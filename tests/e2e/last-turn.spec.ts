@@ -537,11 +537,11 @@ test("the conversation holds a card the captain answered, lists it under Cards, 
 // a card's button shows above the message box as one row with the card's
 // name. INF-6623's plan, the captain's Approve and build: every press on the
 // row, the name included, opens the conversation at that round first ("people
-// can open cards from within the conversation UI"), and resting on the row
-// lights the whole round ("highlight the whole area"). Fixture: the
+// can open cards from within the conversation UI"), and resting on the strip
+// lights the whole strip as one area ("highlight the whole area"). Fixture: the
 // conversation scenario's note, answered with Got it. Failure: no row, a reply
 // line under it, the name opening the card, the conversation opening
-// somewhere else, its tile not opening the card, or no fill behind the round.
+// somewhere else, its tile not opening the card, or no one fill behind the strip.
 test("a press of a card's button shows on the strip with the card's name, and every press on the row opens the conversation there", async () => {
   launched = await launchApp({ withMockProvider: true, scenarios: [conversationRounds] });
   const { page } = launched;
@@ -569,7 +569,8 @@ test("a press of a card's button shows on the strip with the card's name, and ev
     await expect(conversation(page)).toHaveCount(0);
     await expect(name).toBeVisible();
   };
-  const fill = () => row.evaluate((round) => getComputedStyle(round, "::before").opacity);
+  const strip = page.locator("[data-last-turn]");
+  const fill = () => strip.evaluate((lane) => getComputedStyle(lane, "::before").opacity);
 
   await test.step("the press is the newest round: the card's name, then Got it outlined, with no reply line", async () => {
     await expect(row).toHaveAttribute("data-card-round", "choice");
@@ -581,13 +582,20 @@ test("a press of a card's button shows on the strip with the card's name, and ev
     await expect(bubbleWords(yourBubble(page, "older"))).toHaveText(BACKLOG_ASK);
   });
 
-  await test.step("resting on the row lights the whole round, not one line", async () => {
+  await test.step("resting anywhere on the strip lights the whole strip as one area", async () => {
     await page.mouse.move(0, 0);
     await expect.poll(fill).toBe("0");
-    await yourBubble(page).hover();
-    await expect.poll(fill).toBe("1");
-    await name.hover();
-    await expect.poll(fill).toBe("1");
+    for (const part of [yourBubble(page), name, bubbleWords(yourBubble(page, "older"))]) {
+      await part.hover();
+      await expect.poll(fill).toBe("1");
+    }
+    // One shape around both rounds, the same 6 px past the strip on every side.
+    expect(
+      await strip.evaluate((lane) => {
+        const style = getComputedStyle(lane, "::before");
+        return [style.top, style.right, style.bottom, style.left];
+      }),
+    ).toEqual(["-6px", "-6px", "-6px", "-6px"]);
     await page.mouse.move(0, 0);
     await expect.poll(fill).toBe("0");
   });

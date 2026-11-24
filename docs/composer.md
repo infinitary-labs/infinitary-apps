@@ -127,7 +127,9 @@ A round is one thing the captain did and what came back: a message and the reply
   The captain's words sit on the right in a soft grey bubble (`--fg-1` mixed at 8%, corners 11, 11, 4 and 11 px, padding 2 px by 10 px), `--text-sm` in `--fg-1` on a 22 px row, at most 75% of the width; a message that was only pictures reads "A picture".
   The first mate's reply sits 2 px below on the left, plain `--text-sm` in `--fg-1` on a 20 px row, after the first mate's mark, the app's 14 px hexagon in `--accent`, 8 px before the words, at most 80% of the width.
   Newest ordinary words rest at 75% `--fg-2` mixed with 25% `--fg-3`, and the newest bubble rests at 4% `--fg-1` over transparent (INF-1968, the captain’s C selection).
-  Hovering a round or focusing its button lights only that round, never its sibling, and lays one `--bg-3` fill with `--radius-m` corners behind the whole round, 4 px past its rows and 8 px past its sides, so a press reads as the round's (INF-6623's plan, the captain's words: "highlight the whole area"); the fill comes and goes over `--dur-fast` and moves nothing.
+  Hovering a round or focusing its button lights only that round's words, never its sibling's.
+  Resting anywhere on the strip or focusing its button lays one `--bg-3` fill with `--radius-m` corners behind the whole strip, 6 px past it on every side, so a press reads as the strip's (INF-6623's plan, the captain's words: "highlight the whole area"); once the older round has dissolved, the fill covers the newest round alone, and it comes and goes over `--dur-fast` and moves nothing.
+  A press between the rounds, inside that fill, opens the conversation at the newest round.
   The newest round restores ordinary words to `--fg-1` and its bubble to 8% immediately; leaving and blurring restores its quiet treatment, with no animation or timer.
   The older round keeps its colors and lifts from 50% to full opacity while hovered or focused, returning to 50% afterwards.
   The mark stays cyan (`--accent`) in both states, as the captain requested; composer focus alone does not brighten either round.

@@ -4,12 +4,12 @@
       "id": "strip-opens-conversation",
       "kind": "improvement",
       "title": "Your last messages open the conversation",
-      "body": "Clicking anywhere on your last messages above the message box, a card's name included, now opens the conversation at that point; open a card from its tile there. Resting the pointer on a message lights the whole of it.",
+      "body": "Clicking anywhere on your last messages above the message box, a card's name included, now opens the conversation at that point; open a card from its tile there. Resting the pointer there lights your last messages as one area.",
       "area": "message-box",
       "picture": {
         "dark": "strip-opens-conversation-dark.webp",
         "light": "strip-opens-conversation-light.webp",
-        "alt": "Your answer to a card above the message box, lit as one area under the pointer"
+        "alt": "Your last messages above the message box, lit as one area under the pointer"
       },
       "provenance": { "origin": "change" }
     }

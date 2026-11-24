@@ -17,7 +17,7 @@ import {
 } from "../../../tests/helpers/batchHost";
 import { gitRepo } from "../../../tests/helpers/crewHarnessGit";
 import { BUNDLED_NAMING } from "../../../tests/helpers/namingRunbook";
-import { insertTask, setup } from "../../../tests/helpers/prCiHarness";
+import { type CheckedOut, insertTask, setup } from "../../../tests/helpers/prCiHarness";
 import { BATCH_WORDS, Batches } from "../batches/batches";
 import { LEFT_OUT_WORDS } from "../batches/combine";
 import { BATCH_CHECK, BATCH_WAITING_WORDS, presentationCommitMessage } from "../forge";
@@ -84,9 +84,10 @@ const STORY: ChangePresentation = {
 
 /**
  * The project and its host. `dir` is the project's folder, a real repository where a
- * case reads git, and `head` the pushed version the story and the approval name.
+ * case reads git, `head` the pushed version the story and the approval name, and
+ * `checkedOut` what the computer a task runs on says of its working copy there.
  */
-function home(where: { dir?: string; head?: string } = {}) {
+function home(where: { dir?: string; head?: string; checkedOut?: CheckedOut } = {}) {
   const head = where.head ?? HEAD;
   const story: ChangePresentation = { ...STORY, head };
   const forge = new BatchHostForge(head);
@@ -102,7 +103,11 @@ function home(where: { dir?: string; head?: string } = {}) {
     clock += 1;
     return clock;
   };
-  const at = setup({ forge, batches: () => batches });
+  const at = setup({
+    forge,
+    batches: () => batches,
+    ...(where.checkedOut ? { checkedOut: where.checkedOut } : {}),
+  });
   seedProject(at.db, {
     id: REPO,
     name: "meter",
@@ -1312,8 +1317,8 @@ describe("a repair's answer to its project's held batch", () => {
   const AXIS_HEAD = "3c2b1a0918f7e6d5c4b3a2918070f6e5d4c3b2a1";
 
   /** Three other tasks' changes in one batch whose checks failed; this task is the repair. */
-  async function held() {
-    const at = home();
+  async function held(where: Parameters<typeof home>[0] = {}) {
+    const at = home(where);
     at.other("parser01", "fix(parser): read dates with a time zone", PARSER_HEAD);
     at.other("export02", "feat(export): add a CSV export", EXPORT_HEAD);
     at.other("legend03", "fix(chart): keep the legend inside the chart", LEGEND_HEAD);
@@ -1459,27 +1464,55 @@ describe("a repair's answer to its project's held batch", () => {
     expect(at.forge.batchHead).not.toBe(before);
   });
 
+  const REPAIR = "repair09";
+  const REPAIR_BRANCH = `fm/task-${REPAIR}`;
+  /**
+   * Another repair of the held batch with a working copy of its own, a real repository: its
+   * branch checked out at the commit of its fix, built on an earlier commit of that fix.
+   */
+  function repairCopy(at: ReturnType<typeof home>) {
+    const { dir } = gitRepo("meter");
+    const git = (...args: string[]) =>
+      execFileSync(
+        "git",
+        ["-C", dir, "-c", "user.name=Test", "-c", "user.email=test@localhost", ...args],
+        { encoding: "utf8" },
+      ).trim();
+    const commit = (file: string, subject: string) => {
+      writeFileSync(join(dir, file), `// ${subject}\n`);
+      git("add", file);
+      git("commit", "-q", "-m", subject);
+      return git("rev-parse", "HEAD");
+    };
+    git("checkout", "-q", "-b", REPAIR_BRANCH);
+    const earlier = commit("parser.ts", STORY.title);
+    const head = commit("export.ts", "fix(export): read dates through the parser's new form");
+    insertTask(at.tasks, { id: REPAIR, repoId: REPO, branch: REPAIR_BRANCH, worktreeDir: dir });
+    return { dir, git, earlier, head };
+  }
+
   // Intent: upstream issue #55, "Held batch does not resume when a takeover delivers the
   // approved repair commit", a bug being fixed, and its review's findings: the declaration is
-  // bound to the exact commit the repair's working copy holds as it declares, not to a version
-  // the host read on its branch before, and another task approved at that commit ends the hold.
+  // bound to the exact commit the repair's own working copy has committed as it declares, not
+  // to a version the host read on its branch before, and another task approved at that commit
+  // ends the hold.
   it("binds a declared fix to the commit its task has committed: another task approved there ends the hold, and at an earlier version does not", async () => {
     const at = await held();
     const before = at.forge.batchHead;
+    const repair = repairCopy(at);
     // The host read an earlier version of the repair's branch where the project lives.
-    at.tasks.delivery.recordChangeEvidence(TASK, { headSha: AXIS_HEAD });
-    vi.spyOn(at.service.publication, "presentationHead").mockResolvedValue(HEAD);
-    expect(await at.service.checkTool.checkForCrew(TASK, { batch: { fix: true, evidence } })).toBe(
-      BATCH_DECLARATION_WORDS.fix,
-    );
-    expect(at.batches.record(REPO).fixHeads).toEqual({ [TASK]: HEAD });
+    at.tasks.delivery.recordChangeEvidence(REPAIR, { headSha: repair.earlier });
+    expect(
+      await at.service.checkTool.checkForCrew(REPAIR, { batch: { fix: true, evidence } }),
+    ).toBe(BATCH_DECLARATION_WORDS.fix);
+    expect(at.batches.record(REPO).fixHeads).toEqual({ [REPAIR]: repair.head });
 
-    at.other("earlier05", STORY.title, AXIS_HEAD);
+    at.other("earlier05", STORY.title, repair.earlier);
     await at.pass();
     expect(at.open()?.hold).toBeDefined();
     expect(at.forge.batchHead).toBe(before);
 
-    at.other("deliver06", STORY.title, HEAD);
+    at.other("deliver06", STORY.title, repair.head);
     await at.pass();
     expect(at.open()?.members.map((member) => member.taskId)).toEqual([
       "parser01",
@@ -1490,11 +1523,11 @@ describe("a repair's answer to its project's held batch", () => {
     ]);
     expect(at.open()?.hold).toBeUndefined();
     expect(at.forge.batchHead).not.toBe(before);
-    expect(at.batches.record(REPO).fixes).toEqual([TASK]);
+    expect(at.batches.record(REPO).fixes).toEqual([REPAIR]);
   });
 
-  // Intent: the same issue's review: every declaration of a fix binds that commit, and one
-  // whose working copy still holds edits to commit binds none.
+  // Intent: the same issue's reviews: every declaration of a fix binds that commit, and one
+  // made beside work its commit does not hold binds none.
   it.each([
     ["alone", () => ({ fix: true, evidence })],
     [
@@ -1510,19 +1543,66 @@ describe("a repair's answer to its project's held batch", () => {
       (version: string) => ({ passed: version, fix: true, evidence }),
     ],
   ])(
-    "binds the commit of a fix declared %s, and none while its edits are not committed",
+    "binds the commit of a fix declared %s, and none once work is left to commit there",
     async (_way, batch) => {
       const at = await held();
-      const committed = vi.spyOn(at.service.publication, "presentationHead");
-      committed.mockRejectedValue(new Error("Commit the task's changes first."));
-      await at.service.checkTool.checkForCrew(TASK, { batch: batch(at.forge.batchHead) });
-      expect(at.batches.record(REPO).fixes).toEqual([TASK]);
+      const repair = repairCopy(at);
+      writeFileSync(join(repair.dir, "scale.ts"), "export const scale = 1;\n");
+      await at.service.checkTool.checkForCrew(REPAIR, { batch: batch(at.forge.batchHead) });
+      expect(at.batches.record(REPO).fixes).toEqual([REPAIR]);
       expect(at.batches.record(REPO).fixHeads).toBeUndefined();
 
       const again = await held();
-      vi.spyOn(again.service.publication, "presentationHead").mockResolvedValue(HEAD);
-      await again.service.checkTool.checkForCrew(TASK, { batch: batch(again.forge.batchHead) });
-      expect(again.batches.record(REPO).fixHeads).toEqual({ [TASK]: HEAD });
+      const committed = repairCopy(again);
+      await again.service.checkTool.checkForCrew(REPAIR, { batch: batch(again.forge.batchHead) });
+      expect(again.batches.record(REPO).fixHeads).toEqual({ [REPAIR]: committed.head });
+    },
+  );
+
+  // Intent: the same issue's second review, a bug being fixed: the commit was read from
+  // whatever the working copy had checked out, with its untracked files passed over, so a
+  // declaration could name a commit that does not hold the fix.
+  it.each([
+    [
+      "an edit to a tracked file left to commit",
+      (copy: ReturnType<typeof repairCopy>) =>
+        writeFileSync(join(copy.dir, "parser.ts"), "export const zone = false;\n"),
+    ],
+    [
+      "another branch checked out",
+      (copy: ReturnType<typeof repairCopy>) => copy.git("checkout", "-q", "main"),
+    ],
+    [
+      "its commit checked out with no branch",
+      (copy: ReturnType<typeof repairCopy>) => copy.git("checkout", "-q", "--detach"),
+    ],
+  ])("binds no commit to a fix declared from a working copy with %s", async (_state, leave) => {
+    const at = await held();
+    const repair = repairCopy(at);
+    leave(repair);
+    expect(
+      await at.service.checkTool.checkForCrew(REPAIR, { batch: { fix: true, evidence } }),
+    ).toBe(BATCH_DECLARATION_WORDS.fix);
+    expect(at.batches.record(REPO).fixes).toEqual([REPAIR]);
+    expect(at.batches.record(REPO).fixHeads).toBeUndefined();
+  });
+
+  // Intent: the same finding, where the repair runs on another computer: the commit is the
+  // one its own branch has checked out there, and only with nothing left to commit there.
+  it.each([
+    ["with nothing left to commit", { branch: REPAIR_BRANCH, head: HEAD, dirty: false }, true],
+    ["with work left to commit", { branch: REPAIR_BRANCH, head: HEAD, dirty: true }, false],
+    ["on another branch", { branch: "fm/task-other", head: HEAD, dirty: false }, false],
+    ["on no branch", { branch: null, head: HEAD, dirty: false }, false],
+    ["that cannot be read", null, false],
+  ])(
+    "reads the commit of a fix declared from a working copy on another computer %s",
+    async (_state, there, bound) => {
+      const at = await held({ checkedOut: async () => there });
+      insertTask(at.tasks, { id: REPAIR, repoId: REPO, branch: REPAIR_BRANCH, deviceId: "mini" });
+      await at.service.checkTool.checkForCrew(REPAIR, { batch: { fix: true, evidence } });
+      expect(at.batches.record(REPO).fixes).toEqual([REPAIR]);
+      expect(at.batches.record(REPO).fixHeads).toEqual(bound ? { [REPAIR]: HEAD } : undefined);
     },
   );
 

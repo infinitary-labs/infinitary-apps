@@ -48,7 +48,7 @@ export function createChangeDelivery(options: ChangeDeliveryOptions): ChangeDeli
       removeQueuedApproval: merges.removeQueuedApproval.bind(merges),
       mergeReview: reviews.mergeReview.bind(reviews),
     },
-    checkTool: new CheckChangeTool(context, checks, reviews, publication),
+    checkTool: new CheckChangeTool(context, checks, reviews),
     publication,
     mergeCard: new MergeCardSteps(context, publication),
     comments: new PullComments(context, () => options.commentsWatched?.() === true),

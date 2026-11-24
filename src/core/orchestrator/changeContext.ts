@@ -89,10 +89,12 @@ export type ChangeDeliveryOptions = {
   ) => Promise<string | undefined>;
   /**
    * The branch a placed task's working copy has checked out there, null
-   * when detached, and its commit (INF-2490); null when that computer is
-   * out of reach or cannot say.
+   * when detached, its commit (INF-2490), and whether it holds work left to
+   * commit; null when that computer is out of reach or cannot say.
    */
-  checkedOut?: (taskId: string) => Promise<{ branch: string | null; head: string } | null>;
+  checkedOut?: (
+    taskId: string,
+  ) => Promise<{ branch: string | null; head: string; dirty?: boolean } | null>;
 };
 
 /** Where a sign-in was missing, and the project it was for. */
@@ -443,6 +445,34 @@ export class ChangeContext {
     const base = found?.held ?? (await this.defaultRangeBase(dir, task, forge, head));
     await requireNamedRange(dir, base, head, this.options.namingRule?.() ?? null);
     return { dir, ...(found?.held ? { heldBase: found.held } : {}) };
+  }
+
+  /**
+   * The commit a task has committed for the held batch's fix it declares (docs/forge.md, "A
+   * held batch"): the one its own branch has checked out in its working copy, with nothing
+   * left to commit there, untracked files included. Undefined on another branch or a detached
+   * checkout, with work left to commit, or when nobody can say: it then binds no commit.
+   */
+  async ownCommit(task: TaskRecord): Promise<string | undefined> {
+    if (!task.branch) return undefined;
+    if (task.deviceId) {
+      const there = await this.options.checkedOut?.(task.id).catch(() => null);
+      return there?.branch === task.branch && there.dirty === false ? there.head : undefined;
+    }
+    if (!task.worktreeDir) return undefined;
+    // One read answers the branch, its commit and what is left to commit; untracked files are
+    // asked for, so a repository that hides them in its settings cannot read as committed.
+    const status = await git(task.worktreeDir, [
+      "status",
+      "--porcelain=v2",
+      "--branch",
+      "--untracked-files=normal",
+    ]).catch(() => "");
+    const lines = status.split("\n").filter(Boolean);
+    if (!lines.includes(`# branch.head ${task.branch}`)) return undefined;
+    if (lines.some((line) => !line.startsWith("# "))) return undefined;
+    const head = lines.find((line) => line.startsWith("# branch.oid "))?.slice(13);
+    return head && /^[0-9a-f]{40,64}$/.test(head) ? head : undefined;
   }
 
   /** Read the name and tip together, and only reuse a cached ref at that exact tip. */

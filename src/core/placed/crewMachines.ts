@@ -398,8 +398,13 @@ export type CrewMachines = {
   homeCopy?(
     taskId: string,
   ): Promise<{ head: string; at?: number; branch: string; repoDir: string } | undefined>;
-  /** The branch the task's working copy there has checked out, and its commit (INF-2490). */
-  checkedOut(taskId: string): Promise<{ branch: string | null; head: string } | null>;
+  /**
+   * The branch the task's working copy there has checked out, its commit (INF-2490), and
+   * whether it holds work left to commit.
+   */
+  checkedOut(
+    taskId: string,
+  ): Promise<{ branch: string | null; head: string; dirty: boolean } | null>;
   /** The computers that run work on the list, by device id. */
   computers(): readonly string[];
   /** The computer's name, as Devices lists it. */

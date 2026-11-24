@@ -15,7 +15,6 @@ import {
   type Located,
   projectOf,
 } from "./changeContext";
-import type { ChangePublication } from "./changePublication";
 import { declareCheckAction } from "./checkRepair";
 import {
   candidateHead,
@@ -105,8 +104,6 @@ export class CheckChangeTool {
     private readonly context: ChangeContext,
     private readonly checks: ChangeChecks,
     private readonly reviews: MergeReviews,
-    /** Reads the commit a task's working copy holds, for a fix it declares (`declareBatch`). */
-    private readonly publication: Pick<ChangePublication, "presentationHead">,
   ) {
     this.options = context.options;
   }
@@ -404,10 +401,7 @@ export class CheckChangeTool {
     if (batch.fix !== true && back.length === 0 && !passed) return BATCH_DECLARATION_WORDS.one;
     // A declared fix is bound to the exact commit its task has committed now, so another task
     // that delivers that commit carries the declaration; one that cannot be read binds none.
-    const at =
-      batch.fix === true
-        ? await this.publication.presentationHead(record.id).catch(() => undefined)
-        : undefined;
+    const at = batch.fix === true ? await this.context.ownCommit(record) : undefined;
     if (passed) {
       if (back.length) return BATCH_DECLARATION_WORDS.passedSentBack;
       const refused = await batches.declarePassed(

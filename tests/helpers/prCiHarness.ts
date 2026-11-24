@@ -183,7 +183,7 @@ export class FakeForge implements Forge {
 /** What a placed task's computer says its working copy has checked out (`ChangeDeliveryOptions`' `checkedOut`). */
 export type CheckedOut = (
   taskId: string,
-) => Promise<{ branch: string | null; head: string } | null>;
+) => Promise<{ branch: string | null; head: string; dirty?: boolean } | null>;
 
 export type PrCiHarness = {
   db: AppDatabase;

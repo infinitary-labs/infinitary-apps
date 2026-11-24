@@ -682,7 +682,20 @@ The first mate's and a crewmate's fixed prompts each have a budget derived from 
   An Automation rule on GitHub's "A workflow run fails", filtered to workflow `prompt-budget` on branch `main`, files and starts one trim task unless one is already open.
   It works as `docs/orchestrator-contract.md`, "How a trim works", says: at the Careful level on the strongest model, toward 90% of each budget, with every served sentence it removes or alters listed by `node scripts/served-sentences.ts` and marked for its reviewer.
   A red run's output says the same.
+  It never changes a protected sentence ("The protected sentences").
   It changes served text, so it asks before it merges.
+
+## The protected sentences
+
+Some served sentences decide what an agent may do without the captain: consent, what reaches the captain, merges, tests, private data and deleted files.
+Each fixed-context test keeps a list of them, `PROTECTED` in `tests/firstmate-fixed-context.test.ts` and `tests/crewmate-fixed-context.test.ts`, and fails naming the intent and rule of each sentence no longer served word for word in the home its entry names.
+`tests/helpers/protectedSentences.ts` names the six intents, and each list fails when an intent has no sentence.
+
+- **Only the captain's approval changes one.**
+  Changing or removing an entry, or the served words it names, is weakening a test ("This project's rulings on tests"), so it waits for the captain's approval, in its own change.
+  A trim never shortens a protected sentence to make room, and never re-types an entry to match one it shortened.
+- **A new sentence joins in the change that adds it.**
+  A change that adds or restores a served sentence deciding one of the six intents adds its entry, naming the intent and the rule it serves.
 
 ## The size check on AGENTS.md
 

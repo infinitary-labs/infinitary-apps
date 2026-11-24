@@ -226,7 +226,7 @@ export const COMMIT_NAMING_DEFAULT = namingGuide.trim();
 export const CREWMATE_TEST_DEFAULT = testingGuide.trim();
 
 /**
- * What each care level asks, as the bundled care runbook serves it
+ * What each rigor level asks, as the bundled care runbook serves it
  * (`resources/runbooks/care`): the fallback when the runbook selection is
  * unknown mirrors the sections the recorded care would select, so the
  * measured prompt is the served one. Unknown facts take Default, the care
@@ -249,7 +249,7 @@ export function careGuideFor(procedure?: CrewmateProcedureFacts): string[] {
 /**
  * Full guidance when the facts are unknown or name a pull request delivery
  * (direct-pr or queue-pr). Otherwise the delivery passage those facts do
- * not call for is left out, and the brief remains the authority for it. How each care level is carried out is the
+ * not call for is left out, and the brief remains the authority for it. How each rigor level is carried out is the
  * care runbook's, never this prompt's (INF-1868, piece 5).
  */
 function applicableCore(full: string, procedure?: CrewmateProcedureFacts): string {
@@ -310,7 +310,7 @@ Before putting any picture or demo poster on a card, open it with your image-rea
 
 ${RIGOR_SAFETY}
 
-The user sees cards and their threads, never a chat of your own. Follow emit_card's contract for the outcome card. A card is only allowed when: 1. work cannot move forward without a captain decision, or 2. the captain cannot move forward without seeing that fact. Progress, CI waits and other supervisor-only status are never cards; use the feed or silence. Putting a card away grants no permission and ends no task. ${ORDINARY_NOTE_READ_GUIDANCE} For finished code work, the merge card or note has its answer in the title alone (no body lead) and opens with four headed sections in order: ${COMPLETION_CARD_HEADINGS[0]} (the ask or defect; prefer the captain's original intent or wording, paraphrased faithfully, quoting only exact words; otherwise factual motivation), ${COMPLETION_CARD_HEADINGS[1]} (what the change does for people using the project, or that it changes only how the project is built, checked or documented), ${COMPLETION_CARD_HEADINGS[2]} (one sentence on how it stood, then a picture of each changed view as it stood) and ${COMPLETION_CARD_HEADINGS[3]} (how it is now, with each result picture beside the sentence it describes, and what was checked); a view in both sections keeps the same order and caption; something new sits in a figure marked data-inf-new, which needs no Before picture; a change a person cannot see carries one sentence saying why in an element marked data-inf-no-picture, and a task at the quick care level is exempt; a demo recording stands in for a view's pictures in either section, its poster the picture; what is left folds in <details>, while answer cards, previews included, keep their own shape.`;
+The user sees cards and their threads, never a chat of your own. Follow emit_card's contract for the outcome card. A card is only allowed when: 1. work cannot move forward without a captain decision, or 2. the captain cannot move forward without seeing that fact. Progress, CI waits and other supervisor-only status are never cards; use the feed or silence. Putting a card away grants no permission and ends no task. ${ORDINARY_NOTE_READ_GUIDANCE} For finished code work, the merge card or note has its answer in the title alone (no body lead) and opens with four headed sections in order: ${COMPLETION_CARD_HEADINGS[0]} (the ask or defect; prefer the captain's original intent or wording, paraphrased faithfully, quoting only exact words; otherwise factual motivation), ${COMPLETION_CARD_HEADINGS[1]} (what the change does for people using the project, or that it changes only how the project is built, checked or documented), ${COMPLETION_CARD_HEADINGS[2]} (one sentence on how it stood, then a picture of each changed view as it stood) and ${COMPLETION_CARD_HEADINGS[3]} (how it is now, with each result picture beside the sentence it describes, and what was checked); a view in both sections keeps the same order and caption; something new sits in a figure marked data-inf-new, which needs no Before picture; a change a person cannot see carries one sentence saying why in an element marked data-inf-no-picture, and a task at the quick rigor level is exempt; a demo recording stands in for a view's pictures in either section, its poster the picture; what is left folds in <details>, while answer cards, previews included, keep their own shape.`;
   const core = applicableCore(full, procedure);
   return [
     core,

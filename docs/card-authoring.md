@@ -223,7 +223,7 @@ There is no overall level anywhere - not on the chart, the strip, the task recor
 **The declaration.**
 A crewmate's merge card passes `risk`, a top-level `emit_card` parameter whose own description carries every rule, so it reaches a Claude crewmate whole (`docs/claude-client.md`).
 It rates every dimension `low`, `medium` or `high`, with `why`, one line of at most 100 characters.
-The card tool refuses a merge card with no risk, a risk with a dimension left out or a level off the scale, and a risk on any other card, each in words that name the fix (`RISK_MISSING_REFUSAL`, `src/core/pi/cardTool.ts`), at every care level.
+The card tool refuses a merge card with no risk, a risk with a dimension left out or a level off the scale, and a risk on any other card, each in words that name the fix (`RISK_MISSING_REFUSAL`, `src/core/pi/cardTool.ts`), at every rigor level.
 The refusal is recorded like any other ("A refused merge card").
 The first mate's schema has no risk, so its cards carry none.
 
@@ -292,10 +292,10 @@ Saving on the phone is not built: the phone counts a card's files on one line un
 For a crewmate card whose action merges, `lintCrewmateCard` reads only what the body declares, under the Before and After headings (`COMPLETION_PICTURES_REFUSAL`, `src/core/pi/cardLint.ts`): a `data-inf-no-picture` element with words in it passes; otherwise After holds at least one picture, and when any After picture is not inside a `data-inf-new` element Before holds at least one too.
 It never counts above one, never matches pictures to views and never reads the change.
 A demo counts by its poster, the one `<img>` in its figure, and only once the host verified the recording beside it ("What contains a body", "Demo recordings"), which happens before the check reads the card.
-A task at the Quick care level (the stamped tier on the task record) is exempt.
+A task at the Quick rigor level (the stamped tier on the task record) is exempt.
 Notes, the first mate's own cards and answer cards, previews included, are not checked for pictures.
 
-On every crewmate card, at every care level, the check refuses a `data-inf-new` mark on an element that cannot draw the New tag (`untaggedNewMarkRefusal`): `img`, `svg`, `video`, `canvas`, `iframe`, `object`, `embed` and `input` generate no `::before` box in the card frame, so a picture marked itself would show no tag and read as a missing Before picture.
+On every crewmate card, at every rigor level, the check refuses a `data-inf-new` mark on an element that cannot draw the New tag (`untaggedNewMarkRefusal`): `img`, `svg`, `video`, `canvas`, `iframe`, `object`, `embed` and `input` generate no `::before` box in the card frame, so a picture marked itself would show no tag and read as a missing Before picture.
 The refusal names the fix, the figure that holds it.
 
 ## Proof logs
@@ -1143,7 +1143,7 @@ Title and body must make sense with no prior conversation.
 The captain is multi-tasking.
 Name the work in plain language (what changed / what they are deciding), not only a PR number or SHA.
 A finished code-work merge card uses Why / What changed / Before / After, with verification inside After and remaining work folded in details.
-The checks, a review, the captain's override, the project, the PR link, the change's lines and a care level other than Default are the host's settle facts strip, so the body does not repeat them.
+The checks, a review, the captain's override, the project, the PR link, the change's lines and a rigor level other than Default are the host's settle facts strip, so the body does not repeat them.
 SHAs and job timings are optional detail, not the lead.
 Decision options stay 2-3, sentence case; labels can stay short if the body already states the choice.
 
@@ -1203,7 +1203,7 @@ Save and defer has no recording yet, so the approval-handoff evaluation's `save-
 Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 - Card rule (product): a card is allowed only when work cannot move forward without a captain decision or the captain cannot move forward without seeing that fact; forbid all progress, CI-wait, and status cards (they belong in the feed).
-  A card that implies a next step is a decision with that step as its `default`; on any card carrying a settle effect the host appends the checks' state, a review, the captain's override, the project, the proposed change, its lines and a care level other than Default as the fact strip (`SettleFacts.strip`, v2.0 ruling D4, a status line since INF-3709's plan), so bodies never repeat them and the lint asks for none of them; a revision keeps the replaced version in `card_revisions` (migration 24).
+  A card that implies a next step is a decision with that step as its `default`; on any card carrying a settle effect the host appends the checks' state, a review, the captain's override, the project, the proposed change, its lines and a rigor level other than Default as the fact strip (`SettleFacts.strip`, v2.0 ruling D4, a status line since INF-3709's plan), so bodies never repeat them and the lint asks for none of them; a revision keeps the replaced version in `card_revisions` (migration 24).
   `keepsOpen` is retired (orchestrator contract v4.65, `src/core/prompts/contract-revisions/README.md`): no prompt or tool description offers it and `emit_card` refuses it; migration 73 removes the old actions from open cards before the click path is removed.
   A card carries exactly the actions its author declares (cards/tasks/agents P0, captain rulings D1-D8): no automatic Later, no park; a deferral is an action the author offers, and a Not until choice (above) is the one the host brings back.
   The ONE exception is the merge card (contract v3.6, captain lock 3; INF-2744): a crewmate declares a `merge` action and the host replaces every merge and settle action on that card with the merge labelled for the posture plus the danger discard or Not now, leaving the author's other actions untouched - the labels and the count were facts the host held and an agent was transcribing, and `confirm` is deliberately not host-set, because it is a claim about the body and auto-confirming would destroy unlanded work without the captain choosing.

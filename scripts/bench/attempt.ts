@@ -133,9 +133,9 @@ export type AttemptRow = {
   arm: "auto" | "pinned";
   pin: ModelPin | null;
   care: Care;
-  /** The rigor the care level asked the repository for. */
+  /** The rigor the rigor level asked the repository for. */
   rigor_asked: Rigor;
-  /** The rigor the host stamped on the graded work (the served care level). */
+  /** The rigor the host stamped on the graded work (the served rigor level). */
   rigor_served: string | null;
   provider_kind: "mock" | "live";
   infinitary_commit: string | null;

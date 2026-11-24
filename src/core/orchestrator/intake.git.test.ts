@@ -94,7 +94,7 @@ describe("the task graph (task-system P2)", () => {
       expect(body()).toContain(
         `<span data-fact="project"><span class="${SETTLE_FACT_VALUE_CLASS}">firstmate-3000</span></span>`,
       );
-      // The care level shows only when it is not Default (the captain's
+      // The rigor level shows only when it is not Default (the captain's
       // answer on INF-3709's plan).
       expect(body()).not.toContain('data-fact="care"');
       expect(body()).not.toContain(">Goes in<");

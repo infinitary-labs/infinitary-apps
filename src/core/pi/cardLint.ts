@@ -948,7 +948,7 @@ export function untaggedNewMarkRefusal(element: string): string {
  * click rests on them. The picture check reads only what the body declares,
  * never the change, never which view a picture shows, and never how many
  * there are above one; a Quick-care task is exempt. On every crewmate card,
- * at every care level, a data-inf-new mark sits only where the New tag can
+ * at every rigor level, a data-inf-new mark sits only where the New tag can
  * be drawn: a picture marked itself would show no tag.
  */
 export function lintCrewmateCard(

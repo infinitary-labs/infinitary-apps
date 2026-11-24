@@ -7,7 +7,7 @@
  * - an outside pull request passes when its description carries Infinitary's
  *   Careful record for its newest version (`readRecord`);
  * - otherwise it fails and keeps one comment, edited in place, saying how to
- *   raise the pull request with Infinitary at the Careful care level.
+ *   raise the pull request with Infinitary at the Careful rigor level.
  *
  * The record is the one Infinitary writes at the end of a pull request's
  * story once an independent review passed and live validation the review
@@ -47,11 +47,11 @@ const BOT = "github-actions[bot]";
  */
 const PROBLEMS = {
   "no record": {
-    status: "No Careful record: raise this pull request with Infinitary at the Careful care level.",
+    status: "No Careful record: raise this pull request with Infinitary at the Careful rigor level.",
     sentence: "the description carries no Careful record.",
   },
   unreadable: {
-    status: "The description's record cannot be read: raise it with Infinitary at the Careful care level.",
+    status: "The description's record cannot be read: raise it with Infinitary at the Careful rigor level.",
     sentence: "the description's record cannot be read.",
   },
   "another version": {
@@ -154,13 +154,13 @@ export function failureComment(verdict, head, guideUrl) {
     `the record names version ${version(verdict.named)}, but this pull request's newest version is ${version(head)}.`;
   return [
     MARK,
-    `This project merges an outside pull request only when it was raised with Infinitary at the Careful care level: an independent review, and live validation that the review accepted, of the pull request's newest version. Infinitary then writes a record at the end of the description, and the "${STATUS}" check reads it.`,
+    `This project merges an outside pull request only when it was raised with Infinitary at the Careful rigor level: an independent review, and live validation that the review accepted, of the pull request's newest version. Infinitary then writes a record at the end of the description, and the "${STATUS}" check reads it.`,
     "",
     `The check did not pass: ${why}`,
     "",
     "To pass it:",
     "",
-    "- open the pull request from your own copy of the project with Infinitary at the Careful care level, so Infinitary writes its story and record into the description;",
+    "- open the pull request from your own copy of the project with Infinitary at the Careful rigor level, so Infinitary writes its story and record into the description;",
     "- after each later push, let Infinitary review and validate that version too, so the record names it.",
     "",
     `[How to contribute](${guideUrl}) says more.`,

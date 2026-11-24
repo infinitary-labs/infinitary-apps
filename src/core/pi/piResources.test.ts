@@ -722,9 +722,10 @@ it("keeps the full authoring and handoff sources word for word", () => {
   // INF-5446 (the captain chose to apply synced settings through the preview's own controls) adds inf.stage's apply and the card's unsent draft.
   // A prompt-budget trim says the draft button, the browser, files and risk words, the strip and the closing reply lines in fewer words.
   // INF-6293's approved plan adds the one tradeoff chart text every author reads; the token list, the write-in row and time and language say the same in fewer words.
+  // The fact strip's wording calls the task's setting its rigor level.
   const hash = (text: string) => createHash("sha256").update(text).digest("hex");
   expect(hash(CARD_AUTHORING)).toBe(
-    "035e35bfd6a4c95b37778976f8a0279939c69805a55653c2e5d8e0c06d7797f6",
+    "dcb88cc47c26c23140927f810b68fb50ab0a854e5131903daad7f01b9a688c82",
   );
   // INF-416 piece H drops HANDOFF's restatement of reading the saved plan by key; the core still says it.
   // INF-976 widens the first mate's check before a start to filing, read off the built-on work.

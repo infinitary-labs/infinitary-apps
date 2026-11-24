@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "rigor-level-wording",
+      "reason": "Internal: comments, docs, checks and served text now say rigor level where they said care level; no behavior changes."
+    }
+  ]
+}

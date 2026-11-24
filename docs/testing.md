@@ -680,7 +680,8 @@ The first mate's and a crewmate's fixed prompts each have a budget derived from 
   No pull request starts it, and the batch, main's release check, the alpha and every release never read it; `tests/prompt-budget-workflow.test.ts` holds that.
 - **The trim task.**
   An Automation rule on GitHub's "A workflow run fails", filtered to workflow `prompt-budget` on branch `main`, files and starts one trim task unless one is already open.
-  The trim brings every reading back at or under its budget, with no rule lost from the tests' ledgers; how far under is the trimming crewmate's judgment.
+  It works as `docs/orchestrator-contract.md`, "How a trim works", says: at the Careful level on the strongest model, toward 90% of each budget, with every served sentence it removes or alters listed by `node scripts/served-sentences.ts` and marked for its reviewer.
+  A red run's output says the same.
   It changes served text, so it asks before it merges.
 
 ## The size check on AGENTS.md

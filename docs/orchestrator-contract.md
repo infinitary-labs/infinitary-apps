@@ -176,18 +176,51 @@ A crewmate's budget, for each runtime and kind of work, is derived from the same
 `tests/helpers/promptBudget.ts` is the one measurement both read.
 Each budget has two lines (`docs/testing.md`, "The prompt budget's two lines").
 `tests/firstmate-fixed-context.test.ts` and `tests/crewmate-fixed-context.test.ts` fail a change only past the hard line, one and a half times the budget: 29,658 for the first mate and 39,936 for a crewmate.
-The prompt-budget check on main fails past the budget itself, and a red run files one trim task that brings every reading back at or under its budget.
+The prompt-budget check on main fails past the budget itself, and a red run files one trim task, which works as "How a trim works" says.
 A change that would cross the budget trims first where it can.
 The budget is not a second number a revision raises.
 A room-restoring trim measures the same served prompt and tool schemas at both ends of the preceding fourteen days, including the sequences seed for the first mate and the largest backend/procedure case for a crewmate.
 When that window crosses the fresh-history rename, read the earlier tree in the archive named by the root commit rather than shortening the window.
 Report net growth, the chosen growth horizon, the restored room and the forecast's limits with the change's verification; these are measurements, not a second failing ceiling that makes the restored room unusable.
-Do not raise the budgets; an overrun below the hard line spends promised conversation room only until its trim merges.
+Only the captain raises a budget, when a trim finds that what every task needs no longer fits; an overrun below the hard line spends promised conversation room only until its trim merges.
 Each revision file says what its words cost, and names the one home of each rule it adds.
 The test's ledger names, for every rule taken out of one text, the text that still says it: the core, a tool, a wake, or the refusal that answers the call breaking it.
 The crewmate prompt follows the same homes: its tools say how `check_change`, `read_workflow`, `github_write` and `report` work, their refusals hold the repair, rerun and baseline limits, and the prompt keeps which move comes when.
 `file_followup` owns filing eligibility, duplicate searches, dependencies and continuations; `note_progress` owns the plan format, `report` owns waiting and finished declarations, and `emit_card` owns completion-card shapes.
 The general validation resource rule owns secret handling on every tier; the core keeps the specific Keychain consent and isolation instructions.
+
+### How a trim works
+
+A trim brings the served text back under its budget without losing an instruction (INF-6559's plan, which the captain approved).
+It runs at the Careful level on the strongest model, so a second crewmate reviews it before it reaches the captain; the Automation rule that files it asks for both.
+
+- **Its order of work.**
+  1. Move what only some work needs.
+     A passage moves to a page read when needed, such as a runbook skill or a tool the agent opens for that work, only when it is conditionally useful, never because it is long.
+     It leaves one sentence in the always-served text saying when to open its page.
+     A refusal the agent meets only after the mistake is never the new home of a rule.
+  2. Remove true repeats, quoting the copy that stays.
+  3. Shorten a sentence only when its meaning is unchanged.
+- **Its target.**
+  Each reading comes to 90% of its budget or under, the `trimTarget` the budget tests print.
+  A trim never drops or weakens a rule every task needs to get there.
+- **When it stops.**
+  When only text every task needs is left and it still does not fit, the trim stops.
+  It reports each reading's measured size and how much of it every task needs, and asks the captain about the budget on a card.
+- **The list and its marks.**
+  `node scripts/served-sentences.ts` lists every served sentence a change removed or altered, before and after, for both instruction sets, from the text the budget tests count (`SERVED_TEXT_OUT` in `tests/helpers/promptBudget.ts`).
+  It compares the working copy with where it left `origin/main`, or any two versions with `--base` and `--head`.
+  The script only lists.
+  The trimmer marks each listed sentence kept, with its meaning unchanged; moved, quoting its new place; or dropped.
+  The marked list goes in the change's verification, and the reviewer judges each mark.
+- **What a trim never edits.**
+  A trim never edits a test's expected wording or a pinned digest of served text.
+  A sentence a test holds, such as a ledger's `says`, changes only in a change of its own, with the captain's approval.
+- **What the merge card says.**
+  It lists every dropped or weakened instruction in plain words.
+  It says no rule changed only when the reviewer confirmed the marked list.
+- **Every other change too.**
+  Any change that removes or alters a served sentence attaches the same marked list to its verification, and its reviewer judges the marks.
 
 ## What a context carries
 

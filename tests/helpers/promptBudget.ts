@@ -1,3 +1,5 @@
+import { mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { OLLAMA_MIN_CONTEXT } from "../../src/core/pi/ollamaProfile";
 import { LOCAL_CONTEXT_RESERVE } from "../../src/core/pi/ollamaStream";
 
@@ -6,7 +8,8 @@ import { LOCAL_CONTEXT_RESERVE } from "../../src/core/pi/ollamaStream";
  * "The fixed-context budget"; docs/testing.md, "The prompt budget's two
  * lines"). Both fixed-context tests and `scripts/prompt-budget.ts` read it.
  *
- * Each budget is derived from the smallest local window and never raised.
+ * Each budget is derived from the smallest local window; only the captain
+ * raises one, when a trim finds that what every task needs no longer fits.
  * INF-2930's plan, which the captain approved ("fail only if we exceed budget
  * by a lot (say 50%), and anything lower than that result in a follow up trim
  * task not blocking release"), gives it two lines: the tests fail past the
@@ -36,6 +39,13 @@ export const FIRSTMATE_BUDGET = WINDOW_AFTER_RESERVE - FIRSTMATE_PROMISED_CONVER
 /** The captain's "exceed budget by a lot (say 50%)". */
 const HARD_LINE_FACTOR = 1.5;
 
+/** A trim aims here (docs/orchestrator-contract.md, "How a trim works"). */
+const TRIM_TARGET_FACTOR = 0.9;
+
+export function trimTarget(budget: number): number {
+  return Math.floor(budget * TRIM_TARGET_FACTOR);
+}
+
 export function hardLine(budget: number): number {
   return Math.floor(budget * HARD_LINE_FACTOR);
 }
@@ -45,8 +55,15 @@ export function roomAtHardLine(budget: number): number {
   return WINDOW_AFTER_RESERVE - hardLine(budget);
 }
 
+type Counted = { systemPrompt: string; tools: unknown };
+
+/** Each fixed part counted since the last `overLine`, while `SERVED_TEXT_OUT` is set. */
+const counted: Counted[] = [];
+
 /** The app's own count of a fixed part (`localInputFits`): characters / 4. */
-export function fixedTokens(context: { systemPrompt: string; tools: unknown }): number {
+export function fixedTokens(context: Counted): number {
+  if (process.env.SERVED_TEXT_OUT)
+    counted.push({ systemPrompt: context.systemPrompt, tools: context.tools });
   return Math.ceil((context.systemPrompt.length + JSON.stringify(context.tools).length) / 4);
 }
 
@@ -60,10 +77,33 @@ export function failingLine(budget: number): number {
 
 export type Reading = { label: string; tokens: number };
 
+/**
+ * With `SERVED_TEXT_OUT` set, writes the text behind each reading to that
+ * folder as `<seat>.json` for `scripts/served-sentences.ts`. Each budget test
+ * counts its readings, in order, just before it hands them here, so the last
+ * `readings.length` counted parts are those readings. The pairing is by order
+ * because tests written before this hook pass only labels and counts, and the
+ * script reads older versions through them.
+ */
+function writeServed(seat: string, readings: Reading[]): void {
+  const out = process.env.SERVED_TEXT_OUT;
+  if (!out) return;
+  const parts = counted.splice(0).slice(-readings.length);
+  if (parts.length !== readings.length)
+    throw new Error(`${seat}: ${readings.length} readings but ${parts.length} counted parts`);
+  mkdirSync(out, { recursive: true });
+  writeFileSync(
+    join(out, `${seat}.json`),
+    JSON.stringify(readings.map((row, index) => ({ label: row.label, ...parts[index] }))),
+  );
+}
+
 export function overLine(seat: string, budget: number, readings: Reading[]): string[] {
+  writeServed(seat, readings);
   const line = failingLine(budget);
   console.info(`${seat} fixed context`, {
     budget,
+    trimTarget: trimTarget(budget),
     hardLine: hardLine(budget),
     rows: readings.map((row) => ({ ...row, room: budget - row.tokens })),
   });

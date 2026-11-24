@@ -184,8 +184,8 @@ describe("the person's own Google client", () => {
       account: STAND_IN_ACCOUNT,
       health: "ok",
     });
-    // What Google issued for the cancelled sign-in went back, as nothing keeps it.
-    await expect.poll(() => google.revoked.length).toBe(revoked + 1);
+    // Nothing is revoked: at Google that would end the earlier sign-in too.
+    expect(google.revoked).toHaveLength(revoked);
   });
 
   it("stops renewing a sign-in made with a client the person no longer keeps, without asking Google", async () => {

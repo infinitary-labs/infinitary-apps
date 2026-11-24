@@ -546,12 +546,10 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
         const response = used.state === "completed" ? used.result : undefined;
         if (!(response instanceof Response))
           throw new Error("Could not reach Google to finish signing in.");
-        if (signal.aborted) {
-          // Cancelled while Google answered: whatever it issued goes back, as nothing keeps it.
-          const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-          await revoke(issuedFrom(body, options.now())?.accessToken);
-          throw new Error("Could not reach Google to finish signing in.");
-        }
+        // Cancelled while Google answered: the answer is dropped unread, as a direct exchange's
+        // aborted fetch drops it. Revoking it would end every sign-in this account made with
+        // this client at Google, the earlier one the person kept among them.
+        if (signal.aborted) throw new Error("Could not reach Google to finish signing in.");
         if (!response.ok)
           clientRefused(
             own,

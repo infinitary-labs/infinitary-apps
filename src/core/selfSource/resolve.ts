@@ -160,15 +160,7 @@ export async function readSelfSourceAsync(
       if (map.version !== location.version || JSON.stringify(map) !== JSON.stringify(outer))
         throw new Error("The installed app and its source metadata disagree.");
     }
-    const realRoot = await realpath(root);
-    for (const file of Object.keys(map.modules)) {
-      const path = relative(realRoot, await realpath(join(root, file)));
-      if (isAbsolute(file) || path === ".." || path.startsWith(`..${sep}`) || isAbsolute(path))
-        throw new Error("An indexed file escapes the source folder.");
-      if (!(await stat(join(root, file))).isFile())
-        throw new Error("An indexed source file is missing.");
-      await access(join(root, file), constants.R_OK);
-    }
+    await checkIndexedFiles(root, Object.keys(map.modules));
     return {
       ...facts,
       version: location.isPackaged ? map.version : location.version,
@@ -178,6 +170,49 @@ export async function readSelfSourceAsync(
   } catch (error) {
     return { ...facts, reason: error instanceof Error ? error.message : String(error) };
   }
+}
+
+/**
+ * Indexed files checked side by side. Every first-mate turn waits on this
+ * walk: checked one after another, an install's four thousand files take
+ * about thirteen thousand awaited filesystem calls, seconds per turn on a
+ * loaded computer. A bounded number keeps Node's small filesystem thread
+ * pool open to the app's other filesystem work meanwhile.
+ */
+export const SOURCE_CHECKS_AT_ONCE = 16;
+
+/**
+ * Throws what the synchronous walk would: the failure of the first failing
+ * file in index order. Files are taken in index order and none is taken
+ * after a failure, so every file before the earliest failure has been
+ * checked by the time the checks still running settle.
+ */
+async function checkIndexedFiles(root: string, files: readonly string[]): Promise<void> {
+  const realRoot = await realpath(root);
+  const failures: { at: number; error: unknown }[] = [];
+  let next = 0;
+  const checkInTurn = async () => {
+    while (next < files.length && failures.length === 0) {
+      const at = next++;
+      try {
+        await checkIndexedFile(root, realRoot, files[at] as string);
+      } catch (error) {
+        failures.push({ at, error });
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: SOURCE_CHECKS_AT_ONCE }, checkInTurn));
+  const first = failures.sort((a, b) => a.at - b.at)[0];
+  if (first) throw first.error;
+}
+
+async function checkIndexedFile(root: string, realRoot: string, file: string): Promise<void> {
+  const path = relative(realRoot, await realpath(join(root, file)));
+  if (isAbsolute(file) || path === ".." || path.startsWith(`..${sep}`) || isAbsolute(path))
+    throw new Error("An indexed file escapes the source folder.");
+  if (!(await stat(join(root, file))).isFile())
+    throw new Error("An indexed source file is missing.");
+  await access(join(root, file), constants.R_OK);
 }
 
 /** Only identity crosses the connection; filesystem paths remain local. */

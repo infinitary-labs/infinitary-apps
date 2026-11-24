@@ -50,6 +50,8 @@ const INPUTS = [
   "tests/e2e/mockProvider.ts", "tests/e2e/crewScripts.ts", "tests/e2e/mockModels.ts", "tests/e2e/providerRequest.ts",
   // INF-2928 piece 3: the test home's Backlog row for a long press and a swipe, and the talk parts' task and its tags.
   "tests/helpers/phoneRowMoves.ts",
+  // The task-list update regressions and the existing Tasks journey's real task seeds.
+  "tests/helpers/phoneTaskFixtures.ts",
   // INF-1242: the test home's Google sign-in stand-in.
   "tests/helpers/phoneGoogle.ts",
   // INF-3563: the script the phone's Settings pages are built by, and the test home's accounts, rules and usage.

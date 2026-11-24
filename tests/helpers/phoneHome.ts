@@ -95,7 +95,7 @@ import {
 } from "./phoneSettings";
 import { phoneTakeOverControls } from "./phoneTakeOver";
 import { phoneTalkControls, TALK_WRITES } from "./phoneTalk";
-import { taskListControl } from "./phoneTaskFixtures";
+import { seedTaskList, updateTaskList } from "./phoneTaskFixtures";
 import { raiseConversationCard, seedReplyReading } from "./replyReading";
 import { startScriptedClient } from "./scriptedClient";
 import { bundleSqlProcess } from "./sqlProcessBundle";
@@ -3408,8 +3408,10 @@ export async function startPhoneHome(
           result = seedTalkTags(core.services.tasks, "phone-work");
           break;
         case "POST task-list-seed":
+          result = seedTaskList(core.services.tasks, await controlBody(request));
+          break;
         case "POST task-list-op":
-          result = taskListControl(core.services.tasks, command, await controlBody(request));
+          result = updateTaskList(core.services.tasks, await controlBody(request));
           break;
         case "POST row-moves-fixture":
           result = await seedRowMoves(core.services.tasks, "phone-work", () =>

@@ -783,8 +783,15 @@ describe("the crewmate tool spec", () => {
   });
 
   it("carries a parameter that may be null as a tool declares it with zod", () => {
-    const schema = Type.Object({ account: zodParameter(z.string().nullable()) });
-    const parameters = z.object(zodShapeOf(schema));
+    const pick = crewmateTool({
+      name: "pick_account",
+      label: "Pick account",
+      description: "Pick an account, or none.",
+      parameters: Type.Object({ account: zodParameter<string | null>(z.string().nullable()) }),
+      bind: () => async (params) => ({ text: String(params.account) }),
+    });
+    const [served] = claudeCrewmateTools(crewmateToolDelegate(), [pick]);
+    const parameters = z.object(served?.inputSchema as Record<string, z.ZodType>);
     expect(parameters.safeParse({ account: null }).success).toBe(true);
     expect(parameters.safeParse({ account: "work-account" }).success).toBe(true);
     expect(parameters.safeParse({ account: 7 }).success).toBe(false);

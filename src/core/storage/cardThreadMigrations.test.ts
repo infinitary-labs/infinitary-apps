@@ -3,6 +3,7 @@ import { setup } from "../../../tests/helpers/cardServiceHarness";
 import { ALL_VERSIONS, appliedVersions, tmpUserData } from "../../../tests/helpers/migrations";
 import { seedTask } from "../tasks/seedTask";
 import { INTERIM_ANSWERS_VERSION, openDatabase } from "./db";
+import { ORIGIN_EVENT } from "./taskEventStore";
 
 // INF-2730's repair: a card an older build left waiting for good, because an
 // author's interim line kept the captain message it named as its answer and
@@ -35,6 +36,11 @@ describe("clearing the answers interim lines kept", () => {
     older.exec("ALTER TABLE cards ADD COLUMN resolved_through TEXT");
     // The current answer lookup reads the original captain text to distinguish /feedback.
     older.exec("ALTER TABLE card_messages ADD COLUMN captain_text TEXT");
+    // Fixture writes use today's card service, which looks up task origins by
+    // index even on this database opened before the current schema is installed.
+    older.exec(
+      `CREATE INDEX task_events_origin ON task_events (task_id, at, id) WHERE ${ORIGIN_EVENT}`,
+    );
     const before = setup(older);
     seedTask(before.tasks, { id: "t1", title: "Fix the meter", status: "idle" });
     const cards = before.make();

@@ -70,6 +70,7 @@ import type {
   ForgeSignInFlow,
   ForgesView,
 } from "./forges";
+import type { HomeAtAnswer, HomeAtOptions } from "./homeAt";
 import type { HomeMoveProgress, HomeMoveReady } from "./homeMove";
 import type { HomeUpdate } from "./homeUpdate";
 import type {
@@ -514,6 +515,10 @@ export type FirstmateApi = {
     joinAt: (address: string, options?: JoinAtOptions) => Promise<JoinAtAnswer>;
     /** Joins with the link `joinAt` held, or forgets it. */
     joinHeld: (choice: "join" | "forget") => Promise<JoinOutcome>;
+    /** One step of setting the first mate up on the computer at an address over SSH (`inf:devices:home-at`). */
+    homeAt: (address: string, options?: HomeAtOptions) => Promise<HomeAtAnswer>;
+    /** Cancel: the setup under way at that address stops at its next step. */
+    cancelHomeAt: (address: string) => Promise<{ ok: true }>;
     /** Stops controlling the other Mac and returns this app to its own first launch. */
     leave: () => Promise<{ ok: true }>;
     /**

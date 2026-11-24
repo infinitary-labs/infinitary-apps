@@ -7349,6 +7349,412 @@
         ]
       }
     },
+    "inf:devices:home-at": {
+      "effect": "change",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "pattern": "^(?:(?:[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}@)?[A-Za-z0-9_[][A-Za-z0-9_.:%[\\]-]{0,190}|ssh:\\/\\/(?:[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}@)?(?:[A-Za-z0-9_][A-Za-z0-9_.-]{0,190}|\\[[A-Za-z0-9:.%]{2,64}\\]):[1-9][0-9]{0,4})$"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "confirm": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160
+              },
+              "password": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1024
+              },
+              "account": {
+                "type": "boolean",
+                "const": true
+              }
+            },
+            "additionalProperties": false
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "asks": {
+                "type": "string",
+                "const": "confirm"
+              },
+              "address": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255
+              },
+              "line": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160
+              }
+            },
+            "required": [
+              "asks",
+              "address",
+              "line"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "asks": {
+                "type": "string",
+                "const": "password"
+              },
+              "address": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255
+              },
+              "user": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "wrong": {
+                "type": "boolean",
+                "const": true
+              },
+              "for": {
+                "type": "string",
+                "enum": [
+                  "install",
+                  "update"
+                ]
+              },
+              "deviceId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              }
+            },
+            "required": [
+              "asks",
+              "address"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "asks": {
+                "type": "string",
+                "const": "account"
+              },
+              "address": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255
+              }
+            },
+            "required": [
+              "asks",
+              "address",
+              "name"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "asks": {
+                "type": "string",
+                "const": "runs"
+              },
+              "address": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255
+              }
+            },
+            "required": [
+              "asks",
+              "address",
+              "name"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "refused": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "key-locked",
+                      "agent-declined",
+                      "agent-not-running",
+                      "key-refused",
+                      "password-off",
+                      "password-wrong",
+                      "key-not-taken",
+                      "remote-login-off",
+                      "unreachable",
+                      "host-unknown",
+                      "host-changed",
+                      "other-system",
+                      "needs-tools",
+                      "sandbox-off",
+                      "cannot-install",
+                      "no-build",
+                      "build-unverified",
+                      "already-joined",
+                      "still-answers",
+                      "in-reach",
+                      "same-user",
+                      "cannot-send",
+                      "not-set-up",
+                      "busy",
+                      "forwarding-refused",
+                      "another-computer",
+                      "failed",
+                      "out-of-reach",
+                      "not-updatable",
+                      "current"
+                    ]
+                  },
+                  {
+                    "type": "string",
+                    "enum": [
+                      "not-an-address",
+                      "root",
+                      "no-systemd",
+                      "no-curl",
+                      "controls",
+                      "no-link",
+                      "not-started",
+                      "cancelled"
+                    ]
+                  }
+                ]
+              },
+              "step": {
+                "type": "string",
+                "enum": [
+                  "key",
+                  "sign-in",
+                  "look",
+                  "send",
+                  "start",
+                  "connect",
+                  "sign-up"
+                ]
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255
+              },
+              "missing": {
+                "maxItems": 16,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 16
+                }
+              },
+              "installs": {
+                "type": "object",
+                "properties": {
+                  "installer": {
+                    "type": "string",
+                    "enum": [
+                      "apt",
+                      "dnf",
+                      "pacman",
+                      "zypper"
+                    ]
+                  },
+                  "t64": {
+                    "type": "boolean"
+                  }
+                }
+              },
+              "reach": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "step": {
+                        "type": "string",
+                        "const": "key"
+                      },
+                      "port": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 65535
+                      },
+                      "answered": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "step",
+                      "port"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "step": {
+                        "type": "string",
+                        "const": "sign-in"
+                      },
+                      "port": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 65535
+                      }
+                    },
+                    "required": [
+                      "step"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "step": {
+                        "type": "string",
+                        "const": "send"
+                      }
+                    },
+                    "required": [
+                      "step"
+                    ]
+                  }
+                ]
+              },
+              "changed": {
+                "type": "boolean",
+                "const": true
+              }
+            },
+            "required": [
+              "refused",
+              "step"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "started": {
+                "type": "boolean",
+                "const": true
+              },
+              "address": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255
+              },
+              "user": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "lingerOff": {
+                "type": "boolean"
+              },
+              "waitsForLogin": {
+                "type": "boolean"
+              },
+              "private": {
+                "type": "boolean"
+              },
+              "firewall": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "enum": [
+                      "ufw",
+                      "firewalld",
+                      "nixos"
+                    ]
+                  },
+                  "port": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 65535
+                  }
+                },
+                "required": [
+                  "name",
+                  "port"
+                ]
+              }
+            },
+            "required": [
+              "started",
+              "address",
+              "name",
+              "lingerOff",
+              "waitsForLogin",
+              "private"
+            ]
+          }
+        ]
+      }
+    },
+    "inf:devices:home-at-cancel": {
+      "effect": "change",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "pattern": "^(?:(?:[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}@)?[A-Za-z0-9_[][A-Za-z0-9_.:%[\\]-]{0,190}|ssh:\\/\\/(?:[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}@)?(?:[A-Za-z0-9_][A-Za-z0-9_.-]{0,190}|\\[[A-Za-z0-9:.%]{2,64}\\]):[1-9][0-9]{0,4})$"
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "ok"
+        ]
+      }
+    },
     "inf:devices:nearby": {
       "effect": "read",
       "reach": "views",

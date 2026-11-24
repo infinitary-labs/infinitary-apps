@@ -342,7 +342,11 @@ export const LINUX: FarSystem = {
     // user cannot make a user namespace; it asks with the launcher's probe.
     `${SANDBOX_PROBE} || printf 'infinitary:sandbox=off\\n'`,
   ],
-  probe: UBUNTU_PROBE_LINES,
+  // Whether systemd runs there, which starting a first mate at boot needs (docs/run.md, "Starting at boot").
+  probe: [
+    ...UBUNTU_PROBE_LINES,
+    "if [ -d /run/systemd/system ]; then printf 'infinitary:systemd=yes\\n'; fi",
+  ],
   // Ubuntu 24.04 and 26.04 run from the package; every other Linux keeps the AppImage.
   kept: UBUNTU_KEPT_LINES,
   setup: [

@@ -195,8 +195,16 @@ export type JoinAnotherMacProps = {
   join?: (link: string) => Promise<JoinOutcome>;
   /** Join by its address's two requests; the app's own by default. */
   byAddress?: JoinByAddress;
-  /** Opens at Paste its link instead of the chips: the welcome's commands route ends there. */
-  opens?: "paste";
+  /**
+   * Opens at Paste its link instead of the chips, where the welcome's
+   * commands route ends, or at Join by its address with `address` in its
+   * field, where the welcome's setup found Infinitary already running.
+   */
+  opens?: "paste" | "address";
+  /** The address `opens: "address"` starts with, as typed. */
+  address?: string;
+  /** Infinitary is not open there: the welcome screen offers to set it up from here with this. */
+  onSetUpFrom?: (address: string) => void;
 };
 
 /**
@@ -204,7 +212,7 @@ export type JoinAnotherMacProps = {
  * looked for while `open`, asked again inside the core's minute, and
  * stopped once it closes, as Settings -> Devices looks for them.
  */
-function useNearby(open: boolean): NearbyMacsView {
+export function useNearby(open: boolean): NearbyMacsView {
   const [nearby, setNearby] = useState<NearbyMacsView>(NEARBY_OFF);
   useEffect(() => {
     if (!open) return;
@@ -232,10 +240,16 @@ export function JoinAnotherMac({
   join,
   byAddress,
   opens,
+  address: opensAddress,
+  onSetUpFrom,
   followStatus: { afterAdd, joins, pastes, outside },
 }: JoinAnotherMacProps) {
   const [step, setStepState] = useState<Step>(
-    opens === "paste" ? { step: "paste", notALink: false } : { step: "closed" },
+    opens === "paste"
+      ? { step: "paste", notALink: false }
+      : opens === "address"
+        ? { step: "address" }
+        : { step: "closed" },
   );
   // Opened at a step: the stage hides its chips from the first frame.
   const openedAtStep = useRef(opens !== undefined);
@@ -246,8 +260,8 @@ export function JoinAnotherMac({
   }, [onOpenChange]);
   const [value, setValue] = useState("");
   // Join by its address: what is typed, kept across every step and refusal.
-  const [address, setAddress] = useState("");
-  const [port, setPort] = useState("");
+  const [address, setAddress] = useState(() => addressParts(opensAddress ?? "").address);
+  const [port, setPort] = useState(() => addressParts(opensAddress ?? "").port);
   const [account, setAccount] = useState<string | null>(null);
   /** The address as asked, with its port: each later step asks it again. */
   const asked = useRef("");
@@ -373,6 +387,7 @@ export function JoinAnotherMac({
       onKeyYes={(line) => void ask(asked.current, { confirm: line })}
       onKeyCancel={() => setStep({ step: "address" })}
       onPassword={(password) => void ask(asked.current, { password })}
+      {...(onSetUpFrom ? { onSetUpFrom } : {})}
     />
   );
 }
@@ -429,6 +444,8 @@ export type JoinAnotherMacViewProps = {
   onKeyCancel: () => void;
   /** That account's password, typed once. */
   onPassword: (password: string) => void;
+  /** Infinitary is not open there: Set it up from here, with the address as asked. */
+  onSetUpFrom?: (address: string) => void;
 };
 
 /** A sentence with the address it names in mono, where the address is the thing itself. */
@@ -636,8 +653,16 @@ export function JoinAnotherMacView(props: JoinAnotherMacViewProps) {
   );
 }
 
-/** One address to type on the first mate's computer, with its own Copy. */
-function CopyLine({ text, name, autoFocus }: { text: string; name: string; autoFocus: boolean }) {
+/** One line to type on another computer, such as an address or a command, with its own Copy. */
+export function CopyLine({
+  text,
+  name,
+  autoFocus = false,
+}: {
+  text: string;
+  name: string;
+  autoFocus?: boolean;
+}) {
   const [copied, copy] = useCopied();
   return (
     <>
@@ -752,26 +777,53 @@ function SetUpStep(props: JoinAnotherMacViewProps & { here: SetUpHere | null }) 
   );
 }
 
+/** The address form's fields and what it does, shared with Set me up on another computer. */
+export type AddressFormProps = {
+  /** The fields' id prefix: `join` here, `home` on the welcome's setup. */
+  id: string;
+  head: string;
+  sub: string;
+  address: string;
+  port: string;
+  account: string;
+  nearby: NearbyMacsView;
+  onAddress: (address: string) => void;
+  onPort: (port: string) => void;
+  onAccount: (account: string) => void;
+  onContinueAddress: () => void;
+  /** Cancel beside Continue; absent, the form has none. */
+  onCancel?: () => void;
+  /** A refusal under the field, with what was typed still in it. */
+  warning?: React.ReactNode;
+};
+
 /**
  * Join by its address's first step (design skill JoinAnotherMac, "By its
  * address"): the account and computer, an optional port, Continue and
  * Cancel, then Your account above the computers nearby. A refusal is one
  * warning line, with what was typed still in the fields.
  */
-function AddressStep(
-  props: JoinAnotherMacViewProps & { step: Extract<Step, { step: "address" }> },
-) {
-  const { step, address, port, account, nearby } = props;
+export function AddressForm(props: AddressFormProps) {
+  const { id, address, port, account, nearby } = props;
   const form = useRef<HTMLFormElement>(null);
-  const field = () => form.current?.querySelector<HTMLInputElement>("#join-address");
+  const field = () => form.current?.querySelector<HTMLInputElement>(`#${id}-address`);
   const [picked, setPicked] = useState<string | null>(null);
   useEffect(() => {
     if (picked === null) return;
-    const at = form.current?.querySelector<HTMLInputElement>("#join-address");
+    const at = form.current?.querySelector<HTMLInputElement>(`#${id}-address`);
     if (at && at.value === picked) focusWithRing(at);
     setPicked(null);
-  }, [picked]);
+  }, [picked, id]);
   const user = account.trim();
+  const toNearby = (event: React.KeyboardEvent) => {
+    if (event.key !== "ArrowDown") return;
+    const first = form.current?.querySelector<HTMLElement>(
+      "[data-device-nearby-mac][tabindex='0']",
+    );
+    if (!first) return;
+    event.preventDefault();
+    focusWithRing(first);
+  };
   return (
     <form
       ref={form}
@@ -781,70 +833,49 @@ function AddressStep(
         if (address.trim()) props.onContinueAddress();
       }}
     >
-      <label className="fm-join-head" htmlFor="join-address">
-        {m.devicesJoinAddressChip()}
+      <label className="fm-join-head" htmlFor={`${id}-address`}>
+        {props.head}
       </label>
-      <p className="fm-join-sub">
-        {m.devicesJoinAddressSub({ computer: COMPUTER.one, mustBeOn: sshMustBeOn() })}
-      </p>
+      <p className="fm-join-sub">{props.sub}</p>
       <div className="fm-join-field">
         <div>
           <Input
-            id="join-address"
+            id={`${id}-address`}
             mono
             // i18n-exempt: a sample account and computer address
             placeholder="kun@studio"
             value={address}
             onChange={(event) => props.onAddress(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key !== "ArrowDown") return;
-              const first = form.current?.querySelector<HTMLElement>(
-                "[data-device-nearby-mac][tabindex='0']",
-              );
-              if (!first) return;
-              event.preventDefault();
-              focusWithRing(first);
-            }}
+            onKeyDown={toNearby}
             autoFocus
             spellCheck={false}
             autoComplete="off"
           />
         </div>
-        <PortField id="join-port" value={port} onChange={props.onPort} />
+        <PortField id={`${id}-port`} value={port} onChange={props.onPort} />
         <Button variant="primary" size="sm" type="submit" disabled={!address.trim()}>
           {m.devicesJoinContinue()}
         </Button>
-        <Button variant="ghost" size="sm" onClick={props.onCancel}>
-          {m.devicesJoinCancel()}
-        </Button>
+        {props.onCancel && (
+          <Button variant="ghost" size="sm" onClick={props.onCancel}>
+            {m.devicesJoinCancel()}
+          </Button>
+        )}
       </div>
-      {step.refused && (
-        <p className="fm-join-warn" role="alert" data-join-warn="" data-join-refused={step.refused}>
-          <StatusDot tone="warn" label={m.devicesJoinNotJoined()} nativeTitle={false} />
-          <span>{joinAtRefusalWords(step.refused, step.at ?? address.trim(), step.reach)}</span>
-        </p>
-      )}
+      {props.warning}
       {nearby.macs.length > 0 && (
         <div className="fm-join-account">
-          <label className="fm-devices-nearby-label" htmlFor="join-account">
+          <label className="fm-devices-nearby-label" htmlFor={`${id}-account`}>
             {m.devicesJoinYourAccount()}
           </label>
           <Input
-            id="join-account"
+            id={`${id}-account`}
             mono
             // i18n-exempt: a sample account name
             placeholder="kun"
             value={account}
             onChange={(event) => props.onAccount(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key !== "ArrowDown") return;
-              const first = form.current?.querySelector<HTMLElement>(
-                "[data-device-nearby-mac][tabindex='0']",
-              );
-              if (!first) return;
-              event.preventDefault();
-              focusWithRing(first);
-            }}
+            onKeyDown={toNearby}
             spellCheck={false}
             autoComplete="off"
           />
@@ -861,11 +892,61 @@ function AddressStep(
           setPicked(picked);
         }}
         onLeave={() => {
-          const above = form.current?.querySelector<HTMLInputElement>("#join-account") ?? field();
+          const above = form.current?.querySelector<HTMLInputElement>(`#${id}-account`) ?? field();
           if (above) focusWithRing(above);
         }}
       />
     </form>
+  );
+}
+
+/** Join by its address's form, with its refusal under the field. */
+function AddressStep(
+  props: JoinAnotherMacViewProps & { step: Extract<Step, { step: "address" }> },
+) {
+  const { step, address } = props;
+  const at = step.at ?? address.trim();
+  // Nothing open there: the welcome screen offers to set it up from here instead.
+  const setUpFrom = step.refused === "not-open" && props.onSetUpFrom;
+  return (
+    <AddressForm
+      {...props}
+      id="join"
+      head={m.devicesJoinAddressChip()}
+      sub={m.devicesJoinAddressSub({ computer: COMPUTER.one, mustBeOn: sshMustBeOn() })}
+      warning={
+        step.refused && (
+          <>
+            <p
+              className="fm-join-warn"
+              role="alert"
+              data-join-warn=""
+              data-join-refused={step.refused}
+            >
+              <StatusDot tone="warn" label={m.devicesJoinNotJoined()} nativeTitle={false} />
+              <span>
+                {setUpFrom
+                  ? m.devicesHomeNotOpen({ address: at })
+                  : joinAtRefusalWords(step.refused, at, step.reach)}
+              </span>
+            </p>
+            {setUpFrom && (
+              <div className="fm-join-buttons">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  type="button"
+                  data-join-set-up-from=""
+                  onClick={() => setUpFrom(at)}
+                >
+                  {m.devicesHomeSetUpFrom()}
+                </Button>
+              </div>
+            )}
+          </>
+        )
+      }
+    />
   );
 }
 
@@ -874,10 +955,18 @@ function AddressStep(
  * person's SSH key in, as Settings -> Devices asks it: the field holds what
  * is typed until Continue sends it on that one call, then empties.
  */
-function PasswordStep(props: JoinAnotherMacViewProps & { question: RemoteLoginPasswordQuestion }) {
+export function PasswordStep(props: {
+  question: RemoteLoginPasswordQuestion;
+  onPassword: (password: string) => void;
+  onKeyCancel: () => void;
+}) {
   const { question } = props;
   const [typed, setTyped] = useState("");
-  const [found, say] = remoteLoginWords.passwordQuestion(question.address);
+  // The welcome's setup asks it for sudo to install there too, as Settings' add does.
+  const [found, say] =
+    question.for === "install"
+      ? remoteLoginWords.passwordInstallQuestion(question.address)
+      : remoteLoginWords.passwordQuestion(question.address);
   const field = remoteLoginWords.passwordField(question.user);
   return (
     <form

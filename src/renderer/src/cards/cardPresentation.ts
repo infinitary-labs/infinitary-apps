@@ -37,6 +37,21 @@ function laidOutHeight(element: Element): number {
 }
 
 /**
+ * The shown entry's height under the held shell, before its body grows. A
+ * surface's floor (`cardFloor`, the room a maximized card has) can hold it
+ * taller than the shell, overflowing the entry; the shell's natural height
+ * starts from that surface, not from the shell it overflows (INF-6510).
+ * `scrollHeight` is layout, so the entry's own arrival transform leaves it
+ * alone; the peeks sit above the entry, which a scroll height never counts,
+ * and a card surface scrolls its own content, so nothing inside it reaches
+ * past it. `scrollHeight` is whole pixels, so only more than rounding counts.
+ */
+function heldHeight(shown: HTMLElement): number {
+  const laidOut = laidOutHeight(shown);
+  return shown.scrollHeight > laidOut + 1 ? shown.scrollHeight : laidOut;
+}
+
+/**
  * A card's parts besides its body: the head, the title and the revised line
  * in its middle (ResponseCard's `data-card-middle`, which holds the body),
  * and the rows under it. Their heights are the card's chrome, and each is an
@@ -166,7 +181,7 @@ export function useCardPresentation(
     // Release only the presentation constraint, once before paint. The
     // intrinsic iframe viewport NEVER follows the shell's animated height.
     if (!scrolls) shell.dataset.cardGeometry = "natural";
-    const natural = Math.min(cap, shown ? laidOutHeight(shown) + (scrolls ? overflow : 0) : 0);
+    const natural = Math.min(cap, shown ? heldHeight(shown) + (scrolls ? overflow : 0) : 0);
     const card = shown?.querySelector<HTMLElement>("[data-response-card]");
     // A lone card's one field is its own chrome, above its choices (INF-924).
     const chrome = card ? chromeParts(card).reduce((sum, part) => sum + laidOutHeight(part), 2) : 0;

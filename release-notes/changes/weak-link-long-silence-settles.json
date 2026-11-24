@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "weak-link-long-silence-settles",
+      "reason": "Phone check test only, nothing a person sees: the weak-link check of a long silence starts its silence once the phone has no read out, so the captain's 20 s cut applies; the session's silence rule is unchanged and now read from one place."
+    }
+  ]
+}

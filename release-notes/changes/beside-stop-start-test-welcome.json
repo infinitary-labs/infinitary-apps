@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "beside-stop-start-test-welcome",
+      "reason": "Repairs an intermittent unit test of the window opened beside a command: its stop and start case now waits for the command's welcome as the window does, and its poll reports what the window showed instead of timing out; nothing in the app changes."
+    }
+  ]
+}

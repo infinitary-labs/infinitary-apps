@@ -480,7 +480,7 @@ describe("the window beside a command's first mate", () => {
   it("stops the command on Stop, and starts it again through its starter on Start it here", async () => {
     const command = commandRun();
     await command.open().settled();
-    const at = besideShell(command.doorDir, { starts: true, readyMs: 50 });
+    const at = besideShell(command.doorDir, { starts: true });
     await at.start();
     expect(await at.shell.join("not a link")).toEqual({ ok: false, refused: "not-a-link" });
     expect(at.shell.stopCommand()).toBe(true);
@@ -488,7 +488,7 @@ describe("the window beside a command's first mate", () => {
     at.command.records = stopped("quit", 0);
     await command.stop();
     await expect
-      .poll(() => at.shell.thisMac(), { timeout: 5_000 })
+      .poll(() => at.shell.thisMac(), { timeout: 3_000 })
       .toEqual({
         role: "home",
         left: null,

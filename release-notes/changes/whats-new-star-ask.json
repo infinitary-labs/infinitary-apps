@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "whats-new-star-ask",
+      "kind": "feature",
+      "title": "What's new may ask you to star Infinitary on GitHub",
+      "body": "Once your crew has finished three tasks, the What's new note may show a short panel asking you to star the project on GitHub. Star on GitHub opens the project's page in your browser. It shows at most three times, at least 30 days apart, and never again once you open the page or your GitHub sign-in shows you starred it.",
+      "area": "updates",
+      "picture": {
+        "dark": "whats-new-star-ask-dark.webp",
+        "light": "whats-new-star-ask-light.webp",
+        "alt": "A What's new note with an Open source panel between the highlights and the full list, saying Infinitary is open source and a star on GitHub helps more people discover it, with a Star on GitHub button"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

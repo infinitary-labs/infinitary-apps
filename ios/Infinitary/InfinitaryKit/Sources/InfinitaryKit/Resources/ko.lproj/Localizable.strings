@@ -4018,6 +4018,9 @@
 "shellVoiceNotNow" = "나중에";
 "shellVoiceOpenSettings" = "시스템 설정 열기";
 "shellVoiceOpenWindowsSettings" = "Windows 설정 열기";
+"starAskButton" = "GitHub에서 별 누르기";
+"starAskLabel" = "오픈 소스";
+"starAskWords" = "Infinitary는 오픈 소스예요. 유용하다고 느끼셨다면 GitHub에서 별을 눌러 주세요. 더 많은 사람이 찾는 데 도움이 돼요.";
 "taskBrowserDriverCaptain" = "선장님이 조작 중이에요";
 "taskBrowserDriverCrewmate" = "선원이 조작 중이에요";
 "taskBrowserDriverNobody" = "조작하는 사람이 없어요";

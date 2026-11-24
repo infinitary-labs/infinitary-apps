@@ -15,6 +15,7 @@ import {
   intentOf,
   setup,
 } from "../../../tests/helpers/crewHarness";
+import { SettingsStore } from "../storage/settingsStore";
 import { forgeAuthRequired } from "../workspace/forgeAuth";
 import { startHomeForges } from "./homeForges";
 
@@ -63,7 +64,12 @@ describe("a Bitbucket sign-in at the home", () => {
       namingRule: () => null,
       push: () => {},
     });
-    forges.attachCrew({ supervisor, tasks, broadcastEvent: () => {} });
+    forges.attachCrew({
+      supervisor,
+      tasks,
+      broadcastEvent: () => {},
+      settings: new SettingsStore(ctx.db),
+    });
     expect(
       await forges.signIns.signInWithKey({ kind: "bitbucket", address: HOST, key: FIRST_KEY }),
     ).toEqual({ ok: true, host: HOST });

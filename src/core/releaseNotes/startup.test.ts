@@ -45,6 +45,7 @@ function setup(profile: "fresh" | "legacy" = "legacy") {
       broadcastCards: (cards) => published.push(cards.map((card) => card.id)),
     });
   let cards = makeCards();
+  let githubSignedIn = false;
   // This build's pictures beside its catalog, and where the host keeps its copies.
   const picturesDir = scratchDir("infinitary-release-notes-pictures-");
   const keptDir = join(scratchDir("infinitary-release-notes-kept-"), "release-notes", "cards");
@@ -63,6 +64,7 @@ function setup(profile: "fresh" | "legacy" = "legacy") {
           cards.addRecordedFirstmateNote(note, record, { onTop: true });
         },
         keepPicture: (file) => keepPictureFile(file, { dir: keptDir, taskId: "release-notes" }),
+        githubSignedIn: () => githubSignedIn,
         now,
       },
       { version, source: null },
@@ -92,6 +94,10 @@ function setup(profile: "fresh" | "legacy" = "legacy") {
     },
     picturesDir,
     keptDir,
+    signInToGitHub: () => {
+      githubSignedIn = true;
+    },
+    now,
     top: () => cards.snapshot()[0],
     releaseNotes: () => cards.snapshot().filter((card) => RELEASE_TITLE.test(card.title)),
     tracking: () => settings.getReleaseTracking(),
@@ -236,6 +242,54 @@ describe("an upgrade", () => {
     expect(f.launch("0.1.27")).toBe("delivered");
     expect(f.top()?.title).toBe("Your alpha is now stable");
     expect(f.tracking().deliveries["0.1.27"]).toMatchObject({ entryIds: [], coverage: "complete" });
+  });
+});
+
+describe("the star ask", () => {
+  const ASK = 'data-star-ask=""';
+  const crewFinishedThree = (f: ReturnType<typeof setup>) =>
+    f.settings.setFirstRun({ ...f.settings.getFirstRun(), thirdCrewmateDoneAt: f.now() });
+
+  it("is stamped with the note's delivery, and the next note within 30 days leaves it out", () => {
+    const f = setup();
+    f.seed("0.1.25");
+    crewFinishedThree(f);
+    f.launch("0.1.26");
+    expect(f.top()?.body).toContain(ASK);
+    const deliveredAt = f.tracking().deliveries["0.1.26"]?.deliveredAt;
+    expect(f.tracking().starAsk?.shownAt).toEqual([deliveredAt]);
+
+    f.launch("0.1.27");
+    expect(f.top()?.title).toBe("What’s new in stable 0.1.27");
+    expect(f.top()?.body).not.toContain(ASK);
+    expect(f.tracking().starAsk?.shownAt).toEqual([deliveredAt]);
+  });
+
+  it("counts no show when the delivery's write fails", () => {
+    const f = setup();
+    f.seed("0.1.25");
+    crewFinishedThree(f);
+    vi.spyOn(f.settings, "setReleaseTracking").mockImplementationOnce(() => {
+      throw new Error("disk full");
+    });
+    expect(f.launch("0.1.27")).toBe("failed");
+    expect(f.tracking().starAsk).toBeUndefined();
+  });
+
+  it("waits for the crew's third finished task, and for a star answer when a GitHub sign-in is on file", () => {
+    const waiting = setup();
+    waiting.seed("0.1.25");
+    waiting.launch("0.1.27");
+    expect(waiting.top()?.body).not.toContain(ASK);
+
+    const signedIn = setup();
+    signedIn.seed("0.1.25");
+    crewFinishedThree(signedIn);
+    signedIn.signInToGitHub();
+    signedIn.launch("0.1.27");
+    expect(signedIn.top()?.title).toBe("What’s new in stable 0.1.27");
+    expect(signedIn.top()?.body).not.toContain(ASK);
+    expect(signedIn.tracking().starAsk).toBeUndefined();
   });
 });
 

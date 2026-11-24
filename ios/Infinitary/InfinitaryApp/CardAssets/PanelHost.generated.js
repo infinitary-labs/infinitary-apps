@@ -95839,6 +95839,87 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Open Windows Settings`;
   }
+  function starAskButton() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ضع نجمة على GitHub`;
+      case "de":
+        return `Auf GitHub mit einem Stern markieren`;
+      case "es":
+        return `Dar una estrella en GitHub`;
+      case "fr":
+        return `Ajouter une étoile sur GitHub`;
+      case "ja":
+        return `GitHub でスターを付ける`;
+      case "ko":
+        return `GitHub에서 별 누르기`;
+      case "pt-BR":
+        return `Dar uma estrela no GitHub`;
+      case "zh-Hans":
+        return `在 GitHub 上点星`;
+      case "zh-Hant":
+        return `在 GitHub 上點星`;
+      case "en-XA":
+        return `[Šţáŕ öñ ĜîţĤûƀ ~~~~~]`;
+      case "ar-XB":
+        return `‮Star on GitHub‬`;
+    }
+    return `Star on GitHub`;
+  }
+  function starAskLabel() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `مفتوح المصدر`;
+      case "de":
+        return `Open Source`;
+      case "es":
+        return `Código abierto`;
+      case "fr":
+        return `Open source`;
+      case "ja":
+        return `オープンソース`;
+      case "ko":
+        return `오픈 소스`;
+      case "pt-BR":
+        return `Código aberto`;
+      case "zh-Hans":
+        return `开源`;
+      case "zh-Hant":
+        return `開源`;
+      case "en-XA":
+        return `[Öþéñ šöûŕçé ~~~~]`;
+      case "ar-XB":
+        return `‮Open source‬`;
+    }
+    return `Open source`;
+  }
+  function starAskWords() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `Infinitary مفتوح المصدر. إذا وجدته مفيدًا، فإن نجمة على GitHub تساعد المزيد من الناس على اكتشافه.`;
+      case "de":
+        return `Infinitary ist Open Source. Wenn du es nützlich findest, hilft ein Stern auf GitHub mehr Menschen, es zu entdecken.`;
+      case "es":
+        return `Infinitary es de código abierto. Si te resulta útil, una estrella en GitHub ayuda a que más personas lo descubran.`;
+      case "fr":
+        return `Infinitary est open source. Si vous le trouvez utile, une étoile sur GitHub aide davantage de personnes à le découvrir.`;
+      case "ja":
+        return `Infinitary はオープンソースです。役に立つと感じたら、GitHub でスターを付けていただくと、より多くの人に見つけてもらえます。`;
+      case "ko":
+        return `Infinitary는 오픈 소스예요. 유용하다고 느끼셨다면 GitHub에서 별을 눌러 주세요. 더 많은 사람이 찾는 데 도움이 돼요.`;
+      case "pt-BR":
+        return `O Infinitary é de código aberto. Se ele for útil para você, uma estrela no GitHub ajuda mais pessoas a descobri-lo.`;
+      case "zh-Hans":
+        return `Infinitary 是开源的。如果你觉得它有用，在 GitHub 上点一颗星能帮助更多人发现它。`;
+      case "zh-Hant":
+        return `Infinitary 是開源的。如果你覺得它有用，在 GitHub 上點一顆星能幫助更多人發現它。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý îš öþéñ šöûŕçé. Îƒ ýöû ƒîñð îţ ûšéƒûļ, á šţáŕ öñ ĜîţĤûƀ ĥéļþš ɱöŕé þéöþļé ðîšçöṽéŕ îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary is open source. If you find it useful, a star on GitHub helps more people discover it.‬`;
+    }
+    return `Infinitary is open source. If you find it useful, a star on GitHub helps more people discover it.`;
+  }
   function taskBrowserDriverCaptain() {
     switch (currentLanguage()) {
       case "ar":
@@ -105840,6 +105921,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     shellVoiceNotNow,
     shellVoiceOpenSettings,
     shellVoiceOpenWindowsSettings,
+    starAskButton,
+    starAskLabel,
+    starAskWords,
     taskBrowserDriverCaptain,
     taskBrowserDriverCrewmate,
     taskBrowserDriverNobody,
@@ -109164,6 +109248,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "shellVoiceNotNow": [],
     "shellVoiceOpenSettings": [],
     "shellVoiceOpenWindowsSettings": [],
+    "starAskButton": [],
+    "starAskLabel": [],
+    "starAskWords": [],
     "taskBrowserDriverCaptain": [],
     "taskBrowserDriverCrewmate": [],
     "taskBrowserDriverNobody": [],

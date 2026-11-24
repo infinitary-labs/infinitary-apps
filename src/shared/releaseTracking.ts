@@ -39,6 +39,38 @@ export const unresolvedRangeSchema = z.object({
 });
 export type UnresolvedRange = z.infer<typeof unresolvedRangeSchema>;
 
+/**
+ * The What's new note's ask to star the project (docs/release-notes.md "The
+ * star ask"): what stops it for good and what spaces it out. Absent on a
+ * record no build with the ask has written, which reads as never shown.
+ */
+export const starAskRecordSchema = z.object({
+  /** When each note that carried the ask was delivered, oldest first. */
+  shownAt: z.array(z.number()),
+  /** When the person opened the project's page from a note; null until then. */
+  openedAt: z.number().nullable(),
+  /** The last answer the person's github.com sign-in gave, and when it was read; null until one. */
+  star: z.object({ starred: z.boolean(), readAt: z.number() }).nullable(),
+});
+export type StarAskRecord = z.infer<typeof starAskRecordSchema>;
+
+/** The project the star ask names, as GitHub names it. */
+export const STAR_PROJECT = "infinitary-labs/infinitary-apps";
+/** The project's page, where the person stars it themselves. */
+export const STAR_PAGE_URL = `https://github.com/${STAR_PROJECT}`;
+export const STAR_ASKS_MAX = 3;
+const DAY_MS = 24 * 60 * 60 * 1000;
+export const STAR_ASK_SPACING_MS = 30 * DAY_MS;
+/** At most one read of the star a day. */
+export const STAR_READ_EVERY_MS = DAY_MS;
+
+export const NO_STAR_ASK: StarAskRecord = { shownAt: [], openedAt: null, star: null };
+
+/** Whether the ask could ever show again: no star, no visit, and asks left. */
+export function starAskOpen(ask: StarAskRecord): boolean {
+  return ask.star?.starred !== true && ask.openedAt === null && ask.shownAt.length < STAR_ASKS_MAX;
+}
+
 export const releaseTrackingSchema = z.object({
   schema: z.literal(1),
   profile: z.enum(["fresh", "legacy"]),
@@ -49,8 +81,13 @@ export const releaseTrackingSchema = z.object({
   /** Keyed by target version. */
   deliveries: z.record(z.string(), releaseDeliverySchema),
   unresolved: z.array(unresolvedRangeSchema),
+  starAsk: starAskRecordSchema.optional(),
 });
 export type ReleaseTrackingRecord = z.infer<typeof releaseTrackingSchema>;
+
+export function starAskOf(tracking: ReleaseTrackingRecord): StarAskRecord {
+  return tracking.starAsk ?? NO_STAR_ASK;
+}
 
 /** A profile whose record is missing or unreadable: no known baseline, no history to invent. */
 export const UNKNOWN_RELEASE_TRACKING: ReleaseTrackingRecord = {

@@ -4016,6 +4016,9 @@
 "shellVoiceNotNow" = "暫時不要";
 "shellVoiceOpenSettings" = "開啟系統設定";
 "shellVoiceOpenWindowsSettings" = "開啟 Windows 設定";
+"starAskButton" = "在 GitHub 上點星";
+"starAskLabel" = "開源";
+"starAskWords" = "Infinitary 是開源的。如果你覺得它有用，在 GitHub 上點一顆星能幫助更多人發現它。";
 "taskBrowserDriverCaptain" = "你正在操作";
 "taskBrowserDriverCrewmate" = "船員正在操作";
 "taskBrowserDriverNobody" = "沒有人在操作";

@@ -4,8 +4,9 @@ import { offersAddressChange, offersHomeMove, offersStandby } from "./deviceActs
 import { COMPUTER, HERE } from "./deviceNames";
 import { GITHUB_HOST } from "./deviceSetup";
 import { type DeviceView, deviceRunsWork, deviceWords } from "./devices";
+import * as m from "./i18n/messages.generated.ts";
 import { KEPT_ITEM_PREFIX, type KeptJobsView } from "./keptJobs";
-import { SECRETS_AREAS, SECRETS_WORDS } from "./secrets";
+import { SECRET_COPY_SECONDS, SECRET_ROW_ITEM, SECRETS_AREAS, SECRETS_WORDS } from "./secrets";
 import { type DeviceSignIns, signInPlace } from "./signIns";
 import { runsForAnotherFirstmate } from "./sshConnection";
 import type { StandbyViews } from "./standby";
@@ -88,6 +89,17 @@ const SECRETS_PAGE_SAYS: Record<(typeof SECRETS_PAGES)[number], string> = {
   history: "It lists each use of a secret, and exports or deletes that history.",
   copy: "It saves the Secrets to recovery files, or restores them from those files.",
 };
+
+/** A secret's row card's id part: its name in lower case, letters and digits joined by dashes. */
+function secretRowCardKey(secret: string): string {
+  return (
+    secret
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 48) || "secret"
+  );
+}
 
 export const handoverLines = {
   "device-change-address": {
@@ -311,25 +323,40 @@ export const handoverLines = {
     handover: "settings",
     change: null,
     current: null,
-    value: z.strictObject({ page: z.enum(SECRETS_PAGES) }),
-    line: `Open a page of Secrets for the captain when they ask to see or manage it: app_change offers one card whose button opens it in Settings → Secrets. page: ${SECRETS_AREAS.map((area) => `${area.value} (${area.label})`).join(", ")}. Every act there, such as Export history, stays their click, and no value ever reaches you.`,
+    value: z
+      .strictObject({
+        page: z.enum(SECRETS_PAGES).optional(),
+        secret: z.string().trim().min(1).max(120).optional(),
+      })
+      .refine((v) => (v.page === undefined) !== (v.secret === undefined), {
+        message: "secrets-page takes a page or a secret",
+      }),
+    line: `Open a page of Secrets, or one secret's row, for the captain when they ask to see or manage it: app_change offers one card whose button opens it in Settings → Secrets. page: ${SECRETS_AREAS.map((area) => `${area.value} (${area.label})`).join(", ")}. Or secret: the secret's name as the captain calls it, when they ask to read a saved value back; its row's Copy value puts the value on that computer's clipboard after the computer confirms them, and clears it ${SECRET_COPY_SECONDS} seconds later. Every act there, such as Export history or Copy value, stays their click, and no value ever reaches you.`,
     alwaysTrail: true,
     toRequest: () => [],
     readValue: () => ({}),
     done: () => "offered a page of Secrets",
     offer: (v) => {
-      const page = v.page as (typeof SECRETS_PAGES)[number];
-      const name = SECRETS_AREAS.find((area) => area.value === page)?.label ?? page;
+      const secret = v.secret as string | undefined;
+      const page = v.page as (typeof SECRETS_PAGES)[number] | undefined;
+      const name =
+        secret ?? SECRETS_AREAS.find((area) => area.value === page)?.label ?? String(page);
       return {
-        cardId: `app-secrets-page-${page}`,
-        title: `Open ${name} in Secrets`,
-        paragraphs: [
-          SECRETS_PAGE_SAYS[page],
-          `It opens in Settings → Secrets, under ${SECRETS_WORDS.management}. What you do there stays yours.`,
-        ],
+        cardId: secret ? `app-secrets-row-${secretRowCardKey(secret)}` : `app-secrets-page-${page}`,
+        title: secret ? m.settingsSecretsRowOfferTitle({ secret }) : `Open ${name} in Secrets`,
+        paragraphs: secret
+          ? [m.settingsSecretsRowOfferSays({ seconds: String(SECRET_COPY_SECONDS) })]
+          : [
+              SECRETS_PAGE_SAYS[page as (typeof SECRETS_PAGES)[number]],
+              `It opens in Settings → Secrets, under ${SECRETS_WORDS.management}. What you do there stays yours.`,
+            ],
         label: "Open Secrets",
         decline: "Not now",
-        arrival: { section: "secrets", item: page, fromHome: true },
+        arrival: {
+          section: "secrets",
+          item: secret ? `${SECRET_ROW_ITEM}${secret}` : String(page),
+          fromHome: true,
+        },
       };
     },
   },

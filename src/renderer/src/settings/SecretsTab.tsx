@@ -4,6 +4,8 @@ import { needsReference, secretName } from "@shared/secretNames";
 import {
   decisionWords,
   SECRET_APPROVAL_WORDS,
+  SECRET_COPY_WORDS,
+  SECRET_ROW_ITEM,
   SECRET_STATE_WORDS,
   SECRETS_AREAS,
   SECRETS_RECOVERY_WORDS,
@@ -63,7 +65,11 @@ const PROBLEM: Partial<Record<SecretsView["availability"], string>> = {
   },
 };
 
-/** Trusted application chrome only. No value is rendered back, copied, or passed to an agent frame. */
+/**
+ * Trusted application chrome only. No value is rendered back or passed to an
+ * agent frame; Copy value asks the host to copy one, and the value never
+ * reaches this page (docs/secrets.md, "Copying a value").
+ */
 export function SecretsTab() {
   const [view, setView] = useState<SecretsView | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -221,14 +227,42 @@ export function SecretsTab() {
   const arrival = useShellStore((s) =>
     s.settingsItem?.section === "secrets" ? s.settingsItem.item : null,
   );
+  // A secret's row the first mate's offer named (`secret:` and its name or
+  // reference) opens once the list is read; a name that matches nothing
+  // leaves Secrets as it is.
+  const [rowArrival, setRowArrival] = useState<string | null>(null);
   useEffect(() => {
     if (arrival === null) return;
     useShellStore.getState().clearSettingsItem();
+    if (arrival.startsWith(SECRET_ROW_ITEM)) {
+      setRowArrival(arrival.slice(SECRET_ROW_ITEM.length).trim());
+      return;
+    }
     const area = SECRETS_AREAS.find((option) => option.value === arrival)?.value;
     if (!area) return;
     setOpened(new Set([area]));
     setManaging(true);
   }, [arrival]);
+  useEffect(() => {
+    if (rowArrival === null || !view) return;
+    setRowArrival(null);
+    const named = rowArrival.toLocaleLowerCase();
+    const entry =
+      view.entries.find((candidate) => candidate.ref === rowArrival) ??
+      view.entries.find((candidate) => candidate.label.toLocaleLowerCase() === named);
+    if (!entry) return;
+    setSearch("");
+    setManaging(false);
+    // The row exists once Manage has closed and the search no longer hides it.
+    requestAnimationFrame(() => {
+      const row = root.current?.querySelector<HTMLDetailsElement>(
+        `[data-secret-row="${CSS.escape(entry.ref)}"] > details`,
+      );
+      if (!row) return;
+      row.open = true;
+      row.querySelector<HTMLElement>("summary")?.focus();
+    });
+  }, [rowArrival, view]);
   const leaveManagement = () => {
     if (asked) drop(asked.at);
     setManaging(false);
@@ -526,9 +560,13 @@ function SecretRow({
       ? SECRETS_WORDS.waitingRow
       : entry.lastRequest === null
         ? SECRETS_WORDS.notUsed
-        : SECRETS_WORDS.used(dayOf(entry.lastRequest), entry.lastTask);
+        : entry.lastCopied
+          ? SECRET_COPY_WORDS.copiedOn(
+              formatDate(entry.lastRequest, { month: "short", day: "numeric" }),
+            )
+          : SECRETS_WORDS.used(dayOf(entry.lastRequest), entry.lastTask);
   return (
-    <li className="fm-secrets-key">
+    <li className="fm-secrets-key" data-secret-row={entry.ref}>
       <details
         className="fm-secrets-entry"
         onToggle={(event) => {
@@ -549,7 +587,14 @@ function SecretRow({
         </summary>
         <div className="fm-secrets-key-body">
           {entry.kept ? (
-            <Kept forProgram={entry.forProgram === true} />
+            <Kept
+              forProgram={entry.forProgram === true}
+              copy={
+                entry.forProgram ? (
+                  <CopyValue entry={entry} view={view} act={act} busy={asking.busy} />
+                ) : null
+              }
+            />
           ) : (
             <OwnSecret
               entry={entry}
@@ -558,8 +603,10 @@ function SecretRow({
               entryNote={entryNote}
               onReplace={onReplace}
               rules={rules}
+              copy={<CopyValue entry={entry} view={view} act={act} busy={asking.busy} />}
             />
           )}
+          <CopiedLine entry={entry} view={view} act={act} busy={asking.busy} />
         </div>
       </details>
       {reads.map((read) => (
@@ -582,6 +629,7 @@ function OwnSecret({
   entryNote,
   onReplace,
   rules,
+  copy,
 }: {
   entry: Entry;
   asking: Asking;
@@ -589,6 +637,7 @@ function OwnSecret({
   entryNote: string | undefined;
   onReplace: (trigger: HTMLButtonElement) => void;
   rules: SecretsView["rules"];
+  copy: React.ReactNode;
 }) {
   const { view, busy } = asking;
   const at = `row:${entry.ref}`;
@@ -602,6 +651,7 @@ function OwnSecret({
         <SecretQuestion question={question} answering={busy} onAnswer={asking.answer} />
       ) : (
         <div className="fm-secrets-actions">
+          {copy}
           <Button
             variant="secondary"
             off={!canWrite || entryNote !== undefined}
@@ -642,17 +692,102 @@ function OwnSecret({
  * or giving the key was the consent, so it has no Replace, Forget or
  * decisions here.
  */
-function Kept({ forProgram }: { forProgram: boolean }) {
+function Kept({ forProgram, copy }: { forProgram: boolean; copy: React.ReactNode }) {
   return (
     <div className="fm-secrets-kept" data-secrets-kept>
       <p className="fm-secrets-kept-note">
         {forProgram ? m.settingsSecretsKeptForProgram() : m.settingsSecretsKeptSignIn()}
       </p>
       <div className="fm-secrets-actions">
+        {copy}
         <Button variant="secondary" onClick={openIntegrations}>
           {m.settingsSecretsManageInIntegrations()}
         </Button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Copy value (docs/secrets.md, "Copying a value"): the host asks the system to
+ * confirm the person, then copies the value itself. Absent where this
+ * computer has no private clipboard writer.
+ */
+function CopyValue({
+  entry,
+  view,
+  act,
+  busy,
+}: {
+  entry: Entry;
+  view: SecretsView;
+  act: Act;
+  busy: boolean;
+}) {
+  if (!view.copy) return null;
+  const cannot = view.copy === "no-confirmation";
+  return (
+    <span data-secret-copy="">
+      <Button
+        variant="secondary"
+        off={cannot || busy}
+        note={
+          cannot
+            ? SECRET_COPY_WORDS.cannotConfirm
+            : busy
+              ? m.settingsSecretsWaitForChange()
+              : undefined
+        }
+        onClick={() =>
+          void act({
+            kind: "copy",
+            ref: entry.ref,
+            version: entry.version,
+            revision: entry.revision,
+          })
+        }
+      >
+        {SECRET_COPY_WORDS.copy}
+      </Button>
+    </span>
+  );
+}
+
+/** While a copied value is on the clipboard: when it leaves, and Clear now. */
+function CopiedLine({
+  entry,
+  view,
+  act,
+  busy,
+}: {
+  entry: Entry;
+  view: SecretsView;
+  act: Act;
+  busy: boolean;
+}) {
+  const copied = view.copied?.ref === entry.ref ? view.copied : undefined;
+  if (!copied) return null;
+  return (
+    <div className="fm-secrets-key-read" data-secret-copied="">
+      <span aria-live="polite">
+        {SECRET_COPY_WORDS.copiedUntil(
+          formatTime(copied.clears, { hour: "numeric", minute: "2-digit", second: "2-digit" }),
+          copied.concealed,
+        )}
+      </span>
+      <Button
+        variant="secondary"
+        off={busy}
+        onClick={(event) => {
+          // Clear now leaves with the line it sits in: focus goes back to the row's Copy value.
+          const row = event.currentTarget.closest("li");
+          void act({ kind: "clear-copy" }).then(() =>
+            row?.querySelector<HTMLElement>("[data-secret-copy] button")?.focus(),
+          );
+        }}
+      >
+        {SECRET_COPY_WORDS.clearNow}
+      </Button>
     </div>
   );
 }
@@ -957,7 +1092,7 @@ function History({ asking, refresh }: { asking: Asking; refresh: () => Promise<v
                 {SECRET_STATE_WORDS[item.state]} · {dateOf(item.requestedAt)}
               </span>
             </div>
-            <p>{item.reason}</p>
+            {!item.copied && <p>{item.reason}</p>}
             {item.recoveredFrom && (
               <details>
                 <summary>{SECRETS_RECOVERY_WORDS.recoveredHistory}</summary>
@@ -970,7 +1105,11 @@ function History({ asking, refresh }: { asking: Asking; refresh: () => Promise<v
               </details>
             )}
             <p className="fm-secrets-muted">
-              <span className="fm-secrets-mono">{item.program}</span>
+              {item.copied ? (
+                SECRET_COPY_WORDS.byYou
+              ) : (
+                <span className="fm-secrets-mono">{item.program}</span>
+              )}
               {item.approval ? ` · ${SECRET_APPROVAL_WORDS[item.approval]}` : ""}
               {item.signIn ? ` · ${SECRETS_WORDS.yourSignIn}` : ""}
               {item.given ? ` · ${m.settingsSecretsAddedWithProgram()}` : ""}

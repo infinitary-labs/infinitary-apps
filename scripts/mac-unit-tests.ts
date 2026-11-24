@@ -9,6 +9,8 @@ export const MAC_UNIT_FILES = [
   // Native LocalAuthentication; the two scratch Keychain probes keep their
   // existing opt-in gates (listing them does not enable either probe).
   "src/main/host/darwinFreshAuthentication.test.ts",
+  // Native NSPasteboard writes for Copy value, on uniquely named pasteboards only.
+  "src/main/host/darwinSecretClipboard.test.ts",
   "src/main/host/darwinKeychain.scratch.test.ts",
   "src/main/host/darwinSecretCustody.scratch.test.ts",
   "src/main/host/claudeKeychainAccess.integration.test.ts",

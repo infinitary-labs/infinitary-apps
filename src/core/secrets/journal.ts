@@ -49,6 +49,12 @@ export type JournalEntry =
        * a build that predates it reads the bring as a use with no approval.
        */
       brought?: string;
+      /**
+       * The captain copied the value in Settings (docs/secrets.md, "Copying a
+       * value"): no program ran, and `program` is empty. It rides the request,
+       * as `brought` does, so a build that predates it reads a use.
+       */
+      copied?: true;
     }
   | { kind: "approved"; request: string; method: ApprovalMethod; device?: string }
   /** Written and synced before the recipient starts; the effect may follow. */
@@ -77,6 +83,8 @@ export type HistoryItem = {
   computer?: string;
   /** A bring, by the tool it brought secrets from (docs/secrets.md, "Bringing secrets from another tool"). */
   brought?: string;
+  /** The captain copied the value in Settings (docs/secrets.md, "Copying a value"). */
+  copied?: true;
   device?: string;
   reconciled?: true;
   recoveredFrom?: string;
@@ -225,6 +233,7 @@ export class UseJournal {
           ...(entry.given ? { given: true as const } : {}),
           ...(entry.computer ? { computer: entry.computer } : {}),
           ...(entry.brought ? { brought: entry.brought } : {}),
+          ...(entry.copied ? { copied: true as const } : {}),
         });
         continue;
       }

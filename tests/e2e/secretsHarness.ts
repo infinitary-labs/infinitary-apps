@@ -43,6 +43,12 @@ export type SecretsJourney = {
   core: Core;
   confirmation: boolean;
   confirmations: number;
+  /**
+   * Copy value's stand-in clipboard writer (docs/secrets.md, "Copying a
+   * value"): what it holds now, never the person's clipboard. `writes` counts
+   * every write and `clears` every clear the controller asked for.
+   */
+  clipboard: { held: string | null; writes: number; clears: number };
   recovery: { archive: string; key: string; cancel: boolean };
   httpBroker: typeof httpSecretBroker;
   readProbe?: { deliveries: number; credentialMatched: boolean };
@@ -117,6 +123,7 @@ export async function secretsEntry(
         installMainProcessErrorHandlers();
         app.setAppPath(${JSON.stringify(root)});
         const fixture = { custody: disposableCustody(), confirmation: true, confirmations: 0, core: null, httpBroker: httpSecretBroker,
+          clipboard: { held: null, writes: 0, clears: 0 },
           recovery: { archive: ${JSON.stringify(join(dir, "fixture-archive"))}, key: ${JSON.stringify(join(dir, "fixture-key"))}, cancel: false }
         };
         for (const [slot, bytes] of ${JSON.stringify(left)}) fixture.custody.slots.set(slot, Buffer.from(bytes, 'base64'));
@@ -134,6 +141,11 @@ export async function secretsEntry(
             authentication: {
               available: async () => true,
               confirm: async () => { fixture.confirmations += 1; return fixture.confirmation; }
+            },
+            clipboard: {
+              concealed: true,
+              write: async value => { fixture.clipboard.writes += 1; fixture.clipboard.held = value.toString('utf8'); return true; },
+              clear: async () => { fixture.clipboard.clears += 1; fixture.clipboard.held = null; }
             },
             ...(standbyLock ? { standbyLock } : {})
           },

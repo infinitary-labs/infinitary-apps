@@ -32,6 +32,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | card | 카드 | |
 | certificate | 인증서 | An organization CA certificate in the custom API form |
 | claim (recorded claim) | 주장 | "Recorded claim" is 기록된 주장 |
+| clipboard | 클립보드 | Where Copy value puts a secret's value. |
 | clone | 복제 | GitHub's Korean docs say 복제; never 복사 |
 | collection | 모음 | |
 | command search | 명령 검색 | |

@@ -29,6 +29,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | captain | capitán | The usual word a crew uses for a ship's captain; masculine default form, see the register lines above; lowercase in the middle of a sentence, also as a form of address. |
 | card | tarjeta | Feminine: "Revisada", "Escrita". |
 | claim (a recorded relationship) | afirmación | "Afirmación registrada". |
+| clipboard | portapapeles | Where Copy value puts a secret's value. |
 | clone | clonar | "clonado", never "copiado". |
 | command search | búsqueda de comandos | |
 | commit | confirmación | GitHub's Spanish docs say "confirmación"; feminine. |

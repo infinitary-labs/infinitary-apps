@@ -7,6 +7,8 @@ import {
   decisionWords,
   SAVED_DECISION_WORDS,
   SECRET_APPROVAL_CARD_WORDS,
+  SECRET_COPY_SECONDS,
+  SECRET_COPY_WORDS,
   SECRET_DEVICE_WORDS,
   SECRET_QUESTION_WORDS,
   SECRETS_RECOVERY_WORDS,
@@ -24,6 +26,7 @@ import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { asAView } from "../askedFromAView";
 import type { HostSecretsRecovery } from "../host";
 import { approvalCode, decisionMessage } from "./approvals";
+import type { SecretClipboard } from "./clipboard";
 import { httpSecretBroker } from "./httpBroker";
 import { ProtectedSecrets } from "./protected";
 import { SHORT_READ_USES } from "./readAccess";
@@ -109,10 +112,11 @@ function fixture() {
     });
     return protectedOwner;
   };
-  const make = (register = true, recovery?: HostSecretsRecovery) => {
+  const make = (register = true, recovery?: HostSecretsRecovery, clipboard?: SecretClipboard) => {
     const controller = new SecretsSettings({
       open,
       ...(recovery ? { recovery } : {}),
+      ...(clipboard ? { clipboard } : {}),
       raise: (card) => {
         cards.push(card);
         openCards.set(card.id, card);
@@ -1612,5 +1616,96 @@ describe("a phone's Secrets approvals", () => {
     expect(f.confirms()).toBe(2);
     expect((await f.settings.view()).devices).toEqual([]);
     expect((await f.settings.approvals(PHONE)).device).toBeNull();
+  });
+});
+
+// Intent: INF-6315's approved plan - Copy value on a secret's row puts its
+// value on this computer's clipboard after the owner's confirmation, and
+// takes it off after 90 seconds (the captain's choice) or on Clear now; the
+// view names the copy and never the value (docs/secrets.md, "Copying a value").
+describe("Copy value in Settings", () => {
+  /** A stand-in for the host's clipboard writer: what it holds now, never the person's clipboard. */
+  const standInClipboard = () => {
+    const held: { value: string | null } = { value: null };
+    const clipboard: SecretClipboard = {
+      concealed: true,
+      write: async (value) => {
+        held.value = value.toString();
+        return true;
+      },
+      clear: async () => {
+        held.value = null;
+      },
+    };
+    return { held, clipboard };
+  };
+  const row = async (settings: SecretsSettings) => {
+    const entry = (await settings.view()).entries.find((candidate) => candidate.ref === INPUT.ref);
+    if (!entry) throw new Error("no row");
+    return {
+      kind: "copy" as const,
+      ref: entry.ref,
+      version: entry.version,
+      revision: entry.revision,
+    };
+  };
+
+  it("copies after the confirmation and clears after its time", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const f = fixture();
+      const { held, clipboard } = standInClipboard();
+      const settings = f.make(true, undefined, clipboard);
+      await settings.put(INPUT);
+      expect((await settings.view()).copy).toBe("ready");
+      const view = await settings.action(await row(settings));
+      expect(f.confirms()).toBe(1);
+      expect(held.value).toBe(TOKEN);
+      expect(view.copied).toEqual({
+        ref: INPUT.ref,
+        clears: 1000 + SECRET_COPY_SECONDS * 1000,
+        concealed: true,
+      });
+      expect(view.entries[0]).toMatchObject({ lastCopied: true });
+      expect(view.history.at(-1)).toMatchObject({ copied: true, state: "completed" });
+      expect(JSON.stringify(view)).not.toContain(TOKEN);
+      await vi.advanceTimersByTimeAsync(SECRET_COPY_SECONDS * 1000 - 1);
+      expect(held.value).toBe(TOKEN);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(held.value).toBeNull();
+      expect((await settings.view()).copied).toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("Clear now takes the value off at once", async () => {
+    const f = fixture();
+    const { held, clipboard } = standInClipboard();
+    const settings = f.make(true, undefined, clipboard);
+    await settings.put(INPUT);
+    await settings.action(await row(settings));
+    const view = await settings.action({ kind: "clear-copy" });
+    expect(held.value).toBeNull();
+    expect(view.copied).toBeUndefined();
+    expect(view.message).toBe(SECRET_COPY_WORDS.cleared);
+  });
+
+  it("a refused confirmation copies nothing and says so", async () => {
+    const f = fixture();
+    const { held, clipboard } = standInClipboard();
+    const settings = f.make(true, undefined, clipboard);
+    await settings.put(INPUT);
+    f.confirmation(false);
+    const view = await settings.action(await row(settings));
+    expect(held.value).toBeNull();
+    expect(view.copied).toBeUndefined();
+    expect(view.message).toBe(SECRET_COPY_WORDS.refused);
+  });
+
+  it("offers no copy where the host has no clipboard writer", async () => {
+    const f = fixture();
+    await f.settings.put(INPUT);
+    expect((await f.settings.view()).copy).toBeUndefined();
   });
 });

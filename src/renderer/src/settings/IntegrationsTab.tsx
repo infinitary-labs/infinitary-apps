@@ -235,15 +235,18 @@ export function IntegrationsTab() {
   );
   // A kind with a notice shows it first (INF-949): its page opens only on
   // the notice's accept, and Cancel, or leaving the tab, asks nothing.
+  // `fromSetup` keeps the control that opened Google's setup as the one
+  // Cancel returns to, since what has the focus by then is the setup's own.
   const startBrowserSignIn = useCallback(
-    (kind: IntegrationKind) => {
+    (kind: IntegrationKind, fromSetup = false) => {
       if (!INTEGRATION_NOTICES[kind]) {
         signInInBrowser(kind);
         return;
       }
       setError(null);
-      noticeFrom.current =
-        document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      if (!fromSetup)
+        noticeFrom.current =
+          document.activeElement instanceof HTMLElement ? document.activeElement : null;
       setNotice(kind);
     },
     [signInInBrowser],
@@ -254,7 +257,11 @@ export function IntegrationsTab() {
   };
   const cancelNotice = () => {
     setNotice(null);
-    noticeFrom.current?.focus();
+    // A kept client turns the Set up Google chip into the sign-in chip, which takes its place.
+    const back = noticeFrom.current?.isConnected
+      ? noticeFrom.current
+      : document.querySelector<HTMLElement>(`[data-forge-chip="${notice}"]`);
+    back?.focus();
   };
   // Google signs in only as the person's own client: with none kept, or one
   // Google refused, its sign-in is the setup, which goes on to the notice.
@@ -285,7 +292,7 @@ export function IntegrationsTab() {
   const setupKept = (next: IntegrationsView) => {
     setView(next);
     setSetup(false);
-    startBrowserSignIn("google");
+    startBrowserSignIn("google", true);
   };
   // The page again, for the sign-in waiting now: a kind with a notice waits
   // only once its notice was accepted, so the accept still stands.
@@ -341,7 +348,8 @@ export function IntegrationsTab() {
 
   // A card's "Sign in to GitHub" lands here with the sign-in to start, so
   // the code is on screen when the tab opens; a card's Google sign-in opens
-  // Google's notice, and its accept opens Google's page.
+  // Google's notice, or its setup while no client of the person's is kept,
+  // and the notice's accept opens Google's page.
   useEffect(() => {
     if (!loaded || (pending !== "github.com" && pending !== "google")) return;
     if (pending === INTEGRATIONS_SIGN_IN_HOST) {

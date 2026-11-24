@@ -198,7 +198,15 @@ test("development and released builds set up the person's own Google client by k
           }
           await keepClientFile(setup, OWN_CLIENT_FILE);
           await expect(setup).toHaveCount(0);
-          await expect(tab.locator('[data-integration-notice="google"]')).toBeFocused();
+          const notice = tab.locator('[data-integration-notice="google"]');
+          await expect(notice).toBeFocused();
+          // The kept client turned the chip into the sign-in chip, and Cancel returns there.
+          await pressKey(notice.getByRole("button", { name: NOTICE.cancel, exact: true }), "Enter");
+          await expect(chip).toHaveText(INTEGRATION_KIND_NAMES.google);
+          await expect(chip).toBeFocused();
+          expect(await opening()).toEqual([GOOGLE_CLIENT_SETUP_PAGE]);
+          await pressKey(chip, "Enter");
+          await expect(notice).toBeFocused();
           await acceptGoogleNotice(tab);
           const waiting = tab.locator('[data-integration-signing-in="google"]');
           await expect(waiting).toContainText(m.integrationsGoogleSignInHint());

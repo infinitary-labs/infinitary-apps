@@ -594,6 +594,10 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
     if (!ref) throw new Error(SECRETS_LOCKED);
     clients.write({ id, secret: ref });
     if (earlier && earlier.secret !== ref) await options.keys.forgetHidden(earlier.secret);
+    // A sign-in made with the client just replaced can no longer renew: say so
+    // now, as its next renewal would, so the row offers Sign in again.
+    const signedIn = store.read();
+    if (signedIn && !renewingClient(signedIn)) setHealth("needs_reauth");
     options.changed();
   };
 

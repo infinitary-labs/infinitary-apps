@@ -176,6 +176,28 @@ describe("setting up the person's own Google client", () => {
     });
   });
 
+  it("turns a sign-in to Sign in again when another client is kept in its place, and keeps it for a new secret", async () => {
+    const { integrations } = await released();
+    await integrations.keepClient("google", desktopFile());
+    await integrations.signIn("google", NOTICE_ACCEPTED);
+
+    // The same client with a new secret still renews the sign-in.
+    await integrations.keepClient(
+      "google",
+      desktopFile(OWN_CLIENT_ID, "GOCSPX-rotated-secret-9Kx1"),
+    );
+    expect(integrations.view().integrations[0]?.health).toBe("ok");
+
+    await integrations.keepClient(
+      "google",
+      desktopFile(
+        "730158442917-another-desktop.apps.googleusercontent.com",
+        "GOCSPX-another-secret",
+      ),
+    );
+    expect(integrations.view().integrations[0]?.health).toBe("needs_reauth");
+  });
+
   it("names the refused client on the row", async () => {
     const { google, clock, integrations } = await released();
     await integrations.keepClient("google", desktopFile());

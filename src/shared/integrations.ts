@@ -193,7 +193,7 @@ export type IntegrationDoorView = z.infer<typeof integrationDoorViewSchema>;
 
 /**
  * The client a kind signs in as, for a kind that signs in as the person's
- * own client (Google's, docs/integrations.md "Your own Google client"): typed
+ * own client (Google's, docs/integrations.md "Google"): typed
  * facts the row draws its state from, never the client's id or secret.
  */
 export const integrationClientViewSchema = z

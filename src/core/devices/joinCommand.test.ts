@@ -13,7 +13,7 @@ import {
   deviceInviteSchema,
   deviceNameSchema,
   dialAddressSchema,
-  pairingLinkSchema,
+  PAIRING_LINK_ALSO_MAX,
   parsePairingLink,
 } from "@shared/devices";
 import { LINUX_NEEDS } from "@shared/remoteLogin";
@@ -378,7 +378,7 @@ const LONGEST_NAME = "Kun's MacBook Pro, on Sam's desk in the studio's back room
   deviceNameSchema.maxLength ?? 0,
 );
 /** As many addresses as a link carries: its first and every other one it may name (`pairingLinkSchema`'s `also`). */
-const MOST_ADDRESSES = 1 + Number(pairingLinkSchema.shape.also.unwrap()._zod.bag.maximum);
+const MOST_ADDRESSES = 1 + PAIRING_LINK_ALSO_MAX;
 /**
  * A dial address as long as a host name may be, 253 characters (RFC 1035),
  * that never answers: `.invalid` names nothing anywhere (RFC 6761).

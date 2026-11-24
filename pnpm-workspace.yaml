@@ -73,9 +73,21 @@ patchedDependencies:
   '@aws-sdk/token-providers@3.1138.0': patches/@aws-sdk__token-providers@3.1138.0.patch
   '@earendil-works/pi-ai@1.5.0': patches/@earendil-works__pi-ai@1.5.0.patch
   '@electron/universal@2.0.3': patches/@electron__universal@2.0.3.patch
-  '@vitest/runner@4.1.10': patches/@vitest__runner@4.1.10.patch
+  '@vitest/runner@4.1.12': patches/@vitest__runner@4.1.12.patch
   electron-updater@6.8.9: patches/electron-updater@6.8.9.patch
   electron-vite@5.0.0: patches/electron-vite@5.0.0.patch
   playwright-core@1.62.1: patches/playwright-core@1.62.1.patch
   playwright@1.62.1: patches/playwright@1.62.1.patch
-  vitest@4.1.10: patches/vitest@4.1.10.patch
+  vitest@4.1.12: patches/vitest@4.1.12.patch
+# Security fixes a package's own range leaves out: each pins the patched
+# release of one package for the one parent that pulls it in. Drop an entry
+# once that parent's own range reaches the patched release.
+# - adm-zip: onnxruntime-node 1.24.3 asks for ^0.5.16, and only 0.6.1 fixes
+#   its open alerts. Nothing but onnxruntime-node's own install script loads
+#   it, and that script stays off (allowBuilds above).
+# - sharp: @huggingface/transformers 4.2.0 asks for ^0.34.5, and only 0.35.5
+#   fixes its open alerts. Nothing here loads it: the main build stands it in
+#   (src/main/voice/noSharp.ts) and the renderer's build does no image work.
+overrides:
+  onnxruntime-node>adm-zip: 0.6.1
+  '@huggingface/transformers>sharp': 0.35.5

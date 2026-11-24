@@ -885,6 +885,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -1024,8 +1025,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -1045,6 +1047,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -1064,6 +1067,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -1208,7 +1212,8 @@
             }
           }
         ],
-        "items": false
+        "items": false,
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -1472,8 +1477,9 @@
             "type": "string"
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -1498,8 +1504,9 @@
             "type": "string"
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -1761,8 +1768,9 @@
             }
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 3
       },
       "response": {
         "anyOf": [
@@ -1809,8 +1817,9 @@
             "maxLength": 64
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "anyOf": [
@@ -1930,8 +1939,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 4
       },
       "response": {
         "oneOf": [
@@ -1979,8 +1989,9 @@
             "maxLength": 64
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -2028,8 +2039,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 3
       },
       "response": {
         "oneOf": [
@@ -2077,8 +2089,9 @@
             "maxLength": 64
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "oneOf": [
@@ -2176,8 +2189,9 @@
             }
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 3
       },
       "response": {
         "oneOf": [
@@ -2222,6 +2236,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -3278,8 +3293,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -4261,8 +4277,9 @@
             "maxLength": 4096
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "oneOf": [
@@ -4314,8 +4331,9 @@
             "minLength": 1
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -4363,8 +4381,9 @@
             "minLength": 1
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -4426,8 +4445,9 @@
             "minLength": 1
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 3
       },
       "response": {
         "type": "object",
@@ -4669,8 +4689,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "type": "object",
@@ -5693,8 +5714,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "type": "object",
@@ -5714,6 +5736,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -6198,6 +6221,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -6235,8 +6259,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -6259,6 +6284,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -6293,6 +6319,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -6687,6 +6714,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -7100,8 +7128,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -7113,6 +7142,7 @@
           },
           "link": {
             "type": "string",
+            "format": "starts_with",
             "pattern": "^infinitary:\\/\\/join\\?.*"
           },
           "kind": {
@@ -7191,8 +7221,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "anyOf": [
@@ -7687,8 +7718,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "anyOf": [
@@ -8044,8 +8076,9 @@
             "pattern": "^(?:(?:[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}@)?[A-Za-z0-9_[][A-Za-z0-9_.:%[\\]-]{0,190}|ssh:\\/\\/(?:[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}@)?(?:[A-Za-z0-9_][A-Za-z0-9_.-]{0,190}|\\[[A-Za-z0-9:.%]{2,64}\\]):[1-9][0-9]{0,4})$"
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -8070,8 +8103,9 @@
             "type": "boolean"
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -8165,8 +8199,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "anyOf": [
@@ -8699,8 +8734,9 @@
             "maxLength": 64
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -8766,8 +8802,9 @@
             "maxLength": 64
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -8792,6 +8829,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -8817,6 +8855,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -8842,6 +8881,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -8948,8 +8988,9 @@
             "maxLength": 64
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "maxItems": 9,
@@ -8997,8 +9038,9 @@
             "type": "boolean"
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "type": "object",
@@ -9030,8 +9072,9 @@
             "maxLength": 64
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -9063,8 +9106,9 @@
             "maxLength": 64
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -9185,8 +9229,9 @@
             "maxLength": 64
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -9261,8 +9306,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -9295,8 +9341,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "type": "object",
@@ -9717,8 +9764,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -9765,8 +9813,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -10155,8 +10204,9 @@
             "maxLength": 64
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "type": "object",
@@ -10194,8 +10244,9 @@
             "maxLength": 64
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -10579,8 +10630,9 @@
             "maxLength": 64
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "boolean"
@@ -10598,7 +10650,8 @@
             "maxLength": 64
           }
         ],
-        "items": false
+        "items": false,
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -10665,8 +10718,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "type": "object",
@@ -10723,8 +10777,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -10751,8 +10806,9 @@
             "maxLength": 64
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -10821,8 +10877,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -10849,8 +10906,9 @@
             "maxLength": 64
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -10882,8 +10940,9 @@
             "pattern": "^(?:(?:[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}@)?[A-Za-z0-9_[][A-Za-z0-9_.:%[\\]-]{0,190}|ssh:\\/\\/(?:[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}@)?(?:[A-Za-z0-9_][A-Za-z0-9_.-]{0,190}|\\[[A-Za-z0-9:.%]{2,64}\\]):[1-9][0-9]{0,4})$"
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "anyOf": [
@@ -11320,6 +11379,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -11346,8 +11406,9 @@
             "maxLength": 64
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -11367,6 +11428,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -11524,8 +11586,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -11686,8 +11749,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "type": "object",
@@ -12644,6 +12708,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -13585,7 +13650,7 @@
             "flows": {
               "type": "array",
               "items": {
-                "allOf": [
+                "oneOf": [
                   {
                     "type": "object",
                     "properties": {
@@ -13648,153 +13713,206 @@
                       },
                       "link": {
                         "type": "string"
+                      },
+                      "phase": {
+                        "type": "string",
+                        "const": "running"
+                      },
+                      "prompt": {
+                        "type": "object",
+                        "properties": {
+                          "promptId": {
+                            "type": "string"
+                          },
+                          "providerId": {
+                            "type": "string"
+                          },
+                          "accountId": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "text",
+                              "secret",
+                              "select",
+                              "manual_code"
+                            ]
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "placeholder": {
+                            "type": "string"
+                          },
+                          "options": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "label": {
+                                  "type": "string"
+                                },
+                                "description": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "label"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "promptId",
+                          "providerId",
+                          "kind",
+                          "message"
+                        ]
+                      },
+                      "ended": {
+                        "not": {}
                       }
                     },
                     "required": [
                       "signInId",
                       "deviceId",
                       "providerId",
-                      "target"
+                      "target",
+                      "phase"
                     ]
                   },
                   {
-                    "oneOf": [
-                      {
+                    "type": "object",
+                    "properties": {
+                      "signInId": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9_-]{1,64}$"
+                      },
+                      "deviceId": {
+                        "type": "string"
+                      },
+                      "providerId": {
+                        "type": "string"
+                      },
+                      "accountId": {
+                        "type": "string"
+                      },
+                      "target": {
+                        "type": "string",
+                        "enum": [
+                          "account",
+                          "forge"
+                        ]
+                      },
+                      "notice": {
                         "type": "object",
                         "properties": {
-                          "phase": {
-                            "type": "string",
-                            "const": "running"
+                          "providerId": {
+                            "type": "string"
                           },
-                          "prompt": {
-                            "type": "object",
-                            "properties": {
-                              "promptId": {
-                                "type": "string"
-                              },
-                              "providerId": {
-                                "type": "string"
-                              },
-                              "accountId": {
-                                "type": "string"
-                              },
-                              "kind": {
-                                "type": "string",
-                                "enum": [
-                                  "text",
-                                  "secret",
-                                  "select",
-                                  "manual_code"
-                                ]
-                              },
-                              "message": {
-                                "type": "string"
-                              },
-                              "placeholder": {
-                                "type": "string"
-                              },
-                              "options": {
-                                "type": "array",
-                                "items": {
-                                  "type": "object",
-                                  "properties": {
-                                    "id": {
-                                      "type": "string"
-                                    },
-                                    "label": {
-                                      "type": "string"
-                                    },
-                                    "description": {
-                                      "type": "string"
-                                    }
-                                  },
-                                  "required": [
-                                    "id",
-                                    "label"
-                                  ]
-                                }
-                              }
-                            },
-                            "required": [
-                              "promptId",
-                              "providerId",
-                              "kind",
-                              "message"
+                          "accountId": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "info",
+                              "auth_url",
+                              "device_code",
+                              "progress"
                             ]
                           },
-                          "ended": {
-                            "not": {}
+                          "message": {
+                            "type": "string"
+                          },
+                          "url": {
+                            "type": "string"
+                          },
+                          "userCode": {
+                            "type": "string"
+                          },
+                          "expiresAt": {
+                            "type": "number"
                           }
                         },
                         "required": [
-                          "phase"
+                          "providerId",
+                          "kind",
+                          "message"
                         ]
                       },
-                      {
+                      "link": {
+                        "type": "string"
+                      },
+                      "phase": {
+                        "type": "string",
+                        "const": "ended"
+                      },
+                      "prompt": {
+                        "not": {}
+                      },
+                      "ended": {
                         "type": "object",
                         "properties": {
-                          "phase": {
+                          "kind": {
                             "type": "string",
                             "const": "ended"
                           },
-                          "prompt": {
-                            "not": {}
+                          "outcome": {
+                            "type": "string",
+                            "enum": [
+                              "signed-in",
+                              "failed",
+                              "cancelled",
+                              "signs-in-there"
+                            ]
                           },
-                          "ended": {
+                          "accountId": {
+                            "type": "string"
+                          },
+                          "savedReset": {
                             "type": "object",
                             "properties": {
-                              "kind": {
-                                "type": "string",
-                                "const": "ended"
-                              },
                               "outcome": {
                                 "type": "string",
                                 "enum": [
-                                  "signed-in",
-                                  "failed",
-                                  "cancelled",
-                                  "signs-in-there"
+                                  "used",
+                                  "nothing-to-reset",
+                                  "none-left"
                                 ]
                               },
-                              "accountId": {
-                                "type": "string"
-                              },
-                              "savedReset": {
-                                "type": "object",
-                                "properties": {
-                                  "outcome": {
-                                    "type": "string",
-                                    "enum": [
-                                      "used",
-                                      "nothing-to-reset",
-                                      "none-left"
-                                    ]
-                                  },
-                                  "left": {
-                                    "type": "integer",
-                                    "minimum": 0,
-                                    "maximum": 9007199254740991
-                                  }
-                                },
-                                "required": [
-                                  "outcome"
-                                ]
-                              },
-                              "error": {
-                                "type": "string"
+                              "left": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
                               }
                             },
                             "required": [
-                              "kind",
                               "outcome"
                             ]
+                          },
+                          "error": {
+                            "type": "string"
                           }
                         },
                         "required": [
-                          "phase",
-                          "ended"
+                          "kind",
+                          "outcome"
                         ]
                       }
+                    },
+                    "required": [
+                      "signInId",
+                      "deviceId",
+                      "providerId",
+                      "target",
+                      "phase",
+                      "ended"
                     ]
                   }
                 ]
@@ -13840,8 +13958,9 @@
             "maxLength": 256
           }
         ],
+        "items": false,
         "minItems": 3,
-        "items": false
+        "maxItems": 4
       },
       "response": {
         "type": "object",
@@ -13883,8 +14002,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 3,
-        "items": false
+        "maxItems": 3
       },
       "response": {
         "type": "object",
@@ -13910,8 +14030,9 @@
             "pattern": "^[A-Za-z0-9_-]{1,64}$"
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -13943,8 +14064,9 @@
             "maxLength": 256
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "type": "object",
@@ -13977,8 +14099,9 @@
             "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*$"
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "type": "object",
@@ -14011,8 +14134,9 @@
             "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*$"
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "oneOf": [
@@ -14111,8 +14235,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "oneOf": [
@@ -14210,8 +14335,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "type": "object",
@@ -14244,8 +14370,9 @@
             "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*$"
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "type": "object",
@@ -14276,8 +14403,9 @@
             "maxLength": 4096
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "type": "object",
@@ -14366,8 +14494,9 @@
             "maxLength": 64
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "array",
@@ -14437,8 +14566,9 @@
             "maxLength": 65536
           }
         ],
+        "items": false,
         "minItems": 3,
-        "items": false
+        "maxItems": 4
       },
       "response": {
         "type": "object",
@@ -14670,8 +14800,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "type": "object",
@@ -14995,8 +15126,9 @@
             "maxLength": 256
           }
         ],
+        "items": false,
         "minItems": 3,
-        "items": false
+        "maxItems": 3
       },
       "response": {
         "type": "object",
@@ -15238,8 +15370,9 @@
             "maxLength": 128
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "type": "array",
@@ -15285,8 +15418,9 @@
             "maxLength": 128
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "type": "object",
@@ -15321,8 +15455,9 @@
             "type": "boolean"
           }
         ],
+        "items": false,
         "minItems": 3,
-        "items": false
+        "maxItems": 3
       },
       "response": {
         "type": "object",
@@ -15564,8 +15699,9 @@
             "maxLength": 256
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "type": "object",
@@ -15823,8 +15959,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "anyOf": [
@@ -16038,6 +16175,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -17334,8 +17472,9 @@
           {},
           {}
         ],
+        "items": false,
         "minItems": 3,
-        "items": false
+        "maxItems": 5
       },
       "response": {
         "type": "object",
@@ -17500,8 +17639,9 @@
             "type": "boolean"
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "type": "object",
@@ -17526,8 +17666,9 @@
             "type": "string"
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "anyOf": [
@@ -20078,8 +20219,9 @@
           },
           {}
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "type": "object",
@@ -20106,8 +20248,9 @@
           {},
           {}
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 3
       },
       "response": {
         "type": "object",
@@ -20137,8 +20280,9 @@
             "maxLength": 64
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "type": "object",
@@ -20172,8 +20316,9 @@
             "maxLength": 64
           }
         ],
+        "items": false,
         "minItems": 3,
-        "items": false
+        "maxItems": 3
       },
       "response": {
         "type": "object",
@@ -20198,8 +20343,9 @@
             "type": "string"
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -20665,6 +20811,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -21228,8 +21375,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "anyOf": [
@@ -21569,8 +21717,9 @@
             "maxLength": 128
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -21605,8 +21754,9 @@
             "maxLength": 128
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -21642,8 +21792,9 @@
             "maxLength": 128
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -21674,8 +21825,9 @@
             "maxLength": 160
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -21719,8 +21871,9 @@
             "maximum": 1048576
           }
         ],
+        "items": false,
         "minItems": 3,
-        "items": false
+        "maxItems": 3
       },
       "response": {
         "type": "object",
@@ -21773,8 +21926,9 @@
             "maximum": 9007199254740991
           }
         ],
+        "items": false,
         "minItems": 3,
-        "items": false
+        "maxItems": 3
       },
       "response": {
         "type": "object",
@@ -21819,8 +21973,9 @@
             "type": "string"
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "anyOf": [
@@ -23107,8 +23262,9 @@
             "maxLength": 128
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -24388,8 +24544,9 @@
             "maxLength": 128
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -24746,8 +24903,9 @@
             "type": "boolean"
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 4
       },
       "response": {
         "type": "object",
@@ -25213,6 +25371,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -25304,8 +25463,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "type": "object",
@@ -25325,6 +25485,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -25345,6 +25506,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -25408,8 +25570,9 @@
             "type": "string"
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 3
       },
       "response": {
         "type": "object",
@@ -25468,8 +25631,9 @@
             "maxLength": 4096
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -25725,8 +25889,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -26216,8 +26381,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -26455,8 +26621,9 @@
             "type": "string"
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "type": "object",
@@ -26691,8 +26858,9 @@
             "type": "string"
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "array",
@@ -26731,8 +26899,9 @@
             "type": "string"
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -26760,8 +26929,9 @@
             "type": "boolean"
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "type": "object",
@@ -26996,8 +27166,9 @@
             "type": "string"
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -27227,6 +27398,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -27460,6 +27632,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -27598,8 +27771,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 3
       },
       "response": {
         "type": "object",
@@ -27713,8 +27887,9 @@
             "type": "string"
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -27833,8 +28008,9 @@
             "maxLength": 64
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "type": "object",
@@ -27869,8 +28045,9 @@
             "maxLength": 64
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 3
       },
       "response": {
         "type": "object",
@@ -27903,8 +28080,9 @@
             "maxLength": 64
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 3
       },
       "response": {
         "type": "object",
@@ -27937,8 +28115,9 @@
             "maxLength": 64
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 3
       },
       "response": {
         "type": "object",
@@ -27977,8 +28156,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "type": "object",
@@ -28029,8 +28209,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 3
       },
       "response": {
         "type": "object",
@@ -28070,8 +28251,9 @@
             "maxLength": 64
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 3
       },
       "response": {
         "type": "object",
@@ -28091,6 +28273,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -28353,8 +28536,9 @@
             "maxLength": 253
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "array",
@@ -28413,8 +28597,9 @@
             "maxLength": 253
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -28485,8 +28670,9 @@
             "maxLength": 253
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -28551,8 +28737,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -28618,8 +28805,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "oneOf": [
@@ -28692,8 +28880,9 @@
             "maxLength": 2000
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "oneOf": [
@@ -28759,6 +28948,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -29026,8 +29216,9 @@
             "maxLength": 64
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "type": "object",
@@ -29282,6 +29473,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -29375,6 +29567,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -29819,8 +30012,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "type": "object",
@@ -30240,8 +30434,9 @@
             "type": "boolean"
           }
         ],
+        "items": false,
         "minItems": 3,
-        "items": false
+        "maxItems": 3
       },
       "response": {
         "type": "object",
@@ -30654,8 +30849,9 @@
             "pattern": "^[a-z][a-z0-9-]{0,47}$"
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -31068,8 +31264,9 @@
             "pattern": "^[a-z][a-z0-9-]{0,47}$"
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -31498,8 +31695,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 3,
-        "items": false
+        "maxItems": 3
       },
       "response": {
         "type": "object",
@@ -31941,8 +32139,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -33211,8 +33410,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "type": "object",
@@ -33654,8 +33854,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -33681,6 +33882,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -34088,6 +34290,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -34495,6 +34698,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -34525,8 +34729,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "anyOf": [
@@ -34544,6 +34749,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -34727,6 +34933,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -34910,6 +35117,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -35093,6 +35301,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -35163,6 +35372,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -35269,8 +35479,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -35326,6 +35537,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -35380,8 +35592,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "anyOf": [
@@ -35411,6 +35624,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -35514,8 +35728,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -35596,6 +35811,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -35622,6 +35838,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -35953,8 +36170,9 @@
             "type": "boolean"
           }
         ],
+        "items": false,
         "minItems": 3,
-        "items": false
+        "maxItems": 3
       },
       "response": {
         "type": "object",
@@ -36281,8 +36499,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "type": "object",
@@ -36626,8 +36845,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 3,
-        "items": false
+        "maxItems": 3
       },
       "response": {
         "type": "object",
@@ -36943,6 +37163,7 @@
         "anyOf": [
           {
             "type": "array",
+            "items": false,
             "maxItems": 0
           },
           {
@@ -36952,8 +37173,9 @@
                 "type": "string"
               }
             ],
+            "items": false,
             "minItems": 1,
-            "items": false
+            "maxItems": 1
           }
         ]
       },
@@ -37269,6 +37491,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -37722,8 +37945,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -38079,8 +38303,9 @@
             "minLength": 1
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "type": "object",
@@ -38432,8 +38657,9 @@
             "const": "jev"
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -38808,8 +39034,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -39155,6 +39382,7 @@
       "reach": "home",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -39303,6 +39531,7 @@
       "reach": "home",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -39460,8 +39689,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -39609,6 +39839,7 @@
       "reach": "home",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -39629,6 +39860,7 @@
       "reach": "home",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -39673,6 +39905,7 @@
       "reach": "home",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -39821,6 +40054,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -39903,6 +40137,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -39985,6 +40220,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -40067,6 +40303,7 @@
       "reach": "home",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -40135,8 +40372,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -40175,6 +40413,7 @@
       "reach": "home",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -40215,8 +40454,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -40280,6 +40520,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -40299,6 +40540,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -40346,6 +40588,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -40404,6 +40647,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -40427,6 +40671,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -40545,8 +40790,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "oneOf": [
@@ -40786,8 +41032,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "oneOf": [
@@ -40914,8 +41161,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "oneOf": [
@@ -41170,8 +41418,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "oneOf": [
@@ -42267,7 +42516,8 @@
             "additionalProperties": false
           }
         ],
-        "items": false
+        "items": false,
+        "maxItems": 1
       },
       "response": {
         "oneOf": [
@@ -42402,8 +42652,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "oneOf": [
@@ -42680,8 +42931,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -42778,8 +43030,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "oneOf": [
@@ -42897,8 +43150,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "oneOf": [
@@ -43024,6 +43278,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -43181,6 +43436,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -43221,7 +43477,8 @@
             ]
           }
         ],
-        "items": false
+        "items": false,
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -45131,8 +45388,9 @@
             "maxLength": 64
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -45166,8 +45424,9 @@
             "maxLength": 64
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -49697,8 +49956,9 @@
             "maxLength": 64
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -50178,8 +50438,9 @@
             "maxLength": 64
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -50225,8 +50486,9 @@
             "maxLength": 512
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "anyOf": [
@@ -50270,8 +50532,9 @@
             "maxLength": 512
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "anyOf": [
@@ -50307,8 +50570,9 @@
             "maxLength": 200
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "array",
@@ -52024,8 +52288,9 @@
             }
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "array",
@@ -53736,8 +54001,9 @@
             "maxLength": 64
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -53763,8 +54029,9 @@
             "maxLength": 64
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -53790,8 +54057,9 @@
             "maxLength": 64
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -53844,8 +54112,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "type": "object",
@@ -53870,8 +54139,9 @@
             "type": "boolean"
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -54100,8 +54370,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "anyOf": [
@@ -54151,8 +54422,9 @@
             "maxLength": 64
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "anyOf": [
@@ -54263,8 +54535,9 @@
             "maxLength": 64
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "anyOf": [
@@ -54314,8 +54587,9 @@
             "maxLength": 64
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "anyOf": [
@@ -54384,8 +54658,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "anyOf": [
@@ -54467,8 +54742,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 4,
-        "items": false
+        "maxItems": 4
       },
       "response": {
         "anyOf": [
@@ -54558,8 +54834,9 @@
             }
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 3
       },
       "response": {
         "anyOf": [
@@ -54602,6 +54879,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -54712,8 +54990,9 @@
             "maxLength": 64
           }
         ],
+        "items": false,
         "minItems": 3,
-        "items": false
+        "maxItems": 4
       },
       "response": {
         "anyOf": [
@@ -54768,8 +55047,9 @@
             "maxLength": 64
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "anyOf": [
@@ -54819,7 +55099,8 @@
             "maxLength": 64
           }
         ],
-        "items": false
+        "items": false,
+        "maxItems": 1
       },
       "response": {
         "anyOf": [
@@ -54862,6 +55143,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -54897,8 +55179,9 @@
             "maxLength": 2048
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "oneOf": [
@@ -54954,8 +55237,9 @@
             "maxLength": 253
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "oneOf": [
@@ -55004,6 +55288,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -55155,8 +55440,9 @@
             "minLength": 1
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "type": "object",
@@ -55205,8 +55491,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -55226,6 +55513,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -55501,8 +55789,9 @@
                           "maximum": 96
                         }
                       ],
+                      "items": false,
                       "minItems": 2,
-                      "items": false
+                      "maxItems": 2
                     },
                     "start": {
                       "minItems": 2,
@@ -55595,8 +55884,9 @@
                             "maximum": 20
                           }
                         ],
+                        "items": false,
                         "minItems": 2,
-                        "items": false
+                        "maxItems": 2
                       }
                     },
                     "wobble": {
@@ -55613,8 +55903,9 @@
                           "maximum": 400
                         }
                       ],
+                      "items": false,
                       "minItems": 2,
-                      "items": false
+                      "maxItems": 2
                     }
                   },
                   "required": [
@@ -55733,8 +56024,9 @@
                         "maximum": 1
                       }
                     ],
+                    "items": false,
                     "minItems": 3,
-                    "items": false
+                    "maxItems": 3
                   }
                 },
                 "voices": {
@@ -55915,8 +56207,9 @@
                       ]
                     }
                   ],
+                  "items": false,
                   "minItems": 3,
-                  "items": false
+                  "maxItems": 3
                 },
                 "mix": {
                   "description": "A layer louder or quieter than the app's balance, in dB; -60 silences it",
@@ -55989,8 +56282,9 @@
                           "maximum": 12
                         }
                       ],
+                      "items": false,
                       "minItems": 2,
-                      "items": false
+                      "maxItems": 2
                     }
                   },
                   "required": [
@@ -56182,9 +56476,10 @@
                                   "maximum": 16
                                 }
                               ],
-                              "description": "[grid step, pitch, how hard, length in beats]",
+                              "items": false,
                               "minItems": 3,
-                              "items": false
+                              "maxItems": 4,
+                              "description": "[grid step, pitch, how hard, length in beats]"
                             }
                           },
                           "pan": {
@@ -56453,8 +56748,9 @@
                                   "description": "How hard, 0-1"
                                 }
                               ],
+                              "items": false,
                               "minItems": 2,
-                              "items": false
+                              "maxItems": 2
                             },
                             "description": "[grid step, how hard]"
                           },
@@ -56620,8 +56916,9 @@
                                 "description": "How hard, 0-1"
                               }
                             ],
+                            "items": false,
                             "minItems": 2,
-                            "items": false
+                            "maxItems": 2
                           },
                           "pool": {
                             "description": "Chord tones, or the five-note scale",
@@ -56776,8 +57073,9 @@
                                         "maximum": 28
                                       }
                                     ],
+                                    "items": false,
                                     "minItems": 2,
-                                    "items": false
+                                    "maxItems": 2
                                   }
                                 },
                                 "description": "One-bar rhythms as [grid step, length in steps]; each motif takes one"
@@ -57317,8 +57615,9 @@
                               "maximum": 96
                             }
                           ],
+                          "items": false,
                           "minItems": 2,
-                          "items": false
+                          "maxItems": 2
                         },
                         "start": {
                           "minItems": 2,
@@ -57412,8 +57711,9 @@
                                 "maximum": 20
                               }
                             ],
+                            "items": false,
                             "minItems": 2,
-                            "items": false
+                            "maxItems": 2
                           }
                         },
                         "wobble": {
@@ -57430,8 +57730,9 @@
                               "maximum": 400
                             }
                           ],
+                          "items": false,
                           "minItems": 2,
-                          "items": false
+                          "maxItems": 2
                         }
                       },
                       "required": [
@@ -57553,8 +57854,9 @@
                             "maximum": 1
                           }
                         ],
+                        "items": false,
                         "minItems": 3,
-                        "items": false
+                        "maxItems": 3
                       }
                     },
                     "voices": {
@@ -57739,8 +58041,9 @@
                           "additionalProperties": false
                         }
                       ],
+                      "items": false,
                       "minItems": 3,
-                      "items": false
+                      "maxItems": 3
                     },
                     "mix": {
                       "description": "A layer louder or quieter than the app's balance, in dB; -60 silences it",
@@ -57813,8 +58116,9 @@
                               "maximum": 12
                             }
                           ],
+                          "items": false,
                           "minItems": 2,
-                          "items": false
+                          "maxItems": 2
                         }
                       },
                       "required": [
@@ -58009,9 +58313,10 @@
                                       "maximum": 16
                                     }
                                   ],
-                                  "description": "[grid step, pitch, how hard, length in beats]",
+                                  "items": false,
                                   "minItems": 3,
-                                  "items": false
+                                  "maxItems": 4,
+                                  "description": "[grid step, pitch, how hard, length in beats]"
                                 }
                               },
                               "pan": {
@@ -58284,8 +58589,9 @@
                                       "description": "How hard, 0-1"
                                     }
                                   ],
+                                  "items": false,
                                   "minItems": 2,
-                                  "items": false
+                                  "maxItems": 2
                                 },
                                 "description": "[grid step, how hard]"
                               },
@@ -58453,8 +58759,9 @@
                                     "description": "How hard, 0-1"
                                   }
                                 ],
+                                "items": false,
                                 "minItems": 2,
-                                "items": false
+                                "maxItems": 2
                               },
                               "pool": {
                                 "description": "Chord tones, or the five-note scale",
@@ -58611,8 +58918,9 @@
                                             "maximum": 28
                                           }
                                         ],
+                                        "items": false,
                                         "minItems": 2,
-                                        "items": false
+                                        "maxItems": 2
                                       }
                                     },
                                     "description": "One-bar rhythms as [grid step, length in steps]; each motif takes one"
@@ -58879,8 +59187,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -59155,8 +59464,9 @@
                           "maximum": 96
                         }
                       ],
+                      "items": false,
                       "minItems": 2,
-                      "items": false
+                      "maxItems": 2
                     },
                     "start": {
                       "minItems": 2,
@@ -59249,8 +59559,9 @@
                             "maximum": 20
                           }
                         ],
+                        "items": false,
                         "minItems": 2,
-                        "items": false
+                        "maxItems": 2
                       }
                     },
                     "wobble": {
@@ -59267,8 +59578,9 @@
                           "maximum": 400
                         }
                       ],
+                      "items": false,
                       "minItems": 2,
-                      "items": false
+                      "maxItems": 2
                     }
                   },
                   "required": [
@@ -59387,8 +59699,9 @@
                         "maximum": 1
                       }
                     ],
+                    "items": false,
                     "minItems": 3,
-                    "items": false
+                    "maxItems": 3
                   }
                 },
                 "voices": {
@@ -59569,8 +59882,9 @@
                       ]
                     }
                   ],
+                  "items": false,
                   "minItems": 3,
-                  "items": false
+                  "maxItems": 3
                 },
                 "mix": {
                   "description": "A layer louder or quieter than the app's balance, in dB; -60 silences it",
@@ -59643,8 +59957,9 @@
                           "maximum": 12
                         }
                       ],
+                      "items": false,
                       "minItems": 2,
-                      "items": false
+                      "maxItems": 2
                     }
                   },
                   "required": [
@@ -59836,9 +60151,10 @@
                                   "maximum": 16
                                 }
                               ],
-                              "description": "[grid step, pitch, how hard, length in beats]",
+                              "items": false,
                               "minItems": 3,
-                              "items": false
+                              "maxItems": 4,
+                              "description": "[grid step, pitch, how hard, length in beats]"
                             }
                           },
                           "pan": {
@@ -60107,8 +60423,9 @@
                                   "description": "How hard, 0-1"
                                 }
                               ],
+                              "items": false,
                               "minItems": 2,
-                              "items": false
+                              "maxItems": 2
                             },
                             "description": "[grid step, how hard]"
                           },
@@ -60274,8 +60591,9 @@
                                 "description": "How hard, 0-1"
                               }
                             ],
+                            "items": false,
                             "minItems": 2,
-                            "items": false
+                            "maxItems": 2
                           },
                           "pool": {
                             "description": "Chord tones, or the five-note scale",
@@ -60430,8 +60748,9 @@
                                         "maximum": 28
                                       }
                                     ],
+                                    "items": false,
                                     "minItems": 2,
-                                    "items": false
+                                    "maxItems": 2
                                   }
                                 },
                                 "description": "One-bar rhythms as [grid step, length in steps]; each motif takes one"
@@ -60718,8 +61037,9 @@
             }
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -60740,6 +61060,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -61051,8 +61372,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "type": "object",
@@ -61207,8 +61529,9 @@
             "type": "boolean"
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -61242,6 +61565,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -61520,8 +61844,9 @@
                               "maximum": 96
                             }
                           ],
+                          "items": false,
                           "minItems": 2,
-                          "items": false
+                          "maxItems": 2
                         },
                         "start": {
                           "minItems": 2,
@@ -61614,8 +61939,9 @@
                                 "maximum": 20
                               }
                             ],
+                            "items": false,
                             "minItems": 2,
-                            "items": false
+                            "maxItems": 2
                           }
                         },
                         "wobble": {
@@ -61632,8 +61958,9 @@
                               "maximum": 400
                             }
                           ],
+                          "items": false,
                           "minItems": 2,
-                          "items": false
+                          "maxItems": 2
                         }
                       },
                       "required": [
@@ -61752,8 +62079,9 @@
                             "maximum": 1
                           }
                         ],
+                        "items": false,
                         "minItems": 3,
-                        "items": false
+                        "maxItems": 3
                       }
                     },
                     "voices": {
@@ -61934,8 +62262,9 @@
                           ]
                         }
                       ],
+                      "items": false,
                       "minItems": 3,
-                      "items": false
+                      "maxItems": 3
                     },
                     "mix": {
                       "description": "A layer louder or quieter than the app's balance, in dB; -60 silences it",
@@ -62008,8 +62337,9 @@
                               "maximum": 12
                             }
                           ],
+                          "items": false,
                           "minItems": 2,
-                          "items": false
+                          "maxItems": 2
                         }
                       },
                       "required": [
@@ -62201,9 +62531,10 @@
                                       "maximum": 16
                                     }
                                   ],
-                                  "description": "[grid step, pitch, how hard, length in beats]",
+                                  "items": false,
                                   "minItems": 3,
-                                  "items": false
+                                  "maxItems": 4,
+                                  "description": "[grid step, pitch, how hard, length in beats]"
                                 }
                               },
                               "pan": {
@@ -62472,8 +62803,9 @@
                                       "description": "How hard, 0-1"
                                     }
                                   ],
+                                  "items": false,
                                   "minItems": 2,
-                                  "items": false
+                                  "maxItems": 2
                                 },
                                 "description": "[grid step, how hard]"
                               },
@@ -62639,8 +62971,9 @@
                                     "description": "How hard, 0-1"
                                   }
                                 ],
+                                "items": false,
                                 "minItems": 2,
-                                "items": false
+                                "maxItems": 2
                               },
                               "pool": {
                                 "description": "Chord tones, or the five-note scale",
@@ -62795,8 +63128,9 @@
                                             "maximum": 28
                                           }
                                         ],
+                                        "items": false,
                                         "minItems": 2,
-                                        "items": false
+                                        "maxItems": 2
                                       }
                                     },
                                     "description": "One-bar rhythms as [grid step, length in steps]; each motif takes one"
@@ -63240,6 +63574,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -63484,8 +63819,9 @@
             "type": "boolean"
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "type": "object",
@@ -63726,8 +64062,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -63959,6 +64296,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -64068,8 +64406,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -64351,8 +64690,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "null"
@@ -64363,6 +64703,7 @@
       "reach": "home",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -64413,8 +64754,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -64442,6 +64784,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -64520,8 +64863,9 @@
             "minLength": 1
           }
         ],
+        "items": false,
         "minItems": 3,
-        "items": false
+        "maxItems": 3
       },
       "response": {
         "type": "array",
@@ -64595,8 +64939,9 @@
             "type": "boolean"
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "type": "array",
@@ -64662,6 +65007,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -64678,8 +65024,9 @@
             "type": "boolean"
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "boolean"
@@ -64690,6 +65037,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -64792,8 +65140,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -64863,6 +65212,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -64879,8 +65229,9 @@
             "type": "boolean"
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "boolean"
@@ -64906,8 +65257,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -65122,8 +65474,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -65374,8 +65727,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -65444,8 +65798,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -65493,8 +65848,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -65516,6 +65872,7 @@
       "reach": "home",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -65535,6 +65892,7 @@
       "reach": "home",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -66223,8 +66581,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -67173,8 +67532,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -67850,8 +68210,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "anyOf": [
@@ -67912,6 +68273,7 @@
       "reach": "home",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -67930,6 +68292,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -68057,8 +68420,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -68176,6 +68540,7 @@
       "reach": "home",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -68199,6 +68564,7 @@
       "reach": "home",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -68219,6 +68585,7 @@
       "reach": "home",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -68238,6 +68605,7 @@
       "reach": "home",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -68652,8 +69020,9 @@
             "type": "string"
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -69683,8 +70052,9 @@
             "type": "string"
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -69729,6 +70099,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -70247,8 +70618,9 @@
             "minLength": 1
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "array",
@@ -70543,8 +70915,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -70753,8 +71126,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -71007,8 +71381,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "type": "object",
@@ -71261,8 +71636,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "type": "array",
@@ -71336,8 +71712,9 @@
             "type": "string"
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "anyOf": [
@@ -71406,6 +71783,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -71433,8 +71811,9 @@
             "minLength": 1
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -71453,6 +71832,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -71588,8 +71968,9 @@
             "maxLength": 256
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -71713,8 +72094,9 @@
             "maxLength": 256
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -71853,8 +72235,9 @@
             "maxLength": 256
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -71902,8 +72285,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -74106,8 +74490,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -74402,8 +74787,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -74609,8 +74995,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "oneOf": [
@@ -74733,8 +75120,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "anyOf": [
@@ -74813,6 +75201,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -76080,8 +76469,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "anyOf": [
@@ -76146,8 +76536,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "anyOf": [
@@ -76201,6 +76592,7 @@
       "reach": "views",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -76494,8 +76886,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "anyOf": [
@@ -76644,8 +77037,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -76688,8 +77082,9 @@
             }
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 4
       },
       "response": {
         "anyOf": [
@@ -76855,8 +77250,9 @@
             ]
           }
         ],
-        "minItems": 1,
         "items": false,
+        "minItems": 1,
+        "maxItems": 1,
         "$defs": {
           "__schema0": {
             "anyOf": [
@@ -76977,8 +77373,9 @@
             }
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "type": "boolean"
@@ -76997,8 +77394,9 @@
             "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "boolean"
@@ -77085,8 +77483,9 @@
             }
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 3
       },
       "response": {
         "anyOf": [
@@ -77154,8 +77553,9 @@
             "additionalProperties": {}
           }
         ],
+        "items": false,
         "minItems": 3,
-        "items": false
+        "maxItems": 3
       },
       "response": {
         "oneOf": [
@@ -77214,8 +77614,9 @@
             "maxLength": 200
           }
         ],
+        "items": false,
         "minItems": 3,
-        "items": false
+        "maxItems": 3
       },
       "response": {
         "type": "boolean"
@@ -77226,6 +77627,7 @@
       "reach": "home",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -77468,8 +77870,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 2,
-        "items": false
+        "maxItems": 2
       },
       "response": {
         "type": "object",
@@ -77489,6 +77892,7 @@
       "reach": "home",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -77509,6 +77913,7 @@
       "reach": "home",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -77529,6 +77934,7 @@
       "reach": "home",
       "request": {
         "type": "array",
+        "items": false,
         "maxItems": 0
       },
       "response": {
@@ -77937,8 +78343,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -77995,8 +78402,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "string",
@@ -78020,8 +78428,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -79028,8 +79437,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "anyOf": [
@@ -79259,8 +79669,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -79307,8 +79718,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -79376,8 +79788,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -79441,8 +79854,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -79513,8 +79927,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -80547,8 +80962,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -80634,8 +81050,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -80753,8 +81170,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -80798,8 +81216,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -80888,8 +81307,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -80947,8 +81367,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "string",
@@ -81039,8 +81460,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -81165,8 +81587,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -81224,8 +81647,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -81292,8 +81716,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -82265,8 +82690,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -82375,8 +82801,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -83391,8 +83818,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -83706,8 +84134,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -83787,8 +84216,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -83868,8 +84298,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -84184,8 +84615,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -84233,8 +84665,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -84305,8 +84738,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -84391,8 +84825,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -84456,8 +84891,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -84513,8 +84949,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -84945,8 +85382,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "anyOf": [
@@ -85085,8 +85523,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "anyOf": [
@@ -85234,8 +85673,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "anyOf": [
@@ -85392,8 +85832,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -85473,8 +85914,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -85542,8 +85984,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -85604,8 +86047,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -85693,8 +86137,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -88280,8 +88725,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -88597,8 +89043,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -88637,8 +89084,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -88718,8 +89166,9 @@
                             "type": "string"
                           }
                         ],
+                        "items": false,
                         "minItems": 2,
-                        "items": false
+                        "maxItems": 2
                       }
                     }
                   },
@@ -88750,8 +89199,9 @@
                             "type": "string"
                           }
                         ],
+                        "items": false,
                         "minItems": 2,
-                        "items": false
+                        "maxItems": 2
                       }
                     }
                   },
@@ -88807,8 +89257,9 @@
             "additionalProperties": false
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -88871,8 +89322,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -89102,8 +89554,9 @@
                                         "type": "string"
                                       }
                                     ],
+                                    "items": false,
                                     "minItems": 2,
-                                    "items": false
+                                    "maxItems": 2
                                   }
                                 }
                               },
@@ -89134,8 +89587,9 @@
                                         "type": "string"
                                       }
                                     ],
+                                    "items": false,
                                     "minItems": 2,
-                                    "items": false
+                                    "maxItems": 2
                                   }
                                 }
                               },
@@ -89169,8 +89623,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -89377,8 +89832,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -90245,8 +90701,9 @@
             ]
           }
         ],
+        "items": false,
         "minItems": 1,
-        "items": false
+        "maxItems": 1
       },
       "response": {
         "type": "object",
@@ -100197,8 +100654,9 @@
                               "maximum": 96
                             }
                           ],
+                          "items": false,
                           "minItems": 2,
-                          "items": false
+                          "maxItems": 2
                         },
                         "start": {
                           "minItems": 2,
@@ -100291,8 +100749,9 @@
                                 "maximum": 20
                               }
                             ],
+                            "items": false,
                             "minItems": 2,
-                            "items": false
+                            "maxItems": 2
                           }
                         },
                         "wobble": {
@@ -100309,8 +100768,9 @@
                               "maximum": 400
                             }
                           ],
+                          "items": false,
                           "minItems": 2,
-                          "items": false
+                          "maxItems": 2
                         }
                       },
                       "required": [
@@ -100429,8 +100889,9 @@
                             "maximum": 1
                           }
                         ],
+                        "items": false,
                         "minItems": 3,
-                        "items": false
+                        "maxItems": 3
                       }
                     },
                     "voices": {
@@ -100611,8 +101072,9 @@
                           ]
                         }
                       ],
+                      "items": false,
                       "minItems": 3,
-                      "items": false
+                      "maxItems": 3
                     },
                     "mix": {
                       "description": "A layer louder or quieter than the app's balance, in dB; -60 silences it",
@@ -100685,8 +101147,9 @@
                               "maximum": 12
                             }
                           ],
+                          "items": false,
                           "minItems": 2,
-                          "items": false
+                          "maxItems": 2
                         }
                       },
                       "required": [
@@ -100878,9 +101341,10 @@
                                       "maximum": 16
                                     }
                                   ],
-                                  "description": "[grid step, pitch, how hard, length in beats]",
+                                  "items": false,
                                   "minItems": 3,
-                                  "items": false
+                                  "maxItems": 4,
+                                  "description": "[grid step, pitch, how hard, length in beats]"
                                 }
                               },
                               "pan": {
@@ -101149,8 +101613,9 @@
                                       "description": "How hard, 0-1"
                                     }
                                   ],
+                                  "items": false,
                                   "minItems": 2,
-                                  "items": false
+                                  "maxItems": 2
                                 },
                                 "description": "[grid step, how hard]"
                               },
@@ -101316,8 +101781,9 @@
                                     "description": "How hard, 0-1"
                                   }
                                 ],
+                                "items": false,
                                 "minItems": 2,
-                                "items": false
+                                "maxItems": 2
                               },
                               "pool": {
                                 "description": "Chord tones, or the five-note scale",
@@ -101472,8 +101938,9 @@
                                             "maximum": 28
                                           }
                                         ],
+                                        "items": false,
                                         "minItems": 2,
-                                        "items": false
+                                        "maxItems": 2
                                       }
                                     },
                                     "description": "One-bar rhythms as [grid step, length in steps]; each motif takes one"
@@ -104930,7 +105397,7 @@
             "flows": {
               "type": "array",
               "items": {
-                "allOf": [
+                "oneOf": [
                   {
                     "type": "object",
                     "properties": {
@@ -104993,153 +105460,206 @@
                       },
                       "link": {
                         "type": "string"
+                      },
+                      "phase": {
+                        "type": "string",
+                        "const": "running"
+                      },
+                      "prompt": {
+                        "type": "object",
+                        "properties": {
+                          "promptId": {
+                            "type": "string"
+                          },
+                          "providerId": {
+                            "type": "string"
+                          },
+                          "accountId": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "text",
+                              "secret",
+                              "select",
+                              "manual_code"
+                            ]
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "placeholder": {
+                            "type": "string"
+                          },
+                          "options": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "label": {
+                                  "type": "string"
+                                },
+                                "description": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "label"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "promptId",
+                          "providerId",
+                          "kind",
+                          "message"
+                        ]
+                      },
+                      "ended": {
+                        "not": {}
                       }
                     },
                     "required": [
                       "signInId",
                       "deviceId",
                       "providerId",
-                      "target"
+                      "target",
+                      "phase"
                     ]
                   },
                   {
-                    "oneOf": [
-                      {
+                    "type": "object",
+                    "properties": {
+                      "signInId": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9_-]{1,64}$"
+                      },
+                      "deviceId": {
+                        "type": "string"
+                      },
+                      "providerId": {
+                        "type": "string"
+                      },
+                      "accountId": {
+                        "type": "string"
+                      },
+                      "target": {
+                        "type": "string",
+                        "enum": [
+                          "account",
+                          "forge"
+                        ]
+                      },
+                      "notice": {
                         "type": "object",
                         "properties": {
-                          "phase": {
-                            "type": "string",
-                            "const": "running"
+                          "providerId": {
+                            "type": "string"
                           },
-                          "prompt": {
-                            "type": "object",
-                            "properties": {
-                              "promptId": {
-                                "type": "string"
-                              },
-                              "providerId": {
-                                "type": "string"
-                              },
-                              "accountId": {
-                                "type": "string"
-                              },
-                              "kind": {
-                                "type": "string",
-                                "enum": [
-                                  "text",
-                                  "secret",
-                                  "select",
-                                  "manual_code"
-                                ]
-                              },
-                              "message": {
-                                "type": "string"
-                              },
-                              "placeholder": {
-                                "type": "string"
-                              },
-                              "options": {
-                                "type": "array",
-                                "items": {
-                                  "type": "object",
-                                  "properties": {
-                                    "id": {
-                                      "type": "string"
-                                    },
-                                    "label": {
-                                      "type": "string"
-                                    },
-                                    "description": {
-                                      "type": "string"
-                                    }
-                                  },
-                                  "required": [
-                                    "id",
-                                    "label"
-                                  ]
-                                }
-                              }
-                            },
-                            "required": [
-                              "promptId",
-                              "providerId",
-                              "kind",
-                              "message"
+                          "accountId": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "info",
+                              "auth_url",
+                              "device_code",
+                              "progress"
                             ]
                           },
-                          "ended": {
-                            "not": {}
+                          "message": {
+                            "type": "string"
+                          },
+                          "url": {
+                            "type": "string"
+                          },
+                          "userCode": {
+                            "type": "string"
+                          },
+                          "expiresAt": {
+                            "type": "number"
                           }
                         },
                         "required": [
-                          "phase"
+                          "providerId",
+                          "kind",
+                          "message"
                         ]
                       },
-                      {
+                      "link": {
+                        "type": "string"
+                      },
+                      "phase": {
+                        "type": "string",
+                        "const": "ended"
+                      },
+                      "prompt": {
+                        "not": {}
+                      },
+                      "ended": {
                         "type": "object",
                         "properties": {
-                          "phase": {
+                          "kind": {
                             "type": "string",
                             "const": "ended"
                           },
-                          "prompt": {
-                            "not": {}
+                          "outcome": {
+                            "type": "string",
+                            "enum": [
+                              "signed-in",
+                              "failed",
+                              "cancelled",
+                              "signs-in-there"
+                            ]
                           },
-                          "ended": {
+                          "accountId": {
+                            "type": "string"
+                          },
+                          "savedReset": {
                             "type": "object",
                             "properties": {
-                              "kind": {
-                                "type": "string",
-                                "const": "ended"
-                              },
                               "outcome": {
                                 "type": "string",
                                 "enum": [
-                                  "signed-in",
-                                  "failed",
-                                  "cancelled",
-                                  "signs-in-there"
+                                  "used",
+                                  "nothing-to-reset",
+                                  "none-left"
                                 ]
                               },
-                              "accountId": {
-                                "type": "string"
-                              },
-                              "savedReset": {
-                                "type": "object",
-                                "properties": {
-                                  "outcome": {
-                                    "type": "string",
-                                    "enum": [
-                                      "used",
-                                      "nothing-to-reset",
-                                      "none-left"
-                                    ]
-                                  },
-                                  "left": {
-                                    "type": "integer",
-                                    "minimum": 0,
-                                    "maximum": 9007199254740991
-                                  }
-                                },
-                                "required": [
-                                  "outcome"
-                                ]
-                              },
-                              "error": {
-                                "type": "string"
+                              "left": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
                               }
                             },
                             "required": [
-                              "kind",
                               "outcome"
                             ]
+                          },
+                          "error": {
+                            "type": "string"
                           }
                         },
                         "required": [
-                          "phase",
-                          "ended"
+                          "kind",
+                          "outcome"
                         ]
                       }
+                    },
+                    "required": [
+                      "signInId",
+                      "deviceId",
+                      "providerId",
+                      "target",
+                      "phase",
+                      "ended"
                     ]
                   }
                 ]
@@ -105580,8 +106100,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -106605,8 +107126,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -106674,8 +107196,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -106693,6 +107216,7 @@
         "effect": "read",
         "request": {
           "type": "array",
+          "items": false,
           "maxItems": 0
         },
         "response": {
@@ -106962,6 +107486,7 @@
         "effect": "change",
         "request": {
           "type": "array",
+          "items": false,
           "maxItems": 0
         },
         "response": {
@@ -106984,6 +107509,7 @@
         "effect": "change",
         "request": {
           "type": "array",
+          "items": false,
           "maxItems": 0
         },
         "response": {
@@ -107056,8 +107582,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -107316,8 +107843,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -107554,8 +108082,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -107622,8 +108151,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -107664,8 +108194,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -107704,8 +108235,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -107761,8 +108293,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -107831,8 +108364,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -108047,8 +108581,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -108094,8 +108629,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -108216,8 +108752,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -108445,8 +108982,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -108506,8 +109044,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -108626,8 +109165,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "anyOf": [
@@ -108812,8 +109352,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -108865,8 +109406,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "anyOf": [
@@ -108952,8 +109494,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -109030,8 +109573,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -109131,8 +109675,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -109205,8 +109750,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -109256,8 +109802,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -109339,8 +109886,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -109410,8 +109958,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -109463,8 +110012,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -109643,8 +110193,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "oneOf": [
@@ -109703,6 +110254,7 @@
         "effect": "read",
         "request": {
           "type": "array",
+          "items": false,
           "maxItems": 0
         },
         "response": {
@@ -110588,8 +111140,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -110640,8 +111193,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -110674,8 +111228,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -110709,8 +111264,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -110758,8 +111314,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -110794,8 +111351,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "oneOf": [
@@ -110889,8 +111447,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "oneOf": [
@@ -110988,8 +111547,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -111024,8 +111584,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -111050,8 +111611,9 @@
               "maxLength": 4096
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -111132,6 +111694,7 @@
         "effect": "read",
         "request": {
           "type": "array",
+          "items": false,
           "maxItems": 0
         },
         "response": {
@@ -111196,8 +111759,9 @@
               "maxLength": 65536
             }
           ],
+          "items": false,
           "minItems": 2,
-          "items": false
+          "maxItems": 3
         },
         "response": {
           "type": "object",
@@ -111424,8 +111988,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -111742,8 +112307,9 @@
               "maxLength": 256
             }
           ],
+          "items": false,
           "minItems": 2,
-          "items": false
+          "maxItems": 2
         },
         "response": {
           "type": "object",
@@ -111978,8 +112544,9 @@
               "maxLength": 128
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "array",
@@ -112019,8 +112586,9 @@
               "maxLength": 128
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -112049,8 +112617,9 @@
               "type": "boolean"
             }
           ],
+          "items": false,
           "minItems": 2,
-          "items": false
+          "maxItems": 2
         },
         "response": {
           "type": "object",
@@ -112285,8 +112854,9 @@
               "maxLength": 256
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -112533,8 +113103,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -112574,8 +113145,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -112613,8 +113185,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -112661,8 +113234,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -112705,8 +113279,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -112753,8 +113328,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -112773,6 +113349,7 @@
         "effect": "change",
         "request": {
           "type": "array",
+          "items": false,
           "maxItems": 0
         },
         "response": {
@@ -112797,6 +113374,7 @@
         "effect": "read",
         "request": {
           "type": "array",
+          "items": false,
           "maxItems": 0
         },
         "response": {
@@ -113113,8 +113691,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -113174,8 +113753,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -113414,8 +113994,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "anyOf": [
@@ -113471,8 +114052,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "anyOf": [
@@ -113611,8 +114193,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "anyOf": [
@@ -113707,8 +114290,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "anyOf": [
@@ -113818,8 +114402,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "anyOf": [
@@ -113911,8 +114496,9 @@
                                       "type": "string"
                                     }
                                   ],
+                                  "items": false,
                                   "minItems": 2,
-                                  "items": false
+                                  "maxItems": 2
                                 }
                               }
                             },
@@ -113943,8 +114529,9 @@
                                       "type": "string"
                                     }
                                   ],
+                                  "items": false,
                                   "minItems": 2,
-                                  "items": false
+                                  "maxItems": 2
                                 }
                               }
                             },
@@ -114011,8 +114598,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "anyOf": [
@@ -114068,8 +114656,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "anyOf": [
@@ -114129,8 +114718,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -114191,8 +114781,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "anyOf": [
@@ -114353,8 +114944,9 @@
                                   "type": "string"
                                 }
                               ],
+                              "items": false,
                               "minItems": 2,
-                              "items": false
+                              "maxItems": 2
                             }
                           }
                         },
@@ -114385,8 +114977,9 @@
                                   "type": "string"
                                 }
                               ],
+                              "items": false,
                               "minItems": 2,
-                              "items": false
+                              "maxItems": 2
                             }
                           }
                         },
@@ -114425,8 +115018,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "anyOf": [
@@ -114482,8 +115076,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -114536,8 +115131,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "anyOf": [
@@ -114598,8 +115194,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -114617,6 +115214,7 @@
         "effect": "read",
         "request": {
           "type": "array",
+          "items": false,
           "maxItems": 0
         },
         "response": {
@@ -114679,8 +115277,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "anyOf": [
@@ -114736,8 +115335,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "anyOf": [
@@ -114779,6 +115379,7 @@
         "effect": "change",
         "request": {
           "type": "array",
+          "items": false,
           "maxItems": 0
         },
         "response": {
@@ -114839,8 +115440,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -114873,8 +115475,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -114912,8 +115515,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -114980,8 +115584,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -115040,8 +115645,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -115086,8 +115692,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -115111,6 +115718,7 @@
         "effect": "read",
         "request": {
           "type": "array",
+          "items": false,
           "maxItems": 0
         },
         "response": {
@@ -115214,8 +115822,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -115259,8 +115868,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -115302,8 +115912,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -115326,6 +115937,7 @@
         "effect": "read",
         "request": {
           "type": "array",
+          "items": false,
           "maxItems": 0
         },
         "response": {
@@ -115417,8 +116029,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -115474,8 +116087,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -115564,8 +116178,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -115805,8 +116420,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -115862,8 +116478,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -115901,6 +116518,7 @@
         "effect": "change",
         "request": {
           "type": "array",
+          "items": false,
           "maxItems": 0
         },
         "response": {
@@ -116143,8 +116761,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -116167,6 +116786,7 @@
         "effect": "read",
         "request": {
           "type": "array",
+          "items": false,
           "maxItems": 0
         },
         "response": {
@@ -116315,6 +116935,7 @@
         "effect": "read",
         "request": {
           "type": "array",
+          "items": false,
           "maxItems": 0
         },
         "response": {
@@ -116382,8 +117003,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -116479,8 +117101,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -116521,8 +117144,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -116618,6 +117242,7 @@
         "effect": "read",
         "request": {
           "type": "array",
+          "items": false,
           "maxItems": 0
         },
         "response": {
@@ -116806,8 +117431,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "type": "object",
@@ -116835,6 +117461,7 @@
         "effect": "read",
         "request": {
           "type": "array",
+          "items": false,
           "maxItems": 0
         },
         "response": {
@@ -117081,6 +117708,7 @@
         "effect": "change",
         "request": {
           "type": "array",
+          "items": false,
           "maxItems": 0
         },
         "response": {
@@ -117128,8 +117756,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "anyOf": [
@@ -117200,6 +117829,7 @@
         "effect": "read",
         "request": {
           "type": "array",
+          "items": false,
           "maxItems": 0
         },
         "response": {
@@ -117250,8 +117880,9 @@
               ]
             }
           ],
+          "items": false,
           "minItems": 1,
-          "items": false
+          "maxItems": 1
         },
         "response": {
           "anyOf": [

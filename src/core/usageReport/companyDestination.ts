@@ -1,6 +1,6 @@
 import type { UsageReporting } from "@shared/usage";
 import { type ResolveClaudeSettings, resolveSettings } from "../claude/claudeAccess";
-import { claudeCostReportingAllowed, claudeReportingHost } from "../claude/claudeCostPolicy";
+import { claudeCostReportingAllowed } from "../claude/claudeCostPolicy";
 import { hasClaudeReporting } from "../claude/claudeCostReports";
 import { claudeLoginEmail, defaultClaudeConfigDir } from "../claude/claudeQuota";
 import {
@@ -29,8 +29,6 @@ export type CompanyDestinationDeps = {
   read(env: NodeJS.ProcessEnv): Promise<ClaudeCompanyReporting | undefined>;
   /** The person's own Claude Code login's email, which Claude's records carry as `user.email`. */
   email(env: NodeJS.ProcessEnv): Promise<string | undefined>;
-  /** Where the receiver passes Claude's own records on to (`claudeReportingHost`). */
-  claudeHost(env: NodeJS.ProcessEnv): Promise<string | null>;
 };
 
 /**
@@ -52,6 +50,8 @@ export function companyDestination(deps: CompanyDestinationDeps): {
   reporting(): Promise<UsageReporting>;
 } {
   let held: readonly UsageReportDestination[] = [];
+  /** The setup read last, where Claude's own records go even when the report cannot send there. */
+  let setupHost: string | null = null;
   let readAt = Number.NEGATIVE_INFINITY;
   let reading: Promise<void> | undefined;
 
@@ -68,6 +68,7 @@ export function companyDestination(deps: CompanyDestinationDeps): {
             : undefined;
       const email = setup ? await deps.email(env).catch(() => undefined) : undefined;
       held = setup ? toDestination(setup, deps.env, email) : [];
+      setupHost = setup?.host ?? null;
     })().finally(() => {
       reading = undefined;
     });
@@ -82,15 +83,15 @@ export function companyDestination(deps: CompanyDestinationDeps): {
     refresh,
     /**
      * Settings → Usage's line: where the report sends every other model's
-     * work, or else where only Claude's own records go, such as a setup the
-     * report cannot send to over gRPC.
+     * work, or else where only Claude's own records go: a managed setup's
+     * client, or the receiver for the person's own, reports Claude's work to
+     * a setup the report cannot send to over gRPC.
      */
     async reporting() {
       await refresh();
       const endpoint = held[0]?.endpoints.logs ?? held[0]?.endpoints.metrics;
       if (endpoint) return { host: new URL(endpoint).host };
-      const host = await deps.claudeHost(deps.env()).catch(() => null);
-      return host ? { host, claudeOnly: true } : { host: null };
+      return setupHost ? { host: setupHost, claudeOnly: true } : { host: null };
     },
   };
 }
@@ -132,7 +133,6 @@ export function companyUsageDestinations(): ReturnType<typeof companyDestination
     costReportingAllowed: () => claudeCostReportingAllowed(),
     read: (env) => readClaudeCompanyReporting(env),
     email: (env) => claudeLoginEmail(defaultClaudeConfigDir(env), env),
-    claudeHost: async (env) => (await claudeReportingHost(env)).host,
   });
 }
 

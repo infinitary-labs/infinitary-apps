@@ -457,7 +457,6 @@ describe("the company's Claude Code setup as a destination", () => {
       costReportingAllowed: async () => true,
       read: async () => companySetup(url),
       email: async () => "dev@example.com",
-      claudeHost: async () => null,
     });
     await source.refresh();
     const { usage } = home(source.destinations);
@@ -503,7 +502,6 @@ describe("the company's Claude Code setup as a destination", () => {
       costReportingAllowed: async () => true,
       read: async () => companySetup(url, "grpc"),
       email: async () => undefined,
-      claudeHost: async () => null,
     });
     await source.refresh();
     const { usage } = home(source.destinations);
@@ -521,7 +519,6 @@ describe("the company's Claude Code setup as a destination", () => {
       costReportingAllowed: async () => true,
       read: async () => companySetup(url),
       email: async () => "dev@example.com",
-      claudeHost: async () => null,
     });
     await source.refresh();
     expect(source.destinations()).toEqual([]);
@@ -560,7 +557,6 @@ describe("the company's Claude Code setup as a destination", () => {
       costReportingAllowed: async () => false,
       read: async () => companySetup(url),
       email: async () => "dev@example.com",
-      claudeHost: async () => null,
     });
     await source.refresh();
     const { usage } = home(source.destinations);
@@ -609,7 +605,6 @@ describe("the company's Claude Code setup as a destination", () => {
       costReportingAllowed: async () => false,
       read: async () => companySetup(url),
       email: async () => "dev@example.com",
-      claudeHost: async () => null,
     });
     await source.refresh();
     expect(source.destinations()).toEqual([]);
@@ -631,7 +626,6 @@ describe("the company's Claude Code setup as a destination", () => {
         costReportingAllowed: async () => managed === undefined,
         read: async () => own,
         email: async () => undefined,
-        claudeHost: async () => (own ? new URL(url).host : null),
       });
     const host = new URL(url).host;
     const managed = companyReportingFrom({
@@ -648,6 +642,18 @@ describe("the company's Claude Code setup as a destination", () => {
     expect(await sourceWith(managed, undefined).reporting()).toEqual({ host: "otel.example.com" });
     expect(await sourceWith(undefined, companySetup(url)).reporting()).toEqual({ host });
     expect(await sourceWith(undefined, grpcOnly).reporting()).toEqual({ host, claudeOnly: true });
+    const managedGrpc = companyReportingFrom({
+      CLAUDE_CODE_ENABLE_TELEMETRY: "1",
+      OTEL_METRICS_EXPORTER: "otlp",
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc",
+      OTEL_EXPORTER_OTLP_ENDPOINT: "https://otel.example.com:4317",
+    });
+    expect(await sourceWith(managedGrpc, undefined).reporting()).toEqual({
+      host: "otel.example.com:4317",
+      claudeOnly: true,
+    });
+    // A managed policy helper: Claude's client reports somewhere this app cannot know.
+    expect(await sourceWith(null, companySetup(url)).reporting()).toEqual({ host: null });
     expect(await sourceWith(undefined, undefined).reporting()).toEqual({ host: null });
   });
 });

@@ -30,6 +30,8 @@ export type ReviewHistoryEntry =
       title: string;
       action: string;
       answers: CardAnswer[];
+      /** The approved plan's key when the card is that plan's, which the builder is built on. */
+      plan?: string;
     }
   | { kind: "reply"; at: number; card: string; title?: string; words: string }
   | {
@@ -48,7 +50,8 @@ export type ReviewHistoryEntry =
 /** What the history reads: the task record's own readers, nothing new. */
 export type ReviewHistoryReader = {
   timeline(id: string): TaskEvent[];
-  graph: { children(id: string): TaskRecord[] };
+  resolve(ref: string): TaskRecord | undefined;
+  graph: { children(id: string): TaskRecord[]; basisHolds(ref: string): boolean };
 };
 
 /** A card resolution that is not an answer: the captain put the card away without choosing. */
@@ -67,12 +70,13 @@ export function isCaptainAnswer(event: TaskEvent): boolean {
 /**
  * The review history of a builder, oldest first: every review round the
  * host recorded from its reviews, with the typed findings each reported,
- * the captain's answers and replies on its cards word for word, and each
+ * the captain's answers and replies on its cards word for word, the
+ * captain's answers on the approved plan it is built on, and each
  * live-validation answer.
  */
 export function reviewHistory(
   reader: ReviewHistoryReader,
-  builder: Pick<TaskRecord, "id" | "delivery">,
+  builder: Pick<TaskRecord, "id" | "delivery" | "shape">,
 ): ReviewHistoryEntry[] {
   const entries: ReviewHistoryEntry[] = [];
   const own = reader.timeline(builder.id);
@@ -138,6 +142,7 @@ export function reviewHistory(
       entries.push({ kind: "reply", at: event.at, card, ...(title ? { title } : {}), words });
     }
   }
+  entries.push(...planAnswers(reader, builder));
   entries.push(...permissionEntries(builder.delivery?.liveValidation));
   return entries
     .map((entry, index) => ({ entry, index }))
@@ -152,6 +157,39 @@ export function reviewHistory(
 export function earlierHistory(entries: readonly ReviewHistoryEntry[]): ReviewHistoryEntry[] {
   const last = entries.findLastIndex((entry) => entry.kind === "round");
   return entries.filter((_, index) => index !== last);
+}
+
+/** The captain's answers on the cards of the verified basis the builder is built on: its approved plan. */
+function planAnswers(
+  reader: ReviewHistoryReader,
+  builder: Pick<TaskRecord, "id" | "shape">,
+): ReviewHistoryEntry[] {
+  const ref = builder.shape?.basis;
+  const plan = ref && reader.graph.basisHolds(ref) ? reader.resolve(ref) : undefined;
+  if (!plan || plan.id === builder.id) return [];
+  const key = plan.key || plan.id;
+  const events = reader.timeline(plan.id);
+  const titles = new Map(
+    events.flatMap((event) => {
+      const title = event.kind === "card_raised" && /card "(.*)"/.exec(event.text)?.[1];
+      return event.ref && title ? [[event.ref, title] as const] : [];
+    }),
+  );
+  return events.flatMap((event) => {
+    const card = event.data?.cardId;
+    if (!isCaptainAnswer(event) || typeof card !== "string") return [];
+    return [
+      {
+        kind: "answer" as const,
+        at: event.at,
+        card,
+        title: /^card "(.*)": /.exec(event.text)?.[1] ?? titles.get(card) ?? card,
+        action: event.data?.action as string,
+        answers: (event.data?.answers as CardAnswer[] | undefined) ?? [],
+        plan: key,
+      },
+    ];
+  });
 }
 
 /** Each validation request the captain was asked about, with its answer and, for a gap, whether it still covers the latest run. */
@@ -214,7 +252,7 @@ function historyLine(entry: ReviewHistoryEntry): string {
     }
     case "answer":
       return [
-        `- The captain chose ${JSON.stringify(entry.action)} on card ${JSON.stringify(entry.title)} (${entry.card})${entry.answers.length === 0 ? "." : ", answering:"}`,
+        `- The captain chose ${JSON.stringify(entry.action)} on ${entry.plan ? `the approved plan ${entry.plan}'s card` : "card"} ${JSON.stringify(entry.title)} (${entry.card})${entry.answers.length === 0 ? "." : ", answering:"}`,
         ...cardAnswerLines(entry.answers).map((line) => `  ${line}`),
       ].join("\n");
     case "reply":

@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
+import type { Card } from "@shared/cards";
 import { describe, expect, it, vi } from "vitest";
 import {
   fakeCrewmate,
@@ -16,7 +17,9 @@ import { gitRepo } from "../../../tests/helpers/crewHarnessGit";
 import { noSurfaceProof } from "../../../tests/helpers/liveValidation";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { DeviceOutOfReachError } from "../connection/connection";
+import { EMIT_CARD_TOOL } from "../pi/cardTool";
 import type { CrewMachines } from "../placed/crewMachines";
+import { bindTool } from "../session/tools";
 import type { CrewmateSpec } from "./crewSession";
 import { IDLE_NUDGE_TEXT } from "./idleWakes";
 import { REVIEWER_IDLE_NEXT, reviewFindingsNext } from "./reportWakes";
@@ -536,6 +539,163 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       await tick();
       expect(reading.reads).toBe(readsTold);
       expect(ops.length).toBe(beforeTwice + 1);
+    } finally {
+      repo.dispose();
+    }
+  });
+});
+
+// INF-6608's plan, part 4: INF-6603 reviewed INF-6592, built on the plan
+// INF-6581, with a brief that named only the builder; its "Decided so far"
+// held no choice from the plan card, so it asked the captain a question the
+// plan answered. A review of plan-built work now names the plan and the
+// captain's choice on it.
+
+describe("a review of plan-built work", () => {
+  const HEAD = "0123456789abcdef0123456789abcdef01234567";
+
+  it("names the approved plan and the captain's choice on it", async () => {
+    const repo = gitRepo();
+    try {
+      const planner = fakeCrewmate();
+      const builder = fakeCrewmate();
+      const reviewer = fakeCrewmate();
+      const h = setup(planner, {
+        crewmates: [builder, reviewer],
+        classifier: {
+          classify: async (input) =>
+            input.title.startsWith("Plan")
+              ? ({ kind: "research", source: "classifier:test", version: "kc1" } as const)
+              : ({ kind: "implement", source: "classifier:test", version: "kc1" } as const),
+        },
+      });
+      const { view } = await h.repos
+        .setup({ kind: "adopt", path: repo.dir, name: repo.name })
+        .then(({ repo: view }) => ({ view }));
+      h.repos.configure(view.id, { delivery: "direct-pr" });
+      const { taskId: planId } = await h.supervisor.intake.commission({
+        title: "Plan custom model prices",
+        intent: { ...intentOf("plan custom prices"), constraints: [{ kind: "read-only" }] },
+        repoId: view.id,
+      });
+      await tick();
+      await bindTool(EMIT_CARD_TOOL, h.specs.at(-1) as CrewmateSpec).run({
+        title: "Plan: type a price for each custom model",
+        body: '<p>Editing a name or price never re-runs the check.</p><fieldset data-inf-options-only><legend>Review</legend><label><input type="radio" name="careful" value="part-1" data-inf-recommended> Part 1</label></fieldset>',
+        actions: [
+          { id: "build", label: "Approve and build", default: true },
+          { id: "defer", label: "Save and defer" },
+        ],
+      });
+      h.specs.at(-1)?.onReport?.("The plan is on its card.");
+      planner.emit({ type: "turn_end", taskId: planId });
+      planner.finishPrompt();
+      await tick();
+      const card = h.cardStore.listOpen().find((entry) => entry.taskId === planId) as Card;
+      h.supervisor.cardActions.act(card.id, "build", "chrome", {
+        answers: [{ name: "careful", values: ["part-1"], labels: ["Part 1"], changed: true }],
+      });
+      await tick();
+      const plan = h.tasks.get(planId);
+      expect(plan?.status).toBe("done");
+
+      const { taskId: builderId } = await h.supervisor.intake.commission({
+        title: "Type a price for each custom model",
+        intent: intentOf("build it"),
+        repoId: view.id,
+        shape: { basis: plan?.key ?? planId, rigor_ask: "reviewed" },
+      });
+      await tick();
+      await reportTurn(builder, builderId, "Built the price fields.");
+      vi.mocked(h.workspace.branchHead).mockResolvedValue(HEAD);
+      await h.supervisor.intake.commission({
+        title: "Review",
+        intent: intentOf("build it"),
+        shape: { review_of: builderId },
+      });
+      await tick();
+
+      const brief = reviewer.promptCalls[0] ?? "";
+      const builderKey = h.tasks.get(builderId)?.key;
+      expect(brief).toContain(
+        `${builderKey} is built on the approved plan ${plan?.key} "Plan custom model prices"`,
+      );
+      expect(brief).toMatch(
+        /The plan's card, as the captain read it, is saved whole .*\n- .+\.html/,
+      );
+      expect(brief).toContain('The captain closed it by choosing "Approve and build".');
+      expect(brief).toContain(
+        `- The captain chose "build" on the approved plan ${plan?.key}'s card "Plan: type a price for each custom model" (${card.id}), answering:`,
+      );
+    } finally {
+      repo.dispose();
+    }
+  });
+
+  // Part 3: a finding whose recommended way is the plan as written goes to
+  // the builder as a fix; the reviewer records it again at the same head.
+  it("sends the builder a fix the reviewer settled after its first record at that head", async () => {
+    const repo = gitRepo();
+    try {
+      const builder = fakeCrewmate();
+      const reviewer = fakeCrewmate();
+      const { supervisor, tasks, repos, workspace, specs } = setup(builder, {
+        crewmates: [reviewer],
+      });
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "direct-pr" });
+      const { taskId: builderId } = await supervisor.intake.commission({
+        title: "Type a price for each custom model",
+        intent: intentOf("build it"),
+        repoId: view.id,
+        shape: { rigor_ask: "reviewed" },
+      });
+      await tick();
+      await reportTurn(builder, builderId, "Built the price fields.");
+      vi.mocked(workspace.branchHead).mockResolvedValue(HEAD);
+      const { taskId: reviewId } = await supervisor.intake.commission({
+        title: "Review",
+        intent: intentOf("build it"),
+        shape: { review_of: builderId },
+      });
+      await tick();
+      const zero = {
+        id: "F1",
+        severity: "error" as const,
+        file: "src/prices.ts",
+        line: 12,
+        text: "a catalog price of zero counts as free",
+        action: "auto-fix" as const,
+      };
+      const save = {
+        id: "F2",
+        severity: "warning" as const,
+        file: "src/accounts.ts",
+        line: 316,
+        text: "every Save keeps earlier checks",
+        action: "ask-user" as const,
+      };
+      await reviewTurn({ tasks, specs }, reviewer, 1, reviewId, "Two findings.", {
+        code: "findings",
+        findings: [zero, save],
+        risk: { level: "medium", why: "Save changes." },
+      });
+      const received = () =>
+        [...builder.promptCalls, ...vi.mocked(builder.steer).mock.calls.map(([text]) => text)].join(
+          "\n",
+        );
+      expect(received()).toContain(
+        "F1 error src/prices.ts:12 a catalog price of zero counts as free - auto-fix",
+      );
+      expect(received()).not.toContain("F2 warning");
+      await reviewTurn({ tasks, specs }, reviewer, 1, reviewId, "The plan settles F2.", {
+        code: "findings",
+        findings: [zero, { ...save, action: "auto-fix" }],
+        risk: { level: "medium", why: "Save changes." },
+      });
+      expect(received()).toContain(
+        "F2 warning src/accounts.ts:316 every Save keeps earlier checks - auto-fix",
+      );
     } finally {
       repo.dispose();
     }

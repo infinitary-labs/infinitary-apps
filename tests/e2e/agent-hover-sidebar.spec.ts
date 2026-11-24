@@ -42,9 +42,16 @@ async function stageAnchors(page: Page) {
       const point = { x, y: y + 6 };
       if (point.x <= 0 || point.x >= innerWidth || point.y <= 0 || point.y >= innerHeight)
         return [];
-      if (document.elementFromPoint(point.x, point.y)?.closest("[data-rail]")) return [];
+      const hit = document.elementFromPoint(point.x, point.y);
+      if (hit?.closest("[data-rail]")) return [];
       const id = element.getAttribute("data-crew-model-anchor");
       if (!id) throw new Error("The painted crewmate anchor has no task");
+      // Another crewmate's name can cover this glyph. Point only where
+      // the browser can deliver input to this task, not that other name.
+      const named = hit?.closest("[data-crew-model-name], [data-crew-mark]");
+      const owner =
+        named?.getAttribute("data-crew-model-name") ?? named?.getAttribute("data-crew-mark");
+      if (owner && owner !== id) return [];
       return [{ ...point, id }];
     }),
   );

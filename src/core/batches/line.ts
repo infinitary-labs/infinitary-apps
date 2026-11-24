@@ -338,17 +338,19 @@ export function unfixed(record: BatchRecord, joined: readonly string[]): BatchRe
  * mark on each change in line that carries the declaration, and the held
  * version kept among those that held, so the repair's base outlives the hold
  * until the repair merges or its task closes. Declared again, the commit it
- * names now is the one bound: a change at the earlier one carries it no more.
+ * names now is the one bound, and none when none can be read: a change at the
+ * earlier one carries it no more.
  */
 export function declared(record: BatchRecord, taskId: string, at?: string): BatchRecord {
   const fixes = record.fixes ?? [];
   const head = record.open?.hold?.head;
   const held = record.held ?? [];
+  const { [taskId]: _earlier, ...heads } = record.fixHeads ?? {};
   const next = unfixed(
     {
       ...record,
       fixes: fixes.includes(taskId) ? fixes : [...fixes, taskId],
-      ...(at ? { fixHeads: { ...record.fixHeads, [taskId]: at } } : {}),
+      fixHeads: at ? { ...heads, [taskId]: at } : heads,
       ...(head && !held.includes(head) ? { held: [head, ...held] } : {}),
     },
     [],

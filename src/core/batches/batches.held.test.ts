@@ -593,6 +593,25 @@ describe("a held batch", () => {
     expect(home.host.merges).toEqual([]);
   });
 
+  // Intent: the same issue, its second review's finding, a bug being fixed: a repair that
+  // declared again while no commit could be read from its working copy kept the commit it had
+  // named before, so another task's change at that earlier commit still ended the hold.
+  it("binds no commit once the fix is declared again with none read, so a change at the commit named before waits", async () => {
+    const home = await heldBatch();
+    const held = home.open();
+    await home.batches.declareFix(REPO, FIX.taskId, FIX.head);
+    expect(await home.batches.declareFix(REPO, FIX.taskId)).toBeUndefined();
+    expect(home.record().fixes).toEqual([FIX.taskId]);
+    expect(home.record().fixHeads).toBeUndefined();
+
+    const delivered = { ...FIX, taskId: "t-takeover", branch: "fm/task-takeover", at: 8_000 };
+    home.approve(delivered);
+    await home.pass();
+    expect(home.open()).toEqual({ ...held, repair: FIX.taskId });
+    expect(home.record().line).toEqual([delivered]);
+    expect(home.host.merges).toEqual([]);
+  });
+
   // Intent: the same issue, its review's finding: the task that delivers a declared commit
   // holds no declaration of its own, so a later version of its change is an ordinary change.
   it("leaves a later version of the takeover's change an ordinary change", async () => {

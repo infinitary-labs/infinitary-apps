@@ -1527,7 +1527,8 @@ describe("a repair's answer to its project's held batch", () => {
   });
 
   // Intent: the same issue's reviews: every declaration of a fix binds that commit, and one
-  // made beside work its commit does not hold binds none.
+  // made again beside work its commit does not hold binds none, the commit named before
+  // included.
   it.each([
     ["alone", () => ({ fix: true, evidence })],
     [
@@ -1547,6 +1548,9 @@ describe("a repair's answer to its project's held batch", () => {
     async (_way, batch) => {
       const at = await held();
       const repair = repairCopy(at);
+      // An earlier declaration bound the commit the repair had committed then.
+      await at.service.checkTool.checkForCrew(REPAIR, { batch: { fix: true, evidence } });
+      expect(at.batches.record(REPO).fixHeads).toEqual({ [REPAIR]: repair.head });
       writeFileSync(join(repair.dir, "scale.ts"), "export const scale = 1;\n");
       await at.service.checkTool.checkForCrew(REPAIR, { batch: batch(at.forge.batchHead) });
       expect(at.batches.record(REPO).fixes).toEqual([REPAIR]);

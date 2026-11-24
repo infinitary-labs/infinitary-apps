@@ -117898,7 +117898,8 @@ ${FRAME_TAG_SCRIPT}
     if (!event.isTrusted || event.pointerType === "mouse" || !event.isPrimary || !target || target.nodeType !== 1) return;
     if (target.closest(PRESS_OWN) || takesOwnTouches(target)) return;
     var control = target.closest(PRESS_CONTROL);
-    press.held = { id: event.pointerId, at: event.timeStamp, target: target, area: control || target, control: !!control, selection: String(getSelection()), clicked: false, touched: false };
+    var points = annotation.enabled && annotation.mode && !!annotationPart(target);
+    press.held = { id: event.pointerId, at: event.timeStamp, target: target, area: control || target, control: !!control, points: points, selection: String(getSelection()), clicked: false, touched: false };
   }, true);
   window.addEventListener("pointercancel", function (event) {
     if (press.held && press.held.id === event.pointerId) press.held = null;
@@ -117914,11 +117915,12 @@ ${FRAME_TAG_SCRIPT}
     var held = press.held;
     press.held = null;
     if (!held || !event.isTrusted || event.pointerId !== held.id || held.clicked || !held.target.isConnected) return;
-    if (event.timeStamp - held.at < ${WEBKIT_HIGHLIGHT_DELAY_MS}) return;
+    if (!held.points && event.timeStamp - held.at < ${WEBKIT_HIGHLIGHT_DELAY_MS}) return;
     var under = document.elementFromPoint(event.clientX, event.clientY);
     if (!under || !held.area.contains(under)) return;
     var selection = String(getSelection());
     if (!held.control && selection && selection !== held.selection) return;
+    if (held.points && selection) getSelection().removeAllRanges();
     var at = { screenX: event.screenX, screenY: event.screenY, clientX: event.clientX, clientY: event.clientY };
     if (held.touched) press.released = { held: held, at: at };
     else pressClick(held, at);
@@ -118666,7 +118668,7 @@ ${FRAME_KEYBOARD_SCRIPT}
   }, true);
   post({ type: "ready", reuseReads: true });
 })();`;
-  const FRAME_BRIDGE_SHA256 = "sha256-KiSq2TgbB26qidr86hgM18OS9VT6zKcaEIuv1++zuok=";
+  const FRAME_BRIDGE_SHA256 = "sha256-AmlxB+L7UfV4cMOPcrmtjUcfsDdPqGXMhkDcnBuQWmo=";
   const APP_FRAME_SCHEME = "app-frame";
   const FRAME_SANDBOX_TOKENS = ["allow-scripts"];
   const FRAME_SANDBOX = FRAME_SANDBOX_TOKENS.join(" ");

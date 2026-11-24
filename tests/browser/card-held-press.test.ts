@@ -4,7 +4,7 @@ import { buildFrameDocument } from "@shared/plugins/frameDocument";
 import { WEBKIT_HIGHLIGHT_DELAY_MS } from "@shared/plugins/framePressScript";
 import { expect, test } from "vitest";
 import { commands } from "vitest/browser";
-import { cardStylesheet } from "../../src/renderer/src/cards/prototypeSrcdoc";
+import { cardBodyMarkup, cardStylesheet } from "../../src/renderer/src/cards/prototypeSrcdoc";
 
 /**
  * INF-1337: a finger's press on a card acts on its own trusted release once
@@ -30,6 +30,13 @@ import { cardStylesheet } from "../../src/renderer/src/cards/prototypeSrcdoc";
  * test sends as the host does, during a held press. The bridge then makes no
  * click of its own, which the card's script tells from the browser's: a
  * click the bridge makes is not trusted.
+ *
+ * INF-6222: in Point at, a press on a part picks it on its own release
+ * however briefly it is held. On a busy phone WebKit took a quick tap whose
+ * release reached it late for a held press, which clicks nothing on words,
+ * while the pointer events still timed it as quick. The card's script can
+ * swallow every click the browser sends, as WebKit sent none there, so a
+ * pick that still comes is the frame's own.
  */
 
 const FRAME = "held-press-card";
@@ -45,15 +52,26 @@ const BODY = `
   <img id="survey" alt="${PICTURE}" width="240" height="120" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='120'%3E%3Crect width='240' height='120' fill='%232a8fbd'/%3E%3C/svg%3E">
   <figure><svg id="moving" viewBox="0 0 750 120" width="100%" role="img" aria-label="A chart its own script moves"><rect width="750" height="120" fill="var(--bg-2)"/></svg></figure>`;
 
+/** The paragraphs a person points at, above the card's choices and picture. */
+const POINTED = `
+  <p id="basin">The north basin floods at spring tide, so the survey waits for the neap.</p>
+  <p id="chart">Keep the tide table beside the chart.</p>`;
+
 /**
  * The card's own script: it counts the checkbox's changes, the clicks the
  * bridge makes, and, of the browser's own events, its touch starts and ends,
  * mouseups and context menus, and its moving chart takes its own touches, as
- * a drawing a finger drags does.
+ * a drawing a finger drags does. While `swallows` is set it swallows every
+ * click the browser sends, after the bridge has heard it and before the
+ * card's parts do.
  */
 const SCRIPT = `window.heard = { changes: 0, bridged: 0, starts: 0, ends: 0, ups: 0, menus: 0 };
+window.swallows = false;
 document.getElementById("tide").addEventListener("change", function () { window.heard.changes += 1; });
-window.addEventListener("click", function (event) { if (!event.isTrusted) window.heard.bridged += 1; }, true);
+window.addEventListener("click", function (event) {
+  if (!event.isTrusted) window.heard.bridged += 1;
+  else if (window.swallows) { event.preventDefault(); event.stopImmediatePropagation(); }
+}, true);
 [["touchstart", "starts"], ["touchend", "ends"], ["mouseup", "ups"], ["contextmenu", "menus"]].forEach(function (count) {
   window.addEventListener(count[0], function (event) { if (event.isTrusted) window.heard[count[1]] += 1; }, true);
 });
@@ -62,7 +80,14 @@ document.getElementById("moving").addEventListener("touchstart", function (event
 /** A tap, a press held past WebKit's press moment, and one held past its long press. */
 const HOLDS = [50, WEBKIT_HIGHLIGHT_DELAY_MS + 180, 900];
 
-type Heard = { type: string; token?: number; seq?: number; pictures?: { alt: string }[] };
+type Heard = {
+  type: string;
+  token?: number;
+  seq?: number;
+  pictures?: { alt: string }[];
+  target?: { start: number; kind: string; span?: unknown };
+  focus?: boolean;
+};
 type CardHeard = {
   changes: number;
   bridged: number;
@@ -83,6 +108,22 @@ function inFrame<T, A>(read: (argument: A) => T, argument: A): Promise<Awaited<T
 }
 
 const cardHeard = () => inFrame(() => (window as unknown as { heard: CardHeard }).heard, null);
+
+/** Whether the card's script swallows the clicks the browser sends. */
+const swallowClicks = (swallows: boolean) =>
+  inFrame((on: boolean) => {
+    (window as unknown as { swallows: boolean }).swallows = on;
+  }, swallows);
+
+/** The frame answers a ping only after every message the host sent it before. */
+async function caughtUp(heard: Heard[]): Promise<void> {
+  const frame = document.querySelector<HTMLIFrameElement>(`iframe[name="${FRAME}"]`);
+  const seq = Math.random();
+  frame?.contentWindow?.postMessage({ fm: FRAME_BRIDGE_VERSION, type: "ping", seq }, "*");
+  await expect
+    .poll(() => heard.some((message) => message.type === "pong" && message.seq === seq))
+    .toBe(true);
+}
 
 /**
  * A finger held on `selector` for `hold` ms, done once its touch ended and
@@ -114,12 +155,8 @@ async function movedPress(selector: string, heard: Heard[]): Promise<void> {
   const held = commands.holdTouchInFrame(FRAME, selector, HOLDS[2] as number);
   await expect.poll(async () => (await cardHeard()).starts).toBe(before.starts + 1);
   const frame = document.querySelector<HTMLIFrameElement>(`iframe[name="${FRAME}"]`);
-  const seq = Math.random();
   frame?.contentWindow?.postMessage({ fm: FRAME_BRIDGE_VERSION, type: "press-moved" }, "*");
-  frame?.contentWindow?.postMessage({ fm: FRAME_BRIDGE_VERSION, type: "ping", seq }, "*");
-  await expect
-    .poll(() => heard.some((message) => message.type === "pong" && message.seq === seq))
-    .toBe(true);
+  await caughtUp(heard);
   expect((await cardHeard()).ends).toBe(before.ends);
   await held;
   await expect
@@ -142,7 +179,28 @@ async function settled(heard: Heard[]): Promise<void> {
 const opened = (heard: Heard[]) =>
   heard.filter((message) => message.type === "image").map((message) => message.pictures?.[0]?.alt);
 
-async function mounted(): Promise<Heard[]> {
+/** Every part the frame picked for a note, as the host hears it. */
+const picked = (heard: Heard[]) =>
+  heard
+    .filter((message) => message.type === "annotate")
+    .map((message) => ({
+      start: message.target?.start,
+      kind: message.target?.kind,
+      words: message.target?.span !== undefined,
+      focus: message.focus,
+    }));
+
+/** A whole paragraph picked, its note's comment ready, as Point at picks one. */
+const paragraph = (start: number) => ({ start, kind: "paragraph", words: false, focus: true });
+
+const targetOf = (selector: string) =>
+  inFrame(
+    (found: string) => Number(document.querySelector(found)?.getAttribute("data-inf-target")),
+    selector,
+  );
+
+/** The card's body, with Point at on as the host turns it on when `pointing`. */
+async function mounted(pointing = false): Promise<Heard[]> {
   const heard: Heard[] = [];
   const frame = document.createElement("iframe");
   frame.name = FRAME;
@@ -160,13 +218,14 @@ async function mounted(): Promise<Heard[]> {
         frame.contentWindow?.postMessage({ fm: FRAME_BRIDGE_VERSION, ...message }, "*");
       post({ type: "keys", pictures: true, escape: false });
       post({ type: "initialize", document: data.document });
+      if (pointing) post({ type: "annotation", document: data.document, mode: true, queued: [] });
     }
   });
   frame.srcdoc = buildFrameDocument({
     csp: frameCsp([await scriptHash(SCRIPT)]),
     theme: "dark",
     style: cardStylesheet(),
-    html: BODY,
+    html: pointing ? cardBodyMarkup(POINTED + BODY).html : BODY,
     script: SCRIPT,
   });
   document.body.replaceChildren(frame);
@@ -179,6 +238,7 @@ async function mounted(): Promise<Heard[]> {
       ),
     )
     .toBe(true);
+  if (pointing) await caughtUp(heard);
   return heard;
 }
 
@@ -247,4 +307,49 @@ test("a held press the phone says its own scroller took is left to the browser",
     bridged: 1,
     opened: [PICTURE, PICTURE],
   });
+});
+
+test("in Point at, a finger's press on a paragraph picks it once on its own release, quick or held", async () => {
+  const heard = await mounted(true);
+  const basin = await targetOf("#basin");
+  await swallowClicks(true);
+  for (const [index, hold] of HOLDS.slice(0, 2).entries()) {
+    await press("#basin", hold);
+    await settled(heard);
+    expect(picked(heard)).toEqual(Array.from({ length: index + 1 }, () => paragraph(basin)));
+  }
+  // Where the browser clicks too, as Chromium does, its click is dropped: one press, one pick.
+  await swallowClicks(false);
+  await press("#basin", HOLDS[0] as number);
+  await settled(heard);
+  expect(picked(heard)).toEqual(Array.from({ length: 3 }, () => paragraph(basin)));
+  // A choice's words stay the choice's in Point at: they pick it and no part.
+  await press("#tide-words", HOLDS[0] as number);
+  await settled(heard);
+  const tide = await inFrame(
+    () => (document.getElementById("tide") as HTMLInputElement).checked,
+    null,
+  );
+  expect({ checked: tide, picks: picked(heard).length }).toEqual({ checked: true, picks: 3 });
+});
+
+test("in Point at, a press on a paragraph picks it past words still selected from before", async () => {
+  // After a selection's Annotate and Cancel the words stay selected; a tap's own click clears them.
+  const heard = await mounted(true);
+  const basin = await targetOf("#basin");
+  await swallowClicks(true);
+  for (const [index, hold] of HOLDS.slice(0, 2).entries()) {
+    await inFrame(() => {
+      const words = document.getElementById("chart")?.firstChild;
+      if (!words) throw new Error("The chart paragraph has no words");
+      const range = document.createRange();
+      range.setStart(words, 9);
+      range.setEnd(words, 19);
+      getSelection()?.removeAllRanges();
+      getSelection()?.addRange(range);
+    }, null);
+    await press("#basin", hold);
+    await settled(heard);
+    expect(picked(heard)).toEqual(Array.from({ length: index + 1 }, () => paragraph(basin)));
+  }
 });

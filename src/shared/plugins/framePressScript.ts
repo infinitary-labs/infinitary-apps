@@ -8,9 +8,10 @@ export const WEBKIT_HIGHLIGHT_DELAY_MS = 120;
 
 /**
  * Trusted bridge code for a finger's held press (INF-1337), spliced into
- * `FRAME_BRIDGE_SCRIPT`: a touch or pen press held from 0.12 s up acts on its
- * own trusted release, so a press the browser's own press handling swallows
- * still does what a click there does.
+ * `FRAME_BRIDGE_SCRIPT` after `FRAME_ANNOTATION_SCRIPT`, whose Point at it
+ * reads: a touch or pen press held from 0.12 s up, and in Point at any press
+ * on a part, acts on its own trusted release, so a press the browser's own
+ * press handling swallows still does what a click there does.
  *
  * On an iPhone or iPad, WebKit hands a touch held 0.12 s or more to its press
  * path, which clicks only if the page has already answered the position
@@ -43,7 +44,19 @@ export const WEBKIT_HIGHLIGHT_DELAY_MS = 120;
  * `press-moved` once it moves farther than a press may (`pressMoved`), and
  * that press does nothing of its own.
  *
- * A quicker tap stays the browser's, as it always was. A
+ * In Point at, a press on a part the frame picks acts on its own release
+ * however briefly it is held. On a busy phone the app can hand WebKit a
+ * quick tap's release late: WebKit's press handling times the touch from
+ * when it reached it and takes the tap as held, while the pointer events
+ * carry the touch's own times, so the press looks quick to the frame. A held
+ * press that WebKit takes clicks only on something that takes clicks of its
+ * own, such as a link or a button, never on plain words, so a paragraph
+ * pointed at heard no click and opened no note editor. So no clock decides a part pointed at: its release
+ * picks it, and the browser's own click, sent or not, is dropped. A
+ * selection still standing from before the press goes first, as a tap's own
+ * click clears it, so the pick is not kept from the part.
+ *
+ * Outside Point at, a quicker tap stays the browser's, as it always was. A
  * press that moved off what it went down on, one the browser took for a
  * scroll or a swipe (its pointer or touch cancelled), one whose touch the
  * card's own script cancelled, and one on something that takes its own
@@ -84,7 +97,8 @@ export const FRAME_PRESS_SCRIPT = `  var press = { held: null, released: null, a
     if (!event.isTrusted || event.pointerType === "mouse" || !event.isPrimary || !target || target.nodeType !== 1) return;
     if (target.closest(PRESS_OWN) || takesOwnTouches(target)) return;
     var control = target.closest(PRESS_CONTROL);
-    press.held = { id: event.pointerId, at: event.timeStamp, target: target, area: control || target, control: !!control, selection: String(getSelection()), clicked: false, touched: false };
+    var points = annotation.enabled && annotation.mode && !!annotationPart(target);
+    press.held = { id: event.pointerId, at: event.timeStamp, target: target, area: control || target, control: !!control, points: points, selection: String(getSelection()), clicked: false, touched: false };
   }, true);
   window.addEventListener("pointercancel", function (event) {
     if (press.held && press.held.id === event.pointerId) press.held = null;
@@ -100,11 +114,12 @@ export const FRAME_PRESS_SCRIPT = `  var press = { held: null, released: null, a
     var held = press.held;
     press.held = null;
     if (!held || !event.isTrusted || event.pointerId !== held.id || held.clicked || !held.target.isConnected) return;
-    if (event.timeStamp - held.at < ${WEBKIT_HIGHLIGHT_DELAY_MS}) return;
+    if (!held.points && event.timeStamp - held.at < ${WEBKIT_HIGHLIGHT_DELAY_MS}) return;
     var under = document.elementFromPoint(event.clientX, event.clientY);
     if (!under || !held.area.contains(under)) return;
     var selection = String(getSelection());
     if (!held.control && selection && selection !== held.selection) return;
+    if (held.points && selection) getSelection().removeAllRanges();
     var at = { screenX: event.screenX, screenY: event.screenY, clientX: event.clientX, clientY: event.clientY };
     if (held.touched) press.released = { held: held, at: at };
     else pressClick(held, at);

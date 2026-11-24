@@ -29,6 +29,7 @@ import {
   forgeKeySignInResultSchema,
   forgeKeySignInSchema,
 } from "../forges";
+import { homeAtAnswerSchema, homeAtOptionsSchema } from "../homeAt";
 import { homeMoveReadySchema } from "../homeMove";
 import {
   joinAtAnswerSchema,
@@ -118,6 +119,26 @@ export const deviceChannels = {
     reach: "views",
     request: z.tuple([remoteLoginAddressSchema, remoteLoginAddOptionsSchema.optional()]),
     response: remoteLoginAddAnswerSchema,
+  },
+  // Setting the first mate up on another computer over SSH, from the
+  // welcome screen's Another computer (docs/first-launch.md, "Setting it up
+  // from here"): one step each call - its key line, the password once, the
+  // question before making an account, the offer to connect where it already
+  // runs - until the first mate there started. `home-at-cancel` stops the
+  // one under way at its next step.
+  "inf:devices:home-at": {
+    effect: "change",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([remoteLoginAddressSchema, homeAtOptionsSchema.optional()]),
+    response: homeAtAnswerSchema,
+  },
+  "inf:devices:home-at-cancel": {
+    effect: "change",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([remoteLoginAddressSchema]),
+    response: okSchema,
   },
   // Macs nearby (docs/devices.md, "Macs nearby"): while "By its address"
   // is open, this Mac listens for Remote Login's Bonjour announcement and

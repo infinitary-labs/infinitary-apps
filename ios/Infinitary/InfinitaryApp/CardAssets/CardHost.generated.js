@@ -28711,6 +28711,1320 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `${count} tasks stayed on ${from}, out of reach, so it stays on your list.`;
     }
   }
+  function devicesHomeAccountAsk() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أأنشئ هناك حسابًا باسم infinitary لنائب القبطان؟`;
+      case "de":
+        return `Dort ein Konto namens infinitary für deinen ersten Offizier anlegen?`;
+      case "es":
+        return `¿Crear allí una cuenta llamada infinitary para tu primer oficial?`;
+      case "fr":
+        return `Créer là-bas un compte nommé infinitary pour votre second ?`;
+      case "ja":
+        return `一等航海士用に、そちらに infinitary という名前のアカウントを作りますか？`;
+      case "ko":
+        return `일등항해사를 위해 그곳에 infinitary라는 계정을 만들까요?`;
+      case "pt-BR":
+        return `Criar lá uma conta chamada infinitary para o seu imediato?`;
+      case "zh-Hans":
+        return `要在那里为你的大副建一个名为 infinitary 的账户吗？`;
+      case "zh-Hant":
+        return `要在那裡為你的大副建立一個名為 infinitary 的帳號嗎？`;
+      case "en-XA":
+        return `[Ṁáķé áñ áççöûñţ ñáɱéð îñƒîñîţáŕý ţĥéŕé ƒöŕ ýöûŕ ƒîŕšţ ɱáţé? ~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Make an account named infinitary there for your first mate?‬`;
+    }
+    return `Make an account named infinitary there for your first mate?`;
+  }
+  function devicesHomeAccountMake() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أنشئه`;
+      case "de":
+        return `Anlegen`;
+      case "es":
+        return `Crearla`;
+      case "fr":
+        return `Le créer`;
+      case "ja":
+        return `作成する`;
+      case "ko":
+        return `만들기`;
+      case "pt-BR":
+        return `Criar`;
+      case "zh-Hans":
+        return `建立`;
+      case "zh-Hant":
+        return `建立`;
+      case "en-XA":
+        return `[Ṁáķé îţ ~~~]`;
+      case "ar-XB":
+        return `‮Make it‬`;
+    }
+    return `Make it`;
+  }
+  function devicesHomeAddressHead() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أعدّني على حاسوب آخر`;
+      case "de":
+        return `Richte mich auf einem anderen Computer ein`;
+      case "es":
+        return `Configúrame en otra computadora`;
+      case "fr":
+        return `Installez-moi sur un autre ordinateur`;
+      case "ja":
+        return `別のコンピューターに私を準備する`;
+      case "ko":
+        return `다른 컴퓨터에 나를 설정하기`;
+      case "pt-BR":
+        return `Me configure em outro computador`;
+      case "zh-Hans":
+        return `把我设置在另一台电脑上`;
+      case "zh-Hant":
+        return `把我設定在另一台電腦上`;
+      case "en-XA":
+        return `[Šéţ ɱé ûþ öñ áñöţĥéŕ çöɱþûţéŕ ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Set me up on another computer‬`;
+    }
+    return `Set me up on another computer`;
+  }
+  function devicesHomeAskAgain() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `اطلب مجددًا`;
+      case "de":
+        return `Erneut fragen`;
+      case "es":
+        return `Volver a pedirlo`;
+      case "fr":
+        return `Redemander`;
+      case "ja":
+        return `もう一度頼む`;
+      case "ko":
+        return `다시 요청`;
+      case "pt-BR":
+        return `Pedir de novo`;
+      case "zh-Hans":
+        return `再请求一次`;
+      case "zh-Hant":
+        return `再要求一次`;
+      case "en-XA":
+        return `[Åšķ áĝáîñ ~~~]`;
+      case "ar-XB":
+        return `‮Ask again‬`;
+    }
+    return `Ask again`;
+  }
+  function devicesHomeBack() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `رجوع`;
+      case "de":
+        return `Zurück`;
+      case "es":
+        return `Atrás`;
+      case "fr":
+        return `Retour`;
+      case "ja":
+        return `戻る`;
+      case "ko":
+        return `뒤로`;
+      case "pt-BR":
+        return `Voltar`;
+      case "zh-Hans":
+        return `返回`;
+      case "zh-Hant":
+        return `返回`;
+      case "en-XA":
+        return `[Ɓáçķ ~~]`;
+      case "ar-XB":
+        return `‮Back‬`;
+    }
+    return `Back`;
+  }
+  function devicesHomeCancelled(input2) {
+    const computer = input2.computer;
+    switch (currentLanguage()) {
+      case "ar":
+        return `توقف. لم يبدأ شيء على ${computer}.`;
+      case "de":
+        return `Angehalten. Auf ${computer} wurde nichts gestartet.`;
+      case "es":
+        return `Detenido. No se inició nada en ${computer}.`;
+      case "fr":
+        return `Arrêté. Rien n'a été lancé sur ${computer}.`;
+      case "ja":
+        return `停止しました。${computer} では何も起動していません。`;
+      case "ko":
+        return `멈췄습니다. ${computer}에서 아무것도 시작하지 않았습니다.`;
+      case "pt-BR":
+        return `Parado. Nada foi iniciado em ${computer}.`;
+      case "zh-Hans":
+        return `已停止。${computer} 上没有启动任何东西。`;
+      case "zh-Hant":
+        return `已停止。${computer} 上沒有啟動任何東西。`;
+      case "en-XA":
+        return `[Šţöþþéð. Ñöţĥîñĝ ŵáš šţáŕţéð öñ ${computer}. ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Stopped. Nothing was started on ‬${computer}‮.‬`;
+    }
+    return `Stopped. Nothing was started on ${computer}.`;
+  }
+  function devicesHomeCommands() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أعدّه بالأوامر`;
+      case "de":
+        return `Mit Befehlen einrichten`;
+      case "es":
+        return `Configurarlo con comandos`;
+      case "fr":
+        return `L'installer avec des commandes`;
+      case "ja":
+        return `コマンドで準備する`;
+      case "ko":
+        return `명령으로 설정하기`;
+      case "pt-BR":
+        return `Configurar com comandos`;
+      case "zh-Hans":
+        return `用命令设置`;
+      case "zh-Hant":
+        return `用指令設定`;
+      case "en-XA":
+        return `[Šéţ îţ ûþ ŵîţĥ çöɱɱáñðš ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Set it up with commands‬`;
+    }
+    return `Set it up with commands`;
+  }
+  function devicesHomeCommandsInstead() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أعدّه بالأوامر بدلًا من ذلك.`;
+      case "de":
+        return `Richte es stattdessen mit Befehlen ein.`;
+      case "es":
+        return `Configúralo con comandos en su lugar.`;
+      case "fr":
+        return `Installez-le plutôt avec des commandes.`;
+      case "ja":
+        return `代わりにコマンドで準備してください。`;
+      case "ko":
+        return `대신 명령으로 설정하세요.`;
+      case "pt-BR":
+        return `Configure-o com comandos em vez disso.`;
+      case "zh-Hans":
+        return `请改用命令设置。`;
+      case "zh-Hant":
+        return `請改用指令設定。`;
+      case "en-XA":
+        return `[Šéţ îţ ûþ ŵîţĥ çöɱɱáñðš îñšţéáð. ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Set it up with commands instead.‬`;
+    }
+    return `Set it up with commands instead.`;
+  }
+  function devicesHomeFirewall(input2) {
+    const computer = input2.computer;
+    switch (currentLanguage()) {
+      case "ar":
+        return `قد يمنع جدار الحماية على ${computer} حواسيبك الأخرى من الدخول.`;
+      case "de":
+        return `Die Firewall auf ${computer} hält deine anderen Computer womöglich fern.`;
+      case "es":
+        return `El firewall de ${computer} puede impedir la entrada de tus otras computadoras.`;
+      case "fr":
+        return `Le pare-feu de ${computer} peut bloquer vos autres ordinateurs.`;
+      case "ja":
+        return `${computer} のファイアウォールが、ほかのコンピューターを締め出しているかもしれません。`;
+      case "ko":
+        return `${computer}의 방화벽이 다른 컴퓨터를 막고 있을 수 있습니다.`;
+      case "pt-BR":
+        return `O firewall de ${computer} pode bloquear seus outros computadores.`;
+      case "zh-Hans":
+        return `${computer} 上的防火墙可能会挡住你的其他电脑。`;
+      case "zh-Hant":
+        return `${computer} 上的防火牆可能會擋住你的其他電腦。`;
+      case "en-XA":
+        return `[Ţĥé ƒîŕéŵáļļ öñ ${computer} ɱáý ķééþ ýöûŕ öţĥéŕ çöɱþûţéŕš öûţ. ~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The firewall on ‬${computer}‮ may keep your other computers out.‬`;
+    }
+    return `The firewall on ${computer} may keep your other computers out.`;
+  }
+  function devicesHomeInstallWay() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `استخدم حسابًا يستطيع ذلك، أو ثبّت Infinitary هناك وأعدّه بالأوامر بدلًا من ذلك. لم يتغير شيء هناك.`;
+      case "de":
+        return `Nutze ein Konto, das es darf, oder installiere Infinitary dort und richte es stattdessen mit Befehlen ein. Dort hat sich nichts geändert.`;
+      case "es":
+        return `Usa una cuenta que pueda, o instala Infinitary allí y configúralo con comandos en su lugar. No cambió nada allí.`;
+      case "fr":
+        return `Utilisez un compte qui le peut, ou installez Infinitary là-bas et installez-le plutôt avec des commandes. Rien n'a changé là-bas.`;
+      case "ja":
+        return `それができるアカウントを使うか、そちらに Infinitary をインストールして、代わりにコマンドで準備してください。そちらでは何も変わっていません。`;
+      case "ko":
+        return `설치할 수 있는 계정을 쓰거나, 그곳에 Infinitary를 설치한 뒤 대신 명령으로 설정하세요. 그곳에서는 아무것도 바뀌지 않았습니다.`;
+      case "pt-BR":
+        return `Use uma conta que possa, ou instale o Infinitary lá e configure-o com comandos em vez disso. Nada mudou lá.`;
+      case "zh-Hans":
+        return `请使用有权限的账户，或在那里安装 Infinitary 后改用命令设置。那里没有任何改动。`;
+      case "zh-Hant":
+        return `請使用有權限的帳號，或在那裡安裝 Infinitary 後改用指令設定。那裡沒有任何變更。`;
+      case "en-XA":
+        return `[Ûšé áñ áççöûñţ ţĥáţ çáñ, öŕ îñšţáļļ Îñƒîñîţáŕý ţĥéŕé áñð šéţ îţ ûþ ŵîţĥ çöɱɱáñðš îñšţéáð. Ñöţĥîñĝ çĥáñĝéð ţĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Use an account that can, or install Infinitary there and set it up with commands instead. Nothing changed there.‬`;
+    }
+    return `Use an account that can, or install Infinitary there and set it up with commands instead. Nothing changed there.`;
+  }
+  function devicesHomeKeepsRunning(input2) {
+    const computer = input2.computer;
+    switch (currentLanguage()) {
+      case "ar":
+        return `توقف. يبقى نائب القبطان يعمل على ${computer}.`;
+      case "de":
+        return `Angehalten. Dein erster Offizier läuft auf ${computer} weiter.`;
+      case "es":
+        return `Detenido. Tu primer oficial sigue funcionando en ${computer}.`;
+      case "fr":
+        return `Arrêté. Votre second continue de tourner sur ${computer}.`;
+      case "ja":
+        return `停止しました。一等航海士は ${computer} で動き続けます。`;
+      case "ko":
+        return `멈췄습니다. 일등항해사는 ${computer}에서 계속 실행됩니다.`;
+      case "pt-BR":
+        return `Parado. Seu imediato continua rodando em ${computer}.`;
+      case "zh-Hans":
+        return `已停止。你的大副会在 ${computer} 上继续运行。`;
+      case "zh-Hant":
+        return `已停止。你的大副會在 ${computer} 上繼續執行。`;
+      case "en-XA":
+        return `[Šţöþþéð. Ýöûŕ ƒîŕšţ ɱáţé ķééþš ŕûññîñĝ öñ ${computer}. ~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Stopped. Your first mate keeps running on ‬${computer}‮.‬`;
+    }
+    return `Stopped. Your first mate keeps running on ${computer}.`;
+  }
+  function devicesHomeKeyWay() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `قد يقرأ تسجيل الدخول عن بُعد هناك المفاتيح من ملف آخر. أعدّه بالأوامر بدلًا من ذلك.`;
+      case "de":
+        return `Seine Remote-Anmeldung liest Schlüssel womöglich aus einer anderen Datei. Richte es stattdessen mit Befehlen ein.`;
+      case "es":
+        return `Su inicio de sesión remoto puede leer las claves de otro archivo. Configúralo con comandos en su lugar.`;
+      case "fr":
+        return `Sa connexion à distance lit peut-être les clés dans un autre fichier. Installez-le plutôt avec des commandes.`;
+      case "ja":
+        return `そちらのリモートログインは別のファイルから鍵を読んでいるかもしれません。代わりにコマンドで準備してください。`;
+      case "ko":
+        return `그곳의 원격 로그인이 다른 파일에서 키를 읽을 수 있습니다. 대신 명령으로 설정하세요.`;
+      case "pt-BR":
+        return `O login remoto dele pode ler chaves de outro arquivo. Configure-o com comandos em vez disso.`;
+      case "zh-Hans":
+        return `它的远程登录可能从另一个文件读取密钥。请改用命令设置。`;
+      case "zh-Hant":
+        return `它的遠端登入可能從另一個檔案讀取金鑰。請改用指令設定。`;
+      case "en-XA":
+        return `[Îţš Ŕéɱöţé Ļöĝîñ ɱáý ŕéáð ķéýš ƒŕöɱ áñöţĥéŕ ƒîļé. Šéţ îţ ûþ ŵîţĥ çöɱɱáñðš îñšţéáð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Its Remote Login may read keys from another file. Set it up with commands instead.‬`;
+    }
+    return `Its Remote Login may read keys from another file. Set it up with commands instead.`;
+  }
+  function devicesHomeLeftNothing(input2) {
+    const computer = input2.computer;
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${count} خطوة أخرى لم تبدأ · لم يتغير شيء على ${computer}`;
+          case "one":
+            return `خطوة أخرى (${count}) لم تبدأ · لم يتغير شيء على ${computer}`;
+          case "two":
+            return `خطوتان أخريان (${count}) لم تبدآ · لم يتغير شيء على ${computer}`;
+          case "few":
+            return `${count} خطوات أخرى لم تبدأ · لم يتغير شيء على ${computer}`;
+          case "many":
+            return `${count} خطوة أخرى لم تبدأ · لم يتغير شيء على ${computer}`;
+          default:
+            return `${count} خطوة أخرى لم تبدأ · لم يتغير شيء على ${computer}`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} weiterer Schritt nicht begonnen · auf ${computer} hat sich nichts geändert`;
+          default:
+            return `${count} weitere Schritte nicht begonnen · auf ${computer} hat sich nichts geändert`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} paso más sin empezar · no cambió nada en ${computer}`;
+          case "many":
+            return `${count} pasos más sin empezar · no cambió nada en ${computer}`;
+          default:
+            return `${count} pasos más sin empezar · no cambió nada en ${computer}`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} étape restante non commencée · rien n'a changé sur ${computer}`;
+          case "many":
+            return `${count} étapes restantes non commencées · rien n'a changé sur ${computer}`;
+          default:
+            return `${count} étapes restantes non commencées · rien n'a changé sur ${computer}`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `残り ${count} ステップは未開始 · ${computer} では何も変わっていません`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `남은 ${count}단계는 시작하지 않음 · ${computer}에서 바뀐 것은 없습니다`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} etapa a mais não iniciada · nada mudou em ${computer}`;
+          case "many":
+            return `${count} etapas a mais não iniciadas · nada mudou em ${computer}`;
+          default:
+            return `${count} etapas a mais não iniciadas · nada mudou em ${computer}`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `还有 ${count} 个步骤未开始 · ${computer} 上没有任何改动`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `還有 ${count} 個步驟未開始 · ${computer} 上沒有任何變更`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} ɱöŕé šţéþ ñöţ šţáŕţéð · ñöţĥîñĝ çĥáñĝéð öñ ${computer} ~~~~~~~~~~~~~~~]`;
+          default:
+            return `[${count} ɱöŕé šţéþš ñöţ šţáŕţéð · ñöţĥîñĝ çĥáñĝéð öñ ${computer} ~~~~~~~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ more step not started · nothing changed on ‬${computer}`;
+          default:
+            return `${count}‮ more steps not started · nothing changed on ‬${computer}`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} more step not started · nothing changed on ${computer}`;
+      default:
+        return `${count} more steps not started · nothing changed on ${computer}`;
+    }
+  }
+  function devicesHomeLeftRunning(input2) {
+    const computer = input2.computer;
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${count} خطوة أخرى لم تبدأ · يبقى نائب القبطان يعمل على ${computer}`;
+          case "one":
+            return `خطوة أخرى (${count}) لم تبدأ · يبقى نائب القبطان يعمل على ${computer}`;
+          case "two":
+            return `خطوتان أخريان (${count}) لم تبدآ · يبقى نائب القبطان يعمل على ${computer}`;
+          case "few":
+            return `${count} خطوات أخرى لم تبدأ · يبقى نائب القبطان يعمل على ${computer}`;
+          case "many":
+            return `${count} خطوة أخرى لم تبدأ · يبقى نائب القبطان يعمل على ${computer}`;
+          default:
+            return `${count} خطوة أخرى لم تبدأ · يبقى نائب القبطان يعمل على ${computer}`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} weiterer Schritt nicht begonnen · dein erster Offizier läuft auf ${computer} weiter`;
+          default:
+            return `${count} weitere Schritte nicht begonnen · dein erster Offizier läuft auf ${computer} weiter`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} paso más sin empezar · tu primer oficial sigue funcionando en ${computer}`;
+          case "many":
+            return `${count} pasos más sin empezar · tu primer oficial sigue funcionando en ${computer}`;
+          default:
+            return `${count} pasos más sin empezar · tu primer oficial sigue funcionando en ${computer}`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} étape restante non commencée · votre second continue de tourner sur ${computer}`;
+          case "many":
+            return `${count} étapes restantes non commencées · votre second continue de tourner sur ${computer}`;
+          default:
+            return `${count} étapes restantes non commencées · votre second continue de tourner sur ${computer}`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `残り ${count} ステップは未開始 · 一等航海士は ${computer} で動き続けます`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `남은 ${count}단계는 시작하지 않음 · 일등항해사는 ${computer}에서 계속 실행됩니다`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} etapa a mais não iniciada · seu imediato continua rodando em ${computer}`;
+          case "many":
+            return `${count} etapas a mais não iniciadas · seu imediato continua rodando em ${computer}`;
+          default:
+            return `${count} etapas a mais não iniciadas · seu imediato continua rodando em ${computer}`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `还有 ${count} 个步骤未开始 · 你的大副会在 ${computer} 上继续运行`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `還有 ${count} 個步驟未開始 · 你的大副會在 ${computer} 上繼續執行`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} ɱöŕé šţéþ ñöţ šţáŕţéð · ýöûŕ ƒîŕšţ ɱáţé ķééþš ŕûññîñĝ öñ ${computer} ~~~~~~~~~~~~~~~~~~~~]`;
+          default:
+            return `[${count} ɱöŕé šţéþš ñöţ šţáŕţéð · ýöûŕ ƒîŕšţ ɱáţé ķééþš ŕûññîñĝ öñ ${computer} ~~~~~~~~~~~~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ more step not started · your first mate keeps running on ‬${computer}`;
+          default:
+            return `${count}‮ more steps not started · your first mate keeps running on ‬${computer}`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} more step not started · your first mate keeps running on ${computer}`;
+      default:
+        return `${count} more steps not started · your first mate keeps running on ${computer}`;
+    }
+  }
+  function devicesHomeLinger(input2) {
+    const computer = input2.computer;
+    switch (currentLanguage()) {
+      case "ar":
+        return `ليبقى نائب القبطان يعمل بعد إعادة التشغيل، يشغّل مسؤول هذا الأمر مرة واحدة على ${computer}:`;
+      case "de":
+        return `Damit dein erster Offizier nach einem Neustart weiterläuft, führt ein Administrator dies einmal auf ${computer} aus:`;
+      case "es":
+        return `Para que tu primer oficial siga funcionando después de reiniciar, un administrador ejecuta esto una vez en ${computer}:`;
+      case "fr":
+        return `Pour que votre second continue de tourner après un redémarrage, un administrateur exécute ceci une fois sur ${computer} :`;
+      case "ja":
+        return `再起動後も一等航海士を動かし続けるには、管理者が ${computer} でこれを一度実行します:`;
+      case "ko":
+        return `재시작 후에도 일등항해사가 계속 실행되게 하려면, 관리자가 ${computer}에서 이것을 한 번 실행합니다:`;
+      case "pt-BR":
+        return `Para seu imediato continuar rodando depois de reiniciar, um administrador executa isto uma vez em ${computer}:`;
+      case "zh-Hans":
+        return `要让你的大副在重启后继续运行，管理员需在 ${computer} 上运行一次这条命令：`;
+      case "zh-Hant":
+        return `要讓你的大副在重新開機後繼續執行，管理員需在 ${computer} 上執行一次這個指令：`;
+      case "en-XA":
+        return `[Ţö ķééþ ýöûŕ ƒîŕšţ ɱáţé ŕûññîñĝ áƒţéŕ á ŕéšţáŕţ, áñ áðɱîñîšţŕáţöŕ ŕûñš ţĥîš öñ ${computer} öñçé: ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮To keep your first mate running after a restart, an administrator runs this on ‬${computer}‮ once:‬`;
+    }
+    return `To keep your first mate running after a restart, an administrator runs this on ${computer} once:`;
+  }
+  function devicesHomeNoPrivate(input2) {
+    const computer = input2.computer;
+    switch (currentLanguage()) {
+      case "ar":
+        return `ليس لـ ${computer} عنوان على شبكة خاصة، لذا لا يستطيع هذا الحاسوب الاتصال به.`;
+      case "de":
+        return `${computer} hat keine Adresse in einem privaten Netzwerk, daher kann sich dieser Computer nicht mit ihm verbinden.`;
+      case "es":
+        return `${computer} no tiene dirección en una red privada, así que esta computadora no puede conectarse a ella.`;
+      case "fr":
+        return `${computer} n'a pas d'adresse sur un réseau privé, donc cet ordinateur ne peut pas s'y connecter.`;
+      case "ja":
+        return `${computer} にはプライベートネットワーク上のアドレスがないため、このコンピューターから接続できません。`;
+      case "ko":
+        return `${computer}에는 사설 네트워크 주소가 없어서 이 컴퓨터가 연결할 수 없습니다.`;
+      case "pt-BR":
+        return `${computer} não tem endereço em uma rede privada, então este computador não consegue se conectar a ele.`;
+      case "zh-Hans":
+        return `${computer} 没有私有网络地址，所以这台电脑无法连接它。`;
+      case "zh-Hant":
+        return `${computer} 沒有私人網路位址，所以這台電腦無法連到它。`;
+      case "en-XA":
+        return `[${computer} ĥáš ñö áððŕéšš öñ á þŕîṽáţé ñéţŵöŕķ, šö ţĥîš çöɱþûţéŕ çáññöţ çöññéçţ ţö îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${computer}‮ has no address on a private network, so this computer cannot connect to it.‬`;
+    }
+    return `${computer} has no address on a private network, so this computer cannot connect to it.`;
+  }
+  function devicesHomeNoPrivateWay() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ضع الحاسوبين على شبكة خاصة مثل Tailscale، ثم اطلب مجددًا. يبقى نائب القبطان يعمل هناك.`;
+      case "de":
+        return `Bring beide Computer in ein privates Netzwerk wie Tailscale und frag dann erneut. Dein erster Offizier läuft dort weiter.`;
+      case "es":
+        return `Pon ambas computadoras en una red privada como Tailscale y vuelve a pedirlo. Tu primer oficial sigue funcionando allí.`;
+      case "fr":
+        return `Mettez les deux ordinateurs sur un réseau privé comme Tailscale, puis redemandez. Votre second continue de tourner là-bas.`;
+      case "ja":
+        return `両方のコンピューターを Tailscale などのプライベートネットワークに入れてから、もう一度頼んでください。一等航海士はそちらで動き続けます。`;
+      case "ko":
+        return `두 컴퓨터를 Tailscale 같은 사설 네트워크에 넣은 뒤 다시 요청하세요. 일등항해사는 그곳에서 계속 실행됩니다.`;
+      case "pt-BR":
+        return `Coloque os dois computadores em uma rede privada como o Tailscale e peça de novo. Seu imediato continua rodando lá.`;
+      case "zh-Hans":
+        return `把两台电脑都放到 Tailscale 等私有网络上，然后再请求一次。你的大副会在那里继续运行。`;
+      case "zh-Hant":
+        return `把兩台電腦都放到 Tailscale 等私人網路上，然後再要求一次。你的大副會在那裡繼續執行。`;
+      case "en-XA":
+        return `[Þûţ ƀöţĥ çöɱþûţéŕš öñ á þŕîṽáţé ñéţŵöŕķ šûçĥ áš Ţáîļšçáļé, ţĥéñ ášķ áĝáîñ. Ýöûŕ ƒîŕšţ ɱáţé ķééþš ŕûññîñĝ ţĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Put both computers on a private network such as Tailscale, then ask again. Your first mate keeps running there.‬`;
+    }
+    return `Put both computers on a private network such as Tailscale, then ask again. Your first mate keeps running there.`;
+  }
+  function devicesHomeNoSystemd(input2) {
+    const computer = input2.computer;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يستطيع ${computer} تشغيل Infinitary عند كل إعادة تشغيل: ليس فيه systemd.`;
+      case "de":
+        return `${computer} kann Infinitary nicht bei jedem Neustart starten: Es hat kein systemd.`;
+      case "es":
+        return `${computer} no puede iniciar Infinitary en cada reinicio: no tiene systemd.`;
+      case "fr":
+        return `${computer} ne peut pas lancer Infinitary à chaque redémarrage : il n'a pas systemd.`;
+      case "ja":
+        return `${computer} は再起動のたびに Infinitary を起動できません。systemd がありません。`;
+      case "ko":
+        return `${computer}은(는) 재시작할 때마다 Infinitary를 시작할 수 없습니다. systemd가 없습니다.`;
+      case "pt-BR":
+        return `${computer} não consegue iniciar o Infinitary a cada reinício: ele não tem systemd.`;
+      case "zh-Hans":
+        return `${computer} 无法在每次重启时启动 Infinitary：它没有 systemd。`;
+      case "zh-Hant":
+        return `${computer} 無法在每次重新開機時啟動 Infinitary：它沒有 systemd。`;
+      case "en-XA":
+        return `[${computer} çáññöţ šţáŕţ Îñƒîñîţáŕý áţ éṽéŕý ŕéšţáŕţ: îţ ĥáš ñö šýšţéɱð. ~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${computer}‮ cannot start Infinitary at every restart: it has no systemd.‬`;
+    }
+    return `${computer} cannot start Infinitary at every restart: it has no systemd.`;
+  }
+  function devicesHomeNotOpen(input2) {
+    const address = input2.address;
+    switch (currentLanguage()) {
+      case "ar":
+        return `Infinitary غير مفتوح على ${address}. افتحه هناك واطلب مجددًا، أو أعدّه من هنا.`;
+      case "de":
+        return `Infinitary ist auf ${address} nicht geöffnet. Öffne es dort und frag erneut, oder richte es von hier aus ein.`;
+      case "es":
+        return `Infinitary no está abierto en ${address}. Ábrelo allí y vuelve a pedirlo, o configúralo desde aquí.`;
+      case "fr":
+        return `Infinitary n'est pas ouvert sur ${address}. Ouvrez-le là-bas et redemandez, ou installez-le d'ici.`;
+      case "ja":
+        return `${address} で Infinitary が開いていません。そちらで開いてもう一度頼むか、ここから準備してください。`;
+      case "ko":
+        return `${address}에서 Infinitary가 열려 있지 않습니다. 그곳에서 열고 다시 요청하거나, 여기서 설정하세요.`;
+      case "pt-BR":
+        return `O Infinitary não está aberto em ${address}. Abra-o lá e peça de novo, ou configure-o daqui.`;
+      case "zh-Hans":
+        return `${address} 上没有打开 Infinitary。请在那里打开后再请求一次，或从这里设置。`;
+      case "zh-Hant":
+        return `${address} 上沒有開啟 Infinitary。請在那裡開啟後再要求一次，或從這裡設定。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý îš ñöţ öþéñ öñ ${address}. Öþéñ îţ ţĥéŕé áñð ášķ áĝáîñ, öŕ šéţ îţ ûþ ƒŕöɱ ĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary is not open on ‬${address}‮. Open it there and ask again, or set it up from here.‬`;
+    }
+    return `Infinitary is not open on ${address}. Open it there and ask again, or set it up from here.`;
+  }
+  function devicesHomeNotStarted(input2) {
+    const computer = input2.computer;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يبدأ Infinitary على ${computer}.`;
+      case "de":
+        return `Infinitary ist auf ${computer} nicht gestartet.`;
+      case "es":
+        return `Infinitary no se inició en ${computer}.`;
+      case "fr":
+        return `Infinitary n'a pas démarré sur ${computer}.`;
+      case "ja":
+        return `${computer} で Infinitary が起動しませんでした。`;
+      case "ko":
+        return `${computer}에서 Infinitary가 시작되지 않았습니다.`;
+      case "pt-BR":
+        return `O Infinitary não iniciou em ${computer}.`;
+      case "zh-Hans":
+        return `Infinitary 没有在 ${computer} 上启动。`;
+      case "zh-Hant":
+        return `Infinitary 沒有在 ${computer} 上啟動。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý ðîð ñöţ šţáŕţ öñ ${computer}. ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary did not start on ‬${computer}‮.‬`;
+    }
+    return `Infinitary did not start on ${computer}.`;
+  }
+  function devicesHomeOrCommands() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ثم اطلب مجددًا، أو أعدّه بالأوامر بدلًا من ذلك.`;
+      case "de":
+        return `Frag dann erneut, oder richte es stattdessen mit Befehlen ein.`;
+      case "es":
+        return `Luego vuelve a pedirlo, o configúralo con comandos en su lugar.`;
+      case "fr":
+        return `Puis redemandez, ou installez-le plutôt avec des commandes.`;
+      case "ja":
+        return `その後、もう一度頼むか、代わりにコマンドで準備してください。`;
+      case "ko":
+        return `그런 다음 다시 요청하거나, 대신 명령으로 설정하세요.`;
+      case "pt-BR":
+        return `Depois peça de novo, ou configure-o com comandos em vez disso.`;
+      case "zh-Hans":
+        return `然后再请求一次，或改用命令设置。`;
+      case "zh-Hant":
+        return `然後再要求一次，或改用指令設定。`;
+      case "en-XA":
+        return `[Ţĥéñ ášķ áĝáîñ, öŕ šéţ îţ ûþ ŵîţĥ çöɱɱáñðš îñšţéáð. ~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Then ask again, or set it up with commands instead.‬`;
+    }
+    return `Then ask again, or set it up with commands instead.`;
+  }
+  function devicesHomePort(input2) {
+    const port = input2.port;
+    switch (currentLanguage()) {
+      case "ar":
+        return `المنفذ ${port}`;
+      case "de":
+        return `Port ${port}`;
+      case "es":
+        return `puerto ${port}`;
+      case "fr":
+        return `port ${port}`;
+      case "ja":
+        return `ポート ${port}`;
+      case "ko":
+        return `포트 ${port}`;
+      case "pt-BR":
+        return `porta ${port}`;
+      case "zh-Hans":
+        return `端口 ${port}`;
+      case "zh-Hant":
+        return `連接埠 ${port}`;
+      case "en-XA":
+        return `[þöŕţ ${port} ~~]`;
+      case "ar-XB":
+        return `‮port ‬${port}`;
+    }
+    return `port ${port}`;
+  }
+  function devicesHomeRoot(input2) {
+    const computer = input2.computer;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يُدخلك ${computer} بصفة root، ولا يعمل Infinitary بصفة root.`;
+      case "de":
+        return `${computer} meldet dich als root an, und Infinitary läuft nicht als root.`;
+      case "es":
+        return `${computer} te inicia sesión como root, e Infinitary no se ejecuta como root.`;
+      case "fr":
+        return `${computer} vous connecte en tant que root, et Infinitary ne tourne pas en tant que root.`;
+      case "ja":
+        return `${computer} には root としてサインインしますが、Infinitary は root では動きません。`;
+      case "ko":
+        return `${computer}은(는) root로 로그인시키지만, Infinitary는 root로 실행되지 않습니다.`;
+      case "pt-BR":
+        return `${computer} faz você entrar como root, e o Infinitary não roda como root.`;
+      case "zh-Hans":
+        return `${computer} 让你以 root 登录，而 Infinitary 不以 root 运行。`;
+      case "zh-Hant":
+        return `${computer} 讓你以 root 登入，而 Infinitary 不以 root 執行。`;
+      case "en-XA":
+        return `[${computer} šîĝñš ýöû îñ áš ŕööţ, áñð Îñƒîñîţáŕý ðöéš ñöţ ŕûñ áš ŕööţ. ~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${computer}‮ signs you in as root, and Infinitary does not run as root.‬`;
+    }
+    return `${computer} signs you in as root, and Infinitary does not run as root.`;
+  }
+  function devicesHomeRuns(input2) {
+    const computer = input2.computer;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يعمل Infinitary بالفعل على ${computer}.`;
+      case "de":
+        return `Infinitary läuft bereits auf ${computer}.`;
+      case "es":
+        return `Infinitary ya funciona en ${computer}.`;
+      case "fr":
+        return `Infinitary tourne déjà sur ${computer}.`;
+      case "ja":
+        return `${computer} ではすでに Infinitary が動いています。`;
+      case "ko":
+        return `${computer}에서 이미 Infinitary가 실행 중입니다.`;
+      case "pt-BR":
+        return `O Infinitary já roda em ${computer}.`;
+      case "zh-Hans":
+        return `Infinitary 已经在 ${computer} 上运行。`;
+      case "zh-Hant":
+        return `Infinitary 已經在 ${computer} 上執行。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý áļŕéáðý ŕûñš öñ ${computer}. ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary already runs on ‬${computer}‮.‬`;
+    }
+    return `Infinitary already runs on ${computer}.`;
+  }
+  function devicesHomeRunsAsk() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أتتصل به من هنا بدلًا من ذلك؟`;
+      case "de":
+        return `Stattdessen von hier aus damit verbinden?`;
+      case "es":
+        return `¿Conectarte a ella desde aquí en su lugar?`;
+      case "fr":
+        return `Vous y connecter d'ici à la place ?`;
+      case "ja":
+        return `代わりにここから接続しますか？`;
+      case "ko":
+        return `대신 여기서 연결할까요?`;
+      case "pt-BR":
+        return `Conectar a ele daqui em vez disso?`;
+      case "zh-Hans":
+        return `改为从这里连接它吗？`;
+      case "zh-Hant":
+        return `改為從這裡連到它嗎？`;
+      case "en-XA":
+        return `[Çöññéçţ ţö îţ ƒŕöɱ ĥéŕé îñšţéáð? ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Connect to it from here instead?‬`;
+    }
+    return `Connect to it from here instead?`;
+  }
+  function devicesHomeRunsConnect() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `اتصل به بدلًا من ذلك`;
+      case "de":
+        return `Stattdessen verbinden`;
+      case "es":
+        return `Conectarte a ella`;
+      case "fr":
+        return `S'y connecter à la place`;
+      case "ja":
+        return `代わりに接続する`;
+      case "ko":
+        return `대신 연결하기`;
+      case "pt-BR":
+        return `Conectar a ele`;
+      case "zh-Hans":
+        return `改为连接它`;
+      case "zh-Hant":
+        return `改為連到它`;
+      case "en-XA":
+        return `[Çöññéçţ ţö îţ îñšţéáð ~~~~~~~]`;
+      case "ar-XB":
+        return `‮Connect to it instead‬`;
+    }
+    return `Connect to it instead`;
+  }
+  function devicesHomeSandboxWay() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ثبّت هناك حزمة Infinitary المناسبة لنظامه، ثم أعدّه بالأوامر بدلًا من ذلك. لم يتغير شيء هناك.`;
+      case "de":
+        return `Installiere dort das Infinitary-Paket für sein System und richte es dann stattdessen mit Befehlen ein. Dort hat sich nichts geändert.`;
+      case "es":
+        return `Instala allí el paquete de Infinitary para su sistema y luego configúralo con comandos en su lugar. No cambió nada allí.`;
+      case "fr":
+        return `Installez là-bas le paquet Infinitary pour son système, puis installez-le plutôt avec des commandes. Rien n'a changé là-bas.`;
+      case "ja":
+        return `そちらのシステム用の Infinitary パッケージをインストールしてから、代わりにコマンドで準備してください。そちらでは何も変わっていません。`;
+      case "ko":
+        return `그곳 시스템용 Infinitary 패키지를 설치한 뒤 대신 명령으로 설정하세요. 그곳에서는 아무것도 바뀌지 않았습니다.`;
+      case "pt-BR":
+        return `Instale lá o pacote do Infinitary para o sistema dele e depois configure-o com comandos em vez disso. Nada mudou lá.`;
+      case "zh-Hans":
+        return `请在那里安装适合其系统的 Infinitary 软件包，然后改用命令设置。那里没有任何改动。`;
+      case "zh-Hant":
+        return `請在那裡安裝適合其系統的 Infinitary 套件，然後改用指令設定。那裡沒有任何變更。`;
+      case "en-XA":
+        return `[Îñšţáļļ ţĥé Îñƒîñîţáŕý þáçķáĝé ƒöŕ îţš šýšţéɱ ţĥéŕé, ţĥéñ šéţ îţ ûþ ŵîţĥ çöɱɱáñðš îñšţéáð. Ñöţĥîñĝ çĥáñĝéð ţĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Install the Infinitary package for its system there, then set it up with commands instead. Nothing changed there.‬`;
+    }
+    return `Install the Infinitary package for its system there, then set it up with commands instead. Nothing changed there.`;
+  }
+  function devicesHomeSentMb(input2) {
+    const mb = input2.mb;
+    switch (currentLanguage()) {
+      case "ar":
+        return `أُرسل ${mb} ميغابايت`;
+      case "de":
+        return `${mb} MB gesendet`;
+      case "es":
+        return `${mb} MB enviados`;
+      case "fr":
+        return `${mb} Mo envoyés`;
+      case "ja":
+        return `${mb} MB 送信済み`;
+      case "ko":
+        return `${mb}MB 보냄`;
+      case "pt-BR":
+        return `${mb} MB enviados`;
+      case "zh-Hans":
+        return `已发送 ${mb} MB`;
+      case "zh-Hant":
+        return `已傳送 ${mb} MB`;
+      case "en-XA":
+        return `[${mb} ṀƁ šéñţ ~~~]`;
+      case "ar-XB":
+        return `${mb}‮ MB sent‬`;
+    }
+    return `${mb} MB sent`;
+  }
+  function devicesHomeSetUpFrom() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أعدّه من هنا`;
+      case "de":
+        return `Von hier aus einrichten`;
+      case "es":
+        return `Configurarlo desde aquí`;
+      case "fr":
+        return `L'installer d'ici`;
+      case "ja":
+        return `ここから準備する`;
+      case "ko":
+        return `여기서 설정하기`;
+      case "pt-BR":
+        return `Configurar daqui`;
+      case "zh-Hans":
+        return `从这里设置`;
+      case "zh-Hant":
+        return `從這裡設定`;
+      case "en-XA":
+        return `[Šéţ îţ ûþ ƒŕöɱ ĥéŕé ~~~~~~~]`;
+      case "ar-XB":
+        return `‮Set it up from here‬`;
+    }
+    return `Set it up from here`;
+  }
+  function devicesHomeSignsIn() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يُسجَّل الدخول من هنا`;
+      case "de":
+        return `Anmeldung von hier aus`;
+      case "es":
+        return `inicia sesión desde aquí`;
+      case "fr":
+        return `connexion depuis ici`;
+      case "ja":
+        return `ここからサインイン`;
+      case "ko":
+        return `여기서 로그인`;
+      case "pt-BR":
+        return `entra daqui`;
+      case "zh-Hans":
+        return `从这里登录`;
+      case "zh-Hant":
+        return `從這裡登入`;
+      case "en-XA":
+        return `[šîĝñš îñ ƒŕöɱ ĥéŕé ~~~~~~]`;
+      case "ar-XB":
+        return `‮signs in from here‬`;
+    }
+    return `signs in from here`;
+  }
+  function devicesHomeStartOn() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يعمل بعد إعادة التشغيل`;
+      case "de":
+        return `läuft nach einem Neustart`;
+      case "es":
+        return `activo tras reiniciar`;
+      case "fr":
+        return `actif après un redémarrage`;
+      case "ja":
+        return `再起動後も動作`;
+      case "ko":
+        return `재시작 후에도 실행`;
+      case "pt-BR":
+        return `ativo após reiniciar`;
+      case "zh-Hans":
+        return `重启后仍运行`;
+      case "zh-Hant":
+        return `重新開機後仍執行`;
+      case "en-XA":
+        return `[öñ áƒţéŕ á ŕéšţáŕţ ~~~~~~]`;
+      case "ar-XB":
+        return `‮on after a restart‬`;
+    }
+    return `on after a restart`;
+  }
+  function devicesHomeStepConnect() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الاتصال من هنا`;
+      case "de":
+        return `Von hier aus verbinden`;
+      case "es":
+        return `Conectar desde aquí`;
+      case "fr":
+        return `Se connecter d'ici`;
+      case "ja":
+        return `ここから接続する`;
+      case "ko":
+        return `여기서 연결하기`;
+      case "pt-BR":
+        return `Conectar daqui`;
+      case "zh-Hans":
+        return `从这里连接`;
+      case "zh-Hant":
+        return `從這裡連線`;
+      case "en-XA":
+        return `[Çöññéçţ ƒŕöɱ ĥéŕé ~~~~~~]`;
+      case "ar-XB":
+        return `‮Connect from here‬`;
+    }
+    return `Connect from here`;
+  }
+  function devicesHomeStepKey(input2) {
+    const port = input2.port;
+    switch (currentLanguage()) {
+      case "ar":
+        return `قراءة مفتاح SSH الخاص به على المنفذ ${port}`;
+      case "de":
+        return `Seinen SSH-Schlüssel auf Port ${port} lesen`;
+      case "es":
+        return `Leer su clave SSH en el puerto ${port}`;
+      case "fr":
+        return `Lire sa clé SSH sur le port ${port}`;
+      case "ja":
+        return `ポート ${port} で SSH 鍵を読む`;
+      case "ko":
+        return `포트 ${port}에서 SSH 키 읽기`;
+      case "pt-BR":
+        return `Ler a chave SSH dele na porta ${port}`;
+      case "zh-Hans":
+        return `在端口 ${port} 读取它的 SSH 密钥`;
+      case "zh-Hant":
+        return `在連接埠 ${port} 讀取它的 SSH 金鑰`;
+      case "en-XA":
+        return `[Ŕéáð îţš ŠŠĤ ķéý öñ þöŕţ ${port} ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Read its SSH key on port ‬${port}`;
+    }
+    return `Read its SSH key on port ${port}`;
+  }
+  function devicesHomeStepKeyAny() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `قراءة مفتاح SSH الخاص به`;
+      case "de":
+        return `Seinen SSH-Schlüssel lesen`;
+      case "es":
+        return `Leer su clave SSH`;
+      case "fr":
+        return `Lire sa clé SSH`;
+      case "ja":
+        return `SSH 鍵を読む`;
+      case "ko":
+        return `SSH 키 읽기`;
+      case "pt-BR":
+        return `Ler a chave SSH dele`;
+      case "zh-Hans":
+        return `读取它的 SSH 密钥`;
+      case "zh-Hant":
+        return `讀取它的 SSH 金鑰`;
+      case "en-XA":
+        return `[Ŕéáð îţš ŠŠĤ ķéý ~~~~~~]`;
+      case "ar-XB":
+        return `‮Read its SSH key‬`;
+    }
+    return `Read its SSH key`;
+  }
+  function devicesHomeStepLook() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `فحص نظامه`;
+      case "de":
+        return `Sein System prüfen`;
+      case "es":
+        return `Revisar su sistema`;
+      case "fr":
+        return `Vérifier son système`;
+      case "ja":
+        return `システムを確認する`;
+      case "ko":
+        return `시스템 확인하기`;
+      case "pt-BR":
+        return `Verificar o sistema dele`;
+      case "zh-Hans":
+        return `检查它的系统`;
+      case "zh-Hant":
+        return `檢查它的系統`;
+      case "en-XA":
+        return `[Çĥéçķ îţš šýšţéɱ ~~~~~~]`;
+      case "ar-XB":
+        return `‮Check its system‬`;
+    }
+    return `Check its system`;
+  }
+  function devicesHomeStepSend() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إرسال Infinitary`;
+      case "de":
+        return `Infinitary senden`;
+      case "es":
+        return `Enviar Infinitary`;
+      case "fr":
+        return `Envoyer Infinitary`;
+      case "ja":
+        return `Infinitary を送る`;
+      case "ko":
+        return `Infinitary 보내기`;
+      case "pt-BR":
+        return `Enviar o Infinitary`;
+      case "zh-Hans":
+        return `发送 Infinitary`;
+      case "zh-Hant":
+        return `傳送 Infinitary`;
+      case "en-XA":
+        return `[Šéñð Îñƒîñîţáŕý ~~~~~]`;
+      case "ar-XB":
+        return `‮Send Infinitary‬`;
+    }
+    return `Send Infinitary`;
+  }
+  function devicesHomeStepSignIn() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تسجيل الدخول بمفتاح SSH الخاص بك`;
+      case "de":
+        return `Mit deinem SSH-Schlüssel anmelden`;
+      case "es":
+        return `Iniciar sesión con tu clave SSH`;
+      case "fr":
+        return `Se connecter avec votre clé SSH`;
+      case "ja":
+        return `SSH 鍵でサインインする`;
+      case "ko":
+        return `SSH 키로 로그인하기`;
+      case "pt-BR":
+        return `Entrar com sua chave SSH`;
+      case "zh-Hans":
+        return `用你的 SSH 密钥登录`;
+      case "zh-Hant":
+        return `用你的 SSH 金鑰登入`;
+      case "en-XA":
+        return `[Šîĝñ îñ ŵîţĥ ýöûŕ ŠŠĤ ķéý ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Sign in with your SSH key‬`;
+    }
+    return `Sign in with your SSH key`;
+  }
+  function devicesHomeStepSignUp() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ربط اشتراك له`;
+      case "de":
+        return `Ein Abo dafür verbinden`;
+      case "es":
+        return `Conectar una suscripción para él`;
+      case "fr":
+        return `Connecter un abonnement pour lui`;
+      case "ja":
+        return `サブスクリプションを接続する`;
+      case "ko":
+        return `구독 연결하기`;
+      case "pt-BR":
+        return `Conectar uma assinatura para ele`;
+      case "zh-Hans":
+        return `为它连接一个订阅`;
+      case "zh-Hant":
+        return `為它連接一個訂閱方案`;
+      case "en-XA":
+        return `[Çöññéçţ á šûƀšçŕîþţîöñ ƒöŕ îţ ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Connect a subscription for it‬`;
+    }
+    return `Connect a subscription for it`;
+  }
+  function devicesHomeStepStart() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تشغيل نائب القبطان هناك`;
+      case "de":
+        return `Deinen ersten Offizier dort starten`;
+      case "es":
+        return `Iniciar tu primer oficial allí`;
+      case "fr":
+        return `Lancer votre second là-bas`;
+      case "ja":
+        return `そちらで一等航海士を起動する`;
+      case "ko":
+        return `그곳에서 일등항해사 시작하기`;
+      case "pt-BR":
+        return `Iniciar seu imediato lá`;
+      case "zh-Hans":
+        return `在那里启动你的大副`;
+      case "zh-Hant":
+        return `在那裡啟動你的大副`;
+      case "en-XA":
+        return `[Šţáŕţ ýöûŕ ƒîŕšţ ɱáţé ţĥéŕé ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Start your first mate there‬`;
+    }
+    return `Start your first mate there`;
+  }
+  function devicesHomeTitle(input2) {
+    const computer = input2.computer;
+    switch (currentLanguage()) {
+      case "ar":
+        return `جارٍ إعداد نائب القبطان على ${computer}`;
+      case "de":
+        return `Dein erster Offizier wird auf ${computer} eingerichtet`;
+      case "es":
+        return `Configurando tu primer oficial en ${computer}`;
+      case "fr":
+        return `Installation de votre second sur ${computer}`;
+      case "ja":
+        return `${computer} で一等航海士を準備しています`;
+      case "ko":
+        return `${computer}에 일등항해사를 설정하는 중`;
+      case "pt-BR":
+        return `Configurando seu imediato em ${computer}`;
+      case "zh-Hans":
+        return `正在 ${computer} 上设置你的大副`;
+      case "zh-Hant":
+        return `正在 ${computer} 上設定你的大副`;
+      case "en-XA":
+        return `[Šéţţîñĝ ûþ ýöûŕ ƒîŕšţ ɱáţé öñ ${computer} ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Setting up your first mate on ‬${computer}`;
+    }
+    return `Setting up your first mate on ${computer}`;
+  }
+  function devicesHomeUnreachable(input2) {
+    const computer = input2.computer;
+    const port = input2.port;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر الوصول إلى ${computer} على المنفذ ${port}، حيث يستمع نائب القبطان.`;
+      case "de":
+        return `${computer} war auf Port ${port}, wo dein erster Offizier lauscht, nicht erreichbar.`;
+      case "es":
+        return `No se pudo llegar a ${computer} en el puerto ${port}, donde escucha tu primer oficial.`;
+      case "fr":
+        return `Impossible de joindre ${computer} sur le port ${port}, où votre second écoute.`;
+      case "ja":
+        return `一等航海士が待ち受けるポート ${port} で ${computer} に届きませんでした。`;
+      case "ko":
+        return `일등항해사가 기다리는 포트 ${port}에서 ${computer}에 연결할 수 없었습니다.`;
+      case "pt-BR":
+        return `Não foi possível alcançar ${computer} na porta ${port}, onde seu imediato escuta.`;
+      case "zh-Hans":
+        return `无法在端口 ${port} 连到 ${computer}，你的大副在那里监听。`;
+      case "zh-Hant":
+        return `無法在連接埠 ${port} 連到 ${computer}，你的大副在那裡監聽。`;
+      case "en-XA":
+        return `[Çöûļð ñöţ ŕéáçĥ ${computer} öñ þöŕţ ${port}, ŵĥéŕé ýöûŕ ƒîŕšţ ɱáţé ļîšţéñš. ~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Could not reach ‬${computer}‮ on port ‬${port}‮, where your first mate listens.‬`;
+    }
+    return `Could not reach ${computer} on port ${port}, where your first mate listens.`;
+  }
+  function devicesHomeUnreachableWay() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تحقق من أن الحاسوبين يبقيان على الشبكة نفسها أو الشبكة الخاصة نفسها، مثل Tailscale. يبقى نائب القبطان يعمل هناك؛ اطلب مجددًا.`;
+      case "de":
+        return `Prüfe, ob beide Computer im selben Netzwerk oder privaten Netzwerk bleiben, etwa Tailscale. Dein erster Offizier läuft dort weiter; frag erneut.`;
+      case "es":
+        return `Comprueba que ambas computadoras sigan en la misma red o red privada, como Tailscale. Tu primer oficial sigue funcionando allí; vuelve a pedirlo.`;
+      case "fr":
+        return `Vérifiez que les deux ordinateurs restent sur le même réseau ou réseau privé, comme Tailscale. Votre second continue de tourner là-bas ; redemandez.`;
+      case "ja":
+        return `両方のコンピューターが同じネットワーク、または Tailscale などの同じプライベートネットワークにあり続けることを確認してください。一等航海士はそちらで動き続けます。もう一度頼んでください。`;
+      case "ko":
+        return `두 컴퓨터가 같은 네트워크나 Tailscale 같은 사설 네트워크에 계속 있는지 확인하세요. 일등항해사는 그곳에서 계속 실행됩니다. 다시 요청하세요.`;
+      case "pt-BR":
+        return `Verifique se os dois computadores continuam na mesma rede ou rede privada, como o Tailscale. Seu imediato continua rodando lá; peça de novo.`;
+      case "zh-Hans":
+        return `请确认两台电脑一直在同一网络或同一私有网络上，例如 Tailscale。你的大副会在那里继续运行；请再请求一次。`;
+      case "zh-Hant":
+        return `請確認兩台電腦一直在同一網路或同一私人網路上，例如 Tailscale。你的大副會在那裡繼續執行；請再要求一次。`;
+      case "en-XA":
+        return `[Çĥéçķ ţĥáţ ƀöţĥ çöɱþûţéŕš šţáý öñ ţĥé šáɱé ñéţŵöŕķ öŕ þŕîṽáţé ñéţŵöŕķ, šûçĥ áš Ţáîļšçáļé. Ýöûŕ ƒîŕšţ ɱáţé ķééþš ŕûññîñĝ ţĥéŕé; ášķ áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Check that both computers stay on the same network or private network, such as Tailscale. Your first mate keeps running there; ask again.‬`;
+    }
+    return `Check that both computers stay on the same network or private network, such as Tailscale. Your first mate keeps running there; ask again.`;
+  }
+  function devicesHomeWaitsLogin(input2) {
+    const computer = input2.computer;
+    switch (currentLanguage()) {
+      case "ar":
+        return `سجّل الدخول على ${computer} مرة واحدة. يبدأ نائب القبطان حينها، ويستمر هذا.`;
+      case "de":
+        return `Melde dich einmal auf ${computer} an. Dann startet dein erster Offizier, und es geht weiter.`;
+      case "es":
+        return `Inicia sesión una vez en ${computer}. Tu primer oficial se inicia entonces, y esto continúa.`;
+      case "fr":
+        return `Ouvrez une session une fois sur ${computer}. Votre second démarre alors, et la suite continue.`;
+      case "ja":
+        return `${computer} に一度ログインしてください。そのとき一等航海士が起動し、続きが進みます。`;
+      case "ko":
+        return `${computer}에 한 번 로그인하세요. 그때 일등항해사가 시작되고, 이어서 진행됩니다.`;
+      case "pt-BR":
+        return `Entre uma vez em ${computer}. Seu imediato inicia então, e isto continua.`;
+      case "zh-Hans":
+        return `请在 ${computer} 上登录一次。届时你的大副会启动，这里也会继续。`;
+      case "zh-Hant":
+        return `請在 ${computer} 上登入一次。屆時你的大副會啟動，這裡也會繼續。`;
+      case "en-XA":
+        return `[Ļöĝ îñ öñ ${computer} öñçé. Ýöûŕ ƒîŕšţ ɱáţé šţáŕţš ţĥéñ, áñð ţĥîš ĝöéš öñ. ~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Log in on ‬${computer}‮ once. Your first mate starts then, and this goes on.‬`;
+    }
+    return `Log in on ${computer} once. Your first mate starts then, and this goes on.`;
+  }
   function devicesJoinAddressChip() {
     switch (currentLanguage()) {
       case "ar":
@@ -90535,29 +91849,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function shellGateChoiceAnotherSub() {
     switch (currentLanguage()) {
       case "ar":
-        return `دعني أعمل على حاسوب آخر تُعدّه، وتحكّم بي من هنا.`;
+        return `أعطني عنوانه وسأُعدّ نفسي هناك عبر SSH. وتتحكم بي من هنا.`;
       case "de":
-        return `Lass mich auf einem anderen Computer laufen, den du einrichtest, und steuere mich von hier aus.`;
+        return `Gib seine Adresse an, und ich richte mich dort über SSH ein. Du steuerst mich von hier aus.`;
       case "es":
-        return `Déjame funcionar en otra computadora que configures y contrólame desde aquí.`;
+        return `Dame su dirección y me configuro allí por SSH. Me controlas desde aquí.`;
       case "fr":
-        return `Faites-moi tourner sur un autre ordinateur que vous configurez, et pilotez-moi d’ici.`;
+        return `Donnez son adresse et je m'y installe par SSH. Vous me contrôlez d'ici.`;
       case "ja":
-        return `あなたが設定する別のコンピューターで私を動かし、ここから操作します。`;
+        return `アドレスを教えてくれれば、SSH でそちらに私を準備します。操作はここから行います。`;
       case "ko":
-        return `직접 설정한 다른 컴퓨터에서 저를 실행하고, 여기서 저를 제어해요.`;
+        return `주소를 알려 주면 SSH로 그곳에 나를 설정합니다. 조작은 여기서 합니다.`;
       case "pt-BR":
-        return `Deixe-me rodar em outro computador que você configurar e me controle daqui.`;
+        return `Informe o endereço dele e eu me configuro lá por SSH. Você me controla daqui.`;
       case "zh-Hans":
-        return `让我在你设置的另一台电脑上运行，并在这里控制我。`;
+        return `告诉我它的地址，我会通过 SSH 在那里设置自己。你在这里控制我。`;
       case "zh-Hant":
-        return `讓我在你設定的另一台電腦上執行，並在這裡控制我。`;
+        return `告訴我它的位址，我會透過 SSH 在那裡設定自己。你在這裡控制我。`;
       case "en-XA":
-        return `[Ļéţ ɱé ŕûñ öñ áñöţĥéŕ çöɱþûţéŕ ýöû šéţ ûþ, áñð çöñţŕöļ ɱé ƒŕöɱ ĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Ĝîṽé îţš áððŕéšš áñð Î šéţ ɱýšéļƒ ûþ ţĥéŕé öṽéŕ ŠŠĤ. Ýöû çöñţŕöļ ɱé ƒŕöɱ ĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Let me run on another computer you set up, and control me from here.‬`;
+        return `‮Give its address and I set myself up there over SSH. You control me from here.‬`;
     }
-    return `Let me run on another computer you set up, and control me from here.`;
+    return `Give its address and I set myself up there over SSH. You control me from here.`;
   }
   function shellGateChoiceHere() {
     switch (currentLanguage()) {
@@ -100742,6 +102056,49 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     devicesCarryNotRemoved,
     devicesCarryRunsOn,
     devicesCarryStayed,
+    devicesHomeAccountAsk,
+    devicesHomeAccountMake,
+    devicesHomeAddressHead,
+    devicesHomeAskAgain,
+    devicesHomeBack,
+    devicesHomeCancelled,
+    devicesHomeCommands,
+    devicesHomeCommandsInstead,
+    devicesHomeFirewall,
+    devicesHomeInstallWay,
+    devicesHomeKeepsRunning,
+    devicesHomeKeyWay,
+    devicesHomeLeftNothing,
+    devicesHomeLeftRunning,
+    devicesHomeLinger,
+    devicesHomeNoPrivate,
+    devicesHomeNoPrivateWay,
+    devicesHomeNoSystemd,
+    devicesHomeNotOpen,
+    devicesHomeNotStarted,
+    devicesHomeOrCommands,
+    devicesHomePort,
+    devicesHomeRoot,
+    devicesHomeRuns,
+    devicesHomeRunsAsk,
+    devicesHomeRunsConnect,
+    devicesHomeSandboxWay,
+    devicesHomeSentMb,
+    devicesHomeSetUpFrom,
+    devicesHomeSignsIn,
+    devicesHomeStartOn,
+    devicesHomeStepConnect,
+    devicesHomeStepKey,
+    devicesHomeStepKeyAny,
+    devicesHomeStepLook,
+    devicesHomeStepSend,
+    devicesHomeStepSignIn,
+    devicesHomeStepSignUp,
+    devicesHomeStepStart,
+    devicesHomeTitle,
+    devicesHomeUnreachable,
+    devicesHomeUnreachableWay,
+    devicesHomeWaitsLogin,
     devicesJoinAddressChip,
     devicesJoinAddressSub,
     devicesJoinCancel,
@@ -103978,6 +105335,49 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "devicesCarryNotRemoved": ["from", "why"],
     "devicesCarryRunsOn": ["from", "to"],
     "devicesCarryStayed": ["count", "from"],
+    "devicesHomeAccountAsk": [],
+    "devicesHomeAccountMake": [],
+    "devicesHomeAddressHead": [],
+    "devicesHomeAskAgain": [],
+    "devicesHomeBack": [],
+    "devicesHomeCancelled": ["computer"],
+    "devicesHomeCommands": [],
+    "devicesHomeCommandsInstead": [],
+    "devicesHomeFirewall": ["computer"],
+    "devicesHomeInstallWay": [],
+    "devicesHomeKeepsRunning": ["computer"],
+    "devicesHomeKeyWay": [],
+    "devicesHomeLeftNothing": ["computer", "count"],
+    "devicesHomeLeftRunning": ["computer", "count"],
+    "devicesHomeLinger": ["computer"],
+    "devicesHomeNoPrivate": ["computer"],
+    "devicesHomeNoPrivateWay": [],
+    "devicesHomeNoSystemd": ["computer"],
+    "devicesHomeNotOpen": ["address"],
+    "devicesHomeNotStarted": ["computer"],
+    "devicesHomeOrCommands": [],
+    "devicesHomePort": ["port"],
+    "devicesHomeRoot": ["computer"],
+    "devicesHomeRuns": ["computer"],
+    "devicesHomeRunsAsk": [],
+    "devicesHomeRunsConnect": [],
+    "devicesHomeSandboxWay": [],
+    "devicesHomeSentMb": ["mb"],
+    "devicesHomeSetUpFrom": [],
+    "devicesHomeSignsIn": [],
+    "devicesHomeStartOn": [],
+    "devicesHomeStepConnect": [],
+    "devicesHomeStepKey": ["port"],
+    "devicesHomeStepKeyAny": [],
+    "devicesHomeStepLook": [],
+    "devicesHomeStepSend": [],
+    "devicesHomeStepSignIn": [],
+    "devicesHomeStepSignUp": [],
+    "devicesHomeStepStart": [],
+    "devicesHomeTitle": ["computer"],
+    "devicesHomeUnreachable": ["computer", "port"],
+    "devicesHomeUnreachableWay": [],
+    "devicesHomeWaitsLogin": ["computer"],
     "devicesJoinAddressChip": [],
     "devicesJoinAddressSub": ["computer", "mustBeOn"],
     "devicesJoinCancel": [],

@@ -1,4 +1,5 @@
 import * as m from "@shared/i18n/messages.generated";
+import { NEARBY_OFF } from "@shared/nearbyMacs";
 import { expect, test } from "vitest";
 import { userEvent } from "vitest/browser";
 import {
@@ -18,14 +19,17 @@ import { openSize, openWindow } from "./window";
  * (captain's approval of INF-6207: ask first, three equal choices, the
  * move-later line; docs/first-launch.md). Driven by keys as a person does:
  * the arrows move between the choices and Enter opens one. Another computer
- * lists the commands to run there and ends at One already running's paste
- * box; Where I live comes back to the three choices.
+ * sets the first mate up there over SSH (tests/browser/welcome-set-up-there),
+ * or by its Set it up with commands lists the commands to run there, ending
+ * at One already running's paste box; Where I live comes back to the three
+ * choices.
  */
 
 const CHOICES = "[data-gate-choices]";
 
 test("the welcome asks where the first mate lives, and each choice opens its own way in", async () => {
-  const bridge = fakeBridge(freshHome());
+  // Another computer's address form looks for computers nearby, and hears none.
+  const bridge = fakeBridge({ ...freshHome(), "inf:devices:nearby": NEARBY_OFF });
   const copied = clipboard();
   await openSize();
   await openWindow(bridge);
@@ -57,8 +61,9 @@ test("the welcome asks where the first mate lives, and each choice opens its own
   expect(document.activeElement).toBe(cards[1]);
   await userEvent.keyboard("{Enter}");
 
-  // Section: Another computer lists the commands to run there, each with its Copy.
+  // Section: Another computer's Set it up with commands lists the commands to run there, each with its Copy.
   {
+    await userEvent.click(await shown("[data-home-commands]"));
     const commands = await shown("[data-gate-commands]");
     await gone(CHOICES);
     const lines = [...commands.querySelectorAll<HTMLElement>("[data-gate-command]")];

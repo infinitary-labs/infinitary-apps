@@ -66,7 +66,6 @@ describe("the browser view's foot line", () => {
     );
   });
 
-  // The captain's answer on INF-6521's review: name the computer that keeps the sign-in.
   it("names the computer that runs work a browser runs on where its sign-in is kept", () => {
     const there = { ...OPEN, kept: true as const, computer: "Mac mini" };
     expect(signInCaption(there, true, signInPlace(there))).toBe(

@@ -561,8 +561,9 @@ export const CLOSE_PAGE_LABEL = "Close page";
 export const RETURN_CONTROL_NOTICE =
   "Returning control lets the crewmate read and use this browser, including signed-in pages.";
 /**
- * Where the first mate lives, as the browser's words name it: this computer,
- * or that computer by its name on a computer that controls it.
+ * The computer the browser's words name: where the first mate lives (this
+ * computer, or that computer by its name on a computer that controls it),
+ * or the computer that runs work keeping a sign-in made there.
  */
 export type FirstMatePlace = { readonly this: string };
 /** The Electron partition that is a computer's kept profile for the built-in engine (docs/task-browser.md, "Signed-in sites"). */

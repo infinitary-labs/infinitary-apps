@@ -57,7 +57,6 @@ function setup(
 }
 
 describe("signed-in sites a computer that runs work keeps", () => {
-  // The captain's answer on INF-6521's review: name the computer that keeps the sign-in.
   it("names that computer on its open browser's fact", () => {
     const { browsers } = setup(async () => ({ ok: true }));
     expect(browsers.fact("task")).toMatchObject({

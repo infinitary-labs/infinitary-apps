@@ -6,7 +6,7 @@
       "area": "crewmates",
       "title": "A website you sign in to in a task's browser on another computer stays signed in",
       "body": "When a crewmate on another of your computers asks you to sign in to a website in its browser, your sign-in now stays on that computer for later tasks, as it already did on this one. The browser now names that computer as where your sign-in stays. Before, it ended when that browser stopped, so you had to sign in again each time.",
-      "noPicture": "This changes where an existing sign-in is kept, not how any view looks.",
+      "noPicture": "The only visible change is the other computer's name in words shown while signing in to a browser there.",
       "provenance": { "origin": "change" }
     }
   ],

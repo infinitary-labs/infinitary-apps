@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "phone-panel-draft-and-settings",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Panels on your iPhone and iPad can start a message and open Settings",
+      "body": "On the Panels tab of your iPhone and iPad, a panel's button that starts a message now puts its words in the message box on Home, unsent, as it does on your Mac. A button that opens Settings now opens the phone's Settings on that section, and on an automation's own page when it names one. A section the phone does not have opens nothing.",
+      "noPicture": "The panel and the Settings page it opens look as they did; what changed is that the tap now reaches them, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

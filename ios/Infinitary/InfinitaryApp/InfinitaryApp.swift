@@ -63,7 +63,9 @@ struct PhoneView: View {
     @State private var details = false
     /// INF-5265: the way in the computer sheet's Add another computer picked, opened once that sheet has closed.
     @State private var addWay: PhoneAddWay?
-    @State private var settings = false
+    /// Settings while it shows, and where it opened: a panel's `point.openSettings` names a place, Settings' own button
+    /// none, so each showing carries its own place.
+    @State private var settings: PhoneSettingsOpening?
     @State private var keyboardVisible = false
 
     var body: some View {
@@ -100,7 +102,7 @@ struct PhoneView: View {
                     }
                 } else if model.connection != nil, !model.removed {
                     ToolbarItem(placement: .topBarLeading) {
-                        Button { settings = true } label: { PhoneSymbol.settings.image }
+                        Button { settings = PhoneSettingsOpening(place: nil) } label: { PhoneSymbol.settings.image }
                             .accessibilityLabel(PhoneMessages.phoneCommonSettings()).accessibilityIdentifier("phone-settings")
                             .keyboardShortcut(",", modifiers: .command)
                     }
@@ -140,8 +142,8 @@ struct PhoneView: View {
                                        forget: { pin in model.forgetMac(pin) }, add: { way in addWay = way })
                 }
             }
-            .sheet(isPresented: $settings) {
-                if let session = model.connection { PhoneSettingsSheet(session: session).environment(model.secrets).environment(model.google).environment(model.settings).environment(model.pushes) }
+            .sheet(item: $settings) { opening in
+                if let session = model.connection { PhoneSettingsSheet(session: session, opening: opening.place).environment(model.secrets).environment(model.google).environment(model.settings).environment(model.pushes) }
             }
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { note in
                 if phoneKeyboardArrives(note) { keyboardVisible = true }
@@ -150,7 +152,7 @@ struct PhoneView: View {
                 keyboardVisible = false
             }
             .onChange(of: model.connection == nil || model.removed) { _, unavailable in
-                if unavailable { details = false; settings = false }
+                if unavailable { details = false; settings = nil }
             }
             .safeAreaInset(edge: .bottom) {
                 if let problem = model.problem {
@@ -286,6 +288,7 @@ struct PhoneView: View {
         PhoneWorkspace(session: session,
             tasks: PhoneTasks(session: session), composer: MessageComposer(session: session))
             .environment(model.secrets)
+            .environment(\.phoneOpenSettings) { place in settings = PhoneSettingsOpening(place: place) }
             .id(session.mac.deviceID)
             // INF-589 item 12: a soft tap when the computer comes back after it was lost.
             .sensoryFeedback(.phone, trigger: session.returns)
@@ -297,4 +300,10 @@ struct PhoneView: View {
             }
     }
 
+}
+
+/// One showing of Settings, and the place a panel opened it at (nil for its list).
+struct PhoneSettingsOpening: Identifiable {
+    let id = UUID()
+    let place: PhoneSettingsPlace?
 }

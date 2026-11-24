@@ -8,7 +8,8 @@ import SwiftUI
 /// it shows (`rail.show`) runs out of sight and counts only once it says it shows (the captain's answer W3 (c)), so the
 /// tab never opens on an empty column.
 /// Piece 3: the model also holds the panels' cards on Home (`PhonePanelCards`), presses their header buttons, and turns a
-/// panel's pointing into the phone's own ways of opening a task or a card (`PhoneMessageContext`).
+/// panel's pointing into the phone's own ways of opening a task, a card or Settings, or starting a message
+/// (`PhoneMessageContext`).
 @MainActor @Observable final class PhonePanelsModel {
     /// The panels the column draws, in the rails' order.
     private(set) var panels: [PhonePanel] = []
@@ -199,9 +200,20 @@ import SwiftUI
     }
 
     /// A page's pointing, from the captain's own tap in it: a task opens as a Tasks row's tap opens it, or straight to its
-    /// record; a waiting card comes forward on Home. Each names something the phone holds, or does nothing.
+    /// record; a waiting card comes forward on Home; words start the message on Home, unsent; Settings opens at a section
+    /// the phone has. Each names something the phone holds, or does nothing.
     private func point(_ payload: PhoneJSON) -> Bool {
         switch payload["op"].text {
+        case "draft":
+            // The trusted parent page checked the words against the desktop's own rule (`panelDraftSchema`).
+            guard let text = payload["text"].text, !text.isEmpty else { return false }
+            context.draft = text
+            return true
+        case "settings":
+            guard let section = payload["section"].text,
+                  let place = PhoneSettingsPlace(section: section, item: payload["item"].text) else { return false }
+            context.openSettings = place
+            return true
         case "task", "record":
             guard let id = payload["taskId"].text, let board = session.board else { return false }
             // A task the board read without its closed rows may be closed work: Tasks reads those rows and opens it then.

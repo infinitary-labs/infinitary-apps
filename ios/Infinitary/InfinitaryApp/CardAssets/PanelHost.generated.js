@@ -115644,6 +115644,7 @@ ${FRAME_KEYBOARD_SCRIPT}
   }
   const PANEL_SERVER_ACTION = "server.invoke";
   const PANEL_INTEGRATIONS_ACTION = "integrations";
+  const PANEL_DRAFT_MAX = 500;
   const PANEL_CARD_ACTIONS = ["cards.emit", "cards.close", "cards.open"];
   const PANEL_CARD_VIEW_ACTIONS = [...PANEL_CARD_ACTIONS, "card.keep"];
   const PANEL_POINT_ACTIONS = [
@@ -115654,7 +115655,39 @@ ${FRAME_KEYBOARD_SCRIPT}
     "point.aim",
     "point.focusProject"
   ];
+  const PANEL_DRAFT_ACTION = "point.draft";
+  const PANEL_OPEN_SETTINGS_ACTION = "point.openSettings";
+  const panelDraftSchema = string().max(PANEL_DRAFT_MAX).refine((text) => text.trim().length > 0 && !/[\r\n]/.test(text));
   const PANEL_LINE_PEEK_ACTION = "point.peekLine";
+  const SETTINGS_SECTION_NAMES = {
+    general: "General",
+    appearance: "Appearance",
+    panels: "Panels",
+    keyboard: "Keyboard",
+    projects: "Projects",
+    subscriptions: "Intelligence",
+    runbooks: "Runbooks",
+    usage: "Usage",
+    automation: "Automation",
+    integrations: "Integrations",
+    secrets: "Secrets",
+    devices: "Devices",
+    observe: "Observe"
+  };
+  const settingsSectionSchema = string().trim().min(1).max(64);
+  const settingsItemSchema = string().trim().min(1).max(128).regex(/^[^\r\n]*$/);
+  const settingsShowSchema = strictObject({
+    section: settingsSectionSchema,
+    item: settingsItemSchema.optional()
+  });
+  ({
+    "show-task": {
+      value: strictObject({ task: string().trim().min(1).max(64) })
+    },
+    "show-settings": {
+      line: `Open Settings in the captain's window on a section when they ask to see it: section is one of ${Object.keys(SETTINGS_SECTION_NAMES).join(", ")} (subscriptions is Intelligence; observe only on a build that has it). A window that does not offer that section opens nothing. item opens one thing there: a project's or repository's id in projects, a computer's id in devices, a page in secrets (decisions, phone, history, copy), an automation's id, or kept:<id> for a kept job, in automation. It changes nothing; every control there stays the captain's.`
+    }
+  });
   const CARD_DATA_HOST = "data";
   const DATA_FILE_NAME = /^([A-Za-z0-9_-]{1,64})-([0-9a-f]{32})\.json$/;
   function parseCardDataFileName(name) {
@@ -125122,6 +125155,8 @@ svg { ${pinned} }
       ...card ? PANEL_CARD_VIEW_ACTIONS : PANEL_CARD_ACTIONS,
       ...panel.reads.includes("tasks.board") ? PANEL_POINT_ACTIONS : [],
       ...panel.reads.includes("feed.recent") ? [PANEL_LINE_PEEK_ACTION] : [],
+      PANEL_DRAFT_ACTION,
+      PANEL_OPEN_SETTINGS_ACTION,
       ...card ? [] : ["rail.summarize", "rail.show"],
       ...panel.server ? [PANEL_SERVER_ACTION] : [],
       // The app's own panels call no integrations, as on the desktop (`FramedPanelBody`).
@@ -125165,6 +125200,20 @@ svg { ${pinned} }
   async function onPointAction(id2, value) {
     const arg = value;
     switch (id2) {
+      case PANEL_DRAFT_ACTION: {
+        const parsed = panelDraftSchema.safeParse(arg?.text);
+        if (!parsed.success) throw new Error(`point.draft: words on one line, at most ${PANEL_DRAFT_MAX} characters`);
+        if (!pressed()) return false;
+        return native({ type: "point", op: "draft", text: parsed.data });
+      }
+      case PANEL_OPEN_SETTINGS_ACTION: {
+        const parsed = settingsShowSchema.safeParse({ section: arg?.section, ...arg?.item === void 0 ? {} : { item: arg.item } });
+        if (!parsed.success) {
+          throw new Error("point.openSettings: a Settings section's id, and an item of at most 128 characters on one line");
+        }
+        if (!pressed()) return false;
+        return native({ type: "point", op: "settings", section: parsed.data.section, ...parsed.data.item ? { item: parsed.data.item } : {} });
+      }
       case "point.openTask":
       case "point.openRecord":
         if (typeof arg?.taskId !== "string" || !pressed()) return false;

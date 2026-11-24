@@ -22,9 +22,14 @@ import { FRAME_LIB_BOOT, frameLibUrl } from "../../../src/shared/plugins/frameLi
 import {
   PANEL_CARD_ACTIONS,
   PANEL_CARD_VIEW_ACTIONS,
+  PANEL_DRAFT_ACTION,
   PANEL_LINE_PEEK_ACTION,
+  PANEL_OPEN_SETTINGS_ACTION,
   PANEL_POINT_ACTIONS,
+  panelDraftSchema,
 } from "../../../src/shared/plugins/panelActionIds";
+import { PANEL_DRAFT_MAX } from "../../../src/shared/personal/contracts";
+import { settingsShowSchema } from "../../../src/shared/showActions";
 import { panelCardEmitSchema, panelCardIdSchema, panelCardKeptSchema } from "../../../src/shared/plugins/panelCards";
 import { FrameController } from "../../../src/renderer/src/plugins/frames/frameController";
 import { panelStylesheet } from "../../../src/renderer/src/plugins/frames/frameStylesheet";
@@ -137,8 +142,9 @@ const pressed = () => document.hasFocus() && navigator.userActivation.isActive;
 
 /**
  * What a page of the panel may ask on the phone, from what it was granted, as `framePanelActions` declares it: the card
- * actions every panel has (`card.keep` on a card's own page), the pointing a panel that reads the board gets, its rail's
- * two actions on its own page, its background work and its integrations.
+ * actions every panel has (`card.keep` on a card's own page), the pointing a panel that reads the board gets, the draft
+ * and the Settings opening every panel has, its rail's two actions on its own page, its background work and its
+ * integrations.
  */
 function actionsOf(value: Input): string[] {
   const { panel, card } = value;
@@ -146,6 +152,8 @@ function actionsOf(value: Input): string[] {
     ...(card ? PANEL_CARD_VIEW_ACTIONS : PANEL_CARD_ACTIONS),
     ...(panel.reads.includes("tasks.board") ? PANEL_POINT_ACTIONS : []),
     ...(panel.reads.includes("feed.recent") ? [PANEL_LINE_PEEK_ACTION] : []),
+    PANEL_DRAFT_ACTION,
+    PANEL_OPEN_SETTINGS_ACTION,
     ...(card ? [] : ["rail.summarize", "rail.show"]),
     ...(panel.server ? [PANEL_SERVER_ACTION] : []),
     // The app's own panels call no integrations, as on the desktop (`FramedPanelBody`).
@@ -192,13 +200,29 @@ async function onCardAction(id: string, value: unknown): Promise<unknown> {
 }
 
 /**
- * The pointing a panel that reads the board gets (`framePointAction`). Opening a task, its record or its waiting card
- * moves the captain's view, so it counts only from the captain's own tap and answers false otherwise. A rest has no
- * pointer to follow on a phone, and the phone keeps no aim or project focus, so those answer nothing.
+ * The pointing a panel that reads the board gets (`framePointAction`), and the draft and Settings opening every panel
+ * gets. Opening a task, its record, its waiting card or Settings, and starting a message, move the captain's view or
+ * words, so each counts only from the captain's own tap and answers false otherwise; each is checked as the desktop
+ * checks it, and a value it refuses throws as there. A rest has no pointer to follow on a phone, and the phone keeps no
+ * aim or project focus, so those answer nothing.
  */
 async function onPointAction(id: string, value: unknown): Promise<unknown> {
-  const arg = value as { taskId?: unknown; cardId?: unknown } | null;
+  const arg = value as { taskId?: unknown; cardId?: unknown; text?: unknown; section?: unknown; item?: unknown } | null;
   switch (id) {
+    case PANEL_DRAFT_ACTION: {
+      const parsed = panelDraftSchema.safeParse(arg?.text);
+      if (!parsed.success) throw new Error(`point.draft: words on one line, at most ${PANEL_DRAFT_MAX} characters`);
+      if (!pressed()) return false;
+      return native({ type: "point", op: "draft", text: parsed.data });
+    }
+    case PANEL_OPEN_SETTINGS_ACTION: {
+      const parsed = settingsShowSchema.safeParse({ section: arg?.section, ...(arg?.item === undefined ? {} : { item: arg.item }) });
+      if (!parsed.success) {
+        throw new Error("point.openSettings: a Settings section's id, and an item of at most 128 characters on one line");
+      }
+      if (!pressed()) return false;
+      return native({ type: "point", op: "settings", section: parsed.data.section, ...(parsed.data.item ? { item: parsed.data.item } : {}) });
+    }
     case "point.openTask":
     case "point.openRecord":
       if (typeof arg?.taskId !== "string" || !pressed()) return false;

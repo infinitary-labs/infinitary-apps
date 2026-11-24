@@ -2,6 +2,11 @@ import InfinitaryKit
 import SwiftUI
 import Observation
 
+extension EnvironmentValues {
+    /// Opens the phone's Settings sheet at a place, which the window that presents Settings supplies; with none, nothing opens.
+    @Entry var phoneOpenSettings: @MainActor (PhoneSettingsPlace) -> Void = { _ in }
+}
+
 /// Only the entry actually on screen points a message at its card or task.
 @MainActor @Observable final class PhoneMessageContext {
     enum Card: Equatable { case current(String), past(String) }
@@ -29,8 +34,10 @@ import Observation
     var cardWidth: String?
     var cardFirst = false
     var replyTucked = false
-    /// INF-1524: a card's draft button, for the message box to take its words, unsent.
+    /// INF-1524: a card's draft button, or a panel's `point.draft`, for the message box to take its words, unsent.
     var draft: String?
+    /// A panel's `point.openSettings`, for Settings to open there.
+    var openSettings: PhoneSettingsPlace?
     /// INF-2568: the software keyboard is up, and a card's reply field, or a text box in its body (INF-3427), holds its
     /// focus; a phone on its side then has no room for the pager (`PhoneCards`).
     var keyboardUp = false
@@ -119,6 +126,7 @@ struct PhoneWorkspace<Tasks: View, Composer: View>: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(PhoneAppearance.self) private var appearance: PhoneAppearance?
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
+    @Environment(\.phoneOpenSettings) private var openSettings
     @State private var selection = PhoneTab.home
     /// INF-1590: whether the bar and the tab controller show the wide layout, which a rotation reaches once its
     /// animation has ended, and whether one into the wide layout already shows Home (see `PhoneResizeWatch`).
@@ -321,6 +329,13 @@ struct PhoneWorkspace<Tasks: View, Composer: View>: View {
         }
         .onChange(of: messageContext.restoring) { _, id in if id != nil { selection = .home } }
         .onChange(of: messageContext.showOnHome) { _, id in if id != nil { selection = .home } }
+        // A panel's draft starts the message on Home, whose message box takes the words once it shows.
+        .onChange(of: messageContext.draft) { _, draft in if draft != nil { selection = .home } }
+        .onChange(of: messageContext.openSettings) { _, place in
+            guard let place else { return }
+            messageContext.openSettings = nil
+            openSettings(place)
+        }
         .onChange(of: messageContext.pointTask) { _, point in
             guard point != nil, tasks != nil else { return }
             if paged { rail = .tasks; restoreCard() } else { selection = .tasks }

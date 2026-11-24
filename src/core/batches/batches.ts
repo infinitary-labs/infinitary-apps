@@ -492,21 +492,24 @@ export class Batches {
   }
 
   /**
-   * A repair declares its own change the held batch's fix: approved, it
-   * joins that batch with the changes waiting in line and ends the hold.
-   * A change already approved and waiting in line is marked now and joins
-   * on the pass this starts; one approved later is marked as it goes in
-   * line (`at`: its commit as declared). Refused in words when no batch of this project is held.
+   * A repair declares its own change the held batch's fix: approved, it joins that batch with
+   * the changes waiting in line and ends the hold. One already waiting in line is marked now
+   * and joins on this pass; one approved later, as it goes in line (`at`: its commit as
+   * declared). Refused in words when no batch is held, or not at the version its task read.
    */
-  async declareFix(repoId: string, taskId: string, at?: string): Promise<string | undefined> {
+  async declareFix(
+    repoId: string,
+    taskId: string,
+    at?: string,
+    held?: string,
+  ): Promise<string | undefined> {
     let refused: string | undefined;
     await this.write(repoId, (record) => {
-      if (!record.open?.hold) {
-        refused = "No batch of this project is held, so there is nothing to fix.";
-        return record;
-      }
+      const hold = record.open?.hold;
+      if (!hold) refused = "No batch of this project is held, so there is nothing to fix.";
+      else if (held && hold.head !== held) refused = BATCH_WORDS.ended;
       // The task that declared the fix is the hold's repair (`OpenBatch.repair`).
-      return repaired(declared(record, taskId, at), taskId);
+      return refused ? record : repaired(declared(record, taskId, at), taskId);
     });
     if (!refused) void this.pass(repoId);
     return refused;
@@ -577,11 +580,10 @@ export class Batches {
    * combine again with the line. Answers the refusal in English words, as
    * the first mate and a repair read it, or nothing.
    *
-   * A repair that sends changes back and declares its own change the fix in
-   * one declaration names that task as `fix`, at the commit `at` it had
-   * committed (`fixHeads`): the named changes leave, and the batch stays held
-   * at its version, combining nothing, until the fix is approved and joins
-   * with the rest and every change waiting in line.
+   * A repair that sends changes back and declares its own change the fix in one declaration
+   * names that task as `fix`, at the commit `at` it had committed (`fixHeads`): the named
+   * changes leave, and the batch stays held at its version, combining nothing, until the fix
+   * is approved and joins with the rest and every change waiting in line.
    */
   async answer(
     repoId: string,

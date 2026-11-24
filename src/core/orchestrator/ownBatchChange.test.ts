@@ -1610,6 +1610,36 @@ describe("a repair's answer to its project's held batch", () => {
     },
   );
 
+  // Intent: the same review, a bug being fixed: a fix declared alone was saved on whatever
+  // version the batch held at once its commit was read, so a repair that had read one held
+  // version was recorded as the repair of the next.
+  it("refuses a fix declared alone once the batch holds at another version than its task read", async () => {
+    let meanwhile: (() => Promise<void>) | undefined;
+    const at = await held({
+      checkedOut: async () => {
+        await meanwhile?.();
+        return { branch: REPAIR_BRANCH, head: HEAD, dirty: false };
+      },
+    });
+    insertTask(at.tasks, { id: REPAIR, repoId: REPO, branch: REPAIR_BRANCH, deviceId: "mini" });
+    const read = at.forge.batchHead;
+    // While the commit is read, Try again combines the batch anew and its checks fail again.
+    meanwhile = async () => {
+      meanwhile = undefined;
+      await at.batches.answer(REPO, { action: "try-again", head: read });
+      at.forge.atHead[at.forge.batchHead] = [{ name: "unit-tests", state: "failure" }];
+      await at.pass();
+    };
+
+    expect(
+      await at.service.checkTool.checkForCrew(REPAIR, { batch: { fix: true, evidence } }),
+    ).toBe(`Batch declaration refused: ${BATCH_WORDS.ended}`);
+    expect(at.open()?.hold?.head).toBe(at.forge.batchHead);
+    expect(at.forge.batchHead).not.toBe(read);
+    expect(at.open()?.repair).toBeUndefined();
+    expect(at.batches.record(REPO).fixes).toBeUndefined();
+  });
+
   it("declares its own change the batch's fix: once approved it joins the held batch and ends the hold", async () => {
     const at = await held();
     const before = at.forge.batchHead;

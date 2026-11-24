@@ -612,6 +612,30 @@ describe("a held batch", () => {
     expect(home.host.merges).toEqual([]);
   });
 
+  // Intent: the same issue, its second review's finding, a bug being fixed: a fix declared
+  // alone was saved on whatever version the batch held at by then, so a repair that read one
+  // held version before Try again was recorded as the repair of the next one.
+  it("refuses a fix declared for a version the batch no longer holds at, and takes it at the version it holds at now", async () => {
+    const home = await heldBatch();
+    const read = home.open().head;
+    await home.batches.answer(REPO, { action: "try-again", head: read });
+    home.host.report([failed("unit-tests")]);
+    await home.pass();
+    const now = home.open();
+    expect(now.hold?.head).toBeDefined();
+    expect(now.hold?.head).not.toBe(read);
+
+    expect(await home.batches.declareFix(REPO, FIX.taskId, FIX.head, read)).toBe(BATCH_WORDS.ended);
+    expect(home.record().fixes).toBeUndefined();
+    expect(home.open()).toEqual(now);
+
+    expect(
+      await home.batches.declareFix(REPO, FIX.taskId, FIX.head, now.hold?.head),
+    ).toBeUndefined();
+    expect(home.record().fixHeads).toEqual({ [FIX.taskId]: FIX.head });
+    expect(home.open().repair).toBe(FIX.taskId);
+  });
+
   // Intent: the same issue, its review's finding: the task that delivers a declared commit
   // holds no declaration of its own, so a later version of its change is an ordinary change.
   it("leaves a later version of the takeover's change an ordinary change", async () => {

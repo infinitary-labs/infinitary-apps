@@ -415,7 +415,7 @@ export class CheckChangeTool {
       return BATCH_DECLARATION_WORDS.passedRecorded(batch.fix === true);
     }
     if (batch.fix === true && back.length === 0) {
-      const refused = await batches.declareFix(repoId, record.id, at);
+      const refused = await batches.declareFix(repoId, record.id, at, open.hold.head);
       if (refused) return `Batch declaration refused: ${refused}`;
       this.options.tasks.note(
         record.id,

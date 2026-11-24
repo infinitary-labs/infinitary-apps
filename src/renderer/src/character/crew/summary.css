@@ -40,22 +40,26 @@
 .fm-crew-target i:nth-child(1) {
   inset-inline-start: 0;
   top: 0;
-  border-width: 1px 0 0 1px;
+  border-block-start-width: 1px;
+  border-inline-start-width: 1px;
 }
 .fm-crew-target i:nth-child(2) {
   inset-inline-end: 0;
   top: 0;
-  border-width: 1px 1px 0 0;
+  border-block-start-width: 1px;
+  border-inline-end-width: 1px;
 }
 .fm-crew-target i:nth-child(3) {
   inset-inline-start: 0;
   bottom: 0;
-  border-width: 0 0 1px 1px;
+  border-block-end-width: 1px;
+  border-inline-start-width: 1px;
 }
 .fm-crew-target i:nth-child(4) {
   inset-inline-end: 0;
   bottom: 0;
-  border-width: 0 1px 1px 0;
+  border-block-end-width: 1px;
+  border-inline-end-width: 1px;
 }
 .fm-crew-summary-line {
   height: 0;

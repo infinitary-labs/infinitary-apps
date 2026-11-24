@@ -122337,6 +122337,12 @@ ${FRAME_KEYBOARD_SCRIPT}
        */
       kept: literal(true).optional(),
       /**
+       * The computer that runs work it runs on, by the name the home gives it,
+       * whose kept profile holds what the captain signs in to there; the home
+       * adds it, and it is absent for a browser on the first mate's computer.
+       */
+      computer: string().min(1).max(256).optional(),
+      /**
        * While the captain holds it in the kept profile, the captain's rule for
        * the page's site on the computer it runs on (docs/task-browser.md, "The
        * rule"): the Return control question starts from it. Absent while that

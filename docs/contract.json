@@ -49463,6 +49463,11 @@
                     "type": "boolean",
                     "const": true
                   },
+                  "computer": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
                   "rule": {
                     "type": "string",
                     "enum": [
@@ -88410,6 +88415,11 @@
                             "type": "boolean",
                             "const": true
                           },
+                          "computer": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 256
+                          },
                           "rule": {
                             "type": "string",
                             "enum": [
@@ -112898,6 +112908,11 @@
                           "kept": {
                             "type": "boolean",
                             "const": true
+                          },
+                          "computer": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 256
                           },
                           "rule": {
                             "type": "string",

@@ -176,8 +176,11 @@ export class PlacedBrowsers implements PlacedBrowserSink {
     }
   }
 
+  /** An open browser there carries that computer's name, so its kept-profile words name where a sign-in stays. */
   fact(taskId: string): TaskBrowserFact | undefined {
-    return this.facts.get(taskId)?.fact;
+    const heard = this.facts.get(taskId);
+    if (heard?.fact.state !== "open") return heard?.fact;
+    return { ...heard.fact, computer: this.options.nameOf(heard.deviceId) };
   }
 
   isOpen(taskId: string): boolean {

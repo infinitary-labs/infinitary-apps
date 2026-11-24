@@ -6,6 +6,7 @@ import {
   SIGN_IN_CAPTION,
   savedSignInLabel,
   signInCaption,
+  signInPlace,
   signInRuleLegend,
   type TaskBrowserFact,
 } from "./taskBrowser";
@@ -63,5 +64,19 @@ describe("the browser view's foot line", () => {
     expect(signInCaption({ ...OPEN, saved: ["aurora.example"] }, false, place)).toBe(
       "signed in on aurora.example · kept on Mac mini",
     );
+  });
+
+  // The captain's answer on INF-6521's review: name the computer that keeps the sign-in.
+  it("names the computer that runs work a browser runs on where its sign-in is kept", () => {
+    const there = { ...OPEN, kept: true as const, computer: "Mac mini" };
+    expect(signInCaption(there, true, signInPlace(there))).toBe(
+      "what you sign in to here stays on Mac mini",
+    );
+    expect(signInRuleLegend("aurora.example", signInPlace(there, { this: "MacBook Pro" }))).toBe(
+      "Your aurora.example sign-in stays on Mac mini. Later tasks:",
+    );
+    expect(
+      signInCaption({ ...OPEN, kept: true }, true, signInPlace(OPEN, { this: "MacBook Pro" })),
+    ).toBe("what you sign in to here stays on MacBook Pro");
   });
 });

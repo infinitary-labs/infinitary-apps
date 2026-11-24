@@ -253,6 +253,12 @@ export const taskBrowserFactSchema = z.discriminatedUnion("state", [
      */
     kept: z.literal(true).optional(),
     /**
+     * The computer that runs work it runs on, by the name the home gives it,
+     * whose kept profile holds what the captain signs in to there; the home
+     * adds it, and it is absent for a browser on the first mate's computer.
+     */
+    computer: z.string().min(1).max(256).optional(),
+    /**
      * While the captain holds it in the kept profile, the captain's rule for
      * the page's site on the computer it runs on (docs/task-browser.md, "The
      * rule"): the Return control question starts from it. Absent while that
@@ -755,6 +761,17 @@ export function savedCaption(sites: readonly string[], place: FirstMatePlace = H
   const named =
     sites.length > 1 ? `${sites.slice(0, -1).join(", ")} and ${sites.at(-1)}` : (sites[0] ?? "");
   return `signed in on ${named} · kept on ${place.this}`;
+}
+
+/**
+ * Where an open browser keeps what the captain signs in to: the computer
+ * that runs work it runs on, or else where the first mate lives.
+ */
+export function signInPlace(
+  fact: Extract<TaskBrowserFact, { state: "open" }>,
+  place: FirstMatePlace = HERE,
+): FirstMatePlace {
+  return fact.computer ? { this: fact.computer } : place;
 }
 
 /**

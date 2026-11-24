@@ -1,5 +1,23 @@
 {
+  "integrationsMcpAdd": "添加 {name}",
+  "integrationsMcpNeedsSignIn": "需要重新登录",
+  "integrationsMcpOfferBody": "{name} 需要登录，你在浏览器中完成。之后它的工具会在卡片上询问你，直到你选择“始终允许”。",
+  "integrationsMcpOfferButton": "打开集成",
+  "integrationsMcpOfferNotNow": "暂不",
+  "integrationsMcpOfferOpen": "打开“集成”：MCP 服务器表单已填好，连接后会打开登录页面。",
+  "integrationsMcpRenewOperation": "续期 {name} 的登录，让它的工具继续可用",
+  "integrationsMcpRenewReason": "Infinitary 会续期你的 {name} 登录，让它的工具继续可用。",
+  "integrationsMcpRenewResult": "新的 {name} 访问密钥，只保存在应用的内存中",
+  "integrationsMcpRevokeOperation": "让 {name} 忘记你移除的登录",
+  "integrationsMcpRevokeReason": "Infinitary 会让 {name} 忘记你移除的登录。",
+  "integrationsMcpRevokeResult": "不保存任何内容：登录在那里结束",
   "integrationsSignInAgain": "重新打开页面",
   "integrationsSignInCancel": "取消",
+  "integrationsSignInCancelled": "登录已取消。",
+  "integrationsSignInNoneAgain": "{name} 没有可重新进行的登录。",
+  "integrationsSignInNoneWaiting": "没有正在等待的登录。",
+  "integrationsSignInPageAt": "页面位于 {host}。",
+  "integrationsSignInPageNotSignedIn": "未登录 {name}。你可以关闭此标签页，回到 Infinitary。",
+  "integrationsSignInPageSignedIn": "已登录 {name}。你可以关闭此标签页，回到 Infinitary。",
   "integrationsSignInWaiting": "请在浏览器中完成 {name} 的登录。"
 }

@@ -1,5 +1,23 @@
 {
+  "integrationsMcpAdd": "إضافة {name}",
+  "integrationsMcpNeedsSignIn": "يحتاج إلى تسجيل الدخول مجددًا",
+  "integrationsMcpOfferBody": "يطلب {name} تسجيل الدخول، وتُجريه في متصفحك. بعدها تسألك أدواته في بطاقة حتى تختار «مسموح دائمًا».",
+  "integrationsMcpOfferButton": "فتح التكاملات",
+  "integrationsMcpOfferNotNow": "ليس الآن",
+  "integrationsMcpOfferOpen": "افتح التكاملات: نموذج خادم MCP معبّأ، والاتصال يفتح صفحة تسجيل الدخول.",
+  "integrationsMcpRenewOperation": "تجديد تسجيل الدخول إلى {name} لتبقى أدواته تعمل",
+  "integrationsMcpRenewReason": "يجدد Infinitary تسجيل دخولك إلى {name} لتبقى أدواته تعمل.",
+  "integrationsMcpRenewResult": "مفتاح وصول جديد إلى {name}، محفوظ في ذاكرة التطبيق فقط",
+  "integrationsMcpRevokeOperation": "إبلاغ {name} بنسيان تسجيل الدخول الذي أزلته",
+  "integrationsMcpRevokeReason": "يطلب Infinitary من {name} نسيان تسجيل الدخول الذي أزلته.",
+  "integrationsMcpRevokeResult": "لا يُحفظ شيء: ينتهي تسجيل الدخول هناك",
   "integrationsSignInAgain": "فتح الصفحة مرة أخرى",
   "integrationsSignInCancel": "إلغاء",
+  "integrationsSignInCancelled": "أُلغي تسجيل الدخول.",
+  "integrationsSignInNoneAgain": "لا يملك {name} تسجيل دخول يمكن إعادته.",
+  "integrationsSignInNoneWaiting": "لا يوجد تسجيل دخول قيد الانتظار.",
+  "integrationsSignInPageAt": "الصفحة على {host}.",
+  "integrationsSignInPageNotSignedIn": "لم يتم تسجيل الدخول إلى {name}. يمكنك إغلاق هذا التبويب والعودة إلى Infinitary.",
+  "integrationsSignInPageSignedIn": "تم تسجيل الدخول إلى {name}. يمكنك إغلاق هذا التبويب والعودة إلى Infinitary.",
   "integrationsSignInWaiting": "أكمل تسجيل الدخول إلى {name} في متصفحك."
 }

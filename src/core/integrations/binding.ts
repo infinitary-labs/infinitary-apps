@@ -124,6 +124,14 @@ export type IntegrationConnection = {
   events?: readonly IntegrationEventSpec[];
   /** The inbox's door, for Settings alone (`IntegrationView.door`). */
   door?: IntegrationDoorView;
+  /** It signs in in the person's browser, and can be signed in again (`IntegrationView.signIn`). */
+  signIn?: true;
+  /**
+   * This connection's answers and event summaries carry words anyone can
+   * write, in place of the binding's `fence`, with no days kept: an MCP
+   * server at an address, whose program-run servers stay unfenced.
+   */
+  fence?: string;
 };
 
 /** An action's answer: words for the caller, or a refusal that says why and what to do. */
@@ -153,6 +161,15 @@ export type IntegrationAnswer = {
  * run again, and its crewmate reads the place before going on.
  */
 export class IntegrationOutcomeUnknown extends Error {}
+
+/** A sign-in page opened in the person's browser: its address, and a way to open it again. */
+export type IntegrationSignInPage = { page: string; again: () => Promise<void> };
+
+/** A sign-in the person makes in their browser while Settings waits: it ends when `signal` aborts. */
+export type IntegrationSignInHandle = {
+  signal: AbortSignal;
+  opened: (page: IntegrationSignInPage) => void;
+};
 
 export type IntegrationBinding = {
   kind: IntegrationKind;
@@ -198,8 +215,20 @@ export type IntegrationBinding = {
    * `claim` holds a candidate id for this addition before the binding waits
    * on the place, and answers false when the id or a name like it is
    * another's, so the binding tries its next one (docs/integrations.md, "Names").
+   * With `signIn`, a place that asks for a sign-in is signed in to in the
+   * person's browser; without it, such a place is refused with words.
    */
-  add?: (input: unknown, claim?: (id: string) => boolean) => Promise<string>;
+  add?: (
+    input: unknown,
+    claim?: (id: string) => boolean,
+    signIn?: IntegrationSignInHandle,
+  ) => Promise<string>;
+  /**
+   * Sign one connection in again in the person's browser (an MCP server's
+   * whose sign-in ended); throws words when it cannot. Its actions and
+   * rules stay as they were.
+   */
+  signInAgain?: (id: string, signIn: IntegrationSignInHandle) => Promise<void>;
   /**
    * Sign in where the person signs in in their own browser (Google's
    * loopback sign-in) and answer the connection's id once it comes back;

@@ -10,6 +10,7 @@ import type { CrewSupervisor } from "../orchestrator/crewSupervisor";
 import type { GithubGatewayService } from "../orchestrator/githubGateway";
 import type { AppPaths } from "../paths";
 import type { PanelOutsideData } from "../personal/panelOutsideData";
+import type { SignInReturnTo } from "../signInReturns";
 import type { StandIns } from "../standIns";
 import type { TaskService } from "../tasks/taskService";
 import { atUtilityQos } from "../utilityQos";
@@ -117,6 +118,12 @@ export function startHomeIntegrations(options: {
     version: host.app.version,
     changed: () => integrationsChanged(),
     keys: options.keys,
+    open: async (url: string, to: SignInReturnTo) => {
+      if (!isAllowedOpenExternalUrl(url))
+        throw new Error("The server's sign-in page's address was refused.");
+      await (host.openSignInPage ? host.openSignInPage(url, to) : host.openExternal(url));
+    },
+    now,
   });
   const integrationSettings = new IntegrationSettingsStore(paths.integrationsDir);
   // The inbox's switch is its connection's pause (INF-1567): off, its door refuses.

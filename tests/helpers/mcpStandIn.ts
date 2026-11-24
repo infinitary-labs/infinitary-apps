@@ -176,9 +176,14 @@ export type NotesHttpServer = {
   close: () => Promise<void>;
 };
 
+/**
+ * `guard` sees each request first and answers it itself when it returns
+ * true: a server that asks for a sign-in (`mcpSignInStandIn.ts`).
+ */
 export async function serveNotesHttp(
   era: StandInEra,
   notebooks: () => string[] = () => [],
+  guard?: (request: IncomingMessage, reply: ServerResponse) => boolean,
 ): Promise<NotesHttpServer> {
   const book: NotesBook = { notes: [...SAMPLE_NOTES] };
   let tell: () => void;
@@ -246,6 +251,10 @@ export async function serveNotesHttp(
   }
   let dropAdd = false;
   const http = createServer((request, reply) => {
+    if (guard?.(request, reply)) {
+      request.resume();
+      return;
+    }
     const chunks: Buffer[] = [];
     request.on("data", (chunk: Buffer) => chunks.push(chunk));
     request.on("end", () => {

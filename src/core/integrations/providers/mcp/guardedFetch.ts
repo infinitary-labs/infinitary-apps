@@ -103,6 +103,100 @@ export function guardedMcpFetch(
         `${destination.hostname} now points somewhere other than when it was added; remove it and add it again.`,
       );
     }
+    return sendPinned(
+      url,
+      init,
+      addresses,
+      () =>
+        new McpAddressError(
+          "The server redirected the request elsewhere; add the address it ends at instead.",
+        ),
+    );
+  };
+}
+
+/**
+ * The fetch a server's sign-in goes through (docs/integrations.md, "MCP
+ * servers that sign in"): its documents, its registration, its token and
+ * its revocation, at whatever address the server's documents name, since a
+ * sign-in often lives at another address than the server (Todoist's at
+ * todoist.com). Each request is https, resolves its name again, connects
+ * only to the checked addresses and follows no redirect. An address in a
+ * private network or on this computer is reached only when the server itself
+ * is there, and plain http only for a server on this computer.
+ */
+export function guardedSignInFetch(
+  server: CustomNetworkMode,
+  resolve: McpResolver = lookupAll,
+): McpFetch {
+  return async (input, init = {}) => {
+    const url = new URL(typeof input === "string" ? input : input.href);
+    const addresses = await checkSignInAddress(url, server, resolve);
+    return sendPinned(
+      url,
+      init,
+      addresses,
+      () =>
+        new McpAddressError(
+          `The sign-in at ${url.hostname} answered with a redirect, which Infinitary does not follow.`,
+        ),
+    );
+  };
+}
+
+/**
+ * Whether a sign-in address may be reached from a server added under
+ * `server`'s network class: the checked addresses, or words saying why not.
+ */
+export async function checkSignInAddress(
+  url: URL,
+  server: CustomNetworkMode,
+  resolve: McpResolver = lookupAll,
+): Promise<readonly string[]> {
+  if (url.username || url.password)
+    throw new McpAddressError("The server's sign-in names an address with a sign-in in it.");
+  const hostname = url.hostname.replace(/^\[|\]$/g, "");
+  if (url.protocol !== "https:" && !(url.protocol === "http:" && server === "local"))
+    throw new McpAddressError(
+      `The server's sign-in is at ${url.hostname} over plain http, which Infinitary does not use. It needs https.`,
+    );
+  let addresses: readonly string[];
+  try {
+    addresses = isIP(hostname) ? [hostname] : await resolve(hostname);
+  } catch {
+    throw new McpAddressError(`The server's sign-in at ${url.hostname} could not be found.`);
+  }
+  let mode: CustomNetworkMode;
+  try {
+    mode = classifyCustomApiAddresses(addresses);
+  } catch {
+    throw new McpAddressError(
+      `The server's sign-in at ${url.hostname} points somewhere Infinitary does not connect to.`,
+    );
+  }
+  if (mode !== "public" && mode !== server)
+    throw new McpAddressError(
+      `The server's sign-in at ${url.hostname} is in a private network, but the server is not, so Infinitary does not reach it.`,
+    );
+  if (url.protocol === "http:" && mode !== "local")
+    throw new McpAddressError(
+      `The server's sign-in is at ${url.hostname} over plain http, which Infinitary does not use. It needs https.`,
+    );
+  return addresses;
+}
+
+/**
+ * Send one request to `url` on a fresh connection to the checked
+ * `addresses` alone, with the normal certificate roots; a redirect is
+ * refused with the `redirected` error.
+ */
+function sendPinned(
+  url: URL,
+  init: RequestInit,
+  addresses: readonly string[],
+  redirected: () => McpAddressError,
+): Promise<Response> {
+  return (async () => {
     const address = addresses[0] as string;
     const headers: Record<string, string> = Object.fromEntries(new Headers(init.headers));
     const body =
@@ -137,11 +231,7 @@ export function guardedMcpFetch(
           const status = reply.statusCode ?? 0;
           if (status >= 300 && status < 400) {
             reply.destroy();
-            reject(
-              new McpAddressError(
-                "The server redirected the request elsewhere; add the address it ends at instead.",
-              ),
-            );
+            reject(redirected());
             return;
           }
           const replyHeaders = new Headers();
@@ -162,5 +252,5 @@ export function guardedMcpFetch(
       request.on("error", reject);
       request.end(body);
     });
-  };
+  })();
 }

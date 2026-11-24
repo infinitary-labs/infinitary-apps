@@ -24,6 +24,7 @@ import {
 } from "../forges";
 import {
   integrationActionNameSchema,
+  integrationAddHowSchema,
   integrationIdSchema,
   integrationKindSchema,
   integrationMcpAddSchema,
@@ -389,8 +390,25 @@ export const signInChannels = {
     effect: "change",
     surface: "core",
     reach: "views",
-    request: z.tuple([integrationMcpAddSchema]),
+    request: z.tuple([integrationMcpAddSchema, integrationAddHowSchema.optional()]),
     response: z.object({ id: integrationIdSchema, view: integrationsViewSchema }).strict(),
+  },
+  // Sign one row in again in the person's browser (an MCP server whose
+  // sign-in ended); the cancel below ends its wait too.
+  "inf:integrations:sign-in-again": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([integrationIdSchema]),
+    response: integrationsViewSchema,
+  },
+  // Open the waiting sign-in's page once more (`IntegrationsView.signingIn`).
+  "inf:integrations:sign-in-page": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([]),
+    response: integrationsViewSchema,
   },
   // Sign in to a kind that signs in in the person's browser (Google): the
   // answer comes once the browser is back, and the cancel ends the wait.

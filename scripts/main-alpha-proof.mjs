@@ -94,7 +94,9 @@ const MAC_NATIVE = "Native tests, replay and package (Mac)";
 // The desktop journeys are two jobs, one per group of equal measured time; a run
 // from before that split ran them in one job of the first name.
 const MAC_DESKTOP = [["Desktop journeys (Mac)"], ["Desktop journeys (Mac; group 1/2)", "Desktop journeys (Mac; group 2/2)"]];
-const MAC_JOURNEYS = ["Parallel journeys (Mac)", MAC_DESKTOP];
+// The parallel journeys are four jobs on GitHub's Macs (INF-6330's plan).
+const MAC_PARALLEL = [["Parallel journeys (Mac)"], [1, 2, 3, 4].map((group) => `Parallel journeys (Mac; group ${group}/4)`)];
+const MAC_JOURNEYS = [MAC_PARALLEL, MAC_DESKTOP];
 
 /** Whether `jobs` hold verify.yml's Mac lanes, called as job `prefix`, each
  * passed: `names`, or the one `mac` job of a run from before INF-2779. An

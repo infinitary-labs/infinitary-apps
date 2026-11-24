@@ -4,7 +4,14 @@ import { availableParallelism } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { budget, linuxParts } from "../scripts/journey-budget.ts";
-import { loadYamlFile, root, workflowString, workflowValue } from "./helpers/releaseWorkflows";
+import { fileArgument, laneFiles } from "../scripts/journey-groups.ts";
+import {
+  journeysRun,
+  loadYamlFile,
+  root,
+  workflowString,
+  workflowValue,
+} from "./helpers/releaseWorkflows";
 import { scratchDir } from "./helpers/scratchDirs";
 
 // INF-2267: portable workflow contracts keep the integration cohort and its isolation;
@@ -199,6 +206,7 @@ describe("each Mac job's kind", () => {
     release_build: "q-release-build",
     release_sign: "q-release-sign",
     release_light: "q-release-light",
+    native: "q-native",
   };
   const today = {
     MAC_RUNNER: "mini-mac-any",
@@ -208,8 +216,15 @@ describe("each Mac job's kind", () => {
   const publishing = (dryRun: boolean) => ({ resolve: { outputs: { dry_run: String(dryRun) } } });
 
   it.each([
-    ["verify.yml", "lane", { matrix: { lane: "mac" }, inputs: {} }, "split", "mini-mac-any"],
-    ["verify.yml", "lane", { matrix: { lane: "parallel" }, inputs: {} }, "split", "mini-mac-any"],
+    ["verify.yml", "lane", { matrix: { lane: "mac" }, inputs: {} }, "native", "mini-mac-any"],
+    ["verify.yml", "lane", { matrix: { lane: "parallel" }, inputs: {} }, "native", "mini-mac-any"],
+    [
+      "verify.yml",
+      "lane",
+      { matrix: { lane: "parallel-1" }, inputs: {} },
+      "native",
+      "mini-mac-any",
+    ],
     ["verify.yml", "lane", { matrix: { lane: "desktop-1" }, inputs: {} }, "split", "mini-mac-any"],
     ["journeys.yml", "affected-journeys", { inputs: {} }, "journeys", "mini-mac-any"],
     ["phone.yml", "scene-evidence", {}, "light", "mini-mac-any"],
@@ -249,6 +264,49 @@ describe("each Mac job's kind", () => {
     },
   );
 
+  // INF-6330's approved plan (option D): the native kind sends the mac and
+  // parallel lanes to GitHub's Mac, even in a batch or a release that passes
+  // its own queue, while the desktop lanes keep that queue; a request's
+  // native_runner comes first, to measure a runner before the switch.
+  it("sends the native tests and parallel journeys to the native kind, the desktop journeys where they ran", () => {
+    const verify = jobs("verify.yml").lane;
+    const placed = (inputs: Record<string, string>, named: Record<string, string>) => {
+      const vars = { ...today, MAC_QUEUES: JSON.stringify(named) };
+      const lanes = workflowValue(verify?.strategy?.matrix?.lane as string, { inputs, vars });
+      return Object.fromEntries(
+        (lanes as string[]).map((lane) => [
+          lane,
+          workflowValue(verify?.["runs-on"] ?? "", { matrix: { lane }, inputs, vars }),
+        ]),
+      );
+    };
+    const batch = { mac_runner: "q-release-split" };
+    const { native: _unnamed, ...before } = queues;
+    const split = (runner: string, desktop: string) => ({
+      "linux-checks": "ubuntu-24.04",
+      mac: runner,
+      ...Object.fromEntries([1, 2, 3, 4].map((group) => [`parallel-${group}`, runner])),
+      "desktop-1": desktop,
+      "desktop-2": desktop,
+    });
+    expect(placed(batch, { ...queues, native: "macos-15" })).toEqual(
+      split("macos-15", "q-release-split"),
+    );
+    expect(placed({}, { ...queues, native: "macos-15" })).toEqual(split("macos-15", "q-split"));
+    // Until the native kind is named, every Mac lane stays where it ran, in
+    // the one parallel journeys job.
+    expect(placed(batch, before)).toEqual({
+      "linux-checks": "ubuntu-24.04",
+      mac: "q-release-split",
+      parallel: "q-release-split",
+      "desktop-1": "q-release-split",
+      "desktop-2": "q-release-split",
+    });
+    expect(placed({ native_runner: "macos-15-intel" }, before)).toEqual(
+      split("macos-15-intel", "q-split"),
+    );
+  });
+
   // INF-5571's approved plan, part 5: a publishing release's signed installer
   // build asks for the release_build queue, which the placement service starts
   // before release_sign, so it no longer waits behind the signing job. A dry
@@ -286,9 +344,16 @@ describe("each Mac job's kind", () => {
         // without a matrix value.
         const [key, values] = Object.entries(job.strategy?.matrix ?? {})[0] ?? [];
         const known = typeof values !== "string" || !values.includes("needs.");
+        // verify's lanes are more on GitHub's Macs: both placements' lanes.
         const listed =
           known && typeof values === "string" && values.includes("${{")
-            ? workflowValue(values, { inputs: {} })
+            ? [
+                ...new Set(
+                  [{}, { MAC_QUEUES: JSON.stringify(queues) }].flatMap(
+                    (vars) => workflowValue(values, { inputs: {}, vars }) as unknown[],
+                  ),
+                ),
+              ]
             : values;
         const entries =
           key && known && Array.isArray(listed) ? listed.map((value) => ({ [key]: value })) : [{}];
@@ -317,8 +382,6 @@ describe("each Mac job's kind", () => {
   });
 
   it("gives the full Mac check's journeys half the job's cores, its size when the placement service names one", () => {
-    const e2e = jobs("verify.yml").lane?.steps?.find((step) => step.id === "e2e");
-    const run = e2e?.run ?? "";
     // The desktop lane, and the parallel lanes' group in each of the parallel
     // and mac jobs, where the worker count tells (INF-2779, INF-2987).
     const lanes = {
@@ -328,41 +391,16 @@ describe("each Mac job's kind", () => {
         "exec playwright test --no-deps --project=styles --project=renderer --project=application",
       mac: "exec playwright test --no-deps --project=styles --project=renderer --project=application",
     };
-    const dir = scratchDir("infinitary-job-cores-");
-    const bin = join(dir, "bin");
-    mkdirSync(bin);
-    const log = join(dir, "pnpm.log");
-    writeFileSync(join(bin, "pnpm"), '#!/bin/sh\nprintf "%s\\n" "$*" >> "$COMMAND_LOG"\n');
-    chmodSync(join(bin, "pnpm"), 0o755);
-    const ran = (lane: keyof typeof lanes, cores?: string) => {
-      writeFileSync(log, "");
-      const { RUNNER_UP_CORES: _unset, ...env } = process.env;
-      const inputs = { part: "", all_journeys: true };
-      const result = spawnSync("bash", ["--noprofile", "--norc", "-e", "-c", run], {
-        cwd: root,
-        env: {
-          ...env,
-          PATH: `${bin}:${process.env.PATH}`,
-          COMMAND_LOG: log,
-          INFINITARY_E2E_TAG: "",
-          LANE: lane,
-          GROUP: workflowString(e2e?.env?.GROUP ?? "", { inputs, matrix: { lane } }),
-          JOBS: workflowString(e2e?.env?.JOBS ?? "", { inputs, matrix: { lane } }),
-          ...(cores === undefined ? {} : { RUNNER_UP_CORES: cores }),
-        },
-        encoding: "utf8",
-      });
-      expect(result.status, result.stderr).toBe(0);
-      return readFileSync(log, "utf8").trim();
-    };
-    for (const [lane, command] of Object.entries(lanes) as [keyof typeof lanes, string][]) {
+    for (const [lane, command] of Object.entries(lanes)) {
       const workers = (cores?: string) =>
-        ran(lane, cores)
+        journeysRun(lane, { cores })
           .replace(command, "")
           .split(" ")
           .filter((word) => word.startsWith("--workers="))
           .join(" ");
-      expect(ran(lane, "12").startsWith(`${command} --workers=6`), lane).toBe(true);
+      expect(journeysRun(lane, { cores: "12" }).startsWith(`${command} --workers=6`), lane).toBe(
+        true,
+      );
       expect(workers("12"), lane).toBe("--workers=6");
       expect(workers("1"), lane).toBe("--workers=1");
       // No size named: half this machine, as `--workers=50%` gave.
@@ -371,6 +409,36 @@ describe("each Mac job's kind", () => {
       expect(workers("not a number"), lane).toBe(half);
     }
   });
+
+  // INF-6330's approved plan (option D): on GitHub's Macs, a machine of the
+  // job's own, the journeys take every core but one, and the parallel lanes
+  // run in the four parallel jobs and the mac job.
+  it("gives a GitHub Mac's journeys every core but one", () => {
+    for (const lane of ["parallel-1", "parallel-4", "mac", "desktop-1"])
+      expect(journeysRun(lane, { cores: "3", hosted: true }), lane).toContain(" --workers=2 ");
+  });
+
+  it.each([
+    ["the project's Macs", false, "", ["parallel", "mac"]],
+    ["GitHub's Macs", true, "", ["parallel-1", "parallel-2", "parallel-3", "parallel-4", "mac"]],
+    [
+      "GitHub's Macs, journeys part",
+      true,
+      "journeys",
+      ["parallel-1", "parallel-2", "parallel-3", "parallel-4"],
+    ],
+    ["the project's Macs, journeys part", false, "journeys", ["parallel"]],
+  ] as const)(
+    "runs every parallel journey once across the jobs on %s",
+    (_where, hosted, part, jobs) => {
+      const files = jobs.flatMap((lane) =>
+        journeysRun(lane, { cores: "3", hosted, part })
+          .split(" ")
+          .filter((word) => word.startsWith("/tests/")),
+      );
+      expect(files.toSorted()).toEqual(laneFiles("parallel").map(fileArgument).toSorted());
+    },
+  );
 });
 
 /**
@@ -516,7 +584,8 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
       if (!job["runs-on"]) continue;
       const matrix = job.strategy?.matrix ?? {};
       const include = Array.isArray(matrix.include) ? (matrix.include as object[]) : [];
-      const lanes = typeof matrix.lane === "string" ? evaluate(matrix.lane, { inputs: {} }) : [];
+      const lanes =
+        typeof matrix.lane === "string" ? evaluate(matrix.lane, { inputs: {}, vars: {} }) : [];
       const entries: object[] = include.length
         ? include
         : Array.isArray(lanes) && lanes.length

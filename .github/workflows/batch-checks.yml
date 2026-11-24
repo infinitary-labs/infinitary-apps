@@ -335,6 +335,10 @@ jobs:
         job:
           - verify-lane-mac
           - verify-lane-parallel
+          - verify-lane-parallel-1
+          - verify-lane-parallel-2
+          - verify-lane-parallel-3
+          - verify-lane-parallel-4
           - verify-lane-desktop-1
           - verify-lane-desktop-2
           - verify-tests-Unit tests-1

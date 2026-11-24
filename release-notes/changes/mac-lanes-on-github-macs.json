@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "mac-lanes-on-github-macs",
+      "reason": "Runs the full Mac check's native tests and parallel journeys in five groups on GitHub's own Macs and keeps the desktop journeys on the project's Macs; only where the project's checks run changes, and nothing in the app does."
+    }
+  ]
+}

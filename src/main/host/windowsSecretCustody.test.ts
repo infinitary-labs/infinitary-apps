@@ -22,6 +22,10 @@ function credentials(error?: number) {
       items.set(target, Buffer.from(bytes));
       return 0;
     },
+    remove: (target) => {
+      if (error !== undefined) return error;
+      return items.delete(target) ? 0 : 1168;
+    },
   };
   return { api, items };
 }
@@ -63,10 +67,27 @@ describe("Windows Credential Manager custody", () => {
         write: () => {
           throw new Error("reply lost");
         },
+        remove: () => {
+          throw new Error("binding failed");
+        },
       },
       { name: NAME },
     );
     expect(await throwing.read("root")).toEqual({ kind: "unavailable" });
     await expect(throwing.write("root", Buffer.alloc(32))).rejects.toThrow(/unknown/);
+    expect(await throwing.remove?.("root")).toBe("unavailable");
+  });
+
+  // Intent: Reset Infinitary clears its Secrets credentials, or Secrets would
+  // open as tampered beside the fresh folder (docs/reset.md, "Outside the folder").
+  it("removes one slot's credential, says when none was there, and never calls a refusal removed", async () => {
+    const { api, items } = credentials();
+    const custody = createWindowsSecretCustody(api, { name: NAME });
+    await custody.write("root", Buffer.alloc(32, 1));
+    expect(await custody.remove?.("root")).toBe("removed");
+    expect(items.size).toBe(0);
+    expect(await custody.remove?.("root")).toBe("absent");
+    const refused = createWindowsSecretCustody(credentials(5).api, { name: NAME });
+    expect(await refused.remove?.("root")).toBe("unavailable");
   });
 });

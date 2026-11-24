@@ -134,6 +134,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | repo | (not used) | 프로젝트 instead |
 | report | 보고, 보고하다 | |
 | repository (one of a project's) | 저장소 | GitHub's own Korean word; "저장소 추가", "저장소 2개". Names one of a project's repositories; what work belongs to stays 프로젝트. |
+| reset (Infinitary on this computer) | 재설정 | Settings → General's row that deletes everything the app keeps on this computer; distinct from 완전 삭제, which clears tasks only. |
 | review | 검토 | |
 | revision (of a knowledge entry) | 수정본 | "Revision 3" is 수정본 3; kept apart from 버전 |
 | revision (of a knowledge entry) | 수정본 | 수정본 {revision}; 버전 stays for a project version |

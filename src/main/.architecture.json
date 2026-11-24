@@ -31,6 +31,11 @@
       "name": "voice",
       "path": "src/main/voice",
       "about": "Speech to text in its own process, and the voice model"
+    },
+    {
+      "name": "reset",
+      "path": "src/main/reset",
+      "about": "Runs Reset Infinitary and finishes it at the next start"
     }
   ],
   "outside": [
@@ -157,6 +162,26 @@
       "from": "host",
       "to": "Installed browsers",
       "why": "opens task browsers with a private pipe and isolated profiles"
+    },
+    {
+      "from": "reset",
+      "to": "core",
+      "why": "asks the first mate to undo its side, leaves the home it works for, ends leftover programs and finishes the mark"
+    },
+    {
+      "from": "reset",
+      "to": "host",
+      "why": "clears the password store through the native custody"
+    },
+    {
+      "from": "reset",
+      "to": "shared",
+      "why": "reads data folder names, app ids and the reset's words"
+    },
+    {
+      "from": "reset",
+      "to": "the system",
+      "why": "removes start entries, preferences, caches, phone keys, the command link and Chromium's key"
     }
   ]
 }

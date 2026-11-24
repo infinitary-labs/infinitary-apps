@@ -1837,6 +1837,20 @@
       <string>%1$ld台のコンピューター</string>
     </dict>
   </dict>
+  <key>settingsGeneralResetOpenTasks</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>進行中の%1$ld件のタスクが停止します。</string>
+    </dict>
+  </dict>
   <key>settingsGeneralTasksPurged</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

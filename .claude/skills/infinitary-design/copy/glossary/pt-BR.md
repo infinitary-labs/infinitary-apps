@@ -124,6 +124,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | repo (avoided) | projeto | |
 | report | relatório, relatar | The verb in feed lines: "Relatou: ...". |
 | repository (one of a project's) | repositório | "Adicionar um repositório", "2 repositórios". Names one of a project's repositories; what work belongs to stays projeto. |
+| reset (Infinitary on this computer) | redefinir | Settings → General's row that deletes everything the app keeps on this computer; apart from "excluir", which clears tasks only. |
 | resets | renova | "renova sex." for an allowance. |
 | review | revisão | |
 | revision (of a knowledge record) | versão | Kept apart from "revisão", which is review. |

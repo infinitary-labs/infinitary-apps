@@ -5,6 +5,7 @@ import { MAIN_COMMAND_IDS, type MainCommandId } from "../keyboard";
 import { offeredKeySchema } from "../keyboardOffer";
 import { keymapSnapshotSchema, panelCommandsSchema, savedKeymapSchema } from "../keymap";
 import { keyRemindersSchema } from "../keyReminders";
+import { resetAnswerSchema } from "../reset";
 import {
   micAccessSchema,
   recognizerPlaceSchema,
@@ -103,6 +104,15 @@ export const shellChannels = {
     surface: "host",
     request: z.tuple([]),
     response: okSchema,
+  },
+  // Reset Infinitary, in Settings → General (docs/reset.md): after the
+  // system's own confirmation, this computer's Infinitary undoes what it set
+  // up, quits and wipes its folder at the next start.
+  "inf:app:reset": {
+    effect: "change",
+    surface: "host",
+    request: z.tuple([]),
+    response: resetAnswerSchema,
   },
   // A window command the main process runs (the size keys), chosen by name
   // in command search (docs/keyboard.md): the same handler its key runs.

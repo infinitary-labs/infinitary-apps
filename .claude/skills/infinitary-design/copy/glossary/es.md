@@ -123,6 +123,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | repo (never said) | proyecto | The app's noun for what work belongs to stays proyecto. |
 | report | informar, informe | "Informó: …". |
 | repository (one of a project's) | repositorio | "Agregar un repositorio", "2 repositorios". Names one of a project's repositories, or the thing on GitHub. |
+| reset (Infinitary on this computer) | restablecer | Settings → General's row that deletes everything the app keeps on this computer; apart from "eliminar", which clears tasks only. |
 | resets (an allowance) | se renueva | "se renueva: 14:32". |
 | review | revisión | "Superó su revisión". |
 | revision (of a knowledge record) | versión | Kept apart from "revisión", which is review. |

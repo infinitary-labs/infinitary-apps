@@ -2,6 +2,7 @@ import koffi from "koffi";
 import { hostPlatform } from "../../core/platform";
 import type {
   CustodyRead,
+  CustodyRemove,
   CustodySlot,
   CustodyWrite,
   SecretCustody,
@@ -26,11 +27,13 @@ const CRED_TYPE_GENERIC = 1;
 /** CRED_PERSIST_LOCAL_MACHINE: this person, this PC, never roamed. */
 const CRED_PERSIST_LOCAL_MACHINE = 2;
 
-/** The two Credential Manager calls custody makes, so the status mapping is testable without Windows. */
+/** The Credential Manager calls custody makes, so the status mapping is testable without Windows. */
 export type WindowsCustodyApi = {
   read(target: string): { error: 0; bytes: Buffer } | { error: number };
   /** 0 once stored, else the Windows error code. */
   write(target: string, bytes: Buffer): number;
+  /** 0 once deleted, else the Windows error code. */
+  remove(target: string): number;
 };
 
 export type WindowsCustodyOptions = {
@@ -69,12 +72,22 @@ export function createWindowsSecretCustody(
         copy.fill(0);
       }
     },
+    async remove(slot: CustodySlot): Promise<CustodyRemove> {
+      if (!api) return "unavailable";
+      try {
+        const error = api.remove(custodyTarget(options.name, slot));
+        if (error === 0) return "removed";
+        return error === ERROR_NOT_FOUND ? "absent" : "unavailable";
+      } catch {
+        return "unavailable";
+      }
+    },
   };
 }
 
 /**
- * The Credential Manager binding (advapi32's CredReadW, CredWriteW and
- * CredFree). Undefined off Windows, or where it cannot load.
+ * The Credential Manager binding (advapi32's CredReadW, CredWriteW,
+ * CredDeleteW and CredFree). Undefined off Windows, or where it cannot load.
  */
 export function loadWindowsCustodyApi(): WindowsCustodyApi | undefined {
   if (hostPlatform() !== "win32") return undefined;
@@ -119,6 +132,7 @@ function bindCredentialManager(): WindowsCustodyApi {
   ]);
   const credWrite = advapi.func("CredWriteW", "bool", [koffi.pointer(Credential), "uint32"]);
   const credFree = advapi.func("CredFree", "void", ["void *"]);
+  const credDelete = advapi.func("CredDeleteW", "bool", ["str16", "uint32", "uint32"]);
   // koffi keeps the calling thread's last error from Node and V8's own calls.
   const lastError = kernel.func("GetLastError", "uint32", []);
 
@@ -164,5 +178,7 @@ function bindCredentialManager(): WindowsCustodyApi {
       );
       return stored ? 0 : (lastError() as number) || -1;
     },
+    remove: (target) =>
+      credDelete(target, CRED_TYPE_GENERIC, 0) ? 0 : (lastError() as number) || -1,
   };
 }

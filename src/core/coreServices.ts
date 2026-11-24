@@ -77,6 +77,7 @@ import type { AppDatabase } from "./storage/db";
 import type { SettingsStore } from "./storage/settingsStore";
 import type { CrewLiveText } from "./tasks/crewTranscript";
 import type { KeptRunning } from "./tasks/keptRunning";
+import type { LeftoverPrograms } from "./tasks/leftoverPrograms";
 import type { TaskProtocol } from "./tasks/taskProtocol";
 import type { TaskService } from "./tasks/taskService";
 import type { TaskTimeline } from "./tasks/taskTimeline";
@@ -304,6 +305,8 @@ export type CoreServices = {
   placed: PlacedWork & { stopCopies(): Promise<void> };
   /** The jobs kept running past their task's close, and each one's check and remove (docs/leftover-programs.md, "Kept running"). */
   keptRunning: KeptRunning;
+  /** What closed tasks left running, stopped at each close; a reset waits for every sweep (docs/reset.md). */
+  leftovers: Pick<LeftoverPrograms, "settled">;
   /**
    * The core's way to the computers that run work (src/core/placed/workDevices.ts):
    * the shell attaches the connection once it listens.

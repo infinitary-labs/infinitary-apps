@@ -142,6 +142,7 @@ import type {
   RepoSetupSpec,
   RepoView,
 } from "./repos";
+import type { ResetAnswer, ResetScope } from "./reset";
 import type { ComputerResourcesView } from "./resources";
 import type { RunbookView } from "./runbooks";
 import type { KeptOutsideData, OutsideDataDeleted } from "./savedOutsideData";
@@ -239,6 +240,13 @@ export type FirstmateApi = {
     stopCommand: () => Promise<boolean>;
     /** Quits this window's program. */
     quit: () => Promise<{ ok: true }>;
+    /** What Reset Infinitary's question counts: the open tasks it stops (docs/reset.md). */
+    resetScope: () => Promise<ResetScope>;
+    /**
+     * Reset Infinitary, once the person confirmed it: the app quits and its
+     * next start wipes this computer's Infinitary and opens on the welcome screen.
+     */
+    reset: () => Promise<ResetAnswer>;
     /** One of the window's own buttons where the app draws them; answers the window's state after it. */
     controlWindow: (control: WindowControl) => Promise<WindowState>;
     windowState: () => Promise<WindowState>;

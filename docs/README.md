@@ -52,6 +52,7 @@ Markdown in `docs/`, `primitives/` and the design skill is one sentence per line
 - `task-record.md`: the task as a record and the wire protocol over it.
 - `task-graph.md`: parents, links and the ready query.
 - `task-retention.md`: compaction, export and the session footprint.
+- `reset.md`: Reset Infinitary, which takes this computer's Infinitary back to how it was just installed.
 - `card-authoring.md`: the card body contract between agents and the card surface.
 - `card-threads.md`: cards as threads between the captain and the card's author.
 - `card-evidence.md`: the record of what each card offered and what the captain chose.

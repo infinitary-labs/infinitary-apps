@@ -68,6 +68,10 @@ const help =
  * neither made nor opened: status and link read the app running on it.
  */
 async function commandDataDir(): Promise<string> {
+  return (await commandDataChoice()).dataDir;
+}
+
+async function commandDataChoice() {
   const { app } = await import("electron");
   const { chooseUserDataDir, folderSpellingFor, readPackageJsonAt } = await import("./userDataDir");
   const choice = chooseUserDataDir({
@@ -78,7 +82,39 @@ async function commandDataDir(): Promise<string> {
     readAppPackageJson: readPackageJsonAt(app.getAppPath()),
     spelling: folderSpellingFor({ packaged: app.isPackaged, env: process.env }),
   });
-  return choice.kind === "switch" ? app.getPath("userData") : choice.dir;
+  return { choice, dataDir: choice.kind === "switch" ? app.getPath("userData") : choice.dir };
+}
+
+/**
+ * Finishes a reset the person asked before the app quit (./reset/atStart.ts,
+ * docs/reset.md), before anything of this start opens the data folder - the
+ * compile cache below writes into it. False when this start goes no further:
+ * another start is finishing it, or another program holds the folder, which
+ * one box then says. Never awaits readiness, which waits for this module.
+ */
+async function finishAskedReset(windowless = false): Promise<boolean> {
+  try {
+    const { choice, dataDir } = await commandDataChoice();
+    const { readResetMark } = await import("../core/reset/mark");
+    if (!readResetMark(dataDir)) return true;
+    const { finishResetAtStart } = await import("./reset/atStart");
+    const finished = await finishResetAtStart({ choice, dataDir });
+    if (finished.kind === "busy") process.exit(0);
+    if (finished.kind !== "held") return true;
+    if (windowless) {
+      const m = await import("@shared/i18n/messages.generated");
+      process.stderr.write(`${m.resetHeldMessage()}. ${m.resetHeldDetail()}\n`, () =>
+        process.exit(1),
+      );
+      return false;
+    }
+    const { showResetHeld } = await import("./reset/held");
+    void showResetHeld();
+    return false;
+  } catch (error) {
+    console.warn(`[reset] could not finish the reset: ${(error as Error).message}`);
+    return true;
+  }
 }
 
 /**
@@ -144,16 +180,18 @@ if (word) {
   // Its agent's mark is taken first, so nothing this run starts inherits it.
   const agentMark = takeRunAgentMark(process.env);
   askLoginShellEarly(run);
-  await armFreezeRecorder();
-  const loaded = await cacheCompiledCode();
-  const { startApp } = await import("./app");
-  loaded?.();
-  await startApp(dirname(fileURLToPath(import.meta.url)), { args: run, agentMark });
+  if (await finishAskedReset(true)) {
+    await armFreezeRecorder();
+    const loaded = await cacheCompiledCode();
+    const { startApp } = await import("./app");
+    loaded?.();
+    await startApp(dirname(fileURLToPath(import.meta.url)), { args: run, agentMark });
+  }
 } else if (hasNoScreen(hostPlatform(), process.env, process.argv)) {
   // The window cannot open with no screen: say what to do instead, with no crash.
   process.stderr.write(`${NO_SCREEN_WORDS.join("\n")}\n`);
   process.exit(1);
-} else {
+} else if (await finishAskedReset()) {
   await armFreezeRecorder();
   const loaded = await cacheCompiledCode();
   const { startApp } = await import("./app");

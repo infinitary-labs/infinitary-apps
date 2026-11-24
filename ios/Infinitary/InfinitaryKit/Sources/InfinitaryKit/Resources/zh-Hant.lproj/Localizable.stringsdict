@@ -1837,6 +1837,20 @@
       <string>%1$ld 台電腦</string>
     </dict>
   </dict>
+  <key>settingsGeneralResetOpenTasks</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>%1$ld 項進行中的任務會停止。</string>
+    </dict>
+  </dict>
   <key>settingsGeneralTasksPurged</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

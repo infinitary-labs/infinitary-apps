@@ -258,6 +258,8 @@ describe("ipc contract", () => {
       "inf:app:open-external",
       "inf:app:open-runbook-folder",
       "inf:app:quit",
+      // Reset Infinitary quits this program and starts it again (docs/reset.md).
+      "inf:app:reset",
       "inf:app:restart-command",
       "inf:app:start-here",
       "inf:app:stop-command",

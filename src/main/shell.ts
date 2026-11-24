@@ -325,6 +325,25 @@ export class Shell {
   }
 
   /**
+   * Whether Reset Infinitary may run from this window (docs/reset.md): as
+   * this computer's own first mate or beside its command, never as a view
+   * of another computer's.
+   */
+  resettable(): boolean {
+    return this.mode?.kind === "home" || this.mode?.kind === "beside";
+  }
+
+  /**
+   * Reset Infinitary's last step before the app starts again: this
+   * computer's first mate stops - beside a command, whichever run holds
+   * the folder, with its starter let go for good - so nothing writes the
+   * folder the next start wipes.
+   */
+  async stopForReset(): Promise<void> {
+    await this.stopHome();
+  }
+
+  /**
    * Start it here, on the notice over the window opened beside a command
    * that stopped (docs/run.md, "When the command stops"): the app starts
    * again as this computer's own first mate. False when nothing offers it.

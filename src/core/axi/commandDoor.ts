@@ -96,15 +96,19 @@ type Kept = { at: number; payload: unknown };
 
 function ruleOf(schema: Record<string, unknown>): { type: string; rule: string } {
   const parts: string[] = [];
+  // zod writes a union of bare types, such as a string or null, as one `type`
+  // list, and any other union as anyOf.
   const type = Array.isArray(schema.enum)
     ? "string"
     : typeof schema.type === "string"
       ? schema.type
-      : Array.isArray(schema.anyOf)
-        ? (schema.anyOf as Record<string, unknown>[])
-            .map((one) => String(one.type ?? one.const ?? "value"))
-            .join(" or ")
-        : "value";
+      : Array.isArray(schema.type)
+        ? schema.type.map(String).join(" or ")
+        : Array.isArray(schema.anyOf)
+          ? (schema.anyOf as Record<string, unknown>[])
+              .map((one) => String(one.type ?? one.const ?? "value"))
+              .join(" or ")
+          : "value";
   if (Array.isArray(schema.enum)) parts.push(`one of ${schema.enum.join(", ")}`);
   if (typeof schema.minLength === "number" && typeof schema.maxLength === "number")
     parts.push(`${schema.minLength} to ${schema.maxLength} characters`);

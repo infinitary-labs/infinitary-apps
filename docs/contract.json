@@ -2077,6 +2077,64 @@
         ]
       }
     },
+    "inf:task:tags": {
+      "effect": "change",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          {
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "items": false,
+        "minItems": 2,
+        "maxItems": 2
+      },
+      "response": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "ok": {
+                "type": "boolean",
+                "const": true
+              }
+            },
+            "required": [
+              "ok"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "ok": {
+                "type": "boolean",
+                "const": false
+              },
+              "text": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "ok",
+              "text"
+            ]
+          }
+        ]
+      }
+    },
     "inf:task:move-options": {
       "effect": "read",
       "reach": "views",
@@ -43609,6 +43667,36 @@
                 "archived": {
                   "type": "boolean"
                 },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "description": {
+                        "type": "string"
+                      },
+                      "revision": {
+                        "type": "number"
+                      },
+                      "tasks": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "description",
+                      "revision",
+                      "tasks"
+                    ]
+                  }
+                },
                 "counts": {
                   "type": "object",
                   "properties": {
@@ -45307,6 +45395,33 @@
                 },
                 "pinnedAt": {
                   "type": "number"
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "by": {
+                        "type": "string",
+                        "enum": [
+                          "decision",
+                          "captain",
+                          "firstmate"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "by"
+                    ]
+                  }
                 },
                 "createdAt": {
                   "type": "number"
@@ -47134,6 +47249,33 @@
           },
           "pinnedAt": {
             "type": "number"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "by": {
+                  "type": "string",
+                  "enum": [
+                    "decision",
+                    "captain",
+                    "firstmate"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "by"
+              ]
+            }
           },
           "createdAt": {
             "type": "number"
@@ -52311,6 +52453,33 @@
             "pinnedAt": {
               "type": "number"
             },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "by": {
+                    "type": "string",
+                    "enum": [
+                      "decision",
+                      "captain",
+                      "firstmate"
+                    ]
+                  }
+                },
+                "required": [
+                  "id",
+                  "name",
+                  "by"
+                ]
+              }
+            },
             "createdAt": {
               "type": "number"
             },
@@ -54052,6 +54221,33 @@
             "pinnedAt": {
               "type": "number"
             },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "by": {
+                    "type": "string",
+                    "enum": [
+                      "decision",
+                      "captain",
+                      "firstmate"
+                    ]
+                  }
+                },
+                "required": [
+                  "id",
+                  "name",
+                  "by"
+                ]
+              }
+            },
             "createdAt": {
               "type": "number"
             },
@@ -55508,6 +55704,36 @@
             "archived": {
               "type": "boolean"
             },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "revision": {
+                    "type": "number"
+                  },
+                  "tasks": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "id",
+                  "name",
+                  "description",
+                  "revision",
+                  "tasks"
+                ]
+              }
+            },
             "counts": {
               "type": "object",
               "properties": {
@@ -55583,6 +55809,166 @@
           "id",
           "name",
           "was"
+        ]
+      }
+    },
+    "inf:projects:tags": {
+      "effect": "change",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "type": "string",
+                    "const": "add"
+                  },
+                  "projectId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "description": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "op",
+                  "projectId",
+                  "name",
+                  "description"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "type": "string",
+                    "const": "edit"
+                  },
+                  "tagId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "description": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "op",
+                  "tagId"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "type": "string",
+                    "const": "remove"
+                  },
+                  "tagId": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "op",
+                  "tagId"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        ],
+        "items": false,
+        "minItems": 1,
+        "maxItems": 1
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "revision": {
+                  "type": "number"
+                },
+                "tasks": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "description",
+                "revision",
+                "tasks"
+              ]
+            }
+          },
+          "done": {
+            "type": "object",
+            "properties": {
+              "op": {
+                "type": "string",
+                "enum": [
+                  "add",
+                  "edit",
+                  "remove"
+                ]
+              },
+              "name": {
+                "type": "string"
+              },
+              "was": {
+                "type": "string"
+              },
+              "described": {
+                "type": "boolean"
+              },
+              "tasks": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "op",
+              "name"
+            ]
+          }
+        },
+        "required": [
+          "projectId",
+          "tags",
+          "done"
         ]
       }
     },
@@ -95324,6 +95710,36 @@
                 "archived": {
                   "type": "boolean"
                 },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "description": {
+                        "type": "string"
+                      },
+                      "revision": {
+                        "type": "number"
+                      },
+                      "tasks": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "description",
+                      "revision",
+                      "tasks"
+                    ]
+                  }
+                },
                 "counts": {
                   "type": "object",
                   "properties": {
@@ -97022,6 +97438,33 @@
                 },
                 "pinnedAt": {
                   "type": "number"
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "by": {
+                        "type": "string",
+                        "enum": [
+                          "decision",
+                          "captain",
+                          "firstmate"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "by"
+                    ]
+                  }
                 },
                 "createdAt": {
                   "type": "number"
@@ -98813,6 +99256,33 @@
                 "pinnedAt": {
                   "type": "number"
                 },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "by": {
+                        "type": "string",
+                        "enum": [
+                          "decision",
+                          "captain",
+                          "firstmate"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "by"
+                    ]
+                  }
+                },
                 "createdAt": {
                   "type": "number"
                 },
@@ -98971,6 +99441,36 @@
                 },
                 "archived": {
                   "type": "boolean"
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "description": {
+                        "type": "string"
+                      },
+                      "revision": {
+                        "type": "number"
+                      },
+                      "tasks": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "description",
+                      "revision",
+                      "tasks"
+                    ]
+                  }
                 },
                 "counts": {
                   "type": "object",

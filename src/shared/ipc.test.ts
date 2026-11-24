@@ -622,6 +622,7 @@ describe("ipc contract", () => {
       "inf:task:pin",
       "inf:task:run",
       "inf:task:steer",
+      "inf:task:tags",
       "inf:tasks:board",
       "inf:tasks:crewmate",
       "inf:tasks:crewmate:live",

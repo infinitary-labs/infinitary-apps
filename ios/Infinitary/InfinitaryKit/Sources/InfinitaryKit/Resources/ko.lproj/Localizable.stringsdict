@@ -1963,6 +1963,34 @@
       <string>저장소 %1$ld개</string>
     </dict>
   </dict>
+  <key>settingsProjectsTagsRemoveQuestion</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>%2$@을(를) 제거할까요? 이 태그가 붙은 작업 %1$ld개에서 빠져요.</string>
+    </dict>
+  </dict>
+  <key>settingsProjectsTagsTasks</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>작업 %1$ld개</string>
+    </dict>
+  </dict>
   <key>settingsSubscriptionsSavedResets</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

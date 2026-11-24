@@ -991,6 +991,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
 
     "inf:projects:list": () => services.taskProtocol.projects(),
     "inf:projects:rename": (projectId, name) => renameProject(services, projectId, name),
+    "inf:projects:tags": (change) => services.tasks.changeProjectTags(change),
 
     "inf:quota:snapshot": () => services.quota.latest() ?? null,
 

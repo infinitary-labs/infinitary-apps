@@ -121,8 +121,10 @@ export const MIGRATION_71_TABLE =
 export const TASK_REFERENCES_TABLE =
   "CREATE TABLE task_references (task_id TEXT NOT NULL, kind TEXT NOT NULL, ref TEXT NOT NULL, target_id TEXT, actor TEXT, recorded_at INTEGER, PRIMARY KEY (task_id, kind));";
 /** A rule's notes (docs/automation.md, "A rule's notes"), undone: its one table. */
-/** INF-6115's one-time thread carries (the newest table), undone: its one table. */
-const REVERSE_ASK_THREAD_CARRIES = "DROP TABLE IF EXISTS ask_thread_carries;\n";
+/** Task tags (docs/task-tags.md; the newest tables), undone: the tags tasks carry, then the projects' own. */
+const REVERSE_TASK_TAGS = "DROP TABLE IF EXISTS task_tags;\nDROP TABLE IF EXISTS project_tags;\n";
+/** INF-6115's one-time thread carries, undone with the newer tables: its one table. */
+const REVERSE_ASK_THREAD_CARRIES = `${REVERSE_TASK_TAGS}DROP TABLE IF EXISTS ask_thread_carries;\n`;
 /** The card drafts migration, undone with the newer table: its two triggers on `cards`, then its table. */
 export const REVERSE_CARD_DRAFTS =
   REVERSE_ASK_THREAD_CARRIES +

@@ -34,6 +34,10 @@ export const PANEL_CHANGES = {
   "project-settings": true,
   "project-move": true,
   "project-name": true,
+  "project-tags": [
+    "destructive",
+    "Removing a tag takes it off every task for good; tags are not panel data yet",
+  ],
   "project-runs-on": true,
   "device-invite": ["credential", "Makes a joining link for a new computer"],
   "private-site-allow": ["consent", "Widens what every task browser may reach"],

@@ -17,6 +17,7 @@ import { captainActionSchema, requiredActionStatusSchema } from "./requiredActio
 import { reviewRiskSchema, reviewVerdictSchema, rigorSchema } from "./rigor";
 import { riskAssessmentSchema } from "./risk";
 import { deliverableSchema } from "./routingPolicy";
+import { projectTagViewSchema, taskTagViewSchema } from "./tags";
 import { taskBrowserFactSchema } from "./taskBrowser";
 import { taskPlanSchema } from "./taskPlan";
 import { effectiveTaskPoliciesSchema, taskRunsOnSchema } from "./taskPolicies";
@@ -517,6 +518,11 @@ export const taskViewSchema = z.object({
    * Pinned whatever its state. Absent while it is not pinned, and on an older home.
    */
   pinnedAt: z.number().optional(),
+  /**
+   * The tags it carries, alphabetical, each with who set it
+   * (docs/task-tags.md). Absent while it carries none, and on an older home.
+   */
+  tags: z.array(taskTagViewSchema).optional(),
   createdAt: z.number(),
   updatedAt: z.number(),
   startedAt: z.number().nullable(),
@@ -588,6 +594,11 @@ export const projectViewSchema = z.object({
    */
   repos: z.array(projectRepoViewSchema).optional(),
   archived: z.boolean(),
+  /**
+   * The project's own tags, alphabetical (docs/task-tags.md). Absent while
+   * it has none, and on an older home.
+   */
+  tags: z.array(projectTagViewSchema).optional(),
   counts: z.object({
     /** Broader durable attention, including holds and dead dependencies. */
     needsYou: z.number(),

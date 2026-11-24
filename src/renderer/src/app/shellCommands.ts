@@ -130,6 +130,9 @@ const moveComputerButton = (entryId: string) =>
 
 const closeDoneButton = (entryId: string) => shownPart(entryId, "[data-record-close-done]:enabled");
 
+/** The shown record's Edit tags, on its Info tab while its project has tags. */
+const editTagsButton = (entryId: string) => shownPart(entryId, "[data-record-tags] button");
+
 /** The shown card's jump down in its thread, while the captain reads above its foot. */
 const threadJumpButton = (entryId: string) => shownPart(entryId, "[data-thread-jump]");
 
@@ -365,6 +368,8 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, (via: CommandVia) => void>
   "task.move-computer": () => toShownPart(moveComputerButton, (button) => button.click()),
   // The click itself: the one confirm opens with focus on Cancel.
   "task.close-done": () => toShownPart(closeDoneButton, (button) => button.click()),
+  // The click itself: the menu opens with focus on its first tag.
+  "task.edit-tags": () => toShownPart(editTagsButton, (button) => button.click()),
   "cards.show-browser": () => toTab("cards.show-browser"),
   "cards.next-tab": () => toTab("cards.next-tab"),
   "cards.previous-tab": () => toTab("cards.previous-tab"),
@@ -545,6 +550,10 @@ function windowFacts(): WindowFacts {
     taskCloseDone: (() => {
       const id = shownEntry(useShellStore.getState())?.id;
       return !!id && closeDoneButton(id) !== null;
+    })(),
+    taskEditTags: (() => {
+      const id = shownEntry(useShellStore.getState())?.id;
+      return !!id && editTagsButton(id) !== null;
     })(),
     updateAvailable: useUpdateState.getState().status?.updateAvailable ?? false,
     checksUpdates: checksUpdates(useUpdateState.getState().status),

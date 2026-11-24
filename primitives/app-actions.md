@@ -77,7 +77,7 @@ The captain's click alone is no ground: a control with none of these is a catalo
 
 ## Compositions
 
-- Settings → Projects and the first mate's `project-settings`, `project-runs-on` and `project-name` share this path ([projects-and-working-copies.md](projects-and-working-copies.md)).
+- Settings → Projects and the first mate's `project-settings`, `project-runs-on`, `project-name` and `project-tags` share this path ([projects-and-working-copies.md](projects-and-working-copies.md); tags in `docs/task-tags.md`).
 - Settings → Automation's edits are catalog lines over `inf:automation:list` ([automation.md](automation.md)).
 - Settings → Intelligence (first mate model and account, crew slots, pins, routing, decision answerer) is catalog lines ([intelligence-buckets.md](intelligence-buckets.md)).
 - Proposal and hand-over cards are ordinary host cards under [cards-and-consent.md](cards-and-consent.md); `show-card` brings a card forward and runs no effect.

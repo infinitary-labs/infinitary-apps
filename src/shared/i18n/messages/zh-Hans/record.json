@@ -43,6 +43,7 @@
   "recordFactPersonal": "全局说明和技能",
   "recordFactResult": "成果",
   "recordFactRunsOn": "运行于",
+  "recordFactTags": "标签",
   "recordFoldedMore": {
     "plural": "count",
     "other": "还有 {count} 项"
@@ -90,6 +91,9 @@
   "recordStart": "开始",
   "recordStartAgain": "重新开始",
   "recordStarting": "正在开始",
+  "recordTagsEdit": "编辑标签",
+  "recordTagsFailed": "无法保存你对标签的更改。",
+  "recordTagsNone": "没有标签",
   "recordTryAgain": "重试",
   "recordUndated": "无日期 · {summary}",
   "recordUnreadable": "无法读取此记录。",

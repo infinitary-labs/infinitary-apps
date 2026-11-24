@@ -3411,6 +3411,54 @@
       <string>%1$ld مستودع</string>
     </dict>
   </dict>
+  <key>settingsProjectsTagsRemoveQuestion</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>إزالة %2$@؟ سيُزال من %1$ld مهمة تحمله.</string>
+      <key>one</key>
+      <string>إزالة %2$@؟ سيُزال من المهمة الواحدة التي تحمله.</string>
+      <key>two</key>
+      <string>إزالة %2$@؟ سيُزال من المهمتين اللتين تحملانه.</string>
+      <key>few</key>
+      <string>إزالة %2$@؟ سيُزال من %1$ld مهام تحمله.</string>
+      <key>many</key>
+      <string>إزالة %2$@؟ سيُزال من %1$ld مهمة تحمله.</string>
+      <key>other</key>
+      <string>إزالة %2$@؟ سيُزال من %1$ld مهمة تحمله.</string>
+    </dict>
+  </dict>
+  <key>settingsProjectsTagsTasks</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>%1$ld مهمة</string>
+      <key>one</key>
+      <string>مهمة واحدة</string>
+      <key>two</key>
+      <string>مهمتان</string>
+      <key>few</key>
+      <string>%1$ld مهام</string>
+      <key>many</key>
+      <string>%1$ld مهمة</string>
+      <key>other</key>
+      <string>%1$ld مهمة</string>
+    </dict>
+  </dict>
   <key>settingsSubscriptionsSavedResets</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

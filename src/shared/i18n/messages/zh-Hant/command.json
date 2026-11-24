@@ -172,6 +172,8 @@
   "commandSizeSmaller": "全部縮小",
   "commandTaskCloseDone": "將任務以完成關閉",
   "commandTaskCloseDoneWords": "完成, 結束, 已完成, 做完, 關閉, 紀錄, 任務",
+  "commandTaskEditTags": "編輯任務的標籤",
+  "commandTaskEditTagsWords": "標籤, 標記, 分類, 類別, 紀錄, 任務",
   "commandTaskMoveComputer": "把任務移到另一台電腦",
   "commandTaskMoveComputerWords": "電腦, 機器, 移動, 裝置, 紀錄",
   "commandUpdatesCheck": "檢查更新",

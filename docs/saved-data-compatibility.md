@@ -592,3 +592,11 @@ Dropping the two columns and removing the migration's history row undoes it; an 
 A task's delivery facts may carry a `WebReadAsk` among its `writeAsks`, with `kind: "web"`, and a `readerHolds` mark (`docs/agents-reach.md`, "Web pages"); both ride the existing JSON and add no migration.
 An older build knows no web ask, so it would list one as a write where the project lives with no method or path; downgrading with a page still waiting is unsupported.
 An older build ignores `readerHolds` and serves no `web_read`.
+
+## Task tags
+
+A migration adds `project_tags`, each project's own tags, and `task_tags`, the tags each task carries with who set each (`docs/task-tags.md`); both start empty, so every project starts with no tags and every task carries none.
+No existing row changes, and nothing asks the person for a step.
+An older build refuses the profile, because its migration history names a migration it does not know ("Before services start").
+An export this build writes carries no tags, so a task imports with none.
+Dropping both tables and removing the migration's history row undoes it; a task's timeline lines about its tags stay as ordinary notes.

@@ -46,6 +46,7 @@
   "recordFactPersonal": "Globale Anweisungen und Skills",
   "recordFactResult": "Ergebnis",
   "recordFactRunsOn": "Läuft auf",
+  "recordFactTags": "Tags",
   "recordFoldedMore": {
     "plural": "count",
     "one": "{count} weiterer",
@@ -96,6 +97,9 @@
   "recordStart": "Starten",
   "recordStartAgain": "Erneut starten",
   "recordStarting": "Startet",
+  "recordTagsEdit": "Tags bearbeiten",
+  "recordTagsFailed": "Deine Änderung an den Tags konnte nicht gespeichert werden.",
+  "recordTagsNone": "Keine Tags",
   "recordTryAgain": "Erneut versuchen",
   "recordUndated": "Ohne Datum · {summary}",
   "recordUnreadable": "Dieses Protokoll konnte nicht gelesen werden.",

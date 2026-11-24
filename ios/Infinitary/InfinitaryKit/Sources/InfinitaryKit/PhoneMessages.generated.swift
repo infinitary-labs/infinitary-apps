@@ -767,6 +767,8 @@ public enum PhoneMessages {
     public static func `commandSizeSmaller`() -> String { PhoneWords.format("commandSizeSmaller", []) }
     public static func `commandTaskCloseDone`() -> String { PhoneWords.format("commandTaskCloseDone", []) }
     public static func `commandTaskCloseDoneWords`() -> String { PhoneWords.format("commandTaskCloseDoneWords", []) }
+    public static func `commandTaskEditTags`() -> String { PhoneWords.format("commandTaskEditTags", []) }
+    public static func `commandTaskEditTagsWords`() -> String { PhoneWords.format("commandTaskEditTagsWords", []) }
     public static func `commandTaskMoveComputer`() -> String { PhoneWords.format("commandTaskMoveComputer", []) }
     public static func `commandTaskMoveComputerWords`() -> String { PhoneWords.format("commandTaskMoveComputerWords", []) }
     public static func `commandUpdatesCheck`() -> String { PhoneWords.format("commandUpdatesCheck", []) }
@@ -2454,6 +2456,7 @@ public enum PhoneMessages {
     public static func `recordFactPersonal`() -> String { PhoneWords.format("recordFactPersonal", []) }
     public static func `recordFactResult`() -> String { PhoneWords.format("recordFactResult", []) }
     public static func `recordFactRunsOn`() -> String { PhoneWords.format("recordFactRunsOn", []) }
+    public static func `recordFactTags`() -> String { PhoneWords.format("recordFactTags", []) }
     public static func `recordFoldedMore`(`count`: Int) -> String { PhoneWords.format("recordFoldedMore", [`count`]) }
     public static func `recordFromTask`(`key`: String) -> String { PhoneWords.format("recordFromTask", [`key`]) }
     public static func `recordHelperAskFirstMate`() -> String { PhoneWords.format("recordHelperAskFirstMate", []) }
@@ -2492,6 +2495,9 @@ public enum PhoneMessages {
     public static func `recordStart`() -> String { PhoneWords.format("recordStart", []) }
     public static func `recordStartAgain`() -> String { PhoneWords.format("recordStartAgain", []) }
     public static func `recordStarting`() -> String { PhoneWords.format("recordStarting", []) }
+    public static func `recordTagsEdit`() -> String { PhoneWords.format("recordTagsEdit", []) }
+    public static func `recordTagsFailed`() -> String { PhoneWords.format("recordTagsFailed", []) }
+    public static func `recordTagsNone`() -> String { PhoneWords.format("recordTagsNone", []) }
     public static func `recordTryAgain`() -> String { PhoneWords.format("recordTryAgain", []) }
     public static func `recordUndated`(`summary`: String) -> String { PhoneWords.format("recordUndated", [`summary`]) }
     public static func `recordUnreadable`() -> String { PhoneWords.format("recordUnreadable", []) }
@@ -2535,6 +2541,7 @@ public enum PhoneMessages {
     public static func `refuseShowACardBesideABrowserPageFirst`() -> String { PhoneWords.format("refuseShowACardBesideABrowserPageFirst", []) }
     public static func `refuseShowAStartedTaskThatCanMove`() -> String { PhoneWords.format("refuseShowAStartedTaskThatCanMove", []) }
     public static func `refuseShowAStartedTasksRecordFirst`() -> String { PhoneWords.format("refuseShowAStartedTasksRecordFirst", []) }
+    public static func `refuseShowATaggableTasksRecordFirst`() -> String { PhoneWords.format("refuseShowATaggableTasksRecordFirst", []) }
     public static func `refuseTabIsOnComputer`(`computer`: String, `tab`: String) -> String { PhoneWords.format("refuseTabIsOnComputer", [`computer`, `tab`]) }
     public static func `refuseThatTabIsAlreadyShown`() -> String { PhoneWords.format("refuseThatTabIsAlreadyShown", []) }
     public static func `refuseThereIsNoOtherTabToGo`() -> String { PhoneWords.format("refuseThereIsNoOtherTabToGo", []) }
@@ -3644,6 +3651,24 @@ public enum PhoneMessages {
     public static func `settingsProjectsSaveDetails`() -> String { PhoneWords.format("settingsProjectsSaveDetails", []) }
     public static func `settingsProjectsScope`() -> String { PhoneWords.format("settingsProjectsScope", []) }
     public static func `settingsProjectsScopeDescription`() -> String { PhoneWords.format("settingsProjectsScopeDescription", []) }
+    public static func `settingsProjectsTagsAdd`() -> String { PhoneWords.format("settingsProjectsTagsAdd", []) }
+    public static func `settingsProjectsTagsCancel`() -> String { PhoneWords.format("settingsProjectsTagsCancel", []) }
+    public static func `settingsProjectsTagsDescription`() -> String { PhoneWords.format("settingsProjectsTagsDescription", []) }
+    public static func `settingsProjectsTagsDescriptionExample`() -> String { PhoneWords.format("settingsProjectsTagsDescriptionExample", []) }
+    public static func `settingsProjectsTagsEdit`() -> String { PhoneWords.format("settingsProjectsTagsEdit", []) }
+    public static func `settingsProjectsTagsEditNamed`(`name`: String) -> String { PhoneWords.format("settingsProjectsTagsEditNamed", [`name`]) }
+    public static func `settingsProjectsTagsEmpty`() -> String { PhoneWords.format("settingsProjectsTagsEmpty", []) }
+    public static func `settingsProjectsTagsLabel`() -> String { PhoneWords.format("settingsProjectsTagsLabel", []) }
+    public static func `settingsProjectsTagsName`() -> String { PhoneWords.format("settingsProjectsTagsName", []) }
+    public static func `settingsProjectsTagsNameTaken`(`name`: String) -> String { PhoneWords.format("settingsProjectsTagsNameTaken", [`name`]) }
+    public static func `settingsProjectsTagsNeedsDescription`() -> String { PhoneWords.format("settingsProjectsTagsNeedsDescription", []) }
+    public static func `settingsProjectsTagsNeedsName`() -> String { PhoneWords.format("settingsProjectsTagsNeedsName", []) }
+    public static func `settingsProjectsTagsRemove`() -> String { PhoneWords.format("settingsProjectsTagsRemove", []) }
+    public static func `settingsProjectsTagsRemoveNamed`(`name`: String) -> String { PhoneWords.format("settingsProjectsTagsRemoveNamed", [`name`]) }
+    public static func `settingsProjectsTagsRemoveQuestion`(`count`: Int, `name`: String) -> String { PhoneWords.format("settingsProjectsTagsRemoveQuestion", [`count`, `name`]) }
+    public static func `settingsProjectsTagsRemoveQuestionNone`(`name`: String) -> String { PhoneWords.format("settingsProjectsTagsRemoveQuestionNone", [`name`]) }
+    public static func `settingsProjectsTagsSave`() -> String { PhoneWords.format("settingsProjectsTagsSave", []) }
+    public static func `settingsProjectsTagsTasks`(`count`: Int) -> String { PhoneWords.format("settingsProjectsTagsTasks", [`count`]) }
     public static func `settingsProjectsTasksLabel`() -> String { PhoneWords.format("settingsProjectsTasksLabel", []) }
     public static func `settingsProjectsWorkspace`() -> String { PhoneWords.format("settingsProjectsWorkspace", []) }
     public static func `settingsProjectsWorkspaceDescription`() -> String { PhoneWords.format("settingsProjectsWorkspaceDescription", []) }
@@ -4261,6 +4286,13 @@ public enum PhoneMessages {
     public static func `taskTabCards`() -> String { PhoneWords.format("taskTabCards", []) }
     public static func `taskTabCrewmate`() -> String { PhoneWords.format("taskTabCrewmate", []) }
     public static func `taskTabInfo`() -> String { PhoneWords.format("taskTabInfo", []) }
+    public static func `taskTagsAddedByDecision`(`tags`: String) -> String { PhoneWords.format("taskTagsAddedByDecision", [`tags`]) }
+    public static func `taskTagsAddedByFirstMate`(`tags`: String) -> String { PhoneWords.format("taskTagsAddedByFirstMate", [`tags`]) }
+    public static func `taskTagsAddedByYou`(`tags`: String) -> String { PhoneWords.format("taskTagsAddedByYou", [`tags`]) }
+    public static func `taskTagsRemovedByDecision`(`tags`: String) -> String { PhoneWords.format("taskTagsRemovedByDecision", [`tags`]) }
+    public static func `taskTagsRemovedByFirstMate`(`tags`: String) -> String { PhoneWords.format("taskTagsRemovedByFirstMate", [`tags`]) }
+    public static func `taskTagsRemovedByYou`(`tags`: String) -> String { PhoneWords.format("taskTagsRemovedByYou", [`tags`]) }
+    public static func `taskTagsTagRemoved`(`tag`: String) -> String { PhoneWords.format("taskTagsTagRemoved", [`tag`]) }
     public static func `taskWaitChainUntil`(`end`: String, `on`: String, `time`: String) -> String { PhoneWords.format("taskWaitChainUntil", [`end`, `on`, `time`]) }
     public static func `taskWaitChainUpdate`(`end`: String, `on`: String) -> String { PhoneWords.format("taskWaitChainUpdate", [`end`, `on`]) }
     public static func `taskWaitChainVia`(`end`: String, `on`: String) -> String { PhoneWords.format("taskWaitChainVia", [`end`, `on`]) }
@@ -5239,6 +5271,8 @@ extension PhoneWords {
         "commandSizeSmaller": [],
         "commandTaskCloseDone": [],
         "commandTaskCloseDoneWords": [],
+        "commandTaskEditTags": [],
+        "commandTaskEditTagsWords": [],
         "commandTaskMoveComputer": [],
         "commandTaskMoveComputerWords": [],
         "commandUpdatesCheck": [],
@@ -6926,6 +6960,7 @@ extension PhoneWords {
         "recordFactPersonal": [],
         "recordFactResult": [],
         "recordFactRunsOn": [],
+        "recordFactTags": [],
         "recordFoldedMore": ["count"],
         "recordFromTask": ["key"],
         "recordHelperAskFirstMate": [],
@@ -6964,6 +6999,9 @@ extension PhoneWords {
         "recordStart": [],
         "recordStartAgain": [],
         "recordStarting": [],
+        "recordTagsEdit": [],
+        "recordTagsFailed": [],
+        "recordTagsNone": [],
         "recordTryAgain": [],
         "recordUndated": ["summary"],
         "recordUnreadable": [],
@@ -7007,6 +7045,7 @@ extension PhoneWords {
         "refuseShowACardBesideABrowserPageFirst": [],
         "refuseShowAStartedTaskThatCanMove": [],
         "refuseShowAStartedTasksRecordFirst": [],
+        "refuseShowATaggableTasksRecordFirst": [],
         "refuseTabIsOnComputer": ["computer", "tab"],
         "refuseThatTabIsAlreadyShown": [],
         "refuseThereIsNoOtherTabToGo": [],
@@ -8116,6 +8155,24 @@ extension PhoneWords {
         "settingsProjectsSaveDetails": [],
         "settingsProjectsScope": [],
         "settingsProjectsScopeDescription": [],
+        "settingsProjectsTagsAdd": [],
+        "settingsProjectsTagsCancel": [],
+        "settingsProjectsTagsDescription": [],
+        "settingsProjectsTagsDescriptionExample": [],
+        "settingsProjectsTagsEdit": [],
+        "settingsProjectsTagsEditNamed": ["name"],
+        "settingsProjectsTagsEmpty": [],
+        "settingsProjectsTagsLabel": [],
+        "settingsProjectsTagsName": [],
+        "settingsProjectsTagsNameTaken": ["name"],
+        "settingsProjectsTagsNeedsDescription": [],
+        "settingsProjectsTagsNeedsName": [],
+        "settingsProjectsTagsRemove": [],
+        "settingsProjectsTagsRemoveNamed": ["name"],
+        "settingsProjectsTagsRemoveQuestion": ["count", "name"],
+        "settingsProjectsTagsRemoveQuestionNone": ["name"],
+        "settingsProjectsTagsSave": [],
+        "settingsProjectsTagsTasks": ["count"],
         "settingsProjectsTasksLabel": [],
         "settingsProjectsWorkspace": [],
         "settingsProjectsWorkspaceDescription": [],
@@ -8733,6 +8790,13 @@ extension PhoneWords {
         "taskTabCards": [],
         "taskTabCrewmate": [],
         "taskTabInfo": [],
+        "taskTagsAddedByDecision": ["tags"],
+        "taskTagsAddedByFirstMate": ["tags"],
+        "taskTagsAddedByYou": ["tags"],
+        "taskTagsRemovedByDecision": ["tags"],
+        "taskTagsRemovedByFirstMate": ["tags"],
+        "taskTagsRemovedByYou": ["tags"],
+        "taskTagsTagRemoved": ["tag"],
         "taskWaitChainUntil": ["end", "on", "time"],
         "taskWaitChainUpdate": ["end", "on"],
         "taskWaitChainVia": ["end", "on"],
@@ -9089,6 +9153,8 @@ extension PhoneWords {
         "settingsProjectsBatchSentBack": "count",
         "settingsProjectsCount": "count",
         "settingsProjectsRepositoryCount": "count",
+        "settingsProjectsTagsRemoveQuestion": "count",
+        "settingsProjectsTagsTasks": "count",
         "settingsSubscriptionsSavedResets": "count",
         "settingsUsageCostMissingTokens": "count",
         "settingsUsageCostMissingUsd": "count",

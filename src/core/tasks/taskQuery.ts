@@ -135,6 +135,8 @@ export type TaskQueryRow = {
   status: string;
   title: string;
   project: string;
+  /** Its project's tags it carries (docs/task-tags.md), by name. */
+  tags?: string[];
   priority: number;
   start_policy?: string;
   parent?: string;
@@ -501,6 +503,7 @@ function toRow(
   const pictures = cardBody ? picturesOf(tasks, record.id) : [];
   const builtOnBy = cardBody ? builtOnRows(tasks, record.id) : [];
   const allowed = cardBody ? alreadyAllowed(tasks, record).allowances : [];
+  const tags = tasks.tagsOf(record.id).map((tag) => tag.name);
   return {
     key: record.key || record.id,
     task_id: record.id,
@@ -527,6 +530,7 @@ function toRow(
     status: statusText(record),
     title: servedTaskTitle(record, origins, "answer"),
     project: projectKeys.get(record.projectId) ?? record.projectId,
+    ...(tags.length > 0 ? { tags } : {}),
     priority: record.priority,
     ...(record.status === "open" && record.kind === "work"
       ? { start_policy: record.startPolicy }

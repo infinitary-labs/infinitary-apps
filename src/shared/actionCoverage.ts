@@ -261,6 +261,10 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, ActionExceptio
     "window",
     "The captain's own pin in Tasks, on the task board or on the record; what the Tasks panel lists first, never an app setting",
   ],
+  "inf:task:tags": [
+    "window",
+    "The captain's own Edit tags on a task's record; the first mate sets a task's tags with update_task, never an app setting",
+  ],
   "inf:browser:stop": ["window", "The captain's click in a task's browser view; nothing is set"],
   "inf:browser:reopen": ["window", "The captain's click in a task's browser view; nothing is set"],
   "inf:browser:take": ["window", "The captain's click in a task's browser view; nothing is set"],

@@ -5,6 +5,7 @@ import {
   projectKeyInUseWords,
 } from "../tasks/projectKey";
 import type { AppDatabase } from "./db";
+import { ProjectTagStore } from "./projectTagStore";
 
 /**
  * Projects (task-system design section 8, captain decision D5, amended by
@@ -161,7 +162,11 @@ export function joinableProject(db: AppDatabase, projectId: string): string {
 
 export class ProjectStore {
   private membership: boolean | undefined;
-  constructor(private readonly db: AppDatabase) {}
+  /** Each project's own tags (docs/task-tags.md); this store is their one writer. */
+  readonly tags: ProjectTagStore;
+  constructor(private readonly db: AppDatabase) {
+    this.tags = new ProjectTagStore(db);
+  }
 
   /**
    * Whether the record names each repository's project (`repos.project_id`);

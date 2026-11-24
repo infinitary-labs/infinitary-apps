@@ -111,6 +111,8 @@ export function moveIntoProject(
   for (const { row, repoId: to } of moves) {
     const { seq, key } = writer.projects.allocateSeq(project.id);
     writer.patch(row.id, { projectId: project.id, key, seq, repoId: to, updatedAt: at });
+    // A tag belongs to its project, so a task leaves its tags behind (docs/task-tags.md).
+    writer.store.tags.deleteFor(row.id);
     writer.addEvent({
       taskId: row.id,
       at,
@@ -223,6 +225,7 @@ export function joinWithRepositories(
   for (const record of moving.values()) {
     const repository = record.repoId ? movedRepos.get(record.repoId) : undefined;
     writer.patch(record.id, { projectId: move.to.id });
+    writer.store.tags.deleteFor(record.id);
     writer.addEvent({
       taskId: record.id,
       at,

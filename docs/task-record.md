@@ -623,6 +623,7 @@ The window draws its overview from the shared task facts (`TaskFactRows`, `TaskF
    The title stays the task's one line in the chrome.
 5. Project, Now, Progress and the Browser line, as the summary draws them.
    Project names the task's project, and in a project of several repositories the repository it works in beside it ("Harbor Ledger · ledger-api"; `projectFact`, `src/renderer/src/character/crew/projectFact.ts`, and `PhoneRecord.projectFact` on the phone).
+   Tags follows Project once the project has tags or the task carries one: the tags it carries, then Edit tags (`RecordTags`, `docs/task-tags.md`).
 6. One row of facts under a hairline, as the summary's footer row: the model, the task's Difficulty badge (the level its routing asked for), the reasoning, the change with its checks as one cell, the review, Delivery, Runs on, a dim mono Use cell and a Run cell beside it ("Live resource use"), then Why this model.
 7. One closed More row at the end, scrolling with the body: the facts the summary leaves out, with their policy sources, Knowledge used and Live validation; a short dim preview beside its name says what it holds.
 

@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "task-tags",
+      "kind": "feature",
+      "title": "Tag your tasks with your project's own tags",
+      "body": "A project's page in Settings → Projects now has Tags: give each tag a name, such as bug, feature or idea, and a description of which tasks belong under it. A task's Info tab shows its tags, and Edit tags ticks them on or off; your first mate can tag tasks and change a project's tags when you ask. Removing a tag takes it off every task after one question that says how many.",
+      "area": "tasks",
+      "picture": {
+        "dark": "task-tags-dark.webp",
+        "light": "task-tags-light.webp",
+        "alt": "A task's Info tab with its Tags row showing bug, and the Edit tags menu open with bug ticked on and feature and idea off, each under its description"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

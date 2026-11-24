@@ -23,6 +23,7 @@ import {
 import { Button } from "../design";
 import { focusWithRing } from "../design/focus";
 import { JoinAnotherMac } from "../devices/JoinAnotherMac";
+import { SetUpThere } from "../devices/SetUpThere";
 import { useFollowAdded } from "../devices/useFollowAdded";
 import { isView, leftLine, updateThereWords, waitsForUpdate } from "../devices/viewWords";
 import { useCopied } from "../settings/DevicesLinks";
@@ -66,8 +67,9 @@ import "./firstRunGate.css";
  *
  * On the first mate's own computer the gate asks first where the first mate
  * lives (captain's approval of INF-6207): three equal choices, This
- * computer (the chips), Another computer (the commands that set it up
- * there, ending at Paste its link) and One already running (the chips that
+ * computer (the chips), Another computer (set up there over SSH from here,
+ * or the commands that set it up there, ending at Paste its link) and One
+ * already running (the chips that
  * join it, docs/view.md), with a line that moving it later stays possible.
  * No choice opens until a press; a subscription connected that cannot answer
  * yet opens on This computer, where it shows. After this app left a first
@@ -89,8 +91,14 @@ export function FirstRunGate() {
   const [joining, setJoining] = useState(false);
   // Where the first mate lives, as pressed: nothing until a press, and "ask" after Where I live.
   const [picked, setPicked] = useState<GateChoice | "ask" | null>(null);
-  // Another computer's last step opens One already running at its paste box.
-  const [pasteFirst, setPasteFirst] = useState(false);
+  // Another computer's commands end at One already running's paste box, and its
+  // setup, where Infinitary already runs there, at Join by its address.
+  const [joinOpens, setJoinOpens] = useState<
+    { opens: "paste" } | { opens: "address"; address: string } | null
+  >(null);
+  // Another computer: set up from here, or with commands; Set it up from here brings its address.
+  const [byCommands, setByCommands] = useState(false);
+  const [homeAddress, setHomeAddress] = useState<string | undefined>(undefined);
   const open = firstRun?.gateOpen === true;
   // A first mate on an older version answers no check from here: the update line says so.
   const waits = waitsForUpdate(thisMac);
@@ -106,7 +114,9 @@ export function FirstRunGate() {
     const id = window.setTimeout(() => {
       setShown(false);
       setPicked(null);
-      setPasteFirst(false);
+      setJoinOpens(null);
+      setByCommands(false);
+      setHomeAddress(undefined);
     }, 700);
     return () => window.clearTimeout(id);
   }, [open]);
@@ -286,7 +296,9 @@ export function FirstRunGate() {
   const asks = !view && !fresh;
   const choice = asks ? (picked ?? (accounts.length > 0 ? "here" : "ask")) : null;
   const pick = (next: GateChoice | "ask") => {
-    setPasteFirst(false);
+    setJoinOpens(null);
+    setByCommands(false);
+    setHomeAddress(undefined);
     setError(null);
     setPicked(next);
   };
@@ -387,19 +399,40 @@ export function FirstRunGate() {
             variant="stage"
           />
         )}
-        {!connecting && choice === "another" && (
+        {!connecting && choice === "another" && byCommands && (
           <CommandsRoute
             onPaste={() => {
               setPicked("running");
-              setPasteFirst(true);
+              setJoinOpens({ opens: "paste" });
+            }}
+          />
+        )}
+        {!connecting && choice === "another" && !byCommands && (
+          <SetUpThere
+            {...(homeAddress ? { address: homeAddress } : {})}
+            onCommands={() => setByCommands(true)}
+            onConnect={(address) => {
+              setPicked("running");
+              setJoinOpens({ opens: "address", address });
             }}
           />
         )}
         {!connecting && (choice === "running" || (choice === null && !view)) && (
           <JoinAnotherMac
             followStatus={followStatus}
-            key={pasteFirst ? "paste" : "chips"}
-            {...(pasteFirst ? { opens: "paste" as const } : {})}
+            key={joinOpens?.opens ?? "chips"}
+            {...(joinOpens ?? {})}
+            {...(choice === "running"
+              ? {
+                  onSetUpFrom: (address: string) => {
+                    setPicked("another");
+                    setJoinOpens(null);
+                    setByCommands(false);
+                    setHomeAddress(address);
+                    setJoining(false);
+                  },
+                }
+              : {})}
             onOpenChange={setJoining}
             note={choice === null ? leftNote : undefined}
           />

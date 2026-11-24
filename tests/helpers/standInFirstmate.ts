@@ -77,6 +77,11 @@ export function standInFirstmate(
     startGate?: { when: "update" | "join"; ready: string; resume: string };
     /** An external app crash before it claims a join or returns an update result. */
     startExit?: { when: "update" | "join"; code: number };
+    /**
+     * What `start-at-boot` exits with, which the welcome screen's setup runs
+     * there (`HOME_START`): 0, as a first mate it started, by default.
+     */
+    boot?: number;
   } = {
     joined: "at-login",
     updated: "running",
@@ -103,6 +108,7 @@ export function standInFirstmate(
       ...(linux ? ["# marker: the home's own copy"] : []),
       `R=${shellWord(record)}`,
       'printf "started: %s\\n" "$*" >> "$R"',
+      `if [ "$1" = start-at-boot ]; then exit ${background.boot ?? 0}; fi`,
       linux
         ? '[ "$3" = --fetched ] && sed -n \'s/^# marker: //p\' "$4" >> "$R"'
         : '[ "$3" = --fetched ] && cat "$4/Contents/Resources/marker" >> "$R"',

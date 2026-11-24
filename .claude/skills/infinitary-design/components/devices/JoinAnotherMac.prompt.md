@@ -17,7 +17,7 @@ It is not a provider: it never appears on the Intelligence tab's foot, and the e
 The caption is the first mate: "I'm your first mate.
 I'll help you manage the rest of the crew.", then its question "Where should I live?
 Pick a computer that stays on as much as possible." over the three choices.
-Another computer's last step, "Paste its link", opens this group's paste aside directly; its Cancel leaves the chips.
+Another computer's commands end at "Paste its link", which opens this group's paste aside directly, and its setup's "Connect to it instead" opens "By its address" with that address; Cancel leaves the chips.
 The words stay visible in short windows, within the stage's scrolling band.
 
 **Set up from your first mate's computer.**
@@ -72,6 +72,8 @@ Each stop is one `warn` line in the aside, with the address kept in its field an
 - Infinitary is closed there: "Infinitary is not open on kun@studio.
   Open it there, then try again."
   Nothing is started there.
+  On the welcome screen it reads "Infinitary is not open on kun@studio.
+  Open it there and ask again, or set it up from here." with a small secondary "Set it up from here" under it, which opens Another computer's setup with that address in its field (`SetUpThere.prompt.md`).
 - too old: "Infinitary on kun@studio is too old to make a link this way.
   Update it there, or paste a link from it instead."
 - it controls another computer: "Infinitary on kun@studio controls your first mate on another computer.

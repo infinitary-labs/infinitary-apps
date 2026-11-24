@@ -21,7 +21,8 @@ Three equal cards follow in one row, each a button whose line says how that setu
 
 1. **This computer** - "Sign in to a subscription here.
    I live and work on this computer." - opens the provider chips below.
-2. **Another computer** - "Let me run on another computer you set up, and control me from here." - opens the commands route ("Joining the first mate on another Mac" below).
+2. **Another computer** - "Give its address and I set myself up there over SSH.
+   You control me from here." - opens the setup over SSH, with the commands route one press away ("Setting it up from here" below).
 3. **One already running** - "Connect to me where I already run on another computer, and control me from here." - opens the chips that join a first mate on another computer.
 
 Tab reaches each card, the arrow keys move between them, and Enter or Space opens one; a narrow stage stacks them.
@@ -65,7 +66,7 @@ The renderer reads it over `inf:app:first-run` (a core channel on the frozen `ap
 One already running opens a group, a hairline apart, that offers the other way in: `YOUR FIRST MATE IS ON ANOTHER COMPUTER` with "+ Paste its link" and "+ Join by its address", which join the first mate on a computer the person already has instead (`docs/view.md`, "Joining").
 On a Mac or an x64 Linux computer "+ Set up from your first mate's computer" leads them, with the three chips on their own line: its aside shows this computer's address, private network first, whether Remote Login is on, and the line to compare, and waits for that computer to add this one (`docs/view.md`, "Set up from your first mate's computer").
 Once it does, this window opens that first mate by itself, with no relaunch, while nothing was done on this computer yet: no sign-in, connection, project or turn (`docs/view.md`, "Following along").
-Another computer sets the first mate up there by commands (`docs/run.md`), in numbered steps under "Set me up on another computer with commands": install Infinitary there; start it, with `infinitary start-at-boot` ("Starting at boot"); make a link for this computer, with `infinitary link` ("A link by command"); and paste the link it prints here.
+Another computer's "Set it up with commands", under its address form and on each of its stops, sets the first mate up there by commands instead (`docs/run.md`), in numbered steps under "Set me up on another computer with commands": install Infinitary there; start it, with `infinitary start-at-boot` ("Starting at boot"); make a link for this computer, with `infinitary link` ("A link by command"); and paste the link it prints here.
 Each command sits in a mono box with its own Copy, and a line under the steps says a Mac types `/Applications/Infinitary.app/Contents/MacOS/Infinitary` in place of `infinitary`.
 The last step's "Paste its link" opens One already running at its paste box, so the link joins as any pasted link does; its Cancel leaves One already running's chips.
 When a connected subscription still cannot answer, the first mate's line keeps "Pick a computer that stays on.
@@ -73,6 +74,34 @@ Other computers need it awake."
 These explanations stay visible in a short window, where the band scrolls.
 After this app stops controlling that Mac it returns here, and one line under the three cards says which Mac it left, or that the Mac removed it.
 The gate itself stays derived; the line only says what happened.
+
+## Setting it up from here
+
+Another computer opens "Set me up on another computer" (the captain's approval of INF-6207, part 2; design skill `components/devices/SetUpThere`, `src/renderer/src/devices/SetUpThere.tsx`): the address form Join by its address has, with its port field and the computers nearby, and "Set it up with commands" under it.
+Continue runs seven steps in a list under "Setting up your first mate on studio", the one under way lit, each done step with what it found beside it:
+
+1. **Read its SSH key** - the key line to compare, asked once before any sign-in, as Join by its address asks it; the step names the port where one was typed, and its stop names the port the person's SSH settings resolve.
+2. **Sign in with your SSH key** - the person's own SSH, or that account's password once where the computer did not let the key in, which lets Infinitary's own key in.
+3. **Check its system** - what it is, what it lacks, whether a Linux computer has systemd to start it at every restart, and who signed in.
+   An account that already runs work for another first mate, or whose closed window joined one, stops with "studio already runs work for another first mate.", checked again as `infinitary` after a root sign-in, so two first mates never share that account's record.
+   A root sign-in on Linux asks once whether to make an ordinary account named `infinitary` there; a yes makes it with root's SSH keys and linger on, and the setup goes on as that account, whose system is checked again as that account; the Ubuntu package still goes in over root's sign-in, since the new account may not install software.
+   Infinitary open there already for that account stops the setup with "Infinitary already runs on studio." and **Connect to it instead**, which opens Join by its address with that address.
+   Only an account where no Infinitary is open goes on: one that controls another computer, or an answer with no link, stops the setup, so a second copy never starts beside it.
+4. **Send Infinitary** - the Ubuntu package where it applies (24.04 and 26.04), otherwise the copy for its system, kept in that account's own `~/Applications`, with the megabytes sent beside the step.
+5. **Start your first mate there** - the kept copy's own `start-at-boot` (`docs/run.md`, "Starting at boot"), which starts the record that account already has, never a new one in its place.
+6. **Connect from here** - port 47623: Join by its address's two requests, asked again every two seconds for up to a minute while the first mate there opens, or for as long as a Mac account that is not logged in waits for its login, which a line says.
+   Its key line was said yes to at step 1, so it joins without asking again.
+7. **Connect a subscription for it** - joined, the window starts over as that computer's, whose own first launch signs in from here.
+   This computer joined it as a Mac that runs work, so that first mate's "Finish setting up" card for this computer (`docs/devices.md`) comes up first, and its subscription step shows once that card is put away with Not now.
+
+The first five are one core request, `inf:devices:home-at`, asked again with each answer as Join by its address asks (`src/core/devices/homeAt.ts`, `docs/devices.md`, "Setting the first mate up from a first launch").
+A stop marks its step and says what stopped it and what to try (`homeAtRefusalLines`, `src/shared/homeAt.ts`), with **Ask again**, **Set it up with commands** and **Back** (to the address form, its fields kept), and a footer such as "4 more steps not started · nothing changed on studio", or that the first mate keeps running there once it started; once an account was made or the Ubuntu package went in, neither the footer nor the stop's own words say nothing changed, and the stop ends with Ask again or the commands instead.
+The Ubuntu package's install asks for that account's password with the install question, as Settings' add does; the `infinitary` account made after a root sign-in has no password, so a password question there stops as the key not taken.
+After it started, connecting is always tried, and Ask again tries it again; when it fails, a computer with no private-network address, a firewall that may keep it out, or a port that did not answer says so, with the one command to run there where there is one; a Linux account that does not linger shows the administrator's `loginctl enable-linger` line with its Copy.
+Cancel stops at the next step: before step 5 the copy sent is deleted and nothing was started there; pressed during step 5 or after it, the first mate keeps running there, the stop says so without connecting, and Ask again connects to it.
+Once an account was made or the package went in at that address, no later stop there says nothing changed until Continue asks a new address.
+Leaving the screen while a step runs cancels the same way.
+Every control is a button or field in tab order; the key line's question puts focus on Cancel, so Enter never says yes to a key unread, and each other question and stop puts it on its first button.
 
 ## The Diagnostics notice
 

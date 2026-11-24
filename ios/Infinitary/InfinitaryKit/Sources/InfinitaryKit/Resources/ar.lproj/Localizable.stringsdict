@@ -1059,6 +1059,54 @@
       <string>بقيت %1$ld مهمة على %2$@، وهو خارج المتناول، لذا يبقى في قائمتك.</string>
     </dict>
   </dict>
+  <key>devicesHomeLeftNothing</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>%2$ld خطوة أخرى لم تبدأ · لم يتغير شيء على %1$@</string>
+      <key>one</key>
+      <string>خطوة أخرى (%2$ld) لم تبدأ · لم يتغير شيء على %1$@</string>
+      <key>two</key>
+      <string>خطوتان أخريان (%2$ld) لم تبدآ · لم يتغير شيء على %1$@</string>
+      <key>few</key>
+      <string>%2$ld خطوات أخرى لم تبدأ · لم يتغير شيء على %1$@</string>
+      <key>many</key>
+      <string>%2$ld خطوة أخرى لم تبدأ · لم يتغير شيء على %1$@</string>
+      <key>other</key>
+      <string>%2$ld خطوة أخرى لم تبدأ · لم يتغير شيء على %1$@</string>
+    </dict>
+  </dict>
+  <key>devicesHomeLeftRunning</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>%2$ld خطوة أخرى لم تبدأ · يبقى نائب القبطان يعمل على %1$@</string>
+      <key>one</key>
+      <string>خطوة أخرى (%2$ld) لم تبدأ · يبقى نائب القبطان يعمل على %1$@</string>
+      <key>two</key>
+      <string>خطوتان أخريان (%2$ld) لم تبدآ · يبقى نائب القبطان يعمل على %1$@</string>
+      <key>few</key>
+      <string>%2$ld خطوات أخرى لم تبدأ · يبقى نائب القبطان يعمل على %1$@</string>
+      <key>many</key>
+      <string>%2$ld خطوة أخرى لم تبدأ · يبقى نائب القبطان يعمل على %1$@</string>
+      <key>other</key>
+      <string>%2$ld خطوة أخرى لم تبدأ · يبقى نائب القبطان يعمل على %1$@</string>
+    </dict>
+  </dict>
   <key>feedBatchFormedMany</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

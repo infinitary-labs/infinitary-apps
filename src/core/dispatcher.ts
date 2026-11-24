@@ -508,6 +508,13 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     // "Joining another computer"): this first mate keeps the SSH trust, so
     // it asks there, and only the window's program hears the link.
     "inf:devices:link-at": (address, options) => services.remoteLogin.linkAt(address, options),
+    // Setting the first mate up on another computer from the welcome screen
+    // (docs/first-launch.md, "Setting it up from here"), on the person's click.
+    "inf:devices:home-at": (address, options) => services.remoteLogin.homeAt(address, options),
+    "inf:devices:home-at-cancel": (address) => {
+      services.remoteLogin.cancelHomeAt(address);
+      return { ok: true as const };
+    },
     "inf:devices:update": (deviceId, options) =>
       refusalAsAnswer(
         () => {

@@ -795,6 +795,42 @@
       <string>%1$ld tarefas ficaram em %2$@, fora de alcance, então ele continua na sua lista.</string>
     </dict>
   </dict>
+  <key>devicesHomeLeftNothing</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%2$ld etapa a mais não iniciada · nada mudou em %1$@</string>
+      <key>many</key>
+      <string>%2$ld etapas a mais não iniciadas · nada mudou em %1$@</string>
+      <key>other</key>
+      <string>%2$ld etapas a mais não iniciadas · nada mudou em %1$@</string>
+    </dict>
+  </dict>
+  <key>devicesHomeLeftRunning</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%2$ld etapa a mais não iniciada · seu imediato continua rodando em %1$@</string>
+      <key>many</key>
+      <string>%2$ld etapas a mais não iniciadas · seu imediato continua rodando em %1$@</string>
+      <key>other</key>
+      <string>%2$ld etapas a mais não iniciadas · seu imediato continua rodando em %1$@</string>
+    </dict>
+  </dict>
   <key>feedBatchFormedMany</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

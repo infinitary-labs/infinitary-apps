@@ -19,9 +19,10 @@
 
 import { spawnSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
+import { basename } from "node:path";
 import { fileURLToPath } from "node:url";
-import { APPLICATION_SUITES, RENDERER_SUITES } from "../tests/e2e/lanes.ts";
-import { balanceShards, type ShardTimings } from "./shard-balance.ts";
+import { APPLICATION_SUITES, FAR_LINUX_JOURNEYS, RENDERER_SUITES } from "../tests/e2e/lanes.ts";
+import { balanceShards, fileWeights, type ShardTimings } from "./shard-balance.ts";
 
 export type JourneyPlatform = "linux" | "mac" | "mac-hosted";
 export type JourneyLane = "parallel" | "desktop";
@@ -73,6 +74,17 @@ export function laneFiles(lane: JourneyLane): string[] {
     : journeys.filter((file) => !inParallel(file)).toSorted();
 }
 
+/**
+ * The one-based group of each lane that holds every journey whose far
+ * computer is this one on Linux (`FAR_LINUX_JOURNEYS`, tests/e2e/lanes.ts).
+ * A full suite picks its groups inside the job, after its machine is chosen,
+ * so only a fixed group lets source-journeys.yml mark that group's job to stay
+ * off the arm64 guests, which have no SSH server and no x64 chip.
+ */
+export const FAR_LINUX_GROUP = 1;
+
+const farLinux = new Set(FAR_LINUX_JOURNEYS);
+
 /** Group `index` of `count` (one-based) of the lane's files on the platform. */
 export function journeyGroup(
   options: {
@@ -90,11 +102,25 @@ export function journeyGroup(
     if (seconds === undefined) throw new Error(`No measured time outside the journeys for job ${job}`);
     return seconds;
   });
-  return (
-    balanceShards(files, options.count, timings[FILE_TIMES[options.platform]], headStarts)[
-      options.index - 1
-    ] ?? []
+  const measured = timings[FILE_TIMES[options.platform]];
+  if (options.platform !== "linux")
+    return balanceShards(files, options.count, measured, headStarts)[options.index - 1] ?? [];
+  // The far journeys start their group as a job's own work starts a Mac
+  // group, and every file keeps the weight it has over the whole lane.
+  const weights = fileWeights(files, measured);
+  const far = files.filter((file) => farLinux.has(basename(file))).toSorted();
+  const farSeconds = far.reduce((sum, file) => sum + (weights.get(file) ?? 0), 0);
+  const groups = balanceShards(
+    files.filter((file) => !farLinux.has(basename(file))),
+    options.count,
+    Object.fromEntries(weights),
+    Array.from(
+      { length: options.count },
+      (_, at) => (headStarts[at] ?? 0) + (at === FAR_LINUX_GROUP - 1 ? farSeconds : 0),
+    ),
   );
+  const group = groups[options.index - 1] ?? [];
+  return options.index === FAR_LINUX_GROUP ? [...far, ...group] : group;
 }
 
 /** Playwright's file argument is a regular expression over the absolute path:

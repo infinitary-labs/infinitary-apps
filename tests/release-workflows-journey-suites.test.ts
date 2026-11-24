@@ -50,8 +50,11 @@ describe("budgeted pull-request journey workflow (INF-658)", () => {
   // hosted jobs at once.
   it("splits the full suite nine ways, a requested fresh-state pass four and affected files by lane", () => {
     type Group = { lane: string; shard: number; groups: number };
+    // Which groups keep LINUX_RUNNER (farLinux) is release-workflows-runners.test.ts's.
     const groups = (suite: string, lane = "parallel") =>
-      workflowValue(job?.strategy.matrix.include ?? "", { inputs: { suite, lane } }) as Group[];
+      (
+        workflowValue(job?.strategy.matrix.include ?? "", { inputs: { suite, lane } }) as Group[]
+      ).map((group) => ({ lane: group.lane, shard: group.shard, groups: group.groups }));
     const of = (lane: string, count: number) =>
       Array.from({ length: count }, (_, at) => ({ lane, shard: at + 1, groups: count }));
     expect(groups("full")).toEqual([...of("parallel", 6), ...of("desktop", 3)]);

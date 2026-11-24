@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "successor-starts-from-checked-out-work",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Work that builds on a crewmate's work starts from what it built",
+      "body": "When a crewmate committed its work on a second branch of its own, a task that built on that work, retried it or reviewed it was pointed at an older version left on the task's branch. It now starts from the version the crewmate committed.",
+      "noPicture": "This changes which version a follow-up task starts from, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

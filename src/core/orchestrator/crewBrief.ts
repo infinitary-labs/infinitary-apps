@@ -19,7 +19,9 @@ import type { TaskRecord } from "../storage/taskRecords";
 import { alreadyAllowed, inheritedOverride } from "../tasks/alreadyAllowed";
 import { sha256OfFile } from "../tasks/handoverFiles";
 import type { TaskService } from "../tasks/taskService";
+import { checkedOutRefFor } from "../workspace/workspaceService";
 import type { CardService } from "./cardService";
+import { otherCheckedOutBranch } from "./checkedOutHead";
 import { type CrewmateProcedureFacts, crewmateProcedureFor } from "./crewSession";
 import type { CrewSupervisorOptions } from "./crewSupervisorOptions";
 import {
@@ -453,23 +455,33 @@ export class CrewBrief {
     ) {
       if (!machines) throw new Error("The source computer cannot be reached.");
       // A loss there names that computer, so the start waits for it (INF-5142).
-      await machines.bringBranchHome(source.id, true).catch((caught: unknown) => {
+      const outOfReach = (caught: unknown): never => {
         if (!lostComputer(caught)) throw caught;
         throw new SourceOutOfReach(
           `${machines.nameOf(source.deviceId as string)} went before ${source.key || source.id}'s work arrived.`,
           { deviceId: source.deviceId as string, sourceId: source.id, cause: caught },
         );
-      });
-      facts = { ...facts, branch: source.branch };
+      };
+      // Another branch its crewmate committed on there comes home to the
+      // source's own ref for it (INF-2490), never the task's branch it left.
+      const other = await otherCheckedOutBranch({ machines }, source).catch(outOfReach);
+      await machines.bringBranchHome(source.id, true, other).catch(outOfReach);
+      facts = other
+        ? { ...facts, startingRef: checkedOutRefFor(source.id) }
+        : { ...facts, branch: source.branch };
+    } else if (handoff === "work" && facts.branch && source && !source.deviceId) {
+      // Worktrees share refs: another branch its crewmate committed on here is named as it is.
+      const other = await otherCheckedOutBranch({ machines }, source);
+      if (other) facts = { ...facts, branch: other };
     }
     if (machine !== LOCAL_MACHINE_ID) {
       if (!machines?.sourceFile || !machines.sourceRef)
         throw new Error(
           "Update Infinitary on the work computer to carry source files and starting work.",
         );
-      const { branch, keptRef, ...rest } = facts;
+      const { branch, keptRef, startingRef: home, ...rest } = facts;
       facts = rest;
-      const startingRef = branch ?? keptRef;
+      const startingRef = home ?? branch ?? keptRef;
       if (startingRef) {
         facts.startingRef = await machines.sourceRef(
           machine,

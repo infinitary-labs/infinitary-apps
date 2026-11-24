@@ -1262,10 +1262,10 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
   it("reviews and proves the commit a builder's working copy has checked out, not the task's branch left behind on another branch", async () => {
     const repo = gitRepo();
     try {
-      const builder = fakeCrewmate();
+      const [builder, reviewer] = [fakeCrewmate(), fakeCrewmate()];
       const { supervisor, tasks, repos, specs } = setup(builder, {
         realWorkspace: true,
-        crewmates: [fakeCrewmate()],
+        crewmates: [reviewer],
       });
       const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
       repos.configure(view.id, { delivery: "direct-pr" });
@@ -1300,7 +1300,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         intent: intentOf("fix it"),
         shape: { review_of: taskId },
       });
-      await tick();
+      await vi.waitFor(() => expect(reviewer.promptCalls[0]).toContain(`${task.branch}-dev`));
       expect(tasks.get(reviewId)?.delivery?.headSha).toBe(built);
       expect(tasks.get(reviewId)?.prompt).toContain(`at head ${built}`);
       expect(tasks.get(reviewId)?.prompt).toContain('- "meter.test.ts"');

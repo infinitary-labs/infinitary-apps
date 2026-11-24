@@ -8,7 +8,8 @@ import { useEffect, useState } from "react";
  * its background work on a press, and can end that work, so the phone shows its drawing, live data, a press and a stop.
  * Its title row has a button that puts up its note card and one that asks the panel itself, which it counts; its own
  * press puts up a note card and opens the seeded task. It shows whether the computer's music is on (`settings.current`),
- * so the phone shows a settings read arriving and following the computer.
+ * so the phone shows a settings read arriving and following the computer. Its last two presses start the captain's next
+ * message (`point.draft`) and open Settings at Automation (`point.openSettings`), the two pointings every panel has.
  */
 export default function Panel({ id, reads, store, invoke, cards, asks, point }: PanelProps) {
   const [board, setBoard] = useState<PanelTaskBoard | null>(null);
@@ -57,6 +58,10 @@ export default function Panel({ id, reads, store, invoke, cards, asks, point }: 
           Raise a note
         </Button>
         <Button onClick={() => void point.openTask("phone-fixture")}>Open the task</Button>
+      </div>
+      <div style={{ display: "flex", gap: "var(--space-2)" }}>
+        <Button onClick={() => void point.draft("Tell me about the tally")}>Start a message</Button>
+        <Button onClick={() => void point.openSettings("automation")}>Open Automation</Button>
       </div>
     </div>
   );

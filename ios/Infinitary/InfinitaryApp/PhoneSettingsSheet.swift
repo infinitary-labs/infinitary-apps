@@ -7,6 +7,8 @@ import SwiftUI
 /// words (docs/ios.md, "Settings pages in the computer's words"); signing in stays on the computer.
 struct PhoneSettingsSheet: View {
     let session: ReadOnlySession
+    /// Where a panel's `point.openSettings` opens the sheet, read once as it opens; nil opens the list.
+    var opening: PhoneSettingsPlace?
     @Environment(\.dismiss) private var dismiss
     @Environment(PhoneSecrets.self) private var secrets: PhoneSecrets?
     @Environment(PhoneAppearance.self) private var appearance: PhoneAppearance?
@@ -115,8 +117,9 @@ struct PhoneSettingsSheet: View {
         .task(id: watch) { await follow() }
         // A page the computer stopped answering leaves the list, and the sheet with it.
         .onChange(of: shown) { _, shown in
-            if let section, !shown.contains(section) { path = []; settings?.closeRule(); self.section = nil }
+            if let section, !shown.contains(section), !waiting(section) { path = []; settings?.closeRule(); self.section = nil }
         }
+        .onAppear(perform: arrive)
         .font(PhoneFont.body).foregroundStyle(PhoneTheme.text).tint(PhoneTheme.accent)
         // Nine sections do not fit half a screen: Settings opens at full height, with no half stop on the way down.
         .presentationDragIndicator(.visible).phoneSheetSurface()
@@ -381,6 +384,23 @@ struct PhoneSettingsSheet: View {
         path = []
         settings?.problem = nil
         self.section = section
+    }
+
+    /// A section opened at a panel's word before its answer came: the computer's pages wait for the list's first reading,
+    /// Integrations for the computer's connections. It leaves only once the answer says it is not there.
+    private func waiting(_ section: Section) -> Bool {
+        section.live != nil ? settings?.read != true : section == .integrations && google?.read != true
+    }
+
+    /// Opens the section and page a panel named (`opening`), as the captain's own taps there would.
+    private func arrive() {
+        guard let opening, let place = Section(rawValue: opening.section.rawValue) else { return }
+        open(place)
+        switch opening.detail {
+        case .rule(let id): open(.rule(id))
+        case .project(let id): open(.project(id))
+        case nil: break
+        }
     }
 
     private func moveSection(by offset: Int) {

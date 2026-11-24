@@ -612,20 +612,25 @@ export class GithubGatewayService {
       );
       response = await target.api.call("GET", route.path);
     } catch (caught) {
+      // i18n-exempt: a refusal the reader's model hears in its tool answer
       return { refused: `Could not read issue #${issue}: ${messageOf(caught)}` };
     }
     let read: { state?: unknown; pull_request?: unknown; html_url?: unknown } = {};
     try {
       read = JSON.parse(response.body);
     } catch {}
+    // i18n-exempt: a refusal the reader's model hears in its tool answer
     if (response.status === 404 || response.status === 410)
       return { refused: `#${issue} is not an issue of this project.` };
+    // i18n-exempt: a refusal the reader's model hears in its tool answer
     if (response.status >= 300 || typeof read.html_url !== "string")
       return {
         refused: `Could not read issue #${issue}: ${target.api.place} answered ${response.status}.`,
       };
+    // i18n-exempt: a refusal the reader's model hears in its tool answer
     if (read.pull_request !== undefined)
       return { refused: `#${issue} is a pull request, not an issue.` };
+    // i18n-exempt: a refusal the reader's model hears in its tool answer
     if (read.state !== "open") return { refused: `Issue #${issue} is not open.` };
     return { url: read.html_url, place: target.api.place };
   }
@@ -664,7 +669,7 @@ export class GithubGatewayService {
       // An integration's ask runs through its binding (`IntegrationsService.sendAsk`),
       // a reader's web page through its page reader (`ReaderWebService.sendTaken`),
       // and a Build row is answered by the host (`BuildRows.answer`).
-      // i18n-exempt: served to the crewmate as a write-answered outcome
+      // i18n-exempt: the why the crewmate's model hears in its write-answered wake
       const why =
         taken.ask.kind === "web"
           ? "a web page is not a write where a project lives, so it was not sent"

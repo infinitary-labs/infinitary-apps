@@ -36473,6 +36473,92 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Pushed the branch`;
   }
+  function feedBuildRowKept(input2) {
+    const task = input2.task;
+    const title = input2.title;
+    switch (currentLanguage()) {
+      case "ar":
+        return `أُدرجت «${title}» باسم ${task} لوقت لاحق.`;
+      case "de":
+        return `„${title}“ als ${task} für später abgelegt.`;
+      case "es":
+        return `«${title}» anotada como ${task} para después.`;
+      case "fr":
+        return `« ${title} » classée comme ${task} pour plus tard.`;
+      case "ja":
+        return `「${title}」を ${task} として後で行うために登録しました。`;
+      case "ko":
+        return `“${title}” 작업을 나중에 하도록 ${task}(으)로 등록했습니다.`;
+      case "pt-BR":
+        return `“${title}” registrada como ${task} para depois.`;
+      case "zh-Hans":
+        return `已将“${title}”创建为 ${task}，留待以后。`;
+      case "zh-Hant":
+        return `已將「${title}」建立為 ${task}，留待以後。`;
+      case "en-XA":
+        return `[Ƒîļéð “${title}” áš ${task} ƒöŕ ļáţéŕ. ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Filed “‬${title}‮” as ‬${task}‮ for later.‬`;
+    }
+    return `Filed “${title}” as ${task} for later.`;
+  }
+  function feedBuildRowNotFiled(input2) {
+    const title = input2.title;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم تُدرج «${title}».`;
+      case "de":
+        return `„${title}“ nicht abgelegt.`;
+      case "es":
+        return `«${title}» no se anotó.`;
+      case "fr":
+        return `« ${title} » n’a pas été classée.`;
+      case "ja":
+        return `「${title}」は登録しませんでした。`;
+      case "ko":
+        return `“${title}” 작업은 등록하지 않았습니다.`;
+      case "pt-BR":
+        return `“${title}” não foi registrada.`;
+      case "zh-Hans":
+        return `未放入“${title}”。`;
+      case "zh-Hant":
+        return `未排入「${title}」。`;
+      case "en-XA":
+        return `[Ðîð ñöţ ƒîļé “${title}”. ~~~~~~]`;
+      case "ar-XB":
+        return `‮Did not file “‬${title}‮”.‬`;
+    }
+    return `Did not file “${title}”.`;
+  }
+  function feedBuildRowStarted(input2) {
+    const task = input2.task;
+    const title = input2.title;
+    switch (currentLanguage()) {
+      case "ar":
+        return `أُدرجت «${title}» باسم ${task} وبدأت.`;
+      case "de":
+        return `„${title}“ als ${task} abgelegt und gestartet.`;
+      case "es":
+        return `«${title}» anotada como ${task} y empezada.`;
+      case "fr":
+        return `« ${title} » classée comme ${task} et démarrée.`;
+      case "ja":
+        return `「${title}」を ${task} として登録し、開始しました。`;
+      case "ko":
+        return `“${title}” 작업을 ${task}(으)로 등록하고 시작했습니다.`;
+      case "pt-BR":
+        return `“${title}” registrada como ${task} e começada.`;
+      case "zh-Hans":
+        return `已将“${title}”创建为 ${task} 并开始。`;
+      case "zh-Hant":
+        return `已將「${title}」建立為 ${task} 並開始。`;
+      case "en-XA":
+        return `[Ƒîļéð “${title}” áš ${task} áñð šţáŕţéð îţ. ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Filed “‬${title}‮” as ‬${task}‮ and started it.‬`;
+    }
+    return `Filed “${title}” as ${task} and started it.`;
+  }
   function feedBuiltInPlace() {
     switch (currentLanguage()) {
       case "ar":
@@ -107329,6 +107415,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     feedBatchRetried,
     feedBatchSentBack,
     feedBranchPushed,
+    feedBuildRowKept,
+    feedBuildRowNotFiled,
+    feedBuildRowStarted,
     feedBuiltInPlace,
     feedByCaptain,
     feedByCaptainInPanel,
@@ -110732,6 +110821,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "feedBatchRetried": ["label", "project"],
     "feedBatchSentBack": ["project", "reason", "title"],
     "feedBranchPushed": [],
+    "feedBuildRowKept": ["task", "title"],
+    "feedBuildRowNotFiled": ["title"],
+    "feedBuildRowStarted": ["task", "title"],
     "feedBuiltInPlace": [],
     "feedByCaptain": [],
     "feedByCaptainInPanel": ["panel"],

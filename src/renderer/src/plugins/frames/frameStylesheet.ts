@@ -352,7 +352,7 @@ export const FRAME_BASE_STYLE = `
   .inf-build-facts { margin: var(--space-1) 0 0; font-size: var(--text-sm); color: var(--fg-2); }
   .inf-build-choice { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); margin: var(--space-2) 0 0; }
   .inf-build-choice legend { font-size: var(--text-sm); }
-  .inf-build-choice label { display: inline-flex; align-items: center; gap: var(--space-1); font-size: var(--text-sm); }
+  .inf-build-choice label { font-size: var(--text-sm); }
   .inf-asks-buttons { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--space-1) var(--space-3); margin: 0 0 var(--space-2); font-size: var(--text-sm); }
   .inf-asks-buttons dt { color: var(--fg-1); font-weight: 500; }
   .inf-asks-buttons dd { margin: 0; color: var(--fg-2); }
@@ -390,6 +390,8 @@ export const FRAME_BASE_STYLE = `
     margin-inline-start: calc(-13px - var(--space-2));
   }
   label:has(> input:is([type="radio"], [type="checkbox"])) + label { margin-top: var(--space-1); }
+  /* A Build row's choices sit on one line, where the stacked rows' gap would lower all but the first. */
+  .inf-build-choice label:has(> input) + label { margin-top: 0; }
   label:has(> input:is([type="radio"], [type="checkbox"]):checked) { color: var(--fg-1); }
   label > textarea, label > select, label > input:not([type="radio"], [type="checkbox"], [type="range"]) {
     display: block; margin-top: var(--space-1);

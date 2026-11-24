@@ -1027,6 +1027,9 @@
 "feedBatchRetried" = "%2$@：%1$@ をまとめ直し、チェックを再び実行しています。";
 "feedBatchSentBack" = "%1$@：「%3$@」が一括プルリクエストから差し戻されました：%2$@";
 "feedBranchPushed" = "ブランチをプッシュしました";
+"feedBuildRowKept" = "「%2$@」を %1$@ として後で行うために登録しました。";
+"feedBuildRowNotFiled" = "「%1$@」は登録しませんでした。";
+"feedBuildRowStarted" = "「%2$@」を %1$@ として登録し、開始しました。";
 "feedBuiltInPlace" = "その場で作成";
 "feedByCaptain" = "船長 · ";
 "feedByCaptainInPanel" = "船長（%1$@ パネル）· ";

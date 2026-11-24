@@ -1027,6 +1027,9 @@
 "feedBatchRetried" = "%2$@: %1$@ wurde neu zusammengestellt, und seine Überprüfungen laufen erneut.";
 "feedBatchSentBack" = "%1$@: „%3$@“ wurde aus seinem Bündel zurückgeschickt: %2$@";
 "feedBranchPushed" = "Den Branch gepusht";
+"feedBuildRowKept" = "„%2$@“ als %1$@ für später abgelegt.";
+"feedBuildRowNotFiled" = "„%1$@“ nicht abgelegt.";
+"feedBuildRowStarted" = "„%2$@“ als %1$@ abgelegt und gestartet.";
 "feedBuiltInPlace" = "Direkt im Ordner gebaut";
 "feedByCaptain" = "Kapitän · ";
 "feedByCaptainInPanel" = "Kapitän, im Panel %1$@ · ";

@@ -22,7 +22,20 @@ export type ChangeIssue = { number: number; closes?: boolean };
  */
 export function issueLine(issue: ChangeIssue | undefined, kind: ForgeKind): string | undefined {
   if (!issue || kind !== "github") return undefined;
+  // i18n-exempt: GitHub's own closing keywords, read where the project lives
   return issue.closes ? `Closes #${issue.number}` : `Part of #${issue.number}`;
+}
+
+/** Each change's title and the line linking it to its outside issue, where the host reads one. */
+export function batchEntries(
+  members: readonly { taskId: string; title: string }[],
+  issueOf: ((taskId: string) => ChangeIssue | undefined) | undefined,
+  kind: ForgeKind,
+): BatchEntry[] {
+  return members.map((member) => {
+    const issue = issueLine(issueOf?.(member.taskId), kind);
+    return { title: member.title, ...(issue ? { issue } : {}) };
+  });
 }
 
 export type BatchDescription = {

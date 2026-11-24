@@ -1080,6 +1080,9 @@ public enum PhoneMessages {
     public static func `feedBatchRetried`(`label`: String, `project`: String) -> String { PhoneWords.format("feedBatchRetried", [`label`, `project`]) }
     public static func `feedBatchSentBack`(`project`: String, `reason`: String, `title`: String) -> String { PhoneWords.format("feedBatchSentBack", [`project`, `reason`, `title`]) }
     public static func `feedBranchPushed`() -> String { PhoneWords.format("feedBranchPushed", []) }
+    public static func `feedBuildRowKept`(`task`: String, `title`: String) -> String { PhoneWords.format("feedBuildRowKept", [`task`, `title`]) }
+    public static func `feedBuildRowNotFiled`(`title`: String) -> String { PhoneWords.format("feedBuildRowNotFiled", [`title`]) }
+    public static func `feedBuildRowStarted`(`task`: String, `title`: String) -> String { PhoneWords.format("feedBuildRowStarted", [`task`, `title`]) }
     public static func `feedBuiltInPlace`() -> String { PhoneWords.format("feedBuiltInPlace", []) }
     public static func `feedByCaptain`() -> String { PhoneWords.format("feedByCaptain", []) }
     public static func `feedByCaptainInPanel`(`panel`: String) -> String { PhoneWords.format("feedByCaptainInPanel", [`panel`]) }
@@ -5565,6 +5568,9 @@ extension PhoneWords {
         "feedBatchRetried": ["label", "project"],
         "feedBatchSentBack": ["project", "reason", "title"],
         "feedBranchPushed": [],
+        "feedBuildRowKept": ["task", "title"],
+        "feedBuildRowNotFiled": ["title"],
+        "feedBuildRowStarted": ["task", "title"],
         "feedBuiltInPlace": [],
         "feedByCaptain": [],
         "feedByCaptainInPanel": ["panel"],

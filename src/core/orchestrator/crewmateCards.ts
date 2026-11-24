@@ -816,9 +816,9 @@ export class CrewmateCards {
         );
       }
       const ask = this.writeAskOf(task.id, writes[0]?.ask ?? "");
-      if (ask?.kind === "integration" || ask?.kind === "build")
+      if (ask?.kind === "integration")
         throw new Error(
-          "The app already presents integration approval cards and Build rows. Wait for its answer; do not emit another card.",
+          "The app already presents integration approval cards. Wait for its answer; do not emit another card.",
         );
       if (ask?.card !== undefined)
         throw new Error(

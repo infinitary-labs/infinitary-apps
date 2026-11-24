@@ -885,6 +885,7 @@ function writeAnsweredWords(facts: Omit<WriteAnswered, "kind" | "also">): string
   const allowed = facts.allowed
     ? ` The captain chose Allow for the rest of this task: your later calls of ${facts.call} on ${facts.place} for ${facts.allowed} run at once without a card until this task closes.`
     : "";
+  // i18n-exempt: a wake served to the crewmate's model
   if (facts.outcome === "filed" && facts.filed)
     return `[fm-op] the captain filed your ${facts.call} as ${facts.filed.task}${facts.filed.started ? `, and chose Start now${facts.filed.start ? `: ${facts.filed.start}` : ""}` : ", kept for later: it waits until someone starts it"}. Do not file it again.`;
   if (facts.outcome === "ran")

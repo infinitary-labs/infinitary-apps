@@ -36281,6 +36281,92 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Pushed the branch`;
   }
+  function feedBuildRowKept(input2) {
+    const task = input2.task;
+    const title = input2.title;
+    switch (currentLanguage()) {
+      case "ar":
+        return `أُدرجت «${title}» باسم ${task} لوقت لاحق.`;
+      case "de":
+        return `„${title}“ als ${task} für später abgelegt.`;
+      case "es":
+        return `«${title}» anotada como ${task} para después.`;
+      case "fr":
+        return `« ${title} » classée comme ${task} pour plus tard.`;
+      case "ja":
+        return `「${title}」を ${task} として後で行うために登録しました。`;
+      case "ko":
+        return `“${title}” 작업을 나중에 하도록 ${task}(으)로 등록했습니다.`;
+      case "pt-BR":
+        return `“${title}” registrada como ${task} para depois.`;
+      case "zh-Hans":
+        return `已将“${title}”创建为 ${task}，留待以后。`;
+      case "zh-Hant":
+        return `已將「${title}」建立為 ${task}，留待以後。`;
+      case "en-XA":
+        return `[Ƒîļéð “${title}” áš ${task} ƒöŕ ļáţéŕ. ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Filed “‬${title}‮” as ‬${task}‮ for later.‬`;
+    }
+    return `Filed “${title}” as ${task} for later.`;
+  }
+  function feedBuildRowNotFiled(input2) {
+    const title = input2.title;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم تُدرج «${title}».`;
+      case "de":
+        return `„${title}“ nicht abgelegt.`;
+      case "es":
+        return `«${title}» no se anotó.`;
+      case "fr":
+        return `« ${title} » n’a pas été classée.`;
+      case "ja":
+        return `「${title}」は登録しませんでした。`;
+      case "ko":
+        return `“${title}” 작업은 등록하지 않았습니다.`;
+      case "pt-BR":
+        return `“${title}” não foi registrada.`;
+      case "zh-Hans":
+        return `未放入“${title}”。`;
+      case "zh-Hant":
+        return `未排入「${title}」。`;
+      case "en-XA":
+        return `[Ðîð ñöţ ƒîļé “${title}”. ~~~~~~]`;
+      case "ar-XB":
+        return `‮Did not file “‬${title}‮”.‬`;
+    }
+    return `Did not file “${title}”.`;
+  }
+  function feedBuildRowStarted(input2) {
+    const task = input2.task;
+    const title = input2.title;
+    switch (currentLanguage()) {
+      case "ar":
+        return `أُدرجت «${title}» باسم ${task} وبدأت.`;
+      case "de":
+        return `„${title}“ als ${task} abgelegt und gestartet.`;
+      case "es":
+        return `«${title}» anotada como ${task} y empezada.`;
+      case "fr":
+        return `« ${title} » classée comme ${task} et démarrée.`;
+      case "ja":
+        return `「${title}」を ${task} として登録し、開始しました。`;
+      case "ko":
+        return `“${title}” 작업을 ${task}(으)로 등록하고 시작했습니다.`;
+      case "pt-BR":
+        return `“${title}” registrada como ${task} e começada.`;
+      case "zh-Hans":
+        return `已将“${title}”创建为 ${task} 并开始。`;
+      case "zh-Hant":
+        return `已將「${title}」建立為 ${task} 並開始。`;
+      case "en-XA":
+        return `[Ƒîļéð “${title}” áš ${task} áñð šţáŕţéð îţ. ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Filed “‬${title}‮” as ‬${task}‮ and started it.‬`;
+    }
+    return `Filed “${title}” as ${task} and started it.`;
+  }
   function feedBuiltInPlace() {
     switch (currentLanguage()) {
       case "ar":
@@ -107137,6 +107223,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     feedBatchRetried,
     feedBatchSentBack,
     feedBranchPushed,
+    feedBuildRowKept,
+    feedBuildRowNotFiled,
+    feedBuildRowStarted,
     feedBuiltInPlace,
     feedByCaptain,
     feedByCaptainInPanel,
@@ -110540,6 +110629,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "feedBatchRetried": ["label", "project"],
     "feedBatchSentBack": ["project", "reason", "title"],
     "feedBranchPushed": [],
+    "feedBuildRowKept": ["task", "title"],
+    "feedBuildRowNotFiled": ["title"],
+    "feedBuildRowStarted": ["task", "title"],
     "feedBuiltInPlace": [],
     "feedByCaptain": [],
     "feedByCaptainInPanel": ["panel"],
@@ -123518,7 +123610,7 @@ a:hover {
   .inf-build-facts { margin: var(--space-1) 0 0; font-size: var(--text-sm); color: var(--fg-2); }
   .inf-build-choice { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); margin: var(--space-2) 0 0; }
   .inf-build-choice legend { font-size: var(--text-sm); }
-  .inf-build-choice label { display: inline-flex; align-items: center; gap: var(--space-1); font-size: var(--text-sm); }
+  .inf-build-choice label { font-size: var(--text-sm); }
   .inf-asks-buttons { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--space-1) var(--space-3); margin: 0 0 var(--space-2); font-size: var(--text-sm); }
   .inf-asks-buttons dt { color: var(--fg-1); font-weight: 500; }
   .inf-asks-buttons dd { margin: 0; color: var(--fg-2); }
@@ -123556,6 +123648,8 @@ a:hover {
     margin-inline-start: calc(-13px - var(--space-2));
   }
   label:has(> input:is([type="radio"], [type="checkbox"])) + label { margin-top: var(--space-1); }
+  /* A Build row's choices sit on one line, where the stacked rows' gap would lower all but the first. */
+  .inf-build-choice label:has(> input) + label { margin-top: 0; }
   label:has(> input:is([type="radio"], [type="checkbox"]):checked) { color: var(--fg-1); }
   label > textarea, label > select, label > input:not([type="radio"], [type="checkbox"], [type="range"]) {
     display: block; margin-top: var(--space-1);

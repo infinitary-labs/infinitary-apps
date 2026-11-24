@@ -1027,6 +1027,9 @@
 "feedBatchRetried" = "%2$@: %1$@ was combined again and its checks run again.";
 "feedBatchSentBack" = "%1$@: \"%3$@\" was sent back from its batch: %2$@";
 "feedBranchPushed" = "Pushed the branch";
+"feedBuildRowKept" = "Filed “%2$@” as %1$@ for later.";
+"feedBuildRowNotFiled" = "Did not file “%1$@”.";
+"feedBuildRowStarted" = "Filed “%2$@” as %1$@ and started it.";
 "feedBuiltInPlace" = "Built in place";
 "feedByCaptain" = "Captain · ";
 "feedByCaptainInPanel" = "Captain, in the %1$@ panel · ";

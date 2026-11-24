@@ -1027,6 +1027,9 @@
 "feedBatchRetried" = "%2$@ : %1$@ a été regroupé de nouveau et ses vérifications s’exécutent de nouveau.";
 "feedBatchSentBack" = "%1$@ : « %3$@ » a été renvoyée de son lot : %2$@";
 "feedBranchPushed" = "Branche poussée";
+"feedBuildRowKept" = "« %2$@ » classée comme %1$@ pour plus tard.";
+"feedBuildRowNotFiled" = "« %1$@ » n’a pas été classée.";
+"feedBuildRowStarted" = "« %2$@ » classée comme %1$@ et démarrée.";
 "feedBuiltInPlace" = "Construite sur place";
 "feedByCaptain" = "Capitaine · ";
 "feedByCaptainInPanel" = "Capitaine, dans le panneau %1$@ · ";

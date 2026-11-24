@@ -1027,6 +1027,9 @@
 "feedBatchRetried" = "%2$@：%1$@ 已重新合成，检查会再次运行。";
 "feedBatchSentBack" = "%1$@：“%3$@”已从这批改动中退回：%2$@";
 "feedBranchPushed" = "已推送分支";
+"feedBuildRowKept" = "已将“%2$@”创建为 %1$@，留待以后。";
+"feedBuildRowNotFiled" = "未放入“%1$@”。";
+"feedBuildRowStarted" = "已将“%2$@”创建为 %1$@ 并开始。";
 "feedBuiltInPlace" = "已就地构建";
 "feedByCaptain" = "船长 · ";
 "feedByCaptainInPanel" = "船长，在 %1$@ 面板中 · ";

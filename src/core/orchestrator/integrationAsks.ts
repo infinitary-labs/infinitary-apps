@@ -1,3 +1,4 @@
+import * as m from "@shared/i18n/messages.generated";
 import type { IntegrationApprovalChoice } from "@shared/integrations";
 import {
   type BuildRowAsk,
@@ -258,6 +259,13 @@ export class IntegrationAsks {
 
 /** The task's timeline line for a kept write the captain's click took. */
 export function writeSentLine(sent: WriteAskSent): string {
+  // A Build row's line names its title, as its card did, never the call.
+  const title = sent.ask?.kind === "build" ? sent.ask.title : sent.call;
+  if (sent.outcome.kind === "filed")
+    return sent.outcome.started
+      ? m.feedBuildRowStarted({ title, task: sent.outcome.task })
+      : m.feedBuildRowKept({ title, task: sent.outcome.task });
+  if (sent.ask?.kind === "build") return m.feedBuildRowNotFiled({ title });
   switch (sent.outcome.kind) {
     case "answered":
       return `Sent ${sent.call} to ${sent.place} once, on the captain's click: it answered ${sent.outcome.status}.`;
@@ -265,8 +273,6 @@ export function writeSentLine(sent: WriteAskSent): string {
       return `Ran ${sent.call} on ${sent.place} once, on the captain's click.`;
     case "unknown":
       return `Sent ${sent.call} to ${sent.place} once, on the captain's click; what came of it is unknown (${sent.outcome.why}). It is never sent again.`;
-    case "filed":
-      return `Filed ${sent.call} as ${sent.outcome.task} on the captain's click${sent.outcome.started ? ", and asked for its start" : ", for later"}.`;
     default:
       return `The captain's click on ${sent.call} sent nothing: ${sent.outcome.why}`;
   }
@@ -310,6 +316,7 @@ export function listedOn(asks: readonly WriteAsk[] | undefined, cardId: string):
 /** How a kept ask's call is named on the task's timeline and to its crewmate. */
 export function askCall(ask: WriteAsk): string {
   if (ask.kind === "integration") return ask.action;
+  // i18n-exempt: the call the crewmate's model hears; the feed names a Build row by its catalog line
   if (ask.kind === "build") return `Build row "${ask.title}" for issue #${ask.issue}`;
   return readerAskCall(ask);
 }

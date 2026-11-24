@@ -48,6 +48,7 @@ const START_WORDS: Record<BuildRowStart, string> = {
 
 /** The brief a Build row's task starts from: its goal and why as the row showed them, and where they came from. */
 export function buildRowBrief(row: Pick<BuildRowAsk, "goal" | "why" | "start">): string {
+  // i18n-exempt: served to the crewmate's model, never shown to a person
   return [
     `Goal: ${row.goal}`,
     "",
@@ -72,9 +73,6 @@ export function buildRowShape(row: Pick<BuildRowAsk, "start" | "issue" | "issueU
   };
 }
 
-/** How many linked tasks a reader's brief lists, newest first. */
-export const LINKED_ISSUE_TASKS_MAX = 40;
-
 /**
  * The section an unsafe data reader's brief gains from the task record
  * (docs/agents-reach.md, "A reader's Build rows"): each task of its project
@@ -90,13 +88,14 @@ export function linkedIssuesSection(
   const linked = tasks
     .list()
     .filter((task) => task.id !== reader.id && task.repoId === reader.repoId && task.shape?.issue)
-    .sort((a, b) => b.createdAt - a.createdAt)
-    .slice(0, LINKED_ISSUE_TASKS_MAX);
+    .sort((a, b) => b.createdAt - a.createdAt);
   if (linked.length === 0) return undefined;
   const lines = linked.map((task) => {
     const result = tasks.latestResult(task.id)?.value;
+    // i18n-exempt: served to the crewmate's model, never shown to a person
     return `- #${task.shape?.issue?.number}: ${task.key || task.id}, ${task.shape?.kind ?? task.kind}, ${task.status}${result ? `, result ${JSON.stringify(result)}` : ""}`;
   });
+  // i18n-exempt: served to the crewmate's model, never shown to a person
   return [
     "Issues of this project already linked to a task, from the task record, newest first. File no Build row for an issue listed here unless its report asks for something these tasks do not cover:",
     ...lines,
@@ -136,14 +135,18 @@ export class BuildRows {
     const title = input.title.replace(/\s+/g, " ").trim();
     const goal = input.goal.trim();
     const why = input.why.trim();
+    // i18n-exempt: a tool answer served to the crewmate's model
     if (!title || !goal || !why)
       return "A Build row needs a title, a goal and a why. Nothing was kept.";
     const threat = scanKnowledgeThreat(`${title}\n${goal}\n${why}`);
+    // i18n-exempt: a tool answer served to the crewmate's model
     if (threat)
       return `Refused: the row's words match the app's ${threat.pattern} pattern. Rewrite it in your own words, with no instructions to an agent, no credentials and no links that send data out. Nothing was kept.`;
+    // i18n-exempt: a tool answer served to the crewmate's model
     const read = this.options.readerOpenIssue
       ? await this.options.readerOpenIssue(taskId, issue)
       : { refused: "This app cannot read issues where the project lives." };
+    // i18n-exempt: a tool answer served to the crewmate's model
     if ("refused" in read) return `Refused: ${read.refused} Nothing was kept.`;
     const ask: BuildRowAsk = {
       id: `wa${randomUUID().replace(/-/g, "").slice(0, 12)}`,
@@ -159,6 +162,7 @@ export class BuildRows {
     };
     const dropped = this.options.tasks.delivery.keepWriteAsk(taskId, ask);
     this.host.present(taskId, ask, dropped);
+    // i18n-exempt: a tool answer served to the crewmate's model
     return [
       `Not filed: kept as Build row ${ask.id} for issue #${issue}, to start as a ${input.startAs === "reproduce" ? "reproduce step" : "plan"}.`,
       "The app put it on its own approval card for the captain, with the brief its crewmate would get. Do not emit a card for it.",
@@ -180,15 +184,19 @@ export class BuildRows {
     pick: BuildRowChoice,
   ): Promise<WriteAskSent> {
     const delivery = this.options.tasks.delivery;
+    // i18n-exempt: the call and refusals reach the crewmate's model; the feed's line is the catalog's
     const call = `Build row "${ask.title}" for issue #${ask.issue}`;
     const refused = (why: string): WriteAskSent => {
       const outcome = { kind: "refused" as const, why };
       delivery.recordWriteAskOutcome(taskId, ask.id, outcome);
       return { ok: false, ask, call, place: ask.place, outcome };
     };
+    // i18n-exempt: the why the crewmate's model hears
     if (choice !== "once") return refused("The captain chose Not now. Nothing was filed.");
+    // i18n-exempt: the why the crewmate's model hears
     if (pick === "skip") return refused("The captain chose Don't file. Nothing was filed.");
     const origin = this.options.tasks.get(taskId);
+    // i18n-exempt: the why the crewmate's model hears
     if (!origin) return refused("Its task is no longer there. Nothing was filed.");
     const at = this.host.now();
     // The record keeps the reader's goal and why marked, as every reader

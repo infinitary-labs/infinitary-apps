@@ -1027,6 +1027,9 @@
 "feedBatchRetried" = "%2$@: %1$@을(를) 다시 묶었고, 검사를 다시 실행해요.";
 "feedBatchSentBack" = "%1$@: \"%3$@\"이(가) 일괄 끌어오기 요청에서 돌려보내졌어요: %2$@";
 "feedBranchPushed" = "분기를 푸시했어요";
+"feedBuildRowKept" = "“%2$@” 작업을 나중에 하도록 %1$@(으)로 등록했습니다.";
+"feedBuildRowNotFiled" = "“%1$@” 작업은 등록하지 않았습니다.";
+"feedBuildRowStarted" = "“%2$@” 작업을 %1$@(으)로 등록하고 시작했습니다.";
 "feedBuiltInPlace" = "그 자리에서 만듦";
 "feedByCaptain" = "선장 · ";
 "feedByCaptainInPanel" = "선장, %1$@ 패널에서 · ";

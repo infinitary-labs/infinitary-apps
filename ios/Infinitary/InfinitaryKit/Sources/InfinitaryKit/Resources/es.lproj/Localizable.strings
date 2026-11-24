@@ -1027,6 +1027,9 @@
 "feedBatchRetried" = "%2$@: %1$@ se combinó de nuevo y sus comprobaciones se ejecutan otra vez.";
 "feedBatchSentBack" = "%1$@: «%3$@» se devolvió de su lote: %2$@";
 "feedBranchPushed" = "Insertó la rama";
+"feedBuildRowKept" = "«%2$@» anotada como %1$@ para después.";
+"feedBuildRowNotFiled" = "«%1$@» no se anotó.";
+"feedBuildRowStarted" = "«%2$@» anotada como %1$@ y empezada.";
 "feedBuiltInPlace" = "Construida en el lugar";
 "feedByCaptain" = "Capitán · ";
 "feedByCaptainInPanel" = "Capitán, en el panel %1$@ · ";

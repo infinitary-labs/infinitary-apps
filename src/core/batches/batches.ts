@@ -60,12 +60,11 @@ import {
   pushBatch,
 } from "./combine";
 import {
-  type BatchEntry,
   type BatchLimits,
   batchDescription,
+  batchEntries,
   batchList,
   type ChangeIssue,
-  issueLine,
 } from "./description";
 import {
   abandoned,
@@ -1296,7 +1295,9 @@ export class Batches {
         {
           ...change,
           title: only ? only.title : this.title(open.members),
-          squashMessage: only ? only.body : batchList(this.entries(open.members, forge)),
+          squashMessage: only
+            ? only.body
+            : batchList(batchEntries(open.members, this.options.issue, forge.kind)),
         },
         open.head,
         way,
@@ -1704,7 +1705,7 @@ export class Batches {
     const stories = await Promise.all(
       open.members.map((member) => this.options.story(member, forge).catch(() => undefined)),
     );
-    const entries = this.entries(open.members, forge);
+    const entries = batchEntries(open.members, this.options.issue, forge.kind);
     if (open.members.length === 1)
       return {
         body: [stories[0]?.projectText, entries[0]?.issue, stories[0]?.region]
@@ -1714,10 +1715,7 @@ export class Batches {
         missing: stories[0] ? [] : open.members,
       };
     const { body, comments, unplaced } = batchDescription(
-      entries.map((entry, index) => {
-        const story = stories[index];
-        return { ...entry, ...(story ? { region: story.region } : {}) };
-      }),
+      entries.map((entry, index) => ({ ...entry, region: stories[index]?.region })),
       this.limits(forge),
     );
     return {
@@ -1725,14 +1723,6 @@ export class Batches {
       comments,
       missing: open.members.filter((_member, index) => !stories[index] || unplaced.includes(index)),
     };
-  }
-
-  /** Each member's title and the line linking it to its outside issue, where the host reads one. */
-  private entries(members: readonly BatchMember[], forge: Forge): BatchEntry[] {
-    return members.map((member) => {
-      const issue = issueLine(this.options.issue?.(member.taskId), forge.kind);
-      return { title: member.title, ...(issue ? { issue } : {}) };
-    });
   }
 
   /** What the project's host keeps: a description, and a comment where the app can write one. */

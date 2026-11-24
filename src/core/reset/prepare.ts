@@ -26,6 +26,8 @@ export type ResetPrepareDeps = {
   discardTask: (id: string) => Promise<unknown>;
   /** Waits until a closed task's stops and keeps have run. */
   leftoversSettled: (id: string) => Promise<unknown>;
+  /** Waits until every working copy a close handed back to the worktree pool is parked (`WorktreePool.settled`). */
+  worktreesSettled: () => Promise<unknown>;
   /** Jobs kept running past their task, by id. */
   keptJobs: () => readonly { id: string }[];
   /** Runs one's own remove command. */
@@ -79,6 +81,13 @@ export async function prepareReset(
   const tasks = deps.openTasks().map((task) => task.id);
   await Promise.all(tasks.map((id) => attempt(() => deps.discardTask(id), RESET_PROGRAMS_MS)));
   await attempt(() => Promise.all(tasks.map((id) => deps.leftoversSettled(id))), RESET_PROGRAMS_MS);
+  // A close hands its working copy back to the pool, which finishes the
+  // return after the close resolves: it cleans the copy, then renames it
+  // with `git worktree move`, rewriting the project's link to it. Git
+  // truncates that link before writing it, so an undo reading it then sees
+  // an empty path and keeps a link that points into the folder the reset
+  // deletes. The undo below reads the links only once the pool is still.
+  await attempt(() => deps.worktreesSettled(), RESET_PROGRAMS_MS);
 
   for (const job of deps.keptJobs()) {
     await attempt(() => deps.removeKeptJob(job.id), RESET_PROGRAMS_MS);

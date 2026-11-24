@@ -1416,7 +1416,7 @@ export class WorkspaceService {
     if (this.pool) void this.pool.sweep().catch(() => {});
   }
 
-  /** Resolves once every pool return started so far has finished (tests). */
+  /** Resolves once every pool return started so far has finished: a reset waits on it before undoing a project's links, and tests do. */
   async poolSettled(): Promise<void> {
     await this.pool?.settled();
   }

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "firstmate-turn-ready-sooner",
+      "kind": "improvement",
+      "area": "firstmate",
+      "title": "Your first mate starts on your message sooner when your computer is busy",
+      "body": "Your first mate gets ready for each turn several times faster, so on a busy computer your message no longer waits a few seconds before your first mate starts on it. A crewmate starts its work sooner the same way.",
+      "noPicture": "Nothing on screen looks different; the first mate's turns simply begin sooner.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

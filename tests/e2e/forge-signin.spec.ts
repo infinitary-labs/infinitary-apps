@@ -1077,21 +1077,13 @@ for (const runtime of READER_RUNTIMES) {
     expect(
       (await page.evaluate((taskId) => window.infinitary.tasks.detail(taskId), id))?.outcomeSummary,
     ).toBe(feedUnsafeDataReaderReported());
-    // Its own card says it may carry a stranger's words, and its title and
-    // its follow-up's title reach the first mate's turn marked.
-    const readerCard = shownCard(page, UNSAFE_DATA_READER_CARD.title);
-    await expect(readerCard).toContainText(cardReaderUnsafeData(), { timeout: 45_000 });
+    // The follow-up it filed reaches the first mate's turn with its title marked.
+    const firstmateRead = (words: string) =>
+      (launched.mockProvider?.requestBodies() ?? []).some(
+        (raw) => raw.includes("spawn_crewmate") && readerMarked(words).test(raw),
+      );
     await expect
-      .poll(
-        () =>
-          (launched.mockProvider?.requestBodies() ?? []).some(
-            (raw) =>
-              raw.includes("spawn_crewmate") &&
-              readerMarked(UNSAFE_DATA_READER_CARD.title).test(raw) &&
-              readerMarked(UNSAFE_DATA_READER_FOLLOWUP.title).test(raw),
-          ),
-        { timeout: 45_000 },
-      )
+      .poll(() => firstmateRead(UNSAFE_DATA_READER_FOLLOWUP.title), { timeout: 45_000 })
       .toBe(true);
     expect(github.requests()).toContain("GET /repos/octo/meterlab/pulls");
     expect(github.requests()).not.toContain("GET /repos/octo/website/pulls");
@@ -1126,7 +1118,6 @@ for (const runtime of READER_RUNTIMES) {
     if (evidence) {
       await resizeWindow(launched.app, page, { width: 1100, height: 860 });
       await page.screenshot({ path: join(evidence, `${shot}-card.png`) });
-      await readerCard.screenshot({ path: join(evidence, `${shot}-reader-card.png`) });
       if (!runtime.claude)
         await heroShot(launched.app, page, {
           region: card,
@@ -1177,15 +1168,25 @@ for (const runtime of READER_RUNTIMES) {
       await page.screenshot({ path: join(evidence, `${shot}-after-click.png`) });
       writeFileSync(join(evidence, `${shot}.txt`), transcript);
     }
-    if (runtime.claude) return;
-    // The follow-up it filed, once started, carries its words marked in the brief.
+    // Its own card, put up once the click answered, says it may carry a
+    // stranger's words, and its title reaches the first mate's next turn marked.
+    const readerCard = shownCard(page, UNSAFE_DATA_READER_CARD.title);
+    await expect(readerCard).toContainText(cardReaderUnsafeData(), { timeout: 45_000 });
+    if (evidence) await readerCard.screenshot({ path: join(evidence, `${shot}-reader-card.png`) });
     const followup = (await page.evaluate(() => window.infinitary.tasks.board())).tasks.find(
       (row) => row.title === UNSAFE_DATA_READER_FOLLOWUP.title,
     );
     if (!followup) throw new Error("The reader filed no follow-up");
-    await askFirstmate(`Start ${followup.key}.`, [
-      { name: "update_task", args: { task: followup.key, start_now: true } },
-    ]);
+    // On Pi the first mate starts the follow-up; on Claude it only reads.
+    await askFirstmate(
+      runtime.claude ? "How is the crew doing?" : `Start ${followup.key}.`,
+      runtime.claude
+        ? [{ name: "crew_status", args: {} }]
+        : [{ name: "update_task", args: { task: followup.key, start_now: true } }],
+    );
+    expect(firstmateRead(UNSAFE_DATA_READER_CARD.title)).toBe(true);
+    if (runtime.claude) return;
+    // The follow-up it filed, once started, carries its words marked in the brief.
     const brief = async () =>
       (launched.mockProvider?.requestBodies() ?? []).find(
         (raw) =>

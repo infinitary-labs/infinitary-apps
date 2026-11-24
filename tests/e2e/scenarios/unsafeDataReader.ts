@@ -13,8 +13,8 @@ import { sinceLastUser } from "../providerRequest";
 
 /**
  * An unsafe data reader's turn (docs/agents-reach.md, "An unsafe data reader"): a
- * file read and two reads where its project lives, two writes, a decision card and a
- * follow-up, then a report, and later a report of what the captain's click answered.
+ * file read and two reads where its project lives, two writes and a follow-up, then a
+ * report; once the captain's click answers, a decision card and a report of what it answered.
  * Its kept writes go on the app's own approval card, never its own.
  */
 export const unsafeDataReader: Scenario =
@@ -27,7 +27,10 @@ export const unsafeDataReader: Scenario =
     // The follow-up it filed names it in its brief; that crewmate is no reader.
     if (user.includes(FOLLOWUP_PROVENANCE_OPENING)) return undefined;
     if (user.includes(WRITE_ASK_SENT_WAKE)) {
-      if (results.length) return { text: "The answered writes are reported." };
+      // Its decision card goes up only now: while one is open its report
+      // waits on the captain and never wakes the first mate (`sortReport`).
+      if (!results.length) return { calls: [{ name: "emit_card", args: UNSAFE_DATA_READER_CARD }] };
+      if (results.length > 1) return { text: "The answered writes are reported." };
       return {
         calls: [
           {
@@ -57,10 +60,8 @@ export const unsafeDataReader: Scenario =
     if (write) return { calls: [{ name: "github_write", args: write }] };
     const asked = reads + UNSAFE_DATA_READER_WRITES.length;
     if (results.length === asked)
-      return { calls: [{ name: "emit_card", args: UNSAFE_DATA_READER_CARD }] };
-    if (results.length === asked + 1)
       return { calls: [{ name: "file_followup", args: UNSAFE_DATA_READER_FOLLOWUP }] };
-    if (results.length === asked + 2)
+    if (results.length === asked + 1)
       return {
         calls: [
           {

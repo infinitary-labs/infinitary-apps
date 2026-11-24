@@ -77,11 +77,6 @@ export type DeviceSetupOptions = {
     chosenAction(id: string): string | undefined;
   };
   broadcastEvent: (event: FmEvent) => void;
-  /**
-   * The Firstmate's first-launch gate is up, as its last read found it: no
-   * subscription answers it yet. A card not on the stack waits until one does.
-   */
-  held: () => boolean;
   /** A project that lives on a host is set to run on a computer with no sign-in of its own there. */
   forgeNeeded?: (deviceId: string, host: string, repo: { id: string; name: string }) => void;
   /** A computer reported its own sign-in for a host where projects live. */
@@ -93,6 +88,8 @@ export class DeviceSetup {
   private readonly found = new Map<string, FoundTools | undefined>();
   /** Each computer whose card is this run's business, with its rows as last raised. */
   private readonly raised = new Map<string, string | undefined>();
+  /** Up until the first launch says, so no card goes up before its first read. */
+  private gateUp: () => boolean = () => true;
 
   constructor(private readonly options: DeviceSetupOptions) {}
 
@@ -147,6 +144,15 @@ export class DeviceSetup {
     const deviceId = contact.deviceId;
     if (!this.asking(deviceId) || this.options.signIns.lastSaid(deviceId)) return;
     void this.options.signIns.signInsOf(deviceId);
+  }
+
+  /**
+   * The first launch says from here on whether its gate is up, as its last
+   * read found it: no subscription answers the Firstmate yet, and a card not
+   * on the stack waits until one does.
+   */
+  readsGate(gateUp: () => boolean): void {
+    this.gateUp = gateUp;
   }
 
   /** A subscription answers the Firstmate now: each card that waited for one goes up. */
@@ -241,7 +247,7 @@ export class DeviceSetup {
       this.found.delete(deviceId);
       return;
     }
-    if (!up && this.options.held()) return;
+    if (!up && this.gateUp()) return;
     const actions = deviceSetupActions(facts);
     const done = deviceSetupRows(facts);
     if (!up && this.options.cards.chosenAction(id)) {

@@ -1270,14 +1270,11 @@ export async function createServices(
   ticker.register("placed-reach", TICK_PERIOD_MS, (now) => placed.tick(now));
   // Your devices, Remove and Update, and each computer's setup and update
   // cards (docs/devices.md), now that the supervisor holds the stack.
-  // The first launch is read further on; until its first read a setup card waits as for a gate that is up.
-  let firstmateGated: () => boolean = () => true;
   const { computers, setup: deviceSetup } = homeDevices.attachCrew({
     supervisor,
     placed,
     repos,
     ticker,
-    firstmateGated: () => firstmateGated(),
   });
   // The boot sweep (R1): overdue parked decisions return, and time gates
   // that passed while the app was closed dispatch once, now.
@@ -1678,13 +1675,10 @@ export async function createServices(
     hasConnections: () => integrations.hasConnections() || devices.mayHoldDevices(),
     supervisor,
     sharing,
-    // A computer that joined while no subscription answered gets its setup card now, behind the welcome.
-    onGateClosed: () => deviceSetup.firstmateAnswers(),
+    deviceSetup,
     now: ticker.now,
     emit,
   });
-  const { firstRun } = firstLaunch;
-  firstmateGated = () => firstRun.gateUpAsRead();
   reconcileFirstRun = () => firstLaunch.reconcile();
   onCardsChanged = () => firstLaunch.cardsChanged();
   onCaptainTurnAccepted = () => firstLaunch.captainTurnAccepted();
@@ -1788,7 +1782,7 @@ export async function createServices(
     tasks,
     taskProtocol,
     firstmate,
-    firstRun,
+    firstRun: firstLaunch.firstRun,
     localOrchestrator,
     observe,
     crewLive,

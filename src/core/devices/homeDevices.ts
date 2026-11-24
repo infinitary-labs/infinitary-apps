@@ -155,8 +155,6 @@ export type DevicesCrew = {
   placed: Pick<PlacedSessions, "bringHome">;
   repos: RepoRegistry;
   ticker: Ticker;
-  /** The Firstmate's first-launch gate is up: a computer's setup card waits for a subscription that answers it. */
-  firstmateGated: () => boolean;
 };
 
 export async function startHomeDevices(options: {
@@ -630,7 +628,7 @@ export async function startHomeDevices(options: {
     attachSignIns: (changed) => {
       onDeviceSignIns = changed;
     },
-    attachCrew: ({ supervisor, placed, repos, ticker, firstmateGated }) => {
+    attachCrew: ({ supervisor, placed, repos, ticker }) => {
       // Your devices, and Remove for a computer that runs work (docs/devices.md).
       const list = new Computers({
         pairing: devices,
@@ -757,7 +755,6 @@ export async function startHomeDevices(options: {
           chosenAction: (id) => supervisor.cards.chosenAction(id),
         },
         broadcastEvent,
-        held: firstmateGated,
         forgeNeeded: (deviceId, forgeHost, repo) =>
           supervisor.placement.projectForgeSignInNeeded(deviceId, forgeHost, repo),
         forgeReady: (deviceId, forgeHost) =>

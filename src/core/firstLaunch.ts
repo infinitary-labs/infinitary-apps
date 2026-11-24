@@ -1,6 +1,7 @@
 import { RELEASE_NOTES_PICTURE_OWNER } from "@shared/cardPictures";
 import { isCustomApiProvider } from "@shared/customApi";
 import { WELCOME_NOTE } from "@shared/welcome";
+import type { DeviceSetup } from "./devices/deviceSetup";
 import type { CoreEventSink } from "./events";
 import { crewFacts, FirstRunService, hasPriorActivity, presentFirstCrewmateNote } from "./firstRun";
 import type { HostCapabilities } from "./host";
@@ -69,7 +70,7 @@ export function startFirstLaunch(options: {
     cards: Pick<CrewSupervisor["cards"], "addRecordedFirstmateNote" | "has" | "takeDown">;
   };
   sharing: Pick<SharingService, "record">;
-  onGateClosed: () => void;
+  deviceSetup: Pick<DeviceSetup, "readsGate" | "firstmateAnswers">;
   now: () => number;
   emit: CoreEventSink;
 }): FirstLaunch {
@@ -139,8 +140,10 @@ export function startFirstLaunch(options: {
     createFirstCrewmateNote: presentFirstCrewmateNote(supervisor.cards),
     now,
     onStep: (step) => options.sharing.record({ name: `ftue_${step}`, data: {} }),
-    onGateClosed: options.onGateClosed,
+    // A computer that joined while no subscription answered gets its setup card now, behind the welcome.
+    onGateClosed: () => options.deviceSetup.firstmateAnswers(),
   });
+  options.deviceSetup.readsGate(() => firstRun.gateUpAsRead());
   // Release notes (docs/release-notes.md "The startup note"): a packaged
   // build reads the catalog it carries; a dev or e2e run reads one only from
   // INFINITARY_RELEASE_NOTES_DIR, like the update overrides, and otherwise

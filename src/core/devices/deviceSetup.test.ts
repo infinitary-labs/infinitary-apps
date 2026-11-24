@@ -100,10 +100,10 @@ function world() {
       chosenAction: (id) => chosen.get(id),
     },
     broadcastEvent: (event) => events.push(event),
-    held: () => gate.up,
     forgeNeeded: (deviceId, host, repo) => forge.push(`needed ${deviceId} ${host} ${repo.name}`),
     forgeReady: (deviceId, host) => forge.push(`ready ${deviceId} ${host}`),
   });
+  setup.readsGate(() => gate.up);
   /** The captain's click on the card's own button: the card resolves and remembers the action. */
   const click = (action: string) => {
     stack.delete(CARD);

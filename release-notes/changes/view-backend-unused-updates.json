@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "view-backend-unused-updates",
+      "reason": "The other Mac's view tests build each view with one typed update checker whose actions say they are not used by the test, in place of an empty object cast past the type; nothing in the app changes."
+    }
+  ]
+}

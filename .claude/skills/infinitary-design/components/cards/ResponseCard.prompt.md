@@ -3,7 +3,7 @@ ONE card shape; the chip is derived from what the card is, never declared: `deci
 A card the first mate writes is its own: its head says “first mate”, even when its buttons act on a task, and it names the tasks it is about in its words, where each key is a link.
 A card the app writes about a task - a required action, a closing note, a stuck task - names that task after its key.
 An independent reviewer's own decision card on its review task carries that review task as `reviewTaskId`, which the host sets; the host draws a “Review finding” badge in `warn` beside the kind badge.
-Its foot keeps only the reference of its builder's task beside the buttons - the project, the change, its lines and the care level - with no status line states and nothing under them: the checks and the review verdict stay on the merge card, so they never pull the eye from the question.
+Its foot keeps only the reference of its builder's task beside the buttons - the project, the change, its lines and the rigor level - with no status line states and nothing under them: the checks and the review verdict stay on the merge card, so they never pull the eye from the question.
 A working preview is a decision whose body is interactive, not a kind of its own.
 An ended card (chip "Ended", neutral) is a card its author ended after the user had seen it: it keeps its place, its body as last seen and its field, and its choices give way to one primary Close on ⌘1, where a note's button sits; the corner minus reads Close too, and its thread ends with the app's line saying who ended it and why (`CardThread.prompt.md`, "An ended card's line").
 Every agent card is the head of a thread with its author and carries one field above its buttons, with Chat after them (but the welcome, which takes none, `CardThread.prompt.md`); the thread's own rules are `CardThread.prompt.md`, and a card with a thread open is one column of a single container rather than a surface of its own.
@@ -124,7 +124,7 @@ The status line holds one state per fact the task has - Checks, each requested r
 The states are sorted failing, warning, running or waiting, passed, so what needs the captain reads first; a failing or warning state is `--fg-1` at medium weight, and the rest are `--fg-2`.
 A state says one word in the open (`passed`, `failed`, `running for 15m`, `findings`), with how long ago finished checks finished in `--fg-3` (`· 5m ago`); words that say the whole state stand without a label (`No checks`).
 Check counts, how long the checks took, when they started and were read, a review's version and risk, and the batch's words while nothing is wrong wait for rest: the pointer's rest shows them, and a state with such words is a Tab stop that draws the focus ring and shows the same words on a `--text-xs` `--fg-3` line under the states while it holds focus.
-At the line's far end stands the reference in quiet mono (`--font-mono`, `--text-xs`, `--fg-3`): the project, the pull request link, the change's lines as `+316 −13`, and the care level only when it is not Default (`Careful care`).
+At the line's far end stands the reference in quiet mono (`--font-mono`, `--text-xs`, `--fg-3`): the project, the pull request link, the change's lines as `+316 −13`, and the rigor level only when it is not Default (`Careful care`).
 The reference wraps under the states as a whole when the card is narrow.
 The foot names no model and no computer: the card's top line shows both.
 What needs the captain stands under the status line in body color, and only under a state that is not passing.

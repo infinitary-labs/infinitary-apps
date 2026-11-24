@@ -662,7 +662,7 @@ describe("the task graph (task-system P2)", () => {
         SETTLE_FACTS_OPEN +
         // The status line (INF-3709's plan): a task with no checks has no
         // state, so the line holds only the reference - the project, and
-        // the care level because it is not Default.
+        // the rigor level because it is not Default.
         `<p class="inf-foot-line"><span class="inf-foot-ref"><span data-fact="project"><span class="${SETTLE_FACT_VALUE_CLASS}">${DEFAULT_WORKSPACE_WORD}</span></span>` +
         `<span data-fact="care"><span class="${SETTLE_FACT_VALUE_CLASS}">${RIGOR_WORDS.quick}</span> ${RIGOR_REFERENCE_WORD}</span></span></p>` +
         // The app's line says the merge closes the task (INF-2490).

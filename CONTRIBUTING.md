@@ -23,7 +23,7 @@ A pull request adds a release note under `release-notes/changes/` when people us
 
 ## Infinitary's Careful review
 
-Raise an outside pull request with Infinitary at the Careful care level: an independent review, and live validation that the review accepted, of the pull request's newest version.
+Raise an outside pull request with Infinitary at the Careful rigor level: an independent review, and live validation that the review accepted, of the pull request's newest version.
 Open it from your own copy of the project with Infinitary, which writes its story and a record at the end of the description; after each later push, let Infinitary review and validate that version too, so the record names it.
 The pull request's "PR raised with Infinitary's Careful review" check reads that record and passes; until then it fails and leaves one comment saying why.
 A record written by another tool does not count (`docs/public-ci.md`, "The Careful review check").

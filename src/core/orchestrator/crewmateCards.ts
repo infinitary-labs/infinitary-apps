@@ -652,7 +652,7 @@ export class CrewmateCards {
     const before = this.options.tasks.get(task.id);
     const reviewedMerge = before?.delivery?.reviewVerdict === "pass" && mergesOwn(input.actions);
     if (!checkedHead && (input.validationDecision || reviewedMerge)) {
-      // INF-994: a validation question is kept at every care level, and a
+      // INF-994: a validation question is kept at every rigor level, and a
       // merge offered after a passed review reads the version it answers.
       if (!before) throw new Error("The task no longer exists.");
       return this.host.validationHead(before).then(async (head) => {

@@ -540,7 +540,7 @@ Logic-only signing tests use the stand-in `security` and `codesign` commands und
 
 Full Mac verification is not a routine pre-PR or pre-merge gate.
 Crewmates almost never request it on task branches because rolling main supplies broad post-merge coverage, automatic alphas reuse that exact proof, and every alpha runs or reuses every journey.
-Broad code changes, extra confidence and a care level alone are not exceptions.
+Broad code changes, extra confidence and a rigor level alone are not exceptions.
 Keep the checks "What a task branch requests" names, with their repetitions; do not add supplementary signed checks merely because portable code changed or a defect appeared on a Mac.
 
 The exceptions are an alpha candidate lacking reusable exact-source main proof, an evidenced full-run repair or infrastructure qualification that narrower checks cannot prove, coordinated missing-evidence recovery after reading existing runs/artifacts, or an explicit captain full-run request.

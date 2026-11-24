@@ -132,7 +132,7 @@ const CARD_AUTHORING_PARTS: readonly InstructionPart[] = [
   crewOnly(
     "Commits, pull requests, change stories, code, comments and documents keep the project's own language.",
   ),
-  "On a card with a merge or settle effect the host adds a strip after the body - project, model, care level, pull request, checks and any hold - which the body never repeats.",
+  "On a card with a merge or settle effect the host adds a strip after the body - project, model, rigor level, pull request, checks and any hold - which the body never repeats.",
 ];
 
 /** Full authoring contract, unchanged for both crewmate runtimes. */

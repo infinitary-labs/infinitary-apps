@@ -257,7 +257,7 @@ export class ReportIntake {
     if (!record) throw new Error("The task no longer exists.");
     const builder = this.host.reviewBuilderOf(record);
     const owner = builder ?? record;
-    // INF-994: records are kept at every care level, so a raise to Careful
+    // INF-994: records are kept at every rigor level, so a raise to Careful
     // mid-task keeps them. A review's record is the verdict on any change
     // (INF-1875), however it delivers.
     if (input.kind !== "review" && !opensPullRequest(this.host.taskDelivery(owner.id)))

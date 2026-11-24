@@ -131,7 +131,7 @@ It checks out only its script, `scripts/intake-labels.mjs` and `CLA.md` from the
 
 ### The Careful review check
 
-An outside pull request is raised with Infinitary at the Careful care level: an independent review and live validation that the review accepted, of its newest version (`CONTRIBUTING.md`, "Infinitary's Careful review").
+An outside pull request is raised with Infinitary at the Careful rigor level: an independent review and live validation that the review accepted, of its newest version (`CONTRIBUTING.md`, "Infinitary's Careful review").
 Infinitary then writes a record at the end of the pull request's story: no-mistakes' signature line and its v1 attestation, with `producer` set to `infinitary` and a `live_validation` object (`src/core/forge/pipelineAttestation.ts`).
 `careful-review-check.yml` sets the commit status "PR raised with Infinitary's Careful review" on each pull request's newest commit (`scripts/careful-review-check.mjs`):
 

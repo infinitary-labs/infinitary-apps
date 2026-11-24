@@ -1029,7 +1029,7 @@ describe("CrewSupervisor", () => {
 
     /**
      * INF-562, the captain's ask: "the most natural place to make use of the
-     * careful care level is when a merge completion card is raised, and they
+     * careful rigor level is when a merge completion card is raised, and they
      * looked at the card and felt it's risky" - a Quick or Default pull
      * request's merge card offers Review carefully beside Merge.
      */
@@ -1374,7 +1374,7 @@ describe("task-level autonomy and the host's merge hold (contract v3.9)", () => 
       const card = h.cards().find((entry) => entry.taskId === h.taskId);
       expect(card?.body).not.toContain(">On its own<");
       // Default care is not written on the card (INF-3709's plan): only a
-      // care level that is not Default shows in the strip's reference.
+      // rigor level that is not Default shows in the strip's reference.
       expect(card?.body).not.toContain('data-fact="care"');
     } finally {
       h.dispose();

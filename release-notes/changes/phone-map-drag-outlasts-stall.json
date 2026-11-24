@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-map-drag-outlasts-stall",
+      "reason": "Test only: the phone check's drag on a card's map moves slowly enough and rests before the lift, so a simulator whose app stops reading touches for a couple of seconds on a busy Mac still scrolls the card; nothing in the app changes."
+    }
+  ]
+}

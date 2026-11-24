@@ -236,6 +236,26 @@ for (const protocol of ["openai-completions", "openai-responses"] as const) {
     await block.resume.click();
     await expect(block.firstmate("operator-model")).toBeEnabled();
     await placeOnBoard(page, "operator-model", "medium");
+    // INF-6581's plan, piece 1: a name and price edit saves without checking the model again.
+    const sentBeforePrice = api.requests.length;
+    await block.edit.click();
+    f = customApiForm(page);
+    const price = f.price("operator-model");
+    await price.open.click();
+    await price.name.fill("Operator");
+    await price.free.check();
+    expect(await saveCustomApi(page)).toBe("saved");
+    // Save reads the model list again, and sends no check.
+    expect(api.requests.slice(sentBeforePrice).map(({ path }) => path)).toEqual([
+      `${new URL(api.baseUrl).pathname}/models`,
+    ]);
+    expect(
+      (await page.evaluate(() => window.infinitary.accounts.custom.list()))[0]?.models[0],
+    ).toMatchObject({
+      checked: true,
+      name: "Operator",
+      cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+    });
     expect((await page.evaluate(() => window.infinitary.app.firstRun())).gateOpen).toBe(true);
     expect(await page.evaluate(() => window.infinitary.settings.getFirstmateModel())).toBeNull();
     await block.firstmate("operator-model").check();

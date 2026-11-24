@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "custom-model-name-price",
+      "kind": "feature",
+      "title": "Give a custom model its own name and price",
+      "body": "Each model on a custom connection now has a Name and price part: a display name, its prices in US dollars per million tokens, and a Free switch. A model the catalog does not know gets an estimate in Usage, a free one counts as costing nothing, and changing the name or prices saves without checking the model again.",
+      "area": "subscriptions",
+      "picture": {
+        "dark": "custom-model-name-price-dark.webp",
+        "light": "custom-model-name-price-light.webp",
+        "alt": "A custom model's line with its Name and price part open, showing a display name and four prices"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -203,7 +203,8 @@ function errorFromMessage(message: unknown): string | undefined {
  * Pulls the per-message usage (tokens and cost) for burn tracking (D-18).
  * Pi prices a message from the model's listed per-category rates; a model
  * with no rates prices it at zero, which says nothing about what it cost,
- * so a zero estimate is left out rather than recorded as free.
+ * so a zero estimate is left out rather than recorded as free. A custom
+ * connection's zero is the exception: it comes only from stated free prices.
  */
 export function usageFromMessage(message: unknown): FmUsage | undefined {
   if (!message || typeof message !== "object") return undefined;
@@ -244,7 +245,13 @@ export function usageFromMessage(message: unknown): FmUsage | undefined {
   if (reported(output)) result.output = output;
   if (reported(cacheRead)) result.cacheRead = cacheRead;
   if (reported(cacheWrite)) result.cacheWrite = cacheWrite;
-  if (cost && total !== undefined && total > 0) {
+  const provider = (message as { provider?: unknown }).provider;
+  const custom = typeof provider === "string" && /^fm-custom-[a-f0-9]{16}$/.test(provider);
+  // A custom connection's unknown price is NaN, never zero (`restoreUnknownUsage`),
+  // so its zero over measured tokens is the free price a person stated. A
+  // failed request's empty usage is zero too, and stays unpriced.
+  const free = custom && total === 0 && Boolean(input || output);
+  if (cost && total !== undefined && (total > 0 || free)) {
     result.cost = total;
     result.costSource = "listed-prices";
     const parts = {
@@ -258,8 +265,6 @@ export function usageFromMessage(message: unknown): FmUsage | undefined {
   }
   // A custom reply with no volunteered counts still represents a request.
   // Keep the empty usage object so every ledger consumer records its unknowns.
-  const provider = (message as { provider?: unknown }).provider;
-  const custom = typeof provider === "string" && /^fm-custom-[a-f0-9]{16}$/.test(provider);
   return Object.keys(result).length > 0 || custom ? result : undefined;
 }
 

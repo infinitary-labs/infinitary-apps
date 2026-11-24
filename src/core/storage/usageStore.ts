@@ -594,7 +594,7 @@ export class UsageStore {
             : { id: row.project_id, name: row.project },
         kind: workKindOf(row.work_kind),
         tokens: row.counted ? row.tokens : null,
-        cost: row.cost !== null && row.cost > 0 ? row.cost : null,
+        cost: row.cost,
       }),
     );
     const first = tasks[0];

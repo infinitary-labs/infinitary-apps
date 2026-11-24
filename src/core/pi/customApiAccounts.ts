@@ -36,6 +36,7 @@ import {
   customCapabilities,
   customCapabilityProfiles,
   customCatalog,
+  customModelCost,
   customPiModel,
 } from "./customApiModels";
 import {
@@ -308,11 +309,19 @@ export class CustomApiAccountOwner {
       }
     }
     const catalog = this.catalog();
+    // An edit that changes nothing but model names and prices keeps the saved
+    // checks, since neither reaches the server. Any other Save, one with no
+    // change included, checks every model again: Save is how a person retries
+    // a refused or timed-out check.
+    const kept =
+      original && input.replaceAccountId && onlyNamesOrPrices(original.stored.input, input)
+        ? original.stored
+        : undefined;
     const draft: Draft = {
       input,
-      credentialRevision: revision(),
-      storageRevision: revision(),
-      proofs: {},
+      credentialRevision: kept?.credentialRevision ?? revision(),
+      storageRevision: kept?.storageRevision ?? revision(),
+      proofs: kept ? { ...kept.proofs } : {},
       capabilities: Object.fromEntries(
         input.models.flatMap((model) => {
           const retention = model.cacheRetention ?? customDefaultCacheRetention(input.protocol);
@@ -627,17 +636,18 @@ export class CustomApiAccountOwner {
         .map((model) => {
           // Exact ids only, in catalog order if several providers list the id.
           // Borrow descriptive/pricing metadata, never another provider's
-          // credentials, wire settings or unchecked capability claims.
+          // credentials, wire settings or unchecked capability claims. What
+          // the person stated wins over the catalog.
           const known = catalog.find((entry) => entry.id === model.id);
           return customPiModel({
             protocol: input.protocol,
             provider: live.ref.providerId,
             model: model.id,
-            name: known?.name,
+            name: model.name ?? known?.name,
             limits: { context: model.context, output: model.output },
             readsPictures: live.stored.proofs[model.id]?.readsPictures,
             capabilities: live.stored.capabilities?.[model.id],
-            cost: known?.cost,
+            cost: customModelCost(model.cost, known?.cost),
           });
         }),
     });
@@ -781,6 +791,28 @@ export class CustomApiAccountOwner {
       rmSync(temporary, { force: true });
     }
   }
+}
+/** True when the edit changed some model's name or prices and nothing else a check or request reads. */
+function onlyNamesOrPrices(saved: CustomApiInput, next: CustomApiInput): boolean {
+  const checked = (input: CustomApiInput) =>
+    JSON.stringify([
+      input.key,
+      input.noKey,
+      input.tokenCommand ?? null,
+      input.headers.map(({ name, value, secret }) => [name, value, secret]),
+      input.protocol,
+      input.allowStorageDefault,
+      input.models.map((model) => [
+        model.id,
+        model.context,
+        model.output,
+        model.reasoningProfile ?? null,
+        model.cacheRetention ?? customDefaultCacheRetention(input.protocol),
+      ]),
+    ]);
+  const described = (input: CustomApiInput) =>
+    JSON.stringify(input.models.map(({ name, cost }) => [name ?? null, cost ?? null]));
+  return checked(saved) === checked(next) && described(saved) !== described(next);
 }
 function revision(): string {
   return randomBytes(16).toString("hex");

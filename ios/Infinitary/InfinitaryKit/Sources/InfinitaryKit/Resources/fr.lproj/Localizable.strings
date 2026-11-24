@@ -140,6 +140,15 @@
 "accountsCustomApiPause" = "Mettre en pause";
 "accountsCustomApiPausedHint" = "En pause. Reprenez pour utiliser ces modèles.";
 "accountsCustomApiPrepareFailed" = "Votre second n’a pas pu préparer cette connexion. Réessayez.";
+"accountsCustomApiPriceCacheRead" = "Lecture du cache";
+"accountsCustomApiPriceCacheWrite" = "Écriture du cache";
+"accountsCustomApiPriceFree" = "Gratuit";
+"accountsCustomApiPriceHint" = "Dollars américains par million de jetons. Un prix saisi remplace celui qu'Infinitary connaît pour ce modèle ; un prix vide le conserve, ou reste inconnu. Modifier le nom ou les prix ne revérifie jamais le modèle.";
+"accountsCustomApiPriceInput" = "Entrée";
+"accountsCustomApiPriceInvalid" = "Saisissez chaque prix comme un montant en dollars américains, par exemple 3 ou 0.25.";
+"accountsCustomApiPriceName" = "Nom affiché";
+"accountsCustomApiPriceOutput" = "Sortie";
+"accountsCustomApiPriceTitle" = "Nom et prix";
 "accountsCustomApiProfilesFailed" = "Les profils de capacités n’ont pas pu être lus. Fermez et rouvrez ce formulaire pour réessayer.";
 "accountsCustomApiProtocol" = "Protocole d’API";
 "accountsCustomApiRateLimit" = "Le serveur limite les requêtes en ce moment. Patientez un instant, puis appuyez de nouveau sur Enregistrer.";

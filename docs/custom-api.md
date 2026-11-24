@@ -101,6 +101,7 @@ This is a transport lifetime, not the account Pause policy.
    A live line under the address reads "Sends to (canonical address) · (network)" (`inf:accounts:custom:address`, DNS only, nothing sent to the server).
    On Edit at the same address the key field reads "Saved key kept · type to replace", beside **Remove saved key**; an empty key there keeps the saved one.
    Each model row has its check status, ID, context and output tokens, Reasoning profile, Cache retention and a remove button.
+   A folded **Name and price** part under it takes an optional display name, four prices in US dollars per million tokens (input, output, cache read, cache write) and a **Free** switch that sets all four to zero (INF-6581's plan, piece 1); it opens on its own when the line already states one.
    **Fetch from server** lists the server's models above the lines; picking one adds its line with the limits the server states, and **Add by hand** adds an empty line.
    Unknown/zero limits block checks and use rather than inventing limits.
 2. Save, with the address shown above it, is the approval to send the key, headers and content there: the form passes the displayed canonical address as `approvedDestination`, and the owner refuses any other.
@@ -110,6 +111,8 @@ This is a transport lifetime, not the account Pause policy.
    Key input stays in the form until the dialog closes.
 3. Save runs four stages and stops at the first problem (`inf:accounts:custom:connect`, then `check` per model, then `save`).
    It checks the form, sending nothing; it reaches the server, reading the network, preparing a draft and reading the model list; it tests each model one at a time, with progress on its line; and it saves checked and returns to the list, where first setup then asks which model the first mate answers with.
+   An edit that changes nothing but model names and prices keeps the saved checks: Save reads the model list again and sends no check.
+   Any other Save, one with no change included, tests every model again, so Save is how a check is retried.
    A failure keeps the form open and saves nothing, with a plain sentence beside the field at fault: the address (unreachable, redirected, refused, untrusted certificate, or nothing at the path, with a one-press `/v1` when the path has no version), the key (refused, needed, access refused), a model's line (sizes unknown, no tool call, too slow, not offered) or above Save (rate limit, server error).
    The owner returns each failure as a closed category (`customApiFailureSchema`, and `category` on a checked model), never text the form parses; `customApiFailures.ts` places it and words it, and no raw state word reaches the screen.
    A 404 is the model's when the model list answered, and the address's when it did not.
@@ -152,13 +155,15 @@ Relevant edits invalidate it; a failed listing never establishes model departure
 Envelopes count instructions, local history and tools and honor both the role's output cap and documented limits.
 These estimates/checks prove interoperability, not model quality, server capacity or absence of truncation.
 Every custom turn leaves a Usage record, even when the server reports no counts; unreported categories remain unknown, never zero.
-An exact model-id match in Pi's catalog as this computer knows it (`CustomApiCatalog`: each Pi account's runtime and the custom catalog runtime, with the pi.dev catalog each last fetched, then the bundled list) supplies the model's display name and listed prices; the first match in catalog order wins if multiple providers list that id.
+A name or price stated on the model's line wins over the catalog, one price at a time: a price left blank takes the match's, else stays unknown.
+Four stated zeros price the model at nothing: its turns record a zero estimate from listed prices, which Usage and the cost limit count as priced (`PRICED_RECORD`), while any other zero stays a price nobody knew.
+An exact model-id match in Pi's catalog as this computer knows it (`CustomApiCatalog`: each Pi account's runtime and the custom catalog runtime, with the pi.dev catalog each last fetched, then the bundled list) supplies the model's display name and listed prices, where an entry listing every rate at zero lists none; the first match in catalog order wins if multiple providers list that id.
 Only descriptive and price metadata is borrowed: the approved destination, protocol, proven picture input and checked limits remain connection-owned.
 Pi normalizes input, output, cache-read and cache-write counts and calculates each category once from its listed price.
 A presence-only observer restores missing categories to unknown after normalization and pricing; it never invents a cache count.
 When input and output are reported without a total, Pi's context-token calculation supplies the compactor's total before unknown category markers are restored.
 Reported reasoning tokens remain an optional subset of output in the event and saved usage record, never another token or cost category.
-An unmatched id, missing counts or missing rates leaves the estimate unavailable; nothing reprices older records.
+An unmatched id with no stated price, missing counts or missing rates leaves the estimate unavailable; nothing reprices older records.
 Allowance remains unknown.
 
 ## Token commands

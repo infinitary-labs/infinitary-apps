@@ -1,6 +1,7 @@
 import { type CostLimit, costLimitSchema } from "@shared/costLimit";
 import type { AppDatabase } from "./db";
 import { prepared } from "./statements";
+import { PRICED_RECORD } from "./usageDays";
 
 /** Where a limit below the app's own is set: on one task, or on one project. */
 export type CostLimitScope = "task" | "project";
@@ -111,7 +112,7 @@ export class CostLimitStore {
          UNION SELECT tasks.id FROM tasks JOIN family ON tasks.parent_id = family.id
        )
        SELECT COALESCE(SUM(CASE WHEN cost > 0 THEN cost END), 0) AS usd,
-              COALESCE(SUM(CASE WHEN cost > 0 THEN 0 ELSE 1 END), 0) AS unpriced
+              COALESCE(SUM(CASE WHEN ${PRICED_RECORD} THEN 0 ELSE 1 END), 0) AS unpriced
        FROM usage_events WHERE task_id IN (SELECT id FROM family)`,
     ).get(taskId) as { usd: number; unpriced: number };
     return { usd: row.usd, unpriced: row.unpriced };

@@ -96,6 +96,8 @@
   },
   "feedReported": "Reported: {summary}",
   "feedReportedBare": "Reported",
+  "feedRepositoryMoved": "Moved to the {repository} repository",
+  "feedRepositoryRestarted": "Moved to the {repository} repository before its first commit; it starts again there",
   "feedResetRemovalRemoved": "{name} was out of reach when Infinitary was reset. It is back, and what Infinitary set up there is removed.",
   "feedResetRemovalStayed": "{name} stayed out of reach for 30 days after Infinitary was reset. What Infinitary set up there stays until you delete it there.",
   "feedReviewBlocked": "The review could not finish",

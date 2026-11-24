@@ -101,10 +101,32 @@ export const TASK_RELATIONSHIP_RULES = {
 
 /** What a reference's check reads: the task, and what its name resolved to. */
 export type ReferenceCheck = {
-  task: Pick<TaskRecord, "id" | "repoId">;
+  task: Pick<TaskRecord, "id" | "repoId" | "projectId">;
   ref: string;
-  target: Pick<TaskRecord, "id" | "key" | "repoId"> | undefined;
+  target: Pick<TaskRecord, "id" | "key" | "repoId" | "projectId"> | undefined;
+  /** A repository's name within its project, so a refusal names it (`elsewhereWords`). */
+  repositoryName?: (record: Pick<TaskRecord, "projectId" | "repoId">) => string | undefined;
 };
+
+/**
+ * Why a task cannot branch from work in another repository: one of its own
+ * project is named, with its own, since "another project" would be untrue
+ * there (INF-6536 finding 1).
+ */
+export function elsewhereWords(
+  field: string,
+  source: Pick<TaskRecord, "id" | "key" | "repoId" | "projectId">,
+  task: Pick<TaskRecord, "repoId" | "projectId">,
+  repositoryName?: (record: Pick<TaskRecord, "projectId" | "repoId">) => string | undefined,
+): string {
+  const key = source.key || source.id;
+  const theirs = repositoryName?.(source);
+  const own = repositoryName?.(task);
+  if (source.projectId === task.projectId && theirs && own)
+    // i18n-exempt: a tool answer served to the first mate, not shown to a person
+    return `${field} ${key} is in the ${theirs} repository and this task in ${own}; a task branches only from work in its own repository.`;
+  return `${field} ${key} is in another project; a task branches only from work in its own project.`;
+}
 
 const REFERENCE_WORDS: Record<TaskReferenceKind, string> = {
   basis: "basis",
@@ -133,6 +155,6 @@ export function referenceRefusal(
       ? "A task cannot branch from itself."
       : `A task cannot be its own ${kind === "basis" ? "basis" : "earlier attempt"}.`;
   if (rule.scope === "same-repository" && check.target.repoId !== check.task.repoId)
-    return `${field} ${check.target.key || check.target.id} is in another project; a task branches only from work in its own project.`;
+    return elsewhereWords(field, check.target, check.task, check.repositoryName);
   return undefined;
 }

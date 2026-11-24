@@ -93,6 +93,8 @@
   },
   "feedReported": "已回報：{summary}",
   "feedReportedBare": "已回報",
+  "feedRepositoryMoved": "已移到 {repository} 存放庫",
+  "feedRepositoryRestarted": "在第一次提交前已移到 {repository} 存放庫，將在那裡重新開始",
   "feedResetRemovalRemoved": "重設 Infinitary 時無法連線到 {name}。它已恢復連線，Infinitary 在那裡設定的內容已移除。",
   "feedResetRemovalStayed": "重設 Infinitary 後 30 天內一直無法連線到 {name}。Infinitary 在那裡設定的內容會保留，直到你在那裡刪除。",
   "feedReviewBlocked": "審查無法完成",

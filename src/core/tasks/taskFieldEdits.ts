@@ -17,6 +17,7 @@ import type { ProjectStore } from "../storage/projectStore";
 import type { TaskEventActor } from "../storage/taskEventStore";
 import type { TaskRecord, TaskStore } from "../storage/taskRecords";
 import type { TaskReferenceKind } from "../storage/taskReferenceStore";
+import { repositoryName } from "./repositoryMove";
 import { TaskGraphRefusal } from "./taskGraph";
 import { referenceRefusal } from "./taskRelationships";
 import type { TaskService, UpdateTaskPatch } from "./taskService";
@@ -25,7 +26,10 @@ import { keyOrId, type TaskWriter, withShapeKey } from "./taskWriter";
 export type TaskFieldEditContext = {
   writer: TaskWriter;
   projects: ProjectStore;
-  service: Pick<TaskService, "moveToProject" | "resolve" | "setParent" | "policiesOf" | "isClosed">;
+  service: Pick<
+    TaskService,
+    "moveToProject" | "moveWithinProject" | "resolve" | "setParent" | "policiesOf" | "isClosed"
+  >;
 };
 
 /**
@@ -122,11 +126,21 @@ export function updateTaskFields(
       changes.push("required action reopened; previous confirmation kept in history");
       record = writer.mustGet(id);
     }
-    if (patch.project !== undefined) {
-      const project = projects.byKey(patch.project) ?? projects.get(patch.project);
-      if (!project) throw new TaskGraphRefusal(`Unknown project "${patch.project}".`);
+    const project =
+      patch.project !== undefined
+        ? (projects.byKey(patch.project) ?? projects.get(patch.project))
+        : undefined;
+    if (patch.project !== undefined && !project)
+      throw new TaskGraphRefusal(`Unknown project "${patch.project}".`);
+    if (project && project.id !== record.projectId) {
       const moved = service.moveToProject(id, project.id, actor, patch.repository);
       if (moved.key !== record.key) changes.push(`moved to ${project.name} as ${moved.key}`);
+      record = writer.mustGet(id);
+    } else if (patch.repository !== undefined) {
+      // Another repository of its own project: its key stays.
+      const moved = service.moveWithinProject(id, patch.repository, actor);
+      // i18n-exempt: a tool answer served to the first mate, not shown to a person
+      if (moved) changes.push(`moved to the ${moved} repository`);
       record = writer.mustGet(id);
     }
     if (patch.parent !== undefined) {
@@ -505,7 +519,12 @@ export function recordReference(
   actor: TaskEventActor,
   at: number,
 ): void {
-  const refused = referenceRefusal(kind, { task, ref, target });
+  const refused = referenceRefusal(kind, {
+    task,
+    ref,
+    target,
+    repositoryName: (record) => repositoryName({ writer }, record.projectId, record.repoId),
+  });
   if (refused) throw new TaskGraphRefusal(refused);
   writer.references.set(task.id, {
     kind,

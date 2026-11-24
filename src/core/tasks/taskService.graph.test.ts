@@ -713,6 +713,158 @@ describe("the task graph (task-system P2)", () => {
       expect(tasks.get("solo")?.key).toMatch(/^NIA-/);
     });
 
+    // INF-6536 finding 1: a repository named alone, within the task's own
+    // project, was dropped without a word.
+    it("moves open work to another repository of its own project, keeping its key, and names both repositories when a branch_from crosses them", () => {
+      const { db, tasks, work } = setup();
+      seedProject(db, {
+        id: "r-app",
+        name: "harbor-ledger",
+        path: "/fleet/harbor-ledger",
+        key: "HBL",
+        addedAt: 2,
+      });
+      seedProject(db, {
+        id: "r-api",
+        name: "harbor-ledger-api",
+        path: "/fleet/harbor-ledger-api",
+        project: "proj-r-app",
+        addedAt: 3,
+      });
+      work("relay", { repoId: "r-app" });
+      work("relay-part", { repoId: "r-app", parentId: "relay" });
+      const key = tasks.get("relay")?.key;
+
+      expect(tasks.updateFields("relay", { repository: "harbor-ledger-api" }, "firstmate")).toEqual(
+        ["moved to the harbor-ledger-api repository"],
+      );
+      expect(tasks.get("relay")).toMatchObject({ key, repoId: "r-api" });
+      expect(tasks.get("relay-part")?.repoId).toBe("r-api");
+
+      seedTask(tasks, {
+        id: "started",
+        title: "started",
+        status: "running",
+        worktreeDir: "/wt",
+        repoId: "r-app",
+      });
+      expect(() =>
+        tasks.updateFields("started", { repository: "harbor-ledger-api" }, "firstmate"),
+      ).toThrow(
+        `Refused: ${tasks.get("started")?.key} has started, so it moves to the harbor-ledger-api repository only while it has no commits of its own: its crewmate stops and it starts again there.`,
+      );
+
+      work("caller", { repoId: "r-app" });
+      expect(() =>
+        tasks.updateFields("caller", { branchFrom: tasks.get("relay")?.key }, "firstmate"),
+      ).toThrow(
+        `branch_from ${key} is in the harbor-ledger-api repository and this task in harbor-ledger; a task branches only from work in its own repository.`,
+      );
+    });
+
+    // A task branches only from work in its own repository, so a move that
+    // splits a branch_from would refuse that task's next start.
+    it("refuses a move within the project that would land a task apart from the work it branches from, or from open work branching from it", () => {
+      const { db, tasks, work } = setup();
+      seedProject(db, {
+        id: "r-app",
+        name: "harbor-ledger",
+        path: "/fleet/harbor-ledger",
+        key: "HBL",
+        addedAt: 2,
+      });
+      seedProject(db, {
+        id: "r-api",
+        name: "harbor-ledger-api",
+        path: "/fleet/harbor-ledger-api",
+        project: "proj-r-app",
+        addedAt: 3,
+      });
+      work("schema", { repoId: "r-app" });
+      work("migrate", { repoId: "r-app" });
+      tasks.updateFields("migrate", { branchFrom: "HBL-1" }, "firstmate");
+      const before = [tasks.get("schema"), tasks.get("migrate")];
+
+      expect(() =>
+        tasks.updateFields("schema", { repository: "harbor-ledger-api" }, "firstmate"),
+      ).toThrow(
+        "Refused: HBL-2 branches from HBL-1 and stays in the harbor-ledger repository, so HBL-1 cannot move to the harbor-ledger-api repository; clear or move HBL-2's branch_from first.",
+      );
+      expect(() =>
+        tasks.updateFields("migrate", { repository: "harbor-ledger-api" }, "firstmate"),
+      ).toThrow(
+        "Refused: HBL-2 branches from HBL-1, which stays in the harbor-ledger repository, so HBL-2 cannot move to the harbor-ledger-api repository; clear its branch_from first.",
+      );
+      expect([tasks.get("schema"), tasks.get("migrate")]).toEqual(before);
+    });
+
+    // INF-6536 finding 1's review: a started task restarting in another
+    // repository keeps the captain's backlog, and the remote rule of a move.
+    it("restarts started work in another repository back in line, or in the backlog when the backlog held it, and refuses a repository with no remote for a pull request", () => {
+      const db = openInMemoryDatabase();
+      seedProject(db, {
+        id: "r-app",
+        name: "harbor-ledger",
+        path: "/fleet/harbor-ledger",
+        origin: "https://github.com/harbor/harbor-ledger.git",
+        key: "HBL",
+        addedAt: 1,
+      });
+      seedProject(db, {
+        id: "r-api",
+        name: "harbor-ledger-api",
+        path: "/fleet/harbor-ledger-api",
+        origin: "https://github.com/harbor/harbor-ledger-api.git",
+        project: "proj-r-app",
+        addedAt: 2,
+      });
+      seedProject(db, {
+        id: "r-notes",
+        name: "harbor-notes",
+        path: "/fleet/harbor-notes",
+        setupKind: "init",
+        project: "proj-r-app",
+        addedAt: 3,
+      });
+      const tasks = new TaskService({ db, repos: new RepoRegistry(db, "/fleet"), strict: true });
+      const start = (id: string, extra: Partial<Parameters<TaskService["create"]>[0]> = {}) => {
+        tasks.create({
+          id,
+          title: id,
+          prompt: "p",
+          repoId: "r-app",
+          startPolicy: "on-request",
+          ...extra,
+        });
+        expect(tasks.starts.claimForDispatch(id)).toBe(true);
+      };
+      const api = { id: "r-api", name: "harbor-ledger-api" };
+
+      start("running");
+      tasks.restartInRepository("running", api, "firstmate");
+      expect(tasks.get("running")).toMatchObject({
+        status: "open",
+        repoId: "r-api",
+        startPolicy: "when-ready",
+      });
+
+      start("parked");
+      tasks.starts.setQueued("parked", "unqueue-task", { actor: "captain" });
+      tasks.restartInRepository("parked", api, "firstmate");
+      expect(tasks.get("parked")).toMatchObject({
+        status: "open",
+        repoId: "r-api",
+        startPolicy: "on-request",
+        backlogSince: null,
+      });
+
+      start("ship", { shape: { kind: "implement", delivery_ask: "direct-pr" } });
+      expect(tasks.repositoryMoveRefusal("ship", { id: "r-notes", name: "harbor-notes" })).toBe(
+        "Refused: HBL-3 asks to ship as a pull request (direct-pr), and harbor-notes has no remote to open one on, so HBL-3 cannot move there. Configure a remote for harbor-notes, or set HBL-3's delivery to local-only first.",
+      );
+      expect(tasks.repositoryMoveRefusal("ship", api)).toBeUndefined();
+    });
+
     // INF-61's R1: INF-5, moved to Scratch and then to notes, still opened
     // its pull request in infinitary.
     it("a task moved through Scratch into another project takes that project's repository, and the parts that followed it", () => {

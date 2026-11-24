@@ -190,9 +190,9 @@ export const usageSummarySchema = z.object({
 export type UsageSummary = z.infer<typeof usageSummarySchema>;
 
 /**
- * Where Claude work is also reported, when a company's Claude Code setup in
- * the person's own settings or shell names a collector: its host, or null
- * (docs/usage.md, "A company's Claude Code setup").
+ * Where Claude work is also reported: the host of an administrator's managed
+ * collector, otherwise of a company's Claude Code setup in the person's own
+ * settings or shell, or null (docs/usage.md, "A company's Claude Code setup").
  */
 export const usageReportingSchema = z.object({ host: z.string().nullable() });
 export type UsageReporting = z.infer<typeof usageReportingSchema>;

@@ -86,7 +86,7 @@ export function UsageTab() {
     useShellStore.getState().refreshAppearance();
   }, []);
 
-  // A company's Claude Code setup the receiver passes Claude work on to (docs/usage.md).
+  // An administrator's managed collector, or the company setup the receiver passes Claude work on to (docs/usage.md).
   const [reporting, setReporting] = useState<string | null>(null);
   useEffect(
     () =>

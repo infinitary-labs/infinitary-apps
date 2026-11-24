@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "crew-turns-split",
+      "reason": "Internal: the code that sorts a crewmate's report moves out of the long crew turns file into its own file with every answer unchanged; nothing a person sees changes."
+    }
+  ]
+}

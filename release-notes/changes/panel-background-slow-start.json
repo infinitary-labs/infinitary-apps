@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "panel-background-slow-start",
+      "kind": "fix",
+      "title": "A panel's background work is no longer stopped while your computer is still starting it",
+      "body": "On a computer short of memory, a panel's background work could be stopped as not responding before it had even started, so the panel asked you to press Retry. It now has time to start, and background work that stops responding once it runs is still stopped as before.",
+      "area": "other",
+      "noPicture": "Nothing on screen changes: a panel that used to be stopped by mistake now simply works.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

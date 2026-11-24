@@ -304,9 +304,11 @@ When the files are fixed, the next reconcile accepts the file, the line goes and
 Nothing starts an update without the captain's press, and no notice is sent after an app update: the line on the panel is the notice.
 
 **The watch.**
-The process beats every `PANEL_BEAT_MS` (250 ms) from the event loop the panel's code runs on, and starts beating before it imports the module.
+The process beats every `PANEL_BEAT_MS` (250 ms) from the event loop the panel's code runs on, and starts beating before it imports the module; it sends everything else from that loop too.
 So a module, action or task that never gives its loop back - a loop, a native wait - stops the beats.
 A loop silent for `PANEL_SILENCE_MS` (10 s, forty missed beats) is stopped; a slow `await` keeps beating and never is.
+That deadline counts from the first thing the process sends: until then it is still starting, which runs none of the panel's code and on a machine short of memory can take longer than the deadline.
+A process that sends nothing within `PANEL_START_MS` (a minute) of its spawn is stopped the same way.
 A gap the owner's own check also slept through - the computer asleep, or the app's own loop held - blames no panel: the watch starts over.
 The deadline is not the freeze recorder's threshold (`docs/freeze-recorder.md`): that one measures the app's own main thread, this one a panel's own process.
 

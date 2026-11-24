@@ -1124,6 +1124,9 @@
 "handoverStoppingTitle" = "جارٍ إيقاف العمل في الخلفية لـ %1$@";
 "handoverWontStopText" = "طلب %1$@ منه أن يحفظ ويتوقف، ولا يزال يُبقي عملك المحفوظ مفتوحًا. يُنهيه «إيقافه الآن» دون انتظار. لم يتغير شيء.";
 "handoverWontStopTitle" = "لم يتوقف %1$@";
+"integrationsGoogleExchangeOperation" = "إكمال تسجيل الدخول إلى Google باستخدام عميل Google الخاص بك";
+"integrationsGoogleExchangeReason" = "يكمل Infinitary تسجيل دخولك إلى Google باستخدام عميل Google الخاص بك.";
+"integrationsGoogleExchangeResult" = "تسجيل دخول جديد إلى Google، محفوظ في الأسرار وذاكرة التطبيق";
 "integrationsMcpAdd" = "إضافة %1$@";
 "integrationsMcpNeedsSignIn" = "يحتاج إلى تسجيل الدخول مجددًا";
 "integrationsMcpOfferBody" = "يطلب %1$@ تسجيل الدخول، وتُجريه في متصفحك. بعدها تسألك أدواته في بطاقة حتى تختار «مسموح دائمًا».";

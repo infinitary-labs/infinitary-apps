@@ -1,4 +1,7 @@
 {
+  "integrationsGoogleExchangeOperation": "내 Google 클라이언트로 Google 로그인을 마침",
+  "integrationsGoogleExchangeReason": "Infinitary가 내 Google 클라이언트로 Google 로그인을 마쳐요.",
+  "integrationsGoogleExchangeResult": "새 Google 로그인, 비밀 정보와 앱 메모리에 보관",
   "integrationsMcpAdd": "{name} 추가",
   "integrationsMcpNeedsSignIn": "다시 로그인해야 함",
   "integrationsMcpOfferBody": "{name}은(는) 로그인을 요청해요. 로그인은 브라우저에서 해요. 그 뒤 도구는 “항상 허용”을 고를 때까지 카드로 물어봐요.",

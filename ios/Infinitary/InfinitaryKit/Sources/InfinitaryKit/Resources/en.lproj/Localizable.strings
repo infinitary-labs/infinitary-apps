@@ -1124,6 +1124,9 @@
 "handoverStoppingTitle" = "Stopping %1$@'s background work";
 "handoverWontStopText" = "%1$@ asked it to save and stop, and it still holds your saved work. Stop it now ends it without waiting. Nothing has been changed.";
 "handoverWontStopTitle" = "%1$@ has not stopped";
+"integrationsGoogleExchangeOperation" = "Finish the Google sign-in with your own Google client";
+"integrationsGoogleExchangeReason" = "Infinitary finishes your Google sign-in with your own Google client.";
+"integrationsGoogleExchangeResult" = "A new Google sign-in, kept in Secrets and the app's memory";
 "integrationsMcpAdd" = "Add %1$@";
 "integrationsMcpNeedsSignIn" = "needs a sign-in again";
 "integrationsMcpOfferBody" = "%1$@ asks for a sign-in, which you make in your browser. Its tools then ask you on a card until you choose Always allow.";

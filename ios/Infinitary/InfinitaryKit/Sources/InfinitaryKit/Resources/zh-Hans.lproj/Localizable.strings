@@ -1124,6 +1124,9 @@
 "handoverStoppingTitle" = "正在停止 %1$@ 的后台工作";
 "handoverWontStopText" = "%1$@ 已请它保存并停止，但它仍占用着你保存的工作。“立即停止”会直接结束它，不再等待。没有做任何更改。";
 "handoverWontStopTitle" = "%1$@ 没有停止";
+"integrationsGoogleExchangeOperation" = "用你自己的 Google 客户端完成 Google 登录";
+"integrationsGoogleExchangeReason" = "Infinitary 会用你自己的 Google 客户端完成你的 Google 登录。";
+"integrationsGoogleExchangeResult" = "新的 Google 登录，保存在机密和应用的内存中";
 "integrationsMcpAdd" = "添加 %1$@";
 "integrationsMcpNeedsSignIn" = "需要重新登录";
 "integrationsMcpOfferBody" = "%1$@ 需要登录，你在浏览器中完成。之后它的工具会在卡片上询问你，直到你选择“始终允许”。";

@@ -1124,6 +1124,9 @@
 "handoverStoppingTitle" = "Parando o trabalho em segundo plano do %1$@";
 "handoverWontStopText" = "O %1$@ pediu que ele salvasse e parasse, e ele ainda mantém seu trabalho salvo aberto. Parar agora o encerra sem esperar. Nada foi alterado.";
 "handoverWontStopTitle" = "O %1$@ não parou";
+"integrationsGoogleExchangeOperation" = "Concluir o login no Google com seu próprio cliente do Google";
+"integrationsGoogleExchangeReason" = "O Infinitary conclui seu login no Google com seu próprio cliente do Google.";
+"integrationsGoogleExchangeResult" = "Um novo login no Google, guardado em Segredos e na memória do app";
 "integrationsMcpAdd" = "Adicionar %1$@";
 "integrationsMcpNeedsSignIn" = "precisa fazer login de novo";
 "integrationsMcpOfferBody" = "%1$@ pede um login, que você faz no seu navegador. Depois, as ferramentas dele perguntam a você em um cartão até você escolher “Sempre permitida”.";

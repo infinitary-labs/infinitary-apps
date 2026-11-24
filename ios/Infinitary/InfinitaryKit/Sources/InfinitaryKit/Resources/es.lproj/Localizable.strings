@@ -1124,6 +1124,9 @@
 "handoverStoppingTitle" = "Deteniendo el trabajo en segundo plano de %1$@";
 "handoverWontStopText" = "%1$@ le pidió que guardara y se detuviera, y todavía tiene abierto tu trabajo guardado. Detenerlo ahora lo cierra sin esperar. No se ha cambiado nada.";
 "handoverWontStopTitle" = "%1$@ no se ha detenido";
+"integrationsGoogleExchangeOperation" = "Completar el inicio de sesión en Google con tu propio cliente de Google";
+"integrationsGoogleExchangeReason" = "Infinitary completa tu inicio de sesión en Google con tu propio cliente de Google.";
+"integrationsGoogleExchangeResult" = "Un nuevo inicio de sesión en Google, guardado en Secretos y en la memoria de la app";
 "integrationsMcpAdd" = "Añadir %1$@";
 "integrationsMcpNeedsSignIn" = "necesita volver a iniciar sesión";
 "integrationsMcpOfferBody" = "%1$@ pide iniciar sesión, lo que haces en tu navegador. Después, sus herramientas te preguntan en una tarjeta hasta que eliges «Siempre permitida».";

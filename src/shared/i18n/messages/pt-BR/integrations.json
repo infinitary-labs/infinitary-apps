@@ -1,4 +1,7 @@
 {
+  "integrationsGoogleExchangeOperation": "Concluir o login no Google com seu próprio cliente do Google",
+  "integrationsGoogleExchangeReason": "O Infinitary conclui seu login no Google com seu próprio cliente do Google.",
+  "integrationsGoogleExchangeResult": "Um novo login no Google, guardado em Segredos e na memória do app",
   "integrationsMcpAdd": "Adicionar {name}",
   "integrationsMcpNeedsSignIn": "precisa fazer login de novo",
   "integrationsMcpOfferBody": "{name} pede um login, que você faz no seu navegador. Depois, as ferramentas dele perguntam a você em um cartão até você escolher “Sempre permitida”.",

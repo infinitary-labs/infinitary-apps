@@ -1124,6 +1124,9 @@
 "handoverStoppingTitle" = "Arrêt du travail en arrière-plan de %1$@";
 "handoverWontStopText" = "%1$@ lui a demandé d’enregistrer et de s’arrêter, et il garde encore votre travail enregistré ouvert. L’arrêter maintenant le ferme sans attendre. Rien n’a été modifié.";
 "handoverWontStopTitle" = "%1$@ ne s’est pas arrêté";
+"integrationsGoogleExchangeOperation" = "Terminer la connexion à Google avec votre propre client Google";
+"integrationsGoogleExchangeReason" = "Infinitary termine votre connexion à Google avec votre propre client Google.";
+"integrationsGoogleExchangeResult" = "Une nouvelle connexion à Google, gardée dans Secrets et dans la mémoire de l’app";
 "integrationsMcpAdd" = "Ajouter %1$@";
 "integrationsMcpNeedsSignIn" = "doit se reconnecter";
 "integrationsMcpOfferBody" = "%1$@ demande une connexion, que vous faites dans votre navigateur. Ses outils vous demandent ensuite sur une carte, jusqu’à ce que vous choisissiez « Toujours autorisée ».";

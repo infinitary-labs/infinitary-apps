@@ -1,4 +1,7 @@
 {
+  "integrationsGoogleExchangeOperation": "Terminer la connexion à Google avec votre propre client Google",
+  "integrationsGoogleExchangeReason": "Infinitary termine votre connexion à Google avec votre propre client Google.",
+  "integrationsGoogleExchangeResult": "Une nouvelle connexion à Google, gardée dans Secrets et dans la mémoire de l’app",
   "integrationsMcpAdd": "Ajouter {name}",
   "integrationsMcpNeedsSignIn": "doit se reconnecter",
   "integrationsMcpOfferBody": "{name} demande une connexion, que vous faites dans votre navigateur. Ses outils vous demandent ensuite sur une carte, jusqu’à ce que vous choisissiez « Toujours autorisée ».",

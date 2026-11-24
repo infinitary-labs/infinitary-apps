@@ -230,7 +230,8 @@ A look (`IntegrationsService.look`) answers the changes since a cursor; a cursor
 
 ## Google
 
-Google is one row that signs in once for Gmail and Calendar, asking every permission up front (the captain's q8 on INF-775), as Infinitary's own Google client (q4 on the same task), in `src/core/integrations/providers/google/`.
+Google is one row that signs in once for Gmail and Calendar, asking every permission up front (the captain's q8 on INF-775), in `src/core/integrations/providers/google/`.
+It signs in as the person's own Google client when they keep one, and otherwise as the run's own client (`googleSetup`, Infinitary's in a packaged build; q4 on the same task).
 Its permissions are Gmail's `gmail.modify` and Calendar's `calendar.events`, `calendar.calendarlist.readonly` and `calendar.events.freebusy` (`GOOGLE_SCOPES`, `client.ts`): an installed app cannot add a permission later, and the same sign-in reaches both APIs.
 The calendar list and availability take the narrowest scope Google accepts for `calendarList.list` and `freeBusy.query`; a sign-in an earlier version made with `calendar.readonly` keeps working, since Google accepts that for both calls and the app never rechecks a kept sign-in's permissions.
 Google's device flow does not reach Gmail or Calendar, so the sign-in is the installed-app flow (`signIn.ts`): the app listens on `127.0.0.1` at a port the system picks, opens Google's consent page in the person's browser with PKCE (S256), a state, offline access and consent every time, and trades the code the browser brings back for the sign-in.
@@ -240,6 +241,13 @@ The binding declares its identity, so Google and a saved custom name stay its ow
 A sign-in in which the person unchecked any Gmail or Calendar permission is handed back to Google and kept nowhere.
 The lasting key is a hidden Secrets entry labelled Google sign-in ("Keys"), used only through the `google-sign-in` broker: it puts the key in the `refresh_token` field of one renewal form sent to Google's token address, and hands the answer back to the binding.
 The access key that renewal makes lives only in the app's memory, as each Gmail or Calendar request's bearer; a start renews once.
+The person's own client is its id and the Secrets reference of its secret in `userData/integrations/google-client.json`, 0600 (`GoogleClientStore`), and its secret a second hidden Secrets entry labelled Google client; the binding's `keepClient` is the one writer of both.
+With an own client, the consent page names its id, and the code exchange and every renewal go through the same broker, which puts the secret in the form's `client_secret` field beside the code or the lasting key, so the binding never holds it.
+The exchange's broker use names a one-use id the sign-in in progress holds, never a form a caller wrote.
+A sign-in records the client it was made with (`client` in `google.json`) and renews only as that client; one made with a client the person no longer keeps reads `needs_reauth` without asking Google, and one with no `client` renews as the run's own.
+When Google answers a renewal or exchange with `invalid_client` or `deleted_client` for an own client, its record keeps that refusal and when (`refused`) and the sign-in reads `needs_reauth`; the next sign-in Google accepts clears it.
+When Google names how long the lasting key lasts (`refresh_token_expires_in`, as for a client in Testing), the sign-in records when it ends (`endsAt`).
+A failed or replaced sign-in keeps the client; removing the row forgets it with the sign-in, after the revoke, both Secrets entries included.
 The broker declares the app's own sign-in, so every renewal, and the one that makes a key to revoke with at sign-out, runs without asking: signing in to Google in the app is the consent (INF-4096; the captain: "when the user sign-in to google in infinitary, that sign-in is already the consent").
 Who it is signed in as, what Google granted, when the access runs out, its health and its key's reference are `userData/integrations/google.json`, 0600 (`GoogleSignInStore`).
 An earlier version kept both keys in `userData/integrations/secrets/google/secrets.json`; at start, and again at the next use while Secrets is locked, the lasting key moves into Secrets and the file is removed (`MovedGoogleKeys`): the reference is written first, so an interrupted move repeats onto the same entry.

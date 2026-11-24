@@ -1,4 +1,7 @@
 {
+  "integrationsGoogleExchangeOperation": "Completar el inicio de sesión en Google con tu propio cliente de Google",
+  "integrationsGoogleExchangeReason": "Infinitary completa tu inicio de sesión en Google con tu propio cliente de Google.",
+  "integrationsGoogleExchangeResult": "Un nuevo inicio de sesión en Google, guardado en Secretos y en la memoria de la app",
   "integrationsMcpAdd": "Añadir {name}",
   "integrationsMcpNeedsSignIn": "necesita volver a iniciar sesión",
   "integrationsMcpOfferBody": "{name} pide iniciar sesión, lo que haces en tu navegador. Después, sus herramientas te preguntan en una tarjeta hasta que eliges «Siempre permitida».",

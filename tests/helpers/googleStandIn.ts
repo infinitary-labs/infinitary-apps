@@ -23,6 +23,9 @@ import { calendarStandIn } from "./calendarStandIn";
 
 export const STAND_IN_CLIENT_ID = "1084716423951-k2v7o3lq.apps.googleusercontent.com";
 export const STAND_IN_CLIENT_SECRET = "GOCSPX-stand-in-desktop-secret";
+/** A person's own Desktop app client, made in their own Google Cloud project. */
+export const OWN_CLIENT_ID = "582093176224-p8d0vq3hr5k1n6e2.apps.googleusercontent.com";
+export const OWN_CLIENT_SECRET = "GOCSPX-own-desktop-secret-7Qd2";
 
 export const STAND_IN_ACCOUNT = "ada.park@gmail.com";
 
@@ -128,9 +131,13 @@ export async function startGoogleStandIn() {
   let historyId = 4_812_331;
   /** Gmail keeps history from this id on; an older start answers 404. */
   let keptFrom = historyId;
-  const codes = new Map<string, { challenge: string; redirect: string; scopes: string[] }>();
+  const codes = new Map<
+    string,
+    { challenge: string; redirect: string; scopes: string[]; client: string }
+  >();
   const live = new Map<string, string>(); // access key -> refresh key
   const grants = new Map<string, string[]>(); // refresh key -> scopes
+  const grantedTo = new Map<string, string>(); // refresh key -> the client it was issued to
   const knobs = {
     /** What the person does on the consent page. */
     consent: { grant: [...SCOPES], deny: false },
@@ -143,6 +150,18 @@ export async function startGoogleStandIn() {
     afterTaking: [] as ("drop" | 500)[],
     /** The Gmail address the person signs in as on the consent page. */
     account: STAND_IN_ACCOUNT,
+    /** The clients Google knows, by id, with their secrets: Infinitary's and the person's own. */
+    clients: new Map([
+      [STAND_IN_CLIENT_ID, STAND_IN_CLIENT_SECRET],
+      [OWN_CLIENT_ID, OWN_CLIENT_SECRET],
+    ]),
+    /** Clients their owner deleted in Google Cloud: Google answers `deleted_client`. */
+    deleted: new Set<string>(),
+    /**
+     * Seconds a new sign-in's lasting key lasts, as Google says for a client
+     * in Testing (`refresh_token_expires_in`); undefined, it names none.
+     */
+    lasts: 604_799 as number | undefined,
   };
 
   const issue = (refresh: string) => {
@@ -361,7 +380,7 @@ export async function startGoogleStandIn() {
       const params = url.searchParams;
       const redirect = params.get("redirect_uri") ?? "";
       if (
-        params.get("client_id") !== STAND_IN_CLIENT_ID ||
+        !knobs.clients.has(params.get("client_id") ?? "") ||
         params.get("response_type") !== "code" ||
         params.get("code_challenge_method") !== "S256" ||
         !/^http:\/\/127\.0\.0\.1:\d+$/.test(redirect)
@@ -377,7 +396,12 @@ export async function startGoogleStandIn() {
         const asked = (params.get("scope") ?? "").split(" ");
         const scopes = asked.filter((scope) => knobs.consent.grant.includes(scope));
         const code = `4/0AanRRrt${randomBytes(18).toString("base64url")}`;
-        codes.set(code, { challenge: params.get("code_challenge") ?? "", redirect, scopes });
+        codes.set(code, {
+          challenge: params.get("code_challenge") ?? "",
+          redirect,
+          scopes,
+          client: params.get("client_id") ?? "",
+        });
         back.searchParams.set("code", code);
         back.searchParams.set("scope", scopes.join(" "));
       }
@@ -388,7 +412,12 @@ export async function startGoogleStandIn() {
     if (request.method === "POST" && url.pathname === "/token") {
       const form = Object.fromEntries(new URLSearchParams(body));
       tokens.push(form);
-      if (form.client_id !== STAND_IN_CLIENT_ID || form.client_secret !== STAND_IN_CLIENT_SECRET)
+      if (knobs.deleted.has(form.client_id ?? ""))
+        return json(response, 401, {
+          error: "deleted_client",
+          error_description: "The OAuth client was deleted.",
+        });
+      if (!form.client_id || knobs.clients.get(form.client_id) !== form.client_secret)
         return json(response, 401, {
           error: "invalid_client",
           error_description: "The OAuth client was not found.",
@@ -399,17 +428,23 @@ export async function startGoogleStandIn() {
         const challenge = createHash("sha256")
           .update(form.code_verifier ?? "")
           .digest("base64url");
-        if (!issued || issued.challenge !== challenge || issued.redirect !== form.redirect_uri)
+        if (
+          !issued ||
+          issued.challenge !== challenge ||
+          issued.redirect !== form.redirect_uri ||
+          issued.client !== form.client_id
+        )
           return json(response, 400, { error: "invalid_grant", error_description: "Bad Request" });
         const refresh = `1//0g${randomBytes(30).toString("base64url")}`;
         grants.set(refresh, issued.scopes);
+        grantedTo.set(refresh, issued.client);
         return json(response, 200, {
           access_token: issue(refresh),
           expires_in: 3599,
           refresh_token: refresh,
           scope: issued.scopes.join(" "),
           token_type: "Bearer",
-          refresh_token_expires_in: 604799,
+          ...(knobs.lasts !== undefined ? { refresh_token_expires_in: knobs.lasts } : {}),
         });
       }
       if (form.grant_type === "refresh_token") {
@@ -418,6 +453,12 @@ export async function startGoogleStandIn() {
           return json(response, 400, {
             error: "invalid_grant",
             error_description: "Token has been expired or revoked.",
+          });
+        // A lasting key renews only as the client Google issued it to.
+        if (grantedTo.get(form.refresh_token ?? "") !== form.client_id)
+          return json(response, 401, {
+            error: "unauthorized_client",
+            error_description: "Unauthorized",
           });
         return json(response, 200, {
           access_token: issue(form.refresh_token ?? ""),
@@ -451,12 +492,13 @@ export async function startGoogleStandIn() {
     sent,
     knobs,
     /**
-     * A sign-in an earlier version made, granting these permissions: its
-     * keys, as that version kept them.
+     * A sign-in an earlier version or run made as this client, granting these
+     * permissions: its keys, as that version kept them.
      */
-    grantEarlier(scopes: string[]) {
+    grantEarlier(scopes: string[], client = STAND_IN_CLIENT_ID) {
       const refresh = `1//0g${randomBytes(30).toString("base64url")}`;
       grants.set(refresh, scopes);
+      grantedTo.set(refresh, client);
       return { access: issue(refresh), refresh };
     },
     /** The keys Google issued and has not revoked; a test asserts none reaches a reader. */

@@ -39195,6 +39195,87 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `${from} has not stopped`;
   }
+  function integrationsGoogleExchangeOperation() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إكمال تسجيل الدخول إلى Google باستخدام عميل Google الخاص بك`;
+      case "de":
+        return `Die Anmeldung bei Google mit deinem eigenen Google-Client abschließen`;
+      case "es":
+        return `Completar el inicio de sesión en Google con tu propio cliente de Google`;
+      case "fr":
+        return `Terminer la connexion à Google avec votre propre client Google`;
+      case "ja":
+        return `自分の Google クライアントで Google へのサインインを完了する`;
+      case "ko":
+        return `내 Google 클라이언트로 Google 로그인을 마침`;
+      case "pt-BR":
+        return `Concluir o login no Google com seu próprio cliente do Google`;
+      case "zh-Hans":
+        return `用你自己的 Google 客户端完成 Google 登录`;
+      case "zh-Hant":
+        return `用你自己的 Google 用戶端完成 Google 登入`;
+      case "en-XA":
+        return `[Ƒîñîšĥ ţĥé Ĝööĝļé šîĝñ-îñ ŵîţĥ ýöûŕ öŵñ Ĝööĝļé çļîéñţ ~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Finish the Google sign-in with your own Google client‬`;
+    }
+    return `Finish the Google sign-in with your own Google client`;
+  }
+  function integrationsGoogleExchangeReason() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يكمل Infinitary تسجيل دخولك إلى Google باستخدام عميل Google الخاص بك.`;
+      case "de":
+        return `Infinitary schließt deine Anmeldung bei Google mit deinem eigenen Google-Client ab.`;
+      case "es":
+        return `Infinitary completa tu inicio de sesión en Google con tu propio cliente de Google.`;
+      case "fr":
+        return `Infinitary termine votre connexion à Google avec votre propre client Google.`;
+      case "ja":
+        return `Infinitary が自分の Google クライアントで Google へのサインインを完了します。`;
+      case "ko":
+        return `Infinitary가 내 Google 클라이언트로 Google 로그인을 마쳐요.`;
+      case "pt-BR":
+        return `O Infinitary conclui seu login no Google com seu próprio cliente do Google.`;
+      case "zh-Hans":
+        return `Infinitary 会用你自己的 Google 客户端完成你的 Google 登录。`;
+      case "zh-Hant":
+        return `Infinitary 會用你自己的 Google 用戶端完成你的 Google 登入。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý ƒîñîšĥéš ýöûŕ Ĝööĝļé šîĝñ-îñ ŵîţĥ ýöûŕ öŵñ Ĝööĝļé çļîéñţ. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary finishes your Google sign-in with your own Google client.‬`;
+    }
+    return `Infinitary finishes your Google sign-in with your own Google client.`;
+  }
+  function integrationsGoogleExchangeResult() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تسجيل دخول جديد إلى Google، محفوظ في الأسرار وذاكرة التطبيق`;
+      case "de":
+        return `Eine neue Anmeldung bei Google, in Geheimnisse und im Speicher der App`;
+      case "es":
+        return `Un nuevo inicio de sesión en Google, guardado en Secretos y en la memoria de la app`;
+      case "fr":
+        return `Une nouvelle connexion à Google, gardée dans Secrets et dans la mémoire de l’app`;
+      case "ja":
+        return `Google への新しいサインイン。シークレットとアプリのメモリに保持します`;
+      case "ko":
+        return `새 Google 로그인, 비밀 정보와 앱 메모리에 보관`;
+      case "pt-BR":
+        return `Um novo login no Google, guardado em Segredos e na memória do app`;
+      case "zh-Hans":
+        return `新的 Google 登录，保存在机密和应用的内存中`;
+      case "zh-Hant":
+        return `新的 Google 登入，保存在機密和 App 的記憶體中`;
+      case "en-XA":
+        return `[Å ñéŵ Ĝööĝļé šîĝñ-îñ, ķéþţ îñ Šéçŕéţš áñð ţĥé áþþ'š ɱéɱöŕý ~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮A new Google sign-in, kept in Secrets and the app's memory‬`;
+    }
+    return `A new Google sign-in, kept in Secrets and the app's memory`;
+  }
   function integrationsMcpAdd(input2) {
     const name = input2.name;
     switch (currentLanguage()) {
@@ -106276,6 +106357,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     handoverStoppingTitle,
     handoverWontStopText,
     handoverWontStopTitle,
+    integrationsGoogleExchangeOperation,
+    integrationsGoogleExchangeReason,
+    integrationsGoogleExchangeResult,
     integrationsMcpAdd,
     integrationsMcpNeedsSignIn,
     integrationsMcpOfferBody,
@@ -109644,6 +109728,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "handoverStoppingTitle": ["from"],
     "handoverWontStopText": ["to"],
     "handoverWontStopTitle": ["from"],
+    "integrationsGoogleExchangeOperation": [],
+    "integrationsGoogleExchangeReason": [],
+    "integrationsGoogleExchangeResult": [],
     "integrationsMcpAdd": ["name"],
     "integrationsMcpNeedsSignIn": [],
     "integrationsMcpOfferBody": ["name"],

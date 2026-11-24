@@ -1124,6 +1124,9 @@
 "handoverStoppingTitle" = "Die Hintergrundarbeit von %1$@ wird gestoppt";
 "handoverWontStopText" = "%1$@ hat es gebeten, zu speichern und zu stoppen, und es hält deine gespeicherte Arbeit noch. Jetzt stoppen beendet es, ohne zu warten. Es wurde nichts geändert.";
 "handoverWontStopTitle" = "%1$@ hat nicht gestoppt";
+"integrationsGoogleExchangeOperation" = "Die Anmeldung bei Google mit deinem eigenen Google-Client abschließen";
+"integrationsGoogleExchangeReason" = "Infinitary schließt deine Anmeldung bei Google mit deinem eigenen Google-Client ab.";
+"integrationsGoogleExchangeResult" = "Eine neue Anmeldung bei Google, in Geheimnisse und im Speicher der App";
 "integrationsMcpAdd" = "%1$@ hinzufügen";
 "integrationsMcpNeedsSignIn" = "muss neu angemeldet werden";
 "integrationsMcpOfferBody" = "%1$@ verlangt eine Anmeldung, die du in deinem Browser machst. Seine Werkzeuge fragen dich danach auf einer Karte, bis du „Immer erlaubt“ wählst.";

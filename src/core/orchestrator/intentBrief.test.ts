@@ -407,6 +407,11 @@ describe("renderReviewBrief (delivery rigor phase 2, review-before-PR)", () => {
     expect(brief).toContain(
       "ask-user: a finding where every way gives something up under some heading; one whose only winning fix is medium or larger",
     );
+    // INF-6552's approved plan: a reviewer read a test rule shortened where it
+    // is repeated onto a check the change itself added, and asked the captain.
+    expect(brief).toContain(
+      "A project rule makes a finding ask-user only when its sentence, read on the page that owns it, names this very case; quote that sentence in the finding.",
+    );
     // INF-6293: what a heading is has one home, the card rules' tradeoff
     // table, which every author reads; the review brief points there.
     expect(brief).toContain(

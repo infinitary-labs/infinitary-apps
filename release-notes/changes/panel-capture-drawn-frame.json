@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "panel-capture-drawn-frame",
+      "kind": "fix",
+      "title": "A crewmate building your panel no longer gets a blank picture of it",
+      "body": "While a crewmate builds or changes one of your panels, it takes a picture of the panel in the dark and light themes to check its work. Now and then one of those pictures came out as a plain background with nothing drawn on it, so the crewmate saw a broken panel that was not broken. The picture now waits for the panel to be drawn before it is taken.",
+      "area": "crewmates",
+      "noPicture": "The panel looks the same; only the picture the crewmate takes of it changed, from sometimes blank to always drawn.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1080,18 +1080,21 @@ export function renderReviewedPlanSection(
   builderKey: string,
   facts: Pick<BasisBriefFacts, "key" | "title" | "cardFile" | "choice" | "answers">,
 ): string {
+  // i18n-exempt: served to the reviewer crewmate in its brief, stays English
   const lines = [
     `${builderKey} is built on the approved plan ${facts.key} "${facts.title}": a finding it answers for this very case is settled. Read it with tasks, key ${facts.key}, when a finding turns on it.`,
+    ...(facts.cardFile
+      ? [
+          "",
+          "The plan's card, as the captain read it, is saved whole in this file on this machine:",
+          `- ${facts.cardFile}`,
+        ]
+      : []),
+    ...(facts.choice ? ["", `The captain closed it by choosing "${facts.choice}".`] : []),
+    ...(facts.answers?.length
+      ? ["", "The captain's latest submitted settings/answers on it:", ...facts.answers]
+      : []),
   ];
-  if (facts.cardFile)
-    lines.push(
-      "",
-      "The plan's card, as the captain read it, is saved whole in this file on this machine:",
-      `- ${facts.cardFile}`,
-    );
-  if (facts.choice) lines.push("", `The captain closed it by choosing "${facts.choice}".`);
-  if (facts.answers?.length)
-    lines.push("", "The captain's latest submitted settings/answers on it:", ...facts.answers);
   if (lines.some((line) => holdsReaderData(line)))
     lines.push("", fencedListReminder(READER_DATA_LABEL));
   return lines.join("\n");

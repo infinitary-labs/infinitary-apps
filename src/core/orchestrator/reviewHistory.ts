@@ -251,6 +251,7 @@ function historyLine(entry: ReviewHistoryEntry): string {
       ].join("\n");
     }
     case "answer":
+      // i18n-exempt: served to the reviewer and the first mate, stays English
       return [
         `- The captain chose ${JSON.stringify(entry.action)} on ${entry.plan ? `the approved plan ${entry.plan}'s card` : "card"} ${JSON.stringify(entry.title)} (${entry.card})${entry.answers.length === 0 ? "." : ", answering:"}`,
         ...cardAnswerLines(entry.answers).map((line) => `  ${line}`),

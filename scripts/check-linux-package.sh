@@ -25,7 +25,12 @@
 # so Chromium can make its sandbox's namespaces there, and the runner lifts
 # Ubuntu's restriction on user namespaces for it, as Fedora, Arch and NixOS
 # have none; ubuntu-host keeps that restriction and the package's own
-# AppArmor profile. The window is the runner's virtual screen, DISPLAY.
+# AppArmor profile. It shares the runner's shared memory, as an app shares its
+# computer's: Chromium keeps the window's frames and pictures in /dev/shm, and
+# the journey needs nearly 58 MiB there, within a few MiB of Docker's own
+# 64 MiB, where a copy that finds no room makes the browser stop the GPU
+# process and the screenshot fail. The window is the runner's virtual screen,
+# DISPLAY.
 # Environment: IMAGE, NIXPKGS, VERSION (the version the app must report),
 # DISPLAY.
 set -euo pipefail
@@ -86,7 +91,7 @@ journey_in_box() {
 
 start_box() {
   sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 >/dev/null 2>&1 || true
-  docker run -d --name "$NAME" --privileged --network host \
+  docker run -d --name "$NAME" --privileged --network host --ipc host \
     -v /tmp/.X11-unix:/tmp/.X11-unix \
     -v "$WORKSPACE:$WORKSPACE" -v "$PACKAGES:$PACKAGES:ro" -v "$EVIDENCE:$EVIDENCE" \
     -v "$NODE_DIR:$NODE_DIR:ro" \

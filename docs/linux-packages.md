@@ -156,6 +156,7 @@ The runner itself needs only Xvfb for the virtual screen, which GitHub's hosted 
 
 A container stands in for a clean copy of its system.
 It runs privileged so Chromium can make its sandbox's namespaces, and the runner lifts Ubuntu's restriction on user namespaces for it, as Fedora, Arch and NixOS have none; the Ubuntu machine jobs keep the restriction and the package's own profile.
+It shares the runner's shared memory (`--ipc host`), as an app shares its computer's: Chromium keeps the window's frames and pictures in `/dev/shm`, and the journey needs nearly 58 MiB there, within a few MiB of Docker's own 64 MiB, where a copy that finds no room makes the browser stop the GPU process and the window's screenshot fail.
 
 On each, `tests/installed/installed-package.spec.ts` opens the installed app as its desktop entry does, on the runner's virtual screen with a throwaway HOME, profile and mock model provider (`playwright.installed.config.ts`, never the journey suite's).
 The release's fuses turn off the Node inspector Playwright's Electron launcher needs, so it reaches the window through Chromium's debugging port (`tests/installed/installedApp.ts`).

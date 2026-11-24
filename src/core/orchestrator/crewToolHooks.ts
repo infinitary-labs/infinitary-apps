@@ -148,7 +148,30 @@ export class CrewToolHooks {
             ...this.panelToolHooks(task, personal),
           }),
       ...this.forgeToolHooks(task),
-      ...(reader ? {} : this.taskCommandHooks(task, machine)),
+      ...(reader ? this.readerIntegrationHooks(task) : this.taskCommandHooks(task, machine)),
+    };
+  }
+
+  /**
+   * An unsafe data reader's integrations, as typed tools since it has no
+   * shell for the command: its task's rules, every answer fenced whole, and
+   * every call that waits kept on its one approval card
+   * (`IntegrationsService.forReader`).
+   */
+  private readerIntegrationHooks(
+    task: TaskRuntime,
+  ): Pick<CrewmateSpec, "onIntegrations" | "onUseIntegration"> {
+    const reach = this.core.options.integrations?.forReader?.(task.id);
+    if (!reach) return {};
+    return {
+      onIntegrations: async ({ name }) => {
+        if (name === undefined) return JSON.stringify({ integrations: await reach.list() });
+        const shown = await reach.show(name);
+        return "refused" in shown ? String(shown.text) : JSON.stringify(shown);
+      },
+      onUseIntegration: async (input) =>
+        (await reach.call(input.name, input.action, input.input ?? {}, undefined, input.reason))
+          .text,
     };
   }
 

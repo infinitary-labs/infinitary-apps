@@ -92,7 +92,7 @@ The click takes every listed ask before the first runs; a row unticked is refuse
 One `write-answered` steer names every outcome of that click, the waiting asks an allowance ran included (`also`).
 A task keeps at most `WRITE_ASK_CAP` asks: past it the oldest answered ask drops first, and a waiting ask drops only when none answered is left; that ask leaves its card and its crewmate hears at once that it never ran (`DROPPED_ASK_WHY`).
 Asks from different tasks or to different connections never share a card.
-An unsafe data reader's writes where its project lives join a card of their own the same way, with only Only this time and Not now (`docs/forge.md`, "A reader's writes").
+An unsafe data reader's writes where its project lives, and its kept integration calls, join one card of their own the same way, with only Only this time and Not now (`docs/forge.md`, "A reader's writes"; "A reader's integrations").
 The minus only puts the card aside: the ask and its row remain pending, with no grant, refusal or outcome notification.
 The click takes the ask before running it, and the existing `write-answered` steer delivers the outcome once, including refusals.
 The first mate's explicit button choice closes the card's row and takes its ask in the same transaction; its outcome is a `write-answered` wake on the durable inbox, named once by the ask, and an approved call runs as the first mate's own.
@@ -128,6 +128,20 @@ That pass is how fenced words leave saved conversations: a kind declares how man
 The fence carries what the host knows, where the words came from, and never a verdict on them: no rule reads the words to judge whether they try to steer anyone (`docs/principles.md`).
 An unsafe data reader's `github_read` answers are fenced the same way, under its host's label such as `github-data`, and its own words reach the first mate as `reader-data` (`docs/agents-reach.md`, "An unsafe data reader").
 What the fence does not close, and how each way out stands, is in [Google verification material](google-verification.md#prompt-injection).
+
+## A reader's integrations
+
+An unsafe data reader has no shell, so it lists and calls integrations through two typed tools served to it alone, `integrations` and `use_integration` (`src/core/pi/integrationTools.ts`), on both kinds of model session (`docs/agents-reach.md`, "An unsafe data reader").
+They reach the same service as every task (`IntegrationsService.forReader`), with the same Off switch, input check and grants, and three rules of the reader's own:
+
+- A read runs at once only when the captain set it to Always allow and its connection is not an MCP server, whose read-only mark is the server's own claim.
+  Every other call, a read at Asks you, every MCP call and every change or send, is kept and joins the reader's one approval card, whatever its rule or the task's allowances say; that card offers only Only this time and Not now, and the service refuses any other choice for a reader's ask.
+  The list shows each action's rule as it holds for the reader.
+- Every answer, a binding's refusal or error included, comes fenced whole under its kind's label, or `integration-data` for a kind that declares none (`READER_INTEGRATION_FENCE`), so a kind with no fence of its own reaches the reader marked too.
+- An integration where a project lives is refused, since the reader reaches its own project through `github_read` alone, and so is an action that saves a file, since the reader opens no hand-over folder.
+
+The first time a reader's call runs, the host records on its task that it now holds something of the captain's (`delivery.readerHolds`, `TaskDeliveries.markReaderHolds`), keeping the first mark.
+Ordinary crewmates, the first mate and panels keep the rules above unchanged.
 
 ## Keys
 

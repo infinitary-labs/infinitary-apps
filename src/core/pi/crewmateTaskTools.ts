@@ -24,6 +24,7 @@ import {
   READ_WORKFLOW_TOOL,
   SHOW_MERGE_CARD_TOOL,
 } from "./forgeTools";
+import { READER_INTEGRATIONS_TOOL, READER_USE_INTEGRATION_TOOL } from "./integrationTools";
 import { CAPTURE_PANEL_TOOL, LINT_PANEL_TOOL, PLACE_PANEL_TOOL } from "./panelTools";
 import { TASKS_QUERY_TOOL } from "./taskTools";
 import { keepValidationEvidence } from "./validationEvidence";
@@ -604,7 +605,8 @@ export const REVISE_REQUIRED_ACTION_TOOL = crewmateTool({
  * project or the references grant, in an alpha or development build, has
  * it, on this Mac or a computer that runs work), the
  * live-build checks (only a crewmate on the personal workspace has them),
- * and the pair where the project lives. A task's own browser is no tool:
+ * the pair where the project lives, and the integrations pair (only an
+ * unsafe data reader has it, having no shell). A task's own browser is no tool:
  * its crewmate runs `infinitary-browser-axi` in its shell (docs/axi-commands.md).
  * This list is
  * the one spec (primitives P7): the Pi placement, the Claude tool server
@@ -634,6 +636,8 @@ export const CREWMATE_TOOLS = [
   DOWNLOAD_ARTIFACT_TOOL,
   GITHUB_READ_TOOL,
   GITHUB_WRITE_TOOL,
+  READER_INTEGRATIONS_TOOL,
+  READER_USE_INTEGRATION_TOOL,
 ] as const satisfies readonly CrewmateTool[];
 
 /** This module, as the self-source map names where a crewmate tool is defined. */

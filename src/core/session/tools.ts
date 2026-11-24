@@ -520,6 +520,18 @@ export type CrewmateToolDelegate = {
   onGithubRead?: (input: GithubReadInput, signal?: AbortSignal) => Promise<string>;
   onGithubWrite?: (input: GithubWriteInput, signal?: AbortSignal) => Promise<string>;
   /**
+   * The integrations as typed tools, handed only to an unsafe data reader,
+   * which has no shell for `infinitary-integrations-axi`
+   * (docs/agents-reach.md, "An unsafe data reader"): list or show, and call.
+   */
+  onIntegrations?: (input: { name?: string }) => Promise<string>;
+  onUseIntegration?: (input: {
+    name: string;
+    action: string;
+    input?: Record<string, unknown>;
+    reason?: string;
+  }) => Promise<string>;
+  /**
    * This task's own browser (docs/task-browser.md), handed to a crewmate
    * whose task runs on this Mac when the host has one.
    */

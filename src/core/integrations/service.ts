@@ -6,6 +6,7 @@ import {
   type IntegrationApprovalChoice,
   type IntegrationEventView,
   type IntegrationKind,
+  type IntegrationRule,
   type IntegrationSettingsPatch,
   type IntegrationSignInConsent,
   type IntegrationsView,
@@ -91,6 +92,16 @@ export type IntegrationsServiceOptions = {
   files?: {
     refusal: (taskId: string) => string | undefined;
     save: (taskId: string, name: string, bytes: Buffer) => Promise<{ file: string; path: string }>;
+  };
+  /**
+   * Unsafe data readers (docs/agents-reach.md, "An unsafe data reader"):
+   * which tasks are readers, and the host's record of the first time one
+   * held something of the captain's (`TaskDeliveries.markReaderHolds`),
+   * named by the integration it came from. Absent, no task is a reader.
+   */
+  readers?: {
+    is: (taskId: string) => boolean;
+    holds: (taskId: string, what: string) => void;
   };
   now?: () => number;
   /** The whole view, after every change (`inf:integrations`). */
@@ -240,6 +251,25 @@ type Holder =
 
 /** A fence's random value: 64 bits, which nobody who wrote the fenced words could guess. */
 const FENCE_VALUE_BYTES = 8;
+
+/**
+ * The label an unsafe data reader's integration answers are fenced with
+ * when their kind declares none: every answer it receives is marked whole.
+ */
+export const READER_INTEGRATION_FENCE = "integration-data";
+
+/**
+ * The kinds that reach where projects live: a reader reaches its own
+ * project through its read tool alone, so it never calls these.
+ */
+const FORGE_KINDS: ReadonlySet<IntegrationKind> = new Set([
+  "github",
+  "gitlab",
+  "github-enterprise",
+  "bitbucket",
+]);
+const READER_FORGE_REFUSAL =
+  "Refused: an unsafe data reader reaches where its own project lives through github_read alone, never through an integration. Nothing was read.";
 
 /** A refusal the catalog line's caller reads as the reason. */
 export class IntegrationRefusal extends Error {}
@@ -441,6 +471,9 @@ export class IntegrationsService {
       const unnamed = this.panelRefusal(caller.panel, row, { action });
       if (unnamed) return unnamed;
     }
+    const reader = this.isReader(caller);
+    if (reader && FORGE_KINDS.has(row.binding.kind))
+      return { text: READER_FORGE_REFUSAL, refused: "refused" };
     if (row.settings.paused)
       return {
         text: `${this.viewOf(row).name} is paused. The captain resumes it in Settings → Integrations.`,
@@ -481,8 +514,10 @@ export class IntegrationsService {
     const noFile = this.fileRefusal(caller, view.name, spec);
     if (noFile) return { text: noFile, refused: "refused" };
     if (
-      !this.allowed(row, spec) &&
-      !(caller.kind === "task" && this.taskAllows(caller.taskId, row, spec, parsed.data))
+      reader
+        ? !this.runsForReader(row, spec)
+        : !this.allowed(row, spec) &&
+          !(caller.kind === "task" && this.taskAllows(caller.taskId, row, spec, parsed.data))
     )
       return this.keepAsk(
         caller,
@@ -496,6 +531,22 @@ export class IntegrationsService {
     return caller.kind === "firstmate" && spec.effect !== "reads" && !answer.refused
       ? { ...answer, ran: spec.effect }
       : answer;
+  }
+
+  /** The caller is an unsafe data reader's task (docs/agents-reach.md, "An unsafe data reader"). */
+  private isReader(caller: IntegrationCaller): boolean {
+    return caller.kind === "task" && this.options.readers?.is(caller.taskId) === true;
+  }
+
+  /**
+   * Whether an unsafe data reader's call runs without the captain's click:
+   * only a read the captain set to Always allow, on a kind other than an MCP
+   * server, which receives what the call asks and may pass it on. Every
+   * change or send waits, whatever its rule, and no allowance for the rest
+   * of a task covers a reader.
+   */
+  private runsForReader(row: Row, spec: IntegrationActionSpec): boolean {
+    return spec.effect === "reads" && row.binding.kind !== "mcp" && this.allowed(row, spec);
   }
 
   /**
@@ -545,6 +596,12 @@ export class IntegrationsService {
     };
     if (choice === "deny")
       return done({ kind: "refused", why: "The captain chose Not now. Nothing ran." });
+    // A reader's call never earns a grant: its card offers only Only this time.
+    if (ask.by === undefined && choice !== "once" && this.options.readers?.is(taskId))
+      return done({
+        kind: "refused",
+        why: "an unsafe data reader's call runs only once, on Only this time, so it did not run",
+      });
     let row = this.rows().find((entry) => entry.connection.id === ask.integration);
     if (!row) return done({ kind: "refused", why: `${ask.place} is no longer connected` });
     try {
@@ -687,27 +744,39 @@ export class IntegrationsService {
     caller: IntegrationCaller,
   ): Promise<{ answer: IntegrationAnswer; unknown?: true }> {
     const redact = (text: string) => this.redact(text);
+    // An unsafe data reader's answer is marked whole, its binding's refusals
+    // and errors too, since a server's own words can carry a stranger's; and
+    // once the binding ran, the reader holds something of the captain's.
+    const reader = this.isReader(caller);
+    if (reader) this.options.readers?.holds(caller.taskId, name);
+    const ownLabel = row.connection.fence ?? row.binding.fence;
+    const readerLabel = ownLabel ?? READER_INTEGRATION_FENCE;
+    // Only the binding's own label is kept for a while and noted as read
+    // (`IntegrationBinding.kept`); a connection's label and the reader's
+    // stand-in label are not.
+    const noted = !row.connection.fence && row.binding.fence !== undefined;
     try {
       const called = await row.binding.call(row.connection.id, action, input, caller);
       const { file: delivered, ...answer } = called;
       if (delivered && !answer.refused) answer.text = await this.saveFile(row, caller, delivered);
       const text = redact(answer.text);
-      const label = answer.refused ? undefined : (row.connection.fence ?? row.binding.fence);
+      const label = reader ? readerLabel : answer.refused ? undefined : ownLabel;
       return {
         answer: {
           ...answer,
-          text: label ? fencedAnswer(text, this.fence(label, caller, !row.connection.fence)) : text,
+          text: label ? fencedAnswer(text, this.fence(label, caller, noted)) : text,
         },
       };
     } catch (error) {
+      const text = redact(
+        error instanceof IntegrationOutcomeUnknown
+          ? `${name}'s ${action} has an unknown outcome: ${error.message}
+Do not repeat this call; read ${name} to check what happened first.`
+          : `${name} could not do that: ${error instanceof Error ? error.message : String(error)}`,
+      );
       return {
         answer: {
-          text: redact(
-            error instanceof IntegrationOutcomeUnknown
-              ? `${name}'s ${action} has an unknown outcome: ${error.message}
-Do not repeat this call; read ${name} to check what happened first.`
-              : `${name} could not do that: ${error instanceof Error ? error.message : String(error)}`,
-          ),
+          text: reader ? fencedAnswer(text, this.fence(readerLabel, caller, noted)) : text,
           refused: "refused",
         },
         ...(error instanceof IntegrationOutcomeUnknown ? { unknown: true as const } : {}),
@@ -726,6 +795,8 @@ Do not repeat this call; read ${name} to check what happened first.`
     spec: IntegrationActionSpec,
   ): string | undefined {
     if (spec.delivers !== "file") return undefined;
+    if (this.isReader(caller))
+      return `Not run: ${name}'s ${spec.name} saves a file into a task's hand-over folder, which an unsafe data reader cannot open.`;
     if (caller.kind === "firstmate")
       return `Not run: ${name}'s ${spec.name} saves a file into a task's hand-over folder, so only a crewmate can call it. Start a crewmate whose brief names the call and its reason.`;
     if (caller.kind === "panel")
@@ -793,9 +864,10 @@ Do not repeat this call; read ${name} to check what happened first.`
             : `Not run: ${name}'s ${spec.name} asks the captain. Start a crewmate whose brief names the call and its reason.`,
         refused: "refused",
       };
+    const reader = this.isReader(caller);
     if (typeof reason !== "string" || !reason.trim())
       return {
-        text: `Not run: ${name}'s ${spec.name} asks the captain. Call again with ${firstmate ? "reason" : "--reason"} explaining why this action is needed.`,
+        text: `Not run: ${name}'s ${spec.name} asks the captain. Call again with ${firstmate || reader ? "reason" : "--reason"} explaining why this action is needed.`,
         refused: "invalid",
       };
     const ask: IntegrationAsk = {
@@ -818,7 +890,8 @@ Do not repeat this call; read ${name} to check what happened first.`
       signature: this.signature(spec),
       reason,
       input: JSON.stringify(input),
-      ...(caller.kind === "task" ? { scope: this.scopeOf(spec, input) } : {}),
+      // A reader's card offers no Allow for the rest of this task.
+      ...(caller.kind === "task" && !reader ? { scope: this.scopeOf(spec, input) } : {}),
       at: (this.options.now ?? Date.now)(),
     };
     let card: string | undefined;
@@ -850,6 +923,11 @@ Do not repeat this call; read ${name} to check what happened first.`
         refused: "refused",
       };
     }
+    if (reader)
+      return {
+        text: `Not run: this task reads words strangers can write, so ${name}'s ${spec.name} waits for the captain. ${joined ? `The app added ask ${ask.id} to this task's approval card already waiting.` : `The app raised this task's approval card for ask ${ask.id}.`} Do not emit another card or repeat the call. You will hear the outcome once through write-answered.`,
+        refused: "refused",
+      };
     return {
       text: `Not run: ${name}'s ${spec.name} asks the captain. ${joined ? `The app added ask ${ask.id} to the approval card already waiting for your asks to ${name}.` : `The app raised its approval card for ask ${ask.id}.`} Do not emit another card or repeat the call. You will hear the outcome once through write-answered.`,
       refused: "refused",
@@ -1006,6 +1084,60 @@ Do not repeat this call; read ${name} to check what happened first.`
       call: (name, action, input, _signal, reason) =>
         this.call({ kind: "task", taskId }, name, action, input, reason),
     };
+  }
+
+  /**
+   * What an unsafe data reader reaches (docs/agents-reach.md, "An unsafe
+   * data reader"): every integration but those where projects live, under
+   * its task's rules (`call`), with each action's rule as it holds for the
+   * reader: allow only where the call would run without the captain's click.
+   */
+  forReader(taskId: string): TaskIntegrations {
+    const reach = (name: string): Row | IntegrationAnswer => {
+      const row = this.find(name);
+      if ("connection" in row && FORGE_KINDS.has(row.binding.kind))
+        return { text: READER_FORGE_REFUSAL, refused: "refused" };
+      return row;
+    };
+    return {
+      list: async () =>
+        this.rows()
+          .filter((row) => !FORGE_KINDS.has(row.binding.kind))
+          .map((row) => {
+            const entry = this.rosterEntry(row);
+            return {
+              ...entry,
+              actions: row.connection.actions.map((spec) => ({
+                name: spec.name,
+                rule: this.readerRule(row, spec),
+              })),
+            };
+          }),
+      show: async (name) => {
+        const row = reach(name);
+        if (!("connection" in row)) return row;
+        const shown = this.show(name);
+        if (isIntegrationAnswer(shown)) return shown;
+        const rules = new Map(
+          row.connection.actions.map((spec) => [spec.name, this.readerRule(row, spec)]),
+        );
+        return {
+          ...shown,
+          actions: (shown.actions as Record<string, unknown>[]).map((action) => ({
+            ...action,
+            rule: rules.get(String(action.name)) ?? action.rule,
+          })),
+        };
+      },
+      call: (name, action, input, _signal, reason) =>
+        this.call({ kind: "task", taskId }, name, action, input, reason),
+    };
+  }
+
+  /** An action's rule as it holds for an unsafe data reader (`runsForReader`). */
+  private readerRule(row: Row, spec: IntegrationActionSpec): IntegrationRule {
+    if (row.settings.off?.includes(spec.name)) return integrationRule(false, false);
+    return integrationRule(this.runsForReader(row, spec), true);
   }
 
   /**

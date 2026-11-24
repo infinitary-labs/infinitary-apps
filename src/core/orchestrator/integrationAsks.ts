@@ -10,7 +10,7 @@ import { TaskService } from "../tasks/taskService";
 import type { CardService } from "./cardService";
 import type { CrewSupervisorOptions, FirstmateHooks } from "./crewSupervisorOptions";
 import type { WriteAnswered } from "./deliveryWakes";
-import { forgeApprovalCard } from "./forgeApprovalCard";
+import { readerApprovalCard } from "./forgeApprovalCard";
 import type { WriteAskSent } from "./githubGateway";
 import { integrationApprovalCard } from "./integrationApprovalCard";
 import type { TypedWake } from "./wakes";
@@ -48,6 +48,7 @@ export class IntegrationAsks {
   askIntegration(taskId: string, ask: IntegrationAsk, dropped: readonly WriteAsk[] = []): boolean {
     const task = this.options.tasks.get(taskId);
     if (!task || TaskService.isClosed(task)) return false;
+    if (task.shape?.unsafe_data_reader === true) return this.askReader(taskId, ask, dropped);
     this.refuseDropped(taskId, dropped);
     const open = waitingIntegrationAsks(task.delivery?.writeAsks).find(
       (kept) =>
@@ -70,11 +71,28 @@ export class IntegrationAsks {
    * keep it are refused first.
    */
   askForge(taskId: string, ask: ForgeWriteAsk, dropped: readonly WriteAsk[] = []): boolean {
+    return this.askReader(taskId, ask, dropped);
+  }
+
+  /**
+   * An unsafe data reader's kept call - a write where its project lives or
+   * an integration call - joins the one approval card of its task still
+   * waiting, whatever it reaches, revised in place to list it, or raises its
+   * own (docs/agents-reach.md, "An unsafe data reader"). The waiting asks the
+   * cap dropped to keep it are refused first.
+   */
+  private askReader(taskId: string, ask: WriteAsk, dropped: readonly WriteAsk[]): boolean {
     const task = this.options.tasks.get(taskId);
     if (!task || TaskService.isClosed(task)) return false;
     this.refuseDropped(taskId, dropped);
-    const open = waitingForgeCardAsks(task.delivery?.writeAsks).find(
-      (kept) => kept.id !== ask.id && this.host.cards.get(kept.card) !== undefined,
+    const open = [
+      ...waitingForgeCardAsks(task.delivery?.writeAsks),
+      ...waitingIntegrationAsks(task.delivery?.writeAsks),
+    ].find(
+      (kept) =>
+        kept.id !== ask.id &&
+        kept.card !== undefined &&
+        this.host.cards.get(kept.card) !== undefined,
     )?.card;
     const card = open ?? `write-ask-${ask.id}`;
     this.options.tasks.delivery.listWriteAsk(taskId, ask.id, card);
@@ -97,13 +115,13 @@ export class IntegrationAsks {
     const revise = this.host.cards.get(cardId) !== undefined;
     const owner = { id: taskId, title: task.title };
     const options = { id: cardId, ...(joined ? { joined } : {}) };
-    // A card lists asks of one kind: each kind joins only its own cards.
+    // A reader's one card lists every kind of call it makes; any other
+    // crewmate's card lists asks of one kind, each joining only its own.
     const integration = listed.filter((ask): ask is IntegrationAsk => ask.kind === "integration");
-    const forge = listed.filter((ask): ask is ForgeWriteAsk => ask.kind !== "integration");
     this.host.cards.put(
-      integration.length > 0
-        ? integrationApprovalCard(integration, owner, options)
-        : forgeApprovalCard(forge, owner, options),
+      task.shape?.unsafe_data_reader === true || integration.length === 0
+        ? readerApprovalCard(listed, owner, options)
+        : integrationApprovalCard(integration, owner, options),
       revise ? { revise: true } : {},
     );
   }

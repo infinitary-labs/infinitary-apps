@@ -645,6 +645,19 @@ export class TaskDeliveries {
   }
 
   /**
+   * The first time an unsafe data reader held something of the captain's
+   * (docs/agents-reach.md, "An unsafe data reader"), named by where it came
+   * from. The first mark stays: a later one changes nothing.
+   */
+  markReaderHolds(id: string, what: string): void {
+    this.writer.write(() => {
+      const record = this.writer.mustGet(id);
+      if (record.delivery?.readerHolds) return;
+      this.writer.writeDeliveryRecords(id, { readerHolds: { at: this.writer.now(), what } });
+    })();
+  }
+
+  /**
    * Keep the captain's Allow for the rest of this task (INF-2993) on an open
    * task; one for the same connection, action and scope replaces the older.
    * A closed task keeps none.

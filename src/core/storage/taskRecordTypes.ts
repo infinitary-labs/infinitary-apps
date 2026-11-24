@@ -588,6 +588,12 @@ export type TaskDelivery = {
    * card. `TaskService` is their one writer, and a close drops them.
    */
   integrationAllowances?: IntegrationAllowance[];
+  /**
+   * When an unsafe data reader first held something of the captain's, such
+   * as an integration's answer, and where it came from. Only
+   * `TaskDeliveries.markReaderHolds` writes it, and the first mark stays.
+   */
+  readerHolds?: { at: number; what: string };
   /** The crewmate's cards whose marked action records the captain's yes (INF-3170 piece 2). */
   allowanceOffers?: AllowanceOffer[];
   /** The captain's recorded yeses, kept past a close (docs/delivery-rigor.md, "What the captain already allowed"). */

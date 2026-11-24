@@ -303,6 +303,15 @@
 "cardAnswersAnswered" = "%1$@/%2$@ 回答済み";
 "cardAnswersChanged" = "%2$@ · %1$@件変更";
 "cardAnswersPicked" = "%1$@/%2$@ 選択済み";
+"cardAskNoticeAskAgain" = "もう一度尋ねる";
+"cardAskNoticeCardRefused" = "一等航海士はアプリが拒否したカードで答えようとしました。";
+"cardAskNoticeClosedCard" = "一等航海士はこのメッセージに「%1$@」を表示しましたが、あなたが選ぶ前にそのカードを閉じました。";
+"cardAskNoticeClosing" = "必要なものがすでにあれば、そのままにしてください。もう一度尋ねると、新しいメッセージとしてもう一度送ります。";
+"cardAskNoticeCrewmateOwns" = "これに取り組んでいる乗組員がすでにそのカードを持っているため、一等航海士のカードは拒否されました。";
+"cardAskNoticeLeaveIt" = "そのままにする";
+"cardAskNoticeNothingSeen" = "アプリはこのメッセージに対する一等航海士のカードも返信も確認できませんでした。";
+"cardAskNoticeQuoteLabel" = "あなたのメッセージ、%1$@";
+"cardAskNoticeTitle" = "一等航海士があなたのメッセージを見落としたかもしれません";
 "cardAskedAutomation" = "自動化による実行";
 "cardAskedChoseOn" = "「%1$@」で選択";
 "cardAskedFrom" = "%1$@ から";

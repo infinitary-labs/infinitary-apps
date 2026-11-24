@@ -12235,6 +12235,251 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `${count} to answer`;
     }
   }
+  function cardAskNoticeAskAgain() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الطلب مجددًا`;
+      case "de":
+        return `Erneut fragen`;
+      case "es":
+        return `Volver a preguntar`;
+      case "fr":
+        return `Redemander`;
+      case "ja":
+        return `もう一度尋ねる`;
+      case "ko":
+        return `다시 요청`;
+      case "pt-BR":
+        return `Perguntar de novo`;
+      case "zh-Hans":
+        return `再次询问`;
+      case "zh-Hant":
+        return `再問一次`;
+      case "en-XA":
+        return `[Åšķ áĝáîñ ~~~]`;
+      case "ar-XB":
+        return `‮Ask again‬`;
+    }
+    return `Ask again`;
+  }
+  function cardAskNoticeCardRefused() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `حاول نائب القبطان الرد ببطاقة رفضها التطبيق.`;
+      case "de":
+        return `Dein erster Offizier wollte mit einer Karte antworten, die die App abgelehnt hat.`;
+      case "es":
+        return `Tu primer oficial intentó responder con una tarjeta que la app rechazó.`;
+      case "fr":
+        return `Votre second a essayé de répondre avec une carte que l’app a refusée.`;
+      case "ja":
+        return `一等航海士はアプリが拒否したカードで答えようとしました。`;
+      case "ko":
+        return `일등항해사가 앱이 거절한 카드로 답하려고 했어요.`;
+      case "pt-BR":
+        return `Seu imediato tentou responder com um cartão que o app recusou.`;
+      case "zh-Hans":
+        return `你的大副试图用一张被应用拒绝的卡片回答。`;
+      case "zh-Hant":
+        return `你的大副試圖用一張被程式拒絕的卡片回答。`;
+      case "en-XA":
+        return `[Ýöûŕ ƒîŕšţ ɱáţé ţŕîéð ţö áñšŵéŕ ŵîţĥ á çáŕð ţĥé áþþ ŕéƒûšéð. ~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your first mate tried to answer with a card the app refused.‬`;
+    }
+    return `Your first mate tried to answer with a card the app refused.`;
+  }
+  function cardAskNoticeClosedCard(input2) {
+    const title = input2.title;
+    switch (currentLanguage()) {
+      case "ar":
+        return `عرض عليك نائب القبطان «${title}» من أجلها، ثم أغلق تلك البطاقة قبل أن تختار.`;
+      case "de":
+        return `Dein erster Offizier hat dir dafür „${title}“ gezeigt und diese Karte dann geschlossen, bevor du gewählt hast.`;
+      case "es":
+        return `Tu primer oficial te mostró «${title}» para él y luego cerró esa tarjeta antes de que eligieras.`;
+      case "fr":
+        return `Votre second vous a montré « ${title} » pour ce message, puis a fermé cette carte avant que vous choisissiez.`;
+      case "ja":
+        return `一等航海士はこのメッセージに「${title}」を表示しましたが、あなたが選ぶ前にそのカードを閉じました。`;
+      case "ko":
+        return `일등항해사가 이 메시지에 “${title}” 카드를 보여 줬지만, 선택하기 전에 그 카드를 닫았어요.`;
+      case "pt-BR":
+        return `Seu imediato mostrou “${title}” para ela e depois fechou esse cartão antes de você escolher.`;
+      case "zh-Hans":
+        return `你的大副为它给你看了“${title}”，然后在你选择前关闭了那张卡片。`;
+      case "zh-Hant":
+        return `你的大副為它給你看了「${title}」，然後在你選擇前關閉了那張卡片。`;
+      case "en-XA":
+        return `[Ýöûŕ ƒîŕšţ ɱáţé šĥöŵéð ýöû “${title}” ƒöŕ îţ, ţĥéñ çļöšéð ţĥáţ çáŕð ƀéƒöŕé ýöû çĥöšé. ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your first mate showed you “‬${title}‮” for it, then closed that card before you chose.‬`;
+    }
+    return `Your first mate showed you “${title}” for it, then closed that card before you chose.`;
+  }
+  function cardAskNoticeClosing() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `اتركها إن كان لديك ما تحتاجه. «الطلب مجددًا» يرسلها مرة أخرى كرسالة جديدة.`;
+      case "de":
+        return `Lass sie so, wenn du schon hast, was du brauchst. Erneut fragen schickt sie noch einmal als neue Nachricht.`;
+      case "es":
+        return `Déjalo así si ya tienes lo que necesitas. Volver a preguntar lo envía una vez más como un mensaje nuevo.`;
+      case "fr":
+        return `Laissez ainsi si vous avez déjà ce qu’il vous faut. Redemander l’envoie une nouvelle fois comme nouveau message.`;
+      case "ja":
+        return `必要なものがすでにあれば、そのままにしてください。もう一度尋ねると、新しいメッセージとしてもう一度送ります。`;
+      case "ko":
+        return `필요한 걸 이미 받았다면 그대로 두세요. 다시 요청하면 새 메시지로 한 번 더 보내요.`;
+      case "pt-BR":
+        return `Deixe assim se você já tem o que precisa. Perguntar de novo a envia mais uma vez como uma nova mensagem.`;
+      case "zh-Hans":
+        return `如果你已经得到所需内容，就保持不变。再次询问会把它作为新消息再发送一次。`;
+      case "zh-Hant":
+        return `如果你已經得到所需內容，就保持不變。再問一次會把它當作新訊息再傳送一次。`;
+      case "en-XA":
+        return `[Ļéáṽé îţ îƒ ýöû áļŕéáðý ĥáṽé ŵĥáţ ýöû ñééð. Åšķ áĝáîñ šéñðš îţ öñçé ɱöŕé áš á ñéŵ ɱéššáĝé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Leave it if you already have what you need. Ask again sends it once more as a new message.‬`;
+    }
+    return `Leave it if you already have what you need. Ask again sends it once more as a new message.`;
+  }
+  function cardAskNoticeCrewmateOwns() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `فرد الطاقم الذي يعمل عليها يملك البطاقة الخاصة بها بالفعل، لذا رُفضت بطاقة نائب القبطان.`;
+      case "de":
+        return `Das Crewmitglied, das daran arbeitet, hat schon die Karte dafür, deshalb wurde die Karte deines ersten Offiziers abgelehnt.`;
+      case "es":
+        return `El tripulante que trabaja en ello ya tiene la tarjeta para él, así que se rechazó la tarjeta de tu primer oficial.`;
+      case "fr":
+        return `L’équipier qui s’en occupe a déjà la carte pour ce message, la carte de votre second a donc été refusée.`;
+      case "ja":
+        return `これに取り組んでいる乗組員がすでにそのカードを持っているため、一等航海士のカードは拒否されました。`;
+      case "ko":
+        return `이 일을 하는 선원이 이미 그 카드를 갖고 있어서 일등항해사의 카드가 거절됐어요.`;
+      case "pt-BR":
+        return `O tripulante que trabalha nisso já tem o cartão dela, então o cartão do seu imediato foi recusado.`;
+      case "zh-Hans":
+        return `处理它的船员已经拥有它的卡片，所以你的大副的卡片被拒绝了。`;
+      case "zh-Hant":
+        return `處理它的船員已經擁有它的卡片，所以你的大副的卡片被拒絕了。`;
+      case "en-XA":
+        return `[Ţĥé çŕéŵɱáţé ŵöŕķîñĝ öñ îţ áļŕéáðý öŵñš ţĥé çáŕð ƒöŕ îţ, šö ýöûŕ ƒîŕšţ ɱáţé'š çáŕð ŵáš ŕéƒûšéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The crewmate working on it already owns the card for it, so your first mate's card was refused.‬`;
+    }
+    return `The crewmate working on it already owns the card for it, so your first mate's card was refused.`;
+  }
+  function cardAskNoticeLeaveIt() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `اتركه كما هو`;
+      case "de":
+        return `So lassen`;
+      case "es":
+        return `Dejarlo así`;
+      case "fr":
+        return `Laisser ainsi`;
+      case "ja":
+        return `そのままにする`;
+      case "ko":
+        return `그대로 두기`;
+      case "pt-BR":
+        return `Deixar assim`;
+      case "zh-Hans":
+        return `保持不变`;
+      case "zh-Hant":
+        return `保持不變`;
+      case "en-XA":
+        return `[Ļéáṽé îţ ~~~]`;
+      case "ar-XB":
+        return `‮Leave it‬`;
+    }
+    return `Leave it`;
+  }
+  function cardAskNoticeNothingSeen() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يرَ التطبيق أي بطاقة أو رد من نائب القبطان من أجلها.`;
+      case "de":
+        return `Die App hat dafür keine Karte und keine Antwort deines ersten Offiziers gesehen.`;
+      case "es":
+        return `La app no vio ninguna tarjeta ni respuesta de tu primer oficial para él.`;
+      case "fr":
+        return `L’app n’a vu aucune carte ni réponse de votre second pour ce message.`;
+      case "ja":
+        return `アプリはこのメッセージに対する一等航海士のカードも返信も確認できませんでした。`;
+      case "ko":
+        return `앱은 이 메시지에 대한 일등항해사의 카드나 답장을 보지 못했어요.`;
+      case "pt-BR":
+        return `O app não viu nenhum cartão nem resposta do seu imediato para ela.`;
+      case "zh-Hans":
+        return `应用没有看到你的大副为它发出的卡片或回复。`;
+      case "zh-Hant":
+        return `程式沒有看到你的大副為它發出的卡片或回覆。`;
+      case "en-XA":
+        return `[Ţĥé áþþ šáŵ ñö çáŕð öŕ ŕéþļý ƒŕöɱ ýöûŕ ƒîŕšţ ɱáţé ƒöŕ îţ. ~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The app saw no card or reply from your first mate for it.‬`;
+    }
+    return `The app saw no card or reply from your first mate for it.`;
+  }
+  function cardAskNoticeQuoteLabel(input2) {
+    const time2 = input2.time;
+    switch (currentLanguage()) {
+      case "ar":
+        return `رسالتك، ${time2}`;
+      case "de":
+        return `Deine Nachricht, ${time2}`;
+      case "es":
+        return `Tu mensaje, ${time2}`;
+      case "fr":
+        return `Votre message, ${time2}`;
+      case "ja":
+        return `あなたのメッセージ、${time2}`;
+      case "ko":
+        return `보낸 메시지, ${time2}`;
+      case "pt-BR":
+        return `Sua mensagem, ${time2}`;
+      case "zh-Hans":
+        return `你的消息，${time2}`;
+      case "zh-Hant":
+        return `你的訊息，${time2}`;
+      case "en-XA":
+        return `[Ýöûŕ ɱéššáĝé, ${time2} ~~~~~]`;
+      case "ar-XB":
+        return `‮Your message, ‬${time2}`;
+    }
+    return `Your message, ${time2}`;
+  }
+  function cardAskNoticeTitle() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ربما فات نائب القبطان رسالتك`;
+      case "de":
+        return `Dein erster Offizier hat deine Nachricht vielleicht übersehen`;
+      case "es":
+        return `Puede que tu primer oficial no haya visto tu mensaje`;
+      case "fr":
+        return `Votre second a peut-être manqué votre message`;
+      case "ja":
+        return `一等航海士があなたのメッセージを見落としたかもしれません`;
+      case "ko":
+        return `일등항해사가 메시지를 놓쳤을 수 있어요`;
+      case "pt-BR":
+        return `Seu imediato pode ter deixado passar sua mensagem`;
+      case "zh-Hans":
+        return `你的大副可能漏看了你的消息`;
+      case "zh-Hant":
+        return `你的大副可能漏看了你的訊息`;
+      case "en-XA":
+        return `[Ýöûŕ ƒîŕšţ ɱáţé ɱáý ĥáṽé ɱîššéð ýöûŕ ɱéššáĝé ~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your first mate may have missed your message‬`;
+    }
+    return `Your first mate may have missed your message`;
+  }
   function cardAskedAutomation() {
     switch (currentLanguage()) {
       case "ar":
@@ -99686,6 +99931,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardAnswersDefaults,
     cardAnswersPicked,
     cardAnswersToAnswer,
+    cardAskNoticeAskAgain,
+    cardAskNoticeCardRefused,
+    cardAskNoticeClosedCard,
+    cardAskNoticeClosing,
+    cardAskNoticeCrewmateOwns,
+    cardAskNoticeLeaveIt,
+    cardAskNoticeNothingSeen,
+    cardAskNoticeQuoteLabel,
+    cardAskNoticeTitle,
     cardAskedAutomation,
     cardAskedChoseOn,
     cardAskedFrom,
@@ -102903,6 +103157,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardAnswersDefaults": ["count", "counted"],
     "cardAnswersPicked": ["answered", "total"],
     "cardAnswersToAnswer": ["count"],
+    "cardAskNoticeAskAgain": [],
+    "cardAskNoticeCardRefused": [],
+    "cardAskNoticeClosedCard": ["title"],
+    "cardAskNoticeClosing": [],
+    "cardAskNoticeCrewmateOwns": [],
+    "cardAskNoticeLeaveIt": [],
+    "cardAskNoticeNothingSeen": [],
+    "cardAskNoticeQuoteLabel": ["time"],
+    "cardAskNoticeTitle": [],
     "cardAskedAutomation": [],
     "cardAskedChoseOn": ["card"],
     "cardAskedFrom": ["key"],
@@ -116119,6 +116382,16 @@ a:hover {
   h6 { font-size: var(--text-xs); color: var(--fg-3); letter-spacing: var(--tracking-label); text-transform: uppercase; }
   p, ul, ol, pre, blockquote, figure, dl, table, details { margin: 0 0 var(--space-2); }
   figcaption { font-size: var(--text-sm); color: var(--fg-3); margin-top: var(--space-1); }
+  /* A quote reads as the captain's words do in the task record: a hairline at its start. */
+  blockquote { padding-inline-start: var(--space-3); border-inline-start: 1px solid var(--line-1); }
+  blockquote > :last-child { margin-bottom: 0; }
+  /* The lit quote: the one passage a card asks the reader to notice, such as the captain's own
+     message on the app's unanswered-message notice, with an optional micro label above it. */
+  blockquote.inf-lit {
+    padding: var(--space-2) var(--space-3); border-inline-start: 2px solid var(--accent);
+    background: var(--accent-dim); border-radius: var(--radius-s); color: var(--fg-1);
+  }
+  .inf-quote-k { display: block; font-size: var(--text-xs); color: var(--fg-3); letter-spacing: var(--tracking-label); text-transform: uppercase; margin-bottom: 2px; }
   mark { color: var(--fg-1); background: var(--accent-dim); border-radius: var(--radius-xs); padding: 0 var(--space-1); }
   kbd {
     font-family: var(--font-mono); font-size: var(--text-sm); color: var(--fg-2);

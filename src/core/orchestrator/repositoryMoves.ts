@@ -42,7 +42,9 @@ export class RepositoryMoves {
 
   /**
    * Whether this is started work, which moves here rather than in the
-   * record's own edit: running, or back in the backlog with its working copy.
+   * record's own edit: active, which includes started work the backlog holds
+   * (`backlogSince`), or open work that still has a working copy,
+   * placement or conversation.
    */
   static started(record: TaskRecord): boolean {
     if (record.kind !== "work") return false;
@@ -72,7 +74,7 @@ export class RepositoryMoves {
     if (target.id === record.repoId)
       // i18n-exempt: a tool answer served to the first mate, not shown to a person
       return { ok: true, text: `${key} already works in the ${target.name} repository.` };
-    const refused = this.refusal(record, target.name);
+    const refused = this.refusal(record, target);
     if (refused) return { ok: false, text: refused };
     // i18n-exempt: the lock's label, read only in tool answers to the first mate
     const lease = this.locks.claim(taskId, "a move to another repository");
@@ -86,6 +88,11 @@ export class RepositoryMoves {
         await stopping;
         this.locks.turnEnded(taskId);
       }
+      // The crewmate could commit or edit until it stopped, so the copy is
+      // read again before anything removes it.
+      const after = await this.workRefusal(record, target.name);
+      // i18n-exempt: a tool answer served to the first mate, not shown to a person
+      if (after) return { ok: false, text: `${key}'s crewmate stopped, but ${after}` };
       const removed = await this.removeCopy(record);
       // i18n-exempt: a tool answer served to the first mate, not shown to a person
       if (removed) return { ok: false, text: `${key}'s crewmate stopped, but ${removed}` };
@@ -107,8 +114,9 @@ export class RepositoryMoves {
   }
 
   /** The refusals that need no reading of its working copy. */
-  private refusal(record: TaskRecord, name: string): string | undefined {
+  private refusal(record: TaskRecord, target: { id: string; name: string }): string | undefined {
     const key = record.key || record.id;
+    const name = target.name;
     if (!RepositoryMoves.started(record))
       // i18n-exempt: a tool answer served to the first mate, not shown to a person
       return `${key} is not started work, so this move does not apply: update_task's repository moves open work that has not started on its own.`;
@@ -130,7 +138,7 @@ export class RepositoryMoves {
     if (part)
       // i18n-exempt: a tool answer served to the first mate, not shown to a person
       return `${key} has an open part, ${part.key || part.id}, so it cannot start again in the ${name} repository; move or close its parts first.`;
-    return undefined;
+    return this.host.tasks.repositoryMoveRefusal(record.id, target);
   }
 
   /** Refused while its working copy holds commits or edits, or nobody can read it. */
@@ -139,12 +147,18 @@ export class RepositoryMoves {
     if (record.workspaceState !== "present") return undefined;
     const work = record.deviceId
       ? await (this.host.placedStatus?.(record.id) ?? Promise.resolve(null))
-      : await this.host.workspace.taskWorkStatus({
-          taskId: record.id,
-          cwd: record.worktreeDir,
-          branch: record.branch,
-          repoDir: record.repoDir,
-        });
+      : await this.host.workspace
+          .taskWorkStatus(
+            {
+              taskId: record.id,
+              cwd: record.worktreeDir,
+              branch: record.branch,
+              repoDir: record.repoDir,
+            },
+            // A failed git read is not an empty copy.
+            { strict: true },
+          )
+          .catch(() => null);
     if (!work)
       // i18n-exempt: a tool answer served to the first mate, not shown to a person
       return `${key}'s working copy cannot be read now, so nobody can tell whether it holds work of its own; try the move again once its computer is in reach.`;
@@ -162,12 +176,17 @@ export class RepositoryMoves {
         if (!this.host.retireThere) return "its computer cannot remove its working copy.";
         await this.host.retireThere(record.deviceId, record.id);
       } else if (record.worktreeDir && existsSync(record.worktreeDir)) {
-        await this.host.workspace.removeTaskWorktree({
+        // Whatever it holds that never landed is saved on the task's kept
+        // ref first, and the copy stays when that save fails.
+        const retired = await this.host.workspace.retireTaskWorktree({
           taskId: record.id,
           cwd: record.worktreeDir,
           branch: record.branch || defaultTaskBranch(record.id),
           repoDir: record.repoDir,
         });
+        if (retired.outcome === "kept")
+          // i18n-exempt: a tool answer served to the first mate, not shown to a person
+          return `its working copy could not be saved before removal (${retired.reason}), so it keeps its repository; try the move again.`;
       }
       return undefined;
     } catch (caught) {

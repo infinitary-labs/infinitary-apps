@@ -124,6 +124,26 @@ describe("a started task moves to another repository of its project", () => {
     expect(existsSync(first.worktreeDir)).toBe(true);
   });
 
+  it("reads the working copy again once its crewmate stopped, and keeps an edit made as it stopped", async () => {
+    const { supervisor, tasks, crewmate, taskId, first, appRepo } = await startedInAppRepository();
+    const late = join(first.worktreeDir, "late.ts");
+    const dispose = crewmate.dispose.getMockImplementation();
+    crewmate.dispose.mockImplementation(() => {
+      writeFileSync(late, "export const late = 1;\n");
+      return dispose?.();
+    });
+
+    const outcome = await supervisor.repositoryMoves.move(taskId, "harbor-relay", "firstmate");
+
+    expect(crewmate.dispose).toHaveBeenCalled();
+    expect(outcome).toEqual({
+      ok: false,
+      text: `${first.key}'s crewmate stopped, but ${first.key} has edits of its own, so it keeps its repository: only a task with none moves. A takeover in the harbor-relay repository carries its work.`,
+    });
+    expect(existsSync(late)).toBe(true);
+    expect(tasks.get(taskId)).toMatchObject({ repoId: appRepo.id, worktreeDir: first.worktreeDir });
+  });
+
   it("answers a repository its project does not hold as a refusal and leaves the task where it is", async () => {
     const { supervisor, tasks, taskId, appRepo } = await startedInAppRepository();
     const project = tasks.projects.forRepo(appRepo.id);

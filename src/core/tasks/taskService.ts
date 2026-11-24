@@ -67,6 +67,7 @@ import { latestResultOf, type ReportEntry, reportEntryOf, type TaskResult } from
 import {
   moveWithinProject,
   type ProjectRepositoryRef,
+  refuseRepositoryMove,
   repositoryInProject,
   repositoryName,
   restartInRepository,
@@ -1207,6 +1208,22 @@ export class TaskService {
     this.writer.write(() => {
       restartInRepository(this.moves, this.writer.mustGet(id), target, actor, at);
     })();
+  }
+
+  /**
+   * Why started work cannot start again in `target` (`refuseRepositoryMove`),
+   * read before its crewmate stops; undefined when nothing refuses it.
+   */
+  repositoryMoveRefusal(id: string, target: ProjectRepositoryRef): string | undefined {
+    const record = this.writer.mustGet(id);
+    const projectName = this.writer.projects.get(record.projectId)?.name ?? target.name;
+    try {
+      refuseRepositoryMove(this.moves, [{ row: record, repoId: target.id }], projectName);
+      return undefined;
+    } catch (caught) {
+      if (caught instanceof TaskGraphRefusal) return caught.message;
+      throw caught;
+    }
   }
 
   /** The repository of the task's own project `named` names (`repositoryInProject`). */

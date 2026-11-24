@@ -78,7 +78,7 @@ export function moveWithinProject(
     return { row, repoId: to };
   });
   const projectName = writer.projects.get(record.projectId)?.name ?? target.name;
-  refuseRemoteless(repos, moves, projectName);
+  refuseRepositoryMove({ writer, repos }, moves, projectName);
   for (const { row, repoId: to } of moves) {
     if (to === row.repoId) continue;
     writer.patch(row.id, { repoId: to, updatedAt: at });
@@ -101,11 +101,54 @@ export function moveWithinProject(
 }
 
 /**
+ * Refuses a move of `moves` within one project before anything is written:
+ * a row that asks to ship as a pull request into a repository with no
+ * remote (`refuseRemoteless`), and a row that would land apart from the
+ * work it branches from, or from open work that branches from it, since a
+ * task branches only from work in its own repository and that start would
+ * be refused (`branchFromSource`).
+ */
+export function refuseRepositoryMove(
+  context: Pick<ProjectMoveContext, "writer" | "repos">,
+  moves: readonly { row: TaskRecord; repoId: string | null }[],
+  projectName: string,
+): void {
+  const { writer, repos } = context;
+  refuseRemoteless(repos, moves, projectName);
+  const after = new Map(moves.map((move) => [move.row.id, move.repoId]));
+  const landing = (row: TaskRecord) => (after.has(row.id) ? after.get(row.id) : row.repoId);
+  const nameOf = (row: TaskRecord) =>
+    repositoryName(context, row.projectId, landing(row) ?? null) ?? projectName;
+  for (const { row, repoId: to } of moves) {
+    if (to === row.repoId) continue;
+    const handle = keyOrId(row);
+    for (const reference of writer.references.list(row.id)) {
+      if (reference.kind !== "branch-source") continue;
+      const source = writer.resolve(reference.ref);
+      if (!source || landing(source) === to) continue;
+      // i18n-exempt: a tool answer served to the first mate, not shown to a person
+      throw new TaskGraphRefusal(
+        `Refused: ${handle} branches from ${keyOrId(source)}, which stays in the ${nameOf(source)} repository, so ${handle} cannot move to the ${nameOf(row)} repository; clear its branch_from first.`,
+      );
+    }
+    for (const id of writer.references.taskIdsNaming("branch-source", row.id, row.key)) {
+      const follower = writer.store.get(id);
+      if (follower?.status !== "open" || landing(follower) === to) continue;
+      // i18n-exempt: a tool answer served to the first mate, not shown to a person
+      throw new TaskGraphRefusal(
+        `Refused: ${keyOrId(follower)} branches from ${handle} and stays in the ${nameOf(follower)} repository, so ${handle} cannot move to the ${nameOf(row)} repository; clear or move ${keyOrId(follower)}'s branch_from first.`,
+      );
+    }
+  }
+}
+
+/**
  * Started work with no commits of its own goes to another repository of its
  * project and starts again there (inside the caller's transaction, once its
  * crewmate stopped and its empty working copy was removed): it is open
  * and unstarted again, queued if it was running and in the backlog if it
- * waited there, with no working copy, conversation or
+ * waited there (started work there is active with `backlogSince`), with no
+ * working copy, conversation or
  * computer, so its next start makes a working copy in `target` and opens a
  * new conversation from the same brief. Its key, record, the captain's
  * words and consents, its waits and its parts stay as they are.
@@ -134,7 +177,13 @@ export function restartInRepository(
     placement: null,
     gate: null,
     // Running work goes back in line; work the backlog holds stays there.
-    ...(record.status === "active" ? { startPolicy: "when-ready" as const } : {}),
+    ...(record.status === "active"
+      ? {
+          startPolicy:
+            record.backlogSince != null ? ("on-request" as const) : ("when-ready" as const),
+        }
+      : {}),
+    backlogSince: null,
     // What this Mac brought home was the copy that is gone.
     shape: withShapeKey(record.shape, "home_copy", undefined),
     updatedAt: at,

@@ -222,9 +222,9 @@ const PROTECTED: { intent: ProtectedIntent; rule: string; home: Home; says: stri
   },
   {
     intent: "tests",
-    rule: "deleting a test asks the captain",
+    rule: "deleting a test that was there before the change asks the captain",
     home: "prompt",
-    says: "deleting a test still asks for the captain's approval.",
+    says: "deleting a test that was there before your change still asks for the captain's approval.",
   },
   {
     intent: "tests",

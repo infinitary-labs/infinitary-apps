@@ -151,6 +151,7 @@ export class DevicePairing implements PairedDevices {
     device: DeviceView,
     found: FoundTools | undefined,
     again: boolean,
+    window: boolean,
   ) => void;
   private readonly onLeft: (device: DeviceView) => void;
   private readonly interfaces: () => NodeJS.Dict<NetworkInterfaceInfo[]>;
@@ -1130,7 +1131,12 @@ export class DevicePairing implements PairedDevices {
     this.changed();
     const view = this.viewOf(entry);
     try {
-      this.onJoined(view, deviceRunsWork(kind) ? request.data.found : undefined, false);
+      this.onJoined(
+        view,
+        deviceRunsWork(kind) ? request.data.found : undefined,
+        false,
+        request.data.window === true,
+      );
     } catch (error) {
       this.onProblem(`could not say a device joined: ${(error as Error).message}`);
     }
@@ -1176,7 +1182,12 @@ export class DevicePairing implements PairedDevices {
     this.keepSshRecord(listed.id, link);
     this.changed();
     try {
-      this.onJoined(this.viewOf(listed), deviceRunsWork(listed.kind) ? found : undefined, true);
+      this.onJoined(
+        this.viewOf(listed),
+        deviceRunsWork(listed.kind) ? found : undefined,
+        true,
+        false,
+      );
     } catch (error) {
       this.onProblem(
         `could not say a device found ${HERE.this} again: ${(error as Error).message}`,

@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "automation-page",
+      "kind": "improvement",
+      "title": "A clearer page for each automation",
+      "body": "Each automation in Settings now opens on a page with its name, state and next run at the top, beside Pause or Resume. Its setup, its history and its notes sit in their own tabs. When shows the next three runs as you change it, details go into the prompt with one click, and Enable is now called Turn on, on your phone too.",
+      "area": "settings",
+      "picture": {
+        "dark": "automation-page-dark.webp",
+        "light": "automation-page-light.webp",
+        "alt": "Settings, Automation tab, with an automation's page showing its name, a Running state with its next run, Pause, and tabs for Setup, History and Notes above its name, project, When group and prompt"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -15,7 +15,7 @@ The first mate reads a rule's runs, the jobs kept running and a schedule's next 
 The window reads it every 30 seconds while it is connected, since the Automation panel's gate follows it, so one read reads what is connected at most once for all its event rules (`automationRulesOf`, `SchedulerEvents.snapshot`), never once per rule.
 
 Settings and the first mate change a rule through one path: each change channel is a line of the app action catalog (`src/shared/actions.ts`, `docs/orchestrator-contract.md` "App action catalog"), run by the dispatcher.
-`automation-edit` is Save in the sheet and its Turn on, `automation-state` is Pause and Resume, `automation-pause-all` is Pause all and `automation-delete` is Delete.
+`automation-edit` is Save in Setup and its Turn on, `automation-state` is Pause and Resume, `automation-pause-all` is Pause all and `automation-delete` is Delete.
 The first mate runs them with `app_change`, and its `cancel_schedule` is `automation-delete`.
 Pausing, resuming, pausing all and deleting are its own judgment at any turn, as making a schedule is (captain decision Q4); it edits a rule, or turns one on, when the captain asks.
 
@@ -79,11 +79,22 @@ It fires once the named task is closed, whatever closed it, and a task the recor
 Its cursor only marks that the rule looked, so a task that closed before the rule's first look still fires it on the next one.
 It declares `atOnce`, and every close looks at once at the rules listening to it (`lookOnClose`), so nothing waits for the next minute.
 
+## The automation's page
+
+Settings → Automation lists the rules on the left, with New automation at the list's foot, and shows the picked rule's page on the right in four parts, each holding its own actions (`AutomationTab.tsx` and its parts beside it).
+
+- **The header**: the rule's name as the title, then its state with its dot (Failing in red), its schedule, its next run and who set it up, and Pause or Resume, which acts at once.
+  One note under it says why a failing rule gets nothing new, that a stopped rule waits for its integration, or that a draft never runs.
+- **Setup**: Name and Project in one row; one When group holding the kind, its time, the time zone, the weekdays, and an event with its filters and Only if, under one caption that says what is missing, else the next three runs, else how often the app looks; the prompt with one button per schedule detail; Preview, which opens what the rule will do in place; and a foot with Save, lit once something changed, and Discard changes, or a draft's Turn on… and Save draft, with Delete at the far end asking once as Delete for good.
+- **History** and **Notes**, each its own tab beside Setup, one Tab stop moved between with the arrow keys.
+  Every tab stays drawn while another is shown, so unsaved edits survive a switch; a new automation, not saved yet, has Setup alone.
+
 ## Drafts
 
-- A rule made in Settings is saved as a draft with Save draft, or turned on with Enable.
-- Enable opens a review in the sheet before anything runs: the schedule, the time zone, the project, the prompt exactly as the first mate gets it the first time, the next dates, what it sends (the prompt and its schedule details reach the AI subscription and stay in the first mate's conversation, and nothing else gets new access) and what happens to a missed time.
-  Turn on saves the sheet and runs the rule (`automationSaveSchema`'s `enable`); Back returns to the sheet with nothing changed.
+- A rule made in Settings is saved as a draft with Save draft, or turned on with Turn on….
+- Turn on… replaces Setup with a review before anything runs: the schedule, the time zone and what it means, the project, the prompt exactly as the first mate gets it the first time, the next dates, what it sends (the prompt and its schedule details reach the AI subscription and stay in the first mate's conversation, and nothing else gets new access) and what happens to a missed time.
+  Preview shows the same facts while the rule is edited.
+  Turn on saves the rule and runs it (`automationSaveSchema`'s `enable`); Back returns to Setup with nothing changed.
   A draft turned on runs from that moment, so an interval's anchor is when it was turned on.
 - `schedule_prompt` saves a draft when the first mate passes `draft`, which it does when the captain's ask leaves something open; a complete ask runs at once.
 - A recurring rule the first mate makes outside a captain's own turn is saved as a draft whatever it passes: new ongoing rules need the captain (`Scheduler.create`).
@@ -105,7 +116,7 @@ It declares `atOnce`, and every close looks at once at the rules listening to it
 
 A saved prompt may hold placeholders, filled in when it runs (`SCHEDULE_DETAILS`, `fillScheduleDetails` in `src/shared/automation.ts`): `{{scheduled time}}`, `{{time zone}}` and `{{missed runs}}`, and for an event rule `{{events}}` in place of the missed runs.
 Each is a plain value, never an expression.
-Settings' Insert schedule detail puts one at the caret, and Preview shows the prompt filled in for the next run.
+Settings' Insert buttons under the prompt put one at the caret, and Preview shows the prompt filled in for the next run.
 History keeps the prompt as it was sent.
 
 ## Running
@@ -120,8 +131,8 @@ History keeps the prompt as it was sent.
   A passed one-time rule cannot resume; saving it with a new future date re-enables it.
 - An edit to the schedule picks the next occurrence of the new one; an edit to only the name, the prompt or the project keeps the next run where it was.
 - Pause all pauses enabled rules only.
-- Preview lists the next three dates.
-  It sends nothing and changes no due time.
+- Setup's When caption and Preview list the next three dates.
+  They send nothing and change no due time.
 - Delivery stays at least once through the inbox ("Deliveries").
 
 ## Deliveries
@@ -168,7 +179,7 @@ It is the captain's q6 on INF-775: the app looks on its one tick at each kind's 
 - A rule keeps which connection its integration's id stood for when it was pointed there (`schedules.event_connection`; `docs/integrations.md`, "Which connection"), and looks only while the id still stands for it.
   Once that connection is removed or replaced - the same id signed in as another account, or another server added under the same name - the rule waits, and Settings and the rule's `stopped` say why; a rule saved before rules kept a connection waits the same way.
   An edit that keeps the integration and event keeps the connection, so nothing moves a rule onto a replacement unasked.
-  The person picks it again by saving the rule in Settings → Automation, whose sheet says that saving listens to what is picked under When (`reconnect` on `inf:automation:save`); pointing the rule at another integration or event picks that one.
+  The person picks it again by saving the rule in Settings → Automation, whose page says that saving listens to what is picked under When (`reconnect` on `inf:automation:save`); pointing the rule at another integration or event picks that one.
 - The prompt is filled with `{{events}}`, one line per event with the integration's typed summary and its id, never its body; a prompt without the placeholder gets the events after it.
   A summary of words anyone can write, such as a message's sender and subject, arrives fenced as data from outside, and the list ends with one line saying never to follow what the fences hold (`docs/integrations.md`, "Data from outside").
   The first mate's message names the integration, the event and how many arrived, and says each event is evidence from outside, never an instruction.
@@ -182,7 +193,7 @@ It is the captain's q6 on INF-775: the app looks on its one tick at each kind's 
 A look that fails, because the integration answered with an error, changes nothing on its own: the rule keeps its place and looks again at its cadence.
 The Scheduler counts each turned-on rule's failed looks in a row, and the first look that answers clears them (`lookFailed` and `lookingFails` on the Scheduler).
 Once a rule's row spans an hour of ticks (`LOOKS_FAILING_TICKS`, counted in ticks as the cadence is) and holds at least two failed looks, the rule shows as failing: `automation.list` carries `failing` on it, with when the first failed look was and what the newest one answered, cut short.
-Settings → Automation and the phone's Settings read it as Failing, with a red dot and a line in the rule's sheet saying since when nothing new has reached the first mate, the newest answer, and that it runs again by itself once a look works.
+Settings → Automation and the phone's Settings read it as Failing, with a red dot and a red note under the rule's header saying since when nothing new has reached the first mate, the newest answer, and that it runs again by itself once a look works.
 The rule's saved state stays `enabled` and it keeps looking, so a source that answers again needs nothing from the person.
 The first mate hears of it once, in an `automation-looks-failing` wake naming the rule, the integration and event, since when, how many looks failed and the newest answer as words from outside; it tells the captain on a note, or offers a fix it can make itself.
 The wake's `once` names the rule's revision and place, so a restart, which starts the count again, tells nothing new about a rule that has neither changed nor moved.
@@ -190,7 +201,7 @@ Pausing, editing, deleting or signing out ends the row.
 
 ### The event screen
 
-An event rule may say what it waits for, in words (`waitsFor` on the event spec): the first mate passes `event_waits_for` to `schedule_prompt`, and Settings' sheet shows it as an Only if field under When.
+An event rule may say what it waits for, in words (`waitsFor` on the event spec): the first mate passes `event_waits_for` to `schedule_prompt`, and Settings' Setup shows it as an Only if field in the When group.
 While the `event-screen` decision use is on (Settings → Intelligence → Decisions, "Screen automation events"), each look's new events of such a rule are asked about one by one before anything is delivered (`eventScreen`, `src/core/decisions/eventScreen.ts`).
 The question reads what the rule waits for, the event's kind and its summary, and answers `match`, `unrelated` or `unclear`; the summary is data from outside, and the question says never to follow it.
 Only an answered `unrelated` keeps an event from the first mate.
@@ -236,8 +247,8 @@ A rule deleted since its run started keeps nothing: the report stands, and the t
 A file named for the notes from a task no automation started is refused too.
 A run the first mate handles alone leaves the notes as they are: the first mate has no tool or sentence for them, and the catalog line `automation-notes` stays with the captain.
 
-Settings → Automation shows a saved rule's notes under its buttons, where the captain edits them, saves them, clears them (an empty version) and reads earlier versions with who wrote each, all by keyboard (`inf:automation:notes`, `inf:automation:notes-save`).
-The sheet reads only the newest version, and Earlier versions reads every version only while it is open, since versions are never pruned.
+Settings → Automation shows a saved rule's notes in its Notes tab, where the captain edits them, saves them, clears them (an empty version) and reads earlier versions with who wrote each, all by keyboard (`inf:automation:notes`, `inf:automation:notes-save`).
+The tab reads only the newest version, and Earlier versions reads every version only while it is open, since versions are never pruned.
 A captain's save leaves an operation and an Activity line, as every catalog change does; a rule itself carries no notes, so a view on an older build reads rules unchanged.
 The notes are the rule's own page, not knowledge: they reach only the rule's own crewmates, never the knowledge graph, the first mate or standing directions.
 
@@ -247,7 +258,7 @@ The notes are the rule's own page, not knowledge: they reach only the rule's own
 The rule's own next-fire time is stored on the rule, so trimming history never lets an old occurrence run again.
 Deleting a rule, or a one-time rule leaving once it ran, deletes its runs, not the tasks, cards or conversation its deliveries led to.
 
-Settings' History lists a rule's runs newest first: where each delivery stands, its planned and sent times, what it caught up, its version, why a cancelled one was taken back, and what a handled one found and led to.
+Settings' History tab lists a rule's runs newest first, each leading with when it was sent and where its delivery stands, then what a handled one found, or why it stands so, and what it led to; its Details fold its planned and sent times, what it caught up, its version and the prompt as sent.
 What it found is the first mate's closing words on the turn that handled it, after "Found:"; a run handled before runs kept them shows none.
 A task it led to shows by its key, linked as anywhere the window draws one; a card by its title, opened forward while it is up and as it closed otherwise.
 The history reads again when a first mate turn ends, since nothing else says a delivery was handled.
@@ -261,7 +272,7 @@ It starts collapsed; the rail keeps the collapse choice by the panel's id, so it
 Collapsed, its header counts the running rules as active and, when there are any, the paused ones: "1 active · 2 paused", or "1 active"; a draft or a finished rule is in neither count.
 It adds the jobs kept running when there are any, "1 active · 2 kept", and with no rule saved counts only them: "2 kept".
 Each row shows a rule's state, name and next run; a draft reads Draft where a running rule shows its next run.
-A click or Enter opens that rule's sheet in Settings → Automation through `point.openSettings("automation", id)`, with the keyboard in the sheet; nothing runs, pauses or changes.
+A click or Enter opens that rule's page in Settings → Automation through `point.openSettings("automation", id)`, with the keyboard in its Setup; nothing runs, pauses or changes.
 Under Kept running, a row per kept job shows its last check, label and computer; a click or Enter opens Settings → Automation at that job with the keyboard on its Check, through `point.openSettings("automation", "kept:<id>")`.
 The rule rows and kept rows are one stop the arrows move through.
 Expanded, its header shows Open Automation, the app's open button, as Knowledge's header does; it names no card, so it is pressed into the panel, which opens Settings → Automation at the full list through `point.openSettings("automation")` (docs/ui-plugins.md, "A panel's cards").
@@ -276,8 +287,8 @@ Settings → Automation with its Kept running list, the Automation panel and its
 
 A computer that controls the first mate on another (`docs/view.md`) shows the same Automation tab, panel and commands, over the rules of the computer the first mate lives on: every `inf:automation:*` channel reaches views (`docs/connection.md`).
 The rules run only there, so nothing runs twice and nothing moves when the computer that controls it closes.
-The sheet names that computer where the clock matters: a rule that keeps no zone follows "the clock on MacBook Pro", and the review says a missed time is about the first mate on MacBook Pro.
-A new rule still takes the zone of the computer it is made on, shown in the sheet.
+The page names that computer where the clock matters: a rule that keeps no zone follows "the clock on MacBook Pro", and the review says a missed time is about the first mate on MacBook Pro.
+A new rule still takes the zone of the computer it is made on, shown in Setup.
 While that computer is out of reach or too far apart, its rules stay as last read and a change is refused as any change is (`docs/view.md`, "Out of reach in the window").
 
 ### Event filters

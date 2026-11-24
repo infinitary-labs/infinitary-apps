@@ -51,7 +51,6 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | Done / Got it | Hecho / Entendido | |
 | draft (a pull request) | borrador | As in GitHub's Spanish docs. |
 | drop (a task) | abandonar | "Abandonada", kept apart from "descartar". |
-| Enable… / Turn on | Activar… / Activar | "Activar…" opens the review whose button is "Activar"; "Turn off" is "Desactivar". |
 | escalate (never said) | un modelo más potente | |
 | extra usage (Claude's credits past the allowance) | uso adicional | |
 | feed / activity | Actividad | |
@@ -153,6 +152,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | this computer | esta computadora | |
 | thread (a card's) | hilo | |
 | token, credential (never said) | inicio de sesión, clave | "tokens facturables" stays only where English names billable tokens. |
+| Turn on… / Turn on | Activar… / Activar | "Activar…" opens the review whose button is "Activar"; "Turn off" is "Desactivar". |
 | unmerged work | trabajo sin fusionar | What another computer still holds when it is removed: "Su trabajo sin fusionar viene primero a esta computadora". |
 | Usage | Uso | |
 | where the project lives | donde se aloja el proyecto | |

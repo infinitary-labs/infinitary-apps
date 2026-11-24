@@ -1,134 +1,55 @@
 import {
   AUTOMATION_UNREADABLE,
   type AutomationList,
-  type AutomationNotes,
   type AutomationRule,
-  type AutomationRun,
-  type AutomationSave,
-  type AutomationSpec,
-  RULE_NOTES_MAX_CHARS,
-  SCHEDULE_DETAILS,
-  scheduleDetailsFor,
 } from "@shared/automation";
 import {
-  AUTOMATION_EVENT_UNKNOWN,
   automationDateWords,
-  automationEventWords,
   automationLooksFailingWords,
-  automationNextWords,
+  automationNextShort,
   automationRuleTitle,
   automationStateTone,
   automationStateWords,
   automationWhenWords,
   automationZoneOf,
-  automationZoneWords,
 } from "@shared/automationWords";
-import { formatDateTime, formatNumber } from "@shared/i18n/format";
 import * as m from "@shared/i18n/messages.generated";
-import type { IntegrationsView } from "@shared/integrations";
 import type { ProjectView } from "@shared/tasks";
 import type React from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type KeyboardEvent, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useCommandKeys } from "../app/keyHints";
 import { useShellStore } from "../app/store";
-import { KeyedText } from "../cards/TaskKey";
-import { Button, GroupedChecks, Input, Row, StatusDot } from "../design";
+import { Button, Input, Row, StatusDot } from "../design";
 import { focusWithRing } from "../design/focus";
-import { isView, waitsForUpdate } from "../devices/viewWords";
 import { appReadExecutor } from "../plugins/reads/appExecutor";
-import {
-  AUTOMATION_MIN_MINUTES,
-  AUTOMATION_SHEET_WORDS,
-  blankForm,
-  DELIVERY_TONES,
-  deliveryNote,
-  eventPreviewWords,
-  formOf,
-  hereZone,
-  knownZones,
-  localClockWords,
-  localTimeNote,
-  previewPrompt,
-  type RuleForm,
-  reviewCanTurnOn,
-  reviewFacts,
-  runPromptTitle,
-  runStateWords,
-  runWords,
-  saveOf,
-  specOf,
-  weekdayToggles,
-  zoneNote,
-} from "./automationWords";
+import { AutomationHistory } from "./AutomationHistory";
+import { AutomationNotes } from "./AutomationNotes";
+import { AutomationSetup } from "./AutomationSetup";
+import { messageOf } from "./automationParts";
+import { AUTOMATION_SHEET_WORDS, blankForm, formOf } from "./automationWords";
 import { KEPT_ITEM_PREFIX, KeptRunning } from "./KeptRunning";
 import { LABEL_GAP, ROW_GAP, SettingError } from "./settingRows";
 
-/**
- * The computer Firstmate lives on, by its name, when this one controls it:
- * the automations run there (docs/view.md). Null on that computer itself.
- */
-function useWhere(): string | null {
-  return useShellStore((s) => (isView(s.thisMac) ? s.thisMac.name : null));
-}
-
-/** One event a rule may listen for, as the When choice lists it. */
-type Listenable = {
-  /** `integration/event`, as the form keeps it. */
-  value: string;
-  /** "When an item arrives in Stand-in". */
-  when: string;
-  /** "An item arrives in Stand-in". */
-  label: string;
-  every: number;
-  filters?: { name: string; label: string; defaultValue?: string }[];
-};
-
-/**
- * The events each connected integration can tell (docs/automation.md,
- * "Events"), for the When choice; none where the integrations cannot be read.
- */
-function useListenable(): Listenable[] {
-  const [view, setView] = useState<IntegrationsView | null>(null);
-  const waits = useShellStore((s) => waitsForUpdate(s.thisMac));
-  useEffect(() => {
-    let live = true;
-    if (!waits)
-      window.infinitary.integrations
-        .list()
-        .then((next) => live && setView(next))
-        .catch(() => {});
-    const off = window.infinitary.integrations.onChange((next) => setView(next));
-    return () => {
-      live = false;
-      off();
-    };
-  }, [waits]);
-  // The integrations' events, then the app's own, which need nothing connected.
-  return [...(view?.integrations ?? []), ...(view?.appEvents ?? [])].flatMap((integration) =>
-    (integration.events ?? []).map((event) => ({
-      value: `${integration.id}/${event.name}`,
-      when: automationEventWords(event.label, integration.name),
-      label: m.settingsAutomationEventIn({ event: event.label, integration: integration.name }),
-      every: event.every,
-      filters: event.filters,
-    })),
-  );
-}
+/** The parts of a saved automation's page past its header, one at a time. */
+type Part = "setup" | "history" | "notes";
+const PARTS: readonly Part[] = ["setup", "history", "notes"];
 
 /**
  * Settings → Automation (docs/automation.md): the schedules Firstmate runs,
  * as rules. The left column lists them; the right is the selected rule's
- * sheet, where it is edited, previewed, saved as a draft, reviewed and
- * turned on, paused or resumed, deleted, and its history read. The same
- * rules are made by asking Firstmate, and the Automation panel opens a
- * rule's sheet here (`settingsItem`). A computer that controls Firstmate
- * on another shows and changes the same rules, which run over there.
+ * page: its state in the header, then Setup, History and Notes in tabs
+ * (docs/automation.md, "The automation's page"). The same rules are made
+ * by asking Firstmate, and the Automation panel opens a rule's page here
+ * (`settingsItem`). A computer that controls Firstmate on another shows and
+ * changes the same rules, which run over there.
  */
 export function AutomationTab() {
   const [rules, setRules] = useState<AutomationRule[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<string | "new" | null>(null);
+  // The tab shown, kept here so a pause or a save, which draws the page anew, keeps it.
+  const [part, setPart] = useState<Part>("setup");
   const [error, setError] = useState<string | null>(null);
   const [projects, setProjects] = useState<ProjectView[]>([]);
   const arrival = useShellStore((s) =>
@@ -168,8 +89,14 @@ export function AutomationTab() {
     [],
   );
 
+  const select = (id: string | "new" | null) => {
+    setError(null);
+    setPart("setup");
+    setSelected(id);
+  };
+
   // A rule a panel row opened: select it once the list holds it, and put
-  // the keyboard in its sheet.
+  // the keyboard in its Setup.
   useEffect(() => {
     // A kept job's row is Kept running's to open.
     if (arrival === null || rules === null || arrival.startsWith(KEPT_ITEM_PREFIX)) return;
@@ -177,6 +104,7 @@ export function AutomationTab() {
     if (!rules.some((rule) => rule.id === arrival)) return;
     setSearch("");
     setError(null);
+    setPart("setup");
     setSelected(arrival);
     setFocusSheet((count) => count + 1);
   }, [arrival, rules]);
@@ -235,14 +163,6 @@ export function AutomationTab() {
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
-          <Button
-            variant="secondary"
-            onClick={() => setSelected("new")}
-            data-automation-new
-            style={{ justifyContent: "center" }}
-          >
-            {m.settingsAutomationNew()}
-          </Button>
           <ul
             aria-label={m.settingsAutomationList()}
             style={{
@@ -259,12 +179,15 @@ export function AutomationTab() {
                   title={automationRuleTitle(rule)}
                   tone={automationStateTone(rule)}
                   toneLabel={automationStateWords(rule)}
-                  trailing={automationNextWords(rule)}
+                  trailing={
+                    rule.failing ? (
+                      <span style={{ color: "var(--danger)" }}>{automationStateWords(rule)}</span>
+                    ) : (
+                      automationNextShort(rule)
+                    )
+                  }
                   selected={selected === rule.id}
-                  onClick={() => {
-                    setError(null);
-                    setSelected(rule.id);
-                  }}
+                  onClick={() => select(rule.id)}
                 />
               </li>
             ))}
@@ -279,26 +202,36 @@ export function AutomationTab() {
               {m.settingsAutomationNoMatch()}
             </div>
           )}
+          <Button
+            variant="secondary"
+            onClick={() => select("new")}
+            data-automation-new
+            style={{ alignSelf: "flex-start" }}
+          >
+            {m.settingsAutomationNew()}
+          </Button>
         </div>
         <div ref={sheetRef} style={{ minWidth: 0 }}>
           {selected === "new" && (
             <Sheet
               key="new"
-              initial={blankForm()}
               rule={undefined}
               projects={projects}
+              part="setup"
+              onPart={setPart}
               onSaved={(rule) => setSelected(rule.id)}
-              onDeleted={() => setSelected(null)}
+              onDeleted={() => select(null)}
             />
           )}
           {current && (
             <Sheet
               key={`${current.id}-${current.revision}-${current.state}`}
-              initial={formOf(current)}
               rule={current}
               projects={projects}
+              part={part}
+              onPart={setPart}
               onSaved={(rule) => setSelected(rule.id)}
-              onDeleted={() => setSelected(null)}
+              onDeleted={() => select(null)}
             />
           )}
           {/* Nothing picked, or the picked rule is gone: a one-time rule leaves once it ran. */}
@@ -314,1001 +247,306 @@ export function AutomationTab() {
   );
 }
 
-const LABEL_STYLE = { fontSize: "var(--text-sm)", color: "var(--fg-2)", fontWeight: 500 } as const;
-const FIELD_STYLE = { display: "flex", flexDirection: "column", gap: 4 } as const;
-const NOTE_STYLE = { fontSize: "var(--text-xs)", color: "var(--fg-3)" } as const;
-const SELECT_STYLE: React.CSSProperties = {
-  fontFamily: "var(--font-ui)",
-  fontSize: "var(--text-base)",
-  color: "var(--fg-1)",
-  background: "var(--surface-input)",
-  border: "1px solid var(--line-1)",
-  borderRadius: "var(--radius-m)",
-  padding: "9px 10px",
-  minWidth: 0,
+const PART_WORDS: Record<Part, () => string> = {
+  setup: () => m.settingsAutomationSetup(),
+  history: () => m.settingsAutomationHistory(),
+  notes: () => m.settingsAutomationNotes(),
 };
 
-type Preview = { dates: number[]; prompt: string; timeZone: string | undefined };
-
-/** The review before Turn on: the save it turns on, and what the rule will do. */
-type Review = Preview & { save: AutomationSave; spec: AutomationSpec; listened?: Listenable };
-
+/**
+ * One automation's page: the header with its name, state, schedule, next
+ * run and Pause or Resume; one note under it; then Setup, History and Notes
+ * in tabs. A new automation, not saved yet, has Setup alone. Every tab stays
+ * drawn while hidden, so unsaved edits in Setup or Notes survive a switch.
+ */
 function Sheet({
-  initial,
   rule,
   projects,
+  part,
+  onPart,
   onSaved,
   onDeleted,
 }: {
-  initial: RuleForm;
   rule: AutomationRule | undefined;
   projects: readonly ProjectView[];
+  part: Part;
+  onPart: (part: Part) => void;
   onSaved: (rule: AutomationRule) => void;
   onDeleted: () => void;
 }) {
-  const [form, setForm] = useState(initial);
-  const [error, setError] = useState<string | null>(null);
-  const [preview, setPreview] = useState<Preview | null>(null);
-  const [review, setReview] = useState<Review | null>(null);
+  const ids = useId();
   const [busy, setBusy] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const promptRef = useRef<HTMLTextAreaElement>(null);
-  const enableRef = useRef<HTMLButtonElement>(null);
-  // Back returns the keyboard to Enable once the sheet's buttons are back.
-  const [backToEnable, setBackToEnable] = useState(0);
-  useEffect(() => {
-    if (backToEnable > 0 && enableRef.current) focusWithRing(enableRef.current);
-  }, [backToEnable]);
-  const where = useWhere();
-  const listenable = useListenable();
-  const listened = listenable.find((one) => one.value === form.event);
-  // A new rule and a draft are saved as drafts and turned on after a review.
-  const drafting = rule === undefined || rule.state === "draft";
-  const set = <K extends keyof RuleForm>(key: K, value: RuleForm[K]) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
-    setPreview(null);
-    setReview(null);
-  };
-
-  const run = async (work: () => Promise<void>) => {
+  const [error, setError] = useState<string | null>(null);
+  const shownPart = rule ? part : "setup";
+  const toggle = async () => {
+    if (!rule) return;
     setBusy(true);
     setError(null);
     try {
-      await work();
+      await window.infinitary.automation.setState(
+        rule.id,
+        rule.state === "enabled" ? "pause" : "resume",
+      );
     } catch (caught) {
       setError(messageOf(caught));
     } finally {
       setBusy(false);
     }
   };
-
-  // The next dates and the prompt as it is sent the first time; sends nothing.
-  const previewOf = async (spec: AutomationSpec): Promise<Preview> => {
-    const { dates } = await window.infinitary.automation.preview(spec);
-    return {
-      dates,
-      timeZone: automationZoneOf(spec),
-      prompt: previewPrompt(spec, form.prompt, dates, Date.now()),
-    };
-  };
-
-  const save = () =>
-    run(async () => {
-      const request = saveOf(form);
-      if (typeof request === "string") throw new Error(request);
-      onSaved(await window.infinitary.automation.save(request));
-    });
-  const toggle = () =>
-    run(async () => {
-      if (!rule) return;
-      await window.infinitary.automation.setState(
-        rule.id,
-        rule.state === "enabled" ? "pause" : "resume",
-      );
-    });
-  const remove = () =>
-    run(async () => {
-      if (!rule) return;
-      await window.infinitary.automation.delete(rule.id);
-      onDeleted();
-    });
-  const showPreview = () =>
-    run(async () => {
-      const spec = specOf(form);
-      if (typeof spec === "string") throw new Error(spec);
-      setPreview(await previewOf(spec));
-    });
-  // Enable: the review of what turning it on means, with Turn on in reach.
-  const openReview = () =>
-    run(async () => {
-      const request = saveOf(form, true);
-      if (typeof request === "string") throw new Error(request);
-      setPreview(null);
-      setReview({
-        ...(await previewOf(request.spec)),
-        save: request,
-        spec: request.spec,
-        ...(listened ? { listened } : {}),
-      });
-    });
-  const closeReview = () => {
-    setReview(null);
-    setBackToEnable((count) => count + 1);
-  };
-  const turnOn = () =>
-    run(async () => {
-      if (!review) return;
-      onSaved(await window.infinitary.automation.save(review.save));
-    });
-
-  // Insert schedule detail: its placeholder goes in at the caret, and the
-  // caret lands after it.
-  const insertDetail = (token: string) => {
-    const field = promptRef.current;
-    const at = field?.selectionStart ?? form.prompt.length;
-    const end = field?.selectionEnd ?? at;
-    set("prompt", form.prompt.slice(0, at) + token + form.prompt.slice(end));
-    requestAnimationFrame(() => {
-      if (!field) return;
-      field.focus();
-      field.setSelectionRange(at + token.length, at + token.length);
-    });
-  };
-
-  const calendar = form.kind === "daily" || form.kind === "weekly";
+  const setup = (
+    <AutomationSetup
+      initial={rule ? formOf(rule) : blankForm()}
+      rule={rule}
+      projects={projects}
+      onSaved={onSaved}
+      onDeleted={onDeleted}
+    />
+  );
   return (
-    <form
-      aria-label={m.settingsAutomationTitle()}
+    <section
+      aria-label={rule ? automationRuleTitle(rule) : m.settingsAutomationNew()}
       data-automation-sheet={rule?.id ?? "new"}
-      onSubmit={(event) => {
-        event.preventDefault();
-        void save();
-      }}
       style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: ROW_GAP,
-        padding: 18,
         background: "var(--bg-1)",
         border: "1px solid var(--line-1)",
         borderRadius: "var(--radius-m)",
       }}
     >
-      {rule && (
-        <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}>
-          {automationStateWords(rule)} ·{" "}
-          {rule.stopped
-            ? AUTOMATION_SHEET_WORDS.stoppedWhen
-            : automationWhenWords(rule.spec, rule.when)}
-          {rule.captainRequested ? "" : ` · ${m.settingsAutomationSetUpByFirstMate()}`}
-        </div>
-      )}
-      {rule?.failing && (
-        <div
-          data-automation-failing
-          role="status"
-          style={{ ...NOTE_STYLE, display: "flex", flexDirection: "column", gap: 2 }}
-        >
-          {automationLooksFailingWords(rule.failing).map((line) => (
-            <span key={line}>{line}</span>
-          ))}
-        </div>
-      )}
-      {rule?.stopped && (
-        <div data-automation-stopped role="status" style={NOTE_STYLE}>
-          {rule.stopped} {AUTOMATION_SHEET_WORDS.stoppedNote}
-        </div>
-      )}
-      {drafting && (
-        <div data-automation-draft-note style={NOTE_STYLE}>
-          {AUTOMATION_SHEET_WORDS.draftNote}
-        </div>
-      )}
-      <div style={FIELD_STYLE}>
-        <label htmlFor="automation-name" style={LABEL_STYLE}>
-          {m.settingsAutomationName()}
-        </label>
-        <Input
-          id="automation-name"
-          value={form.name}
-          maxLength={80}
-          placeholder={m.settingsAutomationNamePlaceholder()}
-          onChange={(event) => set("name", event.target.value)}
-        />
-      </div>
-      <div style={FIELD_STYLE}>
-        <label htmlFor="automation-when" style={LABEL_STYLE}>
-          {m.settingsAutomationWhen()}
-        </label>
-        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-          <select
-            id="automation-when"
-            value={form.kind}
-            onChange={(event) => {
-              const kind = event.target.value as AutomationSpec["kind"];
-              // Chosen days always keep a zone: a rule that followed this
-              // computer's clock takes this computer's zone, shown.
-              setForm((prev) => ({
-                ...prev,
-                kind,
-                ...(kind === "weekly" && !prev.timeZone ? { timeZone: hereZone() } : {}),
-                // Something happening starts at the first event listed.
-                ...(kind === "event" && !prev.event ? { event: listenable[0]?.value ?? "" } : {}),
-              }));
-              setPreview(null);
-              setReview(null);
-            }}
-            style={SELECT_STYLE}
-          >
-            <option value="every">{m.settingsAutomationKindEvery()}</option>
-            <option value="daily">{m.settingsAutomationKindDaily()}</option>
-            <option value="weekly">{m.settingsAutomationKindWeekly()}</option>
-            <option value="once">{m.settingsAutomationKindOnce()}</option>
-            {(listenable.length > 0 || form.kind === "event") && (
-              <option value="event">{m.settingsAutomationKindEvent()}</option>
-            )}
-          </select>
-          {form.kind === "event" && (
-            <select
-              aria-label={m.settingsAutomationWhatHappens()}
-              data-automation-event
-              value={form.event}
-              onChange={(event) =>
-                setForm((prev) => ({ ...prev, event: event.target.value, filter: {} }))
-              }
-              style={SELECT_STYLE}
-            >
-              {listenable.map((one) => (
-                <option key={one.value} value={one.value}>
-                  {one.label}
-                </option>
-              ))}
-              {!listened && (
-                <option value={form.event}>
-                  {form.event
-                    ? m.settingsAutomationEventNotConnected()
-                    : m.settingsAutomationNoEvents()}
-                </option>
-              )}
-            </select>
-          )}
-          {form.kind === "event" &&
-            listened?.filters?.map((field) => (
-              <label
-                key={field.name}
-                htmlFor={`automation-filter-${field.name}`}
-                style={LABEL_STYLE}
-              >
-                {field.label}
-                <Input
-                  id={`automation-filter-${field.name}`}
-                  aria-label={field.label}
-                  placeholder={field.defaultValue}
-                  value={form.filter[field.name] ?? ""}
-                  onChange={(event) =>
-                    set("filter", { ...form.filter, [field.name]: event.target.value })
-                  }
-                />
-              </label>
-            ))}
-          {form.kind === "every" && (
-            <>
-              <Input
-                aria-label={m.settingsAutomationMinutesBetween()}
-                type="number"
-                min={AUTOMATION_MIN_MINUTES}
-                value={form.minutes}
-                onChange={(event) => set("minutes", event.target.value)}
-                style={{ width: 90 }}
-              />
-              <span style={{ color: "var(--fg-3)", fontSize: "var(--text-sm)" }}>
-                {m.settingsAutomationMinutes()}
-              </span>
-            </>
-          )}
-          {calendar && (
-            <Input
-              aria-label={m.settingsAutomationTimeOfDay()}
-              type="time"
-              value={form.time}
-              onChange={(event) => set("time", event.target.value)}
-              style={{ width: 140 }}
-            />
-          )}
-          {form.kind === "once" && (
-            <Input
-              aria-label={m.settingsAutomationDateAndTime()}
-              type="datetime-local"
-              value={form.at}
-              onChange={(event) => set("at", event.target.value)}
-              style={{ width: 220 }}
-            />
-          )}
-        </div>
-        {form.kind === "weekly" && (
-          <Weekdays days={form.days} onChange={(days) => set("days", days)} />
-        )}
-      </div>
-      {form.kind === "event" && (
-        <div style={FIELD_STYLE}>
-          <label htmlFor="automation-waits-for" style={LABEL_STYLE}>
-            {m.automationWaitsFor()}
-          </label>
-          <Input
-            id="automation-waits-for"
-            placeholder={m.automationWaitsForPlaceholder()}
-            value={form.waitsFor}
-            onChange={(event) => set("waitsFor", event.target.value)}
-          />
-        </div>
-      )}
-      {calendar && (
-        <div style={FIELD_STYLE}>
-          <label htmlFor="automation-zone" style={LABEL_STYLE}>
-            {m.settingsAutomationTimeZone()}
-          </label>
-          <ZoneSelect
-            value={form.timeZone}
-            where={where}
-            onChange={(zone) => set("timeZone", zone)}
-          />
-          <span style={NOTE_STYLE}>{form.timeZone ? zoneNote(where) : localTimeNote(where)}</span>
-        </div>
-      )}
-      <div style={FIELD_STYLE}>
-        <label htmlFor="automation-project" style={LABEL_STYLE}>
-          {m.settingsAutomationProject()}
-        </label>
-        <select
-          id="automation-project"
-          value={form.projectId}
-          onChange={(event) => set("projectId", event.target.value)}
-          style={SELECT_STYLE}
-        >
-          <option value="">{m.settingsAutomationNoProject()}</option>
-          {projects.map((project) => (
-            <option key={project.id} value={project.id}>
-              {project.name}
-            </option>
-          ))}
-          {form.projectId && !projects.some((project) => project.id === form.projectId) && (
-            <option value={form.projectId}>{m.settingsAutomationRemovedProject()}</option>
-          )}
-        </select>
-      </div>
-      <div style={FIELD_STYLE}>
-        <label htmlFor="automation-prompt" style={LABEL_STYLE}>
-          {m.settingsAutomationPrompt()}
-        </label>
-        <textarea
-          id="automation-prompt"
-          ref={promptRef}
-          value={form.prompt}
-          rows={4}
-          placeholder={m.settingsAutomationPromptPlaceholder()}
-          onChange={(event) => set("prompt", event.target.value)}
-          style={TEXTAREA_STYLE}
-        />
-        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-          <select
-            aria-label={m.settingsAutomationInsertDetail()}
-            data-automation-detail
-            value=""
-            onChange={(event) => {
-              const detail = SCHEDULE_DETAILS.find((one) => one.id === event.target.value);
-              if (detail) insertDetail(detail.token);
-            }}
-            style={{ ...SELECT_STYLE, fontSize: "var(--text-sm)", padding: "5px 8px" }}
-          >
-            <option value="">{m.settingsAutomationInsertDetailChoice()}</option>
-            {scheduleDetailsFor(form.kind).map((detail) => (
-              <option key={detail.id} value={detail.id}>
-                {detail.label}
-              </option>
-            ))}
-          </select>
-          <span style={NOTE_STYLE}>{AUTOMATION_SHEET_WORDS.detailNote}</span>
-        </div>
-        <span style={NOTE_STYLE}>
-          {form.kind === "event"
-            ? AUTOMATION_SHEET_WORDS.submittedNoteEvents
-            : AUTOMATION_SHEET_WORDS.submittedNote}
-        </span>
-      </div>
-      {preview !== null && (
-        <div
-          data-automation-preview
-          style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "var(--text-sm)" }}
-        >
-          <div style={{ color: "var(--fg-2)" }}>
-            {form.kind === "event"
-              ? eventPreviewWords(listened?.when ?? AUTOMATION_EVENT_UNKNOWN, listened?.every)
-              : preview.dates.length === 0
-                ? m.settingsAutomationPassed()
-                : m.settingsAutomationPreviewNext({
-                    dates: preview.dates
-                      .map((at) => automationDateWords(at, preview.timeZone))
-                      .join(" · "),
-                  })}
-          </div>
-          {preview.prompt && <PromptBox prompt={preview.prompt} preview />}
-        </div>
-      )}
-      {review !== null && (
-        <ReviewPanel
-          review={review}
-          projects={projects}
-          where={where}
-          busy={busy}
-          onTurnOn={() => void turnOn()}
-          onBack={closeReview}
-        />
-      )}
-      <SettingError error={error} />
-      {review === null && (
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {drafting ? (
-            <>
-              <Button
-                ref={enableRef}
-                type="button"
-                variant="primary"
-                disabled={busy}
-                onClick={() => void openReview()}
-                data-automation-enable
-              >
-                {m.settingsAutomationEnable()}
-              </Button>
-              <Button type="submit" variant="secondary" disabled={busy} data-automation-save>
-                {m.settingsAutomationSaveDraft()}
-              </Button>
-            </>
-          ) : (
-            <Button type="submit" variant="primary" disabled={busy} data-automation-save>
-              {m.settingsAutomationSave()}
-            </Button>
-          )}
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={busy}
-            onClick={() => void showPreview()}
-          >
-            {m.settingsAutomationPreview()}
-          </Button>
-          {rule && (rule.state === "enabled" || rule.state === "paused") && (
-            <Button type="button" variant="secondary" disabled={busy} onClick={() => void toggle()}>
-              {rule.state === "enabled"
-                ? m.settingsAutomationPause()
-                : m.settingsAutomationResume()}
-            </Button>
-          )}
-          {rule &&
-            (confirmDelete ? (
-              <Button type="button" variant="danger" disabled={busy} onClick={() => void remove()}>
-                {m.settingsAutomationDeleteForGood()}
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                variant="ghost"
-                disabled={busy}
-                onClick={() => setConfirmDelete(true)}
-              >
-                {m.settingsAutomationDelete()}
-              </Button>
-            ))}
-        </div>
-      )}
-      {rule && review === null && <Notes rule={rule} />}
-      {rule && <History id={rule.id} />}
-    </form>
-  );
-}
-
-const TEXTAREA_STYLE: React.CSSProperties = {
-  fontFamily: "var(--font-ui)",
-  fontSize: "var(--text-base)",
-  color: "var(--fg-1)",
-  background: "var(--surface-input)",
-  border: "1px solid var(--line-1)",
-  borderRadius: "var(--radius-m)",
-  padding: "9px 14px",
-  resize: "vertical",
-};
-
-/**
- * A rule's notes (docs/automation.md, "A rule's notes"): what its runs
- * learned, which a crewmate a run starts edits as a file. The captain reads,
- * edits or clears them here, and reads every earlier version. Saving them
- * makes no new revision of the rule; a page past the limit is never sent.
- */
-function Notes({ rule }: { rule: AutomationRule }) {
-  const [standing, setStanding] = useState<AutomationNotes | undefined>(undefined);
-  const [text, setText] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  // Whether any version was ever saved, a cleared one included: Earlier versions shows then.
-  const [saved, setSaved] = useState(false);
-  // A crewmate's newer page replaces the field unless the captain is editing it.
-  const shown = useRef("");
-  const show = useCallback((notes: AutomationNotes | undefined) => {
-    // Cleared notes read as none.
-    const page = notes?.text ? notes : undefined;
-    setStanding(page);
-    // The updater runs at render, after `shown` moves on, so it compares with the page shown before.
-    const before = shown.current;
-    setText((current) => (current === before ? (page?.text ?? "") : current));
-    shown.current = page?.text ?? "";
-  }, []);
-  useEffect(
-    () =>
-      appReadExecutor().subscribe(
-        "automation.notes",
-        { id: rule.id, versions: "current" },
-        {
-          onValue: (value) => {
-            const newest = (value as AutomationNotes[])[0];
-            setSaved(newest !== undefined);
-            show(newest);
-          },
-          onError: () => {},
-        },
-      ),
-    [rule.id, show],
-  );
-  const over = text.trim().length > RULE_NOTES_MAX_CHARS;
-  const changed = text.trim() !== (standing?.text ?? "");
-  const save = async (next: string) => {
-    setBusy(true);
-    setError(null);
-    try {
-      const version = await window.infinitary.automation.saveNotes(rule.id, next);
-      // The saved page replaces the field, edited or not.
-      shown.current = text;
-      if (version) setSaved(true);
-      show(version ?? undefined);
-    } catch (caught) {
-      setError(messageOf(caught));
-    } finally {
-      setBusy(false);
-    }
-  };
-  return (
-    <div data-automation-notes style={FIELD_STYLE}>
-      <label htmlFor="automation-notes" style={LABEL_STYLE}>
-        {m.settingsAutomationNotes()}
-      </label>
-      <span style={NOTE_STYLE}>{m.settingsAutomationNotesNote()}</span>
-      {standing && standing.revision < rule.revision && (
-        <span data-automation-notes-older style={NOTE_STYLE}>
-          {m.settingsAutomationNotesOlder()}
-        </span>
-      )}
-      <textarea
-        id="automation-notes"
-        value={text}
-        rows={5}
-        onChange={(event) => setText(event.target.value)}
-        style={TEXTAREA_STYLE}
-      />
-      <span
-        data-automation-notes-count
-        style={{ ...NOTE_STYLE, ...(over ? { color: "var(--danger)" } : {}) }}
-      >
-        {m.settingsAutomationNotesCount({
-          count: formatNumber(text.trim().length),
-          max: formatNumber(RULE_NOTES_MAX_CHARS),
-        })}
-      </span>
-      <SettingError error={error} />
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <Button
-          type="button"
-          variant="secondary"
-          disabled={busy || over || !changed}
-          onClick={() => void save(text)}
-          data-automation-notes-save
-        >
-          {m.settingsAutomationNotesSave()}
-        </Button>
-        {standing && (
-          <Button
-            type="button"
-            variant="ghost"
-            disabled={busy}
-            onClick={() => void save("")}
-            data-automation-notes-clear
-          >
-            {m.settingsAutomationNotesClear()}
-          </Button>
-        )}
-      </div>
-      {saved && <EarlierNotes id={rule.id} />}
-    </div>
-  );
-}
-
-/**
- * Every version of a rule's notes, newest first, each naming who wrote it
- * and when. Read only while it is open: versions are never pruned.
- */
-function EarlierNotes({ id }: { id: string }) {
-  const [open, setOpen] = useState(false);
-  const [versions, setVersions] = useState<AutomationNotes[]>([]);
-  useEffect(() => {
-    if (!open) return;
-    return appReadExecutor().subscribe(
-      "automation.notes",
-      { id, versions: "all" },
-      {
-        onValue: (value) => setVersions(value as AutomationNotes[]),
-        onError: () => setVersions([]),
-      },
-    );
-  }, [id, open]);
-  return (
-    <details
-      data-automation-notes-earlier
-      style={{ fontSize: "var(--text-sm)" }}
-      onToggle={(event) => setOpen(event.currentTarget.open)}
-    >
-      <summary style={{ cursor: "pointer", width: "fit-content", color: "var(--fg-2)" }}>
-        {m.settingsAutomationNotesEarlier()}
-      </summary>
-      {open && (
-        <ul
-          style={{
-            margin: "var(--space-2) 0 0",
-            padding: 0,
-            listStyle: "none",
-            display: "flex",
-            flexDirection: "column",
-            gap: "var(--space-3)",
-          }}
-        >
-          {versions.map((version) => (
-            <li
-              key={version.version}
-              data-automation-notes-version={version.version}
-              style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}
-            >
-              <div style={{ color: "var(--fg-3)" }}>
-                {notesVersionWords(version)}
-                {version.task && (
-                  <>
-                    {" · "}
-                    <KeyedText text={`${version.task.key} ${version.task.title}`} />
-                  </>
-                )}
-              </div>
-              {version.text ? (
-                <PromptBox prompt={version.text} />
-              ) : (
-                <div style={{ color: "var(--fg-3)" }}>{m.settingsAutomationNotesEmpty()}</div>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-    </details>
-  );
-}
-
-function notesVersionWords(version: AutomationNotes): string {
-  const words = {
-    version: formatNumber(version.version),
-    date: formatDateTime(version.at, {
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    }),
-  };
-  return version.by === "captain"
-    ? m.settingsAutomationNotesByYou(words)
-    : m.settingsAutomationNotesByCrew(words);
-}
-
-/** The prompt exactly as Firstmate gets it. */
-function PromptBox({ prompt, preview = false }: { prompt: string; preview?: boolean }) {
-  return (
-    <div
-      {...(preview ? { "data-automation-preview-prompt": "" } : {})}
-      style={{
-        color: "var(--fg-2)",
-        whiteSpace: "pre-wrap",
-        padding: "8px 10px",
-        background: "var(--bg-2)",
-        border: "1px solid var(--line-1)",
-        borderRadius: "var(--radius-s)",
-      }}
-    >
-      {prompt}
-    </div>
-  );
-}
-
-/**
- * Enable's review (docs/automation.md, "Drafts"): before a rule runs, the
- * captain reads its schedule, zone, project, the exact prompt, the next
- * dates, what it sends and what happens to a missed time. Turn on runs it;
- * Back returns to the sheet with nothing changed.
- */
-function ReviewPanel({
-  review,
-  projects,
-  where,
-  busy,
-  onTurnOn,
-  onBack,
-}: {
-  review: Review;
-  projects: readonly ProjectView[];
-  where: string | null;
-  busy: boolean;
-  onTurnOn: () => void;
-  onBack: () => void;
-}) {
-  // The review opens with the keyboard on Turn on, so Enter turns it on.
-  const turnOnRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    if (turnOnRef.current) focusWithRing(turnOnRef.current);
-  }, []);
-  const facts = reviewFacts({ ...review, projectId: review.save.projectId }, projects, where).map(
-    (fact): [string, React.ReactNode] => [
-      fact.term,
-      fact.prompt ? <PromptBox key="prompt" prompt={fact.value} /> : fact.value,
-    ],
-  );
-  return (
-    <section
-      aria-label={m.settingsAutomationTurnOnLabel()}
-      data-automation-review
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "var(--space-3)",
-        padding: "var(--space-4)",
-        border: "1px solid var(--line-2)",
-        borderRadius: "var(--radius-m)",
-        background: "var(--bg-2)",
-      }}
-    >
-      <div style={{ fontSize: "var(--text-md)", color: "var(--fg-1)", fontWeight: 500 }}>
-        {m.settingsAutomationTurnOnQuestion()}
-      </div>
-      <dl
+      <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "120px minmax(0, 1fr)",
-          gap: "var(--space-2) var(--space-3)",
-          margin: 0,
-          fontSize: "var(--text-sm)",
+          display: "flex",
+          flexDirection: "column",
+          gap: "var(--space-3)",
+          padding: "18px 18px var(--space-3)",
         }}
       >
-        {facts.map(([term, value]) => (
-          <div key={term} style={{ display: "contents" }}>
-            <dt style={{ color: "var(--fg-3)" }}>{term}</dt>
-            <dd style={{ margin: 0, color: "var(--fg-1)", minWidth: 0 }}>{value}</dd>
-          </div>
-        ))}
-      </dl>
-      <div style={{ display: "flex", gap: 8 }}>
-        <Button
-          ref={turnOnRef}
-          type="button"
-          variant="primary"
-          disabled={busy || !reviewCanTurnOn(review.spec, review.dates)}
-          onClick={onTurnOn}
-          data-automation-turn-on
-        >
-          {m.settingsAutomationTurnOn()}
-        </Button>
-        <Button type="button" variant="ghost" disabled={busy} onClick={onBack}>
-          {m.settingsAutomationBack()}
-        </Button>
+        <Header rule={rule} busy={busy} onToggle={() => void toggle()} />
+        <SettingError error={error} />
+        <NoteSlot rule={rule} />
       </div>
+      {rule ? (
+        <>
+          <PartTabs ids={ids} part={shownPart} onPart={onPart} />
+          {PARTS.map((one) => (
+            <div
+              key={one}
+              id={`${ids}-panel-${one}`}
+              role="tabpanel"
+              aria-labelledby={`${ids}-tab-${one}`}
+              data-automation-part={one}
+              style={{ padding: 18, display: one === shownPart ? "block" : "none" }}
+            >
+              {one === "setup" ? (
+                setup
+              ) : one === "history" ? (
+                <AutomationHistory id={rule.id} />
+              ) : (
+                <AutomationNotes rule={rule} />
+              )}
+            </div>
+          ))}
+        </>
+      ) : (
+        <div style={{ padding: "0 18px 18px" }}>{setup}</div>
+      )}
     </section>
   );
 }
 
-function Weekdays({ days, onChange }: { days: number[]; onChange: (days: number[]) => void }) {
-  return (
-    <div data-automation-days style={{ alignSelf: "flex-start" }}>
-      <GroupedChecks
-        name="Days"
-        values={days.map(String)}
-        options={weekdayToggles().map(({ day, label, name }) => ({
-          value: String(day),
-          label,
-          ariaLabel: name,
-        }))}
-        onChange={(values) => onChange(values.map(Number))}
-      />
-    </div>
-  );
-}
-
-/**
- * Every zone the platform knows, by city, this computer's first; a rule
- * that follows this computer's clock keeps that choice until another is
- * picked.
- */
-function ZoneSelect({
-  value,
-  where,
-  onChange,
+/** The name as the title; the state with its dot, the schedule, the next run and who set it up. */
+function Header({
+  rule,
+  busy,
+  onToggle,
 }: {
-  value: string;
-  where: string | null;
-  onChange: (zone: string) => void;
+  rule: AutomationRule | undefined;
+  busy: boolean;
+  onToggle: () => void;
 }) {
-  const here = hereZone();
-  const zones = useMemo(
-    () =>
-      knownZones()
-        .filter((zone) => zone !== here)
-        .map((zone) => ({ zone, words: automationZoneWords(zone) }))
-        .sort((a, b) => a.words.localeCompare(b.words)),
-    [here],
-  );
+  const nextFire = rule?.state === "enabled" && !rule.failing ? rule.nextFire : null;
   return (
-    <select
-      id="automation-zone"
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-      style={{ ...SELECT_STYLE, alignSelf: "flex-start" }}
-    >
-      {value === "" && <option value="">{localClockWords(where)}</option>}
-      <option value={here}>
-        {m.settingsAutomationZoneThisComputer({ zone: automationZoneWords(here) })}
-      </option>
-      {value !== "" && value !== here && !zones.some((one) => one.zone === value) && (
-        <option value={value}>{automationZoneWords(value)}</option>
-      )}
-      {zones.map(({ zone, words }) => (
-        <option key={zone} value={zone}>
-          {words}
-        </option>
-      ))}
-    </select>
-  );
-}
-
-/**
- * A rule's runs, newest first (docs/automation.md, "Deliveries"): each with
- * where its delivery stands - waiting, retrying, handled or cancelled - why
- * it was cancelled, and the tasks and cards the turn that handled it led to.
- */
-function History({ id }: { id: string }) {
-  const [runs, setRuns] = useState<AutomationRun[] | null>(null);
-  useEffect(
-    () =>
-      appReadExecutor().subscribe(
-        "automation.history",
-        { id },
-        { onValue: (value) => setRuns(value as AutomationRun[]), onError: () => setRuns([]) },
-      ),
-    [id],
-  );
-  return (
-    <div data-automation-history>
-      <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-2)", fontWeight: 500 }}>
-        {m.settingsAutomationHistory()}
-      </div>
-      {runs === null || runs.length === 0 ? (
-        <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}>
-          {m.settingsAutomationNothingRun()}
-        </div>
-      ) : (
-        <ul
+    <div style={{ display: "flex", alignItems: "flex-start", gap: "var(--space-3)" }}>
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 4 }}>
+        <h3
           style={{
             margin: 0,
-            padding: 0,
-            listStyle: "none",
-            display: "flex",
-            flexDirection: "column",
-            gap: "var(--space-3)",
+            fontSize: "var(--text-md)",
+            color: "var(--fg-1)",
+            fontWeight: 500,
+            overflowWrap: "anywhere",
           }}
         >
-          {runs.map((run) => (
-            <HistoryRow key={run.id} run={run} />
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-function HistoryRow({ run }: { run: AutomationRun }) {
-  const note = deliveryNote(run);
-  return (
-    <li
-      data-automation-run={run.id}
-      data-delivery={run.delivery}
-      style={{
-        display: "grid",
-        gridTemplateColumns: "auto minmax(0, 1fr)",
-        columnGap: "var(--space-2)",
-        alignItems: "start",
-        fontSize: "var(--text-sm)",
-        color: "var(--fg-3)",
-      }}
-    >
-      {/* One line tall, so the dot sits beside the first line. */}
-      <span style={{ display: "flex", alignItems: "center", height: "1lh" }}>
-        <StatusDot
-          tone={DELIVERY_TONES[run.delivery]}
-          label={runStateWords(run)}
-          nativeTitle={false}
-        />
-      </span>
-      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
-        <div>
-          <span style={{ color: "var(--fg-1)" }}>{runStateWords(run)}</span> · {runWords(run)} ·{" "}
-          {m.settingsAutomationVersion({ version: String(run.revision) })}
-        </div>
-        {note && <div>{note}</div>}
-        {run.found && (
-          <div data-automation-run-found style={{ color: "var(--fg-2)", whiteSpace: "pre-wrap" }}>
-            {m.automationRunFound({ words: run.found })}
-          </div>
-        )}
-        {(run.tasks.length > 0 || run.cards.length > 0) && (
+          {rule ? automationRuleTitle(rule) : m.settingsAutomationNew()}
+        </h3>
+        {rule && (
           <div
-            data-automation-run-work
+            data-automation-state
             style={{
               display: "flex",
               flexWrap: "wrap",
-              gap: "0 var(--space-3)",
-              alignItems: "baseline",
+              alignItems: "center",
+              gap: "2px 6px",
+              fontSize: "var(--text-sm)",
+              color: "var(--fg-3)",
             }}
           >
-            <span>{m.settingsAutomationLedTo()}</span>
-            {run.tasks.map((task) => (
-              <span key={task.id} data-automation-run-task={task.id}>
-                <KeyedText text={`${task.key} ${task.title}`} />
+            <StatusDot
+              tone={automationStateTone(rule)}
+              label={automationStateWords(rule)}
+              nativeTitle={false}
+            />
+            <span style={{ color: rule.failing ? "var(--danger)" : "var(--fg-1)" }}>
+              {automationStateWords(rule)}
+            </span>
+            <span>
+              ·{" "}
+              {rule.stopped
+                ? AUTOMATION_SHEET_WORDS.stoppedWhen
+                : automationWhenWords(rule.spec, rule.when)}
+            </span>
+            {nextFire !== null && (
+              <span>
+                · {m.settingsAutomationNextRun()}{" "}
+                <span style={{ fontFamily: "var(--font-mono)", color: "var(--fg-2)" }}>
+                  {automationDateWords(nextFire, automationZoneOf(rule.spec))}
+                </span>
               </span>
-            ))}
-            {run.cards.map((card) => (
-              <Button
-                key={card.id}
-                type="button"
-                variant="ghost"
-                size="sm"
-                data-automation-run-card={card.id}
-                onClick={() => openCard(card)}
-              >
-                {card.open
-                  ? m.settingsAutomationCard({ title: card.title })
-                  : m.settingsAutomationPastCard({ title: card.title })}
-              </Button>
-            ))}
+            )}
+            {!rule.captainRequested && <span>· {m.settingsAutomationSetUpByFirstMate()}</span>}
           </div>
         )}
-        <details data-automation-run-prompt>
-          <summary style={{ cursor: "pointer", width: "fit-content" }}>
-            {runPromptTitle(run)}
-          </summary>
-          <div style={{ marginTop: "var(--space-1)" }}>
-            <PromptBox prompt={run.prompt} />
-          </div>
-        </details>
       </div>
-    </li>
+      {rule && (rule.state === "enabled" || rule.state === "paused") && (
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={busy}
+          onClick={onToggle}
+          data-automation-toggle
+        >
+          {rule.state === "enabled" ? m.settingsAutomationPause() : m.settingsAutomationResume()}
+        </Button>
+      )}
+    </div>
   );
 }
 
-/** A card a delivery led to, on the main view: forward while it is up, else as it closed. */
-function openCard(card: AutomationRun["cards"][number]): void {
-  const shell = useShellStore.getState();
-  shell.setView("home");
-  if (card.open && shell.focusCard(card.id)) return;
-  shell.openPastCard(card.id);
+/** The one note under the header: why a rule gets nothing new, a lost integration, or a draft. */
+function NoteSlot({ rule }: { rule: AutomationRule | undefined }) {
+  const drafting = rule === undefined || rule.state === "draft";
+  if (rule?.failing) {
+    const [since, answer] = automationLooksFailingWords(rule.failing);
+    return (
+      <div
+        data-automation-failing
+        role="status"
+        style={{
+          ...NOTE_BOX,
+          background: "var(--danger-dim)",
+          color: "var(--fg-1)",
+        }}
+      >
+        <span>{since}</span>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)" }}>{answer}</span>
+      </div>
+    );
+  }
+  if (rule?.stopped) {
+    return (
+      <div data-automation-stopped role="status" style={NOTE_BOX}>
+        {rule.stopped} {AUTOMATION_SHEET_WORDS.stoppedNote}
+      </div>
+    );
+  }
+  if (drafting) {
+    return (
+      <div data-automation-draft-note role="status" style={NOTE_BOX}>
+        {AUTOMATION_SHEET_WORDS.draftNote}
+      </div>
+    );
+  }
+  return null;
 }
 
-function messageOf(caught: unknown): string {
-  const text = caught instanceof Error ? caught.message : String(caught);
-  return text.replace(/^Error invoking remote method '[^']*': (Error: )?/, "");
+const NOTE_BOX: React.CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  gap: 2,
+  padding: "var(--space-2) var(--space-3)",
+  borderRadius: "var(--radius-s)",
+  background: "var(--bg-2)",
+  fontSize: "var(--text-sm)",
+  color: "var(--fg-2)",
+};
+
+/** Setup, History and Notes as one Tab stop, moved between with the arrow keys, Home and End. */
+function PartTabs({
+  ids,
+  part,
+  onPart,
+}: {
+  ids: string;
+  part: Part;
+  onPart: (part: Part) => void;
+}) {
+  const list = useRef<HTMLDivElement>(null);
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const keys = ["ArrowLeft", "ArrowRight", "Home", "End"];
+    if (!keys.includes(event.key) || event.metaKey || event.ctrlKey || event.altKey) return;
+    event.preventDefault();
+    const at = PARTS.indexOf(part);
+    const to =
+      event.key === "Home"
+        ? 0
+        : event.key === "End"
+          ? PARTS.length - 1
+          : (at + (event.key === "ArrowRight" ? 1 : -1) + PARTS.length) % PARTS.length;
+    const next = PARTS[to] ?? "setup";
+    onPart(next);
+    list.current?.querySelectorAll<HTMLElement>('[role="tab"]')[to]?.focus();
+  };
+  return (
+    <div
+      ref={list}
+      role="tablist"
+      aria-label={m.settingsAutomationTitle()}
+      onKeyDown={onKeyDown}
+      style={{
+        display: "flex",
+        gap: "var(--space-3)",
+        padding: "0 18px",
+        borderBottom: "1px solid var(--line-1)",
+      }}
+    >
+      {PARTS.map((one) => {
+        const chosen = one === part;
+        return (
+          <button
+            key={one}
+            id={`${ids}-tab-${one}`}
+            type="button"
+            role="tab"
+            aria-selected={chosen}
+            aria-controls={`${ids}-panel-${one}`}
+            tabIndex={chosen ? 0 : -1}
+            data-automation-tab={one}
+            onClick={() => onPart(one)}
+            style={{
+              padding: "var(--space-2) 0",
+              marginBottom: -1,
+              border: 0,
+              borderBottom: `2px solid ${chosen ? "var(--accent)" : "transparent"}`,
+              background: "transparent",
+              fontFamily: "var(--font-ui)",
+              fontSize: "var(--text-sm)",
+              color: chosen ? "var(--fg-1)" : "var(--fg-3)",
+              cursor: chosen ? "default" : "pointer",
+            }}
+          >
+            {PART_WORDS[one]()}
+          </button>
+        );
+      })}
+    </div>
+  );
 }

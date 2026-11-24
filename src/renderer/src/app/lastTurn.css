@@ -31,15 +31,12 @@
   flex-direction: column;
   justify-content: flex-end;
   gap: 10px;
-  height: 44px;
+  /* LastTurn sets the height: each round's own (44 px, a card row 22) and the 10 px between. */
   margin: 0 14px 10px;
   color: var(--fg-1);
   font-size: var(--text-sm);
   line-height: 18px;
   pointer-events: none;
-}
-[data-last-turn][data-last-turn-rounds="2"] {
-  height: 98px;
 }
 /* While the lines are up, the slot takes the pointer so resting on them pauses the fade. */
 [data-last-turn][data-last-turn-fade="shown"],
@@ -104,6 +101,46 @@
   line-height: 18px;
   white-space: nowrap;
 }
+/* While the Firstmate works after a card round, the round's row starts with
+   the spinning mark, at the line's start like a reply's, with no words, so
+   the row stays 22 px. */
+[data-last-turn] .row.you .card-working {
+  display: inline-flex;
+  flex: none;
+  margin-inline-end: auto;
+}
+/* A card round (INF-6337's plan): the card's name, a button that opens the
+   card, before the captain's words on the one 22 px row. */
+[data-last-turn] .card-name {
+  display: inline-flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 45%;
+  height: 18px;
+  margin: 0;
+  margin-inline-end: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-s);
+  background: none;
+  color: var(--fg-3);
+  font: inherit;
+  font-size: var(--text-sm);
+  line-height: 18px;
+  cursor: pointer;
+  pointer-events: auto;
+}
+[data-last-turn] .card-name:hover,
+[data-last-turn] .card-name:focus-visible {
+  color: var(--fg-1);
+}
+[data-last-turn] .card-name .glyph {
+  flex: none;
+  width: 12px;
+  height: 12px;
+}
 [data-last-turn] .row.mate {
   gap: 8px;
   height: 20px;
@@ -132,28 +169,38 @@
   border-radius: 11px 11px 4px 11px;
   background: color-mix(in srgb, var(--fg-1) 8%, transparent);
 }
+/* A press of a card's button: its words in the bubble's outline, no fill. */
+[data-last-turn-bubble="you"][data-choice] {
+  border: 1px solid color-mix(in srgb, var(--fg-1) 16%, transparent);
+  background: none;
+}
 /* INF-1968's C: newest ordinary words stay quiet until that round is read.
    Only colors change, immediately; the resting mark stays cyan. */
 [data-last-turn-pair]:not([data-older]) {
   --last-turn-words: color-mix(in srgb, var(--fg-2) 75%, var(--fg-3));
   --last-turn-bubble: color-mix(in srgb, var(--fg-1) 4%, transparent);
+  --last-turn-outline: color-mix(in srgb, var(--fg-1) 12%, transparent);
 }
 [data-last-turn-pair]:not([data-older]):hover,
-[data-last-turn-pair]:not([data-older]):has(button[data-last-turn-bubble]:focus) {
+[data-last-turn-pair]:not([data-older]):has(button:focus) {
   --last-turn-words: var(--fg-1);
   --last-turn-bubble: color-mix(in srgb, var(--fg-1) 8%, transparent);
+  --last-turn-outline: color-mix(in srgb, var(--fg-1) 16%, transparent);
 }
 [data-last-turn-pair]:not([data-older]) [data-last-turn-bubble="you"],
 [data-last-turn-pair]:not([data-older]) [data-last-turn-bubble][data-state="reply"] {
   color: var(--last-turn-words);
 }
-[data-last-turn-pair]:not([data-older]) [data-last-turn-bubble="you"] {
+[data-last-turn-pair]:not([data-older]) [data-last-turn-bubble="you"]:not([data-choice]) {
   background: var(--last-turn-bubble);
+}
+[data-last-turn-pair]:not([data-older]) [data-last-turn-bubble="you"][data-choice] {
+  border-color: var(--last-turn-outline);
 }
 
 /* Reading the older round lifts only its own half-strength treatment. */
 [data-last-turn-pair][data-older]:hover,
-[data-last-turn-pair][data-older]:has(button[data-last-turn-bubble]:focus) {
+[data-last-turn-pair][data-older]:has(button:focus) {
   opacity: 1;
 }
 

@@ -33,6 +33,7 @@ import { usePromptFoot } from "./promptFoot";
 import { lastTurnLane, lastTurnRise, promptFoldsRails, promptShellMax } from "./promptGeometry";
 import { foldRails, useShellLayout } from "./shellLayout";
 import { useShellStore } from "./store";
+import { shownStrip, stripRoundHeight } from "./strip";
 import { VoiceNotice } from "./VoiceNotice";
 import { WorkSetupNotice } from "./WorkSetupNotice";
 
@@ -145,18 +146,21 @@ export const HomePrompt = memo(function HomePrompt() {
   // gives the composer's growth (./promptGeometry `lastTurnRise`): two
   // rounds, or only the newest while a card is up (./LastTurn).
   const cardUp = useCardUp();
-  const lastTurnRounds = useShellStore((s) =>
-    !s.lastTurn ? 0 : s.lastTurn.previous && !cardUp ? 2 : 1,
+  // The rounds' heights as one value, so the lane reads again only when they change.
+  const lastTurnHeights = useShellStore((s) =>
+    shownStrip(s, cardUp).map(stripRoundHeight).join(","),
   );
-  const laneRise = lastTurnRise(lastTurnRounds);
+  const heights = lastTurnHeights ? lastTurnHeights.split(",").map(Number) : [];
+  const laneRise = lastTurnRise(heights);
+  const lane = lastTurnLane(heights);
   // The whole lane, for what sits above the input and must clear it (the gate).
   useEffect(() => {
     const root = document.documentElement;
-    root.style.setProperty("--last-turn-lane", `${lastTurnLane(lastTurnRounds)}px`);
+    root.style.setProperty("--last-turn-lane", `${lane}px`);
     return () => {
       root.style.removeProperty("--last-turn-lane");
     };
-  }, [lastTurnRounds]);
+  }, [lane]);
 
   const focusRequest = useShellStore((s) => s.focusRequest);
   const focusCaret = useShellStore((s) => s.focusCaret);

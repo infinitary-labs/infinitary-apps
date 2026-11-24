@@ -67,6 +67,7 @@
   "shellKeyReminderHint": "一度押すとこの表示は出なくなります",
   "shellKeyReminderNotTyping": "入力中以外",
   "shellLastTurnFromCommand": "{command} から",
+  "shellLastTurnOpenCard": "このカードを開く",
   "shellLastTurnPictureOnly": "画像",
   "shellLastTurnWorking": "作業中…",
   "shellMainMessageConnectFirst": "先にサブスクリプションを接続してください",

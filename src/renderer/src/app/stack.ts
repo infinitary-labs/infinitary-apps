@@ -40,13 +40,19 @@ export type PanelCardEntry = {
 
 /**
  * The conversation the window holds (docs/composer.md "The conversation"):
- * which round it opens at - the newest, or the older of the two the strip
- * shows - which of its views it shows, and the live card it opened, whose
- * leaving brings the conversation back up. An entry with neither a view nor
- * an opened card is a fresh open.
+ * which round it opens at - the newest, the round the strip was pressed on
+ * (`round`, its id), or the older message of the two the strip shows on a
+ * home whose rounds carry no id (`at`) - which of its views it shows, and
+ * the live card it opened, whose leaving brings the conversation back up.
+ * An entry with neither a view nor an opened card is a fresh open.
  */
 export type ConversationView = "everything" | "cards";
-export type ConversationEntry = { at?: "older"; view?: ConversationView; opened?: string };
+export type ConversationEntry = {
+  at?: "older";
+  round?: string;
+  view?: ConversationView;
+  opened?: string;
+};
 
 /**
  * Shell-held views at the front of the stack; never persisted or emitted as

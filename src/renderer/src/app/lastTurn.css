@@ -11,9 +11,11 @@
  * whole word with an ellipsis (LastTurn's useWholeWords narrows .words to
  * it). The captain's words are plain text: no underline or focus ring. A
  * press anywhere on a round opens the conversation there, so the round
- * takes the pointer. A reply line is a button (docs/composer.md "The
- * conversation"): a Tab stop and the focus ring, and no other chrome, so it
- * still reads as a line of type.
+ * takes the pointer, and resting on it or focusing its button lays one
+ * --bg-3 fill behind the whole round (INF-6623's plan, the captain's words:
+ * "highlight the whole area"). A reply line, and a card round's name, is a
+ * button (docs/composer.md "The conversation"): a Tab stop and the focus
+ * ring, and no other chrome, so it still reads as a line of type.
  *
  * A round enters with a 6 px rise over --dur-med; on a new message the
  * rounds that stay glide up over --dur-med (LastTurn's glide), the newest
@@ -51,6 +53,8 @@
 }
 
 [data-last-turn-pair] {
+  position: relative;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -64,6 +68,24 @@
     opacity: 0;
     transform: translateY(6px);
   }
+}
+/* The whole round lights as one area while it is read, so a press reads as
+   the round's, not one line's. The fill reaches 4 px past the rows, inside
+   the 10 px between rounds and the strip's 14 px side margin, and moves
+   nothing. */
+[data-last-turn-pair]::before {
+  content: "";
+  position: absolute;
+  inset: -4px -8px;
+  z-index: -1;
+  border-radius: var(--radius-m);
+  background: var(--bg-3);
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+[data-last-turn-pair]:hover::before,
+[data-last-turn-pair]:has(button:focus)::before {
+  opacity: 1;
 }
 /* The older round, at the strength the captain chose. */
 [data-last-turn-pair][data-older] {
@@ -109,8 +131,10 @@
   flex: none;
   margin-inline-end: auto;
 }
-/* A card round (INF-6337's plan): the card's name, a button that opens the
-   card, before the captain's words on the one 22 px row. */
+/* A card round (INF-6337's plan): the card's name before the captain's
+   words on the one 22 px row. On a card round it is the round's button and
+   opens the conversation there (INF-6623's plan); it lights with its round,
+   never on its own. */
 [data-last-turn] .card-name {
   display: inline-flex;
   flex: 0 1 auto;
@@ -132,8 +156,8 @@
   cursor: pointer;
   pointer-events: auto;
 }
-[data-last-turn] .card-name:hover,
-[data-last-turn] .card-name:focus-visible {
+[data-last-turn-pair]:hover .card-name,
+[data-last-turn-pair]:has(button:focus) .card-name {
   color: var(--fg-1);
 }
 [data-last-turn] .card-name .glyph {

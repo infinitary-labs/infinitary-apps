@@ -47,7 +47,7 @@ A round is the captain's words and the reply under them; the newest round sits n
 The captain's words sit on the right in a soft grey bubble: `--fg-1` mixed at 8%, corners 11, 11, 4 and 11 px, padding 2 px by 10 px, `--text-sm` in `--fg-1` on a 22 px row, at most 75% of the width.
 2 px below, the reply sits on the left as plain `--text-sm` in `--fg-1` on a 20 px row, at most 80% of the width, after the first mate's mark: the app's 14 px hexagon in `--accent`, 8 px before the words.
 On desktop, newest ordinary words rest at 75% `--fg-2` mixed with 25% `--fg-3`, with a 4% `--fg-1` bubble over transparent (INF-1968’s C, the captain’s Approve and build).
-Hovering a round or focusing its reply lights only that round, never its sibling; composer focus alone brightens neither.
+Hovering a round or focusing its button lights only that round, never its sibling, and lays one `--bg-3` fill with `--radius-m` corners behind the whole round, 4 px past its rows and 8 px past its sides; composer focus alone brightens neither.
 The newest round immediately restores ordinary words to `--fg-1` and the bubble to 8%, with no animation or timer; leaving and blurring restores rest.
 The older round keeps its colors and lifts from 50% to full opacity while hovered or focused, returning to 50% afterwards.
 The captain’s written-in choice keeps the mark cyan (`--accent`) at rest and while reading; the working mark, Working… and problem colors stay unchanged.
@@ -57,7 +57,7 @@ It is one 22 px row on the right: a 12 px card glyph in `--fg-3`, 6 px, the card
 A choice draws its button's words in an outlined bubble: the bubble's shape and padding with no fill and a 1 px `--fg-1` border mixed at 16% (12% on the quiet newest round); a line typed under a card draws in the filled bubble.
 A line typed under the first mate's own card is also a message: its row keeps the reply line under it, 44 px as any message round; a lone card row is 22 px, and the lane is each round's height plus its 10 px.
 While the first mate works and a lone card row is the newest round, the row starts with the first mate's 14 px mark, ember and spinning as a reply's, at the line's start with no words, so the row stays 22 px.
-The card's title is a button: it opens that card, at the front while it is still up and as a past card once it closed; it takes a Tab stop and the focus ring, and resting on it lifts it to `--fg-1`.
+On a card round the card's title is the round's button: it opens the conversation at that round, as every press on the strip does, and the card opens from its tile there; it takes a Tab stop and the focus ring, and lifts to `--fg-1` with its round.
 Putting a card aside, a card taken down and a choice its author or its script made are not rounds.
 No quotation marks: the side says who said it.
 A message of pictures alone reads "A picture".

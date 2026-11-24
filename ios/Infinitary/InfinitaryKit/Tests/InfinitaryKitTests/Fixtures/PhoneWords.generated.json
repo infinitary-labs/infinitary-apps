@@ -3360,7 +3360,6 @@
   {"said":{"m":"shellKeyReminderHint"},"words":"press it once and this stops"},
   {"said":{"m":"shellKeyReminderNotTyping"},"words":"when not typing"},
   {"said":{"m":"shellLastTurnFromCommand","a":{"command":"‹command›"}},"words":"From ‹command›"},
-  {"said":{"m":"shellLastTurnOpenCard"},"words":"Open this card"},
   {"said":{"m":"shellLastTurnPictureOnly"},"words":"A picture"},
   {"said":{"m":"shellLastTurnWorking"},"words":"Working…"},
   {"said":{"m":"shellMainMessageConnectFirst"},"words":"Connect a subscription first"},

@@ -1864,7 +1864,6 @@ public enum PhoneMessages {
     public static func `phoneCommonSettings`() -> String { PhoneWords.format("phoneCommonSettings", []) }
     public static func `phoneCommonTryAgain`() -> String { PhoneWords.format("phoneCommonTryAgain", []) }
     public static func `phoneComposerAddingPhotos`() -> String { PhoneWords.format("phoneComposerAddingPhotos", []) }
-    public static func `phoneComposerCardHint`() -> String { PhoneWords.format("phoneComposerCardHint", []) }
     public static func `phoneComposerConversationHint`() -> String { PhoneWords.format("phoneComposerConversationHint", []) }
     public static func `phoneComposerPhotoFailed`() -> String { PhoneWords.format("phoneComposerPhotoFailed", []) }
     public static func `phoneComposerPhotoTooLarge`() -> String { PhoneWords.format("phoneComposerPhotoTooLarge", []) }
@@ -4171,7 +4170,6 @@ public enum PhoneMessages {
     public static func `shellKeyReminderHint`() -> String { PhoneWords.format("shellKeyReminderHint", []) }
     public static func `shellKeyReminderNotTyping`() -> String { PhoneWords.format("shellKeyReminderNotTyping", []) }
     public static func `shellLastTurnFromCommand`(`command`: String) -> String { PhoneWords.format("shellLastTurnFromCommand", [`command`]) }
-    public static func `shellLastTurnOpenCard`() -> String { PhoneWords.format("shellLastTurnOpenCard", []) }
     public static func `shellLastTurnPictureOnly`() -> String { PhoneWords.format("shellLastTurnPictureOnly", []) }
     public static func `shellLastTurnWorking`() -> String { PhoneWords.format("shellLastTurnWorking", []) }
     public static func `shellMainMessageConnectFirst`() -> String { PhoneWords.format("shellMainMessageConnectFirst", []) }
@@ -6336,7 +6334,6 @@ extension PhoneWords {
         "phoneCommonSettings": [],
         "phoneCommonTryAgain": [],
         "phoneComposerAddingPhotos": [],
-        "phoneComposerCardHint": [],
         "phoneComposerConversationHint": [],
         "phoneComposerPhotoFailed": [],
         "phoneComposerPhotoTooLarge": [],
@@ -8643,7 +8640,6 @@ extension PhoneWords {
         "shellKeyReminderHint": [],
         "shellKeyReminderNotTyping": [],
         "shellLastTurnFromCommand": ["command"],
-        "shellLastTurnOpenCard": [],
         "shellLastTurnPictureOnly": [],
         "shellLastTurnWorking": [],
         "shellMainMessageConnectFirst": [],

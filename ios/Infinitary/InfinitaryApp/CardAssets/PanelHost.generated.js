@@ -97232,33 +97232,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `From ${command}`;
   }
-  function shellLastTurnOpenCard() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `افتح هذه البطاقة`;
-      case "de":
-        return `Diese Karte öffnen`;
-      case "es":
-        return `Abrir esta tarjeta`;
-      case "fr":
-        return `Ouvrir cette carte`;
-      case "ja":
-        return `このカードを開く`;
-      case "ko":
-        return `이 카드 열기`;
-      case "pt-BR":
-        return `Abrir este cartão`;
-      case "zh-Hans":
-        return `打开这张卡片`;
-      case "zh-Hant":
-        return `打開這張卡片`;
-      case "en-XA":
-        return `[Öþéñ ţĥîš çáŕð ~~~~~]`;
-      case "ar-XB":
-        return `‮Open this card‬`;
-    }
-    return `Open this card`;
-  }
   function shellLastTurnPictureOnly() {
     switch (currentLanguage()) {
       case "ar":
@@ -109065,7 +109038,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     shellKeyReminderHint,
     shellKeyReminderNotTyping,
     shellLastTurnFromCommand,
-    shellLastTurnOpenCard,
     shellLastTurnPictureOnly,
     shellLastTurnWorking,
     shellMainMessageConnectFirst,
@@ -112455,7 +112427,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "shellKeyReminderHint": [],
     "shellKeyReminderNotTyping": [],
     "shellLastTurnFromCommand": ["command"],
-    "shellLastTurnOpenCard": [],
     "shellLastTurnPictureOnly": [],
     "shellLastTurnWorking": [],
     "shellMainMessageConnectFirst": [],

@@ -1778,7 +1778,6 @@
 "phoneCommonSettings" = "Ajustes";
 "phoneCommonTryAgain" = "Tentar de novo";
 "phoneComposerAddingPhotos" = "Adicionando fotos…";
-"phoneComposerCardHint" = "Abre o cartão";
 "phoneComposerConversationHint" = "Abre a conversa";
 "phoneComposerPhotoFailed" = "Não foi possível adicionar esta foto. Escolha outra.";
 "phoneComposerPhotoTooLarge" = "Esta foto é grande demais. Escolha uma foto menor.";
@@ -4016,7 +4015,6 @@
 "shellKeyReminderHint" = "pressione uma vez e isto para";
 "shellKeyReminderNotTyping" = "quando não estiver digitando";
 "shellLastTurnFromCommand" = "De %1$@";
-"shellLastTurnOpenCard" = "Abrir este cartão";
 "shellLastTurnPictureOnly" = "Uma imagem";
 "shellLastTurnWorking" = "Trabalhando…";
 "shellMainMessageConnectFirst" = "Conecte uma assinatura primeiro";

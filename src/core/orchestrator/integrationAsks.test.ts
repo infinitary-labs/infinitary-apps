@@ -4,8 +4,22 @@
  * Each case drives a real CrewSupervisor through the crew harness
  * (tests/helpers/crewHarness.ts) and reads what it answers, the cards and the record.
  */
+import {
+  cardReaderAsksTitle,
+  cardReaderCallsLead,
+  cardReaderCallsPagesTitle,
+  cardReaderPagesLead,
+  cardReaderPagesTitle,
+  cardReaderWritesLead,
+} from "@shared/i18n/messages.generated";
 import { INTEGRATION_APPROVAL_WORDS, integrationApprovalsTitle } from "@shared/integrations";
-import { DROPPED_ASK_WHY, type IntegrationAsk, WRITE_ASK_CAP } from "@shared/writeAsk";
+import {
+  DROPPED_ASK_WHY,
+  type ForgeWriteAsk,
+  type IntegrationAsk,
+  type WebReadAsk,
+  WRITE_ASK_CAP,
+} from "@shared/writeAsk";
 import { describe, expect, it, vi } from "vitest";
 import {
   endTurn,
@@ -17,6 +31,7 @@ import {
 } from "../../../tests/helpers/crewHarness";
 import { FIRSTMATE_RECIPIENT } from "../storage/inboxStore";
 import { WRITE_ANSWERED_LEAD } from "./deliveryWakes";
+import type { WriteAskSent } from "./githubGateway";
 import { integrationApprovalCard } from "./integrationApprovalCard";
 import { renderWake } from "./wakes";
 
@@ -258,5 +273,151 @@ describe("a crewmate's asks folded into one waiting card (INF-2993 piece 2)", ()
     const heard = crewmate.promptCalls.slice(prompts).join("\n");
     expect(heard).toContain("ask pr-1");
     expect(heard).toContain(DROPPED_ASK_WHY);
+  });
+});
+
+// An unsafe data reader's web pages (docs/agents-reach.md, "Web pages"): the
+// captain's plan put a page it waits to open on the reader's one approval
+// card, as a row showing its whole address.
+describe("a reader's web pages on its approval card", () => {
+  const write: ForgeWriteAsk = {
+    id: "fw-issue",
+    kind: "github",
+    host: "github.com",
+    via: "project",
+    place: "GitHub",
+    method: "POST",
+    path: "/repos/octo/meter/issues",
+    body: JSON.stringify({ title: "Triage: the meter idles on a cold start" }),
+    at: 1,
+  };
+  const page: WebReadAsk = {
+    id: "wa-forum",
+    kind: "web",
+    url: "https://forum.meter.example/t/idle?from=12",
+    place: "forum.meter.example",
+    at: 2,
+  };
+
+  async function reader(answer: (ask: WebReadAsk) => WriteAskSent) {
+    const crewmate = fakeCrewmate();
+    const sent: { askId: string | null; choice: string }[] = [];
+    const h = setup(crewmate, {
+      sendTakenIntegrationAsk: async (_taskId, taken, choice) => {
+        sent.push({ askId: "ask" in taken ? taken.ask.id : null, choice });
+        if (!("ask" in taken) || taken.ask.kind !== "web")
+          return { ok: false, call: "", place: "", outcome: { kind: "refused", why: "unused" } };
+        return answer(taken.ask);
+      },
+    });
+    const { taskId } = await h.supervisor.intake.commission({
+      title: "Triage the waiting issues",
+      intent: intentOf("triage the waiting issues"),
+    });
+    await tick();
+    return { ...h, crewmate, sent, taskId };
+  }
+
+  it("lists a page alone with its whole address under its own title", async () => {
+    const h = await reader(() => {
+      throw new Error("not clicked");
+    });
+    h.tasks.delivery.keepWriteAsk(h.taskId, page);
+    expect(h.supervisor.integrationAsks.askForge(h.taskId, page)).toBe(false);
+    const card = h.supervisor.cards.get(`write-ask-${page.id}`);
+    expect(card?.title).toBe(cardReaderPagesTitle());
+    expect(card?.body).toContain(`GET ${page.url}`);
+    expect(card?.body).toContain(cardReaderPagesLead({ task: "Triage the waiting issues" }));
+    expect(card?.body).not.toContain(
+      cardReaderWritesLead({ task: "Triage the waiting issues", place: "GitHub" }),
+    );
+  });
+
+  it("joins a reader's waiting integration call on its one card, whose title names the calls and the pages", async () => {
+    const crewmate = fakeCrewmate();
+    const h = setup(crewmate);
+    const { taskId } = await h.supervisor.intake.commission({
+      title: "Triage the waiting issues",
+      intent: {
+        ...intentOf("triage the waiting issues"),
+        constraints: [{ kind: "read-only" as const }],
+      },
+      shape: { unsafe_data_reader: true },
+    });
+    await tick();
+    const note: IntegrationAsk = {
+      id: "ia-note",
+      kind: "integration",
+      integration: "mcp-notes",
+      connection: "mcp-notes#1",
+      place: "Notes",
+      action: "add_note",
+      label: "Add a note",
+      effect: "changes",
+      signature: "add_note:changes",
+      input: JSON.stringify({ text: "The meter idles on a cold start" }),
+      at: 1,
+    };
+    h.tasks.delivery.keepWriteAsk(taskId, note);
+    h.supervisor.integrationAsks.askIntegration(taskId, note);
+    h.tasks.delivery.keepWriteAsk(taskId, page);
+    expect(h.supervisor.integrationAsks.askForge(taskId, page)).toBe(true);
+
+    const cards = h.supervisor.cards.snapshot().filter((card) => card.taskId === taskId);
+    expect(cards.map((card) => card.id)).toEqual([`write-ask-${note.id}`]);
+    const card = cards[0];
+    expect(card?.title).toBe(cardReaderCallsPagesTitle());
+    expect(card?.body).toContain(cardReaderCallsLead({ task: "Triage the waiting issues" }));
+    expect(card?.body).toContain(cardReaderPagesLead({ task: "Triage the waiting issues" }));
+    expect(card?.body).toContain(`GET ${page.url}`);
+    expect(card?.body?.match(/checked>/g)).toHaveLength(2);
+  });
+
+  it("joins a waiting write's card as a second ticked row, and the click opens the page once", async () => {
+    const h = await reader((ask) => ({
+      ok: true,
+      ask,
+      call: `GET ${ask.url}`,
+      place: ask.place,
+      outcome: { kind: "answered", status: 200, requestId: null },
+      answer: "web_read part 1 of 1",
+    }));
+    h.tasks.delivery.keepWriteAsk(h.taskId, write);
+    h.supervisor.integrationAsks.askForge(h.taskId, write);
+    h.tasks.delivery.keepWriteAsk(h.taskId, page);
+    expect(h.supervisor.integrationAsks.askForge(h.taskId, page)).toBe(true);
+    await endTurn(h.crewmate, h.taskId, "A write and a page wait on the captain.");
+    const prompts = h.crewmate.promptCalls.length;
+    const cardId = `write-ask-${write.id}`;
+    const card = h.supervisor.cards.get(cardId);
+    expect(card?.title).toBe(cardReaderAsksTitle({ place: "GitHub" }));
+    const rows = [
+      ...(card?.body ?? "").matchAll(
+        /data-inf-ask-row="([^"]+)"[\s\S]*?inf-ask-call inf-mono">([^<]+)</g,
+      ),
+    ].map((match) => [match[1], match[2]]);
+    expect(rows).toEqual([
+      [write.id, "POST /repos/octo/meter/issues"],
+      [page.id, "GET https://forum.meter.example/t/idle?from=12"],
+    ]);
+    expect(card?.body?.match(/checked>/g)).toHaveLength(2);
+    expect(card?.actions.map((action) => action.label)).toEqual([
+      INTEGRATION_APPROVAL_WORDS.deny,
+      INTEGRATION_APPROVAL_WORDS.once,
+    ]);
+
+    h.supervisor.cardActions.act(cardId, "once");
+    await tick();
+    await tick();
+    // Oldest first, each once: this stand-in answers only the page.
+    expect(h.sent).toEqual([
+      { askId: write.id, choice: "once" },
+      { askId: page.id, choice: "once" },
+    ]);
+    const heard = h.crewmate.promptCalls.slice(prompts).join("\n");
+    expect(heard).toContain(
+      `${WRITE_ANSWERED_LEAD} ${page.id} (GET ${page.url}): the page opened once, signed out, and answered 200.`,
+    );
+    expect(heard).toContain("web_read part 1 of 1");
   });
 });

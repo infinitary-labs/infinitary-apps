@@ -28,6 +28,7 @@ import { READER_INTEGRATIONS_TOOL, READER_USE_INTEGRATION_TOOL } from "./integra
 import { CAPTURE_PANEL_TOOL, LINT_PANEL_TOOL, PLACE_PANEL_TOOL } from "./panelTools";
 import { TASKS_QUERY_TOOL } from "./taskTools";
 import { keepValidationEvidence } from "./validationEvidence";
+import { WEB_READ_TOOL } from "./webReadTool";
 
 /**
  * The crewmate's record-facing tools (task-system P2, design section 7):
@@ -638,6 +639,7 @@ export const CREWMATE_TOOLS = [
   GITHUB_WRITE_TOOL,
   READER_INTEGRATIONS_TOOL,
   READER_USE_INTEGRATION_TOOL,
+  WEB_READ_TOOL,
 ] as const satisfies readonly CrewmateTool[];
 
 /** This module, as the self-source map names where a crewmate tool is defined. */

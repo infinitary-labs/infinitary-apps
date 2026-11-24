@@ -39,6 +39,7 @@ import { ANSWER_WHOLE_MAX_CHARACTERS } from "../session/answerFiles";
 import { storyLedgers } from "../storage/changeProjection";
 import type { TaskService } from "../tasks/taskService";
 import type { RepoRegistry } from "../workspace/repoRegistry";
+import { projectReadHeld, publicProjectRead } from "./readerPublicReads";
 
 /** Thrown before a release file is sent, so an ask records it as nothing sent. */
 const FILE_CHANGED_BEFORE_SEND = "The file changed before it was sent.";
@@ -217,6 +218,9 @@ export class GithubGatewayService {
           throw new ForgeError("refused", READER_READ_REFUSAL);
         const route = api.route(input.method ?? "GET", input.path);
         if (!route.own) throw new ForgeError("refused", READER_READ_REFUSAL);
+        // Marked before the read: once it is asked for, its answer may reach the reader.
+        if (!publicProjectRead(target.forge.kind, route.rest))
+          this.options.tasks.delivery.markReaderHolds(taskId, projectReadHeld(route.rest));
         const answer = await this.readOn(taskId, api, input, READER_ANSWER_MAX);
         const fenced = this.readerFenced(answer, target.forge.kind);
         // Breaking a copied mark lengthens the words by one character each.
@@ -239,6 +243,31 @@ export class GithubGatewayService {
     if (!this.options.tasks.get(taskId)?.repoId)
       throw new ForgeError("refused", READER_NO_PROJECT_REFUSAL);
     return this.targetOf(taskId, through);
+  }
+
+  /**
+   * Whether the task's project can be read by anyone, as its host says
+   * (docs/agents-reach.md, "Web pages"): `none` for a task with no project,
+   * `not-public` for one the host calls private or internal or that lives
+   * only on this computer, and `unknown` when the host cannot say.
+   */
+  async projectVisibility(taskId: string): Promise<"public" | "not-public" | "none" | "unknown"> {
+    const task = this.options.tasks.get(taskId);
+    if (!task) return "unknown";
+    if (!task.repoId) return "none";
+    const repo = this.options.repos.get(task.repoId);
+    if (!repo) return "unknown";
+    try {
+      const forge = this.options.forgeFor(repo, task.worktreeDir ?? undefined);
+      if (forge.kind === "none") return "not-public";
+      const destination = forge.storyDestination
+        ? await forge.storyDestination()
+        : await forge.attachments?.destination();
+      if (!destination || !("visibility" in destination)) return "unknown";
+      return destination.visibility === "public" ? "public" : "not-public";
+    } catch {
+      return "unknown";
+    }
   }
 
   /** Words from outside, fenced with a fresh value so none can forge the closing mark. */
@@ -569,10 +598,14 @@ export class GithubGatewayService {
     if ("refused" in taken) {
       return { ok: false, call: "", place: "", outcome: { kind: "refused", why: taken.refused } };
     }
-    if (taken.ask.kind === "integration") {
-      // An integration's ask runs through its binding (`IntegrationsService.sendAsk`).
+    if (taken.ask.kind === "integration" || taken.ask.kind === "web") {
+      // An integration's ask runs through its binding (`IntegrationsService.sendAsk`),
+      // a reader's web page through its page reader (`ReaderWebService.sendTaken`).
+      // i18n-exempt: served to the crewmate as a write-answered outcome
       const why =
-        "an integration's action is not a write where a project lives, so it was not sent";
+        taken.ask.kind === "web"
+          ? "a web page is not a write where a project lives, so it was not sent"
+          : "an integration's action is not a write where a project lives, so it was not sent";
       this.options.tasks.delivery.recordWriteAskOutcome(taskId, taken.ask.id, {
         kind: "refused",
         why,

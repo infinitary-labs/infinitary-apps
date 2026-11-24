@@ -9,7 +9,7 @@ import type { ChangeRequestKind } from "./forgeKinds";
  * The host stores the exact call; the card names it by `id` and never
  * carries the call itself, so only what was stored is ever sent.
  */
-export type WriteAsk = ForgeWriteAsk | IntegrationAsk;
+export type WriteAsk = ForgeWriteAsk | IntegrationAsk | WebReadAsk;
 
 /** A write where a project lives, through its host's REST API. */
 export type ForgeWriteAsk = {
@@ -46,6 +46,27 @@ export type ForgeWriteAsk = {
   /** When the captain's click took it, set before it was sent: it is never sent again. */
   sentAt?: number;
   /** What came of the click: the host's answer, an outcome nobody knows, or nothing sent. */
+  outcome?: WriteAskOutcome;
+};
+
+/**
+ * A web page an unsafe data reader asked to open once it held something of
+ * the captain's (docs/agents-reach.md, "Web pages"): the address itself
+ * could carry what it read, so it waits on the reader's approval card, and
+ * the captain's Only this time opens it once, signed out. An address the
+ * captain opened this way opens at once after that.
+ */
+export type WebReadAsk = {
+  id: string;
+  kind: "web";
+  /** The whole address, as the card shows it and the click opens it. */
+  url: string;
+  /** Its host, as the card and the timeline name where it goes. */
+  place: string;
+  /** The reader's approval card that lists it. */
+  card?: string;
+  at: number;
+  sentAt?: number;
   outcome?: WriteAskOutcome;
 };
 

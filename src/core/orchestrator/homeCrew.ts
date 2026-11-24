@@ -50,6 +50,7 @@ import type { LeftoverPrograms } from "../tasks/leftoverPrograms";
 import type { TaskService } from "../tasks/taskService";
 import { taskStopsCommand } from "../tasks/taskStops";
 import type { TaskTimeline } from "../tasks/taskTimeline";
+import { webReadNetwork } from "../web/publicPage";
 import type { ProjectContributions } from "../workspace/projectContributions";
 import type { RepoRegistry } from "../workspace/repoRegistry";
 import type { WorkspaceService } from "../workspace/workspaceService";
@@ -57,6 +58,7 @@ import type { ChangeDelivery } from "./changeDelivery";
 import { CrewSupervisor } from "./crewSupervisor";
 import type { GithubGatewayService } from "./githubGateway";
 import { runBatchFacts } from "./ownBatches";
+import { ReaderWebService } from "./readerWeb";
 import { reviewerChooser } from "./reviewerChoice";
 import type { Ticker } from "./ticker";
 import type { WorkflowEvidenceService } from "./workflowEvidence";
@@ -206,6 +208,16 @@ export function startHomeCrew({
     secretBrings: () => SecretBrings;
   };
 }): CrewSupervisor {
+  // An unsafe data reader's public web pages (docs/agents-reach.md, "Web
+  // pages"): a page it waits to open joins its approval card, read only once
+  // a page is asked, after the supervisor below is built.
+  const readerWeb = new ReaderWebService({
+    tasks,
+    projectVisibility: (taskId) => githubGateway.projectVisibility(taskId),
+    presentAsk: (taskId, ask, dropped) => supervisor.integrationAsks.askForge(taskId, ask, dropped),
+    network: webReadNetwork(host.app.packaged),
+    now: ticker.now,
+  });
   const supervisor: CrewSupervisor = new CrewSupervisor({
     captainPlaces,
     readerCheck: cardReader(decisions),
@@ -298,18 +310,24 @@ export function startHomeCrew({
       });
     },
     ...changeDelivery.settleHooks,
-    // An integration's ask runs through its binding; every other is a forge write.
-    sendWriteAsk: (taskId, askId, choice) =>
-      tasks.get(taskId)?.delivery?.writeAsks?.find((ask) => ask.id === askId)?.kind ===
-      "integration"
-        ? integrations.sendAsk(taskId, askId, choice)
-        : githubGateway.sendAsk(taskId, askId),
-    // An unsafe data reader's write joins the same approval cards and is sent
-    // where its project lives (docs/agents-reach.md, "An unsafe data reader").
+    // An integration's ask runs through its binding, a reader's web page
+    // through its page reader; every other is a forge write.
+    sendWriteAsk: (taskId, askId, choice) => {
+      const kind = tasks.get(taskId)?.delivery?.writeAsks?.find((ask) => ask.id === askId)?.kind;
+      if (kind === "integration") return integrations.sendAsk(taskId, askId, choice);
+      if (kind === "web")
+        return readerWeb.sendTaken(taskId, tasks.delivery.takeWriteAsk(taskId, askId), choice);
+      return githubGateway.sendAsk(taskId, askId);
+    },
+    // An unsafe data reader's write and web page join the same approval cards:
+    // the write is sent where its project lives, the page opened signed out
+    // (docs/agents-reach.md, "An unsafe data reader").
     sendTakenIntegrationAsk: (rowId, taken, choice) =>
-      "ask" in taken && taken.ask.kind !== "integration"
-        ? githubGateway.sendTaken(rowId, taken, choice)
-        : integrations.sendTaken(rowId, taken, choice),
+      "ask" in taken && taken.ask.kind === "web"
+        ? readerWeb.sendTaken(rowId, taken, choice)
+        : "ask" in taken && taken.ask.kind !== "integration"
+          ? githubGateway.sendTaken(rowId, taken, choice)
+          : integrations.sendTaken(rowId, taken, choice),
     panelAskAnswered: (askId, choice) => panelAsks.answered(askId, choice === "deny"),
     reviewGate: (taskId, reviewId) => changeDelivery.reviews.reviewGate(taskId, reviewId),
     readPull: (taskId, prNumber, mergeTask, place) =>
@@ -328,6 +346,7 @@ export function startHomeCrew({
     downloadArtifact: (taskId, input) => workflowEvidence.download(taskId, input),
     githubRead: (taskId, input) => githubGateway.readForCrew(taskId, input),
     githubWrite: (taskId, input) => githubGateway.write(taskId, input),
+    webRead: (taskId, input, signal) => readerWeb.read(taskId, input, signal),
     readCheckWatch: (taskId) => changeDelivery.checks.readWatched(taskId),
     readComments: (taskId) => changeDelivery.comments.readTask(taskId),
     readMainChecks: (repoId) => changeDelivery.checks.readDefaultBranchChecks(repoId),

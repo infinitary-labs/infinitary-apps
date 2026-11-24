@@ -98,7 +98,7 @@ Only the first mate sets it, on `spawn_crewmate`; the fence is the host's, so it
 `spawn_crewmate` refuses one on the personal workspace, whose files are the captain's own, or that is not an answer (`UNSAFE_DATA_READER_PROJECT`, `UNSAFE_DATA_READER_ANSWERS` in `src/core/orchestrator/workShape.ts`); a takeover or a stronger model's retry keeps it.
 One with no project runs in an empty folder of its own, `crewmates/<taskId>/reader/` (`crewmateReaderDir`), never a copy of the default workspace, whose files other tasks' work leaves there; its record names no working copy, so its close removes none, and the folder goes with the task's other leftover files.
 
-- Its session is fenced (`SessionSpec.fenced`): no shell, no file change, no web and no browser, on both kinds of model session.
+- Its session is fenced (`SessionSpec.fenced`): no shell, no file change and no browser, on both kinds of model session; its one way onto the web is `web_read` (below).
   Pi serves only its read, grep and ls tools (`fencedPiReadTools`): read and ls check every path they open, and grep checks its search root and leaves the files beneath it to ripgrep, which follows no links out of it.
   It leaves out find, which runs its own search program unasked, and stages no runbook or personal skills, which sit outside the working copy.
   Claude serves only Read, Grep and Glob, and a gate before each call refuses a path outside the working copy (`claudeFenceHook`); no skill is staged, since a plugin can bring hooks and servers of its own.
@@ -109,9 +109,30 @@ One with no project runs in an empty folder of its own, `crewmates/<taskId>/read
   Fencing the whole answer, not only the words of authors who cannot write to the project, keeps the host from judging who is trusted.
   Its answer must reach the model whole, since its fence refuses the temporary folder a long answer is saved to: a listing past that length is read again at the largest page that fits (`smallerPage`), and an answer no page fits is refused with words on asking for less.
 - Every `github_write` it makes to its own project is kept, run starts included, and the host puts it on one approval card with a ticked row each, beside its kept integration calls ("A reader's writes" in `docs/forge.md`); a write anywhere else, a release file and a validation effect are refused and nothing is kept.
+- `web_read` reads one public web page as text (`ReaderWebService`, `src/core/orchestrator/readerWeb.ts`), under "Web pages" below.
 - It writes no file, so its instructions name no evidence, temporary or card body folder: its card bodies go inline.
 - Each of its cards carries one line, drawn by the app from its task's shape, saying it reads words anyone can write, so a link or request there may come from a stranger (`Card.unsafeData`).
 - It runs only on this computer: another computer's host rebuilds a session with the whole coding set, so the placement keeps it home (`runsOnlyHere`) and a placed session refuses a fenced spec.
+
+### Web pages
+
+`web_read` is a GET over https to an address on the public internet, and nothing else (`readPublicPage`, `src/core/web/publicPage.ts`).
+The name is resolved first and every answer must be public (`addressKind`), and the request connects only to the answers checked, so a name cannot lead to this computer, a private network or a cloud's metadata service between the check and the connection.
+Plain http, an address with a user name or password, and a literal address that is not public are refused before anything is sent.
+It sends no cookies and no sign-in, follows at most five redirects and only to another address that passes the same checks, stops reading past 4 MiB, and opens only text: an HTML page is turned to text with no script run (`pageText`), and any other type is refused.
+The page comes back fenced under `web-data`, its address and title inside the fence, in parts of at most 24,000 characters that each reach the model whole; the page is kept ten minutes for its later parts.
+
+An address can carry what the reader read to whoever runs the site, so which address opens at once depends on whether the reader holds anything of the captain's:
+
+- While it holds nothing, any public address opens at once.
+- It holds something once it reads its own project and that project is not public, from its first read, since its working copy is that project's files; the task record keeps the first such mark (`readerHolds`), and a host that cannot say whether the project is public counts as holding.
+  On a public project it holds something once its `github_read` reaches past what anyone may see there (`publicProjectRead`, `src/core/orchestrator/readerPublicReads.ts`): on GitHub, any path outside the repository itself, its issues, pull requests, comments, commits, contents, readme, git objects, branches, tags, comparisons, the latest release and a release by its tag, labels, milestones and Actions runs, jobs and workflows, since the captain's sign-in also reads alerts, advisories, Actions variables, hooks and keys.
+  A path with a `protection` or `reviews` segment marks it too: a branch's or tag's protection is read only by admins, a pull request's reviews carry the captain's own unsent one, and a release listing or one by number shows drafts to anyone who can push.
+  GitLab and Bitbucket let a public project keep any area to its members, and GitLab's own project answer carries a runner token to its maintainers, so every read there makes the reader hold.
+  The mark is set before the read goes out.
+- It also holds something once one of the captain's integrations answers it ("A reader's integrations" in `docs/integrations.md`).
+- Once it holds something, an address its brief names exactly, outside any fenced words, still opens at once, and so does one the captain already allowed; any other is kept as a `WebReadAsk` and joins the reader's one approval card as a row showing the whole address ("A reader's writes" in `docs/forge.md`).
+  The captain's Only this time opens each ticked page once and wakes the reader with its first part; Not now opens nothing.
 
 Every other crewmate's shell and the merge card's rules are unchanged; this is a fence for one kind of task, not a general sandbox.
 The brief names the fence to its crewmate (`UNSAFE_DATA_READER_WORDS`).

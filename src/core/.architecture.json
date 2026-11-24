@@ -169,6 +169,12 @@
       "group": "A crewmate's reach"
     },
     {
+      "name": "web",
+      "path": "src/core/web",
+      "about": "Reads a public web page as text, signed out, for an unsafe data reader",
+      "group": "A crewmate's reach"
+    },
+    {
       "name": "files",
       "path": "src/core/files",
       "about": "Copies files between the person's computers",
@@ -379,7 +385,7 @@
     },
     {
       "name": "websites",
-      "about": "The pages a task's browser opens"
+      "about": "The pages a task's browser opens and a reader's web_read reads"
     },
     {
       "name": "the system",
@@ -1700,6 +1706,31 @@
       "from": "browser",
       "to": "websites",
       "why": "opens pages for a task"
+    },
+    {
+      "from": "orchestrator",
+      "to": "web",
+      "why": "reads public pages for an unsafe data reader"
+    },
+    {
+      "from": "session",
+      "to": "web",
+      "why": "names the web_read input"
+    },
+    {
+      "from": "web",
+      "to": "browser",
+      "why": "checks that an address is public"
+    },
+    {
+      "from": "web",
+      "to": "shared",
+      "why": "reads its stand-in pages setting"
+    },
+    {
+      "from": "web",
+      "to": "websites",
+      "why": "reads public pages signed out"
     },
     {
       "from": "privacy",

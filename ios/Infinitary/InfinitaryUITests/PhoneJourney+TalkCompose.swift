@@ -263,7 +263,12 @@ extension PhoneJourney {
             let reply = app.textFields["card-reply"]
             reveal(reply); focusForPhoneTyping(reply, in: app); reply.typeText(words)
             let send = app.buttons["send-reply"]
-            reveal(send); tapOnPhone(send)
+            reveal(send)
+            // Send stays off until the card's body has drawn, which can finish after the words are typed; a press
+            // before then does nothing.
+            XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "isEnabled == true"), object: send, timeout: 20), .completed,
+                           app.debugDescription)
+            tapOnPhone(send)
             XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "label CONTAINS %@", cardTitle), object: newest, timeout: 15), .completed,
                            "The line typed under \(cardTitle) is the newest round: \(app.debugDescription)")
             XCTAssertEqual(app.buttons["last-turn-you"].label, words, "The round shows the typed words")

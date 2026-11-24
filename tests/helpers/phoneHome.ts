@@ -81,6 +81,7 @@ import type {
 import { raiseMoveCard, showMoveCardPast } from "./phoneMoveCard";
 import { phonePanelControls } from "./phonePanels";
 import { startPhonePushRelay } from "./phonePushRelay";
+import { CARD_RECORDINGS } from "./phoneRecordings";
 import { removeEveryDevice } from "./phoneRemove";
 import { seedRowMoves } from "./phoneRowMoves";
 import { phoneSceneFixture } from "./phoneScene";
@@ -94,7 +95,7 @@ import {
   seedPhoneSettings,
 } from "./phoneSettings";
 import { phoneTakeOverControls } from "./phoneTakeOver";
-import { seedReplyReading } from "./replyReading";
+import { raiseConversationCard, seedReplyReading } from "./replyReading";
 import { startScriptedClient } from "./scriptedClient";
 import { bundleSqlProcess } from "./sqlProcessBundle";
 import { type SshServer, startSshServer } from "./sshServer";
@@ -2378,36 +2379,13 @@ export async function startPhoneHome(
           result = { title };
           break;
         }
-        // INF-6366: a first mate card for the phone to answer with its own button, so the strip and the Conversation
-        // show that press as a card round; then a card left waiting, for the Conversation's Cards view.
-        case "POST conversation-card": {
-          const title = "Pick the chart style";
-          const id = core.services.supervisor.addFirstmateCard({
-            id: "phone-conversation-chart",
-            title,
-            body: "<p>Bars read best for a week of counts; lines read best for a trend.</p>",
-            actions: [
-              { id: "bars", label: "Use bars", default: true },
-              { id: "lines", label: "Use lines" },
-            ],
-          });
-          result = { id, title, label: "Use bars" };
+        case "POST conversation-card":
+        case "POST conversation-waiting":
+          result = raiseConversationCard(
+            (card) => core.services.supervisor.addFirstmateCard(card),
+            command,
+          );
           break;
-        }
-        case "POST conversation-waiting": {
-          const title = "Which harbour goes first?";
-          const id = core.services.supervisor.addFirstmateCard({
-            id: "phone-conversation-waiting",
-            title,
-            body: "<p>Both harbours need a fresh chart this week.</p>",
-            actions: [
-              { id: "north", label: "North first", default: true },
-              { id: "south", label: "South first" },
-            ],
-          });
-          result = { id, title };
-          break;
-        }
         // INF-3881: a card holding the Advanced architecture map part, filled with this project's own map files, with words
         // under it so the card is taller than the screen and a finger on the diagram has a card to scroll.
         case "POST map-card": {
@@ -3271,31 +3249,13 @@ export async function startPhoneHome(
           break;
         }
         case "POST capture-reply-start":
-          await controls?.start("card-reply");
-          result = { ok: true };
-          break;
         case "POST capture-media-start":
-          await controls?.start("card-recording");
-          result = { ok: true };
-          break;
         case "POST capture-picture-start":
-          await controls?.start("card-picture");
-          result = { ok: true };
-          break;
         case "POST capture-page-start":
-          await controls?.start("card-paging");
-          result = { ok: true };
-          break;
         case "POST capture-card-start":
-          await controls?.start("card-form");
-          result = { ok: true };
-          break;
         case "POST capture-conversation-start":
-          await controls?.start("conversation");
-          result = { ok: true };
-          break;
         case "POST capture-character-start":
-          await controls?.start("character");
+          await controls?.start(CARD_RECORDINGS[command ?? ""]);
           result = { ok: true };
           break;
         // A future home whose major broke views: its floor is its own major, so the phone reads only.

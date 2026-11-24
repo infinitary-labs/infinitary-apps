@@ -39,3 +39,42 @@ export function seedReplyReading(tasks: TaskService) {
   }
   return { question: REPLY_READING_QUESTION, words: REPLY_NOTE_WORDS, problemWords };
 }
+
+type FirstmateCard = {
+  id: string;
+  title: string;
+  body: string;
+  actions: { id: string; label: string; default?: boolean }[];
+};
+
+/**
+ * INF-6366's first mate cards on the phone's home: `conversation-card` raises one for the phone to answer with its
+ * own button, so the strip and the Conversation show that press as a card round; `conversation-waiting` raises one
+ * left waiting, for the Conversation's Cards view.
+ */
+export function raiseConversationCard(add: (card: FirstmateCard) => string, command?: string) {
+  if (command === "conversation-card") {
+    const title = "Pick the chart style";
+    const id = add({
+      id: "phone-conversation-chart",
+      title,
+      body: "<p>Bars read best for a week of counts; lines read best for a trend.</p>",
+      actions: [
+        { id: "bars", label: "Use bars", default: true },
+        { id: "lines", label: "Use lines" },
+      ],
+    });
+    return { id, title, label: "Use bars" };
+  }
+  const title = "Which harbour goes first?";
+  const id = add({
+    id: "phone-conversation-waiting",
+    title,
+    body: "<p>Both harbours need a fresh chart this week.</p>",
+    actions: [
+      { id: "north", label: "North first", default: true },
+      { id: "south", label: "South first" },
+    ],
+  });
+  return { id, title };
+}

@@ -34,6 +34,8 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/InfinitaryApp/InfinitaryApp.swift",
     "ios/Infinitary/InfinitaryApp/MessageComposer.swift",
     "ios/Infinitary/InfinitaryApp/PhoneConversationSheet.swift",
+    // The conversation's rounds every part's strip reads (ReadOnlySession.swift).
+    "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneConversation.swift",
     "ios/Infinitary/InfinitaryApp/Notices/swift-asn1-LICENSE.txt",
     "ios/Infinitary/InfinitaryApp/Notices/swift-asn1-NOTICE.txt",
     "ios/Infinitary/InfinitaryApp/Notices/swift-certificates-LICENSE.txt",

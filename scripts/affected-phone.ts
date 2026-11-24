@@ -63,6 +63,8 @@ const INPUTS = [
   "tests/helpers/phoneSecondHome.ts", "tests/helpers/phoneSecondHomeProcess.ts",
   // INF-5608's plan, piece 2: the cards-carried part's card and what reached the computer from its choice.
   "tests/helpers/phoneCarried.ts",
+  // INF-6476: the test home's removal, which many parts start from and the weak-link part's removal check reads.
+  "tests/helpers/phoneRemove.ts",
 ] as const;
 // INF-827 (the captain's "skip changes to unused setup"): the device gates never run this
 // chooser or scripts/phone-test-home.ts, so they are not inputs. The chooser runs before the

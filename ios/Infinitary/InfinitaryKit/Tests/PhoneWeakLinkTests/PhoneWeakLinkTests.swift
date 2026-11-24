@@ -51,9 +51,9 @@ import XCTest
 
 /// INF-2668, the captain: "i feel the ios app’s connection to the home has been flaky sometimes. it would flip between
 /// out of reach and reaching a few times. this is especially prominent when the network condition is not strong like
-/// when i’m out on mobile." Each test is one of the seven checks of INF-2666's direction B, or INF-2669's large catch-up,
-/// run against the disposable real-core home through its relay, which shapes the path as a weak cell does. Every
-/// connection dials the relay only.
+/// when i’m out on mobile." Each test is one of the seven checks of INF-2666's direction B, INF-2669's large catch-up or
+/// INF-6476's removal, run against the disposable real-core home through its relay, which shapes the path as a weak cell
+/// does. Every connection dials the relay only.
 @MainActor final class PhoneWeakLinkTests: XCTestCase {
     /// The checks need the disposable home the phone gate starts for this part; a plain `swift test` of the package
     /// has none.
@@ -497,6 +497,22 @@ import XCTest
         XCTAssertLessThan(named.at - stalled, 30, "within half a minute")
         let dials = try await readings().dials
         XCTAssertGreaterThanOrEqual(dials.count, 2, "Redialed")
+        try await finish(session)
+    }
+
+    /// INF-6476: join-away's phone stayed Out of reach after its removal. The close arrived while the phone was still
+    /// answering an earlier frame with a read, and that read's send, after the close, lost it. A computer stops
+    /// listening once its last phone is removed, so that close is the only way the phone hears it.
+    func testARemovalRightBehindAFrameThePhoneAnswersIsHeard() async throws {
+        let session = try await joined()
+        let watch = Watch(session)
+        session.start()
+        try await inReach(session, watch, within: 30)
+        _ = try await home("remove", ["feedFirst": true])
+        try await watch.until(10, "removed") { session.contact == "removed" }
+        XCTAssertTrue(session.removed)
+        let dials = try await readings().dials
+        XCTAssertEqual(dials.count, 1, "Heard on its one connection, with no dial after it")
         try await finish(session)
     }
 }

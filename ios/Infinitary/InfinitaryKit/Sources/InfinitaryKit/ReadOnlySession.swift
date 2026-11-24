@@ -1111,10 +1111,20 @@ public struct PhoneNotice: Equatable, Sendable {
         }
         defer { watchdog.cancel() }
         var parts = PhoneParts()
+        // INF-6476: a read waits on the socket from the greeting until the socket ends, while the frames before it are
+        // still being read. URLSession keeps the computer's close code only for a read waiting when the close arrives:
+        // a send after the close, with no read waiting, fails the whole socket with no code, so a removal pushed right
+        // behind a frame the phone answers was read as a lost connection. The reader ends when `transport` closes.
+        let (messages, delivered) = AsyncThrowingStream<URLSessionWebSocketTask.Message, Error>.makeStream()
+        Task.detached { [socket] in
+            do { while true { delivered.yield(try await socket.receive()) } } catch { delivered.finish(throwing: error) }
+        }
+        var reading = messages.makeAsyncIterator()
         do {
             try await send(hello, on: socket)
             while !Task.isCancelled {
-                let message = try await socket.receive()
+                // The stream ends without an error only when this task is cancelled.
+                guard let message = try await reading.next() else { throw CancellationError() }
                 guard current == generation, !Task.isCancelled else { break }
                 guard case .string(let text) = message else { throw PhoneError.invalidReply }
                 // INF-2832: each part of a long frame is the computer sending, heard as it arrives; the frame is read

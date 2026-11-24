@@ -3,6 +3,7 @@ import { KEYBOARD_COMMANDS } from "@shared/keyboard";
 import type { LastRound, LastTurn as Turn } from "@shared/lastTurn";
 import { CAPTAIN_COMMAND } from "@shared/through";
 import {
+  type MouseEvent,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -24,7 +25,7 @@ import {
   subscribeFade,
   syncFade,
 } from "./lastTurnFade";
-import { stackOf } from "./stack";
+import { shownEntry, stackOf } from "./stack";
 import { useShellStore } from "./store";
 import "./lastTurn.css";
 
@@ -43,9 +44,11 @@ import "./lastTurn.css";
  * and "Working…" in its reply's place. Working never hides a reply. Becoming the older round starts 15
  * seconds of visible reading time (./lastTurnFade), after which only that
  * round dissolves, even during work; the newest stays until the next message. Each
- * reply line is a button that opens that reply whole as a note
- * (./ReplyNote, docs/composer.md "The reply note"); the captain's words
- * are plain text. A line too long for its row ends on its last whole word
+ * reply line is a button that opens the conversation at that round
+ * (./ConversationCard, docs/composer.md "The conversation"), as a press on
+ * the round anywhere does unless it selected words; the captain's words
+ * are plain text. While the conversation is the shown entry the strip is
+ * not drawn: the conversation holds the same rounds whole. A line too long for its row ends on its last whole word
  * and an ellipsis, never part way through a word (../design/core/wholeWords);
  * resting on a cut line shows its whole text and pauses the count.
  *
@@ -61,7 +64,8 @@ import "./lastTurn.css";
  * any language is set) for a spec; the rounds word them when shown.
  */
 export const WORKING_WORDS = m.shellLastTurnWorking();
-export const PICTURE_ONLY_WORDS = m.shellLastTurnPictureOnly();
+export { PICTURE_ONLY_WORDS } from "./lastTurnWords";
+
 /** The lane whose width bounds each line, which the lines' own words never size. */
 const LANE = "[data-last-turn]";
 /** A leaving round or set of words is gone after --dur-fast. */
@@ -204,10 +208,10 @@ function MateLine({
   const mateFit = useOverflowTitle(shown ? mateWords : undefined);
   const mateCut = useWholeWords(shown ? mateWords : undefined, LANE);
   const mateRef = useCuttingRef(mateFit.ref, mateCut);
-  const openReplyNote = useShellStore((s) => s.openReplyNote);
+  const openConversation = useShellStore((s) => s.openConversation);
   // A reply is a button that opens it whole; the working words are not.
   const Bubble = reply ? "button" : "span";
-  // The newest reply's button names the key of Open the first mate's reply
+  // The newest reply's button names the key of Open the conversation
   // in the app's label on rest, after its words when they are cut short, else
   // after the command's own words (docs/keyboard.md, "Key hints").
   const replyKeys = useCommandKeys(reply && !older ? "firstmate.reply" : null);
@@ -229,7 +233,11 @@ function MateLine({
                       type: "button" as const,
                       "aria-keyshortcuts": replyKeys["aria-keyshortcuts"],
                       "data-key-command": replyKeys["data-key-command"],
-                      onClick: () => openReplyNote(older ? "older" : undefined),
+                      onClick: (event: MouseEvent) => {
+                        // The round's own press opens it too: one open per press.
+                        event.stopPropagation();
+                        openConversation(older ? { at: "older" } : {});
+                      },
                     }
                   : { title: mateFit.title })}
                 data-last-turn-bubble="firstmate"
@@ -291,6 +299,13 @@ export function LastTurnRound({
   return (
     <div
       data-last-turn-pair=""
+      onClick={(event) => {
+        if (leaving || fading) return;
+        // A press that ends a drag across words keeps the selection.
+        const selection = event.currentTarget.ownerDocument.getSelection();
+        if (selection && !selection.isCollapsed) return;
+        useShellStore.getState().openConversation(older ? { at: "older" } : {});
+      }}
       data-older={older ? "" : undefined}
       data-leaving={leaving ? "" : undefined}
       data-fading={fading ? "" : undefined}
@@ -332,6 +347,11 @@ export function useCardUp(): boolean {
   return useShellStore((s) => stackOf(s).length > 0);
 }
 
+/** Whether the conversation is the shown entry: it holds the strip's rounds whole. */
+function useConversationShown(): boolean {
+  return useShellStore((s) => shownEntry(s)?.conversation !== undefined);
+}
+
 type Shown = { round: LastRound; key: number; older: boolean };
 /** A round leaving, drawn where it stood. */
 type Outgoing = Shown & { top: number };
@@ -354,6 +374,7 @@ export function LastTurn() {
   const busy = useShellStore((s) => s.firstmateBusy);
   const view = useShellStore((s) => s.view);
   const cardUp = useCardUp();
+  const conversationShown = useConversationShown();
   const fade = useSyncExternalStore(subscribeFade, getFade, getFade);
   const [outgoing, setOutgoing] = useState<Outgoing | null>(null);
   const [hovering, setHovering] = useState(false);
@@ -467,7 +488,7 @@ export function LastTurn() {
     tops.current = next;
   });
 
-  if (!turn) return null;
+  if (!turn || conversationShown) return null;
   return (
     <div
       data-last-turn=""

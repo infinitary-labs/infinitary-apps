@@ -162,8 +162,9 @@ export async function quietMessagesStory(theme: Theme): Promise<void> {
   expect(await paint(reply)).toEqual(resting.reply);
   expect(await paint(you())).toEqual(resting.you);
 
-  // Section: each reply opens its whole line, by key and by press, and
-  // Escape lets it go.
+  // Section: each reply opens the conversation with its whole words, by key
+  // and by press, and Escape lets it go (INF-6337's plan, the captain's
+  // Approve and build: "clicking would open up a full card").
   const kept = home["inf:conversation:last-turn"];
   if (!kept || typeof kept === "function") throw new Error("The home kept no last turn");
   const words = {
@@ -173,14 +174,18 @@ export async function quietMessagesStory(theme: Theme): Promise<void> {
   expect(words.newest && words.older && kept.you, "the home kept both rounds' words").toBeTruthy();
   reply.focus();
   await userEvent.keyboard("{Enter}");
-  const note = () => document.querySelector("[data-reply-note]");
-  await expect.poll(() => note()?.textContent).toBe(words.newest);
+  const conversation = () => document.querySelector("[data-conversation]");
+  const replies = () =>
+    [...document.querySelectorAll("[data-conversation-mate] [data-conversation-words]")].map(
+      (words) => words.textContent,
+    );
+  await expect.poll(() => replies().at(-1)).toBe(words.newest);
   await userEvent.keyboard("{Escape}");
-  await expect.poll(note).toBeNull();
+  await expect.poll(conversation).toBeNull();
   await userEvent.click(mate(OLDER));
-  await expect.poll(() => note()?.textContent).toBe(words.older);
+  await expect.poll(() => replies().at(-2)).toBe(words.older);
   await userEvent.keyboard("{Escape}");
-  await expect.poll(note).toBeNull();
+  await expect.poll(conversation).toBeNull();
 
   // Section: the narrowest window keeps the captain's words whole, with no
   // sideways scroll.

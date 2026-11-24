@@ -539,6 +539,10 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
     PAIR_BODY_MAX_BYTES: physical("answered 413; the app's own pairing body never comes close"),
     CONNECTION_MAX_FRAME_BYTES: physical("the socket closes on a larger frame; nothing names why"),
   },
+  "src/shared/conversation.ts": {
+    // One page's rounds, each read with its card and answer, in one message to the window.
+    CONVERSATION_PAGE_MAX: physical("refused by the channel; read the next page from the last round"),
+  },
   "src/shared/costLimit.ts": {
     // The captain chose $50 on INF-3112's plan, drawn from their own ledger.
     COST_LIMIT_DEFAULT_USD: {

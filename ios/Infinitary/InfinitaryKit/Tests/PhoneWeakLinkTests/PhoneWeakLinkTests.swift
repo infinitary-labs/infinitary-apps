@@ -500,9 +500,9 @@ import XCTest
         try await finish(session)
     }
 
-    /// INF-6476: join-away's phone stayed Out of reach after its removal. The close came right behind a frame the phone
-    /// answered with a read, and the phone, sending as the close arrived, lost it. A computer stops listening once its
-    /// last phone is removed, so that close is the only way the phone hears it.
+    /// INF-6476: join-away's phone stayed Out of reach after its removal. The close arrived while the phone was still
+    /// answering an earlier frame with a read, and that read's send, after the close, lost it. A computer stops
+    /// listening once its last phone is removed, so that close is the only way the phone hears it.
     func testARemovalRightBehindAFrameThePhoneAnswersIsHeard() async throws {
         let session = try await joined()
         let watch = Watch(session)

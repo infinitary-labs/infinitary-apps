@@ -83,31 +83,40 @@ describe("a question the captain already answered, through the crew", () => {
     }
   });
 
-  it("names the reviewer's open Review finding card on the builder's report wake", async () => {
-    const crewmate = fakeCrewmate();
-    const { supervisor, tasks, ledger } = setup(crewmate);
-    const { taskId } = await supervisor.intake.commission({
-      title: "Keep placed words",
-      intent: intentOf("keep the words I placed"),
-    });
-    await tick();
-    seedTask(tasks, {
-      id: "review-1",
-      title: "Review",
-      status: "idle",
-      parentId: taskId,
-      shape: { kind: "review", kind_source: "host:review", basis: taskId },
-    });
-    const card = supervisor.cards.emitCrewmateCard("review-1", { ...QUESTION, id: "a" }, "m");
-    crewmate.emit({ type: "assistant_delta", taskId, text: "Pushed the fix." });
-    crewmate.emit({ type: "turn_end", taskId, usage: { input: 10, output: 2 } });
-    crewmate.finishPrompt();
-    await tick();
-    // The sort may keep this report quiet while a question card is up; its
-    // record holds the wake either way.
-    const report = ledger.find((text) => text.includes(`reported on task ${taskId}`));
-    expect(report).toContain(
-      `Its reviewer's Review finding card is on the captain's screen: ${card} "${QUESTION.title}". The app already handed those findings to the reviewer and sends the captain's choice to this task, so ask nobody for a card about them.`,
-    );
-  });
+  it.each([
+    ["names", "is up", true],
+    ["leaves out", "was answered", false],
+  ])(
+    "the builder's report wake %s the reviewer's question card that %s",
+    async (_names, _state, up) => {
+      const crewmate = fakeCrewmate();
+      const { supervisor, tasks, ledger } = setup(crewmate);
+      const { taskId } = await supervisor.intake.commission({
+        title: "Keep placed words",
+        intent: intentOf("keep the words I placed"),
+      });
+      await tick();
+      seedTask(tasks, {
+        id: "review-1",
+        title: "Review",
+        status: "idle",
+        parentId: taskId,
+        shape: { kind: "review", kind_source: "host:review", basis: taskId },
+      });
+      const card = supervisor.cards.emitCrewmateCard("review-1", { ...QUESTION, id: "a" }, "m");
+      if (!up)
+        supervisor.cards.resolve(supervisor.cards.shown(card) as Card, "send", "send", ANSWERS);
+      crewmate.emit({ type: "assistant_delta", taskId, text: "Pushed the fix." });
+      crewmate.emit({ type: "turn_end", taskId, usage: { input: 10, output: 2 } });
+      crewmate.finishPrompt();
+      await tick();
+      // The sort may keep this report quiet while a question card is up; its
+      // record holds the wake either way.
+      const report = ledger.find((text) => text.includes(`reported on task ${taskId}`));
+      expect(report).toContain("Pushed the fix.");
+      const sentence = `Its reviewer's Review finding card is on the captain's screen: ${card} "${QUESTION.title}". The app already handed those findings to the reviewer and sends the captain's choice to this task, so ask nobody for a card about them.`;
+      if (up) expect(report).toContain(sentence);
+      else expect(report).not.toContain("Review finding card");
+    },
+  );
 });

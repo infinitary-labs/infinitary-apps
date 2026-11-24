@@ -111,7 +111,7 @@ export function usageReads(
   usageStore: UsageStore,
   slots: { view(): { models: SlotModelView[]; byName: SlotModelView[] } },
   customApiName: string,
-): CoreServices["usage"] {
+): Omit<CoreServices["usage"], "reporting"> {
   return {
     summary: (query) => {
       const view = slots.view();

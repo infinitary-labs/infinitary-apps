@@ -101,7 +101,7 @@ Every other provider's work reaches the same collector, and a managed setup's, i
 - **A managed setup.**
   An administrator's managed setup reaches Claude's client directly and cannot be overridden; there the receiver stays off as before and Infinitary passes nothing on, so nothing is counted twice.
 - **What a person sees.**
-  Usage shows one line naming the collector's host for the first mate's computer: an administrator's managed collector, which Claude's client reports to itself (`readManagedClaudeReporting`), or else the person's setup the receiver passes on to (`usage.reporting`, `claudeReportingHost`); each computer that runs work follows its own setup, which the line says.
+  Usage shows one line naming where usage is reported (`usage.reporting`, `companyDestination`'s `reporting`): the host the usage report sends every model's work to, an administrator's managed setup included, or else, marked Claude work only, the host the receiver passes Claude's records on to, such as a setup over gRPC; each computer that runs work follows its own setup for Claude work, which the line says.
 
 `claudeReporting.integration.test.ts` holds this on the client the product would run, boxed, with stand-in collectors over OTLP/HTTP JSON, protobuf and gRPC and a header command: the collector gets the client's own batches byte for byte, the token and cost counters among them, the person's resource attributes on logs and metrics, prompts only where the person's `OTEL_LOG_USER_PROMPTS` asks, and a managed setup leaves the collector empty.
 

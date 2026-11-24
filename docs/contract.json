@@ -79179,6 +79179,10 @@
                 "type": "null"
               }
             ]
+          },
+          "claudeOnly": {
+            "type": "boolean",
+            "const": true
           }
         },
         "required": [

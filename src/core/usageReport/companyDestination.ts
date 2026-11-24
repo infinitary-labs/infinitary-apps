@@ -1,5 +1,6 @@
+import type { UsageReporting } from "@shared/usage";
 import { type ResolveClaudeSettings, resolveSettings } from "../claude/claudeAccess";
-import { claudeCostReportingAllowed } from "../claude/claudeCostPolicy";
+import { claudeCostReportingAllowed, claudeReportingHost } from "../claude/claudeCostPolicy";
 import { hasClaudeReporting } from "../claude/claudeCostReports";
 import { claudeLoginEmail, defaultClaudeConfigDir } from "../claude/claudeQuota";
 import {
@@ -28,6 +29,8 @@ export type CompanyDestinationDeps = {
   read(env: NodeJS.ProcessEnv): Promise<ClaudeCompanyReporting | undefined>;
   /** The person's own Claude Code login's email, which Claude's records carry as `user.email`. */
   email(env: NodeJS.ProcessEnv): Promise<string | undefined>;
+  /** Where the receiver passes Claude's own records on to (`claudeReportingHost`). */
+  claudeHost(env: NodeJS.ProcessEnv): Promise<string | null>;
 };
 
 /**
@@ -46,6 +49,7 @@ export type CompanyDestinationDeps = {
 export function companyDestination(deps: CompanyDestinationDeps): {
   destinations(): readonly UsageReportDestination[];
   refresh(): Promise<void>;
+  reporting(): Promise<UsageReporting>;
 } {
   let held: readonly UsageReportDestination[] = [];
   let readAt = Number.NEGATIVE_INFINITY;
@@ -76,6 +80,18 @@ export function companyDestination(deps: CompanyDestinationDeps): {
       return held;
     },
     refresh,
+    /**
+     * Settings → Usage's line: where the report sends every other model's
+     * work, or else where only Claude's own records go, such as a setup the
+     * report cannot send to over gRPC.
+     */
+    async reporting() {
+      await refresh();
+      const endpoint = held[0]?.endpoints.logs ?? held[0]?.endpoints.metrics;
+      if (endpoint) return { host: new URL(endpoint).host };
+      const host = await deps.claudeHost(deps.env()).catch(() => null);
+      return host ? { host, claudeOnly: true } : { host: null };
+    },
   };
 }
 
@@ -109,14 +125,15 @@ function toDestination(
 }
 
 /** The production source: the app's environment, the managed policy and the person's setup. */
-export function companyUsageDestinations(): () => readonly UsageReportDestination[] {
+export function companyUsageDestinations(): ReturnType<typeof companyDestination> {
   return companyDestination({
     env: () => hostEnv(),
     managed: (env) => readManagedReporting(env),
     costReportingAllowed: () => claudeCostReportingAllowed(),
     read: (env) => readClaudeCompanyReporting(env),
     email: (env) => claudeLoginEmail(defaultClaudeConfigDir(env), env),
-  }).destinations;
+    claudeHost: async (env) => (await claudeReportingHost(env)).host,
+  });
 }
 
 /**

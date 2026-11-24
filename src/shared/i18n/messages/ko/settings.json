@@ -1461,6 +1461,7 @@
   "settingsUsageRecentTokensLegend": "입력에는 캐시된 토큰이 빠져 있어요. 합계는 각 항목을 한 번만 세요.",
   "settingsUsageRecentUsdLegend": "항목별 추정은 기록된 가격만 써요. 그래서 다루는 범위가 합계와 다를 수 있어요.",
   "settingsUsageRecordsOf": "기록 {records}개 중 {count}개",
+  "settingsUsageReportsClaudeTo": "일등항해사의 컴퓨터에서 하는 Claude 작업은 그 컴퓨터의 Claude Code 설정에 따라 {host}에도 보고됩니다. 다른 컴퓨터는 각자의 설정을 따릅니다.",
   "settingsUsageReportsTo": "일등항해사 컴퓨터의 Claude Code 설정에 따라 크루의 사용량은 {host}에도 보고됩니다. 그 컴퓨터에서 한 Claude 작업과 다른 모든 모델의 작업입니다. 다른 컴퓨터의 Claude 작업은 각자의 설정을 따릅니다.",
   "settingsUsageScopeAll": "모든 작업",
   "settingsUsageScopeFirstmate": "일등항해사",

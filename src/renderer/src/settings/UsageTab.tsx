@@ -86,15 +86,15 @@ export function UsageTab() {
     useShellStore.getState().refreshAppearance();
   }, []);
 
-  // An administrator's managed collector, or the company setup the receiver passes Claude work on to (docs/usage.md).
-  const [reporting, setReporting] = useState<string | null>(null);
+  // Where a company's Claude Code setup has usage reported (docs/usage-report.md).
+  const [reporting, setReporting] = useState<UsageReporting | null>(null);
   useEffect(
     () =>
       appReadExecutor().subscribe(
         "usage.reporting",
         {},
         {
-          onValue: (value) => setReporting((value as UsageReporting).host),
+          onValue: (value) => setReporting(value as UsageReporting),
           // An older home has no such read: no line.
           onError: () => setReporting(null),
         },
@@ -163,9 +163,11 @@ export function UsageTab() {
           />
         </div>
       </div>
-      {reporting && (
+      {reporting?.host && (
         <p className="fm-usage-muted" data-usage-reporting="">
-          {m.settingsUsageReportsTo({ host: reporting })}
+          {reporting.claudeOnly
+            ? m.settingsUsageReportsClaudeTo({ host: reporting.host })
+            : m.settingsUsageReportsTo({ host: reporting.host })}
         </p>
       )}
       <SettingError error={unitError} surface="usage-unit" />

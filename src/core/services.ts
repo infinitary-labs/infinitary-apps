@@ -748,12 +748,13 @@ export async function createServices(
     runtimeFor: (accountId) => vault.runtimeFor(accountId),
     baseRuntime: auth.modelRuntime,
   });
+  const companyUsage = companyUsageDestinations();
   const { usageStore, costLimitStore, appCostLimitView, recordUsage, ...usage } = homeUsage(db, {
     appLimit: () => settings.getTaskCostLimit(),
     projectLimit: (repoId) => repos.get(repoId)?.costLimit,
     isTask: (taskId) => tasks.get(taskId) !== undefined,
     hearEvents: (hear) => eventSeam.attachUsageReport(hear),
-    reportDestinations: companyUsageDestinations(),
+    reportDestinations: companyUsage.destinations,
   });
   taskCostOf = usage.taskCostOf;
   // Card-worthy moments reach Notification Center, and each paired phone
@@ -1784,7 +1785,7 @@ export async function createServices(
     observe,
     crewLive,
     // The words General's model picker uses for a custom API.
-    usage: usageReads(usageStore, slots, "Custom API"),
+    usage: { ...usageReads(usageStore, slots, "Custom API"), reporting: companyUsage.reporting },
     costLimit: {
       view: () => appCostLimitView(),
       set: (limit) => {

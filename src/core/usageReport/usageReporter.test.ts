@@ -457,6 +457,7 @@ describe("the company's Claude Code setup as a destination", () => {
       costReportingAllowed: async () => true,
       read: async () => companySetup(url),
       email: async () => "dev@example.com",
+      claudeHost: async () => null,
     });
     await source.refresh();
     const { usage } = home(source.destinations);
@@ -502,6 +503,7 @@ describe("the company's Claude Code setup as a destination", () => {
       costReportingAllowed: async () => true,
       read: async () => companySetup(url, "grpc"),
       email: async () => undefined,
+      claudeHost: async () => null,
     });
     await source.refresh();
     const { usage } = home(source.destinations);
@@ -519,6 +521,7 @@ describe("the company's Claude Code setup as a destination", () => {
       costReportingAllowed: async () => true,
       read: async () => companySetup(url),
       email: async () => "dev@example.com",
+      claudeHost: async () => null,
     });
     await source.refresh();
     expect(source.destinations()).toEqual([]);
@@ -557,6 +560,7 @@ describe("the company's Claude Code setup as a destination", () => {
       costReportingAllowed: async () => false,
       read: async () => companySetup(url),
       email: async () => "dev@example.com",
+      claudeHost: async () => null,
     });
     await source.refresh();
     const { usage } = home(source.destinations);
@@ -605,6 +609,7 @@ describe("the company's Claude Code setup as a destination", () => {
       costReportingAllowed: async () => false,
       read: async () => companySetup(url),
       email: async () => "dev@example.com",
+      claudeHost: async () => null,
     });
     await source.refresh();
     expect(source.destinations()).toEqual([]);
@@ -612,5 +617,37 @@ describe("the company's Claude Code setup as a destination", () => {
     usage.recordUsage(CODEX_CALL);
     await usage.usageReporter.flush();
     expect(received).toEqual([]);
+  });
+
+  it("names in Settings → Usage where the report sends, or else where only Claude's records go", async () => {
+    const { url } = await collector();
+    const sourceWith = (
+      managed: Awaited<ReturnType<typeof readManagedReporting>>,
+      own: ReturnType<typeof companySetup>,
+    ) =>
+      companyDestination({
+        env: () => ({}),
+        managed: async () => managed,
+        costReportingAllowed: async () => managed === undefined,
+        read: async () => own,
+        email: async () => undefined,
+        claudeHost: async () => (own ? new URL(url).host : null),
+      });
+    const host = new URL(url).host;
+    const managed = companyReportingFrom({
+      CLAUDE_CODE_ENABLE_TELEMETRY: "1",
+      OTEL_LOGS_EXPORTER: "otlp",
+      OTEL_EXPORTER_OTLP_ENDPOINT: "https://otel.example.com",
+    });
+    const grpcOnly = companyReportingFrom({
+      CLAUDE_CODE_ENABLE_TELEMETRY: "1",
+      OTEL_LOGS_EXPORTER: "otlp",
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc",
+      OTEL_EXPORTER_OTLP_ENDPOINT: url,
+    });
+    expect(await sourceWith(managed, undefined).reporting()).toEqual({ host: "otel.example.com" });
+    expect(await sourceWith(undefined, companySetup(url)).reporting()).toEqual({ host });
+    expect(await sourceWith(undefined, grpcOnly).reporting()).toEqual({ host, claudeOnly: true });
+    expect(await sourceWith(undefined, undefined).reporting()).toEqual({ host: null });
   });
 });

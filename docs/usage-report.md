@@ -23,6 +23,7 @@ It takes the setup's per-signal addresses, its headers (the header command's inc
 An administrator's managed setup comes first (`readManagedReporting`): Claude's own client reports there itself, and every other provider's calls go there too, from the managed tier's reporting keys laid over the launch environment and its own header command; a managed policy helper, whose answer is never known here, leaves it out.
 Otherwise the person's own setup is the destination only where the receiver passes Claude's records on to it.
 The setup is read again at most once a minute, when the reporter asks.
+Settings → Usage names this destination's host as where the crew's usage goes; where there is none but the receiver still passes Claude's records on, as for a setup over gRPC, its line names that host for Claude work only (`reporting`).
 
 ## The two formats
 

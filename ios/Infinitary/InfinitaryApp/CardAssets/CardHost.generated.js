@@ -96709,29 +96709,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const host = input2.host;
     switch (currentLanguage()) {
       case "ar":
-        return `يُبلَّغ عن عمل Claude على حاسوب نائب القبطان أيضًا إلى ${host}، كما تطلب إعدادات Claude Code عليه. تتبع الحواسيب الأخرى إعداداتها الخاصة.`;
+        return `يُبلَّغ عن استخدام طاقمك أيضًا إلى ${host}، كما تطلب إعدادات Claude Code على حاسوب نائب القبطان: عمل Claude المنجز هناك، وعمل كل نموذج آخر. يتبع عمل Claude على الحواسيب الأخرى إعداداتها الخاصة.`;
       case "de":
-        return `Claude-Arbeit auf dem Computer deines ersten Offiziers wird außerdem an ${host} gemeldet, wie es dessen Claude-Code-Einstellungen verlangen. Andere Computer folgen ihren eigenen Einstellungen.`;
+        return `Die Nutzung deiner Crew wird außerdem an ${host} gemeldet, wie es die Claude-Code-Einstellungen auf dem Computer deines ersten Offiziers verlangen: Claude-Arbeit, die dort getan wird, und die Arbeit jedes anderen Modells. Claude-Arbeit auf anderen Computern folgt deren eigenen Einstellungen.`;
       case "es":
-        return `El trabajo de Claude en la computadora de tu primer oficial también se informa a ${host}, como piden sus ajustes de Claude Code. Las demás computadoras siguen sus propios ajustes.`;
+        return `El uso de tu tripulación también se informa a ${host}, como piden los ajustes de Claude Code en la computadora de tu primer oficial: el trabajo de Claude hecho allí y el trabajo de cualquier otro modelo. El trabajo de Claude en otras computadoras sigue sus propios ajustes.`;
       case "fr":
-        return `Le travail de Claude sur l’ordinateur de votre second est aussi signalé à ${host}, comme le demandent ses réglages Claude Code. Les autres ordinateurs suivent leurs propres réglages.`;
+        return `L’utilisation de votre équipage est aussi signalée à ${host}, comme le demandent les réglages Claude Code sur l’ordinateur de votre second : le travail de Claude fait là-bas et le travail de tout autre modèle. Le travail de Claude sur les autres ordinateurs suit leurs propres réglages.`;
       case "ja":
-        return `一等航海士のコンピューターでの Claude の作業は、その Claude Code の設定に従い ${host} にも報告されます。ほかのコンピューターはそれぞれの設定に従います。`;
+        return `一等航海士のコンピューターの Claude Code の設定に従い、クルーの使用量は ${host} にも報告されます。そこで行った Claude の作業と、ほかのすべてのモデルの作業です。ほかのコンピューターでの Claude の作業は、それぞれの設定に従います。`;
       case "ko":
-        return `일등항해사의 컴퓨터에서 하는 Claude 작업은 그 컴퓨터의 Claude Code 설정에 따라 ${host}에도 보고됩니다. 다른 컴퓨터는 각자의 설정을 따릅니다.`;
+        return `일등항해사 컴퓨터의 Claude Code 설정에 따라 크루의 사용량은 ${host}에도 보고됩니다. 그 컴퓨터에서 한 Claude 작업과 다른 모든 모델의 작업입니다. 다른 컴퓨터의 Claude 작업은 각자의 설정을 따릅니다.`;
       case "pt-BR":
-        return `O trabalho do Claude no computador do seu imediato também é informado a ${host}, como pedem os ajustes do Claude Code dele. Os outros computadores seguem os próprios ajustes.`;
+        return `O uso da sua tripulação também é informado a ${host}, como pedem os ajustes do Claude Code no computador do seu imediato: o trabalho do Claude feito lá e o trabalho de qualquer outro modelo. O trabalho do Claude em outros computadores segue os próprios ajustes deles.`;
       case "zh-Hans":
-        return `按照你大副电脑上的 Claude Code 设置，Claude 在那台电脑上的工作也会报告给 ${host}。其他电脑按各自的设置。`;
+        return `按照你大副电脑上的 Claude Code 设置，船员的用量也会报告给 ${host}：在那台电脑上完成的 Claude 工作，以及其他所有模型的工作。其他电脑上的 Claude 工作按各自的设置。`;
       case "zh-Hant":
-        return `依照你大副電腦上的 Claude Code 設定，Claude 在那台電腦上的工作也會回報給 ${host}。其他電腦依各自的設定。`;
+        return `依照你大副電腦上的 Claude Code 設定，船員的用量也會回報給 ${host}：在那台電腦上完成的 Claude 工作，以及其他所有模型的工作。其他電腦上的 Claude 工作依各自的設定。`;
       case "en-XA":
-        return `[Çļáûðé ŵöŕķ öñ ýöûŕ ƒîŕšţ ɱáţé’š çöɱþûţéŕ îš áļšö ŕéþöŕţéð ţö ${host}, áš îţš Çļáûðé Çöðé šéţţîñĝš ášķ. Öţĥéŕ çöɱþûţéŕš ƒöļļöŵ ţĥéîŕ öŵñ šéţţîñĝš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Ýöûŕ çŕéŵ’š ûšáĝé îš áļšö ŕéþöŕţéð ţö ${host}, áš ţĥé Çļáûðé Çöðé šéţţîñĝš öñ ýöûŕ ƒîŕšţ ɱáţé’š çöɱþûţéŕ ášķ: Çļáûðé ŵöŕķ ðöñé ţĥéŕé, áñð éṽéŕý öţĥéŕ ɱöðéļ’š ŵöŕķ. Çļáûðé ŵöŕķ öñ öţĥéŕ çöɱþûţéŕš ƒöļļöŵš ţĥéîŕ öŵñ šéţţîñĝš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Claude work on your first mate’s computer is also reported to ‬${host}‮, as its Claude Code settings ask. Other computers follow their own settings.‬`;
+        return `‮Your crew’s usage is also reported to ‬${host}‮, as the Claude Code settings on your first mate’s computer ask: Claude work done there, and every other model’s work. Claude work on other computers follows their own settings.‬`;
     }
-    return `Claude work on your first mate’s computer is also reported to ${host}, as its Claude Code settings ask. Other computers follow their own settings.`;
+    return `Your crew’s usage is also reported to ${host}, as the Claude Code settings on your first mate’s computer ask: Claude work done there, and every other model’s work. Claude work on other computers follows their own settings.`;
   }
   function settingsUsageScopeAll() {
     switch (currentLanguage()) {

@@ -42,9 +42,11 @@ See [Integrations](/integrations/).
 
 ## Your company's usage reporting
 
-If your Claude Code settings file or your shell sets up usage reporting for your company, as Claude Code's guide describes, Infinitary sends Claude's usage records for work done here to the same place.
-They are the records Claude Code itself would send there, and Settings → **Usage** names where they go.
-A setup your company's administrator manages for the whole computer reaches Claude Code directly, as it always did.
+If your Claude Code settings file or your shell sets up usage reporting for your company, as Claude Code's guide describes, Infinitary sends the usage of all work done here to the same place.
+Claude's work goes as the records Claude Code itself would send there.
+Every other model's work goes under the same names, with its model, provider, tokens, estimated cost, whether your first mate or a crewmate did it, the kind of work and your Claude Code sign-in's email, never your words, task titles or project names.
+Settings → **Usage** names where it goes.
+A setup your company's administrator manages for the whole computer reaches Claude Code directly, as it always did, and Infinitary sends every other model's work there too, the same way.
 
 ## Update checks
 

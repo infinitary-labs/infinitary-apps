@@ -82,6 +82,7 @@ If live reporting is unavailable, the existing terminal report still records spe
 
 A company that reads Claude Code's own usage reports (OpenTelemetry) usually has each developer keep the setup in their own Claude settings file's `env` block or in their shell, as Claude Code's guide says.
 Infinitary reads that setup and passes Claude's own records on to the company's collector, so work done here counts there (`src/core/claude/claudeReporting.ts`).
+Every other provider's work reaches the same collector, and a managed setup's, in Claude Code's names through Infinitary's own usage report (`docs/usage-report.md`).
 
 - **Where it is read.**
   The keys are `CLAUDE_CODE_ENABLE_TELEMETRY` and every `OTEL_*` key, from the app's launch environment, then the login shell, then the person's own settings file, a later place winning, as Claude Code lays its settings file over the environment it started in (`readClaudeCompanyReporting`).

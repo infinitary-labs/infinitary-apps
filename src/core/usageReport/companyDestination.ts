@@ -1,12 +1,15 @@
+import { type ResolveClaudeSettings, resolveSettings } from "../claude/claudeAccess";
 import { claudeCostReportingAllowed } from "../claude/claudeCostPolicy";
 import { hasClaudeReporting } from "../claude/claudeCostReports";
 import { claudeLoginEmail, defaultClaudeConfigDir } from "../claude/claudeQuota";
 import {
   type ClaudeCompanyReporting,
   companyHeaders,
+  companyReportingFrom,
+  isReportingKey,
   parseOtlpHeaders,
   readClaudeCompanyReporting,
-  withoutReportingKeys,
+  receiverStepsAside,
 } from "../claude/claudeReporting";
 import { hostEnv } from "../hostEnv";
 import type { UsageReportDestination } from "./usageReporter";
@@ -16,6 +19,11 @@ const SETUP_REREAD_MS = 60_000;
 
 export type CompanyDestinationDeps = {
   env(): NodeJS.ProcessEnv;
+  /**
+   * The administrator's managed setup: undefined when it sets no reporting,
+   * null when it does but cannot be read here (a policy helper, or no OTLP).
+   */
+  managed(env: NodeJS.ProcessEnv): Promise<ClaudeCompanyReporting | null | undefined>;
   costReportingAllowed(): Promise<boolean>;
   read(env: NodeJS.ProcessEnv): Promise<ClaudeCompanyReporting | undefined>;
   /** The person's own Claude Code login's email, which Claude's records carry as `user.email`. */
@@ -29,8 +37,10 @@ export type CompanyDestinationDeps = {
  * Claude Code's names, with the setup's headers and resource attributes and
  * the person's Claude Code login email where Claude's records carry it.
  *
- * None where the receiver steps aside, as `claudeReportingHost` decides: a
- * managed setup's own client reports and its address is never read here.
+ * A managed setup comes first: Claude's own client reports there itself,
+ * and every other provider's calls go there too. Otherwise the person's own
+ * setup, unless the receiver steps aside (`receiverStepsAside`), the rule
+ * Settings → Usage names its host by.
  * A signal the setup sends over gRPC takes no JSON request, so it is left out.
  */
 export function companyDestination(deps: CompanyDestinationDeps): {
@@ -45,10 +55,13 @@ export function companyDestination(deps: CompanyDestinationDeps): {
     readAt = Date.now();
     reading ??= (async () => {
       const env = deps.env();
-      const allowed =
-        !hasClaudeReporting(withoutReportingKeys(env)) &&
-        (await deps.costReportingAllowed().catch(() => false));
-      const setup = allowed ? await deps.read(env).catch(() => undefined) : undefined;
+      const managed = await deps.managed(env).catch(() => null);
+      const setup =
+        managed !== undefined
+          ? (managed ?? undefined)
+          : !receiverStepsAside(env) && (await deps.costReportingAllowed().catch(() => false))
+            ? await deps.read(env).catch(() => undefined)
+            : undefined;
       const email = setup ? await deps.email(env).catch(() => undefined) : undefined;
       held = setup ? toDestination(setup, deps.env, email) : [];
     })().finally(() => {
@@ -99,8 +112,52 @@ function toDestination(
 export function companyUsageDestinations(): () => readonly UsageReportDestination[] {
   return companyDestination({
     env: () => hostEnv(),
+    managed: (env) => readManagedReporting(env),
     costReportingAllowed: () => claudeCostReportingAllowed(),
     read: (env) => readClaudeCompanyReporting(env),
     email: (env) => claudeLoginEmail(defaultClaudeConfigDir(env), env),
   }).destinations;
+}
+
+/**
+ * The reporting setup an administrator manages for the whole computer, as
+ * Claude Code lays it over the environment it starts in. Read from the
+ * managed tier only, as `claudeCostReportingAllowed` reads it.
+ */
+export async function readManagedReporting(
+  launch: NodeJS.ProcessEnv,
+  resolve: ResolveClaudeSettings = resolveSettings,
+): Promise<ClaudeCompanyReporting | null | undefined> {
+  let resolved: Awaited<ReturnType<ResolveClaudeSettings>>;
+  try {
+    resolved = await resolve({ settingSources: [] });
+  } catch {
+    return null;
+  }
+  const keys: Record<string, string> = {};
+  for (const [key, value] of Object.entries(launch))
+    if (isReportingKey(key) && value !== undefined) keys[key] = value;
+  let managed = false;
+  let helper: string | undefined;
+  for (const tier of resolved.sources) {
+    if (tier.source !== "managed") continue;
+    const settings = tier.settings as {
+      env?: Record<string, unknown>;
+      otelHeadersHelper?: unknown;
+      policyHelper?: unknown;
+    };
+    // What a policy helper prints at Claude's startup is never known here.
+    if (settings.policyHelper !== undefined) return null;
+    const env = settings.env && typeof settings.env === "object" ? settings.env : {};
+    const strings: Record<string, string> = {};
+    for (const [key, value] of Object.entries(env))
+      if (typeof value === "string" || typeof value === "number") strings[key] = String(value);
+    if (!hasClaudeReporting(strings)) continue;
+    managed = true;
+    for (const [key, value] of Object.entries(strings)) if (isReportingKey(key)) keys[key] = value;
+    if (typeof settings.otelHeadersHelper === "string" && settings.otelHeadersHelper.trim())
+      helper = settings.otelHeadersHelper.trim();
+  }
+  if (!managed) return undefined;
+  return companyReportingFrom(keys, helper) ?? null;
 }

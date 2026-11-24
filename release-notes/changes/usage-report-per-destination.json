@@ -1,9 +1,14 @@
 {
-  "entries": [],
-  "exclusions": [
+  "entries": [
     {
       "id": "usage-report-per-destination",
-      "reason": "Adds Infinitary's own usage report (both formats and the batched sender) with no destination source yet; nothing is sent until a company's Claude Code setup or a connection the person adds is wired in by a later change, which carries the note."
+      "kind": "feature",
+      "area": "subscriptions",
+      "title": "Your company's Claude Code usage reporting counts every model's work",
+      "body": "When your Claude Code settings file, your shell or your company's administrator sets up Claude Code usage reporting, Infinitary now reports work done with Codex and every other model there too, under Claude Code's own names and your Claude Code sign-in's email, so your company's dashboards count all of it per person. Claude's own records still go as they are, so nothing is counted twice. Each report carries the model, its tokens and an estimated cost, never your words, task titles or project names.",
+      "noPicture": "The change is in what your company's monitoring receives; Settings → Usage changes only the words of the line naming where it goes.",
+      "provenance": { "origin": "change" }
     }
-  ]
+  ],
+  "exclusions": []
 }

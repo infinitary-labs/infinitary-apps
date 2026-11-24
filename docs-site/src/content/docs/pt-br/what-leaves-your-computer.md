@@ -1,5 +1,5 @@
 ---
-source: 0683744dededd132
+source: 2c218b4b5c786426
 title: O que sai do seu computador
 description: O que o Infinitary envia, para onde vai e o único botão que envia algo para nós.
 ---
@@ -43,9 +43,11 @@ Veja [Integrações](/pt-br/integrations/).
 
 ## Os relatórios de uso da sua empresa {#your-companys-usage-reporting}
 
-Se o seu arquivo de ajustes do Claude Code ou o seu shell configura relatórios de uso para a sua empresa, como o guia do Claude Code descreve, o Infinitary envia os registros de uso do Claude do trabalho feito aqui para o mesmo lugar.
-São os registros que o próprio Claude Code enviaria para lá, e Ajustes → **Uso** diz para onde eles vão.
-Uma configuração que o administrador da sua empresa gerencia para o computador inteiro chega ao Claude Code diretamente, como sempre.
+Se o seu arquivo de ajustes do Claude Code ou o seu shell configura relatórios de uso para a sua empresa, como o guia do Claude Code descreve, o Infinitary envia o uso de todo o trabalho feito aqui para o mesmo lugar.
+O trabalho do Claude vai como os registros que o próprio Claude Code enviaria para lá.
+O trabalho de qualquer outro modelo vai com os mesmos nomes, com o modelo, o provedor, os tokens, o custo estimado, se o seu imediato ou um tripulante o fez, o tipo de trabalho e o e-mail do seu login do Claude Code, nunca as suas palavras, os títulos das tarefas nem os nomes dos projetos.
+Ajustes → **Uso** diz para onde ele vai.
+Uma configuração que o administrador da sua empresa gerencia para o computador inteiro chega ao Claude Code diretamente, como sempre, e o Infinitary também envia para lá o trabalho de qualquer outro modelo, do mesmo jeito.
 
 ## Verificações de atualização {#update-checks}
 

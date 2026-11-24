@@ -1,5 +1,5 @@
 ---
-source: 0683744dededd132
+source: 2c218b4b5c786426
 title: 哪些東西會離開你的電腦
 description: Infinitary 會傳送什麼、傳到哪裡，以及唯一一個會傳東西給我們的開關。
 ---
@@ -43,9 +43,11 @@ Infinitary 在你的電腦上執行，透過你已經有的訂閱方案運作。
 
 ## 你公司的用量回報 {#your-companys-usage-reporting}
 
-如果你的 Claude Code 設定檔或 shell 依照 Claude Code 指南為你的公司設定了用量回報，Infinitary 會把在這裡完成的工作的 Claude 用量記錄傳送到同一個地方。
-這些就是 Claude Code 自己會傳送到那裡的記錄，設定 → **用量** 會說明它們送往何處。
-由你公司的管理員為整台電腦管理的設定，會像以前一樣直接作用於 Claude Code。
+如果你的 Claude Code 設定檔或 shell 依照 Claude Code 指南為你的公司設定了用量回報，Infinitary 會把在這裡完成的所有工作的用量傳送到同一個地方。
+Claude 的工作以 Claude Code 自己會傳送到那裡的記錄傳送。
+其他模型的工作以相同的名稱傳送，附帶模型、供應商、token、估算費用、由大副還是船員完成、工作類型，以及你的 Claude Code 登入電子郵件，從不包含你的文字、任務標題或專案名稱。
+設定 → **用量** 會說明它送往何處。
+由你公司的管理員為整台電腦管理的設定，會像以前一樣直接作用於 Claude Code，Infinitary 也會以同樣的方式把其他模型的工作傳送到那裡。
 
 ## 更新檢查 {#update-checks}
 

@@ -20,7 +20,8 @@ With no destination, the reporter keeps nothing and sends nothing.
 
 The company's Claude Code reporting setup (`docs/usage.md`, "A company's Claude Code setup") is one destination in Claude Code's format.
 It takes the setup's per-signal addresses, its headers (the header command's included, through `companyHeaders`), its `OTEL_RESOURCE_ATTRIBUTES` and `OTEL_SERVICE_NAME`, and the email of the person's own Claude Code login (`claudeLoginEmail`).
-It exists only where the receiver passes Claude's records on to that setup; under a managed setup Claude's own client reports and Infinitary reads no address, so other providers' calls are not sent there.
+An administrator's managed setup comes first (`readManagedReporting`): Claude's own client reports there itself, and every other provider's calls go there too, from the managed tier's reporting keys laid over the launch environment and its own header command; a managed policy helper, whose answer is never known here, leaves it out.
+Otherwise the person's own setup is the destination only where the receiver passes Claude's records on to it.
 The setup is read again at most once a minute, when the reporter asks.
 
 ## The two formats
@@ -41,7 +42,7 @@ Nothing carries a task title, project name, prompt or output.
 `service.name` is `infinitary` unless the destination's own attributes name another.
 Metrics are delta sums: each batch says only what it adds.
 
-A session ends a step per model call, so a turn is not one session step: it opens at the session's first words or tool run and ends where its owner settles it, when the first mate is no longer busy or a crewmate's task is no longer running; a step that failed marks it failed.
+A session ends a step per model call, so a turn is not one session step: it opens at the session's first words or tool run and ends where its owner settles it, when the first mate is no longer busy or a crewmate's task is no longer running; a crewmate step that failed marks its turn failed, while the first mate's failed steps are not broadcast, so its turn is never marked failed.
 The ledger keeps no call timing, so a model call's span runs from the previous call in its turn, or the turn's start, to the moment the call was recorded.
 A turn that never ends, such as a session that crashed, is forgotten after six hours; a task that finishes ends its open turn.
 

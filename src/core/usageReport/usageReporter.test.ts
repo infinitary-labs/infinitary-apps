@@ -3,12 +3,13 @@ import type { AddressInfo } from "node:net";
 import { DEFAULT_COST_LIMIT } from "@shared/costLimit";
 import type { FmEvent } from "@shared/events";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { ResolveClaudeSettings } from "../claude/claudeAccess";
 import { companyReportingFrom } from "../claude/claudeReporting";
 import { openInMemoryDatabase } from "../storage/db";
 import { homeUsage } from "../storage/homeUsage";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
-import { companyDestination } from "./companyDestination";
+import { companyDestination, readManagedReporting } from "./companyDestination";
 import type { UsageReportDestination } from "./usageReporter";
 
 /**
@@ -452,6 +453,7 @@ describe("the company's Claude Code setup as a destination", () => {
     const { url, received } = await collector();
     const source = companyDestination({
       env: () => ({}),
+      managed: async () => undefined,
       costReportingAllowed: async () => true,
       read: async () => companySetup(url),
       email: async () => "dev@example.com",
@@ -496,6 +498,7 @@ describe("the company's Claude Code setup as a destination", () => {
     const { url, received } = await collector();
     const source = companyDestination({
       env: () => ({}),
+      managed: async () => undefined,
       costReportingAllowed: async () => true,
       read: async () => companySetup(url, "grpc"),
       email: async () => undefined,
@@ -507,10 +510,98 @@ describe("the company's Claude Code setup as a destination", () => {
     expect(received.map((entry) => entry.path)).toEqual(["/otel/v1/logs"]);
   });
 
-  it("sends nothing under a managed setup, whose own client reports", async () => {
+  it("sends nothing where the receiver leaves reporting to Claude's client", async () => {
+    const { url, received } = await collector();
+    const source = companyDestination({
+      // A collector that needs a client certificate, which this request never carries.
+      env: () => ({ OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE: "/etc/otel/client.pem" }),
+      managed: async () => undefined,
+      costReportingAllowed: async () => true,
+      read: async () => companySetup(url),
+      email: async () => "dev@example.com",
+    });
+    await source.refresh();
+    expect(source.destinations()).toEqual([]);
+    const { usage } = home(source.destinations);
+    usage.recordUsage(CODEX_CALL);
+    await usage.usageReporter.flush();
+    expect(received).toEqual([]);
+  });
+
+  it("sends other providers' calls to a managed setup's collector, which Claude's client reports to", async () => {
+    const { url, received } = await collector();
+    const managedResolve = async () =>
+      ({
+        effective: {},
+        sources: [
+          {
+            source: "managed",
+            settings: {
+              env: {
+                CLAUDE_CODE_ENABLE_TELEMETRY: "1",
+                OTEL_METRICS_EXPORTER: "otlp",
+                OTEL_LOGS_EXPORTER: "otlp",
+                OTEL_EXPORTER_OTLP_PROTOCOL: "http/json",
+                OTEL_EXPORTER_OTLP_ENDPOINT: `${url}/managed`,
+                OTEL_EXPORTER_OTLP_HEADERS: "Authorization=Bearer%20managed-token",
+                OTEL_RESOURCE_ATTRIBUTES: "department=finance",
+              },
+            },
+          },
+        ],
+      }) as unknown as Awaited<ReturnType<ResolveClaudeSettings>>;
+    const source = companyDestination({
+      env: () => ({}),
+      managed: (env) => readManagedReporting(env, managedResolve),
+      // The receiver steps aside under a managed setup; the person's own setup is not used.
+      costReportingAllowed: async () => false,
+      read: async () => companySetup(url),
+      email: async () => "dev@example.com",
+    });
+    await source.refresh();
+    const { usage } = home(source.destinations);
+    usage.recordUsage(CODEX_CALL);
+    usage.recordUsage(CLAUDE_CALL);
+    await usage.usageReporter.flush();
+
+    expect(received.map((entry) => entry.path).sort()).toEqual([
+      "/managed/v1/logs",
+      "/managed/v1/metrics",
+    ]);
+    for (const entry of received) {
+      expect(entry.headers.authorization).toBe("Bearer managed-token");
+      const resource = (entry.body.resourceMetrics ?? entry.body.resourceLogs)[0].resource;
+      expect(attrs(resource)).toEqual({ "service.name": "infinitary", department: "finance" });
+    }
+    expect(JSON.stringify(received)).toContain("openai-codex");
+    expect(JSON.stringify(received)).not.toContain("anthropic-claude");
+  });
+
+  it("sends nothing under a managed policy helper, whose answer is never known here", async () => {
     const { url, received } = await collector();
     const source = companyDestination({
       env: () => ({}),
+      managed: (env) =>
+        readManagedReporting(
+          env,
+          async () =>
+            ({
+              effective: {},
+              sources: [
+                {
+                  source: "managed",
+                  settings: {
+                    policyHelper: "/usr/local/bin/policy",
+                    env: {
+                      CLAUDE_CODE_ENABLE_TELEMETRY: "1",
+                      OTEL_LOGS_EXPORTER: "otlp",
+                      OTEL_EXPORTER_OTLP_ENDPOINT: `${url}/managed`,
+                    },
+                  },
+                },
+              ],
+            }) as unknown as Awaited<ReturnType<ResolveClaudeSettings>>,
+        ),
       costReportingAllowed: async () => false,
       read: async () => companySetup(url),
       email: async () => "dev@example.com",

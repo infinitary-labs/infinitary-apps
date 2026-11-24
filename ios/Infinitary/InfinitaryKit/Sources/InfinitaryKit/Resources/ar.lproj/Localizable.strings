@@ -3998,7 +3998,7 @@
 "settingsUsageRecentTokensLegend" = "لا يشمل الإدخال الرموز المخزّنة مؤقتًا. يحسب المجموع كل فئة مرة واحدة.";
 "settingsUsageRecentUsdLegend" = "تعتمد تقديرات الفئات على الأسعار المسجّلة فقط. قد تختلف تغطيتها عن المجموع.";
 "settingsUsageRecordsOf" = "%1$@ من أصل %2$@ سجل";
-"settingsUsageReportsTo" = "يُبلَّغ عن عمل Claude على حاسوب نائب القبطان أيضًا إلى %1$@، كما تطلب إعدادات Claude Code عليه. تتبع الحواسيب الأخرى إعداداتها الخاصة.";
+"settingsUsageReportsTo" = "يُبلَّغ عن استخدام طاقمك أيضًا إلى %1$@، كما تطلب إعدادات Claude Code على حاسوب نائب القبطان: عمل Claude المنجز هناك، وعمل كل نموذج آخر. يتبع عمل Claude على الحواسيب الأخرى إعداداتها الخاصة.";
 "settingsUsageScopeAll" = "كل العمل";
 "settingsUsageScopeFirstmate" = "نائب القبطان";
 "settingsUsageScopeOther" = "عمل آخر";

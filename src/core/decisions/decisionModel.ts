@@ -47,7 +47,10 @@ import {
  *   kind classifier already was.
  * - `AdaptedDecisionModel` is that S3 machinery, generalised to a question
  *   and nothing more: the same low-first candidate walk, the same stateless
- *   64-token Pi session, the same fail-soft discipline. A consumer that
+ *   64-token Pi session for each question, the same fail-soft discipline. A
+ *   caller that sets `together` gets one uncapped session for the whole set,
+ *   one line per question, and a line it cannot read fails only its own
+ *   question. A consumer that
  *   pins its served bytes (`adapterInstruction`, `adapterText`) gets the
  *   same call it got before this class existed, sha for sha.
  * - `DecisionModels` is the CORE-WIDE service (the captain's annotation,

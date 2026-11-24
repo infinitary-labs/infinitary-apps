@@ -70,11 +70,13 @@ describe("the tag scorer", () => {
         asked("t3", ["windows"], [], { failed: 1, failures: ["unparsed"] }),
         // Fits no tag, and none kept.
         asked("t4", [], [], { unsure: 2 }),
+        // A tag missed with every question answered.
+        asked("t5", ["docs"], []),
       ],
       TAGS,
     );
-    // Kept 4 tags, 3 of them right; expected 4 tags, 3 of them found.
-    expect(scores).toMatchObject({ precision: 0.75, recall: 0.75, exact: 0.5, exact_tasks: 2 });
+    // Kept 4 tags, 3 of them right; expected 5 tags, 3 of them found.
+    expect(scores).toMatchObject({ precision: 0.75, recall: 0.6, exact: 0.4, exact_tasks: 2 });
     expect(scores).toMatchObject({ unsure: 2, failed: 1, failures: { unparsed: 1 } });
     expect(scores.per_tag.bug).toEqual({ expected: 1, predicted: 2, precision: 0.5, recall: 1 });
     expect(scores.per_tag.windows).toEqual({

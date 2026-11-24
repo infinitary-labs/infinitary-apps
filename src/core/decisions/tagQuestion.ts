@@ -1,5 +1,5 @@
 import type { DecisionQuestion, DecisionState } from "@shared/decisions";
-import { cutText } from "@shared/textCut";
+import { clip, LIMITS } from "../routing/decisionKindClassifier";
 
 /**
  * The tagging question (piece 2 of the task tags plan): one yes-or-no
@@ -22,8 +22,6 @@ export type TagTask = {
   userWords?: string;
   parentTitle?: string;
 };
-
-const LIMITS = { title: 200, goal: 1_000, userWords: 2_000 } as const;
 
 /** Tags in the order every surface lists them: by name, ignoring case. */
 export function orderedTags(tags: readonly TagDefinition[]): TagDefinition[] {
@@ -86,9 +84,4 @@ export function tagState(task: TagTask): DecisionState {
     facts: { project, title, goal, user_words: userWords, parent_title: parent },
     adapterText: lines.join("\n"),
   };
-}
-
-function clip(text: string, limit: number): string {
-  const trimmed = (text ?? "").trim();
-  return trimmed.length <= limit ? trimmed : `${cutText(trimmed, limit)}...`;
 }

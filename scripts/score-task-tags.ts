@@ -92,6 +92,14 @@ export function readTags(file: string): Tag[] {
   return tags;
 }
 
+/**
+ * Text a kept row must never hold, because the set is committed: a home
+ * folder path or its leftover tail, an email address, a signing identity's
+ * fingerprint or team, and served saved knowledge.
+ */
+const PRIVATE_TEXT =
+  /(?:\/Users\/|\/home\/|~\/|Application Support\/|<path> Support\/|[\w.+-]+@[\w-]+\.[a-z]{2,}|\b[0-9A-Fa-f]{40}\b|\bTeam [A-Z0-9]{10}\b|\[private, saved reference\])/u;
+
 export function readEvalSet(file: string, tags: readonly Tag[]): EvalRow[] {
   const names = new Set(tags.map((tag) => tag.name));
   const rows: EvalRow[] = [];
@@ -101,6 +109,9 @@ export function readEvalSet(file: string, tags: readonly Tag[]): EvalRow[] {
     const row = rowSchema.parse(JSON.parse(line));
     if (ids.has(row.id)) throw new Error(`Duplicate row ${row.id}`);
     ids.add(row.id);
+    for (const text of [row.title, row.goal, row.userWords ?? "", row.parentTitle ?? ""]) {
+      if (PRIVATE_TEXT.test(text)) throw new Error(`Row ${row.id} holds private text: a path, an email, a signing identity or saved knowledge`);
+    }
     for (const tag of row.tags) if (!names.has(tag)) throw new Error(`Row ${row.id} names unknown tag ${tag}`);
     rows.push(row);
   }

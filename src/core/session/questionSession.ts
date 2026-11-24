@@ -5,13 +5,15 @@ import { LOCAL_MACHINE_ID, type SessionBinding, type SessionSpec } from "./sessi
 /**
  * The question role: one bounded question's session, as options on the one
  * session contract (`src/core/session/`), opened by the question walk
- * (`questionTurns.ts`) for the adapted decision model's one word and for a
+ * (`questionTurns.ts`) for the adapted decision model's one word, for a
+ * question set it asks together (one line per question) and for a
  * program's JSON answer. One bounded question,
  * answered once, by a session that can reach nothing - no built-ins, no
  * tools, no record - on the question's own instruction, served byte for
  * byte, so a verdict recorded months ago still says which question was
  * asked. One model turn, one retry at most; the walk's wall clock stays
- * outside the session. Pi caps a choice's output at a word's allowance.
+ * outside the session. Pi caps a single choice's output at a word's
+ * allowance; a set asked together and a JSON answer are not capped.
  * Claude's output includes hidden thinking that cannot always be disabled,
  * so its client chooses the allowance, as it does for a JSON answer.
  */

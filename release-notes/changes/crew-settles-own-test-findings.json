@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "crew-settles-own-test-findings",
+      "reason": "Changes only what a reviewer and builder are told about tests a change itself adds, and the project's own test rule wording; nothing a person sees in the app changes."
+    }
+  ]
+}

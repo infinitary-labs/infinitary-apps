@@ -10,7 +10,8 @@ A new end-to-end journey follows that rule like any other test, with no ask.
 Its review names the promised result, the data, the completion signal, the platform prerequisites and the shared resources (FI3-1732).
 This project adds six rulings of the captain, which win over that default:
 
-- Weakening, skipping or deleting an existing test waits for the captain's approval.
+- Weakening, skipping or deleting a test that was there before the change waits for the captain's approval.
+  A test or check the change itself adds is its builder's and reviewer's to settle, as any other finding.
 - A phone part sends a tap once more only when backboardd's own log proves the simulator ignored the first one, and only through `tapOnPhone` (INF-1477, "Allow a proven second tap"; `docs/ios.md`).
   The photo pick alone also taps once more when the photo picker's own log proves it read the first tap as a press-and-hold and chose no photo ("Allow one more photo tap"), after one tap below the open preview closes it ("Allow the closing tap").
 - A phone journey never waits for XCTest's animation reply: it skips that wait and keeps the app's run loop wait, and each tap waits until its own target, and the screen inside it, holds still (INF-1541, "The test code skips Apple's animation wait and checks each target itself"; `docs/ios.md`).
@@ -19,7 +20,7 @@ This project adds six rulings of the captain, which win over that default:
 - A test file, helper or stand-in a change edits is brought to the six words in the same pull request (INF-2394, measure 5).
   Remove a bad pattern by re-typing a pin to its source or moving a stand-in to its owner, never by deleting a test on sight.
   Name a pattern seen elsewhere in the report for the first mate to file, not fixed in passing and never copied.
-  Deleting a test still waits for the captain's approval.
+  Deleting a test that was there before the change still waits for the captain's approval.
 
 Before merge, prove the change with the smallest relevant checks, counted once for the current version and required platform (INF-2259's accepted hybrid process).
 Opening a pull request may start that proof; there is no duplicate complete local pre-push gate when CI owns it.

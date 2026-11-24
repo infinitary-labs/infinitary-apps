@@ -258,8 +258,12 @@ describe("the default rule on tests (FI3-1756, the captain's approved plan)", ()
       // INF-2394 measure 5, the captain's approved fifth ruling (INF-2405),
       // in the words INF-2424 trimmed to fit the fixed context: a test,
       // helper or stand-in a change edits, a repaired one included, meets
-      // the six words in that pull request, and deleting still asks.
-      "Bring each test file, helper or stand-in you edit to the six words in the same pull request, moving stand-ins to their owner; deleting a test still asks for the captain's approval.",
+      // the six words in that pull request, and deleting one that was there
+      // before the change still asks (INF-6552's approved plan).
+      "Bring each test file, helper or stand-in you edit to the six words in the same pull request, moving stand-ins to their owner; deleting a test that was there before your change still asks for the captain's approval.",
+      // INF-6552's approved plan: a test the change adds that cannot fail is
+      // its builder's to repair, never a question for the captain.
+      "A test your change adds that you cannot make fail is yours to repair before you report: make it able to fail, or cut its name and checks to what it proves, and say which.",
       "Name patterns in your report, never fixing or copying them.",
       // INF-840, the captain's direction 2: a change's own test is never a
       // suspected flake, and its crewmate repeats it locally before the card.

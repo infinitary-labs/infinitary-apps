@@ -27,7 +27,7 @@ Product vision and interaction model: `.claude/skills/infinitary-design/readme.m
 
 - **Signing.** Never package with the release `electron-builder.yml`, and leave `pnpm dev`, `pnpm codesign:local` and `pnpm package:mac` to the person: they sign with this Mac's real material (`docs/local-code-signing.md`, "In a crewmate's working copy").
 - **Sign-ins.** Never let a test or probe start a real Claude sign-in or boot into the real home folders; launch through `tests/e2e/launch.ts` (`docs/e2e-contracts.md`, `docs/claude-client.md`).
-- **Tests.** Weakening, skipping or deleting a test waits for the captain's approval. Never run the full journey suite locally. Never call a test your change edited a flake.
+- **Tests.** Weakening, skipping or deleting a test that was there before the change waits for the captain's approval. Never run the full journey suite locally. Never call a test your change edited a flake.
 - **Pictures.** Photograph each changed view before the first edit and again after it (`docs/testing.md`, "Capturing pictures of a change").
 - **Architecture.** It is decided (`docs/architecture.md` §14): if reality contradicts a recorded decision, escalate with `needs-decision` instead of improvising.
 - **Vision.** `STRATEGY.md` holds the captain's approved vision, which says what a change should align with or resist: never change that file without the captain's deliberate ask or approval.

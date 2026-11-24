@@ -1443,6 +1443,7 @@
   "settingsUsageRecentTokensLegend": "输入不含缓存的 token。总计中每个类别只算一次。",
   "settingsUsageRecentUsdLegend": "类别估算只使用已记录的价格，覆盖范围可能与总计不同。",
   "settingsUsageRecordsOf": "{records} 条记录中的 {count} 条",
+  "settingsUsageReportsTo": "按照你的 Claude Code 设置，Claude 的工作也会报告给 {host}。",
   "settingsUsageScopeAll": "全部工作",
   "settingsUsageScopeFirstmate": "大副",
   "settingsUsageScopeOther": "其他工作",

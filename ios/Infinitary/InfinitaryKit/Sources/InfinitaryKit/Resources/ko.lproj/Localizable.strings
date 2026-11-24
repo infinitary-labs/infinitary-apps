@@ -3878,6 +3878,7 @@
 "settingsUsageRecentTokensLegend" = "입력에는 캐시된 토큰이 빠져 있어요. 합계는 각 항목을 한 번만 세요.";
 "settingsUsageRecentUsdLegend" = "항목별 추정은 기록된 가격만 써요. 그래서 다루는 범위가 합계와 다를 수 있어요.";
 "settingsUsageRecordsOf" = "기록 %2$@개 중 %1$@개";
+"settingsUsageReportsTo" = "Claude Code 설정에 따라 Claude 작업은 %1$@에도 보고됩니다.";
 "settingsUsageScopeAll" = "모든 작업";
 "settingsUsageScopeFirstmate" = "일등항해사";
 "settingsUsageScopeOther" = "기타 작업";

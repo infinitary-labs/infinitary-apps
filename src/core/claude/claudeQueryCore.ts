@@ -15,6 +15,7 @@ import {
   createNormalizerState,
   fmEventsFromClaudeMessage,
 } from "./claudeEvents";
+import type { ClaudeCompanyReporting } from "./claudeReporting";
 
 /**
  * The core both Claude sessions stand on - the rolling session
@@ -60,6 +61,13 @@ export type ClaudeSessionDeps = {
   configDir: string;
   /** Whether managed settings permit app-local cost exports; absence keeps terminal accounting. */
   costReportingAllowed?: () => Promise<boolean>;
+  /**
+   * A company's Claude Code reporting setup from the person's settings file,
+   * login shell and this launch environment, read as each client starts; the
+   * receiver passes the client's records on to it (`claudeReporting.ts`).
+   * Absent, nothing is passed on.
+   */
+  companyReporting?: (env: NodeJS.ProcessEnv) => Promise<ClaudeCompanyReporting | undefined>;
   /** One lazy receiver for all this factory's rolling attachments. */
   costReports?: Pick<ClaudeCostReports, "subscribe">;
   /**

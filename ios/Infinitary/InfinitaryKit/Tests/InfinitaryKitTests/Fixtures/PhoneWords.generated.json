@@ -3216,6 +3216,7 @@
   {"said":{"m":"settingsUsageRecentTokensLegend"},"words":"Input excludes cached tokens. Total counts each category once."},
   {"said":{"m":"settingsUsageRecentUsdLegend"},"words":"Category estimates use recorded prices only. Their coverage can differ from the total."},
   {"said":{"m":"settingsUsageRecordsOf","a":{"count":"‹count›","records":"‹records›"}},"words":"‹count› of ‹records› records"},
+  {"said":{"m":"settingsUsageReportsTo","a":{"host":"‹host›"}},"words":"Claude work is also reported to ‹host›, as your Claude Code settings ask."},
   {"said":{"m":"settingsUsageScopeAll"},"words":"All work"},
   {"said":{"m":"settingsUsageScopeFirstmate"},"words":"First mate"},
   {"said":{"m":"settingsUsageScopeOther"},"words":"Other work"},

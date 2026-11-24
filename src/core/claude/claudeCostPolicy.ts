@@ -1,5 +1,8 @@
+import type { UsageReporting } from "@shared/usage";
 import type { ResolveClaudeSettings } from "./claudeAccess";
 import { hasClaudeReporting } from "./claudeCostReports";
+import type { ClaudeSessionDeps } from "./claudeQueryCore";
+import { readClaudeCompanyReporting, withoutReportingKeys } from "./claudeReporting";
 
 /**
  * The approved receiver must not overwrite an organization's reporting or
@@ -23,4 +26,33 @@ export async function claudeCostReportingAllowed(
   } catch {
     return false;
   }
+}
+
+/** A production session factory's reporting: the managed policy, and a company's setup to pass records on to. */
+export function claudeReportingDeps(): Pick<
+  ClaudeSessionDeps,
+  "costReportingAllowed" | "companyReporting"
+> {
+  return {
+    costReportingAllowed: () => claudeCostReportingAllowed(),
+    companyReporting: (env) => readClaudeCompanyReporting(env),
+  };
+}
+
+/**
+ * The host Claude work is passed on to, for Settings → Usage: none where the
+ * receiver steps aside (another reporting choice in the environment, or a
+ * managed setup whose own client reports), as a session's attachment does.
+ */
+export async function claudeReportingHost(
+  env: NodeJS.ProcessEnv,
+  deps: ReturnType<typeof claudeReportingDeps> = claudeReportingDeps(),
+): Promise<UsageReporting> {
+  if (
+    hasClaudeReporting(withoutReportingKeys(env)) ||
+    !(await deps.costReportingAllowed?.().catch(() => false))
+  )
+    return { host: null };
+  const setup = await deps.companyReporting?.(env).catch(() => undefined);
+  return { host: setup?.host ?? null };
 }

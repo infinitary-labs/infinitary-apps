@@ -40,6 +40,12 @@ An integration you connect in Settings → **Integrations**, such as Google, is 
 Your first mate and your crew read it only once you connect it.
 See [Integrations](/integrations/).
 
+## Your company's usage reporting
+
+If your Claude Code settings file or your shell sets up usage reporting for your company, as Claude Code's guide describes, Infinitary sends Claude's usage records for work done here to the same place.
+They are the records Claude Code itself would send there, and Settings → **Usage** names where they go.
+A setup your company's administrator manages for the whole computer reaches Claude Code directly, as it always did.
+
 ## Update checks
 
 Infinitary checks for a newer version every few hours, from the place its releases are published.

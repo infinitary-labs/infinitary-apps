@@ -56,9 +56,10 @@ Usage subscribers refresh on these completions as well as ordinary replies.
 Rolling Claude sessions use the client's standard OpenTelemetry request-cost export, not its experimental live usage request.
 `ClaudeCostReports` (`src/core/claude/claudeCostReports.ts`) owns one lazy receiver per factory on the computer running the session, bound to `127.0.0.1` with an unguessable path per client attachment.
 The client keeps its five-second default log batching; the app makes no allowance request or transcript-history scan for these reports.
-It disables content, metric and trace exports for this app-owned path, projects only required request-cost fields, and never persists the raw export, prompts, identity metadata or endpoint secret.
+With no company setup ("A company's Claude Code setup" below) it disables content, metric and trace exports for this app-owned path.
+It projects only required request-cost fields, and never persists the raw export, prompts, identity metadata or endpoint secret.
 The last attachment removes its route and stops the receiver; a failed startup or malformed export never fails the model prompt.
-An existing reporting choice in the host environment, a managed reporting setting, a policy helper or an unavailable policy read keeps result-only accounting rather than overwriting that configuration (`claudeCostPolicy.ts`).
+A reporting choice in the host environment other than a company setup's keys, a managed reporting setting, a policy helper or an unavailable policy read keeps result-only accounting rather than overwriting that configuration (`claudeCostPolicy.ts`).
 The policy read loads no personal settings or credential.
 
 A provider request ID must join a completed SDK-streamed call to the client's price; model IDs use the existing canonical model-name owner.
@@ -74,6 +75,29 @@ A failed or interrupted turn still records the measured calls and its final unre
 A delivered report can trigger the existing cost-limit owner before the turn ends, but this is not a hard time or dollar ceiling.
 Batching, a missing report and the next safe stopping point can delay the hold.
 If live reporting is unavailable, the existing terminal report still records spend; if the client crashes without that report, it cannot supply the missing usage either.
+
+## A company's Claude Code setup
+
+A company that reads Claude Code's own usage reports (OpenTelemetry) usually has each developer keep the setup in their own Claude settings file's `env` block or in their shell, as Claude Code's guide says.
+Infinitary reads that setup and passes Claude's own records on to the company's collector, so work done here counts there (`src/core/claude/claudeReporting.ts`).
+
+- **Where it is read.**
+  The keys are `CLAUDE_CODE_ENABLE_TELEMETRY` and every `OTEL_*` key, from the app's launch environment, then the login shell, then the person's own settings file, a later place winning, as Claude Code lays its settings file over the environment it started in (`readClaudeCompanyReporting`).
+  The login shell's keys come from the same one-time ask that reads its search path: awk prints only those keys inside the shell, so no other variable reaches the app (`readLoginShellPath`, `src/core/userBin.ts`).
+  The settings file's `otelHeadersHelper`, a command that prints a JSON object of headers, is read too; each attachment reads the setup again.
+- **Who sends.**
+  Claude's client reports only to the app's local receiver: the setup's keys leave the client's environment, and the receiver's take their place.
+  With a setup that exports logs or metrics over OTLP, the receiver also takes the client's metrics, each signal in the encoding the collector takes (JSON for `http/json`, protobuf for `http/protobuf` and `grpc`).
+  It prices each call from the logs as before, so cost limits stay live, and posts each batch's bytes unchanged to the collector, over OTLP/HTTP or as one gRPC call; the collector's answer goes back to the client's exporter, so the client's own retries apply and a repeated batch is priced once.
+  The setup's other keys, such as `OTEL_RESOURCE_ATTRIBUTES`, an export interval or the switches that put prompts in the logs, reach the client unchanged, so the company receives what Claude's client would have sent; traces stay off.
+- **Headers.**
+  The setup's static headers and what its header command prints (run with the session's environment, at most once each 29 minutes, as Claude Code runs it) ride each post; they are held in memory only, redirects are refused, and a failed command sends without its headers and leaves one log line without its output.
+- **A managed setup.**
+  An administrator's managed setup reaches Claude's client directly and cannot be overridden; there the receiver stays off as before and Infinitary passes nothing on, so nothing is counted twice.
+- **What a person sees.**
+  Usage shows one line naming the collector's host while a setup is found and passed on to (`usage.reporting`, `claudeReportingHost`).
+
+`claudeReporting.integration.test.ts` holds this on the client the product would run, boxed, with stand-in collectors over OTLP/HTTP JSON, protobuf and gRPC and a header command, and with a managed setup that leaves the collector empty.
 
 ## Daily totals
 

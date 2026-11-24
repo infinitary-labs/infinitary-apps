@@ -1507,6 +1507,7 @@
   "settingsUsageRecentTokensLegend": "La entrada excluye los tokens en caché. El total cuenta cada categoría una sola vez.",
   "settingsUsageRecentUsdLegend": "Las estimaciones por categoría usan solo precios registrados. Su cobertura puede ser distinta de la del total.",
   "settingsUsageRecordsOf": "{count} de {records} registros",
+  "settingsUsageReportsTo": "El trabajo de Claude también se informa a {host}, como piden tus ajustes de Claude Code.",
   "settingsUsageScopeAll": "Todo el trabajo",
   "settingsUsageScopeFirstmate": "Primer oficial",
   "settingsUsageScopeOther": "Otro trabajo",

@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { ResolveClaudeSettings } from "./claudeAccess";
-import { claudeCostReportingAllowed } from "./claudeCostPolicy";
+import { claudeCostReportingAllowed, claudeReportingHost } from "./claudeCostPolicy";
 import { hasClaudeReporting } from "./claudeCostReports";
+import { companyReportingFrom } from "./claudeReporting";
 
 // Approved local-cost direction: preserve existing person/company exports;
 // an unavailable policy must not change how a model session can run.
@@ -47,5 +48,29 @@ describe("local cost reporting respects existing reporting choices", () => {
     expect(hasClaudeReporting({ ANT_OTEL_LOGS_EXPORTER: "otlp" })).toBe(true);
     expect(hasClaudeReporting({ CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1" })).toBe(true);
     expect(hasClaudeReporting({ PATH: "/usr/bin" })).toBe(false);
+  });
+});
+
+describe("the host Settings → Usage names", () => {
+  // INF-6587's plan, piece 1: "One line in Settings → Usage names the collector's host when a setup is found".
+  const setup = companyReportingFrom({
+    CLAUDE_CODE_ENABLE_TELEMETRY: "1",
+    OTEL_METRICS_EXPORTER: "otlp",
+    OTEL_EXPORTER_OTLP_ENDPOINT: "https://otel.example.com:4318",
+  });
+  const deps = (allowed: boolean) => ({
+    costReportingAllowed: async () => allowed,
+    companyReporting: async () => setup,
+  });
+
+  it("is the collector of the person's setup, which the receiver passes records on to", async () => {
+    expect(await claudeReportingHost({}, deps(true))).toEqual({ host: "otel.example.com:4318" });
+  });
+
+  it("is none where a managed setup has Claude's client report, or another reporting choice stands", async () => {
+    expect(await claudeReportingHost({}, deps(false))).toEqual({ host: null });
+    expect(
+      await claudeReportingHost({ CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1" }, deps(true)),
+    ).toEqual({ host: null });
   });
 });

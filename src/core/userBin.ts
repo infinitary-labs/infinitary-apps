@@ -120,7 +120,22 @@ export type LoginShellMode = "interactive" | "login";
 
 export type LoginShellMiss = "timeout" | "exit" | "unparsable";
 
+/** The shell's search path, and its Claude Code reporting keys (`parseReportingKeys`). */
+export type LoginShellAnswer =
+  | { entries: string[]; reporting: Record<string, string> }
+  | { miss: LoginShellMiss };
+
 const PATH_MARK = "__INFINITARY_LOGIN_PATH__";
+const KEY_MARK = "__INFINITARY_REPORTING_KEY__";
+
+/**
+ * The shell's Claude Code reporting keys, and nothing else of its
+ * environment: awk filters them inside the shell, so no other variable is
+ * ever printed to the app (`docs/usage.md`, "A company's Claude Code setup").
+ * It runs before the search path's printf, so the ask's exit status stays
+ * the printf's and a missing awk costs only these keys.
+ */
+const REPORTING_KEYS_COMMAND = `awk -v m='${KEY_MARK}' 'BEGIN{for(k in ENVIRON)if(k~/^OTEL_/||k=="CLAUDE_CODE_ENABLE_TELEMETRY")printf "%s%s=%s",m,k,ENVIRON[k]}' 2>/dev/null; `;
 
 /**
  * Variables that quiet the usual interactive startup chatter - an update
@@ -151,6 +166,23 @@ export function parseMarkedPath(output: string): string[] | undefined {
 }
 
 /**
+ * The reporting keys printed ahead of the search path's marks: each one
+ * follows a key mark, and the text before the first mark is startup chatter.
+ */
+export function parseReportingKeys(output: string): Record<string, string> {
+  const parts = output.split(PATH_MARK);
+  if (parts.length < 3) return {};
+  const keys: Record<string, string> = {};
+  for (const pair of (parts[parts.length - 3] ?? "").split(KEY_MARK).slice(1)) {
+    const at = pair.indexOf("=");
+    const key = pair.slice(0, at);
+    if (at > 0 && (key.startsWith("OTEL_") || key === "CLAUDE_CODE_ENABLE_TELEMETRY"))
+      keys[key] = pair.slice(at + 1);
+  }
+  return keys;
+}
+
+/**
  * The search path the person's own shell builds, asked once of `$SHELL`
  * with `-ilc` (interactive: where nvm and most version managers live) or
  * `-lc` (login only). Bounded like `lookupThroughLoginShell`, with stdin
@@ -162,13 +194,13 @@ export function readLoginShellPath(
   env: NodeJS.ProcessEnv,
   mode: LoginShellMode,
   timeoutMs: number = SHELL_LOOKUP_TIMEOUT_MS,
-): Promise<{ entries: string[] } | { miss: LoginShellMiss }> {
+): Promise<LoginShellAnswer> {
   const shell = env.SHELL?.trim() || hostPlatformProfile().loginShell;
   const flags = mode === "interactive" ? "-ilc" : "-lc";
-  const command = `printf '%s%s%s' '${PATH_MARK}' "$PATH" '${PATH_MARK}'`;
+  const command = `${REPORTING_KEYS_COMMAND}printf '%s%s%s' '${PATH_MARK}' "$PATH" '${PATH_MARK}'`;
   return new Promise((resolve) => {
     let settled = false;
-    const finish = (outcome: { entries: string[] } | { miss: LoginShellMiss }) => {
+    const finish = (outcome: LoginShellAnswer) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
@@ -206,7 +238,7 @@ export function readLoginShellPath(
         return;
       }
       const entries = parseMarkedPath(output);
-      finish(entries ? { entries } : { miss: "unparsable" });
+      finish(entries ? { entries, reporting: parseReportingKeys(output) } : { miss: "unparsable" });
     });
   });
 }

@@ -93128,6 +93128,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `${count} of ${records} records`;
   }
+  function settingsUsageReportsTo(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يُبلَّغ عن عمل Claude أيضًا إلى ${host}، كما تطلب إعدادات Claude Code لديك.`;
+      case "de":
+        return `Claude-Arbeit wird außerdem an ${host} gemeldet, wie es deine Claude-Code-Einstellungen verlangen.`;
+      case "es":
+        return `El trabajo de Claude también se informa a ${host}, como piden tus ajustes de Claude Code.`;
+      case "fr":
+        return `Le travail de Claude est aussi signalé à ${host}, comme le demandent vos réglages Claude Code.`;
+      case "ja":
+        return `Claude Code の設定に従い、Claude の作業は ${host} にも報告されます。`;
+      case "ko":
+        return `Claude Code 설정에 따라 Claude 작업은 ${host}에도 보고됩니다.`;
+      case "pt-BR":
+        return `O trabalho do Claude também é informado a ${host}, como pedem seus ajustes do Claude Code.`;
+      case "zh-Hans":
+        return `按照你的 Claude Code 设置，Claude 的工作也会报告给 ${host}。`;
+      case "zh-Hant":
+        return `依照你的 Claude Code 設定，Claude 的工作也會回報給 ${host}。`;
+      case "en-XA":
+        return `[Çļáûðé ŵöŕķ îš áļšö ŕéþöŕţéð ţö ${host}, áš ýöûŕ Çļáûðé Çöðé šéţţîñĝš ášķ. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Claude work is also reported to ‬${host}‮, as your Claude Code settings ask.‬`;
+    }
+    return `Claude work is also reported to ${host}, as your Claude Code settings ask.`;
+  }
   function settingsUsageScopeAll() {
     switch (currentLanguage()) {
       case "ar":
@@ -108458,6 +108486,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsUsageRecentTokensLegend,
     settingsUsageRecentUsdLegend,
     settingsUsageRecordsOf,
+    settingsUsageReportsTo,
     settingsUsageScopeAll,
     settingsUsageScopeFirstmate,
     settingsUsageScopeOther,
@@ -111838,6 +111867,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsUsageRecentTokensLegend": [],
     "settingsUsageRecentUsdLegend": [],
     "settingsUsageRecordsOf": ["count", "records"],
+    "settingsUsageReportsTo": ["host"],
     "settingsUsageScopeAll": [],
     "settingsUsageScopeFirstmate": [],
     "settingsUsageScopeOther": [],
@@ -130580,6 +130610,7 @@ ${startersHtml()}`;
     /** Tasks finished across all retained history, for the milestones. */
     finishedEver: number()
   });
+  object({ host: string().nullable() });
   const USAGE_TASKS_MAX = 5e3;
   const usageTasksQuerySchema = strictObject({
     period: usagePeriodSchema,
@@ -130788,6 +130819,15 @@ ${startersHtml()}`;
         pushes: ["inf:tasks", "inf:tasks:delta"]
       },
       description: "Recorded model usage by period and kind of work, in tokens and estimated dollars."
+    }),
+    // Read on opening and every minute: the setup lives in files and a shell the app does not watch.
+    "usage.reporting": entry({
+      channel: "inf:usage:reporting",
+      args: noArgs,
+      toRequest: () => [],
+      invalidate: { pollMs: 6e4 },
+      // i18n-exempt: served only to the first mate, as the read's description (src/core/pi/appReads.ts).
+      description: "The host a company's Claude Code reporting setup has Claude work sent to, or null."
     }),
     "usage.tasks": entry({
       channel: "inf:usage:tasks",

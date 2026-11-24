@@ -371,3 +371,5 @@ A settings reader that fails reads as no such access, so the account reads its s
 
 When neither tier sets a token command but one names an address, the subscription sign-in still serves and its requests go to that address: health carries who set it (`gateway`), and the row adds "sent through" that address after the plan and email (`CLAUDE_GATEWAY_LABEL`).
 A computer with neither behaves as before.
+
+A company's Claude Code usage reporting set up in the person's own settings file or shell reaches its collector through the app's local receiver, never from the client directly (`docs/usage.md`, "A company's Claude Code setup").

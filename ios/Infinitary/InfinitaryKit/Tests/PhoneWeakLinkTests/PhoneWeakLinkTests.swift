@@ -14,7 +14,11 @@ import XCTest
 
     static func identity() throws -> PhoneIdentity {
         if let made { return made }
-        let key = P256.Signing.PrivateKey()
+        // The Mac's own openssl (LibreSSL) writes a private key into the bundle without its leading zero bytes, and
+        // SecPKCS12Import drops a P-256 key shorter than 32 bytes yet still returns success, with no identity. One key
+        // in 256 starts with a zero byte, so the bundle takes only a key that does not.
+        var key = P256.Signing.PrivateKey()
+        while key.rawRepresentation.first == 0 { key = P256.Signing.PrivateKey() }
         let certificate = try PhoneIdentity.certificate(key: key)
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("infinitary-weak-link-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)

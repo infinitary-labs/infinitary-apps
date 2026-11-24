@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "weak-link-identity-key",
+      "reason": "Internal: the phone check's weak-link tests make their throwaway identity only from a key the Mac's openssl bundles whole, so one run in 256 no longer fails in its setup; nothing a person sees changes."
+    }
+  ]
+}

@@ -41,6 +41,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | computer | 电脑 | Every computer, Macs, Linux and Windows alike, instead of machine or device type. |
 | concept | 概念 | A Knowledge entry, as on cards. |
 | connection (between concepts) | 关联 | A graph link. |
+| connection file | 连接文件 | The file in Pi's models.json format that Settings → Intelligence reads custom connections from. |
 | conversation | 对话 | Used instead of session or transcript. |
 | credits (a provider's, paid past the allowance) | 点数 | ChatGPT's Codex credits; Claude's are called extra usage. |
 | crew | 船员 / 船员们 | 船员们 where the sentence needs the group. |

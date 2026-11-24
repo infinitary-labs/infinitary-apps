@@ -39,6 +39,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | computer | ordinateur | For every computer, Mac, Linux or Windows alike. |
 | concept / finding | concept / constat | "constat" keeps the card's "Constat {id}". |
 | connection (to a server) | connexion | The same word as sign-in; the sentence tells them apart. Feminine, so its status agrees: "Prête", "Vérifiée"; "En pause" for paused. |
+| connection file | fichier de connexions | The file in Pi's models.json format that Settings → Intelligence reads custom connections from. |
 | conversation | conversation | Never "session" or "transcription" for a crewmate's notes. |
 | cost limit | plafond de coût | A project's estimated-dollar cap; "plafond" keeps it apart from the plan's allowance. |
 | credits (a provider's, paid past the allowance) | crédits | ChatGPT's Codex credits; Claude's are called extra usage. |

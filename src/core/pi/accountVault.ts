@@ -25,6 +25,7 @@ import {
   type CustomApiInput,
   isCustomApiProvider,
 } from "@shared/customApi";
+import type { CustomFileConnection } from "@shared/customApiFile";
 import { HERE } from "@shared/deviceNames";
 import type { ReasoningCapabilities } from "@shared/modelSlots";
 import type { BackendId } from "@shared/providers";
@@ -260,6 +261,8 @@ export class AccountVault {
   private claudeLoginInFlight = false;
   /** The registry file is there but could not be read (`mayHoldAccounts`). */
   private registryUnread = false;
+  /** Each connection's checks a connection file edit asked for, in order. */
+  private readonly fileChecks = new Map<string, Promise<void>>();
 
   private constructor(
     private readonly paths: Pick<AppPaths, "accountsDir">,
@@ -515,6 +518,52 @@ export class AccountVault {
     const view = await this.pi.custom.recheck(accountId);
     if (account.enabled && this.pi.custom.checked(accountId)) await this.runtimeFor(accountId);
     return { ...view, label: account.label };
+  }
+  /**
+   * The connection file's newest good reading, applied to each connection
+   * approved from it (`CustomApiAccountOwner.applyFile`), whose name follows
+   * the file's; null, with no file chosen, ends every hold a file made.
+   * Answers the fresh checks the reading asked for, each in the background.
+   */
+  applyCustomFile(connections: CustomFileConnection[] | null): Promise<void>[] {
+    const checks: Promise<void>[] = [];
+    let renamed = false;
+    for (const account of this.liveAccounts()) {
+      if (!isCustomApiProvider(account.providerId)) continue;
+      const name = this.pi.custom.fileName(account.id);
+      if (!name) continue;
+      if (connections === null) {
+        this.pi.custom.releaseFile(account.id);
+        continue;
+      }
+      const definition = connections.find((entry) => entry.name === name)?.definition;
+      const { applied, recheck } = this.pi.custom.applyFile(account.id, definition);
+      if (applied && definition && account.label !== definition.label) {
+        account.label = definition.label;
+        renamed = true;
+      }
+      if (recheck) checks.push(this.fileCheck(account.id));
+      else if (applied && account.enabled && this.pi.custom.checked(account.id))
+        void this.runtimeFor(account.id).catch(() => undefined);
+    }
+    if (renamed) this.saveRegistry();
+    return checks;
+  }
+
+  /** One connection's checks after a file edit, run one after another however often it changes. */
+  private fileCheck(accountId: string): Promise<void> {
+    const next = (this.fileChecks.get(accountId) ?? Promise.resolve())
+      .then(() => this.customRecheck(accountId))
+      .then(
+        () => undefined,
+        // A failed model stays unchecked, as its line in Settings says.
+        () => undefined,
+      );
+    this.fileChecks.set(accountId, next);
+    void next.then(() => {
+      if (this.fileChecks.get(accountId) === next) this.fileChecks.delete(accountId);
+    });
+    return next;
   }
   customReplacement(draftId: string) {
     return this.pi.custom.draftReplacement(draftId);

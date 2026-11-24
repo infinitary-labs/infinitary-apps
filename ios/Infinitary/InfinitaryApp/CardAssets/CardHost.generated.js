@@ -7337,6 +7337,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `I approve these certificates only for this private connection`;
   }
+  function accountsCustomApiApproveTitle(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `اعتماد ${name}`;
+      case "de":
+        return `${name} freigeben`;
+      case "es":
+        return `Aprobar ${name}`;
+      case "fr":
+        return `Approuver ${name}`;
+      case "ja":
+        return `${name} を承認`;
+      case "ko":
+        return `${name} 승인`;
+      case "pt-BR":
+        return `Aprovar ${name}`;
+      case "zh-Hans":
+        return `批准 ${name}`;
+      case "zh-Hant":
+        return `核准 ${name}`;
+      case "en-XA":
+        return `[Åþþŕöṽé ${name} ~~~]`;
+      case "ar-XB":
+        return `‮Approve ‬${name}`;
+    }
+    return `Approve ${name}`;
+  }
   function accountsCustomApiAuthKey() {
     switch (currentLanguage()) {
       case "ar":
@@ -8895,6 +8923,970 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Fetching…‬`;
     }
     return `Fetching…`;
+  }
+  function accountsCustomApiFileApprove() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `اعتماد`;
+      case "de":
+        return `Freigeben`;
+      case "es":
+        return `Aprobar`;
+      case "fr":
+        return `Approuver`;
+      case "ja":
+        return `承認`;
+      case "ko":
+        return `승인`;
+      case "pt-BR":
+        return `Aprovar`;
+      case "zh-Hans":
+        return `批准`;
+      case "zh-Hant":
+        return `核准`;
+      case "en-XA":
+        return `[Åþþŕöṽé ~~~]`;
+      case "ar-XB":
+        return `‮Approve‬`;
+    }
+    return `Approve`;
+  }
+  function accountsCustomApiFileApproveAgain() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `اعتماد من جديد`;
+      case "de":
+        return `Erneut freigeben`;
+      case "es":
+        return `Aprobar de nuevo`;
+      case "fr":
+        return `Approuver à nouveau`;
+      case "ja":
+        return `もう一度承認`;
+      case "ko":
+        return `다시 승인`;
+      case "pt-BR":
+        return `Aprovar de novo`;
+      case "zh-Hans":
+        return `重新批准`;
+      case "zh-Hant":
+        return `重新核准`;
+      case "en-XA":
+        return `[Åþþŕöṽé áĝáîñ ~~~~~]`;
+      case "ar-XB":
+        return `‮Approve again‬`;
+    }
+    return `Approve again`;
+  }
+  function accountsCustomApiFileApproveToUse() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `اعتمد هذا الاتصال من جديد لاستخدامه.`;
+      case "de":
+        return `Gib diese Verbindung erneut frei, um sie zu verwenden.`;
+      case "es":
+        return `Aprueba esta conexión de nuevo para usarla.`;
+      case "fr":
+        return `Approuvez à nouveau cette connexion pour l’utiliser.`;
+      case "ja":
+        return `使うにはこの接続をもう一度承認してください。`;
+      case "ko":
+        return `이 연결을 쓰려면 다시 승인하세요.`;
+      case "pt-BR":
+        return `Aprove esta conexão de novo para usá-la.`;
+      case "zh-Hans":
+        return `重新批准此连接后即可使用。`;
+      case "zh-Hant":
+        return `重新核准這個連線後即可使用。`;
+      case "en-XA":
+        return `[Åþþŕöṽé ţĥîš çöññéçţîöñ áĝáîñ ţö ûšé îţ. ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Approve this connection again to use it.‬`;
+    }
+    return `Approve this connection again to use it.`;
+  }
+  function accountsCustomApiFileBuiltIn(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${name} مزوّد موجود في Infinitary بالفعل، لذا لا يُقرأ هذا الإدخال.`;
+      case "de":
+        return `${name} ist ein Anbieter, den Infinitary schon kennt, daher wird dieser Eintrag nicht gelesen.`;
+      case "es":
+        return `${name} es un proveedor que Infinitary ya tiene, así que esta entrada no se lee.`;
+      case "fr":
+        return `${name} est un fournisseur qu’Infinitary connaît déjà, donc cette entrée n’est pas lue.`;
+      case "ja":
+        return `${name} は Infinitary にすでにあるプロバイダーなので、この項目は読み込みません。`;
+      case "ko":
+        return `${name}은(는) Infinitary에 이미 있는 제공업체라서 이 항목은 읽지 않아요.`;
+      case "pt-BR":
+        return `${name} é um provedor que o Infinitary já tem, então esta entrada não é lida.`;
+      case "zh-Hans":
+        return `${name} 是 Infinitary 已有的提供商，因此不会读取此条目。`;
+      case "zh-Hant":
+        return `${name} 是 Infinitary 已有的供應商，因此不會讀取這個項目。`;
+      case "en-XA":
+        return `[${name} îš á þŕöṽîðéŕ Îñƒîñîţáŕý áļŕéáðý ĥáš, šö ţĥîš éñţŕý îš ñöţ ŕéáð. ~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${name}‮ is a provider Infinitary already has, so this entry is not read.‬`;
+    }
+    return `${name} is a provider Infinitary already has, so this entry is not read.`;
+  }
+  function accountsCustomApiFileChanged() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `غيّر ملف الاتصالات عنوان هذا الاتصال أو بروتوكوله أو ترويساته، لذا يبقى متوقفًا مؤقتًا حتى تعتمده من جديد.`;
+      case "de":
+        return `Deine Verbindungsdatei hat Adresse, Protokoll oder Header dieser Verbindung geändert. Sie ist pausiert, bis du sie erneut freigibst.`;
+      case "es":
+        return `Tu archivo de conexiones cambió la dirección, el protocolo o los encabezados de esta conexión, así que queda en pausa hasta que la apruebes de nuevo.`;
+      case "fr":
+        return `Votre fichier de connexions a changé l’adresse, le protocole ou les en-têtes de cette connexion : elle reste en pause jusqu’à ce que vous l’approuviez à nouveau.`;
+      case "ja":
+        return `接続ファイルでこの接続のアドレス、プロトコル、ヘッダーが変わったため、もう一度承認するまで一時停止しています。`;
+      case "ko":
+        return `연결 파일에서 이 연결의 주소, 프로토콜 또는 헤더가 바뀌어서 다시 승인할 때까지 일시 정지돼요.`;
+      case "pt-BR":
+        return `Seu arquivo de conexões mudou o endereço, o protocolo ou os cabeçalhos desta conexão, então ela fica pausada até você aprová-la de novo.`;
+      case "zh-Hans":
+        return `你的连接文件更改了此连接的地址、协议或请求头，因此它会暂停，直到你重新批准。`;
+      case "zh-Hant":
+        return `你的連線檔案變更了這個連線的位址、通訊協定或標頭，因此它會暫停，直到你重新核准。`;
+      case "en-XA":
+        return `[Ýöûŕ çöññéçţîöñ ƒîļé çĥáñĝéð ţĥîš çöññéçţîöñ'š áððŕéšš, þŕöţöçöļ öŕ ĥéáðéŕš, šö îţ îš þáûšéð ûñţîļ ýöû áþþŕöṽé îţ áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your connection file changed this connection's address, protocol or headers, so it is paused until you approve it again.‬`;
+    }
+    return `Your connection file changed this connection's address, protocol or headers, so it is paused until you approve it again.`;
+  }
+  function accountsCustomApiFileChoose() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `اختيار ملف`;
+      case "de":
+        return `Datei auswählen`;
+      case "es":
+        return `Elegir archivo`;
+      case "fr":
+        return `Choisir un fichier`;
+      case "ja":
+        return `ファイルを選択`;
+      case "ko":
+        return `파일 선택`;
+      case "pt-BR":
+        return `Escolher arquivo`;
+      case "zh-Hans":
+        return `选择文件`;
+      case "zh-Hant":
+        return `選擇檔案`;
+      case "en-XA":
+        return `[Çĥööšé ƒîļé ~~~~]`;
+      case "ar-XB":
+        return `‮Choose file‬`;
+    }
+    return `Choose file`;
+  }
+  function accountsCustomApiFileChoosing() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `جارٍ الاختيار…`;
+      case "de":
+        return `Wird ausgewählt …`;
+      case "es":
+        return `Eligiendo…`;
+      case "fr":
+        return `Choix…`;
+      case "ja":
+        return `選択中…`;
+      case "ko":
+        return `선택 중…`;
+      case "pt-BR":
+        return `Escolhendo…`;
+      case "zh-Hans":
+        return `正在选择…`;
+      case "zh-Hant":
+        return `正在選擇…`;
+      case "en-XA":
+        return `[Çĥööšîñĝ… ~~~]`;
+      case "ar-XB":
+        return `‮Choosing…‬`;
+    }
+    return `Choosing…`;
+  }
+  function accountsCustomApiFileCompaction(input2) {
+    const model = input2.model;
+    switch (currentLanguage()) {
+      case "ar":
+        return `إعداد الضغط لـ ${model} لا يتسع في نافذته، لذا يُبقيه Infinitary ضمن النافذة.`;
+      case "de":
+        return `Die Verdichtung für ${model} passt nicht in sein Fenster, daher hält Infinitary sie innerhalb des Fensters.`;
+      case "es":
+        return `La compactación de ${model} no cabe en su ventana, así que Infinitary la mantiene dentro de la ventana.`;
+      case "fr":
+        return `Le compactage de ${model} ne tient pas dans sa fenêtre, donc Infinitary le garde dans la fenêtre.`;
+      case "ja":
+        return `${model} の圧縮設定がウィンドウに収まらないため、Infinitary はウィンドウ内に収めます。`;
+      case "ko":
+        return `${model}의 압축 설정이 창에 맞지 않아서 Infinitary가 창 안으로 맞춰요.`;
+      case "pt-BR":
+        return `A compactação de ${model} não cabe na janela dele, então o Infinitary a mantém dentro da janela.`;
+      case "zh-Hans":
+        return `${model} 的压缩设置超出了它的窗口，因此 Infinitary 会把它限制在窗口内。`;
+      case "zh-Hant":
+        return `${model} 的壓縮設定超出了它的視窗，因此 Infinitary 會把它限制在視窗內。`;
+      case "en-XA":
+        return `[Ţĥé çöɱþáçţîöñ šéţ ƒöŕ ${model} ðöéš ñöţ ƒîţ îţš ŵîñðöŵ, šö Îñƒîñîţáŕý ķééþš îţ ŵîţĥîñ ţĥé ŵîñðöŵ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The compaction set for ‬${model}‮ does not fit its window, so Infinitary keeps it within the window.‬`;
+    }
+    return `The compaction set for ${model} does not fit its window, so Infinitary keeps it within the window.`;
+  }
+  function accountsCustomApiFileDone(input2) {
+    const path = input2.path;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تم تعيين ملف الاتصالات إلى ${path}`;
+      case "de":
+        return `Verbindungsdatei auf ${path} gesetzt`;
+      case "es":
+        return `Archivo de conexiones establecido en ${path}`;
+      case "fr":
+        return `Fichier de connexions défini sur ${path}`;
+      case "ja":
+        return `接続ファイルを ${path} に設定しました`;
+      case "ko":
+        return `연결 파일을 ${path}(으)로 설정함`;
+      case "pt-BR":
+        return `Arquivo de conexões definido como ${path}`;
+      case "zh-Hans":
+        return `连接文件已设为 ${path}`;
+      case "zh-Hant":
+        return `連線檔案已設為 ${path}`;
+      case "en-XA":
+        return `[Çöññéçţîöñ ƒîļé šéţ ţö ${path} ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Connection file set to ‬${path}`;
+    }
+    return `Connection file set to ${path}`;
+  }
+  function accountsCustomApiFileDoneNone() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يُقرأ أي ملف اتصالات`;
+      case "de":
+        return `Es wird keine Verbindungsdatei gelesen`;
+      case "es":
+        return `No se lee ningún archivo de conexiones`;
+      case "fr":
+        return `Aucun fichier de connexions n’est lu`;
+      case "ja":
+        return `接続ファイルは読み込まれていません`;
+      case "ko":
+        return `읽는 연결 파일 없음`;
+      case "pt-BR":
+        return `Nenhum arquivo de conexões é lido`;
+      case "zh-Hans":
+        return `不读取任何连接文件`;
+      case "zh-Hant":
+        return `不讀取任何連線檔案`;
+      case "en-XA":
+        return `[Ñö çöññéçţîöñ ƒîļé îš ŕéáð ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮No connection file is read‬`;
+    }
+    return `No connection file is read`;
+  }
+  function accountsCustomApiFileGone() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يعد هذا الاتصال في ملف الاتصالات، لذا توقف مؤقتًا. اقطعه إن لم تعد بحاجة إليه.`;
+      case "de":
+        return `Diese Verbindung steht nicht mehr in deiner Verbindungsdatei und ist deshalb pausiert. Trenne sie, wenn du sie nicht mehr brauchst.`;
+      case "es":
+        return `Esta conexión ya no está en tu archivo de conexiones, así que queda en pausa. Desconéctala si ya no la necesitas.`;
+      case "fr":
+        return `Cette connexion n’est plus dans votre fichier de connexions : elle est en pause. Déconnectez-la si vous n’en avez plus besoin.`;
+      case "ja":
+        return `この接続は接続ファイルにもうないため、一時停止しています。不要なら接続を解除してください。`;
+      case "ko":
+        return `이 연결이 더 이상 연결 파일에 없어서 일시 정지됐어요. 필요 없으면 연결을 해제하세요.`;
+      case "pt-BR":
+        return `Esta conexão não está mais no seu arquivo de conexões, então ficou pausada. Desconecte-a se não precisar mais dela.`;
+      case "zh-Hans":
+        return `此连接已不在你的连接文件中，因此已暂停。如果不再需要，请断开连接。`;
+      case "zh-Hant":
+        return `這個連線已不在你的連線檔案中，因此已暫停。如果不再需要，請中斷連線。`;
+      case "en-XA":
+        return `[Ţĥîš çöññéçţîöñ îš ñö ļöñĝéŕ îñ ýöûŕ çöññéçţîöñ ƒîļé, šö îţ îš þáûšéð. Ðîšçöññéçţ îţ îƒ ýöû ñö ļöñĝéŕ ñééð îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This connection is no longer in your connection file, so it is paused. Disconnect it if you no longer need it.‬`;
+    }
+    return `This connection is no longer in your connection file, so it is paused. Disconnect it if you no longer need it.`;
+  }
+  function accountsCustomApiFileHint() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يستطيع Infinitary قراءة الاتصالات المخصصة من ملف بتنسيق models.json الخاص بـ Pi، ولا يغيّره أبدًا. تعتمد كل اتصال هنا بمفتاح هذا الكمبيوتر نفسه.`;
+      case "de":
+        return `Infinitary kann eigene Verbindungen aus einer Datei im models.json-Format von Pi lesen und ändert sie nie. Du gibst jede Verbindung hier mit dem eigenen Schlüssel dieses Computers frei.`;
+      case "es":
+        return `Infinitary puede leer conexiones propias desde un archivo en el formato models.json de Pi, y nunca lo cambia. Apruebas cada conexión aquí con la clave propia de este ordenador.`;
+      case "fr":
+        return `Infinitary peut lire des connexions personnalisées depuis un fichier au format models.json de Pi, sans jamais le modifier. Vous approuvez chaque connexion ici avec la clé propre à cet ordinateur.`;
+      case "ja":
+        return `Infinitary は Pi の models.json 形式のファイルからカスタム接続を読み込めます。ファイルは変更しません。各接続はここで、このコンピューター自身のキーを使って承認します。`;
+      case "ko":
+        return `Infinitary는 Pi의 models.json 형식 파일에서 사용자 지정 연결을 읽을 수 있고, 파일은 바꾸지 않아요. 각 연결은 여기서 이 컴퓨터의 키로 승인해요.`;
+      case "pt-BR":
+        return `O Infinitary pode ler conexões personalizadas de um arquivo no formato models.json do Pi, e nunca o altera. Você aprova cada conexão aqui com a chave própria deste computador.`;
+      case "zh-Hans":
+        return `Infinitary 可以从 Pi 的 models.json 格式文件中读取自定义连接，并且从不修改该文件。你在这里用这台电脑自己的密钥批准每个连接。`;
+      case "zh-Hant":
+        return `Infinitary 可以從 Pi 的 models.json 格式檔案讀取自訂連線，而且從不修改該檔案。你在這裡用這台電腦自己的金鑰核准每個連線。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý çáñ ŕéáð çûšţöɱ çöññéçţîöñš ƒŕöɱ á ƒîļé îñ Þî'š ɱöðéļš.ĵšöñ ƒöŕɱáţ, áñð ñéṽéŕ çĥáñĝéš îţ. Ýöû áþþŕöṽé éáçĥ çöññéçţîöñ ĥéŕé ŵîţĥ ţĥîš çöɱþûţéŕ'š öŵñ ķéý. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary can read custom connections from a file in Pi's models.json format, and never changes it. You approve each connection here with this computer's own key.‬`;
+    }
+    return `Infinitary can read custom connections from a file in Pi's models.json format, and never changes it. You approve each connection here with this computer's own key.`;
+  }
+  function accountsCustomApiFileInvalid() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `هذا الملف ليس بتنسيق models.json الخاص بـ Pi. تحتفظ اتصالاته بآخر قراءة.`;
+      case "de":
+        return `Diese Datei ist nicht im models.json-Format von Pi. Ihre Verbindungen behalten den letzten gelesenen Stand.`;
+      case "es":
+        return `Este archivo no está en el formato models.json de Pi. Sus conexiones mantienen la última lectura.`;
+      case "fr":
+        return `Ce fichier n’est pas au format models.json de Pi. Ses connexions gardent leur dernière lecture.`;
+      case "ja":
+        return `このファイルは Pi の models.json 形式ではありません。接続は前回読み込んだ内容のままです。`;
+      case "ko":
+        return `이 파일은 Pi의 models.json 형식이 아니에요. 연결은 마지막으로 읽은 내용을 유지해요.`;
+      case "pt-BR":
+        return `Este arquivo não está no formato models.json do Pi. As conexões dele mantêm a última leitura.`;
+      case "zh-Hans":
+        return `此文件不是 Pi 的 models.json 格式。其中的连接保持上次读取的内容。`;
+      case "zh-Hant":
+        return `這個檔案不是 Pi 的 models.json 格式。其中的連線保持上次讀取的內容。`;
+      case "en-XA":
+        return `[Ţĥîš ƒîļé îš ñöţ îñ Þî'š ɱöðéļš.ĵšöñ ƒöŕɱáţ. Îţš çöññéçţîöñš ķééþ ţĥéîŕ ļášţ ŕéáðîñĝ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This file is not in Pi's models.json format. Its connections keep their last reading.‬`;
+    }
+    return `This file is not in Pi's models.json format. Its connections keep their last reading.`;
+  }
+  function accountsCustomApiFileInvalidEntry() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أحد إعدادات هذا الإدخال بشكل غير صحيح، لذا لا يُقرأ.`;
+      case "de":
+        return `Eine Einstellung in diesem Eintrag hat die falsche Form, daher wird er nicht gelesen.`;
+      case "es":
+        return `Un ajuste de esta entrada tiene una forma incorrecta, así que no se lee.`;
+      case "fr":
+        return `Un réglage de cette entrée n’a pas la bonne forme, donc elle n’est pas lue.`;
+      case "ja":
+        return `この項目の設定の形式が正しくないため、読み込みません。`;
+      case "ko":
+        return `이 항목의 설정 형식이 올바르지 않아서 읽지 않아요.`;
+      case "pt-BR":
+        return `Uma configuração desta entrada tem o formato errado, então ela não é lida.`;
+      case "zh-Hans":
+        return `此条目中的某项设置格式不对，因此不会读取。`;
+      case "zh-Hant":
+        return `這個項目中的某項設定格式不對，因此不會讀取。`;
+      case "en-XA":
+        return `[Å šéţţîñĝ îñ ţĥîš éñţŕý ĥáš ţĥé ŵŕöñĝ šĥáþé, šö îţ îš ñöţ ŕéáð. ~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮A setting in this entry has the wrong shape, so it is not read.‬`;
+    }
+    return `A setting in this entry has the wrong shape, so it is not read.`;
+  }
+  function accountsCustomApiFileKey() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يستخدم Infinitary أي مفتاح من الملف. اكتب مفتاح هذا الكمبيوتر نفسه عند الاعتماد.`;
+      case "de":
+        return `Infinitary verwendet nie einen Schlüssel aus der Datei. Gib beim Freigeben den eigenen Schlüssel dieses Computers ein.`;
+      case "es":
+        return `Infinitary nunca usa una clave del archivo. Escribe la clave propia de este ordenador al aprobar.`;
+      case "fr":
+        return `Infinitary n’utilise jamais une clé du fichier. Saisissez la clé propre à cet ordinateur au moment d’approuver.`;
+      case "ja":
+        return `Infinitary はファイル内のキーを使いません。承認するときに、このコンピューター自身のキーを入力してください。`;
+      case "ko":
+        return `Infinitary는 파일에 있는 키를 쓰지 않아요. 승인할 때 이 컴퓨터의 키를 입력하세요.`;
+      case "pt-BR":
+        return `O Infinitary nunca usa uma chave do arquivo. Digite a chave própria deste computador ao aprovar.`;
+      case "zh-Hans":
+        return `Infinitary 从不使用文件中的密钥。批准时请输入这台电脑自己的密钥。`;
+      case "zh-Hant":
+        return `Infinitary 從不使用檔案中的金鑰。核准時請輸入這台電腦自己的金鑰。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý ñéṽéŕ ûšéš á ķéý ƒŕöɱ ţĥé ƒîļé. Ţýþé ţĥîš çöɱþûţéŕ'š öŵñ ķéý ŵĥéñ ýöû áþþŕöṽé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary never uses a key from the file. Type this computer's own key when you approve.‬`;
+    }
+    return `Infinitary never uses a key from the file. Type this computer's own key when you approve.`;
+  }
+  function accountsCustomApiFileMissing() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يجد Infinitary هذا الملف. تحتفظ اتصالاته بآخر قراءة.`;
+      case "de":
+        return `Infinitary findet diese Datei nicht. Ihre Verbindungen behalten den letzten gelesenen Stand.`;
+      case "es":
+        return `Infinitary no encuentra este archivo. Sus conexiones mantienen la última lectura.`;
+      case "fr":
+        return `Infinitary ne trouve pas ce fichier. Ses connexions gardent leur dernière lecture.`;
+      case "ja":
+        return `Infinitary はこのファイルを見つけられません。接続は前回読み込んだ内容のままです。`;
+      case "ko":
+        return `Infinitary가 이 파일을 찾을 수 없어요. 연결은 마지막으로 읽은 내용을 유지해요.`;
+      case "pt-BR":
+        return `O Infinitary não encontra este arquivo. As conexões dele mantêm a última leitura.`;
+      case "zh-Hans":
+        return `Infinitary 找不到此文件。其中的连接保持上次读取的内容。`;
+      case "zh-Hant":
+        return `Infinitary 找不到這個檔案。其中的連線保持上次讀取的內容。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý çáñ'ţ ƒîñð ţĥîš ƒîļé. Îţš çöññéçţîöñš ķééþ ţĥéîŕ ļášţ ŕéáðîñĝ. ~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary can't find this file. Its connections keep their last reading.‬`;
+    }
+    return `Infinitary can't find this file. Its connections keep their last reading.`;
+  }
+  function accountsCustomApiFileNew() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يُعتمد بعد`;
+      case "de":
+        return `Noch nicht freigegeben`;
+      case "es":
+        return `Aún sin aprobar`;
+      case "fr":
+        return `Pas encore approuvée`;
+      case "ja":
+        return `未承認`;
+      case "ko":
+        return `아직 승인 안 됨`;
+      case "pt-BR":
+        return `Ainda não aprovada`;
+      case "zh-Hans":
+        return `尚未批准`;
+      case "zh-Hant":
+        return `尚未核准`;
+      case "en-XA":
+        return `[Ñöţ áþþŕöṽéð ýéţ ~~~~~~]`;
+      case "ar-XB":
+        return `‮Not approved yet‬`;
+    }
+    return `Not approved yet`;
+  }
+  function accountsCustomApiFileNoAddress() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `هذا الإدخال بلا عنوان، لذا لا يُقرأ.`;
+      case "de":
+        return `Dieser Eintrag hat keine Adresse, daher wird er nicht gelesen.`;
+      case "es":
+        return `Esta entrada no tiene dirección, así que no se lee.`;
+      case "fr":
+        return `Cette entrée n’a pas d’adresse, donc elle n’est pas lue.`;
+      case "ja":
+        return `この項目にはアドレスがないため、読み込みません。`;
+      case "ko":
+        return `이 항목에는 주소가 없어서 읽지 않아요.`;
+      case "pt-BR":
+        return `Esta entrada não tem endereço, então não é lida.`;
+      case "zh-Hans":
+        return `此条目没有地址，因此不会读取。`;
+      case "zh-Hant":
+        return `這個項目沒有位址，因此不會讀取。`;
+      case "en-XA":
+        return `[Ţĥîš éñţŕý ĥáš ñö áððŕéšš, šö îţ îš ñöţ ŕéáð. ~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This entry has no address, so it is not read.‬`;
+    }
+    return `This entry has no address, so it is not read.`;
+  }
+  function accountsCustomApiFileNoProtocol() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يدعم Infinitary قيمة api في هذا الإدخال، لذا لا يُقرأ.`;
+      case "de":
+        return `Die api dieses Eintrags spricht Infinitary nicht, daher wird er nicht gelesen.`;
+      case "es":
+        return `Infinitary no habla la api de esta entrada, así que no se lee.`;
+      case "fr":
+        return `Infinitary ne parle pas l’api de cette entrée, donc elle n’est pas lue.`;
+      case "ja":
+        return `この項目の api は Infinitary が対応していないため、読み込みません。`;
+      case "ko":
+        return `이 항목의 api는 Infinitary가 지원하지 않아서 읽지 않아요.`;
+      case "pt-BR":
+        return `O Infinitary não fala a api desta entrada, então ela não é lida.`;
+      case "zh-Hans":
+        return `Infinitary 不支持此条目的 api，因此不会读取。`;
+      case "zh-Hant":
+        return `Infinitary 不支援這個項目的 api，因此不會讀取。`;
+      case "en-XA":
+        return `[Ţĥîš éñţŕý'š áþî îš ñöţ öñé Îñƒîñîţáŕý šþéáķš, šö îţ îš ñöţ ŕéáð. ~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This entry's api is not one Infinitary speaks, so it is not read.‬`;
+    }
+    return `This entry's api is not one Infinitary speaks, so it is not read.`;
+  }
+  function accountsCustomApiFileNone() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يُختر ملف`;
+      case "de":
+        return `Keine Datei ausgewählt`;
+      case "es":
+        return `Ningún archivo elegido`;
+      case "fr":
+        return `Aucun fichier choisi`;
+      case "ja":
+        return `ファイル未選択`;
+      case "ko":
+        return `선택한 파일 없음`;
+      case "pt-BR":
+        return `Nenhum arquivo escolhido`;
+      case "zh-Hans":
+        return `未选择文件`;
+      case "zh-Hant":
+        return `未選擇檔案`;
+      case "en-XA":
+        return `[Ñö ƒîļé çĥöšéñ ~~~~~]`;
+      case "ar-XB":
+        return `‮No file chosen‬`;
+    }
+    return `No file chosen`;
+  }
+  function accountsCustomApiFileNotRead() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يُقرأ`;
+      case "de":
+        return `Nicht gelesen`;
+      case "es":
+        return `No leída`;
+      case "fr":
+        return `Non lue`;
+      case "ja":
+        return `読み込みなし`;
+      case "ko":
+        return `읽지 않음`;
+      case "pt-BR":
+        return `Não lida`;
+      case "zh-Hans":
+        return `未读取`;
+      case "zh-Hant":
+        return `未讀取`;
+      case "en-XA":
+        return `[Ñöţ ŕéáð ~~~]`;
+      case "ar-XB":
+        return `‮Not read‬`;
+    }
+    return `Not read`;
+  }
+  function accountsCustomApiFilePathOn(input2) {
+    const computer = input2.computer;
+    switch (currentLanguage()) {
+      case "ar":
+        return `المسار الكامل للملف على ${computer}`;
+      case "de":
+        return `Der vollständige Pfad der Datei auf ${computer}`;
+      case "es":
+        return `La ruta completa del archivo en ${computer}`;
+      case "fr":
+        return `Le chemin complet du fichier sur ${computer}`;
+      case "ja":
+        return `${computer} 上のファイルのフルパス`;
+      case "ko":
+        return `${computer}에 있는 파일의 전체 경로`;
+      case "pt-BR":
+        return `O caminho completo do arquivo em ${computer}`;
+      case "zh-Hans":
+        return `${computer} 上文件的完整路径`;
+      case "zh-Hant":
+        return `${computer} 上檔案的完整路徑`;
+      case "en-XA":
+        return `[Ţĥé ƒîļé'š ƒûļļ þáţĥ öñ ${computer} ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The file's full path on ‬${computer}`;
+    }
+    return `The file's full path on ${computer}`;
+  }
+  function accountsCustomApiFilePickerFailed() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يُفتح منتقي الملفات. حاول مجددًا.`;
+      case "de":
+        return `Die Dateiauswahl hat sich nicht geöffnet. Versuch es noch einmal.`;
+      case "es":
+        return `El selector de archivos no se abrió. Inténtalo de nuevo.`;
+      case "fr":
+        return `Le sélecteur de fichiers ne s’est pas ouvert. Réessayez.`;
+      case "ja":
+        return `ファイル選択が開きませんでした。もう一度お試しください。`;
+      case "ko":
+        return `파일 선택 창이 열리지 않았어요. 다시 시도하세요.`;
+      case "pt-BR":
+        return `O seletor de arquivos não abriu. Tente de novo.`;
+      case "zh-Hans":
+        return `文件选择器没有打开。请重试。`;
+      case "zh-Hant":
+        return `檔案選擇器沒有開啟。請再試一次。`;
+      case "en-XA":
+        return `[Ţĥé ƒîļé þîçķéŕ ðîð ñöţ öþéñ. Ţŕý áĝáîñ. ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The file picker did not open. Try again.‬`;
+    }
+    return `The file picker did not open. Try again.`;
+  }
+  function accountsCustomApiFileRead(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `قُرئ ${count} اتصال من هذا الملف.`;
+          case "one":
+            return `قُرئ اتصال واحد من هذا الملف.`;
+          case "two":
+            return `قُرئ اتصالان من هذا الملف.`;
+          case "few":
+            return `قُرئت ${count} اتصالات من هذا الملف.`;
+          case "many":
+            return `قُرئ ${count} اتصالًا من هذا الملف.`;
+          default:
+            return `قُرئ ${count} اتصال من هذا الملف.`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} Verbindung aus dieser Datei gelesen.`;
+          default:
+            return `${count} Verbindungen aus dieser Datei gelesen.`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} conexión leída de este archivo.`;
+          case "many":
+            return `${count} de conexiones leídas de este archivo.`;
+          default:
+            return `${count} conexiones leídas de este archivo.`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} connexion lue depuis ce fichier.`;
+          case "many":
+            return `${count} connexions lues depuis ce fichier.`;
+          default:
+            return `${count} connexions lues depuis ce fichier.`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `このファイルから ${count} 件の接続を読み込みました。`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `이 파일에서 연결 ${count}개를 읽었어요.`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} conexão lida deste arquivo.`;
+          case "many":
+            return `${count} conexões lidas deste arquivo.`;
+          default:
+            return `${count} conexões lidas deste arquivo.`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `已从此文件读取 ${count} 个连接。`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `已從這個檔案讀取 ${count} 個連線。`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} çöññéçţîöñ ŕéáð ƒŕöɱ ţĥîš ƒîļé. ~~~~~~~~~~~]`;
+          default:
+            return `[${count} çöññéçţîöñš ŕéáð ƒŕöɱ ţĥîš ƒîļé. ~~~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ connection read from this file.‬`;
+          default:
+            return `${count}‮ connections read from this file.‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} connection read from this file.`;
+      default:
+        return `${count} connections read from this file.`;
+    }
+  }
+  function accountsCustomApiFileReadFailed() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر على Infinitary قراءة هذا الملف. حاول مجددًا.`;
+      case "de":
+        return `Infinitary konnte diese Datei nicht lesen. Versuch es noch einmal.`;
+      case "es":
+        return `Infinitary no pudo leer ese archivo. Inténtalo de nuevo.`;
+      case "fr":
+        return `Infinitary n’a pas pu lire ce fichier. Réessayez.`;
+      case "ja":
+        return `Infinitary はそのファイルを読み込めませんでした。もう一度お試しください。`;
+      case "ko":
+        return `Infinitary가 그 파일을 읽지 못했어요. 다시 시도하세요.`;
+      case "pt-BR":
+        return `O Infinitary não conseguiu ler esse arquivo. Tente de novo.`;
+      case "zh-Hans":
+        return `Infinitary 无法读取该文件。请重试。`;
+      case "zh-Hant":
+        return `Infinitary 無法讀取該檔案。請再試一次。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý çöûļðñ'ţ ŕéáð ţĥáţ ƒîļé. Ţŕý áĝáîñ. ~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary couldn't read that file. Try again.‬`;
+    }
+    return `Infinitary couldn't read that file. Try again.`;
+  }
+  function accountsCustomApiFileReadThis() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `قراءة هذا الملف`;
+      case "de":
+        return `Diese Datei lesen`;
+      case "es":
+        return `Leer este archivo`;
+      case "fr":
+        return `Lire ce fichier`;
+      case "ja":
+        return `このファイルを読み込む`;
+      case "ko":
+        return `이 파일 읽기`;
+      case "pt-BR":
+        return `Ler este arquivo`;
+      case "zh-Hans":
+        return `读取此文件`;
+      case "zh-Hant":
+        return `讀取這個檔案`;
+      case "en-XA":
+        return `[Ŕéáð ţĥîš ƒîļé ~~~~~]`;
+      case "ar-XB":
+        return `‮Read this file‬`;
+    }
+    return `Read this file`;
+  }
+  function accountsCustomApiFileReasoning() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `محدَّد في ملفك`;
+      case "de":
+        return `In deiner Datei festgelegt`;
+      case "es":
+        return `Fijado en tu archivo`;
+      case "fr":
+        return `Défini dans votre fichier`;
+      case "ja":
+        return `ファイルで設定`;
+      case "ko":
+        return `파일에서 설정`;
+      case "pt-BR":
+        return `Definido no seu arquivo`;
+      case "zh-Hans":
+        return `在你的文件中设定`;
+      case "zh-Hant":
+        return `在你的檔案中設定`;
+      case "en-XA":
+        return `[Šéţ îñ ýöûŕ ƒîļé ~~~~~~]`;
+      case "ar-XB":
+        return `‮Set in your file‬`;
+    }
+    return `Set in your file`;
+  }
+  function accountsCustomApiFileSets(input2) {
+    const who = input2.who;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يحدد ملف الاتصالات اسم هذا الاتصال وعنوانه وبروتوكوله وترويساته ونماذجه. اكتب المفتاح وقيم الترويسات السرية التي تُحفظ على ${who}، ثم احفظ لفحص كل نموذج.`;
+      case "de":
+        return `Deine Verbindungsdatei legt Name, Adresse, Protokoll, Header und Modelle dieser Verbindung fest. Gib den Schlüssel und die geheimen Header-Werte für ${who} ein und speichere, um jedes Modell zu prüfen.`;
+      case "es":
+        return `Tu archivo de conexiones fija el nombre, la dirección, el protocolo, los encabezados y los modelos de esta conexión. Escribe la clave y los valores secretos de encabezado que se guardan en ${who}, y guarda para comprobar cada modelo.`;
+      case "fr":
+        return `Votre fichier de connexions fixe le nom, l’adresse, le protocole, les en-têtes et les modèles de cette connexion. Saisissez la clé et les valeurs d’en-têtes secrètes à garder sur ${who}, puis enregistrez pour vérifier chaque modèle.`;
+      case "ja":
+        return `この接続の名前、アドレス、プロトコル、ヘッダー、モデルは接続ファイルで決まります。${who} に保存するキーと秘密のヘッダー値を入力し、保存すると各モデルを確認します。`;
+      case "ko":
+        return `이 연결의 이름, 주소, 프로토콜, 헤더, 모델은 연결 파일에서 정해요. ${who}에 보관할 키와 비밀 헤더 값을 입력하고 저장하면 모델마다 확인해요.`;
+      case "pt-BR":
+        return `Seu arquivo de conexões define o nome, o endereço, o protocolo, os cabeçalhos e os modelos desta conexão. Digite a chave e os valores secretos de cabeçalho que ficam em ${who} e salve para verificar cada modelo.`;
+      case "zh-Hans":
+        return `此连接的名称、地址、协议、请求头和模型由你的连接文件设定。输入要保存在 ${who} 上的密钥和机密请求头的值，然后保存以检查每个模型。`;
+      case "zh-Hant":
+        return `這個連線的名稱、位址、通訊協定、標頭和模型由你的連線檔案設定。輸入要存放在 ${who} 上的金鑰和機密標頭的值，然後儲存以檢查每個模型。`;
+      case "en-XA":
+        return `[Ýöûŕ çöññéçţîöñ ƒîļé šéţš ţĥîš çöññéçţîöñ'š ñáɱé, áððŕéšš, þŕöţöçöļ, ĥéáðéŕš áñð ɱöðéļš. Ţýþé ţĥé ķéý áñð šéçŕéţ ĥéáðéŕ ṽáļûéš ţö ķééþ öñ ${who}, ţĥéñ šáṽé ţö çĥéçķ éáçĥ ɱöðéļ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your connection file sets this connection's name, address, protocol, headers and models. Type the key and secret header values to keep on ‬${who}‮, then save to check each model.‬`;
+    }
+    return `Your connection file sets this connection's name, address, protocol, headers and models. Type the key and secret header values to keep on ${who}, then save to check each model.`;
+  }
+  function accountsCustomApiFileStop() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إيقاف القراءة`;
+      case "de":
+        return `Nicht mehr lesen`;
+      case "es":
+        return `Dejar de leer`;
+      case "fr":
+        return `Arrêter la lecture`;
+      case "ja":
+        return `読み込みをやめる`;
+      case "ko":
+        return `읽기 중지`;
+      case "pt-BR":
+        return `Parar de ler`;
+      case "zh-Hans":
+        return `停止读取`;
+      case "zh-Hant":
+        return `停止讀取`;
+      case "en-XA":
+        return `[Šţöþ ŕéáðîñĝ ~~~~]`;
+      case "ar-XB":
+        return `‮Stop reading‬`;
+    }
+    return `Stop reading`;
+  }
+  function accountsCustomApiFileTag() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `من ملفك`;
+      case "de":
+        return `Aus deiner Datei`;
+      case "es":
+        return `De tu archivo`;
+      case "fr":
+        return `Depuis votre fichier`;
+      case "ja":
+        return `ファイルから`;
+      case "ko":
+        return `파일에서`;
+      case "pt-BR":
+        return `Do seu arquivo`;
+      case "zh-Hans":
+        return `来自你的文件`;
+      case "zh-Hant":
+        return `來自你的檔案`;
+      case "en-XA":
+        return `[Ƒŕöɱ ýöûŕ ƒîļé ~~~~~]`;
+      case "ar-XB":
+        return `‮From your file‬`;
+    }
+    return `From your file`;
+  }
+  function accountsCustomApiFileTitle() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ملف الاتصالات`;
+      case "de":
+        return `Verbindungsdatei`;
+      case "es":
+        return `Archivo de conexiones`;
+      case "fr":
+        return `Fichier de connexions`;
+      case "ja":
+        return `接続ファイル`;
+      case "ko":
+        return `연결 파일`;
+      case "pt-BR":
+        return `Arquivo de conexões`;
+      case "zh-Hans":
+        return `连接文件`;
+      case "zh-Hant":
+        return `連線檔案`;
+      case "en-XA":
+        return `[Çöññéçţîöñ ƒîļé ~~~~~]`;
+      case "ar-XB":
+        return `‮Connection file‬`;
+    }
+    return `Connection file`;
+  }
+  function accountsCustomApiFileUnreadable() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يستطيع Infinitary قراءة هذا الملف. تحتفظ اتصالاته بآخر قراءة.`;
+      case "de":
+        return `Infinitary kann diese Datei nicht lesen. Ihre Verbindungen behalten den letzten gelesenen Stand.`;
+      case "es":
+        return `Infinitary no puede leer este archivo. Sus conexiones mantienen la última lectura.`;
+      case "fr":
+        return `Infinitary ne peut pas lire ce fichier. Ses connexions gardent leur dernière lecture.`;
+      case "ja":
+        return `Infinitary はこのファイルを読み込めません。接続は前回読み込んだ内容のままです。`;
+      case "ko":
+        return `Infinitary가 이 파일을 읽을 수 없어요. 연결은 마지막으로 읽은 내용을 유지해요.`;
+      case "pt-BR":
+        return `O Infinitary não consegue ler este arquivo. As conexões dele mantêm a última leitura.`;
+      case "zh-Hans":
+        return `Infinitary 无法读取此文件。其中的连接保持上次读取的内容。`;
+      case "zh-Hant":
+        return `Infinitary 無法讀取這個檔案。其中的連線保持上次讀取的內容。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý çáñ'ţ ŕéáð ţĥîš ƒîļé. Îţš çöññéçţîöñš ķééþ ţĥéîŕ ļášţ ŕéáðîñĝ. ~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary can't read this file. Its connections keep their last reading.‬`;
+    }
+    return `Infinitary can't read this file. Its connections keep their last reading.`;
+  }
+  function accountsCustomApiFileUnused(input2) {
+    const keys = input2.keys;
+    switch (currentLanguage()) {
+      case "ar":
+        return `غير مستخدَم هنا: ${keys}`;
+      case "de":
+        return `Hier nicht verwendet: ${keys}`;
+      case "es":
+        return `No se usa aquí: ${keys}`;
+      case "fr":
+        return `Non utilisé ici : ${keys}`;
+      case "ja":
+        return `ここでは使わない設定：${keys}`;
+      case "ko":
+        return `여기서 쓰지 않는 설정: ${keys}`;
+      case "pt-BR":
+        return `Não usado aqui: ${keys}`;
+      case "zh-Hans":
+        return `此处不使用：${keys}`;
+      case "zh-Hant":
+        return `此處不使用：${keys}`;
+      case "en-XA":
+        return `[Ñöţ ûšéð ĥéŕé: ${keys} ~~~~~]`;
+      case "ar-XB":
+        return `‮Not used here: ‬${keys}`;
+    }
+    return `Not used here: ${keys}`;
   }
   function accountsCustomApiFirstMate() {
     switch (currentLanguage()) {
@@ -106499,6 +107491,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     accountsCustomApiAnswerKind,
     accountsCustomApiAnswerReserved,
     accountsCustomApiApproveCertificates,
+    accountsCustomApiApproveTitle,
     accountsCustomApiAuthKey,
     accountsCustomApiCache,
     accountsCustomApiCacheFor,
@@ -106556,6 +107549,39 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     accountsCustomApiFetchAgain,
     accountsCustomApiFetchFailed,
     accountsCustomApiFetching,
+    accountsCustomApiFileApprove,
+    accountsCustomApiFileApproveAgain,
+    accountsCustomApiFileApproveToUse,
+    accountsCustomApiFileBuiltIn,
+    accountsCustomApiFileChanged,
+    accountsCustomApiFileChoose,
+    accountsCustomApiFileChoosing,
+    accountsCustomApiFileCompaction,
+    accountsCustomApiFileDone,
+    accountsCustomApiFileDoneNone,
+    accountsCustomApiFileGone,
+    accountsCustomApiFileHint,
+    accountsCustomApiFileInvalid,
+    accountsCustomApiFileInvalidEntry,
+    accountsCustomApiFileKey,
+    accountsCustomApiFileMissing,
+    accountsCustomApiFileNew,
+    accountsCustomApiFileNoAddress,
+    accountsCustomApiFileNoProtocol,
+    accountsCustomApiFileNone,
+    accountsCustomApiFileNotRead,
+    accountsCustomApiFilePathOn,
+    accountsCustomApiFilePickerFailed,
+    accountsCustomApiFileRead,
+    accountsCustomApiFileReadFailed,
+    accountsCustomApiFileReadThis,
+    accountsCustomApiFileReasoning,
+    accountsCustomApiFileSets,
+    accountsCustomApiFileStop,
+    accountsCustomApiFileTag,
+    accountsCustomApiFileTitle,
+    accountsCustomApiFileUnreadable,
+    accountsCustomApiFileUnused,
     accountsCustomApiFirstMate,
     accountsCustomApiFootHint,
     accountsCustomApiFullAddress,
@@ -109914,6 +110940,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "accountsCustomApiAnswerKind": ["address", "kind"],
     "accountsCustomApiAnswerReserved": ["address"],
     "accountsCustomApiApproveCertificates": [],
+    "accountsCustomApiApproveTitle": ["name"],
     "accountsCustomApiAuthKey": [],
     "accountsCustomApiCache": [],
     "accountsCustomApiCacheFor": ["name"],
@@ -109971,6 +110998,39 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "accountsCustomApiFetchAgain": [],
     "accountsCustomApiFetchFailed": [],
     "accountsCustomApiFetching": [],
+    "accountsCustomApiFileApprove": [],
+    "accountsCustomApiFileApproveAgain": [],
+    "accountsCustomApiFileApproveToUse": [],
+    "accountsCustomApiFileBuiltIn": ["name"],
+    "accountsCustomApiFileChanged": [],
+    "accountsCustomApiFileChoose": [],
+    "accountsCustomApiFileChoosing": [],
+    "accountsCustomApiFileCompaction": ["model"],
+    "accountsCustomApiFileDone": ["path"],
+    "accountsCustomApiFileDoneNone": [],
+    "accountsCustomApiFileGone": [],
+    "accountsCustomApiFileHint": [],
+    "accountsCustomApiFileInvalid": [],
+    "accountsCustomApiFileInvalidEntry": [],
+    "accountsCustomApiFileKey": [],
+    "accountsCustomApiFileMissing": [],
+    "accountsCustomApiFileNew": [],
+    "accountsCustomApiFileNoAddress": [],
+    "accountsCustomApiFileNoProtocol": [],
+    "accountsCustomApiFileNone": [],
+    "accountsCustomApiFileNotRead": [],
+    "accountsCustomApiFilePathOn": ["computer"],
+    "accountsCustomApiFilePickerFailed": [],
+    "accountsCustomApiFileRead": ["count"],
+    "accountsCustomApiFileReadFailed": [],
+    "accountsCustomApiFileReadThis": [],
+    "accountsCustomApiFileReasoning": [],
+    "accountsCustomApiFileSets": ["who"],
+    "accountsCustomApiFileStop": [],
+    "accountsCustomApiFileTag": [],
+    "accountsCustomApiFileTitle": [],
+    "accountsCustomApiFileUnreadable": [],
+    "accountsCustomApiFileUnused": ["keys"],
     "accountsCustomApiFirstMate": [],
     "accountsCustomApiFootHint": ["sent"],
     "accountsCustomApiFullAddress": [],
@@ -118298,6 +119358,7 @@ ${FRAME_KEYBOARD_SCRIPT}
     ],
     "account-disconnect": ["credential", "Forgets an account's sign-in"],
     "projects-folder": true,
+    "custom-connection-file": true,
     "project-batch-answer": true,
     "cost-limit": true,
     notifications: true,
@@ -126595,6 +127656,23 @@ ${startersHtml()}`;
     cacheRead: customPriceSchema.optional(),
     cacheWrite: customPriceSchema.optional()
   });
+  const customCompactionSchema = object({
+    keepRecentTokens: number().int().positive().max(1e8).optional(),
+    reserveTokens: number().int().positive().max(1e8).optional()
+  });
+  const CUSTOM_THINKING_LEVELS = [
+    "off",
+    "minimal",
+    "low",
+    "medium",
+    "high",
+    "xhigh",
+    "max"
+  ];
+  const customStatedReasoningSchema = object({
+    thinkingLevelMap: partialRecord(_enum(CUSTOM_THINKING_LEVELS), string().max(64).nullable()).optional(),
+    compat: record(string().max(64), union([boolean(), string().max(64)])).optional()
+  });
   const customModelInputSchema = object({
     id: string().min(1).max(256),
     context: number().int().nonnegative(),
@@ -126608,7 +127686,16 @@ ${startersHtml()}`;
      * checks it again.
      */
     name: string().trim().min(1).max(128).optional(),
-    cost: customModelCostSchema.optional()
+    cost: customModelCostSchema.optional(),
+    /**
+     * What a connection file says the model reads. Absent (a typed line), the
+     * check tries a picture; without `image`, it sends none and the model stays text-only.
+     */
+    input: array(_enum(["text", "image"])).max(2).optional(),
+    /** A connection file's own reasoning for a model with no profile. */
+    statedReasoning: customStatedReasoningSchema.optional(),
+    /** Wins over the connection's, one value at a time. */
+    compaction: customCompactionSchema.optional()
   });
   const customHeaderInputSchema = object({
     name: string().max(128),
@@ -126647,7 +127734,13 @@ ${startersHtml()}`;
      * told them what DNS answered: its name may then point to reserved or mixed
      * networks. Absent, the network check refuses those answers, as always.
      */
-    addressException: string().max(4096).optional()
+    addressException: string().max(4096).optional(),
+    compaction: customCompactionSchema.optional(),
+    /**
+     * The provider's key in the connection file this connection was approved
+     * from: its identity there, so the file's later edits reach it.
+     */
+    file: string().min(1).max(256).optional()
   });
   const customApiConnectInputSchema = customApiInputSchema.omit({ mode: true });
   const customListedModelSchema = object({
@@ -126684,6 +127777,13 @@ ${startersHtml()}`;
     allowStorageDefault: boolean(),
     /** The person made an exception for this address's DNS answers. */
     addressException: boolean().optional(),
+    compaction: customCompactionSchema.optional(),
+    /**
+     * A connection approved from the connection file: its key there, and
+     * whether the file still says what was approved here. `changed` (its
+     * address, protocol or headers) and `missing` hold it until approved again.
+     */
+    file: object({ name: string(), state: _enum(["current", "changed", "missing"]) }).optional(),
     certificates: array(customCertificateViewSchema),
     models: array(
       customModelInputSchema.extend({

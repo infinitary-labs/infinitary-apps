@@ -373,6 +373,21 @@ export function registerIpc(options: IpcOptions): void {
     return picked.canceled ? null : (picked.filePaths[0] ?? null);
   });
 
+  // The system's picker for one file, such as the connection file (Settings ->
+  // Intelligence): it only answers the chosen path; the core reads the file.
+  handleInvoke("inf:app:choose-file", rendererSource, async (event, startAt) => {
+    const options: OpenDialogOptions = {
+      properties: ["openFile"],
+      buttonLabel: m.dialogChoose(),
+      ...(startAt ? { defaultPath: startAt } : {}),
+    };
+    const owner = BrowserWindow.fromWebContents(event.sender);
+    const picked = owner
+      ? await dialog.showOpenDialog(owner, options)
+      : await dialog.showOpenDialog(options);
+    return picked.canceled ? null : (picked.filePaths[0] ?? null);
+  });
+
   // A dropped File's place on disk (docs/composer.md, "Files"): the preload
   // read the path from the File itself; this only says what it is, without
   // following a link, and reads nothing.

@@ -43,6 +43,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | concept | 概念 | A Knowledge entry, as on cards. |
 | conflict (avoided) | 食い違い | Vocabulary rule: the word conflict is not restored. |
 | connection (between concepts) | つながり | Plain word for a graph link. |
+| connection file | 接続ファイル | The file in Pi's models.json format that Settings → Intelligence reads custom connections from. |
 | conversation | 会話 | Replaces session and transcript. |
 | credits (a provider's, paid past the allowance) | クレジット | ChatGPT's Codex credits; Claude's are called extra usage. |
 | crew | 乗組員 | The native ship word reads warmer than クルー and works for one or many. |

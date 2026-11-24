@@ -1401,10 +1401,8 @@ declare module "@infinitary/contracts" {
     pin: (taskId: string, pinned: boolean) => Promise<PanelMoveResult>;
   };
 
-  /**
-   * An app setting a panel may change (\`manifest.json\` \`"actions"\`): a line of
-   * the app's action catalog, the same one the first mate changes it through.
-   */
+  /** An app setting a panel may change (\`manifest.json\` \`"actions"\`): a line of the app's
+   * action catalog, the same one the first mate changes it through. */
   export type PanelChangeSetting =
     | "account-pause"
     | "account-prefer"
@@ -1423,6 +1421,7 @@ declare module "@infinitary/contracts" {
     | "crew-slots"
     | "crew-slots-reset"
     | "crew-speed"
+    | "custom-connection-file"
     | "decision-model"
     | "decision-use-off"
     | "device-fix-work"

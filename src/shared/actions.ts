@@ -35,7 +35,7 @@ import { signInHost } from "./forgeKinds";
 import type { ForgesView } from "./forges";
 import { handoverLines } from "./handoverActions";
 import * as m from "./i18n/messages.generated.ts";
-import { englishOf, type Said } from "./i18n/said";
+import { englishOf, type Said, said } from "./i18n/said";
 import { integrationLines, integrationsBrief } from "./integrationActions";
 import {
   INTEGRATIONS_SIGN_IN_HOST,
@@ -1456,6 +1456,23 @@ const actionLines = {
     toRequest: (v) => (v.deviceId ? [v.accountId, v.deviceId] : [v.accountId]),
     readValue: (c) => ({ accounts: (c as AccountView[]).map((a) => ({ id: a.id })) }),
     done: (v) => `account ${v.accountId} disconnected`,
+  },
+  "custom-connection-file": {
+    area: "intelligence",
+    tier: "own-words",
+    change: "inf:accounts:custom:file:set",
+    current: "inf:accounts:custom:file",
+    value: z.strictObject({ path: z.string().trim().min(1).max(4096).nullable() }),
+    // i18n-exempt: served to the first mate, a model, never shown
+    line: "The connection file this computer reads custom connections from, in Pi's models.json format; null reads none. Only on the captain's own words. The app never writes it, and each connection in it still waits for the captain's approval in Settings → Intelligence.",
+    toRequest: (v, _current, expandHome) => [v.path === null ? null : expandHome(v.path as string)],
+    readValue: (current) => ({ path: (current as { path: string | null }).path }),
+    done: (v) =>
+      englishOf(
+        v.path === null
+          ? said("accountsCustomApiFileDoneNone")
+          : said("accountsCustomApiFileDone", { path: v.path as string }),
+      ),
   },
   "projects-folder": {
     area: "projects",

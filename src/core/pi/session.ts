@@ -56,6 +56,7 @@ import { stagePluginTrees } from "../session/stagedPlugins";
 import { claimStagingFolder } from "../session/stagingFolders";
 import { PI_CONTROL_PROFILE } from "./controlProfile";
 import { speedRuntime } from "./crewSpeed";
+import { customCompaction } from "./customCompaction";
 import { customPictureContext } from "./customPictureContext";
 
 export { PI_CONTROL_PROFILE } from "./controlProfile";
@@ -1106,9 +1107,10 @@ async function openOneShot(
 /**
  * Budget compaction in Pi's own token count. Kept turns are a quarter of the
  * history room and never more than Pi's default; the reserve is sized so the
- * summary is that quarter, and never more than Pi's default. Rebudget at each
- * prompt boundary so a resumed session uses the current model. Overflow still
- * uses Pi's real compactor and its single retry.
+ * summary is that quarter, and never more than Pi's default. A connection's
+ * stated values replace those, each within the history room. Rebudget at
+ * each prompt boundary so a resumed session uses the current model. Overflow
+ * still uses Pi's real compactor and its single retry.
  */
 function budgetCustomCompaction(
   session: AgentSession,
@@ -1123,13 +1125,21 @@ function budgetCustomCompaction(
     ? Math.max(0, model.contextWindow - model.maxTokens - piPrefixTokens(session))
     : 0;
   const quarter = Math.max(1, Math.floor(historyRoom / 4));
+  const stated = custom ? customCompaction(model.provider, model.id) : undefined;
+  const within = (tokens: number) => Math.max(1, Math.min(tokens, historyRoom));
   const reserve = custom
-    ? Math.min(DEFAULT_COMPACTION_SETTINGS.reserveTokens, Math.ceil(quarter / 0.8))
+    ? stated?.reserveTokens
+      ? within(stated.reserveTokens)
+      : Math.min(DEFAULT_COMPACTION_SETTINGS.reserveTokens, Math.ceil(quarter / 0.8))
     : defaultReserve;
   session.settingsManager.applyOverrides({
     compaction: {
       ...(custom
-        ? { keepRecentTokens: Math.min(DEFAULT_COMPACTION_SETTINGS.keepRecentTokens, quarter) }
+        ? {
+            keepRecentTokens: stated?.keepRecentTokens
+              ? within(stated.keepRecentTokens)
+              : Math.min(DEFAULT_COMPACTION_SETTINGS.keepRecentTokens, quarter),
+          }
         : {}),
       // Pi triggers above window - reserve. Recompute rather than retaining a
       // previous large-window reserve when the next attachment uses a smaller model.

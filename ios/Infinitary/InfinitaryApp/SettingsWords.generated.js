@@ -13982,6 +13982,23 @@ ${events}` : prompt;
     cacheRead: customPriceSchema.optional(),
     cacheWrite: customPriceSchema.optional()
   });
+  const customCompactionSchema = object({
+    keepRecentTokens: number().int().positive().max(1e8).optional(),
+    reserveTokens: number().int().positive().max(1e8).optional()
+  });
+  const CUSTOM_THINKING_LEVELS = [
+    "off",
+    "minimal",
+    "low",
+    "medium",
+    "high",
+    "xhigh",
+    "max"
+  ];
+  const customStatedReasoningSchema = object({
+    thinkingLevelMap: partialRecord(_enum(CUSTOM_THINKING_LEVELS), string().max(64).nullable()).optional(),
+    compat: record(string().max(64), union([boolean(), string().max(64)])).optional()
+  });
   const customModelInputSchema = object({
     id: string().min(1).max(256),
     context: number().int().nonnegative(),
@@ -13995,7 +14012,16 @@ ${events}` : prompt;
      * checks it again.
      */
     name: string().trim().min(1).max(128).optional(),
-    cost: customModelCostSchema.optional()
+    cost: customModelCostSchema.optional(),
+    /**
+     * What a connection file says the model reads. Absent (a typed line), the
+     * check tries a picture; without `image`, it sends none and the model stays text-only.
+     */
+    input: array(_enum(["text", "image"])).max(2).optional(),
+    /** A connection file's own reasoning for a model with no profile. */
+    statedReasoning: customStatedReasoningSchema.optional(),
+    /** Wins over the connection's, one value at a time. */
+    compaction: customCompactionSchema.optional()
   });
   const customHeaderInputSchema = object({
     name: string().max(128),
@@ -14034,7 +14060,13 @@ ${events}` : prompt;
      * told them what DNS answered: its name may then point to reserved or mixed
      * networks. Absent, the network check refuses those answers, as always.
      */
-    addressException: string().max(4096).optional()
+    addressException: string().max(4096).optional(),
+    compaction: customCompactionSchema.optional(),
+    /**
+     * The provider's key in the connection file this connection was approved
+     * from: its identity there, so the file's later edits reach it.
+     */
+    file: string().min(1).max(256).optional()
   });
   const customApiConnectInputSchema = customApiInputSchema.omit({ mode: true });
   const customListedModelSchema = object({
@@ -14071,6 +14103,13 @@ ${events}` : prompt;
     allowStorageDefault: boolean(),
     /** The person made an exception for this address's DNS answers. */
     addressException: boolean().optional(),
+    compaction: customCompactionSchema.optional(),
+    /**
+     * A connection approved from the connection file: its key there, and
+     * whether the file still says what was approved here. `changed` (its
+     * address, protocol or headers) and `missing` hold it until approved again.
+     */
+    file: object({ name: string(), state: _enum(["current", "changed", "missing"]) }).optional(),
     certificates: array(customCertificateViewSchema),
     models: array(
       customModelInputSchema.extend({

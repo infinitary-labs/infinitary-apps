@@ -63,6 +63,7 @@ import {
   readPanelLibrary,
 } from "./personal/panelLibrary";
 import { answerPhoneAsk, isPhoneAsk, phoneOnly } from "./phoneAsks";
+import type { CustomApiFileSource } from "./pi/customApiFileSource";
 import type { AuthInteractionBridge } from "./pi/piAuth";
 import { releaseNotesView } from "./releaseNotes/shown";
 import { secretsHandlers } from "./secrets/handlers";
@@ -183,6 +184,8 @@ export type CoreDispatcherOptions = {
   homeMove?: OutgoingHomeMove;
   /** The live copies on other computers (docs/devices.md, "Keeping a copy on another computer"). */
   standbys?: Standbys;
+  /** The connection file this computer reads custom connections from; refused when absent. */
+  customApiFile?: CustomApiFileSource;
   /** The windows the first mate asks; a test hands its own. */
   viewWindows?: ViewWindows;
 };
@@ -190,6 +193,10 @@ export type CoreDispatcherOptions = {
 export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispatch {
   const { services, host, emit, ownWindow } = options;
   const browserViews = new BrowserViews(() => services.browsers);
+  const customApiFile = () => {
+    if (!options.customApiFile) throw new Error("This computer reads no connection file.");
+    return options.customApiFile;
+  };
   /** The windows the first mate asks their own Settings (`./viewWindows.ts`). */
   const viewWindows =
     options.viewWindows ??
@@ -1223,6 +1230,8 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
           "Matching work is still running. Apply this checked replacement once it is idle.",
         );
       const record = await services.vault.customSave(draftId, paused);
+      // A connection approved from the file starts following it at once.
+      options.customApiFile?.reapply();
       services.slots.reconcile();
       services.firstRun.reconcile();
       const view = services.vault.customViews().find((entry) => entry.accountId === record.id);
@@ -1239,6 +1248,8 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     },
     "inf:accounts:custom:profiles": () => services.vault.customProfiles(),
     "inf:accounts:custom:list": () => services.vault.customViews(),
+    "inf:accounts:custom:file": () => customApiFile().view(),
+    "inf:accounts:custom:file:set": (path) => customApiFile().set(path),
 
     "inf:accounts:list": () => services.vault.views(),
 

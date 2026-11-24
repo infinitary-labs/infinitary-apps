@@ -8,11 +8,13 @@ import {
   CUSTOM_EXCEPTION_WORDS,
   placeCustomApiFailure,
 } from "../../src/renderer/src/accounts/customApiFailures";
+import * as m from "../../src/shared/i18n/messages.generated";
 import { customApiCaFixture } from "../helpers/customApiCaFixture";
 import { scratchDir } from "../helpers/scratchDirs";
 import {
   customApiBlock,
   customApiEditDialog,
+  customApiFile,
   customApiForm,
   fillCustomApi,
   saveCustomApi,
@@ -475,6 +477,116 @@ test("the server's model list supplies model names and limits nobody typed", asy
     test.info().outputPath("listed-models.json"),
     JSON.stringify({ wire: api.requests, custom: saved }, null, 2),
   );
+});
+
+// A connection file in Pi's models.json format: the app reads it and never
+// writes it, each computer approves a connection with its own key, a name
+// from the file applies at once, and a new address pauses it until approved.
+test("a connection from the connection file is approved with this computer's own key and follows the file", async () => {
+  model = await startMockProvider();
+  api = await startCustomApiFixture(model.port);
+  const path = join(scratchDir("custom-connection-file-"), "models.json");
+  const provider = (name: string, baseUrl: string) => ({
+    providers: {
+      "team-gateway": {
+        name,
+        baseUrl,
+        api: "openai-completions",
+        apiKey: "$TEAM_GATEWAY_KEY",
+        headers: { "X-Org-Id": "synthetic-org" },
+        models: [
+          {
+            id: "operator-model",
+            name: "Operator",
+            contextWindow: 200000,
+            maxTokens: 4096,
+            cost: { input: 3, output: 15 },
+          },
+        ],
+      },
+    },
+  });
+  const written = JSON.stringify(provider("Team gateway", api.baseUrl), null, 2);
+  writeFileSync(path, written);
+  launched = await launchApp({
+    reuseMockProvider: model,
+    modelsJson: () => JSON.stringify({ providers: {} }),
+  });
+  const page = launched.page;
+  // The picker is the system's own sheet, answered in the main process.
+  await launched.app.evaluate(({ dialog }, answer) => {
+    dialog.showOpenDialog = (async () => ({
+      canceled: false,
+      filePaths: [answer],
+    })) as unknown as typeof dialog.showOpenDialog;
+  }, path);
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByRole("tab", { name: "Intelligence" }).click();
+  const file = customApiFile(page);
+  await file.choose.click();
+  await expect(file.path).toHaveText(path);
+  await expect(file.status).toHaveText(m.accountsCustomApiFileRead({ count: 1 }));
+  const pending = file.pending("team-gateway");
+  await expect(pending.block).toContainText(m.accountsCustomApiFileNew());
+  // The file's key reference is never used: each computer types its own.
+  await expect(pending.warnings).toContainText(m.accountsCustomApiFileKey());
+  await page.screenshot({ path: test.info().outputPath("custom-file-pending.png") });
+  expect(api.requests).toHaveLength(0);
+
+  await pending.approve.click();
+  const f = customApiForm(page);
+  await expect(page.getByRole("dialog", { name: "Approve Team gateway" })).toBeVisible();
+  await expect(f.name).toHaveValue("Team gateway");
+  await expect(f.name).toHaveAttribute("readonly", "");
+  await expect(f.address).toHaveValue(api.baseUrl);
+  await expect(f.address).toHaveAttribute("readonly", "");
+  await expect(f.protocol).toBeDisabled();
+  await expect(f.row("operator-model").getByLabel(/^Context tokens/)).toHaveValue("200000");
+  await f.http.check();
+  await f.key.fill("synthetic-file-key");
+  await page.screenshot({ path: test.info().outputPath("custom-file-approve.png") });
+  expect(await saveCustomApi(page)).toBe("saved");
+  // Checked with this computer's key and the file's visible header.
+  expect(api.requests.length).toBeGreaterThan(0);
+  expect(api.requests.every((request) => request.scheme === "Bearer")).toBe(true);
+  expect(api.requests.every((request) => request.org === "synthetic-org")).toBe(true);
+  const [saved] = await page.evaluate(() => window.infinitary.accounts.custom.list());
+  expect(saved).toMatchObject({
+    label: "Team gateway",
+    file: { name: "team-gateway", state: "current" },
+    models: [
+      { id: "operator-model", name: "Operator", cost: { input: 3, output: 15 }, checked: true },
+    ],
+  });
+  const block = customApiBlock(page, saved?.accountId ?? "");
+  await expect(block.block).toContainText(m.accountsCustomApiFileTag());
+  await expect(block.block).toContainText("Ready");
+  await expect(file.pending("team-gateway").block).toHaveCount(0);
+  await page.screenshot({ path: test.info().outputPath("custom-file-approved.png") });
+
+  // A new name in the file applies at once, with no request to the server.
+  const checks = api.requests.length;
+  writeFileSync(path, JSON.stringify(provider("Renamed gateway", api.baseUrl), null, 2));
+  await expect(block.block.locator("h3")).toHaveText("Renamed gateway");
+  expect(api.requests).toHaveLength(checks);
+
+  // A new address pauses it until this computer approves it again.
+  writeFileSync(
+    path,
+    JSON.stringify(provider("Renamed gateway", "http://127.0.0.1:9/v1"), null, 2),
+  );
+  await expect(block.block.locator("[data-custom-file-held]")).toContainText(
+    m.accountsCustomApiFileChanged(),
+  );
+  await expect(block.block.getByRole("button", { name: "Approve again" })).toBeVisible();
+  await expect(block.firstmate("operator-model")).toHaveAttribute("aria-disabled", "true");
+  await page.screenshot({ path: test.info().outputPath("custom-file-held.png") });
+  expect(api.requests).toHaveLength(checks);
+  // The app read the file and never wrote it.
+  expect(readFileSync(path, "utf8")).toBe(
+    JSON.stringify(provider("Renamed gateway", "http://127.0.0.1:9/v1"), null, 2),
+  );
+  expect(written).not.toBe(readFileSync(path, "utf8"));
 });
 
 // INF-3100's report: a proxy app answering a public API's name with a reserved

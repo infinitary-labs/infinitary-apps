@@ -303,6 +303,39 @@ The check uses that exact policy; consent persists across restart, changes inval
 Neither policy uses `previous_response_id`, remote conversation objects, retrieval, polling or WebSocket continuation.
 Neither policy prevents implicit server logging/caching.
 
+## Connection file
+
+A team can define its custom connections once, in a file in Pi's `models.json` format that each computer reads (`src/core/pi/customApiFile.ts`).
+Each entry under `providers` is one connection: `name`, `baseUrl`, `api` (`openai-completions`, `openai-responses` or `anthropic-messages`), visible `headers`, `compat`, and `models[]` with `id`, `name`, `contextWindow`, `maxTokens`, `input`, `cost`, `reasoning` and `thinkingLevelMap`.
+Infinitary's own keys sit in an `infinitary` object: on the provider, `secretHeaders` (header names each computer types a value for) and `compaction`; on a model, `cacheRetention`, `reasoningProfile` and `compaction`.
+Pi's own reader ignores that object, so one file serves both.
+Comments and trailing commas are read as Pi reads them.
+A limit the file leaves out is unknown (0), for the server's model list to fill, never Pi's defaults.
+
+The file is chosen on the **Connection file** row of Settings → Intelligence (app action `custom-connection-file`), with the system's file picker on this computer or a typed full path from a view window.
+`CustomApiFileSource` (`src/core/pi/customApiFileSource.ts`) keeps the path in Settings, reads the file at launch, on choice and whenever its folder changes (after 250 ms of quiet), and never writes it.
+A read that fails (missing, unreadable, over 1 MB or not valid) is shown on the row and keeps the last good reading, so a half-synced file pauses nothing and forgets nothing.
+
+Nothing in the file is used until this computer approves it.
+A connection the file defines and this computer has not saved shows under the row with **Approve**, which opens the connection form with the file's name, address, protocol, headers and models fixed; the person types the key and any secret header values, and Save checks each model as any save does.
+The key and secret values stay on this computer; each computer approves for itself.
+A model's check sends a picture only when its `input` names `image`.
+
+The account owner (`CustomApiAccountOwner.applyFile`) compares each good reading with what was approved:
+
+- A new name, price or compaction applies at once, with no request to the server.
+- New limits, pictures, reasoning, compat or cache retention check that model again with the saved key.
+- A new address, protocol or headers pause the connection, shown as **Approve again**, until it is approved again or the file agrees again.
+- A connection that leaves the file is paused, never deleted; choosing no file releases every pause the file made.
+
+A paused connection keeps its key and its checks and offers no model to the crew or first mate.
+Approving at a new address saves a separate connection, as an edit does ("Lifecycle" below).
+
+The file never supplies a credential.
+Each of these is listed as not used on the connection: `apiKey`, a header value that is a `$` or `!` reference, `oauth`, `authHeader`, `modelOverrides`, sampling settings, a model's own `baseUrl`, `api` or `headers`, cost tiers and any key Infinitary does not read.
+A provider named like one of Pi's built-in providers is refused.
+Stated compaction values replace Pi's own (20,000 tokens kept, 16,384 reserved), bounded by the model's window; a model whose window cannot hold them is warned of.
+
 ## Lifecycle
 
 - Rename preserves identity and use choices.

@@ -45,6 +45,7 @@ import type {
   CustomListedModel,
   CustomNetworkMode,
 } from "./customApi";
+import type { CustomApiFileView } from "./customApiFile";
 import type { DecisionModelId, DecisionsSettings, DecisionsView } from "./decisions";
 import type { DecisionUseRequest } from "./decisionUses";
 import type {
@@ -221,6 +222,8 @@ export type FirstmateApi = {
     openExternal: (url: string) => Promise<{ ok: true }>;
     /** The system's folder picker: the chosen folder, or null when cancelled. */
     chooseFolder: (startAt?: string) => Promise<string | null>;
+    /** The system's picker for one file: its path, or null when cancelled. */
+    chooseFile: (startAt?: string) => Promise<string | null>;
     /**
      * Start it here, on the notice over a window whose command stopped
      * (`ThisMac.command`): the app starts again as this computer's own
@@ -1014,6 +1017,10 @@ export type FirstmateApi = {
       /** A saved connection's one fresh check; a failure comes back on its model. */
       recheck: (accountId: string) => Promise<CustomApiView>;
       list: () => Promise<CustomApiView[]>;
+      /** The connection file this computer reads, as last read. */
+      file: () => Promise<CustomApiFileView>;
+      /** Chooses it by its full path, or none, and reads it at once. */
+      setFile: (path: string | null) => Promise<CustomApiFileView>;
     };
     list: () => Promise<AccountView[]>;
     /** Add an account: runs the provider's own sign-in into a fresh store. */

@@ -78,6 +78,9 @@
   "recordPolicyProject": "プロジェクトの設定",
   "recordPolicyThisTask": "このタスク",
   "recordRecordedDetails": "記録された詳細",
+  "recordReviewCarried": "このタスクは、{key} が {head} で合格したレビューを引き継ぎます。同じコミットです。",
+  "recordReviewCarriedProof": "このタスクは、{key} が {head} で合格したレビューと、そこで受け入れられた証拠を引き継ぎます。同じコミットです。",
+  "recordReviewPassedIn": "{key} で合格",
   "recordShowCard": "カードを表示",
   "recordShowEarlier": {
     "plural": "count",

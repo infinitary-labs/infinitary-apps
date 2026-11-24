@@ -161,6 +161,19 @@ export const taskPullRequestSchema = z.object({
 });
 export type TaskPullRequest = z.infer<typeof taskPullRequestSchema>;
 
+/**
+ * The earlier task whose passed review a takeover carries, at the very
+ * commit that review read (INF-6536 finding 3), and whether the proof
+ * accepted there came with it.
+ */
+export const reviewFromSchema = z.object({
+  taskId: z.string(),
+  key: z.string(),
+  title: z.string(),
+  proof: z.boolean(),
+});
+export type ReviewFrom = z.infer<typeof reviewFromSchema>;
+
 /** Delivery facts as they become known (check_pr_ci, land, merge-pr, review). */
 export const taskDeliveryViewSchema = z.object({
   captainAction: captainActionSchema.optional(),
@@ -216,6 +229,8 @@ export const taskDeliveryViewSchema = z.object({
   reviewRisk: reviewRiskSchema.optional(),
   reviewRiskNote: z.string().optional(),
   reviewedAt: z.number().optional(),
+  /** The earlier task that earned the pass above, when this task carries it. */
+  reviewFrom: reviewFromSchema.optional(),
   /**
    * Legacy count history remains readable; it no longer places holds or changes readiness.
    */

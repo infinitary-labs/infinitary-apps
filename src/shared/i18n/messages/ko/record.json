@@ -78,6 +78,9 @@
   "recordPolicyProject": "프로젝트 설정",
   "recordPolicyThisTask": "이 작업",
   "recordRecordedDetails": "기록된 세부 정보",
+  "recordReviewCarried": "이 작업은 {key}이(가) {head}에서 통과한 검토를 이어받습니다. 같은 커밋입니다.",
+  "recordReviewCarriedProof": "이 작업은 {key}이(가) {head}에서 통과한 검토와 그때 받아들여진 증거를 이어받습니다. 같은 커밋입니다.",
+  "recordReviewPassedIn": "{key}에서 통과",
   "recordShowCard": "카드 보기",
   "recordShowEarlier": {
     "plural": "count",

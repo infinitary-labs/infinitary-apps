@@ -31,6 +31,7 @@ import {
   REVIEW_EARLIER_WORDS,
   REVIEW_WORDS,
   RUN_CHECK_WORDS,
+  reviewCarriedWords,
 } from "./vocabulary";
 
 /**
@@ -391,10 +392,12 @@ function deliveryOf(task: Pick<TaskView, "status" | "delivery">): TaskDelivery |
   // The version the review read rides its words; a pass the home says
   // does not cover the version on offer reads as an earlier one (INF-3141).
   const earlier = facts.reviewVerdict === "pass" && facts.reviewCovers === false;
+  // A pass a takeover carries names the task that earned it (INF-6536 finding 3).
+  const carried = facts.reviewVerdict === "pass" ? facts.reviewFrom : undefined;
   const review = facts.reviewVerdict
     ? {
         dot: earlier ? ("warn" as const) : REVIEW_DOT[facts.reviewVerdict],
-        words: `${earlier ? REVIEW_EARLIER_WORDS : REVIEW_WORDS[facts.reviewVerdict]}${facts.reviewSha ? ` ${facts.reviewSha.slice(0, 7)}` : ""}${facts.reviewRisk ? ` · risk ${facts.reviewRisk}` : ""}`,
+        words: `${earlier ? REVIEW_EARLIER_WORDS : carried ? reviewCarriedWords(carried.key) : REVIEW_WORDS[facts.reviewVerdict]}${facts.reviewSha ? ` ${facts.reviewSha.slice(0, 7)}` : ""}${facts.reviewRisk ? ` · risk ${facts.reviewRisk}` : ""}`,
       }
     : null;
   return change || checks || review ? { change, checks, review } : null;

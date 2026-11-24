@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "takeover-carries-review",
+      "kind": "improvement",
+      "area": "crewmates",
+      "title": "Work taken over at an already reviewed version keeps its review",
+      "body": "When a crewmate takes over another task's work and offers the very version that task's review passed, the takeover keeps that passed review, and the proof accepted with it, without a second review. Its task record and merge card say which task earned the review. A version with any new change still gets its own review. And when a crewmate records proof that nobody has started to review, your first mate hears about it at once and starts the review.",
+      "picture": {
+        "dark": "takeover-carries-review-dark.webp",
+        "light": "takeover-carries-review-light.webp",
+        "alt": "A taken-over task's record whose Review line reads passed in SCR-1, beside the line saying it replaces the earlier task"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

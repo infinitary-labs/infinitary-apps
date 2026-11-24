@@ -2359,6 +2359,9 @@
 "recordPolicyProject" = "プロジェクトの設定";
 "recordPolicyThisTask" = "このタスク";
 "recordRecordedDetails" = "記録された詳細";
+"recordReviewCarried" = "このタスクは、%2$@ が %1$@ で合格したレビューを引き継ぎます。同じコミットです。";
+"recordReviewCarriedProof" = "このタスクは、%2$@ が %1$@ で合格したレビューと、そこで受け入れられた証拠を引き継ぎます。同じコミットです。";
+"recordReviewPassedIn" = "%1$@ で合格";
 "recordShowCard" = "カードを表示";
 "recordSourceGone" = "この過去の出典はもう利用できません。";
 "recordStart" = "開始";

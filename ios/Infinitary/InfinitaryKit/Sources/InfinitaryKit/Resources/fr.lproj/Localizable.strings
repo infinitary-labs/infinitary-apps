@@ -2359,6 +2359,9 @@
 "recordPolicyProject" = "Réglage du projet";
 "recordPolicyThisTask" = "Cette tâche";
 "recordRecordedDetails" = "Détails enregistrés";
+"recordReviewCarried" = "Cette tâche reprend la revue que %2$@ a réussie à %1$@ : le même commit.";
+"recordReviewCarriedProof" = "Cette tâche reprend la revue que %2$@ a réussie à %1$@, et la preuve acceptée là : le même commit.";
+"recordReviewPassedIn" = "réussie dans %1$@";
 "recordShowCard" = "Afficher la carte";
 "recordSourceGone" = "Cette source historique n’est plus disponible.";
 "recordStart" = "Démarrer";

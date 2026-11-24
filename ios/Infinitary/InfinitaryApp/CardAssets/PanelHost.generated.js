@@ -48115,6 +48115,92 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Recorded details`;
   }
+  function recordReviewCarried(input2) {
+    const head2 = input2.head;
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تحمل هذه المهمة المراجعة التي اجتازتها ${key} عند ${head2}: الالتزام نفسه.`;
+      case "de":
+        return `Diese Aufgabe übernimmt das Review, das ${key} bei ${head2} bestanden hat: derselbe Commit.`;
+      case "es":
+        return `Esta tarea conserva la revisión que ${key} superó en ${head2}: el mismo commit.`;
+      case "fr":
+        return `Cette tâche reprend la revue que ${key} a réussie à ${head2} : le même commit.`;
+      case "ja":
+        return `このタスクは、${key} が ${head2} で合格したレビューを引き継ぎます。同じコミットです。`;
+      case "ko":
+        return `이 작업은 ${key}이(가) ${head2}에서 통과한 검토를 이어받습니다. 같은 커밋입니다.`;
+      case "pt-BR":
+        return `Esta tarefa herda a revisão aprovada em ${key} no commit ${head2}: o mesmo commit.`;
+      case "zh-Hans":
+        return `此任务沿用 ${key} 在 ${head2} 通过的审查：同一个提交。`;
+      case "zh-Hant":
+        return `此任務沿用 ${key} 在 ${head2} 通過的審查：同一個提交。`;
+      case "en-XA":
+        return `[Ţĥîš ţášķ çáŕŕîéš ţĥé ŕéṽîéŵ ${key} þáššéð áţ ${head2}: ţĥé šáɱé çöɱɱîţ. ~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This task carries the review ‬${key}‮ passed at ‬${head2}‮: the same commit.‬`;
+    }
+    return `This task carries the review ${key} passed at ${head2}: the same commit.`;
+  }
+  function recordReviewCarriedProof(input2) {
+    const head2 = input2.head;
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تحمل هذه المهمة المراجعة التي اجتازتها ${key} عند ${head2}، والإثبات المقبول هناك: الالتزام نفسه.`;
+      case "de":
+        return `Diese Aufgabe übernimmt das Review, das ${key} bei ${head2} bestanden hat, und den dort akzeptierten Nachweis: derselbe Commit.`;
+      case "es":
+        return `Esta tarea conserva la revisión que ${key} superó en ${head2} y la prueba aceptada allí: el mismo commit.`;
+      case "fr":
+        return `Cette tâche reprend la revue que ${key} a réussie à ${head2}, et la preuve acceptée là : le même commit.`;
+      case "ja":
+        return `このタスクは、${key} が ${head2} で合格したレビューと、そこで受け入れられた証拠を引き継ぎます。同じコミットです。`;
+      case "ko":
+        return `이 작업은 ${key}이(가) ${head2}에서 통과한 검토와 그때 받아들여진 증거를 이어받습니다. 같은 커밋입니다.`;
+      case "pt-BR":
+        return `Esta tarefa herda a revisão aprovada em ${key} no commit ${head2} e a prova aceita ali: o mesmo commit.`;
+      case "zh-Hans":
+        return `此任务沿用 ${key} 在 ${head2} 通过的审查，以及当时接受的证明：同一个提交。`;
+      case "zh-Hant":
+        return `此任務沿用 ${key} 在 ${head2} 通過的審查，以及當時接受的證明：同一個提交。`;
+      case "en-XA":
+        return `[Ţĥîš ţášķ çáŕŕîéš ţĥé ŕéṽîéŵ ${key} þáššéð áţ ${head2}, áñð ţĥé þŕööƒ áççéþţéð ţĥéŕé: ţĥé šáɱé çöɱɱîţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This task carries the review ‬${key}‮ passed at ‬${head2}‮, and the proof accepted there: the same commit.‬`;
+    }
+    return `This task carries the review ${key} passed at ${head2}, and the proof accepted there: the same commit.`;
+  }
+  function recordReviewPassedIn(input2) {
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `اجتازت في ${key}`;
+      case "de":
+        return `bestanden in ${key}`;
+      case "es":
+        return `superada en ${key}`;
+      case "fr":
+        return `réussie dans ${key}`;
+      case "ja":
+        return `${key} で合格`;
+      case "ko":
+        return `${key}에서 통과`;
+      case "pt-BR":
+        return `aprovada em ${key}`;
+      case "zh-Hans":
+        return `已在 ${key} 中通过`;
+      case "zh-Hant":
+        return `已在 ${key} 中通過`;
+      case "en-XA":
+        return `[þáššéð îñ ${key} ~~~~]`;
+      case "ar-XB":
+        return `‮passed in ‬${key}`;
+    }
+    return `passed in ${key}`;
+  }
   function recordShowCard() {
     switch (currentLanguage()) {
       case "ar":
@@ -107007,6 +107093,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     recordPolicyProject,
     recordPolicyThisTask,
     recordRecordedDetails,
+    recordReviewCarried,
+    recordReviewCarriedProof,
+    recordReviewPassedIn,
     recordShowCard,
     recordShowEarlier,
     recordSourceGone,
@@ -110384,6 +110473,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "recordPolicyProject": [],
     "recordPolicyThisTask": [],
     "recordRecordedDetails": [],
+    "recordReviewCarried": ["head", "key"],
+    "recordReviewCarriedProof": ["head", "key"],
+    "recordReviewPassedIn": ["key"],
     "recordShowCard": [],
     "recordShowEarlier": ["count"],
     "recordSourceGone": [],
@@ -125203,6 +125295,12 @@ ${FRAME_KEYBOARD_SCRIPT}
     merged: literal(true).optional(),
     closes: literal(true).optional()
   });
+  const reviewFromSchema = object({
+    taskId: string(),
+    key: string(),
+    title: string(),
+    proof: boolean()
+  });
   const taskDeliveryViewSchema = object({
     captainAction: captainActionSchema.optional(),
     mode: taskDeliveryModeSchema,
@@ -125257,6 +125355,8 @@ ${FRAME_KEYBOARD_SCRIPT}
     reviewRisk: reviewRiskSchema.optional(),
     reviewRiskNote: string().optional(),
     reviewedAt: number().optional(),
+    /** The earlier task that earned the pass above, when this task carries it. */
+    reviewFrom: reviewFromSchema.optional(),
     /**
      * Legacy count history remains readable; it no longer places holds or changes readiness.
      */

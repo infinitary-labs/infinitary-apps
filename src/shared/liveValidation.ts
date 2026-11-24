@@ -644,3 +644,25 @@ export function acceptedValidation(
     reason: review.reason,
   };
 }
+
+/** The run a recorded proof waits for a reader at, and the version it proves. */
+export type ProofAwaitingReader = { run: number; head: string };
+
+/**
+ * The proof that waits for an independent reader (INF-6536 finding 3):
+ * acceptance at the version the task last recorded validation for, or at
+ * the latest run's own version while it has recorded none, names the reviewer as what is
+ * missing. Whether a review is open to read it is the caller's typed fact.
+ */
+export function proofAwaitingReader(
+  state: LiveValidation | undefined,
+  head: string | undefined,
+): ProofAwaitingReader | undefined {
+  const run = latestValidationRun(state);
+  if (!run) return undefined;
+  const at = head ?? run.head;
+  const acceptance = acceptedValidation(state, at);
+  return !acceptance.ready && acceptance.by === "reviewer"
+    ? { run: run.revision, head: at }
+    : undefined;
+}

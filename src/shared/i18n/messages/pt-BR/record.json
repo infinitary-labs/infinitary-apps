@@ -88,6 +88,9 @@
   "recordPolicyProject": "Configuração do projeto",
   "recordPolicyThisTask": "Esta tarefa",
   "recordRecordedDetails": "Detalhes registrados",
+  "recordReviewCarried": "Esta tarefa herda a revisão aprovada em {key} no commit {head}: o mesmo commit.",
+  "recordReviewCarriedProof": "Esta tarefa herda a revisão aprovada em {key} no commit {head} e a prova aceita ali: o mesmo commit.",
+  "recordReviewPassedIn": "aprovada em {key}",
   "recordShowCard": "Mostrar o cartão",
   "recordShowEarlier": {
     "plural": "count",

@@ -464,6 +464,8 @@ export class SettleFacts {
           review.reviewVerdict === "pass" &&
           offered !== undefined &&
           !reviewCoversHead(review, offered);
+        // A pass a takeover carries names the task that earned it.
+        const carried = review.reviewVerdict === "pass" ? review.reviewFrom : undefined;
         state(
           "review",
           review.reviewVerdict === "pass" && !earlier
@@ -472,7 +474,11 @@ export class SettleFacts {
               ? "failed"
               : "warn",
           "Review",
-          earlier ? REVIEW_EARLIER_WORDS : REVIEW_WORDS[review.reviewVerdict],
+          earlier
+            ? REVIEW_EARLIER_WORDS
+            : carried
+              ? saidMark(said("recordReviewPassedIn", { key: carried.key }))
+              : REVIEW_WORDS[review.reviewVerdict],
           // On rest: the version it read and its risk, then that it reads
           // an earlier version, then the reviewer's note on the risk.
           [

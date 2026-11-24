@@ -1,5 +1,6 @@
 import type { CutOffClass } from "@shared/authFailure";
 import { type Card, cardWord } from "@shared/cards";
+import { type ProofAwaitingReader, proofAwaitingReader } from "@shared/liveValidation";
 import { answeringAgainLine, providerOutageFold } from "@shared/plainProblem";
 import type { KeptPutOff } from "@shared/putOff";
 import { formatDurationShort } from "@shared/quotaSignals";
@@ -321,6 +322,7 @@ export class IdleLadder {
     // answer reads cannot. A marked saved answer waits for explicit Done.
     const finished = record?.delivery?.finishedAt !== undefined;
     const finishedCardUp = finished && this.ownCardFor(taskId);
+    const proofUnread = record ? this.proofUnread(record) : undefined;
     return {
       threadAwaitingAuthor: this.host.threadsAwaitingAuthor(taskId).length > 0,
       decisionCardOpen: cardUp || gateCardUp || captainWait || browserWithCaptain,
@@ -349,6 +351,7 @@ export class IdleLadder {
       outOfReach: this.host.outOfReach?.(taskId) === true,
       ...(record ? this.waitWitnesses(record) : { waitsOnUnstarted: false }),
       reviewOpen: record ? this.reviewOpen(record) : false,
+      ...(proofUnread ? { proofUnread } : {}),
       inBacklog: record?.status === "active" && record.backlogSince != null,
       ...(putOff ? { putOff } : {}),
     };
@@ -368,6 +371,21 @@ export class IdleLadder {
           !TaskService.isClosed(child) &&
           child.activity !== "idle",
       );
+  }
+
+  /**
+   * Recorded proof no review is open to read (INF-6536 finding 3): any
+   * open review reads it, an idle one kept for the proof read included.
+   * A review's own record holds no proof of its own.
+   */
+  private proofUnread(record: TaskRecord): ProofAwaitingReader | undefined {
+    if (record.shape?.kind === "review") return undefined;
+    const reading = this.host.tasks.graph
+      .openChildren(record.id)
+      .some((child) => child.shape?.kind === "review" && !TaskService.isClosed(child));
+    return reading
+      ? undefined
+      : proofAwaitingReader(record.delivery?.liveValidation, record.delivery?.validationHead);
   }
 
   /**

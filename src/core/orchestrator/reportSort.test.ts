@@ -169,6 +169,20 @@ describe("sortReport", () => {
       wake: true,
     },
     {
+      // INF-6536 finding 3: recorded proof that only an independent reader
+      // can accept, with no review open to read it, is a typed fact the
+      // app holds; the first mate starts that review.
+      name: "0d. recorded proof waits for a reader and no review is open: wake",
+      facts: facts({
+        proofUnread: { run: 2, head: "4f1c2b9e8d7a6c5b4a39281706f5e4d3c2b1a098" },
+        checksWatched: true,
+        workObservable: true,
+      }),
+      rule: "proof-unread",
+      verdict: "captain",
+      wake: true,
+    },
+    {
       name: "1. a decision card is open: the captain's turn",
       facts: facts({ decisionCardOpen: true, workObservable: true }),
       rule: "captain-card",
@@ -456,6 +470,19 @@ describe("sortReport", () => {
       "needs-firstmate",
     );
     expect(sortReport(facts({ reviewReread: true, waitedOn: true })).rule).toBe("waited-on");
+  });
+
+  // INF-6536 finding 3: the proof's wake sits below an open review's
+  // findings, whose reread already reads it, and below the rows that
+  // already reach the first mate.
+  it("recorded proof with no reader yields to an open review's findings and the rows above it", () => {
+    const proofUnread = { run: 2, head: "4f1c2b9e8d7a6c5b4a39281706f5e4d3c2b1a098" };
+    expect(sortReport(facts({ proofUnread, reviewReread: true })).rule).toBe("review-reread");
+    expect(sortReport(facts({ proofUnread, needsFirstmate: true })).rule).toBe("needs-firstmate");
+    expect(sortReport(facts({ proofUnread, threadAwaitingAuthor: true })).rule).toBe(
+      "thread-unanswered",
+    );
+    expect(sortReport(facts({ proofUnread, decisionCardOpen: true })).rule).toBe("proof-unread");
   });
 
   // INF-799 piece 2, the captain's Approve and build on "Plan task-graph

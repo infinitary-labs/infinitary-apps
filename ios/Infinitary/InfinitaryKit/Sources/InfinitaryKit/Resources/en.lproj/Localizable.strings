@@ -2359,6 +2359,9 @@
 "recordPolicyProject" = "Project setting";
 "recordPolicyThisTask" = "This task";
 "recordRecordedDetails" = "Recorded details";
+"recordReviewCarried" = "This task carries the review %2$@ passed at %1$@: the same commit.";
+"recordReviewCarriedProof" = "This task carries the review %2$@ passed at %1$@, and the proof accepted there: the same commit.";
+"recordReviewPassedIn" = "passed in %1$@";
 "recordShowCard" = "Show the card";
 "recordSourceGone" = "This historical source is no longer available.";
 "recordStart" = "Start";

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "trim-lists-every-sentence",
+      "reason": "Changes how the project trims its own served instructions: a script lists every served sentence a change removed or altered, and the trim procedure in the docs says how a trimmer marks them for its reviewer; nothing in the app changes."
+    }
+  ]
+}

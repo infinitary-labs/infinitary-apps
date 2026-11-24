@@ -1235,6 +1235,13 @@ export async function startPhoneHome(
         case "POST panel-runbook-off":
           result = await panels.runbookOff();
           break;
+        // The app's own Automation panel, which shows on the phone while a rule is saved.
+        case "POST panel-automation-on":
+          result = await panels.automationOn();
+          break;
+        case "POST panel-automation-off":
+          result = await panels.automationOff();
+          break;
         case "POST panel-write":
           result = await panels.write(41);
           break;

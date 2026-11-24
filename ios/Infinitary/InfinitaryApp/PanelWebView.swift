@@ -38,6 +38,8 @@ import SwiftUI
     var onPoint: ((PhoneJSON) -> Bool)?
     private let session: ReadOnlySession
     private let library: (String) async throws(PhonePanelFailure) -> PhonePanelLibrary
+    /// One of the app's own panels' files by id and version, kept on the device (`PhonePanelsModel.appFiles`).
+    private let appFiles: (String, String) async throws(PhonePanelFailure) -> PhonePanelFiles
     private let mount = (0..<16).map { _ in String("0123456789abcdef".randomElement()!) }.joined()
     private var view: WKWebView?
     /// INF-1208's direction C: a field in the page holds the software keyboard, so a foldable's pages bring the panel
@@ -58,8 +60,10 @@ import SwiftUI
     private var reloaded = false
 
     init(panel: PhonePanel, card: PhonePanelCardEntry? = nil, session: ReadOnlySession, collapsed: Bool,
+         appFiles: @escaping (String, String) async throws(PhonePanelFailure) -> PhonePanelFiles,
          library: @escaping (String) async throws(PhonePanelFailure) -> PhonePanelLibrary) {
-        self.panel = panel; self.card = card; self.session = session; self.collapsed = collapsed; self.library = library
+        self.panel = panel; self.card = card; self.session = session; self.collapsed = collapsed
+        self.appFiles = appFiles; self.library = library
     }
 
     /// The panel's one view: made the first time it is asked for, then the same view.
@@ -102,13 +106,16 @@ import SwiftUI
             guard let self else { return }
             do throws(PhonePanelFailure) {
                 guard let version = panel.frame?.version else { throw .notServed }
-                let answer: PhoneJSON
-                do {
-                    answer = try await session.panelAsk(.pluginsFiles, [.object([
-                        "source": .string(panel.filesSource), "id": .string(panel.id), "version": .string(version),
-                    ])])
-                } catch { throw .unreadable }
-                let files = try PhonePanelFiles.read(answer)
+                let files: PhonePanelFiles
+                if panel.isApp { files = try await appFiles(panel.id, version) } else {
+                    let answer: PhoneJSON
+                    do {
+                        answer = try await session.panelAsk(.pluginsFiles, [.object([
+                            "source": .string(panel.filesSource), "id": .string(panel.id), "version": .string(version),
+                        ])])
+                    } catch { throw .unreadable }
+                    files = try PhonePanelFiles.read(answer)
+                }
                 let library = try await self.library(files.builtFor)
                 guard !Task.isCancelled else { return }
                 assets?.serve(library: library.files, files: files.files)
@@ -260,7 +267,7 @@ import SwiftUI
     /// The channels the parent page may ask on: what the panel reads and does, never the files or the list, which
     /// native code asks for itself.
     private static let pageAsks = Set(PhonePanelRequest.allCases).subtracting([
-        .pluginsFiles, .pluginsLibrary, .pluginsRetry, .pluginsPersonalList, .shellPreferences,
+        .pluginsFiles, .pluginsLibrary, .pluginsRetry, .pluginsPersonalList, .shellPreferences, .pluginsAppPanels, .pluginsAppPanelFiles,
     ])
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage,

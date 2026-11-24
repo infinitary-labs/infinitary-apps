@@ -26,6 +26,7 @@ import {
 } from "@shared/ipc";
 import { presetKeymap, type SavedKeymap } from "@shared/keymap";
 import { OWN_WINDOW_WORDS, type OwnWindowAsked } from "@shared/ownWindow";
+import type { AppPanels } from "@shared/personal/appPanels";
 import type { PersonalSnapshot } from "@shared/personal/manifest";
 import {
   phonePushCardSchema,
@@ -69,6 +70,8 @@ import { catalogRefreshesSettled } from "./pi/modelRuntime";
 import { SIGN_IN_RETURN_WORDS } from "./signInReturns";
 import { forkChildProcess } from "./sql/forkChildProcess";
 import type { AskRecord } from "./storage/askStore";
+import type { KeptJobs } from "./tasks/keptJobs";
+import { keptRoot } from "./tasks/taskStops";
 
 // This file chains real git and is not about the utility-QoS clamp, so what
 // the product spawns runs at this run's own priority (tests/helpers/unclampedQos.ts).
@@ -498,6 +501,147 @@ describe("the connection serves the core to paired devices", () => {
 
     // Removed, as each test here leaves the first mate with no device.
     rmSync(join(core.paths.personalWorkspaceDir, "open-items"), { recursive: true, force: true });
+    await core.dispatch("inf:devices:remove", [grant.deviceId]);
+    expect(await phone.closed).toBe(CONNECTION_CLOSE.unpaired);
+  });
+
+  // The captain, on INF-6295: "we should show the built-in panels as custom
+  // panels in the panels tab as well, unless there's a dedicated native tab
+  // for it". The computer names every app panel it shows; the phone leaves
+  // out the ones it draws as tabs of its own.
+  it("serves a phone the app's own panels it shows, their files by version, and a push when one comes or goes", async () => {
+    const { link } = await core.dispatch("inf:devices:invite", [{ kind: "mac", at }]);
+    await connection.settled();
+    const grant = await claimLink(link, { ...AT_FIRST_LAUNCH, name: "iPhone" });
+    const phone = await connectClient(grant, { system: { system: "ios" }, appVersion: "1.4.0" });
+    expect(phone.welcome.changes).toContain("app-panels-on-the-phone");
+    const home = (await core.dispatch("inf:app:healthcheck", [])).version;
+    const ids = (answer: AppPanels) => answer.panels.map((panel) => panel.id);
+    // The next list pushed from now on that the test accepts: `phone.push`
+    // also matches a push already received.
+    const nextList = (accept: (shown: string[]) => boolean) => {
+      const from = phone.pushes.length;
+      return phone
+        .push(
+          (push) =>
+            phone.pushes.indexOf(push) >= from &&
+            push.channel === "inf:plugins:app-panels" &&
+            accept(ids(push.payload as AppPanels)),
+        )
+        .then((push) => push.payload as AppPanels);
+    };
+
+    // With no rule saved, Automation's gate is shut, and a panel this build
+    // made no files for is never offered.
+    const before = await phone.invoke("inf:plugins:app-panels", []);
+    expect(ids(before)).toEqual(["activity"]);
+
+    // A rule saved opens Automation's gate, and the phone hears of it.
+    const opened = nextList((shown) => shown.includes("automation"));
+    const rule = await core.dispatch("inf:automation:save", [
+      {
+        name: "Morning summary",
+        spec: { kind: "daily", hour: 8, minute: 0, timeZone: "America/Los_Angeles" },
+        prompt: "Summarize what changed in the project since yesterday.",
+        enable: true,
+      },
+    ]);
+    const shown = await opened;
+    const automation = shown.panels.find((panel) => panel.id === "automation");
+    expect(automation).toMatchObject({ title: "Automation", ownPresence: true });
+    expect(await phone.invoke("inf:plugins:app-panels", [])).toEqual(shown);
+
+    // Its files, by the version listed, each with the pin the build gave it.
+    const lib = frameLib as { dir: string; pins: Record<string, string> };
+    const version = automation?.frame.version as string;
+    const files = await phone.invoke("inf:plugins:app-panel-files", [
+      { id: "automation", version },
+    ]);
+    expect(files?.builtFor).toBe(home);
+    expect(files?.files.map((file) => file.path)).toEqual(["cards.mjs", "panel.mjs"]);
+    for (const file of files?.files ?? []) {
+      const at = `builtin/automation/${file.path}`;
+      expect(file.integrity).toBe(lib.pins[at]);
+      expect(file.data).toBe(readFileSync(join(lib.dir, at)).toString("base64"));
+    }
+    // Another version, or a panel not shown, answers nothing.
+    expect(
+      await phone.invoke("inf:plugins:app-panel-files", [
+        { id: "automation", version: "0000000000000000" },
+      ]),
+    ).toBeNull();
+    expect(
+      await phone.invoke("inf:plugins:app-panel-files", [{ id: "knowledge", version }]),
+    ).toBeNull();
+    // A file that is no longer the one the build made is never served.
+    const panel = join(lib.dir, "builtin", "automation", "panel.mjs");
+    const built = readFileSync(panel);
+    writeFileSync(panel, "fetch('https://example.com');\n");
+    await expect(
+      phone.invoke("inf:plugins:app-panel-files", [{ id: "automation", version }]),
+    ).rejects.toThrow(/not the file this build made/);
+    writeFileSync(panel, built);
+
+    // The rule gone shuts the gate again.
+    const shut = nextList((shown) => !shown.includes("automation"));
+    await core.dispatch("inf:automation:delete", [rule.id]);
+    expect(ids(await shut)).toEqual(["activity"]);
+
+    // A job a close kept running opens it too, though the close records the
+    // job after its own events: the record's change is heard.
+    const kept = (core.services.placed as unknown as { keptJobs: KeptJobs }).keptJobs;
+    const folder = join(keptRoot(core.services.paths.crewmatesDir), "task-9-s1");
+    const keptOpens = nextList((shown) => shown.includes("automation"));
+    kept.record(
+      [
+        {
+          id: "s1",
+          label: "Nightly backup of the notes folder",
+          check: "true",
+          remove: "true",
+          folder,
+          account: "captain",
+        },
+      ],
+      { computer: null, task: "task-9", key: "INF-9" },
+    );
+    await keptOpens;
+    const keptShuts = nextList((shown) => !shown.includes("automation"));
+    kept.forget(null, folder);
+    await keptShuts;
+
+    // The Batches panel shows while its runbook is on, with its own files.
+    const batchesOn = nextList((shown) => shown.includes("batches-panel"));
+    await core.dispatch("inf:settings:runbooks:set", ["batches", true]);
+    const batches = (await batchesOn).panels.find((panel) => panel.id === "batches-panel");
+    expect(batches?.title).toBe("Batches");
+    const batchFiles = await phone.invoke("inf:plugins:app-panel-files", [
+      { id: "batches-panel", version: batches?.frame.version as string },
+    ]);
+    expect(batchFiles?.files.map((file) => file.path)).toEqual(["panel.mjs"]);
+    const batchesOff = nextList((shown) => !shown.includes("batches-panel"));
+    await core.dispatch("inf:settings:runbooks:set", ["batches", false]);
+    await batchesOff;
+
+    // Knowledge shows once some is kept: a write's own event is heard.
+    const knowledgeOn = nextList((shown) => shown.includes("knowledge"));
+    const { direction } = await core.dispatch("inf:knowledge:direction:set", [
+      { op: "add", text: "Keep invoices in euros.", scope: "captain", reason: "test" },
+    ]);
+    const knowledge = (await knowledgeOn).panels.find((panel) => panel.id === "knowledge");
+    expect(knowledge?.title).toBe("Knowledge");
+    const knowledgeFiles = await phone.invoke("inf:plugins:app-panel-files", [
+      { id: "knowledge", version: knowledge?.frame.version as string },
+    ]);
+    expect(knowledgeFiles?.files.map((file) => file.path)).toEqual(["panel.mjs"]);
+    for (const file of knowledgeFiles?.files ?? [])
+      expect(file.integrity).toBe(lib.pins[`builtin/knowledge/${file.path}`]);
+    const knowledgeOff = nextList((shown) => !shown.includes("knowledge"));
+    await core.dispatch("inf:knowledge:direction:set", [
+      { op: "retire", id: direction.id, expectedRevision: direction.revision, reason: "test" },
+    ]);
+    await knowledgeOff;
+
     await core.dispatch("inf:devices:remove", [grant.deviceId]);
     expect(await phone.closed).toBe(CONNECTION_CLOSE.unpaired);
   });
@@ -1696,7 +1840,7 @@ describe("a phone's cards reach it sealed through the push relay", () => {
 
 /**
  * A frame realm library as the build lays it out (scripts/frame-lib.ts):
- * the boot module, the host modules, a shared chunk they import, and one of
+ * the boot module, the host modules, a shared chunk they import, and some of
  * the app's own panels under `builtin/`, each pinned by its SHA-256.
  */
 function panelLibraryOnDisk(dir: string): { dir: string; pins: Record<string, string> } {
@@ -1708,6 +1852,13 @@ function panelLibraryOnDisk(dir: string): { dir: string; pins: Record<string, st
     "chunks/react-e5f6a7b8.mjs": "export const createElement = () => null;\n",
     "chunks/runtime-a1b2c3d4.mjs": "export function bootPanel() {}\n",
     "builtin/activity/panel.mjs":
+      'import React from "../../react.mjs";\nexport default () => null;\n',
+    "builtin/automation/panel.mjs":
+      'import React from "../../react.mjs";\nexport default () => null;\n',
+    "builtin/automation/cards.mjs": "export default {};\n",
+    "builtin/batches-panel/panel.mjs":
+      'import React from "../../react.mjs";\nexport default () => null;\n',
+    "builtin/knowledge/panel.mjs":
       'import React from "../../react.mjs";\nexport default () => null;\n',
   };
   const pins: Record<string, string> = {};

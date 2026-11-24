@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "app-panels-on-the-phone",
+      "kind": "feature",
+      "area": "devices",
+      "title": "Batches, Knowledge and Automation on your iPhone and iPad",
+      "body": "The Panels tab on your iPhone and iPad now shows the app's own panels your computer shows: Batches while batched pull requests are on, Knowledge once your first mate keeps some, and Automation once a rule is saved. Tasks and Activity keep their own tabs.",
+      "picture": {
+        "dark": "app-panels-on-the-phone-dark.webp",
+        "light": "app-panels-on-the-phone-light.webp",
+        "alt": "The Panels tab on an iPhone showing the Automation panel with a saved rule, Morning summary, and its next run time."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

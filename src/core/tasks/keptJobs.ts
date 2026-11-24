@@ -39,6 +39,8 @@ export type KeptJob = z.infer<typeof keptJobSchema>;
 const keptJobsFileSchema = z.object({ jobs: z.array(keptJobSchema) });
 
 export class KeptJobs {
+  private readonly listeners = new Set<() => void>();
+
   constructor(
     private readonly file: string,
     private readonly now: () => number = Date.now,
@@ -122,6 +124,12 @@ export class KeptJobs {
     if (kept.length !== jobs.length) this.write(kept);
   }
 
+  /** Hears each write of the record, after it lands; returns the stop function. */
+  onChange(listener: () => void): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
   private write(jobs: KeptJob[]): void {
     const dir = join(this.file, "..");
     mkdirSync(dir, { recursive: true, mode: 0o700 });
@@ -129,6 +137,7 @@ export class KeptJobs {
     writeFileSync(next, `${JSON.stringify({ jobs })}\n`, { mode: 0o600 });
     chmodSync(next, 0o600);
     renameSync(next, this.file);
+    for (const listener of this.listeners) listener();
   }
 }
 

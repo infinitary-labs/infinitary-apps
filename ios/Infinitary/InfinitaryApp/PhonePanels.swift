@@ -29,9 +29,13 @@ import SwiftUI
 
     private let session: ReadOnlySession
     private let context: PhoneMessageContext
-    private var all: [PhonePanel] = []
+    /// The captain's panels and the app's own the computer shows (INF-6295 piece A), as the column and the cards read them.
+    private var all: [PhonePanel] { personal + app }
+    private var personal: [PhonePanel] = []
+    private var app: [PhonePanel] = []
     private var layout = PhonePanelLayout()
     private var libraries: [String: Task<PhonePanelLibrary, Error>] = [:]
+    private var appPanelFiles: [String: Task<PhonePanelFiles, Error>] = [:]
     private let foldsKey: String
 
     init(session: ReadOnlySession, context: PhoneMessageContext) {
@@ -60,29 +64,43 @@ import SwiftUI
     }
 
     private func read() async {
-        guard session.servesPanels else { apply(panels: [], layout: PhonePanelLayout()); return }
+        guard session.servesPanels else { apply(panels: [], app: [], layout: PhonePanelLayout()); return }
         async let list = try? session.panelAsk(.pluginsPersonalList, [])
         async let preferences = try? session.panelAsk(.shellPreferences, [])
-        let (snapshot, prefs) = await (list, preferences)
-        apply(panels: snapshot.map(PhonePanelList.decode) ?? all, layout: prefs.map(PhonePanelLayout.of(preferences:)) ?? layout)
+        // An older computer serves only the captain's panels: none of the app's own.
+        async let appList = session.servesAppPanels ? try? session.panelAsk(.pluginsAppPanels, []) : PhoneJSON.null
+        let (snapshot, prefs, shownApp) = await (list, preferences, appList)
+        let next = snapshot.map(PhonePanelList.decode) ?? personal
+        apply(panels: next, app: shownApp.map { PhoneAppPanelList.decode($0, besides: next) } ?? app,
+              layout: prefs.map(PhonePanelLayout.of(preferences:)) ?? layout)
     }
 
     private func heard(_ channel: String, _ payload: PhoneJSON) {
         switch channel {
-        case "inf:plugins:personal": apply(panels: PhonePanelList.decode(payload), layout: layout)
-        case "inf:shell:preferences": apply(panels: all, layout: PhonePanelLayout.of(preferences: payload))
+        case "inf:plugins:personal":
+            let next = PhonePanelList.decode(payload)
+            apply(panels: next, app: app.filter { panel in !next.contains { $0.id == panel.id } }, layout: layout)
+            // A panel of the captain's that leaves gives an app panel of its id back: the computer's list says it.
+            if session.servesAppPanels { Task { await readApp() } }
+        case "inf:plugins:app-panels": apply(panels: personal, app: PhoneAppPanelList.decode(payload, besides: personal), layout: layout)
+        case "inf:shell:preferences": apply(panels: personal, app: app, layout: PhonePanelLayout.of(preferences: payload))
         default: break
         }
         for host in pages { host.push(channel, payload) }
+    }
+
+    private func readApp() async {
+        guard let answer = try? await session.panelAsk(.pluginsAppPanels, []) else { return }
+        apply(panels: personal, app: PhoneAppPanelList.decode(answer, besides: personal), layout: layout)
     }
 
     /// Every page the phone runs: each panel's, and the page of the card Home shows, which reads and keeps a store as
     /// its panel does, so both hear the computer's pushes and read again after a reload (docs/ios.md, "Panels").
     private var pages: [PanelWebHost] { Array(hosts.values) + Array(cardHosts.values) }
 
-    private func apply(panels next: [PhonePanel], layout: PhonePanelLayout) {
-        all = next; self.layout = layout
-        let shown = PhonePanelOrder.shown(next, layout: layout)
+    private func apply(panels next: [PhonePanel], app nextApp: [PhonePanel], layout: PhonePanelLayout) {
+        personal = next; app = nextApp; self.layout = layout
+        let shown = PhonePanelOrder.shown(all, layout: layout)
         for panel in shown {
             if let host = hosts[panel.id] { host.update(panel) }
             else { hosts[panel.id] = makeHost(panel, card: nil) }
@@ -91,13 +109,17 @@ import SwiftUI
         for (id, host) in hosts where !kept.contains(id) { host.close(); hosts[id] = nil }
         panels = shown
         // A panel that left the computer's list, or whose code is not built, takes its cards with it (`closeCards`).
-        cards.keepOnly(panels: Set(next.filter { $0.frame != nil }.map(\.id)))
+        cards.keepOnly(panels: Set(all.filter { $0.frame != nil }.map(\.id)))
         syncCardPages()
         tellStates()
     }
 
     private func makeHost(_ panel: PhonePanel, card: PhonePanelCardEntry?) -> PanelWebHost {
-        let host = PanelWebHost(panel: panel, card: card, session: session, collapsed: card == nil && folded.contains(panel.id)) { [weak self] version throws(PhonePanelFailure) in
+        let host = PanelWebHost(panel: panel, card: card, session: session, collapsed: card == nil && folded.contains(panel.id),
+                                appFiles: { [weak self] id, version throws(PhonePanelFailure) in
+            guard let self else { throw .unreadable }
+            return try await self.appFiles(id, version)
+        }) { [weak self] version throws(PhonePanelFailure) in
             guard let self else { throw .unreadable }
             return try await self.library(version)
         }
@@ -225,6 +247,29 @@ import SwiftUI
         }
     }
 
+    /// One of the app's own panels' files, read once a version and kept on this device as the library is: a panel's page
+    /// mounts again each time its card shows and after each stop, and asks no new bytes while its version stands.
+    private func appFiles(_ id: String, _ version: String) async throws(PhonePanelFailure) -> PhonePanelFiles {
+        let key = "\(id) \(version)"
+        let task = appPanelFiles[key] ?? Task { [session] in
+            let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            let folder = PhonePanelFiles.folder(in: caches, app: id, version: version)
+            if let kept = PhonePanelFiles.load(from: folder) { return kept }
+            let answer: PhoneJSON
+            do { answer = try await session.panelAsk(.pluginsAppPanelFiles, [.object(["id": .string(id), "version": .string(version)])]) }
+            catch { throw PhonePanelFailure.unreadable }
+            let files = try PhonePanelFiles.readPinned(answer)
+            try? files.save(in: folder)
+            return files
+        }
+        appPanelFiles[key] = task
+        do { return try await task.value }
+        catch {
+            appPanelFiles[key] = nil
+            throw error as? PhonePanelFailure ?? .unreadable
+        }
+    }
+
     func toggleFold(_ id: String) {
         if folded.contains(id) { folded.remove(id) } else { folded.insert(id) }
         UserDefaults.standard.set(folded.sorted(), forKey: foldsKey)
@@ -294,7 +339,9 @@ private struct PhonePanelSection: View {
                 Button(action: fold) {
                     HStack(alignment: .center, spacing: PhoneTheme.space2) {
                         Text(panel.title.uppercased()).font(PhoneFont.micro).tracking(PhoneFont.labelTracking).foregroundStyle(PhoneTheme.secondary).lineLimit(1)
-                        Text(panel.owner).font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted).lineLimit(1)
+                        if let owner = panel.owner {
+                            Text(owner).font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted).lineLimit(1)
+                        }
                         Spacer(minLength: 0)
                     }
                     .frame(minHeight: 44).contentShape(Rectangle())

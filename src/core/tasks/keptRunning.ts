@@ -73,6 +73,11 @@ export class KeptRunning {
     return { jobs: this.options.jobs.list().map((job) => this.view(job)) };
   }
 
+  /** Hears each change to the record of kept jobs (`KeptJobs.onChange`). */
+  onChange(listener: () => void): () => void {
+    return this.options.jobs.onChange(listener);
+  }
+
   async check(id: string): Promise<KeptJobView> {
     const job = this.find(id);
     const ran = await this.run(job, "check");

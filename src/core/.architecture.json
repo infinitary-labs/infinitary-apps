@@ -388,6 +388,10 @@
     {
       "name": "package registry",
       "about": "Where a build of the home's source gets its packages"
+    },
+    {
+      "name": "company collector",
+      "about": "Where a company's Claude Code setup gathers its usage reports"
     }
   ],
   "links": [
@@ -1625,6 +1629,11 @@
       "from": "claude",
       "to": "Claude client",
       "why": "runs Claude sessions and sign-ins"
+    },
+    {
+      "from": "claude",
+      "to": "company collector",
+      "why": "passes Claude's usage reports on"
     },
     {
       "from": "codex",

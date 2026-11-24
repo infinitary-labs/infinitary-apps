@@ -667,9 +667,10 @@ export class CardEmits {
     }
     const skip = new Set([resolved, input.asksAgain?.card].filter((id) => id !== undefined));
     const store = this.host.cardStore;
-    const earlier = [...scope].flatMap((id) =>
-      store.closedByCaptain(id).flatMap((card) => store.past(card.id) ?? []),
-    );
+    const earlier = () =>
+      [...scope].flatMap((id) =>
+        store.closedByCaptain(id).flatMap((card) => store.past(card.id) ?? []),
+      );
     const refusal = answeredQuestionRefusal(input.body, earlier, skip);
     if (refusal) throw new Error(refusal);
   }

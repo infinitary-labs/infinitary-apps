@@ -15,16 +15,17 @@ export const ANSWERED_QUESTION_WORDS = "already answered this question";
  * the earlier card with a choice that is not a decline or a put-off: only
  * then does their answer settle it. The refusal shows the earlier question,
  * its options, the answer and when, because the author judges whether the
- * question is really the same, and `asks_again` sends it anyway.
+ * question is really the same, and `asks_again` sends it anyway. The
+ * earlier cards are read only for a body that asks a choice question.
  */
 export function answeredQuestionRefusal(
   body: string,
-  earlier: readonly PastCard[],
+  earlier: () => readonly PastCard[],
   skip: ReadonlySet<string>,
 ): string | undefined {
   const asked = cardChoiceQuestions(body).filter((question) => question.values.length > 0);
   if (asked.length === 0) return undefined;
-  for (const past of earlier) {
+  for (const past of earlier()) {
     if (skip.has(past.id) || !settledBy(past)) continue;
     const previous = cardChoiceQuestions(past.body);
     for (const question of asked) {

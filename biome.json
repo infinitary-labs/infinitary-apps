@@ -350,6 +350,7 @@
         "!src/core/core.contract.test.ts",
         "!src/core/core.projects.test.ts",
         "!src/core/core.settings.test.ts",
+        "!src/core/core.settings.trail.test.ts",
         "!src/core/core.settingsParity.test.ts",
         "!src/core/core.wiring.test.ts",
         "!src/core/core.feedback.test.ts",

@@ -149,7 +149,7 @@ A step's `personalized` event carries its run's id, and a withdrawal carries `wi
 The run is the generic `feedRunSchema` (`src/shared/events.ts`), read through `feedRunOf`: a copy's count of what it sent so far to a Mac being set up rides the same seam as a `device_setup` run (`docs/devices.md`, "How far the copy has gone"), and so ends a captain's run as any other line does.
 `changesFeed` (`src/shared/feed.ts`) makes `feed.recent` read again on a rewrite and on a withdrawal, so Activity draws a run as one line with no change to the panel or to `PanelFeedLine`.
 A run lives in memory: a restart ends it, and the record and Activity keep what it settled.
-`src/core/core.settings.test.ts` ("settles a run of the captain's steps on one setting into one line and one operation", "starts a new run once the captain's setting has rested for the wait") and `tests/e2e/activity-runs.spec.ts` hold it.
+`src/core/core.settings.trail.test.ts` ("settles a run of the captain's steps on one setting into one line and one operation", "starts a new run once the captain's setting has rested for the wait") and `tests/e2e/activity-runs.spec.ts` hold it.
 
 ### The fixed-context budget
 

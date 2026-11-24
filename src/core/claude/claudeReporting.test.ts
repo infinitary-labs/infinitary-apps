@@ -14,7 +14,7 @@ import {
 
 /**
  * Reading a company's Claude Code reporting setup from where Claude Code's
- * guide puts it for each developer (INF-6587's plan, piece 1). The keys are
+ * guide puts it for each developer. The keys are
  * the guide's own example setup.
  */
 
@@ -133,7 +133,7 @@ describe("a company's Claude Code reporting setup", () => {
 });
 
 describe("a setup in the environment the app was started from", () => {
-  // INF-6616's review: what the receiver cannot pass on stays the client's to send, as before.
+  // What the receiver cannot pass on stays the client's to send.
   it("is passed on when the receiver can carry all of it", () => {
     expect(receiverStepsAside(GUIDE_SETUP)).toBe(false);
   });
@@ -160,8 +160,7 @@ describe("a setup in the environment the app was started from", () => {
 describe("the setup's header command", () => {
   afterEach(() => resetHeadersHelperForTests());
 
-  // INF-6616's review: one failed run must not leave every batch without the
-  // company's token for the whole refresh period.
+  // The client does not resend a batch its collector refused for a missing token.
   it("runs again soon after a failed run, and keeps a good run for the refresh period", async () => {
     const dir = scratchDir("infinitary-headers-helper-");
     const count = join(dir, "runs");

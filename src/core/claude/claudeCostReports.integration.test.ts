@@ -149,8 +149,7 @@ describe("the approved private same-computer cost receiver", () => {
     }
   });
 
-  // INF-6616's review: a batch past the pricing bound still reaches the
-  // company's collector, since the client never resends a refused one.
+  // The client never resends a refused batch, so a large one must still reach the collector.
   it("passes a batch over the pricing bound on to the company's collector, unpriced", async () => {
     const reports = new ClaudeCostReports();
     const seen: ClaudeCallCost[] = [];

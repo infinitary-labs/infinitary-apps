@@ -52,7 +52,7 @@ describe("local cost reporting respects existing reporting choices", () => {
 });
 
 describe("the host Settings → Usage names", () => {
-  // INF-6587's plan, piece 1: "One line in Settings → Usage names the collector's host when a setup is found".
+  // The line names where Claude work is passed on, and nothing where the receiver steps aside.
   const setup = companyReportingFrom({
     CLAUDE_CODE_ENABLE_TELEMETRY: "1",
     OTEL_METRICS_EXPORTER: "otlp",

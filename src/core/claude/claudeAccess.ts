@@ -26,8 +26,9 @@ import { loginPathCapture } from "../hostEnv";
  * (`ANTHROPIC_CUSTOM_HEADERS`, such as a team id), reach a session as the
  * app's own flag settings (`accessSettings`). The only other part of that
  * file read is a company's usage reporting setup, which the app's receiver
- * passes on (`claudeReporting.ts`); everything else stays out. The headers may also come from the person's
- * login shell, where the settings file's own win, as they do in the client.
+ * passes on (`claudeReporting.ts`); everything else stays out. The headers
+ * may also come from the person's login shell, where the settings file's own
+ * win, as they do in the client.
  */
 
 /** The organization's access, or the person's own, as a fact the row and the store stamp read. */
@@ -50,7 +51,7 @@ export type ClaudeAccessSettings = {
 export type ClaudeAccessRead = {
   /** Present when a token command is set: the client signs in with it, ahead of a subscription. */
   access?: ClaudeAccess;
-  /** The person's own token command and address, for the app's flag settings. */
+  /** The person's own token command, address and gateway headers, for the app's flag settings. */
   settings?: ClaudeAccessSettings;
   /**
    * Who set the address requests go to when no tier sets a token command:
@@ -187,9 +188,9 @@ function accessDigest(source: ClaudeAccessSource, command: string, address: stri
 
 /**
  * The flag settings a session lays over the app's own: the person's token
- * command and address, and nothing else of their settings. The
- * organization's tier ranks above flag settings in the client, so where it
- * sets either key, its own wins.
+ * command, address and gateway headers, and nothing else of their access
+ * settings. The organization's tier ranks above flag settings in the client,
+ * so where it sets any of these, its own wins.
  */
 export function accessFlagSettings(read: ClaudeAccessRead | undefined): ClaudeAccessSettings {
   return read?.settings ?? {};

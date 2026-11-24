@@ -35,10 +35,11 @@ import { ClaudeTranscriptLookup } from "./claudeTranscript";
  * Every Claude session runs the machine's default login, or the token
  * command an organization or the person set up for Claude Code with its
  * address (`claudeAccess.ts`, as flag settings), and nothing ambient
- * (`claudeEnvFor`), nothing else of the person's own Claude setup but a
- * company's usage reporting, which the app's receiver passes on
- * (`claudeReporting.ts`) (`settingSources: []`, `strictMcpConfig: true`, and the client's auto
- * memory off: `CLAUDE_SESSION_ENV`), no built-in tool unless the spec asks
+ * (`claudeEnvFor`), nothing else of the person's own Claude setup
+ * (`settingSources: []`, `strictMcpConfig: true`, and the client's auto
+ * memory off: `CLAUDE_SESSION_ENV`) but a gateway's custom headers beside
+ * the address and a company's usage reporting, which the app's receiver
+ * passes on (`claudeReporting.ts`), no built-in tool unless the spec asks
  * for the coding set - which also brings its working copy's own instruction
  * file and skills (`claudeProjectResources.ts`) and turns the client's
  * commit and pull request attribution off (`CLAUDE_CODING_SETTINGS`) - and

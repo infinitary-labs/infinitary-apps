@@ -93,7 +93,7 @@ export type ClaudeSessionDeps = {
   /** The SDK's query; tests script one. */
   query?: ClaudeQueryFactory;
   /**
-   * The person's own Claude Code token command and address, read as each
+   * The person's own Claude Code token command, address and gateway headers, read as each
    * client starts and handed to it as the app's flag settings
    * (`claudeAccess.ts`). Production reads them with the client library's
    * settings reader; tests that leave it out hand the client none.

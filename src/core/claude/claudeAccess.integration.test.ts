@@ -141,9 +141,7 @@ describe("a Claude crewmate on the gateway in the person's Claude settings", () 
     );
   });
 
-  // INF-6617's card, the captain's choice "File the two small additions": a
-  // gateway's custom header (ANTHROPIC_CUSTOM_HEADERS, such as a team id) set
-  // for Claude Code reaches the gateway from Infinitary's sessions too.
+  // The header from the settings file, from the login shell, and the settings file winning over the shell.
   it.each([
     { from: "the person's settings file", shell: undefined, settings: "X-Team-Id: platform" },
     { from: "the login shell", shell: "X-Team-Id: platform", settings: undefined },

@@ -40,9 +40,8 @@ vi.setConfig({ testTimeout: 30_000 });
 /**
  * A company's Claude Code reporting setup in the person's own settings file
  * reaches the company's collector through Infinitary, never from Claude's
- * client directly (INF-6587's plan, piece 1: "Claude's client reports only
- * to Infinitary's local receiver. Infinitary passes Claude's own records on
- * unchanged to the company's Claude Code setup").
+ * client directly: the collector gets the client's own batches unchanged,
+ * as a terminal session's client would have sent them.
  *
  * The client is the real one, boxed by the e2e stub with its config in a
  * throwaway HOME and its model calls at a local stand-in of the Anthropic

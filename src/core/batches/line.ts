@@ -180,19 +180,27 @@ export function batchStatus(place: Standing): BatchStatus {
 export function enqueue(record: BatchRecord, approved: BatchChange): BatchRecord {
   // The held version an approval verified a declared fix on goes with its repair as it enters
   // the line, before any combine, so a version approved in its place is carried from it too.
-  const { heldBase, ...change } = approved;
-  const repair = declarationOf(record, change);
+  // It stays on the approved version as well: once that declaration is gone, as when another
+  // task's repair closes or declares again, the version is still carried from it, never whole.
+  const { heldBase } = approved;
+  const repair = declarationOf(record, approved);
   const bound =
-    change.fix && heldBase && repair && !record.fixBases?.[repair]
+    approved.fix && heldBase && repair && !record.fixBases?.[repair]
       ? { ...record, fixBases: { ...record.fixBases, [repair]: heldBase } }
       : record;
-  if (standing(bound, change.taskId, change.head)?.state === "waiting")
-    return change.fix ? markFix(bound, change.taskId) : bound;
-  const without = withdraw(bound, change.taskId);
+  if (standing(bound, approved.taskId, approved.head)?.state === "waiting") {
+    const marked = approved.fix ? markFix(bound, approved.taskId) : bound;
+    const based = (entry: BatchChange) =>
+      entry.taskId === approved.taskId && entry.head === approved.head && !entry.heldBase
+        ? { ...entry, heldBase }
+        : entry;
+    return heldBase ? { ...marked, line: marked.line.map(based) } : marked;
+  }
+  const without = withdraw(bound, approved.taskId);
   return {
     ...without,
-    line: [...without.line, change].sort((a, b) => a.at - b.at),
-    leftOut: without.leftOut.filter((entry) => entry.taskId !== change.taskId),
+    line: [...without.line, approved].sort((a, b) => a.at - b.at),
+    leftOut: without.leftOut.filter((entry) => entry.taskId !== approved.taskId),
   };
 }
 

@@ -16,6 +16,7 @@ import {
   carried,
   clashesEnded,
   combined,
+  declared,
   enqueue,
   finishedWithin,
   fixWaits,
@@ -362,6 +363,29 @@ describe("a held batch", () => {
     );
     expect(fixed.open?.hold).toBeUndefined();
     expect(fixed.line).toEqual([]);
+  });
+
+  // Intent: upstream issue #55's second review, a bug being fixed: the held version an
+  // approval verified a declared fix on was kept with its repair's declaration alone, so
+  // another task's delivery of that fix lost it when the repair's task closed.
+  it("keeps the held version an approval verified with the approved version, in line already or not", () => {
+    const held = hold(openBatch(), failed).record;
+    const delivered = { ...LEGEND, taskId: "t-takeover", at: 4_000 };
+    const approved = { ...delivered, fix: true as const, heldBase: failed.head };
+    const declaredAt = (record: BatchRecord) => declared(record, "t-repair", delivered.head);
+    for (const record of [
+      enqueue(declaredAt(held), approved),
+      // Approved as an ordinary change before the repair declared its commit, then again.
+      enqueue(declaredAt(enqueue(held, delivered)), approved),
+    ]) {
+      expect(record.line).toEqual([approved]);
+      expect(record.fixBases).toEqual({ "t-repair": failed.head });
+      const closed = pruned(record, (taskId) => taskId !== "t-repair");
+      expect(closed.fixes).toBeUndefined();
+      expect(closed.fixBases).toBeUndefined();
+      expect(closed.line).toEqual([{ ...delivered, heldBase: failed.head }]);
+      expect(carried(closed, "line").at(-1)).toEqual({ ...delivered, heldBase: failed.head });
+    }
   });
 
   it("ends when its checks run again", () => {

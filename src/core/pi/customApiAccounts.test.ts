@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Message } from "@earendil-works/pi-ai";
+import { getBuiltinModels, getBuiltinProviders } from "@earendil-works/pi-ai/providers/all";
 import type { CustomApiInput } from "@shared/customApi";
 import { Type } from "typebox";
 import { expect, it } from "vitest";
@@ -1172,6 +1173,129 @@ it.each(["openai-completions", "openai-responses"] as const)(
     });
   },
 );
+
+// INF-6581's plan, piece 1: a stated name and price win over the catalog, a
+// free model is priced at nothing, and editing them never checks again.
+it("uses a model's stated name and prices, and keeps its saved check when only those change", async () => {
+  const api = await fixture();
+  const world = vault();
+  const draft = world.vault.customPrepare({
+    ...input(api.baseUrl),
+    models: [
+      { id: "gpt-4o", context: 65536, output: 1024, name: "Team GPT", cost: { input: 2 } },
+      { id: "operator-model", context: 65536, output: 1024 },
+    ],
+  });
+  for (const id of ["gpt-4o", "operator-model"])
+    await world.vault.customCheck(draft.draftId ?? "", id);
+  const account = await world.vault.customSave(draft.draftId ?? "", false);
+  const runtime = await world.vault.runtimeFor(account.id);
+  const known = runtime
+    .getModels()
+    .find((model) => model.provider !== account.providerId && model.id === "gpt-4o");
+  if (!known) throw new Error("Missing catalog fixture model");
+  expect(runtime.getModel(account.providerId, "gpt-4o")).toMatchObject({
+    name: "Team GPT",
+    cost: {
+      input: 2,
+      output: known.cost.output,
+      cacheRead: known.cost.cacheRead,
+      cacheWrite: known.cost.cacheWrite,
+    },
+  });
+
+  const sent = api.requests.length;
+  const free = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
+  const edit = world.vault.customPrepare({
+    ...input(api.baseUrl),
+    key: "",
+    replaceAccountId: account.id,
+    models: [
+      { id: "gpt-4o", context: 65536, output: 1024 },
+      { id: "operator-model", context: 65536, output: 1024, name: "Operator", cost: free },
+    ],
+  });
+  expect(edit.models.map((model) => model.checked)).toEqual([true, true]);
+  await world.vault.customSave(edit.draftId ?? "", false);
+  expect(api.requests).toHaveLength(sent);
+  expect(runtime.getModel(account.providerId, "gpt-4o")?.name).toBe(known.name);
+  const operator = runtime.getModel(account.providerId, "operator-model");
+  expect(operator).toMatchObject({ name: "Operator", cost: free });
+  if (!operator) throw new Error("Missing edited model");
+  api.highUsage();
+  const context = {
+    messages: [{ role: "user" as const, content: "Synthetic request", timestamp: Date.now() }],
+  };
+  expect(usageFromMessage(await runtime.completeSimple(operator, context))).toMatchObject({
+    input: 60000,
+    output: 20,
+    cost: 0,
+    costSource: "listed-prices",
+  });
+
+  // Any other Save checks every model again, so Save still retries a check:
+  // one with no change, a new size and a new key.
+  const unchanged = world.vault.customPrepare({
+    ...input(api.baseUrl),
+    key: "",
+    replaceAccountId: account.id,
+    models: [
+      { id: "gpt-4o", context: 65536, output: 1024 },
+      { id: "operator-model", context: 65536, output: 1024, name: "Operator", cost: free },
+    ],
+  });
+  expect(unchanged.models.map((model) => model.checked)).toEqual([false, false]);
+  const resized = world.vault.customPrepare({
+    ...input(api.baseUrl),
+    key: "",
+    replaceAccountId: account.id,
+    models: [
+      { id: "gpt-4o", context: 32768, output: 1024 },
+      { id: "operator-model", context: 65536, output: 1024, name: "Renamed" },
+    ],
+  });
+  expect(resized.models.map((model) => model.checked)).toEqual([false, false]);
+  const rekeyed = world.vault.customPrepare({
+    ...input(api.baseUrl),
+    key: "another-synthetic-secret",
+    replaceAccountId: account.id,
+    models: [
+      { id: "gpt-4o", context: 65536, output: 1024 },
+      { id: "operator-model", context: 65536, output: 1024 },
+    ],
+  });
+  expect(rekeyed.models.map((model) => model.checked)).toEqual([false, false]);
+});
+
+// INF-6581's plan: a catalog match with nothing stated prices as before. Pi's
+// bundled Qwen token-plan entry lists every rate at zero while the model is
+// paid elsewhere, so only a person's own Free may record a turn as costing nothing.
+it("leaves a turn unpriced when the model's catalog match lists every rate at zero", async () => {
+  expect(
+    getBuiltinProviders()
+      .flatMap((provider) => getBuiltinModels(provider))
+      .find((model) => model.id === "qwen3.7-max")?.cost,
+  ).toMatchObject({ input: 0, output: 0, cacheRead: 0, cacheWrite: 0 });
+  const api = await fixture();
+  const world = vault();
+  const draft = world.vault.customPrepare({
+    ...input(api.baseUrl),
+    models: [{ id: "qwen3.7-max", context: 65536, output: 1024 }],
+  });
+  await world.vault.customCheck(draft.draftId ?? "", "qwen3.7-max");
+  const account = await world.vault.customSave(draft.draftId ?? "", false);
+  const runtime = await world.vault.runtimeFor(account.id);
+  const model = runtime.getModel(account.providerId, "qwen3.7-max");
+  if (!model) throw new Error("Missing saved model");
+  api.highUsage();
+  const usage = usageFromMessage(
+    await runtime.completeSimple(model, {
+      messages: [{ role: "user" as const, content: "Synthetic request", timestamp: Date.now() }],
+    }),
+  );
+  expect(usage).toMatchObject({ input: 60000, output: 20 });
+  expect(usage?.cost).toBeUndefined();
+});
 
 it("offers a connection's models once a checked replacement is applied after a restart that left it without a runtime", async () => {
   const api = await fixture();

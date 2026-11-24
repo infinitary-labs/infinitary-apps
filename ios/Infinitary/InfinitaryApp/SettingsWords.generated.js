@@ -13975,13 +13975,27 @@ ${events}` : prompt;
     protocol: customProtocolSchema,
     cacheRetentions: array(customCacheRetentionSchema)
   });
+  const customPriceSchema = number().finite().nonnegative().max(1e6);
+  const customModelCostSchema = object({
+    input: customPriceSchema.optional(),
+    output: customPriceSchema.optional(),
+    cacheRead: customPriceSchema.optional(),
+    cacheWrite: customPriceSchema.optional()
+  });
   const customModelInputSchema = object({
     id: string().min(1).max(256),
     context: number().int().nonnegative(),
     output: number().int().nonnegative(),
     /** Absent on older connections: reasoning off and explicit caching off. */
     reasoningProfile: string().max(512).optional(),
-    cacheRetention: customCacheRetentionSchema.optional()
+    cacheRetention: customCacheRetentionSchema.optional(),
+    /**
+     * What the person calls the model and what it costs, both winning over the
+     * catalog match. Neither is part of a model's check, so editing them never
+     * checks it again.
+     */
+    name: string().trim().min(1).max(128).optional(),
+    cost: customModelCostSchema.optional()
   });
   const customHeaderInputSchema = object({
     name: string().max(128),

@@ -407,6 +407,32 @@
   grid-column: 1 / -1;
 }
 
+.fm-custom-price {
+  grid-column: 2 / 5;
+}
+.fm-custom-price-body {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin-block-start: var(--space-2);
+}
+.fm-custom-price summary {
+  inline-size: fit-content;
+  font-size: var(--text-sm);
+  color: var(--fg-2);
+  cursor: pointer;
+  border-radius: var(--radius-s);
+}
+/* The row sizes its text fields; the switch keeps its own size. */
+.fm-custom-row .fm-custom-price-free input {
+  height: auto;
+}
+.fm-custom-price-name,
+.fm-custom-price-free,
+.fm-custom-price .fm-custom-hint {
+  grid-column: 1 / -1;
+}
+
 .fm-custom-command-approval pre {
   margin: var(--space-2) 0;
   color: var(--fg-1);

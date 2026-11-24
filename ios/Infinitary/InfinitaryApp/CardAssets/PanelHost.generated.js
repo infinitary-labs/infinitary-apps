@@ -10632,6 +10632,249 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Your first mate could not prepare this connection. Try again.`;
   }
+  function accountsCustomApiPriceCacheRead() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `قراءة الذاكرة المؤقتة`;
+      case "de":
+        return `Cache-Lesen`;
+      case "es":
+        return `Lectura de caché`;
+      case "fr":
+        return `Lecture du cache`;
+      case "ja":
+        return `キャッシュ読み取り`;
+      case "ko":
+        return `캐시 읽기`;
+      case "pt-BR":
+        return `Leitura de cache`;
+      case "zh-Hans":
+        return `缓存读取`;
+      case "zh-Hant":
+        return `快取讀取`;
+      case "en-XA":
+        return `[Çáçĥé ŕéáð ~~~~]`;
+      case "ar-XB":
+        return `‮Cache read‬`;
+    }
+    return `Cache read`;
+  }
+  function accountsCustomApiPriceCacheWrite() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `كتابة الذاكرة المؤقتة`;
+      case "de":
+        return `Cache-Schreiben`;
+      case "es":
+        return `Escritura de caché`;
+      case "fr":
+        return `Écriture du cache`;
+      case "ja":
+        return `キャッシュ書き込み`;
+      case "ko":
+        return `캐시 쓰기`;
+      case "pt-BR":
+        return `Gravação de cache`;
+      case "zh-Hans":
+        return `缓存写入`;
+      case "zh-Hant":
+        return `快取寫入`;
+      case "en-XA":
+        return `[Çáçĥé ŵŕîţé ~~~~]`;
+      case "ar-XB":
+        return `‮Cache write‬`;
+    }
+    return `Cache write`;
+  }
+  function accountsCustomApiPriceFree() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `مجاني`;
+      case "de":
+        return `Kostenlos`;
+      case "es":
+        return `Gratis`;
+      case "fr":
+        return `Gratuit`;
+      case "ja":
+        return `無料`;
+      case "ko":
+        return `무료`;
+      case "pt-BR":
+        return `Grátis`;
+      case "zh-Hans":
+        return `免费`;
+      case "zh-Hant":
+        return `免費`;
+      case "en-XA":
+        return `[Ƒŕéé ~~]`;
+      case "ar-XB":
+        return `‮Free‬`;
+    }
+    return `Free`;
+  }
+  function accountsCustomApiPriceHint() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `بالدولار الأمريكي لكل مليون رمز. السعر الذي تكتبه يحل محل السعر الذي يعرفه Infinitary لهذا النموذج، والسعر الفارغ يبقيه أو يبقى غير معروف. تغيير الاسم أو الأسعار لا يعيد فحص النموذج أبدًا.`;
+      case "de":
+        return `US-Dollar pro Million Tokens. Ein eingegebener Preis ersetzt den, den Infinitary für dieses Modell kennt; ein leerer behält ihn oder bleibt unbekannt. Eine Änderung von Name oder Preisen prüft das Modell nie erneut.`;
+      case "es":
+        return `Dólares estadounidenses por millón de tokens. Un precio que escribes sustituye al que Infinitary conoce para este modelo; uno vacío lo conserva o queda desconocido. Cambiar el nombre o los precios nunca vuelve a comprobar el modelo.`;
+      case "fr":
+        return `Dollars américains par million de jetons. Un prix saisi remplace celui qu'Infinitary connaît pour ce modèle ; un prix vide le conserve, ou reste inconnu. Modifier le nom ou les prix ne revérifie jamais le modèle.`;
+      case "ja":
+        return `100 万トークンあたりの米ドル。入力した価格は Infinitary がこのモデルについて知っている価格より優先されます。空欄ならその価格のまま、なければ不明のままです。名前や価格を変えてもモデルを再確認することはありません。`;
+      case "ko":
+        return `100만 토큰당 미국 달러입니다. 입력한 가격은 Infinitary가 이 모델에 대해 알고 있는 가격을 대신합니다. 비워 두면 그 가격을 유지하거나 알 수 없음으로 남습니다. 이름이나 가격을 바꿔도 모델을 다시 확인하지 않습니다.`;
+      case "pt-BR":
+        return `Dólares americanos por milhão de tokens. Um preço digitado substitui o que o Infinitary conhece para este modelo; um em branco o mantém ou fica desconhecido. Mudar o nome ou os preços nunca verifica o modelo de novo.`;
+      case "zh-Hans":
+        return `每百万 token 的美元价格。你输入的价格会取代 Infinitary 已知的该模型价格；留空则保留已知价格，否则仍为未知。修改名称或价格不会重新检查模型。`;
+      case "zh-Hant":
+        return `每百萬 token 的美元價格。你輸入的價格會取代 Infinitary 已知的該模型價格；留空則保留已知價格，否則仍為未知。修改名稱或價格不會重新檢查模型。`;
+      case "en-XA":
+        return `[ÛŠ ðöļļáŕš þéŕ ɱîļļîöñ ţöķéñš. Å þŕîçé ýöû ţýþé ŕéþļáçéš ţĥé öñé Îñƒîñîţáŕý ķñöŵš ƒöŕ ţĥîš ɱöðéļ; á ƀļáñķ öñé ķééþš îţ, öŕ šţáýš ûñķñöŵñ. Çĥáñĝîñĝ ţĥé ñáɱé öŕ þŕîçéš ñéṽéŕ çĥéçķš ţĥé ɱöðéļ áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮US dollars per million tokens. A price you type replaces the one Infinitary knows for this model; a blank one keeps it, or stays unknown. Changing the name or prices never checks the model again.‬`;
+    }
+    return `US dollars per million tokens. A price you type replaces the one Infinitary knows for this model; a blank one keeps it, or stays unknown. Changing the name or prices never checks the model again.`;
+  }
+  function accountsCustomApiPriceInput() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `المدخلات`;
+      case "de":
+        return `Eingabe`;
+      case "es":
+        return `Entrada`;
+      case "fr":
+        return `Entrée`;
+      case "ja":
+        return `入力`;
+      case "ko":
+        return `입력`;
+      case "pt-BR":
+        return `Entrada`;
+      case "zh-Hans":
+        return `输入`;
+      case "zh-Hant":
+        return `輸入`;
+      case "en-XA":
+        return `[Îñþûţ ~~]`;
+      case "ar-XB":
+        return `‮Input‬`;
+    }
+    return `Input`;
+  }
+  function accountsCustomApiPriceInvalid() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `اكتب كل سعر كمبلغ بالدولار الأمريكي، مثل 3 أو 0.25.`;
+      case "de":
+        return `Gib jeden Preis als Betrag in US-Dollar an, etwa 3 oder 0.25.`;
+      case "es":
+        return `Escribe cada precio como una cantidad en dólares estadounidenses, como 3 o 0.25.`;
+      case "fr":
+        return `Saisissez chaque prix comme un montant en dollars américains, par exemple 3 ou 0.25.`;
+      case "ja":
+        return `各価格は 3 や 0.25 のように米ドルの数値で入力してください。`;
+      case "ko":
+        return `각 가격을 3이나 0.25처럼 미국 달러 숫자로 입력하세요.`;
+      case "pt-BR":
+        return `Escreva cada preço como um valor em dólares americanos, como 3 ou 0.25.`;
+      case "zh-Hans":
+        return `请把每个价格写成美元数字，例如 3 或 0.25。`;
+      case "zh-Hant":
+        return `請把每個價格寫成美元數字，例如 3 或 0.25。`;
+      case "en-XA":
+        return `[Ŵŕîţé éáçĥ þŕîçé áš á ñûɱƀéŕ öƒ ÛŠ ðöļļáŕš, šûçĥ áš 3 öŕ 0.25. ~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Write each price as a number of US dollars, such as 3 or 0.25.‬`;
+    }
+    return `Write each price as a number of US dollars, such as 3 or 0.25.`;
+  }
+  function accountsCustomApiPriceName() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الاسم المعروض`;
+      case "de":
+        return `Anzeigename`;
+      case "es":
+        return `Nombre visible`;
+      case "fr":
+        return `Nom affiché`;
+      case "ja":
+        return `表示名`;
+      case "ko":
+        return `표시 이름`;
+      case "pt-BR":
+        return `Nome de exibição`;
+      case "zh-Hans":
+        return `显示名称`;
+      case "zh-Hant":
+        return `顯示名稱`;
+      case "en-XA":
+        return `[Ðîšþļáý ñáɱé ~~~~]`;
+      case "ar-XB":
+        return `‮Display name‬`;
+    }
+    return `Display name`;
+  }
+  function accountsCustomApiPriceOutput() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `المخرجات`;
+      case "de":
+        return `Ausgabe`;
+      case "es":
+        return `Salida`;
+      case "fr":
+        return `Sortie`;
+      case "ja":
+        return `出力`;
+      case "ko":
+        return `출력`;
+      case "pt-BR":
+        return `Saída`;
+      case "zh-Hans":
+        return `输出`;
+      case "zh-Hant":
+        return `輸出`;
+      case "en-XA":
+        return `[Öûţþûţ ~~]`;
+      case "ar-XB":
+        return `‮Output‬`;
+    }
+    return `Output`;
+  }
+  function accountsCustomApiPriceTitle() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الاسم والسعر`;
+      case "de":
+        return `Name und Preis`;
+      case "es":
+        return `Nombre y precio`;
+      case "fr":
+        return `Nom et prix`;
+      case "ja":
+        return `名前と価格`;
+      case "ko":
+        return `이름과 가격`;
+      case "pt-BR":
+        return `Nome e preço`;
+      case "zh-Hans":
+        return `名称和价格`;
+      case "zh-Hant":
+        return `名稱和價格`;
+      case "en-XA":
+        return `[Ñáɱé áñð þŕîçé ~~~~~]`;
+      case "ar-XB":
+        return `‮Name and price‬`;
+    }
+    return `Name and price`;
+  }
   function accountsCustomApiProfilesFailed() {
     switch (currentLanguage()) {
       case "ar":
@@ -106559,6 +106802,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     accountsCustomApiPause,
     accountsCustomApiPausedHint,
     accountsCustomApiPrepareFailed,
+    accountsCustomApiPriceCacheRead,
+    accountsCustomApiPriceCacheWrite,
+    accountsCustomApiPriceFree,
+    accountsCustomApiPriceHint,
+    accountsCustomApiPriceInput,
+    accountsCustomApiPriceInvalid,
+    accountsCustomApiPriceName,
+    accountsCustomApiPriceOutput,
+    accountsCustomApiPriceTitle,
     accountsCustomApiProfilesFailed,
     accountsCustomApiProtocol,
     accountsCustomApiRateLimit,
@@ -109965,6 +110217,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "accountsCustomApiPause": [],
     "accountsCustomApiPausedHint": [],
     "accountsCustomApiPrepareFailed": [],
+    "accountsCustomApiPriceCacheRead": [],
+    "accountsCustomApiPriceCacheWrite": [],
+    "accountsCustomApiPriceFree": [],
+    "accountsCustomApiPriceHint": [],
+    "accountsCustomApiPriceInput": [],
+    "accountsCustomApiPriceInvalid": [],
+    "accountsCustomApiPriceName": [],
+    "accountsCustomApiPriceOutput": [],
+    "accountsCustomApiPriceTitle": [],
     "accountsCustomApiProfilesFailed": [],
     "accountsCustomApiProtocol": [],
     "accountsCustomApiRateLimit": [],
@@ -122169,13 +122430,27 @@ ${FRAME_KEYBOARD_SCRIPT}
     protocol: customProtocolSchema,
     cacheRetentions: array(customCacheRetentionSchema)
   });
+  const customPriceSchema = number().finite().nonnegative().max(1e6);
+  const customModelCostSchema = object({
+    input: customPriceSchema.optional(),
+    output: customPriceSchema.optional(),
+    cacheRead: customPriceSchema.optional(),
+    cacheWrite: customPriceSchema.optional()
+  });
   const customModelInputSchema = object({
     id: string().min(1).max(256),
     context: number().int().nonnegative(),
     output: number().int().nonnegative(),
     /** Absent on older connections: reasoning off and explicit caching off. */
     reasoningProfile: string().max(512).optional(),
-    cacheRetention: customCacheRetentionSchema.optional()
+    cacheRetention: customCacheRetentionSchema.optional(),
+    /**
+     * What the person calls the model and what it costs, both winning over the
+     * catalog match. Neither is part of a model's check, so editing them never
+     * checks it again.
+     */
+    name: string().trim().min(1).max(128).optional(),
+    cost: customModelCostSchema.optional()
   });
   const customHeaderInputSchema = object({
     name: string().max(128),

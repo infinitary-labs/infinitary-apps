@@ -17,14 +17,7 @@ import {
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useShellStore } from "../app/store";
-import {
-  Button,
-  IconButton,
-  Input,
-  type InputProps,
-  StatusDot,
-  type StatusDotTone,
-} from "../design";
+import { Button, IconButton, StatusDot, type StatusDotTone } from "../design";
 import { useModalKeys } from "../design/core/modalKeys";
 import { focusWithRing } from "../design/focus";
 import { useFirstMatePlace } from "../devices/useFirstMatePlace";
@@ -40,6 +33,8 @@ import { HERE } from "@shared/deviceNames";
 import { formatList } from "@shared/i18n/format";
 import * as m from "@shared/i18n/messages.generated";
 import { FirstmateChoice } from "./CustomApiFirstmate";
+import { CustomModelPrice, type PriceText, priceText, typedCost } from "./CustomModelPrice";
+import { FormInput } from "./FormInput";
 
 type RowState = "run" | "ok" | "bad";
 const emptyModel = (): FormModel => ({ id: "", context: 0, output: 0, uiId: crypto.randomUUID() });
@@ -53,6 +48,8 @@ type FormModel = {
   /** A person chose this line's profile, or it was saved: an exact ID match never replaces it. */
   profileChosen?: boolean;
   cacheRetention?: "none" | "short" | "long";
+  name?: string;
+  prices?: PriceText;
 };
 /** A line nobody chose a profile for takes its exact catalog match, or none. */
 function withExactProfile(
@@ -76,7 +73,7 @@ const emptyHeader = () => ({
 type FormHeader = ReturnType<typeof emptyHeader>;
 type Field = "name" | "address" | "http" | "key" | "headers" | "certificates" | "models" | "save";
 type Errors = Partial<Record<Field, string>>;
-type RowError = { text: string; at: "id" | "sizes" | "model" };
+type RowError = { text: string; at: "id" | "sizes" | "model" | "price" };
 /** An approval holds for the address it was given for, and returns with that address. */
 type Approvals = { http?: string; storage?: string; certificates?: string; exception?: string };
 
@@ -107,17 +104,6 @@ const ROW_DOT: Record<RowState | "none", { tone: StatusDotTone; readonly label: 
     },
   },
 };
-function FormInput({ invalid = false, ...rest }: InputProps & { invalid?: boolean }) {
-  return (
-    <Input
-      {...rest}
-      aria-invalid={invalid || undefined}
-      style={{
-        ...(invalid ? { borderColor: "var(--danger)" } : {}),
-      }}
-    />
-  );
-}
 /** The address as typed, the key an approval is remembered under. */
 const addressKey = (value: string) => value.trim().replace(/\/+$/, "");
 /** The host an address names, as the exception's words call it. */
@@ -246,16 +232,20 @@ export function CustomApiForm({
     if (target) focusWithRing(target);
   }, [headers, id]);
   const [models, setModels] = useState<FormModel[]>(
-    original?.models.map(({ id, context, output, checked, reasoningProfile, cacheRetention }) => ({
-      reasoningProfile,
-      profileChosen: true,
-      cacheRetention,
-      id,
-      context,
-      output,
-      uiId: crypto.randomUUID(),
-      ...(checked ? { state: "ok" as const } : {}),
-    })) ?? [],
+    original?.models.map(
+      ({ id, context, output, checked, reasoningProfile, cacheRetention, name, cost }) => ({
+        reasoningProfile,
+        name,
+        prices: priceText(cost),
+        profileChosen: true,
+        cacheRetention,
+        id,
+        context,
+        output,
+        uiId: crypto.randomUUID(),
+        ...(checked ? { state: "ok" as const } : {}),
+      }),
+    ) ?? [],
   );
   // Profiles arrive after the form opens: lines typed meanwhile take their match then.
   useEffect(() => {
@@ -390,6 +380,14 @@ export function CustomApiForm({
       ),
     );
   };
+  /** A name or price is no part of the model's check, so the line keeps its state. */
+  const describeModel = (uiId: string, change: Pick<FormModel, "name" | "prices">) => {
+    edited("models");
+    setRowErrors(({ [uiId]: _, ...rest }) => rest);
+    setModels((current) =>
+      current.map((model) => (model.uiId === uiId ? { ...model, ...change } : model)),
+    );
+  };
   const cancel = () => {
     closed.current = true;
     setKey("");
@@ -431,13 +429,18 @@ export function CustomApiForm({
       storageApproved: protocol === "openai-responses" && approved("storage"),
       models: rows
         .filter((model) => model.id.trim())
-        .map(({ id, context, output, reasoningProfile, cacheRetention }) => ({
-          id: id.trim(),
-          context,
-          output,
-          reasoningProfile,
-          cacheRetention,
-        })),
+        .map(({ id, context, output, reasoningProfile, cacheRetention, name, prices }) => {
+          const cost = typedCost(prices);
+          return {
+            id: id.trim(),
+            context,
+            output,
+            reasoningProfile,
+            cacheRetention,
+            ...(name?.trim() ? { name: name.trim() } : {}),
+            ...(cost && cost !== "invalid" ? { cost } : {}),
+          };
+        }),
       ...(draftId.current ? { sourceDraftId: draftId.current } : {}),
       ...(original?.accountId ? { replaceAccountId: original.accountId } : {}),
     };
@@ -597,6 +600,8 @@ export function CustomApiForm({
             text: m.accountsCustomApiOutputTooLarge(),
             at: "sizes",
           };
+        else if (typedCost(model.prices) === "invalid")
+          rows[model.uiId] = { text: m.accountsCustomApiPriceInvalid(), at: "price" };
         seen.add(modelId);
       }
       if (Object.keys(found).length || Object.keys(rows).length) return stop();
@@ -661,6 +666,11 @@ export function CustomApiForm({
           }
           tested = true;
           const modelId = row.id.trim();
+          // A saved check that still counts, such as after a name or price edit, is not sent again.
+          if (view.models.find((model) => model.id === modelId)?.checked) {
+            mark(row.uiId, "ok");
+            continue;
+          }
           mark(row.uiId, "run");
           setProgress(
             m.accountsCustomApiCheckingModel({
@@ -1401,6 +1411,13 @@ export function CustomApiForm({
                         </p>
                       )}
                     </div>
+                    <CustomModelPrice
+                      idPrefix={`${id}-model-${index}`}
+                      name={model.name ?? ""}
+                      prices={model.prices}
+                      invalid={rowErrors[model.uiId]?.at === "price"}
+                      onChange={(change) => describeModel(model.uiId, change)}
+                    />
                     {rowErrors[model.uiId] && (
                       <p role="alert" className="fm-custom-field-error fm-custom-row-error">
                         {rowErrors[model.uiId]?.text}

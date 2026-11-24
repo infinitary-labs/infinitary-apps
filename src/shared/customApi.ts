@@ -101,6 +101,16 @@ export function customExactProfile(
       profile.protocol === protocol && profile.id.slice(profile.id.indexOf("/") + 1) === id,
   )?.id;
 }
+/** US dollars per million tokens, the catalog's unit; zero is a real price, never unknown. */
+const customPriceSchema = z.number().finite().nonnegative().max(1_000_000);
+/** A price left out takes the catalog match's, else stays unknown. */
+export const customModelCostSchema = z.object({
+  input: customPriceSchema.optional(),
+  output: customPriceSchema.optional(),
+  cacheRead: customPriceSchema.optional(),
+  cacheWrite: customPriceSchema.optional(),
+});
+export type CustomModelCost = z.infer<typeof customModelCostSchema>;
 export const customModelInputSchema = z.object({
   id: z.string().min(1).max(256),
   context: z.number().int().nonnegative(),
@@ -108,6 +118,13 @@ export const customModelInputSchema = z.object({
   /** Absent on older connections: reasoning off and explicit caching off. */
   reasoningProfile: z.string().max(512).optional(),
   cacheRetention: customCacheRetentionSchema.optional(),
+  /**
+   * What the person calls the model and what it costs, both winning over the
+   * catalog match. Neither is part of a model's check, so editing them never
+   * checks it again.
+   */
+  name: z.string().trim().min(1).max(128).optional(),
+  cost: customModelCostSchema.optional(),
 });
 /**
  * An extra header the organisation's server needs on every request. A secret

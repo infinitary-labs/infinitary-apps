@@ -46,6 +46,25 @@ describe("CostLimitStore", () => {
     db.close();
   });
 
+  it("counts a free custom model's turns as priced at nothing, and an unknown zero as unpriced", () => {
+    // INF-6581's plan: a model stated as free reads as priced at $0, so a limit counts it complete.
+    const { db, store, task } = ledger();
+    const usage = new UsageStore(db);
+    task("free");
+    const turn = (costSource?: "listed-prices") =>
+      usage.record({
+        taskId: "free",
+        model: { provider: "fm-custom-0123456789abcdef", id: "local-model" },
+        usage: { input: 9_000, output: 300, cost: 0, ...(costSource ? { costSource } : {}) },
+        at: NOW,
+      });
+    turn("listed-prices");
+    expect(store.familySpend("free")).toEqual({ usd: 0, unpriced: 0 });
+    turn();
+    expect(store.familySpend("free")).toEqual({ usd: 0, unpriced: 1 });
+    db.close();
+  });
+
   it("counts the task families of the last days that reached the limit, never the first mate", () => {
     const { db, store, spend, task } = ledger();
     task("big");

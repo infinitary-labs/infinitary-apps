@@ -15,6 +15,7 @@ import type { CardActionUndone } from "./captainWakes";
 import type { CrewCore } from "./crewCore";
 import { approvableOffer, matchesOfferDestination, taskPull } from "./mergeAuthorization";
 import { publicationRepo } from "./publicationRepo";
+import { readerWroteCard } from "./readerData";
 import type { MergeBehind } from "./settleCardFacts";
 import { mergesInOwnBatch } from "./workShape";
 
@@ -354,6 +355,7 @@ export class MergeCardActions {
           label,
           undone,
           reason,
+          ...(readerWroteCard(this.core.options.tasks, card) ? { readerCard: true as const } : {}),
         },
       },
       "agent",

@@ -704,6 +704,15 @@ A crewmate on another computer asks the same way: its write and its card reach t
 Evidence: `tests/e2e/forge-signin.spec.ts` - a write to another repository, a project kept on this computer creating its GitHub repository through the github.com sign-in, and a task that only answers writing to its own project - each shows the exact call on the card, nothing sent before the captain's key, one request after it, the crewmate hearing the answer, and the same ask on a revised card refused; `tests/e2e/gitlab-delivery.spec.ts` keeps a write to another GitLab project unsent.
 The gateway tests (`src/core/forge/providers/github/gateway.test.ts`, `src/core/forge/providers/gitlab/gateway.test.ts`) send a task that only answers' run start and rerun at once, watch the run, and keep its cancel, its other writes, a start elsewhere and a start through the github.com sign-in.
 
+### A reader's writes
+
+An unsafe data reader (`docs/agents-reach.md`, "An unsafe data reader") keeps every write to its own project, run starts included, and never puts one on a card of its own.
+`github_write` keeps it as a `WriteAsk` naming its card (`ForgeWriteAsk.card`), and the host lists it there (`IntegrationAsks.askForge`): it joins the task's waiting card of writes, revised in place, or raises `write-ask-<id>`.
+The card draws one ticked row per write, its method and path and the JSON body it sends, with the tally and legend of the integrations' card (`forgeApprovalCard`), and offers Only this time and Not now.
+The click takes every row it showed before the first is sent: an unticked row and Not now send nothing, and Only this time sends the others once each, oldest first, through `GithubGatewayService.sendTaken`, with the same guards as any kept write.
+One `write-answered` steer names every outcome, each sent write's answer fenced under its host's label like the reader's reads; the cap and dropped asks work as they do for an integration's asks.
+A write outside the project, a release file and a validation effect are refused, and `emit_card` refuses a card naming a reader's ask.
+
 ### On GitLab
 
 `GitLabForge.api` sends the same requests to `https://<host>/api/v4` with the app’s own sign-in there, under GitLab's own policy (`providers/gitlab/api.ts`), with the caps above.

@@ -136,18 +136,23 @@ ${FRAME_QUESTION_SCRIPT}
       values.push(value);
       labels.push(label);
     }
+    // An option with no words bound to it is named by its value: the value
+    // is still the card's words, never a typed answer, so it keeps a label.
+    function choose(value, label) {
+      pick(value, label || value);
+    }
     group.controls.forEach(function (control) {
       var kind = kindOf(control);
       if (kind === "radio" || kind === "checkbox") {
         if (isWriteIn(control)) return;
-        if (control.checked) pick(control.value, labelOf(control));
+        if (control.checked) choose(control.value, labelOf(control));
         if (recommended(control, control.defaultChecked) && control.value !== "") proposed.push(control.value);
       } else if (kind === "select") {
         var marked = false;
         for (var i = 0; i < control.options.length; i++) {
           var option = control.options[i];
           if (isWriteIn(option)) continue;
-          if (option.selected) pick(option.value, words(option));
+          if (option.selected) choose(option.value, words(option));
           if (recommended(option, option.defaultSelected)) {
             marked = true;
             if (option.value !== "") proposed.push(option.value);

@@ -585,15 +585,15 @@ export class TaskDeliveries {
 
   /**
    * Name the approval card that lists a crewmate's waiting integration ask
-   * (INF-2993 piece 2). An ask already taken, or no longer kept, changes
-   * nothing.
+   * (INF-2993 piece 2), or an unsafe data reader's waiting write. An ask already
+   * taken, or no longer kept, changes nothing.
    */
   listWriteAsk(id: string, askId: string, card: string): void {
     const run = this.writer.write(() => {
       const record = this.writer.store.get(id);
       const asks = record?.delivery?.writeAsks;
       const ask = asks?.find((kept) => kept.id === askId);
-      if (!record || !asks || ask?.kind !== "integration" || ask.sentAt !== undefined) return;
+      if (!record || !asks || !ask || ask.sentAt !== undefined) return;
       if (ask.card === card) return;
       this.writer.patch(id, {
         delivery: this.writer.mergeDelivery(record, {

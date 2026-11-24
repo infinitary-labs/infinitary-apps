@@ -309,6 +309,11 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
     THREAD_CONTEXT_LIMIT: physical("older threads drop out uncounted; each card's thread stays on record"),
     CARD_EXCERPT_LIMIT: physical("clipped with an ellipsis; the card itself keeps the whole body"),
   },
+  "src/core/orchestrator/githubGateway.ts": {
+    READER_ANSWER_MAX: outside(
+      "read again at the largest page that fits; refused in words naming per_page, one item or a narrower path",
+    ),
+  },
   "src/core/orchestrator/scheduler.ts": {
     MISSED_COUNT_CAP: physical("none in practice: a longer gap reads as 10,000 missed"),
   },

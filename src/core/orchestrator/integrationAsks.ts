@@ -1,10 +1,16 @@
 import type { IntegrationApprovalChoice } from "@shared/integrations";
-import { DROPPED_ASK_WHY, type IntegrationAsk, type WriteAsk } from "@shared/writeAsk";
+import {
+  DROPPED_ASK_WHY,
+  type ForgeWriteAsk,
+  type IntegrationAsk,
+  type WriteAsk,
+} from "@shared/writeAsk";
 import type { IntegrationAskTaken } from "../integrations";
 import { TaskService } from "../tasks/taskService";
 import type { CardService } from "./cardService";
 import type { CrewSupervisorOptions, FirstmateHooks } from "./crewSupervisorOptions";
 import type { WriteAnswered } from "./deliveryWakes";
+import { forgeApprovalCard } from "./forgeApprovalCard";
 import type { WriteAskSent } from "./githubGateway";
 import { integrationApprovalCard } from "./integrationApprovalCard";
 import type { TypedWake } from "./wakes";
@@ -57,6 +63,26 @@ export class IntegrationAsks {
   }
 
   /**
+   * An unsafe data reader's kept write where its project lives
+   * (docs/agents-reach.md, "An unsafe data reader"): it joins its task's card of
+   * waiting writes, revised in place to list it, or raises its own, the way
+   * a crewmate's integration ask does. The waiting asks the cap dropped to
+   * keep it are refused first.
+   */
+  askForge(taskId: string, ask: ForgeWriteAsk, dropped: readonly WriteAsk[] = []): boolean {
+    const task = this.options.tasks.get(taskId);
+    if (!task || TaskService.isClosed(task)) return false;
+    this.refuseDropped(taskId, dropped);
+    const open = waitingForgeCardAsks(task.delivery?.writeAsks).find(
+      (kept) => kept.id !== ask.id && this.host.cards.get(kept.card) !== undefined,
+    )?.card;
+    const card = open ?? `write-ask-${ask.id}`;
+    this.options.tasks.delivery.listWriteAsk(taskId, ask.id, card);
+    this.showAsks(taskId, card, open ? new Set([ask.id]) : undefined);
+    return open !== undefined;
+  }
+
+  /**
    * Draw a crewmate's approval card from the asks of its task still waiting
    * on it: revised in place while one is left, taken down once none is.
    * `joined` names the asks that joined in this revision.
@@ -69,12 +95,15 @@ export class IntegrationAsks {
       return;
     }
     const revise = this.host.cards.get(cardId) !== undefined;
+    const owner = { id: taskId, title: task.title };
+    const options = { id: cardId, ...(joined ? { joined } : {}) };
+    // A card lists asks of one kind: each kind joins only its own cards.
+    const integration = listed.filter((ask): ask is IntegrationAsk => ask.kind === "integration");
+    const forge = listed.filter((ask): ask is ForgeWriteAsk => ask.kind !== "integration");
     this.host.cards.put(
-      integrationApprovalCard(
-        listed,
-        { id: taskId, title: task.title },
-        { id: cardId, ...(joined ? { joined } : {}) },
-      ),
+      integration.length > 0
+        ? integrationApprovalCard(integration, owner, options)
+        : forgeApprovalCard(forge, owner, options),
       revise ? { revise: true } : {},
     );
   }
@@ -86,14 +115,20 @@ export class IntegrationAsks {
   private refuseDropped(taskId: string, dropped: readonly WriteAsk[]): void {
     const cards = new Set<string>();
     for (const ask of dropped) {
-      if (ask.kind !== "integration" || ask.by !== undefined) continue;
-      cards.add(ask.card ?? `integration-ask-${ask.id}`);
+      const card =
+        ask.kind === "integration"
+          ? ask.by === undefined
+            ? (ask.card ?? `integration-ask-${ask.id}`)
+            : undefined
+          : ask.card;
+      if (card === undefined) continue;
+      cards.add(card);
       void this.host
         .steer(taskId, {
           facts: writeAnsweredFacts(ask.id, {
             ok: false,
             ask,
-            call: ask.action,
+            call: askCall(ask),
             place: ask.place,
             outcome: { kind: "refused", why: DROPPED_ASK_WHY },
           }),
@@ -223,14 +258,34 @@ export function waitingIntegrationAsks(asks: readonly WriteAsk[] | undefined): I
     .sort((a, b) => a.at - b.at);
 }
 
+/** An unsafe data reader's writes still waiting on the host's approval card, oldest first. */
+export function waitingForgeCardAsks(
+  asks: readonly WriteAsk[] | undefined,
+): (ForgeWriteAsk & { card: string })[] {
+  return (asks ?? [])
+    .filter(
+      (ask): ask is ForgeWriteAsk & { card: string } =>
+        ask.kind !== "integration" && ask.card !== undefined && ask.sentAt === undefined,
+    )
+    .sort((a, b) => a.at - b.at);
+}
+
 /**
  * The waiting asks a crewmate's approval card lists, oldest first: those
  * naming it, or, on a card raised before cards listed several, its one ask.
  */
-export function listedOn(asks: readonly WriteAsk[] | undefined, cardId: string): IntegrationAsk[] {
-  return waitingIntegrationAsks(asks).filter(
-    (ask) => (ask.card ?? `integration-ask-${ask.id}`) === cardId,
-  );
+export function listedOn(asks: readonly WriteAsk[] | undefined, cardId: string): WriteAsk[] {
+  return [
+    ...waitingIntegrationAsks(asks).filter(
+      (ask) => (ask.card ?? `integration-ask-${ask.id}`) === cardId,
+    ),
+    ...waitingForgeCardAsks(asks).filter((ask) => ask.card === cardId),
+  ].sort((a, b) => a.at - b.at);
+}
+
+/** How a kept ask's call is named on the task's timeline and to its crewmate. */
+export function askCall(ask: WriteAsk): string {
+  return ask.kind === "integration" ? ask.action : `${ask.method} ${ask.path}`;
 }
 
 /** The facts of one `write-answered` steer for a click's outcome on one ask. */

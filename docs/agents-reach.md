@@ -90,3 +90,37 @@ Words that name GitHub's required review pass asking first, and GitHub's rule re
 A crewmate reserves and reruns a failed job a second time, and the host records both reservations with no allowance to refuse the second: no card goes up and no override is asked.
 The weekly audit rule, set to run once, starts one audit task, and the corpus export counts each override per hold.
 Every refusal an agent was served names its hold: a soft hold with its way out, a fixed limit as fixed.
+
+## An unsafe data reader
+
+A task that reads words strangers can write, such as its project's issues and pull requests, starts as an unsafe data reader: a read-only answer task whose shape says `unsafe_data_reader` (`src/shared/routingPolicy.ts`).
+Only the first mate sets it, on `spawn_crewmate`; the fence is the host's, so it holds whatever those words say, and the crewmate cannot set or clear it.
+`spawn_crewmate` refuses one with no project, on the personal workspace, or that is not an answer (`UNSAFE_DATA_READER_PROJECT`, `UNSAFE_DATA_READER_ANSWERS` in `src/core/orchestrator/workShape.ts`); a takeover or a stronger model's retry keeps it.
+
+- Its session is fenced (`SessionSpec.fenced`): no shell, no file change, no web and no browser, on both kinds of model session.
+  Pi serves only its read, grep and ls tools (`fencedPiReadTools`): read and ls check every path they open, and grep checks its search root and leaves the files beneath it to ripgrep, which follows no links out of it.
+  It leaves out find, which runs its own search program unasked, and stages no runbook or personal skills, which sit outside the working copy.
+  Claude serves only Read, Grep and Glob, and a gate before each call refuses a path outside the working copy (`claudeFenceHook`); no skill is staged, since a plugin can bring hooks and servers of its own.
+  A path's links are followed before the check, and a `~` path is refused whole (`outsideWorkingCopy`, `src/core/session/fencedReads.ts`).
+- None of the app's shell commands reach it, so it has no integrations and no browser, and it gets no task reads, no knowledge, no programs and no workflow logs or artifacts: those would bring outside words in unfenced, or reach past its project.
+- `github_read` reaches only its own project, through the project's own sign-in, and every answer comes fenced whole under its host's label, `github-data`, `gitlab-data` or `bitbucket-data` (`readerFenceLabel`), the way Google's words are (`docs/integrations.md`, "Data from outside"), with a fresh fence each read.
+  Fencing the whole answer, not only the words of authors who cannot write to the project, keeps the host from judging who is trusted.
+  Its answer must reach the model whole, since its fence refuses the temporary folder a long answer is saved to: a listing past that length is read again at the largest page that fits (`smallerPage`), and an answer no page fits is refused with words on asking for less.
+- Every `github_write` it makes to its own project is kept, run starts included, and the host puts it on one approval card with a ticked row each ("A reader's writes" in `docs/forge.md`); a write anywhere else, a release file and a validation effect are refused and nothing is kept.
+- It writes no file, so its instructions name no evidence, temporary or card body folder: its card bodies go inline.
+- Each of its cards carries one line, drawn by the app from its task's shape, saying it reads words anyone can write, so a link or request there may come from a stranger (`Card.unsafeData`).
+- It runs only on this computer: another computer's host rebuilds a session with the whole coding set, so the placement keeps it home (`runsOnlyHere`) and a placed session refuses a fenced spec.
+
+Every other crewmate's shell and the merge card's rules are unchanged; this is a fence for one kind of task, not a general sandbox.
+The brief names the fence to its crewmate (`UNSAFE_DATA_READER_WORDS`).
+What it says reaches the first mate between `reader-data` marks (`src/core/orchestrator/readerData.ts`), since it may carry words anyone can write:
+
+- Its report, its closing words when it makes none, and what it asks with `needs_firstmate` or `waiting_on_captain` are kept marked; its headline in the feed, the task row and the outcome is the host's fixed line saying the reader reported, worded in the app's language as it is saved and carrying none of its words, since a headline is cut short and would split the marks.
+- A follow-up it files keeps its goal and why marked in the record and in the brief a builder would start from, so no builder takes them as instructions; its title stays as written on the captain's screens and is marked where an agent reads it as the reader's: the report's wake, the `tasks` query, the first mate's context, every answer to starting it now (a refusal included) and a brief built on it (`servedTaskTitle`).
+  Once the follow-up runs, its own crewmate's start, report, idle and delivery wakes name its title as written.
+- Its progress notes are kept marked, cut before they are marked; a plan with them is refused, since its labels would go unmarked.
+- Its card replies, and its cards' own titles, bodies and button and option labels, stay as written on the captain's screens and are marked where an agent reads them: a card read, the open-work read, the `tasks` query by key with its card, the captain's closing choice and the wake that answers or undoes it, its `decisions` and its `timeline` field (`readerTimeline`), a brief built on its answer, the report's wake with any decision it withdrew, and every card line of the first mate's context (`CardThreads.servedLine`, `CardThreads.servedCardWords`), which ends with one reminder covering them all.
+  In the captain's answers on its cards, the reader's words are marked: each question's name, each option label and the value it labels (an option with no words bound to it is labelled by its value), a value the card proposed and the captain left as it was, and a settings snapshot the card carries; what the captain wrote in or typed stays as written (`answersWithAuthorWordsMarked`).
+  That split rests on the frame's own report, so a reader's card carries no script, which could set a field or rewrite the answers the frame sends (`CrewmateCards.crewmateCardWrite`).
+- A card's saved words are marked the same way on every read: the fence is a keyed digest under a secret the process draws once (`readerSavedAnswer`), so the context, which sends only what changed, leaves an unchanged reader card out, and the by-key read still shows a body its newest card and closing choice share once.
+- Its report refuses `recovery_ways`, `work_wait`, `result` and `check_back`, and a reader takes no `result_schema`: each is free text the host would pass on unmarked, so what it would say goes in the report's own words.

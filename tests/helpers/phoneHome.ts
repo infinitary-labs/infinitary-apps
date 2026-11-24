@@ -68,6 +68,7 @@ import { disposableCustody } from "./disposableCustody";
 import { standInDnsSd } from "./dnsSdStandIn";
 import { phoneCardReadControls } from "./phoneCardReads";
 import { carriedHeard, raiseCarriedCard, showCarriedPast } from "./phoneCarried";
+import { clearPhoneCards, raiseReaderCard } from "./phoneCrewCards";
 import { phoneGoogleControls, startPhoneGoogle } from "./phoneGoogle";
 import type {
   PhoneCaretOutcome,
@@ -1854,17 +1855,14 @@ export async function startPhoneHome(
           };
           break;
         }
+        case "POST reader-card":
+          result = await raiseReaderCard(core);
+          break;
         // INF-6136: a crewmate's decision with the tallest head a card draws (its task's key, place and model, a
         // four-line title and a revised line), a body several screens long with a required question, three choices
         // and a thread; beside it a short first mate card, its neighbour in the row.
         case "POST top-bar-card": {
-          for (const card of await core.dispatch("inf:cards:list", []))
-            await core.dispatch(
-              card.noteDone && !card.noteDone.closesTask
-                ? "inf:cards:note-done"
-                : "inf:cards:close",
-              [card.id],
-            );
+          await clearPhoneCards(core);
           const shortTitle = "The tide table is up to date";
           core.services.supervisor.addFirstmateCard({
             id: "phone-top-bar-short",

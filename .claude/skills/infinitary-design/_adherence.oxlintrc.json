@@ -144,8 +144,8 @@
         "message": "<QuotaMeter> pace must be one of 'ahead' | 'on_pace' | 'behind' | 'unknown'."
       },
       {
-        "selector": "JSXOpeningElement[name.name='ResponseCard'] > JSXAttribute > JSXIdentifier[name!=/^(?:kind|chrome|recordTaskId|title|titleWords|taskKey|reviewFinding|quick|meta|place|model|actions|attachment|comment|facts|aside|closeRef|corner|children|width|minHeight|surface|headExtra|revised|asked|footer|bare|style|bodyStyle|bodyRef|key|ref|className|style|children)$/]",
-        "message": "<ResponseCard> doesn't accept that prop. Declared props: kind, chrome, recordTaskId, title, titleWords, taskKey, reviewFinding, quick, meta, place, model, actions, attachment, comment, facts, aside, closeRef, corner, children, width, minHeight, surface, headExtra, revised, asked, footer, bare, style, bodyStyle, bodyRef."
+        "selector": "JSXOpeningElement[name.name='ResponseCard'] > JSXAttribute > JSXIdentifier[name!=/^(?:kind|chrome|recordTaskId|title|titleWords|taskKey|reviewFinding|quick|meta|place|model|actions|attachment|comment|facts|aside|closeRef|corner|children|width|minHeight|surface|headExtra|revised|asked|unsafeData|footer|bare|style|bodyStyle|bodyRef|key|ref|className|style|children)$/]",
+        "message": "<ResponseCard> doesn't accept that prop. Declared props: kind, chrome, recordTaskId, title, titleWords, taskKey, reviewFinding, quick, meta, place, model, actions, attachment, comment, facts, aside, closeRef, corner, children, width, minHeight, surface, headExtra, revised, asked, unsafeData, footer, bare, style, bodyStyle, bodyRef."
       },
       {
         "selector": "JSXOpeningElement[name.name='ResponseCard'] > JSXAttribute[name.name='kind'] > Literal[value!=/^(?:decision|note|attention|record|ended)$/]",

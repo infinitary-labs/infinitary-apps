@@ -4,6 +4,7 @@ import { foldForSearch } from "@shared/searchText";
 import { taskChangeOf } from "@shared/taskFacts";
 import type { EffectiveTaskPolicies } from "@shared/taskPolicies";
 import { attachmentPath } from "../attachments";
+import { readerResolvedEvent, readerTimeline, servedTaskTitle } from "../orchestrator/readerData";
 import type { CardResolution } from "../storage/cardStore";
 import type { TaskEventActor } from "../storage/taskEventStore";
 import type { TaskDelivery, TaskRecord, TaskStatus } from "../storage/taskRecords";
@@ -390,7 +391,11 @@ export function queryTasks(
             ...(one
               ? {
                   ...(input.field === "timeline" && reach.timeline
-                    ? { timeline: reach.timeline.sources(record.id) }
+                    ? {
+                        timeline: record.shape?.unsafe_data_reader
+                          ? readerTimeline(record.id, reach.timeline.sources(record.id))
+                          : reach.timeline.sources(record.id),
+                      }
                     : {}),
                   ...(reach.pendingResponses
                     ? { response_requests: reach.pendingResponses(record.id) }
@@ -446,8 +451,10 @@ function toRow(
   const result = cardBody ? tasks.latestResult(record.id) : undefined;
   const briefed = history.filter((event) => event.kind === "briefed").at(-1);
   const brief = briefed ? tasks.servedBrief(briefed) : undefined;
+  const reader = record.shape?.unsafe_data_reader === true;
   const decisions = history
     .filter((event) => event.kind === "card_resolved")
+    .map((event) => (reader ? readerResolvedEvent(record.id, event) : event))
     .map((event) => ({
       event_id: event.id,
       text: event.text,
@@ -518,7 +525,7 @@ function toRow(
     ...(policies ? { policies } : {}),
     kind: record.kind,
     status: statusText(record),
-    title: record.title,
+    title: servedTaskTitle(record, origins, "answer"),
     project: projectKeys.get(record.projectId) ?? record.projectId,
     priority: record.priority,
     ...(record.status === "open" && record.kind === "work"

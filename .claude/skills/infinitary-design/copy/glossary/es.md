@@ -156,6 +156,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | token, credential (never said) | inicio de sesión, clave | "tokens facturables" stays only where English names billable tokens. |
 | Turn on… / Turn on | Activar… / Activar | "Activar…" opens the review whose button is "Activar"; "Turn off" is "Desactivar". |
 | unmerged work | trabajo sin fusionar | What another computer still holds when it is removed: "Su trabajo sin fusionar viene primero a esta computadora". |
+| unsafe data reader | lector de datos no seguros | A crewmate that reads words anyone can write. |
 | Usage | Uso | |
 | where the project lives | donde se aloja el proyecto | |
 | window wash | velo de la ventana | The theme color laid over the blurred background. |

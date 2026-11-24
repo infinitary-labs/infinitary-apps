@@ -13,6 +13,7 @@ import {
   cardMessageText,
   cardMutationSchema,
   cardTakesReplies,
+  cardWord,
   onStage,
   takesTaskFacts,
 } from "@shared/cards";
@@ -30,6 +31,14 @@ import { resolveRevisionTargets, revisionLinks } from "./cardNavigation";
 import { firstmateSignOffRefusal, SIGNED_OFF_ACTION_ID, signOffRefusal } from "./cardSignOff";
 import type { CardAuthorRef, CardServiceHost, CardStack } from "./cardStackTypes";
 import { waitingCardWords } from "./idleWakes";
+import {
+  crewmateWriterOf,
+  readerDataAnswer,
+  readerSavedAnswer,
+  readerWroteCard,
+  servedCardLine,
+} from "./readerData";
+import type { WakeCard } from "./reportWakes";
 import { requiredActionCard, requiredActionProvenance } from "./requiredActionCard";
 
 /**
@@ -434,6 +443,52 @@ export class CardThreads {
     });
   }
 
+  /**
+   * A thread line as an agent reads it: an unsafe data reader's own line
+   * between reader-data marks (docs/agents-reach.md, "An unsafe data
+   * reader"), since it may carry words anyone can write; the captain's
+   * thread keeps the words as written.
+   */
+  servedLine(card: Pick<Card, "taskId">, message: CardMessage): string {
+    const text = cardMessageText(message);
+    return this.fromReader(card, message) ? readerDataAnswer(text, message.at) : text;
+  }
+
+  /**
+   * A card's own title or body as an agent reads it: an unsafe data reader's
+   * card's between reader-data marks, as its thread lines are, marked the
+   * same on every read (`readerSavedAnswer`); the captain's card keeps the
+   * words as written.
+   */
+  servedCardWords(card: Pick<Card, "id" | "author" | "taskId">, words: string): string {
+    return this.readerCard(card) ? readerSavedAnswer(`card:${card.id}`, words) : words;
+  }
+
+  /**
+   * A reader's card's title or label inside a line of a list, marked the
+   * same on every read; the list ends with the reader-data reminder
+   * (`withReaderDataReminder`).
+   */
+  servedCardLine(card: Pick<Card, "id" | "author" | "taskId">, words: string): string {
+    return servedCardLine(this.host.tasks, card, words);
+  }
+
+  /** A crewmate's shown card as its report wake lists it, a reader's title marked (`servedCardLine`). */
+  wakeCard(card: Card): WakeCard {
+    return { id: card.id, word: cardWord(card), title: this.servedCardLine(card, card.title) };
+  }
+
+  /** Whether an unsafe data reader wrote this card. */
+  readerCard(card: Pick<Card, "author" | "taskId">): boolean {
+    return readerWroteCard(this.host.tasks, card);
+  }
+
+  /** Whether an unsafe data reader wrote this thread line. */
+  fromReader(card: Pick<Card, "taskId">, message: CardMessage): boolean {
+    const writer = crewmateWriterOf(card, message);
+    return writer !== undefined && this.host.tasks.get(writer)?.shape?.unsafe_data_reader === true;
+  }
+
   /** Who owes an answer on a card now: `closed` once it is off the stack. */
   owed(cardId: string): ThreadOwed {
     return this.threadOwed(this.stack.cards.get(cardId));
@@ -505,7 +560,7 @@ export class CardThreads {
         : undefined;
     return {
       id: card.id,
-      title: card.title,
+      title: this.servedCardWords(card, card.title),
       author: card.author,
       ...(task ? { task: task.key || task.id } : {}),
       open,
@@ -516,15 +571,15 @@ export class CardThreads {
         : {}),
       choices: card.actions.map((action) => ({
         id: action.id,
-        label: action.label,
+        label: this.servedCardWords(card, action.label),
         ...(action.effect ? { effect: action.effect.kind } : {}),
       })),
-      body: card.body,
+      body: this.servedCardWords(card, card.body),
       thread: this.host.cardStore.messages(id).map((message) => ({
         id: message.id,
         who: message.who,
         at: message.at,
-        text: cardMessageText(message),
+        text: this.servedLine(card, message),
         ...(message.contributor ? { by: message.contributor.label } : {}),
         ...(message.answersMessage !== undefined ? { answers: message.answersMessage } : {}),
         ...(message.clarification ? { clarification: true } : {}),

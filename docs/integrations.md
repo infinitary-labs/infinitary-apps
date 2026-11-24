@@ -92,6 +92,7 @@ The click takes every listed ask before the first runs; a row unticked is refuse
 One `write-answered` steer names every outcome of that click, the waiting asks an allowance ran included (`also`).
 A task keeps at most `WRITE_ASK_CAP` asks: past it the oldest answered ask drops first, and a waiting ask drops only when none answered is left; that ask leaves its card and its crewmate hears at once that it never ran (`DROPPED_ASK_WHY`).
 Asks from different tasks or to different connections never share a card.
+An unsafe data reader's writes where its project lives join a card of their own the same way, with only Only this time and Not now (`docs/forge.md`, "A reader's writes").
 The minus only puts the card aside: the ask and its row remain pending, with no grant, refusal or outcome notification.
 The click takes the ask before running it, and the existing `write-answered` steer delivers the outcome once, including refusals.
 The first mate's explicit button choice closes the card's row and takes its ask in the same transaction; its outcome is a `write-answered` wake on the durable inbox, named once by the ask, and an approved call runs as the first mate's own.
@@ -125,6 +126,7 @@ A refusal and an error are the app's own words and stay as they are.
 The opening mark keeps the moment the words were read, and `fencedSpans` finds each span, one cut short included, so a later pass can find what an agent read in saved records.
 That pass is how fenced words leave saved conversations: a kind declares how many days they stay (`IntegrationBinding.kept`, 30 for Google), then a note takes their place, and Settings → Integrations' Data section deletes them at once ([Task retention](task-retention.md#words-from-outside)).
 The fence carries what the host knows, where the words came from, and never a verdict on them: no rule reads the words to judge whether they try to steer anyone (`docs/principles.md`).
+An unsafe data reader's `github_read` answers are fenced the same way, under its host's label such as `github-data`, and its own words reach the first mate as `reader-data` (`docs/agents-reach.md`, "An unsafe data reader").
 What the fence does not close, and how each way out stands, is in [Google verification material](google-verification.md#prompt-injection).
 
 ## Keys

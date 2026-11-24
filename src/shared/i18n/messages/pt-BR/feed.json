@@ -113,6 +113,7 @@
   "feedStarted": "Iniciada",
   "feedStopped": "Parada",
   "feedUndelivered": "Mensagem não entregue: {why}",
+  "feedUnsafeDataReaderReported": "O leitor de dados não seguros relatou; as palavras dele estão no registro.",
   "feedUpdated": "Atualizada: {text}",
   "feedYouChose": "Você escolheu “{choice}”"
 }

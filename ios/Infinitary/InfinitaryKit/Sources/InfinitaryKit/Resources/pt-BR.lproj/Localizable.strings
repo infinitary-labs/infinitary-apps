@@ -115,7 +115,7 @@
 "accountsCustomApiFileReadThis" = "Ler este arquivo";
 "accountsCustomApiFileReasoning" = "Definido no seu arquivo";
 "accountsCustomApiFileReplaced" = "Uma conexão mais nova da mesma entrada do seu arquivo de conexões está em uso, então esta continua pausada. Desconecte-a se não precisar mais dela.";
-"accountsCustomApiFileSets" = "Seu arquivo de conexões define o nome, o endereço, o protocolo, os cabeçalhos e os modelos desta conexão. Digite a chave e os valores secretos de cabeçalho que ficam em %1$@ e salve para verificar cada modelo.";
+"accountsCustomApiFileSets" = "Seu arquivo de conexões define o nome, o endereço, o protocolo, os cabeçalhos e os modelos desta conexão. Digite a chave, os valores secretos de cabeçalho e qualquer tamanho de modelo que o arquivo omita, que ficam em %1$@, e salve para verificar cada modelo.";
 "accountsCustomApiFileStop" = "Parar de ler";
 "accountsCustomApiFileTag" = "Do seu arquivo";
 "accountsCustomApiFileTitle" = "Arquivo de conexões";

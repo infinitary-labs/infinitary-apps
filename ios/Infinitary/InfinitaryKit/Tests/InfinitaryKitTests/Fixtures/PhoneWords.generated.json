@@ -119,7 +119,7 @@
   {"said":{"m":"accountsCustomApiFileReadThis"},"words":"Read this file"},
   {"said":{"m":"accountsCustomApiFileReasoning"},"words":"Set in your file"},
   {"said":{"m":"accountsCustomApiFileReplaced"},"words":"A newer connection from the same entry in your connection file is in use, so this one stays paused. Disconnect it if you no longer need it."},
-  {"said":{"m":"accountsCustomApiFileSets","a":{"who":"‹who›"}},"words":"Your connection file sets this connection's name, address, protocol, headers and models. Type the key and secret header values to keep on ‹who›, then save to check each model."},
+  {"said":{"m":"accountsCustomApiFileSets","a":{"who":"‹who›"}},"words":"Your connection file sets this connection's name, address, protocol, headers and models. Type the key, secret header values and any model size the file leaves out to keep on ‹who›, then save to check each model."},
   {"said":{"m":"accountsCustomApiFileStop"},"words":"Stop reading"},
   {"said":{"m":"accountsCustomApiFileTag"},"words":"From your file"},
   {"said":{"m":"accountsCustomApiFileTitle"},"words":"Connection file"},

@@ -119,7 +119,7 @@
   "accountsCustomApiFileReadThis": "讀取這個檔案",
   "accountsCustomApiFileReasoning": "在你的檔案中設定",
   "accountsCustomApiFileReplaced": "你的連線檔案中同一項目的較新連線正在使用，因此這個連線保持暫停。如果不再需要，請中斷連線。",
-  "accountsCustomApiFileSets": "這個連線的名稱、位址、通訊協定、標頭和模型由你的連線檔案設定。輸入要存放在 {who} 上的金鑰和機密標頭的值，然後儲存以檢查每個模型。",
+  "accountsCustomApiFileSets": "這個連線的名稱、位址、通訊協定、標頭和模型由你的連線檔案設定。輸入要存放在 {who} 上的金鑰、機密標頭的值以及檔案未寫明的模型大小，然後儲存以檢查每個模型。",
   "accountsCustomApiFileStop": "停止讀取",
   "accountsCustomApiFileTag": "來自你的檔案",
   "accountsCustomApiFileTitle": "連線檔案",

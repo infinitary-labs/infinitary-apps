@@ -588,6 +588,61 @@ test("a connection from the connection file is approved with this computer's own
   );
 });
 
+// The captain's choice on the review of this file's approval: a size the file
+// leaves out, with no server list to fill it, is typed on this computer.
+test("a size the connection file leaves out is typed on this computer when it approves", async () => {
+  model = await startMockProvider();
+  api = await startCustomApiFixture(model.port);
+  const path = join(scratchDir("custom-connection-file-"), "models.json");
+  writeFileSync(
+    path,
+    JSON.stringify({
+      providers: {
+        "local-server": {
+          baseUrl: api.baseUrl,
+          api: "openai-completions",
+          models: [{ id: "operator-model", maxTokens: 4096 }],
+        },
+      },
+    }),
+  );
+  launched = await launchApp({
+    reuseMockProvider: model,
+    modelsJson: () => JSON.stringify({ providers: {} }),
+  });
+  const page = launched.page;
+  await launched.app.evaluate(({ dialog }, answer) => {
+    dialog.showOpenDialog = (async () => ({
+      canceled: false,
+      filePaths: [answer],
+    })) as unknown as typeof dialog.showOpenDialog;
+  }, path);
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByRole("tab", { name: "Intelligence" }).click();
+  const file = customApiFile(page);
+  await file.choose.click();
+  await file.pending("local-server").approve.click();
+  const f = customApiForm(page);
+  const row = f.row("operator-model");
+  const context = row.getByLabel(m.accountsCustomApiContextFor({ name: "operator-model" }));
+  const output = row.getByLabel(m.accountsCustomApiOutputFor({ name: "operator-model" }));
+  await expect(row.getByLabel(m.accountsCustomApiModelId())).toBeDisabled();
+  await expect(output).toBeDisabled();
+  await expect(output).toHaveValue("4096");
+  await expect(context).toBeEnabled();
+  await expect(context).toHaveValue("");
+  await context.fill("65536");
+  await f.http.check();
+  await f.key.fill("synthetic-file-key");
+  await page.screenshot({ path: test.info().outputPath("custom-file-typed-size.png") });
+  expect(await saveCustomApi(page)).toBe("saved");
+  const [saved] = await page.evaluate(() => window.infinitary.accounts.custom.list());
+  expect(saved).toMatchObject({
+    file: { name: "local-server", state: "current" },
+    models: [{ id: "operator-model", context: 65536, output: 4096, checked: true }],
+  });
+});
+
 // INF-3100's report: a proxy app answering a public API's name with a reserved
 // stand-in address (198.18.0.0/15) left the form refusing with no reason. The
 // captain asked that the form say what DNS answered and let the person make

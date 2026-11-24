@@ -115,7 +115,7 @@
 "accountsCustomApiFileReadThis" = "قراءة هذا الملف";
 "accountsCustomApiFileReasoning" = "محدَّد في ملفك";
 "accountsCustomApiFileReplaced" = "يُستخدم اتصال أحدث من الإدخال نفسه في ملف الاتصالات، لذا يبقى هذا الاتصال متوقفًا مؤقتًا. اقطعه إن لم تعد بحاجة إليه.";
-"accountsCustomApiFileSets" = "يحدد ملف الاتصالات اسم هذا الاتصال وعنوانه وبروتوكوله وترويساته ونماذجه. اكتب المفتاح وقيم الترويسات السرية التي تُحفظ على %1$@، ثم احفظ لفحص كل نموذج.";
+"accountsCustomApiFileSets" = "يحدد ملف الاتصالات اسم هذا الاتصال وعنوانه وبروتوكوله وترويساته ونماذجه. اكتب المفتاح وقيم الترويسات السرية وأي حجم نموذج لا يذكره الملف، لتُحفظ على %1$@، ثم احفظ لفحص كل نموذج.";
 "accountsCustomApiFileStop" = "إيقاف القراءة";
 "accountsCustomApiFileTag" = "من ملفك";
 "accountsCustomApiFileTitle" = "ملف الاتصالات";

@@ -9948,29 +9948,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const who = input2.who;
     switch (currentLanguage()) {
       case "ar":
-        return `يحدد ملف الاتصالات اسم هذا الاتصال وعنوانه وبروتوكوله وترويساته ونماذجه. اكتب المفتاح وقيم الترويسات السرية التي تُحفظ على ${who}، ثم احفظ لفحص كل نموذج.`;
+        return `يحدد ملف الاتصالات اسم هذا الاتصال وعنوانه وبروتوكوله وترويساته ونماذجه. اكتب المفتاح وقيم الترويسات السرية وأي حجم نموذج لا يذكره الملف، لتُحفظ على ${who}، ثم احفظ لفحص كل نموذج.`;
       case "de":
-        return `Deine Verbindungsdatei legt Name, Adresse, Protokoll, Header und Modelle dieser Verbindung fest. Gib den Schlüssel und die geheimen Header-Werte für ${who} ein und speichere, um jedes Modell zu prüfen.`;
+        return `Deine Verbindungsdatei legt Name, Adresse, Protokoll, Header und Modelle dieser Verbindung fest. Gib den Schlüssel, die geheimen Header-Werte und jede Modellgröße, die die Datei offenlässt, für ${who} ein und speichere, um jedes Modell zu prüfen.`;
       case "es":
-        return `Tu archivo de conexiones fija el nombre, la dirección, el protocolo, los encabezados y los modelos de esta conexión. Escribe la clave y los valores secretos de encabezado que se guardan en ${who}, y guarda para comprobar cada modelo.`;
+        return `Tu archivo de conexiones fija el nombre, la dirección, el protocolo, los encabezados y los modelos de esta conexión. Escribe la clave, los valores secretos de encabezado y cualquier tamaño de modelo que el archivo omita, que se guardan en ${who}, y guarda para comprobar cada modelo.`;
       case "fr":
-        return `Votre fichier de connexions fixe le nom, l’adresse, le protocole, les en-têtes et les modèles de cette connexion. Saisissez la clé et les valeurs d’en-têtes secrètes à garder sur ${who}, puis enregistrez pour vérifier chaque modèle.`;
+        return `Votre fichier de connexions fixe le nom, l’adresse, le protocole, les en-têtes et les modèles de cette connexion. Saisissez la clé, les valeurs d’en-têtes secrètes et toute taille de modèle que le fichier omet, à garder sur ${who}, puis enregistrez pour vérifier chaque modèle.`;
       case "ja":
-        return `この接続の名前、アドレス、プロトコル、ヘッダー、モデルは接続ファイルで決まります。${who} に保存するキーと秘密のヘッダー値を入力し、保存すると各モデルを確認します。`;
+        return `この接続の名前、アドレス、プロトコル、ヘッダー、モデルは接続ファイルで決まります。${who} に保存するキー、秘密のヘッダー値、ファイルにないモデルのサイズを入力し、保存すると各モデルを確認します。`;
       case "ko":
-        return `이 연결의 이름, 주소, 프로토콜, 헤더, 모델은 연결 파일에서 정해요. ${who}에 보관할 키와 비밀 헤더 값을 입력하고 저장하면 모델마다 확인해요.`;
+        return `이 연결의 이름, 주소, 프로토콜, 헤더, 모델은 연결 파일에서 정해요. ${who}에 보관할 키, 비밀 헤더 값, 파일에 없는 모델 크기를 입력하고 저장하면 모델마다 확인해요.`;
       case "pt-BR":
-        return `Seu arquivo de conexões define o nome, o endereço, o protocolo, os cabeçalhos e os modelos desta conexão. Digite a chave e os valores secretos de cabeçalho que ficam em ${who} e salve para verificar cada modelo.`;
+        return `Seu arquivo de conexões define o nome, o endereço, o protocolo, os cabeçalhos e os modelos desta conexão. Digite a chave, os valores secretos de cabeçalho e qualquer tamanho de modelo que o arquivo omita, que ficam em ${who}, e salve para verificar cada modelo.`;
       case "zh-Hans":
-        return `此连接的名称、地址、协议、请求头和模型由你的连接文件设定。输入要保存在 ${who} 上的密钥和机密请求头的值，然后保存以检查每个模型。`;
+        return `此连接的名称、地址、协议、请求头和模型由你的连接文件设定。输入要保存在 ${who} 上的密钥、机密请求头的值以及文件未写明的模型大小，然后保存以检查每个模型。`;
       case "zh-Hant":
-        return `這個連線的名稱、位址、通訊協定、標頭和模型由你的連線檔案設定。輸入要存放在 ${who} 上的金鑰和機密標頭的值，然後儲存以檢查每個模型。`;
+        return `這個連線的名稱、位址、通訊協定、標頭和模型由你的連線檔案設定。輸入要存放在 ${who} 上的金鑰、機密標頭的值以及檔案未寫明的模型大小，然後儲存以檢查每個模型。`;
       case "en-XA":
-        return `[Ýöûŕ çöññéçţîöñ ƒîļé šéţš ţĥîš çöññéçţîöñ'š ñáɱé, áððŕéšš, þŕöţöçöļ, ĥéáðéŕš áñð ɱöðéļš. Ţýþé ţĥé ķéý áñð šéçŕéţ ĥéáðéŕ ṽáļûéš ţö ķééþ öñ ${who}, ţĥéñ šáṽé ţö çĥéçķ éáçĥ ɱöðéļ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Ýöûŕ çöññéçţîöñ ƒîļé šéţš ţĥîš çöññéçţîöñ'š ñáɱé, áððŕéšš, þŕöţöçöļ, ĥéáðéŕš áñð ɱöðéļš. Ţýþé ţĥé ķéý, šéçŕéţ ĥéáðéŕ ṽáļûéš áñð áñý ɱöðéļ šîžé ţĥé ƒîļé ļéáṽéš öûţ ţö ķééþ öñ ${who}, ţĥéñ šáṽé ţö çĥéçķ éáçĥ ɱöðéļ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Your connection file sets this connection's name, address, protocol, headers and models. Type the key and secret header values to keep on ‬${who}‮, then save to check each model.‬`;
+        return `‮Your connection file sets this connection's name, address, protocol, headers and models. Type the key, secret header values and any model size the file leaves out to keep on ‬${who}‮, then save to check each model.‬`;
     }
-    return `Your connection file sets this connection's name, address, protocol, headers and models. Type the key and secret header values to keep on ${who}, then save to check each model.`;
+    return `Your connection file sets this connection's name, address, protocol, headers and models. Type the key, secret header values and any model size the file leaves out to keep on ${who}, then save to check each model.`;
   }
   function accountsCustomApiFileStop() {
     switch (currentLanguage()) {

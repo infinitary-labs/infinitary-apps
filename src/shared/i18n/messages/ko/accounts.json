@@ -119,7 +119,7 @@
   "accountsCustomApiFileReadThis": "이 파일 읽기",
   "accountsCustomApiFileReasoning": "파일에서 설정",
   "accountsCustomApiFileReplaced": "연결 파일의 같은 항목으로 만든 새 연결을 쓰고 있어서 이 연결은 일시 정지된 상태로 남아요. 필요 없으면 연결을 해제하세요.",
-  "accountsCustomApiFileSets": "이 연결의 이름, 주소, 프로토콜, 헤더, 모델은 연결 파일에서 정해요. {who}에 보관할 키와 비밀 헤더 값을 입력하고 저장하면 모델마다 확인해요.",
+  "accountsCustomApiFileSets": "이 연결의 이름, 주소, 프로토콜, 헤더, 모델은 연결 파일에서 정해요. {who}에 보관할 키, 비밀 헤더 값, 파일에 없는 모델 크기를 입력하고 저장하면 모델마다 확인해요.",
   "accountsCustomApiFileStop": "읽기 중지",
   "accountsCustomApiFileTag": "파일에서",
   "accountsCustomApiFileTitle": "연결 파일",

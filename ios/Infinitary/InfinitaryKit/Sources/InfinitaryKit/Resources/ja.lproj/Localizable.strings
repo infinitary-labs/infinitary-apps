@@ -115,7 +115,7 @@
 "accountsCustomApiFileReadThis" = "このファイルを読み込む";
 "accountsCustomApiFileReasoning" = "ファイルで設定";
 "accountsCustomApiFileReplaced" = "接続ファイルの同じ項目から作った新しい接続を使っているため、この接続は一時停止したままです。不要なら接続を解除してください。";
-"accountsCustomApiFileSets" = "この接続の名前、アドレス、プロトコル、ヘッダー、モデルは接続ファイルで決まります。%1$@ に保存するキーと秘密のヘッダー値を入力し、保存すると各モデルを確認します。";
+"accountsCustomApiFileSets" = "この接続の名前、アドレス、プロトコル、ヘッダー、モデルは接続ファイルで決まります。%1$@ に保存するキー、秘密のヘッダー値、ファイルにないモデルのサイズを入力し、保存すると各モデルを確認します。";
 "accountsCustomApiFileStop" = "読み込みをやめる";
 "accountsCustomApiFileTag" = "ファイルから";
 "accountsCustomApiFileTitle" = "接続ファイル";

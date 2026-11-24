@@ -163,7 +163,8 @@ export function CustomApiForm({
   /**
    * A connection the connection file defines, approved here: the file sets its
    * name, address, protocol, visible headers and models, so those stay locked,
-   * and each computer types only its own key and secret header values.
+   * and each computer types only its own key, secret header values and any
+   * size the file leaves out.
    */
   fromFile?: { name: string; definition: CustomFileDefinition };
   /** First setup asks which model Firstmate answers with once the connection is saved. */
@@ -1247,7 +1248,8 @@ export function CustomApiForm({
             <span>{m.accountsCustomApiStorage()}</span>
           </label>
         )}
-        <fieldset className="fm-custom-body" disabled={locked}>
+        {/* Not one disabled fieldset: a size the file leaves out stays open to type here. */}
+        <fieldset className="fm-custom-body">
           <div className="fm-custom-models">
             <div className="fm-custom-models-head">
               <span className="fm-custom-models-title">{m.accountsCustomApiModelsTitle()}</span>
@@ -1285,7 +1287,7 @@ export function CustomApiForm({
                       className="fm-custom-pick"
                       data-custom-listed={entry.id}
                       aria-pressed={added}
-                      disabled={added || busy !== ""}
+                      disabled={added || busy !== "" || locked}
                       onClick={() => {
                         edited("models");
                         setModels((current) => [
@@ -1322,6 +1324,7 @@ export function CustomApiForm({
                 {models.map((model, index) => {
                   const dot = ROW_DOT[model.state ?? "none"];
                   const name = model.id.trim() || m.accountsCustomApiThisModelLower();
+                  const stated = defined?.models.find((entry) => entry.id === model.id.trim());
                   return (
                     <div
                       className="fm-custom-row"
@@ -1343,6 +1346,7 @@ export function CustomApiForm({
                         autoComplete="off"
                         aria-label={m.accountsCustomApiModelId()}
                         invalid={rowErrors[model.uiId]?.at === "id"}
+                        disabled={locked}
                         value={model.id}
                         onChange={(event) => changeModel(model.uiId, { id: event.target.value })}
                       />
@@ -1352,6 +1356,7 @@ export function CustomApiForm({
                         aria-label={m.accountsCustomApiContextFor({ name })}
                         invalid={rowErrors[model.uiId]?.at === "sizes" && !model.context}
                         placeholder={m.accountsCustomApiContext()}
+                        disabled={locked && Boolean(stated?.context)}
                         value={model.context ? String(model.context) : ""}
                         onChange={(event) =>
                           changeModel(model.uiId, { context: digits(event.target.value) })
@@ -1366,6 +1371,7 @@ export function CustomApiForm({
                           (!model.output || model.output >= model.context)
                         }
                         placeholder={m.accountsCustomApiOutput()}
+                        disabled={locked && Boolean(stated?.output)}
                         value={model.output ? String(model.output) : ""}
                         onChange={(event) =>
                           changeModel(model.uiId, { output: digits(event.target.value) })
@@ -1406,6 +1412,7 @@ export function CustomApiForm({
                           <span>{m.accountsCustomApiReasoning()}</span>
                           <select
                             aria-label={m.accountsCustomApiReasoningFor({ name })}
+                            disabled={locked}
                             value={model.reasoningProfile ?? ""}
                             onChange={(event) =>
                               changeModel(model.uiId, {
@@ -1441,6 +1448,7 @@ export function CustomApiForm({
                           <span>{m.accountsCustomApiCache()}</span>
                           <select
                             aria-label={m.accountsCustomApiCacheFor({ name })}
+                            disabled={locked}
                             value={model.cacheRetention ?? customDefaultCacheRetention(protocol)}
                             onChange={(event) =>
                               changeModel(model.uiId, {
@@ -1476,13 +1484,15 @@ export function CustomApiForm({
                           </p>
                         )}
                       </div>
-                      <CustomModelPrice
-                        idPrefix={`${id}-model-${index}`}
-                        name={model.name ?? ""}
-                        prices={model.prices}
-                        invalid={rowErrors[model.uiId]?.at === "price"}
-                        onChange={(change) => describeModel(model.uiId, change)}
-                      />
+                      <fieldset className="fm-custom-body" disabled={locked}>
+                        <CustomModelPrice
+                          idPrefix={`${id}-model-${index}`}
+                          name={model.name ?? ""}
+                          prices={model.prices}
+                          invalid={rowErrors[model.uiId]?.at === "price"}
+                          onChange={(change) => describeModel(model.uiId, change)}
+                        />
+                      </fieldset>
                       {rowErrors[model.uiId] && (
                         <p role="alert" className="fm-custom-field-error fm-custom-row-error">
                           {rowErrors[model.uiId]?.text}

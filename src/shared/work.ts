@@ -459,6 +459,8 @@ export const placedCardSchema = z.object({
   continues: z.boolean().optional(),
   /** It answers the captain's message it is about (INF-1610, `Card.answering`). */
   answering: z.boolean().optional(),
+  /** It re-asks a question answered on this card, on purpose (`card-asks-again.md`); an older home drops it. */
+  asksAgain: z.object({ card: z.string(), why: z.string() }).optional(),
   /** A write on someone else's card (major 15); an older home drops them. */
   expectedRevision: z.string().optional(),
   contributionReason: z.string().optional(),

@@ -396,6 +396,66 @@ export function preansweredQuestions(body: string): PreansweredQuestion[] {
     .map(({ required: _required, ...entry }) => entry);
 }
 
+/**
+ * A radio, checkbox or select question a card asks, as the captain's answer
+ * names it: its control name, the values of its options, and the words of
+ * the fieldset legend it sits in (empty when none). A Something else row
+ * (`data-inf-write-in`) and a select's empty Choose option are no options:
+ * one card can end a question with the row and another mark it options-only.
+ */
+export type CardChoiceQuestion = { name: string; legend: string; values: string[] };
+
+/** Every choice question in a body, by name, its values sorted and distinct. */
+export function cardChoiceQuestions(body: string): CardChoiceQuestion[] {
+  const document = parseDocument(body, { decodeEntities: true });
+  const questions = new Map<string, { legend: string; values: Set<string> }>();
+  const add = (name: string, legend: string, value: string | undefined) => {
+    const entry = questions.get(name) ?? { legend, values: new Set<string>() };
+    if (!entry.legend) entry.legend = legend;
+    if (value !== undefined && value !== "") entry.values.add(value);
+    questions.set(name, entry);
+  };
+  const legendOf = (fieldset: ControlNode): string => {
+    const legend = (fieldset.children as ControlNode[] | undefined)?.find(
+      (child) => ELEMENT_TYPES.has(child.type) && child.name?.toLowerCase() === "legend",
+    );
+    return legend ? textOf(legend).replace(/\s+/g, " ").trim() : "";
+  };
+  const walk = (nodes: DomNode[], legend: string): void => {
+    for (const node of nodes as ControlNode[]) {
+      if (!ELEMENT_TYPES.has(node.type)) continue;
+      const tag = node.name?.toLowerCase() ?? "";
+      if (NON_COPY.has(tag)) continue;
+      const attrs = node.attribs ?? {};
+      const name = attrs.name;
+      if (tag === "input" && name && attrs.disabled === undefined) {
+        const type = (attrs.type ?? "text").toLowerCase();
+        if (type !== "radio" && type !== "checkbox") continue;
+        add(
+          name,
+          legend,
+          attrs["data-inf-write-in"] === undefined ? (attrs.value ?? "on") : undefined,
+        );
+        continue;
+      }
+      if (tag === "select" && name && attrs.disabled === undefined) {
+        add(name, legend, undefined);
+        for (const { option } of selectOptions(node))
+          if (option.attribs?.["data-inf-write-in"] === undefined)
+            add(name, legend, optionValue(option));
+        continue;
+      }
+      walk(node.children ?? [], tag === "fieldset" ? legendOf(node) || legend : legend);
+    }
+  };
+  walk(document.children as unknown as DomNode[], "");
+  return [...questions].map(([name, entry]) => ({
+    name,
+    legend: entry.legend,
+    values: [...entry.values].sort(),
+  }));
+}
+
 /** A refusal's words for a pre-answered question; a scripted stand-in recognizes them. */
 export const PREANSWERED_WORDS = "arrives already answered";
 

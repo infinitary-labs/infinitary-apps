@@ -214,6 +214,7 @@ describe("createEmitCardTool", () => {
       "contribution_reason",
       "operation_id",
       "answers_message",
+      "asks_again",
       "actions",
       "signs_off",
       "task_id",
@@ -228,6 +229,15 @@ describe("createEmitCardTool", () => {
     const tool = piToolOf(createEmitCardTool(onCard)) as unknown as AnyTool;
     await tool.execute("t1", { title: "Note", body: "x", task_id: "t9", related: ["t8"] });
     expect(onCard).toHaveBeenCalledWith({ title: "Note", body: "x", actions: [] });
+    // INF-6523 part 4: a deliberate re-ask names the earlier card and why.
+    const again = { card: "card-t1-1", why: "The builder changed the words since." };
+    await tool.execute("t1", { title: "Note", body: "x", asks_again: again });
+    expect(onCard).toHaveBeenLastCalledWith({
+      title: "Note",
+      body: "x",
+      actions: [],
+      asksAgain: again,
+    });
 
     // INF-125: the approval names the recorded request and its exact action;
     // forwarding this declaration grants nothing at the tool boundary.

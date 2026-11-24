@@ -560,9 +560,7 @@ export class CardService {
    * carries facts, never a restatement of policy).
    */
   shownCards(taskId: string): WakeCard[] {
-    return [...this.cards.values()]
-      .filter((card) => card.taskId === taskId && cardEmitter(card.id, taskId) === "crewmate")
-      .map((card) => this.threads.wakeCard(card));
+    return this.threads.wakeCards(taskId).cards;
   }
 
   /**

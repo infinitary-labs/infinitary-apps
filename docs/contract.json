@@ -79447,6 +79447,21 @@
                   "answering": {
                     "type": "boolean"
                   },
+                  "asksAgain": {
+                    "type": "object",
+                    "properties": {
+                      "card": {
+                        "type": "string"
+                      },
+                      "why": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "card",
+                      "why"
+                    ]
+                  },
                   "expectedRevision": {
                     "type": "string"
                   },

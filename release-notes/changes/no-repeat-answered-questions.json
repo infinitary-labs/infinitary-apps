@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "no-repeat-answered-questions",
+      "kind": "fix",
+      "area": "cards",
+      "title": "The crew no longer asks you a question you already answered",
+      "body": "When you answer a question on a card, a crewmate or reviewer that comes back to it reads your answer and acts on it instead of raising a second card. A question is asked again only when its facts changed, and then the card opens with your earlier answer.",
+      "noPicture": "This changes which cards reach the screen, not how any card or view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

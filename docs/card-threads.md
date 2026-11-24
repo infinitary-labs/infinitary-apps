@@ -53,8 +53,26 @@ Its field moves from above the card's buttons to the thread's foot and keeps the
 The card's buttons move with it, under the field: `StackedCard` draws them into the thread column's reply slot (`choicesIn`), so a button plainly carries the field's words, and its keys and Go to the card's buttons still find them there.
 A card with a secret's masked fields keeps its buttons under them instead (`EntryView.chatFirst`), so Save sits with the fields it sends and never under the thread's plain field; words left in the thread's field still go with a press.
 The field is the card's one place to write (`docs/card-authoring.md`, "The card's one field"): Enter or Chat sends its words as the reply, and words left in it when the captain clicks a button go with that choice instead.
-The author's answer redraws it at the close-out - see the next section.
+The author's answer redraws it at the close-out - see "When a card reaches the stage".
 A refused reply moves nothing and keeps the draft.
+
+## A question already answered
+
+A question the captain answered on one card is not asked again on another (INF-6523, the captain's pick "Keep the backstop").
+Three facts carry the answer to the agent that might ask again, and one refusal backs them.
+
+- The card read (`tasks card`, `CardService.cardRead`) of a closed card carries `ended`: how it ended, who closed it, when, the choice's id and label, and the answers sent with it, from `CardStore.past`.
+- The crewmate's card rules and the reviewer's Review finding round say an answered question is settled: read the earlier card before asking it again, and act on its answer.
+  The round's decisions are written when the round starts, so an answer that arrives later shows only on the card.
+- A builder's report wake names its reviewer's open Review finding cards (`CardThreads.wakeCards`), so the first mate asks nobody for a card already on the captain's screen.
+- `emit_card` refuses a decision whose radio, checkbox or select question repeats one on a closed card the captain answered (`answeredQuestionRefusal`, `answeredQuestion.ts`).
+  A question repeats when it has the same control name and the same set of option values (`cardChoiceQuestions`, `cardLint.ts`), whatever its title, legend or body say; a Something else row is no option.
+  Only a choice that neither declines nor puts the card off answers it, and only an answer that names the question.
+  The check reads the emitting task's closed cards and, for an independent reviewer or a first mate relaying one, the cards of the builder and every review of it.
+  The refusal shows the earlier card, its legend, options, the choice, the answers and when, an unsafe data reader's words marked as data, and nothing is shown.
+  Only the newest answered card with the question counts, so a question asked again on purpose is settled by its latest answer.
+  The author judges whether the question is the same: when its facts changed, `asks_again` `{ card, why }` names that newest card and the card goes up, opening with the earlier answer and what changed; a different question that only shares the name takes a name of its own.
+  A crewmate on a computer that runs work without the `card-asks-again` change cannot send `asks_again`, so its cards skip this check.
 
 ## When a card reaches the stage
 
@@ -533,7 +551,7 @@ The captain approved shared cards ("Any crewmate or first mate, without a per-ca
 
 Any first mate or crewmate may write on a card it did not author, with no grant.
 `CardService.targetOf` reads what an id names for its caller before any id prefix makes a new card: a card on the record is `own`, `foreign` or `closed`, an unused id in the caller's own namespace is `new`, and any other unused `card-` id is `unknown` and refused, never filed as a new card.
-A writer reads the card first with `tasks card` (`CardService.cardRead`): its words, revision, lifecycle, choices, the captain message it waits on, and its thread with message ids.
+A writer reads the card first with `tasks card` (`CardService.cardRead`): its words, revision, lifecycle, choices, the captain message it waits on, its thread with message ids, and for a closed card how it ended ("A question already answered").
 
 `emit_card` on someone else's card is one of two writes (`CardService.contribute`).
 With `expected_revision`, the revision the writer read, it revises the card's words in place.

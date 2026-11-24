@@ -407,6 +407,7 @@ There is no one-card-per-topic cap - several open decisions on one task are legi
   The version it replaced is kept in `card_revisions` (`CardStore.history`), so a revision is one card with history.
   The host marks what is new since the captain last saw the card ("What changed since you looked" below); the author never does.
 - If none is open, a new card is created as usual.
+  A decision that asks again a question the captain already answered on a closed card, under the same control name with the same options, is refused unless `asks_again` names that card and why (`docs/card-threads.md`, "A question already answered").
 - App-raised singletons (`card-fm-auth`, flagship quota cards) are only overwritten when the id matches that singleton.
 
 Every emitter sees what is on screen: the first mate's context lists every open card, and a crewmate's report wake names its cards.

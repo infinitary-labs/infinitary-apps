@@ -22,6 +22,7 @@ import { parseStableCardId, resolveFirstmateCardId } from "../pi/cardTool";
 import { decidedCardWidth } from "../pi/cardWidth";
 import type { EmittedCardInput } from "../session/tools";
 import { TaskService } from "../tasks/taskService";
+import { answeredQuestionRefusal } from "./answeredQuestion";
 import { FIRSTMATE_CARD_PREFIX } from "./cardIds";
 import { revisionLinks } from "./cardNavigation";
 import type { CardServiceHost, CardStack } from "./cardStackTypes";
@@ -70,6 +71,12 @@ type EmitContext = {
   meta: string;
   model?: string;
   place?: string;
+  /**
+   * False when the author's computer cannot send `asks_again`
+   * (`card-asks-again.md`): its repeat questions go unchecked, since a
+   * refusal would leave it no way to ask one again on purpose.
+   */
+  asksAgain?: false;
   mintId: () => string;
   resolveId: (stableId: string) => string;
 };
@@ -95,6 +102,7 @@ export class CardEmits {
     meta: string,
     model?: string,
     place?: string,
+    asksAgain = true,
   ): string {
     // An independent reviewer's decision is its Review finding card
     // (INF-4338's direction D): the app labels it and draws the builder's
@@ -113,6 +121,7 @@ export class CardEmits {
       meta,
       ...(model ? { model } : {}),
       ...(place ? { place } : {}),
+      ...(asksAgain ? {} : { asksAgain: false as const }),
       mintId: () => {
         this.cardSeq += 1;
         return `card-${taskId}-${this.cardSeq}`;
@@ -436,6 +445,7 @@ export class CardEmits {
       );
     }
     if (!existing && resolved) this.refuseAnsweredRevision(resolved, input);
+    this.refuseAnsweredQuestion(resolved, input, context);
     if (existing && resolved) {
       // An update is never the whole answer: while the captain's reply waits
       // on its author, the revision carries the author's short answer too.
@@ -641,6 +651,43 @@ export class CardEmits {
     const permissions = this.host.tasks.get(past.taskId)?.delivery?.liveValidation?.permissions;
     const newest = permissions?.findLast((item) => item.decision?.card === past.id);
     return newest?.state === "expired" && newest.answer === undefined;
+  }
+
+  /**
+   * A decision asking a question the captain already answered on another
+   * closed card (INF-6523 part 4, `answeredQuestionRefusal`): read on the
+   * emitting task's cards and, for a reviewer, on every review of the same
+   * builder, since each round's Review finding card asks about one work.
+   * `asks_again` names the earlier card the author re-asks on purpose.
+   */
+  private refuseAnsweredQuestion(
+    resolved: string | undefined,
+    input: EmittedCardInput,
+    context: EmitContext,
+  ): void {
+    if (input.actions.length === 0 || !context.taskId || context.asksAgain === false) return;
+    const scope = new Set([context.taskId]);
+    const builder = context.factsOf ?? (input.reviewTaskId ? context.taskId : undefined);
+    if (builder) {
+      scope.add(builder);
+      for (const child of this.host.tasks.graph.children(builder))
+        if (child.shape?.kind === "review") scope.add(child.id);
+    }
+    const store = this.host.cardStore;
+    const earlier = () =>
+      [...scope].flatMap((id) =>
+        store.closedByCaptain(id).flatMap((card) => store.past(card.id) ?? []),
+      );
+    const refusal = answeredQuestionRefusal(
+      input.body,
+      earlier,
+      {
+        ...(resolved ? { revising: resolved } : {}),
+        ...(input.asksAgain ? { asksAgain: input.asksAgain.card } : {}),
+      },
+      (card, words) => this.threads.servedCardWords(card, words),
+    );
+    if (refusal) throw new Error(refusal);
   }
 
   /**

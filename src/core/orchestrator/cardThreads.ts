@@ -1,3 +1,4 @@
+import { cardAnswerLines } from "@shared/cardAnswerLines";
 import { ANSWER_DONE_LABEL } from "@shared/cardLeave";
 import type { CardNote } from "@shared/cardNotes";
 import {
@@ -15,6 +16,7 @@ import {
   cardTakesReplies,
   cardWord,
   onStage,
+  type PastCard,
   takesTaskFacts,
 } from "@shared/cards";
 import type { CrewResponse } from "@shared/crewResponses";
@@ -25,13 +27,14 @@ import { revisedLineWords } from "@shared/threadLines";
 import { decidedCardWidth } from "../pi/cardWidth";
 import type { EmittedCardInput } from "../session/tools";
 import { TaskService } from "../tasks/taskService";
-import { buildEmittedCard, FIRSTMATE_CARD_PREFIX } from "./cardEmit";
+import { buildEmittedCard, cardEmitter, FIRSTMATE_CARD_PREFIX } from "./cardEmit";
 import { cardMutationText } from "./cardMutationText";
 import { resolveRevisionTargets, revisionLinks } from "./cardNavigation";
 import { firstmateSignOffRefusal, SIGNED_OFF_ACTION_ID, signOffRefusal } from "./cardSignOff";
 import type { CardAuthorRef, CardServiceHost, CardStack } from "./cardStackTypes";
 import { waitingCardWords } from "./idleWakes";
 import {
+  answersWithAuthorWordsMarked,
   crewmateWriterOf,
   readerDataAnswer,
   readerSavedAnswer,
@@ -40,6 +43,7 @@ import {
 } from "./readerData";
 import type { WakeCard } from "./reportWakes";
 import { requiredActionCard, requiredActionProvenance } from "./requiredActionCard";
+import { openReviewQuestions } from "./reviewCard";
 
 /**
  * A card's thread and every write on someone else's card
@@ -478,6 +482,24 @@ export class CardThreads {
     return { id: card.id, word: cardWord(card), title: this.servedCardLine(card, card.title) };
   }
 
+  /**
+   * The cards a task's report wake names: its crewmate's own on the
+   * captain's screen, and its reviewer's Review finding cards about it
+   * (INF-6523 part 3), which the app already handed to the reviewer.
+   */
+  wakeCards(taskId: string): { cards: WakeCard[]; reviewCards?: WakeCard[] } {
+    const cards = [...this.stack.cards.values()];
+    const reviewCards = openReviewQuestions(cards, taskId, this.host.tasks);
+    return {
+      cards: cards
+        .filter((card) => card.taskId === taskId && cardEmitter(card.id, taskId) === "crewmate")
+        .map((card) => this.wakeCard(card)),
+      ...(reviewCards.length > 0
+        ? { reviewCards: reviewCards.map((card) => this.wakeCard(card)) }
+        : {}),
+    };
+  }
+
   /** Whether an unsafe data reader wrote this card. */
   readerCard(card: Pick<Card, "author" | "taskId">): boolean {
     return readerWroteCard(this.host.tasks, card);
@@ -558,12 +580,37 @@ export class CardThreads {
       open && this.host.cardStore.awaitingAuthor(id)
         ? this.host.cardStore.newestCaptainMessage(id)
         : undefined;
+    // A closed card's read says how it ended (INF-6523 part 1): a reviewer
+    // that read only "open": false raised the captain's answered question again.
+    const past = open ? undefined : this.host.cardStore.past(id);
     return {
       id: card.id,
       title: this.servedCardWords(card, card.title),
       author: card.author,
       ...(task ? { task: task.key || task.id } : {}),
       open,
+      ...(past
+        ? {
+            ended: {
+              how: past.ending.how,
+              ...(past.ending.by ? { by: past.ending.by } : {}),
+              at: past.ending.at,
+              ...(past.ending.actionId
+                ? {
+                    choice: {
+                      id: past.ending.actionId,
+                      label: this.servedCardWords(card, past.ending.label ?? past.ending.actionId),
+                    },
+                  }
+                : {}),
+              answers: cardAnswerLines(
+                answersWithAuthorWordsMarked(past.answers, (words) =>
+                  this.servedCardWords(card, words),
+                ),
+              ),
+            },
+          }
+        : {}),
       ...(card.lifecycleId ? { lifecycle: card.lifecycleId } : {}),
       ...(card.offerId ? { revision: card.offerId } : {}),
       ...(question
@@ -1209,6 +1256,17 @@ export type CardRead = {
   author: Card["author"];
   task?: string;
   open: boolean;
+  /**
+   * How a closed card ended: who closed it, when (epoch milliseconds), the
+   * choice taken and the answers sent with it, one line each.
+   */
+  ended?: {
+    how: PastCard["ending"]["how"];
+    by?: PastCard["ending"]["by"];
+    at: number;
+    choice?: { id: string; label: string };
+    answers: string[];
+  };
   lifecycle?: string;
   revision?: string;
   waitingOn?: { messageId: number; text: string };

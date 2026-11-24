@@ -1416,7 +1416,7 @@ export class CrewTurns {
         })),
         ...(waits.length > 0 ? { waits } : {}),
         ...(waiting.length > 0 ? { waiting } : {}),
-        cards: this.core.cards.shownCards(task.id),
+        ...this.core.cards.threads.wakeCards(task.id),
         ...(refused ? { refused } : {}),
         ...(withdrawn.length > 0 ? { withdrawn } : {}),
         ...(unseenWait ? { captainWait: unseenWait.reason } : {}),

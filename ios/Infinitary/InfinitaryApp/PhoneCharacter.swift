@@ -298,7 +298,8 @@ final class CharacterMotion: @unchecked Sendable {
         let body = CharacterCinch.body(pose.cinchK)
         vel += (0.5 - vel) * min(dt * 1.5, 1)
         let warp = CharacterWarp.pose(of: pose)
-        pose.a += (pose.cur.sa * body.spin + (warp?.sa ?? 0)) * dt
+        let supernova = machine.variant == .supernova && mode == .fidget ? CharacterSupernova.eyes(et) : nil
+        pose.a += (pose.cur.sa * body.spin + (warp?.sa ?? 0) + (CharacterSupernova.body(of: pose)?.spin ?? 0)) * dt
         pose.b += (pose.cur.sb * body.spin + (warp?.sb ?? 0)) * dt
         pose.hs += dt * vel * pose.cur.flat
         pose.milliseconds += dt * 1000
@@ -317,6 +318,7 @@ final class CharacterMotion: @unchecked Sendable {
             else if machine.variant == .blackhole { look = (0, 0.12) }
             else if machine.variant == .saturn { look = (0, 0.1) }
             else if let warp { look = warp.look }
+            else if let supernova { look = supernova.look }
             else { look = (0, 0) }
             if let constellation = CharacterCatalog.shared.constellations[machine.variant?.rawValue ?? ""] {
                 look = (constellation.gaze[0], constellation.gaze[1])
@@ -332,6 +334,7 @@ final class CharacterMotion: @unchecked Sendable {
         if machine.variant == .yawn { pose.lid = max(pose.lid, pulse(et, 0.12, 0.62) * 0.95) }
         if machine.variant == .blackhole { pose.lid = max(pose.lid, CharacterSky.envelope(pose) * 0.3) }
         if let warp { pose.lid = max(pose.lid, warp.lid) }
+        if let supernova { pose.lid = max(pose.lid, supernova.lid) }
         if machine.variant == .galaxy { pose.lid = max(pose.lid, CharacterSky.envelope(pose) * CharacterCatalog.shared.galaxy["lid"]!) }
         pose.wink = mode == .greet ? band(et, 0.42, 0.1, 0.68, 0.12) : 0
         pose.happy = mode == .greet ? band(et, 0.12, 0.18, 0.82, 0.18) : mode == .celebrate ? band(et, 0.08, 0.15, 0.85, 0.15) : reply.happy
@@ -434,6 +437,10 @@ enum CharacterPainter {
         let bright = acc.mix(hot, heat), dimUse = dim.mix(RGB(hot.r * 0.55, hot.g * 0.5, hot.b * 0.45), heat)
         let breathe = 1 + cur.breath * sin(now / 650)
         let warp = CharacterWarp.pose(of: p)
+        // The supernova (CharacterSupernova): the collapse, the bounce and the eyes.
+        let nova = CharacterSupernova.body(of: p), novaEyes = nova.map { _ in CharacterSupernova.eyes(et) }
+        let squeeze = nova?.squeeze ?? 0
+        var trails: [(point: CGPoint, angle: Double, k: Double)] = []
         let R0 = s * 0.27 * breathe * cur.scale * (warp?.scale ?? 1)
         // The cinch draws the body tight, and it springs back past its size.
         let cinchK = p.cinchK, cinchKz = clamp01(cinchK), cinchLift = (p.cinch?.lift ?? 0) * p.cinchGate
@@ -467,7 +474,7 @@ enum CharacterPainter {
         }
 
         // The ambient glow, breathing while listening.
-        let glowA = haloBoost * cur.glow * (warp?.glow ?? 1) * (0.1 + heat * 0.16 + cur.breath * 0.6 * (0.5 + 0.5 * sin(now / 650))) + replyGlow * 0.18
+        let glowA = haloBoost * cur.glow * (warp?.glow ?? 1) * (nova?.glow ?? 1) * (0.1 + heat * 0.16 + cur.breath * 0.6 * (0.5 + 0.5 * sin(now / 650))) + replyGlow * 0.18
             + cinchKz * 0.08 * (0.4 + 0.6 * cinchFlight.arrival) + cinchLift * 0.3
         context.fill(Path(CGRect(x: 0, y: 0, width: s, height: s)), with: .radialGradient(
             PenGradient(colors: [bright.color(glowA), bright.color(0)]), center: CGPoint(x: c, y: c), startRadius: 0, endRadius: s / 2))
@@ -510,6 +517,15 @@ enum CharacterPainter {
                let rim = CharacterWarp.sphereVertex(i, base: placed.point, et: et, c: c, r: R, time: now / 1000) {
                 placed.point = rim.point; placed.progress = rim.progress
             }
+            if nova != nil {
+                let rank = Double(CharacterSky.winding.firstIndex(of: i) ?? 0)
+                let v = CharacterSupernova.vertex(i, rank: rank, base: placed.point, et: et, c: c, r: R, time: now / 1000)
+                placed.point = v.point; placed.progress = v.progress; placed.scale *= v.scale; placed.white = max(placed.white, v.white)
+                if let trail = v.trail {
+                    let at = posed(v.point.x, v.point.y)
+                    trails.append((CGPoint(x: at.x, y: at.y), trail.angle + rotation, trail.k))
+                }
+            }
             cache.sky[i] = placed
             (cache.points[i].x, cache.points[i].y) = posed(placed.point.x, placed.point.y)
             if let w = placed.w { cache.points[i].w += (w - cache.points[i].w) * placed.progress }
@@ -532,13 +548,15 @@ enum CharacterPainter {
             alpha *= 1 - min(cache.sky[p0].progress, cache.sky[q0].progress) * 0.97
             // The cinch dims the outer cell and lifts every wire at its end.
             if P.w > 0 && Q.w > 0 { alpha *= cinchBody.outer }
-            alpha *= 1 + 0.5 * cinchLift
+            alpha *= (1 + 0.5 * cinchLift) * (1 + 0.5 * squeeze)
             if alpha < 0.02 { continue }
-            let m = max(clamp01(0.5 + (P.w + Q.w) * 0.35), f * 0.9)
+            let m = max(clamp01(0.5 + (P.w + Q.w) * 0.35), f * 0.9, squeeze)
             cache.prims.edgeSkip[i] = false
             cache.prims.edgeMix[i] = m
             cache.prims.edgeAlpha[i] = min(1, alpha * (0.85 + 0.15 * m) * (1 + 0.9 * p.flicker * CharacterFlicker.wire(i, now)))
-            cache.prims.edgeCore[i] = max(neon > 0.02 && m > 0.5 ? min(1, alpha) * neon * 0.85 : 0, min(1, p.flicker * CharacterFlicker.wire(i, now) * 0.7))
+            cache.prims.edgeCore[i] = max(neon > 0.02 && m > 0.5 ? min(1, alpha) * neon * 0.85 : 0, min(1, p.flicker * CharacterFlicker.wire(i, now) * 0.7),
+                                          // A supernova's falling frame runs white-hot as it is squeezed.
+                                          squeeze > 0.02 ? min(1, alpha) * 0.7 * squeeze : 0)
         }
         for i in 0..<16 {
             let P = cache.points[i]
@@ -564,6 +582,9 @@ enum CharacterPainter {
                 paint(cache.prims, cache.points, in: &mask) { _, _ in tint }
             }
         }
+        if nova != nil {
+            CharacterSupernova.drawUnder(et, trails: trails, c: c, r: R, wire: bright, background: bg, boost: boost, in: &context)
+        }
         if warp != nil, p.variant == .sphere {
             CharacterWarp.drawSphere(et, c: c, r: R, time: now / 1000, bright: bright, background: bg, boost: boost, in: &context)
         }
@@ -587,9 +608,11 @@ enum CharacterPainter {
         // The eyes: two soft lights in the inner cell, with white-hot cores, on the wires' colour family.
         let eyeBase = acc.mix(hot, heat), eyeCol = eyeBase.mix(RGB(255, 246, 230), 0.45)
         let gxo = p.eyeX * R * 0.1, gyo = p.eyeY * R * 0.08
+        // The supernova draws the eyes in through the collapse and opens them wide after.
+        let gather = novaEyes?.gather ?? 1, novaWide = novaEyes.map { $0.wide * (0.6 + 0.4 * $0.gather) } ?? 1
         let pxo = sin(p.a) * R * 0.05 * (1 - f), pyo = sin(p.b * 0.8) * R * 0.04 * (1 - f)
         let eyes = [-1.0, 1.0].map { side -> (Double, CharacterSky.Eye) in
-            let base = posed(c + side * R * 0.34 + gxo + pxo, c - R * 0.1 + gyo + pyo)
+            let base = posed(c + (side * R * 0.34 + gxo + pxo) * gather, c + (-R * 0.1 + gyo + pyo) * gather)
             return (side, CharacterSky.eye(side, base: CGPoint(x: base.x, y: base.y), pose: p, c: c, r: R))
         }.sorted { $0.1.z < $1.1.z }
         let bodyOpacity = context.opacity
@@ -598,7 +621,7 @@ enum CharacterPainter {
             context.opacity = bodyOpacity * eye.alpha
             let lid = max(p.lid, side == 1 ? p.wink : 0)
             let open = (1 - lid) * cur.eyeScale
-            let rw = R * 0.085 * cur.eyeScale * eye.depth
+            let rw = R * 0.085 * cur.eyeScale * eye.depth * novaWide
             let socket = rw * 3.2
             context.fill(circle(e.x, e.y, socket), with: .radialGradient(PenGradient(colors: [bg.color(0.75), bg.color(0)]),
                 center: CGPoint(x: e.x, y: e.y), startRadius: 0, endRadius: socket))

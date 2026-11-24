@@ -39,6 +39,8 @@ struct CharacterCatalog: Decodable, Sendable {
     let saturn: Saturn
     /// The warp fidgets (INF-1755): settings, schedule, travel table and stars.
     let warp: CharacterWarp.Data
+    /// The supernova fidget: the captain's settings, its schedule, and every spark, ray, shard and flight.
+    let supernova: CharacterSupernova.Data
     /// The fixed stars (INF-3634): the captain's staged look and the constellation's tables, from the desktop owner
     /// (fixedStars.ts); PhoneFixedStars places them.
     struct FixedStars: Decodable, Sendable {

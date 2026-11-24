@@ -17,6 +17,7 @@
 
 import type { FidgetVariant } from "@shared/emotes";
 import { isReplyEmote, REPLY_DURATION_MS, type ReplyEmote } from "./replies";
+import { SUPERNOVA } from "./supernova";
 import { WARP } from "./warp";
 
 export type { FidgetVariant };
@@ -73,6 +74,8 @@ export const FIDGET_DURATION_MS: Record<FidgetVariant, number> = {
   tunnel: WARP.durationMs,
   sphere: WARP.durationMs,
   corkscrew: WARP.durationMs,
+  // The supernova's length is the captain's setting on its preview card.
+  supernova: SUPERNOVA.durationMs,
   // Last on purpose: the pool draws by key order, and the black hole's e2e
   // picks "the last variant" with a deterministic draw.
   blackhole: 5600,
@@ -118,6 +121,7 @@ export const CLIP_BLEND_MS: Record<string, number> = {
   tunnel: 250,
   sphere: 250,
   corkscrew: 250,
+  supernova: 250,
   blackhole: 250,
 };
 

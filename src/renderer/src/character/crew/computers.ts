@@ -1,5 +1,5 @@
 import type { CenterCue, CrewedWait } from "@shared/dependencyVisual";
-import { type DeviceView, deviceRunsWork } from "@shared/devices";
+import { type DeviceView, deviceConnecting, deviceRunsWork } from "@shared/devices";
 import * as m from "@shared/i18n/messages.generated";
 import type { Slot } from "@shared/modelSlots";
 import { HERE } from "../../../../shared/deviceNames";
@@ -56,6 +56,12 @@ export type ComputerCluster = {
   id: string;
   name: string;
   reachable: boolean;
+  /**
+   * Why a computer not in reach is away, when the device list says: its
+   * update is being followed, or its connection is being made. Absent, it is
+   * out of reach (`awayWord`, docs/devices.md "Updating").
+   */
+  away?: "updating" | "connecting";
   /** The cluster's center, px from the Firstmate's center, screen axes. */
   x: number;
   y: number;
@@ -185,12 +191,21 @@ export class ComputerOrbits extends CrewOrbit {
     if (!placed || this.devices.some((d) => d.id === placed && d.onThisMac)) return HOME_COMPUTER;
     return placed;
   }
-  private computers(): Array<{ id: string; name: string; reachable: boolean }> {
+  private computers(): Array<Pick<ComputerCluster, "id" | "name" | "reachable" | "away">> {
     const list = this.devices
       .filter((d) => deviceRunsWork(d.kind) && !d.onThisMac)
       .slice()
       .sort((a, b) => a.pairedAt - b.pairedAt || a.id.localeCompare(b.id))
-      .map((d) => ({ id: d.id, name: d.name, reachable: d.inReach === true }));
+      .map((d) => ({
+        id: d.id,
+        name: d.name,
+        reachable: d.inReach === true,
+        ...(d.inReach !== true && d.updating
+          ? { away: "updating" as const }
+          : deviceConnecting(d)
+            ? { away: "connecting" as const }
+            : {}),
+      }));
     // A removed computer's still-active last-known crew retain their identity.
     for (const id of this.present()) {
       const computer = this.computerOf(id);
@@ -200,7 +215,7 @@ export class ComputerOrbits extends CrewOrbit {
     return [{ id: HOME_COMPUTER, name: this.homeName, reachable: true }, ...list];
   }
   /** The other computers on this page, in pairing order. */
-  private pagePeers(): Array<{ id: string; name: string; reachable: boolean }> {
+  private pagePeers(): Array<Pick<ComputerCluster, "id" | "name" | "reachable" | "away">> {
     return this.computers().slice(1 + this.pageIndex * 5, 1 + (this.pageIndex + 1) * 5);
   }
   /**

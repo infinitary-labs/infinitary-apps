@@ -17,6 +17,11 @@
 .fm-computer-name .fm-computer-unreachable {
   color: var(--warn);
 }
+/* Updating and connecting keep the name's quiet color; the shared word is
+   lowercase for the middle of a line, and stands alone here like Out of reach. */
+.fm-computer-name .fm-computer-away::first-letter {
+  text-transform: uppercase;
+}
 .fm-computer-crew-accessible {
   position: absolute;
   width: 1px;

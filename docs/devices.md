@@ -1149,7 +1149,7 @@ While its update goes on, the computer reads updating, never out of reach (`upda
 - **What says so.**
   In Devices its row follows the update's own step, even when Devices opened part way, with an idle dot while it is out of reach, and the Map reads "Updating" on a dotted edge, never Out of reach.
   Each task there carries `place.updating`: its Tasks row reads "updating" in `--fg-3` with no warn mark, and its status says "Mac mini is updating" with the mark as it was (`docs/helper.md`, "Runs on").
-  Runs on, the sign-ins note, the device forge rows, Remove's lines and Automatic's compared computers say "updating" too, and so do the phone's task rows.
+  Runs on, the sign-ins note, the device forge rows, Remove's lines and Automatic's compared computers say "updating" too, and so do the phone's task rows and the line under that computer's name in the center (`docs/crew-orbits.md`).
 - **How long without a word.**
   Anything heard of the update renews it: the computer's connection, each step the feed says, and each Remote Login setup step.
   After `UPDATE_RETURN_MS` (3 minutes) heard from nowhere, a computer still not in reach reads out of reach in `--warn`, update or no update, and reads updating again at the next word heard.

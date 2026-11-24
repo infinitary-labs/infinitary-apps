@@ -37,6 +37,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | Careful | متأنٍّ | Chosen over "حذر", which reads as wary rather than thorough. |
 | certificate | شهادة | "شهادة CA" for an organization certificate. |
 | claim (recorded claim) | ادعاء | "ادعاء مسجّل". |
+| clipboard | الحافظة | Where Copy value puts a secret's value. |
 | clone | استنساخ | "استُنسخ" for "cloned", never "نُسخ" (copied). |
 | collection | مجموعة | |
 | command search | البحث في الأوامر | |

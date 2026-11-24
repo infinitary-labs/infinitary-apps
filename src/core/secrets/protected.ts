@@ -138,6 +138,13 @@ export type RecoveryRestore =
   | "locked"
   | "unavailable"
   | "unknown";
+/**
+ * A Copy value's outcome (docs/secrets.md, "Copying a value"), never the
+ * value: `refused` when the system confirmed no one, `changed` when the
+ * secret is not the record the row showed, `unknown` when the writer failed
+ * after the copy was journaled.
+ */
+export type SecretCopy = "copied" | "refused" | "changed" | "unavailable" | "unknown";
 /** A start-over's outcome; `unneeded` when storage does not read lost or tampered. */
 export type SecretsStartOver =
   | "started"
@@ -1120,6 +1127,94 @@ export class ProtectedSecrets implements SecretsBackend {
     });
   }
 
+  /** Whether this computer can confirm the person now; a headless start cannot. */
+  async canConfirm(): Promise<boolean> {
+    try {
+      return (await this.options.authentication?.available()) === true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Copy value (docs/secrets.md, "Copying a value"): the captain's own read of
+   * one value, handed to the host's clipboard writer in this process. Every
+   * copy asks the system to confirm the person again, with `reason` naming the
+   * secret, and nothing an earlier confirmation covered is reused. The copy is
+   * journaled before the value moves, so a journal that cannot be written
+   * refuses it. Only a secret the person gave copies, never a sign-in the app
+   * keeps for one of its own services. No answer holds the value.
+   */
+  async copyValue(
+    ref: string,
+    shown: { version: number; revision: string },
+    reason: (label: string) => string,
+    write: (value: Buffer) => Promise<boolean>,
+  ): Promise<SecretCopy> {
+    return this.change(async () => {
+      const ready = this.ready;
+      if (!ready || !(await this.custodyCurrent())) return "unavailable";
+      const same = (entry: VaultEntry | undefined): entry is VaultEntry =>
+        entry?.version === shown.version && entry.revision === shown.revision;
+      const entry = await ready.vault.entry(ref);
+      if (!same(entry)) return "changed";
+      if (!entry.discoverable && !entry.forProgram) return "unavailable";
+      let confirmed = false;
+      try {
+        confirmed = (await this.options.authentication?.confirm(reason(entry.label))) === true;
+      } catch {
+        // Failed or cancelled native confirmation authorizes no copy.
+      }
+      if (!confirmed) return "refused";
+      if (!(await this.custodyCurrent())) return "unavailable";
+      if (!same(await ready.vault.entry(ref))) return "changed";
+      const request = randomUUID();
+      try {
+        await ready.journal.append({
+          kind: "requested",
+          request,
+          intent: `copy:${request}`,
+          inputDigest: sha256(canonical({ copy: ref, revision: shown.revision })),
+          digest: sha256(canonical({ request, copy: ref, revision: shown.revision })),
+          secrets: [ref],
+          program: "",
+          reason: "",
+          rule: "ask",
+          copied: true,
+        });
+        await ready.journal.append({ kind: "approved", request, method: "local" });
+        await ready.journal.append({ kind: "consumed", request });
+      } catch {
+        return "unavailable";
+      }
+      const end = (state: "unavailable" | "unknown") =>
+        ready.journal.append({ kind: "ended", request, state }).catch(() => undefined);
+      const opened = await ready.vault.open(ref).catch(() => undefined);
+      try {
+        if (opened?.entry.revision !== shown.revision) {
+          await end("unavailable");
+          return "changed";
+        }
+        let written: boolean;
+        try {
+          written = await write(opened.value);
+        } catch {
+          // The writer may have replaced the clipboard before it failed.
+          await end("unknown");
+          return "unknown";
+        }
+        if (!written) {
+          await end("unavailable");
+          return "unavailable";
+        }
+        await ready.journal.append({ kind: "completed", request }).catch(() => undefined);
+        return "copied";
+      } finally {
+        opened?.value.fill(0);
+      }
+    });
+  }
+
   /**
    * Every value with its metadata and this home's history, as a recovery
    * archive holds them; undefined when a value cannot be read whole now. The
@@ -1131,11 +1226,11 @@ export class ProtectedSecrets implements SecretsBackend {
       createdAt: this.now(),
       sourceHome: ready.authority.authority.home,
       values: [],
-      // A build that predates runs elsewhere, or brings, reads an archive
-      // strictly, so the computer a use ran on and the tool a bring read stay
-      // with this home's own history.
+      // A build that predates runs elsewhere, brings or copies reads an
+      // archive strictly, so the computer a use ran on, the tool a bring read
+      // and the mark of a copy stay with this home's own history.
       history: structuredClone(ready.journal.history()).map(
-        ({ computer: _, brought: __, ...item }) => item,
+        ({ computer: _, brought: __, copied: ___, ...item }) => item,
       ),
     };
     try {

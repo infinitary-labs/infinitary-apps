@@ -48,6 +48,8 @@ export const secretMetadataSchema = z.strictObject({
    * knows it: what the Secrets page names beside when.
    */
   lastTask: z.string().optional(),
+  /** The last use was the captain's own Copy value (docs/secrets.md, "Copying a value"). */
+  lastCopied: z.literal(true).optional(),
   /**
    * A sign-in the app keeps for one of its own services, hidden from the crew
    * (docs/secrets.md, "App sign-ins"): the page offers its Integrations row,
@@ -105,6 +107,8 @@ export const secretHistorySchema = z.strictObject({
   computer: z.string().optional(),
   /** A bring, by the tool it brought secrets from (docs/secrets.md, "Bringing secrets from another tool"). */
   brought: z.string().optional(),
+  /** The captain copied the value in Settings (docs/secrets.md, "Copying a value"); no program received it. */
+  copied: z.literal(true).optional(),
   device: z.string().optional(),
   reconciled: z.literal(true).optional(),
   /** Historical metadata imported from a recovery archive, never live authority. */
@@ -199,6 +203,22 @@ export const secretsViewSchema = z.strictObject({
   devices: z.array(secretApprovalDeviceSchema),
   /** Paired phones the captain is turning on; absent from an older home. */
   phones: z.array(secretPhoneSetupSchema).optional(),
+  /**
+   * Whether Copy value can work here (docs/secrets.md, "Copying a value"):
+   * `no-confirmation` where this computer cannot confirm the person now.
+   * Absent where this computer has no private clipboard writer, or from an
+   * older home, and then no row offers Copy value.
+   */
+  copy: z.enum(["ready", "no-confirmation"]).optional(),
+  /**
+   * The value Copy value last put on the clipboard, while Infinitary still
+   * means to clear it: its secret and when it clears. `concealed` is false
+   * where the platform's one write could not tell clipboard history tools to
+   * skip it.
+   */
+  copied: z
+    .strictObject({ ref: secretRefSchema, clears: z.number(), concealed: z.boolean() })
+    .optional(),
   message: z.string().nullable(),
   /**
    * Only on the answer to a Settings entry: the record it saved, so an entry
@@ -254,6 +274,15 @@ export const secretActionSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("cancel-phone"), paired: z.string().min(1).max(64) }),
   // The answer to the question on a Settings row: the one-time pass the view carried.
   z.strictObject({ kind: z.literal("answer"), pass: z.string().min(1).max(64) }),
+  // Copy value on a secret's row, bound to the record the row shows; the answer never holds the value.
+  z.strictObject({
+    kind: z.literal("copy"),
+    ref: secretRefSchema,
+    version: z.number().int().positive(),
+    revision: z.string().regex(/^[0-9a-f]{64}$/),
+  }),
+  // Clear now: takes the copied value off the clipboard while it still holds it.
+  z.strictObject({ kind: z.literal("clear-copy") }),
 ]);
 
 /**
@@ -353,6 +382,19 @@ export type SecretEnrollInput = z.infer<typeof secretEnrollInputSchema>;
 export type SecretDecisionInput = z.infer<typeof secretDecisionInputSchema>;
 export type SecretDecision = z.infer<typeof secretDecisionSchema>;
 
+/**
+ * How long a value Copy value put on the clipboard stays there before
+ * Infinitary clears it: the captain's choice of 90 seconds on the plan.
+ */
+export const SECRET_COPY_SECONDS = 90;
+
+/**
+ * The start of a Settings item that opens one secret's row (`settingsItem`),
+ * followed by the secret's name or reference: the first mate's
+ * `secrets-page` offer for a value the captain reads back with Copy value.
+ */
+export const SECRET_ROW_ITEM = "secret:";
+
 /** Captain's bounded-read choice, shared by enforcement and its visible permission label. */
 export const SHORT_READ_SECONDS = 600;
 export const SHORT_READ_USES = 20;
@@ -366,6 +408,50 @@ export const SECRETS_AREAS = [
   { value: "history", label: "Use history" },
   { value: "copy", label: "Backup and restore" },
 ] as const;
+
+/**
+ * Copy value's words (docs/secrets.md, "Copying a value"): the row's button,
+ * its status line and the controller's answers. None names a value.
+ */
+export const SECRET_COPY_WORDS = {
+  get copy() {
+    return m.settingsSecretsCopyValue();
+  },
+  get clearNow() {
+    return m.settingsSecretsClearNow();
+  },
+  /** The row's status while the copied value is on the clipboard; `concealed` false where history tools were not told to skip it. */
+  copiedUntil: (time: string, concealed: boolean) =>
+    concealed
+      ? m.settingsSecretsCopiedUntil({ time })
+      : m.settingsSecretsCopiedUntilVisible({ time }),
+  get cannotConfirm() {
+    return m.settingsSecretsCopyCannotConfirm();
+  },
+  /** A row's last-use line when its last use was a copy. */
+  copiedOn: (when: string) => m.settingsSecretsCopiedOn({ when }),
+  /** Use history's line for a copy, where a use names its program. */
+  get byYou() {
+    return m.settingsSecretsCopiedByYou();
+  },
+  /** The system confirmation's reason, naming the secret as Settings names it. */
+  reason: (name: string) => m.settingsSecretsCopyReason({ name }),
+  get refused() {
+    return m.settingsSecretsCopyRefused();
+  },
+  get changed() {
+    return m.settingsSecretsCopyChanged();
+  },
+  get unavailable() {
+    return m.settingsSecretsCopyUnavailable();
+  },
+  get unknown() {
+    return m.settingsSecretsCopyUnknown();
+  },
+  get cleared() {
+    return m.settingsSecretsCopyCleared();
+  },
+};
 
 export const SECRETS_WORDS = {
   title: "Secrets",
@@ -381,7 +467,7 @@ export const SECRETS_WORDS = {
    */
   custody: (mac: boolean) =>
     mac
-      ? "Kept on this computer. Your crew uses them but never sees them."
+      ? m.settingsSecretsCustodyMac()
       : "Kept on this computer. Your crew uses them only with your approval, but any program you run can reach them while your system's secret store is unlocked.",
   disabled: "Protected storage is not enabled in this build.",
   unavailable: "Secrets could not open its protected storage. No access was granted.",
@@ -421,7 +507,9 @@ export const SECRETS_WORDS = {
     "No phone or Mac approves uses. To add one, turn on Approves secret uses beside it in Settings → Devices.",
   stopApprovals: "Stop approvals",
   history: "History stays here until you delete it. Exports contain metadata, never secret values.",
-  noReveal: "The value stays hidden after saving. Only an approved use can receive it.",
+  get noReveal() {
+    return m.settingsSecretsNoReveal();
+  },
   search: "Search secrets",
   noMatch: "No matching secrets.",
   noneYet: "No secrets added yet.",

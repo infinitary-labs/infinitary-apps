@@ -64311,6 +64311,10 @@
                 "lastTask": {
                   "type": "string"
                 },
+                "lastCopied": {
+                  "type": "boolean",
+                  "const": true
+                },
                 "kept": {
                   "type": "boolean",
                   "const": true
@@ -64534,6 +64538,10 @@
                 "brought": {
                   "type": "string"
                 },
+                "copied": {
+                  "type": "boolean",
+                  "const": true
+                },
                 "device": {
                   "type": "string"
                 },
@@ -64667,6 +64675,33 @@
                 "state"
               ]
             }
+          },
+          "copy": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "no-confirmation"
+            ]
+          },
+          "copied": {
+            "type": "object",
+            "properties": {
+              "ref": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+              },
+              "clears": {
+                "type": "number"
+              },
+              "concealed": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "ref",
+              "clears",
+              "concealed"
+            ]
           },
           "message": {
             "anyOf": [
@@ -64965,6 +65000,10 @@
                 "lastTask": {
                   "type": "string"
                 },
+                "lastCopied": {
+                  "type": "boolean",
+                  "const": true
+                },
                 "kept": {
                   "type": "boolean",
                   "const": true
@@ -65188,6 +65227,10 @@
                 "brought": {
                   "type": "string"
                 },
+                "copied": {
+                  "type": "boolean",
+                  "const": true
+                },
                 "device": {
                   "type": "string"
                 },
@@ -65321,6 +65364,33 @@
                 "state"
               ]
             }
+          },
+          "copy": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "no-confirmation"
+            ]
+          },
+          "copied": {
+            "type": "object",
+            "properties": {
+              "ref": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+              },
+              "clears": {
+                "type": "number"
+              },
+              "concealed": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "ref",
+              "clears",
+              "concealed"
+            ]
           },
           "message": {
             "anyOf": [
@@ -65633,6 +65703,48 @@
                   "pass"
                 ],
                 "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "copy"
+                  },
+                  "ref": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+                  },
+                  "version": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "revision": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "ref",
+                  "version",
+                  "revision"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "clear-copy"
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "additionalProperties": false
               }
             ]
           }
@@ -65837,6 +65949,10 @@
                 },
                 "lastTask": {
                   "type": "string"
+                },
+                "lastCopied": {
+                  "type": "boolean",
+                  "const": true
                 },
                 "kept": {
                   "type": "boolean",
@@ -66061,6 +66177,10 @@
                 "brought": {
                   "type": "string"
                 },
+                "copied": {
+                  "type": "boolean",
+                  "const": true
+                },
                 "device": {
                   "type": "string"
                 },
@@ -66194,6 +66314,33 @@
                 "state"
               ]
             }
+          },
+          "copy": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "no-confirmation"
+            ]
+          },
+          "copied": {
+            "type": "object",
+            "properties": {
+              "ref": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+              },
+              "clears": {
+                "type": "number"
+              },
+              "concealed": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "ref",
+              "clears",
+              "concealed"
+            ]
           },
           "message": {
             "anyOf": [

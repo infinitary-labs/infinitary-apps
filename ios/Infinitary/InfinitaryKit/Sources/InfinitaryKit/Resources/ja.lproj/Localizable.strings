@@ -446,6 +446,10 @@
 "cardPastSentLead" = "選択と一緒に送信：";
 "cardPastUnreadable" = "このカードを読み取れませんでした";
 "cardQuickAnswer" = "クイック回答";
+"cardReaderCallChanges" = "プロジェクトの外にあるものを変更します。";
+"cardReaderCallReads" = "読み取るだけで、何も変更しません。";
+"cardReaderCallSends" = "ほかの人に何かを送ります。";
+"cardReaderCallWhy" = "理由（クルーの言葉）：";
 "cardReaderCallsHow" = "各行は最初からチェックされています。実行したくない行はチェックを外してください。チェックされた行は古い順に 1 回ずつ、それぞれの送り先のあなたのサインインで実行されます。";
 "cardReaderCallsLead" = "「%1$@」の担当の乗組員は誰でも書ける文章を読むため、これらの呼び出しはあなたの判断を待ちます。各行は 1 回の呼び出しと、その送り先と送信内容です。";
 "cardReaderCallsTitle" = "これらの呼び出しを許可しますか？";

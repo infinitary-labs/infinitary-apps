@@ -115,10 +115,20 @@ describe("an unsafe data reader's one approval card", () => {
       INTEGRATION_APPROVAL_WORDS.once,
     ]);
     expect(card?.body).toContain("POST /repos/octo/meter/issues/12/comments");
-    expect(card?.body).toContain("Notes: Add a note");
-    expect(card?.body).toContain("Issue 12 reproduces");
-    expect(card?.body).toContain("Remember issue 12 for the captain.");
-    expect(card?.body).toContain("Notes: List notes");
+    // Each integration row says whether it reads, changes or sends, and names
+    // its reason as the crewmate's words, since that model reads strangers'.
+    const row = (id: string) => card?.body.split(`data-inf-ask-row="${id}"`)[1]?.split("</li>")[0];
+    expect(row("note")).toContain("Notes: Add a note");
+    expect(row("note")).toContain(
+      "Changes something outside your project. Adds a note to the end of the list.",
+    );
+    expect(row("note")).toContain("Issue 12 reproduces");
+    expect(row("note")).toContain(
+      "Why, in the crewmate's words: Remember issue 12 for the captain.",
+    );
+    expect(row("read")).toContain("Notes: List notes");
+    expect(row("read")).toContain("Reads and changes nothing.");
+    expect(row("comment")).not.toContain("Reads and changes nothing.");
 
     expect(
       h.supervisor.cardActions.act(

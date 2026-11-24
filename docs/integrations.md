@@ -91,7 +91,7 @@ A click answers exactly the asks the offer it showed listed: a click on an older
 The click takes every listed ask before the first runs; a row unticked is refused with `NOT_ALLOWED_WHY`, and the others run once each, oldest first, with the choice; a row the click carries no reading of stays allowed.
 One `write-answered` steer names every outcome of that click, the waiting asks an allowance ran included (`also`).
 A task keeps at most `WRITE_ASK_CAP` asks: past it the oldest answered ask drops first, and a waiting ask drops only when none answered is left; that ask leaves its card and its crewmate hears at once that it never ran (`DROPPED_ASK_WHY`).
-Asks from different tasks or to different connections never share a card.
+Asks from different tasks or to different connections never share a card, except an unsafe data reader's, whose asks to every connection share its one card.
 An unsafe data reader's writes where its project lives, and its kept integration calls, join one card of their own the same way, with only Only this time and Not now (`docs/forge.md`, "A reader's writes"; "A reader's integrations").
 The minus only puts the card aside: the ask and its row remain pending, with no grant, refusal or outcome notification.
 The click takes the ask before running it, and the existing `write-answered` steer delivers the outcome once, including refusals.
@@ -136,11 +136,13 @@ They reach the same service as every task (`IntegrationsService.forReader`), wit
 
 - A read runs at once only when the captain set it to Always allow and its connection is not an MCP server, whose read-only mark is the server's own claim.
   Every other call, a read at Asks you, every MCP call and every change or send, is kept and joins the reader's one approval card, whatever its rule or the task's allowances say; that card offers only Only this time and Not now, and the service refuses any other choice for a reader's ask.
-  The list shows each action's rule as it holds for the reader.
+  The list shows each action's rule as it holds for the reader, a file-saving action as off, and neither the list nor a show names the account a connection signed in as, which is the captain's own.
+  Each row on that card says whether the call reads, changes or sends, with its action's description, and names its reason as the crewmate's words.
 - Every answer, a binding's refusal or error included, comes fenced whole under its kind's label, or `integration-data` for a kind that declares none (`READER_INTEGRATION_FENCE`), so a kind with no fence of its own reaches the reader marked too.
+  An answer longer than a reader's model takes whole (`READER_INTEGRATION_ANSWER_MAX`) is not served, since the reader cannot open a saved answer file: the reader hears its length and is asked for less.
 - An integration where a project lives is refused, since the reader reaches its own project through `github_read` alone, and so is an action that saves a file, since the reader opens no hand-over folder.
 
-The first time a reader's call runs, the host records on its task that it now holds something of the captain's (`delivery.readerHolds`, `TaskDeliveries.markReaderHolds`), keeping the first mark.
+The first time a reader's call answers it, the host records on its task that it now holds something of the captain's (`delivery.readerHolds`, `TaskDeliveries.markReaderHolds`), keeping the first mark.
 Ordinary crewmates, the first mate and panels keep the rules above unchanged.
 
 ## Keys
@@ -400,6 +402,7 @@ It changes them through `app_change` in the area `integrations`, the same channe
 ## How a crewmate reaches them
 
 A crewmate runs `infinitary-integrations-axi` on its task channel (`docs/axi-commands.md`, "The integrations command"): discover, then call.
+An unsafe data reader has no shell, so it reaches them through its two typed tools instead ("A reader's integrations").
 Its instructions carry one line for it (`CREWMATE_INTEGRATIONS_LINE`, `src/core/integrations/commandWords.ts`).
 A task on this Mac is granted the command whenever the host has a command process.
 

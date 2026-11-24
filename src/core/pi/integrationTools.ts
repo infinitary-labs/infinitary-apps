@@ -9,7 +9,8 @@ import { boundTool, crewmateTool } from "../session/tools";
  * Claude seat never starts over when an integration comes or goes, and an
  * integration nobody uses costs one name on the context block's roster
  * line. A crewmate reaches the same service through
- * `infinitary-integrations-axi`.
+ * `infinitary-integrations-axi`, and an unsafe data reader, which has no
+ * shell, through the reader's pair below under the same names.
  */
 
 export const INTEGRATIONS_TOOL_NAME = "integrations";

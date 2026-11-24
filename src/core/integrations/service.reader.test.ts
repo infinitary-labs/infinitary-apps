@@ -199,7 +199,15 @@ describe("an unsafe data reader's integrations", () => {
     const f = fixture();
     f.service.setRule("mcp-notes", "list_notes", true);
     f.service.setRule("stand-in", "count_items", true);
+    // A file-saving action is refused for a reader, so it lists as off even when allowed.
+    f.service.setRule("stand-in", "fetch_file", true);
     const listed = await f.service.forReader("reader").list();
+    // The account each connection signed in as ("sam") is the captain's own, so neither names it.
+    expect(listed.every((entry) => !("account" in entry))).toBe(true);
+    const shown = await f.service.forReader("reader").show("Notes");
+    expect(shown).not.toHaveProperty("account");
+    expect(shown).toHaveProperty("integration", "Notes");
+    expect(f.service.show("Notes")).toHaveProperty("account", "sam");
     expect(listed.map((entry) => [entry.name, entry.actions])).toEqual([
       [
         "Notes",
@@ -212,7 +220,7 @@ describe("an unsafe data reader's integrations", () => {
         "Stand-in",
         [
           { name: "count_items", rule: "allow" },
-          { name: "fetch_file", rule: "ask" },
+          { name: "fetch_file", rule: "never" },
         ],
       ],
     ]);
@@ -234,6 +242,25 @@ describe("an unsafe data reader's integrations", () => {
     expect(f.items.call).not.toHaveBeenCalled();
     expect(f.present).not.toHaveBeenCalled();
     expect(f.holds).toEqual([]);
+  });
+
+  it("withholds an answer too long to reach the reader whole, asking for less, and records no hold", async () => {
+    const f = fixture();
+    f.service.setRule("stand-in", "count_items", true);
+    // One character past the length a crewmate's tool hands its model whole
+    // (ANSWER_WHOLE_MAX_CHARACTERS, 50,000), before the fence is added.
+    const long = "x".repeat(50_001);
+    vi.mocked(f.items.call).mockResolvedValueOnce({ text: long });
+    const answer = await f.service.forReader("reader").call("Stand-in", "count_items", {});
+    expect(answer.text).not.toContain(long);
+    expect(answer.text).toMatch(
+      /^Not served: Stand-in's count_items answered \d+ characters, past the 50000 /,
+    );
+    expect(answer.text).toContain("Ask for less");
+    expect(f.holds).toEqual([]);
+    // An ordinary task's same read is served whole, for its own answer files.
+    vi.mocked(f.items.call).mockResolvedValueOnce({ text: long });
+    expect((await f.service.forTask("task-1").call("Stand-in", "count_items", {})).text).toBe(long);
   });
 
   it("records the reader holding something of the captain's when a call runs, never for a kept one", async () => {

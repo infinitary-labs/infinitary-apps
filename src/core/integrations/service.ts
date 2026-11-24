@@ -44,7 +44,12 @@ import {
   type PanelCaller,
 } from "./binding";
 import { FIRSTMATE_READER } from "./outsideReads";
-import { READER_INTEGRATION_FENCE, READER_REFUSED_KINDS, READER_WORDS } from "./readerReach";
+import {
+  READER_INTEGRATION_ANSWER_MAX,
+  READER_INTEGRATION_FENCE,
+  READER_REFUSED_KINDS,
+  READER_WORDS,
+} from "./readerReach";
 import { WHOLE_ACTION } from "./scopes";
 import type { IntegrationSettings, IntegrationSettingsStore } from "./store";
 
@@ -124,8 +129,9 @@ type Row = {
  * One task's reach, as its crewmate's command asks it
  * (`infinitary-integrations-axi`): this service's `forTask` on this Mac, and
  * on a computer that runs work the home asked each time (`SessionHost`,
- * docs/integrations.md "On a computer that runs work"). `signal` ends a wait
- * the command could no longer answer.
+ * docs/integrations.md "On a computer that runs work"); or, for an unsafe
+ * data reader, as its two typed tools ask it (`forReader`). `signal` ends a
+ * wait the command could no longer answer.
  */
 export type TaskIntegrations = {
   list: (signal?: AbortSignal) => Promise<Record<string, unknown>[]>;
@@ -728,9 +734,15 @@ export class IntegrationsService {
     const redact = (text: string) => this.redact(text);
     // An unsafe data reader's answer is marked whole, its binding's refusals
     // and errors too, since a server's own words can carry a stranger's; and
-    // once the binding ran, the reader holds something of the captain's.
+    // once an answer reaches it, the reader holds something of the captain's.
     const reader = this.isReader(caller);
-    if (reader && caller.kind === "task") this.options.readers?.holds(caller.taskId, name);
+    const served = (fenced: string): string => {
+      if (!reader || caller.kind !== "task") return fenced;
+      if (fenced.length > READER_INTEGRATION_ANSWER_MAX)
+        return READER_WORDS.tooLong(name, action, fenced.length);
+      this.options.readers?.holds(caller.taskId, name);
+      return fenced;
+    };
     const ownLabel = row.connection.fence ?? row.binding.fence;
     const readerLabel = ownLabel ?? READER_INTEGRATION_FENCE;
     // Only the binding's own label is kept for a while and noted as read
@@ -743,12 +755,9 @@ export class IntegrationsService {
       if (delivered && !answer.refused) answer.text = await this.saveFile(row, caller, delivered);
       const text = redact(answer.text);
       const label = reader ? readerLabel : answer.refused ? undefined : ownLabel;
-      return {
-        answer: {
-          ...answer,
-          text: label ? fencedAnswer(text, this.fence(label, caller, noted)) : text,
-        },
-      };
+      // A too-long answer is withheld, not refused: a change behind it still ran.
+      const marked = label ? fencedAnswer(text, this.fence(label, caller, noted)) : text;
+      return { answer: { ...answer, text: served(marked) } };
     } catch (error) {
       const text = redact(
         error instanceof IntegrationOutcomeUnknown
@@ -758,7 +767,7 @@ Do not repeat this call; read ${name} to check what happened first.`
       );
       return {
         answer: {
-          text: reader ? fencedAnswer(text, this.fence(readerLabel, caller, noted)) : text,
+          text: reader ? served(fencedAnswer(text, this.fence(readerLabel, caller, noted))) : text,
           refused: "refused",
         },
         ...(error instanceof IntegrationOutcomeUnknown ? { unknown: true as const } : {}),
@@ -1072,6 +1081,7 @@ Do not repeat this call; read ${name} to check what happened first.`
    * data reader"): every integration but those where projects live, under
    * its task's rules (`call`), with each action's rule as it holds for the
    * reader: allow only where the call would run without the captain's click.
+   * Neither its list nor a show names the account a connection signed in as.
    */
   forReader(taskId: string): TaskIntegrations {
     const reach = (name: string): Row | IntegrationAnswer => {
@@ -1085,7 +1095,8 @@ Do not repeat this call; read ${name} to check what happened first.`
         this.rows()
           .filter((row) => !READER_REFUSED_KINDS.has(row.binding.kind))
           .map((row) => {
-            const entry = this.rosterEntry(row);
+            // The signed-in account is the captain's own, which a reader could carry off.
+            const { account: _account, ...entry } = this.rosterEntry(row);
             return {
               ...entry,
               actions: row.connection.actions.map((spec) => ({
@@ -1097,8 +1108,9 @@ Do not repeat this call; read ${name} to check what happened first.`
       show: async (name) => {
         const row = reach(name);
         if (!("connection" in row)) return row;
-        const shown = this.show(name);
-        if (isIntegrationAnswer(shown)) return shown;
+        const whole = this.show(name);
+        if (isIntegrationAnswer(whole)) return whole;
+        const { account: _account, ...shown } = whole;
         const rules = new Map(
           row.connection.actions.map((spec) => [spec.name, this.readerRule(row, spec)]),
         );
@@ -1117,7 +1129,9 @@ Do not repeat this call; read ${name} to check what happened first.`
 
   /** An action's rule as it holds for an unsafe data reader (`runsForReader`). */
   private readerRule(row: Row, spec: IntegrationActionSpec): IntegrationRule {
-    if (row.settings.off?.includes(spec.name)) return integrationRule(false, false);
+    // A file-saving action is refused for a reader (`fileRefusal`), so it is off.
+    if (row.settings.off?.includes(spec.name) || spec.delivers === "file")
+      return integrationRule(false, false);
     return integrationRule(this.runsForReader(row, spec), true);
   }
 

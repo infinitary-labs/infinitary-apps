@@ -446,6 +446,10 @@
 "cardPastSentLead" = "Enviado con tu elección:";
 "cardPastUnreadable" = "No se pudo leer esta tarjeta";
 "cardQuickAnswer" = "Respuesta rápida";
+"cardReaderCallChanges" = "Cambia algo fuera de tu proyecto.";
+"cardReaderCallReads" = "Solo lee y no cambia nada.";
+"cardReaderCallSends" = "Envía algo a otras personas.";
+"cardReaderCallWhy" = "Por qué, en palabras del tripulante:";
 "cardReaderCallsHow" = "Todas las filas vienen marcadas; desmarca las que no quieras ejecutar. Las filas marcadas se ejecutan una vez cada una, de la más antigua a la más reciente, con tu inicio de sesión en cada lugar.";
 "cardReaderCallsLead" = "El tripulante de «%1$@» lee palabras que cualquiera puede escribir, así que estas llamadas esperan tu decisión. Cada fila es una llamada, adónde va y lo que envía.";
 "cardReaderCallsTitle" = "¿Permitir estas llamadas?";

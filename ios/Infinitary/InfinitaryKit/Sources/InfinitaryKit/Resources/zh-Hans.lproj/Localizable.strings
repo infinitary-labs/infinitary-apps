@@ -446,6 +446,10 @@
 "cardPastSentLead" = "已随你的选择发送：";
 "cardPastUnreadable" = "无法读取这张卡片";
 "cardQuickAnswer" = "快速回答";
+"cardReaderCallChanges" = "更改你项目之外的内容。";
+"cardReaderCallReads" = "只读取，不更改任何内容。";
+"cardReaderCallSends" = "向其他人发送内容。";
+"cardReaderCallWhy" = "原因（船员的原话）：";
 "cardReaderCallsHow" = "每一行默认已勾选；取消勾选你不想运行的行。勾选的行按从旧到新的顺序各运行一次，使用你在各处的登录。";
 "cardReaderCallsLead" = "“%1$@”上的船员会读取任何人都能写的内容，所以这些调用要等你决定。每一行是一次调用、它的去向及其发送的内容。";
 "cardReaderCallsTitle" = "允许这些调用吗？";

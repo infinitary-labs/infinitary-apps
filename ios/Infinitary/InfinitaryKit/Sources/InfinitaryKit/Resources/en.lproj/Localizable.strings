@@ -446,6 +446,10 @@
 "cardPastSentLead" = "Sent with your choice:";
 "cardPastUnreadable" = "This card could not be read";
 "cardQuickAnswer" = "Quick answer";
+"cardReaderCallChanges" = "Changes something outside your project.";
+"cardReaderCallReads" = "Reads and changes nothing.";
+"cardReaderCallSends" = "Sends something to other people.";
+"cardReaderCallWhy" = "Why, in the crewmate's words:";
 "cardReaderCallsHow" = "Every row comes ticked; untick any you do not want run. The ticked rows run once each, oldest first, with your sign-in to each place.";
 "cardReaderCallsLead" = "The crewmate on “%1$@” reads words anyone can write, so these calls wait for you. Each row is one call, where it goes and what it sends.";
 "cardReaderCallsTitle" = "Allow these calls?";

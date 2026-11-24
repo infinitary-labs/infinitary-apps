@@ -6,7 +6,7 @@ import {
   INTEGRATION_APPROVAL_WORDS,
   integrationApprovalsButtonLines,
 } from "@shared/integrations";
-import type { WriteAsk } from "@shared/writeAsk";
+import type { IntegrationAsk, WriteAsk } from "@shared/writeAsk";
 import { escapeCardText } from "./cardText";
 import { HOST_CARD_PRIORITY } from "./hostCards";
 import { APPROVAL_CARD_META, inputLines } from "./integrationApprovalCard";
@@ -43,13 +43,15 @@ export function readerApprovalCard(
         : "",
       `<label class="inf-ask-out"><input type="checkbox" name="${text(allowFieldOf(ask.id))}" value="allow" checked> ${ASK_ROW_WORDS.allow}</label>`,
       "</div>",
+      ask.kind === "integration" ? `<p class="inf-ask-why">${text(callEffect(ask))}</p>` : "",
       ask.kind !== "integration"
         ? ask.body !== undefined
           ? inputLines(ask.body)
           : ""
         : inputLines(ask.input),
+      // The reason comes from a model reading strangers' words, so it is named as the crewmate's.
       ask.kind === "integration" && ask.reason
-        ? `<p class="inf-ask-why">${text(ask.reason)}</p>`
+        ? `<p class="inf-ask-why">${m.cardReaderCallWhy()} ${text(ask.reason)}</p>`
         : "",
       "</li>",
     ].join(""),
@@ -98,4 +100,15 @@ export function readerApprovalCard(
     status: "ready",
     createdAt: first.at,
   };
+}
+
+/** What an integration row does, as the ordinary integration card says it, then its action's own description. */
+function callEffect(ask: IntegrationAsk): string {
+  const effect =
+    ask.effect === "reads"
+      ? m.cardReaderCallReads()
+      : ask.effect === "sends"
+        ? m.cardReaderCallSends()
+        : m.cardReaderCallChanges();
+  return ask.description ? `${effect} ${ask.description}` : effect;
 }

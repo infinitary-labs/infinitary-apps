@@ -446,6 +446,10 @@
 "cardPastSentLead" = "Mit deiner Wahl gesendet:";
 "cardPastUnreadable" = "Diese Karte konnte nicht gelesen werden";
 "cardQuickAnswer" = "Schnelle Antwort";
+"cardReaderCallChanges" = "Ändert etwas außerhalb deines Projekts.";
+"cardReaderCallReads" = "Liest nur und ändert nichts.";
+"cardReaderCallSends" = "Sendet etwas an andere Personen.";
+"cardReaderCallWhy" = "Warum, in den Worten des Crewmitglieds:";
 "cardReaderCallsHow" = "Jede Zeile ist angehakt; entferne den Haken bei allen, die nicht laufen sollen. Die angehakten Zeilen laufen je einmal, die älteste zuerst, mit deiner Anmeldung beim jeweiligen Ziel.";
 "cardReaderCallsLead" = "Das Crewmitglied von „%1$@“ liest Texte, die jeder schreiben kann, darum warten diese Aufrufe auf deine Entscheidung. Jede Zeile ist ein Aufruf, sein Ziel und was er sendet.";
 "cardReaderCallsTitle" = "Diese Aufrufe erlauben?";

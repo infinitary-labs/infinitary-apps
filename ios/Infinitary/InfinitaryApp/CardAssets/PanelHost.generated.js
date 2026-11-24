@@ -19070,6 +19070,114 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Quick answer`;
   }
+  function cardReaderCallChanges() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يغيّر شيئًا خارج مشروعك.`;
+      case "de":
+        return `Ändert etwas außerhalb deines Projekts.`;
+      case "es":
+        return `Cambia algo fuera de tu proyecto.`;
+      case "fr":
+        return `Change quelque chose en dehors de votre projet.`;
+      case "ja":
+        return `プロジェクトの外にあるものを変更します。`;
+      case "ko":
+        return `프로젝트 밖의 무언가를 바꿉니다.`;
+      case "pt-BR":
+        return `Muda algo fora do seu projeto.`;
+      case "zh-Hans":
+        return `更改你项目之外的内容。`;
+      case "zh-Hant":
+        return `變更你專案之外的內容。`;
+      case "en-XA":
+        return `[Çĥáñĝéš šöɱéţĥîñĝ öûţšîðé ýöûŕ þŕöĵéçţ. ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Changes something outside your project.‬`;
+    }
+    return `Changes something outside your project.`;
+  }
+  function cardReaderCallReads() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يقرأ فقط ولا يغيّر شيئًا.`;
+      case "de":
+        return `Liest nur und ändert nichts.`;
+      case "es":
+        return `Solo lee y no cambia nada.`;
+      case "fr":
+        return `Lit seulement et ne change rien.`;
+      case "ja":
+        return `読み取るだけで、何も変更しません。`;
+      case "ko":
+        return `읽기만 하고 아무것도 바꾸지 않습니다.`;
+      case "pt-BR":
+        return `Só lê e não muda nada.`;
+      case "zh-Hans":
+        return `只读取，不更改任何内容。`;
+      case "zh-Hant":
+        return `只讀取，不變更任何內容。`;
+      case "en-XA":
+        return `[Ŕéáðš áñð çĥáñĝéš ñöţĥîñĝ. ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Reads and changes nothing.‬`;
+    }
+    return `Reads and changes nothing.`;
+  }
+  function cardReaderCallSends() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يرسل شيئًا إلى أشخاص آخرين.`;
+      case "de":
+        return `Sendet etwas an andere Personen.`;
+      case "es":
+        return `Envía algo a otras personas.`;
+      case "fr":
+        return `Envoie quelque chose à d’autres personnes.`;
+      case "ja":
+        return `ほかの人に何かを送ります。`;
+      case "ko":
+        return `다른 사람에게 무언가를 보냅니다.`;
+      case "pt-BR":
+        return `Envia algo para outras pessoas.`;
+      case "zh-Hans":
+        return `向其他人发送内容。`;
+      case "zh-Hant":
+        return `向其他人傳送內容。`;
+      case "en-XA":
+        return `[Šéñðš šöɱéţĥîñĝ ţö öţĥéŕ þéöþļé. ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Sends something to other people.‬`;
+    }
+    return `Sends something to other people.`;
+  }
+  function cardReaderCallWhy() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `السبب، بكلمات فرد الطاقم:`;
+      case "de":
+        return `Warum, in den Worten des Crewmitglieds:`;
+      case "es":
+        return `Por qué, en palabras del tripulante:`;
+      case "fr":
+        return `Pourquoi, selon les mots du membre d’équipage :`;
+      case "ja":
+        return `理由（クルーの言葉）：`;
+      case "ko":
+        return `이유(크루원의 말):`;
+      case "pt-BR":
+        return `Por quê, nas palavras do tripulante:`;
+      case "zh-Hans":
+        return `原因（船员的原话）：`;
+      case "zh-Hant":
+        return `原因（船員的原話）：`;
+      case "en-XA":
+        return `[Ŵĥý, îñ ţĥé çŕéŵɱáţé'š ŵöŕðš: ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Why, in the crewmate's words:‬`;
+    }
+    return `Why, in the crewmate's words:`;
+  }
   function cardReaderCallsHow() {
     switch (currentLanguage()) {
       case "ar":
@@ -105854,6 +105962,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardPastSentLead,
     cardPastUnreadable,
     cardQuickAnswer,
+    cardReaderCallChanges,
+    cardReaderCallReads,
+    cardReaderCallSends,
+    cardReaderCallWhy,
     cardReaderCallsHow,
     cardReaderCallsLead,
     cardReaderCallsTitle,
@@ -109225,6 +109337,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardPastSentLead": [],
     "cardPastUnreadable": [],
     "cardQuickAnswer": [],
+    "cardReaderCallChanges": [],
+    "cardReaderCallReads": [],
+    "cardReaderCallSends": [],
+    "cardReaderCallWhy": [],
     "cardReaderCallsHow": [],
     "cardReaderCallsLead": ["task"],
     "cardReaderCallsTitle": [],

@@ -189,9 +189,12 @@ for (const runtime of READER_RUNTIMES) {
       (await page.evaluate((taskId) => window.infinitary.tasks.detail(taskId), id))?.outcome ?? "";
     await expect.poll(outcome, { timeout: 45_000 }).toContain(READER_LISTED);
     const listed = await outcome();
-    // Its list names the notes server and the stand-in, each action at Asks you.
+    // Its list gives each rule as it holds for the reader: the allowed count
+    // runs, the notes list set to Always allow still asks, since its server is MCP.
     expect(listed).toContain('"name":"Notes"');
-    expect(listed).toContain(NOTES_ADD_TOOL);
+    expect(listed).toContain('{"name":"count_items","rule":"allow"}');
+    expect(listed).toContain('{"name":"list_notes","rule":"ask"}');
+    expect(listed).toContain(`{"name":"${NOTES_ADD_TOOL}","rule":"ask"}`);
     expect(listed).toContain("this task reads words strangers can write");
     // The allowed count answered before any click, and the host recorded the hold.
     expect(listed).toContain("The stand-in holds 2 items.");

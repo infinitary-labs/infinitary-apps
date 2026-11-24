@@ -130,6 +130,7 @@ An address can carry what the reader read to whoever runs the site, so which add
   A path with a `protection` or `reviews` segment marks it too: a branch's or tag's protection is read only by admins, a pull request's reviews carry the captain's own unsent one, and a release listing or one by number shows drafts to anyone who can push.
   GitLab and Bitbucket let a public project keep any area to its members, and GitLab's own project answer carries a runner token to its maintainers, so every read there makes the reader hold.
   The mark is set before the read goes out.
+- It also holds something once one of the captain's integrations answers it ("A reader's integrations" in `docs/integrations.md`).
 - Once it holds something, an address its brief names exactly, outside any fenced words, still opens at once, and so does one the captain already allowed; any other is kept as a `WebReadAsk` and joins the reader's one approval card as a row showing the whole address ("A reader's writes" in `docs/forge.md`).
   The captain's Only this time opens each ticked page once and wakes the reader with its first part; Not now opens nothing.
 

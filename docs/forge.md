@@ -713,7 +713,7 @@ A card of writes to one place names it in its title; one that also holds integra
 The click takes every row it showed before the first is sent: an unticked row and Not now send nothing, and Only this time sends the others once each, oldest first, through `GithubGatewayService.sendTaken`, with the same guards as any kept write.
 One `write-answered` steer names every outcome, each sent write's answer fenced under its host's label like the reader's reads; the cap and dropped asks work as they do for an integration's asks.
 A write outside the project, a release file and a validation effect are refused, and `emit_card` refuses a card naming a reader's ask.
-A web page the reader waits to open (`WebReadAsk`, `docs/agents-reach.md`, "Web pages") joins the same card as a row showing `GET` and its whole address, and the card's title and lead name pages, writes or both; its click opens the page once through `ReaderWebService.sendTaken`, and the steer carries the page's first part fenced under `web-data`.
+A web page the reader waits to open (`WebReadAsk`, `docs/agents-reach.md`, "Web pages") joins the same card as a row showing `GET` and its whole address, and the card adds a lead about pages, its title naming pages alone, or writes on one place and pages; its click opens the page once through `ReaderWebService.sendTaken`, and the steer carries the page's first part fenced under `web-data`.
 
 ### On GitLab
 

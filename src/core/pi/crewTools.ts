@@ -401,14 +401,14 @@ const SHAPE_FIELD_RULES = {
   runs_on_ask: "As update_task's runs_on.",
   internal_step: INTERNAL_STEP_DESCRIPTION,
   unsafe_data_reader:
-    "True only on a read-only task whose brief has it read words strangers can write, such as its project's issues and pull requests. Its crewmate gets no shell, web or browser, reads only its own project, or with no repo_id an empty folder of its own, and every write it makes waits for the captain's click.",
+    "True only on a read-only task whose brief reads words strangers can write, such as its project's issues and pull requests. Its crewmate gets no shell, web or browser, reads only its own project (or with no repo_id an empty folder of its own), and its writes wait for the captain's click.",
   in_folder: "Operate in the project's folder; ships nothing.",
   skipped_plan_because:
     "For a direct build without a chosen basis, which sequences test parts passed: one nameable place, no changed rule, state or meaning, and a result checkable by looking. The host shows it unjudged.",
   review_of:
     "Task whose committed work an independent reviewer checks read-only; pass the user's original words and same repo_id. It runs on its builder's computer: omit runs_on_ask.",
   repairs_batch:
-    "True only on the one task you start to repair a project's held batch: the host records it as that batch's repair, which the captain sees.",
+    "True only on the one task you start to repair a project's held batch; the captain sees it as that batch's repair.",
 } as const satisfies Record<keyof typeof SHAPE_FIELDS, string>;
 
 /** What each wait in spawn_crewmate's `start_after` group means, on the group (v4.13). */
@@ -571,7 +571,7 @@ export function createCrewTools(delegate: CrewDelegate) {
     description: [
       "Commission a crewmate for project work or evidence-gathering investigation.",
       "Pass a goal, the user's verbatim words, typed constraints and an optional delivery note;",
-      "the crewmate briefs itself from these on its first turn; do not author a brief.",
+      "the crewmate briefs itself; do not author a brief.",
       "Pass repo_id to bind a project, or omit it for the default workspace.",
       "Lessons and the user's own panels on the rails use personal_ui true: the",
       "host binds the personal workspace itself (no repo_id) and the crewmate builds in place,",
@@ -947,7 +947,7 @@ export function createCrewTools(delegate: CrewDelegate) {
       "Moves started work to another work computer or this Mac at a safe pause: " +
       "its crewmate's turn and commands finish first. It keeps " +
       "its key, branch, uncommitted work, files and record, and continues in a new conversation " +
-      "there on the same model. Only on the captain's ask, never to balance load. cancel stops a " +
+      "there on its model. Only on the captain's ask, never to balance load. cancel stops a " +
       "move before crossing starts. Git-ignored files stay with the old copy unless keep names them. " +
       "Off a computer out of reach it refuses, saying what stays behind; leave_behind, only once " +
       "the captain heard that and said yes, continues from the commit the first mate's computer holds.",

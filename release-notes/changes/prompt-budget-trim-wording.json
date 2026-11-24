@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "prompt-budget-trim-wording",
+      "reason": "Shortens wording in a few first mate tool descriptions so its fixed prompt is back under budget; nothing a person sees changes."
+    }
+  ]
+}

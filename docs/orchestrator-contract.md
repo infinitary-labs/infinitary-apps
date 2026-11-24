@@ -171,14 +171,14 @@ A rule that the core, a tool description and a parameter each stated is said onc
 - **emit_card describes only its top-level parameters.**
   A Claude seat was served no nested description until INF-744, so each nested rule rides its top-level parameter's description, such as `actions` or `asks_again`, or `CARD_MECHANICS`; `claudeToolSurface.test.ts` holds that no app tool describes a nested parameter.
 
-The first mate's budget is derived: the 65,536-token floor, minus the 12,288 reserve, minus the promised 33,476-token conversation, which is 19,772.
+The first mate's budget is derived and then raised: the 65,536-token floor, minus the 12,288 reserve, minus a promised 33,476-token conversation, is 19,772, and the captain raised that by half to 29,658 when the first trim found its always-needed rules over it, which leaves the conversation 23,590.
 A crewmate's budget, for each runtime and kind of work, is derived from the same floor and reserve: the conversation is promised at least as much room as the fixed part takes, so the budget is half of what the floor leaves after the reserve, 26,624.
 `tests/helpers/promptBudget.ts` is the one measurement both read.
 Each budget has two lines (`docs/testing.md`, "The prompt budget's two lines").
-`tests/firstmate-fixed-context.test.ts` and `tests/crewmate-fixed-context.test.ts` fail a change only past the hard line, one and a half times the budget: 29,658 for the first mate and 39,936 for a crewmate.
+`tests/firstmate-fixed-context.test.ts` and `tests/crewmate-fixed-context.test.ts` fail a change only past the hard line: a quarter over the first mate's raised budget, 37,072, and one and a half times a crewmate's, 39,936.
 The prompt-budget check on main fails past the budget itself, and a red run files one trim task, which works as "How a trim works" says.
 A change that would cross the budget trims first where it can.
-The budget is not a second number a revision raises.
+A revision never raises a budget on its own.
 A room-restoring trim measures the same served prompt and tool schemas at both ends of the preceding fourteen days, including the sequences seed for the first mate and the largest backend/procedure case for a crewmate.
 When that window crosses the fresh-history rename, read the earlier tree in the archive named by the root commit rather than shortening the window.
 Report net growth, the chosen growth horizon, the restored room and the forecast's limits with the change's verification; these are measurements, not a second failing ceiling that makes the restored room unusable.

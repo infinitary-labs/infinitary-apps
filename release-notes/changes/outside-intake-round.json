@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "outside-intake-round",
+      "reason": "Internal: a docs page holding the method and the two draft Automation rules for the project's own intake rounds on outside issues and pull requests; nothing in the app changes."
+    }
+  ]
+}

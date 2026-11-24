@@ -226,6 +226,8 @@ type RecordUsageInput = {
 };
 
 export type SetupExtras = {
+  /** The integrations a task reaches (docs/integrations.md); absent, none. */
+  integrations?: import("@core/orchestrator/crewSupervisorOptions").CrewSupervisorOptions["integrations"];
   realRouter?: (
     db: ReturnType<typeof openInMemoryDatabase>,
   ) => import("@core/routing/router").Router;
@@ -572,6 +574,7 @@ export function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
         }
       : {}),
     ...(extras.accounts ? { accounts: extras.accounts } : {}),
+    ...(extras.integrations ? { integrations: extras.integrations } : {}),
     ...(extras.accountlessServes ? { accountlessServes: extras.accountlessServes } : {}),
     ...(extras.accountlessModels ? { accountlessModels: extras.accountlessModels } : {}),
     ...(extras.machines ? { machines: extras.machines } : {}),

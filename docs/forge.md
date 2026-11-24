@@ -707,8 +707,9 @@ The gateway tests (`src/core/forge/providers/github/gateway.test.ts`, `src/core/
 ### A reader's writes
 
 An unsafe data reader (`docs/agents-reach.md`, "An unsafe data reader") keeps every write to its own project, run starts included, and never puts one on a card of its own.
-`github_write` keeps it as a `WriteAsk` naming its card (`ForgeWriteAsk.card`), and the host lists it there (`IntegrationAsks.askForge`): it joins the task's waiting card of writes, revised in place, or raises `write-ask-<id>`.
-The card draws one ticked row per write, its method and path and the JSON body it sends, with the tally and legend of the integrations' card (`forgeApprovalCard`), and offers Only this time and Not now.
+`github_write` keeps it as a `WriteAsk` naming its card (`ForgeWriteAsk.card`), and the host lists it there (`IntegrationAsks.askForge`): it joins the task's waiting card, revised in place, or raises `write-ask-<id>`; the reader's kept integration calls join the same card (`docs/integrations.md`, "A reader's integrations").
+The card draws one ticked row per call: a write's method and path and the JSON body it sends, or an integration call's place, action, exact input and the reader's reason, with the tally and legend of the integrations' card (`readerApprovalCard`), and offers Only this time and Not now.
+A card of writes to one place names it in its title; one that also holds integration calls asks to allow these calls.
 The click takes every row it showed before the first is sent: an unticked row and Not now send nothing, and Only this time sends the others once each, oldest first, through `GithubGatewayService.sendTaken`, with the same guards as any kept write.
 One `write-answered` steer names every outcome, each sent write's answer fenced under its host's label like the reader's reads; the cap and dropped asks work as they do for an integration's asks.
 A write outside the project, a release file and a validation effect are refused, and `emit_card` refuses a card naming a reader's ask.

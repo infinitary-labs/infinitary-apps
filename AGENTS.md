@@ -31,17 +31,19 @@ Product vision and interaction model: `.claude/skills/infinitary-design/readme.m
 - **Pictures.** Photograph each changed view before the first edit and again after it (`docs/testing.md`, "Capturing pictures of a change").
 - **Architecture.** It is decided (`docs/architecture.md` §14): if reality contradicts a recorded decision, escalate with `needs-decision` instead of improvising.
 - **Vision.** `STRATEGY.md` holds the captain's approved vision, which says what a change should align with or resist: never change that file without the captain's deliberate ask or approval.
-- **Served text.** What the app serves to every user's first mate and crew speaks for every project, never for this repository's own setup (`docs/orchestrator-contract.md`, "What the served text may name").
+- **Served text.** What the app serves to every user's first mate and crew, and what the host does on its own, speaks for every project, never for this repository's own setup (`docs/orchestrator-contract.md`, "What the served text may name").
 - **Seams.** Every child process gets its environment from `hostEnv()`, every `ModelRuntime` comes from `src/core/pi/modelRuntime.ts` and every model session from a `SessionFactory`. Never spawn a path inside app.asar; never read `~/.pi`.
+- **Saved sessions and failures.** Nothing prunes a session (`docs/task-retention.md`). A provider-failed turn stays a `turn_failed` event, and `src/shared/authFailure.ts` alone classifies sign-in failures (`docs/firstmate-runaway-hardening.md`).
+- **Test rows.** Seed task rows through `seedTask`, never raw SQL (`docs/e2e-contracts.md`); a migration test that reverses a column a published view reads drops the views first (`docs/ui-plugins.md`).
 - **One writer.** Each store has one writer; find it on its page before writing to its files (`primitives/`, `docs/architecture.md`).
-- **Docs.** `docs/` holds how the project works now, in the present tense. A record of what happened (a run, a measurement, an incident, an executed plan, evidence) is never committed; it goes in the change's Verified section or the task's report.
+- **Docs.** `docs/` holds how the project works now, in the present tense. A record of what happened (a run, a measurement, an incident, a status, an executed plan, evidence, a prototype) is never committed; it goes in the change's Verified section or the task's report, and git history keeps how a rule got there.
 
 ## Every change
 
 1. UI follows the `infinitary-design` skill: consume its tokens, and extend the skill before inventing a rule.
 2. Every word a person reads follows the vocabulary and goes in the catalog with all nine translations in the same change (`docs/i18n.md`, "Translating"). Text served to a model stays English.
 3. A change a person notices adds a note under `release-notes/changes/`; internal work adds an exclusion with a reason (`docs/release-notes.md`).
-4. Regenerate a generated file with its script; never hand-edit one (`*.generated.ts`, `docs/contract.json`, `CHANGELOG.md`).
+4. Regenerate a generated file with its script; never hand-edit one (`*.generated.ts`, the phone's message files, `docs/contract.json`, `CHANGELOG.md`).
 5. Run `pnpm check:changed` after the final file change and before every push; any later change makes that proof stale.
 6. An edited test file needs three passing runs with no retries: unit files locally, journeys and phone parts through the requests in `docs/testing.md`, "What a task branch requests", made once at the final version.
 7. This project merges in batches: a change is a task's pushed branch with no pull request of its own (`docs/testing.md`, "The swept batch").
@@ -59,7 +61,7 @@ Product vision and interaction model: `.claude/skills/infinitary-design/readme.m
 | Layout, fences, sharp edges already paid for | `docs/architecture.md` |
 | An IPC channel or a core shape | `docs/contract.md`, `src/shared/contract-changes/README.md` |
 | What the first mate or a crewmate is told | `docs/orchestrator-contract.md`, `src/core/prompts/contract-revisions/README.md` |
-| The prompt, card lint, whose-turn sort, routing, `src/renderer/src/cards/` | `docs/replay-harness.md` (run the replay gate) |
+| The prompt, the first mate agent, card lint, whose-turn sort, routing, `src/renderer/src/cards/` | `docs/replay-harness.md` (run the replay gate before pushing) |
 | Accounts, sign-ins, quota, the Claude client | `docs/quota.md`, `docs/claude-client.md`, `docs/architecture.md` §16 |
 | Where the project lives, pull requests, batches | `docs/forge.md` |
 | A release, an alpha, signing, packaging | `docs/alpha.md`, `docs/local-code-signing.md`, `tests/release-contract.test.ts` |

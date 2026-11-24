@@ -25,6 +25,7 @@ import { type BuildFlavor, userDataFoldersNewestFirst } from "@shared/userDataFo
 import {
   createDarwinSecretCustody,
   type DarwinCustodyApi,
+  inKeychainTurn,
   loadDarwinCustodyApi,
 } from "../host/darwinSecretCustody";
 import {
@@ -256,8 +257,10 @@ export async function clearSafeStorage(
   if (input.platform === "darwin") {
     const api = apis.darwin?.();
     if (!api) return false;
-    api.setUserInteractionAllowed(false);
-    const status = api.remove(item, input.appName);
+    const status = await inKeychainTurn(() => {
+      api.setUserInteractionAllowed(false);
+      return api.remove(item, input.appName);
+    });
     return status === 0 || status === ERR_SEC_ITEM_NOT_FOUND;
   }
   if (input.platform === "linux") {

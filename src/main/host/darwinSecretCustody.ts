@@ -18,6 +18,11 @@ import type {
  * Every call is silent unless `interactive` is set: a locked store answers
  * `locked`, never a dialog the person did not ask for. Nothing falls back to
  * a file or another store when the Keychain refuses.
+ *
+ * An interactive read can wait on the Keychain's dialog for as long as the
+ * person leaves it up, so it runs on a native worker thread and the main
+ * thread keeps working. Silent calls take a few milliseconds and stay
+ * synchronous.
  */
 
 const SEC_SUCCESS = 0;
@@ -30,10 +35,14 @@ const SEC_LOCKED = new Set([
   -60008, // errAuthorizationInternal: the dialog could not be shown
 ]);
 
+type CustodyLookup = { status: number; bytes?: Buffer };
+
 /** The few Keychain calls custody makes, so the status mapping is testable without a Keychain. */
 export type DarwinCustodyApi = {
   setUserInteractionAllowed(allowed: boolean): void;
-  read(service: string, account: string): { status: number; bytes?: Buffer };
+  read(service: string, account: string): CustodyLookup;
+  /** The same read on a native worker thread, for one that may wait on a dialog. */
+  readOffThread(service: string, account: string): Promise<CustodyLookup>;
   write(service: string, account: string, bytes: Buffer): number;
   /** Deletes the item; errSecItemNotFound when there is none. */
   remove(service: string, account: string): number;
@@ -45,56 +54,78 @@ export type DarwinCustodyOptions = {
   interactive?: boolean;
 };
 
+/**
+ * The tail of every Keychain call this process makes through custody.
+ * `SecKeychainSetUserInteractionAllowed` is one switch for the whole process,
+ * and an interactive read now waits off the main thread: a silent call made
+ * meanwhile would turn the dialog off under it, or be allowed one itself. So
+ * each call waits for the one before it, across every custody of every service.
+ */
+let keychainTurn: Promise<unknown> = Promise.resolve();
+
+/** Runs `call` once every custody Keychain call started before it has settled. */
+export function inKeychainTurn<T>(call: () => T | Promise<T>): Promise<T> {
+  const turn = keychainTurn.then(call);
+  keychainTurn = turn.catch(() => undefined);
+  return turn;
+}
+
 export function createDarwinSecretCustody(
   api: DarwinCustodyApi | undefined,
   options: DarwinCustodyOptions,
 ): SecretCustody {
   return {
-    async read(slot: CustodySlot): Promise<CustodyRead> {
-      if (!api) return { kind: "unavailable" };
-      try {
-        api.setUserInteractionAllowed(options.interactive === true);
-        const { status, bytes } = api.read(options.service, slot);
-        if (status === SEC_SUCCESS && bytes) {
-          const decoded = Buffer.from(bytes.toString("ascii"), "base64");
-          bytes.fill(0);
-          return { kind: "value", bytes: decoded };
+    read: (slot: CustodySlot): Promise<CustodyRead> =>
+      inKeychainTurn(async () => {
+        if (!api) return { kind: "unavailable" };
+        try {
+          const interactive = options.interactive === true;
+          api.setUserInteractionAllowed(interactive);
+          const { status, bytes } = interactive
+            ? await api.readOffThread(options.service, slot)
+            : api.read(options.service, slot);
+          if (status === SEC_SUCCESS && bytes) {
+            const decoded = Buffer.from(bytes.toString("ascii"), "base64");
+            bytes.fill(0);
+            return { kind: "value", bytes: decoded };
+          }
+          if (status === SEC_ITEM_NOT_FOUND) return { kind: "absent" };
+          return { kind: SEC_LOCKED.has(status) ? "locked" : "unavailable" };
+        } catch {
+          return { kind: "unavailable" };
         }
-        if (status === SEC_ITEM_NOT_FOUND) return { kind: "absent" };
-        return { kind: SEC_LOCKED.has(status) ? "locked" : "unavailable" };
-      } catch {
-        return { kind: "unavailable" };
-      }
-    },
-    async write(slot: CustodySlot, bytes: Buffer): Promise<CustodyWrite> {
-      if (!api) return "unavailable";
-      const encoded = Buffer.from(bytes.toString("base64"), "ascii");
-      let attempted = false;
-      try {
-        api.setUserInteractionAllowed(options.interactive === true);
-        attempted = true;
-        const status = api.write(options.service, slot, encoded);
-        if (status === SEC_SUCCESS) return "stored";
-        return SEC_LOCKED.has(status) ? "locked" : "unavailable";
-      } catch {
-        if (attempted) throw new Error("The native Secrets write outcome is unknown.");
-        return "unavailable";
-      } finally {
-        encoded.fill(0);
-      }
-    },
-    async remove(slot: CustodySlot): Promise<CustodyRemove> {
-      if (!api) return "unavailable";
-      try {
-        api.setUserInteractionAllowed(options.interactive === true);
-        const status = api.remove(options.service, slot);
-        if (status === SEC_SUCCESS) return "removed";
-        if (status === SEC_ITEM_NOT_FOUND) return "absent";
-        return SEC_LOCKED.has(status) ? "locked" : "unavailable";
-      } catch {
-        return "unavailable";
-      }
-    },
+      }),
+    write: (slot: CustodySlot, bytes: Buffer): Promise<CustodyWrite> =>
+      inKeychainTurn(() => {
+        if (!api) return "unavailable";
+        const encoded = Buffer.from(bytes.toString("base64"), "ascii");
+        let attempted = false;
+        try {
+          api.setUserInteractionAllowed(options.interactive === true);
+          attempted = true;
+          const status = api.write(options.service, slot, encoded);
+          if (status === SEC_SUCCESS) return "stored";
+          return SEC_LOCKED.has(status) ? "locked" : "unavailable";
+        } catch {
+          if (attempted) throw new Error("The native Secrets write outcome is unknown.");
+          return "unavailable";
+        } finally {
+          encoded.fill(0);
+        }
+      }),
+    remove: (slot: CustodySlot): Promise<CustodyRemove> =>
+      inKeychainTurn(() => {
+        if (!api) return "unavailable";
+        try {
+          api.setUserInteractionAllowed(options.interactive === true);
+          const status = api.remove(options.service, slot);
+          if (status === SEC_SUCCESS) return "removed";
+          if (status === SEC_ITEM_NOT_FOUND) return "absent";
+          return SEC_LOCKED.has(status) ? "locked" : "unavailable";
+        } catch {
+          return "unavailable";
+        }
+      }),
   };
 }
 
@@ -162,6 +193,16 @@ function bindKeychain(keychainPath?: string): DarwinCustodyApi {
     keychain = opened[0];
   }
 
+  const copyOut = (status: number, length: number, data: unknown): CustodyLookup => {
+    if (status !== SEC_SUCCESS || data == null) return { status };
+    try {
+      const bytes = Buffer.from(koffi.decode(data, koffi.array("uint8", length)) as number[]);
+      return { status, bytes };
+    } finally {
+      freeContent(null, data);
+    }
+  };
+
   const lookup = (service: string, account: string, wantItem: boolean) => {
     const length = [0];
     const data: [unknown] = [null];
@@ -185,16 +226,29 @@ function bindKeychain(keychainPath?: string): DarwinCustodyApi {
     },
     read: (service, account) => {
       const found = lookup(service, account, false);
-      if (found.status !== SEC_SUCCESS || found.data == null) return { status: found.status };
-      try {
-        const bytes = Buffer.from(
-          koffi.decode(found.data, koffi.array("uint8", found.length)) as number[],
-        );
-        return { status: found.status, bytes };
-      } finally {
-        freeContent(null, found.data);
-      }
+      return copyOut(found.status, found.length, found.data);
     },
+    readOffThread: (service, account) =>
+      new Promise((resolve, reject) => {
+        const length = [0];
+        const data: [unknown] = [null];
+        // koffi runs the call on its worker pool and fills the out arrays
+        // before this callback runs on the main thread.
+        find.async(
+          keychain,
+          Buffer.byteLength(service),
+          service,
+          Buffer.byteLength(account),
+          account,
+          length,
+          data,
+          null,
+          (error: unknown, status: number) => {
+            if (error) reject(error);
+            else resolve(copyOut(status, Number(length[0]), data[0]));
+          },
+        );
+      }),
     write: (service, account, bytes) => {
       const found = lookup(service, account, true);
       try {

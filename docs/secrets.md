@@ -115,7 +115,9 @@ Renaming one loses every secret that flavor kept, because its sealed files then 
 On macOS the app composes the Keychain custody on the account's own login keychain, LocalAuthentication and an Unlock gesture in two parts.
 First a silent Keychain process reads that file's lock, and when it is locked, or its lock cannot be read, a fresh one unlocks that same file by its path with macOS's own dialog: the app's own process touched the store silently first, so it can never show that dialog itself ([architecture](architecture.md), "The latch").
 Unlock never searches for the store holding an item, so it opens the file custody uses even when another keychain holds an item of the same name.
-Then one read of each slot in the app's own process, with the Keychain's dialog allowed, lets the person trust the app with an item again, a dialog the latch does not cover; that read waits on the app's main thread until the person answers.
+Then one read of each slot in the app's own process, with the Keychain's dialog allowed, lets the person trust the app with an item again, a dialog the latch does not cover.
+That read waits until the person answers, on one of Koffi's native worker threads, so the app's main thread keeps running while the dialog is up; silent custody calls take a few milliseconds and stay on the main thread.
+Whether the Keychain may show a dialog is one setting for the whole process, so every custody call in the process, of every custody name, Reset's removal of Chromium's window key included, waits for the one before it (`inKeychainTurn`): no silent call turns the dialog off under a waiting read or is allowed a dialog of its own, and each waits until the person answers.
 The Keychain trusts the app that created an item by its signature, so a release signed by another team reads the items as locked until that gesture.
 The login keychain's lock is kept per session, so the store is unlocked only for a run in the account's logged-in session, where the log in unlocked it.
 `start-at-boot` starts the run there, as a login agent, at boot too once the Mac logs the account in automatically ([run](run.md), "Starting at boot").

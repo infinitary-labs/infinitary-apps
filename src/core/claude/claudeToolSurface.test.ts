@@ -499,8 +499,9 @@ function nestedFields(schema: Schema | undefined): string[] {
  * Where each nested emit_card field's rule is said. Since contract v4.59 a
  * nested field carries no description on any runtime - a Claude seat was
  * served none until INF-744, and the copy a Pi seat read repeated the served
- * text - so each rule lives in the `actions` description or in the tool's own
- * (`CARD_MECHANICS`). Keyed by the nested path: a new nested field fails
+ * text - so each rule lives in its top-level parameter's description, such
+ * as `actions` or `asks_again`, or in the tool's own (`CARD_MECHANICS`).
+ * Keyed by the nested path: a new nested field fails
  * the census below until the phrase that carries its rule is named here.
  */
 const EMIT_CARD_NESTED_CARRIERS: Record<string, string> = {

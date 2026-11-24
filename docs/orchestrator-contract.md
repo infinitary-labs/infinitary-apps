@@ -169,7 +169,7 @@ A rule that the core, a tool description and a parameter each stated is said onc
   It also leaves out a string's length, an array's item count and an object's closed flag: the tool parses the argument with the same zod schema, which refuses a value past one and names it.
   A pattern, a number's bound, an enum, a constant and the required fields stay, since a model writes a value from them; a count a model must plan around is said in the parameter's description.
 - **emit_card describes only its top-level parameters.**
-  A Claude seat was served no nested description until INF-744, so each nested rule rides `actions` or `CARD_MECHANICS`; `claudeToolSurface.test.ts` holds that no app tool describes a nested parameter.
+  A Claude seat was served no nested description until INF-744, so each nested rule rides its top-level parameter's description, such as `actions` or `asks_again`, or `CARD_MECHANICS`; `claudeToolSurface.test.ts` holds that no app tool describes a nested parameter.
 
 The first mate's budget is derived: the 65,536-token floor, minus the 12,288 reserve, minus the promised 33,476-token conversation, which is 19,772.
 A crewmate's budget, for each runtime and kind of work, is derived from the same floor and reserve: the conversation is promised at least as much room as the fixed part takes, so the budget is half of what the floor leaves after the reserve, 26,624.

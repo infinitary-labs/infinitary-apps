@@ -116,6 +116,12 @@ export class PreparationFailed extends Error {}
 export class PlacedCopies {
   /** One bring-home or retirement per task at a time, in order. */
   private readonly chains = new Map<string, Promise<unknown>>();
+  /**
+   * One landing or read of the task's refs here at a time (`landing`):
+   * git writes a ref before this Mac records what came with it, so a read
+   * between the two would name the new commit without when it came.
+   */
+  private readonly landings = new Map<string, Promise<unknown>>();
   private stopping = false;
   /** Tasks whose working copy there is retired, so a second retirement says nothing twice. */
   private readonly retiredThere = new Set<string>();
@@ -511,20 +517,25 @@ export class PlacedCopies {
         if (other && !this.sendsCheckedOut(deviceId))
           throw new Error("That computer needs an update to send another branch.");
         const ref = other ? checkedOutRefFor(taskId) : `refs/heads/${record.branch}`;
+        const notArrived = () =>
+          new Error("The source branch did not arrive at its current commit.");
+        const into = repoDir;
         const sha = await this.take(
           deviceId,
           taskId,
-          repoDir,
+          into,
           "branch",
           ref,
           other ? branch : undefined,
+          async (sha) => {
+            if (strict && (await commitOf(into, ref)) !== sha) throw notArrived();
+            // What a move continues from if that computer is out of reach later
+            // (docs/helper.md, "Moving a task off a computer that is out of reach").
+            if (!other && this.options.tasks.get(taskId)?.deviceId === deviceId)
+              this.options.tasks.placement.recordHomeCopy(taskId, { sha, at: this.options.now() });
+          },
         );
-        if (strict && (!sha || (await commitOf(repoDir, ref)) !== sha))
-          throw new Error("The source branch did not arrive at its current commit.");
-        // What a move continues from if that computer is out of reach later
-        // (docs/helper.md, "Moving a task off a computer that is out of reach").
-        if (!other && sha && this.options.tasks.get(taskId)?.deviceId === deviceId)
-          this.options.tasks.placement.recordHomeCopy(taskId, { sha, at: this.options.now() });
+        if (strict && !sha) throw notArrived();
       } catch (caught) {
         if (strict) throw caught;
         this.options.log(`could not bring ${taskId}'s branch home: ${messageOf(caught)}`);
@@ -538,24 +549,27 @@ export class PlacedCopies {
    * (docs/helper.md, "Moving a task off a computer that is out of reach"):
    * the commit `refs/heads/<branch>` of the task's repository here points
    * at, and when it was brought here when the record says so. Undefined
-   * when this Mac holds none of the task's commits.
+   * when this Mac holds none of the task's commits. A bring landing the
+   * branch now is read once it has landed, its time with it.
    */
-  async homeCopy(
+  homeCopy(
     taskId: string,
   ): Promise<{ head: string; at?: number; branch: string; repoDir: string } | undefined> {
-    const record = this.options.tasks.get(taskId);
-    if (!record?.branch) return undefined;
-    const repoDir = await this.options.homeRepo(record.repoId ?? null).catch(() => undefined);
-    if (!repoDir || !existsSync(repoDir)) return undefined;
-    const head = await commitOf(repoDir, `refs/heads/${record.branch}`);
-    if (!head) return undefined;
-    const known = record.shape?.home_copy;
-    return {
-      head,
-      ...(known?.sha === head ? { at: known.at } : {}),
-      branch: record.branch,
-      repoDir,
-    };
+    return this.landing(taskId, async () => {
+      const record = this.options.tasks.get(taskId);
+      if (!record?.branch) return undefined;
+      const repoDir = await this.options.homeRepo(record.repoId ?? null).catch(() => undefined);
+      if (!repoDir || !existsSync(repoDir)) return undefined;
+      const head = await commitOf(repoDir, `refs/heads/${record.branch}`);
+      if (!head) return undefined;
+      const known = record.shape?.home_copy;
+      return {
+        head,
+        ...(known?.sha === head ? { at: known.at } : {}),
+        branch: record.branch,
+        repoDir,
+      };
+    });
   }
 
   /**
@@ -1028,7 +1042,8 @@ export class PlacedCopies {
 
   /**
    * Fetches one of the task's refs there into `to` here, as a bundle of
-   * only what this Mac lacks; answers the commit it points at.
+   * only what this Mac lacks; answers the commit it points at. Writing
+   * `to` and then `landed` are one landing (`landing`).
    */
   private async take(
     deviceId: string,
@@ -1037,31 +1052,39 @@ export class PlacedCopies {
     ref: BundledRef,
     to: string,
     branch?: string,
+    landed?: (sha: string) => Promise<void>,
   ): Promise<string | null> {
     const have = await this.haves(repoDir, taskId);
     const made = await this.ask(deviceId, "inf:working-copy:bundle", [
       { task: taskId, ref, have, ...(branch === undefined ? {} : { branch }) },
     ]);
-    if (!made.sha) return null;
-    if (!made.bundle) {
+    const { sha, bundle } = made;
+    if (!sha) return null;
+    if (!bundle) {
       // This Mac has the commit already: only the ref moves.
-      if ((await commitOf(repoDir, to)) !== made.sha && !(await this.checkedOut(repoDir, to)))
-        await git(repoDir, ["update-ref", to, made.sha]);
-      return made.sha;
+      await this.landing(taskId, async () => {
+        if ((await commitOf(repoDir, to)) !== sha && !(await this.checkedOut(repoDir, to)))
+          await git(repoDir, ["update-ref", to, sha]);
+        await landed?.(sha);
+      });
+      return sha;
     }
     const dir = crewmatePlacedDir(this.options.paths, taskId);
     const file = join(dir, `${ref}.bundle`);
     try {
-      await this.download(deviceId, taskId, ref, made.bundle.size, dir, file);
+      await this.download(deviceId, taskId, ref, bundle.size, dir, file);
       const from =
         branch === undefined
           ? await bundledName(repoDir, file, taskId, ref, to)
           : `refs/heads/${branch}`;
-      await takeBundle(repoDir, file, made.bundle, from, to, made.sha);
+      await this.landing(taskId, async () => {
+        await takeBundle(repoDir, file, bundle, from, to, sha);
+        await landed?.(sha);
+      });
     } finally {
       await rm(file, { force: true });
     }
-    return made.sha;
+    return sha;
   }
 
   private async download(
@@ -1260,14 +1283,31 @@ export class PlacedCopies {
 
   private serial<T>(key: string, run: () => Promise<T>): Promise<T> {
     if (this.stopping) return Promise.reject(new Error("This computer is stopping."));
-    const next = (this.chains.get(key) ?? Promise.resolve()).then(run, run);
-    const settled = next.catch(() => undefined);
-    this.chains.set(key, settled);
-    void settled.then(() => {
-      if (this.chains.get(key) === settled) this.chains.delete(key);
-    });
-    return next;
+    return inTurn(this.chains, key, run);
   }
+
+  /**
+   * Holds only steps on this Mac, never an ask of another computer, so a
+   * read waits at most for one ref write and its record.
+   */
+  private landing<T>(taskId: string, run: () => Promise<T>): Promise<T> {
+    return inTurn(this.landings, taskId, run);
+  }
+}
+
+/** Runs `run` after everything queued under `key`, whether it settled or failed. */
+function inTurn<T>(
+  chains: Map<string, Promise<unknown>>,
+  key: string,
+  run: () => Promise<T>,
+): Promise<T> {
+  const next = (chains.get(key) ?? Promise.resolve()).then(run, run);
+  const settled = next.catch(() => undefined);
+  chains.set(key, settled);
+  void settled.then(() => {
+    if (chains.get(key) === settled) chains.delete(key);
+  });
+  return next;
 }
 
 /**

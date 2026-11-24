@@ -136,6 +136,11 @@ export type StackedCardProps = {
    * edge of their row (INF-924); none while its thread is open beside it.
    */
   reply?: React.ReactNode;
+  /**
+   * A card with masked fields draws no field under them: Chat, at the same
+   * place, opens its thread beside it instead (`EntryView.chatFirst`).
+   */
+  chatOpens?: () => void;
   /** The in-place rung: the body becomes the thread behind a segmented control. */
   inPlaceThread?: boolean;
   /** Whether its head draws the size and leave buttons (ResponseCard's `corner`). */
@@ -174,6 +179,7 @@ export function StackedCard({
   bare = false,
   active = true,
   reply,
+  chatOpens,
   inPlaceThread = false,
   corner = true,
   threadWorking = false,
@@ -579,7 +585,10 @@ export function StackedCard({
                 </Button>
               )}
               {/* Chat after the choices, at the right edge (INF-924). */}
-              {index === all.length - 1 && reply !== undefined && (
+              {index === all.length - 1 && chatOpens !== undefined && (
+                <ChatButton cardId={card.id} onOpen={chatOpens} />
+              )}
+              {index === all.length - 1 && reply !== undefined && chatOpens === undefined && (
                 <ChatButton cardId={card.id} collect={collect} />
               )}
             </div>

@@ -146,11 +146,13 @@ public struct PhoneCard: Decodable, Identifiable, Sendable {
             choice: line["choice"].text, card: line["card"].text, key: line["key"].text,
             through: line["through"].numeric.map { Int($0) })
     }
-    /// INF-1670: the Mac's stuck alert is the host's, and names the first mate as the one who answers it.
+    /// INF-1670: the Mac's stuck alert is the host's, and names the first mate as the one who answers it; the Mac's
+    /// own card for a crewmate's ask names that crewmate (`cardAnswerer` on the Mac).
     public var takesReplies: Bool {
         value["replies"] != .bool(false)
             && (author == "firstmate" || value["answeredBy"] == .string("firstmate")
-                || (author == "crewmate" && value["taskId"].text != nil))
+                || ((author == "crewmate" || value["answeredBy"] == .string("crewmate"))
+                    && value["taskId"].text != nil))
     }
     public var isPast: Bool { value["ending"] != .null }
     /// Minimized on the Mac: still open, but off its stack.

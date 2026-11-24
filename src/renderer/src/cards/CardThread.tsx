@@ -149,6 +149,12 @@ const CHAT_KEY = "⏎";
  */
 const focusCarried = new Set<string>();
 
+/**
+ * Chat opened a card's thread (`ChatButton`'s `onOpen`): its field takes the
+ * caret once it is drawn beside the card, a render after the press.
+ */
+const focusOpened = new Set<string>();
+
 /** The card's one field, found from anywhere inside the card or its thread. */
 const fieldIn = (from: Element, cardId: string) =>
   from
@@ -169,11 +175,17 @@ export function ChatButton({
   cardId,
   collect,
   focusField,
+  onOpen,
 }: {
   cardId: string;
   collect?: CollectAnswers | undefined;
   /** The field to put the caret in; found inside the card when not given. */
   focusField?: () => void;
+  /**
+   * On a card with no field of its own (masked fields, `EntryView.chatFirst`),
+   * Chat opens the thread beside the card, whose field takes the caret.
+   */
+  onOpen?: () => void;
 }) {
   const draft = useShellStore((s) => s.replyDrafts[cardId] ?? "");
   const images = useShellStore((s) => s.replyImages[cardId] ?? NO_REPLY_IMAGES);
@@ -186,6 +198,21 @@ export function ChatButton({
   const something = length > 0 || images.length > 0 || pastes.length > 0 || notes.length > 0;
   const lit = something && !over;
   const naming = notes.length > 0;
+  if (onOpen)
+    return (
+      <Button
+        variant="ghost"
+        data-card-chat={cardId}
+        data-card-chat-opens=""
+        icon={chatIcon}
+        onClick={() => {
+          focusOpened.add(cardId);
+          onOpen();
+        }}
+      >
+        {CARD_CHAT_LABEL}
+      </Button>
+    );
   return (
     <Button
       variant={naming ? "primary" : "ghost"}
@@ -318,7 +345,7 @@ export function ReplyRow({
     void sendReply(cardId, collect);
   };
   useLayoutEffect(() => {
-    if (focusCarried.delete(cardId)) field.current?.focus();
+    if (focusCarried.delete(cardId) || focusOpened.delete(cardId)) field.current?.focus();
     const own = field.current;
     return () => {
       // Read before the field leaves the page: the one that replies it in

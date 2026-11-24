@@ -436,8 +436,8 @@ test("a crewmate's asks to one connection fold into one card, and a row unticked
     await expect(rows.nth(index)).toContainText(note.reason);
   }
   expect(
-    (await page.evaluate(() => window.infinitary.cards.list())).filter(
-      (shown) => shown.meta === "Integration approval",
+    (await page.evaluate(() => window.infinitary.cards.list())).filter((shown) =>
+      shown.id.startsWith("integration-ask-"),
     ),
   ).toHaveLength(1);
   const held = (await page.evaluate(() => window.infinitary.cards.list())).find(
@@ -487,8 +487,8 @@ test("a crewmate's asks to one connection fold into one card, and a row unticked
   expect(report).toContain(addedNote(SAMPLE_NOTES.length + 2));
   if (evidenceDir) writeFileSync(join(evidenceDir, "fold-report.txt"), `${report}\n`);
   expect(
-    (await page.evaluate(() => window.infinitary.cards.list())).filter(
-      (shown) => shown.meta === "Integration approval",
+    (await page.evaluate(() => window.infinitary.cards.list())).filter((shown) =>
+      shown.id.startsWith("integration-ask-"),
     ),
   ).toEqual([]);
 });

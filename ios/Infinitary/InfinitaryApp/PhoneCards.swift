@@ -689,7 +689,7 @@ struct PhoneCardPane: View {
         _host = State(initialValue: bodies?.body(card) { Self.bodyHost(card, session, fill) } ?? Self.bodyHost(card, session, fill))
         _side = side
         // A pane built again while its back shows starts on the back, with no turn.
-        let showsBack = side.wrappedValue.turned && !Self.messages(card, session).isEmpty
+        let showsBack = side.wrappedValue.turned && Self.hasBack(card, Self.messages(card, session))
         _flipped = State(initialValue: showsBack); _backMounted = State(initialValue: showsBack)
     }
     static func bodyHost(_ card: PhoneCard, _ session: ReadOnlySession, _ fill: PhoneJSON,
@@ -705,6 +705,11 @@ struct PhoneCardPane: View {
             host.detachDraft = session.cardDrafts.attach(card.id) { [weak host] in host?.fill($0) ?? false }
         }
         return host
+    }
+    /// A card has a back once its thread has a message. A live ask to keep a secret has one from the start: its face
+    /// holds no plain field beside the masked ones, so Chat turns it to the back's field, as Chat opens the Mac's thread.
+    static func hasBack(_ card: PhoneCard, _ messages: [PhoneJSON]) -> Bool {
+        !messages.isEmpty || (card.takesReplies && !card.isPast && PhoneSecretAsk.of(card) != nil)
     }
     static func messages(_ card: PhoneCard, _ session: ReadOnlySession) -> [PhoneJSON] {
         if card.isPast { return card.value["messages"].list }
@@ -770,8 +775,8 @@ struct PhoneCardPane: View {
     var hasFoot: Bool {
         !card.actions.isEmpty || line != nil || takesReply || factsHost != nil || !messages.isEmpty
     }
-    /// The back shows: a card has a back only once its thread has a message.
-    var showsBack: Bool { turned && !messages.isEmpty }
+    var hasBack: Bool { Self.hasBack(card, messages) }
+    var showsBack: Bool { turned && hasBack }
     /// The author's messages that came while the card showed its face.
     var unread: Int {
         guard !showsBack, let readCount else { return 0 }
@@ -822,7 +827,7 @@ struct PhoneCardPane: View {
     var body: some View {
         ZStack(alignment: .top) {
             front.modifier(PhoneCardTurn(angle: turnAngle, back: false))
-            if backMounted && !messages.isEmpty { back.modifier(PhoneCardTurn(angle: turnAngle, back: true)) }
+            if backMounted && hasBack { back.modifier(PhoneCardTurn(angle: turnAngle, back: true)) }
         }
         // INF-3106 direction B: a pull down that starts anywhere on the card, its head included, puts the keyboard away.
         .simultaneousGesture(DragGesture(minimumDistance: 16).onEnded { value in
@@ -982,6 +987,12 @@ struct PhoneCardPane: View {
     func turnOver(back: Bool) {
         if replyFocus != nil { pendingFocus = back ? .back : .face; replyFocus = pendingFocus }
         turned = back
+    }
+
+    /// Chat on a secret ask's face: the card turns to its back with the caret in the back's field.
+    func chatOnBack() {
+        pendingFocus = .back
+        turned = true
     }
 
     /// The back is drawn at the face's angle first, then turns in; turned away, it leaves once the turn ends.

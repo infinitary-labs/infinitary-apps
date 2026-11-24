@@ -228,11 +228,14 @@ export class SecretAsks {
       })),
     };
     const taskTitle = ask.task ? (this.host.options.taskTitle?.(ask.task) ?? null) : null;
+    // Whoever asked answers a reply under the card, and its head names them:
+    // a crewmate's ask heads with its task, the first mate's with the first mate.
     this.host.options.raise({
       id: this.askCardId(ask),
       title: secretAskTitle(ask),
       body: secretAskBody(ask, taskTitle, trouble && !answered ? words[trouble] : undefined),
-      meta: FIRSTMATE_CARD_META,
+      meta: taskTitle ?? FIRSTMATE_CARD_META,
+      answeredBy: ask.task ? "crewmate" : "firstmate",
       ...(ask.task ? { taskId: ask.task } : {}),
       actions: [
         {

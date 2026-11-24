@@ -3,6 +3,7 @@ import { LEGACY_CLOSE_CONTROL_IDS } from "./cardLeave";
 import {
   agentEffectSchema,
   type Card,
+  cardAnswerer,
   cardPresentation,
   cardSchema,
   cardsSnapshotSchema,
@@ -396,6 +397,13 @@ describe("cardTakesReplies", () => {
   // INF-1670: the stuck alert is the host's, and the first mate answers it.
   it("reaches a host card that names the first mate as its answerer (the stuck alert)", () => {
     expect(cardTakesReplies({ author: "host", taskId: "t1", answeredBy: "firstmate" })).toBe(true);
+  });
+
+  // INF-6265 piece 1: the app's own card for a crewmate's ask is answered by
+  // the crewmate that asked, so it needs that crewmate's task.
+  it("reaches a host card that names the crewmate that asked, only with its task", () => {
+    expect(cardAnswerer({ author: "host", taskId: "t1", answeredBy: "crewmate" })).toBe("crewmate");
+    expect(cardTakesReplies({ author: "host", answeredBy: "crewmate" })).toBe(false);
   });
 });
 

@@ -8,7 +8,7 @@
  * door and reads its answer, the record and what the crewmate heard.
  */
 
-import type { HostEffect } from "@shared/cards";
+import { cardAnswerer, type HostEffect, withAnythingElse } from "@shared/cards";
 import {
   ASK_ROW_WORDS,
   allowFieldOf,
@@ -30,6 +30,8 @@ import {
   tick,
 } from "../../../tests/helpers/crewHarness";
 import type { IntegrationAskTaken } from "../integrations";
+import { CARRIED_OUT_ASKER_WORDS } from "../prompts/choiceCarried";
+import { THREAD_APP_CARD_PREAMBLE } from "./captainWakes";
 import { CardChoiceUnavailableError } from "./cardActions";
 import type { CrewSupervisorOptions } from "./crewSupervisorOptions";
 import { integrationApprovalCard } from "./integrationApprovalCard";
@@ -422,6 +424,47 @@ describe("a crewmate's integration approval card (INF-2993)", () => {
     expect(ran(send)).toEqual(["pr-b task"]);
     const kept = h.tasks.get(taskId)?.delivery?.writeAsks?.find((ask) => ask.id === "pr-a");
     expect(kept?.sentAt).toBeUndefined();
+  });
+
+  // INF-6265 piece 1: the captain could not talk with the crewmate on the
+  // app's own card for its ask; now the card names that crewmate, its thread
+  // reaches it, and words left in the field at Not now ride the outcome to it.
+  it("names its crewmate, brings a reply in its thread to that crewmate, and brings the words left at Not now there too", async () => {
+    const send = sendTaken();
+    const { h, crewmate, taskId } = await started(send);
+    const ask = integrationAsk("pr-a", "/repos/octo/queue-proof-4ca5/pulls", SCOPE, 1);
+    h.tasks.delivery.keepWriteAsk(taskId, ask);
+    h.supervisor.integrationAsks.askIntegration(taskId, ask);
+    await endTurn(crewmate, taskId, "The proof pull request waits on the captain's click.");
+    const shown = h.supervisor.cards.get("integration-ask-pr-a");
+    expect(shown?.meta).toBe("Open the proof pull request");
+    expect(shown && cardAnswerer(shown)).toBe("crewmate");
+
+    h.supervisor.cardActions.replyToCard(
+      "integration-ask-pr-a",
+      "Why does the proof need a pull request?",
+    );
+    await tick();
+    const heardAll = () =>
+      [...crewmate.promptCalls, ...crewmate.steer.mock.calls.map(([text]) => text)].join("\n");
+    const replied = heardAll();
+    expect(replied).toContain(THREAD_APP_CARD_PREAMBLE);
+    expect(replied).toContain("Why does the proof need a pull request?");
+    await endTurn(crewmate, taskId, "Answered in the thread.");
+
+    const firstmateBefore = h.ops.length;
+    expect(
+      h.supervisor.cardActions.act("integration-ask-pr-a", "deny", "chrome", {
+        answers: withAnythingElse([], "Use the draft pull request you opened yesterday."),
+      }),
+    ).toEqual({});
+    await tick();
+    await tick();
+    expect(ran(send)).toEqual(["pr-a deny"]);
+    const heard = heardAll();
+    expect(heard).toContain(CARRIED_OUT_ASKER_WORDS);
+    expect(heard).toContain("Use the draft pull request you opened yesterday.");
+    expect(h.ops.slice(firstmateBefore).join("\n")).not.toContain("the draft pull request");
   });
 
   // INF-4190: what pressed the button never changes what the press does, so

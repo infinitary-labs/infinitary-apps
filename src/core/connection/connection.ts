@@ -65,6 +65,7 @@ import type { CoreActor } from "../dispatcher";
 import { listenAddresses, listenOn } from "./addresses";
 import {
   CARD_ANSWER_SKIPPED,
+  CARD_ANSWERED_BY_CREWMATE,
   CARD_DRAFTS_CHANGE,
   CARD_LIVE_READS,
   CARD_NOTE_PLACES,
@@ -746,6 +747,8 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         places: listsChange(hello.changes, CARD_NOTE_PLACES),
         // An older desktop reads a card strictly; a phone ignores the lists until it answers them.
         liveReads: hello.system === "ios" || listsChange(hello.changes, CARD_LIVE_READS),
+        // An older view reads who answers as a closed set, or draws a plain field beside a masked one.
+        answeredByCrewmate: listsChange(hello.changes, CARD_ANSWERED_BY_CREWMATE),
       };
       client.sharedCards =
         hello.system === "ios" || readsSharedCards(hello.protocolVersion, hello.changes);
@@ -1026,6 +1029,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
           skipped: false,
           places: false,
           liveReads: false,
+          answeredByCrewmate: false,
         },
         sharedCards: false,
         actionReads: {

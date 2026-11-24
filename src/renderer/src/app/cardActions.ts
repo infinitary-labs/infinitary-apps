@@ -90,6 +90,12 @@ export type CardSlice = {
    */
   closedThreadIds: string[];
   /**
+   * Cards whose thread the captain opened in this window, which a card with
+   * masked fields opens beside it before any message (its Chat). Shell state
+   * only, gone with the card.
+   */
+  openedThreadIds: string[];
+  /**
    * The captain's choice for a request docked beside its browser's page
    * (docs/task-browser.md, "The request beside the page"): open beside the
    * page, or folded to its latest line. With none, the window's width
@@ -317,6 +323,7 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
     replyPastes: {},
     replyImages: {},
     closedThreadIds: [],
+    openedThreadIds: [],
     requestColumns: {},
     actOnCard: async (cardId, actionId, source = "chrome", value, collect, mounted, input) => {
       const offered = get().cards.find((card) => card.id === cardId);
@@ -800,7 +807,12 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
           : { closedThreadIds: [...s.closedThreadIds, cardId] },
       ),
     openThread: (cardId) =>
-      set((s) => ({ closedThreadIds: s.closedThreadIds.filter((id) => id !== cardId) })),
+      set((s) => ({
+        closedThreadIds: s.closedThreadIds.filter((id) => id !== cardId),
+        openedThreadIds: s.openedThreadIds.includes(cardId)
+          ? s.openedThreadIds
+          : [...s.openedThreadIds, cardId],
+      })),
     setRequestColumn: (cardId, choice) =>
       set((s) =>
         s.requestColumns[cardId] === choice

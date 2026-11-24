@@ -25,7 +25,7 @@ A schedule holds one time a day, so the two times are two rules with the same pr
 > Start nothing the round files: each follow-up waits in the backlog for the captain.
 
 The first mate's wake carries only these words, so a stranger's text never reaches it.
-The round's crewmate is an unsafe data reader (`docs/agents-reach.md`, "An unsafe data reader"): it has no shell and no browser, reads only this project and public web pages (a new address waits for the captain's click once it holds something of theirs; `docs/agents-reach.md`, "Web pages"), and every GitHub write it makes waits on the app's approval card (`docs/forge.md`, "A reader's writes").
+The round's crewmate is an unsafe data reader (`docs/agents-reach.md`, "An unsafe data reader"): it has no shell and no browser, reads only this project, the integration reads the captain set to Always allow, and public web pages (a new address waits for the captain's click once it holds something of theirs; `docs/agents-reach.md`, "Web pages"), and every GitHub write it makes waits on the app's approval card (`docs/forge.md`, "A reader's writes").
 Its words reach the first mate marked as data.
 The reader writes no file, so it keeps no rule notes; what a later round needs to know lives on GitHub as labels and replies.
 

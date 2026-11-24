@@ -315,7 +315,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       start_policy: Type.Optional(
         stringEnum(START_POLICY_VALUES, {
           description:
-            "As create_task's start_policy. on-request parks started work: stops the turn, keeps work; only start_now wakes it. Give a reason for a captain-requested pause or a stall blocker no steer can change.",
+            "As create_task's start_policy. on-request parks started work: stops the turn, keeps work; only start_now wakes it. Give a reason for a captain-requested pause or a stall blocker no steer can change; never steer it to stay idle.",
         }),
       ),
       // What it records is said on start_policy, so it is served bare.
@@ -372,7 +372,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       crew_speed: Type.Optional(
         Type.Union([stringEnum(["standard", "fast", "ultrafast"]), Type.Null()], {
           description:
-            "Captain-only crew/summary speed next request; null inherits Models. First mate/Decisions stay Standard. Ultrafast: 8× allowance/6× credits.",
+            "Captain-only crew/summary speed next request; null inherits Models. First mate/Decisions stay Standard. Unavailable: explained Standard, same model/account. Ultrafast: 8× allowance/6× credits.",
         }),
       ),
       override_model_id: Type.Optional(
@@ -798,7 +798,7 @@ export const TASKS_QUERY_TOOL_NAME = "tasks";
 export const TASKS_QUERY_TOOL_DESCRIPTION = [
   "Beyond context: key/task_id, kind/status/title/project, parent/blockers/blocked tasks/children, ready/wait; no bodies.",
   "Filters: project/status/key/id/title/goal/parent.",
-  "Key reads: reports, cards, choices, brief, checks, sessions, earlier attempt. Timeline and exact sources only with field: timeline.",
+  "Key reads: reports, cards, choices, brief, checks/reviews, sessions, earlier attempt. Timeline and exact sources only with field: timeline.",
   "Resolution is facts; HANDOFF governs authorization.",
   "Paging names remaining fields/lengths; identical card bodies appear once.",
   "card alone reads one card.",

@@ -16,8 +16,9 @@ import { LOCAL_CONTEXT_RESERVE } from "../../src/core/pi/ollamaStream";
  * INF-2930's plan, which the captain approved ("fail only if we exceed budget
  * by a lot (say 50%), and anything lower than that result in a follow up trim
  * task not blocking release"), gives it two lines: the tests fail past the
- * hard line, one and a half times the budget, and the prompt-budget check on
- * main fails past the budget itself, which files one trim task.
+ * hard line, one and a half times a crewmate's budget and a quarter over the
+ * first mate's raised one, and the prompt-budget check on main fails past the
+ * budget itself, which files one trim task.
  */
 
 /** The window left once the reserve for the answer is taken. */

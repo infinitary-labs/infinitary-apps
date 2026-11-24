@@ -51,7 +51,7 @@ export function createScheduleTools(delegate: ScheduleDelegate) {
       event_waits_for: Type.Optional(
         Type.String({
           description:
-            "With on_event: the rule's Only if in plain words; act only on matching events. Omit to act on all.",
+            "With on_event: the rule's Only if in plain words; act only on matching events. With the event screen on, an event plainly not that skips your turn and is listed in the rule's history. Omit to act on all.",
         }),
       ),
       name: Type.Optional(Type.String()),

@@ -382,7 +382,7 @@ const SHAPE_FIELD_RULES = {
   ongoing:
     "True for work continuing across turns until explicitly finished; routine personal-workspace turns commit without waking the first mate.",
   intelligence:
-    "Intelligence: low, medium or high; premium needs the captain's premium ask. Tell the captain difficulty: high Hard, medium Normal, low Simple, premium Premium.",
+    "Intelligence: low, medium or high; premium needs the captain's premium ask. To the captain a level is the task's difficulty: high Hard, medium Normal, low Simple, premium Premium.",
   kind: "Declare kind: read-only answers use plan/retrieval/research/reproduce; changes use implement/fix/chore. The classifier sorts what you omit; review is host-owned.",
   delivery_ask:
     "Only when the user asked in words for this task to ship as a pull request or stay local. The repository default is unchanged.",

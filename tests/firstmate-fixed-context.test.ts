@@ -111,9 +111,7 @@ describe("the Firstmate's fixed context (contract v4.59)", () => {
     // while an overrun waits for its trim.
     expect(fits(roomAtHardLine(FIXED_CONTEXT_BOUNDARY, RAISED_HARD_LINE_FACTOR))).toBe(true);
     // The boundary leaves exactly that conversation, no separately kept slack.
-    expect(OLLAMA_MIN_CONTEXT - LOCAL_CONTEXT_RESERVE - FIXED_CONTEXT_BOUNDARY).toBe(
-      PROMISED_CONVERSATION,
-    );
+    expect(OLLAMA_MIN_CONTEXT - LOCAL_CONTEXT_RESERVE - FIXED_CONTEXT_BOUNDARY).toBe(23_590);
     // The check is the real one: it refuses what cannot fit.
     const room = OLLAMA_MIN_CONTEXT - LOCAL_CONTEXT_RESERVE - fixedTokens({ systemPrompt, tools });
     expect(fits(room)).toBe(true);
@@ -779,6 +777,12 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
  * served words it names, waits for the captain's approval.
  */
 const PROTECTED: { intent: ProtectedIntent; rule: string; home: Home; says: string }[] = [
+  {
+    intent: "what reaches the captain",
+    rule: "a policy edit asks the captain only what is unclear",
+    home: { tool: "update_task" },
+    says: "Ask only unclear task/scope/consent; refusals name blockers.",
+  },
   {
     intent: "consent",
     rule: "a Keychain or signing command against real material asks first",

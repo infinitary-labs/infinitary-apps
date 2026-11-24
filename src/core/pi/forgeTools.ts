@@ -41,8 +41,8 @@ export const CHECK_CHANGE_TOOL_NAME = "check_change";
 export const OPEN_CHANGE_TOOL_DESCRIPTION = [
   "Offer your branch as a GitHub pull request, GitLab merge request, or pushed branch on a plain Git host.",
   "On GitHub or GitLab, push first; the app's sign-in answers the host.",
-  "Native-media hosts upload inspected media before opening or replacing a story, unless the host marks it card-only. A failed or uncertain upload opens no PR: report the blocker, never omit evidence. Other hosts publish text; plain Git keeps the story on its card.",
-  "body replaces the description; the answer reads it back. A saved-story replacement preserves surrounding text; change it with around.",
+  "Native-media hosts upload inspected media before opening or replacing a story, unless the host marks it card-only. A failed or uncertain upload opens no PR, even a draft: report the blocker, never omit evidence. Other hosts publish text; plain Git keeps the story on its card.",
+  "body replaces the description; the answer reads it back. A saved-story replacement preserves surrounding text; change it with around. Held writes are read first; a closed story PR stops publication.",
 ].join(" ");
 
 /** The around parameter's own words: no app tool describes a nested field, so from and to are explained here (INF-497). */
@@ -54,7 +54,7 @@ export const OPEN_CHANGE_AROUND_DESCRIPTION = [
 
 export const CHECK_CHANGE_TOOL_DESCRIPTION = [
   "Read the latest pull request's checks, runs, workflows, events, mergeability and version changes. facts.main: the failed check's latest default-branch run, evidence of cause, never a merge input.",
-  "The merge card signals readiness. Checks hold merges; the captain authorizes them separately. Declare only flake, settled or answered, with headSha and evidence. Settle at the repair's headSha with repairId and outcome; explain renamed jobs.",
+  "The merge card signals readiness. Checks hold merges; the captain authorizes them separately. Declare only flake, settled or answered, with headSha and evidence. Settle at the repair's headSha with repairId and outcome; explain renamed jobs. Facts list absent repair checks without guessing replacements.",
   "repair records your fix. Judge readiness, flakes, settlement and when to stop from your delivery guidance, not a host count. Raw readings never settle a repair.",
   "Empty or all-skipped hosted readings stay pending. absentChecks records positive no-CI evidence from trusted default-branch policy and the local gate, with pull or on your own PR; time, history or missing workflows prove nothing.",
   "The app wakes you on first failure and completion of watched checks; end your turn. No watchable checks means no wake.",
@@ -144,7 +144,7 @@ export const PREPARE_CHANGE_TOOL = crewmateTool({
   name: "prepare_change",
   label: "Prepare change story",
   description:
-    "Prepare a two-tier story without showing a card or uploading. Commit demonstrated code first; use one title for story, pull request and merge card. Aim for 150 open words on the card, 250 on the pull request. Fold commands, file names, counts, unfinished work and the PR's risk table. Never write versions, hashes or revisions in text; use base, head and captureHead. Pair ordered Before and After views under one heading; stack recordings. Inspect publishable media and raster exports; publish no private threads, local paths or secrets. Put public templates and issue references in projectText. No setting change, new approval, upload fallback or evidence commit.",
+    "Prepare a two-tier story without showing a card or uploading. Commit demonstrated code first; use one title for story, pull request and merge card. Aim for 150 open words on the card, 250 on the pull request. Fold commands, file names, counts, unfinished work and the PR's risk table. Omit empty sections and boilerplate. Never write versions, hashes or revisions in text; use base, head and captureHead. Pair ordered Before and After views under one heading; stack recordings. Inspect publishable media; meaningful drawn figures need inspected raster exports, and the host retains immutable copies in the task card folder. Publish no private threads, local paths or secrets. Put public templates and issue references in projectText. No setting change, new approval, upload fallback or evidence commit.",
   parameters: Type.Object({
     story: zodParameter<ChangePresentationDraft>(changePresentationDraftSchema, {
       dropPatterns: true,
@@ -419,7 +419,7 @@ export const CHECK_CHANGE_TOOL = crewmateTool({
       Type.Integer({
         minimum: 1,
         description:
-          "Prepare a merge review of any open pull request in the task's project, whoever opened it: it becomes your current change. Grants no approval and merges nothing.",
+          "Prepare a merge review of any open pull request in the task's project, or in the project your current change is in when it is that change, whoever opened it: it becomes your current change. Grants no approval and merges nothing.",
       }),
     ),
     skipRules: Type.Optional(
@@ -468,7 +468,7 @@ export const READ_WORKFLOW_TOOL = crewmateTool({
     "Read project CI evidence through the app's sign-in. runId alone reads name, state, version, link, attempt and latest-attempt job numbers, names, states and failures.",
     "A short read watches a running run, up to 3 hours and 5 runs per task. It wakes on first failure and completion; end your turn, never sleep or loop on reads. A result you read sends no matching wake.",
     "Over 100 jobs are read; the answer counts omissions.",
-    "jobId reads run/version, steps and numbered log lines from offset (1-based, default 1), up to limit (default 200, max 500) and 20,000 characters; nextOffset continues. Lines over 2,000 characters are clipped.",
+    "jobId reads run/version, steps and numbered log lines from offset (1-based, default 1), up to limit (default 200, max 500) and 20,000 characters; nextOffset continues. Lines over 2,000 characters are clipped; logs over 8 MiB are refused. offset and limit need jobId.",
     "GitHub runId is an Actions run; GitLab's is the pipeline and jobId the job; Bitbucket's is the build number and jobId the step's place from 1.",
     "Find a version's run with github_read: GET /repos/{owner}/{repo}/actions/runs?head_sha=<full commit id> (untouched main for a baseline), on GitLab GET /projects/{id}/pipelines?sha=<full commit id>, on Bitbucket GET /repositories/{workspace}/{repo_slug}/pipelines?sort=-created_on, matching target.commit.hash.",
     "Bitbucket Data Center has no runs or logs: its checks are build statuses another service posts, whose link names where to read them.",

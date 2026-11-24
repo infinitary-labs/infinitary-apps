@@ -722,7 +722,7 @@ const BROWSER_BUTTON_DESCRIPTION = [
  * description, which a Claude model reads.
  */
 const BROWSER_PAGE_DESCRIPTION = [
-  "Optional, only beside browser_button: an .html or .htm file of your task's project, such as index.html, that the button opens, by its working-copy-relative path, with no .. and no link on the way.",
+  "Optional, only beside browser_button: an .html or .htm file of your task's project, such as index.html, that the button opens, with the captain in control, by its working-copy-relative path, with no .. and no link on the way.",
   "The app serves only files inside the project folder; the click opens the current file or says it is not there yet. It needs no open browser; never beside browser_handoff.",
 ].join(" ");
 

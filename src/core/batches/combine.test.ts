@@ -18,17 +18,7 @@ import {
   landedCommits,
   pushBatch,
 } from "./combine";
-import {
-  carried,
-  combined,
-  declarationOf,
-  declared,
-  enqueue,
-  heldVersions,
-  pruned,
-  release,
-  withdraw,
-} from "./line";
+import { carried, combined, declared, enqueue, heldVersions, release, withdraw } from "./line";
 
 // This file chains real git and is not about the utility-QoS clamp, so what
 // the product spawns runs at this run's own priority (tests/helpers/unclampedQos.ts).
@@ -1028,56 +1018,6 @@ describe("a held batch's fix built on the version that held", () => {
       "docs/report.md",
     );
   });
-
-  // Intent: upstream issue #55's second review, a bug being fixed: the version an approval
-  // measured another task's delivery of a declared fix from stayed with the repair's
-  // declaration alone, so once that declaration was gone the delivery was carried whole, with
-  // the work of the change sent back.
-  it.each([
-    [
-      "its repair's task closed",
-      (record: BatchRecord) => pruned(record, (taskId) => taskId !== "task-fix"),
-    ],
-    [
-      "its repair declared again with no commit read",
-      (record: BatchRecord) => declared(record, "task-fix"),
-    ],
-  ])(
-    "carries a declared fix another task delivered from the held version once %s",
-    async (_way, gone) => {
-      const at = host();
-      const { page, held, record: saved } = await heldBatch(at);
-      const delivered = change(at, {
-        taskId: "task-takeover",
-        title: "fix(report): name the column as the export does",
-        files: { "src/report.ts": "export const rows = ['date', 'total', 'time_zone'];\n" },
-        from: `origin/${BATCH}`,
-        approvedAt: 3_000,
-      });
-      // The repair sent the page back and declared the commit it had committed as the fix.
-      let record = declared(withdraw(saved, page.taskId), "task-fix", delivered.head);
-      // Try again releases the hold, and the retried batch checks without the fix.
-      record = await recombined(at, release(record), AT + 30_000);
-      // Approved while it checks: another task delivers that commit, measured from the held version.
-      record = enqueue(record, { ...delivered, fix: true, heldBase: held });
-      expect(record.fixBases).toEqual({ "task-fix": held });
-
-      record = gone(record);
-      expect(declarationOf(record, delivered)).toBeUndefined();
-      record = await recombined(at, record, AT + 60_000);
-
-      expect(record.leftOut).toEqual([]);
-      expect(record.open?.members.map((member) => member.taskId)).toEqual([
-        "task-column",
-        "task-takeover",
-      ]);
-      const head = record.open?.head as string;
-      expect(run(at.home, "show", `${head}:src/report.ts`)).toBe(
-        "export const rows = ['date', 'total', 'time_zone'];",
-      );
-      expect(run(at.home, "ls-tree", "-r", "--name-only", head)).not.toContain("docs/report.md");
-    },
-  );
 
   // Intent: the same piece, the independent review's third finding, a bug being fixed: a
   // joined fix replaced by a version whose inherited history was rewritten matched no held

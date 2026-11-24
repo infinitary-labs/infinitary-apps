@@ -26,9 +26,14 @@ extension PhoneJourney {
 
         let before = box.frame
         let start = box.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-        // The drag runs 240 points for an 80-point move: the card's scroll takes the finger only after the map's press
-        // handling lets it go, and on a busy phone Mac that came late enough that a 160-point drag moved the card 73.
-        start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 0, dy: -240)), withVelocity: .slow, thenHoldForDuration: 0.3)
+        // INF-6501: the card scrolls only for the movement its main thread reads while the finger is still down, and
+        // XCTest moves and lifts the finger on its own clock whatever that thread is doing. In phone run 45338955599 the
+        // thread stopped from touch-down until after a one-second drag had lifted, and read its first touch 1.5 s after
+        // touch-down, so the card never moved. At 50 points a second the finger moves for almost five seconds and rests a
+        // second before the lift, so a thread stopped for over two seconds still reads more than 80 points of it, as a task
+        // row's long press outlasts the same stop (INF-6075).
+        start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 0, dy: -240)),
+                    withVelocity: XCUIGestureVelocity(rawValue: 50), thenHoldForDuration: 1)
         waitForSteadyTarget(box)
         XCTAssertLessThan(box.frame.minY, before.minY - 80, "A drag on the map scrolls the card: \(before) to \(box.frame)")
         XCTAssertEqual(box.frame.width, before.width, accuracy: 1, "A drag on the map in the card leaves the map's size alone")

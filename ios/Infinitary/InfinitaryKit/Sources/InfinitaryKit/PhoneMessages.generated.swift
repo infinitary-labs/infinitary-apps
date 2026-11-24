@@ -2708,21 +2708,20 @@ public enum PhoneMessages {
     public static func `settingsAutomationDeliverySent`() -> String { PhoneWords.format("settingsAutomationDeliverySent", []) }
     public static func `settingsAutomationDeliveryWaiting`() -> String { PhoneWords.format("settingsAutomationDeliveryWaiting", []) }
     public static func `settingsAutomationDescription`() -> String { PhoneWords.format("settingsAutomationDescription", []) }
-    public static func `settingsAutomationDetailNote`() -> String { PhoneWords.format("settingsAutomationDetailNote", []) }
+    public static func `settingsAutomationDetails`() -> String { PhoneWords.format("settingsAutomationDetails", []) }
+    public static func `settingsAutomationDiscard`() -> String { PhoneWords.format("settingsAutomationDiscard", []) }
     public static func `settingsAutomationDraftNote`() -> String { PhoneWords.format("settingsAutomationDraftNote", []) }
     public static func `settingsAutomationEmpty`() -> String { PhoneWords.format("settingsAutomationEmpty", []) }
     public static func `settingsAutomationEnable`() -> String { PhoneWords.format("settingsAutomationEnable", []) }
     public static func `settingsAutomationEventIn`(`event`: String, `integration`: String) -> String { PhoneWords.format("settingsAutomationEventIn", [`event`, `integration`]) }
     public static func `settingsAutomationEventNotConnected`() -> String { PhoneWords.format("settingsAutomationEventNotConnected", []) }
-    public static func `settingsAutomationEventPreview`(`count`: Int, `when`: String) -> String { PhoneWords.format("settingsAutomationEventPreview", [`count`, `when`]) }
-    public static func `settingsAutomationEventPreviewNoLook`(`when`: String) -> String { PhoneWords.format("settingsAutomationEventPreviewNoLook", [`when`]) }
     public static func `settingsAutomationEventsPreview`() -> String { PhoneWords.format("settingsAutomationEventsPreview", []) }
     public static func `settingsAutomationFirstMateGets`() -> String { PhoneWords.format("settingsAutomationFirstMateGets", []) }
     public static func `settingsAutomationFri`() -> String { PhoneWords.format("settingsAutomationFri", []) }
     public static func `settingsAutomationFriday`() -> String { PhoneWords.format("settingsAutomationFriday", []) }
     public static func `settingsAutomationHistory`() -> String { PhoneWords.format("settingsAutomationHistory", []) }
+    public static func `settingsAutomationInsert`() -> String { PhoneWords.format("settingsAutomationInsert", []) }
     public static func `settingsAutomationInsertDetail`() -> String { PhoneWords.format("settingsAutomationInsertDetail", []) }
-    public static func `settingsAutomationInsertDetailChoice`() -> String { PhoneWords.format("settingsAutomationInsertDetailChoice", []) }
     public static func `settingsAutomationKeptCheck`() -> String { PhoneWords.format("settingsAutomationKeptCheck", []) }
     public static func `settingsAutomationKeptCheckUnfinished`(`time`: String) -> String { PhoneWords.format("settingsAutomationKeptCheckUnfinished", [`time`]) }
     public static func `settingsAutomationKeptDescription`() -> String { PhoneWords.format("settingsAutomationKeptDescription", []) }
@@ -2761,6 +2760,7 @@ public enum PhoneMessages {
     public static func `settingsAutomationName`() -> String { PhoneWords.format("settingsAutomationName", []) }
     public static func `settingsAutomationNamePlaceholder`() -> String { PhoneWords.format("settingsAutomationNamePlaceholder", []) }
     public static func `settingsAutomationNew`() -> String { PhoneWords.format("settingsAutomationNew", []) }
+    public static func `settingsAutomationNextRun`() -> String { PhoneWords.format("settingsAutomationNextRun", []) }
     public static func `settingsAutomationNextRuns`() -> String { PhoneWords.format("settingsAutomationNextRuns", []) }
     public static func `settingsAutomationNoEvents`() -> String { PhoneWords.format("settingsAutomationNoEvents", []) }
     public static func `settingsAutomationNoMatch`() -> String { PhoneWords.format("settingsAutomationNoMatch", []) }
@@ -2815,10 +2815,9 @@ public enum PhoneMessages {
     public static func `settingsAutomationSaveDraft`() -> String { PhoneWords.format("settingsAutomationSaveDraft", []) }
     public static func `settingsAutomationSearch`() -> String { PhoneWords.format("settingsAutomationSearch", []) }
     public static func `settingsAutomationSetUpByFirstMate`() -> String { PhoneWords.format("settingsAutomationSetUpByFirstMate", []) }
+    public static func `settingsAutomationSetup`() -> String { PhoneWords.format("settingsAutomationSetup", []) }
     public static func `settingsAutomationStoppedNote`() -> String { PhoneWords.format("settingsAutomationStoppedNote", []) }
     public static func `settingsAutomationStoppedWhen`() -> String { PhoneWords.format("settingsAutomationStoppedWhen", []) }
-    public static func `settingsAutomationSubmittedNote`() -> String { PhoneWords.format("settingsAutomationSubmittedNote", []) }
-    public static func `settingsAutomationSubmittedNoteEvents`() -> String { PhoneWords.format("settingsAutomationSubmittedNoteEvents", []) }
     public static func `settingsAutomationSun`() -> String { PhoneWords.format("settingsAutomationSun", []) }
     public static func `settingsAutomationSunday`() -> String { PhoneWords.format("settingsAutomationSunday", []) }
     public static func `settingsAutomationThu`() -> String { PhoneWords.format("settingsAutomationThu", []) }
@@ -7071,21 +7070,20 @@ extension PhoneWords {
         "settingsAutomationDeliverySent": [],
         "settingsAutomationDeliveryWaiting": [],
         "settingsAutomationDescription": [],
-        "settingsAutomationDetailNote": [],
+        "settingsAutomationDetails": [],
+        "settingsAutomationDiscard": [],
         "settingsAutomationDraftNote": [],
         "settingsAutomationEmpty": [],
         "settingsAutomationEnable": [],
         "settingsAutomationEventIn": ["event", "integration"],
         "settingsAutomationEventNotConnected": [],
-        "settingsAutomationEventPreview": ["count", "when"],
-        "settingsAutomationEventPreviewNoLook": ["when"],
         "settingsAutomationEventsPreview": [],
         "settingsAutomationFirstMateGets": [],
         "settingsAutomationFri": [],
         "settingsAutomationFriday": [],
         "settingsAutomationHistory": [],
+        "settingsAutomationInsert": [],
         "settingsAutomationInsertDetail": [],
-        "settingsAutomationInsertDetailChoice": [],
         "settingsAutomationKeptCheck": [],
         "settingsAutomationKeptCheckUnfinished": ["time"],
         "settingsAutomationKeptDescription": [],
@@ -7124,6 +7122,7 @@ extension PhoneWords {
         "settingsAutomationName": [],
         "settingsAutomationNamePlaceholder": [],
         "settingsAutomationNew": [],
+        "settingsAutomationNextRun": [],
         "settingsAutomationNextRuns": [],
         "settingsAutomationNoEvents": [],
         "settingsAutomationNoMatch": [],
@@ -7178,10 +7177,9 @@ extension PhoneWords {
         "settingsAutomationSaveDraft": [],
         "settingsAutomationSearch": [],
         "settingsAutomationSetUpByFirstMate": [],
+        "settingsAutomationSetup": [],
         "settingsAutomationStoppedNote": [],
         "settingsAutomationStoppedWhen": [],
-        "settingsAutomationSubmittedNote": [],
-        "settingsAutomationSubmittedNoteEvents": [],
         "settingsAutomationSun": [],
         "settingsAutomationSunday": [],
         "settingsAutomationThu": [],
@@ -8848,7 +8846,6 @@ extension PhoneWords {
         "secretsAskTitleMany": "count",
         "settingsAccountsCount": "count",
         "settingsAccountsWaiting": "count",
-        "settingsAutomationEventPreview": "count",
         "settingsAutomationRunCatchingUpMissed": "count",
         "settingsAutomationRunEvents": "count",
         "settingsAutomationRunsEachTimeLooks": "count",

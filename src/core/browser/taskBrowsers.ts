@@ -22,7 +22,6 @@ import {
 } from "@shared/taskBrowser";
 import {
   FORM_RESEND,
-  type HostBrowserAsk,
   type HostBrowserPage,
   type HostBrowserViewport,
   type HostFileChooser,
@@ -39,8 +38,8 @@ import {
   type HandBack,
   loadOwn,
   NUMBER_WORDS,
-  type PageAsk,
   type PageEntry,
+  pageAddress,
   Queues,
   quoted,
   shown,
@@ -63,14 +62,14 @@ import { PageDiagnostics } from "./diagnostics";
 import { saveDownload } from "./evidenceFiles";
 import { RefBook } from "./outline";
 import { PageActions } from "./pageActions";
-import { type AnswerTarget, answerTarget, probeLoopback } from "./pageAnswers";
 import { blockedPageWords, clip, PageNotices, refusalWords } from "./pageNotices";
+import { PageOutages } from "./pageOutages";
 import { startAfterOpen, startBeforeOpen, startMissing } from "./pageStartSteps";
-import type { PageStart } from "./pageStarts";
 import { pagePlaces } from "./places";
 import { type ProjectServer, serveProjectFolder } from "./projectServer";
 import { isPageNoise } from "./reading";
 import { SavedSignInGrants } from "./savedSignInGrants";
+import { SiteAsks } from "./siteAsks";
 import type {
   BrowserFrameSink,
   CrewmateBrowser,
@@ -113,7 +112,9 @@ export type {
  * commands (`crewmateCommands.ts`), its actions on a page
  * (`pageActions.ts`), the signed-in sites it allows and the kept profile
  * they live in (`savedSignInGrants.ts`), what a browser keeps to tell its crewmate
- * (`pageNotices.ts`) and the files it writes (`evidenceFiles.ts`).
+ * (`pageNotices.ts`), the files it writes (`evidenceFiles.ts`), a site's asks
+ * of its pages (`siteAsks.ts`) and whether anything answers at its page's
+ * loopback address (`pageOutages.ts`).
  *
  * The captain reads each task's browser here too (docs/task-browser.md,
  * "The view"): its fact - the site, what the crewmate did last, or why it
@@ -212,13 +213,6 @@ export class TaskBrowsers {
   private readonly allowed = new Map<string, Map<string, string>>();
   /** The tasks whose kept page this run has read, or no longer needs to. */
   private readonly restored = new Set<string>();
-  /**
-   * The loopback address nothing answered at, per task, until it answers
-   * again: one outage, with the name its crewmate's one wake carries.
-   */
-  private readonly outages = new Map<string, { origin: string; once: string; failed?: true }>();
-  /** How many outages this run has seen: each one's name follows. */
-  private outageCount = 0;
   /** How many browsers each task has had in this run: the next one's generation follows. */
   private readonly generations = new Map<string, number>();
   /**
@@ -257,6 +251,8 @@ export class TaskBrowsers {
   private readonly commands: CrewmateCommands;
   private readonly actions: PageActions;
   private readonly grants: SavedSignInGrants;
+  private readonly asks: SiteAsks;
+  private readonly outages: PageOutages;
   /** The private sites list as last read: what the guard and the policy check a name against. */
   private sites: readonly string[] = [];
   /**
@@ -307,6 +303,8 @@ export class TaskBrowsers {
     this.commands = commands;
     this.actions = new PageActions(core);
     this.grants = grants;
+    this.asks = new SiteAsks(core);
+    this.outages = new PageOutages(core);
   }
 
   /**
@@ -386,7 +384,7 @@ export class TaskBrowsers {
           }
         : {}),
       ...(browser.control === "captain" && browser.told ? { told: browser.told } : {}),
-      ...(this.isUnanswered(taskId, browser)
+      ...(this.outages.isUnanswered(taskId, browser)
         ? {
             unanswered: true as const,
             ...(this.options.starts?.starting(taskId) ? { starting: true as const } : {}),
@@ -453,7 +451,7 @@ export class TaskBrowsers {
       browser.cancelIdle = undefined;
       this.startWatching(taskId, browser);
       // The captain looks at its page: whether anything answers there.
-      if (sinks.size === 1) void this.checkAnswers(taskId, browser, { wake: true });
+      if (sinks.size === 1) void this.outages.checkAnswers(taskId, browser, { wake: true });
     }
     let watching = true;
     return () => {
@@ -539,7 +537,7 @@ export class TaskBrowsers {
             const open = this.browsers.has(taskId);
             return startAfterOpen(taskId, answer, before, open, this.options.starts);
           })
-          .finally(() => this.answeredAgain(taskId));
+          .finally(() => this.outages.answeredAgain(taskId));
       },
       inspect: (input) =>
         this.queues.run(taskId, async () => this.held(taskId) ?? commands.inspect(taskId, input)),
@@ -711,7 +709,7 @@ export class TaskBrowsers {
         ? await this.grants.keep(browser, shownSite, options.automatic === true)
         : undefined;
       // Whatever a site was let use while the captain held it goes back at the return.
-      await this.endAsks(browser);
+      await this.asks.endAsks(browser);
       if (this.browsers.get(taskId) !== browser) {
         return { ok: false, text: "This browser stopped before control went back." };
       }
@@ -794,153 +792,19 @@ export class TaskBrowsers {
     }
   }
 
-  /**
-   * Where the captain sits when taking, drives or answers the task's
-   * browser (docs/task-browser.md, "A site's asks"): at the computer it runs
-   * on, or away from it. Only there can Chrome show the captain a passkey's prompt.
-   */
+  /** Whether the captain's window is on the computer the task's browser runs on. */
   captainAt(taskId: string, here: boolean): void {
-    const browser = this.browsers.get(taskId);
-    if (browser) browser.here = here;
+    this.asks.captainAt(taskId, here);
   }
 
-  /**
-   * The captain's answer to what the page asks the captain now (docs/task-browser.md,
-   * "A site's asks"): Allow once lets the page's call run, its permission
-   * granted for that site until the captain returns control; Not now ends it as not
-   * allowed. A passkey waits for Use passkey, which lets it run in Chrome and
-   * brings Chrome's window forward for the system's prompt, or Not now; once
-   * let run, Show Chrome window brings that window forward again. Refused in
-   * words for an ask that is no longer there.
-   */
-  async answerAsk(
+  /** The captain's answer to what the task's page asks now. */
+  answerAsk(
     taskId: string,
     handle: TaskBrowserHandle,
     id: number,
     answer: TaskBrowserAskAnswer,
   ): Promise<TaskBrowserCommandResult> {
-    const browser = this.browsers.get(taskId);
-    if (!browser || !this.isHandled(browser, handle)) {
-      return { ok: false, text: "This browser is no longer running." };
-    }
-    if (browser.control !== "captain") {
-      return { ok: false, text: "You do not have control of this browser." };
-    }
-    const asking = browser.asking;
-    if (!asking || asking.id !== id) {
-      return { ok: false, text: "The page no longer asks for that." };
-    }
-    if (asking.kind === "passkey") {
-      if (answer === "not-now" && !asking.shown) {
-        asking.answer?.(false);
-        return { ok: true };
-      }
-      // Use passkey (sent as show, which a view without ask-first offers too), or Allow once.
-      if (answer === "not-now" || !asking.entry.page.showWindow) {
-        return { ok: false, text: "Answer the passkey's prompt in Chrome's own window." };
-      }
-      if (!asking.shown) {
-        asking.shown = true;
-        asking.answer?.(true);
-        this.options.onChange?.(taskId);
-      }
-      await asking.entry.page.showWindow(true).catch(() => undefined);
-      return { ok: true };
-    }
-    if (answer === "show") return { ok: false, text: "That page asks for no passkey." };
-    asking.answer?.(answer === "allow");
-    return { ok: true };
-  }
-
-  /**
-   * One ask of a page (docs/task-browser.md, "A site's asks"). While the
-   * crewmate drives, every ask is no, and a passkey's is told to it. While
-   * the captain holds the browser, a permission waits for the captain's Allow once or
-   * Not now, one ask at a time; a passkey is asked only in Chrome with the captain at
-   * its computer, where Use passkey lets Chrome ask in its own window, and is otherwise told
-   * no at once and told to the captain, so the site offers its other ways.
-   * Chrome's window goes back to the Dock when the request ends, whatever
-   * brought it out.
-   */
-  private async pageAsked(
-    taskId: string,
-    browser: Browser,
-    entry: PageEntry,
-    ask: HostBrowserAsk,
-  ): Promise<boolean> {
-    if (this.browsers.get(taskId) !== browser) return false;
-    const holds = browser.control === "captain";
-    const chrome = entry.page.showWindow !== undefined;
-    if (ask.kind === "platform") return holds && chrome && browser.here === true;
-    if (!holds) {
-      if (ask.kind === "passkey") {
-        const words = refusalWords({ kind: "passkey", url: ask.url });
-        if (!browser.notices.refusals.includes(words)) browser.notices.keep("refusals", words);
-      }
-      return false;
-    }
-    const site = siteOf(ask.url);
-    if (ask.kind === "passkey" && !(chrome && browser.here === true)) {
-      browser.told = { kind: "passkey", site, where: chrome ? "away" : "engine" };
-      this.options.onChange?.(taskId);
-      return false;
-    }
-    // One ask at a time: a second while the first waits is no.
-    if (browser.asking) return false;
-    browser.asks = (browser.asks ?? 0) + 1;
-    const asking: PageAsk = { id: browser.asks, kind: ask.kind, site, entry };
-    const settle = (): void => {
-      if (browser.asking !== asking) return;
-      browser.asking = undefined;
-      if (this.browsers.get(taskId) === browser) this.options.onChange?.(taskId);
-    };
-    browser.asking = asking;
-    browser.told = undefined;
-    this.options.onChange?.(taskId);
-    if (ask.kind === "passkey") {
-      // Use passkey lets it run and Chrome's own prompt answers it; its window
-      // goes back to the Dock when it ends, even one that came out by itself.
-      return new Promise<boolean>((resolve) => {
-        asking.answer = (allow) => {
-          asking.answer = undefined;
-          if (!allow) settle();
-          resolve(allow);
-        };
-        void ask.ended.then(() => {
-          asking.answer?.(false);
-          settle();
-          void entry.page.showWindow?.(false).catch(() => undefined);
-        });
-      });
-    }
-    return new Promise<boolean>((resolve) => {
-      asking.answer = (allow) => {
-        settle();
-        resolve(allow);
-      };
-      void ask.ended.then(() => asking.answer?.(false));
-    });
-  }
-
-  /**
-   * The captain lets the browser go: an ask still waiting is no, every
-   * Chrome window of its pages goes back to the Dock - a passkey's, or one
-   * Chrome brought out by itself - and every permission a site was let use
-   * is taken back.
-   */
-  private async endAsks(browser: Browser): Promise<void> {
-    const asking = browser.asking;
-    browser.asking = undefined;
-    browser.told = undefined;
-    asking?.answer?.(false);
-    await Promise.all(
-      browser.pages.map((entry) =>
-        Promise.all([
-          entry.page.showWindow?.(false).catch(() => undefined),
-          entry.page.revokeAsks().catch(() => undefined),
-        ]),
-      ),
-    );
+    return this.asks.answerAsk(taskId, handle, id, answer);
   }
 
   /**
@@ -1146,7 +1010,7 @@ export class TaskBrowsers {
     this.restored.add(taskId);
     this.options.kept?.remove(taskId);
     this.allowed.delete(taskId);
-    this.outages.delete(taskId);
+    this.outages.forget(taskId);
     this.stopped.delete(taskId);
   }
 
@@ -1165,9 +1029,7 @@ export class TaskBrowsers {
           fact: {
             state: "stopped",
             site: fact.site,
-            url: signedIn(browser)
-              ? bareAddress(this.pageAddress(browser))
-              : this.pageAddress(browser),
+            url: signedIn(browser) ? bareAddress(pageAddress(browser)) : pageAddress(browser),
             stopped: "gone",
             at: Date.now(),
             quit: true,
@@ -1507,7 +1369,7 @@ export class TaskBrowsers {
       onClosed: () => {
         if (live()) this.leave(taskId, browser, entry, "closed itself");
       },
-      onAsk: (ask) => this.pageAsked(taskId, browser, entry, ask),
+      onAsk: (ask) => this.asks.pageAsked(taskId, browser, entry, ask),
     };
   }
 
@@ -1721,130 +1583,6 @@ export class TaskBrowsers {
     );
   }
 
-  /** The address a browser's current page is on, its last one while it shows an error page. */
-  private pageAddress(browser: Browser): string {
-    const entry = browser.current;
-    const shown = addressOf(browser, entry);
-    if (/^https?:/.test(shown)) return shown;
-    return entry.lastUrl ?? (entry === browser.pages[0] ? browser.firstUrl : shown);
-  }
-
-  /**
-   * Whether anything answers at the loopback address a task's page is on
-   * (docs/task-browser.md, "When nothing answers"): only an address its
-   * crewmate opened, never a project folder the host serves itself. A
-   * refused connection starts an outage and, with `wake`, tells its
-   * crewmate's wake; an answer ends it. Any other reading changes nothing.
-   */
-  private async checkAnswers(
-    taskId: string,
-    browser: Browser,
-    options: { wake: boolean },
-  ): Promise<void> {
-    const address = this.pageAddress(browser);
-    const target = answerTarget(address);
-    if (!target || !browser.origins.has(target.origin)) return;
-    if (browser.server && address.startsWith(`${browser.server.origin}/`)) return;
-    const reading = await (this.options.probe ?? probeLoopback)(target.host, target.port).catch(
-      () => "unknown" as const,
-    );
-    if (this.browsers.get(taskId) !== browser) return;
-    const outage = this.outages.get(taskId);
-    if (reading === "answered") {
-      if (outage) {
-        this.outages.delete(taskId);
-        this.options.onChange?.(taskId);
-      }
-      return;
-    }
-    if (reading !== "refused") return;
-    let current: { origin: string; once: string; failed?: true } | undefined = outage;
-    if (!current || current.origin !== target.origin) {
-      this.outageCount += 1;
-      current = {
-        origin: target.origin,
-        once: `page-unanswered:${this.session}:${taskId}:${this.outageCount}`,
-      };
-      this.outages.set(taskId, current);
-      this.options.onChange?.(taskId);
-    }
-    if (!options.wake) return;
-    // A saved start runs first; its crewmate is woken only once it failed.
-    const start = current.failed ? undefined : this.options.starts?.kept(taskId, target.origin);
-    if (start) this.startPage(taskId, browser, start, target, current);
-    else {
-      this.options.onUnanswered?.(taskId, {
-        site: siteOf(address),
-        url: bareAddress(address),
-        once: current.once,
-      });
-    }
-  }
-
-  /**
-   * Run a task's saved start while the captain waits at its page
-   * (docs/task-browser.md, "Starting a page again"): the page loads again
-   * once its address answers; when the program exits first or its wait
-   * runs out, its crewmate gets the outage's one wake, with how it failed.
-   */
-  private startPage(
-    taskId: string,
-    browser: Browser,
-    start: PageStart,
-    target: AnswerTarget,
-    outage: { origin: string; once: string; failed?: true },
-  ): void {
-    const starts = this.options.starts as NonNullable<TaskBrowsersOptions["starts"]>;
-    const fresh = !starts.starting(taskId);
-    const address = this.pageAddress(browser);
-    void starts.run(taskId, start, target).then(async (outcome) => {
-      if (this.browsers.get(taskId) !== browser || outcome.kind === "stopped") return;
-      if (outcome.kind === "answered") {
-        // Only the press that started it loads the page again, and only one still on its origin.
-        if (!fresh) return;
-        await this.queues.run(taskId, async () => {
-          const now = this.pageAddress(browser);
-          if (this.browsers.get(taskId) !== browser) return;
-          if (answerTarget(now)?.origin !== outage.origin) return;
-          const entry = browser.current;
-          const loaded = await loadOwn(entry, entry.page.load(now));
-          if (!loaded.ok) entry.moved = undefined;
-        });
-        await this.checkAnswers(taskId, browser, { wake: false });
-        this.options.onChange?.(taskId);
-        return;
-      }
-      outage.failed = true;
-      this.options.onChange?.(taskId);
-      this.options.onUnanswered?.(taskId, {
-        site: siteOf(address),
-        url: bareAddress(address),
-        once: outage.once,
-        start: {
-          command: start.command,
-          ...(outcome.ranOut ? { ranOut: true as const } : { exit: outcome.exit ?? null }),
-          log: outcome.log,
-        },
-      });
-    });
-    if (fresh) this.options.onChange?.(taskId);
-  }
-
-  /** Whether the task's current page is on the origin of its running outage; no outage, no notice. */
-  private isUnanswered(taskId: string, browser: Browser): boolean {
-    const outage = this.outages.get(taskId);
-    return (
-      outage !== undefined && outage.origin === answerTarget(this.pageAddress(browser))?.origin
-    );
-  }
-
-  /** A crewmate's command moved the page: an outage ends once its address answers again. */
-  private answeredAgain(taskId: string): void {
-    const browser = this.browsers.get(taskId);
-    if (!browser || !this.outages.has(taskId)) return;
-    void this.checkAnswers(taskId, browser, { wake: false });
-  }
-
   /** Pictures of the task's current page to everyone watching it, once per page. */
   private startWatching(taskId: string, browser: Browser): void {
     if (browser.stopWatching) return;
@@ -1908,7 +1646,7 @@ export class TaskBrowsers {
     if (!outcome.ok) entry.moved = undefined;
     this.options.onChange?.(taskId);
     // The captain waits at its page: whether anything answers there.
-    await this.checkAnswers(taskId, browser, { wake: true });
+    await this.outages.checkAnswers(taskId, browser, { wake: true });
     return { ok: true };
   }
 

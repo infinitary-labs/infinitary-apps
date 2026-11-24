@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "task-browsers-split",
+      "reason": "Internal: a site's asks and the check for a page whose address stops answering move unchanged out of the task browsers' owner into files of their own; nothing a person sees changes."
+    }
+  ]
+}

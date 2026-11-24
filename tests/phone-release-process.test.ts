@@ -206,7 +206,9 @@ globalThis.fetch = async (url, init) => {
       .trim()
       .split("\n")
       .map((line) => JSON.parse(line));
-  } catch {}
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
   const receipt = files.includes("receipt.json")
     ? JSON.parse(readFileSync(env.PHONE_RECEIPT, "utf8"))
     : undefined;

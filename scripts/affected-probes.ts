@@ -139,8 +139,8 @@ export const PROBES = [
     why: "nested vitest runs frozen by the test: unit limits and waits on the load clock",
     files: ["tests/wait-window.test.ts"],
     paths: [
-      "patches/@vitest__runner@4.1.10.patch",
-      "patches/vitest@4.1.10.patch",
+      "patches/@vitest__runner@4.1.12.patch",
+      "patches/vitest@4.1.12.patch",
       "tests/fixtures/frozen-work/",
       "tests/helpers/budgets.ts",
       "tests/helpers/loadClock.ts",

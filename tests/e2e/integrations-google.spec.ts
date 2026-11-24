@@ -132,7 +132,7 @@ async function keepClientFile(setup: Locator, file: string): Promise<void> {
  * development overrides.
  * Data: fresh isolated homes, no account; the own client's file as Google
  * Cloud gives it, with the stand-in's own-client id.
- * Completion: development and packaged Settings offer Set up Google; keys
+ * Completion: development and packaged Settings offer Google's setup from its chip; keys
  * open the setup, whose Cancel opens nothing, then its first step opens
  * Google's Personal mode page, the file pasted by keys is kept, Google's
  * notice comes next, and its accept opens Google's real consent page for the
@@ -171,7 +171,7 @@ test("development and released builds set up the person's own Google client by k
           await runFromSearch(app, page, "settings.integrations");
           const tab = settingsSection(page, "integrations");
           const chip = tab.locator('[data-integration-add="google"] button');
-          await expect(chip).toHaveText(m.integrationsGoogleSetUpChip());
+          await expect(chip).toHaveText("Google");
           const opening = () =>
             app.evaluate(() => (globalThis as { googleOpened?: string[] }).googleOpened ?? []);
           await pressKey(chip, "Enter");

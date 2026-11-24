@@ -616,7 +616,7 @@ export function IntegrationsTab() {
                         onClick={openSetup}
                       >
                         {plusIcon}
-                        <span>{m.integrationsGoogleSetUpChip()}</span>
+                        <span>{kind.name}</span>
                       </button>
                     ) : (
                       <HostChip

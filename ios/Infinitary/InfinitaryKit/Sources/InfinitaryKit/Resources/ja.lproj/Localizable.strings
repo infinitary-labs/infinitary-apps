@@ -1152,8 +1152,7 @@
 "integrationsGoogleRetiringDetail" = "Google は Infinitary の共有クライアントで接続されていますが、このクライアントは廃止されます。それまでは使えます。接続を保つには自分のクライアントを設定してください。";
 "integrationsGoogleSetUp" = "設定";
 "integrationsGoogleSetUpAgain" = "もう一度設定";
-"integrationsGoogleSetUpChip" = "Google を設定";
-"integrationsGoogleSetUpFirst" = "先に自分の Google クライアントを設定してください（設定 → 連携 → Google を設定）。";
+"integrationsGoogleSetUpFirst" = "先に自分の Google クライアントを設定してください（設定 → 連携 → Google）。";
 "integrationsGoogleSetupChoose" = "ファイルを選択";
 "integrationsGoogleSetupChosen" = "%1$@ を保管できます。";
 "integrationsGoogleSetupDrop" = "ここにクライアント ファイルをドロップ";

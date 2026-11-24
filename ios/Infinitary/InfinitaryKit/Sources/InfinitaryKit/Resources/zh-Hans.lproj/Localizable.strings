@@ -1152,8 +1152,7 @@
 "integrationsGoogleRetiringDetail" = "Google 目前通过 Infinitary 的共享客户端连接，该客户端即将停用。在那之前它仍可使用；请设置你自己的客户端以保持连接。";
 "integrationsGoogleSetUp" = "设置";
 "integrationsGoogleSetUpAgain" = "重新设置";
-"integrationsGoogleSetUpChip" = "设置 Google";
-"integrationsGoogleSetUpFirst" = "请先设置你自己的 Google 客户端：设置 → 集成 → 设置 Google。";
+"integrationsGoogleSetUpFirst" = "请先设置你自己的 Google 客户端：设置 → 集成 → Google。";
 "integrationsGoogleSetupChoose" = "选择文件";
 "integrationsGoogleSetupChosen" = "%1$@ 已可保存。";
 "integrationsGoogleSetupDrop" = "把客户端文件拖到这里";

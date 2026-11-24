@@ -39959,59 +39959,32 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Set up again`;
   }
-  function integrationsGoogleSetUpChip() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `إعداد Google`;
-      case "de":
-        return `Google einrichten`;
-      case "es":
-        return `Configurar Google`;
-      case "fr":
-        return `Configurer Google`;
-      case "ja":
-        return `Google を設定`;
-      case "ko":
-        return `Google 설정`;
-      case "pt-BR":
-        return `Configurar Google`;
-      case "zh-Hans":
-        return `设置 Google`;
-      case "zh-Hant":
-        return `設定 Google`;
-      case "en-XA":
-        return `[Šéţ ûþ Ĝööĝļé ~~~~~]`;
-      case "ar-XB":
-        return `‮Set up Google‬`;
-    }
-    return `Set up Google`;
-  }
   function integrationsGoogleSetUpFirst() {
     switch (currentLanguage()) {
       case "ar":
-        return `أعدّ عميل Google الخاص بك أولًا، من الإعدادات ← التكاملات ← إعداد Google.`;
+        return `أعدّ عميل Google الخاص بك أولًا، من الإعدادات ← التكاملات ← Google.`;
       case "de":
-        return `Richte zuerst deinen eigenen Google-Client ein, unter Einstellungen → Integrationen → Google einrichten.`;
+        return `Richte zuerst deinen eigenen Google-Client ein, unter Einstellungen → Integrationen → Google.`;
       case "es":
-        return `Primero configura tu propio cliente de Google, en Ajustes → Integraciones → Configurar Google.`;
+        return `Primero configura tu propio cliente de Google, en Ajustes → Integraciones → Google.`;
       case "fr":
-        return `Configurez d’abord votre propre client Google, dans Réglages → Intégrations → Configurer Google.`;
+        return `Configurez d’abord votre propre client Google, dans Réglages → Intégrations → Google.`;
       case "ja":
-        return `先に自分の Google クライアントを設定してください（設定 → 連携 → Google を設定）。`;
+        return `先に自分の Google クライアントを設定してください（設定 → 連携 → Google）。`;
       case "ko":
-        return `먼저 내 Google 클라이언트를 설정하세요. 설정 → 연동 → Google 설정에서 할 수 있습니다.`;
+        return `먼저 내 Google 클라이언트를 설정하세요. 설정 → 연동 → Google에서 할 수 있습니다.`;
       case "pt-BR":
-        return `Primeiro configure seu próprio cliente do Google, em Ajustes → Integrações → Configurar Google.`;
+        return `Primeiro configure seu próprio cliente do Google, em Ajustes → Integrações → Google.`;
       case "zh-Hans":
-        return `请先设置你自己的 Google 客户端：设置 → 集成 → 设置 Google。`;
+        return `请先设置你自己的 Google 客户端：设置 → 集成 → Google。`;
       case "zh-Hant":
-        return `請先設定你自己的 Google 用戶端：設定 → 整合 → 設定 Google。`;
+        return `請先設定你自己的 Google 用戶端：設定 → 整合 → Google。`;
       case "en-XA":
-        return `[Šéţ ûþ ýöûŕ öŵñ Ĝööĝļé çļîéñţ ƒîŕšţ, îñ Šéţţîñĝš → Îñţéĝŕáţîöñš → Šéţ ûþ Ĝööĝļé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Šéţ ûþ ýöûŕ öŵñ Ĝööĝļé çļîéñţ ƒîŕšţ, îñ Šéţţîñĝš → Îñţéĝŕáţîöñš → Ĝööĝļé. ~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Set up your own Google client first, in Settings → Integrations → Set up Google.‬`;
+        return `‮Set up your own Google client first, in Settings → Integrations → Google.‬`;
     }
-    return `Set up your own Google client first, in Settings → Integrations → Set up Google.`;
+    return `Set up your own Google client first, in Settings → Integrations → Google.`;
   }
   function integrationsGoogleSetupChoose() {
     switch (currentLanguage()) {
@@ -107697,7 +107670,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     integrationsGoogleRetiringDetail,
     integrationsGoogleSetUp,
     integrationsGoogleSetUpAgain,
-    integrationsGoogleSetUpChip,
     integrationsGoogleSetUpFirst,
     integrationsGoogleSetupChoose,
     integrationsGoogleSetupChosen,
@@ -111116,7 +111088,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "integrationsGoogleRetiringDetail": [],
     "integrationsGoogleSetUp": [],
     "integrationsGoogleSetUpAgain": [],
-    "integrationsGoogleSetUpChip": [],
     "integrationsGoogleSetUpFirst": [],
     "integrationsGoogleSetupChoose": [],
     "integrationsGoogleSetupChosen": ["name"],

@@ -1152,8 +1152,7 @@
 "integrationsGoogleRetiringDetail" = "Google est connecté par le client partagé d’Infinitary, qui va être retiré. Il fonctionne jusque-là ; configurez votre propre client pour rester connecté.";
 "integrationsGoogleSetUp" = "Configurer";
 "integrationsGoogleSetUpAgain" = "Configurer de nouveau";
-"integrationsGoogleSetUpChip" = "Configurer Google";
-"integrationsGoogleSetUpFirst" = "Configurez d’abord votre propre client Google, dans Réglages → Intégrations → Configurer Google.";
+"integrationsGoogleSetUpFirst" = "Configurez d’abord votre propre client Google, dans Réglages → Intégrations → Google.";
 "integrationsGoogleSetupChoose" = "Choisir un fichier";
 "integrationsGoogleSetupChosen" = "%1$@ est prêt à être gardé.";
 "integrationsGoogleSetupDrop" = "Déposez le fichier de client ici";

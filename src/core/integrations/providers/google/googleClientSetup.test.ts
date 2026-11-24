@@ -122,7 +122,7 @@ describe("setting up the person's own Google client", () => {
   it("refuses a new sign-in without an own client, opening nothing", async () => {
     const { opened, google, integrations } = await released();
     await expect(integrations.signIn("google", NOTICE_ACCEPTED)).rejects.toThrow(
-      "Set up your own Google client first, in Settings → Integrations → Set up Google.",
+      "Set up your own Google client first, in Settings → Integrations → Google.",
     );
     expect(opened).toEqual([]);
     expect(google.tokens).toEqual([]);

@@ -5,7 +5,8 @@ The captain chose complete keyboard access with conventional controls and custom
 
 | Piece | Where |
 | --- | --- |
-| The catalog, chords, scopes, the resolver, two-key shortcuts, menu accelerators and key hints | `src/shared/keyboard.ts` (`KEYBOARD_COMMANDS`, `DEFAULT_BINDINGS`, `commandFor`, `chordMatches`, `startsTwoKeys`, `secondKeyCommand`, `menuAccelerator`, `keyHint`, `ariaKeyShortcuts`) |
+| The catalog: each command's id, words, default keys, scope, repeat and risk | `src/shared/keyboardCommands.ts` (`KEYBOARD_COMMANDS`, `KeyboardCommand`, `KeyBinding`), read through `src/shared/keyboard.ts` |
+| Matching a press to a chord, scopes, the resolver, two-key shortcuts, menu accelerators and key hints | `src/shared/keyboard.ts` (`DEFAULT_BINDINGS`, `commandFor`, `chordMatches`, `startsTwoKeys`, `secondKeyCommand`, `menuAccelerator`, `keyHint`, `ariaKeyShortcuts`) |
 | The presets, their keys and which a profile is offered | `src/shared/keyPresets.ts` (`PRESET_IDS`, `presetKeys`, `presetsOffered`, `NEW_PROFILE_PRESET`) |
 | What is saved, which keys a command may take, clashes, the installed map and a refused change | `src/shared/keymap.ts` (`savedKeymapSchema`, `bindingProblem`, `clashesWith`, `resolveBindings`, `keymapRefusal`) |
 | The installed map, the window's commands heard before the page, and recording | `src/main/keyboard.ts` (`InstalledKeymap`, `followWindowCommands`, `recordWindowKeys`) |
@@ -47,7 +48,7 @@ The short rule is in `AGENTS.md`; the record is `docs/principles.md` ("Standing 
 A new control is reached with Tab, or the arrows inside a list, and draws the focus ring.
 A list is one Tab stop and the arrows move through it ("Lists and Settings"); a control that is not in a list is its own Tab stop.
 A focus a key moves goes through `focusWithRing` (`src/renderer/src/design/focus.ts`), which asks for the ring, and the window and every frame draw that ring on whatever the keyboard reaches.
-An action a person repeats becomes a window command in `KEYBOARD_COMMANDS` (`src/shared/keyboard.ts`).
+An action a person repeats becomes a window command in `KEYBOARD_COMMANDS` (`src/shared/keyboardCommands.ts`).
 Command search lists every window command but search itself (`SEARCHED_COMMANDS` in `src/renderer/src/app/commandRows.ts`), so that is the command this rule adds.
 Its handler stays with the code that owns what it changes, and `followWindowCommands` takes one handler for every window command, so a new one cannot be left without one ("Handlers").
 It gets a default key only where none clashes: no two commands that can work in the same place share a default key, which `src/shared/keyboard.test.ts` checks, and a window command may instead have none and be chosen by name.
@@ -404,7 +405,7 @@ A panel's page counts an ask for focus it was born with as an earlier one, never
 
 ## Moving by a key of your own
 
-Move left, down, up and right, Move to the start and the end, Move up and down a page, and Cancel (`move.*`, `cancel`, `MOVE_KEYS` in `src/shared/keyboard.ts`) let a person move with keys of their own, such as Emacs's or Vim's, everywhere the arrows, Home, End, the page keys and Escape work today: the Tasks list, the task board, Settings' tabs, a card while it is read, a card's question options, command search's rows and the Tasks search's.
+Move left, down, up and right, Move to the start and the end, Move up and down a page, and Cancel (`move.*` and `cancel` in `src/shared/keyboardCommands.ts`, `MOVE_KEYS` in `src/shared/keyboard.ts`) let a person move with keys of their own, such as Emacs's or Vim's, everywhere the arrows, Home, End, the page keys and Escape work today: the Tasks list, the task board, Settings' tabs, a card while it is read, a card's question options, command search's rows and the Tasks search's.
 They have no keys in Legacy, so nothing changes until a person gives them some.
 
 The main process runs them, because only it knows which document holds focus (`pressMoveKey` in `src/main/keyboard.ts`):

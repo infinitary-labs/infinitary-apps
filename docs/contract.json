@@ -78940,6 +78940,10 @@
                       "savedFailed": {
                         "type": "boolean",
                         "const": true
+                      },
+                      "signIn": {
+                        "type": "boolean",
+                        "const": true
                       }
                     },
                     "required": [

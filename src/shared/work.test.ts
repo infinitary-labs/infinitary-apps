@@ -18,6 +18,23 @@ describe("what a computer that runs work tells its home", () => {
     expect(read({ ...ordinary, holdsPlace: "true" }).success).toBe(false);
   });
 
+  // INF-6518: a sign-in request from a computer that runs work reached its home
+  // without its mark, so the captain's sign-in never went to the kept profile.
+  it("carries a browser handoff's sign-in mark to the home", () => {
+    const request = workRequests["inf:work:card"].request;
+    const handoff = {
+      site: "app.notion.example",
+      reason: "The settings open only with your sign-in.",
+      after: "I read the settings list.",
+      signIn: true,
+    };
+    const card = { title: "Sign in once", body: "<p>Sign in.</p>", actions: [] };
+    const read = request.safeParse([
+      { task: "t1", callId: "c1", card: { ...card, browserHandoff: handoff } },
+    ]);
+    expect(read.data?.[0].card.browserHandoff).toEqual(handoff);
+  });
+
   it("carries an owner-only input read witness without exposing the message", () => {
     const read = { type: "input_read", textSha256: "message-fingerprint" };
     expect(told(read).data?.[0].events[0]?.event).toEqual(read);

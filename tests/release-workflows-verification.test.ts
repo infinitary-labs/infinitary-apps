@@ -4,6 +4,7 @@ import { createRequire } from "node:module";
 import { basename, join, posix } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
+import { fileArgument, laneFiles } from "../scripts/journey-groups.ts";
 import { MAC_UNIT_FILES } from "../scripts/mac-unit-tests.ts";
 import vitestConfig from "../vitest.config";
 import { E2E_PROJECTS } from "./e2e/lanes.ts";
@@ -12,6 +13,7 @@ import { runJobNames } from "./helpers/ciJobNames";
 import {
   ciJobs,
   githubScript,
+  journeysRun,
   loadYamlFile,
   PUBLISHES,
   root,
@@ -106,10 +108,24 @@ describe("the signed channel workflow", () => {
     });
     // INF-2779 (the captain's three Mac jobs): native tests and the package,
     // the parallel journeys, and the one-worker desktop journeys.
+    // On GitHub's Macs, where no Mac queue of the project's own is named, the
+    // parallel journeys are four jobs (INF-6330's approved plan, option D).
+    const own = { MAC_RUNNER: "mini-mac" };
     const all = ["linux-checks", "mac", "parallel", "desktop-1", "desktop-2"];
-    expect(lanes("stable")).toEqual(all);
-    expect(lanes()).toEqual(all);
-    expect(lanes("alpha")).toEqual(all);
+    const hosted = [
+      "linux-checks",
+      "mac",
+      "parallel-1",
+      "parallel-2",
+      "parallel-3",
+      "parallel-4",
+      "desktop-1",
+      "desktop-2",
+    ];
+    for (const profile of ["stable", undefined, "alpha"]) {
+      expect(lanes(profile, own), profile).toEqual(all);
+      expect(lanes(profile), profile).toEqual(hosted);
+    }
     const resolve = jobOf(release, "resolve");
     expect(resolve.if).toBeUndefined();
     const guard = resolve.steps?.find(
@@ -301,15 +317,29 @@ describe("the signed channel workflow", () => {
       Object.values(main.jobs).find((job) => job.uses?.endsWith("verify.yml"))?.with ?? {},
     );
     expect(linuxJourneys(checks)).toBe(false);
-    expect(workflowValue(lane.strategy?.matrix.lane ?? "", { inputs: checks })).toEqual([
+    // The project's own Mac, or GitHub's Macs when the project names none,
+    // where the parallel journeys are four jobs.
+    const placements = [{ MAC_RUNNER: "mini-mac" }, {}];
+    const matrixLanes = (inputs: Record<string, unknown>, vars: Record<string, unknown>) =>
+      workflowValue(lane.strategy?.matrix.lane ?? "", { inputs, vars }) as string[];
+    const hostedParallel = ["parallel-1", "parallel-2", "parallel-3", "parallel-4"];
+    expect(matrixLanes(checks, placements[0]!)).toEqual([
       "linux-checks",
       "mac",
       "parallel",
       "desktop-1",
       "desktop-2",
     ]);
-    for (const name of ["linux-checks", "mac", "parallel", "desktop-1", "desktop-2"])
-      expect(ran(name, checks), name).toEqual(ran(name, called({})));
+    expect(matrixLanes(checks, {})).toEqual([
+      "linux-checks",
+      "mac",
+      ...hostedParallel,
+      "desktop-1",
+      "desktop-2",
+    ]);
+    for (const vars of placements)
+      for (const name of matrixLanes(checks, vars))
+        expect(ran(name, checks), name).toEqual(ran(name, called({})));
     // Every Linux test group, as in the whole check (INF-2646).
     const groupSteps = (inputs: Record<string, unknown>) =>
       verifyLinuxTests(inputs).map(({ steps }) => steps);
@@ -318,17 +348,14 @@ describe("the signed channel workflow", () => {
     expect(only(checks)).toBe(MAC_ONLY_TAG);
 
     // The journeys part: every Linux journey, and on the Mac every journey and
-    // what it needs, in the two journey jobs alone (INF-2779).
+    // what it needs, in the journey jobs alone (INF-2779).
     const journeys = called({ part: "journeys" });
     expect(linuxJourneys(journeys)).toBe(true);
-    expect(workflowValue(lane.strategy?.matrix.lane ?? "", { inputs: journeys })).toEqual([
-      "parallel",
-      "desktop-1",
-      "desktop-2",
-    ]);
+    expect(matrixLanes(journeys, placements[0]!)).toEqual(["parallel", "desktop-1", "desktop-2"]);
+    expect(matrixLanes(journeys, {})).toEqual([...hostedParallel, "desktop-1", "desktop-2"]);
     expect(verifyLinuxTests(journeys)).toEqual([]);
     expect(only(journeys)).toBe("");
-    for (const name of ["parallel", "desktop-1", "desktop-2"])
+    for (const name of ["parallel", ...hostedParallel, "desktop-1", "desktop-2"])
       expect(ran(name, journeys), name).toEqual([
         "install",
         "build",
@@ -379,15 +406,19 @@ describe("the signed channel workflow", () => {
     // ones' teardown, so without --no-deps the parallel groups would run it too.
     for (const line of lines.filter((candidate) => candidate.includes("--project=")))
       expect(line).toContain("--no-deps");
-    // The parallel job's group first and the mac job's second, each with its
-    // job's own work counted; the journeys part has no mac job and runs them all.
-    const group = (name: string, part: string) =>
-      [e2e?.env?.GROUP, e2e?.env?.JOBS].map((value) =>
-        workflowString(value ?? "", { matrix: { lane: name }, inputs: { part } }),
-      );
-    expect(group("parallel", "all")).toEqual(["1/2", "--jobs parallel,mac"]);
-    expect(group("mac", "all")).toEqual(["2/2", "--jobs parallel,mac"]);
-    expect(group("parallel", "journeys")).toEqual(["1/1", ""]);
+    // On the project's Macs the parallel job and the mac job each run a share
+    // of the parallel lanes' files, none twice; the journeys part has no mac
+    // job and its parallel job runs them all.
+    const files = (name: string, part = "") =>
+      journeysRun(name, { cores: "2", part })
+        .split(" ")
+        .filter((word) => word.startsWith("/tests/"));
+    const every = laneFiles("parallel").map(fileArgument).toSorted();
+    const [parallelShare, macShare] = [files("parallel"), files("mac")];
+    expect(parallelShare.length).toBeGreaterThan(0);
+    expect(macShare.length).toBeGreaterThan(0);
+    expect([...parallelShare, ...macShare].toSorted()).toEqual(every);
+    expect(files("parallel", "journeys").toSorted()).toEqual(every);
   });
 
   // Captain's accepted INF-1258 mac-unit-only option: all files still run

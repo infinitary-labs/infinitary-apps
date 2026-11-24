@@ -297,16 +297,29 @@ const jobsOf = (file: string) =>
 const github = { run_id: "43188445742", run_attempt: "1" };
 const lead = `batch-stop-${github.run_id}-${github.run_attempt}-`;
 
+// verify.yml's parallel journeys are one job on the project's Macs and four
+// on GitHub's, which MAC_QUEUES's native kind chooses: a stop covers both.
+const placements: Record<string, string>[] = [
+  {},
+  { MAC_QUEUES: JSON.stringify({ native: "macos-15" }) },
+];
+
 function groups(job: Job, inputs: Record<string, unknown>): string[] {
   const matrix = job.strategy!.matrix;
-  const value = (raw: unknown) =>
-    typeof raw === "string" && raw.includes("${{") ? workflowValue(raw, { inputs }) : raw;
-  const entries = matrix.include
-    ? (value(matrix.include) as Record<string, unknown>[])
-    : (value(matrix.lane) as string[]).map((lane) => ({ lane }));
-  return entries.map((entry) =>
-    workflowString(job.concurrency!.group, { github, inputs, matrix: entry }),
+  const value = (raw: unknown, vars: Record<string, string>) =>
+    typeof raw === "string" && raw.includes("${{") ? workflowValue(raw, { inputs, vars }) : raw;
+  const entries = placements.flatMap((vars) =>
+    matrix.include
+      ? (value(matrix.include, vars) as Record<string, unknown>[])
+      : (value(matrix.lane, vars) as string[]).map((lane) => ({ lane })),
   );
+  return [
+    ...new Set(
+      entries.map((entry) =>
+        workflowString(job.concurrency!.group, { github, inputs, matrix: entry }),
+      ),
+    ),
+  ];
 }
 
 describe("batch-checks.yml stops at a failed code check", () => {

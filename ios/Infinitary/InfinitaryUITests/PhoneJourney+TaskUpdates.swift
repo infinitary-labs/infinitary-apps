@@ -57,9 +57,8 @@ extension PhoneJourney {
             list.swipeUp(velocity: .slow)
         }
         for _ in 0..<3 { list.swipeUp(velocity: .fast) }
-        picture("task-list-D0-after-scroll")
-        XCTAssertTrue(done.exists && done.isHittable, "Done must be visible at the bottom before opening it")
         picture("task-list-D0-before")
+        XCTAssertTrue(done.exists && done.isHittable, "Done must be visible at the bottom before opening it")
         _ = try await home("capture-start")
         tapOnPhone(done)
         let rows = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "task-task-list-D0-d-"))
@@ -73,8 +72,10 @@ extension PhoneJourney {
         try await launchJoined()
         _ = try await home("empty-cards")
         tab("Tasks", repeatDiscarded: false)
-        _ = try await home("task-list-seed", body: "{\"prefix\":\"S0\",\"working\":2,\"backlog\":2}")
+        let workingCount = 2
+        _ = try await home("task-list-seed", body: "{\"prefix\":\"S0\",\"working\":\(workingCount),\"backlog\":2}")
         let backlog = app.buttons["group-backlog"]
+        XCTAssertTrue(app.buttons["task-task-list-S0-w-\(workingCount - 1)"].waitForPresence(timeout: 20))
         XCTAssertTrue(backlog.waitForPresence(timeout: 20))
         tapOnPhone(backlog)
         let last = app.buttons["task-task-list-S0-b-1"]

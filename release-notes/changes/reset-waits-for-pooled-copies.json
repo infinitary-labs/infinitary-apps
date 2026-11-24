@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "reset-waits-for-pooled-copies",
+      "kind": "fix",
+      "area": "settings",
+      "title": "Reset Infinitary leaves no working copy listed in your own projects",
+      "body": "When Reset Infinitary discarded a task, it could occasionally check your project's working copies while the task's own copy was still being put away. That copy then stayed listed in your project, pointing at a folder the reset had deleted. The reset now waits until each discarded task's copy is put away before it removes their links.",
+      "noPicture": "This changes what the reset leaves in a project's git records, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

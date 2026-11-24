@@ -26,6 +26,15 @@ function deps(overrides: Partial<ResetPrepareDeps> = {}) {
     openTasks: () => [{ id: "t1" }, { id: "t2" }],
     discardTask: step("discard"),
     leftoversSettled: step("settled"),
+    // The pool finishes a return after the close that started it resolves,
+    // so this records only once a later turn of the event loop has come.
+    worktreesSettled: () =>
+      new Promise((done) =>
+        setTimeout(() => {
+          steps.push("worktrees settled");
+          done(undefined);
+        }, 0),
+      ),
     keptJobs: () => [{ id: "k1" }],
     removeKeptJob: async (id) => {
       steps.push(`remove kept ${id}`);
@@ -50,7 +59,7 @@ describe("the first mate's side of a reset", () => {
     expect(resetScope(deps().deps)).toEqual({ tasks: 2 });
   });
 
-  it("removes devices while connected, closes tasks before their records go, then the rest", async () => {
+  it("removes devices while connected, closes tasks before their records go, waits for their working copies before undoing a project, then the rest", async () => {
     const { steps, deps: d } = deps();
     expect(await prepareReset(d)).toEqual({ ok: true });
     expect(steps).toEqual([
@@ -59,6 +68,7 @@ describe("the first mate's side of a reset", () => {
       "discard t2",
       "settled t1",
       "settled t2",
+      "worktrees settled",
       "remove kept k1",
       "undo project /projects/app",
       "sign out claude",

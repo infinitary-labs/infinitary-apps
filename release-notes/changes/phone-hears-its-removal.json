@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "phone-hears-its-removal",
+      "kind": "fix",
+      "area": "devices",
+      "title": "An iPhone or iPad you remove says so, even while it is busy",
+      "body": "When you removed your last iPhone or iPad from your Mac at the moment it was loading something, it could stay on Out of reach for good instead of saying it was removed. It now says Removed from your computer and offers to join again, whatever it was doing.",
+      "noPicture": "The removed screen is unchanged; it now appears every time instead of Out of reach staying up.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,7 +1,8 @@
 # Infinitary on iPhone and iPad
 
 The native SwiftUI app lives in `ios/Infinitary/`, supports iPhone and iPad from iOS 18, and reads a Mac through the published connection contract.
-Its name is Infinitary, its bundle identifier is `com.getinfinitary.infinitary`, and its Xcode development team is `9T2J7MNUP9`.
+Its name is Infinitary, its bundle identifier is `com.getinfinitary.app`, and its Xcode development team is Infinitary Labs, Inc. (`Y44V95NP6K`).
+Apple moves an app to another team only after an App Store release, so the app left the personal team's `com.getinfinitary.infinitary` for a new identifier and App Store Connect record: a tester installs it from TestFlight as a new app and pairs it again, and the old app's builds expire on their own.
 The phone is a view of the Mac, not a separate first mate or a place that runs work.
 It shows interactive cards on Home, with Tasks and Activity on their own tabs, sends the captain's messages and photos, and lets the captain start, continue, steer and interrupt work on the Mac.
 The version-dispatched TestFlight workflow and the square app icon support internal delivery; App Store distribution and background notifications remain separate work.
@@ -939,8 +940,8 @@ GitHub can preserve an earlier resolve job's outputs while advancing another job
 A status-only request remains safe to rerun because it never uploads.
 A fresh dispatch creates another build, not a retry of a prior upload.
 
-The Linux preflight reads App Store Connect with the existing `APP_STORE_CONNECT_KEY_ID`, `APP_STORE_CONNECT_ISSUER_ID` and base64-encoded `APP_STORE_CONNECT_API_KEY` secrets.
-It requires exactly the app record named **Infinitary** for `com.getinfinitary.infinitary`, the registered bundle identifier, and an internal TestFlight group with automatic distribution and a configured, non-revoked tester.
+The Linux preflight reads App Store Connect with the Infinitary Labs team's `COMPANY_APP_STORE_CONNECT_KEY_ID`, `COMPANY_APP_STORE_CONNECT_ISSUER_ID` and base64-encoded `COMPANY_APP_STORE_CONNECT_API_KEY` secrets.
+It requires exactly the app record named **Infinitary** for `com.getinfinitary.app`, the registered bundle identifier, and an internal TestFlight group with automatic distribution and a configured, non-revoked tester.
 Apple's identifier filters can return prefix matches; the preflight selects exact identifiers before requiring one match.
 Apple sends the TestFlight invitation only after a build is available, so `NOT_INVITED` and `INVITED` are valid preflight states, not proof of installation ([Apple's internal-testing instructions](https://developer.apple.com/help/app-store-connect/test-a-beta-version/add-internal-testers/)).
 These preflight reads use GET only; they create no app record or tester and change no account permissions.
@@ -950,18 +951,17 @@ A configured tester somewhere in the group is not proof that the captain accepte
 
 The captain's one-time Apple setup is:
 
-1. In Apple Developer → Certificates, Identifiers & Profiles → Identifiers, register the explicit identifier `com.getinfinitary.infinitary` for team `9T2J7MNUP9` if it does not exist.
+1. In Apple Developer → Certificates, Identifiers & Profiles → Identifiers, register the explicit identifier `com.getinfinitary.app` for team `Y44V95NP6K` if it does not exist.
 2. In App Store Connect → Apps → + → New App, choose iOS, name **Infinitary**, a primary language, the registered identifier, a stable SKU such as `infinitary-ios` and Full Access.
    An existing record must have that name and identifier, and the API key must have access to it.
 3. In that app's TestFlight tab, press + beside Internal Testing to create a group, or select one, enable automatic distribution, and add the captain with Invite Testers.
    Accept its TestFlight invitation once the first build is available; that acceptance is not an upload prerequisite.
    A missing eligible tester is managed through App Store Connect → Users and Access, not by this workflow.
-4. On the legacy private repository, keep the three existing repository secrets set to a team key authorized for the app and Xcode automatic signing.
-   On `infinitary-apps`, put those credentials in the `ios-release` environment, not in repository-wide secrets.
+4. On `infinitary-apps`, put a team key authorized for the app and Xcode automatic signing in the `ios-release` environment's three `COMPANY_` secrets, not in repository-wide secrets.
    Configure the environment to allow deployments only from the `main` branch, with no tag rule.
    Apple readiness, upload and availability read their credentials from that environment.
    The private-key secret contains base64 of the downloaded `.p8` file, never a value pasted into a task or a command argument.
-5. For card pushes, the app identifier needs the Push Notifications capability, and the notification part its own identifier, `com.getinfinitary.infinitary.notifications`.
+5. For card pushes, the app identifier needs the Push Notifications capability, and the notification part its own identifier, `com.getinfinitary.app.notifications`.
    Xcode's automatic signing registers both with the team key during the archive when the key may; otherwise register the second identifier and turn on Push Notifications for the first in the same Identifiers page.
 
 After preflight, `ios-release.yml` calls the same-source reusable `phone.yml` with the resolved `source_commit`.
@@ -970,7 +970,7 @@ That unsigned job runs each device's parts through the required `MAC_QUEUES.phon
 It receives only contents-read and actions-read permissions, for checkout and the Export phone pictures job's download, because GitHub starts no job of a called workflow that asks for more than its caller grants; no signing secrets or release environment pass to the guest.
 Both devices run even if one fails; any failure, cancellation or skipped phone job prevents the host signing job from starting.
 The host signing job then uses the `testflight` kind's queue (`docs/testing.md`, "Each Mac job's kind and size"), otherwise `REAL_MAC_RUNNER`, then `MAC_RUNNER`, falling back only to `mini-mac`.
-Xcode signs the upload with the captain's certificates, so that job asks for the real Mac, never a virtual one.
+Xcode signs the upload with the Infinitary Labs team's certificates, so that job asks for the real Mac, never a virtual one.
 It waits in its own `ios-testflight` line, apart from phone checks, and retains its 225-minute job allowance.
 Install-time checks use a scratch HOME and an empty local-signing directory, as in `phone.yml`.
 

@@ -2,8 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
 <!-- Simulator-only metadata for unsigned tests; no identity, provisioning or signing key. -->
-<key>application-identifier</key><string>9T2J7MNUP9.com.getinfinitary.infinitary</string>
+<key>application-identifier</key><string>Y44V95NP6K.com.getinfinitary.app</string>
 <!-- INF-4794: lets the simulator give the push part a push address and deliver its stand-in pushes. -->
 <key>aps-environment</key><string>development</string>
-<key>keychain-access-groups</key><array><string>9T2J7MNUP9.com.getinfinitary.infinitary</string><string>9T2J7MNUP9.com.getinfinitary.infinitary.push</string></array>
+<key>keychain-access-groups</key><array><string>Y44V95NP6K.com.getinfinitary.app</string><string>Y44V95NP6K.com.getinfinitary.app.push</string></array>
 </dict></plist>

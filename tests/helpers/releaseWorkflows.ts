@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { compileFunction, constants } from "node:vm";
 import { data, Evaluator, Lexer, Parser } from "@actions/expressions";
 import { expect } from "vitest";
+import { SIGNING_TEAMS } from "../../scripts/release-signing-team.ts";
 import { laterParts } from "../../scripts/unit-repeats.ts";
 import { hostEnv } from "../../src/core/hostEnv";
 import { scratchDir } from "./scratchDirs";
@@ -425,3 +426,23 @@ export const PUBLISHES =
 export const UPLOADS = /gh release (create|upload)|publish-release-asset\.sh|publish-downloads\.ts/;
 export const PUBLICATION_TOKEN =
   /secrets\.(GITHUB_TOKEN|R2_ACCESS_KEY_ID|R2_SECRET_ACCESS_KEY|HOMEBREW_TAP_TOKEN|OLD_TAP_TOKEN)/;
+
+/**
+ * A read of a secret whose name starts with one of `names`, in a workflow's
+ * text: by name under any signing team's prefix, or through the index
+ * release.yml builds from the prefix of the team that signs the source
+ * (scripts/release-signing-team.ts).
+ */
+export function secretRead(names: string): RegExp {
+  const prefixes = Object.values(SIGNING_TEAMS)
+    .map((team) => team.secrets)
+    .join("|");
+  return new RegExp(`secrets(?:\\.(?:${prefixes})|\\[format\\('\\{0\\})(?:${names})`);
+}
+
+/** The resolve job's outputs naming the team that signs and the prefix of its secrets. */
+export function signingOutputs(team: string): Record<string, string> {
+  const known = SIGNING_TEAMS[team];
+  if (!known) throw new Error(`The workflow keeps no signing material for team ${team}.`);
+  return { team_id: team, sign_identity: known.identity, signing_secrets: known.secrets };
+}

@@ -15,6 +15,7 @@ import {
   loadYamlFile,
   PUBLISHES,
   root,
+  secretRead,
   signedChannel,
   VERIFY_E2E_RUN,
   verifyLinuxTests,
@@ -539,11 +540,10 @@ describe("the signed channel workflow", () => {
     };
     const waitsFor = (name: string, target: string): boolean =>
       needsOf(name).some((need) => need === target || waitsFor(need, target));
-    const signing = Object.keys(jobs).filter((name) =>
-      /secrets: ?inherit|"secrets":"inherit"|secrets\.(MAC_DEVELOPER_ID|CSC_)/.test(
-        JSON.stringify(jobs[name]),
-      ),
+    const material = new RegExp(
+      `secrets: ?inherit|"secrets":"inherit"|${secretRead("MAC_DEVELOPER_ID|CSC_").source}`,
     );
+    const signing = Object.keys(jobs).filter((name) => material.test(JSON.stringify(jobs[name])));
     expect(signing).toEqual(expect.arrayContaining(["release"]));
     for (const name of signing) expect(waitsFor(name, "phone"), name).toBe(true);
     // INF-1900: the update check holds no signing material.

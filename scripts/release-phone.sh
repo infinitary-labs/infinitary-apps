@@ -40,7 +40,7 @@ xcodebuild archive \
   -allowProvisioningUpdates -authenticationKeyPath "$key_path" \
   -authenticationKeyID "$APP_STORE_CONNECT_KEY_ID" \
   -authenticationKeyIssuerID "$APP_STORE_CONNECT_ISSUER_ID" \
-  DEVELOPMENT_TEAM=9T2J7MNUP9 \
+  DEVELOPMENT_TEAM=Y44V95NP6K \
   CODE_SIGN_STYLE=Automatic MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" 2>&1 | tee "$work/archive.log"
 
 # Read the actual archive, not just the build settings passed above.
@@ -50,7 +50,7 @@ with open(sys.argv[1], 'rb') as source:
     info = plistlib.load(source)
 expected = {
     'CFBundleDisplayName': 'Infinitary',
-    'CFBundleIdentifier': 'com.getinfinitary.infinitary',
+    'CFBundleIdentifier': 'com.getinfinitary.app',
     'CFBundleShortVersionString': sys.argv[2],
     'CFBundleVersion': sys.argv[3],
     'DTPlatformName': 'iphoneos',
@@ -71,7 +71,7 @@ if info.get('ITSAppUsesNonExemptEncryption') is not False:
 # INF-4794: the notification part that opens card pushes, with its own identifier and the app's version and build.
 with open(sys.argv[1].replace('/Info.plist', '/PlugIns/InfinitaryNotifications.appex/Info.plist'), 'rb') as source:
     part = plistlib.load(source)
-for name, value in {'CFBundleIdentifier': 'com.getinfinitary.infinitary.notifications',
+for name, value in {'CFBundleIdentifier': 'com.getinfinitary.app.notifications',
                     'CFBundleShortVersionString': sys.argv[2], 'CFBundleVersion': sys.argv[3]}.items():
     if part.get(name) != value:
         raise SystemExit('Notification part identity mismatch: ' + name)

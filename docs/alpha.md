@@ -442,10 +442,20 @@ The requirement goes on the two files signed under the app's identifier: the app
 No helper or other nested executable has that identifier, so none takes it.
 A copy added over SSH is checked against the same requirement (`docs/devices.md`, "Downloading on a Mac reached by its address").
 
-A move takes two releases.
+A move takes two releases on each channel.
 The bridge release, still signed by the old team, lists both teams, and copies reach it through ordinary updates.
-Once it has shipped and copies have taken it, the switch changes `teamId`, the signing identity and the release secrets to the new team and drops the old team from `acceptedTeamIds`.
-A copy older than the bridge refuses the switch's update and needs one manual reinstall.
+The switch changes `teamId`, `signer` and `electron-builder.yml`'s `mac.identity` to the new team, and keeps both teams in `acceptedTeamIds`, so a release the old team signs stays installable while any channel still needs one.
+Dropping the old team from `acceptedTeamIds` is a later change, once no release the old team signs is left to publish.
+Releases now sign with Infinitary Labs, Inc. (team `Y44V95NP6K`); sources from before the switch name the personal team `9T2J7MNUP9`.
+
+Each release signs with the team its own source names.
+`release.yml`'s resolve job reads it with the workflow's own `scripts/release-signing-team.ts`, which also names the prefix of the release secrets that hold that team's Developer ID certificate and App Store Connect key: `COMPANY_` for Infinitary Labs, none for the personal team.
+A stable promoting an alpha the old team signed therefore signs with the old team, as that alpha's own `electron-builder.yml` asks.
+The same step refuses a release whose team the channel's current release does not accept, before anything builds.
+An alpha checks the newest release of either channel, since alpha copies also take a promoted stable; a stable checks the newest stable.
+A stable runs no update check of its own, so the stable channel needs its own bridge stable, a promoted bridge alpha, before a stable the new team signs.
+The step reads only the channel's newest release: a copy older than its channel's bridge refuses the switch's update and needs one manual reinstall.
+The signed installer check (`mac-installer.yml`) and the phone's release reads use the new team's material alone.
 The Keychain's items are tied to the signing team, so each saved item asks once more after the switch.
 
 ## Download storage

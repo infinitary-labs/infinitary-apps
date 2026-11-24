@@ -32,6 +32,7 @@ fi
 RELEASE_IDENTITY="$(dirname "$0")/../packaging/release-identity.json"
 EXPECTED_BUNDLE_ID="$(plutil -extract bundleId raw -o - "$RELEASE_IDENTITY")"
 EXPECTED_TEAM_ID="$(plutil -extract teamId raw -o - "$RELEASE_IDENTITY")"
+EXPECTED_SIGNER="$(plutil -extract signer raw -o - "$RELEASE_IDENTITY")"
 EXPECTED_EXECUTABLE="Infinitary"
 # The file every start with no window runs from (scripts/mac-app-launcher.m;
 # docs/run.md, "Opened while it runs"), signed under the app's own identity.
@@ -169,7 +170,7 @@ check_signature() {
   local INFO
   INFO="$(codesign -dvvv "$target" 2>&1)" \
     || fail "codesign -dvvv failed on $target"
-  echo "$INFO" | grep -q "^Authority=Developer ID Application: Kun Chen ($EXPECTED_TEAM_ID)$" \
+  echo "$INFO" | grep -qxF "Authority=Developer ID Application: $EXPECTED_SIGNER ($EXPECTED_TEAM_ID)" \
     || fail "$target not signed by the expected Developer ID identity"
   echo "$INFO" | grep -q "^TeamIdentifier=$EXPECTED_TEAM_ID$" \
     || fail "$target has wrong Team ID"

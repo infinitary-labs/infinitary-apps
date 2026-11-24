@@ -65,9 +65,9 @@ jobs:
           node-version: 24
       - name: Check Apple's app record and internal testing
         env:
-          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
-          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.COMPANY_APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.COMPANY_APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.COMPANY_APP_STORE_CONNECT_API_KEY }}
         run: node scripts/phone-release.ts preflight
 
   phone:
@@ -156,9 +156,9 @@ jobs:
       - id: upload
         name: Archive and upload Infinitary
         env:
-          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
-          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.COMPANY_APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.COMPANY_APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.COMPANY_APP_STORE_CONNECT_API_KEY }}
           PHONE_RECEIPT: ${{ runner.temp }}/phone-upload.json
         run: bash scripts/release-phone.sh
       - name: Remove this release's temporary key and archive
@@ -196,8 +196,8 @@ jobs:
           node-version: 24
       - name: Wait for Apple to confirm internal TestFlight availability
         env:
-          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
-          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.COMPANY_APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.COMPANY_APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.COMPANY_APP_STORE_CONNECT_API_KEY }}
           CHECK_BUILD: ${{ needs.resolve.outputs.build_number }}
         run: node scripts/phone-release.ts status

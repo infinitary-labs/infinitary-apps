@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "releases-signed-by-infinitary-labs",
+      "kind": "improvement",
+      "area": "updates",
+      "title": "Infinitary is now signed by Infinitary Labs",
+      "body": "Infinitary for Mac and the iPhone and iPad app are now signed by Infinitary Labs, Inc. On your Mac, the first update signed this way asks once more before it uses each saved sign-in. On your iPhone or iPad, the app arrives in TestFlight as a new app: install it there and pair it with your computer again. The earlier app keeps working until its TestFlight builds expire.",
+      "noPicture": "The change is in who signs the apps; no view or control looks different.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

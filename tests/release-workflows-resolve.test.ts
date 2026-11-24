@@ -1,7 +1,8 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
+import { SIGNING_TEAMS } from "../scripts/release-signing-team.ts";
 import { presentationCommitMessage } from "../src/core/forge";
 import {
   buildDownloadUrl,
@@ -27,14 +28,47 @@ import { scratchDir } from "./helpers/scratchDirs";
 // Preserve the original release-contract budget; discovery keeps its explicit budget.
 vi.setConfig({ testTimeout: 10_000 });
 
+/** A step's whole value read from one secret, by name or by an index such as the signing team's prefix. */
+const KEY_EXPRESSION = /^\$\{\{ secrets(\.[A-Z0-9_]+|\[[^\]]+\]) \}\}$/;
+
 /** The release's identity, its keys and how a release is resolved and numbered (release.yml). */
 
 describe("signed release workflow", () => {
   const workflow = read(".github/workflows/release.yml");
 
+  // The signing job validates the restored keychain against the identity and
+  // signs the disk image with it, so a release signs only with the identity
+  // its source's team holds, as the resolve job's signing step names it.
   it("enforces the pinned identity", () => {
-    expect(workflow).toContain('SIGN_IDENTITY: "Developer ID Application: Kun Chen (9T2J7MNUP9)"');
-    expect(workflow).toContain("TEAM_ID: 9T2J7MNUP9");
+    const parsed = loadYamlFile(".github/workflows/release.yml") as {
+      env: Record<string, string>;
+      jobs: {
+        resolve: { outputs: Record<string, string> };
+        release: {
+          env: Record<string, string>;
+          steps: { id?: string; env?: Record<string, string> }[];
+        };
+      };
+    };
+    expect(parsed.env.SIGN_IDENTITY).toBeUndefined();
+    expect(parsed.jobs.release.env.SIGN_IDENTITY).toBeUndefined();
+    const stepEnv = (id: string) =>
+      parsed.jobs.release.steps.find((step) => step.id === id)?.env ?? {};
+    for (const [team, { identity }] of Object.entries(SIGNING_TEAMS)) {
+      const steps = { signing: { outputs: { team_id: team, sign_identity: identity } } };
+      const outputs = Object.fromEntries(
+        ["team_id", "sign_identity"].map((name) => [
+          name,
+          workflowValue(parsed.jobs.resolve.outputs[name] ?? "", { steps }),
+        ]),
+      );
+      const needs = { resolve: { outputs } };
+      expect(workflowValue(stepEnv("developer_id_cert").TEAM_ID ?? "", { needs })).toBe(team);
+      expect(workflowValue(stepEnv("developer_id_cert").SIGN_IDENTITY ?? "", { needs })).toBe(
+        identity,
+      );
+      expect(workflowValue(stepEnv("dmg").SIGN_IDENTITY ?? "", { needs })).toBe(identity);
+    }
   });
 
   it("resolves the documented signing and publication credentials through the workflow's expressions", () => {
@@ -51,6 +85,11 @@ describe("signed release workflow", () => {
       "GITHUB_TOKEN",
       "HOMEBREW_TAP_TOKEN",
       "OLD_TAP_TOKEN",
+      "COMPANY_MAC_DEVELOPER_ID_CERT_P12",
+      "COMPANY_MAC_DEVELOPER_ID_CERT_PASSWORD",
+      "COMPANY_APP_STORE_CONNECT_KEY_ID",
+      "COMPANY_APP_STORE_CONNECT_ISSUER_ID",
+      "COMPANY_APP_STORE_CONNECT_API_KEY",
     ];
     const secrets = Object.fromEntries(names.map((name) => [name, `fixture-${name}`]));
     const parsed = loadYamlFile(".github/workflows/release.yml") as {
@@ -58,10 +97,16 @@ describe("signed release workflow", () => {
     };
     const expressions = Object.values(parsed.jobs)
       .flatMap((job) => (job.steps ?? []).flatMap((step) => Object.values(step.env ?? {})))
-      .filter((value) => /^\$\{\{ secrets\.[A-Z0-9_]+ \}\}$/.test(value));
-    expect(
-      new Set(expressions.map((expression) => workflowValue(expression, { secrets }))),
-    ).toEqual(new Set(Object.values(secrets)));
+      .filter((value) => KEY_EXPRESSION.test(value));
+    const resolved = Object.values(SIGNING_TEAMS).flatMap(({ secrets: prefix }) =>
+      expressions.map((expression) =>
+        workflowValue(expression, {
+          secrets,
+          needs: { resolve: { outputs: { signing_secrets: prefix } } },
+        }),
+      ),
+    );
+    expect(new Set(resolved)).toEqual(new Set(Object.values(secrets)));
   });
 
   // INF-2498's plan, piece 2 (the captain's hosted-parallel choice): the
@@ -86,12 +131,38 @@ describe("signed release workflow", () => {
       >;
     };
     const holders: Record<string, string[]> = {};
+    // Each name a key expression reads under some team's prefix; a name
+    // missing from this list reads as nothing and fails the comparison.
+    const names = [
+      ...[
+        "MAC_DEVELOPER_ID_CERT_P12",
+        "MAC_DEVELOPER_ID_CERT_PASSWORD",
+        "APP_STORE_CONNECT_KEY_ID",
+        "APP_STORE_CONNECT_ISSUER_ID",
+        "APP_STORE_CONNECT_API_KEY",
+      ].flatMap((name) =>
+        Object.values(SIGNING_TEAMS).map(({ secrets: prefix }) => `${prefix}${name}`),
+      ),
+      ...["GITHUB_TOKEN", "R2_ENDPOINT", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY"],
+      ...["HOMEBREW_TAP_TOKEN", "OLD_TAP_TOKEN"],
+    ];
+    const secrets = Object.fromEntries(names.map((name) => [name, name]));
     for (const [id, job] of Object.entries(parsed.jobs)) {
       expect(job.secrets, id).toBe(id === "signed-installer" ? "inherit" : undefined);
       const hold = (where: string, env: Record<string, string> | undefined) => {
         for (const value of Object.values(env ?? {})) {
-          const key = /^\$\{\{ secrets\.([A-Z0-9_]+) \}\}$/.exec(value)?.[1];
-          if (key) holders[key] = [...(holders[key] ?? []), where];
+          if (!KEY_EXPRESSION.test(value)) continue;
+          const keys = new Set(
+            Object.values(SIGNING_TEAMS).map(({ secrets: prefix }) =>
+              String(
+                workflowValue(value, {
+                  secrets,
+                  needs: { resolve: { outputs: { signing_secrets: prefix } } },
+                }),
+              ),
+            ),
+          );
+          for (const key of keys) holders[key] = [...(holders[key] ?? []), where];
         }
       };
       hold(`${id}:(job)`, job.env);
@@ -101,11 +172,28 @@ describe("signed release workflow", () => {
     expect(holders).toEqual({
       // The real Mac signs and notarizes; it reads the record and asks
       // whether the storage keys are set, and uploads with none.
+      // Each team's material reaches the signing steps only when that team
+      // signs the source; the phone check reads the company's app record.
       MAC_DEVELOPER_ID_CERT_P12: ["release:developer_id_cert"],
       MAC_DEVELOPER_ID_CERT_PASSWORD: ["release:developer_id_cert"],
-      APP_STORE_CONNECT_KEY_ID: [phone, "release:asc-key", "release:notarize", "release:dmg"],
-      APP_STORE_CONNECT_ISSUER_ID: [phone, "release:asc-key", "release:notarize", "release:dmg"],
-      APP_STORE_CONNECT_API_KEY: [phone, "release:asc-key"],
+      APP_STORE_CONNECT_KEY_ID: ["release:asc-key", "release:notarize", "release:dmg"],
+      APP_STORE_CONNECT_ISSUER_ID: ["release:asc-key", "release:notarize", "release:dmg"],
+      APP_STORE_CONNECT_API_KEY: ["release:asc-key"],
+      COMPANY_MAC_DEVELOPER_ID_CERT_P12: ["release:developer_id_cert"],
+      COMPANY_MAC_DEVELOPER_ID_CERT_PASSWORD: ["release:developer_id_cert"],
+      COMPANY_APP_STORE_CONNECT_KEY_ID: [
+        phone,
+        "release:asc-key",
+        "release:notarize",
+        "release:dmg",
+      ],
+      COMPANY_APP_STORE_CONNECT_ISSUER_ID: [
+        phone,
+        "release:asc-key",
+        "release:notarize",
+        "release:dmg",
+      ],
+      COMPANY_APP_STORE_CONNECT_API_KEY: [phone, "release:asc-key"],
       GITHUB_TOKEN: [
         "release:recorded",
         // The read-only adopt check runs before the first write, the
@@ -253,6 +341,112 @@ describe("resolving a release", () => {
     });
     expect(notYetActive.status).not.toBe(0);
     expect(notYetActive.stderr).toContain("Only the configured source repository can publish");
+  });
+
+  // The move to the company Apple team (docs/alpha.md, "Moving releases to
+  // another Apple team"): an installed copy takes an update only from a team
+  // its own release accepts, and a stable is built from a promoted alpha's
+  // commit, so each release signs with its source's team and is refused while
+  // its channel's current release would refuse that team.
+  it("signs each release with its source's team, once the channel's current release accepts it", () => {
+    const company = JSON.parse(read("packaging/release-identity.json")) as {
+      teamId: string;
+      signer: string;
+      acceptedTeamIds: string[];
+      bundleId: string;
+    };
+    const earlier = company.acceptedTeamIds.find((team) => team !== company.teamId) ?? "";
+    const personalOnly = JSON.stringify({ teamId: earlier, bundleId: company.bundleId });
+    const bridge = JSON.stringify({
+      teamId: earlier,
+      acceptedTeamIds: company.acceptedTeamIds,
+      bundleId: company.bundleId,
+    });
+
+    const clone = join(scratchDir("infinitary-release-signing-"), "clone");
+    mkdirSync(clone);
+    git(clone, "init", "-q", "-b", "main");
+    const commit = (subject: string, identity: string, tag?: string) => {
+      mkdirSync(join(clone, "packaging"), { recursive: true });
+      writeFileSync(join(clone, "packaging/release-identity.json"), identity);
+      git(clone, "add", "-A");
+      git(clone, "commit", "-q", "--allow-empty", "-m", subject);
+      if (tag) git(clone, "tag", tag);
+      return git(clone, "rev-parse", "HEAD");
+    };
+    commit("feat: an earlier alpha", personalOnly, "v0.8.7-alpha.31");
+    const stable = commit("chore: the stable's alpha", personalOnly, "v0.8.7");
+    const switched = commit(
+      "feat: sign with the company team",
+      read("packaging/release-identity.json"),
+    );
+    // The step runs the workflow's own scripts beside the release clone.
+    symlinkSync(join(root, "scripts"), join(clone, "scripts"));
+    writeFileSync(join(clone, ".git/info/exclude"), "scripts\n");
+
+    const workflow = loadYamlFile(".github/workflows/release.yml") as {
+      jobs: { resolve: { steps: { id?: string; run?: string; env?: Record<string, string> }[] } };
+    };
+    const step = workflow.jobs.resolve.steps.find((candidate) => candidate.id === "signing");
+    if (!step?.run) throw new Error("The signing team reader is missing");
+    const sign = (source: string, channel: string, version: string) => {
+      const outputs = { source_commit: source, channel, version };
+      const env = Object.fromEntries(
+        Object.entries(step.env ?? {}).map(([name, value]) => [
+          name,
+          String(workflowValue(value, { steps: { resolve: { outputs } } })),
+        ]),
+      );
+      const output = join(scratchDir("infinitary-release-signing-output-"), "output");
+      writeFileSync(output, "");
+      const result = spawnSync("bash", ["-c", step.run ?? ""], {
+        cwd: clone,
+        encoding: "utf8",
+        env: { ...gitEnv, ...env, GITHUB_OUTPUT: output },
+      });
+      return { status: result.status, stderr: result.stderr, output: readFileSync(output, "utf8") };
+    };
+    const signedBy = (team: string) => {
+      const known = SIGNING_TEAMS[team];
+      if (!known) throw new Error(`No signing material for ${team}`);
+      return `team_id=${team}\nsign_identity=${known.identity}\nsigning_secrets=${known.secrets}\n`;
+    };
+
+    // Every copy out there accepts only the earlier team, so the switch waits.
+    const tooEarly = sign(switched, "alpha", "0.8.8-alpha.1");
+    expect(tooEarly.status).toBe(1);
+    expect(tooEarly.stderr).toContain(
+      `Alpha subscribers have 0.8.7, which installs only updates signed by team ${earlier}`,
+    );
+    expect(tooEarly.output).toBe("");
+
+    // The bridge alpha, signed by the earlier team, accepts both.
+    git(clone, "checkout", "-q", stable);
+    const bridged = commit("feat: accept both teams", bridge, "v0.8.8-alpha.1");
+    expect(sign(bridged, "alpha", "0.8.8-alpha.1").output).toBe(signedBy(earlier));
+    git(clone, "checkout", "-q", "main");
+
+    // Alpha subscribers now have the bridge: the company alpha signs with
+    // the company's material.
+    const alpha = sign(switched, "alpha", "0.8.8-alpha.2");
+    expect(alpha.status, alpha.stderr).toBe(0);
+    expect(alpha.output).toBe(signedBy(company.teamId));
+    expect(SIGNING_TEAMS[company.teamId]?.identity).toBe(
+      `Developer ID Application: ${company.signer} (${company.teamId})`,
+    );
+
+    // Stable subscribers still have the earlier team's 0.8.7: promoting the
+    // company alpha would strand them, while promoting the bridge signs it
+    // with the earlier team, as its own electron-builder.yml asks.
+    git(clone, "tag", "v0.8.8-alpha.2", switched);
+    const strand = sign(switched, "stable", "0.8.8");
+    expect(strand.status).toBe(1);
+    expect(strand.stderr).toContain("Stable subscribers have 0.8.7");
+    expect(sign(bridged, "stable", "0.8.8").output).toBe(signedBy(earlier));
+
+    // Once the bridge is the current stable, the company's next stable signs.
+    git(clone, "tag", "v0.8.8", bridged);
+    expect(sign(switched, "stable", "0.8.9").output).toBe(signedBy(company.teamId));
   });
 
   function resolve(clone: string, env: Record<string, string>) {

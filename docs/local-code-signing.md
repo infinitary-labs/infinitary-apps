@@ -124,7 +124,7 @@ The local main-executable identity check therefore does not prove that a native-
 The local package is signed inside-out by `@electron/osx-sign` - electron-builder's own signer, reached through electron-builder - with the local identity substituted for the placeholder.
 
 Release builds do not touch any of this.
-`electron-builder.yml` still signs with `Developer ID Application: Kun Chen (9T2J7MNUP9)`, hardened runtime, secure timestamps, notarization, and the two-entitlement allowlist; `tests/release-contract.test.ts` pins the bundle configuration and `tests/release-workflows-resolve.test.ts` pins the signing workflow.
+`electron-builder.yml` still signs with the release team's Developer ID certificate (`Developer ID Application: Infinitary Labs, Inc. (Y44V95NP6K)`), hardened runtime, secure timestamps, notarization, and the two-entitlement allowlist; `tests/release-contract.test.ts` pins the bundle configuration and `tests/release-workflows-resolve.test.ts` pins the signing workflow.
 
 ## Setup, and recovery
 

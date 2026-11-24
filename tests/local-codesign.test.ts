@@ -15,6 +15,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, afterEach, describe, expect, it } from "vitest";
+import { SIGNING_TEAMS } from "../scripts/release-signing-team.ts";
 
 /**
  * The local code-signing contract (docs/local-code-signing.md).
@@ -93,8 +94,8 @@ describe("local signing material never reaches the repository", () => {
       const text = execFileSync("cat", [join(repoRoot, "scripts", script)], { encoding: "utf8" });
       expect(text).not.toContain("BEGIN PRIVATE KEY");
       expect(text).not.toContain("BEGIN CERTIFICATE");
-      // The one Apple identity this repo owns belongs to release signing only.
-      expect(text).not.toContain("9T2J7MNUP9");
+      // The Apple teams this repo signs with belong to release signing only.
+      for (const team of Object.keys(SIGNING_TEAMS)) expect(text).not.toContain(team);
     }
   });
 });

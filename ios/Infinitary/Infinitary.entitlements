@@ -4,5 +4,5 @@
 <!-- INF-4794: card pushes; the app's own keychain group stays first, so its other keys stay where they are, and the push group second is the only one it shares with its notification part (docs/ios.md, "Card pushes"). -->
 <!-- Signing sets the push service from the profile: development for local builds, production for TestFlight. -->
 <key>aps-environment</key><string>development</string>
-<key>keychain-access-groups</key><array><string>$(AppIdentifierPrefix)com.getinfinitary.infinitary</string><string>$(AppIdentifierPrefix)com.getinfinitary.infinitary.push</string></array>
+<key>keychain-access-groups</key><array><string>$(AppIdentifierPrefix)com.getinfinitary.app</string><string>$(AppIdentifierPrefix)com.getinfinitary.app.push</string></array>
 </dict></plist>

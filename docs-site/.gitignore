@@ -4,3 +4,4 @@ dist/
 .wrangler/
 # Written from release-notes/ at each build (scripts/docs-site-whats-new.ts).
 src/content/docs/whats-new.md
+src/content/docs/whats-new/

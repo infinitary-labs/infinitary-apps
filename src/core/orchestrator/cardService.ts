@@ -1812,7 +1812,6 @@ export class CardService {
     this.writerLeft(taskId);
   }
 
-  /** Every card whose thread moved since `since`, newest first (`CardThreads`). */
   /** A thread line's words as an agent reads them (`CardThreads.servedLine`). */
   servedLine(card: Pick<Card, "taskId">, message: CardMessage): string {
     return this.threads.servedLine(card, message);
@@ -1823,6 +1822,7 @@ export class CardService {
     return this.threads.fromReader(card, message);
   }
 
+  /** Every card whose thread moved since `since`, newest first (`CardThreads`). */
   threadActivitySince(since: number, limit?: number): ThreadActivity[] {
     return this.threads.threadActivitySince(since, limit);
   }

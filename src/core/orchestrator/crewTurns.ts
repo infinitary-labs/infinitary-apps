@@ -44,7 +44,7 @@ import { JOB_BOUND_MS } from "./idleLadder";
 import { type BriefPart, briefText } from "./intentBrief";
 import { checkBackAsk, checkBackAskOnce } from "./jobWakes";
 import { outageFailedWake, stuckWake } from "./outageWakes";
-import { readerDataAnswer } from "./readerData";
+import { READER_HEADLINE, readerDataAnswer } from "./readerData";
 import { implausibleReport } from "./reportPlausibility";
 import { type IdleRule, type ReportSortRule, sortReport } from "./reportSort";
 import { PENDING_RESPONSES_END, PENDING_RESPONSES_OPENING, wakeBuiltOn } from "./reportWakes";
@@ -708,12 +708,11 @@ export class CrewTurns {
     }
     const spoken =
       task.turnReport ?? (task.currentTurnText.trim() ? task.currentTurnText : undefined);
-    // An unsafe data reader's closing words stand in for its report, marked as one is (`readerReport`).
+    const reader = this.core.options.tasks.get(task.id)?.shape?.unsafe_data_reader === true;
+    // An unsafe data reader's closing words stand in for its report, marked
+    // and headed as one is (`readerReport`).
     const finalText =
-      spoken !== undefined &&
-      this.core.options.tasks.get(task.id)?.shape?.unsafe_data_reader === true
-        ? readerDataAnswer(spoken, Date.now())
-        : spoken;
+      spoken !== undefined && reader ? readerDataAnswer(spoken, Date.now()) : spoken;
     // A paused turn's last words are where it stopped, never its report.
     const candidate = providerError
       ? undefined
@@ -722,7 +721,12 @@ export class CrewTurns {
         : (task.explicitReport ?? finalText);
     // The tool's own headline belongs to the tool's report, never to a
     // final text that stood in for it.
-    const candidateSummary = task.explicitReport !== undefined ? task.explicitSummary : undefined;
+    const candidateSummary =
+      task.explicitReport !== undefined
+        ? task.explicitSummary
+        : reader && finalText !== undefined
+          ? READER_HEADLINE
+          : undefined;
     // A report the provider-failed turn made before it failed is already on
     // the record (`holdReport`): its wake names it (INF-3165).
     const keptReport =

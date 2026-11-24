@@ -30,6 +30,15 @@ export function readerDataLine(words: string, at: number): string {
 }
 
 /**
+ * A reader's report headline in the feed, the task row and the outcome
+ * summary. It holds none of the reader's words: a headline is cut short,
+ * so marked words would lose their closing mark, and the first sentence of
+ * marked words is the reminder, not the report.
+ */
+// i18n-exempt: saved as record text in place of a crewmate's own headline, which the crew writes in its own words
+export const READER_HEADLINE = "The unsafe data reader reported; its words are on its record.";
+
+/**
  * The task that wrote a thread line, when a crewmate did: its own card's
  * crewmate, or a crewmate that wrote with its name on another's card.
  */
@@ -45,10 +54,8 @@ export function crewmateWriterOf(
 
 /**
  * A reader's report as the record keeps it: its words and what it asks of
- * the first mate, each between reader-data marks. Its own headline is left
- * out, since a feed line is cut short and a cut would split the marks; the
- * record takes the headline from the marked words. The rest of its
- * declaration is typed facts the host checks, never read as words.
+ * the first mate, each between reader-data marks, under the host's fixed
+ * headline in place of its own.
  */
 export function readerReport(
   text: string,
@@ -57,7 +64,7 @@ export function readerReport(
 ): [string, string | undefined, ReportDeclaration | undefined] {
   return [
     readerDataAnswer(text, at),
-    undefined,
+    READER_HEADLINE,
     declared && {
       ...declared,
       ...(declared.needsFirstmate

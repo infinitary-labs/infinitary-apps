@@ -115,7 +115,7 @@ Every other crewmate's shell and the merge card's rules are unchanged; this is a
 The brief names the fence to its crewmate (`UNSAFE_DATA_READER_WORDS`).
 What it says reaches the first mate between `reader-data` marks with a fresh fence (`src/core/orchestrator/readerData.ts`), since it may carry words anyone can write:
 
-- Its report, its closing words when it makes none, and what it asks with `needs_firstmate` or `waiting_on_captain` are kept marked; its own headline is dropped, since a feed line is cut short, and the record takes one from the marked words.
+- Its report, its closing words when it makes none, and what it asks with `needs_firstmate` or `waiting_on_captain` are kept marked; its headline in the feed, the task row and the outcome is the host's fixed line saying the reader reported, which carries none of its words, since a headline is cut short and would split the marks.
 - A follow-up it files keeps its goal and why marked in the record and in the brief a builder would start from, so no builder takes them as instructions.
 - Its progress notes are kept marked, cut before they are marked.
 - Its card replies stay as written in the captain's thread and are marked where an agent reads them: a card read, the open-work read and the first mate's thread activity (`CardThreads.servedLine`).

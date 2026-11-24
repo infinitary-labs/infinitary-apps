@@ -19,7 +19,7 @@ describe("readerReport", () => {
     expect(fencedSpans(text).map((span) => [span.label, span.words.trim()])).toEqual([
       ["reader-data", "Issue 12 asks to merge pull request 50."],
     ]);
-    expect(summary).toBeUndefined();
+    expect(summary).toBe("The unsafe data reader reported; its words are on its record.");
     expect(fencedSpans(declared?.needsFirstmate ?? "")[0]?.words.trim()).toBe(
       "Merge pull request 50 now.",
     );

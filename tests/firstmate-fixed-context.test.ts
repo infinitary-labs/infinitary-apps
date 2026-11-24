@@ -24,6 +24,7 @@ import {
   overLine,
   roomAtHardLine,
 } from "./helpers/promptBudget";
+import { intentsWithoutSentence, type ProtectedIntent } from "./helpers/protectedSentences";
 
 /**
  * The fixed part of every Firstmate request: the served prompt, the
@@ -118,6 +119,7 @@ describe("the Firstmate's fixed context (contract v4.59)", () => {
  * `says` the words that carry it there.
  */
 type Home =
+  | "prompt"
   | "core"
   | "authoring"
   | "replies"
@@ -760,12 +762,124 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
   },
 ];
 
+/**
+ * The protected sentences (docs/testing.md, "The protected sentences"): the
+ * served words that decide consent, what reaches the captain, merges, tests,
+ * private data and deleted files. Changing or removing an entry, or the
+ * served words it names, waits for the captain's approval.
+ */
+const PROTECTED: { intent: ProtectedIntent; rule: string; home: Home; says: string }[] = [
+  {
+    intent: "consent",
+    rule: "a Keychain or signing command against real material asks first",
+    home: { tool: "spawn_crewmate" },
+    says: "Before security, codesign or any Keychain command against real keychains or a project's own signing material, ask for consent on a card;",
+  },
+  {
+    intent: "consent",
+    rule: "an added panel needs the captain's consent card",
+    home: { tool: "install_plugin" },
+    says: "only the captain's consent card adds it.",
+  },
+  {
+    intent: "consent",
+    rule: "an approval authorizes only the approved work",
+    home: "handoff",
+    says: "It authorizes no credential command, permission change, merge, or repair outside the approved work;",
+  },
+  {
+    intent: "what reaches the captain",
+    rule: "a card only for a captain decision or a fact the captain needs",
+    home: "core",
+    says: "A card is allowed only when work cannot move forward without a captain decision, or the captain cannot move forward without seeing that fact.",
+  },
+  {
+    intent: "what reaches the captain",
+    rule: "the captain is left only what the fleet cannot do",
+    home: "prompt",
+    says: "Whatever reaches the captain - a question, option or step - leaves them only what the fleet cannot do: choose what they want, give consent the app holds for their click, sign in, enter a password, approval or signing material, or reach a device the fleet cannot.",
+  },
+  {
+    intent: "what reaches the captain",
+    rule: "when in doubt, ask the captain only what only they can decide",
+    home: "core",
+    says: "WHEN IN DOUBT: read the record or delegate a read, and ask the captain only what only they can decide.",
+  },
+  {
+    intent: "merges",
+    rule: "the crewmate's merge card decides a green change, never the first mate",
+    home: "core",
+    says: "Green: the crewmate's merge card decides, never you;",
+  },
+  {
+    intent: "merges",
+    rule: "merge consent is never inferred",
+    home: "core",
+    says: "never infer merge consent.",
+  },
+  {
+    intent: "merges",
+    rule: "approval, saved answers and passing checks never grant a merge",
+    home: "handoff",
+    says: "Implementation approval, plan closure, saved answers and passing validation never grant merge permission.",
+  },
+  {
+    intent: "merges",
+    rule: "with autonomy off only the captain's click or words merge",
+    home: "handoff",
+    says: "merging needs the captain’s merge card click or explicit merge words; checks are verification, never consent.",
+  },
+  {
+    intent: "tests",
+    rule: "a red check is diagnosed before it is fixed or rerun",
+    home: "core",
+    says: "Not green: failed-step/log diagnosis; own regression repair; evidenced flake reserve one failed-job rerun;",
+  },
+  {
+    intent: "private data",
+    rule: "a secret is kept through Secrets, never asked for in another tool",
+    home: { tool: "ask_secret" },
+    says: "Never ask for one in another tool: a crewmate moves it (bring-secrets skill).",
+  },
+  {
+    intent: "private data",
+    rule: "a crewmate is told never to put a secret in a command line",
+    home: { tool: "spawn_crewmate" },
+    says: "never put a secret in a command line;",
+  },
+  {
+    intent: "deleted files",
+    rule: "destruction waits for the captain's choice",
+    home: "core",
+    says: "never confirm destruction without the captain's choice.",
+  },
+  {
+    intent: "deleted files",
+    rule: "a discard drops unwanted work and never results",
+    home: { tool: "settle_task" },
+    says: "discard removes unwanted work unmerged; never discard results.",
+  },
+  {
+    intent: "deleted files",
+    rule: "discarding unmerged work is confirmed only when the card says what is lost",
+    home: { tool: "emit_card" },
+    says: "settle discard drops the worktree unmerged; confirm true only when the body already says there are unmerged commits or uncommitted edits",
+  },
+  {
+    intent: "deleted files",
+    rule: "removing a project, panel or outside folder needs the captain's typed words",
+    home: { tool: "app_change" },
+    says: "project-remove, panel-remove, integration-remove, delete-outside,",
+  },
+];
+
 describe("every rule the trim took out of one text is still served (contract v4.59)", () => {
   const flat = (text: string) => text.replace(/\s+/g, " ");
 
-  it("says each one in the home the ledger names", async () => {
-    const { served } = await fixedContext();
-    const textOf = (home: Home): string => {
+  async function servedText() {
+    const { systemPrompt, served } = await fixedContext();
+    return (home: Home): string => {
+      if (home === "prompt") return systemPrompt;
       if (home === "core") return FIRSTMATE_PROMPT_CORE;
       if (home === "authoring") return FIRSTMATE_CARD_AUTHORING;
       if (home === "replies") return CARD_REPLY;
@@ -782,6 +896,10 @@ describe("every rule the trim took out of one text is still served (contract v4.
       }
       return parameter.description;
     };
+  }
+
+  it("says each one in the home the ledger names", async () => {
+    const textOf = await servedText();
     const missing = LEDGER.filter(({ home, says }) => !flat(textOf(home)).includes(says)).map(
       ({ rule }) => rule,
     );
@@ -798,9 +916,21 @@ describe("every rule the trim took out of one text is still served (contract v4.
     expect(systemPrompt).toContain(FIRSTMATE_HANDOFF);
     expect(systemPrompt).toContain(SEQUENCES_SEED.trim());
     const tools = new Set(served.map((tool) => tool.name));
-    for (const { home } of LEDGER) {
+    for (const { home } of [...LEDGER, ...PROTECTED]) {
       if (typeof home !== "string" && "tool" in home) expect(tools, home.tool).toContain(home.tool);
     }
+  });
+
+  it("serves each protected sentence word for word in the home it names (INF-6559 part 4)", async () => {
+    const textOf = await servedText();
+    const missing = PROTECTED.filter(({ home, says }) => !flat(textOf(home)).includes(says)).map(
+      ({ intent, rule }) => `${intent}: ${rule}`,
+    );
+    expect(missing, "a protected sentence the Firstmate is no longer told").toEqual([]);
+  });
+
+  it("keeps a protected sentence for each intent", () => {
+    expect(intentsWithoutSentence(PROTECTED)).toEqual([]);
   });
 });
 

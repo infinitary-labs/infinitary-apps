@@ -64,6 +64,14 @@ import { drawReplyGarnish, isReplyEmote, type ReplyFrame, replyFrame } from "./r
 import { drawSaturnOver, drawSaturnUnder, placeSaturnVertices, type SaturnLayout } from "./saturn";
 import { type SkyDots, skyEnvelope } from "./sky";
 import { stageNow } from "./stageClock";
+import {
+  drawSupernovaRemnant,
+  drawSupernovaTrails,
+  placeSupernovaVertices,
+  type SnTrail,
+  supernovaBody,
+  supernovaEyes,
+} from "./supernova";
 import { FM_STATES, type StateTargets } from "./targets";
 import {
   drawWarpSphere,
@@ -640,6 +648,9 @@ export function drawFrame(
   const sat = fv === "saturn" ? skyK : 0;
   const gal = fv === "galaxy" ? skyK : 0;
   const alg = fv === "algol" ? skyK : 0;
+  // The supernova (./supernova): the collapse, the bounce and the eyes.
+  const snB = fv === "supernova" ? supernovaBody(et) : null;
+  const snEyes = fv === "supernova" ? supernovaEyes(et) : null;
   // Algol's eclipse dims the whole character's light (./algol).
   const dim = alg > 0.001 ? algolDim(alg, et) : 1;
   const t = FM_STATES[state] ?? (FM_STATES.idle as StateTargets);
@@ -696,7 +707,7 @@ export function drawFrame(
     sim.lastKick = kick;
   }
   sim.vel += (0.5 + (level || 0) * 6 - sim.vel) * Math.min(dt * 1.5, 1);
-  sim.a += (cur.sa * cinchB.spin + (wp?.sa ?? 0)) * dt;
+  sim.a += (cur.sa * cinchB.spin + (wp?.sa ?? 0) + (snB?.spin ?? 0)) * dt;
   sim.b += (cur.sb * cinchB.spin + (wp?.sb ?? 0)) * dt;
   sim.hs += dt * sim.vel * cur.flat;
 
@@ -716,6 +727,7 @@ export function drawFrame(
     else if (con) sim.gaze.look(con.gaze[0], con.gaze[1]);
     else if (fv === "saturn") sim.gaze.look(0, 0.1);
     else if (wp) sim.gaze.look(wp.look[0], wp.look[1]);
+    else if (snEyes) sim.gaze.look(snEyes.look[0], snEyes.look[1]);
     else sim.gaze.look(0, 0);
   } else if (reply?.gaze) sim.gaze.look(reply.gaze.x, reply.gaze.y);
   else sim.gaze.free();
@@ -758,6 +770,7 @@ export function drawFrame(
   if (fv === "blackhole") sim.lid = Math.max(sim.lid, bhEnvelope(et) * 0.3);
   if (fv === "galaxy") sim.lid = Math.max(sim.lid, gal * GALAXY.lid);
   if (wp) sim.lid = Math.max(sim.lid, wp.lid);
+  if (snEyes) sim.lid = Math.max(sim.lid, snEyes.lid);
   sim.wink = state === "greet" ? band(et, 0.42, 0.1, 0.68, 0.12) : 0;
   sim.happy =
     state === "celebrate"
@@ -843,6 +856,7 @@ export function drawFrame(
   // Ambient glow - pulses gently while listening.
   const glowA =
     dim *
+    (snB?.glow ?? 1) *
     (sim.haloBoost *
       cur.glow *
       (wp?.glow ?? 1) *
@@ -932,6 +946,12 @@ export function drawFrame(
   placeGalaxyVertices(gal, pts, c, R, tSec, windProgress, skyDots);
   // The sphere warp: the vertices take their places on the wormhole's rim (./warp).
   if (warpV === "sphere") placeSphereVertices(et, BH_LAYOUT.rank, pts, c, R, tSec, windProgress);
+  // The supernova: the frame falls in, then its vertices fly out and come
+  // home, inner cell first (./supernova).
+  const snTrails: SnTrail[] = snB
+    ? placeSupernovaVertices(et, BH_LAYOUT.rank, pts, c, R, tSec, windProgress, skyDots)
+    : [];
+  const squeeze = snB?.squeeze ?? 0;
 
   // The crystal: the vertices lift into the standing bipyramid by the
   // crystal amount (./crystal owns the geometry).
@@ -980,7 +1000,7 @@ export function drawFrame(
     alpha *= wireFade;
     // The cinch dims the outer cell and lifts every wire at its end.
     if (P[3] > 0 && Q[3] > 0) alpha *= cinchB.outer;
-    alpha *= 1 + 0.5 * cinchLift;
+    alpha *= (1 + 0.5 * cinchLift) * (1 + 0.5 * squeeze);
     if (alpha < 0.02) {
       edgeSkip[i] = 1;
       continue;
@@ -993,10 +1013,15 @@ export function drawFrame(
     // runs cool (./flicker `filamentWaver`). With no flicker `fw` is 0 and
     // every line below is the resting rig's own arithmetic.
     const fw = flick > 0 ? flick * filamentWaver(i, now) : 0;
-    edgeMix[i] = Math.max(m, Math.min(1, fw * 0.8));
+    edgeMix[i] = Math.max(m, Math.min(1, fw * 0.8), squeeze);
     edgeAlpha[i] = Math.min(1, alpha * (0.85 + 0.15 * m) * (1 + 0.85 * fw)) * bhDim;
     edgeCore[i] = (neon > 0.02 || fw > 0.08) && m > 0.5 ? 1 : 0;
     edgeCoreAlpha[i] = Math.min(1, alpha) * Math.max(neon, fw * 1.1) * 0.85 * bhDim;
+    // A supernova's falling frame runs white-hot as it is squeezed.
+    if (squeeze > 0.02) {
+      edgeCore[i] = 1;
+      edgeCoreAlpha[i] = Math.max(edgeCoreAlpha[i] as number, Math.min(1, alpha) * 0.7 * squeeze);
+    }
     edgeCool[i] = ck;
     // The flicker is filament, not floodlight: the halo mask's shares divide
     // the waver back out, so the blurred under-glow stays at the rig's own
@@ -1066,6 +1091,12 @@ export function drawFrame(
         }
       : null;
   if (bhEnv) drawBlackholeUnder(bhEnv);
+  // The supernova's remnant light and the flying vertices' tails, under the wires.
+  if (snB) {
+    const snCol = { wire: briRgb, bg: bgRgb, boost };
+    drawSupernovaRemnant(ctx, et, c, R, snCol);
+    drawSupernovaTrails(ctx, snTrails, R, snCol);
+  }
   // The sphere warp's wormhole, under the wires that ring it.
   if (warpV === "sphere") {
     drawWarpSphere(ctx, et, c, R, tSec, { bright: briRgb, bg: bgRgb, boost });
@@ -1196,7 +1227,9 @@ export function drawFrame(
   // A crystal keeps half the ember here and leans the light toward cool.
   const eyeBase: Rgb = fmMixRgb(fmMixRgb(accRgb, hotRgb, heatCore), coolRgb, 0.4 * ck);
   const eyeCol: Rgb = fmMixRgb(eyeBase, [255, 246, 230], Math.min(0.95, 0.45 + spill * 0.3));
-  const eyeK = (1 - bh * 0.18) * cur.eyeScale;
+  // The supernova draws the eyes in through the collapse and opens them wide after.
+  const gather = snEyes?.gather ?? 1;
+  const eyeK = (1 - bh * 0.18) * cur.eyeScale * (snEyes ? snEyes.wide * (0.6 + 0.4 * gather) : 1);
   const gxo = sim.eye.x * R * 0.1;
   const gyo = sim.eye.y * R * 0.08;
   // Parallax from the rotation keeps them inside the structure; it fades out
@@ -1215,7 +1248,10 @@ export function drawFrame(
   };
   const eyes: EyeSpot[] = [];
   for (const side of [-1, 1]) {
-    const base = posePoint(c + side * R * 0.34 + gxo + pxo, c - R * 0.1 + gyo + pyo);
+    const base = posePoint(
+      c + (side * R * 0.34 + gxo + pxo) * gather,
+      c + (-R * 0.1 + gyo + pyo) * gather,
+    );
     if (alg > 0.001) {
       // Algol: the eyes are the eclipsing pair (./algol).
       eyes.push({ side, ...algolEye(alg, side, base, c, R, et) });

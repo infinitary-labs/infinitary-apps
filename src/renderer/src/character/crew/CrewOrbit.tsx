@@ -22,6 +22,7 @@ import { prefersReducedMotion } from "../reducedMotion";
 import { stageClock, stageRateTarget } from "../stageClock";
 import { CLUSTER_LAYOUT, ComputerOrbits, HOME_COMPUTER } from "./computers";
 import "./computers.css";
+import { drawSupernovaBlast, type SupernovaFrame } from "../supernova";
 import { drawWarpBackdrop, type WarpFrame } from "../warp";
 import { CrewSummary } from "./CrewSummary";
 import {
@@ -61,6 +62,7 @@ import {
   useSummaryFade,
   useSummaryPresence,
 } from "./summaryMotion";
+import { crewSupernova } from "./supernova";
 import type { CrewFacts } from "./useCrewBoard";
 import { crewWarp } from "./warp";
 import "./modelLabels.css";
@@ -174,6 +176,7 @@ function paintFrame(
   now: number,
   inspected: string | null,
   warp: WarpFrame | null,
+  supernova: SupernovaFrame | null,
 ): void {
   near.ctx.clearRect(0, 0, box.width, box.height);
   far.ctx.clearRect(0, 0, box.width, box.height);
@@ -197,6 +200,19 @@ function paintFrame(
       { acc: colors.accent, hot: colors.hot, boost: colors.boost },
       riders,
     );
+  }
+  // So does a supernova's blast, which reaches through the crew's orbits.
+  if (supernova) {
+    const wire: [number, number, number] = [0, 1, 2].map(
+      (i) =>
+        (colors.accent[i] as number) +
+        ((colors.hot[i] as number) - (colors.accent[i] as number)) * supernova.heat,
+    ) as [number, number, number];
+    drawSupernovaBlast(far.ctx, supernova, cx, cy, {
+      wire,
+      bg: colors.bg ?? [5, 7, 13],
+      boost: colors.boost,
+    });
   }
   const byId = new Map(frame.crew.map((cm) => [cm.id, cm]));
   // A constellation lies flat at its mark's depth, under the crew it seats.
@@ -746,8 +762,9 @@ export function CrewOrbit({
       const light = lightRef.current;
       light.duration ??= motionToken(document.documentElement, "--dur-med");
       const warp = reducedMotion ? null : crewWarp.frame(now);
+      const supernova = reducedMotion ? null : crewSupernova.frame(now);
       const frame = lightFrame(
-        model.update(now, reducedMotion, crewRush.level(now), warp),
+        model.update(now, reducedMotion, crewRush.level(now), warp, supernova),
         focusRef.current ?? { project: null, projectOf: () => undefined },
         light.state,
         light.at === 0 ? 0 : real - light.at,
@@ -847,6 +864,11 @@ export function CrewOrbit({
       if ((near.canvas.dataset.crewWarp ?? "") !== warpName) {
         if (warpName) near.canvas.dataset.crewWarp = warpName;
         else delete near.canvas.dataset.crewWarp;
+      }
+      const blast = supernova ? "playing" : "";
+      if ((near.canvas.dataset.crewSupernova ?? "") !== blast) {
+        if (blast) near.canvas.dataset.crewSupernova = blast;
+        else delete near.canvas.dataset.crewSupernova;
       }
       if (shownRef.current) placeSummary();
       placeLit();
@@ -994,11 +1016,22 @@ export function CrewOrbit({
             cs.getPropertyValue("--fg-3"),
             colorsRef.current.quiet ?? [148, 156, 168],
           ),
+          bg: parseRgb(cs.getPropertyValue("--bg-0"), colorsRef.current.bg ?? [5, 7, 13]),
           boost: Number.parseFloat(cs.getPropertyValue("--wire-boost")) || 1,
         };
         lastRead.current = real;
       }
-      paintFrame(near, far, box, frame, colorsRef.current, now, inspectingRef.current, warp);
+      paintFrame(
+        near,
+        far,
+        box,
+        frame,
+        colorsRef.current,
+        now,
+        inspectingRef.current,
+        warp,
+        supernova,
+      );
     },
     `${extent}:${version}:${viewportWidth}:${viewportHeight}:${nameKey}:${theme}:${focus?.project ?? ""}`,
   );
@@ -1027,6 +1060,7 @@ export function CrewOrbit({
           colorsRef.current,
           view.now,
           inspectingRef.current,
+          null,
           null,
         );
       });

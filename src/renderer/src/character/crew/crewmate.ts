@@ -45,7 +45,14 @@ import { FIXED_STARS } from "./fixedStars";
 import type { CrewmateFrame, DependencyLink, PacketFrame, ProgramFrame } from "./orbit";
 
 export type Rgb = [number, number, number];
-export type CrewColors = { accent: Rgb; hot: Rgb; boost: number; quiet?: Rgb };
+export type CrewColors = {
+  accent: Rgb;
+  hot: Rgb;
+  boost: number;
+  quiet?: Rgb;
+  /** The app background: a supernova's white light keeps its own ink on a light one (../supernova). */
+  bg?: Rgb;
+};
 
 type Vec3 = readonly [number, number, number];
 type Edge = readonly [number, number];

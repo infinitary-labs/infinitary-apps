@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "supernova-fidget",
+      "kind": "feature",
+      "title": "The first mate can go supernova",
+      "body": "The first mate has a new fidget: it collapses, goes dark for a beat, then bursts into a flash of rays and a shell of sparks that reaches through its crew, kicking each crewmate outward before it swings back to its seat. The pieces of its frame fly out and fall back together. Crewmates on your other computers stay in their own groups. It plays on your Mac, iPhone and iPad.",
+      "area": "firstmate",
+      "picture": {
+        "dark": "supernova-fidget-dark.webp",
+        "light": "supernova-fidget-light.webp",
+        "alt": "The first mate with wide eyes at the center of a burst of sparks and broken wires, its crew pushed outward around it"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

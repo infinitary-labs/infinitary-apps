@@ -48,6 +48,8 @@ try {
   const { ALGOL } = await runner.import<typeof import("../src/renderer/src/character/algol.ts")>(join(character, "algol.ts"));
   const { TRAVEL_PER_SECOND, WARP, WARP_LEAD, WARP_SCHEDULE, WARP_STARS, WARP_TRAVEL } = await runner.import<typeof import("../src/renderer/src/character/warp.ts")>(join(character, "warp.ts"));
   const { WARP_RELEASE_MS } = await runner.import<typeof import("../src/renderer/src/character/crew/warp.ts")>(join(character, "crew/warp.ts"));
+  const supernova = await runner.import<typeof import("../src/renderer/src/character/supernova.ts")>(join(character, "supernova.ts"));
+  const { supernovaKick } = await runner.import<typeof import("../src/renderer/src/character/crew/supernova.ts")>(join(character, "crew/supernova.ts"));
   const { CINCH, cinchFrame, cinchMotes } = await runner.import<typeof import("../src/renderer/src/character/cinch.ts")>(join(character, "cinch.ts"));
   const { FLICKER_TUNING } = await runner.import<typeof import("../src/renderer/src/character/flicker.ts")>(join(character, "flicker.ts"));
   const { REPLY_EMOTES, replyFrame } = await runner.import<typeof import("../src/renderer/src/character/replies.ts")>(join(character, "replies.ts"));
@@ -102,7 +104,7 @@ try {
       solids: TIER_SOLIDS, gemWires: GEM_WIRES, planes: CROWDED_PLANES,
       ring: { startRadiusPx: GROWING_RING.startRadiusPx, remoteShare: CLUSTER_LAYOUT.sizeShare, glyphPx: PLANES_GLYPH_PX,
         remoteGlyphPx: CLUSTER_LAYOUT.crewGlyphPx, crowdedGlyphPx: CLUSTER_LAYOUT.crowdedGlyphPx, crowdedCrew: CLUSTER_LAYOUT.crowdedCrew }, constellations: { orion: ORION, dipper: BIG_DIPPER },
-      saturn: SATURN, galaxy: GALAXY, algol: ALGOL, flicker: FLICKER_TUNING, cinch: CINCH, warp: warpData(),
+      saturn: SATURN, galaxy: GALAXY, algol: ALGOL, flicker: FLICKER_TUNING, cinch: CINCH, warp: warpData(), supernova: supernovaData(),
       captain: { ...CAPTAIN_LIGHT, breathMs: CAPTAIN_BREATH_MS },
       wait: { ...WAIT_LIGHT, arcRate: WAIT_ARC_RATE },
       batch: BATCH_GATE,
@@ -111,6 +113,7 @@ try {
     "ios/Infinitary/InfinitaryTests/PhoneSceneTraces.generated.json": REPLY_EMOTES.flatMap((emote) =>
       [0, 0.05, 0.15, 0.25, 0.4, 0.55, 0.7, 0.85, 1].map((progress) => ({ emote, progress, frame: replyFrame(emote, progress) }))),
     "ios/Infinitary/InfinitaryTests/PhoneCinchTraces.generated.json": cinchTraces(),
+    "ios/Infinitary/InfinitaryTests/PhoneSupernovaTraces.generated.json": supernovaTraces(),
     "ios/Infinitary/InfinitaryTests/PhoneOrbitSeats.generated.json": orbitSeats(),
     "ios/Infinitary/InfinitaryTests/PhoneFixedStars.generated.json": fixedStarReadings(),
     "ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/Fixtures/PhoneTaskFacts.generated.json": taskFactReadings(),
@@ -191,6 +194,39 @@ try {
     return { ...WARP, travelPerSecond: TRAVEL_PER_SECOND, releaseMs: WARP_RELEASE_MS, schedule: WARP_SCHEDULE, lead: WARP_LEAD,
       travel: Array.from(WARP_TRAVEL, fixed), head: stars(WARP_STARS.head, WARP.stars), side: stars(WARP_STARS.side, Math.ceil(WARP.stars * 0.6)),
       inner: stars(WARP_STARS.inner, WARP_STARS.inner.length) };
+  }
+  /** The supernova fidget's settings, schedule and tables: every spark, ray, shard and flight the desktop draws. */
+  function supernovaData() {
+    const fixed = (n: number) => Math.round(n * 1e6) / 1e6;
+    const { SUPERNOVA, SN_SCHEDULE, SN_SPARKS, SN_RAYS, SN_SHARDS, SN_FLING } = supernova;
+    return { ...SUPERNOVA, releaseMs: WARP_RELEASE_MS, schedule: SN_SCHEDULE,
+      sparks: SN_SPARKS.map((k) => [k.a, k.f, k.near, k.size, k.alpha, k.big ? 1 : 0, k.glint ? 1 : 0].map(fixed)),
+      rays: SN_RAYS.map((r) => [r.a, r.len, r.alpha, r.width].map(fixed)),
+      shards: SN_SHARDS.map((h) => [h.a, h.r, h.spin, h.turn, h.half, h.alpha].map(fixed)),
+      // The flights stay whole: the phone replays the vertices to the desktop's own digits.
+      fling: SN_FLING.map((v) => [v.far, v.delay]) };
+  }
+  /** The desktop supernova's curves, eyes, vertices and crew kick through one fidget, for the phone's to replay. */
+  function supernovaTraces() {
+    const fixed = (n: number) => Math.round(n * 1e9) / 1e9;
+    const { snCollapse, snFront, snFade, snFlash, snPulsar, supernovaBody, supernovaEyes, placeSupernovaVertices } = supernova;
+    const rank = [3, 4, 0, 1, 7, 5, 15, 2, 9, 11, 13, 12, 8, 10, 14, 6];
+    const c = 100, R = 27;
+    return [0, 0.04, 0.1, 0.18, 0.2, 0.21, 0.22, 0.24, 0.3, 0.4, 0.55, 0.7, 0.76, 0.85, 0.93, 0.97, 1].map((et) => {
+      const pts = Array.from({ length: 16 }, (_, i) => [c + Math.cos(i * 0.4) * R, c + Math.sin(i * 0.7) * R, 1, 0] as [number, number, number, number]);
+      const progress = new Float64Array(16);
+      const dots = { scale: new Float64Array(16).fill(1), white: new Float64Array(16) };
+      const trails = placeSupernovaVertices(et, rank, pts, c, R, 3.5, progress, dots);
+      const frame = { et, t: 3.5, release: 1, coreR: 81, heat: 0 };
+      const body = supernovaBody(et), eyes = supernovaEyes(et);
+      return {
+        et, collapse: fixed(snCollapse(et)), front: fixed(snFront(et)), fade: fixed(snFade(et)), flash: fixed(snFlash(et)), pulsar: fixed(snPulsar(et)),
+        body: [body.squeeze, body.spin, body.glow].map(fixed), eyes: [eyes.look[0], eyes.look[1], eyes.lid, eyes.wide, eyes.gather].map(fixed),
+        rank, points: pts.map((p) => [p[0], p[1]].map(fixed)), progress: Array.from(progress, fixed),
+        scale: Array.from(dots.scale, fixed), white: Array.from(dots.white, fixed), trails: trails.length,
+        kick: [0, 60, 120, 180, 240].map((d) => fixed(supernovaKick(d, frame))),
+      };
+    });
   }
   /** INF-1926: the desktop crew summary's own facts and words for rows in each state it reads, for the phone's sheet to replay. */
   function taskFactReadings() {

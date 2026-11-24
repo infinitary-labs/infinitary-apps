@@ -133,11 +133,11 @@ import { READ_VALUE_DECODER } from "./readTransfer";
  * once the host names them (`tasks`, `entries`): `FRAME_LINK_SCRIPT`
  * (./frameLinkScript.ts) posts the one-way `task` and `entry` messages.
  *
- * A finger's PRESS held from 0.12 s up acts on its own release:
- * `FRAME_PRESS_SCRIPT` (./framePressScript.ts) clicks what a touch went down
- * on as it comes up there, so a press the browser's own press handling
- * swallows still acts, and drops the browser's own click for a press it
- * already clicked. A phone's host says `press-moved` when its own scroller
+ * A finger's PRESS held from 0.12 s up, and in Point at any press on a part,
+ * acts on its own release: `FRAME_PRESS_SCRIPT` (./framePressScript.ts)
+ * clicks what a touch went down on as it comes up there, so a press the
+ * browser's own press handling swallows still acts, and drops the browser's
+ * own click for a press it already clicked. A phone's host says `press-moved` when its own scroller
  * or swipe took the press, which then does nothing of its own.
  *
  * A card body's KEYBOARD is the bridge's to complete once the host says
@@ -829,4 +829,4 @@ ${FRAME_KEYBOARD_SCRIPT}
  * to the script moves it: re-pin it in the same change, or
  * frameBridgeHash.test.ts fails and every frame's CSP blocks the script.
  */
-export const FRAME_BRIDGE_SHA256 = "sha256-KiSq2TgbB26qidr86hgM18OS9VT6zKcaEIuv1++zuok=";
+export const FRAME_BRIDGE_SHA256 = "sha256-AmlxB+L7UfV4cMOPcrmtjUcfsDdPqGXMhkDcnBuQWmo=";

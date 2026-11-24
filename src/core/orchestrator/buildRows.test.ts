@@ -7,6 +7,7 @@ import { TaskService } from "../tasks/taskService";
 import { seedProject } from "../workspace/seedProject";
 import { BuildRows, linkedIssuesSection } from "./buildRows";
 import { holdsReaderData } from "./readerData";
+import { workShape } from "./workShape";
 
 // Intent: INF-6426's approved plan, piece A. An outside reader's
 // file_followup naming an open issue becomes a Build row on its round's
@@ -180,5 +181,30 @@ describe("a reader's linked-issue section", () => {
     expect(section.split("\n").slice(1)).toEqual([`- #7: ${task?.key}, reproduce, open`]);
     expect(section).not.toContain(ROW.title);
     expect(linkedIssuesSection(f.tasks, { id: "reader", repoId: "repo-2" })).toBeUndefined();
+  });
+});
+
+describe("work built on a linked step", () => {
+  it("carries the issue: a fix on a reproduce step closes it, a plan's piece is part of it unless marked last", async () => {
+    const f = fixture();
+    await f.keep();
+    await f.keep({ title: "Show the week's readings", startAs: "plan" });
+    const [bug, idea] = f.kept();
+    await f.rows.answer("reader", bug as BuildRowAsk, "once", "later");
+    await f.rows.answer("reader", idea as BuildRowAsk, "once", "later");
+    const reproduce = f.filed().find((task) => task.shape?.kind === "reproduce");
+    const plan = f.filed().find((task) => task.shape?.kind === "plan");
+    expect(workShape(f.tasks, { basis: reproduce?.key }).issue).toEqual({
+      number: 7,
+      url: ISSUE_URL,
+      closes: true,
+    });
+    expect(workShape(f.tasks, { basis: plan?.key }).issue).toEqual({ number: 7, url: ISSUE_URL });
+    expect(workShape(f.tasks, { basis: plan?.key, closes_issue: true }).issue).toEqual({
+      number: 7,
+      url: ISSUE_URL,
+      closes: true,
+    });
+    expect(workShape(f.tasks, { basis: "builder" }).issue).toBeUndefined();
   });
 });

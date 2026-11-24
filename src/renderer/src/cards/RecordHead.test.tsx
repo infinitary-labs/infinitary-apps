@@ -279,4 +279,22 @@ describe("the head above the goal", () => {
       ),
     ).toBe("");
   });
+
+  // INF-6426's piece A: the record keeps the outside issue a task answers as a
+  // typed link, shown on its Info tab.
+  it("links the outside issue the task answers under Issue", () => {
+    const url = "https://github.com/octo/meter/issues/7";
+    const html = renderToStaticMarkup(
+      <RecordRelations
+        detail={task({ issue: { number: 7, url } })}
+        parentKey={undefined}
+        onOpenLink={() => {}}
+      />,
+    );
+    const row = find(html, "data-record-fact");
+    expect(row?.attribs?.["data-record-fact"]).toBe("issue");
+    expect(textOf(row)).toBe("#7");
+    expect(html).toContain(`href="${url}"`);
+    expect(html).toContain(">Issue<");
+  });
 });

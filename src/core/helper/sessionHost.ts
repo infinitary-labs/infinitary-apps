@@ -101,7 +101,9 @@ import { type WorkingCopyHost, workingCopyOrder } from "./workingCopyOrders";
  *
  * Each task's conversation runs in its own working copy here, which the
  * home has made first (`WorkingCopies`, docs/helper.md "Its working
- * copies"); the orders about the working copy ride the same answers.
+ * copies"); the orders about the working copy ride the same answers
+ * (`workingCopyOrder`). Its home's update saves the crew's work here
+ * first (`UpdateSaves`).
  *
  * Nothing is done twice. An order carries an id from what the home saved,
  * and one this conversation already applied is answered as it was, without

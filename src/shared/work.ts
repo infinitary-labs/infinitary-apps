@@ -44,6 +44,7 @@ import { toolObservationSchema } from "./toolCompletion";
 import {
   bundledRefSchema,
   bundleSchema,
+  checkedOutSchema,
   dispatchBaseSchema,
   keptWorkSchema,
   readableRefSchema,
@@ -1620,22 +1621,8 @@ export const workOrders = {
        * a computer on an older contract, and when no working copy is there.
        */
       origin: z.string().max(4096).nullable().optional(),
-      /**
-       * The branch the working copy has checked out, null when its checkout
-       * is detached, and the commit it points at (INF-2490). Absent from a
-       * computer on an older contract, and when no working copy is there.
-       * `dirty` says whether work is left to commit at that checkout,
-       * untracked files included whatever the repository's settings, read in
-       * the same answer as the branch and the commit; absent from a computer
-       * that reads them apart (`checkout-left-to-commit.md`).
-       */
-      checkedOut: z
-        .object({
-          branch: z.string().min(1).max(255).nullable(),
-          head: commitSchema,
-          dirty: z.boolean().optional(),
-        })
-        .optional(),
+      /** Its checkout; absent from a computer on an older contract, and when no copy is there. */
+      checkedOut: checkedOutSchema.optional(),
     }),
   },
   /**

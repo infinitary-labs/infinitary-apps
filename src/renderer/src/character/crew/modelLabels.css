@@ -17,7 +17,7 @@
 }
 .fm-crew-model-anchor {
   position: absolute;
-  inset-inline-start: 0;
+  left: 0; /* physical: the painter writes left-based orbit coordinates */
   top: 0;
 }
 .fm-crew-model-anchor:not([data-painted]) {

@@ -43,7 +43,9 @@ async function stageAnchors(page: Page) {
       if (point.x <= 0 || point.x >= innerWidth || point.y <= 0 || point.y >= innerHeight)
         return [];
       if (document.elementFromPoint(point.x, point.y)?.closest("[data-rail]")) return [];
-      return [point];
+      const id = element.getAttribute("data-crew-model-anchor");
+      if (!id) throw new Error("The painted crewmate anchor has no task");
+      return [{ ...point, id }];
     }),
   );
 }
@@ -188,6 +190,7 @@ async function hoverNearRail(
     await page.mouse.move(anchor.x, anchor.y);
     const summary = page.locator(summarySelector);
     await expect(summary).toBeVisible();
+    await expect(summary).toHaveAttribute("data-crew-summary", anchor.id);
     await expect(summary).toContainText(HOVER_NOTE);
     await expect(page.locator("[data-crew-target]")).toBeVisible();
     await nextFrame(page);

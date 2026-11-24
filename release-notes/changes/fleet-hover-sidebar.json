@@ -5,7 +5,7 @@
       "kind": "fix",
       "area": "crewmates",
       "title": "Crewmate summaries stay readable in narrow windows",
-      "body": "Summaries use clear space beside your sidebars. If none remains, they appear above the sidebars. The fleet remains visible through the sidebars.",
+      "body": "Summaries use clear space beside your sidebars. If none remains, they appear above the sidebars. The fleet remains visible through the sidebars. Crewmate labels stay with their crewmates in right-to-left languages.",
       "picture": {
         "dark": "fleet-hover-sidebar-dark.webp",
         "light": "fleet-hover-sidebar-light.webp",

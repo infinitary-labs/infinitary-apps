@@ -77,6 +77,12 @@ An answer the cap cuts short is still the answer, read as Pi reads it (the one o
 Claude competes in the same low-first walk as every other provider (the owner's Q3 a); a Claude model binds only through its account, never the base runtime, and a backend with no factory is passed over.
 A typed cut-off the call sees is recorded on the account (`noteCutOff`, `docs/quota.md`), which takes the account's models out of the pool until a fact changes; the answer is the abstention with `provider` as its reason, like any failed turn.
 
+The adapter asks each question of a set in its own call, unless the asker sets `together` on its `DecisionCaller`.
+Then it asks the whole set in one call (`renderTogetherInstruction`): each question under its id, and a reply of one line per question, written as its id, a colon and its answer.
+That call carries no answer-only output cap, because its reply grows with the set.
+`parseTogether` reads each line against its own question's options, so a missing, repeated or unreadable line fails only its own question, with `unparsed` as its reason, and a failed call fails them all.
+Every other consumer leaves it unset; the tagging question (`decisions/tagQuestion.ts`) is the one built to be asked together, and `docs/task-tags-eval.md` measures both.
+
 The question is one of the session contract's three presets (the seat's and the crewmate's are the others, `docs/architecture.md` §2): the adapter takes the same `SessionFactories` pair the agent and the supervisor open on (`services.ts`), and binds a candidate's account through a `SessionBinder` (`session/binding.ts`), the account-to-binding step the flagship and the supervisor use too.
 Its walk, rendering, parsing, ledger and wall clock stay the adapter's; the factory sees only the spec.
 The native model is not a session and not a third backend: it sits beside the adapter under `DecisionModels`, one layer above the session contract, and makes one typed call with no turn to run.

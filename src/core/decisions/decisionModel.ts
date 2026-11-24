@@ -168,6 +168,59 @@ export function renderAdapterInstruction(question: DecisionQuestion): string {
   return lines.join("\n");
 }
 
+/**
+ * What the adapter serves when a caller asks the whole set in one call
+ * (`DecisionCaller.together`): each question as it would be served alone,
+ * under its own id, then one reply format for all of them.
+ */
+export function renderTogetherInstruction(questions: Record<string, DecisionQuestion>): string {
+  const ids = Object.keys(questions);
+  // i18n-exempt: an instruction served to the decision model, not shown to a person
+  const lines = [
+    `Answer each of the ${ids.length} questions below about the same input. Judge each one on its own.`,
+  ];
+  for (const [id, question] of Object.entries(questions)) {
+    lines.push("", `[question ${id}]`, renderAdapterInstruction(question));
+  }
+  // i18n-exempt: an instruction served to the decision model, not shown to a person
+  lines.push(
+    "",
+    `Reply with exactly ${ids.length} lines and nothing else, one per question in the order asked, each written as the question's id, a colon and your answer, such as "${ids[0]}: ${adapterOptions(questions[ids[0] as string] as DecisionQuestion)[0]}".`,
+  );
+  return lines.join("\n");
+}
+
+/**
+ * Reads a reply to a set asked in one call: each line that starts with a
+ * question's id answers that question, parsed against its own options. A
+ * question whose line is missing, repeated or unreadable gets no value, so
+ * only that question fails.
+ */
+export function parseTogether(
+  reply: string,
+  questions: Record<string, DecisionQuestion>,
+): Record<string, string | undefined> {
+  const found = new Map<string, string[]>();
+  for (const line of reply.split("\n")) {
+    const match = line.match(/^[\s*`>#-]*([A-Za-z0-9_-]+)[\s*`]*[:=]\s*(.*)$/);
+    if (!match) continue;
+    const id = match[1] as string;
+    if (!Object.hasOwn(questions, id)) continue;
+    found.set(id, [...(found.get(id) ?? []), match[2] as string]);
+  }
+  return Object.fromEntries(
+    Object.entries(questions).map(([id, question]) => {
+      const answers = found.get(id);
+      return [
+        id,
+        answers?.length === 1
+          ? parseOption(answers[0] as string, adapterOptions(question))
+          : undefined,
+      ];
+    }),
+  );
+}
+
 /** The adapter's single user message: the consumer's pinned text, else the facts. */
 export function renderAdapterState(state: DecisionState): string {
   if (state.adapterText !== undefined) return state.adapterText;
@@ -214,9 +267,9 @@ export class AdaptedDecisionModel implements DecisionModel {
   /**
    * One bounded call PER QUESTION: a chat model answers one word, so a
    * question set is a sequence rather than the single call a native model
-   * fans out. The app asks one question today; a consumer that asks several
-   * pays for several, which is the honest cost of the adapter path and one
-   * of the reasons a native model is worth having.
+   * fans out, and a consumer that asks several pays for several. A caller
+   * that sets `together` gets the set in one call instead, one line per
+   * question, where a missing or unreadable line fails only its question.
    */
   async decide(
     caller: DecisionCaller,
@@ -224,12 +277,58 @@ export class AdaptedDecisionModel implements DecisionModel {
     questions: Record<string, DecisionQuestion>,
     signal: AbortSignal,
   ): Promise<DecisionRun> {
+    if (caller.together && Object.keys(questions).length > 1)
+      return this.askTogether(caller, state, questions, signal);
     const answers: Record<string, DecisionAnswer> = {};
     const usage: DecisionUsage[] = [];
     for (const [id, question] of Object.entries(questions)) {
       const run = await this.ask(caller, state, question, signal);
       answers[id] = run.answer;
       if (run.usage) usage.push(run.usage);
+    }
+    return { answers, usage };
+  }
+
+  /**
+   * The whole set in one bounded call, answered one line per question. The
+   * reply's length is its own rather than a word's, and each answer is
+   * stamped with the fingerprint of the combined instruction it was asked
+   * under, since that is what was served.
+   */
+  private async askTogether(
+    caller: DecisionCaller,
+    state: DecisionState,
+    questions: Record<string, DecisionQuestion>,
+    signal: AbortSignal,
+  ): Promise<DecisionRun> {
+    const instruction = renderTogetherInstruction(questions);
+    const named = parseDecisionOffering(this.options.offering?.() ?? "auto");
+    const turn = await this.turns.turn({
+      attribution: caller.taskId ?? caller.purpose,
+      instruction,
+      text: renderAdapterState(state),
+      signal,
+      set: true,
+      ...(named ? { named } : {}),
+    });
+    const usage = turn.usage ? [turn.usage] : [];
+    const parsed = "failed" in turn ? undefined : parseTogether(turn.text, questions);
+    const answers: Record<string, DecisionAnswer> = {};
+    for (const [id, question] of Object.entries(questions)) {
+      const version = questionVersion(question, instruction);
+      if ("failed" in turn) {
+        answers[id] = failedAnswer(question, turn.failed, version, turn.source);
+        continue;
+      }
+      const value = parsed?.[id];
+      answers[id] = value
+        ? {
+            value,
+            outcome: value === question.abstain ? "abstained" : "answered",
+            source: turn.source,
+            version,
+          }
+        : failedAnswer(question, "unparsed", version, turn.source);
     }
     return { answers, usage };
   }

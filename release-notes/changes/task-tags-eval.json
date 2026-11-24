@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "task-tags-eval",
+      "reason": "Adds the tagging question, a labelled eval set and its developer scoring script; no tags reach the app yet, so nothing a person uses changes."
+    }
+  ]
+}

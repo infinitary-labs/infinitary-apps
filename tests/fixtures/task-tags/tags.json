@@ -1,0 +1,38 @@
+[
+  {
+    "name": "bug",
+    "description": "Something in the app works wrongly for a person using it: a crash, a freeze, a wrong or missing result, lost data, or a view that breaks. Reproducing it and fixing it both count. A failing test or check that nobody using the app would notice is not a bug."
+  },
+  {
+    "name": "ci",
+    "description": "The project's own tests, checks and merge batches: a failing or flaky test, a broken check on main, a held batch, the CI runners, or which checks a branch runs."
+  },
+  {
+    "name": "docs",
+    "description": "Written pages: the project's docs, the public documentation site and its languages, the README and AGENTS.md. The app's own on-screen words are not docs."
+  },
+  {
+    "name": "feature",
+    "description": "Adds or changes what a person can do or see in the app, or how the crew behaves for them, usually by building an approved plan or a request. Fixing broken behavior and restructuring code without changing behavior are not features."
+  },
+  {
+    "name": "idea",
+    "description": "Explores something not yet decided and ends in an answer or a plan for the captain, with nothing built: a plan, a design, research, a comparison or an audit."
+  },
+  {
+    "name": "ios",
+    "description": "The iPhone and iPad app: how it looks and behaves, its checks, or its builds."
+  },
+  {
+    "name": "prompts",
+    "description": "What the first mate and crewmates are told and how they are steered: served prompts, runbooks, card rules, briefs and the rules agents follow."
+  },
+  {
+    "name": "release",
+    "description": "Getting a version to people: alpha, stable and phone releases, TestFlight, release notes, signing, notarization, installers and app updates."
+  },
+  {
+    "name": "windows",
+    "description": "The app on a Windows PC: its installer, how it behaves there, or the Windows checks."
+  }
+]

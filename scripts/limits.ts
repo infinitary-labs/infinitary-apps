@@ -161,6 +161,9 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
   "src/core/decisions/jev/jevClient.ts": {
     JEV_MAX_OPTIONS: outside("the question answers its abstention, reason too-many-options recorded"),
   },
+  "src/core/decisions/tagQuestion.ts": {
+    LIMITS: physical("clipped with ... for the tagging question; the whole text stays on the task"),
+  },
   "src/core/devices/dial.ts": {
     ANSWER_MAX_BYTES: physical("pairing fails in words: the home's answer is too long"),
   },

@@ -27,6 +27,8 @@ export function questionSessionSpec(input: {
    * own, so the model's own output ceiling bounds it, not a word's.
    */
   json?: boolean;
+  /** A question set answered one line per question: its length is its own too. */
+  set?: boolean;
 }): SessionSpec {
   return {
     machine: LOCAL_MACHINE_ID,
@@ -44,7 +46,7 @@ export function questionSessionSpec(input: {
       request: {
         // INF-1451: Sonnet can spend the entire word-only cap on hidden
         // thinking even when asked to disable it, leaving no answer text.
-        ...(input.json || input.binding.backend === "claude"
+        ...(input.json || input.set || input.binding.backend === "claude"
           ? {}
           : { maxOutputTokens: CLASSIFIER_MAX_OUTPUT_TOKENS }),
         maxModelTurns: 1,

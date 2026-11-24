@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "intake-reproduce-first",
+      "reason": "Internal: the project's own intake method and contributing guide say an outside bug is reproduced before it is fixed, and the triage mark gains a released label; nothing in the app changes."
+    }
+  ]
+}

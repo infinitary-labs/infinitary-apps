@@ -133,6 +133,11 @@ describe("the triage mark", () => {
       { labels: ["question"], close: { state: "closed", state_reason: "completed" } },
     ],
     ["changes-requested", pull(), { labels: [WAITING] }],
+    [
+      "released",
+      { ...issue([ACCEPTED, "bug"]), state: "closed" },
+      { labels: ["bug", ACCEPTED, "released"] },
+    ],
   ];
 
   it("covers every disposition on the list", () => {

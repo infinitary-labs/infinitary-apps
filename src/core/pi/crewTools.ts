@@ -948,7 +948,7 @@ export function createCrewTools(delegate: CrewDelegate) {
       "its crewmate's turn and commands finish first. It keeps " +
       "its key, branch, uncommitted work, files and record, and continues in a new conversation " +
       "there on its model. Only on the captain's ask, never to balance load. cancel stops a " +
-      "move before crossing starts. Git-ignored files stay with the old copy unless keep names them. " +
+      "move before crossing starts. Files git ignores stay behind and go with the old copy unless keep names them. " +
       "Off a computer out of reach it refuses, saying what stays behind; leave_behind, only once " +
       "the captain heard that and said yes, continues from the commit the first mate's computer holds.",
     parameters: Type.Object({

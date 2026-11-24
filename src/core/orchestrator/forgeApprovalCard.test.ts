@@ -1,7 +1,7 @@
 import { type BuildRowAsk, buildRowChoiceOf, type ForgeWriteAsk } from "@shared/writeAsk";
 import { ElementType, parseDocument } from "htmlparser2";
 import { describe, expect, it } from "vitest";
-import { forgeApprovalCard } from "./forgeApprovalCard";
+import { readerApprovalCard } from "./forgeApprovalCard";
 
 // Intent: INF-6426's approved plan, piece A. A Build row on the reader's
 // approval card shows its title, the issue as a link, Reproduce first or Plan
@@ -61,7 +61,7 @@ function textOf(node: Node | undefined): string {
 
 describe("the reader's approval card with a Build row", () => {
   it("draws the row whole with its choice set to Keep for later, outside the ticked writes", () => {
-    const card = forgeApprovalCard([WRITE, BUILD], { id: "reader", title: "Triage the issues" });
+    const card = readerApprovalCard([WRITE, BUILD], { id: "reader", title: "Triage the issues" });
     const doc = parse(card.body ?? "");
     const [row] = all(doc, (node) => node.attribs?.["data-inf-build-row"] === BUILD.id);
     expect(textOf(all(row, hasClass("inf-ask-name"))[0])).toBe(BUILD.title);
@@ -96,7 +96,7 @@ describe("the reader's approval card with a Build row", () => {
   });
 
   it("names the card for Build rows when it holds no write", () => {
-    const card = forgeApprovalCard([BUILD], { id: "reader", title: "Triage the issues" });
+    const card = readerApprovalCard([BUILD], { id: "reader", title: "Triage the issues" });
     expect(card.title).toBe("File tasks from GitHub issues?");
     const doc = parse(card.body ?? "");
     expect(all(doc, hasClass("inf-asks-tally"))).toEqual([]);

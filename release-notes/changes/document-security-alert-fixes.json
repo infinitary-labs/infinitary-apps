@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "document-security-alert-fixes",
+      "reason": "Documents the daily security alert check and its fix steps in the public CI page; nothing in the app changes."
+    }
+  ]
+}

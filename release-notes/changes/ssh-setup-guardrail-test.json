@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "ssh-setup-guardrail-test",
+      "reason": "The desktop guardrail test recognizes the intended SSH setup and cancel methods without changing app behavior."
+    }
+  ]
+}

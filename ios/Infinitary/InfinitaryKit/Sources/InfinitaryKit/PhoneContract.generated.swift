@@ -393,6 +393,8 @@ public enum PhonePanelRequest: String, Sendable, CaseIterable {
     case `knowledgeGraph` = "inf:knowledge:graph"
     case `knowledgeRefs` = "inf:knowledge:refs"
     case `knowledgeUses` = "inf:knowledge:uses"
+    case `pluginsAppPanelFiles` = "inf:plugins:app-panel-files"
+    case `pluginsAppPanels` = "inf:plugins:app-panels"
     case `pluginsDb` = "inf:plugins:db"
     case `pluginsFetch` = "inf:plugins:fetch"
     case `pluginsFiles` = "inf:plugins:files"
@@ -420,10 +422,11 @@ public enum PhonePanelRequest: String, Sendable, CaseIterable {
         switch self { case .pluginsDb, .pluginsFetch, .pluginsIntegrations, .pluginsInvoke, .pluginsRetry: true; default: false }
     }
     /// The pushes a panel's page hears: what its reads re-read on, and its store's and the panel list's own.
-    public static let pushes: Set<String> = ["inf:cards", "inf:computers:resources", "inf:event", "inf:forges", "inf:plugins:db", "inf:plugins:personal", "inf:quota", "inf:shell:preferences", "inf:tasks", "inf:tasks:delta"]
+    public static let pushes: Set<String> = ["inf:cards", "inf:computers:resources", "inf:event", "inf:forges", "inf:plugins:app-panels", "inf:plugins:db", "inf:plugins:personal", "inf:quota", "inf:shell:preferences", "inf:tasks", "inf:tasks:delta"]
     /// The asks a crewmate card's page may make for its live reads: only reads, never a panel's store, files or work.
     public static let cardReads: Set<PhonePanelRequest> = [.automationKept, .automationList, .batchesList, .cardsList, .computersResources, .feedRecent, .forgesChanges, .knowledgeCollections, .knowledgeConcepts, .knowledgeDirection, .knowledgeDirections, .knowledgeEntry, .knowledgeFindings, .knowledgeGraph, .quotaSnapshot, .settingsCurrent, .sqlQuery, .tasksBoard, .tasksDetail, .tasksSearch]
     public static let change = "panels-on-the-phone"
+    public static let appPanelsChange = "app-panels-on-the-phone"
 }
 
 public enum PhonePanelWords {

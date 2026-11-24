@@ -31,6 +31,9 @@ export const PHONE_RUNBOOK_ID = "phone-desk";
 /** That panel's id: its runbook's and its folder's. */
 export const PHONE_RUNBOOK_PANEL_ID = `${PHONE_RUNBOOK_ID}-reading`;
 
+/** The saved rule the Automation panel lists on the phone. */
+export const PHONE_AUTOMATION_RULE = "Morning summary";
+
 /**
  * INF-3830 piece 2's phone part: the computer's side of the Panels journey
  * (ios/Infinitary/InfinitaryUITests/PhoneJourney+Panels.swift). The real core
@@ -90,6 +93,7 @@ export function phonePanelControls(
     });
     return built;
   };
+  let automationRule: string | undefined;
   return {
     async seed() {
       await library();
@@ -175,6 +179,28 @@ export function phonePanelControls(
         PHONE_RUNBOOK_PANEL_ID,
       );
       rmSync(runbook, { recursive: true, force: true });
+      return { ok: true };
+    },
+    /**
+     * A saved automation rule, which opens the app's own Automation panel on the computer and so on the phone
+     * (docs/automation.md, "The Automation panel"), saved through the action Settings → Automation saves with.
+     */
+    async automationOn() {
+      await library();
+      const rule = await core.dispatch("inf:automation:save", [
+        {
+          name: PHONE_AUTOMATION_RULE,
+          spec: { kind: "daily", hour: 8, minute: 0, timeZone: "America/Los_Angeles" },
+          prompt: "Summarize what changed in the project since yesterday.",
+          enable: true,
+        },
+      ]);
+      automationRule = rule.id;
+      return { ok: true };
+    },
+    async automationOff() {
+      if (automationRule) await core.dispatch("inf:automation:delete", [automationRule]);
+      automationRule = undefined;
       return { ok: true };
     },
     async removeShy() {

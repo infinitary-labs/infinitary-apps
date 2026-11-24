@@ -9,6 +9,7 @@ import { askSignInsAgainAt, homeMoveStaging, outgoingHomeMove } from "./homeMove
 import type { HostCapabilities } from "./host";
 import { OwnWindow } from "./ownWindow";
 import type { AppPaths } from "./paths";
+import { appPanelGatesOf, appPanelsFor, watchAppPanels } from "./personal/appPanelsServed";
 import { createServices } from "./services";
 import { SIGN_IN_RETURN, SIGN_IN_RETURN_WORDS, SignInReturns } from "./signInReturns";
 import { type Standbys, standbyCopies } from "./standby/wiring";
@@ -160,6 +161,12 @@ export async function startCore(given: HostCapabilities, options: CoreOptions = 
       services.firstmate.appActionRecorded(id, action, value),
   });
   services.firstmate.bindAppDispatch(dispatch);
+  const stopAppPanels = watchAppPanels({
+    subscribe: (sink) => events.subscribe(sink),
+    keptJobs: (listener) => services.keptRunning.onChange(listener),
+    emit: events.emit,
+    read: () => appPanelsFor(appPanelGatesOf(services), host.frameLib?.pins, host.app.version),
+  });
   // What the system starts at login, remembered in the folder for an app
   // that later moves it in (storage/startAtLoginRecord.ts).
   // A first mate a command started hears it from its window, when one opens.
@@ -186,6 +193,7 @@ export async function startCore(given: HostCapabilities, options: CoreOptions = 
       // sign-in that dies while the app is closed is bracketed (docs/forge.md).
       services.forges.recordApp("quit");
       standbys?.dispose();
+      stopAppPanels();
       services.jobs.disposeAll();
       services.ticker.stop();
       services.corrections?.stop();

@@ -1,5 +1,4 @@
 import type { FmEvent } from "@shared/events";
-import { runbookGatesOf } from "@shared/surfaces";
 import type { Batches } from "../batches/batches";
 import type { CoreServices } from "../coreServices";
 import type { startCorrections } from "../decisions/startCorrections";
@@ -9,6 +8,7 @@ import type { HostCapabilities } from "../host";
 import type { IntegrationsService } from "../integrations/service";
 import type { KnowledgeService } from "../knowledge/knowledgeService";
 import type { AppPaths } from "../paths";
+import { appPanelGates } from "../personal/appPanelsServed";
 import type { HomePersonal } from "../personal/homePersonal";
 import type { PersonalExtensions } from "../personal/personalExtensions";
 import type { AccountVault } from "../pi/accountVault";
@@ -30,6 +30,7 @@ import type { DecisionStore } from "../storage/decisionStore";
 import type { HomeUsage } from "../storage/homeUsage";
 import type { InboxStore } from "../storage/inboxStore";
 import type { SettingsStore } from "../storage/settingsStore";
+import type { KeptJobs } from "../tasks/keptJobs";
 import type { TaskService } from "../tasks/taskService";
 import type { ProjectChanges } from "../workspace/projectChanges";
 import type { ProjectSetups } from "../workspace/projectSetups";
@@ -87,6 +88,7 @@ export function startHomeFirstmate({
   batches,
   knowledge,
   scheduler,
+  keptJobs,
   selfSourceDir,
   source,
   sourceLocation,
@@ -142,6 +144,8 @@ export function startHomeFirstmate({
   batches: Pick<Batches, "markRepair">;
   knowledge: KnowledgeService;
   scheduler: Scheduler;
+  /** The jobs kept running past their task's close, which keep the Automation panel shown. */
+  keptJobs: Pick<KeptJobs, "list">;
   selfSourceDir: string;
   source: () => SelfSourceFacts;
   sourceLocation: Parameters<typeof readSelfSourceAsync>[0];
@@ -286,14 +290,7 @@ export function startHomeFirstmate({
       removePersonal: (id) => personal.remove(id),
       uninstallPlugin: (id) => pluginInstaller.uninstall(id),
       personalWorkspaceDir: paths.personalWorkspaceDir,
-      // The Knowledge panel is a surface only while there is knowledge to show (docs/knowledge.md),
-      // and the Automation panel while a rule is saved (docs/automation.md); a built-in
-      // runbook's panel while that runbook is on (docs/runbooks.md, "Panels").
-      gates: () => ({
-        knowledge: knowledge.held(),
-        automation: scheduler.rules().length > 0,
-        ...runbookGatesOf(runbooks.list()),
-      }),
+      gates: () => appPanelGates({ knowledge, scheduler, keptJobs, runbooks }),
       mounts: () => panelMounts.current(),
     },
     installPlugin: (request) => pluginInstaller.install(request),

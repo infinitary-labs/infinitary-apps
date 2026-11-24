@@ -46,8 +46,8 @@ export type AppPanelFolder = {
 /**
  * A gate an app panel can wait on: `knowledge` is open while there is some
  * to show, in every build (docs/knowledge.md, "Who has it"); `automation`
- * while a saved automation rule exists (docs/automation.md, "The Automation
- * panel"); `runbook-<id>` while that built-in runbook is on, for the panels
+ * while a saved automation rule exists or a job is kept running past its
+ * task's close (docs/automation.md, "The Automation panel"); `runbook-<id>` while that built-in runbook is on, for the panels
  * it shows (docs/runbooks.md, "Panels").
  */
 export type AppPanelGate = "knowledge" | "automation" | RunbookPanelGate;
@@ -90,7 +90,7 @@ export type AppPanelGates = Readonly<Partial<Record<AppPanelGate, boolean>>>;
  * start, and Tasks on the right, which shows only while the board has a row
  * to list. Both are bottom-docked, on opposite rails. Knowledge sits under
  * Tasks while there is some to show, and Automation under them while a rule
- * is saved. Batches sits between Tasks and Knowledge while the Batched pull
+ * is saved or a job is kept running. Batches sits between Tasks and Knowledge while the Batched pull
  * requests runbook is on. A manifest the panel schema
  * refuses fails at load, so a broken folder never reaches a session.
  */

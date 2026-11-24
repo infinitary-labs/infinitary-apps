@@ -1400,6 +1400,7 @@ export async function createServices(
     batches,
     knowledge,
     scheduler,
+    keptJobs: placed.keptJobs,
     selfSourceDir,
     source,
     sourceLocation,

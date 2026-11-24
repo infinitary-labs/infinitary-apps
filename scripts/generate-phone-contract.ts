@@ -231,18 +231,22 @@ try {
   // INF-3830 piece 2: the channels a panel on the phone may ask for and hear, from the read catalog every panel reads
   // through and the requests the desktop's panel host sends (docs/ios.md, "Panels"). Native code passes no other.
   const panelsChange = "panels-on-the-phone";
+  // INF-6295 piece A: the app's own panels the computer shows, which a computer that lists this change answers.
+  const appPanelsChange = "app-panels-on-the-phone";
+  if (!existsSync(join(REPO_ROOT, `src/shared/contract-changes/${appPanelsChange}.md`))) throw new Error(`No contract change ${appPanelsChange}`);
   const { readCatalog } = await runner.import<typeof import("../src/shared/reads.ts")>(join(REPO_ROOT, "src/shared/reads.ts"));
   type Invalidation = { pushes?: readonly string[]; valueFromPush?: string; deltaFromPush?: { channel: string } };
   const reading = Object.values(readCatalog) as unknown as { channel: string; invalidate: Invalidation }[];
   const panelHostRequests = ["inf:plugins:invoke", "inf:plugins:db", "inf:plugins:integrations", "inf:plugins:fetch",
-    "inf:plugins:retry", "inf:plugins:library", "inf:plugins:files", "inf:plugins:personal:list", "inf:shell:preferences", "inf:cards:list"];
+    "inf:plugins:retry", "inf:plugins:library", "inf:plugins:files", "inf:plugins:personal:list", "inf:shell:preferences", "inf:cards:list",
+    "inf:plugins:app-panels", "inf:plugins:app-panel-files"];
   // A read only the computer's own window may ask, such as Observe's, stays out: the phone could never be answered.
   const panelChannels = [...new Set([...reading.map((read) => read.channel), ...panelHostRequests])]
     .filter((channel) => contract.requests[channel]?.reach === "views" || panelHostRequests.includes(channel)).sort();
   for (const channel of panelChannels) {
     if (contract.requests[channel]?.reach !== "views") throw new Error(`The phone cannot ask ${channel}`);
   }
-  const panelPushes = [...new Set(["inf:event", "inf:cards", "inf:plugins:db", "inf:plugins:personal", "inf:shell:preferences",
+  const panelPushes = [...new Set(["inf:event", "inf:cards", "inf:plugins:db", "inf:plugins:personal", "inf:plugins:app-panels", "inf:shell:preferences",
     ...reading.flatMap((read) => [...(read.invalidate.pushes ?? []), ...(read.invalidate.valueFromPush ? [read.invalidate.valueFromPush] : []),
       ...(read.invalidate.deltaFromPush ? [read.invalidate.deltaFromPush.channel] : [])])])].sort();
   for (const push of panelPushes) if (!contract.pushes[push]) throw new Error(`The phone cannot hear ${push}`);
@@ -262,7 +266,7 @@ try {
   // INF-3830 piece 3: a panel's cards on Home and its header's buttons keep the desktop's bounds and icons.
   const cardBounds = await runner.import<typeof import("../src/shared/plugins/panelCards.ts")>(join(REPO_ROOT, "src/shared/plugins/panelCards.ts"));
   const panelCardWords = `    public static let openCardsMax = ${cardBounds.PANEL_OPEN_CARDS_MAX}\n    public static let defaultCardWidth = ${JSON.stringify(cardBounds.DEFAULT_PANEL_CARD_WIDTH)}\n    public static let defaultCardHeight = ${JSON.stringify(cardBounds.DEFAULT_PANEL_CARD_HEIGHT)}\n    public static let headerIcons = [${cardBounds.PANEL_HEADER_ICONS.map((icon) => JSON.stringify(icon)).join(", ")}]\n`;
-  const panelEnum = `\npublic enum PhonePanelRequest: String, Sendable, CaseIterable {\n${panelCases}\n    public var changes: Bool {\n        switch self { case ${panelChanges}: true; default: false }\n    }\n    /// The pushes a panel's page hears: what its reads re-read on, and its store's and the panel list's own.\n    public static let pushes: Set<String> = [${panelPushes.map((push) => JSON.stringify(push)).join(", ")}]\n    /// The asks a crewmate card's page may make for its live reads: only reads, never a panel's store, files or work.\n    public static let cardReads: Set<PhonePanelRequest> = [${cardReadChannels.map((channel) => `.${caseName(channel)}`).join(", ")}]\n    public static let change = ${JSON.stringify(panelsChange)}\n}\n\npublic enum PhonePanelWords {\n    public static let yours = ${swiftWords(PERSONAL_ATTRIBUTION)}\n    public static let backgroundStopped = ${swiftWords(catalog.panelBackgroundStopped())}\n    public static let backgroundExited = ${swiftWords(catalog.panelBackgroundExited())}\n    public static let retry = ${swiftWords(catalog.panelRetry())}\n    public static let unresponsive = ${swiftWords(catalog.panelUnresponsiveLine())}\n    public static func couldNotOpen(_ failure: String) -> String { ${swiftWords(catalog.panelCouldNotOpen({ failure: "{failure}" }), { "{failure}": "failure" })} }\n${panelCardWords}}\n`;
+  const panelEnum = `\npublic enum PhonePanelRequest: String, Sendable, CaseIterable {\n${panelCases}\n    public var changes: Bool {\n        switch self { case ${panelChanges}: true; default: false }\n    }\n    /// The pushes a panel's page hears: what its reads re-read on, and its store's and the panel list's own.\n    public static let pushes: Set<String> = [${panelPushes.map((push) => JSON.stringify(push)).join(", ")}]\n    /// The asks a crewmate card's page may make for its live reads: only reads, never a panel's store, files or work.\n    public static let cardReads: Set<PhonePanelRequest> = [${cardReadChannels.map((channel) => `.${caseName(channel)}`).join(", ")}]\n    public static let change = ${JSON.stringify(panelsChange)}\n    public static let appPanelsChange = ${JSON.stringify(appPanelsChange)}\n}\n\npublic enum PhonePanelWords {\n    public static let yours = ${swiftWords(PERSONAL_ATTRIBUTION)}\n    public static let backgroundStopped = ${swiftWords(catalog.panelBackgroundStopped())}\n    public static let backgroundExited = ${swiftWords(catalog.panelBackgroundExited())}\n    public static let retry = ${swiftWords(catalog.panelRetry())}\n    public static let unresponsive = ${swiftWords(catalog.panelUnresponsiveLine())}\n    public static func couldNotOpen(_ failure: String) -> String { ${swiftWords(catalog.panelCouldNotOpen({ failure: "{failure}" }), { "{failure}": "failure" })} }\n${panelCardWords}}\n`;
   const path = join(REPO_ROOT, "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneContract.generated.swift");
   // INF-4207 piece 9: taking over from the phone (docs/devices.md, "Taking over from a phone"; src/shared/standbyPhone.ts).
   const standbyPhone = await runner.import<typeof import("../src/shared/standbyPhone.ts")>(join(REPO_ROOT, "src/shared/standbyPhone.ts"));

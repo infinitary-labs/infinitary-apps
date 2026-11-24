@@ -403,6 +403,8 @@ const SHAPE_FIELD_RULES = {
   unsafe_data_reader:
     "True only on a read-only task whose brief reads words strangers can write, such as its project's issues and pull requests. Its crewmate gets no shell or browser and reads only its own project (or with no repo_id an empty folder of its own), the integrations' reads the captain set to Always allow, and public web pages, each new address waiting for the captain's click once it holds something of theirs; every other call it makes waits for the captain's click.",
   in_folder: "Operate in the project's folder; ships nothing.",
+  closes_issue:
+    "True only on a plan's last piece, when its basis answers an outside issue: its change closes that issue. A fix on a reproduce step closes it unmarked.",
   skipped_plan_because:
     "For a direct build without a chosen basis, which sequences test parts passed: one nameable place, no changed rule, state or meaning, and a result checkable by looking. The host shows it unjudged.",
   review_of:
@@ -448,6 +450,7 @@ const SHAPE_FIELDS = {
   internal_step: "boolean",
   unsafe_data_reader: "boolean",
   in_folder: "boolean",
+  closes_issue: "boolean",
   skipped_plan_because: "string",
   review_of: "string",
   repairs_batch: "boolean",
@@ -633,6 +636,7 @@ export function createCrewTools(delegate: CrewDelegate) {
             internal_step: Type.Optional(Type.Boolean()),
             unsafe_data_reader: Type.Optional(Type.Boolean()),
             in_folder: Type.Optional(Type.Boolean()),
+            closes_issue: Type.Optional(Type.Boolean()),
             skipped_plan_because: Type.Optional(Type.String()),
             review_of: Type.Optional(Type.String()),
             repairs_batch: Type.Optional(Type.Boolean()),
@@ -1029,6 +1033,7 @@ function shapeAskFrom(params: {
   internal_step?: boolean;
   unsafe_data_reader?: boolean;
   in_folder?: boolean;
+  closes_issue?: boolean;
   review_of?: string;
   skipped_plan_because?: string;
   result_schema?: Record<string, unknown>;
@@ -1063,6 +1068,7 @@ function shapeAskFrom(params: {
     ...(params.internal_step ? { internal_step: true } : {}),
     ...(params.unsafe_data_reader ? { unsafe_data_reader: true } : {}),
     ...(params.in_folder ? { in_folder: true } : {}),
+    ...(params.closes_issue ? { closes_issue: true } : {}),
     ...(reviewOf ? { review_of: reviewOf } : {}),
     ...(params.skipped_plan_because?.trim()
       ? { skipped_plan_because: params.skipped_plan_because.trim() }

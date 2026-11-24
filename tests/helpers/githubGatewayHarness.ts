@@ -445,6 +445,17 @@ export async function fixture(
     } else if (url.pathname === "/repos/octo/meter/redirect") {
       res.writeHead(302, { location: "https://elsewhere.example/" });
       res.end();
+    } else if (url.pathname === "/repos/octo/meter/issues/7") {
+      json({ number: 7, state: "open", html_url: "https://github.com/octo/meter/issues/7" });
+    } else if (url.pathname === "/repos/octo/meter/issues/8") {
+      json({ number: 8, state: "closed", html_url: "https://github.com/octo/meter/issues/8" });
+    } else if (url.pathname === "/repos/octo/meter/issues/9") {
+      json({
+        number: 9,
+        state: "open",
+        html_url: "https://github.com/octo/meter/pull/9",
+        pull_request: { url: "https://api.github.com/repos/octo/meter/pulls/9" },
+      });
     } else if (url.pathname === "/repos/octo/meter/contents/README.md") {
       json(privateFile("README.md"));
     } else if (url.pathname === "/repos/octo/meter/contents/src") {

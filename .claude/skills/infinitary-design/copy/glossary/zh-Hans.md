@@ -77,6 +77,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | inspector | 检查器 | The Knowledge pane that reads one entry, as Apple's apps say. |
 | Integrations / integration | 集成 | |
 | Intelligence | 智能 | |
+| issue (where the project lives) | 议题 | |
 | join (the phone joins a computer) | 连接 |  |
 | key (an integration's key) | 密钥 | Named by its place, such as Linear 密钥, instead of token or secret. |
 | Knowledge (the panel) | 知识 | The panel's name. |

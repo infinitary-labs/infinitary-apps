@@ -274,6 +274,8 @@ export type FileFollowupInput = {
   testFailure?: boolean;
   /** The failing test's path. The host refuses a second open row for it. */
   testPath?: string;
+  /** The shape it is filed with, such as a reader's Build row's (docs/agents-reach.md, "A reader's Build rows"); absent, it is sorted when it starts. */
+  shape?: WorkShape;
 };
 
 export type FileFollowupResult = {
@@ -1327,6 +1329,7 @@ export class TaskService {
         startPolicy: "on-request",
         actor,
         createdAt: at,
+        ...(input.shape ? { shape: input.shape } : {}),
       });
       if (testPath) this.writer.patch(record.id, { testPath });
       this.graph.insertLink(record.id, origin.id, "discovered-from", actor, at);

@@ -162,6 +162,16 @@ export const FILE_FOLLOWUP_TOOL = crewmateTool({
         description: "The failing test's path.",
       }),
     ),
+    issue: Type.Optional(
+      Type.Integer({
+        description: "Unsafe data reader only: the open issue of your project it answers.",
+      }),
+    ),
+    start_as: Type.Optional(
+      Type.Union([Type.Literal("reproduce"), Type.Literal("plan")], {
+        description: "With issue: reproduce for a bug, plan for an idea.",
+      }),
+    ),
   }),
   bind: ({ onFollowup }) =>
     onFollowup &&
@@ -176,6 +186,8 @@ export const FILE_FOLLOWUP_TOOL = crewmateTool({
             ...(params.blocks_me ? { blocksMe: true } : {}),
             ...(params.test_failure ? { testFailure: true } : {}),
             ...(params.test_path ? { testPath: params.test_path } : {}),
+            ...(params.issue !== undefined ? { issue: params.issue } : {}),
+            ...(params.start_as ? { startAs: params.start_as } : {}),
           },
         ],
         signal,

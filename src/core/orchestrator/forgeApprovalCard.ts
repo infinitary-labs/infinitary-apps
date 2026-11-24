@@ -6,7 +6,16 @@ import {
   INTEGRATION_APPROVAL_WORDS,
   integrationApprovalsButtonLines,
 } from "@shared/integrations";
-import type { ForgeWriteAsk, IntegrationAsk, WebReadAsk, WriteAsk } from "@shared/writeAsk";
+import {
+  BUILD_ROW_CHOICES,
+  type BuildRowAsk,
+  type BuildRowChoice,
+  buildRowFieldOf,
+  type ForgeWriteAsk,
+  type IntegrationAsk,
+  type WebReadAsk,
+  type WriteAsk,
+} from "@shared/writeAsk";
 import { escapeCardText } from "./cardText";
 import { HOST_CARD_PRIORITY } from "./hostCards";
 import { APPROVAL_CARD_META, inputLines } from "./integrationApprovalCard";
@@ -21,6 +30,11 @@ import { APPROVAL_CARD_META, inputLines } from "./integrationApprovalCard";
  * offers only Only this time and Not now: a reader's call is never allowed
  * beyond the one click. The click answers every row it showed
  * (`CardActions.answerIntegrationCard`).
+ *
+ * A Build row (docs/agents-reach.md, "A reader's Build rows") shows the task
+ * the reader proposes from an open issue: its title, the issue as a link,
+ * how it starts, its goal and why whole, and one choice that arrives on Keep
+ * for later. It has no tick, so it is drawn outside the tally's rows.
  */
 export function readerApprovalCard(
   listed: readonly WriteAsk[],
@@ -31,7 +45,11 @@ export function readerApprovalCard(
   if (!first) throw new Error("An approval card lists at least one ask.");
   const text = escapeCardText;
   const choices = ["deny", "once"] as const;
-  const rows = listed.map((ask, index) =>
+  const writes = listed.filter(
+    (ask): ask is Exclude<WriteAsk, BuildRowAsk> => ask.kind !== "build",
+  );
+  const builds = listed.filter((ask): ask is BuildRowAsk => ask.kind === "build");
+  const rows = writes.map((ask, index) =>
     [
       `<li class="inf-ask" data-inf-ask-row="${text(ask.id)}">`,
       '<div class="inf-ask-head">',
@@ -57,14 +75,17 @@ export function readerApprovalCard(
       "</li>",
     ].join(""),
   );
+  const buildRows = builds.map((ask, index) =>
+    buildRowLines(ask, writes.length + index + 1, options.joined?.has(ask.id) === true),
+  );
   const legend = integrationApprovalsButtonLines(undefined).filter(({ choice }) =>
     (choices as readonly string[]).includes(choice),
   );
   // Writes on one place keep the words that name it; integration calls, or
   // writes on several places, are spoken of as calls; waiting web pages add
   // their own lead.
-  const calls = listed.filter((ask): ask is ForgeWriteAsk | IntegrationAsk => ask.kind !== "web");
-  const pages = calls.length < listed.length;
+  const calls = writes.filter((ask): ask is ForgeWriteAsk | IntegrationAsk => ask.kind !== "web");
+  const pages = calls.length < writes.length;
   const place = calls[0]?.kind === "integration" ? undefined : calls[0]?.place;
   const onePlace =
     place !== undefined && calls.every((ask) => ask.kind !== "integration" && ask.place === place);
@@ -87,7 +108,8 @@ export function readerApprovalCard(
     taskId: task.id,
     author: "host",
     priority: HOST_CARD_PRIORITY,
-    title: words?.title ?? m.cardReaderPagesTitle(),
+    title:
+      words?.title ?? (pages ? m.cardReaderPagesTitle() : m.cardBuildRowsTitle({ place: first.place })),
     meta: APPROVAL_CARD_META,
     body: [
       ...(words ? [`<p>${text(words.lead)}</p>`, `<p>${text(words.how)}</p>`] : []),
@@ -97,7 +119,18 @@ export function readerApprovalCard(
             `<p>${text(m.cardReaderPagesHow())}</p>`,
           ]
         : []),
-      `<ol class="inf-asks">${rows.join("")}<li class="inf-asks-tally" data-of="${ASK_ROW_WORDS.of}" data-ticked="${ASK_ROW_WORDS.ticked}"></li></ol>`,
+      ...(writes.length > 0
+        ? [
+            `<ol class="inf-asks">${rows.join("")}<li class="inf-asks-tally" data-of="${ASK_ROW_WORDS.of}" data-ticked="${ASK_ROW_WORDS.ticked}"></li></ol>`,
+          ]
+        : []),
+      ...(builds.length > 0
+        ? [
+            `<p>${text(m.cardBuildRowsLead({ task: task.title }))}</p>`,
+            `<p>${text(m.cardBuildRowsHow())}</p>`,
+            `<ol class="inf-asks inf-builds" start="${writes.length + 1}">${buildRows.join("")}</ol>`,
+          ]
+        : []),
       '<dl class="inf-asks-buttons">',
       ...legend.map(
         ({ choice, words }) => `<dt>${INTEGRATION_APPROVAL_WORDS[choice]}</dt><dd>${words}</dd>`,
@@ -130,4 +163,39 @@ function callEffect(ask: IntegrationAsk): string {
 /** One reader ask as its row and its kept call show it: the write's request, or a page's whole address. */
 export function readerAskCall(ask: ForgeWriteAsk | WebReadAsk): string {
   return ask.kind === "web" ? `GET ${ask.url}` : `${ask.method} ${ask.path}`;
+}
+
+const BUILD_ROW_CHOICE_WORDS: Record<BuildRowChoice, () => string> = {
+  start: m.cardBuildRowStart,
+  later: m.cardBuildRowLater,
+  skip: m.cardBuildRowSkip,
+};
+
+/** One Build row: what its task would be told, and its one choice, Keep for later picked. */
+function buildRowLines(ask: BuildRowAsk, n: number, joined: boolean): string {
+  const text = escapeCardText;
+  const field = text(buildRowFieldOf(ask.id));
+  return [
+    `<li class="inf-build" data-inf-build-row="${text(ask.id)}">`,
+    '<div class="inf-ask-head">',
+    `<span class="inf-ask-n">${n}</span>`,
+    `<span class="inf-ask-name inf-ask-call">${text(ask.title)}</span>`,
+    joined ? `<span class="inf-ask-joined">${ASK_ROW_WORDS.joined}</span>` : "",
+    "</div>",
+    '<p class="inf-build-facts">',
+    `<a class="inf-mono" href="${text(ask.issueUrl)}">${text(m.cardBuildRowIssue({ number: String(ask.issue) }))}</a>`,
+    ` · ${text(ask.start === "reproduce" ? m.cardBuildRowReproduce() : m.cardBuildRowPlan())}`,
+    "</p>",
+    '<dl class="inf-ask-input">',
+    `<dt>${text(m.cardBuildRowGoal())}</dt><dd>${text(ask.goal)}</dd>`,
+    `<dt>${text(m.cardBuildRowWhy())}</dt><dd>${text(ask.why)}</dd>`,
+    "</dl>",
+    `<fieldset class="inf-build-choice" data-inf-options-only><legend>${text(m.cardBuildRowChoice())}</legend>`,
+    ...BUILD_ROW_CHOICES.map(
+      (choice) =>
+        `<label><input type="radio" name="${field}" value="${choice}"${choice === "later" ? " checked" : ""}> ${text(BUILD_ROW_CHOICE_WORDS[choice]())}</label>`,
+    ),
+    "</fieldset>",
+    "</li>",
+  ].join("");
 }

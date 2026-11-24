@@ -59,7 +59,14 @@ import {
   landedCommits,
   pushBatch,
 } from "./combine";
-import { type BatchLimits, batchDescription, batchList } from "./description";
+import {
+  type BatchEntry,
+  type BatchLimits,
+  batchDescription,
+  batchList,
+  type ChangeIssue,
+  issueLine,
+} from "./description";
 import {
   abandoned,
   awaitedJoins,
@@ -276,6 +283,8 @@ export type BatchesOptions = {
    * Absent, none is.
    */
   unmergedBase?: (change: BatchChange) => readonly string[] | undefined;
+  /** The outside issue a member's task answers, for its Closes or Part of line. */
+  issue?: (taskId: string) => ChangeIssue | undefined;
   /** A member's story as the batch's pull request shows it, with the words around it. */
   story: (
     member: BatchChange,
@@ -1287,7 +1296,7 @@ export class Batches {
         {
           ...change,
           title: only ? only.title : this.title(open.members),
-          squashMessage: only ? only.body : batchList(open.members.map((member) => member.title)),
+          squashMessage: only ? only.body : batchList(this.entries(open.members, forge)),
         },
         open.head,
         way,
@@ -1695,16 +1704,19 @@ export class Batches {
     const stories = await Promise.all(
       open.members.map((member) => this.options.story(member, forge).catch(() => undefined)),
     );
+    const entries = this.entries(open.members, forge);
     if (open.members.length === 1)
       return {
-        body: [stories[0]?.projectText, stories[0]?.region].filter(Boolean).join("\n\n"),
+        body: [stories[0]?.projectText, entries[0]?.issue, stories[0]?.region]
+          .filter(Boolean)
+          .join("\n\n"),
         comments: [],
         missing: stories[0] ? [] : open.members,
       };
     const { body, comments, unplaced } = batchDescription(
-      open.members.map((member, index) => {
+      entries.map((entry, index) => {
         const story = stories[index];
-        return { title: member.title, ...(story ? { region: story.region } : {}) };
+        return { ...entry, ...(story ? { region: story.region } : {}) };
       }),
       this.limits(forge),
     );
@@ -1713,6 +1725,14 @@ export class Batches {
       comments,
       missing: open.members.filter((_member, index) => !stories[index] || unplaced.includes(index)),
     };
+  }
+
+  /** Each member's title and the line linking it to its outside issue, where the host reads one. */
+  private entries(members: readonly BatchMember[], forge: Forge): BatchEntry[] {
+    return members.map((member) => {
+      const issue = issueLine(this.options.issue?.(member.taskId), forge.kind);
+      return { title: member.title, ...(issue ? { issue } : {}) };
+    });
   }
 
   /** What the project's host keeps: a description, and a comment where the app can write one. */

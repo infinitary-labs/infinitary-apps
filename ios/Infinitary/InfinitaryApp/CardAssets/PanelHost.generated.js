@@ -15381,6 +15381,333 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Browser`;
   }
+  function cardBuildRowChoice() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `متى يبدأ`;
+      case "de":
+        return `Wann starten`;
+      case "es":
+        return `Cuándo empezarla`;
+      case "fr":
+        return `Quand la démarrer`;
+      case "ja":
+        return `開始のタイミング`;
+      case "ko":
+        return `시작 시점`;
+      case "pt-BR":
+        return `Quando começar`;
+      case "zh-Hans":
+        return `何时开始`;
+      case "zh-Hant":
+        return `何時開始`;
+      case "en-XA":
+        return `[Ŵĥéñ ţö šţáŕţ îţ ~~~~~~]`;
+      case "ar-XB":
+        return `‮When to start it‬`;
+    }
+    return `When to start it`;
+  }
+  function cardBuildRowGoal() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الهدف`;
+      case "de":
+        return `Ziel`;
+      case "es":
+        return `Objetivo`;
+      case "fr":
+        return `Objectif`;
+      case "ja":
+        return `目標`;
+      case "ko":
+        return `목표`;
+      case "pt-BR":
+        return `Objetivo`;
+      case "zh-Hans":
+        return `目标`;
+      case "zh-Hant":
+        return `目標`;
+      case "en-XA":
+        return `[Ĝöáļ ~~]`;
+      case "ar-XB":
+        return `‮Goal‬`;
+    }
+    return `Goal`;
+  }
+  function cardBuildRowIssue(input2) {
+    const number2 = input2.number;
+    switch (currentLanguage()) {
+      case "ar":
+        return `البلاغ #${number2}`;
+      case "de":
+        return `Issue #${number2}`;
+      case "es":
+        return `Incidencia #${number2}`;
+      case "fr":
+        return `Ticket #${number2}`;
+      case "ja":
+        return `Issue #${number2}`;
+      case "ko":
+        return `이슈 #${number2}`;
+      case "pt-BR":
+        return `Issue #${number2}`;
+      case "zh-Hans":
+        return `议题 #${number2}`;
+      case "zh-Hant":
+        return `議題 #${number2}`;
+      case "en-XA":
+        return `[Îššûé #${number2} ~~~]`;
+      case "ar-XB":
+        return `‮Issue #‬${number2}`;
+    }
+    return `Issue #${number2}`;
+  }
+  function cardBuildRowLater() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `احتفظ به لاحقًا`;
+      case "de":
+        return `Für später behalten`;
+      case "es":
+        return `Guardar para después`;
+      case "fr":
+        return `Garder pour plus tard`;
+      case "ja":
+        return `後で行う`;
+      case "ko":
+        return `나중에 하기`;
+      case "pt-BR":
+        return `Guardar para depois`;
+      case "zh-Hans":
+        return `留待以后`;
+      case "zh-Hant":
+        return `留待以後`;
+      case "en-XA":
+        return `[Ķééþ ƒöŕ ļáţéŕ ~~~~~]`;
+      case "ar-XB":
+        return `‮Keep for later‬`;
+    }
+    return `Keep for later`;
+  }
+  function cardBuildRowPlan() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `التخطيط أولًا`;
+      case "de":
+        return `Zuerst planen`;
+      case "es":
+        return `Planificar primero`;
+      case "fr":
+        return `Planifier d’abord`;
+      case "ja":
+        return `まず計画`;
+      case "ko":
+        return `먼저 계획`;
+      case "pt-BR":
+        return `Planejar primeiro`;
+      case "zh-Hans":
+        return `先规划`;
+      case "zh-Hant":
+        return `先規劃`;
+      case "en-XA":
+        return `[Þļáñ ƒîŕšţ ~~~~]`;
+      case "ar-XB":
+        return `‮Plan first‬`;
+    }
+    return `Plan first`;
+  }
+  function cardBuildRowReproduce() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إعادة الإنتاج أولًا`;
+      case "de":
+        return `Zuerst nachstellen`;
+      case "es":
+        return `Reproducir primero`;
+      case "fr":
+        return `Reproduire d’abord`;
+      case "ja":
+        return `まず再現`;
+      case "ko":
+        return `먼저 재현`;
+      case "pt-BR":
+        return `Reproduzir primeiro`;
+      case "zh-Hans":
+        return `先复现`;
+      case "zh-Hant":
+        return `先重現`;
+      case "en-XA":
+        return `[Ŕéþŕöðûçé ƒîŕšţ ~~~~~]`;
+      case "ar-XB":
+        return `‮Reproduce first‬`;
+    }
+    return `Reproduce first`;
+  }
+  function cardBuildRowSkip() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا تُدرج`;
+      case "de":
+        return `Nicht ablegen`;
+      case "es":
+        return `No anotar`;
+      case "fr":
+        return `Ne pas classer`;
+      case "ja":
+        return `登録しない`;
+      case "ko":
+        return `등록 안 함`;
+      case "pt-BR":
+        return `Não registrar`;
+      case "zh-Hans":
+        return `不放入`;
+      case "zh-Hant":
+        return `不排入`;
+      case "en-XA":
+        return `[Ðöñ'ţ ƒîļé ~~~~]`;
+      case "ar-XB":
+        return `‮Don't file‬`;
+    }
+    return `Don't file`;
+  }
+  function cardBuildRowStart() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ابدأ الآن`;
+      case "de":
+        return `Jetzt starten`;
+      case "es":
+        return `Empezar ahora`;
+      case "fr":
+        return `Démarrer maintenant`;
+      case "ja":
+        return `今すぐ開始`;
+      case "ko":
+        return `지금 시작`;
+      case "pt-BR":
+        return `Começar agora`;
+      case "zh-Hans":
+        return `立即开始`;
+      case "zh-Hant":
+        return `立即開始`;
+      case "en-XA":
+        return `[Šţáŕţ ñöŵ ~~~]`;
+      case "ar-XB":
+        return `‮Start now‬`;
+    }
+    return `Start now`;
+  }
+  function cardBuildRowWhy() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `السبب`;
+      case "de":
+        return `Warum`;
+      case "es":
+        return `Por qué`;
+      case "fr":
+        return `Pourquoi`;
+      case "ja":
+        return `理由`;
+      case "ko":
+        return `이유`;
+      case "pt-BR":
+        return `Por quê`;
+      case "zh-Hans":
+        return `原因`;
+      case "zh-Hant":
+        return `原因`;
+      case "en-XA":
+        return `[Ŵĥý ~]`;
+      case "ar-XB":
+        return `‮Why‬`;
+    }
+    return `Why`;
+  }
+  function cardBuildRowsHow() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يُنشئ صف Build مهمته إلا عندما توافق على هذه البطاقة. «ابدأ الآن» يُنشئها ويبدؤها، و«احتفظ به لاحقًا» يُدرجها دون بدء، و«لا تُدرج» يتركها.`;
+      case "de":
+        return `Eine Build-Zeile legt ihre Aufgabe nur ab, wenn du diese Karte bestätigst. Jetzt starten legt sie ab und startet sie, Für später behalten legt sie im Backlog ab, und Nicht ablegen verwirft sie.`;
+      case "es":
+        return `Una fila de Build anota su tarea solo si apruebas esta tarjeta. Empezar ahora la anota y la empieza, Guardar para después la anota sin empezarla y No anotar la descarta.`;
+      case "fr":
+        return `Une ligne Build ne classe sa tâche que si vous approuvez cette carte. Démarrer maintenant la classe et la démarre, Garder pour plus tard la classe sans la démarrer et Ne pas classer l’écarte.`;
+      case "ja":
+        return `Build 行は、このカードを承認したときだけタスクを登録します。今すぐ開始 は登録して開始し、後で行う は開始せずに登録し、登録しない は取り下げます。`;
+      case "ko":
+        return `Build 행은 이 카드를 승인할 때만 작업을 등록합니다. 지금 시작은 등록하고 시작하며, 나중에 하기는 시작하지 않고 등록하고, 등록 안 함은 버립니다.`;
+      case "pt-BR":
+        return `Uma linha de Build só registra a tarefa quando você aprova este cartão. Começar agora registra e começa, Guardar para depois registra no backlog sem começar e Não registrar descarta.`;
+      case "zh-Hans":
+        return `只有在你批准这张卡片时，Build 行才会创建任务。立即开始会创建并开始它，留待以后会把它放入待办，不放入会放弃它。`;
+      case "zh-Hant":
+        return `只有在你核准這張卡片時，Build 列才會建立任務。立即開始會建立並開始它，留待以後會把它排入，不排入會放棄它。`;
+      case "en-XA":
+        return `[Å Ɓûîļð ŕöŵ ƒîļéš îţš ţášķ öñļý ŵĥéñ ýöû áþþŕöṽé ţĥîš çáŕð. Šţáŕţ ñöŵ ƒîļéš áñð šţáŕţš îţ, Ķééþ ƒöŕ ļáţéŕ ƒîļéš îţ ŵîţĥöûţ šţáŕţîñĝ, áñð Ðöñ'ţ ƒîļé ðŕöþš îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮A Build row files its task only when you approve this card. Start now files and starts it, Keep for later files it without starting, and Don't file drops it.‬`;
+    }
+    return `A Build row files its task only when you approve this card. Start now files and starts it, Keep for later files it without starting, and Don't file drops it.`;
+  }
+  function cardBuildRowsLead(input2) {
+    const task = input2.task;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يقرأ فرد الطاقم في «${task}» كلامًا يمكن لأي أحد كتابته، لذا تنتظر كل مهمة يقترحها قرارك. يعرض كل صف Build التكليف الذي سيتلقاه فرد طاقمه.`;
+      case "de":
+        return `Das Crewmitglied von „${task}“ liest Texte, die jeder schreiben kann, darum wartet jede Aufgabe, die es vorschlägt, auf dich. Jede Build-Zeile zeigt den Auftrag, den sein Crewmitglied bekäme.`;
+      case "es":
+        return `El tripulante de «${task}» lee palabras que cualquiera puede escribir, así que cada tarea que propone espera tu decisión. Cada fila de Build muestra el encargo que recibiría su tripulante.`;
+      case "fr":
+        return `L’équipier de « ${task} » lit des mots que tout le monde peut écrire : chaque tâche qu’il propose attend donc votre décision. Chaque ligne Build montre la consigne que recevrait son équipier.`;
+      case "ja":
+        return `「${task}」の担当の乗組員は誰でも書ける文章を読むため、提案するタスクはすべてあなたの判断を待ちます。各 Build 行には、担当の乗組員が受け取る指示が表示されます。`;
+      case "ko":
+        return `"${task}"의 선원은 누구나 쓸 수 있는 글을 읽으므로, 제안하는 모든 작업은 결정을 기다립니다. 각 Build 행에는 담당 선원이 받을 지시가 보입니다.`;
+      case "pt-BR":
+        return `O tripulante de “${task}” lê textos que qualquer pessoa pode escrever, então cada tarefa que ele propõe espera a sua decisão. Cada linha de Build mostra as instruções que o tripulante receberia.`;
+      case "zh-Hans":
+        return `“${task}”上的船员会读取任何人都能写的内容，所以它提议的每个任务都要等你决定。每个 Build 行显示其船员将收到的说明。`;
+      case "zh-Hant":
+        return `「${task}」上的船員會讀取任何人都能寫的內容，所以它提議的每個任務都要等你決定。每個 Build 列顯示其船員將收到的說明。`;
+      case "en-XA":
+        return `[Ţĥé çŕéŵɱáţé öñ “${task}” ŕéáðš ŵöŕðš áñýöñé çáñ ŵŕîţé, šö éáçĥ ţášķ îţ þŕöþöšéš ŵáîţš ƒöŕ ýöû. Éáçĥ Ɓûîļð ŕöŵ šĥöŵš ţĥé ƀŕîéƒ îţš çŕéŵɱáţé ŵöûļð ĝéţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The crewmate on “‬${task}‮” reads words anyone can write, so each task it proposes waits for you. Each Build row shows the brief its crewmate would get.‬`;
+    }
+    return `The crewmate on “${task}” reads words anyone can write, so each task it proposes waits for you. Each Build row shows the brief its crewmate would get.`;
+  }
+  function cardBuildRowsTitle(input2) {
+    const place = input2.place;
+    switch (currentLanguage()) {
+      case "ar":
+        return `هل تُنشئ مهامّ من بلاغات ${place}؟`;
+      case "de":
+        return `Aufgaben aus Issues auf ${place} im Backlog ablegen?`;
+      case "es":
+        return `¿Anotar tareas a partir de incidencias de ${place}?`;
+      case "fr":
+        return `Classer des tâches à partir des tickets ${place} ?`;
+      case "ja":
+        return `${place} の Issue からタスクを登録しますか？`;
+      case "ko":
+        return `${place} 이슈로 작업을 등록할까요?`;
+      case "pt-BR":
+        return `Registrar no backlog tarefas a partir de issues do ${place}?`;
+      case "zh-Hans":
+        return `根据 ${place} 上的议题创建任务吗？`;
+      case "zh-Hant":
+        return `根據 ${place} 上的議題建立任務嗎？`;
+      case "en-XA":
+        return `[Ƒîļé ţášķš ƒŕöɱ ${place} îššûéš? ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮File tasks from ‬${place}‮ issues?‬`;
+    }
+    return `File tasks from ${place} issues?`;
+  }
   function cardCarriedNotes(input2) {
     const count = formatNumber(input2.count);
     switch (currentLanguage()) {
@@ -19956,6 +20283,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Holds up‬`;
     }
     return `Holds up`;
+  }
+  function cardRecordIssue() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `البلاغ`;
+      case "de":
+        return `Issue`;
+      case "es":
+        return `Incidencia`;
+      case "fr":
+        return `Ticket`;
+      case "ja":
+        return `Issue`;
+      case "ko":
+        return `이슈`;
+      case "pt-BR":
+        return `Issue`;
+      case "zh-Hans":
+        return `议题`;
+      case "zh-Hant":
+        return `議題`;
+      case "en-XA":
+        return `[Îššûé ~~]`;
+      case "ar-XB":
+        return `‮Issue‬`;
+    }
+    return `Issue`;
   }
   function cardRecordLoading() {
     switch (currentLanguage()) {
@@ -106275,6 +106629,18 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardBrowserUnansweredStarting,
     cardBrowserUnansweredWorking,
     cardBrowserWord,
+    cardBuildRowChoice,
+    cardBuildRowGoal,
+    cardBuildRowIssue,
+    cardBuildRowLater,
+    cardBuildRowPlan,
+    cardBuildRowReproduce,
+    cardBuildRowSkip,
+    cardBuildRowStart,
+    cardBuildRowWhy,
+    cardBuildRowsHow,
+    cardBuildRowsLead,
+    cardBuildRowsTitle,
     cardCarriedNotes,
     cardCarriedPictures,
     cardCarriedWithChoice,
@@ -106408,6 +106774,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardRecordFoldNoPlan,
     cardRecordGoal,
     cardRecordHoldsUp,
+    cardRecordIssue,
     cardRecordLoading,
     cardRecordNoPlanWhy,
     cardRecordNoReason,
@@ -109665,6 +110032,18 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardBrowserUnansweredStarting": ["site"],
     "cardBrowserUnansweredWorking": ["site"],
     "cardBrowserWord": [],
+    "cardBuildRowChoice": [],
+    "cardBuildRowGoal": [],
+    "cardBuildRowIssue": ["number"],
+    "cardBuildRowLater": [],
+    "cardBuildRowPlan": [],
+    "cardBuildRowReproduce": [],
+    "cardBuildRowSkip": [],
+    "cardBuildRowStart": [],
+    "cardBuildRowWhy": [],
+    "cardBuildRowsHow": [],
+    "cardBuildRowsLead": ["task"],
+    "cardBuildRowsTitle": ["place"],
     "cardCarriedNotes": ["count"],
     "cardCarriedPictures": ["count"],
     "cardCarriedWithChoice": ["count", "items"],
@@ -109798,6 +110177,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardRecordFoldNoPlan": [],
     "cardRecordGoal": [],
     "cardRecordHoldsUp": [],
+    "cardRecordIssue": [],
     "cardRecordLoading": [],
     "cardRecordNoPlanWhy": [],
     "cardRecordNoReason": [],
@@ -124379,6 +124759,18 @@ ${FRAME_KEYBOARD_SCRIPT}
      */
     result_schema: record(string(), unknown()).optional(),
     /**
+     * The outside issue this task answers, where its project lives
+     * (docs/agents-reach.md, "A reader's Build rows"): written by the host
+     * when the captain's click files a reader's Build row, and carried by a
+     * task built on such a task (`basis`). `closes` marks the change that
+     * closes the issue when it merges: a fix, or a plan's last piece.
+     */
+    issue: object({
+      number: number().int().positive(),
+      url: string(),
+      closes: boolean().optional()
+    }).optional(),
+    /**
      * The task, by key, whose last commit this task's working copy starts at
      * (INF-799 piece 1): its branch head while its working copy is present,
      * else its kept ref. Declared by the first mate; the host checks it holds
@@ -124575,7 +124967,14 @@ ${FRAME_KEYBOARD_SCRIPT}
      * own folder, not a working copy (INF-567): the host stamps
      * `in_place: { folder: true }` from it.
      */
-    in_folder: boolean().optional()
+    in_folder: boolean().optional(),
+    /**
+     * The first mate's mark on a task built on one that answers an outside
+     * issue (`WorkShape.issue`): its change closes that issue when it
+     * merges, as a plan's last piece does. A fix built on a reproduce step
+     * closes it unmarked.
+     */
+    closes_issue: boolean().optional()
   });
   const ruleIdSchema = _enum([
     "R0",
@@ -126172,6 +126571,12 @@ ${FRAME_KEYBOARD_SCRIPT}
       originKey: string(),
       verdict: string().nullable()
     }).optional(),
+    /**
+     * The outside issue the task answers where its project lives
+     * (`WorkShape.issue`), drawn as a link on the record's Info tab; absent
+     * when it answers none.
+     */
+    issue: object({ number: number().int().positive(), url: string() }).optional(),
     /** Present only while Drop task applies. The footer confirms these lists. */
     dropEffects: dropEffectsSchema.optional(),
     /**

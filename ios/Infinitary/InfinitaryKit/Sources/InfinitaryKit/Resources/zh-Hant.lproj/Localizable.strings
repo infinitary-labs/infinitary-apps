@@ -356,6 +356,18 @@
 "cardBrowserUnansweredStarting" = "%1$@ 沒有回應，Infinitary 正在重新啟動它。它一回應，頁面就會顯示在這裡。";
 "cardBrowserUnansweredWorking" = "%1$@ 沒有回應，船員正在工作。它一回應，頁面就會顯示在這裡。";
 "cardBrowserWord" = "瀏覽器";
+"cardBuildRowChoice" = "何時開始";
+"cardBuildRowGoal" = "目標";
+"cardBuildRowIssue" = "議題 #%1$@";
+"cardBuildRowLater" = "留待以後";
+"cardBuildRowPlan" = "先規劃";
+"cardBuildRowReproduce" = "先重現";
+"cardBuildRowSkip" = "不排入";
+"cardBuildRowStart" = "立即開始";
+"cardBuildRowWhy" = "原因";
+"cardBuildRowsHow" = "只有在你核准這張卡片時，Build 列才會建立任務。立即開始會建立並開始它，留待以後會把它排入，不排入會放棄它。";
+"cardBuildRowsLead" = "「%1$@」上的船員會讀取任何人都能寫的內容，所以它提議的每個任務都要等你決定。每個 Build 列顯示其船員將收到的說明。";
+"cardBuildRowsTitle" = "根據 %1$@ 上的議題建立任務嗎？";
 "cardConsentChanges" = "更改";
 "cardConsentChangesDetail" = "這些設定，每次僅在你於面板中點按或按鍵時更改。它從不刪除任何內容。";
 "cardConsentChangesLine" = "在你點按時可更改設定：%1$@";
@@ -475,6 +487,7 @@
 "cardRecordFoldNoPlan" = "為什麼沒有計畫";
 "cardRecordGoal" = "目標";
 "cardRecordHoldsUp" = "擋住";
+"cardRecordIssue" = "議題";
 "cardRecordLoading" = "載入中";
 "cardRecordNoPlanWhy" = "你的大副為什麼沒有計畫就直接建置";
 "cardRecordNoReason" = "沒有記錄原因。";

@@ -356,6 +356,18 @@
 "cardBrowserUnansweredStarting" = "لا شيء يستجيب على %1$@، لذا يعيد Infinitary تشغيله الآن. ستظهر الصفحة هنا حين يستجيب.";
 "cardBrowserUnansweredWorking" = "لا شيء يستجيب على %1$@، وفرد الطاقم يعمل الآن. ستظهر الصفحة هنا حين يستجيب.";
 "cardBrowserWord" = "المتصفح";
+"cardBuildRowChoice" = "متى يبدأ";
+"cardBuildRowGoal" = "الهدف";
+"cardBuildRowIssue" = "البلاغ #%1$@";
+"cardBuildRowLater" = "احتفظ به لاحقًا";
+"cardBuildRowPlan" = "التخطيط أولًا";
+"cardBuildRowReproduce" = "إعادة الإنتاج أولًا";
+"cardBuildRowSkip" = "لا تُدرج";
+"cardBuildRowStart" = "ابدأ الآن";
+"cardBuildRowWhy" = "السبب";
+"cardBuildRowsHow" = "لا يُنشئ صف Build مهمته إلا عندما توافق على هذه البطاقة. «ابدأ الآن» يُنشئها ويبدؤها، و«احتفظ به لاحقًا» يُدرجها دون بدء، و«لا تُدرج» يتركها.";
+"cardBuildRowsLead" = "يقرأ فرد الطاقم في «%1$@» كلامًا يمكن لأي أحد كتابته، لذا تنتظر كل مهمة يقترحها قرارك. يعرض كل صف Build التكليف الذي سيتلقاه فرد طاقمه.";
+"cardBuildRowsTitle" = "هل تُنشئ مهامّ من بلاغات %1$@؟";
 "cardConsentChanges" = "يغيّر";
 "cardConsentChangesDetail" = "هذه الإعدادات، كلٌّ منها فقط عند نقرك أو ضغطك مفتاحًا داخل اللوحة. لا يحذف أي شيء أبدًا.";
 "cardConsentChangesLine" = "يمكنه تغيير إعداد عند نقرك: %1$@";
@@ -475,6 +487,7 @@
 "cardRecordFoldNoPlan" = "سبب عدم وجود خطة";
 "cardRecordGoal" = "الهدف";
 "cardRecordHoldsUp" = "تؤخّر";
+"cardRecordIssue" = "البلاغ";
 "cardRecordLoading" = "جارٍ التحميل";
 "cardRecordNoPlanWhy" = "لماذا بنى نائب القبطان دون خطة";
 "cardRecordNoReason" = "لم يُسجَّل أي سبب.";

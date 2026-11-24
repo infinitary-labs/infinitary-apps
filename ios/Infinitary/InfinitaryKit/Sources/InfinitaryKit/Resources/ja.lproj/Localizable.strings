@@ -356,6 +356,18 @@
 "cardBrowserUnansweredStarting" = "%1$@ が応答しないため、Infinitary が再起動しています。応答するとページがここに表示されます。";
 "cardBrowserUnansweredWorking" = "%1$@ が応答しません。乗組員は現在作業中です。応答するとページがここに表示されます。";
 "cardBrowserWord" = "ブラウザ";
+"cardBuildRowChoice" = "開始のタイミング";
+"cardBuildRowGoal" = "目標";
+"cardBuildRowIssue" = "Issue #%1$@";
+"cardBuildRowLater" = "後で行う";
+"cardBuildRowPlan" = "まず計画";
+"cardBuildRowReproduce" = "まず再現";
+"cardBuildRowSkip" = "登録しない";
+"cardBuildRowStart" = "今すぐ開始";
+"cardBuildRowWhy" = "理由";
+"cardBuildRowsHow" = "Build 行は、このカードを承認したときだけタスクを登録します。今すぐ開始 は登録して開始し、後で行う は開始せずに登録し、登録しない は取り下げます。";
+"cardBuildRowsLead" = "「%1$@」の担当の乗組員は誰でも書ける文章を読むため、提案するタスクはすべてあなたの判断を待ちます。各 Build 行には、担当の乗組員が受け取る指示が表示されます。";
+"cardBuildRowsTitle" = "%1$@ の Issue からタスクを登録しますか？";
 "cardConsentChanges" = "変更";
 "cardConsentChangesDetail" = "これらの設定は、パネル内でクリックかキーを押したときだけ変更します。何かを削除することはありません。";
 "cardConsentChangesLine" = "クリックしたときに設定を変更できます: %1$@";
@@ -475,6 +487,7 @@
 "cardRecordFoldNoPlan" = "計画がなかった理由";
 "cardRecordGoal" = "目標";
 "cardRecordHoldsUp" = "待たせている作業";
+"cardRecordIssue" = "Issue";
 "cardRecordLoading" = "読み込み中";
 "cardRecordNoPlanWhy" = "一等航海士が計画なしで作成した理由";
 "cardRecordNoReason" = "理由は記録されていません。";

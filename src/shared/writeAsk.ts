@@ -9,7 +9,7 @@ import type { ChangeRequestKind } from "./forgeKinds";
  * The host stores the exact call; the card names it by `id` and never
  * carries the call itself, so only what was stored is ever sent.
  */
-export type WriteAsk = ForgeWriteAsk | IntegrationAsk | WebReadAsk;
+export type WriteAsk = ForgeWriteAsk | IntegrationAsk | WebReadAsk | BuildRowAsk;
 
 /** A write where a project lives, through its host's REST API. */
 export type ForgeWriteAsk = {
@@ -69,6 +69,60 @@ export type WebReadAsk = {
   sentAt?: number;
   outcome?: WriteAskOutcome;
 };
+
+/**
+ * How a Build row's task starts (docs/agents-reach.md, "A reader's Build
+ * rows"): a bug as a read-only reproduce step, an idea as a read-only plan.
+ */
+export type BuildRowStart = "reproduce" | "plan";
+
+/**
+ * An unsafe data reader's `file_followup` naming the open issue it answers
+ * (docs/agents-reach.md, "A reader's Build rows"): kept on its task's
+ * approval card as a Build row, never filed at once. The captain's click
+ * files the brief exactly as the row showed it, starts it on Start now,
+ * or files nothing.
+ */
+export type BuildRowAsk = {
+  id: string;
+  kind: "build";
+  /** The host in a sentence, such as "GitHub". */
+  place: string;
+  /** The issue's number in the reader's own project, read open when the row was kept. */
+  issue: number;
+  /** The issue's page where the project lives, as the row links it. */
+  issueUrl: string;
+  start: BuildRowStart;
+  title: string;
+  goal: string;
+  why: string;
+  /** The host's approval card that lists it, beside the reader's kept writes. */
+  card?: string;
+  at: number;
+  sentAt?: number;
+  outcome?: WriteAskOutcome;
+};
+
+/** A Build row's three answers on its card, Keep for later the one it comes picked with. */
+export const BUILD_ROW_CHOICES = ["start", "later", "skip"] as const;
+export type BuildRowChoice = (typeof BUILD_ROW_CHOICES)[number];
+export const BUILD_ROW_FIELD = "inf-build-";
+export function buildRowFieldOf(askId: string): string {
+  return `${BUILD_ROW_FIELD}${askId}`;
+}
+/**
+ * Each Build row's answer as the click read it; a row the click carries no
+ * reading of keeps Keep for later, which starts nothing.
+ */
+export function buildRowChoiceOf(
+  answers: readonly { name: string; values: readonly string[] }[] | undefined,
+  askId: string,
+): BuildRowChoice {
+  const value = answers?.find((answer) => answer.name === buildRowFieldOf(askId))?.values[0];
+  return (BUILD_ROW_CHOICES as readonly string[]).includes(value ?? "")
+    ? (value as BuildRowChoice)
+    : "later";
+}
 
 /** What a feedback write is, beside its exact call: its kind, title, the issue it comments on and whose account sends it. */
 export type FeedbackAskFacts = {
@@ -181,7 +235,17 @@ export type WriteAskOutcome =
   /** An integration's action ran and answered. */
   | { kind: "ran" }
   | { kind: "unknown"; why: string }
-  | { kind: "refused"; why: string };
+  | { kind: "refused"; why: string }
+  /** A Build row's task was filed, and started on Start now. */
+  | {
+      kind: "filed";
+      /** The filed task's key. */
+      task: string;
+      /** The captain picked Start now, and the app asked for its start. */
+      started: boolean;
+      /** What that start answered, such as a refusal or that the first mate applies directions first. */
+      start?: string;
+    };
 
 /**
  * How many asks a task keeps, newest first. Past it the oldest answered ask

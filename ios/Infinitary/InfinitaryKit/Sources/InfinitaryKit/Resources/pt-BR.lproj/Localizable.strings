@@ -356,6 +356,18 @@
 "cardBrowserUnansweredStarting" = "Nada responde em %1$@, então o Infinitary está iniciando-o de novo. A página aparece aqui assim que responder.";
 "cardBrowserUnansweredWorking" = "Nada responde em %1$@, e o tripulante está trabalhando agora. A página aparece aqui assim que responder.";
 "cardBrowserWord" = "Navegador";
+"cardBuildRowChoice" = "Quando começar";
+"cardBuildRowGoal" = "Objetivo";
+"cardBuildRowIssue" = "Issue #%1$@";
+"cardBuildRowLater" = "Guardar para depois";
+"cardBuildRowPlan" = "Planejar primeiro";
+"cardBuildRowReproduce" = "Reproduzir primeiro";
+"cardBuildRowSkip" = "Não registrar";
+"cardBuildRowStart" = "Começar agora";
+"cardBuildRowWhy" = "Por quê";
+"cardBuildRowsHow" = "Uma linha de Build só registra a tarefa quando você aprova este cartão. Começar agora registra e começa, Guardar para depois registra no backlog sem começar e Não registrar descarta.";
+"cardBuildRowsLead" = "O tripulante de “%1$@” lê textos que qualquer pessoa pode escrever, então cada tarefa que ele propõe espera a sua decisão. Cada linha de Build mostra as instruções que o tripulante receberia.";
+"cardBuildRowsTitle" = "Registrar no backlog tarefas a partir de issues do %1$@?";
 "cardConsentChanges" = "Altera";
 "cardConsentChangesDetail" = "Estas configurações, cada uma só quando você clica ou pressiona uma tecla no painel. Ele nunca apaga nada.";
 "cardConsentChangesLine" = "Pode alterar uma configuração quando você clica: %1$@";
@@ -475,6 +487,7 @@
 "cardRecordFoldNoPlan" = "por que não houve plano";
 "cardRecordGoal" = "Objetivo";
 "cardRecordHoldsUp" = "Segura";
+"cardRecordIssue" = "Issue";
 "cardRecordLoading" = "Carregando";
 "cardRecordNoPlanWhy" = "Por que seu imediato fez sem um plano";
 "cardRecordNoReason" = "Nenhum motivo foi registrado.";

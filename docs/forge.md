@@ -714,6 +714,13 @@ The click takes every row it showed before the first is sent: an unticked row an
 One `write-answered` steer names every outcome, each sent write's answer fenced under its host's label like the reader's reads; the cap and dropped asks work as they do for an integration's asks.
 A write outside the project, a release file and a validation effect are refused, and `emit_card` refuses a card naming a reader's ask.
 A web page the reader waits to open (`WebReadAsk`, `docs/agents-reach.md`, "Web pages") joins the same card as a row showing `GET` and its whole address, and the card adds a lead about pages, its title naming pages alone, writes on one place and pages, or calls and pages; its click opens the page once through `ReaderWebService.sendTaken`, and the steer carries the page's first part fenced under `web-data`.
+A reader's Build row joins the same card but is never sent: the click files it as the captain picked on its row (`docs/agents-reach.md`, "A reader's Build rows").
+
+### A change that answers an issue
+
+A task filed from a reader's Build row, and every task built on it, keeps the outside issue it answers (`WorkShape.issue`).
+Where its change is published on GitHub, the description says `Closes #N` for a fix built on a reproduce step or a plan's last piece, and `Part of #N` for any other piece (`issueLine`, `src/core/batches/description.ts`).
+The line sits between the words around the story and the story on a pull request's first publication and on a batch of one, and after the change's title in a batch of several's list and squash message; other hosts get no line.
 
 ### On GitLab
 

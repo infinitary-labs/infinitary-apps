@@ -356,6 +356,18 @@
 "cardBrowserUnansweredStarting" = "Unter %1$@ antwortet nichts, deshalb startet Infinitary es neu. Die Seite erscheint hier, sobald es antwortet.";
 "cardBrowserUnansweredWorking" = "Unter %1$@ antwortet nichts, und das Crewmitglied arbeitet gerade. Die Seite erscheint hier, sobald es antwortet.";
 "cardBrowserWord" = "Browser";
+"cardBuildRowChoice" = "Wann starten";
+"cardBuildRowGoal" = "Ziel";
+"cardBuildRowIssue" = "Issue #%1$@";
+"cardBuildRowLater" = "Für später behalten";
+"cardBuildRowPlan" = "Zuerst planen";
+"cardBuildRowReproduce" = "Zuerst nachstellen";
+"cardBuildRowSkip" = "Nicht ablegen";
+"cardBuildRowStart" = "Jetzt starten";
+"cardBuildRowWhy" = "Warum";
+"cardBuildRowsHow" = "Eine Build-Zeile legt ihre Aufgabe nur ab, wenn du diese Karte bestätigst. Jetzt starten legt sie ab und startet sie, Für später behalten legt sie im Backlog ab, und Nicht ablegen verwirft sie.";
+"cardBuildRowsLead" = "Das Crewmitglied von „%1$@“ liest Texte, die jeder schreiben kann, darum wartet jede Aufgabe, die es vorschlägt, auf dich. Jede Build-Zeile zeigt den Auftrag, den sein Crewmitglied bekäme.";
+"cardBuildRowsTitle" = "Aufgaben aus Issues auf %1$@ im Backlog ablegen?";
 "cardConsentChanges" = "Ändert";
 "cardConsentChangesDetail" = "Diese Einstellungen, jede nur, wenn du im Panel klickst oder eine Taste drückst. Es löscht nie etwas.";
 "cardConsentChangesLine" = "Kann eine Einstellung auf deinen Klick ändern: %1$@";
@@ -475,6 +487,7 @@
 "cardRecordFoldNoPlan" = "warum es keinen Plan gab";
 "cardRecordGoal" = "Ziel";
 "cardRecordHoldsUp" = "Hält auf";
+"cardRecordIssue" = "Issue";
 "cardRecordLoading" = "Wird geladen";
 "cardRecordNoPlanWhy" = "Warum dein erster Offizier ohne Plan gebaut hat";
 "cardRecordNoReason" = "Es wurde kein Grund festgehalten.";

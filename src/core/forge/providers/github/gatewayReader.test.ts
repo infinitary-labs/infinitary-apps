@@ -139,6 +139,35 @@ describe("the GitHub gateway for an unsafe data reader", () => {
     );
   });
 
+  // INF-6426's piece A: a reader's Build row names an open issue of its own
+  // project, which the app reads once before keeping the row.
+  it("keeps a Build row only on an open issue of the reader's own project", async () => {
+    const { service, seen } = await fixture();
+    expect(await service.readerOpenIssue("task-reader", 7)).toEqual({
+      url: "https://github.com/octo/meter/issues/7",
+      place: "GitHub",
+    });
+    expect(await service.readerOpenIssue("task-reader", 8)).toEqual({
+      refused: "Issue #8 is not open.",
+    });
+    expect(await service.readerOpenIssue("task-reader", 9)).toEqual({
+      refused: "#9 is a pull request, not an issue.",
+    });
+    expect(await service.readerOpenIssue("task-reader", 404)).toEqual({
+      refused: "#404 is not an issue of this project.",
+    });
+    expect(await service.readerOpenIssue("task-1", 7)).toEqual({
+      refused:
+        "A Build row names an issue of an unsafe data reader's own project on GitHub, read through its own sign-in.",
+    });
+    expect(seen.map(({ method, path }) => `${method} ${path}`)).toEqual([
+      "GET /repos/octo/meter/issues/7",
+      "GET /repos/octo/meter/issues/8",
+      "GET /repos/octo/meter/issues/9",
+      "GET /repos/octo/meter/issues/404",
+    ]);
+  });
+
   // INF-6388's review: a reader has no shell and its fence refuses the
   // temporary folder, so an answer saved there as a file would never be read.
   it("serves an unsafe data reader's long listing as the largest page its model reads whole, and refuses one no page fits", async () => {

@@ -76,6 +76,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | inspector | 상세 보기 | Avoids 검사, which is the checks |
 | Integrations | 연동 | |
 | Intelligence | 지능 | |
+| issue (where the project lives) | 이슈 | |
 | join (the phone joins a computer) | 연결하다 | Pairs with 나가기 for Leave. |
 | key (an integration's key) | 키 | Named by its place, e.g. "Linear 키" |
 | knowledge (Knowledge used) | 지식 | 사용한 지식; a finding is 발견 and a concept 개념 |

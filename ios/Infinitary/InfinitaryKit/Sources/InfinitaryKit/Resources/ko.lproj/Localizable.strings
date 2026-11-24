@@ -356,6 +356,18 @@
 "cardBrowserUnansweredStarting" = "%1$@에서 응답이 없어 Infinitary가 다시 시작하고 있어요. 응답하면 페이지가 여기에 표시돼요.";
 "cardBrowserUnansweredWorking" = "%1$@에서 응답이 없고, 선원은 지금 작업 중이에요. 응답하면 페이지가 여기에 표시돼요.";
 "cardBrowserWord" = "브라우저";
+"cardBuildRowChoice" = "시작 시점";
+"cardBuildRowGoal" = "목표";
+"cardBuildRowIssue" = "이슈 #%1$@";
+"cardBuildRowLater" = "나중에 하기";
+"cardBuildRowPlan" = "먼저 계획";
+"cardBuildRowReproduce" = "먼저 재현";
+"cardBuildRowSkip" = "등록 안 함";
+"cardBuildRowStart" = "지금 시작";
+"cardBuildRowWhy" = "이유";
+"cardBuildRowsHow" = "Build 행은 이 카드를 승인할 때만 작업을 등록합니다. 지금 시작은 등록하고 시작하며, 나중에 하기는 시작하지 않고 등록하고, 등록 안 함은 버립니다.";
+"cardBuildRowsLead" = "\"%1$@\"의 선원은 누구나 쓸 수 있는 글을 읽으므로, 제안하는 모든 작업은 결정을 기다립니다. 각 Build 행에는 담당 선원이 받을 지시가 보입니다.";
+"cardBuildRowsTitle" = "%1$@ 이슈로 작업을 등록할까요?";
 "cardConsentChanges" = "변경";
 "cardConsentChangesDetail" = "이 설정들은 패널 안에서 클릭하거나 키를 누를 때만 바꿔요. 아무것도 삭제하지 않아요.";
 "cardConsentChangesLine" = "클릭할 때 설정을 바꿀 수 있어요: %1$@";
@@ -475,6 +487,7 @@
 "cardRecordFoldNoPlan" = "계획이 없었던 이유";
 "cardRecordGoal" = "목표";
 "cardRecordHoldsUp" = "막고 있는 작업";
+"cardRecordIssue" = "이슈";
 "cardRecordLoading" = "불러오는 중";
 "cardRecordNoPlanWhy" = "일등항해사가 계획 없이 만든 이유";
 "cardRecordNoReason" = "기록된 이유가 없어요.";

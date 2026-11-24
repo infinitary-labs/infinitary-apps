@@ -120,7 +120,12 @@ export class CrewToolHooks {
       onCardRefused: (refusal) => this.core.crewmateCards.recordCardRefusal(task, refusal),
       onCloseCard: (input) =>
         this.core.closeCard(input.cardId, { kind: "crewmate", taskId: task.id }, input.reason),
-      onFollowup: (input) => this.core.reportIntake.fileFollowup(task, input),
+      // A reader's follow-up naming an issue is a Build row the captain files
+      // (docs/agents-reach.md, "A reader's Build rows"); any other is filed now.
+      onFollowup: (input) =>
+        input.issue !== undefined || input.startAs !== undefined
+          ? this.core.buildRows.keep(task.id, input)
+          : this.core.reportIntake.fileFollowup(task, input),
       // Served only where a program can run (docs/programs.md, "Starting a program").
       ...(!reader && this.programs.servedTo(task.id)
         ? { onStartProgram: (input) => this.programs.start(task, input) }

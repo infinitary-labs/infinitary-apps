@@ -154,6 +154,9 @@ export function taskDetailOf(
     ...(view.delivery && pullRequests.length > 0
       ? { delivery: { ...view.delivery, pullRequests } }
       : {}),
+    ...(record.shape?.issue
+      ? { issue: { number: record.shape.issue.number, url: record.shape.issue.url } }
+      : {}),
     ...(origin
       ? {
           filing: {

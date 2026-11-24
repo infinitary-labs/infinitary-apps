@@ -1,6 +1,7 @@
 import { constants as cryptoConstants } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { createServer, type Server } from "node:https";
+import { Server as NetServer, type Socket } from "node:net";
 import type { Duplex } from "node:stream";
 import {
   channelIn,
@@ -284,12 +285,12 @@ type Client = {
 
 type Run = {
   /** The listeners devices dial, while anything is paired. */
-  servers: Server[];
+  servers: NetServer[];
   /** The addresses it was asked to listen on, as asked; empty while nothing is paired. */
   chosen: string;
   addresses: string[];
   /** The local door's own listener and its key, for as long as the run lasts. */
-  readonly local: { readonly server: Server; readonly door: OpenLocalDoor } | null;
+  readonly local: { readonly server: NetServer; readonly door: OpenLocalDoor } | null;
   /** Listens on these addresses for devices, in place of those it listened on. */
   readonly listen: (listed: { key: string; addresses: string[] }) => Promise<void>;
   readonly clients: Set<Client>;
@@ -496,6 +497,8 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         }
       }
     }
+    // A new key to show is a new listening run too (`identityTag`).
+    if (paired) listed = { ...listed, key: `${listed.key}|${devices.identityTag?.() ?? ""}` };
     if (run && run.chosen !== listed.key) {
       // A new set of addresses is a new listening run: devices come back and
       // reload. With the local door, only the devices' listeners change.
@@ -1370,23 +1373,68 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       handshakeTimeout: 10_000,
       headersTimeout: 10_000,
       requestTimeout: 10_000,
+      // Node looks for connections past those limits this often: 30 s unless told.
+      connectionsCheckingInterval: 1_000,
     });
     const bind = async (
       host: string,
       at: number,
       door: { open: OpenLocalDoor | null } | null,
       identity: { key: string; cert: string },
-    ): Promise<{ server: Server; port: number }> => {
-      const server = createServer(tlsWith(identity), (request, response) => {
-        const path = new URL(request.url ?? "/", "https://home").pathname;
-        if (door && path === COMMAND_PATH && options.command) command(request, response, door);
-        else if (!door && path === PAIR_PATH) void pair(request, response);
-        else if (!door && path === FETCH_APP_PATH) void fetchApp(request, response);
-        else if (!door && path === FETCH_SOURCE_PATH) void fetchSource(request, response);
-        else
-          response.writeHead(path === CONNECTION_PATH ? 426 : 404, { Connection: "close" }).end();
-      });
-      server.on("upgrade", (request, socket, head) => void upgrade(request, socket, head, door));
+    ): Promise<{ server: NetServer; port: number }> => {
+      // Connections the front handed on whose handshake has not finished, by
+      // address and port: a TLS socket whose handshake failed no longer
+      // knows its address, so the front, which read it first, says it.
+      const handshaking = new Set<string>();
+      // A reset's old key is shown to an address that asks for it
+      // (`identityFor`, docs/reset.md, "Computers out of reach"): TLS picks
+      // its key before the device says anything that names the key it
+      // expects, so the choice is made on the bare socket, by its address,
+      // and the socket is handed to the TLS listener that shows that key.
+      const choosing = !door && devices.identityFor;
+      const serve = (shown: { key: string; cert: string }) => {
+        const made = createServer(tlsWith(shown), (request, response) => {
+          const path = new URL(request.url ?? "/", "https://home").pathname;
+          if (door && path === COMMAND_PATH && options.command) command(request, response, door);
+          else if (!door && path === PAIR_PATH) void pair(request, response);
+          else if (!door && path === FETCH_APP_PATH) void fetchApp(request, response);
+          else if (!door && path === FETCH_SOURCE_PATH) void fetchSource(request, response);
+          else
+            response.writeHead(path === CONNECTION_PATH ? 426 : 404, { Connection: "close" }).end();
+        });
+        made.on("upgrade", (request, socket, head) => void upgrade(request, socket, head, door));
+        if (!door && (devices.noticed || devices.abandoned))
+          made.on("secureConnection", (socket) => {
+            handshaking.delete(`${socket.remoteAddress}|${socket.remotePort}`);
+            devices.noticed?.(socket, shown.cert);
+          });
+        // Node starts a server's header and request timers only when it
+        // listens, and one behind the front never does.
+        if (choosing) made.emit("listening");
+        return made;
+      };
+      const tls = serve(identity);
+      const shownBy = new Map<string, Server>([[identity.cert, tls]]);
+      const server: NetServer = choosing
+        ? new KeyFront(shownBy, (socket) => {
+            const address = socket.remoteAddress;
+            const other = devices.identityFor?.(address);
+            const shown = other ?? identity;
+            let listener = shownBy.get(shown.cert);
+            if (!listener) {
+              listener = serve(shown);
+              shownBy.set(shown.cert, listener);
+            }
+            if (devices.abandoned) {
+              const at = `${address}|${socket.remotePort}`;
+              handshaking.add(at);
+              socket.once("close", () => {
+                if (handshaking.delete(at)) devices.abandoned?.(address, shown.cert);
+              });
+            }
+            listener.emit("connection", socket);
+          })
+        : tls;
       await new Promise<void>((resolve, reject) => {
         server.once("error", reject);
         server.listen({ host, port: at }, () => {
@@ -1403,7 +1451,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
     let localPart: Run["local"] = null;
     if (local) {
       const held: { open: OpenLocalDoor | null } = { open: null };
-      let server: Server | null = null;
+      let server: NetServer | null = null;
       try {
         // A key of its own, kept only in memory and new each run: its pin
         // is in the door's folder, and the home's key stays unwritten until
@@ -1458,10 +1506,12 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         if (was.length)
           for (const client of clients)
             if (!client.local) cut(client, CONNECTION_CLOSE.closing, "closing");
-        const servers: Server[] = [];
+        const servers: NetServer[] = [];
         const bound: string[] = [];
         let port = options.port ?? CONNECTION_PORT;
         try {
+          // Read again at each listen: the key `identityTag` names may have changed.
+          homeIdentity = null;
           for (const address of want.addresses) {
             const made = await bind(address, port, null, ownIdentity());
             servers.push(made.server);
@@ -1673,4 +1723,23 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       await reconcile();
     },
   };
+}
+
+/**
+ * The listener that picks which key a connection is shown and hands it to the
+ * TLS listener showing that key (`identityFor`); those never listen
+ * themselves, so closing it closes them too.
+ */
+class KeyFront extends NetServer {
+  constructor(
+    private readonly shownBy: ReadonlyMap<string, Server>,
+    handOn: (socket: Socket) => void,
+  ) {
+    super(handOn);
+  }
+
+  override close(callback?: (error?: Error) => void): this {
+    for (const listener of this.shownBy.values()) listener.close();
+    return super.close(callback);
+  }
 }

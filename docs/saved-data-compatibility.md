@@ -83,6 +83,9 @@ The mark is `{ "schemaVersion": 1, "stage", "askedAt", "outside", "asideTries"? 
 A mark that cannot be parsed is a reset asked from its first step with every outside kind, since only a reset writes that name; one that cannot be opened at all is left for a later start.
 A build without the reset ignores the mark and opens the folder.
 
+A reset that could not reach a paired computer also writes `<folder>.reset-removals.json` beside the folder (`docs/reset.md`, "Computers out of reach"), readable by this account alone: `{ "version": 1, "resets" }`, each reset `{ "at", "home", "computers" }` with the old first mate's key and certificate (`resetRemovalsFileSchema`, `src/core/reset/removals.ts`).
+A record that cannot be parsed is deleted, keys and all, and its computers wait for nothing; a build without it never reads the file, and a later build that has it answers for what is left of its 30 days.
+
 A window start also counts itself in `<folder>.start-attempts` beside the folder, a decimal count of earlier starts that never got as far as starting (`docs/reset.md`, "Infinitary could not start"); a file that cannot be read counts as none, and a build without the count ignores it.
 
 ## The one-time move

@@ -73,6 +73,7 @@ import { DevicePairing } from "./pairing";
 import { PhoneDoor } from "./phoneDoor";
 import { PublishedBuilds, standInTapFetch } from "./publishedBuilds";
 import { RemoteLogin } from "./remoteLogin";
+import { ResetFarewells, removeThereOverSsh } from "./resetFarewells";
 import { saveThereFor } from "./saveThere";
 import { systemSsh } from "./ssh";
 import { SshConnections } from "./sshConnections";
@@ -115,6 +116,8 @@ export type HomeDevices = {
   /** Makes a link for a device, wrapped in the command for one when asked (docs/devices.md, "Joining by a command"). */
   inviteDevice: (request: DeviceInviteRequest) => Promise<DeviceInvite>;
   sshConnections: SshConnections;
+  /** The computers a reset could not tell they were removed (docs/reset.md, "Computers out of reach"). */
+  resetFarewells: ResetFarewells;
   /** One reach value, worked out once and handed to every reader. */
   reachOf: (deviceId: string) => ComputerReach;
   remoteLogin: RemoteLogin;
@@ -446,6 +449,14 @@ export async function startHomeDevices(options: {
   // The captain's own SSH, or a development run's stand-in for it, so a test
   // never reaches a real Mac (docs/devices.md, "Adding a computer by its address").
   const ssh = standIns.ssh ? { program: standIns.ssh, args: [] } : systemSsh();
+  // The computers a reset could not tell they were removed (docs/reset.md,
+  // "Computers out of reach"); the shell starts its tries over Remote Login.
+  const resetFarewells = new ResetFarewells({
+    dataDir: paths.userData,
+    said: ({ id, name }, outcome) =>
+      broadcastEvent({ type: "device_reset_removal", deviceId: id, name, outcome }),
+    removeThere: removeThereOverSsh({ ssh, flavor }),
+  });
   // Nothing here starts it: the shell does, once it attached the paired
   // connection.
   const sshConnections: SshConnections = new SshConnections({
@@ -611,6 +622,7 @@ export async function startHomeDevices(options: {
     farBuild,
     inviteDevice,
     sshConnections,
+    resetFarewells,
     reachOf,
     remoteLogin,
     cardAdds,

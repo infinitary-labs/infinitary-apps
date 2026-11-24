@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import type { TLSSocket } from "node:tls";
 import type { BuildIdentity } from "@shared/buildIdentity";
 import type { Spelling } from "@shared/codeNames";
 import type { FetchAppRefusal, PairGrant, PairRefusal } from "@shared/connection";
@@ -63,6 +64,28 @@ export type PairedDevices = {
   subscribe(listener: () => void): () => void;
   /** The home's TLS key and certificate, PEM. Read each time listening starts. */
   identity(): { readonly key: string; readonly cert: string };
+  /**
+   * Names the key `identity` answers now; listening starts again when it
+   * changes. A reset's old key stands in for the home's own while nothing
+   * of its own is paired (docs/reset.md, "Computers out of reach").
+   */
+  identityTag?(): string;
+  /**
+   * Another key to show a connection from this address instead of
+   * `identity`: a reset's old key, to an address whose dial showed a
+   * computer that reset could not tell it was removed. Undefined for `identity`.
+   */
+  identityFor?(
+    address: string | undefined,
+  ): { readonly key: string; readonly cert: string } | undefined;
+  /** A device's handshake finished; `servedCert` is the certificate it was shown. */
+  noticed?(socket: TLSSocket, servedCert: string): void;
+  /**
+   * A handshake from `address` ended before it finished, as a device's does
+   * when it was shown a key it does not expect; `servedCert` is the
+   * certificate it was shown.
+   */
+  abandoned?(address: string | undefined, servedCert: string): void;
   /** The paired device a connection request proves to be, or null to refuse it. */
   admit(request: IncomingMessage): PairedDevice | null | Promise<PairedDevice | null>;
   /** Whether a device admitted earlier is still paired. */

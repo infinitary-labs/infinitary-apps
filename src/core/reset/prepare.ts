@@ -12,6 +12,12 @@ export type ResetPrepareDeps = {
   devices: () => readonly { id: string }[];
   /** Takes one off the list; a connected one hears it was removed. */
   removeDevice: (id: string) => unknown;
+  /**
+   * Keeps a removal-only record of each paired computer no connection
+   * reaches now, but `keep`, beside the folder, so the fresh first mate tells
+   * it it was removed once it is back (docs/reset.md, "Computers out of reach").
+   */
+  keepOutOfReach?: (keep: string | undefined) => unknown;
   /** Signed-in accounts, by id. */
   accounts: () => readonly { id: string }[];
   /** Signs one out with its provider, as Settings' Remove does. */
@@ -70,7 +76,9 @@ export async function prepareReset(
   };
 
   // Devices first, while the connection still runs: a phone or computer
-  // that hears it was removed stops dialing a first mate that is going.
+  // that hears it was removed stops dialing a first mate that is going. The
+  // record of those out of reach is read before any is taken off the list.
+  if (deps.keepOutOfReach) await attempt(() => deps.keepOutOfReach?.(options.keep), RESET_STEP_MS);
   for (const device of deps.devices()) {
     if (device.id === options.keep) continue;
     await attempt(() => deps.removeDevice(device.id), RESET_STEP_MS);

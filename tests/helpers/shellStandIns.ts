@@ -245,6 +245,8 @@ export function ownCore(): OwnCore {
       workDevices: { attach, tellGoodbye: goodbye },
       devices: { followNetwork: follow },
       sshConnections: ssh,
+      // A reset's computers out of reach, which nothing here waits on.
+      resetFarewells: { start: () => () => {}, resume: () => {} },
       settings: { getDictation: () => ({ enabled: true }) },
       quota: { onWindowFocus: vi.fn(), onResumed: vi.fn() },
       personal: { framePanelDir: () => "/own/panels" },

@@ -87530,6 +87530,34 @@
                               "properties": {
                                 "type": {
                                   "type": "string",
+                                  "const": "device_reset_removal"
+                                },
+                                "deviceId": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "outcome": {
+                                  "type": "string",
+                                  "enum": [
+                                    "removed",
+                                    "stayed"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "type",
+                                "deviceId",
+                                "name",
+                                "outcome"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "type": "string",
                                   "const": "device_signed_in"
                                 },
                                 "deviceId": {
@@ -91984,6 +92012,34 @@
               "deviceId",
               "name",
               "kind"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "device_reset_removal"
+              },
+              "deviceId": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "outcome": {
+                "type": "string",
+                "enum": [
+                  "removed",
+                  "stayed"
+                ]
+              }
+            },
+            "required": [
+              "type",
+              "deviceId",
+              "name",
+              "outcome"
             ]
           },
           {

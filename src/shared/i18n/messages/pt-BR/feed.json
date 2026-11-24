@@ -99,6 +99,8 @@
   },
   "feedReported": "Relatou: {summary}",
   "feedReportedBare": "Relatou",
+  "feedResetRemovalRemoved": "{name} estava fora de alcance quando o Infinitary foi redefinido. Ele voltou, e o que o Infinitary configurou lá foi removido.",
+  "feedResetRemovalStayed": "{name} ficou fora de alcance por 30 dias depois que o Infinitary foi redefinido. O que o Infinitary configurou lá continua até você apagar lá.",
   "feedReviewBlocked": "A revisão não pôde terminar",
   "feedReviewFindings": "A revisão encontrou coisas a corrigir",
   "feedReviewPassed": "Passou na revisão",

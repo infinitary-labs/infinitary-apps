@@ -458,6 +458,7 @@
         "!src/core/devices/remoteLoginUpdate.test.ts",
         "!src/core/devices/ubuntuPackage.test.ts",
         "!src/core/devices/sshConnections.test.ts",
+        "!src/core/devices/resetFarewellsRemoteLogin.test.ts",
         "!src/core/helper/connect.test.ts",
         "!src/core/devices/relay.test.ts",
         "!src/core/devices/dnsSd.test.ts",

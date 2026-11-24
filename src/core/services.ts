@@ -645,9 +645,7 @@ export async function createServices(
   // A clean copy `pnpm dev`'s starter started names its commit (docs/alpha.md, "Updates from source").
   const starterDir = host.app.packaged ? undefined : settingFrom(process.env, DEV_STARTER_SETTING);
   const starter = starterDir ? readStarterSession(starterDir.trim()) : null;
-  // The home's devices (docs/devices.md): pairing, the computers that run
-  // work and their load, Remote Login, Macs nearby, the phone's door, the
-  // privacy watch and each computer's own sign-ins.
+  // The home's devices, each named where they are taken apart below (docs/devices.md).
   const homeDevices = await startHomeDevices({
     host,
     paths,
@@ -670,6 +668,7 @@ export async function createServices(
     pairing: devices,
     computerResourceFeed,
     sshConnections,
+    resetFarewells,
     reachOf,
     remoteLogin,
     signIns: deviceSignIns,
@@ -1847,6 +1846,7 @@ export async function createServices(
     privacyWatch: homeDevices.privacyWatch,
     freezeRecorder,
     sshConnections,
+    resetFarewells,
     workDevices,
     computerResources,
     computerResourceFeed,

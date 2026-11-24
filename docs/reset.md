@@ -71,7 +71,7 @@ It refuses, changing nothing, where the system has no confirmation to ask, as on
 
 The window's program runs the reset (`runReset`, `src/main/reset/running.ts`) once the system confirmed the person, each step capped so a remote service never holds it up, and none stops the next:
 
-1. The first mate undoes what its own side set up elsewhere (`prepareReset`, `src/core/reset/prepare.ts`): it removes its paired phones and computers while the connection still runs, so a connected one hears it was removed; discards each open task, so its registered stops and keeps run, and waits for them and for the working copies those closes handed back to the worktree pool; removes each kept job with its own remove; undoes what it set in projects outside its folder ("Your projects"); signs out its accounts; and removes its integrations, revoking a sign-in where the service offers it.
+1. The first mate undoes what its own side set up elsewhere (`prepareReset`, `src/core/reset/prepare.ts`): it keeps a removal record of each paired computer no connection reaches now ("Computers out of reach"), then removes its paired phones and computers while the connection still runs, so a connected one hears it was removed; discards each open task, so its registered stops and keeps run, and waits for them and for the working copies those closes handed back to the worktree pool; removes each kept job with its own remove; undoes what it set in projects outside its folder ("Your projects"); signs out its accounts; and removes its integrations, revoking a sign-in where the service offers it.
 2. It writes the mark beside the folder, naming every outside kind still to clear, before anything that could end this program.
 3. On the person's own folder of a flavor, the program clears what it reaches outside the folder now ("Outside the folder"), and leaves the home this computer runs work for (`leaveWorkHome`, `src/main/reset/workHome.ts`): it stops the work's run, tells that home Leave, as a device's own Leave does, so the home takes this computer off its list instead of keeping it as out of reach, and removes what was set up here for it.
    The work's working copies sit inside the data folder, so the next start deletes them with it, unmerged work included.
@@ -107,12 +107,33 @@ The outside kinds are cleared once, at the start that wipes the folder, and a ki
 A folder renamed aside that cannot be deleted keeps the mark at `moved` for up to three starts, which delete the renamed folders and the older copies again, never the fresh folder, then the mark goes anyway.
 The older copies are the person's own folder's of a flavor alone: an older name's folder (Firstmate 3000's), a folder a move set aside or was still building, the hand-over's throwaway profile and the move's lock files.
 An isolated or chosen folder (`INFINITARY_USER_DATA_DIR`, `--user-data-dir`) is wiped alone, with no older copies and nothing outside it.
+The removal record beside the folder is neither, and stays for the fresh first mate.
 
 ### A folder another program holds
 
 Windows refuses to rename a folder another program holds open.
 The start tries again every two seconds for a minute, never opening the folder meanwhile, then shows one box on a throwaway profile outside it: Infinitary could not finish its reset, with Try again, which starts the app once more, and Quit (`showResetHeld`, `src/main/reset/held.ts`).
 A run with no window says so on its terminal and ends.
+
+## Computers out of reach
+
+A paired computer the reset cannot reach - none of its connections is up, neither its work nor its window - cannot hear it was removed.
+Before removing any device, the first mate writes each such computer to the removal record, `<folder>.reset-removals.json` beside the folder (`src/core/reset/removals.ts`, its one writer), readable by this account alone: its id, its name as Devices showed it, the pin of its key, and the address and checked host key of its Remote Login, if the first mate reached it that way.
+The record keeps the old first mate's key, used only to answer such a computer's dial with a removal.
+Phones and the computer that asked the reset are never written, and a reset that reached every computer writes no record.
+A second reset keeps the first's computers, each reset under its own key and date, up to eight resets; the running first mate adds it to the record it holds, so its next save keeps both.
+
+The fresh first mate (`ResetFarewells`, `src/core/devices/resetFarewells.ts`) never treats such a computer as paired:
+
+- **Its dial**: while the record waits, the connection listens even with nothing paired, and shows the newest reset's old key until the fresh first mate pairs anything, so it makes no key of its own meanwhile.
+  Once it pairs something, it shows its own key; an address whose dial gave up on a key it did not expect is shown the next one - its own, then each waiting reset's from the newest - from its next dial (`identityFor`, `docs/connection.md`), and an address shown an old key whose dial shows no key of its own, such as a computer's join probe, is shown its own key again.
+  A waiting computer's dial shown its old key is refused, which it reads as removed at the second time in a row (`docs/devices.md`, "Remove"); one refused twice in a row that then dials no more for 30 seconds is removed, since one not removed dials again within seconds.
+- **Over Remote Login**: one the old first mate reached that way has the old first mate's removal asked there (`work remove --from-home`, with the old first mate's pin and its id), on the Mac's own SSH and only the host key the person checked, at once, then after 1, 5 and 15 minutes and every 30 after, and at once when this computer wakes.
+  Nothing of the first mate's own SSH key is kept, so this works only where the person's own SSH signs in there.
+
+Each computer removed is said once on the feed and leaves the record; the last takes the record and its keys with it.
+30 days after a reset, its computers still waiting are said once on the feed to have stayed, and go from the record with that reset's key, and the connection stops listening for them: what the old first mate set up there stays until the person removes it there.
+Nothing answers a waiting computer while no first mate runs on this computer.
 
 ## Outside the folder
 

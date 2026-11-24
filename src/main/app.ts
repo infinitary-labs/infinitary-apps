@@ -1512,7 +1512,7 @@ export async function startApp(
           const connection = startConnection({
             dispatch: core.dispatch,
             events: core.events,
-            devices: core.services.devices,
+            devices: core.services.resetFarewells.answering(core.services.devices),
             localDoor: core.paths.localDoorDir,
             // The window beside this run knows by it which run admitted it (docs/view.md, "Joining").
             ...(ownRun ? { localDoorRun: ownRun } : {}),

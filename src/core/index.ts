@@ -1,3 +1,4 @@
+import { customHomeDefinition } from "@shared/customApiFile";
 import { askedFromAView, askingViewHas } from "./askedFromAView";
 import type { CoreServices } from "./coreServices";
 import { ownComputerName } from "./devices/computerName";
@@ -156,6 +157,19 @@ export async function startCore(given: HostCapabilities, options: CoreOptions = 
     services.firstRun.reconcile();
     events.emit("inf:models:changed", { ok: true });
   });
+  // Each computer that runs work follows the connections here it approved its own from
+  // (docs/custom-api.md, "On other computers"); any change to them says the models changed.
+  services.deviceSignIns.followCustomDefinitions(() =>
+    services.vault.customViews().flatMap((view) => {
+      const definition = view.accountId
+        ? customHomeDefinition(view, customApiFile.view())
+        : undefined;
+      return view.accountId && definition ? [{ name: view.accountId, definition }] : [];
+    }),
+  );
+  const stopSendingCustom = events.subscribe((channel) => {
+    if (channel === "inf:models:changed") services.deviceSignIns.sendCustomDefinitions();
+  });
   const dispatch = createCoreDispatcher({
     services,
     host,
@@ -224,6 +238,7 @@ export async function startCore(given: HostCapabilities, options: CoreOptions = 
       // The query process holds a read snapshot while it runs: stop it.
       services.sql.dispose();
       const records = services.recordReader.dispose();
+      stopSendingCustom();
       services.deviceSignIns.dispose();
       services.automaticPlacement.dispose();
       services.loadLine.dispose();

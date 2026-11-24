@@ -150,9 +150,24 @@ const hereClient: CustomApiClient = {
   review: (baseUrl, mode, pem) => window.infinitary.accounts.custom.review(baseUrl, mode, pem),
 };
 
+/** The calls the form makes on a computer that runs work: they ask it there, through the home. */
+export function deviceCustomClient(deviceId: string): CustomApiClient {
+  const custom = window.infinitary.devices.custom;
+  return {
+    profiles: () => custom.profiles(deviceId),
+    address: (baseUrl) => custom.address(deviceId, baseUrl),
+    connect: (input) => custom.connect(deviceId, input),
+    check: (draftId, modelId) => custom.check(deviceId, draftId, modelId),
+    save: (draftId, paused) => custom.save(deviceId, draftId, paused),
+    cancel: (draftId) => custom.cancel(deviceId, draftId),
+    review: (baseUrl, mode, pem) => custom.review(deviceId, baseUrl, mode, pem),
+  };
+}
+
 export function CustomApiForm({
   original,
   fromFile,
+  fromHome,
   firstSetup = false,
   onClose,
   onSaved,
@@ -167,6 +182,12 @@ export function CustomApiForm({
    * size the file leaves out.
    */
   fromFile?: { name: string; definition: CustomFileDefinition };
+  /**
+   * One of the first mate's computer's own connections, used on the computer
+   * `place` names: its account id there and what it says now, locked as a
+   * file's are, while that computer types its own key and secret values.
+   */
+  fromHome?: { name: string; definition: CustomFileDefinition };
   /** First setup asks which model Firstmate answers with once the connection is saved. */
   firstSetup?: boolean;
   onClose: () => void;
@@ -188,7 +209,7 @@ export function CustomApiForm({
   const [profiles, setProfiles] = useState<CustomCapabilityProfile[]>([]);
   const [profileFailure, setProfileFailure] = useState(false);
   const id = useId();
-  const defined = fromFile?.definition;
+  const defined = (fromFile ?? fromHome)?.definition;
   const locked = Boolean(defined);
   const [label, setLabel] = useState(defined?.label ?? original?.label ?? "");
   const [baseUrl, setBase] = useState(defined?.baseUrl ?? original?.baseUrl ?? "");
@@ -477,6 +498,7 @@ export function CustomApiForm({
         }),
       ...(defined?.compaction ? { compaction: defined.compaction } : {}),
       ...(fromFile ? { file: fromFile.name } : {}),
+      ...(fromHome ? { home: fromHome.name } : {}),
       ...(draftId.current ? { sourceDraftId: draftId.current } : {}),
       ...(original?.accountId ? { replaceAccountId: original.accountId } : {}),
     };
@@ -796,18 +818,22 @@ export function CustomApiForm({
   return (
     <section className="fm-custom-api fm-custom-form" data-custom-api-form>
       <h3>
-        {fromFile
-          ? m.accountsCustomApiApproveTitle({ name: label })
-          : original
-            ? m.accountsCustomApiEditTitle({ name: original.label })
-            : place
-              ? m.accountsCustomApiAddTitleOn({ on: place.on })
-              : m.accountsCustomApiAddTitle()}
+        {fromHome
+          ? m.accountsCustomApiUseTitle({ name: label, on: place?.on ?? "" })
+          : fromFile
+            ? m.accountsCustomApiApproveTitle({ name: label })
+            : original
+              ? m.accountsCustomApiEditTitle({ name: original.label })
+              : place
+                ? m.accountsCustomApiAddTitleOn({ on: place.on })
+                : m.accountsCustomApiAddTitle()}
       </h3>
       <p className="fm-custom-hint">{m.accountsCustomApiTrustHint({ who })}</p>
       {locked && (
         <p className="fm-custom-hint" data-custom-from-file>
-          {m.accountsCustomApiFileSets({ who })}
+          {fromHome
+            ? m.accountsCustomApiHomeSets({ home: home.this, who })
+            : m.accountsCustomApiFileSets({ who })}
         </p>
       )}
       {/* Held still while Save runs, so what is checked is what is saved. */}

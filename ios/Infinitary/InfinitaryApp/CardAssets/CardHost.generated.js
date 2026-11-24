@@ -10132,6 +10132,121 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Extra request headers`;
   }
+  function accountsCustomApiHomeChanged(input2) {
+    const home = input2.home;
+    const who = input2.who;
+    switch (currentLanguage()) {
+      case "ar":
+        return `غيّر الاتصال على ${home} عنوانه أو بروتوكوله أو ترويساته، لذا يبقى هذا الاتصال متوقفًا مؤقتًا على ${who} حتى تعتمده من جديد.`;
+      case "de":
+        return `Die Verbindung auf ${home} hat Adresse, Protokoll oder Header geändert. Diese hier ist auf ${who} pausiert, bis du sie erneut freigibst.`;
+      case "es":
+        return `La conexión en ${home} cambió su dirección, protocolo o encabezados, así que esta queda en pausa en ${who} hasta que la apruebes de nuevo.`;
+      case "fr":
+        return `La connexion sur ${home} a changé d’adresse, de protocole ou d’en-têtes : celle-ci reste en pause sur ${who} jusqu’à ce que vous l’approuviez à nouveau.`;
+      case "ja":
+        return `${home} の接続でアドレス、プロトコル、ヘッダーが変わったため、もう一度承認するまで ${who} のこの接続は一時停止しています。`;
+      case "ko":
+        return `${home}의 연결에서 주소, 프로토콜 또는 헤더가 바뀌어서 다시 승인할 때까지 ${who}의 이 연결은 일시 정지돼요.`;
+      case "pt-BR":
+        return `A conexão em ${home} mudou o endereço, o protocolo ou os cabeçalhos, então esta fica pausada em ${who} até você aprová-la de novo.`;
+      case "zh-Hans":
+        return `${home} 上的连接更改了地址、协议或请求头，因此 ${who} 上的此连接会暂停，直到你重新批准。`;
+      case "zh-Hant":
+        return `${home} 上的連線變更了位址、通訊協定或標頭，因此 ${who} 上的這個連線會暫停，直到你重新核准。`;
+      case "en-XA":
+        return `[Ţĥé çöññéçţîöñ öñ ${home} çĥáñĝéð îţš áððŕéšš, þŕöţöçöļ öŕ ĥéáðéŕš, šö ţĥîš öñé îš þáûšéð öñ ${who} ûñţîļ ýöû áþþŕöṽé îţ áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The connection on ‬${home}‮ changed its address, protocol or headers, so this one is paused on ‬${who}‮ until you approve it again.‬`;
+    }
+    return `The connection on ${home} changed its address, protocol or headers, so this one is paused on ${who} until you approve it again.`;
+  }
+  function accountsCustomApiHomeGone(input2) {
+    const home = input2.home;
+    const who = input2.who;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يعد الاتصال على ${home} موجودًا، لذا توقف هذا الاتصال مؤقتًا على ${who}. اقطعه إن لم تعد بحاجة إليه.`;
+      case "de":
+        return `Die Verbindung auf ${home} gibt es nicht mehr, deshalb ist diese hier auf ${who} pausiert. Trenne sie, wenn du sie nicht mehr brauchst.`;
+      case "es":
+        return `La conexión en ${home} ya no existe, así que esta queda en pausa en ${who}. Desconéctala si ya no la necesitas.`;
+      case "fr":
+        return `La connexion sur ${home} n’existe plus : celle-ci est en pause sur ${who}. Déconnectez-la si vous n’en avez plus besoin.`;
+      case "ja":
+        return `${home} の接続がなくなったため、${who} のこの接続は一時停止しています。不要なら接続を解除してください。`;
+      case "ko":
+        return `${home}의 연결이 없어져서 ${who}의 이 연결은 일시 정지됐어요. 필요 없으면 연결을 해제하세요.`;
+      case "pt-BR":
+        return `A conexão em ${home} não existe mais, então esta ficou pausada em ${who}. Desconecte-a se não precisar mais dela.`;
+      case "zh-Hans":
+        return `${home} 上的连接已不存在，因此 ${who} 上的此连接已暂停。如果不再需要，请断开连接。`;
+      case "zh-Hant":
+        return `${home} 上的連線已不存在，因此 ${who} 上的這個連線已暫停。如果不再需要，請中斷連線。`;
+      case "en-XA":
+        return `[Ţĥé çöññéçţîöñ öñ ${home} îš ĝöñé, šö ţĥîš öñé îš þáûšéð öñ ${who}. Ðîšçöññéçţ îţ îƒ ýöû ñö ļöñĝéŕ ñééð îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The connection on ‬${home}‮ is gone, so this one is paused on ‬${who}‮. Disconnect it if you no longer need it.‬`;
+    }
+    return `The connection on ${home} is gone, so this one is paused on ${who}. Disconnect it if you no longer need it.`;
+  }
+  function accountsCustomApiHomeSets(input2) {
+    const home = input2.home;
+    const who = input2.who;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يحدد الاتصال على ${home} اسم هذا الاتصال وعنوانه وبروتوكوله وترويساته ونماذجه. اكتب المفتاح وقيم الترويسات السرية وأي حجم نموذج لا يذكره، لتُحفظ على ${who}، ثم احفظ لفحص كل نموذج.`;
+      case "de":
+        return `Die Verbindung auf ${home} legt Name, Adresse, Protokoll, Header und Modelle dieser Verbindung fest. Gib den Schlüssel, die geheimen Header-Werte und jede Modellgröße, die sie offenlässt, für ${who} ein und speichere, um jedes Modell zu prüfen.`;
+      case "es":
+        return `La conexión en ${home} fija el nombre, la dirección, el protocolo, los encabezados y los modelos de esta conexión. Escribe la clave, los valores secretos de encabezado y cualquier tamaño de modelo que omita, que se guardan en ${who}, y guarda para comprobar cada modelo.`;
+      case "fr":
+        return `La connexion sur ${home} fixe le nom, l’adresse, le protocole, les en-têtes et les modèles de cette connexion. Saisissez la clé, les valeurs d’en-têtes secrètes et toute taille de modèle qu’elle omet, à garder sur ${who}, puis enregistrez pour vérifier chaque modèle.`;
+      case "ja":
+        return `この接続の名前、アドレス、プロトコル、ヘッダー、モデルは ${home} の接続で決まります。${who} に保存するキー、秘密のヘッダー値、決まっていないモデルのサイズを入力し、保存すると各モデルを確認します。`;
+      case "ko":
+        return `이 연결의 이름, 주소, 프로토콜, 헤더, 모델은 ${home}의 연결에서 정해요. ${who}에 보관할 키, 비밀 헤더 값, 정해지지 않은 모델 크기를 입력하고 저장하면 모델마다 확인해요.`;
+      case "pt-BR":
+        return `A conexão em ${home} define o nome, o endereço, o protocolo, os cabeçalhos e os modelos desta conexão. Digite a chave, os valores secretos de cabeçalho e qualquer tamanho de modelo que ela omita, que ficam em ${who}, e salve para verificar cada modelo.`;
+      case "zh-Hans":
+        return `此连接的名称、地址、协议、请求头和模型由 ${home} 上的连接设定。输入要保存在 ${who} 上的密钥、机密请求头的值以及未写明的模型大小，然后保存以检查每个模型。`;
+      case "zh-Hant":
+        return `這個連線的名稱、位址、通訊協定、標頭和模型由 ${home} 上的連線設定。輸入要存放在 ${who} 上的金鑰、機密標頭的值以及未寫明的模型大小，然後儲存以檢查每個模型。`;
+      case "en-XA":
+        return `[Ţĥé çöññéçţîöñ öñ ${home} šéţš ţĥîš çöññéçţîöñ'š ñáɱé, áððŕéšš, þŕöţöçöļ, ĥéáðéŕš áñð ɱöðéļš. Ţýþé ţĥé ķéý, šéçŕéţ ĥéáðéŕ ṽáļûéš áñð áñý ɱöðéļ šîžé îţ ļéáṽéš öûţ ţö ķééþ öñ ${who}, ţĥéñ šáṽé ţö çĥéçķ éáçĥ ɱöðéļ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The connection on ‬${home}‮ sets this connection's name, address, protocol, headers and models. Type the key, secret header values and any model size it leaves out to keep on ‬${who}‮, then save to check each model.‬`;
+    }
+    return `The connection on ${home} sets this connection's name, address, protocol, headers and models. Type the key, secret header values and any model size it leaves out to keep on ${who}, then save to check each model.`;
+  }
+  function accountsCustomApiHomeTag(input2) {
+    const home = input2.home;
+    switch (currentLanguage()) {
+      case "ar":
+        return `من ${home}`;
+      case "de":
+        return `Von ${home}`;
+      case "es":
+        return `De ${home}`;
+      case "fr":
+        return `Depuis ${home}`;
+      case "ja":
+        return `${home} から`;
+      case "ko":
+        return `${home}에서`;
+      case "pt-BR":
+        return `De ${home}`;
+      case "zh-Hans":
+        return `来自 ${home}`;
+      case "zh-Hant":
+        return `來自 ${home}`;
+      case "en-XA":
+        return `[Ƒŕöɱ ${home} ~~]`;
+      case "ar-XB":
+        return `‮From ‬${home}`;
+    }
+    return `From ${home}`;
+  }
   function accountsCustomApiHostSlow(input2) {
     const host = input2.host;
     switch (currentLanguage()) {
@@ -13172,6 +13287,63 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Use ‬${model}`;
     }
     return `Use ${model}`;
+  }
+  function accountsCustomApiUseOn(input2) {
+    const on = input2.on;
+    switch (currentLanguage()) {
+      case "ar":
+        return `استخدام ${on}`;
+      case "de":
+        return `Verwenden ${on}`;
+      case "es":
+        return `Usar ${on}`;
+      case "fr":
+        return `Utiliser ${on}`;
+      case "ja":
+        return `使う（${on}）`;
+      case "ko":
+        return `사용 ${on}`;
+      case "pt-BR":
+        return `Usar ${on}`;
+      case "zh-Hans":
+        return `使用（${on}）`;
+      case "zh-Hant":
+        return `使用（${on}）`;
+      case "en-XA":
+        return `[Ûšé ${on} ~~]`;
+      case "ar-XB":
+        return `‮Use ‬${on}`;
+    }
+    return `Use ${on}`;
+  }
+  function accountsCustomApiUseTitle(input2) {
+    const name = input2.name;
+    const on = input2.on;
+    switch (currentLanguage()) {
+      case "ar":
+        return `استخدام ${name} ${on}`;
+      case "de":
+        return `${name} verwenden ${on}`;
+      case "es":
+        return `Usar ${name} ${on}`;
+      case "fr":
+        return `Utiliser ${name} ${on}`;
+      case "ja":
+        return `${name} を使う（${on}）`;
+      case "ko":
+        return `${name} 사용 ${on}`;
+      case "pt-BR":
+        return `Usar ${name} ${on}`;
+      case "zh-Hans":
+        return `使用 ${name}（${on}）`;
+      case "zh-Hant":
+        return `使用 ${name}（${on}）`;
+      case "en-XA":
+        return `[Ûšé ${name} ${on} ~~]`;
+      case "ar-XB":
+        return `‮Use ‬${name}‮ ‬${on}`;
+    }
+    return `Use ${name} ${on}`;
   }
   function accountsSavedResetBusy(input2) {
     const account = input2.account;
@@ -109416,6 +109588,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     accountsCustomApiHeaders,
     accountsCustomApiHeadersHint,
     accountsCustomApiHeadersTitle,
+    accountsCustomApiHomeChanged,
+    accountsCustomApiHomeGone,
+    accountsCustomApiHomeSets,
+    accountsCustomApiHomeTag,
     accountsCustomApiHostSlow,
     accountsCustomApiHttp,
     accountsCustomApiHttpApproved,
@@ -109525,6 +109701,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     accountsCustomApiUseFix,
     accountsCustomApiUseForFirstMate,
     accountsCustomApiUseModel,
+    accountsCustomApiUseOn,
+    accountsCustomApiUseTitle,
     accountsSavedResetBusy,
     accountsSavedResetCodexStopped,
     accountsSavedResetNoCodex,
@@ -112927,6 +113105,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "accountsCustomApiHeaders": [],
     "accountsCustomApiHeadersHint": [],
     "accountsCustomApiHeadersTitle": [],
+    "accountsCustomApiHomeChanged": ["home", "who"],
+    "accountsCustomApiHomeGone": ["home", "who"],
+    "accountsCustomApiHomeSets": ["home", "who"],
+    "accountsCustomApiHomeTag": ["home"],
     "accountsCustomApiHostSlow": ["host"],
     "accountsCustomApiHttp": ["who"],
     "accountsCustomApiHttpApproved": [],
@@ -113036,6 +113218,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "accountsCustomApiUseFix": ["address"],
     "accountsCustomApiUseForFirstMate": ["model"],
     "accountsCustomApiUseModel": ["model"],
+    "accountsCustomApiUseOn": ["on"],
+    "accountsCustomApiUseTitle": ["name", "on"],
     "accountsSavedResetBusy": ["account"],
     "accountsSavedResetCodexStopped": [],
     "accountsSavedResetNoCodex": ["floor", "site"],
@@ -129708,7 +129892,13 @@ ${startersHtml()}`;
      * The provider's key in the connection file this connection was approved
      * from: its identity there, so the file's later edits reach it.
      */
-    file: string().min(1).max(256).optional()
+    file: string().min(1).max(256).optional(),
+    /**
+     * The first mate's computer's connection this one was approved from on a
+     * computer that runs work (its account id there), so that connection's
+     * later edits reach it. A connection follows the file or the home, never both.
+     */
+    home: string().min(1).max(256).optional()
   });
   const customApiConnectInputSchema = customApiInputSchema.omit({ mode: true });
   const customListedModelSchema = object({
@@ -129752,6 +129942,12 @@ ${startersHtml()}`;
      * address, protocol or headers) and `missing` hold it until approved again.
      */
     file: object({ name: string(), state: _enum(["current", "changed", "missing"]) }).optional(),
+    /**
+     * A connection approved from the first mate's computer's own, on a computer
+     * that runs work: its account id there, and whether what that computer
+     * last sent still says what was approved here, as `file` says.
+     */
+    home: object({ name: string(), state: _enum(["current", "changed", "missing"]) }).optional(),
     certificates: array(customCertificateViewSchema),
     models: array(
       customModelInputSchema.extend({
@@ -129792,6 +129988,65 @@ ${startersHtml()}`;
     answers: array(customApiAnswerSchema).optional(),
     /** `destination`: the person may make an exception for this address. */
     exceptionOffered: boolean().optional()
+  });
+  const customFileWarningSchema = _enum([
+    /** `apiKey`: the key is typed on each computer instead. */
+    "key",
+    "oauth",
+    "auth-header",
+    /** A header value naming an environment variable (`$`) or a command (`!`). */
+    "header-reference",
+    "model-overrides",
+    "sampling",
+    /** A model's own `baseUrl` or `api` that differs from its connection's. */
+    "model-address",
+    "model-headers",
+    /** Another Pi setting Infinitary does not read, such as `promptCache`. */
+    "unused",
+    /** Kept history and the summary's room do not fit the model's window. */
+    "compaction"
+  ]);
+  const customFileRefusalSchema = _enum([
+    /** Its name is a provider Pi has built in, which it would repoint. */
+    "built-in",
+    "address",
+    /** No `api`, or one Infinitary does not speak. */
+    "protocol",
+    /** A setting has the wrong shape, such as a model without an id or one listed twice. */
+    "invalid"
+  ]);
+  const customFileDefinitionSchema = object({
+    label: string().min(1).max(64),
+    baseUrl: string().max(4096),
+    protocol: customProtocolSchema,
+    headers: array(
+      object({ name: string().max(128), secret: boolean(), value: string().optional() })
+    ),
+    compaction: customCompactionSchema.optional(),
+    models: array(customModelInputSchema)
+  });
+  const customFileConnectionSchema = object({
+    /** The provider's key in the file: the connection's identity there. */
+    name: string(),
+    refused: customFileRefusalSchema.optional(),
+    warnings: array(
+      object({
+        kind: customFileWarningSchema,
+        model: string().optional(),
+        /** The file's own key, such as `apiKey` or `promptCache`. */
+        key: string().max(128).optional()
+      })
+    ),
+    definition: customFileDefinitionSchema.optional()
+  });
+  object({
+    path: string().nullable(),
+    failure: _enum(["missing", "unreadable", "invalid"]).optional(),
+    connections: array(customFileConnectionSchema)
+  });
+  const customHomeDefinitionSchema = object({
+    name: string().min(1).max(256),
+    definition: customFileDefinitionSchema
   });
   const forgeSignInStateSchema = _enum(["ok", "needs_reauth", "unavailable", "unknown"]);
   const forgeServerViewSchema = object({
@@ -130334,6 +130589,15 @@ ${startersHtml()}`;
       request: tuple([string().min(1).max(256)])
     },
     /**
+     * What each of the home's connections that this computer approved one of
+     * its own from says now, from the contract change
+     * `custom-connection-from-home`: whole each time, so one left out is gone
+     * from the home. No key or secret header value crosses.
+     */
+    "inf:sign-ins:custom-definitions": {
+      request: tuple([array(customHomeDefinitionSchema).max(32)])
+    },
+    /**
      * Turns one of that computer's own accounts' Keep going on credits switch
      * on or off (docs/quota.md), saved only there, from the contract change
      * `computer-keep-going`. Only the account id and the switch cross; its
@@ -130466,6 +130730,12 @@ ${startersHtml()}`;
      * means it does not, so the chip stays disabled.
      */
     customApi: boolean().optional(),
+    /**
+     * It approves a connection of the home's own and follows its later edits
+     * (the contract change `custom-connection-from-home`). Absent means it
+     * does not, so the home's connections offer no Use on it.
+     */
+    customFromHome: boolean().optional(),
     /**
      * It takes Keep going on credits for its own accounts (the contract change
      * `computer-keep-going`). Absent means it does not, so the item stays dim.

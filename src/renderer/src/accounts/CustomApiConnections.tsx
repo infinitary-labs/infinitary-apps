@@ -4,12 +4,61 @@ import { useShellStore } from "../app/store";
 import { Badge, Button, StatusDot } from "../design";
 import { CUSTOM_EXCEPTION_WORDS } from "./customApiFailures";
 import "./customApi.css";
-import type { CustomApiFileView } from "@shared/customApiFile";
+import {
+  type CustomApiFileView,
+  type CustomFileDefinition,
+  customHomeDefinition,
+} from "@shared/customApiFile";
 import { HERE } from "@shared/deviceNames";
 import * as m from "@shared/i18n/messages.generated";
+import { type DeviceSignIns, signInPlace } from "@shared/signIns";
+import { useFirstMatePlace } from "../devices/useFirstMatePlace";
+import { useDeviceSignIns } from "../settings/useDeviceSignIns";
 import { CustomApiFileRow, FileApproval, FileConnectionRow, FileWarnings } from "./CustomApiFile";
 import { type FirstmateModel, FirstmateRadio } from "./CustomApiFirstmate";
-import { type CustomApiClient, CustomApiDialog, CustomApiForm } from "./CustomApiForm";
+import {
+  type CustomApiClient,
+  CustomApiDialog,
+  CustomApiForm,
+  deviceCustomClient,
+} from "./CustomApiForm";
+
+/**
+ * What each of the first mate's computer's own connections says now, by its
+ * account id there, as a computer that runs work follows it. Read only while
+ * `active`, such as while a computer's group is drawn.
+ */
+export function useHomeCustomDefinitions(active: boolean): Map<string, CustomFileDefinition> {
+  const [definitions, setDefinitions] = useState(new Map<string, CustomFileDefinition>());
+  useEffect(() => {
+    if (!active) return;
+    let live = true;
+    const read = () =>
+      void Promise.all([
+        window.infinitary.accounts.custom.list(),
+        window.infinitary.accounts.custom.file().catch(() => undefined),
+      ])
+        .then(([views, file]) => {
+          if (!live) return;
+          const next = new Map<string, CustomFileDefinition>();
+          for (const view of views) {
+            const definition = customHomeDefinition(view, file);
+            if (view.accountId && definition) next.set(view.accountId, definition);
+          }
+          setDefinitions(next);
+        })
+        .catch(() => {});
+    read();
+    const timer = setInterval(read, 3000);
+    const off = window.infinitary.models.onChanged(read);
+    return () => {
+      live = false;
+      clearInterval(timer);
+      off();
+    };
+  }, [active]);
+  return definitions;
+}
 
 /**
  * One connection saved on a computer that runs work: status, Edit, Pause or
@@ -17,6 +66,7 @@ import { type CustomApiClient, CustomApiDialog, CustomApiForm } from "./CustomAp
  */
 export function RemoteCustomConnection({
   view,
+  homeDefinition,
   client,
   place,
   onDisconnect,
@@ -24,6 +74,8 @@ export function RemoteCustomConnection({
   pauseOff,
 }: {
   view: CustomApiView;
+  /** What the first mate's computer's connection it was approved from says now. */
+  homeDefinition?: CustomFileDefinition;
   client: CustomApiClient;
   place: { who: string; on: string };
   onDisconnect: (accountId: string) => void;
@@ -34,9 +86,12 @@ export function RemoteCustomConnection({
 }) {
   const [editing, setEditing] = useState(false);
   const [armed, setArmed] = useState(false);
+  const home = useFirstMatePlace();
   const accountId = view.accountId ?? "";
   const checked = view.models.length > 0 && view.models.every((model) => model.checked);
-  const ready = view.enabled && checked;
+  // A change at the home to its address, protocol or headers holds it there until approved again.
+  const held = Boolean(view.home && view.home.state !== "current");
+  const ready = view.enabled && checked && !held;
   return (
     <section className="fm-custom-conn" data-custom-account={accountId}>
       <div className="fm-custom-conn-head">
@@ -47,6 +102,11 @@ export function RemoteCustomConnection({
             {m.accountsCustomApiUnencrypted()}
           </span>
         )}
+        {view.home && (
+          <span className="fm-custom-tag" data-custom-home-tag>
+            {m.accountsCustomApiHomeTag({ home: home.this })}
+          </span>
+        )}
         <span
           className="fm-custom-tag"
           data-tone={view.tokenCommandFailed ? "danger" : ready ? "ok" : "idle"}
@@ -55,16 +115,22 @@ export function RemoteCustomConnection({
             ? CUSTOM_TOKEN_FAILURE.status
             : ready
               ? m.accountsCustomApiStatusReady()
-              : view.enabled
+              : view.enabled && !held
                 ? m.accountsCustomApiStatusNotChecked()
                 : checked
                   ? m.accountsCustomApiStatusPaused()
                   : m.accountsCustomApiStatusPausedNotChecked()}
         </span>
         <span className="fm-custom-acts">
-          <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
-            {m.accountsCustomApiEdit()}
-          </Button>
+          {view.home?.state === "changed" && homeDefinition ? (
+            <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
+              {m.accountsCustomApiFileApproveAgain()}
+            </Button>
+          ) : (
+            <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
+              {m.accountsCustomApiEdit()}
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"
@@ -96,21 +162,35 @@ export function RemoteCustomConnection({
           <span className="fm-custom-mono fm-custom-model-id">{model.id}</span>
           <span className="fm-custom-status">
             <StatusDot
-              tone={model.checked && view.enabled ? "ok" : "ring"}
+              tone={model.checked ? (view.enabled && !held ? "ok" : "idle") : "ring"}
               label={
-                model.checked && view.enabled
-                  ? m.accountsCustomApiStatusReady()
+                model.checked
+                  ? view.enabled && !held
+                    ? m.accountsCustomApiStatusReady()
+                    : m.accountsCustomApiStatusChecked()
                   : m.accountsCustomApiStatusNotChecked()
               }
               nativeTitle={false}
             />
-            {model.checked && view.enabled
-              ? m.accountsCustomApiStatusReady()
+            {model.checked
+              ? view.enabled && !held
+                ? m.accountsCustomApiStatusReady()
+                : m.accountsCustomApiStatusChecked()
               : m.accountsCustomApiStatusNotChecked()}
             {model.readsPictures && <Badge tone="accent">{CUSTOM_READS_PICTURES}</Badge>}
           </span>
         </div>
       ))}
+      {view.home?.state === "changed" && (
+        <p className="fm-custom-lock" data-custom-home-held>
+          {m.accountsCustomApiHomeChanged({ home: home.this, who: place.who })}
+        </p>
+      )}
+      {view.home?.state === "missing" && (
+        <p className="fm-custom-lock" data-custom-home-held>
+          {m.accountsCustomApiHomeGone({ home: home.this, who: place.who })}
+        </p>
+      )}
       <p className="fm-custom-lock">{m.accountsCustomApiCrewUseRemote({ who: place.who })}</p>
       {armed && (
         <div className="fm-custom-disconnect">
@@ -132,6 +212,9 @@ export function RemoteCustomConnection({
         >
           <CustomApiForm
             original={view}
+            {...(view.home && homeDefinition
+              ? { fromHome: { name: view.home.name, definition: homeDefinition } }
+              : {})}
             client={client}
             place={place}
             onClose={() => setEditing(false)}
@@ -151,6 +234,13 @@ export function CustomApiAccountsSection() {
   const choosing = useRef(false);
   const [editing, setEditing] = useState<CustomApiView>();
   const [approving, setApproving] = useState<CustomApiView>();
+  // One of these connections being used on a computer that runs work.
+  const [using, setUsing] = useState<{
+    view: CustomApiView;
+    definition: CustomFileDefinition;
+    device: DeviceSignIns;
+  }>();
+  const computers = useDeviceSignIns();
   const [file, setFile] = useState<CustomApiFileView>();
   const [armed, setArmed] = useState<string>();
   const [error, setError] = useState("");
@@ -367,6 +457,35 @@ export function CustomApiAccountsSection() {
               </p>
             )}
             {fromFile && <FileWarnings connection={fromFile} approved />}
+            {(() => {
+              const definition = held ? undefined : customHomeDefinition(view, file);
+              // Each computer in reach that takes it and does not follow it yet.
+              const offered = definition
+                ? computers.filter(
+                    (device) =>
+                      device.customFromHome &&
+                      device.reach === "in-reach" &&
+                      device.signIns &&
+                      !device.signIns.custom?.some(
+                        (there) => there.home?.name === accountId && there.home.state !== "missing",
+                      ),
+                  )
+                : [];
+              return definition && offered.length > 0 ? (
+                <p className="fm-custom-lock fm-custom-acts" data-custom-use-there>
+                  {offered.map((device) => (
+                    <Button
+                      key={device.deviceId}
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setUsing({ view, definition, device })}
+                    >
+                      {m.accountsCustomApiUseOn({ on: signInPlace(device).where })}
+                    </Button>
+                  ))}
+                </p>
+              ) : null;
+            })()}
             {held ? null : !checked ? (
               <p className="fm-custom-lock">{m.accountsCustomApiCheckBeforeUse()}</p>
             ) : !view.enabled ? (
@@ -418,6 +537,27 @@ export function CustomApiAccountsSection() {
               onSaved={refresh}
             />
           ) : null;
+        })()}
+      {using &&
+        (() => {
+          const place = signInPlace(using.device);
+          const close = () => {
+            setUsing(undefined);
+            refresh();
+          };
+          return (
+            <CustomApiDialog
+              label={m.accountsCustomApiUseTitle({ name: using.definition.label, on: place.where })}
+              onClose={close}
+            >
+              <CustomApiForm
+                fromHome={{ name: using.view.accountId ?? "", definition: using.definition }}
+                client={deviceCustomClient(using.device.deviceId)}
+                place={{ who: place.who, on: place.where }}
+                onClose={close}
+              />
+            </CustomApiDialog>
+          );
         })()}
       {editing && (
         <CustomApiDialog

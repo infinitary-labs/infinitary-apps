@@ -17,6 +17,7 @@ The complete connection flow is exposed from **Intelligence → Add account**, f
 The same form adds a connection for a computer that runs work, from that computer's Add account row (`docs/helper.md`, "Its own sign-ins").
 The form is drawn here and that computer reads the address, checks each model and keeps the key; this Mac keeps no copy.
 A connection saved there shows Edit and Disconnect only, and never offers the first mate's own model.
+A connection here can also be used there, keeping its settings in step ("On other computers" below).
 P1's guarded transport remains the only custom request boundary; P2–P4 add its account, model, lifecycle, scoped certificate and Responses integration.
 Built-in providers and the person's `models.json`/auth configuration are not repointed.
 
@@ -323,7 +324,7 @@ A size typed here stands until the file states one.
 The key and secret values stay on this computer; each computer approves for itself.
 A model's check sends a picture only when its `input` names `image`.
 
-The account owner (`CustomApiAccountOwner.applyFile`) compares each good reading with what was approved:
+The account owner (`CustomApiAccountOwner.applyDefinition`) compares each good reading with what was approved:
 
 - A new name, price or compaction applies at once, with no request to the server.
 - New limits, pictures, reasoning, compat or cache retention check that model again with the saved key, and only that model.
@@ -337,6 +338,20 @@ The file never supplies a credential.
 Each of these is listed as not used on the connection: `apiKey`, a header value Pi would fill from an environment variable or a command (a `$NAME` or `${NAME}` anywhere, or a leading `!`; `$$` and `$!` are a plain `$` and `!`), `oauth`, `authHeader`, `modelOverrides`, sampling settings, a model's own `baseUrl`, `api` or `headers`, cost tiers and any key Infinitary does not read.
 A provider named like one of Pi's built-in providers is refused.
 Stated compaction values replace Pi's own (20,000 tokens kept, 16,384 reserved), bounded by the model's window, with kept turns bounded by what the reserve the session gives Pi leaves of it; a model whose window cannot hold them is warned of.
+
+## On other computers
+
+A connection on the first mate's computer, typed or from the connection file, can be used on each computer that runs work and lists the `custom-connection-from-home` change (`docs/contract.md`).
+Its row offers **Use** for each such computer in reach that does not already follow it; an older computer is not offered, and one that is asked anyway is refused with words that ask to update it there.
+Use opens the connection form for that computer with the name, address, protocol, headers and models fixed, as Approve does for the connection file; the person types that computer's key, secret header values and any size left out, and that computer checks each model and keeps the key, sent once in `inf:sign-ins:custom-connect` with the home connection's account id as `home`.
+The first mate's computer keeps no copy.
+
+The connection saved there follows the home's by that account id.
+`DeviceSignIns.sendCustomDefinitions` (`src/core/devices/deviceSignIns.ts`) sends each computer in reach that takes the change the definitions of the home connections it follows, with secret headers by name only and never a key, in `inf:sign-ins:custom-definitions`: after any change to the home's models, whenever that computer's sign-ins change, and again after each contact, since it may have restarted.
+A definition is built from the home connection as saved; for one from the connection file that the file has since changed, the file's new definition, so that computer pauses with it, and a file connection the file no longer defines is left out.
+That computer applies them as it applies a connection file (`AccountVault.applyCustomHome`, `CustomApiAccountOwner.applyDefinition`, above): a new name, price or compaction at once, a changed limit or setting checks that model again with its own key, and a new address, protocol or headers pause it there until it is approved again there with **Approve again**.
+A home connection that is gone pauses it, never deleted, until it is disconnected there.
+Its row there says **From this computer** (the first mate's computer, by name on a window that controls it) and why it is paused.
 
 ## Lifecycle
 

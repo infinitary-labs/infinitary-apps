@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { hasSince16, speaksCustomApi } from "@shared/contractFeatures";
+import type { CustomHomeDefinition } from "@shared/customApiFile";
 import { HERE } from "@shared/deviceNames";
 import { type ComputerReach, type DeviceView, deviceRunsWork, reachFrom } from "@shared/devices";
 import type { FmEvent } from "@shared/events";
@@ -62,6 +63,9 @@ const AUTO_SAVED_RESETS = contractChange("auto-saved-resets");
 /** A computer that renames, pauses and prefers its own accounts and reads its allowance on request. */
 const COMPUTER_ACCOUNT_SETTINGS = contractChange("computer-account-settings");
 
+/** A computer that approves and follows the home's own custom connections (`custom-connection-from-home.md`). */
+const CUSTOM_FROM_HOME = contractChange("custom-connection-from-home");
+
 /** A computer that signs in to GitLab and GitHub Enterprise from here (`computer-forge-servers.md`). */
 const COMPUTER_FORGE_SERVERS = contractChange("computer-forge-servers");
 
@@ -123,6 +127,12 @@ export class DeviceSignIns {
     (step: Extract<SignInStep, { kind: "ended" }>) => void
   >();
   private readonly reading = new Map<string, Promise<boolean>>();
+  /** What this computer's own custom connections say now (`followCustomDefinitions`). */
+  private customDefinitions: (() => CustomHomeDefinition[]) | undefined;
+  /** What each computer was last sent of them, until its next contact. */
+  private readonly customSent = new Map<string, string>();
+  /** Each computer with a send in flight, which sends again once it ends. */
+  private readonly customSending = new Set<string>();
   private readonly now: () => number;
   private readonly unsubscribe: () => void;
 
@@ -145,6 +155,7 @@ export class DeviceSignIns {
         ...(this.options.updatingOf?.(device.id) ? { updating: true as const } : {}),
         ...this.setupStatus.get(device.id),
         customApi: speaksCustomApi(this.options.work.version(device.id)?.contract ?? ""),
+        ...(this.takesCustomFromHome(device.id) ? { customFromHome: true } : {}),
         keepGoing: this.takesKeepGoing(device.id),
         ...(this.takesSavedReset(device.id) ? { savedReset: true } : {}),
         ...(this.takesAutoSavedResets(device.id) ? { autoSavedResets: true } : {}),
@@ -410,6 +421,15 @@ export class DeviceSignIns {
       !hasSince16(version?.contract, version?.changes, "custom-token-command")
     )
       throw new Error(`Update Infinitary on ${who} before saving a token command.`);
+    // An older computer would drop the link and save a connection that never follows this one.
+    if (
+      channel === "inf:sign-ins:custom-connect" &&
+      args[0] &&
+      typeof args[0] === "object" &&
+      "home" in args[0] &&
+      !this.takesCustomFromHome(deviceId)
+    )
+      throw new Error(`Update Infinitary on ${who} to use this connection there.`);
     if (!this.options.work.inReach(deviceId))
       throw new Error(`${who} is out of reach, so nothing was sent.`);
     let answer: unknown;
@@ -638,6 +658,58 @@ export class DeviceSignIns {
     return listsChange(this.options.work.version(deviceId)?.changes, USE_SAVED_RESET);
   }
 
+  /** Whether that computer takes `inf:sign-ins:custom-definitions` (`custom-connection-from-home.md`). */
+  takesCustomFromHome(deviceId: string): boolean {
+    return listsChange(this.options.work.version(deviceId)?.changes, CUSTOM_FROM_HOME);
+  }
+
+  /**
+   * Reads what this computer's own custom connections say now, each by its
+   * account id (`customHomeDefinition`), and sends each computer its share.
+   */
+  followCustomDefinitions(read: () => CustomHomeDefinition[]): void {
+    this.customDefinitions = read;
+    this.sendCustomDefinitions();
+  }
+
+  /**
+   * Sends each computer in reach what each of this computer's connections it
+   * approved one of its own from says now, whole, when that differs from what
+   * it last heard. One this computer no longer has is left out, which holds
+   * it there as gone. One send per computer is in flight at a time, so an
+   * older reading never lands after a newer one; a refused send waits for
+   * the next change or contact rather than asking again at once.
+   */
+  sendCustomDefinitions(): void {
+    const read = this.customDefinitions;
+    if (!read) return;
+    let ours: CustomHomeDefinition[] | undefined;
+    for (const device of this.computers()) {
+      const deviceId = device.id;
+      if (this.customSending.has(deviceId)) continue;
+      if (!this.takesCustomFromHome(deviceId) || !this.options.work.inReach(deviceId)) continue;
+      const followed = new Set(
+        (this.said.get(deviceId)?.signIns?.custom ?? []).flatMap((view) =>
+          view.home ? [view.home.name] : [],
+        ),
+      );
+      if (followed.size === 0) continue;
+      ours ??= read();
+      const share = ours.filter((entry) => followed.has(entry.name));
+      const key = JSON.stringify(share);
+      if (this.customSent.get(deviceId) === key) continue;
+      this.customSent.set(deviceId, key);
+      this.customSending.add(deviceId);
+      void this.options.work
+        .ask(deviceId, "inf:sign-ins:custom-definitions", [share])
+        .catch(() => undefined)
+        .finally(() => {
+          this.customSending.delete(deviceId);
+          this.sendCustomDefinitions();
+        });
+    }
+  }
+
   /** Whether that computer takes `inf:sign-ins:keep-going` (`computer-keep-going.md`). */
   takesKeepGoing(deviceId: string): boolean {
     return listsChange(this.options.work.version(deviceId)?.changes, COMPUTER_KEEP_GOING);
@@ -855,6 +927,8 @@ export class DeviceSignIns {
   }
 
   private contact(contact: WorkDeviceContact): void {
+    // A computer that restarted holds nothing the home sent before; it is sent again once its sign-ins are read.
+    this.customSent.delete(contact.deviceId);
     // Quick redial can keep the computer in reach without running its dropped
     // cleanup. End the old view here and cancel its work through the new link.
     for (const [signInId, running] of [...this.running]) {

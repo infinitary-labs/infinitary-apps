@@ -93,6 +93,19 @@ export async function fillCustomApi(page: Page, entry: CustomApiEntry): Promise<
   }
 }
 
+/** Adds one visible extra request header at the end of the form's list. */
+export async function addCustomHeader(page: Page, name: string, value: string): Promise<void> {
+  const f = customApiForm(page);
+  const add = f.form.getByRole("button", { name: "Add header" });
+  if (!(await add.isVisible()))
+    await f.form.getByText("Extra request headers", { exact: true }).click();
+  await add.click();
+  const row = f.form.locator("[data-custom-header]").last();
+  await row.getByLabel("Header name").fill(name);
+  await row.getByLabel("Header value").fill(value);
+  if (await row.getByLabel("Secret").isChecked()) await row.getByLabel("Secret").uncheck();
+}
+
 /**
  * Presses Save and waits for what it came to: `saved` when the dialog closed
  * or first setup asks which model Firstmate uses, `failed` when the form
@@ -116,6 +129,9 @@ export function customApiBlock(page: Page, accountId: string) {
   return {
     block,
     edit: block.getByRole("button", { name: "Edit", exact: true }),
+    approveAgain: block.getByRole("button", { name: "Approve again", exact: true }),
+    /** Use on a computer that runs work, by where its words put it ("as Builder"). */
+    offerOn: (where: string) => block.getByRole("button", { name: `Use ${where}`, exact: true }),
     resume: block.getByRole("button", { name: "Resume", exact: true }),
     unencrypted: block.getByText("Unencrypted", { exact: true }),
     exception: block.getByText(CUSTOM_EXCEPTION_WORDS.tag, { exact: true }),

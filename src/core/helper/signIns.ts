@@ -120,6 +120,11 @@ export class SignInHost {
     };
   }
 
+  /** Tells the home its sign-ins again once the model checks a home edit started end. */
+  private settled(checks: Promise<void>[]): void {
+    if (checks.length) void Promise.allSettled(checks).then(() => this.report());
+  }
+
   /** A welcome can follow a quick redial without dropped ever running. */
   reached(): void {
     this.dropped();
@@ -249,6 +254,8 @@ export class SignInHost {
       case "inf:sign-ins:custom-save": {
         const [draftId, paused] = request as SignInOrderRequest<"inf:sign-ins:custom-save">;
         const record = await this.options.accounts.vault.customSave(draftId, paused);
+        // A connection approved from the home's starts following what the home last sent at once.
+        this.settled(this.options.accounts.vault.reapplyCustomHome());
         const view = this.options.accounts.vault
           .customViews()
           .find((entry) => entry.accountId === record.id);
@@ -261,6 +268,12 @@ export class SignInHost {
         const view = await this.options.accounts.vault.customRecheck(accountId);
         void this.report();
         return view;
+      }
+      case "inf:sign-ins:custom-definitions": {
+        const [definitions] = request as SignInOrderRequest<"inf:sign-ins:custom-definitions">;
+        this.settled(this.options.accounts.vault.applyCustomHome(definitions));
+        void this.report();
+        return { ok: true };
       }
       case "inf:sign-ins:keep-going": {
         const [keep] = request as SignInOrderRequest<"inf:sign-ins:keep-going">;

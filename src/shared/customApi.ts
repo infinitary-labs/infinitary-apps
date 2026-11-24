@@ -224,6 +224,12 @@ export const customApiInputSchema = z.object({
    * from: its identity there, so the file's later edits reach it.
    */
   file: z.string().min(1).max(256).optional(),
+  /**
+   * The first mate's computer's connection this one was approved from on a
+   * computer that runs work (its account id there), so that connection's
+   * later edits reach it. A connection follows the file or the home, never both.
+   */
+  home: z.string().min(1).max(256).optional(),
 });
 export type CustomApiInput = z.infer<typeof customApiInputSchema>;
 /**
@@ -307,6 +313,12 @@ export const customApiViewSchema = z.object({
    * address, protocol or headers) and `missing` hold it until approved again.
    */
   file: z.object({ name: z.string(), state: z.enum(["current", "changed", "missing"]) }).optional(),
+  /**
+   * A connection approved from the first mate's computer's own, on a computer
+   * that runs work: its account id there, and whether what that computer
+   * last sent still says what was approved here, as `file` says.
+   */
+  home: z.object({ name: z.string(), state: z.enum(["current", "changed", "missing"]) }).optional(),
   certificates: z.array(customCertificateViewSchema),
   models: z.array(
     customModelInputSchema.extend({

@@ -1,5 +1,5 @@
 import { createHmac, randomBytes } from "node:crypto";
-import type { Card, CardMessage } from "@shared/cards";
+import type { Card, CardAnswer, CardMessage } from "@shared/cards";
 import * as m from "@shared/i18n/messages.generated";
 import { fenced, fencedAnswer, fencedListReminder } from "@shared/outsideData";
 import type { ReportDeclaration } from "../tasks/taskTurns";
@@ -37,8 +37,9 @@ export function readerDataLine(words: string, at: number): string {
  * a secret this process draws once. The same words then read the same, so
  * a context that sends only what changed leaves them out, and a read can
  * tell a card's body from the same body under its resolution; changed
- * words draw a new fence. Nobody who wrote them is served a read of them,
- * and the secret never leaves the process.
+ * words draw a new fence. A fence depends on the words it closes, so
+ * words cannot carry their own closing mark, and knowing one fence helps
+ * forge no other; the secret never leaves the process.
  */
 const SAVED_WORDS_SECRET = randomBytes(32);
 /** When this process started serving saved words: their marks' read time. */
@@ -80,6 +81,29 @@ export function servedTaskTitle(
   if (!origins.some((origin) => origin.shape?.unsafe_data_reader === true)) return task.title;
   const key = `task:${task.id}`;
   return form === "answer" ? readerSavedAnswer(key, task.title) : readerSavedLine(key, task.title);
+}
+
+/**
+ * The captain's answers to a card's questions with only its author's words
+ * passed through `mark`: each option label and the value it labels. What
+ * the captain wrote in, typed into a field or staged as settings has no
+ * label and stays as written, so their own words are never served as data
+ * (`cardAnswerLines` prints the result). `mark` must give the same words
+ * the same marks, so a label equal to its value still reads once.
+ */
+export function answersWithAuthorWordsMarked(
+  answers: readonly CardAnswer[],
+  mark: (words: string) => string,
+): CardAnswer[] {
+  return answers.map((answer) => {
+    if (answer.json || !answer.labels) return answer;
+    const labels = answer.labels;
+    return {
+      ...answer,
+      values: answer.values.map((value, index) => (labels[index] ? mark(value) : value)),
+      labels: labels.map((label) => (label ? mark(label) : label)),
+    };
+  });
 }
 
 /**

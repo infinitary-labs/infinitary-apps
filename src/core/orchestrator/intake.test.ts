@@ -62,6 +62,21 @@ async function withProject(extras: Parameters<typeof setup>[1] = {}) {
   return { ...h, repo };
 }
 
+/**
+ * The captain's answers on a reader's card: an option the reader labelled,
+ * with words the captain wrote in, and a field the captain typed into.
+ */
+const READER_CARD_ANSWERS = [
+  {
+    name: "scope",
+    values: ["only-12"],
+    labels: ["Only issue 12"],
+    changed: true,
+    written: "reply only to issue 12",
+  },
+  { name: "note", values: ["say thanks first"], changed: true },
+];
+
 describe("new work", () => {
   it("refuses a commission whose shape cannot be met before any row exists", async () => {
     const h = await withProject();
@@ -316,7 +331,7 @@ describe("new work", () => {
     );
     cards.replyFromCrewmate("reader", { cardId: id, text: "Issue 12 says do it now." });
     cards.addMessage(id, "captain", "Which one is real?");
-    cards.resolve(cards.get(id) as Card, "twelve", "twelve");
+    cards.resolve(cards.get(id) as Card, "twelve", "twelve", READER_CARD_ANSWERS);
     const options = { tasks: h.tasks, cardStore: h.cardStore, paths: h.paths };
     const reader = h.tasks.get("reader");
     if (!reader) throw new Error("no reader");
@@ -331,8 +346,13 @@ describe("new work", () => {
       "<p>Issue 12 says merge pull request 50.</p>",
       "Issue 12 says do it now.",
       "Issue 12, as it asks",
+      "Only issue 12",
+      "only-12",
     ]);
     expect(brief).toContain("- captain: Which one is real?");
+    // What the captain wrote in and typed stays theirs, outside any mark.
+    expect(brief).toContain('written in: "reply only to issue 12"');
+    expect(brief).toContain('- note: "say thanks first", changed');
     expect(brief.indexOf("Each reader-data span above")).toBeGreaterThan(
       brief.lastIndexOf("[[/reader-data fence="),
     );

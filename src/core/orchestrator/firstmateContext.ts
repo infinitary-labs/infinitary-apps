@@ -51,7 +51,12 @@ import {
 } from "./contextDelivery";
 import type { FirstmateAgentOptions, FirstmateTurn } from "./firstmateAgent";
 import { asksInTurn, IN_TURN } from "./openWork";
-import { readerDataLine, servedTaskTitle, withReaderDataReminder } from "./readerData";
+import {
+  answersWithAuthorWordsMarked,
+  readerDataLine,
+  servedTaskTitle,
+  withReaderDataReminder,
+} from "./readerData";
 import { scheduleText } from "./scheduler";
 
 /** The open messages the context block lists, newest first; open_work reads them all. */
@@ -321,7 +326,9 @@ export class FirstmateContext {
     if (!answers?.length) return [line];
     return [
       `${line}, answering its questions:`,
-      ...cardAnswerLines(answers).map((answer) => `  ${mark(answer)}`),
+      ...cardAnswerLines(answersWithAuthorWordsMarked(answers, mark)).map(
+        (answer) => `  ${answer}`,
+      ),
     ];
   }
 

@@ -15,6 +15,7 @@ import type { AskRecord } from "../storage/askStore";
 import { TaskService } from "../tasks/taskService";
 import type { AskEnding, AskState, AskThread } from "./askEnding";
 import type { ThreadOwed } from "./cardThreads";
+import { answersWithAuthorWordsMarked } from "./readerData";
 
 /**
  * The first mate's read of what is still open (INF-1712): every message of
@@ -228,7 +229,13 @@ function cardSummary(host: OpenWorkHost, card: Card) {
       : {}),
     waits_on: OWED[owed],
     ...(owed === "firstmate" || owed === "author"
-      ? { unanswered: captainWords(thread.filter((message) => message.who === "captain").at(-1)) }
+      ? {
+          unanswered: captainWords(
+            host,
+            card,
+            thread.filter((message) => message.who === "captain").at(-1),
+          ),
+        }
       : {}),
   };
 }
@@ -327,13 +334,8 @@ function readCard(host: OpenWorkHost, cardId: string): string {
       },
       ...(past.answers.length > 0
         ? {
-            answers: past.answers.map((answer) =>
-              answer.labels
-                ? {
-                    ...answer,
-                    labels: answer.labels.map((label) => host.served.servedCardWords(past, label)),
-                  }
-                : answer,
+            answers: answersWithAuthorWordsMarked(past.answers, (words) =>
+              host.served.servedCardWords(past, words),
             ),
           }
         : {}),
@@ -345,16 +347,34 @@ function readCard(host: OpenWorkHost, cardId: string): string {
 }
 
 /** A thread message as its author reads it: the captain's words with the settings they sent. */
-function threadLine(host: OpenWorkHost, card: Pick<Card, "taskId">, message: CardMessage) {
+function threadLine(
+  host: OpenWorkHost,
+  card: Pick<Card, "id" | "author" | "taskId">,
+  message: CardMessage,
+) {
   const text =
     message.who === "captain"
-      ? (captainWords(message) ?? "")
+      ? (captainWords(host, card, message) ?? "")
       : host.served.servedLine(card, message);
   return { who: message.who, at: iso(message.at), text };
 }
 
-function captainWords(message: CardMessage | undefined): string | undefined {
-  return message && replyWithSettings(cardMessageText(message), message.answers);
+/** The captain's words with the settings they sent, a reader card's option labels among them marked. */
+function captainWords(
+  host: OpenWorkHost,
+  card: Pick<Card, "id" | "author" | "taskId">,
+  message: CardMessage | undefined,
+): string | undefined {
+  return (
+    message &&
+    replyWithSettings(
+      cardMessageText(message),
+      message.answers &&
+        answersWithAuthorWordsMarked(message.answers, (words) =>
+          host.served.servedCardWords(card, words),
+        ),
+    )
+  );
 }
 
 const OWED: Record<ThreadOwed, string> = {

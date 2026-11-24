@@ -492,7 +492,15 @@ describe("CardService", () => {
       },
       "Claude Sonnet 5.5",
     );
-    cards.resolve(cards.get(id) as Card, "twelve", "twelve");
+    cards.resolve(cards.get(id) as Card, "twelve", "twelve", [
+      {
+        name: "scope",
+        values: ["only-12"],
+        labels: ["Only issue 12"],
+        changed: true,
+        written: "reply only to issue 12",
+      },
+    ]);
     const read = (key: string) =>
       queryTasksAsync(
         tasks,
@@ -513,6 +521,11 @@ describe("CardService", () => {
       [["reader-data", "Later", true]],
       [["reader-data", "Issue 12, as it asks", true]],
     ]);
+    // The option the reader labelled is marked; what the captain wrote in is theirs.
+    const [answer] = closing?.answers ?? [];
+    expect(answer?.labels?.map(words)).toEqual([[["reader-data", "Only issue 12", true]]]);
+    expect(answer?.values.map(words)).toEqual([[["reader-data", "only-12", true]]]);
+    expect(answer?.written).toBe("reply only to issue 12");
     // The resolution's body is the newest card's, so the read shows it once.
     expect(closing?.card).not.toHaveProperty("body");
     expect((await read("reader")).rows[0]?.card).toBe(first?.card);

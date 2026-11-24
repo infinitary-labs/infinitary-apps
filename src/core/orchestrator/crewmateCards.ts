@@ -217,9 +217,11 @@ export class CrewmateCards {
     if (target.kind === "new" || target.kind === "own") {
       if (input.expectedRevision !== undefined) {
         const own = target.kind === "own" ? this.host.cards.cardRead(target.id) : undefined;
+        // The card's own title as it wrote it: `cardRead` marks a reader's as data.
+        const title = own && (this.host.cards.get(own.id) ?? this.host.cards.stored(own.id))?.title;
         if (own && own.revision !== input.expectedRevision)
           throw new Error(
-            `Nothing changed on card "${own.title}" (${own.id}): you read revision ${input.expectedRevision}, and it is at ${own.revision ?? "none"} now. Read it again before revising it.`,
+            `Nothing changed on card "${title ?? ""}" (${own.id}): you read revision ${input.expectedRevision}, and it is at ${own.revision ?? "none"} now. Read it again before revising it.`,
           );
       }
       return this.readerChecked(task, input, this.addCrewmateCard(task, input));

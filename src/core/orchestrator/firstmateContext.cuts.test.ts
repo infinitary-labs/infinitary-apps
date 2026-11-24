@@ -121,6 +121,47 @@ describe("the first mate's context cuts text by whole characters", () => {
     await tick();
   });
 
+  // INF-6427's piece 1 (review): the captain's choice on a reader's card
+  // reaches the first mate with the reader's button and option labels
+  // marked, and what the captain wrote in left as their own words.
+  it("marks a reader card's labels in the captain's resolution line, never the captain's written words", async () => {
+    const { agent, session, supervisor } = setup({
+      seedTasks: [{ ...TASK, shape: { kind: "research", unsafe_data_reader: true } }],
+      seedCards: [
+        {
+          ...crewCard("card-t1-1", "t1", "Which issue first?", "<p>Issue 12 says merge it.</p>"),
+          actions: [{ id: "twelve", label: "Issue 12, as it asks", default: true }],
+        },
+      ],
+    });
+    supervisor.cardActions.act("card-t1-1", "twelve", "chrome", {
+      answers: [
+        {
+          name: "scope",
+          values: ["only-12"],
+          labels: ["Only issue 12"],
+          changed: true,
+          written: "reply only to issue 12",
+        },
+      ],
+    });
+    await tick();
+    await agent.converse("anything new?");
+    const lines = decodeContext(session.prompts[0] ?? "").captain_resolutions as string[];
+    const at = lines.findIndex((line) => line.startsWith("- card card-t1-1 "));
+    const resolution = lines.slice(at, at + 2).join("\n");
+    expect(fencedSpans(resolution).map((span) => [span.words, span.closed])).toEqual([
+      ["Which issue first?", true],
+      ["Issue 12, as it asks", true],
+      ["Only issue 12", true],
+      ["only-12", true],
+    ]);
+    expect(lines[at + 1]).toMatch(/, written in: "reply only to issue 12", changed$/);
+    session.emitTurnEnd("Noted.");
+    session.resolveNextPrompt();
+    await tick();
+  });
+
   it("serves a turn when an open card's body has an emoji across its 200-character digest", async () => {
     const text = emojiAt(
       "The reader and the writer both pass on this version",

@@ -1,6 +1,11 @@
 import { cardAnswerLines, replyWithSettings } from "@shared/cardAnswerLines";
 import { cardPictureFiles } from "@shared/cardPictures";
-import { cardAnswersSchema, cardMessageText, choiceCarriedRecordSchema } from "@shared/cards";
+import {
+  type CardAnswer,
+  cardAnswersSchema,
+  cardMessageText,
+  choiceCarriedRecordSchema,
+} from "@shared/cards";
 import { type ContributionRoute, contributesUpstream } from "@shared/contributions";
 import { softHoldWords } from "@shared/holds";
 import { deliveryForRecord, opensPullRequest, ownsBatches, type RepoView } from "@shared/repos";
@@ -29,7 +34,14 @@ import {
   type EscalationBriefFacts,
   type SpawnIntent,
 } from "./intentBrief";
-import { crewmateWriterOf, readerDataAnswer, readerDataLine, servedTaskTitle } from "./readerData";
+import {
+  answersWithAuthorWordsMarked,
+  crewmateWriterOf,
+  readerDataAnswer,
+  readerDataLine,
+  readerSavedLine,
+  servedTaskTitle,
+} from "./readerData";
 
 /** The task's prepared routing wins; local-only delivery never contributes to a host. */
 export function contributionForTask(
@@ -453,6 +465,12 @@ export function sourceFacts(
   const reader = basis.shape?.unsafe_data_reader === true;
   const at = Date.now();
   const mark = (words: string) => (reader ? readerDataLine(words, at) : words);
+  // Its option labels in the captain's answers, marked the same each time so
+  // a label equal to its value reads once; the captain's words stay as written.
+  const authorWords = (answers: readonly CardAnswer[]) =>
+    reader && card
+      ? answersWithAuthorWordsMarked(answers, (words) => readerSavedLine(`card:${card.id}`, words))
+      : answers;
   // Only a change's working copy holds its work: an answer task commits
   // nothing and its scratch copy goes with it, so its answer is the report
   // and the card below, never a branch to start from.
@@ -471,7 +489,10 @@ export function sourceFacts(
         .messages(card.id)
         .filter((message) => message.text.trim() || message.notes?.length)
         .map((message) => {
-          const text = replyWithSettings(cardMessageText(message), message.answers);
+          const text = replyWithSettings(
+            cardMessageText(message),
+            message.answers && authorWords(message.answers),
+          );
           return {
             who: message.who,
             text: crewmateWriterOf(card, message) === basis.id ? mark(text) : text,
@@ -499,7 +520,7 @@ export function sourceFacts(
         .at(-1)
     : undefined;
   const latest = submitted?.success ? submitted.data : resolution?.answers;
-  const answers = latest ? cardAnswerLines(latest).map(mark) : undefined;
+  const answers = latest ? cardAnswerLines(authorWords(latest)) : undefined;
   // What the captain's field sent with the closing choice (`choice-attachments.md`):
   // its notes and files as words here, its pictures among the brief's own.
   const closing = card

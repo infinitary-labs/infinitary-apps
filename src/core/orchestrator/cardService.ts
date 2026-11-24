@@ -56,6 +56,7 @@ import {
 import { ENDED_STAYS, EndedCards } from "./endedCards";
 import { HostCardStack } from "./hostCardStack";
 import { PutOffs } from "./putOffs";
+import { answersWithAuthorWordsMarked } from "./readerData";
 import type { WakeCard } from "./reportWakes";
 import { requiredActionCard, requiredActionProvenance } from "./requiredActionCard";
 import { asksAbout, openReviewQuestions, reviewedTaskOf } from "./reviewCard";
@@ -1839,8 +1840,10 @@ export class CardService {
   /**
    * A task's newest captain resolution as the by-key read serves it
    * (`newestResolutionForTask`): a reader's card and closing offer with
-   * their title, body and labels marked as data, the same marks as the
-   * newest body, so a body the two share is still shown once.
+   * their title, body, button labels and the option labels in the
+   * captain's answers marked as data, the captain's own written words left
+   * as written, with the same marks as the newest body, so a body the two
+   * share is still shown once.
    */
   servedResolutionForTask(taskId: string): CardResolution | undefined {
     const resolved = this.newestResolutionForTask(taskId);
@@ -1851,6 +1854,9 @@ export class CardService {
       list.map((action) => ({ ...action, label: words(action.label) }));
     return {
       ...resolved,
+      ...(resolved.answers
+        ? { answers: answersWithAuthorWordsMarked(resolved.answers, words) }
+        : {}),
       card: {
         ...card,
         title: words(card.title),

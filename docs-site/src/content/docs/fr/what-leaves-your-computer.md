@@ -1,5 +1,5 @@
 ---
-source: 2c218b4b5c786426
+source: c482d3d1c4076adf
 title: Ce qui quitte votre ordinateur
 description: Ce qu’envoie Infinitary, où cela va, et le seul interrupteur qui nous envoie quoi que ce soit.
 ---
@@ -47,6 +47,7 @@ Si votre fichier de réglages Claude Code ou votre shell configure des rapports 
 Le travail de Claude part sous la forme des relevés que Claude Code lui-même y enverrait.
 Le travail de tout autre modèle part sous les mêmes noms, avec son modèle, son fournisseur, ses tokens, son coût estimé, le fait que votre second ou un membre d’équipage l’a fait, le type de travail et l’adresse e-mail de votre connexion Claude Code, jamais vos mots, les titres des tâches ni les noms des projets.
 Réglages → **Utilisation** indique où il va.
+Une configuration qui envoie son utilisation par gRPC ne reçoit que le travail de Claude, et Réglages → **Utilisation** le précise alors.
 Une configuration que l’administrateur de votre entreprise gère pour tout l’ordinateur atteint Claude Code directement, comme avant, et Infinitary y envoie aussi le travail de tout autre modèle, de la même façon.
 
 ## Les recherches de mises à jour {#update-checks}

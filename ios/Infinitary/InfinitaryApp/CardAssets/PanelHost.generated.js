@@ -130871,7 +130871,7 @@ ${FRAME_KEYBOARD_SCRIPT}
       toRequest: () => [],
       invalidate: { pollMs: 6e4 },
       // i18n-exempt: served only to the first mate, as the read's description (src/core/pi/appReads.ts).
-      description: "The host a company's Claude Code reporting setup has Claude work sent to, or null."
+      description: "The host the usage report sends every model's work to, from a company's Claude Code reporting setup; claudeOnly when only Claude's own records go there, such as a setup over gRPC; null when usage goes nowhere."
     }),
     "usage.tasks": entry({
       channel: "inf:usage:tasks",

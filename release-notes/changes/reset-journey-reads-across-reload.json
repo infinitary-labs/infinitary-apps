@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "reset-journey-reads-across-reload",
+      "reason": "The journey for a computer that was closed during a reset reads that computer again when its window reloads on becoming its own first mate, instead of failing on the read the reload replaced; the app itself is unchanged."
+    }
+  ]
+}

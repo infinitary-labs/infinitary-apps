@@ -24,6 +24,8 @@ import { settingRow } from "./settings";
 
 const HOME = "Mac mini";
 const STUDIO = "Studio";
+/** Playwright's words for a read whose page was replaced before it answered. */
+const PAGE_REPLACED = /Execution context was destroyed/;
 
 test("a computer closed during a reset hears it was removed once it opens again", async () => {
   test.setTimeout(4 * 60_000);
@@ -91,11 +93,21 @@ test("a computer closed during a reset hears it was removed once it opens again"
         env: { INFINITARY_DEVICE_NAME: STUDIO },
       });
       opened.push(back);
-      // It had its own first mate before it joined, which it is again.
+      // It had its own first mate before it joined, which it is again. Becoming
+      // it reloads the window, and expect.poll stops at a read that throws, so
+      // a read that reload replaces answers its words and the poll reads again.
       await expect
-        .poll(() => back.page.evaluate(() => window.infinitary.devices.thisMac()), {
-          timeout: 60_000,
-        })
+        .poll(
+          () =>
+            back.page
+              .evaluate(() => window.infinitary.devices.thisMac())
+              .catch((error: unknown) => {
+                if (error instanceof Error && PAGE_REPLACED.test(error.message))
+                  return error.message;
+                throw error;
+              }),
+          { timeout: 60_000 },
+        )
         .toMatchObject({ role: "home", left: { name: HOME, reason: "removed" } });
     });
 

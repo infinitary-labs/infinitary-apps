@@ -25,7 +25,10 @@ export const STORIED_STORY = {
 };
 export const STORIED_STORY_TITLE = "fix: read the selected pull request";
 
-const READ_VERSIONS = "git rev-parse main HEAD";
+// A story's base is the commit its branch left main at, never main itself:
+// the existing branch starts before main's newer commit, and the app refuses
+// a base the committed version does not descend from (docs/forge.md).
+const READ_VERSIONS = "git merge-base main HEAD && git rev-parse HEAD";
 
 export function storiedChanges(
   repair: () => NonNullable<ScriptedArgs<"check_change">["conflictRepair"]>,

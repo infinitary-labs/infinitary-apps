@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "storied-changes-journey-base",
+      "reason": "Internal: a journey's scripted crewmate gives its second story the commit its existing branch left the default branch at, as the app now requires of a story's base; nothing a person sees changes."
+    }
+  ]
+}

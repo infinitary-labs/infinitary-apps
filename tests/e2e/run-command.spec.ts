@@ -44,12 +44,20 @@ test.afterEach(endCommands);
 /**
  * The lines a run that cannot go on says, apart from Chromium's own notes on stderr: its
  * `[pid:...]` lines, and the `ERR: <file>.cpp:<line>` lines its graphics layer (ANGLE) writes when
- * a run past Electron's start has no display to draw on, as on Linux with none.
+ * a run past Electron's start has no display to draw on, as on Linux with none, and the
+ * `<date> <time> <process>[<pid>:<thread>]` lines macOS's own frameworks log from the app's
+ * helpers, such as a Mac's backup service refusing a sandboxed helper's connection.
  */
 const said = (error: string) =>
   error
     .split("\n")
-    .filter((line) => line && !line.startsWith("[") && !/^ERR: \S+\.cpp:\d+ /.test(line));
+    .filter(
+      (line) =>
+        line &&
+        !line.startsWith("[") &&
+        !/^ERR: \S+\.cpp:\d+ /.test(line) &&
+        !/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+ [^[]+\[\d+:\d+\] /.test(line),
+    );
 
 test("a command starts the whole app with no window, and a stop signal stops it cleanly", async () => {
   const userDataDir = scratchDir("infinitary-run-command-");

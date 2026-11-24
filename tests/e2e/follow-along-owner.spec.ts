@@ -76,17 +76,23 @@ const alive = (pid: number) => {
   }
 };
 
-/** Waits until the window beside a command is welcomed by it, which takes seconds on a busy runner. */
+/**
+ * Waits until the window beside a command is welcomed by it, which takes seconds on a busy runner.
+ * The window starts over when its command changes, and a read during that reload loses its page:
+ * expect.poll fails at once on a read that throws, so a lost page reads as not welcomed yet.
+ */
 async function welcomed(page: Page): Promise<void> {
   await expect
     .poll(
       () =>
-        page.evaluate(() =>
-          window.infinitary.devices.list().then(
-            () => true,
-            () => false,
-          ),
-        ),
+        page
+          .evaluate(() =>
+            window.infinitary.devices.list().then(
+              () => true,
+              () => false,
+            ),
+          )
+          .catch(() => false),
       { timeout: 60_000 },
     )
     .toBe(true);

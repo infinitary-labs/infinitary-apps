@@ -49,14 +49,14 @@ export const OPEN_CHANGE_TOOL_DESCRIPTION = [
 export const OPEN_CHANGE_AROUND_DESCRIPTION = [
   "Change one passage around this task's saved story on its open pull or merge request, not the story. Pass the newest presentation revision.",
   "from is the exact passage, found once above or below the story; to replaces it.",
-  "If changed since your read, the passage is not found: nothing is sent and the answer quotes the current words.",
+  "If changed since your read, the passage is not found: nothing is sent and the answer quotes the current words. Change a person's words only when asked.",
 ].join(" ");
 
 export const CHECK_CHANGE_TOOL_DESCRIPTION = [
   "Read the latest pull request's checks, runs, workflows, events, mergeability and version changes. facts.main: the failed check's latest default-branch run, evidence of cause, never a merge input.",
   "The merge card signals readiness. Checks hold merges; the captain authorizes them separately. Declare only flake, settled or answered, with headSha and evidence. Settle at the repair's headSha with repairId and outcome.",
   "repair records your fix. Judge readiness, flakes, settlement and when to stop from your delivery guidance, not a host count. Raw readings never settle a repair.",
-  "Empty or all-skipped hosted readings stay pending. absentChecks records positive no-CI evidence from trusted default-branch policy and the local gate, with pull or on your own PR.",
+  "Empty or all-skipped hosted readings stay pending. absentChecks records positive no-CI evidence from trusted default-branch policy and the local gate, with pull or on your own PR; time, history or missing workflows prove nothing.",
   "The app wakes you on first failure and completion of watched checks; end your turn. No watchable checks means no wake.",
   "conflictRepair and captainGuidance grant no fresh merge consent.",
   "A merge past branch rules names its review on a card without presentation. A saved-story merge card gives presentation and omits review: pull selected the change. Otherwise put pull's review id in the merge effect; after says whether the task continues or closes.",
@@ -147,7 +147,7 @@ export const PREPARE_CHANGE_TOOL = crewmateTool({
   name: "prepare_change",
   label: "Prepare change story",
   description:
-    "Prepare a two-tier story without showing a card or uploading. Commit demonstrated code first; use one title for story, pull request and merge card. Aim for 150 open words on the card, 250 on the pull request. Fold commands, file names, counts, unfinished work and the PR's risk table. Never write versions, hashes or revisions in text; use base, head and captureHead. Pair ordered Before and After views under one heading; stack recordings. Inspect publishable media and raster exports. Put public templates and issue references in projectText. No setting change, new approval, upload fallback or evidence commit.",
+    "Prepare a two-tier story without showing a card or uploading. Commit demonstrated code first; use one title for story, pull request and merge card. Aim for 150 open words on the card, 250 on the pull request. Fold commands, file names, counts, unfinished work and the PR's risk table. Never write versions, hashes or revisions in text; use base, head and captureHead. Pair ordered Before and After views under one heading; stack recordings. Inspect publishable media and raster exports; publish no private threads, local paths or secrets. Put public templates and issue references in projectText. No setting change, new approval, upload fallback or evidence commit.",
   parameters: Type.Object({
     story: zodParameter<ChangePresentationDraft>(changePresentationDraftSchema, {
       dropPatterns: true,

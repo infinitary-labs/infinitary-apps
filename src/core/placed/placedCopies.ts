@@ -374,12 +374,9 @@ export class PlacedCopies {
   private async checkoutAt(
     deviceId: string,
     taskId: string,
-  ): Promise<{ branch: string | null; head: string; dirty: boolean } | null> {
+  ): Promise<{ branch: string | null; head: string; dirty?: boolean } | null> {
     const status = await this.ask(deviceId, "inf:working-copy:status", [{ task: taskId }]);
-    // The same answer says whether work is left to commit there, so the two facts agree.
-    return status.present && status.checkedOut
-      ? { ...status.checkedOut, dirty: status.dirty }
-      : null;
+    return status.present ? (status.checkedOut ?? null) : null;
   }
 
   /** Transfer starting work over the paired connection, not through the project's host. */
@@ -564,13 +561,13 @@ export class PlacedCopies {
   /**
    * The branch the task's working copy there has checked out, null when
    * detached, the commit it points at (INF-2490), and whether it holds work
-   * left to commit: what a story is prepared for, as this Mac's own working
-   * copy reads its checkout. Null when that computer is out of reach or
-   * cannot say.
+   * left to commit, absent from a computer that does not read it with the
+   * checkout: what a story is prepared for, as this Mac's own working copy
+   * reads its checkout. Null when that computer is out of reach or cannot say.
    */
   async checkoutThere(
     taskId: string,
-  ): Promise<{ branch: string | null; head: string; dirty: boolean } | null> {
+  ): Promise<{ branch: string | null; head: string; dirty?: boolean } | null> {
     const deviceId = this.options.tasks.get(taskId)?.deviceId;
     if (!deviceId || !this.options.devices.inReach(deviceId) || !this.sendsCheckedOut(deviceId))
       return null;

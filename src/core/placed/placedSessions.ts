@@ -593,7 +593,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
 
   checkedOut(
     taskId: string,
-  ): Promise<{ branch: string | null; head: string; dirty: boolean } | null> {
+  ): Promise<{ branch: string | null; head: string; dirty?: boolean } | null> {
     return this.copies.checkoutThere(taskId);
   }
 

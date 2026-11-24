@@ -613,6 +613,29 @@ describe("a task that runs on a computer that runs work", () => {
     });
   });
 
+  // Intent: upstream issue #55's third review, a bug being fixed: the home took what is left
+  // to commit there from a reading made apart from the checkout and with the repository's own
+  // settings, so a working copy that hides untracked files read as committed at a commit that
+  // lacks them, and a held batch's declared fix could bind that commit.
+  it("reads a checkout there as holding work left to commit though the repository's settings hide untracked files", async () => {
+    const project = await gitProject();
+    const at = await world(() => project.forge(Buffer.from("")));
+    const home = at.home();
+    const { repo } = await adoptHere(home.repos, project.home);
+    model([{ text: "Started on the units fix." }]);
+    await at.start("t-hidden", "Keep the units with the meter.", repo.id);
+    await expect.poll(() => home.tasks.get("t-hidden")?.activity).toBe("idle");
+    const work = at.folders("t-hidden").work;
+    const branch = home.tasks.get("t-hidden")?.branch;
+    await git(work, ["config", "status.showUntrackedFiles", "no"]);
+    writeFileSync(join(work, "units.ts"), "export const unit = 'mWh';\n");
+    const head = await commit(work, "fix: keep the units");
+    expect(await home.placed.checkedOut("t-hidden")).toEqual({ branch, head, dirty: false });
+
+    writeFileSync(join(work, "scale.ts"), "export const scale = 1000;\n");
+    expect(await home.placed.checkedOut("t-hidden")).toEqual({ branch, head, dirty: true });
+  });
+
   // R3: prepared contribution routing survives the actual move/pack owners in both directions.
   // Host identities are declared fixtures; branches, bundles, packs and pushes are disposable real Git.
   it("keeps a started contribution pushing to its fork after moving home and back", async () => {

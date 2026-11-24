@@ -21,7 +21,7 @@ import {
 } from "../forge";
 import type { TaskRecord } from "../storage/taskRecords";
 import type { TaskService } from "../tasks/taskService";
-import { git } from "../workspace/git";
+import { checkoutOf, git } from "../workspace/git";
 import { requireNamedRange } from "../workspace/naming";
 import type { RepoRegistry } from "../workspace/repoRegistry";
 import type { ChangePresentations } from "./changePresentations";
@@ -455,24 +455,14 @@ export class ChangeContext {
    */
   async ownCommit(task: TaskRecord): Promise<string | undefined> {
     if (!task.branch) return undefined;
-    if (task.deviceId) {
-      const there = await this.options.checkedOut?.(task.id).catch(() => null);
-      return there?.branch === task.branch && there.dirty === false ? there.head : undefined;
-    }
-    if (!task.worktreeDir) return undefined;
-    // One read answers the branch, its commit and what is left to commit; untracked files are
-    // asked for, so a repository that hides them in its settings cannot read as committed.
-    const status = await git(task.worktreeDir, [
-      "status",
-      "--porcelain=v2",
-      "--branch",
-      "--untracked-files=normal",
-    ]).catch(() => "");
-    const lines = status.split("\n").filter(Boolean);
-    if (!lines.includes(`# branch.head ${task.branch}`)) return undefined;
-    if (lines.some((line) => !line.startsWith("# "))) return undefined;
-    const head = lines.find((line) => line.startsWith("# branch.oid "))?.slice(13);
-    return head && /^[0-9a-f]{40,64}$/.test(head) ? head : undefined;
+    // The same reading on either computer (`checkoutOf`): its own takes it here, and a task
+    // placed on another answers with the one that computer took.
+    const at = task.deviceId
+      ? await this.options.checkedOut?.(task.id).catch(() => null)
+      : task.worktreeDir
+        ? await checkoutOf(task.worktreeDir)
+        : null;
+    return at?.branch === task.branch && at.dirty === false ? at.head : undefined;
   }
 
   /** Read the name and tip together, and only reuse a cached ref at that exact tip. */

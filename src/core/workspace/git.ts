@@ -324,6 +324,33 @@ export function gitFailure(caught: unknown): string {
   return reason.length > 200 ? `${cutText(reason, 200)}...` : reason;
 }
 
+/**
+ * What a working copy has checked out, read in one answer so its facts agree: the branch,
+ * null when detached, the commit it points at, and whether work is left to commit there.
+ * Untracked files are asked for, so a repository whose settings hide them cannot read as
+ * committed. Null when the folder cannot say, or has no commit yet.
+ */
+export async function checkoutOf(
+  cwd: string,
+): Promise<{ branch: string | null; head: string; dirty: boolean } | null> {
+  const status = await git(cwd, [
+    "status",
+    "--porcelain=v2",
+    "--branch",
+    "--untracked-files=normal",
+  ]).catch(() => "");
+  const lines = status.split("\n").filter(Boolean);
+  const fact = (name: string) =>
+    lines.find((line) => line.startsWith(`# branch.${name} `))?.slice(`# branch.${name} `.length);
+  const [head, branch] = [fact("oid"), fact("head")];
+  if (!head || !branch || !/^[0-9a-f]{40,64}$/.test(head)) return null;
+  return {
+    branch: branch === "(detached)" ? null : branch,
+    head,
+    dirty: lines.some((line) => !line.startsWith("# ")),
+  };
+}
+
 export async function isGitRepo(dir: string): Promise<boolean> {
   try {
     return (await git(dir, ["rev-parse", "--is-inside-work-tree"])) === "true";

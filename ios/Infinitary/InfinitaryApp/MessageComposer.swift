@@ -201,7 +201,8 @@ struct MessageComposer: View {
         }
         return VStack(alignment: .leading, spacing: 4) {
             if let card = round.card {
-                cardRow(round, card: card, id: id, open: open).opacity(strength)
+                cardRow(round, card: card, id: id, working: newest && session.firstmateBusy && !round.sentAsMessage, open: open)
+                    .opacity(strength)
             } else {
                 BubbleColumn { bubble(round, id: id, open: open).opacity(strength) }
             }
@@ -252,9 +253,15 @@ struct MessageComposer: View {
     }
 
     /// A card round's one row: the card glyph and title on the left, which open the card, and the bubble on the right.
-    private func cardRow(_ round: PhoneConversationRound, card: PhoneConversationRound.Card, id: String,
+    /// A round that is not also a message has no reply line, so while it is the newest and the first mate works the row
+    /// starts with the spinning mark and no words, at its own height (INF-6365's review, the captain's choice).
+    private func cardRow(_ round: PhoneConversationRound, card: PhoneConversationRound.Card, id: String, working: Bool,
                          open: @escaping () -> Void) -> some View {
         HStack(spacing: PhoneTheme.space2) {
+            if working {
+                MateMark(working: true, still: reduceMotion).frame(width: 16, height: 16)
+                    .accessibilityIdentifier("\(id)-card-working")
+            }
             Button { openCard(card.id) } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "rectangle.portrait").font(.system(size: 11)).foregroundStyle(PhoneTheme.muted)

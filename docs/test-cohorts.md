@@ -248,6 +248,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/core/orchestrator/starts.lost.test.ts` | real git in a scratch project for a task placed on a stand-in computer that runs work, at the run's own priority | 5 s default (Mac slowest case 0.4 s) |
 | `src/core/orchestrator/taskMoves.computer.test.ts` | real git across two computers' working copies, at the run's own priority | 10 s on the moves to another computer, kept: its slowest case (Mac fastest 4.4 s) mostly waits out a quit's fixed 2 s settle, 1.4 s with that wait shortened; 5 s default elsewhere |
 | `src/core/orchestrator/reviews.test.ts` | real git in scratch projects for the review cases, at the run's own priority | 5 s default (Mac slowest case 0.6 s) |
+| `src/core/orchestrator/reviews.version.test.ts` | real git in scratch projects for the review cases, at the run's own priority | 5 s default (Mac slowest case 0.6 s) |
 | `src/core/orchestrator/reviews.wakes.test.ts` | real git in scratch projects for the review cases, at the run's own priority | 5 s default (Mac slowest case 0.6 s) |
 | `src/core/orchestrator/crewBrief.test.ts` | real git in scratch projects for some rigor and picture cases, at the run's own priority | 5 s default (Mac slowest case 0.6 s) |
 | `tests/e2e-lanes.test.ts` | playwright --list over every spec, and the real runner over fixture specs | 60 s; 180 s on the listing (Linux fastest 35.7 s; it grows with the suite) |

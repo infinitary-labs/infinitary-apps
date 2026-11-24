@@ -414,7 +414,7 @@ Where the review stands is on every surface the fleet already has: `crew_status`
 Nothing new reaches a user surface: no card kind, no setting, no control.
 
 `tests/e2e/rigor-reviewed.spec.ts` is the binding test: through the real app on real Pi sessions with a local GitHub stand-in the app reads through its own sign-in (`tests/e2e/githubStub.ts`), a direct-pr task derived Careful reports green with no card, the first mate checks CI and spawns `review_of`, the host delivers auto-fix findings and the first mate asks one decision card, the task waits on nothing while the review is open, the re-review's pass is one feed line that releases the builder's close, and the merge card renders the review beside CI and merges.
-`reviews.test.ts` covers the verdicts, the review record across care edits, the sort and the facts each review wake carries; `wakes.test.ts` the next steps each review wake words; `tests/firstmate-fixed-context.test.ts` that every step the core gave up is still served where it arises; `rigor.test.ts` the derivation order, the typed finding and the blocking rule; `intentBrief.test.ts` the care line and the review brief.
+`reviews.test.ts` and `reviews.version.test.ts` cover the verdicts, the version a review reads, the review record across care edits, the sort and the facts each review wake carries; `wakes.test.ts` the next steps each review wake words; `tests/firstmate-fixed-context.test.ts` that every step the core gave up is still served where it arises; `rigor.test.ts` the derivation order, the typed finding and the blocking rule; `intentBrief.test.ts` the care line and the review brief.
 
 ## The record and its holds (phase 3)
 

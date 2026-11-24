@@ -375,6 +375,8 @@ export const CARD_PARAMS = {
   firstmateSignsOff:
     "With reply alone and answers_message on your own card: ends it as read, as Done does. close_card withdraws it and answers nothing.",
   id: "Stable kebab-case id",
+  asks_again:
+    "Only after a refusal for a question the captain already answered: card names the card it cited, why says what changed.",
   holds_place:
     "Leave unset unless the card needs continuous attention: true brings it forward on arrival. Choices close at once.",
   reply: "Your short answer in this card's thread, saying what changed where.",

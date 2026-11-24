@@ -185,6 +185,11 @@ export type EmittedCardInput = {
   /** Declared: it answers the captain's message it is about (INF-1610). */
   answering?: boolean;
   /**
+   * Declared: it asks again, on purpose, a question the captain answered on
+   * this earlier card, and why (`asks_again`, INF-6523 part 4).
+   */
+  asksAgain?: { card: string; why: string };
+  /**
    * On someone else's card (docs/card-threads.md, "Shared cards"): the
    * revision the writer read, which a revision must name, why it writes,
    * its operation identity, and the captain message its reply answers.

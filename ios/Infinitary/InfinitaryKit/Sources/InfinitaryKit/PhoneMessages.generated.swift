@@ -3608,6 +3608,20 @@ public enum PhoneMessages {
     public static func `settingsSecretsBackupNote`() -> String { PhoneWords.format("settingsSecretsBackupNote", []) }
     public static func `settingsSecretsBroughtFrom`(`tool`: String) -> String { PhoneWords.format("settingsSecretsBroughtFrom", [`tool`]) }
     public static func `settingsSecretsCancel`() -> String { PhoneWords.format("settingsSecretsCancel", []) }
+    public static func `settingsSecretsClearNow`() -> String { PhoneWords.format("settingsSecretsClearNow", []) }
+    public static func `settingsSecretsCopiedByYou`() -> String { PhoneWords.format("settingsSecretsCopiedByYou", []) }
+    public static func `settingsSecretsCopiedOn`(`when`: String) -> String { PhoneWords.format("settingsSecretsCopiedOn", [`when`]) }
+    public static func `settingsSecretsCopiedUntil`(`time`: String) -> String { PhoneWords.format("settingsSecretsCopiedUntil", [`time`]) }
+    public static func `settingsSecretsCopiedUntilVisible`(`time`: String) -> String { PhoneWords.format("settingsSecretsCopiedUntilVisible", [`time`]) }
+    public static func `settingsSecretsCopyCannotConfirm`() -> String { PhoneWords.format("settingsSecretsCopyCannotConfirm", []) }
+    public static func `settingsSecretsCopyChanged`() -> String { PhoneWords.format("settingsSecretsCopyChanged", []) }
+    public static func `settingsSecretsCopyCleared`() -> String { PhoneWords.format("settingsSecretsCopyCleared", []) }
+    public static func `settingsSecretsCopyReason`(`name`: String) -> String { PhoneWords.format("settingsSecretsCopyReason", [`name`]) }
+    public static func `settingsSecretsCopyRefused`() -> String { PhoneWords.format("settingsSecretsCopyRefused", []) }
+    public static func `settingsSecretsCopyUnavailable`() -> String { PhoneWords.format("settingsSecretsCopyUnavailable", []) }
+    public static func `settingsSecretsCopyUnknown`() -> String { PhoneWords.format("settingsSecretsCopyUnknown", []) }
+    public static func `settingsSecretsCopyValue`() -> String { PhoneWords.format("settingsSecretsCopyValue", []) }
+    public static func `settingsSecretsCustodyMac`() -> String { PhoneWords.format("settingsSecretsCustodyMac", []) }
     public static func `settingsSecretsDeleteHistory`() -> String { PhoneWords.format("settingsSecretsDeleteHistory", []) }
     public static func `settingsSecretsDeviceCode`(`code`: String) -> String { PhoneWords.format("settingsSecretsDeviceCode", [`code`]) }
     public static func `settingsSecretsExportFailed`() -> String { PhoneWords.format("settingsSecretsExportFailed", []) }
@@ -3623,6 +3637,7 @@ public enum PhoneMessages {
     public static func `settingsSecretsNamePlaceholder`() -> String { PhoneWords.format("settingsSecretsNamePlaceholder", []) }
     public static func `settingsSecretsNoExport`() -> String { PhoneWords.format("settingsSecretsNoExport", []) }
     public static func `settingsSecretsNoHistory`() -> String { PhoneWords.format("settingsSecretsNoHistory", []) }
+    public static func `settingsSecretsNoReveal`() -> String { PhoneWords.format("settingsSecretsNoReveal", []) }
     public static func `settingsSecretsNotRequested`() -> String { PhoneWords.format("settingsSecretsNotRequested", []) }
     public static func `settingsSecretsPermissionsRecovery`() -> String { PhoneWords.format("settingsSecretsPermissionsRecovery", []) }
     public static func `settingsSecretsReading`() -> String { PhoneWords.format("settingsSecretsReading", []) }
@@ -3632,6 +3647,8 @@ public enum PhoneMessages {
     public static func `settingsSecretsRecoveryNeeded`() -> String { PhoneWords.format("settingsSecretsRecoveryNeeded", []) }
     public static func `settingsSecretsRefresh`() -> String { PhoneWords.format("settingsSecretsRefresh", []) }
     public static func `settingsSecretsRestoreNote`() -> String { PhoneWords.format("settingsSecretsRestoreNote", []) }
+    public static func `settingsSecretsRowOfferSays`(`seconds`: String) -> String { PhoneWords.format("settingsSecretsRowOfferSays", [`seconds`]) }
+    public static func `settingsSecretsRowOfferTitle`(`secret`: String) -> String { PhoneWords.format("settingsSecretsRowOfferTitle", [`secret`]) }
     public static func `settingsSecretsSaving`() -> String { PhoneWords.format("settingsSecretsSaving", []) }
     public static func `settingsSecretsStorageLocked`() -> String { PhoneWords.format("settingsSecretsStorageLocked", []) }
     public static func `settingsSecretsStorageUnavailable`() -> String { PhoneWords.format("settingsSecretsStorageUnavailable", []) }
@@ -7971,6 +7988,20 @@ extension PhoneWords {
         "settingsSecretsBackupNote": [],
         "settingsSecretsBroughtFrom": ["tool"],
         "settingsSecretsCancel": [],
+        "settingsSecretsClearNow": [],
+        "settingsSecretsCopiedByYou": [],
+        "settingsSecretsCopiedOn": ["when"],
+        "settingsSecretsCopiedUntil": ["time"],
+        "settingsSecretsCopiedUntilVisible": ["time"],
+        "settingsSecretsCopyCannotConfirm": [],
+        "settingsSecretsCopyChanged": [],
+        "settingsSecretsCopyCleared": [],
+        "settingsSecretsCopyReason": ["name"],
+        "settingsSecretsCopyRefused": [],
+        "settingsSecretsCopyUnavailable": [],
+        "settingsSecretsCopyUnknown": [],
+        "settingsSecretsCopyValue": [],
+        "settingsSecretsCustodyMac": [],
         "settingsSecretsDeleteHistory": [],
         "settingsSecretsDeviceCode": ["code"],
         "settingsSecretsExportFailed": [],
@@ -7986,6 +8017,7 @@ extension PhoneWords {
         "settingsSecretsNamePlaceholder": [],
         "settingsSecretsNoExport": [],
         "settingsSecretsNoHistory": [],
+        "settingsSecretsNoReveal": [],
         "settingsSecretsNotRequested": [],
         "settingsSecretsPermissionsRecovery": [],
         "settingsSecretsReading": [],
@@ -7995,6 +8027,8 @@ extension PhoneWords {
         "settingsSecretsRecoveryNeeded": [],
         "settingsSecretsRefresh": [],
         "settingsSecretsRestoreNote": [],
+        "settingsSecretsRowOfferSays": ["seconds"],
+        "settingsSecretsRowOfferTitle": ["secret"],
         "settingsSecretsSaving": [],
         "settingsSecretsStorageLocked": [],
         "settingsSecretsStorageUnavailable": [],

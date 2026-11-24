@@ -32,6 +32,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | captain | capitaine | The word a ship's crew uses; masculine default form, lowercase mid-sentence ("Bienvenue à bord d’Infinitary, capitaine"). |
 | card | carte | Feminine. |
 | claim (a recorded relationship) | affirmation | "Affirmation enregistrée". |
+| clipboard | presse-papiers | Where Copy value puts a secret's value. |
 | clone | cloner | "cloné", never "copié". |
 | command search | recherche de commandes | |
 | commit | commit | GitHub's French docs keep "commit"; masculine ("le commit"). |

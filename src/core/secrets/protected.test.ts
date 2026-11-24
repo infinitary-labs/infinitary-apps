@@ -675,3 +675,125 @@ describe("protected Secrets owner", () => {
     expect(existsSync(join(cwd, "runs.log"))).toBe(false);
   });
 });
+
+// Intent: INF-6315's approved plan - Copy value puts one secret's value on
+// this computer's clipboard only after a fresh system confirmation, journals
+// the copy before the value moves and refuses when it cannot, and keeps the
+// value out of every answer and saved file (docs/secrets.md, "Copying a value").
+describe("copying a value", () => {
+  const reason = (label: string) => `Copy ${label} to this computer's clipboard.`;
+  const shownOf = async (backend: ProtectedSecrets, ref = "staging-deploy") => {
+    const entry = (await backend.metadata()).find((candidate) => candidate.ref === ref);
+    if (!entry) throw new Error("no entry");
+    return { version: entry.version, revision: entry.revision };
+  };
+  const journalKinds = (dir: string) =>
+    readFileSync(join(dir, "history.jsonl"), "utf8")
+      .trim()
+      .split("\n")
+      .map((line) => (JSON.parse(line) as { entry: { kind: string } }).entry);
+
+  it("confirms, journals the copy before the write and keeps the value out of every file", async () => {
+    const asked: string[] = [];
+    const { dir, backend } = await owner({
+      authentication: {
+        available: async () => true,
+        confirm: async (said) => {
+          asked.push(said);
+          return true;
+        },
+      },
+    });
+    let given: Buffer | undefined;
+    let journaledFirst: string[] = [];
+    const result = await backend.copyValue(
+      "staging-deploy",
+      await shownOf(backend),
+      reason,
+      async (value) => {
+        journaledFirst = journalKinds(dir).map((line) => line.kind);
+        expect(value.toString()).toBe(TOKEN);
+        given = value;
+        return true;
+      },
+    );
+    expect(result).toBe("copied");
+    expect(asked).toEqual(["Copy Staging deploy token to this computer's clipboard."]);
+    expect(journaledFirst.slice(-3)).toEqual(["requested", "approved", "consumed"]);
+    // The opened value is zero-filled once the writer has it.
+    expect(given?.every((byte) => byte === 0)).toBe(true);
+    expect(backend.history().at(-1)).toMatchObject({
+      secrets: ["staging-deploy"],
+      state: "completed",
+      approval: "local",
+      copied: true,
+    });
+    expect(leaks(JSON.stringify([backend.history(), backend.exportHistory(), result]))).toBe(false);
+    for (const file of readdirSync(dir)) {
+      if (file.endsWith(".json") || file.endsWith(".jsonl"))
+        expect(leaks(readFileSync(join(dir, file), "utf8"))).toBe(false);
+    }
+  });
+
+  it("copies nothing when the confirmation is refused or fails", async () => {
+    for (const confirm of [async () => false, async () => Promise.reject(new Error("cancelled"))]) {
+      const { backend } = await owner({ authentication: { available: async () => true, confirm } });
+      const write = vi.fn(async () => true);
+      expect(await backend.copyValue("staging-deploy", await shownOf(backend), reason, write)).toBe(
+        "refused",
+      );
+      expect(write).not.toHaveBeenCalled();
+      expect(backend.history()).toEqual([]);
+    }
+  });
+
+  it("refuses a value that changed since the row was read, before asking", async () => {
+    const confirm = vi.fn(async () => true);
+    const { backend } = await owner({ authentication: { available: async () => true, confirm } });
+    const shown = await shownOf(backend);
+    await backend.putSecret("staging-deploy", "Staging deploy token", Buffer.from(`${TOKEN}x`), {
+      discoverable: true,
+    });
+    const write = vi.fn(async () => true);
+    expect(await backend.copyValue("staging-deploy", shown, reason, write)).toBe("changed");
+    expect(confirm).not.toHaveBeenCalled();
+    expect(write).not.toHaveBeenCalled();
+  });
+
+  it("refuses when the copy cannot be journaled", async () => {
+    const { dir, backend } = await owner();
+    const shown = await shownOf(backend);
+    const realOpen = files.open;
+    vi.spyOn(files, "open").mockImplementation(async (path, ...rest) => {
+      if (String(path) === join(dir, "history.jsonl")) throw new Error("disk full");
+      return realOpen(path, ...rest);
+    });
+    const write = vi.fn(async () => true);
+    expect(await backend.copyValue("staging-deploy", shown, reason, write)).toBe("unavailable");
+    expect(write).not.toHaveBeenCalled();
+  });
+
+  it("refuses an entry the app keeps for itself", async () => {
+    const { backend } = await owner();
+    await backend.putSecret("app-sign-in", "Google sign-in", Buffer.from(TOKEN), {});
+    const write = vi.fn(async () => true);
+    expect(
+      await backend.copyValue("app-sign-in", await shownOf(backend, "app-sign-in"), reason, write),
+    ).toBe("unavailable");
+    expect(write).not.toHaveBeenCalled();
+  });
+
+  it("ends the use unknown when the writer fails partway, and unavailable when it writes nothing", async () => {
+    const { backend } = await owner();
+    expect(
+      await backend.copyValue("staging-deploy", await shownOf(backend), reason, async () => {
+        throw new Error("clipboard went away");
+      }),
+    ).toBe("unknown");
+    expect(backend.history().at(-1)).toMatchObject({ state: "unknown", copied: true });
+    expect(
+      await backend.copyValue("staging-deploy", await shownOf(backend), reason, async () => false),
+    ).toBe("unavailable");
+    expect(backend.history().at(-1)).toMatchObject({ state: "unavailable", copied: true });
+  });
+});

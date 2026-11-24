@@ -34,6 +34,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | Careful | 慎重 | Rigor level. |
 | certificate | 証明書 | Only where the person chooses an organization's CA certificate. |
 | check (of a finding) | 検証 | 「検証済み」「再検証が必要」; チェック stays for a pull request's checks. |
+| clipboard | クリップボード | Where Copy value puts a secret's value. |
 | clone | クローン | 「クローン済み」, never コピー. |
 | command (run in Terminal) | コマンド | Run in 「ターミナル」, macOS's own Japanese name for Terminal. |
 | command search | コマンド検索 | Plain compound. |

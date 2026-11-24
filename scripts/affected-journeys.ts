@@ -379,8 +379,13 @@ export function servedStrings(diff: string): Map<string, { added: string[]; remo
  */
 export function patternsIn(text: string): RegExp[] {
   const found: RegExp[] = [];
+  // A slash after a keyword such as `return` opens a pattern too. Skipping
+  // that one read its closing slash as an opening one, so
+  // `return /^running: /m.test(printed) || /^code: BUSY$/m` gave the pattern
+  // "m.test(printed) || ", whose empty alternative matches any text. English
+  // words such as `in` and `of` stay out: a comment's "in /path/" is no pattern.
   for (const [, body, flags] of text.matchAll(
-    /(?<=[(=,:!&|?]\s*)\/((?:\\.|\[(?:\\.|[^\]\\\n])*\]|[^/\\\n[*])(?:\\.|\[(?:\\.|[^\]\\\n])*\]|[^/\\\n[])*)\/([dgimsuy]*)/g,
+    /(?<=(?:[(=,:!&|?]|\b(?:return|throw|case|yield|await|typeof))\s*)\/((?:\\.|\[(?:\\.|[^\]\\\n])*\]|[^/\\\n[*])(?:\\.|\[(?:\\.|[^\]\\\n])*\]|[^/\\\n[])*)\/([dgimsuy]*)/g,
   )) {
     const literal = (body ?? "").replace(/\\./g, " ").replace(/\[[^\]]*\]/g, " ");
     if (!/[A-Za-z]{4,}/.test(literal)) continue;

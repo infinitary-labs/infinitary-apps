@@ -28,9 +28,13 @@ export type GoogleIssued = {
 /**
  * Sends the code exchange's form to Google's token address with the client's
  * secret added by its keeper, answering Google's response; the form carries
- * no secret of its own.
+ * no secret of its own. It refuses once `signal` aborts, as a direct
+ * exchange's fetch does, so a cancelled sign-in goes no further.
  */
-export type GoogleTokenExchange = (form: Record<string, string>) => Promise<Response>;
+export type GoogleTokenExchange = (
+  form: Record<string, string>,
+  signal: AbortSignal,
+) => Promise<Response>;
 
 export type LoopbackSignInOptions = {
   client: GoogleClient;
@@ -109,7 +113,7 @@ async function exchange(
     redirect_uri: redirectUri,
   };
   let response: Response;
-  if (options.exchange) response = await options.exchange(form);
+  if (options.exchange) response = await options.exchange(form, options.signal);
   else
     try {
       response = await (options.fetch ?? fetch)(options.endpoints.token, {

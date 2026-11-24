@@ -48,8 +48,10 @@ import { type GoogleClientRecord, GoogleClientStore, GoogleSignInStore } from ".
  * about it is pasted.
  *
  * Health is the forge sign-in's words: `needs_reauth` only from proof - Google
- * refused the lasting key, or a request was refused again after a real
- * renewal - and `unavailable` when Google could not be reached or failed.
+ * refused the lasting key or the person's own client, a request was refused
+ * again after a real renewal, or the sign-in was made with a client the
+ * person no longer keeps - and `unavailable` when Google could not be
+ * reached or failed.
  * When Gmail asks the app to slow down and says for how long (Retry-After),
  * every request waits that long, and a rule's look tries again on its next
  * minute.
@@ -184,6 +186,14 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
     const own = clients.read();
     return own?.id === record.client ? { own } : undefined;
   };
+
+  /**
+   * When the lasting key ends, kept only for a sign-in made with the
+   * person's own client: a sign-in made with the run's own then stays
+   * readable to an older build, whose strict schema knows no such field.
+   */
+  const endOf = (own: GoogleClientRecord | undefined, endsAt: number | undefined) =>
+    own && endsAt !== undefined ? { endsAt } : {};
 
   /** The person's own client's secret, added by Secrets to the form's client_secret field. */
   const clientSecret = (own: GoogleClientRecord) => ({
@@ -367,7 +377,7 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
         store.write({
           ...record,
           expiresAt: issued.expiresAt,
-          ...(issued.endsAt !== undefined ? { endsAt: issued.endsAt } : {}),
+          ...endOf(renewingAs.own, issued.endsAt),
         });
     })().finally(() => {
       renewing = undefined;
@@ -519,7 +529,8 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
   /** The code exchange for the person's own client, run inside Secrets so its secret is added there. */
   const exchangeAs =
     (own: GoogleClientRecord): GoogleTokenExchange =>
-    async (form) => {
+    async (form, signal) => {
+      if (signal.aborted) throw new Error("Could not reach Google to finish signing in.");
       register();
       const id = randomUUID();
       exchanges.set(id, { own, form });
@@ -535,6 +546,12 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
         const response = used.state === "completed" ? used.result : undefined;
         if (!(response instanceof Response))
           throw new Error("Could not reach Google to finish signing in.");
+        if (signal.aborted) {
+          // Cancelled while Google answered: whatever it issued goes back, as nothing keeps it.
+          const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+          await revoke(issuedFrom(body, options.now())?.accessToken);
+          throw new Error("Could not reach Google to finish signing in.");
+        }
         if (!response.ok)
           clientRefused(
             own,
@@ -669,7 +686,7 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
         signedInAt: options.now(),
         key,
         ...(own ? { client: own.id } : {}),
-        ...(issued.endsAt !== undefined ? { endsAt: issued.endsAt } : {}),
+        ...endOf(own, issued.endsAt),
       });
       // Google took the client again, so an earlier refusal no longer stands.
       const current = clients.read();

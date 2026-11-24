@@ -245,13 +245,14 @@ The person's own client is its id and the Secrets reference of its secret in `us
 With an own client, the consent page names its id, and the code exchange and every renewal go through the same broker, which puts the secret in the form's `client_secret` field beside the code or the lasting key, so the binding never holds it.
 The exchange's broker use names a one-use id the sign-in in progress holds, never a form a caller wrote.
 A sign-in records the client it was made with (`client` in `google.json`) and renews only as that client; one made with a client the person no longer keeps reads `needs_reauth` without asking Google, and one with no `client` renews as the run's own.
-When Google answers a renewal or exchange with `invalid_client` or `deleted_client` for an own client, its record keeps that refusal and when (`refused`) and the sign-in reads `needs_reauth`; the next sign-in Google accepts clears it.
-When Google names how long the lasting key lasts (`refresh_token_expires_in`, as for a client in Testing), the sign-in records when it ends (`endsAt`).
+When Google answers a renewal or a sign-in's code exchange with `invalid_client` or `deleted_client` for an own client, its record keeps that refusal and when (`refused`); a refused renewal also turns the sign-in to `needs_reauth`, and a refused exchange fails that sign-in, keeping none; the next sign-in Google accepts clears it.
+The exchange follows the sign-in's cancel as a direct one does: a cancelled sign-in sends none, and one cancelled while Google answers hands back what it issued.
+When Google names how long the lasting key of a sign-in made with an own client lasts (`refresh_token_expires_in`, as for a client in Testing), the sign-in records when it ends (`endsAt`); a sign-in made with the run's own client records none.
 A failed or replaced sign-in keeps the client; removing the row forgets it with the sign-in, after the revoke, both Secrets entries included.
 The broker declares the app's own sign-in, so every renewal, and the one that makes a key to revoke with at sign-out, runs without asking: signing in to Google in the app is the consent (INF-4096; the captain: "when the user sign-in to google in infinitary, that sign-in is already the consent").
 Who it is signed in as, what Google granted, when the access runs out, its health and its key's reference are `userData/integrations/google.json`, 0600 (`GoogleSignInStore`).
 An earlier version kept both keys in `userData/integrations/secrets/google/secrets.json`; at start, and again at the next use while Secrets is locked, the lasting key moves into Secrets and the file is removed (`MovedGoogleKeys`): the reference is written first, so an interrupted move repeats onto the same entry.
-The access renews when it has less than one request's time left, and once more when Gmail refuses it; health is `needs_reauth` only when Google refuses the lasting key or refuses a request again after a real renewal, and `unavailable` when Google cannot be reached or fails, or when Secrets is locked.
+The access renews when it has less than one request's time left, and once more when Gmail refuses it; health is `needs_reauth` only when Google refuses the lasting key or the person's own client, refuses a request again after a real renewal, or the sign-in was made with a client the person no longer keeps, and `unavailable` when Google cannot be reached or fails, or when Secrets is locked.
 When Gmail answers 429, or 403 for a rate limit, with Retry-After, no request goes to Gmail until then, and a rule's look tries again on its next minute; the sign-in's health stays as it was.
 Removing the row asks Google to revoke the sign-in, as far as Google can be reached, and forgets it here and in Secrets either way; with no access key in memory, one renewal makes one to revoke with.
 
@@ -284,7 +285,7 @@ Both APIs share one renewal and backoff boundary; a Calendar rate limit holds Gm
 `GOOGLE_OAUTH_CLIENT` holds Infinitary's registered public Desktop app client, including the installed-app client secret that Google does not treat as confidential.
 `googleSetup` offers Google in development and packaged builds on both stable and alpha channels, for the captain's private experimental rollout.
 Stable is the private testers' distribution and alpha is the captain's development channel; neither channel label establishes Google's verification or a public launch.
-Packaged builds always use Infinitary's registered client and Google's HTTPS endpoints, ignoring development client and endpoint overrides.
+Packaged builds use Infinitary's registered client, unless the person keeps their own, and Google's HTTPS endpoints, ignoring development client and endpoint overrides.
 An unpackaged run uses those defaults, or may name a client and a stand-in Google: `INFINITARY_GOOGLE_CLIENT_ID`, `INFINITARY_GOOGLE_CLIENT_SECRET` and `INFINITARY_GOOGLE_URL`, every address under that one (`googleSetup`).
 Google Cloud's External / In production audience permits unverified access without an individual tester list, normally with a 100-user lifetime project cap and an unverified-app warning.
 Google or an account's administrator may still refuse access; offering the chip is not proof of verification, assessment or policy compliance.

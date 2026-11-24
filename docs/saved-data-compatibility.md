@@ -261,10 +261,10 @@ The format revision therefore stays at 1.
 ## A Google sign-in with the person's own client
 
 The person's own Google client is a file of its own, `integrations/google-client.json`, so a build that knows no own client never reads it (`docs/integrations.md`, "Google").
-A sign-in may carry two optional fields in `integrations/google.json`: `client`, the own client it was made with, and `endsAt`, when Google said its lasting key ends.
-A sign-in saved before has neither and renews as the run's own client, as before.
+A sign-in made with an own client carries two optional fields in `integrations/google.json`: `client`, the own client it was made with, and `endsAt`, when Google said its lasting key ends.
+A sign-in made with the run's own client carries neither, as before, so an older build reads and renews it unchanged.
 An older build reads a sign-in holding either field as unreadable, because its schema is strict, and shows Google as not signed in; nothing is rewritten, and a build that knows the fields reads it again.
-An own client's sign-in could not renew in an older build anyway, since only this build adds the client's secret.
+Such a sign-in could not renew in an older build anyway, since only this build adds the client's secret.
 No database migration or saved-data format revision is needed.
 
 ## An ask's how-to in waiting asks

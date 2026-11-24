@@ -147,6 +147,47 @@ describe("the person's own Google client", () => {
     expect(new GoogleClientStore(dir).read()?.refused).toBeUndefined();
   });
 
+  it("fails a sign-in whose code exchange Google refuses for the client, keeping the client and recording why", async () => {
+    const { google, dir, binding, integrations, keys } = await fixture();
+    await binding.keepClient(ownClient());
+    // The person made a new secret in Google Cloud after giving the app the old one.
+    google.knobs.clients.set(OWN_CLIENT_ID, "GOCSPX-rotated-secret-9Kx1");
+    await expect(integrations.signIn("google", NOTICE_ACCEPTED)).rejects.toThrow(
+      "Google did not finish the sign-in (invalid_client).",
+    );
+    expect(new GoogleClientStore(dir).read()).toMatchObject({
+      id: OWN_CLIENT_ID,
+      refused: { error: "invalid_client" },
+    });
+    expect(existsSync(join(dir, "google.json"))).toBe(false);
+    expect(await keys.entries()).toEqual([
+      expect.objectContaining({ label: "Google client", discoverable: false }),
+    ]);
+
+    google.knobs.deleted.add(OWN_CLIENT_ID);
+    await expect(integrations.signIn("google", NOTICE_ACCEPTED)).rejects.toThrow(
+      "Google did not finish the sign-in (deleted_client).",
+    );
+    expect(new GoogleClientStore(dir).read()?.refused?.error).toBe("deleted_client");
+  });
+
+  it("keeps the earlier sign-in when a new one is cancelled while Google trades its code", async () => {
+    const { google, dir, integrations } = await signedInOwn();
+    const earlier = new GoogleSignInStore(dir).read();
+    const revoked = google.revoked.length;
+    google.knobs.onExchange = () => integrations.cancelSignIn();
+    await expect(integrations.signIn("google", NOTICE_ACCEPTED)).rejects.toThrow(
+      "The sign-in was cancelled.",
+    );
+    expect(new GoogleSignInStore(dir).read()).toEqual(earlier);
+    expect(integrations.view().integrations[0]).toMatchObject({
+      account: STAND_IN_ACCOUNT,
+      health: "ok",
+    });
+    // What Google issued for the cancelled sign-in went back, as nothing keeps it.
+    await expect.poll(() => google.revoked.length).toBe(revoked + 1);
+  });
+
   it("stops renewing a sign-in made with a client the person no longer keeps, without asking Google", async () => {
     const { google, binding, clock, integrations } = await signedInOwn();
     await binding.keepClient({
@@ -236,7 +277,11 @@ describe("the person's own Google client", () => {
         client_secret: STAND_IN_CLIENT_SECRET,
       }),
     ]);
-    expect(new GoogleSignInStore(dir).read()?.client).toBeUndefined();
+    // Google named an end for the lasting key, but a run-client sign-in records neither field,
+    // so an older build still reads it.
+    expect(google.knobs.lasts).toBeDefined();
+    expect(new GoogleSignInStore(dir).read()).not.toHaveProperty("client");
+    expect(new GoogleSignInStore(dir).read()).not.toHaveProperty("endsAt");
     expect(existsSync(join(dir, "google-client.json"))).toBe(false);
     clock.now += 3_600_000;
     expect((await search(integrations)).refused).toBeUndefined();

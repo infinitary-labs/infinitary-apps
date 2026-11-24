@@ -162,6 +162,8 @@ export async function startGoogleStandIn() {
      * in Testing (`refresh_token_expires_in`); undefined, it names none.
      */
     lasts: 604_799 as number | undefined,
+    /** Runs as each code exchange arrives, before Google answers it: what the person does meanwhile. */
+    onExchange: undefined as (() => void) | undefined,
   };
 
   const issue = (refresh: string) => {
@@ -423,6 +425,7 @@ export async function startGoogleStandIn() {
           error_description: "The OAuth client was not found.",
         });
       if (form.grant_type === "authorization_code") {
+        knobs.onExchange?.();
         const issued = codes.get(form.code ?? "");
         codes.delete(form.code ?? "");
         const challenge = createHash("sha256")

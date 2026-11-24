@@ -879,6 +879,10 @@ The listener passes only GET, as its path, to `inf:integrations:sign-in-return`,
 When the phone cannot listen on that port, or the computer refused what it passed on, the row asks for the address the browser ended on and sends it; a refused address is named under the field (`RETURN_PASTE_WORDS`).
 `inf:app:sign-in-ended` ends the wait, live or replayed after a reconnect, and the row reads the computer's connections again.
 Sign out asks once, then removes the connection on the computer (`inf:integrations:remove`).
+The row reads the computer's facts on the person's own Google client (`client` on its row or addable entry) and says what the computer's row says, in the same order (`PhoneGoogleClientState`, after `googleClientState`): a client Google refused, a sign-in on Infinitary's retiring client, and the date a client outside Personal mode stops.
+With no client of the person's kept, or one Google refused, Sign in is Set up (INF-6342, the captain's choice setup-on-phone): the setup sheet, in the computer's Settings words, opens Google's page in the browser and takes the client file Google gives, chosen from Files or pasted, and hands it whole to the computer (`inf:integrations:client`), which keeps its secret in Secrets; kept, the same sheet shows Google's notice.
+A computer from before that change sends no `client`, so the row offers its sign-in as before and never asks it to keep a client.
+The phone check's computer names no client of its own, as a released build, so its google part sets up the stand-in's own client by pasting its file (`tests/helpers/phoneGoogle.ts`).
 The isolated phone check opens no browser: the simulator shares its computer's loopback address, where the sign-in itself listens, so its google part pastes the address the stand-in Google sends the browser to (`tests/helpers/phoneGoogle.ts`), and `PhoneSignInReturnTests` drives the real listener with a real request.
 
 ## Settings pages in the computer's words

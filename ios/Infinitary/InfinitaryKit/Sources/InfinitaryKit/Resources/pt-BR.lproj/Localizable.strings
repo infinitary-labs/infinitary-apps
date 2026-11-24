@@ -1844,6 +1844,8 @@
 "phoneFormatNow" = "agora";
 "phoneFormatUnderMinute" = "menos de 1 min";
 "phoneGoogleInvite" = "Deixe seu imediato em %1$@ ler o Gmail e o Calendário. O login fica em %1$@.";
+"phoneGoogleSetupStays" = "O Infinitary guarda a chave secreta do cliente em Segredos no %1$@. Seu imediato e sua tripulação nunca a veem.";
+"phoneGoogleSetupStepFile" = "Baixe com Download JSON o arquivo de cliente que o Google mostra e depois escolha-o aqui ou cole o conteúdo dele.";
 "phoneGoogleSignIn" = "Fazer login";
 "phoneGoogleSignInAgain" = "Fazer login de novo";
 "phoneGoogleSignInAgainNeeded" = "O Google pede que você faça login de novo.";

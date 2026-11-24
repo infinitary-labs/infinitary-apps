@@ -166,6 +166,8 @@
   "phoneFormatNow": "剛剛",
   "phoneFormatUnderMinute": "不到 1 分鐘",
   "phoneGoogleInvite": "讓你在 {computer} 上的大副讀取 Gmail 和 Google 日曆。登入資訊會留在 {computer} 上。",
+  "phoneGoogleSetupStays": "Infinitary 把用戶端的密鑰保存在 {computer} 的機密中。你的大副和船員永遠看不到它。",
+  "phoneGoogleSetupStepFile": "用 Download JSON 下載 Google 顯示的用戶端檔案，然後在這裡選擇它，或貼上它的內容。",
   "phoneGoogleSignIn": "登入",
   "phoneGoogleSignInAgain": "重新登入",
   "phoneGoogleSignInAgainNeeded": "Google 要求你重新登入。",

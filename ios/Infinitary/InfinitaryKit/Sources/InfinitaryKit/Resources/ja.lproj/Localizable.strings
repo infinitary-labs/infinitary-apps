@@ -1844,6 +1844,8 @@
 "phoneFormatNow" = "今";
 "phoneFormatUnderMinute" = "1分未満";
 "phoneGoogleInvite" = "%1$@ の一等航海士が Gmail とカレンダーを読めるようにします。サインイン情報は %1$@ にとどまります。";
+"phoneGoogleSetupStays" = "Infinitary はクライアントのシークレットを %1$@ のシークレットに保管します。一等航海士と乗組員がそれを見ることはありません。";
+"phoneGoogleSetupStepFile" = "Google に表示されるクライアント ファイルを Download JSON でダウンロードし、ここで選択するか、中身を貼り付けてください。";
 "phoneGoogleSignIn" = "サインイン";
 "phoneGoogleSignInAgain" = "もう一度サインイン";
 "phoneGoogleSignInAgainNeeded" = "Google から再度のサインインを求められています。";

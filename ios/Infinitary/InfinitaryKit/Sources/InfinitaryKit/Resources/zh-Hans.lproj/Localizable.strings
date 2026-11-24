@@ -1844,6 +1844,8 @@
 "phoneFormatNow" = "刚刚";
 "phoneFormatUnderMinute" = "不到 1 分钟";
 "phoneGoogleInvite" = "让 %1$@ 上的大副读取 Gmail 和日历。登录信息保留在 %1$@ 上。";
+"phoneGoogleSetupStays" = "Infinitary 把客户端的密钥保存在 %1$@ 的机密中。你的大副和船员永远看不到它。";
+"phoneGoogleSetupStepFile" = "用 Download JSON 下载 Google 显示的客户端文件，然后在这里选择它，或粘贴它的内容。";
 "phoneGoogleSignIn" = "登录";
 "phoneGoogleSignInAgain" = "重新登录";
 "phoneGoogleSignInAgainNeeded" = "Google 要求你重新登录。";

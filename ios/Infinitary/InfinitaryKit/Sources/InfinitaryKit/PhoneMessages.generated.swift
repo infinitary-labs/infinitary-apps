@@ -1930,6 +1930,8 @@ public enum PhoneMessages {
     public static func `phoneFormatNow`() -> String { PhoneWords.format("phoneFormatNow", []) }
     public static func `phoneFormatUnderMinute`() -> String { PhoneWords.format("phoneFormatUnderMinute", []) }
     public static func `phoneGoogleInvite`(`computer`: String) -> String { PhoneWords.format("phoneGoogleInvite", [`computer`]) }
+    public static func `phoneGoogleSetupStays`(`computer`: String) -> String { PhoneWords.format("phoneGoogleSetupStays", [`computer`]) }
+    public static func `phoneGoogleSetupStepFile`() -> String { PhoneWords.format("phoneGoogleSetupStepFile", []) }
     public static func `phoneGoogleSignIn`() -> String { PhoneWords.format("phoneGoogleSignIn", []) }
     public static func `phoneGoogleSignInAgain`() -> String { PhoneWords.format("phoneGoogleSignInAgain", []) }
     public static func `phoneGoogleSignInAgainNeeded`() -> String { PhoneWords.format("phoneGoogleSignInAgainNeeded", []) }
@@ -6431,6 +6433,8 @@ extension PhoneWords {
         "phoneFormatNow": [],
         "phoneFormatUnderMinute": [],
         "phoneGoogleInvite": ["computer"],
+        "phoneGoogleSetupStays": ["computer"],
+        "phoneGoogleSetupStepFile": [],
         "phoneGoogleSignIn": [],
         "phoneGoogleSignInAgain": [],
         "phoneGoogleSignInAgainNeeded": [],

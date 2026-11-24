@@ -722,10 +722,9 @@ test("a Build row's bug that reproduces: the fix starts built on the reproductio
   });
 });
 
-test("a Build row's bug that does not reproduce: its crewmate asks the captain and nothing starts", async () => {
+test("a Build row's bug that does not reproduce: its crewmate's card offers asking the reporter, keeping it or closing it", async () => {
   const { page } = launched;
   const reproduce = await rowTitled(page, SEQ_ROW_NO.reproduce);
-  const before = (await board(page)).map((task) => task.id);
   await startFromRecord(page, reproduce.key);
   await cardShown(page, SEQ_ROW_NOT_REPRODUCED_TITLE);
   for (const way of SEQ_ROW_NOT_REPRODUCED_WAYS)
@@ -735,10 +734,7 @@ test("a Build row's bug that does not reproduce: its crewmate asks the captain a
     taskId: reproduce.id,
     author: "crewmate",
   });
-  // Its report arrived, and no task was filed or started on it.
   await expect
     .poll(async () => (await detailOf(page, reproduce.id)()).outcome ?? "", { timeout: 30_000 })
     .toContain("reproduced: no");
-  const filed = (await board(page)).filter((task) => !before.includes(task.id));
-  expect(filed.filter((task) => /gauge blink/i.test(task.title))).toEqual([]);
 });

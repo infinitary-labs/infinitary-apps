@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "core-settings-test-split",
+      "reason": "Internal: the whole-core Settings tests split into two files by owner, the trail a change leaves moving whole into its own file with the same test names; nothing a person sees changes."
+    }
+  ]
+}

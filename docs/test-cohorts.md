@@ -316,6 +316,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/core/orchestrator/firstmateAgent.context.test.ts` | real git, at the run's own priority | 5 s default |
 | `src/core/orchestrator/firstmateAgent.delivery.test.ts` | real git, at the run's own priority | 5 s default |
 | `src/core/orchestrator/firstmateAgent.flagship.test.ts` | real git, at the run's own priority | 5 s default |
+| `src/core/orchestrator/firstmateAgent.handoffs.test.ts` | real git, at the run's own priority | 5 s default |
 | `src/core/orchestrator/firstmateAgent.inbox.test.ts` | real git, at the run's own priority | 5 s default |
 | `src/core/orchestrator/firstmateAgent.knowledge.test.ts` | real git, at the run's own priority | 5 s default |
 | `src/core/orchestrator/firstmateAgent.lane.test.ts` | real git, at the run's own priority | 5 s default |

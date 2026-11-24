@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "split-firstmate-agent-actions-test",
+      "reason": "How the project's tests are laid out: the first mate's hand-off-to-Settings tests moved unchanged out of src/core/orchestrator/firstmateAgent.actions.test.ts into their own file to keep it under the size warning; every test stays the same, and nothing a person sees changes."
+    }
+  ]
+}

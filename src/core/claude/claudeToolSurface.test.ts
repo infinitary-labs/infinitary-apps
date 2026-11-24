@@ -604,10 +604,15 @@ describe("what the Claude client serves the Firstmate equals the source (contrac
       ...parameterDescriptions(emitCard?.input_schema).values(),
     ].join("\n");
     const source = tools.find((tool) => tool.name === "emit_card");
+    // Fields the served schema leaves open (`required_actions` entries and
+    // the `until` details) keep their carrier below: their rules are still
+    // said in the description.
     expect(
-      new Set(nestedFields(source?.parameters as Schema)),
+      nestedFields(source?.parameters as Schema).filter(
+        (path) => !(path in EMIT_CARD_NESTED_CARRIERS),
+      ),
       "every nested emit_card field names its carrier",
-    ).toEqual(new Set(Object.keys(EMIT_CARD_NESTED_CARRIERS)));
+    ).toEqual([]);
     for (const [path, carrier] of Object.entries(EMIT_CARD_NESTED_CARRIERS)) {
       expect(servedCardText, `emit_card ${path} is not carried by what is served`).toContain(
         carrier,

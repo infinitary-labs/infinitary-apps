@@ -322,7 +322,7 @@ export const CLAUDE_TOOL_DESCRIPTION_CAP = 2_048;
  */
 const RISK_PARAM = [
   `Required on your own change's merge card, allowed on one naming a reviewed pull request, nowhere else: your assessment of the change's risk, drawn as a radar on the card and kept on the task.`,
-  `Give each of the seven dimensions a level - low, medium or high, rating the change itself, never how careful you were - and why: one plain line of at most ${RISK_WHY_MAX} characters naming the concrete reason.`,
+  `Key each of the seven dimensions to {level, why}: a level - low, medium or high, rating the change itself, never how careful you were - and why: one plain line of at most ${RISK_WHY_MAX} characters naming the concrete reason.`,
   "The app adds no measurements; the body never repeats the assessment.",
   ...RISK_DIMENSIONS.map((dimension) => {
     const { label, ask, levels } = RISK_WORDS[dimension];

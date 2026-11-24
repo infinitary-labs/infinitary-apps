@@ -229,10 +229,10 @@ export const SHOW_MERGE_CARD_TOOL_NAME = "show_merge_card";
 /** show_merge_card's own words (INF-3717 piece 2): every rule a Claude crewmate needs is here. */
 export const SHOW_MERGE_CARD_TOOL_DESCRIPTION = [
   "Show your merge card in one call after committing. Pass story for new or changed words; omit it to use the newest.",
-  "The app prepares and publishes the story, opens and reads back the pull request, stopping at the first missing commit, push, review, proof, passing checks or closed waits. Accepted proof refreshes it; unchanged words add no revision.",
+  "The app prepares and publishes the story and opens the pull request, stopping at the first missing commit, push, review, proof, passing checks or closed waits. Accepted proof refreshes it; unchanged words add no revision.",
   "The answer names actions, missing item and owner; act or end the turn, then call again.",
   "The app builds the saved-story card and merge action; give no body, risk, required actions or actions. Reuse id to revise an open card; after the captain answers, the app uses a new id.",
-  "Use prepare_change, open_change and emit_card only for surrounding text, uncertain writes, another project, a stacked change, upstream contribution or a contributor's fork review.",
+  "Use prepare_change, open_change and emit_card only for surrounding text, uncertain writes, another project, a stacked change, an upstream contribution or a fork review.",
 ].join(" ");
 
 export const SHOW_MERGE_CARD_TOOL = crewmateTool({

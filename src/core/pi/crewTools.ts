@@ -751,7 +751,7 @@ export function createCrewTools(delegate: CrewDelegate) {
     description:
       "Send guidance, feedback or a follow-up to a crewmate's running or idle task. " +
       "The result says when it queued for the next turn. " +
-      "Messages expect a correlated response by default; guidance-only response_mode needs none. Responses wake you at once when submitted.",
+      "Messages expect a correlated response by default; guidance-only response_mode needs none. Responses wake you at once.",
     parameters: Type.Object({
       task_id: Type.String({ description: "Task id from context or spawn" }),
       message: Type.String({ description: "What the crewmate should know or do next" }),

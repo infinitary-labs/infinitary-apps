@@ -298,6 +298,8 @@ export type EmittedCard = {
   continues?: boolean;
   /** Declared: it answers the captain's message it is about (INF-1610). */
   answering?: boolean;
+  /** Declared: it asks again, on purpose, a question answered on this earlier card. */
+  asksAgain?: { card: string; why: string };
 };
 
 /**
@@ -507,6 +509,9 @@ const sharedCardParams = {
   contribution_reason: Type.Optional(Type.String()),
   operation_id: Type.Optional(Type.String()),
   answers_message: Type.Optional(Type.Integer({ minimum: 1 })),
+  // Served bare too: the refusal of a repeated question says when to pass it
+  // and what the card then opens with (INF-6523 part 4).
+  asks_again: Type.Optional(Type.Object({ card: Type.String(), why: Type.String() })),
   actions: Type.Optional(
     Type.Array(
       actionParam(Type.Union([mergeEffectParam, settleEffectParam, firstmateOpenEffectParam])),
@@ -1104,6 +1109,9 @@ async function emitCard(
     ...(params.design_only ? { designOnly: true } : {}),
     ...(params.continues ? { continues: true } : {}),
     ...(params.answering ? { answering: true } : {}),
+    ...(params.asks_again?.card.trim() && params.asks_again.why.trim()
+      ? { asksAgain: { card: params.asks_again.card.trim(), why: params.asks_again.why.trim() } }
+      : {}),
     // The attribution and attach-first fields exist only in the Firstmate's schema; a
     // crewmate's runtime never passes them.
     ...(firstmate && params.task_id?.trim() ? { taskId: params.task_id.trim() } : {}),

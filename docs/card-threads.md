@@ -44,6 +44,22 @@ One note is the exception: a validation question whose click the host could not 
 A decision the captain closed without choosing, or a card a script or its author closed, can still come back under its id.
 The host's own card for a first mate's `app_change` ask (`HandoverOffer`) is never refused this way: while it is up, asking again revises it, and once the captain answered it, the next ask goes up under the next id in its series (`CardEmits.offerCardId`), such as `app-device-invite-2`.
 
+### A question already answered
+
+A question the captain answered on one card is not asked again on another (INF-6523, the captain's pick "Keep the backstop").
+Three facts carry the answer to the agent that might ask again, and one refusal backs them.
+
+- The card read (`tasks card`, `CardService.cardRead`) of a closed card carries `ended`: how it ended, who closed it, when, the choice's id and label, and the answers sent with it, from `CardStore.past`.
+- The crewmate's card rules and the reviewer's Review finding round say an answered question is settled: read the earlier card before asking it again, and act on its answer.
+  The round's decisions are written when the round starts, so an answer that arrives later shows only on the card.
+- A builder's report wake names its reviewer's open Review finding cards (`CardThreads.wakeCards`), so the first mate asks nobody for a card already on the captain's screen.
+- `emit_card` refuses a decision whose radio, checkbox or select question repeats one on a closed card the captain answered (`answeredQuestionRefusal`, `answeredQuestion.ts`).
+  A question repeats when it has the same control name and the same set of option values (`cardChoiceQuestions`, `cardLint.ts`), whatever its title, legend or body say; a Something else row is no option.
+  Only a choice that neither declines nor puts the card off answers it, and only an answer that names the question.
+  The check reads the emitting task's closed cards and, for an independent reviewer or a first mate relaying one, the cards of the builder and every review of it.
+  The refusal shows the earlier card, its legend, options, the choice, the answers and when, and nothing is shown.
+  The author judges whether the question is the same: when its facts changed or it is a different question under the same name, `asks_again` `{ card, why }` names the earlier card and the card goes up, opening with the earlier answer and what changed.
+
 A reply does hand the turn to the author, and it never moves the card (INF-770 direction A, captain-approved 2026-10-21): the card stays shown in its place with the thread beside it, the pager and the arrows do not change, and the waiting line says who answers next.
 The minimize minus puts the card away and says what stays on rest (`docs/card-authoring.md`, "Put a card aside").
 An author may declare `holds_place` on `emit_card` (`Card.holdsPlace`): each newly arriving marked card comes forward, including the same stable id raised again as a note after a choice, but a revision or thread answer never undoes the captain's paging away.
@@ -533,7 +549,7 @@ The captain approved shared cards ("Any crewmate or first mate, without a per-ca
 
 Any first mate or crewmate may write on a card it did not author, with no grant.
 `CardService.targetOf` reads what an id names for its caller before any id prefix makes a new card: a card on the record is `own`, `foreign` or `closed`, an unused id in the caller's own namespace is `new`, and any other unused `card-` id is `unknown` and refused, never filed as a new card.
-A writer reads the card first with `tasks card` (`CardService.cardRead`): its words, revision, lifecycle, choices, the captain message it waits on, and its thread with message ids.
+A writer reads the card first with `tasks card` (`CardService.cardRead`): its words, revision, lifecycle, choices, the captain message it waits on, its thread with message ids, and for a closed card how it ended ("A question already answered").
 
 `emit_card` on someone else's card is one of two writes (`CardService.contribute`).
 With `expected_revision`, the revision the writer read, it revises the card's words in place.

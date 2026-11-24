@@ -103,6 +103,24 @@ const CASES: WordsCases<FirstmateReportWakeKind> = {
         '[fm-op] crewmate 61 reported on task 479823ee "Restructure the wakes file": Started the migration; the audit capped the meter. Programs started this turn: INF-3032 "Migrate each renderer". Each runs now, and this task waits on it; update_task drop stops one. Programs this task started that returned a branch: INF-3031 "Cap the meter" returned INF-3033\'s last commit: work that ships it names INF-3033 in branch_from.',
     },
     {
+      // INF-6536 finding 3: recorded proof with no reader started reaches
+      // the first mate at the report that recorded it.
+      name: "its recorded proof waits for a reader",
+      wake: {
+        facts: {
+          kind: "report",
+          task: TASK,
+          crewmate: "crewmate 61",
+          excerpt: "Recorded the live validation run.",
+          filed: [],
+          cards: [],
+          proofUnread: { run: 2, head: "4be7c1d90a2f3e5b6c7d8e9f0a1b2c3d4e5f6a7b" },
+        },
+      },
+      words:
+        '[fm-op] crewmate 61 reported on task 479823ee "Restructure the wakes file": Recorded the live validation run. Its live validation run 2 at 4be7c1d waits for an independent reader, and no review of the task is open to read it; a review started with review_of at that version reads it.',
+    },
+    {
       name: "carrying every fact a report can",
       wake: {
         facts: {

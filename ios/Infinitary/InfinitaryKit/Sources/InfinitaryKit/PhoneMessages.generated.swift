@@ -2464,6 +2464,9 @@ public enum PhoneMessages {
     public static func `recordPolicyProject`() -> String { PhoneWords.format("recordPolicyProject", []) }
     public static func `recordPolicyThisTask`() -> String { PhoneWords.format("recordPolicyThisTask", []) }
     public static func `recordRecordedDetails`() -> String { PhoneWords.format("recordRecordedDetails", []) }
+    public static func `recordReviewCarried`(`head`: String, `key`: String) -> String { PhoneWords.format("recordReviewCarried", [`head`, `key`]) }
+    public static func `recordReviewCarriedProof`(`head`: String, `key`: String) -> String { PhoneWords.format("recordReviewCarriedProof", [`head`, `key`]) }
+    public static func `recordReviewPassedIn`(`key`: String) -> String { PhoneWords.format("recordReviewPassedIn", [`key`]) }
     public static func `recordShowCard`() -> String { PhoneWords.format("recordShowCard", []) }
     public static func `recordShowEarlier`(`count`: Int) -> String { PhoneWords.format("recordShowEarlier", [`count`]) }
     public static func `recordSourceGone`() -> String { PhoneWords.format("recordSourceGone", []) }
@@ -6914,6 +6917,9 @@ extension PhoneWords {
         "recordPolicyProject": [],
         "recordPolicyThisTask": [],
         "recordRecordedDetails": [],
+        "recordReviewCarried": ["head", "key"],
+        "recordReviewCarriedProof": ["head", "key"],
+        "recordReviewPassedIn": ["key"],
         "recordShowCard": [],
         "recordShowEarlier": ["count"],
         "recordSourceGone": [],

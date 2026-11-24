@@ -2350,6 +2350,9 @@
 "recordPolicyProject" = "Configuración del proyecto";
 "recordPolicyThisTask" = "Esta tarea";
 "recordRecordedDetails" = "Detalles registrados";
+"recordReviewCarried" = "Esta tarea conserva la revisión que %2$@ superó en %1$@: el mismo commit.";
+"recordReviewCarriedProof" = "Esta tarea conserva la revisión que %2$@ superó en %1$@ y la prueba aceptada allí: el mismo commit.";
+"recordReviewPassedIn" = "superada en %1$@";
 "recordShowCard" = "Mostrar la tarjeta";
 "recordSourceGone" = "Esta fuente histórica ya no está disponible.";
 "recordStart" = "Iniciar";

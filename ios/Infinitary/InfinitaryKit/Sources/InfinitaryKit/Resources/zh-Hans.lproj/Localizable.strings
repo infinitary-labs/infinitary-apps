@@ -2350,6 +2350,9 @@
 "recordPolicyProject" = "项目设置";
 "recordPolicyThisTask" = "本任务";
 "recordRecordedDetails" = "记录的详情";
+"recordReviewCarried" = "此任务沿用 %2$@ 在 %1$@ 通过的审查：同一个提交。";
+"recordReviewCarriedProof" = "此任务沿用 %2$@ 在 %1$@ 通过的审查，以及当时接受的证明：同一个提交。";
+"recordReviewPassedIn" = "已在 %1$@ 中通过";
 "recordShowCard" = "显示卡片";
 "recordSourceGone" = "这个历史来源已不可用。";
 "recordStart" = "开始";

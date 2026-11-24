@@ -88,6 +88,9 @@
   "recordPolicyProject": "Réglage du projet",
   "recordPolicyThisTask": "Cette tâche",
   "recordRecordedDetails": "Détails enregistrés",
+  "recordReviewCarried": "Cette tâche reprend la revue que {key} a réussie à {head} : le même commit.",
+  "recordReviewCarriedProof": "Cette tâche reprend la revue que {key} a réussie à {head}, et la preuve acceptée là : le même commit.",
+  "recordReviewPassedIn": "réussie dans {key}",
   "recordShowCard": "Afficher la carte",
   "recordShowEarlier": {
     "plural": "count",

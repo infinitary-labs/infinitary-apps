@@ -256,6 +256,14 @@ export const REVIEW_WORDS: Words<"pass" | "findings" | "blocked"> = {
 export const REVIEW_EARLIER_WORDS = "passed at an earlier version";
 
 /**
+ * A pass a takeover carries from the task whose review earned it, at the
+ * very same version (INF-6536 finding 3): the fact names that task.
+ */
+export function reviewCarriedWords(key: string): string {
+  return m.recordReviewPassedIn({ key });
+}
+
+/**
  * What a plugin can read, in the person's words (the consent card, one
  * plugin vehicle Phase A; the design skill's vocabulary table): the app's
  * own reads a panel may declare, by catalog name.

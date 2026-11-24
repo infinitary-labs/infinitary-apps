@@ -77,6 +77,12 @@ export type ChangeDeliveryOptions = {
   /** Synchronous: kept proof is checked immediately before the forge send. */
   verifyValidationEvidence?: (taskId: string) => void;
   /**
+   * The folder a task's kept proof lives in, so a takeover can carry an
+   * earlier task's accepted proof into its own (`carryTakenOverReview`).
+   * Absent, a takeover carries no review.
+   */
+  proofDir?: (taskId: string) => string;
+  /**
    * A task whose working copy is on a computer that runs work: its
    * branch is brought here from there before this Mac's own git reads
    * it, into the project's folder (docs/helper.md, "Its working

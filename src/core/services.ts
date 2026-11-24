@@ -862,8 +862,8 @@ export async function createServices(
     commentsWatched: () => runbooks.wakes().has(PULL_REQUEST_COMMENTS_WAKE),
     bringBranchHome: (taskId, strict, branch) => placed.bringBranchHome(taskId, strict, branch),
     checkedOut: (taskId) => placed.checkedOut(taskId),
-    verifyValidationEvidence: (taskId): void =>
-      supervisor.reportIntake.verifyValidationEvidence(taskId),
+    verifyValidationEvidence: (taskId) => supervisor.reportIntake.verifyValidationEvidence(taskId),
+    proofDir: (taskId) => crewmateCardPicturesDir(paths, taskId),
     now: ticker.now,
   });
   // A project's batch changed (docs/forge.md, "Batches of your own"): Settings reads it again.

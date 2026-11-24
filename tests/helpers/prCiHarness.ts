@@ -251,6 +251,7 @@ export function setup(
     ...(options.onNote ? { onNote: options.onNote } : {}),
     ...(options.steer ? { steer: options.steer } : {}),
     ...(options.batches ? { batches: options.batches } : {}),
+    proofDir: (taskId) => join(paths, "proof", taskId),
   });
   return { db, tasks, repos, service, forge, paths, presentations, readHead };
 }

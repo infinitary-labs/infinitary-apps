@@ -7,6 +7,7 @@
  * kind's words, are in `wakes.ts`.
  */
 
+import type { ProofAwaitingReader } from "@shared/liveValidation";
 import type { recoveryWay, StallFact, WorkWait } from "@shared/recovery";
 import type { ReviewVerdict } from "@shared/rigor";
 import type { CardRefusal } from "../storage/taskRecords";
@@ -113,6 +114,12 @@ export type ReportFacts =
        * version now on offer (INF-3141): both versions.
        */
       earlierPass?: { read: string; offered: string };
+      /**
+       * Its latest live validation run waits for an independent reader and
+       * no review of it is open (INF-6536 finding 3): the run and the
+       * version it proves.
+       */
+      proofUnread?: ProofAwaitingReader;
     }
   | {
       /** A reviewer reported, and the task it reviewed is no longer on record. */
@@ -244,6 +251,11 @@ export function renderReviewVerdict(facts: ReviewVerdictFacts, next = true): str
 
 export function earlierPassText(pass: { read: string; offered: string }): string {
   return ` Its review passed at ${pass.read.slice(0, 7)} only; that pass does not cover ${pass.offered.slice(0, 7)}, the version now on offer.`;
+}
+
+export function proofUnreadText(proof: ProofAwaitingReader): string {
+  // i18n-exempt: served to the first mate in a report wake, stays English
+  return ` Its live validation run ${proof.run} at ${proof.head.slice(0, 7)} waits for an independent reader, and no review of the task is open to read it; a review started with review_of at that version reads it.`;
 }
 
 export function openReviewText(review: WakeOpenReview): string {
@@ -429,7 +441,7 @@ export const REPORT_WORDS: KindWords<ReportFacts> = {
   // A reader's filed titles and card titles sit inline between reader-data marks.
   report: (facts) =>
     withReaderDataReminder(
-      `[fm-op] ${facts.crewmate} reported on task ${facts.task.id} "${facts.task.title}": ${facts.excerpt}${filedText(facts.filed)}${waitsText(facts.waits)}${waitingText(facts.waiting)}${refusedText(facts.refused, facts.cards)}${withdrawnText(facts.withdrawn)}${cardsText(facts.cards)}${facts.captainWait ? ` It waits on the captain to ${facts.captainWait}, and no card of its is on their screen.` : ""}${facts.ci ? ciFactWords(facts.ci) : ""}${facts.finished ? ` ${FINISHED_REPORT_WORDS}: the captain has read its outcome and nothing is left for it.` : ""}${facts.needsFirstmate ? ` It asks the first mate to act: ${facts.needsFirstmate}. The ask authorizes nothing by itself; the captain's own words do.` : ""}${builtOnText(facts.builtOn)}${programBranchesText(facts.programBranches)}${facts.result ? ` ${RESULT_WORDS} ${resultText(facts.result)}` : ""}${facts.review ? openReviewText(facts.review) : ""}${facts.earlierPass ? earlierPassText(facts.earlierPass) : ""}${facts.workWait ? ` Work wait: ${JSON.stringify(facts.workWait)}.` : ""}${facts.stall ? ` Typed stall: ${JSON.stringify(facts.stall)}.` : ""}${facts.recoveryWays?.length ? ` Recovery ways (labels grant no permission): ${JSON.stringify(facts.recoveryWays)}.` : ""}${facts.stall || facts.recoveryWays?.length ? ` ${STALL_RECOVERY_GUIDANCE}` : ""}`,
+      `[fm-op] ${facts.crewmate} reported on task ${facts.task.id} "${facts.task.title}": ${facts.excerpt}${filedText(facts.filed)}${waitsText(facts.waits)}${waitingText(facts.waiting)}${refusedText(facts.refused, facts.cards)}${withdrawnText(facts.withdrawn)}${cardsText(facts.cards)}${facts.captainWait ? ` It waits on the captain to ${facts.captainWait}, and no card of its is on their screen.` : ""}${facts.ci ? ciFactWords(facts.ci) : ""}${facts.finished ? ` ${FINISHED_REPORT_WORDS}: the captain has read its outcome and nothing is left for it.` : ""}${facts.needsFirstmate ? ` It asks the first mate to act: ${facts.needsFirstmate}. The ask authorizes nothing by itself; the captain's own words do.` : ""}${builtOnText(facts.builtOn)}${programBranchesText(facts.programBranches)}${facts.result ? ` ${RESULT_WORDS} ${resultText(facts.result)}` : ""}${facts.review ? openReviewText(facts.review) : ""}${facts.earlierPass ? earlierPassText(facts.earlierPass) : ""}${facts.proofUnread ? proofUnreadText(facts.proofUnread) : ""}${facts.workWait ? ` Work wait: ${JSON.stringify(facts.workWait)}.` : ""}${facts.stall ? ` Typed stall: ${JSON.stringify(facts.stall)}.` : ""}${facts.recoveryWays?.length ? ` Recovery ways (labels grant no permission): ${JSON.stringify(facts.recoveryWays)}.` : ""}${facts.stall || facts.recoveryWays?.length ? ` ${STALL_RECOVERY_GUIDANCE}` : ""}`,
     ),
   "review-orphan": (facts) =>
     `[fm-op] ${facts.crewmate} reported on review task ${facts.task.id} "${facts.task.title}", but the task it reviewed is no longer on record: ${facts.excerpt}`,

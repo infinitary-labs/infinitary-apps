@@ -2350,6 +2350,9 @@
 "recordPolicyProject" = "專案設定";
 "recordPolicyThisTask" = "這項任務";
 "recordRecordedDetails" = "記錄的詳細資料";
+"recordReviewCarried" = "此任務沿用 %2$@ 在 %1$@ 通過的審查：同一個提交。";
+"recordReviewCarriedProof" = "此任務沿用 %2$@ 在 %1$@ 通過的審查，以及當時接受的證明：同一個提交。";
+"recordReviewPassedIn" = "已在 %1$@ 中通過";
 "recordShowCard" = "顯示卡片";
 "recordSourceGone" = "這個歷史來源已經無法取得。";
 "recordStart" = "開始";

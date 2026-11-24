@@ -83,6 +83,9 @@
   "recordPolicyProject": "Projekteinstellung",
   "recordPolicyThisTask": "Diese Aufgabe",
   "recordRecordedDetails": "Erfasste Details",
+  "recordReviewCarried": "Diese Aufgabe übernimmt das Review, das {key} bei {head} bestanden hat: derselbe Commit.",
+  "recordReviewCarriedProof": "Diese Aufgabe übernimmt das Review, das {key} bei {head} bestanden hat, und den dort akzeptierten Nachweis: derselbe Commit.",
+  "recordReviewPassedIn": "bestanden in {key}",
   "recordShowCard": "Karte anzeigen",
   "recordShowEarlier": {
     "plural": "count",

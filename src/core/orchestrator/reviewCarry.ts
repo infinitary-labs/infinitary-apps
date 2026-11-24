@@ -42,6 +42,19 @@ export function reviewCoversHead(
 }
 
 /**
+ * A pass that does not cover the version now on offer (INF-3141): the
+ * version it read and the one offered, so a report wake never reads an
+ * earlier review as covering later work.
+ */
+export function earlierPassOf(
+  delivery: TaskDelivery | null | undefined,
+): { read: string; offered: string } | undefined {
+  const read = delivery?.reviewVerdict === "pass" ? delivery.reviewSha : undefined;
+  const offered = delivery?.headSha;
+  return read && offered && !reviewCoversHead(delivery, offered) ? { read, offered } : undefined;
+}
+
+/**
  * Record that a passed review covers `head` when its change reading matches.
  * Compares stored readings. A version with none yet is read once and the
  * reading is stored - never a second carried-to head. Unreadable versions

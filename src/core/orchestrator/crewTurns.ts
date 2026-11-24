@@ -48,7 +48,7 @@ import { closingWords } from "./readerData";
 import { implausibleReport } from "./reportPlausibility";
 import { type IdleRule, type ReportSortRule, sortReport } from "./reportSort";
 import { PENDING_RESPONSES_END, PENDING_RESPONSES_OPENING, wakeBuiltOn } from "./reportWakes";
-import { reviewCoversHead } from "./reviewCarry";
+import { earlierPassOf } from "./reviewCarry";
 import { installText, ModelWaitError, NotAcceptedError, OpenedNothingError } from "./taskMoves";
 import { keptReportNote, laneTurnText, renderWake, type TypedWake } from "./wakes";
 
@@ -1395,12 +1395,7 @@ export class CrewTurns {
     const review = record ? this.core.reviewToReread(record) : undefined;
     // A pass that does not cover the version now on offer is named, so an
     // earlier review never reads as covering later work (INF-3141).
-    const read = record?.delivery?.reviewVerdict === "pass" ? record.delivery.reviewSha : undefined;
-    const offered = record?.delivery?.headSha;
-    const earlierPass =
-      read && offered && !reviewCoversHead(record?.delivery, offered)
-        ? { read, offered }
-        : undefined;
+    const earlierPass = earlierPassOf(record?.delivery);
     const builtOn = wakeBuiltOn(builtOnRows(this.core.options.tasks, task.id));
     const programBranches = startedProgramBranches(this.core.options.tasks, task.id);
     const witnesses = this.core.ladder.witnesses(task.id, this.core.now());
@@ -1447,6 +1442,7 @@ export class CrewTurns {
         ...(ci ? { ci } : {}),
         ...(review ? { review } : {}),
         ...(earlierPass ? { earlierPass } : {}),
+        ...(witnesses.proofUnread ? { proofUnread: witnesses.proofUnread } : {}),
       },
     };
     return { wake, record, witnesses, stall, recoveryWays, waiting, review };

@@ -655,6 +655,8 @@ export class Reviews {
       reviewSha: sha,
       reviewChange: review.delivery?.reviewChange,
       reviewCarrySha: undefined,
+      // This task's own verdict replaces a pass a takeover carried.
+      reviewFrom: undefined,
       ...(risk ? { reviewRisk: risk } : {}),
       ...(riskNote ? { reviewRiskNote: riskNote } : {}),
       reviewedAt: at,

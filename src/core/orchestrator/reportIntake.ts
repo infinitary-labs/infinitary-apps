@@ -45,6 +45,7 @@ import type { CrewSupervisorOptions } from "./crewSupervisorOptions";
 import { type PersonalBriefFacts, renderFollowupBrief } from "./intentBrief";
 import { READER_DATA_LABEL, readerDataAnswer, readerDataLine } from "./readerData";
 import { implausibleReport } from "./reportPlausibility";
+import { carryTakenOverReview } from "./takeoverCarry";
 
 /** What the report intake reaches of the supervisor beyond its options. */
 export type ReportIntakeHost = {
@@ -295,6 +296,21 @@ export class ReportIntake {
     if (input.kind === "decision")
       throw new Error(
         "Bind validation permission with emit_card.validation_request so the shown offer carries its exact facts; a report cannot attach permission to an unrelated card.",
+      );
+    // A takeover at the very commit an earlier task's review passed carries
+    // that pass and its accepted proof first (INF-6536 finding 3): proof
+    // that came with it is not run or recorded again at this commit.
+    const carried = builder
+      ? undefined
+      : carryTakenOverReview({
+          tasks: this.options.tasks,
+          taskId: owner.id,
+          head,
+          proofDir: (taskId) => crewmateCardPicturesDir(this.options.paths, taskId),
+        });
+    if (carried?.proof)
+      throw new Error(
+        `Nothing was recorded: this task now carries the review ${carried.key} passed at this same commit and the proof accepted there, so this version needs no proof of its own. Show the merge card; record proof again only for a new commit.`,
       );
     if (
       currentHead !== undefined &&

@@ -39,6 +39,7 @@ import { ANSWER_WHOLE_MAX_CHARACTERS } from "../session/answerFiles";
 import { storyLedgers } from "../storage/changeProjection";
 import type { TaskService } from "../tasks/taskService";
 import type { RepoRegistry } from "../workspace/repoRegistry";
+import { projectReadHeld, publicProjectRead } from "./readerPublicReads";
 
 /** Thrown before a release file is sent, so an ask records it as nothing sent. */
 const FILE_CHANGED_BEFORE_SEND = "The file changed before it was sent.";
@@ -217,6 +218,9 @@ export class GithubGatewayService {
           throw new ForgeError("refused", READER_READ_REFUSAL);
         const route = api.route(input.method ?? "GET", input.path);
         if (!route.own) throw new ForgeError("refused", READER_READ_REFUSAL);
+        // Marked before the read: once it is asked for, its answer may reach the reader.
+        if (!publicProjectRead(target.forge.kind, route.rest))
+          this.options.tasks.delivery.markReaderHolds(taskId, projectReadHeld(route.rest));
         const answer = await this.readOn(taskId, api, input, READER_ANSWER_MAX);
         const fenced = this.readerFenced(answer, target.forge.kind);
         // Breaking a copied mark lengthens the words by one character each.

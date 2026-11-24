@@ -126,7 +126,9 @@ An address can carry what the reader read to whoever runs the site, so which add
 
 - While it holds nothing, any public address opens at once.
 - It holds something once it reads its own project and that project is not public, from its first read, since its working copy is that project's files; the task record keeps the first such mark (`readerHolds`), and a host that cannot say whether the project is public counts as holding.
-  A reader with a public project holds nothing from it.
+  On a public project it holds something once its `github_read` reaches past what anyone may see there (`publicProjectRead`, `src/core/orchestrator/readerPublicReads.ts`): on GitHub, any path outside the repository itself, its issues, pull requests, comments, commits, contents, readme, git objects, branches, tags, comparisons, releases, labels, milestones and Actions runs, jobs and workflows, since the captain's sign-in also reads alerts, advisories, Actions variables, hooks and keys.
+  GitLab and Bitbucket let a public project keep any area to its members, and GitLab's own project answer carries a runner token to its maintainers, so every read there makes the reader hold.
+  The mark is set before the read goes out.
 - Once it holds something, an address its brief names exactly, outside any fenced words, still opens at once, and so does one the captain already allowed; any other is kept as a `WebReadAsk` and joins the reader's one approval card as a row showing the whole address ("A reader's writes" in `docs/forge.md`).
   The captain's Only this time opens each ticked page once and wakes the reader with its first part; Not now opens nothing.
 

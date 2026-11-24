@@ -11,6 +11,7 @@ import {
   devicePartNames,
   devicePhotos,
   endPhoneGate,
+  firstPhoneLanes,
   keepPhonePasses,
   macTestFilter,
   PHONE_DEVICES,
@@ -508,6 +509,134 @@ describe("several simulated devices of one device", () => {
       expect(most).toBe(failing ? 1 : 2);
       expect(ended.sort()).toEqual(failing ? ["iphone-1"] : ["iphone-1", "iphone-2"]);
     }
+  });
+});
+
+// INF-6407: on a compute Mac VM of 10 cores and 9 GiB, an iPhone Duo beside another simulated device slowed both, and
+// the iPad's panels part ran past its allowance beside the Duo's start and its fold part.
+describe("an iPhone Duo on a Mac of two places", () => {
+  const recorded = partTimes(readFileSync(PHONE_PART_TIMES, "utf8"))!;
+  const everyDevice = phonePasses(["ipad", "duo", "iphone"], {
+    parts: PHONE_PARTS.map(({ name }) => name),
+  });
+
+  it("runs alone after the devices that share the Mac, which keep the Mac's places", () => {
+    const plan = phoneLanePlan(everyDevice, 2, recorded);
+    expect(plan.lanes).toEqual([
+      { device: "iphone", number: 1 },
+      { device: "ipad", number: 1 },
+      { device: "duo", number: 1 },
+    ]);
+    expect([...plan.places]).toEqual([
+      ["ipad", 1],
+      ["duo", 2],
+      ["iphone", 1],
+    ]);
+    // With the Duo out of the shared places, the iPhone's parts take both of them.
+    const iphoneAndDuo = phonePasses(["duo", "iphone"], {
+      parts: ["fold", "panels", "cards-place"],
+    });
+    expect(phoneLanePlan(iphoneAndDuo, 2, recorded).lanes).toEqual([
+      { device: "iphone", number: 1 },
+      { device: "iphone", number: 2 },
+      { device: "duo", number: 1 },
+    ]);
+  });
+
+  it("keeps the one-place Mac's order, and lets a Mac of more places run the Duo beside others", () => {
+    const one = phoneLanePlan(everyDevice, 1, recorded);
+    expect(one.lanes.map((lane) => lane.device)).toEqual(["iphone", "ipad", "duo"]);
+    expect([...one.places.values()]).toEqual([1, 1, 1]);
+    const four = phoneLanePlan(everyDevice, 4, recorded);
+    expect(four.places.get("duo")).toBe(2);
+    expect(four.lanes.filter((lane) => lane.device !== "duo")).toHaveLength(2);
+    expect(four.lanes.map((lane) => lane.device)).toContain("duo");
+  });
+
+  it("starts only the lanes whose places fit while the app builds", () => {
+    expect(firstPhoneLanes(phoneLanePlan(everyDevice, 2, recorded), 2)).toEqual([
+      { device: "iphone", number: 1 },
+      { device: "ipad", number: 1 },
+    ]);
+    // The fold part runs once on each, so the iPhone has one lane and a place left that the Duo cannot take.
+    const iphoneAndDuo = phonePasses(["duo", "iphone"], { parts: ["fold"] });
+    const plan = phoneLanePlan(iphoneAndDuo, 2, recorded);
+    expect(plan.lanes).toEqual([
+      { device: "iphone", number: 1 },
+      { device: "duo", number: 1 },
+    ]);
+    expect(firstPhoneLanes(plan, 2)).toEqual([{ device: "iphone", number: 1 }]);
+    const duoAlone = phoneLanePlan(phonePasses(["duo"], { parts: ["fold"] }), 2, recorded);
+    expect(firstPhoneLanes(duoAlone, 2)).toEqual([{ device: "duo", number: 1 }]);
+  });
+
+  it("starts the Duo only once every other lane has ended, and starts no lane beside it", async () => {
+    const plan = phoneLanePlan(everyDevice, 2, recorded);
+    const open = new Set<string>();
+    const beside: string[][] = [];
+    const events: string[] = [];
+    const outcomes = await runDeviceLanes(
+      everyDevice,
+      2,
+      {
+        open: async (device) => {
+          open.add(device);
+          beside.push([...open]);
+          events.push(`start ${device}`);
+          return device;
+        },
+        run: async (job) => {
+          await new Promise((resolve) => setImmediate(resolve));
+          beside.push([...open]);
+          return job.part;
+        },
+        close: async (device) => {
+          events.push(`end ${device}`);
+          open.delete(device);
+        },
+      },
+      undefined,
+      plan,
+    );
+    expect(outcomes).toEqual(everyDevice.map((job) => job.part));
+    expect(beside.filter((devices) => devices.includes("duo") && devices.length > 1)).toEqual([]);
+    expect(beside.some((devices) => devices.length === 2)).toBe(true);
+    expect(events.indexOf("start duo")).toBeGreaterThan(events.indexOf("end iphone"));
+    expect(events.indexOf("start duo")).toBeGreaterThan(events.indexOf("end ipad"));
+  });
+
+  it("holds a job of two places until both are free, and starts no later job before it", async () => {
+    const order: string[] = [];
+    let running = 0;
+    const beside: number[] = [];
+    const jobs = ["a", "b", "duo", "c"];
+    await runSideBySide(
+      jobs,
+      2,
+      async (job) => {
+        order.push(job);
+        running += 1;
+        beside.push(running);
+        await new Promise((resolve) => setImmediate(resolve));
+        if (job === "duo") expect(running).toBe(1);
+        running -= 1;
+        return job;
+      },
+      undefined,
+      (job) => (job === "duo" ? 2 : 1),
+    );
+    expect(order).toEqual(jobs);
+    expect(Math.max(...beside)).toBe(2);
+    // A job asking for more places than the Mac has takes them all rather than never starting.
+    expect(
+      await runSideBySide(
+        ["duo"],
+        1,
+        async (job) => job,
+        undefined,
+        () => 3,
+      ),
+    ).toEqual(["duo"]);
   });
 });
 

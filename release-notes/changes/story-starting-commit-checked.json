@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "story-starting-commit-checked",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A mistyped starting point no longer holds a change's merge card",
+      "body": "A change's summary names the version of your project the change started from. A crewmate that names one your project does not have is now told at once, and one already saved that way can be corrected. Before, the merge card stayed out of reach and the work needed a second task.",
+      "noPicture": "This changes when a change's summary is accepted, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

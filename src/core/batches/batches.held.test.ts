@@ -719,14 +719,22 @@ describe("a held batch", () => {
   // declared the fix itself too, as the issue's workaround did, was read as carrying its own
   // declaration alone. A batch that waited for the repair's fix stayed held with that fix's
   // exact commit approved, and the repair's declaration outlived the batch that merged with it.
+  // Its fourth review's finding: the held version the combine verified stayed with the awaited
+  // repair only until the push came back, then went to the takeover's own declaration.
   it.each([
-    ["a batch that waits for that fix after a send-back", true, ["t-parser", "t-takeover"]],
-    ["a held batch", false, ["t-parser", "t-export", "t-takeover"]],
+    [
+      "a batch that waits for that fix after a send-back",
+      true,
+      ["t-parser", "t-takeover"],
+      FIX.taskId,
+    ],
+    ["a held batch", false, ["t-parser", "t-export", "t-takeover"], "t-takeover"],
   ])(
     "takes a takeover that declared the fix itself at the repair's declared commit into %s, and answers both declarations at the merge",
-    async (_batch, sentBack, members) => {
+    async (_batch, sentBack, members, based) => {
       const home = await heldBatch();
       const held = home.open();
+      home.builtOn.set(FIX.head, held.head);
       if (sentBack)
         await home.batches.answer(
           REPO,
@@ -747,6 +755,8 @@ describe("a held batch", () => {
       await home.pass();
       expect(home.members()).toEqual(members);
       expect(home.open().hold).toBeUndefined();
+      // The pushed batch keeps the base with the fix the change was carried as.
+      expect(home.record().fixBases).toEqual({ [based]: held.head });
 
       home.host.report([passed("build"), passed("unit-tests"), passed("lint")]);
       home.host.ready("clean");

@@ -1484,7 +1484,7 @@ export class Batches {
     if (!this.stillAt(repo)) return record;
     // The base this combine verified for a declared fix is kept before the push, which may
     // never come back: it joins the saved record alone, whose hold and version stay as they were.
-    this.save(repo.id, withBases(this.record(repo.id), result));
+    const { fixBases } = this.save(repo.id, withBases(this.record(repo.id), result));
     if (result.members.length)
       await (this.options.push ?? pushBatch)({
         repoDir: repo.path,
@@ -1496,11 +1496,11 @@ export class Batches {
     // Moved while the push ran: its result belongs to the former address, not the project now.
     if (!this.stillAt(repo)) return record;
     // A declared fix stays declared once it joins, until a batch merges with it or its task
-    // closes: a new version of it is still the fix, carried from the same base.
-    let next = this.save(
-      repo.id,
-      combined(release(record), result, { branch, at, origin: repo.origin }),
-    );
+    // closes. Its base is the one kept above, where the batch still said which fix it awaited.
+    let next = this.save(repo.id, {
+      ...combined(release(record), result, { branch, at, origin: repo.origin }),
+      ...(fixBases ? { fixBases } : {}),
+    });
     for (const left of result.leftOut) {
       // A clash while a batch stays open is answered now: its crewmate rebuilds on that batch.
       if (left.clash && next.open && this.options.rebuild) {

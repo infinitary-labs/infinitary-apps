@@ -13,13 +13,13 @@ import {
   expandDock,
   expectRecordBody,
   keySummary,
+  linkedTaskKeys,
   nowFrame,
   recordFrame,
   restOnFramedKey,
   restOnRow,
   rowSummaryBody,
   showRecordTab,
-  taskKeyLinks,
 } from "./rails";
 import { focusOn, pressKey } from "./windowKeys";
 
@@ -322,7 +322,10 @@ test("a tall summary stays above sidebars only when the smallest window leaves n
     await pressKey(target, "Enter");
     await expectRecordBody(page);
     await showRecordTab(page, "activity");
-    await restOnFramedKey(page, taskKeyLinks(recordFrame(page)).first());
+    await restOnFramedKey(
+      page,
+      linkedTaskKeys(recordFrame(page).locator('[data-record-section="timeline"]')).first(),
+    );
     const summary = keySummary(page).locator("[data-crew-summary]");
     await expect(summary).toBeVisible();
     expect(await clearOfLosses(page, summary)).toEqual([]);

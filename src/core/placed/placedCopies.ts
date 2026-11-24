@@ -10,15 +10,14 @@ import type { FmEvent } from "@shared/events";
 import { forgeOf } from "@shared/forge";
 import type { AwayCopy } from "@shared/placement";
 import {
-  type BundledRef,
   PLACED_COPY_CHUNK_BYTES,
-  type ReadableRef,
   SOURCE_REF_FROM,
   type WorkingCopyBase,
   type WorkOrderChannel,
   type WorkOrderResponse,
   workOrders,
 } from "@shared/work";
+import type { BundledRef, ReadableRef } from "@shared/workCopies";
 import { DeviceOutOfReachError } from "../connection/connection";
 import { ComputerBehindError, listsChange } from "../connection/contractChanges";
 import { type AppPaths, crewmatePlacedDir } from "../paths";

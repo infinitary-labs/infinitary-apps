@@ -40,7 +40,7 @@ import {
   VIEW_FLOOR,
 } from "./ipc";
 import { VIEW_OPEN_LISTS } from "./openLists";
-import { RESOURCE_OBSERVATIONS_SINCE, RESOURCE_ORDER, resourceOrders } from "./resources";
+import { RESOURCE_OBSERVATIONS_SINCE, resourceOrders } from "./resources";
 import { SIGN_IN_ORDER_CHANNELS, signInOrders } from "./signIns";
 import { STANDBY_CHANGE, STANDBY_ORDER_CHANNELS, standbyOrders } from "./standby";
 import {
@@ -54,6 +54,8 @@ import {
   STANDBY_PEERS_ORDER_CHANNELS,
   standbyPeersOrders,
 } from "./standbyPeers";
+import { WORK_ORDER_CHANNELS, workOrders } from "./work";
+import { BROWSER_ORDER_CHANNELS, browserOrders } from "./workBrowsers";
 import {
   DOWNLOAD_ORDER_CHANNELS,
   downloadOrders,
@@ -62,10 +64,7 @@ import {
   sourceOrders,
   UPDATE_ORDER_CHANNELS,
   updateOrders,
-  WORK_ORDER_CHANNELS,
-  workOrders,
-} from "./work";
-import { BROWSER_ORDER_CHANNELS, browserOrders } from "./workBrowsers";
+} from "./workUpdate";
 
 /**
  * The published contract (docs/contract.md): every core request and push of

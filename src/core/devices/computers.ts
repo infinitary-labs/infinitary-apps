@@ -42,10 +42,18 @@ import { RUNS_ON_THIS_MAC } from "@shared/repos";
 import { compareSemver } from "@shared/semver";
 import { devicePlace } from "@shared/signIns";
 import {
+  type DeviceWorkSetup,
+  WORK_REACH_GRACE_MS,
+  WORK_SETUP_LIVE,
+  WORK_SETUP_ONLY,
+  type WorkSetupReport,
+} from "@shared/workSetup";
+import {
   downloadOrders,
   SOURCE_BUILDS_CHANGE,
   type SourceBuildStep,
   sourceOrders,
+  UPDATE_RETURN_MS,
   type UpdateDownload,
   updateOrders,
   WORK_DOWNLOAD_ORDER,
@@ -54,15 +62,7 @@ import {
   WORK_UPDATE_ORDER,
   type WorkSourceAnswer,
   type WorkUpdateAnswer,
-} from "@shared/work";
-import {
-  type DeviceWorkSetup,
-  WORK_REACH_GRACE_MS,
-  WORK_SETUP_LIVE,
-  WORK_SETUP_ONLY,
-  type WorkSetupReport,
-} from "@shared/workSetup";
-import { UPDATE_RETURN_MS } from "@shared/workUpdate";
+} from "@shared/workUpdate";
 import {
   DeviceOutOfReachError,
   type ViewDeviceContact,

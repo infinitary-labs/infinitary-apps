@@ -2,6 +2,7 @@ import { FOLLOWUP_PROVENANCE_OPENING } from "../../../src/core/orchestrator/inte
 import {
   UNSAFE_DATA_READER_ASK,
   UNSAFE_DATA_READER_CARD,
+  UNSAFE_DATA_READER_CARD_WORDS,
   UNSAFE_DATA_READER_FILE,
   UNSAFE_DATA_READER_FOLLOWUP,
   UNSAFE_DATA_READER_MARKER,
@@ -16,7 +17,8 @@ import { sinceLastUser } from "../providerRequest";
  * An unsafe data reader's turn (docs/agents-reach.md, "An unsafe data reader"): a
  * file read and two reads where its project lives, two writes and a follow-up, then a
  * report asking the first mate to start that follow-up; once the captain's click answers, a
- * decision card and a report of what it answered.
+ * decision card with a question, its own reply under it and a report of what it answered;
+ * once the captain answers that card, a last report.
  * Its kept writes go on the app's own approval card, never its own.
  */
 export const unsafeDataReader: Scenario =
@@ -32,7 +34,16 @@ export const unsafeDataReader: Scenario =
       // Its decision card goes up only now: while one is open its report
       // waits on the captain and never wakes the first mate (`sortReport`).
       if (!results.length) return { calls: [{ name: "emit_card", args: UNSAFE_DATA_READER_CARD }] };
-      if (results.length > 1) return { text: "The answered writes are reported." };
+      if (results.length === 1) {
+        const card = results[0]?.match(/card-[\w-]+/)?.[0];
+        if (!card) throw new Error("The reader's card was not shown");
+        return {
+          calls: [
+            { name: "reply", args: { card_id: card, text: UNSAFE_DATA_READER_CARD_WORDS.reply } },
+          ],
+        };
+      }
+      if (results.length > 2) return { text: "The answered writes are reported." };
       return {
         calls: [
           {
@@ -43,6 +54,12 @@ export const unsafeDataReader: Scenario =
             },
           },
         ],
+      };
+    }
+    if (user.includes(UNSAFE_DATA_READER_CARD.title)) {
+      if (results.length) return { text: "The captain's answer is reported." };
+      return {
+        calls: [{ name: "report", args: { text: "The captain answered the card." } }],
       };
     }
     if (!user.includes(UNSAFE_DATA_READER_MARKER)) return undefined;

@@ -119,12 +119,20 @@ export const UNSAFE_DATA_READER_WRITES: GithubWriteInput[] = [
 /** The decision an unsafe data reader puts to the captain, whose words reach the first mate marked. */
 export const UNSAFE_DATA_READER_CARD = {
   title: "Reply to issue 12?",
-  body: "<p>Issue 12 asks for a reply about the cold start.</p>",
+  body: '<p>Issue 12 asks for a reply about the cold start.</p><fieldset><legend>What should the reply say?</legend><label><input type="checkbox" name="reply_says" value="planned"> Say a fix is planned</label><label><input type="checkbox" name="reply_says" value="other" data-inf-write-in> Something else</label></fieldset>',
   actions: [
-    { id: "reply", label: "Reply", default: true },
+    { id: "reply", label: "Draft the reply", default: true },
     { id: "later", label: "Not now" },
   ],
 };
+/** The reader card's words a person reads: its body's opening, its option and its reply under it. */
+export const UNSAFE_DATA_READER_CARD_WORDS = {
+  body: "Issue 12 asks for a reply about the cold start.",
+  option: "Say a fix is planned",
+  reply: "Issue 12 was opened by an account made today.",
+};
+/** What the captain writes in under the reader card's Something else, which stays their own words. */
+export const UNSAFE_DATA_READER_WRITTEN = "Ask them for the meter's log first";
 /** The follow-up an unsafe data reader files, whose brief carries its words marked. */
 export const UNSAFE_DATA_READER_FOLLOWUP = {
   title: "Look at the cold start idle",

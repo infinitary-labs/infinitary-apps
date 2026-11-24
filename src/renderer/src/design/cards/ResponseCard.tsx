@@ -468,7 +468,7 @@ export function ResponseCard({
           <div
             data-card-title=""
             style={{
-              order: 3,
+              order: 4,
               position: aside ? "relative" : undefined,
               padding: `10px ${asideRoom} 0 20px`,
               flexShrink: 0,
@@ -496,7 +496,7 @@ export function ResponseCard({
           <div
             data-card-revised=""
             style={{
-              order: 2,
+              order: 3,
               padding: `var(--space-1) ${asideRoom} 0 20px`,
               flexShrink: 0,
               fontFamily: "var(--font-mono)",
@@ -514,7 +514,7 @@ export function ResponseCard({
           <div
             data-card-asked-row=""
             style={{
-              order: 1,
+              order: 2,
               padding: `var(--space-2) ${asideRoom} 0 20px`,
               flexShrink: 0,
             }}

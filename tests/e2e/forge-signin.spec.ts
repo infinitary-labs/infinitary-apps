@@ -54,11 +54,13 @@ import {
   savedWriteAsks,
   UNSAFE_DATA_READER_ASK,
   UNSAFE_DATA_READER_CARD,
+  UNSAFE_DATA_READER_CARD_WORDS,
   UNSAFE_DATA_READER_CHANGE_MARKER,
   UNSAFE_DATA_READER_FILE,
   UNSAFE_DATA_READER_FOLLOWUP,
   UNSAFE_DATA_READER_MARKER,
   UNSAFE_DATA_READER_WRITES,
+  UNSAFE_DATA_READER_WRITTEN,
   WRITE_ASK_ANSWER_MARKER,
   WRITE_ASK_CARD_TITLE,
   WRITE_ASK_MARKER,
@@ -118,7 +120,7 @@ import { mergeWriteGuard } from "./scenarios/mergeWriteGuard";
 import { unsafeDataReader } from "./scenarios/unsafeDataReader";
 import { assertSettingsFits } from "./settings";
 import { clickInBody, expectNoCard, factsStrip, noteDone, shownCard } from "./stack";
-import { focusOn, pressKey } from "./windowKeys";
+import { focusOn, pressKey, typeInto } from "./windowKeys";
 
 /**
  * The app's own GitHub sign-in (git integration PR 1.2, `docs/forge.md`),
@@ -1170,32 +1172,113 @@ for (const runtime of READER_RUNTIMES) {
     // stranger's words, and its title reaches the first mate's next turn marked.
     const readerCard = shownCard(page, UNSAFE_DATA_READER_CARD.title);
     await expect(readerCard).toContainText(cardReaderUnsafeData(), { timeout: 45_000 });
+    // Its own reply waits under the card; the captain ticks its option and
+    // writes their own words under Something else, then sends.
+    await expect(page.getByText(UNSAFE_DATA_READER_CARD_WORDS.reply)).toBeVisible({
+      timeout: 45_000,
+    });
     if (evidence) await readerCard.screenshot({ path: join(evidence, `${shot}-reader-card.png`) });
+    const readerBody = cardBody(page, UNSAFE_DATA_READER_CARD.title);
+    await pressKey(
+      readerBody.getByRole("checkbox", { name: UNSAFE_DATA_READER_CARD_WORDS.option }),
+      " ",
+    );
+    await pressKey(readerBody.getByRole("checkbox", { name: "Something else" }), " ");
+    await typeInto(
+      readerBody.getByRole("textbox", { name: /^Your own answer to: What should the reply say/ }),
+      UNSAFE_DATA_READER_WRITTEN,
+    );
+    const sent = (launched.mockProvider?.requestBodies() ?? []).length;
+    // With a thread open, the card's buttons sit under it, beside the card.
+    await pressKey(
+      page.getByRole("button", {
+        name: UNSAFE_DATA_READER_CARD.actions[0]?.label,
+        exact: true,
+      }),
+      "Enter",
+    );
+    await expect(readerCard).toBeHidden();
     const followup = (await page.evaluate(() => window.infinitary.tasks.board())).tasks.find(
       (row) => row.title === UNSAFE_DATA_READER_FOLLOWUP.title,
     );
     if (!followup) throw new Error("The reader filed no follow-up");
-    await askFirstmate(
-      runtime.claude ? "How is the crew doing?" : `Start ${followup.key}.`,
-      runtime.claude
-        ? [{ name: "crew_status", args: {} }]
-        : [{ name: "update_task", args: { task: followup.key, start_now: true } }],
-    );
+    const readerKey =
+      (await page.evaluate(() => window.infinitary.tasks.board())).tasks.find(
+        (row) => row.id === id,
+      )?.key ?? "";
+    await askFirstmate(runtime.claude ? "How is the crew doing?" : `Start ${followup.key}.`, [
+      { name: "tasks", args: { key: readerKey } },
+      ...(runtime.claude
+        ? []
+        : [{ name: "update_task" as const, args: { task: followup.key, start_now: true } }]),
+    ]);
     expect(firstmateRead(UNSAFE_DATA_READER_CARD.title)).toBe(true);
+    // In the first mate's turn after the answer, the reader's chosen button and
+    // option are marked and the captain's own words are not; its read of the
+    // reader's record marks the card's body the same way.
+    const answered = (launched.mockProvider?.requestBodies() ?? [])
+      .slice(sent)
+      .find((raw) => raw.includes("spawn_crewmate") && raw.includes(UNSAFE_DATA_READER_WRITTEN));
+    if (!answered) throw new Error("The first mate's turn did not carry the captain's answer");
+    // Its read comes back whole in the request after it, where the scripted
+    // turn's own outcome holds only its opening.
+    const readerRead =
+      (launched.mockProvider?.requestBodies() ?? [])
+        .slice(sent)
+        .find((raw) => raw.includes("spawn_crewmate") && raw.includes("matching task")) ?? "";
+    if (evidence) {
+      writeFileSync(join(evidence, `${shot}-answered-request.json`), answered);
+      writeFileSync(join(evidence, `${shot}-reader-read-request.json`), readerRead);
+    }
+    for (const words of [
+      UNSAFE_DATA_READER_CARD.actions[0]?.label ?? "",
+      UNSAFE_DATA_READER_CARD_WORDS.option,
+    ])
+      expect(answered).toMatch(readerMarked(words));
+    expect(answered).not.toMatch(readerMarked(UNSAFE_DATA_READER_WRITTEN));
+    // Every time the read serves the card's body, as its card and in its
+    // decisions, it is marked.
+    const served = readerRead.split(UNSAFE_DATA_READER_CARD_WORDS.body).length - 1;
+    expect(served).toBeGreaterThan(0);
+    expect(
+      readerRead.match(new RegExp(readerMarked(UNSAFE_DATA_READER_CARD_WORDS.body).source, "g")),
+    ).toHaveLength(served);
+    expect(readerRead).toContain(UNSAFE_DATA_READER_WRITTEN);
+    expect(readerRead).not.toMatch(readerMarked(UNSAFE_DATA_READER_WRITTEN));
     if (runtime.claude) return;
-    // The follow-up it filed, once started, carries its words marked in the brief.
+    // The follow-up it filed, once started, carries its words marked in its
+    // own crewmate's brief: the one offered the report tool, past the app's
+    // tool-less ask that sorts the work's kind.
     const brief = async () =>
-      (launched.mockProvider?.requestBodies() ?? []).find(
-        (raw) =>
-          !raw.includes("spawn_crewmate") &&
-          raw.includes(FOLLOWUP_PROVENANCE_OPENING) &&
-          raw.includes(UNSAFE_DATA_READER_FOLLOWUP.goal),
-      ) ?? "";
+      (launched.mockProvider?.requestBodies() ?? []).find((raw) => {
+        if (!raw.includes(FOLLOWUP_PROVENANCE_OPENING)) return false;
+        const names = (
+          (JSON.parse(raw).tools ?? []) as { name?: string; function?: { name: string } }[]
+        ).map((tool) => tool.name ?? tool.function?.name ?? "");
+        return (
+          names.some((name) => name.endsWith("report")) &&
+          !names.some((name) => name.endsWith("spawn_crewmate"))
+        );
+      }) ?? "";
     await expect.poll(brief, { timeout: 60_000 }).not.toBe("");
     const started = await brief();
-    expect(started).toMatch(readerMarked(UNSAFE_DATA_READER_FOLLOWUP.goal));
-    expect(started).toMatch(readerMarked(UNSAFE_DATA_READER_FOLLOWUP.why));
     if (evidence) writeFileSync(join(evidence, `${shot}-followup-request.json`), started);
+    // Its card's body is saved whole in a file the brief names, marked there.
+    const cardFile = started.match(/- (\/[^"\\]+\/source-cards\/[^"\\]+\.html)/)?.[1];
+    if (!cardFile) throw new Error("The started follow-up's brief names no card file");
+    const savedCard = readFileSync(cardFile, "utf8");
+    if (evidence) writeFileSync(join(evidence, `${shot}-followup-card.html`), savedCard);
+    expect(savedCard).toMatch(readerMarked(UNSAFE_DATA_READER_CARD_WORDS.body));
+    for (const words of [
+      UNSAFE_DATA_READER_FOLLOWUP.goal,
+      UNSAFE_DATA_READER_FOLLOWUP.why,
+      UNSAFE_DATA_READER_CARD_WORDS.reply,
+      UNSAFE_DATA_READER_CARD_WORDS.option,
+      UNSAFE_DATA_READER_CARD.actions[0]?.label ?? "",
+    ])
+      expect(started).toMatch(readerMarked(words));
+    expect(started).toContain(UNSAFE_DATA_READER_WRITTEN);
+    expect(started).not.toMatch(readerMarked(UNSAFE_DATA_READER_WRITTEN));
   });
 }
 

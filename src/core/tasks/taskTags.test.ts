@@ -1,6 +1,7 @@
 import { projectTagChangeSchema } from "@shared/tags";
 import { describe, expect, it } from "vitest";
 import { taskProtocolFixture } from "../../../tests/helpers/taskProtocol";
+import { TaskTagStore } from "../storage/taskTagStore";
 import { seedProject } from "../workspace/seedProject";
 
 /**
@@ -193,6 +194,8 @@ describe("the tags a task carries", () => {
       add("bug", "Broken now.");
       const idea = add("idea", "Design first.").tags.find((tag) => tag.name === "idea")
         ?.id as string;
+      const docs = add("docs", "Only words change.").tags.find((tag) => tag.name === "docs")
+        ?.id as string;
       seedProject(f.db, { id: "r2", name: "website", path: "/fleet/website", addedAt: 2 });
       f.tasks.create({ id: "site", title: "Redo the footer", prompt: "", repoId: "r2" });
       const website = f.tasks.get("site")?.projectId as string;
@@ -204,6 +207,10 @@ describe("the tags a task carries", () => {
       }).tags[0]?.id as string;
       f.tasks.replaceTags("work", { names: ["bug"] }, "captain");
       f.tasks.setTags("work", [{ tagId: idea, on: true }], "decision");
+      f.tasks.setTags("work", [{ tagId: docs, on: true }], "decision");
+      f.tasks.setTags("work", [{ tagId: docs, on: false }], "decision");
+      // idea's row was judged at its first description; this edit makes it the second.
+      f.tasks.changeProjectTags({ op: "edit", tagId: idea, description: "Design it first." });
 
       f.tasks.joinWithRepositories(
         { sources: [{ projectId, whole: true }], repos: [{ id: "r1", name: "app" }] },
@@ -220,9 +227,50 @@ describe("the tags a task carries", () => {
       const listed = f.fresh().projects.find((project) => project.id === website)?.tags;
       expect(listed?.map((tag) => [tag.name, tag.description, tag.tasks])).toEqual([
         ["Bug", "Something on the site is broken.", 1],
-        ["idea", "Design first.", 1],
+        ["docs", "Only words change.", 0],
+        ["idea", "Design it first.", 1],
+      ]);
+      const idOf = (name: string) => listed?.find((tag) => tag.name === name)?.id as string;
+      const rows = new TaskTagStore(f.db).rowsOf("work");
+      expect(
+        [idOf("Bug"), idOf("docs"), idOf("idea")].map((id) => {
+          const row = rows.get(id);
+          return [row?.on, row?.by, row?.revision];
+        }),
+      ).toEqual([
+        [true, "captain", null],
+        [false, "decision", 1],
+        [true, "decision", null],
       ]);
       expect(f.fresh().projects.find((project) => project.id === projectId)?.tags).toBeUndefined();
+    } finally {
+      f.protocol.dispose();
+      f.db.close();
+    }
+  });
+
+  it("drops a moved task's tags when its project keeps other repositories", () => {
+    const { f, projectId, add } = withProject();
+    try {
+      const bug = add("bug", "Broken now.").tags[0]?.id as string;
+      seedProject(f.db, { id: "r3", name: "docs", path: "/fleet/docs", project: projectId });
+      f.tasks.create({ id: "manual", title: "Fix the manual", prompt: "", repoId: "r3" });
+      f.tasks.replaceTags("work", { ids: [bug] }, "captain");
+      f.tasks.replaceTags("manual", { ids: [bug] }, "captain");
+      seedProject(f.db, { id: "r2", name: "website", path: "/fleet/website", addedAt: 2 });
+      f.tasks.create({ id: "site", title: "Redo the footer", prompt: "", repoId: "r2" });
+      const website = f.tasks.get("site")?.projectId as string;
+
+      f.tasks.joinWithRepositories(
+        { sources: [{ projectId, whole: false }], repos: [{ id: "r3", name: "docs" }] },
+        "captain",
+        () => ({ id: website, name: "website" }),
+      );
+
+      expect(f.tasks.get("manual")?.projectId).toBe(website);
+      expect(new TaskTagStore(f.db).rowsOf("manual").size).toBe(0);
+      expect(f.tasks.tagsOf("work").map((tag) => tag.name)).toEqual(["bug"]);
+      expect(f.fresh().projects.find((project) => project.id === website)?.tags).toBeUndefined();
     } finally {
       f.protocol.dispose();
       f.db.close();

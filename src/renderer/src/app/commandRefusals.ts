@@ -100,7 +100,10 @@ export type WindowFacts = {
   taskMove?: boolean;
   /** The shown record offers Close as done (INF-3169's plan, piece 3). */
   taskCloseDone?: boolean;
-  /** The shown record offers Edit tags: its project has tags. */
+  /**
+   * Edit tags can run: the shown record, card or task tab belongs to a task
+   * whose project has tags or that carries tags.
+   */
   taskEditTags?: boolean;
   answerDoneReady?: boolean;
   /** The shown decision offers a way to say no (INF-3108). */

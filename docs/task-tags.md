@@ -50,7 +50,8 @@ Each change to a task's tags writes one quiet `note` on its timeline for each di
 A task reads a tag only while the tag belongs to its own project.
 Moving a task to another project deletes its tag rows, on and off, in the same write as the move (`src/core/tasks/projectMove.ts`), and so does moving repositories out of a project that keeps others.
 A project that empties into another, its repositories all moved, brings its tags along (`carryProjectTags`, `src/core/tasks/taskTags.ts`): each lands on the other project's tag of the same name in any case, or joins its list with its description, and every task keeps its rows, on and off, with who set each.
-A row landing on a tag the other project already had loses the description revision it was judged at, and the emptied project keeps no tags.
+A row keeps the description revision it was judged at only when that description is the one now on its tag: a row landing on a tag the other project already had, or one judged at an older description of its own tag, loses it.
+The emptied project keeps no tags.
 A purged task's rows go with it.
 
 A task's view (`taskViewSchema`) carries the tags it carries in `tags`, alphabetical, each with its id, name and setter; the field is absent while it carries none.

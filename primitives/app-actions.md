@@ -105,7 +105,8 @@ The captain's click alone is no ground: a control with none of these is a catalo
 ## Checks
 
 - [`src/shared/actions.test.ts`](../src/shared/actions.test.ts): action permissions, channel parity and per-field claims.
-- [`src/core/core.settings.test.ts`](../src/core/core.settings.test.ts): dispatch, refusals and settled runs.
+- [`src/core/core.settings.test.ts`](../src/core/core.settings.test.ts): dispatch and refusals.
+- [`src/core/core.settings.trail.test.ts`](../src/core/core.settings.trail.test.ts): settled runs, and the one operation and Activity line each change leaves.
 - [`src/core/core.settingsParity.test.ts`](../src/core/core.settingsParity.test.ts): the first mate's Settings acts and their refusals in the whole core, and a window's own setting changed at the named computer's window.
 - [`src/core/viewWindows.test.ts`](../src/core/viewWindows.test.ts) and [`src/shared/windowAnswer.test.ts`](../src/shared/windowAnswer.test.ts): an ask answered only by the window asked, and how a window answers.
 - [`tests/e2e/paired-window-settings.spec.ts`](../tests/e2e/paired-window-settings.spec.ts): the first mate changes a paired Mac's usage unit and key reminder at its window, and its own computer's key reminder at its own, in two apps.

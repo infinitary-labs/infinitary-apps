@@ -107,8 +107,9 @@ function publish(what: string, schema: z.ZodType, io: "input" | "output", open: 
         if (open && jsonSchema.additionalProperties === false)
           delete jsonSchema.additionalProperties;
         const def = zodSchema._zod.def;
-        if (def.type === "tuple" && !(def as z.core.$ZodTupleDef).rest)
-          boundTuple((def as z.core.$ZodTupleDef).items, jsonSchema, io);
+        // An empty list has no prefix to name: JSON Schema wants one prefix item at least.
+        if (def.type === "tuple" && (def as z.core.$ZodTupleDef).items.length === 0)
+          delete jsonSchema.prefixItems;
       },
     }) as JsonSchema;
   } catch (error) {
@@ -144,27 +145,6 @@ function oneTypeEach(node: unknown, names = false): unknown {
     else spelled[key] = oneTypeEach(value, NAME_MAPS.has(key));
   }
   return spelled;
-}
-
-/**
- * A list of arguments is published with the counts the home holds it to,
- * which zod leaves out: up to the last element that may not be left off,
- * and no more than it lists. Without them JSON Schema would admit any count.
- */
-function boundTuple(
-  items: readonly z.core.SomeType[],
-  jsonSchema: Record<string, unknown>,
-  io: "input" | "output",
-) {
-  const optional = io === "input" ? "optin" : "optout";
-  let required = items.length;
-  while (required > 0 && items[required - 1]?._zod[optional] === "optional") required -= 1;
-  if (required > 0) jsonSchema.minItems = required;
-  // An empty list has no prefix to name: JSON Schema wants one item at least.
-  if (items.length === 0) {
-    delete jsonSchema.prefixItems;
-    jsonSchema.maxItems = 0;
-  } else jsonSchema.items = false;
 }
 
 export const VERSION_RULE = {

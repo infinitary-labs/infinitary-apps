@@ -112,7 +112,13 @@ test("minimize preserves the decision and restores it from its own task row", as
     await expect(answer()).toBeChecked();
     await expect(cardReply(page).field).toHaveValue("Keep the review beside it.");
     await shownEntry(page).getByRole("button", { name: PUT_ASIDE_LABEL, exact: true }).click();
-    await page.evaluate(() => window.infinitary.tasks.detail("minimize-launch"));
+    expect(
+      await page.evaluate(() => window.infinitary.tasks.detail("minimize-launch")),
+    ).toMatchObject({
+      key,
+      title: "Prepare the launch checklist",
+      cards: [{ id: "minimize-choice", state: "open", minimized: true }],
+    });
 
     {
       await runFromSearch(app, page, "panel:now/board");

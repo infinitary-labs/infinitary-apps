@@ -94,6 +94,9 @@ extension PhoneJourney {
             XCTAssertTrue(panelsTab.waitForPresence(timeout: 20), app.debugDescription)
         }
 
+        try await pressPhoneKey("4", modifiers: .command, in: app)
+        XCTAssertTrue(header.waitForPresence(timeout: 20), app.debugDescription)
+
         // Background work that ended shows the computer's own line and Retry, which starts it again there.
         _ = try await home("panel-quit")
         let retry = app.buttons["panel-retry-phone-tally"]
@@ -103,7 +106,6 @@ extension PhoneJourney {
         XCTAssertTrue(retry.waitForAbsence(timeout: 30), app.debugDescription)
         let retried = try await home("panel-state", method: "GET")
         XCTAssertTrue(retried["stopped"] is NSNull, "Retry lifted the stop on the computer")
-
 
         _ = try await home("panel-remove")
         XCTAssertTrue(panelsTab.waitForAbsence(timeout: 20), app.debugDescription)

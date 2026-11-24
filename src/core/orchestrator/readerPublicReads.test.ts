@@ -18,4 +18,22 @@ describe("which of a reader's project reads anyone may see", () => {
     expect(publicProjectRead("github", "issues-secret")).toBe(false);
     expect(publicProjectRead("github", "secret-scanning/alerts")).toBe(false);
   });
+
+  // INF-6530's F10: drafts, protection and an unsent review are read only by
+  // those with access, so only the published forms of each area count.
+  it("counts published releases, branches and pull requests as public, but not drafts, protection or reviews", () => {
+    expect(publicProjectRead("github", "releases/latest")).toBe(true);
+    expect(publicProjectRead("github", "releases/tags/v0.8.9")).toBe(true);
+    expect(publicProjectRead("github", "releases")).toBe(false);
+    expect(publicProjectRead("github", "releases/183447521")).toBe(false);
+    expect(publicProjectRead("github", "releases/183447521/assets")).toBe(false);
+    expect(publicProjectRead("github", "branches/main")).toBe(true);
+    expect(publicProjectRead("github", "branches/main/protection")).toBe(false);
+    expect(publicProjectRead("github", "branches/main/protection/required_status_checks")).toBe(
+      false,
+    );
+    expect(publicProjectRead("github", "tags/protection")).toBe(false);
+    expect(publicProjectRead("github", "pulls/250/files")).toBe(true);
+    expect(publicProjectRead("github", "pulls/250/reviews")).toBe(false);
+  });
 });

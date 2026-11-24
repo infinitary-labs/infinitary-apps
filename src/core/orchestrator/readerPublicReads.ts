@@ -21,13 +21,24 @@ const GITHUB_PUBLIC_AREAS: readonly (readonly string[])[] = [
   ["branches"],
   ["tags"],
   ["compare"],
-  ["releases"],
+  // A release listing or one by number also shows drafts to anyone who can
+  // push; a release by tag and the latest one are published only.
+  ["releases", "latest"],
+  ["releases", "tags"],
   ["labels"],
   ["milestones"],
   ["actions", "runs"],
   ["actions", "jobs"],
   ["actions", "workflows"],
 ];
+
+/**
+ * Segments that close part of a public area: a branch's or tag's
+ * protection, read only by admins, and a pull request's reviews, which
+ * carry the caller's own unsent review. One anywhere in the path marks the
+ * reader, a file or folder of the same name included.
+ */
+const GITHUB_CLOSED_SEGMENTS = new Set(["protection", "reviews"]);
 
 /**
  * Whether a reader's read of its own project, `rest` being the path under
@@ -43,6 +54,7 @@ export function publicProjectRead(kind: ForgeKind, rest: string): boolean {
     .split("/")
     .filter((segment) => segment !== "")
     .map((segment) => decodeURIComponent(segment).toLowerCase());
+  if (segments.some((segment) => GITHUB_CLOSED_SEGMENTS.has(segment))) return false;
   return GITHUB_PUBLIC_AREAS.some((area) =>
     area.length === 0
       ? segments.length === 0

@@ -21,7 +21,7 @@ Three equal cards follow in one row, each a button whose line says how that setu
 
 1. **This computer** - "Sign in to a subscription here.
    I live and work on this computer." - opens the provider chips below.
-2. **Another computer** - "Give its address and I set myself up there over SSH.
+2. **Another computer** - "Let me run on another computer.
    You control me from here." - opens the setup over SSH, with the commands route one press away ("Setting it up from here" below).
 3. **One already running** - "Connect to me where I already run on another computer, and control me from here." - opens the chips that join a first mate on another computer.
 

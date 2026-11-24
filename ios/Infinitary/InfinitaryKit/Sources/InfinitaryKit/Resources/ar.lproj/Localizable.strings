@@ -3929,7 +3929,7 @@
 "shellDiagnosticsTurnOff" = "إيقاف";
 "shellGateBack" = "أين أسكن";
 "shellGateChoiceAnother" = "حاسوب آخر";
-"shellGateChoiceAnotherSub" = "أعطني عنوانه وسأُعدّ نفسي هناك عبر SSH. وتتحكم بي من هنا.";
+"shellGateChoiceAnotherSub" = "دعني أعمل على حاسوب آخر. وتتحكم بي من هنا.";
 "shellGateChoiceHere" = "هذا الحاسوب";
 "shellGateChoiceHereSub" = "سجّل الدخول إلى اشتراك هنا. أسكن وأعمل على هذا الحاسوب.";
 "shellGateChoiceRunning" = "حاسوب يعمل عليه Infinitary بالفعل";

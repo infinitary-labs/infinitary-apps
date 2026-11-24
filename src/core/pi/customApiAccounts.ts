@@ -309,15 +309,12 @@ export class CustomApiAccountOwner {
       }
     }
     const catalog = this.catalog();
-    // An edit that keeps the saved address, key, headers and storage choice
-    // keeps the saved checks: a model's check still counts while its
-    // fingerprint matches, so changing only its name or price never checks it
-    // again, and changing what a check proves still does.
+    // An edit that changes nothing but model names and prices keeps the saved
+    // checks, since neither reaches the server. Any other Save, one with no
+    // change included, checks every model again: Save is how a person retries
+    // a refused or timed-out check.
     const kept =
-      original &&
-      input.replaceAccountId &&
-      sameCredential(original.stored.input, input) &&
-      original.stored.input.allowStorageDefault === input.allowStorageDefault
+      original && input.replaceAccountId && onlyNamesOrPrices(original.stored.input, input)
         ? original.stored
         : undefined;
     const draft: Draft = {
@@ -795,14 +792,27 @@ export class CustomApiAccountOwner {
     }
   }
 }
-/** The same key or token command, and the same headers with the same values, in order. */
-function sameCredential(saved: CustomApiInput, next: CustomApiInput): boolean {
-  return (
-    saved.key === next.key &&
-    saved.noKey === next.noKey &&
-    JSON.stringify(saved.tokenCommand ?? null) === JSON.stringify(next.tokenCommand ?? null) &&
-    JSON.stringify(saved.headers) === JSON.stringify(next.headers)
-  );
+/** True when the edit changed some model's name or prices and nothing else a check or request reads. */
+function onlyNamesOrPrices(saved: CustomApiInput, next: CustomApiInput): boolean {
+  const checked = (input: CustomApiInput) =>
+    JSON.stringify([
+      input.key,
+      input.noKey,
+      input.tokenCommand ?? null,
+      input.headers.map(({ name, value, secret }) => [name, value, secret]),
+      input.protocol,
+      input.allowStorageDefault,
+      input.models.map((model) => [
+        model.id,
+        model.context,
+        model.output,
+        model.reasoningProfile ?? null,
+        model.cacheRetention ?? customDefaultCacheRetention(input.protocol),
+      ]),
+    ]);
+  const described = (input: CustomApiInput) =>
+    JSON.stringify(input.models.map(({ name, cost }) => [name ?? null, cost ?? null]));
+  return checked(saved) === checked(next) && described(saved) !== described(next);
 }
 function revision(): string {
   return randomBytes(16).toString("hex");

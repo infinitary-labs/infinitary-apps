@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Message } from "@earendil-works/pi-ai";
+import { getBuiltinModels, getBuiltinProviders } from "@earendil-works/pi-ai/providers/all";
 import type { CustomApiInput } from "@shared/customApi";
 import { Type } from "typebox";
 import { expect, it } from "vitest";
@@ -1232,17 +1233,28 @@ it("uses a model's stated name and prices, and keeps its saved check when only t
     costSource: "listed-prices",
   });
 
-  // What a check proves still needs one: a new size checks that model, a new key every model.
+  // Any other Save checks every model again, so Save still retries a check:
+  // one with no change, a new size and a new key.
+  const unchanged = world.vault.customPrepare({
+    ...input(api.baseUrl),
+    key: "",
+    replaceAccountId: account.id,
+    models: [
+      { id: "gpt-4o", context: 65536, output: 1024 },
+      { id: "operator-model", context: 65536, output: 1024, name: "Operator", cost: free },
+    ],
+  });
+  expect(unchanged.models.map((model) => model.checked)).toEqual([false, false]);
   const resized = world.vault.customPrepare({
     ...input(api.baseUrl),
     key: "",
     replaceAccountId: account.id,
     models: [
       { id: "gpt-4o", context: 32768, output: 1024 },
-      { id: "operator-model", context: 65536, output: 1024 },
+      { id: "operator-model", context: 65536, output: 1024, name: "Renamed" },
     ],
   });
-  expect(resized.models.map((model) => model.checked)).toEqual([false, true]);
+  expect(resized.models.map((model) => model.checked)).toEqual([false, false]);
   const rekeyed = world.vault.customPrepare({
     ...input(api.baseUrl),
     key: "another-synthetic-secret",
@@ -1259,6 +1271,11 @@ it("uses a model's stated name and prices, and keeps its saved check when only t
 // bundled Qwen token-plan entry lists every rate at zero while the model is
 // paid elsewhere, so only a person's own Free may record a turn as costing nothing.
 it("leaves a turn unpriced when the model's catalog match lists every rate at zero", async () => {
+  expect(
+    getBuiltinProviders()
+      .flatMap((provider) => getBuiltinModels(provider))
+      .find((model) => model.id === "qwen3.7-max")?.cost,
+  ).toMatchObject({ input: 0, output: 0, cacheRead: 0, cacheWrite: 0 });
   const api = await fixture();
   const world = vault();
   const draft = world.vault.customPrepare({

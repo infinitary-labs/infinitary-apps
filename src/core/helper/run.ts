@@ -32,9 +32,10 @@ import {
   STANDBY_PHONE_TAKE_OVER,
   standbyPhoneOrders,
 } from "@shared/standbyPhone";
+import { placedTaskFolders, worktreesDirOf } from "@shared/work";
+import { isBrowserOrderChannel } from "@shared/workBrowsers";
 import {
   downloadOrders,
-  placedTaskFolders,
   sourceOrders,
   type UpdateProgress,
   updateOrders,
@@ -45,9 +46,7 @@ import {
   type WorkDownloadAnswer,
   type WorkSourceAnswer,
   type WorkUpdateAnswer,
-  worktreesDirOf,
-} from "@shared/work";
-import { isBrowserOrderChannel } from "@shared/workBrowsers";
+} from "@shared/workUpdate";
 import type { WebSocket } from "ws";
 import { defaultClaudeConfigDir } from "../claude/claudeQuota";
 import { offeredAddresses } from "../connection/addresses";

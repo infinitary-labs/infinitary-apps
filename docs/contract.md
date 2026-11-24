@@ -23,7 +23,7 @@ An older desktop draws such a card as a note whose one button closes it.
 
 ## The file
 
-`docs/contract.json` is generated, never edited by hand: `pnpm generate:contract` writes it from `src/shared/publishedContract.ts`, which reads `src/shared/ipc.ts`, `src/shared/work.ts` and `src/shared/connection.ts`.
+`docs/contract.json` is generated, never edited by hand: `pnpm generate:contract` writes it from `src/shared/publishedContract.ts`, which reads `src/shared/ipc.ts`, `src/shared/work.ts`, `src/shared/workUpdate.ts` and `src/shared/connection.ts`.
 `pnpm check` renders it again with `node scripts/generate-contract.ts --check` and fails when the committed file differs, on every change whatever files it touches, and `src/shared/publishedContract.test.ts` does the same where a change reaches it, so a change to a core shape, a channel, the envelope or the version comes with the regenerated file in the same pull request, and its diff shows a reviewer what clients see.
 
 | Part | What it holds |
@@ -39,7 +39,7 @@ An older desktop draws such a card as a note whose one button closes it.
 | `browserOrders` | What a home asks a computer that runs work about its tasks' own browsers there (`src/shared/workBrowsers.ts`, `docs/task-browser.md` "On another computer"), from the version `since` names, published the same way |
 | `fileOrders` | What a home asks a computer that runs work for one of its files, for the files command (`src/shared/files.ts`, `docs/files.md`), on the current work major, published the same way |
 | `resourceOrders` | Read-only computer and task-process observations from the version `since` names, independent of conversations and sign-ins (`src/shared/resources.ts`) |
-| `updateOrders` | The one order a home asks a computer that runs work whatever its version (`src/shared/work.ts`, `docs/devices.md` "Updating over the connection"), from the version `since` names, published the same way; its name and shape never change across majors |
+| `updateOrders` | The one order a home asks a computer that runs work whatever its version (`src/shared/workUpdate.ts`, `docs/devices.md` "Updating over the connection"), from the version `since` names, published the same way; its name and shape never change across majors |
 
 Channels the desktop shell answers itself (`surface: "host"`) are not published: no other client can ask them.
 

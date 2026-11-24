@@ -15,7 +15,7 @@ import {
 } from "@shared/devices";
 import { settingFrom } from "@shared/envSettings";
 import { LINUX_NEEDS, type LinuxInstaller } from "@shared/remoteLogin";
-import type { UpdateDownload } from "@shared/work";
+import type { UpdateDownload } from "@shared/workUpdate";
 import {
   afterLogout,
   COMMAND_DOWNLOADING,

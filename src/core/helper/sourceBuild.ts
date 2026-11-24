@@ -13,7 +13,7 @@ import type { Writable } from "node:stream";
 import { type BuildIdentity, buildIdentitySchema } from "@shared/buildIdentity";
 import { FETCH_SOURCE_PATH } from "@shared/connection";
 import type { DeviceGrant } from "@shared/devices";
-import type { SourceBuildStep } from "@shared/work";
+import type { SourceBuildStep } from "@shared/workUpdate";
 import { z } from "zod";
 import { type DialOptions, fetchFromHome } from "../devices/dial";
 import { writePrivate } from "../devices/identity";

@@ -10,7 +10,7 @@ import type { Spelling } from "@shared/codeNames";
 import { PLACED_WORK_SINCE, WORK_UPDATE_SINCE } from "@shared/contractFeatures";
 import type { DeviceView } from "@shared/devices";
 import { PROTOCOL_VERSION } from "@shared/ipc";
-import type { UpdateDownload } from "@shared/work";
+import type { UpdateDownload } from "@shared/workUpdate";
 import { assert, expect } from "vitest";
 import { startConnection } from "../../src/core/connection/connection";
 import { Computers, type DeviceUpdateEvent } from "../../src/core/devices/computers";

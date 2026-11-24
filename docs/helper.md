@@ -495,7 +495,7 @@ A Windows PC keeps no trial, since a newer Infinitary reaches it only by an inst
 
 ### Building the home's source
 
-A home run from source at a commit asks a Mac that runs work for it to run the same commit with the source order, `inf:source:build` (`sourceOrders`, `src/shared/work.ts`; `buildSourceHere`, `src/core/helper/sourceBuild.ts`; `docs/devices.md`, "Matching the home's build").
+A home run from source at a commit asks a Mac that runs work for it to run the same commit with the source order, `inf:source:build` (`sourceOrders`, `src/shared/workUpdate.ts`; `buildSourceHere`, `src/core/helper/sourceBuild.ts`; `docs/devices.md`, "Matching the home's build").
 A run whose hello lists the `source-builds` change answers it:
 
 1. It refuses at once, changing nothing, on a computer that is not a Mac (`system`), with no background whose agent launchd can start (`keep`), or without this user's own Node and pnpm on the search path the app reads for its children (`tools`).

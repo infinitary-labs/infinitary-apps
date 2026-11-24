@@ -1241,7 +1241,7 @@ Linux keeps its current delivery path, and a Mac a command added downloads over 
 
 ### Updating over the connection
 
-1. "Updating Infinitary on Mac mini.": the home asks the update order, `fm:firstmate:update` (`updateOrders`, `src/shared/work.ts`), of a connected computer whatever its version (`ask` with `anyVersion`).
+1. "Updating Infinitary on Mac mini.": the home asks the update order, `fm:firstmate:update` (`updateOrders`, `src/shared/workUpdate.ts`), of a connected computer whatever its version (`ask` with `anyVersion`).
    The order takes no arguments and answers `{ restarts }`, and its name and shape never change across majors, so a home on any later major can still ask it.
 2. A computer that keeps a copy of Infinitary - another Mac added by a command - gets this Mac's at `/firstmate` with its own key and no code (below, "Getting Infinitary by its own key"), unpacks it beside its own and keeps it in its place; another user on this Mac runs this Mac's own app, so it gets nothing.
    Another Mac that joined by pasting its link runs its own installed app, so its first update keeps this Mac's copy the same way and its background starts that copy from then on (`docs/helper.md`, "Updated by its home").
@@ -1279,7 +1279,7 @@ The row says "Runs another build than this computer, which runs its code at comm
 
 Match on a source home (`Computers.matchSource`) sends a committed source archive that a Mac builds and runs; edits not committed stay on the home.
 It refuses before anything is asked there when that computer is out of reach, is not a Mac ("Only a Mac builds Infinitary from code, and Mac mini is not a Mac."), or speaks no `source-builds` change ("Install the newest Infinitary release there, then choose Match again."), each with "It keeps the version it runs."
-Otherwise its crew's work is saved as for an update (above, "Saving work before an update"), the home asks the source order, `inf:source:build` (`sourceOrders`, `src/shared/work.ts`), with the commit, and follows `fm:firstmate:update-progress` as it runs: "Mac mini is getting this computer's code.", "… is installing what this computer's code needs." and "… is building this computer's code."
+Otherwise its crew's work is saved as for an update (above, "Saving work before an update"), the home asks the source order, `inf:source:build` (`sourceOrders`, `src/shared/workUpdate.ts`), with the commit, and follows `fm:firstmate:update-progress` as it runs: "Mac mini is getting this computer's code.", "… is installing what this computer's code needs." and "… is building this computer's code."
 (`fetching`, `installing`, `building`).
 A step that fails answers which (`tools`, `fetch`, `install`, `build`, `keep` or `system`) and changes nothing there; the feed says it in two warning lines, the second "It keeps the version it runs."
 A build that does not reach the home in time goes back as a release update does (below, "A copy that does not start"), and the home keeps that commit on `failed-updates.json`, so Match does not build it there again until the home runs other code.
@@ -1300,7 +1300,7 @@ A Mac a command added - a Mac elsewhere that keeps its own copy - on a contract 
 One on an older contract keeps the update order alone, now counted, and takes the download order only from the update after (captain's direction B on INF-322: every work computer).
 
 1. After "Updating Infinitary on Mac mini.", this Mac looks up its version in the published builds without downloading it here, with the five-second lookup a Mac reached by its address uses (`FarBuilds.downloadFor`); a development, unpublished or offline version is sent at once, as above.
-2. It asks the download order, `fm:firstmate:update-download`, with the address and the published SHA-256 (`downloadOrders`, `src/shared/work.ts`), whatever that computer's major (`anyVersion`).
+2. It asks the download order, `fm:firstmate:update-download`, with the address and the published SHA-256 (`downloadOrders`, `src/shared/workUpdate.ts`), whatever that computer's major (`anyVersion`).
    Its name and shape never change across majors, nor in either spelling (`FROZEN_CHANNELS`), as the update order's do not.
 3. That computer downloads it with the instructions a Mac reached by its address runs (`MAC_DOWNLOAD`; `downloadHere`, `src/core/helper/update.ts`): its own curl over HTTPS, the published SHA-256, its own ditto and its own codesign against the release's publisher, into a private folder in its work folder that goes whatever happens.
 4. While it runs, this Mac asks `fm:firstmate:update-progress` once a second: the bytes received, the size the release states, never a redirect's, and what is under way there (`state`: `idle`, `downloading`, `updating` while it keeps what it got or the update order runs, or `failed` and `mismatch` once a download ended with nothing changed).

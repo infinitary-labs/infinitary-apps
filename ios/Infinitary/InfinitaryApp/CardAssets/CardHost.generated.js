@@ -116262,9 +116262,11 @@ ${FRAME_TAG_SCRIPT}
     dressForm();
     if (form.fill) fillForm(form.fill);
     form.fill = null;
-    // A draft filled into a new document shows its rows' fields: no watch
-    // heard that fill.
-    offerWriteIns();
+    // A draft filled into a new document shows as the captain's own picks
+    // do - its rows' fields, its chart marks, no Default ring on a question
+    // it answers - since no watch heard that fill. A mark left unpicked
+    // over a picked radio drops every press on it.
+    dressForm();
     if (form.locked) lockForm();
     if (!form.on) {
       form.on = true;
@@ -117810,7 +117812,7 @@ ${FRAME_KEYBOARD_SCRIPT}
   }, true);
   post({ type: "ready", reuseReads: true });
 })();`;
-  const FRAME_BRIDGE_SHA256 = "sha256-AmlxB+L7UfV4cMOPcrmtjUcfsDdPqGXMhkDcnBuQWmo=";
+  const FRAME_BRIDGE_SHA256 = "sha256-3s+lc8EyIu8oPbb32Wz/fP+y7kyabpwqLGrvK1Xj+so=";
   const APP_FRAME_SCHEME = "app-frame";
   const CARD_PICTURE_HOST = "images";
   const CARD_MEDIA_HOST = "media";

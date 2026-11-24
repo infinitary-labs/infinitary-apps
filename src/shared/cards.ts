@@ -596,8 +596,11 @@ export const ANYTHING_ELSE_MAX_CHARS = CARD_REPLY_MAX_CHARS;
  * One question a card body asks with its own form (inline decisions,
  * contract 4.22; docs/card-authoring.md "Questions in the body"), as the
  * frame bridge reads it: its name, the value or values picked (none when
- * nothing is), the text of the `<label>` bound to each picked option
- * (aligned with `values`; present only when at least one has one), and
+ * nothing is), each pick's label (aligned with `values`: a picked option's
+ * bound `<label>` text, or its value when no words are bound to it, so an
+ * option is never read as a typed answer; empty for a typed value; present
+ * when at least one pick is an option, and absent on answers saved before
+ * options were labelled by value), and
  * whether the pick differs from the state the author wrote. `json` marks a
  * snapshot staged with `inf.stage`, whose one value is JSON text. `written`
  * is what the captain wrote under the question's Something else row

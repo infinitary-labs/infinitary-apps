@@ -9,9 +9,9 @@ import { freshAuthenticationFor } from "./freshAuthentication";
 import { canConfirm, resetWithoutFirstMate } from "./withoutFirstMate";
 
 /**
- * `<app> reset` as the app runs it (./command.ts): once Electron is ready,
- * on the folder `run` would open, holding that folder's own lock so no start
- * opens it meanwhile. Nothing restarts: the command wipes the folder itself
+ * `<app> reset` as the app runs it (./command.ts): on the folder `run` would
+ * open, holding that folder's own lock, taken before Electron is ready, so
+ * no start opens it meanwhile. Nothing restarts: the command wipes the folder itself
  * once its lock is let go, and the next start opens on the welcome screen.
  */
 export async function runResetCommand(input: {
@@ -19,7 +19,6 @@ export async function runResetCommand(input: {
   choice: UserDataChoice;
   dataDir: string;
 }): Promise<CommandAnswer> {
-  await app.whenReady();
   const { choice, dataDir } = input;
   const platform = hostPlatform();
   const authentication = freshAuthenticationFor(choice, platform);
@@ -49,7 +48,12 @@ export async function runResetCommand(input: {
     restart: () => {},
   });
   return answerResetCommand(input.words, {
-    canConfirm: () => canConfirm(authentication),
+    // Electron starts only once the folder's lock is held, as a window's start
+    // asks it first, so no second Chromium opens on a folder Infinitary runs on.
+    canConfirm: async () => {
+      await app.whenReady();
+      return canConfirm(authentication);
+    },
     holdFolder: () => {
       app.setPath("userData", dataDir);
       return app.requestSingleInstanceLock();

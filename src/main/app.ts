@@ -1142,7 +1142,7 @@ export async function startApp(
       );
       if (!opens) {
         if (windowless) runExitCode = 1;
-        app.quit();
+        resets.personQuit();
         return;
       }
       // A Windows PC needs Git for Windows: the app uses a suitable one it
@@ -1180,7 +1180,7 @@ export async function startApp(
               lines: [GIT_SETUP_WORDS.ask.message],
             };
           }
-          app.quit();
+          resets.personQuit();
           return;
         }
       }

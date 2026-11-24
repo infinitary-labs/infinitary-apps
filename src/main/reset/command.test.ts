@@ -46,15 +46,30 @@ describe("the reset command", () => {
     expect(steps).toEqual(["hold", "reset", "release", "finish"]);
   });
 
-  it("wipes nothing where the system cannot ask the person to confirm", async () => {
+  it("wipes nothing where the system cannot ask the person to confirm, and lets the folder go", async () => {
     for (const canConfirm of [async () => false, () => Promise.reject(new Error("none"))]) {
       const { steps, seams: s } = seams({ canConfirm });
       expect(await answerResetCommand([], s)).toMatchObject({
         code: 1,
         error: `${m.resetCommandNoConfirmation()}\n`,
       });
-      expect(steps).toEqual([]);
+      expect(steps).toEqual(["hold", "release"]);
     }
+  });
+
+  it("asks nothing of the system while Infinitary runs on the folder", async () => {
+    let asked = false;
+    const { seams: s } = seams({
+      holdFolder: () => false,
+      canConfirm: async () => {
+        asked = true;
+        return true;
+      },
+    });
+    expect(await answerResetCommand([], s)).toMatchObject({
+      error: `${m.resetCommandRunning()}\n`,
+    });
+    expect(asked).toBe(false);
   });
 
   it("wipes nothing while Infinitary runs on the folder", async () => {

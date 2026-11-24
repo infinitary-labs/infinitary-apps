@@ -35,7 +35,7 @@ A home that does not answer, or refuses, resets nothing on either computer: the 
 A reset starts in three places, each confirmed by the person at this computer:
 
 - **Settings → General**, the row above.
-- **The screens shown when Infinitary cannot open**: the saved-data refusal, when the folder holds data from a newer version (`docs/saved-data-compatibility.md`), the privacy refusals of a folder others can reach or one left mid-move, and the could-not-start screen below.
+- **The screens shown when Infinitary cannot open**: the saved-data refusal, when the folder holds data from a newer version (`docs/saved-data-compatibility.md`), Windows' three owner-only refusals (others can read the folder, Windows could not check who can, or making it owner-only did not finish), and the could-not-start screen below.
   The refusals of a folder an older name left behind and of a move in progress offer no reset, since a reset there would delete what the person is still moving.
 - **The reset command**, `<app> reset`, below.
 
@@ -49,7 +49,7 @@ A reset that is not confirmed goes back to the screen and says nothing was reset
 
 A window start on its own folder counts itself in `<folder>.start-attempts`, beside the folder and never in it (`src/main/reset/startAttempts.ts`), once it holds the folder's lock; the count goes once a window is ready to show or the first mate or the view started.
 A start that finds two earlier starts that never got that far shows Infinitary could not start instead of trying again (`showCouldNotStart`, `src/main/reset/couldNotStart.ts`), with Try again, which clears the count and starts the app once more, Reset Infinitary, and Quit, which leaves the count so the next start shows the screen again.
-A start with no window, a move and a run beside a command count nothing, and a reset deletes the count with the folder.
+A start with no window, a move and a run beside a command count nothing, a person's own Quit at a startup question (Linux git or sandbox, Windows Git setup) clears the count, and a reset deletes the count with the folder.
 
 ### The reset command
 

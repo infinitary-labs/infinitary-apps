@@ -20,7 +20,7 @@ export const RESET_USAGE = "Usage: infinitary reset";
 
 /** What the command reaches, each a seam a test stands in. */
 export type ResetCommandSeams = {
-  /** Whether the system can ask the person at this computer to confirm. */
+  /** Whether the system can ask the person at this computer to confirm; asked holding the folder. */
   canConfirm: () => Promise<boolean>;
   /** Takes the folder's own lock; false while Infinitary runs on it. */
   holdFolder: () => boolean;
@@ -40,10 +40,12 @@ export async function answerResetCommand(
 ): Promise<CommandAnswer> {
   const refuse = (line: string, code = 1): CommandAnswer => ({ code, out: "", error: `${line}\n` });
   if (words.length > 0) return refuse(RESET_USAGE, 2);
-  if (!(await seams.canConfirm().catch(() => false))) return refuse(m.resetCommandNoConfirmation());
+  // The lock first: while Infinitary runs on the folder, nothing else starts on it.
   if (!seams.holdFolder()) return refuse(m.resetCommandRunning());
   let answer: ResetAnswer;
   try {
+    if (!(await seams.canConfirm().catch(() => false)))
+      return refuse(m.resetCommandNoConfirmation());
     answer = await seams.reset();
   } finally {
     seams.releaseFolder();

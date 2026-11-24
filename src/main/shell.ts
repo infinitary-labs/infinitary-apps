@@ -325,9 +325,9 @@ export class Shell {
   }
 
   /**
-   * Whether Reset Infinitary may run from this window (docs/reset.md): as
-   * this computer's own first mate or beside its command, never as a view
-   * of another computer's.
+   * Whether this window's own Reset Infinitary runs here (docs/reset.md): as
+   * this computer's own first mate or beside its command. A view of another
+   * computer's first mate asks that computer first (`ResetAsk` "of-home").
    */
   resettable(): boolean {
     return this.mode?.kind === "home" || this.mode?.kind === "beside";

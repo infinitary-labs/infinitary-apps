@@ -61,6 +61,14 @@ export function resetsFor(input: {
     started: () => {
       if (input.countsStarts) clearStartAttempts(input.dataDir);
     },
+    /**
+     * Quits at a startup question the person answered Quit (Linux git or
+     * sandbox, Windows Git setup): no start failed, so the count goes too.
+     */
+    personQuit: () => {
+      if (input.countsStarts) clearStartAttempts(input.dataDir);
+      input.quit();
+    },
     /** The reset a screen shown when this folder cannot open offers, with no first mate running. */
     withoutFirstMate: (authentication: FreshAuthentication | undefined) =>
       resetWithoutFirstMate({ ...spot, authentication, questionConfirms: true, restart }),

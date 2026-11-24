@@ -35,8 +35,9 @@ export function resetHandlers(
       if (!from) throw new Error("Only a computer that controls this first mate can reset it.");
       if (!host.resetForController)
         throw new Error("Infinitary cannot reset this computer from another one.");
+      await host.resetForController();
+      // Only an accepted ask is kept; its reset starts on a later tick, after this.
       asker = from;
-      await host.resetForController(from);
       return { ok: true as const };
     },
   };

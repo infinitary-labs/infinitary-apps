@@ -22,6 +22,10 @@ export function ResetRow({ home }: { home?: string } = {}) {
   const keep = useRef<HTMLButtonElement>(null);
   const reset = useRef<HTMLButtonElement>(null);
   const returnFocus = useRef(false);
+  const confirmButton = useRef<HTMLButtonElement>(null);
+  // A pending button is disabled, which drops focus; a reset that comes back
+  // unreached gives it back to Reset Infinitary, still on the question.
+  const refocus = useRef(false);
 
   useLayoutEffect(() => {
     if (asking) keep.current?.focus();
@@ -30,6 +34,12 @@ export function ResetRow({ home }: { home?: string } = {}) {
       reset.current?.focus();
     }
   }, [asking]);
+  useLayoutEffect(() => {
+    if (!resetting && refocus.current) {
+      refocus.current = false;
+      confirmButton.current?.focus();
+    }
+  }, [resetting]);
 
   const ask = () => {
     setError(null);
@@ -52,7 +62,7 @@ export function ResetRow({ home }: { home?: string } = {}) {
         // The system's own confirmation was not given, or the first mate's
         // computer did not answer: nothing changed.
         if (outcome === "unreached" && home) {
-          setAsking(false);
+          refocus.current = true;
           setError(m.settingsGeneralResetUnreached({ home }));
           return;
         }
@@ -114,6 +124,7 @@ export function ResetRow({ home }: { home?: string } = {}) {
               <Button
                 variant="danger"
                 size="sm"
+                ref={confirmButton}
                 onClick={confirm}
                 pending={resetting}
                 pendingLabel={m.settingsGeneralResetting()}

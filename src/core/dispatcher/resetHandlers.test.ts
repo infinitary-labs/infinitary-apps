@@ -12,9 +12,9 @@ import { resetHandlers } from "./resetHandlers";
  * or computer that only runs work can ask it.
  */
 
-function setup(devices: Partial<DeviceView>[]) {
+function setup(devices: Partial<DeviceView>[], accepts = true) {
   const removed: string[] = [];
-  const asked: string[] = [];
+  let asked = 0;
   const services = {
     devices: { list: () => devices, remove: async (id: string) => removed.push(id) },
     computers: { list: () => devices },
@@ -26,11 +26,12 @@ function setup(devices: Partial<DeviceView>[]) {
     paths: { userData: "/nowhere" },
   } as unknown as CoreServices;
   const handlers = resetHandlers(services, {
-    resetForController: async (from) => {
-      asked.push(from);
+    resetForController: async () => {
+      if (!accepts) throw new Error("Infinitary is still starting.");
+      asked += 1;
     },
   });
-  return { handlers, removed, asked };
+  return { handlers, removed, asked: () => asked };
 }
 
 const laptop = { id: "laptop", kind: "view", system: "macos" } as const;
@@ -46,9 +47,18 @@ describe("a reset asked by a controlling computer", () => {
     expect(await asAView(() => handlers["inf:home-reset:start"](), { view: "laptop" })).toEqual({
       ok: true,
     });
-    expect(asked).toEqual(["laptop"]);
+    expect(asked()).toBe(1);
     await handlers["inf:app:reset-prepare"]();
     expect(removed).toEqual(["phone"]);
+  });
+
+  it("keeps no asking computer from an ask this computer did not accept", async () => {
+    const { handlers, removed } = setup([laptop], false);
+    await expect(
+      asAView(() => handlers["inf:home-reset:start"](), { view: "laptop" }),
+    ).rejects.toThrow("Infinitary is still starting.");
+    await handlers["inf:app:reset-prepare"]();
+    expect(removed).toEqual(["laptop"]);
   });
 
   it("refuses a phone, a computer that only runs work, an unknown view and this computer's own window", async () => {
@@ -62,7 +72,7 @@ describe("a reset asked by a controlling computer", () => {
       );
     }
     await expect(handlers["inf:home-reset:start"]()).rejects.toThrow();
-    expect(asked).toEqual([]);
+    expect(asked()).toBe(0);
   });
 
   it("refuses when this computer cannot reset from another one", async () => {

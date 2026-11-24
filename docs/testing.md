@@ -297,6 +297,8 @@ The full Mac check (`verify.yml`) runs its journeys in four jobs (INF-2779, INF-
 The split is by measured time ("Journey groups by measured time", below): the native job takes fewer journeys for the work it does besides, so those three jobs end together.
 The desktop lane's two groups (`desktop-1` and `desktop-2`, the jobs named `Desktop journeys (Mac; group N/2)`) are split the same way by the Mac times, with no job of their own work to count, and each runs `scripts/journey-groups.ts --lane desktop`; the lane's files still run one at a time inside each, since they need a quiet machine.
 A round therefore needs four Macs at once, and the desktop lane's time is half what one job took.
+On GitHub's own Macs (`macos-15`, three processors and 7 GB), which run the same journeys about three times slower, the parallel journeys job is four, `parallel-1` to `parallel-4`, the jobs named `Parallel journeys (Mac; group N/4)`: with the native job they are five groups of about equal time, balanced by GitHub's Mac's own measured times (`macHosted` and `macHostedJobs` in the record), and each takes every processor but one, since such a Mac runs its job alone (INF-6330's plan, option D).
+The `native` kind sends the native job and the parallel journeys there ("Each Mac job's kind and size"), while both desktop groups stay on the project's Macs; an outside contributor's run, all on GitHub's Macs, splits the same way.
 The journeys part of an alpha, with no native job, runs the whole parallel lanes in the parallel journeys job.
 Each passes `--no-deps`, so neither parallel group pulls in desktop, its lanes' teardown.
 Each gives Playwright half the job's cores, because a job on the real Mac shares one processor with the jobs beside it: with all of it, app launches starved past `firstWindow`'s 30 s while the other slot ran journeys too.
@@ -1733,7 +1735,8 @@ Other jobs read `fromJSON(vars.MAC_QUEUES || '{}').<kind>` before their old labe
 
 | Kind | Jobs | Its queue places it |
 | --- | --- | --- |
-| `split` | `verify.yml`'s three Mac lanes, the full Mac check: native tests, replay and package; parallel journeys; two desktop journeys groups | in a virtual Mac only |
+| `split` | `verify.yml`'s Mac lanes, the full Mac check: native tests, replay and package; parallel journeys; two desktop journeys groups | in a virtual Mac only |
+| `native` | `verify.yml`'s native tests, replay and package and its parallel journeys, ahead of `split` and of a batch's or release's `release_split` | GitHub's own `macos-15`, not the placement service |
 | `check` | none of its own: the full Mac check's lanes fall back to it after `split` and `journeys` | anywhere |
 | `journeys` | `journeys.yml`'s `affected-journeys` | anywhere |
 | `phone` | `phone.yml`'s `native-phone` | on any Mac place: the rented vBoxx places and the compute Macs alike |
@@ -1749,6 +1752,9 @@ The TestFlight job runs only for a release, so its `testflight` kind has no rele
 A dry run asks for the ordinary kinds, so a rehearsal never takes a release's place in line.
 `release.yml` hands `release_split` to `verify.yml` as its `mac_runner` input, `release_build` to `mac-installer.yml` and `release_light` to `mac-update.yml` as their `runner` input, and `verify.yml`'s Mac lanes read their kind only when that input is empty.
 The batch checks' sweep, the alpha's full check, hands `release_split` the same way.
+The `native` kind is the one kind whose queue is GitHub's, `macos-15`, free in a public project: its five jobs take GitHub's five Macs for about half an hour each and leave the project's Macs to the desktop journeys (INF-6330's plan, option D).
+Those lanes read it before `verify.yml`'s `mac_runner` input, so a batch and a release send them there too, while the desktop lanes keep the input's queue; a request's own `native_runner` input comes first, to measure another runner, such as `macos-15-intel`, before a switch.
+Removing `native` from `MAC_QUEUES` sends them back to `split` in one parallel journeys job.
 The full Mac check's lanes ask for `split`, then the `journeys` kind, whose queue already takes journeys-sized jobs, then `check`, then the old label, so until `MAC_QUEUES` names `split` they run where journeys run.
 The placement service starts `release_build` before `release_sign`, so a publishing release's signed installer build starts first; on the Mac mini the build's place and the signing job's cores do not fit together, so signing waits until the build job, with its installed check, ends; until `MAC_QUEUES` names it, the build asks for its `build` kind, as in a dry run.
 `tests/release-workflows-runners.test.ts` ("each Mac job's kind") evaluates every Mac job with the variable set, unset and for a publishing release, and refuses a Mac job without a kind.
@@ -1893,11 +1899,11 @@ The dispatch's top-level `ref` selects the workflow definition; `inputs.ref` sel
 Playwright's own `--shard` cuts a lane into equal counts of files in listing order, so the group that drew the slow files held up every run (INF-2987).
 `scripts/journey-groups.ts` instead splits a lane's files by the seconds each took, longest first into the group with the least time so far (`scripts/shard-balance.ts`, as the unit groups are split), and runs Playwright over its group's files alone.
 A group with no file runs nothing, since Playwright given no file runs every one.
-The times are `tests/helpers/journeyTimings.json`: each file's job seconds on Linux and on the Mac (its work over the workers that ran it), and each Mac job's seconds outside its journeys, the head start its group begins with.
+The times are `tests/helpers/journeyTimings.json`: each file's job seconds on Linux, on the project's Macs and on GitHub's Mac (its work over the workers that ran it), and each Mac job's seconds outside its journeys on each kind of Mac, the head start its group begins with.
 A file with no measured time, a new journey, weighs the median of the measured ones.
-`scripts/journey-group-timings.ts` writes the record from a passing full run's results: the Linux groups' `journey-timing-Linux-*` artifacts, the Mac jobs' `e2e-results-<lane>` artifacts, and that run's job list for the Mac jobs' own work.
+`scripts/journey-group-timings.ts` writes the record from a passing full run's results: the Linux groups' `journey-timing-Linux-*` artifacts, the Mac jobs' `e2e-results-<lane>` artifacts, and that run's job list for the Mac jobs' own work; with `--hosted` the Mac results and job list are a run on GitHub's Macs and write their times alone.
 Write it again and commit it when journeys move or the groups' times drift apart.
-A manual `verify.yml` request instead requires `full_system: true`, or `mac_only: true` for its three Mac jobs alone, plus task, source and reason before expensive jobs can start.
+A manual `verify.yml` request instead requires `full_system: true`, or `mac_only: true` for its Mac jobs alone, plus task, source and reason before expensive jobs can start.
 Both `stable` and `alpha` profiles run full-system checks, not Linux-only checks.
 Installer-only and installer-reuse requests retain their separate route and cannot also select `full_system` or `mac_only`; main and release reusable calls need no manual opt-in.
 With `suite: affected`, each job ends with the run-alone pass over its directly edited files and keeps it as `e2e-alone-<suffix>-<lane>`.

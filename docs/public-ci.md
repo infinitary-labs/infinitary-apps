@@ -19,7 +19,9 @@ Leave the repository variables `LINUX_RUNNER` and `RELEASE_LINUX_PACKAGES_RUNNER
 An outside contributor's pull request takes hosted Ubuntu before any variable, so no variable can send it to the project's own machines ("Outside contributors").
 The existing private project keeps its variables until it is archived, since GitHub bills its hosted minutes.
 The Windows installer's unsigned build runs on hosted `windows-2025` whenever `WINDOWS_RUNNER` is unset (`docs/windows.md`, "The checks"); leave it unset.
-The Mac jobs, the fresh Windows 11 check, signing and TestFlight keep their runner variables and stay on the project's own machines.
+The full Mac check's native tests and parallel journeys run on GitHub's own Macs through `MAC_QUEUES`'s `native` kind, in five groups of about half an hour (`docs/testing.md`, "Each Mac job's kind and size"); its desktop journeys stay on the project's own Macs, since GitHub's three-processor Mac runs them about two and a half times slower.
+GitHub runs at most five of the project's Mac jobs at once, so a batch and an alpha whose Mac checks overlap wait for each other's, and an outside contributor's Mac lanes share the same five.
+The other Mac jobs, the fresh Windows 11 check, signing and TestFlight keep their runner variables and stay on the project's own machines.
 Use neutral runner registration names that identify platform and queue, not people or machines.
 Keep routing labels intact, and verify an ordinary internal batch and release rehearsal select their existing lanes.
 Do not share reusable runner workspaces, dependency stores, caches or deployment artifacts with untrusted jobs.

@@ -568,9 +568,13 @@ describe("CI job names (INF-2410 scheme A, trigger first)", () => {
         "Main push · Desktop checks / Main push · Environment checks (Linux; group 1/2)",
         "Main push · Desktop checks / Main push · Environment checks (Linux; group 2/2)",
         "Main push · Desktop checks / Main push · Browser tests (Linux)",
-        // INF-2779: the Mac lane is three jobs.
+        // On GitHub's Macs, which a project with no Mac queues of its own
+        // reaches, the parallel journeys are four groups beside the native job.
         "Main push · Desktop checks / Main push · Native tests, replay and package (Mac)",
-        "Main push · Desktop checks / Main push · Parallel journeys (Mac)",
+        "Main push · Desktop checks / Main push · Parallel journeys (Mac; group 1/4)",
+        "Main push · Desktop checks / Main push · Parallel journeys (Mac; group 2/4)",
+        "Main push · Desktop checks / Main push · Parallel journeys (Mac; group 3/4)",
+        "Main push · Desktop checks / Main push · Parallel journeys (Mac; group 4/4)",
         "Main push · Desktop checks / Main push · Desktop journeys (Mac; group 1/2)",
         "Main push · Desktop checks / Main push · Desktop journeys (Mac; group 2/2)",
       ]),
@@ -600,13 +604,13 @@ describe("CI job names (INF-2410 scheme A, trigger first)", () => {
       runId: 1,
       journeys: false,
     });
-    // A missing Mac lane is still an incomplete check, and so is any one of its four jobs.
+    // A missing Mac lane is still an incomplete check, and so is any one of its seven jobs.
     const short = jobs.filter((job) => !job.name.includes("(Mac"));
     expect(() => verifyMainEvidence(run, short, "infinitary-labs/infinitary-apps", source)).toThrow(
       "every full-check owner",
     );
     const macJobs = jobs.filter((job) => job.name.includes("(Mac"));
-    expect(macJobs).toHaveLength(4);
+    expect(macJobs).toHaveLength(7);
     for (const missing of macJobs)
       expect(
         () =>

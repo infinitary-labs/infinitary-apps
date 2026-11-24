@@ -36,7 +36,20 @@ const splits: {
   { platform: "mac", lane: "parallel", count: 2, jobs: ["parallel", "mac"] },
   // verify.yml: the desktop lane in two jobs, each alone on its own Mac.
   { platform: "mac", lane: "desktop", count: 2 },
+  // verify.yml on GitHub's Macs (INF-6330's plan): the parallel lanes between
+  // four parallel jobs and the mac job, and the desktop lane as above.
+  {
+    platform: "mac-hosted",
+    lane: "parallel",
+    count: 5,
+    jobs: ["parallel", "parallel", "parallel", "parallel", "mac"],
+  },
+  { platform: "mac-hosted", lane: "desktop", count: 2 },
 ];
+const fileTimes = (platform: JourneyPlatform) =>
+  platform === "mac-hosted" ? timings.macHosted : timings[platform];
+const jobTimes = (platform: JourneyPlatform) =>
+  platform === "mac-hosted" ? timings.macHostedJobs : timings.macJobs;
 
 describe("journeyGroup", () => {
   it.each(splits)("puts every $lane file on $platform in exactly one of $count groups", (split) => {
@@ -53,10 +66,10 @@ describe("journeyGroup", () => {
   it.each(splits)(
     "gives the $platform $lane groups about the same time, each job's own work counted",
     (split) => {
-      const measured = timings[split.platform];
+      const measured = fileTimes(split.platform);
       const ends = Array.from({ length: split.count }, (_, at) => {
         const files = journeyGroup({ ...split, index: at + 1 }, timings);
-        const own = split.jobs ? (timings.macJobs[split.jobs[at] ?? ""] ?? 0) : 0;
+        const own = split.jobs ? (jobTimes(split.platform)[split.jobs[at] ?? ""] ?? 0) : 0;
         return files.reduce((sum, file) => sum + (measured[file] ?? 0), own);
       });
       // The longest file bounds how even greedy packing can be.
@@ -170,6 +183,8 @@ describe("timingsFromJourneyReports", () => {
       linux: {},
       mac: {},
       macJobs: {},
+      macHosted: {},
+      macHostedJobs: {},
     });
     const linuxFiles = [...new Set(linux.files.map((entry: { file: string }) => entry.file))];
     expect(Object.keys(written.linux).toSorted()).toEqual(linuxFiles.toSorted());
@@ -188,5 +203,26 @@ describe("timingsFromJourneyReports", () => {
     expect(timingsFromJourneyReports([], [], kept)).toEqual(kept);
     const linux = { ...fixture("linux-report.json"), complete: false };
     expect(timingsFromJourneyReports([linux], [], kept).linux).toBe(kept.linux);
+  });
+
+  // INF-6330's plan: a run on GitHub's Macs writes their own times, whose
+  // parallel journeys ran in four groups, and keeps the project's Macs' times.
+  it("writes a GitHub Mac run's times as GitHub's, each parallel group a parallel job", () => {
+    const kept = readJourneyTimings();
+    const mac = fixture("mac-report.json");
+    const { jobs } = fixture("mac-jobs.json") as {
+      jobs: Parameters<typeof timingsFromJourneyReports>[1][number];
+    };
+    const grouped = jobs.map((job) => ({
+      ...job,
+      name: job.name.replace("Parallel journeys (Mac)", "Parallel journeys (Mac; group 3/4)"),
+    }));
+    const written = timingsFromJourneyReports([mac], [grouped], kept, true);
+    expect(written.mac).toBe(kept.mac);
+    expect(written.macJobs).toBe(kept.macJobs);
+    expect(Object.keys(written.macHosted)).toHaveLength(mac.suites.length);
+    for (const file of Object.keys(written.macHosted))
+      expect(written.macHosted[file], file).toBe(timings.mac[file]);
+    expect(written.macHostedJobs).toEqual(timings.macJobs);
   });
 });

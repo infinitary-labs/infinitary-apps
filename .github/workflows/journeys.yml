@@ -224,13 +224,14 @@ jobs:
       # lane's result as e2e-results-<lane>, and needs both; a run from
       # before it kept one e2e-results. INF-2987: since the mac job runs a
       # group of the parallel lanes too, a run keeps e2e-results-mac as well,
-      # and needs all three.
+      # and needs all three. On GitHub's Macs the parallel journeys are four
+      # groups, e2e-results-parallel-1 to -4 (INF-6330's plan).
       - id: timing-run
         name: Find the newest passing full verification
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
         with:
           script: |
-            const TIMES = [['e2e-results-parallel', 'e2e-results-desktop-1', 'e2e-results-desktop-2', 'e2e-results-mac'], ['e2e-results-parallel', 'e2e-results-desktop', 'e2e-results-mac'], ['e2e-results-parallel', 'e2e-results-desktop'], ['e2e-results']];
+            const TIMES = [['e2e-results-parallel-1', 'e2e-results-parallel-2', 'e2e-results-parallel-3', 'e2e-results-parallel-4', 'e2e-results-desktop-1', 'e2e-results-desktop-2', 'e2e-results-mac'], ['e2e-results-parallel', 'e2e-results-desktop-1', 'e2e-results-desktop-2', 'e2e-results-mac'], ['e2e-results-parallel', 'e2e-results-desktop', 'e2e-results-mac'], ['e2e-results-parallel', 'e2e-results-desktop'], ['e2e-results']];
             const pages = github.paginate.iterator(github.rest.actions.listWorkflowRuns, {
               ...context.repo, workflow_id: 'verify.yml', exclude_pull_requests: true, per_page: 100
             });

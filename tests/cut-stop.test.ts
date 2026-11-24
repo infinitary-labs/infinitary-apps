@@ -240,56 +240,72 @@ describe("release.yml stops the cut at its first failed job", () => {
   // and the signed installer check. A cut that reuses main's proof runs a
   // subset of the same jobs.
   const pass = { result: "success" };
-  const jobs = runJobs("release.yml", {
-    github: github_,
-    inputs: { channel: "alpha", main_run: "44899900000", main_run_number: "19" },
-    needs: {
-      resolve: {
-        ...pass,
-        outputs: {
-          trigger,
-          skip: "false",
-          channel: "alpha",
-          dry_run: "false",
-          verify_required: "true",
-          main_journeys: "false",
-          main_run: "",
-          installer_source: "a".repeat(40),
+  // On the project's own Macs, and with MAC_QUEUES's native kind on GitHub's,
+  // where verify.yml's parallel journeys are four jobs (INF-6330's plan).
+  const cut = (vars: Record<string, string>) =>
+    runJobs("release.yml", {
+      vars,
+      github: github_,
+      inputs: { channel: "alpha", main_run: "44899900000", main_run_number: "19" },
+      needs: {
+        resolve: {
+          ...pass,
+          outputs: {
+            trigger,
+            skip: "false",
+            channel: "alpha",
+            dry_run: "false",
+            verify_required: "true",
+            main_journeys: "false",
+            main_run: "",
+            installer_source: "a".repeat(40),
+          },
         },
+        ...Object.fromEntries(
+          [
+            "notes",
+            "phone",
+            "verify",
+            "linux",
+            "windows",
+            "release",
+            "update",
+            "signed-installer",
+            "upload",
+          ].map((id) => [id, pass]),
+        ),
+        build: { ...pass, outputs: { rounds: "[1]" } },
       },
-      ...Object.fromEntries(
-        [
-          "notes",
-          "phone",
-          "verify",
-          "linux",
-          "windows",
-          "release",
-          "update",
-          "signed-installer",
-          "upload",
-        ].map((id) => [id, pass]),
-      ),
-      build: { ...pass, outputs: { rounds: "[1]" } },
-    },
-  }).filter((each) => !own(each.name).startsWith("Stop the cut ("));
+    }).filter((each) => !own(each.name).startsWith("Stop the cut ("));
+  const jobs = cut({ MAC_QUEUES: JSON.stringify({ split: "mini-mac-split" }) });
+  const hostedJobs = cut({ MAC_QUEUES: JSON.stringify({ native: "macos-15" }) });
 
   it("gives every job a cut runs but the exempt ones its own stop, which the stop matrix names", () => {
     const stoppable = jobs.filter((each) => !(own(each.name) in EXEMPT));
     // Each exempt job is one the cut runs, so the list never outlives its job.
     const ends = new Set(jobs.map((each) => own(each.name)));
     for (const name of Object.keys(EXEMPT)) expect(ends.has(name), name).toBe(true);
-    const groups = stoppable.map((each) => {
-      const group = each.job.concurrency?.group;
-      expect(group, each.name).toBeDefined();
-      const value = workflowString(group!, { ...each.contexts, github: github_ });
-      // Its own run attempt's, never another run's, and never cancelling
-      // itself: only the stop enters it with cancel-in-progress.
-      expect(value.startsWith(lead), each.name).toBe(true);
-      expect(each.job.concurrency!["cancel-in-progress"], each.name).toBeUndefined();
-      return value;
-    });
-    expect(new Set(groups).size).toBe(groups.length);
+    const hosted = hostedJobs.filter((each) => !(own(each.name) in EXEMPT));
+    const groups = [
+      ...new Set(
+        [...stoppable, ...hosted].map((each) => {
+          const group = each.job.concurrency?.group;
+          expect(group, each.name).toBeDefined();
+          const value = workflowString(group!, { ...each.contexts, github: github_ });
+          // Its own run attempt's, never another run's, and never cancelling
+          // itself: only the stop enters it with cancel-in-progress.
+          expect(value.startsWith(lead), each.name).toBe(true);
+          expect(each.job.concurrency!["cancel-in-progress"], each.name).toBeUndefined();
+          return value;
+        }),
+      ),
+    ];
+    for (const run of [stoppable, hosted]) {
+      const named = run.map((each) =>
+        workflowString(each.job.concurrency!.group!, { ...each.contexts, github: github_ }),
+      );
+      expect(new Set(named).size).toBe(named.length);
+    }
     const stop = release.stop!;
     expect(stop.concurrency!["cancel-in-progress"]).toBe(true);
     const stopped = stop.strategy!.matrix.job.map((job) =>

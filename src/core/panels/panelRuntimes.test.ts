@@ -21,6 +21,7 @@ import { type PanelRuntimeIdentity, type PanelStop, PanelStops } from "./panelSt
 const BEAT = 250;
 const flush = () => new Promise((resolve) => setImmediate(resolve));
 const SILENCE = 10_000;
+const START = 60_000;
 
 class ManualClock implements PanelClock {
   t = 0;
@@ -111,6 +112,7 @@ function setup() {
     clock,
     beatMs: BEAT,
     silenceMs: SILENCE,
+    startMs: START,
     onStop: (_runtime, stop) => stopped.push(stop),
   });
   return { clock, children, stops, stopped, runtimes };
@@ -184,11 +186,49 @@ describe("PanelRuntimes' watch", () => {
   });
 
   it("stops one whose import never returns, so start rejects with the stop and nothing runs", async () => {
-    const { clock, runtimes } = setup();
+    const { clock, children, runtimes } = setup();
     const started = runtimes.start(identity, "/tmp/server.mjs", services);
+    // The process beats once before it imports the module.
+    (children[0] as StandIn).say({ type: "beat" });
     clock.advance(SILENCE);
     const error = await started.catch((caught: unknown) => caught);
     expect(error).toBeInstanceOf(PanelStoppedError);
+    expect(runtimes.running).toBe(0);
+  });
+
+  it("holds a process still starting to its start allowance, not to the silence deadline", async () => {
+    const { clock, children, runtimes, stopped } = setup();
+    const started = runtimes.start(identity, "/tmp/server.mjs", services);
+    const child = children[0] as StandIn;
+    // Nothing of the panel runs before the process's first beat.
+    clock.advance(START - BEAT);
+    expect(stopped).toEqual([]);
+    child.say({ type: "beat" });
+    child.say({ type: "loaded", actions: ["fill"], background: [] });
+    const runtime = await started;
+    const answer = runtime.invoke("fill", ["alpha"]);
+    const call = child.sent.find((m) => m.type === "invoke");
+    child.say({
+      type: "result",
+      call: call?.type === "invoke" ? call.call : 0,
+      ok: true,
+      value: { filled: 1 },
+    });
+    await expect(answer).resolves.toEqual({ filled: 1 });
+    // From its first beat, its loop is held to the silence deadline.
+    clock.advance(SILENCE);
+    expect(stopped).toMatchObject([{ reason: "unresponsive", silentMs: SILENCE }]);
+  });
+
+  it("stops a process that never starts once its start allowance has passed", async () => {
+    const { clock, runtimes, stopped } = setup();
+    const started = runtimes.start(identity, "/tmp/server.mjs", services);
+    clock.advance(START - BEAT);
+    expect(stopped).toEqual([]);
+    clock.advance(BEAT);
+    const error = await started.catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(PanelStoppedError);
+    expect(stopped).toMatchObject([{ reason: "unresponsive", silentMs: START }]);
     expect(runtimes.running).toBe(0);
   });
 
@@ -236,6 +276,7 @@ describe("PanelRuntimes' watch", () => {
   it("starts nothing for a live panel a stop holds, at any version, until Retry", async () => {
     const { clock, children, runtimes } = setup();
     const started = runtimes.start(identity, "/tmp/server.mjs", services);
+    (children[0] as StandIn).say({ type: "beat" });
     clock.advance(SILENCE);
     await started.catch(() => undefined);
     const next = { ...identity, version: "v2" };

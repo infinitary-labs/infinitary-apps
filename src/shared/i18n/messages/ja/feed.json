@@ -93,6 +93,8 @@
   },
   "feedReported": "報告：{summary}",
   "feedReportedBare": "報告",
+  "feedRepositoryMoved": "{repository} リポジトリに移動",
+  "feedRepositoryRestarted": "最初のコミットの前に {repository} リポジトリに移動：そこで最初からやり直します",
   "feedResetRemovalRemoved": "{name} は Infinitary のリセット時に接続できませんでした。接続が戻り、Infinitary がそこで設定したものは削除されました。",
   "feedResetRemovalStayed": "{name} は Infinitary のリセット後 30 日間接続できませんでした。Infinitary がそこで設定したものは、そこで削除するまで残ります。",
   "feedReviewBlocked": "レビューを完了できませんでした",

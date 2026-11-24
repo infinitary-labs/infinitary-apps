@@ -93,6 +93,8 @@
   },
   "feedReported": "보고함: {summary}",
   "feedReportedBare": "보고함",
+  "feedRepositoryMoved": "{repository} 저장소로 옮김",
+  "feedRepositoryRestarted": "첫 커밋 전에 {repository} 저장소로 옮김: 그곳에서 다시 시작",
   "feedResetRemovalRemoved": "Infinitary를 초기화할 때 {name} 컴퓨터에 연결할 수 없었어요. 다시 연결되어 Infinitary가 그곳에 설정한 것을 삭제했어요.",
   "feedResetRemovalStayed": "Infinitary를 초기화한 뒤 30일 동안 {name} 컴퓨터에 연결할 수 없었어요. Infinitary가 그곳에 설정한 것은 그곳에서 직접 삭제할 때까지 남아 있어요.",
   "feedReviewBlocked": "검토를 마치지 못했어요",

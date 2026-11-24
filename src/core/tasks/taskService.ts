@@ -64,6 +64,13 @@ import {
   tasksJoining,
 } from "./projectMove";
 import { latestResultOf, type ReportEntry, reportEntryOf, type TaskResult } from "./reportEntry";
+import {
+  moveWithinProject,
+  type ProjectRepositoryRef,
+  repositoryInProject,
+  repositoryName,
+  restartInRepository,
+} from "./repositoryMove";
 import { TaskArchive } from "./taskArchive";
 import { TaskCapture } from "./taskCapture";
 import { CLOSE_EVENT_KIND } from "./taskCloses";
@@ -1174,6 +1181,42 @@ export class TaskService {
       return this.writer.mustGet(id);
     });
     return run();
+  }
+
+  /**
+   * Move open work that has not started to another repository of its own
+   * project, by name or id, keeping its key (`moveWithinProject`). Answers
+   * the repository's name, or undefined when it already works there.
+   */
+  moveWithinProject(id: string, repository: string, actor: TaskEventActor): string | undefined {
+    const at = this.writer.now();
+    return this.writer.write((): string | undefined => {
+      const record = this.writer.mustGet(id);
+      const target = repositoryInProject(this.moves, record, repository);
+      return moveWithinProject(this.moves, record, target, actor, at) ? target.name : undefined;
+    })();
+  }
+
+  /**
+   * Started work with no commits of its own starts again in another
+   * repository of its project (`restartInRepository`), once the caller has
+   * stopped its crewmate and removed its empty working copy.
+   */
+  restartInRepository(id: string, target: ProjectRepositoryRef, actor: TaskEventActor): void {
+    const at = this.writer.now();
+    this.writer.write(() => {
+      restartInRepository(this.moves, this.writer.mustGet(id), target, actor, at);
+    })();
+  }
+
+  /** The repository of the task's own project `named` names (`repositoryInProject`). */
+  repositoryInProject(id: string, named: string): ProjectRepositoryRef {
+    return repositoryInProject(this.moves, this.writer.mustGet(id), named);
+  }
+
+  /** The name of the task's own repository, when its project holds it. */
+  repositoryNameOf(record: Pick<TaskRecord, "projectId" | "repoId">): string | undefined {
+    return repositoryName(this.moves, record.projectId, record.repoId);
   }
 
   /** The tasks a move of repositories would take along (INF-5005), oldest first; nothing is written. */

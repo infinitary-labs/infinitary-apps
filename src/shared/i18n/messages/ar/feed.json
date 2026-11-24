@@ -108,6 +108,8 @@
   },
   "feedReported": "التقرير: {summary}",
   "feedReportedBare": "أُرسل تقرير",
+  "feedRepositoryMoved": "نُقلت إلى المستودع {repository}",
+  "feedRepositoryRestarted": "نُقلت إلى المستودع {repository} قبل أول إيداع لها؛ تبدأ من جديد هناك",
   "feedResetRemovalRemoved": "كان {name} خارج النطاق عند إعادة تعيين Infinitary. لقد عاد، وأُزيل ما أعدّه Infinitary هناك.",
   "feedResetRemovalStayed": "بقي {name} خارج النطاق لمدة 30 يومًا بعد إعادة تعيين Infinitary. يبقى ما أعدّه Infinitary هناك حتى تحذفه هناك.",
   "feedReviewBlocked": "تعذّر إكمال المراجعة",

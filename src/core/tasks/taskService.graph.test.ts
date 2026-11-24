@@ -713,6 +713,55 @@ describe("the task graph (task-system P2)", () => {
       expect(tasks.get("solo")?.key).toMatch(/^NIA-/);
     });
 
+    // INF-6536 finding 1: a repository named alone, within the task's own
+    // project, was dropped without a word.
+    it("moves open work to another repository of its own project, keeping its key, and names both repositories when a branch_from crosses them", () => {
+      const { db, tasks, work } = setup();
+      seedProject(db, {
+        id: "r-app",
+        name: "harbor-ledger",
+        path: "/fleet/harbor-ledger",
+        key: "HBL",
+        addedAt: 2,
+      });
+      seedProject(db, {
+        id: "r-api",
+        name: "harbor-ledger-api",
+        path: "/fleet/harbor-ledger-api",
+        project: "proj-r-app",
+        addedAt: 3,
+      });
+      work("relay", { repoId: "r-app" });
+      work("relay-part", { repoId: "r-app", parentId: "relay" });
+      const key = tasks.get("relay")?.key;
+
+      expect(tasks.updateFields("relay", { repository: "harbor-ledger-api" }, "firstmate")).toEqual(
+        ["moved to the harbor-ledger-api repository"],
+      );
+      expect(tasks.get("relay")).toMatchObject({ key, repoId: "r-api" });
+      expect(tasks.get("relay-part")?.repoId).toBe("r-api");
+
+      seedTask(tasks, {
+        id: "started",
+        title: "started",
+        status: "running",
+        worktreeDir: "/wt",
+        repoId: "r-app",
+      });
+      expect(() =>
+        tasks.updateFields("started", { repository: "harbor-ledger-api" }, "firstmate"),
+      ).toThrow(
+        `Refused: ${tasks.get("started")?.key} has started, so it moves to the harbor-ledger-api repository only while it has no commits of its own: its crewmate stops and it starts again there.`,
+      );
+
+      work("caller", { repoId: "r-app" });
+      expect(() =>
+        tasks.updateFields("caller", { branchFrom: tasks.get("relay")?.key }, "firstmate"),
+      ).toThrow(
+        `branch_from ${key} is in the harbor-ledger-api repository and this task in harbor-ledger; a task branches only from work in its own repository.`,
+      );
+    });
+
     // INF-61's R1: INF-5, moved to Scratch and then to notes, still opened
     // its pull request in infinitary.
     it("a task moved through Scratch into another project takes that project's repository, and the parts that followed it", () => {

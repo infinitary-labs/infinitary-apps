@@ -1121,6 +1121,8 @@ public enum PhoneMessages {
     public static func `feedRepairsCapped`(`rounds`: Int) -> String { PhoneWords.format("feedRepairsCapped", [`rounds`]) }
     public static func `feedReported`(`summary`: String) -> String { PhoneWords.format("feedReported", [`summary`]) }
     public static func `feedReportedBare`() -> String { PhoneWords.format("feedReportedBare", []) }
+    public static func `feedRepositoryMoved`(`repository`: String) -> String { PhoneWords.format("feedRepositoryMoved", [`repository`]) }
+    public static func `feedRepositoryRestarted`(`repository`: String) -> String { PhoneWords.format("feedRepositoryRestarted", [`repository`]) }
     public static func `feedResetRemovalRemoved`(`name`: String) -> String { PhoneWords.format("feedResetRemovalRemoved", [`name`]) }
     public static func `feedResetRemovalStayed`(`name`: String) -> String { PhoneWords.format("feedResetRemovalStayed", [`name`]) }
     public static func `feedReviewBlocked`() -> String { PhoneWords.format("feedReviewBlocked", []) }
@@ -5583,6 +5585,8 @@ extension PhoneWords {
         "feedRepairsCapped": ["rounds"],
         "feedReported": ["summary"],
         "feedReportedBare": [],
+        "feedRepositoryMoved": ["repository"],
+        "feedRepositoryRestarted": ["repository"],
         "feedResetRemovalRemoved": ["name"],
         "feedResetRemovalStayed": ["name"],
         "feedReviewBlocked": [],

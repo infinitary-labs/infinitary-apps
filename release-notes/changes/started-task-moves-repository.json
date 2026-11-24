@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "started-task-moves-repository",
+      "kind": "improvement",
+      "area": "tasks",
+      "title": "A task started in the wrong repository of a project moves to the right one",
+      "body": "When a crewmate finds before its first change that the work belongs in another repository of your project, your first mate now moves the task there and it starts again with the same task and your words. Before, the work needed a second task and a second pull request.",
+      "noPicture": "This changes where a started task works and what the crewmate reports, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

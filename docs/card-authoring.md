@@ -575,10 +575,10 @@ It carries none when the choice is a look, wording or layout, whose drawing or p
 A review finding's question always carries it (Review finding attribution, below), as does a question about a pull request comment.
 The author writes a plain table marked `data-inf-tradeoff` inside the question's fieldset, under its options.
 Its first row is an empty cell, then one cell per heading where the options differ, two or more; a heading names a quality of the whole product the person wants more of, in one or two words that would fit an unrelated change, written as the author chose it.
-The rules suggest user experience, security, privacy, reliability, control, cost, maintainability and ship fast, and the fewest headings that show the difference.
+The rules ask for the fewest headings that show the difference and give user experience, security, privacy, reliability, control, save cost, maintainability and ship fast as examples, never a closed set: the author chooses whatever headings the choice turns on.
 With a table, each option's label is a dozen words at most, with one line naming the headings on which the options are level and one naming the pick and what it gives up; the reasons sit in the table, folded under the chart.
 Each later row is one option, a `<tr data-inf-option="<value>">` naming the value of the question's own radio or checkbox it stands for, its option's words in a few words in the first cell, then one cell per heading with `data-inf-level` of `high`, `medium` or `low` and a few words for this change.
-High is always the most of what the heading names, so a heading is named for what the person wants more of: ship fast, never work now.
+High is always better: high is the most of what the heading names, so a heading is named positively for what the person wants more of: save cost, never cost; easy to undo, never hard to undo; ship fast, never work now.
 
 Every reader - the window, a view of another computer and the phone - draws the table when it builds the body's markup (`withTradeoffCharts`, `src/shared/tradeoffChart.ts`, from `cardBodyMarkup`), so a revision's refresh keeps the drawing and the core measures the drawn size.
 Two headings draw one plane, the first heading up and the second across, with each option a mark in the cell its two levels name; three or more draw a small radar on each option, its outer ring high.

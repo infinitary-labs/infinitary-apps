@@ -1,6 +1,7 @@
 import { homedir, userInfo } from "node:os";
 import { basename } from "node:path";
 import { readInstalled, type ServiceManager, stopInBackground } from "@core/helper/background";
+import { hostPlatform } from "@core/platform";
 import type { ResetOutsideKind } from "@core/reset/mark";
 import { withinMs } from "@core/reset/prepare";
 import type { FreshAuthentication } from "@core/secrets/approvals";
@@ -9,6 +10,7 @@ import * as m from "@shared/i18n/messages.generated";
 import type { ResetAnswer } from "@shared/reset";
 import type { BuildFlavor } from "@shared/userDataFolders";
 import { app } from "electron";
+import { LET_GO_JOB_ARG, START_HERE_ARG } from "../besideRun";
 import type { CommandStarter } from "../commandStarter";
 import { startAtLoginFor } from "../host/electronHost";
 import type { Shell } from "../shell";
@@ -23,6 +25,7 @@ import {
   passwordStoreCustodies,
 } from "./outside";
 import { runReset } from "./running";
+import { restartOnWindows } from "./windowsRestart";
 import { leaveWorkHome } from "./workHome";
 
 /**
@@ -35,7 +38,8 @@ export function resetInApp(input: {
   shell: Shell;
   dataDir: string;
   choice: UserDataChoice;
-  platform: NodeJS.Platform;
+  /** A run on a test's or another chosen isolated folder. */
+  isolated: boolean;
   /** The command starter this window keeps, if any; let go for good. */
   starter: CommandStarter | null;
   /** This computer's work for another home, whose background agent goes. */
@@ -50,17 +54,23 @@ export function resetInApp(input: {
    * password, Windows Hello, polkit. None on an isolated or chosen folder.
    */
   authentication: FreshAuthentication | undefined;
-  /** Starts the app again once it quits. */
-  relaunch: () => void;
-  /**
-   * On Windows, starts the app again only once this program has ended, so
-   * the next start finds the folder free (./windowsRestart.ts); false
-   * leaves it to `relaunch`.
-   */
-  restartAfterExit?: () => Promise<boolean>;
+  /** Starts the app again with these arguments once it quits. */
+  relaunch: (args: string[]) => void;
   quit: () => void;
 }): () => Promise<ResetAnswer> {
-  const { choice, platform } = input;
+  const { choice } = input;
+  const platform = hostPlatform();
+  // The fresh start is an ordinary one: neither a run's hand-over nor a job's let-go.
+  const args = process.argv
+    .slice(1)
+    .filter((arg) => arg !== START_HERE_ARG && arg !== LET_GO_JOB_ARG);
+  // On Windows the app starts again only once this program has ended, so the
+  // next start finds the folder free (./windowsRestart.ts); false leaves it
+  // to the relaunch.
+  const restartAfterExit =
+    platform === "win32" && !input.isolated
+      ? () => restartOnWindows({ pid: process.pid, executable: process.execPath, args })
+      : undefined;
   const own = choice.kind === "flavor" ? choice : null;
   const clear: Partial<Record<ResetOutsideKind, () => Promise<boolean>>> = own
     ? {
@@ -96,7 +106,7 @@ export function resetInApp(input: {
       stopFirstMate: () => input.shell.stopForReset(),
       endLeftovers: () => endLeftoverPrograms(input.dataDir),
       restart: async () => {
-        if (!(await input.restartAfterExit?.().catch(() => false))) input.relaunch();
+        if (!(await restartAfterExit?.().catch(() => false))) input.relaunch(args);
         input.quit();
       },
       within: withinMs,

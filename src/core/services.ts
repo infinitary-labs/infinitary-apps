@@ -153,7 +153,7 @@ import { CrewActions } from "./tasks/crewActions";
 import { CrewLiveText, CrewTranscripts } from "./tasks/crewTranscript";
 import { startHomeTaskFiles } from "./tasks/homeTaskFiles";
 import { keptRunningAt } from "./tasks/keptRunning";
-import { LeftoverPrograms } from "./tasks/leftoverPrograms";
+import { leftoverProgramsAt } from "./tasks/leftoverPrograms";
 import { TaskProtocol } from "./tasks/taskProtocol";
 import { TaskService } from "./tasks/taskService";
 import { TaskTimeline } from "./tasks/taskTimeline";
@@ -1058,12 +1058,7 @@ export async function createServices(
   });
   // What a closed task left running on this Mac stops at its close, before
   // its working copy and temporary folder go (docs/leftover-programs.md).
-  const leftoverPrograms = new LeftoverPrograms({
-    crewmatesDir: paths.crewmatesDir,
-    keptJobs: placed.keptJobs,
-    tasks,
-    log: (line) => console.warn(`[leftovers] ${line}`),
-  });
+  const leftoverPrograms = leftoverProgramsAt(paths.crewmatesDir, placed.keptJobs, tasks);
   const leftBehind = leftoverPrograms.leftBehind(() => loadLine.snapshot().runs);
   // Where the captain's input comes from, for a crewmate's card that needs
   // them at a named computer (docs/devices.md, "Where the captain is").

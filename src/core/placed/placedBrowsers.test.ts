@@ -57,6 +57,15 @@ function setup(
 }
 
 describe("signed-in sites a computer that runs work keeps", () => {
+  it("names that computer on its open browser's fact", () => {
+    const { browsers } = setup(async () => ({ ok: true }));
+    expect(browsers.fact("task")).toMatchObject({
+      state: "open",
+      kept: true,
+      computer: "Work computer",
+    });
+  });
+
   it("sends the captain's rule with Return control from that computer's kept profile, and none to an older one", async () => {
     const { browsers, asked } = setup(async () => ({ ok: true }));
     expect(await browsers.returnControl("task", handle, { site, automatic: true })).toEqual({

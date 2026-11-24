@@ -474,6 +474,8 @@ export const placedCardSchema = z.object({
       after: z.string(),
       /** The saved sign-in its browser was given did not sign the page in (docs/task-browser.md, "Signed-in sites"). */
       savedFailed: z.literal(true).optional(),
+      /** The captain signs in there, so the take opens the kept profile (`browser-sign-in-mark.md`); an older home drops it. */
+      signIn: z.literal(true).optional(),
     })
     .optional(),
   /** Bind the shown ordinary action to a recorded validation request; INF-1824: `gaps` names further gaps of the same version, drawn as one checklist. */

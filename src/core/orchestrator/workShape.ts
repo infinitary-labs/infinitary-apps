@@ -1,6 +1,11 @@
 import { cardAnswerLines, replyWithSettings } from "@shared/cardAnswerLines";
 import { cardPictureFiles } from "@shared/cardPictures";
-import { cardAnswersSchema, cardMessageText, choiceCarriedRecordSchema } from "@shared/cards";
+import {
+  type CardAnswer,
+  cardAnswersSchema,
+  cardMessageText,
+  choiceCarriedRecordSchema,
+} from "@shared/cards";
 import { type ContributionRoute, contributesUpstream } from "@shared/contributions";
 import { softHoldWords } from "@shared/holds";
 import { deliveryForRecord, opensPullRequest, ownsBatches, type RepoView } from "@shared/repos";
@@ -29,6 +34,14 @@ import {
   type EscalationBriefFacts,
   type SpawnIntent,
 } from "./intentBrief";
+import {
+  answersWithAuthorWordsMarked,
+  crewmateWriterOf,
+  readerDataAnswer,
+  readerDataLine,
+  readerSavedLine,
+  servedTaskTitle,
+} from "./readerData";
 
 /** The task's prepared routing wins; local-only delivery never contributes to a host. */
 export function contributionForTask(
@@ -205,6 +218,8 @@ export function workShape(
     const internalStep = ask?.internal_step ?? inherited?.internal_step;
     // So does working in the project's folder (INF-567).
     const inFolder = ask?.in_folder || isFolderWork(inherited?.in_place);
+    // A stronger-model retry of an unsafe data reader reads the same strangers' words.
+    const unsafeDataReader = ask?.unsafe_data_reader || inherited?.unsafe_data_reader;
     return {
       ...(inherited?.deliverable === "operation" ? { deliverable: "operation" as const } : {}),
       ...((ask?.ongoing ?? inherited?.ongoing) !== undefined
@@ -231,6 +246,7 @@ export function workShape(
           }
         : {}),
       ...(internalStep ? { internal_step: true } : {}),
+      ...(unsafeDataReader ? { unsafe_data_reader: true } : {}),
       ...(inFolder ? { in_place: { folder: true as const } } : {}),
       ...(ask?.skipped_plan_because ? { skipped_plan_because: ask.skipped_plan_because } : {}),
       escalate_from: escalation.stamp.from,
@@ -253,6 +269,7 @@ export function workShape(
     ...(ask?.runs_on_ask?.trim() ? { runs_on_ask: ask.runs_on_ask.trim() } : {}),
     ...(ask?.placement_requirements ? { placement_requirements: ask.placement_requirements } : {}),
     ...(ask?.internal_step ? { internal_step: true } : {}),
+    ...(ask?.unsafe_data_reader ? { unsafe_data_reader: true } : {}),
     ...(ask?.in_folder ? { in_place: { folder: true as const } } : {}),
     ...(ask?.skipped_plan_because ? { skipped_plan_because: ask.skipped_plan_because } : {}),
   };
@@ -378,14 +395,25 @@ export function withDeliverable(shape: WorkShape, intent: SpawnIntent | undefine
     intent,
     isFolderWork(shape.in_place) || shape.deliverable === "operation",
   );
-  return {
-    ...shape,
-    deliverable:
-      isFolderWork(shape.in_place) || shape.deliverable === "operation"
-        ? "operation"
-        : deliverableFor(intent, shape.kind),
-  };
+  const deliverable =
+    isFolderWork(shape.in_place) || shape.deliverable === "operation"
+      ? "operation"
+      : deliverableFor(intent, shape.kind);
+  // A typed result would reach the first mate as the reader's unmarked words.
+  if (shape.unsafe_data_reader && (deliverable !== "answer" || shape.result_schema))
+    throw new Error(UNSAFE_DATA_READER_ANSWERS);
+  return { ...shape, deliverable };
 }
+
+/** Why an unsafe data reader with no project of its own is refused before it starts. */
+export const UNSAFE_DATA_READER_PROJECT =
+  // i18n-exempt: a refusal served to the first mate
+  "An unsafe data reader reads only its own project: name repo_id, a project other than the personal workspace.";
+
+/** Why an unsafe data reader that would deliver anything but an answer is refused before it starts. */
+export const UNSAFE_DATA_READER_ANSWERS =
+  // i18n-exempt: a refusal served to the first mate
+  "An unsafe data reader only answers in words: give it the read-only constraint, and neither operation, in_folder nor result_schema. Nothing was started.";
 
 /** What a record's shape says it delivers; a pre-axis row shipped a change. */
 export function deliverableOf(record: TaskRecord | undefined): Deliverable {
@@ -432,6 +460,17 @@ export function sourceFacts(
 ): BasisBriefFacts {
   const timeline = options.tasks.timeline(basis.id);
   const card = cards.newestAnswerForTask(basis.id);
+  // An unsafe data reader's card words may carry words anyone can write: a
+  // builder reads them between reader-data marks (docs/agents-reach.md).
+  const reader = basis.shape?.unsafe_data_reader === true;
+  const at = Date.now();
+  const mark = (words: string) => (reader ? readerDataLine(words, at) : words);
+  // Its option labels in the captain's answers, marked the same each time so
+  // a label equal to its value reads once; the captain's words stay as written.
+  const authorWords = (answers: readonly CardAnswer[]) =>
+    reader && card
+      ? answersWithAuthorWordsMarked(answers, (words) => readerSavedLine(`card:${card.id}`, words))
+      : answers;
   // Only a change's working copy holds its work: an answer task commits
   // nothing and its scratch copy goes with it, so its answer is the report
   // and the card below, never a branch to start from.
@@ -449,10 +488,16 @@ export function sourceFacts(
     ? cards
         .messages(card.id)
         .filter((message) => message.text.trim() || message.notes?.length)
-        .map((message) => ({
-          who: message.who,
-          text: replyWithSettings(cardMessageText(message), message.answers),
-        }))
+        .map((message) => {
+          const text = replyWithSettings(
+            cardMessageText(message),
+            message.answers && authorWords(message.answers),
+          );
+          return {
+            who: message.who,
+            text: crewmateWriterOf(card, message) === basis.id ? mark(text) : text,
+          };
+        })
     : [];
   // The choice, the answers and the body all come off that one card, so a
   // later card on the task never lends the builder its choice instead.
@@ -475,7 +520,7 @@ export function sourceFacts(
         .at(-1)
     : undefined;
   const latest = submitted?.success ? submitted.data : resolution?.answers;
-  const answers = latest ? cardAnswerLines(latest) : undefined;
+  const answers = latest ? cardAnswerLines(authorWords(latest)) : undefined;
   // What the captain's field sent with the closing choice (`choice-attachments.md`):
   // its notes and files as words here, its pictures among the brief's own.
   const closing = card
@@ -489,12 +534,14 @@ export function sourceFacts(
   );
   const carried = carriedRecord.success ? carriedLines(carriedRecord.data) : [];
   const result = options.tasks.latestResult(basis.id);
-  const rawBody = offer?.body ?? card?.body;
+  const unmarkedBody = offer?.body ?? card?.body;
+  // The body may be saved whole in a file, so it carries its own reminder.
+  const rawBody = unmarkedBody && reader ? readerDataAnswer(unmarkedBody, at) : unmarkedBody;
   const cardBody = rawBody ? cardPictureFiles(rawBody, options.paths.crewmatesDir) : undefined;
   return {
     key: basis.key || basis.id,
     taskId: basis.id,
-    title: basis.title,
+    title: servedTaskTitle(basis, options.tasks.graph.discoveredOrigins(basis.id), "line"),
     ...(basis.intent?.userWords ? { userWords: basis.intent.userWords } : {}),
     ...(basis.outcome ? { outcome: basis.outcome } : {}),
     ...(result ? { result: result.value } : {}),
@@ -507,7 +554,7 @@ export function sourceFacts(
     ...(branch ? { branch } : {}),
     ...(keptRef ? { keptRef } : {}),
     ...(thread.length > 0 ? { thread } : {}),
-    ...(choice ? { choice } : {}),
+    ...(choice ? { choice: mark(choice) } : {}),
     ...(answers ? { answers } : {}),
     ...(carried.length > 0 ? { carried } : {}),
   };

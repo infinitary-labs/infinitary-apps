@@ -249,6 +249,17 @@ export const workShapeSchema = z.object({
    */
   internal_step: z.boolean().optional(),
   /**
+   * The first mate's declaration that this answer task reads words from
+   * outside its project's own people, such as issues and pull requests
+   * strangers open (docs/agents-reach.md, "An unsafe data reader"): its session
+   * gets no shell, no web, no browser and no subagent, its file reads stay
+   * in its working copy, its reads where the project lives stay in its own
+   * project and arrive fenced, and every write it makes there waits for the
+   * captain's click on one host card. The host refuses it on a task that is
+   * not an answer, and the task runs only on the computer keeping the record.
+   */
+  unsafe_data_reader: z.boolean().optional(),
+  /**
    * The shape this task's report must carry as its typed result (INF-799
    * piece 1): a JSON Schema object with an object at its root, declared by
    * the first mate when it plans or spawns the task. The host prints it in
@@ -465,6 +476,7 @@ export const CAPTAIN_OWNED_SHAPE_FIELDS = [
   "runs_on_ask",
   "placement_requirements",
   "internal_step",
+  "unsafe_data_reader",
   "skipped_plan_because",
   "result_schema",
   "branch_from",
@@ -550,6 +562,7 @@ export const workShapeAskSchema = workShapeSchema
     runs_on_ask: true,
     placement_requirements: true,
     internal_step: true,
+    unsafe_data_reader: true,
     skipped_plan_because: true,
     result_schema: true,
     branch_from: true,

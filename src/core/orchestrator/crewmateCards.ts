@@ -189,6 +189,17 @@ export class CrewmateCards {
   ): string | CardMutation | Promise<string> {
     const caller: CardCaller = { actor: "crewmate", taskId: task.id };
     const target = this.host.cards.targetOf(caller, input.id);
+    // A script shares the frame with the bridge that reports the captain's
+    // answers, so it could forge which words are theirs; a reader's words are
+    // marked by that split (`answersWithAuthorWordsMarked`).
+    if (
+      this.options.tasks.get(task.id)?.shape?.unsafe_data_reader === true &&
+      /<script\b/i.test(input.body)
+    ) {
+      // i18n-exempt: a refusal served to the crewmate, never shown to a person
+      const why = "an unsafe data reader's card carries no script; send the body as plain HTML.";
+      throw new CardRefusedError(`Card refused: ${why}`, "shape", why);
+    }
     // A computer from before shared cards would read the typed result as
     // its own card shown: it is refused before anything is written.
     const machine = this.host.machineOf(task.id);
@@ -217,9 +228,11 @@ export class CrewmateCards {
     if (target.kind === "new" || target.kind === "own") {
       if (input.expectedRevision !== undefined) {
         const own = target.kind === "own" ? this.host.cards.cardRead(target.id) : undefined;
+        // The card's own title as it wrote it: `cardRead` marks a reader's as data.
+        const title = own && (this.host.cards.get(own.id) ?? this.host.cards.stored(own.id))?.title;
         if (own && own.revision !== input.expectedRevision)
           throw new Error(
-            `Nothing changed on card "${own.title}" (${own.id}): you read revision ${input.expectedRevision}, and it is at ${own.revision ?? "none"} now. Read it again before revising it.`,
+            `Nothing changed on card "${title ?? ""}" (${own.id}): you read revision ${input.expectedRevision}, and it is at ${own.revision ?? "none"} now. Read it again before revising it.`,
           );
       }
       return this.readerChecked(task, input, this.addCrewmateCard(task, input));
@@ -793,6 +806,10 @@ export class CrewmateCards {
       if (ask?.kind === "integration")
         throw new Error(
           "The app already presents integration approval cards. Wait for its answer; do not emit another card.",
+        );
+      if (ask?.card !== undefined)
+        throw new Error(
+          `Card refused: the app already shows ask ${ask.id} on its own approval card. Wait for its write-answered; do not emit another card.`,
         );
       if (!ask) {
         throw new Error(

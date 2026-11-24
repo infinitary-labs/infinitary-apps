@@ -208,6 +208,13 @@ export type SessionSpec = {
   instructions: { base: string; served?: ServedInstructions };
   /** Beyond the app's tools: nothing, or the backend's own coding set. */
   builtins: "none" | "coding";
+  /**
+   * With the coding set, only its read-only tools, each refusing a path
+   * outside `cwd`: no shell, no file change, no web and no subagent (an
+   * unsafe data reader, docs/agents-reach.md). Only this computer's factories
+   * build it; a computer that runs work refuses it.
+   */
+  fenced?: true;
   /** Opt-in to personal instructions and skills: this user's own, or `personalRoot`'s. */
   personalResources?: boolean;
   /**

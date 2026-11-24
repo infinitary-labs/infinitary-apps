@@ -545,8 +545,8 @@ export class HostOps {
     actor: "captain" | "firstmate",
     from?: typeof TASK_CARD_VIA,
     panel?: string,
+    handle = `${record.key || record.id} "${record.title}"`,
   ): string {
-    const handle = `${record.key || record.id} "${record.title}"`;
     const left = this.core.options.tasks.starts.leaveBacklog(record.id, {
       actor,
       ...(from ? { via: from } : {}),
@@ -581,10 +581,14 @@ export class HostOps {
   /**
    * Why a start on the captain's click would be refused at once, in his
    * words, or undefined when it may go ahead: the checks `startQueuedNow`
-   * makes before its first await.
+   * makes before its first await. `handle` names the task as the one the
+   * answer goes to reads it.
    */
-  startRefusal(record: TaskRecord, audience: "tool" | "captain"): string | undefined {
-    const handle = `${record.key || record.id} "${record.title}"`;
+  startRefusal(
+    record: TaskRecord,
+    audience: "tool" | "captain",
+    handle = `${record.key || record.id} "${record.title}"`,
+  ): string | undefined {
     if (record.status !== "open" || record.kind !== "work") {
       return `Cannot start ${handle} now: it is ${describeStatus(record)}, not queued work.${record.status === "dropped" ? (audience === "tool" ? " On the captain’s request, use update_task start_again to create a replacement." : " Use Start again on its record to create a replacement.") : ""}`;
     }

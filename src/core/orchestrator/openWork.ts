@@ -15,6 +15,7 @@ import type { AskRecord } from "../storage/askStore";
 import { TaskService } from "../tasks/taskService";
 import type { AskEnding, AskState, AskThread } from "./askEnding";
 import type { ThreadOwed } from "./cardThreads";
+import { answersWithAuthorWordsMarked } from "./readerData";
 
 /**
  * The first mate's read of what is still open (INF-1712): every message of
@@ -34,6 +35,11 @@ export type OpenWorkHost = {
   pastCard: (cardId: string) => PastCard | undefined;
   owed: (cardId: string) => ThreadOwed;
   thread: (cardId: string) => CardThread;
+  /** A card's words as an agent reads them, an unsafe data reader's marked (`CardThreads`). */
+  served: {
+    servedLine: (card: Pick<Card, "taskId">, message: CardMessage) => string;
+    servedCardWords: (card: Pick<Card, "id" | "author" | "taskId">, words: string) => string;
+  };
 };
 
 /** A message's words in the overview; the whole is one `ask` read away. */
@@ -208,12 +214,12 @@ function cardSummary(host: OpenWorkHost, card: Card) {
     kind: cardPresentation(card),
     from: card.author,
     ...(card.taskId ? { task: task?.key || card.taskId, task_id: card.taskId } : {}),
-    title: card.title,
+    title: host.served.servedCardWords(card, card.title),
     ...(card.offerId ? { revision: card.offerId } : {}),
     ...(card.answering ? { answering: true } : {}),
     actions: card.actions.map((action) => ({
       id: action.id,
-      label: action.label,
+      label: host.served.servedCardWords(card, action.label),
       ...(action.default ? { default: true } : {}),
     })),
     ...(thread.length > 0
@@ -223,7 +229,13 @@ function cardSummary(host: OpenWorkHost, card: Card) {
       : {}),
     waits_on: OWED[owed],
     ...(owed === "firstmate" || owed === "author"
-      ? { unanswered: captainWords(thread.filter((message) => message.who === "captain").at(-1)) }
+      ? {
+          unanswered: captainWords(
+            host,
+            card,
+            thread.filter((message) => message.who === "captain").at(-1),
+          ),
+        }
       : {}),
   };
 }
@@ -290,8 +302,8 @@ function readCard(host: OpenWorkHost, cardId: string): string {
       {
         ...cardSummary(host, open),
         state: "open",
-        body: open.body,
-        messages: host.thread(cardId).messages.map(threadLine),
+        body: host.served.servedCardWords(open, open.body),
+        messages: host.thread(cardId).messages.map((message) => threadLine(host, open, message)),
       },
       null,
       1,
@@ -306,17 +318,28 @@ function readCard(host: OpenWorkHost, cardId: string): string {
       state: "closed",
       from: past.author,
       ...(past.taskId ? { task_id: past.taskId } : {}),
-      title: past.title,
-      body: past.body,
-      actions: past.actions.map((action) => ({ id: action.id, label: action.label })),
+      title: host.served.servedCardWords(past, past.title),
+      body: host.served.servedCardWords(past, past.body),
+      actions: past.actions.map((action) => ({
+        id: action.id,
+        label: host.served.servedCardWords(past, action.label),
+      })),
       ending: {
         how: past.ending.how,
         at: iso(past.ending.at),
-        ...(past.ending.label ? { chose: past.ending.label } : {}),
+        ...(past.ending.label
+          ? { chose: host.served.servedCardWords(past, past.ending.label) }
+          : {}),
         ...(past.ending.by ? { by: past.ending.by } : {}),
       },
-      ...(past.answers.length > 0 ? { answers: past.answers } : {}),
-      messages: past.messages.map(threadLine),
+      ...(past.answers.length > 0
+        ? {
+            answers: answersWithAuthorWordsMarked(past.answers, (words) =>
+              host.served.servedCardWords(past, words),
+            ),
+          }
+        : {}),
+      messages: past.messages.map((message) => threadLine(host, past, message)),
     },
     null,
     1,
@@ -324,12 +347,34 @@ function readCard(host: OpenWorkHost, cardId: string): string {
 }
 
 /** A thread message as its author reads it: the captain's words with the settings they sent. */
-function threadLine(message: CardMessage) {
-  return { who: message.who, at: iso(message.at), text: captainWords(message) ?? "" };
+function threadLine(
+  host: OpenWorkHost,
+  card: Pick<Card, "id" | "author" | "taskId">,
+  message: CardMessage,
+) {
+  const text =
+    message.who === "captain"
+      ? (captainWords(host, card, message) ?? "")
+      : host.served.servedLine(card, message);
+  return { who: message.who, at: iso(message.at), text };
 }
 
-function captainWords(message: CardMessage | undefined): string | undefined {
-  return message && replyWithSettings(cardMessageText(message), message.answers);
+/** The captain's words with the settings they sent, a reader card's option labels among them marked. */
+function captainWords(
+  host: OpenWorkHost,
+  card: Pick<Card, "id" | "author" | "taskId">,
+  message: CardMessage | undefined,
+): string | undefined {
+  return (
+    message &&
+    replyWithSettings(
+      cardMessageText(message),
+      message.answers &&
+        answersWithAuthorWordsMarked(message.answers, (words) =>
+          host.served.servedCardWords(card, words),
+        ),
+    )
+  );
 }
 
 const OWED: Record<ThreadOwed, string> = {

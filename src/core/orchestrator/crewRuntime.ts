@@ -102,7 +102,12 @@ export type PlacementRecord = {
   repoId: string | null;
   parentId?: string | null;
   deviceId?: string | null;
-  shape?: { kind?: string; runs_on_ask?: string; in_place?: object } | null;
+  shape?: {
+    kind?: string;
+    runs_on_ask?: string;
+    in_place?: object;
+    unsafe_data_reader?: boolean;
+  } | null;
 };
 
 export type InterruptSource = {

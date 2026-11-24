@@ -935,7 +935,10 @@ export class CrewSupervisor {
     const card = author ? this.cards.get(cardId.trim()) : undefined;
     const result = this.cards.close(cardId, actor, reason);
     if (author && card && card.actions.length > 0)
-      this.tasks.get(author)?.withdrawnThisTurn.push({ id: card.id, title: card.title });
+      this.tasks.get(author)?.withdrawnThisTurn.push({
+        id: card.id,
+        title: this.cards.threads.servedCardLine(card, card.title),
+      });
     // Withdrawal can leave a message without its answering offer. Re-read
     // coverage through the existing sweep, never a captain acknowledgement.
     this.hooks.asksMoved?.();

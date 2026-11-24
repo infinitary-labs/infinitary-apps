@@ -47,6 +47,8 @@ import { CrewmatePrograms } from "./crewmatePrograms";
 import type { TaskRuntime } from "./crewRuntime";
 import type { CrewmateSpec } from "./crewSession";
 import type { PersonalLiveDelegate } from "./crewSupervisorOptions";
+import { readerReport, readerReportRefusal } from "./readerData";
+import { servedNewestBody, servedResolutionForTask } from "./readerResolution";
 import type { WakeBody } from "./wakes";
 import { deliverableOf } from "./workShape";
 
@@ -75,7 +77,12 @@ export class CrewToolHooks {
       machine === LOCAL_MACHINE_ID
         ? undefined
         : this.core.options.machines?.folders(machine, task.id);
+    // An unsafe data reader holds strangers' words, so it gets no shell and none
+    // of the commands that ride it, no program, and no read of the captain's
+    // record or saved knowledge (docs/agents-reach.md, "An unsafe data reader").
+    const reader = this.core.options.tasks.get(task.id)?.shape?.unsafe_data_reader === true;
     return {
+      ...(reader ? { fenced: true as const } : {}),
       onSpeed: (model, selection) => this.noteSpeed(task.id, model, selection),
       requestedSpeed: (model) =>
         this.core.options.tasks.get(task.id)?.shape?.override_speed ??
@@ -114,23 +121,34 @@ export class CrewToolHooks {
         this.core.closeCard(input.cardId, { kind: "crewmate", taskId: task.id }, input.reason),
       onFollowup: (input) => this.core.reportIntake.fileFollowup(task, input),
       // Served only where a program can run (docs/programs.md, "Starting a program").
-      ...(this.programs.servedTo(task.id)
+      ...(!reader && this.programs.servedTo(task.id)
         ? { onStartProgram: (input) => this.programs.start(task, input) }
         : {}),
       onProgress: (text, plan) => this.core.reportIntake.noteProgress(task, text, plan),
-      onReport: (text, summary, declared) =>
-        this.core.turns.recordReportFromSession(task, text, summary, declared),
+      onReport: (text, summary, declared) => {
+        if (!reader) return this.core.turns.recordReportFromSession(task, text, summary, declared);
+        const refused = readerReportRefusal(declared);
+        if (refused) throw new Error(refused);
+        return this.core.turns.recordReportFromSession(
+          task,
+          ...readerReport(text, declared, Date.now()),
+        );
+      },
       onReply: (input) => this.core.cards.replyFromCrewmate(task.id, input),
       onReviseRequiredAction: (input) =>
         cardMutationText(
           this.core.cards.reviseRequiredAction({ actor: "crewmate", taskId: task.id }, input),
         ),
-      onReadCard: (cardId) => this.core.crewmateCards.readCard(cardId),
-      onQueryTasks: (input) => this.queryTasks(input),
-      ...this.knowledgeHooks(task, machine),
-      ...this.panelToolHooks(task, personal),
+      ...(reader
+        ? {}
+        : {
+            onReadCard: (cardId: string) => this.core.crewmateCards.readCard(cardId),
+            onQueryTasks: (input: TaskQueryInput) => this.queryTasks(input),
+            ...this.knowledgeHooks(task, machine),
+            ...this.panelToolHooks(task, personal),
+          }),
       ...this.forgeToolHooks(task),
-      ...this.taskCommandHooks(task, machine),
+      ...(reader ? {} : this.taskCommandHooks(task, machine)),
     };
   }
 
@@ -461,6 +479,21 @@ export class CrewToolHooks {
     | "onGithubWrite"
   > {
     if (this.core.facts.isPersonalTask(task.id)) return {};
+    // An unsafe data reader reaches where its project lives only through the
+    // API pair, whose answers the gateway fences and whose writes all wait
+    // for the captain: a workflow log or artifact would bring outside words
+    // in unfenced (docs/agents-reach.md, "An unsafe data reader").
+    if (this.core.options.tasks.get(task.id)?.shape?.unsafe_data_reader === true) {
+      const { githubRead, githubWrite } = this.core.options;
+      return {
+        ...(githubRead
+          ? { onGithubRead: (input: GithubReadInput) => githubRead(task.id, input) }
+          : {}),
+        ...(githubWrite
+          ? { onGithubWrite: (input: GithubWriteInput) => githubWrite(task.id, input) }
+          : {}),
+      };
+    }
     // A task that works in place ships nothing; the one that closes a pull
     // request an abandoned task left open reads and writes where the project
     // lives, and nothing else (INF-549's sibling).
@@ -671,8 +704,8 @@ export class CrewToolHooks {
       this.core.options.tasks,
       input,
       (repoId) => this.core.options.repos.get(repoId)?.name,
-      (taskId) => this.core.cards.newestForTask(taskId)?.body,
-      (taskId) => this.core.cards.newestResolutionForTask(taskId),
+      (taskId) => servedNewestBody(this.core.cards, taskId),
+      (taskId) => servedResolutionForTask(this.core.cards, taskId),
       this.taskQueryReach(),
     );
   }

@@ -107,6 +107,7 @@
   "feedStarted": "시작함",
   "feedStopped": "중지됨",
   "feedUndelivered": "메시지 전달 안 됨: {why}",
+  "feedUnsafeDataReaderReported": "안전하지 않은 데이터 읽기 작업이 보고했습니다. 그 내용은 기록에 있습니다.",
   "feedUpdated": "업데이트: {text}",
   "feedYouChose": "\"{choice}\" 선택함"
 }

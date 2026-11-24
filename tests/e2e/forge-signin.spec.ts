@@ -10,6 +10,9 @@ import {
 } from "../../src/core/forge";
 import { MERGE_WRITE_REFUSAL } from "../../src/core/forge/apiWriteGuard";
 import { SYNC_CAP_MS } from "../../src/core/jobs/jobManager";
+import { FOLLOWUP_PROVENANCE_OPENING } from "../../src/core/orchestrator/intentBrief";
+import { captainTurn, renderWake } from "../../src/core/orchestrator/wakes";
+import { UNSAFE_DATA_READER_ANSWERS } from "../../src/core/orchestrator/workShape";
 import { PERSONAL_WORKSPACE_NAME } from "../../src/core/paths";
 import { openDatabase } from "../../src/core/storage/db";
 import { TaskStore } from "../../src/core/storage/taskRecords";
@@ -23,7 +26,16 @@ import {
   GITHUB_ENTERPRISE,
   LOCAL_PROJECTS_UNAFFECTED,
 } from "../../src/shared/forges";
-import { INTEGRATIONS_WORDS } from "../../src/shared/integrations";
+import {
+  cardReaderUnsafeData,
+  cardReaderWritesTitle,
+  feedUnsafeDataReaderReported,
+} from "../../src/shared/i18n/messages.generated";
+import {
+  ASK_ROW_WORDS,
+  INTEGRATION_APPROVAL_WORDS,
+  INTEGRATIONS_WORDS,
+} from "../../src/shared/integrations";
 import {
   CHECK_WORDS,
   MERGE_WORDS,
@@ -33,17 +45,29 @@ import {
 import { NEVER_SENT_AGAIN } from "../../src/shared/writeAsk";
 import { BUNDLED_NAMING } from "../helpers/namingRunbook";
 import { scratchDir } from "../helpers/scratchDirs";
+import type { ScriptedCall } from "../helpers/scriptedCalls";
 import {
   API_WRITE_GUARD_MARKER,
   mergeWriteCases,
   PAGED_REPOSITORY,
   READS_ANYWHERE_MARKER,
   savedWriteAsks,
+  UNSAFE_DATA_READER_ASK,
+  UNSAFE_DATA_READER_CARD,
+  UNSAFE_DATA_READER_CARD_WORDS,
+  UNSAFE_DATA_READER_CHANGE_MARKER,
+  UNSAFE_DATA_READER_FILE,
+  UNSAFE_DATA_READER_FOLLOWUP,
+  UNSAFE_DATA_READER_MARKER,
+  UNSAFE_DATA_READER_WRITES,
+  UNSAFE_DATA_READER_WRITTEN,
   WRITE_ASK_ANSWER_MARKER,
   WRITE_ASK_CARD_TITLE,
   WRITE_ASK_MARKER,
   writeAskCall,
 } from "./apiWriteCases";
+import { launchClaudeCrew } from "./claudeCrew";
+import { waitForFirstmateIdle } from "./crew";
 import { cardBody } from "./frames";
 import {
   type GitHubStub,
@@ -64,7 +88,9 @@ import { heroShot, regionShot } from "./pictures";
 import { seedProject } from "./projectSeed";
 import { addedProjects, openProject, projectLine } from "./projects";
 import { promptInput } from "./prompt";
+import { served } from "./providerRequest";
 import { putInLine } from "./rails";
+import { copiesOf, firstmateTurnWith, READER_RUNTIMES, readerMarked } from "./readerJourney";
 import { readSavedData } from "./savedData";
 import { MOCK_GITHUB_STORY } from "./scenarios/changeStory";
 import {
@@ -92,9 +118,10 @@ import {
   MOCK_GITHUB_CHANGE_CARD_TITLE,
 } from "./scenarios/githubChange";
 import { mergeWriteGuard } from "./scenarios/mergeWriteGuard";
+import { unsafeDataReader } from "./scenarios/unsafeDataReader";
 import { assertSettingsFits } from "./settings";
 import { clickInBody, expectNoCard, factsStrip, noteDone, shownCard } from "./stack";
-import { focusOn, pressKey } from "./windowKeys";
+import { focusOn, pressKey, typeInto } from "./windowKeys";
 
 /**
  * The app's own GitHub sign-in (git integration PR 1.2, `docs/forge.md`),
@@ -175,8 +202,11 @@ async function arrange({
   host = "github.com",
   keptHere = false,
   githubCli,
+  claude = false,
 }: {
   signedIn: boolean;
+  /** The crew on Claude's own client, for a commission whose title asks for it. */
+  claude?: boolean;
   host?: string;
   /** A stand-in GitHub CLI the app finds on this computer, by its path. */
   githubCli?: string;
@@ -240,12 +270,18 @@ async function arrange({
     { fullName: "octo/website", updatedAt: "2026-09-01T10:00:00Z" },
   ]);
   github.headOf((branch) => git("-C", bare, "rev-parse", `refs/heads/${branch}`));
-  launched = await launchApp({
-    withMockProvider: true,
-    scenarios: [githubChange, continueChange, forgeSignin, forgeSigninReads, mergeWriteGuard],
-    userDataDir,
-    env: { ...github.env, ...(githubCli ? { INFINITARY_GITHUB_CLI: githubCli } : {}) },
-  });
+  const scenarios = [
+    githubChange,
+    continueChange,
+    forgeSignin,
+    unsafeDataReader,
+    forgeSigninReads,
+    mergeWriteGuard,
+  ];
+  const env = { ...github.env, ...(githubCli ? { INFINITARY_GITHUB_CLI: githubCli } : {}) };
+  launched = claude
+    ? await launchClaudeCrew({ scenarios, userDataDir, env })
+    : await launchApp({ withMockProvider: true, scenarios, userDataDir, env });
   // `launched` is read when the test ends, so a relaunch is the one stopped.
   stop = async () => {
     await launched.close();
@@ -310,6 +346,21 @@ async function send(page: Page, text: string) {
   await input.click();
   await input.fill(text);
   await input.press("Enter");
+}
+
+/** The captain asks the first mate, which answers with exactly these calls. */
+async function askFirstmate(words: string, calls: ScriptedCall[]): Promise<string[]> {
+  if (!launched.mockProvider) throw new Error("Asking the first mate needs the mock provider");
+  await waitForFirstmateIdle(launched.page);
+  const answer = launched.mockProvider.scriptFirstmateTurn(
+    served({ kind: "user", origin: "captain", body: renderWake(captainTurn(words, false)) }),
+    calls,
+  );
+  await send(launched.page, words);
+  await expect
+    .poll(answer.outcome, { timeout: 30_000 })
+    .toMatchObject({ state: "closed", results: calls.map(() => expect.any(String)) });
+  return answer.outcome().results;
 }
 
 const section = (page: Page) => page.locator("[data-integrations]");
@@ -919,6 +970,298 @@ test("a task that only answers asks before writing even to its own project, and 
   );
   expect(detail?.status).toBe("active");
 });
+
+/**
+ * An unsafe data reader (docs/agents-reach.md, "An unsafe data reader"), on a Pi
+ * crewmate and on Claude's own client: its session holds only reads, a file
+ * outside its working copy is refused, GitHub answers come fenced, a read of
+ * another project is refused, and both its writes to its own project, an
+ * issue and a run start, wait on the app's one approval card. The captain
+ * unticks the run start, so only the issue is sent, once.
+ */
+for (const runtime of READER_RUNTIMES) {
+  test(`an unsafe data reader on ${runtime.name} reads only its own project and its writes wait on one approval card`, async () => {
+    await arrange({ signedIn: true, claude: runtime.claude });
+    const { page } = launched;
+    if (!runtime.claude) {
+      // An unsafe data reader that would change its project never starts.
+      const refused = `meterlab ${UNSAFE_DATA_READER_CHANGE_MARKER}`;
+      await send(page, `${SPAWN_PROMPT_MARKER} ${refused}`);
+      await expect
+        .poll(
+          () =>
+            (launched.mockProvider?.requestBodies() ?? []).some((raw) =>
+              raw.includes(UNSAFE_DATA_READER_ANSWERS),
+            ),
+          { timeout: 45_000 },
+        )
+        .toBe(true);
+      const board = await page.evaluate(() => window.infinitary.tasks.board());
+      expect(board.tasks.some((row) => row.title === refused)).toBe(false);
+    }
+    const title = `meterlab ${UNSAFE_DATA_READER_MARKER}${runtime.suffix}`;
+    const [issue, dispatch] = UNSAFE_DATA_READER_WRITES.map(
+      (call) => `${call.method} ${call.path}`,
+    );
+    await send(page, `${SPAWN_PROMPT_MARKER} ${title}`);
+    const cardTitle = cardReaderWritesTitle({ place: "GitHub" });
+    const card = shownCard(page, cardTitle);
+    await expect(card).toBeVisible({ timeout: 45_000 });
+    const rows = cardBody(page, cardTitle).locator("[data-inf-ask-row]");
+    await expect(rows).toHaveCount(2, { timeout: 45_000 });
+    await expect(rows.nth(0)).toContainText(issue as string);
+    await expect(rows.nth(1)).toContainText(dispatch as string);
+    await expect(rows.nth(1)).toContainText(ASK_ROW_WORDS.joined);
+    for (const row of [0, 1]) await expect(rows.nth(row).getByRole("checkbox")).toBeChecked();
+    const shown = (await page.evaluate(() => window.infinitary.cards.list())).filter(
+      (one) => one.meta === "Integration approval",
+    );
+    expect(shown.map((one) => one.author)).toEqual(["host"]);
+    expect(shown[0]?.actions.map((action) => action.label)).toEqual([
+      INTEGRATION_APPROVAL_WORDS.deny,
+      INTEGRATION_APPROVAL_WORDS.once,
+    ]);
+    // The record by the card's task: a long title is cut short on the board.
+    const id = shown[0]?.taskId ?? "";
+    await expect
+      .poll(
+        async () =>
+          (await page.evaluate((taskId) => window.infinitary.tasks.detail(taskId), id))?.outcome ??
+          "",
+        { timeout: 45_000 },
+      )
+      .toContain("Kept as ask");
+    const firstReport =
+      (await page.evaluate((taskId) => window.infinitary.tasks.detail(taskId), id))?.outcome ?? "";
+    // A file outside its working copy is refused; its own project's answer
+    // arrives fenced; another project is never read.
+    expect(firstReport).toContain(`${UNSAFE_DATA_READER_FILE} is outside this task's working copy`);
+    // The file's own words never reached the crewmate.
+    expect(firstReport).not.toMatch(/localhost/);
+    expect(firstReport).toContain("github-data");
+    expect(firstReport).toContain("Nothing was read");
+    // Its report is kept between reader-data marks, and reaches the first
+    // mate's own turn that way, its ask of the first mate marked too.
+    expect(firstReport).toMatch(/\[\[reader-data fence=[0-9a-f]{16} /);
+    const firstmateRead = (words: string) =>
+      (launched.mockProvider?.requestBodies() ?? []).some(
+        (raw) => raw.includes("spawn_crewmate") && readerMarked(words).test(raw),
+      );
+    await expect.poll(() => firstmateRead(UNSAFE_DATA_READER_ASK), { timeout: 45_000 }).toBe(true);
+    expect(
+      (launched.mockProvider?.requestBodies() ?? []).some(
+        (raw) =>
+          raw.includes("spawn_crewmate") &&
+          /\[\[reader-data fence=[0-9a-f]{16} [^\]]*\]\][\s\S]*Nothing was read/.test(raw),
+      ),
+    ).toBe(true);
+    // Its headline is the host's own line, never its words or the reminder.
+    expect(
+      (await page.evaluate((taskId) => window.infinitary.tasks.detail(taskId), id))?.outcomeSummary,
+    ).toBe(feedUnsafeDataReaderReported());
+    // The follow-up it filed reaches the first mate's turn with its title marked.
+    await expect
+      .poll(() => firstmateRead(UNSAFE_DATA_READER_FOLLOWUP.title), { timeout: 45_000 })
+      .toBe(true);
+    expect(github.requests()).toContain("GET /repos/octo/meterlab/pulls");
+    expect(github.requests()).not.toContain("GET /repos/octo/website/pulls");
+    expect(github.requests()).not.toContain(issue);
+    expect(github.dispatches()).toEqual([]);
+    // Its session held only reads: no shell, no file changes, no web or browser.
+    const tools = (launched.mockProvider?.requestBodies() ?? [])
+      .map((raw) => JSON.parse(raw))
+      .filter((request) => JSON.stringify(request.messages).includes(UNSAFE_DATA_READER_MARKER))
+      .map((request) =>
+        (request.tools ?? []).map(
+          (tool: { name?: string; function?: { name: string } }) =>
+            tool.name ?? tool.function?.name,
+        ),
+      )
+      // The crewmate's own turns: the first mate's and the app's tool-less asks are left out.
+      .filter(
+        (names: string[]) =>
+          names.some((name) => name.endsWith("report")) &&
+          !names.some((name) => name.endsWith("spawn_crewmate")),
+      );
+    expect(tools.length).toBeGreaterThan(0);
+    for (const names of tools) {
+      for (const name of runtime.reads) expect(names).toContain(name);
+      for (const name of ["github_read", "github_write"])
+        expect(names.some((served: string) => served.endsWith(name))).toBe(true);
+      for (const name of runtime.gone) expect(names).not.toContain(name);
+      expect(names.some((served: string) => /browser|bash/i.test(served))).toBe(false);
+    }
+    const evidence = process.env.INFINITARY_TASK_EVIDENCE_DIR;
+    const shot = `unsafe-data-reader-${runtime.name.toLowerCase()}`;
+    if (evidence) {
+      await resizeWindow(launched.app, page, { width: 1100, height: 860 });
+      await page.screenshot({ path: join(evidence, `${shot}-card.png`) });
+      if (!runtime.claude)
+        await heroShot(launched.app, page, {
+          region: card,
+          anchors: [
+            card.getByRole("button", { name: INTEGRATION_APPROVAL_WORDS.once, exact: true }),
+          ],
+          name: "unsafe-data-reader",
+        });
+    }
+    await pressKey(rows.nth(1).getByRole("checkbox"), " ");
+    await expect(rows.nth(1).getByRole("checkbox")).not.toBeChecked();
+    await pressKey(
+      card.getByRole("button", { name: INTEGRATION_APPROVAL_WORDS.once, exact: true }),
+      "Enter",
+    );
+    await expect
+      .poll(() => github.requests().filter((entry) => entry === issue), { timeout: 20_000 })
+      .toEqual([issue]);
+    await expect
+      .poll(
+        async () =>
+          (await page.evaluate((taskId) => window.infinitary.tasks.detail(taskId), id))?.outcome ??
+          "",
+        { timeout: 45_000 },
+      )
+      .toContain(
+        "Answered: GitHub answered 201 | sent nothing: The captain did not allow this one.",
+      );
+    expect(github.dispatches()).toEqual([]);
+    expect(github.requests().filter((entry) => entry === issue)).toEqual([issue]);
+    const oldestFirst = savedWriteAsks(userDataDir, id).sort((a, b) => a.at - b.at);
+    expect(oldestFirst).toEqual([
+      expect.objectContaining({
+        path: UNSAFE_DATA_READER_WRITES[0]?.path,
+        sentAt: expect.any(Number),
+        outcome: expect.objectContaining({ kind: "answered", status: 201 }),
+      }),
+      expect.objectContaining({
+        path: UNSAFE_DATA_READER_WRITES[1]?.path,
+        outcome: expect.objectContaining({ kind: "refused" }),
+      }),
+    ]);
+    const detail = await page.evaluate((taskId) => window.infinitary.tasks.detail(taskId), id);
+    const transcript = `First report:\n${firstReport}\n\nAfter the click:\n${detail?.outcome ?? ""}\n\nSaved asks:\n${JSON.stringify(oldestFirst, null, 2)}\n\nSession tools:\n${JSON.stringify(tools[0])}\n\nRequests:\n${github.requests().join("\n")}`;
+    await test.info().attach(shot, { body: transcript, contentType: "text/plain" });
+    await expect(card).toBeHidden();
+    if (evidence) {
+      await page.screenshot({ path: join(evidence, `${shot}-after-click.png`) });
+      writeFileSync(join(evidence, `${shot}.txt`), transcript);
+    }
+    // Its own card, put up once the click answered, says it may carry a
+    // stranger's words, and its title reaches the first mate's next turn marked.
+    const readerCard = shownCard(page, UNSAFE_DATA_READER_CARD.title);
+    await expect(readerCard).toContainText(cardReaderUnsafeData(), { timeout: 45_000 });
+    // Its own reply waits under the card; the captain ticks its option and
+    // writes their own words under Something else, then sends.
+    await expect(page.getByText(UNSAFE_DATA_READER_CARD_WORDS.reply)).toBeVisible({
+      timeout: 45_000,
+    });
+    if (evidence) await readerCard.screenshot({ path: join(evidence, `${shot}-reader-card.png`) });
+    const readerBody = cardBody(page, UNSAFE_DATA_READER_CARD.title);
+    await pressKey(
+      readerBody.getByRole("checkbox", { name: UNSAFE_DATA_READER_CARD_WORDS.option }),
+      " ",
+    );
+    await pressKey(readerBody.getByRole("checkbox", { name: "Something else" }), " ");
+    await typeInto(
+      readerBody.getByRole("textbox", { name: /^Your own answer to: What should the reply say/ }),
+      UNSAFE_DATA_READER_WRITTEN,
+    );
+    const sent = (launched.mockProvider?.requestBodies() ?? []).length;
+    // With a thread open, the card's buttons sit under it, beside the card.
+    await pressKey(
+      page.getByRole("button", {
+        name: UNSAFE_DATA_READER_CARD.actions[0]?.label,
+        exact: true,
+      }),
+      "Enter",
+    );
+    await expect(readerCard).toBeHidden();
+    const followup = (await page.evaluate(() => window.infinitary.tasks.board())).tasks.find(
+      (row) => row.title === UNSAFE_DATA_READER_FOLLOWUP.title,
+    );
+    if (!followup) throw new Error("The reader filed no follow-up");
+    const readerKey =
+      (await page.evaluate(() => window.infinitary.tasks.board())).tasks.find(
+        (row) => row.id === id,
+      )?.key ?? "";
+    await askFirstmate(runtime.claude ? "How is the crew doing?" : `Start ${followup.key}.`, [
+      { name: "tasks", args: { key: readerKey } },
+      ...(runtime.claude
+        ? []
+        : [{ name: "update_task" as const, args: { task: followup.key, start_now: true } }]),
+    ]);
+    expect(firstmateRead(UNSAFE_DATA_READER_CARD.title)).toBe(true);
+    // In the first mate's turn after the answer, the reader's card title,
+    // chosen button and option are marked and the captain's own words are not;
+    // its read of the reader's record marks the card's body the same way.
+    const turns = (launched.mockProvider?.requestBodies() ?? []).slice(sent);
+    const answered = firstmateTurnWith(turns, UNSAFE_DATA_READER_WRITTEN);
+    if (!answered) throw new Error("The first mate's turn did not carry the captain's answer");
+    // Its read comes back whole in the request after it, where the scripted
+    // turn's own outcome holds only its opening.
+    const readerRead = firstmateTurnWith(turns, "matching task") ?? "";
+    if (evidence) {
+      writeFileSync(join(evidence, `${shot}-answered-request.json`), answered);
+      writeFileSync(join(evidence, `${shot}-reader-read-request.json`), readerRead);
+    }
+    // Every copy of the reader's words in that turn sits between marks: its
+    // context's card line, the answer-closed wake and the resolution alike.
+    for (const words of [
+      UNSAFE_DATA_READER_CARD.title,
+      UNSAFE_DATA_READER_CARD.actions[0]?.label ?? "",
+      UNSAFE_DATA_READER_CARD_WORDS.option,
+    ]) {
+      const copies = copiesOf(answered, words);
+      expect(copies.total, words).toBeGreaterThan(0);
+      expect(copies.unmarked, words).toBe(0);
+    }
+    expect(answered).not.toMatch(readerMarked(UNSAFE_DATA_READER_WRITTEN));
+    // Every time the read serves the card's body, as its card and in its
+    // decisions, it is marked; on Pi, so is the follow-up's title the start
+    // answers with.
+    expect(copiesOf(readerRead, UNSAFE_DATA_READER_CARD_WORDS.body).total).toBeGreaterThan(0);
+    expect(copiesOf(readerRead, UNSAFE_DATA_READER_CARD_WORDS.body).unmarked).toBe(0);
+    if (!runtime.claude)
+      expect(copiesOf(readerRead, UNSAFE_DATA_READER_FOLLOWUP.title).total).toBeGreaterThan(0);
+    expect(copiesOf(readerRead, UNSAFE_DATA_READER_FOLLOWUP.title).unmarked).toBe(0);
+    expect(readerRead).toContain(UNSAFE_DATA_READER_WRITTEN);
+    expect(readerRead).not.toMatch(readerMarked(UNSAFE_DATA_READER_WRITTEN));
+    if (runtime.claude) return;
+    // The follow-up it filed, once started, carries its words marked in its
+    // own crewmate's brief: the one offered the report tool, past the app's
+    // tool-less ask that sorts the work's kind.
+    const brief = async () =>
+      (launched.mockProvider?.requestBodies() ?? []).find((raw) => {
+        if (!raw.includes(FOLLOWUP_PROVENANCE_OPENING)) return false;
+        const names = (
+          (JSON.parse(raw).tools ?? []) as { name?: string; function?: { name: string } }[]
+        ).map((tool) => tool.name ?? tool.function?.name ?? "");
+        return (
+          names.some((name) => name.endsWith("report")) &&
+          !names.some((name) => name.endsWith("spawn_crewmate"))
+        );
+      }) ?? "";
+    await expect.poll(brief, { timeout: 60_000 }).not.toBe("");
+    const started = await brief();
+    if (evidence) writeFileSync(join(evidence, `${shot}-followup-request.json`), started);
+    // Its card's body is saved whole in a file the brief names, marked there.
+    const cardFile = started.match(/- (\/[^"\\]+\/source-cards\/[^"\\]+\.html)/)?.[1];
+    if (!cardFile) throw new Error("The started follow-up's brief names no card file");
+    const savedCard = readFileSync(cardFile, "utf8");
+    if (evidence) writeFileSync(join(evidence, `${shot}-followup-card.html`), savedCard);
+    expect(savedCard).toMatch(readerMarked(UNSAFE_DATA_READER_CARD_WORDS.body));
+    for (const words of [
+      UNSAFE_DATA_READER_FOLLOWUP.goal,
+      UNSAFE_DATA_READER_FOLLOWUP.why,
+      UNSAFE_DATA_READER_CARD_WORDS.reply,
+      UNSAFE_DATA_READER_CARD_WORDS.option,
+      UNSAFE_DATA_READER_CARD.actions[0]?.label ?? "",
+    ])
+      expect(started).toMatch(readerMarked(words));
+    expect(started).toContain(UNSAFE_DATA_READER_WRITTEN);
+    expect(started).not.toMatch(readerMarked(UNSAFE_DATA_READER_WRITTEN));
+  });
+}
 
 for (const signedIn of [true, false]) {
   test(`a crewmate runs project workflow operations with GitHub signed ${signedIn ? "in" : "out"}`, async () => {

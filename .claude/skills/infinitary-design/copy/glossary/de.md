@@ -162,6 +162,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | this computer | dieser Computer | |
 | thread (a card's replies) | Verlauf | |
 | token (a sign-in token a command prints) | Token | Neuter ("das Token"); only in the custom API form, plural "Tokens" for counted model tokens. |
+| unsafe data reader | Leser unsicherer Daten | A crewmate that reads words anyone can write. |
 | Usage | Nutzung | |
 | version (replaces SHA, hash) | Version | |
 | Waiting on you (board lane) | Wartet auf dich | |

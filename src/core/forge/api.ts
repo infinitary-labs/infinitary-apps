@@ -222,15 +222,18 @@ export type SmallerPage = { path: string; perPage: number } | { refused: string 
  * a list, or the one list it holds (a run listing's `workflow_runs`, a
  * search's `items`, Bitbucket's `values`); their sizes in the held answer say
  * how many fit. A path with no page size asked for the host's
- * `defaultPerPage`; `pageParam` is the host's name for that size.
+ * `defaultPerPage`; `pageParam` is the host's name for that size. `max` is
+ * the bound the page must fit, the JSON cap unless a reader's answer has a
+ * tighter one, measured in `answer.bytes`'s own unit.
  */
 export function smallerPage(
   path: string,
   answer: OversizedAnswer,
   defaultPerPage: number,
   pageParam = "per_page",
+  max = API_RESPONSE_MAX_BYTES,
 ): SmallerPage {
-  const limit = `${API_RESPONSE_MAX_BYTES / 1024} KiB`;
+  const limit = `${Math.floor(max / 1024)} KiB`;
   const [pathPart = "", query = ""] = path.split(/\?(.*)/s, 2);
   const params = new URLSearchParams(query);
   const askedSize = params.get(pageParam);
@@ -256,7 +259,7 @@ export function smallerPage(
   // indents its answers is measured as it sends them.
   const scale = answer.bytes / Buffer.byteLength(JSON.stringify(parsed));
   let bytes = list ? Buffer.byteLength(JSON.stringify(list.withItems([]))) : Infinity;
-  if (!list || list.items.length === 0 || bytes * scale > API_RESPONSE_MAX_BYTES) {
+  if (!list || list.items.length === 0 || bytes * scale > max) {
     return { refused: "It is one object, not a list, so a smaller page would not shrink it." };
   }
   const { items } = list;
@@ -268,7 +271,7 @@ export function smallerPage(
   let fit = 0;
   for (const item of items) {
     bytes += Buffer.byteLength(JSON.stringify(item)) + (fit > 0 ? 1 : 0);
-    if (bytes * scale > API_RESPONSE_MAX_BYTES) break;
+    if (bytes * scale > max) break;
     fit += 1;
   }
   if (fit === 0) {

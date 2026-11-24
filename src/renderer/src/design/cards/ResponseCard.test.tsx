@@ -105,6 +105,40 @@ describe("ResponseCard chrome", () => {
     expect(research).not.toContain(m.cardQuickAnswer());
   });
 
+  it("draws the unsafe data line under the title only on a reader's card", () => {
+    const reader = renderToStaticMarkup(
+      <ResponseCard
+        kind="note"
+        title="Two issues need a reply"
+        meta="INF-6390"
+        asked="You asked: read the waiting issues"
+        unsafeData
+      >
+        Issue 12 asks for a Windows build.
+      </ResponseCard>,
+    );
+    expect(reader.match(/data-card-unsafe-data="" style="[^"]*">([^<]*)<\/div>/)?.[1]).toBe(
+      m.cardReaderUnsafeData(),
+    );
+    // The card's middle is a reversed column, so a higher order draws higher:
+    // the line sits under the You asked line and above the body, and the
+    // markup reads in that same order.
+    const order = (row: string) =>
+      Number(reader.match(new RegExp(`${row}="" style="[^"]*order:(\\d+)`))?.[1] ?? 0);
+    expect(order("data-card-asked-row")).toBeGreaterThan(order("data-card-unsafe-data"));
+    expect(order("data-card-unsafe-data")).toBeGreaterThan(order("data-card-body"));
+    expect(reader.indexOf("data-card-asked-row")).toBeLessThan(
+      reader.indexOf("data-card-unsafe-data"),
+    );
+    expect(reader.indexOf("data-card-unsafe-data")).toBeLessThan(reader.indexOf("data-card-body"));
+    const plain = renderToStaticMarkup(
+      <ResponseCard kind="note" title="Two issues need a reply" meta="INF-6391">
+        Issue 12 asks for a Windows build.
+      </ResponseCard>,
+    );
+    expect(plain).not.toContain("data-card-unsafe-data");
+  });
+
   it("keeps real footer actions next to the leaving control", () => {
     const html = renderToStaticMarkup(
       <ResponseCard

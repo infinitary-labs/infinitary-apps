@@ -2,6 +2,7 @@ import type { Card } from "@shared/cards";
 import { softHoldWords } from "@shared/holds";
 import type { TaskRecord } from "../storage/taskRecords";
 import type { TaskService } from "../tasks/taskService";
+import { servedTaskTitle, withReaderDataReminder } from "./readerData";
 import { questionsNaming } from "./reviewCard";
 
 /** The open card stack, as the hold reads it (`CardService`). */
@@ -94,7 +95,7 @@ export function cardHeldStartRefusal(
     (record.status === "open" && record.kind === "work") ||
     (record.status === "active" && record.backlogSince != null);
   if (!unstarted) return undefined;
-  const handle = `${record.key || record.id} "${record.title}"`;
+  const handle = `${record.key || record.id} "${servedTaskTitle(record, facts.tasks.graph.discoveredOrigins(record.id), "line")}"`;
   // i18n-exempt: the first mate's tool answer, served only to a model
   const what =
     facts.edit === "when-ready"
@@ -107,11 +108,15 @@ export function cardHeldStartRefusal(
   const hold = softHoldWords("card-question", "firstmate");
   const card = openCardAskingAbout(record.id, facts.open, facts.tasks);
   if (card)
-    // i18n-exempt: the first mate's tool answer, served only to a model
-    return `${what}: your open card "${card.title}" (${card.id}) still asks the captain about ${handle}, and no words they typed arrived with this turn. Only if the card no longer applies, withdraw it with close_card, saying why. ${hold}`;
+    return withReaderDataReminder(
+      // i18n-exempt: the first mate's tool answer, served only to a model
+      `${what}: your open card "${card.title}" (${card.id}) still asks the captain about ${handle}, and no words they typed arrived with this turn. Only if the card no longer applies, withdraw it with close_card, saying why. ${hold}`,
+    );
   const answered = unreadChoiceAbout(record.id, facts.unreadChoices(), facts.tasks);
   if (!answered) return undefined;
   const named = answered.id ? ` (${answered.id})` : "";
-  // i18n-exempt: the first mate's tool answer, served only to a model
-  return `${what}: the captain chose on your card "${answered.title}"${named} about ${handle}, and that choice has not reached you yet: it comes in a turn after this one. Read it before you start this task. ${hold}`;
+  return withReaderDataReminder(
+    // i18n-exempt: the first mate's tool answer, served only to a model
+    `${what}: the captain chose on your card "${answered.title}"${named} about ${handle}, and that choice has not reached you yet: it comes in a turn after this one. Read it before you start this task. ${hold}`,
+  );
 }

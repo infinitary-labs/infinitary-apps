@@ -171,8 +171,11 @@ export class CrewSessions {
         });
       delete spec.speed;
     }
-    spec.personalResources = this.core.options.personalResourcesEnabled?.() === true;
-    if (runbookSkills) spec.runbookSkills = runbookSkills;
+    // A fenced session's reads stop at its working copy, so skills staged
+    // outside it would be offered and then refused.
+    spec.personalResources =
+      !spec.fenced && this.core.options.personalResourcesEnabled?.() === true;
+    if (runbookSkills && !spec.fenced) spec.runbookSkills = runbookSkills;
     if (this.core.disposed()) throw new Error("This computer is stopping.");
     const session = await factory.open(spec);
     if (spec.personalResources) await this.notePersonal(task.id, crewmate.machineId);

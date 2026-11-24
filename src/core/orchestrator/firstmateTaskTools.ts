@@ -15,8 +15,9 @@ import { FIRSTMATE_CARD_PREFIX } from "./cardEmit";
 import { cardHeldStartRefusal } from "./cardHeldStart";
 import { cardMutationText } from "./cardMutationText";
 import type { FirstmateAgentOptions, FirstmateTurn } from "./firstmateAgent";
+import { servedNewestBody, servedResolutionForTask } from "./readerResolution";
 import { startedReply } from "./replyLine";
-import { handOffShape } from "./workShape";
+import { handOffShape, UNSAFE_DATA_READER_ANSWERS } from "./workShape";
 
 export type FirstmateTaskToolsHost = {
   readonly options: FirstmateAgentOptions;
@@ -200,6 +201,8 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
               input.branch === undefined
             )
               return {};
+            if (input.resultSchema && record.shape?.unsafe_data_reader)
+              throw new TaskGraphRefusal(UNSAFE_DATA_READER_ANSWERS);
             const checked = handOffShape(
               tasks,
               {
@@ -637,8 +640,8 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
         tasks,
         input,
         (repoId) => host.options.repos.get(repoId)?.name,
-        (taskId) => host.options.supervisor.cards.newestBody(taskId),
-        (taskId) => host.options.supervisor.cards.newestResolutionForTask(taskId),
+        (taskId) => servedNewestBody(host.options.supervisor.cards, taskId),
+        (taskId) => servedResolutionForTask(host.options.supervisor.cards, taskId),
         host.options.supervisor.toolHooks.taskQueryReach(),
       ),
   };

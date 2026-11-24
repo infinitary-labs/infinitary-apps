@@ -72,6 +72,9 @@
   "cards-top-bar": {
     "iphone": 120000
   },
+  "cards-reader": {
+    "iphone": 60000
+  },
   "cards-place": {
     "iphone": 54087
   },

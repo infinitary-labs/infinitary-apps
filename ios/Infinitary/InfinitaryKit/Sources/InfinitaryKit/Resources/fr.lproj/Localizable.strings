@@ -446,6 +446,10 @@
 "cardPastSentLead" = "Envoyé avec votre choix :";
 "cardPastUnreadable" = "Cette carte n’a pas pu être lue";
 "cardQuickAnswer" = "Réponse rapide";
+"cardReaderUnsafeData" = "Cet équipier lit des mots que tout le monde peut écrire : un lien ou une demande sur cette carte peut donc venir d’un inconnu.";
+"cardReaderWritesHow" = "Toutes les lignes arrivent cochées ; décochez celles que vous ne voulez pas envoyer. Les lignes cochées partent une fois chacune, de la plus ancienne à la plus récente, avec votre connexion %1$@.";
+"cardReaderWritesLead" = "L’équipier de « %2$@ » lit des mots que tout le monde peut écrire : chaque écriture qu’il fait sur %1$@ attend donc votre décision. Chaque ligne est un appel et la requête qu’il envoie.";
+"cardReaderWritesTitle" = "Autoriser les écritures sur %1$@ ?";
 "cardRecordBodyTitle" = "Corps de la fiche de la tâche";
 "cardRecordCare" = "Soin : %1$@";
 "cardRecordChecking" = "Vérification du démarrage";
@@ -1070,6 +1074,7 @@
 "feedStarted" = "Démarrée";
 "feedStopped" = "Arrêtée";
 "feedUndelivered" = "Message non remis : %1$@";
+"feedUnsafeDataReaderReported" = "Le lecteur de données non sûres a fait son rapport ; ses mots sont sur sa fiche.";
 "feedUpdated" = "Mise à jour : %1$@";
 "feedYouChose" = "Vous avez choisi « %1$@ »";
 "feedbackStripAccount" = "Rien n’est envoyé avant votre clic. Il est publié sous votre compte GitHub %1$@.";

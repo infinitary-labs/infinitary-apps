@@ -22,6 +22,7 @@ import { parseStableCardId, resolveFirstmateCardId } from "../pi/cardTool";
 import { decidedCardWidth } from "../pi/cardWidth";
 import type { EmittedCardInput } from "../session/tools";
 import { TaskService } from "../tasks/taskService";
+import { FIRSTMATE_CARD_PREFIX } from "./cardIds";
 import { revisionLinks } from "./cardNavigation";
 import type { CardServiceHost, CardStack } from "./cardStackTypes";
 import type { CardThreads } from "./cardThreads";
@@ -36,8 +37,7 @@ import { emittedSettleFacts } from "./settleCardFacts";
  * card is written through `CardThreads.contribute`, never here.
  */
 
-/** Firstmate-agent cards are id-prefixed so `CardActions.act` can route their answers. */
-export const FIRSTMATE_CARD_PREFIX = "card-fm-";
+export { cardEmitter, FIRSTMATE_CARD_PREFIX } from "./cardIds";
 
 /** A decision (a card with actions) shows before a note; the host's own cards sit above both. */
 function cardPriority(input: Pick<EmittedCardInput, "actions">): number {
@@ -685,17 +685,6 @@ export class CardEmits {
       );
     }
   }
-}
-
-/**
- * Who put a task's card on the stack, read off its id: the Firstmate mints
- * `card-fm-…`, a crewmate `card-<taskId>-…`; anything else (the auth cards)
- * is the host's own.
- */
-export function cardEmitter(cardId: string, taskId: string): "firstmate" | "crewmate" | "host" {
-  if (cardId.startsWith(FIRSTMATE_CARD_PREFIX)) return "firstmate";
-  if (cardId.startsWith(`card-${taskId}-`)) return "crewmate";
-  return "host";
 }
 
 /**

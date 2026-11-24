@@ -61,6 +61,7 @@ import { customPictureContext } from "./customPictureContext";
 export { PI_CONTROL_PROFILE } from "./controlProfile";
 
 import { createEventBashTool, type EventBashInput } from "./bashTool";
+import { fencedPiReadTools } from "./fencedTools";
 import { LOCAL_CONTEXT_RESERVE, localInputFits } from "./ollamaStream";
 import { piSessionEvents, usageFromMessage } from "./piEvents";
 import { createCrewmateResourceLoader } from "./piResourceLoader";
@@ -1293,9 +1294,12 @@ async function openCoding(
   await resourceLoader.reload();
 
   const runBash = deps.runBash;
+  // A fenced session has only reads confined to its working copy: none of
+  // Pi's own set, and no shell.
   const customTools: ToolDefinition[] = [
     ...piToolsOf(spec.tools),
-    ...(runBash
+    ...(spec.fenced ? fencedPiReadTools(spec.cwd) : []),
+    ...(runBash && !spec.fenced
       ? [
           createEventBashTool((input) =>
             runBash({
@@ -1323,7 +1327,7 @@ async function openCoding(
   // A custom tool sharing a builtin's name replaces it (R2: the event-driven
   // bash shadows Pi's blocking bash), so the builtin never competes.
   const customNames = new Set(customTools.map((tool) => tool.name));
-  const builtins = PI_CODING_BUILTINS.filter((name) => !customNames.has(name));
+  const builtins = spec.fenced ? [] : PI_CODING_BUILTINS.filter((name) => !customNames.has(name));
   const { session } = await createAgentSession({
     cwd: spec.cwd,
     agentDir: deps.agentDir,

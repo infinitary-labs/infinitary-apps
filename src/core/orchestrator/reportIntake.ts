@@ -15,6 +15,7 @@ import {
   type ValidationForgeWrite,
   validationRevision,
 } from "@shared/liveValidation";
+import { fencedListReminder } from "@shared/outsideData";
 import { formatDurationShort } from "@shared/quotaSignals";
 import { keptRecoveryWaySchema, workWaitSchema } from "@shared/recovery";
 import { deliveryFor, opensPullRequest, type RepoDelivery } from "@shared/repos";
@@ -42,6 +43,7 @@ import { checkedOutHead } from "./checkedOutHead";
 import type { TaskRuntime } from "./crewRuntime";
 import type { CrewSupervisorOptions } from "./crewSupervisorOptions";
 import { type PersonalBriefFacts, renderFollowupBrief } from "./intentBrief";
+import { READER_DATA_LABEL, readerDataAnswer, readerDataLine } from "./readerData";
 import { implausibleReport } from "./reportPlausibility";
 
 /** What the report intake reaches of the supervisor beyond its options. */
@@ -118,14 +120,27 @@ export class ReportIntake {
     // origin is not one made of it (FI3-733). It is written again at start.
     const repo = origin.repoId ? this.options.repos.get(origin.repoId) : undefined;
     const delivery = personal ? undefined : deliveryFor({ repo: repo?.delivery }).delivery;
+    // An unsafe data reader's goal and why may carry words anyone can write:
+    // the record keeps them between marks, so neither the first mate nor a
+    // builder later started from this brief takes them as an instruction.
+    const reader = origin.shape?.unsafe_data_reader === true;
+    const at = Date.now();
+    const keptGoal = reader ? readerDataLine(goal, at) : goal;
+    const keptWhy = reader ? readerDataAnswer(why, at) : why;
     const filed = this.options.tasks.fileFollowup({
       id: randomUUID().slice(0, 8),
       originId: origin.id,
       title,
-      goal,
-      why,
+      goal: keptGoal,
+      why: keptWhy,
       prompt: renderFollowupBrief(
-        { goal, why, filedBy: task.crewmate, originTitle: origin.title, originKey: origin.key },
+        {
+          goal: keptGoal,
+          why: reader ? `${keptWhy}\n${fencedListReminder(READER_DATA_LABEL)}` : why,
+          filedBy: task.crewmate,
+          originTitle: origin.title,
+          originKey: origin.key,
+        },
         delivery,
         personal ? this.host.personalFacts() : undefined,
       ),
@@ -142,7 +157,12 @@ export class ReportIntake {
       text: `Task ${origin.title} follow-up filed: ${record.key} ${title}${input.blocksMe ? `; ${origin.title} must wait` : ""}`,
     });
     this.host.broadcastCrewCounts();
-    task.filedThisTurn.push({ key: record.key, title, blocks: Boolean(input.blocksMe) });
+    // The first mate hears of it in the report's wake, its title marked as its goal is.
+    task.filedThisTurn.push({
+      key: record.key,
+      title: reader ? readerDataLine(title, at) : title,
+      blocks: Boolean(input.blocksMe),
+    });
     return `Filed follow-up ${record.key} "${title}", discovered from your task${input.blocksMe ? " and blocking it: your task cannot land until this one closes" : " and not holding it up"}. The first mate hears about it with your report and decides when it runs; keep going on your own task.`;
   }
 
@@ -594,6 +614,12 @@ export class ReportIntake {
       );
     }
     const ask = declared?.needsFirstmate?.replace(/\s+/g, " ").trim();
+    // A reader's ask and reason arrive cut and marked (`readerReport`): a
+    // second cut would drop its words and their closing mark.
+    const kept = (words: string) =>
+      this.options.tasks.get(task.id)?.shape?.unsafe_data_reader === true
+        ? words
+        : cutText(words, 300);
     if (declared?.needsFirstmate !== undefined && !ask) {
       throw new Error(
         "Report refused: needs_firstmate needs a reason - what the first mate must do.",
@@ -618,7 +644,7 @@ export class ReportIntake {
       ...(waitsOn ? { waitsOn } : {}),
       ...(workWait ? { workWait } : {}),
       ...(recoveryWays ? { recoveryWays } : {}),
-      ...(ask ? { needsFirstmate: cutText(ask, 300) } : {}),
+      ...(ask ? { needsFirstmate: kept(ask) } : {}),
       ...(captainWords ? { captainWordsFrom: captainWords.from, captainWords } : {}),
       ...(declared?.firstRelease ? { firstRelease: declared.firstRelease } : {}),
       ...(result ? { result } : {}),
@@ -634,7 +660,7 @@ export class ReportIntake {
     }
     const named = wait.cardId?.trim();
     const cardId = named ? this.ownOpenCard(task, named) : undefined;
-    return { wait: { reason: cutText(reason, 300), ...(cardId ? { cardId } : {}) }, ...needs };
+    return { wait: { reason: kept(reason), ...(cardId ? { cardId } : {}) }, ...needs };
   }
 
   /**
@@ -828,6 +854,12 @@ export class ReportIntake {
   noteProgress(task: TaskRuntime, text: string, plan?: unknown): string {
     const line = text.replace(/\s+/g, " ").trim();
     if (!line) throw new Error("text is required: one line of progress.");
+    const reader = this.options.tasks.get(task.id)?.shape?.unsafe_data_reader === true;
+    // A reader's plan labels would reach the first mate unmarked: its line is kept, its plan never.
+    if (reader && plan !== undefined)
+      throw new Error(
+        "Nothing was noted. An unsafe data reader sends note_progress with text only, never a plan.",
+      );
     let items: PlanItem[] | undefined;
     if (plan !== undefined) {
       const read = readPlanItems(plan);
@@ -843,7 +875,14 @@ export class ReportIntake {
             (event.kind === "progress" || event.kind === "compacted") &&
             !("refusal" in readPlanItems(event.data?.plan)),
         );
-    this.options.tasks.noteProgress(task.id, cutText(line, 500), "crewmate", items);
+    const kept = cutText(line, 500);
+    // An unsafe data reader's line is marked after the cut, so no cut splits its marks.
+    this.options.tasks.noteProgress(
+      task.id,
+      reader ? readerDataLine(kept, Date.now()) : kept,
+      "crewmate",
+      items,
+    );
     this.host.noteTaskActivity(task);
     if (items) return "Noted on your task's timeline, with your plan.";
     return planned

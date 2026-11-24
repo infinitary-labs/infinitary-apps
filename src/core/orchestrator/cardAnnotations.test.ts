@@ -92,6 +92,7 @@ describe("annotation reply delivery", () => {
         pastCard: (id) => h.supervisor.cards.past(id),
         owed: (id) => h.supervisor.cards.owed(id),
         thread: (id) => h.supervisor.cards.thread(id),
+        served: h.supervisor.cards.threads,
       },
       { card: card.id },
     );

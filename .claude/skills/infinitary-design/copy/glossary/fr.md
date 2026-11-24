@@ -158,6 +158,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | token (a custom API's sign-in token) | jeton | "Commande de jeton"; the same word as billable model tokens. |
 | token, OAuth, credential (never said) | connexion, clé | "jetons" appears only for billable model tokens, as English "tokens" does. |
 | unmerged work | travail non fusionné | What another computer still holds when it is removed: "Son travail non fusionné vient d’abord sur cet ordinateur". |
+| unsafe data reader | lecteur de données non sûres | A crewmate that reads words anyone can write. |
 | Usage (Settings section) | Utilisation | The section's name, as in "Ouvrir Utilisation". |
 | usage record | entrée | One recorded model response in Usage ("entrées avec prix"); "fiche" stays for a task's record and "enregistrement" for a recording. |
 | where the project lives | là où le projet est hébergé | |

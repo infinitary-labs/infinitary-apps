@@ -5,6 +5,7 @@ import { TaskService } from "../tasks/taskService";
 import type { CrewCore } from "./crewCore";
 import type { WriteAskSent } from "./githubGateway";
 import {
+  askCall,
   listedOn,
   waitingIntegrationAsks,
   writeAnsweredFacts,
@@ -64,13 +65,7 @@ export class CardWriteAsks {
         const ask = took.ask;
         outcomes.push({
           id,
-          sent: {
-            ok: false,
-            ask,
-            call: ask.kind === "integration" ? ask.action : "",
-            place: ask.place,
-            outcome,
-          },
+          sent: { ok: false, ask, call: askCall(ask), place: ask.place, outcome },
         });
       } else taken.push({ id, taken: took });
     }
@@ -83,7 +78,7 @@ export class CardWriteAsks {
         return {
           ok: false,
           ...(ask ? { ask } : {}),
-          call: ask?.kind === "integration" ? ask.action : "",
+          call: ask ? askCall(ask) : "",
           place: ask?.place ?? "",
           outcome: ask ? { kind: "unknown" as const, why } : { kind: "refused" as const, why },
         };

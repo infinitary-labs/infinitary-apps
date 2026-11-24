@@ -26,7 +26,11 @@ import {
   writeAnthropicToolUse,
 } from "../helpers/anthropicDialect";
 import type { ScriptedArgs, ScriptedCall } from "../helpers/scriptedCalls";
-import { WRITE_ASK_ANSWER_MARKER } from "./apiWriteCases";
+import {
+  UNSAFE_DATA_READER_CHANGE_MARKER,
+  UNSAFE_DATA_READER_MARKER,
+  WRITE_ASK_ANSWER_MARKER,
+} from "./apiWriteCases";
 import {
   CLAUDE_CREW_PROMPT_MARKER,
   CLAUDE_ORG_REFUSAL_MESSAGE,
@@ -1158,7 +1162,8 @@ export async function startMockProvider(
                   user_words: `${SPAWN_PROMPT_MARKER} ${title}`,
                   ...(bound ? { repo_id: bound[1] } : {}),
                   // A task that only answers, in its project (FI3-1571 piece 4).
-                  ...(title.includes(WRITE_ASK_ANSWER_MARKER)
+                  ...(title.includes(WRITE_ASK_ANSWER_MARKER) ||
+                  title.includes(UNSAFE_DATA_READER_MARKER)
                     ? { constraints: [{ kind: "read-only" as const }] }
                     : {}),
                   ...(title.includes(THREAD_TREE_PROMPT_MARKER) ||
@@ -1177,6 +1182,10 @@ export async function startMockProvider(
                   // Both ride the work-shape group (contract v4.12).
                   shape: {
                     ...(title.includes(AUTONOMY_ASK_MARKER) ? { autonomy_ask: true } : {}),
+                    ...(title.includes(UNSAFE_DATA_READER_MARKER) ||
+                    title.includes(UNSAFE_DATA_READER_CHANGE_MARKER)
+                      ? { unsafe_data_reader: true }
+                      : {}),
                     ...(title.includes(CLAUDE_CREW_PROMPT_MARKER) ||
                     title.includes(CLAUDE_CREWMATE_MARKER)
                       ? { override_model_id: CLAUDE_CREW_MODEL }

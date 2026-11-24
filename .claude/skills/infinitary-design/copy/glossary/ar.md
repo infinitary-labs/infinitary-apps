@@ -175,6 +175,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | thread (a card's replies) | السلسلة | |
 | token (a sign-in token a command prints) | رمز الوصول | Only in the custom API form ("أمر رمز الوصول"), kept apart from "رموز" for counted model tokens. |
 | token, credential (never said) | تسجيل الدخول | "رموز" appears only for counted model tokens in Usage. |
+| unsafe data reader | قارئ البيانات غير الآمنة | A crewmate that reads words anyone can write. |
 | Usage | الاستخدام | |
 | version | نسخة | Said in place of SHA or head. |
 | Waiting on you (board lane) | بانتظارك | |

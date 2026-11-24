@@ -32,6 +32,12 @@ export interface ResponseCardProps {
    * title. The app draws it from the saved message or origin, never from the card's words.
    */
   asked?: React.ReactNode;
+  /**
+   * The unsafe data line: one quiet sentence under the title's lines on a crewmate's card from an
+   * unsafe data reader, saying a link or request on it may come from a stranger
+   * (`ResponseCard.prompt.md`, "The unsafe data line"). The app sets it from the task's shape.
+   */
+  unsafeData?: boolean;
   /** Footer action row — Button elements. */
   actions?: React.ReactNode;
   /**

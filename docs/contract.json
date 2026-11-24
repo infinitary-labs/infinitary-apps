@@ -17257,6 +17257,10 @@
               "type": "boolean",
               "const": true
             },
+            "unsafeData": {
+              "type": "boolean",
+              "const": true
+            },
             "seen": {
               "type": "boolean"
             },
@@ -18739,6 +18743,10 @@
                 ]
               },
               "quick": {
+                "type": "boolean",
+                "const": true
+              },
+              "unsafeData": {
                 "type": "boolean",
                 "const": true
               },
@@ -93475,6 +93483,10 @@
               ]
             },
             "quick": {
+              "type": "boolean",
+              "const": true
+            },
+            "unsafeData": {
               "type": "boolean",
               "const": true
             },

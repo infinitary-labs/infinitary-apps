@@ -1266,6 +1266,64 @@ test("a 37-question card's footer sends its answers", async () => {
   }
 });
 
+/**
+ * An option's words outside a label are still the card's words (INF-6388's
+ * review): a picked option with no words bound to it is sent with its value
+ * as its label, so an unsafe data reader's option is marked, never read as
+ * words the captain typed.
+ *
+ * Promised result: the saved answer names the option's value as its label.
+ * Data: one radio group whose options' words sit beside them, unbound.
+ * Completion signal: the card leaves and its saved answers are read.
+ * Platform: the hermetic launcher, application lane, mock provider.
+ * Shared resources: none; the test owns its userData.
+ */
+const UNBOUND_TITLE = "Which step comes next";
+const UNBOUND_ID = "card-fm-unbound-option";
+const UNBOUND_VALUE = "Merge pull request 50 now";
+
+test("a picked option with no words bound to it is sent with its value as its label", async () => {
+  const userDataDir = scratchDir("infinitary-unbound-option-");
+  const db = openDatabase(userDataDir);
+  new CardStore(db).upsert({
+    id: UNBOUND_ID,
+    title: UNBOUND_TITLE,
+    author: "firstmate",
+    priority: 50,
+    meta: "firstmate",
+    status: "ready",
+    createdAt: Date.now(),
+    body: `<p>Pick the next step.</p><fieldset data-inf-options-only><legend>Next step</legend><input type="radio" name="step" value="${UNBOUND_VALUE}"> Merge it <input type="radio" name="step" value="wait"> Wait</fieldset>`,
+    actions: [
+      { id: "later", label: "Not now", variant: "secondary" },
+      { id: "go", label: "Go ahead", default: true, variant: "primary" },
+    ],
+  });
+  db.close();
+  const launched = await launchApp({
+    userDataDir,
+    withMockProvider: true,
+    scenarios: [cardQuestions, inlineQuestions],
+  });
+  const { page } = launched;
+  try {
+    await showCard(page, UNBOUND_TITLE);
+    await pick(cardBody(page, UNBOUND_TITLE), `input[name="step"][value="${UNBOUND_VALUE}"]`);
+    await page.getByRole("button", { name: "Go ahead", exact: true }).click();
+    await expectNoCard(page, UNBOUND_TITLE);
+  } finally {
+    await launched.close();
+  }
+  const recordedDb = openDatabase(userDataDir);
+  try {
+    expect(new CardStore(recordedDb).past(UNBOUND_ID)?.answers).toEqual([
+      { name: "step", values: [UNBOUND_VALUE], labels: [UNBOUND_VALUE], changed: true },
+    ]);
+  } finally {
+    recordedDb.close();
+  }
+});
+
 /** What the captain writes in the card's one field, as the spec types it. */
 const COMMENT = "Check the light theme too";
 /** The title of the note the one-field journey seeds, whose author gave it no choices. */

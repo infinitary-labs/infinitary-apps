@@ -4,6 +4,7 @@ import { TaskService } from "../tasks/taskService";
 import { taskResultResponse } from "./answerTaskResponse";
 import type { AnswerTaskClosedPayload } from "./captainWakes";
 import { SIGNED_OFF_ACTION_ID } from "./cardSignOff";
+import { readerWroteCard } from "./readerData";
 import type { SettleServiceHost } from "./settleHost";
 import type { TaskClosing } from "./taskClose";
 
@@ -60,6 +61,7 @@ export class DeclaredCloses {
         text,
         ...(handoff ? { answerHandoff: handoff } : {}),
         ...(handoff && carried ? { answerCarried: carried } : {}),
+        ...(handoff && readerWroteCard(this.host.tasks, card) ? { answerReader: true } : {}),
       })
       .catch(() => {});
     return true;

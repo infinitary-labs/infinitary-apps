@@ -113,6 +113,7 @@
   "feedStarted": "Démarrée",
   "feedStopped": "Arrêtée",
   "feedUndelivered": "Message non remis : {why}",
+  "feedUnsafeDataReaderReported": "Le lecteur de données non sûres a fait son rapport ; ses mots sont sur sa fiche.",
   "feedUpdated": "Mise à jour : {text}",
   "feedYouChose": "Vous avez choisi « {choice} »"
 }

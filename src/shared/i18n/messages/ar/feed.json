@@ -122,6 +122,7 @@
   "feedStarted": "بدأت",
   "feedStopped": "توقفت",
   "feedUndelivered": "لم تُسلَّم الرسالة: {why}",
+  "feedUnsafeDataReaderReported": "أرسل قارئ البيانات غير الآمنة تقريره؛ كلامه في سجله.",
   "feedUpdated": "تحديث: {text}",
   "feedYouChose": "اخترت «{choice}»"
 }

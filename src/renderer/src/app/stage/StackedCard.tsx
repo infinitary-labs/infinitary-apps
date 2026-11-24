@@ -628,6 +628,7 @@ export function StackedCard({
         model={card.model}
         revised={card.changes ? revisedLine(card.changes) : undefined}
         asked={card.asked ? <AskedLine asked={card.asked} /> : undefined}
+        unsafeData={card.unsafeData}
         width="100%"
         // One column of the pair's single container (`CardSurface`), which
         // holds the surface and the floor.

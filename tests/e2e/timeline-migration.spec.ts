@@ -40,9 +40,10 @@ const REVISED = "Only the queue flush passes the Windows check.";
  * added is lent to it here. The columns are read from today's schema rather
  * than listed, so a new card column, as INF-2796's `after_merge_json` was,
  * reaches this fixture with no edit. Each of those migrations adds its column
- * through `addColumn`, which leaves a lent one in place.
+ * through `addColumn`, which leaves a lent one in place. The current card
+ * projection also requires the origin index when reading the old fixture.
  */
-function lendTodaysCardColumns(db: AppDatabase): void {
+function lendTodaysCardSchema(db: AppDatabase): void {
   const today = openInMemoryDatabase();
   try {
     for (const table of ["cards", "card_messages"]) {
@@ -55,6 +56,10 @@ function lendTodaysCardColumns(db: AppDatabase): void {
         );
       }
     }
+    const originIndex = today
+      .prepare("SELECT sql FROM sqlite_schema WHERE type = 'index' AND name = 'task_events_origin'")
+      .get() as { sql: string };
+    db.exec(originIndex.sql);
   } finally {
     today.close();
   }
@@ -82,7 +87,7 @@ function columnsOf(db: AppDatabase, table: string) {
 function olderProfile() {
   const userDataDir = scratchDir("timeline-upgrade-");
   const db = openDatabase(userDataDir, TASK_RECORD_RETIREMENT_VERSION - 1);
-  lendTodaysCardColumns(db);
+  lendTodaysCardSchema(db);
   const at = Date.now() - 3600000;
   const now = () => at;
   const tasks = new TaskService({ db, strict: true, now });

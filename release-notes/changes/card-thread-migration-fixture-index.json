@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "card-thread-migration-fixture-index",
+      "reason": "Repairs the card-thread migration test fixture without changing app behavior."
+    }
+  ]
+}

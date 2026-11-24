@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-card-swipe-below-bar",
+      "reason": "Test-only: the phone journeys' card scroll swipe starts below the top bar instead of at the screen's top edge, so on an iPhone on its side it no longer pulls down the system's notification sheet and sends the app to the background; no app behavior changes."
+    }
+  ]
+}

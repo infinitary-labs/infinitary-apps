@@ -153,6 +153,7 @@ describe("the first mate's context cuts text by whole characters", () => {
     expect(fencedSpans(resolution).map((span) => [span.words, span.closed])).toEqual([
       ["Which issue first?", true],
       ["Issue 12, as it asks", true],
+      ["scope", true],
       ["Only issue 12", true],
       ["only-12", true],
     ]);

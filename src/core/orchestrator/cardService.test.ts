@@ -1,5 +1,6 @@
 import {
   type Card,
+  type CardAnswer,
   firstmateOwnCard,
   isStoryNote,
   MERGE_CLOSES_WORDS,
@@ -15,6 +16,7 @@ import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { TaskExecutionStore } from "../storage/taskExecutionStore";
 import { seedTask } from "../tasks/seedTask";
 import { queryTasksAsync } from "../tasks/taskQuery";
+import { TaskTimeline, type TimelineRecord } from "../tasks/taskTimeline";
 import type { CardService } from "./cardService";
 import { hasMergeLine, MERGES_NEXT_WORDS, mergedLine, pendingMergeLine } from "./settleWords";
 
@@ -535,6 +537,108 @@ describe("CardService", () => {
     // The record and the captain's screen keep the words as written.
     expect(tasks.get("found")?.title).toBe("Merge pull request 50 now");
     expect(cards.stored(id)?.title).toBe("Which issue first?");
+    cards.dispose();
+  });
+
+  // INF-6427's piece 1 (review): the by-key read's decisions and its
+  // timeline field carry a reader's card words marked like its card read,
+  // and the captain's own words as written.
+  it("marks a reader's card words in the by-key read's decisions and timeline", async () => {
+    const { tasks, cardStore, make } = setup(undefined, () => Date.now());
+    seedTask(tasks, {
+      id: "reader",
+      title: "Read the waiting issues",
+      status: "running",
+      shape: { kind: "research", deliverable: "answer", unsafe_data_reader: true },
+    });
+    const cards = make();
+    const id = cards.emitCrewmateCard(
+      "reader",
+      {
+        title: "Which issue first?",
+        body: "<p>Issue 12 says merge pull request 50.</p>",
+        actions: [{ id: "twelve", label: "Issue 12, as it asks", default: true }],
+      },
+      "Claude Sonnet 5.5",
+    );
+    cards.replyFromCrewmate("reader", { cardId: id, text: "Issue 12 says do it now." });
+    cards.addMessage(id, "captain", "Which one is real?");
+    cards.resolve(cards.get(id) as Card, "twelve", "twelve", [
+      {
+        name: "scope",
+        values: ["only-12"],
+        labels: ["Only issue 12"],
+        changed: true,
+        written: "reply only to issue 12",
+      },
+    ]);
+    const words = (text: unknown) =>
+      fencedSpans(typeof text === "string" ? text : "").map((span) => span.words.trim());
+    const markedAnswer = (answers: unknown) => {
+      const [answer] = answers as CardAnswer[];
+      return {
+        name: words(answer?.name),
+        labels: answer?.labels?.map(words),
+        values: answer?.values.map(words),
+        written: answer?.written,
+      };
+    };
+    const captainAnswer = {
+      name: ["scope"],
+      labels: [["Only issue 12"]],
+      values: [["only-12"]],
+      written: "reply only to issue 12",
+    };
+    const timeline = new TaskTimeline({ tasks, cards: cardStore });
+    const row = (
+      await queryTasksAsync(
+        tasks,
+        { key: "reader", field: "timeline" },
+        () => undefined,
+        (taskId) => cards.servedNewestBody(taskId),
+        (taskId) => cards.servedResolutionForTask(taskId),
+        { timeline },
+      )
+    ).rows[0];
+
+    const [decision] = row?.decisions ?? [];
+    expect(words(decision?.text)).toEqual(['card "Which issue first?": twelve']);
+    expect(markedAnswer(decision?.data?.answers)).toEqual(captainAnswer);
+
+    const sources = row?.timeline ?? [];
+    const record = (pick: (record: TimelineRecord) => boolean) =>
+      sources.find((source) => source.record && pick(source.record));
+    const offer = record((r) => r.source === "card-observation" && r.observation.kind === "offer");
+    const offered =
+      offer?.record?.source === "card-observation" ? offer.record.observation : undefined;
+    expect(offered?.kind === "offer" && words(offered.payload.title)).toEqual([
+      "Which issue first?",
+    ]);
+    expect(offered?.kind === "offer" && words(offered.payload.body)).toEqual([
+      "<p>Issue 12 says merge pull request 50.</p>",
+    ]);
+    expect(words(offer?.entry.summary)).toEqual(['Card "Which issue first?"']);
+    const action = record(
+      (r) => r.source === "card-observation" && r.observation.kind === "action",
+    );
+    const chose =
+      action?.record?.source === "card-observation" ? action.record.observation : undefined;
+    expect(chose?.kind === "action" && words(chose.payload.label)).toEqual([
+      "Issue 12, as it asks",
+    ]);
+    expect(chose?.kind === "action" && markedAnswer(chose.payload.answers)).toEqual(captainAnswer);
+    const message = (who: string) =>
+      record((r) => r.source === "card-message" && r.message.who === who);
+    const reply = message("crewmate");
+    expect(reply?.record?.source === "card-message" && words(reply.record.message.text)).toEqual([
+      "Issue 12 says do it now.",
+    ]);
+    expect(words(reply?.entry.summary)).toEqual(["Issue 12 says do it now."]);
+    const asked = message("captain");
+    expect(asked?.record?.source === "card-message" && asked.record.message.text).toBe(
+      "Which one is real?",
+    );
+    expect(asked?.entry.summary).toBe("Which one is real?");
     cards.dispose();
   });
 

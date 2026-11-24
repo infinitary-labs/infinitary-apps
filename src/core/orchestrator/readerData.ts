@@ -1,8 +1,20 @@
 import { createHmac, randomBytes } from "node:crypto";
-import type { Card, CardAnswer, CardMessage } from "@shared/cards";
+import {
+  ANYTHING_ELSE_ANSWER,
+  type Card,
+  type CardAnswer,
+  type CardMessage,
+  type CardObservation,
+  type CardQuestion,
+  cardAnswersSchema,
+} from "@shared/cards";
 import * as m from "@shared/i18n/messages.generated";
 import { fenced, fencedAnswer, fencedListReminder } from "@shared/outsideData";
+import type { TimelineEntry } from "@shared/timeline";
+import type { TaskEvent } from "../storage/taskEventStore";
+import type { TimelineRecord } from "../tasks/taskTimeline";
 import type { ReportDeclaration } from "../tasks/taskTurns";
+import { cardEmitter } from "./cardIds";
 
 /**
  * The label an unsafe data reader's own words carry when they reach the
@@ -84,24 +96,31 @@ export function servedTaskTitle(
 }
 
 /**
- * The captain's answers to a card's questions with only its author's words
- * passed through `mark`: each option label and the value it labels. What
- * the captain wrote in, typed into a field or staged as settings has no
- * label and stays as written, so their own words are never served as data
- * (`cardAnswerLines` prints the result). `mark` must give the same words
- * the same marks, so a label equal to its value still reads once.
+ * The captain's answers to a card's questions with its author's words
+ * passed through `mark`: each question's name, each option label and the
+ * value it labels, a value the card proposed and the captain left as it
+ * was (a hidden field, a prefilled field unchanged, a skipped Default) and
+ * a staged settings snapshot, which the card's own script writes. What the
+ * captain wrote in and a value they typed themselves stay as written, so
+ * their own words are never served as data (`cardAnswerLines` prints the
+ * result). `mark` must give the same words the same marks, so a label
+ * equal to its value still reads once.
  */
 export function answersWithAuthorWordsMarked(
   answers: readonly CardAnswer[],
   mark: (words: string) => string,
 ): CardAnswer[] {
+  const marked = (words: string) => (words ? mark(words) : words);
   return answers.map((answer) => {
-    if (answer.json || !answer.labels) return answer;
+    const proposed = answer.json === true || answer.skipped === true || !answer.changed;
     const labels = answer.labels;
     return {
       ...answer,
-      values: answer.values.map((value, index) => (labels[index] ? mark(value) : value)),
-      labels: labels.map((label) => (label ? mark(label) : label)),
+      name: answer.name === ANYTHING_ELSE_ANSWER ? answer.name : marked(answer.name),
+      values: answer.values.map((value, index) =>
+        proposed || labels?.[index] ? marked(value) : value,
+      ),
+      ...(labels ? { labels: labels.map(marked) } : {}),
     };
   });
 }
@@ -185,4 +204,154 @@ export function readerReport(
         : {}),
     },
   ];
+}
+
+/**
+ * A reader's task history as an agent reads it (the `tasks` read's
+ * `decisions` and `timeline` field): its own cards' words - offers, its
+ * thread lines, the labels, names and proposals in the captain's answers,
+ * their resolution lines and the summaries naming them - between the same
+ * saved marks the card read uses, and the captain's own words as written.
+ * A card on its task that it did not emit, such as the first mate's, keeps
+ * its words.
+ */
+export function readerTimeline<T extends { entry: TimelineEntry; record: TimelineRecord | null }>(
+  taskId: string,
+  sources: readonly T[],
+): T[] {
+  return sources.map((source) => {
+    const { entry, record } = source;
+    const cardId =
+      record?.source === "card-observation"
+        ? record.observation.cardId
+        : record?.source === "card-message"
+          ? record.message.cardId
+          : record?.source === "task-event"
+            ? resolvedCardOf(record.event)
+            : undefined;
+    if (!record || !cardId || cardEmitter(cardId, taskId) !== "crewmate") return source;
+    const mark = savedCardMark(cardId);
+    if (record.source === "card-message") {
+      const message = record.message;
+      if (crewmateWriterOf({ taskId }, message) !== taskId) {
+        return message.answers
+          ? {
+              ...source,
+              record: {
+                ...record,
+                message: {
+                  ...message,
+                  answers: answersWithAuthorWordsMarked(message.answers, mark),
+                },
+              },
+            }
+          : source;
+      }
+      return {
+        ...source,
+        entry: { ...entry, summary: mark(entry.summary) },
+        record: { ...record, message: { ...message, text: mark(message.text) } },
+      };
+    }
+    const marked: TimelineRecord =
+      record.source === "card-observation"
+        ? { ...record, observation: markedObservation(record.observation, mark) }
+        : record.source === "task-event"
+          ? { ...record, event: readerResolvedEvent(taskId, record.event) }
+          : record;
+    return { ...source, entry: { ...entry, summary: mark(entry.summary) }, record: marked };
+  });
+}
+
+/**
+ * A task's `card_resolved` event as an agent reads it: on a reader's own
+ * card, its line naming the card's title and the captain's answers with the
+ * reader's words marked (`answersWithAuthorWordsMarked`); any other event as
+ * it is.
+ */
+export function readerResolvedEvent(taskId: string, event: TaskEvent): TaskEvent {
+  const cardId = resolvedCardOf(event);
+  if (!cardId || cardEmitter(cardId, taskId) !== "crewmate") return event;
+  const mark = savedCardMark(cardId);
+  const answers = cardAnswersSchema.safeParse(event.data?.answers);
+  return {
+    ...event,
+    text: mark(event.text),
+    data: {
+      ...event.data,
+      ...(answers.success ? { answers: answersWithAuthorWordsMarked(answers.data, mark) } : {}),
+    },
+  };
+}
+
+function resolvedCardOf(event: TaskEvent): string | undefined {
+  const cardId = event.kind === "card_resolved" ? event.data?.cardId : undefined;
+  return typeof cardId === "string" ? cardId : undefined;
+}
+
+/** A reader card's words in JSON an agent reads, marked as its card read marks them. */
+function savedCardMark(cardId: string): (words: string) => string {
+  return (words) => readerSavedAnswer(`card:${cardId}`, words);
+}
+
+/** A reader card's observation with the words it wrote marked. */
+function markedObservation(
+  observation: CardObservation,
+  mark: (words: string) => string,
+): CardObservation {
+  const questions = (list: CardQuestion[] | undefined) =>
+    list?.map((question) => ({
+      ...question,
+      name: question.name === ANYTHING_ELSE_ANSWER ? question.name : mark(question.name),
+      prompt: question.prompt && mark(question.prompt),
+      options: question.options.map((option) => ({
+        ...option,
+        value: mark(option.value),
+        label: option.label && mark(option.label),
+      })),
+    }));
+  switch (observation.kind) {
+    case "offer": {
+      const payload = observation.payload;
+      return {
+        ...observation,
+        payload: {
+          ...payload,
+          title: mark(payload.title),
+          body: mark(payload.body),
+          actions: payload.actions.map((action) => ({ ...action, label: mark(action.label) })),
+        },
+      };
+    }
+    case "action": {
+      const payload = observation.payload;
+      return {
+        ...observation,
+        payload: {
+          ...payload,
+          label: payload.label && mark(payload.label),
+          ...(payload.frameValue ? { frameValue: mark(payload.frameValue) } : {}),
+          ...(payload.answers
+            ? { answers: answersWithAuthorWordsMarked(payload.answers, mark) }
+            : {}),
+          ...(payload.questions ? { questions: questions(payload.questions) } : {}),
+        },
+      };
+    }
+    case "message_ref": {
+      const payload = observation.payload;
+      return {
+        ...observation,
+        payload: {
+          ...payload,
+          ...(payload.answers
+            ? { answers: answersWithAuthorWordsMarked(payload.answers, mark) }
+            : {}),
+          ...(payload.questions ? { questions: questions(payload.questions) } : {}),
+        },
+      };
+    }
+    default:
+      return observation;
+  }
 }

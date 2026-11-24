@@ -1,5 +1,5 @@
 import { DEFAULT_SHELL_PREFERENCES, type ShellPreferences } from "@shared/preferences";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type SizeDoor, sizeCommands } from "./windowSize";
 
 /** A door that saves each write a moment later, as the core does once its queue reaches it. */
@@ -23,7 +23,20 @@ function door(size?: ShellPreferences["appearance"]["size"]) {
   };
 }
 
-const settled = () => new Promise((resolve) => setTimeout(resolve, 50));
+/**
+ * Each stand-in save is a fake timer and every step between saves is promise
+ * work, so draining the timers runs every queued step whatever the machine's
+ * load, and a step that writes nothing still runs before the drain returns.
+ */
+beforeEach(() => {
+  vi.useFakeTimers();
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+const settled = () => vi.runAllTimersAsync();
 
 describe("the size keys, View menu and command search", () => {
   it("write the window-size choice through the picker's door, keeping the rest of the look", async () => {

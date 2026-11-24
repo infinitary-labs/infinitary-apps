@@ -9,7 +9,7 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { allowFieldOf, INTEGRATION_APPROVAL_WORDS, NOT_ALLOWED_WHY } from "@shared/integrations";
-import type { ForgeWriteAsk, IntegrationAsk, WriteAskSent } from "@shared/writeAsk";
+import type { ForgeWriteAsk, IntegrationAsk } from "@shared/writeAsk";
 import { describe, expect, it, vi } from "vitest";
 import {
   fakeCrewmate,
@@ -19,8 +19,9 @@ import {
   tick,
 } from "../../../tests/helpers/crewHarness";
 import type { IntegrationAskTaken, TaskIntegrations } from "../integrations";
-import type { CrewmateSpec } from "./crewSession";
 import { seedProject } from "../workspace/seedProject";
+import type { CrewmateSpec } from "./crewSession";
+import type { WriteAskSent } from "./githubGateway";
 
 fakeCrewTimersEachTest();
 
@@ -64,9 +65,20 @@ const read: IntegrationAsk = {
 describe("an unsafe data reader's one approval card", () => {
   it("lists its write and its integration calls as ticked rows, and runs the ticked ones once", async () => {
     const sent = vi.fn(
-      async (_taskId: string, taken: IntegrationAskTaken, _choice: string): Promise<WriteAskSent> =>
+      async (
+        _taskId: string,
+        taken: IntegrationAskTaken,
+        _choice: string,
+      ): Promise<WriteAskSent> =>
         "ask" in taken
-          ? { ok: true, ask: taken.ask, call: "", place: "", outcome: { kind: "ran" }, answer: "ok" }
+          ? {
+              ok: true,
+              ask: taken.ask,
+              call: "",
+              place: "",
+              outcome: { kind: "ran" },
+              answer: "ok",
+            }
           : { ok: false, call: "", place: "", outcome: { kind: "refused", why: taken.refused } },
     );
     const crewmate = fakeCrewmate();
@@ -127,7 +139,9 @@ describe("an unsafe data reader's one approval card", () => {
     await tick();
 
     expect(
-      sent.mock.calls.map(([, taken, choice]) => `${"ask" in taken ? taken.ask.id : "-"} ${choice}`),
+      sent.mock.calls.map(
+        ([, taken, choice]) => `${"ask" in taken ? taken.ask.id : "-"} ${choice}`,
+      ),
     ).toEqual(["comment once", "read once"]);
     const left = h.tasks.get(taskId)?.delivery?.writeAsks?.find((ask) => ask.id === "note");
     expect(left?.outcome).toEqual({ kind: "refused", why: NOT_ALLOWED_WHY });
@@ -169,7 +183,11 @@ describe("an unsafe data reader's integration tools", () => {
       JSON.stringify({ integrations: [{ name: "Notes", by: "reader" }] }),
     );
     expect(
-      await reader.onUseIntegration?.({ name: "Notes", action: "list_notes", reason: "Check notes." }),
+      await reader.onUseIntegration?.({
+        name: "Notes",
+        action: "list_notes",
+        reason: "Check notes.",
+      }),
     ).toBe("reader answered");
     expect(reached).toEqual(["reader Notes list_notes Check notes."]);
 

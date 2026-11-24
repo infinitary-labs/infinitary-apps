@@ -18878,6 +18878,88 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Quick answer`;
   }
+  function cardReaderCallsHow() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تأتي كل الصفوف محددة؛ ألغِ تحديد ما لا تريد تشغيله. تُشغَّل الصفوف المحددة مرة واحدة لكل منها، الأقدم أولًا، بتسجيل دخولك إلى كل وجهة.`;
+      case "de":
+        return `Jede Zeile ist angehakt; entferne den Haken bei allen, die nicht laufen sollen. Die angehakten Zeilen laufen je einmal, die älteste zuerst, mit deiner Anmeldung beim jeweiligen Ziel.`;
+      case "es":
+        return `Todas las filas vienen marcadas; desmarca las que no quieras ejecutar. Las filas marcadas se ejecutan una vez cada una, de la más antigua a la más reciente, con tu inicio de sesión en cada lugar.`;
+      case "fr":
+        return `Toutes les lignes arrivent cochées ; décochez celles que vous ne voulez pas lancer. Les lignes cochées s’exécutent une fois chacune, de la plus ancienne à la plus récente, avec votre connexion à chaque destination.`;
+      case "ja":
+        return `各行は最初からチェックされています。実行したくない行はチェックを外してください。チェックされた行は古い順に 1 回ずつ、それぞれの送り先のあなたのサインインで実行されます。`;
+      case "ko":
+        return `모든 행은 체크된 상태로 옵니다. 실행하지 않을 행은 체크를 해제하세요. 체크된 행은 오래된 순서대로 한 번씩, 각 대상의 로그인으로 실행됩니다.`;
+      case "pt-BR":
+        return `Todas as linhas vêm marcadas; desmarque as que você não quer executar. As linhas marcadas são executadas uma vez cada, da mais antiga à mais recente, com o seu login em cada lugar.`;
+      case "zh-Hans":
+        return `每一行默认已勾选；取消勾选你不想运行的行。勾选的行按从旧到新的顺序各运行一次，使用你在各处的登录。`;
+      case "zh-Hant":
+        return `每一列預設已勾選；取消勾選你不想執行的列。勾選的列依從舊到新的順序各執行一次，使用你在各處的登入。`;
+      case "en-XA":
+        return `[Éṽéŕý ŕöŵ çöɱéš ţîçķéð; ûñţîçķ áñý ýöû ðö ñöţ ŵáñţ ŕûñ. Ţĥé ţîçķéð ŕöŵš ŕûñ öñçé éáçĥ, öļðéšţ ƒîŕšţ, ŵîţĥ ýöûŕ šîĝñ-îñ ţö éáçĥ þļáçé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Every row comes ticked; untick any you do not want run. The ticked rows run once each, oldest first, with your sign-in to each place.‬`;
+    }
+    return `Every row comes ticked; untick any you do not want run. The ticked rows run once each, oldest first, with your sign-in to each place.`;
+  }
+  function cardReaderCallsLead(input2) {
+    const task = input2.task;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يقرأ فرد الطاقم في «${task}» كلامًا يمكن لأي أحد كتابته، لذا تنتظر هذه الاستدعاءات قرارك. كل صف هو استدعاء واحد ووجهته وما يرسله.`;
+      case "de":
+        return `Das Crewmitglied von „${task}“ liest Texte, die jeder schreiben kann, darum warten diese Aufrufe auf deine Entscheidung. Jede Zeile ist ein Aufruf, sein Ziel und was er sendet.`;
+      case "es":
+        return `El tripulante de «${task}» lee palabras que cualquiera puede escribir, así que estas llamadas esperan tu decisión. Cada fila es una llamada, adónde va y lo que envía.`;
+      case "fr":
+        return `L’équipier de « ${task} » lit des mots que tout le monde peut écrire : ces appels attendent donc votre décision. Chaque ligne est un appel, sa destination et ce qu’il envoie.`;
+      case "ja":
+        return `「${task}」の担当の乗組員は誰でも書ける文章を読むため、これらの呼び出しはあなたの判断を待ちます。各行は 1 回の呼び出しと、その送り先と送信内容です。`;
+      case "ko":
+        return `"${task}"의 선원은 누구나 쓸 수 있는 글을 읽으므로, 이 호출들은 결정을 기다립니다. 각 행은 한 번의 호출과 그 대상, 보내는 내용입니다.`;
+      case "pt-BR":
+        return `O tripulante de “${task}” lê textos que qualquer pessoa pode escrever, então estas chamadas esperam a sua decisão. Cada linha é uma chamada, para onde ela vai e o que ela envia.`;
+      case "zh-Hans":
+        return `“${task}”上的船员会读取任何人都能写的内容，所以这些调用要等你决定。每一行是一次调用、它的去向及其发送的内容。`;
+      case "zh-Hant":
+        return `「${task}」上的船員會讀取任何人都能寫的內容，所以這些呼叫要等你決定。每一列是一次呼叫、它的去向及其送出的內容。`;
+      case "en-XA":
+        return `[Ţĥé çŕéŵɱáţé öñ “${task}” ŕéáðš ŵöŕðš áñýöñé çáñ ŵŕîţé, šö ţĥéšé çáļļš ŵáîţ ƒöŕ ýöû. Éáçĥ ŕöŵ îš öñé çáļļ, ŵĥéŕé îţ ĝöéš áñð ŵĥáţ îţ šéñðš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The crewmate on “‬${task}‮” reads words anyone can write, so these calls wait for you. Each row is one call, where it goes and what it sends.‬`;
+    }
+    return `The crewmate on “${task}” reads words anyone can write, so these calls wait for you. Each row is one call, where it goes and what it sends.`;
+  }
+  function cardReaderCallsTitle() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `هل تسمح بهذه الاستدعاءات؟`;
+      case "de":
+        return `Diese Aufrufe erlauben?`;
+      case "es":
+        return `¿Permitir estas llamadas?`;
+      case "fr":
+        return `Autoriser ces appels ?`;
+      case "ja":
+        return `これらの呼び出しを許可しますか？`;
+      case "ko":
+        return `이 호출들을 허용할까요?`;
+      case "pt-BR":
+        return `Permitir estas chamadas?`;
+      case "zh-Hans":
+        return `允许这些调用吗？`;
+      case "zh-Hant":
+        return `允許這些呼叫嗎？`;
+      case "en-XA":
+        return `[Åļļöŵ ţĥéšé çáļļš? ~~~~~~]`;
+      case "ar-XB":
+        return `‮Allow these calls?‬`;
+    }
+    return `Allow these calls?`;
+  }
   function cardReaderUnsafeData() {
     switch (currentLanguage()) {
       case "ar":
@@ -105580,6 +105662,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardPastSentLead,
     cardPastUnreadable,
     cardQuickAnswer,
+    cardReaderCallsHow,
+    cardReaderCallsLead,
+    cardReaderCallsTitle,
     cardReaderUnsafeData,
     cardReaderWritesHow,
     cardReaderWritesLead,
@@ -108948,6 +109033,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardPastSentLead": [],
     "cardPastUnreadable": [],
     "cardQuickAnswer": [],
+    "cardReaderCallsHow": [],
+    "cardReaderCallsLead": ["task"],
+    "cardReaderCallsTitle": [],
     "cardReaderUnsafeData": [],
     "cardReaderWritesHow": ["place"],
     "cardReaderWritesLead": ["place", "task"],

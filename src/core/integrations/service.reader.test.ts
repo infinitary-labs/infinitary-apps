@@ -188,7 +188,10 @@ describe("an unsafe data reader's integrations", () => {
     await reader.call("Notes", "add_note", { text: "Pay the electric bill" }, undefined, reason);
     const once = await f.service.sendAsk("reader", f.latest().id, "once");
     expect(once.ok).toBe(true);
-    expect(f.notes).toEqual(["Call the dentist to move Thursday's cleaning", "Pay the electric bill"]);
+    expect(f.notes).toEqual([
+      "Call the dentist to move Thursday's cleaning",
+      "Pay the electric bill",
+    ]);
     expect(fencedSpans(once.answer ?? "").map((span) => span.label)).toEqual(["integration-data"]);
   });
 

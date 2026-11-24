@@ -44,6 +44,7 @@ import {
   type PanelCaller,
 } from "./binding";
 import { FIRSTMATE_READER } from "./outsideReads";
+import { READER_INTEGRATION_FENCE, READER_REFUSED_KINDS, READER_WORDS } from "./readerReach";
 import { WHOLE_ACTION } from "./scopes";
 import type { IntegrationSettings, IntegrationSettingsStore } from "./store";
 
@@ -252,25 +253,6 @@ type Holder =
 /** A fence's random value: 64 bits, which nobody who wrote the fenced words could guess. */
 const FENCE_VALUE_BYTES = 8;
 
-/**
- * The label an unsafe data reader's integration answers are fenced with
- * when their kind declares none: every answer it receives is marked whole.
- */
-export const READER_INTEGRATION_FENCE = "integration-data";
-
-/**
- * The kinds that reach where projects live: a reader reaches its own
- * project through its read tool alone, so it never calls these.
- */
-const FORGE_KINDS: ReadonlySet<IntegrationKind> = new Set([
-  "github",
-  "gitlab",
-  "github-enterprise",
-  "bitbucket",
-]);
-const READER_FORGE_REFUSAL =
-  "Refused: an unsafe data reader reaches where its own project lives through github_read alone, never through an integration. Nothing was read.";
-
 /** A refusal the catalog line's caller reads as the reason. */
 export class IntegrationRefusal extends Error {}
 
@@ -472,8 +454,8 @@ export class IntegrationsService {
       if (unnamed) return unnamed;
     }
     const reader = this.isReader(caller);
-    if (reader && FORGE_KINDS.has(row.binding.kind))
-      return { text: READER_FORGE_REFUSAL, refused: "refused" };
+    if (reader && READER_REFUSED_KINDS.has(row.binding.kind))
+      return { text: READER_WORDS.forge, refused: "refused" };
     if (row.settings.paused)
       return {
         text: `${this.viewOf(row).name} is paused. The captain resumes it in Settings → Integrations.`,
@@ -600,7 +582,7 @@ export class IntegrationsService {
     if (ask.by === undefined && choice !== "once" && this.options.readers?.is(taskId))
       return done({
         kind: "refused",
-        why: "an unsafe data reader's call runs only once, on Only this time, so it did not run",
+        why: READER_WORDS.onlyOnce,
       });
     let row = this.rows().find((entry) => entry.connection.id === ask.integration);
     if (!row) return done({ kind: "refused", why: `${ask.place} is no longer connected` });
@@ -748,7 +730,7 @@ export class IntegrationsService {
     // and errors too, since a server's own words can carry a stranger's; and
     // once the binding ran, the reader holds something of the captain's.
     const reader = this.isReader(caller);
-    if (reader) this.options.readers?.holds(caller.taskId, name);
+    if (reader && caller.kind === "task") this.options.readers?.holds(caller.taskId, name);
     const ownLabel = row.connection.fence ?? row.binding.fence;
     const readerLabel = ownLabel ?? READER_INTEGRATION_FENCE;
     // Only the binding's own label is kept for a while and noted as read
@@ -795,8 +777,7 @@ Do not repeat this call; read ${name} to check what happened first.`
     spec: IntegrationActionSpec,
   ): string | undefined {
     if (spec.delivers !== "file") return undefined;
-    if (this.isReader(caller))
-      return `Not run: ${name}'s ${spec.name} saves a file into a task's hand-over folder, which an unsafe data reader cannot open.`;
+    if (this.isReader(caller)) return READER_WORDS.file(name, spec.name);
     if (caller.kind === "firstmate")
       return `Not run: ${name}'s ${spec.name} saves a file into a task's hand-over folder, so only a crewmate can call it. Start a crewmate whose brief names the call and its reason.`;
     if (caller.kind === "panel")
@@ -925,7 +906,7 @@ Do not repeat this call; read ${name} to check what happened first.`
     }
     if (reader)
       return {
-        text: `Not run: this task reads words strangers can write, so ${name}'s ${spec.name} waits for the captain. ${joined ? `The app added ask ${ask.id} to this task's approval card already waiting.` : `The app raised this task's approval card for ask ${ask.id}.`} Do not emit another card or repeat the call. You will hear the outcome once through write-answered.`,
+        text: READER_WORDS.kept(name, spec.name, ask.id, joined),
         refused: "refused",
       };
     return {
@@ -1095,14 +1076,14 @@ Do not repeat this call; read ${name} to check what happened first.`
   forReader(taskId: string): TaskIntegrations {
     const reach = (name: string): Row | IntegrationAnswer => {
       const row = this.find(name);
-      if ("connection" in row && FORGE_KINDS.has(row.binding.kind))
-        return { text: READER_FORGE_REFUSAL, refused: "refused" };
+      if ("connection" in row && READER_REFUSED_KINDS.has(row.binding.kind))
+        return { text: READER_WORDS.forge, refused: "refused" };
       return row;
     };
     return {
       list: async () =>
         this.rows()
-          .filter((row) => !FORGE_KINDS.has(row.binding.kind))
+          .filter((row) => !READER_REFUSED_KINDS.has(row.binding.kind))
           .map((row) => {
             const entry = this.rosterEntry(row);
             return {

@@ -162,7 +162,12 @@ const CALLS: Record<string, { params: Record<string, unknown>; callback: string 
   },
   integrations: { params: { name: "google" }, callback: "onIntegrations" },
   use_integration: {
-    params: { name: "google", action: "list_messages", input: { query: "from:me" }, reason: "Find the thread." },
+    params: {
+      name: "google",
+      action: "list_messages",
+      input: { query: "from:me" },
+      reason: "Find the thread.",
+    },
     callback: "onUseIntegration",
   },
   prepare_change: {

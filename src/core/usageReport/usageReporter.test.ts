@@ -431,16 +431,20 @@ describe("UsageReporter", () => {
  * over HTTP to a local collector.
  */
 function companySetup(url: string, protocol = "http/protobuf") {
-  return companyReportingFrom({
-    CLAUDE_CODE_ENABLE_TELEMETRY: "1",
-    OTEL_METRICS_EXPORTER: "otlp",
-    OTEL_LOGS_EXPORTER: "otlp",
-    OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf",
-    OTEL_EXPORTER_OTLP_METRICS_PROTOCOL: protocol,
-    OTEL_EXPORTER_OTLP_ENDPOINT: `${url}/otel`,
-    OTEL_EXPORTER_OTLP_HEADERS: "Authorization=Bearer%20your-token",
-    OTEL_RESOURCE_ATTRIBUTES: "department=engineering,team.id=platform",
-  });
+  return companyReportingFrom(
+    {
+      CLAUDE_CODE_ENABLE_TELEMETRY: "1",
+      OTEL_METRICS_EXPORTER: "otlp",
+      OTEL_LOGS_EXPORTER: "otlp",
+      OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf",
+      OTEL_EXPORTER_OTLP_METRICS_PROTOCOL: protocol,
+      OTEL_EXPORTER_OTLP_ENDPOINT: `${url}/otel`,
+      OTEL_EXPORTER_OTLP_HEADERS: "Authorization=Bearer%20your-token",
+      // As the user's setup keeps it: who they are, beside the team.
+      OTEL_RESOURCE_ATTRIBUTES: "user.email=dev%40example.com,department=engineering",
+    },
+    `printf '{"X-Team-Token":"from-helper"}'`,
+  );
 }
 
 describe("the company's Claude Code setup as a destination", () => {
@@ -461,22 +465,23 @@ describe("the company's Claude Code setup as a destination", () => {
       "/otel/v1/logs",
       "/otel/v1/metrics",
     ]);
-    for (const entry of received) expect(entry.headers.authorization).toBe("Bearer your-token");
+    for (const entry of received) {
+      expect(entry.headers.authorization).toBe("Bearer your-token");
+      expect(entry.headers["x-team-token"]).toBe("from-helper");
+    }
     expect(namesAt(received, "/otel")).toEqual([
       "claude_code.cost.usage",
       "claude_code.token.usage",
       "claude_code.api_request",
     ]);
-    expect(
-      attrs(
-        received[0]?.body.resourceMetrics?.[0]?.resource ??
-          received[0]?.body.resourceLogs[0].resource,
-      ),
-    ).toEqual({
-      "service.name": "infinitary",
-      department: "engineering",
-      "team.id": "platform",
-    });
+    for (const entry of received) {
+      const resource = (entry.body.resourceMetrics ?? entry.body.resourceLogs)[0].resource;
+      expect(attrs(resource)).toEqual({
+        "service.name": "infinitary",
+        "user.email": "dev@example.com",
+        department: "engineering",
+      });
+    }
     // Where Claude's own records carry who the work is for, so per-person panels count it.
     const cost = metricsOf(received, "/otel/v1/metrics").find(
       (metric: any) => metric.name === "claude_code.cost.usage",

@@ -1,5 +1,5 @@
 ---
-source: 418540bc652d78a6
+source: c71bc8e7d8a6ffd4
 title: Integrações
 description: Conecte GitHub, GitLab, Bitbucket, Google e servidores MCP para que seu imediato e sua tripulação possam alcançá-los, e escolha o que cada um pode fazer sem perguntar a você.
 ---
@@ -8,8 +8,8 @@ Uma integração é uma conexão com algo fora dos seus projetos, como o GitHub,
 Cada uma tem o login feito em seu nome.
 Seu imediato, sua tripulação, suas automações e seus painéis a alcançam do mesmo jeito, pelo mesmo login e com as mesmas regras.
 
-<img class="picture-dark" src="/pictures/integrations-dark.webp" alt="Ajustes, seção Integrações: um servidor Notes conectado com cada uma das suas leituras e a sua alteração definidas como Pergunta a você ao lado de uma chave ligada, depois botões para adicionar GitHub, Google, um servidor MCP, GitLab ou GitHub Enterprise, o comando Infinitary desligado e uma lista de Sites privados vazia." width="1180" height="709" />
-<img class="picture-light" src="/pictures/integrations-light.webp" alt="Ajustes, seção Integrações: um servidor Notes conectado com cada uma das suas leituras e a sua alteração definidas como Pergunta a você ao lado de uma chave ligada, depois botões para adicionar GitHub, Google, um servidor MCP, GitLab ou GitHub Enterprise, o comando Infinitary desligado e uma lista de Sites privados vazia." width="1180" height="709" />
+<img class="picture-dark" src="/pictures/integrations-dark.webp" alt="Ajustes, seção Integrações: um servidor Notes conectado com cada uma das suas leituras e a sua alteração definidas como Pergunta a você ao lado de uma chave ligada, depois botões para adicionar GitHub, Google, um servidor MCP, Notion, Linear, Bitbucket, GitLab ou GitHub Enterprise, o comando Infinitary desligado e uma lista de Sites privados vazia." width="1180" height="709" />
+<img class="picture-light" src="/pictures/integrations-light.webp" alt="Ajustes, seção Integrações: um servidor Notes conectado com cada uma das suas leituras e a sua alteração definidas como Pergunta a você ao lado de uma chave ligada, depois botões para adicionar GitHub, Google, um servidor MCP, Notion, Linear, Bitbucket, GitLab ou GitHub Enterprise, o comando Infinitary desligado e uma lista de Sites privados vazia." width="1180" height="709" />
 
 ## Onde ficam as integrações {#where-integrations-live}
 
@@ -55,14 +55,35 @@ Sair do GitHub interrompe clones privados e solicitações de pull até você fa
 ## Google: Gmail e Agenda {#google-gmail-and-calendar}
 
 O Google é um único login para o Gmail e para a Agenda.
+O Infinitary os alcança por uma conexão com o Google que é sua: um cliente que você cria no seu próprio projeto do Google Cloud, no modo pessoal do Google.
+O Google não o revisa, não mostra nenhum alerta e não encerra o login dele depois de 7 dias.
 
-1. Aperte **Google**.
-2. Leia **Antes de conectar o Google**: o que o Infinitary usa da sua conta, para onde vai e por quanto tempo fica.
-3. Aperte **Aceitar e continuar para o Google**, ou **Cancelar** para não pedir nada ao Google.
-4. Termine o login na página do Google no seu navegador e permita todas as permissões que ela listar.
+1. Aperte **Google**, que abre **Configure sua própria conexão com o Google**.
+2. Aperte **Abrir a página do Google** e faça login lá com a conta do Google que você vai conectar.
+   Dê um nome ao projeto, aceite a política do Google e aperte Continue.
+3. Baixe o arquivo de cliente que o Google mostra, com Download JSON.
+4. Solte esse arquivo em **Solte o arquivo de cliente aqui**, escolha-o com **Escolher arquivo** ou cole o conteúdo dele em **Arquivo de cliente**.
+5. Aperte **Guardar e fazer login**.
+6. Leia **Antes de conectar o Google**: o que o Infinitary usa da sua conta, para onde vai e por quanto tempo fica.
+7. Aperte **Aceitar e continuar para o Google**, ou **Cancelar** para não pedir nada ao Google.
+8. Termine o login na página do Google no seu navegador, com a conta do Google que criou seu cliente, e permita todas as permissões que ela listar.
 
+O Infinitary guarda a chave secreta do cliente em [Segredos](/pt-br/secrets/) neste computador, e seu imediato e sua tripulação nunca a veem.
+Seu cliente só atende a conta do Google que o criou.
+Você o configura uma única vez: depois disso, fazer login no Google começa pelo aviso.
 Se você deixar uma permissão desmarcada, o Infinitary não guarda nada e você pode fazer login de novo.
 Toda vez que você faz login no Google, o aviso aparece primeiro.
+
+A linha do Google diz quando a conexão precisa de você:
+
+- **Configure sua própria conexão**: este login ainda passa por um cliente que o Infinitary compartilha com todos, e que vai ser desativado.
+  Ele continua funcionando até lá; aperte **Configurar** para continuar conectado.
+- **Para em**, com uma data: seu cliente não está no modo pessoal, então o Google encerra o login dele nessa data.
+  Aperte **Configurar de novo** e crie um cliente no modo pessoal.
+- **Seu cliente do Google parou**: o Google não aceita mais seu cliente, talvez porque ele foi excluído no Google Cloud.
+  Aperte **Configurar de novo**.
+
+No seu iPhone ou iPad, a configuração pela linha do Google é feita do mesmo jeito: você escolhe o arquivo de cliente ou cola o conteúdo dele.
 
 Com o Google conectado, seu imediato e sua tripulação podem buscar e ler seus e-mails, salvar um anexo na pasta de uma tarefa, marcar ou arquivar uma mensagem, escrever um rascunho e enviar uma mensagem.
 Na Agenda, eles podem listar suas agendas e eventos, ler um evento, ver quando você está ocupado e criar ou atualizar um evento.
@@ -100,6 +121,26 @@ O servidor recebe a chave toda vez que é iniciado, sem perguntar a você.
 Seu imediato e sua tripulação nunca a veem.
 Remover o servidor esquece as chaves dele.
 
+### Um servidor que pede login {#a-server-that-asks-you-to-sign-in}
+
+Alguns servidores que ficam em um endereço pedem um login, não uma chave.
+Para esses, **Conectar** abre a página de login do servidor no seu navegador.
+O formulário pede que você termine o login lá e mostra o endereço da página, com **Abrir a página de novo** e **Cancelar**.
+Quando você termina no navegador, a nova linha abre nas ações do servidor.
+Se você cancelar, o Infinitary não guarda nenhuma linha nem chave.
+
+**Notion** e **Linear**, ao lado de **Servidor MCP**, conectam esses dois serviços com um único clique.
+
+O Infinitary guarda o login em [Segredos](/pt-br/secrets/) e o renova sozinho.
+Quando o serviço o encerra, a linha diz **precisa fazer login de novo**, com **Fazer login de novo** na linha e no menu dela.
+Fazer login de novo mantém o botão de cada ação como estava e volta todas as ações para **Pergunta a você**.
+Remover o servidor esquece o login e o encerra no serviço, quando o serviço permite isso.
+Um servidor que precisa de um app seu ainda não pode ser conectado, e o formulário avisa isso.
+
+Seu imediato não pode abrir seu navegador.
+Para um servidor que pede login, ele traz um cartão com **Abrir Integrações**, que abre o formulário já preenchido.
+O que um servidor em um endereço responde chega ao seu imediato e à sua tripulação marcado como informação de fora, nunca como instruções.
+
 ## O que cada ação pode fazer sem perguntar a você {#what-each-action-may-do-without-asking-you}
 
 Uma linha aberta lista cada ação com o que ela faz: **lê**, **altera** ou **envia**.
@@ -127,6 +168,27 @@ O que uma integração responde é informação para seu imediato e sua tripula�
 Um painel também pode usar as integrações que ele cita.
 Os pedidos dele mostram o mesmo cartão, com o nome do painel.
 Veja [Painéis](/pt-br/panels/).
+
+## Um tripulante que lê textos que qualquer pessoa pode escrever {#a-crewmate-that-reads-words-anyone-can-write}
+
+Algumas tarefas leem textos que um desconhecido pode ter escrito, como as issues e as solicitações de pull de um projeto público.
+Para uma tarefa assim, seu imediato pode iniciar um tripulante que só lê.
+Ele não executa programas, não altera arquivos e não tem navegador.
+Ele lê só o próprio projeto e páginas públicas da web, e não alcança mais nada no seu computador nem na sua rede privada.
+Ele abre uma página da web sem login, só como texto.
+
+Tudo o que ele lê é marcado como texto de fora, nunca como instruções, e o relatório dele ao seu imediato também.
+Cada cartão dele diz “Este tripulante lê textos que qualquer pessoa pode escrever, então um link ou pedido neste cartão pode vir de um desconhecido.”
+
+Tudo o que ele quer alterar ou chamar espera a sua decisão, em uma linha marcada de um único cartão de aprovação, como “Permitir estas chamadas?”.
+Esse cartão só oferece **Só desta vez** e **Agora não**.
+Uma leitura por uma integração só roda sem perguntar quando você definiu essa ação como **Sempre permitida**, e nunca em um servidor MCP.
+Uma tarefa que ele propõe a partir de uma issue também espera no cartão, com **Começar agora**, **Guardar para depois** e **Não registrar**.
+
+Enquanto não tem nada seu, ele abre na hora qualquer página pública da web.
+Ele passa a ter algo seu depois de ler um projeto que não é público ou a resposta de uma integração.
+A partir daí, uma página que a tarefa dele cita continua abrindo na hora.
+Qualquer outro endereço espera em uma linha do cartão, “Abrir páginas da web?”, com o endereço completo, porque um endereço pode levar o que ele leu a quem mantém o site.
 
 ## O que uma integração pode avisar {#what-an-integration-can-tell}
 

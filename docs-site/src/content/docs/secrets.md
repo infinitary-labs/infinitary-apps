@@ -5,10 +5,10 @@ description: Keep the passwords and keys your crew needs, allow each use on a ca
 
 Secrets keeps the passwords and keys your crew needs for its work, such as the key that publishes your website.
 A crewmate uses a secret by its name, and only once you allow that use.
-Each value goes straight into Secrets on your computer: Infinitary never shows it again, and neither the first mate nor the crew gets it.
+Each value goes straight into Secrets on your computer: neither the first mate nor the crew gets it, and it stays hidden unless you copy it yourself.
 
-<img class="picture-dark" src="/pictures/secrets-dark.webp" alt="Settings, Secrets section: three protected secrets, Newsletter mail key for Production, Shop database password for Staging and Weather service key for Personal, none used yet, with Search secrets, Add secret, Move from another tool and Access, history &amp; recovery, and an empty Signed-in sites list below." width="1164" height="582" />
-<img class="picture-light" src="/pictures/secrets-light.webp" alt="Settings, Secrets section: three protected secrets, Newsletter mail key for Production, Shop database password for Staging and Weather service key for Personal, none used yet, with Search secrets, Add secret, Move from another tool and Access, history &amp; recovery, and an empty Signed-in sites list below." width="1164" height="582" />
+<img class="picture-dark" src="/pictures/secrets-dark.webp" alt="Settings, Secrets section: three protected secrets, Newsletter mail key for Production, Shop database password for Staging and Weather service key for Personal, none used yet, the Shop database password row open on Copy value, Replace and Forget, with Search secrets, Add secret, Move from another tool and Access, history &amp; recovery, and an empty Signed-in sites list below." width="1164" height="596" />
+<img class="picture-light" src="/pictures/secrets-light.webp" alt="Settings, Secrets section: three protected secrets, Newsletter mail key for Production, Shop database password for Staging and Weather service key for Personal, none used yet, the Shop database password row open on Copy value, Replace and Forget, with Search secrets, Add secret, Move from another tool and Access, history &amp; recovery, and an empty Signed-in sites list below." width="1164" height="596" />
 
 ## Where your secrets live
 
@@ -17,7 +17,7 @@ Open **Settings**, then **Secrets**, or search for **Open Secrets** in command s
 **Protected secrets** lists each secret by its name and place, and says which task last used it, and when.
 **Search secrets** finds one by its name, its place or the task that last used it.
 
-On a Mac, the line under the list reads "Kept on this computer. Your crew uses them but never sees them."
+On a Mac, the line under the list reads "Kept on this computer. Your crew uses them but never sees them, unless you copy one."
 On Linux, it says your crew uses them only with your approval, but any program you run can reach them while your system's secret store is unlocked.
 
 Secrets stay on the computer where your first mate lives.
@@ -31,8 +31,9 @@ A computer that controls your first mate from elsewhere has no Secrets section o
 4. If you keep two secrets with the same name, tell them apart with **Place (optional)**, such as staging or production.
 5. Choose **Save secret**.
 
-The value stays hidden after saving, and only a use you allow can receive it.
-Open a secret's row to **Replace** its value or **Forget** it.
+The value stays hidden after saving.
+Only a use you allow receives it, unless you copy it yourself.
+Open a secret's row to [copy its value](#copy-a-value), **Replace** it or **Forget** it.
 Forget removes it from this computer, but it does not turn the key off where it was made.
 
 ### When a crewmate needs one you have not kept
@@ -47,6 +48,25 @@ Type or paste each value into the hidden field Infinitary draws on the card, the
 The crewmate gets the secret's name, never its value, and each use still asks you.
 
 Type a secret only into a field Infinitary draws, never into a card's reply field or your message box.
+
+## Copy a value
+
+When you need a value yourself, such as to paste a key into a website, open the secret's row and choose **Copy value**.
+Each time, your computer asks you to confirm it is you: on a Mac with Touch ID or your password, and on Linux with your password.
+
+The value goes onto this computer's clipboard, and no other.
+On a Mac, it does not travel to your other devices.
+On Linux, a clipboard history tool may still keep it, and the row says so.
+
+The row then says "Copied. It leaves the clipboard at" a time, 90 seconds after the copy.
+Infinitary clears it then, or when you choose **Clear now**, or when you quit Infinitary.
+If you have copied something else since, it leaves your clipboard alone.
+
+The secret's row then says **Copied by you** and when, and [Use history](#use-history-and-backups) lists the copy the same way.
+Where your computer cannot confirm it is you, the button is off and the row says why.
+
+Your first mate never copies a value.
+Ask it for one, and it brings you a card, such as "Open Website deployment in Secrets", whose **Open Secrets** button opens that secret's row for you.
 
 ## Allow a use
 
@@ -113,8 +133,10 @@ You pick the secrets in Infinitary's window on the computer where your first mat
 
 ## Keys for your integrations
 
-When you sign in to Google or add an MCP server with keys in Settings → **Integrations**, Infinitary keeps those keys in Secrets.
+When you sign in to Google or to an MCP server, or add an MCP server with keys, in Settings → **Integrations**, Infinitary keeps those keys in Secrets.
+It keeps the secret of the Google client you set up there too.
 Secrets lists them with **Manage in Integrations** in place of Replace and Forget.
+A server's key also offers **Copy value**; a sign-in's entry does not.
 Infinitary uses them without asking, because signing in, or adding the server with its keys, was your consent.
 Your crew cannot see them or ask to use them.
 Sign out, or remove the server, in Integrations to forget them.

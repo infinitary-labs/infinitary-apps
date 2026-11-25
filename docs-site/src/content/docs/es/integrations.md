@@ -1,5 +1,5 @@
 ---
-source: 418540bc652d78a6
+source: c71bc8e7d8a6ffd4
 title: Integraciones
 description: Conecta GitHub, GitLab, Bitbucket, Google y servidores MCP para que tu primer oficial y tu tripulación puedan alcanzarlos, y elige lo que cada uno puede hacer sin preguntarte.
 ---
@@ -8,8 +8,8 @@ Una integración es una conexión con algo fuera de tus proyectos, como GitHub, 
 Cada una tiene la sesión iniciada como tú.
 Tu primer oficial, tu tripulación, tus automatizaciones y tus paneles la alcanzan de la misma forma, con el mismo inicio de sesión y las mismas reglas.
 
-<img class="picture-dark" src="/pictures/integrations-dark.webp" alt="Configuración, sección Integraciones: un servidor Notes conectado con cada una de sus lecturas y su cambio en Asks you junto a un interruptor activado, luego botones para agregar GitHub, Google, un servidor MCP, GitLab o GitHub Enterprise, el comando Infinitary desactivado y una lista Private sites vacía." width="1180" height="709" />
-<img class="picture-light" src="/pictures/integrations-light.webp" alt="Configuración, sección Integraciones: un servidor Notes conectado con cada una de sus lecturas y su cambio en Asks you junto a un interruptor activado, luego botones para agregar GitHub, Google, un servidor MCP, GitLab o GitHub Enterprise, el comando Infinitary desactivado y una lista Private sites vacía." width="1180" height="709" />
+<img class="picture-dark" src="/pictures/integrations-dark.webp" alt="Configuración, sección Integraciones: un servidor Notes conectado con cada una de sus lecturas y su cambio en Asks you junto a un interruptor activado, luego botones para agregar GitHub, Google, un servidor MCP, Notion, Linear, Bitbucket, GitLab o GitHub Enterprise, el comando Infinitary desactivado y una lista Private sites vacía." width="1180" height="709" />
+<img class="picture-light" src="/pictures/integrations-light.webp" alt="Configuración, sección Integraciones: un servidor Notes conectado con cada una de sus lecturas y su cambio en Asks you junto a un interruptor activado, luego botones para agregar GitHub, Google, un servidor MCP, Notion, Linear, Bitbucket, GitLab o GitHub Enterprise, el comando Infinitary desactivado y una lista Private sites vacía." width="1180" height="709" />
 
 ## Dónde viven las integraciones {#where-integrations-live}
 
@@ -55,14 +55,35 @@ Cerrar sesión en GitHub detiene los clones privados y las solicitudes de incorp
 ## Google: Gmail y Calendar {#google-gmail-and-calendar}
 
 Google es un solo inicio de sesión para Gmail y Calendar.
+Infinitary los alcanza mediante tu propia conexión con Google: un cliente que creas en tu propio proyecto de Google Cloud, en el modo personal de Google.
+Google no lo revisa, no muestra ninguna advertencia y no cierra su sesión a los 7 días.
 
-1. Presiona **Google**.
-2. Lee **Antes de conectar Google**: lo que Infinitary usa de tu cuenta, adónde va y cuánto tiempo se queda.
-3. Presiona **Aceptar y continuar a Google**, o **Cancelar** para no pedirle nada a Google.
-4. Termina de iniciar sesión en la página de Google en tu navegador, y permite todos los permisos que enumera.
+1. Presiona **Google**, que abre **Configura tu propia conexión con Google**.
+2. Presiona **Abrir la página de Google**, e inicia sesión ahí con la cuenta de Google que vas a conectar.
+   Ponle nombre al proyecto, acepta la política de Google y presiona Continue.
+3. Descarga el archivo de cliente que muestra Google, con Download JSON.
+4. Suelta ese archivo en **Suelta aquí el archivo de cliente**, elígelo con **Elegir archivo**, o pega su contenido en **Archivo de cliente**.
+5. Presiona **Guardar e iniciar sesión**.
+6. Lee **Antes de conectar Google**: lo que Infinitary usa de tu cuenta, adónde va y cuánto tiempo se queda.
+7. Presiona **Aceptar y continuar a Google**, o **Cancelar** para no pedirle nada a Google.
+8. Termina de iniciar sesión en la página de Google en tu navegador, con la cuenta de Google que creó tu cliente, y permite todos los permisos que enumera.
 
+Infinitary guarda el secreto del cliente en [Secretos](/es/secrets/) en esta computadora, y tu primer oficial y tu tripulación nunca lo ven.
+Tu cliente solo sirve para la cuenta de Google que lo creó.
+Lo configuras una sola vez: después, iniciar sesión en Google empieza en el aviso.
 Si dejas un permiso sin marcar, Infinitary no guarda nada y puedes volver a iniciar sesión.
 Cada vez que inicias sesión en Google, el aviso aparece primero.
+
+La fila de Google dice cuándo la conexión te necesita:
+
+- **Configura tu propia conexión**: este inicio de sesión todavía pasa por un cliente que Infinitary comparte con todos, y que se retirará.
+  Sigue funcionando hasta entonces; presiona **Configurar** para seguir conectado.
+- **Deja de funcionar**, con una fecha: tu cliente no está en modo personal, así que Google cerrará su sesión en esa fecha.
+  Presiona **Volver a configurar**, y crea un cliente en modo personal.
+- **Tu cliente de Google dejó de funcionar**: Google ya no acepta tu cliente, quizá porque se eliminó en Google Cloud.
+  Presiona **Volver a configurar**.
+
+En tu iPhone o iPad, la fila de Google se configura de la misma forma: eliges el archivo de cliente, o pegas su contenido.
 
 Con Google conectado, tu primer oficial y tu tripulación pueden buscar y leer tu correo, guardar un adjunto en la carpeta de una tarea, etiquetar o archivar un mensaje, redactar un mensaje y enviar uno.
 En Calendar pueden enumerar tus calendarios y eventos, leer un evento, ver cuándo estás ocupado, y crear o actualizar un evento.
@@ -100,6 +121,26 @@ El servidor recibe la clave cada vez que se inicia, sin preguntarte.
 Tu primer oficial y tu tripulación nunca la ven.
 Quitar el servidor olvida sus claves.
 
+### Un servidor que te pide iniciar sesión {#a-server-that-asks-you-to-sign-in}
+
+Algunos servidores en una dirección piden un inicio de sesión, no una clave.
+Para estos, **Conectar** abre la página de inicio de sesión del servidor en tu navegador.
+El formulario dice que termines de iniciar sesión ahí y nombra la dirección de la página, con **Abrir la página otra vez** y **Cancelar**.
+Cuando terminas en tu navegador, la nueva fila se abre en las acciones del servidor.
+Si cancelas, Infinitary no guarda ninguna fila ni ninguna clave.
+
+**Notion** y **Linear**, junto a **Servidor MCP**, conectan esos dos servicios con solo presionarlos.
+
+Infinitary guarda el inicio de sesión en [Secretos](/es/secrets/) y lo renueva por sí mismo.
+Cuando el servicio le pone fin, la fila dice **necesita volver a iniciar sesión**, con **Volver a iniciar sesión** en la fila y en su menú.
+Volver a iniciar sesión conserva el interruptor de cada acción, y devuelve todas las acciones a **Te pregunta**.
+Quitar el servidor olvida el inicio de sesión, y le pone fin en el servicio cuando el servicio lo permite.
+Un servidor que necesita tu propia app todavía no se puede conectar, y el formulario lo dice.
+
+Tu primer oficial no puede abrir tu navegador.
+Para un servidor que pide un inicio de sesión, te trae una tarjeta con **Abrir Integraciones**, que abre el formulario ya completo.
+Lo que responde un servidor en una dirección llega a tu primer oficial y a tu tripulación marcado como información de fuera, nunca como instrucciones.
+
 ## Lo que cada acción puede hacer sin preguntarte {#what-each-action-may-do-without-asking-you}
 
 Una fila abierta enumera cada acción con lo que hace: **lee**, **cambia** o **envía**.
@@ -127,6 +168,27 @@ Lo que responde una integración es información para tu primer oficial y tu tri
 Un panel también puede usar las integraciones que nombra.
 Sus peticiones abren la misma tarjeta, que nombra el panel.
 Consulta [Paneles](/es/panels/).
+
+## Un tripulante que lee palabras que cualquiera puede escribir {#a-crewmate-that-reads-words-anyone-can-write}
+
+Algunas tareas leen palabras que un desconocido pudo haber escrito, como las incidencias y las solicitudes de incorporación de cambios de un proyecto público.
+Para una tarea así, tu primer oficial puede iniciar un tripulante que solo lee.
+No ejecuta programas, no cambia archivos y no tiene navegador.
+Solo lee su propio proyecto y páginas web públicas, y no alcanza nada más en tu computadora ni en tu red privada.
+Abre una página web sin iniciar sesión, solo como texto.
+
+Todo lo que lee va marcado como palabras de fuera, nunca como instrucciones, y su informe a tu primer oficial también.
+Cada una de sus tarjetas dice «Este tripulante lee palabras que cualquiera puede escribir, así que un enlace o una petición en esta tarjeta puede venir de un desconocido».
+
+Cualquier cambio o llamada que quiera hacer espera tu decisión, como una fila marcada en una sola tarjeta de aprobación, por ejemplo «¿Permitir estas llamadas?».
+Esa tarjeta solo ofrece **Solo esta vez** y **Ahora no**.
+Una lectura a través de una integración se ejecuta sin preguntar solo cuando pusiste esa acción en **Siempre permitida**, y nunca en un servidor MCP.
+Una tarea que propone a partir de una incidencia también espera en la tarjeta, con **Empezar ahora**, **Guardar para después** y **No anotar**.
+
+Mientras no tiene nada tuyo, abre cualquier página web pública enseguida.
+Tiene algo tuyo en cuanto ha leído un proyecto que no es público, o la respuesta de una integración.
+A partir de entonces, una página que nombra su tarea se sigue abriendo enseguida.
+Cualquier otra dirección espera como una fila en la tarjeta, «¿Abrir páginas web?», que muestra la dirección completa, porque una dirección puede llevar lo que leyó a quien gestiona el sitio.
 
 ## Lo que puede avisar una integración {#what-an-integration-can-tell}
 

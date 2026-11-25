@@ -7,8 +7,8 @@ An integration is a connection to something outside your projects, such as GitHu
 Each one is signed in as you.
 Your first mate, your crew, your automations and your panels reach it the same way, through the same sign-in and the same rules.
 
-<img class="picture-dark" src="/pictures/integrations-dark.webp" alt="Settings, Integrations section: a connected Notes server with each of its reads and its change set to Asks you beside an on switch, then buttons to add GitHub, Google, an MCP server, GitLab or GitHub Enterprise, the Infinitary command switched off, and an empty Private sites list." width="1180" height="709" />
-<img class="picture-light" src="/pictures/integrations-light.webp" alt="Settings, Integrations section: a connected Notes server with each of its reads and its change set to Asks you beside an on switch, then buttons to add GitHub, Google, an MCP server, GitLab or GitHub Enterprise, the Infinitary command switched off, and an empty Private sites list." width="1180" height="709" />
+<img class="picture-dark" src="/pictures/integrations-dark.webp" alt="Settings, Integrations section: a connected Notes server with each of its reads and its change set to Asks you beside an on switch, then buttons to add GitHub, Google, an MCP server, Notion, Linear, Bitbucket, GitLab or GitHub Enterprise, the Infinitary command switched off, and an empty Private sites list." width="1180" height="709" />
+<img class="picture-light" src="/pictures/integrations-light.webp" alt="Settings, Integrations section: a connected Notes server with each of its reads and its change set to Asks you beside an on switch, then buttons to add GitHub, Google, an MCP server, Notion, Linear, Bitbucket, GitLab or GitHub Enterprise, the Infinitary command switched off, and an empty Private sites list." width="1180" height="709" />
 
 ## Where integrations live
 
@@ -54,14 +54,35 @@ Signing out of GitHub stops private clones and pull requests until you sign in a
 ## Google: Gmail and Calendar
 
 Google is one sign-in for both Gmail and Calendar.
+Infinitary reaches them through a Google connection of your own: a client you make in your own Google Cloud project, in Google's Personal mode.
+Google does not review it, shows no warning, and does not end its sign-in after 7 days.
 
-1. Press **Google**.
-2. Read **Before you connect Google**: what Infinitary uses from your account, where it goes and how long it stays.
-3. Press **Accept and continue to Google**, or **Cancel** to ask nothing of Google.
-4. Finish signing in on Google's page in your browser, and allow every permission it lists.
+1. Press **Google**, which opens **Set up your own Google connection**.
+2. Press **Open Google's page**, and sign in there with the Google account you will connect.
+   Name the project, accept Google's policy and press Continue.
+3. Download the client file Google shows, with Download JSON.
+4. Drop that file on **Drop the client file here**, pick it with **Choose file**, or paste what it holds into **Client file**.
+5. Press **Keep and sign in**.
+6. Read **Before you connect Google**: what Infinitary uses from your account, where it goes and how long it stays.
+7. Press **Accept and continue to Google**, or **Cancel** to ask nothing of Google.
+8. Finish signing in on Google's page in your browser, with the Google account that made your client, and allow every permission it lists.
 
+Infinitary keeps the client's secret in [Secrets](/secrets/) on this computer, and your first mate and your crew never see it.
+Your client serves only the Google account that made it.
+You set it up once: after that, signing in to Google starts at the notice.
 If you leave a permission unchecked, Infinitary keeps nothing and you can sign in again.
 Each time you sign in to Google, the notice shows first.
+
+The Google row says when the connection needs you:
+
+- **Set up your own connection**: this sign-in still runs through a client Infinitary shares with everyone, which is going away.
+  It keeps working until then; press **Set up** to stay connected.
+- **Stops**, with a date: your client is not in Personal mode, so Google ends its sign-in on that date.
+  Press **Set up again**, and make a client in Personal mode.
+- **Your Google client stopped**: Google no longer accepts your client, perhaps because it was deleted in Google Cloud.
+  Press **Set up again**.
+
+On your iPhone or iPad, the Google row sets up the same way: you choose the client file, or paste what it holds.
 
 With Google connected, your first mate and crew can search and read your mail, save an attachment into a task's folder, label or archive a message, draft a message and send one.
 In Calendar they can list your calendars and events, read an event, read when you are busy, and create or update an event.
@@ -99,6 +120,26 @@ The server gets the key each time it starts, without asking you.
 Your first mate and your crew never see it.
 Removing the server forgets its keys.
 
+### A server that asks you to sign in
+
+Some servers at an address ask for a sign-in, not a key.
+For these, **Connect** opens the server's sign-in page in your browser.
+The form says to finish signing in there and names the page's address, with **Open the page again** and **Cancel**.
+Once you finish in your browser, the new row opens on the server's actions.
+If you cancel, Infinitary keeps no row and no key.
+
+**Notion** and **Linear**, beside **MCP server**, connect those two services with one press.
+
+Infinitary keeps the sign-in in [Secrets](/secrets/) and renews it by itself.
+When the service ends it, the row says **needs a sign-in again**, with **Sign in again** on the row and in its menu.
+Signing in again keeps each action's switch, and sets every action back to **Asks you**.
+Removing the server forgets the sign-in, and ends it at the service where the service allows that.
+A server that needs an app of your own cannot be connected yet, and the form says so.
+
+Your first mate cannot open your browser.
+For a server that asks for a sign-in, it brings you a card with **Open Integrations**, which opens the form already filled in.
+What a server at an address answers reaches your first mate and crew marked as information from outside, never as instructions.
+
 ## What each action may do without asking you
 
 An open row lists each action with what it does: **reads**, **changes** or **sends**.
@@ -126,6 +167,27 @@ What an integration answers is information for your first mate and crew, never a
 A panel can use the integrations it names too.
 Its asks raise the same card, naming the panel.
 See [Panels](/panels/).
+
+## A crewmate that reads words anyone can write
+
+Some tasks read words a stranger could have written, such as a public project's issues and pull requests.
+For such a task, your first mate can start a crewmate that only reads.
+It runs no programs, changes no files and has no browser.
+It reads only its own project and public web pages, and reaches nothing else on your computer or your private network.
+It opens a web page signed out, as text only.
+
+Everything it reads is marked as words from outside, never as instructions, and so is its report to your first mate.
+Each of its cards says "This crewmate reads words anyone can write, so a link or request on this card may come from a stranger."
+
+Whatever it wants to change or call waits for you, as a ticked row on one approval card, such as "Allow these calls?".
+That card offers only **Only this time** and **Not now**.
+A read through an integration runs without asking only when you set that action to **Always allowed**, and never on an MCP server.
+A task it proposes from an issue waits on the card too, with **Start now**, **Keep for later** and **Don't file**.
+
+While it holds nothing of yours, it opens any public web page at once.
+It holds something once it has read a project that is not public, or an integration's answer.
+From then on, a page its task names still opens at once.
+Any other address waits as a row on the card, "Open web pages?", showing the whole address, because an address can carry what it read to whoever runs the site.
 
 ## What an integration can tell
 

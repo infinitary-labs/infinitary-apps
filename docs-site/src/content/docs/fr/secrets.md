@@ -1,15 +1,15 @@
 ---
-source: 0cf7ba43b1059baf
+source: 0c5daa67e1edf076
 title: Secrets
 description: Gardez les mots de passe et les clés dont votre équipage a besoin, autorisez chaque utilisation sur une carte et voyez ce qui les a utilisés.
 ---
 
 Secrets garde les mots de passe et les clés dont votre équipage a besoin pour son travail, comme la clé qui publie votre site web.
 Un équipier utilise un secret par son nom, et seulement une fois que vous autorisez cette utilisation.
-Chaque valeur va directement dans Secrets sur votre ordinateur : Infinitary ne l’affiche plus jamais, et ni le second ni l’équipage ne la reçoivent.
+Chaque valeur va directement dans Secrets sur votre ordinateur : ni le second ni l’équipage ne la reçoivent, et elle reste masquée sauf si vous la copiez vous-même.
 
-<img class="picture-dark" src="/pictures/secrets-dark.webp" alt="Réglages, section Secrets : trois secrets protégés, la clé de messagerie de la newsletter pour Production, le mot de passe de la base de données de la boutique pour Staging et la clé du service météo pour Personnel, aucun encore utilisé, avec Rechercher des secrets, Ajouter un secret, Importer d’un autre outil et Accès, historique et récupération, et une liste Sites connectés vide en dessous." width="1164" height="582" />
-<img class="picture-light" src="/pictures/secrets-light.webp" alt="Réglages, section Secrets : trois secrets protégés, la clé de messagerie de la newsletter pour Production, le mot de passe de la base de données de la boutique pour Staging et la clé du service météo pour Personnel, aucun encore utilisé, avec Rechercher des secrets, Ajouter un secret, Importer d’un autre outil et Accès, historique et récupération, et une liste Sites connectés vide en dessous." width="1164" height="582" />
+<img class="picture-dark" src="/pictures/secrets-dark.webp" alt="Réglages, section Secrets : trois secrets protégés, la clé de messagerie de la newsletter pour Production, le mot de passe de la base de données de la boutique pour Staging et la clé du service météo pour Personnel, aucun encore utilisé, la ligne du mot de passe de la base de données de la boutique ouverte sur Copier la valeur, Remplacer et Oublier, avec Rechercher des secrets, Ajouter un secret, Importer d’un autre outil et Accès, historique et récupération, et une liste Sites connectés vide en dessous." width="1164" height="596" />
+<img class="picture-light" src="/pictures/secrets-light.webp" alt="Réglages, section Secrets : trois secrets protégés, la clé de messagerie de la newsletter pour Production, le mot de passe de la base de données de la boutique pour Staging et la clé du service météo pour Personnel, aucun encore utilisé, la ligne du mot de passe de la base de données de la boutique ouverte sur Copier la valeur, Remplacer et Oublier, avec Rechercher des secrets, Ajouter un secret, Importer d’un autre outil et Accès, historique et récupération, et une liste Sites connectés vide en dessous." width="1164" height="596" />
 
 ## Où se trouvent vos secrets {#where-your-secrets-live}
 
@@ -18,7 +18,7 @@ Ouvrez **Réglages**, puis **Secrets**, ou cherchez **Ouvrir Secrets** dans la r
 **Secrets protégés** liste chaque secret par son nom et son emplacement, et indique quelle tâche l’a utilisé en dernier, et quand.
 **Rechercher des secrets** en trouve un par son nom, son emplacement ou la tâche qui l’a utilisé en dernier.
 
-Sur un Mac, la ligne sous la liste indique « Gardés sur cet ordinateur. Votre équipage les utilise mais ne les voit jamais. »
+Sur un Mac, la ligne sous la liste indique « Conservés sur cet ordinateur. Votre équipage les utilise sans jamais les voir, sauf si vous en copiez un. »
 Sous Linux, elle indique que votre équipage ne les utilise qu’avec votre approbation, mais que tout programme que vous exécutez peut y accéder tant que le stockage de secrets de votre système est déverrouillé.
 
 Les secrets restent sur l’ordinateur où vit votre second.
@@ -32,8 +32,9 @@ Un ordinateur qui contrôle votre second depuis ailleurs n’a pas de section Se
 4. Si vous gardez deux secrets du même nom, distinguez-les avec **Emplacement (facultatif)**, comme staging ou production.
 5. Choisissez **Enregistrer le secret**.
 
-La valeur reste masquée après l’enregistrement, et seule une utilisation que vous autorisez peut la recevoir.
-Ouvrez la ligne d’un secret pour **Remplacer** sa valeur ou l’**Oublier**.
+La valeur reste masquée après l’enregistrement.
+Seule une utilisation que vous autorisez la reçoit, sauf si vous la copiez vous-même.
+Ouvrez la ligne d’un secret pour [copier sa valeur](#copy-a-value), la **Remplacer** ou l’**Oublier**.
 Oublier le retire de cet ordinateur, mais ne désactive pas la clé là où elle a été créée.
 
 ### Quand un équipier en a besoin d’un que vous n’avez pas gardé {#when-a-crewmate-needs-one-you-have-not-kept}
@@ -48,6 +49,25 @@ Tapez ou collez chaque valeur dans le champ masqué qu’Infinitary dessine sur 
 L’équipier reçoit le nom du secret, jamais sa valeur, et chaque utilisation vous demande toujours.
 
 Ne tapez un secret que dans un champ dessiné par Infinitary, jamais dans le champ de réponse d’une carte ni dans votre zone de message.
+
+## Copier une valeur {#copy-a-value}
+
+Quand vous avez vous-même besoin d’une valeur, par exemple pour coller une clé dans un site web, ouvrez la ligne du secret et choisissez **Copier la valeur**.
+Chaque fois, votre ordinateur vous demande de confirmer que c’est vous : sur un Mac avec Touch ID ou votre mot de passe, et sous Linux avec votre mot de passe.
+
+La valeur va dans le presse-papiers de cet ordinateur, et d’aucun autre.
+Sur un Mac, elle ne part pas vers vos autres appareils.
+Sous Linux, un outil d’historique du presse-papiers peut tout de même la garder, et la ligne le dit.
+
+La ligne indique alors « Copiée. Elle quitte le presse-papiers à » suivi de l’heure, 90 secondes après la copie.
+Infinitary l’efface du presse-papiers à ce moment-là, ou quand vous choisissez **Effacer maintenant**, ou quand vous quittez Infinitary.
+Si vous avez copié autre chose entre-temps, il ne touche pas à votre presse-papiers.
+
+La ligne du secret indique ensuite **Copiée par vous** et quand, et [Historique d’utilisation](#use-history-and-backups) liste la copie de la même façon.
+Quand votre ordinateur ne peut pas confirmer que c’est vous, le bouton est désactivé et la ligne dit pourquoi.
+
+Votre second ne copie jamais de valeur.
+Demandez-lui-en une, et il vous apporte une carte, comme « Ouvrir Déploiement du site web dans Secrets », dont le bouton **Ouvrir Secrets** ouvre pour vous la ligne de ce secret.
 
 ## Autoriser une utilisation {#allow-a-use}
 
@@ -114,8 +134,10 @@ Vous choisissez les secrets dans la fenêtre d’Infinitary sur l’ordinateur o
 
 ## Les clés de vos intégrations {#keys-for-your-integrations}
 
-Quand vous vous connectez à Google ou ajoutez un serveur MCP avec des clés dans Réglages → **Intégrations**, Infinitary garde ces clés dans Secrets.
+Quand vous vous connectez à Google ou à un serveur MCP, ou ajoutez un serveur MCP avec des clés, dans Réglages → **Intégrations**, Infinitary garde ces clés dans Secrets.
+Il garde aussi le secret du client Google que vous y configurez.
 Secrets les liste avec **Gérer dans Intégrations** à la place de Remplacer et Oublier.
+La clé d’un serveur propose aussi **Copier la valeur** ; l’entrée d’une connexion ne le propose pas.
 Infinitary les utilise sans demander, car vous connecter, ou ajouter le serveur avec ses clés, valait votre accord.
 Votre équipage ne peut ni les voir ni demander à les utiliser.
 Déconnectez-vous, ou retirez le serveur, dans Intégrations pour les oublier.

@@ -1,15 +1,15 @@
 ---
-source: 0cf7ba43b1059baf
+source: 0c5daa67e1edf076
 title: Segredos
 description: Guarde as senhas e chaves de que sua tripulação precisa, permita cada uso em um cartão e veja o que as usou.
 ---
 
 Segredos guarda as senhas e chaves de que sua tripulação precisa para trabalhar, como a chave que publica seu site.
 Um tripulante usa um segredo pelo nome, e só depois que você permite esse uso.
-Cada valor vai direto para Segredos no seu computador: o Infinitary nunca o mostra de novo, e nem o imediato nem a tripulação o recebem.
+Cada valor vai direto para Segredos no seu computador: nem o imediato nem a tripulação o recebem, e ele fica oculto a menos que você mesmo o copie.
 
-<img class="picture-dark" src="/pictures/secrets-dark.webp" alt="Ajustes, seção Segredos: três segredos protegidos, a chave de e-mail da newsletter para Production, a senha do banco de dados da loja para Staging e a chave do serviço de clima para Personal, nenhum usado ainda, com Buscar segredos, Adicionar segredo, Trazer de outra ferramenta e Acesso, histórico e recuperação, e uma lista vazia de Sites com login abaixo." width="1164" height="582" />
-<img class="picture-light" src="/pictures/secrets-light.webp" alt="Ajustes, seção Segredos: três segredos protegidos, a chave de e-mail da newsletter para Production, a senha do banco de dados da loja para Staging e a chave do serviço de clima para Personal, nenhum usado ainda, com Buscar segredos, Adicionar segredo, Trazer de outra ferramenta e Acesso, histórico e recuperação, e uma lista vazia de Sites com login abaixo." width="1164" height="582" />
+<img class="picture-dark" src="/pictures/secrets-dark.webp" alt="Ajustes, seção Segredos: três segredos protegidos, a chave de e-mail da newsletter para Production, a senha do banco de dados da loja para Staging e a chave do serviço de clima para Personal, nenhum usado ainda, a linha da senha do banco de dados da loja aberta em Copiar valor, Substituir e Esquecer, com Buscar segredos, Adicionar segredo, Trazer de outra ferramenta e Acesso, histórico e recuperação, e uma lista vazia de Sites com login abaixo." width="1164" height="596" />
+<img class="picture-light" src="/pictures/secrets-light.webp" alt="Ajustes, seção Segredos: três segredos protegidos, a chave de e-mail da newsletter para Production, a senha do banco de dados da loja para Staging e a chave do serviço de clima para Personal, nenhum usado ainda, a linha da senha do banco de dados da loja aberta em Copiar valor, Substituir e Esquecer, com Buscar segredos, Adicionar segredo, Trazer de outra ferramenta e Acesso, histórico e recuperação, e uma lista vazia de Sites com login abaixo." width="1164" height="596" />
 
 ## Onde seus segredos ficam {#where-your-secrets-live}
 
@@ -18,7 +18,7 @@ Abra **Ajustes** e depois **Segredos**, ou procure **Abrir Segredos** na busca d
 **Segredos protegidos** lista cada segredo pelo nome e pelo lugar, e diz qual tarefa o usou por último, e quando.
 **Buscar segredos** encontra um pelo nome, pelo lugar ou pela tarefa que o usou por último.
 
-No Mac, a linha abaixo da lista diz “Guardados neste computador. Sua tripulação os usa, mas nunca os vê.”
+No Mac, a linha abaixo da lista diz “Guardados neste computador. Sua tripulação os usa, mas nunca os vê, a menos que você copie um.”
 No Linux, ela diz que sua tripulação só os usa com a sua aprovação, mas que qualquer programa que você executa pode alcançá-los enquanto o cofre de segredos do seu sistema estiver desbloqueado.
 
 Os segredos ficam no computador onde seu imediato mora.
@@ -32,8 +32,9 @@ Um computador que controla seu imediato de outro lugar não tem uma seção Segr
 4. Se você guardar dois segredos com o mesmo nome, diferencie-os com **Lugar (opcional)**, como staging ou produção.
 5. Escolha **Salvar segredo**.
 
-O valor fica oculto depois de salvo, e só um uso que você permite pode recebê-lo.
-Abra a linha de um segredo para **Substituir** o valor ou **Esquecer** o segredo.
+O valor fica oculto depois de salvo.
+Só um uso que você permite o recebe, a menos que você mesmo o copie.
+Abra a linha de um segredo para [copiar o valor dele](#copy-a-value), **Substituir** esse valor ou **Esquecer** o segredo.
 Esquecer o remove deste computador, mas não desativa a chave no lugar onde ela foi criada.
 
 ### Quando um tripulante precisa de um que você não guardou {#when-a-crewmate-needs-one-you-have-not-kept}
@@ -48,6 +49,25 @@ Digite ou cole cada valor no campo oculto que o Infinitary desenha no cartão e 
 O tripulante recebe o nome do segredo, nunca o valor, e cada uso continua pedindo sua permissão.
 
 Digite um segredo só em um campo que o Infinitary desenha, nunca no campo de resposta de um cartão nem na sua caixa de mensagem.
+
+## Copiar um valor {#copy-a-value}
+
+Quando você mesmo precisar de um valor, por exemplo para colar uma chave em um site, abra a linha do segredo e escolha **Copiar valor**.
+A cada vez, seu computador pede que você confirme que é você: no Mac com Touch ID ou sua senha, e no Linux com sua senha.
+
+O valor vai para a área de transferência deste computador, e de nenhum outro.
+No Mac, ele não passa para seus outros dispositivos.
+No Linux, uma ferramenta de histórico da área de transferência ainda pode guardá-lo, e a linha avisa isso.
+
+A linha então diz “Copiado. Ele sai da área de transferência às” e um horário, 90 segundos depois da cópia.
+O Infinitary tira o valor de lá nesse horário, ou quando você escolhe **Limpar agora**, ou quando você encerra o Infinitary.
+Se você copiou outra coisa nesse meio-tempo, ele não mexe na sua área de transferência.
+
+A linha do segredo passa a dizer **Copiado por você** e quando, e o [Histórico de uso](#use-history-and-backups) lista a cópia do mesmo jeito.
+Onde seu computador não consegue confirmar que é você, o botão fica desativado e a linha diz por quê.
+
+Seu imediato nunca copia um valor.
+Peça um a ele, e ele traz um cartão, como “Abrir Publicação do site em Segredos”, cujo botão **Abrir Segredos** abre a linha desse segredo para você.
 
 ## Permitir um uso {#allow-a-use}
 
@@ -114,8 +134,10 @@ Você escolhe os segredos na janela do Infinitary no computador onde seu imediat
 
 ## Chaves das suas integrações {#keys-for-your-integrations}
 
-Quando você faz login no Google ou adiciona um servidor MCP com chaves em Ajustes → **Integrações**, o Infinitary guarda essas chaves em Segredos.
+Quando você faz login no Google ou em um servidor MCP, ou adiciona um servidor MCP com chaves, em Ajustes → **Integrações**, o Infinitary guarda essas chaves em Segredos.
+Ele também guarda a chave secreta do cliente do Google que você configura lá.
 Segredos as lista com **Gerenciar em Integrações** no lugar de Substituir e Esquecer.
+A chave de um servidor também oferece **Copiar valor**; a entrada de um login, não.
 O Infinitary as usa sem perguntar, porque fazer login, ou adicionar o servidor com as chaves dele, foi o seu consentimento.
 Sua tripulação não pode vê-las nem pedir para usá-las.
 Saia da conta, ou remova o servidor, em Integrações para esquecê-las.

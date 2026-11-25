@@ -1,5 +1,5 @@
 ---
-source: 418540bc652d78a6
+source: c71bc8e7d8a6ffd4
 title: Integrationen
 description: Verbinde GitHub, GitLab, Bitbucket, Google und MCP-Server, damit dein erster Offizier und deine Crew sie erreichen, und lege fest, was jede Integration ohne Rückfrage tun darf.
 ---
@@ -8,8 +8,8 @@ Eine Integration ist eine Verbindung zu etwas außerhalb deiner Projekte, etwa G
 Jede ist als du angemeldet.
 Dein erster Offizier, deine Crew, deine Automatisierungen und deine Panels erreichen sie auf dieselbe Weise, über dieselbe Anmeldung und mit denselben Regeln.
 
-<img class="picture-dark" src="/pictures/integrations-dark.webp" alt="Einstellungen, Bereich Integrationen: ein verbundener Notes-Server, bei dem jede Leseaktion und die Änderungsaktion auf „Fragt dich“ stehen, jeweils neben einem eingeschalteten Schalter, darunter Schaltflächen zum Hinzufügen von GitHub, Google, einem MCP-Server, GitLab oder GitHub Enterprise, der ausgeschaltete Infinitary-Befehl und eine leere Liste privater Seiten." width="1180" height="709" />
-<img class="picture-light" src="/pictures/integrations-light.webp" alt="Einstellungen, Bereich Integrationen: ein verbundener Notes-Server, bei dem jede Leseaktion und die Änderungsaktion auf „Fragt dich“ stehen, jeweils neben einem eingeschalteten Schalter, darunter Schaltflächen zum Hinzufügen von GitHub, Google, einem MCP-Server, GitLab oder GitHub Enterprise, der ausgeschaltete Infinitary-Befehl und eine leere Liste privater Seiten." width="1180" height="709" />
+<img class="picture-dark" src="/pictures/integrations-dark.webp" alt="Einstellungen, Bereich Integrationen: ein verbundener Notes-Server, bei dem jede Leseaktion und die Änderungsaktion auf „Fragt dich“ stehen, jeweils neben einem eingeschalteten Schalter, darunter Schaltflächen zum Hinzufügen von GitHub, Google, einem MCP-Server, Notion, Linear, Bitbucket, GitLab oder GitHub Enterprise, der ausgeschaltete Infinitary-Befehl und eine leere Liste privater Seiten." width="1180" height="709" />
+<img class="picture-light" src="/pictures/integrations-light.webp" alt="Einstellungen, Bereich Integrationen: ein verbundener Notes-Server, bei dem jede Leseaktion und die Änderungsaktion auf „Fragt dich“ stehen, jeweils neben einem eingeschalteten Schalter, darunter Schaltflächen zum Hinzufügen von GitHub, Google, einem MCP-Server, Notion, Linear, Bitbucket, GitLab oder GitHub Enterprise, der ausgeschaltete Infinitary-Befehl und eine leere Liste privater Seiten." width="1180" height="709" />
 
 ## Wo Integrationen liegen {#where-integrations-live}
 
@@ -55,14 +55,35 @@ Wenn du dich bei GitHub abmeldest, funktionieren private Klone und Pull Requests
 ## Google: Gmail und Kalender {#google-gmail-and-calendar}
 
 Google ist eine Anmeldung für Gmail und Kalender zusammen.
+Infinitary erreicht beide über deine eigene Google-Verbindung: einen Client, den du in deinem eigenen Google-Cloud-Projekt im persönlichen Modus von Google erstellst.
+Google prüft ihn nicht, zeigt keine Warnung und beendet seine Anmeldung nicht nach 7 Tagen.
 
-1. Drück **Google**.
-2. Lies **Bevor du Google verbindest**: was Infinitary aus deinem Konto verwendet, wohin es geht und wie lange es bleibt.
-3. Drück **Akzeptieren und weiter zu Google**, oder **Abbrechen**, wenn Google nichts erfahren soll.
-4. Schließ die Anmeldung auf der Seite von Google in deinem Browser ab und erlaube jede Berechtigung, die dort aufgeführt ist.
+1. Drück **Google**, dann öffnet sich **Deine eigene Google-Verbindung einrichten**.
+2. Drück **Googles Seite öffnen** und melde dich dort mit dem Google-Konto an, das du verbinden willst.
+   Gib dem Projekt einen Namen, akzeptiere Googles Richtlinie und drück Continue.
+3. Lade die Client-Datei, die Google zeigt, mit Download JSON herunter.
+4. Leg diese Datei auf **Client-Datei hier ablegen** ab, wähl sie mit **Datei auswählen** aus oder füg ihren Inhalt in **Client-Datei** ein.
+5. Drück **Aufbewahren und anmelden**.
+6. Lies **Bevor du Google verbindest**: was Infinitary aus deinem Konto verwendet, wohin es geht und wie lange es bleibt.
+7. Drück **Akzeptieren und weiter zu Google**, oder **Abbrechen**, wenn Google nichts erfahren soll.
+8. Schließ die Anmeldung auf der Seite von Google in deinem Browser mit dem Google-Konto ab, das deinen Client erstellt hat, und erlaube jede Berechtigung, die dort aufgeführt ist.
 
+Infinitary bewahrt das Geheimnis des Clients in [Geheimnisse](/de/secrets/) auf diesem Computer auf, und dein erster Offizier und deine Crew sehen es nie.
+Dein Client dient nur dem Google-Konto, das ihn erstellt hat.
+Du richtest ihn einmal ein: Danach beginnt die Anmeldung bei Google mit dem Hinweis.
 Wenn du eine Berechtigung nicht ankreuzt, behält Infinitary nichts, und du kannst dich erneut anmelden.
 Bei jeder Anmeldung bei Google erscheint zuerst der Hinweis.
+
+Die Google-Zeile sagt es, wenn die Verbindung dich braucht:
+
+- **Eigene Verbindung einrichten**: Diese Anmeldung läuft noch über einen Client, den Infinitary mit allen teilt und der eingestellt wird.
+  Bis dahin funktioniert sie weiter; drück **Einrichten**, um verbunden zu bleiben.
+- **Endet**, mit einem Datum: Dein Client ist nicht im persönlichen Modus, daher beendet Google seine Anmeldung an diesem Tag.
+  Drück **Erneut einrichten** und erstelle einen Client im persönlichen Modus.
+- **Dein Google-Client funktioniert nicht mehr**: Google akzeptiert deinen Client nicht mehr, vielleicht weil er in Google Cloud gelöscht wurde.
+  Drück **Erneut einrichten**.
+
+Auf deinem iPhone oder iPad richtest du die Verbindung in der Google-Zeile genauso ein: Du wählst die Client-Datei aus oder fügst ihren Inhalt ein.
 
 Mit verbundenem Google können dein erster Offizier und deine Crew deine Mails durchsuchen und lesen, einen Anhang im Ordner einer Aufgabe speichern, eine Nachricht beschriften oder archivieren, eine Nachricht entwerfen und eine senden.
 Im Kalender können sie deine Kalender und Termine auflisten, einen Termin lesen, lesen, wann du beschäftigt bist, und einen Termin anlegen oder ändern.
@@ -100,6 +121,26 @@ Der Server bekommt den Schlüssel bei jedem Start, ohne dich zu fragen.
 Dein erster Offizier und deine Crew sehen ihn nie.
 Wenn du den Server entfernst, vergisst Infinitary seine Schlüssel.
 
+### Ein Server, der eine Anmeldung verlangt {#a-server-that-asks-you-to-sign-in}
+
+Manche Server, die unter einer Adresse erreichbar sind, verlangen eine Anmeldung statt eines Schlüssels.
+Bei ihnen öffnet **Verbinden** die Anmeldeseite des Servers in deinem Browser.
+Das Formular sagt, dass du die Anmeldung dort abschließen sollst, und nennt die Adresse der Seite, mit **Seite erneut öffnen** und **Abbrechen**.
+Sobald du in deinem Browser fertig bist, öffnet sich die neue Zeile mit den Aktionen des Servers.
+Wenn du abbrichst, behält Infinitary keine Zeile und keinen Schlüssel.
+
+**Notion** und **Linear**, neben **MCP-Server**, verbinden diese beiden Dienste mit einem Klick.
+
+Infinitary bewahrt die Anmeldung in [Geheimnisse](/de/secrets/) auf und erneuert sie von selbst.
+Wenn der Dienst sie beendet, sagt die Zeile **muss neu angemeldet werden**, mit **Erneut anmelden** in der Zeile und in ihrem Menü.
+Beim erneuten Anmelden bleibt der Schalter jeder Aktion, wie er ist, und jede Aktion steht wieder auf **Fragt dich**.
+Wenn du den Server entfernst, vergisst Infinitary die Anmeldung und beendet sie beim Dienst, sofern der Dienst das zulässt.
+Ein Server, der eine eigene App von dir braucht, lässt sich noch nicht verbinden, und das Formular sagt das.
+
+Dein erster Offizier kann deinen Browser nicht öffnen.
+Für einen Server, der eine Anmeldung verlangt, bringt er dir eine Karte mit **Integrationen öffnen**; damit öffnet sich das Formular schon ausgefüllt.
+Was ein Server unter einer Adresse antwortet, erreicht deinen ersten Offizier und deine Crew als Informationen von außen gekennzeichnet, nie als Anweisungen.
+
 ## Was jede Aktion ohne Rückfrage tun darf {#what-each-action-may-do-without-asking-you}
 
 Eine geöffnete Zeile listet jede Aktion mit dem, was sie tut: **liest**, **ändert** oder **sendet**.
@@ -127,6 +168,27 @@ Was eine Integration antwortet, sind Informationen für deinen ersten Offizier u
 Auch ein Panel kann die Integrationen nutzen, die es nennt.
 Seine Bitten lösen dieselbe Karte aus, auf der das Panel genannt wird.
 Siehe [Panels](/de/panels/).
+
+## Ein Crewmitglied, das Texte liest, die jeder schreiben kann {#a-crewmate-that-reads-words-anyone-can-write}
+
+Manche Aufgaben lesen Texte, die ein Fremder geschrieben haben könnte, etwa die Issues und Pull Requests eines öffentlichen Projekts.
+Für eine solche Aufgabe kann dein erster Offizier ein Crewmitglied starten, das nur liest.
+Es führt keine Programme aus, ändert keine Dateien und hat keinen Browser.
+Es liest nur sein eigenes Projekt und öffentliche Webseiten und erreicht sonst nichts auf deinem Computer oder in deinem privaten Netzwerk.
+Eine Webseite öffnet es ohne Anmeldung und nur als Text.
+
+Alles, was es liest, ist als Text von außen gekennzeichnet, nie als Anweisung, und sein Bericht an deinen ersten Offizier ebenso.
+Auf jeder seiner Karten steht: „Dieses Crewmitglied liest Texte, die jeder schreiben kann, darum kann ein Link oder eine Bitte auf dieser Karte von einem Fremden stammen.“
+
+Was immer es ändern oder aufrufen will, wartet auf dich, als angehakte Zeile auf einer einzigen Genehmigungskarte, etwa „Diese Aufrufe erlauben?“.
+Diese Karte bietet nur **Nur dieses Mal** und **Nicht jetzt** an.
+Eine Leseaktion über eine Integration läuft nur dann ohne Rückfrage, wenn du diese Aktion auf **Immer erlaubt** gestellt hast, und auf einem MCP-Server nie.
+Auch eine Aufgabe, die es aus einem Issue vorschlägt, wartet auf der Karte, mit **Jetzt starten**, **Für später behalten** und **Nicht ablegen**.
+
+Solange es nichts von dir hat, öffnet es jede öffentliche Webseite sofort.
+Es hat etwas von dir, sobald es ein Projekt gelesen hat, das nicht öffentlich ist, oder die Antwort einer Integration.
+Von da an öffnet es eine Seite, die seine Aufgabe nennt, weiterhin sofort.
+Jede andere Adresse wartet als Zeile auf der Karte „Webseiten öffnen?“, mit der ganzen Adresse, denn eine Adresse kann das Gelesene an den Betreiber der Website tragen.
 
 ## Was eine Integration melden kann {#what-an-integration-can-tell}
 

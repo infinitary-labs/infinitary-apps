@@ -29,8 +29,8 @@ It has no **Rename**, and if you switch the Claude Code sign-in, the row follows
 
 ## Read your plan's allowance
 
-<img class="picture-dark" src="/pictures/subscriptions-dark.webp" alt="Two accounts in AI subscriptions, Codex and Claude, each with a session meter and a weekly meter, and the Add account buttons below them." width="1064" height="532" />
-<img class="picture-light" src="/pictures/subscriptions-light.webp" alt="Two accounts in AI subscriptions, Codex and Claude, each with a session meter and a weekly meter, and the Add account buttons below them." width="1064" height="532" />
+<img class="picture-dark" src="/pictures/subscriptions-dark.webp" alt="Settings, Intelligence section: two accounts in AI subscriptions, Codex and Claude, each with a session meter and a weekly meter, and one saved reset on the Codex account, then the Add account buttons, the Connection file row and First mate model." width="1048" height="524" />
+<img class="picture-light" src="/pictures/subscriptions-light.webp" alt="Settings, Intelligence section: two accounts in AI subscriptions, Codex and Claude, each with a session meter and a weekly meter, and one saved reset on the Codex account, then the Add account buttons, the Connection file row and First mate model." width="1048" height="524" />
 
 Each account shows a small meter for every allowance its provider has, such as a session and a week.
 The number is how much is left.
@@ -41,6 +41,7 @@ Rest the pointer on a meter to see when it resets.
 - Beside the meters, one word sums up the account: **on pace**, **empty in** a time, or **empty now**.
 - **as of 3h ago** means the last reading is old, so its numbers are dimmed.
 - A dash means that allowance was not read.
+- A Codex account that holds [saved resets](#saved-codex-resets) says how many under its meters.
 
 **Refresh**, at the top of the list, reads every allowance again.
 Infinitary does not read an allowance for OpenRouter or a custom API, and the row says so.
@@ -76,6 +77,25 @@ For a Claude or Codex account, the menu holds **Keep going on credits**.
 Your crew then spends credits only after every included allowance.
 Infinitary never buys credits or sets their limit; the provider's own site does.
 
+### Saved Codex resets
+
+ChatGPT can give a Codex account saved resets.
+Each one refills an allowance before it resets by itself.
+The account's row says how many it holds and where to use one, such as "1 saved reset · use it on chatgpt.com".
+
+While one can be used now, the account's menu holds **Use a saved reset**.
+The card that says an allowance is used up says so too, with the same button and a link to the usage page on chatgpt.com.
+Infinitary then has Codex on your computer use the reset that expires first.
+This needs Codex 0.143 or later, and the first time Codex asks you to sign in to that ChatGPT account.
+A used reset cannot be given back.
+Activity says what happened, and how many are left.
+
+Infinitary can also use them without a click.
+Turn on **Use saved resets on their own** in the account's menu, or on that card; it is off until you do.
+Infinitary then uses one only when work waits and no account has room, and only when waiting for the allowance to refill would take long.
+Accounts with allowance left always come first.
+Activity says each time it uses one.
+
 ## Sign in again
 
 A sign-in can lapse.
@@ -90,11 +110,40 @@ Give it a name, the server's address, a key if it needs one, and the models to u
 **Save** checks each model before your crew can use it.
 You then choose on the **Models** board whether your crew uses these models.
 
+### Connections from a file
+
+If you already keep your connections in a file in Pi's `models.json` format, Infinitary can read them from it.
+On the **Connection file** row under **AI subscriptions**, press **Choose file** and pick the file.
+Infinitary only reads the file: it never changes it, and it never uses a key written in it.
+
+Each connection the file defines appears marked **From your file** and **Not approved yet**.
+Press **Approve**, type this computer's own key and any model size the file leaves out, then **Save**, which checks each model.
+
+Infinitary follows the file after that.
+A new name or price applies at once, and a changed limit checks that model again.
+A changed address, protocol or header pauses the connection until you press **Approve again**.
+A connection that leaves the file is paused, never deleted.
+**Stop reading** stops following the file, and the connections you approved stay.
+
+### On your other computers
+
+When another computer runs work for you, a custom connection's row offers **Use**, naming that computer.
+You type that computer's own key, and it checks each model and keeps the key itself; this computer keeps no copy.
+Later changes to the connection follow it there.
+See [Your other computers](/your-other-computers/).
+
 ## Usage
 
 Settings → **Usage** shows how much your first mate and your crew have used, across every project.
-Show it in **Tokens** or **Estimated $**, for a **Period** and for the kind of **Work**.
+It opens in **Estimated $**; under **Show usage as** you can switch to **Tokens**.
+Choose a **Period** and the kind of **Work** to count.
 Estimated dollars are a guide to value, not a bill.
+
+**Cost per task** charts what a finished task costs, its reviews included.
+Each point is the median of the tasks that finished in the seven days before it, and the band holds the middle half of them.
+A line that climbs means tasks are taking more work than before.
+**Projects** and **Kinds** narrow it to the work you want to compare.
+
 **Recent tasks** lists what each task used.
 
 Under **Intelligence**, **Ask before a task spends more than** sets an amount.

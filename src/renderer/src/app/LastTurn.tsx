@@ -40,7 +40,7 @@ import "./lastTurn.css";
  * message round is the captain's words in a soft grey bubble on the right
  * and, under them, the reply as plain type beside the first mate's mark on
  * the left. A card round (./strip, INF-6337's plan) is one 22 px row: the
- * card's glyph and title, a button that opens the card, then the bubble,
+ * card's glyph and title, then the bubble,
  * outlined for a press of the card's button and filled for a typed line,
  * with no reply line. The older round sits above at half strength; while a
  * card is up only the newest shows.
@@ -51,9 +51,10 @@ import "./lastTurn.css";
  * and "Working…" in its reply's place. Working never hides a reply. Becoming the older round starts 15
  * seconds of visible reading time (./lastTurnFade), after which only that
  * round dissolves, even during work; the newest stays until the next round. Each
- * reply line is a button that opens the conversation at that round
- * (./ConversationCard, docs/composer.md "The conversation"), as a press on
- * the round anywhere does unless it selected words; the captain's words
+ * reply line, and a card round's name, is a button that opens the
+ * conversation at that round (./ConversationCard, docs/composer.md "The
+ * conversation"), as a press on the round anywhere does unless it selected
+ * words, so no press on the strip opens a card; the captain's words
  * are plain text. While the conversation is the shown entry the strip is
  * not drawn: the conversation holds the same rounds whole. A line too long for its row ends on its last whole word
  * and an ellipsis, never part way through a word (../design/core/wholeWords);
@@ -170,6 +171,38 @@ function useCuttingRef(
 
 const REPLY_COMMAND_WORDS = KEYBOARD_COMMANDS["firstmate.reply"].label;
 
+/**
+ * A round's one button on the strip, the reply line or a card round's name,
+ * opens the conversation at its round. On the newest round it names Open
+ * the conversation's key in the app's label on rest, after its words when
+ * they are cut short, else after the command's own words (docs/keyboard.md,
+ * "Key hints"). With no `opens` it is no button, and only cut words show.
+ */
+function useOpensConversation(
+  opens: ConversationEntry | undefined,
+  { older, cut, quiet = false }: { older: boolean; cut: string | undefined; quiet?: boolean },
+) {
+  const openConversation = useShellStore((s) => s.openConversation);
+  const keys = useCommandKeys(opens && !older ? "firstmate.reply" : null);
+  const rest = useRestLabel(
+    quiet ? undefined : (cut ?? (opens && keys.keys ? REPLY_COMMAND_WORDS : undefined)),
+    { keys: keys.keys },
+  );
+  const button = opens
+    ? {
+        type: "button" as const,
+        "aria-keyshortcuts": keys["aria-keyshortcuts"],
+        "data-key-command": keys["data-key-command"],
+        onClick: (event: MouseEvent) => {
+          // The round's own press opens it too: one open per press.
+          event.stopPropagation();
+          openConversation(opens);
+        },
+      }
+    : undefined;
+  return { rest, button };
+}
+
 /** The Firstmate's line, swapping its words with a leave and a rise. */
 function MateLine({
   target,
@@ -218,17 +251,13 @@ function MateLine({
   const mateFit = useOverflowTitle(shown ? mateWords : undefined);
   const mateCut = useWholeWords(shown ? mateWords : undefined, LANE);
   const mateRef = useCuttingRef(mateFit.ref, mateCut);
-  const openConversation = useShellStore((s) => s.openConversation);
   // A reply is a button that opens it whole; the working words are not.
   const Bubble = reply ? "button" : "span";
-  // The newest reply's button names the key of Open the conversation
-  // in the app's label on rest, after its words when they are cut short, else
-  // after the command's own words (docs/keyboard.md, "Key hints").
-  const replyKeys = useCommandKeys(reply && !older ? "firstmate.reply" : null);
-  const replyRest = useRestLabel(
-    reply ? (mateFit.title ?? (replyKeys.keys ? REPLY_COMMAND_WORDS : undefined)) : undefined,
-    { keys: replyKeys.keys },
-  );
+  const replyButton = useOpensConversation(reply ? opens : undefined, {
+    older,
+    cut: mateFit.title,
+    quiet: !reply,
+  });
   return (
     <>
       <div className="row mate">
@@ -237,18 +266,8 @@ function MateLine({
             <MateMark working={busy} />
             <span className="line">
               <Bubble
-                {...(reply
-                  ? {
-                      ...replyRest,
-                      type: "button" as const,
-                      "aria-keyshortcuts": replyKeys["aria-keyshortcuts"],
-                      "data-key-command": replyKeys["data-key-command"],
-                      onClick: (event: MouseEvent) => {
-                        // The round's own press opens it too: one open per press.
-                        event.stopPropagation();
-                        openConversation(opens);
-                      },
-                    }
+                {...(replyButton.button
+                  ? { ...replyButton.rest, ...replyButton.button }
                   : { title: mateFit.title })}
                 data-last-turn-bubble="firstmate"
                 data-state={
@@ -284,41 +303,56 @@ function MateLine({
 /** The card a round acted on, as the strip names it. */
 type RoundCard = Pick<ConversationCard, "id" | "title">;
 
-/** Opens the card a round acted on: in front while it is still up, else as a past card. */
-function openRoundCard(cardId: string): void {
-  const shell = useShellStore.getState();
-  if (shell.cards.some((card) => card.id === cardId) && shell.focusCard(cardId)) return;
-  shell.openPastCard(cardId);
-}
-
 /**
- * The card's name before the captain's act on it (INF-6337's plan): a
- * small card glyph and the title, a button that opens the card.
+ * The card's name before the captain's act on it (INF-6337's plan): a small
+ * card glyph and the title. On a card round it is the round's one Tab stop
+ * and opens the conversation at that round, as a reply line does
+ * (INF-6623's plan: no press on the strip opens a card; the conversation's
+ * tile does). Where a message names the card, its reply line is that stop and
+ * the name is plain text.
  */
-function CardName({ card, leaving }: { card: RoundCard; leaving: boolean }) {
+function CardName({
+  card,
+  leaving,
+  older,
+  opens,
+}: {
+  card: RoundCard;
+  leaving: boolean;
+  older: boolean;
+  /** Where the name's press opens the conversation; absent, the name is plain text. */
+  opens?: ConversationEntry;
+}) {
   const fit = useOverflowTitle(leaving ? undefined : card.title);
   const cut = useWholeWords(card.title, LANE);
   const ref = useCuttingRef(fit.ref, cut);
-  const rest = useRestLabel(leaving ? undefined : (fit.title ?? m.shellLastTurnOpenCard()));
-  return (
-    <button
-      {...rest}
-      type="button"
-      className="card-name"
-      data-last-turn-card={card.id}
-      onClick={(event) => {
-        // The round's own press opens the conversation: this one opens the card instead.
-        event.stopPropagation();
-        openRoundCard(card.id);
-      }}
-    >
-      <svg className="glyph" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-        <rect x="1.5" y="2" width="9" height="8" rx="1.5" stroke="currentColor" />
-        <path d="M3.75 5h4.5M3.75 7.25h2.75" stroke="currentColor" strokeLinecap="round" />
-      </svg>
-      <span className="words" data-last-turn-words="" ref={ref}>
-        {card.title}
+  const { rest, button } = useOpensConversation(opens, {
+    older,
+    cut: fit.title,
+    quiet: leaving,
+  });
+  const glyph = (
+    <svg className="glyph" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+      <rect x="1.5" y="2" width="9" height="8" rx="1.5" stroke="currentColor" />
+      <path d="M3.75 5h4.5M3.75 7.25h2.75" stroke="currentColor" strokeLinecap="round" />
+    </svg>
+  );
+  const words = (
+    <span className="words" data-last-turn-words="" ref={ref}>
+      {card.title}
+    </span>
+  );
+  if (!button)
+    return (
+      <span {...rest} className="card-name" data-last-turn-card={card.id}>
+        {glyph}
+        {words}
       </span>
+    );
+  return (
+    <button {...rest} {...button} className="card-name" data-last-turn-card={card.id}>
+      {glyph}
+      {words}
     </button>
   );
 }
@@ -391,7 +425,9 @@ export function LastTurnRound({
             {m.shellLastTurnFromCommand({ command: CAPTAIN_COMMAND })}
           </span>
         ) : null}
-        {card ? <CardName card={card} leaving={leaving} /> : null}
+        {card ? (
+          <CardName card={card} leaving={leaving} older={older} {...(act ? { opens } : {})} />
+        ) : null}
         <span
           data-last-turn-bubble="you"
           data-choice={act === "choice" ? "" : undefined}

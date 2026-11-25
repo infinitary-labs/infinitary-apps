@@ -1,15 +1,23 @@
 import { writeFileSync } from "node:fs";
 import { expect, type Page, test } from "@playwright/test";
-import { TAKEN_BACK_OPENING, TAKEN_BACK_REPLACED } from "../../src/core/orchestrator/captainWakes";
+import { ANSWER_NOTICE_TITLE } from "../../src/core/orchestrator/answerDelivery";
+import {
+  ANSWER_MISSING_OPENING,
+  TAKEN_BACK_OPENING,
+  TAKEN_BACK_REPLACED,
+} from "../../src/core/orchestrator/captainWakes";
 import { takenBackRefusalText } from "../../src/core/orchestrator/takeBack";
 import { waitForFirstmateIdle } from "./crew";
 import { type LaunchedApp, launchApp } from "./launch";
+import { SILENT_ANSWER_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
 import {
+  TAKE_BACK_ALONE_MARKER,
   TAKE_BACK_FILED_MARKER,
   TAKE_BACK_HELD_MARKER,
   TAKE_BACK_UNRELATED_TITLE,
   takeBack,
+  takeBackAlone,
 } from "./scenarios/takeBack";
 
 /**
@@ -30,7 +38,7 @@ test.afterEach(async () => {
 });
 
 async function start(): Promise<LaunchedApp> {
-  launched = await launchApp({ scenarios: [takeBack], withMockProvider: true });
+  launched = await launchApp({ scenarios: [takeBack, takeBackAlone], withMockProvider: true });
   await expect(promptInput(launched.page)).toBeEnabled({ timeout: 30_000 });
   return launched;
 }
@@ -86,6 +94,29 @@ test("a message taken back while its turn reads it files nothing for it", async 
   expect(await task(app.page, title)).toBeUndefined();
   // A call that names no message with ask_id "" goes through.
   expect(await task(app.page, TAKE_BACK_UNRELATED_TITLE)).toBeDefined();
+  expect(await takeBackAsk(app.page, askId)).toEqual({ outcome: "refused", reason: "taken-back" });
+  // Nothing took effect for the message, yet a taken-back message gets no answer retry or notice.
+  expect(requestWith(app, ANSWER_MISSING_OPENING)).toBeUndefined();
+  const cards = await app.page.evaluate(() => window.infinitary.cards.list());
+  expect(cards.map((card) => card.title)).not.toContain(ANSWER_NOTICE_TITLE);
+});
+
+// biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured fixture signature.
+test("a message waiting unread while the first mate answers alone is withdrawn and never served", async ({}, testInfo) => {
+  const app = await start();
+  await send(app.page, `${TAKE_BACK_ALONE_MARKER} ${SILENT_ANSWER_MARKER}`);
+  // The answer retry is served alone and held, so a new message waits on the lane.
+  await expect.poll(() => app.mockProvider?.heldThreadAnswers(), { timeout: 30_000 }).toBe(1);
+  const words = "archive the release notes from last year";
+  await send(app.page, words);
+  const askId = await newestAsk(app.page, words);
+  expect(await takeBackAsk(app.page, askId)).toEqual({ outcome: "withdrawn" });
+  app.mockProvider?.releaseThreadAnswer();
+  await waitForFirstmateIdle(app.page);
+  const bodies = app.mockProvider?.requestBodies() ?? [];
+  writeFileSync(testInfo.outputPath("requests-after-withdraw.json"), JSON.stringify(bodies));
+  expect(bodies.filter((body) => body.includes(words))).toEqual([]);
+  expect(requestWith(app, TAKEN_BACK_OPENING)).toBeUndefined();
   expect(await takeBackAsk(app.page, askId)).toEqual({ outcome: "refused", reason: "taken-back" });
 });
 

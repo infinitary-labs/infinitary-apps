@@ -1866,7 +1866,6 @@
 "phoneCommonSettings" = "設定";
 "phoneCommonTryAgain" = "もう一度試す";
 "phoneComposerAddingPhotos" = "写真を追加中…";
-"phoneComposerCardHint" = "カードを開きます";
 "phoneComposerConversationHint" = "会話を開きます";
 "phoneComposerPhotoFailed" = "この写真を追加できませんでした。別の写真を選んでください。";
 "phoneComposerPhotoTooLarge" = "この写真は大きすぎます。もっと小さい写真を選んでください。";
@@ -4107,7 +4106,6 @@
 "shellKeyReminderHint" = "一度押すとこの表示は出なくなります";
 "shellKeyReminderNotTyping" = "入力中以外";
 "shellLastTurnFromCommand" = "%1$@ から";
-"shellLastTurnOpenCard" = "このカードを開く";
 "shellLastTurnPictureOnly" = "画像";
 "shellLastTurnWorking" = "作業中…";
 "shellMainMessageConnectFirst" = "先にサブスクリプションを接続してください";

@@ -1866,7 +1866,6 @@
 "phoneCommonSettings" = "الإعدادات";
 "phoneCommonTryAgain" = "حاول مجددًا";
 "phoneComposerAddingPhotos" = "جارٍ إضافة الصور…";
-"phoneComposerCardHint" = "يفتح البطاقة";
 "phoneComposerConversationHint" = "يفتح المحادثة";
 "phoneComposerPhotoFailed" = "تعذّرت إضافة هذه الصورة. اختر صورة أخرى.";
 "phoneComposerPhotoTooLarge" = "هذه الصورة كبيرة جدًا. اختر صورة أصغر.";
@@ -4107,7 +4106,6 @@
 "shellKeyReminderHint" = "اضغطه مرة واحدة ولن يظهر هذا بعدها";
 "shellKeyReminderNotTyping" = "في غير أثناء الكتابة";
 "shellLastTurnFromCommand" = "من %1$@";
-"shellLastTurnOpenCard" = "افتح هذه البطاقة";
 "shellLastTurnPictureOnly" = "صورة";
 "shellLastTurnWorking" = "جارٍ العمل…";
 "shellMainMessageConnectFirst" = "اربط اشتراكًا أولًا";

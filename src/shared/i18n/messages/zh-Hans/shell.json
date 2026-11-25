@@ -67,7 +67,6 @@
   "shellKeyReminderHint": "按一次后不再显示",
   "shellKeyReminderNotTyping": "不在打字时",
   "shellLastTurnFromCommand": "来自 {command}",
-  "shellLastTurnOpenCard": "打开这张卡片",
   "shellLastTurnPictureOnly": "一张图片",
   "shellLastTurnWorking": "处理中…",
   "shellMainMessageConnectFirst": "请先连接一个订阅",

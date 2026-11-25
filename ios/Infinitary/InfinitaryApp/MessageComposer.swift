@@ -161,8 +161,8 @@ struct MessageComposer: View {
     /// older at half strength and only the newest while a card is up. A message round is the captain's words in a soft
     /// grey bubble on the right and the first mate's reply beside its mark on the left; while the first mate works, the
     /// newest round's mark turns ember and spins (INF-2483), beside its reply or Working…. A card round (INF-6337's plan)
-    /// is one row: a card glyph and the card's title, which opens the card, then the button's words in an outlined bubble
-    /// or the typed words in the filled one. After 15 seconds of a complete newest round on screen the older round
+    /// is one row: a card glyph and the card's title, then the button's words in an outlined bubble or the typed words in
+    /// the filled one; every press on it opens the Conversation, whose tile opens the card (INF-6623's plan). After 15 seconds of a complete newest round on screen the older round
     /// dissolves and keeps its room, so the input never moves. INF-1846 chose "A quiet glance": 15-point rows, 12 points
     /// between rounds and 12 above the box, one line each. With the box at the top for Apple Pencil only the newest round
     /// shows, card or no card, so a card coming or going never moves the box. Pressing a round anywhere else opens the
@@ -252,7 +252,8 @@ struct MessageComposer: View {
         }
     }
 
-    /// A card round's one row: the card glyph and title on the left, which open the card, and the bubble on the right.
+    /// A card round's one row: the card glyph and title on the left and the bubble on the right, each opening the
+    /// Conversation at the round; the card itself opens from the Conversation's tile (INF-6623's plan).
     /// A round that is not also a message has no reply line, so while it is the newest and the first mate works the row
     /// starts with the spinning mark and no words, at its own height (INF-6365's review, the captain's choice).
     private func cardRow(_ round: PhoneConversationRound, card: PhoneConversationRound.Card, id: String, working: Bool,
@@ -263,19 +264,19 @@ struct MessageComposer: View {
                     .accessibilityElement(children: .ignore).accessibilityLabel(PhoneMessages.phoneComposerWorking())
                     .accessibilityIdentifier("\(id)-card-working")
             }
-            Button { openCard(card.id) } label: {
+            Button(action: open) {
                 HStack(spacing: 6) {
                     Image(systemName: "rectangle.portrait").font(.system(size: 11)).foregroundStyle(PhoneTheme.muted)
                     WholeWordsLine(words: card.title).foregroundStyle(PhoneTheme.secondary)
                 }.frame(minHeight: 28).contentShape(Rectangle())
-            }.buttonStyle(.plain).accessibilityHint(PhoneMessages.phoneComposerCardHint())
+            }.buttonStyle(.plain).accessibilityHint(PhoneMessages.phoneComposerConversationHint())
                 .accessibilityIdentifier("\(id)-card")
             Spacer(minLength: 0)
             bubble(round, id: id, open: open).layoutPriority(1)
         }.frame(maxWidth: .infinity)
     }
 
-    /// A card from a strip row or a Conversation tile, shown on Home: one on the stage comes forward, one put aside comes
+    /// A card from a Conversation tile, shown on Home: one on the stage comes forward, one put aside comes
     /// back first, and an ended one opens as a past card. The Conversation steps away while it shows.
     private func openCard(_ id: String) {
         let leave = {

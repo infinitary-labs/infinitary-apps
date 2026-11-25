@@ -419,7 +419,15 @@ export class CrewSupervisor {
         queueMicrotask(() => this.hooks.pokeInbox?.());
       },
     });
-    this.askEnding = askEndingOf(options.tasks, this.cards, (id) => options.inbox.requestOpen(id));
+    this.askEnding = askEndingOf(
+      options.tasks,
+      this.cards,
+      (id) => options.inbox.requestOpen(id),
+      (id) => {
+        const line = options.inbox.answeredLine(id);
+        return line === undefined ? undefined : options.cardStore.messageById(line)?.cardId;
+      },
+    );
     this.placement = new TaskPlacement(options, {
       now: this.now,
       cards: this.cards,

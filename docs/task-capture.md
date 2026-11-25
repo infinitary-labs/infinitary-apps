@@ -72,7 +72,7 @@ A captain message the first mate read and then did nothing visible about is a hi
 Each message saved from INF-1610 piece 2 on is followed until a card the captain accepts answers it ("How a message ends" below); a message saved before it keeps the older rule, which only checked that at least one action took effect after the first mate read it.
 The host never judges whether an answer is right (`src/core/orchestrator/answerDelivery.ts`, the pure rule and the served words; `askEnding.ts`, how a message stands; `answerDeliveryCheck.ts`, the stateful check; `FirstmateAgent` records the facts).
 
-What the first mate did is recorded where the call succeeds (a typed result, never the words) for every message the running turn had read when it took effect, or, when the call named a message with `ask_id`, for that message alone (`AskCapture.namedAsk`):
+What the first mate did is recorded where the call succeeds (a typed result, never the words) for every message the running turn had read when it took effect, or, when the call named a message with `ask_id`, for that message alone (`AskCapture.namedAsks`); `emit_card`'s `ask_id` may name a list instead, such as a question and the correction sent after it, and the call is then recorded for each message it names:
 
 - a card shown or revised (`emit_card`, the Settings hand-over card, the app's approval card for a held `use_integration` call), with the card's id;
 - the closing words written into the card's replies, for a reply under a first mate card or a done task's kept note (`CardService.recordFirstmateThreadAnswer` returns whether it wrote), with the card's id;
@@ -156,6 +156,8 @@ One module owns the walk (`src/core/tasks/askThreads.ts`, `AskThreads`): the thr
   A captain's message sent while that turn runs waits on the lane for a turn of its own, as during the retry (`AnswerDeliveryCheck.servedAlone`), and parked captain words are served before a waiting answer.
   The turn that reads the answer (a `requested-response` wake) reads the message too (`AnswerDeliveryCheck.adopt`): a follow-up asked or work started in it stays the message's, a card shown in it is shown for the message, and the message is judged when that turn ends, so an answer written only as closing words gets the one retry below.
   Several messages asked of one long task each wait on their own requests and end on their own answers.
+  A crewmate that answers with `reply`'s `response` writes its answer as a line in a card's thread, where the captain reads it: the message is then accepted on that card (`AskEnding` reads `InboxStore.answeredLine`), and the `requested-response` wake names the line and tells the first mate not to write it again.
+  The steer that asks for the response tells the crewmate so, and that an interim line is neither its response nor the captain's answer.
 - **A task's own origin.**
   A task's origin is the message that filed or started it, an automation run, the card whose choice filed it, or the task whose report passed the captain's words on (`threadOrigin`).
   A message or an automation starts a thread of its own: a thread that reaches such a task only through a part, a plan or a merge stops there, so work another message started on top of this one's never ends this message.

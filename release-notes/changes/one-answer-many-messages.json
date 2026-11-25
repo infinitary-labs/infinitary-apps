@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "one-answer-many-messages",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "One question gets one answer",
+      "body": "When you send a question and then a quick correction, one answer from your first mate now covers both. When your first mate passes your question to a crewmate and the crewmate answers on its card, that answer counts too. Before, your first mate could answer the same question a second time.",
+      "noPicture": "This stops a repeated answer in a card's thread; no view or control looks different.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

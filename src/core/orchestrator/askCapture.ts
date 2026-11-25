@@ -105,6 +105,8 @@ export class AskCapture {
     origin?: TurnOrigin | undefined;
     /** Whether the action named its message with `ask_id`, rather than leaving it to the turn. */
     named?: boolean;
+    /** The other messages its `ask_id` named, when one answer answers several. */
+    also?: readonly string[];
   }>();
 
   /**
@@ -161,22 +163,35 @@ export class AskCapture {
    * Pin an action's declared source through awaits, without changing
    * another action's source: the message it addresses, and the automation
    * run, click or report it answers when it named one. `named` says the
-   * action named the message itself with `ask_id`.
+   * action named the message itself with `ask_id`; `also` names the other
+   * messages it named, when one answer answers several.
    */
-  withAsk<T>(askId: string | undefined, action: () => T, origin?: TurnOrigin, named = false): T {
+  withAsk<T>(
+    askId: string | undefined,
+    action: () => T,
+    origin?: TurnOrigin,
+    named = false,
+    also: readonly string[] = [],
+  ): T {
     return this.actionAsk.run(
-      { askId, ...(origin ? { origin } : {}), ...(named ? { named } : {}) },
+      {
+        askId,
+        ...(origin ? { origin } : {}),
+        ...(named ? { named } : {}),
+        ...(also.length ? { also } : {}),
+      },
       action,
     );
   }
 
   /**
-   * The message the running action named with `ask_id`, when it named one:
-   * what it shows or writes is recorded for that message alone (INF-6115).
+   * The messages the running action named with `ask_id`, empty when it named
+   * none: what it shows or writes is recorded for those messages alone
+   * (INF-6115), each of them when one answer answers several (INF-6769).
    */
-  namedAsk(): string | undefined {
+  namedAsks(): readonly string[] {
     const scope = this.actionAsk.getStore();
-    return scope?.named ? scope.askId : undefined;
+    return scope?.named && scope.askId ? [scope.askId, ...(scope.also ?? [])] : [];
   }
 
   /**
@@ -266,13 +281,24 @@ export class AskCapture {
       if (origin) this.tasks.capture.saveOrigin(taskId, origin);
       return false;
     }
-    return this.tasks.capture.attachAsk(
+    const attached = this.tasks.capture.attachAsk(
       ask.id,
       taskId,
       `tool:${tool}` as AskAttachedVia,
       starts,
       tie === "tie",
     );
+    for (const id of this.actionAsk.getStore()?.also ?? []) {
+      if (this.tasks.capture.getAsk(id))
+        this.tasks.capture.attachAsk(
+          id,
+          taskId,
+          `tool:${tool}` as AskAttachedVia,
+          starts,
+          tie === "tie",
+        );
+    }
+    return attached;
   }
 
   /**

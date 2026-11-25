@@ -7,6 +7,7 @@ Each destination gets one format, and nothing is ever sent in two formats.
 | --- | --- |
 | The destination shape and the sender | `UsageReportDestination`, `UsageReporter` (`src/core/usageReport/usageReporter.ts`) |
 | The company's Claude Code setup as a destination | `companyDestination`, `companyUsageDestinations` (`src/core/usageReport/companyDestination.ts`) |
+| The person's reporting connection, and both destinations together | `usageConnection`, `usageReportRoutes` (`src/core/usageReport/usageConnection.ts`); its row, `UsageConnectionRow` (`src/renderer/src/settings/UsageConnectionRow.tsx`) |
 | The two formats, from ledger rows and heard turns | `claudeCodeBodies`, `standardBodies`, `callSpan` (`src/core/usageReport/usageReportFormats.ts`) |
 | The rows it reads | what `UsageStore.record` answers it wrote (`docs/usage.md`, "What the ledger records") |
 | Where it is built and hears turns | `homeUsage` (`src/core/storage/homeUsage.ts`), `EventSeam.attachUsageReport` (`src/core/eventSeam.ts`) |
@@ -16,6 +17,7 @@ Each destination gets one format, and nothing is ever sent in two formats.
 
 A destination is one place the report goes, with exactly one format, the full OTLP/HTTP address of each signal it takes, the headers it asks for per batch, and its own resource attributes (who and which team, as the company set them).
 Its source owns where it comes from and which format it was saved with: a company's Claude Code reporting setup defaults to Claude Code's format, a connection the person adds to the standard one.
+A destination may send its own way (`post`), as the person's connection does through Secrets.
 With no destination, the reporter keeps nothing and sends nothing.
 
 The company's Claude Code reporting setup (`docs/usage.md`, "A company's Claude Code setup") is one destination in Claude Code's format.
@@ -24,6 +26,28 @@ An administrator's managed setup comes first (`readManagedReporting`): Claude's 
 Otherwise the person's own setup is the destination only where the receiver passes Claude's records on to it.
 The setup is read again at most once a minute, when the reporter asks.
 Settings → Usage names this destination's host as where the crew's usage goes; where the setup leaves it none, as over gRPC, its line names the setup's host for Claude work only, which Claude's own client or the receiver still reports there (`reporting`).
+
+## The person's reporting connection
+
+A person adds one reporting connection beside the cost limit in Settings → Intelligence: an OTLP/HTTP address, the headers the tool asks for, and which tool reads it, the standard format by default or Claude Code's.
+Save is the consent to send there, so reporting starts once saved and nothing asks again; Remove stops it, drops what waits and forgets the headers.
+The address is reached the way an MCP server's is (`docs/integrations.md`): its network class is read from every DNS answer on Save (`classifyCustomApiAddresses`) and held on every send (`guardedMcpFetch`), plain http only reaches a tool on this computer, an https address is checked against the normal certificate roots that ship with the app rather than the computer's trusted list, and a signal's own address, such as `…/v1/traces`, saves as the base it sits under.
+Header names and values follow a custom API's rules (`assertCustomHeaders`).
+Each header value is a hidden Secrets entry marked as the connection's (`consumer` `usage-report`; `docs/secrets.md`, "App sign-ins"), and `userData/usage-connection.json` keeps only the address, its network class, the format and each header's name and reference.
+An edit at the same address keeps a header whose value is left blank; a new address takes every value again.
+A save that changes the address or the format drops what waits, which was built for the old one; an edit of the headers alone keeps it, and it leaves with the new headers.
+A computer without Secrets saves a connection only without headers.
+
+The connection batches for ten minutes rather than five seconds, merging the reporter's batches into one request per signal, because every send with headers is one brokered use, and each use writes a line to Secrets' history, which is kept until the person deletes it; at quit the app waits for the last sends, the reporter's and then the connection's, for at most five seconds in all (`QUIT_SEND_MS`), so a collector that answers gets what waited and one that never answers holds quit no longer.
+Its broker (`usage-report`) declares `signIn`, binds the saved address and each signal's body by digest, applies the headers inside Secrets and answers each signal's HTTP status; a body never reaches the journal.
+A connection without headers sends through the same guarded fetch with no use.
+A connection in Claude Code's format also carries Claude's own work, from the ledger rather than Claude's records (`claudeFromLedger`), since nothing passes Claude's records on to it; those rows have no line or commit counts.
+Each record carries the person's Claude Code sign-in email as `user.email`, in either format, when this computer has one, so a tool's per-person view counts their work; the email is read again every minute.
+Prompts and outputs are not sent.
+
+When the company setup (`companyDestination`) already sends to the same host, the connection leaves out what that setup carries, so a tool never counts it twice: nothing at all when the setup is the company's HTTP destination for every row, and Claude's work (`withoutClaude`) when the host is the one Claude's own reports go to.
+Hosts are compared by name without the port, since one collector often listens on two.
+Settings → Usage adds a line naming the connection's host (`reporting`'s `connection`).
 
 ## The two formats
 
@@ -52,7 +76,7 @@ A turn that never ends, such as a session that crashed, is forgotten after six h
 The reporter runs on the computer that keeps the ledger, whichever computer the session ran on.
 A batch goes five seconds after its first row or span, as Claude's client batches its own reports, and once more as the app stops.
 Each signal is one OTLP/HTTP JSON request with the destination's headers, over connections kept open between batches; redirects are not followed and a request gives up after ten seconds.
-A secure signal goes the way Claude's forward sends to a company collector (`collectorAgent`, `postOtlpHttp`; `docs/usage.md`, "Certificates"): with the certificate files its source names for it, or else checked against the computer's trusted list, so a collector on a company's own certificate authority, or one that takes only client certificates, gets every provider's work as it gets Claude's; a relative file path resolves against the folder the app runs in.
+A secure signal the reporter posts itself, to a company setup's collector, goes the way Claude's forward sends to a company collector (`collectorAgent`, `postOtlpHttp`; `docs/usage.md`, "Certificates"): with the certificate files its source names for it, or else checked against the computer's trusted list, so a collector on a company's own certificate authority, or one that takes only client certificates, gets every provider's work as it gets Claude's; a relative file path resolves against the folder the app runs in.
 The kept connections are made again when a certificate file changes, even at the same path, so a certificate renewed in place is sent from the next batch; the old connections close once idle, so a batch in flight on one finishes.
 A refused or unreachable destination drops that batch with one log line naming its host and the HTTP status or failure (`secure-connection` where the connection could not be made secure), never a header value; recording a row never waits on the network.
 A signal a setup sends over gRPC takes no JSON request, so its source offers no address for it; a signal set to `http/protobuf` takes the JSON body at the same address, which the OpenTelemetry Collector accepts.

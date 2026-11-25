@@ -420,7 +420,8 @@ export class NextMove {
   }
 }
 
-function startedBuilding(record: TaskRecord): boolean {
+/** Work that started building: a started part that delivers no answer and is no delivery step. */
+export function startedBuilding(record: TaskRecord): boolean {
   return (
     record.kind === "work" &&
     record.startedAt != null &&

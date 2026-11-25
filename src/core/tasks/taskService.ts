@@ -824,6 +824,11 @@ export class TaskService {
     return this.writer.events.latestAt(id, "report");
   }
 
+  /** When a turn of the task last failed at its provider (`TaskTurns.recordTurnFailure`). */
+  lastFailureAt(id: string): number | undefined {
+    return this.writer.events.latestAt(id, "failed");
+  }
+
   /**
    * The events other tasks wrote that concern this one, in timeline order,
    * each with how its task stands to this one (docs/task-record.md, "Whom

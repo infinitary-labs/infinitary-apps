@@ -59950,7 +59950,7 @@
     },
     "inf:projects:tag-checks": {
       "effect": "read",
-      "reach": "views",
+      "reach": "home",
       "request": {
         "type": "array",
         "prefixItems": [

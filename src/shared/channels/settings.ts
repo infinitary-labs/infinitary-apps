@@ -56,11 +56,12 @@ export const settingsChannels = {
   // Check existing tasks (docs/task-tags.md, `tag-check.md`): each project
   // with tags, or the one named with the tags to count for, as its Tags
   // group draws it. Settings and the first mate's `project-tag-check` line
-  // read it.
+  // read it. It stays home's, as the tag changes beside it do: a paired
+  // view could read a check here but neither start nor stop one.
   "inf:projects:tag-checks": {
     effect: "read",
     surface: "core",
-    reach: "views",
+    reach: "home",
     request: z.tuple([tagCheckReadSchema.optional()]),
     response: z.array(tagCheckViewSchema),
   },

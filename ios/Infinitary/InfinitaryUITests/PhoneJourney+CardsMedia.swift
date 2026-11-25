@@ -210,6 +210,11 @@ extension PhoneJourney {
         let atDisconnect = try await home("card-state", method: "GET")
         let bodyButton = app.webViews.buttons["Choose from the body"]
         reveal(bodyButton); tapOnPhone(bodyButton)
+        // INF-6677: the phone answers the body's choice out of reach with its refusal, so the tap reached the choice and
+        // not the log button above it, whose open reader then took the tap made after reconnecting.
+        let refused = app.staticTexts.matching(identifier: "card-notice")
+            .matching(NSPredicate(format: "label == %@", "Your computer is out of reach. Nothing will be sent later.")).firstMatch
+        XCTAssertTrue(refused.waitForPresence(timeout: 10), app.debugDescription)
         picture("card-out-of-reach")
         _ = try await home("online")
         reach("Live", timeout: 20)

@@ -437,10 +437,7 @@ import XCTest
         // far the card starts from it; the card's scroll ends, so the drags do too. A try is a drag that moved nothing, or a swipe.
         var tries = 0
         while tries < 8 {
-            // INF-1651: after the card moves, iOS 27.0 reports a body element's frame one layout behind, partly outside
-            // the body, until the card scrolls. A control's own frame can overhang the body by a point.
-            let stale = body.exists && body.frame.intersects(element.frame)
-                && !body.frame.insetBy(dx: -2, dy: -2).contains(element.frame)
+            let stale = readsStale(element, in: body)
             // A body element reads hittable even where the card's scroller clips it, as under the pinned footer, whose reply
             // field a press there focused on iPhone. So a body element is first moved inside the scroller.
             // INF-4607: the scroller runs under the top bar, which takes a press there, so only the part below the bar's foot
@@ -478,6 +475,26 @@ import XCTest
                        withVelocity: XCUIGestureVelocity(rawValue: 1000), thenHoldForDuration: 0)
         }
         XCTAssertTrue(element.isHittable, app.debugDescription)
+        XCTAssertFalse(readsStale(element, in: body),
+                       "\(element) reads at \(element.frame), where the card body at \(body.frame) no longer draws it")
+    }
+
+    /// INF-1651, INF-6677: iOS 27.0 reads every element of the card body's page through one screen transform that it does
+    /// not take again as the card moves, until something such as a scroll of the card refreshes it. After the card turned
+    /// to its face and the reach line pushed it down, the page still read through a transform taken mid-turn, narrower
+    /// than the card and above it, so a control's frame lay wholly inside the body yet away from the control: the tap on
+    /// "Choose from the body" pressed the log button above it. The host draws the body in one frame titled "Card body",
+    /// full width at the page's top-left, so that frame lies on the web view's own whenever the transform is current;
+    /// WebKit gives it whole points, within a point of the web view's place. An element that frame holds while the frame
+    /// lies elsewhere reads stale, and so does one overhanging the body by more than a control's own point.
+    func readsStale(_ element: XCUIElement, in body: XCUIElement) -> Bool {
+        guard body.exists, element.exists else { return false }
+        let page = body.otherElements.matching(NSPredicate(format: "label == %@", "Card body")).firstMatch
+        if page.exists, page.frame.intersects(element.frame) {
+            let (drawn, view) = (page.frame, body.frame)
+            if abs(drawn.minX - view.minX) > 2 || abs(drawn.minY - view.minY) > 2 || abs(drawn.width - view.width) > 2 { return true }
+        }
+        return body.frame.intersects(element.frame) && !body.frame.insetBy(dx: -2, dy: -2).contains(element.frame)
     }
 
     func waitUntilEnabled(_ element: XCUIElement) {

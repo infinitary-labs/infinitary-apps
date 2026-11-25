@@ -1,5 +1,5 @@
 ---
-source: 454b7a23fdc82430
+source: ea34c1740306756c
 title: Configuración
 description: Lo que contiene cada sección de Configuración, con General y Apariencia explicadas aquí y un enlace para el resto.
 ---
@@ -10,8 +10,8 @@ Las flechas arriba y abajo se mueven entre ellas, y Escape o **Atrás** salen de
 
 También puedes pedirle a tu primer oficial que cambie una opción por ti, como «cambia al tema claro» o «activa la música ambiental».
 
-<img class="picture-dark" src="/pictures/settings-dark.webp" alt="Configuración abierta en General: las doce secciones a la izquierda, de General a Devices, y las filas Start at login, Show in dock, notificaciones, Dictation, Your panels y Purge task data." width="1024" height="559" />
-<img class="picture-light" src="/pictures/settings-light.webp" alt="Configuración abierta en General: las doce secciones a la izquierda, de General a Devices, y las filas Start at login, Show in dock, notificaciones, Dictation, Your panels y Purge task data." width="1024" height="559" />
+<img class="picture-dark" src="/pictures/settings-dark.webp" alt="Configuración abierta en General: las doce secciones a la izquierda, de General a Devices, y las filas Start at login, Show in dock, notificaciones, Dictation, Your panels, Purge task data y Reset Infinitary." width="1040" height="661" />
+<img class="picture-light" src="/pictures/settings-light.webp" alt="Configuración abierta en General: las doce secciones a la izquierda, de General a Devices, y las filas Start at login, Show in dock, notificaciones, Dictation, Your panels, Purge task data y Reset Infinitary." width="1040" height="661" />
 
 ## Las secciones {#the-sections}
 
@@ -43,7 +43,12 @@ Consulta [Tus otras computadoras](/es/your-other-computers/).
   Consulta [El primer oficial](/es/the-first-mate/#talk-instead-of-typing).
 - **Tus paneles** retira todos los paneles que tu primer oficial construyó para ti, y los que agregaste, hasta que lo vuelvas a activar.
 - **Eliminar los datos de las tareas** quita todas las tareas, con su copia de trabajo, sus notas y sus tarjetas, y el conocimiento que registró tu tripulación.
+  Tus proyectos, inicios de sesión y configuración se conservan.
   Presiona **Eliminar** y luego **Confirmar la eliminación**.
+- **Restablecer Infinitary** devuelve Infinitary en esta computadora al estado en que quedó al instalarlo.
+  Elimina todo lo que Infinitary guarda aquí, incluidas las tareas, los inicios de sesión, los Secretos, la configuración y los dispositivos vinculados, mientras que los proyectos en tus propias carpetas conservan todos sus archivos y commits.
+  Presiona **Restablecer**, luego **Restablecer Infinitary**, y confirma que eres tú como te lo pida tu computadora.
+  Consulta [Restablecer Infinitary](/es/update-and-remove/#reset-infinitary).
 - **Compartir** contiene el interruptor **Diagnósticos**, una línea sobre lo que nos dice la búsqueda de actualizaciones diga lo que diga ese interruptor, y **Lo que saldría de esta computadora**.
   Consulta [Lo que sale de tu computadora](/es/what-leaves-your-computer/#diagnostics-the-one-switch-that-sends-to-us).
 - **Versión** nombra la versión que usas, y vuelve a abrir cada nota de versión que se te mostró.
@@ -84,9 +89,18 @@ Algunas partes de Infinitary todavía se muestran en inglés.
 
 ### Sonido {#sound}
 
-**Música ambiental** reproduce lofi tranquilo hecho en tu computadora.
+**Música ambiental** reproduce música tranquila hecha en tu computadora mientras suena, así que nunca se repite.
 Sigue a la tripulación, y suena cuando algo te espera.
-Está desactivada hasta que la activas, y **Volumen** define qué tan fuerte suena.
+Está desactivada hasta que la activas.
+
+- **Estilo** elige la música, entre diez estilos de cuatro tipos: **Espacio**, **Piratas**, **Náutico** e **Isla**.
+  Empieza en **Sueño criogénico**.
+- **Tu propia música** tiene **Describe la tuya**, que empieza un mensaje para tu primer oficial.
+  Describe la música que quieres, y tu primer oficial la escribe como un estilo, en la lista **Tuyos** de **Estilo**.
+  **Quitar** aparece mientras está elegido uno de tus propios estilos, y lo saca de la lista.
+- **Volumen** define qué tan fuerte suena la música.
+- **Pausar cuando no estés**, en una Mac o una PC con Windows, pausa la música mientras tu pantalla está apagada o bloqueada, para que no mantenga despierta tu computadora.
+  Vuelve a sonar cuando regresas, y está activado hasta que lo desactivas.
 
 Un botón de sonido aparece justo antes de **Configuración**, en la parte superior de la ventana, esté la música activada o desactivada.
 Presiónalo para activar o desactivar la música; el interruptor **Música ambiental** cambia con él.

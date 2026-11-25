@@ -1,5 +1,5 @@
 ---
-source: 5a44a232aea453c9
+source: b49e11a26445efba
 title: 문제 해결
 description: Infinitary에서 자주 생기는 문제와, 각 문제에서 앱이 보여 주는 말, 그리고 할 일이에요.
 ---
@@ -95,6 +95,32 @@ Mac에서는 그 Mac 앞에 있는 사람이 허용하기 전까지 macOS가 Inf
 먼저 잠시 기다리세요.
 계속 멈춰 있으면 Infinitary를 종료하고 다시 여세요.
 일등항해사나 선원이 다 처리하지 못한 메시지는 다시 열 때 이어서 처리돼요.
+
+## Infinitary를 시작하지 못했어요 {#infinitary-could-not-start}
+
+Infinitary가 시작을 마치기 전에 두 번 멈추면, "Infinitary를 시작하지 못했어요"라는 제목의 화면이 나타나요.
+화면에는 "시작을 마치기 전에 두 번 멈췄어요. 저장된 작업은 바뀌지 않았어요."라고 적혀 있어요.
+
+- **다시 시도**는 Infinitary를 한 번 더 시작해요.
+- **Infinitary 재설정**은 처음 설치한 것처럼 새로 시작해요.
+  먼저 물어보고, **모두 유지**를 누르면 돌아가요. 그다음 컴퓨터가 본인임을 확인해요.
+  Infinitary가 이 컴퓨터에 보관한 모든 것을 지우지만, 내 폴더에 있는 프로젝트는 모든 파일과 커밋이 그대로 남아요.
+- **종료**는 화면을 닫고, 다음에 Infinitary를 시작하면 이 화면이 다시 나타나요.
+
+저장된 작업을 열 수 없을 때 Infinitary가 보여 주는 화면에도 **Infinitary 재설정**이 있어요.
+재설정이 무엇을 지우는지는 [Infinitary 재설정하기](/ko/update-and-remove/#reset-infinitary)를 보세요.
+
+### 터미널에서 재설정하기 {#reset-from-a-terminal}
+
+창이 전혀 열리지 않으면, Infinitary를 종료하고 터미널에서 다음을 실행하세요:
+
+```sh
+infinitary reset
+```
+
+Mac에서는 `/Applications/Infinitary.app/Contents/MacOS/Infinitary`를 `infinitary` 대신 입력하고, AppImage라면 파일의 경로를 입력하세요.
+컴퓨터가 본인임을 확인하면, 명령이 "Infinitary를 재설정했어요. 다음에 열면 환영 화면이 나와요."라고 답해요.
+이 컴퓨터에서 Infinitary가 열려 있거나 확인하지 않으면, 명령은 아무것도 재설정하지 않았다고 알려 줘요.
 
 ## macOS가 다른 앱의 데이터에 대해 물을 때 {#macos-asks-about-other-apps-data}
 

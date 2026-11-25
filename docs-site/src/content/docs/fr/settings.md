@@ -1,5 +1,5 @@
 ---
-source: 454b7a23fdc82430
+source: ea34c1740306756c
 title: Réglages
 description: Ce que contient chaque section des Réglages, avec Général et Apparence expliqués ici et un lien pour le reste.
 ---
@@ -10,8 +10,8 @@ Les flèches haut et bas passent de l’une à l’autre, et Escape ou **Retour*
 
 Vous pouvez aussi demander à votre second de changer un réglage pour vous, par exemple « passe au thème clair » ou « active la musique d’ambiance ».
 
-<img class="picture-dark" src="/pictures/settings-dark.webp" alt="Les Réglages ouverts sur Général : les douze sections sur la gauche, de Général à Appareils, et les lignes Ouvrir à la connexion, Afficher dans le Dock, notification, Dictée, Vos panneaux et Effacer les données des tâches." width="1024" height="559" />
-<img class="picture-light" src="/pictures/settings-light.webp" alt="Les Réglages ouverts sur Général : les douze sections sur la gauche, de Général à Appareils, et les lignes Ouvrir à la connexion, Afficher dans le Dock, notification, Dictée, Vos panneaux et Effacer les données des tâches." width="1024" height="559" />
+<img class="picture-dark" src="/pictures/settings-dark.webp" alt="Les Réglages ouverts sur Général : les douze sections sur la gauche, de Général à Appareils, et les lignes Ouvrir à la connexion, Afficher dans le Dock, notification, Dictée, Vos panneaux, Effacer les données des tâches et Réinitialiser Infinitary." width="1040" height="661" />
+<img class="picture-light" src="/pictures/settings-light.webp" alt="Les Réglages ouverts sur Général : les douze sections sur la gauche, de Général à Appareils, et les lignes Ouvrir à la connexion, Afficher dans le Dock, notification, Dictée, Vos panneaux, Effacer les données des tâches et Réinitialiser Infinitary." width="1040" height="661" />
 
 ## Les sections {#the-sections}
 
@@ -43,7 +43,12 @@ Voir [Vos autres ordinateurs](/fr/your-other-computers/).
   Voir [Le second](/fr/the-first-mate/#talk-instead-of-typing).
 - **Vos panneaux** retire chaque panneau que votre second a construit pour vous, et ceux que vous avez ajoutés, jusqu’à ce que vous le réactiviez.
 - **Effacer les données des tâches** supprime chaque tâche, avec sa copie de travail, ses notes et ses cartes, ainsi que les connaissances enregistrées par votre équipage.
+  Vos projets, connexions et réglages restent.
   Appuyez sur **Effacer**, puis sur **Confirmer l’effacement**.
+- **Réinitialiser Infinitary** remet Infinitary sur cet ordinateur dans l’état où il était juste après l’installation.
+  Il supprime tout ce qu’Infinitary garde ici, y compris les tâches, les connexions, les Secrets, les réglages et les appareils jumelés, tandis que les projets dans vos propres dossiers gardent tous leurs fichiers et commits.
+  Appuyez sur **Réinitialiser**, puis sur **Réinitialiser Infinitary**, et confirmez que c’est bien vous, comme votre ordinateur le demande.
+  Voir [Réinitialiser Infinitary](/fr/update-and-remove/#reset-infinitary).
 - **Partage** contient l’interrupteur **Diagnostics**, une ligne sur ce que nous apprend la recherche de mises à jour quel que soit cet interrupteur, et **Ce qui quitterait cet ordinateur**.
   Voir [Ce qui quitte votre ordinateur](/fr/what-leaves-your-computer/#diagnostics-the-one-switch-that-sends-to-us).
 - **Version** nomme la version que vous utilisez, et rouvre chaque note de version qui vous a été montrée.
@@ -84,9 +89,18 @@ Certaines parties d’Infinitary s’affichent encore en anglais.
 
 ### Son {#sound}
 
-**Musique d’ambiance** joue une musique lofi calme créée sur votre ordinateur.
+**Musique d’ambiance** joue une musique calme créée sur votre ordinateur au fil de l’écoute, si bien qu’elle ne tourne jamais en boucle.
 Elle suit l’équipage, et sonne quand quelque chose vous attend.
-Elle est désactivée jusqu’à ce que vous l’activiez, et **Volume** règle son niveau.
+Elle est désactivée jusqu’à ce que vous l’activiez.
+
+- **Style** choisit la musique, parmi dix styles de quatre genres : **Espace**, **Pirates**, **Marine** et **Île**.
+  Il commence sur **Sommeil cryogénique**.
+- **Votre propre musique** comporte **Décrire la vôtre**, qui commence un message pour votre second.
+  Décrivez la musique que vous voulez, et votre second l’écrit comme un style, listé sous **Les vôtres** dans **Style**.
+  **Supprimer** s’affiche tant que l’un de vos propres styles est choisi, et le retire de la liste.
+- **Volume** règle le niveau de la musique.
+- **Mettre en pause en votre absence**, sur un Mac ou un PC Windows, met la musique en pause tant que votre écran est éteint ou verrouillé, pour qu’elle ne garde pas votre ordinateur éveillé.
+  Elle reprend à votre retour, et ce réglage est activé jusqu’à ce que vous le désactiviez.
 
 Un bouton de son se trouve juste avant **Réglages** en haut de la fenêtre, que la musique soit activée ou non.
 Appuyez dessus pour activer ou désactiver la musique ; l’interrupteur **Musique d’ambiance** suit.

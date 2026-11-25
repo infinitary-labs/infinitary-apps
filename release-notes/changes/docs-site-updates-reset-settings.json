@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "docs-site-updates-reset-settings",
+      "reason": "Brings the documentation site's Update and remove, Troubleshooting and Settings pages and the Settings picture up to date in every language, covering how your other computers update, Reset Infinitary, the screen shown when Infinitary could not start and the Sound rows; nothing in the app changes."
+    }
+  ]
+}

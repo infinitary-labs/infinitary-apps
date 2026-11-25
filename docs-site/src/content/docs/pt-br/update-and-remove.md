@@ -1,5 +1,5 @@
 ---
-source: 81c1b11c48b639fa
+source: f96837d901679136
 title: Atualizar e remover o Infinitary
 description: Como cada tipo de instalação recebe uma nova versão estável e como remover o Infinitary mantendo seu trabalho salvo.
 ---
@@ -67,11 +67,23 @@ O aviso então mostra um comando que instala a mesma versão manualmente.
 ## Seus outros computadores e seu celular {#your-other-computers-and-your-phone}
 
 Um computador que você adicionou é atualizado a partir do computador onde fica o seu imediato.
-Em Ajustes → **Dispositivos**, um computador em outra versão mostra **Atualizar** na linha dele.
-Ele recebe a versão deste computador, e o trabalho em andamento dele para por um momento e continua depois.
+Quando ele se conecta em uma versão mais antiga, recebe sozinho a versão desse computador.
+O trabalho em andamento dele é salvo primeiro e continua depois.
+Quando ele não consegue se atualizar sozinho, por exemplo porque a atualização pede uma senha lá, um cartão pergunta a você.
+Em Ajustes → **Dispositivos**, um computador em outra versão mostra **Igualar** na linha dele.
+Aperte para levar esse computador à versão deste computador, seja ela mais nova ou mais antiga.
 
-Em um computador que controla o seu imediato, Ajustes → **Geral** tem uma linha para o Infinitary no computador onde fica o seu imediato.
-Quando esse computador tiver uma atualização pronta, aperte **Atualizar** seguido do nome dele para iniciar a atualização de onde você está.
+O app aberto em um computador que controla o seu imediato segue a mesma versão.
+Quando ele é mais antigo, obtém essa versão sozinho e reinicia nela quando ninguém o estiver usando lá.
+A linha dele em Ajustes → **Dispositivos** diz até onde ele chegou, e **Atualizar app** obtém a versão na hora.
+As palavras digitadas lá e ainda não enviadas seguram o reinício até serem enviadas ou apagadas.
+Quando esse app não consegue se atualizar sozinho, como uma cópia do Homebrew, a linha dele e um cartão dizem o que fazer lá.
+
+De um computador que controla o seu imediato, você também pode atualizar o computador onde fica o seu imediato.
+Ajustes → **Geral** tem uma linha para o Infinitary nesse computador.
+Quando esse computador tiver uma atualização pronta, aperte **Atualizar** seguido do nome dele.
+O Infinitary pergunta primeiro: ele nomeia o trabalho em andamento que termina antes do reinício e diz que alguém precisa estar nesse computador se a nova versão não iniciar.
+Enquanto esse trabalho é salvo, **Atualizar mais tarde** deixa a atualização para depois.
 Seu celular também pode iniciar essa atualização, depois de perguntar a você primeiro.
 Veja [Seus outros computadores](/pt-br/your-other-computers/) e [iPhone e iPad](/pt-br/iphone-and-ipad/).
 
@@ -95,7 +107,27 @@ Estes excluem essa pasta, e o que o Infinitary guardava nela vai junto:
 - `brew uninstall --zap`.
 - Um app desinstalador que também remove os arquivos de suporte de um app.
 - Mover a própria pasta para o Lixo, ou excluí-la.
+- **Redefinir o Infinitary**, que existe para recomeçar do zero: veja [Redefinir o Infinitary](#reset-infinitary).
 
 Em um computador que roda trabalho para outro, essa pasta guarda a chave do próprio computador, as cópias de trabalho dele e os arquivos das tarefas dele.
 Sem ela, o computador entra de novo como uma entrada nova, e o trabalho que ele ainda não tinha trazido fica perdido.
 Veja [Um computador aparece duas vezes](/pt-br/troubleshooting/#a-computer-is-listed-twice).
+
+## Redefinir o Infinitary {#reset-infinitary}
+
+**Redefinir o Infinitary**, uma linha em Ajustes → **Geral**, deixa o Infinitary neste computador como estava logo depois de instalado, e mantém o app.
+Ele apaga tudo o que o Infinitary guarda neste computador, incluindo tarefas, logins, Segredos, ajustes e dispositivos pareados.
+Os projetos nas suas próprias pastas mantêm todos os arquivos e commits.
+Para apagar só as tarefas, use **Excluir dados das tarefas**, a linha acima dela.
+
+1. Aperte **Redefinir**.
+   O Infinitary diz o que apaga e quantas tarefas abertas param.
+2. Aperte **Redefinir o Infinitary**, ou **Manter tudo** para não mudar nada.
+3. Confirme que é você do jeito que seu computador pedir, por exemplo com Touch ID ou sua senha.
+4. O Infinitary encerra e depois abre na tela de boas-vindas, como se tivesse acabado de ser instalado.
+
+Um computador que roda trabalho para outro sai desse outro como parte da redefinição.
+Em um computador que controla o seu imediato, a linha redefine o Infinitary nos dois computadores: este e o computador onde fica o seu imediato.
+Se aquele computador não responder, nada é redefinido em nenhum dos dois.
+
+Quando o Infinitary não consegue abrir, você ainda pode redefini-lo: veja [O Infinitary não conseguiu iniciar](/pt-br/troubleshooting/#infinitary-could-not-start).

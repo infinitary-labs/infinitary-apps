@@ -9,8 +9,8 @@ The up and down arrows move between them, and Escape or **Back** leaves Settings
 
 You can also ask your first mate to change a setting for you, such as "switch to the light theme" or "turn on ambient music".
 
-<img class="picture-dark" src="/pictures/settings-dark.webp" alt="Settings open on General: the twelve sections down the left, from General to Devices, and the Start at login, Show in dock, notification, Dictation, Your panels and Purge task data rows." width="1024" height="559" />
-<img class="picture-light" src="/pictures/settings-light.webp" alt="Settings open on General: the twelve sections down the left, from General to Devices, and the Start at login, Show in dock, notification, Dictation, Your panels and Purge task data rows." width="1024" height="559" />
+<img class="picture-dark" src="/pictures/settings-dark.webp" alt="Settings open on General: the twelve sections down the left, from General to Devices, and the Start at login, Show in dock, notification, Dictation, Your panels, Purge task data and Reset Infinitary rows." width="1040" height="661" />
+<img class="picture-light" src="/pictures/settings-light.webp" alt="Settings open on General: the twelve sections down the left, from General to Devices, and the Start at login, Show in dock, notification, Dictation, Your panels, Purge task data and Reset Infinitary rows." width="1040" height="661" />
 
 ## The sections
 
@@ -42,7 +42,12 @@ See [Your other computers](/your-other-computers/).
   See [The first mate](/the-first-mate/#talk-instead-of-typing).
 - **Your panels** takes down every panel your first mate built for you, and the ones you added, until you turn it back on.
 - **Purge task data** removes every task, with its working copy, its notes and its cards, and the knowledge your crew recorded.
+  Your projects, sign-ins and settings stay.
   Press **Purge**, then **Confirm purge**.
+- **Reset Infinitary** takes Infinitary on this computer back to how it was just installed.
+  It deletes everything Infinitary keeps here, including tasks, sign-ins, Secrets, settings and paired devices, while projects in your own folders keep every file and commit.
+  Press **Reset**, then **Reset Infinitary**, and confirm it is you the way your computer asks.
+  See [Reset Infinitary](/update-and-remove/#reset-infinitary).
 - **Sharing** holds the **Diagnostics** switch, a line on what the update check tells us whatever that switch says, and **What would leave this computer**.
   See [What leaves your computer](/what-leaves-your-computer/#diagnostics-the-one-switch-that-sends-to-us).
 - **Version** names the version you run, and opens each release note you were shown again.
@@ -83,9 +88,18 @@ Some parts of Infinitary still show English.
 
 ### Sound
 
-**Ambient music** plays calm lofi made on your computer.
+**Ambient music** plays calm music made on your computer as it plays, so it never loops.
 It follows the crew, and chimes when something waits for you.
-It is off until you turn it on, and **Volume** sets how loud it plays.
+It is off until you turn it on.
+
+- **Style** chooses the music, from ten styles in four kinds: **Space**, **Pirate**, **Nautical** and **Island**.
+  It starts on **Cold sleep**.
+- **Your own music** has **Describe your own**, which starts a message to your first mate.
+  Describe the music you want, and your first mate writes it as a style, listed under **Yours** in **Style**.
+  **Remove** shows while one of your own styles is chosen, and takes it off the list.
+- **Volume** sets how loud the music plays.
+- **Pause when you're away**, on a Mac or a Windows PC, pauses the music while your screen is off or locked, so it does not keep your computer awake.
+  It plays again when you are back, and it is on until you turn it off.
 
 A sound button sits just before **Settings** at the top of the window, whether the music is on or off.
 Press it to turn the music on or off; the **Ambient music** switch turns with it.

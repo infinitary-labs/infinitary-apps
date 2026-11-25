@@ -1,5 +1,5 @@
 ---
-source: 5a44a232aea453c9
+source: b49e11a26445efba
 title: Dépannage
 description: Les problèmes courants dans Infinitary, les mots que l’app affiche pour chacun et ce qu’il faut faire.
 ---
@@ -95,6 +95,32 @@ Voir [Ce qui supprime votre travail enregistré](/fr/update-and-remove/#what-del
 Attendez d’abord un instant.
 Si elle reste bloquée, quittez Infinitary et rouvrez-le.
 Les messages que votre second ou un équipier n’avait pas fini de traiter sont repris à l’ouverture.
+
+## Infinitary n’a pas pu démarrer {#infinitary-could-not-start}
+
+Après deux démarrages qui se sont arrêtés avant qu’Infinitary ait fini de démarrer, il affiche un écran intitulé « Infinitary n’a pas pu démarrer ».
+L’écran indique : « Il s’est arrêté deux fois avant d’avoir fini de démarrer. Votre travail enregistré n’a pas été modifié. »
+
+- **Réessayer** démarre Infinitary une fois de plus.
+- **Réinitialiser Infinitary** repart comme s’il venait d’être installé.
+  Il demande d’abord, avec **Tout garder** pour revenir en arrière, puis votre ordinateur confirme que c’est bien vous.
+  Il supprime tout ce qu’Infinitary garde sur cet ordinateur, tandis que les projets dans vos propres dossiers gardent tous leurs fichiers et commits.
+- **Quitter** ferme l’écran, qui s’affiche de nouveau au prochain démarrage d’Infinitary.
+
+Les écrans qu’Infinitary affiche quand il ne peut pas ouvrir votre travail enregistré proposent aussi **Réinitialiser Infinitary**.
+Voir [Réinitialiser Infinitary](/fr/update-and-remove/#reset-infinitary) pour ce qu’une réinitialisation supprime.
+
+### Réinitialiser depuis un terminal {#reset-from-a-terminal}
+
+Quand aucune fenêtre ne s’ouvre, quittez Infinitary et exécutez ceci dans un terminal :
+
+```sh
+infinitary reset
+```
+
+Sur un Mac, tapez `/Applications/Infinitary.app/Contents/MacOS/Infinitary` à la place de `infinitary`, et pour une AppImage, tapez le chemin du fichier.
+Votre ordinateur confirme que c’est bien vous, et la commande répond : « Infinitary est réinitialisé. Il s’ouvrira sur l’écran d’accueil la prochaine fois. »
+Tant qu’Infinitary est ouvert sur cet ordinateur, ou quand vous ne confirmez pas, la commande indique que rien n’a été réinitialisé.
 
 ## macOS pose une question sur les données d’autres apps {#macos-asks-about-other-apps-data}
 

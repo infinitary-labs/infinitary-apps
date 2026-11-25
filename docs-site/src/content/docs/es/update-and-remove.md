@@ -1,5 +1,5 @@
 ---
-source: 81c1b11c48b639fa
+source: f96837d901679136
 title: Actualizar y quitar Infinitary
 description: Cómo recibe cada tipo de instalación una nueva versión estable, y cómo quitar Infinitary conservando tu trabajo guardado.
 ---
@@ -67,11 +67,23 @@ El aviso muestra entonces un comando que instala la misma versión a mano.
 ## Tus otras computadoras y tu teléfono {#your-other-computers-and-your-phone}
 
 Una computadora que agregaste se actualiza desde la computadora donde vive tu primer oficial.
-En Configuración → **Dispositivos**, una computadora con otra versión muestra **Actualizar** en su fila.
-Recibe la versión de esta computadora, y su trabajo en curso se detiene un momento y continúa después.
+Cuando se conecta con una versión anterior, recibe la versión de esa computadora por sí sola.
+Su trabajo en curso se guarda primero y continúa después.
+Cuando no puede actualizarse por sí sola, por ejemplo porque la actualización pide una contraseña ahí, una tarjeta te lo pregunta.
+En Configuración → **Dispositivos**, una computadora con otra versión muestra **Igualar** en su fila.
+Presiónalo para llevar esa computadora a la versión de esta, sea esa versión más nueva o más antigua.
 
-Desde una computadora que controla a tu primer oficial, Configuración → **General** tiene una fila para Infinitary en la computadora donde vive tu primer oficial.
-Cuando esa computadora tiene una actualización lista, presiona **Actualizar** seguido de su nombre para iniciar la actualización desde donde estás.
+La app abierta en una computadora que controla a tu primer oficial sigue la misma versión.
+Cuando es anterior, obtiene esa versión por sí sola y se reinicia con ella cuando nadie la usa ahí.
+Su fila en Configuración → **Dispositivos** dice cuánto lleva, y **Actualizar app** obtiene la versión de inmediato.
+Las palabras escritas ahí y aún no enviadas detienen el reinicio hasta que se envían o se borran.
+Cuando esa app no puede actualizarse por sí sola, como una copia de Homebrew, su fila y una tarjeta dicen qué hacer ahí.
+
+Desde una computadora que controla a tu primer oficial, también puedes actualizar la computadora donde vive tu primer oficial.
+Configuración → **General** tiene una fila para Infinitary en esa computadora.
+Cuando esa computadora tiene una actualización lista, presiona **Actualizar** seguido de su nombre.
+Infinitary pregunta primero: nombra el trabajo en curso que termina antes del reinicio, y dice que alguien tiene que estar en esa computadora si la nueva versión no se inicia.
+Mientras se guarda ese trabajo, **Actualizar más tarde** deja la actualización para después.
 Tu teléfono también puede iniciar esa actualización, después de preguntarte primero.
 Consulta [Tus otras computadoras](/es/your-other-computers/) y [iPhone y iPad](/es/iphone-and-ipad/).
 
@@ -95,7 +107,27 @@ Esto elimina esa carpeta, y lo que Infinitary guardaba ahí se va con ella:
 - `brew uninstall --zap`.
 - Una app desinstaladora que también quita los archivos de soporte de una app.
 - Mover la propia carpeta a la Papelera, o eliminarla.
+- **Restablecer Infinitary**, que está para empezar de nuevo: consulta [Restablecer Infinitary](#reset-infinitary).
 
 En una computadora que hace trabajo para otra, esa carpeta contiene la clave propia de la computadora, sus copias de trabajo y los archivos de sus tareas.
 Sin ella, la computadora se vuelve a unir como una entrada nueva, y el trabajo que no había traído se pierde.
 Consulta [Una computadora aparece dos veces](/es/troubleshooting/#a-computer-is-listed-twice).
+
+## Restablecer Infinitary {#reset-infinitary}
+
+**Restablecer Infinitary**, una fila de Configuración → **General**, devuelve Infinitary en esta computadora al estado en que quedó al instalarlo, y conserva la app.
+Elimina todo lo que Infinitary guarda en esta computadora, incluidas las tareas, los inicios de sesión, los Secretos, la configuración y los dispositivos vinculados.
+Los proyectos en tus propias carpetas conservan todos sus archivos y commits.
+Para borrar solo las tareas, usa **Eliminar los datos de las tareas**, la fila de arriba.
+
+1. Presiona **Restablecer**.
+   Infinitary dice qué elimina y cuántas tareas abiertas se detienen.
+2. Presiona **Restablecer Infinitary**, o **Conservar todo** para no cambiar nada.
+3. Confirma que eres tú como te lo pida tu computadora, por ejemplo con Touch ID o tu contraseña.
+4. Infinitary se cierra y luego se abre en la pantalla de bienvenida, como recién instalado.
+
+Una computadora que hace trabajo para otra sale de esa computadora como parte de su restablecimiento.
+En una computadora que controla a tu primer oficial, la fila restablece Infinitary en las dos computadoras: esta y la computadora donde vive tu primer oficial.
+Si aquella no responde, no se restablece nada en ninguna de las dos.
+
+Cuando Infinitary no puede abrirse, aún puedes restablecerlo: consulta [Infinitary no pudo iniciarse](/es/troubleshooting/#infinitary-could-not-start).

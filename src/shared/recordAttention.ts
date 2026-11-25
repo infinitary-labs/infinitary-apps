@@ -162,14 +162,6 @@ const PART_COUNTS: Record<string, (count: number) => string> = {
  * parent a blocker holds (its blocker leads), and on an older home that
  * sends no parts.
  */
-/**
- * The attention box says what a parent's parts wait on, so the pill's reason
- * beside it stays empty rather than repeating it (INF-6805).
- */
-export function partsSentenceSpeaks(task: AttentionDetail): boolean {
-  return partsAttentionOf(task) !== null;
-}
-
 function partsAttentionOf(
   task: Pick<
     AttentionDetail,
@@ -208,6 +200,14 @@ function partsAttentionOf(
     title: m.recordPartsOpen({ open: formatNumber(open.length), total }),
     guidance: m.recordPartsOpenGuidance({ counts: formatList(counts, "and") }),
   };
+}
+
+/**
+ * The attention box says what a parent's parts wait on, so the pill's reason
+ * beside it stays empty rather than repeating it (INF-6805).
+ */
+export function partsSentenceSpeaks(task: AttentionDetail): boolean {
+  return partsAttentionOf(task) !== null;
 }
 
 /**

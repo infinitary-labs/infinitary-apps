@@ -59,7 +59,7 @@ test("runbook switches persist and the first mate uses the same named switch", a
       .filter((book) => book.startsOff)
       .map((book) => book.id)
       .sort();
-    expect(startsOff).toEqual(["architecture", "batches", "pull-comments"]);
+    expect(startsOff).toEqual(["architecture", "batches", "heartbeat", "pull-comments"]);
     expect(
       off
         .filter((book) => !book.enabled)

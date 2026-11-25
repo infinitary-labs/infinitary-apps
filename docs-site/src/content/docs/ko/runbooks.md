@@ -1,5 +1,5 @@
 ---
-source: 6d79068a24795b48
+source: b17e14176dad1387
 title: 런북
 description: 일등항해사와 선원들이 일의 종류마다 따르는 글로 된 안내와, 그것을 켜고 끄고, 읽고, 직접 만들거나 추가하는 방법이에요.
 ---
@@ -37,7 +37,7 @@ Infinitary에는 기본 런북이 있고, 더 만들거나 추가할 수 있어�
 ## 기본 제공 런북 {#the-built-in-runbooks}
 
 대부분의 기본 제공 런북은 켜진 채로 시작해요.
-세 가지는 켜기 전까지 꺼져 있어요: **Batched pull requests**, **Pull request comments**, **Advanced architecture**예요.
+네 가지는 켜기 전까지 꺼져 있어요: **Batched pull requests**, **Pull request comments**, **Heartbeat**, **Advanced architecture**예요.
 
 - **Common workflows**: 일등항해사가 계획, 만들기, 고치기, 조사에 접근하는 방식이에요.
 - **Delivery judgment**: 끌어오기 요청을 거치는 일에서, 선원이 검사와 수정을 판단하고 변경이 병합할 준비가 되었는지 판단하는 방식이에요.
@@ -56,6 +56,8 @@ Infinitary에는 기본 런북이 있고, 더 만들거나 추가할 수 있어�
   [프로젝트](/ko/projects/#how-changes-reach-your-project)를 보세요.
 - **Pull request comments**: 선원이 병합될 때까지 자기 끌어오기 요청의 댓글에 답해요.
   분명한 수정은 스스로 하고, 분명하지 않은 것은 선택지로 선장님께 가져와요.
+- **Heartbeat**: 알려 줄 것 없이 일이 기다리기 시작하거나 오래 조용하면, 일등항해사가 기다리는 일을 살펴보고 진행하거나 선장님께 한 번 물어요.
+  설정 → **자동화**에서 일시 중지할 수 있는 자동화를 가져오고, 런북을 끄면 그 자동화도 사라져요.
 - **Computer cleanup**: 동의한 뒤 읽기만 하는 살펴보기와, 남은 것 중 무엇을 멈출지 고르는 카드예요.
   [요청할 수 있는 일](/ko/what-you-can-ask-for/#a-look-at-a-computer-under-strain)을 보세요.
 - **Moving secrets in**: 선원이 어떤 에이전트도 값을 보지 않게 하면서 다른 도구의 비밀 정보를 **비밀 정보**로 옮기는 방식이에요.

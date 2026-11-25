@@ -127,6 +127,12 @@ export const automationRuleSchema = z.strictObject({
    * keeps looking, and this goes once a look answers.
    */
   failing: z.strictObject({ since: z.number(), reason: z.string() }).optional(),
+  /**
+   * The runbook wake that brought the rule (docs/automation.md, "The
+   * heartbeat"): it comes and goes with that runbook's switch, and nobody
+   * edits or deletes it; Pause and Resume still work.
+   */
+  brought: z.literal("heartbeat").optional(),
 });
 export type AutomationRule = z.infer<typeof automationRuleSchema>;
 

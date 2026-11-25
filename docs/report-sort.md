@@ -456,7 +456,7 @@ A part left last behind other stopped parts is not its parent's only open part, 
 
 INF-6664 piece 1: the waiting work that no wake reports to the first mate, read from typed facts the record already holds.
 The next-move check wakes no one about a part the captain stopped and asks the captain only once it is its parent's last open part ("The last part the captain stopped" above), and the first mate's context counts unstarted work per project without listing it, so a part parked half way through begun work stood with nobody reading it again.
-`standingWork(host, now)` (`src/core/orchestrator/standingWork.ts`) only reads; nothing serves it yet, and the heartbeat that will is INF-6664 piece 2.
+`standingWork(host, now)` (`src/core/orchestrator/standingWork.ts`) only reads; the heartbeat serves it (`docs/automation.md`, "The heartbeat").
 
 It has two kinds of row:
 
@@ -474,7 +474,7 @@ Everything else that waits is counted, never listed: open work on request that i
 A saved plan is not also counted as filed for later.
 
 A row is new when it joins the list and again when its stay passes 1, 3 and 7 days, then every 7 days.
-The mark rides the inbox's once-names (`docs/inbox.md`, "Once per fact"): each row carries the name `standing:<since>:<days>` for its current milestone, about its task, and reads new until a delivery records that name.
+The mark rides the inbox's once-names (`docs/inbox.md`, "Once per fact"): each row carries the name `standing:<since>:<days>` for its current milestone, about its task, and reads new until a delivery records that name; a heartbeat records each new row's name once its beat goes out (`InboxStore.recordOnce`).
 A new stay (a new `since`) starts over, and a task's close purges its names with its rows, so the list adds no store.
 
 `standingWorkText` renders the list in the first mate's context format (TOON), each title as the context serves it and each wait's reason between reader-data marks, with the one reminder after them.

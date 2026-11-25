@@ -481,6 +481,22 @@ export class InboxStore {
   }
 
   /**
+   * Record a once-name about `ref` with no wake of its own: a delivery that
+   * carries several facts marks each one told (the heartbeat's standing
+   * rows, docs/report-sort.md "The standing list"). False when it already was.
+   */
+  recordOnce(ref: string, once: string): boolean {
+    return (
+      this.db
+        .prepare(
+          // i18n-exempt: SQL, never shown to a person
+          "INSERT INTO inbox_once (ref, once_key, at) VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
+        )
+        .run(ref, once, this.now()).changes > 0
+    );
+  }
+
+  /**
    * Whether a wake named `once` about `ref` was already queued: what an
    * emitter reads before the side effects of building it again.
    */

@@ -2758,6 +2758,7 @@
 "settingsAppearanceWashDescription" = "Quanto da cor do tema cobre o fundo desfocado. 0%% é o padrão.";
 "settingsAppearanceWashValue" = "%1$@%% de opacidade";
 "settingsAutomationBack" = "Voltar";
+"settingsAutomationBroughtNote" = "Vem com o manual Heartbeat. Para alterá-la ou removê-la, desative o manual em Ajustes, Manuais.";
 "settingsAutomationCancelCleared" = "A conversa do seu imediato foi apagada antes que ele lesse isto.";
 "settingsAutomationCancelEdited" = "Retirada antes que seu imediato a lesse, porque a automação foi alterada.";
 "settingsAutomationCancelPaused" = "Retirada antes que seu imediato a lesse, porque a automação foi pausada.";

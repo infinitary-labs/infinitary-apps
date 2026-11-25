@@ -93,7 +93,7 @@ const STAMP = /\d{4}-\d\d-\d\dT[\d:.]+Z/g;
  * milliseconds of that reading, and readings that land in the same millisecond on one run but not
  * the next would otherwise change the turn's fingerprint between preparation and the live run.
  */
-function atServedTime(turn: string): string {
+export function atServedTime(turn: string): string {
   const servedAt = turn.match(STAMP)?.at(-1);
   return servedAt ? turn.replace(STAMP, servedAt) : turn;
 }
@@ -103,7 +103,7 @@ function atServedTime(turn: string): string {
  * task and message ids, the clock reading and the scratch folder - named in order of appearance,
  * so the run sheet's turn fingerprint holds while the model still reads the turn as served.
  */
-function volatile(turn: string): Record<string, string> {
+export function volatile(turn: string): Record<string, string> {
   const found = turn.match(
     /card-fm-[\w-]+|\b[0-9a-f]{8}\b|\d{4}-\d\d-\d\dT[\d:.]+Z|\/\S*fm-model-eval-\w+(?:\/attempt-\d+)?/g,
   );
@@ -114,7 +114,7 @@ function volatile(turn: string): Record<string, string> {
  * The served frame quotes an id that reads as a number, such as 12345678 or 1234e567, and leaves
  * every other id bare, so such an id changes the turn's text itself, not only its values.
  */
-const NUMBER_LIKE_ID = /"\d+(?:e\d+)?"/;
+export const NUMBER_LIKE_ID = /"\d+(?:e\d+)?"/;
 
 async function showCase(test: SignOffCase, dir: string, model: { provider: string; id: string }, protectedDirs: readonly string[]) {
   const host = await approvalHost(test, dir, model, protectedDirs);

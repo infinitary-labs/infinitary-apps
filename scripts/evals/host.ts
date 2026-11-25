@@ -24,7 +24,9 @@ import type {
 import { CardStore } from "../../src/core/storage/cardStore.ts";
 import { openInMemoryDatabase } from "../../src/core/storage/db.ts";
 import { InboxStore } from "../../src/core/storage/inboxStore.ts";
+import { ScheduleStore } from "../../src/core/storage/scheduleStore.ts";
 import { SettingsStore } from "../../src/core/storage/settingsStore.ts";
+import { UsageStore } from "../../src/core/storage/usageStore.ts";
 import { seedTask } from "../../src/core/tasks/seedTask.ts";
 import { TaskService } from "../../src/core/tasks/taskService.ts";
 import { APP_GIT_IDENTITY, git } from "../../src/core/workspace/git.ts";
@@ -88,7 +90,7 @@ export async function approvalHost(
   mkdirSync(paths.firstmateHomeDir, { recursive: true });
   mkdirSync(paths.defaultWorkspaceDir, { recursive: true });
   const db = openInMemoryDatabase();
-  const tasks = new TaskService({ db });
+  const tasks = new TaskService({ db, ...(test.taskClock ? { now: test.taskClock } : {}) });
   const cards = new CardStore(db);
   const settings = new SettingsStore(db);
   const inbox = new InboxStore(db);
@@ -215,6 +217,7 @@ export async function approvalHost(
     threadContext = `\nYour open card: ${id}, ${test.firstmateThread.title}. Captain reply: ${test.firstmateThread.reply}`;
   }
   settings.setFirstmateModel(model);
+  if (test.runbooks) settings.setRunbookStates(test.runbooks);
   let captured: SessionSpec | undefined;
   let reviewSpec: SessionSpec | undefined;
   const starts: string[] = [];
@@ -640,6 +643,11 @@ export async function approvalHost(
     supervisor: host.supervisor,
     /** Each input the production seat was served, in order, for a module that serves a later turn. */
     served,
+    /** The disposable schedules, usage ledger, inbox and first mate, for a module that drives the host's own stores. */
+    schedules: new ScheduleStore(db),
+    usage: new UsageStore(db),
+    inbox,
+    firstmate: host.firstmate,
     close,
   };
 }

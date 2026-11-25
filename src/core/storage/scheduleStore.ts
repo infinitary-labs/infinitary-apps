@@ -3,6 +3,7 @@ import {
   type AutomationSpec,
   automationEventFilterSchema,
 } from "@shared/automation";
+import { HEARTBEAT_RULE_ID } from "@shared/heartbeat";
 import type { AppDatabase } from "./db";
 
 /**
@@ -62,6 +63,13 @@ export type ScheduleRecord = {
    * mate, and finishes after that one run. Absent on every other rule.
    */
   task?: string;
+  /**
+   * The runbook wake that brought this rule (docs/automation.md, "The
+   * heartbeat"): the host keeps it while a runbook that is on names the wake
+   * and removes it once none does, and nobody edits or deletes it. Read from
+   * its reserved id (`HEARTBEAT_RULE_ID`), never saved in a column.
+   */
+  brought?: "heartbeat";
 };
 
 export type RuleState = "draft" | "enabled" | "paused" | "completed";
@@ -289,6 +297,7 @@ function fromRow(row: Row): ScheduleRecord {
     ...(row.event_connection !== null ? { connection: row.event_connection } : {}),
     ...(row.card_id !== null ? { card: row.card_id } : {}),
     ...(row.task_id !== null ? { task: row.task_id } : {}),
+    ...(row.id === HEARTBEAT_RULE_ID ? { brought: "heartbeat" as const } : {}),
   };
 }
 
@@ -570,6 +579,11 @@ export class ScheduleStore {
     return new Set(rows.flatMap((row) => (itemsOf(row.events) ?? []).map((item) => item.id)));
   }
 
+  /** A rule's settled runs past the 30-day rule or the count cap, removed. */
+  trimRuns(scheduleId: string, now: number): void {
+    this.trim(scheduleId, now);
+  }
+
   private trim(scheduleId: string, now: number): void {
     this.db
       .prepare(
@@ -606,11 +620,22 @@ export class ScheduleStore {
     return rows.map(fromRow);
   }
 
-  delete(id: string): void {
+  /**
+   * Remove a rule but keep its runs and their history, which the 30-day
+   * rule trims (`trimRuns`): a brought rule leaves this way when its runbook
+   * goes off, and finds its history again under the same id if it comes back.
+   */
+  removeKeepingRuns(id: string): void {
     this.db.transaction(() => {
       this.db.prepare("DELETE FROM schedules WHERE id = ?").run(id);
-      this.db.prepare("DELETE FROM schedule_runs WHERE schedule_id = ?").run(id);
       this.db.prepare("DELETE FROM schedule_notes WHERE schedule_id = ?").run(id);
+    })();
+  }
+
+  delete(id: string): void {
+    this.db.transaction(() => {
+      this.removeKeepingRuns(id);
+      this.db.prepare("DELETE FROM schedule_runs WHERE schedule_id = ?").run(id);
     })();
   }
 

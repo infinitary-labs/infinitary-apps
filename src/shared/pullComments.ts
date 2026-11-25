@@ -1,3 +1,5 @@
+import { HEARTBEAT_WAKE } from "./heartbeat";
+
 /**
  * The wake a runbook asks for by naming it in its manifest's `wakes`
  * (docs/runbooks.md, "Built-ins"): new comments on a pull request a task
@@ -7,7 +9,7 @@
 export const PULL_REQUEST_COMMENTS_WAKE = "pull-request-comments";
 
 /** Every wake a runbook may ask for: the host's closed list of what it can read. */
-export const RUNBOOK_WAKES = [PULL_REQUEST_COMMENTS_WAKE] as const;
+export const RUNBOOK_WAKES = [PULL_REQUEST_COMMENTS_WAKE, HEARTBEAT_WAKE] as const;
 
 /**
  * Who wrote a comment, as the host reads it: the person whose sign-in the

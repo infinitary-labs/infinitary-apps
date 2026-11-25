@@ -2,10 +2,14 @@
 // The wordmark as getinfinitary.com and the design system draw it: the name in
 // Space Grotesk 500 in the text color, never the accent, beside the app icon
 // reduced to its two hexagons, without the icon's dark tile.
-const { siteTitle, siteTitleHref } = Astro.locals.starlightRoute;
+// It leads to getinfinitary.com's landing page, not this site's home, in the
+// page's language: the landing page serves each language under the same
+// segment this site does (/fr/, /zh-hans/), and English at its root.
+const { siteTitle, locale } = Astro.locals.starlightRoute;
+const landingPage = new URL(locale ? `${locale}/` : "", "https://getinfinitary.com/").href;
 ---
 
-<a href={siteTitleHref} class="wordmark">
+<a href={landingPage} class="wordmark">
   <svg class="mark" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
     <path class="mark-in" d="M14.3 8H9.7L7.4 12l2.3 4h4.6l2.3-4z"></path>
     <path class="mark-out" d="M12 3.2l7.6 4.4v8.8L12 20.8l-7.6-4.4V7.6z"></path>

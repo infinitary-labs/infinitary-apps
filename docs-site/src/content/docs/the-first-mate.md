@@ -38,6 +38,15 @@ A few things help:
 - **Paste a lot of text.**
   A long paste becomes a file chip in the box, and goes with your message whole.
 
+### Take back a message
+
+For one minute after you send a message, a revert icon sits beside it above the message box.
+Press it, or use **Revert your last message** in command search.
+Your first mate stops what the message started, undoes what it already did, and says what it undid beside the message.
+To change the message instead, press ↑ in an empty message box.
+The box reads "Replaces your last message": Enter sends your edit in its place, and Esc sends it as a new message.
+In [the whole conversation](#the-whole-conversation), a reverted message is struck through, and an edited one keeps its earlier words.
+
 ### Add pictures and files
 
 Drag files onto the message box, or press **Add files**.

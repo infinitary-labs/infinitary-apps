@@ -1,5 +1,5 @@
 ---
-source: 36f0e08a37cc757f
+source: c78bd352e2745a60
 title: O imediato
 description: Quem é o seu imediato, o que ele faz e o que não faz, como falar com ele e como escolher o modelo com que ele responde.
 ---
@@ -38,6 +38,15 @@ Algumas coisas ajudam:
   Pressione ↑ com a caixa de mensagem vazia.
 - **Colar bastante texto.**
   Um texto longo colado vira um anexo de arquivo na caixa e vai inteiro com a sua mensagem.
+
+### Retirar uma mensagem {#take-back-a-message}
+
+Durante um minuto depois de enviar uma mensagem, um ícone de reverter aparece ao lado dela, acima da caixa de mensagem.
+Pressione-o, ou use **Reverter sua última mensagem** na busca de comandos.
+Seu imediato interrompe o que a mensagem começou, desfaz o que já fez e diz ao lado da mensagem o que desfez.
+Para mudar a mensagem em vez disso, pressione ↑ com a caixa de mensagem vazia.
+A caixa mostra "Substitui sua última mensagem": Enter envia sua edição no lugar dela, e Esc a envia como uma nova mensagem.
+Na [conversa inteira](#the-whole-conversation), uma mensagem revertida aparece riscada, e uma editada guarda suas palavras anteriores.
 
 ### Adicionar imagens e arquivos {#add-pictures-and-files}
 

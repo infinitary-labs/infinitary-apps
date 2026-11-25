@@ -736,6 +736,7 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
     ...createAppTools({
       ...(host.options.platform ? { platform: host.options.platform } : {}),
       ...(host.options.installedKeys ? { installedKeys: host.options.installedKeys } : {}),
+      ...(host.options.runbooks ? { runbooks: host.options.runbooks } : {}),
       dispatch: (channel, args, actor) => {
         const appDispatch = host.appDispatch();
         if (!appDispatch) throw new Error("App actions are not connected.");

@@ -22,6 +22,7 @@ import {
   phoneLogMilliseconds,
   withPhoneHardwareKeyboard,
 } from "./helpers/phoneKeyboard";
+import { photoTapBegan, pickerHeld } from "./helpers/phonePickerReadings";
 import { scratchDir } from "./helpers/scratchDirs";
 
 const { spawn } = vi.hoisted(() => ({ spawn: vi.fn() }));

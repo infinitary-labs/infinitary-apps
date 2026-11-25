@@ -9,6 +9,7 @@ import {
 } from "./helpers/phoneKeyboard";
 import { observePhoneLog } from "./helpers/phoneLogs";
 import { logTime } from "./helpers/phonePhotos";
+import { photosPicker, photoTapBegan, pickerHeld } from "./helpers/phonePickerReadings";
 import { scratchDir } from "./helpers/scratchDirs";
 
 const { spawn } = vi.hoisted(() => ({ spawn: vi.fn() }));
@@ -31,20 +32,13 @@ afterEach(() => {
 // compact log's millisecond times in that virtual Mac's UTC. The iPhone delivered the second photo tap, but its lift
 // reached the photo picker 1.65 seconds late: the picker opened the photo's preview, then logged its context menu
 // line as it handled the lift, and chose nothing.
-const photosPicker = "/System/Library/ExtensionKit/Extensions/PhotosPicker.appex/PhotosPicker";
 const pickerPreviewOpened = {
   processImagePath: photosPicker,
   timestamp: "2026-10-27 11:06:58.651000+0000",
   eventMessage:
     "Current asset changed and not scrubbing. UUID: B84E8479-475C-4727-A4A4-B77AA9980897",
 };
-const pickerHeld = {
-  processImagePath: photosPicker,
-  timestamp: "2026-10-27 11:06:59.624000+0000",
-  eventMessage: "performAllAnimations for animator: <_UIContextMenuAnimator: 0x1162914d0>",
-};
 // When testmanagerd began synthesizing that photo tap, and when the runner asked for the next tap's outcome.
-const photoTapBegan = phoneLogMilliseconds("2026-10-27 11:06:57.803000+0000");
 const nextTapBegan = phoneLogMilliseconds("2026-10-27 11:07:28.133000+0000");
 
 // INF-2305: main run 41429548461's rest iPhone logged this real Photos response in simulator-live.log

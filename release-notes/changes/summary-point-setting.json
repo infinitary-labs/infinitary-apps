@@ -11,6 +11,7 @@
         "light": "summary-point-setting-light.webp",
         "alt": "Settings row Summarize long conversations at, set to 300,000 tokens, noting that GPT-6.1 Sol requests cost more past 272,000"
       },
+      "docsSite": ["subscriptions-and-quota"],
       "provenance": { "origin": "change" }
     }
   ],

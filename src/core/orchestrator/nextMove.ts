@@ -8,7 +8,7 @@ import { escapeCardText } from "./cardText";
 import { HOST_CARD_PRIORITY } from "./hostCards";
 import type { IdleLadderHost } from "./idleLadder";
 import type { NextMoveBegun } from "./idleWakes";
-import { lastPartCard, lastPartCardId } from "./lastPartCard";
+import { type ClosedParts, lastPartCard, lastPartCardId } from "./lastPartCard";
 import { asksAbout, questionsNaming } from "./reviewCard";
 import type { TypedWake } from "./wakes";
 
@@ -59,7 +59,7 @@ type Standing = {
  * A part the captain stopped, left as the only open part of its parent,
  * since the close of the last other part.
  */
-type LastPart = { record: TaskRecord; parent: TaskRecord; since: number };
+type LastPart = { record: TaskRecord; parent: TaskRecord; since: number; closed: ClosedParts };
 
 /**
  * The captain's put-offs as one pass reads them (`putOffsOnTasks`): the
@@ -223,7 +223,8 @@ export class NextMove {
     const since = Math.max(...others.map((part) => part.closedAt ?? 0));
     if (since <= (tasks.starts.latestStopAt(record.id) ?? 0)) return undefined;
     if (this.captainHolds(record, pass)) return undefined;
-    return { record, parent, since };
+    const dropped = others.filter((part) => part.status === "dropped").length;
+    return { record, parent, since, closed: { done: others.length - dropped, dropped } };
   }
 
   /**
@@ -426,12 +427,12 @@ export class NextMove {
    * waiting keeps it down until another part closes after a new one opens.
    */
   private tellLastPart(found: LastPart, now: number): void {
-    const { record, parent, since } = found;
+    const { record, parent, since, closed } = found;
     if (now - since < this.settleMs) return;
     const id = lastPartCardId(record.id);
     const raised = this.host.tasks.capture.cardRaisedAt(record.id, id);
     if (raised !== undefined && raised >= since) return;
-    const card = lastPartCard(record, parent, now);
+    const card = lastPartCard(record, parent, closed, now);
     this.host.recordSort(
       record.id,
       record.title,

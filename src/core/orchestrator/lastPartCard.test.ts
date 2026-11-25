@@ -87,9 +87,8 @@ describe("the card on a stopped part left last under its parent (INF-6663)", () 
     expect(h.card(part.id)).toBeUndefined();
     await h.at(minutes(60) + STALL_WAKE_MS);
     const card = h.card(part.id);
-    expect(card?.title).toBe(
-      "Answer outside issues and pull requests waits only on Write the triage plan",
-    );
+    // The captain's words on the merge card: one title for every such card, and a figure of the tasks.
+    expect(card?.title).toBe("A task is waiting on a part in your backlog");
     expect(card?.author).toBe("host");
     expect(card?.taskId).toBe(part.id);
     expect(card?.actions).toEqual([
@@ -106,7 +105,18 @@ describe("the card on a stopped part left last under its parent (INF-6663)", () 
     expect(card?.body).toContain(
       "Write the triage plan is the only part of Answer outside issues and pull requests still open.",
     );
-    expect(card?.body).toContain("It waits because you asked for it to wait");
+    expect(card?.body).toContain("It waits in your backlog because you asked");
+    const figure = card?.body.match(/<figure[\s\S]*<\/figure>/)?.[0] ?? "";
+    for (const shown of [
+      "Answer outside issues and pull requests",
+      "Waiting",
+      "2 other parts done",
+      "Write the triage plan",
+      "In your backlog",
+    ]) {
+      expect(figure).toContain(`>${shown}</span>`);
+    }
+    expect(figure).not.toContain("dropped");
     for (const later of [120, 600, 6000]) await h.at(minutes(later));
     expect(h.raised(part.id)).toHaveLength(1);
     expect(h.cards().filter((shown) => shown.id === lastPartCardId(part.id))).toHaveLength(1);
@@ -141,6 +151,18 @@ describe("the card on a stopped part left last under its parent (INF-6663)", () 
     await h.at(minutes(610) + STALL_WAKE_MS);
     expect(h.card(part.id)).toBeDefined();
     expect(h.raised(part.id)).toHaveLength(2);
+  });
+
+  it("draws a dropped part as dropped, not done", async () => {
+    const h = harness();
+    const { part } = workstream(h);
+    await h.at(minutes(5));
+    finish(h, "forms");
+    h.tasks.close("labels", { status: "dropped", reason: "cancelled", actor: "host" });
+    await h.at(minutes(5) + STALL_WAKE_MS);
+    const body = h.card(part.id)?.body ?? "";
+    expect(body).toContain(">1 other part done</span>");
+    expect(body).toContain(">1 other part dropped</span>");
   });
 
   it("starts the part on Start now", async () => {
@@ -283,8 +305,6 @@ describe("the card on a stopped part left last under its parent (INF-6663)", () 
     await h.at(minutes(5));
     finish(h, "forms");
     await h.at(minutes(5) + STALL_WAKE_MS);
-    expect(h.card("plan")?.title).toBe(
-      "Answer outside issues and pull requests waits only on Write the triage plan",
-    );
+    expect(h.card("plan")?.body).toContain(">1 other part done</span>");
   });
 });

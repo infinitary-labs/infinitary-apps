@@ -212,11 +212,25 @@
   "cardKnowledgeConceptRef": "Concept {id} : {title}",
   "cardKnowledgeFindingRef": "Constat {id} : {title}",
   "cardKnowledgeRetired": "Retiré",
+  "cardLastPartBacklog": "Dans votre réserve",
+  "cardLastPartDone": {
+    "plural": "count",
+    "one": "{count} autre partie terminée",
+    "many": "{count} autres parties terminées",
+    "other": "{count} autres parties terminées"
+  },
+  "cardLastPartDropped": {
+    "plural": "count",
+    "one": "{count} autre partie écartée",
+    "many": "{count} autres parties écartées",
+    "other": "{count} autres parties écartées"
+  },
   "cardLastPartKeep": "La laisser attendre",
   "cardLastPartOpen": "{part} est la seule partie de {parent} encore ouverte.",
   "cardLastPartStart": "Démarrer maintenant",
-  "cardLastPartStopped": "Elle attend parce que vous avez demandé qu’elle attende, donc rien ne la démarrera tant que vous ne le ferez pas.",
-  "cardLastPartTitle": "{parent} n’attend plus que {part}",
+  "cardLastPartStopped": "Elle attend dans votre réserve parce que vous l’avez demandé, donc rien ne la démarrera tant que vous ne le ferez pas.",
+  "cardLastPartTitle": "Une tâche attend une partie restée dans votre réserve",
+  "cardLastPartWaiting": "En attente",
   "cardLastPartWays": "Démarrer maintenant la démarre. La laisser attendre la laisse telle quelle, et cette carte ne revient que si une autre partie se termine plus tard. Pour la modifier ou l’écarter, répondez ici.",
   "cardLeaveAside": "Mettre de côté",
   "cardLeaveAsideRest": "Mettre de côté · attend dans Tâches, revient dès qu’elle change",

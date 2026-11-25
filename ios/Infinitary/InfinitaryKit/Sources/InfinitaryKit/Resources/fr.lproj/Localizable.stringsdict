@@ -543,6 +543,42 @@
       <string>%1$ld autres fichiers</string>
     </dict>
   </dict>
+  <key>cardLastPartDone</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld autre partie terminée</string>
+      <key>many</key>
+      <string>%1$ld autres parties terminées</string>
+      <key>other</key>
+      <string>%1$ld autres parties terminées</string>
+    </dict>
+  </dict>
+  <key>cardLastPartDropped</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld autre partie écartée</string>
+      <key>many</key>
+      <string>%1$ld autres parties écartées</string>
+      <key>other</key>
+      <string>%1$ld autres parties écartées</string>
+    </dict>
+  </dict>
   <key>cardNoteQueued</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

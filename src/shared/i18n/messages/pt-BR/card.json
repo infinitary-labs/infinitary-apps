@@ -212,11 +212,25 @@
   "cardKnowledgeConceptRef": "Conceito {id}: {title}",
   "cardKnowledgeFindingRef": "Constatação {id}: {title}",
   "cardKnowledgeRetired": "Desativado",
+  "cardLastPartBacklog": "No seu backlog",
+  "cardLastPartDone": {
+    "plural": "count",
+    "one": "{count} outra parte concluída",
+    "many": "{count} outras partes concluídas",
+    "other": "{count} outras partes concluídas"
+  },
+  "cardLastPartDropped": {
+    "plural": "count",
+    "one": "{count} outra parte abandonada",
+    "many": "{count} outras partes abandonadas",
+    "other": "{count} outras partes abandonadas"
+  },
   "cardLastPartKeep": "Deixar esperando",
   "cardLastPartOpen": "{part} é a única parte de {parent} ainda aberta.",
   "cardLastPartStart": "Começar agora",
-  "cardLastPartStopped": "Ela espera porque você pediu que esperasse, então nada vai iniciá-la até você fazer isso.",
-  "cardLastPartTitle": "{parent} só espera por {part}",
+  "cardLastPartStopped": "Ela espera no seu backlog porque você pediu, então nada vai iniciá-la até você fazer isso.",
+  "cardLastPartTitle": "Uma tarefa está esperando uma parte no seu backlog",
+  "cardLastPartWaiting": "Esperando",
   "cardLastPartWays": "Começar agora a começa. Deixar esperando a deixa como está, e este cartão só volta se outra parte terminar depois. Para mudá-la ou abandoná-la, responda aqui.",
   "cardLeaveAside": "Deixar de lado",
   "cardLeaveAsideRest": "Deixar de lado · aguarda em Tarefas, volta quando mudar",

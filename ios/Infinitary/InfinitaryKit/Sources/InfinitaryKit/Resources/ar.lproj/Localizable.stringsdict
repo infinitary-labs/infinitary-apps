@@ -723,6 +723,54 @@
       <string>%1$ld ملف آخر</string>
     </dict>
   </dict>
+  <key>cardLastPartDone</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>%1$ld جزء آخر مكتمل</string>
+      <key>one</key>
+      <string>%1$ld جزء آخر مكتمل</string>
+      <key>two</key>
+      <string>%1$ld جزءان آخران مكتملان</string>
+      <key>few</key>
+      <string>%1$ld أجزاء أخرى مكتملة</string>
+      <key>many</key>
+      <string>%1$ld جزءًا آخر مكتملًا</string>
+      <key>other</key>
+      <string>%1$ld جزء آخر مكتمل</string>
+    </dict>
+  </dict>
+  <key>cardLastPartDropped</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>%1$ld جزء آخر أُسقط</string>
+      <key>one</key>
+      <string>%1$ld جزء آخر أُسقط</string>
+      <key>two</key>
+      <string>%1$ld جزءان آخران أُسقطا</string>
+      <key>few</key>
+      <string>%1$ld أجزاء أخرى أُسقطت</string>
+      <key>many</key>
+      <string>%1$ld جزءًا آخر أُسقط</string>
+      <key>other</key>
+      <string>%1$ld جزء آخر أُسقط</string>
+    </dict>
+  </dict>
   <key>cardNoteQueued</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

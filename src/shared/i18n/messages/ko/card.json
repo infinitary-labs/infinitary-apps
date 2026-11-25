@@ -184,11 +184,21 @@
   "cardKnowledgeConceptRef": "개념 {id}: {title}",
   "cardKnowledgeFindingRef": "발견 {id}: {title}",
   "cardKnowledgeRetired": "폐기됨",
+  "cardLastPartBacklog": "백로그에 있음",
+  "cardLastPartDone": {
+    "plural": "count",
+    "other": "다른 부분 {count}개 완료"
+  },
+  "cardLastPartDropped": {
+    "plural": "count",
+    "other": "다른 부분 {count}개 중단됨"
+  },
   "cardLastPartKeep": "계속 기다리게 두기",
   "cardLastPartOpen": "{parent}에서 아직 열려 있는 부분은 {part}뿐이에요.",
   "cardLastPartStart": "지금 시작",
-  "cardLastPartStopped": "기다려 달라는 요청에 따라 기다리고 있어서, 직접 시작하기 전에는 아무것도 시작하지 않아요.",
-  "cardLastPartTitle": "{parent}은(는) 이제 {part}만 기다려요",
+  "cardLastPartStopped": "요청에 따라 백로그에서 기다리고 있어서, 직접 시작하기 전에는 아무것도 시작하지 않아요.",
+  "cardLastPartTitle": "작업 하나가 백로그에 있는 부분을 기다리고 있어요",
+  "cardLastPartWaiting": "대기 중",
   "cardLastPartWays": "지금 시작을 누르면 시작해요. 계속 기다리게 두기를 누르면 그대로 두고, 나중에 다른 부분이 끝날 때만 이 카드가 다시 돌아와요. 바꾸거나 중단하려면 여기에 답장하세요.",
   "cardLeaveAside": "치워 두기",
   "cardLeaveAsideRest": "치워 두기 · 작업에서 기다리다가 바뀌면 다시 나와요",

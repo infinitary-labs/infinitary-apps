@@ -212,11 +212,25 @@
   "cardKnowledgeConceptRef": "Concepto {id}: {title}",
   "cardKnowledgeFindingRef": "Hallazgo {id}: {title}",
   "cardKnowledgeRetired": "Retirado",
+  "cardLastPartBacklog": "En tus pendientes",
+  "cardLastPartDone": {
+    "plural": "count",
+    "one": "{count} otra parte terminada",
+    "many": "{count} de otras partes terminadas",
+    "other": "{count} otras partes terminadas"
+  },
+  "cardLastPartDropped": {
+    "plural": "count",
+    "one": "{count} otra parte abandonada",
+    "many": "{count} de otras partes abandonadas",
+    "other": "{count} otras partes abandonadas"
+  },
   "cardLastPartKeep": "Dejar que espere",
   "cardLastPartOpen": "{part} es la única parte de {parent} que sigue abierta.",
   "cardLastPartStart": "Empezar ahora",
-  "cardLastPartStopped": "Espera porque pediste que esperara, así que nada la iniciará hasta que lo hagas tú.",
-  "cardLastPartTitle": "{parent} solo espera a {part}",
+  "cardLastPartStopped": "Espera en tus pendientes porque lo pediste, así que nada la iniciará hasta que lo hagas tú.",
+  "cardLastPartTitle": "Una tarea espera una parte que está en tus pendientes",
+  "cardLastPartWaiting": "Esperando",
   "cardLastPartWays": "Empezar ahora la empieza. Dejar que espere la deja como está, y esta tarjeta solo vuelve si otra parte termina más adelante. Para cambiarla o abandonarla, responde aquí.",
   "cardLeaveAside": "Apartar",
   "cardLeaveAsideRest": "Apartar · espera en Tareas y vuelve cuando cambie",

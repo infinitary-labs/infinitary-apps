@@ -444,7 +444,8 @@ A stopped part is its parent's last when all of these hold:
 - an open part is held at no gate and by no uncleared wait, so the captain's start alone would start it; and
 - the captain does not hold it, as above: a decision card, a first mate question naming it, a put-off, a marked saved answer or its browser in their hands.
 
-Once the last close has stood for `STALL_WAKE_MS`, the host raises one decision on the part, `card-last-part-<task>` (`rule:last-part-card`), saying the parent waits only on this part, which waits because the captain asked.
+Once the last close has stood for `STALL_WAKE_MS`, the host raises one decision on the part, `card-last-part-<task>` (`rule:last-part-card`), saying the parent waits only on this part, which waits in the backlog because the captain asked.
+Its title is the same for every such part, so a figure names the tasks: the parent, and under it the other parts counted as done or dropped and this part lit as in the backlog.
 Start now starts it (host op `start-task`), Keep it waiting only closes the card, and a reply goes to the first mate, which can change or drop it, since dropping is not a card effect.
 Its words are catalog facts (`cardLastPart*`), so each view words it in its own language.
 Its raised line on the part's timeline keeps it to one per last close, so Keep it waiting keeps it down until another part, filed later, closes after it.

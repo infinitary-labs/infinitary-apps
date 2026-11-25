@@ -26,6 +26,19 @@ const ATTRIBUTING_TOOLS = new Set([
 // "EVERY TURN is about a task"), not on each of the sixteen tools that carry it.
 const ASK_ID = Type.Optional(Type.String());
 
+// emit_card alone may name several messages: one answer can answer a
+// question and its correction, and each message then counts it (INF-6769).
+// i18n-exempt: a tool description served to the first mate
+const ANSWER_ASK_IDS = Type.Optional(
+  Type.Union([Type.String(), Type.Array(Type.String(), { minItems: 1 })], {
+    description:
+      "The open_asks id this card or line answers, or a list of every one it answers, such as a question and its correction.",
+  }),
+);
+
+// The tool whose ask_id may list several messages.
+const ANSWERING_TOOL = "emit_card";
+
 // i18n-exempt: served to the first mate as a refusal, never shown to a person
 const UNREAD = "ask_id must name a message this turn has read.";
 
@@ -60,9 +73,9 @@ type AttributedTool<Tool> =
       ? BoundTool<
           Name,
           TObject<
-            Params["properties"] & { ask_id: typeof ASK_ID } & (Name extends
-                | "spawn_crewmate"
-                | "create_task"
+            Params["properties"] & {
+              ask_id: Name extends typeof ANSWERING_TOOL ? typeof ANSWER_ASK_IDS : typeof ASK_ID;
+            } & (Name extends "spawn_crewmate" | "create_task"
                 ? { origin: typeof ORIGIN }
                 : unknown)
           >
@@ -86,7 +99,7 @@ export function withAskAttribution<Tool extends BoundTool>(
     ...tool.parameters,
     properties: {
       ...tool.parameters.properties,
-      ask_id: ASK_ID,
+      ask_id: tool.name === ANSWERING_TOOL ? ANSWER_ASK_IDS : ASK_ID,
       ...(FILING_TOOLS.has(tool.name)
         ? { origin: tool.name === "create_task" ? ORIGIN : ORIGIN_AS_CREATE_TASK }
         : {}),
@@ -97,18 +110,26 @@ export function withAskAttribution<Tool extends BoundTool>(
     parameters: ATTRIBUTING_TOOLS.has(tool.name) ? parameters : tool.parameters,
     run: (params: Parameters<Tool["run"]>[0], signal?: AbortSignal) => {
       if (!ATTRIBUTING_TOOLS.has(tool.name)) return tool.run(params, signal);
-      const { ask_id: declared, ...rest } = params as Record<string, unknown>;
+      const { ask_id: given, ...rest } = params as Record<string, unknown>;
       const filing = FILING_TOOLS.has(tool.name);
       const { origin, ...input } = rest;
       const named = filing ? origin : undefined;
-      if (declared !== undefined && typeof declared !== "string")
+      const list = Array.isArray(given) && tool.name === ANSWERING_TOOL;
+      if (
+        given !== undefined &&
+        typeof given !== "string" &&
+        !(list && given.length > 0 && given.every((id) => typeof id === "string" && id !== ""))
+      )
         throw new Error("ask_id must name a read message, or be empty for unrelated work.");
-      if (declared && !witnessed(declared)) {
+      const declaredIds = list ? [...new Set(given as string[])] : given ? [given as string] : [];
+      for (const declared of declaredIds) {
+        if (witnessed(declared)) continue;
         const refusal = nameRefusal(declared);
         if (refusal) throw new Error(refusal);
       }
-      const askId = declared === undefined ? capture.current()?.id : declared || undefined;
-      const declares = typeof declared === "string" && declared !== "";
+      const [first, ...also] = declaredIds;
+      const askId = given === undefined ? capture.current()?.id : first;
+      const declares = declaredIds.length > 0;
       if (named === undefined || named === "") {
         const runs = filing && !askId ? capture.severalRuns() : [];
         if (runs.length > 0) throw new Error(severalRunsRefusal(runs));
@@ -117,6 +138,7 @@ export function withAskAttribution<Tool extends BoundTool>(
           () => tool.run(filing ? input : rest, signal),
           undefined,
           declares,
+          also,
         );
       }
       const answered = typeof named === "string" ? capture.readOrigin(named) : undefined;
@@ -124,7 +146,7 @@ export function withAskAttribution<Tool extends BoundTool>(
         throw new Error(
           "origin must name an automation run, card choice or crewmate report this turn has read.",
         );
-      return capture.withAsk(askId, () => tool.run(input, signal), answered, declares);
+      return capture.withAsk(askId, () => tool.run(input, signal), answered, declares, also);
     },
   } as unknown as AttributedTool<Tool>;
 }

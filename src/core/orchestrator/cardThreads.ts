@@ -907,6 +907,7 @@ export class CardThreads {
         this.host.submitCardResponse?.(caller.taskId, response, text, {
           cardId: id,
           messageId: line.id,
+          ...(line.clarification ? { clarification: true as const } : {}),
         });
       }
       const result: CardMutation = {

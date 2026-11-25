@@ -354,12 +354,12 @@ export class FirstmateAgent {
 
   /**
    * Save one action that took effect (or one refused card) for the messages
-   * the turn has read, or for the one message the action named with
-   * `ask_id` (INF-6115): a card shown for one message is shown for it alone.
+   * the turn has read, or for the messages the action named with `ask_id`
+   * (INF-6115, INF-6769): a card shown for one message is shown for it alone.
    */
   private noteDelivery(entry: DeliveryNote): void {
-    const named = this.asks.namedAsk();
-    this.delivery.note(entry, named ? [named] : [...this.turn.read]);
+    const named = this.asks.namedAsks();
+    this.delivery.note(entry, named.length ? named : [...this.turn.read]);
     // The same typed facts choose the reply line (./replyLine).
     if (!this.running || entry.outcome !== "action") return;
     this.turn.replyFacts.acted = true;

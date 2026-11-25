@@ -1152,6 +1152,24 @@ export class InboxStore {
     return unread ? "unread" : undefined;
   }
 
+  /**
+   * The card line that carries a request's answer, when its crewmate wrote
+   * the answer in a card's thread (`submitResponse`'s `line`): the newest
+   * answered response's line, or undefined when it was answered only in a
+   * report or not yet.
+   */
+  answeredLine(requestId: string): number | undefined {
+    const row = this.db
+      .prepare(
+        // i18n-exempt: SQL, never shown to a person
+        `SELECT card_message_id FROM crew_responses
+         WHERE request_id = ? AND status = 'answered' AND card_message_id IS NOT NULL
+         ORDER BY at DESC, rowid DESC LIMIT 1`,
+      )
+      .get(requestId) as { card_message_id: number } | undefined;
+    return row?.card_message_id;
+  }
+
   /** Cancellation is a sender declaration, never inferred from closing work. */
   cancelResponse(id: string): void {
     const request = this.responseRequest(id);
@@ -1181,7 +1199,7 @@ export class InboxStore {
     input: CrewResponse,
     contributor: { task: string; session: string | null },
     text: string,
-    line?: { cardId: string; messageId: number },
+    line?: { cardId: string; messageId: number; clarification?: true },
   ): SavedCrewResponse {
     if (!text.trim()) throw new Error("A response needs its exact answer text.");
     return this.transaction(() => {
@@ -1216,6 +1234,10 @@ export class InboxStore {
             status: input.status,
             question: capWithOverflow(request.body, "response-question"),
             excerpt: capWithOverflow(text, "requested-response"),
+            // A closed card's clarification is not where the captain reads an answer.
+            ...(line && !line.clarification
+              ? { line: { cardId: line.cardId, messageId: line.messageId } }
+              : {}),
           },
         },
         undefined,

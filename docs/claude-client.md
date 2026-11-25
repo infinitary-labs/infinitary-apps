@@ -79,6 +79,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
   Since contract v4.59 no app tool describes a nested parameter at all: `emit_card`'s nested words were a restatement for Pi, and the test names where each nested field's rule is served instead - `CARD_MECHANICS` or its top-level parameter's description, such as `actions` or `asks_again`.
   A fixed choice is one string with an `enum` (`stringEnum`), which `zodOf` reads as the same closed set.
   A two-member union with null carries that same typed value as nullable, preserving its validation on both runtimes.
+  A union of plain values of different types, such as one id or a list of ids (`emit_card`'s `ask_id`), carries each member with its own validation; a union of objects carries only as one discriminated by `kind`.
   The 2,048-character cap is on a TOOL description only: a top-level parameter description arrives whole (`spawn_crewmate`'s `shape` group, 2,545 characters, is served byte for byte, and the capture holds it), so a group's rules are never trimmed to fit a cap that does not apply to them.
   The crewmate's fixed instructions, for each runtime and kind of work, are measured in `tests/crewmate-fixed-context.test.ts`, which names each tool's headroom when a description would meet the cap.
   Two more things that binary taught us the expensive way (captain dogfood, packaged build, 2026-09-01):

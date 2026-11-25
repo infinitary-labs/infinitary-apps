@@ -126,7 +126,7 @@ export type CardServiceHost = {
     taskId: string,
     response: CrewResponse,
     text: string,
-    line: { cardId: string; messageId: number },
+    line: { cardId: string; messageId: number; clarification?: true },
   ) => void;
 };
 

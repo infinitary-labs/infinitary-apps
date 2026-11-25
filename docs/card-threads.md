@@ -580,7 +580,7 @@ Captain replies still go to the card's own answerer: the author, or the first ma
 Any line, the answerer's own included, ends a captain question only when it names that message with `answers_message` and the card is waiting on it (the captain's "Only a line that says it answers it; a handoff stays open").
 A line without it - a handoff, a comment, the host's `revised:` - ends nothing, as the answerer's own interim line ends nothing, even one that names it; anyone else's interim mark is dropped, so their line is an ordinary one.
 The answer is saved on the line (`card_messages.answers_message`), so when the card's own answerer, queued behind the steer, comes to the same question, the host tells it who already answered and with what (`CardService.answeredByContributor`), and its own line is kept as a comment.
-A response a crewmate's `reply` correlates with the line is saved once with it (`crew_responses.card_message_id`), so a report naming the same response notifies nobody a second time (`docs/inbox.md`).
+A response a crewmate's `reply` correlates with the line is saved once with it (`crew_responses.card_message_id`), so a report naming the same response notifies nobody a second time (`docs/inbox.md`), and, on an open card, the captain's message the request was asked for ends on that line's card.
 
 A closed card takes a dated clarification alone: a reply that is marked as written after the card closed, reopens nothing and changes no choice.
 A revision or an `answers_message` on a closed card is refused.

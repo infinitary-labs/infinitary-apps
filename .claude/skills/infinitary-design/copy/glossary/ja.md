@@ -68,6 +68,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | evidence / source | 根拠 / 出典 | A finding's support and what it cites. |
 | extra usage (Claude's credits past the allowance) | 追加使用量 | |
 | feed / activity | アクティビティ | The pane's name. |
+| feedback (/feedback, to Infinitary's maker) | フィードバック | 「フィードバックを送信」. |
 | file (to the backlog) | バックログに登録 | 登録 for filing; a task that starts now is 開始, never 登録. |
 | finding | 知見 | A recorded claim with evidence, as on cards. |
 | fingerprint (a computer's key) | フィンガープリント | 指紋 would read as Touch ID. |
@@ -100,6 +101,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | log in (to a computer's user account) | ログイン | Kept apart from サインイン, which is for services. |
 | machine (avoided) | コンピューター | Vocabulary rule; マシン appears only as a search word. |
 | main message | メインのメッセージ欄 | Command label. |
+| mark (a place marked on a picture or a page) | マーク | 「マーク {mark}」, 「マーク付きの画像」. |
 | median (Usage, Cost per task) | 中央値 | The middle task of a week's finished tasks; never "average". |
 | merge | マージ | GitHub Japanese docs; 「マージ済み」 for the merged state. |
 | merge queue (the host's own) | マージキュー | |
@@ -108,6 +110,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | middle half (Usage, Cost per task) | 中間の半分 | The band between the quarter and three-quarter marks of a week's tasks. |
 | model | モデル | Standard. |
 | Not now | 今はしない | Consent button. |
+| note (a comment pointed at part of a card) | メモ | The queued comment, 「2件のメモを送信」; a note card stays お知らせ. |
 | note (card kind) | お知らせ | A note card carries a fact for the person; メモ is kept for a crewmate's own notes and first mate's noted lines. |
 | out of reach | 連絡がつきません | Replaces offline; the short label is the same phrase. |
 | panel | パネル | Plain loanword. |
@@ -117,6 +120,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | pin (a task) | 固定 | 「タスクの先頭に固定」, as for a pinned model. |
 | plan | プラン | Standard billing word. |
 | plugin / extension (avoided) | パネル | Vocabulary rule. |
+| Point at | 指し示す | The button, in dictionary form. |
 | PR #N | PR #N | Kept as the identifier, in mono. |
 | Premium / Hard / Normal / Simple (a task's level), Difficulty | プレミアム / 難しい / 普通 / 簡単, 難易度 | How hard the task is, never a reasoning word. |
 | private network | プライベートネットワーク | A network that joins computers wherever they are. |

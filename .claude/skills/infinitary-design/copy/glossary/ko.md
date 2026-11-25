@@ -62,6 +62,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | evidence | 근거 | "Differing evidence" is 엇갈리는 근거 |
 | extra usage (Claude's credits past the allowance) | 추가 사용량 | |
 | feed / activity | 활동 | |
+| feedback (/feedback, to Infinitary's maker) | 피드백 | "피드백 보내기"; the card's button is "피드백 제출". |
 | file (to the backlog) | 백로그에 등록 | "Why it was filed" is 등록한 이유 |
 | fingerprint (a computer's key) | 지문 |  |
 | first mate | 일등항해사 | The ship's second-in-command, a common noun; the thread's short author tag is 항해사 |
@@ -89,6 +90,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | live validation | 실제 검증 | Trying the change for real; kept apart from the checks |
 | log (a check's kept output) | 로그 | Plain loanword, distinct from the record, 기록. |
 | machine | (not used) | 컴퓨터 instead |
+| mark (a place marked on a picture or a page) | 표시 | "표시 {mark}", "표시한 사진". |
 | median (Usage, Cost per task) | 중앙값 | The middle task of a week's finished tasks; never "average". |
 | merge | 병합, 병합하다 | GitHub's Korean docs; "Cannot merge" is 병합할 수 없어요 |
 | merge queue (the host's own) | 병합 대기열 | |
@@ -98,6 +100,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | model | 모델 | |
 | Models board | 모델 보드 | The board of models under Intelligence in Settings |
 | Not now | 나중에 | |
+| note (a comment pointed at part of a card) | 메모 | The queued comment, "메모 2개 보내기". |
 | Observe | 관찰 | |
 | offline, disconnected | (not used) | 연락 닿지 않음 instead |
 | out of reach | 연락 닿지 않음 | Avoids 오프라인 and 연결 끊김 |
@@ -109,6 +112,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | plan (a task's steps) | 계획 | "Why there was no plan" is 계획이 없었던 이유 |
 | plan (billing) | 요금제 | |
 | plugin, extension | (not used) | 패널 instead |
+| Point at | 가리키기 | The button, as a noun phrase. |
 | PR #N | PR #N | Kept as written, in mono |
 | Premium / Hard / Normal / Simple (a task's level), Difficulty | 프리미엄 / 어려움 / 보통 / 간단, 난이도 | How hard the task is, never a reasoning word. |
 | preset | 프리셋 | |

@@ -61,6 +61,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | evidence / source | 證據 / 來源 | A finding's support and what it cites. |
 | extra usage (Claude's credits past the allowance) | 額外用量 | |
 | feed / activity | 動態 | The Activity label. |
+| feedback (/feedback, to Infinitary's maker) | 意見回饋 | 「傳送意見回饋」; the card's button is 「送出意見回饋」. |
 | file (to the backlog) | 排入 | Only for the backlog, as in 排入的原因. |
 | finding | 發現 | Counter 項, as on cards. |
 | fingerprint (a computer's key) | 指紋 |  |
@@ -89,6 +90,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | live validation | 實際驗證 | Trying the change for real; kept apart from the checks. |
 | local merge | 本機合併 | Taiwan writes 本機, not 本地. |
 | log (a check's kept output) | 日誌 | Distinct from the record, 紀錄. |
+| mark (a place marked on a picture or a page) | 標記 | 「標記 {mark}」, 「帶標記的圖片」. |
 | median (Usage, Cost per task) | 中位數 | The middle task of a week's finished tasks; never "average". |
 | merge | 合併 | GitHub-adjacent Taiwan docs and Microsoft Taiwan both say 合併. |
 | merge queue (the host's own) | 合併佇列 | |
@@ -97,6 +99,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | middle half (Usage, Cost per task) | 中間一半 | The band between the quarter and three-quarter marks of a week's tasks. |
 | model | 模型 | Standard. |
 | Not now | 暫時不要 | The decline button. |
+| note (a comment pointed at part of a card) | 筆記 | The queued comment, counter 則: 「送出 2 則筆記」. |
 | offline, disconnected (never said) | 連絡不上 | Never 離線. |
 | out of reach | 連絡不上 | Avoids 離線 (offline) and 斷線 (disconnected). |
 | panel | 面板 | Counter 個. |
@@ -107,6 +110,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | place (a secret's, such as staging or production) | 用途場所 | Tells two secrets with the same name apart; the field is 用途場所（選填）. |
 | plan | 方案 | Taiwan's word for a subscription plan. |
 | plugin, extension (never said) | 面板 | Never 外掛. |
+| Point at | 指向 | The button and the verb alike. |
 | port (a computer's SSH port) | 連接埠 | Taiwan's word; 端口 is mainland. |
 | PR #N | PR #N | Never translated, stays in mono. |
 | Premium / Hard / Normal / Simple (a task's level), Difficulty | 頂級 / 困難 / 普通 / 簡單, 難度 | How hard the task is, never a reasoning word. |

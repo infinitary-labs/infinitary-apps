@@ -60,6 +60,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | evidence | éléments | "Éléments divergents", "Ouvrez ses éléments"; plain and countable. |
 | extra usage (Claude's credits past the allowance) | utilisation supplémentaire | |
 | feed / activity | Activité | |
+| feedback (/feedback, to Infinitary's maker) | avis | "Envoyer un avis"; the card's button is "Envoyer l’avis". |
 | fetch (a server's list of models) | récupérer | "Récupérer depuis le serveur", "Récupération…". |
 | file (to the backlog) | classer | "Pourquoi elle a été classée"; only for the backlog. |
 | fingerprint (a computer's key) | empreinte |  |
@@ -86,6 +87,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | log (a check's kept output) | le journal | Distinct from the task's record, "la fiche". |
 | machine (never said) | ordinateur | "Il fonctionne sur cet ordinateur" in the voice consent line. |
 | main message | message principal | |
+| mark (a place marked on a picture or a page) | repère | Masculine: "repère {mark}", "Image avec ses repères". |
 | median (Usage, Cost per task) | médiane | The middle task of a week's finished tasks; never "average". |
 | merge | fusionner, fusion | GitHub's French docs say "fusionner"; "Fusion impossible" for "Cannot merge". |
 | merge queue (the host's own) | file de fusion | |
@@ -94,6 +96,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | middle half (Usage, Cost per task) | moitié centrale | The band between the quarter and three-quarter marks of a week's tasks. |
 | model | modèle | |
 | Not now | Pas maintenant | |
+| note (a comment pointed at part of a card) | note | The queued comment, feminine: "Non envoyée", "Envoyer 2 notes". |
 | offline, disconnected (never said) | hors de portée | |
 | out of reach | hors de portée | Never "hors ligne" or "déconnecté". |
 | panel | panneau | |
@@ -102,6 +105,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | phone | téléphone | |
 | plan | forfait | The word on a French bill. |
 | plugin, extension (never said) | panneau | |
+| Point at | Désigner | The button; "désignez-la" in a sentence. |
 | PR #N | PR #N | Kept as is, in mono. |
 | Premium / Hard / Normal / Simple (a task's level), Difficulty | Premium / Difficile / Normale / Simple, Difficulté | How hard the task is, never a reasoning word. |
 | project | projet | |

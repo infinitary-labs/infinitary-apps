@@ -1,5 +1,5 @@
 ---
-source: 72e8eba0a4de8933
+source: 01d22d3c265a0418
 title: O navegador da tripulação
 description: Um tripulante pode abrir sites em um navegador próprio para a tarefa dele. Acompanhe o trabalho, assuma o controle quando uma página precisar de você e decida quais dos seus logins as próximas tarefas podem usar.
 ---
@@ -9,8 +9,8 @@ Ele abre sites e páginas servidas pelo seu projeto, lê o que há nelas, clica 
 Você pode acompanhar o trabalho, assumir o controle quando uma página precisar de uma pessoa e depois devolvê-lo.
 Uma compra, uma reserva ou qualquer outra coisa que comprometa você é sempre decisão sua.
 
-<img class="picture-dark" src="/pictures/browser-dark.webp" alt="O cartão de uma tarefa na aba Navegador enquanto você tem o controle: a linha acima da página de um clube de jardinagem inventado diz que você tem o controle e que o tripulante não vê a página, com Devolver o controle, e o cartão de decisão do tripulante ao lado pede que você faça login na página do clube." width="1272" height="636" />
-<img class="picture-light" src="/pictures/browser-light.webp" alt="O cartão de uma tarefa na aba Navegador enquanto você tem o controle: a linha acima da página de um clube de jardinagem inventado diz que você tem o controle e que o tripulante não vê a página, com Devolver o controle, e o cartão de decisão do tripulante ao lado pede que você faça login na página do clube." width="1272" height="636" />
+<img class="picture-dark" src="/pictures/browser-dark.webp" alt="O cartão de uma tarefa na aba Navegador enquanto você tem o controle: a linha acima da página de um clube de jardinagem inventado diz que você tem o controle e que o tripulante não vê a página, com Apontar para e Devolver o controle, e o cartão de decisão do tripulante ao lado pede que você faça login na página do clube." width="1272" height="636" />
+<img class="picture-light" src="/pictures/browser-light.webp" alt="O cartão de uma tarefa na aba Navegador enquanto você tem o controle: a linha acima da página de um clube de jardinagem inventado diz que você tem o controle e que o tripulante não vê a página, com Apontar para e Devolver o controle, e o cartão de decisão do tripulante ao lado pede que você faça login na página do clube." width="1272" height="636" />
 
 ## O navegador próprio de uma tarefa {#a-tasks-own-browser}
 
@@ -38,7 +38,7 @@ Abra o cartão da tarefa e escolha a aba **Navegador**, que mostra **Navegador**
 A partir de um cartão sobre a tarefa, **Mostrar Navegador** na busca de comandos também o abre.
 O cartão de um tripulante também pode trazer um botão, como “Experimentar” ou “Ver reserva”, que abre o navegador ao lado desse cartão.
 
-A linha acima da página tem **Voltar**, **Avançar** e **Recarregar**, quem está conduzindo, **Assumir o controle** e **Mais**.
+A linha acima da página tem **Voltar**, **Avançar** e **Recarregar**, quem está conduzindo, **Apontar para**, **Assumir o controle** e **Mais**.
 Enquanto você acompanha, a página é uma imagem do que o tripulante vê, e seus cliques não chegam a ela.
 **Mais** reúne **Ajustar** ou **Tamanho real**, **Parar o navegador**, **Copiar o endereço da página** e **Relatar um problema**, que começa uma mensagem ao seu imediato para você terminar.
 
@@ -70,6 +70,27 @@ Enquanto você tem o controle:
 Depois que você devolve o controle, o tripulante olha a página de novo.
 Ele não lê o que você digitou nos campos da página: eles aparecem como preenchidos, com as palavras ocultas.
 Ele só tira uma imagem da página com um motivo que ele informa, que vai para a Atividade da tarefa, e nunca de uma página que contenha o que você digitou.
+
+## Apontar para um lugar da página {#point-at-a-place-on-the-page}
+
+Para falar com o tripulante sobre um lugar da página, aponte para ele.
+
+1. Pressione **Apontar para** na linha acima da página, ou ⇧⌘A (Ctrl+Shift+A no Linux).
+   A página fica parada, e nada do que você faz chega a ela.
+2. Pressione um ponto, arraste uma caixa, ou escolha **Linha à mão livre** e desenhe uma linha.
+   Pelo teclado, percorra os itens da página com as setas e pressione Enter.
+3. Digite um comentário, ou deixe-o vazio, e pressione **Pôr na fila**.
+   A nota mostra a imagem exata que será enviada.
+
+Escape sai de **Apontar para** sem deixar uma nota.
+
+Com um cartão ao lado da página, a nota espera com as notas desse cartão e vai com a sua resposta.
+Sem um cartão ali, ela espera acima da caixa de mensagem do Tripulante, ao lado da página, e vai com a sua próxima mensagem para o tripulante.
+Nada chega ao tripulante antes de você enviar.
+Então o tripulante recebe a imagem com as suas marcas, o endereço e o título da página, e o nome do que você marcou.
+
+**Apontar para** funciona enquanto você acompanha e enquanto você tem o controle.
+Enquanto você tem o controle, a nota diz “Ao enviar, o tripulante vê esta imagem da página.”
 
 ## Quando uma página precisa de você {#when-a-page-needs-you}
 

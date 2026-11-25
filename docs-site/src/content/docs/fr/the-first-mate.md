@@ -1,5 +1,5 @@
 ---
-source: c1b9ffbe11bf0317
+source: 36f0e08a37cc757f
 title: Le second
 description: Qui est votre second, ce qu’il fait et ne fait pas, comment lui parler et comment choisir le modèle avec lequel il répond.
 ---
@@ -25,8 +25,10 @@ Voir [Tâches et équipiers](/fr/tasks-and-crewmates/).
 ## Parler à votre second {#talking-to-your-first-mate}
 
 Tapez dans la zone de message en bas de la fenêtre et envoyez.
-Votre message et la courte réponse de votre second restent juste au-dessus de la zone.
-Cliquez sur la réponse pour la lire en entier.
+Vos deux derniers messages et les courtes réponses de votre second restent juste au-dessus de la zone.
+Une réponse que vous avez donnée sur une carte s’y affiche aussi.
+Le plus ancien des deux s’estompe après quelques secondes.
+Appuyez sur ces lignes pour lire [toute la conversation](#the-whole-conversation).
 
 Quelques astuces aident :
 
@@ -56,6 +58,27 @@ Pour changer la touche, ou désactiver la dictée, utilisez **Dictée** dans [R�
 Quand votre second ou un équipier apporte une carte, répondez sur la carte elle-même.
 Ce que vous tapez sous une carte va à celui qui l’a écrite.
 Voir [Cartes et décisions](/fr/cards-and-decisions/).
+
+### Toute la conversation {#the-whole-conversation}
+
+Appuyez sur les lignes au-dessus de la zone de message pour ouvrir la carte **Conversation**.
+**Ouvrir la conversation** dans la recherche de commandes l’ouvre aussi.
+
+Elle se lit comme une discussion, le plus ancien en haut, avec une ligne pour chaque jour :
+
+- vos messages, et les réponses entières de votre second ;
+- chaque carte sur laquelle vous avez choisi, en petite vignette avec le bouton sur lequel vous avez appuyé ;
+- chaque ligne que vous avez tapée sous une carte, avec la première réponse de son auteur.
+
+Faites défiler vers le haut pour lire les messages plus anciens.
+La carte a deux vues, **Tout** et **Cartes**.
+**Cartes** liste les cartes en attente de vous, puis celles auxquelles vous avez répondu, les plus récentes d’abord.
+Appuyez sur la vignette d’une carte pour ouvrir cette carte.
+Quand vous y répondez ou la mettez de côté, la conversation revient là où vous lisiez.
+
+Un message que vous envoyez pendant que la conversation est ouverte s’y ajoute, et la réponse suit.
+Échap range la conversation.
+L’ouvrir et la lire ne dit rien à votre second.
 
 ## Choisir son modèle {#choosing-its-model}
 

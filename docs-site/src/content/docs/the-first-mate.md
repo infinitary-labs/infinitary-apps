@@ -24,8 +24,10 @@ See [Tasks and crewmates](/tasks-and-crewmates/).
 ## Talking to your first mate
 
 Type in the message box at the bottom of the window and send it.
-Your message and your first mate's short reply stay just above the box.
-Click the reply to read all of it.
+Your last two messages and your first mate's short replies stay just above the box.
+An answer you gave on a card shows there too.
+The older of the two fades after a few seconds.
+Press these lines to read [the whole conversation](#the-whole-conversation).
 
 A few things help:
 
@@ -55,6 +57,27 @@ To change the key, or turn dictation off, use **Dictation** in [Settings → Gen
 When your first mate or a crewmate brings a card, answer on the card itself.
 What you type under a card goes to whoever wrote it.
 See [Cards and decisions](/cards-and-decisions/).
+
+### The whole conversation
+
+Press the lines above the message box to open the **Conversation** card.
+**Open the conversation** in command search opens it too.
+
+It reads like a chat, oldest at the top, with a line for each day:
+
+- your messages, and your first mate's whole replies;
+- each card you chose on, as a small tile with the button you pressed;
+- each line you typed under a card, with its author's first answer.
+
+Scroll up to read earlier messages.
+The card has two views, **Everything** and **Cards**.
+**Cards** lists the cards waiting on you, then the ones you answered, newest first.
+Press a card's tile to open that card.
+When you answer it or put it aside, the conversation comes back where you were reading.
+
+A message you send while the conversation is open joins it, and the reply follows.
+Escape puts the conversation away.
+Opening and reading it tells your first mate nothing.
 
 ## Choosing its model
 

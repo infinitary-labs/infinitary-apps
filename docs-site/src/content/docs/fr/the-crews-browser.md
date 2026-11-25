@@ -1,5 +1,5 @@
 ---
-source: 72e8eba0a4de8933
+source: 01d22d3c265a0418
 title: Le navigateur de l’équipage
 description: Un équipier peut ouvrir des sites web dans son propre navigateur pour sa tâche. Regardez-le, prenez le contrôle quand une page a besoin de vous, et décidez lesquelles de vos connexions les tâches suivantes peuvent utiliser.
 ---
@@ -9,8 +9,8 @@ Il ouvre des sites web et des pages que sert votre projet, les lit, y clique et 
 Vous pouvez le regarder travailler, prendre le contrôle quand une page a besoin d’une personne, et le lui rendre.
 Un achat, une réservation ou toute autre chose qui vous engage reste toujours à faire par vous.
 
-<img class="picture-dark" src="/pictures/browser-dark.webp" alt="La carte d’une tâche sur son onglet Navigateur pendant que vous avez le contrôle : la rangée au-dessus d’une page inventée de club de jardinage indique que vous avez la main et que l’équipier ne voit pas la page, avec Rendre le contrôle, et la carte de décision de l’équipier à côté vous demande de vous connecter à la page du club." width="1272" height="636" />
-<img class="picture-light" src="/pictures/browser-light.webp" alt="La carte d’une tâche sur son onglet Navigateur pendant que vous avez le contrôle : la rangée au-dessus d’une page inventée de club de jardinage indique que vous avez la main et que l’équipier ne voit pas la page, avec Rendre le contrôle, et la carte de décision de l’équipier à côté vous demande de vous connecter à la page du club." width="1272" height="636" />
+<img class="picture-dark" src="/pictures/browser-dark.webp" alt="La carte d’une tâche sur son onglet Navigateur pendant que vous avez le contrôle : la rangée au-dessus d’une page inventée de club de jardinage indique que vous avez la main et que l’équipier ne voit pas la page, avec Désigner et Rendre le contrôle, et la carte de décision de l’équipier à côté vous demande de vous connecter à la page du club." width="1272" height="636" />
+<img class="picture-light" src="/pictures/browser-light.webp" alt="La carte d’une tâche sur son onglet Navigateur pendant que vous avez le contrôle : la rangée au-dessus d’une page inventée de club de jardinage indique que vous avez la main et que l’équipier ne voit pas la page, avec Désigner et Rendre le contrôle, et la carte de décision de l’équipier à côté vous demande de vous connecter à la page du club." width="1272" height="636" />
 
 ## Le navigateur propre à une tâche {#a-tasks-own-browser}
 
@@ -38,7 +38,7 @@ Ouvrez la carte de la tâche et choisissez son onglet **Navigateur**, qui indiqu
 Depuis une carte sur la tâche, **Afficher Navigateur** dans la recherche de commandes l’ouvre aussi.
 La carte d’un équipier peut aussi porter un bouton, comme « Essayer » ou « Voir la réservation », qui ouvre le navigateur à côté de cette carte.
 
-La rangée au-dessus de la page propose **Précédent**, **Suivant** et **Actualiser**, qui pilote, **Prendre le contrôle** et **Plus**.
+La rangée au-dessus de la page propose **Précédent**, **Suivant** et **Actualiser**, qui pilote, **Désigner**, **Prendre le contrôle** et **Plus**.
 Pendant que vous regardez, la page est une image de ce que voit l’équipier, et vos clics ne l’atteignent pas.
 **Plus** contient **Ajuster** ou **Taille réelle**, **Arrêter le navigateur**, **Copier l’adresse de la page** et **Signaler un problème**, qui commence un message à votre second que vous terminez.
 
@@ -70,6 +70,27 @@ Pendant que vous avez le contrôle :
 Une fois le contrôle rendu, l’équipier jette un œil neuf sur la page.
 Il ne lit pas ce que vous avez tapé dans les champs de la page : ils apparaissent remplis, avec leurs mots masqués.
 Il ne prend une image de la page qu’avec une raison qu’il donne, qui va dans l’Activité de la tâche, et jamais d’une page qui contient ce que vous avez tapé.
+
+## Désigner un endroit de la page {#point-at-a-place-on-the-page}
+
+Pour parler à l’équipier d’un endroit précis de la page, désignez-le.
+
+1. Appuyez sur **Désigner** dans la rangée au-dessus de la page, ou sur ⇧⌘A (Ctrl+Shift+A sous Linux).
+   La page est figée, et rien de ce que vous faites ne l’atteint.
+2. Appuyez sur un point, tracez un cadre, ou choisissez **Trait à main levée** et tracez un trait.
+   Au clavier, parcourez les éléments de la page avec les flèches, et appuyez sur Entrée.
+3. Tapez un commentaire, ou laissez-le vide, et appuyez sur **Garder**.
+   La note montre l’image exacte qui sera envoyée.
+
+Échap quitte **Désigner** sans note.
+
+Avec une carte à côté de la page, la note attend avec les notes de cette carte et part avec votre réponse.
+Sans carte à cet endroit, elle attend au-dessus de la zone de message Équipier à côté de la page, et part avec votre prochain message à l’équipier.
+Rien n’atteint l’équipier avant que vous n’envoyiez.
+L’équipier reçoit alors l’image avec vos repères, l’adresse et le titre de la page, et le nom de ce que vous avez marqué.
+
+**Désigner** fonctionne pendant que vous regardez et pendant que vous avez le contrôle.
+Pendant que vous avez le contrôle, la note indique « L’envoi montre cette image de la page à l’équipier. »
 
 ## Quand une page a besoin de vous {#when-a-page-needs-you}
 

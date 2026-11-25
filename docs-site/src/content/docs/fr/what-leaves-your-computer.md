@@ -1,5 +1,5 @@
 ---
-source: 4e862d71de30e0c9
+source: 63adaa2fec424fbb
 title: Ce qui quitte votre ordinateur
 description: Ce qu’envoie Infinitary, où cela va, et le seul interrupteur qui nous envoie quoi que ce soit.
 ---
@@ -90,6 +90,19 @@ Votre téléphone n’envoie rien lui-même ; votre ordinateur envoie ses év�
 Pour voir exactement ce qui partirait, ouvrez **Ce qui quitterait cet ordinateur** sous **Partage**.
 Cela affiche l’identifiant d’installation, ce qui attend d’être envoyé, ce qui a été envoyé, et chaque événement que Diagnostics peut envoyer.
 Désactivez **Diagnostics**, et plus rien n’est enregistré ni envoyé.
+
+## Les avis que vous envoyez {#feedback-you-send}
+
+Un avis n’est pas l’un des interrupteurs de **Partage** : vous l’écrivez, le lisez et l’envoyez vous-même.
+Quand vous tapez `/feedback`, un équipier rédige un ticket pour le projet public d’Infinitary sur GitHub.
+Votre clic sur **Envoyer l’avis** le publie, publiquement, sous votre propre compte GitHub.
+
+- Le ticket contient les mots de l’équipier et quelques faits sur l’app et vos ordinateurs, comme les versions, les systèmes et les types de fournisseur.
+- Il laisse de côté vos noms, vos dossiers, vos projets et vos connexions.
+  Infinitary refuse un brouillon qui en contient un qu’il connaît, une adresse e-mail ou une clé.
+- Avant votre clic, une seule chose part vers GitHub : une recherche de tickets similaires, dont les mots passent le même contrôle.
+
+Voir [Obtenir de l’aide](/fr/get-help/#send-feedback-from-the-app).
 
 ## Secrets {#secrets}
 

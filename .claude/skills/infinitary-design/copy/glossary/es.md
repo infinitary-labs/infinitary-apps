@@ -56,6 +56,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | escalate (never said) | un modelo más potente | |
 | extra usage (Claude's credits past the allowance) | uso adicional | |
 | feed / activity | Actividad | |
+| feedback (/feedback, to Infinitary's maker) | comentarios | Plural: "Enviar comentarios"; a comment on a card part stays "comentario" in the singular. |
 | fetch (a server's list of models) | obtener | "Obtener del servidor", "Obteniendo…". |
 | file (to the backlog) | anotar | "Por qué se anotó"; only for the backlog, never for work that starts now. |
 | fingerprint (a computer's key) | huella digital |  |
@@ -84,6 +85,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | log (a check's kept output) | el log | "Registro" already names the task's record. |
 | machine, server, host (never said) | computadora, por su nombre | "this machine" in the voice consent reads "esta computadora". |
 | main message | mensaje principal | |
+| mark (a place marked on a picture or a page) | marca | "la marca {mark}", "Imagen marcada". |
 | median (Usage, Cost per task) | mediana | The middle task of a week's finished tasks; never "average". |
 | merge | fusionar, fusión | GitHub's Spanish docs say "fusionar una solicitud de incorporación de cambios"; the noun is "fusión" ("Tu fusión queda pendiente"). |
 | merge queue (the host's own) | cola de fusión | |
@@ -92,6 +94,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | middle half (Usage, Cost per task) | mitad central | The band between the quarter and three-quarter marks of a week's tasks. |
 | model | modelo | |
 | Not now | Ahora no | |
+| note (a comment pointed at part of a card) | nota | The queued comment, "Enviar 2 notas". |
 | offline, disconnected (never said) | fuera de alcance | |
 | on pace / empty (an allowance) | al ritmo / se agota, agotada | "se agota en 2h", "agotada"; never "vacía". |
 | out of reach | fuera de alcance | Never "desconectado" or "sin conexión". |
@@ -101,6 +104,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | phone | teléfono | |
 | plan | plan | |
 | plugin, extension (never said) | panel | |
+| Point at | Señalar | The button; in a sentence "señálala". |
 | port (a computer's SSH port) | puerto | "su puerto si no es el 22". |
 | PR #N | PR #N | Stays as it is, in mono. |
 | Premium / Hard / Normal / Simple (a task's level), Difficulty | Premium / Difícil / Normal / Simple, Dificultad | How hard the task is, never a reasoning word. |

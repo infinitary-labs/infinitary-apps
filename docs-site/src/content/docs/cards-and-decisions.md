@@ -20,8 +20,8 @@ The keys on this page are the standard ones; [Keyboard](/keyboard/) lists every 
 
 ## Notes and decisions
 
-<img class="picture-dark" src="/pictures/window-dark.webp" alt="A decision card in the middle of the window: a question with two options, the reply field, and the Decline, Save and defer, and Approve and build buttons." width="1280" height="652" />
-<img class="picture-light" src="/pictures/window-light.webp" alt="A decision card in the middle of the window: a question with two options, the reply field, and the Decline, Save and defer, and Approve and build buttons." width="1280" height="652" />
+<img class="picture-dark" src="/pictures/window-dark.webp" alt="A decision card in the middle of the window, above the message box: a question with two options, the reply field, and the Decline, Save and defer, and Approve and build buttons." width="1280" height="720" />
+<img class="picture-light" src="/pictures/window-light.webp" alt="A decision card in the middle of the window, above the message box: a question with two options, the reply field, and the Decline, Save and defer, and Approve and build buttons." width="1280" height="720" />
 
 A card is one of two kinds, marked at its top:
 
@@ -64,6 +64,34 @@ To fold the thread back into the card, press ⌘\ (Ctrl+\ on Linux).
 The card stays in its place while its author works on your reply.
 A crewmate redraws its card once, when it has finished.
 
+## Pointing at part of a card
+
+To say which part of a card your words are about, point at it.
+
+1. Press **Point at**, the pointer beside the reply field, or ⇧⌘A (Ctrl+Shift+A on Linux).
+2. Click a part of the card, or move to it with the arrow keys and press Enter.
+3. Type a comment, or leave it empty, and press **Queue**.
+
+You can also select words in the card and press **Annotate** under them.
+
+Each note waits in the thread, marked **Not sent**, with **Edit** and **Remove**.
+**Point at** turns off after each note, so press it again for the next part.
+With two notes waiting, **Chat** reads **Send 2 notes**, and sends them together as one reply.
+The card's author reads each note with the part it points at.
+
+### Pointing at a picture
+
+Click a picture on a card to see it larger.
+There, press **Point at** to mark a place on it.
+
+- With **Box or spot**, drag a box or press a spot.
+- With **Freehand line**, draw one line.
+- From the keyboard, the arrow keys move a box, Shift with an arrow sizes it, and Enter writes the note.
+
+Each mark gets a number, and its note waits in the thread with a small copy of the picture.
+When you send, the author gets the picture with every mark drawn on it.
+A reply carries up to four pictures.
+
 ## Putting a card aside
 
 Each card has a minus in its corner, **Put aside**.
@@ -76,6 +104,21 @@ The card waits under Waiting on you in Tasks, and comes back when its author cha
 
 To bring a card back, click its task in Tasks.
 
+## Finding words in a card
+
+Press ⌘F (Ctrl+F on Linux), or the magnifying glass at the card's top, to find words in the card on screen.
+Type in the field that opens, and the matches light up as you type.
+Capital letters and accents make no difference.
+A count such as "2 of 7" says which match you are on.
+
+- **Next match**: Enter or ⌘G (Ctrl+G on Linux).
+- **Previous match**: Shift+Enter or ⇧⌘G (Ctrl+Shift+G on Linux).
+- **Close find**: Escape.
+
+It looks through the whole card: its title, its body, its folded sections and its thread.
+A folded section opens when the match is inside it.
+It works the same in a past card, in [the whole conversation](/the-first-mate/#the-whole-conversation) and on a task's card, except on its Browser tab.
+
 ## Merge cards
 
 When a change is ready, its crewmate brings a merge card.
@@ -84,7 +127,7 @@ It tells the change's story: why, what changed, and what was checked.
 **Before and After pictures.**
 Each screen the change touches shows how it looked before and how it looks after, side by side.
 A new screen shows only After.
-Click a picture to see it larger.
+Click a picture to see it larger, and to [point at a place on it](#pointing-at-a-picture).
 A demo recording has a play button.
 
 **The risk drawing.**
@@ -111,3 +154,4 @@ If it did not work, paste what you saw into its field and choose **It failed**, 
 
 A card you answered is kept.
 Open its task and choose the **Cards** tab to read it again, with what you chose.
+[The whole conversation](/the-first-mate/#the-whole-conversation) lists the cards you answered too, in its **Cards** view.

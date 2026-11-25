@@ -1,5 +1,5 @@
 ---
-source: c1b9ffbe11bf0317
+source: 36f0e08a37cc757f
 title: Der erste Offizier
 description: Wer dein erster Offizier ist, was er tut und was nicht, wie du mit ihm sprichst und wie du das Modell wählst, mit dem er antwortet.
 ---
@@ -25,8 +25,10 @@ Siehe [Aufgaben und Crewmitglieder](/de/tasks-and-crewmates/).
 ## Mit deinem ersten Offizier sprechen {#talking-to-your-first-mate}
 
 Tipp in das Nachrichtenfeld unten im Fenster und sende es ab.
-Deine Nachricht und die kurze Antwort deines ersten Offiziers bleiben direkt über dem Feld.
-Klick auf die Antwort, um sie ganz zu lesen.
+Deine letzten zwei Nachrichten und die kurzen Antworten deines ersten Offiziers bleiben direkt über dem Feld.
+Auch eine Antwort, die du auf einer Karte gegeben hast, steht dort.
+Die ältere der beiden verblasst nach ein paar Sekunden.
+Drück auf diese Zeilen, um [die ganze Unterhaltung](#the-whole-conversation) zu lesen.
 
 Ein paar Dinge helfen:
 
@@ -56,6 +58,27 @@ Um die Taste zu ändern oder das Diktat auszuschalten, nutz **Diktat** unter [Ei
 Wenn dein erster Offizier oder ein Crewmitglied eine Karte bringt, antworte auf der Karte selbst.
 Was du unter eine Karte schreibst, geht an den, der sie geschrieben hat.
 Siehe [Karten und Entscheidungen](/de/cards-and-decisions/).
+
+### Die ganze Unterhaltung {#the-whole-conversation}
+
+Drück auf die Zeilen über dem Nachrichtenfeld, um die Karte **Unterhaltung** zu öffnen.
+Auch **Unterhaltung öffnen** in der Befehlssuche öffnet sie.
+
+Sie liest sich wie ein Chat, das Älteste oben, mit einer Zeile für jeden Tag:
+
+- deine Nachrichten und die ganzen Antworten deines ersten Offiziers;
+- jede Karte, auf der du gewählt hast, als kleine Kachel mit der Schaltfläche, die du gedrückt hast;
+- jede Zeile, die du unter eine Karte geschrieben hast, mit der ersten Antwort ihres Verfassers.
+
+Scroll nach oben, um frühere Nachrichten zu lesen.
+Die Karte hat zwei Ansichten, **Alles** und **Karten**.
+**Karten** listet die Karten, die auf dich warten, dann die, die du beantwortet hast, die neuesten zuerst.
+Drück auf die Kachel einer Karte, um diese Karte zu öffnen.
+Wenn du sie beantwortest oder beiseitelegst, kommt die Unterhaltung dorthin zurück, wo du gelesen hast.
+
+Eine Nachricht, die du sendest, während die Unterhaltung offen ist, kommt dazu, und die Antwort folgt.
+Esc legt die Unterhaltung weg.
+Sie zu öffnen und zu lesen sagt deinem ersten Offizier nichts.
 
 ## Sein Modell wählen {#choosing-its-model}
 

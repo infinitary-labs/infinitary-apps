@@ -8,8 +8,8 @@ It opens websites and pages your project serves, reads them, clicks and types in
 You can watch it work, take control when a page needs a person, and hand it back.
 A purchase, a booking or anything else that commits you is always yours to make.
 
-<img class="picture-dark" src="/pictures/browser-dark.webp" alt="A task's card on its Browser tab while you have control: the row above a made-up garden club page reads that you have control and the crewmate cannot see the page, with Return control, and the crewmate's decision card beside it asks you to sign in to the club page." width="1272" height="636" />
-<img class="picture-light" src="/pictures/browser-light.webp" alt="A task's card on its Browser tab while you have control: the row above a made-up garden club page reads that you have control and the crewmate cannot see the page, with Return control, and the crewmate's decision card beside it asks you to sign in to the club page." width="1272" height="636" />
+<img class="picture-dark" src="/pictures/browser-dark.webp" alt="A task's card on its Browser tab while you have control: the row above a made-up garden club page reads that you have control and the crewmate cannot see the page, with Point at and Return control, and the crewmate's decision card beside it asks you to sign in to the club page." width="1272" height="636" />
+<img class="picture-light" src="/pictures/browser-light.webp" alt="A task's card on its Browser tab while you have control: the row above a made-up garden club page reads that you have control and the crewmate cannot see the page, with Point at and Return control, and the crewmate's decision card beside it asks you to sign in to the club page." width="1272" height="636" />
 
 ## A task's own browser
 
@@ -37,7 +37,7 @@ Open the task's card and choose its **Browser** tab, which reads **Browser** and
 From a card about the task, **Show Browser** in command search opens it too.
 A crewmate's card can also carry a button, such as "Try it" or "View booking", that opens the browser beside that card.
 
-The row above the page has **Back**, **Forward** and **Reload**, who is driving, **Take control** and **More**.
+The row above the page has **Back**, **Forward** and **Reload**, who is driving, **Point at**, **Take control** and **More**.
 While you watch, the page is a picture of what the crewmate sees, and your clicks do not reach it.
 **More** holds **Fit** or **Actual size**, **Stop browser**, **Copy page address** and **Report a problem**, which starts a message to your first mate for you to finish.
 
@@ -69,6 +69,27 @@ While you have control:
 After you hand it back, the crewmate takes a fresh look at the page.
 It does not read what you typed into the page's fields: they show as filled, with their words hidden.
 It takes a picture of the page only with a reason it gives, which goes in the task's Activity, and never of a page that holds what you typed.
+
+## Point at a place on the page
+
+To tell the crewmate about one place on the page, point at it.
+
+1. Press **Point at** in the row above the page, or ⇧⌘A (Ctrl+Shift+A on Linux).
+   The page is held still, and nothing you do reaches it.
+2. Press a spot, drag a box, or choose **Freehand line** and draw one line.
+   From the keyboard, step through the things on the page with the arrow keys, and press Enter.
+3. Type a comment, or leave it empty, and press **Queue**.
+   The note shows the exact picture that will be sent.
+
+Escape leaves **Point at** without a note.
+
+With a card beside the page, the note waits with that card's notes and goes with your reply.
+With no card there, it waits above the Crewmate message box beside the page, and goes with your next message to the crewmate.
+Nothing reaches the crewmate before you send.
+The crewmate then gets the picture with your marks, the page's address and title, and the name of what you marked.
+
+**Point at** works while you watch and while you have control.
+While you have control, the note says "Sending shows this picture of the page to the crewmate."
 
 ## When a page needs you
 

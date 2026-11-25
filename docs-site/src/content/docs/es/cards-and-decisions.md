@@ -1,5 +1,5 @@
 ---
-source: a59e47a363ec3b9e
+source: 543f9bb4d4d0a6b3
 title: Tarjetas y decisiones
 description: Cómo tu primer oficial y tu tripulación te traen respuestas y decisiones como tarjetas, y cómo responderlas.
 ---
@@ -21,8 +21,8 @@ Las teclas de esta página son las estándar; [Teclado](/es/keyboard/) enumera c
 
 ## Notas y decisiones {#notes-and-decisions}
 
-<img class="picture-dark" src="/pictures/window-dark.webp" alt="Una tarjeta de decisión en el centro de la ventana: una pregunta con dos opciones, el campo de respuesta y los botones Decline, Save and defer y Approve and build." width="1280" height="652" />
-<img class="picture-light" src="/pictures/window-light.webp" alt="Una tarjeta de decisión en el centro de la ventana: una pregunta con dos opciones, el campo de respuesta y los botones Decline, Save and defer y Approve and build." width="1280" height="652" />
+<img class="picture-dark" src="/pictures/window-dark.webp" alt="Una tarjeta de decisión en el centro de la ventana, encima del cuadro de mensaje: una pregunta con dos opciones, el campo de respuesta y los botones Decline, Save and defer y Approve and build." width="1280" height="720" />
+<img class="picture-light" src="/pictures/window-light.webp" alt="Una tarjeta de decisión en el centro de la ventana, encima del cuadro de mensaje: una pregunta con dos opciones, el campo de respuesta y los botones Decline, Save and defer y Approve and build." width="1280" height="720" />
 
 Una tarjeta es de uno de dos tipos, marcado en su parte superior:
 
@@ -65,6 +65,34 @@ Para volver a plegar el hilo en la tarjeta, presiona ⌘\ (Ctrl+\ en Linux).
 La tarjeta se queda en su lugar mientras su autor trabaja en tu respuesta.
 Un tripulante vuelve a dibujar su tarjeta una vez, cuando ha terminado.
 
+## Señalar una parte de una tarjeta {#pointing-at-part-of-a-card}
+
+Para decir de qué parte de una tarjeta hablan tus palabras, señálala.
+
+1. Presiona **Señalar**, el puntero que está junto al campo de respuesta, o ⇧⌘A (Ctrl+Shift+A en Linux).
+2. Haz clic en una parte de la tarjeta, o ve hasta ella con las teclas de flecha y presiona Enter.
+3. Escribe un comentario, o déjalo vacío, y presiona **Poner en cola**.
+
+También puedes seleccionar palabras de la tarjeta y presionar **Anotar** debajo de ellas.
+
+Cada nota espera en el hilo, marcada **Sin enviar**, con **Editar** y **Quitar**.
+**Señalar** se desactiva después de cada nota, así que presiónalo otra vez para la parte siguiente.
+Con dos notas en espera, **Conversar** dice **Enviar 2 notas**, y las envía juntas como una sola respuesta.
+El autor de la tarjeta lee cada nota con la parte que señala.
+
+### Señalar un lugar en una imagen {#pointing-at-a-picture}
+
+Haz clic en una imagen de una tarjeta para verla más grande.
+Ahí, presiona **Señalar** para marcar un lugar en ella.
+
+- Con **Recuadro o punto**, arrastra un recuadro o presiona un punto.
+- Con **Línea a mano alzada**, dibuja una línea.
+- Desde el teclado, las teclas de flecha mueven un recuadro, Mayús con una flecha cambia su tamaño y Enter escribe la nota.
+
+Cada marca recibe un número, y su nota espera en el hilo con una copia pequeña de la imagen.
+Cuando envías, el autor recibe la imagen con todas las marcas dibujadas en ella.
+Una respuesta lleva hasta cuatro imágenes.
+
 ## Apartar una tarjeta {#putting-a-card-aside}
 
 Cada tarjeta tiene un signo menos en su esquina, **Apartar**.
@@ -77,6 +105,21 @@ La tarjeta espera en Esperándote, en Tareas, y vuelve cuando su autor la cambia
 
 Para traer de vuelta una tarjeta, haz clic en su tarea en Tareas.
 
+## Buscar palabras en una tarjeta {#finding-words-in-a-card}
+
+Presiona ⌘F (Ctrl+F en Linux), o la lupa de la parte superior de la tarjeta, para buscar palabras en la tarjeta en pantalla.
+Escribe en el campo que se abre, y las coincidencias se iluminan mientras escribes.
+Las mayúsculas y los acentos no importan.
+Un contador como «2 de 7» dice en qué coincidencia estás.
+
+- **Siguiente coincidencia**: Enter o ⌘G (Ctrl+G en Linux).
+- **Coincidencia anterior**: Shift+Enter o ⇧⌘G (Ctrl+Shift+G en Linux).
+- **Cerrar la búsqueda**: Escape.
+
+Busca en toda la tarjeta: su título, su cuerpo, sus secciones plegadas y su hilo.
+Una sección plegada se abre cuando la coincidencia está dentro.
+Funciona igual en una tarjeta anterior, en [toda la conversación](/es/the-first-mate/#the-whole-conversation) y en la tarjeta de una tarea, salvo en su pestaña Navegador.
+
 ## Tarjetas de fusión {#merge-cards}
 
 Cuando un cambio está listo, su tripulante trae una tarjeta de fusión.
@@ -85,7 +128,7 @@ Cuenta la historia del cambio: por qué, qué cambió y qué se comprobó.
 **Imágenes de Antes y Después.**
 Cada pantalla que toca el cambio muestra cómo se veía antes y cómo se ve después, una junto a otra.
 Una pantalla nueva solo muestra Después.
-Haz clic en una imagen para verla más grande.
+Haz clic en una imagen para verla más grande y para [señalar un lugar en ella](#pointing-at-a-picture).
 Una grabación de demo tiene un botón de reproducir.
 
 **El dibujo del riesgo.**
@@ -112,3 +155,4 @@ Si no funcionó, pega lo que viste en su campo y elige **Falló**, y tu primer o
 
 Una tarjeta que respondiste se guarda.
 Abre su tarea y elige la pestaña **Tarjetas** para volver a leerla, con lo que elegiste.
+[Toda la conversación](/es/the-first-mate/#the-whole-conversation) también enumera las tarjetas que respondiste, en su vista **Tarjetas**.

@@ -90,6 +90,19 @@ To see exactly what would go, open **What would leave this computer** under **Sh
 It shows the install ID, what waits to be sent, what was sent, and every event Diagnostics can send.
 Turn **Diagnostics** off, and nothing more is recorded or sent.
 
+## Feedback you send
+
+Feedback is not one of the **Sharing** switches: you write it, read it and send it yourself.
+When you type `/feedback`, a crewmate drafts an issue for Infinitary's public project on GitHub.
+Your click on **Submit feedback** publishes it, publicly, under your own GitHub account.
+
+- The issue holds the crewmate's words and a few facts about the app and your computers, such as versions, systems and kinds of provider.
+- It leaves out your names, folders, projects and sign-ins.
+  Infinitary refuses a draft that holds one it knows, an email address or a key.
+- Before your click, one thing goes to GitHub: a search for similar issues, whose words pass the same check.
+
+See [Get help](/get-help/#send-feedback-from-the-app).
+
 ## Secrets
 
 Values you keep in Settings → **Secrets** stay on your computer.

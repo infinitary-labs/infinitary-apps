@@ -1,5 +1,5 @@
 ---
-source: a59e47a363ec3b9e
+source: 543f9bb4d4d0a6b3
 title: Karten und Entscheidungen
 description: Wie dein erster Offizier und deine Crew dir Antworten und Entscheidungen als Karten bringen und wie du sie beantwortest.
 ---
@@ -21,8 +21,8 @@ Die Tasten auf dieser Seite sind die Standardtasten; [Tastatur](/de/keyboard/) l
 
 ## Notizen und Entscheidungen {#notes-and-decisions}
 
-<img class="picture-dark" src="/pictures/window-dark.webp" alt="Eine Entscheidungskarte in der Mitte des Fensters: eine Frage mit zwei Optionen, das Antwortfeld und die Schaltflächen „Ablehnen“, „Sichern und aufschieben“ und „Bestätigen und bauen“." width="1280" height="652" />
-<img class="picture-light" src="/pictures/window-light.webp" alt="Eine Entscheidungskarte in der Mitte des Fensters: eine Frage mit zwei Optionen, das Antwortfeld und die Schaltflächen „Ablehnen“, „Sichern und aufschieben“ und „Bestätigen und bauen“." width="1280" height="652" />
+<img class="picture-dark" src="/pictures/window-dark.webp" alt="Eine Entscheidungskarte in der Mitte des Fensters, über dem Nachrichtenfeld: eine Frage mit zwei Optionen, das Antwortfeld und die Schaltflächen „Ablehnen“, „Sichern und aufschieben“ und „Bestätigen und bauen“." width="1280" height="720" />
+<img class="picture-light" src="/pictures/window-light.webp" alt="Eine Entscheidungskarte in der Mitte des Fensters, über dem Nachrichtenfeld: eine Frage mit zwei Optionen, das Antwortfeld und die Schaltflächen „Ablehnen“, „Sichern und aufschieben“ und „Bestätigen und bauen“." width="1280" height="720" />
 
 Eine Karte ist von einer von zwei Arten, die oben auf ihr steht:
 
@@ -65,6 +65,34 @@ Um den Verlauf wieder in die Karte einzuklappen, drück ⌘\ (Ctrl+\ unter Linux
 Die Karte bleibt an ihrem Platz, während ihr Verfasser an deiner Antwort arbeitet.
 Ein Crewmitglied zeichnet seine Karte einmal neu, wenn es fertig ist.
 
+## Auf einen Teil einer Karte zeigen {#pointing-at-part-of-a-card}
+
+Um zu sagen, um welchen Teil einer Karte es dir geht, zeig darauf.
+
+1. Drück **Zeigen auf**, den Zeiger neben dem Antwortfeld, oder ⇧⌘A (Ctrl+Shift+A unter Linux).
+2. Klick auf einen Teil der Karte, oder geh mit den Pfeiltasten dorthin und drück Enter.
+3. Schreib einen Kommentar, oder lass ihn leer, und drück **Vormerken**.
+
+Du kannst auch Worte in der Karte markieren und darunter **Anmerken** drücken.
+
+Jede Notiz wartet im Verlauf, mit **Nicht gesendet** gekennzeichnet, mit **Bearbeiten** und **Entfernen**.
+**Zeigen auf** schaltet sich nach jeder Notiz aus, drück es also für den nächsten Teil noch einmal.
+Warten zwei Notizen, zeigt **Chat** **2 Notizen senden** und sendet sie zusammen als eine Antwort.
+Der Verfasser der Karte liest jede Notiz mit dem Teil, auf den sie zeigt.
+
+### Auf ein Bild zeigen {#pointing-at-a-picture}
+
+Klick auf ein Bild in einer Karte, um es größer zu sehen.
+Drück dort **Zeigen auf**, um eine Stelle im Bild zu markieren.
+
+- Mit **Rahmen oder Stelle** ziehst du einen Rahmen oder drückst auf eine Stelle.
+- Mit **Freihandlinie** zeichnest du eine Linie.
+- Mit der Tastatur bewegen die Pfeiltasten einen Rahmen, Shift mit einem Pfeil ändert seine Größe, und Enter schreibt die Notiz.
+
+Jede Markierung bekommt eine Nummer, und ihre Notiz wartet im Verlauf mit einer kleinen Kopie des Bildes.
+Wenn du sendest, bekommt der Verfasser das Bild mit allen eingezeichneten Markierungen.
+Eine Antwort trägt bis zu vier Bilder.
+
 ## Eine Karte beiseitelegen {#putting-a-card-aside}
 
 Jede Karte hat in ihrer Ecke ein Minus, **Beiseitelegen**.
@@ -77,6 +105,21 @@ Die Karte wartet in „Aufgaben“ unter „Wartet auf dich“ und kommt zurück
 
 Um eine Karte zurückzuholen, klick in „Aufgaben“ auf ihre Aufgabe.
 
+## Worte in einer Karte suchen {#finding-words-in-a-card}
+
+Drück ⌘F (Ctrl+F unter Linux) oder die Lupe oben in der Karte, um in der Karte auf dem Bildschirm nach Worten zu suchen.
+Schreib in das Feld, das sich öffnet, und die Treffer leuchten auf, während du tippst.
+Groß- und Kleinschreibung und Akzente spielen keine Rolle.
+Ein Zähler wie „2 von 7“ sagt, bei welchem Treffer du bist.
+
+- **Nächster Treffer**: Enter oder ⌘G (Ctrl+G unter Linux).
+- **Vorheriger Treffer**: Shift+Enter oder ⇧⌘G (Ctrl+Shift+G unter Linux).
+- **Suche schließen**: Esc.
+
+Die Suche geht durch die ganze Karte: ihren Titel, ihren Text, ihre eingeklappten Abschnitte und ihren Verlauf.
+Ein eingeklappter Abschnitt öffnet sich, wenn der Treffer darin liegt.
+Sie funktioniert genauso in einer früheren Karte, in [der ganzen Unterhaltung](/de/the-first-mate/#the-whole-conversation) und auf der Karte einer Aufgabe, außer auf ihrem Tab „Browser“.
+
 ## Karten zum Zusammenführen {#merge-cards}
 
 Wenn eine Änderung bereit ist, bringt ihr Crewmitglied eine Karte zum Zusammenführen.
@@ -85,7 +128,7 @@ Sie erzählt die Geschichte der Änderung: warum, was sich geändert hat und was
 **Bilder Vorher und Nachher.**
 Jeder Bildschirm, den die Änderung berührt, zeigt nebeneinander, wie er vorher aussah und wie er nachher aussieht.
 Ein neuer Bildschirm zeigt nur Nachher.
-Klick auf ein Bild, um es größer zu sehen.
+Klick auf ein Bild, um es größer zu sehen und um [auf eine Stelle darin zu zeigen](#pointing-at-a-picture).
 Eine Demo-Aufnahme hat eine Wiedergabetaste.
 
 **Die Risikozeichnung.**
@@ -112,3 +155,4 @@ Hat es nicht funktioniert, füg in ihr Feld ein, was du gesehen hast, und wähl 
 
 Eine Karte, die du beantwortet hast, bleibt erhalten.
 Öffne ihre Aufgabe und wähl den Tab **Karten**, um sie noch einmal zu lesen, zusammen mit dem, was du gewählt hast.
+Auch [die ganze Unterhaltung](/de/the-first-mate/#the-whole-conversation) listet in ihrer Ansicht **Karten** die Karten, die du beantwortet hast.

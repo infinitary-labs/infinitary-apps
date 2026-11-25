@@ -1228,7 +1228,8 @@ Required observer setup still fails when observation cannot start, and simulator
 In a talk part, the first actual UIKit keyboard-queue timeout triggers a one-second stack sample after the runner confirms that PID still belongs to its own simulator's app.
 It retains `keyboard-timeout-stack.log` and the capture outcome, joins the sampler before deleting the simulator, and never retries a capture or changes the photo-selection, tap or focus assertions.
 A run without that fault records that no reproduction or stack capture is claimed.
-In every part, the first time XCTest reports that the app's main run loop never went idle, the runner takes one three-second stack sample of the app and of the simulator processes a turn with the keyboard up waits on: SpringBoard, backboardd, InputUI and kbd.
+In every part, the first time XCTest reports that the app's main run loop never went idle, or the app's simulator log says an XCTest query found its main thread busy for 30 seconds, the runner takes one three-second stack sample of the app and of the simulator processes a turn with the keyboard up waits on: SpringBoard, backboardd, InputUI and kbd.
+The busy report arrives 30 seconds into a freeze, a minute or more before XCTest fails the query as a UI query timeout.
 It finds them as the simulator launcher's children from host process metadata alone, because a simulator command issued then can queue behind the stuck app, and confirms the app belongs to its own simulator before sampling.
 It retains `idle-timeout-<process>-<PID>.log` for each sample and the capture outcome in `idle-timeout-capture.log`, names a process it did not find or could not sample, joins the samplers before deleting the simulator, and never retries a capture or changes a test.
 The Cards journey keeps both its accessibility tree and the disposable home's card-state calls when a choice does not dismiss its card.

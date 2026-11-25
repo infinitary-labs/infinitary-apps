@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "docs-site-wordmark-landing-page",
+      "reason": "The documentation site's header wordmark now leads to the getinfinitary.com landing page in the reader's language instead of the documentation home; nothing in the app changes."
+    }
+  ]
+}

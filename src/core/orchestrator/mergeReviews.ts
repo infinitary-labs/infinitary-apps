@@ -670,6 +670,7 @@ export class MergeReviews {
       url: null,
       branch: pull.branch ?? review.branch,
       headSha: pull.headSha,
+      headRepo: pull.headRepo ?? review.headRepo,
       title: pull.title ?? review.title,
       body: "",
     };

@@ -190,13 +190,15 @@ export class MergeCardSteps {
             `The selected ${label} is in another project. Use its explicit merge review and emit_card; nothing was published.`,
             "crewmate",
           );
-        if (checkout !== undefined && checkout !== selected.branch)
+        if (checkout !== undefined && checkout !== selected.branch) {
+          const ownChange = options.tasks.changeFor(taskId);
           return stop(
             "pull",
             // i18n-exempt: a tool refusal served to the crewmate
-            `The selected ${label} uses ${selected.branch}, not the checked-out ${checkout}. Check out ${selected.branch} to publish its saved story, or use emit_card with its explicit merge review if it predates saved stories. Nothing was published.`,
+            `The selected ${label} uses ${selected.branch}, not the checked-out ${checkout}. Check out ${selected.branch} to publish its saved story, or use emit_card with its explicit merge review if it predates saved stories.${ownChange ? ` To deliver this task's own branch instead, make its change current with check_change({ change: "${ownChange.id}" })${checkout === ownBranch ? "" : ` and check out ${ownBranch}`}.` : ""} Nothing was published.`,
             "crewmate",
           );
+        }
         selectedRequest = selected.number;
       }
       branch = checkout ?? currentChange(located.record.delivery, located.branch).branch;

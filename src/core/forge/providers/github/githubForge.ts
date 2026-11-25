@@ -414,8 +414,8 @@ export class GitHubForge implements Forge {
       place: this.place,
       repoPath: this.repoPath(),
       source:
-        this.location.source?.fullName ??
         change.headRepo ??
+        this.location.source?.fullName ??
         `${this.owner()}/${this.location.name}`,
       read: (path) => this.request("GET", path),
       pages: (path, itemsOf) => this.pages(path, itemsOf),

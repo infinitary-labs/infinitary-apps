@@ -45,14 +45,26 @@ type SuiteRunJson = {
   status: string;
   run_started_at?: string | null;
   head_branch?: string | null;
-  head_repository?: { full_name?: string } | null;
-  pull_requests?: { number: number }[];
+  head_repository?: RunRepository | null;
+  pull_requests?: (Pick<BranchRequest, "number"> & Partial<Pick<BranchRequest, "head">>)[];
 };
+
+type RunRepository = { id?: number; full_name?: string };
 
 type BranchRequest = {
   number: number;
-  head: { ref: string; repo?: { full_name?: string } | null };
+  head: { ref: string; repo?: RunRepository | null };
 };
+
+function repositoryMatch(
+  run: RunRepository | null | undefined,
+  request: RunRepository | null | undefined,
+) {
+  if (run?.id !== undefined && request?.id !== undefined) return run.id === request.id;
+  if (run?.full_name && request?.full_name)
+    return run.full_name.toLowerCase() === request.full_name.toLowerCase();
+  return undefined;
+}
 
 type CheckReads = {
   place: string;
@@ -187,11 +199,10 @@ export class GitHubChecks {
         continue;
       }
       if (run.event !== "pull_request" && run.event !== "pull_request_target") continue;
-      if (run.pull_requests?.length) {
-        if (run.pull_requests.some((pull) => pull.number === change.number)) {
-          if (run.pull_requests.length === 1) matched.push(run);
-          else ambiguous = true;
-        }
+      const linked = run.pull_requests ?? [];
+      if (linked.length && !linked.some((pull) => pull.number === change.number)) continue;
+      if (linked.length === 1) {
+        matched.push(run);
         continue;
       }
       const runSource = run.head_repository?.full_name;
@@ -200,7 +211,27 @@ export class GitHubChecks {
         (runSource && !sameSource(runSource))
       )
         continue;
-      if (run.head_branch === change.branch && sameSource(runSource)) unlinked.push(run);
+      if (run.head_branch !== change.branch || !sameSource(runSource)) {
+        ambiguous = true;
+        continue;
+      }
+      if (!linked.length) {
+        unlinked.push(run);
+        continue;
+      }
+      // GitHub links requests by SHA or branch, so some links name a different source.
+      const candidates = linked.filter(
+        ({ head }) =>
+          (!head?.ref || head.ref === change.branch) &&
+          repositoryMatch(run.head_repository, head?.repo) !== false,
+      );
+      if (
+        candidates.length === 1 &&
+        candidates[0]?.number === change.number &&
+        candidates[0].head?.ref === change.branch &&
+        repositoryMatch(run.head_repository, candidates[0].head.repo) === true
+      )
+        matched.push(run);
       else ambiguous = true;
     }
     if (unlinked.length) {

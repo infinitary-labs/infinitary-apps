@@ -176,7 +176,7 @@ describe("the merge card of a story pull request merged outside the app", () => 
 
 describe("a selected pull request on the way to its merge card", () => {
   it("does not open a duplicate when a selected legacy PR shares the checkout's commit", async () => {
-    const { at, story } = await deliveringFromAnotherBranch();
+    const { at, story, checkedOut } = await deliveringFromAnotherBranch();
     const title = "fix: upgrade translations";
     at.forge.change = {
       number: 1906,
@@ -221,6 +221,14 @@ describe("a selected pull request on the way to its merge card", () => {
     await expect(
       at.service.publication.completionPresentation("ab12cd34", 1, 1906),
     ).rejects.toThrow("The checkout names a different pull request");
+    const own = at.tasks.changeFor("ab12cd34");
+    if (!own) throw new Error("The fixture requires a task change.");
+    checkedOut.branch = own.head.branch;
+    const ownBranch = await at.service.mergeCard.walk("ab12cd34");
+    expect(ownBranch.stop?.missing).toContain(`check_change({ change: "${own.id}" })`);
+    await at.service.checkTool.checkForCrew("ab12cd34", { change: own.id });
+    expect(at.tasks.get("ab12cd34")?.delivery?.checkTarget).toBeUndefined();
+    expect(opens(at)).toBe(0);
   });
   it("stops at the pull request when the one that carried the story closed, sending nothing again", async () => {
     const { at, story: saved } = await deliveringFromAnotherBranch();

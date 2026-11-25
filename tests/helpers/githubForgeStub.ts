@@ -1,5 +1,6 @@
 import { createServer, type IncomingMessage, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
+import type { ForgeLocation } from "@core/forge";
 import { GitHubForge } from "@core/forge/providers/github/githubForge";
 import { afterEach } from "vitest";
 import { BUNDLED_NAMING } from "./namingRunbook";
@@ -35,7 +36,11 @@ afterEach(async () => {
  * records the waits between reads of a background merge's result instead of
  * sleeping them.
  */
-export async function stub(routes: Record<string, Route>, sleeps?: number[]) {
+export async function stub(
+  routes: Record<string, Route>,
+  sleeps?: number[],
+  project?: Pick<ForgeLocation, "owner" | "name" | "source">,
+) {
   const seen: Seen[] = [];
   server = createServer((req, res) => {
     let raw = "";
@@ -65,7 +70,12 @@ export async function stub(routes: Record<string, Route>, sleeps?: number[]) {
   const { port } = listening.address() as AddressInfo;
   const base = `http://127.0.0.1:${port}`;
   const forge = new GitHubForge(
-    { kind: "github", host: "github.com", owner: "octo", name: "meter", dir: "/r" },
+    {
+      kind: "github",
+      host: "github.com",
+      dir: "/r",
+      ...(project ?? { owner: "octo", name: "meter" }),
+    },
     {
       token: async () => "gho_test",
       apiBaseUrl: base,

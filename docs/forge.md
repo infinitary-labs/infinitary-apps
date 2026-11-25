@@ -810,7 +810,8 @@ The owner's verdict: git is bundled with the app, the GitHub Desktop model, beca
 `check_change` reads the newest change through the forge and returns a `facts` JSON object: the change's id and base, the version, whether it moved since the recorded reading, mergeability as the host reports it, and each check's name, state, run, workflow and event where available.
 It takes the change's id (`change`) and refuses another task's; a task reads only its own change (INF-1868 piece 2, INF-1873).
 A pull request's checks are the runs the host started for it (INF-1891, the captain: "for merge we only care about the PR checks"): on GitHub a check whose run carries an event stays only when that event is `pull_request` or `pull_request_target`, so a run a person or a tool started on the branch by hand, such as a dispatched heavy check, is read through `read_workflow` and never holds or passes the merge (`ownChecksOf` in `src/core/forge/forge.ts`); a check with no event, such as a commit status, stays as read, and a branch's own checks, read with no number, keep every run at their version.
-For a numbered GitHub request, the provider scopes Actions runs before associating their jobs or applying supersession.
+For a numbered GitHub request, the provider scopes Actions runs by the request’s source (including contributor forks) before associating their jobs or applying supersession.
+When GitHub links several requests to a run, its source repository and branch must identify exactly one of them.
 When GitHub omits the pull request links, a run can count only when its source repository and branch match and the request is the only known request from that source branch.
 An ambiguous attribution keeps the reading incomplete.
 A batch's pull request also keeps the runs its own push started (`push`), because the app itself pushed that branch: a project that checks every pushed branch starts no other run for a batch ("Batches of your own").
@@ -1806,6 +1807,7 @@ With no identical copy left, the refusal names the view and side the picture sho
 Its optional story refers to the full shape served on `prepare_change`, and both calls validate it through the same story parser before staging.
 It resolves the change from the checkout.
 On direct pull-request delivery, a selected request pins its number: a different checkout or a request no longer open never opens a replacement, and a request that predates saved stories uses its explicit merge review instead.
+To return to the task’s own branch instead, select its change id with `check_change`.
 It does the app's own steps itself: it prepares the story it was given at the committed version, prepares the same words again once live proof was accepted since the story with the same scenarios, opens the pull request with the story or publishes it on the open one, and reads it back.
 A change that joins a batch of the person's own opens no pull request: the call confirms its story on the pushed branch and reads that branch as the change, as the card call and `check_change` do ("Batches of your own").
 It stops at the first step someone else supplies, and its answer names what it did, the missing step and who supplies it: the crewmate, the reviewer through the first mate, the first mate, the captain or the checks.

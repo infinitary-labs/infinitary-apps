@@ -39,6 +39,7 @@ export const DRAFT_QUIET_MS = 400;
 const WORDS = "words";
 const NOTES = "notes";
 const answerPart = (name: string) => `answer:${name}`;
+const isAnswerPart = (part: string) => part !== WORDS && part !== NOTES;
 
 type Parts = Map<string, unknown>;
 
@@ -113,6 +114,10 @@ function draftParts(parts: Parts): DraftParts {
 const ownAnswer = (answer: FrameAnswer) =>
   !answer.skipped && (answer.changed || answer.written !== undefined);
 
+/** Whether an answer holds a pick: a skip's Default is the card's, never one. */
+const hasPick = (answer: FrameAnswer) =>
+  !answer.skipped && (answer.values.length > 0 || answer.written !== undefined);
+
 /**
  * The revision a waiting part goes against: null for a part changed while in
  * reach, which is the later change and goes against the newest revision this
@@ -133,6 +138,14 @@ export class DraftSync {
   private readonly dirty = new Map<string, Map<string, Base>>();
   private readonly flying = new Map<string, Flying>();
   private readonly timers = new Map<string, unknown>();
+  /**
+   * Questions this window's reading moved from no pick to a pick, by card.
+   * A pick of the option the card recommends reads unchanged, as the card
+   * proposed it, yet it is the captain's own and worth a draft; a question
+   * another window's draft filled in is here too, but the draft already
+   * holds it, so it sends nothing.
+   */
+  private readonly picked = new Map<string, Set<string>>();
   /** Each card's changes refused for their size, none sent again unchanged. */
   private readonly refused = new Map<string, Set<string>>();
   private welcomed = false;
@@ -170,8 +183,12 @@ export class DraftSync {
       const saved = first ? this.saved(cardId) : null;
       if (saved) {
         const marked = this.dirtyOf(cardId);
+        // A part this window kept as unsent is the captain's own change.
         for (const [part, value] of this.localParts(cardId, true))
-          if (!marked.has(part) && this.differs(part, value, partsOfDraft(draft)))
+          if (
+            !marked.has(part) &&
+            this.differs(part, value, partsOfDraft(draft), saved.parts[part] !== undefined)
+          )
             marked.set(part, saved.parts[part] ?? saved.revision);
       }
       this.adopt(draft);
@@ -203,9 +220,19 @@ export class DraftSync {
     const marked = this.dirtyOf(cardId);
     let moved = false;
     for (const [part, value] of now) {
-      if (canonical(was.get(part)) === canonical(value)) continue;
+      const before = was.get(part);
+      if (canonical(before) === canonical(value)) continue;
       moved = true;
-      if (!this.differs(part, value, expected)) marked.delete(part);
+      // The body's first reading has no answer before it, so an authored default is never a pick.
+      if (
+        isAnswerPart(part) &&
+        before !== undefined &&
+        !hasPick(before as FrameAnswer) &&
+        hasPick(value as FrameAnswer)
+      )
+        this.pickedOf(cardId).add(part);
+      const own = this.picked.get(cardId)?.has(part) === true;
+      if (!this.differs(part, value, expected, own)) marked.delete(part);
       else if (!marked.has(part))
         marked.set(part, this.deps.canSend() ? null : this.revisionOf(cardId));
     }
@@ -219,6 +246,7 @@ export class DraftSync {
     this.heard.delete(cardId);
     this.early.delete(cardId);
     this.dirty.delete(cardId);
+    this.picked.delete(cardId);
     this.flying.delete(cardId);
     this.refused.delete(cardId);
     const timer = this.timers.get(cardId);
@@ -401,6 +429,15 @@ export class DraftSync {
     this.deps.saveBase(cardId, { ...(lifecycle !== null ? { lifecycle } : {}), revision, parts });
   }
 
+  private pickedOf(cardId: string): Set<string> {
+    let picked = this.picked.get(cardId);
+    if (!picked) {
+      picked = new Set();
+      this.picked.set(cardId, picked);
+    }
+    return picked;
+  }
+
   private dirtyOf(cardId: string): Map<string, Base> {
     let marked = this.dirty.get(cardId);
     if (!marked) {
@@ -414,10 +451,10 @@ export class DraftSync {
     return partsOfDraft(this.heard.get(cardId) ?? emptyDraft(cardId));
   }
 
-  /** Whether a value here is worth sending against the draft's. */
-  private differs(part: string, value: unknown, heard: Parts): boolean {
+  /** Whether a value here is worth sending against the draft's; `own` marks the captain's pick. */
+  private differs(part: string, value: unknown, heard: Parts, own = false): boolean {
     const there = heard.get(part);
-    if (there === undefined) return ownAnswer(value as FrameAnswer);
+    if (there === undefined) return own || ownAnswer(value as FrameAnswer);
     return canonical(there) !== canonical(value);
   }
 

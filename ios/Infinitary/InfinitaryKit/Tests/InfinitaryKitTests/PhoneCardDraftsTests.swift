@@ -108,6 +108,39 @@ import Testing
         detach()
     }
 
+    /// INF-6671: the captain's words, "the selections i made on my desktop aren't synced to my ios app". A pick of the
+    /// option a card recommends reads unchanged, as the card proposed it, yet it is the captain's and goes to the draft.
+    @Test func aPickOfTheRecommendedOptionGoesOnceTheCaptainPauses() async {
+        let home = await joined()
+        let unpicked: PhoneJSON = .object(["name": .string("merge"), "values": .array([]), "changed": .bool(false)])
+        let recommended: PhoneJSON = .object(["name": .string("merge"), "values": .array([.string("you")]),
+                                              "labels": .array([.string("You")]), "changed": .bool(false)])
+        // An option the author checked in the body is the card's, never a pick.
+        let authored: PhoneJSON = .object(["name": .string("report"), "values": .array([.string("weekly")]),
+                                           "labels": .array([.string("Weekly")]), "changed": .bool(false)])
+        home.drafts.read("card-1", answers: .array([unpicked, authored]))
+        await home.pause()
+        #expect(home.sent.isEmpty)
+        home.drafts.read("card-1", answers: .array([recommended, authored]))
+        await home.pause()
+        #expect(home.sent.count == 1)
+        #expect(home.sent.first?.change["answers"] == .array([recommended]))
+    }
+
+    /// INF-6671: a recommended pick another screen sent arrives reading unchanged; the body on screen still draws it.
+    @Test func anotherScreensRecommendedPickReachesTheBodyOnScreen() async {
+        let home = await joined()
+        var filled: [PhoneJSON] = []
+        let detach = home.drafts.attach("card-1") { filled.append($0); return true }
+        let recommended: PhoneJSON = .object(["name": .string("merge"), "values": .array([.string("you")]),
+                                              "labels": .array([.string("You")]), "changed": .bool(false)])
+        home.drafts.heard(Self.draft("card-1", revision: 1, answers: [recommended]))
+        #expect(filled == [.array([recommended])])
+        detach()
+        await home.pause()
+        #expect(home.sent.isEmpty)
+    }
+
     @Test func aPickMadeOutOfReachGoesOnReturnAgainstTheRevisionItWasMadeAt() async {
         let home = await joined()
         home.drafts.heard(Self.draft("card-1", revision: 3, answers: [Self.answer("size", "small")]))

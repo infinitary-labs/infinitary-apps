@@ -30,7 +30,6 @@ describe("a crewmate session's commit name", () => {
       vi.stubEnv(`GIT_${name}_NAME`, undefined);
       vi.stubEnv(`GIT_${name}_EMAIL`, undefined);
     }
-    vi.stubEnv("EMAIL", undefined);
     repo = scratchDir("infinitary-commit-repo-");
     execFileSync("git", ["-C", repo, "init", "-q", "-b", "main"]);
   });
@@ -87,7 +86,6 @@ describe("a crewmate session's commit name", () => {
     );
     vi.stubEnv("GIT_AUTHOR_NAME", "Crewmate");
     vi.stubEnv("GIT_AUTHOR_EMAIL", "crew@infinitary.invalid");
-    vi.stubEnv("EMAIL", "crew@infinitary.invalid");
 
     expect(await resolveCommitName(repo)).toEqual({
       name: "Ada Lovelace",

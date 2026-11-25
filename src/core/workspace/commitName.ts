@@ -20,11 +20,7 @@ const RESOLVE_TIMEOUT_MS = 10 * 1000;
  * dropped for the read: an app started from a crewmate's shell inherits
  * that shell's pair.
  */
-const INHERITED_AUTHOR = {
-  GIT_AUTHOR_NAME: undefined,
-  GIT_AUTHOR_EMAIL: undefined,
-  EMAIL: undefined,
-};
+const INHERITED_AUTHOR = { GIT_AUTHOR_NAME: undefined, GIT_AUTHOR_EMAIL: undefined };
 
 /**
  * The name git would commit under in `cwd` from saved settings alone: the

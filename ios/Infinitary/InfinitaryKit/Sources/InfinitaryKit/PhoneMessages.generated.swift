@@ -507,6 +507,16 @@ public enum PhoneMessages {
     public static func `cardKnowledgeConceptRef`(`id`: String, `title`: String) -> String { PhoneWords.format("cardKnowledgeConceptRef", [`id`, `title`]) }
     public static func `cardKnowledgeFindingRef`(`id`: String, `title`: String) -> String { PhoneWords.format("cardKnowledgeFindingRef", [`id`, `title`]) }
     public static func `cardKnowledgeRetired`() -> String { PhoneWords.format("cardKnowledgeRetired", []) }
+    public static func `cardLastPartBacklog`() -> String { PhoneWords.format("cardLastPartBacklog", []) }
+    public static func `cardLastPartDone`(`count`: Int) -> String { PhoneWords.format("cardLastPartDone", [`count`]) }
+    public static func `cardLastPartDropped`(`count`: Int) -> String { PhoneWords.format("cardLastPartDropped", [`count`]) }
+    public static func `cardLastPartKeep`() -> String { PhoneWords.format("cardLastPartKeep", []) }
+    public static func `cardLastPartOpen`(`parent`: String, `part`: String) -> String { PhoneWords.format("cardLastPartOpen", [`parent`, `part`]) }
+    public static func `cardLastPartStart`() -> String { PhoneWords.format("cardLastPartStart", []) }
+    public static func `cardLastPartStopped`() -> String { PhoneWords.format("cardLastPartStopped", []) }
+    public static func `cardLastPartTitle`() -> String { PhoneWords.format("cardLastPartTitle", []) }
+    public static func `cardLastPartWaiting`() -> String { PhoneWords.format("cardLastPartWaiting", []) }
+    public static func `cardLastPartWays`() -> String { PhoneWords.format("cardLastPartWays", []) }
     public static func `cardLeaveAside`() -> String { PhoneWords.format("cardLeaveAside", []) }
     public static func `cardLeaveAsideRest`() -> String { PhoneWords.format("cardLeaveAsideRest", []) }
     public static func `cardLeaveHide`() -> String { PhoneWords.format("cardLeaveHide", []) }
@@ -5149,6 +5159,16 @@ extension PhoneWords {
         "cardKnowledgeConceptRef": ["id", "title"],
         "cardKnowledgeFindingRef": ["id", "title"],
         "cardKnowledgeRetired": [],
+        "cardLastPartBacklog": [],
+        "cardLastPartDone": ["count"],
+        "cardLastPartDropped": ["count"],
+        "cardLastPartKeep": [],
+        "cardLastPartOpen": ["parent", "part"],
+        "cardLastPartStart": [],
+        "cardLastPartStopped": [],
+        "cardLastPartTitle": [],
+        "cardLastPartWaiting": [],
+        "cardLastPartWays": [],
         "cardLeaveAside": [],
         "cardLeaveAsideRest": [],
         "cardLeaveHide": [],
@@ -9317,6 +9337,8 @@ extension PhoneWords {
         "cardConsentUsesEvents": "count",
         "cardFilesAll": "count",
         "cardFilesMore": "count",
+        "cardLastPartDone": "count",
+        "cardLastPartDropped": "count",
         "cardNoteQueued": "count",
         "cardNoteSend": "count",
         "cardPastPictures": "count",

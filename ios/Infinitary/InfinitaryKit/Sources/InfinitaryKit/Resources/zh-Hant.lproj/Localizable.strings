@@ -472,6 +472,14 @@
 "cardKnowledgeConceptRef" = "概念 %1$@：%2$@";
 "cardKnowledgeFindingRef" = "發現 %1$@：%2$@";
 "cardKnowledgeRetired" = "已停用";
+"cardLastPartBacklog" = "在待辦清單中";
+"cardLastPartKeep" = "讓它繼續等";
+"cardLastPartOpen" = "%1$@ 中仍未關閉的部分只剩 %2$@。";
+"cardLastPartStart" = "立即開始";
+"cardLastPartStopped" = "它在待辦清單中等待，是因為你要求這樣；在你開始它之前，什麼都不會開始它。";
+"cardLastPartTitle" = "有個任務在等待待辦清單中的一個部分";
+"cardLastPartWaiting" = "等待中";
+"cardLastPartWays" = "立即開始會開始它。讓它繼續等會保持原樣，只有之後另一部分完成時這張卡片才會回來。要修改或放棄它，請在這裡回覆。";
 "cardLeaveAside" = "放到一旁";
 "cardLeaveAsideRest" = "放到一旁 · 留在任務中，有變動時再回來";
 "cardLeaveHide" = "隱藏";

@@ -198,6 +198,24 @@
   "cardKnowledgeConceptRef": "Concept {id}: {title}",
   "cardKnowledgeFindingRef": "Finding {id}: {title}",
   "cardKnowledgeRetired": "Retired",
+  "cardLastPartBacklog": "In your backlog",
+  "cardLastPartDone": {
+    "plural": "count",
+    "one": "{count} other part done",
+    "other": "{count} other parts done"
+  },
+  "cardLastPartDropped": {
+    "plural": "count",
+    "one": "{count} other part dropped",
+    "other": "{count} other parts dropped"
+  },
+  "cardLastPartKeep": "Keep it waiting",
+  "cardLastPartOpen": "{part} is the only part of {parent} still open.",
+  "cardLastPartStart": "Start now",
+  "cardLastPartStopped": "It waits in your backlog because you asked, so nothing starts it until you do.",
+  "cardLastPartTitle": "A task is waiting on a part in your backlog",
+  "cardLastPartWaiting": "Waiting",
+  "cardLastPartWays": "Start now starts it. Keep it waiting leaves it as it is, and this card comes back only if another part finishes later. To change or drop it, reply here.",
   "cardLeaveAside": "Put aside",
   "cardLeaveAsideRest": "Put aside · waits in Tasks, back when it changes",
   "cardLeaveHide": "Hide",

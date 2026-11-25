@@ -29,6 +29,7 @@
   "refuseShowACardBesideABrowserPageFirst": "请先在浏览器页面旁显示一张卡片",
   "refuseShowAStartedTaskThatCanMove": "请先显示一个已开始且可以移到另一台电脑的任务",
   "refuseShowAStartedTasksRecordFirst": "请先显示一个已开始任务的记录",
+  "refuseShowATaggableTasksRecordFirst": "请先显示一个所在项目有标签的任务的记录",
   "refuseTabIsOnComputer": "{tab} 在 {computer} 上",
   "refuseThatTabIsAlreadyShown": "该标签页已在显示",
   "refuseThereIsNoOtherTabToGo": "没有其他标签页可前往",

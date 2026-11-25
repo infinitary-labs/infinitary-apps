@@ -172,6 +172,8 @@
   "commandSizeSmaller": "모두 작게",
   "commandTaskCloseDone": "작업을 완료로 닫기",
   "commandTaskCloseDoneWords": "완료, 마치기, 끝남, 종료, 닫기, 기록, 작업",
+  "commandTaskEditTags": "작업의 태그 편집",
+  "commandTaskEditTagsWords": "태그, 라벨, 분류, 종류, 기록, 작업",
   "commandTaskMoveComputer": "작업을 다른 컴퓨터로 옮기기",
   "commandTaskMoveComputerWords": "컴퓨터, 맥, 옮기기, 기기, 기록",
   "commandUpdatesCheck": "업데이트 확인",

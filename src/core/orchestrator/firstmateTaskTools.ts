@@ -8,6 +8,7 @@ import type { TaskRecord } from "../storage/taskRecords";
 import { TaskGraphRefusal } from "../tasks/taskGraph";
 import { queryTasksAsync } from "../tasks/taskQuery";
 import { TaskService } from "../tasks/taskService";
+import { TaskTagRefusal } from "../tasks/taskTags";
 import type { DeliveryNote } from "./answerDelivery";
 import type { AskCapture } from "./askCapture";
 import { captainWordsIn } from "./captainOverrides";
@@ -516,6 +517,21 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
           return `${record.key} is already ${input.pinned ? "pinned" : "not pinned"}; nothing changed.`;
         tookEffect(record.id, words);
         return `${words}.`;
+      }),
+    tags: (input) =>
+      asText(() => {
+        const record = resolve(input.task);
+        try {
+          const set = tasks.replaceTags(record.id, { names: input.names }, "firstmate");
+          if (set.added.length + set.removed.length > 0) tookEffect(record.id);
+        } catch (caught) {
+          if (caught instanceof TaskTagRefusal) return caught.message;
+          throw caught;
+        }
+        const now = tasks.tagsOf(record.id).map((tag) => tag.name);
+        return now.length > 0
+          ? `${record.key}'s tags: ${now.join(", ")}.`
+          : `${record.key} carries no tags.`;
       }),
     override: (input) =>
       asText(() => {

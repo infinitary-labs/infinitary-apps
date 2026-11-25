@@ -77,6 +77,7 @@ import {
 import type { SharingView } from "./sharing";
 import { showLines } from "./showActions";
 import { type DeviceSignIns, signInPlace } from "./signIns";
+import { tagLines } from "./tagActions";
 import type { ProjectView } from "./tasks";
 import { signInsUnansweredInEnglish, workSetupWordsInEnglish } from "./workSetupWords";
 
@@ -510,6 +511,7 @@ const actionLines = {
     }),
     done: (v) => `Renamed project ${v.was as string} to ${v.name as string}`,
   },
+  ...tagLines,
   // Where a project's next task starts (docs/helper.md, "Runs on"): asked,
   // like the project's other settings. A task already started finishes
   // where it started.

@@ -43,6 +43,7 @@
   "recordFactPersonal": "全域指示和技能",
   "recordFactResult": "成果",
   "recordFactRunsOn": "執行於",
+  "recordFactTags": "標籤",
   "recordFoldedMore": {
     "plural": "count",
     "other": "還有 {count} 項"
@@ -90,6 +91,9 @@
   "recordStart": "開始",
   "recordStartAgain": "重新開始",
   "recordStarting": "正在啟動",
+  "recordTagsEdit": "編輯標籤",
+  "recordTagsFailed": "無法儲存你對標籤的變更。",
+  "recordTagsNone": "沒有標籤",
   "recordTryAgain": "再試一次",
   "recordUndated": "無日期 · {summary}",
   "recordUnreadable": "無法讀取這份紀錄。",

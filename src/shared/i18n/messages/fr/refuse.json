@@ -29,6 +29,7 @@
   "refuseShowACardBesideABrowserPageFirst": "Affichez d’abord une carte à côté d’une page de navigateur",
   "refuseShowAStartedTaskThatCanMove": "Affichez d’abord une tâche démarrée qui peut passer sur un autre ordinateur",
   "refuseShowAStartedTasksRecordFirst": "Affichez d’abord la fiche d’une tâche démarrée",
+  "refuseShowATaggableTasksRecordFirst": "Affichez d’abord la fiche d’une tâche dont le projet a des étiquettes",
   "refuseTabIsOnComputer": "{tab} est sur {computer}",
   "refuseThatTabIsAlreadyShown": "Cet onglet est déjà affiché",
   "refuseThereIsNoOtherTabToGo": "Il n’y a pas d’autre onglet où aller",

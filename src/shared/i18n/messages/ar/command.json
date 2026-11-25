@@ -172,6 +172,8 @@
   "commandSizeSmaller": "تصغير كل شيء",
   "commandTaskCloseDone": "إغلاق المهمة كمنجزة",
   "commandTaskCloseDoneWords": "تم, إنهاء, منتهية, مكتملة, إغلاق, سجل, مهمة",
+  "commandTaskEditTags": "تعديل وسوم المهمة",
+  "commandTaskEditTagsWords": "وسوم, وسم, تصنيف, فئة, نوع, سجل, مهمة",
   "commandTaskMoveComputer": "نقل المهمة إلى حاسوب آخر",
   "commandTaskMoveComputerWords": "حاسوب, جهاز, نقل, سجل",
   "commandUpdatesCheck": "التحقق من وجود تحديثات",

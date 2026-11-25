@@ -119,6 +119,8 @@ export type TaskToolsDelegate = {
   }): Promise<string>;
   /** Pin a task to the top of Tasks, or unpin it, on the captain's words (INF-3127). */
   pin(input: { task: string; pinned: boolean }): string;
+  /** A task's tags become exactly these of its project's, by name (docs/task-tags.md). */
+  tags?(input: { task: string; names: string[] }): string;
   /** Correct a required action's words, keeping its filing (docs/required-actions.md). */
   reviseRequiredAction?(input: RequiredActionRevisionInput): string;
   /**
@@ -179,7 +181,14 @@ function undeclaredPrerequisites(verb: "filed" | "changed") {
   };
 }
 
+const TAGS_PARAM = Type.Array(Type.String(), {
+  description:
+    "Its project's tag names (project-tags): exactly these, an empty list none. Set only as the captain asks.",
+});
+
 export function createTaskTools(delegate: TaskToolsDelegate) {
+  const tagsOf = (task: string, names: string[]): string =>
+    delegate.tags ? delegate.tags({ task, names }) : "Tags are not available here.";
   const create = boundTool({
     name: "create_task",
     label: "Create task",
@@ -246,6 +255,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
         }),
       ),
       branch: Type.Optional(Type.String({ description: "As spawn_crewmate's branch." })),
+      tags: Type.Optional(TAGS_PARAM),
     }),
     run: async (params) => {
       // Automatic creation must not turn an undeclared graph into independent work (INF-143).
@@ -288,7 +298,9 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
         ...(Object.keys(shape).length > 0 ? { shape } : {}),
         ...(params.captain_stop ? { captainStop: true } : {}),
       });
-      return { text: planned.text };
+      // A refused filing answers with no task id, and its words alone.
+      if (params.tags === undefined || !planned.taskId) return { text: planned.text };
+      return { text: `${planned.text}\n${tagsOf(planned.taskId, params.tags)}` };
     },
   });
 
@@ -465,6 +477,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       // The captain's pin (INF-3127), served bare: the name says it, and the
       // refusal says it goes alone.
       pinned: Type.Optional(Type.Boolean()),
+      tags: Type.Optional({ ...TAGS_PARAM, description: "As create_task's tags." }),
       withdraw_merge: Type.Optional(
         Type.Boolean({
           description: "Only on the captain's words: withdraw their merge click; keep work.",
@@ -732,13 +745,17 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
         ...(params.verdict !== undefined ? { verdict: params.verdict } : {}),
       };
       const hasEdits = Object.keys(edits).some((key) => key !== "task" && key !== "direction");
-      const updated = hasEdits || !params.start_now ? await delegate.update(edits) : undefined;
+      const tagsAlone = params.tags !== undefined && !hasEdits && !params.start_now;
+      const updated =
+        !tagsAlone && (hasEdits || !params.start_now) ? await delegate.update(edits) : undefined;
       if (updated && !updated.ok) return { text: updated.text };
+      // After the other edits: a move to another project drops the task's tags first.
+      const tagged = params.tags !== undefined ? tagsOf(params.task, params.tags) : undefined;
       if (params.start_now) {
         const started = await delegate.startNow({ task: params.task });
-        return { text: [updated?.text, started].filter(Boolean).join("\n") };
+        return { text: [updated?.text, tagged, started].filter(Boolean).join("\n") };
       }
-      return { text: updated?.text ?? "" };
+      return { text: [updated?.text, tagged].filter(Boolean).join("\n") };
     },
   });
 

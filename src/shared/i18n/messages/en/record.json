@@ -46,6 +46,7 @@
   "recordFactPersonal": "Global instructions and skills",
   "recordFactResult": "Result",
   "recordFactRunsOn": "Runs on",
+  "recordFactTags": "Tags",
   "recordFoldedMore": {
     "plural": "count",
     "one": "{count} more",
@@ -96,6 +97,9 @@
   "recordStart": "Start",
   "recordStartAgain": "Start again",
   "recordStarting": "Starting",
+  "recordTagsEdit": "Edit tags",
+  "recordTagsFailed": "Your change to the tags could not be saved.",
+  "recordTagsNone": "No tags",
   "recordTryAgain": "Try again",
   "recordUndated": "Undated · {summary}",
   "recordUnreadable": "This record could not be read.",

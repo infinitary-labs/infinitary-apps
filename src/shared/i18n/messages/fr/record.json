@@ -49,6 +49,7 @@
   "recordFactPersonal": "Instructions et compétences globales",
   "recordFactResult": "Résultat",
   "recordFactRunsOn": "S’exécute sur",
+  "recordFactTags": "Étiquettes",
   "recordFoldedMore": {
     "plural": "count",
     "one": "{count} de plus",
@@ -102,6 +103,9 @@
   "recordStart": "Démarrer",
   "recordStartAgain": "Redémarrer",
   "recordStarting": "Démarrage",
+  "recordTagsEdit": "Modifier les étiquettes",
+  "recordTagsFailed": "Votre modification des étiquettes n’a pas pu être enregistrée.",
+  "recordTagsNone": "Aucune étiquette",
   "recordTryAgain": "Réessayer",
   "recordUndated": "Sans date · {summary}",
   "recordUnreadable": "Cette fiche n’a pas pu être lue.",

@@ -12,13 +12,14 @@ import { openSize, openWindow } from "./window";
  * Focus stays on a repository just added to a project of one in Settings ->
  * Projects (INF-4378; tests/e2e/add-project.spec.ts's add-a-second-repository
  * journey): the project's page chooses the new repository's tab and focuses
- * it. The add asks the app for three lists: the repositories and the
- * projects again when the app says a repository was set up, and the projects
- * once the add answers. When the repository list draws on its own first, the
- * new repository shows for a moment as its own project outside the open one,
- * and the page must still focus the new tab once the projects answer. On
- * Linux the order the lists answer in lost focus to the page in some of the
- * journey's runs; this test answers the repository list first.
+ * it. The add asks the app for four lists: the repositories, the projects
+ * and the page's Tags box's projects again when the app says a repository
+ * was set up, and the projects once the add answers. When the repository
+ * list draws on its own first, the new repository shows for a moment as its
+ * own project outside the open one, and the page must still focus the new
+ * tab once the projects answer. On Linux the order the lists answer in lost
+ * focus to the page in some of the journey's runs; this test answers the
+ * repository list first.
  */
 
 const PROJECT = { name: "wallet", key: "WAL" } as const;
@@ -84,7 +85,6 @@ test("a repository added to a project of one keeps focus when the repository lis
   await userEvent.keyboard("{Enter}");
   await expect.poll(() => bridge.requests("inf:repos:setup").length).toBe(1);
 
-  // The app says the repository was set up: the tab asks both lists again.
   bridge.push("inf:event", {
     type: "repo_setup",
     actor: "captain",
@@ -94,13 +94,15 @@ test("a repository added to a project of one keeps focus when the repository lis
     kind: added.setupKind,
     project: PROJECT.name,
   });
-  await expect.poll(() => [repoLists.length, projectLists.length]).toEqual([1, 1]);
+  // The app says the repository was set up: the tab asks both lists again,
+  // and the page's Tags box asks the projects again too.
+  await expect.poll(() => [repoLists.length, projectLists.length]).toEqual([1, 2]);
   // The add answers: the tab asks the projects once more.
   setup.resolve({ repo: added, created: true });
-  await expect.poll(() => projectLists.length).toBe(2);
+  await expect.poll(() => projectLists.length).toBe(3);
 
   // The repository list draws alone, the new repository outside the open
-  // project; both project lists answer only after that drawing.
+  // project; every project list answers only after that drawing.
   repoLists[0]?.resolve(after.repos);
   await afterNextFrame();
   for (const list of projectLists) list.resolve(after.projects);

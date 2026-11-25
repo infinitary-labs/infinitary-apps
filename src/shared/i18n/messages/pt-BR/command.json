@@ -172,6 +172,8 @@
   "commandSizeSmaller": "Diminuir tudo",
   "commandTaskCloseDone": "Encerrar a tarefa como concluída",
   "commandTaskCloseDoneWords": "concluído, concluir, terminar, terminado, completo, encerrar, fechar, registro, tarefa",
+  "commandTaskEditTags": "Editar as etiquetas da tarefa",
+  "commandTaskEditTagsWords": "etiquetas, etiqueta, tag, categoria, tipo, registro, tarefa",
   "commandTaskMoveComputer": "Mover a tarefa para outro computador",
   "commandTaskMoveComputerWords": "computador, máquina, mover, dispositivo, registro",
   "commandUpdatesCheck": "Verificar atualizações",

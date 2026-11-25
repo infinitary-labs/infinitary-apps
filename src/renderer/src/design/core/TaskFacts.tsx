@@ -738,6 +738,7 @@ export function TaskFactRows({
   lead,
   withTask = false,
   project,
+  afterProject,
   planView,
   omitStrip = false,
   strip = "full",
@@ -760,6 +761,8 @@ export function TaskFactRows({
    * project's name, under the goal (INF-2261).
    */
   project?: string;
+  /** Rows the record draws after the project: its Tags row (docs/task-tags.md). */
+  afterProject?: ReactNode;
   /**
    * How the plan is drawn (FI3-734): `dots` on the summary, `list` on the
    * record; absent, the plan is not drawn.
@@ -825,6 +828,7 @@ export function TaskFactRows({
           </div>
         </div>
       ) : null}
+      {afterProject}
       {/* Held open while the record is read, so the panel does not jump. */}
       {facts.now !== null && (
         <div className="row">

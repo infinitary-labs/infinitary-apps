@@ -172,6 +172,8 @@
   "commandSizeSmaller": "缩小所有内容",
   "commandTaskCloseDone": "将任务关闭为已完成",
   "commandTaskCloseDoneWords": "完成, 结束, 已完成, 做完, 关闭, 记录, 任务",
+  "commandTaskEditTags": "编辑任务的标签",
+  "commandTaskEditTagsWords": "标签, 标记, 分类, 类别, 记录, 任务",
   "commandTaskMoveComputer": "将任务移到另一台电脑",
   "commandTaskMoveComputerWords": "电脑, 计算机, 设备, 移动, 迁移, 记录",
   "commandUpdatesCheck": "检查更新",

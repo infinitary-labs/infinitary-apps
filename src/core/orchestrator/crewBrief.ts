@@ -41,6 +41,7 @@ import {
   renderPicturesSection,
   renderProgramPartSection,
   renderResultShapeSection,
+  renderReviewedPlanSection,
   renderRigorSection,
   UNSAFE_DATA_READER_WORDS,
   withoutOriginReadLine,
@@ -347,6 +348,20 @@ export class CrewBrief {
       }
       const basis = basisFacts(this.options, this.host.cards, record);
       if (basis) sections.push(basisSectionParts(await this.withCardFile(taskId, basis)));
+      // A review's basis is the builder it reads; the task that builder is
+      // built on, such as its plan, may settle a finding (INF-6608).
+      const reviewed =
+        basis && record?.shape?.kind === "review"
+          ? this.options.tasks.get(basis.taskId ?? "")
+          : undefined;
+      const plan = basisFacts(this.options, this.host.cards, reviewed);
+      if (reviewed && plan)
+        sections.push([
+          renderReviewedPlanSection(
+            reviewed.key || reviewed.id,
+            await this.withCardFile(taskId, plan, "context"),
+          ),
+        ]);
       // A filing's discovered-from links are truthful provenance, not an
       // inferred accepted basis or a routing discount. Preserve same-session
       // direct builds/prototypes that legitimately have no external source.

@@ -1,3 +1,11 @@
+import type {
+  UsageQuery,
+  UsageSummary,
+  UsageTaskCosts,
+  UsageTaskCostsQuery,
+  UsageTasks,
+  UsageTasksQuery,
+} from "@shared/usage";
 import type { HostChildProcess, HostChildSpawner } from "../host";
 import type { PlacedWorkAnswer, PlacedWorkRead } from "../routing/placedWork";
 import type {
@@ -48,6 +56,28 @@ export class RecordReader {
   /** The window's search of earlier work (`TaskProtocol.search`). */
   closed(input: ClosedTaskSearchInput): Promise<ClosedTaskSearch> {
     return this.read({ kind: "closed", input }) as Promise<ClosedTaskSearch>;
+  }
+
+  /**
+   * Settings → Usage's reads (docs/usage.md), over the daily totals as the
+   * core last folded them: the caller folds first, since this process
+   * cannot write. The summary's models carry their recorded ids as names.
+   */
+  usageSummary(input: { query: UsageQuery; now: number }): Promise<UsageSummary> {
+    return this.read({ kind: "usageSummary", input }) as Promise<UsageSummary>;
+  }
+
+  usageTasks(input: { query: UsageTasksQuery; now: number }): Promise<UsageTasks> {
+    return this.read({ kind: "usageTasks", input }) as Promise<UsageTasks>;
+  }
+
+  usageTaskCosts(input: { query: UsageTaskCostsQuery; now: number }): Promise<UsageTaskCosts> {
+    return this.read({ kind: "usageTaskCosts", input }) as Promise<UsageTaskCosts>;
+  }
+
+  /** Whether this host has the process to read in; without it every read is refused. */
+  get available(): boolean {
+    return this.spawner !== undefined && !this.disposed;
   }
 
   get pid(): number | undefined {

@@ -1784,8 +1784,7 @@ export async function createServices(
     localOrchestrator,
     observe,
     crewLive,
-    // The words General's model picker uses for a custom API.
-    usage: { ...usageReads(usageStore, slots, "Custom API"), reporting: companyUsage.reporting },
+    usage: { ...usageReads(usageStore, slots, recordReader), reporting: companyUsage.reporting },
     costLimit: {
       view: () => appCostLimitView(),
       set: (limit) => {

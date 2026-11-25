@@ -8,6 +8,7 @@ import { PlacedWorkScores } from "../routing/placedWork";
 import { forkChildProcess } from "../sql/forkChildProcess";
 import { openDatabase } from "../storage/db";
 import { DecisionStore } from "../storage/decisionStore";
+import { usageReads } from "../storage/homeUsage";
 import { SettingsStore } from "../storage/settingsStore";
 import { UsageStore } from "../storage/usageStore";
 import { seedTask } from "../tasks/seedTask";
@@ -147,6 +148,76 @@ describe("finding A: the actual background record reader", () => {
             }
           })
           .toBe(false);
+      db.close();
+    }
+  });
+
+  // INF-6716: while Settings → Usage is open its three reads run again after
+  // every board update and model reply; on the core's thread each held the
+  // window for 15 to 200 ms on a long record.
+  it("answers Settings → Usage's reads in the record process, with usage the core recorded since the last read", async () => {
+    const dir = scratchDir("infinitary-record-usage-");
+    const db = openDatabase(dir);
+    const reader = new RecordReader(forkChildProcess(entry), join(dir, "firstmate.db"));
+    const now = vi.spyOn(Date, "now").mockReturnValue(AT);
+    const slots = { view: () => ({ models: [], byName: [] }) };
+    try {
+      const tasks = new TaskService({ db, now: () => AT - 3_600_000 });
+      const usage = new UsageStore(db);
+      for (const id of ["sorted-board", "usage-tab"]) {
+        seedTask(tasks, { id, title: id, prompt: id, status: "running" });
+        tasks.close(id, { status: "done", reason: "finished", actor: "host" });
+      }
+      const spend = (taskId: string, input: number) =>
+        usage.record({
+          taskId,
+          accountId: "mini-grok",
+          model: GROK,
+          usage: { input, output: 10, cost: 0.5, costSource: "listed-prices" },
+          at: AT - 1_800_000,
+        });
+      spend("sorted-board", 1_000);
+      const background = usageReads(usage, slots, reader);
+      const here = usageReads(usage, slots);
+      const summaryQuery = { period: "30d", scope: "all" } as const;
+      expect((await background.summary(summaryQuery)).total.records).toBe(1);
+
+      // Written after the last read: the core folds it before the process reads.
+      spend("usage-tab", 2_000);
+      const onParent = [
+        vi.spyOn(UsageStore.prototype, "summary"),
+        vi.spyOn(UsageStore.prototype, "tasks"),
+        vi.spyOn(UsageStore.prototype, "taskCosts"),
+      ];
+      let parentTurns = 0;
+      let progress: ReturnType<typeof setImmediate> | undefined;
+      const tick = () => {
+        parentTurns++;
+        progress = setImmediate(tick);
+      };
+      progress = setImmediate(tick);
+      const [summary, recent, costs] = await Promise.all([
+        background.summary(summaryQuery),
+        background.tasks({ period: "30d", scope: "all", limit: 10 }),
+        background.taskCosts({ period: "30d" }),
+      ]).finally(() => clearImmediate(progress));
+      for (const spy of onParent) expect(spy).not.toHaveBeenCalled();
+      expect(parentTurns).toBeGreaterThan(0);
+      for (const spy of onParent) spy.mockRestore();
+
+      expect(summary.total.records).toBe(2);
+      expect(summary.total.tokens.input).toBe(3_000);
+      expect(summary.finished).toBe(2);
+      expect(recent.matching).toBe(2);
+      expect(costs.tasks.map((task) => task.tokens).sort()).toEqual([1_010, 2_010]);
+      // The same answers, models named as Settings names them, as on the core's own thread.
+      expect(summary).toEqual(await here.summary(summaryQuery));
+      expect(recent).toEqual(await here.tasks({ period: "30d", scope: "all", limit: 10 }));
+      expect(costs).toEqual(await here.taskCosts({ period: "30d" }));
+    } finally {
+      now.mockRestore();
+      vi.restoreAllMocks();
+      await reader.dispose();
       db.close();
     }
   });

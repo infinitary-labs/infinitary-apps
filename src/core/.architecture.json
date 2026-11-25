@@ -243,7 +243,7 @@
     {
       "name": "recordReads",
       "path": "src/core/recordReads",
-      "about": "Task searches in a read-only process",
+      "about": "Task searches and usage sums in a read-only process",
       "group": "Saved state"
     },
     {
@@ -1150,7 +1150,7 @@
     {
       "from": "recordReads",
       "to": "storage",
-      "why": "searches tasks"
+      "why": "searches tasks and sums usage"
     },
     {
       "from": "releaseNotes",
@@ -1866,6 +1866,11 @@
       "from": "dispatcher",
       "to": "reset",
       "why": "answers how many tasks a reset stops, undoes the first mate's side and leaves a controlling computer that asked for the reset paired"
+    },
+    {
+      "from": "storage",
+      "to": "recordReads",
+      "why": "hands it Settings → Usage's reads"
     },
     {
       "from": "storage",

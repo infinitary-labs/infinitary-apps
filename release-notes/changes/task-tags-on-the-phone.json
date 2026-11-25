@@ -9,7 +9,7 @@
       "picture": {
         "dark": "task-tags-on-the-phone-dark.webp",
         "light": "task-tags-on-the-phone-light.webp",
-        "alt": "Tasks search on an iPhone with the tag row under the search field: All tags, bug, feature pressed, idea and No tag with their counts, and the task tagged feature listed under Backlog"
+        "alt": "Tasks search on an iPhone with harbour typed and the tag row under the search field: All tags, bug 0, feature 1 pressed, idea 0 and the start of No tag, and the one matching task listed under Backlog"
       },
       "provenance": { "origin": "change" }
     }

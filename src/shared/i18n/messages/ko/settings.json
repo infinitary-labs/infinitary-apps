@@ -1073,6 +1073,14 @@
   },
   "settingsProjectsTagsRemoveQuestionNone": "{name}을(를) 제거할까요? 이 태그가 붙은 작업은 없어요.",
   "settingsProjectsTagsSave": "저장",
+  "settingsProjectsTagsSuggest": "태그 제안",
+  "settingsProjectsTagsSuggestHint": "태그 제안은 일등항해사에게 요청하고, 일등항해사가 카드로 답해요.",
+  "settingsProjectsTagsSuggestNotSent": "일등항해사에게 요청하지 못했어요. 다시 시도해 주세요.",
+  "settingsProjectsTagsSuggestRemoved": "{project}이(가) 제거되어 아무것도 보내지 않았어요.",
+  "settingsProjectsTagsSuggestStarting": "Infinitary가 아직 시작 중이에요. 잠시 후 다시 시도해 주세요.",
+  "settingsProjectsTagsSuggestTagged": "{project}에 이제 태그가 있어 아무것도 보내지 않았어요.",
+  "settingsProjectsTagsSuggestUnknown": "이 프로젝트가 더 이상 없어 아무것도 보내지 않았어요.",
+  "settingsProjectsTagsSuggestWords": "{project}의 태그를 제안해 줘",
   "settingsProjectsTagsTasks": {
     "plural": "count",
     "other": "작업 {count}개"

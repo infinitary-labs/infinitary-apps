@@ -54,6 +54,7 @@ import {
   keptMessageWords,
 } from "./seat";
 import { digestEntry, digestFor, keepDigest } from "./seatDigest";
+import type { TagSuggestionFacts } from "./tagSuggestionNote";
 import { receiptOf, TakeBacks } from "./takeBack";
 import { turnOriginOf } from "./turnOrigins";
 import {
@@ -147,12 +148,7 @@ export type FirstmateTurn = {
   /** That cut-off paused the seat: the ladder's card speaks for it. */
   pausing: boolean;
   /** The captain's live words the running turn carries on no inbox row. */
-  liveCaptain?: {
-    words: string;
-    attachments?: AttachmentRef[];
-    aboutCardId?: string;
-    askId?: string;
-  };
+  liveCaptain?: AcceptedSteer;
 };
 
 /** What each turn starts afresh: its origin, wake, card and live words were stamped before it. */
@@ -238,6 +234,8 @@ type TurnPayload =
        * project pill, docs/project-focus.md): a hint below a shown record.
        */
       focusedProjectId?: string;
+      /** Set only by the home's Suggest tags press (docs/task-tags.md, "Suggesting tags"). */
+      tagSuggestion?: TagSuggestionFacts;
     };
 
 /** Whether a batch of inbox rows carries a message the captain typed, not only a choice. */
@@ -519,6 +517,7 @@ export class FirstmateAgent {
     // An accepted turn owns copies of its pictures before anything records
     // or acknowledges it, so a parked or retried turn still has its bytes.
     const kept = images ? keepImages(randomUUID(), images) : undefined;
+    const tagSuggestion = typeof turn === "string" ? undefined : turn.tagSuggestion;
     // The ask row exists before anything runs (capture, P1): the open card
     // or the record card is the hint the fallback prefers.
     const hintTaskId = this.resolveHint(turn, visibleCardId, pastCardId);
@@ -543,6 +542,13 @@ export class FirstmateAgent {
     this.asks.select([...this.turn.read].at(-1));
     this.takeBacks.handing(ask.id);
     if (correctionOf) this.takeBacks.replaced(correctionOf, trimmed);
+    const accepted: AcceptedSteer = {
+      words: trimmed,
+      attachments: kept,
+      aboutCardId,
+      askId: ask.id,
+      ...(tagSuggestion ? { tagSuggestion } : {}),
+    };
     try {
       this.options.onCaptainTurnAccepted?.();
     } catch (error) {
@@ -553,7 +559,7 @@ export class FirstmateAgent {
     const unavailable = this.options.knowledge?.availability();
     if (unavailable?.state === "unavailable") {
       const problem = `Your first mate has paused new work because standing directions could not be read. ${unavailable.reason}`;
-      this.park({ words: trimmed, attachments: kept, aboutCardId, askId: ask.id });
+      this.park(accepted);
       this.replyToLastMessage([ask.id], plainProblem(problem));
       this.settleTurn({ trigger: "captain", failed: true, reason: "error" });
       this.delivery.endTurn({ asks: [ask.id], held: true, unread: [] });
@@ -570,14 +576,14 @@ export class FirstmateAgent {
     if (this.takeBacks.dropped(ask.id)) return;
     if (!session && this.seat.pausedAtAttach) {
       // Paused at the attach: the words wait on the inbox like admission's.
-      this.park({ words: trimmed, attachments: kept, aboutCardId, askId: ask.id });
+      this.park(accepted);
       this.keptReceipt(ask.id);
       return;
     }
     if (!session) {
       // No session could be built: the card is up, and Retry serves the
       // same durable message once a session can start.
-      this.park({ words: trimmed, attachments: kept, aboutCardId, askId: ask.id });
+      this.park(accepted);
       this.replyToLastMessage([ask.id], plainProblem(this.seat.sessionFailure));
       this.settleTurn({ trigger: "captain", failed: true, reason: "no_session" });
       this.delivery.endTurn({ asks: [ask.id], held: true, unread: [] });
@@ -588,7 +594,9 @@ export class FirstmateAgent {
     // the next context complete.
     const contextNow = () =>
       this.context.forTurn(visibleCardId, hintTaskId, typedUnder, pastCardId, sourceFacts);
-    const userBody = renderWake(captainTurn(trimmed, false, undefined, undefined, ask.through));
+    const userBody = renderWake(
+      captainTurn(trimmed, false, undefined, undefined, ask.through, tagSuggestion),
+    );
     const userSegment: ServedSegmentInput = { kind: "user", body: userBody, origin: "captain" };
     const captainOnly = (context: string): ServedInput => ({
       framed: frameServedInput([{ kind: "context", body: context }, userSegment]),
@@ -600,7 +608,7 @@ export class FirstmateAgent {
       // does not judge a message it never read. So does a turn reading an
       // answer an earlier message waits on: a card for the new message must
       // not count as the earlier one's answer.
-      this.park({ words: trimmed, attachments: kept, aboutCardId, askId: ask.id });
+      this.park(accepted);
       this.unreadAsks.add(ask.id);
       return;
     }
@@ -611,15 +619,7 @@ export class FirstmateAgent {
       // captain is now waiting, so the rest of the turn runs at the captain
       // level even when it began as a low operational drain (WI-13).
       session.setThinkingLevel(FIRSTMATE_CAPTAIN_THINKING_LEVEL);
-      await this.steerRecorded(
-        session,
-        captainOnly(contextNow()),
-        trimmed,
-        images,
-        kept,
-        aboutCardId,
-        ask.id,
-      );
+      await this.steerRecorded(session, captainOnly(contextNow()), accepted, images);
       return;
     }
     // The pre-turn admission check: the flagship binding is re-decided only
@@ -627,26 +627,18 @@ export class FirstmateAgent {
     const admitted = await this.seat.admitTurn(session);
     if (this.takeBacks.dropped(ask.id)) return;
     if (!admitted) {
-      this.park({ words: trimmed, attachments: kept, aboutCardId, askId: ask.id });
+      this.park(accepted);
       this.keptReceipt(ask.id);
       return;
     }
     if (this.delivery.servedAlone) {
-      this.park({ words: trimmed, attachments: kept, aboutCardId, askId: ask.id });
+      this.park(accepted);
       this.unreadAsks.add(ask.id);
       return;
     }
     if (admitted.isStreaming() || this.running) {
       admitted.setThinkingLevel(FIRSTMATE_CAPTAIN_THINKING_LEVEL);
-      await this.steerRecorded(
-        admitted,
-        captainOnly(contextNow()),
-        trimmed,
-        images,
-        kept,
-        aboutCardId,
-        ask.id,
-      );
+      await this.steerRecorded(admitted, captainOnly(contextNow()), accepted, images);
       return;
     }
     this.seat.serveInstructionsAt(admitted);
@@ -679,7 +671,7 @@ export class FirstmateAgent {
     this.delivery.adopt(pending);
     this.turn.aboutCardId = aboutCardId;
     // The live words ride no row: a cut-off turn parks them (runTurn).
-    this.turn.liveCaptain = { words: trimmed, attachments: kept, aboutCardId, askId: ask.id };
+    this.turn.liveCaptain = accepted;
     void this.runTurn(
       admitted,
       input,
@@ -787,11 +779,11 @@ export class FirstmateAgent {
    * the pictures their message keeps; the drain frames them under a fresh
    * context block. Answers the row's id.
    */
-  private park({ words, attachments, aboutCardId, askId }: AcceptedSteer): number {
+  private park({ words, attachments, aboutCardId, askId, tagSuggestion }: AcceptedSteer): number {
     const through = askId ? this.options.tasks.capture.getAsk(askId)?.through : undefined;
     return this.options.inbox.enqueue(
       FIRSTMATE_RECIPIENT,
-      captainTurn(words, false, attachments, askId, through),
+      captainTurn(words, false, attachments, askId, through, tagSuggestion),
       captainTurnRef(aboutCardId),
       "captain",
     );
@@ -807,20 +799,18 @@ export class FirstmateAgent {
   private async steerRecorded(
     session: ModelSession,
     input: ServedInput,
-    words: string,
+    steer: AcceptedSteer,
     images: Array<{ mimeType: string; data: string }> | undefined,
-    kept: AttachmentRef[] | undefined,
-    aboutCardId?: string,
-    askId?: string,
   ): Promise<void> {
-    const id = this.park({ words, attachments: kept, aboutCardId, askId });
+    const { words, askId } = steer;
+    const id = this.park(steer);
     this.expectRead(input.framed.text, askId ? [askId] : []);
     if (askId) this.takeBacks.handing(askId, true);
     try {
       await session.steer(input.framed.text, images);
       this.options.inbox.ack([id]);
       this.decisions.noteSteer(input);
-      this.acceptedSteers.push({ words, attachments: kept, aboutCardId, askId });
+      this.acceptedSteers.push(steer);
       this.turn.asked.push(words);
       this.turn.typed = true;
     } catch {
@@ -1839,4 +1829,6 @@ type AcceptedSteer = {
   attachments?: AttachmentRef[];
   aboutCardId?: string;
   askId?: string;
+  /** The Suggest tags press these words came from; its note rides every copy of them. */
+  tagSuggestion?: TagSuggestionFacts;
 };

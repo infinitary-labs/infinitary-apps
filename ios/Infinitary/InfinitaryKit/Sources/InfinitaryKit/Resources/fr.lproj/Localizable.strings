@@ -3668,6 +3668,14 @@
 "settingsProjectsTagsRemoveNamed" = "Retirer %1$@";
 "settingsProjectsTagsRemoveQuestionNone" = "Retirer %1$@ ? Aucune tâche ne la porte.";
 "settingsProjectsTagsSave" = "Enregistrer";
+"settingsProjectsTagsSuggest" = "Suggérer des étiquettes";
+"settingsProjectsTagsSuggestHint" = "Suggérer des étiquettes le demande à votre second, qui répond sur une carte.";
+"settingsProjectsTagsSuggestNotSent" = "Impossible de demander à votre second. Veuillez réessayer.";
+"settingsProjectsTagsSuggestRemoved" = "%1$@ a été retiré, donc rien n’a été envoyé.";
+"settingsProjectsTagsSuggestStarting" = "Infinitary démarre encore. Réessayez dans un instant.";
+"settingsProjectsTagsSuggestTagged" = "%1$@ a maintenant une étiquette, donc rien n’a été envoyé.";
+"settingsProjectsTagsSuggestUnknown" = "Ce projet n’existe plus, donc rien n’a été envoyé.";
+"settingsProjectsTagsSuggestWords" = "Suggère des étiquettes pour %1$@";
 "settingsProjectsTasksLabel" = "Tâches";
 "settingsProjectsWorkspace" = "Espace de travail";
 "settingsProjectsWorkspaceDescription" = "Construit sur place : pas de copie de travail ni de demande de tirage.";

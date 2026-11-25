@@ -1079,6 +1079,14 @@
   },
   "settingsProjectsTagsRemoveQuestionNone": "{name} を削除しますか？このタグが付いたタスクはありません。",
   "settingsProjectsTagsSave": "保存",
+  "settingsProjectsTagsSuggest": "タグを提案",
+  "settingsProjectsTagsSuggestHint": "「タグを提案」は一等航海士に頼み、一等航海士がカードで答えます。",
+  "settingsProjectsTagsSuggestNotSent": "一等航海士に頼めませんでした。もう一度お試しください。",
+  "settingsProjectsTagsSuggestRemoved": "{project} は削除されたため、何も送信していません。",
+  "settingsProjectsTagsSuggestStarting": "Infinitary はまだ起動中です。少し待ってからもう一度お試しください。",
+  "settingsProjectsTagsSuggestTagged": "{project} にはもうタグがあるため、何も送信していません。",
+  "settingsProjectsTagsSuggestUnknown": "このプロジェクトはもうないため、何も送信していません。",
+  "settingsProjectsTagsSuggestWords": "{project} のタグを提案して",
   "settingsProjectsTagsTasks": {
     "plural": "count",
     "other": "{count} 件のタスク"

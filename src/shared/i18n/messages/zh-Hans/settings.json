@@ -1079,6 +1079,14 @@
   },
   "settingsProjectsTagsRemoveQuestionNone": "移除 {name}？没有任务带有它。",
   "settingsProjectsTagsSave": "保存",
+  "settingsProjectsTagsSuggest": "建议标签",
+  "settingsProjectsTagsSuggestHint": "“建议标签”会请你的大副给出建议，大副会在卡片上回答。",
+  "settingsProjectsTagsSuggestNotSent": "无法请你的大副给出建议。请再试一次。",
+  "settingsProjectsTagsSuggestRemoved": "{project} 已被移除，因此没有发送任何内容。",
+  "settingsProjectsTagsSuggestStarting": "Infinitary 仍在启动。请稍后再试。",
+  "settingsProjectsTagsSuggestTagged": "{project} 现在已有标签，因此没有发送任何内容。",
+  "settingsProjectsTagsSuggestUnknown": "这个项目已不存在，因此没有发送任何内容。",
+  "settingsProjectsTagsSuggestWords": "为 {project} 建议标签",
   "settingsProjectsTagsTasks": {
     "plural": "count",
     "other": "{count} 个任务"

@@ -3824,6 +3824,14 @@ public enum PhoneMessages {
     public static func `settingsProjectsTagsRemoveQuestion`(`count`: Int, `name`: String) -> String { PhoneWords.format("settingsProjectsTagsRemoveQuestion", [`count`, `name`]) }
     public static func `settingsProjectsTagsRemoveQuestionNone`(`name`: String) -> String { PhoneWords.format("settingsProjectsTagsRemoveQuestionNone", [`name`]) }
     public static func `settingsProjectsTagsSave`() -> String { PhoneWords.format("settingsProjectsTagsSave", []) }
+    public static func `settingsProjectsTagsSuggest`() -> String { PhoneWords.format("settingsProjectsTagsSuggest", []) }
+    public static func `settingsProjectsTagsSuggestHint`() -> String { PhoneWords.format("settingsProjectsTagsSuggestHint", []) }
+    public static func `settingsProjectsTagsSuggestNotSent`() -> String { PhoneWords.format("settingsProjectsTagsSuggestNotSent", []) }
+    public static func `settingsProjectsTagsSuggestRemoved`(`project`: String) -> String { PhoneWords.format("settingsProjectsTagsSuggestRemoved", [`project`]) }
+    public static func `settingsProjectsTagsSuggestStarting`() -> String { PhoneWords.format("settingsProjectsTagsSuggestStarting", []) }
+    public static func `settingsProjectsTagsSuggestTagged`(`project`: String) -> String { PhoneWords.format("settingsProjectsTagsSuggestTagged", [`project`]) }
+    public static func `settingsProjectsTagsSuggestUnknown`() -> String { PhoneWords.format("settingsProjectsTagsSuggestUnknown", []) }
+    public static func `settingsProjectsTagsSuggestWords`(`project`: String) -> String { PhoneWords.format("settingsProjectsTagsSuggestWords", [`project`]) }
     public static func `settingsProjectsTagsTasks`(`count`: Int) -> String { PhoneWords.format("settingsProjectsTagsTasks", [`count`]) }
     public static func `settingsProjectsTasksLabel`() -> String { PhoneWords.format("settingsProjectsTasksLabel", []) }
     public static func `settingsProjectsWorkspace`() -> String { PhoneWords.format("settingsProjectsWorkspace", []) }
@@ -8550,6 +8558,14 @@ extension PhoneWords {
         "settingsProjectsTagsRemoveQuestion": ["count", "name"],
         "settingsProjectsTagsRemoveQuestionNone": ["name"],
         "settingsProjectsTagsSave": [],
+        "settingsProjectsTagsSuggest": [],
+        "settingsProjectsTagsSuggestHint": [],
+        "settingsProjectsTagsSuggestNotSent": [],
+        "settingsProjectsTagsSuggestRemoved": ["project"],
+        "settingsProjectsTagsSuggestStarting": [],
+        "settingsProjectsTagsSuggestTagged": ["project"],
+        "settingsProjectsTagsSuggestUnknown": [],
+        "settingsProjectsTagsSuggestWords": ["project"],
         "settingsProjectsTagsTasks": ["count"],
         "settingsProjectsTasksLabel": [],
         "settingsProjectsWorkspace": [],

@@ -3668,6 +3668,14 @@
 "settingsProjectsTagsRemoveNamed" = "%1$@ を削除";
 "settingsProjectsTagsRemoveQuestionNone" = "%1$@ を削除しますか？このタグが付いたタスクはありません。";
 "settingsProjectsTagsSave" = "保存";
+"settingsProjectsTagsSuggest" = "タグを提案";
+"settingsProjectsTagsSuggestHint" = "「タグを提案」は一等航海士に頼み、一等航海士がカードで答えます。";
+"settingsProjectsTagsSuggestNotSent" = "一等航海士に頼めませんでした。もう一度お試しください。";
+"settingsProjectsTagsSuggestRemoved" = "%1$@ は削除されたため、何も送信していません。";
+"settingsProjectsTagsSuggestStarting" = "Infinitary はまだ起動中です。少し待ってからもう一度お試しください。";
+"settingsProjectsTagsSuggestTagged" = "%1$@ にはもうタグがあるため、何も送信していません。";
+"settingsProjectsTagsSuggestUnknown" = "このプロジェクトはもうないため、何も送信していません。";
+"settingsProjectsTagsSuggestWords" = "%1$@ のタグを提案して";
 "settingsProjectsTasksLabel" = "タスク";
 "settingsProjectsWorkspace" = "ワークスペース";
 "settingsProjectsWorkspaceDescription" = "その場で作成：作業コピーもプルリクエストもありません。";

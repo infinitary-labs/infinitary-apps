@@ -20,6 +20,7 @@ import {
 import { settingsShowSchema } from "../showActions";
 import { summaryPointSchema, summaryPointViewSchema } from "../summaryPoint";
 import { tagCheckChangeSchema, tagCheckReadSchema, tagCheckViewSchema } from "../tagCheck";
+import { tagSuggestionRequestSchema, tagSuggestionResultSchema } from "../tagSuggestion";
 import { projectTagChangeResultSchema, projectTagChangeSchema } from "../tags";
 import { projectViewSchema } from "../tasks";
 import {
@@ -58,6 +59,17 @@ export const settingsChannels = {
     reach: "home",
     request: z.tuple([projectTagChangeSchema]),
     response: projectTagChangeResultSchema,
+  },
+  // Suggest tags (docs/task-tags.md, "Suggesting tags", `suggest-tags.md`):
+  // a project with no tags asks the first mate for some, with the person's
+  // words as their own message and a typed note beside them. A refusal
+  // answers its typed reason, and nothing is sent.
+  "inf:projects:suggest-tags": {
+    effect: "change",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([tagSuggestionRequestSchema]),
+    response: tagSuggestionResultSchema,
   },
   // Check existing tasks (docs/task-tags.md, `tag-check.md`): each project
   // with tags, or the one named with the tags to count for, as its Tags

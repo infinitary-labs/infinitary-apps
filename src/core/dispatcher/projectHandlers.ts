@@ -10,7 +10,7 @@ type ProjectHandlers = {
 
 /** The core dispatcher validates requests and authority before these calls. */
 export function projectHandlers(
-  services: Pick<CoreServices, "taskProtocol" | "repos" | "tasks" | "tagging">,
+  services: Pick<CoreServices, "taskProtocol" | "repos" | "tasks" | "tagging" | "firstmate">,
 ): ProjectHandlers {
   return {
     "inf:projects:list": () => services.taskProtocol.projects(),
@@ -21,6 +21,19 @@ export function projectHandlers(
     "inf:projects:tag-check": (change) => {
       if (!services.tagging) throw new Error("Infinitary is still starting.");
       return services.tagging.tagger.change(change);
+    },
+    // The press, never the words, adds the note: the words are the person's own message.
+    "inf:projects:suggest-tags": async ({ projectId, words }) => {
+      if (!services.tagging) return { ok: false as const, refused: "starting" as const };
+      const facts = services.tagging.tagger.suggestion(projectId);
+      if (typeof facts === "string") return { ok: false as const, refused: facts };
+      await services.firstmate.converse({
+        text: words,
+        captainText: words.trim(),
+        focusedProjectId: projectId,
+        tagSuggestion: facts,
+      });
+      return { ok: true as const };
     },
   };
 }

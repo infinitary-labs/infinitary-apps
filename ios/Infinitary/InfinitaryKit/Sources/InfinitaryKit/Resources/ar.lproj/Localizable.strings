@@ -3668,6 +3668,14 @@
 "settingsProjectsTagsRemoveNamed" = "إزالة %1$@";
 "settingsProjectsTagsRemoveQuestionNone" = "إزالة %1$@؟ لا تحمله أي مهمة.";
 "settingsProjectsTagsSave" = "حفظ";
+"settingsProjectsTagsSuggest" = "اقتراح وسوم";
+"settingsProjectsTagsSuggestHint" = "يطلب «اقتراح وسوم» من نائب القبطان، فيجيب على بطاقة.";
+"settingsProjectsTagsSuggestNotSent" = "تعذّر سؤال نائب القبطان. حاول مرة أخرى.";
+"settingsProjectsTagsSuggestRemoved" = "أُزيل %1$@، لذا لم يُرسَل شيء.";
+"settingsProjectsTagsSuggestStarting" = "لا يزال Infinitary يبدأ. حاول مرة أخرى بعد لحظة.";
+"settingsProjectsTagsSuggestTagged" = "صار لـ %1$@ وسم الآن، لذا لم يُرسَل شيء.";
+"settingsProjectsTagsSuggestUnknown" = "لم يعد هذا المشروع موجودًا، لذا لم يُرسَل شيء.";
+"settingsProjectsTagsSuggestWords" = "اقترح وسومًا لـ %1$@";
 "settingsProjectsTasksLabel" = "المهام";
 "settingsProjectsWorkspace" = "مساحة العمل";
 "settingsProjectsWorkspaceDescription" = "يُبنى في مكانه: لا نسخة عمل ولا طلب سحب.";

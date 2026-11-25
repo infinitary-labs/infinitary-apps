@@ -507,6 +507,7 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
       tagChecks: (read) =>
         read ? invoke("inf:projects:tag-checks", read) : invoke("inf:projects:tag-checks"),
       tagCheck: (change) => invoke("inf:projects:tag-check", change),
+      suggestTags: (request) => invoke("inf:projects:suggest-tags", request),
     },
     quota: {
       snapshot: () => invoke("inf:quota:snapshot"),

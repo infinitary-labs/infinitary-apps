@@ -60118,6 +60118,75 @@
         ]
       }
     },
+    "inf:projects:suggest-tags": {
+      "effect": "change",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "object",
+            "properties": {
+              "projectId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "words": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 20000
+              }
+            },
+            "required": [
+              "projectId",
+              "words"
+            ],
+            "additionalProperties": false
+          }
+        ],
+        "items": false,
+        "minItems": 1,
+        "maxItems": 1
+      },
+      "response": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "ok": {
+                "type": "boolean",
+                "const": true
+              }
+            },
+            "required": [
+              "ok"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "ok": {
+                "type": "boolean",
+                "const": false
+              },
+              "refused": {
+                "type": "string",
+                "enum": [
+                  "unknown",
+                  "removed",
+                  "tagged",
+                  "starting"
+                ]
+              }
+            },
+            "required": [
+              "ok",
+              "refused"
+            ]
+          }
+        ]
+      }
+    },
     "inf:projects:tag-checks": {
       "effect": "read",
       "reach": "views",

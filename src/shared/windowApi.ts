@@ -164,6 +164,7 @@ import type { DeviceSignInEvent, DeviceSignIns } from "./signIns";
 import type { StandbyReady, StandbyViews } from "./standby";
 import type { SummaryPoint, SummaryPointView } from "./summaryPoint";
 import type { TagCheckChange, TagCheckRead, TagCheckView } from "./tagCheck";
+import type { TagSuggestionRequest, TagSuggestionResult } from "./tagSuggestion";
 import type { ProjectTagChange, ProjectTagChangeResult } from "./tags";
 import type { TakeBackResult } from "./takeBack";
 import type {
@@ -850,6 +851,8 @@ export type FirstmateApi = {
     tagChecks: (read?: TagCheckRead) => Promise<TagCheckView[]>;
     /** Start or stop a project's Check existing tasks. */
     tagCheck: (change: TagCheckChange) => Promise<TagCheckView>;
+    /** Ask the first mate to suggest tags for a project that has none (docs/task-tags.md). */
+    suggestTags: (request: TagSuggestionRequest) => Promise<TagSuggestionResult>;
   };
   quota: {
     snapshot: () => Promise<QuotaSnapshotView | null>;

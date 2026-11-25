@@ -1,7 +1,7 @@
 import { rm } from "node:fs/promises";
 import { resolve } from "node:path";
 import type { BatchChange, BatchMember } from "@shared/batches";
-import { git, gitFailure, REMOTE_TIMEOUT_MS } from "../workspace/git";
+import { APP_GIT_ENV, git, gitFailure, REMOTE_TIMEOUT_MS } from "../workspace/git";
 
 /**
  * The combine of batches of your own (docs/forge.md, "Batches of your
@@ -447,12 +447,7 @@ async function readable(repoDir: string, version: string): Promise<boolean> {
  */
 async function rebased(repoDir: string, ours: string, base: string): Promise<string> {
   return git(repoDir, ["commit-tree", `${ours}^{tree}`, "-p", base, "-m", "batch"], {
-    env: {
-      GIT_AUTHOR_NAME: "Infinitary",
-      GIT_AUTHOR_EMAIL: "batch@infinitary.invalid",
-      GIT_COMMITTER_NAME: "Infinitary",
-      GIT_COMMITTER_EMAIL: "batch@infinitary.invalid",
-    },
+    env: APP_GIT_ENV,
   });
 }
 

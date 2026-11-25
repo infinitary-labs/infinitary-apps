@@ -36,6 +36,54 @@ function crewSummaryRoom(): SummaryRoom {
   };
 }
 
+/** Reduced motion supplies no later frame after rail folds or an intrinsic
+ * panel resize, so the room follows its layout independently of stage time. */
+function observeCrewSummaryRoom(changed: () => void): () => void {
+  let watched = new Set<Element>();
+  const sizes = new ResizeObserver(changed);
+  const changes = new MutationObserver(() => {
+    watch();
+    changed();
+  });
+  const watch = () => {
+    const next = new Set(
+      document.querySelectorAll(
+        `${RAIL_CONTENTS_SELECTOR}, [data-rail], [data-topbar], [data-prompt-dock]`,
+      ),
+    );
+    for (const element of watched) if (!next.has(element)) sizes.unobserve(element);
+    for (const element of next) if (!watched.has(element)) sizes.observe(element);
+    watched = next;
+    changes.disconnect();
+    for (const region of document.querySelectorAll(
+      "[data-rail], [data-topbar], [data-prompt-dock]",
+    )) {
+      changes.observe(region, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: [
+          "style",
+          "class",
+          "hidden",
+          "data-side-panel-collapsed",
+          "data-side-panel-folded",
+          "data-side-panel-placement-y",
+        ],
+      });
+    }
+    const row = document.querySelector("[data-rail-row]");
+    if (row) changes.observe(row, { childList: true });
+    // Root attributes carry folding, text direction and prompt-lift variables.
+    changes.observe(document.documentElement, { attributes: true });
+  };
+  watch();
+  return () => {
+    sizes.disconnect();
+    changes.disconnect();
+  };
+}
+
 /**
  * Whether the first mate listens: hold-to-talk is recording, or the main
  * message has a draft. Only whether, so typing never re-renders the stage.
@@ -156,6 +204,7 @@ export const HomeMate = memo(function HomeMate() {
           facts={facts}
           onOpen={openRecord}
           summaryRoom={crewSummaryRoom}
+          observeSummaryRoom={observeCrewSummaryRoom}
           interactive={!showCards}
           theme={theme}
           teach={teach}

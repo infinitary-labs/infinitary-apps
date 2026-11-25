@@ -5,10 +5,11 @@ import { SMALLEST_WINDOW } from "../../src/shared/smallestWindow";
 import { agentHoverFixture, HOVER_COUNTS, HOVER_NOTE, HOVER_PLAN } from "./agentHoverFixture";
 import { nextFrame } from "./crew";
 import { type LaunchedApp, launchApp } from "./launch";
-import { clearOfLosses, intersects, resizeWindow } from "./layout";
+import { clearOfLosses, expectClearOf, intersects, resizeWindow } from "./layout";
 import { movePanelTo } from "./panelLayout";
 import { seedClockPanels } from "./personalFixtures";
 import { heroShot, regionShot, windowShot } from "./pictures";
+import { promptInput } from "./prompt";
 import {
   expandDock,
   expectRecordBody,
@@ -57,12 +58,12 @@ async function stageAnchors(page: Page) {
   );
 }
 
-async function prepare(launched: LaunchedApp) {
+async function prepare(launched: LaunchedApp, expandActivity = true) {
   const { page, app } = launched;
   await page.emulateMedia({ reducedMotion: "reduce", colorScheme: "dark" });
   await resizeWindow(app, page, { width: 1024, height: 800 });
   await expandDock(page, "now");
-  await expandDock(page, "activity");
+  if (expandActivity) await expandDock(page, "activity");
   await expect(nowFrame(page).locator("[data-now-row]").first()).toBeVisible();
   await expect(page.locator("[data-computer-cluster]")).toHaveCount(HOVER_COUNTS.length);
   await expect(page.locator("[data-card-stack-open]")).toHaveCount(0);
@@ -278,6 +279,111 @@ test("crewmate summaries clear both rails in both text directions", async () => 
   }
 });
 
+/** The requested repair: a held summary follows late rail geometry without
+ * another pointer move or a running animation loop under reduced motion. */
+test("an open summary follows changing room geometry under reduced motion", async () => {
+  const launched = await launchApp({ ...agentHoverFixture(TITLE), withMockProvider: true });
+  try {
+    await prepare(launched);
+    const { page, app } = launched;
+    await movePanelTo(page, "activity", { x: "right", y: "top" });
+    await movePanelTo(
+      page,
+      "now",
+      { x: "left", y: "top" },
+      {
+        collapsedPanels: { now: true, activity: false },
+      },
+    );
+    await resizeWindow(app, page, { width: SMALLEST_WINDOW.width, height: 800 });
+    await expect(page.locator('[data-side-panel="now"]')).toHaveAttribute(
+      "data-side-panel-collapsed",
+      "",
+    );
+    await nextFrame(page);
+    const anchor = (await stageAnchors(page))
+      .filter((point) => point.x < SMALLEST_WINDOW.width / 2)
+      .sort((a, b) => a.x - b.x)[0];
+    if (!anchor) throw new Error("No crewmate beside the collapsed left rail");
+    const target = page.locator(`[data-crew-model-name="${anchor.id}"]`);
+    await focusOn(target);
+    const summary = page.locator(summarySelector);
+    await expect(summary).toHaveAttribute("data-crew-summary", anchor.id);
+    await expect(summary).toContainText(HOVER_NOTE);
+    const mounted = await summary.elementHandle();
+    if (!mounted) throw new Error("The focused summary did not mount");
+    try {
+      await movePanelTo(
+        page,
+        "now",
+        { x: "left", y: "top" },
+        {
+          collapsedPanels: { now: false, activity: false },
+        },
+      );
+      await expect(page.locator('[data-side-panel="now"]')).not.toHaveAttribute(
+        "data-side-panel-collapsed",
+        "",
+      );
+      await expectClearOf(page, summary, ...(await controls(page)));
+      await expect(summary).toHaveAttribute("data-crew-summary", anchor.id);
+      expect(
+        await mounted.evaluate((element) => element.isConnected),
+        "Room changes retain the mounted summary",
+      ).toBe(true);
+    } finally {
+      await mounted.dispose();
+    }
+    await pressKey(target, "Escape");
+    await expect(summary).toHaveCount(0);
+    await movePanelTo(page, "activity", { x: "left", y: "top" });
+    await movePanelTo(page, "now", { x: "right", y: "top" });
+    await focusOn(target);
+    await expect(summary).toContainText(HOVER_NOTE);
+    await expectClearOf(page, summary, ...(await controls(page)));
+    const activity = page.locator('[data-side-panel="activity"]');
+    const beforePanel = await activity.boundingBox();
+    const beforeSummary = await summary.boundingBox();
+    if (!beforePanel || !beforeSummary) throw new Error("The held summary or Activity is missing");
+    await movePanelTo(page, "activity", { x: "left", y: "bottom" });
+    await expect(activity).toHaveAttribute("data-side-panel-placement-y", "bottom");
+    const afterPanel = await activity.boundingBox();
+    if (!afterPanel) throw new Error("Activity disappeared after moving");
+    expect(afterPanel.width).toBe(beforePanel.width);
+    expect(afterPanel.height).toBe(beforePanel.height);
+    expect(afterPanel.y).not.toBe(beforePanel.y);
+    expect(
+      intersects(beforeSummary, afterPanel),
+      "The position-only move reaches the summary's old place",
+    ).toBe(true);
+    await expectClearOf(page, summary, ...(await controls(page)));
+    await expect(summary).toHaveAttribute("data-crew-summary", anchor.id);
+    await pressKey(target, "Escape");
+    await expect(summary).toHaveCount(0);
+    const middle = await page.evaluate(() => innerHeight / 2);
+    const lower = (await stageAnchors(page))
+      .filter((point) => point.x < SMALLEST_WINDOW.width / 2 && point.y > middle)
+      .sort((a, b) => a.x - b.x)[0];
+    if (!lower) throw new Error("No lower crewmate beside the prompt");
+    await page.mouse.move(lower.x, lower.y);
+    await expect(summary).toHaveAttribute("data-crew-summary", lower.id);
+    await expect(summary).toContainText(HOVER_NOTE);
+    const prompt = page.locator("[data-prompt-dock]");
+    const beforePrompt = await prompt.boundingBox();
+    if (!beforePrompt) throw new Error("The main message is missing");
+    await promptInput(page).fill(
+      [TITLE, HOVER_NOTE, ...HOVER_PLAN.map((item) => item.label)].join("\n\n"),
+    );
+    await expect
+      .poll(async () => (await prompt.boundingBox())?.height ?? 0)
+      .toBeGreaterThan(beforePrompt.height);
+    await expect(summary).toHaveAttribute("data-crew-summary", lower.id);
+    await expectClearOf(page, summary, prompt, ...(await controls(page)));
+  } finally {
+    await launched.close();
+  }
+});
+
 test("a tall summary stays above sidebars only when the smallest window leaves no clear spot", async () => {
   const launched = await launchApp({
     ...agentHoverFixture(TITLE, { tall: true }),
@@ -357,7 +463,7 @@ for (const kind of ["create-slot", "more"] as const) {
     if (kind === "more") seedClockPanels(fixture.userDataDir, CLOCKS);
     const launched = await launchApp({ ...fixture, withMockProvider: true });
     try {
-      await prepare(launched);
+      await prepare(launched, kind !== "more");
       await resizeWindow(launched.app, launched.page, SMALLEST_WINDOW);
       await expect(
         launched.page.locator(kind === "more" ? "[data-rail-more]" : "[data-create-panel-slot]"),

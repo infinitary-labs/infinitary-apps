@@ -112,6 +112,8 @@ export type CrewOrbitProps = {
   onOpen?: (taskId: string) => void;
   /** Where a summary may sit, in window coordinates; anywhere in the window when absent. */
   summaryRoom?: () => SummaryRoom;
+  /** Room changes need placement even when neither the summary nor window resizes. */
+  observeSummaryRoom?: (changed: () => void) => () => void;
   /** Background crew under a card do not take focus or the pointer. */
   interactive?: boolean;
   theme?: Theme;
@@ -330,6 +332,7 @@ export function CrewOrbit({
   facts,
   onOpen,
   summaryRoom,
+  observeSummaryRoom,
   interactive = true,
   theme,
   teach = null,
@@ -521,7 +524,7 @@ export function CrewOrbit({
   const pictureRef = useRef(false);
 
   // The summary, its brackets and its hairline follow the painted crewmate.
-  // Every write compares first, so a paused stage touches no DOM.
+  // Every write compares first, so unchanged geometry touches no DOM.
   const placeSummary = useCallback(() => {
     const view = viewRef.current;
     const wrap = wrapRef.current;
@@ -667,12 +670,14 @@ export function CrewOrbit({
     placedFor.current = { panel, target: shown };
     const observer = new ResizeObserver(placeSummary);
     observer.observe(panel);
+    const stopObservingRoom = observeSummaryRoom?.(placeSummary);
     window.addEventListener("resize", placeSummary);
     return () => {
       observer.disconnect();
+      stopObservingRoom?.();
       window.removeEventListener("resize", placeSummary);
     };
-  }, [summary, shown, placeSummary, aboveRails, summaryHost]);
+  }, [summary, shown, placeSummary, aboveRails, summaryHost, observeSummaryRoom]);
   useSummaryFade(layerRef, leaving);
 
   useEffect(() => {

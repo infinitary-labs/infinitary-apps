@@ -443,7 +443,9 @@ If none of its preferred positions fits, it searches the remaining space along t
 When rail content leaves no clear place, the same summary, brackets and hairline use the window-wide layer above the rails, so sidebar rows never obscure the summary.
 Only that no-room case may cover sidebar content; as soon as a clear place exists it returns to the ordinary layer.
 Placement measures visible panels, the create-panel slot and the More row, and its coordinates stay physical in either text direction.
-It lives outside the fitted formation, so its type is never scaled, and it follows the painted crewmate with compare-before-write, so a paused stage touches no DOM.
+While a summary is open, its room source observes rail, control, top-bar and prompt geometry, including panel moves and newly mounted controls, independently of the animation clock.
+Late panel resizing or folding repositions the same mounted summary under reduced motion without another pointer move.
+It lives outside the fitted formation, so its type is never scaled, and it follows the painted crewmate with compare-before-write, so a paused stage with unchanged room touches no DOM.
 It is read-only - no buttons - and never takes the pointer.
 Under reduced motion the summary works against the still frame.
 

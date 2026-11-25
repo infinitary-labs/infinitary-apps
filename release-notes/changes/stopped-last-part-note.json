@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "stopped-last-part-note",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A part you asked to wait no longer holds up its main task unnoticed",
+      "body": "When every other part of a main task has finished and the one left is a part you asked to wait, a card now draws the main task with its parts and asks you once whether to start that part. Start now starts it, Keep it waiting leaves it as it is, and a reply can change or drop it.",
+      "picture": {
+        "dark": "stopped-last-part-note-dark.webp",
+        "light": "stopped-last-part-note-light.webp",
+        "alt": "A card titled A task is waiting on a part in your backlog draws the main task, its finished parts and the part in your backlog, with Start now and Keep it waiting"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

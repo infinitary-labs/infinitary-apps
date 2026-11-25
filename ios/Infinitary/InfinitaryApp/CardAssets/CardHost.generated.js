@@ -19407,6 +19407,412 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Retired`;
   }
+  function cardLastPartBacklog() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `في مهامك المؤجلة`;
+      case "de":
+        return `In deinem Backlog`;
+      case "es":
+        return `En tus pendientes`;
+      case "fr":
+        return `Dans votre réserve`;
+      case "ja":
+        return `バックログ内`;
+      case "ko":
+        return `백로그에 있음`;
+      case "pt-BR":
+        return `No seu backlog`;
+      case "zh-Hans":
+        return `在待办列表中`;
+      case "zh-Hant":
+        return `在待辦清單中`;
+      case "en-XA":
+        return `[Îñ ýöûŕ ƀáçķļöĝ ~~~~~]`;
+      case "ar-XB":
+        return `‮In your backlog‬`;
+    }
+    return `In your backlog`;
+  }
+  function cardLastPartDone(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${count} جزء آخر مكتمل`;
+          case "one":
+            return `${count} جزء آخر مكتمل`;
+          case "two":
+            return `${count} جزءان آخران مكتملان`;
+          case "few":
+            return `${count} أجزاء أخرى مكتملة`;
+          case "many":
+            return `${count} جزءًا آخر مكتملًا`;
+          default:
+            return `${count} جزء آخر مكتمل`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} anderer Teil erledigt`;
+          default:
+            return `${count} andere Teile erledigt`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} otra parte terminada`;
+          case "many":
+            return `${count} de otras partes terminadas`;
+          default:
+            return `${count} otras partes terminadas`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} autre partie terminée`;
+          case "many":
+            return `${count} autres parties terminées`;
+          default:
+            return `${count} autres parties terminées`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `ほかのパート ${count} 件が完了`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `다른 부분 ${count}개 완료`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} outra parte concluída`;
+          case "many":
+            return `${count} outras partes concluídas`;
+          default:
+            return `${count} outras partes concluídas`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `其他 ${count} 个部分已完成`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `其他 ${count} 個部分已完成`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} öţĥéŕ þáŕţ ðöñé ~~~~~~]`;
+          default:
+            return `[${count} öţĥéŕ þáŕţš ðöñé ~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ other part done‬`;
+          default:
+            return `${count}‮ other parts done‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} other part done`;
+      default:
+        return `${count} other parts done`;
+    }
+  }
+  function cardLastPartDropped(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${count} جزء آخر أُسقط`;
+          case "one":
+            return `${count} جزء آخر أُسقط`;
+          case "two":
+            return `${count} جزءان آخران أُسقطا`;
+          case "few":
+            return `${count} أجزاء أخرى أُسقطت`;
+          case "many":
+            return `${count} جزءًا آخر أُسقط`;
+          default:
+            return `${count} جزء آخر أُسقط`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} anderer Teil aufgegeben`;
+          default:
+            return `${count} andere Teile aufgegeben`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} otra parte abandonada`;
+          case "many":
+            return `${count} de otras partes abandonadas`;
+          default:
+            return `${count} otras partes abandonadas`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} autre partie écartée`;
+          case "many":
+            return `${count} autres parties écartées`;
+          default:
+            return `${count} autres parties écartées`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `ほかのパート ${count} 件を取りやめ`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `다른 부분 ${count}개 중단됨`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} outra parte abandonada`;
+          case "many":
+            return `${count} outras partes abandonadas`;
+          default:
+            return `${count} outras partes abandonadas`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `其他 ${count} 个部分已放弃`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `其他 ${count} 個部分已放棄`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} öţĥéŕ þáŕţ ðŕöþþéð ~~~~~~~]`;
+          default:
+            return `[${count} öţĥéŕ þáŕţš ðŕöþþéð ~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ other part dropped‬`;
+          default:
+            return `${count}‮ other parts dropped‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} other part dropped`;
+      default:
+        return `${count} other parts dropped`;
+    }
+  }
+  function cardLastPartKeep() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `دعه ينتظر`;
+      case "de":
+        return `Weiter warten lassen`;
+      case "es":
+        return `Dejar que espere`;
+      case "fr":
+        return `La laisser attendre`;
+      case "ja":
+        return `待たせておく`;
+      case "ko":
+        return `계속 기다리게 두기`;
+      case "pt-BR":
+        return `Deixar esperando`;
+      case "zh-Hans":
+        return `让它继续等`;
+      case "zh-Hant":
+        return `讓它繼續等`;
+      case "en-XA":
+        return `[Ķééþ îţ ŵáîţîñĝ ~~~~~]`;
+      case "ar-XB":
+        return `‮Keep it waiting‬`;
+    }
+    return `Keep it waiting`;
+  }
+  function cardLastPartOpen(input2) {
+    const parent = input2.parent;
+    const part = input2.part;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${part} هو الجزء الوحيد من ${parent} الذي ما زال مفتوحًا.`;
+      case "de":
+        return `${part} ist der einzige Teil von ${parent}, der noch offen ist.`;
+      case "es":
+        return `${part} es la única parte de ${parent} que sigue abierta.`;
+      case "fr":
+        return `${part} est la seule partie de ${parent} encore ouverte.`;
+      case "ja":
+        return `${parent} のパートでまだ開いているのは ${part} だけです。`;
+      case "ko":
+        return `${parent}에서 아직 열려 있는 부분은 ${part}뿐이에요.`;
+      case "pt-BR":
+        return `${part} é a única parte de ${parent} ainda aberta.`;
+      case "zh-Hans":
+        return `${parent} 中仍未关闭的部分只剩 ${part}。`;
+      case "zh-Hant":
+        return `${parent} 中仍未關閉的部分只剩 ${part}。`;
+      case "en-XA":
+        return `[${part} îš ţĥé öñļý þáŕţ öƒ ${parent} šţîļļ öþéñ. ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${part}‮ is the only part of ‬${parent}‮ still open.‬`;
+    }
+    return `${part} is the only part of ${parent} still open.`;
+  }
+  function cardLastPartStart() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ابدأ الآن`;
+      case "de":
+        return `Jetzt starten`;
+      case "es":
+        return `Empezar ahora`;
+      case "fr":
+        return `Démarrer maintenant`;
+      case "ja":
+        return `今すぐ開始`;
+      case "ko":
+        return `지금 시작`;
+      case "pt-BR":
+        return `Começar agora`;
+      case "zh-Hans":
+        return `立即开始`;
+      case "zh-Hant":
+        return `立即開始`;
+      case "en-XA":
+        return `[Šţáŕţ ñöŵ ~~~]`;
+      case "ar-XB":
+        return `‮Start now‬`;
+    }
+    return `Start now`;
+  }
+  function cardLastPartStopped() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إنه ينتظر في مهامك المؤجلة لأنك طلبت ذلك، لذا لن يبدأه شيء حتى تبدأه أنت.`;
+      case "de":
+        return `Er wartet in deinem Backlog, weil du darum gebeten hast, also startet ihn nichts, bis du es tust.`;
+      case "es":
+        return `Espera en tus pendientes porque lo pediste, así que nada la iniciará hasta que lo hagas tú.`;
+      case "fr":
+        return `Elle attend dans votre réserve parce que vous l’avez demandé, donc rien ne la démarrera tant que vous ne le ferez pas.`;
+      case "ja":
+        return `あなたが求めたため、バックログで待機しています。あなたが開始するまで、何もこれを開始しません。`;
+      case "ko":
+        return `요청에 따라 백로그에서 기다리고 있어서, 직접 시작하기 전에는 아무것도 시작하지 않아요.`;
+      case "pt-BR":
+        return `Ela espera no seu backlog porque você pediu, então nada vai iniciá-la até você fazer isso.`;
+      case "zh-Hans":
+        return `它在待办列表中等待，是因为你要求这样；在你开始它之前，什么都不会开始它。`;
+      case "zh-Hant":
+        return `它在待辦清單中等待，是因為你要求這樣；在你開始它之前，什麼都不會開始它。`;
+      case "en-XA":
+        return `[Îţ ŵáîţš îñ ýöûŕ ƀáçķļöĝ ƀéçáûšé ýöû ášķéð, šö ñöţĥîñĝ šţáŕţš îţ ûñţîļ ýöû ðö. ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮It waits in your backlog because you asked, so nothing starts it until you do.‬`;
+    }
+    return `It waits in your backlog because you asked, so nothing starts it until you do.`;
+  }
+  function cardLastPartTitle() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `مهمة تنتظر جزءًا في مهامك المؤجلة`;
+      case "de":
+        return `Eine Aufgabe wartet auf einen Teil in deinem Backlog`;
+      case "es":
+        return `Una tarea espera una parte que está en tus pendientes`;
+      case "fr":
+        return `Une tâche attend une partie restée dans votre réserve`;
+      case "ja":
+        return `タスクがバックログ内のパートを待っています`;
+      case "ko":
+        return `작업 하나가 백로그에 있는 부분을 기다리고 있어요`;
+      case "pt-BR":
+        return `Uma tarefa está esperando uma parte no seu backlog`;
+      case "zh-Hans":
+        return `有个任务在等待待办列表中的一个部分`;
+      case "zh-Hant":
+        return `有個任務在等待待辦清單中的一個部分`;
+      case "en-XA":
+        return `[Å ţášķ îš ŵáîţîñĝ öñ á þáŕţ îñ ýöûŕ ƀáçķļöĝ ~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮A task is waiting on a part in your backlog‬`;
+    }
+    return `A task is waiting on a part in your backlog`;
+  }
+  function cardLastPartWaiting() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `بالانتظار`;
+      case "de":
+        return `Wartet`;
+      case "es":
+        return `Esperando`;
+      case "fr":
+        return `En attente`;
+      case "ja":
+        return `待機中`;
+      case "ko":
+        return `대기 중`;
+      case "pt-BR":
+        return `Esperando`;
+      case "zh-Hans":
+        return `等待中`;
+      case "zh-Hant":
+        return `等待中`;
+      case "en-XA":
+        return `[Ŵáîţîñĝ ~~~]`;
+      case "ar-XB":
+        return `‮Waiting‬`;
+    }
+    return `Waiting`;
+  }
+  function cardLastPartWays() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `«ابدأ الآن» يبدؤه. «دعه ينتظر» يتركه كما هو، ولا تعود هذه البطاقة إلا إذا انتهى جزء آخر لاحقًا. لتغييره أو إسقاطه، رُدّ هنا.`;
+      case "de":
+        return `Jetzt starten startet ihn. Weiter warten lassen lässt ihn, wie er ist, und diese Karte kommt nur zurück, wenn später ein anderer Teil fertig wird. Um ihn zu ändern oder aufzugeben, antworte hier.`;
+      case "es":
+        return `Empezar ahora la empieza. Dejar que espere la deja como está, y esta tarjeta solo vuelve si otra parte termina más adelante. Para cambiarla o abandonarla, responde aquí.`;
+      case "fr":
+        return `Démarrer maintenant la démarre. La laisser attendre la laisse telle quelle, et cette carte ne revient que si une autre partie se termine plus tard. Pour la modifier ou l’écarter, répondez ici.`;
+      case "ja":
+        return `今すぐ開始 で開始します。待たせておく ではそのままにし、後で別のパートが終わったときだけこのカードが戻ります。変更や取りやめは、ここに返信してください。`;
+      case "ko":
+        return `지금 시작을 누르면 시작해요. 계속 기다리게 두기를 누르면 그대로 두고, 나중에 다른 부분이 끝날 때만 이 카드가 다시 돌아와요. 바꾸거나 중단하려면 여기에 답장하세요.`;
+      case "pt-BR":
+        return `Começar agora a começa. Deixar esperando a deixa como está, e este cartão só volta se outra parte terminar depois. Para mudá-la ou abandoná-la, responda aqui.`;
+      case "zh-Hans":
+        return `立即开始会开始它。让它继续等会保持原样，只有之后另一部分完成时这张卡片才会回来。要修改或放弃它，请在这里回复。`;
+      case "zh-Hant":
+        return `立即開始會開始它。讓它繼續等會保持原樣，只有之後另一部分完成時這張卡片才會回來。要修改或放棄它，請在這裡回覆。`;
+      case "en-XA":
+        return `[Šţáŕţ ñöŵ šţáŕţš îţ. Ķééþ îţ ŵáîţîñĝ ļéáṽéš îţ áš îţ îš, áñð ţĥîš çáŕð çöɱéš ƀáçķ öñļý îƒ áñöţĥéŕ þáŕţ ƒîñîšĥéš ļáţéŕ. Ţö çĥáñĝé öŕ ðŕöþ îţ, ŕéþļý ĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Start now starts it. Keep it waiting leaves it as it is, and this card comes back only if another part finishes later. To change or drop it, reply here.‬`;
+    }
+    return `Start now starts it. Keep it waiting leaves it as it is, and this card comes back only if another part finishes later. To change or drop it, reply here.`;
+  }
   function cardLeaveAside() {
     switch (currentLanguage()) {
       case "ar":
@@ -111095,6 +111501,16 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardKnowledgeConceptRef,
     cardKnowledgeFindingRef,
     cardKnowledgeRetired,
+    cardLastPartBacklog,
+    cardLastPartDone,
+    cardLastPartDropped,
+    cardLastPartKeep,
+    cardLastPartOpen,
+    cardLastPartStart,
+    cardLastPartStopped,
+    cardLastPartTitle,
+    cardLastPartWaiting,
+    cardLastPartWays,
     cardLeaveAside,
     cardLeaveAsideRest,
     cardLeaveHide,
@@ -114644,6 +115060,16 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardKnowledgeConceptRef": ["id", "title"],
     "cardKnowledgeFindingRef": ["id", "title"],
     "cardKnowledgeRetired": [],
+    "cardLastPartBacklog": [],
+    "cardLastPartDone": ["count"],
+    "cardLastPartDropped": ["count"],
+    "cardLastPartKeep": [],
+    "cardLastPartOpen": ["parent", "part"],
+    "cardLastPartStart": [],
+    "cardLastPartStopped": [],
+    "cardLastPartTitle": [],
+    "cardLastPartWaiting": [],
+    "cardLastPartWays": [],
     "cardLeaveAside": [],
     "cardLeaveAsideRest": [],
     "cardLeaveHide": [],
@@ -118624,7 +119050,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     /**
      * Who answers a reply under a card whose author cannot (`cards.answered_by`,
      * read through `cardAnswerer`): "firstmate" on the host's stuck alert
-     * (`card-stall-<task>`, INF-1670) and on every card it raises through
+     * (`card-stall-<task>`, INF-1670), its next-move card
+     * (`card-next-move-<task>`), its decision on a stopped part left last
+     * (`card-last-part-<task>`) and on every card it raises through
      * `raiseHostCard` unless the caller names another, so the first mate
      * answers in the thread, never the task's crewmate; "crewmate" on the
      * app's own card for a crewmate's ask (a secret to keep or use, secrets to

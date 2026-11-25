@@ -472,6 +472,14 @@
 "cardKnowledgeConceptRef" = "Begriff %1$@: %2$@";
 "cardKnowledgeFindingRef" = "Erkenntnis %1$@: %2$@";
 "cardKnowledgeRetired" = "Zurückgezogen";
+"cardLastPartBacklog" = "In deinem Backlog";
+"cardLastPartKeep" = "Weiter warten lassen";
+"cardLastPartOpen" = "%2$@ ist der einzige Teil von %1$@, der noch offen ist.";
+"cardLastPartStart" = "Jetzt starten";
+"cardLastPartStopped" = "Er wartet in deinem Backlog, weil du darum gebeten hast, also startet ihn nichts, bis du es tust.";
+"cardLastPartTitle" = "Eine Aufgabe wartet auf einen Teil in deinem Backlog";
+"cardLastPartWaiting" = "Wartet";
+"cardLastPartWays" = "Jetzt starten startet ihn. Weiter warten lassen lässt ihn, wie er ist, und diese Karte kommt nur zurück, wenn später ein anderer Teil fertig wird. Um ihn zu ändern oder aufzugeben, antworte hier.";
 "cardLeaveAside" = "Beiseitelegen";
 "cardLeaveAsideRest" = "Beiseitelegen · wartet in Aufgaben, kommt zurück, sobald sich etwas ändert";
 "cardLeaveHide" = "Ausblenden";

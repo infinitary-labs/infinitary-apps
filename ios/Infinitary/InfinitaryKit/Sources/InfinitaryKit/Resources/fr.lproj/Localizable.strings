@@ -472,6 +472,14 @@
 "cardKnowledgeConceptRef" = "Concept %1$@ : %2$@";
 "cardKnowledgeFindingRef" = "Constat %1$@ : %2$@";
 "cardKnowledgeRetired" = "Retiré";
+"cardLastPartBacklog" = "Dans votre réserve";
+"cardLastPartKeep" = "La laisser attendre";
+"cardLastPartOpen" = "%2$@ est la seule partie de %1$@ encore ouverte.";
+"cardLastPartStart" = "Démarrer maintenant";
+"cardLastPartStopped" = "Elle attend dans votre réserve parce que vous l’avez demandé, donc rien ne la démarrera tant que vous ne le ferez pas.";
+"cardLastPartTitle" = "Une tâche attend une partie restée dans votre réserve";
+"cardLastPartWaiting" = "En attente";
+"cardLastPartWays" = "Démarrer maintenant la démarre. La laisser attendre la laisse telle quelle, et cette carte ne revient que si une autre partie se termine plus tard. Pour la modifier ou l’écarter, répondez ici.";
 "cardLeaveAside" = "Mettre de côté";
 "cardLeaveAsideRest" = "Mettre de côté · attend dans Tâches, revient dès qu’elle change";
 "cardLeaveHide" = "Masquer";

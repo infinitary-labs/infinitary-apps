@@ -423,6 +423,34 @@
       <string>파일 %1$ld개 더</string>
     </dict>
   </dict>
+  <key>cardLastPartDone</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>다른 부분 %1$ld개 완료</string>
+    </dict>
+  </dict>
+  <key>cardLastPartDropped</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>다른 부분 %1$ld개 중단됨</string>
+    </dict>
+  </dict>
   <key>cardNoteQueued</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

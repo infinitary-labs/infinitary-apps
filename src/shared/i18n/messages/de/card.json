@@ -198,6 +198,24 @@
   "cardKnowledgeConceptRef": "Begriff {id}: {title}",
   "cardKnowledgeFindingRef": "Erkenntnis {id}: {title}",
   "cardKnowledgeRetired": "Zurückgezogen",
+  "cardLastPartBacklog": "In deinem Backlog",
+  "cardLastPartDone": {
+    "plural": "count",
+    "one": "{count} anderer Teil erledigt",
+    "other": "{count} andere Teile erledigt"
+  },
+  "cardLastPartDropped": {
+    "plural": "count",
+    "one": "{count} anderer Teil aufgegeben",
+    "other": "{count} andere Teile aufgegeben"
+  },
+  "cardLastPartKeep": "Weiter warten lassen",
+  "cardLastPartOpen": "{part} ist der einzige Teil von {parent}, der noch offen ist.",
+  "cardLastPartStart": "Jetzt starten",
+  "cardLastPartStopped": "Er wartet in deinem Backlog, weil du darum gebeten hast, also startet ihn nichts, bis du es tust.",
+  "cardLastPartTitle": "Eine Aufgabe wartet auf einen Teil in deinem Backlog",
+  "cardLastPartWaiting": "Wartet",
+  "cardLastPartWays": "Jetzt starten startet ihn. Weiter warten lassen lässt ihn, wie er ist, und diese Karte kommt nur zurück, wenn später ein anderer Teil fertig wird. Um ihn zu ändern oder aufzugeben, antworte hier.",
   "cardLeaveAside": "Beiseitelegen",
   "cardLeaveAsideRest": "Beiseitelegen · wartet in Aufgaben, kommt zurück, sobald sich etwas ändert",
   "cardLeaveHide": "Ausblenden",

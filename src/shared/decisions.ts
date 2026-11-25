@@ -146,6 +146,13 @@ export type DecisionCaller = {
    * approval before any model or key is read.
    */
   use?: DecisionUseId;
+  /**
+   * Ask the whole question set in one call. A native model already answers
+   * a set in one request; this asks the adapter to do the same, one line
+   * per question in one reply. Absent, the adapter asks one call per
+   * question, as every existing use does.
+   */
+  together?: boolean;
 };
 
 /**

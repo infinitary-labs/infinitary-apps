@@ -30,6 +30,7 @@ Markdown in `docs/`, `primitives/` and the design skill is one sentence per line
 - `routing.md`: how a crewmate's model is chosen.
 - `kind-classifier.md`: the kind classifier behind model levels.
 - `decision-models.md`: the models that make the first mate's decisions.
+- `task-tags-eval.md`: the tagging question and the eval that scores it.
 - `sequences.md`: how the first mate works an ask through opinionated steps without a workflow engine.
 - `programs.md`: programs, tasks whose steps a script decides.
 - `runbooks.md`: runbooks, the bundled guidance root, typed crew reach, skill precedence and switches.

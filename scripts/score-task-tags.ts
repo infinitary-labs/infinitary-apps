@@ -19,6 +19,7 @@
  *
  *   pnpm score:tags --dry
  *   pnpm score:tags --models <models.json> --provider <p> --model <m> --api-key-env <NAME> --out a.json
+ *   pnpm score:tags --claude claude-haiku-5-5 --out claude.json
  *   pnpm score:tags --decision-model jev --out jev.json            # TYPESAFE_API_KEY
  *   pnpm score:tags --decision-model openrouter:<id> --api-key-env <NAME> --out or.json
  */
@@ -45,6 +46,9 @@ const USAGE = `Usage: score-task-tags [options]
   --models <file>     a Pi models.json to bind the person's own chat model through
   --provider <id>     the provider in that models.json
   --model <id>        the model id in that models.json
+  --claude <model id> score the person's own Claude subscription instead, through
+                      this computer's own Claude client and default sign-in, as
+                      the app asks it (such as claude-haiku-5-5)
   --api-key-env <N>   read the provider's key from this environment variable; it
                       is set on the runtime in memory and never touches disk or argv
   --decision-model <id>
@@ -248,6 +252,7 @@ type Args = {
   provider?: string;
   model?: string;
   apiKeyEnv?: string;
+  claude?: string;
   decisionModel?: string;
   limit?: number;
   concurrency: number;
@@ -275,6 +280,7 @@ function parseArgs(argv: string[]): Args {
       case "--provider":
       case "--model":
       case "--api-key-env":
+      case "--claude":
       case "--decision-model":
       case "--limit":
       case "--concurrency":
@@ -290,6 +296,7 @@ function parseArgs(argv: string[]): Args {
         else if (flag === "--provider") args.provider = value;
         else if (flag === "--model") args.model = value;
         else if (flag === "--api-key-env") args.apiKeyEnv = value;
+        else if (flag === "--claude") args.claude = value;
         else if (flag === "--decision-model") args.decisionModel = value;
         else if (flag === "--limit") args.limit = Number.parseInt(value, 10);
         else if (flag === "--concurrency") args.concurrency = Math.max(1, Number.parseInt(value, 10) || 1);
@@ -406,8 +413,8 @@ async function main(): Promise<number> {
     const nativeId = args.decisionModel;
     const openRouterPick = nativeId?.startsWith("openrouter:") ? nativeId.slice("openrouter:".length) : undefined;
     if (nativeId && nativeId !== "jev" && !openRouterPick) throw new Error(`Unknown decision model ${nativeId}`);
-    if (!nativeId && (!args.provider || !args.model || !args.models)) {
-      process.stderr.write("A chat model's scored run needs --models, --provider and --model.\n");
+    if (!nativeId && !args.claude && (!args.provider || !args.model || !args.models)) {
+      process.stderr.write("A chat model's scored run needs --claude, or --models, --provider and --model.\n");
       return 2;
     }
     const ways = (args.ways ?? (nativeId ? [...WAYS] : WAYS.filter((way) => way !== "d"))).filter(
@@ -517,6 +524,39 @@ async function main(): Promise<number> {
             DECIDE_TIMEOUT_MS,
           ),
         );
+    } else if (args.claude) {
+      const { createClaudeSessionFactory } = await runner.import<typeof import("../src/core/claude/session.ts")>(
+        "/src/core/claude/session.ts",
+      );
+      const { defaultClaudeConfigDir } = await runner.import<typeof import("../src/core/claude/claudeQuota.ts")>(
+        "/src/core/claude/claudeQuota.ts",
+      );
+      const { CLAUDE_PROVIDER_ID } = await runner.import<typeof import("../src/shared/providers.ts")>(
+        "/src/shared/providers.ts",
+      );
+      const { AdaptedDecisionModel } = await runner.import<typeof import("../src/core/decisions/decisionModel.ts")>(
+        "/src/core/decisions/decisionModel.ts",
+      );
+      const model = { provider: CLAUDE_PROVIDER_ID, id: args.claude };
+      const baseRuntime = await createModelRuntime({
+        authPath: join(home, "auth.json"),
+        modelsPath: join(home, "models.json"),
+      });
+      // The account id only attributes cost and rate-limit readings, which
+      // this run keeps nowhere; the client answers on its own default sign-in.
+      const adapted = new AdaptedDecisionModel({
+        homeDir: home,
+        availableModels: () => [{ ...model, slot: "low" as const }],
+        quotaModels: () => undefined,
+        selectAccount: () => "scorer",
+        flagshipAccountId: () => null,
+        runtimeFor: async () => baseRuntime,
+        baseRuntime,
+        sessions: { claude: createClaudeSessionFactory({ configDir: defaultClaudeConfigDir() }) },
+      });
+      label = `${model.provider}/${model.id}`;
+      decide = (state, set, together) =>
+        adapted.decide({ purpose: "tags", together }, state, set, new AbortController().signal);
     } else {
       const runtime = await createModelRuntime({
         authPath: join(home, "auth.json"),

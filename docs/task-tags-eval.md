@@ -49,12 +49,13 @@ A failed or unsure answer keeps no tag.
 ```sh
 pnpm score:tags --dry
 pnpm score:tags --models <models.json> --provider <p> --model <m> --api-key-env <NAME> --out chat.json
+pnpm score:tags --claude claude-haiku-5-5 --out claude.json
 pnpm score:tags --decision-model jev --out jev.json
 pnpm score:tags --decision-model openrouter:<model id> --api-key-env <NAME> --out openrouter.json
 ```
 
 `--dry` prints the set and the served questions and calls no model.
-A chat model is bound through a Pi `models.json`, and a native model through its own key: TypeSafe's from `TYPESAFE_API_KEY`, OpenRouter's from the variable `--api-key-env` names.
+A chat model is bound through a Pi `models.json`, a Claude subscription through this computer's own Claude client and default sign-in as the app asks it, and a native model through its own key: TypeSafe's from `TYPESAFE_API_KEY`, OpenRouter's from the variable `--api-key-env` names.
 A key is set on the runtime in memory and never written to disk or passed on the command line.
 `--ways` picks ways, `--limit` scores the first rows only, and `--concurrency` sets how many tasks are asked at once.
 Like `pnpm score:kinds`, the scorer runs only behind Observe's development gate.

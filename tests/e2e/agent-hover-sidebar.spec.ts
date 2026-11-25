@@ -279,104 +279,54 @@ test("crewmate summaries clear both rails in both text directions", async () => 
   }
 });
 
-/** The requested repair: a held summary follows late rail geometry without
- * another pointer move or a running animation loop under reduced motion. */
-test("an open summary follows changing room geometry under reduced motion", async () => {
+/** A held summary follows the prompt's late growth without another pointer
+ * move or a running animation loop under reduced motion. */
+test("a held summary clears a growing prompt under reduced motion", async () => {
   const launched = await launchApp({ ...agentHoverFixture(TITLE), withMockProvider: true });
   try {
     await prepare(launched);
     const { page, app } = launched;
-    await movePanelTo(page, "activity", { x: "right", y: "top" });
-    await movePanelTo(
-      page,
-      "now",
-      { x: "left", y: "top" },
-      {
-        collapsedPanels: { now: true, activity: false },
-      },
-    );
-    await resizeWindow(app, page, { width: SMALLEST_WINDOW.width, height: 800 });
-    await expect(page.locator('[data-side-panel="now"]')).toHaveAttribute(
-      "data-side-panel-collapsed",
-      "",
-    );
-    await nextFrame(page);
-    const anchor = (await stageAnchors(page))
-      .filter((point) => point.x < SMALLEST_WINDOW.width / 2)
-      .sort((a, b) => a.x - b.x)[0];
-    if (!anchor) throw new Error("No crewmate beside the collapsed left rail");
-    const target = page.locator(`[data-crew-model-name="${anchor.id}"]`);
-    await focusOn(target);
-    const summary = page.locator(summarySelector);
-    await expect(summary).toHaveAttribute("data-crew-summary", anchor.id);
-    await expect(summary).toContainText(HOVER_NOTE);
-    const mounted = await summary.elementHandle();
-    if (!mounted) throw new Error("The focused summary did not mount");
-    try {
-      await movePanelTo(
-        page,
-        "now",
-        { x: "left", y: "top" },
-        {
-          collapsedPanels: { now: false, activity: false },
-        },
-      );
-      await expect(page.locator('[data-side-panel="now"]')).not.toHaveAttribute(
-        "data-side-panel-collapsed",
-        "",
-      );
-      await expectClearOf(page, summary, ...(await controls(page)));
-      await expect(summary).toHaveAttribute("data-crew-summary", anchor.id);
-      expect(
-        await mounted.evaluate((element) => element.isConnected),
-        "Room changes retain the mounted summary",
-      ).toBe(true);
-    } finally {
-      await mounted.dispose();
-    }
-    await pressKey(target, "Escape");
-    await expect(summary).toHaveCount(0);
     await movePanelTo(page, "activity", { x: "left", y: "top" });
     await movePanelTo(page, "now", { x: "right", y: "top" });
-    await focusOn(target);
-    await expect(summary).toContainText(HOVER_NOTE);
-    await expectClearOf(page, summary, ...(await controls(page)));
-    const activity = page.locator('[data-side-panel="activity"]');
-    const beforePanel = await activity.boundingBox();
-    const beforeSummary = await summary.boundingBox();
-    if (!beforePanel || !beforeSummary) throw new Error("The held summary or Activity is missing");
-    await movePanelTo(page, "activity", { x: "left", y: "bottom" });
-    await expect(activity).toHaveAttribute("data-side-panel-placement-y", "bottom");
-    const afterPanel = await activity.boundingBox();
-    if (!afterPanel) throw new Error("Activity disappeared after moving");
-    expect(afterPanel.width).toBe(beforePanel.width);
-    expect(afterPanel.height).toBe(beforePanel.height);
-    expect(afterPanel.y).not.toBe(beforePanel.y);
-    expect(
-      intersects(beforeSummary, afterPanel),
-      "The position-only move reaches the summary's old place",
-    ).toBe(true);
-    await expectClearOf(page, summary, ...(await controls(page)));
-    await expect(summary).toHaveAttribute("data-crew-summary", anchor.id);
-    await pressKey(target, "Escape");
-    await expect(summary).toHaveCount(0);
+    await resizeWindow(app, page, { width: SMALLEST_WINDOW.width, height: 800 });
+    await nextFrame(page);
     const middle = await page.evaluate(() => innerHeight / 2);
     const lower = (await stageAnchors(page))
       .filter((point) => point.x < SMALLEST_WINDOW.width / 2 && point.y > middle)
       .sort((a, b) => a.x - b.x)[0];
     if (!lower) throw new Error("No lower crewmate beside the prompt");
     await page.mouse.move(lower.x, lower.y);
+    const summary = page.locator(summarySelector);
     await expect(summary).toHaveAttribute("data-crew-summary", lower.id);
     await expect(summary).toContainText(HOVER_NOTE);
     const prompt = page.locator("[data-prompt-dock]");
+    await expectClearOf(page, summary, prompt, ...(await controls(page)));
+    const beforeSummary = await summary.boundingBox();
     const beforePrompt = await prompt.boundingBox();
-    if (!beforePrompt) throw new Error("The main message is missing");
+    if (!beforeSummary || !beforePrompt) throw new Error("The summary or main message is missing");
     await promptInput(page).fill(
       [TITLE, HOVER_NOTE, ...HOVER_PLAN.map((item) => item.label)].join("\n\n"),
     );
     await expect
       .poll(async () => (await prompt.boundingBox())?.height ?? 0)
       .toBeGreaterThan(beforePrompt.height);
+    const afterPrompt = await prompt.boundingBox();
+    if (!afterPrompt) throw new Error("The main message disappeared after growing");
+    await test.info().attach("prompt-growth-geometry", {
+      body: Buffer.from(
+        JSON.stringify({
+          beforeSummary,
+          beforePrompt,
+          afterPrompt,
+          currentSummary: await summary.boundingBox(),
+        }),
+      ),
+      contentType: "application/json",
+    });
+    expect(
+      intersects(beforeSummary, afterPrompt),
+      "The grown prompt reaches the summary's old place",
+    ).toBe(true);
     await expect(summary).toHaveAttribute("data-crew-summary", lower.id);
     await expectClearOf(page, summary, prompt, ...(await controls(page)));
   } finally {

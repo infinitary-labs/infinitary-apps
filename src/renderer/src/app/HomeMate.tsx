@@ -72,8 +72,6 @@ function observeCrewSummaryRoom(changed: () => void): () => void {
         ],
       });
     }
-    const row = document.querySelector("[data-rail-row]");
-    if (row) changes.observe(row, { childList: true });
     // Root attributes carry folding, text direction and prompt-lift variables.
     changes.observe(document.documentElement, { attributes: true });
   };

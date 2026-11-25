@@ -60120,7 +60120,7 @@
     },
     "inf:projects:suggest-tags": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [

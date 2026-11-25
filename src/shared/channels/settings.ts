@@ -67,7 +67,7 @@ export const settingsChannels = {
   "inf:projects:suggest-tags": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([tagSuggestionRequestSchema]),
     response: tagSuggestionResultSchema,
   },

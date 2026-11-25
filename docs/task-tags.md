@@ -140,6 +140,7 @@ It is a Tab stop like any button and has no window command, since a person press
 While the main message refuses (`mainMessageRefusal`, `src/renderer/src/app/composer.ts`), the button is held and the quiet line says why.
 
 The press sends `inf:projects:suggest-tags` (`src/shared/tagSuggestion.ts`) with the project and the words "Suggest tags for <project>" in the person's language, and the window goes home, where the words show as the person's own message.
+Any window may press it, a view on another computer included, and the press counts as the captain's input like a message (`CAPTAIN_INPUT_CHANNELS`, `docs/devices.md`, "Where the captain is"); it names no project focus, since the note names the project.
 The home refuses an unknown or removed project, one that already has a tag, and a start before tagging is ready, answering the reason; the window says it under the button, and nothing is sent.
 The first mate's turn carries the words and one note, `[tag suggestion request]` (`tagSuggestionNote`, `src/core/orchestrator/tagSuggestionNote.ts`), which the press adds and the words never do.
 The note names the project; how many tasks each check reach holds, read by `TagWork.tasksIn`; whether Tag tasks automatically asks now and who answers; and the steps.

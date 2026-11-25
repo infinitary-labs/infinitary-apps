@@ -30,7 +30,6 @@ export function projectHandlers(
       await services.firstmate.converse({
         text: words,
         captainText: words.trim(),
-        focusedProjectId: projectId,
         tagSuggestion: facts,
       });
       return { ok: true as const };

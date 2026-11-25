@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "open-message-walk-narrow-reads",
+      "reason": "The open-message check that runs on each card click and task close reads a task's shape alone instead of its whole record and reuses one compiled lookup, cutting that check from about 15 ms to about 9 ms on a large record; a person does not notice that difference on its own."
+    }
+  ]
+}

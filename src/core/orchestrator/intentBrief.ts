@@ -961,14 +961,20 @@ export function joinParts(
 export function renderBasisSection(
   facts: BasisBriefFacts,
   source: "basis" | "origin" | "replacement" = "basis",
+  builder = true,
 ): string {
-  return briefText(basisSectionParts(facts, source));
+  return briefText(basisSectionParts(facts, source, builder));
 }
 
-/** The basis section in pieces, each report it copies marked as its event. */
+/**
+ * The basis section in pieces, each report it copies marked as its event.
+ * `builder` is false for a review or repair assessment, whose basis is the
+ * change it reads: it builds nothing, so it reads no builder's hand-over.
+ */
 export function basisSectionParts(
   facts: BasisBriefFacts,
   source: "basis" | "origin" | "replacement" = "basis",
+  builder = true,
 ): BriefPart[] {
   const { taskId } = facts;
   const report = (eventId: number, text: string): BriefPart =>
@@ -1079,7 +1085,7 @@ export function basisSectionParts(
     "",
     "Build on it rather than re-deriving it, and say in your report where it turned out to be wrong.",
   );
-  if (source === "basis") lines.push("", BUILDER_HANDOFF_WORDS);
+  if (source === "basis" && builder) lines.push("", BUILDER_HANDOFF_WORDS);
   return joinParts(
     lines.map((line) => [line]),
     "\n",

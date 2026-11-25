@@ -6,7 +6,7 @@ The captain allowed the edits to the tests that held them.
 Where a crewmate now reads them:
 
 - An answer task's answer-shape section (`renderAnswerShapeSection`, after "Previews and plans:") carries a playable preview's two authoring passages (`ANSWER_CARD_AUTHORING`) and what a planner acts on of the hand-over (`ANSWER_HANDOFF`). A quick answer neither plans nor previews and goes without.
-- The basis section of a change built on an answer (`basisSectionParts`, after "Building on an answer:") carries what a builder acts on of the hand-over (`BASIS_HANDOFF`).
+- The basis section of a change built on an answer (`basisSectionParts`, after "Building on an answer:") carries what a builder acts on of the hand-over (`BASIS_HANDOFF`); a review's basis section, which names the change it reads, does not.
 - What a purchase review names moves from `emit_card`'s `browser_handoff` to the browser's home view and the help of `click` and `press` (`BROWSER_RULES.review`). `browser_handoff` keeps that the step is the captain's and the card is its review, and says the home view names the rest.
 
 A crewmate's prompt keeps the question-card flags, the steering limit and merge consent of the hand-over.

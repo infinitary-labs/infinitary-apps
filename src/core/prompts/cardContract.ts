@@ -53,13 +53,12 @@ export const ORDINARY_NOTE_READ_GUIDANCE = `${ORDINARY_NOTE_READ_ACK} After Got 
  */
 
 /**
- * What a card is and how it should look - the ONE authoring text, included
- * once by every persona, filtered by reader under FI3-566. The captain
- * approved keeping crew-only passages out of Firstmate. No descriptor repeats a
- * sentence of it, and no persona writes its own version; `piResources.test.ts`
- * pins both directions.
- */
-/**
+ * The card authoring and hand-over texts each have ONE source, filtered by
+ * reader: a reader's part is served once, no descriptor repeats a sentence
+ * of it, and no persona writes its own version; `piResources.test.ts` pins
+ * both directions. The captain approved keeping crew-only passages out of
+ * the first mate (FI3-566).
+ *
  * Who reads a part: the two system prompts, or one of two brief sections a
  * crewmate is served only when its task needs them - the answer-shape
  * section of an answer task (`renderAnswerShapeSection`) and the basis

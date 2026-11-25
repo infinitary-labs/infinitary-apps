@@ -1170,7 +1170,7 @@ The path stays for cards already stored: the optional fourth `inf:cards:act` arg
 
 `HANDOFF` is the fourth constant in `cardContract.ts` (contract v4.41): what a choice on a plan or investigation authorizes, who builds it, and what the builder starts from.
 The host decides none of it - it records the closing choice and answers, verifies the basis and mints the brief - so the judgment is the agents'.
-One source marks each passage's readers: the first mate's prompt (`FIRSTMATE_HANDOFF`), every crewmate's prompt (`CREWMATE_HANDOFF`), an answer task's answer-shape section (`ANSWER_HANDOFF`, what a planner acts on) and the basis section of a change built on an answer (`BASIS_HANDOFF`, what a builder acts on).
+One source marks each passage's readers: the first mate's prompt (`FIRSTMATE_HANDOFF`), every crewmate's prompt (`CREWMATE_HANDOFF`), an answer task's answer-shape section (`ANSWER_HANDOFF`, what a planner acts on) and the basis section of a change built on an answer (`BASIS_HANDOFF`, what a builder acts on); a review's basis section names the change it reads and carries none of it.
 A crewmate's prompt keeps only what every crewmate needs - the question-card flags, the steering limit and merge consent - and reads the planner's and builder's passages in the brief of the work that needs them (INF-6570's budget card, the captain's choice); the first mate reads every passage but those two briefs' crewmate-only steps.
 
 - A ready plan for a product change offers **Approve and build** as its default, and a ready plan for an operation offers **Start the next step**, each beside **Save and defer** and **Abandon**; a plan with a preview offers the same three for a product change.

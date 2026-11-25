@@ -50,6 +50,8 @@ export interface VoiceInputProps {
   onCaretChange?: (caret: number) => void;
   /** Up in an empty field (no words, no chips): bring back the last message sent. */
   onRecall?: () => void;
+  /** The draft replaces the newest message: "Replaces your last message" over the field, and the hint names Enter and Esc. */
+  replacing?: boolean;
   /** Dropping and choosing files: the host's intake (drop handler, "Add files" picker, files being prepared with Cancel, and a status line a screen reader hears). Absent, the input takes none. */
   files?: {
     onFiles: (files: File[]) => void;

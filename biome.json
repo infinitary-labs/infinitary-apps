@@ -481,6 +481,7 @@
         "!src/core/files/fileReachLocks.integration.test.ts",
         "!src/core/program/programRunner.test.ts",
         "!src/core/axi/channel.test.ts",
+        "!src/core/axi/secretTaskFolder.test.ts",
         "!src/core/axi/captainCommands.test.ts",
         "!src/core/integrations/providers/inbox.test.ts",
         "!src/core/secrets/protected.test.ts",

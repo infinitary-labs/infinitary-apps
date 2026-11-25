@@ -2,6 +2,7 @@ import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { crewFacts, FirstRunService } from "@core/firstRun";
 import { AnswerDeliveryCheck } from "@core/orchestrator/answerDeliveryCheck";
+import { linkedIssuesSection } from "@core/orchestrator/buildRows";
 import { CrewSupervisor } from "@core/orchestrator/crewSupervisor";
 import { FirstmateAgent } from "@core/orchestrator/firstmateAgent";
 import { TICK_PERIOD_MS, Ticker } from "@core/orchestrator/ticker";
@@ -21,6 +22,7 @@ import { TaskService } from "@core/tasks/taskService";
 import { TaskTempFiles } from "@core/tasks/taskTemp";
 import { WorkPresentation } from "@core/tasks/workPresentation";
 import { RepoRegistry } from "@core/workspace/repoRegistry";
+import { seedProject } from "@core/workspace/seedProject";
 import type { WorkspaceService } from "@core/workspace/workspaceService";
 import type { Card } from "@shared/cards";
 import Database from "better-sqlite3";
@@ -34,8 +36,9 @@ import { outsideCensus } from "./helpers/statementCheck";
 // app repeats on its main thread - a first mate turn's context build, the
 // answer-delivery sweep, one minute pass, a task board update, the first
 // launch's crew facts, a task's close with the closed-task file passes
-// watching, a merged close that files a required action (INF-4224) and a
-// work computer's contact - must not grow with closed history. Five main thread freezes (INF-703, INF-940,
+// watching, a merged close that files a required action (INF-4224), a
+// work computer's contact and an outside reader's brief - must
+// not grow with closed history. Five main thread freezes (INF-703, INF-940,
 // INF-1348, INF-1956, INF-2059) were synchronous SQLite whose cost grew
 // with the saved record while the tests used a few rows. This seeds a
 // record sized from the captain's real readings, counts each read's
@@ -65,6 +68,12 @@ const RECENTLY_CLOSED = 40;
  */
 const PLACED_CLOSED = 40;
 const WORK_COMPUTER = "work-computer";
+/**
+ * An outside reader of one project waiting to start, and that project's
+ * tasks already linked to an issue, which the reader's brief lists.
+ */
+const READER = { id: "reader", repoId: "reader-project" };
+const ISSUE_LINKED = 3;
 
 /** Closed tasks seeded per transaction; see addClosedHistory. */
 const SEED_BATCH = 200;
@@ -284,7 +293,28 @@ async function buildRecord() {
     seedTask(tasks, { id, title: `Placed work ${index}`, status: "idle", deviceId: WORK_COMPUTER });
     tasks.close(id, { status: "done", reason: "merged", actor: "host" });
   }
+  seedProject(db, { id: READER.repoId, name: "meter", path: join(paths.userData, "meter") });
+  for (let index = 0; index < ISSUE_LINKED; index += 1) {
+    const id = `issue-linked-${index}`;
+    const issue = { number: 7 + index, url: `https://github.com/octo/meter/issues/${7 + index}` };
+    seedTask(tasks, {
+      id,
+      title: `Issue work ${index}`,
+      status: "idle",
+      repoId: READER.repoId,
+      shape: { kind: "reproduce", issue },
+    });
+    tasks.close(id, { status: "done", reason: "merged", actor: "host" });
+  }
   vi.setSystemTime(NOW - DAY);
+  seedTask(tasks, {
+    id: READER.id,
+    title: "Triage the waiting issues",
+    status: "queued",
+    startPolicy: "on-request",
+    repoId: READER.repoId,
+    shape: { kind: "research", deliverable: "answer", unsafe_data_reader: true },
+  });
   for (let index = 0; index < QUEUED; index += 1)
     seedTask(tasks, {
       id: `queued-${index}`,
@@ -513,6 +543,11 @@ async function buildRecord() {
         "minute pass": await counted("minute pass", () => refreshed(() => ticker.tick())),
         "task board update": await counted("task board update", () => {
           protocol.board();
+        }),
+        // An outside reader's start: its brief lists its project's tasks
+        // linked to an issue, as `CrewBrief.mintBrief` reads them.
+        "outside reader's brief": await counted("outside reader's brief", () => {
+          linkedIssuesSection(tasks, READER);
         }),
       };
       const closing = `closing-${closes++}`;

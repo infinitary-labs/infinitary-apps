@@ -1178,6 +1178,27 @@ export class TaskStore {
   }
 
   /**
+   * A project's tasks linked to an outside issue, open or closed and oldest
+   * first, sought through `task_contracts_issue` and composing only the
+   * matching ones: each outside reader's brief lists them as its task
+   * starts, on the main thread, where composing every task would hold it
+   * for as long as the whole record takes to read.
+   */
+  listIssueLinked(repoId: string): TaskRecord[] {
+    if (!this.shapes.exists())
+      return this.list().filter((record) => record.repoId === repoId && record.shape?.issue);
+    const ids = prepared(
+      this.db,
+      // i18n-exempt: SQL, never shown to a person
+      `SELECT c.task_id FROM task_contracts c JOIN tasks t ON t.id = c.task_id
+       WHERE json_type(c.value_json, '$.issue') = 'object' AND t.repo_id = ?`,
+    )
+      .pluck()
+      .all(repoId) as string[];
+    return this.getMany(ids);
+  }
+
+  /**
    * The rows, open or closed and oldest first, whose required-action record
    * holds a requirement from this source task or for one of these shared
    * actions: what a merged close's required-action step matches against

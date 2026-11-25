@@ -59950,7 +59950,7 @@
     },
     "inf:projects:tag-checks": {
       "effect": "read",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -60074,7 +60074,7 @@
     },
     "inf:projects:tag-check": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [

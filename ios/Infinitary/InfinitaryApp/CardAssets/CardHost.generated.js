@@ -61329,6 +61329,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `An integration not connected now`;
   }
+  function settingsAutomationEventTaskReleased() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يصدر العمل في إصدار`;
+      case "de":
+        return `Arbeit erscheint in einem Release`;
+      case "es":
+        return `El trabajo sale en una versión publicada`;
+      case "fr":
+        return `Le travail paraît dans une version publiée`;
+      case "ja":
+        return `作業がリリースに含まれる`;
+      case "ko":
+        return `작업이 릴리스에 포함됨`;
+      case "pt-BR":
+        return `O trabalho sai em uma versão publicada`;
+      case "zh-Hans":
+        return `工作随版本发布`;
+      case "zh-Hant":
+        return `工作隨版本發布`;
+      case "en-XA":
+        return `[Ŵöŕķ šĥîþš îñ á ŕéļéášé ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Work ships in a release‬`;
+    }
+    return `Work ships in a release`;
+  }
   function settingsAutomationEventsPreview() {
     switch (currentLanguage()) {
       case "ar":
@@ -115833,6 +115860,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsAutomationEnable,
     settingsAutomationEventIn,
     settingsAutomationEventNotConnected,
+    settingsAutomationEventTaskReleased,
     settingsAutomationEventsPreview,
     settingsAutomationFirstMateGets,
     settingsAutomationFri,
@@ -119494,6 +119522,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsAutomationEnable": [],
     "settingsAutomationEventIn": ["event", "integration"],
     "settingsAutomationEventNotConnected": [],
+    "settingsAutomationEventTaskReleased": [],
     "settingsAutomationEventsPreview": [],
     "settingsAutomationFirstMateGets": [],
     "settingsAutomationFri": [],
@@ -137560,13 +137589,12 @@ ${startersHtml()}`;
      * The outside issue this task answers, where its project lives
      * (docs/agents-reach.md, "A reader's Build rows"): written by the host
      * when the captain's click files a reader's Build row, and carried by a
-     * task built on such a task (`basis`). `closes` marks the change that
-     * closes the issue when it merges: a fix, or a plan's last piece.
+     * task built on such a task (`basis`). A fact for the intake round only:
+     * the app writes no closing words from it.
      */
     issue: object({
       number: number().int().positive(),
-      url: string(),
-      closes: boolean().optional()
+      url: string()
     }).optional(),
     /**
      * The task, by key, whose last commit this task's working copy starts at
@@ -137590,6 +137618,13 @@ ${startersHtml()}`;
      * its merge on batched pull requests too.
      */
     needs_merge: array(string()).optional(),
+    /**
+     * The first mate's mark on a task whose only job is an outside action
+     * that waits on work, such as closing a work item (docs/task-graph.md,
+     * "A side-effect task"): every one of its waits needs the merge, the ones
+     * added later too, so no approval starts or releases it.
+     */
+    side_effect: boolean().optional(),
     /**
      * The approved version of an earlier part this task's working copy
      * started on (`start_at_approval`): that task, its pushed branch and the
@@ -137749,6 +137784,7 @@ ${startersHtml()}`;
     branch_from: true,
     start_at_approval: true,
     needs_merge: true,
+    side_effect: true,
     branch: true,
     program: true
   }).extend({
@@ -137765,14 +137801,7 @@ ${startersHtml()}`;
      * own folder, not a working copy (INF-567): the host stamps
      * `in_place: { folder: true }` from it.
      */
-    in_folder: boolean().optional(),
-    /**
-     * The first mate's mark on a task built on one that answers an outside
-     * issue (`WorkShape.issue`): its change closes that issue when it
-     * merges, as a plan's last piece does. A fix built on a reproduce step
-     * closes it unmarked.
-     */
-    closes_issue: boolean().optional()
+    in_folder: boolean().optional()
   });
   const ruleIdSchema = _enum([
     "R0",

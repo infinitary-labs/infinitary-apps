@@ -345,6 +345,44 @@ describe("the task graph (task-system P2)", () => {
       ).toEqual(["direct", "release"]);
     });
 
+    // INF-6776 part 1, the captain's pick "Its own task, waiting on every task that does
+    // the work": an outside action must follow work that merged, so no approval starts
+    // a side-effect task or releases its close, a wait added later included.
+    it("starts a side-effect task only once every wait merged, a wait linked later too", () => {
+      const { tasks, work } = setup();
+      const first = work("first", { startPolicy: "on-request" });
+      const second = work("second", { startPolicy: "on-request" });
+      work("close-item", {
+        blockedBy: ["first"],
+        shape: { ...BATCHED, kind: "implement", side_effect: true },
+      });
+      work("ordinary", { blockedBy: ["first"], shape: { ...BATCHED, kind: "implement" } });
+      tasks.graph.link(second.id, "close-item", "blocks", "firstmate");
+
+      approve(tasks, first.id);
+      approve(tasks, second.id);
+      expect(tasks.graph.listReady().map((r) => r.id)).toEqual(["ordinary"]);
+      expect(
+        tasks.graph
+          .waitingOn("close-item")
+          .map((r) => r.id)
+          .sort(),
+      ).toEqual(["first", "second"]);
+      expect(
+        tasks.graph
+          .blockersHoldingClose("close-item")
+          .map((r) => r.id)
+          .sort(),
+      ).toEqual(["first", "second"]);
+
+      tasks.close(first.id, { status: "done", reason: "merged", actor: "host" });
+      approve(tasks, first.id, "consumed");
+      expect(tasks.graph.waitingOn("close-item").map((r) => r.id)).toEqual(["second"]);
+      tasks.close(second.id, { status: "done", reason: "merged", actor: "host" });
+      approve(tasks, second.id, "consumed");
+      expect(tasks.graph.listReady().map((r) => r.id)).toContain("close-item");
+    });
+
     it("keeps a part waiting on the part under its base when it needs that part merged", () => {
       const { tasks, work } = setup();
       const first = work("first", { startPolicy: "on-request" });

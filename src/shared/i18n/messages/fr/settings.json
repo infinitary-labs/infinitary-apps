@@ -95,6 +95,7 @@
   "settingsAutomationEnable": "Activer…",
   "settingsAutomationEventIn": "{event} dans {integration}",
   "settingsAutomationEventNotConnected": "Une intégration non connectée pour l’instant",
+  "settingsAutomationEventTaskReleased": "Le travail paraît dans une version publiée",
   "settingsAutomationEventsPreview": "- (un résumé de chaque événement arrivé)",
   "settingsAutomationFirstMateGets": "Votre second reçoit",
   "settingsAutomationFri": "Ven",

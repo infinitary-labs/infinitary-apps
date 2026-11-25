@@ -59,13 +59,7 @@ import {
   landedCommits,
   pushBatch,
 } from "./combine";
-import {
-  type BatchLimits,
-  batchDescription,
-  batchEntries,
-  batchList,
-  type ChangeIssue,
-} from "./description";
+import { type BatchLimits, batchDescription, batchList } from "./description";
 import {
   abandoned,
   awaitedJoins,
@@ -282,8 +276,6 @@ export type BatchesOptions = {
    * Absent, none is.
    */
   unmergedBase?: (change: BatchChange) => readonly string[] | undefined;
-  /** The outside issue a member's task answers, for its Closes or Part of line. */
-  issue?: (taskId: string) => ChangeIssue | undefined;
   /** A member's story as the batch's pull request shows it, with the words around it. */
   story: (
     member: BatchChange,
@@ -1295,9 +1287,7 @@ export class Batches {
         {
           ...change,
           title: only ? only.title : this.title(open.members),
-          squashMessage: only
-            ? only.body
-            : batchList(batchEntries(open.members, this.options.issue, forge.kind)),
+          squashMessage: only ? only.body : batchList(open.members),
         },
         open.head,
         way,
@@ -1705,17 +1695,17 @@ export class Batches {
     const stories = await Promise.all(
       open.members.map((member) => this.options.story(member, forge).catch(() => undefined)),
     );
-    const entries = batchEntries(open.members, this.options.issue, forge.kind);
     if (open.members.length === 1)
       return {
-        body: [stories[0]?.projectText, entries[0]?.issue, stories[0]?.region]
-          .filter(Boolean)
-          .join("\n\n"),
+        body: [stories[0]?.projectText, stories[0]?.region].filter(Boolean).join("\n\n"),
         comments: [],
         missing: stories[0] ? [] : open.members,
       };
     const { body, comments, unplaced } = batchDescription(
-      entries.map((entry, index) => ({ ...entry, region: stories[index]?.region })),
+      open.members.map((member, index) => ({
+        title: member.title,
+        region: stories[index]?.region,
+      })),
       this.limits(forge),
     );
     return {

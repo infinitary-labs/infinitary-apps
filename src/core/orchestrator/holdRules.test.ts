@@ -18,6 +18,7 @@ import {
   minutes,
   settle,
 } from "../../../tests/helpers/idleLadderHarness";
+import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { createTaskTools } from "../pi/taskTools";
 import { piToolsOf } from "../pi/toolSpec";
 import { ScheduleStore } from "../storage/scheduleStore";
@@ -26,7 +27,13 @@ import type { TaskService } from "../tasks/taskService";
 import type { CrewSupervisor } from "./crewSupervisor";
 import { type FirstmateTaskToolsHost, firstmateTaskTools } from "./firstmateTaskTools";
 import { Scheduler } from "./scheduler";
-import { lookOnClose, TASK_CLOSED_EVENT, TASK_EVENTS_ID, withTaskEvents } from "./taskEvents";
+import {
+  lookOnClose,
+  TASK_CLOSED_EVENT,
+  TASK_EVENTS_ID,
+  TASK_RELEASED_EVENT,
+  withTaskEvents,
+} from "./taskEvents";
 
 fakeCrewTimersEachTest();
 
@@ -134,6 +141,41 @@ describe("a hold an event ends sooner (INF-5145 part 2)", () => {
     await h.supervisor.watch.sweepGates(clock.now);
     await settle();
     expect(h.crewmate.promptCalls).toHaveLength(prompts + 1);
+  });
+
+  // INF-6776 part 1: a side-effect task whose moment is a release is held on "Work
+  // ships in a release", which the record's first release ends, never the merge alone.
+  it("a hold on the work's release ends once the record holds its first release, not at its close", async () => {
+    const h = await heldOnEvent();
+    const onEvent = { ...h.onEvent, event: TASK_RELEASED_EVENT };
+    expect(
+      await h.update({
+        task: h.taskId,
+        hold: { until: new Date(h.until).toISOString(), reason, on_event: onEvent },
+      }),
+    ).toContain("Held");
+    const prompts = h.crewmate.promptCalls.length;
+    await h.closeRun();
+    h.scheduler.lookNow(TASK_EVENTS_ID);
+    await h.scheduler.settled();
+    await settle();
+    expect(h.crewmate.promptCalls).toHaveLength(prompts);
+
+    seedDelivery(h.tasks, h.run.id, {
+      firstRelease: {
+        version: "1.4.0-alpha.2",
+        url: "https://github.com/example/nimbus-api/releases/tag/v1.4.0-alpha.2",
+        evidence: "The release's notes list the run's change.",
+      },
+    });
+    h.scheduler.lookNow(TASK_EVENTS_ID);
+    await h.scheduler.settled();
+    await settle();
+    expect(h.crewmate.promptCalls).toHaveLength(prompts + 1);
+    expect(h.crewmate.promptCalls.at(-1)).toContain(
+      `${h.run.key} Run the alpha on Windows shipped in release 1.4.0-alpha.2`,
+    );
+    expect(h.tasks.get(h.taskId)?.gate).toBeNull();
   });
 
   it.each([

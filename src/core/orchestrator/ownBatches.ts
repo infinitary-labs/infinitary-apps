@@ -146,7 +146,6 @@ export function createOwnBatches(owners: {
         ...new Set([builtOn.head, ...(approval ? [TaskGraph.newestApproved(approval)] : [])]),
       ];
     },
-    issue: (taskId) => tasks.get(taskId)?.shape?.issue,
     story: async (member, forge) => {
       const { story, region } = await owners.presentations.batchRegion(
         member.taskId,

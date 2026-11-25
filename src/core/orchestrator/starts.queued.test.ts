@@ -24,6 +24,7 @@ import {
   tick,
 } from "../../../tests/helpers/crewHarness";
 import { deferred } from "../../../tests/helpers/deferred";
+import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { crewmateEvidenceDir } from "../paths";
 import type { KindInput } from "../routing/kindClassifier";
 import { FIRSTMATE_RECIPIENT } from "../storage/inboxStore";
@@ -512,6 +513,81 @@ describe("the task graph (R1)", () => {
       expect.objectContaining({ kind: "implement", basis: spec.key, basis_verified: true }),
     ]);
     expect(tasks.get(planned.id)?.shape).toMatchObject({ kind: "implement", basis: spec.key });
+  });
+
+  // INF-6776 part 1: a side-effect task's brief names each wait and how the record says
+  // it closed, so its crewmate acts only on merged work and does nothing on dropped work.
+  it("briefs a started side-effect task with each wait's close and first release", async () => {
+    const crew = fakeCrewmate();
+    const { supervisor, tasks } = setup(crew);
+    seedTask(tasks, {
+      id: "fix",
+      title: "Fix the negative reading",
+      status: "queued",
+      startPolicy: "on-request",
+    });
+    seedTask(tasks, {
+      id: "plan",
+      title: "Plan the weekly view",
+      status: "queued",
+      startPolicy: "on-request",
+    });
+    seedTask(tasks, {
+      id: "close-item",
+      title: "Close the work item",
+      status: "queued",
+      blockedBy: ["fix", "plan"],
+      shape: { kind: "unclear", side_effect: true },
+    });
+    seedTask(tasks, {
+      id: "ordinary",
+      title: "Write the notes",
+      status: "queued",
+      blockedBy: ["plan"],
+    });
+    tasks.close("plan", { status: "done", reason: "answered", actor: "captain" });
+    seedDelivery(tasks, "fix", {
+      mergeAuthorization: {
+        version: 1,
+        id: "approval-fix",
+        generation: 1,
+        issuer: "captain",
+        at: 1,
+        card: { id: "merge-card", offerId: "offer-1", actionId: "merge" },
+        target: {
+          repoId: "r1",
+          host: "github.com",
+          owner: "example",
+          name: "nimbus-api",
+          branch: "inf/fix-reading-a1b2",
+          delivery: "direct-pr",
+          method: "squash",
+        },
+        approvedHead: "0f3c9a1e4b7d2c6a8e5f1b3d9c7a2e4f6b8d0c1a",
+        proceedWithOpen: false,
+        status: "consumed",
+        lineage: [],
+      },
+      firstRelease: {
+        version: "1.4.0-alpha.2",
+        url: "https://github.com/example/nimbus-api/releases/tag/v1.4.0-alpha.2",
+        evidence: "The release's notes list the fix.",
+      },
+    });
+    tasks.close("fix", { status: "done", reason: "merged", actor: "host" });
+    await supervisor.watch.sweepGates(Date.now());
+    await tick();
+    // Both started: the side-effect task and the ordinary task behind the answered plan.
+    expect(crew.promptCalls).toHaveLength(2);
+    const served = crew.promptCalls.join("\n=====\n");
+    expect(served).toContain(
+      `- ${tasks.get("fix")?.key} "Fix the negative reading": merged; first shipped in release 1.4.0-alpha.2 (https://github.com/example/nimbus-api/releases/tag/v1.4.0-alpha.2)`,
+    );
+    expect(served).toContain(
+      `- ${tasks.get("plan")?.key} "Plan the weekly view": done (answered), with no merge`,
+    );
+    // Only the side-effect task reads the section.
+    expect(served.match(/This is a side-effect task/g)).toHaveLength(1);
   });
 
   it("delivers historical full reports and uncut card amendments, then pins the served content", async () => {
@@ -1127,7 +1203,7 @@ describe("the task graph (R1)", () => {
       id: "dropped-fix",
       title: "Fix the negative reading",
       status: "cancelled",
-      shape: { kind: "fix", issue: { number: 7, url, closes: true } },
+      shape: { kind: "fix", issue: { number: 7, url } },
     });
     for (const old of [step, fix]) tasks.placement.markWorkspaceRemoved(old.id);
     const again = (id: string) => {
@@ -1145,6 +1221,6 @@ describe("the task graph (R1)", () => {
       result_schema: REPRODUCE_RESULT_SCHEMA,
       issue: { number: 7, url },
     });
-    expect(tasks.get(freshFix.id)?.shape?.issue).toEqual({ number: 7, url, closes: true });
+    expect(tasks.get(freshFix.id)?.shape?.issue).toEqual({ number: 7, url });
   });
 });

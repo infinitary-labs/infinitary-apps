@@ -91,6 +91,7 @@
   "settingsAutomationEnable": "オンにする…",
   "settingsAutomationEventIn": "{integration} の {event}",
   "settingsAutomationEventNotConnected": "現在接続されていない連携",
+  "settingsAutomationEventTaskReleased": "作業がリリースに含まれる",
   "settingsAutomationEventsPreview": "-（届いた各イベントの要約）",
   "settingsAutomationFirstMateGets": "一等航海士が受け取る内容",
   "settingsAutomationFri": "金",

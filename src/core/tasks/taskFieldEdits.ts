@@ -42,6 +42,15 @@ export function startAtApprovalNotABlocker(named: string): string {
 }
 
 /**
+ * The refusal when a side-effect task names a wait whose approval starts it
+ * (docs/task-graph.md, "A side-effect task"): its every wait needs the merge.
+ */
+// i18n-exempt: a tool answer served to the first mate, not shown to a person
+// i18n-exempt: served to the first mate, never shown to a person
+export const SIDE_EFFECT_START_AT_APPROVAL =
+  "A side-effect task starts only once all its work merged, so it takes no start_at_approval: clear one or the other.";
+
+/**
  * The refusal when needs_merge names a task that is not one of the task's
  * own blocked_by, or the one its start_at_approval names: filing and
  * editing refuse it in the same words.
@@ -179,6 +188,11 @@ export function updateTaskFields(
       // i18n-exempt: a tool answer served to the first mate, not shown to a person
       throw new TaskGraphRefusal("needs_merge can only change on open work that has not started.");
     }
+    if (patch.sideEffect !== undefined && !unstarted) {
+      // i18n-exempt: a tool answer served to the first mate, not shown to a person
+      // i18n-exempt: served to the first mate's tool, never shown to a person
+      throw new TaskGraphRefusal("side_effect can only change on open work that has not started.");
+    }
 
     if (
       patch.programBound !== undefined &&
@@ -289,11 +303,24 @@ export function updateTaskFields(
           !writer.links.listTo(id, "blocks").some((link) => link.fromId === prerequisite.id))
       )
         throw new TaskGraphRefusal(startAtApprovalNotABlocker(named));
+      if (named && (update.shape ?? record.shape)?.side_effect)
+        throw new TaskGraphRefusal(SIDE_EFFECT_START_AT_APPROVAL);
       const mark = prerequisite ? keyOrId(prerequisite) : undefined;
       const current = update.shape ?? record.shape;
       if (mark !== current?.start_at_approval) {
         update.shape = withShapeKey(current, "start_at_approval", mark);
         changes.push(mark ? `starts at ${mark}'s approval` : "start_at_approval cleared");
+      }
+    }
+    if (patch.sideEffect !== undefined) {
+      const current = update.shape ?? record.shape;
+      const mark = patch.sideEffect || undefined;
+      if (mark && current?.start_at_approval)
+        throw new TaskGraphRefusal(SIDE_EFFECT_START_AT_APPROVAL);
+      if (mark !== current?.side_effect) {
+        update.shape = withShapeKey(current, "side_effect", mark);
+        // i18n-exempt: served to the first mate's tool, never shown to a person
+        changes.push(mark ? "side-effect task" : "side_effect cleared");
       }
     }
     if (patch.needsMerge !== undefined || patch.startAtApproval !== undefined) {

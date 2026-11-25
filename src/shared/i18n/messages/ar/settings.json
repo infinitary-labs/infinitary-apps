@@ -101,6 +101,7 @@
   "settingsAutomationEnable": "تشغيل…",
   "settingsAutomationEventIn": "{event} في {integration}",
   "settingsAutomationEventNotConnected": "تكامل غير متصل الآن",
+  "settingsAutomationEventTaskReleased": "يصدر العمل في إصدار",
   "settingsAutomationEventsPreview": "- (ملخص لكل حدث وصل)",
   "settingsAutomationFirstMateGets": "ما يتلقاه نائب القبطان",
   "settingsAutomationFri": "جمعة",

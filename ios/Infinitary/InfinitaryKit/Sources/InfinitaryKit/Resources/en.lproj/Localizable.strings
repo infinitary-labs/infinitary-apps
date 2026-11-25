@@ -2803,6 +2803,7 @@
 "settingsAutomationEnable" = "Turn on…";
 "settingsAutomationEventIn" = "%1$@ in %2$@";
 "settingsAutomationEventNotConnected" = "An integration not connected now";
+"settingsAutomationEventTaskReleased" = "Work ships in a release";
 "settingsAutomationEventsPreview" = "- (a summary of each event that arrived)";
 "settingsAutomationFirstMateGets" = "Your first mate gets";
 "settingsAutomationFri" = "Fri";

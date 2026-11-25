@@ -19,7 +19,11 @@ import type { RouteResult } from "../routing/router";
 import { FIRSTMATE_RECIPIENT } from "../storage/inboxStore";
 import type { TaskLinkType } from "../storage/taskLinkStore";
 import type { TaskGate, TaskRecord, TaskStartPolicy } from "../storage/taskRecords";
-import { needsMergeKeys, startAtApprovalNotABlocker } from "../tasks/taskFieldEdits";
+import {
+  needsMergeKeys,
+  SIDE_EFFECT_START_AT_APPROVAL,
+  startAtApprovalNotABlocker,
+} from "../tasks/taskFieldEdits";
 import { TaskGraphRefusal } from "../tasks/taskGraph";
 import type { SavedOrigin } from "../tasks/taskOrigin";
 import { TaskService } from "../tasks/taskService";
@@ -718,6 +722,10 @@ export class TaskIntake {
       : undefined;
     if (typeof program === "string") throw new TaskGraphRefusal(`Nothing was filed. ${program}`);
     const startAt = this.startAtApproval(input.shape?.start_at_approval, placement.blockedBy);
+    const sideEffect = input.shape?.side_effect === true;
+    if (sideEffect && startAt)
+      // i18n-exempt: served to the first mate's tool, never shown to a person
+      throw new TaskGraphRefusal(`Nothing was filed. ${SIDE_EFFECT_START_AT_APPROVAL}`);
     const needsMerge = this.needsMerge(input.shape?.needs_merge, placement.blockedBy, startAt);
     const shape = withDeliverable(
       {
@@ -725,6 +733,7 @@ export class TaskIntake {
         ...handOff,
         ...(startAt ? { start_at_approval: startAt } : {}),
         ...(needsMerge.length ? { needs_merge: needsMerge } : {}),
+        ...(sideEffect ? { side_effect: true } : {}),
         ...(program ? { program } : {}),
       },
       input.intent,

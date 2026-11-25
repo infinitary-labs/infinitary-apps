@@ -2803,6 +2803,7 @@
 "settingsAutomationEnable" = "켜기…";
 "settingsAutomationEventIn" = "%2$@의 %1$@";
 "settingsAutomationEventNotConnected" = "지금 연결되지 않은 연동";
+"settingsAutomationEventTaskReleased" = "작업이 릴리스에 포함됨";
 "settingsAutomationEventsPreview" = "- (도착한 각 이벤트의 요약)";
 "settingsAutomationFirstMateGets" = "일등항해사가 받는 것";
 "settingsAutomationFri" = "금";

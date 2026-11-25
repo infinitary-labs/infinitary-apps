@@ -84,6 +84,8 @@ export type TaskToolsDelegate = {
     startAtApproval?: string;
     /** The blocked_by tasks whose merge it needs, before it starts; empty clears it. */
     needsMerge?: string[];
+    /** Whether it is a side-effect task, every wait needing the merge, before it starts. */
+    sideEffect?: boolean;
     /** Whether the work is the first mate's own, not the captain's ask (INF-1467). */
     internalStep?: boolean;
     /** A program's new bound on its task() calls (INF-799), on the captain's words. */
@@ -254,6 +256,12 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
             "The blocked_by tasks it needs merged, not only approved, such as for a release.",
         }),
       ),
+      side_effect: Type.Optional(
+        Type.Boolean({
+          description:
+            "True when its only job is an outside action that waits on work, such as closing a work item: each blocked_by, added later too, holds until merged, never at approval, and its brief says how each closed.",
+        }),
+      ),
       branch: Type.Optional(Type.String({ description: "As spawn_crewmate's branch." })),
       tags: Type.Optional(TAGS_PARAM),
     }),
@@ -279,6 +287,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
           ? { start_at_approval: params.start_at_approval.trim() }
           : {}),
         ...(params.needs_merge?.length ? { needs_merge: params.needs_merge } : {}),
+        ...(params.side_effect ? { side_effect: true } : {}),
         ...(params.branch?.trim() ? { branch: params.branch.trim() } : {}),
       };
       const intent = parseSpawnIntent({
@@ -379,6 +388,9 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
           description:
             "As create_task's needs_merge, before start; replaces the list, empty clears.",
         }),
+      ),
+      side_effect: Type.Optional(
+        Type.Boolean({ description: "As create_task's side_effect, before start." }),
       ),
       program_bound: Type.Optional(Type.Integer()),
       crew_speed: Type.Optional(
@@ -720,6 +732,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
           ? { startAtApproval: params.start_at_approval }
           : {}),
         ...(params.needs_merge !== undefined ? { needsMerge: params.needs_merge } : {}),
+        ...(params.side_effect !== undefined ? { sideEffect: params.side_effect } : {}),
         ...(params.internal_step !== undefined ? { internalStep: params.internal_step } : {}),
         ...(params.program_bound !== undefined ? { programBound: params.program_bound } : {}),
         ...(params.crew_speed !== undefined ? { speed: params.crew_speed } : {}),

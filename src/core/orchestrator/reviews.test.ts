@@ -34,7 +34,7 @@ import type { TaskRecord } from "../storage/taskRecords";
 import { taskFeedLine } from "../tasks/taskFeed";
 import { readChangeReading } from "../workspace/workspaceService";
 import type { CrewmateSpec } from "./crewSession";
-import { REVIEW_FIX_RULES, renderRigorSection } from "./intentBrief";
+import { BUILDER_HANDOFF_WORDS, REVIEW_FIX_RULES, renderRigorSection } from "./intentBrief";
 import { REVIEW_CARD_RULES, REVIEW_HANDOFF_NEXT } from "./reportWakes";
 import type { ReviewerChooser, ReviewerPick } from "./reviewerChoice";
 import { renderWake } from "./wakes";
@@ -799,6 +799,10 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       expect(brief).toContain("make the meter test stop flaking");
       // No rigor section on a review: it ships nothing.
       expect(brief).not.toContain("Care:");
+      // Its basis is the change it reads, not an answer it builds on: it
+      // reads no builder's hand-over (INF-6639's review).
+      expect(brief).toContain("This work is grounded in");
+      expect(brief).not.toContain(BUILDER_HANDOFF_WORDS);
       expect(review?.shape?.rigor).toBeUndefined();
       // No hold: the review carries no edge onto the builder (INF-1876).
       expect(tasks.graph.blockersHoldingClose(builderId)).toEqual([]);

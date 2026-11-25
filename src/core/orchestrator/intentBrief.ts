@@ -14,6 +14,7 @@ import {
   type WorkKind,
 } from "@shared/routingPolicy";
 import { RIGOR_WORDS } from "@shared/vocabulary";
+import { ANSWER_CARD_AUTHORING, ANSWER_HANDOFF, BASIS_HANDOFF } from "../prompts/cardContract";
 import { BRIEF_CARRIED_LEAD } from "../prompts/choiceCarried";
 import { RESULT_WORDS, resultText } from "../tasks/taskResult";
 import { holdsReaderData, READER_DATA_LABEL } from "./readerData";
@@ -631,8 +632,22 @@ export function renderAnswerShapeSection(internalStep = false, kind?: WorkKind):
   // An internal step's answer goes to the next step, not to a card.
   return isQuickAnswer({ kind, internal_step: internalStep })
     ? `${shape} ${RETRIEVAL_BOUNDARY_WORDS}`
-    : shape;
+    : `${shape} ${PLAN_AND_PREVIEW_WORDS}`;
 }
+
+/**
+ * What only a planner or a preview's author needs (INF-6570's budget card,
+ * the captain's choice): the card authoring and hand-over parts read by
+ * "answer" (`../prompts/cardContract.ts`), served to an answer task here
+ * instead of in every crewmate's prompt. A quick answer reads only what the
+ * app already holds and neither plans nor previews, so it goes without.
+ */
+// i18n-exempt: served to the crewmate's model in its brief, stays English
+export const PLAN_AND_PREVIEW_WORDS = `Previews and plans: ${ANSWER_CARD_AUTHORING} ${ANSWER_HANDOFF}`;
+
+/** What only a builder needs of the hand-over, served in its basis section. */
+// i18n-exempt: served to the crewmate's model in its brief, stays English
+export const BUILDER_HANDOFF_WORDS = `Building on an answer: ${BASIS_HANDOFF}`;
 
 /**
  * What an unsafe data reader's crewmate is told of its own fence
@@ -946,14 +961,20 @@ export function joinParts(
 export function renderBasisSection(
   facts: BasisBriefFacts,
   source: "basis" | "origin" | "replacement" = "basis",
+  builder = true,
 ): string {
-  return briefText(basisSectionParts(facts, source));
+  return briefText(basisSectionParts(facts, source, builder));
 }
 
-/** The basis section in pieces, each report it copies marked as its event. */
+/**
+ * The basis section in pieces, each report it copies marked as its event.
+ * `builder` is false for a review or repair assessment, whose basis is the
+ * change it reads: it builds nothing, so it reads no builder's hand-over.
+ */
 export function basisSectionParts(
   facts: BasisBriefFacts,
   source: "basis" | "origin" | "replacement" = "basis",
+  builder = true,
 ): BriefPart[] {
   const { taskId } = facts;
   const report = (eventId: number, text: string): BriefPart =>
@@ -1064,6 +1085,7 @@ export function basisSectionParts(
     "",
     "Build on it rather than re-deriving it, and say in your report where it turned out to be wrong.",
   );
+  if (source === "basis" && builder) lines.push("", BUILDER_HANDOFF_WORDS);
   return joinParts(
     lines.map((line) => [line]),
     "\n",

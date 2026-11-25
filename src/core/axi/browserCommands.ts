@@ -1,6 +1,7 @@
 import { encode } from "@toon-format/toon";
 import { AxiError } from "axi-sdk-js";
 import { HERE } from "../../shared/deviceNames";
+import { BROWSER_PAY_STEP, UNKNOWN_OUTCOME_WORDS } from "../../shared/taskBrowser";
 import { BROWSER_COMMAND } from "../browser/commandWords";
 import { BROWSER_KEYS } from "../browser/keys";
 import { HIDDEN_VALUE_WORDS, REF_PATTERN } from "../browser/outline";
@@ -38,8 +39,8 @@ const REF_ARG = new RegExp(`^@?\\[?(${REF_PATTERN})\\]?$`, "i");
 /**
  * The browser's rules, in the help of the answers they apply to
  * (docs/task-browser.md): the sign-in rule where a page is opened, the
- * payment rule on the home view and in the help of every command that
- * presses, and the signed-in rule on every answer from a browser that may
+ * payment rule and what its review names on the home view and in the help
+ * of every command that presses, and the signed-in rule on every answer from a browser that may
  * show the captain's account. The document rule (INF-2375) rides the home
  * view and the click's help, where a site's one-time letter or receipt is
  * reached and downloaded. The prompt line carries the payment rule too.
@@ -49,6 +50,7 @@ export const BROWSER_RULES = {
     "A sign-in you did not expect, or on another site: never sign in yourself; ask the captain on a card with emit_card browser_handoff",
   payment:
     "Never press the last step of a purchase or booking yourself, such as Pay or Place order: ask the captain on a card with emit_card browser_handoff that reviews it",
+  review: `That review names what the captain commits to, read from the page now - for a trip the route, dates and times with time zones, passengers, seller, total and currency, baggage and fare rules - with anything uncertain and what changed; label the step, such as ${BROWSER_PAY_STEP}, beside one such as Stop here. If the page does not confirm the captain's last step, the outcome is unknown: never submit, reload or resend it; check where the site lists it; ask the captain. ${UNKNOWN_OUTCOME_WORDS} If the price or terms change after a review, stop and review again: an earlier choice does not cover them`,
   signedIn:
     "This browser may show the captain's account: keep only the results the task needs, never passwords, codes or card numbers; a screenshot needs --reason",
   document:
@@ -343,7 +345,7 @@ export const BROWSER_COMMANDS: Record<string, AxiCommand<BrowserConnection>> = {
   ),
   click: command(
     "click @ref",
-    `Click a control by its ref. A click on a link waits for the page it opens. ${BROWSER_RULES.payment}. ${BROWSER_RULES.document}.`,
+    `Click a control by its ref. A click on a link waits for the page it opens. ${BROWSER_RULES.payment}. ${BROWSER_RULES.review}. ${BROWSER_RULES.document}.`,
     async (args, browser) => {
       if (args.positional.length !== 1)
         invalid("click needs one ref", usage("click", "click @ref"));
@@ -416,7 +418,7 @@ export const BROWSER_COMMANDS: Record<string, AxiCommand<BrowserConnection>> = {
   ),
   press: command(
     "press <key> [@ref]",
-    `Press a key on a control, or on whatever has focus. Keys: ${BROWSER_KEYS.join(", ")}. ${BROWSER_RULES.payment}.`,
+    `Press a key on a control, or on whatever has focus. Keys: ${BROWSER_KEYS.join(", ")}. ${BROWSER_RULES.payment}. ${BROWSER_RULES.review}.`,
     async (args, browser) => {
       const spec = "press <key> [@ref]";
       const [name, target, ...rest] = args.positional;
@@ -565,6 +567,7 @@ async function home(browser: BrowserConnection): Promise<string> {
         `\`${BROWSER_COMMAND} open <url>\` opens a page`,
         BROWSER_RULES.signIn,
         BROWSER_RULES.payment,
+        BROWSER_RULES.review,
         BROWSER_RULES.document,
       ],
     });
@@ -578,7 +581,7 @@ async function home(browser: BrowserConnection): Promise<string> {
   return renderReply(
     "snapshot",
     reply,
-    [BROWSER_RULES.signIn, BROWSER_RULES.payment, BROWSER_RULES.document],
+    [BROWSER_RULES.signIn, BROWSER_RULES.payment, BROWSER_RULES.review, BROWSER_RULES.document],
     true,
   );
 }

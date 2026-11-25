@@ -119050,7 +119050,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     /**
      * Who answers a reply under a card whose author cannot (`cards.answered_by`,
      * read through `cardAnswerer`): "firstmate" on the host's stuck alert
-     * (`card-stall-<task>`, INF-1670) and on every card it raises through
+     * (`card-stall-<task>`, INF-1670), its next-move card
+     * (`card-next-move-<task>`), its decision on a stopped part left last
+     * (`card-last-part-<task>`) and on every card it raises through
      * `raiseHostCard` unless the caller names another, so the first mate
      * answers in the thread, never the task's crewmate; "crewmate" on the
      * app's own card for a crewmate's ask (a secret to keep or use, secrets to

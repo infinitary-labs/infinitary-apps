@@ -184,7 +184,7 @@ export const activityChannels = {
     request: z.tuple([usageTaskCostsQuerySchema]),
     response: usageTaskCostsSchema,
   },
-  // Usage's reporting line: the host a company's Claude Code setup has Claude work sent to.
+  // Usage's reporting line: the host the usage report sends every model's work to, or where only Claude's own records go.
   "inf:usage:reporting": {
     effect: "read",
     surface: "core",

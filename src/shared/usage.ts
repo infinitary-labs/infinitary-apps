@@ -190,11 +190,15 @@ export const usageSummarySchema = z.object({
 export type UsageSummary = z.infer<typeof usageSummarySchema>;
 
 /**
- * Where Claude work is also reported: the host of an administrator's managed
- * collector, otherwise of a company's Claude Code setup in the person's own
- * settings or shell, or null (docs/usage.md, "A company's Claude Code setup").
+ * Where usage is also reported, when a company's Claude Code setup names a
+ * collector: its host, or null (docs/usage-report.md, "Destinations").
+ * `claudeOnly` when only Claude's own records go there, as for a setup the
+ * report cannot send every other model's work to.
  */
-export const usageReportingSchema = z.object({ host: z.string().nullable() });
+export const usageReportingSchema = z.object({
+  host: z.string().nullable(),
+  claudeOnly: z.literal(true).optional(),
+});
 export type UsageReporting = z.infer<typeof usageReportingSchema>;
 
 /** Recent tasks: ten at first, ten more each time the captain asks. */

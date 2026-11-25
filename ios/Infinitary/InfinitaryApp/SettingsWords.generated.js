@@ -17989,7 +17989,10 @@ ${events}` : prompt;
     /** Tasks finished across all retained history, for the milestones. */
     finishedEver: number()
   });
-  object({ host: string().nullable() });
+  object({
+    host: string().nullable(),
+    claudeOnly: literal(true).optional()
+  });
   const USAGE_TASKS_MAX = 5e3;
   const usageTasksQuerySchema = strictObject({
     period: usagePeriodSchema,

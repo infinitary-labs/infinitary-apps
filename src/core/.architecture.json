@@ -323,6 +323,12 @@
       "path": "src/core/sharing",
       "about": "Diagnostics and contribution: what leaves the computer",
       "group": "The app's upkeep"
+    },
+    {
+      "name": "usageReport",
+      "path": "src/core/usageReport",
+      "about": "Infinitary's own usage report, one format per destination",
+      "group": "The app's upkeep"
     }
   ],
   "outside": [
@@ -396,8 +402,8 @@
       "about": "Where a build of the home's source gets its packages"
     },
     {
-      "name": "company collector",
-      "about": "Where a company's Claude Code setup gathers its usage reports"
+      "name": "usage collectors",
+      "about": "The OpenTelemetry collectors a company or a person points the usage report at"
     }
   ],
   "links": [
@@ -1637,11 +1643,6 @@
       "why": "runs Claude sessions and sign-ins"
     },
     {
-      "from": "claude",
-      "to": "company collector",
-      "why": "passes Claude's usage reports on"
-    },
-    {
       "from": "codex",
       "to": "claude",
       "why": "compares client versions"
@@ -1865,6 +1866,31 @@
       "from": "dispatcher",
       "to": "reset",
       "why": "answers how many tasks a reset stops, undoes the first mate's side and leaves a controlling computer that asked for the reset paired"
+    },
+    {
+      "from": "storage",
+      "to": "usageReport",
+      "why": "hands it each new ledger row and heard turn"
+    },
+    {
+      "from": "usageReport",
+      "to": "storage",
+      "why": "reads the ledger row's shape"
+    },
+    {
+      "from": "usageReport",
+      "to": "shared",
+      "why": "reads event, usage and provider shapes"
+    },
+    {
+      "from": "usageReport",
+      "to": "claude",
+      "why": "reads the company's Claude Code setup, its headers and the login's email"
+    },
+    {
+      "from": "usageReport",
+      "to": "usage collectors",
+      "why": "sends usage in each one's format"
     }
   ],
   "machines": [

@@ -6,6 +6,7 @@ import type { ProviderView } from "@shared/providers";
 import type { SavedResetResult } from "@shared/savedResets";
 import type {
   UsageQuery,
+  UsageReporting,
   UsageSummary,
   UsageTaskCosts,
   UsageTaskCostsQuery,
@@ -168,6 +169,8 @@ export type CoreServices = {
     summary: (query: UsageQuery) => UsageSummary;
     tasks: (query: UsageTasksQuery) => UsageTasks;
     taskCosts: (query: UsageTaskCostsQuery) => UsageTaskCosts;
+    /** Settings → Usage's line naming where usage is reported (docs/usage-report.md). */
+    reporting: () => Promise<UsageReporting>;
   };
   /** Settings → Intelligence's cost limit row: the app's own limit and what it would have asked about (docs/usage.md). */
   costLimit: {

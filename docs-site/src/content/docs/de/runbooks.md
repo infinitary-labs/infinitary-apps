@@ -1,5 +1,5 @@
 ---
-source: 6d79068a24795b48
+source: b17e14176dad1387
 title: Leitfäden
 description: Die geschriebene Anleitung, der dein erster Offizier und deine Crew bei bestimmten Arten von Arbeit folgen – und wie du sie ein- oder ausschaltest, liest und eigene erstellst oder hinzufügst.
 ---
@@ -37,7 +37,7 @@ Ein ausgeschalteter Leitfaden leitet niemanden an, bleibt aber in der Liste, dam
 ## Die mitgelieferten Leitfäden {#the-built-in-runbooks}
 
 Die meisten mitgelieferten Leitfäden sind anfangs eingeschaltet.
-Drei sind anfangs aus, bis du sie einschaltest: **Gebündelte Pull Requests**, **Pull-Request-Kommentare** und **Erweiterte Architektur**.
+Vier sind anfangs aus, bis du sie einschaltest: **Gebündelte Pull Requests**, **Pull-Request-Kommentare**, **Herzschlag** und **Erweiterte Architektur**.
 
 - **Gängige Abläufe**: wie dein erster Offizier an Planung, Bau, Fehlerbehebung und Recherche herangeht.
 - **Lieferurteil**: wie Crewmitglieder Überprüfungen und Reparaturen beurteilen und wann eine Änderung bereit zum Zusammenführen ist, bei Arbeit, die über einen Pull Request läuft.
@@ -56,6 +56,8 @@ Drei sind anfangs aus, bis du sie einschaltest: **Gebündelte Pull Requests**, *
   Siehe [Projekte](/de/projects/#how-changes-reach-your-project).
 - **Pull-Request-Kommentare**: Ein Crewmitglied beantwortet Kommentare zu seinem Pull Request, bis er zusammengeführt ist.
   Eindeutige Korrekturen macht es selbst, unklare bringt es dir als Entscheidung.
+- **Herzschlag**: Wenn Arbeit zu warten beginnt und nichts sie zur Sprache bringt, oder nach langer Ruhe, sieht dein erster Offizier die wartende Arbeit durch, bringt sie voran oder fragt dich einmal.
+  Er bringt eine Automatisierung mit, die du in Einstellungen → **Automatisierung** pausieren kannst; schaltest du den Leitfaden aus, verschwindet sie.
 - **Computer aufräumen**: ein Blick, der nur liest, nachdem du zugestimmt hast, und eine Karte, auf der du wählst, welche Überbleibsel gestoppt werden.
   Siehe [Worum du bitten kannst](/de/what-you-can-ask-for/#a-look-at-a-computer-under-strain).
 - **Geheimnisse übernehmen**: wie ein Crewmitglied Geheimnisse aus einem anderen Werkzeug in **Geheimnisse** übernimmt, ohne dass ein Agent einen Wert sieht.

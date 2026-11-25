@@ -75400,6 +75400,10 @@
                         "since",
                         "reason"
                       ]
+                    },
+                    "brought": {
+                      "type": "string",
+                      "const": "heartbeat"
                     }
                   },
                   "required": [
@@ -75651,6 +75655,10 @@
                         "since",
                         "reason"
                       ]
+                    },
+                    "brought": {
+                      "type": "string",
+                      "const": "heartbeat"
                     }
                   },
                   "required": [
@@ -76417,6 +76425,10 @@
               "since",
               "reason"
             ]
+          },
+          "brought": {
+            "type": "string",
+            "const": "heartbeat"
           }
         },
         "required": [
@@ -76672,6 +76684,10 @@
               "since",
               "reason"
             ]
+          },
+          "brought": {
+            "type": "string",
+            "const": "heartbeat"
           }
         },
         "required": [

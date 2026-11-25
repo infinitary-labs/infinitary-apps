@@ -72,6 +72,7 @@
   "settingsAppearanceWashDescription": "Cuánto del color del tema cubre el fondo desenfocado. 0 % es el valor predeterminado.",
   "settingsAppearanceWashValue": "{percent} % de opacidad",
   "settingsAutomationBack": "Atrás",
+  "settingsAutomationBroughtNote": "Viene con el manual Heartbeat. Para cambiarla o quitarla, desactiva el manual en Configuración, Manuales.",
   "settingsAutomationCancelCleared": "La conversación de tu primer oficial se borró antes de que la leyera.",
   "settingsAutomationCancelEdited": "Se retiró antes de que tu primer oficial la leyera, porque se cambió la automatización.",
   "settingsAutomationCancelPaused": "Se retiró antes de que tu primer oficial la leyera, porque se pausó la automatización.",

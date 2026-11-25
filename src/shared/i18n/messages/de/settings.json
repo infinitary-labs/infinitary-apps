@@ -70,6 +70,7 @@
   "settingsAppearanceWashDescription": "Wie stark die Designfarbe den unscharfen Hintergrund überdeckt. 0 % ist der Standard.",
   "settingsAppearanceWashValue": "{percent} % Deckkraft",
   "settingsAutomationBack": "Zurück",
+  "settingsAutomationBroughtNote": "Gehört zum Leitfaden Heartbeat. Um sie zu ändern oder zu entfernen, schalte den Leitfaden unter Einstellungen, Leitfäden aus.",
   "settingsAutomationCancelCleared": "Die Unterhaltung deines ersten Offiziers wurde geleert, bevor er dies gelesen hat.",
   "settingsAutomationCancelEdited": "Zurückgenommen, bevor dein erster Offizier es gelesen hat, weil die Automatisierung geändert wurde.",
   "settingsAutomationCancelPaused": "Zurückgenommen, bevor dein erster Offizier es gelesen hat, weil die Automatisierung pausiert wurde.",

@@ -60114,6 +60114,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Back`;
   }
+  function settingsAutomationBroughtNote() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يأتي مع دليل التشغيل Heartbeat. لتغييره أو إزالته، أوقف دليل التشغيل من الإعدادات، أدلة التشغيل.`;
+      case "de":
+        return `Gehört zum Leitfaden Heartbeat. Um sie zu ändern oder zu entfernen, schalte den Leitfaden unter Einstellungen, Leitfäden aus.`;
+      case "es":
+        return `Viene con el manual Heartbeat. Para cambiarla o quitarla, desactiva el manual en Configuración, Manuales.`;
+      case "fr":
+        return `Fournie par la procédure Heartbeat. Pour la modifier ou la retirer, désactivez la procédure dans Réglages, Procédures.`;
+      case "ja":
+        return `ランブック「Heartbeat」に付属しています。変更や削除をするには、設定のランブックでこのランブックをオフにしてください。`;
+      case "ko":
+        return `Heartbeat 런북과 함께 제공됩니다. 바꾸거나 없애려면 설정의 런북에서 이 런북을 끄세요.`;
+      case "pt-BR":
+        return `Vem com o manual Heartbeat. Para alterá-la ou removê-la, desative o manual em Ajustes, Manuais.`;
+      case "zh-Hans":
+        return `随 Heartbeat 操作手册提供。要更改或移除它，请在设置的操作手册中关闭该手册。`;
+      case "zh-Hant":
+        return `隨 Heartbeat 作業手冊提供。若要變更或移除，請在設定的作業手冊中關閉該手冊。`;
+      case "en-XA":
+        return `[Çöɱéš ŵîţĥ ţĥé Ĥéáŕţƀéáţ ŕûñƀööķ. Ţö çĥáñĝé öŕ ŕéɱöṽé îţ, ţûŕñ ţĥé ŕûñƀööķ öƒƒ îñ Šéţţîñĝš, Ŕûñƀööķš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Comes with the Heartbeat runbook. To change or remove it, turn the runbook off in Settings, Runbooks.‬`;
+    }
+    return `Comes with the Heartbeat runbook. To change or remove it, turn the runbook off in Settings, Runbooks.`;
+  }
   function settingsAutomationCancelCleared() {
     switch (currentLanguage()) {
       case "ar":
@@ -114345,6 +114372,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsAppearanceWashDescription,
     settingsAppearanceWashValue,
     settingsAutomationBack,
+    settingsAutomationBroughtNote,
     settingsAutomationCancelCleared,
     settingsAutomationCancelEdited,
     settingsAutomationCancelPaused,
@@ -117951,6 +117979,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsAppearanceWashDescription": [],
     "settingsAppearanceWashValue": ["percent"],
     "settingsAutomationBack": [],
+    "settingsAutomationBroughtNote": [],
     "settingsAutomationCancelCleared": [],
     "settingsAutomationCancelEdited": [],
     "settingsAutomationCancelPaused": [],

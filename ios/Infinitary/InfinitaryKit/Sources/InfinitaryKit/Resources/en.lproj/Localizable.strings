@@ -2758,6 +2758,7 @@
 "settingsAppearanceWashDescription" = "How much of the theme color covers the blurred background. 0%% is the default.";
 "settingsAppearanceWashValue" = "%1$@%% opacity";
 "settingsAutomationBack" = "Back";
+"settingsAutomationBroughtNote" = "Comes with the Heartbeat runbook. To change or remove it, turn the runbook off in Settings, Runbooks.";
 "settingsAutomationCancelCleared" = "Your first mate's conversation was cleared before it read this.";
 "settingsAutomationCancelEdited" = "Taken back before your first mate read it, because the automation was changed.";
 "settingsAutomationCancelPaused" = "Taken back before your first mate read it, because the automation was paused.";

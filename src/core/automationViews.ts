@@ -55,5 +55,6 @@ export function automationRuleOf(
     ...(listened ? { when: automationEventWords(listened.label, listened.name) } : {}),
     ...(stopped ? { stopped } : {}),
     ...(failing ? { failing } : {}),
+    ...(record.brought ? { brought: record.brought } : {}),
   };
 }

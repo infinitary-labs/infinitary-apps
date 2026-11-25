@@ -68,6 +68,7 @@
   "settingsAppearanceWashDescription": "主題顏色覆蓋模糊背景的程度。預設為 0%。",
   "settingsAppearanceWashValue": "{percent}% 不透明度",
   "settingsAutomationBack": "返回",
+  "settingsAutomationBroughtNote": "隨 Heartbeat 作業手冊提供。若要變更或移除，請在設定的作業手冊中關閉該手冊。",
   "settingsAutomationCancelCleared": "你的大副讀到這則之前，它的對話已被清除。",
   "settingsAutomationCancelEdited": "在你的大副讀到之前已收回，因為這項自動化已變更。",
   "settingsAutomationCancelPaused": "在你的大副讀到之前已收回，因為這項自動化已暫停。",

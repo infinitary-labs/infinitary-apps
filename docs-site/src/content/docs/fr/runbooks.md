@@ -1,5 +1,5 @@
 ---
-source: 6d79068a24795b48
+source: b17e14176dad1387
 title: Procédures
 description: Les consignes écrites que suivent votre second et votre équipage pour certains types de travail, et comment les activer ou les désactiver, les lire, créer les vôtres ou en ajouter.
 ---
@@ -37,7 +37,7 @@ Une procédure désactivée ne guide personne, mais elle reste dans la liste, po
 ## Les procédures intégrées {#the-built-in-runbooks}
 
 La plupart des procédures intégrées sont activées au départ.
-Trois restent désactivées jusqu’à ce que vous les activiez : **Demandes de tirage groupées**, **Commentaires de demande de tirage** et **Architecture avancée**.
+Quatre restent désactivées jusqu’à ce que vous les activiez : **Demandes de tirage groupées**, **Commentaires de demande de tirage**, **Battement de cœur** et **Architecture avancée**.
 
 - **Flux de travail courants** : la façon dont votre second aborde la planification, la construction, les corrections et les recherches.
 - **Jugement de livraison** : la façon dont les équipiers jugent les vérifications, les réparations et le moment où une modification est prête à fusionner, pour le travail qui passe par une demande de tirage.
@@ -56,6 +56,8 @@ Trois restent désactivées jusqu’à ce que vous les activiez : **Demandes de
   Voir [Projets](/fr/projects/#how-changes-reach-your-project).
 - **Commentaires de demande de tirage** : un équipier répond aux commentaires sur sa demande de tirage jusqu’à sa fusion.
   Il fait seul les corrections claires, et vous soumet les moins claires sous forme de choix.
+- **Battement de cœur** : quand un travail se met à attendre sans que rien ne le signale, ou après un long calme, votre second passe en revue le travail en attente, le fait avancer ou vous pose la question une fois.
+  Elle apporte une automatisation que vous pouvez mettre en pause dans Réglages → **Automatisation**, et désactiver la procédure la retire.
 - **Nettoyage de l’ordinateur** : un examen qui ne fait que lire, après votre accord, et une carte pour choisir quels restes arrêter.
   Voir [Ce que vous pouvez demander](/fr/what-you-can-ask-for/#a-look-at-a-computer-under-strain).
 - **Importer des secrets** : la façon dont un équipier déplace des secrets d’un autre outil vers **Secrets** sans qu’aucun agent ne voie une valeur.

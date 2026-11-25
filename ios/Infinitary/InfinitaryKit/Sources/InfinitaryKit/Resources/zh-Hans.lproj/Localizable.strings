@@ -2758,6 +2758,7 @@
 "settingsAppearanceWashDescription" = "主题颜色覆盖模糊背景的程度。默认为 0%%。";
 "settingsAppearanceWashValue" = "%1$@%% 不透明度";
 "settingsAutomationBack" = "返回";
+"settingsAutomationBroughtNote" = "随 Heartbeat 操作手册提供。要更改或移除它，请在设置的操作手册中关闭该手册。";
 "settingsAutomationCancelCleared" = "你的大副读到这条之前，它的对话已被清空。";
 "settingsAutomationCancelEdited" = "在你的大副读到之前已收回，因为这项自动化被更改了。";
 "settingsAutomationCancelPaused" = "在你的大副读到之前已收回，因为这项自动化被暂停了。";

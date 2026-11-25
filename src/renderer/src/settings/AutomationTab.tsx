@@ -277,7 +277,9 @@ function Sheet({
   const ids = useId();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const shownPart = rule ? part : "setup";
+  // A brought rule has no Setup: its runbook owns it (docs/automation.md, "The heartbeat").
+  const parts = rule?.brought ? PARTS.filter((one) => one !== "setup") : PARTS;
+  const shownPart = !rule ? "setup" : parts.includes(part) ? part : "history";
   const toggle = async () => {
     if (!rule) return;
     setBusy(true);
@@ -326,8 +328,8 @@ function Sheet({
       </div>
       {rule ? (
         <>
-          <PartTabs ids={ids} part={shownPart} onPart={onPart} />
-          {PARTS.map((one) => (
+          <PartTabs ids={ids} parts={parts} part={shownPart} onPart={onPart} />
+          {parts.map((one) => (
             <div
               key={one}
               id={`${ids}-panel-${one}`}
@@ -458,6 +460,13 @@ function NoteSlot({ rule }: { rule: AutomationRule | undefined }) {
       </div>
     );
   }
+  if (rule?.brought) {
+    return (
+      <div data-automation-brought role="status" style={NOTE_BOX}>
+        {m.settingsAutomationBroughtNote()}
+      </div>
+    );
+  }
   if (drafting) {
     return (
       <div data-automation-draft-note role="status" style={NOTE_BOX}>
@@ -482,10 +491,12 @@ const NOTE_BOX: React.CSSProperties = {
 /** Setup, History and Notes as one Tab stop, moved between with the arrow keys, Home and End. */
 function PartTabs({
   ids,
+  parts,
   part,
   onPart,
 }: {
   ids: string;
+  parts: readonly Part[];
   part: Part;
   onPart: (part: Part) => void;
 }) {
@@ -494,14 +505,14 @@ function PartTabs({
     const keys = ["ArrowLeft", "ArrowRight", "Home", "End"];
     if (!keys.includes(event.key) || event.metaKey || event.ctrlKey || event.altKey) return;
     event.preventDefault();
-    const at = PARTS.indexOf(part);
+    const at = parts.indexOf(part);
     const to =
       event.key === "Home"
         ? 0
         : event.key === "End"
-          ? PARTS.length - 1
-          : (at + (event.key === "ArrowRight" ? 1 : -1) + PARTS.length) % PARTS.length;
-    const next = PARTS[to] ?? "setup";
+          ? parts.length - 1
+          : (at + (event.key === "ArrowRight" ? 1 : -1) + parts.length) % parts.length;
+    const next = parts[to] ?? part;
     onPart(next);
     list.current?.querySelectorAll<HTMLElement>('[role="tab"]')[to]?.focus();
   };
@@ -518,7 +529,7 @@ function PartTabs({
         borderBottom: "1px solid var(--line-1)",
       }}
     >
-      {PARTS.map((one) => {
+      {parts.map((one) => {
         const chosen = one === part;
         return (
           <button

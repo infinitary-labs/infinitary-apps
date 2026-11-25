@@ -2887,6 +2887,7 @@ public enum PhoneMessages {
     public static func `settingsAppearanceWashDescription`() -> String { PhoneWords.format("settingsAppearanceWashDescription", []) }
     public static func `settingsAppearanceWashValue`(`percent`: String) -> String { PhoneWords.format("settingsAppearanceWashValue", [`percent`]) }
     public static func `settingsAutomationBack`() -> String { PhoneWords.format("settingsAutomationBack", []) }
+    public static func `settingsAutomationBroughtNote`() -> String { PhoneWords.format("settingsAutomationBroughtNote", []) }
     public static func `settingsAutomationCancelCleared`() -> String { PhoneWords.format("settingsAutomationCancelCleared", []) }
     public static func `settingsAutomationCancelEdited`() -> String { PhoneWords.format("settingsAutomationCancelEdited", []) }
     public static func `settingsAutomationCancelPaused`() -> String { PhoneWords.format("settingsAutomationCancelPaused", []) }
@@ -7586,6 +7587,7 @@ extension PhoneWords {
         "settingsAppearanceWashDescription": [],
         "settingsAppearanceWashValue": ["percent"],
         "settingsAutomationBack": [],
+        "settingsAutomationBroughtNote": [],
         "settingsAutomationCancelCleared": [],
         "settingsAutomationCancelEdited": [],
         "settingsAutomationCancelPaused": [],

@@ -84,6 +84,16 @@ In `answer-correction` the captain corrects the answer, and in `required-action-
 The model's calls run against the isolated host, so each case's recorded `state` says whether the card ended or stayed up, beside its thread; read the recorded calls for whether `signs_off` or `close_card` ended it, since a refused mark answers in text the runner records as a success.
 The same run-sheet approval and Claude-client requirements apply, with the unused builder selection named explicitly.
 
+## Heartbeat guide evaluation
+
+Use `--module scripts/evals/heartbeat.ts` for the Heartbeat runbook's four first mate cases: each serves the beat the production scheduler delivers, from the rule the runbook brings, with the runbook switched on so its guide is in the served instructions.
+In `quiet-beat` the standing list is empty and the quiet reason sends the beat; the expected reply is one line that starts `Found:` and calls no tool.
+In `new-last-part` a part the captain stopped is its plan's last open part and joins the list as new; the expected reply puts it on one card and starts nothing.
+In `told-last-part` the same part is listed but not new, and the earlier heartbeat card about it is still open; the expected reply asks nothing again and adds no card.
+In `after-summary` the turn follows a summary of the conversation whose last line says the other part is still being built, though it has since merged; the expected reply reads the open work before it acts, then asks once and starts nothing.
+Each case's recorded `state` carries what the guide asks of it (`guideAsks`), the cards shown, the starts and the stopped part's status; read the recorded calls beside it, since a refused call answers in text the runner records as a success.
+The same run-sheet approval and Claude-client requirements apply, with the unused builder selection named explicitly.
+
 ## The Claude crewmate's client
 
 The running app holds the machine's Claude store for a Claude crewmate's client from its start to its exit (the session lease in `docs/claude-client.md`), so the app's own renewal never runs beside the evaluation's Claude clients over a single-use refresh token.

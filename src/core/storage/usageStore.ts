@@ -671,6 +671,36 @@ export class UsageStore {
   }
 
   /**
+   * One task's ledger readings since `since`, oldest first: each row is one
+   * reported request, recorded when it ended (the heartbeat reads the first
+   * mate's, docs/automation.md "The heartbeat").
+   */
+  readingsSince(
+    taskId: string,
+    since: number,
+  ): { at: number; input: number | null; cache_read: number | null; cache_write: number | null }[] {
+    return (
+      this.db
+        // i18n-exempt: SQL, never shown to a person
+        .prepare(`SELECT at, input, cache_read, cache_write
+      FROM usage_events WHERE task_id = ? AND at >= ? ORDER BY at, id`)
+        .all(taskId, since) as ReturnType<UsageStore["readingsSince"]>
+    );
+  }
+
+  /** One task's newest reading: when its last request ended and which provider served it. */
+  lastReading(taskId: string): { at: number; provider: string | null } | null {
+    return (
+      (this.db
+        .prepare(
+          // i18n-exempt: SQL, never shown to a person
+          `SELECT at, provider FROM usage_events WHERE task_id = ? ORDER BY at DESC, id DESC LIMIT 1`,
+        )
+        .get(taskId) as { at: number; provider: string | null } | undefined) ?? null
+    );
+  }
+
+  /**
    * Every task's usage summed in one query (or one task's), so a caller that
    * polls a whole list never pays a query per task.
    */

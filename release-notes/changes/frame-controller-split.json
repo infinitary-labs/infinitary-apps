@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "frame-controller-split",
+      "reason": "Tests moved unchanged into a second file; nothing a person sees changes."
+    }
+  ]
+}

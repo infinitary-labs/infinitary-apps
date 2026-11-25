@@ -711,6 +711,8 @@
 "commandMessageDeleteWordBefore" = "حذف الكلمة التي قبل المؤشر";
 "commandMessagePutBackDeleted" = "إرجاع آخر ما حُذف";
 "commandMessageRecall" = "استعادة آخر رسالة مُرسلة";
+"commandMessageTakeBack" = "التراجع عن آخر رسالة لك";
+"commandMessageTakeBackWords" = "تراجع, إلغاء, سحب, رسالة";
 "commandMoveDown" = "التحرك لأسفل";
 "commandMoveDownWords" = "سهم, أسفل, التالي";
 "commandMoveFirst" = "الانتقال إلى البداية";
@@ -819,6 +821,9 @@
 "composerFolderNotProject" = "تعذّرت إضافة هذا المجلد كمشروع.";
 "composerFolderProject" = "هذا المجلد من مشاريعك بالفعل.";
 "composerHintFeedback" = "%1$@: أخبر صانع Infinitary بمشكلة أو فكرة";
+"composerHintReplaces" = "يستبدل ·";
+"composerHintSendsAsNew" = "يرسل كرسالة جديدة";
+"composerReplacesLast" = "تحل محل آخر رسالة لك";
 "composerTooLongShorten" = "النص أطول من أن يُرسل. اختصره أولًا.";
 "composerWordsOnly" = "يمكن إرسال الكلمات فقط حتى يتم تحديث Infinitary. أزل الصور والملفات لإرسال هذه الرسالة.";
 "crewAPart" = "جزء";
@@ -2526,6 +2531,7 @@
 "refuseNoCardIsShown" = "لا توجد بطاقة معروضة";
 "refuseNoCardIsShownOrPutAside" = "لا توجد بطاقة معروضة أو موضوعة جانبًا";
 "refuseNoCardThreadIsReadAboveIts" = "لا توجد سلسلة بطاقة مقروءة حتى ما قبل أحدث رسائلها";
+"refuseNoMessageToRevert" = "لا توجد رسالة للتراجع عنها: مرّت عليها أكثر من دقيقة أو تم التراجع عنها";
 "refuseNoOtherCardIsNew" = "لا توجد بطاقة جديدة أخرى";
 "refuseNoPageToPointAt" = "لا توجد صفحة معروضة للإشارة إليها";
 "refuseNoPictureIsOpen" = "افتح صورة في بطاقة أولًا";
@@ -4183,6 +4189,7 @@
 "shellConversationCards" = "البطاقات";
 "shellConversationChose" = "اخترت «%1$@»";
 "shellConversationCrewmate" = "فرد الطاقم";
+"shellConversationEdited" = "معدّلة";
 "shellConversationEmpty" = "لا شيء هنا بعد. تظهر هنا رسائلك والبطاقات التي تجيب عنها.";
 "shellConversationEverything" = "الكل";
 "shellConversationHeading" = "المحادثة";
@@ -4229,6 +4236,9 @@
 "shellKeyReminderNotTyping" = "في غير أثناء الكتابة";
 "shellLastTurnFromCommand" = "من %1$@";
 "shellLastTurnPictureOnly" = "صورة";
+"shellLastTurnRevert" = "التراجع عن آخر رسالة لك";
+"shellLastTurnReverted" = "تم التراجع";
+"shellLastTurnRevertedUnread" = "تم التراجع قبل أن يقرأها نائب القبطان";
 "shellLastTurnWorking" = "جارٍ العمل…";
 "shellMainMessageConnectFirst" = "اربط اشتراكًا أولًا";
 "shellMainMessagePickingKey" = "الإعدادات بانتظار مفتاح الإملاء";

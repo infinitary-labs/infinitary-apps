@@ -131,18 +131,49 @@ function CardTile({
   );
 }
 
-function You({ words, through }: { words: string; through?: boolean }) {
+function You({
+  words,
+  through,
+  takenBack = false,
+  replaces,
+}: {
+  words: string;
+  through?: boolean;
+  /** The captain took it back: struck, after a quiet Reverted mark. */
+  takenBack?: boolean;
+  /** The words of the message it replaced, folded under an Edited mark. */
+  replaces?: string | undefined;
+}) {
   return (
-    <div className="conversation-you">
-      {through && (
-        <span className="conversation-through">
-          {m.shellLastTurnFromCommand({ command: CAPTAIN_COMMAND })}
-        </span>
-      )}
-      <div className="conversation-bubble" data-conversation-you="">
-        {words.trim() || m.shellLastTurnPictureOnly()}
+    <>
+      <div className="conversation-you">
+        {through && (
+          <span className="conversation-through">
+            {m.shellLastTurnFromCommand({ command: CAPTAIN_COMMAND })}
+          </span>
+        )}
+        {takenBack && (
+          <span className="conversation-through" data-conversation-reverted="">
+            {m.shellLastTurnReverted()}
+          </span>
+        )}
+        <div
+          className="conversation-bubble"
+          data-conversation-you=""
+          data-taken-back={takenBack ? "" : undefined}
+        >
+          {words.trim() || m.shellLastTurnPictureOnly()}
+        </div>
       </div>
-    </div>
+      {replaces !== undefined && (
+        <details className="conversation-edited" data-conversation-edited="">
+          <summary>{m.shellConversationEdited()}</summary>
+          <div className="conversation-bubble" data-conversation-replaced="">
+            {replaces.trim() || m.shellLastTurnPictureOnly()}
+          </div>
+        </details>
+      )}
+    </>
   );
 }
 
@@ -189,7 +220,12 @@ function RoundView({
     const reply = round.reply;
     return (
       <>
-        <You words={round.you} through={round.through !== undefined} />
+        <You
+          words={round.you}
+          through={round.through !== undefined}
+          takenBack={round.takenBack === true}
+          replaces={round.replaces}
+        />
         {reply ? (
           <Mate
             words={reply.words ?? reply.text}

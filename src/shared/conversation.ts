@@ -52,6 +52,10 @@ export const conversationRoundSchema = z.discriminatedUnion("kind", [
     /** The first mate's reply, as the strip keeps it; null while none was given. */
     reply: lastTurnReplySchema.nullable(),
     through: throughSchema.optional(),
+    /** The captain took the message back (docs/task-capture.md, "Taking back a message"). */
+    takenBack: z.literal(true).optional(),
+    /** The words of the message this one replaced, which the captain took back to send it. */
+    replaces: z.string().optional(),
   }),
   // A press of one of a card's own buttons.
   z.object({
@@ -163,6 +167,9 @@ export function stripRounds(input: StripInput): StripRound[] {
       you: said.you,
       reply: said.reply,
       ...(said.through ? { through: said.through } : {}),
+      ...(said.askId ? { askId: said.askId } : {}),
+      ...(said.sentAt !== undefined ? { sentAt: said.sentAt } : {}),
+      ...(said.takenBack ? { takenBack: true as const } : {}),
     };
     const key = `m:${seq - i}`;
     if (!page) return { at: -i, order: i, round: { key, kind: "message", round } };

@@ -45,6 +45,11 @@ export const lastRoundSchema = z.object({
   through: throughSchema.optional(),
   /** The message's id, which a take back names; absent from an older core. */
   askId: z.string().optional(),
+  /**
+   * When the core accepted the message, in ms since the epoch: the take-back
+   * window runs from it (`TAKE_BACK_WINDOW_MS`). Absent from an older core.
+   */
+  sentAt: z.number().optional(),
   /** The captain took the message back (docs/task-capture.md, "Taking back a message"). */
   takenBack: z.literal(true).optional(),
 });

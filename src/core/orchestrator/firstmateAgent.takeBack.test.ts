@@ -219,4 +219,40 @@ describe("FirstmateAgent taking back a message", () => {
       'They replaced it with a new message: "start a task to archive the old logs".',
     );
   });
+
+  it("writes the undo turn's closing line beside the message it took back", async () => {
+    const f = setup({ silent: true });
+    await f.agent.converse("start a task to delete the old logs");
+    const ask = newest(f);
+    await createTask(f, { title: "Delete the old logs" });
+    await finish(f, "Filed it.");
+    expect(f.agent.takeBack(ask.id)).toEqual({ outcome: "undoing" });
+    await drained(f.session, 2);
+    await finish(f, "Took it back: dropped its task.");
+    expect(f.tasks.capture.lastTurn()).toMatchObject({
+      askId: ask.id,
+      reply: { text: "Took it back: dropped its task." },
+    });
+    const lines = f.events.filter((event) => event.type === "firstmate_reply");
+    expect(lines.at(-1)).toMatchObject({ text: "Took it back: dropped its task.", askId: ask.id });
+  });
+
+  it("keeps the line beside a replacement whose turn also carries the undo", async () => {
+    const f = setup({ silent: true });
+    await f.agent.converse("start a task to delete the old logs");
+    const first = newest(f);
+    await createTask(f, { title: "Delete the old logs" });
+    await finish(f, "Filed it.");
+    await f.agent.converse({ text: "start a task to archive the old logs", replaces: first.id });
+    const second = newest(f);
+    await drained(f.session, 2);
+    expect(f.session.prompts[1]).toContain(`${TAKEN_BACK_OPENING} ${first.id}`);
+    await createTask(f, { title: "Archive the old logs", ask_id: second.id });
+    await finish(f, "Dropped the delete task and filed the archive task.");
+    expect(f.tasks.capture.lastTurn()).toMatchObject({
+      askId: second.id,
+      reply: { text: "Dropped the delete task and filed the archive task." },
+      previous: { askId: first.id, takenBack: true, reply: { text: "Filed it." } },
+    });
+  });
 });

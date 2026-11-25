@@ -17343,6 +17343,11 @@ ${events}` : prompt;
     through: throughSchema.optional(),
     /** The message's id, which a take back names; absent from an older core. */
     askId: string().optional(),
+    /**
+     * When the core accepted the message, in ms since the epoch: the take-back
+     * window runs from it (`TAKE_BACK_WINDOW_MS`). Absent from an older core.
+     */
+    sentAt: number().optional(),
     /** The captain took the message back (docs/task-capture.md, "Taking back a message"). */
     takenBack: literal(true).optional()
   });
@@ -18013,7 +18018,13 @@ ${events}` : prompt;
       /** Typed completion: absent is unknown, and the line stays. */
       eligibility: lastTurnEligibilitySchema.optional(),
       /** The closing words as written, when they differ from `text` (src/shared/lastTurn.ts). */
-      words: string().optional()
+      words: string().optional(),
+      /**
+       * The message the line stands beside: the newest, or one the captain
+       * took back whose undo the turn did (docs/task-capture.md, "Taking back
+       * a message"). Absent from an older core, and the line is the newest's.
+       */
+      askId: string().optional()
     }),
     /**
      * A task record changed (task-system P3): per-task invalidation for

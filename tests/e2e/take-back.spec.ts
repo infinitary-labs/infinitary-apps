@@ -7,7 +7,9 @@ import {
   TAKEN_BACK_REPLACED,
 } from "../../src/core/orchestrator/captainWakes";
 import { takenBackRefusalText } from "../../src/core/orchestrator/takeBack";
+import * as m from "../../src/shared/i18n/messages.generated";
 import { waitForFirstmateIdle } from "./crew";
+import { conversation, conversationYou, mateBubble, yourBubble } from "./lastTurn";
 import { type LaunchedApp, launchApp } from "./launch";
 import { SILENT_ANSWER_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
@@ -15,10 +17,12 @@ import {
   TAKE_BACK_ALONE_MARKER,
   TAKE_BACK_FILED_MARKER,
   TAKE_BACK_HELD_MARKER,
+  TAKE_BACK_UNDO_LINE,
   TAKE_BACK_UNRELATED_TITLE,
   takeBack,
   takeBackAlone,
 } from "./scenarios/takeBack";
+import { runFromSearch } from "./windowKeys";
 
 /**
  * Taking back a message in the app's core (docs/task-capture.md, "Taking
@@ -26,8 +30,9 @@ import {
  * back their newest message within one minute; a turn still reading it is
  * refused every action credited to it, and once a turn acted on it the first
  * mate is served one wake listing what it caused, by task key, to undo.
- * Driven through the window's bridge with a scripted first mate; the
- * control a person presses belongs to the desktop part.
+ * Driven through the window's bridge with a scripted first mate. Part 2,
+ * the desktop's controls: a revert icon beside the newest message, Up to
+ * replace it, the command, and the marks the strip and conversation draw.
  */
 
 let launched: LaunchedApp | undefined;
@@ -178,4 +183,106 @@ test("a replacement takes back the newest message and its words reach the undo",
   await send(app.page, "what is on the backlog?");
   await newestAsk(app.page, "what is on the backlog?");
   expect(await takeBackAsk(app.page, second)).toEqual({ outcome: "refused", reason: "not-newest" });
+});
+
+/** Sends `words` through the main input, as a person does, and waits for its turn to end. */
+async function type(page: Page, words: string): Promise<string> {
+  await promptInput(page).fill(words);
+  await promptInput(page).press("Enter");
+  const askId = await newestAsk(page, words);
+  await waitForFirstmateIdle(page);
+  return askId;
+}
+
+// INF-6763's approved plan, part 2, and the captain's words on it: "don't
+// make the button literally "take back". use a "revert" icon or something
+// like that".
+// biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured fixture signature.
+test("the revert icon beside the newest message takes it back and its line says what was undone", async ({}, testInfo) => {
+  const { page } = await start();
+  const title = "rename the release channel";
+  await type(page, `${TAKE_BACK_FILED_MARKER} ${title}`);
+  await expect.poll(async () => (await task(page, title))?.status).toBe("open");
+
+  const revert = page.locator("[data-last-turn-revert]");
+  await yourBubble(page).hover();
+  await expect(revert).toHaveAccessibleName(m.shellLastTurnRevert());
+  await expect(revert).toHaveText("");
+  await revert.click();
+
+  await expect
+    .poll(async () => (await task(page, title))?.status, { timeout: 30_000 })
+    .toBe("dropped");
+  await waitForFirstmateIdle(page);
+  await expect(page.locator("[data-last-turn] [data-last-turn-reverted]")).toHaveText(
+    m.shellLastTurnReverted(),
+  );
+  await expect(revert).toHaveCount(0);
+  // The undo turn read no message: its line stands on the message taken back.
+  const line = await page.evaluate(() => window.infinitary.conversation.lastTurn());
+  writeFileSync(testInfo.outputPath("last-turn-after-revert.json"), JSON.stringify(line));
+  expect(line?.reply?.text).toBe(TAKE_BACK_UNDO_LINE);
+  await expect(mateBubble(page)).toHaveText(TAKE_BACK_UNDO_LINE);
+
+  await mateBubble(page).click();
+  await expect(conversation(page)).toBeVisible();
+  await expect(conversation(page).locator("[data-conversation-reverted]")).toHaveCount(1);
+  await expect(conversationYou(page).last()).toHaveAttribute("data-taken-back", "");
+});
+
+// biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured fixture signature.
+test("Up inside the minute marks the draft as replacing the newest message, Esc sends it as new", async ({}, testInfo) => {
+  const { page } = await start();
+  const title = "move the nightly backup to Sunday";
+  const first = await type(page, `${TAKE_BACK_FILED_MARKER} ${title}`);
+  const input = promptInput(page);
+  const mark = page.locator("[data-voice-input-replaces]");
+
+  await input.press("ArrowUp");
+  await expect(input).toHaveValue(`${TAKE_BACK_FILED_MARKER} ${title}`);
+  await expect(mark).toHaveText(m.composerReplacesLast());
+  await expect(page.locator("[data-prompt-dock]")).toContainText(m.composerHintSendsAsNew());
+  await input.press("Escape");
+  await expect(mark).toHaveCount(0);
+  await expect(input).toHaveValue(`${TAKE_BACK_FILED_MARKER} ${title}`);
+
+  await input.fill("");
+  await input.press("ArrowUp");
+  await expect(mark).toBeVisible();
+  const replacement = "keep the nightly backup on Saturday";
+  await input.fill(replacement);
+  await expect(mark).toBeVisible();
+  await input.press("Enter");
+  const second = await newestAsk(page, replacement);
+  await expect
+    .poll(async () => (await task(page, title))?.status, { timeout: 30_000 })
+    .toBe("dropped");
+  await waitForFirstmateIdle(page);
+  const turn = await page.evaluate(() => window.infinitary.conversation.lastTurn());
+  writeFileSync(testInfo.outputPath("last-turn-after-replace.json"), JSON.stringify(turn));
+  expect(turn?.askId).toBe(second);
+  expect(turn?.previous).toMatchObject({ askId: first, takenBack: true });
+
+  await yourBubble(page).click();
+  await expect(conversation(page)).toBeVisible();
+  const edited = conversation(page).locator("[data-conversation-edited]");
+  await expect(edited.locator("summary")).toHaveText(m.shellConversationEdited());
+  await edited.locator("summary").click();
+  await expect(edited.locator("[data-conversation-replaced]")).toHaveText(
+    `${TAKE_BACK_FILED_MARKER} ${title}`,
+  );
+});
+
+// biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured fixture signature.
+test("the revert command from search takes back the newest message, and refuses once it is", async ({}) => {
+  const { app, page } = await start();
+  const askId = await type(page, "what is on the backlog today?");
+  await runFromSearch(app, page, "message.take-back");
+  await expect
+    .poll(
+      async () => (await page.evaluate(() => window.infinitary.conversation.lastTurn()))?.takenBack,
+    )
+    .toBe(true);
+  expect(await takeBackAsk(page, askId)).toEqual({ outcome: "refused", reason: "taken-back" });
+  await expect(page.locator("[data-last-turn] [data-last-turn-reverted]")).toBeVisible();
 });

@@ -211,4 +211,37 @@ describe("a round of the last turn above the input", () => {
     expect(newest).not.toContain('data-last-turn-bubble="firstmate"');
     expect(round(true)).not.toContain("data-last-turn-mark");
   });
+
+  // INF-6763's approved plan, part 2, and the captain's words on it: "don't
+  // make the button literally "take back". use a "revert" icon or something
+  // like that".
+  it("puts a revert icon with no words of its own beside a message that may be taken back", () => {
+    const round = { you: "Rename the release channel", reply: null };
+    const markup = (onRevert?: () => void, older = false) =>
+      renderToStaticMarkup(
+        <LastTurnRound round={round} busy={false} older={older} onRevert={onRevert} />,
+      );
+    const control = markup(() => {}).match(
+      /<button[^>]*data-last-turn-revert=""[^>]*>(.*?)<\/button>/,
+    );
+    expect(control?.[0]).toContain('aria-label="Revert your last message"');
+    expect(control?.[1]).toMatch(/^<svg[^>]*>.*<\/svg>$/);
+    expect(control?.[1]).not.toMatch(/>[^<]+</);
+    expect(markup()).not.toContain("data-last-turn-revert");
+    expect(markup(() => {}, true)).not.toContain("data-last-turn-revert");
+  });
+
+  it("marks a taken-back message, and says so in its line when no turn read it", () => {
+    const unread = render({ you: "Delete the old logs", reply: null, takenBack: true });
+    expect(unread.html).toMatch(/data-taken-back=""/);
+    expect(unread.html).toMatch(/data-last-turn-reverted="">Reverted</);
+    expect(unread.mate?.words).toBe("Reverted before your first mate read it");
+    const undone = render({
+      you: "Delete the old logs",
+      reply: { text: "Took it back: dropped its task." },
+      takenBack: true,
+    });
+    expect(undone.mate?.words).toBe("Took it back: dropped its task.");
+    expect(render({ you: "Delete the old logs", reply: null }).html).not.toContain("Reverted");
+  });
 });

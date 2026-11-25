@@ -711,6 +711,8 @@
 "commandMessageDeleteWordBefore" = "커서 앞 단어 지우기";
 "commandMessagePutBackDeleted" = "마지막으로 지운 내용 되돌리기";
 "commandMessageRecall" = "마지막으로 보낸 메시지 다시 불러오기";
+"commandMessageTakeBack" = "마지막 메시지 되돌리기";
+"commandMessageTakeBackWords" = "되돌리기, 취소, 보내기 취소, 메시지";
 "commandMoveDown" = "아래로 이동";
 "commandMoveDownWords" = "화살표, 아래, 다음";
 "commandMoveFirst" = "처음으로 이동";
@@ -819,6 +821,9 @@
 "composerFolderNotProject" = "이 폴더를 프로젝트로 추가할 수 없어요.";
 "composerFolderProject" = "이 폴더는 이미 내 프로젝트예요.";
 "composerHintFeedback" = "%1$@: Infinitary 제작자에게 문제나 아이디어를 알립니다";
+"composerHintReplaces" = "대신 보내기 ·";
+"composerHintSendsAsNew" = "새로 보내기";
+"composerReplacesLast" = "마지막 메시지를 대신해요";
 "composerTooLongShorten" = "너무 길어서 보낼 수 없어요. 먼저 줄여 주세요.";
 "composerWordsOnly" = "Infinitary가 업데이트될 때까지는 글만 보낼 수 있어요. 보내려면 사진과 파일을 빼 주세요.";
 "crewAPart" = "부분";
@@ -2526,6 +2531,7 @@
 "refuseNoCardIsShown" = "표시된 카드가 없어요";
 "refuseNoCardIsShownOrPutAside" = "표시된 카드도 치워 둔 카드도 없어요";
 "refuseNoCardThreadIsReadAboveIts" = "최신 메시지보다 위를 읽고 있는 카드 스레드가 없어요";
+"refuseNoMessageToRevert" = "되돌릴 메시지가 없어요. 1분이 지났거나 이미 되돌렸어요";
 "refuseNoOtherCardIsNew" = "다른 새 카드가 없어요";
 "refuseNoPageToPointAt" = "가리킬 페이지가 표시되어 있지 않아요";
 "refuseNoPictureIsOpen" = "먼저 카드의 사진을 여세요";
@@ -4185,6 +4191,7 @@
 "shellConversationCards" = "카드";
 "shellConversationChose" = "“%1$@” 선택";
 "shellConversationCrewmate" = "선원";
+"shellConversationEdited" = "수정됨";
 "shellConversationEmpty" = "아직 아무것도 없습니다. 보낸 메시지와 답한 카드가 여기에 표시됩니다.";
 "shellConversationEverything" = "전체";
 "shellConversationHeading" = "대화";
@@ -4231,6 +4238,9 @@
 "shellKeyReminderNotTyping" = "입력 중이 아닐 때";
 "shellLastTurnFromCommand" = "%1$@에서";
 "shellLastTurnPictureOnly" = "사진";
+"shellLastTurnRevert" = "마지막 메시지 되돌리기";
+"shellLastTurnReverted" = "되돌림";
+"shellLastTurnRevertedUnread" = "일등항해사가 읽기 전에 되돌렸어요";
 "shellLastTurnWorking" = "처리 중…";
 "shellMainMessageConnectFirst" = "먼저 구독을 연결하세요";
 "shellMainMessagePickingKey" = "설정에서 받아쓰기 키를 기다리는 중이에요";

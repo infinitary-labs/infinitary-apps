@@ -2,10 +2,13 @@
   "composerFolderNotProject": "そのフォルダをプロジェクトとして追加できませんでした。",
   "composerFolderProject": "そのフォルダはすでにプロジェクトに入っています。",
   "composerHintFeedback": "{command}：Infinitary の開発者に問題やアイデアを伝えます",
+  "composerHintReplaces": "置き換え ·",
+  "composerHintSendsAsNew": "新しく送信",
   "composerLines": {
     "plural": "count",
     "other": "{count}行"
   },
+  "composerReplacesLast": "最後のメッセージを置き換えます",
   "composerTooLongShorten": "長すぎて送信できません。先に短くしてください。",
   "composerWordsOnly": "Infinitary が更新されるまで、送れるのは文字だけです。送るには画像とファイルを取り除いてください。"
 }

@@ -131,6 +131,7 @@ export const HomePrompt = memo(function HomePrompt() {
   const attachPastedText = useShellStore((s) => s.attachPastedText);
   const removePaste = useShellStore((s) => s.removePaste);
   const recallLastSent = useShellStore((s) => s.recallLastSent);
+  const replacing = useShellStore((s) => s.replacing !== null);
   const showComposerNotice = useShellStore((s) => s.showComposerNotice);
   const dictation = useShellStore((s) => s.dictation);
   const voiceSupported = useShellStore((s) => s.voiceSupported);
@@ -256,6 +257,16 @@ export const HomePrompt = memo(function HomePrompt() {
         data-voice-transcribing={transcribing ? "true" : "false"}
         // One of the window's parts F6 moves between (./regions.ts).
         data-window-region="main-message"
+        // Esc on a replacing draft only drops the mark and keeps the words;
+        // the next Esc does what it always does (docs/composer.md "Recall
+        // and a failed send").
+        onKeyDownCapture={(event) => {
+          if (event.key !== "Escape" || event.nativeEvent.isComposing) return;
+          if (event.target !== inputRef.current) return;
+          if (!useShellStore.getState().dropReplacing()) return;
+          event.preventDefault();
+          event.stopPropagation();
+        }}
         style={{
           position: "absolute",
           left: "50%",
@@ -310,6 +321,7 @@ export const HomePrompt = memo(function HomePrompt() {
           onCaretChange={setInputCaret}
           files={fileIntake}
           onRecall={recallLastSent}
+          replacing={replacing}
           onChange={(e) => setInputText(e.target.value)}
           onKeystroke={keystroke}
           onAbandon={abandonRecording}

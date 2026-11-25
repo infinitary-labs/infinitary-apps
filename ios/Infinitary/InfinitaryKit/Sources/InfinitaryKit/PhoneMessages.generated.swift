@@ -758,6 +758,8 @@ public enum PhoneMessages {
     public static func `commandMessageDeleteWordBefore`() -> String { PhoneWords.format("commandMessageDeleteWordBefore", []) }
     public static func `commandMessagePutBackDeleted`() -> String { PhoneWords.format("commandMessagePutBackDeleted", []) }
     public static func `commandMessageRecall`() -> String { PhoneWords.format("commandMessageRecall", []) }
+    public static func `commandMessageTakeBack`() -> String { PhoneWords.format("commandMessageTakeBack", []) }
+    public static func `commandMessageTakeBackWords`() -> String { PhoneWords.format("commandMessageTakeBackWords", []) }
     public static func `commandMoveDown`() -> String { PhoneWords.format("commandMoveDown", []) }
     public static func `commandMoveDownWords`() -> String { PhoneWords.format("commandMoveDownWords", []) }
     public static func `commandMoveFirst`() -> String { PhoneWords.format("commandMoveFirst", []) }
@@ -866,7 +868,10 @@ public enum PhoneMessages {
     public static func `composerFolderNotProject`() -> String { PhoneWords.format("composerFolderNotProject", []) }
     public static func `composerFolderProject`() -> String { PhoneWords.format("composerFolderProject", []) }
     public static func `composerHintFeedback`(`command`: String) -> String { PhoneWords.format("composerHintFeedback", [`command`]) }
+    public static func `composerHintReplaces`() -> String { PhoneWords.format("composerHintReplaces", []) }
+    public static func `composerHintSendsAsNew`() -> String { PhoneWords.format("composerHintSendsAsNew", []) }
     public static func `composerLines`(`count`: Int) -> String { PhoneWords.format("composerLines", [`count`]) }
+    public static func `composerReplacesLast`() -> String { PhoneWords.format("composerReplacesLast", []) }
     public static func `composerTooLongShorten`() -> String { PhoneWords.format("composerTooLongShorten", []) }
     public static func `composerWordsOnly`() -> String { PhoneWords.format("composerWordsOnly", []) }
     public static func `crewAPart`() -> String { PhoneWords.format("crewAPart", []) }
@@ -2647,6 +2652,7 @@ public enum PhoneMessages {
     public static func `refuseNoCardIsShown`() -> String { PhoneWords.format("refuseNoCardIsShown", []) }
     public static func `refuseNoCardIsShownOrPutAside`() -> String { PhoneWords.format("refuseNoCardIsShownOrPutAside", []) }
     public static func `refuseNoCardThreadIsReadAboveIts`() -> String { PhoneWords.format("refuseNoCardThreadIsReadAboveIts", []) }
+    public static func `refuseNoMessageToRevert`() -> String { PhoneWords.format("refuseNoMessageToRevert", []) }
     public static func `refuseNoOtherCardIsNew`() -> String { PhoneWords.format("refuseNoOtherCardIsNew", []) }
     public static func `refuseNoPageToPointAt`() -> String { PhoneWords.format("refuseNoPageToPointAt", []) }
     public static func `refuseNoPictureIsOpen`() -> String { PhoneWords.format("refuseNoPictureIsOpen", []) }
@@ -4347,6 +4353,7 @@ public enum PhoneMessages {
     public static func `shellConversationCards`() -> String { PhoneWords.format("shellConversationCards", []) }
     public static func `shellConversationChose`(`label`: String) -> String { PhoneWords.format("shellConversationChose", [`label`]) }
     public static func `shellConversationCrewmate`() -> String { PhoneWords.format("shellConversationCrewmate", []) }
+    public static func `shellConversationEdited`() -> String { PhoneWords.format("shellConversationEdited", []) }
     public static func `shellConversationEmpty`() -> String { PhoneWords.format("shellConversationEmpty", []) }
     public static func `shellConversationEverything`() -> String { PhoneWords.format("shellConversationEverything", []) }
     public static func `shellConversationHeading`() -> String { PhoneWords.format("shellConversationHeading", []) }
@@ -4394,6 +4401,9 @@ public enum PhoneMessages {
     public static func `shellKeyReminderNotTyping`() -> String { PhoneWords.format("shellKeyReminderNotTyping", []) }
     public static func `shellLastTurnFromCommand`(`command`: String) -> String { PhoneWords.format("shellLastTurnFromCommand", [`command`]) }
     public static func `shellLastTurnPictureOnly`() -> String { PhoneWords.format("shellLastTurnPictureOnly", []) }
+    public static func `shellLastTurnRevert`() -> String { PhoneWords.format("shellLastTurnRevert", []) }
+    public static func `shellLastTurnReverted`() -> String { PhoneWords.format("shellLastTurnReverted", []) }
+    public static func `shellLastTurnRevertedUnread`() -> String { PhoneWords.format("shellLastTurnRevertedUnread", []) }
     public static func `shellLastTurnWorking`() -> String { PhoneWords.format("shellLastTurnWorking", []) }
     public static func `shellMainMessageConnectFirst`() -> String { PhoneWords.format("shellMainMessageConnectFirst", []) }
     public static func `shellMainMessagePickingKey`() -> String { PhoneWords.format("shellMainMessagePickingKey", []) }
@@ -5458,6 +5468,8 @@ extension PhoneWords {
         "commandMessageDeleteWordBefore": [],
         "commandMessagePutBackDeleted": [],
         "commandMessageRecall": [],
+        "commandMessageTakeBack": [],
+        "commandMessageTakeBackWords": [],
         "commandMoveDown": [],
         "commandMoveDownWords": [],
         "commandMoveFirst": [],
@@ -5566,7 +5578,10 @@ extension PhoneWords {
         "composerFolderNotProject": [],
         "composerFolderProject": [],
         "composerHintFeedback": ["command"],
+        "composerHintReplaces": [],
+        "composerHintSendsAsNew": [],
         "composerLines": ["count"],
+        "composerReplacesLast": [],
         "composerTooLongShorten": [],
         "composerWordsOnly": [],
         "crewAPart": [],
@@ -7347,6 +7362,7 @@ extension PhoneWords {
         "refuseNoCardIsShown": [],
         "refuseNoCardIsShownOrPutAside": [],
         "refuseNoCardThreadIsReadAboveIts": [],
+        "refuseNoMessageToRevert": [],
         "refuseNoOtherCardIsNew": [],
         "refuseNoPageToPointAt": [],
         "refuseNoPictureIsOpen": [],
@@ -9047,6 +9063,7 @@ extension PhoneWords {
         "shellConversationCards": [],
         "shellConversationChose": ["label"],
         "shellConversationCrewmate": [],
+        "shellConversationEdited": [],
         "shellConversationEmpty": [],
         "shellConversationEverything": [],
         "shellConversationHeading": [],
@@ -9094,6 +9111,9 @@ extension PhoneWords {
         "shellKeyReminderNotTyping": [],
         "shellLastTurnFromCommand": ["command"],
         "shellLastTurnPictureOnly": [],
+        "shellLastTurnRevert": [],
+        "shellLastTurnReverted": [],
+        "shellLastTurnRevertedUnread": [],
         "shellLastTurnWorking": [],
         "shellMainMessageConnectFirst": [],
         "shellMainMessagePickingKey": [],

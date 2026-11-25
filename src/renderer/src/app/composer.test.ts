@@ -476,3 +476,105 @@ describe("the main input before the first read of the gate (docs/first-launch.md
     expect(mainInputHeld(state())).toBe(true);
   });
 });
+
+// INF-6763's approved plan, part 2 (docs/composer.md "Recall and a failed
+// send"): Up inside the take-back minute marks the draft as replacing the
+// newest message, Enter sends the replacement, Esc drops the mark and keeps
+// the words, and nothing is marked past the minute or for a failed send.
+describe("replacing the last message", () => {
+  const sentAt = Date.UTC(2026, 10, 25, 18);
+  const conversation = (overrides: Record<string, unknown> = {}) => ({
+    send: vi.fn(async () => ({ ok: true as const })),
+    lastTurn: vi.fn(async () => ({
+      askId: "ask-1",
+      sentAt,
+      you: "rename the release channel",
+      reply: null,
+      previous: null,
+    })),
+    takeBack: vi.fn(async () => ({ outcome: "stopping" as const })),
+    ...overrides,
+  });
+  const sendFirst = async (c: ReturnType<typeof conversation>) => {
+    vi.stubGlobal("window", { infinitary: { conversation: c } });
+    useShellStore.setState({ inputText: "rename the release channel" });
+    useShellStore.getState().submit();
+    await vi.waitFor(() => expect(useShellStore.getState().lastSent?.askId).toBe("ask-1"));
+  };
+  const state = () => useShellStore.getState();
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(sentAt + 5_000);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    resetShell();
+  });
+
+  it("marks a recalled newest message inside the minute, and Enter sends it as its replacement", async () => {
+    const c = conversation();
+    await sendFirst(c);
+    state().recallLastSent();
+    expect(state().replacing).toBe("ask-1");
+    state().setInputText("rename the beta channel instead");
+    // A mark already shown stays while the draft is edited past the minute.
+    vi.setSystemTime(sentAt + 61_000);
+    state().submit();
+    expect(c.send).toHaveBeenLastCalledWith(
+      expect.objectContaining({ text: "rename the beta channel instead", replaces: "ask-1" }),
+    );
+    expect(state().replacing).toBeNull();
+  });
+
+  it("drops the mark on Esc and keeps the words, which then send as a new message", async () => {
+    const c = conversation();
+    await sendFirst(c);
+    state().recallLastSent();
+    expect(state().dropReplacing()).toBe(true);
+    expect(state().replacing).toBeNull();
+    expect(state().inputText).toBe("rename the release channel");
+    // A second Esc finds no mark and does what Esc did before.
+    expect(state().dropReplacing()).toBe(false);
+    state().submit();
+    expect(c.send).toHaveBeenLastCalledWith("rename the release channel");
+  });
+
+  it("marks nothing past the minute", async () => {
+    await sendFirst(conversation());
+    vi.setSystemTime(sentAt + 60_001);
+    state().recallLastSent();
+    expect(state().inputText).toBe("rename the release channel");
+    expect(state().replacing).toBeNull();
+  });
+
+  it("marks nothing for a send the core refused", async () => {
+    const c = conversation({ send: vi.fn(async () => Promise.reject(new Error("refused"))) });
+    vi.stubGlobal("window", { infinitary: { conversation: c } });
+    useShellStore.setState({ lastTurn: await c.lastTurn() });
+    useShellStore.setState({ inputText: "rename the beta channel" });
+    state().submit();
+    await vi.waitFor(() => expect(state().composerNotice).toBe("not-sent"));
+    useShellStore.setState({ inputText: "" });
+    state().recallLastSent();
+    expect(state().inputText).toBe("rename the beta channel");
+    expect(state().replacing).toBeNull();
+  });
+
+  it("takes back the newest message and draws it taken back, but not past the minute", async () => {
+    const c = conversation();
+    await sendFirst(c);
+    await state().takeBackLast();
+    expect(c.takeBack).toHaveBeenCalledWith("ask-1");
+    expect(state().lastTurn?.takenBack).toBe(true);
+
+    const late = conversation();
+    resetShell();
+    await sendFirst(late);
+    vi.setSystemTime(sentAt + 60_001);
+    await state().takeBackLast();
+    expect(late.takeBack).not.toHaveBeenCalled();
+    expect(state().lastTurn?.takenBack).toBeUndefined();
+  });
+});

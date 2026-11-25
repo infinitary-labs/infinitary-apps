@@ -1429,10 +1429,10 @@ export class FirstmateAgent {
 
   private keepReplyLine(read: readonly string[], reply: LastTurnReply): void {
     try {
-      const latest = this.options.tasks.capture.latestAskId();
-      if (!latest || !read.includes(latest)) return;
-      this.options.tasks.capture.setAskReply(latest, reply);
-      this.options.broadcastEvent({ type: "firstmate_reply", ...reply });
+      for (const askId of this.takeBacks.replyTargets(read)) {
+        this.options.tasks.capture.setAskReply(askId, reply);
+        this.options.broadcastEvent({ type: "firstmate_reply", ...reply, askId });
+      }
     } catch (caught) {
       console.warn("[firstmate] the reply line could not be kept:", caught);
     }
@@ -1635,6 +1635,7 @@ export class FirstmateAgent {
       }),
     );
     this.delivery.adopt(batch);
+    this.takeBacks.serving(batch);
     this.turn.aboutCardId = aboutCardId;
     void this.runTurn(
       admitted,

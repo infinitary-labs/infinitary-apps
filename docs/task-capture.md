@@ -249,7 +249,9 @@ The answer names how far the message had got, and the first mate's agent runs ea
 
 A taken-back message has ended: it is no open thread, gets no answer retry and no notice, and its delivery is covered.
 Outside a turn that read it, naming it in `ask_id` is refused on every tool (`AskEnding.nameRefusal`); inside that turn, only the work-changing tools above refuse it.
-Each round of the last turn above the input carries the message's `askId` and `takenBack`, so a view words the mark itself.
+Each round of the last turn above the input carries the message's `askId`, `sentAt` (when the core accepted it, which the minute runs from) and `takenBack`, so a view draws the control and words the mark itself; a conversation round carries `takenBack`, and a replacement `replaces`, the words of the message it took back (`docs/composer.md`, "Taking back").
+The undo wake's turn reads no message, so its closing line would stand nowhere: the core keeps it as the reply line of the message taken back and sends it with that message's `askId` (`TakeBacks.replyTargets`, served from the `ended` wakes the turn was handed).
+A turn that read the newest message keeps its line there, even when the undo wake rode the same turn, as a replacement's does.
 
 ## Where a reply was typed
 

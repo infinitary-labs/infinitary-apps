@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "take-back-message",
+      "kind": "feature",
+      "title": "Take back your last message",
+      "body": "For one minute after you send a message, a revert icon sits beside it. Press it and Firstmate stops what the message started, undoes what it already did, and says what it undid beside the message. Press Up in the empty message box to bring the message back and change it: Enter sends your edit in its place, and Esc sends it as a new message instead. The conversation shows reverted messages struck through and edited ones with their earlier words.",
+      "area": "message-box",
+      "picture": {
+        "dark": "take-back-message-dark.webp",
+        "light": "take-back-message-light.webp",
+        "alt": "A revert icon beside the newest message above the message box"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

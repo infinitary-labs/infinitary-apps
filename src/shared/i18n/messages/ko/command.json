@@ -89,6 +89,8 @@
   "commandMessageDeleteWordBefore": "커서 앞 단어 지우기",
   "commandMessagePutBackDeleted": "마지막으로 지운 내용 되돌리기",
   "commandMessageRecall": "마지막으로 보낸 메시지 다시 불러오기",
+  "commandMessageTakeBack": "마지막 메시지 되돌리기",
+  "commandMessageTakeBackWords": "되돌리기, 취소, 보내기 취소, 메시지",
   "commandMoveDown": "아래로 이동",
   "commandMoveDownWords": "화살표, 아래, 다음",
   "commandMoveFirst": "처음으로 이동",

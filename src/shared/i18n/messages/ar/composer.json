@@ -2,6 +2,8 @@
   "composerFolderNotProject": "تعذّرت إضافة هذا المجلد كمشروع.",
   "composerFolderProject": "هذا المجلد من مشاريعك بالفعل.",
   "composerHintFeedback": "{command}: أخبر صانع Infinitary بمشكلة أو فكرة",
+  "composerHintReplaces": "يستبدل ·",
+  "composerHintSendsAsNew": "يرسل كرسالة جديدة",
   "composerLines": {
     "plural": "count",
     "zero": "{count} سطر",
@@ -11,6 +13,7 @@
     "many": "{count} سطرًا",
     "other": "{count} سطر"
   },
+  "composerReplacesLast": "تحل محل آخر رسالة لك",
   "composerTooLongShorten": "النص أطول من أن يُرسل. اختصره أولًا.",
   "composerWordsOnly": "يمكن إرسال الكلمات فقط حتى يتم تحديث Infinitary. أزل الصور والملفات لإرسال هذه الرسالة."
 }

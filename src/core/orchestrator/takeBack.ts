@@ -166,6 +166,8 @@ export class TakeBacks {
    * read (true). A steer's mark ends with that turn, or when it is refused.
    */
   private readonly handingOff = new Map<string, boolean>();
+  /** Messages whose undo wake the running turn was served: its reply line is theirs. */
+  private readonly undoing = new Set<string>();
 
   constructor(private readonly host: TakeBackHost) {}
 
@@ -231,6 +233,27 @@ export class TakeBacks {
     return "undoing";
   }
 
+  /** The batch a turn is served: each undo wake in it names the message the turn undoes. */
+  serving(rows: readonly InboxRow[]): void {
+    this.undoing.clear();
+    for (const row of rows)
+      if (row.facts?.kind === "taken-back" && row.facts.stage === "ended")
+        this.undoing.add(row.facts.askId);
+  }
+
+  /**
+   * Where the running turn's reply line goes (docs/task-capture.md, "Taking
+   * back a message"): the newest message when the turn read it, as for any
+   * turn; else, for a turn that read no message, each message whose undo
+   * it was served, so the line saying what was undone stands beside the
+   * message the captain took back.
+   */
+  replyTargets(read: readonly string[]): readonly string[] {
+    const latest = this.host.tasks.capture.latestAskId();
+    if (latest && read.includes(latest)) return [latest];
+    return read.length === 0 ? [...this.undoing] : [];
+  }
+
   /** Before the turn's capture floor: a held message's words never wait on the lane for another turn. */
   beforeFloor(): void {
     for (const id of this.held) withdrawWaiting(this.host.inbox, id);
@@ -244,6 +267,7 @@ export class TakeBacks {
   ended(read: Iterable<string>): void {
     const ids = new Set([...this.held, ...read]);
     this.held.clear();
+    this.undoing.clear();
     // A steer the turn never read is parked on the lane again, where a take back withdraws it.
     for (const [id, steering] of this.handingOff) if (steering) this.handingOff.delete(id);
     for (const id of ids) {

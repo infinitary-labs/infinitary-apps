@@ -508,6 +508,12 @@ export const fmEventSchema = z.discriminatedUnion("type", [
     eligibility: lastTurnEligibilitySchema.optional(),
     /** The closing words as written, when they differ from `text` (src/shared/lastTurn.ts). */
     words: z.string().optional(),
+    /**
+     * The message the line stands beside: the newest, or one the captain
+     * took back whose undo the turn did (docs/task-capture.md, "Taking back
+     * a message"). Absent from an older core, and the line is the newest's.
+     */
+    askId: z.string().optional(),
   }),
   /**
    * A task record changed (task-system P3): per-task invalidation for

@@ -110,6 +110,32 @@
   user-select: text;
 }
 
+/* A message the captain took back: its words struck in --fg-3 in a 4% bubble. */
+.conversation-bubble[data-taken-back] {
+  background: color-mix(in srgb, var(--fg-1) 4%, transparent);
+  color: var(--fg-3);
+  text-decoration: line-through;
+}
+/* A message that replaced one: a quiet Edited mark under it, its fold
+   holding the earlier words in a 4% bubble. */
+.conversation-edited {
+  text-align: end;
+  margin-top: calc(-1 * var(--space-1));
+  color: var(--fg-3);
+  font-size: var(--text-xs);
+}
+.conversation-edited > summary {
+  cursor: pointer;
+  border-radius: var(--radius-s);
+}
+.conversation-edited .conversation-bubble {
+  display: inline-block;
+  margin-top: var(--space-1);
+  text-align: start;
+  background: color-mix(in srgb, var(--fg-1) 4%, transparent);
+  color: var(--fg-3);
+}
+
 .conversation-mate {
   display: flex;
   align-items: flex-start;

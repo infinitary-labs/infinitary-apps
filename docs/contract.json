@@ -1216,6 +1216,9 @@
               "askId": {
                 "type": "string"
               },
+              "sentAt": {
+                "type": "number"
+              },
               "takenBack": {
                 "type": "boolean",
                 "const": true
@@ -1265,6 +1268,9 @@
                       },
                       "askId": {
                         "type": "string"
+                      },
+                      "sentAt": {
+                        "type": "number"
                       },
                       "takenBack": {
                         "type": "boolean",
@@ -1386,6 +1392,13 @@
                     "through": {
                       "type": "string",
                       "const": "command"
+                    },
+                    "takenBack": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "replaces": {
+                      "type": "string"
                     }
                   },
                   "required": [
@@ -93178,6 +93191,9 @@
                                 },
                                 "words": {
                                   "type": "string"
+                                },
+                                "askId": {
+                                  "type": "string"
                                 }
                               },
                               "required": [
@@ -97822,6 +97838,9 @@
                 ]
               },
               "words": {
+                "type": "string"
+              },
+              "askId": {
                 "type": "string"
               }
             },

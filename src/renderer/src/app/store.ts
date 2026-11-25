@@ -3,7 +3,7 @@ import type { DeviceArrival } from "@shared/deviceArrival";
 import type { ThisMac } from "@shared/devices";
 import type { FmEvent } from "@shared/events";
 import type { CrewWord, FirstRunView } from "@shared/firstRun";
-import type { LastTurn } from "@shared/lastTurn";
+import type { LastRound, LastTurn } from "@shared/lastTurn";
 import type { ReleaseNotesView } from "@shared/releaseTracking";
 import type { TaskBoard } from "@shared/tasks";
 import { create, type StoreApi } from "zustand";
@@ -282,6 +282,11 @@ function readBoard(): Promise<void> {
  */
 let firstRunReads = 0;
 let firstRunApplied = 0;
+
+/** The newest round as the older one once a new message is sent: everything but its own older round. */
+function olderRound({ previous: _previous, ...round }: LastTurn): LastRound {
+  return round;
+}
 
 export const useShellStore = create<ShellState>()((set, get) => ({
   ...appearanceSlice(set, get),
@@ -614,13 +619,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
           you: event.text,
           reply: null,
           ...(event.through ? { through: event.through } : {}),
-          previous: s.lastTurn
-            ? {
-                you: s.lastTurn.you,
-                reply: s.lastTurn.reply,
-                ...(s.lastTurn.through ? { through: s.lastTurn.through } : {}),
-              }
-            : null,
+          previous: s.lastTurn ? olderRound(s.lastTurn) : null,
         },
         lastTurnSeq: s.lastTurnSeq + 1,
       }));
@@ -632,14 +631,15 @@ export const useShellStore = create<ShellState>()((set, get) => ({
         ...(event.eligibility ? { eligibility: event.eligibility } : {}),
         ...(event.words ? { words: event.words } : {}),
       };
-      set((s) =>
-        s.lastTurn
-          ? {
-              lastTurn: { ...s.lastTurn, reply },
-              lastTurnReplySeq: s.lastTurnReplySeq + 1,
-            }
-          : {},
-      );
+      set((s) => {
+        const turn = s.lastTurn;
+        if (!turn) return {};
+        // An undo turn's line stands beside the message taken back, which a
+        // replacement made the older round (docs/composer.md "The last turn").
+        if (event.askId && turn.askId !== event.askId && turn.previous?.askId === event.askId)
+          return { lastTurn: { ...turn, previous: { ...turn.previous, reply } } };
+        return { lastTurn: { ...turn, reply }, lastTurnReplySeq: s.lastTurnReplySeq + 1 };
+      });
     }
     // The crew orbit follows the same stream: spawns, activity, packets,
     // closes (character/crew/crewSignal.ts) - a side channel like the emotes.

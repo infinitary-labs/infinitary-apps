@@ -38,8 +38,10 @@ extension PhoneJourney {
         reach("Live", timeout: 20)
         tab("Panels", repeatDiscarded: false)
         XCTAssertTrue(header.waitForPresence(timeout: 20), app.debugDescription)
-        XCTAssertTrue(header.label.contains("TALLY") && !header.label.contains("yours"), "Its title, no owner word: \(header.label)")
-        XCTAssertFalse(app.staticTexts["yours"].exists, "The captain's own panel names no owner")
+        XCTAssertTrue(header.label.contains("TALLY"), "Its title: \(header.label)")
+        // The owner word would sit in its own fold button beside the title, so look for it in any element.
+        XCTAssertFalse(app.descendants(matching: .any).matching(NSPredicate(format: "label ==[c] %@", "yours")).firstMatch.exists,
+                       "The captain's own panel names no owner")
         let tally = { (count: Int) in self.app.webViews.staticTexts["Tally \(count)"] }
         XCTAssertTrue(tally(0).waitForPresence(timeout: 60), app.debugDescription)
         XCTAssertTrue(app.webViews.staticTexts.containing(NSPredicate(format: "label ENDSWITH[c] %@", " tasks")).firstMatch

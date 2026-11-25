@@ -1,7 +1,8 @@
-import { readFileSync, rmSync } from "node:fs";
+import { existsSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { expect, it } from "vitest";
-import { editCase, editHost } from "../scripts/evals/isolatedEdit";
+import { expect, it, vi } from "vitest";
+import { editCase, editHost, evaluation } from "../scripts/evals/isolatedEdit";
+import { allowanceRefusal, runEvaluation } from "../scripts/evals/runner";
 import { scratchDir } from "./helpers/scratchDirs";
 
 it("returns one independently checkable assigned edit without exposing the other marker", async () => {
@@ -42,5 +43,37 @@ it("returns one independently checkable assigned edit without exposing the other
     }
   } finally {
     rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+it("refuses credit-ambiguous evaluation before spending even a matching sheet", async () => {
+  const root = scratchDir("isolated-edit-sheet-");
+  try {
+    const role = {
+      backend: "pi" as const,
+      accountId: "fixture",
+      accountLabel: "Fixture",
+      provider: "openai-codex",
+      model: "fixture",
+    };
+    const opts = {
+      out: join(root, "out"),
+      userData: join(root, "profile"),
+      version: "fixture",
+      sourceHash: "fixture",
+      roles: { firstmate: role, builder: role },
+    };
+    const factory = vi.fn(async () => {
+      throw new Error("Unexpected connection");
+    });
+    const deps = { module: evaluation, factory };
+    const dry = await runEvaluation(opts, deps);
+    await expect(
+      runEvaluation({ ...opts, live: true, approvedHash: dry.sheetHash }, deps),
+    ).rejects.toBe(allowanceRefusal);
+    expect(factory).not.toHaveBeenCalled();
+    expect(existsSync(join(opts.out, "run-started.json"))).toBe(false);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
   }
 });

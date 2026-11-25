@@ -36,8 +36,10 @@ if (values.help) {
 Review responses.json independently, then use approval-handoff.ts --responses.`);
 } else {
   const runner = await openModuleRunner();
+  let allowanceRefusal: Error | undefined;
   try {
     const module = await runner.import<typeof Eval>(join(REPO_ROOT, "scripts/evals/runner.ts"));
+    allowanceRefusal = module.allowanceRefusal;
     const { hostEnv } = await runner.import<typeof import("../../src/core/hostEnv.ts")>(
       join(REPO_ROOT, "src/core/hostEnv.ts"),
     );
@@ -87,10 +89,10 @@ Review responses.json independently, then use approval-handoff.ts --responses.`)
     console.log(`Run sheet hash: ${result.sheetHash}`);
     if (result.responses && Object.values(result.responses).some((run) => !run.endedNormally))
       process.exitCode = 1;
-  } catch {
+  } catch (error) {
     // Never print a provider's exception: it can contain headers or credentials.
     console.error(
-      "Evaluation refused or stopped. Check explicit model/account fields, the approved hash, the Claude crewmate's client and clean version. No automatic retry.",
+      allowanceRefusal && error === allowanceRefusal ? allowanceRefusal.message : "Evaluation refused or stopped. Check explicit model/account fields, the approved hash, the Claude crewmate's client and clean version. No automatic retry.",
     );
     process.exitCode = 2;
   } finally {

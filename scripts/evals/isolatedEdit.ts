@@ -5,7 +5,7 @@ import { Type } from "typebox";
 import { crewmateContractStamp } from "../../src/core/orchestrator/crewSession.ts";
 import { boundTool } from "../../src/core/session/tools.ts";
 import type { ApprovalCase } from "./approvalHandoff.ts";
-import { approvalHost } from "./host.ts";
+import { ACCEPTANCE_WAIT_MS, approvalHost } from "./host.ts";
 
 const assigned = "labels.json";
 const outside = "other.json";
@@ -20,14 +20,10 @@ export const editCase: ApprovalCase = {
 
 export const editHost: typeof approvalHost = async (test, dir, model, protectedDirs) => {
   if (model.provider !== "openai-codex") throw new Error("This evaluation requires a Codex subscription");
-  let deliver: ((text: string) => Promise<void>) | undefined;
-  let completion: Promise<void> | undefined;
+  let receive: ((text: string) => void) | undefined;
+  let dispatched = false;
   const host = await approvalHost(test, dir, model, protectedDirs, async (owner, text) => {
-    if (!deliver || owner !== host.ids.BUILD || !text.includes(test.context)) return;
-    const send = deliver;
-    deliver = undefined;
-    completion = send(test.context);
-    await completion;
+    if (receive && owner === host.ids.BUILD) receive(text);
   });
   const source = join(dir, assigned);
   const marker = randomUUID();
@@ -62,11 +58,25 @@ export const editHost: typeof approvalHost = async (test, dir, model, protectedD
   return {
     ...host, prompt: test.context,
     dispatch: async (send) => {
-      if (deliver || completion) throw new Error("Assignment already dispatched");
-      deliver = send;
-      await host.supervisor.steer.steerCrewmate(host.ids.BUILD!, test.context, "firstmate");
-      if (!completion) throw new Error("Assigned worker did not receive the owner's message");
-      await completion;
+      if (dispatched) throw new Error("Assignment already dispatched");
+      dispatched = true;
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const receipt = new Promise<string>((resolve) => { receive = resolve; });
+      let payload: string;
+      try {
+        const timeout = new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new Error("Assignment delivery timed out")), ACCEPTANCE_WAIT_MS);
+        });
+        [payload] = await Promise.race([
+          Promise.all([receipt, host.supervisor.steer.steerCrewmate(host.ids.BUILD!, test.context, "firstmate")]),
+          timeout,
+        ]);
+      } finally {
+        receive = undefined;
+        clearTimeout(timer);
+      }
+      if (payload !== test.context) throw new Error("Delivered assignment differs from approved text");
+      await send(payload);
     },
     spec: { ...host.spec, instructions, tools, shape: { ...shape, record: { ...shape.record, stamp: crewmateContractStamp(instructions.base, tools) } } },
     effect: (_name, _args, result) => result.details?.refusal ? "refused" : "success",

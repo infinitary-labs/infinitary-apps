@@ -35,6 +35,8 @@ import {
 import { approvalHost, refuseOverlap } from "./host.ts";
 import { sumUsage, type TokenUsage, tokenUsage, turnUsage } from "./usage.ts";
 
+export const allowanceRefusal = new Error("Evaluation refused: this transport cannot guarantee included allowance only. No model request was made.");
+
 export const hash = (value: unknown): string =>
   createHash("sha256")
     .update(typeof value === "string" ? value : JSON.stringify(value))
@@ -464,7 +466,7 @@ export async function runEvaluation(
   if (!options.live) return { sheet, sheetHash };
   // The Codex runtime has no request-level ban on paid credits. A quota snapshot
   // cannot bind billing for a subsequent request, even on a pinned account.
-  if (evaluation.includedAllowanceOnly) throw new Error("Transport cannot guarantee included allowance only");
+  if (evaluation.includedAllowanceOnly) throw allowanceRefusal;
   // One approved sheet is one run; do not silently spend it again on the same output folder.
   // The pid lets the crewmate hold its turn until this process exits.
   write(out, "run-started.json", { sheetHash, pid: process.pid });
@@ -493,6 +495,7 @@ export async function runEvaluation(
     for (const test of evaluation.cases) {
       const dir = scratch();
       let host: EvalHost | undefined;
+      let actualTurn: string | undefined;
       let session: ModelSession | undefined;
       let unsubscribe: (() => void) | undefined;
       const calls: EvalCall[] = [];
@@ -645,8 +648,14 @@ export async function runEvaluation(
               frames.push({ ...event, request: requestCount });
           });
           if (!clientEnded) {
-            if (host.dispatch) await host.dispatch((text) => session!.prompt(text));
-            else await session.prompt(host.prompt);
+            const approved = host.prompt;
+            const send = (text: string) => {
+              if (actualTurn !== undefined || text !== approved) throw new Error("Unapproved evaluation turn");
+              actualTurn = text;
+              return session!.prompt(text);
+            };
+            if (host.dispatch) await host.dispatch(send);
+            else await send(approved);
           }
           if (requestCount === 0) bounded = "no observed model request";
           if (
@@ -733,8 +742,8 @@ export async function runEvaluation(
           servedModel: served ? { provider: served.provider, id: served.model } : undefined,
           ...intended,
           approvedTurnSha: intended.turnSha,
-          turnSha: hash(host.prompt),
-          userTurn: host.prompt,
+          turnSha: actualTurn === undefined ? undefined : hash(actualTurn),
+          userTurn: actualTurn,
           frames,
           native,
           usageTotals: caseUsage,
@@ -766,8 +775,8 @@ export async function runEvaluation(
           calls,
           results,
           state: host?.state(),
-          turnSha: host ? hash(host.prompt) : undefined,
-          userTurn: host?.prompt,
+          turnSha: actualTurn === undefined ? undefined : hash(actualTurn),
+          userTurn: actualTurn,
           ending: "bounded",
           reason: stop,
           usageTotals: caseUsage,

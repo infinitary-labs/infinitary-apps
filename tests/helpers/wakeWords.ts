@@ -10,7 +10,9 @@
  * holds the first mate's kinds its family's `*Wakes.ts` module words,
  * `wakes.words.firstmate.test.ts` the rest of `FirstmateWakeKind`, and
  * `wakes.words.crewmate.test.ts` every other kind `WakeFacts` declares but
- * `SavedOnlyWakeKind` and the kinds below that have files of their own. Each
+ * `SavedOnlyWakeKind` and the kinds below that have files of their own;
+ * `wakes.words.crewmate.forge.test.ts` and `wakes.words.crewmate.checks.test.ts`
+ * hold the crewmate kinds named below. Each
  * file's table is keyed by its kinds, so a kind with no case does not compile.
  */
 import { describe, expect, it } from "vitest";
@@ -149,6 +151,34 @@ export type CrewmateWakeKind = Exclude<
   | OwnBatchWakeKind
   | CardActionWakeKind
   | FinishedOpenWakeKind
+>;
+
+/** The crewmate kinds about the offered change and the work waited on: `wakes.words.crewmate.forge.test.ts`. */
+export type CrewmateForgeWakeKind = Extract<
+  CrewmateWakeKind,
+  | "base-approval-ended"
+  | "base-moved"
+  | "base-closed-unmerged"
+  | "dependency-closed"
+  | "wait-moved"
+  | "contribution-updated"
+  | "pull-comments"
+  | "merge-continued"
+  | "merge-card-behind"
+  | "external-merge"
+  | "write-answered"
+>;
+
+/** The crewmate kinds about checks and runs: `wakes.words.crewmate.checks.test.ts`. */
+export type CrewmateChecksWakeKind = Extract<
+  CrewmateWakeKind,
+  "repair-assessed" | "main-check-observed" | "checks-settled" | "run-watch" | "job-exit"
+>;
+
+/** The crewmate kinds `wakes.words.crewmate.test.ts` keeps. */
+export type CrewmateOtherWakeKind = Exclude<
+  CrewmateWakeKind,
+  CrewmateForgeWakeKind | CrewmateChecksWakeKind
 >;
 
 /** One wake as a lane holds it, and the words it is served as. */

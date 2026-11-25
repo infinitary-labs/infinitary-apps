@@ -226,6 +226,8 @@
   "src/core/orchestrator/wakes.envelopes.test.ts": 0.1,
   "src/core/orchestrator/wakes.savedRows.test.ts": 6,
   "src/core/orchestrator/wakes.test.ts": 5.1,
+  "src/core/orchestrator/wakes.words.crewmate.checks.test.ts": 0.1,
+  "src/core/orchestrator/wakes.words.crewmate.forge.test.ts": 0.1,
   "src/core/orchestrator/wakes.words.crewmate.test.ts": 0.1,
   "src/core/orchestrator/wakes.words.firstmate.test.ts": 0.1,
   "src/core/orchestrator/workPosture.test.ts": 13.6,

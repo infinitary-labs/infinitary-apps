@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "wakes-words-crewmate-split",
+      "reason": "Moves the crewmate wake words' tests into three files by wake family, unchanged. Nothing a person sees changes."
+    }
+  ]
+}

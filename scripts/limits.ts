@@ -334,6 +334,13 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
     FIRSTMATE_MAX_MODEL_TURNS: physical("the turn ends saying it stopped after 40 model requests"),
     CLASSIFIER_MAX_OUTPUT_TOKENS: physical("a cut-short answer is still read for its option word"),
   },
+  // INF-6664's approved plan set 12 rows; the captain's review choice puts rows marked new first, then oldest first.
+  "src/core/orchestrator/standingWork.ts": {
+    STANDING_ROW_CAP: {
+      rests: "consent",
+      way: "the rest are counted as more; each task's record holds them (tasks by key); raise the number in a change that says why",
+    },
+  },
   "src/core/orchestrator/workflowEvidence.ts": {
     SHORT_READ_MAX_CHARS: physical("jobs past it are left out; the answer counts how many"),
   },

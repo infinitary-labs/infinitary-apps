@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "standing-work-list",
+      "reason": "Adds the host's read-only standing list of parked parts and open-ended waits for a later heartbeat to serve; nothing reads it yet, so nothing a person sees changes."
+    }
+  ]
+}

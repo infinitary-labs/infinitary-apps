@@ -429,6 +429,33 @@ When the first mate has finished a turn on that news and the part still stands, 
 The card's raised line on the task's timeline keeps it to one per stay, so Leave it does not bring it back until a new stay begins.
 A state answers it, never a turn ending: the card comes down at the next pass once the part moves, the captain holds it, the captain stopped it or it closes, unless a reply under it still waits on the first mate.
 
+## The standing list
+
+INF-6664 piece 1: the waiting work that no wake reports to the first mate, read from typed facts the record already holds.
+The next-move check skips a part the captain stopped, and the first mate's context counts unstarted work per project without listing it, so a part parked half way through begun work stood with nobody reading it again.
+`standingWork(host, now)` (`src/core/orchestrator/standingWork.ts`) only reads; nothing serves it yet, and the heartbeat that will is INF-6664 piece 2.
+
+It has two kinds of row:
+
+- **A parked part** (`parked-part`): live work the captain stopped (`TaskStarts.stoppedByCaptain`) whose parent is begun: live, not a task that delivers an answer, and it or another part started building work, as the next-move check reads it (a part that delivers an answer, a dropped part and a part the captain stopped do not count).
+  Its fields are its key and title, its parent's key, since when it stood (its newest line that stopped or started it, `TaskStarts.latestStopAt`), its parent's other open parts, and whether every task it waits on has closed (`TaskGraph.waitingOn`).
+  Work the captain stopped under a task that delivers an answer is an idea for later and never a row, as in the next-move check.
+- **An open-ended wait** (`open-ended-wait`): a started, idle task out of the backlog with no gate, whose newest report declared a work wait with no `end` ("Self-resolving work waits" above), once the idle ladder has reached rung 3.
+  Until then the ladder's own nudge, wakes and stall card report it; the stall card's captain gate keeps it off the list while the card is up, so a row is the wait left standing after that card closes with no new turn.
+  Its fields are its key and title, the report's time and the wait's observation as its reason.
+  A turn that failed after that report ends the wait, as the idle ladder reads a declared wait.
+  A gate is a typed end: a hold has its time and may also end on an event or an app update, an allowance has its reset and a captain gate has its card, so a gated task is never a row.
+
+Rows marked new go first and the rest oldest first, at most 12 (`STANDING_ROW_CAP`), then the count of the rest, so a row the cap would cut still reaches the reader at each milestone.
+Everything else that waits is counted, never listed: open work on request that is no row, by how long since it was filed (under 3 days, 3 to 14, over 14), and saved plans not built (open work on request whose basis is a closed task that delivers an answer), with the oldest one's filing time.
+A saved plan is not also counted as filed for later.
+
+A row is new when it joins the list and again when its stay passes 1, 3 and 7 days, then every 7 days.
+The mark rides the inbox's once-names (`docs/inbox.md`, "Once per fact"): each row carries the name `standing:<since>:<days>` for its current milestone, about its task, and reads new until a delivery records that name.
+A new stay (a new `since`) starts over, and a task's close purges its names with its rows, so the list adds no store.
+
+`standingWorkText` renders the list in the first mate's context format (TOON), each title as the context serves it and each wait's reason between reader-data marks, with the one reminder after them.
+
 ## What it writes
 
 Every sort is one `sort` row of the decision ledger (`decisions`, migration 50; `docs/decision-models.md`, "The decision ledger"), with the rule that sorted it in `rule` and the wake's typed facts beside its served text, written through the `CrewTurns.recordSort` seam into `DecisionStore`; the wake rides the store's own transaction, so a decision and its effect still commit together.

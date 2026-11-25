@@ -172,9 +172,17 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     const build = gate.find((step) => step.run === "pnpm build");
     const desktop = gate.find((step) => step.uses === "./.github/actions/linux-desktop");
     const criticalPath = gate.find((step) => step.id === "critical-path");
-    const skips = gate.find((step) => step.run?.startsWith("node scripts/untagged-skips.ts "));
+    const skips = gate.find(
+      (step) => step.run === "node scripts/untagged-skips.ts playwright-report/source-results.json",
+    );
+    // INF-6748's velocity review, the captain's pick: the window's method
+    // list journey runs beside the critical path on the same build.
+    const windowMethods = gate.find((step) => step.id === "window-methods");
+    const windowSkips = gate.find((step) => step.run?.includes("window-methods-results.json"));
     const evidence = gate.find((step) => step.uses?.startsWith("actions/upload-artifact@"));
-    for (const step of [build, desktop, criticalPath, skips, evidence]) expect(step).toBeDefined();
+    for (const step of [build, desktop, criticalPath, skips, windowMethods, windowSkips, evidence])
+      expect(step).toBeDefined();
+    expect(windowMethods?.run).toContain("--files tests/e2e/phase0-guardrails.spec.ts");
     const gated = [
       ...bases,
       notes,
@@ -191,7 +199,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       build,
       desktop,
     ];
-    gated.push(criticalPath, skips);
+    gated.push(criticalPath, skips, windowMethods, windowSkips);
     // The setup and code checks a branch built on a batch's version skips
     // (the case after next), which every other change runs.
     const setup = gate.filter(
@@ -295,7 +303,14 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
         "pnpm check",
         "pnpm typecheck",
         ...(change
-          ? [count?.run, reach?.run, criticalPath?.run, skips?.run]
+          ? [
+              count?.run,
+              reach?.run,
+              criticalPath?.run,
+              skips?.run,
+              windowMethods?.run,
+              windowSkips?.run,
+            ]
           : ["pnpm lint:adherence"]),
       ].toSorted(),
     );

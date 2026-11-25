@@ -107,6 +107,7 @@ public enum PhoneRequest: String, Sendable {
     case signInReturn = "inf:integrations:sign-in-return"
     case signInCancel = "inf:integrations:sign-in-cancel"
     case integrationRemove = "inf:integrations:remove"
+    case keepClient = "inf:integrations:client"
     case accounts = "inf:accounts:list"
     case quota = "inf:quota:snapshot"
     case providers = "inf:auth:providers"
@@ -131,7 +132,7 @@ public enum PhoneRequest: String, Sendable {
     case homeUpdateLater = "inf:home-update:later"
     case devicesPush = "inf:devices:push"
     public var changes: Bool {
-        switch self { case .converse, .run, .pin, .steer, .interrupt, .secretEnroll, .secretDecide, .secretKeep, .signIn, .signInReturn, .signInCancel, .integrationRemove, .automationState, .automationPauseAll, .automationSave, .projectConfigure, .runbookSet, .homeUpdateInstall, .homeUpdateLater, .devicesPush: true; default: false }
+        switch self { case .converse, .run, .pin, .steer, .interrupt, .secretEnroll, .secretDecide, .secretKeep, .signIn, .signInReturn, .signInCancel, .integrationRemove, .keepClient, .automationState, .automationPauseAll, .automationSave, .projectConfigure, .runbookSet, .homeUpdateInstall, .homeUpdateLater, .devicesPush: true; default: false }
     }
 }
 
@@ -351,6 +352,8 @@ public enum PhoneDecision {
 
 public enum PhoneGoogleWords {
     public static let signInReturn = "sign-in-return"
+    public static let setupPage = "https://console.cloud.google.com/auth/overview/personal?apis=ws&clientType=desktop"
+    public static let clientFileBytes = 16384
     public static let kind = "google"
     public static let name = "Google"
     public struct Item: Sendable { public let name: String?; public let text: String }

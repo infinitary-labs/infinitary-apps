@@ -65,6 +65,8 @@ export async function googleWorld(
     keys: ReturnType<typeof integrationKeys>,
   ) => Promise<void>,
   keyOptions?: Parameters<typeof integrationKeys>[0],
+  /** False is a released build: a new sign-in needs the person's own client, as `googleSetup`'s `signsIn` says. */
+  runSignsIn = true,
 ): Promise<GoogleWorld> {
   const google: GoogleStandIn = await startGoogleStandIn();
   cleanup.push(() => google.close());
@@ -99,7 +101,9 @@ export async function googleWorld(
   const binding = googleIntegration({
     root: dir,
     keys: keys.keys,
-    ...setup,
+    client: setup.client,
+    endpoints: setup.endpoints,
+    runSignsIn,
     // The person's browser: it opens the page and follows Google back to the app.
     open:
       browser ??

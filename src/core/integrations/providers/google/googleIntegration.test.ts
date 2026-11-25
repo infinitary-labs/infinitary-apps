@@ -944,7 +944,9 @@ describe("Google as an integration", () => {
     expect(keys).toContain(google.revoked[0]);
     expect(google.issued()).toEqual([]);
     expect(view.integrations).toEqual([]);
-    expect(view.addable).toEqual([{ kind: "google", name: "Google" }]);
+    expect(view.addable).toEqual([
+      { kind: "google", name: "Google", client: { kept: false, runClient: true } },
+    ]);
     expect(() => statSync(join(dir, "google.json"))).toThrow();
     expect(await secrets.entries()).toEqual([]);
   });

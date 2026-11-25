@@ -125,6 +125,50 @@
   color: var(--fg-3);
 }
 
+/* Google's own-client setup: two numbered steps in the notice's frame, the
+   second a drop target for the client file that lights while a file is over it. */
+.fm-integrations-setup-steps {
+  margin: 0;
+  padding-inline-start: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--fg-2);
+}
+
+.fm-integrations-setup-steps p {
+  margin: 0 0 var(--space-2);
+}
+
+.fm-integrations-setup-drop {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px dashed var(--line-2);
+  border-radius: var(--radius-m);
+}
+
+.fm-integrations-setup-drop[data-over] {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.fm-integrations-setup-drop-words {
+  color: var(--fg-3);
+}
+
+.fm-integrations-setup-problem {
+  font-size: var(--text-sm);
+  color: var(--danger);
+}
+
+.fm-integrations-setup-problem:empty,
+.fm-integrations-setup-status:empty {
+  display: none;
+}
+
 .fm-integrations-notice-group {
   display: flex;
   flex-direction: column;

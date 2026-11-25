@@ -176,6 +176,8 @@
   "phoneFormatNow": "à l’instant",
   "phoneFormatUnderMinute": "moins d’1 min",
   "phoneGoogleInvite": "Laissez votre second sur {computer} lire Gmail et Agenda. La connexion reste sur {computer}.",
+  "phoneGoogleSetupStays": "Infinitary garde le secret du client dans Secrets sur {computer}. Votre second et votre équipage ne le voient jamais.",
+  "phoneGoogleSetupStepFile": "Téléchargez avec Download JSON le fichier de client que Google affiche, puis choisissez-le ici ou collez son contenu.",
   "phoneGoogleSignIn": "Se connecter",
   "phoneGoogleSignInAgain": "Se reconnecter",
   "phoneGoogleSignInAgainNeeded": "Google vous demande de vous reconnecter.",

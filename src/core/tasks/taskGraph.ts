@@ -1129,6 +1129,23 @@ export class TaskGraph {
   }
 
   /**
+   * A replaced-by link carries the outside issue with the work
+   * (docs/task-graph.md, "The graph"): the carrier takes the replaced
+   * task's `WorkShape.issue` whole, so the intake round sees that issue's
+   * work go on instead of every linked task closed. The replaced task keeps
+   * its own link as history. Issue numbers belong to one repository, so a
+   * carrier in another takes nothing, and a carrier that already answers an
+   * issue keeps it: a task holds one issue link.
+   */
+  private carryIssue(fromId: string, toId: string, at: number): void {
+    const from = this.writer.store.get(fromId);
+    const to = this.writer.store.get(toId);
+    const issue = from?.shape?.issue;
+    if (!issue || !to || to.shape?.issue || to.repoId !== from.repoId) return;
+    this.writer.patch(toId, { shape: withShapeKey(to.shape, "issue", issue), updatedAt: at });
+  }
+
+  /**
    * A shipped slice's after-merge step carries one wait on (INF-3846 piece
    * 4): `waiterId`'s wait on `fromId` becomes a wait on `carrierId`, the task
    * that does the rest of the work, keeping its merge mark and when it began,
@@ -1253,7 +1270,10 @@ export class TaskGraph {
       createdAt,
       holdsMerge: type === "blocks" && holdsMerge,
     });
-    if (created && type === "replaced-by") this.moveWaits(fromId, toId, actor, at);
+    if (created && type === "replaced-by") {
+      this.moveWaits(fromId, toId, actor, at);
+      this.carryIssue(fromId, toId, at);
+    }
     if (created) {
       // Both ends' views change (blockedBy on one, blocks on the other).
       this.writer.touch(fromId);

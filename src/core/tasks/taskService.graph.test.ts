@@ -12,6 +12,7 @@ import {
 } from "@shared/taskQueue";
 import { describe, expect, it } from "vitest";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
+import { buildRowShape } from "../orchestrator/buildRows";
 import { openInMemoryDatabase } from "../storage/db";
 import { RepoRegistry } from "../workspace/repoRegistry";
 import { seedProject } from "../workspace/seedProject";
@@ -1451,6 +1452,45 @@ describe("the task graph (task-system P2)", () => {
       tasks.graph.link(old.id, carrier.id, "replaced-by", "firstmate");
       expect(tasks.graph.linksTo(waiter.id).map((link) => link.fromId)).toEqual([old.id]);
       expect(tasks.graph.replacementOf(old.id)).toBe(carrier.key);
+    });
+
+    // The captain's pick on a review finding about the intake round's
+    // endings: "Start a task now so the app moves the issue link along". A
+    // task that carries a Build row's step on answers its issue, so the round
+    // never reads every task linked to it closed while the work goes on.
+    it("gives the task carrying a linked task's work its issue link, in the same repository and only when it answers none", () => {
+      const { db, tasks, work } = setup();
+      seedProject(db, { id: "r2", name: "nimbus-web", path: "/fleet/nimbus-web", addedAt: 2 });
+      const issue = { number: 412, url: "https://github.com/nimbus/api/issues/412" };
+      const own = { number: 97, url: "https://github.com/nimbus/api/issues/97" };
+      const step = (id: string) =>
+        work(id, {
+          repoId: "r1",
+          shape: buildRowShape({ start: "reproduce", issue: issue.number, issueUrl: issue.url }),
+        });
+      step("dropped-step");
+      step("moved-step");
+      step("crossed-step");
+      const fix = work("fix", { repoId: "r1" });
+      const answering = work("answering", { repoId: "r1", shape: { kind: "fix", issue: own } });
+      const web = work("web", { repoId: "r2" });
+
+      tasks.dropWithChildren("dropped-step", {
+        reason: "the fix carries it on",
+        actor: "firstmate",
+        replacedBy: fix.id,
+      });
+      tasks.graph.link("moved-step", answering.id, "replaced-by", "firstmate");
+      tasks.graph.link("crossed-step", web.id, "replaced-by", "firstmate");
+
+      expect(tasks.get("dropped-step")).toMatchObject({
+        status: "done",
+        closedReason: "superseded",
+      });
+      expect(tasks.get(fix.id)?.shape?.issue).toEqual(issue);
+      expect(tasks.get("dropped-step")?.shape?.issue).toEqual(issue);
+      expect(tasks.get(answering.id)?.shape?.issue).toEqual(own);
+      expect(tasks.get(web.id)?.shape?.issue).toBeUndefined();
     });
 
     it("copies a merge mark when dropped work starts again, and a required action's prerequisite holds", () => {

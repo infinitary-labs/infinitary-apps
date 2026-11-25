@@ -38,7 +38,9 @@ Start again uses the existing `replaced-by` link: the dropped predecessor stays 
 Writing a `replaced-by` link from A to B moves the live waits in the same write (`TaskService.moveWaits`, called from the one link writer): each open or active task A blocks now waits on B, and each `blocks` edge into A from open or active work now runs into B, keeping its merge mark and its `createdAt`.
 A link between A and B, a closed waiter, done or dropped work A waited on, the host's delivery machinery (a review), and a wait whose move would close a cycle stay where they are, and so does a baseline wait on a delivery record, which is not a link.
 The `unlinked` event the move writes on the waiter carries `movedTo`, which the idle ladder reads to name the work a carrier took over.
-The first mate links `replaced-by` on every move of work to another task (`link_tasks`'s description), and `update_task`'s `replaced_by` and Start again write the same link.
+**An outside issue follows moved work too**: the same write copies the issue A answers to B (`WorkShape.issue`, `TaskGraph.carryIssue`), so the intake round sees that issue's work go on instead of every task linked to it closed (`docs/outside-intake.md`).
+A keeps its own link; a B in another repository takes nothing, since issue numbers belong to one repository, and a B that already answers an issue keeps that one.
+The first mate links `replaced-by` on every move of work to another task (`link_tasks`'s description), and `update_task`'s `replaced_by`, `settle_task` done with why `carried_on`, and Start again write the same link.
 Nothing moves back when the link is removed.
 Closed dependents keep their historical edges.
 A second restart of the same record refuses once a replacement or stronger-model retry exists; a task with any parts refuses too.

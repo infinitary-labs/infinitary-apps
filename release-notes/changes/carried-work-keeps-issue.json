@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "carried-work-keeps-issue",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Work another task carries on keeps its outside issue",
+      "body": "When a task filed from an outside issue closes because another task carries its work on, that other task now shows the same issue on its record. The crewmate that reads your project's issues then sees the work still going on, instead of every task for that issue closed.",
+      "noPicture": "The Issue row the record already has now also shows on the task that carries the work on; no view changes.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

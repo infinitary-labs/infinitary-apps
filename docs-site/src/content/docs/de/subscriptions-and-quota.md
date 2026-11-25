@@ -1,5 +1,5 @@
 ---
-source: e1f49458875e9674
+source: b09b575fa5a6a2c1
 title: Abos und Kontingent
 description: Wie du deine KI-Abos hinzufügst, das Kontingent deines Tarifs ablesen kannst und was deine Crew tut, wenn es aufgebraucht ist.
 ---
@@ -30,8 +30,8 @@ Es hat kein **Umbenennen**, und wenn du die Claude-Code-Anmeldung wechselst, fol
 
 ## Das Kontingent deines Tarifs ablesen {#read-your-plans-allowance}
 
-<img class="picture-dark" src="/pictures/subscriptions-dark.webp" alt="Zwei Konten in KI-Abos, Codex und Claude, jedes mit einer Sitzungsanzeige und einer Wochenanzeige, darunter die Schaltflächen „Konto hinzufügen“." width="1064" height="532" />
-<img class="picture-light" src="/pictures/subscriptions-light.webp" alt="Zwei Konten in KI-Abos, Codex und Claude, jedes mit einer Sitzungsanzeige und einer Wochenanzeige, darunter die Schaltflächen „Konto hinzufügen“." width="1064" height="532" />
+<img class="picture-dark" src="/pictures/subscriptions-dark.webp" alt="Einstellungen, Bereich Intelligenz: zwei Konten in KI-Abos, Codex und Claude, jedes mit einer Sitzungsanzeige und einer Wochenanzeige, und ein gespeicherter Reset beim Codex-Konto, darunter die Schaltflächen „Konto hinzufügen“, die Zeile Verbindungsdatei und Modell des ersten Offiziers." width="1048" height="524" />
+<img class="picture-light" src="/pictures/subscriptions-light.webp" alt="Einstellungen, Bereich Intelligenz: zwei Konten in KI-Abos, Codex und Claude, jedes mit einer Sitzungsanzeige und einer Wochenanzeige, und ein gespeicherter Reset beim Codex-Konto, darunter die Schaltflächen „Konto hinzufügen“, die Zeile Verbindungsdatei und Modell des ersten Offiziers." width="1048" height="524" />
 
 Jedes Konto zeigt für jedes Kontingent, das sein Anbieter hat, eine kleine Anzeige, etwa für eine Sitzung und eine Woche.
 Die Zahl sagt, wie viel übrig ist.
@@ -42,6 +42,7 @@ Halt den Zeiger auf eine Anzeige, um zu sehen, wann sie zurückgesetzt wird.
 - Neben den Anzeigen fasst ein Wort das Konto zusammen: **im Plan**, **leer in** einer Zeitangabe oder **jetzt leer**.
 - **Stand: vor 3 Std.** heißt, dass die letzte Ablesung alt ist, deshalb sind ihre Zahlen abgedunkelt.
 - Ein Strich bedeutet, dass dieses Kontingent nicht gelesen wurde.
+- Ein Codex-Konto mit [gespeicherten Resets](#saved-codex-resets) sagt unter seinen Anzeigen, wie viele es hat.
 
 **Aktualisieren** oben in der Liste liest jedes Kontingent erneut.
 Infinitary liest kein Kontingent für OpenRouter oder eine eigene API, und die Zeile sagt das.
@@ -77,6 +78,25 @@ Bei einem Claude- oder Codex-Konto enthält das Menü **Mit Guthaben weitermache
 Deine Crew gibt Guthaben dann erst nach jedem enthaltenen Kontingent aus.
 Infinitary kauft nie Guthaben und legt auch nie dessen Limit fest; das erledigt die Website des Anbieters.
 
+### Gespeicherte Codex-Resets {#saved-codex-resets}
+
+ChatGPT kann einem Codex-Konto gespeicherte Resets geben.
+Jeder füllt ein Kontingent auf, bevor es von selbst zurückgesetzt wird.
+Die Zeile des Kontos sagt, wie viele es hat und wo du einen einlösen kannst, zum Beispiel „1 gespeicherter Reset · einlösbar auf chatgpt.com“.
+
+Solange einer jetzt eingelöst werden kann, enthält das Menü des Kontos **Gespeicherten Reset einlösen**.
+Auch die Karte, die sagt, dass ein Kontingent aufgebraucht ist, sagt das, mit derselben Schaltfläche und einem Link zur Nutzungsseite auf chatgpt.com.
+Infinitary lässt dann Codex auf deinem Computer den Reset einlösen, der zuerst abläuft.
+Dafür ist Codex 0.143 oder neuer nötig, und beim ersten Mal bittet dich Codex, dich bei diesem ChatGPT-Konto anzumelden.
+Einen eingelösten Reset bekommst du nicht zurück.
+Die Aktivität sagt, was passiert ist und wie viele übrig sind.
+
+Infinitary kann sie auch ohne Klick einlösen.
+Schalte **Gespeicherte Resets selbst einlösen** im Menü des Kontos oder auf dieser Karte ein; es ist aus, bis du es einschaltest.
+Infinitary löst einen dann nur ein, wenn Arbeit wartet und kein Konto Kontingent hat, und nur, wenn das Warten auf das Auffüllen des Kontingents lange dauern würde.
+Konten mit übrigem Kontingent kommen immer zuerst.
+Die Aktivität sagt es jedes Mal, wenn Infinitary einen einlöst.
+
 ## Erneut anmelden {#sign-in-again}
 
 Eine Anmeldung kann ablaufen.
@@ -91,11 +111,40 @@ Gib ihr einen Namen, die Adresse des Servers, einen Schlüssel, falls er einen b
 **Speichern** prüft jedes Modell, bevor deine Crew es nutzen kann.
 Danach wählst du auf der **Modelltafel**, ob deine Crew diese Modelle nutzt.
 
+### Verbindungen aus einer Datei {#connections-from-a-file}
+
+Wenn du deine Verbindungen schon in einer Datei im `models.json`-Format von Pi hast, kann Infinitary sie daraus lesen.
+Drück in der Zeile **Verbindungsdatei** unter **KI-Abos** auf **Datei auswählen** und wähl die Datei aus.
+Infinitary liest die Datei nur: Es ändert sie nie und verwendet nie einen Schlüssel, der darin steht.
+
+Jede Verbindung, die die Datei festlegt, erscheint mit den Markierungen **Aus deiner Datei** und **Noch nicht freigegeben**.
+Drück **Freigeben**, gib den eigenen Schlüssel dieses Computers und jede Modellgröße ein, die die Datei offenlässt, und drück dann **Speichern**, das jedes Modell prüft.
+
+Danach folgt Infinitary der Datei.
+Ein neuer Name oder Preis gilt sofort, und nach einem geänderten Limit wird das betroffene Modell erneut geprüft.
+Eine geänderte Adresse, ein geändertes Protokoll oder ein geänderter Header pausiert die Verbindung, bis du **Erneut freigeben** drückst.
+Eine Verbindung, die nicht mehr in der Datei steht, wird pausiert, nie gelöscht.
+Mit **Nicht mehr lesen** folgt Infinitary der Datei nicht mehr, und die Verbindungen, die du freigegeben hast, bleiben.
+
+### Auf deinen anderen Computern {#on-your-other-computers}
+
+Wenn ein anderer Computer Arbeit für dich ausführt, bietet die Zeile einer eigenen Verbindung **Verwenden** an und nennt dabei den anderen Computer.
+Du gibst den eigenen Schlüssel des anderen Computers ein, und er prüft jedes Modell und bewahrt den Schlüssel selbst auf; dieser Computer behält keine Kopie.
+Spätere Änderungen an der Verbindung folgen ihr dorthin.
+Siehe [Deine anderen Computer](/de/your-other-computers/).
+
 ## Nutzung {#usage}
 
 Einstellungen → **Nutzung** zeigt, wie viel dein erster Offizier und deine Crew über alle Projekte hinweg genutzt haben.
-Zeig es in **Tokens** oder **Geschätzt $** an, für einen **Zeitraum** und für die Art der **Arbeit**.
+Die Nutzung öffnet sich in **Geschätzt $**; unter **Nutzung anzeigen als** kannst du zu **Tokens** wechseln.
+Wähl einen **Zeitraum** und die Art der **Arbeit**, die gezählt werden soll.
 Geschätzte Dollar sind ein Richtwert für den Wert, keine Rechnung.
+
+**Kosten pro Aufgabe** zeigt als Diagramm, was eine abgeschlossene Aufgabe kostet, ihre Reviews eingeschlossen.
+Jeder Punkt ist der Median der Aufgaben, die in den sieben Tagen davor abgeschlossen wurden, und das Band zeigt die mittlere Hälfte davon.
+Eine steigende Linie heißt, dass Aufgaben mehr Arbeit brauchen als zuvor.
+**Projekte** und **Arten** grenzen das Diagramm auf die Arbeit ein, die du vergleichen willst.
+
 **Letzte Aufgaben** listet auf, was jede Aufgabe genutzt hat.
 
 Unter **Intelligenz** legt **Fragen, bevor eine Aufgabe mehr ausgibt als** einen Betrag fest.

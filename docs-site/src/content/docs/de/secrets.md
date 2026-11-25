@@ -1,15 +1,15 @@
 ---
-source: 0cf7ba43b1059baf
+source: 0c5daa67e1edf076
 title: Geheimnisse
 description: Bewahre die Passwörter und Schlüssel auf, die deine Crew braucht, erlaube jede Nutzung auf einer Karte und sieh, was sie genutzt hat.
 ---
 
 Geheimnisse bewahrt die Passwörter und Schlüssel auf, die deine Crew für ihre Arbeit braucht, etwa den Schlüssel, der deine Website veröffentlicht.
 Ein Crewmitglied nutzt ein Geheimnis über seinen Namen, und erst, nachdem du diese Nutzung erlaubt hast.
-Jeder Wert geht direkt in Geheimnisse auf deinem Computer: Infinitary zeigt ihn nie wieder, und weder der erste Offizier noch die Crew bekommt ihn.
+Jeder Wert geht direkt in Geheimnisse auf deinem Computer: Weder der erste Offizier noch die Crew bekommt ihn, und er bleibt verborgen, außer du kopierst ihn selbst.
 
-<img class="picture-dark" src="/pictures/secrets-dark.webp" alt="Einstellungen, Bereich Geheimnisse: drei geschützte Geheimnisse, Newsletter mail key für Production, Shop database password für Staging und Weather service key für Personal, noch keines genutzt, mit Geheimnisse durchsuchen, Geheimnis hinzufügen, Aus einem anderen Werkzeug übernehmen und Zugriff, Verlauf &amp; Wiederherstellung, darunter eine leere Liste Angemeldete Websites." width="1164" height="582" />
-<img class="picture-light" src="/pictures/secrets-light.webp" alt="Einstellungen, Bereich Geheimnisse: drei geschützte Geheimnisse, Newsletter mail key für Production, Shop database password für Staging und Weather service key für Personal, noch keines genutzt, mit Geheimnisse durchsuchen, Geheimnis hinzufügen, Aus einem anderen Werkzeug übernehmen und Zugriff, Verlauf &amp; Wiederherstellung, darunter eine leere Liste Angemeldete Websites." width="1164" height="582" />
+<img class="picture-dark" src="/pictures/secrets-dark.webp" alt="Einstellungen, Bereich Geheimnisse: drei geschützte Geheimnisse, Newsletter mail key für Production, Shop database password für Staging und Weather service key für Personal, noch keines genutzt, die Zeile von Shop database password geöffnet mit den Schaltflächen Wert kopieren, Ersetzen und Vergessen, mit Geheimnisse durchsuchen, Geheimnis hinzufügen, Aus einem anderen Werkzeug übernehmen und Zugriff, Verlauf &amp; Wiederherstellung, darunter eine leere Liste Angemeldete Websites." width="1164" height="596" />
+<img class="picture-light" src="/pictures/secrets-light.webp" alt="Einstellungen, Bereich Geheimnisse: drei geschützte Geheimnisse, Newsletter mail key für Production, Shop database password für Staging und Weather service key für Personal, noch keines genutzt, die Zeile von Shop database password geöffnet mit den Schaltflächen Wert kopieren, Ersetzen und Vergessen, mit Geheimnisse durchsuchen, Geheimnis hinzufügen, Aus einem anderen Werkzeug übernehmen und Zugriff, Verlauf &amp; Wiederherstellung, darunter eine leere Liste Angemeldete Websites." width="1164" height="596" />
 
 ## Wo deine Geheimnisse liegen {#where-your-secrets-live}
 
@@ -18,7 +18,7 @@ Jeder Wert geht direkt in Geheimnisse auf deinem Computer: Infinitary zeigt ihn 
 **Geschützte Geheimnisse** listet jedes Geheimnis mit Namen und Ort auf und sagt, welche Aufgabe es zuletzt genutzt hat und wann.
 **Geheimnisse durchsuchen** findet eines über seinen Namen, seinen Ort oder die Aufgabe, die es zuletzt genutzt hat.
 
-Auf einem Mac steht in der Zeile unter der Liste: „Auf diesem Computer gespeichert. Deine Crew nutzt sie, sieht sie aber nie.“
+Auf einem Mac steht in der Zeile unter der Liste: „Auf diesem Computer aufbewahrt. Deine Crew nutzt sie, sieht sie aber nie, außer du kopierst eines.“
 Unter Linux steht dort, dass deine Crew sie nur mit deiner Freigabe nutzt, dass aber jedes Programm, das du ausführst, sie erreichen kann, solange der Geheimnisspeicher deines Systems entsperrt ist.
 
 Geheimnisse bleiben auf dem Computer, auf dem dein erster Offizier lebt.
@@ -32,8 +32,9 @@ Ein Computer, der deinen ersten Offizier von woanders aus steuert, hat keinen ei
 4. Wenn du zwei Geheimnisse mit demselben Namen aufbewahrst, unterscheide sie mit **Ort (optional)**, zum Beispiel Staging oder Production.
 5. Wähl **Geheimnis speichern**.
 
-Der Wert bleibt nach dem Speichern verborgen, und nur eine Nutzung, die du erlaubst, kann ihn erhalten.
-Öffne die Zeile eines Geheimnisses, um seinen Wert zu **ersetzen** oder es zu **vergessen**.
+Der Wert bleibt nach dem Speichern verborgen.
+Nur eine Nutzung, die du erlaubst, erhält ihn, außer du kopierst ihn selbst.
+Öffne die Zeile eines Geheimnisses, um [seinen Wert zu kopieren](#copy-a-value), ihn zu **ersetzen** oder es zu **vergessen**.
 Vergessen entfernt es von diesem Computer, schaltet den Schlüssel aber nicht dort ab, wo er erstellt wurde.
 
 ### Wenn ein Crewmitglied eines braucht, das du nicht aufbewahrt hast {#when-a-crewmate-needs-one-you-have-not-kept}
@@ -48,6 +49,25 @@ Tipp oder füg jeden Wert in das verborgene Feld ein, das Infinitary auf der Kar
 Das Crewmitglied bekommt den Namen des Geheimnisses, nie seinen Wert, und jede Nutzung fragt trotzdem bei dir nach.
 
 Gib ein Geheimnis nur in ein Feld ein, das Infinitary zeichnet, nie in das Antwortfeld einer Karte oder in dein Nachrichtenfeld.
+
+## Einen Wert kopieren {#copy-a-value}
+
+Wenn du einen Wert selbst brauchst, etwa um einen Schlüssel auf einer Website einzufügen, öffne die Zeile des Geheimnisses und wähl **Wert kopieren**.
+Jedes Mal bittet dich dein Computer, zu bestätigen, dass du es bist: auf einem Mac mit Touch ID oder deinem Passwort, unter Linux mit deinem Passwort.
+
+Der Wert kommt in die Zwischenablage dieses Computers und in keine andere.
+Auf einem Mac wandert er nicht auf deine anderen Geräte.
+Unter Linux kann ein Verlaufswerkzeug der Zwischenablage ihn trotzdem behalten, und die Zeile sagt das.
+
+Die Zeile sagt dann „Kopiert. Um … wird er aus der Zwischenablage entfernt.“ und nennt dabei die Uhrzeit, 90 Sekunden nach dem Kopieren.
+Infinitary entfernt ihn dann, oder wenn du **Jetzt entfernen** wählst, oder wenn du Infinitary beendest.
+Hast du inzwischen etwas anderes kopiert, lässt es deine Zwischenablage unberührt.
+
+Die Zeile des Geheimnisses sagt danach **Von dir kopiert** und wann, und der [Nutzungsverlauf](#use-history-and-backups) listet das Kopieren genauso auf.
+Wo dein Computer nicht bestätigen kann, dass du es bist, ist die Schaltfläche aus, und die Zeile sagt, warum.
+
+Dein erster Offizier kopiert nie einen Wert.
+Bitte ihn um einen, und er bringt dir eine Karte, zum Beispiel „Website-Veröffentlichung in Geheimnisse öffnen“, deren Schaltfläche **Geheimnisse öffnen** die Zeile dieses Geheimnisses für dich öffnet.
 
 ## Eine Nutzung erlauben {#allow-a-use}
 
@@ -114,8 +134,10 @@ Du wählst die Geheimnisse im Fenster von Infinitary auf dem Computer, auf dem d
 
 ## Schlüssel für deine Integrationen {#keys-for-your-integrations}
 
-Wenn du dich bei Google anmeldest oder in Einstellungen → **Integrationen** einen MCP-Server mit Schlüsseln hinzufügst, bewahrt Infinitary diese Schlüssel in Geheimnisse auf.
+Wenn du dich in Einstellungen → **Integrationen** bei Google oder bei einem MCP-Server anmeldest oder einen MCP-Server mit Schlüsseln hinzufügst, bewahrt Infinitary diese Schlüssel in Geheimnisse auf.
+Auch das Geheimnis des Google-Clients, den du dort einrichtest, bewahrt es auf.
 Geheimnisse listet sie mit **In Integrationen verwalten** statt Ersetzen und Vergessen auf.
+Der Schlüssel eines Servers bietet auch **Wert kopieren** an; der Eintrag einer Anmeldung nicht.
 Infinitary nutzt sie ohne Rückfrage, denn das Anmelden oder das Hinzufügen des Servers mit seinen Schlüsseln war deine Zustimmung.
 Deine Crew kann sie weder sehen noch ihre Nutzung anfragen.
 Melde dich in Integrationen ab oder entferne den Server, um sie zu vergessen.

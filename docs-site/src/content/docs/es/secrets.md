@@ -1,15 +1,15 @@
 ---
-source: 0cf7ba43b1059baf
+source: 0c5daa67e1edf076
 title: Secretos
 description: Guarda las contraseñas y claves que necesita tu tripulación, permite cada uso en una tarjeta y mira qué las usó.
 ---
 
 Secretos guarda las contraseñas y claves que tu tripulación necesita para su trabajo, como la clave que publica tu sitio web.
 Un tripulante usa un secreto por su nombre, y solo después de que permites ese uso.
-Cada valor va directamente a Secretos en tu computadora: Infinitary nunca vuelve a mostrarlo, y ni el primer oficial ni la tripulación lo reciben.
+Cada valor va directamente a Secretos en tu computadora: ni el primer oficial ni la tripulación lo reciben, y se queda oculto salvo que lo copies tú mismo.
 
-<img class="picture-dark" src="/pictures/secrets-dark.webp" alt="Configuración, sección Secretos: tres secretos protegidos, la clave de correo del boletín para Production, la contraseña de la base de datos de la tienda para Staging y la clave del servicio del tiempo para Personal, ninguno usado todavía, con Search secrets, Add secret, Move from another tool y Access, history &amp; recovery, y una lista Signed-in sites vacía debajo." width="1164" height="582" />
-<img class="picture-light" src="/pictures/secrets-light.webp" alt="Configuración, sección Secretos: tres secretos protegidos, la clave de correo del boletín para Production, la contraseña de la base de datos de la tienda para Staging y la clave del servicio del tiempo para Personal, ninguno usado todavía, con Search secrets, Add secret, Move from another tool y Access, history &amp; recovery, y una lista Signed-in sites vacía debajo." width="1164" height="582" />
+<img class="picture-dark" src="/pictures/secrets-dark.webp" alt="Configuración, sección Secretos: tres secretos protegidos, la clave de correo del boletín para Production, la contraseña de la base de datos de la tienda para Staging y la clave del servicio del tiempo para Personal, ninguno usado todavía, la fila de la contraseña de la base de datos de la tienda abierta en Copy value, Replace y Forget, con Search secrets, Add secret, Move from another tool y Access, history &amp; recovery, y una lista Signed-in sites vacía debajo." width="1164" height="596" />
+<img class="picture-light" src="/pictures/secrets-light.webp" alt="Configuración, sección Secretos: tres secretos protegidos, la clave de correo del boletín para Production, la contraseña de la base de datos de la tienda para Staging y la clave del servicio del tiempo para Personal, ninguno usado todavía, la fila de la contraseña de la base de datos de la tienda abierta en Copy value, Replace y Forget, con Search secrets, Add secret, Move from another tool y Access, history &amp; recovery, y una lista Signed-in sites vacía debajo." width="1164" height="596" />
 
 ## Dónde viven tus secretos {#where-your-secrets-live}
 
@@ -18,7 +18,7 @@ Abre **Configuración** y luego **Secretos**, o busca **Abrir Secretos** en la b
 **Secretos protegidos** enumera cada secreto por su nombre y su lugar, y dice qué tarea lo usó por última vez, y cuándo.
 **Buscar secretos** encuentra uno por su nombre, su lugar o la tarea que lo usó por última vez.
 
-En una Mac, la línea debajo de la lista dice «Guardados en esta computadora. Tu tripulación los usa pero nunca los ve».
+En una Mac, la línea debajo de la lista dice «Se guardan en esta computadora. Tu tripulación los usa pero nunca los ve, salvo que copies uno».
 En Linux, dice que tu tripulación solo los usa con tu aprobación, pero que cualquier programa que ejecutes puede alcanzarlos mientras el almacén de secretos de tu sistema esté desbloqueado.
 
 Los secretos se quedan en la computadora donde vive tu primer oficial.
@@ -32,8 +32,9 @@ Una computadora que controla a tu primer oficial desde otro lugar no tiene una s
 4. Si guardas dos secretos con el mismo nombre, distínguelos con **Lugar (opcional)**, como staging o production.
 5. Elige **Guardar secreto**.
 
-El valor se queda oculto después de guardarlo, y solo un uso que permitas puede recibirlo.
-Abre la fila de un secreto para **Reemplazar** su valor u **Olvidarlo**.
+El valor se queda oculto después de guardarlo.
+Solo lo recibe un uso que permitas, salvo que lo copies tú mismo.
+Abre la fila de un secreto para [copiar su valor](#copy-a-value), **Reemplazarlo** u **Olvidarlo**.
 Olvidar lo quita de esta computadora, pero no desactiva la clave donde se creó.
 
 ### Cuando un tripulante necesita uno que no has guardado {#when-a-crewmate-needs-one-you-have-not-kept}
@@ -48,6 +49,25 @@ Escribe o pega cada valor en el campo oculto que Infinitary dibuja en la tarjeta
 El tripulante recibe el nombre del secreto, nunca su valor, y cada uso sigue preguntándote.
 
 Escribe un secreto solo en un campo que dibuje Infinitary, nunca en el campo de respuesta de una tarjeta ni en tu cuadro de mensaje.
+
+## Copiar un valor {#copy-a-value}
+
+Cuando necesitas tú mismo un valor, por ejemplo para pegar una clave en un sitio web, abre la fila del secreto y elige **Copiar valor**.
+Cada vez, tu computadora te pide confirmar que eres tú: en una Mac con Touch ID o tu contraseña, y en Linux con tu contraseña.
+
+El valor va al portapapeles de esta computadora, y a ningún otro.
+En una Mac, no viaja a tus otros dispositivos.
+En Linux, una herramienta de historial del portapapeles podría conservarlo de todos modos, y la fila lo dice.
+
+La fila dice entonces «Copiado. Sale del portapapeles a las» y una hora, 90 segundos después de la copia.
+Infinitary lo borra entonces, o cuando eliges **Borrar ahora**, o cuando sales de Infinitary.
+Si desde entonces copiaste otra cosa, deja tu portapapeles como está.
+
+La fila del secreto dice entonces **Copiado por ti** y cuándo, y [Historial de uso](#use-history-and-backups) enumera la copia de la misma forma.
+Si tu computadora no puede confirmar que eres tú, el botón está desactivado y la fila dice por qué.
+
+Tu primer oficial nunca copia un valor.
+Pídele uno, y te trae una tarjeta, como «Abrir Despliegue del sitio web en Secretos», cuyo botón **Abrir Secretos** te abre la fila de ese secreto.
 
 ## Permitir un uso {#allow-a-use}
 
@@ -114,8 +134,10 @@ Eliges los secretos en la ventana de Infinitary de la computadora donde vive tu 
 
 ## Claves de tus integraciones {#keys-for-your-integrations}
 
-Cuando inicias sesión en Google o agregas un servidor MCP con claves en Configuración → **Integraciones**, Infinitary guarda esas claves en Secretos.
+Cuando inicias sesión en Google o en un servidor MCP, o agregas un servidor MCP con claves, en Configuración → **Integraciones**, Infinitary guarda esas claves en Secretos.
+También guarda el secreto del cliente de Google que configuras ahí.
 Secretos las enumera con **Gestionar en Integraciones** en lugar de Reemplazar y Olvidar.
+La clave de un servidor también ofrece **Copiar valor**; la entrada de un inicio de sesión, no.
 Infinitary las usa sin preguntar, porque iniciar sesión, o agregar el servidor con sus claves, fue tu consentimiento.
 Tu tripulación no puede verlas ni pedir usarlas.
 Cierra sesión, o quita el servidor, en Integraciones para olvidarlas.

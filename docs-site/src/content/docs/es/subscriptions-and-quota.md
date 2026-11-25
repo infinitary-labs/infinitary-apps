@@ -1,5 +1,5 @@
 ---
-source: e1f49458875e9674
+source: b09b575fa5a6a2c1
 title: Suscripciones y asignación
 description: Cómo agregar tus suscripciones de IA, leer cuánto queda de la asignación de tu plan y qué hace tu tripulación cuando se agota.
 ---
@@ -30,8 +30,8 @@ No tiene **Cambiar nombre**, y si cambias el inicio de sesión de Claude Code, l
 
 ## Leer la asignación de tu plan {#read-your-plans-allowance}
 
-<img class="picture-dark" src="/pictures/subscriptions-dark.webp" alt="Dos cuentas en Suscripciones de IA, Codex y Claude, cada una con un medidor de la sesión y un medidor semanal, y los botones Add account debajo." width="1064" height="532" />
-<img class="picture-light" src="/pictures/subscriptions-light.webp" alt="Dos cuentas en Suscripciones de IA, Codex y Claude, cada una con un medidor de la sesión y un medidor semanal, y los botones Add account debajo." width="1064" height="532" />
+<img class="picture-dark" src="/pictures/subscriptions-dark.webp" alt="Configuración, sección Inteligencia: dos cuentas en Suscripciones de IA, Codex y Claude, cada una con un medidor de la sesión y un medidor semanal, y un restablecimiento guardado en la cuenta de Codex, luego los botones Add account, la fila del archivo de conexiones y el modelo del primer oficial." width="1048" height="524" />
+<img class="picture-light" src="/pictures/subscriptions-light.webp" alt="Configuración, sección Inteligencia: dos cuentas en Suscripciones de IA, Codex y Claude, cada una con un medidor de la sesión y un medidor semanal, y un restablecimiento guardado en la cuenta de Codex, luego los botones Add account, la fila del archivo de conexiones y el modelo del primer oficial." width="1048" height="524" />
 
 Cada cuenta muestra un pequeño medidor por cada asignación que tiene su proveedor, como una sesión y una semana.
 El número es cuánto queda.
@@ -42,6 +42,7 @@ Deja el puntero sobre un medidor para ver cuándo se renueva.
 - Junto a los medidores, una palabra resume la cuenta: **al ritmo**, **se agota en** un tiempo, o **agotada**.
 - **hace 3 h** significa que la última lectura es antigua, así que sus números aparecen atenuados.
 - Un guion significa que esa asignación no se leyó.
+- Una cuenta de Codex que tiene [restablecimientos guardados](#saved-codex-resets) dice cuántos debajo de sus medidores.
 
 **Actualizar**, en la parte superior de la lista, vuelve a leer todas las asignaciones.
 Infinitary no lee una asignación para OpenRouter ni para una API personalizada, y la fila lo dice.
@@ -77,6 +78,25 @@ Para una cuenta de Claude o de Codex, el menú tiene **Seguir con créditos**.
 Tu tripulación solo gasta créditos después de toda asignación incluida.
 Infinitary nunca compra créditos ni fija su límite; lo hace el propio sitio del proveedor.
 
+### Restablecimientos guardados de Codex {#saved-codex-resets}
+
+ChatGPT puede dar restablecimientos guardados a una cuenta de Codex.
+Cada uno renueva una asignación antes de que se renueve por sí sola.
+La fila de la cuenta dice cuántos tiene y dónde usar uno, como «1 restablecimiento guardado · úsalo en chatgpt.com».
+
+Mientras se puede usar uno ahora, el menú de la cuenta tiene **Usar un restablecimiento guardado**.
+La tarjeta que dice que una asignación se agotó también lo dice, con el mismo botón y un enlace a la página de uso en chatgpt.com.
+Infinitary hace entonces que Codex, en tu computadora, use el restablecimiento que vence primero.
+Esto necesita Codex 0.143 o posterior, y la primera vez Codex te pide iniciar sesión en esa cuenta de ChatGPT.
+Un restablecimiento usado no se puede recuperar.
+Actividad dice qué pasó, y cuántos quedan.
+
+Infinitary también puede usarlos sin que hagas clic.
+Activa **Usar restablecimientos guardados por sí solo** en el menú de la cuenta, o en esa tarjeta; está desactivado hasta que lo activas.
+Entonces Infinitary solo usa uno cuando hay trabajo en espera y ninguna cuenta tiene asignación, y solo cuando esperar a que la asignación se renueve llevaría mucho tiempo.
+Las cuentas a las que les queda asignación siempre van primero.
+Actividad dice cada vez que usa uno.
+
 ## Volver a iniciar sesión {#sign-in-again}
 
 Un inicio de sesión puede caducar.
@@ -91,11 +111,40 @@ Dale un nombre, la dirección del servidor, una clave si la necesita y los model
 **Guardar** comprueba cada modelo antes de que tu tripulación pueda usarlo.
 Luego eliges en el tablero **Modelos** si tu tripulación usa estos modelos.
 
+### Conexiones desde un archivo {#connections-from-a-file}
+
+Si ya guardas tus conexiones en un archivo en el formato `models.json` de Pi, Infinitary puede leerlas desde él.
+En la fila **Archivo de conexiones**, debajo de **Suscripciones de IA**, presiona **Elegir archivo** y elige el archivo.
+Infinitary solo lee el archivo: nunca lo cambia, y nunca usa una clave escrita en él.
+
+Cada conexión que define el archivo aparece marcada como **De tu archivo** y **Aún sin aprobar**.
+Presiona **Aprobar**, escribe la clave propia de esta computadora y cualquier tamaño de modelo que el archivo omita, y luego **Guardar**, que comprueba cada modelo.
+
+Después de eso, Infinitary sigue el archivo.
+Un nombre o un precio nuevo se aplica enseguida, y un límite que cambia hace que ese modelo se compruebe de nuevo.
+Un cambio de dirección, de protocolo o de encabezado pone la conexión en pausa hasta que presiones **Aprobar de nuevo**.
+Una conexión que sale del archivo queda en pausa, nunca se elimina.
+**Dejar de leer** deja de seguir el archivo, y las conexiones que aprobaste se quedan.
+
+### En tus otras computadoras {#on-your-other-computers}
+
+Cuando otra computadora hace trabajo para ti, la fila de una conexión personalizada ofrece **Usar**, con el nombre de esa computadora.
+Escribes la clave propia de esa computadora, que comprueba cada modelo y guarda ella misma la clave; esta computadora no guarda ninguna copia.
+Los cambios posteriores en la conexión la siguen hasta ahí.
+Consulta [Tus otras computadoras](/es/your-other-computers/).
+
 ## Uso {#usage}
 
 Configuración → **Uso** muestra cuánto han usado tu primer oficial y tu tripulación, en todos los proyectos.
-Muéstralo en **Tokens** o **$ estimados**, para un **Período** y para el tipo de **Trabajo**.
+Se abre en **$ estimados**; en **Mostrar el uso en** puedes cambiar a **Tokens**.
+Elige un **Período** y el tipo de **Trabajo** que quieres contar.
 Los dólares estimados son una guía del valor, no una factura.
+
+**Costo por tarea** muestra en un gráfico lo que cuesta una tarea terminada, incluidas sus revisiones.
+Cada punto es la mediana de las tareas que terminaron en los siete días anteriores, y la franja contiene la mitad central de ellas.
+Una línea que sube significa que las tareas requieren más trabajo que antes.
+**Proyectos** y **Tipos** lo limitan al trabajo que quieres comparar.
+
 **Tareas recientes** enumera lo que usó cada tarea.
 
 En **Inteligencia**, **Preguntar antes de que una tarea gaste más de** fija una cantidad.

@@ -35,12 +35,14 @@ const PAUSE = glyph('<path d="M6 4v8M10 4v8"/>', "var(--accent)");
  * The tree's line from the parent down to one part. Each part's cell sits
  * `--space-2` below the one above it, so its middle, where the branch
  * meets it, is half that below the row's middle; the last part's line
- * stops there instead of running on.
+ * stops there instead of running on. Its sides are logical, since a card
+ * frame takes the language's direction and an Arabic tree runs from the
+ * right.
  */
 const branch = (last: boolean) => {
   const middle = "calc(50% + var(--space-1))";
   const reach = last ? `height:${middle}` : "bottom:0";
-  return `<div aria-hidden="true" style="position:relative"><div style="position:absolute;left:0;top:0;${reach};border-left:1px solid var(--line-2)"></div><div style="position:absolute;left:0;right:0;top:${middle};border-top:1px solid var(--line-2)"></div></div>`;
+  return `<div aria-hidden="true" style="position:relative"><div style="position:absolute;inset-inline-start:0;top:0;${reach};border-inline-start:1px solid var(--line-2)"></div><div style="position:absolute;inset-inline:0;top:${middle};border-top:1px solid var(--line-2)"></div></div>`;
 };
 
 /**
@@ -64,7 +66,7 @@ function figure(part: TaskRecord, parent: TaskRecord, closed: ClosedParts): stri
         `${branch(at === rows.length - 1)}<div style="padding-top:var(--space-2)">${row}</div>`,
     )
     .join("");
-  return `<figure style="margin:var(--space-3) 0"><div style="${NODE};border:1px solid var(--line-1);background:var(--bg-1)"><span ${NAME}>${escapeHtml(parent.title)}</span>${saidMark(said("cardLastPartWaiting"), "span", pill("color:var(--fg-2);border:1px solid var(--line-2)"))}</div><div style="display:grid;grid-template-columns:var(--space-4) minmax(0,1fr);margin-left:var(--space-4)">${tree}</div></figure>`;
+  return `<figure style="margin:var(--space-3) 0"><div style="${NODE};border:1px solid var(--line-1);background:var(--bg-1)"><span ${NAME}>${escapeHtml(parent.title)}</span>${saidMark(said("cardLastPartWaiting"), "span", pill("color:var(--fg-2);border:1px solid var(--line-2)"))}</div><div style="display:grid;grid-template-columns:var(--space-4) minmax(0,1fr);margin-inline-start:var(--space-4)">${tree}</div></figure>`;
 }
 
 /**

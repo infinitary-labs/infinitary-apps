@@ -2,7 +2,7 @@
 
 What happens when a crewmate reports.
 Captain call **C7 A, heuristics only** ("Send and End", 2026-09-20), on the scout report `fm3000-s7c-supervision-decision-model-s1`, revisions R4 and R5.
-Code: `src/core/orchestrator/reportSort.ts` (the rule, `sortReport` and `idleTurn`), `src/core/orchestrator/idleLadder.ts` (`IdleLadder`, with its stall card in `idleStallCard.ts` and its steers about waits in `idleDependencySteers.ts`: the one `witnesses(taskId, now)` both readers call, the reconciler, the ladder, the gate, the caps and the ready sweep), and `CrewTurns.sortReport` (`src/core/orchestrator/crewTurns.ts`), which composes them.
+Code: `src/core/orchestrator/reportSort.ts` (the rule, `sortReport` and `idleTurn`), `src/core/orchestrator/idleLadder.ts` (`IdleLadder`, with its stall card in `idleStallCard.ts` and its steers about waits in `idleDependencySteers.ts`: the one `witnesses(taskId, now)` both readers call, the reconciler, the ladder, the gate, the caps and the ready sweep), and `ReportSorting.sortReport` (`src/core/orchestrator/reportSorting.ts`, called from `CrewTurns` in `crewTurns.ts`), which composes them.
 Tests: `reportSort.test.ts` (the table), `crewTurns.whoseTurn.test.ts` ("the whose-turn rule at the report's call site"), `idleLadder.test.ts`, `idleLadder.waits.test.ts` and `idleLadder.served.test.ts` ("the idle ladder"), `core.boot.test.ts` ("the idle ladder across a restart"), `tests/e2e/report-sort.spec.ts`, `tests/e2e/idle-ladder.spec.ts`, `tests/e2e/relayed-decision.spec.ts`, `tests/e2e/sequences.spec.ts`, `tests/e2e/sequences-claude.spec.ts`.
 
 A report is sorted from typed state the host already holds, never by a second model reading its prose.

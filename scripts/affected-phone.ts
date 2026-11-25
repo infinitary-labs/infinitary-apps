@@ -50,7 +50,7 @@ const INPUTS = [
   "tests/e2e/mockProvider.ts", "tests/e2e/crewScripts.ts", "tests/e2e/mockModels.ts", "tests/e2e/providerRequest.ts",
   // INF-2928 piece 3: the test home's Backlog row for a long press and a swipe, and the talk parts' task and its tags.
   "tests/helpers/phoneRowMoves.ts",
-  // The task-list update regressions and the existing Tasks journey's real task seeds.
+  // A fixture-only change must select the task-list update checks.
   "tests/helpers/phoneTaskFixtures.ts",
   // INF-1242: the test home's Google sign-in stand-in.
   "tests/helpers/phoneGoogle.ts",

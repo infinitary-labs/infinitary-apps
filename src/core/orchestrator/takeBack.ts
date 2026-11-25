@@ -1,5 +1,7 @@
+import type { FmEvent } from "@shared/events";
 import { frameServedInput } from "@shared/servedFrame";
 import { TAKE_BACK_WINDOW_MS, type TakeBackRefusal, type TakeBackResult } from "@shared/takeBack";
+import { throughNow } from "../askedFromTheCommand";
 import { FIRSTMATE_RECIPIENT, type InboxRow, type InboxStore } from "../storage/inboxStore";
 import type { TaskService } from "../tasks/taskService";
 import { excerptOf } from "./answerDelivery";
@@ -14,6 +16,29 @@ import { renderWake, type TypedWake } from "./wakes";
  * undo what a message the captain took back would cause. The record write
  * is `TaskCapture.takeBack`; the agent owns when each step runs.
  */
+
+/**
+ * The reply line's English for a message taken back before any turn read
+ * it, for a reader without the window's words; the window words it from
+ * the line's `withdrawn`.
+ */
+// i18n-exempt: a reader with no words of its own draws it; the window words the line from `withdrawn`
+export const WITHDRAWN_LINE = "Taken back before your first mate read it.";
+
+/**
+ * The receipt of a message just saved (`user_turn`), sent after its ask
+ * opens: its id and time let any window take it back without a reload.
+ */
+export function receiptOf(text: string, ask: { id: string; at: number }): FmEvent {
+  const through = throughNow();
+  return {
+    type: "user_turn",
+    text,
+    ...(through ? { through } : {}),
+    askId: ask.id,
+    sentAt: ask.at,
+  };
+}
 
 /** The inbox ref the taken-back wake rides; its once-name keeps it to one per message. */
 export const TAKEN_BACK_REF = "taken-back";
@@ -147,6 +172,7 @@ export type TakeBackHost = {
   steer(input: ServedInput): void;
   /** The message leaves the turn's unread list. */
   forget(askId: string): void;
+  broadcastEvent(event: FmEvent): void;
   /** Serves a queued wake now if the seat is idle. */
   drain(): void;
 };
@@ -222,15 +248,23 @@ export class TakeBacks {
     this.host.forget(askId);
     this.host.asks.closeTakenBack(askId);
     // Not read yet: the hand-off drops the words when it sees the take back.
-    if (handing === false) return "withdrawn";
+    if (handing === false) return this.withdrawn(askId);
     // Words a failed turn read and parked again may already have caused something.
     const caused = tasks.capture
       .getAsk(askId)
       ?.deliveryFacts.entries.some((entry) => entry.outcome === "action");
-    if (withdrawn && !caused) return "withdrawn";
+    if (withdrawn && !caused) return this.withdrawn(askId);
     queueTakenBackWake(tasks, inbox, askId);
     this.host.drain();
     return "undoing";
+  }
+
+  /** No turn read the message, so no turn's line will stand beside it: this typed one does. */
+  private withdrawn(askId: string): "withdrawn" {
+    const reply = { text: WITHDRAWN_LINE, eligibility: "completed", withdrawn: true } as const;
+    this.host.tasks.capture.setAskReply(askId, reply);
+    this.host.broadcastEvent({ type: "firstmate_reply", ...reply, askId });
+    return "withdrawn";
   }
 
   /** The batch a turn is served: each undo wake in it names the message the turn undoes. */

@@ -619,6 +619,8 @@ export const useShellStore = create<ShellState>()((set, get) => ({
           you: event.text,
           reply: null,
           ...(event.through ? { through: event.through } : {}),
+          ...(event.askId !== undefined ? { askId: event.askId } : {}),
+          ...(event.sentAt !== undefined ? { sentAt: event.sentAt } : {}),
           previous: s.lastTurn ? olderRound(s.lastTurn) : null,
         },
         lastTurnSeq: s.lastTurnSeq + 1,
@@ -630,14 +632,19 @@ export const useShellStore = create<ShellState>()((set, get) => ({
         ...(event.problem ? { problem: true } : {}),
         ...(event.eligibility ? { eligibility: event.eligibility } : {}),
         ...(event.words ? { words: event.words } : {}),
+        ...(event.withdrawn ? { withdrawn: true as const } : {}),
       };
       set((s) => {
         const turn = s.lastTurn;
         if (!turn) return {};
-        // An undo turn's line stands beside the message taken back, which a
-        // replacement made the older round (docs/composer.md "The last turn").
-        if (event.askId && turn.askId !== event.askId && turn.previous?.askId === event.askId)
-          return { lastTurn: { ...turn, previous: { ...turn.previous, reply } } };
+        // A line naming another message stands beside that one: a message
+        // taken back is the older round once any newer one was sent
+        // (docs/composer.md "The last turn"), and a line for neither round
+        // is not drawn here.
+        if (event.askId && turn.askId && turn.askId !== event.askId)
+          return turn.previous?.askId === event.askId
+            ? { lastTurn: { ...turn, previous: { ...turn.previous, reply } } }
+            : {};
         return { lastTurn: { ...turn, reply }, lastTurnReplySeq: s.lastTurnReplySeq + 1 };
       });
     }

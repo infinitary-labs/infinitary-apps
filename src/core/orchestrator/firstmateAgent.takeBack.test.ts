@@ -52,6 +52,38 @@ describe("FirstmateAgent taking back a message", () => {
     expect(newest(f).turnState).not.toBe("open");
   });
 
+  it("types the line of a message no turn read as withdrawn, and never of one a turn is reading", async () => {
+    // The review of the desktop take back: the window words "taken back
+    // before your first mate read it" from this fact, never from a missing line.
+    const options = { silent: true, failCreate: "Conversation could not start." };
+    const f = setup(options);
+    await f.agent.converse("start a task to delete the old logs");
+    const unread = newest(f);
+    expect(f.agent.takeBack(unread.id)).toEqual({ outcome: "withdrawn" });
+    expect(f.tasks.capture.lastTurn()).toMatchObject({
+      askId: unread.id,
+      reply: { withdrawn: true },
+    });
+    expect(f.events.filter((event) => event.type === "firstmate_reply").at(-1)).toMatchObject({
+      askId: unread.id,
+      withdrawn: true,
+    });
+
+    options.failCreate = "";
+    await f.agent.converse("start a task to archive the old logs");
+    await drained(f.session, 1);
+    const reading = newest(f);
+    await f.agent.converse({ text: "archive only last year's logs", replaces: reading.id });
+    expect(f.tasks.capture.lastTurn()?.previous).toMatchObject({
+      askId: reading.id,
+      takenBack: true,
+    });
+    expect(f.tasks.capture.lastTurn()?.previous?.reply).toBeNull();
+    expect(
+      f.events.filter((event) => event.type === "firstmate_reply" && event.askId === reading.id),
+    ).toEqual([]);
+  });
+
   it("drops a message taken back while it is still being handed to the first mate", async () => {
     let release = () => {};
     const sourceRead = new Promise<never>((resolve) => {
@@ -86,6 +118,7 @@ describe("FirstmateAgent taking back a message", () => {
       lane(f).filter((row) => row.facts?.kind === "captain-turn" && row.facts.askId === ask.id),
     ).toEqual([]);
     expect(f.tasks.capture.getAsk(ask.id)?.turnState).not.toBe("open");
+    expect(f.tasks.capture.lastTurn()?.reply).toMatchObject({ withdrawn: true });
     await finish(f);
   });
 

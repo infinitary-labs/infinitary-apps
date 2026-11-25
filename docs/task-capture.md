@@ -240,6 +240,7 @@ A view asks with `inf:conversation:take-back`, or sends a replacement with `repl
 The answer names how far the message had got, and the first mate's agent runs each step (`TakeBacks`, `src/core/orchestrator/takeBack.ts`):
 
 - **Not read yet** (`withdrawn`): its words leave the lane (`InboxStore.withdraw`, `docs/inbox.md`) and the message closes on the capture floor; no wake follows.
+  Its reply line becomes the typed `withdrawn` line, sent with its `askId`, since no turn will write one.
 - **Being read** (`stopping`): the running turn is told at once, and from then on every work-changing tool credited to the message is refused, beside the answer-only gate in `firstmateTools.ts`: a call whose `ask_id` names it, or a call naming no message in a turn that read it.
   A call naming another message, or `ask_id` "", goes through.
   The steer into the turn is best effort; the refusal holds without it.

@@ -17328,6 +17328,13 @@ ${events}` : prompt;
     /** Typed, never inferred from the words. Absent is unknown, and the line stays. */
     eligibility: lastTurnEligibilitySchema.optional(),
     /**
+     * The captain took the message back before any turn read it, so nothing
+     * answered it (docs/task-capture.md, "Taking back a message"). The window
+     * words the line from this, never from `text`, which is English for a
+     * reader without the words.
+     */
+    withdrawn: literal(true).optional(),
+    /**
      * The Firstmate's closing words as it wrote them, line breaks kept, when
      * they differ from the one-line `text`: the conversation shows them
      * (docs/composer.md "The conversation"). Absent, it shows `text`.
@@ -18003,7 +18010,11 @@ ${events}` : prompt;
       type: literal("user_turn"),
       text: string(),
       /** Sent from the captain's own command, `infinitary-axi`, not the window. */
-      through: throughSchema.optional()
+      through: throughSchema.optional(),
+      /** The message's id, which a take back names (src/shared/lastTurn.ts). Absent from an older core. */
+      askId: string().optional(),
+      /** When the core accepted the message, in ms since the epoch. Absent from an older core. */
+      sentAt: number().optional()
     }),
     /**
      * The Firstmate's reply line to the captain's last message, sent as the
@@ -18019,10 +18030,12 @@ ${events}` : prompt;
       eligibility: lastTurnEligibilitySchema.optional(),
       /** The closing words as written, when they differ from `text` (src/shared/lastTurn.ts). */
       words: string().optional(),
+      /** Taken back before any turn read it (src/shared/lastTurn.ts). */
+      withdrawn: literal(true).optional(),
       /**
        * The message the line stands beside: the newest, or one the captain
-       * took back whose undo the turn did (docs/task-capture.md, "Taking back
-       * a message"). Absent from an older core, and the line is the newest's.
+       * took back, whose undo the turn did or no turn read (docs/task-capture.md,
+       * "Taking back a message"). Absent from an older core, and the line is the newest's.
        */
       askId: string().optional()
     }),

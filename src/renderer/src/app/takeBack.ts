@@ -1,5 +1,8 @@
-import type { LastRound, LastTurn } from "@shared/lastTurn";
+import type { ThisMac } from "@shared/devices";
+import * as m from "@shared/i18n/messages.generated";
+import type { LastRound, LastTurn, LastTurnReply } from "@shared/lastTurn";
 import { TAKE_BACK_WINDOW_MS } from "@shared/takeBack";
+import { changesOff } from "../devices/viewWords";
 
 /**
  * Taking back the newest message on the desktop (docs/composer.md "The last
@@ -20,6 +23,15 @@ export function revertible(turn: LastTurn | null, now: number): NamedRound | nul
   return now - turn.sentAt <= TAKE_BACK_WINDOW_MS ? (turn as NamedRound) : null;
 }
 
+/** The message the strip's revert control names: the revertible newest one, on a window that may make changes. */
+export function revertControlFor(
+  turn: LastTurn | null,
+  now: number,
+  thisMac: ThisMac | null,
+): string | undefined {
+  return changesOff(thisMac) ? undefined : revertible(turn, now)?.askId;
+}
+
 /** How long until the newest message leaves the window, in ms; null once it has or never could. */
 export function revertibleFor(turn: LastTurn | null, now: number): number | null {
   const round = revertible(turn, now);
@@ -33,4 +45,9 @@ export function markedTakenBack(turn: LastTurn | null, askId: string): LastTurn 
   if (turn.previous?.askId === askId)
     return { ...turn, previous: { ...turn.previous, takenBack: true } };
   return turn;
+}
+
+/** A reply line's words: the window's own for a message no turn read, which the core marks typed. */
+export function replyText(reply: LastTurnReply, words = reply.text): string {
+  return reply.withdrawn ? m.shellLastTurnRevertedUnread() : words;
 }

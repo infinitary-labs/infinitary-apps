@@ -184,10 +184,11 @@ A round is one thing the captain did and what came back: a message and the reply
   Revert your last message (`message.take-back`, `docs/keyboard.md`) does the same from command search; it has no default key, and refuses with its words past the minute or once the message is taken back.
   A taken-back message draws Reverted in `--fg-3` before its bubble, which drops to 4% with its words struck in `--fg-3`.
   Its line is the undo turn's closing words: that turn reads no message, so the core keeps its line on the message taken back and sends `firstmate_reply` with that message's `askId` (`TakeBacks.replyTargets`), and a window draws it on whichever round holds that message.
-  A message withdrawn before any turn read it says Reverted before your first mate read it where the line goes.
+  A message withdrawn before any turn read it gets a typed line from the core (`withdrawn` on the reply, `TakeBacks`), which the window words Reverted before your first mate read it; a message a turn was reading keeps no line until the undo turn's arrives.
+  A line whose `askId` names neither round is not drawn.
   A round from a core without the change carries no `askId` or `sentAt`, and draws no revert icon.
 - **What stays.**
-  A message sent becomes the newest round at once (`user_turn`), the round it follows becomes the older one, and the round before that leaves; one sent while the first mate is busy keeps the spinning mark.
+  A message sent becomes the newest round at once (`user_turn`, which carries its `askId` and `sentAt`, so a message sent from a card, the command or the phone can be taken back too), the round it follows becomes the older one, and the round before that leaves; one sent while the first mate is busy keeps the spinning mark.
   A new card round does the same once the strip reads it.
   The older round comes back as the older round on a new round even after it dissolved.
   Becoming the second-to-last round starts 15 seconds of visible reading time, then only that older round dissolves in place over `--dur-slow` (700 ms), with no movement; the newest round stays until the next round.

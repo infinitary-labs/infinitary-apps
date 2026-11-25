@@ -27,6 +27,13 @@ export const lastTurnReplySchema = z.object({
   /** Typed, never inferred from the words. Absent is unknown, and the line stays. */
   eligibility: lastTurnEligibilitySchema.optional(),
   /**
+   * The captain took the message back before any turn read it, so nothing
+   * answered it (docs/task-capture.md, "Taking back a message"). The window
+   * words the line from this, never from `text`, which is English for a
+   * reader without the words.
+   */
+  withdrawn: z.literal(true).optional(),
+  /**
    * The Firstmate's closing words as it wrote them, line breaks kept, when
    * they differ from the one-line `text`: the conversation shows them
    * (docs/composer.md "The conversation"). Absent, it shows `text`.

@@ -24,6 +24,7 @@ import { MateMark } from "./LastTurn";
 import { conversationHeading } from "./lastTurnWords";
 import type { ConversationEntry, ConversationView } from "./stack";
 import { useShellStore } from "./store";
+import { replyText } from "./takeBack";
 import "./conversation.css";
 
 /**
@@ -228,7 +229,7 @@ function RoundView({
         />
         {reply ? (
           <Mate
-            words={reply.words ?? reply.text}
+            words={replyText(reply, reply.words ?? reply.text)}
             problem={reply.problem === true}
             working={working}
           />
@@ -256,7 +257,7 @@ function RoundView({
         <Mate words={answer.text} who={answer.who} />
       ) : reply ? (
         <Mate
-          words={reply.words ?? reply.text}
+          words={replyText(reply, reply.words ?? reply.text)}
           problem={reply.problem === true}
           working={working}
         />

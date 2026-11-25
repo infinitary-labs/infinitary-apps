@@ -493,6 +493,10 @@ export const fmEventSchema = z.discriminatedUnion("type", [
     text: z.string(),
     /** Sent from the captain's own command, `infinitary-axi`, not the window. */
     through: throughSchema.optional(),
+    /** The message's id, which a take back names (src/shared/lastTurn.ts). Absent from an older core. */
+    askId: z.string().optional(),
+    /** When the core accepted the message, in ms since the epoch. Absent from an older core. */
+    sentAt: z.number().optional(),
   }),
   /**
    * The Firstmate's reply line to the captain's last message, sent as the
@@ -508,10 +512,12 @@ export const fmEventSchema = z.discriminatedUnion("type", [
     eligibility: lastTurnEligibilitySchema.optional(),
     /** The closing words as written, when they differ from `text` (src/shared/lastTurn.ts). */
     words: z.string().optional(),
+    /** Taken back before any turn read it (src/shared/lastTurn.ts). */
+    withdrawn: z.literal(true).optional(),
     /**
      * The message the line stands beside: the newest, or one the captain
-     * took back whose undo the turn did (docs/task-capture.md, "Taking back
-     * a message"). Absent from an older core, and the line is the newest's.
+     * took back, whose undo the turn did or no turn read (docs/task-capture.md,
+     * "Taking back a message"). Absent from an older core, and the line is the newest's.
      */
     askId: z.string().optional(),
   }),

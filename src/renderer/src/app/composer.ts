@@ -368,6 +368,7 @@ export function composerSlice(set: ShellSet, get: ShellGet): ComposerSlice {
         // A plain-words send to a first mate two versions apart replaces nothing.
         const replaces = wordsOnly ? undefined : (get().replacing ?? undefined);
         const sent = { text: draft, pastes, attachments };
+        const roundsBefore = get().lastTurnSeq;
         set((s) => ({
           inputText: "",
           attachments: [],
@@ -406,9 +407,10 @@ export function composerSlice(set: ShellSet, get: ShellGet): ComposerSlice {
             : text;
         return window.infinitary.conversation.send(turn).then(
           async () => {
-            // The core answers once the message is saved: its id and time come
-            // back with the last turn, for the revert control and Up.
-            await get().loadLastTurn();
+            // The core answers once the message is saved, and its receipt
+            // (`user_turn`) brought the message's id for Up; a receipt not
+            // seen yet is read from the last turn instead.
+            if (get().lastTurnSeq === roundsBefore) await get().loadLastTurn();
             const askId = get().lastTurn?.askId;
             if (get().lastSent === sent && askId) set({ lastSent: { ...sent, askId } });
           },

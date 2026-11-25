@@ -1196,6 +1196,10 @@
                           "queued"
                         ]
                       },
+                      "withdrawn": {
+                        "type": "boolean",
+                        "const": true
+                      },
                       "words": {
                         "type": "string"
                       }
@@ -1248,6 +1252,10 @@
                                   "completed",
                                   "queued"
                                 ]
+                              },
+                              "withdrawn": {
+                                "type": "boolean",
+                                "const": true
                               },
                               "words": {
                                 "type": "string"
@@ -1375,6 +1383,10 @@
                                 "completed",
                                 "queued"
                               ]
+                            },
+                            "withdrawn": {
+                              "type": "boolean",
+                              "const": true
                             },
                             "words": {
                               "type": "string"
@@ -1557,6 +1569,10 @@
                                 "completed",
                                 "queued"
                               ]
+                            },
+                            "withdrawn": {
+                              "type": "boolean",
+                              "const": true
                             },
                             "words": {
                               "type": "string"
@@ -93162,6 +93178,12 @@
                                 "through": {
                                   "type": "string",
                                   "const": "command"
+                                },
+                                "askId": {
+                                  "type": "string"
+                                },
+                                "sentAt": {
+                                  "type": "number"
                                 }
                               },
                               "required": [
@@ -93191,6 +93213,10 @@
                                 },
                                 "words": {
                                   "type": "string"
+                                },
+                                "withdrawn": {
+                                  "type": "boolean",
+                                  "const": true
                                 },
                                 "askId": {
                                   "type": "string"
@@ -97810,6 +97836,12 @@
               "through": {
                 "type": "string",
                 "const": "command"
+              },
+              "askId": {
+                "type": "string"
+              },
+              "sentAt": {
+                "type": "number"
               }
             },
             "required": [
@@ -97839,6 +97871,10 @@
               },
               "words": {
                 "type": "string"
+              },
+              "withdrawn": {
+                "type": "boolean",
+                "const": true
               },
               "askId": {
                 "type": "string"

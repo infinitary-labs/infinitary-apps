@@ -231,7 +231,7 @@ test("the revert icon beside the newest message takes it back and its line says 
 });
 
 // biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured fixture signature.
-test("Up inside the minute marks the draft as replacing the newest message, Esc sends it as new", async ({}, testInfo) => {
+test("Up inside the minute marks the draft as replacing the newest message, Esc drops the mark and keeps the words, and Enter replaces", async ({}, testInfo) => {
   const { page } = await start();
   const title = "move the nightly backup to Sunday";
   const first = await type(page, `${TAKE_BACK_FILED_MARKER} ${title}`);

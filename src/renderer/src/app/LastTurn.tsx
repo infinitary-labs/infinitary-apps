@@ -17,7 +17,6 @@ import { prefersReducedMotion } from "../character/reducedMotion";
 import { IconButton, useRestLabel } from "../design";
 import { useOverflowTitle } from "../design/core/overflowTitle";
 import { useWholeWords } from "../design/core/wholeWords";
-import { changesOff } from "../devices/viewWords";
 import { useCommandKeys } from "./keyHints";
 import {
   fadeKey,
@@ -32,7 +31,7 @@ import { LAST_TURN_GAP, lastTurnLane } from "./promptGeometry";
 import { type ConversationEntry, shownEntry, stackOf } from "./stack";
 import { useShellStore } from "./store";
 import { shownStrip, stripRoundHeight } from "./strip";
-import { revertible, revertibleFor } from "./takeBack";
+import { replyText, revertControlFor, revertibleFor } from "./takeBack";
 import "./lastTurn.css";
 
 /**
@@ -88,12 +87,8 @@ const MARK_REST_DEG = 60;
 type Mate = { kind: "working" } | { kind: "reply"; text: string; problem: boolean };
 
 function mateOf(busy: boolean, round: LastRound): Mate | null {
-  // A message taken back before any turn read it keeps only its receipt, or no line.
-  const unread = round.takenBack && (!round.reply || round.reply.eligibility === "queued");
-  if (unread && !busy)
-    return { kind: "reply", text: m.shellLastTurnRevertedUnread(), problem: false };
   if (round.reply)
-    return { kind: "reply", text: round.reply.text, problem: round.reply.problem === true };
+    return { kind: "reply", text: replyText(round.reply), problem: round.reply.problem === true };
   return busy ? { kind: "working" } : null;
 }
 
@@ -602,7 +597,7 @@ export function LastTurn() {
   const busy = useShellStore((s) => s.firstmateBusy);
   const view = useShellStore((s) => s.view);
   const takeBackLast = useShellStore((s) => s.takeBackLast);
-  const changesHeld = useShellStore((s) => changesOff(s.thisMac));
+  const thisMac = useShellStore((s) => s.thisMac);
   const cardUp = useCardUp();
   // The revert control stands until the minute ends, then a render takes it away.
   const [, setTick] = useState(0);
@@ -612,7 +607,7 @@ export function LastTurn() {
     const id = window.setTimeout(() => setTick((tick) => tick + 1), wait);
     return () => window.clearTimeout(id);
   }, [turn]);
-  const revertAsk = changesHeld ? undefined : revertible(turn, Date.now())?.askId;
+  const revertAsk = revertControlFor(turn, Date.now(), thisMac);
   const conversationShown = useConversationShown();
   const fade = useSyncExternalStore(subscribeFade, getFade, getFade);
   const [outgoing, setOutgoing] = useState<Outgoing | null>(null);

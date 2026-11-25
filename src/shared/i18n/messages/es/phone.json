@@ -176,6 +176,8 @@
   "phoneFormatNow": "ahora",
   "phoneFormatUnderMinute": "menos de 1 min",
   "phoneGoogleInvite": "Deja que tu primer oficial en {computer} lea Gmail y Calendar. El inicio de sesión se queda en {computer}.",
+  "phoneGoogleSetupStays": "Infinitary guarda el secreto del cliente en Secretos en {computer}. Tu primer oficial y tu tripulación nunca lo ven.",
+  "phoneGoogleSetupStepFile": "Descarga con Download JSON el archivo de cliente que muestra Google y luego elígelo aquí o pega su contenido.",
   "phoneGoogleSignIn": "Iniciar sesión",
   "phoneGoogleSignInAgain": "Volver a iniciar sesión",
   "phoneGoogleSignInAgainNeeded": "Google te pide que vuelvas a iniciar sesión.",

@@ -171,6 +171,8 @@
   "phoneFormatNow": "jetzt",
   "phoneFormatUnderMinute": "unter 1 Min.",
   "phoneGoogleInvite": "Lass deinen ersten Offizier auf {computer} Gmail und Kalender lesen. Die Anmeldung bleibt auf {computer}.",
+  "phoneGoogleSetupStays": "Infinitary bewahrt das Geheimnis des Clients in Geheimnisse auf {computer} auf. Dein erster Offizier und deine Crew sehen es nie.",
+  "phoneGoogleSetupStepFile": "Lade die Client-Datei, die Google zeigt, mit Download JSON herunter. Wähle sie dann hier aus oder füge ihren Inhalt ein.",
   "phoneGoogleSignIn": "Anmelden",
   "phoneGoogleSignInAgain": "Erneut anmelden",
   "phoneGoogleSignInAgainNeeded": "Google bittet dich, dich erneut anzumelden.",

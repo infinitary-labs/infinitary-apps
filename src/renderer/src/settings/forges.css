@@ -76,6 +76,10 @@
   color: var(--danger);
 }
 
+.fm-forges-state[data-tone="warn"] {
+  color: var(--warn);
+}
+
 .fm-forges-action,
 .fm-forges-menu {
   display: inline-flex;

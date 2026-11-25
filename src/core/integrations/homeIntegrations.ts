@@ -71,10 +71,9 @@ export function startHomeIntegrations(options: {
   emit: CoreEventSink;
 }): HomeIntegrations {
   const { host, paths, standIns, forgeSignIns, gateway: githubGateway, tasks, now } = options;
-  // Google only where the run has a client: a packaged build has none until
-  // Infinitary registers its own (`GOOGLE_OAUTH_CLIENT`), so it offers no
-  // Google row until then.
-  const google = googleSetup({ packaged: host.app.packaged });
+  // Google signs in as the person's own client; the run's renews only the
+  // sign-ins made with it, unless a development run names its own.
+  const { signsIn: runSignsIn, ...google } = googleSetup({ packaged: host.app.packaged });
   // A binding's own change reaches the service once it exists.
   let integrationsChanged: () => void = () => {};
   const outsideReads = new OutsideReads(paths.integrationsDir);
@@ -101,6 +100,7 @@ export function startHomeIntegrations(options: {
         root: paths.integrationsDir,
         keys: options.keys,
         ...google,
+        runSignsIn,
         open: async (url, to) => {
           if (!isAllowedOpenExternalUrl(url))
             throw new Error("The Google sign-in page's address was refused.");

@@ -1,0 +1,3 @@
+Adds `inf:integrations:client`, which hands the home the client file a person made for an integration whose sign-in runs as their own client, such as Google's; the home keeps its secret in Secrets and answers the integrations view.
+Adds the optional `client` field to an integration row and to an addable integration: whether a client is kept, whether its provider refused it, whether the sign-in still runs on a client that takes no new sign-ins, whether the run names a client of its own that signs in without one, and when a sign-in ends.
+A window or view of an older home reads no `client` and offers the sign-in as before, so it never asks the older home for `inf:integrations:client`.

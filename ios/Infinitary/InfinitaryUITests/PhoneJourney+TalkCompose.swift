@@ -176,9 +176,9 @@ extension PhoneJourney {
 
     /// INF-6337's plan, part 3, the captain's words: the conversation holds "cards they interacted" and is "a place for
     /// people to find their recent cards". The phone's own press of a card's button shows on the strip as a card round;
-    /// the round opens the Conversation, its Cards view lists the card waiting and the one answered, and a tile opens
-    /// its card on Home, after which the Conversation comes back as it was. Data: this part's test home, two first mate
-    /// cards. Resources: this part's own simulator.
+    /// every press on the round, the card's name included, opens the Conversation (INF-6623's plan), its Cards view
+    /// lists the card waiting and the one answered, and a tile opens its card on Home, after which the Conversation
+    /// comes back as it was. Data: this part's test home, two first mate cards. Resources: this part's own simulator.
     private func verifyConversationCards() async throws {
         _ = try await home("empty-cards")
         let pressed = try await home("conversation-card")
@@ -198,11 +198,15 @@ extension PhoneJourney {
         XCTAssertEqual(bubble.label, label, "The card round shows the button's own words")
         XCTAssertTrue(app.staticTexts["last-turn-older-you"].exists, "The message before it stays as the older round")
         try await appearances("strip-card-round", showing: bubble)
-        // The card's name opens it again, as a past card; putting it away leaves the strip as it was.
+        // INF-6623's plan, the captain's "always open up the conversation first": the card's name opens the
+        // Conversation at the card round, never the card; closing it leaves the strip as it was.
         tapOnPhone(cardName)
-        XCTAssertTrue(heading.waitForPresence(timeout: 10), "The card's name opens the card: \(app.debugDescription)")
-        tapOnPhone(app.buttons["put-aside-card"])
-        XCTAssertTrue(heading.waitForAbsence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(conversationYou("Chose “\(label)”").waitForPresence(timeout: 10),
+                      "The card's name opens the Conversation at the card round: \(app.debugDescription)")
+        XCTAssertFalse(heading.exists, "The card's name opens no card")
+        tapOnPhone(app.buttons["close-conversation"])
+        XCTAssertTrue(app.buttons["close-conversation"].waitForAbsence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(cardName.waitForPresence(timeout: 10), "The strip stays as it was: \(app.debugDescription)")
         let waiting = try await home("conversation-waiting")
         let waitingHeading = cardHeading(try XCTUnwrap(waiting["title"] as? String))
         XCTAssertTrue(waitingHeading.waitForPresence(timeout: 10), app.debugDescription)

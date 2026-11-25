@@ -151,8 +151,10 @@ describe("a round of the last turn above the input", () => {
   });
 
   // INF-6337's plan, the captain's Approve and build, part 2: a press of a
-  // card's button is one row with the card's name, a button that opens the
-  // card, before the button's words in an outlined bubble, with no reply line.
+  // card's button is one row with the card's name before the button's words
+  // in an outlined bubble, with no reply line. INF-6623's plan, the captain's
+  // Approve and build ("always open up the conversation first"): the name is
+  // the round's one button, which opens the conversation, not the card.
   it("draws a press of a card's button as one row naming the card, its words outlined, and no reply line", () => {
     const html = renderToStaticMarkup(
       <LastTurnRound
@@ -170,6 +172,23 @@ describe("a round of the last turn above the input", () => {
     expect(html).toMatch(/data-last-turn-bubble="you" data-choice=""[^>]*>.*Approve and build/);
     expect(html).not.toContain('data-last-turn-bubble="firstmate"');
     expect(html).not.toContain("data-last-turn-mark");
+  });
+
+  // INF-6623's plan: each round keeps one Tab stop, so a message that names a
+  // card (a line typed under the first mate's own card) keeps its reply line
+  // as the button and draws the card's name as plain text.
+  it("draws the card's name as plain text in a message round, whose one button is its reply line", () => {
+    const html = renderToStaticMarkup(
+      <LastTurnRound
+        round={{ you: "Make it monthly", reply: { text: "Got it" } }}
+        busy={false}
+        card={{ id: "card-backlog", title: "A panel that charts your backlog" }}
+      />,
+    );
+    expect(html.match(/<button\b[^>]*>/g)).toEqual([
+      expect.stringMatching(/data-last-turn-bubble="firstmate"/),
+    ]);
+    expect(html).toMatch(/<span[^>]*data-last-turn-card="card-backlog"/);
   });
 
   // INF-6365's review, the captain's choice: while the first mate works

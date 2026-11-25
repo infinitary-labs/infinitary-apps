@@ -65,6 +65,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | fingerprint (a computer's key) | empreinte |  |
 | first mate | second | The French navy and merchant-marine term for a ship's second-in-command ("le second"); a common noun, "votre second", "Second" only as a short label or at a sentence start. |
 | fold (where an iPhone Duo folds) | le pli | |
+| folder picker | sélecteur de dossier | The system window for choosing a folder, as the app's own message names it. |
 | font (Settings → Appearance) | police | |
 | gate (the checks work passes before it merges) | point de contrôle | "Ici, rien ne passe par un point de contrôle"; kept apart from "les vérifications". |
 | header (a request's) | en-tête | Masculine: "un en-tête". |
@@ -120,6 +121,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | rebase, conflict (never said) | mettre à jour, ne s’accorde pas avec | "elle ne s’accorde pas avec un travail plus récent du projet". |
 | relay (Infinitary's push relay) | relais d’Infinitary | It passes sealed notifications and notes it cannot read; a sealed note is "note scellée". |
 | released (closed through an outside process) | publiée | "Publiée en dehors de cette tâche". |
+| Remote Login (macOS's own name) | Session à distance | macOS's own French name in Sharing. |
 | remote, origin (never said) | là où le projet est hébergé | |
 | Remove (a device) | Retirer | |
 | repair (the task repairing a held batch) | réparation | "{key} le répare" for the task at work; the change it makes stays correctif. |

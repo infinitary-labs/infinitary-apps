@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "docs-site-first-launch-refresh",
+      "reason": "Rewrites the documentation site's First launch page and its pictures in every shipped language to match the current welcome: choosing where the first mate lives, the How we work card and the first crewmate's note; nothing in the app changes."
+    }
+  ]
+}

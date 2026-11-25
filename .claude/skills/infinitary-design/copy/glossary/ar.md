@@ -71,6 +71,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | fingerprint (a computer's key) | بصمة |  |
 | first mate | نائب القبطان | The ship's second-in-command, a common noun; used without "your" because the captain is the reader, and "النائب" only as the thread's one-word author tag. |
 | fold (where an iPhone Duo folds) | الطيّة | |
+| folder picker (the computer's own) | نافذة اختيار المجلد | What Work in a folder on my computer opens; plainer than a word for picker. |
 | font (Settings → Appearance) | خط | |
 | form (a dialog to fill in) | استمارة | Never "نموذج", which names a model. |
 | gate (the checks work passes before it merges) | بوابة | As in "بوابة الجودة", the usual Arabic for a quality gate. |
@@ -117,6 +118,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | plan (a task's plan) | خطة | |
 | plan (what the person subscribes to) | باقة | Kept apart from a task's "خطة" so one word never names two things. |
 | plugin, extension (never said) | لوحة | |
+| port (a computer's SSH port) | منفذ | "ومنفذه إن لم يكن 22". |
 | PR #N | PR #N | Kept as is, in mono. |
 | Premium / Hard / Normal / Simple (a task's level), Difficulty | ممتاز / صعبة / عادية / بسيطة, الصعوبة | How hard the task is, never a reasoning word. |
 | preset (keyboard) | الإعداد المسبق | |
@@ -137,6 +139,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | record (a Usage record) | سجل | Plural "سجلات". |
 | relay (Infinitary's push relay) | مرحّل Infinitary | It passes sealed notifications and notes it cannot read; a sealed note is "رسالة مختومة". |
 | release | إصدار | "أُصدرت" for "Released"; "نسخة" is a version of the work. |
+| Remote Login (macOS's own name) | «تسجيل الدخول عن بُعد» | macOS's own Arabic name in Sharing. |
 | Remove (a device) | إزالة | |
 | repair (the task repairing a held batch) | الإصلاح | "{key} يصلحها" for the task at work; a fix it makes stays تصحيح. |
 | repo (never said) | مشروع | The app's noun for what work belongs to stays مشروع. |

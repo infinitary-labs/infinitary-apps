@@ -72,6 +72,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | first mate | erster Offizier | The German merchant-navy rank for a ship's second-in-command; a common noun with a lowercase adjective mid-sentence ("dein erster Offizier"), "Erster Offizier" only at a sentence start or as a short label. |
 | first mate (thread author tag) | Offizier | The very short author label in a card's thread. |
 | fold (where an iPhone Duo folds) | die Falz | |
+| folder picker (the computer's own) | Ordnerauswahl | What Work in a folder on my computer opens: "die Ordnerauswahl deines Computers". |
 | font (Settings → Appearance) | Schrift | |
 | forget (a computer, on the phone) | vergessen | Pairs with "Verlassen" for Leave. |
 | gate (what work passes before it merges) | Kontrolle | Kept apart from "Überprüfungen" and "Review". |
@@ -110,6 +111,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | pin / unpin (a task) | anheften / nicht mehr angeheftet | |
 | plan (a task's steps) | Plan | |
 | plan (subscription) | Tarif | Kept apart from a task's "Plan". |
+| port (a computer's SSH port) | Port | Masculine: "seinen Port, falls er nicht 22 ist". |
 | PR #N | PR #N | Stays as is, in mono. |
 | Premium / Hard / Normal / Simple (a task's level), Difficulty | Premium / Schwer / Normal / Einfach, Schwierigkeit | How hard the task is, never a reasoning word. |
 | preset (keyboard) | Vorlage | |
@@ -127,6 +129,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | rebase merges, merge commits (the host's settings) | Rebase-Merges, Merge-Commits | Named only as the settings where the project lives, as GitHub's German docs say them; the app's own action stays "auf den neuesten Stand bringen". |
 | record (a Usage record) | Eintrag | Kept apart from a task's Protokoll. |
 | relay (Infinitary's push relay) | Relay von Infinitary | Neuter ("das Relay"); it passes sealed notifications and notes it cannot read; a sealed note is "versiegelte Nachricht". |
+| Remote Login (macOS's own name) | „Entfernte Anmeldung“ | macOS's own German name in Sharing, quoted mid-sentence. |
 | Remove (a device) | Entfernen | |
 | repair (the task repairing a held batch) | Reparatur | Feminine ("die Reparatur"); "{key} repariert es" for the task at work; the change it makes stays Korrektur. |
 | report | Bericht, berichten | |

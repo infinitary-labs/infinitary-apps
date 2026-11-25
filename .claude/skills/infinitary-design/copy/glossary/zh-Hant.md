@@ -66,6 +66,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | fingerprint (a computer's key) | 指紋 |  |
 | first mate | 大副 | The ship's second-in-command in Chinese naval usage, written as a common noun, often 你的大副. |
 | fold (where an iPhone Duo folds) | 摺痕 | |
+| folder picker (the computer's own) | 資料夾選擇器 | What Work in a folder on my computer opens; as the file picker is 檔案選擇器. |
 | font (Settings → Appearance) | 字體 | |
 | forget (a computer, on the phone) | 忘記 | As Apple's 忘記此網路; Leave stays 退出. |
 | gate (the checks work passes before it merges) | 把關 | As in 不經過把關; 閘門 and 關卡 are avoided. |
@@ -106,6 +107,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | place (a secret's, such as staging or production) | 用途場所 | Tells two secrets with the same name apart; the field is 用途場所（選填）. |
 | plan | 方案 | Taiwan's word for a subscription plan. |
 | plugin, extension (never said) | 面板 | Never 外掛. |
+| port (a computer's SSH port) | 連接埠 | Taiwan's word; 端口 is mainland. |
 | PR #N | PR #N | Never translated, stays in mono. |
 | Premium / Hard / Normal / Simple (a task's level), Difficulty | 頂級 / 困難 / 普通 / 簡單, 難度 | How hard the task is, never a reasoning word. |
 | preset (keyboard) | 配置 | Avoids 預設, which already means Default. |
@@ -128,6 +130,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | recovery key | 復原金鑰 | Taiwan writes 復原, not 恢復. |
 | redacted (decision records) | 去識別化 | Taiwan's word for records with personal details stripped. |
 | relay (Infinitary's push relay) | Infinitary 的中繼服務 | It passes sealed notifications and notes it cannot read; a sealed note is 封好的信. |
+| Remote Login (macOS's own name) | 遠端登入 | macOS's own Taiwan name in Sharing, quoted as「遠端登入」in sentences. |
 | Remove (a device) | 移除 | Standard. |
 | repair (the task repairing a held batch) | 修復 | 「{key} 正在修復」 for the task at work; the change it makes stays 修正. |
 | repo (never said) | 專案 | The app's noun for what work belongs to stays 專案. |

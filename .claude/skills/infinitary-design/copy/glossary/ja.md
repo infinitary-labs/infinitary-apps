@@ -73,6 +73,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | fingerprint (a computer's key) | フィンガープリント | 指紋 would read as Touch ID. |
 | first mate | 一等航海士 | The ship's officer term, a common noun; the thread's short author label is 航海士. |
 | fold (where an iPhone Duo folds) | 折り目 | |
+| folder picker | フォルダの選択画面 | The system window for choosing a folder, as the app's own message names it. |
 | font (Settings → Appearance) | フォント | |
 | forget (a computer, on the phone) | 登録を解除 | Kept apart from 削除 (Remove) and 離脱 (Leave). |
 | gate | 関門 | The checks work passes before it merges; ゲート would read as a physical gate. |
@@ -135,6 +136,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | redacted (decision records) | 個人情報を伏せた | Plain phrase; 墨消し and リダクト read as jargon. |
 | Reduce motion (macOS) | 視差効果を減らす | macOS's own Japanese setting name, used only in the path to it. |
 | relay (Infinitary's push relay) | Infinitary の中継サーバー | It passes sealed notifications and notes it cannot read; a sealed note is 「封をしたメッセージ」. |
+| Remote Login (macOS) | リモートログイン | macOS's own Japanese name in Sharing, quoted as 「リモートログイン」 in sentences. |
 | Remove (a device) | 削除 | At the computer where the first mate lives. |
 | repair (the task repairing a held batch) | 修復 | 「{key} が修復しています」 for the task at work; the change it makes stays 修正. |
 | report | 報告 | 「報告：{summary}」. |

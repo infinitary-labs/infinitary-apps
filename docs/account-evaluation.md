@@ -354,3 +354,7 @@ It does not grade its own reasoning as a pass.
 The first mate has an independent reader inspect every trace against these criteria, quoting the consequential calls and returned observations, and check the ordinary session transcript for actions taken outside the bridge.
 Missing cases, a refusal, an exhausted bound, an unapproved side effect, a reviewer execution, a changed version, or an unsupported live-pass claim is not a pass.
 Both families' results and that independent judgment return to INF-100 before its code review; there is no automatic push, pull request, merge or repeated live run.
+
+## Single assigned edit
+
+`--module scripts/evals/isolatedEdit.ts` assigns one version of a disposable label file to a Codex worker. Select the same Pi account and model for both roles. Only the builder case makes requests, at most four. The worker can look up an assigned name and return one replacement; neither tool executes the returned text. An absent lookup returns no content. The owner's original file stays unchanged. Read the native trace and the `assignment` state together: a normal finish, an actual out-of-assignment lookup, the correct preserved marker and an independently checked replacement are required. This does not enable parallel dispatch or measure performance.

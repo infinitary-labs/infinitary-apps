@@ -17,11 +17,12 @@
  * - the first comment of a version labels the pull request "waiting on
  *   author", and its mark records that this note put the label on;
  * - when a later run of the same version passes, such as a maintainer's
- *   rerun, it reads the version again: once nothing it names still fails,
- *   it edits the comment to say so and, if this note put the label on and
- *   both required checks pass, takes the label off and puts the pull
- *   request back in triage, as the author's own push does
- *   (scripts/intake-labels.mjs).
+ *   rerun, it reads the version again: once nothing it names is left for
+ *   the pull request to fix, it edits the comment to say so and, if this
+ *   note put the label on and both required checks pass, takes the label
+ *   off and puts the pull request back in triage, as the author's own push
+ *   does (scripts/intake-labels.mjs); a later failure at that version puts
+ *   the label back.
  *
  * Started by hand with a pull request number it is a dry run: it reads the
  * pull request's newest version, writes what it would say to the job
@@ -117,13 +118,16 @@ export function failedComment({
 const POSTED =
   "_Posted automatically by this project's GitHub workflow when a check finishes on a pull request._";
 
-/** The note once nothing it named still fails at that version. */
+const CLEARED = "is left for this pull request to fix.";
+
+/** The note once nothing it named is left for the pull request to fix at that version. */
 export function clearedComment({ sha, onMain = [], labeled = true }) {
   return [
     markFor(sha, labeled),
     POSTED,
     "",
-    `Every check this note named on version ${sha.slice(0, 7)} now passes.`,
+    // Holds too when a named check still fails but main broke it since.
+    `Nothing this note named on version ${sha.slice(0, 7)} ${CLEARED}`,
     ...(onMain.length > 0
       ? [
           "",
@@ -262,9 +266,16 @@ export async function noteFailedChecks({ github, context, core, pullNumber }) {
 
   if (named.length > 0) {
     if (comment) {
-      const labeled = comment.body.startsWith(markFor(sha, true));
+      // A failure after a clear took the label off puts it back, so the
+      // comment's "labeled waiting on author" holds, and the mark records the
+      // note put it on.
+      const relabel = comment.body.includes(CLEARED) && !labels.has(WAITING);
+      const labeled = relabel || comment.body.startsWith(markFor(sha, true));
       const body = failedComment({ server, owner, repo, sha, jobs: named, onMain, mainFailing, labeled });
-      return (await write(body)) ? `named ${named.length} again` : "already named";
+      const edited = await write(body);
+      if (relabel)
+        await github.rest.issues.addLabels({ owner, repo, issue_number: pull.number, labels: [WAITING] });
+      return edited ? `named ${named.length} again` : "already named";
     }
     const labeled = !labels.has(WAITING);
     await write(failedComment({ server, owner, repo, sha, jobs: named, onMain, mainFailing, labeled }));

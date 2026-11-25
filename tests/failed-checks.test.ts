@@ -331,15 +331,35 @@ describe("the failed-check note", () => {
       return { api, said };
     }
 
-    it("says the named checks now pass, takes its label off and puts the pull request back in triage", async () => {
+    it("says nothing it named is left to fix, takes its label off and puts the pull request back in triage", async () => {
       const { api, said } = await namedThenRerun();
       expect(said).toBe("cleared");
       expect(api.comments).toHaveLength(1);
       expect(api.comments[0]?.body).toContain(
-        "Every check this note named on version e357ae4 now passes.",
+        "Nothing this note named on version e357ae4 is left for this pull request to fix.",
       );
       expect(api.comments[0]?.body).not.toContain("[log]");
       expect([...(api.labels.get(35) ?? [])]).toEqual([NEEDS_TRIAGE]);
+    });
+
+    it("puts its label back when a later run of that version fails", async () => {
+      const { api } = await namedThenRerun();
+      api.setJobs({ [forkCi.id]: forkCiJobs });
+      expect(
+        await noteFailedChecks({ github: api.github, context: finished(), core: core() }),
+      ).toBe("named 2 again");
+      expect(api.comments).toHaveLength(1);
+      expect(api.comments[0]?.body).toContain("so it is labeled `waiting on author`");
+      expect(api.labels.get(35)?.has(WAITING)).toBe(true);
+      // Cleared again by the next passing run: the mark still says the note put it on.
+      api.setJobs({ [forkCi.id]: rerun });
+      expect(
+        await noteFailedChecks({
+          github: api.github,
+          context: finished({ conclusion: "success" }),
+          core: core(),
+        }),
+      ).toBe("cleared");
     });
 
     it("keeps a label the note did not put on", async () => {

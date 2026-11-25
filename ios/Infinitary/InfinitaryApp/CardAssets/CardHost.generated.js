@@ -124930,6 +124930,7 @@ ${FRAME_KEYBOARD_SCRIPT}
     "custom-connection-file": true,
     "project-batch-answer": true,
     "cost-limit": true,
+    "summary-point": true,
     notifications: true,
     runbook: true,
     "runbook-copy": true,
@@ -138405,6 +138406,7 @@ ${startersHtml()}`;
     "ambient-music",
     "notifications",
     "cost-limit",
+    "summary-point",
     "personal-resources",
     "panels-switch"
   ];

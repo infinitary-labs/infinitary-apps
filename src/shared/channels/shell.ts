@@ -217,6 +217,15 @@ export const shellChannels = {
     request: z.tuple([z.string().min(1).max(4096).optional()]),
     response: z.string().nullable(),
   },
+  // The system's file picker for one file, such as the connection file, opened
+  // at a starting file when given: its path, or null when the person cancels.
+  // Choosing reads and writes nothing; the caller saves the pick through its own channel.
+  "inf:app:choose-file": {
+    effect: "change",
+    surface: "host",
+    request: z.tuple([z.string().min(1).max(4096).optional()]),
+    response: z.string().nullable(),
+  },
   // A File the captain dropped on an input: where it lives on disk, read by
   // the shell's own `webUtils.getPathForFile` in the preload (never a path
   // the page names), and whether it is a regular file. Nothing is read.

@@ -4,8 +4,10 @@ import { useShellStore } from "../app/store";
 import { Badge, Button, StatusDot } from "../design";
 import { CUSTOM_EXCEPTION_WORDS } from "./customApiFailures";
 import "./customApi.css";
+import type { CustomApiFileView } from "@shared/customApiFile";
 import { HERE } from "@shared/deviceNames";
 import * as m from "@shared/i18n/messages.generated";
+import { CustomApiFileRow, FileApproval, FileConnectionRow, FileWarnings } from "./CustomApiFile";
 import { type FirstmateModel, FirstmateRadio } from "./CustomApiFirstmate";
 import { type CustomApiClient, CustomApiDialog, CustomApiForm } from "./CustomApiForm";
 
@@ -148,6 +150,8 @@ export function CustomApiAccountsSection() {
   // A choice in flight is shown at once; the poll does not put the old one back meanwhile.
   const choosing = useRef(false);
   const [editing, setEditing] = useState<CustomApiView>();
+  const [approving, setApproving] = useState<CustomApiView>();
+  const [file, setFile] = useState<CustomApiFileView>();
   const [armed, setArmed] = useState<string>();
   const [error, setError] = useState("");
   const refresh = useCallback(() => {
@@ -165,6 +169,8 @@ export function CustomApiAccountsSection() {
         if (!choosing.current) setChosen(selected);
       })
       .catch(() => setError(m.accountsCustomApiListFailed()));
+    // On its own: a home too old to read a connection file still lists every connection.
+    window.infinitary.accounts.custom.file().then(setFile, () => setFile(undefined));
   }, []);
   useEffect(() => {
     refresh();
@@ -178,13 +184,42 @@ export function CustomApiAccountsSection() {
   }, [refresh]);
   const failed = (fallback: string) => (caught: unknown) =>
     setError(caught instanceof Error ? caught.message : fallback);
+  const fileConnection = (view: CustomApiView) =>
+    view.file && file?.connections.find((entry) => entry.name === view.file?.name);
+  // The file's connections no saved one follows yet.
+  const pending =
+    file?.connections.filter(
+      (entry) =>
+        !views.some((view) => view.file?.name === entry.name && view.file.state !== "missing"),
+    ) ?? [];
   return (
     <div className="fm-custom-list" data-custom-api-accounts>
+      <CustomApiFileRow
+        file={file}
+        onChanged={(next) => {
+          setFile(next);
+          refresh();
+        }}
+      />
       {views.map((view) => {
         const accountId = view.accountId ?? "";
         const provider = providers[accountId] ?? "";
         const checked = view.models.length > 0 && view.models.every((model) => model.checked);
-        const ready = view.enabled && checked;
+        // A change in the file to its address, protocol or headers holds it until approved again.
+        const held = Boolean(view.file && view.file.state !== "current");
+        // Held by the file, it runs nothing, though its checks still stand.
+        const running = view.enabled && !held;
+        const ready = running && checked;
+        const fromFile = fileConnection(view);
+        // Approved again as a new connection, the same entry already runs; this one only waits to be disconnected.
+        const replaced =
+          view.file?.state === "changed" &&
+          views.some(
+            (other) =>
+              other !== view &&
+              other.file?.name === view.file?.name &&
+              other.file?.state === "current",
+          );
         return (
           <section className="fm-custom-conn" data-custom-account={accountId} key={accountId}>
             {view.tokenCommandFailed && (
@@ -208,6 +243,11 @@ export function CustomApiAccountsSection() {
                   {CUSTOM_EXCEPTION_WORDS.tag}
                 </span>
               )}
+              {view.file && (
+                <span className="fm-custom-tag" data-custom-file-tag>
+                  {m.accountsCustomApiFileTag()}
+                </span>
+              )}
               <span
                 className="fm-custom-tag"
                 data-tone={view.tokenCommandFailed ? "danger" : ready ? "ok" : "idle"}
@@ -221,9 +261,19 @@ export function CustomApiAccountsSection() {
                       : m.accountsCustomApiStatusPausedNotChecked()}
               </span>
               <span className="fm-custom-acts">
-                <Button variant="ghost" size="sm" onClick={() => setEditing(view)}>
-                  {m.accountsCustomApiEdit()}
-                </Button>
+                {replaced ? null : view.file?.state === "changed" && fromFile?.definition ? (
+                  <Button variant="secondary" size="sm" onClick={() => setApproving(view)}>
+                    {m.accountsCustomApiFileApproveAgain()}
+                  </Button>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => (fromFile?.definition ? setApproving(view) : setEditing(view))}
+                  >
+                    {m.accountsCustomApiEdit()}
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="sm"
@@ -251,17 +301,17 @@ export function CustomApiAccountsSection() {
               <span>{m.accountsCustomApiColumnFirstmate()}</span>
             </div>
             {view.models.map((model) => {
-              const usable = Boolean(provider) && view.enabled && model.checked;
+              const usable = Boolean(provider) && running && model.checked;
               const isChosen = chosen?.provider === provider && chosen.id === model.id;
               return (
                 <div className="fm-custom-lrow" key={model.id} data-custom-model={model.id}>
                   <span className="fm-custom-mono fm-custom-model-id">{model.id}</span>
                   <span className="fm-custom-status">
                     <StatusDot
-                      tone={model.checked ? (view.enabled ? "ok" : "idle") : "ring"}
+                      tone={model.checked ? (running ? "ok" : "idle") : "ring"}
                       label={
                         model.checked
-                          ? view.enabled
+                          ? running
                             ? m.accountsCustomApiStatusReady()
                             : m.accountsCustomApiStatusChecked()
                           : m.accountsCustomApiStatusNotChecked()
@@ -269,7 +319,7 @@ export function CustomApiAccountsSection() {
                       nativeTitle={false}
                     />
                     {model.checked
-                      ? view.enabled
+                      ? running
                         ? m.accountsCustomApiStatusReady()
                         : m.accountsCustomApiStatusChecked()
                       : m.accountsCustomApiStatusNotChecked()}
@@ -279,11 +329,13 @@ export function CustomApiAccountsSection() {
                     model={model.id}
                     chosen={isChosen}
                     off={
-                      usable
-                        ? undefined
-                        : model.checked
-                          ? m.accountsCustomApiResumeToUse()
-                          : m.accountsCustomApiCheckModelFirst()
+                      held
+                        ? m.accountsCustomApiFileApproveToUse()
+                        : usable
+                          ? undefined
+                          : model.checked
+                            ? m.accountsCustomApiResumeToUse()
+                            : m.accountsCustomApiCheckModelFirst()
                     }
                     onChoose={() => {
                       const before = chosen;
@@ -304,7 +356,18 @@ export function CustomApiAccountsSection() {
                 </div>
               );
             })}
-            {!checked ? (
+            {view.file?.state === "changed" && (
+              <p className="fm-custom-lock" data-custom-file-held>
+                {replaced ? m.accountsCustomApiFileReplaced() : m.accountsCustomApiFileChanged()}
+              </p>
+            )}
+            {view.file?.state === "missing" && (
+              <p className="fm-custom-lock" data-custom-file-held>
+                {m.accountsCustomApiFileGone()}
+              </p>
+            )}
+            {fromFile && <FileWarnings connection={fromFile} approved />}
+            {held ? null : !checked ? (
               <p className="fm-custom-lock">{m.accountsCustomApiCheckBeforeUse()}</p>
             ) : !view.enabled ? (
               <p className="fm-custom-lock">{m.accountsCustomApiPausedHint()}</p>
@@ -338,6 +401,24 @@ export function CustomApiAccountsSection() {
           </section>
         );
       })}
+      {pending.map((connection) => (
+        <FileConnectionRow key={connection.name} connection={connection} onSaved={refresh} />
+      ))}
+      {approving &&
+        (() => {
+          const connection = fileConnection(approving);
+          return connection ? (
+            <FileApproval
+              connection={connection}
+              original={approving}
+              onClose={() => {
+                setApproving(undefined);
+                refresh();
+              }}
+              onSaved={refresh}
+            />
+          ) : null;
+        })()}
       {editing && (
         <CustomApiDialog
           label={m.accountsCustomApiEditTitle({ name: editing.label })}

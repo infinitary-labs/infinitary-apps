@@ -111,6 +111,38 @@ export const customModelCostSchema = z.object({
   cacheWrite: customPriceSchema.optional(),
 });
 export type CustomModelCost = z.infer<typeof customModelCostSchema>;
+/**
+ * How much recent history a rolling session keeps and how much room its
+ * summary reserves, in tokens. Either replaces Pi's own cap, and both stay
+ * within the room the model's window leaves.
+ */
+export const customCompactionSchema = z.object({
+  keepRecentTokens: z.number().int().positive().max(100_000_000).optional(),
+  reserveTokens: z.number().int().positive().max(100_000_000).optional(),
+});
+export type CustomCompaction = z.infer<typeof customCompactionSchema>;
+export const CUSTOM_THINKING_LEVELS = [
+  "off",
+  "minimal",
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max",
+] as const;
+/**
+ * Reasoning a connection file states for a model with no catalog profile:
+ * the provider's own value for each level (null where it refuses one) and
+ * the few compatibility settings that say how the server reads reasoning
+ * and history. Checked like a profile's, at every level it offers.
+ */
+export const customStatedReasoningSchema = z.object({
+  thinkingLevelMap: z
+    .partialRecord(z.enum(CUSTOM_THINKING_LEVELS), z.string().max(64).nullable())
+    .optional(),
+  compat: z.record(z.string().max(64), z.union([z.boolean(), z.string().max(64)])).optional(),
+});
+export type CustomStatedReasoning = z.infer<typeof customStatedReasoningSchema>;
 export const customModelInputSchema = z.object({
   id: z.string().min(1).max(256),
   context: z.number().int().nonnegative(),
@@ -125,6 +157,18 @@ export const customModelInputSchema = z.object({
    */
   name: z.string().trim().min(1).max(128).optional(),
   cost: customModelCostSchema.optional(),
+  /**
+   * What a connection file says the model reads. Absent (a typed line), the
+   * check tries a picture; without `image`, it sends none and the model stays text-only.
+   */
+  input: z
+    .array(z.enum(["text", "image"]))
+    .max(2)
+    .optional(),
+  /** A connection file's own reasoning for a model with no profile. */
+  statedReasoning: customStatedReasoningSchema.optional(),
+  /** Wins over the connection's, one value at a time. */
+  compaction: customCompactionSchema.optional(),
 });
 /**
  * An extra header the organisation's server needs on every request. A secret
@@ -174,6 +218,12 @@ export const customApiInputSchema = z.object({
    * networks. Absent, the network check refuses those answers, as always.
    */
   addressException: z.string().max(4096).optional(),
+  compaction: customCompactionSchema.optional(),
+  /**
+   * The provider's key in the connection file this connection was approved
+   * from: its identity there, so the file's later edits reach it.
+   */
+  file: z.string().min(1).max(256).optional(),
 });
 export type CustomApiInput = z.infer<typeof customApiInputSchema>;
 /**
@@ -250,6 +300,13 @@ export const customApiViewSchema = z.object({
   allowStorageDefault: z.boolean(),
   /** The person made an exception for this address's DNS answers. */
   addressException: z.boolean().optional(),
+  compaction: customCompactionSchema.optional(),
+  /**
+   * A connection approved from the connection file: its key there, and
+   * whether the file still says what was approved here. `changed` (its
+   * address, protocol or headers) and `missing` hold it until approved again.
+   */
+  file: z.object({ name: z.string(), state: z.enum(["current", "changed", "missing"]) }).optional(),
   certificates: z.array(customCertificateViewSchema),
   models: z.array(
     customModelInputSchema.extend({

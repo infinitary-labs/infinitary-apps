@@ -39,6 +39,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | commit | 커밋 | GitHub's Korean docs |
 | computer | 컴퓨터 | For every computer, Mac, Linux or Windows |
 | concept / finding | 개념 / 발견 | As the card references already say |
+| connection file | 연결 파일 | The file in Pi's models.json format that Settings → Intelligence reads custom connections from. |
 | conversation | 대화 | Replaces session and transcript; "The crewmate's session" is 선원의 대화 |
 | credits (a provider's, paid past the allowance) | 크레딧 | ChatGPT's Codex credits; Claude's are called extra usage. |
 | crew | 선원들 | The first mate's helpers as a group |

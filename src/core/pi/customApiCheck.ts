@@ -39,6 +39,8 @@ export type CustomConnectionCandidate = CustomApiTransportOptions & {
   storage: CustomResponsesPolicy;
   capabilities?: CustomCapabilities;
   cacheRetention?: "none" | "short" | "long";
+  /** A connection file says the model reads no pictures: the check sends none. */
+  textOnly?: boolean;
 };
 export type CustomModelProof = {
   profile: ReturnType<typeof customApiProfile>;
@@ -81,6 +83,8 @@ export function customModelFingerprint(candidate: CustomConnectionCandidate): st
         cacheRetention: candidate.cacheRetention ?? "none",
         // A connection without an exception keeps its earlier fingerprint.
         ...(candidate.exception ? { exception: true } : {}),
+        // A typed model line keeps its earlier fingerprint too.
+        ...(candidate.textOnly ? { textOnly: true } : {}),
         ...(candidate.headers?.length
           ? {
               headers: candidate.headers.map((header) => ({
@@ -220,67 +224,68 @@ export async function checkCustomApiModel(
       if (cancellation.aborted) throw new CustomApiError(signal?.aborted ? "cancelled" : "timeout");
     }
     let readsPictures = false;
-    try {
-      const definition = customPiModel(base);
-      const pictureCall: AssistantMessage = {
-        role: "assistant",
-        api: definition.api,
-        provider: definition.provider,
-        model: definition.id,
-        content: [
-          {
-            type: "toolCall",
-            id: "picture_check",
-            name: "firstmate_echo",
-            arguments: { text: CHECK_TOKEN },
-          },
-        ],
-        stopReason: "toolUse",
-        timestamp: 0,
-        usage: {
-          input: 0,
-          output: 0,
-          cacheRead: 0,
-          cacheWrite: 0,
-          totalTokens: 0,
-          cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
-        },
-      };
-      const messages: Message[] = [
-        { role: "user", content: "Read the tool's picture.", timestamp: 0 },
-        pictureCall,
-        {
-          role: "toolResult",
-          toolCallId: "picture_check",
-          toolName: "firstmate_echo",
-          isError: false,
-          timestamp: 0,
+    if (!captured.textOnly)
+      try {
+        const definition = customPiModel(base);
+        const pictureCall: AssistantMessage = {
+          role: "assistant",
+          api: definition.api,
+          provider: definition.provider,
+          model: definition.id,
           content: [
-            { type: "text", text: "Picture to read:" },
-            { type: "image", mimeType: "image/png", data: CHECK_PICTURE },
+            {
+              type: "toolCall",
+              id: "picture_check",
+              name: "firstmate_echo",
+              arguments: { text: CHECK_TOKEN },
+            },
           ],
-        },
-      ];
-      const picture = await generateCustomApi(
-        transport,
-        {
-          ...base,
-          readsPictures: true,
-          context: normalizeContext({
-            systemPrompt:
-              "This is a synthetic API connection check. Read the two digits in the picture returned by firstmate_echo. Reply with only those digits, or unknown if you cannot read it.",
-            tools,
-            messages,
-          }),
-        },
-        cancellation,
-      );
-      readsPictures =
-        !picture.content.some((part) => part.type === "toolCall") &&
-        textOf(picture).trim() === "47";
-    } catch {
-      // An optional picture refusal leaves text proof intact; caller cancel never does.
-    }
+          stopReason: "toolUse",
+          timestamp: 0,
+          usage: {
+            input: 0,
+            output: 0,
+            cacheRead: 0,
+            cacheWrite: 0,
+            totalTokens: 0,
+            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+          },
+        };
+        const messages: Message[] = [
+          { role: "user", content: "Read the tool's picture.", timestamp: 0 },
+          pictureCall,
+          {
+            role: "toolResult",
+            toolCallId: "picture_check",
+            toolName: "firstmate_echo",
+            isError: false,
+            timestamp: 0,
+            content: [
+              { type: "text", text: "Picture to read:" },
+              { type: "image", mimeType: "image/png", data: CHECK_PICTURE },
+            ],
+          },
+        ];
+        const picture = await generateCustomApi(
+          transport,
+          {
+            ...base,
+            readsPictures: true,
+            context: normalizeContext({
+              systemPrompt:
+                "This is a synthetic API connection check. Read the two digits in the picture returned by firstmate_echo. Reply with only those digits, or unknown if you cannot read it.",
+              tools,
+              messages,
+            }),
+          },
+          cancellation,
+        );
+        readsPictures =
+          !picture.content.some((part) => part.type === "toolCall") &&
+          textOf(picture).trim() === "47";
+      } catch {
+        // An optional picture refusal leaves text proof intact; caller cancel never does.
+      }
     if (signal?.aborted) throw new CustomApiError("cancelled");
     return {
       profile: customApiProfile(candidate.protocol),

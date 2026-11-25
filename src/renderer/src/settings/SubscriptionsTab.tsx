@@ -604,6 +604,11 @@ export function AccountRow({
               {view.savedResets}
             </span>
           )}
+          {view.pool && (
+            <span className="fm-subs-credits" data-pool="">
+              {view.pool}
+            </span>
+          )}
           {view.stateText ? (
             <span
               className="fm-subs-state"
@@ -1384,7 +1389,7 @@ export function SubscriptionsTab() {
           />
         )}
       />
-      <CustomApiAccountsSection />
+      <CustomApiAccountsSection quota={snapshot} />
       <IntelligenceBoard
         firstmateModel={
           <FirstmateModelRow

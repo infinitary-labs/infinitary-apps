@@ -1,5 +1,5 @@
 ---
-source: 454b7a23fdc82430
+source: a0cdeb238cc2527f
 title: Einstellungen
 description: Was jeder Bereich der Einstellungen enthält – Allgemein und Erscheinungsbild hier erklärt, für den Rest ein Link.
 ---
@@ -10,8 +10,8 @@ Die Pfeiltasten nach oben und unten wechseln zwischen ihnen, und Escape oder **Z
 
 Du kannst deinen ersten Offizier auch bitten, eine Einstellung für dich zu ändern, etwa „Wechsle zum hellen Design“ oder „Schalte Ambient-Musik ein“.
 
-<img class="picture-dark" src="/pictures/settings-dark.webp" alt="Die Einstellungen sind auf „Allgemein“ geöffnet: links die zwölf Bereiche von „Allgemein“ bis „Geräte“, daneben die Zeilen „Bei Anmeldung starten“, „Im Dock anzeigen“, Benachrichtigung, „Diktat“, „Deine Panels“ und „Aufgabendaten endgültig löschen“." width="1024" height="559" />
-<img class="picture-light" src="/pictures/settings-light.webp" alt="Die Einstellungen sind auf „Allgemein“ geöffnet: links die zwölf Bereiche von „Allgemein“ bis „Geräte“, daneben die Zeilen „Bei Anmeldung starten“, „Im Dock anzeigen“, Benachrichtigung, „Diktat“, „Deine Panels“ und „Aufgabendaten endgültig löschen“." width="1024" height="559" />
+<img class="picture-dark" src="/pictures/settings-dark.webp" alt="Die Einstellungen sind auf „Allgemein“ geöffnet: links die zwölf Bereiche von „Allgemein“ bis „Geräte“, daneben die Zeilen „Bei Anmeldung starten“, „Im Dock anzeigen“, Benachrichtigung, „Diktat“, „Deine Panels“, „Aufgabendaten endgültig löschen“ und „Infinitary zurücksetzen“." width="1184" height="661" />
+<img class="picture-light" src="/pictures/settings-light.webp" alt="Die Einstellungen sind auf „Allgemein“ geöffnet: links die zwölf Bereiche von „Allgemein“ bis „Geräte“, daneben die Zeilen „Bei Anmeldung starten“, „Im Dock anzeigen“, Benachrichtigung, „Diktat“, „Deine Panels“, „Aufgabendaten endgültig löschen“ und „Infinitary zurücksetzen“." width="1184" height="661" />
 
 ## Die Bereiche {#the-sections}
 
@@ -43,7 +43,12 @@ Siehe [Deine anderen Computer](/de/your-other-computers/).
   Siehe [Der erste Offizier](/de/the-first-mate/#talk-instead-of-typing).
 - **Deine Panels** nimmt jedes Panel weg, das dein erster Offizier für dich gebaut hat, und die, die du hinzugefügt hast, bis du es wieder einschaltest.
 - **Aufgabendaten endgültig löschen** entfernt jede Aufgabe mit ihrer Arbeitskopie, ihren Notizen und ihren Karten sowie das Wissen, das deine Crew festgehalten hat.
+  Deine Projekte, Anmeldungen und Einstellungen bleiben.
   Drück auf **Endgültig löschen** und dann auf **Löschen bestätigen**.
+- **Infinitary zurücksetzen** setzt Infinitary auf diesem Computer in den Zustand direkt nach der Installation zurück.
+  Es löscht alles, was Infinitary hier aufbewahrt, darunter Aufgaben, Anmeldungen, Geheimnisse, Einstellungen und gekoppelte Geräte, während Projekte in deinen eigenen Ordnern jede Datei und jeden Commit behalten.
+  Drück auf **Zurücksetzen**, dann auf **Infinitary zurücksetzen**, und bestätige, dass du es bist, so wie dein Computer es verlangt.
+  Siehe [Infinitary zurücksetzen](/de/update-and-remove/#reset-infinitary).
 - **Teilen** enthält den Schalter **Diagnose**, eine Zeile dazu, was die Update-Prüfung uns unabhängig von diesem Schalter mitteilt, und **Was diesen Computer verlassen würde**.
   Siehe [Was deinen Computer verlässt](/de/what-leaves-your-computer/#diagnostics-the-one-switch-that-sends-to-us).
 - **Version** nennt die Version, die du nutzt, und öffnet jede Release-Note, die dir gezeigt wurde, noch einmal.
@@ -84,9 +89,18 @@ Einige Teile von Infinitary zeigen noch Englisch.
 
 ### Ton {#sound}
 
-**Ambient-Musik** spielt ruhigen Lofi, der auf deinem Computer entsteht.
+**Ambient-Musik** spielt ruhige Musik, die auf deinem Computer entsteht, während sie läuft, und sich darum nie wiederholt.
 Sie folgt der Crew und läutet, wenn etwas auf dich wartet.
-Sie ist aus, bis du sie einschaltest, und **Lautstärke** legt fest, wie laut sie spielt.
+Sie ist aus, bis du sie einschaltest.
+
+- **Stil** wählt die Musik aus zehn Stilen in vier Arten: **Weltraum**, **Piraten**, **Seefahrt** und **Insel**.
+  Am Anfang steht er auf **Kälteschlaf**.
+- **Deine eigene Musik** hat **Eigene beschreiben**, das eine Nachricht an deinen ersten Offizier beginnt.
+  Beschreib die Musik, die du möchtest, und dein erster Offizier schreibt sie als Stil, aufgeführt unter **Deine** in **Stil**.
+  **Entfernen** erscheint, solange einer deiner eigenen Stile gewählt ist, und nimmt ihn von der Liste.
+- **Lautstärke** legt fest, wie laut die Musik spielt.
+- **Pausieren, wenn du weg bist** pausiert auf einem Mac oder einem Windows-PC die Musik, solange dein Bildschirm aus oder gesperrt ist, damit sie deinen Computer nicht wach hält.
+  Sie spielt weiter, sobald du zurück bist, und der Schalter ist an, bis du ihn ausschaltest.
 
 Ein Ton-Knopf sitzt direkt vor **Einstellungen** oben im Fenster, ob die Musik an oder aus ist.
 Drück ihn, um die Musik ein- oder auszuschalten; der Schalter **Ambient-Musik** schaltet mit.

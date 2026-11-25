@@ -1,5 +1,5 @@
 ---
-source: 81c1b11c48b639fa
+source: f96837d901679136
 title: Mettre à jour et supprimer Infinitary
 description: Comment chaque type d’installation reçoit une nouvelle version stable, et comment supprimer Infinitary en gardant votre travail enregistré.
 ---
@@ -67,11 +67,23 @@ L’avis affiche alors une commande qui installe la même version à la main.
 ## Vos autres ordinateurs et votre téléphone {#your-other-computers-and-your-phone}
 
 Un ordinateur que vous avez ajouté se met à jour depuis l’ordinateur où vit votre second.
-Dans Réglages → **Appareils**, un ordinateur sur une autre version affiche **Mettre à jour** sur sa ligne.
-Il reçoit la version de cet ordinateur, et son travail en cours s’arrête un instant puis reprend.
+Quand il se connecte sur une version plus ancienne, il reçoit de lui-même la version de cet ordinateur.
+Son travail en cours est d’abord enregistré, puis reprend.
+Quand il ne peut pas se mettre à jour de lui-même, par exemple parce que la mise à jour demande un mot de passe là-bas, une carte vous le demande à la place.
+Dans Réglages → **Appareils**, un ordinateur sur une autre version affiche **Aligner** sur sa ligne.
+Appuyez dessus pour l’amener à la version de cet ordinateur-ci, qu’elle soit plus récente ou plus ancienne.
 
-Depuis un ordinateur qui pilote votre second, Réglages → **Général** comporte une ligne pour Infinitary sur l’ordinateur où vit votre second.
-Quand cet ordinateur a une mise à jour prête, appuyez sur **Mettre à jour** suivi de son nom pour lancer la mise à jour depuis l’endroit où vous êtes.
+L’app ouverte sur un ordinateur qui pilote votre second suit la même version.
+Quand elle est plus ancienne, elle récupère cette version d’elle-même, et redémarre dessus dès que personne ne l’utilise là-bas.
+Sa ligne dans Réglages → **Appareils** indique où elle en est, et **Mettre à jour l’app** récupère la version tout de suite.
+Les mots tapés là-bas et pas encore envoyés retiennent le redémarrage jusqu’à ce qu’ils soient envoyés ou effacés.
+Quand cette app ne peut pas se mettre à jour d’elle-même, comme une copie venue de Homebrew, sa ligne et une carte disent quoi faire là-bas.
+
+Depuis un ordinateur qui pilote votre second, vous pouvez aussi mettre à jour l’ordinateur où vit votre second.
+Réglages → **Général** comporte une ligne pour Infinitary sur cet ordinateur.
+Quand cet ordinateur a une mise à jour prête, appuyez sur **Mettre à jour** suivi de son nom.
+Infinitary demande d’abord : il nomme le travail en cours qui se termine avant le redémarrage, et précise que quelqu’un doit se trouver devant cet ordinateur si la nouvelle version ne démarre pas.
+Pendant que ce travail s’enregistre, **Mettre à jour plus tard** laisse la mise à jour de côté.
 Votre téléphone peut aussi lancer cette mise à jour, après vous avoir demandé d’abord.
 Voir [Vos autres ordinateurs](/fr/your-other-computers/) et [iPhone et iPad](/fr/iphone-and-ipad/).
 
@@ -95,7 +107,27 @@ Ces actions suppriment ce dossier, et ce qu’Infinitary y gardait disparaît av
 - `brew uninstall --zap`.
 - Une app de désinstallation qui supprime aussi les fichiers de support d’une app.
 - Placer le dossier lui-même dans la Corbeille, ou le supprimer.
+- **Réinitialiser Infinitary**, qui sert à repartir de zéro : voir [Réinitialiser Infinitary](#reset-infinitary).
 
 Sur un ordinateur qui exécute le travail d’un autre, ce dossier contient la clé propre à l’ordinateur, ses copies de travail et les fichiers de ses tâches.
 Sans lui, l’ordinateur rejoint de nouveau comme une nouvelle entrée, et le travail qu’il n’avait pas rapporté reste perdu.
 Voir [Un ordinateur apparaît deux fois](/fr/troubleshooting/#a-computer-is-listed-twice).
+
+## Réinitialiser Infinitary {#reset-infinitary}
+
+**Réinitialiser Infinitary**, une ligne de Réglages → **Général**, remet Infinitary sur cet ordinateur dans l’état où il était juste après l’installation, et garde l’app.
+Il supprime tout ce qu’Infinitary garde sur cet ordinateur, y compris les tâches, les connexions, les Secrets, les réglages et les appareils jumelés.
+Les projets dans vos propres dossiers gardent tous leurs fichiers et commits.
+Pour effacer seulement les tâches, utilisez **Effacer les données des tâches**, la ligne juste au-dessus.
+
+1. Appuyez sur **Réinitialiser**.
+   Infinitary indique ce qu’il supprime et combien de tâches ouvertes s’arrêtent.
+2. Appuyez sur **Réinitialiser Infinitary**, ou sur **Tout garder** pour ne rien changer.
+3. Confirmez que c’est bien vous, comme votre ordinateur le demande, par exemple avec Touch ID ou votre mot de passe.
+4. Infinitary se ferme, puis s’ouvre sur l’écran d’accueil comme s’il venait d’être installé.
+
+Un ordinateur qui exécute le travail d’un autre quitte cet autre ordinateur lors de sa réinitialisation.
+Sur un ordinateur qui pilote votre second, la ligne réinitialise Infinitary sur les deux ordinateurs : celui-ci, et l’ordinateur où vit votre second.
+Si ce dernier ne répond pas, rien n’est réinitialisé, ni sur l’un ni sur l’autre.
+
+Quand Infinitary ne peut pas s’ouvrir, vous pouvez quand même le réinitialiser : voir [Infinitary n’a pas pu démarrer](/fr/troubleshooting/#infinitary-could-not-start).

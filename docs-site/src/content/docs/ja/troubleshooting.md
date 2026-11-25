@@ -1,5 +1,5 @@
 ---
-source: 5a44a232aea453c9
+source: b49e11a26445efba
 title: トラブルシューティング
 description: Infinitary でよくある問題と、それぞれでアプリに表示される言葉、そしてその対処法です。
 ---
@@ -95,6 +95,32 @@ Mac では、その Mac の前にいる人が許可するまで、macOS が Infi
 まずは少し待ってください。
 固まったままの場合は、Infinitary を終了してもう一度開きます。
 一等航海士や乗組員が処理し終えていなかったメッセージは、開いたときに再び処理されます。
+
+## Infinitary を起動できませんでした {#infinitary-could-not-start}
+
+Infinitary が起動を終える前に 2 回続けて止まると、「Infinitary を起動できませんでした」という題の画面が表示されます。
+画面には「起動が終わる前に 2 回停止しました。保存した作業は変更されていません。」と表示されます。
+
+- **もう一度試す** は、Infinitary をもう一度起動します。
+- **Infinitary をリセット** は、インストール直後の状態からやり直します。
+  先に確認があり、**すべて残す** で元の画面に戻れます。そのあとコンピューターが本人であることを確認します。
+  Infinitary がこのコンピューターに保存しているものはすべて削除されますが、自分のフォルダーにあるプロジェクトは、すべてのファイルとコミットがそのまま残ります。
+- **終了** は画面を閉じます。次に Infinitary を起動すると、この画面がもう一度表示されます。
+
+保存した作業を開けないときに Infinitary が表示する画面にも、**Infinitary をリセット** があります。
+リセットで何が削除されるかは、[Infinitary をリセットする](/ja/update-and-remove/#reset-infinitary)を参照してください。
+
+### ターミナルからリセットする {#reset-from-a-terminal}
+
+ウインドウがまったく開かないときは、Infinitary を終了して、ターミナルで次を実行します。
+
+```sh
+infinitary reset
+```
+
+Mac では `/Applications/Infinitary.app/Contents/MacOS/Infinitary` を `infinitary` の代わりに入力し、AppImage の場合はファイルのパスを入力します。
+コンピューターが本人であることを確認すると、コマンドは「Infinitary をリセットしました。次に開くとようこそ画面が表示されます。」と答えます。
+このコンピューターで Infinitary が開いている間や、確認しなかったときは、コマンドは何もリセットしなかったと答えます。
 
 ## macOS がほかのアプリのデータについて尋ねてくる {#macos-asks-about-other-apps-data}
 

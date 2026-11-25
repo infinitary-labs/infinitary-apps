@@ -1,5 +1,5 @@
 ---
-source: 454b7a23fdc82430
+source: a0cdeb238cc2527f
 title: Ajustes
 description: O que cada seção dos Ajustes contém, com Geral e Aparência explicadas aqui e um link para as demais.
 ---
@@ -10,8 +10,8 @@ As setas para cima e para baixo passam de uma para outra, e Escape ou **Voltar**
 
 Você também pode pedir ao seu imediato para mudar um ajuste por você, como “mude para o tema claro” ou “ative a música ambiente”.
 
-<img class="picture-dark" src="/pictures/settings-dark.webp" alt="Ajustes abertos em Geral: as doze seções à esquerda, de Geral a Dispositivos, e as linhas Abrir ao fazer login, Mostrar no Dock, avisos, Ditado, Seus painéis e Excluir dados das tarefas." width="1024" height="559" />
-<img class="picture-light" src="/pictures/settings-light.webp" alt="Ajustes abertos em Geral: as doze seções à esquerda, de Geral a Dispositivos, e as linhas Abrir ao fazer login, Mostrar no Dock, avisos, Ditado, Seus painéis e Excluir dados das tarefas." width="1024" height="559" />
+<img class="picture-dark" src="/pictures/settings-dark.webp" alt="Ajustes abertos em Geral: as doze seções à esquerda, de Geral a Dispositivos, e as linhas Abrir ao fazer login, Mostrar no Dock, avisos, Ditado, Seus painéis, Excluir dados das tarefas e Redefinir o Infinitary." width="1184" height="661" />
+<img class="picture-light" src="/pictures/settings-light.webp" alt="Ajustes abertos em Geral: as doze seções à esquerda, de Geral a Dispositivos, e as linhas Abrir ao fazer login, Mostrar no Dock, avisos, Ditado, Seus painéis, Excluir dados das tarefas e Redefinir o Infinitary." width="1184" height="661" />
 
 ## As seções {#the-sections}
 
@@ -43,7 +43,12 @@ Veja [Seus outros computadores](/pt-br/your-other-computers/).
   Veja [O imediato](/pt-br/the-first-mate/#talk-instead-of-typing).
 - **Seus painéis** tira do ar todos os painéis que seu imediato criou para você, e os que você adicionou, até você ligá-lo de novo.
 - **Excluir dados das tarefas** remove todas as tarefas, com a cópia de trabalho, as notas e os cartões de cada uma, e o conhecimento que sua tripulação registrou.
+  Seus projetos, logins e ajustes ficam.
   Pressione **Excluir** e depois **Confirmar exclusão**.
+- **Redefinir o Infinitary** deixa o Infinitary neste computador como estava logo depois de instalado.
+  Ele apaga tudo o que o Infinitary guarda aqui, incluindo tarefas, logins, Segredos, ajustes e dispositivos pareados, enquanto os projetos nas suas próprias pastas mantêm todos os arquivos e commits.
+  Pressione **Redefinir**, depois **Redefinir o Infinitary**, e confirme que é você do jeito que seu computador pedir.
+  Veja [Redefinir o Infinitary](/pt-br/update-and-remove/#reset-infinitary).
 - **Compartilhamento** contém o interruptor **Diagnóstico**, uma linha sobre o que a verificação de atualizações nos informa seja qual for a posição desse interruptor, e **O que sairia deste computador**.
   Veja [O que sai do seu computador](/pt-br/what-leaves-your-computer/#diagnostics-the-one-switch-that-sends-to-us).
 - **Versão** diz a versão que você usa e abre de novo cada nota de versão que já foi mostrada a você.
@@ -84,9 +89,18 @@ Algumas partes do Infinitary ainda aparecem em inglês.
 
 ### Som {#sound}
 
-**Música ambiente** toca um lofi calmo feito no seu computador.
+**Música ambiente** toca uma música tranquila feita no seu computador enquanto toca, então ela nunca se repete.
 Ela acompanha a tripulação e soa um sininho quando algo espera por você.
-Ela fica desligada até você ligá-la, e **Volume** define o quanto ela toca alto.
+Ela fica desligada até você ligá-la.
+
+- **Estilo** escolhe a música, entre dez estilos de quatro tipos: **Espaço**, **Piratas**, **Náutico** e **Ilha**.
+  Ele começa em **Sono criogênico**.
+- **Sua própria música** tem **Descrever a sua**, que começa uma mensagem para o seu imediato.
+  Descreva a música que você quer, e seu imediato a escreve como um estilo, listado em **Seus**, em **Estilo**.
+  **Remover** aparece enquanto um dos seus próprios estilos está escolhido, e o tira da lista.
+- **Volume** define o quanto a música toca alto.
+- **Pausar quando você sair**, em um Mac ou um PC com Windows, pausa a música enquanto sua tela está desligada ou bloqueada, para que ela não mantenha seu computador acordado.
+  Ela volta a tocar quando você retorna, e essa chave fica ligada até você desligá-la.
 
 Um botão de som fica logo antes de **Ajustes**, no topo da janela, com a música ligada ou desligada.
 Pressione-o para ligar ou desligar a música; a chave **Música ambiente** muda junto.

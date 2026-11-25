@@ -95,6 +95,32 @@ Wait a moment first.
 If it stays stuck, quit Infinitary and open it again.
 Messages your first mate or a crewmate had not finished with are picked up again when it opens.
 
+## Infinitary could not start
+
+After two starts that stopped before Infinitary finished starting, it shows a screen titled "Infinitary could not start".
+The screen says "It stopped twice before it finished starting. Your saved work has not been changed."
+
+- **Try again** starts Infinitary once more.
+- **Reset Infinitary** starts over as if just installed.
+  It asks first, with **Keep everything** to go back, and your computer then confirms it is you.
+  It deletes everything Infinitary keeps on this computer, while projects in your own folders keep every file and commit.
+- **Quit** closes the screen, which shows again the next time Infinitary starts.
+
+The screens Infinitary shows when it cannot open your saved work offer **Reset Infinitary** too.
+See [Reset Infinitary](/update-and-remove/#reset-infinitary) for what a reset deletes.
+
+### Reset from a terminal
+
+When no window opens at all, quit Infinitary and run this in a terminal:
+
+```sh
+infinitary reset
+```
+
+On a Mac, type `/Applications/Infinitary.app/Contents/MacOS/Infinitary` in place of `infinitary`, and for an AppImage, type the file's path.
+Your computer confirms it is you, and the command answers "Infinitary is reset. It opens on the welcome screen next time."
+While Infinitary is open on this computer, or when you do not confirm, the command says that nothing was reset.
+
 ## macOS asks about other apps' data
 
 macOS may ask "Infinitary would like to access data from other apps."

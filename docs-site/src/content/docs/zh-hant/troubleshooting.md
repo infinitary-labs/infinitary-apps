@@ -1,5 +1,5 @@
 ---
-source: 5a44a232aea453c9
+source: b49e11a26445efba
 title: 疑難排解
 description: Infinitary 的常見問題、程式為每個問題顯示的字詞，以及該怎麼做。
 ---
@@ -95,6 +95,32 @@ description: Infinitary 的常見問題、程式為每個問題顯示的字詞�
 先等一下。
 如果還是卡住，就結束 Infinitary 再重新打開。
 大副或船員還沒處理完的訊息，會在它打開時重新接手。
+
+## Infinitary 無法啟動 {#infinitary-could-not-start}
+
+如果 Infinitary 有兩次在完成啟動前就停止了，它會顯示一個標題為「Infinitary 無法啟動」的畫面。
+畫面上寫著：「它在完成啟動前停止了兩次。你儲存的工作沒有被變更。」
+
+- **再試一次** 會再啟動一次 Infinitary。
+- **重設 Infinitary** 會像剛安裝時一樣重新開始。
+  它會先問你，按 **全部保留** 可以返回，接著你的電腦會確認是你本人。
+  它會刪除 Infinitary 在這台電腦上保存的一切，而你自己資料夾中的專案會保留所有檔案和提交。
+- **結束** 會關閉這個畫面，下次啟動 Infinitary 時它會再次出現。
+
+Infinitary 在無法開啟你保存的工作時顯示的畫面，也提供 **重設 Infinitary**。
+重設會刪除什麼，請看 [重設 Infinitary](/zh-hant/update-and-remove/#reset-infinitary)。
+
+### 從終端機重設 {#reset-from-a-terminal}
+
+如果完全沒有視窗打開，請結束 Infinitary，並在終端機裡執行：
+
+```sh
+infinitary reset
+```
+
+在 Mac 上，請輸入 `/Applications/Infinitary.app/Contents/MacOS/Infinitary` 來取代 `infinitary`；如果是 AppImage，請輸入該檔案的路徑。
+你的電腦確認是你本人後，指令會回答：「Infinitary 已重設。下次開啟時會顯示歡迎畫面。」
+如果 Infinitary 正在這台電腦上開著，或你沒有確認，指令會說明沒有重設任何內容。
 
 ## macOS 詢問其他 App 的資料 {#macos-asks-about-other-apps-data}
 

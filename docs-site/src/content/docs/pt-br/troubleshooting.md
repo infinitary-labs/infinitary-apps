@@ -1,5 +1,5 @@
 ---
-source: 5a44a232aea453c9
+source: b49e11a26445efba
 title: Solução de problemas
 description: Problemas comuns no Infinitary, as palavras que o app mostra para cada um e o que fazer.
 ---
@@ -95,6 +95,32 @@ Veja [O que exclui seu trabalho salvo](/pt-br/update-and-remove/#what-deletes-yo
 Espere um momento primeiro.
 Se ela continuar travada, encerre o Infinitary e abra-o de novo.
 As mensagens que seu imediato ou um tripulante não tinham terminado são retomadas quando ele abre.
+
+## O Infinitary não conseguiu iniciar {#infinitary-could-not-start}
+
+Depois de duas inicializações que pararam antes de o Infinitary terminar de iniciar, ele mostra uma tela com o título “O Infinitary não conseguiu iniciar”.
+A tela diz “Ele parou duas vezes antes de terminar de iniciar. Seu trabalho salvo não foi alterado.”
+
+- **Tentar de novo** inicia o Infinitary mais uma vez.
+- **Redefinir o Infinitary** recomeça como se ele tivesse acabado de ser instalado.
+  Ele pergunta primeiro, com **Manter tudo** para voltar, e depois seu computador confirma que é você.
+  Ele apaga tudo o que o Infinitary guarda neste computador, enquanto os projetos nas suas próprias pastas mantêm todos os arquivos e commits.
+- **Sair** fecha a tela, que aparece de novo na próxima vez que o Infinitary iniciar.
+
+As telas que o Infinitary mostra quando não consegue abrir seu trabalho salvo também oferecem **Redefinir o Infinitary**.
+Veja [Redefinir o Infinitary](/pt-br/update-and-remove/#reset-infinitary) para saber o que uma redefinição apaga.
+
+### Redefinir por um terminal {#reset-from-a-terminal}
+
+Quando nenhuma janela abre, encerre o Infinitary e execute isto em um terminal:
+
+```sh
+infinitary reset
+```
+
+Em um Mac, digite `/Applications/Infinitary.app/Contents/MacOS/Infinitary` no lugar de `infinitary`, e para um AppImage, digite o caminho do arquivo.
+Seu computador confirma que é você, e o comando responde “O Infinitary foi redefinido. Na próxima vez, ele abre na tela de boas-vindas.”
+Enquanto o Infinitary está aberto neste computador, ou quando você não confirma, o comando diz que nada foi redefinido.
 
 ## O macOS pergunta sobre dados de outros apps {#macos-asks-about-other-apps-data}
 

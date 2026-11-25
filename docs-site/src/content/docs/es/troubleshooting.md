@@ -1,5 +1,5 @@
 ---
-source: 5a44a232aea453c9
+source: b49e11a26445efba
 title: Solución de problemas
 description: Problemas comunes en Infinitary, las palabras que muestra la app para cada uno y qué hacer.
 ---
@@ -95,6 +95,32 @@ Consulta [Qué elimina tu trabajo guardado](/es/update-and-remove/#what-deletes-
 Espera un momento primero.
 Si sigue atascada, cierra Infinitary y vuelve a abrirlo.
 Los mensajes que tu primer oficial o un tripulante no habían terminado se retoman cuando se abre.
+
+## Infinitary no pudo iniciarse {#infinitary-could-not-start}
+
+Después de dos inicios que se detuvieron antes de que Infinitary terminara de iniciarse, muestra una pantalla titulada «Infinitary no pudo iniciarse».
+La pantalla dice «Se detuvo dos veces antes de terminar de iniciarse. Tu trabajo guardado no ha cambiado».
+
+- **Reintentar** inicia Infinitary una vez más.
+- **Restablecer Infinitary** empieza de nuevo como recién instalado.
+  Pregunta primero, con **Conservar todo** para volver, y después tu computadora confirma que eres tú.
+  Elimina todo lo que Infinitary guarda en esta computadora, mientras que los proyectos en tus propias carpetas conservan todos sus archivos y commits.
+- **Salir** cierra la pantalla, que vuelve a aparecer la próxima vez que se inicia Infinitary.
+
+Las pantallas que Infinitary muestra cuando no puede abrir tu trabajo guardado también ofrecen **Restablecer Infinitary**.
+Consulta [Restablecer Infinitary](/es/update-and-remove/#reset-infinitary) para saber qué elimina un restablecimiento.
+
+### Restablecer desde una terminal {#reset-from-a-terminal}
+
+Cuando no se abre ninguna ventana, cierra Infinitary y ejecuta esto en una terminal:
+
+```sh
+infinitary reset
+```
+
+En una Mac, escribe `/Applications/Infinitary.app/Contents/MacOS/Infinitary` en lugar de `infinitary`, y para una AppImage, escribe la ruta del archivo.
+Tu computadora confirma que eres tú, y el comando responde «Infinitary se restableció. La próxima vez se abre en la pantalla de bienvenida».
+Mientras Infinitary está abierto en esta computadora, o cuando no lo confirmas, el comando dice que no se restableció nada.
 
 ## macOS pregunta por los datos de otras apps {#macos-asks-about-other-apps-data}
 

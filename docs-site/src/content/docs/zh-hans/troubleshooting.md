@@ -1,5 +1,5 @@
 ---
-source: 5a44a232aea453c9
+source: b49e11a26445efba
 title: 故障排除
 description: Infinitary 中的常见问题、应用针对每个问题显示的文字，以及该怎么做。
 ---
@@ -95,6 +95,32 @@ description: Infinitary 中的常见问题、应用针对每个问题显示的�
 先稍等片刻。
 如果一直卡住，请退出 Infinitary 再重新打开。
 你的大副或某个船员尚未处理完的消息，会在它打开时重新接上。
+
+## Infinitary 无法启动 {#infinitary-could-not-start}
+
+如果 Infinitary 有两次在完成启动前就停止了，它会显示一个标题为“Infinitary 无法启动”的界面。
+界面上写着：“它在完成启动前停止了两次。你保存的工作没有被更改。”
+
+- “**重试**”会再启动一次 Infinitary。
+- “**重置 Infinitary**”会像刚安装时一样重新开始。
+  它会先询问，点击“**全部保留**”可以返回，随后你的电脑会确认是你本人。
+  它会删除 Infinitary 在这台电脑上保存的一切，而你自己文件夹中的项目会保留所有文件和提交。
+- “**退出**”会关闭这个界面，下次启动 Infinitary 时它会再次出现。
+
+Infinitary 在无法打开你已保存的工作时显示的界面，也提供“**重置 Infinitary**”。
+重置会删除什么，请参阅[重置 Infinitary](/zh-hans/update-and-remove/#reset-infinitary)。
+
+### 从终端重置 {#reset-from-a-terminal}
+
+如果完全没有窗口打开，请退出 Infinitary，并在终端中运行：
+
+```sh
+infinitary reset
+```
+
+在 Mac 上，请输入 `/Applications/Infinitary.app/Contents/MacOS/Infinitary` 来代替 `infinitary`；如果是 AppImage，请输入该文件的路径。
+你的电脑确认是你本人后，命令会回答：“Infinitary 已重置。下次打开时会显示欢迎界面。”
+如果 Infinitary 正在这台电脑上打开，或者你没有确认，命令会说明没有重置任何内容。
 
 ## macOS 询问其他应用的数据 {#macos-asks-about-other-apps-data}
 

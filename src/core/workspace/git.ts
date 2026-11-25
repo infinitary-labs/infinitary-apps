@@ -5,15 +5,20 @@ import { atUtilityQos } from "../utilityQos";
 import { runGitProcess } from "./gitProcess";
 
 /**
- * The identity the app commits under when a repo has none of its own (a
- * fresh fleet init, the personal workspace's managed files): never a
- * user's, never a global config write.
+ * The one identity the app commits under for itself (a fresh fleet init, the
+ * personal workspace's managed files) and for the batch's scratch commits:
+ * never a user's, never a global config write. The address is plain, with no
+ * account on any forge behind it, so where a project lives links these
+ * commits to nobody.
  */
+export const APP_GIT_NAME = "Infinitary";
+export const APP_GIT_EMAIL = "infinitary@localhost";
+
 export const APP_GIT_IDENTITY = [
   "-c",
-  "user.name=Infinitary",
+  `user.name=${APP_GIT_NAME}`,
   "-c",
-  "user.email=infinitary@localhost",
+  `user.email=${APP_GIT_EMAIL}`,
 ];
 
 /**

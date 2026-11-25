@@ -24,7 +24,7 @@ import { LOCAL_CLIENT } from "../connection/connection";
 import type { CoreDispatch } from "../dispatcher";
 import { renderSignInRefusal, SignInRequiredError } from "../forge";
 import { boundTool, stringEnum } from "../session/tools";
-import { appReadList, runAppRead } from "./appReads";
+import { appReadList, type ReadHost, runAppRead } from "./appReads";
 import { listSurfaces } from "./personalizeTool";
 
 export type AppToolsDelegate = {
@@ -42,6 +42,8 @@ export type AppToolsDelegate = {
   platform?: string;
   /** The window's installed keys, which `keyboard.keys` reads; null or absent with no window open, which reads the saved keys. */
   installedKeys?: () => KeymapSnapshot | null;
+  /** The runbooks, which `runbooks.crew` reads; absent reads that none are connected. */
+  runbooks?: ReadHost["runbooks"];
 };
 
 /**
@@ -190,7 +192,7 @@ export function createAppTools(delegate: AppToolsDelegate) {
       name: "app_state",
       label: "App actions",
       description:
-        "App actions: schemas, current values, who may act (captainAllowed, firstmateAllowed); asked: the captain asked in any form, own-words: their typed words, judgment: your own reason, each at any wake. area reads lists reads. No changes.",
+        "App actions: schemas, current values, who may act (captainAllowed, firstmateAllowed); asked: the captain asked in any form, own-words: their typed words, judgment: your own reason, each at any wake. area reads lists reads, a runbook's crew part among them, which your runbook text leaves out. No changes.",
       parameters: Type.Object({
         area: Type.Optional(
           stringEnum([

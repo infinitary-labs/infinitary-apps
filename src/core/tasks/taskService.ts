@@ -88,8 +88,10 @@ import { TaskPlacement } from "./taskPlacement";
 import { TaskStarts } from "./taskStarts";
 import {
   changeProjectTags,
+  judgeTaskTags,
   replaceTaskTags,
   setTaskTags,
+  type TagJudgment,
   type TagsSet,
   tagIdsByName,
 } from "./taskTags";
@@ -1433,6 +1435,11 @@ export class TaskService {
   /** Turn tags on or off on a task, with one quiet timeline line (`setTaskTags`). */
   setTags(id: string, wanted: readonly { tagId: string; on: boolean }[], by: TagSetter): TagsSet {
     return setTaskTags(this.writer, id, wanted, by);
+  }
+
+  /** The decision model's answers on a task, kept with the revision each read (`judgeTaskTags`). */
+  judgeTags(id: string, judgments: readonly TagJudgment[]): TagsSet & { kept: number } {
+    return judgeTaskTags(this.writer, id, judgments);
   }
 
   /** A task's tags become exactly these, by id or, from the first mate's tools, by name. */

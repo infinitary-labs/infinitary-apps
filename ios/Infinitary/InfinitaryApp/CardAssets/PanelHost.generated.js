@@ -6413,6 +6413,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       "destructive",
       "Removing a tag takes it off every task for good; tags are not panel data yet"
     ],
+    "project-tag-check": [
+      "not-a-setting",
+      "Starts or stops a run of decision model requests; nothing is set"
+    ],
     "project-runs-on": true,
     "device-invite": ["credential", "Makes a joining link for a new computer"],
     "private-site-allow": ["consent", "Widens what every task browser may reach"],
@@ -40442,6 +40446,197 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Stopped`;
   }
+  function feedTagCheckFinished(input2) {
+    const count = formatNumber(input2.count);
+    const project = input2.project;
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${project}: فُحصت ${count} مهمة بحثًا عن وسوم.`;
+          case "one":
+            return `${project}: فُحصت مهمة واحدة بحثًا عن وسوم.`;
+          case "two":
+            return `${project}: فُحصت مهمتان بحثًا عن وسوم.`;
+          case "few":
+            return `${project}: فُحصت ${count} مهام بحثًا عن وسوم.`;
+          case "many":
+            return `${project}: فُحصت ${count} مهمة بحثًا عن وسوم.`;
+          default:
+            return `${project}: فُحصت ${count} مهمة بحثًا عن وسوم.`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${project}: eine Aufgabe auf Tags geprüft.`;
+          default:
+            return `${project}: ${count} Aufgaben auf Tags geprüft.`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${project}: se revisó una tarea en busca de etiquetas.`;
+          case "many":
+            return `${project}: se revisaron ${count} de tareas en busca de etiquetas.`;
+          default:
+            return `${project}: se revisaron ${count} tareas en busca de etiquetas.`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${project} : ${count} tâche vérifiée pour les étiquettes.`;
+          case "many":
+            return `${project} : ${count} de tâches vérifiées pour les étiquettes.`;
+          default:
+            return `${project} : ${count} tâches vérifiées pour les étiquettes.`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${project}: ${count} 件のタスクのタグを確認しました。`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${project}: 작업 ${count}개의 태그를 확인했습니다.`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${project}: uma tarefa verificada quanto a etiquetas.`;
+          case "many":
+            return `${project}: ${count} de tarefas verificadas quanto a etiquetas.`;
+          default:
+            return `${project}: ${count} tarefas verificadas quanto a etiquetas.`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${project}：已检查 ${count} 个任务的标签。`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${project}：已檢查 ${count} 個任務的標籤。`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${project}: çĥéçķéð öñé ţášķ ƒöŕ ţáĝš. ~~~~~~~~~~]`;
+          default:
+            return `[${project}: çĥéçķéð ${count} ţášķš ƒöŕ ţáĝš. ~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${project}‮: checked one task for tags.‬`;
+          default:
+            return `${project}‮: checked ‬${count}‮ tasks for tags.‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${project}: checked one task for tags.`;
+      default:
+        return `${project}: checked ${count} tasks for tags.`;
+    }
+  }
+  function feedTagCheckFinishedMissed(input2) {
+    const count = formatNumber(input2.count);
+    const missed = input2.missed;
+    const project = input2.project;
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${project}: فُحصت ${count} مهمة بحثًا عن وسوم؛ و${missed} لم تتلقَّ إجابة وبقيت دون فحص.`;
+          case "one":
+            return `${project}: فُحصت مهمة واحدة بحثًا عن وسوم؛ و${missed} لم تتلقَّ إجابة وبقيت دون فحص.`;
+          case "two":
+            return `${project}: فُحصت مهمتان بحثًا عن وسوم؛ و${missed} لم تتلقَّ إجابة وبقيت دون فحص.`;
+          case "few":
+            return `${project}: فُحصت ${count} مهام بحثًا عن وسوم؛ و${missed} لم تتلقَّ إجابة وبقيت دون فحص.`;
+          case "many":
+            return `${project}: فُحصت ${count} مهمة بحثًا عن وسوم؛ و${missed} لم تتلقَّ إجابة وبقيت دون فحص.`;
+          default:
+            return `${project}: فُحصت ${count} مهمة بحثًا عن وسوم؛ و${missed} لم تتلقَّ إجابة وبقيت دون فحص.`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${project}: eine Aufgabe auf Tags geprüft; ${missed} bekamen keine Antwort und bleiben ungeprüft.`;
+          default:
+            return `${project}: ${count} Aufgaben auf Tags geprüft; ${missed} bekamen keine Antwort und bleiben ungeprüft.`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${project}: se revisó una tarea en busca de etiquetas; ${missed} no recibieron respuesta y siguen sin revisar.`;
+          case "many":
+            return `${project}: se revisaron ${count} de tareas en busca de etiquetas; ${missed} no recibieron respuesta y siguen sin revisar.`;
+          default:
+            return `${project}: se revisaron ${count} tareas en busca de etiquetas; ${missed} no recibieron respuesta y siguen sin revisar.`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${project} : ${count} tâche vérifiée pour les étiquettes ; ${missed} sans réponse restent à vérifier.`;
+          case "many":
+            return `${project} : ${count} de tâches vérifiées pour les étiquettes ; ${missed} sans réponse restent à vérifier.`;
+          default:
+            return `${project} : ${count} tâches vérifiées pour les étiquettes ; ${missed} sans réponse restent à vérifier.`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${project}: ${count} 件のタスクのタグを確認しました。${missed} 件は回答がなく、未確認のままです。`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${project}: 작업 ${count}개의 태그를 확인했습니다. ${missed}개는 답을 받지 못해 확인되지 않은 채로 남았습니다.`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${project}: uma tarefa verificada quanto a etiquetas; ${missed} ficaram sem resposta e continuam sem verificação.`;
+          case "many":
+            return `${project}: ${count} de tarefas verificadas quanto a etiquetas; ${missed} ficaram sem resposta e continuam sem verificação.`;
+          default:
+            return `${project}: ${count} tarefas verificadas quanto a etiquetas; ${missed} ficaram sem resposta e continuam sem verificação.`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${project}：已检查 ${count} 个任务的标签；${missed} 个没有得到回答，仍未检查。`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${project}：已檢查 ${count} 個任務的標籤；${missed} 個沒有得到回答，仍未檢查。`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${project}: çĥéçķéð öñé ţášķ ƒöŕ ţáĝš; ${missed} ĝöţ ñö áñšŵéŕ áñð šţáý ûñçĥéçķéð. ~~~~~~~~~~~~~~~~~~~~~]`;
+          default:
+            return `[${project}: çĥéçķéð ${count} ţášķš ƒöŕ ţáĝš; ${missed} ĝöţ ñö áñšŵéŕ áñð šţáý ûñçĥéçķéð. ~~~~~~~~~~~~~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${project}‮: checked one task for tags; ‬${missed}‮ got no answer and stay unchecked.‬`;
+          default:
+            return `${project}‮: checked ‬${count}‮ tasks for tags; ‬${missed}‮ got no answer and stay unchecked.‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${project}: checked one task for tags; ${missed} got no answer and stay unchecked.`;
+      default:
+        return `${project}: checked ${count} tasks for tags; ${missed} got no answer and stay unchecked.`;
+    }
+  }
   function feedUndelivered(input2) {
     const why = input2.why;
     switch (currentLanguage()) {
@@ -64547,6 +64742,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `When work waits on a Codex account whose Use saved resets on their own is on, it weighs using one of its saved resets against waiting for the allowance to refill. It reads the account's plan, how much of each allowance is left and when it refills, how many saved resets it holds, and which work waits.`;
   }
+  function settingsDecisionUseTagsName() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `وسم المهام تلقائيًا`;
+      case "de":
+        return `Aufgaben automatisch taggen`;
+      case "es":
+        return `Etiquetar tareas automáticamente`;
+      case "fr":
+        return `Étiqueter les tâches automatiquement`;
+      case "ja":
+        return `タスクに自動でタグを付ける`;
+      case "ko":
+        return `작업에 자동으로 태그 달기`;
+      case "pt-BR":
+        return `Etiquetar tarefas automaticamente`;
+      case "zh-Hans":
+        return `自动为任务添加标签`;
+      case "zh-Hant":
+        return `自動為任務加上標籤`;
+      case "en-XA":
+        return `[Ţáĝ ţášķš áûţöɱáţîçáļļý ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Tag tasks automatically‬`;
+    }
+    return `Tag tasks automatically`;
+  }
+  function settingsDecisionUseTagsReads() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تُقارن كل مهمة جديدة في مشروع له وسوم بهذه الوسوم، وتحصل على الوسوم التي تناسبها. يقرأ عنوان المهمة وهدفها وكلماتك، ومشروعها والمهمة التي هي جزء منها.`;
+      case "de":
+        return `Jede neue Aufgabe in einem Projekt mit Tags wird mit diesen Tags abgeglichen und bekommt die passenden. Gelesen werden Titel, Ziel und deine Worte zur Aufgabe, ihr Projekt und die Aufgabe, zu der sie gehört.`;
+      case "es":
+        return `Cada tarea nueva de un proyecto con etiquetas se compara con esas etiquetas y recibe las que le corresponden. Lee el título, el objetivo y tus palabras de la tarea, su proyecto y la tarea de la que forma parte.`;
+      case "fr":
+        return `Chaque nouvelle tâche d'un projet doté d'étiquettes est comparée à ces étiquettes et reçoit celles qui lui correspondent. Elle lit le titre, l'objectif et vos mots de la tâche, son projet et la tâche dont elle fait partie.`;
+      case "ja":
+        return `タグのあるプロジェクトの新しいタスクをそれぞれのタグと照らし合わせ、当てはまるタグを付けます。タスクのタイトル、目標、あなたの言葉、プロジェクト、親タスクを読みます。`;
+      case "ko":
+        return `태그가 있는 프로젝트의 새 작업을 각 태그와 비교해 맞는 태그를 답니다. 작업의 제목, 목표, 내 말, 프로젝트, 상위 작업을 읽습니다.`;
+      case "pt-BR":
+        return `Cada nova tarefa de um projeto com etiquetas é comparada a essas etiquetas e recebe as que se encaixam. Lê o título, o objetivo e as suas palavras da tarefa, o projeto e a tarefa da qual ela faz parte.`;
+      case "zh-Hans":
+        return `有标签的项目中的每个新任务都会与这些标签对照，并获得符合的标签。它读取任务的标题、目标和你的原话、所属项目以及它所属的任务。`;
+      case "zh-Hant":
+        return `有標籤的專案中的每個新任務都會與這些標籤對照，並獲得符合的標籤。它讀取任務的標題、目標和你的原話、所屬專案以及它所屬的任務。`;
+      case "en-XA":
+        return `[Éáçĥ ñéŵ ţášķ îñ á þŕöĵéçţ ŵîţĥ ţáĝš îš çĥéçķéð áĝáîñšţ ţĥöšé ţáĝš, áñð ĝéţš ţĥé ţáĝš îţ ƒîţš. Îţ ŕéáðš ţĥé ţášķ'š ţîţļé, ĝöáļ áñð ýöûŕ ŵöŕðš, îţš þŕöĵéçţ áñð ţĥé ţášķ îţ îš þáŕţ öƒ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Each new task in a project with tags is checked against those tags, and gets the tags it fits. It reads the task's title, goal and your words, its project and the task it is part of.‬`;
+    }
+    return `Each new task in a project with tags is checked against those tags, and gets the tags it fits. It reads the task's title, goal and your words, its project and the task it is part of.`;
+  }
   function settingsDecisionsActions() {
     switch (currentLanguage()) {
       case "ar":
@@ -85398,6 +85647,88 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Add a tag`;
   }
+  function settingsProjectsTagsAutoOff() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `وسم المهام تلقائيًا متوقف في الإعدادات ← الذكاء، لذا لا تحصل المهام الجديدة على وسوم من تلقاء نفسها.`;
+      case "de":
+        return `Aufgaben automatisch taggen ist in Einstellungen → Intelligenz aus, daher bekommen neue Aufgaben keine Tags von selbst.`;
+      case "es":
+        return `Etiquetar tareas automáticamente está desactivado en Ajustes → Inteligencia, así que las tareas nuevas no reciben etiquetas por sí solas.`;
+      case "fr":
+        return `Étiqueter les tâches automatiquement est désactivé dans Réglages → Intelligence, donc les nouvelles tâches ne reçoivent pas d'étiquettes d'elles-mêmes.`;
+      case "ja":
+        return `タスクに自動でタグを付けるは 設定 → インテリジェンス でオフのため、新しいタスクに自動でタグは付きません。`;
+      case "ko":
+        return `작업에 자동으로 태그 달기가 설정 → 인텔리전스에서 꺼져 있어 새 작업에 태그가 저절로 달리지 않습니다.`;
+      case "pt-BR":
+        return `Etiquetar tarefas automaticamente está desativado em Ajustes → Inteligência, então novas tarefas não recebem etiquetas sozinhas.`;
+      case "zh-Hans":
+        return `自动为任务添加标签已在 设置 → 智能 中关闭，因此新任务不会自动获得标签。`;
+      case "zh-Hant":
+        return `自動為任務加上標籤已在 設定 → 智慧 中關閉，因此新任務不會自動獲得標籤。`;
+      case "en-XA":
+        return `[Ţáĝ ţášķš áûţöɱáţîçáļļý îš öƒƒ îñ Šéţţîñĝš → Îñţéļļîĝéñçé, šö ñéŵ ţášķš ĝéţ ñö ţáĝš öñ ţĥéîŕ öŵñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Tag tasks automatically is off in Settings → Intelligence, so new tasks get no tags on their own.‬`;
+    }
+    return `Tag tasks automatically is off in Settings → Intelligence, so new tasks get no tags on their own.`;
+  }
+  function settingsProjectsTagsAutoOn(input2) {
+    const answerer = input2.answerer;
+    switch (currentLanguage()) {
+      case "ar":
+        return `وسم المهام تلقائيًا مفعّل: يقارن ${answerer} كل مهمة جديدة بهذه الوسوم.`;
+      case "de":
+        return `Aufgaben automatisch taggen ist an: ${answerer} gleicht jede neue Aufgabe mit diesen Tags ab.`;
+      case "es":
+        return `Etiquetar tareas automáticamente está activado: ${answerer} compara cada tarea nueva con estas etiquetas.`;
+      case "fr":
+        return `Étiqueter les tâches automatiquement est activé : ${answerer} compare chaque nouvelle tâche à ces étiquettes.`;
+      case "ja":
+        return `タスクに自動でタグを付けるはオンです: ${answerer} が新しいタスクをそれぞれこれらのタグと照らし合わせます。`;
+      case "ko":
+        return `작업에 자동으로 태그 달기가 켜져 있습니다: ${answerer}이(가) 새 작업마다 이 태그들과 비교합니다.`;
+      case "pt-BR":
+        return `Etiquetar tarefas automaticamente está ativado: ${answerer} compara cada nova tarefa a estas etiquetas.`;
+      case "zh-Hans":
+        return `自动为任务添加标签已开启：${answerer} 会将每个新任务与这些标签对照。`;
+      case "zh-Hant":
+        return `自動為任務加上標籤已開啟：${answerer} 會將每個新任務與這些標籤對照。`;
+      case "en-XA":
+        return `[Ţáĝ ţášķš áûţöɱáţîçáļļý îš öñ: ${answerer} çĥéçķš éáçĥ ñéŵ ţášķ áĝáîñšţ ţĥéšé ţáĝš. ~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Tag tasks automatically is on: ‬${answerer}‮ checks each new task against these tags.‬`;
+    }
+    return `Tag tasks automatically is on: ${answerer} checks each new task against these tags.`;
+  }
+  function settingsProjectsTagsAutoOnOwn() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `وسم المهام تلقائيًا مفعّل: تقارن نماذجك الخاصة كل مهمة جديدة بهذه الوسوم.`;
+      case "de":
+        return `Aufgaben automatisch taggen ist an: Deine eigenen Modelle gleichen jede neue Aufgabe mit diesen Tags ab.`;
+      case "es":
+        return `Etiquetar tareas automáticamente está activado: tus propios modelos comparan cada tarea nueva con estas etiquetas.`;
+      case "fr":
+        return `Étiqueter les tâches automatiquement est activé : vos propres modèles comparent chaque nouvelle tâche à ces étiquettes.`;
+      case "ja":
+        return `タスクに自動でタグを付けるはオンです: あなた自身のモデルが新しいタスクをそれぞれこれらのタグと照らし合わせます。`;
+      case "ko":
+        return `작업에 자동으로 태그 달기가 켜져 있습니다: 내 모델이 새 작업마다 이 태그들과 비교합니다.`;
+      case "pt-BR":
+        return `Etiquetar tarefas automaticamente está ativado: seus próprios modelos comparam cada nova tarefa a estas etiquetas.`;
+      case "zh-Hans":
+        return `自动为任务添加标签已开启：你自己的模型会将每个新任务与这些标签对照。`;
+      case "zh-Hant":
+        return `自動為任務加上標籤已開啟：你自己的模型會將每個新任務與這些標籤對照。`;
+      case "en-XA":
+        return `[Ţáĝ ţášķš áûţöɱáţîçáļļý îš öñ: ýöûŕ öŵñ ɱöðéļš çĥéçķ éáçĥ ñéŵ ţášķ áĝáîñšţ ţĥéšé ţáĝš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Tag tasks automatically is on: your own models check each new task against these tags.‬`;
+    }
+    return `Tag tasks automatically is on: your own models check each new task against these tags.`;
+  }
   function settingsProjectsTagsCancel() {
     switch (currentLanguage()) {
       case "ar":
@@ -85424,6 +85755,589 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Cancel‬`;
     }
     return `Cancel`;
+  }
+  function settingsProjectsTagsCheck() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `فحص المهام الحالية`;
+      case "de":
+        return `Vorhandene Aufgaben prüfen`;
+      case "es":
+        return `Revisar tareas existentes`;
+      case "fr":
+        return `Vérifier les tâches existantes`;
+      case "ja":
+        return `既存のタスクを確認`;
+      case "ko":
+        return `기존 작업 확인`;
+      case "pt-BR":
+        return `Verificar tarefas existentes`;
+      case "zh-Hans":
+        return `检查现有任务`;
+      case "zh-Hant":
+        return `檢查現有任務`;
+      case "en-XA":
+        return `[Çĥéçķ éẋîšţîñĝ ţášķš ~~~~~~~]`;
+      case "ar-XB":
+        return `‮Check existing tasks‬`;
+    }
+    return `Check existing tasks`;
+  }
+  function settingsProjectsTagsCheckAll() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `كل المهام`;
+      case "de":
+        return `Alle Aufgaben`;
+      case "es":
+        return `Todas las tareas`;
+      case "fr":
+        return `Toutes les tâches`;
+      case "ja":
+        return `すべてのタスク`;
+      case "ko":
+        return `모든 작업`;
+      case "pt-BR":
+        return `Todas as tarefas`;
+      case "zh-Hans":
+        return `所有任务`;
+      case "zh-Hant":
+        return `所有任務`;
+      case "en-XA":
+        return `[Éṽéŕý ţášķ ~~~~]`;
+      case "ar-XB":
+        return `‮Every task‬`;
+    }
+    return `Every task`;
+  }
+  function settingsProjectsTagsCheckCost(input2) {
+    const answerer = input2.answerer;
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${count} طلب، واحد لكل مهمة، يجيب عنها ${answerer}.`;
+          case "one":
+            return `طلب واحد، يجيب عنه ${answerer}.`;
+          case "two":
+            return `طلبان، واحد لكل مهمة، يجيب عنهما ${answerer}.`;
+          case "few":
+            return `${count} طلبات، واحد لكل مهمة، يجيب عنها ${answerer}.`;
+          case "many":
+            return `${count} طلبًا، واحد لكل مهمة، يجيب عنها ${answerer}.`;
+          default:
+            return `${count} طلب، واحد لكل مهمة، يجيب عنها ${answerer}.`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Eine Anfrage, beantwortet von ${answerer}.`;
+          default:
+            return `${count} Anfragen, eine pro Aufgabe, beantwortet von ${answerer}.`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Una solicitud, respondida por ${answerer}.`;
+          case "many":
+            return `${count} de solicitudes, una por tarea, respondidas por ${answerer}.`;
+          default:
+            return `${count} solicitudes, una por tarea, respondidas por ${answerer}.`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} requête, répondue par ${answerer}.`;
+          case "many":
+            return `${count} de requêtes, une par tâche, répondues par ${answerer}.`;
+          default:
+            return `${count} requêtes, une par tâche, répondues par ${answerer}.`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 件のリクエスト (タスクごとに 1 件)、${answerer} が回答します。`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `요청 ${count}개(작업마다 1개), ${answerer}이(가) 답합니다.`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Uma solicitação, respondida por ${answerer}.`;
+          case "many":
+            return `${count} de solicitações, uma por tarefa, respondidas por ${answerer}.`;
+          default:
+            return `${count} solicitações, uma por tarefa, respondidas por ${answerer}.`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 个请求，每个任务一个，由 ${answerer} 回答。`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 個請求，每個任務一個，由 ${answerer} 回答。`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[Öñé ŕéǫûéšţ, áñšŵéŕéð ƀý ${answerer}. ~~~~~~~~~]`;
+          default:
+            return `[${count} ŕéǫûéšţš, öñé þéŕ ţášķ, áñšŵéŕéð ƀý ${answerer}. ~~~~~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `‮One request, answered by ‬${answerer}‮.‬`;
+          default:
+            return `${count}‮ requests, one per task, answered by ‬${answerer}‮.‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `One request, answered by ${answerer}.`;
+      default:
+        return `${count} requests, one per task, answered by ${answerer}.`;
+    }
+  }
+  function settingsProjectsTagsCheckCostOwn(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${count} طلب، واحد لكل مهمة، تجيب عنها نماذجك الخاصة.`;
+          case "one":
+            return `طلب واحد، تجيب عنه نماذجك الخاصة.`;
+          case "two":
+            return `طلبان، واحد لكل مهمة، تجيب عنهما نماذجك الخاصة.`;
+          case "few":
+            return `${count} طلبات، واحد لكل مهمة، تجيب عنها نماذجك الخاصة.`;
+          case "many":
+            return `${count} طلبًا، واحد لكل مهمة، تجيب عنها نماذجك الخاصة.`;
+          default:
+            return `${count} طلب، واحد لكل مهمة، تجيب عنها نماذجك الخاصة.`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Eine Anfrage, beantwortet von deinen eigenen Modellen.`;
+          default:
+            return `${count} Anfragen, eine pro Aufgabe, beantwortet von deinen eigenen Modellen.`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Una solicitud, respondida por tus propios modelos.`;
+          case "many":
+            return `${count} de solicitudes, una por tarea, respondidas por tus propios modelos.`;
+          default:
+            return `${count} solicitudes, una por tarea, respondidas por tus propios modelos.`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} requête, répondue par vos propres modèles.`;
+          case "many":
+            return `${count} de requêtes, une par tâche, répondues par vos propres modèles.`;
+          default:
+            return `${count} requêtes, une par tâche, répondues par vos propres modèles.`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 件のリクエスト (タスクごとに 1 件)、あなた自身のモデルが回答します。`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `요청 ${count}개(작업마다 1개), 내 모델이 답합니다.`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Uma solicitação, respondida pelos seus próprios modelos.`;
+          case "many":
+            return `${count} de solicitações, uma por tarefa, respondidas pelos seus próprios modelos.`;
+          default:
+            return `${count} solicitações, uma por tarefa, respondidas pelos seus próprios modelos.`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 个请求，每个任务一个，由你自己的模型回答。`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 個請求，每個任務一個，由你自己的模型回答。`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[Öñé ŕéǫûéšţ, áñšŵéŕéð ƀý ýöûŕ öŵñ ɱöðéļš. ~~~~~~~~~~~~~~]`;
+          default:
+            return `[${count} ŕéǫûéšţš, öñé þéŕ ţášķ, áñšŵéŕéð ƀý ýöûŕ öŵñ ɱöðéļš. ~~~~~~~~~~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `‮One request, answered by your own models.‬`;
+          default:
+            return `${count}‮ requests, one per task, answered by your own models.‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `One request, answered by your own models.`;
+      default:
+        return `${count} requests, one per task, answered by your own models.`;
+    }
+  }
+  function settingsProjectsTagsCheckElsewhere(input2) {
+    const project = input2.project;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يجري فحص مهام ${project}. أوقفه أو انتظر حتى ينتهي لفحص هذا المشروع.`;
+      case "de":
+        return `Gerade läuft eine Prüfung der Aufgaben von ${project}. Stoppe sie oder lass sie fertig werden, um dieses Projekt zu prüfen.`;
+      case "es":
+        return `Hay una revisión de las tareas de ${project} en curso. Detenla o deja que termine para revisar este proyecto.`;
+      case "fr":
+        return `Une vérification des tâches de ${project} est en cours. Arrêtez-la ou laissez-la finir pour vérifier ce projet.`;
+      case "ja":
+        return `${project} のタスクの確認が進行中です。このプロジェクトを確認するには、停止するか終わるまで待ってください。`;
+      case "ko":
+        return `${project}의 작업을 확인하는 중입니다. 이 프로젝트를 확인하려면 중지하거나 끝날 때까지 기다리세요.`;
+      case "pt-BR":
+        return `Há uma verificação das tarefas de ${project} em andamento. Pare-a ou deixe-a terminar para verificar este projeto.`;
+      case "zh-Hans":
+        return `正在检查 ${project} 的任务。要检查此项目，请停止该检查或等它完成。`;
+      case "zh-Hant":
+        return `正在檢查 ${project} 的任務。要檢查此專案，請停止該檢查或等它完成。`;
+      case "en-XA":
+        return `[Å çĥéçķ öƒ ${project}'š ţášķš îš ûñðéŕ ŵáý. Šţöþ îţ öŕ ļéţ îţ ƒîñîšĥ ţö çĥéçķ ţĥîš þŕöĵéçţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮A check of ‬${project}‮'s tasks is under way. Stop it or let it finish to check this project.‬`;
+    }
+    return `A check of ${project}'s tasks is under way. Stop it or let it finish to check this project.`;
+  }
+  function settingsProjectsTagsCheckNamed(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `فحص المهام الحالية بحثًا عن ${name}`;
+      case "de":
+        return `Vorhandene Aufgaben auf ${name} prüfen`;
+      case "es":
+        return `Revisar tareas existentes para ${name}`;
+      case "fr":
+        return `Vérifier les tâches existantes pour ${name}`;
+      case "ja":
+        return `既存のタスクを ${name} で確認`;
+      case "ko":
+        return `기존 작업에서 ${name} 확인`;
+      case "pt-BR":
+        return `Verificar tarefas existentes para ${name}`;
+      case "zh-Hans":
+        return `按 ${name} 检查现有任务`;
+      case "zh-Hant":
+        return `依 ${name} 檢查現有任務`;
+      case "en-XA":
+        return `[Çĥéçķ éẋîšţîñĝ ţášķš ƒöŕ ${name} ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Check existing tasks for ‬${name}`;
+    }
+    return `Check existing tasks for ${name}`;
+  }
+  function settingsProjectsTagsCheckNone() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `كل هذه المهام مفحوصة بالفعل.`;
+      case "de":
+        return `Alle diese Aufgaben sind schon geprüft.`;
+      case "es":
+        return `Todas estas tareas ya están revisadas.`;
+      case "fr":
+        return `Toutes ces tâches sont déjà vérifiées.`;
+      case "ja":
+        return `これらのタスクはすべて確認済みです。`;
+      case "ko":
+        return `이 작업들은 모두 이미 확인했습니다.`;
+      case "pt-BR":
+        return `Todas essas tarefas já foram verificadas.`;
+      case "zh-Hans":
+        return `这些任务都已检查过。`;
+      case "zh-Hant":
+        return `這些任務都已檢查過。`;
+      case "en-XA":
+        return `[Éṽéŕý öñé öƒ ţĥéšé ţášķš îš áļŕéáðý çĥéçķéð. ~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Every one of these tasks is already checked.‬`;
+    }
+    return `Every one of these tasks is already checked.`;
+  }
+  function settingsProjectsTagsCheckNotNow() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ليس الآن`;
+      case "de":
+        return `Nicht jetzt`;
+      case "es":
+        return `Ahora no`;
+      case "fr":
+        return `Pas maintenant`;
+      case "ja":
+        return `今はしない`;
+      case "ko":
+        return `나중에`;
+      case "pt-BR":
+        return `Agora não`;
+      case "zh-Hans":
+        return `暂不`;
+      case "zh-Hant":
+        return `暫不`;
+      case "en-XA":
+        return `[Ñöţ ñöŵ ~~~]`;
+      case "ar-XB":
+        return `‮Not now‬`;
+    }
+    return `Not now`;
+  }
+  function settingsProjectsTagsCheckOpen() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `المهام المفتوحة`;
+      case "de":
+        return `Offene Aufgaben`;
+      case "es":
+        return `Tareas abiertas`;
+      case "fr":
+        return `Tâches ouvertes`;
+      case "ja":
+        return `未完了のタスク`;
+      case "ko":
+        return `열린 작업`;
+      case "pt-BR":
+        return `Tarefas abertas`;
+      case "zh-Hans":
+        return `未完成的任务`;
+      case "zh-Hant":
+        return `未完成的任務`;
+      case "en-XA":
+        return `[Öþéñ ţášķš ~~~~]`;
+      case "ar-XB":
+        return `‮Open tasks‬`;
+    }
+    return `Open tasks`;
+  }
+  function settingsProjectsTagsCheckProgress(input2) {
+    const done = input2.done;
+    const total = formatNumber(input2.total);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.total)) {
+          case "zero":
+            return `فُحصت ${done} من ${total} مهمة`;
+          case "one":
+            return `فُحصت ${done} من ${total} مهمة`;
+          case "two":
+            return `فُحصت ${done} من ${total} مهمة`;
+          case "few":
+            return `فُحصت ${done} من ${total} مهام`;
+          case "many":
+            return `فُحصت ${done} من ${total} مهمة`;
+          default:
+            return `فُحصت ${done} من ${total} مهمة`;
+        }
+      case "de":
+        switch (pluralCategory(input2.total)) {
+          case "one":
+            return `${done} von ${total} Aufgabe geprüft`;
+          default:
+            return `${done} von ${total} Aufgaben geprüft`;
+        }
+      case "es":
+        switch (pluralCategory(input2.total)) {
+          case "one":
+            return `Revisadas ${done} de ${total} tarea`;
+          case "many":
+            return `Revisadas ${done} de ${total} de tareas`;
+          default:
+            return `Revisadas ${done} de ${total} tareas`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.total)) {
+          case "one":
+            return `${done} sur ${total} tâche vérifiée`;
+          case "many":
+            return `${done} sur ${total} de tâches vérifiées`;
+          default:
+            return `${done} sur ${total} tâches vérifiées`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.total)) {
+          default:
+            return `${total} 件中 ${done} 件のタスクを確認しました`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.total)) {
+          default:
+            return `작업 ${total}개 중 ${done}개 확인함`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.total)) {
+          case "one":
+            return `${done} de ${total} tarefa verificada`;
+          case "many":
+            return `${done} de ${total} de tarefas verificadas`;
+          default:
+            return `${done} de ${total} tarefas verificadas`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.total)) {
+          default:
+            return `已检查 ${done}/${total} 个任务`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.total)) {
+          default:
+            return `已檢查 ${done}/${total} 個任務`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.total, "en")) {
+          case "one":
+            return `[Çĥéçķéð ${done} öƒ ${total} ţášķ ~~~~~~]`;
+          default:
+            return `[Çĥéçķéð ${done} öƒ ${total} ţášķš ~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.total, "en")) {
+          case "one":
+            return `‮Checked ‬${done}‮ of ‬${total}‮ task‬`;
+          default:
+            return `‮Checked ‬${done}‮ of ‬${total}‮ tasks‬`;
+        }
+    }
+    switch (pluralCategory(input2.total)) {
+      case "one":
+        return `Checked ${done} of ${total} task`;
+      default:
+        return `Checked ${done} of ${total} tasks`;
+    }
+  }
+  function settingsProjectsTagsCheckReach() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أي المهام`;
+      case "de":
+        return `Welche Aufgaben`;
+      case "es":
+        return `Qué tareas`;
+      case "fr":
+        return `Quelles tâches`;
+      case "ja":
+        return `対象のタスク`;
+      case "ko":
+        return `대상 작업`;
+      case "pt-BR":
+        return `Quais tarefas`;
+      case "zh-Hans":
+        return `哪些任务`;
+      case "zh-Hant":
+        return `哪些任務`;
+      case "en-XA":
+        return `[Ŵĥîçĥ ţášķš ~~~~]`;
+      case "ar-XB":
+        return `‮Which tasks‬`;
+    }
+    return `Which tasks`;
+  }
+  function settingsProjectsTagsCheckStart() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ابدأ`;
+      case "de":
+        return `Starten`;
+      case "es":
+        return `Empezar`;
+      case "fr":
+        return `Démarrer`;
+      case "ja":
+        return `開始`;
+      case "ko":
+        return `시작`;
+      case "pt-BR":
+        return `Iniciar`;
+      case "zh-Hans":
+        return `开始`;
+      case "zh-Hant":
+        return `開始`;
+      case "en-XA":
+        return `[Šţáŕţ ~~]`;
+      case "ar-XB":
+        return `‮Start‬`;
+    }
+    return `Start`;
+  }
+  function settingsProjectsTagsCheckStop() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أوقف`;
+      case "de":
+        return `Stoppen`;
+      case "es":
+        return `Detener`;
+      case "fr":
+        return `Arrêter`;
+      case "ja":
+        return `停止`;
+      case "ko":
+        return `중지`;
+      case "pt-BR":
+        return `Parar`;
+      case "zh-Hans":
+        return `停止`;
+      case "zh-Hant":
+        return `停止`;
+      case "en-XA":
+        return `[Šţöþ ~~]`;
+      case "ar-XB":
+        return `‮Stop‬`;
+    }
+    return `Stop`;
+  }
+  function settingsProjectsTagsCheckWeek() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `المهام المفتوحة وتلك المنجزة في آخر 7 أيام`;
+      case "de":
+        return `Offene Aufgaben und die in den letzten 7 Tagen erledigten`;
+      case "es":
+        return `Tareas abiertas y las terminadas en los últimos 7 días`;
+      case "fr":
+        return `Tâches ouvertes et celles terminées ces 7 derniers jours`;
+      case "ja":
+        return `未完了のタスクと過去 7 日間に完了したタスク`;
+      case "ko":
+        return `열린 작업과 최근 7일 동안 완료된 작업`;
+      case "pt-BR":
+        return `Tarefas abertas e as concluídas nos últimos 7 dias`;
+      case "zh-Hans":
+        return `未完成的任务和过去 7 天内完成的任务`;
+      case "zh-Hant":
+        return `未完成的任務和過去 7 天內完成的任務`;
+      case "en-XA":
+        return `[Öþéñ ţášķš áñð ţĥöšé ðöñé îñ ţĥé ļášţ 7 ðáýš ~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Open tasks and those done in the last 7 days‬`;
+    }
+    return `Open tasks and those done in the last 7 days`;
   }
   function settingsProjectsTagsDescription() {
     switch (currentLanguage()) {
@@ -111009,6 +111923,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     feedRunsOnThere,
     feedStarted,
     feedStopped,
+    feedTagCheckFinished,
+    feedTagCheckFinishedMissed,
     feedUndelivered,
     feedUnsafeDataReaderReported,
     feedUpdated,
@@ -111831,6 +112747,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsDecisionUseKindReads,
     settingsDecisionUseSavedResetName,
     settingsDecisionUseSavedResetReads,
+    settingsDecisionUseTagsName,
+    settingsDecisionUseTagsReads,
     settingsDecisionsActions,
     settingsDecisionsAnswerWith,
     settingsDecisionsAuto,
@@ -112544,7 +113462,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsProjectsScope,
     settingsProjectsScopeDescription,
     settingsProjectsTagsAdd,
+    settingsProjectsTagsAutoOff,
+    settingsProjectsTagsAutoOn,
+    settingsProjectsTagsAutoOnOwn,
     settingsProjectsTagsCancel,
+    settingsProjectsTagsCheck,
+    settingsProjectsTagsCheckAll,
+    settingsProjectsTagsCheckCost,
+    settingsProjectsTagsCheckCostOwn,
+    settingsProjectsTagsCheckElsewhere,
+    settingsProjectsTagsCheckNamed,
+    settingsProjectsTagsCheckNone,
+    settingsProjectsTagsCheckNotNow,
+    settingsProjectsTagsCheckOpen,
+    settingsProjectsTagsCheckProgress,
+    settingsProjectsTagsCheckReach,
+    settingsProjectsTagsCheckStart,
+    settingsProjectsTagsCheckStop,
+    settingsProjectsTagsCheckWeek,
     settingsProjectsTagsDescription,
     settingsProjectsTagsDescriptionExample,
     settingsProjectsTagsEdit,
@@ -114534,6 +115469,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "feedRunsOnThere": ["name", "where"],
     "feedStarted": [],
     "feedStopped": [],
+    "feedTagCheckFinished": ["count", "project"],
+    "feedTagCheckFinishedMissed": ["count", "missed", "project"],
     "feedUndelivered": ["why"],
     "feedUnsafeDataReaderReported": [],
     "feedUpdated": ["text"],
@@ -115356,6 +116293,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsDecisionUseKindReads": [],
     "settingsDecisionUseSavedResetName": [],
     "settingsDecisionUseSavedResetReads": [],
+    "settingsDecisionUseTagsName": [],
+    "settingsDecisionUseTagsReads": [],
     "settingsDecisionsActions": [],
     "settingsDecisionsAnswerWith": ["model"],
     "settingsDecisionsAuto": [],
@@ -116069,7 +117008,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsProjectsScope": [],
     "settingsProjectsScopeDescription": [],
     "settingsProjectsTagsAdd": [],
+    "settingsProjectsTagsAutoOff": [],
+    "settingsProjectsTagsAutoOn": ["answerer"],
+    "settingsProjectsTagsAutoOnOwn": [],
     "settingsProjectsTagsCancel": [],
+    "settingsProjectsTagsCheck": [],
+    "settingsProjectsTagsCheckAll": [],
+    "settingsProjectsTagsCheckCost": ["answerer", "count"],
+    "settingsProjectsTagsCheckCostOwn": ["count"],
+    "settingsProjectsTagsCheckElsewhere": ["project"],
+    "settingsProjectsTagsCheckNamed": ["name"],
+    "settingsProjectsTagsCheckNone": [],
+    "settingsProjectsTagsCheckNotNow": [],
+    "settingsProjectsTagsCheckOpen": [],
+    "settingsProjectsTagsCheckProgress": ["done", "total"],
+    "settingsProjectsTagsCheckReach": [],
+    "settingsProjectsTagsCheckStart": [],
+    "settingsProjectsTagsCheckStop": [],
+    "settingsProjectsTagsCheckWeek": [],
     "settingsProjectsTagsDescription": [],
     "settingsProjectsTagsDescriptionExample": [],
     "settingsProjectsTagsEdit": [],

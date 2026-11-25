@@ -254,6 +254,8 @@
   "settingsDecisionUseKindReads": "새 작업마다 작업에 맞는 모델로 실행돼서, 쉬운 작업은 사용 한도를 덜 써요. 작업의 제목과 목표, 직접 쓴 말, 프로젝트와 관련 작업을 읽어요.",
   "settingsDecisionUseSavedResetName": "저장된 재설정 사용 또는 대기",
   "settingsDecisionUseSavedResetReads": "‘저장된 재설정 자동 사용’이 켜진 Codex 계정에서 작업이 기다릴 때, 저장된 재설정을 쓸지 사용 한도가 다시 채워지길 기다릴지 판단해요. 계정의 요금제, 각 사용 한도의 남은 양과 다시 채워지는 시점, 저장된 재설정 수, 기다리는 작업을 읽어요.",
+  "settingsDecisionUseTagsName": "작업에 자동으로 태그 달기",
+  "settingsDecisionUseTagsReads": "태그가 있는 프로젝트의 새 작업을 각 태그와 비교해 맞는 태그를 답니다. 작업의 제목, 목표, 내 말, 프로젝트, 상위 작업을 읽습니다.",
   "settingsDecisionsActions": "결정 모델 동작",
   "settingsDecisionsAnswerWith": "{model}(으)로 결정에 답하기",
   "settingsDecisionsAuto": "자동 · 수준에 둔 모델 중 가장 저렴한 모델",
@@ -1021,7 +1023,33 @@
   "settingsProjectsScope": "범위",
   "settingsProjectsScopeDescription": "이 프로젝트에 속하는 작업이에요. 일등항해사는 이것을 읽고 새 작업을 어디에 둘지 정해요.",
   "settingsProjectsTagsAdd": "태그 추가",
+  "settingsProjectsTagsAutoOff": "작업에 자동으로 태그 달기가 설정 → 인텔리전스에서 꺼져 있어 새 작업에 태그가 저절로 달리지 않습니다.",
+  "settingsProjectsTagsAutoOn": "작업에 자동으로 태그 달기가 켜져 있습니다: {answerer}이(가) 새 작업마다 이 태그들과 비교합니다.",
+  "settingsProjectsTagsAutoOnOwn": "작업에 자동으로 태그 달기가 켜져 있습니다: 내 모델이 새 작업마다 이 태그들과 비교합니다.",
   "settingsProjectsTagsCancel": "취소",
+  "settingsProjectsTagsCheck": "기존 작업 확인",
+  "settingsProjectsTagsCheckAll": "모든 작업",
+  "settingsProjectsTagsCheckCost": {
+    "plural": "count",
+    "other": "요청 {count}개(작업마다 1개), {answerer}이(가) 답합니다."
+  },
+  "settingsProjectsTagsCheckCostOwn": {
+    "plural": "count",
+    "other": "요청 {count}개(작업마다 1개), 내 모델이 답합니다."
+  },
+  "settingsProjectsTagsCheckElsewhere": "{project}의 작업을 확인하는 중입니다. 이 프로젝트를 확인하려면 중지하거나 끝날 때까지 기다리세요.",
+  "settingsProjectsTagsCheckNamed": "기존 작업에서 {name} 확인",
+  "settingsProjectsTagsCheckNone": "이 작업들은 모두 이미 확인했습니다.",
+  "settingsProjectsTagsCheckNotNow": "나중에",
+  "settingsProjectsTagsCheckOpen": "열린 작업",
+  "settingsProjectsTagsCheckProgress": {
+    "plural": "total",
+    "other": "작업 {total}개 중 {done}개 확인함"
+  },
+  "settingsProjectsTagsCheckReach": "대상 작업",
+  "settingsProjectsTagsCheckStart": "시작",
+  "settingsProjectsTagsCheckStop": "중지",
+  "settingsProjectsTagsCheckWeek": "열린 작업과 최근 7일 동안 완료된 작업",
   "settingsProjectsTagsDescription": "해당하는 작업",
   "settingsProjectsTagsDescriptionExample": "전에는 되던 것이 지금은 고장 난 경우",
   "settingsProjectsTagsEdit": "편집",

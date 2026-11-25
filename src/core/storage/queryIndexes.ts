@@ -59,6 +59,9 @@ import { EVERY_STATUS, MISSING_INVARIANTS } from "./taskInvariants";
  * The conversation's read (conversationRead.ts) pages the captain's own
  * card presses by time, and seeks the message that names a line typed
  * under a card, instead of walking every observation or every message.
+ * Automatic tagging seeks the tasks filed since it began asking and the
+ * decision model's rows waiting to be asked again (tagWork.ts), at each
+ * task filed, moved or reworded, instead of walking every task.
  * `migrate` (db.ts) creates them once a database reaches the newest migration.
  */
 export function createQueryIndexes(db: AppDatabase): void {
@@ -100,6 +103,9 @@ export function createQueryIndexes(db: AppDatabase): void {
       ON task_permissions ((${UNRESOLVED_SEND}), task_id) WHERE (${UNRESOLVED_SEND}) = 1;
     CREATE INDEX IF NOT EXISTS tasks_specification ON tasks (specification_id);
     CREATE INDEX IF NOT EXISTS tasks_branch ON tasks (branch);
+    CREATE INDEX IF NOT EXISTS tasks_created_at ON tasks (created_at);
+    CREATE INDEX IF NOT EXISTS task_tags_unjudged ON task_tags (task_id)
+      WHERE set_by = 'decision' AND revision IS NULL;
     CREATE INDEX IF NOT EXISTS tasks_status_reads ON tasks (closed_at, id, status)
       WHERE ${EVERY_STATUS};
     CREATE INDEX IF NOT EXISTS tasks_missing_invariants ON tasks (id)

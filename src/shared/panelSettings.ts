@@ -75,6 +75,7 @@ export const PANEL_SETTINGS: Record<ActionName, PanelSetting> = {
   "project-move": { unreadable: "names" },
   "project-name": { unreadable: "names" },
   "project-tags": { unreadable: "names" },
+  "project-tag-check": { unreadable: "act" },
   "project-runs-on": { unreadable: "names" },
   "device-invite": { unreadable: "names" },
   "private-site-allow": { unreadable: "names" },

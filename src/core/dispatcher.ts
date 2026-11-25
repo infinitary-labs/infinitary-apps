@@ -43,7 +43,7 @@ import { accountHandlers } from "./dispatcher/accountHandlers";
 import { createActionTrail } from "./dispatcher/actionTrail";
 import { cardMediaHandlers } from "./dispatcher/cardMedia";
 import { type CoreHandlers, createCatalogDispatch } from "./dispatcher/catalogDispatch";
-import { renameProject } from "./dispatcher/projectRename";
+import { projectHandlers } from "./dispatcher/projectHandlers";
 import { moveRepositories } from "./dispatcher/repositoryMove";
 import { resetHandlers } from "./dispatcher/resetHandlers";
 import type { CoreEventSink } from "./events";
@@ -996,9 +996,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
         : { ok: false, text: NO_TASK_BROWSERS },
     ...privateSiteChannels(() => services.browsers?.privateSites, NO_TASK_BROWSERS),
 
-    "inf:projects:list": () => services.taskProtocol.projects(),
-    "inf:projects:rename": (projectId, name) => renameProject(services, projectId, name),
-    "inf:projects:tags": (change) => services.tasks.changeProjectTags(change),
+    ...projectHandlers(services),
 
     "inf:quota:snapshot": () => services.quota.latest() ?? null,
 

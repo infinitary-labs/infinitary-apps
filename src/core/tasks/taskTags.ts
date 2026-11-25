@@ -73,25 +73,78 @@ export function setTaskTags(
       });
       (on ? added : removed).push(tag.name);
     }
-    if (added.length + removed.length === 0) return { added, removed };
-    writer.patch(taskId, { updatedAt: at });
-    for (const [names, on] of [
-      [added, true],
-      [removed, false],
-    ] as const) {
-      if (names.length === 0) continue;
-      const line = tagLine(by, on, names);
-      writer.addEvent({
-        taskId,
-        at,
-        actor: ACTOR[by],
-        kind: "note",
-        text: line.text,
-        data: { said: line.said, tags: { [on ? "added" : "removed"]: names, by }, news: false },
-        feed: false,
-      });
-    }
+    noteTagsSet(writer, taskId, { added, removed }, by, at);
     return { added, removed };
+  })();
+}
+
+/** One quiet timeline line for each direction tags moved, inside the caller's write. */
+function noteTagsSet(writer: TaskWriter, taskId: string, set: TagsSet, by: TagSetter, at: number) {
+  if (set.added.length + set.removed.length === 0) return;
+  writer.patch(taskId, { updatedAt: at });
+  for (const [names, on] of [
+    [set.added, true],
+    [set.removed, false],
+  ] as const) {
+    if (names.length === 0) continue;
+    const line = tagLine(by, on, names);
+    writer.addEvent({
+      taskId,
+      at,
+      actor: ACTOR[by],
+      kind: "note",
+      text: line.text,
+      data: { said: line.said, tags: { [on ? "added" : "removed"]: names, by }, news: false },
+      feed: false,
+    });
+  }
+}
+
+/** The decision model's answer for one tag on one task, at the description revision it read. */
+export type TagJudgment = { tagId: string; revision: number; answer: "yes" | "no" | "unsure" };
+
+/**
+ * Record the decision model's answers on one task (docs/task-tags.md,
+ * "Automatic tagging"): yes puts the tag on, no takes off a tag it had put
+ * on, and unsure leaves the tag as it is. Each answer is kept with the
+ * description revision it read, so the same task, tag and description are
+ * never asked twice; an answer read at an older description, about a tag
+ * no longer the task's project's, or about a tag a person or the first
+ * mate set or removed, is dropped. `kept` counts the answers recorded.
+ */
+export function judgeTaskTags(
+  writer: TaskWriter,
+  taskId: string,
+  judgments: readonly TagJudgment[],
+): TagsSet & { kept: number } {
+  return writer.write((): TagsSet & { kept: number } => {
+    const record = writer.store.get(taskId);
+    const set: TagsSet = { added: [], removed: [] };
+    let kept = 0;
+    if (!record) return { ...set, kept };
+    const rows = writer.store.tags.rowsOf(taskId);
+    const at = writer.now();
+    for (const judgment of judgments) {
+      const tag = writer.projects.tags.get(judgment.tagId);
+      if (!tag || tag.projectId !== record.projectId || tag.revision !== judgment.revision)
+        continue;
+      const row = rows.get(tag.id);
+      if (row && row.by !== "decision") continue;
+      const was = row?.on ?? false;
+      const on = judgment.answer === "yes" ? true : judgment.answer === "no" ? false : was;
+      writer.store.tags.set({
+        taskId,
+        tagId: tag.id,
+        on,
+        by: "decision",
+        revision: tag.revision,
+        at,
+      });
+      kept += 1;
+      if (on !== was) (on ? set.added : set.removed).push(tag.name);
+    }
+    noteTagsSet(writer, taskId, set, "decision", at);
+    return { ...set, kept };
   })();
 }
 

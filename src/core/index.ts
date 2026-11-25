@@ -219,6 +219,7 @@ export async function startCore(given: HostCapabilities, options: CoreOptions = 
       services.jobs.disposeAll();
       services.ticker.stop();
       services.corrections?.stop();
+      services.tagging?.stop();
       services.stopWorkPresentation();
       services.scheduler.stop();
       // An attach still in flight would make the first mate's folders after the quit.

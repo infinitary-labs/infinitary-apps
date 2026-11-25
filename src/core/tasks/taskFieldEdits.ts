@@ -475,6 +475,9 @@ export function updateTaskFields(
     if (referenceEdits.some(([, ref]) => ref) && !update.shape && !record.shape)
       update.shape = { kind: "unclear" };
     writer.patch(id, { ...update, updatedAt: at });
+    // New words: automatic tagging asks again the tags it judged on the old
+    // ones (docs/task-tags.md, "Automatic tagging").
+    if ("title" in update || "goal" in update) writer.store.tags.forgetJudgments(id);
     for (const [kind, ref, target] of referenceEdits) {
       if (ref) recordReference(writer, writer.mustGet(id), kind, ref, target, actor, at);
       else writer.references.delete(id, kind);

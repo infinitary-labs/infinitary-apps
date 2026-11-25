@@ -128,6 +128,24 @@
   "feedRunsOnThere": "يعمل {name} الآن {where}. تبدأ مهمته التالية هناك؛ والمهمة التي بدأت بالفعل تنتهي حيث بدأت.",
   "feedStarted": "بدأت",
   "feedStopped": "توقفت",
+  "feedTagCheckFinished": {
+    "plural": "count",
+    "zero": "{project}: فُحصت {count} مهمة بحثًا عن وسوم.",
+    "one": "{project}: فُحصت مهمة واحدة بحثًا عن وسوم.",
+    "two": "{project}: فُحصت مهمتان بحثًا عن وسوم.",
+    "few": "{project}: فُحصت {count} مهام بحثًا عن وسوم.",
+    "many": "{project}: فُحصت {count} مهمة بحثًا عن وسوم.",
+    "other": "{project}: فُحصت {count} مهمة بحثًا عن وسوم."
+  },
+  "feedTagCheckFinishedMissed": {
+    "plural": "count",
+    "zero": "{project}: فُحصت {count} مهمة بحثًا عن وسوم؛ و{missed} لم تتلقَّ إجابة وبقيت دون فحص.",
+    "one": "{project}: فُحصت مهمة واحدة بحثًا عن وسوم؛ و{missed} لم تتلقَّ إجابة وبقيت دون فحص.",
+    "two": "{project}: فُحصت مهمتان بحثًا عن وسوم؛ و{missed} لم تتلقَّ إجابة وبقيت دون فحص.",
+    "few": "{project}: فُحصت {count} مهام بحثًا عن وسوم؛ و{missed} لم تتلقَّ إجابة وبقيت دون فحص.",
+    "many": "{project}: فُحصت {count} مهمة بحثًا عن وسوم؛ و{missed} لم تتلقَّ إجابة وبقيت دون فحص.",
+    "other": "{project}: فُحصت {count} مهمة بحثًا عن وسوم؛ و{missed} لم تتلقَّ إجابة وبقيت دون فحص."
+  },
   "feedUndelivered": "لم تُسلَّم الرسالة: {why}",
   "feedUnsafeDataReaderReported": "أرسل قارئ البيانات غير الآمنة تقريره؛ كلامه في سجله.",
   "feedUpdated": "تحديث: {text}",

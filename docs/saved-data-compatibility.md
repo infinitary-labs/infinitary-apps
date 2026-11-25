@@ -600,3 +600,6 @@ No existing row changes, and nothing asks the person for a step.
 An older build refuses the profile, because its migration history names a migration it does not know ("Before services start").
 An export this build writes carries no tags, so a task imports with none.
 Dropping both tables and removing the migration's history row undoes it; a task's timeline lines about its tags stay as ordinary notes.
+
+Automatic tagging adds no table and no migration: it keeps the moment it began asking in the `tag-auto-since` settings row and the check under way in the `tag-check` row, and writes ordinary `task_tags` rows (`docs/task-tags.md`, "Automatic tagging").
+Its two query indexes, `tasks_created_at` and `task_tags_unjudged`, are created at the start like the other optional query indexes, and an older build ignores them and both rows.

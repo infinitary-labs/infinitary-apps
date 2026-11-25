@@ -58,6 +58,7 @@ import {
   UNKNOWN_RELEASE_TRACKING,
 } from "@shared/releaseTracking";
 import { DEFAULT_SHARING, type Sharing, sharingSchema } from "@shared/sharing";
+import { tagCheckReachSchema } from "@shared/tagCheck";
 import { z } from "zod";
 import { runbookStateSchema } from "../../shared/runbooks";
 import { type SeatDigestEntry, seatDigestEntrySchema } from "../orchestrator/seatDigest";
@@ -75,6 +76,17 @@ const firstmateMovedFromSchema = z.object({
   class: z.enum(["signed_out", "no_headroom", "refused", "client", "unavailable"]),
   offered: z.boolean().optional(),
 });
+
+/** A check of existing tasks kept across a restart (`getTagCheck`). */
+const savedTagCheckSchema = z.strictObject({
+  projectId: z.string().min(1),
+  reach: tagCheckReachSchema,
+  tagIds: z.array(z.string().min(1)).min(1).nullable(),
+  at: z.number().finite(),
+  total: z.number().int().nonnegative(),
+});
+export type SavedTagCheck = z.infer<typeof savedTagCheckSchema>;
+
 export type FirstmateMovedFrom = z.infer<typeof firstmateMovedFromSchema>;
 
 const firstmatePausedSchema = z.object({
@@ -603,6 +615,35 @@ export class SettingsStore {
 
   setTaskCostLimit(limit: CostLimit): void {
     this.set("task-cost-limit", costLimitSchema.parse(limit));
+  }
+
+  /**
+   * The check of existing tasks under way (docs/task-tags.md, "Checking
+   * existing tasks"), kept so a restart resumes it; null once it ends or
+   * stops. `at` is when it started, which fixes the tasks it reads.
+   */
+  getTagCheck(): SavedTagCheck | null {
+    const parsed = savedTagCheckSchema.safeParse(this.get("tag-check"));
+    return parsed.success ? parsed.data : null;
+  }
+
+  setTagCheck(check: SavedTagCheck | null): void {
+    if (check) this.set("tag-check", savedTagCheckSchema.parse(check));
+    else this.remove("tag-check");
+  }
+
+  /**
+   * When automatic tagging last began asking: tasks filed before it are
+   * left for a check, so turning it on, or a first start of a build that
+   * has it, never asks about the tasks filed meanwhile. Absent until then.
+   */
+  getTagAutoSince(): number | null {
+    const parsed = z.number().finite().safeParse(this.get("tag-auto-since"));
+    return parsed.success ? parsed.data : null;
+  }
+
+  setTagAutoSince(at: number): void {
+    this.set("tag-auto-since", at);
   }
 
   /** Notifications when the window is not front (P2): default on. */

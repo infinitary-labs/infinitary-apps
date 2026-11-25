@@ -113,6 +113,14 @@
   "feedRunsOnThere": "{name} は今後 {where} で実行されます。次のタスクはそちらで開始し、実行中のタスクは開始した場所で完了します。",
   "feedStarted": "開始",
   "feedStopped": "停止",
+  "feedTagCheckFinished": {
+    "plural": "count",
+    "other": "{project}: {count} 件のタスクのタグを確認しました。"
+  },
+  "feedTagCheckFinishedMissed": {
+    "plural": "count",
+    "other": "{project}: {count} 件のタスクのタグを確認しました。{missed} 件は回答がなく、未確認のままです。"
+  },
   "feedUndelivered": "メッセージ未送達：{why}",
   "feedUnsafeDataReaderReported": "安全でないデータの読み手が報告しました。その内容は記録にあります。",
   "feedUpdated": "更新：{text}",

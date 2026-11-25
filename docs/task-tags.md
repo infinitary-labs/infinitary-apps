@@ -3,6 +3,7 @@
 Each project keeps its own list of tags, and a task carries any of its project's tags.
 A tag has a name and a description that says which tasks qualify, such as `bug`: "Something that used to work and is broken now".
 Tags help a person find and group work; nothing in the app acts on a tag by itself.
+The decision model tags each new task in a project with tags, and Check existing tasks tags the older ones ("Automatic tagging").
 
 ## A project's tags
 
@@ -30,6 +31,7 @@ A project's view (`projectViewSchema`, `src/shared/tasks.ts`) carries its tags i
   The form refuses an empty name, an empty description and a name the project already has in the person's own words before anything is sent.
 - **The first mate.**
   The `project-tags` line of the action catalog (`src/shared/tagActions.ts`) sends the same request Settings sends, `inf:projects:tags`, on the captain's ask; its current value lists every project's tags with their descriptions and how many tasks carry each.
+  The `project-tag-check` line starts or stops Check existing tasks, `inf:projects:tag-check`, on the captain's ask; its current value is every project's check as `inf:projects:tag-checks` reads it.
 
 ## The tags a task carries
 
@@ -49,6 +51,8 @@ Each change to a task's tags writes one quiet `note` on its timeline for each di
 
 A task reads a tag only while the tag belongs to its own project.
 Moving a task to another project deletes its tag rows, on and off, in the same write as the move (`src/core/tasks/projectMove.ts`), and so does moving repositories out of a project that keeps others.
+A task moved on its own owes automatic tagging its new project's tags: the move writes an off row of the decision model's with no revision for each, which automatic tagging asks.
+Tasks that leave with their repositories owe nothing; Check existing tasks reaches them.
 A project that empties into another, its repositories all moved, brings its tags along (`carryProjectTags`, `src/core/tasks/taskTags.ts`): each lands on the other project's tag of the same name in any case, or joins its list with its description, and every task keeps its rows, on and off, with who set each.
 A row keeps the description revision it was judged at only when that description is the one now on its tag: a row landing on a tag the other project already had, or one judged at an older description of its own tag, loses it.
 The emptied project keeps no tags.
@@ -89,8 +93,45 @@ With no project in focus, other projects' tasks count and list under No tag.
 - **Command search.**
   Filter tasks by tag, Show tasks by tag and Group tasks, with no default keys; the first two say why they cannot run while no tags apply (`rail.refuse`, `docs/ui-plugins.md`).
 
+## Automatic tagging
+
+Tag tasks automatically is a use of the decision model (`tags`, `src/shared/decisionUses.ts`; `docs/decision-models.md`, "The uses"), on by default, switched in Settings → Intelligence.
+`TaskTagger` (`src/core/decisions/taskTagger.ts`) is the one worker that asks; it records every answer through `TaskService.judgeTags` (`judgeTaskTags`, `src/core/tasks/taskTags.ts`).
+It asks about one task at a time, all of the task's owed tags in one request (`together`), with the tagging question (`docs/task-tags-eval.md`), and records the use against the task.
+A task starts as it always does: nothing waits for the answer.
+
+What is owed is read from the record each time, never kept in a list (`TagWork`, `src/core/storage/tagWork.ts`), so a restart picks up where the record stands:
+
+- a tag of the task's project with no row, on a task filed after automatic tagging began asking and no earlier than the tag;
+- a row the decision model set with no revision, which a task's new title or goal leaves (`TaskTagStore.forgetJudgments`), as does a single task's move.
+
+Automatic tagging began asking when this version first started with the use on, and begins again whenever the use is turned back on (the `tag-auto-since` settings row), so tasks filed while it was off are left to Check existing tasks.
+A project with no tags owes nothing and is never asked about.
+
+`yes` turns the tag on, `no` leaves it off, and `unsure` keeps what the row held; each is kept with the description revision it read, so nothing is asked twice about the same task, tag and description.
+A row a person or the first mate set is never asked about or changed.
+A tag left without an answer stays owed: its task is asked again an hour later (`TAG_RETRY_MS`) or at the next start, with no card, no Activity line and no loop.
+A changed title or goal asks again only the tags the decision model set; a tag added later, or a new description, is asked only by Check existing tasks.
+
+Turning the use off stops new requests at once, lets go of the request in flight and stops a check under way, keeping what it recorded.
+
+## Checking existing tasks
+
+The Tags box ends, once the project has tags, with a line saying whether Tag tasks automatically checks each new task and who answers (`ProjectTagCheck`, `src/renderer/src/settings/ProjectTagCheck.tsx`).
+While the use is on, Check existing tasks follows: which tasks (open; open and done in the last 7 days; every task), how many requests that makes, one per task with an unjudged tag, and who answers, then Start.
+While a check runs, the same place counts the tasks checked of the tasks it set out to check, with Stop.
+After a tag is added or its description changed, the box offers to check that tag alone; Not now returns it to every tag.
+
+`inf:projects:tag-check` starts or stops a check, and `inf:projects:tag-checks` reads one project's view or every project with tags (`src/shared/tagCheck.ts`).
+A check asks every task in its reach filed before it started that has a tag with no row, or a row the decision model set at another description or none.
+New tasks go first; the check takes the turns left.
+One check runs at a time across every project, kept in the `tag-check` settings row, so a restart resumes it; Stop keeps every answer recorded so far.
+A finished check writes one Activity line naming its project and how many tasks it checked, and how many got no answer.
+
 ## Saved data and older sides
 
 The tags migration adds both tables; an existing record upgrades with no step for the person, and every task starts with no tags (`docs/saved-data-compatibility.md`).
 A record opened at an older version has neither table, and both stores read nothing from it.
 An older window, view or phone never sends either request and reads neither `tags` field, so it draws no tags and behaves as before (`src/shared/contract-changes/project-tags.md`).
+Automatic tagging adds no table: it keeps two settings rows, `tag-auto-since` and `tag-check`, and the `revision` column the tags migration already wrote; two query indexes seek its reads (`src/core/storage/queryIndexes.ts`).
+An older window never sends the check requests and draws no Check existing tasks (`src/shared/contract-changes/tag-check.md`).

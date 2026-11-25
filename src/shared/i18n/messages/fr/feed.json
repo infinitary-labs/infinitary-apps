@@ -119,6 +119,18 @@
   "feedRunsOnThere": "{name} s’exécute désormais {where}. Sa prochaine tâche y démarre ; une tâche déjà en cours se termine là où elle a commencé.",
   "feedStarted": "Démarrée",
   "feedStopped": "Arrêtée",
+  "feedTagCheckFinished": {
+    "plural": "count",
+    "one": "{project} : {count} tâche vérifiée pour les étiquettes.",
+    "many": "{project} : {count} de tâches vérifiées pour les étiquettes.",
+    "other": "{project} : {count} tâches vérifiées pour les étiquettes."
+  },
+  "feedTagCheckFinishedMissed": {
+    "plural": "count",
+    "one": "{project} : {count} tâche vérifiée pour les étiquettes ; {missed} sans réponse restent à vérifier.",
+    "many": "{project} : {count} de tâches vérifiées pour les étiquettes ; {missed} sans réponse restent à vérifier.",
+    "other": "{project} : {count} tâches vérifiées pour les étiquettes ; {missed} sans réponse restent à vérifier."
+  },
   "feedUndelivered": "Message non remis : {why}",
   "feedUnsafeDataReaderReported": "Le lecteur de données non sûres a fait son rapport ; ses mots sont sur sa fiche.",
   "feedUpdated": "Mise à jour : {text}",

@@ -18,6 +18,7 @@ import {
   sharingViewSchema,
 } from "../sharing";
 import { settingsShowSchema } from "../showActions";
+import { tagCheckChangeSchema, tagCheckReadSchema, tagCheckViewSchema } from "../tagCheck";
 import { projectTagChangeResultSchema, projectTagChangeSchema } from "../tags";
 import { projectViewSchema } from "../tasks";
 import { type ChannelDeclaration, okSchema } from "./common";
@@ -51,6 +52,25 @@ export const settingsChannels = {
     reach: "home",
     request: z.tuple([projectTagChangeSchema]),
     response: projectTagChangeResultSchema,
+  },
+  // Check existing tasks (docs/task-tags.md, `tag-check.md`): each project
+  // with tags, or the one named with the tags to count for, as its Tags
+  // group draws it. Settings and the first mate's `project-tag-check` line
+  // read it.
+  "inf:projects:tag-checks": {
+    effect: "read",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([tagCheckReadSchema.optional()]),
+    response: z.array(tagCheckViewSchema),
+  },
+  // Start or stop a project's check; a refusal throws its words.
+  "inf:projects:tag-check": {
+    effect: "change",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([tagCheckChangeSchema]),
+    response: tagCheckViewSchema,
   },
   // The captain's presentation choices, held by the core so a fresh window
   // profile cannot forget them (src/shared/preferences.ts).

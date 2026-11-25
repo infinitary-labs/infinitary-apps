@@ -45,6 +45,7 @@ import type { CoreServices } from "./coreServices";
 import { CORRECTION_CASES, CORRECTION_QUESTIONS } from "./decisions/correctionConsumer";
 import { startHomeDecisions } from "./decisions/homeDecisions";
 import { startCorrections } from "./decisions/startCorrections";
+import { startTaskTagger } from "./decisions/taskTagger";
 import { CaptainPlaces } from "./devices/captainPlaces";
 import { ownComputerName } from "./devices/computerName";
 import { startHomeDevices } from "./devices/homeDevices";
@@ -1343,18 +1344,16 @@ export async function createServices(
     integrationInbox,
   });
   const homeComputerName = await ownComputerName({ packaged: host.app.packaged, env: process.env });
+  const decisionUses = { db, tasks, models: decisions, settings, ticker };
   const corrections = startCorrections({
-    db,
+    ...decisionUses,
     inbox,
     cards: cardStore,
-    tasks,
-    models: decisions,
-    settings,
     supervisor,
     knowledge,
     repos,
-    ticker,
   });
+  const tagging = startTaskTagger({ ...decisionUses, broadcastEvent });
   const firstmate = startHomeFirstmate({
     corrections,
     workDevices,
@@ -1769,6 +1768,7 @@ export async function createServices(
     decisions,
     eventScreenOffer,
     corrections,
+    tagging,
     stopLivenessSweep: () => {
       clearInterval(livenessInterval);
       // The daily read of each phone's box of letters (docs/phone-push.md, "Letters").

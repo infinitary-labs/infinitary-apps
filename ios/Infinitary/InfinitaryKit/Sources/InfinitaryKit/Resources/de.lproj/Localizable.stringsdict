@@ -803,6 +803,38 @@
       <string>Nach %1$ld Reparaturversuchen sind die Überprüfungen noch nicht erfolgreich – dein erster Offizier fragt dich, wie es weitergeht</string>
     </dict>
   </dict>
+  <key>feedTagCheckFinished</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%2$@: eine Aufgabe auf Tags geprüft.</string>
+      <key>other</key>
+      <string>%2$@: %1$ld Aufgaben auf Tags geprüft.</string>
+    </dict>
+  </dict>
+  <key>feedTagCheckFinishedMissed</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%3$@: eine Aufgabe auf Tags geprüft; %2$@ bekamen keine Antwort und bleiben ungeprüft.</string>
+      <key>other</key>
+      <string>%3$@: %1$ld Aufgaben auf Tags geprüft; %2$@ bekamen keine Antwort und bleiben ungeprüft.</string>
+    </dict>
+  </dict>
   <key>filePathsAnnounce</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>
@@ -2289,6 +2321,54 @@
       <string>%1$ld Repository</string>
       <key>other</key>
       <string>%1$ld Repositorys</string>
+    </dict>
+  </dict>
+  <key>settingsProjectsTagsCheckCost</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Eine Anfrage, beantwortet von %1$@.</string>
+      <key>other</key>
+      <string>%2$ld Anfragen, eine pro Aufgabe, beantwortet von %1$@.</string>
+    </dict>
+  </dict>
+  <key>settingsProjectsTagsCheckCostOwn</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Eine Anfrage, beantwortet von deinen eigenen Modellen.</string>
+      <key>other</key>
+      <string>%1$ld Anfragen, eine pro Aufgabe, beantwortet von deinen eigenen Modellen.</string>
+    </dict>
+  </dict>
+  <key>settingsProjectsTagsCheckProgress</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@total@</string>
+    <key>total</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$@ von %2$ld Aufgabe geprüft</string>
+      <key>other</key>
+      <string>%1$@ von %2$ld Aufgaben geprüft</string>
     </dict>
   </dict>
   <key>settingsProjectsTagsRemoveQuestion</key>

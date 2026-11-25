@@ -569,7 +569,7 @@ describe("a secure collector without the setup's certificate authority", () => {
     clock.at += REFUSAL_LASTS_MS;
     await send();
     expect(collector.received).toEqual([]);
-    expect(lastingRefusal(company, clock.at)).toEqual({
+    expect(lastingRefusal(company)).toEqual({
       host: new URL(collector.url).host,
       reason: "secure-connection",
     });
@@ -588,6 +588,6 @@ describe("a secure collector without the setup's certificate authority", () => {
     clock.at += REFUSAL_LASTS_MS;
     await send();
     expect(collector.received).toEqual([]);
-    expect(lastingRefusal(company, clock.at)?.reason).toBe("secure-connection");
+    expect(lastingRefusal(company)?.reason).toBe("secure-connection");
   });
 });

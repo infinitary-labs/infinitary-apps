@@ -279,16 +279,25 @@ describe("a collector that keeps refusing", () => {
     expect((await send()).status, "the client reads the collector's own answer").toBe(401);
     clock.at += REFUSAL_LASTS_MS - 1;
     await send();
-    expect(lastingRefusal(setup, clock.at), "one batch's retries pass quietly").toBe(undefined);
+    expect(lastingRefusal(setup), "one batch's retries pass quietly").toBe(undefined);
     clock.at += 1;
     await send();
-    expect(lastingRefusal(setup, clock.at)).toEqual({
+    expect(lastingRefusal(setup)).toEqual({
       host: new URL(endpoint).host,
       reason: "refused",
     });
     clock.at += 1_000;
     expect((await send()).status).toBe(200);
-    expect(lastingRefusal(setup, clock.at)).toBe(undefined);
+    expect(lastingRefusal(setup)).toBe(undefined);
+  });
+
+  it("is not named after one refused batch followed by no more work", async () => {
+    const endpoint = await collector([401]);
+    const clock = { at: 1_000_000 };
+    const { setup, send } = forwardTo(endpoint, clock);
+    expect((await send()).status).toBe(401);
+    clock.at += 10 * REFUSAL_LASTS_MS;
+    expect(lastingRefusal(setup)).toBe(undefined);
   });
 
   it("says the collector could not be reached when nothing answers at its address", async () => {
@@ -299,6 +308,6 @@ describe("a collector that keeps refusing", () => {
     expect((await send()).status, "the client retries a collector it could not reach").toBe(503);
     clock.at += REFUSAL_LASTS_MS;
     await send();
-    expect(lastingRefusal(setup, clock.at)?.reason).toBe("unreachable");
+    expect(lastingRefusal(setup)?.reason).toBe("unreachable");
   });
 });

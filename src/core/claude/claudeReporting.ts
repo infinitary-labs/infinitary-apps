@@ -385,39 +385,40 @@ function failureOf(error: unknown): UsageReportingRefusalReason {
     : "unreachable";
 }
 
-/** How long the computer's trusted list serves before it is read again. */
-const ROOTS_REFRESH_MS = 5 * 60 * 1000;
 let readSystemRoots: () => readonly string[] = () => getCACertificates("system");
-let roots: { at: number; list: string[] } | undefined;
+let systemRoots: { pem: string; endsAt: number }[] | undefined;
 
 /**
  * The computer's trusted list as Claude's client builds it: Node's own list,
  * with any `NODE_EXTRA_CA_CERTS`, and the system's, leaving out system
- * certificates past their end date.
+ * certificates past their end date. Node reads the system's list once per
+ * process and keeps it, so a certificate the computer trusts only after the
+ * app started is not seen until the app starts again.
  */
 function computerRoots(now = Date.now()): string[] {
-  if (roots && now - roots.at < ROOTS_REFRESH_MS) return roots.list;
-  let system: readonly string[] = [];
-  try {
-    system = readSystemRoots();
-  } catch {
-    // A system list that cannot be read leaves Node's own.
-  }
-  const current = system.filter((pem) => {
+  if (!systemRoots) {
+    let system: readonly string[] = [];
     try {
-      return new X509Certificate(pem).validToDate.getTime() > now;
+      system = readSystemRoots();
     } catch {
-      return false;
+      // A system list that cannot be read leaves Node's own.
     }
-  });
-  roots = { at: now, list: [...new Set([...getCACertificates("default"), ...current])] };
-  return roots.list;
+    systemRoots = system.flatMap((pem) => {
+      try {
+        return [{ pem, endsAt: new X509Certificate(pem).validToDate.getTime() }];
+      } catch {
+        return [];
+      }
+    });
+  }
+  const current = systemRoots.filter((root) => root.endsAt > now).map((root) => root.pem);
+  return [...new Set([...getCACertificates("default"), ...current])];
 }
 
 /** Stands a list in for the system's, or restores the real one with none. */
 export function useSystemRootsForTests(read?: () => readonly string[]): void {
   readSystemRoots = read ?? (() => getCACertificates("system"));
-  roots = undefined;
+  systemRoots = undefined;
 }
 
 /**
@@ -621,8 +622,14 @@ function postGrpc(
  */
 export const REFUSAL_LASTS_MS = 60_000;
 
-/** Each destination's run of failures, by its address, while no batch gets through. */
-const refusals = new Map<string, { since: number; reason: UsageReportingRefusalReason }>();
+/**
+ * Each destination's run of failures, by its address, while no batch gets
+ * through: when it began, when its latest failure was, and why that one failed.
+ */
+const refusals = new Map<
+  string,
+  { since: number; latest: number; reason: UsageReportingRefusalReason }
+>();
 
 function recordAnswer(
   to: CompanyDestination,
@@ -640,21 +647,20 @@ function recordAnswer(
     note(
       `the company collector at ${new URL(to.endpoint).host} did not take a batch (${answer.failure})`,
     );
-  refusals.set(to.endpoint, { since: run?.since ?? now, reason: answer.failure });
+  refusals.set(to.endpoint, { since: run?.since ?? now, latest: now, reason: answer.failure });
 }
 
 /**
- * The first of this setup's collectors that has taken no batch for at least
- * `REFUSAL_LASTS_MS`, and why its latest one failed. A delivered batch ends
- * the run.
+ * The first of this setup's collectors whose failures have gone on for at
+ * least `REFUSAL_LASTS_MS`, its first and latest failure that far apart with
+ * no batch taken between them, and why its latest one failed. One failed
+ * batch followed by no more work is not a collector that keeps refusing. A
+ * delivered batch ends the run.
  */
-export function lastingRefusal(
-  setup: ClaudeCompanyReporting,
-  now: number = Date.now(),
-): UsageReporting["refusal"] {
+export function lastingRefusal(setup: ClaudeCompanyReporting): UsageReporting["refusal"] {
   for (const to of Object.values(setup.signals)) {
     const run = refusals.get(to.endpoint);
-    if (run && now - run.since >= REFUSAL_LASTS_MS)
+    if (run && run.latest - run.since >= REFUSAL_LASTS_MS)
       return { host: new URL(to.endpoint).host, reason: run.reason };
   }
   return undefined;

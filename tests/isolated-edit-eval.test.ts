@@ -2,6 +2,7 @@ import { existsSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { expect, it, vi } from "vitest";
 import { editCase, editHost, evaluation } from "../scripts/evals/isolatedEdit";
+import { ACCEPTANCE_WAIT_MS } from "../scripts/evals/host";
 import { allowanceRefusal, runEvaluation } from "../scripts/evals/runner";
 import { scratchDir } from "./helpers/scratchDirs";
 
@@ -77,3 +78,40 @@ it("refuses credit-ambiguous evaluation before spending even a matching sheet", 
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+it.each(["altered", "late"] as const)(
+  "does not send an assignment with a %s receipt",
+  async (fault) => {
+    const dir = scratchDir("isolated-edit-receipt-");
+    try {
+      const host = await editHost(editCase, dir, { provider: "openai-codex", id: "fixture" }, []);
+      try {
+        const steer = host.supervisor.steer;
+        const original = steer.steerCrewmate.bind(steer);
+        const send = vi.fn(async () => {});
+        if (fault === "altered") {
+          vi.spyOn(steer, "steerCrewmate").mockImplementationOnce((id, text, actor) =>
+            original(id, `${text}\nUnassigned fixture text`, actor),
+          );
+          await expect(host.dispatch!(send)).rejects.toThrow("differs from approved text");
+        } else {
+          const queue = vi.spyOn(steer, "steerCrewmate").mockResolvedValueOnce("queued-next-turn");
+          vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+          const refused = expect(host.dispatch!(send)).rejects.toThrow("delivery timed out");
+          vi.advanceTimersByTime(ACCEPTANCE_WAIT_MS);
+          await refused;
+          vi.useRealTimers();
+          const [args] = queue.mock.calls;
+          await original(...args!);
+        }
+        expect(send).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+        vi.restoreAllMocks();
+        await host.close();
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  },
+);

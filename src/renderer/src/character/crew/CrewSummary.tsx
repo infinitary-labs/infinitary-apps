@@ -28,8 +28,9 @@ import "./summary.css";
  * and paint at once; once the record answers, the whole projection is the
  * record's, the same one its task record shows, and it stays live while
  * the summary is open. Read-only: the record a click opens has the full
- * text of a note cut short here. The status, the task title and the project
- * wrap in full. How it comes and goes is its holder's (./summaryMotion.ts).
+ * text of a note cut short here. The status, the task title, the project
+ * and the tags wrap in full. How it comes and goes is its holder's
+ * (./summaryMotion.ts).
  * A pinned task wears the Tasks row's filled pin beside its key (INF-3634):
  * its crewmate is a fixed star on the stage, and this says why. The tags
  * the task carries sit under its project (INF-6634).

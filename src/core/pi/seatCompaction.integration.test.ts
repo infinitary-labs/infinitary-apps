@@ -100,9 +100,10 @@ it.each([1_000_000, 200_000])(
 
 // INF-6693: the first mate summarized at 300,000 even on a model whose price
 // rises at 272,000 (GPT-6.1 Sol's listed step), so its longest conversations
-// paid the higher price on every request past the step. It now carries the
-// crew's rule too: here its context grows by about 10,000 tokens a turn, less
-// than Pi's reserve, until it summarizes, and the service reads each request.
+// paid the higher price on every request past the step. The seat carries the
+// shared rule (`SESSION_COMPACTION`): here its context grows by about 10,000
+// tokens a turn, less than Pi's reserve, until it summarizes, and the service
+// reads each request.
 it("a first mate's real Pi seat summarizes below its model's 272,000-token price step", async () => {
   const sol = catalogLimits("openai-codex", "gpt-6.1-sol");
   api = await startStubApi(() => true);

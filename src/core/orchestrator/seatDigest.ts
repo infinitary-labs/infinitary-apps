@@ -93,6 +93,24 @@ export function appendDigest(
 }
 
 /**
+ * Keeps one turn on the digest a seat move carries across. A failed write
+ * loses only that turn's line, never the turn's end.
+ */
+export function keepDigest(
+  store: {
+    getFirstmateSeatDigest(): readonly SeatDigestEntry[];
+    setFirstmateSeatDigest(entries: readonly SeatDigestEntry[]): void;
+  },
+  entry: SeatDigestEntry,
+): void {
+  try {
+    store.setFirstmateSeatDigest(appendDigest(store.getFirstmateSeatDigest(), entry));
+  } catch (caught) {
+    console.warn("[firstmate] seat digest failed at turn end:", caught);
+  }
+}
+
+/**
  * The turns a session has not seen, for the wake that moves the seat onto
  * it: those served elsewhere since that session's own last turn, the
  * newest `SEAT_DIGEST_TURNS` of them, oldest first.

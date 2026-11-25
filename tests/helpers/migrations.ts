@@ -18,6 +18,8 @@ export const ALL_VERSIONS = Array.from({ length: DATABASE_VERSION }, (_, index) 
  * optional query indexes over its columns (INF-2061's statement check).
  */
 export const REVERSE_MIGRATION_102 =
+  // Taking back a message (docs/task-capture.md) is newer than both historical schemas.
+  "DROP INDEX IF EXISTS captain_asks_correction_of; ALTER TABLE captain_asks DROP COLUMN correction_of; ALTER TABLE captain_asks DROP COLUMN taken_back_at; " +
   // Neither historical schema has the later reply attribution columns.
   "DROP INDEX IF EXISTS captain_asks_typed; ALTER TABLE captain_asks DROP COLUMN typed_line; ALTER TABLE captain_asks DROP COLUMN typed_card_id; " +
   // INF-3898 piece 2's command mark is newer than every captain_asks shape these tests compare.

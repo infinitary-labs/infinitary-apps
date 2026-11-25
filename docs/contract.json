@@ -1027,6 +1027,11 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 64
+                  },
+                  "replaces": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
                   }
                 }
               }
@@ -1047,6 +1052,93 @@
         },
         "required": [
           "ok"
+        ]
+      }
+    },
+    "inf:conversation:take-back": {
+      "effect": "change",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "object",
+            "properties": {
+              "askId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              }
+            },
+            "required": [
+              "askId"
+            ]
+          }
+        ],
+        "items": false,
+        "minItems": 1,
+        "maxItems": 1
+      },
+      "response": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "outcome": {
+                "type": "string",
+                "const": "withdrawn"
+              }
+            },
+            "required": [
+              "outcome"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "outcome": {
+                "type": "string",
+                "const": "stopping"
+              }
+            },
+            "required": [
+              "outcome"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "outcome": {
+                "type": "string",
+                "const": "undoing"
+              }
+            },
+            "required": [
+              "outcome"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "outcome": {
+                "type": "string",
+                "const": "refused"
+              },
+              "reason": {
+                "type": "string",
+                "enum": [
+                  "not-newest",
+                  "past-window",
+                  "taken-back",
+                  "unknown"
+                ]
+              }
+            },
+            "required": [
+              "outcome",
+              "reason"
+            ]
+          }
         ]
       }
     },
@@ -1121,6 +1213,13 @@
                 "type": "string",
                 "const": "command"
               },
+              "askId": {
+                "type": "string"
+              },
+              "takenBack": {
+                "type": "boolean",
+                "const": true
+              },
               "previous": {
                 "anyOf": [
                   {
@@ -1163,6 +1262,13 @@
                       "through": {
                         "type": "string",
                         "const": "command"
+                      },
+                      "askId": {
+                        "type": "string"
+                      },
+                      "takenBack": {
+                        "type": "boolean",
+                        "const": true
                       }
                     },
                     "required": [

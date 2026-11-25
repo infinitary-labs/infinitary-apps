@@ -131,6 +131,7 @@ If the orchestrator is already streaming or running, that user text is always `s
 There is no first-mate-turn cancel surface and no `inf:firstmate:abort`.
 Crewmate task abort exists (`inf:task:abort` → supervisor cancel; the first mate also has `interrupt_crewmate`).
 The captain kept this (2026-08-14 architecture review): the user can redirect a live first mate turn, not stop it.
+A message the captain takes back mid-turn stops nothing either: the running turn is told, and the tools refuse what that message would cause (`docs/task-capture.md`, "Taking back a message").
 
 **Cards are captain-action-only.**
 `emit_card` is the agent's only card channel (schema-validated at the tool boundary).

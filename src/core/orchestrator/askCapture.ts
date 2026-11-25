@@ -53,6 +53,8 @@ export type OpenTurnAsk = {
   retryOf?: string | undefined;
   /** The card the message was typed under and its line there (INF-6115 piece 3). */
   typedUnder?: AskTypedUnder | undefined;
+  /** The message this one replaces, taken back as this one is saved. */
+  correctionOf?: string | undefined;
 };
 
 export type EndTurnInput = {
@@ -139,6 +141,7 @@ export class AskCapture {
       hintTaskId: hint,
       ...(input.retryOf ? { retryOf: input.retryOf } : {}),
       ...(input.typedUnder ? { typedUnder: input.typedUnder } : {}),
+      ...(input.correctionOf ? { correctionOf: input.correctionOf } : {}),
     });
     this.currentAskId = record.id;
     return record;
@@ -316,6 +319,18 @@ export class AskCapture {
     }
     this.currentAskId = undefined;
     return fallbacks;
+  }
+
+  /**
+   * A taken-back message no turn holds, closed now as a turn end would
+   * close it, without touching the running turn's current message.
+   */
+  closeTakenBack(askId: string): void {
+    const ask = this.tasks.capture.getAsk(askId);
+    if (ask?.turnState !== "open") return;
+    this.settle(ask, { asks: [askId], failed: false });
+    this.tasks.capture.closeAsk(askId, "closed");
+    if (this.currentAskId === askId) this.currentAskId = undefined;
   }
 
   /**

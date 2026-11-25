@@ -558,6 +558,7 @@ export const RAW_WORDS_LEDGER: Readonly<Record<string, number>> = {
   "src/core/orchestrator/draftReadiness.ts": 3,
   "src/core/orchestrator/endedCards.ts": 1,
   "src/core/orchestrator/firstmateAgent.ts": 15,
+  "src/core/orchestrator/firstmateQuiet.ts": 2,
   "src/core/orchestrator/firstmateContext.ts": 71,
   "src/core/orchestrator/firstmateSeat.ts": 55,
   "src/core/orchestrator/flagship.ts": 17,

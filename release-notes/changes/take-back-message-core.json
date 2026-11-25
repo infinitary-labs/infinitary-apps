@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "take-back-message-core",
+      "reason": "The core's half of taking back a message: a request, a saved fact and the first mate's undo wake. Nothing on screen offers it until the desktop and phone parts add the control, which carry the note."
+    }
+  ]
+}

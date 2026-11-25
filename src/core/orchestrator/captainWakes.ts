@@ -249,6 +249,29 @@ export type CaptainFacts =
       ownedBy?: string;
       /** The work a crewmate ran for the message, all ended with no card answering it. */
       workEnded?: { id: string; title: string }[];
+    }
+  | {
+      /**
+       * The captain took back a message the first mate read (docs/task-capture.md,
+       * "Taking back a message"). `held` is the live steer into the turn that
+       * holds it; `ended` is the wake after that turn, listing what the
+       * message already caused, for the first mate to undo.
+       */
+      kind: "taken-back";
+      stage: "held" | "ended";
+      askId: string;
+      excerpt: string;
+      /** When the captain sent it, as an ISO time. */
+      sentAt: string;
+      /** What took effect for it before the press, oldest first, each by its tool and what it names. */
+      caused: {
+        tool: string;
+        ref?: string;
+        /** The task by the id its tools take and the key the captain reads. */
+        task?: { id: string; key: string; title: string };
+      }[];
+      /** The words of the message that replaced it, when one did. */
+      replacement?: string;
     };
 
 /** What the app's Decline means to the card's author (INF-3108). */
@@ -440,7 +463,67 @@ export function answerRepairOnce(askId: string): string {
 export function answerMissingWake(
   facts: Omit<Extract<WakeFacts, { kind: "answer-missing" }>, "kind">,
 ): TypedWake {
-  return { facts: { kind: "answer-missing", ...facts }, once: answerRepairOnce(facts.askId) };
+  return {
+    facts: { kind: "answer-missing", ...facts },
+    once: answerRepairOnce(facts.askId),
+  };
+}
+
+/** The name the taken-back wake goes out once for: the message, so one undo ever. */
+export function takenBackOnce(askId: string): string {
+  return `taken-back:${askId}`;
+}
+
+type TakenBackFacts = Omit<Extract<WakeFacts, { kind: "taken-back" }>, "kind">;
+
+/** The live steer telling the turn that holds a taken-back message to stop acting on it. */
+export function takenBackHeldWake(facts: Omit<TakenBackFacts, "stage">): TypedWake {
+  return { facts: { kind: "taken-back", stage: "held", ...facts } };
+}
+
+/** The one wake after a taken-back message's turn, asking the first mate to undo what it caused. */
+export function takenBackWake(facts: Omit<TakenBackFacts, "stage">): TypedWake & { once: string } {
+  return {
+    facts: { kind: "taken-back", stage: "ended", ...facts },
+    once: takenBackOnce(facts.askId),
+  };
+}
+
+/** How the taken-back wake opens; a scripted stand-in recognizes it by this. */
+// i18n-exempt: a wake served to the first mate, never shown to a person
+export const TAKEN_BACK_OPENING = "The captain took back their message";
+
+/** How the taken-back wake introduces the message that replaced it. */
+// i18n-exempt: a wake served to the first mate, never shown to a person
+export const TAKEN_BACK_REPLACED = "They replaced it with a new message:";
+
+// i18n-exempt: a wake served to the first mate, never shown to a person
+function causedItem(item: TakenBackFacts["caused"][number]): string {
+  // i18n-exempt: a wake served to the first mate, never shown to a person
+  if (item.task)
+    return `${item.tool} on task ${item.task.id} (${item.task.key}) "${item.task.title}"`;
+  return item.ref ? `${item.tool} (${item.ref})` : item.tool;
+}
+
+// i18n-exempt: a wake served to the first mate, never shown to a person
+function renderTakenBack(facts: Extract<WakeFacts, { kind: "taken-back" }>): string {
+  // i18n-exempt: a wake served to the first mate, never shown to a person
+  const which = `${TAKEN_BACK_OPENING} ${facts.askId}, sent ${facts.sentAt}. Their words, verbatim: "${facts.excerpt}".`;
+  // i18n-exempt: a wake served to the first mate, never shown to a person
+  const replaced = facts.replacement
+    ? ` ${TAKEN_BACK_REPLACED} "${facts.replacement}". That message is their request now: keep what it still asks for.`
+    : "";
+  if (facts.stage === "held") {
+    // i18n-exempt: a wake served to the first mate, never shown to a person
+    return `[fm-op] ${which}${replaced} Do not carry out what it asked, and finish this turn without it: every call for it is refused from now on, including one that names no message. Work for another message names that message's ask_id. Once this turn ends, the app lists what it already caused for you to undo.`;
+  }
+  // i18n-exempt: a wake served to the first mate, never shown to a person
+  const caused =
+    facts.caused.length > 0
+      ? ` What it already caused: ${facts.caused.map(causedItem).join("; ")}. Undo each that came only from this message: drop a task it filed, stop a crewmate it started and keep its work, close a card it raised, tell a crewmate it steered to ignore those words, cancel a schedule it made, and retire knowledge or a direction it recorded. Set ask_id to "" on each of these calls.`
+      : " The app recorded nothing it caused.";
+  // i18n-exempt: a wake served to the first mate, never shown to a person
+  return `[fm-op] ${which} Do not carry out what it asked.${caused}${replaced} Close with one line for the captain saying what you undid and what you cannot undo, such as a message already sent elsewhere or a merge already made.`;
 }
 
 /**
@@ -605,4 +688,5 @@ export const CAPTAIN_WORDS: KindWords<CaptainFacts> = {
   "browser-returned": (facts) => renderBrowserReturned(facts),
   "page-unanswered": (facts) => pageUnansweredWords(facts),
   "answer-missing": (facts) => renderAnswerMissing(facts),
+  "taken-back": (facts) => renderTakenBack(facts),
 };

@@ -24,6 +24,7 @@ import {
   repoSetupSpecSchema,
   repoViewSchema,
 } from "../repos";
+import { takeBackRequestSchema, takeBackResultSchema } from "../takeBack";
 import { moveOptionsSchema } from "../tasks";
 import { type ChannelDeclaration, okSchema, pastedFilesSchema } from "./common";
 
@@ -69,10 +70,26 @@ export const talkChannels = {
            * pill, docs/project-focus.md): a hint below a shown record.
            */
           focusedProjectId: z.string().min(1).max(64).optional(),
+          /**
+           * The captain's newest message, which this one replaces: it is
+           * taken back as this one is saved (docs/task-capture.md,
+           * "Taking back a message"). A home without `take-back-message`
+           * drops the field and saves this one as a new message.
+           */
+          replaces: z.string().min(1).max(128).optional(),
         }),
       ]),
     ]),
     response: okSchema,
+  },
+  // Taking back the captain's newest message to the first mate within a
+  // minute of sending it (docs/task-capture.md, "Taking back a message").
+  "inf:conversation:take-back": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([takeBackRequestSchema]),
+    response: takeBackResultSchema,
   },
   // The conversation owner's current busy state, before the view hears live state changes.
   "inf:conversation:state": {

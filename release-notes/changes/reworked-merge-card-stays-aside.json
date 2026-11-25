@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "reworked-merge-card-stays-aside",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A merge card you put aside stays away while its new checks run",
+      "body": "When you reply under a merge card asking for a change and put the card aside, it now stays away while the new version's checks run, and comes back once when they finish. Before, it came back each time the crewmate finished a turn, still showing the earlier version with Merge off.",
+      "noPicture": "This changes when the existing merge card comes back, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

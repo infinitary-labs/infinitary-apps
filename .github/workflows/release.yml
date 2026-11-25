@@ -700,16 +700,16 @@ jobs:
       hosted: true
       release_runner: ${{ needs.resolve.outputs.dry_run == 'false' && vars.RELEASE_LINUX_PACKAGES_RUNNER || '' }}
 
-  # The Windows installer of every alpha (docs/windows.md; the captain's pick
-  # on INF-4243, "on every alpha"): built at the release's version from its
-  # one source commit and checked on a fresh Windows 11 virtual machine
-  # before anything publishes. It publishes nothing itself: the upload job
-  # publishes the installer this check tested, an unsigned early build for
-  # testers until Windows signing joins the release, and the builds file
-  # names it under windows/x64.
+  # The Windows installer of every alpha and stable (docs/windows.md; the
+  # captain's picks on INF-4243, "on every alpha", and INF-6684, Windows on
+  # stable marked experimental): built at the release's version from its one
+  # source commit and checked on a fresh Windows 11 virtual machine before
+  # anything publishes, so a failed check holds the whole release. It
+  # publishes nothing itself: the upload job publishes the installer this
+  # check tested, unsigned until Windows signing joins the release, and the
+  # builds file names it under windows/x64.
   windows:
     needs: [resolve, notes]
-    if: ${{ needs.resolve.outputs.channel == 'alpha' }}
     name: ${{ format('{0} · Windows installer', needs.resolve.outputs.trigger) }}
     uses: ./.github/workflows/windows.yml
     with:
@@ -816,8 +816,8 @@ jobs:
       RELEASE_REPOSITORY: ${{ needs.resolve.outputs.release_repository }}
       DMG_NAME: Infinitary-${{ needs.resolve.outputs.version }}-mac-universal.dmg
       ZIP_NAME: ${{ needs.resolve.outputs.zip_name }}
-      # An alpha's Windows installer (docs/windows.md); a stable carries none.
-      WINDOWS_NAME: ${{ needs.resolve.outputs.channel == 'alpha' && format('Infinitary-{0}-windows-x64-setup.exe', needs.resolve.outputs.version) || '' }}
+      # The release's Windows installer, on both channels (docs/windows.md).
+      WINDOWS_NAME: Infinitary-${{ needs.resolve.outputs.version }}-windows-x64-setup.exe
       DOWNLOAD_URL: ${{ needs.resolve.outputs.download_base }}releases/${{ needs.resolve.outputs.tag_name }}/${{ needs.resolve.outputs.zip_name }}
       CASK_TOKEN: ${{ needs.resolve.outputs.cask_token }}
       PRERELEASE: ${{ needs.resolve.outputs.prerelease }}
@@ -884,7 +884,7 @@ jobs:
               exit 1
             fi
             echo 'direct=false' >> "$GITHUB_OUTPUT"
-            echo 'Direct installers are not configured; publishing Homebrew and Linux only.' >> "$GITHUB_STEP_SUMMARY"
+            echo 'Direct installers are not configured; publishing Homebrew and Linux only. The Windows installer goes on the release record alone, and no builds file names it.' >> "$GITHUB_STEP_SUMMARY"
           else
             echo 'Incomplete download storage configuration; refusing a partially configured release.' >&2
             exit 1
@@ -1611,7 +1611,7 @@ jobs:
     environment: desktop-release
     name: ${{ format(inputs.dry_run && '{0} · Preview uploads; upload nothing' || '{0} · Upload every download', needs.resolve.outputs.trigger) }}
     needs: [resolve, notes, verify, linux, windows, phone, release, update, signed-installer]
-    if: ${{ always() && !cancelled() && needs.resolve.result == 'success' && (needs.resolve.outputs.installer_source == '' || needs.signed-installer.result == 'success') && needs.notes.result == 'success' && needs.linux.result == 'success' && (needs.resolve.outputs.channel != 'alpha' || needs.windows.result == 'success') && needs.phone.result == 'success' && needs.release.result == 'success' && ((needs.resolve.outputs.verify_required == 'true' && (needs.verify.result == 'success' || (needs.resolve.outputs.main_journeys == 'true' && needs.verify.result == 'skipped')) && needs.update.result == 'success') || (needs.resolve.outputs.verify_required == 'false' && needs.verify.result == 'skipped' && needs.update.result == 'skipped')) }}
+    if: ${{ always() && !cancelled() && needs.resolve.result == 'success' && (needs.resolve.outputs.installer_source == '' || needs.signed-installer.result == 'success') && needs.notes.result == 'success' && needs.linux.result == 'success' && needs.windows.result == 'success' && needs.phone.result == 'success' && needs.release.result == 'success' && ((needs.resolve.outputs.verify_required == 'true' && (needs.verify.result == 'success' || (needs.resolve.outputs.main_journeys == 'true' && needs.verify.result == 'skipped')) && needs.update.result == 'success') || (needs.resolve.outputs.verify_required == 'false' && needs.verify.result == 'skipped' && needs.update.result == 'skipped')) }}
     # A release's Linux jobs run on GitHub's hosted machines (docs/testing.md, "A release's hosted machines").
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -1634,8 +1634,8 @@ jobs:
       TAG_NAME: ${{ needs.resolve.outputs.tag_name }}
       DMG_NAME: Infinitary-${{ needs.resolve.outputs.version }}-mac-universal.dmg
       ZIP_NAME: ${{ needs.resolve.outputs.zip_name }}
-      # An alpha's Windows installer (docs/windows.md); a stable carries none.
-      WINDOWS_NAME: ${{ needs.resolve.outputs.channel == 'alpha' && format('Infinitary-{0}-windows-x64-setup.exe', needs.resolve.outputs.version) || '' }}
+      # The release's Windows installer, on both channels (docs/windows.md).
+      WINDOWS_NAME: Infinitary-${{ needs.resolve.outputs.version }}-windows-x64-setup.exe
       CASK_TOKEN: ${{ needs.resolve.outputs.cask_token }}
       PRERELEASE: ${{ needs.resolve.outputs.prerelease }}
       PROMOTED_FROM: ${{ needs.resolve.outputs.promoted_from }}
@@ -1751,7 +1751,7 @@ jobs:
       # The package check is the workflow's own, as the launch gate is
       # (INF-1768): a stable checks out an older alpha's commit, which may
       # predate it. So is the Cloudflare upload, so a release from an older
-      # commit uploads every file the workflow publishes, an alpha's Windows
+      # commit uploads every file the workflow publishes, the Windows
       # installer included.
       - id: tooling
         name: Check out the workflow's own package check
@@ -1788,20 +1788,18 @@ jobs:
           sums: ${{ needs.linux.outputs.sums }}
           path: ${{ runner.temp }}/linux-packages
 
-      # An alpha's Windows installer, the one the windows job built and its
+      # The release's Windows installer, the one the windows job built and its
       # fresh Windows 11 check installed and ran (docs/windows.md): checked
       # against the build's own line of SHA256SUMS, carried as a job output so
       # it never trusts a list from the same download, before anything
-      # publishes it. A stable carries none.
+      # publishes it.
       - name: Fetch the Windows installer
-        if: ${{ needs.resolve.outputs.channel == 'alpha' }}
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: windows-installer
           path: ${{ runner.temp }}/windows-download
       - name: Check the Windows installer
         id: windows-file
-        if: ${{ needs.resolve.outputs.channel == 'alpha' }}
         env:
           SUMS: ${{ needs.windows.outputs.sums }}
         run: |
@@ -2009,7 +2007,11 @@ jobs:
             printf '\nOn Mac, open the disk image and drag Infinitary into Applications. Open that copy, then choose Stable or Alpha in Settings → General. Use Update and restart for later versions; Homebrew is not needed.\n'
             printf '\nHomebrew installation remains supported. Homebrew copies keep updating through Homebrew; disk-image copies use in-app updates. See docs/mac-installation.md to switch installation methods while keeping saved work.\n'
             printf '\nLinux downloads and the universal ZIP for paired computers are included below. Check downloads against their checksum files.\n'
-            [[ -z "$WINDOWS_NAME" ]] || printf '\nOn Windows 11 (x64), %s is an unsigned early build: Windows warns before it runs, and a PC with Smart App Control on blocks it until the signed build.\n' "$WINDOWS_NAME"
+            if [[ "$CHANNEL" == alpha ]]; then
+              printf '\nOn Windows 11 (x64), %s is an unsigned early build: Windows warns before it runs, and a PC with Smart App Control on blocks it until the signed build.\n' "$WINDOWS_NAME"
+            else
+              printf '\nOn Windows 11 (x64), %s is an experimental build, not yet signed with a certificate Microsoft verifies: Windows warns before it runs, and a PC with Smart App Control on blocks it until the signed build.\n' "$WINDOWS_NAME"
+            fi
           } > "$NOTES_FILE"
           # The stable's record keeps these (docs/release-notes.md "Who writes what").
           [[ -z "$HIGHLIGHTS" ]] || printf '\nHighlights picked, lead first: %s\n' "$HIGHLIGHTS" >> "$NOTES_FILE"
@@ -2023,8 +2025,8 @@ jobs:
           }
           cat "$WORK/zip.out" >> "$GITHUB_OUTPUT"
 
-      # Every place at once, each with its own key: the disk image, an
-      # alpha's Windows installer and the Linux files beside the record's
+      # Every place at once, each with its own key: the disk image, the
+      # Windows installer and the Linux files beside the record's
       # zip; all of them on Cloudflare (scripts/publish-downloads.ts); and
       # the zip and Linux files as a release on each tap, where the casks fetch them,
       # since the product repository is private through the beta gate. Every
@@ -2200,7 +2202,7 @@ jobs:
     environment: desktop-release
     name: ${{ format(inputs.dry_run && '{0} · Check every copy; switch nothing' || '{0} · Check every copy and switch downloads', needs.resolve.outputs.trigger) }}
     needs: [resolve, notes, verify, linux, windows, phone, release, update, signed-installer, upload]
-    if: ${{ always() && !cancelled() && needs.upload.result == 'success' && needs.resolve.result == 'success' && (needs.resolve.outputs.installer_source == '' || needs.signed-installer.result == 'success') && needs.notes.result == 'success' && needs.linux.result == 'success' && (needs.resolve.outputs.channel != 'alpha' || needs.windows.result == 'success') && needs.phone.result == 'success' && needs.release.result == 'success' && ((needs.resolve.outputs.verify_required == 'true' && (needs.verify.result == 'success' || (needs.resolve.outputs.main_journeys == 'true' && needs.verify.result == 'skipped')) && needs.update.result == 'success') || (needs.resolve.outputs.verify_required == 'false' && needs.verify.result == 'skipped' && needs.update.result == 'skipped')) }}
+    if: ${{ always() && !cancelled() && needs.upload.result == 'success' && needs.resolve.result == 'success' && (needs.resolve.outputs.installer_source == '' || needs.signed-installer.result == 'success') && needs.notes.result == 'success' && needs.linux.result == 'success' && needs.windows.result == 'success' && needs.phone.result == 'success' && needs.release.result == 'success' && ((needs.resolve.outputs.verify_required == 'true' && (needs.verify.result == 'success' || (needs.resolve.outputs.main_journeys == 'true' && needs.verify.result == 'skipped')) && needs.update.result == 'success') || (needs.resolve.outputs.verify_required == 'false' && needs.verify.result == 'skipped' && needs.update.result == 'skipped')) }}
     # The light kind's virtual-only queue once MAC_QUEUES names it, and
     # release_light for a publishing run (docs/testing.md, "Each Mac job's kind and size").
     runs-on: ${{ needs.resolve.outputs.dry_run == 'false' && fromJSON(vars.MAC_QUEUES || '{}').release_light || fromJSON(vars.MAC_QUEUES || '{}').light || 'mini-mac-virtual' }}
@@ -2219,8 +2221,8 @@ jobs:
       RELEASE_REPOSITORY: ${{ needs.resolve.outputs.release_repository }}
       DMG_NAME: Infinitary-${{ needs.resolve.outputs.version }}-mac-universal.dmg
       ZIP_NAME: ${{ needs.resolve.outputs.zip_name }}
-      # An alpha's Windows installer (docs/windows.md); a stable carries none.
-      WINDOWS_NAME: ${{ needs.resolve.outputs.channel == 'alpha' && format('Infinitary-{0}-windows-x64-setup.exe', needs.resolve.outputs.version) || '' }}
+      # The release's Windows installer, on both channels (docs/windows.md).
+      WINDOWS_NAME: Infinitary-${{ needs.resolve.outputs.version }}-windows-x64-setup.exe
       DOWNLOAD_URL: ${{ needs.resolve.outputs.download_base }}releases/${{ needs.resolve.outputs.tag_name }}/${{ needs.resolve.outputs.zip_name }}
       CASK_TOKEN: ${{ needs.resolve.outputs.cask_token }}
       PRERELEASE: ${{ needs.resolve.outputs.prerelease }}
@@ -2253,7 +2255,7 @@ jobs:
       # fetcher, which waits out a host that is not answering (INF-3224). The
       # feeds are written by the workflow's own feed writer, live and in a
       # rehearsal, so a release from an older commit names every file the
-      # workflow published, an alpha's Windows installer included. Each feed
+      # workflow published, the Windows installer included. Each feed
       # step lays the source's release-source.json beside that writer first:
       # the destination is the source's, the one its app reads, the upload
       # wrote to and the fetch-back checked.
@@ -2448,7 +2450,7 @@ jobs:
           path: ${{ runner.temp }}/linux-packages
 
       - name: Fetch the Windows installer
-        if: ${{ needs.resolve.outputs.dry_run == 'true' && needs.resolve.outputs.channel == 'alpha' }}
+        if: ${{ needs.resolve.outputs.dry_run == 'true' }}
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: windows-installer

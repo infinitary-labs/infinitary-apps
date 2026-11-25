@@ -9,13 +9,13 @@ name: windows
 # person's yes, the command with no window started through this person's
 # Task Scheduler, a crew turn whose commands run in that Git's Git Bash with
 # its job stopped, and removal that keeps the saved work. The installer
-# stays on the run; nothing here signs or uploads it anywhere else. An
-# alpha's upload job publishes the installer this run checked
+# stays on the run; nothing here signs or uploads it anywhere else. A
+# release's upload job, alpha or stable, publishes the installer this run checked
 # (release.yml).
 #
 # The captain's pick on INF-4243: it runs on each combined batch that
 # touches Windows-relevant files (batch-checks.yml, scripts/windows-paths.ts)
-# and on every alpha (release.yml), and on request.
+# and on every alpha and stable (release.yml), and on request.
 #
 # An outside contributor's pull request (docs/public-ci.md, "Outside
 # contributors") calls it with hosted: the build runs on GitHub's hosted

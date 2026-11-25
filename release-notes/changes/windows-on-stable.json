@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "windows-on-stable",
+      "kind": "feature",
+      "title": "Stable releases include Infinitary for Windows, as an experimental download",
+      "body": "Every stable release now carries the installer for Windows 11 on 64-bit Intel and AMD PCs, marked experimental. It is not yet signed with a certificate Microsoft verifies, so Windows warns before it runs, and a PC with Smart App Control on blocks it until the signed build. A Windows PC on the Stable channel now gets Update and restart for each new stable.",
+      "area": "updates",
+      "noPicture": "No view changes: a Windows copy on the Stable channel shows the existing update offer instead of saying no release is available yet.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

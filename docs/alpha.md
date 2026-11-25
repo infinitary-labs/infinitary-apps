@@ -12,9 +12,9 @@ The selected download destination is `downloads.getinfinitary.com`; its Cloudfla
 The workflow keeps each immutable signed `v<version>` record on the active source repository using its own token.
 The source moves to the public development repository `infinitary-apps` at the cutover below; the preparation changes do not switch publication.
 Bucket-scoped R2 credentials publish the public copy only after storage is configured.
-Without those settings, the approved fallback keeps a stable's Homebrew and Linux publishing through the taps and skips disk images and direct feeds; a live alpha refuses to publish, since its Windows installer reaches testers only through download storage.
+Without those settings, the approved fallback keeps a stable's Homebrew and Linux publishing through the taps and skips disk images and direct feeds, its Windows installer reaching the release record alone; a live alpha refuses to publish, since its Windows installer reaches testers only through download storage.
 
-Each release carries the finalized universal ZIP, a signed and notarized disk image, and the Linux files, with checksum sidecars.
+Each release carries the finalized universal ZIP, a signed and notarized disk image, the Linux files and the unsigned Windows installer, with checksum sidecars.
 The ZIP remains the native updater's payload and the download paired computers use.
 The disk image places Infinitary on the left, an instruction to drag it across, and the Applications shortcut on the right; its artwork and dimensions are owned by the design skill and `electron-builder.yml`.
 The release publishes the verified ZIP to the Homebrew tap as well as the configured direct-download destination, then advances each path after its own credential-free fetch-back.
@@ -90,7 +90,7 @@ The selected Cloudflare snapshot serves `feeds/latest-mac.yml` for Stable and `f
 The same snapshot carries schema-1 `infinitary-updates.json`, `infinitary-builds.json`, and `versions/<version>.json` with immutable ZIP and disk-image identities.
 `releaseFeedFiles` reuses the existing forward-only target and builds producers and validates URLs against the configured destination.
 
-The builds file carries `macos` → `arm64` and `x64` → `zip` and `dmg`, `linux` → `x64` → `deb`, `rpm`, `appimage`, `arch` and `nix`, and, on an alpha, `windows` → `x64` → `exe`, the unsigned installer its Windows check tested (`docs/windows.md`, "Published on every alpha").
+The builds file carries `macos` → `arm64` and `x64` → `zip` and `dmg`, `linux` → `x64` → `deb`, `rpm`, `appimage`, `arch` and `nix`, and `windows` → `x64` → `exe`, the unsigned installer the release's Windows check tested (`docs/windows.md`, "Published on every release").
 The feed writer runs the app's own builds reader on the next file and refuses one it would not accept, before the feed switches.
 Every build names a file on that version's release and its SHA-256.
 Both channels naming one version must agree on channel-neutral bytes; the Arch and Nix recipes may differ because their package names encode the channel.
@@ -283,10 +283,10 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   `scripts/check-app-launch.sh <app> <logical version>` proves them separately at every launch gate - the built app, the distribution zip, and both fetched-back copies: the two fields from the bundle, the logical version by asking the running app, on a throwaway profile, through its own healthcheck over Chromium's debugging port (`scripts/app-runtime-version.mjs`).
   The gate starts the app in a process group of its own; afterwards it asks the app to quit and waits for it, stops outright whatever of that group, or whatever names the profile, is still running, reaps the app, and removes the profile only once nothing can write into it.
   Every launch runs the workflow's own copy of the gate and its probe: the signing job puts them in place of the source's once the app is packaged, and the publication job and the old-cask check before they launch anything, so a stable promoting an older alpha launches through the current gate while its app stays the alpha's.
-- **The Windows check on every alpha.**
-  The `windows` job calls `windows.yml` at the alpha's version on its one source commit: it builds the unsigned Windows installer and installs and runs it on a fresh Windows 11 virtual machine (`docs/windows.md`, "The checks").
-  An alpha's upload and publication wait for it to succeed; a stable promotion skips it.
-  The upload job checks its own copy of the `windows-installer` artifact against the windows job's `sums` output and uploads it beside the zip to the record and Cloudflare, never a tap; the publication job fetches it back from both before the builds file names it (`docs/windows.md`, "Published on every alpha").
+- **The Windows check in every release.**
+  The `windows` job calls `windows.yml` at the release's version on its one source commit, for both channels, a stable promotion included: it builds the unsigned Windows installer and installs and runs it on a fresh Windows 11 virtual machine (`docs/windows.md`, "The checks").
+  The upload and publication wait for it to succeed, so a failed Windows check holds an alpha or a stable.
+  The upload job checks its own copy of the `windows-installer` artifact against the windows job's `sums` output and uploads it beside the zip to the record and Cloudflare, never a tap; the publication job fetches it back from both before the builds file names it (`docs/windows.md`, "Published on every release").
 - **Linux in every release.**
   The `linux` job calls `linux-packages.yml` at the release's version on its one source commit, with the notes job's catalog, for both channels, a stable promotion included: it builds the Linux packages and installs and opens each on a clean copy of its system (`docs/linux-packages.md`) while verify runs.
   The upload job waits for it and checks its own copy of the artifact against the linux job's `SHA256SUMS` before anything renders or uploads (`docs/linux-packages.md`, "The checks").
@@ -329,7 +329,7 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   It never carries the app, the workspace, a credential or the environment, nor the Linux files, which come from the linux job; both artifacts' ids, the zip's on its own and the manifest's checksum are the signing job's outputs, and every reader fetches the artifacts by id into one folder.
   The `upload` job starts only after the signing job, the update check and every check succeeded, on GitHub's hosted `ubuntu-24.04`, one run of a version at a time.
   Before any effect it validates the handoff: the manifest is the one the signing job wrote, names this run, an attempt no later than this one, this workflow revision and this release, and the files are exactly those it lists, byte for byte.
-  Then it lays out the Linux files and reads every place - the record, Cloudflare through its storage API, the Homebrew tap and the Firstmate 3000 tap - for the disk image, an alpha's Windows installer and the Linux files, adopts a copy any of them already holds, and fails before anything is written when two places hold different bytes or a held Windows installer is not the one this run's Windows check built and checked.
+  Then it lays out the Linux files and reads every place - the record, Cloudflare through its storage API, the Homebrew tap and the Firstmate 3000 tap - for the disk image, the Windows installer and the Linux files, adopts a copy any of them already holds, and fails before anything is written when two places hold different bytes or a held Windows installer is not the one this run's Windows check built and checked.
   Only then does it record the zip in the source record, its first effect and alone, so no place can hold a zip the record lacks.
   It compares each place's copies as soon as it reads them and keeps only the adopted copy of each file, and a copy fetched back only to prove an upload's bytes the same is deleted once checked, so a retry after every place took every file holds one copy of each on the hosted machine's disk, not one per place.
   It then uploads to every place at once, the recipes rendered from the adopted packages, and hands the publication job each file's name and checksum; its summary names the places and how long the uploads took.
@@ -465,7 +465,7 @@ The site keeps its private-alpha landing page and never links to `/alpha-downloa
 The storage and serving Worker belong to `infinitary-infra`; creating or deploying them is separate from merging this release code.
 Repository variable `R2_BUCKET` and secrets `R2_ENDPOINT` (`https://<account-id>.r2.cloudflarestorage.com`), `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` activate direct publication.
 The endpoint stays secret because it contains the Cloudflare account identifier; the two upload keys are bucket-scoped.
-With all four absent, a live stable skips the disk image and direct feeds but still publishes Homebrew and Linux to both activated taps.
+With all four absent, a live stable skips the disk image and direct feeds but still publishes Homebrew and Linux to both activated taps, and puts its Windows installer on the release record alone.
 A live alpha with all four absent refuses before anything is signed or written: its Windows installer reaches testers only through download storage (`docs/windows.md`).
 Its Linux recipes use the tap's download URLs in that mode (`RECIPE_HOST=tap`), never the not-yet-configured storage address.
 A partial configuration fails before publication.

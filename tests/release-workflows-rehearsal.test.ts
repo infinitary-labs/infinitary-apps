@@ -526,9 +526,10 @@ describe("the signed channel workflow", () => {
       DIST_DMG: "${{ steps.rehearsal-files.outputs.dmg }}",
     });
     expect(ids.indexOf("rehearsal-files")).toBeLessThan(ids.indexOf("tap-rehearsal"));
-    // INF-5230's piece 1: an alpha's rehearsal checks and lists its Windows
-    // installer, and writes its feeds with it; a stable carries none.
-    expect(ids.includes("windows-file")).toBe(channel === "alpha");
+    // INF-5230's piece 1 and INF-6684's piece 1: a rehearsal of either
+    // channel checks and lists its Windows installer, and writes its feeds
+    // with it.
+    expect(ids).toContain("windows-file");
     expect(step("feed-rehearsal").env?.DIST_WINDOWS).toBe(
       // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
       "${{ steps.rehearsal-files.outputs.windows }}",

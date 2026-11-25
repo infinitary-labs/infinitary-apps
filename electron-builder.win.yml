@@ -1,7 +1,8 @@
 # The Windows installer (docs/windows.md): one per-user installer for x64
 # PCs, from the same app the Mac and Linux packages ship. Nothing here
-# signs or publishes: `publish` stays null, and windows.yml keeps the
-# installer on its run as an unsigned internal check build.
+# signs or publishes: `publish` stays null, windows.yml keeps the
+# installer on its run, and each alpha's and stable's upload job publishes
+# the unsigned installer that run checked (release.yml).
 extends: ./electron-builder.yml
 artifactName: Infinitary-${version}-windows-${arch}-setup.${ext}
 # No rebuild of native modules for Electron, as on Linux: better-sqlite3

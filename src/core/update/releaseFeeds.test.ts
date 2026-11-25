@@ -136,7 +136,8 @@ describe("public release feeds without cask publication", () => {
   });
 
   // INF-5230's piece 1: every alpha publishes the Windows installer its Windows check tested.
-  it("names an alpha's Windows installer under windows, x64, exe, and only for the alpha it was built for", () => {
+  // INF-6684's piece 1: every stable does too, as an experimental download.
+  it("names a release's Windows installer under windows, x64, exe, for every channel it moves", () => {
     const builds = (files: Record<string, string>) =>
       parseBuilds(
         JSON.parse(files[PUBLIC_RELEASE_NAMES.buildsFile] ?? "null"),
@@ -155,25 +156,36 @@ describe("public release feeds without cask publication", () => {
     // A retry with the same installer changes nothing; a different one is refused.
     expect(next("0.5.0-alpha.9", files, { windows: true }).files).toEqual({});
     expect(() => next("0.5.0-alpha.9", files)).toThrow("cannot change");
-    // A stable handed to alpha carries no Windows installer; the next alpha does again.
-    files = { ...files, ...next("0.5.0", files).files };
+    // A stable handed to alpha names its installer on both channels.
+    files = { ...files, ...next("0.5.0", files, { windows: true }).files };
+    const stableExe = {
+      url: `${releaseSource.downloadBase}releases/v0.5.0/Infinitary-0.5.0-windows-x64-setup.exe`,
+      sha256,
+    };
+    expect(builds(files)?.channels.stable?.systems.windows).toEqual({ x64: { exe: stableExe } });
     expect(builds(files)?.channels.alpha?.version).toBe("0.5.0");
-    expect(builds(files)?.channels.alpha?.systems.windows).toBeUndefined();
-    expect(builds(files)?.channels.stable?.systems.windows).toBeUndefined();
+    expect(builds(files)?.channels.alpha?.systems.windows).toEqual({ x64: { exe: stableExe } });
     files = { ...files, ...next("0.5.1-alpha.11", files, { windows: true }).files };
-    expect(builds(files)?.channels.alpha?.systems.windows?.x64?.exe?.sha256).toBe(sha256);
+    expect(builds(files)?.channels.alpha?.systems.windows?.x64?.exe?.url).toContain(
+      "/releases/v0.5.1-alpha.11/",
+    );
+    expect(builds(files)?.channels.stable?.systems.windows).toEqual({ x64: { exe: stableExe } });
     // A stable older than alpha leaves alpha, and its installer, alone.
     const newer = next("0.5.2-alpha.1", {}, { windows: true }).files;
-    const kept = { ...newer, ...next("0.5.1", newer).files };
-    expect(builds(kept)?.channels.stable?.version).toBe("0.5.1");
-    expect(builds(kept)?.channels.alpha?.systems.windows?.x64?.exe?.sha256).toBe(sha256);
+    const kept = { ...newer, ...next("0.5.1", newer, { windows: true }).files };
+    expect(builds(kept)?.channels.stable?.systems.windows?.x64?.exe?.url).toContain(
+      "/releases/v0.5.1/",
+    );
+    expect(builds(kept)?.channels.alpha?.systems.windows?.x64?.exe?.url).toContain(
+      "/releases/v0.5.2-alpha.1/",
+    );
   });
 
-  it("refuses a Windows installer on a stable or under another name before any feed is written", () => {
-    const stable = publication("0.5.0", { windows: true });
-    expect(() => releaseFeedFiles(stable)).toThrow("does not describe");
-    const misnamed = publication("0.5.0-alpha.9", { windows: true });
-    if (misnamed.manifest.windows) misnamed.manifest.windows.asset = "Infinitary-setup.exe";
-    expect(() => releaseFeedFiles(misnamed)).toThrow("does not describe");
+  it("refuses a Windows installer under another name before any feed is written", () => {
+    for (const version of ["0.5.0-alpha.9", "0.5.0"]) {
+      const misnamed = publication(version, { windows: true });
+      if (misnamed.manifest.windows) misnamed.manifest.windows.asset = "Infinitary-setup.exe";
+      expect(() => releaseFeedFiles(misnamed), version).toThrow("does not describe");
+    }
   });
 });

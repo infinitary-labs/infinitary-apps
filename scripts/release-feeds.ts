@@ -30,7 +30,7 @@ if (channel !== "stable" && channel !== "alpha") throw new Error("Invalid releas
 const zip = resolve(required("zip"));
 const dmg = resolve(required("dmg"));
 const directory = resolve(required("directory"));
-// An alpha's Windows installer, when the release publishes one (docs/windows.md).
+// The release's Windows installer, when it publishes one (docs/windows.md).
 const windows = typeof values.windows === "string" && values.windows ? resolve(values.windows) : undefined;
 const manifest: ReleaseManifest = {
   schemaVersion: 1, version, sourceCommit: required("source-commit"),

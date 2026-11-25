@@ -245,7 +245,7 @@ it("a first mate's real Pi seat at the person's 300,000 runs past the 272,000 pr
 });
 
 // INF-6693's plan: a changed point reaches a conversation already open at its
-// next prompt. At 500,000 ten turns stay unsummarized; once the person picks
+// next prompt. At 500,000 sixteen turns stay unsummarized; once the person picks
 // 150,000 the very next turn summarizes and the requests after it are smaller.
 it("a first mate's real Pi seat takes a changed summary point at its next prompt", async () => {
   let point: SummaryPoint = 500_000;

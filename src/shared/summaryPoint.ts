@@ -8,6 +8,9 @@ import { z } from "zod";
  * (the captain's answer on that plan); `model` leaves each model's own
  * limit.
  */
+/** The app's own point, which Automatic names (the captain's INF-447 ruling). */
+export const AUTOMATIC_SUMMARY_TOKENS = 300_000;
+
 export const SUMMARY_POINT_TOKENS = [150_000, 200_000, 300_000, 500_000] as const;
 
 export const summaryPointSchema = z.union([
@@ -36,10 +39,14 @@ export const summaryPointViewSchema = z.strictObject({
 });
 export type SummaryPointView = z.infer<typeof summaryPointViewSchema>;
 
-/** The models a choice lets run past their price step, where every input token costs more. */
+/**
+ * The models a choice lets reach their price step, where every input token
+ * costs more: a conversation summarizes only after a request passes the
+ * point, so the request that crosses a step at the point pays the higher price.
+ */
 export function stepsPassed(point: SummaryPoint, steps: readonly PriceStep[]): PriceStep[] {
   if (point === "automatic") return [];
-  return steps.filter((step) => point === "model" || step.tokens < point);
+  return steps.filter((step) => point === "model" || step.tokens <= point);
 }
 
 /**

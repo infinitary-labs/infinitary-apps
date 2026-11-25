@@ -22,6 +22,15 @@ describe("the summary point row's words", () => {
     ).toBeNull();
   });
 
+  // A conversation summarizes only after a request passes the point, so the
+  // request that crosses a step at the point already pays the higher price.
+  // Grok 4.5's catalog price steps at 200,000.
+  it("names a model whose price step sits at the chosen number", () => {
+    expect(
+      summaryPointSteps({ point: 200_000, steps: [{ name: "Grok 4.5", tokens: 200_000 }] }),
+    ).toBe("Requests cost more on Grok 4.5 past 200,000.");
+  });
+
   it("names none for Automatic, which summarizes before a step, and every one for each model's limit", () => {
     expect(summaryPointSteps({ point: "automatic", steps: STEPS })).toBeNull();
     expect(summaryPointSteps({ point: "model", steps: STEPS })).toBe(

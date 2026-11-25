@@ -9,6 +9,7 @@
  * record.
  */
 
+import type { SummaryPoint } from "@shared/summaryPoint";
 import { describe, expect, it, vi } from "vitest";
 import {
   fakeCrewmate,
@@ -19,6 +20,7 @@ import {
   workComputer,
 } from "../../../tests/helpers/crewHarness";
 import { deferred } from "../../../tests/helpers/deferred";
+import { compactionNow } from "../session/compaction";
 import { seedTask } from "../tasks/seedTask";
 import type { TaskService } from "../tasks/taskService";
 
@@ -384,6 +386,25 @@ describe("a crewmate's session, as CrewSessions holds it", () => {
     enabled = false;
     await reopen();
     expect(reads()).toHaveLength(2);
+  });
+
+  // INF-6693's plan: each Settings choice reaches a crewmate's session spec,
+  // read again at each use, so a changed choice needs no new conversation.
+  it("gives a crewmate's conversation the home's summary point at each read", async () => {
+    const crewmate = fakeCrewmate();
+    let point: SummaryPoint = "automatic";
+    const h = setup(crewmate, { summaryPoint: () => point });
+    await h.supervisor.intake.commission({
+      title: "Count presses",
+      intent: intentOf("make the meter count every press"),
+    });
+    await tick();
+    const rule = () => compactionNow(h.sessionSpecs[0]?.compaction);
+    expect(rule()).toEqual({ maxContextTokens: 300_000, belowPriceStep: true });
+    point = 500_000;
+    expect(rule()).toEqual({ maxContextTokens: 500_000 });
+    point = "model";
+    expect(rule()).toEqual({});
   });
 
   it("stops every started task on a computer being removed, and leaves the rest", async () => {

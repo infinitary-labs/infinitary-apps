@@ -1,15 +1,13 @@
 import { formatList, formatNumber } from "@shared/i18n/format";
 import * as m from "@shared/i18n/messages.generated";
 import {
+  AUTOMATIC_SUMMARY_TOKENS,
   type PriceStep,
   SUMMARY_POINT_TOKENS,
   type SummaryPoint,
   type SummaryPointView,
   stepsPassed,
 } from "@shared/summaryPoint";
-
-/** The app's own point, which Automatic names; the core's `SESSION_COMPACTION_TOKENS`. */
-const AUTOMATIC_TOKENS = 300_000;
 
 /** Settings → Intelligence's summary point row (`SummaryPointRow.tsx`; INF-6693). */
 export const SUMMARY_POINT_WORDS = {
@@ -35,7 +33,9 @@ export function summaryPointDescription(view: SummaryPointView | null): string {
   if (!view) return m.settingsSummaryPointDescriptionUnread();
   const { point } = view;
   if (point === "automatic")
-    return m.settingsSummaryPointDescriptionAutomatic({ tokens: formatNumber(AUTOMATIC_TOKENS) });
+    return m.settingsSummaryPointDescriptionAutomatic({
+      tokens: formatNumber(AUTOMATIC_SUMMARY_TOKENS),
+    });
   if (point === "model") return m.settingsSummaryPointDescriptionModelLimit();
   return m.settingsSummaryPointDescriptionTokens({ tokens: formatNumber(point) });
 }

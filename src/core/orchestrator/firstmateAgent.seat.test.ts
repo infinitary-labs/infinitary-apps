@@ -31,6 +31,7 @@ import {
   tick,
 } from "../../../tests/helpers/firstmateHarness";
 import type { ModelRuntime } from "../pi/types";
+import { compactionNow } from "../session/compaction";
 import { FIRSTMATE_RECIPIENT, type InboxStore } from "../storage/inboxStore";
 import type { FirstmateAgent } from "./firstmateAgent";
 import { RECHECK_ALLOWANCE_LABEL } from "./hostCards";
@@ -799,6 +800,21 @@ describe("the seat's other ways: Settings, the way back, holds and moves (INF-26
     const back = () => t.cards().find((card) => card.id === "card-fm-move-back");
     return { t, back };
   }
+
+  // INF-6693's plan: each Settings choice reaches the first mate's session spec,
+  // read again at each use, so a changed choice needs no new session.
+  it("the first mate's session takes the saved summary point at each read", async () => {
+    const f = setup();
+    await f.agent.converse("first");
+    const rule = () => compactionNow(f.specs[0]?.compaction);
+    expect(rule()).toEqual({ maxContextTokens: 300_000, belowPriceStep: true });
+    f.settings.setSummaryPoint(150_000);
+    expect(rule()).toEqual({ maxContextTokens: 150_000 });
+    f.settings.setSummaryPoint("model");
+    expect(rule()).toEqual({});
+    f.settings.setSummaryPoint("automatic");
+    expect(rule()).toEqual({ maxContextTokens: 300_000, belowPriceStep: true });
+  });
 
   it("Observe's peek names the setting's model before a seat attaches, and nothing as its file", async () => {
     const f = setup();

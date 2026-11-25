@@ -1,6 +1,10 @@
 import { z } from "zod";
 import type { ActionLine } from "./actions";
-import { type SummaryPointView, summaryPointSchema } from "./summaryPoint";
+import {
+  AUTOMATIC_SUMMARY_TOKENS,
+  type SummaryPointView,
+  summaryPointSchema,
+} from "./summaryPoint";
 
 /**
  * The catalog line for where conversations summarize (INF-6693): the same
@@ -13,7 +17,7 @@ export const summaryPointLines = {
     change: "inf:settings:summary-point:set",
     current: "inf:settings:summary-point:get",
     value: z.strictObject({ point: summaryPointSchema }),
-    line: 'Set where the first mate and crew summarize a long conversation when asked: "automatic" (300,000 tokens, or below a model\'s first price step), 150000, 200000, 300000, 500000, or "model" for each model\'s own limit. A number wins over price steps; steps lists the models that charge more past one.',
+    line: `Set where the first mate and crew summarize a long conversation when asked: "automatic" (${AUTOMATIC_SUMMARY_TOKENS} tokens, or below a model's first price step), 150000, 200000, 300000, 500000, or "model" for each model's own limit. A number wins over price steps; steps lists the models that charge more once a conversation reaches the point.`,
     toRequest: (v) => [v.point],
     readValue: (c) => c as SummaryPointView,
     // i18n-exempt: an operation's saved title, written in English like every catalog line's done

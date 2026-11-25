@@ -33,8 +33,9 @@ function steppedModelsJson(port: number): string {
 }
 
 // INF-6693's plan, piece 2: a person picks where long conversations summarize
-// from Settings → Intelligence by keyboard; a number past a model's price step
-// names that model, and the choice survives a restart.
+// from Settings → Intelligence by keyboard, each of the six choices saving; a
+// number at or past a model's price step names that model, and the choice
+// survives a restart.
 test("a person picks where long conversations summarize by keyboard, and the choice survives restart", async () => {
   let launched = await launchApp({ withMockProvider: true, modelsJson: steppedModelsJson });
   const { userDataDir, homeDir } = launched;
@@ -47,6 +48,9 @@ test("a person picks where long conversations summarize by keyboard, and the cho
     return settingRow(launched.page, "summary-point");
   };
   try {
+    const steps = m.settingsSummaryPointSteps({
+      models: m.settingsSummaryPointStep({ name: STEPPED_NAME, tokens: "272,000" }),
+    });
     const row = await openIntelligence();
     const select = row.getByRole("combobox", { name: m.settingsSummaryPointTitle() });
     await expect(select).toBeEnabled();
@@ -57,14 +61,28 @@ test("a person picks where long conversations summarize by keyboard, and the cho
     await pressKey(select, "3");
     await expect(select).toHaveValue("300000");
     await expect.poll(saved).toBe(300_000);
-    await expect(row.locator("[data-summary-point-steps]")).toHaveText(
-      m.settingsSummaryPointSteps({
-        models: m.settingsSummaryPointStep({ name: STEPPED_NAME, tokens: "272,000" }),
-      }),
-    );
+    await expect(row.locator("[data-summary-point-steps]")).toHaveText(steps);
+    // The arrows walk the rest of the choices in order, each saved as it is picked.
+    await pressKey(select, "ArrowDown");
+    await expect(select).toHaveValue("500000");
+    await expect.poll(saved).toBe(500_000);
+    await expect(row.locator("[data-summary-point-steps]")).toHaveText(steps);
+    await pressKey(select, "ArrowDown");
+    await expect(select).toHaveValue("model");
+    await expect.poll(saved).toBe("model");
+    await expect(row.locator("[data-summary-point-steps]")).toHaveText(steps);
     await pressKey(select, "1");
     await expect(select).toHaveValue("150000");
     await expect.poll(saved).toBe(150_000);
+    await expect(row.locator("[data-summary-point-steps]")).toHaveCount(0);
+    await pressKey(select, "ArrowUp");
+    await expect(select).toHaveValue("automatic");
+    await expect.poll(saved).toBe("automatic");
+    await expect(row.locator("[data-summary-point-steps]")).toHaveCount(0);
+    await pressKey(select, "ArrowDown");
+    await pressKey(select, "ArrowDown");
+    await expect(select).toHaveValue("200000");
+    await expect.poll(saved).toBe(200_000);
     await expect(row.locator("[data-summary-point-steps]")).toHaveCount(0);
     await launched.close();
     launched = await launchApp({
@@ -76,7 +94,7 @@ test("a person picks where long conversations summarize by keyboard, and the cho
     const reopened = (await openIntelligence()).getByRole("combobox", {
       name: m.settingsSummaryPointTitle(),
     });
-    await expect(reopened).toHaveValue("150000");
+    await expect(reopened).toHaveValue("200000");
   } finally {
     await launched.close();
   }

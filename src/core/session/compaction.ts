@@ -1,8 +1,8 @@
-import type { SummaryPoint } from "@shared/summaryPoint";
+import { AUTOMATIC_SUMMARY_TOKENS, type SummaryPoint } from "@shared/summaryPoint";
 import type { SessionCompaction, SessionSpec } from "./session";
 
 /** Captain’s INF-447 ruling: the app's own summary point, which Settings → Intelligence can change (INF-6693). */
-export const SESSION_COMPACTION_TOKENS = 300_000;
+export const SESSION_COMPACTION_TOKENS = AUTOMATIC_SUMMARY_TOKENS;
 
 /**
  * The one automatic summary rule every Pi conversation of the first mate and

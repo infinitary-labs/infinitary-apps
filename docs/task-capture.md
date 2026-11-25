@@ -25,7 +25,7 @@ An answer given while the first mate handles a crewmate's report saves that repo
    The host checks only typed facts (`AskEnding.nameRefusal`): a message still waiting for its own step is refused as unread, and one that has ended - answered, or its notice closed - is refused with a reason saying it ended.
    Omission uses the latest read message for ordinary direct-request calls.
    A turn itself runs outside every action's selection (`AskCapture.outsideActions`), so a turn woken by work an earlier action started attaches only the messages it reads.
-   The host pins that selection for the action's whole asynchronous execution (`withAskAttribution` and `AskCapture.withAsk`), including pictures and complete text files carried in a brief, and attaches only that selected ask with `attached_via = tool:<name>`:
+   The host pins that selection for the action's whole asynchronous execution (`withAskAttribution` and `AskCapture.withAsk`), including pictures and complete text files carried in a brief, and attaches only that selected ask, or with `emit_card` every message its `ask_id` list names, with `attached_via = tool:<name>`:
    - `spawn_crewmate` -> the new task; `steer_crewmate`, `interrupt_crewmate`, `settle_task`, `update_task` (including `start_now`) -> the named task.
    - `emit_card` with `task_id` -> that task: a decision a `card_raised` event whose resolution `act()`/`close()` record as `card_resolved`, and a review relay (with `review_task_id`) an `answered` event carrying the body.
      A note with `task_id` and no `review_task_id` is refused (`NOTE_NAMES_TASK_REFUSAL` in `src/core/pi/cardLint.ts`).
@@ -156,7 +156,7 @@ One module owns the walk (`src/core/tasks/askThreads.ts`, `AskThreads`): the thr
   A captain's message sent while that turn runs waits on the lane for a turn of its own, as during the retry (`AnswerDeliveryCheck.servedAlone`), and parked captain words are served before a waiting answer.
   The turn that reads the answer (a `requested-response` wake) reads the message too (`AnswerDeliveryCheck.adopt`): a follow-up asked or work started in it stays the message's, a card shown in it is shown for the message, and the message is judged when that turn ends, so an answer written only as closing words gets the one retry below.
   Several messages asked of one long task each wait on their own requests and end on their own answers.
-  A crewmate that answers with `reply`'s `response` writes its answer as a line in a card's thread, where the captain reads it: the message is then accepted on that card (`AskEnding` reads `InboxStore.answeredLine`), and the `requested-response` wake names the line and tells the first mate not to write it again.
+  A crewmate that answers with `reply`'s `response` writes its answer as a line in an open card's thread, where the captain reads it: the message is then accepted on that card (`AskEnding` reads `InboxStore.answeredLine`), and the `requested-response` wake names the line and tells the first mate not to write it again; a closed card's dated clarification does neither, as the first mate's own clarification ends nothing, so the message keeps its relay sentence and the one retry.
   The steer that asks for the response tells the crewmate so, and that an interim line is neither its response nor the captain's answer.
 - **A task's own origin.**
   A task's origin is the message that filed or started it, an automation run, the card whose choice filed it, or the task whose report passed the captain's words on (`threadOrigin`).

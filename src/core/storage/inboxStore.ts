@@ -1183,7 +1183,7 @@ export class InboxStore {
     input: CrewResponse,
     contributor: { task: string; session: string | null },
     text: string,
-    line?: { cardId: string; messageId: number },
+    line?: { cardId: string; messageId: number; clarification?: true },
   ): SavedCrewResponse {
     if (!text.trim()) throw new Error("A response needs its exact answer text.");
     return this.transaction(() => {
@@ -1218,7 +1218,10 @@ export class InboxStore {
             status: input.status,
             question: capWithOverflow(request.body, "response-question"),
             excerpt: capWithOverflow(text, "requested-response"),
-            ...(line ? { line } : {}),
+            // A closed card's clarification is not where the captain reads an answer.
+            ...(line && !line.clarification
+              ? { line: { cardId: line.cardId, messageId: line.messageId } }
+              : {}),
           },
         },
         undefined,

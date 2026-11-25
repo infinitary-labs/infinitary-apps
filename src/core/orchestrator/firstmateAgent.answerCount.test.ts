@@ -128,4 +128,58 @@ describe("one answer for every message it answers", () => {
     expect(ask?.answeredAt).not.toBeNull();
     expect(retries(f)).toEqual([]);
   });
+
+  // The review of INF-6769: a closed card's dated clarification is off the
+  // captain's stack, so it ends no message, as the first mate's own does not.
+  it("keeps a passed-on question open when the crewmate's answer is a closed card's clarification", async () => {
+    const f = setup({
+      silent: true,
+      seedTasks: [
+        {
+          id: "strip",
+          title: "Open the conversation from the strip",
+          status: "idle",
+          sessionFile: "/tmp/strip.jsonl",
+        },
+      ],
+      seedCards: [
+        crewCard(
+          "card-strip-merge",
+          "strip",
+          "Open the conversation from the strip",
+          "<p>Ready.</p>",
+        ),
+      ],
+    });
+    vi.advanceTimersByTime(1_000);
+    await f.agent.converse("wait why does the highlight look like this?");
+    await toolsOf(f.specs).get("steer_crewmate")?.execute("s1", {
+      task_id: "strip",
+      message:
+        "The captain asked why the hover highlight is a thin band. Answer him in your card's thread.",
+    });
+    await finish(f, "I passed your question on.");
+    const [request] = new InboxStore(f.db).pendingResponses("strip");
+    if (!request) throw new Error("No open request on the strip task");
+    f.supervisor.cards.close("card-strip-merge", { kind: "crewmate", taskId: "strip" });
+
+    const line = f.supervisor.cards.replyAs(
+      { actor: "crewmate", taskId: "strip" },
+      {
+        cardId: "card-strip-merge",
+        text: "I lit each round on its own instead of the whole strip.",
+        response: { requestId: request.id, responseId: "strip-r1", status: "answered" },
+      },
+    );
+    expect(line.effect).toBe("reply-only");
+    f.agent.pokeInbox();
+    await drained(f.session, 2);
+    expect(f.session.prompts[1]).toContain("Answer the captain on the original card");
+    expect(f.session.prompts[1]).not.toContain("do not write it again");
+    await finish(f, "The crewmate answered.");
+    await tick();
+
+    expect(f.tasks.capture.listAsks()[0]?.answerCardId ?? null).not.toBe("card-strip-merge");
+    expect(retries(f)).toHaveLength(1);
+  });
 });

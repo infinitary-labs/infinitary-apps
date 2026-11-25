@@ -240,7 +240,7 @@ Multiple references in one report commit together or not at all.
 `not-yet-answered` notifies the first mate and leaves the request pending; a final answer clears only its explicitly named request.
 Retries reuse the response identity and return its saved record; a correction uses a new identity and appends rather than replacing the earlier answer.
 A crewmate's `reply` may carry the same correlated response: the card line is then its exact answer, saved with the line's message id (`crew_responses.card_message_id`), so a report naming that response identity afterwards is the same response, kept once with one notification (`docs/card-threads.md`, "Shared cards").
-That notification names the line, which is the captain's answer to the message the request was asked for, so the first mate does not write it again and the message ends on that card (`docs/task-capture.md`, "Waiting for an answer").
+When the line is on an open card, that notification names the line, which is the captain's answer to the message the request was asked for, so the first mate does not write it again and the message ends on that card (`docs/task-capture.md`, "Waiting for an answer").
 An authenticated contributor may answer a named request for another task; that alone executes no effect, and its words on the card follow the shared-card rules (`docs/card-threads.md`, "Shared cards").
 Long answers stay exact in the database and use the existing overflow owner in served wakes.
 The wake has no task ref, so the originating worker's close cannot purge it.

@@ -32,6 +32,25 @@ const CASES: WordsCases<FirstmateReportWakeKind> = {
       words:
         "[fm-op] Requested crewmate response: rs-7 to request rq-41 for task INF-2696, submitted by task INF-2697 (answered). Request: Which split keeps the replay numbers still?\nResponse: The family split: no served word moves.\nThis is a saved response, independent of later reports and continuing work. Handling acknowledges delivery, not correctness. Answer the captain on the original card when this request concerns their question.",
     },
+    {
+      // INF-6769: the crewmate's answer is already a line in an open card's thread.
+      name: "answered on a card line",
+      wake: {
+        facts: {
+          kind: "requested-response",
+          requestId: "rq-41",
+          responseId: "rs-7",
+          taskId: "INF-2696",
+          contributorTask: "INF-2697",
+          status: "answered",
+          question: "Which split keeps the replay numbers still?",
+          excerpt: "The family split: no served word moves.",
+          line: { cardId: "card-INF-2696-merge", messageId: 812 },
+        },
+      },
+      words:
+        "[fm-op] Requested crewmate response: rs-7 to request rq-41 for task INF-2696, submitted by task INF-2697 (answered). Request: Which split keeps the replay numbers still?\nResponse: The family split: no served word moves.\nThis is a saved response, independent of later reports and continuing work. Handling acknowledges delivery, not correctness. The crewmate wrote it as message 812 in the thread of card card-INF-2696-merge, where the captain reads it: it is the answer to the captain's message this request was asked for, so do not write it again.",
+    },
   ],
   "response-missing": [
     {

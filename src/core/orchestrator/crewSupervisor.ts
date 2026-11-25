@@ -425,7 +425,10 @@ export class CrewSupervisor {
       (id) => options.inbox.requestOpen(id),
       (id) => {
         const line = options.inbox.answeredLine(id);
-        return line === undefined ? undefined : options.cardStore.messageById(line)?.cardId;
+        const message = line === undefined ? undefined : options.cardStore.messageById(line);
+        // A closed card's dated clarification is off the captain's stack, so it
+        // ends no message, as the first mate's own clarification ends none.
+        return message?.clarification ? undefined : message?.cardId;
       },
     );
     this.placement = new TaskPlacement(options, {

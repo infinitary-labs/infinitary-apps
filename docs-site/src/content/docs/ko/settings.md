@@ -1,5 +1,5 @@
 ---
-source: a0cdeb238cc2527f
+source: ea34c1740306756c
 title: 설정
 description: 설정의 각 항목에 무엇이 있는지 알려 주고, 일반과 모양은 여기서 설명하며 나머지는 링크로 안내해요.
 ---
@@ -10,8 +10,8 @@ description: 설정의 각 항목에 무엇이 있는지 알려 주고, 일반�
 
 "라이트 테마로 바꿔 줘"나 "앰비언트 음악 켜 줘"처럼 일등항해사에게 설정을 바꿔 달라고 부탁할 수도 있어요.
 
-<img class="picture-dark" src="/pictures/settings-dark.webp" alt="일반이 열린 설정: 왼쪽에 일반부터 기기까지 열두 항목, 그리고 로그인 시 시작, Dock에 표시, 알림, 받아쓰기, 내 패널, 작업 데이터 완전 삭제, Infinitary 재설정 줄." width="1184" height="661" />
-<img class="picture-light" src="/pictures/settings-light.webp" alt="일반이 열린 설정: 왼쪽에 일반부터 기기까지 열두 항목, 그리고 로그인 시 시작, Dock에 표시, 알림, 받아쓰기, 내 패널, 작업 데이터 완전 삭제, Infinitary 재설정 줄." width="1184" height="661" />
+<img class="picture-dark" src="/pictures/settings-dark.webp" alt="일반이 열린 설정: 왼쪽에 일반부터 기기까지 열두 항목, 그리고 로그인 시 시작, Dock에 표시, 알림, 받아쓰기, 내 패널, 작업 데이터 완전 삭제, Infinitary 재설정 줄." width="1040" height="661" />
+<img class="picture-light" src="/pictures/settings-light.webp" alt="일반이 열린 설정: 왼쪽에 일반부터 기기까지 열두 항목, 그리고 로그인 시 시작, Dock에 표시, 알림, 받아쓰기, 내 패널, 작업 데이터 완전 삭제, Infinitary 재설정 줄." width="1040" height="661" />
 
 ## 항목 {#the-sections}
 

@@ -1,5 +1,5 @@
 ---
-source: a0cdeb238cc2527f
+source: ea34c1740306756c
 title: Configuración
 description: Lo que contiene cada sección de Configuración, con General y Apariencia explicadas aquí y un enlace para el resto.
 ---
@@ -10,8 +10,8 @@ Las flechas arriba y abajo se mueven entre ellas, y Escape o **Atrás** salen de
 
 También puedes pedirle a tu primer oficial que cambie una opción por ti, como «cambia al tema claro» o «activa la música ambiental».
 
-<img class="picture-dark" src="/pictures/settings-dark.webp" alt="Configuración abierta en General: las doce secciones a la izquierda, de General a Devices, y las filas Start at login, Show in dock, notificaciones, Dictation, Your panels, Purge task data y Reset Infinitary." width="1184" height="661" />
-<img class="picture-light" src="/pictures/settings-light.webp" alt="Configuración abierta en General: las doce secciones a la izquierda, de General a Devices, y las filas Start at login, Show in dock, notificaciones, Dictation, Your panels, Purge task data y Reset Infinitary." width="1184" height="661" />
+<img class="picture-dark" src="/pictures/settings-dark.webp" alt="Configuración abierta en General: las doce secciones a la izquierda, de General a Devices, y las filas Start at login, Show in dock, notificaciones, Dictation, Your panels, Purge task data y Reset Infinitary." width="1040" height="661" />
+<img class="picture-light" src="/pictures/settings-light.webp" alt="Configuración abierta en General: las doce secciones a la izquierda, de General a Devices, y las filas Start at login, Show in dock, notificaciones, Dictation, Your panels, Purge task data y Reset Infinitary." width="1040" height="661" />
 
 ## Las secciones {#the-sections}
 

@@ -9,8 +9,8 @@ The up and down arrows move between them, and Escape or **Back** leaves Settings
 
 You can also ask your first mate to change a setting for you, such as "switch to the light theme" or "turn on ambient music".
 
-<img class="picture-dark" src="/pictures/settings-dark.webp" alt="Settings open on General: the twelve sections down the left, from General to Devices, and the Start at login, Show in dock, notification, Dictation, Your panels, Purge task data and Reset Infinitary rows." width="1184" height="661" />
-<img class="picture-light" src="/pictures/settings-light.webp" alt="Settings open on General: the twelve sections down the left, from General to Devices, and the Start at login, Show in dock, notification, Dictation, Your panels, Purge task data and Reset Infinitary rows." width="1184" height="661" />
+<img class="picture-dark" src="/pictures/settings-dark.webp" alt="Settings open on General: the twelve sections down the left, from General to Devices, and the Start at login, Show in dock, notification, Dictation, Your panels, Purge task data and Reset Infinitary rows." width="1040" height="661" />
+<img class="picture-light" src="/pictures/settings-light.webp" alt="Settings open on General: the twelve sections down the left, from General to Devices, and the Start at login, Show in dock, notification, Dictation, Your panels, Purge task data and Reset Infinitary rows." width="1040" height="661" />
 
 ## The sections
 

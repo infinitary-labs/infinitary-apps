@@ -1,5 +1,5 @@
 ---
-source: a0cdeb238cc2527f
+source: ea34c1740306756c
 title: Réglages
 description: Ce que contient chaque section des Réglages, avec Général et Apparence expliqués ici et un lien pour le reste.
 ---
@@ -10,8 +10,8 @@ Les flèches haut et bas passent de l’une à l’autre, et Escape ou **Retour*
 
 Vous pouvez aussi demander à votre second de changer un réglage pour vous, par exemple « passe au thème clair » ou « active la musique d’ambiance ».
 
-<img class="picture-dark" src="/pictures/settings-dark.webp" alt="Les Réglages ouverts sur Général : les douze sections sur la gauche, de Général à Appareils, et les lignes Ouvrir à la connexion, Afficher dans le Dock, notification, Dictée, Vos panneaux, Effacer les données des tâches et Réinitialiser Infinitary." width="1184" height="661" />
-<img class="picture-light" src="/pictures/settings-light.webp" alt="Les Réglages ouverts sur Général : les douze sections sur la gauche, de Général à Appareils, et les lignes Ouvrir à la connexion, Afficher dans le Dock, notification, Dictée, Vos panneaux, Effacer les données des tâches et Réinitialiser Infinitary." width="1184" height="661" />
+<img class="picture-dark" src="/pictures/settings-dark.webp" alt="Les Réglages ouverts sur Général : les douze sections sur la gauche, de Général à Appareils, et les lignes Ouvrir à la connexion, Afficher dans le Dock, notification, Dictée, Vos panneaux, Effacer les données des tâches et Réinitialiser Infinitary." width="1040" height="661" />
+<img class="picture-light" src="/pictures/settings-light.webp" alt="Les Réglages ouverts sur Général : les douze sections sur la gauche, de Général à Appareils, et les lignes Ouvrir à la connexion, Afficher dans le Dock, notification, Dictée, Vos panneaux, Effacer les données des tâches et Réinitialiser Infinitary." width="1040" height="661" />
 
 ## Les sections {#the-sections}
 

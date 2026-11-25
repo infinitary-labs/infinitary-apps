@@ -1,5 +1,5 @@
 ---
-source: a0cdeb238cc2527f
+source: ea34c1740306756c
 title: 設定
 description: 設定的每個部分裡有什麼；這裡說明「一般」和「外觀」，其他部分附上連結。
 ---
@@ -10,8 +10,8 @@ description: 設定的每個部分裡有什麼；這裡說明「一般」和「�
 
 你也可以請大副幫你更改設定，例如「切換到淺色主題」或「開啟環境音樂」。
 
-<img class="picture-dark" src="/pictures/settings-dark.webp" alt="打開在「一般」的設定：左側從「一般」到「裝置」的十二個部分，以及登入時啟動、在 Dock 中顯示、通知、聽寫、你的面板、清除任務資料和重設 Infinitary 這幾列。" width="1184" height="661" />
-<img class="picture-light" src="/pictures/settings-light.webp" alt="打開在「一般」的設定：左側從「一般」到「裝置」的十二個部分，以及登入時啟動、在 Dock 中顯示、通知、聽寫、你的面板、清除任務資料和重設 Infinitary 這幾列。" width="1184" height="661" />
+<img class="picture-dark" src="/pictures/settings-dark.webp" alt="打開在「一般」的設定：左側從「一般」到「裝置」的十二個部分，以及登入時啟動、在 Dock 中顯示、通知、聽寫、你的面板、清除任務資料和重設 Infinitary 這幾列。" width="1040" height="661" />
+<img class="picture-light" src="/pictures/settings-light.webp" alt="打開在「一般」的設定：左側從「一般」到「裝置」的十二個部分，以及登入時啟動、在 Dock 中顯示、通知、聽寫、你的面板、清除任務資料和重設 Infinitary 這幾列。" width="1040" height="661" />
 
 ## 各個部分 {#the-sections}
 

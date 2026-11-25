@@ -1,5 +1,5 @@
 ---
-source: a0cdeb238cc2527f
+source: ea34c1740306756c
 title: 设置
 description: 设置的每个分区里有什么，其中“通用”和“外观”在这里详细说明，其余分区附有链接。
 ---
@@ -10,8 +10,8 @@ description: 设置的每个分区里有什么，其中“通用”和“外观�
 
 你也可以让大副替你更改某项设置，例如“切换到浅色主题”或“打开环境音乐”。
 
-<img class="picture-dark" src="/pictures/settings-dark.webp" alt="设置已打开“通用”：左侧是从“通用”到“设备”的十二个分区，右侧是“登录时启动”“在程序坞中显示”、通知、“听写”、“你的面板”、“清除任务数据”和“重置 Infinitary”这几行。" width="1184" height="661" />
-<img class="picture-light" src="/pictures/settings-light.webp" alt="设置已打开“通用”：左侧是从“通用”到“设备”的十二个分区，右侧是“登录时启动”“在程序坞中显示”、通知、“听写”、“你的面板”、“清除任务数据”和“重置 Infinitary”这几行。" width="1184" height="661" />
+<img class="picture-dark" src="/pictures/settings-dark.webp" alt="设置已打开“通用”：左侧是从“通用”到“设备”的十二个分区，右侧是“登录时启动”“在程序坞中显示”、通知、“听写”、“你的面板”、“清除任务数据”和“重置 Infinitary”这几行。" width="1040" height="661" />
+<img class="picture-light" src="/pictures/settings-light.webp" alt="设置已打开“通用”：左侧是从“通用”到“设备”的十二个分区，右侧是“登录时启动”“在程序坞中显示”、通知、“听写”、“你的面板”、“清除任务数据”和“重置 Infinitary”这几行。" width="1040" height="661" />
 
 ## 各个分区 {#the-sections}
 

@@ -1,5 +1,5 @@
 ---
-source: a0cdeb238cc2527f
+source: ea34c1740306756c
 title: 設定
 description: 設定の各セクションに何があるかを説明します。一般と外観はこのページで、そのほかはリンク先で説明します。
 ---
@@ -10,8 +10,8 @@ description: 設定の各セクションに何があるかを説明します。�
 
 「ライトテーマに切り替えて」「アンビエント音楽をオンにして」のように、一等航海士に設定の変更を頼むこともできます。
 
-<img class="picture-dark" src="/pictures/settings-dark.webp" alt="一般を開いた設定：左側に一般からデバイスまでの 12 のセクションが並び、サインイン時に起動、Dock に表示、通知、音声入力、あなたのパネル、タスクのデータを消去、Infinitary をリセットの各行が表示されています。" width="1184" height="661" />
-<img class="picture-light" src="/pictures/settings-light.webp" alt="一般を開いた設定：左側に一般からデバイスまでの 12 のセクションが並び、サインイン時に起動、Dock に表示、通知、音声入力、あなたのパネル、タスクのデータを消去、Infinitary をリセットの各行が表示されています。" width="1184" height="661" />
+<img class="picture-dark" src="/pictures/settings-dark.webp" alt="一般を開いた設定：左側に一般からデバイスまでの 12 のセクションが並び、サインイン時に起動、Dock に表示、通知、音声入力、あなたのパネル、タスクのデータを消去、Infinitary をリセットの各行が表示されています。" width="1040" height="661" />
+<img class="picture-light" src="/pictures/settings-light.webp" alt="一般を開いた設定：左側に一般からデバイスまでの 12 のセクションが並び、サインイン時に起動、Dock に表示、通知、音声入力、あなたのパネル、タスクのデータを消去、Infinitary をリセットの各行が表示されています。" width="1040" height="661" />
 
 ## セクション {#the-sections}
 

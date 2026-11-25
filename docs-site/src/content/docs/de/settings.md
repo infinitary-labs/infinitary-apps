@@ -1,5 +1,5 @@
 ---
-source: a0cdeb238cc2527f
+source: ea34c1740306756c
 title: Einstellungen
 description: Was jeder Bereich der Einstellungen enthält – Allgemein und Erscheinungsbild hier erklärt, für den Rest ein Link.
 ---
@@ -10,8 +10,8 @@ Die Pfeiltasten nach oben und unten wechseln zwischen ihnen, und Escape oder **Z
 
 Du kannst deinen ersten Offizier auch bitten, eine Einstellung für dich zu ändern, etwa „Wechsle zum hellen Design“ oder „Schalte Ambient-Musik ein“.
 
-<img class="picture-dark" src="/pictures/settings-dark.webp" alt="Die Einstellungen sind auf „Allgemein“ geöffnet: links die zwölf Bereiche von „Allgemein“ bis „Geräte“, daneben die Zeilen „Bei Anmeldung starten“, „Im Dock anzeigen“, Benachrichtigung, „Diktat“, „Deine Panels“, „Aufgabendaten endgültig löschen“ und „Infinitary zurücksetzen“." width="1184" height="661" />
-<img class="picture-light" src="/pictures/settings-light.webp" alt="Die Einstellungen sind auf „Allgemein“ geöffnet: links die zwölf Bereiche von „Allgemein“ bis „Geräte“, daneben die Zeilen „Bei Anmeldung starten“, „Im Dock anzeigen“, Benachrichtigung, „Diktat“, „Deine Panels“, „Aufgabendaten endgültig löschen“ und „Infinitary zurücksetzen“." width="1184" height="661" />
+<img class="picture-dark" src="/pictures/settings-dark.webp" alt="Die Einstellungen sind auf „Allgemein“ geöffnet: links die zwölf Bereiche von „Allgemein“ bis „Geräte“, daneben die Zeilen „Bei Anmeldung starten“, „Im Dock anzeigen“, Benachrichtigung, „Diktat“, „Deine Panels“, „Aufgabendaten endgültig löschen“ und „Infinitary zurücksetzen“." width="1040" height="661" />
+<img class="picture-light" src="/pictures/settings-light.webp" alt="Die Einstellungen sind auf „Allgemein“ geöffnet: links die zwölf Bereiche von „Allgemein“ bis „Geräte“, daneben die Zeilen „Bei Anmeldung starten“, „Im Dock anzeigen“, Benachrichtigung, „Diktat“, „Deine Panels“, „Aufgabendaten endgültig löschen“ und „Infinitary zurücksetzen“." width="1040" height="661" />
 
 ## Die Bereiche {#the-sections}
 

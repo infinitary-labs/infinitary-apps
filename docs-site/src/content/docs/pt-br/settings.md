@@ -1,5 +1,5 @@
 ---
-source: a0cdeb238cc2527f
+source: ea34c1740306756c
 title: Ajustes
 description: O que cada seção dos Ajustes contém, com Geral e Aparência explicadas aqui e um link para as demais.
 ---
@@ -10,8 +10,8 @@ As setas para cima e para baixo passam de uma para outra, e Escape ou **Voltar**
 
 Você também pode pedir ao seu imediato para mudar um ajuste por você, como “mude para o tema claro” ou “ative a música ambiente”.
 
-<img class="picture-dark" src="/pictures/settings-dark.webp" alt="Ajustes abertos em Geral: as doze seções à esquerda, de Geral a Dispositivos, e as linhas Abrir ao fazer login, Mostrar no Dock, avisos, Ditado, Seus painéis, Excluir dados das tarefas e Redefinir o Infinitary." width="1184" height="661" />
-<img class="picture-light" src="/pictures/settings-light.webp" alt="Ajustes abertos em Geral: as doze seções à esquerda, de Geral a Dispositivos, e as linhas Abrir ao fazer login, Mostrar no Dock, avisos, Ditado, Seus painéis, Excluir dados das tarefas e Redefinir o Infinitary." width="1184" height="661" />
+<img class="picture-dark" src="/pictures/settings-dark.webp" alt="Ajustes abertos em Geral: as doze seções à esquerda, de Geral a Dispositivos, e as linhas Abrir ao fazer login, Mostrar no Dock, avisos, Ditado, Seus painéis, Excluir dados das tarefas e Redefinir o Infinitary." width="1040" height="661" />
+<img class="picture-light" src="/pictures/settings-light.webp" alt="Ajustes abertos em Geral: as doze seções à esquerda, de Geral a Dispositivos, e as linhas Abrir ao fazer login, Mostrar no Dock, avisos, Ditado, Seus painéis, Excluir dados das tarefas e Redefinir o Infinitary." width="1040" height="661" />
 
 ## As seções {#the-sections}
 

@@ -722,7 +722,7 @@ const BROWSER_BUTTON_DESCRIPTION = [
  * description, which a Claude model reads.
  */
 const BROWSER_PAGE_DESCRIPTION = [
-  "Optional, only beside browser_button: an .html or .htm file of your task's project, such as index.html, that the button opens, by its working-copy-relative path, with no .. and no link on the way.",
+  "Optional, only beside browser_button: an .html or .htm file of your task's project, such as index.html, that the button opens, with the captain in control, by its working-copy-relative path, with no .. and no link on the way.",
   "The app serves only files inside the project folder; the click opens the current file or says it is not there yet. It needs no open browser; never beside browser_handoff.",
 ].join(" ");
 
@@ -743,7 +743,7 @@ const BROWSER_HANDOFF_DESCRIPTION = [
   "The app pauses your browser before the card goes up; its commands refuse until the captain returns control, and only their Return control resumes you, once, with your earlier refs gone. Put the steps and values to copy in the card body.",
   `Returning control gives this task the signed-in site, never permission to buy, pay or submit something that matters. ${browserCommand("stop")} withdraws a waiting request.`,
   "A purchase, booking or other submission that commits the captain is the captain's to make: prepare it up to its last step and ask here, with the card as its review.",
-  `The review names what the captain commits to, read from the page now - for a trip the route, dates and times with time zones, passengers, seller, total and currency, fare rules - with anything uncertain and what changed; label the step, such as ${BROWSER_PAY_STEP}, beside one such as Stop here.`,
+  `The review names what the captain commits to, read from the page now - for a trip the route, dates and times with time zones, passengers, seller, total and currency, baggage and fare rules - with anything uncertain and what changed; label the step, such as ${BROWSER_PAY_STEP}, beside one such as Stop here.`,
   "If the price or terms change after a review, stop and review again: an earlier choice does not cover them.",
   "If the page does not confirm the captain's last step, the outcome is unknown: never submit, reload or resend it; check where the site lists it; ask the captain.",
   UNKNOWN_OUTCOME_WORDS,

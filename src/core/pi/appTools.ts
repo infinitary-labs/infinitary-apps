@@ -257,7 +257,7 @@ export function createAppTools(delegate: AppToolsDelegate) {
           Type.String({
             minLength: 1,
             description:
-              "For a window's own setting (window true in app_state): the Mac, by name or id, whose window the captain means, usually where they are. Omit it for this computer.",
+              "For a window's own setting (window true in app_state): the Mac, by name or id, that controls this one and whose window the captain means, usually where they are. Omit it for this computer.",
           }),
         ),
       }),

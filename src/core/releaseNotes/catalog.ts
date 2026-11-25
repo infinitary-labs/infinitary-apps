@@ -275,6 +275,7 @@ function parseEntry(value: unknown, where: string, problems: string[]): NoteEntr
     value.noDocsSite === undefined
       ? undefined
       : (text(value.noDocsSite, `${where}.noDocsSite`, 300, problems) ?? "");
+  // i18n-exempt: a release-note check refusal, read by the change author in a terminal or a check log
   if (value.docsSite !== undefined && value.noDocsSite !== undefined)
     problems.push(`${where}: declare docsSite pages or a noDocsSite reason, not both`);
   let provenance: NoteEntry["provenance"] | null = null;
@@ -321,6 +322,7 @@ function parseDocsSite(value: unknown, where: string, problems: string[]): strin
       problems.push(
         `${at}[${index}]: "${name}" is written by a script from the app's own data, so no change names it`,
       );
+    // i18n-exempt: a release-note check refusal, read by the change author in a terminal or a check log
     else if (value.indexOf(name) !== index) problems.push(`${at}: names "${name}" twice`);
   });
   return problems.length > before ? undefined : (value as string[]);
@@ -716,13 +718,15 @@ export function docsSiteProblems(
   const problems: string[] = [];
   for (const entry of file.file.entries) {
     const at = `${file.path}: "${entry.id}"`;
+    const covering = (entry.provenance.covers?.length ?? 0) > 0;
     if (
       entry.provenance.origin === "change" &&
-      entry.provenance.covers === undefined &&
+      !covering &&
       DOCS_SITE_KINDS.includes(entry.kind) &&
       entry.docsSite === undefined &&
       entry.noDocsSite === undefined
     )
+      // i18n-exempt: a release-note check refusal, read by the change author in a terminal or a check log
       problems.push(
         `${at} is a ${entry.kind}: name the docs site pages this change edited in "docsSite", or say in one sentence in "noDocsSite" why no page needs to change`,
       );
@@ -730,7 +734,8 @@ export function docsSiteProblems(
       const path = pages.get(name);
       if (path === undefined)
         problems.push(`${at} names "${name}", which is not a hand-written docs site page`);
-      else if (!entry.provenance.covers && !edited.has(path))
+      else if (!covering && !edited.has(path))
+        // i18n-exempt: a release-note check refusal, read by the change author in a terminal or a check log
         problems.push(
           `${at} names "${name}", but this change does not edit ${path}: update the page in the same change, or say in "noDocsSite" why it needs no change`,
         );

@@ -615,6 +615,7 @@
   "src/renderer/src/plugins/builtin/record/record.frame.test.ts": 0.1,
   "src/renderer/src/plugins/createPanelSlotStore.test.ts": 0.1,
   "src/renderer/src/plugins/frames/frameController.test.ts": 0.1,
+  "src/renderer/src/plugins/frames/frameController.watchdog.test.ts": 0.1,
   "src/renderer/src/plugins/frames/frameLink.test.ts": 0.1,
   "src/renderer/src/plugins/frames/frameStylesheet.test.ts": 0.1,
   "src/renderer/src/plugins/host.test.ts": 0.1,

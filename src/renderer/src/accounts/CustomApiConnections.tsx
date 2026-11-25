@@ -26,7 +26,7 @@ import {
 /**
  * What each of the first mate's computer's own connections says now, by its
  * account id there, as a computer that runs work follows it. Read only while
- * `active`, such as while a computer's group is drawn.
+ * `active`, such as while a computer has a connection approved from one of them.
  */
 export function useHomeCustomDefinitions(active: boolean): Map<string, CustomFileDefinition> {
   const [definitions, setDefinitions] = useState(new Map<string, CustomFileDefinition>());

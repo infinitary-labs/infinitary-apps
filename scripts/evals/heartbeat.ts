@@ -97,10 +97,13 @@ type Host = Awaited<ReturnType<typeof approvalHost>>;
 /**
  * The plan, its built part and its parked last part, as the standing list
  * reads them. The captain stopped the checklist a day ago while the changelog
- * was still being built, and the changelog merged two hours ago, so the
+ * was still being built, and the changelog merged five minutes ago, so the
  * stopped part became the last one since the captain decided: news the guide
  * asks about once. A stop recorded after the last close says nothing new
- * (docs/report-sort.md, "The last part the captain stopped").
+ * (docs/report-sort.md, "The last part the captain stopped"). The close stays
+ * inside the next-move check's settle (`STALL_WAKE_MS`, ten minutes): past
+ * it the app would already have raised its own last-part card, and the
+ * guide would leave the part to that card.
  */
 function seedLastPart(host: Host, clock: { offset: number }): string {
   clock.offset = -26 * 60 * MINUTE_MS;
@@ -121,7 +124,7 @@ function seedLastPart(host: Host, clock: { offset: number }): string {
   clock.offset = -24 * 60 * MINUTE_MS;
   const stop = host.tasks.starts.declareCaptainStop("checklist", "firstmate");
   if (!stop.ok) throw new Error("The parked part could not be stopped");
-  clock.offset = -2 * 60 * MINUTE_MS;
+  clock.offset = -5 * MINUTE_MS;
   host.tasks.close("changelog", { status: "done", reason: "merged", actor: "host" });
   clock.offset = 0;
   return "checklist";

@@ -794,9 +794,8 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks, stor
     if (event.defaultPrevented) return;
     if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
     const target = event.target as HTMLElement;
-    // On a task with parts listed under it, ← collapses it and → expands it;
-    // from a part, ← goes to the row it is listed under. A tag group lists
-    // its tasks flat, so its rows fold nothing and ← goes to its header.
+    // On a task with parts listed under it, ← collapses it and → expands it; from a part, ← goes
+    // to the row it is listed under. A tag group's rows are flat: ← goes to its header.
     const flat = target.dataset.nowNav?.includes("@") === true;
     const rowId = target.matches("[data-now-row]") && !flat ? target.dataset.nowRow : undefined;
     if (rowId && (event.key === "ArrowLeft" || event.key === "ArrowRight")) {
@@ -880,13 +879,15 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks, stor
       ?.querySelector<HTMLElement>('[role="menuitemradio"][aria-checked="true"]')
       ?.focus();
   }, [menuAsk]);
-  // While it shows, the list keeps room under it, so a short Tasks never cuts it.
+  // While it shows, the list keeps room under it, so a short Tasks never cuts it. The
+  // room is the menu's whole height, never its box, which a frame shorter than it caps.
   useLayoutEffect(() => {
     const menu = menuRef.current;
-    const root = rootRef.current;
+    const root = rootRef.current?.getBoundingClientRect().top ?? 0;
+    const top = menu ? menu.getBoundingClientRect().top - root : 0;
     const room =
-      menuDrawn && menu && root
-        ? Math.ceil(menu.getBoundingClientRect().bottom - root.getBoundingClientRect().top) + 8
+      menuDrawn && menu
+        ? Math.ceil(top + menu.scrollHeight + menu.offsetHeight - menu.clientHeight) + 8
         : 0;
     setMenuRoom((held) => (held === room ? held : room));
   });

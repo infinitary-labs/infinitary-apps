@@ -1087,6 +1087,38 @@ const TIMED_WAITS: Partial<Record<MergeWait, number>> = {
 const MAX_RETRY_MS = 30 * 60_000;
 
 /**
+ * How long the host may hold a merge request of an approved version before
+ * the app sends its direct merge once in that request's place (docs/forge.md,
+ * "A merge request GitHub holds"): the captain's choice, five minutes.
+ */
+export const HELD_MERGE_BOUND_MS = 5 * 60_000;
+
+/**
+ * When a held merge request is read again: on the outcome wait's backoff,
+ * and no later than the moment its hold passes the bound, so the direct
+ * merge is not late by a whole backoff.
+ */
+export function heldRetryAfter(
+  held: NonNullable<MergeAuthorization["heldMerge"]>,
+  retries: number,
+  now: number,
+): number | undefined {
+  const backoff = retryAfter("outcome", retries, now);
+  const bound = held.since + HELD_MERGE_BOUND_MS;
+  return backoff !== undefined && held.direct === undefined && bound > now
+    ? Math.min(backoff, bound)
+    : backoff;
+}
+
+/** The merge request the host holds for the version the approval covers now, when it said it holds one. */
+export function heldMergeOf(
+  authorization: MergeAuthorization,
+): NonNullable<MergeAuthorization["heldMerge"]> | undefined {
+  const held = authorization.heldMerge;
+  return held?.head === candidateHead(authorization) ? held : undefined;
+}
+
+/**
  * A wait only a read ends, since the host announces nothing: how far apart
  * its reads may grow, which is how late the app can learn the host merged.
  */

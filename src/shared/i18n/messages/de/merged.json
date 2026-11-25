@@ -1,5 +1,6 @@
 {
   "mergedAt": "Um {at} zusammengeführt",
+  "mergedChangeDirectlyOn": "{change} auf {place} direkt zusammengeführt, nachdem {place} die erste Zusammenführungsanfrage zurückgehalten hatte",
   "mergedChangeNewerOn": "{change} auf {place} zusammengeführt, mit einem Push nach der freigegebenen Version",
   "mergedChangeOn": "{change} auf {place} zusammengeführt",
   "mergedChangeOnHost": "{change} beim Host des Projekts zusammengeführt",

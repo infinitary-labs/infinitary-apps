@@ -103,6 +103,14 @@ export type PrOutcome = {
    * a later read asks the host how it ended.
    */
   mergeTask?: string;
+  /**
+   * The host said it holds a merge request of this pull request and took no
+   * new one (`ForgeMergeUnconfirmed.held`), named in `mergeTask` when the
+   * host named it: the approval follows that request and sends nothing again.
+   */
+  mergeHeld?: true;
+  /** The host refused the direct merge sent in place of a request it holds (`MergeGuard.direct`). */
+  directRefused?: true;
 };
 
 /**
@@ -181,6 +189,13 @@ export type MergeGuard = {
   unresolved?: () => string | undefined;
   /** Where the approved pull request lives: what a read-back reads, never the selected project. */
   place?: { host: string; owner: string; name: string };
+  /**
+   * The host has held a merge request of this version past the bound
+   * (`HELD_MERGE_BOUND_MS`): this run sends the host's direct merge in its
+   * place, at the same version, after every gate an ordinary merge passes.
+   * `heldMs` is how long the host has held it.
+   */
+  direct?: () => { heldMs: number } | undefined;
   beforeDispatch: (head: string, mark?: boolean) => string | undefined;
 };
 
@@ -456,6 +471,7 @@ export class ChangeMerge {
     }
     const { change, forge } = checked;
     let dispatched = false;
+    let direct: { heldMs: number } | undefined;
     try {
       const record = this.options.tasks.get(taskId);
       const target = record?.delivery?.checkTarget;
@@ -556,9 +572,14 @@ export class ChangeMerge {
           dispatched = true;
         },
       );
-      const receipt = leaving
-        ? await forge.putIn(publishedChange, publishedChange.headSha, way, leaving)
-        : await forge.putIn(publishedChange, publishedChange.headSha, way);
+      // Read after the last look, which is what records the send.
+      direct = way && forge.putInDirectly ? guard?.direct?.() : undefined;
+      const receipt =
+        direct && way && forge.putInDirectly
+          ? await forge.putInDirectly(publishedChange, publishedChange.headSha, way)
+          : leaving
+            ? await forge.putIn(publishedChange, publishedChange.headSha, way, leaving)
+            : await forge.putIn(publishedChange, publishedChange.headSha, way);
       if (receipt?.queued) return hostQueued(forge, change);
       // A host whose merge names no version says which one it merged: a
       // push between the app's read and the merge went in too, is told, and
@@ -566,7 +587,7 @@ export class ChangeMerge {
       const newer = otherMerged(change.headSha, receipt?.mergedHead);
       return {
         ok: true,
-        ...this.putInText(taskId, forge, change, newer),
+        ...this.putInText(taskId, forge, change, newer, direct),
         ...(guard
           ? {
               receipt: {
@@ -602,11 +623,16 @@ export class ChangeMerge {
         problem: message,
         ...(isTransientForgeFailure(caught) ? { transient: true } : {}),
         ...(sent ? { dispatched: true } : {}),
-        ...(sent && forge.mergeNamesNoVersion && isTransientForgeFailure(caught)
+        ...(sent && isTransientForgeFailure(caught) && (forge.mergeNamesNoVersion || heldBy(caught))
           ? { noResend: true }
           : {}),
         ...(caught instanceof ForgeMergeUnconfirmed && caught.mergeTask
           ? { mergeTask: caught.mergeTask }
+          : {}),
+        ...(sent && heldBy(caught) ? { mergeHeld: true as const } : {}),
+        // The host's own verdict on the one direct merge: never sent again.
+        ...(sent && direct && !isTransientForgeFailure(caught) && !isSignInForgeFailure(caught)
+          ? { directRefused: true as const }
           : {}),
         ...(baseMoved ? { baseMoved: true } : {}),
         ...(stop ? { stop } : {}),
@@ -1038,6 +1064,12 @@ export class ChangeMerge {
       if (await forge.mergeTaskRefused(prNumber, mergeTask))
         return { ...pull, mergeTaskRefused: true };
     }
+    // A merge request the host holds: how it stands now, read by its id. A
+    // read that fails leaves it unsaid, and the request is read again later.
+    if (mergeTask && forge.heldMergeState && pull.state === "open" && !pull.merged) {
+      const heldMerge = await forge.heldMergeState(prNumber, mergeTask).catch(() => undefined);
+      if (heldMerge) return { ...pull, heldMerge };
+    }
     return pull;
   }
 
@@ -1389,6 +1421,8 @@ export class ChangeMerge {
     change: ForgeChange,
     /** The newer version the host merged instead of the approved one, when it said so. */
     newer?: string,
+    /** The direct merge sent in place of a merge request the host held (`MergeGuard.direct`). */
+    direct?: { heldMs: number },
   ): { text: string; line: string; lineSaid: Said } {
     const url = forge.url(change);
     const where = forge.place ? `on ${forge.place}` : "where the project lives";
@@ -1398,12 +1432,18 @@ export class ChangeMerge {
       const lineSaid =
         place && newer
           ? said("mergedChangeNewerOn", { change: label, place })
-          : place
-            ? said("mergedChangeOn", { change: label, place })
-            : said("mergedChangeWhereItLives", { change: label });
+          : place && direct
+            ? said("mergedChangeDirectlyOn", { change: label, place })
+            : place
+              ? said("mergedChangeOn", { change: label, place })
+              : said("mergedChangeWhereItLives", { change: label });
       const line = englishOf(lineSaid);
       const { told } = otherMergedFacts(place, label, newer, change.headSha);
-      return { text: `${line}.${url ? ` ${url}` : ""}${told}`, line, lineSaid };
+      // i18n-exempt: served to the first mate in the merge answer, stays English
+      const directly = direct
+        ? ` ${place ?? "The host"} had held the first merge request for ${Math.round(direct.heldMs / 60_000)} minutes without finishing it, so the app merged the pull request directly at the approved version. Tell the captain that once; nothing else is needed.`
+        : "";
+      return { text: `${line}.${url ? ` ${url}` : ""}${told}${directly}`, line, lineSaid };
     }
     const title = this.options.tasks.get(taskId)?.title ?? forge.label(change);
     const lineSaid = place ? said("mergedOn", { place }) : said("mergedWhereItLives");
@@ -1536,11 +1576,17 @@ export function mergedReceipt(pull: ForgePull): NonNullable<PrOutcome["receipt"]
   };
 }
 
+/** The host answered a merge request by saying it already holds one for that pull request. */
+export function heldBy(caught: unknown): boolean {
+  return caught instanceof ForgeMergeUnconfirmed && caught.held === true;
+}
+
 export function stripAttempt(attempt: MergeAttempt): PrOutcome {
   const {
     transient: _transient,
     dispatched: _dispatched,
     baseMoved: _baseMoved,
+    noResend: _noResend,
     ...outcome
   } = attempt;
   return outcome;

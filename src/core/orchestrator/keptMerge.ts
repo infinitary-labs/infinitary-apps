@@ -7,6 +7,9 @@ import { mergedReceipt, otherMergedFacts } from "./changeMerge";
 import type { KeptApproval } from "./keptApproval";
 import {
   candidateHead,
+  HELD_MERGE_BOUND_MS,
+  heldMergeOf,
+  heldRetryAfter,
   keptFeedLine,
   keptFeedSaid,
   keptNote,
@@ -338,7 +341,12 @@ export class KeptMerge {
       const number = authorization.target.prNumber;
       pull =
         readPull && number !== undefined
-          ? await readPull(taskId, number, authorization.attempt?.task, authorization.target)
+          ? await readPull(
+              taskId,
+              number,
+              authorization.attempt?.task ?? heldMergeOf(authorization)?.request,
+              authorization.target,
+            )
           : undefined;
     } catch {
       pull = undefined;
@@ -399,8 +407,68 @@ export class KeptMerge {
       this.reportEnded(taskId, record.title);
       return;
     }
+    const held = heldMergeOf(current);
+    if (held && this.followHeld(taskId, current, held, pull, now)) return;
     this.approvals.patchStanding(taskId, { attempt: undefined, retryAt: now });
     await this.runMergeAuthorization(taskId);
+  }
+
+  /**
+   * The pull request reads open while the host holds a merge request of the
+   * approved version (docs/forge.md, "A merge request GitHub holds").
+   * Returns true when the approval keeps waiting on that request, read only;
+   * false when every gate runs again: the request ended without merging,
+   * the host never named it, so only another request can say whether it is
+   * still held, or its hold passed the bound, and that run sends the host's
+   * direct merge once in its place.
+   */
+  private followHeld(
+    taskId: string,
+    current: MergeAuthorization,
+    held: NonNullable<MergeAuthorization["heldMerge"]>,
+    pull: ForgePull,
+    now: number,
+  ): boolean {
+    const record = this.host.tasks.get(taskId);
+    const place = placeOf(this.host.repos, record);
+    const change = changeName(record, pull.number);
+    const state = held.request ? pull.heldMerge : undefined;
+    const wait = (): boolean => {
+      const retries = (current.retries ?? 0) + 1;
+      this.approvals.patchStanding(taskId, {
+        waiting: { on: "outcome", head: held.head, at: now },
+        retries,
+        retryAt: heldRetryAfter(held, retries, now),
+      });
+      return true;
+    };
+    // The host says it merged and its pull request does not show it yet: the next read does.
+    if (state?.status === "merged") return wait();
+    if (state && state.status !== "pending") {
+      this.approvals.patchStanding(taskId, { heldMerge: undefined });
+      this.host.tasks.note(
+        taskId,
+        // i18n-exempt: an English timeline note, like the approval's other notes
+        `The merge request ${place} was holding for ${change} ended without merging${state.message ? `: ${state.message}` : ""}. The merge is sent again once its gates pass.`,
+        { news: true },
+      );
+      return false;
+    }
+    // Still pending, unreadable, or never named. A request the host named is
+    // read, never sent again; one it did not name can only be asked about by
+    // sending another.
+    if (held.direct === "refused" || now - held.since < HELD_MERGE_BOUND_MS)
+      return held.request ? wait() : false;
+    if (held.direct !== "due") {
+      this.approvals.patchStanding(taskId, { heldMerge: { ...held, direct: "due" } });
+      this.host.tasks.note(
+        taskId,
+        // i18n-exempt: an English timeline note, like the approval's other notes
+        `${place} has held the merge request of ${change} for ${Math.round((now - held.since) / 60_000)} minutes without finishing it, so the app sends its direct merge once, at the approved version, when the pull request can merge.`,
+        { news: true },
+      );
+    }
+    return false;
   }
 
   /** A merge the reconcile found already done: spend the approval and close the task once. */

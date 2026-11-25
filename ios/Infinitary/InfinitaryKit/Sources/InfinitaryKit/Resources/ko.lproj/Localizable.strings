@@ -1521,6 +1521,7 @@
 "mergeSetInProject" = "이 프로젝트의 설정에서 정했어요.";
 "mergeWaitsForReview" = "이 병합은 검토에 대한 답을 기다려요:";
 "mergedAt" = "%1$@에 병합됨";
+"mergedChangeDirectlyOn" = "%2$@에서 첫 병합 요청이 보류되어 %2$@에서 %1$@ 직접 병합됨";
 "mergedChangeNewerOn" = "%2$@에서 %1$@ 병합됨, 승인된 버전 이후의 푸시가 포함됨";
 "mergedChangeOn" = "%2$@에서 %1$@ 병합됨";
 "mergedChangeOnHost" = "프로젝트 호스트에서 %1$@ 병합됨";

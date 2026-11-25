@@ -22,6 +22,9 @@ import type { KeptApproval } from "./keptApproval";
 import {
   approvalClosesOn,
   candidateHead,
+  HELD_MERGE_BOUND_MS,
+  heldMergeOf,
+  KEPT_APPROVAL_WORDS,
   keptFeedSaid,
   keptNote,
   standingAuthorization,
@@ -434,6 +437,8 @@ export class SettleService {
         ...(result.notGreen ? { notGreen: true } : {}),
         ...(result.stop ? { stop: result.stop } : {}),
         ...(result.mergeTask ? { mergeTask: result.mergeTask } : {}),
+        ...(result.mergeHeld ? { mergeHeld: true as const } : {}),
+        ...(result.directRefused ? { directRefused: true as const } : {}),
         ...(result.skip ? { skip: result.skip } : {}),
         ...(refusal ? { refusal } : {}),
       };
@@ -960,7 +965,8 @@ export class SettleService {
   ): Promise<{ text: string; ok: boolean; refusal?: SettleRefusal }> {
     const approved =
       mode === "merge-pr" && actor === "firstmate"
-        ? await this.mergeOnCaptainWords(taskId, proceedWithOpen ?? false)
+        ? ((await this.mergeOnCaptainWords(taskId, proceedWithOpen ?? false)) ??
+          (await this.keptMergeUnread(taskId)))
         : undefined;
     const result =
       approved ??
@@ -1305,6 +1311,58 @@ export class SettleService {
         ),
       );
     return result;
+  }
+
+  /** Runs the task's kept approval once now (`KeptMerge.runMergeAuthorization`), set where the owners are composed. */
+  runKept?: (taskId: string) => Promise<void>;
+
+  /**
+   * The first mate's merge while the kept approval of the task's own pull
+   * request still reads back a merge it sent, or follows a merge request
+   * the host holds: the approval runs once now, under its own guard, so the
+   * pull request and the held request are read before anything is sent, and
+   * the first mate sends nothing beside it. The answer is what that run
+   * found. Undefined leaves the first mate's merge to the ordinary settle.
+   */
+  private async keptMergeUnread(taskId: string): Promise<SettleOutcome | undefined> {
+    const unread = () => {
+      const record = this.host.tasks.get(taskId);
+      if (!record || TaskService.isClosed(record) || this.locks.holder(taskId)) return undefined;
+      const kept = standingAuthorization(record.delivery);
+      const number = kept?.target.prNumber;
+      if (!kept || kept.review || number === undefined || number !== record.delivery?.prNumber)
+        return undefined;
+      const held = heldMergeOf(kept);
+      if (!kept.attempt && !held) return undefined;
+      return { held, place: placeOf(this.host.repos, record), change: changeName(record, number) };
+    };
+    const before = unread();
+    if (!before || !this.runKept) return undefined;
+    await this.runKept(taskId);
+    const after = this.host.tasks.get(taskId);
+    if (after && TaskService.isClosed(after) && after.closedReason === "merged")
+      // i18n-exempt: served to the first mate in the merge answer, stays English
+      return {
+        ok: true,
+        text: `Merged ${before.change} on ${before.place}: the host's own run of the kept merge approval went through, so nothing was sent beside it.`,
+      };
+    const now = unread();
+    if (!now) return undefined;
+    const { held, place, change } = now;
+    const minutes = held ? Math.round((this.host.now() - held.since) / 60_000) : 0;
+    const named = held?.request ? ` (${held.request})` : "";
+    // i18n-exempt: a refusal served to the first mate, not shown to a person
+    const why = !held
+      ? `a merge of ${change} sent earlier under the kept approval is still being read back on ${place}, so nothing is sent again until it is. The host reads it on its own.`
+      : held.direct === "refused"
+        ? `${place} is holding an earlier merge request of ${change}${named}, first seen ${minutes} minutes ago, and refused the one direct merge the app sent in its place. Nothing is sent again while it holds that request; the host reads it on its own.`
+        : `${place} is holding an earlier merge request of ${change}${named}, first seen ${minutes} minutes ago, so nothing is sent again while it does. The host reads that request on its own, and once ${place} has held it for ${HELD_MERGE_BOUND_MS / 60_000} minutes it sends the direct merge once, at the approved version, when the pull request can merge.`;
+    return {
+      ok: false,
+      // i18n-exempt: a refusal served to the first mate, not shown to a person
+      text: `Cannot merge yet: ${why} ${KEPT_APPROVAL_WORDS} Nothing is needed from you.`,
+      stop: "outcome",
+    };
   }
 
   /** Every detached settle is awaited here; refusal text is an outcome too, and it answers the outcome. */

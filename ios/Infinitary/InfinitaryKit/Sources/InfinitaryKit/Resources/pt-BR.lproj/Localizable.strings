@@ -1521,6 +1521,7 @@
 "mergeSetInProject" = "Definido nos ajustes deste projeto.";
 "mergeWaitsForReview" = "Esta mesclagem espera você responder à revisão:";
 "mergedAt" = "Mesclada às %1$@";
+"mergedChangeDirectlyOn" = "%1$@ mesclada diretamente no %2$@, depois que o %2$@ reteve o primeiro pedido de mesclagem";
 "mergedChangeNewerOn" = "%1$@ mesclada no %2$@, com um envio feito depois da versão aprovada";
 "mergedChangeOn" = "%1$@ mesclada no %2$@";
 "mergedChangeOnHost" = "%1$@ mesclada no host do projeto";

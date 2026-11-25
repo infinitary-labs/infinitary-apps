@@ -1,5 +1,6 @@
 {
   "mergedAt": "دُمج في {at}",
+  "mergedChangeDirectlyOn": "دُمج {change} على {place} مباشرةً بعد أن علّق {place} طلب الدمج الأول",
   "mergedChangeNewerOn": "دُمج {change} على {place} مع دفع أُجري بعد النسخة المعتمدة",
   "mergedChangeOn": "دُمج {change} على {place}",
   "mergedChangeOnHost": "دُمج {change} على مستضيف المشروع",

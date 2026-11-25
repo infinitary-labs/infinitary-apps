@@ -1521,6 +1521,7 @@
 "mergeSetInProject" = "Set in this project's settings.";
 "mergeWaitsForReview" = "This merge waits until you answer the review:";
 "mergedAt" = "Merged at %1$@";
+"mergedChangeDirectlyOn" = "Merged %1$@ on %2$@ directly, after %2$@ held the first merge request";
 "mergedChangeNewerOn" = "Merged %1$@ on %2$@, with a push made after the approved version";
 "mergedChangeOn" = "Merged %1$@ on %2$@";
 "mergedChangeOnHost" = "Merged %1$@ on the project's host";

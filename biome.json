@@ -378,6 +378,7 @@
         "!src/core/orchestrator/ownBatchChange.test.ts",
         "!src/core/orchestrator/inPlaceWork.folders.test.ts",
         "!src/core/orchestrator/intake.git.test.ts",
+        "!src/core/orchestrator/keptMerge.held.test.ts",
         "!src/core/orchestrator/repositoryMoves.git.test.ts",
         "!src/core/orchestrator/reviews.tier.test.ts",
         "!src/core/orchestrator/settleOwners.keptMerge.test.ts",

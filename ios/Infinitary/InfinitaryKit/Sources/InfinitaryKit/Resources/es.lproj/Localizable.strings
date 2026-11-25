@@ -1521,6 +1521,7 @@
 "mergeSetInProject" = "Se configura en los ajustes de este proyecto.";
 "mergeWaitsForReview" = "Esta fusión espera a que respondas a la revisión:";
 "mergedAt" = "Se fusionó a las %1$@";
+"mergedChangeDirectlyOn" = "Se fusionó %1$@ en %2$@ directamente, después de que %2$@ retuviera la primera solicitud de fusión";
 "mergedChangeNewerOn" = "Se fusionó %1$@ en %2$@, con un envío posterior a la versión aprobada";
 "mergedChangeOn" = "Se fusionó %1$@ en %2$@";
 "mergedChangeOnHost" = "Se fusionó %1$@ en el sitio que aloja el proyecto";

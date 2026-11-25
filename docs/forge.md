@@ -1017,14 +1017,34 @@ It follows any failed result whose words name a merge queue, since GitHub offers
 GitHub's direct merge (`PUT .../merge`) is refused on a branch that requires a merge queue, so before this the app could not merge there.
 The result is read by its id after 0.25, 0.5, 1, 2, 3 and 4 seconds (`ASYNC_MERGE_READ_DELAYS_MS`), a wait a person clicking Merge sits through at most once.
 `merged` is the merge, with the commit GitHub names; `enqueued` is the typed answer `MergeAnswer.queued`; `failed` is GitHub's refusal in its own words, read as a conflict, a moved version or a moved main branch the way the direct merge's refusals are.
-A result still pending after the last read, or one GitHub no longer keeps, is unknown: the pull request is read before anything else and nothing is sent again.
-A 409 on the request that names no moved version says a merge of that pull request is already running, and is read the same way.
+A result GitHub no longer keeps is unknown: the pull request is read before anything else and nothing is sent again.
+A result still pending after the last read, and a 409 on the request that names no moved version, say GitHub holds a merge request of that pull request ("A merge request GitHub holds").
 A GitHub that does not know the call gets the direct merge instead (`putInDirect`): a 404 on the request, or a 400 that names the API version, either of which comes back before anything is sent on.
 A GitHub Enterprise Server without the asynchronous merge is such a GitHub; that fallback is held by scripted answers alone, since no such server was at hand to try it on.
 GitLab and a plain Git host merge as before; a GitLab merge train is not used.
 Bitbucket Cloud's merge queue takes the ordinary merge request itself, with its strategy and words: Bitbucket answers 202 and the pull request reads `queued` ("Bitbucket pull requests"), which is the same typed answer, read again by the pull request's `queued` flag.
 A merge of a Bitbucket pull request the queue took and no flag shows yet, such as a pending task with no place in the queue, is an outcome not known, never queued, and is not sent again.
 Bitbucket's queue is offered only on paid plans, so the stand-in journey holds it, not a live run.
+
+### A merge request GitHub holds
+
+GitHub takes one background merge request per pull request at a time and answers a second with 409, which its documentation says carries the held request's id and merge options.
+A request it took and never finishes would otherwise answer 409 to every later one for as long as it holds it, while the pull request reads open and ready.
+The GitHub client reads the request a 409 names once by its id; while it is pending, or cannot be read, the answer is `ForgeMergeUnconfirmed` with that id and `held`, and a 409 that names no request answers the same with no id.
+A request GitHub took (202) that is still pending after the last read answers the same way with its own id.
+A held request that already ended is a transient failure: the pull request is read before anything else.
+A 409 to a merge past the branch's rules is GitHub's refusal, since that merge is sent once.
+
+The kept approval records the hold on itself (`MergeAuthorization.heldMerge`): the version, when GitHub first said so and the request's id once known.
+It waits on `outcome` and reads the pull request and the held request (`Forge.heldMergeState`) one minute later, then twice as long each time up to thirty minutes apart, and no later than the moment the hold passes five minutes (`HELD_MERGE_BOUND_MS`, `heldRetryAfter`, `src/core/orchestrator/mergeAuthorization.ts`); a request it knows by id is read, never sent again.
+The pull request merged ends it as any merge read back does.
+The held request ended without merging, or GitHub no longer keeping it, clears the hold, says so on the task's timeline, and every gate runs again before the merge is sent again.
+A hold older than five minutes on a pull request that still passes every gate at the approved version gets GitHub's direct merge (`PUT .../merge`, `Forge.putInDirectly`) once, with the same version, method and commit words: `sha` makes GitHub refuse it if the version moved, and a pull request the held request merged in the meantime answers that it is merged.
+Activity then says "Merged #N on GitHub directly, after GitHub held the first merge request", and the merge answer tells the first mate to say so to the captain once.
+A direct merge GitHub refuses, as a branch with a merge queue does, is the refusal the approval waits on like any other, and is not sent a second time for that hold (`heldMerge.direct`); a direct merge that failed without an answer is tried again at the next read.
+A hold GitHub never named is bounded by the same five minutes.
+The first mate's own merge of a pull request whose kept approval still reads back a merge or follows a hold runs that approval once and answers with what it found (`SettleService.keptMergeUnread`), so it sends nothing beside the approval's own request.
+A batch's merge keeps to reading the pull request: the direct merge is the kept approval's alone.
 
 A queued answer is no merge.
 The kept approval then waits on `host-queue` (`hostQueued`, `src/core/orchestrator/changeMerge.ts`) and records on itself the version GitHub took and when (`MergeAuthorization.handed`), apart from the wait, which any later stop replaces.

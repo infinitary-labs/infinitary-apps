@@ -1521,6 +1521,7 @@
 "mergeSetInProject" = "In den Einstellungen dieses Projekts festgelegt.";
 "mergeWaitsForReview" = "Das Zusammenführen wartet auf deine Antworten zu diesen Review-Fragen:";
 "mergedAt" = "Um %1$@ zusammengeführt";
+"mergedChangeDirectlyOn" = "%1$@ auf %2$@ direkt zusammengeführt, nachdem %2$@ die erste Zusammenführungsanfrage zurückgehalten hatte";
 "mergedChangeNewerOn" = "%1$@ auf %2$@ zusammengeführt, mit einem Push nach der freigegebenen Version";
 "mergedChangeOn" = "%1$@ auf %2$@ zusammengeführt";
 "mergedChangeOnHost" = "%1$@ beim Host des Projekts zusammengeführt";

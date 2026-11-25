@@ -241,6 +241,22 @@ export type ForgePull = {
    * pull request's: it does not confirm either, so nothing is sent again.
    */
   mergeTaskRefused?: true;
+  /**
+   * How the merge request the host is holding for it stands now
+   * (`Forge.heldMergeState`), read with the pull request while it is open.
+   */
+  heldMerge?: ForgeMergeRequest;
+};
+
+/**
+ * A merge request the host took to run in the background, read by the
+ * host's own id for it: still `pending`, `merged`, `queued` in the branch's
+ * merge queue, `failed` with the host's words, or `gone` when the host no
+ * longer keeps its result.
+ */
+export type ForgeMergeRequest = {
+  status: "pending" | "merged" | "queued" | "failed" | "gone";
+  message?: string;
 };
 
 /**
@@ -377,15 +393,19 @@ export class ForgeBaseMoved extends ForgeError {
 }
 
 /**
- * A merge the host took and has not confirmed, on a host whose merge names
- * no version: an outcome not yet known, never sent again. `mergeTask` is
+ * A merge the host took and has not confirmed: on a host whose merge names
+ * no version, or a merge request GitHub is holding to run in the
+ * background. An outcome not yet known, never sent again. `mergeTask` is
  * the host's own reference to that merge, when it gave one, which a later
- * read asks how it ended (`Forge.mergeTaskRefused`).
+ * read asks how it ended (`Forge.mergeTaskRefused`, `Forge.heldMergeState`).
+ * `held` is the host saying it holds a merge request of that pull request,
+ * whether or not it named it.
  */
 export class ForgeMergeUnconfirmed extends ForgeError {
   constructor(
     message: string,
     readonly mergeTask?: string,
+    readonly held?: true,
   ) {
     super("transient", message);
     this.name = "ForgeMergeUnconfirmed";
@@ -444,6 +464,19 @@ export interface Forge {
    * once it merged. A refusal is not proof the merge failed.
    */
   mergeTaskRefused?(number: number, task: string): Promise<boolean>;
+  /**
+   * How a merge request the host is holding stands now, by the host's own
+   * id for it (`ForgeMergeUnconfirmed.mergeTask`). Read, never written.
+   * Absent on a host that runs no merge in the background.
+   */
+  heldMergeState?(number: number, task: string): Promise<ForgeMergeRequest>;
+  /**
+   * The host's direct merge of the change, only while its head is still
+   * `headSha`: sent once in place of a background merge request the host
+   * has held past the bound (docs/forge.md, "A merge request GitHub
+   * holds"). A branch with a merge queue of its own refuses it.
+   */
+  putInDirectly?(change: ForgeChange, headSha: string, way: MergeWay): Promise<MergeAnswer>;
   /** The selected contributor change publishes its saved story in a comment. */
   readonly storyInComment?: boolean;
   readonly workflows?: ForgeWorkflows;

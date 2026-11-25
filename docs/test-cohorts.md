@@ -239,6 +239,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/core/orchestrator/ownBatchChange.test.ts` | real git in one case's project folder, for a repair declared after a send-back, at the run's own priority | 5 s default (Mac slowest case 0.3 s) |
 | `src/core/orchestrator/inPlaceWork.folders.test.ts` | real git in a project's folder, at the run's own priority | 60 s on each real-git describe, kept above the rule's 10 s (Mac slowest case 1.2 s) |
 | `src/core/orchestrator/intake.git.test.ts` | real git for settle facts, delivery overrides, typed results and branch_from, at the run's own priority | 5 s default; 60 s on branch_from, kept (Mac slowest case 0.6 s) |
+| `src/core/orchestrator/keptMerge.held.test.ts` | real git in the kept merge fixture's project folder and a scripted GitHub over local HTTP, at the run's own priority | 5 s default |
 | `src/core/orchestrator/repositoryMoves.git.test.ts` | real git for a started task moving to another repository of its project, at the run's own priority | 5 s default (Mac slowest case 0.9 s) |
 | `src/core/orchestrator/reviews.tier.test.ts` | real git in scratch projects for the reviewed tier, at the run's own priority | 5 s default (Mac slowest case 0.6 s) |
 | `src/core/orchestrator/settleOwners.keptMerge.test.ts` | real git in the kept merge fixture's project folder, at the run's own priority | 5 s default (Mac slowest case 0.6 s) |

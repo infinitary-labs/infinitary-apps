@@ -34,6 +34,7 @@ import {
   atDispatch,
   branchInProject,
   type ChangeMerge,
+  heldBy,
   hostQueued,
   MERGE_RETRY_DELAYS_MS,
   type MergeAttempt,
@@ -848,6 +849,7 @@ export class MergeReviews {
       };
     };
     let dispatched = false;
+    let direct = false;
     try {
       if (!isForkReview(review) && hasChangeRequests(forge.kind))
         requireNamed(change.title ?? "", "pull request title", this.options.namingRule?.() ?? null);
@@ -887,9 +889,14 @@ export class MergeReviews {
           dispatched = true;
         },
       );
-      const sent = leaving
-        ? await forge.putIn(change, candidate.headSha, way, leaving)
-        : await forge.putIn(change, candidate.headSha, way);
+      // Read after the last look, which is what records the send.
+      direct = (way && forge.putInDirectly ? guard?.direct?.() : undefined) !== undefined;
+      const sent =
+        direct && way && forge.putInDirectly
+          ? await forge.putInDirectly(change, candidate.headSha, way)
+          : leaving
+            ? await forge.putIn(change, candidate.headSha, way, leaving)
+            : await forge.putIn(change, candidate.headSha, way);
       if (sent?.queued) return hostQueued(forge, change);
       return merged(sent?.sha, sent?.mergedHead);
     } catch (caught) {
@@ -918,6 +925,11 @@ export class MergeReviews {
         stop,
         ...(caught instanceof ForgeMergeUnconfirmed && caught.mergeTask
           ? { mergeTask: caught.mergeTask }
+          : {}),
+        ...(sent && heldBy(caught) ? { mergeHeld: true as const } : {}),
+        // The host's own verdict on the one direct merge: never sent again.
+        ...(sent && direct && !isTransientForgeFailure(caught) && !isSignInForgeFailure(caught)
+          ? { directRefused: true as const }
           : {}),
         ...(caught instanceof ForgeBaseMoved && (stop === undefined || stop === "computing")
           ? { baseMoved: true }

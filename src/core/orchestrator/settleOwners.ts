@@ -53,5 +53,6 @@ export function createSettleOwners(host: SettleServiceHost): SettleOwners {
       console.warn("[settle] a kept merge approval could not run:", caught);
     });
   };
+  settle.runKept = (taskId) => kept.runMergeAuthorization(taskId);
   return { locks, approvals, closing, drops, settle, kept, declared, done };
 }

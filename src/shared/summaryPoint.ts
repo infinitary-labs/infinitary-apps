@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+/** The app's own point, which Automatic names (the captain's INF-447 ruling). */
+export const AUTOMATIC_SUMMARY_TOKENS = 300_000;
+
 /**
  * Where long conversations summarize, the captain's Settings choice
  * (INF-6693's plan, piece 2): `automatic` is the app's own rule (300,000
@@ -8,9 +11,6 @@ import { z } from "zod";
  * (the captain's answer on that plan); `model` leaves each model's own
  * limit.
  */
-/** The app's own point, which Automatic names (the captain's INF-447 ruling). */
-export const AUTOMATIC_SUMMARY_TOKENS = 300_000;
-
 export const SUMMARY_POINT_TOKENS = [150_000, 200_000, 300_000, 500_000] as const;
 
 export const summaryPointSchema = z.union([

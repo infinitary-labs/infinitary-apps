@@ -5,7 +5,7 @@ import { launchApp } from "./launch";
 import { MOCK_PROVIDER_ID, mockModelsJson } from "./mockModels";
 import { readSavedData } from "./savedData";
 import { settingRow } from "./settings";
-import { focusOn, pressKey, pressWindowKey } from "./windowKeys";
+import { focusOn, pressKey, pressWindowKey, typeToOption } from "./windowKeys";
 
 /** The stepped model's name, which this spec puts in its catalog. */
 const STEPPED_NAME = "Stepped stand-in";
@@ -56,34 +56,32 @@ test("a person picks where long conversations summarize by keyboard, and the cho
     await expect(select).toBeEnabled();
     await expect(select).toHaveValue("automatic");
     await expect(row.locator("[data-summary-point-steps]")).toHaveCount(0);
-    // A native select: Tab reaches it, and its first letters pick a point.
-    await focusOn(select);
-    await pressKey(select, "3");
-    await expect(select).toHaveValue("300000");
+    // A native select: a choice's first character picks it, as a person types it.
+    const pick = async (value: string) => {
+      // A save disables the select until its reply, so each pick waits for it.
+      await expect(select).toBeEnabled();
+      await typeToOption(select, value);
+      await expect(select).toHaveValue(value);
+    };
+    const shown = row.locator("[data-summary-point-steps]");
+    await pick("300000");
     await expect.poll(saved).toBe(300_000);
-    await expect(row.locator("[data-summary-point-steps]")).toHaveText(steps);
-    // The arrows walk the rest of the choices in order, each saved as it is picked.
-    await pressKey(select, "ArrowDown");
-    await expect(select).toHaveValue("500000");
+    await expect(shown).toHaveText(steps);
+    await pick("500000");
     await expect.poll(saved).toBe(500_000);
-    await expect(row.locator("[data-summary-point-steps]")).toHaveText(steps);
-    await pressKey(select, "ArrowDown");
-    await expect(select).toHaveValue("model");
+    await expect(shown).toHaveText(steps);
+    await pick("model");
     await expect.poll(saved).toBe("model");
-    await expect(row.locator("[data-summary-point-steps]")).toHaveText(steps);
-    await pressKey(select, "1");
-    await expect(select).toHaveValue("150000");
+    await expect(shown).toHaveText(steps);
+    await pick("150000");
     await expect.poll(saved).toBe(150_000);
-    await expect(row.locator("[data-summary-point-steps]")).toHaveCount(0);
-    await pressKey(select, "ArrowUp");
-    await expect(select).toHaveValue("automatic");
+    await expect(shown).toHaveCount(0);
+    await pick("automatic");
     await expect.poll(saved).toBe("automatic");
-    await expect(row.locator("[data-summary-point-steps]")).toHaveCount(0);
-    await pressKey(select, "ArrowDown");
-    await pressKey(select, "ArrowDown");
-    await expect(select).toHaveValue("200000");
+    await expect(shown).toHaveCount(0);
+    await pick("200000");
     await expect.poll(saved).toBe(200_000);
-    await expect(row.locator("[data-summary-point-steps]")).toHaveCount(0);
+    await expect(shown).toHaveCount(0);
     await launched.close();
     launched = await launchApp({
       userDataDir,

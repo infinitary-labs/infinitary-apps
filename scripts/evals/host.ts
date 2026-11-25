@@ -90,7 +90,7 @@ export async function approvalHost(
   mkdirSync(paths.firstmateHomeDir, { recursive: true });
   mkdirSync(paths.defaultWorkspaceDir, { recursive: true });
   const db = openInMemoryDatabase();
-  const tasks = new TaskService({ db });
+  const tasks = new TaskService({ db, ...(test.taskClock ? { now: test.taskClock } : {}) });
   const cards = new CardStore(db);
   const settings = new SettingsStore(db);
   const inbox = new InboxStore(db);

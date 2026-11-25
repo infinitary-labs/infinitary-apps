@@ -7,7 +7,7 @@ import { FIRSTMATE_USAGE_TASK_ID } from "../../src/core/storage/usageStore.ts";
 import { seedTask } from "../../src/core/tasks/seedTask.ts";
 import { HEARTBEAT_RULE_ID } from "../../src/shared/heartbeat.ts";
 import type { ApprovalCase } from "./approvalHandoff.ts";
-import { atServedTime, NUMBER_LIKE_ID, volatile } from "./firstmateSignOff.ts";
+import { NUMBER_LIKE_ID, volatile } from "./firstmateSignOff.ts";
 import { approvalHost } from "./host.ts";
 
 /**
@@ -94,8 +94,16 @@ const MINUTE_MS = 60_000;
 
 type Host = Awaited<ReturnType<typeof approvalHost>>;
 
-/** The plan, its built part and its parked last part, as the standing list reads them. */
-function seedLastPart(host: Host): string {
+/**
+ * The plan, its built part and its parked last part, as the standing list
+ * reads them. The captain stopped the checklist a day ago while the changelog
+ * was still being built, and the changelog merged two hours ago, so the
+ * stopped part became the last one since the captain decided: news the guide
+ * asks about once. A stop recorded after the last close says nothing new
+ * (docs/report-sort.md, "The last part the captain stopped").
+ */
+function seedLastPart(host: Host, clock: { offset: number }): string {
+  clock.offset = -26 * 60 * MINUTE_MS;
   seedTask(host.tasks, { id: "plan", title: "Ship the 2.0 release", status: "queued" });
   seedTask(host.tasks, {
     id: "changelog",
@@ -103,7 +111,6 @@ function seedLastPart(host: Host): string {
     parentId: "plan",
     status: "completed",
   });
-  host.tasks.close("changelog", { status: "done", reason: "merged", actor: "host" });
   seedTask(host.tasks, {
     id: "checklist",
     title: "Write the release checklist",
@@ -111,8 +118,12 @@ function seedLastPart(host: Host): string {
     status: "queued",
     startPolicy: "on-request",
   });
+  clock.offset = -24 * 60 * MINUTE_MS;
   const stop = host.tasks.starts.declareCaptainStop("checklist", "firstmate");
   if (!stop.ok) throw new Error("The parked part could not be stopped");
+  clock.offset = -2 * 60 * MINUTE_MS;
+  host.tasks.close("changelog", { status: "done", reason: "merged", actor: "host" });
+  clock.offset = 0;
   return "checklist";
 }
 
@@ -122,7 +133,13 @@ async function serveBeat(
   model: { provider: string; id: string },
   protectedDirs: readonly string[],
 ) {
-  const host = await approvalHost(test, dir, model, protectedDirs);
+  const clock = { offset: 0 };
+  const host = await approvalHost(
+    { ...test, taskClock: () => Date.now() + clock.offset },
+    dir,
+    model,
+    protectedDirs,
+  );
   // Preparation's own message stays open on the stand-in seat; a beat carries no captain message.
   for (const ask of host.tasks.capture.openThreadAsks(true)) {
     host.tasks.capture.closeAsk(ask.id, "closed");
@@ -130,7 +147,7 @@ async function serveBeat(
   }
   const now = Date.now();
   const { schedules, usage } = host;
-  if (test.list !== "empty") seedLastPart(host);
+  if (test.list !== "empty") seedLastPart(host, clock);
   if (test.list !== "new-last-part") {
     // No row is new, so only the quiet reason sends this beat: a Claude request 52 minutes ago.
     usage.record({
@@ -174,7 +191,7 @@ async function serveBeat(
     await host.close();
     throw new Error("The heartbeat delivered no beat to the first mate");
   }
-  return { host, turn: atServedTime(served) };
+  return { host, turn: served };
 }
 
 export const heartbeatHost: typeof approvalHost = async (test, dir, model, protectedDirs) => {

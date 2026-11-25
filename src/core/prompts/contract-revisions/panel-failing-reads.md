@@ -7,7 +7,7 @@ What the first mate is now told:
 
 - A `panel-reads-failing` wake, once per panel, code version and read, when a read has failed two or more times across the automation's window for a look that keeps failing: the panel, the read in plain words, since when, how many tries and the newest answer as words from outside. It says to put up a card only for a fix the first mate can make or a step only the captain can take, and otherwise to show nothing.
 - A `panel-reads-asked` wake when the captain presses Ask the first mate in the dot's details, once per failing read: find the cause, start one task in the personal workspace when the panel's code can fix it, or name the captain's step on one card.
-- The surfaces section's row for a personal panel adds its failing reads, since when, how many tries and whether the captain asked.
+- The surfaces section's row for a personal panel adds its failing reads, since when, how many tries, whether the captain asked and the newest answer, under a key that names it words from outside and never an instruction.
 - The `panel-update-asked` wake says the dot by the panel's name clears once its code is updated, where it said the panel's line.
 
 Homes: each wake owns its own words; the surfaces row owns the standing state; none is said twice.

@@ -351,7 +351,7 @@ The snapshot carries `failing` for each failing row: the read (`background` with
 
 The first mate hears a row turn failing once (the `panel-reads-failing` wake, once per panel, code version and read), with the newest answer as words from outside, and puts up a card only when there is something to decide: a fix it can make, or a step only the captain can take, such as signing in again.
 The mark's failing section says since when each read fails, that the panel still shows what it last read, and that it clears by itself, with Ask the first mate (`inf:plugins:ask-firstmate`): that tells the first mate once per row (`panel-reads-asked`), which finds the cause and starts one personal-workspace task to fix the panel's code, or names the captain's step on one card; the button then reads Asked, and the section says the first mate is looking into it.
-The first mate's surfaces context lists each failing read on the panel's row.
+The first mate's surfaces context lists each failing read on the panel's row: since when, the tries, whether the captain asked, and the newest answer under a key that names it words from outside.
 `panelReadFailures.test.ts` pins the rule on an hourly job that hits a read limit.
 
 ## The panel log

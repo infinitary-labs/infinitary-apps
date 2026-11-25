@@ -34,6 +34,7 @@ import { automationNotesOf, automationRuleOf, automationRulesOf } from "./automa
 import { batchesView } from "./batches/view";
 import { type BrowserViewer, BrowserViews } from "./browser/browserViews";
 import { privateSiteChannels } from "./browser/privateSites";
+import { claudeReportingHost } from "./claude/claudeCostPolicy";
 import { prepareComposerTurn } from "./composerTurn";
 import { CONTRACT_CHANGES } from "./connection/contractChanges";
 import type { CoreServices } from "./coreServices";
@@ -51,6 +52,7 @@ import { SignInRequiredError, signInRefusal } from "./forge";
 import { homeMoveHandlers } from "./homeMove/handlers";
 import type { OutgoingHomeMove } from "./homeMove/outgoing";
 import type { HostCapabilities } from "./host";
+import { hostEnv } from "./hostEnv";
 import { isAllowedOpenExternalUrl } from "./openExternal";
 import { CardChoiceUnavailableError } from "./orchestrator/cardActions";
 import type { OwnWindow } from "./ownWindow";
@@ -1518,6 +1520,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     "inf:usage:summary": (query) => services.usage.summary(query),
     "inf:usage:tasks": (query) => services.usage.tasks(query),
     "inf:usage:task-costs": (query) => services.usage.taskCosts(query),
+    "inf:usage:reporting": () => claudeReportingHost(hostEnv()),
 
     "inf:plugins:fetch": (call) => services.pluginFetch(call),
     "inf:sql:query": (request) => services.sql.query(request),

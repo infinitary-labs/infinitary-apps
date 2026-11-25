@@ -4065,6 +4065,7 @@ public enum PhoneMessages {
     public static func `settingsUsageRecentTokensLegend`() -> String { PhoneWords.format("settingsUsageRecentTokensLegend", []) }
     public static func `settingsUsageRecentUsdLegend`() -> String { PhoneWords.format("settingsUsageRecentUsdLegend", []) }
     public static func `settingsUsageRecordsOf`(`count`: String, `records`: String) -> String { PhoneWords.format("settingsUsageRecordsOf", [`count`, `records`]) }
+    public static func `settingsUsageReportsTo`(`host`: String) -> String { PhoneWords.format("settingsUsageReportsTo", [`host`]) }
     public static func `settingsUsageScopeAll`() -> String { PhoneWords.format("settingsUsageScopeAll", []) }
     public static func `settingsUsageScopeFirstmate`() -> String { PhoneWords.format("settingsUsageScopeFirstmate", []) }
     public static func `settingsUsageScopeOther`() -> String { PhoneWords.format("settingsUsageScopeOther", []) }
@@ -8562,6 +8563,7 @@ extension PhoneWords {
         "settingsUsageRecentTokensLegend": [],
         "settingsUsageRecentUsdLegend": [],
         "settingsUsageRecordsOf": ["count", "records"],
+        "settingsUsageReportsTo": ["host"],
         "settingsUsageScopeAll": [],
         "settingsUsageScopeFirstmate": [],
         "settingsUsageScopeOther": [],

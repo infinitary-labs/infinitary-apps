@@ -75472,6 +75472,33 @@
         ]
       }
     },
+    "inf:usage:reporting": {
+      "effect": "read",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "items": false,
+        "maxItems": 0
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "host": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "host"
+        ]
+      }
+    },
     "inf:plugins:fetch": {
       "effect": "change",
       "reach": "views",

@@ -19,7 +19,7 @@ The read costs nothing.
 The session's input stream never yields a message, so no turn is ever started and no tokens are spent; the session is closed on every path, including the timeout.
 Nobody is signed in, no browser is opened, and nothing but model ids is read or printed.
 
-It runs under the same boundary a crewmate run does (`claudeEnvFor`, see `docs/claude-client.md`): the installed executable or the `INFINITARY_CLAUDE_CLI` override, the machine's default login with `CLAUDE_CONFIG_DIR` **unset**, no ambient `ANTHROPIC_API_KEY` / `CLAUDE_CODE_OAUTH_TOKEN` / `ANTHROPIC_BASE_URL`, and `settingSources: []`, with only the person's own token command and address as flag settings (`docs/claude-client.md`, "Access a company set up").
+It runs under the same boundary a crewmate run does (`claudeEnvFor`, see `docs/claude-client.md`): the installed executable or the `INFINITARY_CLAUDE_CLI` override, the machine's default login with `CLAUDE_CONFIG_DIR` **unset**, no ambient `ANTHROPIC_API_KEY` / `CLAUDE_CODE_OAUTH_TOKEN` / `ANTHROPIC_BASE_URL`, and `settingSources: []`, with only the person's own token command, address and gateway headers as flag settings (`docs/claude-client.md`, "Access a company set up").
 
 ## How the two catalogs are compared
 

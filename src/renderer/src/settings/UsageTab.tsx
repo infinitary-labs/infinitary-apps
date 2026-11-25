@@ -9,6 +9,7 @@ import {
   type UsageModel,
   type UsagePeriod,
   type UsageQuery,
+  type UsageReporting,
   type UsageScope,
   type UsageSummary,
   type UsageTasks,
@@ -85,6 +86,22 @@ export function UsageTab() {
     useShellStore.getState().refreshAppearance();
   }, []);
 
+  // An administrator's managed collector, or the company setup the receiver passes Claude work on to (docs/usage.md).
+  const [reporting, setReporting] = useState<string | null>(null);
+  useEffect(
+    () =>
+      appReadExecutor().subscribe(
+        "usage.reporting",
+        {},
+        {
+          onValue: (value) => setReporting((value as UsageReporting).host),
+          // An older home has no such read: no line.
+          onError: () => setReporting(null),
+        },
+      ),
+    [],
+  );
+
   useEffect(() => {
     setFailed(false);
     return appReadExecutor().subscribe("usage.summary", query, {
@@ -146,6 +163,11 @@ export function UsageTab() {
           />
         </div>
       </div>
+      {reporting && (
+        <p className="fm-usage-muted" data-usage-reporting="">
+          {m.settingsUsageReportsTo({ host: reporting })}
+        </p>
+      )}
       <SettingError error={unitError} surface="usage-unit" />
       <div className="fm-usage-filters">
         <label>

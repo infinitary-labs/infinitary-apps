@@ -30,7 +30,7 @@ import { assertClaudeWorkSettings } from "./claudeAccess";
 import { ClaudeCallUsage } from "./claudeCallUsage";
 import { resolveClaudeExecutable } from "./claudeCli";
 import { ClaudeClientExit } from "./claudeClientProcess";
-import { type ClaudeCostSubscription, hasClaudeReporting } from "./claudeCostReports";
+import type { ClaudeCostSubscription } from "./claudeCostReports";
 import {
   type ClaudeNormalizeResult,
   type ClaudeTurnFailure,
@@ -49,6 +49,7 @@ import {
   refuseMissingClient,
   userMessage,
 } from "./claudeQueryCore";
+import { companyForward, receiverStepsAside, withoutReportingKeys } from "./claudeReporting";
 import { ClaudeSafeStop } from "./claudeSafeStop";
 import { CLAUDE_STEER_PRIORITY, claudeSessionOptions } from "./claudeSessionOptions";
 import { ClaudeSessionRecord, type Pushed, sha256 } from "./claudeSessionRecord";
@@ -605,13 +606,21 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
       const project = await this.projectResources();
       await assertClaudeWorkSettings(this.deps.resolveWorkSettings);
       const access = await this.deps.accessSettings?.().catch(() => undefined);
+      // A company's reporting keys in the launch environment are a setup the
+      // receiver passes records on to (`claudeReporting.ts`), not a reason
+      // to step aside; any other reporting choice there still is.
       if (
-        !hasClaudeReporting(env) &&
+        !receiverStepsAside(env) &&
         (await this.deps.costReportingAllowed?.().catch(() => false))
       ) {
+        const company = await this.deps.companyReporting?.(env).catch(() => undefined);
+        this.stillServing(mine);
         try {
-          costReports = await this.deps.costReports?.subscribe(this.id, (report) =>
-            calls.report({ ...report, model: canonicalClaudeModelId({ value: report.model }) }),
+          costReports = await this.deps.costReports?.subscribe(
+            this.id,
+            (report) =>
+              calls.report({ ...report, model: canonicalClaudeModelId({ value: report.model }) }),
+            company ? companyForward(company, env, (line) => this.note(line)) : undefined,
           );
         } catch {
           this.note("local cost reporting unavailable; retaining turn-end accounting");
@@ -633,7 +642,9 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
           toolGate: this.safeStop.toolGate,
         },
       });
-      if (costReports) options.env = { ...options.env, ...costReports.env };
+      // The client reports only to the receiver: the setup's own keys leave its environment.
+      if (costReports)
+        options.env = { ...withoutReportingKeys(options.env ?? {}), ...costReports.env };
       this.stillServing(mine);
       query = (this.deps.query ?? sdkQuery)({ prompt: input, options });
     } catch (caught) {

@@ -33,7 +33,7 @@ import { openTaskChannel, startTaskBrowsers } from "./browser/homeTaskBrowsers";
 import { accessFlagSettings, readClaudeAccess } from "./claude/claudeAccess";
 import { ClaudeAuthBackend } from "./claude/claudeAuth";
 import { primeClaudeExecutable } from "./claude/claudeCli";
-import { claudeCostReportingAllowed } from "./claude/claudeCostPolicy";
+import { claudeReportingDeps } from "./claude/claudeCostPolicy";
 import { defaultClaudeConfigDir } from "./claude/claudeQuota";
 import { createClaudeSessionFactory } from "./claude/session";
 import { AutoSavedResets } from "./codex/autoSavedResets";
@@ -638,7 +638,7 @@ export async function createServices(
         onServed: (accountId) => vault.noteAccepted(accountId),
         log: (line) => console.warn(`[claude-session] ${line}`),
         accessSettings: async () => accessFlagSettings(await readClaudeAccess()),
-        costReportingAllowed: () => claudeCostReportingAllowed(),
+        ...claudeReportingDeps(),
       }),
     ),
   };

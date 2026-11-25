@@ -1,5 +1,5 @@
 ---
-source: 67e6220319b54d48
+source: 0683744dededd132
 title: 컴퓨터 밖으로 나가는 것
 description: Infinitary가 무엇을 보내는지, 어디로 가는지, 그리고 저희에게 무언가를 보내는 단 하나의 스위치예요.
 ---
@@ -40,6 +40,12 @@ Claude를 쓰면 Infinitary는 설치된 Claude Code를 사용하고, 그 Claude
 설정 → **연동**에서 연결한 Google 같은 연동은 자체 로그인으로 닿고, 그 로그인은 로그인한 컴퓨터에 남아요.
 일등항해사와 선원들은 연결한 뒤에만 그것을 읽어요.
 [연동](/ko/integrations/)을 보세요.
+
+## 회사의 사용량 보고 {#your-companys-usage-reporting}
+
+Claude Code 설정 파일이나 셸에서 Claude Code 안내서대로 회사용 사용량 보고를 설정해 두었다면, Infinitary는 여기서 한 작업의 Claude 사용량 기록을 같은 곳으로 보내요.
+Claude Code가 직접 그곳에 보낼 기록과 같은 기록이고, 설정 → **사용량**에서 어디로 가는지 알려 줘요.
+회사 관리자가 컴퓨터 전체에 관리하는 설정은 지금처럼 Claude Code에 바로 닿아요.
 
 ## 업데이트 확인 {#update-checks}
 

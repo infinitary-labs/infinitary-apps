@@ -1,4 +1,9 @@
-import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import {
+  createServer,
+  type IncomingHttpHeaders,
+  type IncomingMessage,
+  type ServerResponse,
+} from "node:http";
 import type { AddressInfo } from "node:net";
 
 /**
@@ -116,6 +121,8 @@ export type StubRequest = {
   raw: string;
   /** What the request signed in with: its `x-api-key`, or its bearer token. */
   credential?: string;
+  /** The request's headers as they arrived, such as a gateway's custom ones. */
+  headers: IncomingHttpHeaders;
 };
 
 export type Reply = (request: StubRequest, res: ServerResponse) => void;
@@ -176,6 +183,7 @@ export async function startStubApi(
         n: requests.length + 1,
         body,
         raw,
+        headers: req.headers,
         ...(credential ? { credential } : {}),
       };
       requests.push(request);

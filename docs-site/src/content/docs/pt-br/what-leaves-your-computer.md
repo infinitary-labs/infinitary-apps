@@ -1,5 +1,5 @@
 ---
-source: 67e6220319b54d48
+source: 0683744dededd132
 title: O que sai do seu computador
 description: O que o Infinitary envia, para onde vai e o único botão que envia algo para nós.
 ---
@@ -40,6 +40,12 @@ Veja [Seus outros computadores](/pt-br/your-other-computers/).
 Uma integração que você conecta em Ajustes → **Integrações**, como o Google, é alcançada com o próprio login, que fica no computador em que você fez login.
 Seu imediato e sua tripulação só a leem depois que você a conecta.
 Veja [Integrações](/pt-br/integrations/).
+
+## Os relatórios de uso da sua empresa {#your-companys-usage-reporting}
+
+Se o seu arquivo de ajustes do Claude Code ou o seu shell configura relatórios de uso para a sua empresa, como o guia do Claude Code descreve, o Infinitary envia os registros de uso do Claude do trabalho feito aqui para o mesmo lugar.
+São os registros que o próprio Claude Code enviaria para lá, e Ajustes → **Uso** diz para onde eles vão.
+Uma configuração que o administrador da sua empresa gerencia para o computador inteiro chega ao Claude Code diretamente, como sempre.
 
 ## Verificações de atualização {#update-checks}
 

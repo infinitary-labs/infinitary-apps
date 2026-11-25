@@ -80,7 +80,7 @@ async function phoneReloads(phone: ConnectionClient) {
   await phone.invoke("inf:tasks:board", [{ closed: false }]);
 }
 
-/** A computer's window reads the whole board. */
+/** A computer's window that reads the whole board, as one does once its Tasks shows Done or a search. */
 async function windowReloads(window: ConnectionClient) {
   for (const channel of FIRST_READS) await window.invoke(channel, []);
   await window.invoke("inf:tasks:board", []);

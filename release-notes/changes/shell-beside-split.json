@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "shell-beside-split",
+      "reason": "Internal: the tests for the window beside a command's first mate move into two files by owner, with one shared helper; nothing a person sees changes."
+    }
+  ]
+}

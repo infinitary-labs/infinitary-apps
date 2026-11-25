@@ -39,7 +39,8 @@ One that also lists `secret-asks-elsewhere` asks the home to keep a secret too, 
 On an older one, `inject`, `status` and `cancel` answer `unavailable` with a fixed explanation, no value, receipt, approval or custody reaches it, and its crewmate reads `CREWMATE_SECRETS_CATALOG_LINE`.
 `inject --env '{"SERVICE_TOKEN":"s1"}' --reason 'Check staging' --id staging-check -- /bin/sh ./scripts/check-staging.sh` submits references and an explicit argument vector.
 The example neither approves that script nor reads a secret.
-The channel adds the calling shell's working folder as the request's working directory, which the recipient binds like any other fact and which never grants authority. A request may name a slash-rooted folder or a fully qualified Windows drive path; the recipient checks the folder on the computer where the program would run.
+The channel adds the calling shell's working folder as the request's working directory, which the recipient binds like any other fact and which never grants authority.
+A request may name a slash-rooted folder or a fully qualified Windows drive path; the recipient checks the folder on the computer where the program would run.
 `status <request>` reads a receipt and never executes again; `cancel <request>` withdraws unused authority.
 `check --env '<references>' -- <program> [args...]` is the crew's pre-check (see "The crew's pre-check").
 Help and version use the ordinary runtime; unknown flags and unsupported commands refuse.

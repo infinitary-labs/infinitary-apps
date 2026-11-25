@@ -73,6 +73,7 @@ it("checks, requests and cancels from the task command's own working folder", as
       program,
     );
     const [receipt] = owner.receipts();
+    if (!receipt) throw new Error("The task command did not create a receipt.");
     expect(waiting).toMatchObject({ receipt: { request: receipt.request, state: "waiting" } });
     expect(await run("cancel", receipt.request)).toMatchObject({
       receipt: { request: receipt.request, state: "cancelled" },

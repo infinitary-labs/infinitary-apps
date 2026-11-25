@@ -1819,6 +1819,7 @@ public enum PhoneMessages {
     public static func `panelChangeShowInDock`() -> String { PhoneWords.format("panelChangeShowInDock", []) }
     public static func `panelChangeShowWhatsNew`() -> String { PhoneWords.format("panelChangeShowWhatsNew", []) }
     public static func `panelChangeStartAtLogin`() -> String { PhoneWords.format("panelChangeStartAtLogin", []) }
+    public static func `panelChangeSummaryPoint`() -> String { PhoneWords.format("panelChangeSummaryPoint", []) }
     public static func `panelChangeTheme`() -> String { PhoneWords.format("panelChangeTheme", []) }
     public static func `panelChangeUpdateChannel`() -> String { PhoneWords.format("panelChangeUpdateChannel", []) }
     public static func `panelChangeUpdateCheck`() -> String { PhoneWords.format("panelChangeUpdateCheck", []) }
@@ -6530,6 +6531,7 @@ extension PhoneWords {
         "panelChangeShowInDock": [],
         "panelChangeShowWhatsNew": [],
         "panelChangeStartAtLogin": [],
+        "panelChangeSummaryPoint": [],
         "panelChangeTheme": [],
         "panelChangeUpdateChannel": [],
         "panelChangeUpdateCheck": [],

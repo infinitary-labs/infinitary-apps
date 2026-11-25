@@ -41,6 +41,8 @@ An item is listed when one of these holds:
 - it has no crew reply yet;
 - after the clock, its author or another account that cannot write commented, answered on the change or pushed a new version;
 - it is an issue whose linked task finished with a result the crew's last reply does not yet answer ("What a round knows of its builds");
+- it is an issue labeled `accepted` and not `released` whose work shipped in a release or stopped ("When the work ends");
+- it is an open issue the crew promised work on, labeled `accepted` or answered with a bug's first reply, that no task is linked to ("When the work ends");
 - it is an outside pull request labeled `accepted` whose newest version has runs waiting for approval, or on which every check passed and the crew's review has not yet published its story comment there ("The review").
 
 Comments from the crew and from GitHub's bot account never move the clock: the check-file flag, the agreement and Careful review checks and the timer's reminder all leave it where it was.
@@ -62,7 +64,7 @@ A round handles at most 8 places, since the app keeps at most 8 waiting writes f
 3. Within each kind, a pull request that closes an open `accepted` issue goes first; otherwise the item waiting longest since its author last acted goes first.
 
 The rest keep their place and wait for the next round.
-A round also lists closed issues labeled `accepted` and not `released` (`/repos/{owner}/{repo}/issues?state=closed&labels=accepted`), for the thank-you ("After a release").
+A round also lists closed issues labeled `accepted` and not `released` (`/repos/{owner}/{repo}/issues?state=closed&labels=accepted`), skipping one GitHub closed as not planned, since a change may have closed an issue before its release; it thanks those too ("When the work ends").
 A round with nothing to list reports that nothing waits and raises no card.
 
 ## What a round reads
@@ -86,11 +88,11 @@ An issue a pull request says it closes gets no reply of its own; the pull reques
 
 The round's brief carries one section from the task record: each issue of this project that a task is linked to, with each linked task's kind, state, closing reason (such as `merged`, `superseded` or `answered`), first release once its change shipped, and typed result, and nothing else from the record.
 A round reads no other part of the record; this section is how it knows what to tell a reporter.
-An issue with a linked task gets a reply only when that task's result gives it something new to say ("After the reproduce step"); otherwise the round leaves it for the next one.
+An issue with a linked task gets a reply only when that task's result gives it something new to say ("After the reproduce step"), or its work shipped or stopped ("When the work ends"); otherwise the round leaves it for the next one.
 
 ## What a round answers
 
-Each listed item gets one reply, sent as one write: `POST /repos/{owner}/{repo}/issues/{number}/comments`.
+Each listed item gets one reply, sent as one write: `POST /repos/{owner}/{repo}/issues/{number}/comments`; the one exception is an issue whose Build row is drafted again, which gets the row and no reply ("When the work ends").
 A reply opens with the crewmate line in italics, `Written by an Infinitary crewmate, an AI agent working for this project's maintainer, and approved by the maintainer.`, so every reader knows who wrote it before reading on.
 It thanks the author, says what was found in plain words, says what happens next and who acts, and ends with the triage mark that sets the labels (`<!-- infinitary-triage v1 disposition=NAME -->`).
 The mark does the labeling and closing, so a round sends no label or close request of its own.
@@ -100,10 +102,10 @@ The mark does the labeling and closing, so a round sends no label or close reque
 | `accepted` | a bug its reproduce step reproduced, an idea the project may take up, or a pull request that meets criteria 1 to 4 ("Which pull requests reach the tick") | it is confirmed and kept to plan or review, with no date promised; for a bug, the version it reproduced on; for a pull request, the line of `STRATEGY.md` it rests on |
 | `needs-info` | the report lacks what a reproduction needs, or its reproduce step did not reproduce it and the maintainer chose to ask | exactly what to add, or the reproduce step's question; it waits on the author |
 | `duplicate` | an earlier issue covers it, or another open issue or pull request covers a pull request's change | which issue or pull request, by its number |
-| `declined` | an idea or a pull request that goes against `STRATEGY.md`, a bug that is not one, a bug its reproduce step did not reproduce and the maintainer chose to close, or an issue whose Build row the maintainer marked Don't file | the reason, naming the line of `STRATEGY.md` it rests on, or the version and steps the reproduce step tried |
+| `declined` | an idea or a pull request that goes against `STRATEGY.md`, a bug that is not one, a bug its reproduce step did not reproduce and the maintainer chose to close, an issue whose Build row the maintainer marked Don't file, or an `accepted` issue whose work stopped | the reason, naming the line of `STRATEGY.md` it rests on, the version and steps the reproduce step tried, or that the maintainer stopped the work without shipping it |
 | `answered` | a question answered, or a bug already fixed in a release | the answer, or the release that fixed it |
 | `changes-requested` | a pull request that needs changes first | each change, plainly |
-| `released` | a closed accepted issue whose change the newest release holds | thanks to its reporter by name, and the first version with the change; it closes nothing |
+| `released` | an `accepted` issue whose work shipped in a release | thanks to its reporter by name, and the first release that holds all of the work, saying when it is an alpha; it closes the issue if it is still open |
 
 An idea is read as a symptom of a problem: the reply names the problem it found and whether the project already plans for it.
 A pull request's `accepted` row on the approval card also says whether the change restores behavior the project promised, adds something a person turns on, or changes what happens by default, so the maintainer sees it at the tick.
@@ -144,7 +146,7 @@ A step that did not reproduce reports the maintainer's choice as its result's `n
 | did not, and the maintainer chose to close | the version and the steps it tried | `declined` |
 
 While the step has no result, or the maintainer kept it for later, the round sends nothing more.
-On reproduced, the first mate starts the fix built on the reproduction, and the fix's change closes the issue when it merges.
+On reproduced, the first mate starts the fix built on the reproduction, and the round thanks the reporter and closes the issue at the fix's first release ("When the work ends").
 
 ## Which pull requests reach the tick
 
@@ -188,10 +190,25 @@ The review's crewmate first confirms on GitHub that the pull request carries `ac
 It reads the code and GitHub's runs, runs nothing from the change on the project's machines or the maintainer's computers, and shows a merge card with `asks_first` (`docs/public-ci.md`, "How an outside pull request moves").
 For a pull request labeled `edits checks`, it first shows the maintainer those check files on a card, since that pull request's runs wait for the maintainer's approval on GitHub.
 
-## After a release
+## When the work ends
 
-For each closed issue labeled `accepted` and not `released` that a merged change closed, the round checks on GitHub that the newest release holds that merge.
-If it does, the round drafts one reply thanking the reporter by name and naming that release's version, with the `released` mark, which labels the issue so the reporter is thanked once.
+An accepted issue always ends with one more reply: a thank-you once its work ships, a `declined` reply when its work stops, or a Build row again when no task carries its work.
+The round judges each from "What a round knows of its builds" alone, and never reads the record or a task's words for it.
+A linked task that shipped a change is one closed `merged`, `landed` or `released`.
+
+- **The work shipped.**
+  An `accepted` issue not labeled `released`, open or closed, none of whose linked tasks is still open or active, with at least one that shipped a change and a first release for every one that did, gets the thank-you with the `released` mark.
+  It names the newest of those first releases, the first one that holds all of the work, and says when that release is an alpha.
+  The mark closes the issue as completed if it is still open, so the reporter is thanked and the issue closed once, whether or not a change closed it before.
+  While a linked task is still open, or one that shipped has no first release yet, the round sends nothing.
+- **The work stopped.**
+  An open `accepted` issue none of whose linked tasks is open or active, and none of which shipped a change, gets a `declined` reply for the maintainer's tick: it thanks the reporter, says the maintainer stopped the work without shipping it, and promises nothing.
+  A reproduce step that reproduced the bug counts here once the crew's `accepted` reply is sent: the fix built on it was dropped, or never started.
+  The maintainer may leave the reply unticked; the issue then comes back next round, as every unticked reply does.
+- **No task carries the work.**
+  An open issue the crew promised work on, labeled `accepted` or answered with a bug's first reply, that "What a round knows of its builds" does not list, gets its Build row drafted again, as reproduce first for a bug and plan first for an idea, with no reply, since the reporter has nothing new to hear.
+  This happens when the maintainer picked Not now on the row, or left it unticked while ticking the reply.
+  The row comes back each round until the maintainer picks Start now or Keep for later, which links a task, or Don't file, after which the round drafts the issue's `declined` reply ("After the click").
 
 ## What a round never does
 

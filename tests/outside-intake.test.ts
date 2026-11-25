@@ -135,8 +135,11 @@ describe("the triage mark", () => {
     ["changes-requested", pull(), { labels: [WAITING] }],
     [
       "released",
-      { ...issue([ACCEPTED, "bug"]), state: "closed" },
-      { labels: ["bug", ACCEPTED, "released"] },
+      issue([ACCEPTED, "bug"]),
+      {
+        labels: ["bug", ACCEPTED, "released"],
+        close: { state: "closed", state_reason: "completed" },
+      },
     ],
   ];
 
@@ -181,6 +184,21 @@ describe("the triage mark", () => {
       core,
     });
     expect(api.updates).toEqual([{ ...project, issue_number: 50, state: "closed" }]);
+  });
+
+  // INF-6776's pick "The intake round closes it with the thank-you at the
+  // first release": an issue a merged change already closed only gains the label.
+  it("closes nothing more on an issue a change already closed", async () => {
+    const closed = { ...issue([ACCEPTED, "bug"]), state: "closed" };
+    const api = gitHub(closed);
+    expect(
+      await applyMark({
+        github: api.github,
+        context: commented(closed, maintainer, mark("released")),
+        core,
+      }),
+    ).toBe("released");
+    expect(api.updates).toEqual([]);
   });
 
   it("asks for changes only on a pull request", async () => {

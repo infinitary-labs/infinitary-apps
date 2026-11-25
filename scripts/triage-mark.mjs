@@ -37,7 +37,9 @@ export const DISPOSITIONS = Object.freeze({
   declined: { add: [], close: "not_planned" },
   answered: { add: [], close: "completed" },
   "changes-requested": { add: [WAITING], pullOnly: true },
-  released: { add: [RELEASED] },
+  // The intake round thanks an accepted issue's reporter at its work's first
+  // release and closes it then, unless a change already closed it.
+  released: { add: [RELEASED], close: "completed" },
 });
 
 /** The disposition a comment's mark names, or null for none or one not on the list. */

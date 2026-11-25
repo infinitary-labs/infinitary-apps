@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "intake-round-close-loop",
+      "reason": "Changes how this project's own intake round answers outside issues (a thank-you that closes the issue at its first release, a declined reply when its work stops, a Build row again when no task carries it) and what the project's triage mark does on GitHub; nothing in the app changes for a person using it."
+    }
+  ]
+}

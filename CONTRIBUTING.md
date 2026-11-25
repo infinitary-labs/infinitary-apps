@@ -42,6 +42,7 @@ The answer says what happens next, with a label:
 - `duplicate`, declined or answered: the issue or pull request is closed, and the answer says why.
 
 A pull request also waits on you while its "Contributor License Agreement" or "PR raised with Infinitary's Careful review" check fails; each check's comment says what it needs.
+Once a maintainer approves its runs, a check that fails on your version labels it `waiting on author` with one automatic comment linking each failed check's log; the comment says when `main` is failing too, so a failure may not be yours. A new push, or a rerun that passes, puts it back in line.
 Something that waits on you gets one reminder after 14 days, and closes 14 days after that reminder; you are welcome to pick it up again in a new one that links the old.
 Each account without write access to the project may have at most 3 pull requests open at a time, drafts not counted, so please finish or close one before opening a fourth.
 

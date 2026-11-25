@@ -34,6 +34,18 @@ export async function removeLabel({ github, owner, repo, number, name }) {
   }
 }
 
+/** The state of each REQUIRED status on one commit, in REQUIRED's order; undefined until it writes one. */
+export async function requiredStates({ github, owner, repo, sha }) {
+  const statuses = await github.paginate(github.rest.repos.listCommitStatusesForRef, {
+    owner,
+    repo,
+    ref: sha,
+    per_page: 100,
+  });
+  // GitHub lists a commit's statuses newest first; the first of each name is its state.
+  return REQUIRED.map((name) => statuses.find((each) => each.context === name)?.state);
+}
+
 /**
  * Sets "waiting on author" on an outside pull request from the required
  * statuses on its newest version, after a check wrote its own:
@@ -61,15 +73,7 @@ export async function syncWaiting({ github, context, pullNumber }) {
   if (pull.head.repo?.full_name === `${owner}/${repo}`) return "own branch";
   if (pull.state !== "open") return "closed";
 
-  const statuses = await github.paginate(github.rest.repos.listCommitStatusesForRef, {
-    owner,
-    repo,
-    ref: pull.head.sha,
-    per_page: 100,
-  });
-  // GitHub lists a commit's statuses newest first; the first of each name is its state.
-  const state = (name) => statuses.find((each) => each.context === name)?.state;
-  const states = REQUIRED.map(state);
+  const states = await requiredStates({ github, owner, repo, sha: pull.head.sha });
   const labels = new Set((pull.labels ?? []).map((label) => label.name));
 
   if (states.some((each) => each === "failure" || each === "error")) {

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "failed-checks-note",
+      "reason": "Internal: a new workflow comments on an outside pull request naming each failed check with its log and labels it waiting on author; nothing in the app changes."
+    }
+  ]
+}

@@ -11,6 +11,13 @@ export function removeLabel(target: {
   number: number;
   name: string;
 }): Promise<void>;
+/** The state of each REQUIRED status on one commit, in REQUIRED's order; undefined until it writes one. */
+export function requiredStates(target: {
+  github: unknown;
+  owner: string;
+  repo: string;
+  sha: string;
+}): Promise<(string | undefined)[]>;
 /** Sets "waiting on author" on an outside pull request from its required statuses and says what it decided. */
 export function syncWaiting(script: {
   github: unknown;

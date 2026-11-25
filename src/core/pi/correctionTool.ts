@@ -10,8 +10,9 @@ export function createCorrectionTool(handle: (request: CorrectionCaseRequest) =>
   return boundTool({
     name: "correction_case",
     label: "Handle a flagged correction",
+    // i18n-exempt: served to the first mate, stays English
     description:
-      "Only for the correction-review wake's case: inspect reads its source; offer proposes exact wording for a known project on an independent first-mate card; ignore finishes an unneeded candidate or, with a reply saying why, an unsavable chosen instruction. After Keep, app_change direction uses offered id/text/scope and expectedRevision. recover reads storage before retry and confirms only a matching saved revision. After verified saving, guide declares affected running task ids; empty finishes without interrupting anyone. Never writes directions or authorizes work.",
+      "Only for the correction-review wake's case, whose words say which op comes when. recover confirms only a matching saved revision; guide with no task ids finishes without interrupting anyone. Never writes directions or authorizes work.",
     parameters: Type.Object({
       op: stringEnum(["inspect", "offer", "ignore", "recover", "guide"]),
       inputId: Type.Integer(),

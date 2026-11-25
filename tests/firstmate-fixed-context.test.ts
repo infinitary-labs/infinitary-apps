@@ -22,6 +22,7 @@ import {
   FIRSTMATE_PROMISED_CONVERSATION,
   fixedTokens,
   overLine,
+  RAISED_HARD_LINE_FACTOR,
   roomAtHardLine,
 } from "./helpers/promptBudget";
 import { intentsWithoutSentence, type ProtectedIntent } from "./helpers/protectedSentences";
@@ -63,20 +64,29 @@ function conversation(tokens: number): Parameters<typeof localInputFits>[0]["mes
  * The budget for the fixed part is derived rather than kept by hand
  * (INF-416 piece H, findings P1 and P2; tests/helpers/promptBudget.ts): the
  * smallest local window's floor, minus the reserve, minus the conversation
- * that window promises. It is not a second number a revision raises.
+ * that window promised, raised by half on the captain's choice. It is not a
+ * second number a revision raises.
  */
 const PROMISED_CONVERSATION = FIRSTMATE_PROMISED_CONVERSATION;
 const FIXED_CONTEXT_BOUNDARY = FIRSTMATE_BUDGET;
 
 describe("the Firstmate's fixed context (contract v4.59)", () => {
   it("stays under its hard line by the app's own count", async () => {
-    // 65,536 - 12,288 - 33,476. The pin is the derivation, not a ceiling kept beside it.
-    expect(PROMISED_CONVERSATION).toBe(33_476);
-    expect(FIXED_CONTEXT_BOUNDARY).toBe(19_772);
+    // (65,536 - 12,288 - 33,476) x 1.5, leaving 23,590 of the 64K window's
+    // conversation. The pin is the derivation, not a ceiling kept beside it.
+    expect(PROMISED_CONVERSATION).toBe(23_590);
+    expect(FIXED_CONTEXT_BOUNDARY).toBe(29_658);
     // INF-2930: it fails only past the hard line; the prompt-budget check on
     // main holds the budget and files the trim.
     const tokens = fixedTokens(await fixedContext(false));
-    expect(overLine("First mate", FIXED_CONTEXT_BOUNDARY, [{ label: "core", tokens }])).toEqual([]);
+    expect(
+      overLine(
+        "First mate",
+        FIXED_CONTEXT_BOUNDARY,
+        [{ label: "core", tokens }],
+        RAISED_HARD_LINE_FACTOR,
+      ),
+    ).toEqual([]);
   });
 
   it("names a prototype only where it sends the ask to a plan (FI3-872)", async () => {
@@ -99,11 +109,9 @@ describe("the Firstmate's fixed context (contract v4.59)", () => {
     // model. INF-2930: a fixed part up to the hard line still leaves the
     // conversation the room that line leaves, less than the promised one
     // while an overrun waits for its trim.
-    expect(fits(roomAtHardLine(FIXED_CONTEXT_BOUNDARY))).toBe(true);
+    expect(fits(roomAtHardLine(FIXED_CONTEXT_BOUNDARY, RAISED_HARD_LINE_FACTOR))).toBe(true);
     // The boundary leaves exactly that conversation, no separately kept slack.
-    expect(OLLAMA_MIN_CONTEXT - LOCAL_CONTEXT_RESERVE - FIXED_CONTEXT_BOUNDARY).toBe(
-      PROMISED_CONVERSATION,
-    );
+    expect(OLLAMA_MIN_CONTEXT - LOCAL_CONTEXT_RESERVE - FIXED_CONTEXT_BOUNDARY).toBe(23_590);
     // The check is the real one: it refuses what cannot fit.
     const room = OLLAMA_MIN_CONTEXT - LOCAL_CONTEXT_RESERVE - fixedTokens({ systemPrompt, tools });
     expect(fits(room)).toBe(true);
@@ -769,6 +777,12 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
  * served words it names, waits for the captain's approval.
  */
 const PROTECTED: { intent: ProtectedIntent; rule: string; home: Home; says: string }[] = [
+  {
+    intent: "what reaches the captain",
+    rule: "a policy edit asks the captain only what is unclear",
+    home: { tool: "update_task" },
+    says: "Ask only unclear task/scope/consent; refusals name blockers.",
+  },
   {
     intent: "consent",
     rule: "a Keychain or signing command against real material asks first",

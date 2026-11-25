@@ -4,13 +4,7 @@ import { RECOVERY_APPROACHES, type RecoveryApproach } from "@shared/recovery";
 import { Type } from "typebox";
 import { KNOWLEDGE_TOOL, RECORD_KNOWLEDGE_TOOL } from "../knowledge/knowledgeTools";
 import { ORDINARY_NOTE_READ_ACK } from "../prompts/cardContract";
-import {
-  type CrewmateTool,
-  callWithSignal,
-  crewmateTool,
-  stringEnum,
-  zodParameter,
-} from "../session/tools";
+import { type CrewmateTool, callWithSignal, crewmateTool, stringEnum } from "../session/tools";
 import { keepHandoverFiles } from "../tasks/handoverFiles";
 import { cardPictureRoot } from "./cardImages";
 import { CLOSE_CARD_TOOL, EMIT_CARD_TOOL } from "./cardTool";
@@ -120,7 +114,7 @@ export const FOLLOWUP_AFTER_MERGE_RULE =
 export const FILE_FOLLOWUP_TOOL_DESCRIPTION = [
   "Record a defect or safety risk you discovered outside your task, instead of doing it:",
   "a bug you can show on the current main line, or a credible risk to the person's data, accounts, signing material or merges.",
-  "Not for an optional improvement: that is one line in your report, and the first mate decides whether the captain sees it.",
+  "Not for an optional improvement (a refactor, extra assurance, a nicer wording): that is one line in your report, and the first mate decides whether the captain sees it.",
   "Not for work your own change needs to be finished, or documents it makes stale: those are yours.",
   "Search tasks first (text, project); if a match exists, file nothing and report its key.",
   "The planned task waits for the first mate to triage; filing starts nothing and does not hold up your work.",
@@ -256,7 +250,7 @@ export const REPORT_TOOL = crewmateTool({
         {
           additionalProperties: false,
           description:
-            "After verifying a published release, report each included merged task, internal ones too, with its earliest release, page and evidence of membership and first publication. Collect every key with tasks skip; report each earliest-release group. Arrange missing verification; never infer from merge time. Existing attribution stays unless corrects names the previous version.",
+            "After verifying a published release, report each included merged task, internal ones too, with its earliest release, page and evidence of membership and first publication. Collect every key with tasks skip; report each earliest-release group. Arrange missing verification; never infer from merge time or call unknown unshipped. Existing attribution stays unless corrects names the previous version and evidence explains the correction.",
         },
       ),
     ),
@@ -292,11 +286,13 @@ export const REPORT_TOOL = crewmateTool({
         },
       ),
     ),
+    // Only validation work writes one, so its shape is the careful-change
+    // skill's validation-shape.json (scripts/generate-validation-shape.ts), not this schema; the
+    // host parses each with liveValidationInputSchema.
     validation: Type.Optional(
-      zodParameter<LiveValidationInput>(liveValidationInputSchema, {
-        dropPatterns: true,
-        description:
-          "Typed validation facts, kept at every care; only a Careful merge waits on them; its brief gives the rules. Requests grant nothing; approval needs the captain's click on the emit_card.validation_request card, or a check request's allowance naming an Already allowed yes: its card id, or standing for an override.",
+      Type.Unsafe<LiveValidationInput>({
+        type: "object",
+        description: `Typed validation facts, kept at every care; only a Careful merge waits on them; its brief gives the rules. Before writing one, read its JSON Schema, validation-shape.json in the careful-change skill. Requests grant nothing; approval needs the captain's click on the emit_card.validation_request card, or a check request's allowance naming an Already allowed yes: its card id, or standing for an override.`,
       }),
     ),
     text: Type.String({

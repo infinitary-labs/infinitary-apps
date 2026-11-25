@@ -358,10 +358,6 @@ function scopeOf(saved: SavedTagCheck): TagCheckScope {
   return { projectId: saved.projectId, reach: saved.reach, tagIds: saved.tagIds, at: saved.at };
 }
 
-/**
- * The app's one tagger: it hears every committed task change, every move
- * of the use's switch, and the ticker's minute for failed requests' retry.
- */
 type TaskRecord = NonNullable<ReturnType<TaskService["get"]>>;
 
 function goalOf(task: TaskRecord): string {
@@ -373,6 +369,10 @@ function wordsOf(task: TaskRecord): string {
   return JSON.stringify([task.projectId, task.title, goalOf(task)]);
 }
 
+/**
+ * The app's one tagger: it hears every committed task change, every move
+ * of the use's switch, and the ticker's minute for failed requests' retry.
+ */
 export function startTaskTagger(input: {
   db: AppDatabase;
   tasks: TaskService;

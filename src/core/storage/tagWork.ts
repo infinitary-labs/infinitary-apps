@@ -10,7 +10,9 @@ import type { AppDatabase } from "./db";
  * A pair is judged when its row was set by a person or the first mate, or
  * set by the decision model at the tag's current description revision. A
  * decision-model row with no revision is one whose task's words changed or
- * that moved with its project, which automatic tagging asks again.
+ * whose task moved on its own into the project, which automatic tagging
+ * asks again; one carried from an emptied project holds `STALE_JUDGMENT`,
+ * which only a check asks.
  */
 
 /** One task and the tags to ask about it. */

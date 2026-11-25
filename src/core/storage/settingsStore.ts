@@ -633,9 +633,10 @@ export class SettingsStore {
   }
 
   /**
-   * When automatic tagging last began asking: tasks filed before it are
-   * left for a check, so turning it on, or a first start of a build that
-   * has it, never asks about the tasks filed meanwhile. Absent until then.
+   * Where automatic tagging's reads of new tasks start: set when it begins
+   * asking, so turning it on, or a first start of a build that has it,
+   * leaves the tasks filed before to a check; then moved up to the newest
+   * task each time nothing is owed. Absent until it first begins.
    */
   getTagAutoSince(): number | null {
     const parsed = z.number().finite().safeParse(this.get("tag-auto-since"));

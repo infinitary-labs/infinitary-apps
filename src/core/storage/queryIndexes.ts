@@ -59,7 +59,8 @@ import { EVERY_STATUS, MISSING_INVARIANTS } from "./taskInvariants";
  * The conversation's read (conversationRead.ts) pages the captain's own
  * card presses by time, and seeks the message that names a line typed
  * under a card, instead of walking every observation or every message.
- * Automatic tagging seeks the tasks filed since it began asking and the
+ * Automatic tagging seeks the tasks filed since its start mark, which it
+ * moves up to the newest task whenever nothing is owed, and the
  * decision model's rows waiting to be asked again (tagWork.ts), at each
  * task filed, moved or reworded, instead of walking every task.
  * `migrate` (db.ts) creates them once a database reaches the newest migration.

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "usage-reads-off-main-thread",
+      "kind": "fix",
+      "area": "settings",
+      "title": "The app keeps answering while Settings → Usage is open",
+      "body": "With Settings → Usage open, the app no longer pauses for a moment each time a task changes or a model replies. Usage now adds up its numbers in the background, so clicks and typing answer while it stays up to date.",
+      "noPicture": "Usage looks the same; what changes is that the window stops pausing while it is open.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

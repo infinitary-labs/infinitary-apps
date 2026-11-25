@@ -1,16 +1,19 @@
 import { PlacedWorkScores } from "../routing/placedWork";
 import type { AppDatabase } from "../storage/db";
 import { registerTaskSearch, selectClosedTasks, selectTasks } from "../storage/taskSelection";
-import type { RecordChild, RecordParent } from "./protocol";
+import { RECORDED_USAGE_NAMES, UsageStore } from "../storage/usageStore";
+import type { RecordAnswer, RecordChild, RecordParent, RecordRead } from "./protocol";
 
 /** Owns the reader's scoring state and one committed work snapshot per incoming batch. */
 export class RecordReadEngine {
   private readonly scores: PlacedWorkScores;
   private prices: Record<string, number> = {};
   private readonly observations = new Map<string, string>();
+  private readonly usage: UsageStore;
 
   constructor(private readonly db: AppDatabase) {
     registerTaskSearch(db);
+    this.usage = new UsageStore(db, { folds: false });
     this.scores = new PlacedWorkScores(db, {
       getAllowancePrices: () => ({ ...this.prices }),
       setAllowancePrices: (next) => {
@@ -43,18 +46,7 @@ export class RecordReadEngine {
             : undefined;
         return reads.map(({ id, request }): RecordChild => {
           try {
-            const answer =
-              request.kind === "tasks"
-                ? selectTasks(this.db, request.input)
-                : request.kind === "closed"
-                  ? selectClosedTasks(this.db, request.input)
-                  : {
-                      data: data
-                        ? this.scores.preparedCharges(request.input.rows, data)
-                        : { work: [], samples: [], charges: {} },
-                      prices: this.prices,
-                    };
-            return { type: "answer", id, answer };
+            return { type: "answer", id, answer: this.answer(request, data) };
           } catch (error) {
             return { type: "error", id, message: String(error) };
           }
@@ -62,6 +54,34 @@ export class RecordReadEngine {
       })();
     } catch (error) {
       return reads.map(({ id }): RecordChild => ({ type: "error", id, message: String(error) }));
+    }
+  }
+
+  private answer(
+    request: RecordRead,
+    data: ReturnType<PlacedWorkScores["data"]> | undefined,
+  ): RecordAnswer {
+    switch (request.kind) {
+      case "tasks":
+        return selectTasks(this.db, request.input);
+      case "closed":
+        return selectClosedTasks(this.db, request.input);
+      case "placed":
+        return {
+          data: data
+            ? this.scores.preparedCharges(request.input.rows, data)
+            : { work: [], samples: [], charges: {} },
+          prices: this.prices,
+        };
+      case "usageSummary":
+        return this.usage.summary(request.input.query, {
+          now: request.input.now,
+          names: RECORDED_USAGE_NAMES,
+        });
+      case "usageTasks":
+        return this.usage.tasks(request.input.query, { now: request.input.now });
+      case "usageTaskCosts":
+        return this.usage.taskCosts(request.input.query, { now: request.input.now });
     }
   }
 }

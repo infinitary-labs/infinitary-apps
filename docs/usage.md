@@ -9,7 +9,7 @@ How it looks and reads is the design skill's `components/usage/UsageTab.prompt.m
 | --- | --- |
 | The ledger and its one writer | `usage_events`, `UsageStore.record` (`src/core/storage/usageStore.ts`) |
 | Its daily totals, which the reads add up | `usage_days` and `usage_days_state`, `foldUsageDays` (`src/core/storage/usageDays.ts`) |
-| The summary the tab reads | `UsageStore.summary`, served as `services.usage.summary` on `inf:usage:summary` |
+| The summary the tab reads | `UsageStore.summary`, run in the record process and served as `services.usage.summary` on `inf:usage:summary` |
 | The read the tab subscribes to | `usage.summary` in the read catalog (`src/shared/reads.ts`) |
 | Its recent tasks | `UsageStore.tasks`, served as `services.usage.tasks` on `inf:usage:tasks`, read as `usage.tasks` |
 | Its cost per task | `UsageStore.taskCosts`, served as `services.usage.taskCosts` on `inf:usage:task-costs`, read as `usage.taskCosts` |
@@ -121,6 +121,14 @@ Before each read, `foldUsageDays` adds the records written since its last fold t
 When there is no fold yet, or the time zone differs from the one recorded, it counts every day again from the ledger, once.
 The totals are derived, never a second ledger: they add no migration or saved-data format, the first read on a connection makes their tables, and an older build ignores them.
 Nothing deletes or rewrites ledger rows; a writer that did would have to count the days again.
+
+## Off the main thread
+
+The summary, the recent tasks and the cost per task run in the read-only record process (`src/core/recordReads/`), never on the main thread that handles clicks and keys and runs the core (`usageReads`, `src/core/storage/homeUsage.ts`).
+While the tab is open each re-runs after every model response and task change, and on a long record each one took 15 to 200 ms (INF-6716).
+The core folds the daily totals first, as their one writer, and then hands the read to the process, which cannot write.
+The process answers the summary's models by their recorded ids, and the core names them as Settings does (`nameUsageSummary`).
+A host with no record process runs the three reads on the main thread.
 
 ## The summary
 

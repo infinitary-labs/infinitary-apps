@@ -1,3 +1,11 @@
+import type {
+  UsageQuery,
+  UsageSummary,
+  UsageTaskCosts,
+  UsageTaskCostsQuery,
+  UsageTasks,
+  UsageTasksQuery,
+} from "@shared/usage";
 import type { PlacedWorkAnswer, PlacedWorkRead } from "../routing/placedWork";
 import type {
   ClosedTaskSearch,
@@ -9,8 +17,17 @@ import type {
 export type RecordRead =
   | { kind: "tasks"; input: TaskSelectionInput }
   | { kind: "closed"; input: ClosedTaskSearchInput }
-  | { kind: "placed"; input: PlacedWorkRead };
-export type RecordAnswer = TaskSelection | ClosedTaskSearch | PlacedWorkAnswer;
+  | { kind: "placed"; input: PlacedWorkRead }
+  | { kind: "usageSummary"; input: { query: UsageQuery; now: number } }
+  | { kind: "usageTasks"; input: { query: UsageTasksQuery; now: number } }
+  | { kind: "usageTaskCosts"; input: { query: UsageTaskCostsQuery; now: number } };
+export type RecordAnswer =
+  | TaskSelection
+  | ClosedTaskSearch
+  | PlacedWorkAnswer
+  | UsageSummary
+  | UsageTasks
+  | UsageTaskCosts;
 export type RecordParent =
   | { type: "open"; path: string }
   | { type: "batch"; reads: { id: number; request: RecordRead }[] };

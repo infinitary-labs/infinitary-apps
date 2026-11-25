@@ -2,6 +2,7 @@ import { writeFileSync } from "node:fs";
 import { expect, type Page, test } from "@playwright/test";
 import { openDatabase } from "../../src/core/storage/db";
 import { TaskService } from "../../src/core/tasks/taskService";
+import { READING_MS } from "../../src/renderer/src/app/lastTurnFade";
 import { CONVERSATION_HEADING, PICTURE_ONLY_WORDS } from "../../src/renderer/src/app/lastTurnWords";
 import { NOTE_GOT_IT_LABEL } from "../../src/shared/cardLeave";
 import * as m from "../../src/shared/i18n/messages.generated";
@@ -535,11 +536,15 @@ test("the conversation holds a card the captain answered, lists it under Cards, 
 
 // Intent: INF-6337's plan, the captain's Approve and build, part 2: a press of
 // a card's button shows above the message box as one row with the card's
-// name; the name opens the card, and the rest of the row opens the
-// conversation at that round. Fixture: the conversation scenario's note,
-// answered with Got it. Failure: no row, a reply line under it, the name not opening
-// the past card, or the conversation opening somewhere else.
-test("a press of a card's button shows on the strip with the card's name, which opens it by click and Enter, and the row opens the conversation there", async () => {
+// name. INF-6623's plan, the captain's Approve and build: every press on the
+// row, the name included, opens the conversation at that round first ("people
+// can open cards from within the conversation UI"), and resting on the strip
+// lights the whole strip as one area ("highlight the whole area"). Fixture: the
+// conversation scenario's note, answered with Got it. Failure: no row, a reply
+// line under it, the name opening the card, the conversation opening
+// somewhere else, its tile not opening the card, no one fill behind the strip,
+// or a press in the strip's blank edge opening nothing.
+test("a press of a card's button shows on the strip with the card's name, and every press on the row opens the conversation there", async () => {
   launched = await launchApp({ withMockProvider: true, scenarios: [conversationRounds] });
   const { page } = launched;
   await resizeWindow(launched.app, page, { width: 1280, height: 800 });
@@ -550,9 +555,28 @@ test("a press of a card's button shows on the strip with the card's name, which 
   await expect(shownCard(page, BACKLOG_CARD_TITLE)).toHaveCount(0);
 
   const row = cardRound(page);
+  const name = row.locator("[data-last-turn-card]");
+  const landed = conversation(page).locator("[data-conversation-round][data-landed]");
+  const landedOnChoice = async () => {
+    await expect(conversation(page)).toBeVisible();
+    await expect(shownCard(page, BACKLOG_CARD_TITLE)).toHaveCount(0);
+    await expect(landed).toHaveAttribute("data-kind", "choice");
+    await expect(landed.locator("[data-conversation-card]")).toHaveText(
+      new RegExp(BACKLOG_CARD_TITLE),
+    );
+    await expect(landed).toBeInViewport();
+  };
+  const closeConversation = async () => {
+    await page.keyboard.press("Escape");
+    await expect(conversation(page)).toHaveCount(0);
+    await expect(name).toBeVisible();
+  };
+  const strip = page.locator("[data-last-turn]");
+  const fill = () => strip.evaluate((lane) => getComputedStyle(lane, "::before").opacity);
+
   await test.step("the press is the newest round: the card's name, then Got it outlined, with no reply line", async () => {
     await expect(row).toHaveAttribute("data-card-round", "choice");
-    await expect(row.locator("[data-last-turn-card]")).toHaveText(BACKLOG_CARD_TITLE);
+    await expect(name).toHaveText(BACKLOG_CARD_TITLE);
     await expect(yourBubble(page)).toHaveText(NOTE_GOT_IT_LABEL);
     await expect(yourBubble(page)).toHaveAttribute("data-choice", "");
     await expect(mateBubble(page)).toHaveCount(0);
@@ -560,32 +584,100 @@ test("a press of a card's button shows on the strip with the card's name, which 
     await expect(bubbleWords(yourBubble(page, "older"))).toHaveText(BACKLOG_ASK);
   });
 
-  await test.step("the card's name opens the card it answered, as a past card", async () => {
-    await row.locator("[data-last-turn-card]").click();
-    await expect(shownCard(page, BACKLOG_CARD_TITLE)).toBeVisible();
-    await expect(conversation(page)).toHaveCount(0);
-    await page.keyboard.press("Escape");
-    await expect(shownCard(page, BACKLOG_CARD_TITLE)).toHaveCount(0);
+  await test.step("resting anywhere on the strip lights the whole strip as one area", async () => {
+    await page.mouse.move(0, 0);
+    await expect.poll(fill).toBe("0");
+    for (const part of [yourBubble(page), name, bubbleWords(yourBubble(page, "older"))]) {
+      await part.hover();
+      await expect.poll(fill).toBe("1");
+    }
+    // One shape around both rounds, the same 6 px past the strip on every side.
+    expect(
+      await strip.evaluate((lane) => {
+        const style = getComputedStyle(lane, "::before");
+        return [style.top, style.right, style.bottom, style.left];
+      }),
+    ).toEqual(["-6px", "-6px", "-6px", "-6px"]);
+    await page.mouse.move(0, 0);
+    await expect.poll(fill).toBe("0");
   });
 
-  await test.step("Enter on the focused card name opens it too", async () => {
-    await pressKey(row.locator("[data-last-turn-card]"), "Enter");
+  await test.step("the card's name opens the conversation at that round, and its tile opens the card", async () => {
+    await name.click();
+    await landedOnChoice();
+    await landed.locator("[data-conversation-card]").click();
     await expect(shownCard(page, BACKLOG_CARD_TITLE)).toBeVisible();
     await expect(conversation(page)).toHaveCount(0);
     await page.keyboard.press("Escape");
-    await expect(shownCard(page, BACKLOG_CARD_TITLE)).toHaveCount(0);
+    await expect(conversation(page)).toBeVisible();
+    await closeConversation();
+  });
+
+  await test.step("Enter on the focused card name opens the conversation there too", async () => {
+    await pressKey(name, "Enter");
+    await landedOnChoice();
+    await closeConversation();
+  });
+
+  await test.step("a press in the lit strip's blank edge beside the row opens the conversation there", async () => {
+    const box = await row.boundingBox();
+    if (!box) throw new Error("The card round is not on screen");
+    await page.mouse.click(box.x + 10, box.y - 3);
+    await landedOnChoice();
+    await closeConversation();
   });
 
   await test.step("the rest of the row opens the conversation at that round", async () => {
     await yourBubble(page).click();
-    await expect(conversation(page)).toBeVisible();
-    const landed = conversation(page).locator("[data-conversation-round][data-landed]");
-    await expect(landed).toHaveAttribute("data-kind", "choice");
-    await expect(landed.locator("[data-conversation-card]")).toHaveText(
-      new RegExp(BACKLOG_CARD_TITLE),
-    );
-    await expect(landed).toBeInViewport();
+    await landedOnChoice();
   });
+});
+
+// Intent: the captain's choice on INF-6624's review, "Light the whole newest
+// row and open on any click there": once the older round has dissolved, the
+// newest round alone lights as one area wherever the pointer rests on it, and
+// a press on its blank part opens the conversation there. Fixture: the
+// conversation scenario's note answered with Got it, on the page's virtual
+// clock past the reading time and the dissolve. Failure: no fill over the
+// row's blank part, or a press there opening nothing.
+test("once the older round has dissolved, the whole newest row lights and a press anywhere on it opens the conversation", async () => {
+  launched = await launchApp({ withMockProvider: true, scenarios: [conversationRounds] });
+  const { page } = launched;
+  await resizeWindow(launched.app, page, { width: 1280, height: 800 });
+  await expect(promptInput(page)).toBeEnabled({ timeout: 30_000 });
+  await askFirstmate(page, BACKLOG_ASK);
+  await expect(shownCard(page, BACKLOG_CARD_TITLE)).toBeVisible({ timeout: 30_000 });
+  await page.clock.install();
+  await page.clock.pauseAt(new Date(Date.now() + 100));
+  await noteDone(page).click();
+  await expect(shownCard(page, BACKLOG_CARD_TITLE)).toHaveCount(0);
+  const row = cardRound(page);
+  await expect(row).toHaveAttribute("data-card-round", "choice");
+  await page.mouse.move(0, 0);
+  await page.clock.runFor(READING_MS);
+  const strip = page.locator("[data-last-turn]");
+  await expect(strip).toHaveAttribute("data-last-turn-fade", "fading");
+  const dissolve = await page.evaluate(() =>
+    Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--dur-slow")),
+  );
+  await page.clock.runFor(dissolve);
+  await expect(strip).toHaveAttribute("data-last-turn-fade", "hidden");
+  await expect(olderRound(page)).toHaveCount(0);
+  await page.clock.resume();
+
+  const fill = () => row.evaluate((round) => getComputedStyle(round, "::before").opacity);
+  const box = await row.boundingBox();
+  if (!box) throw new Error("The card round is not on screen");
+  // The row's blank part, left of the card's name, on the row's middle.
+  const blank = { x: box.x + 20, y: box.y + box.height / 2 };
+  await page.mouse.move(blank.x, blank.y);
+  await expect.poll(fill).toBe("1");
+  await page.mouse.move(0, 0);
+  await expect.poll(fill).toBe("0");
+  await page.mouse.click(blank.x, blank.y);
+  await expect(conversation(page)).toBeVisible();
+  const landed = conversation(page).locator("[data-conversation-round][data-landed]");
+  await expect(landed).toHaveAttribute("data-kind", "choice");
 });
 
 // Intent: INF-2218's accepted plan keeps saved words and picture-only and

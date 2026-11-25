@@ -127,7 +127,9 @@ A round is one thing the captain did and what came back: a message and the reply
   The captain's words sit on the right in a soft grey bubble (`--fg-1` mixed at 8%, corners 11, 11, 4 and 11 px, padding 2 px by 10 px), `--text-sm` in `--fg-1` on a 22 px row, at most 75% of the width; a message that was only pictures reads "A picture".
   The first mate's reply sits 2 px below on the left, plain `--text-sm` in `--fg-1` on a 20 px row, after the first mate's mark, the app's 14 px hexagon in `--accent`, 8 px before the words, at most 80% of the width.
   Newest ordinary words rest at 75% `--fg-2` mixed with 25% `--fg-3`, and the newest bubble rests at 4% `--fg-1` over transparent (INF-1968, the captain’s C selection).
-  Hovering a round or focusing its reply lights only that round, never its sibling.
+  Hovering a round or focusing its button lights only that round's words, never its sibling's.
+  Resting anywhere on the strip or focusing its button lays one `--bg-3` fill with `--radius-m` corners behind the whole strip, 6 px past it on every side, so a press reads as the strip's (INF-6623's plan, the captain's words: "highlight the whole area"); once the older round has dissolved, the newest round alone takes the pointer across its whole width and the fill covers it, so a press anywhere on it opens the conversation (the captain's choice on INF-6624's review: "Light the whole newest row and open on any click there"), and the fill comes and goes over `--dur-fast` and moves nothing.
+  A press between the rounds or at the fill's edge opens the conversation at the round nearest it.
   The newest round restores ordinary words to `--fg-1` and its bubble to 8% immediately; leaving and blurring restores its quiet treatment, with no animation or timer.
   The older round keeps its colors and lifts from 50% to full opacity while hovered or focused, returning to 50% afterwards.
   The mark stays cyan (`--accent`) in both states, as the captain requested; composer focus alone does not brighten either round.
@@ -135,15 +137,15 @@ A round is one thing the captain did and what came back: a message and the reply
   Neither carries quotation marks.
   Each line is one line; a line too long for its row ends on the last whole word that fits beside an ellipsis, never part way through a word, and resting on a cut line shows its whole text.
   The cut follows the row's width as the window or a side rail changes it, the line keeps all its words for a reader, and only a first word too wide for the row is cut part way (`src/renderer/src/design/core/wholeWords.ts`).
-  A press anywhere on a round opens the conversation (below) at that round, unless it ended a drag that selected words; the captain's words take no Tab stop and draw no underline or focus ring.
-  Each reply line, the older one included, is a button that opens the conversation at its round: it takes a Tab stop and the focus ring, and no other chrome; the working words are not a button.
+  A press anywhere on a round opens the conversation (below) at that round, unless it ended a drag that selected words, so no press on the strip opens a card: a card opens from its tile in the conversation (INF-6623's plan, the captain's Approve and build: "always open up the conversation first"); the captain's words take no Tab stop and draw no underline or focus ring.
+  Each round has one Tab stop, a button that opens the conversation at its round: a message's reply line, the older one included, or a card round's name (below); it takes the focus ring and no other chrome; the working words are not a button.
   While a card or another stack entry is up, only the newest round shows, so a card keeps about the room it had with one round.
 - **Card rounds.**
   The captain's own press of a card's button, Got it and Done included, and a line they typed under a card are rounds too, among the messages by time (INF-6337's plan, the captain's Approve and build: "cards they interacted"; the strip's part of it).
   A card round is one 22 px row on the right: a 12 px card glyph and the card's title in `--fg-3`, at most 45% of the width and cut on a whole word, 8 px, then the bubble.
   A press of a button draws the button's words in the bubble's outline with no fill; a line typed under a card draws in the filled bubble.
   A line typed under the first mate's own card is also a message: its row keeps the reply line under it.
-  The card's title is a button that opens that card, in front while it is still up and as a past card once it closed; a press anywhere else on the row opens the conversation at that round.
+  On a card round the card's name is the round's button: it opens the conversation at that round like the rest of the row, takes the reply line's label on rest, and lights with its round, never on its own; in a message round that names a card the name is plain text.
   Putting a card aside, a card taken down, and a choice its author or its script made are not rounds, as in the conversation.
   The strip reads the conversation's newest rounds (`inf:conversation:thread`, as many as it shows) again whenever a message, a reply, the cards or a card's thread change, and takes the card rounds and each message's time from them, while the messages themselves stay the window's own, so a message sent shows at once (`stripRounds`, `src/shared/conversation.ts`).
   A home that cannot answer that read shows messages alone, as before.
@@ -190,7 +192,7 @@ A round is one thing the captain did and what came back: a message and the reply
   Fading does not move focus, change the draft, or read the reply out again.
   The saved rounds are the two newest `captain_asks` rows and the reply lines kept beside them (`TaskService.capture.setAskReply`, migration 68), read once as the window opens (`inf:conversation:last-turn`, the older round as its `previous`).
 - **The conversation.**
-  Pressing a round, or Enter or Space on its reply line, opens the conversation at the front of the stack, in front of any open card (INF-6337's plan, the captain's Approve and build: "a thread that has everything the user directly interacted with", "a place for people to find their recent cards"); it lands on the round pressed, centered and outlined in `--accent` for a moment.
+  Pressing a round, or Enter or Space on its reply line or a card round's name, opens the conversation at the front of the stack, in front of any open card (INF-6337's plan, the captain's Approve and build: "a thread that has everything the user directly interacted with", "a place for people to find their recent cards"); it lands on the round pressed, centered and outlined in `--accent` for a moment.
   The window holds it, as it holds a past card (`{ conversation }` in `OpenRecord`, `stack.ts`, `ConversationCard.tsx`): opening and reading it tell the first mate nothing.
   It is 720 px wide until dragged, carries the Note chip, a quiet Conversation heading and two views, Everything and Cards, and has no buttons or reply row; the shared minus or Esc puts it away.
   While it is the shown entry the lines above the input are not drawn, and the message box is its field: a message sent there joins its foot as it is sent, and the first mate's reply follows.

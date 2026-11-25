@@ -1,5 +1,5 @@
 ---
-source: e113b8fc8884a051
+source: d1435fbb25dfd2af
 title: Tarefas e tripulantes
 description: O que é uma tarefa, como ela vai do backlog até concluída, onde acompanhá-la e como orientar o tripulante que a faz.
 ---
@@ -62,11 +62,12 @@ Para ler em palavras o status de uma tarefa e o motivo dele, deixe o ponteiro so
 Para uma visão mais completa, pressione **Abrir o quadro de tarefas** no topo de Tarefas.
 O quadro mostra Aguardando você no alto e depois três colunas: Backlog, Na fila e Trabalhando.
 
-<img class="picture-dark" src="/pictures/task-board-dark.webp" alt="O quadro de tarefas: uma tarefa aguardando você no alto e depois as colunas Backlog, Na fila e Trabalhando." width="876" height="493" />
-<img class="picture-light" src="/pictures/task-board-light.webp" alt="O quadro de tarefas: uma tarefa aguardando você no alto e depois as colunas Backlog, Na fila e Trabalhando." width="876" height="493" />
+<img class="picture-dark" src="/pictures/task-board-dark.webp" alt="O quadro de tarefas: uma fileira com as etiquetas do projeto, uma tarefa aguardando você no alto e depois as colunas Backlog, Na fila e Trabalhando." width="876" height="493" />
+<img class="picture-light" src="/pictures/task-board-light.webp" alt="O quadro de tarefas: uma fileira com as etiquetas do projeto, uma tarefa aguardando você no alto e depois as colunas Backlog, Na fila e Trabalhando." width="876" height="493" />
 
 As visualizações dele também listam o backlog inteiro, Concluídas · 7 d e o trabalho abandonado nesta semana.
 Digite uma chave ou um título em **Buscar uma tarefa** para filtrar todas as faixas, inclusive trabalhos concluídos mais antigos.
+Quando seu projeto tem etiquetas, o quadro mostra uma fileira com elas, e pressionar uma delas deixa no quadro só as tarefas que a levam; veja [Etiquetas](#tags).
 
 Para mover uma tarefa, arraste o bloco dela para outra coluna ou use o menu ⋯ dela:
 
@@ -84,7 +85,7 @@ O quadro nunca mescla nada: uma mesclagem só acontece no cartão de mesclagem d
 Abra uma tarefa para ver o cartão dela.
 Embaixo do título fica uma fileira de abas:
 
-- **Info**: o que você pediu, onde ela está e como ela é entregue.
+- **Info**: o que você pediu, onde ela está, as etiquetas dela e como ela é entregue.
 - **Cartões**: os cartões que a tarefa mostrou a você, com a quantidade.
 - **Atividade**: cada linha que a tarefa escreveu, em ordem.
 - **Tripulante**: a conversa do próprio tripulante, linha por linha, enquanto ele trabalha.
@@ -92,6 +93,27 @@ Embaixo do título fica uma fileira de abas:
   Veja [O navegador da tripulação](/pt-br/the-crews-browser/).
 
 Uma aba só aparece quando a tarefa tem algo para mostrar nela.
+
+## Etiquetas {#tags}
+
+Uma tarefa pode levar qualquer uma das etiquetas do projeto dela, como bug ou recurso.
+Você cria as etiquetas de um projeto em Ajustes → Projetos; veja [Projetos](/pt-br/projects/#tags).
+
+Para etiquetar uma tarefa, abra a aba **Info** dela e pressione **Editar etiquetas** na linha **Etiquetas**.
+Um menu lista as etiquetas do projeto, e cada etiqueta que você marca é salva na hora.
+A linha **Etiquetas** aparece quando o projeto tem etiquetas.
+Você também pode pedir ao seu imediato para etiquetar uma tarefa.
+
+Você pode encontrar tarefas por etiqueta em três lugares:
+
+- **Buscar tarefas**, no topo de Tarefas, mostra uma fileira com as etiquetas do projeto.
+  Pressione uma etiqueta para listar só as tarefas que a levam, **Sem etiqueta** para as tarefas que não levam nenhuma ou **Todas as etiquetas** para ver todas as tarefas de novo.
+- **Agrupar tarefas**, logo ao lado, lista suas tarefas **Por etiqueta** em vez de **Por status**.
+  Cada etiqueta é um grupo, que fica recolhido até você abri-lo.
+- O quadro de tarefas tem a própria fileira de etiquetas, e a visualização **Por etiqueta** dele conta as tarefas de cada etiqueta conforme onde cada uma está.
+
+As etiquetas aparecem para um projeto de cada vez: o projeto em foco ou seu único projeto com etiquetas.
+Para focar em um projeto, veja [Projetos](/pt-br/projects/#focus-on-one-project).
 
 ## Orientar um tripulante {#steering-a-crewmate}
 

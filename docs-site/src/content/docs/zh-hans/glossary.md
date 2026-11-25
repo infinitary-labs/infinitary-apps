@@ -1,5 +1,5 @@
 ---
-source: 72cf3e89cd5a9c83
+source: 14ae8437d49c7f6c
 title: 术语表
 description: Infinitary 中带有特定含义的词，每个词用一两句话说明，并附上解释它的页面链接。
 ---
@@ -12,7 +12,7 @@ description: Infinitary 中带有特定含义的词，每个词用一两句话�
 ### 动态（Activity） {#activity}
 
 窗口左侧底部的面板，你的大副和船员所做的每件事在其中各占一行。
-某个任务自己的各行在它卡片的“**动态**”标签上。
+某个任务自己的各行在它卡片的“**动态**”标签页上。
 请参阅[面板](/zh-hans/panels/#the-apps-own-panels)。
 
 ### 额度（Allowance） {#allowance}
@@ -130,9 +130,16 @@ description: Infinitary 中带有特定含义的词，每个词用一两句话�
 
 ### 聚焦（Focus） {#focus}
 
-通过顶部栏的项目标签，把窗口收窄到一个项目。
+通过顶部栏的项目按钮，把窗口收窄到一个项目。
 “任务”、“动态”和卡片随后只显示这个项目，你提出的新工作也会放在这里，除非你指明另一个项目。
 请参阅[项目](/zh-hans/projects/#focus-on-one-project)。
+
+## H {#h}
+
+### 主机（Home） {#home}
+
+设置 → **设备** 中的拓扑图在大副所在的电脑下方标出的词。
+请参阅[你的其他电脑](/zh-hans/your-other-computers/#the-computer-where-your-first-mate-lives)。
 
 ## I {#i}
 
@@ -211,7 +218,7 @@ description: Infinitary 中带有特定含义的词，每个词用一两句话�
 
 ### 项目（Project） {#project}
 
-你自己的一个用 git 保存的文件夹，由你的船员在其中工作。
+你的船员工作的对象：一个仓库，或几个相互配套的仓库。
 每个任务都属于一个项目。
 请参阅[项目](/zh-hans/projects/)。
 
@@ -241,6 +248,12 @@ description: Infinitary 中带有特定含义的词，每个词用一两句话�
 每个任务都会保留的内容：你要求了什么、改动了什么、证据，以及你的决定。
 任务的记录在任务结束后仍会保留。
 请参阅[任务和船员](/zh-hans/tasks-and-crewmates/)。
+
+### 仓库（Repository） {#repository}
+
+你自己的一个用 git 保存的文件夹，属于某个项目。
+一个项目包含一个或几个仓库，每个任务在其中一个仓库中工作。
+请参阅[项目](/zh-hans/projects/#several-repositories-in-one-project)。
 
 ### 把关（Rigor） {#rigor}
 
@@ -281,6 +294,12 @@ Infinitary 不会再次显示它的值，你的大副和你的船员也都拿不
 请参阅[订阅和额度](/zh-hans/subscriptions-and-quota/)。
 
 ## T {#t}
+
+### 标签（Tag） {#tag}
+
+项目给某一类任务起的名称，例如缺陷或功能，并附有一段描述，说明哪些任务符合。
+你或你的大副都可以给任务加标签，“任务”和任务看板可以按标签列出任务。
+请参阅[任务和船员](/zh-hans/tasks-and-crewmates/#tags)。
 
 ### 接手（Take over） {#take-over}
 

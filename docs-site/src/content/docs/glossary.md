@@ -133,6 +133,13 @@ Narrowing the window to one project, from the project pill in the top bar.
 Tasks, Activity and cards then show only that project, and new work you ask for goes there unless you name another.
 See [Projects](/projects/#focus-on-one-project).
 
+## H
+
+### Home
+
+The word the map in Settings → **Devices** puts under the computer where your first mate lives.
+See [Your other computers](/your-other-computers/#the-computer-where-your-first-mate-lives).
+
 ## I
 
 ### Integration
@@ -210,7 +217,7 @@ See [The crew's browser](/the-crews-browser/#private-sites).
 
 ### Project
 
-A folder of your own, kept with git, that your crew works on.
+What your crew works on: one repository, or several that belong together.
 Every task belongs to a project.
 See [Projects](/projects/).
 
@@ -240,6 +247,12 @@ See [Tasks and crewmates](/tasks-and-crewmates/#where-a-task-stands).
 What every task keeps: what you asked, what changed, the evidence and what you decided.
 A task's record stays after the task closes.
 See [Tasks and crewmates](/tasks-and-crewmates/).
+
+### Repository
+
+A folder of your own, kept with git, that a project holds.
+A project holds one repository or several, and each task works in one of them.
+See [Projects](/projects/#several-repositories-in-one-project).
 
 ### Rigor
 
@@ -280,6 +293,12 @@ Each one you sign in to is an account in Settings → **Intelligence**.
 See [Subscriptions and allowance](/subscriptions-and-quota/).
 
 ## T
+
+### Tag
+
+A name a project gives to a kind of task, such as bug or feature, with a description that says which tasks qualify.
+You or your first mate tag a task, and Tasks and the task board can list tasks by tag.
+See [Tasks and crewmates](/tasks-and-crewmates/#tags).
 
 ### Take over
 

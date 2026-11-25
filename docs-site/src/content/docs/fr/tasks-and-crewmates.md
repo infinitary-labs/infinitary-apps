@@ -1,5 +1,5 @@
 ---
-source: e113b8fc8884a051
+source: d1435fbb25dfd2af
 title: Tâches et équipiers
 description: Ce qu’est une tâche, comment elle passe de la réserve à terminée, où la suivre et comment orienter l’équipier qui s’en charge.
 ---
@@ -62,11 +62,12 @@ Pour lire en toutes lettres l’état d’une tâche et sa raison, laissez le po
 Pour une vue plus complète, appuyez sur **Ouvrir le tableau des tâches** dans l’en-tête de Tâches.
 Le tableau affiche En attente de vous en haut, puis trois colonnes : Réserve, En attente et En cours.
 
-<img class="picture-dark" src="/pictures/task-board-dark.webp" alt="Le tableau des tâches : une tâche en attente de vous en haut, puis les colonnes Réserve, En attente et En cours." width="876" height="493" />
-<img class="picture-light" src="/pictures/task-board-light.webp" alt="Le tableau des tâches : une tâche en attente de vous en haut, puis les colonnes Réserve, En attente et En cours." width="876" height="493" />
+<img class="picture-dark" src="/pictures/task-board-dark.webp" alt="Le tableau des tâches : une rangée des étiquettes du projet, une tâche en attente de vous en haut, puis les colonnes Réserve, En attente et En cours." width="876" height="493" />
+<img class="picture-light" src="/pictures/task-board-light.webp" alt="Le tableau des tâches : une rangée des étiquettes du projet, une tâche en attente de vous en haut, puis les colonnes Réserve, En attente et En cours." width="876" height="493" />
 
 Ses vues listent aussi toute la réserve, Terminées · 7 j et le travail écarté cette semaine.
 Tapez une clé ou un titre dans **Rechercher une tâche** pour restreindre chaque colonne, y compris le travail terminé plus ancien.
+Quand votre projet a des étiquettes, le tableau en affiche une rangée, et appuyer sur l’une d’elles restreint le tableau à ses tâches ; voir [Étiquettes](#tags).
 
 Pour déplacer une tâche, faites glisser sa vignette vers une autre colonne, ou utilisez son menu ⋯ :
 
@@ -84,7 +85,7 @@ Le tableau ne fusionne jamais rien : une fusion n’a lieu que sur la carte de 
 Ouvrez une tâche pour voir sa carte.
 Sous son titre se trouve une rangée d’onglets :
 
-- **Infos** : ce que vous avez demandé, où elle en est et comment elle est livrée.
+- **Infos** : ce que vous avez demandé, où elle en est, ses étiquettes et comment elle est livrée.
 - **Cartes** : les cartes que la tâche vous a montrées, avec leur nombre.
 - **Activité** : chaque ligne qu’a écrite la tâche, dans l’ordre.
 - **Équipier** : la conversation de l’équipier lui-même, ligne par ligne, pendant qu’il travaille.
@@ -92,6 +93,27 @@ Sous son titre se trouve une rangée d’onglets :
   Voir [Le navigateur de l’équipage](/fr/the-crews-browser/).
 
 Un onglet n’apparaît qu’une fois que la tâche a quelque chose à y montrer.
+
+## Étiquettes {#tags}
+
+Une tâche peut porter une ou plusieurs des étiquettes de son projet, comme bogue ou fonctionnalité.
+Vous créez les étiquettes d’un projet dans Réglages → Projets ; voir [Projets](/fr/projects/#tags).
+
+Pour étiqueter une tâche, ouvrez son onglet **Infos** et appuyez sur **Modifier les étiquettes** sur la ligne **Étiquettes**.
+Un menu liste les étiquettes du projet, et chaque coche est enregistrée aussitôt.
+La ligne **Étiquettes** apparaît dès que le projet a des étiquettes.
+Vous pouvez aussi demander à votre second d’étiqueter une tâche.
+
+Vous pouvez retrouver des tâches par étiquette à trois endroits :
+
+- **Rechercher des tâches**, dans l’en-tête de Tâches, affiche une rangée des étiquettes du projet.
+  Appuyez sur une étiquette pour ne lister que les tâches qui la portent, sur **Sans étiquette** pour celles qui n’en portent aucune, ou sur **Toutes les étiquettes** pour revoir toutes les tâches.
+- **Grouper les tâches**, juste à côté, liste vos tâches **Par étiquette** au lieu de **Par état**.
+  Chaque étiquette forme un groupe, replié jusqu’à ce que vous l’ouvriez.
+- Le tableau des tâches a sa propre rangée d’étiquettes, et sa vue **Par étiquette** compte les tâches de chaque étiquette selon leur état.
+
+Les étiquettes s’affichent pour un seul projet à la fois : le projet qui a le focus, ou votre seul projet à avoir des étiquettes.
+Pour vous concentrer sur un projet, voir [Projets](/fr/projects/#focus-on-one-project).
 
 ## Orienter un équipier {#steering-a-crewmate}
 

@@ -1,5 +1,5 @@
 ---
-source: e113b8fc8884a051
+source: d1435fbb25dfd2af
 title: Aufgaben und Crewmitglieder
 description: Was eine Aufgabe ist, wie sie vom Backlog bis zu „Fertig“ wandert, wo du sie verfolgst und wie du das Crewmitglied lenkst, das sie bearbeitet.
 ---
@@ -62,11 +62,12 @@ Um den Status einer Aufgabe und seinen Grund in Worten zu lesen, halte den Zeige
 Für eine ausführlichere Ansicht drück in der Kopfzeile von Aufgaben auf **Aufgabenboard öffnen**.
 Das Board zeigt oben „Wartet auf dich“, darunter drei Spalten: Backlog, Eingereiht und Arbeitet.
 
-<img class="picture-dark" src="/pictures/task-board-dark.webp" alt="Das Aufgabenboard: oben eine Aufgabe, die auf dich wartet, darunter die Spalten Backlog, Eingereiht und Arbeitet." width="876" height="493" />
-<img class="picture-light" src="/pictures/task-board-light.webp" alt="Das Aufgabenboard: oben eine Aufgabe, die auf dich wartet, darunter die Spalten Backlog, Eingereiht und Arbeitet." width="876" height="493" />
+<img class="picture-dark" src="/pictures/task-board-dark.webp" alt="Das Aufgabenboard: eine Reihe mit den Tags des Projekts, oben eine Aufgabe, die auf dich wartet, darunter die Spalten Backlog, Eingereiht und Arbeitet." width="876" height="493" />
+<img class="picture-light" src="/pictures/task-board-light.webp" alt="Das Aufgabenboard: eine Reihe mit den Tags des Projekts, oben eine Aufgabe, die auf dich wartet, darunter die Spalten Backlog, Eingereiht und Arbeitet." width="876" height="493" />
 
 Seine Ansichten listen auch das ganze Backlog, Fertig · 7 T. und die in dieser Woche aufgegebene Arbeit auf.
 Gib in **Aufgabe suchen** ein Kürzel oder einen Titel ein, um jede Spalte einzugrenzen, auch ältere fertige Arbeit.
+Hat dein Projekt Tags, zeigt das Board sie in einer Reihe, und wenn du auf eines drückst, zeigt das Board nur noch dessen Aufgaben; siehe [Tags](#tags).
 
 Um eine Aufgabe zu verschieben, zieh ihre Kachel in eine andere Spalte oder nutz ihr Menü ⋯:
 
@@ -84,7 +85,7 @@ Das Board führt nie etwas zusammen: Ein Zusammenführen geschieht nur auf der K
 Öffne eine Aufgabe, um ihre Karte zu sehen.
 Unter ihrem Titel steht eine Reihe von Tabs:
 
-- **Info**: worum du gebeten hast, wo sie steht und wie sie geliefert wird.
+- **Info**: worum du gebeten hast, wo sie steht, ihre Tags und wie sie geliefert wird.
 - **Karten**: die Karten, die dir die Aufgabe gezeigt hat, mit ihrer Anzahl.
 - **Aktivität**: jede Zeile, die die Aufgabe geschrieben hat, der Reihe nach.
 - **Crewmitglied**: die eigene Unterhaltung des Crewmitglieds, Zeile für Zeile, während es arbeitet.
@@ -92,6 +93,27 @@ Unter ihrem Titel steht eine Reihe von Tabs:
   Siehe [Der Browser der Crew](/de/the-crews-browser/).
 
 Ein Tab erscheint erst, wenn die Aufgabe dort etwas zu zeigen hat.
+
+## Tags {#tags}
+
+Eine Aufgabe kann beliebige Tags ihres Projekts tragen, etwa Fehler oder Funktion.
+Die Tags eines Projekts legst du in Einstellungen → Projekte an; siehe [Projekte](/de/projects/#tags).
+
+Um eine Aufgabe zu taggen, öffne ihren Tab **Info** und drück in der Zeile **Tags** auf **Tags bearbeiten**.
+Ein Menü listet die Tags des Projekts auf, und jedes Häkchen wird sofort gespeichert.
+Die Zeile **Tags** erscheint, sobald das Projekt Tags hat.
+Du kannst auch deinen ersten Offizier bitten, eine Aufgabe zu taggen.
+
+An drei Stellen kannst du Aufgaben nach Tag finden:
+
+- **Aufgaben durchsuchen**, in der Kopfzeile von Aufgaben, zeigt eine Reihe mit den Tags des Projekts.
+  Drück auf ein Tag, um nur die Aufgaben aufzulisten, die es tragen, auf **Ohne Tag** für die Aufgaben, die keines tragen, oder auf **Alle Tags**, um wieder jede Aufgabe zu sehen.
+- **Aufgaben gruppieren**, gleich daneben, listet deine Aufgaben **Nach Tag** statt **Nach Status** auf.
+  Jedes Tag ist eine Gruppe, eingeklappt, bis du sie öffnest.
+- Das Aufgabenboard hat eine eigene Reihe von Tags, und seine Ansicht **Nach Tag** zählt die Aufgaben jedes Tags danach, wo sie stehen.
+
+Tags werden immer nur für ein Projekt gezeigt: das Projekt im Fokus oder dein einziges Projekt mit Tags.
+Wie du dich auf ein Projekt konzentrierst, steht unter [Projekte](/de/projects/#focus-on-one-project).
 
 ## Ein Crewmitglied lenken {#steering-a-crewmate}
 

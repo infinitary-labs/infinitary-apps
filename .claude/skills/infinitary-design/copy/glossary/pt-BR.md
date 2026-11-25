@@ -151,6 +151,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | subscription | assinatura | |
 | switch (a setting's on/off control) | botão | Never "chave", which already means a key. |
 | tab | aba | |
+| tag (a project's name for a kind of task) | etiqueta | The app's own word ("Etiquetas", "Sem etiqueta", "Por etiqueta"); plain Portuguese, never "tag". Feminine, plural "etiquetas"; the verb is "etiquetar", and a task "leva" a tag ("as tarefas que a levam"). |
 | Take control / Return control (browser) | Assumir o controle / Devolver o controle | Matches the command "Assumir ou devolver o controle do navegador". |
 | task | tarefa | Feminine, so feed lines agree: "Iniciada", "Concluída", "Mesclada". |
 | task board / its lanes | quadro de tarefas / Aguardando você, Backlog, Na fila, Trabalhando, Concluídas · 7 d | |

@@ -1,11 +1,12 @@
 ---
 title: Projects
-description: How to add a project to Infinitary, focus the window on one, choose how its changes are merged, and remove it.
+description: How to add a project to Infinitary, put several repositories in one, give it tags, focus the window on one, choose how its changes are merged, and remove it.
 ---
 
-A project is what your crew works on: a folder of your own, kept with git.
+A project is what your crew works on: one repository, or several that belong together, such as an app and its service.
+A repository is a folder of your own, kept with git.
 Every task belongs to a project, and every task key starts with its project's key, such as `WEB-12`.
-Your projects are listed in **Settings → Projects**.
+Your projects are listed in **Settings → Projects**, and pressing a project's line opens its page.
 
 ## Add a project
 
@@ -60,6 +61,56 @@ Your sign-in stays on this computer.
 
 If a sign-in stops working, a card asks you to sign in again.
 Work that needs it waits until you do.
+
+## Several repositories in one project
+
+A project starts with one repository and can hold more.
+Its page lists them under **Repositories**, with a tab for each.
+
+You can add a repository to a project in two ways.
+
+- **Ask your first mate.**
+  Say which project the repository joins.
+  Your first mate brings you a card, and nothing is added until you press **Add repository** on it.
+- **Add it yourself.**
+  Press **Add a repository**, after the last tab, and choose a folder, a repo to clone or **New repository**, as you do for a project.
+
+The repository's tasks take the project's task key.
+Each task works in one repository, and the task's **Info** tab names it beside the project.
+Each repository keeps its own settings, such as **Where changes go**, **Ask before merging** and **Rigor**: choose its tab to change them.
+A project of several repositories has a name of its own, which **Name** in the **Project** box changes.
+
+## Move a repository to another project
+
+A repository can move to another project, or to a project of its own.
+
+- **Ask your first mate.**
+  When you name the exact move, it happens at once.
+  When your first mate suggests one, a card shows where each repository goes and which tasks follow, and nothing moves until you press **Apply move**.
+- **Move it yourself.**
+  On the repository's tab, choose a project on the line that offers to move it, press **Move**, and press **Move** again to confirm.
+
+The repository keeps its name, its folder and its settings.
+Its tasks go with it, and every task keeps its key.
+A project left with no repository leaves the list: the rest of its tasks, its tags and its automations join the other project, and its key is never used again.
+To combine two projects, move the repositories of one into the other.
+
+## Tags
+
+Each project keeps its own list of tags, such as bug, feature or idea.
+A tag has a name and a description that says which tasks qualify.
+Tags help you find and group tasks, and nothing else in Infinitary acts on a tag.
+
+A project's page lists its tags under **Tags**, each with how many tasks carry it.
+
+- **Add a tag** asks for the tag's name and which tasks qualify.
+- **Edit** changes a tag's name or description.
+  A renamed tag stays on the tasks that carry it.
+- **Remove** takes the tag off every task that carries it, after one question that says how many.
+
+You can also ask your first mate to add, change or remove a project's tags.
+A task that moves to another project loses its tags, unless its whole project joined that one.
+To tag a task and to find tasks by tag, see [Tasks and crewmates](/tasks-and-crewmates/#tags).
 
 ## Working copies
 
@@ -116,6 +167,8 @@ Turn it off, and work that passes the checks may merge without asking you.
 Removing takes the project off the list.
 Its folder and its finished tasks stay.
 If the project still has tasks, Infinitary names them, and you finish or drop them first.
+
+In a project of several repositories, **Remove** takes away the repository whose tab is chosen, and the project keeps the others.
 
 ## Next
 

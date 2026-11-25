@@ -169,6 +169,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | stop | إيقاف | "إيقاف مؤقت" for pause. |
 | story (a change's) | قصة | |
 | subscription | اشتراك | |
+| tag (a project's name for a kind of task) | وسم | The word the catalog already uses ("الوسوم", "إضافة وسم"); masculine, plural "وسوم". A task carries one ("تحمله"), and tagging a task is "وضع وسم على مهمة". |
 | take over (another computer's first mate) | التولّي | |
 | task | مهمة | Feminine, plural "مهام"; feed lines about a task agree in the feminine. |
 | task key (a project's task numbering, "INF") | رمز المهام | "رمزه" for a project's own; kept apart from "مفتاح", which unlocks something. |

@@ -90,6 +90,7 @@ It never judges the prose; it refuses a shipped language that lacks a page Engli
 
 Add `docs-site/src/content/docs/<tag in lowercase>/` with every hand-written page translated and stamped, the language's words in `docs-site/words/<tag>.json`, and run `node scripts/docs-site-keyboard.ts` for its Keyboard page.
 The redirect for it goes away, its menu entry, alternates and search appear, and the site and live checks open its pages, with no other change.
+Its pages' wordmark leads to `getinfinitary.com/<tag in lowercase>/`, so the landing page adds the language first ("The look").
 Its file under `docs-site/src/content/i18n/` holds its search window's words, and the words Starlight brings none for.
 
 ## Build and check
@@ -106,7 +107,7 @@ The build writes plain files to `docs-site/dist/`, search index included.
 ### The check
 
 `docs-site/scripts/check-site.mjs` serves `dist/` on this computer and opens every built page in Chromium through Playwright, in a browser that may reach only that server.
-It opens pages side by side, and fails on a page that does not answer or draws no title, a page that does not name its language, direction, canonical address and alternates or labels its heading links in another language's words ("Languages"), a shipped language's home page whose language menu cuts its name short or whose theme menu cuts any of its choices short, a request to any other host, a cookie, a link between pages or to a heading that leads nowhere, a picture that does not draw, a space drawn after a full-width full stop (。), an unknown address that does not draw the site's own not-found page, search that draws no search box on a shipped language's home page, or finds nothing in English or, from each shipped language's home page, for a word of its Install page's title, finding that language's pages, or whose result count or clear button reads as English's on a translated home page, a sitemap entry whose alternates differ from its page's, a translated What's new that does not show the English notes, marked English, under Starlight's notice in its language and marked so, and a wordmark drawn in anything but the text color at weight 500.
+It opens pages side by side, and fails on a page that does not answer or draws no title, a page that does not name its language, direction, canonical address and alternates or labels its heading links in another language's words ("Languages"), a shipped language's home page whose language menu cuts its name short or whose theme menu cuts any of its choices short, a request to any other host, a cookie, a link between pages or to a heading that leads nowhere, a picture that does not draw, a space drawn after a full-width full stop (。), an unknown address that does not draw the site's own not-found page, search that draws no search box on a shipped language's home page, or finds nothing in English or, from each shipped language's home page, for a word of its Install page's title, finding that language's pages, or whose result count or clear button reads as English's on a translated home page, a sitemap entry whose alternates differ from its page's, a translated What's new that does not show the English notes, marked English, under Starlight's notice in its language and marked so, and a wordmark drawn in anything but the text color at weight 500, or leading anywhere but `getinfinitary.com`'s landing page in the page's language.
 Starlight builds the search box only when the browser next has idle time, and headless Chromium on a busy computer can stop drawing without ever having it, so the check waits for the box while asking the page for animation frames, as a visitor's pointer would.
 Each search opens in a fresh tab, because a tab that walked page after page keeps those pages in its browser's memory, and on a busy computer such a tab sometimes never gets that idle time.
 It also opens the home page with the system asking for dark and then for light, and fails unless the site follows.
@@ -130,6 +131,7 @@ Space Grotesk and JetBrains Mono are served by the site itself from the skill's 
 Dark is the default; light follows the visitor's system or their choice in the theme menu, through the same `data-theme="light"` the tokens answer to.
 
 The header draws the wordmark as `getinfinitary.com` and the design skill draw it (`docs-site/src/components/SiteTitle.astro`): the name in Space Grotesk 500 in the text color (`--fg-1`), never the accent, beside the app icon reduced to its two hexagons, without the icon's dark tile.
+The wordmark leads to `getinfinitary.com`'s landing page, never to the site's own home, in the page's language: the landing page serves each language under the same segment the site does, so a French page's wordmark leads to `https://getinfinitary.com/fr/` and an English page's to `https://getinfinitary.com/`.
 The built site's `favicon.svg` is the skill's `assets/app-icon.svg`, copied at build time.
 
 ## What a page may say

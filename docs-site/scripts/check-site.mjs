@@ -16,7 +16,8 @@
 // - search that draws no search box, or finds nothing, with the network limited to the site itself,
 //   in English and, from each shipped language's home page, for a word of
 //   one of its page titles, finding that language's own pages,
-// - the wordmark drawn in anything but the text color,
+// - the wordmark drawn in anything but the text color, or leading anywhere
+//   but getinfinitary.com's landing page in the page's language,
 // - a first visit that does not follow the visitor's system to dark or light
 //   (Starlight opens dark unless the system asks for light; Chromium cannot
 //   stand in for a system that states no preference, so that case is not here).
@@ -330,6 +331,9 @@ try {
     for (const href of await tab.$$eval("a[href]", (as) => as.map((a) => a.getAttribute("href")))) {
       links.push({ from: path, href });
     }
+    const landingPage = new URL(languageOf(path).prefix, "https://getinfinitary.com").href;
+    const wordmark = await tab.evaluate(() => document.querySelector("header .wordmark")?.getAttribute("href") ?? null);
+    if (wordmark !== landingPage) fail(`${path}'s wordmark leads to ${wordmark}, not the landing page ${landingPage}`);
     if (path !== "/404.html") {
       const marks = await tab.evaluate(languageMarks);
       for (const problem of languageProblems(path, marks)) fail(problem);

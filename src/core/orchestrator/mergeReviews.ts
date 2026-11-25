@@ -31,12 +31,9 @@ import {
   reviewOf,
 } from "./changeContext";
 import {
-  afterDirectTold,
   atDispatch,
   branchInProject,
   type ChangeMerge,
-  directlyLine,
-  directlyTold,
   heldBy,
   hostQueued,
   MERGE_RETRY_DELAYS_MS,
@@ -51,9 +48,9 @@ import {
   readinessStop,
   sleep,
   stripAttempt,
-  throughHold,
   UNDECIDED_REREAD_MS,
 } from "./changeMerge";
+import { afterDirectTold, directlyLine, directlyTold, throughHold } from "./heldMergeGate";
 import { MERGE_CHECKS_HOLD_REASON, standingAuthorization } from "./mergeAuthorization";
 import { taskContributesUpstream } from "./workShape";
 

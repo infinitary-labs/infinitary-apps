@@ -1039,7 +1039,7 @@ A held request that ended without merging is a transient failure: the pull reque
 A 409 to a merge past the branch's rules is GitHub's refusal, since that merge is sent once.
 
 The kept approval records the hold on itself (`MergeAuthorization.heldMerge`): the version, when GitHub first said so, the request's id once known, and what became of the direct merge (`direct`).
-While a hold is recorded nothing asks GitHub to merge that pull request through the asynchronous merge again: one gate (`throughHold`, `src/core/orchestrator/changeMerge.ts`) stands before every send, for a task's own pull request and a reviewed one alike.
+While a hold is recorded nothing asks GitHub to merge that pull request through the asynchronous merge again: one gate (`throughHold`, `src/core/orchestrator/heldMergeGate.ts`) stands before every send, for a task's own pull request and a reviewed one alike.
 The approval waits on `outcome` and reads the pull request and, where it knows the id, the held request (`Forge.heldMergeState`) one minute later, then twice as long each time up to thirty minutes apart, and no later than the moment the hold passes five minutes (`HELD_MERGE_BOUND_MS`, `heldRetryAfter`, `src/core/orchestrator/mergeAuthorization.ts`).
 The pull request merged ends it as any merge read back does.
 The held request taken by GitHub's merge queue hands the approval to the queue's own wait, below, and clears the hold.

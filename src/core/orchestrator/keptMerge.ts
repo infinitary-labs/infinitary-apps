@@ -3,7 +3,8 @@ import { forgePlace } from "@shared/forge";
 import type { ForgePull } from "../forge";
 import type { MergeAuthorization, MergeWait } from "../storage/taskRecords";
 import { TaskService } from "../tasks/taskService";
-import { afterDirectTold, mergedReceipt, otherMergedFacts } from "./changeMerge";
+import { mergedReceipt, otherMergedFacts } from "./changeMerge";
+import { afterDirectTold } from "./heldMergeGate";
 import type { KeptApproval } from "./keptApproval";
 import {
   candidateHead,

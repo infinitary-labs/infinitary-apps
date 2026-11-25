@@ -11,8 +11,16 @@ import { launchClaudeSeat, say } from "./claudeSeat";
 import { waitForFirstmateIdle } from "./crew";
 import { leaveSettings } from "./handoverCards";
 import type { LaunchedApp } from "./launch";
-import { ANSWER_PROMPT_MARKER, MOCK_ANSWER_TITLE, startMockProvider } from "./mockProvider";
+import {
+  ANSWER_PROMPT_MARKER,
+  MOCK_ANSWER_TITLE,
+  MOCK_COMPLETION_TEXT,
+  mockSpawnGoal,
+  SPAWN_PROMPT_MARKER,
+  startMockProvider,
+} from "./mockProvider";
 import { promptInput } from "./prompt";
+import { reportLine, taskKey } from "./rails";
 import { launchSecrets, type SecretsJourneyGlobal } from "./secretsHarness";
 import { settingRow, settingsSection } from "./settings";
 import { shownCard } from "./stack";
@@ -212,6 +220,8 @@ test("the person adds a reporting connection by keys and the crew's usage reache
 
 /** A key of a shape Infinitary recognizes, made up for the run. */
 const KEY = "sk-ant-api03-invented-example-key";
+/** The task the first mate commissions, whose crewmate takes its own turn. */
+const CREW_TITLE = "Count the idle meter's minutes";
 
 /** Each span of one name the collector got, with its attributes by key. */
 function spansNamed(arrived: Arrived[], name: string): Record<string, string>[] {
@@ -260,7 +270,8 @@ async function answers(page: LaunchedApp["page"]): Promise<number> {
  * replies"): the person turns on Send prompts and replies too by keys, and
  * the first mate's turn reaches their collector with its prompt, its reply
  * and the card call's arguments on the turn's span, a key typed into the
- * prompt hidden first. After a relaunch the form still shows the switch on,
+ * prompt hidden first. A crewmate's turn arrives on its own span with its
+ * brief and its report, read from the crewmate's session. After a relaunch the form still shows the switch on,
  * and in Claude Code's format the next turn arrives as Claude Code's own
  * prompt and tool events, without repeating the first.
  * The app, its session records and its sending are real; the model is the
@@ -319,11 +330,21 @@ test("prompts and replies reach the person's tool once they turn them on, in eit
       await turn(launched as NonNullable<typeof launched>, `check the staging key ${KEY}`);
     });
 
-    await test.step("quitting sends the turn's words on its span, the key hidden", async () => {
+    await test.step("a crewmate takes its own turn and reports", async () => {
+      const { page } = launched as NonNullable<typeof launched>;
+      const input = promptInput(page);
+      await input.fill(`${SPAWN_PROMPT_MARKER} ${CREW_TITLE}`);
+      await input.press("Enter");
+      const key = await taskKey(page, CREW_TITLE);
+      await expect(reportLine(page, key).last()).toBeVisible({ timeout: 30_000 });
+      await waitForFirstmateIdle(page);
+    });
+
+    await test.step("quitting sends each turn's words on its span, the key hidden", async () => {
       await launched?.close();
       launched = undefined;
-      const [spoken] = spansNamed(arrived, "invoke_agent firstmate").filter(
-        (span) => span["gen_ai.input.messages"],
+      const spoken = spansNamed(arrived, "invoke_agent firstmate").find((span) =>
+        span["gen_ai.input.messages"]?.includes("check the staging key"),
       );
       expect(
         partsOf(spoken?.["gen_ai.input.messages"]).some(
@@ -337,6 +358,18 @@ test("prompts and replies reach the person's tool once they turn them on, in eit
       );
       expect(call?.arguments).toMatchObject({ title: MOCK_ANSWER_TITLE });
       expect(JSON.stringify(arrived)).not.toContain(KEY);
+      const crewed = spansNamed(arrived, "invoke_agent crewmate").find(
+        (span) => span["gen_ai.input.messages"],
+      );
+      expect(
+        partsOf(crewed?.["gen_ai.input.messages"]).some(
+          (part) => part.type === "text" && part.content.includes(mockSpawnGoal(CREW_TITLE)),
+        ),
+      ).toBe(true);
+      expect(partsOf(crewed?.["gen_ai.output.messages"])).toContainEqual({
+        type: "text",
+        content: MOCK_COMPLETION_TEXT,
+      });
     });
 
     const before = arrived.length;

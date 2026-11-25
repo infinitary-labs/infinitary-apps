@@ -35,7 +35,17 @@ test("typed filter text finds eight-day-old and dropped work and opens its recor
   tasks.close("dropped", { status: "dropped", reason: "superseded", actor: "host" });
   clock = now;
   tasks.close("recent", { status: "done", reason: "settled", actor: "host" });
-  tasks.create({ id: "live", title: "Planned live work", prompt: "p", repoId: null });
+  // Open work the host never starts: work it starts fails with no signed-in
+  // model and puts up a sign-in card at no set moment, and a card's page born
+  // while the keyboard is in the search takes the window's focus at the next
+  // key, which can lose that key's text (docs/e2e-contracts.md).
+  tasks.create({
+    id: "live",
+    title: "Planned live work",
+    prompt: "p",
+    repoId: null,
+    startPolicy: "on-request",
+  });
   db.close();
 
   const launched = await launchApp({ userDataDir });

@@ -130,6 +130,10 @@ struct PhoneTasks: View {
         .accessibilityIdentifier("tasks-list")
         .onChange(of: searchFocused) { _, focused in if !focused && query.isEmpty && tag == nil { closeSearch() } }
         .onDisappear { if query.isEmpty && tag == nil { searchOpen = false } }
+        // Once a read board's row no longer offers the pressed tag (removed on the Mac, or a second project has tags), the
+        // list has let go of it, so the view does too, as the Mac's panel does; otherwise it would keep the search open
+        // and narrow again by itself if the row came back.
+        .onChange(of: list.board != nil && tag != nil && list.tag == nil) { _, stale in if stale { tag = nil } }
         .task(id: "\(query)|\(session.contact)") {
             earlier = []; problem = nil
             let requested = query

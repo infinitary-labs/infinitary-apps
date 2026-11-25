@@ -174,6 +174,12 @@ function textOf(
 const PROTECTED: { intent: ProtectedIntent; rule: string; home: Home; says: string }[] = [
   {
     intent: "consent",
+    rule: "a check uses a named sign-in only through what holds it",
+    home: "prompt",
+    says: "Use the named sign-in through the app or program that holds it.",
+  },
+  {
+    intent: "consent",
     rule: "sensitive or costly validation asks the captain first",
     home: "prompt",
     says: "Before anything sensitive or costly - the captain's sign-ins or accounts, plan allowance or money, real data or production, keychain or signing access, credential access, or anything others can see - ask for consent on a card unless a captain-origin project direction's words or the served Already allowed list cover it.",

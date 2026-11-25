@@ -1,8 +1,8 @@
 name: prompt-budget
 
 # The prompt budget's second line (docs/testing.md, "The prompt budget's two
-# lines"; INF-2930). The fixed-context tests fail only past the hard line, one
-# and a half times each budget; this check fails past the budget itself, after
+# lines"; INF-2930). The fixed-context tests fail only past each budget's hard
+# line; this check fails past the budget itself, after
 # a change reaches main. Nothing waits on it: no pull request starts it, and
 # the batch, main's release check, the alpha and every release never read it.
 # A red run on main files one trim task through an Automation rule on

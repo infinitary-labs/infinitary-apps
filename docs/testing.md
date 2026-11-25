@@ -670,7 +670,7 @@ Priority never interrupts running work, and capacity, test gates and merge conse
 The first mate's and a crewmate's fixed prompts each have a budget derived from the smallest local window (`docs/orchestrator-contract.md`, "The fixed-context budget"), and each budget has two lines (INF-2930).
 `tests/helpers/promptBudget.ts` owns the budgets, the count and both lines; the two fixed-context tests and `scripts/prompt-budget.ts` read it.
 
-- **The hard line, one and a half times the budget.**
+- **The hard line, one and a half times a crewmate's budget and a quarter over the first mate's raised one.**
   `tests/firstmate-fixed-context.test.ts` and `tests/crewmate-fixed-context.test.ts` fail only past it, naming each reading, its budget and its hard line.
   Every check that merges or releases runs them, so only an overrun this large holds a merge or a release.
   Their room tests hold the conversation the hard line leaves in the 64K window and keep the real pre-send guard's refusal of one token more.

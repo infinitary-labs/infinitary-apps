@@ -805,6 +805,7 @@ The code is reviewed first and the proof runs once, after the code passes, as no
 Quick, Default, answer-only and personal-workspace work, and the local-delivery fallback keep their existing rules.
 A change delivered through a pull request keeps its validation records and validation questions at every care, so a raise to Careful mid-task keeps them; the host holds nothing on them, and Careful's guidance is what reads them (captain's INF-994 direction A; INF-1876).
 The careful-change skill (`resources/runbooks/care/skills/careful-change/SKILL.md`) carries the contract to both model families, on this computer or a work computer, staged as a runbook skill.
+Beside it, `validation-shape.json` is the JSON Schema of a `report.validation` record, generated from `liveValidationInputSchema` by `node scripts/generate-validation-shape.ts`, which `pnpm check` runs with `--check`; the report tool serves the field open, with a sentence naming that file, and the host parses every record with the same schema.
 A reviewer runs neither the product nor the tests: it reads the captain's words, the whole changed-file checklist, the scenario record and the kept proof.
 
 Before editing, the builder records `report.validation` with `kind: plan`.

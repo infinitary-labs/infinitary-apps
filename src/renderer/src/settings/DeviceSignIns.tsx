@@ -18,8 +18,8 @@ import {
   connectMethods,
   ProviderChips,
 } from "../accounts/ConnectChips";
-import { RemoteCustomConnection } from "../accounts/CustomApiConnections";
-import { type CustomApiClient, CustomApiDialog, CustomApiForm } from "../accounts/CustomApiForm";
+import { RemoteCustomConnection, useHomeCustomDefinitions } from "../accounts/CustomApiConnections";
+import { CustomApiDialog, CustomApiForm, deviceCustomClient } from "../accounts/CustomApiForm";
 import "../accounts/customApi.css";
 import { useShellStore } from "../app/store";
 import type { RowMenuItem } from "../design";
@@ -129,6 +129,10 @@ export function DeviceSignInGroups({
 }) {
   const home = useFirstMatePlace();
   const groups = useDeviceSignIns();
+  // The home's own connections, read only while a computer has a connection approved from one of them.
+  const homeDefinitions = useHomeCustomDefinitions(
+    groups.some((device) => device.signIns?.custom?.some((view) => view.home)),
+  );
   const [choice, setChoice] = useState<{ deviceId: string; provider: ProviderView } | null>(null);
   const [customFor, setCustomFor] = useState<string | null>(null);
 
@@ -222,18 +226,7 @@ export function DeviceSignInGroups({
         );
         const providers = device.signIns?.providers ?? [];
         const placeWords = { who: place.who, on: place.where };
-        const customClient: CustomApiClient = {
-          profiles: () => window.infinitary.devices.custom.profiles(device.deviceId),
-          address: (baseUrl) => window.infinitary.devices.custom.address(device.deviceId, baseUrl),
-          connect: (input) => window.infinitary.devices.custom.connect(device.deviceId, input),
-          check: (draftId, modelId) =>
-            window.infinitary.devices.custom.check(device.deviceId, draftId, modelId),
-          save: (draftId, paused) =>
-            window.infinitary.devices.custom.save(device.deviceId, draftId, paused),
-          cancel: (draftId) => window.infinitary.devices.custom.cancel(device.deviceId, draftId),
-          review: (baseUrl, mode, pem) =>
-            window.infinitary.devices.custom.review(device.deviceId, baseUrl, mode, pem),
-        };
+        const customClient = deviceCustomClient(device.deviceId);
         const quotaRow = (account: AccountView) =>
           device.signIns?.quota?.providers.find((row) => row.accountId === account.id);
         const aside = (anchor: string | undefined) => {
@@ -370,10 +363,22 @@ export function DeviceSignInGroups({
                   </div>
                 );
               })}
-              {(device.signIns?.custom ?? []).map((view) => (
+              {(device.signIns?.custom ?? []).map((view, _index, views) => (
                 <RemoteCustomConnection
                   key={view.accountId}
                   view={view}
+                  replaced={
+                    view.home?.state === "changed" &&
+                    views.some(
+                      (other) =>
+                        other !== view &&
+                        other.home?.name === view.home?.name &&
+                        other.home?.state === "current",
+                    )
+                  }
+                  {...(view.home && homeDefinitions.has(view.home.name)
+                    ? { homeDefinition: homeDefinitions.get(view.home.name) }
+                    : {})}
                   client={customClient}
                   place={placeWords}
                   onDisconnect={(accountId) =>

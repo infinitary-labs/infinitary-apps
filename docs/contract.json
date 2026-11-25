@@ -13475,6 +13475,26 @@
                               "state"
                             ]
                           },
+                          "home": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string"
+                              },
+                              "state": {
+                                "type": "string",
+                                "enum": [
+                                  "current",
+                                  "changed",
+                                  "missing"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "state"
+                            ]
+                          },
                           "certificates": {
                             "type": "array",
                             "items": {
@@ -13831,6 +13851,9 @@
               "type": "boolean"
             },
             "customApi": {
+              "type": "boolean"
+            },
+            "customFromHome": {
               "type": "boolean"
             },
             "keepGoing": {
@@ -15107,6 +15130,11 @@
                 "type": "string",
                 "minLength": 1,
                 "maxLength": 256
+              },
+              "home": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
               }
             },
             "required": [
@@ -15234,6 +15262,26 @@
                 }
               },
               "file": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "current",
+                      "changed",
+                      "missing"
+                    ]
+                  }
+                },
+                "required": [
+                  "name",
+                  "state"
+                ]
+              },
+              "home": {
                 "type": "object",
                 "properties": {
                   "name": {
@@ -15697,6 +15745,26 @@
             }
           },
           "file": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string",
+                "enum": [
+                  "current",
+                  "changed",
+                  "missing"
+                ]
+              }
+            },
+            "required": [
+              "name",
+              "state"
+            ]
+          },
+          "home": {
             "type": "object",
             "properties": {
               "name": {
@@ -16185,6 +16253,26 @@
               "state"
             ]
           },
+          "home": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string",
+                "enum": [
+                  "current",
+                  "changed",
+                  "missing"
+                ]
+              }
+            },
+            "required": [
+              "name",
+              "state"
+            ]
+          },
           "certificates": {
             "type": "array",
             "items": {
@@ -16550,6 +16638,26 @@
             }
           },
           "file": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string",
+                "enum": [
+                  "current",
+                  "changed",
+                  "missing"
+                ]
+              }
+            },
+            "required": [
+              "name",
+              "state"
+            ]
+          },
+          "home": {
             "type": "object",
             "properties": {
               "name": {
@@ -26881,6 +26989,11 @@
                 "type": "string",
                 "minLength": 1,
                 "maxLength": 256
+              },
+              "home": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
               }
             },
             "required": [
@@ -27008,6 +27121,26 @@
                 }
               },
               "file": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "current",
+                      "changed",
+                      "missing"
+                    ]
+                  }
+                },
+                "required": [
+                  "name",
+                  "state"
+                ]
+              },
+              "home": {
                 "type": "object",
                 "properties": {
                   "name": {
@@ -27637,6 +27770,11 @@
                 "type": "string",
                 "minLength": 1,
                 "maxLength": 256
+              },
+              "home": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
               }
             },
             "required": [
@@ -27762,6 +27900,26 @@
             }
           },
           "file": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string",
+                "enum": [
+                  "current",
+                  "changed",
+                  "missing"
+                ]
+              }
+            },
+            "required": [
+              "name",
+              "state"
+            ]
+          },
+          "home": {
             "type": "object",
             "properties": {
               "name": {
@@ -28142,6 +28300,26 @@
             }
           },
           "file": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string",
+                "enum": [
+                  "current",
+                  "changed",
+                  "missing"
+                ]
+              }
+            },
+            "required": [
+              "name",
+              "state"
+            ]
+          },
+          "home": {
             "type": "object",
             "properties": {
               "name": {
@@ -28609,6 +28787,26 @@
               "state"
             ]
           },
+          "home": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string",
+                "enum": [
+                  "current",
+                  "changed",
+                  "missing"
+                ]
+              }
+            },
+            "required": [
+              "name",
+              "state"
+            ]
+          },
           "certificates": {
             "type": "array",
             "items": {
@@ -28967,6 +29165,26 @@
             }
           },
           "file": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string",
+                "enum": [
+                  "current",
+                  "changed",
+                  "missing"
+                ]
+              }
+            },
+            "required": [
+              "name",
+              "state"
+            ]
+          },
+          "home": {
             "type": "object",
             "properties": {
               "name": {
@@ -29963,6 +30181,26 @@
               }
             },
             "file": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "current",
+                    "changed",
+                    "missing"
+                  ]
+                }
+              },
+              "required": [
+                "name",
+                "state"
+              ]
+            },
+            "home": {
               "type": "object",
               "properties": {
                 "name": {
@@ -94828,6 +95066,26 @@
                         "state"
                       ]
                     },
+                    "home": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "current",
+                            "changed",
+                            "missing"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "name",
+                        "state"
+                      ]
+                    },
                     "certificates": {
                       "type": "array",
                       "items": {
@@ -109883,6 +110141,26 @@
                               "state"
                             ]
                           },
+                          "home": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string"
+                              },
+                              "state": {
+                                "type": "string",
+                                "enum": [
+                                  "current",
+                                  "changed",
+                                  "missing"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "state"
+                            ]
+                          },
                           "certificates": {
                             "type": "array",
                             "items": {
@@ -110239,6 +110517,9 @@
               "type": "boolean"
             },
             "customApi": {
+              "type": "boolean"
+            },
+            "customFromHome": {
               "type": "boolean"
             },
             "keepGoing": {
@@ -111639,6 +111920,26 @@
                             }
                           },
                           "file": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string"
+                              },
+                              "state": {
+                                "type": "string",
+                                "enum": [
+                                  "current",
+                                  "changed",
+                                  "missing"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "state"
+                            ]
+                          },
+                          "home": {
                             "type": "object",
                             "properties": {
                               "name": {
@@ -115898,6 +116199,26 @@
                       "state"
                     ]
                   },
+                  "home": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "state": {
+                        "type": "string",
+                        "enum": [
+                          "current",
+                          "changed",
+                          "missing"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "state"
+                    ]
+                  },
                   "certificates": {
                     "type": "array",
                     "items": {
@@ -117235,6 +117556,11 @@
                   "type": "string",
                   "minLength": 1,
                   "maxLength": 256
+                },
+                "home": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
                 }
               },
               "required": [
@@ -117363,6 +117689,26 @@
                   }
                 },
                 "file": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "current",
+                        "changed",
+                        "missing"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "state"
+                  ]
+                },
+                "home": {
                   "type": "object",
                   "properties": {
                     "name": {
@@ -117838,6 +118184,26 @@
                 "state"
               ]
             },
+            "home": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "current",
+                    "changed",
+                    "missing"
+                  ]
+                }
+              },
+              "required": [
+                "name",
+                "state"
+              ]
+            },
             "certificates": {
               "type": "array",
               "items": {
@@ -118288,6 +118654,26 @@
                 "state"
               ]
             },
+            "home": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "current",
+                    "changed",
+                    "missing"
+                  ]
+                }
+              },
+              "required": [
+                "name",
+                "state"
+              ]
+            },
             "certificates": {
               "type": "array",
               "items": {
@@ -118665,6 +119051,26 @@
                 "state"
               ]
             },
+            "home": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "current",
+                    "changed",
+                    "missing"
+                  ]
+                }
+              },
+              "required": [
+                "name",
+                "state"
+              ]
+            },
             "certificates": {
               "type": "array",
               "items": {
@@ -118901,6 +119307,258 @@
             "allowStorageDefault",
             "certificates",
             "models"
+          ]
+        }
+      },
+      "inf:sign-ins:custom-definitions": {
+        "effect": "change",
+        "request": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "maxItems": 32,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "definition": {
+                    "type": "object",
+                    "properties": {
+                      "label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                      },
+                      "baseUrl": {
+                        "type": "string",
+                        "maxLength": 4096
+                      },
+                      "protocol": {
+                        "type": "string",
+                        "enum": [
+                          "openai-completions",
+                          "openai-responses",
+                          "anthropic-messages"
+                        ]
+                      },
+                      "headers": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string",
+                              "maxLength": 128
+                            },
+                            "secret": {
+                              "type": "boolean"
+                            },
+                            "value": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "secret"
+                          ]
+                        }
+                      },
+                      "compaction": {
+                        "type": "object",
+                        "properties": {
+                          "keepRecentTokens": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 100000000
+                          },
+                          "reserveTokens": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 100000000
+                          }
+                        }
+                      },
+                      "models": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256
+                            },
+                            "context": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "output": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "reasoningProfile": {
+                              "type": "string",
+                              "maxLength": 512
+                            },
+                            "cacheRetention": {
+                              "type": "string",
+                              "enum": [
+                                "none",
+                                "short",
+                                "long"
+                              ]
+                            },
+                            "name": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 128
+                            },
+                            "cost": {
+                              "type": "object",
+                              "properties": {
+                                "input": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 1000000
+                                },
+                                "output": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 1000000
+                                },
+                                "cacheRead": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 1000000
+                                },
+                                "cacheWrite": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 1000000
+                                }
+                              }
+                            },
+                            "input": {
+                              "maxItems": 2,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "enum": [
+                                  "text",
+                                  "image"
+                                ]
+                              }
+                            },
+                            "statedReasoning": {
+                              "type": "object",
+                              "properties": {
+                                "thinkingLevelMap": {
+                                  "type": "object",
+                                  "propertyNames": {
+                                    "type": "string",
+                                    "enum": [
+                                      "off",
+                                      "minimal",
+                                      "low",
+                                      "medium",
+                                      "high",
+                                      "xhigh",
+                                      "max"
+                                    ]
+                                  },
+                                  "additionalProperties": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "maxLength": 64
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "compat": {
+                                  "type": "object",
+                                  "propertyNames": {
+                                    "type": "string",
+                                    "maxLength": 64
+                                  },
+                                  "additionalProperties": {
+                                    "anyOf": [
+                                      {
+                                        "type": "boolean"
+                                      },
+                                      {
+                                        "type": "string",
+                                        "maxLength": 64
+                                      }
+                                    ]
+                                  }
+                                }
+                              }
+                            },
+                            "compaction": {
+                              "type": "object",
+                              "properties": {
+                                "keepRecentTokens": {
+                                  "type": "integer",
+                                  "exclusiveMinimum": 0,
+                                  "maximum": 100000000
+                                },
+                                "reserveTokens": {
+                                  "type": "integer",
+                                  "exclusiveMinimum": 0,
+                                  "maximum": 100000000
+                                }
+                              }
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "context",
+                            "output"
+                          ]
+                        }
+                      }
+                    },
+                    "required": [
+                      "label",
+                      "baseUrl",
+                      "protocol",
+                      "headers",
+                      "models"
+                    ]
+                  }
+                },
+                "required": [
+                  "name",
+                  "definition"
+                ]
+              }
+            }
+          ],
+          "items": false,
+          "minItems": 1,
+          "maxItems": 1
+        },
+        "response": {
+          "type": "object",
+          "properties": {
+            "ok": {
+              "type": "boolean",
+              "const": true
+            }
+          },
+          "required": [
+            "ok"
           ]
         }
       },

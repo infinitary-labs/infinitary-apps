@@ -14066,7 +14066,13 @@ ${events}` : prompt;
      * The provider's key in the connection file this connection was approved
      * from: its identity there, so the file's later edits reach it.
      */
-    file: string().min(1).max(256).optional()
+    file: string().min(1).max(256).optional(),
+    /**
+     * The first mate's computer's connection this one was approved from on a
+     * computer that runs work (its account id there), so that connection's
+     * later edits reach it. A connection follows the file or the home, never both.
+     */
+    home: string().min(1).max(256).optional()
   });
   const customApiConnectInputSchema = customApiInputSchema.omit({ mode: true });
   const customListedModelSchema = object({
@@ -14110,6 +14116,12 @@ ${events}` : prompt;
      * address, protocol or headers) and `missing` hold it until approved again.
      */
     file: object({ name: string(), state: _enum(["current", "changed", "missing"]) }).optional(),
+    /**
+     * A connection approved from the first mate's computer's own, on a computer
+     * that runs work: its account id there, and whether what that computer
+     * last sent still says what was approved here, as `file` says.
+     */
+    home: object({ name: string(), state: _enum(["current", "changed", "missing"]) }).optional(),
     certificates: array(customCertificateViewSchema),
     models: array(
       customModelInputSchema.extend({
@@ -15892,6 +15904,65 @@ ${events}` : prompt;
     confirmed: string().optional(),
     reason: string().optional()
   });
+  const customFileWarningSchema = _enum([
+    /** `apiKey`: the key is typed on each computer instead. */
+    "key",
+    "oauth",
+    "auth-header",
+    /** A header value naming an environment variable (`$`) or a command (`!`). */
+    "header-reference",
+    "model-overrides",
+    "sampling",
+    /** A model's own `baseUrl` or `api` that differs from its connection's. */
+    "model-address",
+    "model-headers",
+    /** Another Pi setting Infinitary does not read, such as `promptCache`. */
+    "unused",
+    /** Kept history and the summary's room do not fit the model's window. */
+    "compaction"
+  ]);
+  const customFileRefusalSchema = _enum([
+    /** Its name is a provider Pi has built in, which it would repoint. */
+    "built-in",
+    "address",
+    /** No `api`, or one Infinitary does not speak. */
+    "protocol",
+    /** A setting has the wrong shape, such as a model without an id or one listed twice. */
+    "invalid"
+  ]);
+  const customFileDefinitionSchema = object({
+    label: string().min(1).max(64),
+    baseUrl: string().max(4096),
+    protocol: customProtocolSchema,
+    headers: array(
+      object({ name: string().max(128), secret: boolean(), value: string().optional() })
+    ),
+    compaction: customCompactionSchema.optional(),
+    models: array(customModelInputSchema)
+  });
+  const customFileConnectionSchema = object({
+    /** The provider's key in the file: the connection's identity there. */
+    name: string(),
+    refused: customFileRefusalSchema.optional(),
+    warnings: array(
+      object({
+        kind: customFileWarningSchema,
+        model: string().optional(),
+        /** The file's own key, such as `apiKey` or `promptCache`. */
+        key: string().max(128).optional()
+      })
+    ),
+    definition: customFileDefinitionSchema.optional()
+  });
+  object({
+    path: string().nullable(),
+    failure: _enum(["missing", "unreadable", "invalid"]).optional(),
+    connections: array(customFileConnectionSchema)
+  });
+  const customHomeDefinitionSchema = object({
+    name: string().min(1).max(256),
+    definition: customFileDefinitionSchema
+  });
   const forgeSignInStateSchema = _enum(["ok", "needs_reauth", "unavailable", "unknown"]);
   const forgeServerViewSchema = object({
     kind: string().min(1).max(32),
@@ -16545,6 +16616,15 @@ ${events}` : prompt;
       request: tuple([string().min(1).max(256)])
     },
     /**
+     * What each of the home's connections that this computer approved one of
+     * its own from says now, from the contract change
+     * `custom-connection-from-home`: whole each time, so one left out is gone
+     * from the home. No key or secret header value crosses.
+     */
+    "inf:sign-ins:custom-definitions": {
+      request: tuple([array(customHomeDefinitionSchema).max(32)])
+    },
+    /**
      * Turns one of that computer's own accounts' Keep going on credits switch
      * on or off (docs/quota.md), saved only there, from the contract change
      * `computer-keep-going`. Only the account id and the switch cross; its
@@ -16677,6 +16757,12 @@ ${events}` : prompt;
      * means it does not, so the chip stays disabled.
      */
     customApi: boolean().optional(),
+    /**
+     * It approves a connection of the home's own and follows its later edits
+     * (the contract change `custom-connection-from-home`). Absent means it
+     * does not, so the home's connections offer no Use on it.
+     */
+    customFromHome: boolean().optional(),
     /**
      * It takes Keep going on credits for its own accounts (the contract change
      * `computer-keep-going`). Absent means it does not, so the item stays dim.

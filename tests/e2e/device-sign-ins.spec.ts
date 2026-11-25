@@ -15,6 +15,8 @@ import type { QuotaHttp } from "../../src/core/quota/http";
 import { DEVICE_FORGE_WORDS } from "../../src/renderer/src/settings/deviceForgeWords";
 import type { ACTIONS } from "../../src/shared/actions";
 import { CLAUDE_CLIENT_MISSING_TEXT } from "../../src/shared/claudeClient";
+import { customNetworkLabel } from "../../src/shared/customApi";
+import { HERE } from "../../src/shared/deviceNames";
 import { deviceSetupTitle } from "../../src/shared/deviceSetup";
 import { SIGN_IN_KINDS } from "../../src/shared/forgeKinds";
 import {
@@ -28,7 +30,15 @@ import * as m from "../../src/shared/i18n/messages.generated";
 import { INTEGRATIONS_WORDS } from "../../src/shared/integrations";
 import { type DeviceSignIns, signInPlace } from "../../src/shared/signIns";
 import { scratchDir } from "../helpers/scratchDirs";
-import { customApiBlock, fillCustomApi, saveCustomApi } from "./customApi";
+import {
+  addCustomHeader,
+  customApiBlock,
+  customApiEditDialog,
+  customApiFile,
+  customApiForm,
+  fillCustomApi,
+  saveCustomApi,
+} from "./customApi";
 import { startCustomApiFixture } from "./customApiFixture";
 import { type GitHubStub, STUB_USER_CODE, seedGitHubSignIn, startGitHubStub } from "./githubStub";
 import { handoverCard, leaveSettings, offeredCard } from "./handoverCards";
@@ -1031,5 +1041,245 @@ test("a custom API added on a computer is kept there and its model can be placed
     expect(savedText(dataDir).some(({ text }) => text.includes(key))).toBe(true);
   } finally {
     await api.close();
+  }
+});
+
+// INF-6581's plan, piece 3: a connection here is used on a computer that runs
+// work, which keeps its own key, runs its own check and follows later edits.
+test("a custom API here is used on a computer, which keeps its own key and follows its edits", async () => {
+  test.setTimeout(150_000);
+  const { app, page, deviceId, dataDir } = await homeAndComputer();
+  const port = app.mockProvider?.port;
+  if (!port) throw new Error("The stand-in provider did not start.");
+  const api = await startCustomApiFixture(port, undefined, {
+    object: "list",
+    data: [{ id: "operator-model", context_length: 8192, max_completion_tokens: 1024 }],
+  });
+  const thereKey = "sk-e2e-custom-used-there";
+  /** The computer's connection that follows the one here, as it says it. */
+  const there = (homeId: string) =>
+    page.evaluate(
+      ({ id, homeId }) =>
+        window.infinitary.devices
+          .signIns()
+          .then((rows) =>
+            rows
+              .find((row) => row.deviceId === id)
+              ?.signIns?.custom?.find((view) => view.home?.name === homeId),
+          ),
+      { id: deviceId, homeId },
+    );
+  try {
+    await openIntelligence(page);
+    await page.locator('[data-connect-chips="foot"] [data-connect-custom-api]').first().click();
+    await fillCustomApi(page, {
+      name: "Studio models",
+      address: api.baseUrl,
+      network: "local",
+      key: "sk-e2e-custom-here",
+      pick: ["operator-model"],
+    });
+    expect(await saveCustomApi(page)).toBe("saved");
+    const homeId = await page.evaluate(() =>
+      window.infinitary.accounts.custom.list().then((rows) => rows[0]?.accountId ?? ""),
+    );
+    const here = customApiBlock(page, homeId);
+    await expect(here.block).toContainText("Ready");
+
+    // Use as Builder: the connection's settings are fixed, and only Builder's own key is typed.
+    await here.offerOn("as Builder").click();
+    await expect(
+      page.getByRole("dialog", { name: "Use Studio models as Builder", exact: true }),
+    ).toBeVisible();
+    const f = customApiForm(page);
+    await expect(f.name).toHaveValue("Studio models");
+    await expect(f.address).toHaveAttribute("readonly", "");
+    await expect(f.sendsTo).toContainText(customNetworkLabel("local", "Builder"));
+    await f.http.check();
+    await f.key.fill(thereKey);
+    expect(await saveCustomApi(page)).toBe("saved");
+    await expect.poll(async () => (await there(homeId))?.home?.state).toBe("current");
+    const thereId = (await there(homeId))?.accountId ?? "";
+    const followed = customApiBlock(page, thereId);
+    await expect(followed.block).toContainText(m.accountsCustomApiHomeTag({ home: HERE.this }));
+    await expect(followed.block).toContainText("Ready");
+    // Builder follows it now, so it is no longer offered for Builder.
+    await expect(here.offerOn("as Builder")).toHaveCount(0);
+    // The key went to the computer once; this Mac keeps no copy.
+    expect(savedText(app.userDataDir).some(({ text }) => text.includes(thereKey))).toBe(false);
+    expect(savedText(dataDir).some(({ text }) => text.includes(thereKey))).toBe(true);
+
+    // A new name here reaches it at once, with no request to the server.
+    const before = api.requests.length;
+    await page.evaluate((id) => window.infinitary.accounts.rename(id, "Team models"), homeId);
+    await expect.poll(async () => (await there(homeId))?.label).toBe("Team models");
+    expect(api.requests.length).toBe(before);
+
+    // A new limit here checks that model again there, with that computer's own key.
+    const beforeLimit = api.requests.length;
+    await here.edit.click();
+    await expect(customApiEditDialog(page, "Team models")).toBeVisible();
+    await customApiForm(page)
+      .form.locator("[data-custom-model-row]")
+      .first()
+      .getByLabel(/^Context tokens/)
+      .fill("4096");
+    expect(await saveCustomApi(page)).toBe("saved");
+    await expect
+      .poll(async () => (await there(homeId))?.models.map(({ context }) => context))
+      .toEqual([4096]);
+    await expect
+      .poll(() => api.requests.slice(beforeLimit).filter(({ key }) => key === thereKey).length)
+      .toBeGreaterThan(0);
+    expect((await there(homeId))?.models[0]?.checked).toBe(true);
+
+    // A new header here pauses it there until it is approved again there.
+    await here.edit.click();
+    await expect(customApiEditDialog(page, "Team models")).toBeVisible();
+    await addCustomHeader(page, "X-Org-Id", "synthetic-org");
+    expect(await saveCustomApi(page)).toBe("saved");
+    await expect.poll(async () => (await there(homeId))?.home?.state).toBe("changed");
+    await expect(followed.block).toContainText(
+      m.accountsCustomApiHomeChanged({ home: HERE.this, who: PLACE.who }),
+    );
+    await followed.approveAgain.click();
+    await expect(f.form).toBeVisible();
+    await f.key.fill(thereKey);
+    expect(await saveCustomApi(page)).toBe("saved");
+    await expect
+      .poll(async () => {
+        const view = await page.evaluate(
+          (id) =>
+            window.infinitary.devices
+              .signIns()
+              .then((rows) => rows.find((row) => row.deviceId === id)?.signIns?.custom ?? []),
+          deviceId,
+        );
+        return view.map((entry) => `${entry.home?.state}:${entry.headers.map((h) => h.name)}`);
+      })
+      .toContain("current:X-Org-Id");
+
+    // Disconnected here: paused there, never deleted.
+    await here.block.getByRole("button", { name: "Disconnect", exact: true }).click();
+    await here.block.getByRole("button", { name: "Stop work and disconnect", exact: true }).click();
+    await expect
+      .poll(async () => (await there(homeId))?.home?.state, { timeout: 15_000 })
+      .toBe("missing");
+    const gone = customApiBlock(page, (await there(homeId))?.accountId ?? "");
+    await expect(gone.block).toContainText(
+      m.accountsCustomApiHomeGone({ home: HERE.this, who: PLACE.who }),
+    );
+  } finally {
+    await api.close();
+  }
+});
+
+// INF-6581's plan, piece 3: a connection from the connection file here is
+// used on a computer too, and the file moving its address pauses it there
+// until it is approved again there, which leaves one working connection.
+test("a connection from the connection file here is used on a computer, and a new address there is approved again there", async () => {
+  test.setTimeout(150_000);
+  const { app, page, deviceId } = await homeAndComputer();
+  const port = app.mockProvider?.port;
+  if (!port) throw new Error("The stand-in provider did not start.");
+  const list = {
+    object: "list",
+    data: [{ id: "operator-model", context_length: 8192, max_completion_tokens: 1024 }],
+  };
+  const api = await startCustomApiFixture(port, undefined, list);
+  const moved = await startCustomApiFixture(port, undefined, list);
+  const thereKey = "sk-e2e-custom-file-there";
+  const path = join(scratchDir("custom-connection-file-"), "models.json");
+  const reading = (baseUrl: string) =>
+    JSON.stringify({
+      providers: {
+        "team-gateway": {
+          name: "Team gateway",
+          baseUrl,
+          api: "openai-completions",
+          models: [{ id: "operator-model", contextWindow: 8192, maxTokens: 1024 }],
+        },
+      },
+    });
+  /** The computer's connections that follow the one here, as it says them. */
+  const there = (homeId: string) =>
+    page.evaluate(
+      ({ id, homeId }) =>
+        window.infinitary.devices
+          .signIns()
+          .then(
+            (rows) =>
+              rows
+                .find((row) => row.deviceId === id)
+                ?.signIns?.custom?.filter((view) => view.home?.name === homeId) ?? [],
+          ),
+      { id: deviceId, homeId },
+    );
+  try {
+    writeFileSync(path, reading(api.baseUrl));
+    // The picker is the system's own sheet, answered in the main process.
+    await app.app.evaluate(({ dialog }, answer) => {
+      dialog.showOpenDialog = (async () => ({
+        canceled: false,
+        filePaths: [answer],
+      })) as unknown as typeof dialog.showOpenDialog;
+    }, path);
+    await openIntelligence(page);
+    const file = customApiFile(page);
+    await file.choose.click();
+    await file.pending("team-gateway").approve.click();
+    const f = customApiForm(page);
+    await f.http.check();
+    await f.key.fill("sk-e2e-custom-file-here");
+    expect(await saveCustomApi(page)).toBe("saved");
+    const homeId = await page.evaluate(() =>
+      window.infinitary.accounts.custom.list().then((rows) => rows[0]?.accountId ?? ""),
+    );
+    const here = customApiBlock(page, homeId);
+    await expect(here.block).toContainText("Ready");
+
+    await here.offerOn("as Builder").click();
+    await expect(f.address).toHaveValue(api.baseUrl);
+    await f.http.check();
+    await f.key.fill(thereKey);
+    expect(await saveCustomApi(page)).toBe("saved");
+    await expect
+      .poll(async () => (await there(homeId)).map((view) => view.home?.state))
+      .toEqual(["current"]);
+    const firstId = (await there(homeId))[0]?.accountId ?? "";
+    const first = customApiBlock(page, firstId);
+    await expect(first.block).toContainText("Ready");
+
+    // The file names a new address: paused there until approved again there.
+    writeFileSync(path, reading(moved.baseUrl));
+    await expect
+      .poll(async () => (await there(homeId)).map((view) => view.home?.state))
+      .toEqual(["changed"]);
+    await expect(first.block).toContainText(
+      m.accountsCustomApiHomeChanged({ home: HERE.this, who: PLACE.who }),
+    );
+    await first.approveAgain.click();
+    await expect(f.address).toHaveValue(moved.baseUrl);
+    await f.http.check();
+    await f.key.fill(thereKey);
+    expect(await saveCustomApi(page)).toBe("saved");
+
+    // One connection works there, at the new address; the old one only waits to be disconnected.
+    await expect
+      .poll(async () =>
+        (await there(homeId)).map((view) => `${view.home?.state}:${view.baseUrl}`).sort(),
+      )
+      .toEqual([`changed:${api.baseUrl}`, `current:${moved.baseUrl}`].sort());
+    const nextId =
+      (await there(homeId)).find((view) => view.home?.state === "current")?.accountId ?? "";
+    await expect(customApiBlock(page, nextId).block).toContainText("Ready");
+    await expect(first.block).toContainText(
+      m.accountsCustomApiHomeReplaced({ home: HERE.this, who: PLACE.who }),
+    );
+    await expect(first.approveAgain).toHaveCount(0);
+    expect(moved.requests.some(({ key }) => key === thereKey)).toBe(true);
+  } finally {
+    await api.close();
+    await moved.close();
   }
 });

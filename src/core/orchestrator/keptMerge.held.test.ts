@@ -258,15 +258,22 @@ describe("a merge request GitHub holds for an approved, clean pull request", () 
     await h.supervisor.disposeAll();
   });
 
-  it("sends the direct merge once: when GitHub refuses it the first mate is woken once with the reason and nothing but reads follows", async () => {
+  it("sends the direct merge once: when GitHub refuses it the first mate is woken once with the reason and nothing but reads follows, even once the held request ends", async () => {
     const refusal = "Pull Request is not mergeable";
+    let ended = false;
     const { h, stamped, pass } = await replay(
       88,
       () => ({ status: 409, json: PENDING }),
       () => ({ status: 405, json: { message: refusal } }),
+      {
+        held: () =>
+          ended ? { status: "failed", details: { message: "Merge request timed out" } } : PENDING,
+      },
     );
-    // Three more hours.
-    await pass(180);
+    // Three more hours, the last two after the held request ended without merging.
+    await pass(60);
+    ended = true;
+    await pass(120);
     // Neither the rider nor the first mate's merges at minutes 53 and 88 send anything more.
     expect(writes(stamped)).toEqual(["41 PUT merge-async", "46 PUT merge"]);
     expect(h.tasks.get(h.taskId)?.status).toBe("active");

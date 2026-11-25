@@ -499,6 +499,9 @@ export class KeptMerge {
       );
       return true;
     }
+    // The host refused the one direct merge: the held request ending does
+    // not start the merge over, or the same hold and refusal could repeat.
+    if (held.direct === "refused") return wait();
     if (state && state.status !== "pending") {
       this.approvals.patchStanding(taskId, { heldMerge: undefined });
       this.host.tasks.note(

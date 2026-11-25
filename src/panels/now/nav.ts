@@ -19,6 +19,8 @@ export type NavGroup = {
   open: boolean;
   collapsible: boolean;
   taskIds: readonly string[];
+  /** The rows a folded group still lists: a tag group's tasks waiting on you (`foldedTagRowsOf`). */
+  foldedTaskIds?: readonly string[];
   /** Grouped by tag: its rows' stops are their tasks' in this group (`rowNavKey`). */
   byTag?: boolean;
 };
@@ -40,11 +42,10 @@ const taskOfStop = (key: string | null): string | null =>
 /** Every stop in the list, in the order the arrows move through them. */
 export function nowNavItems(groups: readonly NavGroup[]): NowNavItem[] {
   const items: NowNavItem[] = [];
-  for (const { group, open, collapsible, taskIds, byTag } of groups) {
+  for (const { group, open, collapsible, taskIds, foldedTaskIds = [], byTag } of groups) {
     if (collapsible) items.push({ kind: "group", key: groupNavKey(group), group, open, taskIds });
-    if (open)
-      for (const id of taskIds)
-        items.push({ kind: "row", key: rowNavKey(id, byTag ? group : undefined), group });
+    for (const id of open ? taskIds : foldedTaskIds)
+      items.push({ kind: "row", key: rowNavKey(id, byTag ? group : undefined), group });
   }
   return items;
 }

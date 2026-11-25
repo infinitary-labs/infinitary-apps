@@ -1114,6 +1114,24 @@ test("a custom API here is used on a computer, which keeps its own key and follo
     await expect.poll(async () => (await there(homeId))?.label).toBe("Team models");
     expect(api.requests.length).toBe(before);
 
+    // A new limit here checks that model again there, with that computer's own key.
+    const beforeLimit = api.requests.length;
+    await here.edit.click();
+    await expect(customApiEditDialog(page, "Team models")).toBeVisible();
+    await customApiForm(page)
+      .form.locator("[data-custom-model-row]")
+      .first()
+      .getByLabel(/^Context tokens/)
+      .fill("4096");
+    expect(await saveCustomApi(page)).toBe("saved");
+    await expect
+      .poll(async () => (await there(homeId))?.models.map(({ context }) => context))
+      .toEqual([4096]);
+    await expect
+      .poll(() => api.requests.slice(beforeLimit).filter(({ key }) => key === thereKey).length)
+      .toBeGreaterThan(0);
+    expect((await there(homeId))?.models[0]?.checked).toBe(true);
+
     // A new header here pauses it there until it is approved again there.
     await here.edit.click();
     await expect(customApiEditDialog(page, "Team models")).toBeVisible();

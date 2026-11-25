@@ -1,4 +1,7 @@
-import type { TaskDetail } from "./tasks";
+import { formatList, formatNumber } from "./i18n/format";
+import * as m from "./i18n/messages.generated";
+import { type TaskStatus, taskStatusOf } from "./taskPresentation";
+import type { TaskDetail, TaskView } from "./tasks";
 import { recordAttentionWaits, taskWaitText, waitStopsOf } from "./taskWaits";
 import { AT_PROVIDER_WORDS } from "./workPosture";
 
@@ -36,6 +39,7 @@ type AttentionDetail = Pick<
   | "children"
   | "waits"
   | "waitChain"
+  | "parts"
 >;
 
 /** What the record says under "Stuck at its provider". */
@@ -49,11 +53,14 @@ export function recordAttentionOf(task: AttentionDetail, now: number): RecordAtt
   let guidance = "";
   let urgent = false;
   let danger = false;
+  const parent = partsAttentionOf(task);
   if (task.closedReason === "failed" || (live && task.activity === "interrupted")) {
     title = task.closedReason === "failed" ? "Task failed" : "Work was interrupted";
     guidance = task.problem ?? "Ask your first mate how to continue.";
     urgent = true;
     danger = true;
+  } else if (parent) {
+    ({ title, guidance } = parent);
   } else if (task.queueWait) {
     title = task.queueWait.line;
     guidance = task.hold?.text ?? "";
@@ -112,6 +119,98 @@ export function recordAttentionOf(task: AttentionDetail, now: number): RecordAtt
     }
   }
   return title ? { title, guidance, urgent, danger } : null;
+}
+
+/**
+ * The open parts' status words, most pressing first: the order a parent's
+ * sentence counts them in (INF-6805's plan, item 2).
+ */
+const PRESSING: readonly TaskStatus[] = [
+  "waiting",
+  "interrupted",
+  "working",
+  "starting",
+  "idle",
+  "queued",
+  "backlog",
+];
+
+const LAST_PART: Partial<Record<TaskStatus, (key: string) => string>> = {
+  interrupted: (key) => m.recordPartsLastInterrupted({ key }),
+  working: (key) => m.recordPartsLastWorking({ key }),
+  starting: (key) => m.recordPartsLastStarting({ key }),
+  idle: (key) => m.recordPartsLastIdle({ key }),
+  queued: (key) => m.recordPartsLastQueued({ key }),
+};
+
+const PART_COUNTS: Record<string, (count: number) => string> = {
+  waiting: (count) => m.recordPartsCountWaiting({ count }),
+  interrupted: (count) => m.recordPartsCountInterrupted({ count }),
+  working: (count) => m.recordPartsCountWorking({ count }),
+  starting: (count) => m.recordPartsCountStarting({ count }),
+  idle: (count) => m.recordPartsCountIdle({ count }),
+  queued: (count) => m.recordPartsCountQueued({ count }),
+  backlog: (count) => m.recordPartsCountBacklog({ count }),
+};
+
+/**
+ * What an unstarted parent truly waits on: its open parts, by what each is
+ * doing (INF-6805's plan, item 2). A parent's parts do its work and it has
+ * no Start, so "Waiting for Start" misled. Null for any other task, for a
+ * parent a blocker holds (its blocker leads), and on an older home that
+ * sends no parts.
+ */
+function partsAttentionOf(
+  task: Pick<AttentionDetail, "status" | "blockedBy" | "flags" | "parts">,
+): { title: string; guidance: string } | null {
+  if (task.status !== "open" || task.blockedBy.length > 0 || task.flags.blocked) return null;
+  const open = (task.parts ?? []).filter(
+    (part) => part.status === "open" || part.status === "active",
+  );
+  if (open.length === 0) return null;
+  const marks = open.map((part) => ({ part, mark: taskStatusOf(part).mark }));
+  if (open.length === 1) {
+    const { part, mark } = marks[0] as { part: TaskView; mark: TaskStatus };
+    const key = part.key || part.id;
+    if (mark === "backlog")
+      return {
+        title: m.recordPartsLastBacklog(),
+        guidance: m.recordPartsLastBacklogGuidance({ key }),
+      };
+    if (mark === "waiting")
+      return {
+        title: m.recordPartsLastWaiting(),
+        guidance: m.recordPartsLastWaitingGuidance({ key }),
+      };
+    const said = LAST_PART[mark];
+    return said ? { title: m.recordPartsLast(), guidance: said(key) } : null;
+  }
+  const counts = PRESSING.flatMap((mark) => {
+    const count = marks.filter((entry) => entry.mark === mark).length;
+    const said = PART_COUNTS[mark];
+    return count > 0 && said ? [said(count)] : [];
+  });
+  const total = task.parts?.length ?? open.length;
+  return {
+    title: m.recordPartsOpen({ open: formatNumber(open.length), total }),
+    guidance: m.recordPartsOpenGuidance({ counts: formatList(counts, "and") }),
+  };
+}
+
+/**
+ * An unstarted parent: its parts do its work, so it never runs and its
+ * record leaves out the facts of a run (INF-6805's plan, the captain's
+ * answer run_facts: hidden).
+ */
+export function partsDoTheWork(task: Pick<TaskView, "status" | "children">): boolean {
+  return task.status === "open" && task.children.total > 0;
+}
+
+/** A part row's word on its parent's record: how it closed, or its status word. */
+export function partWordOf(part: TaskView): string {
+  const reading = taskStatusOf(part);
+  if (part.status !== "done" && part.status !== "dropped") return reading.word;
+  return (part.closedReason ? CLOSE_WORDS[part.closedReason] : undefined) ?? reading.word;
 }
 
 const CLOSE_WORDS: Record<string, string> = {

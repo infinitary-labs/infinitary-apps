@@ -360,7 +360,7 @@ The design skill's `TaskRecord` owns the layout and the attention box's words.
 | Backlog: open work on request, held or not, no parts, no blockers | Drop task | Start (primary) |
 | Backlog, could not start: open work on request with a start notice | Drop task | Try again (primary); Could not start and its reason between the slots |
 | Backlog or Queued with live blockers, or a dropped dependency edge | Drop task | Start, disabled; the attention box names what it waits on |
-| Backlog or Queued with parts of its own | Drop task. Open parts refuse the drop. | empty: the status reason and the attention box say the parts do the work |
+| Backlog or Queued with parts of its own | Drop task. Open parts refuse the drop. | empty: the attention box says what its open parts wait on |
 | Queued: when-ready work, held for a later start or not | Drop task | empty: no Start now |
 | Working or Idle | Drop task | empty: nothing needs the captain |
 | Interrupted | Drop task | Continue (primary) |

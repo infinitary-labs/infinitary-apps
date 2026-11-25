@@ -2,6 +2,7 @@ import type { DropTaskReview, TaskLifecycleOp } from "@shared/cards";
 import * as m from "@shared/i18n/messages.generated";
 import { isSafeCardHref } from "@shared/linkify";
 import type { FrameTheme } from "@shared/plugins/frameDocument";
+import { partsDoTheWork } from "@shared/recordAttention";
 import { recordBarOf } from "@shared/recordBar";
 import { recordOffersCloseDone } from "@shared/recordCloseDone";
 import { recordProofDemo, recordProofPictures } from "@shared/recordProof";
@@ -85,6 +86,10 @@ function recordWords(detail: TaskDetail | null, parentKey: string | undefined): 
 
 /** The name the window keeps the fold under the goal by, among the record's remembered rows. */
 const WORDS_SECTION = "words";
+/** The name the window keeps a folded parts list by; the list starts unfolded. */
+const PARTS_FOLDED = "parts-folded";
+/** The remembered rows the window draws itself, which the frame never reports. */
+const WINDOW_SECTIONS: readonly string[] = [WORDS_SECTION, PARTS_FOLDED];
 
 const DELIVERY_WORDS: Record<string, string> = {
   get "direct-pr"() {
@@ -217,11 +222,13 @@ export function RecordCard({
     if (id === "record-sections") {
       const open = (value as { open?: unknown } | null)?.open;
       if (Array.isArray(open)) {
-        // The frame names its own rows; the fold under the goal is the window's.
-        const words = (recordOpenSections.get(taskId) ?? []).filter((n) => n === WORDS_SECTION);
+        // The frame names its own rows; the folds under the goal and of the parts are the window's.
+        const kept = (recordOpenSections.get(taskId) ?? []).filter((n) =>
+          WINDOW_SECTIONS.includes(n),
+        );
         recordOpenSections.set(taskId, [
-          ...words,
-          ...open.filter((n): n is string => typeof n === "string" && n !== WORDS_SECTION),
+          ...kept,
+          ...open.filter((n): n is string => typeof n === "string" && !WINDOW_SECTIONS.includes(n)),
         ]);
       }
       return;
@@ -318,6 +325,18 @@ export function RecordCard({
     const rest = (recordOpenSections.get(taskId) ?? []).filter((n) => n !== WORDS_SECTION);
     recordOpenSections.set(taskId, open ? [WORDS_SECTION, ...rest] : rest);
   };
+  const [partsOpen, setPartsOpen] = useState(() => !openAtBirth.includes(PARTS_FOLDED));
+  useEffect(() => {
+    setPartsOpen(!(recordOpenSections.get(taskId) ?? []).includes(PARTS_FOLDED));
+  }, [taskId]);
+  const toggleParts = (open: boolean) => {
+    setPartsOpen(open);
+    const rest = (recordOpenSections.get(taskId) ?? []).filter((n) => n !== PARTS_FOLDED);
+    recordOpenSections.set(taskId, open ? rest : [PARTS_FOLDED, ...rest]);
+  };
+  // A parent that never runs leaves out the facts of a run: Now, Delivery,
+  // Runs on and Use; Spend stays (INF-6805's plan, run_facts: hidden).
+  const quiet = shown ? partsDoTheWork(shown) : false;
   return (
     <ResponseCard
       bodyRef={bodyRef}
@@ -391,11 +410,17 @@ export function RecordCard({
           <div className="fm-record-facts" style={{ marginBottom: "var(--space-3)" }}>
             <RecordAttention detail={shown} onOpenChange={openLink} />
             <TaskFactRows
-              facts={facts}
+              facts={quiet ? { ...facts, now: null } : facts}
               lead={
                 <>
                   <RecordDelivered detail={shown} />
-                  <RecordRelations detail={shown} parentKey={parentKey} onOpenLink={openLink} />
+                  <RecordRelations
+                    detail={shown}
+                    parentKey={parentKey}
+                    onOpenLink={openLink}
+                    partsOpen={partsOpen}
+                    onPartsToggle={toggleParts}
+                  />
                   <RecordGoal detail={shown} open={wordsOpen} onToggle={toggleWords} />
                 </>
               }
@@ -417,17 +442,17 @@ export function RecordCard({
                 why
                 more={
                   <>
-                    {deliveryWordsOf(shown) && (
+                    {!quiet && deliveryWordsOf(shown) && (
                       <RecordCell label={m.cardRecordDelivery()} data-record-cell="delivery">
                         {deliveryWordsOf(shown)}
                       </RecordCell>
                     )}
-                    {shown.runsOn && (
+                    {!quiet && shown.runsOn && (
                       <RecordCell label={m.cardRecordRunsOn()} data-record-cell="runs-on">
                         {shown.runsOn.label}
                       </RecordCell>
                     )}
-                    <TaskResourceUse taskId={taskId} />
+                    {!quiet && <TaskResourceUse taskId={taskId} />}
                     {shown.cost && <RecordCost cost={shown.cost} />}
                   </>
                 }

@@ -120,7 +120,12 @@ describe("the task protocol (task-system P3)", () => {
     expect(f.protocol.detail("t").personal).toBeUndefined();
     const read = (version: string, computer: string) => {
       f.tick();
-      const personal = { version: version.repeat(64), since: f.clock(), files: 3, computer };
+      const personal = {
+        version: version.repeat(64),
+        since: f.clock(),
+        files: 3,
+        computer,
+      };
       f.tasks.note("t", `Read the personal instructions on ${computer}.`, {
         news: false,
         data: { personal },
@@ -159,7 +164,12 @@ describe("the task protocol (task-system P3)", () => {
       model,
       shape: { kind: "implement", basis: "plan", basis_verified: true },
     });
-    seedTask(tasks, { id: "unrouted", title: "Never routed", status: "idle", model });
+    seedTask(tasks, {
+      id: "unrouted",
+      title: "Never routed",
+      status: "idle",
+      model,
+    });
     new DecisionStore(db).recordRouting({
       taskId: "build",
       ...model,
@@ -223,12 +233,20 @@ describe("the task protocol (task-system P3)", () => {
       model: { provider: "openai-codex", id: "gpt-6-sol" },
       reasoning: { level: "medium", lower: "capped" },
     });
-    expect(protocol.detail("quick").reasoning).toEqual({ level: "medium", lower: "capped" });
+    expect(protocol.detail("quick").reasoning).toEqual({
+      level: "medium",
+      lower: "capped",
+    });
   });
 
   it("finds closed work beyond the board's window, and dropped work, only for typed text", async () => {
     const { tasks, protocol, tick } = taskProtocolFixture();
-    tasks.create({ id: "old-done", title: "Reconcile idle answers", prompt: "p", repoId: null });
+    tasks.create({
+      id: "old-done",
+      title: "Reconcile idle answers",
+      prompt: "p",
+      repoId: null,
+    });
     tasks.create({
       id: "old-goal",
       title: "Other",
@@ -236,14 +254,41 @@ describe("the task protocol (task-system P3)", () => {
       prompt: "p",
       repoId: null,
     });
-    tasks.create({ id: "dropped", title: "Stalled zebra follow-up", prompt: "p", repoId: null });
-    tasks.create({ id: "live", title: "Live zebra", prompt: "p", repoId: null });
-    tasks.close("old-done", { status: "done", reason: "settled", actor: "host" });
-    tasks.close("old-goal", { status: "done", reason: "settled", actor: "host" });
+    tasks.create({
+      id: "dropped",
+      title: "Stalled zebra follow-up",
+      prompt: "p",
+      repoId: null,
+    });
+    tasks.create({
+      id: "live",
+      title: "Live zebra",
+      prompt: "p",
+      repoId: null,
+    });
+    tasks.close("old-done", {
+      status: "done",
+      reason: "settled",
+      actor: "host",
+    });
+    tasks.close("old-goal", {
+      status: "done",
+      reason: "settled",
+      actor: "host",
+    });
     tick(BOARD_RECENT_MS + 1);
-    tasks.create({ id: "recent", title: "Recent zebra", prompt: "p", repoId: null });
+    tasks.create({
+      id: "recent",
+      title: "Recent zebra",
+      prompt: "p",
+      repoId: null,
+    });
     tasks.close("recent", { status: "done", reason: "settled", actor: "host" });
-    tasks.close("dropped", { status: "dropped", reason: "superseded", actor: "host" });
+    tasks.close("dropped", {
+      status: "dropped",
+      reason: "superseded",
+      actor: "host",
+    });
     const ids = async (text: string) => (await protocol.search(text)).map((task) => task.id);
     expect(await protocol.search("")).toEqual([]);
     expect(await protocol.search("   ")).toEqual([]);
@@ -264,8 +309,17 @@ describe("the task protocol (task-system P3)", () => {
   it("answers at most 50 earlier matches, newest first, the limit the panel contract names", async () => {
     const { tasks, protocol, tick } = taskProtocolFixture();
     for (let i = 0; i < 55; i += 1) {
-      tasks.create({ id: `old-${i}`, title: `Older zebra ${i}`, prompt: "p", repoId: null });
-      tasks.close(`old-${i}`, { status: "done", reason: "settled", actor: "host" });
+      tasks.create({
+        id: `old-${i}`,
+        title: `Older zebra ${i}`,
+        prompt: "p",
+        repoId: null,
+      });
+      tasks.close(`old-${i}`, {
+        status: "done",
+        reason: "settled",
+        actor: "host",
+      });
       tick(1);
     }
     tick(BOARD_RECENT_MS + 1);
@@ -295,7 +349,13 @@ describe("the task protocol (task-system P3)", () => {
 
   it("finds a question answered within the board's window, which the panel never lists", async () => {
     const { tasks, protocol } = taskProtocolFixture();
-    tasks.create({ id: "q", kind: "question", title: "Gauge", prompt: "p", repoId: null });
+    tasks.create({
+      id: "q",
+      kind: "question",
+      title: "Gauge",
+      prompt: "p",
+      repoId: null,
+    });
     tasks.close("q", { status: "done", reason: "answered", actor: "host" });
     tasks.create({ id: "w", title: "Gauge work", prompt: "p", repoId: null });
     tasks.close("w", { status: "done", reason: "settled", actor: "host" });
@@ -312,12 +372,31 @@ describe("the task protocol (task-system P3)", () => {
     tasks.create({ id: "old", title: "Older work", prompt: "p", repoId: null });
     tasks.close("old", { status: "done", reason: "settled", actor: "host" });
     tick(BOARD_RECENT_MS + 1);
-    tasks.create({ id: "week", title: "Closed this week", prompt: "p", repoId: null });
+    tasks.create({
+      id: "week",
+      title: "Closed this week",
+      prompt: "p",
+      repoId: null,
+    });
     tasks.close("week", { status: "done", reason: "settled", actor: "host" });
-    tasks.create({ id: "dropped", title: "Dropped", prompt: "p", repoId: null });
-    tasks.close("dropped", { status: "dropped", reason: "superseded", actor: "host" });
+    tasks.create({
+      id: "dropped",
+      title: "Dropped",
+      prompt: "p",
+      repoId: null,
+    });
+    tasks.close("dropped", {
+      status: "dropped",
+      reason: "superseded",
+      actor: "host",
+    });
     tasks.create({ id: "live", title: "Live", prompt: "p", repoId: null });
-    tasks.create({ id: "other", title: "Not asked for", prompt: "p", repoId: null });
+    tasks.create({
+      id: "other",
+      title: "Not asked for",
+      prompt: "p",
+      repoId: null,
+    });
     const keyOf = (id: string) => tasks.get(id)?.key ?? "";
     // The search of earlier work never finds this week's work: the board lists it.
     expect(await protocol.search(keyOf("week"))).toEqual([]);
@@ -341,9 +420,17 @@ describe("the task protocol (task-system P3)", () => {
       title: "A",
       prompt: "the brief",
       repoId: "r1",
-      intent: { goal: "Ship", userWords: "ship it", constraints: [{ kind: "minimal-diff" }] },
+      intent: {
+        goal: "Ship",
+        userWords: "ship it",
+        constraints: [{ kind: "minimal-diff" }],
+      },
     });
-    tasks.capture.openAsk({ id: "turn-1", text: "ship it", images: [{ mimeType: "image/png" }] });
+    tasks.capture.openAsk({
+      id: "turn-1",
+      text: "ship it",
+      images: [{ mimeType: "image/png" }],
+    });
     tasks.capture.attachAsk("turn-1", "a", "tool:spawn_crewmate");
     tasks.capture.closeAsk("turn-1", "closed");
     tasks.turns.recordReport("a", { text: "Shipped." });
@@ -366,14 +453,56 @@ describe("the task protocol (task-system P3)", () => {
       ],
     });
     expect(detail.events.map((event) => event.kind)).toEqual(["created", "ask", "report"]);
-    expect(detail.dropEffects).toEqual({ parts: [], waiting: [], underway: [] });
+    expect(detail.dropEffects).toEqual({
+      parts: [],
+      waiting: [],
+      underway: [],
+    });
   });
 
   // INF-3908 (INF-3896's piece 2): on the captain's record these three made
   // 16.1 MB of a 21.5 MB board, and no view draws them from a row.
+  // INF-6805: "there's no way to see children parts, and \"waiting for start\" is also misleading".
+  it("lists a parent's parts on its record, and a parent never waits for a Start of its own", () => {
+    const f = taskProtocolFixture();
+    const unstarted = { status: "queued", startPolicy: "on-request" } as const;
+    seedTask(f.tasks, { id: "parent", title: "Import secrets", ...unstarted });
+    seedTask(f.tasks, {
+      id: "done",
+      title: "Plan the import",
+      parentId: "parent",
+      ...unstarted,
+    });
+    f.tasks.close("done", { status: "done", reason: "merged", actor: "host" });
+    seedTask(f.tasks, {
+      id: "last",
+      title: "Bring secrets",
+      parentId: "parent",
+      ...unstarted,
+    });
+    seedTask(f.tasks, { id: "alone", title: "Fix search", ...unstarted });
+    const parent = taskDetailSchema.parse(f.protocol.detail("parent"));
+    expect(parent.parts?.map((part) => [part.id, part.status, part.closedReason])).toEqual([
+      ["done", "done", "merged"],
+      ["last", "open", null],
+    ]);
+    expect(parent.waits?.map((wait) => wait.kind) ?? []).not.toContain("backlog");
+    expect(parent.parts?.[1]?.waits?.map((wait) => wait.kind)).toContain("backlog");
+    const alone = taskDetailSchema.parse(f.protocol.detail("alone"));
+    expect(alone.parts).toBeUndefined();
+    expect(alone.waits?.map((wait) => wait.kind)).toContain("backlog");
+    f.protocol.dispose();
+    f.db.close();
+  });
+
   it("sends no change story, live validation or check repair record on a board row or a record's delivery", () => {
     const { tasks, protocol } = taskProtocolFixture();
-    tasks.create({ id: "a", title: "Color the chart", prompt: "p", repoId: "r1" });
+    tasks.create({
+      id: "a",
+      title: "Color the chart",
+      prompt: "p",
+      repoId: "r1",
+    });
     const head = "a".repeat(40);
     // Keep a populated repair ledger: an empty or unparsed input would make omission vacuous.
     const ciRepair = {
@@ -390,9 +519,23 @@ describe("the task protocol (task-system P3)", () => {
       repairs: [],
     };
     const story = {
-      revisions: [{ revision: 1, head, base: "main", title: "feat(chart): color the chart" }],
+      revisions: [
+        {
+          revision: 1,
+          head,
+          base: "main",
+          title: "feat(chart): color the chart",
+        },
+      ],
       receipts: [],
-      published: { revision: 1, head, state: "confirmed", region: "", regionHash: "", number: 88 },
+      published: {
+        revision: 1,
+        head,
+        state: "confirmed",
+        region: "",
+        regionHash: "",
+        number: 88,
+      },
     };
     seedDelivery(tasks, "a", {
       mode: "direct-pr",
@@ -410,19 +553,37 @@ describe("the task protocol (task-system P3)", () => {
     const row = taskBoardSchema.parse(protocol.board()).tasks.find((task) => task.id === "a");
     const detail = protocol.detail("a");
     for (const delivery of [row?.delivery, detail.delivery]) {
-      expect(delivery).toMatchObject({ prNumber: 88, changeLabel: "#88", ci: "green" });
+      expect(delivery).toMatchObject({
+        prNumber: 88,
+        changeLabel: "#88",
+        ci: "green",
+      });
       for (const field of ["presentation", "presentations", "liveValidation", "ciRepair"])
         expect(delivery).not.toHaveProperty(field);
     }
     // The record still draws its validation, from its own read.
-    expect(detail.liveValidation).toMatchObject({ head, revision: 1, verdict: "no-surface" });
+    expect(detail.liveValidation).toMatchObject({
+      head,
+      revision: 1,
+      verdict: "no-surface",
+    });
   });
 
   it("keeps a captain drop of unstarted work as a dropped record, not done", () => {
     const { tasks, protocol } = taskProtocolFixture();
-    tasks.create({ id: "a", title: "A", prompt: "p", repoId: "r1", startPolicy: "on-request" });
+    tasks.create({
+      id: "a",
+      title: "A",
+      prompt: "p",
+      repoId: "r1",
+      startPolicy: "on-request",
+    });
     const before = protocol.detail("a");
-    expect(before.dropEffects).toEqual({ parts: [], waiting: [], underway: [] });
+    expect(before.dropEffects).toEqual({
+      parts: [],
+      waiting: [],
+      underway: [],
+    });
     expect(before.dropEffects && dropReviewKeys(before.dropEffects).parts).toEqual([]);
     tasks.starts.dropUnstarted("a", {
       actor: "captain",
@@ -445,7 +606,12 @@ describe("the task protocol (task-system P3)", () => {
   // close as done records for a task with an open pull request and work it saved.
   it("carries a close as done's delivery facts and the captain's word on its closing, and drops a note's repeat of the reason", () => {
     const { tasks, protocol } = taskProtocolFixture();
-    tasks.create({ id: "a", title: "Correct the meter", prompt: "p", repoId: "r1" });
+    tasks.create({
+      id: "a",
+      title: "Correct the meter",
+      prompt: "p",
+      repoId: "r1",
+    });
     tasks.close("a", {
       status: "done",
       reason: "finished",
@@ -487,14 +653,25 @@ describe("the task protocol (task-system P3)", () => {
       onWord: true,
       facts: [
         { basis: "checked", text: "Its own pull request #55 is still open" },
-        { basis: "checked", text: "1 commit not on the main branch and uncommitted edits, saved" },
-        { basis: "stated", text: "Result named by the first mate: The meter reads on time." },
+        {
+          basis: "checked",
+          text: "1 commit not on the main branch and uncommitted edits, saved",
+        },
+        {
+          basis: "stated",
+          text: "Result named by the first mate: The meter reads on time.",
+        },
         { basis: "unread", text: "Its own pull request #54 could not be read" },
       ],
     });
 
     // A finished close with evidence keeps the evidence, not the reason's word again.
-    tasks.create({ id: "b", title: "Sound the shoal", prompt: "p", repoId: "r1" });
+    tasks.create({
+      id: "b",
+      title: "Sound the shoal",
+      prompt: "p",
+      repoId: "r1",
+    });
     tasks.close("b", {
       status: "done",
       reason: "finished",
@@ -515,7 +692,11 @@ describe("the task protocol (task-system P3)", () => {
     tasks.create({ id: "a", title: "A", prompt: "p", repoId: "r1" });
     tick();
     tasks.starts.dispatch("a", {
-      workspace: { repoDir: "/fleet/nimbus-api", worktreeDir: "/wt/a", branch: "fm/a" },
+      workspace: {
+        repoDir: "/fleet/nimbus-api",
+        worktreeDir: "/wt/a",
+        branch: "fm/a",
+      },
       accountId: null,
       assignee: "crewmate 21",
       model: { provider: "openai", id: "gpt-6-sol" },
@@ -528,8 +709,16 @@ describe("the task protocol (task-system P3)", () => {
     seedDelivery(
       tasks,
       "a",
-      { changeLabel: "#422", prNumber: 422, prUrl: "https://github.com/o/r/pull/422" },
-      { kind: "pr_opened", text: "PR #422 https://github.com/o/r/pull/422", feed: true },
+      {
+        changeLabel: "#422",
+        prNumber: 422,
+        prUrl: "https://github.com/o/r/pull/422",
+      },
+      {
+        kind: "pr_opened",
+        text: "PR #422 https://github.com/o/r/pull/422",
+        feed: true,
+      },
     );
     for (const ci of ["pending", "pending", "green", "green"] as const) {
       tick();
@@ -581,7 +770,10 @@ describe("the task protocol (task-system P3)", () => {
     expect(protocol.detail("a").outcomeSummary).toBe("the popup reads plainly.");
     // The report's own summary wins over any sentence of it.
     tick();
-    tasks.turns.recordReport("a", { text: report, summary: "The popup reads plainly now." });
+    tasks.turns.recordReport("a", {
+      text: report,
+      summary: "The popup reads plainly now.",
+    });
     expect(protocol.detail("a").outcomeSummary).toBe("The popup reads plainly now.");
     expect(protocol.detail("a").activityLog.at(-1)?.text).toBe("The popup reads plainly now.");
 
@@ -594,16 +786,27 @@ describe("the task protocol (task-system P3)", () => {
 
     tasks.create({ id: "b", title: "B", prompt: "p", repoId: "r1" });
     tick();
-    tasks.dropWithChildren("b", { reason: "Duplicate of NIA-1.", actor: "firstmate" });
+    tasks.dropWithChildren("b", {
+      reason: "Duplicate of NIA-1.",
+      actor: "firstmate",
+    });
     const dropped = protocol.detail("b");
-    expect(dropped.closing).toEqual({ at: dropped.closedAt, note: "Duplicate of NIA-1." });
+    expect(dropped.closing).toEqual({
+      at: dropped.closedAt,
+      note: "Duplicate of NIA-1.",
+    });
     expect(dropped.activityLog.map((row) => row.kind)).toEqual(["created", "status"]);
     expect(dropped.modelLabel).toBeNull();
   });
 
   it("shows the basis the same on the detail, the published view and the export, its verdict derived at read", () => {
     const { db, tasks, protocol } = taskProtocolFixture();
-    tasks.create({ id: "plan", title: "Plan the panel", prompt: "p", repoId: "r1" });
+    tasks.create({
+      id: "plan",
+      title: "Plan the panel",
+      prompt: "p",
+      repoId: "r1",
+    });
     const planKey = tasks.get("plan")?.key ?? "";
     // Routed with a verdict on the shape, the way a spawn hands it over:
     // this one is stale (the plan has not answered), and it is not kept.
@@ -632,14 +835,24 @@ describe("the task protocol (task-system P3)", () => {
         parseTaskExport(exportTaskRecords(tasks).join("\n")).tasks.find((task) => task.id === id)
           ?.shape?.basis ?? null,
     });
-    expect(shown("build")).toEqual({ detail: planKey, view: planKey, export: planKey });
+    expect(shown("build")).toEqual({
+      detail: planKey,
+      view: planKey,
+      export: planKey,
+    });
     expect(shown("free")).toEqual({ detail: null, view: null, export: null });
-    expect(protocol.detail("build").basis).toEqual({ ref: planKey, verified: false });
+    expect(protocol.detail("build").basis).toEqual({
+      ref: planKey,
+      verified: false,
+    });
 
     // The plan answers: the verdict follows with no write to the build row.
     const before = tasks.get("build")?.updatedAt;
     tasks.turns.recordReport("plan", { text: "Group the rows into sections." });
-    expect(protocol.detail("build").basis).toEqual({ ref: planKey, verified: true });
+    expect(protocol.detail("build").basis).toEqual({
+      ref: planKey,
+      verified: true,
+    });
     expect(tasks.get("build")?.updatedAt).toBe(before);
     expect(protocol.detail("free").basis).toBeNull();
   });
@@ -650,14 +863,21 @@ describe("the task protocol (task-system P3)", () => {
     tick();
     tasks.create({ id: "a", title: "Build it", prompt: "p", repoId: "r1" });
     tasks.starts.dispatch("a", {
-      workspace: { repoDir: "/fleet/nimbus-api", worktreeDir: "/wt/a", branch: "fm/a" },
+      workspace: {
+        repoDir: "/fleet/nimbus-api",
+        worktreeDir: "/wt/a",
+        branch: "fm/a",
+      },
       accountId: null,
       assignee: "crewmate 1",
     });
     tick();
     tasks.noteProgress("a", "halfway");
     tick();
-    activity.record({ kind: "info", text: "First mate · remembered: squash merges" });
+    activity.record({
+      kind: "info",
+      text: "First mate · remembered: squash merges",
+    });
     tick();
     tasks.turns.recordReport("a", { text: "Built. Tests green." });
     const feed = recentFeed(tasks, activity, 200);
@@ -712,7 +932,12 @@ describe("the task protocol (task-system P3)", () => {
 
   it("folds only programs into one feed row before the recent limit (INF-1137 friction 8)", () => {
     const { tasks, activity, tick } = taskProtocolFixture();
-    tasks.create({ id: "ordinary", title: "Website refresh", prompt: "p", repoId: "r1" });
+    tasks.create({
+      id: "ordinary",
+      title: "Website refresh",
+      prompt: "p",
+      repoId: "r1",
+    });
     tasks.create({
       id: "ordinary-child",
       parentId: "ordinary",
@@ -729,7 +954,10 @@ describe("the task protocol (task-system P3)", () => {
       title: "Research release questions",
       prompt: "p",
       repoId: "r1",
-      shape: { kind: "research", program: { script: "return null;", bound: 29 } },
+      shape: {
+        kind: "research",
+        program: { script: "return null;", bound: 29 },
+      },
     });
     for (let i = 0; i < 29; i++) {
       const id = `part-${i}`;
@@ -751,9 +979,17 @@ describe("the task protocol (task-system P3)", () => {
       program?.key,
     ]);
     expect(feed().at(-1)?.text).toBe("0/29 parts done · Research release questions");
-    tasks.close("part-0", { status: "done", reason: "finished", actor: "host" });
+    tasks.close("part-0", {
+      status: "done",
+      reason: "finished",
+      actor: "host",
+    });
     tick();
-    tasks.close("part-1", { status: "dropped", reason: "cancelled", actor: "host" });
+    tasks.close("part-1", {
+      status: "dropped",
+      reason: "cancelled",
+      actor: "host",
+    });
     expect(feed().at(-1)).toMatchObject({
       taskKey: program?.key,
       kind: "warn",

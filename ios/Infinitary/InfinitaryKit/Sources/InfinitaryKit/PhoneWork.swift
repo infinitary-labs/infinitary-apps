@@ -133,6 +133,9 @@ public struct PhoneTask: Decodable, Identifiable, Sendable {
     public let skippedPlanBecause: String?
     public let browser: Browser?
     public let deliverable: String?
+    /// Its parts, each as its Tasks row reads it, in the order they were filed (`taskDetailSchema.parts`); absent on a
+    /// task with none, and from an older Mac. The record's attention sentence reads what its open parts are doing.
+    public let parts: [PhoneTask]?
     /// A standing wait's owner fact (`taskWaitSchema`, src/shared/taskWaits.ts).
     public struct Wait: Decodable, Sendable {
         public let id: String

@@ -2160,6 +2160,7 @@
 "phoneRecordWaitDueRead" = "next read was due %1$@";
 "phoneRecordWaitDueReset" = "reset was due %1$@";
 "phoneRecordWaitDueStart" = "start time was due %1$@";
+"phoneRecordWaitLabelRecorded" = "%1$@ · wait recorded %2$@";
 "phoneRecordWaitLine" = "%2$@ · %1$@";
 "phoneRecordWaitLineRecorded" = "%2$@ · %1$@ · wait recorded %3$@";
 "phoneRecordWaitNextCheckBack" = "check-back %1$@";
@@ -2167,7 +2168,6 @@
 "phoneRecordWaitNextRead" = "next read %1$@";
 "phoneRecordWaitNextReset" = "reset %1$@";
 "phoneRecordWaitNextStart" = "start time %1$@";
-"phoneRecordWaitTimeUnknown" = "time unknown";
 "phoneRecordWaitsOn" = "Waits on";
 "phoneRecordWhy" = "Why";
 "phoneRecordWhyFiled" = "Why it was filed";
@@ -2507,6 +2507,17 @@
 "recordMoreDelivery" = "delivery";
 "recordMoreValidation" = "live validation";
 "recordOpenKeptEvidence" = "Open kept evidence";
+"recordPartsLast" = "Waiting for its last part";
+"recordPartsLastBacklog" = "Its last part waits for your Start";
+"recordPartsLastBacklogGuidance" = "%1$@ is in your backlog. This task closes by itself once its parts close.";
+"recordPartsLastIdle" = "%1$@ is idle. This task closes by itself once its parts close.";
+"recordPartsLastInterrupted" = "%1$@ was interrupted. This task closes by itself once its parts close.";
+"recordPartsLastQueued" = "%1$@ is queued. This task closes by itself once its parts close.";
+"recordPartsLastStarting" = "%1$@ is starting. This task closes by itself once its parts close.";
+"recordPartsLastWaiting" = "Its last part is waiting on you";
+"recordPartsLastWaitingGuidance" = "%1$@ has a card for you. This task closes by itself once its parts close.";
+"recordPartsLastWorking" = "%1$@ is working. This task closes by itself once its parts close.";
+"recordPartsOpenGuidance" = "%1$@. This task closes by itself once its parts close.";
 "recordPersonalNone" = "None, on %1$@";
 "recordPersonalVersion" = "Version %2$@ from %3$@, on %1$@";
 "recordPolicyParentTask" = "Parent task";

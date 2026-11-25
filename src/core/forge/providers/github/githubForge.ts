@@ -1289,7 +1289,6 @@ function changeOf(pull: PullJson, branch: string): ForgeChange {
     url: pull.html_url,
     branch,
     headSha: pull.head.sha,
-    ...(pull.head.repo?.full_name ? { headRepo: pull.head.repo.full_name } : {}),
     ...(pull.draft ? { draft: true } : {}),
     title: pull.title,
     body: pull.body ?? "",

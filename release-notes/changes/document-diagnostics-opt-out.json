@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "document-diagnostics-opt-out",
+      "reason": "Documentation only: the environment opt-out, what the app reads from Claude Code's sign-in, the phone's events and the random install ID are written down; no behavior changes."
+    }
+  ]
+}

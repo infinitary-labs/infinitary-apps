@@ -1,7 +1,7 @@
 # The two switches
 
 Roadmap 1.4.
-Diagnostics was turned on by default by the captain's decision of 2026-09-22 ("on from the first cask ... opt-out, disclosed in the notice") and, the same day, widened from one anonymous daily count to the event set below with an anonymous install ID (captain: "i need accurate accounting for user funnel and retention").
+Diagnostics was turned on by default by the captain's decision of 2026-09-22 ("on from the first cask ... opt-out, disclosed in the notice") and, the same day, widened from one anonymous daily count to the event set below with a random install ID (captain: "i need accurate accounting for user funnel and retention").
 This page is the one home for what may leave this machine for us, and the code that keeps the promise.
 [Infinitary’s privacy policy](https://getinfinitary.com/privacy) is the published policy for Diagnostics and phone notifications.
 It does not cover Contribution, which stays hidden and off until approved terms are published.
@@ -13,7 +13,7 @@ Two switches on Settings → General → Sharing are the only switches that send
 
 | Switch | Default | What leaves | Where it goes today |
 | --- | --- | --- | --- |
-| Diagnostics | **On** - the switch is the opt-out | The allowlisted events below, each with the app version and an anonymous random install ID, and nothing else | The endpoint Infinitary Labs, Inc. operates, whose ids a release build carries; a source or dev build has none and sends nowhere |
+| Diagnostics | **On** - the switch is the opt-out | The allowlisted events below, each with the app version and a random install ID, and nothing else | The endpoint Infinitary Labs, Inc. operates, whose ids a release build carries; a source or dev build has none and sends nowhere |
 | Contribution | Off | Redacted records of the first mate's own decisions: the R2 `decided` task events, in the shapes the corpus export packages, run through the same redaction | Nowhere yet. The switch is absent from every build until the terms are published (`DATA_TERMS.published`), and there is no sender - the seam is `contributionSender` on the service |
 
 Whatever the switches say, the update check an installed copy already makes carries a yes/no active mark ("The update check's active mark" below), and the section says so in a line under them.
@@ -33,7 +33,8 @@ Three rules:
    A field is an `enum` of code words, a `boolean` or a finite `number`; the version is checked as a version string.
    There is no free-form string type, so no text a person wrote or a machine names - a conversation, a prompt, code, a card, a task or repository title, a path, an account, an email, a host name - can ride any event.
    An error's message never leaves; only its kind.
-3. **One identifier: the anonymous install ID.**
+3. **One identifier: the random install ID.**
+   It is called random, not anonymous: it names no person, but it does tell one install's events apart; the published words should say random too.
    A random (version 4) UUID from `crypto.randomUUID`, minted at boot the first time Diagnostics is on, derived from nothing about the person or the machine.
    Turning Diagnostics off drops it (and everything waiting); turning it back on mints a new, unrelated one.
    It is what lets daily and weekly actives, the first-run funnel and retention count per install.
@@ -92,7 +93,16 @@ Nothing about this shows on the phone.
 - The phone keeps a short queue of what happened (`PhoneDiagnosticsQueue`) and hands it over the connection on `inf:settings:sharing:phone` only when the computer runs major 14 or later, or its welcome names the older `phone-diagnostics` change, and its access is full (`PHONE_DIAGNOSTICS_SINCE`); an older computer, or a read-only one, gets nothing and the queue is dropped.
 - The connection names the asking phone (`view` on the captain actor), and only a paired phone may hand one; `SharingService.recordPhone` keeps it only while Diagnostics is on, the notice was answered and the build has a destination - otherwise it is dropped, never held for later.
 - Each phone gets its own random install ID on its first event, kept on the row under `phones` by device; turning Diagnostics off drops every phone's ID, and removing a phone, or a phone leaving, drops its ID and what of it waits.
+- The phone's events are members of the event set named `ios_*` in `src/shared/diagnostics.ts`: `ios_launch` (the app started), `ios_opened` (it came to the front), `ios_ftue_joined`, `ios_ftue_first_message`, `ios_message_sent` and `ios_card_answered`; each carries only the device kind (`device`) and the app version, never the message, card or task.
 - A phone event goes out with hostname `ios`, title `Infinitary`, the url `app://infinitary-ios/<event>`, the phone app's version and the phone's install ID; the `ios_ftue_*` steps go once per phone ID.
+
+### What the app reads and never sends
+
+Infinitary Labs never receives anything the app reads from another tool's sign-in; Diagnostics' fields are enums, booleans and numbers only and the wire client re-checks every body, so no such value can ride an event.
+For the Claude subscription the app reads Claude Code's saved sign-in on the person's own computer, the Keychain item `Claude Code-credentials` or `~/.claude/.credentials.json`, and `~/.claude.json` (the account's email, account ID and organization ID), only to ask Anthropic for the allowance and to label the account in the app (`src/core/claude/claudeQuota.ts`, `docs/quota.md`).
+The token goes only to Anthropic's own allowance request; a SHA-256 of it exists only in memory to tell one sign-in from another, and the email and IDs stay on the computer, shown in the app.
+Other providers' sign-ins live in the app's own folder, never in another tool's.
+The published privacy policy should say this in the person's words (a gap those words still owe); a change that reads another tool's files, or sends one of these values anywhere, moves this section, the policy and the notice together.
 
 ### The body, exactly
 
@@ -109,7 +119,7 @@ Each event is one POST to the endpoint's `/api/send`, Umami's event shape, with 
     "name": "<event>",
     "data": { "<field>": "<allowlisted value>", "version": "<the app version>" },
     "timestamp": <when it happened, whole seconds>,
-    "id": "<the anonymous install ID>"
+    "id": "<the random install ID>"
   }
 }
 ```
@@ -144,7 +154,8 @@ The address a request comes from is the endpoint's configuration to drop, not th
 3. **The opt-out stops everything.**
    Off, `record` builds and keeps nothing, the install ID is gone and what waited is dropped.
    A row someone wrote "off" stays off across upgrades and relaunches, and a `sharing` row that exists but cannot be read counts as off, never as the default (`SettingsStore.getSharing`).
-   The D-12 environment opt-out (`INFINITARY_TELEMETRY=0`) still empties the destination, and a build with no destination keeps nothing either.
+   Setting `INFINITARY_TELEMETRY` to `0`, `false` or `off` in the app's environment (`resolveTelemetryConfig` in `src/core/telemetry.ts`) also empties the destination, so nothing is built or sent whatever the switch says; this is the opt-out for a person who wants it fixed before the first launch, and a build with no destination keeps nothing either.
+   It does not stop the update check's active mark, which has no switch ("The update check's active mark").
 4. **The switch is the core's.**
    The `sharing` settings row is written only by `SharingService` (`src/core/sharing/sharingService.ts`) and pushed whole as `inf:sharing` on every write, the way the captain's preferences travel.
    A relaunch reads the row; a fresh window profile cannot forget it.
@@ -184,8 +195,8 @@ The words telemetry, analytics and the vendor's name reach no user surface; the 
 
 Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
-- The two switches (roadmap 1.4, captain lock F4c; Diagnostics on by default and set to the event set with an anonymous install ID by the captain on 2026-09-22; `docs/sharing.md` is the one home): what may leave this machine FOR US is Settings → General → Sharing, no feature gated on either, beside the update check's yes/no active mark ("The update check's active mark" above).
-  Diagnostics sends ONLY the events `src/shared/diagnostics.ts` declares (`app_launch`, `main_agent_turn_end`/`_failed`, the `ftue_*` first-run funnel, each first-run step once per install), each with allowlisted enum/boolean/number fields, the app version and the anonymous install ID (a random UUID, dropped when the switch goes off and minted anew when it comes back; Umami 3.1 makes it the session).
+- The two switches (roadmap 1.4, captain lock F4c; Diagnostics on by default and set to the event set with a random install ID by the captain on 2026-09-22; `docs/sharing.md` is the one home): what may leave this machine FOR US is Settings → General → Sharing, no feature gated on either, beside the update check's yes/no active mark ("The update check's active mark" above).
+  Diagnostics sends ONLY the events `src/shared/diagnostics.ts` declares (`app_launch`, `main_agent_turn_end`/`_failed`, the `ftue_*` first-run funnel, each first-run step once per install), each with allowlisted enum/boolean/number fields, the app version and the random install ID (a random UUID, dropped when the switch goes off and minted anew when it comes back; Umami 3.1 makes it the session).
   THE POLICY is no personal data and no user content: there is no free-form field type, an error leaves only as its kind, `buildDiagnosticBody` (`src/core/telemetry.ts`) refuses anything else and the wire client re-checks every body (`diagnosticBodyViolation`); widening what leaves is an edit to the allowlist that moves `diagnostics.test.ts`, the alpha notice and `docs/sharing.md` together.
   `SharingService` (`src/core/sharing/sharingService.ts`) is the ONE writer of the `sharing` row and the one caller of the wire: `record(event)` is the one way in (off, nothing is built or kept; the events come from the first mate's `onTurnSettled`, `FirstRunService.onStep` and `crewMilestoneFor` on the `broadcastEvent` seam, none carrying content), events wait on the row until the endpoint accepts them, and nothing goes until the build has a destination (a dev build has none) and the person has been TOLD (`viewedAt`, stamped by the first-launch notice's "OK" - `src/renderer/src/app/DiagnosticsNotice.tsx` - or the Settings viewer painting); a row written off stays off and an unreadable row reads as off.
   The viewer shows the install ID, what waits and went (built by the same function) and the whole allowlist.

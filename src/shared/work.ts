@@ -1297,12 +1297,13 @@ export const workOrders = {
       notOpened: z.string().optional(),
     }),
   },
-  /** Starts a turn; answers once it has started, and its end is an event. */
+  /** Starts a turn, with the home's summary rule now (`summary-point.md`); answers once it has started. */
   "inf:session:prompt": {
     effect: "change",
     request: ordered({
       text: z.string(),
       images: z.array(sessionImageSchema).max(16).optional(),
+      compaction: placedCompactionSchema.optional(),
     }),
     response: z.object({ turn: z.number().int().positive() }),
   },

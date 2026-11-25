@@ -172,22 +172,33 @@ it("carries only the opt-in to the running computer, which reads its own local f
   console.info("Placed resources:", system.slice(system.indexOf("Personal instructions from")));
 });
 // INF-6693's plan: the person's summary point reaches the work sent to a
-// computer that runs work, which opens the conversation with it.
-it("sends the home's summary point to the running computer with the crewmate's open", async () => {
+// computer that runs work, which opens the conversation with it; the
+// captain's answer on its review: a changed point reaches that conversation
+// at its next message, as on the home's own computer.
+it("sends the home's summary point to the running computer with the open and each message", async () => {
   const at = await world();
   const sent = vi.spyOn(at.home().devices, "ask");
-  new SettingsStore(at.home().db).setSummaryPoint(150_000);
+  const settings = new SettingsStore(at.home().db);
+  settings.setSummaryPoint(150_000);
   model([
+    { text: "Started on the footer." },
     { tools: [{ name: "report", args: { text: "Summary point served.", summary: "Served." } }] },
     { text: "Reported." },
   ]);
   await at.start("t-summary-point");
+  await expect.poll(() => at.home().tasks.get("t-summary-point")?.activity).toBe("idle");
+  settings.setSummaryPoint(500_000);
+  await at.home().supervisor.steer.steerCrewmate("t-summary-point", "Fix the header too.");
   await expect
     .poll(() => at.home().tasks.get("t-summary-point")?.outcome)
     .toBe("Summary point served.");
   const open = sent.mock.calls.find((call) => call[1] === "inf:session:open");
   const [order] = workOrders["inf:session:open"].request.parse(open?.[2]);
   expect(order?.spec.compaction).toEqual({ maxContextTokens: 150_000 });
+  const prompts = sent.mock.calls
+    .filter((call) => call[1] === "inf:session:prompt")
+    .map((call) => workOrders["inf:session:prompt"].request.parse(call[2])[0].compaction);
+  expect(prompts).toEqual([{ maxContextTokens: 150_000 }, { maxContextTokens: 500_000 }]);
   sent.mockRestore();
 });
 describe("a task that runs on a computer that runs work", () => {

@@ -114290,6 +114290,20 @@
                       "data"
                     ]
                   }
+                },
+                "compaction": {
+                  "type": "object",
+                  "properties": {
+                    "maxContextTokens": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 100000000
+                    },
+                    "belowPriceStep": {
+                      "type": "boolean",
+                      "const": true
+                    }
+                  }
                 }
               },
               "required": [

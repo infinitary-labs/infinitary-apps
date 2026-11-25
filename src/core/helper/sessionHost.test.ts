@@ -23,7 +23,7 @@ import {
 } from "../../../tests/helpers/sessionHostWorld";
 import { CONTRACT_CHANGES } from "../connection/contractChanges";
 import { answersDir, savedAnswerText } from "../session/answerFiles";
-import { SESSION_COMPACTION } from "../session/compaction";
+import { compactionNow, SESSION_COMPACTION } from "../session/compaction";
 import type { SessionSpec } from "../session/session";
 import { PlacedTasks } from "./placedTasks";
 import { PLACED_REQUEST_WAIT_MS } from "./toolWait";
@@ -1145,12 +1145,15 @@ describe("a conversation held on a computer that runs work", () => {
     ).options.factories.pi;
     const open = vi.spyOn(factory, "open");
     await at.open();
-    expect(open.mock.calls.map(([spec]) => spec.compaction)).toEqual([SESSION_COMPACTION]);
+    expect(open.mock.calls.map(([spec]) => compactionNow(spec.compaction))).toEqual([
+      SESSION_COMPACTION,
+    ]);
   });
 
-  // INF-6693's plan: the home's summary point travels with the open, and an
-  // older home that sends none leaves the computer on the app's own rule.
-  it("opens a crewmate's conversation with the summary point the home sends", async () => {
+  // INF-6693's plan: the home's summary point travels with the open; the
+  // captain's answer on its review: a point a later message carries applies
+  // from that message, and one that carries none keeps the last.
+  it("opens a crewmate's conversation with the summary point the home sends, and takes a message's newer one", async () => {
     const at = await placed();
     const factory = (
       at.host() as unknown as {
@@ -1165,9 +1168,17 @@ describe("a conversation held on a computer that runs work", () => {
         spec: { ...at.spec, compaction: { maxContextTokens: 500_000 } },
       },
     ]);
-    expect(open.mock.calls.map(([spec]) => spec.compaction)).toEqual([
-      { maxContextTokens: 500_000 },
+    const rule = () => compactionNow(open.mock.calls[0]?.[0].compaction);
+    expect(rule()).toEqual({ maxContextTokens: 500_000 });
+    model([{ text: "Hello." }, { text: "Again." }]);
+    await at.order("inf:session:prompt", [
+      { orderId: "rows:1", task: TASK, text: "Hi.", compaction: { maxContextTokens: 150_000 } },
     ]);
+    expect(rule()).toEqual({ maxContextTokens: 150_000 });
+    await at.ended(1);
+    await at.order("inf:session:prompt", [{ orderId: "rows:2", task: TASK, text: "Again." }]);
+    expect(rule()).toEqual({ maxContextTokens: 150_000 });
+    await at.ended(2);
   });
 
   it("refuses an order it does not know, a malformed one, and one for a task it never opened", async () => {

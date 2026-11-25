@@ -67,6 +67,8 @@ export type ApprovalCase = {
   firstmateThread?: { title: string; body: string; reply: string };
   /** Disposable standing directions; never imported from the captain's collection. */
   directions?: { id: string; text: string }[];
+  /** Runbook switches over the bundled defaults, by id, saved before the first mate opens. */
+  runbooks?: Record<string, boolean>;
 };
 
 const countSpec = readFileSync(

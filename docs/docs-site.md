@@ -1,7 +1,7 @@
 # The docs site
 
 The docs site is the public help for people who use Infinitary, published at `docs.getinfinitary.com`.
-Its pages live in this repository, in `docs-site/`, so a change to the app can update its page in the same pull request.
+Its pages live in this repository, in `docs-site/`, so a change to the app updates its page in the same pull request: a feature, improvement or removal's release note names the pages it edited or says why none needs to, and the release-note check holds it to that (`docs/release-notes.md`, "The docs site declaration").
 `docs/` and `primitives/` stay the project's own pages and are never published there.
 
 ## Where pages live
@@ -41,7 +41,7 @@ Two pages are written from the app's own data, so neither tells a person somethi
 
 A page's pictures are dark and light pairs under `docs-site/public/pictures/`, taken through the hermetic launcher with `heroShot` (`tests/e2e/pictures.ts`), the way release-note hero pictures are, with made-up projects and tasks.
 A page shows both through the `.picture-dark` and `.picture-light` classes in `docs-site/src/styles/infinitary.css`, so each follows the site's theme.
-Retake a picture when the view it shows changes enough to mislead.
+Retake a picture when the view it shows changes enough to mislead; the reviewing crewmate checks each named page's pictures with its note (`docs/release-notes.md`, "Who writes what").
 
 ## Languages
 

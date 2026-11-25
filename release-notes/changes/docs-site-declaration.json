@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "docs-site-declaration",
+      "reason": "How the project checks its release notes: a feature, improvement or removal note now names the docs site pages its change edited, or says why none needs to. Nothing in the app changes."
+    }
+  ]
+}

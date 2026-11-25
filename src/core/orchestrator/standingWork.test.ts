@@ -102,8 +102,17 @@ describe("the standing list", () => {
       createdAt: T0,
     });
     f.merge("a1");
+    // Filed when its sibling merged; the captain's stop was recorded 11 minutes later.
+    const last = seedTask(f.tasks, {
+      id: "a2",
+      title: "A part 2",
+      parentId: "a",
+      status: "queued",
+      startPolicy: "on-request",
+      createdAt: T0,
+    });
     f.at(11 * 60_000);
-    const last = f.parked("a2", "A part 2", "a");
+    expect(f.tasks.starts.declareCaptainStop("a2", "firstmate").ok).toBe(true);
     f.at(2 * DAY);
     seedTask(f.tasks, {
       id: "b",
@@ -129,7 +138,7 @@ describe("the standing list", () => {
     ]);
   });
 
-  it("leaves out a stopped task whose parent has not begun, a dated hold and an idea under an answer task", () => {
+  it("leaves out a stopped task whose parent has not started building, a dated hold and an idea under an answer task", () => {
     const f = fixture();
     seedTask(f.tasks, { id: "quiet", title: "Nothing started", status: "queued", createdAt: T0 });
     f.parked("quiet1", "Stopped before anything began", "quiet");
@@ -163,11 +172,37 @@ describe("the standing list", () => {
     });
     f.parked("idea", "An idea for later", "plan-answer");
 
+    // A plan whose only finished part is its answer: nothing has started building.
+    seedTask(f.tasks, { id: "planned", title: "Planned work", status: "queued", createdAt: T0 });
+    seedTask(f.tasks, {
+      id: "planned-answer",
+      title: "Plan it",
+      parentId: "planned",
+      status: "running",
+      shape: { kind: "research", deliverable: "answer" },
+    });
+    f.merge("planned-answer");
+    f.parked("planned1", "Piece 1, parked before any building", "planned");
+
     f.at(1 * DAY);
     const list = f.read();
     expect(list.rows).toEqual([]);
-    // The two stopped parts that are not rows wait for a go like any filed work.
-    expect(list.filedForLater).toEqual({ under3Days: 2, days3To14: 0, over14Days: 0 });
+    // The three stopped parts that are not rows wait for a go like any filed work.
+    expect(list.filedForLater).toEqual({ under3Days: 3, days3To14: 0, over14Days: 0 });
+  });
+
+  it("ends an open-ended wait when a later turn fails", () => {
+    const f = fixture();
+    seedTask(f.tasks, { id: "w", title: "Waits", status: "completed", createdAt: T0 });
+    f.at(1 * HOUR);
+    f.tasks.turns.recordReport("w", {
+      text: "Waiting.",
+      declared: { workWait: { observation: "The docs host answers 404.", cheapestWay: "None." } },
+    });
+    f.at(2 * HOUR);
+    expect(f.read().rows.map((row) => row.kind)).toEqual(["open-ended-wait"]);
+    f.tasks.turns.recordTurnFailure("w", "The provider refused the request.");
+    expect(f.read().rows).toEqual([]);
   });
 
   it("lists a started task whose newest report declared a wait with no end, until a report names one", () => {

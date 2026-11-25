@@ -437,11 +437,12 @@ The next-move check skips a part the captain stopped, and the first mate's conte
 
 It has two kinds of row:
 
-- **A parked part** (`parked-part`): live work the captain stopped (`TaskStarts.stoppedByCaptain`) whose parent is begun: live, not a task that delivers an answer, with another part started or done (a dropped part does not count).
+- **A parked part** (`parked-part`): live work the captain stopped (`TaskStarts.stoppedByCaptain`) whose parent is begun: live, not a task that delivers an answer, and it or another part started building work, as the next-move check reads it (a part that delivers an answer, a dropped part and a part the captain stopped do not count).
   Its fields are its key and title, its parent's key, since when it stood (its newest line that stopped or started it, `TaskStarts.latestStopAt`), its parent's other open parts, and whether every task it waits on has closed (`TaskGraph.waitingOn`).
   Work the captain stopped under a task that delivers an answer is an idea for later and never a row, as in the next-move check.
 - **An open-ended wait** (`open-ended-wait`): a started, idle task out of the backlog with no gate, whose newest report declared a work wait with no `end` ("Self-resolving work waits" above).
   Its fields are its key and title, the report's time and the wait's observation as its reason.
+  A turn that failed after that report ends the wait, as the idle ladder reads a declared wait.
   A gate is a typed end: a hold has its time and may also end on an event or an app update, an allowance has its reset and a captain gate has its card, so a gated task is never a row.
 
 Rows go oldest first, at most 12 (`STANDING_ROW_CAP`), then the count of the rest.

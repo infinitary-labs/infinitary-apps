@@ -4,6 +4,7 @@ import type { InboxStore } from "../storage/inboxStore";
 import type { TaskRecord } from "../storage/taskRecords";
 import { TaskService } from "../tasks/taskService";
 import { keyOrId } from "../tasks/taskWriter";
+import { startedBuilding } from "./nextMove";
 import { readerSavedLine, servedTaskTitle, withReaderDataReminder } from "./readerData";
 
 /**
@@ -87,20 +88,21 @@ export type StandingWorkHost = {
 
 /**
  * Its parent, when that parent is begun: live, building work rather than an
- * answer (whose parts are ideas for later), with another part started or
- * done. A dropped part does not count, as in the next-move check.
+ * answer (whose parts are ideas for later), and it or another part started
+ * building work. As in the next-move check, a part that delivers an answer,
+ * a dropped part and a part the captain stopped make nothing begun.
  */
 function begunParent(tasks: TaskService, record: TaskRecord): TaskRecord | undefined {
   const parent = record.parentId ? tasks.get(record.parentId) : undefined;
   if (!parent || TaskService.isClosed(parent) || parent.shape?.deliverable === "answer") return;
-  const begun = tasks.graph
-    .children(parent.id)
-    .some(
-      (part) =>
-        part.id !== record.id &&
-        !TaskService.isDeliveryChild(part) &&
-        (part.status === "active" || part.status === "done"),
-    );
+  const begun =
+    startedBuilding(parent) ||
+    tasks.graph
+      .children(parent.id)
+      .some(
+        (part) =>
+          part.id !== record.id && startedBuilding(part) && !tasks.starts.stoppedByCaptain(part),
+      );
   return begun ? parent : undefined;
 }
 
@@ -126,13 +128,15 @@ function parkedPart(tasks: TaskService, record: TaskRecord): Unmarked | undefine
  * A started, idle task out of the backlog whose newest report declared a
  * work wait with no end: nothing typed ends it. A gate (a dated hold, an
  * allowance, a card for the captain) is a typed end, so a gated task is not
- * one.
+ * one. A turn that failed after that report ends the wait, as the idle
+ * ladder reads a declared wait (`IdleLadder.declaredWait`).
  */
 function openEndedWait(tasks: TaskService, record: TaskRecord): Unmarked | undefined {
   if (record.activity !== "idle" || record.backlogSince != null || record.gate) return;
   const report = tasks.lastReportEntries(record.id).at(-1);
   const wait = report?.declared.workWait;
   if (!report || !wait || wait.end) return;
+  if ((tasks.lastFailureAt(record.id) ?? -1) > report.at) return;
   return {
     kind: "open-ended-wait",
     taskId: record.id,

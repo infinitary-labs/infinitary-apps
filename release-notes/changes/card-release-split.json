@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "card-release-split",
+      "reason": "Internal: the card stack's stage-release and hold code moves to its own file; nothing a person sees changes."
+    }
+  ]
+}

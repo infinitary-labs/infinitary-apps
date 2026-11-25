@@ -628,7 +628,12 @@ export class ChangeMerge {
       }
       const message = caught instanceof Error ? caught.message : String(caught);
       const repoId = this.options.tasks.get(taskId)?.repoId;
-      const stop = guard ? await this.refusalStop(forge, guard, caught, message) : undefined;
+      // The host's own verdict on the one direct merge, never an answer that
+      // could not be read: the refusal the first mate hears, whatever an
+      // ordinary merge would wait on (a main branch that moved).
+      const directRefused = direct !== undefined && isRefusal(caught);
+      const read = guard ? await this.refusalStop(forge, guard, caught, message) : undefined;
+      const stop = directRefused && read === "computing" ? undefined : read;
       // The main branch moved while the host merged: tried again unless the
       // pull request's own state already says why it cannot merge.
       const baseMoved =
@@ -652,10 +657,7 @@ export class ChangeMerge {
           ? { mergeTask: caught.mergeTask }
           : {}),
         ...(sent && heldBy(caught) ? { mergeHeld: true as const } : {}),
-        // The host's own verdict on the one direct merge: never sent again.
-        ...(sent && direct && !isTransientForgeFailure(caught) && !isSignInForgeFailure(caught)
-          ? { directRefused: true as const }
-          : {}),
+        ...(sent && directRefused ? { directRefused: true as const } : {}),
         ...(baseMoved ? { baseMoved: true } : {}),
         ...(stop ? { stop } : {}),
         ...(isSignInForgeFailure(caught) ? { signIn: this.context.signInFact(forge, repoId) } : {}),
@@ -1599,6 +1601,11 @@ export function mergedReceipt(pull: ForgePull): NonNullable<PrOutcome["receipt"]
 /** The host answered a merge request by saying it already holds one for that pull request. */
 export function heldBy(caught: unknown): boolean {
   return caught instanceof ForgeMergeUnconfirmed && caught.held === true;
+}
+
+/** The host's own verdict on a merge it was sent: neither a hiccup nor an answer that could not be read. */
+export function isRefusal(caught: unknown): boolean {
+  return caught instanceof ForgeError && caught.failure === "refused";
 }
 
 export function stripAttempt(attempt: MergeAttempt): PrOutcome {

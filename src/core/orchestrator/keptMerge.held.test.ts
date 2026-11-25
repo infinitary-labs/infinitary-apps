@@ -316,6 +316,54 @@ describe("a merge request GitHub holds for an approved, clean pull request", () 
     await h.supervisor.disposeAll();
   });
 
+  it("treats a direct merge answered with nothing readable as unknown, never a refusal: nothing is sent again once the held request ends", async () => {
+    let ended = false;
+    const { h, stamped, pass } = await replay(
+      88,
+      () => ({ status: 409, json: PENDING }),
+      // A 200 with no body: the merge may have gone in.
+      () => ({}),
+      {
+        held: () =>
+          ended ? { status: "failed", details: { message: "Merge request timed out" } } : PENDING,
+      },
+    );
+    expect(h.authorization()?.heldMerge).toMatchObject({ request: UUID, direct: "sent" });
+    ended = true;
+    await pass(180);
+    expect(writes(stamped)).toEqual(["41 PUT merge-async", "46 PUT merge"]);
+    expect(h.authorization()?.heldMerge).toMatchObject({ request: UUID, direct: "sent" });
+    h.forge.merged = true;
+    await pass(31);
+    expect(h.tasks.get(h.taskId)?.status).toBe("done");
+    const wakes = settleWakes(h.ops).filter((wake) => wake.includes(TOLD_UNKNOWN));
+    expect(wakes).toHaveLength(1);
+    await h.supervisor.disposeAll();
+  });
+
+  it.each([
+    ["the task's own", false],
+    ["a reviewed", true],
+  ])(
+    "wakes the first mate once with GitHub's reason when it refuses the direct merge of %s pull request because the main branch moved, and sends nothing after",
+    async (_whose, reviewed) => {
+      const refusal = "Base branch was modified. Review and try the merge again.";
+      const { h, stamped, pass } = await replay(
+        88,
+        () => ({ status: 409, json: PENDING }),
+        () => ({ status: 405, json: { message: refusal } }),
+        { reviewed },
+      );
+      await pass(180);
+      expect(reviewedWrites(stamped)).toEqual(["PUT merge-async", "PUT merge"]);
+      expect(h.authorization()?.heldMerge).toMatchObject({ request: UUID, direct: "refused" });
+      const wakes = settleWakes(h.ops).filter((wake) => wake.includes(refusal));
+      expect(wakes).toHaveLength(1);
+      expect(wakes[0]).toContain(`GitHub answered 405 to PUT ${DIRECT}: ${refusal}`);
+      await h.supervisor.disposeAll();
+    },
+  );
+
   it("says a merge of unknown origin when the direct merge's answer is lost and the pull request reads merged at once", async () => {
     const { h, stamped } = await replay(
       88,

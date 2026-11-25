@@ -36,6 +36,7 @@ import {
   type ChangeMerge,
   heldBy,
   hostQueued,
+  isRefusal,
   MERGE_RETRY_DELAYS_MS,
   type MergeAttempt,
   type MergeGuard,
@@ -922,13 +923,10 @@ export class MergeReviews {
         return merged(after.mergedSha, after.headSha, false);
       // The host's own verdict on the one direct merge: never sent again, and
       // the refusal the first mate hears, never a wait on an outcome.
-      const directRefused =
-        sent &&
-        direct !== undefined &&
-        !isTransientForgeFailure(caught) &&
-        !isSignInForgeFailure(caught);
+      const directRefused = sent && direct !== undefined && isRefusal(caught);
+      const read = guard ? await this.merges.refusalStop(forge, guard, caught, message) : undefined;
       const stop = guard
-        ? ((await this.merges.refusalStop(forge, guard, caught, message)) ??
+        ? ((directRefused && read === "computing" ? undefined : read) ??
           (directRefused
             ? undefined
             : sent

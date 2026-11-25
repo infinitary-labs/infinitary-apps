@@ -125,10 +125,18 @@ export class KeptMerge {
       const actor = approved?.issuer === "autonomy" ? "app" : "captain";
       const finished = await this.settle.finishReviewMerge(taskId, review, result, then, actor);
       // The direct merge sent in place of a request the host held: the first
-      // mate is told once, as for the task's own pull request.
+      // mate is told once, in the report every merge makes, with any work
+      // the merge filed.
       if (finished.ok && result.mergedDirectly)
-        // i18n-exempt: the tool name a wake served to the first mate carries
-        this.settle.wakeOnSettle(taskId, record.title, "merge-pr (kept)", finished, [], false);
+        this.settle.reportOutcome(
+          taskId,
+          record.title,
+          "merge-pr",
+          undefined,
+          { ...finished, mergedDirectly: true },
+          undefined,
+          false,
+        );
       return finished;
     } finally {
       lease.release();
@@ -558,11 +566,17 @@ export class KeptMerge {
           then,
           authorization.issuer === "autonomy" ? "app" : "captain",
         );
-        if (direct && result.ok)
-          // i18n-exempt: the tool name a wake served to the first mate carries
-          this.settle.wakeOnSettle(taskId, title, "merge-pr (kept)", result, [], false);
-        else if (!result.continued)
-          this.settle.reportOutcome(taskId, title, "merge-pr", undefined, result, undefined);
+        // One report, as every merge makes, with any work the merge filed;
+        // the direct merge has it wake the first mate.
+        if (!result.continued || (direct && result.ok))
+          this.settle.reportOutcome(
+            taskId,
+            title,
+            "merge-pr",
+            undefined,
+            direct && result.ok ? { ...result, mergedDirectly: true } : result,
+            undefined,
+          );
         return;
       }
       this.approvals.consumeStanding(taskId, mergedReceipt(pull));

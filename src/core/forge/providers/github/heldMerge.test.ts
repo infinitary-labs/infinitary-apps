@@ -136,6 +136,26 @@ describe("a merge request GitHub already holds for the pull request", () => {
     });
   });
 
+  it("calls a direct merge answered with nothing readable unknown, and one GitHub says it did not make refused", async () => {
+    let answer: { status?: number; json?: unknown } = {};
+    const { forge } = await stub({ [`PUT ${DIRECT}`]: () => answer }, []);
+    await expect(forge.putInDirectly(merging, "feedbeef", "squash")).rejects.toMatchObject({
+      name: "ForgeMergeUnconfirmed",
+      failure: "transient",
+      message: "GitHub's answer to the merge of #23 could not be read",
+    });
+    answer = { json: { message: "accepted" } };
+    await expect(forge.putInDirectly(merging, "feedbeef", "squash")).rejects.toMatchObject({
+      name: "ForgeMergeUnconfirmed",
+    });
+    answer = { json: { merged: false, message: "Pull Request is not mergeable" } };
+    await expect(forge.putInDirectly(merging, "feedbeef", "squash")).rejects.toMatchObject({
+      name: "ForgeError",
+      failure: "refused",
+      message: "GitHub did not confirm the merge of #23: Pull Request is not mergeable",
+    });
+  });
+
   it("keeps the id of a request GitHub took when a read of its result fails", async () => {
     const { forge, seen } = await stub(
       {

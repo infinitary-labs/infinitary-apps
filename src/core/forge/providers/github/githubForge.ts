@@ -822,13 +822,18 @@ export class GitHubForge implements Forge {
 
   /** The direct merge (`PUT .../merge`): for a GitHub without the asynchronous one, or in place of a request GitHub holds. */
   private async putInDirect(change: ForgeChange, path: string, body: object): Promise<MergeAnswer> {
-    const answer = (await this.request("PUT", path, body)) as {
-      merged?: boolean;
-      sha?: string;
-      message?: string;
-    } | null;
+    type Answer = { merged?: boolean; sha?: string; message?: string } | null;
+    // An answer the app cannot read says nothing: the merge may have gone in.
+    const answer = await (this.request("PUT", path, body) as Promise<Answer>).catch((caught) =>
+      caught instanceof ForgeError ? Promise.reject(caught) : null,
+    );
+    if (typeof answer?.merged !== "boolean")
+      // i18n-exempt: a forge failure's words, read by the first mate and kept on the timeline in English
+      throw new ForgeMergeUnconfirmed(
+        `GitHub's answer to the merge of ${this.label(change)} could not be read`,
+      );
     // A 200 is not a merge on its own: GitHub says it merged, or it did not.
-    if (answer?.merged !== true) {
+    if (!answer.merged) {
       throw new ForgeError(
         "refused",
         `GitHub did not confirm the merge of ${this.label(change)}${answer?.message ? `: ${answer.message}` : ""}`,

@@ -124,8 +124,9 @@ public struct PhoneDraftLocal: Equatable, Sendable {
     private var early: [String: PhoneCardDraft] = [:]
     /// Parts changed here and not yet sent, with the revision each goes against, by card.
     private var dirty: [String: [String: Base]] = [:]
-    /// Questions the captain picked here, by card: each moved from no pick to a pick. A pick of the option the card
-    /// recommends reads unchanged, as the card proposed it, yet it is the captain's own and worth a draft.
+    /// Questions the phone's reading moved from no pick to a pick, by card. A pick of the option the card recommends
+    /// reads unchanged, as the card proposed it, yet it is the captain's own and worth a draft; a question another
+    /// screen's draft filled in is here too, but the draft already holds it, so it sends nothing.
     private var picked: [String: Set<String>] = [:]
     private var flying: [String: Flight] = [:]
     private var timers: [String: PhoneDraftTimer] = [:]

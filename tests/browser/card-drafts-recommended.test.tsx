@@ -10,7 +10,8 @@ import { openSize, openWindow } from "./window";
  * words: "the selections i made on my desktop aren't synced to my ios app. i
  * thought we'd sync it." A pick of the option a card recommends matches the
  * card's proposal, so its answer reads unchanged; it is still the captain's
- * pick, and goes to the card's shared draft like any other.
+ * pick, and goes to the card's shared draft like any other. An option the
+ * author checked in the body is the card's, never a pick, and stays out.
  */
 
 const CARD_ID = "card-drafts-recommended";
@@ -24,6 +25,10 @@ const BODY = `
   <fieldset><legend>Who merges an outside pull request?</legend>
     <label><input type="radio" name="merge" value="you" data-inf-recommended> You</label>
     <label><input type="radio" name="merge" value="anyone"> Anyone with write access</label>
+  </fieldset>
+  <fieldset><legend>How often does the round report?</legend>
+    <label><input type="radio" name="report" value="weekly" checked> Weekly</label>
+    <label><input type="radio" name="report" value="daily"> Daily</label>
   </fieldset>`;
 
 const pick = (value: string) =>
@@ -45,7 +50,7 @@ test("a pick of a card's recommended option goes to the card's shared draft, kee
   await stageAtRest();
   expect(bridge.requests("inf:cards:draft")).toEqual([]);
 
-  // Section: the recommended option, picked alone, goes once the captain pauses.
+  // Section: the recommended option, picked alone, goes once the captain pauses; the authored default does not.
   await pick("weekdays");
   await expect.poll(() => bridge.requests("inf:cards:draft").length).toBe(1);
   const [cardId, change] = bridge.requests("inf:cards:draft")[0] ?? [];

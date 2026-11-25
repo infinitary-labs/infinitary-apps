@@ -139,9 +139,11 @@ export class DraftSync {
   private readonly flying = new Map<string, Flying>();
   private readonly timers = new Map<string, unknown>();
   /**
-   * Questions the captain picked here, by card: each moved from no pick to a
-   * pick. A pick of the option the card recommends reads unchanged, as the
-   * card proposed it, yet it is the captain's own and worth a draft.
+   * Questions this window's reading moved from no pick to a pick, by card.
+   * A pick of the option the card recommends reads unchanged, as the card
+   * proposed it, yet it is the captain's own and worth a draft; a question
+   * another window's draft filled in is here too, but the draft already
+   * holds it, so it sends nothing.
    */
   private readonly picked = new Map<string, Set<string>>();
   /** Each card's changes refused for their size, none sent again unchanged. */

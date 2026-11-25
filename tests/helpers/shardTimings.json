@@ -187,6 +187,7 @@
   "src/core/orchestrator/hostCards.test.ts": 0.2,
   "src/core/orchestrator/hostOps.start.test.ts": 0.4,
   "src/core/orchestrator/hostOps.test.ts": 1.2,
+  "src/core/orchestrator/idleLadder.reminders.test.ts": 1.4,
   "src/core/orchestrator/idleLadder.served.test.ts": 6.8,
   "src/core/orchestrator/idleLadder.test.ts": 7.3,
   "src/core/orchestrator/inPlaceWork.test.ts": 0.8,

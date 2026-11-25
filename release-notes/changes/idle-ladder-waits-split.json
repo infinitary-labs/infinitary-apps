@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "idle-ladder-waits-split",
+      "reason": "Internal: the idle ladder's reminder tests move to their own file by owner, unchanged; nothing a person sees changes."
+    }
+  ]
+}

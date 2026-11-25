@@ -95,6 +95,7 @@ It installs, builds and packages the installer, and keeps it on the run with its
 Both jobs first unpack Git for Windows' portable build, pinned by its SHA-256, and put it first on their own steps' search path, so the job's bash, git and curl are that release's: the places' own Git 2.45.2 has a curl that refuses a plain download (exit 43), and the fresh machine has no Git.
 Each job's checkout then waits while GitHub refuses the job's token and checks out once more, as every checkout a release reaches does (`docs/testing.md`, "GitHub refusing a job's token"); the wait runs in that Git Bash, in the PowerShell job too.
 The project's composite actions are bash, which that Git Bash runs; the pnpm action writes a `.cmd` shim beside each sh one on Windows, so PowerShell steps find `pnpm` too.
+Each job takes those actions, and the Electron zip reader the build runs, from a sparse checkout of the workflow's own commit in `.release-tooling`, and runs them against the source: a stable's source is its alpha's commit, which may predate an action the workflow uses (`tests/release-workflows-windows-actions.test.ts`).
 
 A request names how many rounds it wants (`rounds`, default 1, a whole number of at least 1).
 The `build` job builds the installer once and lists the rounds; `check` is a matrix of one job for each round, so every round installs that one installer on its own fresh machine, side by side, and a failed round never cancels the others.

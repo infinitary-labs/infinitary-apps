@@ -48,7 +48,7 @@ export function buildJob(workflow: string): string {
 }
 
 function buildActions(job: string): string[] {
-  return [...new Set([...job.matchAll(/uses:\s*\.\/(\.github\/actions\/[\w-]+)/g)].map((m) => `${m[1]}/`))];
+  return [...new Set([...job.matchAll(/uses:\s*\.\/(?:\.release-tooling\/)?(\.github\/actions\/[\w-]+)/g)].map((m) => `${m[1]}/`))];
 }
 
 /** One tracked file, as `git ls-files -s` names it: its path and its content's object id. */

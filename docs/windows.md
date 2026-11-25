@@ -1,9 +1,9 @@
 # Windows
 
 Infinitary on Windows is one unsigned installer for x64 PCs, built and checked by `.github/workflows/windows.yml`.
-Every alpha publishes it as an unsigned early build for testers ("Published on every alpha" below); a stable carries none yet, and nothing signs it.
+Every alpha and every stable publishes it, unsigned: an alpha as an early build for testers, a stable as an experimental download ("Published on every release" below); nothing signs it yet.
 The installed app updates itself in one click from the installer its channel's release carries, checked against the published SHA-256 (`docs/alpha.md`, "Updates on Windows"); a channel whose release carries no Windows installer offers no update.
-Windows on Arm, signing and a stable Windows build are later pieces of the Windows plan.
+Windows on Arm and signing are later pieces of the Windows plan.
 The earlier hosted investigation and what it observed are `docs/windows-feasibility.md`.
 
 ## What is built
@@ -91,10 +91,11 @@ A Windows PC that keeps a copy offers Take over while the home is out of reach, 
 `windows.yml` has two jobs, and a third on request ("The update check" below).
 `build` runs on GitHub's hosted `windows-2025`: the unsigned installer reads no secret, and a public project's hosted minutes cost nothing, so the PC's cores stay for the fresh Windows 11 check.
 Setting `vars.WINDOWS_RUNNER` to a place of the project's own, a fresh standard account on the PC removed when the job ends, pins the build back there; `hosted` always takes the hosted machine.
-It installs, builds and packages the installer, and keeps it on the run with its `SHA256SUMS` as the `windows-installer` artifact, and hands its line of `SHA256SUMS` to a calling workflow as the `sums` output; only an alpha's upload job publishes it.
+It installs, builds and packages the installer, and keeps it on the run with its `SHA256SUMS` as the `windows-installer` artifact, and hands its line of `SHA256SUMS` to a calling workflow as the `sums` output; only a release's upload job publishes it.
 Both jobs first unpack Git for Windows' portable build, pinned by its SHA-256, and put it first on their own steps' search path, so the job's bash, git and curl are that release's: the places' own Git 2.45.2 has a curl that refuses a plain download (exit 43), and the fresh machine has no Git.
 Each job's checkout then waits while GitHub refuses the job's token and checks out once more, as every checkout a release reaches does (`docs/testing.md`, "GitHub refusing a job's token"); the wait runs in that Git Bash, in the PowerShell job too.
 The project's composite actions are bash, which that Git Bash runs; the pnpm action writes a `.cmd` shim beside each sh one on Windows, so PowerShell steps find `pnpm` too.
+Each job takes those actions, and the Electron zip reader the build runs, from a sparse checkout of the workflow's own commit in `.release-tooling`, and runs them against the source: a stable's source is its alpha's commit, which may predate an action the workflow uses (`tests/release-workflows-windows-actions.test.ts`).
 
 A request names how many rounds it wants (`rounds`, default 1, a whole number of at least 1).
 The `build` job builds the installer once and lists the rounds; `check` is a matrix of one job for each round, so every round installs that one installer on its own fresh machine, side by side, and a failed round never cancels the others.
@@ -137,27 +138,27 @@ That journey checks, in order:
 6. The removal entry's own command removes the app silently, as Settings does: the program, its removal entry and its Start menu entry are gone, and `%APPDATA%\infinitary` still holds the saved data.
 
 Its pictures and readings go to the `windows-evidence` artifact.
-The check runs on every alpha (`release.yml`'s `windows` job, which an alpha's upload and publish wait on) and on each combined batch that touches Windows-relevant files (`batch-checks.yml`'s `windows` job, which the batch's last job waits on).
+The check runs on every alpha and stable (`release.yml`'s `windows` job, which the release's upload and publish wait on, so a failed check holds the whole release) and on each combined batch that touches Windows-relevant files (`batch-checks.yml`'s `windows` job, which the batch's last job waits on).
 `scripts/windows-paths.ts` decides the batch's run from its changed files: the Windows check's own files always count - its workflow and the composite actions it uses, its installer config, the script itself, and its journey's config and every test file the journey reaches by its imports, all read from the checkout - and otherwise any file the build reads counts unless it only makes the Mac or Linux packages, is under `.github/`, or is one of the pull request check's light paths (tests, docs, release notes, phone-only files, the docs site).
 The shared font notice is a desktop input, not a phone-only file; see [What a pull request runs](testing.md#what-a-pull-request-runs).
 An unreadable change runs the check.
 It also runs on request (`workflow_dispatch`).
 An outside contributor's pull request that reaches Windows-relevant files builds the installer on GitHub's hosted `windows-2025` instead and skips this check, which waits for the next alpha's release check (`contributors.yml`; `docs/public-ci.md`, "Outside contributors").
 
-## Published on every alpha
+## Published on every release
 
-An alpha's installer packages the release notes job's verified catalog and its hero pictures, never the development placeholder `pnpm build` leaves, and `build` runs `verify-package` on the packaged catalog before it keeps the installer (`docs/release-notes.md`), so the installed app's update note lists what changed.
-An alpha publishes the installer its own Windows check built, installed and ran, and no other: `release.yml`'s upload job downloads the `windows-installer` artifact and refuses it unless its bytes match the `sums` line the windows job handed over.
-It goes beside the alpha's other downloads, under the same rules: on the release record and on Cloudflare under `releases/v<version>/`, each with a `.sha256` sidecar, never on a Homebrew tap.
+A release's installer packages the release notes job's verified catalog and its hero pictures, never the development placeholder `pnpm build` leaves, and `build` runs `verify-package` on the packaged catalog before it keeps the installer (`docs/release-notes.md`), so the installed app's update note lists what changed.
+An alpha or a stable publishes the installer its own Windows check built, installed and ran, and no other: `release.yml`'s upload job downloads the `windows-installer` artifact and refuses it unless its bytes match the `sums` line the windows job handed over.
+It goes beside the release's other downloads, under the same rules: on the release record and on Cloudflare under `releases/v<version>/`, each with a `.sha256` sidecar, never on a Homebrew tap.
 A retry keeps an installer a place already holds only when its bytes are the ones this run's Windows check built and checked; any other copy stops the release before anything is written, the record's zip included, so testers only ever get checked bytes.
 The publication job fetches it back from the record and, without a credential, from Cloudflare, and checks each copy against the upload job's list before any feed moves.
-The builds file then names it at `channels.alpha.systems.windows.x64.exe` ("Builds by system and chip" in `docs/alpha.md`), and the feed writer runs the app's own builds reader on the next file before the feed switches, so a Windows entry can never make an installed copy refuse the whole file.
-Both the Cloudflare upload and the feed writer are the workflow's own copies, never the release source's, so an alpha cut from an older commit publishes and names its installer too; the download origin they use is still the release source's, the one the fetch-back reads.
-A live alpha refuses to publish when download storage is not configured, since storage is the only place testers can download the installer.
+The builds file then names it at `channels.<channel>.systems.windows.x64.exe` for each channel the release moves ("Builds by system and chip" in `docs/alpha.md`), and the feed writer runs the app's own builds reader on the next file before the feed switches, so a Windows entry can never make an installed copy refuse the whole file.
+Both the Cloudflare upload and the feed writer are the workflow's own copies, never the release source's, so an alpha cut from an older commit, or a stable built from its alpha's commit, publishes and names its installer too; the download origin they use is still the release source's, the one the fetch-back reads.
+A live alpha refuses to publish when download storage is not configured, since storage is the only place testers can download the installer; a live stable without it keeps publishing Homebrew and Linux, puts the installer on the release record alone and names it in no builds file, and its run says so.
 A rehearsal checks and lists the installer and writes it into its rehearsed builds file, and publishes no release download; like any rehearsal it still keeps its run's artifacts and sends the Mac app and disk image to Apple for notarization.
-A stable promotion builds no Windows installer: when it hands its version to alpha, alpha's entry names no Windows build until the next alpha.
-The alpha's release notes call it an unsigned early build: Windows warns before it runs, and a PC with Smart App Control on blocks it until the signed build.
-This gives the downloads page the entry it reads; the page lists the installer once its own change is deployed.
+A stable promotion builds its own installer at the stable version from the alpha's commit; when it hands its version to alpha, alpha's entry names that installer too.
+The alpha's release notes call it an unsigned early build; the stable's call it an experimental build, not yet signed with a certificate Microsoft verifies; both say Windows warns before it runs, and a PC with Smart App Control on blocks it until the signed build.
+This gives the downloads page the entry it reads; the page lists a channel's installer once its own change is deployed.
 
 ## The update check
 

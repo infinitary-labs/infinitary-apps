@@ -1068,6 +1068,26 @@ describe("the Homebrew-free feed publication", () => {
     ).not.toBeNull();
   });
 
+  // INF-6684's piece 1: a stable publishes its Windows installer too, and a
+  // stable that moves alpha names it there as well.
+  it("uploads a stable's Windows installer and names it for every channel the stable moves", () => {
+    const f = fixture();
+    const alpha = f.publish("0.5.0-alpha.9", "live", false, true);
+    expect(alpha.status, alpha.stderr).toBe(0);
+    const stable = f.publish("0.5.0", "live", false, true);
+    expect(stable.status, stable.stderr).toBe(0);
+    const name = "Infinitary-0.5.0-windows-x64-setup.exe";
+    const key = `releases/v0.5.0/${name}`;
+    const builds = f.read(PUBLIC_RELEASE_NAMES.buildsFile);
+    expect(builds.channels.stable.systems.windows.x64.exe).toEqual({
+      url: `${releaseSource.downloadBase}${key}`,
+      sha256: sha256Of(Buffer.from(f.object(key).bytes, "base64")),
+    });
+    expect(builds.channels.alpha.version).toBe("0.5.0");
+    expect(builds.channels.alpha.systems.windows).toEqual(builds.channels.stable.systems.windows);
+    expect(parseBuilds(builds, PUBLIC_RELEASE_NAMES)).not.toBeNull();
+  });
+
   // INF-640: an updater and the publication it reads use one destination.
   // The workflow's own feed writer names the release source's download
   // origin, the one its upload wrote to and its fetch-back read, even when

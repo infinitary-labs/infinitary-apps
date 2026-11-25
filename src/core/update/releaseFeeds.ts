@@ -16,7 +16,7 @@ export const releaseManifestSchema = z
     sourceCommit: z.string().regex(/^[0-9a-f]{40}$/),
     zip: archiveSchema.extend({ sha512: z.string().regex(/^[A-Za-z0-9+/]{86}==$/) }).strict(),
     dmg: archiveSchema,
-    /** An alpha's Windows installer, the one its Windows check tested (docs/windows.md). */
+    /** The release's Windows installer, the one its Windows check tested (docs/windows.md). */
     windows: archiveSchema.optional(),
   })
   .strict();
@@ -82,8 +82,7 @@ export function releaseFeedFiles(options: {
     !manifest.zip.asset.endsWith(".zip") ||
     !manifest.dmg.asset.endsWith(".dmg") ||
     (manifest.windows &&
-      (publication.channel !== "alpha" ||
-        manifest.windows.asset !== `Infinitary-${manifest.version}-windows-x64-setup.exe`))
+      manifest.windows.asset !== `Infinitary-${manifest.version}-windows-x64-setup.exe`)
   ) {
     throw new Error(
       "The installer manifest does not describe this publication's finalized artifacts.",
@@ -118,9 +117,9 @@ export function releaseFeedFiles(options: {
           sha256: manifest.dmg.sha256,
         };
       }
-      // Only the alpha it was built for names the Windows installer: a
-      // stable handed to alpha carries none (docs/windows.md).
-      if (manifest.windows && channel === publication.channel) {
+      // Every channel the release moves names its Windows installer, so a
+      // stable handed to alpha keeps alpha's Windows build (docs/windows.md).
+      if (manifest.windows) {
         entry.systems.windows = {
           x64: {
             exe: {

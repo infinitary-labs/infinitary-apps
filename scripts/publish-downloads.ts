@@ -17,7 +17,7 @@ const required = (name: string) => {
 };
 const linux = required("LINUX_DIRECTORY");
 const files = [required("DIST_ZIP"), required("DIST_DMG")];
-// An alpha's Windows installer, when the release publishes one (docs/windows.md).
+// The release's Windows installer, when it publishes one (docs/windows.md).
 if (process.env.DIST_WINDOWS) files.push(process.env.DIST_WINDOWS);
 const linuxNames = readFileSync(join(linux, "assets.txt"), "utf8").trim().split("\n");
 for (const name of linuxNames) {

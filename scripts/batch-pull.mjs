@@ -132,7 +132,7 @@ export function windowsOnlyCheckFiles(checkFiles) {
   const others = batchRunCheckFiles(checkFiles, WINDOWS_CHECK);
   const all = batchRunCheckFiles(checkFiles);
   const used = new Set(
-    [...text.matchAll(/uses:\s*\.\/(\.github\/actions\/[\w-]+)/g)].map((use) => `${use[1]}/`),
+    [...text.matchAll(/uses:\s*\.\/(?:\.release-tooling\/)?(\.github\/actions\/[\w-]+)/g)].map((use) => `${use[1]}/`),
   );
   const own = new Set();
   for (const path of all) {

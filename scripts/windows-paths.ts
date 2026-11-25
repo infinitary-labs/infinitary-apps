@@ -45,7 +45,7 @@ const JOURNEY_CONFIG = "playwright.windows.config.ts";
 export function windowsCheckFiles(root = ROOT): { files: Set<string>; folders: string[] } {
   const files = new Set([WORKFLOW, "electron-builder.win.yml", "scripts/windows-paths.ts"]);
   const uses = readFileSync(join(root, WORKFLOW), "utf8").matchAll(
-    /uses:\s*\.\/(\.github\/actions\/[\w-]+)/g,
+    /uses:\s*\.\/(?:\.release-tooling\/)?(\.github\/actions\/[\w-]+)/g,
   );
   const folders = [...new Set([...uses].map((use) => `${use[1]}/`))];
   const journey = readdirSync(join(root, "tests/windows")).map((name) => `tests/windows/${name}`);

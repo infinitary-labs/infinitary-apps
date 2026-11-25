@@ -514,7 +514,7 @@ The app's own release workflows and Homebrew cask distribution carry the release
 - **Distribution (captain-approved INF-640; `docs/mac-installation.md`)**: signed, notarized universal Mac disk images install one app, "Infinitary", bundle id `com.getinfinitary.infinitary`, by dragging it into Applications.
   Universal updater ZIPs and Linux x64 packages share the build-owned download origin `downloads.getinfinitary.com` (`packaging/release-source.json`), independent of the public source repository.
   Immutable Cloudflare R2 objects and one conditional feed-snapshot pointer replace public source releases and the feed branch; both Homebrew taps remain supported.
-  With storage not yet configured, a stable publishes Homebrew and Linux only and an alpha refuses, since its Windows installer goes only to storage; new Linux and paired-computer readers retain their tap fallback.
+  With storage not yet configured, a stable publishes Homebrew and Linux only, its Windows installer on the release record alone, and an alpha refuses, since its Windows installer goes only to storage; new Linux and paired-computer readers retain their tap fallback.
   A live release advances the direct feed only after unsigned download verification; incomplete storage configuration fails without changing repository visibility.
   Homebrew remains supported: releases mirror verified artifacts and advance its casks and manifests separately, preserving historical downloads.
   The alpha notice (`packaging/alpha-notice.txt`) remains in release notes.

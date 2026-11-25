@@ -865,6 +865,7 @@ describe("automatic alpha workflow handoff (INF-2259)", () => {
       notes: { result: "success" },
       verify: { result: "skipped" },
       linux: { result: "success" },
+      windows: { result: "success" },
       phone: { result: "success" },
       release: { result: "success" },
       update: { result: "success" },
@@ -874,7 +875,7 @@ describe("automatic alpha workflow handoff (INF-2259)", () => {
     for (const name of ["release", "update", "upload", "publish"])
       expect(workflowValue(job(name).if!, { needs }), name).toBe(true);
     for (const name of ["upload", "publish"])
-      for (const failed of ["notes", "linux", "phone", "release", "update"])
+      for (const failed of ["notes", "linux", "windows", "phone", "release", "update"])
         expect(
           workflowValue(job(name).if!, { needs: { ...needs, [failed]: { result: "failure" } } }),
           `${name} after a failed ${failed}`,
@@ -900,6 +901,7 @@ describe("automatic alpha workflow handoff (INF-2259)", () => {
       notes: { result: "success" },
       verify: { result: "success" },
       linux: { result: "success" },
+      windows: { result: "success" },
       phone: { result: "success" },
       release: { result: "success" },
       update: { result: "success" },
@@ -911,7 +913,7 @@ describe("automatic alpha workflow handoff (INF-2259)", () => {
     for (const name of ["release", "update", "upload", "publish"])
       expect(workflowValue(job(name).if!, { needs }), name).toBe(true);
     for (const name of ["upload", "publish"])
-      for (const failed of ["notes", "verify", "linux", "phone", "release", "update"])
+      for (const failed of ["notes", "verify", "linux", "windows", "phone", "release", "update"])
         expect(
           workflowValue(job(name).if!, { needs: { ...needs, [failed]: { result: "failure" } } }),
           `${name} after a failed ${failed}`,

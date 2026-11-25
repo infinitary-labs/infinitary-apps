@@ -576,6 +576,7 @@
         "!tests/release-workflows-runners.test.ts",
         "!tests/release-workflows-verification.test.ts",
         "!tests/release-workflows-verify-evidence.test.ts",
+        "!tests/release-workflows-windows-actions.test.ts",
         "!tests/release-publication.test.ts",
         "!tests/release-notes.test.ts",
         "!tests/requested-version.test.ts",

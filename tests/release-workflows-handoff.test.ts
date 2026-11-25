@@ -70,8 +70,9 @@ describe("the signed channel workflow", () => {
     ];
     expect(upload.needs).toEqual(before);
     expect(publish.needs).toEqual([...before, "upload"]);
-    // INF-4243's pick, "on every alpha": an alpha's Windows installer check
-    // must pass before anything uploads or publishes; a stable runs none.
+    // INF-4243's pick, "on every alpha", and INF-6684's piece 1, Windows on
+    // stable: the release's Windows installer check must pass before
+    // anything uploads or publishes, on both channels.
     const passed = { result: "success" };
     const ready = (channel: string, windows: string) => ({
       needs: {
@@ -84,10 +85,11 @@ describe("the signed channel workflow", () => {
       },
     });
     for (const job of [upload, publish]) {
-      expect(workflowValue(job.if ?? "", ready("alpha", "success"))).toBe(true);
-      expect(workflowValue(job.if ?? "", ready("alpha", "failure"))).toBe(false);
-      expect(workflowValue(job.if ?? "", ready("alpha", "skipped"))).toBe(false);
-      expect(workflowValue(job.if ?? "", ready("stable", "skipped"))).toBe(true);
+      for (const channel of ["alpha", "stable"]) {
+        expect(workflowValue(job.if ?? "", ready(channel, "success"))).toBe(true);
+        expect(workflowValue(job.if ?? "", ready(channel, "failure"))).toBe(false);
+        expect(workflowValue(job.if ?? "", ready(channel, "skipped"))).toBe(false);
+      }
     }
     const affected = ready("alpha", "success");
     Object.assign(affected.needs.resolve.outputs, { installer_source: "merged release source" });
@@ -96,10 +98,9 @@ describe("the signed channel workflow", () => {
       expect(workflowValue(upload.if ?? "", { needs })).toBe(result === "success");
       expect(workflowValue(publish.if ?? "", { needs })).toBe(result === "success");
     }
-    expect(workflowValue(jobOf(release, "windows").if ?? "", ready("stable", "skipped"))).toBe(
-      false,
-    );
-    expect(workflowValue(jobOf(release, "windows").if ?? "", ready("alpha", "skipped"))).toBe(true);
+    // The windows job, as the linux job, runs whenever the notes it needs ran.
+    expect(jobOf(release, "windows").if).toBeUndefined();
+    expect(jobOf(release, "windows").needs).toEqual(["resolve", "notes"]);
     for (const dryRun of ["false", "true"]) {
       const contexts = { needs: { resolve: { outputs: { dry_run: dryRun } } }, vars: {} };
       expect(workflowString(upload["runs-on"] ?? "", contexts)).toBe("ubuntu-24.04");
@@ -110,6 +111,7 @@ describe("the signed channel workflow", () => {
       notes: { result: "success" },
       verify: { result: required === "true" ? "success" : "skipped" },
       linux: { result: "success" },
+      windows: { result: "success" },
       phone: { result: "success" },
     });
     for (const result of ["success", "failure", "cancelled", "skipped"]) {
@@ -754,7 +756,7 @@ describe("the signed channel workflow", () => {
      * Actions runs them: each step whose condition holds, with the job's and
      * its own environment, until one fails or `until` ran. The linux job's
      * packages are laid out as their artifact download leaves them, and so
-     * is an alpha's Windows installer, with the windows job's sums as its
+     * is the release's Windows installer, with the windows job's sums as its
      * output carries them. The record and both taps are a stand-in `gh`'s,
      * and Cloudflare is the disposable storage file the publication
      * command's own test uses. The job's tooling checkout is laid out from
@@ -777,12 +779,10 @@ describe("the signed channel workflow", () => {
       for (const name of linuxPackages)
         writeFileSync(join(packages, name), options.packages?.[name] ?? bytes);
       const windowsSums = `${shaOf(windowsBytes)} *${windowsName}`;
-      if (produced.resolve.channel === "alpha") {
-        const download = join(temp, "windows-download");
-        mkdirSync(download);
-        writeFileSync(join(download, windowsName), options.windows ?? windowsBytes);
-        writeFileSync(join(download, "SHA256SUMS"), `${windowsSums}\n`);
-      }
+      const download = join(temp, "windows-download");
+      mkdirSync(download);
+      writeFileSync(join(download, windowsName), options.windows ?? windowsBytes);
+      writeFileSync(join(download, "SHA256SUMS"), `${windowsSums}\n`);
       const tooling = join(temp, "workflow-tooling");
       const checkout = uploadSteps.find((candidate) => candidate.with?.path === ".release-tooling");
       for (const pattern of String(checkout?.with?.["sparse-checkout"]).trim().split("\n"))

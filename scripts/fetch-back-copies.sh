@@ -49,7 +49,7 @@ for PLACE in "$@"; do
 done
 
 # Each copy and its sidecar from a place's folder, keyless, checked against
-# the sidecar and the upload job's list; the disk image and an alpha's
+# the sidecar and the upload job's list; the disk image and the
 # Windows installer only where named, since no tap carries them.
 keyless() {
   local whose="$1" base="$2" dir="$3" image="$4" NAME

@@ -16,7 +16,9 @@ import type { AppPaths } from "../paths";
 import { atUtilityQos } from "../utilityQos";
 import { forgeAuthRequired } from "./forgeAuth";
 import {
+  APP_GIT_EMAIL,
   APP_GIT_IDENTITY,
+  APP_GIT_NAME,
   git,
   gitFailure,
   inheritWorktreeRemotes,
@@ -562,8 +564,8 @@ export class WorkspaceService {
     }
     await mkdir(dir, { recursive: true });
     await git(dir, ["init", "--initial-branch=main"]);
-    await git(dir, ["config", "user.name", "Infinitary"]);
-    await git(dir, ["config", "user.email", "infinitary@localhost"]);
+    await git(dir, ["config", "user.name", APP_GIT_NAME]);
+    await git(dir, ["config", "user.email", APP_GIT_EMAIL]);
     await writeFile(
       join(dir, "README.md"),
       "# Infinitary workspace\n\nThe app-managed default workspace. Tasks not tied to a registered repo run here, one git worktree per task.\n",

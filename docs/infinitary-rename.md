@@ -38,7 +38,8 @@ The app's identity as a system knows it - its bundle id, data folders, backgroun
 | The design skill | `.claude/skills/infinitary-design/` | `firstmate-3000-design`, which a personal workspace seed takes away |
 
 Names nothing outside one run reads - scratch and socket folder prefixes and log prefixes - are renamed outright.
-The app's git author is `Infinitary <infinitary@localhost>` since step 9; a repository the app made before keeps the author it was given.
+The app's git author is `Infinitary <infinitary@localhost>` since step 9, one constant in `src/core/workspace/git.ts` (`APP_GIT_NAME`, `APP_GIT_EMAIL`) for every commit the app makes for itself and for a batch's scratch commits; the address has no account behind it on any forge, so no one else's profile is linked to those commits.
+A repository the app made before keeps the author it was given.
 
 ## The words
 

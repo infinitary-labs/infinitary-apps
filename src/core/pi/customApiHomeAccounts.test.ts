@@ -113,8 +113,8 @@ it("pauses a connection the home moved or removed, and never lets a connection f
   expect(api.requests.length).toBe(before);
 });
 
-// Review of this change: a second connection approved there was held as gone
-// by the home's send from before it existed.
+// A save applies the home's last send again, which may predate a connection
+// approved since; that send does not hold the newer connection as gone.
 it("keeps a second connection approved from the home's current until the home says otherwise", async () => {
   const { api, world, definition, apply, save } = await approvedFromHome();
   await apply(definition);
@@ -131,7 +131,7 @@ it("keeps a second connection approved from the home's current until the home sa
   ).toEqual(["operator-model"]);
 });
 
-// Review of this change: an edit that no longer follows the home kept the old pause.
+// An edit that stops following the home ends the pause the home's connection put on it.
 it("serves a connection again once an edit stops it following a home connection that is gone", async () => {
   const { api, account, apply, view, usable, save } = await approvedFromHome();
   await apply(undefined);

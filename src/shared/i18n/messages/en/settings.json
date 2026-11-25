@@ -1475,6 +1475,7 @@
   "settingsUsageRecentTokensLegend": "Input excludes cached tokens. Total counts each category once.",
   "settingsUsageRecentUsdLegend": "Category estimates use recorded prices only. Their coverage can differ from the total.",
   "settingsUsageRecordsOf": "{count} of {records} records",
+  "settingsUsageReportsTo": "Claude work on your first mate’s computer is also reported to {host}, as its Claude Code settings ask. Other computers follow their own settings.",
   "settingsUsageScopeAll": "All work",
   "settingsUsageScopeFirstmate": "First mate",
   "settingsUsageScopeOther": "Other work",

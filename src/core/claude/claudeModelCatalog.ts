@@ -213,7 +213,7 @@ export async function readClaudeModelCatalog(
     factory?: ClaudeCatalogQueryFactory;
     /** Run the client at utility QoS: the in-app read is background work. */
     utilityQos?: boolean;
-    /** The person's own token command and address, as a session is handed them (`claudeAccess.ts`). */
+    /** The person's own token command, address and gateway headers, as a session is handed them (`claudeAccess.ts`). */
     settings?: ClaudeAccessSettings;
   } = {},
 ): Promise<ClaudeModelRow[]> {

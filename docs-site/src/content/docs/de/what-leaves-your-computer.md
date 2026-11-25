@@ -1,5 +1,5 @@
 ---
-source: 67e6220319b54d48
+source: 0683744dededd132
 title: Was deinen Computer verlässt
 description: Was Infinitary sendet, wohin es geht und der eine Schalter, der überhaupt etwas an uns sendet.
 ---
@@ -40,6 +40,12 @@ Siehe [Deine anderen Computer](/de/your-other-computers/).
 Eine Integration, die du in Einstellungen → **Integrationen** verbindest, etwa Google, wird mit ihrer eigenen Anmeldung erreicht, die auf dem Computer bleibt, auf dem du dich angemeldet hast.
 Dein erster Offizier und deine Crew lesen sie erst, wenn du sie verbindest.
 Siehe [Integrationen](/de/integrations/).
+
+## Die Nutzungsberichte deiner Firma {#your-companys-usage-reporting}
+
+Wenn deine Claude-Code-Einstellungsdatei oder deine Shell Nutzungsberichte für deine Firma einrichtet, wie es die Anleitung von Claude Code beschreibt, schickt Infinitary Claudes Nutzungseinträge für die Arbeit hier an dieselbe Stelle.
+Es sind die Einträge, die Claude Code selbst dorthin schicken würde, und Einstellungen → **Nutzung** nennt, wohin sie gehen.
+Eine Einrichtung, die der Administrator deiner Firma für den ganzen Computer verwaltet, erreicht Claude Code direkt, wie bisher.
 
 ## Suche nach Updates {#update-checks}
 

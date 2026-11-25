@@ -1,4 +1,4 @@
-import { chmodSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { writeMockClaudeClient } from "../../../tests/e2e/mockClaudeClient";
@@ -14,7 +14,7 @@ import { crewmateSessionSpec } from "../orchestrator/crewSession";
 import { appPathsFor } from "../paths";
 import { LOCAL_MACHINE_ID } from "../session/session";
 import { SessionRecordStore } from "../storage/sessionRecordStore";
-import type { ClaudeAccessSettings } from "./claudeAccess";
+import { accessFlagSettings, type ClaudeAccessSettings, readClaudeAccess } from "./claudeAccess";
 import { resolveClaudeExecutable } from "./claudeCli";
 import { CLAUDE_MODEL_PROVIDER } from "./claudeQueryCore";
 import { resetStoreLeasesForTest } from "./claudeStoreLease";
@@ -55,6 +55,7 @@ afterAll(async () => {
 const stores: SessionRecordStore[] = [];
 
 afterEach(async () => {
+  vi.unstubAllEnvs();
   resetStoreLeasesForTest();
   await Promise.all(stores.splice(0).map((store) => store.flushed()));
 });
@@ -73,13 +74,15 @@ function tokenCommand(home: string): { command: string; runs: () => number } {
 }
 
 /** A crewmate in a throwaway HOME whose client signs in only through `access`. */
-function boxedCrewmate(access: (home: string) => ClaudeAccessSettings) {
+function boxedCrewmate(
+  access: (home: string) => ClaudeAccessSettings | Promise<ClaudeAccessSettings>,
+) {
   const home = scratchDir("infinitary-claude-access-home-");
   const client = resolveClaudeExecutable();
   const stub = writeMockClaudeClient(home, {
     turns: { baseUrl: api.url, credential: "settings", ...(client ? { client } : {}) },
   });
-  const settings = access(home);
+  const settings = Promise.resolve(access(home));
   const env = { PATH: process.env.PATH ?? "", HOME: home, INFINITARY_CLAUDE_CLI: stub };
   const factory = createClaudeSessionFactory({
     configDir: join(home, ".claude"),
@@ -91,7 +94,7 @@ function boxedCrewmate(access: (home: string) => ClaudeAccessSettings) {
       stores.push(store);
       return store;
     },
-    accessSettings: async () => settings,
+    accessSettings: () => settings,
   });
   const spec = crewmateSessionSpec(
     appPathsFor(scratchDir("infinitary-claude-access-app-")),
@@ -136,5 +139,51 @@ describe("a Claude crewmate on the gateway in the person's Claude settings", () 
     expect(JSON.stringify(events), "the answer reached the crewmate").toContain(
       "Aye from the gateway.",
     );
+  });
+
+  // The header from the settings file, from the login shell, and the settings file winning over the shell.
+  it.each([
+    { from: "the person's settings file", shell: undefined, settings: "X-Team-Id: platform" },
+    { from: "the login shell", shell: "X-Team-Id: platform", settings: undefined },
+    {
+      from: "the settings file over the login shell",
+      shell: "X-Team-Id: shell",
+      settings: "X-Team-Id: platform",
+    },
+  ])("sends the gateway's custom header from $from", async ({ shell, settings }) => {
+    const crewmate = boxedCrewmate(async (home) => {
+      const token = tokenCommand(home);
+      const config = join(home, "claude-settings");
+      mkdirSync(config, { recursive: true });
+      writeFileSync(
+        join(config, "settings.json"),
+        JSON.stringify({
+          apiKeyHelper: token.command,
+          env: {
+            ANTHROPIC_BASE_URL: api.url,
+            ...(settings ? { ANTHROPIC_CUSTOM_HEADERS: settings } : {}),
+          },
+        }),
+      );
+      vi.stubEnv("CLAUDE_CONFIG_DIR", config);
+      return accessFlagSettings(
+        await readClaudeAccess(undefined, () =>
+          shell ? { ANTHROPIC_CUSTOM_HEADERS: shell } : undefined,
+        ),
+      );
+    });
+    api.answer((request, res) => answerText(request, res, "Aye from the gateway."));
+    const from = api.requests.length;
+    const session = await crewmate.factory.open(crewmate.spec);
+    await session.prompt("Say aye.");
+    session.dispose();
+    await session.closed();
+    const sent = api.requests.slice(from);
+    expect(sent.length, "the turn reached the gateway").toBeGreaterThan(0);
+    expect(
+      sent.map((request) => request.headers["x-team-id"]),
+      "every request carried the gateway's custom header",
+    ).toEqual(sent.map(() => "platform"));
+    expect(sent.map((request) => request.credential)).toEqual(sent.map(() => "gateway-token-1"));
   });
 });

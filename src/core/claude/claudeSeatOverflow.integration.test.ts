@@ -119,7 +119,7 @@ async function startOverflowApi(
         finishAnthropicStream(res, "end_turn", 2);
         return;
       }
-      const request: StubRequest = { n, body, raw };
+      const request: StubRequest = { n, body, raw, headers: req.headers };
       requests.push(request);
       open.add(res);
       res.on("close", () => open.delete(res));

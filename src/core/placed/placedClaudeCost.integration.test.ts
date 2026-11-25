@@ -41,7 +41,10 @@ import { WorkspaceService } from "../workspace/workspaceService";
 // home supervisor/ledger and native Claude client. Only the organization's
 // policy answer and model replies are stood in; no real policy or login is read.
 const permission = vi.hoisted(() => vi.fn(async () => true));
-vi.mock("../claude/claudeCostPolicy", () => ({ claudeCostReportingAllowed: permission }));
+vi.mock("../claude/claudeCostPolicy", () => ({
+  claudeCostReportingAllowed: permission,
+  claudeReportingDeps: () => ({ costReportingAllowed: permission }),
+}));
 vi.mock("../claude/claudeAccess", async (original) => ({
   ...(await original<typeof import("../claude/claudeAccess")>()),
   readClaudeAccess: async () => ({}),

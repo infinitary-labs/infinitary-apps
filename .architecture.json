@@ -125,6 +125,10 @@
     {
       "name": "push relay",
       "about": "Infinitary's service that hands sealed cards to Apple, which wakes the phone"
+    },
+    {
+      "name": "company collector",
+      "about": "Where a company's Claude Code setup gathers its usage reports"
     }
   ],
   "links": [
@@ -222,6 +226,11 @@
       "from": "core",
       "to": "Claude client",
       "why": "runs Claude sessions and sign-ins"
+    },
+    {
+      "from": "core",
+      "to": "company collector",
+      "why": "passes Claude's usage reports on"
     },
     {
       "from": "core",

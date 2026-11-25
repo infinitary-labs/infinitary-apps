@@ -3911,6 +3911,7 @@
 "settingsUsageRecentTokensLegend" = "A entrada exclui tokens em cache. O total conta cada categoria só uma vez.";
 "settingsUsageRecentUsdLegend" = "As estimativas por categoria usam só preços registrados. A cobertura delas pode ser diferente da do total.";
 "settingsUsageRecordsOf" = "%1$@ de %2$@ registros";
+"settingsUsageReportsTo" = "O trabalho do Claude no computador do seu imediato também é informado a %1$@, como pedem os ajustes do Claude Code dele. Os outros computadores seguem os próprios ajustes.";
 "settingsUsageScopeAll" = "Todo o trabalho";
 "settingsUsageScopeFirstmate" = "Imediato";
 "settingsUsageScopeOther" = "Outro trabalho";

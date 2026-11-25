@@ -10,7 +10,7 @@ import {
   readClaudeAccess,
   resolvePlacedClaudePolicyFixture,
 } from "../claude/claudeAccess";
-import { claudeCostReportingAllowed } from "../claude/claudeCostPolicy";
+import { claudeReportingDeps } from "../claude/claudeCostPolicy";
 import { defaultClaudeConfigDir } from "../claude/claudeQuota";
 import { createClaudeSessionFactory } from "../claude/session";
 import { protectedPlaces } from "../files/fileReach";
@@ -310,7 +310,7 @@ export async function startConversations(options: {
         ...(options.placedClaudePolicy
           ? { resolveWorkSettings: resolvePlacedClaudePolicyFixture(options.placedClaudePolicy) }
           : {}),
-        costReportingAllowed: () => claudeCostReportingAllowed(),
+        ...claudeReportingDeps(),
       }),
     },
     bind: async (binding) =>

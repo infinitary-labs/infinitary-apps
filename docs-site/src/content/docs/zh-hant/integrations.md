@@ -1,5 +1,5 @@
 ---
-source: c71bc8e7d8a6ffd4
+source: 1ce217aea874fab1
 title: 整合
 description: 連結 GitHub、GitLab、Bitbucket、Google 和 MCP 伺服器，讓你的大副和船員能使用它們，並選擇每一個可以不經詢問就做哪些事。
 ---
@@ -129,7 +129,7 @@ Infinitary 會把金鑰移到 [機密](/zh-hant/secrets/)，那一行只留下�
 你在瀏覽器裡完成後，新的一列就會打開，列出伺服器的動作。
 如果你取消，Infinitary 不會留下那一列，也不會保存任何金鑰。
 
-**MCP 伺服器** 旁邊的 **Notion** 和 **Linear**，按一下就能連結這兩項服務。
+**MCP 伺服器** 旁邊的 **Notion**、**Linear** 和 **Atlassian**，按一下就能連結這三項服務。
 
 Infinitary 會把這個登入保存在 [機密](/zh-hant/secrets/) 裡，並自行更新它。
 當服務結束這個登入時，那一列會顯示 **需要重新登入**，列上和它的選單裡都有 **重新登入**。

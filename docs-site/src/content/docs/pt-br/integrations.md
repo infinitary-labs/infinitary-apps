@@ -1,5 +1,5 @@
 ---
-source: c71bc8e7d8a6ffd4
+source: 1ce217aea874fab1
 title: Integrações
 description: Conecte GitHub, GitLab, Bitbucket, Google e servidores MCP para que seu imediato e sua tripulação possam alcançá-los, e escolha o que cada um pode fazer sem perguntar a você.
 ---
@@ -129,7 +129,7 @@ O formulário pede que você termine o login lá e mostra o endereço da página
 Quando você termina no navegador, a nova linha abre nas ações do servidor.
 Se você cancelar, o Infinitary não guarda nenhuma linha nem chave.
 
-**Notion** e **Linear**, ao lado de **Servidor MCP**, conectam esses dois serviços com um único clique.
+**Notion**, **Linear** e **Atlassian**, ao lado de **Servidor MCP**, conectam esses três serviços com um único clique.
 
 O Infinitary guarda o login em [Segredos](/pt-br/secrets/) e o renova sozinho.
 Quando o serviço o encerra, a linha diz **precisa fazer login de novo**, com **Fazer login de novo** na linha e no menu dela.

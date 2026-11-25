@@ -574,7 +574,7 @@ test("Infinitary on Windows updates itself from its channel, refusing a wrong ch
       const task = runTask(label);
       keep("run-task-after.json", JSON.stringify(task, null, 2));
       expect(task?.execute.toLowerCase()).toBe(executable.toLowerCase());
-      expect(task?.arguments).toBe("run");
+      expect(task?.arguments).toBe(`run --agent ${label}`);
       expect(removalEntries().map((entry) => entry.hive)).toEqual(["HKCU"]);
       // The installer the update ran is gone once the new copy started.
       await expect

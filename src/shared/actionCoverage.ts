@@ -82,6 +82,7 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, ActionExceptio
     "Stops reporting and forgets the connection's kept headers on the captain's click in Settings",
   ],
   "inf:converse": ["not-a-setting", "Conversation, not an app setting"],
+  "inf:conversation:take-back": ["not-a-setting", "Conversation, not an app setting"],
   "inf:repos:offer-folder": [
     "consent",
     // i18n-exempt: an inventory reason the channel parity test reads, never shown

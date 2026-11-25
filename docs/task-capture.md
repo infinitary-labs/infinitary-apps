@@ -232,6 +232,25 @@ Open-thread reads list every followed, unended message in one query (`TaskServic
 The first mate's turn facts list the open messages (`open_asks`), one per row: each one's id, when it was sent, how it stands and the work that still runs for it, newest first and bounded like the task list, with a notice still up counted as unanswered; `open_work` lists every one, one per row, with its words.
 They never repeat the captain's words, which are in its conversation.
 
+## Taking back a message
+
+The captain may take back their newest message to the first mate within one minute of sending it (`TAKE_BACK_WINDOW_MS`, `src/shared/takeBack.ts`, one constant and not a setting).
+A view asks with `inf:conversation:take-back`, or sends a replacement with `replaces` on `inf:converse`, which takes back the newest message and opens the new one as its correction in one write; a replacement keeps no window, since the view marked the draft while the message could still be taken back.
+`captain_asks.taken_back_at` holds when it was taken back and `correction_of` the message a replacement took back; `TaskService.capture` is their only writer (`takeBack`, `openAsk`).
+The answer names how far the message had got, and the first mate's agent runs each step (`TakeBacks`, `src/core/orchestrator/takeBack.ts`):
+
+- **Not read yet** (`withdrawn`): its words leave the lane (`InboxStore.withdraw`, `docs/inbox.md`) and the message closes on the capture floor; no wake follows.
+- **Being read** (`stopping`): the running turn is told at once, and from then on every work-changing tool credited to the message is refused, beside the answer-only gate in `firstmateTools.ts`: a call whose `ask_id` names it, or a call naming no message in a turn that read it.
+  A call naming another message, or `ask_id` "", goes through.
+  The steer into the turn is best effort; the refusal holds without it.
+- **Already acted on** (`undoing`): once no turn holds the message, one wake of origin captain, `taken-back`, asks the first mate to undo what the message caused, listed from its delivery record by tool, and each task by the id its tools take and its key, and to close with one line saying what it undid and what it cannot undo.
+  Its once-name, `taken-back:<askId>`, keeps it to one wake per message, across a restart too.
+  A replacement's words ride the wake, and the first mate keeps what they still ask for.
+
+A taken-back message has ended: it is no open thread, gets no answer retry and no notice, and its delivery is covered.
+Naming it in `ask_id` is refused on every tool (`AskEnding.nameRefusal`).
+Each round of the last turn above the input carries the message's `askId` and `takenBack`, so a view words the mark itself.
+
 ## Where a reply was typed
 
 A message the captain typed as a reply under a first mate card keeps that card's id and its line's number in the card's thread on its own row (`captain_asks.typed_card_id` and `typed_line`, INF-6115 piece 3); both are empty for a message typed in the main input and for a row an older build saved.

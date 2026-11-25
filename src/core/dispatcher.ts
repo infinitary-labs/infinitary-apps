@@ -305,6 +305,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       await services.firstmate.converse(prepareComposerTurn(turn));
       return { ok: true as const };
     },
+    "inf:conversation:take-back": ({ askId }) => services.firstmate.takeBack(askId),
     "inf:conversation:last-turn": () => services.tasks.capture.lastTurn(),
     "inf:conversation:thread": (request) => services.tasks.capture.conversation(request),
     "inf:conversation:state": () => ({ busy: services.firstmate.isBusy() }),

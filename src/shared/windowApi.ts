@@ -164,6 +164,7 @@ import type { DeviceSignInEvent, DeviceSignIns } from "./signIns";
 import type { StandbyReady, StandbyViews } from "./standby";
 import type { TagCheckChange, TagCheckRead, TagCheckView } from "./tagCheck";
 import type { ProjectTagChange, ProjectTagChangeResult } from "./tags";
+import type { TakeBackResult } from "./takeBack";
 import type {
   SavedSignInsView,
   TaskBrowserAskAnswer,
@@ -288,12 +289,15 @@ export type FirstmateApi = {
             taskId?: string;
             pastCardId?: string;
             focusedProjectId?: string;
+            replaces?: string;
           },
     ) => Promise<{ ok: true }>;
     /** The captain's newest message and the Firstmate's reply line beside it, or null before the first. */
     lastTurn: () => Promise<LastTurn | null>;
     /** One page of the conversation, newest first (docs/composer.md "The conversation"). */
     thread: (request?: ConversationPageRequest) => Promise<ConversationPage>;
+    /** Take back the newest message within the window (docs/task-capture.md, "Taking back a message"). */
+    takeBack: (askId: string) => Promise<TakeBackResult>;
   };
   task: {
     abort: (taskId: string) => Promise<{ ok: true }>;

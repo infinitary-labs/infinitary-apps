@@ -445,6 +445,7 @@ describe("ipc contract", () => {
       "inf:computers:resources",
       "inf:conversation:last-turn",
       "inf:conversation:state",
+      "inf:conversation:take-back",
       "inf:conversation:thread",
       "inf:converse",
       "inf:crew:counts",

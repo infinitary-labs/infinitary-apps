@@ -272,7 +272,8 @@ A sender may take back or rewrite a message no turn was handed yet, and never on
 - `InboxStore.get(id)` reads one row, in flight or not, so its sender can tell where it stands.
 
 Automation uses them (`docs/automation.md`, "Deliveries"): a pause, an edit or a delete takes back a scheduled prompt the first mate has not read, and a later occurrence folds into the one still waiting.
-The first mate's close as done is the other (`docs/task-record.md`, "One close as done"): its `drop_waiting` takes back guidance an idle crewmate no longer needs, first letting go a row a turn was handed and never finished with, since no turn runs to acknowledge it.
+The first mate's close as done is another (`docs/task-record.md`, "One close as done"): its `drop_waiting` takes back guidance an idle crewmate no longer needs, first letting go a row a turn was handed and never finished with, since no turn runs to acknowledge it.
+The captain's own take back of their newest message is a third (`docs/task-capture.md`, "Taking back a message"): its words leave the first mate's lane while no turn was handed them, and its undo wake rides `InboxStore.enqueueCaptainOnce`, with the captain's origin and a once-name.
 
 ## The wake envelope
 

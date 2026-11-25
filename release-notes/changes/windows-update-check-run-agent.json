@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "windows-update-check-run-agent",
+      "reason": "The on-request Windows update check expects the run's Task Scheduler entry to carry the --agent words the app already writes, as the installer check does; tests and docs only, no app behavior change."
+    }
+  ]
+}

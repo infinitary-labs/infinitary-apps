@@ -812,7 +812,7 @@ export class GitHubForge implements Forge {
 
   async putInDirectly(change: ForgeChange, headSha: string, way: MergeWay): Promise<MergeAnswer> {
     const { path, body } = this.mergeRequestOf(change, headSha, way);
-    return this.putInDirect(change, path, body);
+    return this.putInDirect(change, path, body, true);
   }
 
   heldMergeState(number: number, task: string): Promise<ForgeMergeRequest> {
@@ -821,19 +821,25 @@ export class GitHubForge implements Forge {
   }
 
   /** The direct merge (`PUT .../merge`): for a GitHub without the asynchronous one, or in place of a request GitHub holds. */
-  private async putInDirect(change: ForgeChange, path: string, body: object): Promise<MergeAnswer> {
+  private async putInDirect(
+    change: ForgeChange,
+    path: string,
+    body: object,
+    held = false,
+  ): Promise<MergeAnswer> {
     type Answer = { merged?: boolean; sha?: string; message?: string } | null;
-    // An answer the app cannot read says nothing: the merge may have gone in.
-    const answer = await (this.request("PUT", path, body) as Promise<Answer>).catch((caught) =>
-      caught instanceof ForgeError ? Promise.reject(caught) : null,
-    );
-    if (typeof answer?.merged !== "boolean")
+    const sent = this.request("PUT", path, body) as Promise<Answer>;
+    // In place of a held request, an unreadable answer says nothing: the merge may have gone in.
+    const answer = await (held
+      ? sent.catch((caught) => (caught instanceof ForgeError ? Promise.reject(caught) : null))
+      : sent);
+    if (held && typeof answer?.merged !== "boolean")
       // i18n-exempt: a forge failure's words, read by the first mate and kept on the timeline in English
       throw new ForgeMergeUnconfirmed(
         `GitHub's answer to the merge of ${this.label(change)} could not be read`,
       );
     // A 200 is not a merge on its own: GitHub says it merged, or it did not.
-    if (!answer.merged) {
+    if (answer?.merged !== true) {
       throw new ForgeError(
         "refused",
         `GitHub did not confirm the merge of ${this.label(change)}${answer?.message ? `: ${answer.message}` : ""}`,

@@ -837,12 +837,13 @@ export class MergeReviews {
     let direct: { heldMs: number } | undefined;
     // `confirmed` is the host's own answer to the direct merge; a read that
     // finds the pull request merged after it left does not say who merged it.
-    const merged = (sha?: string, head?: string, confirmed = true): PrOutcome => {
+    // `refusal` is the host's own refusal of that merge, in its words.
+    const merged = (sha?: string, head?: string, confirmed = true, refusal?: string): PrOutcome => {
       const newer = otherMerged(candidate.headSha, head);
       const other = otherMergedFacts(forge.place, forge.label(change), head, candidate.headSha);
       return {
         ok: true,
-        text: `Merged ${forge.label(change)}${forge.place ? ` on ${forge.place}` : ""}.${other.told}${direct ? (confirmed ? directlyTold(forge.place, direct.heldMs) : afterDirectTold(forge.place)) : ""}`,
+        text: `Merged ${forge.label(change)}${forge.place ? ` on ${forge.place}` : ""}.${other.told}${direct ? (confirmed ? directlyTold(forge.place, direct.heldMs) : afterDirectTold(forge.place, refusal)) : ""}`,
         ...(direct && confirmed && forge.place
           ? directlyLine(forge.place, forge.label(change))
           : {}),
@@ -920,7 +921,12 @@ export class MergeReviews {
       const sent = dispatched && !(caught instanceof ForgeError && caught.beforeSend);
       const after = sent ? await forge.pull?.(review.number).catch(() => undefined) : undefined;
       if (after?.merged && (after.headSha === candidate.headSha || forge.mergeNamesNoVersion))
-        return merged(after.mergedSha, after.headSha, false);
+        return merged(
+          after.mergedSha,
+          after.headSha,
+          false,
+          isRefusal(caught) ? message : undefined,
+        );
       // The host's own verdict on the one direct merge: never sent again, and
       // the refusal the first mate hears, never a wait on an outcome.
       const directRefused = sent && direct !== undefined && isRefusal(caught);

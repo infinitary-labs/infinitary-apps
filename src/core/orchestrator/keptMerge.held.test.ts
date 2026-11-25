@@ -431,6 +431,28 @@ describe("a merge request GitHub holds for an approved, clean pull request", () 
     await h.supervisor.disposeAll();
   });
 
+  it("keeps GitHub's reason when it refuses the direct merge of a reviewed pull request that already reads merged, without saying who merged it", async () => {
+    const refusal = "Pull Request is not mergeable";
+    const { h, stamped } = await replay(
+      88,
+      () => ({ status: 409, json: PENDING }),
+      // Something else merges it just before the direct merge arrives.
+      (merge) => {
+        merge();
+        return { status: 405, json: { message: refusal } };
+      },
+      { reviewed: true },
+    );
+    expect(reviewedWrites(stamped)).toEqual(["PUT merge-async", "PUT merge"]);
+    const wakes = settleWakes(h.ops).filter((wake) => wake.includes("Merged #7"));
+    expect(wakes).toHaveLength(1);
+    expect(wakes[0]).toContain(
+      `GitHub held the first merge request without finishing it, so the app sent its direct merge once at the approved version and GitHub refused it: GitHub answered 405 to PUT ${DIRECT}: ${refusal}. The pull request reads merged now; whether the held request or someone else merged it is not known. Tell the captain that once; nothing else is needed.`,
+    );
+    expect(wakes[0]).not.toContain("got no answer");
+    await h.supervisor.disposeAll();
+  });
+
   it("tells the first mate once when a reviewed pull request reads merged after its direct merge got no answer", async () => {
     const { h, stamped, pass } = await replay(
       88,

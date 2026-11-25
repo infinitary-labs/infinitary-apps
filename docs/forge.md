@@ -1053,6 +1053,8 @@ A direct merge GitHub answers as merged says "Merged #N on GitHub directly, afte
 A pull request that reads merged after a direct merge left unanswered wakes the first mate once too, in words that say the app sent it and that the read does not show whether it, the held request or a person merged (`afterDirectTold`).
 A direct merge GitHub refuses wakes the first mate once with GitHub's reason, and nothing but reads follows for that hold; that includes a refusal because the main branch moved, which an ordinary merge would wait on and try again.
 Only GitHub's own verdict is a refusal: an answer the app cannot read, such as a 200 with no body, is an answer that never came (`ForgeMergeUnconfirmed`).
+That reading is this merge's alone; the direct merge for a GitHub without the asynchronous call still takes an answer that does not say merged as a refusal.
+A reviewed pull request that reads merged right after GitHub refused its direct merge is told with GitHub's reason, and without a claim of who merged it.
 All three hold for a reviewed pull request as for the task's own.
 A hold GitHub never named is bounded by the same five minutes; after its direct merge is sent, refused or withheld, the approval reads the pull request until it merges, closes or a new version is approved.
 The first mate's own merge of a pull request whose kept approval still reads back a merge or follows a hold runs that approval once and answers with what it found (`SettleService.keptMergeUnread`); it sends nothing beside the approval, whatever that run found.

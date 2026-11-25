@@ -29,12 +29,20 @@ export function directlyTold(place: string | null | undefined, heldMs: number): 
 
 /**
  * What the first mate hears when the pull request reads merged after the
- * one direct merge left and its answer never came: the read does not say
- * whether that merge, the held request or a person merged it.
+ * one direct merge left and was not confirmed: its answer never came, or
+ * the host refused it in the words of `refusal`. The read does not say who
+ * merged it.
  */
-export function afterDirectTold(place: string | null | undefined): string {
+export function afterDirectTold(place: string | null | undefined, refusal?: string): string {
+  // i18n-exempt: named in a merge answer served to the first mate, stays English
+  const host = place ?? "The host";
+  const answered = refusal
+    ? // i18n-exempt: served to the first mate in the merge answer, stays English
+      `${host} refused it: ${refusal}${/[.!?]$/.test(refusal) ? "" : "."} The pull request reads merged now; whether the held request or someone else merged it is not known.`
+    : // i18n-exempt: served to the first mate in the merge answer, stays English
+      "got no answer. The pull request reads merged now; whether that merge, the held request or someone else merged it is not known.";
   // i18n-exempt: served to the first mate in the merge answer, stays English
-  return ` ${place ?? "The host"} held the first merge request without finishing it, so the app sent its direct merge once at the approved version and got no answer. The pull request reads merged now; whether that merge, the held request or someone else merged it is not known. Tell the captain that once; nothing else is needed.`;
+  return ` ${host} held the first merge request without finishing it, so the app sent its direct merge once at the approved version and ${answered} Tell the captain that once; nothing else is needed.`;
 }
 
 /** The Activity line of a merge that was the direct one sent in place of a held request. */

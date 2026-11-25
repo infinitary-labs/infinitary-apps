@@ -156,6 +156,23 @@ describe("a merge request GitHub already holds for the pull request", () => {
     });
   });
 
+  it("leaves the direct merge for a GitHub without the background merge as it was: an answer with no merged value is a refusal", async () => {
+    // A 404 to the background merge: nothing was sent on, and the direct merge is asked instead.
+    let answer: { status?: number; json?: unknown } = {};
+    const { forge } = await stub({ [`PUT ${DIRECT}`]: () => answer });
+    await expect(forge.putIn(merging, "feedbeef", "squash")).rejects.toMatchObject({
+      name: "ForgeError",
+      failure: "refused",
+      message: "GitHub did not confirm the merge of #23",
+    });
+    answer = { json: { message: "accepted" } };
+    await expect(forge.putIn(merging, "feedbeef", "squash")).rejects.toMatchObject({
+      name: "ForgeError",
+      failure: "refused",
+      message: "GitHub did not confirm the merge of #23: accepted",
+    });
+  });
+
   it("keeps the id of a request GitHub took when a read of its result fails", async () => {
     const { forge, seen } = await stub(
       {

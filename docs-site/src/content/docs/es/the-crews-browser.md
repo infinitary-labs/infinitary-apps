@@ -1,5 +1,5 @@
 ---
-source: 01d22d3c265a0418
+source: d48d479419254865
 title: El navegador de la tripulación
 description: Un tripulante puede abrir sitios web en un navegador propio para su tarea. Míralo trabajar, toma el control cuando una página te necesite y decide cuáles de tus inicios de sesión pueden usar las tareas posteriores.
 ---
@@ -75,7 +75,7 @@ Solo toma una foto de la página con una razón que da, que queda en la Activida
 
 Para hablarle al tripulante de un lugar de la página, señálalo.
 
-1. Presiona **Señalar** en la fila sobre la página, o ⇧⌘A (Ctrl+Shift+A en Linux).
+1. Presiona **Señalar** en la fila sobre la página, o ⇧⌘A (Ctrl+Shift+A en Linux y Windows).
    La página se queda quieta, y nada de lo que haces la alcanza.
 2. Presiona un punto, arrastra un recuadro, o elige **Línea a mano alzada** y dibuja una línea.
    Desde el teclado, recorre los elementos de la página con las teclas de flecha y presiona Enter.

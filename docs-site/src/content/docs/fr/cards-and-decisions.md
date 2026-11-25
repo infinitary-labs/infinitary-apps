@@ -1,5 +1,5 @@
 ---
-source: 543f9bb4d4d0a6b3
+source: 28dbb83c4a64e09c
 title: Cartes et décisions
 description: Comment votre second et votre équipage vous apportent réponses et décisions sous forme de cartes, et comment y répondre.
 ---
@@ -13,8 +13,8 @@ Les cartes apparaissent au milieu de la fenêtre, par-dessus votre second.
 Quand plusieurs cartes attendent, elles forment une pile, et vous en voyez une à la fois.
 Une nouvelle carte arrive sans écarter celle que vous lisez.
 
-- **Afficher la carte suivante** : ⇧⌘] (Ctrl+Shift+] sous Linux).
-- **Afficher la carte précédente** : ⇧⌘[ (Ctrl+Shift+[ sous Linux).
+- **Afficher la carte suivante** : ⇧⌘] (Ctrl+Shift+] sous Linux et Windows).
+- **Afficher la carte précédente** : ⇧⌘[ (Ctrl+Shift+[ sous Linux et Windows).
 
 Une tâche dont une carte vous attend est listée sous En attente de vous dans Tâches.
 Les touches de cette page sont les touches standard ; [Clavier](/fr/keyboard/) liste toutes les touches, pour chaque ensemble de touches que vous pouvez choisir.
@@ -36,7 +36,7 @@ La plupart des décisions ont aussi un discret bouton **Refuser**, pour dire non
 ## Répondre à une décision {#answering-a-decision}
 
 Appuyez sur un bouton pour choisir.
-⌘1 (Ctrl+1 sous Linux) appuie sur le bouton principal, et ⌘2 à ⌘4 sur les autres.
+⌘1 (Ctrl+1 sous Linux et Windows) appuie sur le bouton principal, et ⌘2 à ⌘4 sur les autres.
 
 Certaines cartes posent plusieurs questions dans leur corps, à côté de la partie que concerne chaque question.
 Choisissez une réponse pour chacune, puis appuyez sur un bouton pour les envoyer toutes ensemble.
@@ -60,7 +60,7 @@ Chaque carte de votre second ou d’un équipier a, sous son corps, un champ qui
 Une réponse va à celui qui a écrit la carte.
 La première réponse ouvre un fil à côté de la carte, et l’auteur y répond.
 Quand l’auteur modifie la carte en réponse, la carte est révisée sur place, et le fil le signale.
-Pour replier le fil dans la carte, appuyez sur ⌘\ (Ctrl+\ sous Linux).
+Pour replier le fil dans la carte, appuyez sur ⌘\ (Ctrl+\ sous Linux et Windows).
 
 La carte reste à sa place pendant que son auteur traite votre réponse.
 Un équipier redessine sa carte une seule fois, quand il a terminé.
@@ -69,7 +69,7 @@ Un équipier redessine sa carte une seule fois, quand il a terminé.
 
 Pour dire de quelle partie d’une carte parlent vos mots, désignez-la.
 
-1. Appuyez sur **Désigner**, le pointeur à côté du champ de réponse, ou sur ⇧⌘A (Ctrl+Shift+A sous Linux).
+1. Appuyez sur **Désigner**, le pointeur à côté du champ de réponse, ou sur ⇧⌘A (Ctrl+Shift+A sous Linux et Windows).
 2. Cliquez sur une partie de la carte, ou allez-y avec les flèches et appuyez sur Entrée.
 3. Tapez un commentaire, ou laissez-le vide, et appuyez sur **Garder**.
 
@@ -100,20 +100,20 @@ Il masque la carte sans y répondre.
 Vos choix et tout ce que vous avez tapé restent avec elle.
 La carte attend sous En attente de vous dans Tâches, et revient quand son auteur la modifie.
 
-- **Mettre la carte de côté** : ⇧⌘M (Ctrl+Shift+M sous Linux).
-- **Mettre toutes les cartes de côté ou les ramener** : ⌥⇧⌘M (Ctrl+Alt+Shift+M sous Linux).
+- **Mettre la carte de côté** : ⇧⌘M (Ctrl+Shift+M sous Linux et Windows).
+- **Mettre toutes les cartes de côté ou les ramener** : ⌥⇧⌘M (Ctrl+Alt+Shift+M sous Linux et Windows).
 
 Pour ramener une carte, cliquez sur sa tâche dans Tâches.
 
 ## Rechercher des mots dans une carte {#finding-words-in-a-card}
 
-Appuyez sur ⌘F (Ctrl+F sous Linux), ou sur la loupe en haut de la carte, pour rechercher des mots dans la carte à l’écran.
+Appuyez sur ⌘F (Ctrl+F sous Linux et Windows), ou sur la loupe en haut de la carte, pour rechercher des mots dans la carte à l’écran.
 Tapez dans le champ qui s’ouvre, et les résultats s’allument à mesure que vous tapez.
 Les majuscules et les accents ne comptent pas.
 Un compteur comme « 2 sur 7 » dit sur quel résultat vous êtes.
 
-- **Résultat suivant** : Entrée ou ⌘G (Ctrl+G sous Linux).
-- **Résultat précédent** : Maj+Entrée ou ⇧⌘G (Ctrl+Shift+G sous Linux).
+- **Résultat suivant** : Entrée ou ⌘G (Ctrl+G sous Linux et Windows).
+- **Résultat précédent** : Maj+Entrée ou ⇧⌘G (Ctrl+Shift+G sous Linux et Windows).
 - **Fermer la recherche** : Échap.
 
 La recherche parcourt toute la carte : son titre, son corps, ses sections repliées et son fil.

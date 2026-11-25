@@ -1,5 +1,5 @@
 ---
-source: 668341763c6348cb
+source: e0f16d58d735b925
 title: Projekte
 description: Wie du ein Projekt zu Infinitary hinzufügst, mehrere Repositorys in einem zusammenfasst, ihm Tags gibst, das Fenster auf eines konzentrierst, wählst, wie seine Änderungen zusammengeführt werden, und es entfernst.
 ---
@@ -123,7 +123,7 @@ Deine Dateien bleiben unverändert, bis du eine Änderung zusammenführst.
 ## Auf ein Projekt konzentrieren {#focus-on-one-project}
 
 Bei zwei oder mehr Projekten zeigt die obere Leiste eine Projektauswahl.
-Drück darauf oder drück ⇧⌘P (Ctrl+Shift+P unter Linux), um eine Reihe deiner Projekte zu öffnen.
+Drück darauf oder drück ⇧⌘P (Ctrl+Shift+P unter Linux und Windows), um eine Reihe deiner Projekte zu öffnen.
 Jede Auswahl zählt die Aufgaben, die auf dich warten, und die Aufgaben, die gerade in Arbeit sind.
 Wähl ein Projekt, um das Fenster darauf zu konzentrieren.
 

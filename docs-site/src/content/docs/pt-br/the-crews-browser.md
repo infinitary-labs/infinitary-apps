@@ -1,5 +1,5 @@
 ---
-source: 01d22d3c265a0418
+source: d48d479419254865
 title: O navegador da tripulação
 description: Um tripulante pode abrir sites em um navegador próprio para a tarefa dele. Acompanhe o trabalho, assuma o controle quando uma página precisar de você e decida quais dos seus logins as próximas tarefas podem usar.
 ---
@@ -75,7 +75,7 @@ Ele só tira uma imagem da página com um motivo que ele informa, que vai para a
 
 Para falar com o tripulante sobre um lugar da página, aponte para ele.
 
-1. Pressione **Apontar para** na linha acima da página, ou ⇧⌘A (Ctrl+Shift+A no Linux).
+1. Pressione **Apontar para** na linha acima da página, ou ⇧⌘A (Ctrl+Shift+A no Linux e no Windows).
    A página fica parada, e nada do que você faz chega a ela.
 2. Pressione um ponto, arraste uma caixa, ou escolha **Linha à mão livre** e desenhe uma linha.
    Pelo teclado, percorra os itens da página com as setas e pressione Enter.

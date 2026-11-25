@@ -1,5 +1,5 @@
 ---
-source: 668341763c6348cb
+source: e0f16d58d735b925
 title: Proyectos
 description: Cómo agregar un proyecto a Infinitary, reunir varios repositorios en uno, darle etiquetas, centrar la ventana en uno, elegir cómo se fusionan sus cambios y quitarlo.
 ---
@@ -123,7 +123,7 @@ Tus archivos se quedan como están hasta que fusionas un cambio.
 ## Centrarse en un proyecto {#focus-on-one-project}
 
 Con dos proyectos o más, la barra superior muestra una píldora de proyecto.
-Presiónala, o presiona ⇧⌘P (Ctrl+Shift+P en Linux), para abrir una fila con tus proyectos.
+Presiónala, o presiona ⇧⌘P (Ctrl+Shift+P en Linux y Windows), para abrir una fila con tus proyectos.
 Cada píldora cuenta las tareas que te esperan y las tareas que están trabajando.
 Elige un proyecto para centrar la ventana en él.
 

@@ -1,5 +1,5 @@
 ---
-source: 543f9bb4d4d0a6b3
+source: 28dbb83c4a64e09c
 title: Tarjetas y decisiones
 description: Cómo tu primer oficial y tu tripulación te traen respuestas y decisiones como tarjetas, y cómo responderlas.
 ---
@@ -13,8 +13,8 @@ Las tarjetas aparecen en el centro de la ventana, sobre tu primer oficial.
 Cuando hay más de una tarjeta esperando, forman una pila, y ves una a la vez.
 Una tarjeta nueva llega sin apartar la que estás leyendo.
 
-- **Mostrar la tarjeta siguiente**: ⇧⌘] (Ctrl+Shift+] en Linux).
-- **Mostrar la tarjeta anterior**: ⇧⌘[ (Ctrl+Shift+[ en Linux).
+- **Mostrar la tarjeta siguiente**: ⇧⌘] (Ctrl+Shift+] en Linux y Windows).
+- **Mostrar la tarjeta anterior**: ⇧⌘[ (Ctrl+Shift+[ en Linux y Windows).
 
 Una tarea con una tarjeta que te espera aparece en Esperándote, en Tareas.
 Las teclas de esta página son las estándar; [Teclado](/es/keyboard/) enumera cada tecla, para cada conjunto de teclas que puedes elegir.
@@ -36,7 +36,7 @@ La mayoría de las decisiones también tienen un discreto botón **Rechazar**, p
 ## Responder una decisión {#answering-a-decision}
 
 Presiona un botón para elegir.
-⌘1 (Ctrl+1 en Linux) presiona el botón principal, y de ⌘2 a ⌘4 los demás.
+⌘1 (Ctrl+1 en Linux y Windows) presiona el botón principal, y de ⌘2 a ⌘4 los demás.
 
 Algunas tarjetas hacen más de una pregunta en su cuerpo, junto a la parte a la que se refiere cada pregunta.
 Elige una respuesta para cada una y luego presiona un botón para enviarlas todas juntas.
@@ -60,7 +60,7 @@ Cada tarjeta de tu primer oficial o de un tripulante tiene, debajo de su cuerpo,
 Una respuesta le llega a quien escribió la tarjeta.
 La primera respuesta abre un hilo junto a la tarjeta, y el autor responde ahí.
 Cuando el autor cambia la tarjeta como respuesta, la tarjeta se revisa en su lugar, y el hilo lo dice.
-Para volver a plegar el hilo en la tarjeta, presiona ⌘\ (Ctrl+\ en Linux).
+Para volver a plegar el hilo en la tarjeta, presiona ⌘\ (Ctrl+\ en Linux y Windows).
 
 La tarjeta se queda en su lugar mientras su autor trabaja en tu respuesta.
 Un tripulante vuelve a dibujar su tarjeta una vez, cuando ha terminado.
@@ -69,7 +69,7 @@ Un tripulante vuelve a dibujar su tarjeta una vez, cuando ha terminado.
 
 Para decir de qué parte de una tarjeta hablan tus palabras, señálala.
 
-1. Presiona **Señalar**, el puntero que está junto al campo de respuesta, o ⇧⌘A (Ctrl+Shift+A en Linux).
+1. Presiona **Señalar**, el puntero que está junto al campo de respuesta, o ⇧⌘A (Ctrl+Shift+A en Linux y Windows).
 2. Haz clic en una parte de la tarjeta, o ve hasta ella con las teclas de flecha y presiona Enter.
 3. Escribe un comentario, o déjalo vacío, y presiona **Poner en cola**.
 
@@ -100,20 +100,20 @@ Oculta la tarjeta sin responderla.
 Lo que elegiste y lo que escribiste se quedan con ella.
 La tarjeta espera en Esperándote, en Tareas, y vuelve cuando su autor la cambia.
 
-- **Apartar la tarjeta**: ⇧⌘M (Ctrl+Shift+M en Linux).
-- **Apartar todas las tarjetas o traerlas de vuelta**: ⌥⇧⌘M (Ctrl+Alt+Shift+M en Linux).
+- **Apartar la tarjeta**: ⇧⌘M (Ctrl+Shift+M en Linux y Windows).
+- **Apartar todas las tarjetas o traerlas de vuelta**: ⌥⇧⌘M (Ctrl+Alt+Shift+M en Linux y Windows).
 
 Para traer de vuelta una tarjeta, haz clic en su tarea en Tareas.
 
 ## Buscar palabras en una tarjeta {#finding-words-in-a-card}
 
-Presiona ⌘F (Ctrl+F en Linux), o la lupa de la parte superior de la tarjeta, para buscar palabras en la tarjeta en pantalla.
+Presiona ⌘F (Ctrl+F en Linux y Windows), o la lupa de la parte superior de la tarjeta, para buscar palabras en la tarjeta en pantalla.
 Escribe en el campo que se abre, y las coincidencias se iluminan mientras escribes.
 Las mayúsculas y los acentos no importan.
 Un contador como «2 de 7» dice en qué coincidencia estás.
 
-- **Siguiente coincidencia**: Enter o ⌘G (Ctrl+G en Linux).
-- **Coincidencia anterior**: Shift+Enter o ⇧⌘G (Ctrl+Shift+G en Linux).
+- **Siguiente coincidencia**: Enter o ⌘G (Ctrl+G en Linux y Windows).
+- **Coincidencia anterior**: Shift+Enter o ⇧⌘G (Ctrl+Shift+G en Linux y Windows).
 - **Cerrar la búsqueda**: Escape.
 
 Busca en toda la tarjeta: su título, su cuerpo, sus secciones plegadas y su hilo.

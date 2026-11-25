@@ -1,5 +1,5 @@
 ---
-source: 45896475239d4a1f
+source: 91a924b8c4a1a2d6
 title: Secrets
 description: Gardez les mots de passe et les clés dont votre équipage a besoin, autorisez chaque utilisation sur une carte et voyez ce qui les a utilisés.
 ---
@@ -19,7 +19,7 @@ Ouvrez **Réglages**, puis **Secrets**, ou cherchez **Ouvrir Secrets** dans la r
 **Rechercher des secrets** en trouve un par son nom, son emplacement ou la tâche qui l’a utilisé en dernier.
 
 Sur un Mac, la ligne sous la liste indique « Conservés sur cet ordinateur. Votre équipage les utilise sans jamais les voir, sauf si vous en copiez un. »
-Sous Linux, elle indique que votre équipage ne les utilise qu’avec votre approbation, mais que tout programme que vous exécutez peut y accéder tant que le stockage de secrets de votre système est déverrouillé.
+Sous Linux et Windows, elle indique que votre équipage ne les utilise qu’avec votre approbation, mais que tout programme que vous exécutez peut y accéder tant que le stockage de secrets de votre système est déverrouillé.
 
 Les secrets restent sur l’ordinateur où vit votre second.
 Un ordinateur qui contrôle votre second depuis ailleurs n’a pas de section Secrets à lui.
@@ -53,10 +53,10 @@ Ne tapez un secret que dans un champ dessiné par Infinitary, jamais dans le cha
 ## Copier une valeur {#copy-a-value}
 
 Quand vous avez vous-même besoin d’une valeur, par exemple pour coller une clé dans un site web, ouvrez la ligne du secret et choisissez **Copier la valeur**.
-Chaque fois, votre ordinateur vous demande de confirmer que c’est vous : sur un Mac avec Touch ID ou votre mot de passe, et sous Linux avec votre mot de passe.
+Chaque fois, votre ordinateur vous demande de confirmer que c’est vous : sur un Mac avec Touch ID ou votre mot de passe, sous Linux avec votre mot de passe, et sous Windows avec Windows Hello ou votre mot de passe Windows.
 
 La valeur va dans le presse-papiers de cet ordinateur, et d’aucun autre.
-Sur un Mac, elle ne part pas vers vos autres appareils.
+Sur un Mac et sous Windows, elle ne part pas vers vos autres appareils.
 Sous Linux, un outil d’historique du presse-papiers peut tout de même la garder, et la ligne le dit.
 
 La ligne indique alors « Copiée. Elle quitte le presse-papiers à » suivi de l’heure, 90 secondes après la copie.
@@ -87,7 +87,7 @@ Choisissez ensuite :
   Tout ce qui diffère demande de nouveau.
 - **Ne pas autoriser** refuse, et la prochaine exécution demande de nouveau.
 
-Chaque autorisation vous demande d’abord de confirmer : sur un Mac avec Touch ID ou votre mot de passe, et sous Linux avec votre mot de passe.
+Chaque autorisation vous demande d’abord de confirmer : sur un Mac avec Touch ID ou votre mot de passe, sous Linux avec votre mot de passe, et sous Windows avec Windows Hello ou votre mot de passe Windows.
 Ce qui reçoit un secret peut le garder.
 Autoriser n’approuve jamais une action distincte, comme déployer ou envoyer quelque chose.
 L’équipier apprend seulement si l’exécution s’est terminée, pas ce qu’elle a affiché.

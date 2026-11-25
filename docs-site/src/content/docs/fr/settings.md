@@ -1,10 +1,10 @@
 ---
-source: ea34c1740306756c
+source: e40976e5ca452a82
 title: Réglages
 description: Ce que contient chaque section des Réglages, avec Général et Apparence expliqués ici et un lien pour le reste.
 ---
 
-Ouvrez les Réglages avec ⌘, (Ctrl+, sous Linux), le bouton **Réglages** en haut de la fenêtre, ou **Ouvrir les Réglages** dans la recherche de commandes.
+Ouvrez les Réglages avec ⌘, (Ctrl+, sous Linux et Windows), le bouton **Réglages** en haut de la fenêtre, ou **Ouvrir les Réglages** dans la recherche de commandes.
 Les sections sont listées sur la gauche.
 Les flèches haut et bas passent de l’une à l’autre, et Escape ou **Retour** quitte les Réglages.
 

@@ -408,9 +408,10 @@ export function composerSlice(set: ShellSet, get: ShellGet): ComposerSlice {
         return window.infinitary.conversation.send(turn).then(
           async () => {
             // The core answers once the message is saved, and its receipt
-            // (`user_turn`) brought the message's id for Up; a receipt not
-            // seen yet is read from the last turn instead.
-            if (get().lastTurnSeq === roundsBefore) await get().loadLastTurn();
+            // (`user_turn`) brought the message's id for Up. The last turn is
+            // read again for a receipt not seen yet, and for a replacement,
+            // whose older round only the core's answer marks taken back.
+            if (replaces || get().lastTurnSeq === roundsBefore) await get().loadLastTurn();
             const askId = get().lastTurn?.askId;
             if (get().lastSent === sent && askId) set({ lastSent: { ...sent, askId } });
           },

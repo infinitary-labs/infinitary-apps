@@ -212,7 +212,12 @@ describe("annotation reply delivery", () => {
         notes,
       );
       expect(h.events.filter((e) => e.type === "user_turn")).toEqual([
-        expect.objectContaining({ type: "user_turn", text: notes.map(noteText).join("\n") }),
+        {
+          type: "user_turn",
+          text: notes.map(noteText).join("\n"),
+          askId: expect.any(String),
+          sentAt: expect.any(Number),
+        },
       ]);
       await tickFirstmate();
       expect(h.session.prompts[0]).toContain(pointedAtLines(notes).join("\n"));
@@ -225,9 +230,11 @@ describe("annotation reply delivery", () => {
         undefined,
         notes,
       );
-      expect(h.events.filter((e) => e.type === "user_turn").at(-1)).toMatchObject({
+      expect(h.events.filter((e) => e.type === "user_turn").at(-1)).toEqual({
         type: "user_turn",
         text: [ANNOTATION_WORDS, ...notes.map(noteText)].join("\n"),
+        askId: expect.any(String),
+        sentAt: expect.any(Number),
       });
       await tickFirstmate();
       expect(h.session.steers.at(-1)).toContain(pointedAtLines(notes).join("\n"));
@@ -277,7 +284,7 @@ describe("annotation reply delivery", () => {
       h.supervisor.cardActions.act(notice.id, "ask-again");
       await tickFirstmate();
       expect(h.events.filter((e) => e.type === "user_turn")).toEqual([
-        expect.objectContaining({ type: "user_turn", text: receipt }),
+        { type: "user_turn", text: receipt, askId: expect.any(String), sentAt: expect.any(Number) },
       ]);
       expect(h.session.prompts[0]).toContain(text);
       expect(h.tasks.capture.lastTurn()?.you).toBe(receipt);

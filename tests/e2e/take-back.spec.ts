@@ -254,6 +254,8 @@ test("Up inside the minute marks the draft as replacing the newest message, Esc 
   await expect(mark).toBeVisible();
   await input.press("Enter");
   const second = await newestAsk(page, replacement);
+  // The strip draws the replaced message struck with its mark, not only the core's record.
+  await expect(page.locator("[data-last-turn] [data-last-turn-reverted]")).toHaveCount(1);
   await expect
     .poll(async () => (await task(page, title))?.status, { timeout: 30_000 })
     .toBe("dropped");

@@ -1,4 +1,5 @@
 import type { FmEvent } from "@shared/events";
+import * as m from "@shared/i18n/messages.generated";
 import { frameServedInput } from "@shared/servedFrame";
 import { TAKE_BACK_WINDOW_MS, type TakeBackRefusal, type TakeBackResult } from "@shared/takeBack";
 import { throughNow } from "../askedFromTheCommand";
@@ -16,14 +17,6 @@ import { renderWake, type TypedWake } from "./wakes";
  * undo what a message the captain took back would cause. The record write
  * is `TaskCapture.takeBack`; the agent owns when each step runs.
  */
-
-/**
- * The reply line's English for a message taken back before any turn read
- * it, for a reader without the window's words; the window words it from
- * the line's `withdrawn`.
- */
-// i18n-exempt: a reader with no words of its own draws it; the window words the line from `withdrawn`
-export const WITHDRAWN_LINE = "Taken back before your first mate read it.";
 
 /**
  * The receipt of a message just saved (`user_turn`), sent after its ask
@@ -261,7 +254,8 @@ export class TakeBacks {
 
   /** No turn read the message, so no turn's line will stand beside it: this typed one does. */
   private withdrawn(askId: string): "withdrawn" {
-    const reply = { text: WITHDRAWN_LINE, eligibility: "completed", withdrawn: true } as const;
+    const text = m.shellLastTurnRevertedUnread();
+    const reply = { text, eligibility: "completed", withdrawn: true } as const;
     this.host.tasks.capture.setAskReply(askId, reply);
     this.host.broadcastEvent({ type: "firstmate_reply", ...reply, askId });
     return "withdrawn";

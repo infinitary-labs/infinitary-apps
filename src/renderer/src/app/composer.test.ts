@@ -1,4 +1,5 @@
 import { CONVERSE_TEXT_MAX_CHARS, TURN_IMAGES_MAX } from "@shared/cards";
+import type { LastTurn } from "@shared/lastTurn";
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import { MAIN_FILES_KEY, useIntakeStore } from "../attachments/intake";
 import { voiceController } from "../voice/voiceController";
@@ -485,13 +486,15 @@ describe("replacing the last message", () => {
   const sentAt = Date.UTC(2026, 10, 25, 18);
   const conversation = (overrides: Record<string, unknown> = {}) => ({
     send: vi.fn(async () => ({ ok: true as const })),
-    lastTurn: vi.fn(async () => ({
-      askId: "ask-1",
-      sentAt,
-      you: "rename the release channel",
-      reply: null,
-      previous: null,
-    })),
+    lastTurn: vi.fn(
+      async (): Promise<LastTurn | null> => ({
+        askId: "ask-1",
+        sentAt,
+        you: "rename the release channel",
+        reply: null,
+        previous: null,
+      }),
+    ),
     takeBack: vi.fn(async () => ({ outcome: "stopping" as const })),
     ...overrides,
   });
@@ -526,6 +529,41 @@ describe("replacing the last message", () => {
       expect.objectContaining({ text: "rename the beta channel instead", replaces: "ask-1" }),
     );
     expect(state().replacing).toBeNull();
+  });
+
+  // The review of the desktop take back: the receipt arrives before the
+  // send's answer, and the replaced message still draws taken back.
+  it("draws the replaced message taken back once the replacement is saved", async () => {
+    const c = conversation();
+    await sendFirst(c);
+    state().recallLastSent();
+    state().setInputText("rename the beta channel instead");
+    const replaced = {
+      askId: "ask-2",
+      sentAt: sentAt + 5_000,
+      you: "rename the beta channel instead",
+      reply: null,
+      previous: {
+        askId: "ask-1",
+        sentAt,
+        you: "rename the release channel",
+        reply: null,
+        takenBack: true as const,
+      },
+    };
+    c.lastTurn.mockResolvedValue(replaced);
+    c.send.mockImplementation(async () => {
+      state().applyEvent({
+        type: "user_turn",
+        text: replaced.you,
+        askId: replaced.askId,
+        sentAt: replaced.sentAt,
+      });
+      return { ok: true as const };
+    });
+    state().submit();
+    await vi.waitFor(() => expect(state().lastTurn?.previous?.takenBack).toBe(true));
+    expect(state().lastSent?.askId).toBe("ask-2");
   });
 
   it("drops the mark on Esc and keeps the words, which then send as a new message", async () => {

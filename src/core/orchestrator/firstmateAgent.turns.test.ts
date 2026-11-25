@@ -792,9 +792,12 @@ describe("FirstmateAgent", () => {
     expect(turn).toContain("[user]\nhello there");
     const userPart = turn.split("[user]\n")[1];
     expect(userPart).toBe("hello there");
-    expect(events).toContainEqual(
-      expect.objectContaining({ type: "user_turn", text: "hello there" }),
-    );
+    expect(events).toContainEqual({
+      type: "user_turn",
+      text: "hello there",
+      askId: expect.any(String),
+      sentAt: expect.any(Number),
+    });
   });
 
   it("does not reject an already accepted ask when its introductory witness cannot be saved", async () => {
@@ -1268,7 +1271,12 @@ describe("FirstmateAgent", () => {
   it("broadcasts user_turn for an image-only submit", async () => {
     const { agent, events } = setup();
     await agent.converse({ images: [pngImage] });
-    expect(events).toContainEqual(expect.objectContaining({ type: "user_turn", text: "" }));
+    expect(events).toContainEqual({
+      type: "user_turn",
+      text: "",
+      askId: expect.any(String),
+      sentAt: expect.any(Number),
+    });
   });
 
   it("carries pasted images beside the turn text, on prompts and steers alike", async () => {

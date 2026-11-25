@@ -58,6 +58,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | drop (a task) | abandonar | "Abandonada", as the board's lines say. |
 | extra usage (Claude's credits past the allowance) | uso extra | |
 | feed / activity | Atividade | |
+| feedback (/feedback, to Infinitary's maker) | feedback | Masculine: "Enviar feedback", "o feedback". |
 | fetch (a server's list of models) | buscar | "Buscar no servidor", "Buscando…". |
 | file (to the backlog) | registrar no backlog | "Por que foi registrada". |
 | fingerprint (a computer's key) | impressão digital |  |
@@ -83,6 +84,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | live validation | validação ao vivo | Trying the change for real; kept apart from the checks. |
 | log (a check's kept output) | o log | "Registro" already names the task's record. |
 | machine (avoided) | computador | Also in the voice consent line, where the English says "this machine". |
+| mark (a place marked on a picture or a page) | marca | "a marca {mark}", "Imagem marcada". |
 | median (Usage, Cost per task) | mediana | The middle task of a week's finished tasks; never "average". |
 | merge | mesclar, mesclagem | GitHub's Portuguese docs say "mesclar uma solicitação de pull"; the noun is "mesclagem". |
 | merge queue (the host's own) | fila de mesclagem | |
@@ -91,6 +93,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | middle half (Usage, Cost per task) | metade central | The band between the quarter and three-quarter marks of a week's tasks. |
 | model | modelo | |
 | Not now | Agora não | |
+| note (a comment pointed at part of a card) | nota | The queued comment, feminine: "Não enviada", "Enviar 2 notas". |
 | out of reach | fora de alcance | |
 | panel | painel | |
 | part (of a task) | parte | Feminine: "todas as partes". |
@@ -99,6 +102,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | phone | celular | The Brazilian everyday word. |
 | picture | imagem | |
 | plan | plano | |
+| Point at | Apontar para | The button; "aponte para ela" in a sentence. |
 | port (a computer's SSH port) | porta | "a porta, se não for a 22". |
 | PR #N | PR #N | Stays as it is, in mono. |
 | Premium / Hard / Normal / Simple (a task's level), Difficulty | Premium / Difícil / Normal / Simples, Dificuldade | How hard the task is, never a reasoning word. |

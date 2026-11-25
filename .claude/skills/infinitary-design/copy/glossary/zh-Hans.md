@@ -62,6 +62,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | evidence / source | 证据 / 来源 | A finding's support and what it cites. |
 | extra usage (Claude's credits past the allowance) | 额外用量 | |
 | feed / activity | 动态 | |
+| feedback (/feedback, to Infinitary's maker) | 反馈 | “发送反馈”; the card's button is “提交反馈”. |
 | file (to the backlog) | 放入待办 | Used only for the backlog, never for a task that starts now. |
 | finding | 发现 | Measure word 条, as on cards. |
 | fingerprint (a computer's key) | 指纹 |  |
@@ -88,6 +89,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | link (to add a device) | 链接 | The one-time link that adds a computer or phone. |
 | live validation | 实测验证 | Trying the change for real; kept apart from the checks. |
 | log (a check's kept output) | 日志 | Distinct from the record, 记录. |
+| mark (a place marked on a picture or a page) | 标记 | “标记 {mark}”, “带标记的图片”. |
 | median (Usage, Cost per task) | 中位数 | The middle task of a week's finished tasks; never "average". |
 | merge | 合并 | |
 | merge queue (the host's own) | 合并队列 | |
@@ -98,6 +100,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | model | 模型 | |
 | Not now | 暂不 | |
 | note (a card kind) | 便笺 | |
+| note (a comment pointed at part of a card) | 批注 | The queued comment, measure word 条: “发送 2 条批注”; a note card stays 便笺. |
 | Observe | 观测 | |
 | out of reach | 无法联系 | Used instead of offline or disconnected. |
 | panel | 面板 | |
@@ -108,6 +111,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | pin (a task) | 固定 | As for a pinned model. |
 | plan | 套餐 | A subscription plan, distinct from a task's 计划. |
 | plan (a task's list of steps) | 计划 | |
+| Point at | 指向 | The button and the verb alike. |
 | port (a computer's SSH port) | 端口 | |
 | PR #N | PR #N | Kept as is in mono. |
 | Premium / Hard / Normal / Simple (a task's level), Difficulty | 顶级 / 困难 / 普通 / 简单, 难度 | How hard the task is, never a reasoning word. |

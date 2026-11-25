@@ -1,5 +1,5 @@
 ---
-source: c1b9ffbe11bf0317
+source: 36f0e08a37cc757f
 title: O imediato
 description: Quem é o seu imediato, o que ele faz e o que não faz, como falar com ele e como escolher o modelo com que ele responde.
 ---
@@ -25,8 +25,10 @@ Veja [Tarefas e tripulantes](/pt-br/tasks-and-crewmates/).
 ## Falar com o seu imediato {#talking-to-your-first-mate}
 
 Digite na caixa de mensagem, na parte de baixo da janela, e envie.
-Sua mensagem e a resposta curta do seu imediato ficam logo acima da caixa.
-Clique na resposta para lê-la inteira.
+Suas duas últimas mensagens e as respostas curtas do seu imediato ficam logo acima da caixa.
+Uma resposta que você deu em um cartão também aparece ali.
+A mais antiga das duas some depois de alguns segundos.
+Pressione essas linhas para ler [a conversa inteira](#the-whole-conversation).
 
 Algumas coisas ajudam:
 
@@ -56,6 +58,27 @@ Para trocar a tecla ou desativar o ditado, use **Ditado** em [Ajustes → Geral]
 Quando o seu imediato ou um tripulante traz um cartão, responda no próprio cartão.
 O que você digita embaixo de um cartão vai para quem o escreveu.
 Veja [Cartões e decisões](/pt-br/cards-and-decisions/).
+
+### A conversa inteira {#the-whole-conversation}
+
+Pressione as linhas acima da caixa de mensagem para abrir o cartão **Conversa**.
+**Abrir a conversa** na busca de comandos também o abre.
+
+Ela se lê como um chat, com o mais antigo no alto e uma linha para cada dia:
+
+- suas mensagens e as respostas inteiras do seu imediato;
+- cada cartão em que você escolheu, como uma miniatura com o botão que você pressionou;
+- cada linha que você digitou embaixo de um cartão, com a primeira resposta do autor.
+
+Role para cima para ler mensagens anteriores.
+O cartão tem duas visualizações, **Tudo** e **Cartões**.
+**Cartões** lista os cartões que aguardam você e depois os que você respondeu, do mais recente para o mais antigo.
+Pressione a miniatura de um cartão para abrir esse cartão.
+Quando você responde ou o deixa de lado, a conversa volta para onde você estava lendo.
+
+Uma mensagem que você envia com a conversa aberta entra nela, e a resposta vem em seguida.
+Escape tira a conversa da frente.
+Abrir e ler a conversa não diz nada ao seu imediato.
 
 ## Escolher o modelo dele {#choosing-its-model}
 

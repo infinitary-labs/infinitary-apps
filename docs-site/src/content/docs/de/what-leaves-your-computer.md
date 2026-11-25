@@ -1,5 +1,5 @@
 ---
-source: 4e862d71de30e0c9
+source: 63adaa2fec424fbb
 title: Was deinen Computer verlässt
 description: Was Infinitary sendet, wohin es geht und der eine Schalter, der überhaupt etwas an uns sendet.
 ---
@@ -90,6 +90,19 @@ Dein Telefon sendet selbst nichts; dein Computer sendet seine Ereignisse unter d
 Um genau zu sehen, was gehen würde, öffne unter **Teilen** den Eintrag **Was dieser Computer verlassen würde**.
 Er zeigt die Installations-ID, was auf das Senden wartet, was gesendet wurde und jedes Ereignis, das die Diagnose senden kann.
 Schalte **Diagnose** aus, und nichts wird mehr aufgezeichnet oder gesendet.
+
+## Feedback, das du sendest {#feedback-you-send}
+
+Feedback ist keiner der Schalter unter **Teilen**: Du schreibst es, liest es und sendest es selbst.
+Wenn du `/feedback` schreibst, entwirft ein Crewmitglied ein Issue für das öffentliche Projekt von Infinitary auf GitHub.
+Dein Klick auf **Feedback absenden** veröffentlicht es, öffentlich, unter deinem eigenen GitHub-Konto.
+
+- Das Issue enthält die Worte des Crewmitglieds und ein paar Fakten über die App und deine Computer, etwa Versionen, Systeme und Arten von Anbietern.
+- Es lässt deine Namen, Ordner, Projekte und Anmeldungen weg.
+  Infinitary lehnt einen Entwurf ab, der etwas davon enthält, das es kennt, eine E-Mail-Adresse oder einen Schlüssel.
+- Vor deinem Klick geht eines an GitHub: eine Suche nach ähnlichen Issues, deren Worte dieselbe Prüfung durchlaufen.
+
+Siehe [Hilfe bekommen](/de/get-help/#send-feedback-from-the-app).
 
 ## Geheimnisse {#secrets}
 

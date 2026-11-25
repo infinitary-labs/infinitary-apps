@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "intake-dont-file-holds-reply",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Don't file on a Build row holds back that issue's reply",
+      "body": "When you pick Don't file on a Build row, the reply to the same issue on that card is no longer sent with your approval. The crewmate that reads your project's issues hears it was held back, so it can write a reply that fits your choice. When a bug does not reproduce, your choice to ask the reporter, close the issue or keep it is now kept with the result, so the next reply matches it.",
+      "noPicture": "This changes what an existing approval card sends and what the reader is told, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

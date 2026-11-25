@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-card-body-stale-frames",
+      "reason": "Test-only repair of the phone journeys' reveal of card body controls: it now reads a body control's frame as stale when the body's page frame lies away from the web view, and scrolls the card to refresh it before tapping; the card media journey also checks that its offline tap reached the body's choice. No app behavior change."
+    }
+  ]
+}

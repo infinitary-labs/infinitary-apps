@@ -7,9 +7,11 @@ import { type AppPaths, crewmateSessionsDir } from "../paths";
 import {
   CLIENT_INTERRUPT_NOTICE,
   CLIENT_NOTICE,
+  FILE_TIME_SLACK_MS,
   sessionEntriesBetween,
   sessionFilesIn,
   sessionOffsetAfter,
+  timeOf,
 } from "../storage/sessionReader";
 import { FIRSTMATE_USAGE_TASK_ID } from "../storage/usageStore";
 import { crewSessionFiles } from "../tasks/crewTranscript";
@@ -53,13 +55,6 @@ export const WORDS_ARGUMENTS_MAX = 2_000;
 const CURSORS_MAX = 64;
 
 /**
- * A file last written this long before a turn's start holds none of it:
- * a file's change time and the times its lines carry come from different
- * clocks' readings.
- */
-const MTIME_SLACK_MS = 2_000;
-
-/**
  * A turn's words from Infinitary's own session records (docs/usage-report.md,
  * "Prompts and replies"), for the person's reporting connection when its
  * switch is on: the prompts and steers it was sent, and its replies and tool
@@ -86,7 +81,7 @@ export class SessionWords {
       } catch {
         continue;
       }
-      if (stat.mtimeMs < since - MTIME_SLACK_MS) continue;
+      if (stat.mtimeMs < since - FILE_TIME_SLACK_MS) continue;
       const held = this.cursors.get(path);
       // A place is good only for the stretch that starts where it stopped.
       const from =
@@ -207,14 +202,4 @@ function textsOf(content: unknown): string[] {
       ? [(part as JsonRecord).text as string]
       : [],
   );
-}
-
-function timeOf(record: JsonRecord): number | null {
-  const value = record.timestamp;
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string") {
-    const parsed = Date.parse(value);
-    return Number.isFinite(parsed) ? parsed : null;
-  }
-  return null;
 }

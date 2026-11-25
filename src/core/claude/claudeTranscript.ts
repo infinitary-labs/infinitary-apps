@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, realpathSync, statSync } from "node:fs";
 import { access, readdir } from "node:fs/promises";
 import { join } from "node:path";
-import { sessionFilesIn } from "../storage/sessionReader";
+import { FILE_TIME_SLACK_MS, SIDECAR_SUFFIX, sessionFilesIn } from "../storage/sessionReader";
 
 /**
  * Where Claude's own client keeps a session transcript.
@@ -118,12 +118,6 @@ async function exists(path: string): Promise<boolean> {
   }
 }
 
-/** A served sidecar's name ends so (`sidecarPathOf`). */
-const SIDECAR_SUFFIX = ".served.jsonl";
-
-/** A file's change time and a turn's times are different clocks' readings. */
-const STAMP_SLACK_MS = 2_000;
-
 /**
  * Where the client keeps a session it ran in `cwd`, by the known path
  * alone: the client names the folder after the folder it runs in as the
@@ -166,7 +160,7 @@ export function seatSessionFiles(
   }
   for (const name of names) {
     if (!name.endsWith(SIDECAR_SUFFIX)) continue;
-    if (sizeAndTime(join(recordDir, name)).at < since - STAMP_SLACK_MS) continue;
+    if (sizeAndTime(join(recordDir, name)).at < since - FILE_TIME_SLACK_MS) continue;
     const sessionId = name.slice(0, -SIDECAR_SUFFIX.length);
     const client = clientFileOf(sessionId);
     const copy = join(recordDir, `${sessionId}.jsonl`);

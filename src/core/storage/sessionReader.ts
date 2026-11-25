@@ -118,10 +118,20 @@ const FIRST_LINE_CHUNK = 64 * 1024;
 /** The Pi session's contract stamp (`FIRSTMATE_CONTRACT_ENTRY`, src/core/pi/session.ts). */
 const CONTRACT_ENTRY = "fm-contract";
 
+/** How a served sidecar's name ends, beside its transcript copy's `<sessionId>.jsonl`. */
+export const SIDECAR_SUFFIX = ".served.jsonl";
+
 /** The served sidecar beside a Claude transcript copy: `<sessionId>.served.jsonl`. */
 export function sidecarPathOf(transcriptPath: string): string {
-  return transcriptPath.replace(/\.jsonl$/, ".served.jsonl");
+  return transcriptPath.replace(/\.jsonl$/, SIDECAR_SUFFIX);
 }
+
+/**
+ * A session file last changed this long before a moment holds nothing
+ * written after it: a file's change time and the times its lines carry are
+ * different clocks' readings.
+ */
+export const FILE_TIME_SLACK_MS = 2_000;
 
 /**
  * The dialect a session file is written in, from its first line: a Pi
@@ -850,7 +860,7 @@ function textOf(content: unknown): string {
     .join("\n");
 }
 
-function timeOf(entry: JsonRecord): number | null {
+export function timeOf(entry: JsonRecord): number | null {
   const value = entry.timestamp;
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string") {

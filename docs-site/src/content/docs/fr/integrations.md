@@ -1,5 +1,5 @@
 ---
-source: 418540bc652d78a6
+source: c71bc8e7d8a6ffd4
 title: Intégrations
 description: Connectez GitHub, GitLab, Bitbucket, Google et des serveurs MCP pour que votre second et votre équipage puissent les joindre, et choisissez ce que chacun peut faire sans vous demander.
 ---
@@ -8,8 +8,8 @@ Une intégration est une connexion à quelque chose en dehors de vos projets, co
 Chacune est établie à votre nom.
 Votre second, votre équipage, vos automatisations et vos panneaux la joignent de la même façon, avec la même connexion et les mêmes règles.
 
-<img class="picture-dark" src="/pictures/integrations-dark.webp" alt="Réglages, section Intégrations : un serveur Notes connecté dont chaque lecture et la modification sont réglées sur Vous demande à côté d’un interrupteur activé, puis des boutons pour ajouter GitHub, Google, un serveur MCP, GitLab ou GitHub Enterprise, la commande Infinitary désactivée et une liste Sites privés vide." width="1180" height="709" />
-<img class="picture-light" src="/pictures/integrations-light.webp" alt="Réglages, section Intégrations : un serveur Notes connecté dont chaque lecture et la modification sont réglées sur Vous demande à côté d’un interrupteur activé, puis des boutons pour ajouter GitHub, Google, un serveur MCP, GitLab ou GitHub Enterprise, la commande Infinitary désactivée et une liste Sites privés vide." width="1180" height="709" />
+<img class="picture-dark" src="/pictures/integrations-dark.webp" alt="Réglages, section Intégrations : un serveur Notes connecté dont chaque lecture et la modification sont réglées sur Vous demande à côté d’un interrupteur activé, puis des boutons pour ajouter GitHub, Google, un serveur MCP, Notion, Linear, Bitbucket, GitLab ou GitHub Enterprise, la commande Infinitary désactivée et une liste Sites privés vide." width="1180" height="709" />
+<img class="picture-light" src="/pictures/integrations-light.webp" alt="Réglages, section Intégrations : un serveur Notes connecté dont chaque lecture et la modification sont réglées sur Vous demande à côté d’un interrupteur activé, puis des boutons pour ajouter GitHub, Google, un serveur MCP, Notion, Linear, Bitbucket, GitLab ou GitHub Enterprise, la commande Infinitary désactivée et une liste Sites privés vide." width="1180" height="709" />
 
 ## Où se trouvent les intégrations {#where-integrations-live}
 
@@ -55,14 +55,35 @@ Se déconnecter de GitHub arrête les clonages privés et les demandes de tirage
 ## Google : Gmail et Agenda {#google-gmail-and-calendar}
 
 Google est une seule connexion pour Gmail et Agenda.
+Infinitary y accède par une connexion Google à vous : un client que vous créez dans votre propre projet Google Cloud, en mode personnel de Google.
+Google ne l’examine pas, n’affiche aucun avertissement et ne met pas fin à sa connexion au bout de 7 jours.
 
-1. Appuyez sur **Google**.
-2. Lisez **Avant de connecter Google** : ce qu’Infinitary utilise de votre compte, où cela va et combien de temps cela reste.
-3. Appuyez sur **Accepter et continuer vers Google**, ou sur **Annuler** pour ne rien demander à Google.
-4. Terminez la connexion sur la page de Google dans votre navigateur, et accordez chaque autorisation qu’elle liste.
+1. Appuyez sur **Google**, ce qui ouvre **Configurer votre propre connexion Google**.
+2. Appuyez sur **Ouvrir la page de Google**, et connectez-vous sur cette page avec le compte Google que vous allez relier.
+   Nommez le projet, acceptez la règle de Google et appuyez sur Continue.
+3. Téléchargez le fichier de client que Google affiche, avec Download JSON.
+4. Déposez ce fichier sur **Déposez le fichier de client ici**, choisissez-le avec **Choisir un fichier**, ou collez son contenu dans **Fichier de client**.
+5. Appuyez sur **Garder et se connecter**.
+6. Lisez **Avant de connecter Google** : ce qu’Infinitary utilise de votre compte, où cela va et combien de temps cela reste.
+7. Appuyez sur **Accepter et continuer vers Google**, ou sur **Annuler** pour ne rien demander à Google.
+8. Terminez la connexion sur la page de Google dans votre navigateur, avec le compte Google qui a créé votre client, et accordez chaque autorisation qu’elle liste.
 
+Infinitary garde le secret du client dans [Secrets](/fr/secrets/) sur cet ordinateur, et votre second et votre équipage ne le voient jamais.
+Votre client ne sert que le compte Google qui l’a créé.
+Vous ne le configurez qu’une fois : ensuite, la connexion à Google commence à l’avis.
 Si vous laissez une autorisation décochée, Infinitary ne garde rien et vous pouvez vous reconnecter.
 Chaque fois que vous vous connectez à Google, l’avis s’affiche d’abord.
+
+La ligne Google indique quand la connexion a besoin de vous :
+
+- **Configurez votre propre connexion** : cette connexion passe encore par un client qu’Infinitary partage avec tout le monde, et qui va être retiré.
+  Elle fonctionne jusque-là ; appuyez sur **Configurer** pour rester connecté.
+- **S’arrête le**, suivi d’une date : votre client n’est pas en mode personnel, donc Google met fin à sa connexion à cette date.
+  Appuyez sur **Configurer de nouveau**, et créez un client en mode personnel.
+- **Votre client Google ne fonctionne plus** : Google n’accepte plus votre client, peut-être parce qu’il a été supprimé dans Google Cloud.
+  Appuyez sur **Configurer de nouveau**.
+
+Sur votre iPhone ou votre iPad, la ligne Google se configure de la même façon : vous choisissez le fichier de client, ou collez son contenu.
 
 Une fois Google connecté, votre second et votre équipage peuvent chercher dans votre courrier et le lire, enregistrer une pièce jointe dans le dossier d’une tâche, étiqueter ou archiver un message, rédiger un brouillon et envoyer un message.
 Dans Agenda, ils peuvent lister vos agendas et vos événements, lire un événement, voir quand vous êtes occupé, et créer ou mettre à jour un événement.
@@ -100,6 +121,26 @@ Le serveur reçoit la clé à chaque démarrage, sans vous demander.
 Votre second et votre équipage ne la voient jamais.
 Retirer le serveur oublie ses clés.
 
+### Un serveur qui vous demande de vous connecter {#a-server-that-asks-you-to-sign-in}
+
+Certains serveurs situés à une adresse demandent une connexion, pas une clé.
+Pour ceux-là, **Connecter** ouvre la page de connexion du serveur dans votre navigateur.
+Le formulaire vous dit d’y terminer la connexion et indique l’adresse de la page, avec **Rouvrir la page** et **Annuler**.
+Une fois que vous avez terminé dans votre navigateur, la nouvelle ligne s’ouvre sur les actions du serveur.
+Si vous annulez, Infinitary ne garde ni ligne ni clé.
+
+**Notion** et **Linear**, à côté de **Serveur MCP**, connectent ces deux services en un seul appui.
+
+Infinitary garde la connexion dans [Secrets](/fr/secrets/) et la renouvelle de lui-même.
+Quand le service y met fin, la ligne indique **doit se reconnecter**, avec **Se reconnecter** sur la ligne et dans son menu.
+Se reconnecter garde l’interrupteur de chaque action, et remet chaque action sur **Vous demande**.
+Retirer le serveur oublie la connexion, et y met fin auprès du service quand celui-ci le permet.
+Un serveur qui a besoin d’une app à vous ne peut pas encore être connecté, et le formulaire le dit.
+
+Votre second ne peut pas ouvrir votre navigateur.
+Pour un serveur qui demande une connexion, il vous apporte une carte avec **Ouvrir Intégrations**, qui ouvre le formulaire déjà rempli.
+Ce que répond un serveur situé à une adresse parvient à votre second et à votre équipage marqué comme des informations venues de l’extérieur, jamais comme des instructions.
+
 ## Ce que chaque action peut faire sans vous demander {#what-each-action-may-do-without-asking-you}
 
 Une ligne ouverte liste chaque action avec ce qu’elle fait : **lit**, **modifie** ou **envoie**.
@@ -127,6 +168,27 @@ Ce que répond une intégration est une information pour votre second et votre �
 Un panneau peut aussi utiliser les intégrations qu’il nomme.
 Ses demandes affichent la même carte, qui nomme le panneau.
 Voir [Panneaux](/fr/panels/).
+
+## Un équipier qui lit des mots que tout le monde peut écrire {#a-crewmate-that-reads-words-anyone-can-write}
+
+Certaines tâches lisent des mots qu’un inconnu aurait pu écrire, comme les tickets et les demandes de tirage d’un projet public.
+Pour une telle tâche, votre second peut démarrer un équipier qui ne fait que lire.
+Il n’exécute aucun programme, ne modifie aucun fichier et n’a pas de navigateur.
+Il ne lit que son propre projet et des pages web publiques, et n’accède à rien d’autre sur votre ordinateur ni sur votre réseau privé.
+Il ouvre une page web sans connexion, sous forme de texte seulement.
+
+Tout ce qu’il lit est marqué comme des mots venus de l’extérieur, jamais comme des instructions, et son rapport à votre second l’est aussi.
+Chacune de ses cartes indique « Cet équipier lit des mots que tout le monde peut écrire : un lien ou une demande sur cette carte peut donc venir d’un inconnu. »
+
+Tout ce qu’il veut modifier ou appeler attend votre décision, sous forme de ligne cochée sur une seule carte d’approbation, comme « Autoriser ces appels ? ».
+Cette carte ne propose que **Seulement cette fois** et **Pas maintenant**.
+Une lecture qui passe par une intégration ne s’exécute sans demander que si vous avez réglé cette action sur **Toujours autorisée**, et jamais sur un serveur MCP.
+Une tâche qu’il propose à partir d’un ticket attend aussi sur la carte, avec **Démarrer maintenant**, **Garder pour plus tard** et **Ne pas classer**.
+
+Tant qu’il ne détient rien à vous, il ouvre aussitôt n’importe quelle page web publique.
+Il détient quelque chose dès qu’il a lu un projet qui n’est pas public, ou la réponse d’une intégration.
+Dès lors, une page que nomme sa tâche continue de s’ouvrir aussitôt.
+Toute autre adresse attend sur la carte, « Ouvrir des pages web ? », sous forme de ligne qui montre l’adresse complète, car une adresse peut porter ce qu’il a lu jusqu’à qui gère le site.
 
 ## Ce qu’une intégration peut signaler {#what-an-integration-can-tell}
 

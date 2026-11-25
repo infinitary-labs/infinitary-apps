@@ -2,6 +2,7 @@ import { type IntegrationApprovalChoice, NOT_ALLOWED_WHY } from "@shared/integra
 import { allowanceCovers, buildRowChoiceOf, type IntegrationAllowance } from "@shared/writeAsk";
 import type { IntegrationAskTaken } from "../integrations";
 import { TaskService } from "../tasks/taskService";
+import { addressesRowIssue, heldForDontFileWhy } from "./buildRows";
 import type { CrewCore } from "./crewCore";
 import type { WriteAskSent } from "./githubGateway";
 import {
@@ -43,7 +44,8 @@ export class CardWriteAsks {
    * asks inside it. Every ask is taken before the first runs, so none can
    * drop or run twice, and the crewmate hears every outcome in one steer.
    * A reader's Build row is never sent: the click files it as the captain
-   * picked on its row (`BuildRows.answer`).
+   * picked on its row (`BuildRows.answer`). A write to an issue whose row
+   * the captain marked Don't file on this click is held back, never sent.
    */
   async answerIntegrationCard(
     cardId: string,
@@ -72,9 +74,31 @@ export class CardWriteAsks {
         });
       } else taken.push({ id, taken: took });
     }
+    // Every row's pick is read before the first write runs, so a reply that
+    // comes before its issue's row on the card is held back all the same.
+    const skipped = taken.flatMap(({ id, taken: took }) =>
+      choice === "once" &&
+      "ask" in took &&
+      took.ask.kind === "build" &&
+      buildRowChoiceOf(answers, id) === "skip"
+        ? [took.ask]
+        : [],
+    );
     const allowances: IntegrationAllowance[] = [];
     const run = async (id: string, took: IntegrationAskTaken, as: IntegrationApprovalChoice) => {
       const build = "ask" in took && took.ask.kind === "build" ? took.ask : undefined;
+      const heldFor =
+        "ask" in took ? skipped.find((row) => addressesRowIssue(row, took.ask)) : undefined;
+      if (heldFor && "ask" in took) {
+        const outcome = { kind: "refused" as const, why: heldForDontFileWhy(heldFor.issue) };
+        delivery.recordWriteAskOutcome(taskId, id, outcome);
+        const ask = took.ask;
+        outcomes.push({
+          id,
+          sent: { ok: false, ask, call: askCall(ask), place: ask.place, outcome },
+        });
+        return;
+      }
       const sending = build
         ? this.core.buildRows.answer(taskId, build, as, buildRowChoiceOf(answers, id))
         : send(taskId, took, as);

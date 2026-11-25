@@ -21,8 +21,10 @@ export type BuildRowsHost = {
 
 /**
  * The typed result a bug's reproduce step reports (docs/agents-reach.md,
- * "A reader's Build rows"): whether it reproduced, on which version, and
- * the question for the reporter when one is needed.
+ * "A reader's Build rows"): whether it reproduced, on which version, the
+ * question for the reporter when one is needed, and, once the captain chose
+ * on a step that did not reproduce, what they chose: ask the reporter, close
+ * the issue or keep it for later.
  */
 export const REPRODUCE_RESULT_SCHEMA = {
   type: "object",
@@ -30,6 +32,7 @@ export const REPRODUCE_RESULT_SCHEMA = {
     reproduced: { type: "boolean" },
     version: { type: "string", minLength: 1 },
     question: { type: "string" },
+    next: { type: "string", enum: ["ask", "close", "keep"] },
   },
   required: ["reproduced", "version"],
   additionalProperties: false,
@@ -43,7 +46,7 @@ export const BUILD_ROW_PROVENANCE =
 // i18n-exempt: served to the crewmate's model, never shown to a person
 const START_WORDS: Record<BuildRowStart, string> = {
   reproduce:
-    'This is a bug\'s reproduce step. Try the steps above in a clean setup on the current version, and put the failing check in your report. Open your report with "reproduced: yes" or "reproduced: no", and give its typed result: whether it reproduced, the version you tried, and, when you need more from the reporter, the question to ask them. On yes the first mate starts the fix built on your reproduction. On no, start nothing: show one card asking the captain whether to ask the reporter your question, keep it for later, or close it as not reproduced.',
+    'This is a bug\'s reproduce step. Try the steps above in a clean setup on the current version, and put the failing check in your report. Open your report with "reproduced: yes" or "reproduced: no", and give its typed result: whether it reproduced, the version you tried, and, when you need more from the reporter, the question to ask them. On yes the first mate starts the fix built on your reproduction. On no, start nothing: show one card asking the captain whether to ask the reporter your question, keep it for later, or close it as not reproduced, and declare continues on it, since their choice is not your answer. Once they choose, report again with the same typed result and next: "ask", "keep" or "close", as they chose.',
   plan: "This is an idea's plan step. Treat the ask as a symptom: work out the underlying problem and design a solution other people using the project would also benefit from, rather than building literally what was asked.",
 };
 
@@ -76,9 +79,10 @@ export function buildRowShape(row: Pick<BuildRowAsk, "start" | "issue" | "issueU
 
 /**
  * The section an unsafe data reader's brief gains from the task record
- * (docs/agents-reach.md, "A reader's Build rows"): each task of its project
- * linked to an issue, with its kind, state and typed result, and nothing
- * else, so a reader files no row for an issue a task already answers. A
+ * (docs/agents-reach.md, "A reader's Build rows"): each issue of its project
+ * linked to a task, with every linked task's kind, state, closing reason,
+ * first release and typed result, and nothing else, so a reader files no
+ * row for an issue a task already answers and knows how each one ended. A
  * title is left out: a reader's own follow-up's title is a stranger's words.
  */
 export function linkedIssuesSection(
@@ -91,16 +95,63 @@ export function linkedIssuesSection(
     .filter((task) => task.id !== reader.id && task.repoId === reader.repoId && task.shape?.issue)
     .sort((a, b) => b.createdAt - a.createdAt);
   if (linked.length === 0) return undefined;
-  const lines = linked.map((task) => {
+  // Map keeps insertion order, so each issue sits where its newest task first appears.
+  const byIssue = new Map<number, string[]>();
+  for (const task of linked) {
+    const number = task.shape?.issue?.number ?? 0;
     const result = tasks.latestResult(task.id)?.value;
+    const release = task.delivery?.firstRelease;
     // i18n-exempt: served to the crewmate's model, never shown to a person
-    return `- #${task.shape?.issue?.number}: ${task.key || task.id}, ${task.shape?.kind ?? task.kind}, ${task.status}${result ? `, result ${JSON.stringify(result)}` : ""}`;
-  });
+    const line = [
+      `- ${task.key || task.id}`,
+      task.shape?.kind ?? task.kind,
+      task.status,
+      ...(task.closedReason ? [`closed ${task.closedReason}`] : []),
+      ...(release ? [`first release ${release.version} (${release.url})`] : []),
+      ...(result ? [`result ${JSON.stringify(result)}`] : []),
+    ].join(", ");
+    byIssue.set(number, [...(byIssue.get(number) ?? []), line]);
+  }
   // i18n-exempt: served to the crewmate's model, never shown to a person
   return [
-    "Issues of this project already linked to a task, from the task record, newest first. File no Build row for an issue listed here unless its report asks for something these tasks do not cover:",
-    ...lines,
+    "Issues of this project already linked to a task, from the task record, each with its tasks newest first: key, kind, state, how it closed, its first release once its change shipped, and its typed result. File no Build row for an issue listed here unless its report asks for something these tasks do not cover:",
+    ...[...byIssue].flatMap(([number, lines]) => [`#${number}:`, ...lines]),
   ].join("\n");
+}
+
+/**
+ * Whether a kept write where the project lives addresses the issue a Build
+ * row names: the issue itself or anything under it, such as its comments,
+ * in the row's own project. On the click that chose Don't file for the row,
+ * such a write is held back, so the issue gets no reply that promises the
+ * work the captain chose not to file (`CardWriteAsks.answerIntegrationCard`).
+ */
+export function addressesRowIssue(row: BuildRowAsk, ask: WriteAsk): boolean {
+  if (ask.kind === "build" || ask.kind === "web" || ask.kind === "integration") return false;
+  const page = /^\/([^/]+)\/([^/]+)\/issues\/\d+$/.exec(safePathname(row.issueUrl));
+  if (!page) return false;
+  const [, owner, repo] = page;
+  const call = /^\/?repos\/([^/]+)\/([^/]+)\/issues\/(\d+)(?:[/?]|$)/.exec(ask.path);
+  return (
+    call !== null &&
+    call[1]?.toLowerCase() === owner?.toLowerCase() &&
+    call[2]?.toLowerCase() === repo?.toLowerCase() &&
+    Number(call[3]) === row.issue
+  );
+}
+
+function safePathname(url: string): string {
+  try {
+    return new URL(url).pathname;
+  } catch {
+    return "";
+  }
+}
+
+/** Why a write to an issue was held back on the click that chose Don't file for its Build row. */
+export function heldForDontFileWhy(issue: number): string {
+  // i18n-exempt: the why the crewmate's model hears
+  return `The captain chose Don't file for issue #${issue}'s Build row on the same card, so the app held back this write to issue #${issue}. Nothing was sent. If the issue still needs a reply, write a new one that fits the captain's choice not to file the work.`;
 }
 
 // i18n-exempt: tool answers served to the crewmate's model

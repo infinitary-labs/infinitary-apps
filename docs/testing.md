@@ -1114,7 +1114,8 @@ Those sections are the gate at launch, a key signed in through the gate's own ch
 `ci.yml`'s `build` job runs it as its last step (INF-2915's plan, the captain's direction B), on the app that job just built from the pull request's merge commit, on the Linux desktop `.github/actions/linux-desktop` prepares, as `source-journeys.yml` prepares its own ("The Linux source desktop").
 A version that skips the build skips it too ("What a pull request runs").
 A pull request that edits the journey runs it three rounds and then alone, as any edited journey (`scripts/journey-runs.ts`); any other pull request runs it once.
-A failed run keeps the window and the journey's results as the `source-desktop-critical-path` artifact.
+The `build` job then runs `tests/e2e/phase0-guardrails.spec.ts`, the journey that pins the window's exact method list, as its own step on the same build (INF-6748's velocity review, the captain's pick), since a change that adds a method fails it in the swept batch and no branch check ran it before; it adds about 15 seconds.
+A failed run keeps the window and either journey's results as the `source-desktop-critical-path` artifact.
 The swept batch runs it again on the batch's version, in `batch-checks.yml`'s own `critical-path` job, and passes only when it passed ("The swept batch").
 Every other journey runs on request ("Journeys on request") and in main's desktop release check, never on a pull request of its own accord.
 A step that breaks fails the pull request, and is repaired at its owner; weakening or deleting the journey is ask-first ("This project's rulings on tests").

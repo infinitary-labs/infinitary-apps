@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "window-methods-journey-on-branch",
+      "reason": "Internal CI change: the branch check now runs the journey that pins the app window's method list."
+    }
+  ]
+}

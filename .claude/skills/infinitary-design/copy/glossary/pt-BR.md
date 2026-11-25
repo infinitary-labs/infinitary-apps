@@ -63,6 +63,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | fingerprint (a computer's key) | impressão digital |  |
 | first mate | imediato | The Brazilian naval term for a ship's second-in-command; a common noun, lowercase: "seu imediato", "Imediato" only as a short label. |
 | fold (where an iPhone Duo folds) | a dobra | |
+| folder picker (the computer's own) | seletor de pastas | What Work in a folder on my computer opens; as the file picker is "seletor de arquivos". |
 | font (Settings → Appearance) | fonte | |
 | forget (a computer, on the phone) | Esquecer | Pairs with "Sair" for Leave. |
 | gate | crivo | What work passes before it merges: "passar por um crivo"; never "verificações", which are the checks. |
@@ -98,6 +99,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | phone | celular | The Brazilian everyday word. |
 | picture | imagem | |
 | plan | plano | |
+| port (a computer's SSH port) | porta | "a porta, se não for a 22". |
 | PR #N | PR #N | Stays as it is, in mono. |
 | Premium / Hard / Normal / Simple (a task's level), Difficulty | Premium / Difícil / Normal / Simples, Dificuldade | How hard the task is, never a reasoning word. |
 | preset (keyboard) | predefinição | As in Apple's Brazilian Portuguese. |

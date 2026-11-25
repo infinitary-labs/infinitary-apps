@@ -61,6 +61,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | fingerprint (a computer's key) | huella digital |  |
 | first mate | primer oficial | The ship's officer who is second-in-command; a common noun, lowercase: "tu primer oficial", "Primer oficial" only as a short label; "oficial" alone in the thread's short author tag. |
 | fold (where an iPhone Duo folds) | el pliegue | |
+| folder picker (the computer's own) | selector de carpetas | What Work in a folder on my computer opens: "el selector de carpetas de tu computadora". |
 | font (Settings → Appearance) | fuente | |
 | gate | control | The checks work passes before it merges: "Aquí nada pasa por un control." |
 | header (a request's) | encabezado | |
@@ -100,6 +101,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | phone | teléfono | |
 | plan | plan | |
 | plugin, extension (never said) | panel | |
+| port (a computer's SSH port) | puerto | "su puerto si no es el 22". |
 | PR #N | PR #N | Stays as it is, in mono. |
 | Premium / Hard / Normal / Simple (a task's level), Difficulty | Premium / Difícil / Normal / Simple, Dificultad | How hard the task is, never a reasoning word. |
 | preset (keyboard) | preajuste | |
@@ -119,6 +121,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | rebase merges, merge commits (the host's settings) | fusiones con cambio de base (rebase), confirmaciones de fusión | Named only as the settings where the project lives, following GitHub's Spanish docs, with "rebase" beside it because that settings page is in English; the app's own action stays "poner al día". |
 | rebase, conflict (never said) | poner al día | One English line says "conflicts"; it reads "choca con trabajo más reciente". |
 | relay (Infinitary's push relay) | relé de Infinitary | It passes sealed notifications and notes it cannot read; a sealed note is "nota sellada". |
+| Remote Login (macOS's own name) | Sesión remota | macOS's own Spanish name in Sharing. |
 | Remove (a device) | Quitar | |
 | repair (the task repairing a held batch) | reparación | "{key} lo está reparando" for the task at work; the change it makes stays corrección. |
 | repo (never said) | proyecto | The app's noun for what work belongs to stays proyecto. |

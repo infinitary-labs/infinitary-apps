@@ -50,6 +50,7 @@ import {
   TaskReferenceStore,
 } from "./taskReferenceStore";
 import { TaskSpecificationStore } from "./taskSpecificationStore";
+import { TaskTagStore } from "./taskTagStore";
 
 /**
  * The task record's row layer (task-system design section 4.1). A task is
@@ -470,8 +471,11 @@ export class TaskStore {
   readonly changes: ChangeStore;
   readonly specifications: TaskSpecificationStore;
   readonly shapes: TaskOwnedShapeStore;
+  /** The tags a task carries (docs/task-tags.md); written only by TaskService. */
+  readonly tags: TaskTagStore;
 
   constructor(private readonly db: AppDatabase) {
+    this.tags = new TaskTagStore(db);
     this.specifications = new TaskSpecificationStore(db);
     this.shapes = new TaskOwnedShapeStore(db);
     this.references = new TaskReferenceStore(db);
@@ -1692,6 +1696,7 @@ export class TaskStore {
     this.delivery.deleteFor(id);
     this.execution.deleteFor(id);
     this.policies.deleteFor(id);
+    this.tags.deleteFor(id);
     this.db.prepare("DELETE FROM tasks WHERE id = ?").run(id);
   }
 
@@ -1700,6 +1705,7 @@ export class TaskStore {
     this.delivery.deleteAll();
     this.execution.deleteAll();
     this.policies.deleteAll();
+    this.tags.deleteAll();
     return this.db.prepare("DELETE FROM tasks").run().changes;
   }
 }

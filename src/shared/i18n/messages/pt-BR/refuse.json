@@ -29,6 +29,7 @@
   "refuseShowACardBesideABrowserPageFirst": "Mostre primeiro um cartão ao lado de uma página do navegador",
   "refuseShowAStartedTaskThatCanMove": "Mostre primeiro uma tarefa iniciada que possa ir para outro computador",
   "refuseShowAStartedTasksRecordFirst": "Mostre primeiro o registro de uma tarefa iniciada",
+  "refuseShowATaggableTasksRecordFirst": "Mostre primeiro o registro de uma tarefa cujo projeto tenha etiquetas",
   "refuseTabIsOnComputer": "{tab} está em {computer}",
   "refuseThatTabIsAlreadyShown": "Essa aba já está sendo mostrada",
   "refuseThereIsNoOtherTabToGo": "Não há outra aba para onde ir",

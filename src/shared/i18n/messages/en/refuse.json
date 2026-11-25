@@ -29,6 +29,7 @@
   "refuseShowACardBesideABrowserPageFirst": "Show a card beside a browser page first",
   "refuseShowAStartedTaskThatCanMove": "Show a started task that can move to another computer first",
   "refuseShowAStartedTasksRecordFirst": "Show a started task's record first",
+  "refuseShowATaggableTasksRecordFirst": "Show the record of a task whose project has tags first",
   "refuseTabIsOnComputer": "{tab} is on {computer}",
   "refuseThatTabIsAlreadyShown": "That tab is already shown",
   "refuseThereIsNoOtherTabToGo": "There is no other tab to go to",

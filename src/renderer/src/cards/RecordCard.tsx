@@ -38,6 +38,7 @@ import type { HtmlCardBody } from "./PrototypeBody";
 import { RecordCost } from "./RecordCost";
 import { RecordAttention, RecordDelivered, RecordGoal, RecordRelations } from "./RecordHead";
 import { RecordPaneChrome, RecordPaneFooter } from "./RecordPaneChrome";
+import { RecordTags } from "./RecordTags";
 import { recordPillToneOf } from "./recordFooter";
 import { useStageRole } from "./SurfaceReveal";
 import { KeyedText } from "./TaskKey";
@@ -399,6 +400,7 @@ export function RecordCard({
                 </>
               }
               {...(projectWords ? { project: projectWords } : {})}
+              afterProject={<RecordTags detail={shown} />}
               planView="list"
               omitStrip
               pullRequests

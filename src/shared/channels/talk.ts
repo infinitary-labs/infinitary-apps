@@ -197,6 +197,20 @@ export const talkChannels = {
       z.object({ ok: z.literal(false), text: z.string().min(1) }),
     ]),
   },
+  // The task record's Edit tags (docs/task-tags.md): the task's tags become
+  // exactly these of its project's, by id, as the captain's own, and each
+  // change writes one quiet line on its timeline. A refusal comes back as
+  // text and writes nothing.
+  "inf:task:tags": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([z.string().min(1).max(64), z.array(z.string().min(1)).max(200)]),
+    response: z.discriminatedUnion("ok", [
+      okSchema,
+      z.object({ ok: z.literal(false), text: z.string().min(1) }),
+    ]),
+  },
   // The task record's Move to a computer (docs/helper.md, "Moving a started
   // task"): where the task could move, and the move itself - to a computer
   // that runs work by its device id or `this-mac`, or null to cancel a move

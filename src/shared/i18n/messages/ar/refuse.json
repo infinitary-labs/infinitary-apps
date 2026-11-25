@@ -29,6 +29,7 @@
   "refuseShowACardBesideABrowserPageFirst": "اعرض أولًا بطاقة بجانب صفحة متصفح",
   "refuseShowAStartedTaskThatCanMove": "اعرض أولًا مهمة بدأت ويمكن نقلها إلى حاسوب آخر",
   "refuseShowAStartedTasksRecordFirst": "اعرض أولًا سجل مهمة بدأت",
+  "refuseShowATaggableTasksRecordFirst": "اعرض أولًا سجل مهمة لمشروعها وسوم",
   "refuseTabIsOnComputer": "{tab} على {computer}",
   "refuseThatTabIsAlreadyShown": "علامة التبويب هذه معروضة بالفعل",
   "refuseThereIsNoOtherTabToGo": "لا توجد علامة تبويب أخرى للانتقال إليها",

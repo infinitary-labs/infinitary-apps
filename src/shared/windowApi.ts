@@ -162,6 +162,7 @@ import type {
 import type { SharingAskAnswer, SharingChannel, SharingPreview, SharingView } from "./sharing";
 import type { DeviceSignInEvent, DeviceSignIns } from "./signIns";
 import type { StandbyReady, StandbyViews } from "./standby";
+import type { ProjectTagChange, ProjectTagChangeResult } from "./tags";
 import type {
   SavedSignInsView,
   TaskBrowserAskAnswer,
@@ -314,6 +315,8 @@ export type FirstmateApi = {
       /** The panel whose page the captain pinned it from, by its title. */
       from?: TaskMoveFrom,
     ) => Promise<{ ok: true } | { ok: false; text: string }>;
+    /** The record's Edit tags: the task's tags become exactly these of its project's, by id. */
+    tags: (taskId: string, tagIds: string[]) => Promise<{ ok: true } | { ok: false; text: string }>;
     /** Where a started task could move: Move to a computer's choices. */
     moveOptions: (taskId: string) => Promise<MoveOptions>;
     /**
@@ -830,6 +833,8 @@ export type FirstmateApi = {
     list: () => Promise<ProjectView[]>;
     /** Name a project of several repositories; one of one is named with its repository. */
     rename: (projectId: string, name: string) => Promise<{ id: string; name: string }>;
+    /** Add, edit or remove one of a project's tags (docs/task-tags.md). */
+    tags: (change: ProjectTagChange) => Promise<ProjectTagChangeResult>;
   };
   quota: {
     snapshot: () => Promise<QuotaSnapshotView | null>;

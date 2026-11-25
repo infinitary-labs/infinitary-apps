@@ -2005,6 +2005,34 @@
       <string>%1$ld 个仓库</string>
     </dict>
   </dict>
+  <key>settingsProjectsTagsRemoveQuestion</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>移除 %2$@？它会从带有它的 %1$ld 个任务上去掉。</string>
+    </dict>
+  </dict>
+  <key>settingsProjectsTagsTasks</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>%1$ld 个任务</string>
+    </dict>
+  </dict>
   <key>settingsSubscriptionsSavedResets</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

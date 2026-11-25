@@ -14,7 +14,7 @@ An e2e assertion enforces the wording.
 
 ## Standing product principle (captain, 2026-09-19)
 
-Settings → Projects may expose delivery, autonomy, and standing rigor.
+Settings → Projects may expose delivery, autonomy, standing rigor, and the project's tags (`docs/task-tags.md`).
 Each project opens its own page from a one-line list, with its repositories as tabs joined to their settings; the captain asked for it when the settings inline in an open row had grown too many to read and use, replacing the accordion picked earlier.
 Setup and removal are shared by Settings and `app_change` (`project-setup`, `project-remove`); the first mate removes a project only on the captain's own words, and Remove asks once in place.
 The personal workspace's row is locked entirely - it is a workspace kind, not a posture, and reads "builds in place".

@@ -1540,6 +1540,37 @@ export const MIGRATIONS: readonly Migration[] = [
     addColumn(db, "captain_asks", "typed_card_id", "TEXT");
     addColumn(db, "captain_asks", "typed_line", "INTEGER");
   },
+  // Task tags (docs/task-tags.md): each project's own tags, and the tags
+  // each task carries, one row per task and tag with who set it and the
+  // tag's description revision it was judged at. A row whose state is off
+  // keeps a tag a person or the first mate removed, so the decision model
+  // never puts it back. The tag index holds each row's state, so a tag's
+  // count of the tasks carrying it reads the index alone. Empty on every
+  // existing install. `ProjectStore` is the only writer of `project_tags`
+  // and `TaskService` of `task_tags`; no published view reads them. Dropping both tables reverses it.
+  // i18n-exempt: SQL, never shown
+  `
+  CREATE TABLE IF NOT EXISTS project_tags (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL,
+    revision INTEGER NOT NULL DEFAULT 1,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  CREATE UNIQUE INDEX IF NOT EXISTS project_tags_name ON project_tags (project_id, name COLLATE NOCASE);
+  CREATE TABLE IF NOT EXISTS task_tags (
+    task_id TEXT NOT NULL,
+    tag_id TEXT NOT NULL,
+    state TEXT NOT NULL,
+    set_by TEXT NOT NULL,
+    revision INTEGER,
+    at INTEGER NOT NULL,
+    PRIMARY KEY (task_id, tag_id)
+  ) WITHOUT ROWID;
+  CREATE INDEX IF NOT EXISTS task_tags_tag ON task_tags (tag_id, state);
+  `,
 ];
 
 /**

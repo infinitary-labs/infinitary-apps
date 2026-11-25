@@ -100,6 +100,11 @@ export type WindowFacts = {
   taskMove?: boolean;
   /** The shown record offers Close as done (INF-3169's plan, piece 3). */
   taskCloseDone?: boolean;
+  /**
+   * Edit tags can run: the shown record, card or task tab belongs to a task
+   * whose project has tags or that carries tags.
+   */
+  taskEditTags?: boolean;
   answerDoneReady?: boolean;
   /** The shown decision offers a way to say no (INF-3108). */
   declineReady?: boolean;
@@ -371,6 +376,8 @@ const REFUSALS: Readonly<
     facts.taskMove ? null : m.refuseShowAStartedTaskThatCanMove(),
   "task.close-done": (_s, facts) =>
     facts.taskCloseDone ? null : m.refuseShowAStartedTasksRecordFirst(),
+  "task.edit-tags": (_s, facts) =>
+    facts.taskEditTags ? null : m.refuseShowATaggableTasksRecordFirst(),
   "cards.show-browser": (s) => tabRefusal(s, "cards.show-browser"),
   "cards.next-tab": (s) => tabRefusal(s, "cards.next-tab"),
   "cards.previous-tab": (s) => tabRefusal(s, "cards.previous-tab"),

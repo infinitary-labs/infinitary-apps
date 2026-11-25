@@ -2005,6 +2005,34 @@
       <string>%1$ld 個存放庫</string>
     </dict>
   </dict>
+  <key>settingsProjectsTagsRemoveQuestion</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>移除 %2$@？它會從帶有它的 %1$ld 項任務上拿掉。</string>
+    </dict>
+  </dict>
+  <key>settingsProjectsTagsTasks</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>%1$ld 項任務</string>
+    </dict>
+  </dict>
   <key>settingsSubscriptionsSavedResets</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

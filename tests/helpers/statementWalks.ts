@@ -240,6 +240,17 @@ export const WALKS: Record<string, { walks: string[]; reason: string }> = {
     reason:
       "stops at its first row: the personal workspace is at most one row before it, and repos holds one row per project the captain adds",
   },
+  "SELECT t.*, (SELECT COUNT(*) FROM task_tags x WHERE x.tag_id = t.id AND x.state = 'on') AS carried FROM project_tags t":
+    {
+      walks: ["SCAN t"],
+      reason:
+        "every project's tags with how many tasks carry each (ProjectTagStore.views): one row per tag the captain adds, each count read from the task_tags_tag index alone, which holds each row's state",
+    },
+  "SELECT 1 FROM task_tags LIMIT 1": {
+    walks: ["SCAN task_tags USING COVERING INDEX task_tags_tag"],
+    reason:
+      "reads one row and stops at its LIMIT, until a first tag is carried (TaskTagStore.viewsOf); nothing asks again after one is",
+  },
   "SELECT id, origin FROM repos WHERE forge_kind = 'git' OR forge_kind IS NULL": {
     walks: ["SCAN repos"],
     reason: "one row per project the captain adds",

@@ -95,6 +95,7 @@ describe("the command catalog", () => {
       "browser.card", // INF-4578's direction A, piece 3: chosen by name.
       "task.move-computer",
       "task.close-done",
+      "task.edit-tags",
       "cards.show-browser",
       "cards.next-tab",
       "cards.previous-tab",
@@ -201,6 +202,7 @@ describe("the command catalog", () => {
       "browser.card", // INF-4578's direction A, piece 3: chosen by name.
       "task.move-computer",
       "task.close-done",
+      "task.edit-tags",
       "cards.show-browser",
       "cards.next-tab",
       "cards.previous-tab",

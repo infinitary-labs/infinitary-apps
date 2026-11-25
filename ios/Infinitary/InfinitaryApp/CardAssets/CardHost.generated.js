@@ -28672,6 +28672,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `done, finish, finished, complete, close, record, task`;
   }
+  function commandTaskEditTags() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعديل وسوم المهمة`;
+      case "de":
+        return `Tags der Aufgabe bearbeiten`;
+      case "es":
+        return `Editar las etiquetas de la tarea`;
+      case "fr":
+        return `Modifier les étiquettes de la tâche`;
+      case "ja":
+        return `タスクのタグを編集`;
+      case "ko":
+        return `작업의 태그 편집`;
+      case "pt-BR":
+        return `Editar as etiquetas da tarefa`;
+      case "zh-Hans":
+        return `编辑任务的标签`;
+      case "zh-Hant":
+        return `編輯任務的標籤`;
+      case "en-XA":
+        return `[Éðîţ ţĥé ţášķ'š ţáĝš ~~~~~~~]`;
+      case "ar-XB":
+        return `‮Edit the task's tags‬`;
+    }
+    return `Edit the task's tags`;
+  }
+  function commandTaskEditTagsWords() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `وسوم, وسم, تصنيف, فئة, نوع, سجل, مهمة`;
+      case "de":
+        return `Tags, Tag, Label, Etikett, Kategorie, Art, Protokoll, Aufgabe`;
+      case "es":
+        return `etiquetas, etiqueta, tag, categoría, tipo, registro, tarea`;
+      case "fr":
+        return `étiquettes, étiquette, tag, catégorie, genre, fiche, tâche`;
+      case "ja":
+        return `タグ, ラベル, 分類, 種類, 記録, タスク`;
+      case "ko":
+        return `태그, 라벨, 분류, 종류, 기록, 작업`;
+      case "pt-BR":
+        return `etiquetas, etiqueta, tag, categoria, tipo, registro, tarefa`;
+      case "zh-Hans":
+        return `标签, 标记, 分类, 类别, 记录, 任务`;
+      case "zh-Hant":
+        return `標籤, 標記, 分類, 類別, 紀錄, 任務`;
+      case "en-XA":
+        return `[ţáĝš, ţáĝ, ļáƀéļ, ļáƀéļš, çáţéĝöŕý, ķîñð, ŕéçöŕð, ţášķ ~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮tags, tag, label, labels, category, kind, record, task‬`;
+    }
+    return `tags, tag, label, labels, category, kind, record, task`;
+  }
   function commandTaskMoveComputer() {
     switch (currentLanguage()) {
       case "ar":
@@ -49763,6 +49817,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Runs on`;
   }
+  function recordFactTags() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الوسوم`;
+      case "de":
+        return `Tags`;
+      case "es":
+        return `Etiquetas`;
+      case "fr":
+        return `Étiquettes`;
+      case "ja":
+        return `タグ`;
+      case "ko":
+        return `태그`;
+      case "pt-BR":
+        return `Etiquetas`;
+      case "zh-Hans":
+        return `标签`;
+      case "zh-Hant":
+        return `標籤`;
+      case "en-XA":
+        return `[Ţáĝš ~~]`;
+      case "ar-XB":
+        return `‮Tags‬`;
+    }
+    return `Tags`;
+  }
   function recordFoldedMore(input2) {
     const count = formatNumber(input2.count);
     switch (currentLanguage()) {
@@ -51001,6 +51082,87 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Starting`;
   }
+  function recordTagsEdit() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعديل الوسوم`;
+      case "de":
+        return `Tags bearbeiten`;
+      case "es":
+        return `Editar etiquetas`;
+      case "fr":
+        return `Modifier les étiquettes`;
+      case "ja":
+        return `タグを編集`;
+      case "ko":
+        return `태그 편집`;
+      case "pt-BR":
+        return `Editar etiquetas`;
+      case "zh-Hans":
+        return `编辑标签`;
+      case "zh-Hant":
+        return `編輯標籤`;
+      case "en-XA":
+        return `[Éðîţ ţáĝš ~~~]`;
+      case "ar-XB":
+        return `‮Edit tags‬`;
+    }
+    return `Edit tags`;
+  }
+  function recordTagsFailed() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر حفظ تغييرك على الوسوم.`;
+      case "de":
+        return `Deine Änderung an den Tags konnte nicht gespeichert werden.`;
+      case "es":
+        return `No se pudo guardar tu cambio en las etiquetas.`;
+      case "fr":
+        return `Votre modification des étiquettes n’a pas pu être enregistrée.`;
+      case "ja":
+        return `タグの変更を保存できませんでした。`;
+      case "ko":
+        return `태그 변경 사항을 저장하지 못했어요.`;
+      case "pt-BR":
+        return `Não foi possível salvar sua mudança nas etiquetas.`;
+      case "zh-Hans":
+        return `无法保存你对标签的更改。`;
+      case "zh-Hant":
+        return `無法儲存你對標籤的變更。`;
+      case "en-XA":
+        return `[Ýöûŕ çĥáñĝé ţö ţĥé ţáĝš çöûļð ñöţ ƀé šáṽéð. ~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your change to the tags could not be saved.‬`;
+    }
+    return `Your change to the tags could not be saved.`;
+  }
+  function recordTagsNone() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا وسوم`;
+      case "de":
+        return `Keine Tags`;
+      case "es":
+        return `Sin etiquetas`;
+      case "fr":
+        return `Aucune étiquette`;
+      case "ja":
+        return `タグなし`;
+      case "ko":
+        return `태그 없음`;
+      case "pt-BR":
+        return `Sem etiquetas`;
+      case "zh-Hans":
+        return `没有标签`;
+      case "zh-Hant":
+        return `沒有標籤`;
+      case "en-XA":
+        return `[Ñö ţáĝš ~~~]`;
+      case "ar-XB":
+        return `‮No tags‬`;
+    }
+    return `No tags`;
+  }
   function recordTryAgain() {
     switch (currentLanguage()) {
       case "ar":
@@ -52235,6 +52397,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Show a started task's record first‬`;
     }
     return `Show a started task's record first`;
+  }
+  function refuseShowATaggableTasksRecordFirst() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `اعرض أولًا سجل مهمة لمشروعها وسوم`;
+      case "de":
+        return `Zeig zuerst das Protokoll einer Aufgabe, deren Projekt Tags hat`;
+      case "es":
+        return `Primero muestra el registro de una tarea cuyo proyecto tenga etiquetas`;
+      case "fr":
+        return `Affichez d’abord la fiche d’une tâche dont le projet a des étiquettes`;
+      case "ja":
+        return `先にタグのあるプロジェクトのタスクの記録を表示してください`;
+      case "ko":
+        return `태그가 있는 프로젝트의 작업 기록을 먼저 표시하세요`;
+      case "pt-BR":
+        return `Mostre primeiro o registro de uma tarefa cujo projeto tenha etiquetas`;
+      case "zh-Hans":
+        return `请先显示一个所在项目有标签的任务的记录`;
+      case "zh-Hant":
+        return `請先顯示一項所在專案有標籤的任務的紀錄`;
+      case "en-XA":
+        return `[Šĥöŵ ţĥé ŕéçöŕð öƒ á ţášķ ŵĥöšé þŕöĵéçţ ĥáš ţáĝš ƒîŕšţ ~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Show the record of a task whose project has tags first‬`;
+    }
+    return `Show the record of a task whose project has tags first`;
   }
   function refuseTabIsOnComputer(input2) {
     const computer = input2.computer;
@@ -84622,6 +84811,631 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `What work belongs in this project. Your first mate reads it to choose where new work goes.`;
   }
+  function settingsProjectsTagsAdd() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إضافة وسم`;
+      case "de":
+        return `Tag hinzufügen`;
+      case "es":
+        return `Añadir una etiqueta`;
+      case "fr":
+        return `Ajouter une étiquette`;
+      case "ja":
+        return `タグを追加`;
+      case "ko":
+        return `태그 추가`;
+      case "pt-BR":
+        return `Adicionar uma etiqueta`;
+      case "zh-Hans":
+        return `添加标签`;
+      case "zh-Hant":
+        return `新增標籤`;
+      case "en-XA":
+        return `[Åðð á ţáĝ ~~~]`;
+      case "ar-XB":
+        return `‮Add a tag‬`;
+    }
+    return `Add a tag`;
+  }
+  function settingsProjectsTagsCancel() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إلغاء`;
+      case "de":
+        return `Abbrechen`;
+      case "es":
+        return `Cancelar`;
+      case "fr":
+        return `Annuler`;
+      case "ja":
+        return `キャンセル`;
+      case "ko":
+        return `취소`;
+      case "pt-BR":
+        return `Cancelar`;
+      case "zh-Hans":
+        return `取消`;
+      case "zh-Hant":
+        return `取消`;
+      case "en-XA":
+        return `[Çáñçéļ ~~]`;
+      case "ar-XB":
+        return `‮Cancel‬`;
+    }
+    return `Cancel`;
+  }
+  function settingsProjectsTagsDescription() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `المهام التي تندرج تحته`;
+      case "de":
+        return `Welche Aufgaben dazugehören`;
+      case "es":
+        return `Qué tareas entran`;
+      case "fr":
+        return `Quelles tâches y entrent`;
+      case "ja":
+        return `当てはまるタスク`;
+      case "ko":
+        return `해당하는 작업`;
+      case "pt-BR":
+        return `Quais tarefas se encaixam`;
+      case "zh-Hans":
+        return `哪些任务符合`;
+      case "zh-Hant":
+        return `哪些任務符合`;
+      case "en-XA":
+        return `[Ŵĥîçĥ ţášķš ǫûáļîƒý ~~~~~~~]`;
+      case "ar-XB":
+        return `‮Which tasks qualify‬`;
+    }
+    return `Which tasks qualify`;
+  }
+  function settingsProjectsTagsDescriptionExample() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `شيء كان يعمل من قبل وتعطّل الآن`;
+      case "de":
+        return `Etwas, das früher funktioniert hat und jetzt kaputt ist`;
+      case "es":
+        return `Algo que antes funcionaba y ahora está roto`;
+      case "fr":
+        return `Quelque chose qui marchait avant et ne marche plus`;
+      case "ja":
+        return `以前は動いていたのに、今は壊れているもの`;
+      case "ko":
+        return `전에는 되던 것이 지금은 고장 난 경우`;
+      case "pt-BR":
+        return `Algo que funcionava antes e agora está quebrado`;
+      case "zh-Hans":
+        return `以前能用、现在坏了的东西`;
+      case "zh-Hant":
+        return `以前能用、現在壞了的東西`;
+      case "en-XA":
+        return `[Šöɱéţĥîñĝ ţĥáţ ûšéð ţö ŵöŕķ áñð îš ƀŕöķéñ ñöŵ ~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Something that used to work and is broken now‬`;
+    }
+    return `Something that used to work and is broken now`;
+  }
+  function settingsProjectsTagsEdit() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعديل`;
+      case "de":
+        return `Bearbeiten`;
+      case "es":
+        return `Editar`;
+      case "fr":
+        return `Modifier`;
+      case "ja":
+        return `編集`;
+      case "ko":
+        return `편집`;
+      case "pt-BR":
+        return `Editar`;
+      case "zh-Hans":
+        return `编辑`;
+      case "zh-Hant":
+        return `編輯`;
+      case "en-XA":
+        return `[Éðîţ ~~]`;
+      case "ar-XB":
+        return `‮Edit‬`;
+    }
+    return `Edit`;
+  }
+  function settingsProjectsTagsEditNamed(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعديل ${name}`;
+      case "de":
+        return `${name} bearbeiten`;
+      case "es":
+        return `Editar ${name}`;
+      case "fr":
+        return `Modifier ${name}`;
+      case "ja":
+        return `${name} を編集`;
+      case "ko":
+        return `${name} 편집`;
+      case "pt-BR":
+        return `Editar ${name}`;
+      case "zh-Hans":
+        return `编辑 ${name}`;
+      case "zh-Hant":
+        return `編輯 ${name}`;
+      case "en-XA":
+        return `[Éðîţ ${name} ~~]`;
+      case "ar-XB":
+        return `‮Edit ‬${name}`;
+    }
+    return `Edit ${name}`;
+  }
+  function settingsProjectsTagsEmpty() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا وسوم بعد. يسمّي الوسم نوعًا من العمل، مثل خلل أو ميزة أو فكرة، ويقول وصفه أي المهام تندرج تحته.`;
+      case "de":
+        return `Noch keine Tags. Ein Tag benennt eine Art von Arbeit, etwa Fehler, Funktion oder Idee, und seine Beschreibung sagt, welche Aufgaben dazugehören.`;
+      case "es":
+        return `Aún no hay etiquetas. Una etiqueta nombra un tipo de trabajo, como error, función o idea, y su descripción dice qué tareas entran.`;
+      case "fr":
+        return `Aucune étiquette pour l’instant. Une étiquette nomme un genre de travail, comme bogue, fonctionnalité ou idée, et sa description dit quelles tâches y entrent.`;
+      case "ja":
+        return `タグはまだありません。タグはバグ、機能、アイデアなどの作業の種類を表し、説明でどのタスクが当てはまるかを示します。`;
+      case "ko":
+        return `아직 태그가 없어요. 태그는 버그, 기능, 아이디어 같은 작업의 종류를 나타내고, 설명은 어떤 작업이 해당하는지 알려 줘요.`;
+      case "pt-BR":
+        return `Ainda não há etiquetas. Uma etiqueta nomeia um tipo de trabalho, como bug, recurso ou ideia, e sua descrição diz quais tarefas se encaixam.`;
+      case "zh-Hans":
+        return `还没有标签。标签代表一类工作，比如缺陷、功能或想法，它的描述说明哪些任务符合。`;
+      case "zh-Hant":
+        return `還沒有標籤。標籤代表一類工作，例如錯誤、功能或想法，它的描述說明哪些任務符合。`;
+      case "en-XA":
+        return `[Ñö ţáĝš ýéţ. Å ţáĝ ñáɱéš á ķîñð öƒ ŵöŕķ, šûçĥ áš ƀûĝ, ƒéáţûŕé öŕ îðéá, áñð îţš ðéšçŕîþţîöñ šáýš ŵĥîçĥ ţášķš ǫûáļîƒý. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮No tags yet. A tag names a kind of work, such as bug, feature or idea, and its description says which tasks qualify.‬`;
+    }
+    return `No tags yet. A tag names a kind of work, such as bug, feature or idea, and its description says which tasks qualify.`;
+  }
+  function settingsProjectsTagsLabel() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الوسوم`;
+      case "de":
+        return `Tags`;
+      case "es":
+        return `Etiquetas`;
+      case "fr":
+        return `Étiquettes`;
+      case "ja":
+        return `タグ`;
+      case "ko":
+        return `태그`;
+      case "pt-BR":
+        return `Etiquetas`;
+      case "zh-Hans":
+        return `标签`;
+      case "zh-Hant":
+        return `標籤`;
+      case "en-XA":
+        return `[Ţáĝš ~~]`;
+      case "ar-XB":
+        return `‮Tags‬`;
+    }
+    return `Tags`;
+  }
+  function settingsProjectsTagsName() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `اسم الوسم`;
+      case "de":
+        return `Name des Tags`;
+      case "es":
+        return `Nombre de la etiqueta`;
+      case "fr":
+        return `Nom de l’étiquette`;
+      case "ja":
+        return `タグ名`;
+      case "ko":
+        return `태그 이름`;
+      case "pt-BR":
+        return `Nome da etiqueta`;
+      case "zh-Hans":
+        return `标签名称`;
+      case "zh-Hant":
+        return `標籤名稱`;
+      case "en-XA":
+        return `[Ţáĝ ñáɱé ~~~]`;
+      case "ar-XB":
+        return `‮Tag name‬`;
+    }
+    return `Tag name`;
+  }
+  function settingsProjectsTagsNameTaken(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لدى هذا المشروع وسم باسم ${name} بالفعل.`;
+      case "de":
+        return `Dieses Projekt hat schon ein Tag namens ${name}.`;
+      case "es":
+        return `Este proyecto ya tiene una etiqueta llamada ${name}.`;
+      case "fr":
+        return `Ce projet a déjà une étiquette nommée ${name}.`;
+      case "ja":
+        return `このプロジェクトには ${name} というタグがすでにあります。`;
+      case "ko":
+        return `이 프로젝트에는 이미 ${name}(이)라는 태그가 있어요.`;
+      case "pt-BR":
+        return `Este projeto já tem uma etiqueta chamada ${name}.`;
+      case "zh-Hans":
+        return `这个项目已经有名为 ${name} 的标签。`;
+      case "zh-Hant":
+        return `這個專案已經有名為 ${name} 的標籤。`;
+      case "en-XA":
+        return `[Ţĥîš þŕöĵéçţ áļŕéáðý ĥáš á ţáĝ ñáɱéð ${name}. ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This project already has a tag named ‬${name}‮.‬`;
+    }
+    return `This project already has a tag named ${name}.`;
+  }
+  function settingsProjectsTagsNeedsDescription() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `قل أي المهام تندرج تحت هذا الوسم.`;
+      case "de":
+        return `Sag, welche Aufgaben zu diesem Tag gehören.`;
+      case "es":
+        return `Di qué tareas entran en esta etiqueta.`;
+      case "fr":
+        return `Dites quelles tâches entrent dans cette étiquette.`;
+      case "ja":
+        return `このタグに当てはまるタスクを書いてください。`;
+      case "ko":
+        return `이 태그에 해당하는 작업을 적어 주세요.`;
+      case "pt-BR":
+        return `Diga quais tarefas se encaixam nesta etiqueta.`;
+      case "zh-Hans":
+        return `说明哪些任务符合这个标签。`;
+      case "zh-Hant":
+        return `說明哪些任務符合這個標籤。`;
+      case "en-XA":
+        return `[Šáý ŵĥîçĥ ţášķš ǫûáļîƒý ƒöŕ ţĥîš ţáĝ. ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Say which tasks qualify for this tag.‬`;
+    }
+    return `Say which tasks qualify for this tag.`;
+  }
+  function settingsProjectsTagsNeedsName() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أعطِ الوسم اسمًا.`;
+      case "de":
+        return `Gib dem Tag einen Namen.`;
+      case "es":
+        return `Ponle un nombre a la etiqueta.`;
+      case "fr":
+        return `Donnez un nom à l’étiquette.`;
+      case "ja":
+        return `タグに名前を付けてください。`;
+      case "ko":
+        return `태그 이름을 정해 주세요.`;
+      case "pt-BR":
+        return `Dê um nome à etiqueta.`;
+      case "zh-Hans":
+        return `给标签起个名字。`;
+      case "zh-Hant":
+        return `替標籤取個名字。`;
+      case "en-XA":
+        return `[Ĝîṽé ţĥé ţáĝ á ñáɱé. ~~~~~~~]`;
+      case "ar-XB":
+        return `‮Give the tag a name.‬`;
+    }
+    return `Give the tag a name.`;
+  }
+  function settingsProjectsTagsRemove() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إزالة`;
+      case "de":
+        return `Entfernen`;
+      case "es":
+        return `Quitar`;
+      case "fr":
+        return `Retirer`;
+      case "ja":
+        return `削除`;
+      case "ko":
+        return `제거`;
+      case "pt-BR":
+        return `Remover`;
+      case "zh-Hans":
+        return `移除`;
+      case "zh-Hant":
+        return `移除`;
+      case "en-XA":
+        return `[Ŕéɱöṽé ~~]`;
+      case "ar-XB":
+        return `‮Remove‬`;
+    }
+    return `Remove`;
+  }
+  function settingsProjectsTagsRemoveNamed(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `إزالة ${name}`;
+      case "de":
+        return `${name} entfernen`;
+      case "es":
+        return `Quitar ${name}`;
+      case "fr":
+        return `Retirer ${name}`;
+      case "ja":
+        return `${name} を削除`;
+      case "ko":
+        return `${name} 제거`;
+      case "pt-BR":
+        return `Remover ${name}`;
+      case "zh-Hans":
+        return `移除 ${name}`;
+      case "zh-Hant":
+        return `移除 ${name}`;
+      case "en-XA":
+        return `[Ŕéɱöṽé ${name} ~~~]`;
+      case "ar-XB":
+        return `‮Remove ‬${name}`;
+    }
+    return `Remove ${name}`;
+  }
+  function settingsProjectsTagsRemoveQuestion(input2) {
+    const count = formatNumber(input2.count);
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `إزالة ${name}؟ سيُزال من ${count} مهمة تحمله.`;
+          case "one":
+            return `إزالة ${name}؟ سيُزال من المهمة الواحدة التي تحمله.`;
+          case "two":
+            return `إزالة ${name}؟ سيُزال من المهمتين اللتين تحملانه.`;
+          case "few":
+            return `إزالة ${name}؟ سيُزال من ${count} مهام تحمله.`;
+          case "many":
+            return `إزالة ${name}؟ سيُزال من ${count} مهمة تحمله.`;
+          default:
+            return `إزالة ${name}؟ سيُزال من ${count} مهمة تحمله.`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${name} entfernen? Das Tag verschwindet von der ${count} Aufgabe, die es trägt.`;
+          default:
+            return `${name} entfernen? Das Tag verschwindet von den ${count} Aufgaben, die es tragen.`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `¿Quitar ${name}? Sale de la ${count} tarea que la lleva.`;
+          case "many":
+            return `¿Quitar ${name}? Sale de las ${count} de tareas que la llevan.`;
+          default:
+            return `¿Quitar ${name}? Sale de las ${count} tareas que la llevan.`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Retirer ${name} ? Elle quitte la ${count} tâche qui la porte.`;
+          case "many":
+            return `Retirer ${name} ? Elle quitte les ${count} de tâches qui la portent.`;
+          default:
+            return `Retirer ${name} ? Elle quitte les ${count} tâches qui la portent.`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${name} を削除しますか？このタグが付いている ${count} 件のタスクから外れます。`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${name}을(를) 제거할까요? 이 태그가 붙은 작업 ${count}개에서 빠져요.`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Remover ${name}? Ela sai da ${count} tarefa que a leva.`;
+          case "many":
+            return `Remover ${name}? Ela sai das ${count} de tarefas que a levam.`;
+          default:
+            return `Remover ${name}? Ela sai das ${count} tarefas que a levam.`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `移除 ${name}？它会从带有它的 ${count} 个任务上去掉。`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `移除 ${name}？它會從帶有它的 ${count} 項任務上拿掉。`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[Ŕéɱöṽé ${name}? Îţ çöɱéš öƒƒ ţĥé ${count} ţášķ ţĥáţ çáŕŕîéš îţ. ~~~~~~~~~~~~~~~~]`;
+          default:
+            return `[Ŕéɱöṽé ${name}? Îţ çöɱéš öƒƒ ţĥé ${count} ţášķš ţĥáţ çáŕŕý îţ. ~~~~~~~~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `‮Remove ‬${name}‮? It comes off the ‬${count}‮ task that carries it.‬`;
+          default:
+            return `‮Remove ‬${name}‮? It comes off the ‬${count}‮ tasks that carry it.‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `Remove ${name}? It comes off the ${count} task that carries it.`;
+      default:
+        return `Remove ${name}? It comes off the ${count} tasks that carry it.`;
+    }
+  }
+  function settingsProjectsTagsRemoveQuestionNone(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `إزالة ${name}؟ لا تحمله أي مهمة.`;
+      case "de":
+        return `${name} entfernen? Keine Aufgabe trägt es.`;
+      case "es":
+        return `¿Quitar ${name}? Ninguna tarea la lleva.`;
+      case "fr":
+        return `Retirer ${name} ? Aucune tâche ne la porte.`;
+      case "ja":
+        return `${name} を削除しますか？このタグが付いたタスクはありません。`;
+      case "ko":
+        return `${name}을(를) 제거할까요? 이 태그가 붙은 작업은 없어요.`;
+      case "pt-BR":
+        return `Remover ${name}? Nenhuma tarefa a leva.`;
+      case "zh-Hans":
+        return `移除 ${name}？没有任务带有它。`;
+      case "zh-Hant":
+        return `移除 ${name}？沒有任務帶有它。`;
+      case "en-XA":
+        return `[Ŕéɱöṽé ${name}? Ñö ţášķ çáŕŕîéš îţ. ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Remove ‬${name}‮? No task carries it.‬`;
+    }
+    return `Remove ${name}? No task carries it.`;
+  }
+  function settingsProjectsTagsSave() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `حفظ`;
+      case "de":
+        return `Speichern`;
+      case "es":
+        return `Guardar`;
+      case "fr":
+        return `Enregistrer`;
+      case "ja":
+        return `保存`;
+      case "ko":
+        return `저장`;
+      case "pt-BR":
+        return `Salvar`;
+      case "zh-Hans":
+        return `保存`;
+      case "zh-Hant":
+        return `儲存`;
+      case "en-XA":
+        return `[Šáṽé ~~]`;
+      case "ar-XB":
+        return `‮Save‬`;
+    }
+    return `Save`;
+  }
+  function settingsProjectsTagsTasks(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${count} مهمة`;
+          case "one":
+            return `مهمة واحدة`;
+          case "two":
+            return `مهمتان`;
+          case "few":
+            return `${count} مهام`;
+          case "many":
+            return `${count} مهمة`;
+          default:
+            return `${count} مهمة`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} Aufgabe`;
+          default:
+            return `${count} Aufgaben`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} tarea`;
+          case "many":
+            return `${count} de tareas`;
+          default:
+            return `${count} tareas`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} tâche`;
+          case "many":
+            return `${count} de tâches`;
+          default:
+            return `${count} tâches`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 件のタスク`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `작업 ${count}개`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} tarefa`;
+          case "many":
+            return `${count} de tarefas`;
+          default:
+            return `${count} tarefas`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 个任务`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 項任務`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} ţášķ ~~]`;
+          default:
+            return `[${count} ţášķš ~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ task‬`;
+          default:
+            return `${count}‮ tasks‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} task`;
+      default:
+        return `${count} tasks`;
+    }
+  }
   function settingsProjectsTasksLabel() {
     switch (currentLanguage()) {
       case "ar":
@@ -102038,6 +102852,202 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Info`;
   }
+  function taskTagsAddedByDecision(input2) {
+    const tags = input2.tags;
+    switch (currentLanguage()) {
+      case "ar":
+        return `وسم نموذج القرارات هذه المهمة بـ ${tags}.`;
+      case "de":
+        return `Das Entscheidungsmodell hat diese Aufgabe mit ${tags} getaggt.`;
+      case "es":
+        return `El modelo de decisiones etiquetó esta tarea con ${tags}.`;
+      case "fr":
+        return `Le modèle de décision a étiqueté cette tâche ${tags}.`;
+      case "ja":
+        return `判断モデルがこのタスクに ${tags} を付けました。`;
+      case "ko":
+        return `판단 모델이 이 작업에 ${tags} 태그를 붙였어요.`;
+      case "pt-BR":
+        return `O modelo de decisões marcou esta tarefa com ${tags}.`;
+      case "zh-Hans":
+        return `决策模型给这个任务加上了 ${tags}。`;
+      case "zh-Hant":
+        return `決策模型替這項任務加上了 ${tags}。`;
+      case "en-XA":
+        return `[Ţĥé ðéçîšîöñ ɱöðéļ ţáĝĝéð ţĥîš ţášķ ${tags}. ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The decision model tagged this task ‬${tags}‮.‬`;
+    }
+    return `The decision model tagged this task ${tags}.`;
+  }
+  function taskTagsAddedByFirstMate(input2) {
+    const tags = input2.tags;
+    switch (currentLanguage()) {
+      case "ar":
+        return `وسم نائب القبطان هذه المهمة بـ ${tags}.`;
+      case "de":
+        return `Dein erster Offizier hat diese Aufgabe mit ${tags} getaggt.`;
+      case "es":
+        return `Tu primer oficial etiquetó esta tarea con ${tags}.`;
+      case "fr":
+        return `Votre second a étiqueté cette tâche ${tags}.`;
+      case "ja":
+        return `一等航海士がこのタスクに ${tags} を付けました。`;
+      case "ko":
+        return `일등항해사가 이 작업에 ${tags} 태그를 붙였어요.`;
+      case "pt-BR":
+        return `Seu imediato marcou esta tarefa com ${tags}.`;
+      case "zh-Hans":
+        return `你的大副给这个任务加上了 ${tags}。`;
+      case "zh-Hant":
+        return `你的大副替這項任務加上了 ${tags}。`;
+      case "en-XA":
+        return `[Ýöûŕ ƒîŕšţ ɱáţé ţáĝĝéð ţĥîš ţášķ ${tags}. ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your first mate tagged this task ‬${tags}‮.‬`;
+    }
+    return `Your first mate tagged this task ${tags}.`;
+  }
+  function taskTagsAddedByYou(input2) {
+    const tags = input2.tags;
+    switch (currentLanguage()) {
+      case "ar":
+        return `وسمتَ هذه المهمة بـ ${tags}.`;
+      case "de":
+        return `Du hast diese Aufgabe mit ${tags} getaggt.`;
+      case "es":
+        return `Etiquetaste esta tarea con ${tags}.`;
+      case "fr":
+        return `Vous avez étiqueté cette tâche ${tags}.`;
+      case "ja":
+        return `あなたがこのタスクに ${tags} を付けました。`;
+      case "ko":
+        return `이 작업에 ${tags} 태그를 붙였어요.`;
+      case "pt-BR":
+        return `Você marcou esta tarefa com ${tags}.`;
+      case "zh-Hans":
+        return `你给这个任务加上了 ${tags}。`;
+      case "zh-Hant":
+        return `你替這項任務加上了 ${tags}。`;
+      case "en-XA":
+        return `[Ýöû ţáĝĝéð ţĥîš ţášķ ${tags}. ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮You tagged this task ‬${tags}‮.‬`;
+    }
+    return `You tagged this task ${tags}.`;
+  }
+  function taskTagsRemovedByDecision(input2) {
+    const tags = input2.tags;
+    switch (currentLanguage()) {
+      case "ar":
+        return `أزال نموذج القرارات ${tags} عن هذه المهمة.`;
+      case "de":
+        return `Das Entscheidungsmodell hat ${tags} von dieser Aufgabe entfernt.`;
+      case "es":
+        return `El modelo de decisiones quitó ${tags} de esta tarea.`;
+      case "fr":
+        return `Le modèle de décision a retiré ${tags} de cette tâche.`;
+      case "ja":
+        return `判断モデルがこのタスクから ${tags} を外しました。`;
+      case "ko":
+        return `판단 모델이 이 작업에서 ${tags} 태그를 뗐어요.`;
+      case "pt-BR":
+        return `O modelo de decisões tirou ${tags} desta tarefa.`;
+      case "zh-Hans":
+        return `决策模型从这个任务上去掉了 ${tags}。`;
+      case "zh-Hant":
+        return `決策模型從這項任務上拿掉了 ${tags}。`;
+      case "en-XA":
+        return `[Ţĥé ðéçîšîöñ ɱöðéļ ţööķ ${tags} öƒƒ ţĥîš ţášķ. ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The decision model took ‬${tags}‮ off this task.‬`;
+    }
+    return `The decision model took ${tags} off this task.`;
+  }
+  function taskTagsRemovedByFirstMate(input2) {
+    const tags = input2.tags;
+    switch (currentLanguage()) {
+      case "ar":
+        return `أزال نائب القبطان ${tags} عن هذه المهمة.`;
+      case "de":
+        return `Dein erster Offizier hat ${tags} von dieser Aufgabe entfernt.`;
+      case "es":
+        return `Tu primer oficial quitó ${tags} de esta tarea.`;
+      case "fr":
+        return `Votre second a retiré ${tags} de cette tâche.`;
+      case "ja":
+        return `一等航海士がこのタスクから ${tags} を外しました。`;
+      case "ko":
+        return `일등항해사가 이 작업에서 ${tags} 태그를 뗐어요.`;
+      case "pt-BR":
+        return `Seu imediato tirou ${tags} desta tarefa.`;
+      case "zh-Hans":
+        return `你的大副从这个任务上去掉了 ${tags}。`;
+      case "zh-Hant":
+        return `你的大副從這項任務上拿掉了 ${tags}。`;
+      case "en-XA":
+        return `[Ýöûŕ ƒîŕšţ ɱáţé ţööķ ${tags} öƒƒ ţĥîš ţášķ. ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your first mate took ‬${tags}‮ off this task.‬`;
+    }
+    return `Your first mate took ${tags} off this task.`;
+  }
+  function taskTagsRemovedByYou(input2) {
+    const tags = input2.tags;
+    switch (currentLanguage()) {
+      case "ar":
+        return `أزلتَ ${tags} عن هذه المهمة.`;
+      case "de":
+        return `Du hast ${tags} von dieser Aufgabe entfernt.`;
+      case "es":
+        return `Quitaste ${tags} de esta tarea.`;
+      case "fr":
+        return `Vous avez retiré ${tags} de cette tâche.`;
+      case "ja":
+        return `あなたがこのタスクから ${tags} を外しました。`;
+      case "ko":
+        return `이 작업에서 ${tags} 태그를 뗐어요.`;
+      case "pt-BR":
+        return `Você tirou ${tags} desta tarefa.`;
+      case "zh-Hans":
+        return `你从这个任务上去掉了 ${tags}。`;
+      case "zh-Hant":
+        return `你從這項任務上拿掉了 ${tags}。`;
+      case "en-XA":
+        return `[Ýöû ţööķ ${tags} öƒƒ ţĥîš ţášķ. ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮You took ‬${tags}‮ off this task.‬`;
+    }
+    return `You took ${tags} off this task.`;
+  }
+  function taskTagsTagRemoved(input2) {
+    const tag = input2.tag;
+    switch (currentLanguage()) {
+      case "ar":
+        return `أُزيل الوسم ${tag} من هذا المشروع، فلم تعد هذه المهمة تحمله.`;
+      case "de":
+        return `Das Tag ${tag} wurde aus diesem Projekt entfernt, darum trägt diese Aufgabe es nicht mehr.`;
+      case "es":
+        return `La etiqueta ${tag} se quitó de este proyecto, así que esta tarea ya no la lleva.`;
+      case "fr":
+        return `L’étiquette ${tag} a été retirée de ce projet, donc cette tâche ne la porte plus.`;
+      case "ja":
+        return `タグ ${tag} はこのプロジェクトから削除されたため、このタスクにはもう付いていません。`;
+      case "ko":
+        return `${tag} 태그가 이 프로젝트에서 제거되어 이 작업에는 더 이상 붙어 있지 않아요.`;
+      case "pt-BR":
+        return `A etiqueta ${tag} foi removida deste projeto, então esta tarefa não a leva mais.`;
+      case "zh-Hans":
+        return `标签 ${tag} 已从这个项目移除，所以这个任务不再带有它。`;
+      case "zh-Hant":
+        return `標籤 ${tag} 已從這個專案移除，所以這項任務不再帶有它。`;
+      case "en-XA":
+        return `[Ţĥé ţáĝ ${tag} ŵáš ŕéɱöṽéð ƒŕöɱ ţĥîš þŕöĵéçţ, šö ţĥîš ţášķ ñö ļöñĝéŕ çáŕŕîéš îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The tag ‬${tag}‮ was removed from this project, so this task no longer carries it.‬`;
+    }
+    return `The tag ${tag} was removed from this project, so this task no longer carries it.`;
+  }
   function taskWaitChainUntil(input2) {
     const end = input2.end;
     const on = input2.on;
@@ -109017,6 +110027,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     commandSizeSmaller,
     commandTaskCloseDone,
     commandTaskCloseDoneWords,
+    commandTaskEditTags,
+    commandTaskEditTagsWords,
     commandTaskMoveComputer,
     commandTaskMoveComputerWords,
     commandUpdatesCheck,
@@ -109735,6 +110747,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     recordFactPersonal,
     recordFactResult,
     recordFactRunsOn,
+    recordFactTags,
     recordFoldedMore,
     recordFromTask,
     recordHelperAskFirstMate,
@@ -109773,6 +110786,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     recordStart,
     recordStartAgain,
     recordStarting,
+    recordTagsEdit,
+    recordTagsFailed,
+    recordTagsNone,
     recordTryAgain,
     recordUndated,
     recordUnreadable,
@@ -109816,6 +110832,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     refuseShowACardBesideABrowserPageFirst,
     refuseShowAStartedTaskThatCanMove,
     refuseShowAStartedTasksRecordFirst,
+    refuseShowATaggableTasksRecordFirst,
     refuseTabIsOnComputer,
     refuseThatTabIsAlreadyShown,
     refuseThereIsNoOtherTabToGo,
@@ -110925,6 +111942,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsProjectsSaveDetails,
     settingsProjectsScope,
     settingsProjectsScopeDescription,
+    settingsProjectsTagsAdd,
+    settingsProjectsTagsCancel,
+    settingsProjectsTagsDescription,
+    settingsProjectsTagsDescriptionExample,
+    settingsProjectsTagsEdit,
+    settingsProjectsTagsEditNamed,
+    settingsProjectsTagsEmpty,
+    settingsProjectsTagsLabel,
+    settingsProjectsTagsName,
+    settingsProjectsTagsNameTaken,
+    settingsProjectsTagsNeedsDescription,
+    settingsProjectsTagsNeedsName,
+    settingsProjectsTagsRemove,
+    settingsProjectsTagsRemoveNamed,
+    settingsProjectsTagsRemoveQuestion,
+    settingsProjectsTagsRemoveQuestionNone,
+    settingsProjectsTagsSave,
+    settingsProjectsTagsTasks,
     settingsProjectsTasksLabel,
     settingsProjectsWorkspace,
     settingsProjectsWorkspaceDescription,
@@ -111542,6 +112577,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     taskTabCards,
     taskTabCrewmate,
     taskTabInfo,
+    taskTagsAddedByDecision,
+    taskTagsAddedByFirstMate,
+    taskTagsAddedByYou,
+    taskTagsRemovedByDecision,
+    taskTagsRemovedByFirstMate,
+    taskTagsRemovedByYou,
+    taskTagsTagRemoved,
     taskWaitChainUntil,
     taskWaitChainUpdate,
     taskWaitChainVia,
@@ -112496,6 +113538,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "commandSizeSmaller": [],
     "commandTaskCloseDone": [],
     "commandTaskCloseDoneWords": [],
+    "commandTaskEditTags": [],
+    "commandTaskEditTagsWords": [],
     "commandTaskMoveComputer": [],
     "commandTaskMoveComputerWords": [],
     "commandUpdatesCheck": [],
@@ -113214,6 +114258,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "recordFactPersonal": [],
     "recordFactResult": [],
     "recordFactRunsOn": [],
+    "recordFactTags": [],
     "recordFoldedMore": ["count"],
     "recordFromTask": ["key"],
     "recordHelperAskFirstMate": [],
@@ -113252,6 +114297,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "recordStart": [],
     "recordStartAgain": [],
     "recordStarting": [],
+    "recordTagsEdit": [],
+    "recordTagsFailed": [],
+    "recordTagsNone": [],
     "recordTryAgain": [],
     "recordUndated": ["summary"],
     "recordUnreadable": [],
@@ -113295,6 +114343,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "refuseShowACardBesideABrowserPageFirst": [],
     "refuseShowAStartedTaskThatCanMove": [],
     "refuseShowAStartedTasksRecordFirst": [],
+    "refuseShowATaggableTasksRecordFirst": [],
     "refuseTabIsOnComputer": ["computer", "tab"],
     "refuseThatTabIsAlreadyShown": [],
     "refuseThereIsNoOtherTabToGo": [],
@@ -114404,6 +115453,24 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsProjectsSaveDetails": [],
     "settingsProjectsScope": [],
     "settingsProjectsScopeDescription": [],
+    "settingsProjectsTagsAdd": [],
+    "settingsProjectsTagsCancel": [],
+    "settingsProjectsTagsDescription": [],
+    "settingsProjectsTagsDescriptionExample": [],
+    "settingsProjectsTagsEdit": [],
+    "settingsProjectsTagsEditNamed": ["name"],
+    "settingsProjectsTagsEmpty": [],
+    "settingsProjectsTagsLabel": [],
+    "settingsProjectsTagsName": [],
+    "settingsProjectsTagsNameTaken": ["name"],
+    "settingsProjectsTagsNeedsDescription": [],
+    "settingsProjectsTagsNeedsName": [],
+    "settingsProjectsTagsRemove": [],
+    "settingsProjectsTagsRemoveNamed": ["name"],
+    "settingsProjectsTagsRemoveQuestion": ["count", "name"],
+    "settingsProjectsTagsRemoveQuestionNone": ["name"],
+    "settingsProjectsTagsSave": [],
+    "settingsProjectsTagsTasks": ["count"],
     "settingsProjectsTasksLabel": [],
     "settingsProjectsWorkspace": [],
     "settingsProjectsWorkspaceDescription": [],
@@ -115021,6 +116088,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "taskTabCards": [],
     "taskTabCrewmate": [],
     "taskTabInfo": [],
+    "taskTagsAddedByDecision": ["tags"],
+    "taskTagsAddedByFirstMate": ["tags"],
+    "taskTagsAddedByYou": ["tags"],
+    "taskTagsRemovedByDecision": ["tags"],
+    "taskTagsRemovedByFirstMate": ["tags"],
+    "taskTagsRemovedByYou": ["tags"],
+    "taskTagsTagRemoved": ["tag"],
     "taskWaitChainUntil": ["end", "on", "time"],
     "taskWaitChainUpdate": ["end", "on"],
     "taskWaitChainVia": ["end", "on"],
@@ -120168,6 +121242,10 @@ ${FRAME_KEYBOARD_SCRIPT}
     "project-settings": true,
     "project-move": true,
     "project-name": true,
+    "project-tags": [
+      "destructive",
+      "Removing a tag takes it off every task for good; tags are not panel data yet"
+    ],
     "project-runs-on": true,
     "device-invite": ["credential", "Makes a joining link for a new computer"],
     "private-site-allow": ["consent", "Widens what every task browser may reach"],
@@ -121139,6 +122217,21 @@ ${FRAME_KEYBOARD_SCRIPT}
       keys: [],
       get searchWords() {
         return searchWords(commandTaskCloseDoneWords());
+      }
+    },
+    // The shown task record's Edit tags (docs/task-tags.md): opens its menu
+    // of the project's tags, each ticked on or off.
+    "task.edit-tags": {
+      get label() {
+        return commandTaskEditTags();
+      },
+      scope: "window",
+      runs: "shell",
+      repeat: false,
+      risk: "navigate",
+      keys: [],
+      get searchWords() {
+        return searchWords(commandTaskEditTagsWords());
       }
     },
     "cards.show-browser": {
@@ -131561,6 +132654,52 @@ ${startersHtml()}`;
     personalVersionSchema.extend({ home: literal(true) }),
     personalVersionSchema.extend({ computer: string().min(1).max(256) })
   ]);
+  const tagName = string().trim().min(1);
+  const tagDescription = string().trim().min(1);
+  const projectTagViewSchema = object({
+    id: string(),
+    name: string(),
+    description: string(),
+    /** Rises each time the description changes. */
+    revision: number(),
+    /** Tasks carrying it now, at any state. */
+    tasks: number()
+  });
+  const tagSetterSchema = _enum(["decision", "captain", "firstmate"]);
+  const taskTagViewSchema = object({
+    id: string(),
+    name: string(),
+    by: tagSetterSchema
+  });
+  discriminatedUnion("op", [
+    strictObject({
+      op: literal("add"),
+      projectId: string().min(1),
+      name: tagName,
+      description: tagDescription
+    }),
+    strictObject({
+      op: literal("edit"),
+      tagId: string().min(1),
+      name: tagName.optional(),
+      description: tagDescription.optional()
+    }),
+    strictObject({ op: literal("remove"), tagId: string().min(1) })
+  ]);
+  object({
+    projectId: string(),
+    tags: array(projectTagViewSchema),
+    done: object({
+      op: _enum(["add", "edit", "remove"]),
+      name: string(),
+      /** The name before a rename. */
+      was: string().optional(),
+      /** Whether an edit changed the description. */
+      described: boolean().optional(),
+      /** Tasks a removal took it off. */
+      tasks: number().optional()
+    })
+  });
   const phoneStandbySchema = object({
     deviceId: string().min(1).max(64),
     name: deviceNameSchema,
@@ -132790,6 +133929,11 @@ ${startersHtml()}`;
      * Pinned whatever its state. Absent while it is not pinned, and on an older home.
      */
     pinnedAt: number().optional(),
+    /**
+     * The tags it carries, alphabetical, each with who set it
+     * (docs/task-tags.md). Absent while it carries none, and on an older home.
+     */
+    tags: array(taskTagViewSchema).optional(),
     createdAt: number(),
     updatedAt: number(),
     startedAt: number().nullable(),
@@ -132836,6 +133980,11 @@ ${startersHtml()}`;
      */
     repos: array(projectRepoViewSchema).optional(),
     archived: boolean(),
+    /**
+     * The project's own tags, alphabetical (docs/task-tags.md). Absent while
+     * it has none, and on an older home.
+     */
+    tags: array(projectTagViewSchema).optional(),
     counts: object({
       /** Broader durable attention, including holds and dead dependencies. */
       needsYou: number(),

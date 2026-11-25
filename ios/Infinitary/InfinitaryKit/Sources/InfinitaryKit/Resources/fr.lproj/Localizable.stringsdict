@@ -2577,6 +2577,42 @@
       <string>%1$ld dépôts</string>
     </dict>
   </dict>
+  <key>settingsProjectsTagsRemoveQuestion</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Retirer %2$@ ? Elle quitte la %1$ld tâche qui la porte.</string>
+      <key>many</key>
+      <string>Retirer %2$@ ? Elle quitte les %1$ld de tâches qui la portent.</string>
+      <key>other</key>
+      <string>Retirer %2$@ ? Elle quitte les %1$ld tâches qui la portent.</string>
+    </dict>
+  </dict>
+  <key>settingsProjectsTagsTasks</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld tâche</string>
+      <key>many</key>
+      <string>%1$ld de tâches</string>
+      <key>other</key>
+      <string>%1$ld tâches</string>
+    </dict>
+  </dict>
   <key>settingsSubscriptionsSavedResets</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

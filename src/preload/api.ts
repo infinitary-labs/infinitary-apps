@@ -193,6 +193,7 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
         from
           ? invoke("inf:task:pin", taskId, pinned, from)
           : invoke("inf:task:pin", taskId, pinned),
+      tags: (taskId, tagIds) => invoke("inf:task:tags", taskId, tagIds),
       moveOptions: (taskId) => invoke("inf:task:move-options", taskId),
       move: (taskId, to, options) =>
         options
@@ -501,6 +502,7 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
     projects: {
       list: () => invoke("inf:projects:list"),
       rename: (projectId, name) => invoke("inf:projects:rename", projectId, name),
+      tags: (change) => invoke("inf:projects:tags", change),
     },
     quota: {
       snapshot: () => invoke("inf:quota:snapshot"),

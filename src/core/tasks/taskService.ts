@@ -7,6 +7,12 @@ import { TASK_CARD_VIA } from "@shared/provenance";
 import { DROP_BEFORE_START } from "@shared/recordDrop";
 import type { RepoView } from "@shared/repos";
 import type { WorkShape } from "@shared/routingPolicy";
+import type {
+  ProjectTagChange,
+  ProjectTagChangeResult,
+  TagSetter,
+  TaskTagView,
+} from "@shared/tags";
 import { pinActivity, pinMissingRefusal } from "@shared/taskPin";
 import type { PlanItem } from "@shared/taskPlan";
 import {
@@ -80,6 +86,13 @@ import { recordReference, updateTaskFields } from "./taskFieldEdits";
 import { TaskGraph, TaskGraphRefusal } from "./taskGraph";
 import { TaskPlacement } from "./taskPlacement";
 import { TaskStarts } from "./taskStarts";
+import {
+  changeProjectTags,
+  replaceTaskTags,
+  setTaskTags,
+  type TagsSet,
+  tagIdsByName,
+} from "./taskTags";
 import { TaskTurns } from "./taskTurns";
 import { keyOrId, type TaskChangeListener, TaskWriter } from "./taskWriter";
 import { liveWaitCycle, waitCycleWords } from "./waitCycles";
@@ -1410,6 +1423,34 @@ export class TaskService {
       },
     );
     return run();
+  }
+
+  /** The tags a task carries, alphabetical, each with who set it (docs/task-tags.md). */
+  tagsOf(id: string): TaskTagView[] {
+    return this.writer.store.tags.viewsOf(id);
+  }
+
+  /** Turn tags on or off on a task, with one quiet timeline line (`setTaskTags`). */
+  setTags(id: string, wanted: readonly { tagId: string; on: boolean }[], by: TagSetter): TagsSet {
+    return setTaskTags(this.writer, id, wanted, by);
+  }
+
+  /** A task's tags become exactly these, by id or, from the first mate's tools, by name. */
+  replaceTags(
+    id: string,
+    tags: { ids: readonly string[] } | { names: readonly string[] },
+    by: Exclude<TagSetter, "decision">,
+  ): TagsSet {
+    const ids = "ids" in tags ? tags.ids : tagIdsByName(this.writer, id, tags.names);
+    return replaceTaskTags(this.writer, id, ids, by);
+  }
+
+  /** Add, edit or remove one of a project's tags (`changeProjectTags`). */
+  changeProjectTags(change: ProjectTagChange): ProjectTagChangeResult {
+    const done = changeProjectTags(this.writer, change);
+    // A project's tags ride its view, which no task row carries.
+    this.invalidatePresentation();
+    return { ...done, tags: this.projects.tags.views().get(done.projectId) ?? [] };
   }
 
   /**

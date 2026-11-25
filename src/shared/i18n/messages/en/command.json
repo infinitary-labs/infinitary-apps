@@ -172,6 +172,8 @@
   "commandSizeSmaller": "Make everything smaller",
   "commandTaskCloseDone": "Close the task as done",
   "commandTaskCloseDoneWords": "done, finish, finished, complete, close, record, task",
+  "commandTaskEditTags": "Edit the task's tags",
+  "commandTaskEditTagsWords": "tags, tag, label, labels, category, kind, record, task",
   "commandTaskMoveComputer": "Move the task to another computer",
   "commandTaskMoveComputerWords": "computer, mac, machine, move, device, record",
   "commandUpdatesCheck": "Check for updates",

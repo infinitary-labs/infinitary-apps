@@ -2,6 +2,7 @@ import { type Card, isReadyDecision } from "@shared/cards";
 import { overridePasses } from "@shared/holds";
 import type { Slot } from "@shared/modelSlots";
 import { captainActionResult } from "@shared/requiredActions";
+import type { ProjectTagView } from "@shared/tags";
 import { cardMerges, taskMovesOf } from "@shared/taskMoves";
 import { BOARD_RECENT_MS, type ProjectView, type TaskPlace, type TaskView } from "@shared/tasks";
 import type { WorkPosture } from "@shared/workPosture";
@@ -368,6 +369,7 @@ export function viewOf(
       ? { backlogSince: record.backlogSince }
       : {}),
     ...(record.pinnedAt != null ? { pinnedAt: record.pinnedAt } : {}),
+    ...tagsOf(options.tasks.tagsOf(record.id)),
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
     startedAt: record.startedAt,
@@ -388,6 +390,7 @@ export function projectViews(
 ): ProjectView[] {
   const cutoff = now - BOARD_RECENT_MS;
   const counts = new Map<string, ProjectView["counts"]>();
+  const tags = options.tasks.projects.tags.views();
   for (const record of all) {
     const entry = counts.get(record.projectId) ?? {
       needsYou: 0,
@@ -419,13 +422,18 @@ export function projectViews(
         a.createdAt - b.createdAt ||
         a.id.localeCompare(b.id),
     )
-    .map((project) => projectView(options, project, counts));
+    .map((project) => projectView(options, project, counts, tags.get(project.id) ?? []));
+}
+
+function tagsOf<T>(tags: readonly T[]): { tags?: T[] } {
+  return tags.length > 0 ? { tags: [...tags] } : {};
 }
 
 function projectView(
   options: Pick<TaskProtocolOptions, "tasks" | "repos">,
   project: ProjectRecord,
   counts: Map<string, ProjectView["counts"]>,
+  tags: readonly ProjectTagView[],
 ): ProjectView {
   const repos = options.tasks.projects.repositoriesOf(project.id).flatMap((member) => {
     const repo = options.repos.get(member.id);
@@ -448,6 +456,7 @@ function projectView(
     repo: repos[0] ?? null,
     ...(repos.length > 0 ? { repos } : {}),
     archived: project.archivedAt !== null,
+    ...tagsOf(tags),
     counts: counts.get(project.id) ?? NO_COUNTS,
   };
 }

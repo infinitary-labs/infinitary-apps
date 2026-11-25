@@ -197,6 +197,74 @@ describe("automatic tagging", () => {
     }
   });
 
+  it("asks again about a task whose title changed while its request waited, recording nothing about the old words", async () => {
+    const t = tagged((title, tag) =>
+      title === "Old words" ? "hang" : tag === "docs" ? "yes" : "no",
+    );
+    try {
+      t.f.tick(10);
+      t.f.tasks.create({ id: "retold", title: "Old words", prompt: "", repoId: "r1" });
+      const pending = t.tagger.idle();
+      t.f.tasks.updateFields("retold", { title: "Write the setup guide" }, "firstmate");
+      t.release();
+      await pending;
+      await t.tagger.idle();
+      expect(t.asked.map((ask) => ask.facts.title)).toEqual(["Old words", "Write the setup guide"]);
+      expect(t.tagsOf("retold")).toEqual(["docs:decision"]);
+    } finally {
+      t.done();
+    }
+  });
+
+  it("leaves tags carried from an emptied project to Check existing tasks, never asking them on its own", async () => {
+    const t = tagged((_, tag) => (tag === "bug" ? "yes" : "no"));
+    try {
+      await t.file("crash", "The app crashes");
+      expect(t.asked).toHaveLength(1);
+      seedProject(t.f.db, { id: "r2", name: "website", path: "/fleet/website", addedAt: 2 });
+      t.f.tick(10);
+      t.f.tasks.create({ id: "site", title: "Footer", prompt: "", repoId: "r2" });
+      const website = t.f.tasks.get("site")?.projectId as string;
+      t.f.tick(10);
+      t.f.tasks.changeProjectTags({
+        op: "add",
+        projectId: website,
+        name: "Bug",
+        description: "Something on the site is broken.",
+      });
+      t.f.tasks.joinWithRepositories(
+        { sources: [{ projectId: t.projectId, whole: true }], repos: [{ id: "r1", name: "app" }] },
+        "captain",
+        () => ({ id: website, name: "website" }),
+      );
+      await t.tagger.idle();
+      expect(t.asked.map((ask) => [ask.taskId, ask.tags])).toEqual([["crash", ["bug", "docs"]]]);
+      expect(t.tagsOf("crash")).toEqual(["Bug:decision"]);
+      t.tagger.change({ op: "start", projectId: website, reach: "all" });
+      await t.tagger.idle();
+      // Bug lands on the website's own tag, so its judgment goes; docs keeps its description and its judgment.
+      expect(t.asked.filter((ask) => ask.taskId === "crash").map((ask) => ask.tags)).toEqual([
+        ["bug", "docs"],
+        ["Bug"],
+      ]);
+    } finally {
+      t.done();
+    }
+  });
+
+  it("reads only tasks filed since the newest one it found judged", async () => {
+    const t = tagged(() => "no");
+    try {
+      await t.file("first", "First");
+      await t.file("second", "Second");
+      expect(t.asked).toHaveLength(2);
+      const newest = t.f.tasks.get("second")?.createdAt as number;
+      expect(t.saved.since).toBe(newest - 1);
+    } finally {
+      t.done();
+    }
+  });
+
   it("leaves a task unchecked when the model gives no answer, and asks again only after an hour", async () => {
     let reply: Reply = "fail";
     const t = tagged(() => reply);

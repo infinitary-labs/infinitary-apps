@@ -6,6 +6,7 @@ import {
   type TagSetter,
 } from "@shared/tags";
 import type { TaskEventActor } from "../storage/taskEventStore";
+import { STALE_JUDGMENT } from "../storage/taskTagStore";
 import type { TaskWriter } from "./taskWriter";
 
 /**
@@ -268,8 +269,9 @@ export function changeProjectTags(
  * rows it had, on or off, with who set each. A row keeps the description
  * revision it was judged at only when that description is the one now on
  * its tag: a row landing on a tag the other project already had, or one
- * judged at an older description of its own tag, loses it, so a later check
- * asks again. The emptied project keeps no tags. Inside the caller's write,
+ * judged at an older description of its own tag, keeps `STALE_JUDGMENT`
+ * instead, so Check existing tasks asks it again and automatic tagging,
+ * which asks rows with no revision, does not. The emptied project keeps no tags. Inside the caller's write,
  * after the tasks moved.
  */
 export function carryProjectTags(
@@ -295,10 +297,11 @@ export function carryProjectTags(
     for (const row of writer.store.tags.rowsOf(taskId).values()) {
       const landed = onto.get(row.tagId);
       if (!landed) continue;
+      const kept = row.revision === landed.judged ? landed.revision : null;
       writer.store.tags.set({
         ...row,
         tagId: landed.id,
-        revision: row.revision === landed.judged ? landed.revision : null,
+        revision: row.by === "decision" ? (kept ?? STALE_JUDGMENT) : row.revision,
       });
     }
   for (const tag of from) {

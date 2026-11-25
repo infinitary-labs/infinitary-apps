@@ -10,6 +10,13 @@ import { prepared } from "./statements";
  * task's own project.
  */
 
+/**
+ * The revision of a decision-model row whose description is gone, such as
+ * one carried onto another project's tag: revisions start at 1, so no
+ * description matches it and only Check existing tasks asks it again.
+ */
+export const STALE_JUDGMENT = 0;
+
 export type TaskTagRow = {
   taskId: string;
   tagId: string;

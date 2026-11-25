@@ -60,11 +60,11 @@ export class TagWork {
 
   /**
    * The newest task automatic tagging owes a request: a tag of its project
-   * with no row, on a task filed after `since`, the moment automatic tagging
-   * last began asking, and no earlier than the tag; or a decision-model row
-   * with no revision. Tasks in `skip` wait out a failed request. Each half
-   * seeks its rows by an index (`tasks_created_at`, `task_tags_unjudged`),
-   * so a long record is never walked.
+   * with no row, on a task filed after `since` and no earlier than the tag;
+   * or a decision-model row with no revision. Tasks in `skip` wait out a
+   * failed request. Each half seeks its rows by an index (`tasks_created_at`,
+   * `task_tags_unjudged`), and `TaskTagger` moves `since` up to the newest
+   * task whenever nothing is owed, so a long record is never walked.
    */
   nextAuto(since: number, skip: readonly string[]): TagWorkItem | undefined {
     if (!this.exists()) return undefined;
@@ -87,6 +87,15 @@ export class TagWork {
       )
       .all({ since, skip: JSON.stringify(skip) }) as { task_id: string; tag_id: string }[];
     return firstItem(rows);
+  }
+
+  /** When the newest task was filed, read from `tasks_created_at` alone; null with no tasks. */
+  newestFiled(): number | null {
+    const row = this.db
+      // i18n-exempt: SQL, never shown to a person
+      .prepare("SELECT MAX(created_at) AS at FROM tasks")
+      .get() as { at: number | null };
+    return row.at;
   }
 
   /** The newest task a check still owes a request, outside `skip`. */

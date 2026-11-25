@@ -150,7 +150,17 @@ export class TaskTagger {
     const now = this.options.now();
     for (const [taskId, at] of this.failedAuto) if (at <= now) this.failedAuto.delete(taskId);
     const since = this.options.settings.getTagAutoSince() ?? now;
-    return this.options.work.nextAuto(since, [...this.failedAuto.keys()]);
+    const next = this.options.work.nextAuto(since, [...this.failedAuto.keys()]);
+    // With nothing owed and no task waiting out a retry, every task filed
+    // so far is judged, so the next read seeks only tasks filed from here
+    // and its cost stays with the newest tasks, not the whole record. One
+    // millisecond short of the newest task: a task filed later in that same
+    // millisecond is still read.
+    if (!next && this.failedAuto.size === 0) {
+      const newest = this.options.work.newestFiled();
+      if (newest !== null && newest - 1 > since) this.options.settings.setTagAutoSince(newest - 1);
+    }
+    return next;
   }
 
   private nextCheck(): TagWorkItem | undefined {
@@ -182,10 +192,11 @@ export class TaskTagger {
     const state = tagState({
       project: this.options.tasks.projects.get(task.projectId)?.name,
       title: task.title,
-      goal: task.goal ?? task.intent?.goal ?? "",
+      goal: goalOf(task),
       userWords: task.intent?.userWords,
       parentTitle: parent?.title,
     });
+    const asked = wordsOf(task);
     const abort = new AbortController();
     this.controller = { abort, check };
     let answers: Record<string, DecisionAnswer>;
@@ -200,6 +211,11 @@ export class TaskTagger {
       this.controller = undefined;
     }
     if (abort.signal.aborted || this.stopped) return;
+    // Answers about words or a project the task no longer has are dropped
+    // unrecorded and not counted as a failure: the record still owes the
+    // task, so the next read asks about what it holds now.
+    const current = this.options.tasks.get(task.id);
+    if (!current || wordsOf(current) !== asked) return;
     const judgments: TagJudgment[] = [];
     let missed = false;
     for (const [key, name] of Object.entries(ids)) {
@@ -346,6 +362,17 @@ function scopeOf(saved: SavedTagCheck): TagCheckScope {
  * The app's one tagger: it hears every committed task change, every move
  * of the use's switch, and the ticker's minute for failed requests' retry.
  */
+type TaskRecord = NonNullable<ReturnType<TaskService["get"]>>;
+
+function goalOf(task: TaskRecord): string {
+  return task.goal ?? task.intent?.goal ?? "";
+}
+
+/** What a task's answers were about: its project and its words. */
+function wordsOf(task: TaskRecord): string {
+  return JSON.stringify([task.projectId, task.title, goalOf(task)]);
+}
+
 export function startTaskTagger(input: {
   db: AppDatabase;
   tasks: TaskService;

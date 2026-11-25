@@ -36,7 +36,7 @@ A project's view (`projectViewSchema`, `src/shared/tasks.ts`) carries its tags i
 ## The tags a task carries
 
 `task_tags` holds one row per task and tag: on or off, who set it, the tag's description revision the decision model judged it at, and when.
-`TaskService` is its one writer, through `setTaskTags` and `changeProjectTags` (`src/core/tasks/taskTags.ts`); `TaskTagStore` (`src/core/storage/taskTagStore.ts`) reads and writes the rows for it.
+`TaskService` is its one writer: through `setTaskTags`, `changeProjectTags` and `judgeTaskTags` (`src/core/tasks/taskTags.ts`), and through a task's new title or goal (`forgetJudgments`) and a single task's move (`owe`); `TaskTagStore` (`src/core/storage/taskTagStore.ts`) reads and writes the rows for it.
 
 Who set a tag is one of three setters (`tagSetterSchema`):
 
@@ -54,7 +54,7 @@ Moving a task to another project deletes its tag rows, on and off, in the same w
 A task moved on its own owes automatic tagging its new project's tags: the move writes an off row of the decision model's with no revision for each, which automatic tagging asks.
 Tasks that leave with their repositories owe nothing; Check existing tasks reaches them.
 A project that empties into another, its repositories all moved, brings its tags along (`carryProjectTags`, `src/core/tasks/taskTags.ts`): each lands on the other project's tag of the same name in any case, or joins its list with its description, and every task keeps its rows, on and off, with who set each.
-A row keeps the description revision it was judged at only when that description is the one now on its tag: a row landing on a tag the other project already had, or one judged at an older description of its own tag, loses it.
+A row keeps the description revision it was judged at only when that description is the one now on its tag: a row of the decision model's landing on a tag the other project already had, or judged at an older description of its own tag, takes revision 0 (`STALE_JUDGMENT`), which no description has, so Check existing tasks asks it again and automatic tagging does not.
 The emptied project keeps no tags.
 A purged task's rows go with it.
 
@@ -106,6 +106,8 @@ What is owed is read from the record each time, never kept in a list (`TagWork`,
 - a row the decision model set with no revision, which a task's new title or goal leaves (`TaskTagStore.forgetJudgments`), as does a single task's move.
 
 Automatic tagging began asking when this version first started with the use on, and begins again whenever the use is turned back on (the `tag-auto-since` settings row), so tasks filed while it was off are left to Check existing tasks.
+Each time it finds nothing owed and no task waiting out a retry, it moves that row up to the newest task filed, so each read seeks only the newest tasks.
+An answer that arrives after its task's project, title or goal changed is dropped unrecorded, and the task is asked again about what it holds now.
 A project with no tags owes nothing and is never asked about.
 
 `yes` turns the tag on, `no` leaves it off, and `unsure` keeps what the row held; each is kept with the description revision it read, so nothing is asked twice about the same task, tag and description.

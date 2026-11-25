@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "one-infinitary-commit-identity",
+      "reason": "The app's own commits and a batch's scratch commits read one Infinitary name and address from a single constant; the scratch commits, which never reach a project, move to that address. Nothing a person sees changes."
+    }
+  ]
+}

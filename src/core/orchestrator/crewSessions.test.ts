@@ -303,6 +303,28 @@ describe("a crewmate's session, as CrewSessions holds it", () => {
     expect(h.tasks.get(taskId)?.status).toBe("active");
   });
 
+  // INF-6779's approved plan, part 1: the host gives each crewmate session's
+  // shell the commit name resolved in its working copy.
+  it("opens a crewmate's session with its shell committing under the name its working copy resolves", async () => {
+    const crewmate = fakeCrewmate();
+    const commitName = vi.fn(async () => ({ name: "Ada Lovelace", email: "ada@example.com" }));
+    const h = setup(crewmate, { commitName });
+    await h.supervisor.intake.commission({
+      title: "Count presses",
+      intent: intentOf("make the meter count every press"),
+    });
+    await vi.waitFor(() => expect(h.sessionSpecs).toHaveLength(1));
+
+    const spec = h.sessionSpecs[0];
+    expect(commitName.mock.calls).toEqual([[spec?.cwd]]);
+    expect(spec?.shell?.env).toMatchObject({
+      GIT_AUTHOR_NAME: "Ada Lovelace",
+      GIT_AUTHOR_EMAIL: "ada@example.com",
+      GIT_COMMITTER_NAME: "Ada Lovelace",
+      GIT_COMMITTER_EMAIL: "ada@example.com",
+    });
+  });
+
   it("asks the computer a running turn is on whether it still runs after a stop", async () => {
     const crewmate = fakeCrewmate();
     const confirm = vi.fn(async () => false);

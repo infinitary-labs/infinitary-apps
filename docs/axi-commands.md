@@ -34,6 +34,7 @@ The app listens on a port of this Mac's loopback (`127.0.0.1`) for the run.
 A task granted a tool gets its own key, a 256-bit secret written to a file only its owner can read (0600), as the one header line curl sends, in `userData/task-channel/` (`AppPaths.taskChannelDir`, 0700).
 The channel empties that folder when it opens and when it closes, so a run that was killed leaves no key that outlives the next start, and nothing is left in the system's temporary folder.
 The task's shell is told three things (`TaskShell` on the session spec, laid over the host's environment by `withTaskShell`): the address (`INFINITARY_AXI_ADDRESS`), the key's file (`INFINITARY_AXI_KEY`), never the key itself, and the version; and the launcher's folder goes first on its search path.
+A crewmate's shell also carries its commit name in `GIT_AUTHOR_*` and `GIT_COMMITTER_*`, resolved where its session opens (`withCommitName`, `src/core/workspace/commitName.ts`).
 Pi's own shell (`jobs/jobManager.ts`) and the Claude client, and so every command the client runs, carry it.
 A request names its task by its key alone: the app looks the key up by its digest, and a command reaches only the tools of the task whose key it holds; nothing in its arguments names a task.
 Anything on this Mac can reach a loopback port, a web page among them, so a request that names another host (a name rebound to this Mac) or carries an origin is refused before its key is read; the launcher sends neither.

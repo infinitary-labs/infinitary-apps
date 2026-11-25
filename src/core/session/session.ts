@@ -237,7 +237,8 @@ export type SessionSpec = {
   needs?: Partial<Pick<ControlProfile, "steer">>;
   /**
    * What the session's shell carries beyond the host's environment: a
-   * task's commands (docs/axi-commands.md). Every command the session runs -
+   * task's commands (docs/axi-commands.md) and a crewmate's commit name
+   * (`workspace/commitName.ts`). Every command the session runs -
    * Pi's own shell, the Claude client and whatever it runs - gets it.
    */
   shell?: TaskShell;

@@ -862,6 +862,7 @@ A task runs in a working copy of its own on the computer that runs it, made from
   A task with no project gets one of this computer's own default workspace, started at the commit of the home's that it was sent first (below, "Seeding").
   `inf:working-copy:install` installs its dependencies as the home installs a new one's.
   A conversation opens only once its working copy is here.
+  It opens with its shell carrying the commit name this computer's saved git settings give in that working copy, or Infinitary when they give none (`resolveCommitName`, `src/core/workspace/commitName.ts`), as `GIT_AUTHOR_*` and `GIT_COMMITTER_*`, which outrank a `-c user.name` and every saved setting.
 - **Pushing.**
   The crewmate pushes from it in its own shell, with the app's own git there, which answers GitHub with this computer's own sign-in (`configureComputerGit`); nothing of the home's sign-in is here.
 - **What it holds.**

@@ -51,6 +51,7 @@ import type { TaskService } from "../tasks/taskService";
 import { taskStopsCommand } from "../tasks/taskStops";
 import type { TaskTimeline } from "../tasks/taskTimeline";
 import { webReadNetwork } from "../web/publicPage";
+import { resolveCommitName } from "../workspace/commitName";
 import type { ProjectContributions } from "../workspace/projectContributions";
 import type { RepoRegistry } from "../workspace/repoRegistry";
 import type { WorkspaceService } from "../workspace/workspaceService";
@@ -220,6 +221,7 @@ export function startHomeCrew({
   });
   const supervisor: CrewSupervisor = new CrewSupervisor({
     captainPlaces,
+    commitName: resolveCommitName,
     readerCheck: cardReader(decisions),
     reviewerChooser: reviewerChooser(decisions, knowledge.directions),
     prepareContribution: (taskId) => later.projectContributions().prepareTask(taskId, tasks, false),

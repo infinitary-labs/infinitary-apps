@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "crew-commit-name",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Crewmate commits carry your name, or Infinitary",
+      "body": "Crewmates sometimes made up a commit name, such as Crewmate, so your project's history showed an author nobody recognized, sometimes linked to someone else's GitHub account. Every crewmate now commits under the name the computer it works on is already set up to commit with, and under Infinitary when that computer has none.",
+      "noPicture": "This changes the name on commits in your project's history, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

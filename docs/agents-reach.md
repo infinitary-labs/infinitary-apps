@@ -111,6 +111,7 @@ One with no project runs in an empty folder of its own, `crewmates/<taskId>/read
 - Every `github_write` it makes to its own project is kept, run starts included, and the host puts it on one approval card with a ticked row each, beside its kept integration calls ("A reader's writes" in `docs/forge.md`); a write anywhere else, a release file and a validation effect are refused and nothing is kept.
 - `web_read` reads one public web page as text (`ReaderWebService`, `src/core/orchestrator/readerWeb.ts`), under "Web pages" below.
 - It writes no file, so its instructions name no evidence, temporary or card body folder: its card bodies go inline.
+  It can never open an email's attachment or any other file an integration saves, and the first mate's `unsafe_data_reader` parameter says so, so a request that needs one starts an ordinary task.
 - Each of its cards carries one line, drawn by the app from its task's shape, saying it reads words anyone can write, so a link or request there may come from a stranger (`Card.unsafeData`).
 - It runs only on this computer: another computer's host rebuilds a session with the whole coding set, so the placement keeps it home (`runsOnlyHere`) and a placed session refuses a fenced spec.
 

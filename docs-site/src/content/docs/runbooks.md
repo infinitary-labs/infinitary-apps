@@ -36,7 +36,7 @@ A runbook that is off guides nobody, but it stays in the list, so you can turn i
 ## The built-in runbooks
 
 Most built-in runbooks start on.
-Three start off until you turn them on: **Batched pull requests**, **Pull request comments** and **Advanced architecture**.
+Four start off until you turn them on: **Batched pull requests**, **Pull request comments**, **Heartbeat** and **Advanced architecture**.
 
 - **Common workflows**: how your first mate approaches planning, building, fixing and research.
 - **Delivery judgment**: how crewmates judge checks, repairs and when a change is ready to merge, for work that goes through a pull request.
@@ -55,6 +55,8 @@ Three start off until you turn them on: **Batched pull requests**, **Pull reques
   See [Projects](/projects/#how-changes-reach-your-project).
 - **Pull request comments**: a crewmate answers comments on its pull request until it merges.
   It makes clear fixes by itself, and brings unclear ones to you as a choice.
+- **Heartbeat**: when work starts waiting with nothing to bring it up, or after a long quiet spell, your first mate looks over the waiting work, moves it on or asks you once.
+  It brings an automation you can pause in Settings → **Automation**, and turning the runbook off removes it.
 - **Computer cleanup**: a look that only reads, after you agree, and a card to choose which leftovers to stop.
   See [What you can ask for](/what-you-can-ask-for/#a-look-at-a-computer-under-strain).
 - **Moving secrets in**: how a crewmate moves secrets from another tool into **Secrets** without any agent seeing a value.

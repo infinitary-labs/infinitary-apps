@@ -552,7 +552,7 @@ export class Scheduler {
       });
       this.announce(automationWords.created(false, spec, HEARTBEAT_LINE), {});
     } else if (!on && record) {
-      this.recall(record.id, "cleared");
+      this.recall(record.id, "edited");
       this.options.store.removeKeepingRuns(record.id);
       this.announce(automationWords.cancelled(record.prompt), {});
     }

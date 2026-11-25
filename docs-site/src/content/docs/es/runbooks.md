@@ -1,5 +1,5 @@
 ---
-source: 6d79068a24795b48
+source: b17e14176dad1387
 title: Manuales
 description: La guía escrita que siguen tu primer oficial y tu tripulación para tipos de trabajo, y cómo activarla o desactivarla, leerla y crear o agregar la tuya.
 ---
@@ -37,7 +37,7 @@ Un manual desactivado no guía a nadie, pero se queda en la lista, para que pued
 ## Los manuales incluidos {#the-built-in-runbooks}
 
 La mayoría de los manuales incluidos empiezan activados.
-Tres empiezan desactivados hasta que los activas: **Batched pull requests**, **Pull request comments** y **Advanced architecture**.
+Cuatro empiezan desactivados hasta que los activas: **Batched pull requests**, **Pull request comments**, **Heartbeat** y **Advanced architecture**.
 
 - **Common workflows**: cómo aborda tu primer oficial la planificación, la construcción, las correcciones y la investigación.
 - **Delivery judgment**: cómo juzgan los tripulantes las comprobaciones, las reparaciones y cuándo un cambio está listo para fusionarse, en el trabajo que pasa por una solicitud de incorporación de cambios.
@@ -56,6 +56,8 @@ Tres empiezan desactivados hasta que los activas: **Batched pull requests**, **P
   Consulta [Proyectos](/es/projects/#how-changes-reach-your-project).
 - **Pull request comments**: un tripulante responde los comentarios de su solicitud de incorporación de cambios hasta que se fusiona.
   Hace por sí mismo las correcciones claras, y te trae las dudosas como una elección.
+- **Heartbeat**: cuando un trabajo empieza a esperar sin nada que lo mencione, o tras un largo rato de calma, tu primer oficial revisa el trabajo en espera, lo hace avanzar o te pregunta una vez.
+  Trae una automatización que puedes pausar en Configuración → **Automatización**, y desactivar el manual la quita.
 - **Computer cleanup**: una revisión que solo lee, después de que aceptas, y una tarjeta para elegir qué restos detener.
   Consulta [Lo que puedes pedir](/es/what-you-can-ask-for/#a-look-at-a-computer-under-strain).
 - **Moving secrets in**: cómo un tripulante pasa secretos de otra herramienta a **Secretos** sin que ningún agente vea un valor.

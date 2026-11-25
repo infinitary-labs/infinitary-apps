@@ -30,6 +30,17 @@ export const HEARTBEAT_MINUTES = 55;
 export const QUIET_MINUTES = 50;
 
 /**
+ * Minutes after the first mate's last request ended past which a quiet beat
+ * no longer goes: the cache has ended, or ends before a beat could read it,
+ * so a beat would pay a cold read to find nothing (the plan rules that out).
+ * The hour runs from when the request began, before its recorded end, so
+ * the two minutes short of the hour cover a request up to two minutes long;
+ * a beat on a longer one may land cold, and the cold-beat rest stops the
+ * ones after it.
+ */
+export const QUIET_UNTIL_MINUTES = 58;
+
+/**
  * Quiet beats in a row, with no other first mate turn among them, after
  * which the heartbeat rests until the first mate's next turn: twelve quiet
  * beats cost about one cold read (the plan's measure).
@@ -40,7 +51,7 @@ export const REST_AFTER_BEATS = 12;
 export const COLD_CACHE_SHARE = 0.5;
 
 /** The fixed line a beat opens with, before the standing list. */
-// i18n-exempt: served to the first mate, never shown to a person
+// i18n-exempt: sent to the first mate in English; History and the phone's automation page show it as sent
 export const HEARTBEAT_LINE =
   'Heartbeat: a scheduled turn with no news in it. Read the standing list below as the Heartbeat runbook says, and end with one line that starts "Found:".';
 
@@ -64,8 +75,9 @@ export type HeartbeatAnswer = "deliver" | "wait" | "rest";
 /**
  * Whether a beat is due now. A new row delivers once 55 minutes passed since
  * the last beat, resting or not, since it is news. A quiet beat needs a seat
- * whose cache is known to last an hour and 50 minutes since the first mate's
- * last request ended, and answers `rest` instead while the heartbeat rests.
+ * whose cache is known to last an hour and from 50 to 58 minutes since the
+ * first mate's last request ended, inside that hour, and answers `rest`
+ * instead while the heartbeat rests.
  */
 export function heartbeatDue(facts: HeartbeatFacts, now: number): HeartbeatAnswer {
   const beatPassed =
@@ -73,7 +85,8 @@ export function heartbeatDue(facts: HeartbeatFacts, now: number): HeartbeatAnswe
   if (!beatPassed) return "wait";
   if (facts.newRow) return "deliver";
   if (!facts.hourCache || facts.lastRequestEndedAt === undefined) return "wait";
-  if (now - facts.lastRequestEndedAt < QUIET_MINUTES * MINUTE_MS) return "wait";
+  const quiet = now - facts.lastRequestEndedAt;
+  if (quiet < QUIET_MINUTES * MINUTE_MS || quiet >= QUIET_UNTIL_MINUTES * MINUTE_MS) return "wait";
   const cold =
     facts.quietBeats > 0 &&
     facts.lastBeatCacheShare !== undefined &&

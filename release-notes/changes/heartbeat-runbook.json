@@ -6,8 +6,14 @@
       "area": "firstmate",
       "title": "A Heartbeat runbook brings up waiting work nothing else reports",
       "body": "Turn on Heartbeat in Settings, Runbooks and your first mate looks over work that waits with nothing to bring it up, such as a part of begun work you parked: when something new joins that list, and, when it runs on Claude, after 55 quiet minutes, so its next reply stays quick and uses less of your plan. It moves things on when the next step is already its own, and asks you once on one card when only you can decide. It never starts work you parked or filed for later. The automation it brings shows in Settings, Automation; you can pause it there, and turning the runbook off removes it.",
-      "noPicture": "It adds one switch to Settings, Runbooks and one automation to Settings, Automation, both existing lists.",
-      "provenance": { "origin": "change" }
+      "picture": {
+        "dark": "heartbeat-runbook-dark.webp",
+        "light": "heartbeat-runbook-light.webp",
+        "alt": "Settings, Runbooks: the Heartbeat row switched on between Pull request comments and Computer cleanup, with its description"
+      },
+      "provenance": {
+        "origin": "change"
+      }
     }
   ],
   "exclusions": []

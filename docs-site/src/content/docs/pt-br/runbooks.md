@@ -1,5 +1,5 @@
 ---
-source: 6d79068a24795b48
+source: b17e14176dad1387
 title: Manuais
 description: As orientações escritas que seu imediato e sua tripulação seguem em cada tipo de trabalho, e como ativá-las ou desativá-las, lê-las e criar ou adicionar as suas.
 ---
@@ -37,7 +37,7 @@ Um manual desativado não orienta ninguém, mas continua na lista, então você 
 ## Os manuais incluídos {#the-built-in-runbooks}
 
 A maioria dos manuais incluídos começa ativada.
-Três começam desativados até você ativá-los: **Batched pull requests**, **Pull request comments** e **Advanced architecture**.
+Quatro começam desativados até você ativá-los: **Batched pull requests**, **Pull request comments**, **Heartbeat** e **Advanced architecture**.
 
 - **Common workflows**: como seu imediato encara o planejamento, a construção, as correções e a pesquisa.
 - **Delivery judgment**: como os tripulantes avaliam as verificações, os reparos e quando uma mudança está pronta para ser mesclada, no trabalho que passa por uma solicitação de pull.
@@ -56,6 +56,8 @@ Três começam desativados até você ativá-los: **Batched pull requests**, **P
   Veja [Projetos](/pt-br/projects/#how-changes-reach-your-project).
 - **Pull request comments**: um tripulante responde aos comentários na solicitação de pull dele até ela ser mesclada.
   Ele faz sozinho as correções claras e traz as que não estão claras para você, como uma escolha.
+- **Heartbeat**: quando um trabalho começa a esperar sem nada que o mencione, ou depois de um longo período de calma, seu imediato revisa o trabalho em espera, faz ele avançar ou pergunta a você uma vez.
+  Ele traz uma automação que você pode pausar em Ajustes → **Automação**, e desativar o manual a remove.
 - **Computer cleanup**: uma análise que só lê, depois que você concorda, e um cartão para escolher quais sobras parar.
   Veja [O que você pode pedir](/pt-br/what-you-can-ask-for/#a-look-at-a-computer-under-strain).
 - **Moving secrets in**: como um tripulante traz segredos de outra ferramenta para **Segredos** sem que nenhum agente veja um valor.

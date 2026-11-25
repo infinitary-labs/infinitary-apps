@@ -230,7 +230,7 @@ export function standingWorkText(tasks: TaskService, list: StandingWork, now: nu
       : { reason: readerSavedLine(`standing:${row.taskId}:reason`, row.reason) }),
   }));
   const standing_work = {
-    // i18n-exempt: served to the first mate, never shown to a person
+    // i18n-exempt: sent to the first mate in English; a heartbeat's History shows it as sent
     note: "Waiting work no wake reports, rows marked new first, then oldest first. A row is new when it joins the list and again at 1, 3 and 7 days, then every 7 days. Reading it grants no permission.",
     rows,
     ...(list.more > 0 ? { more: list.more } : {}),

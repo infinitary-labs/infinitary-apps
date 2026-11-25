@@ -306,7 +306,7 @@ describe("when a beat goes out", () => {
     expect(f.run(T0 + 24 * 60 * MINUTE)).toEqual([T0 + 24 * 60 * MINUTE]);
   });
 
-  it("drops a beat due while the app was closed, and sends none while one still waits", () => {
+  it("drops a beat due while the app was closed, sends none once the cache's hour ended, and none while one still waits", () => {
     const f = fixture();
     f.scheduler.keepBrought(true);
     f.request();
@@ -314,11 +314,37 @@ describe("when a beat goes out", () => {
     f.scheduler.tick(f.clock.now, { catchUp: true });
     expect(f.beats()).toEqual([]);
     expect(f.scheduler.rule(HEARTBEAT_RULE_ID).nextFire).toBe(f.clock.now + 55 * MINUTE);
+    // 235 minutes after the last request its cache is long gone: no quiet beat pays a cold read.
+    f.clock.now += 55 * MINUTE;
+    f.scheduler.tick(f.clock.now);
+    expect(f.beats()).toEqual([]);
+    // The first mate's next turn warms the cache again, and the quiet beat comes 50 minutes on.
+    f.request();
+    const warmed = f.clock.now;
+    expect(f.run(warmed + 50 * MINUTE)).toEqual([warmed + 50 * MINUTE]);
+    // Unhandled, a beat waits; a later tick past the next mark sends no second one, even for a new row.
+    f.request();
     f.clock.now += 55 * MINUTE;
     f.scheduler.tick(f.clock.now);
     expect(f.beats()).toHaveLength(1);
-    // Unhandled, the beat waits; a later tick past the next mark sends no second one.
-    f.clock.now += 120 * MINUTE;
+    seedTask(f.tasks, { id: "plan", title: "Approved plan", status: "queued", createdAt: T0 });
+    seedTask(f.tasks, {
+      id: "p1",
+      title: "Piece 1",
+      parentId: "plan",
+      status: "running",
+      createdAt: T0,
+    });
+    seedTask(f.tasks, {
+      id: "p2",
+      title: "Piece 2",
+      parentId: "plan",
+      status: "queued",
+      startPolicy: "on-request",
+      createdAt: f.clock.now,
+    });
+    f.tasks.starts.declareCaptainStop("p2", "firstmate");
+    f.clock.now += 60 * MINUTE;
     f.scheduler.tick(f.clock.now);
     expect(f.beats()).toHaveLength(1);
   });

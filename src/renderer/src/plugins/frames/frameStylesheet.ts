@@ -452,6 +452,12 @@ export const FRAME_BASE_STYLE = `
     border: 1.5px solid var(--line-2); border-radius: 50%; vertical-align: -1px;
   }
   [data-inf-tradeoff-picked] [data-inf-tradeoff-ring] { border: 3.5px solid var(--accent); }
+  [data-inf-tradeoff-ring="box"] { position: relative; border-radius: 3px; }
+  [data-inf-tradeoff-picked] [data-inf-tradeoff-ring="box"] { border: 1.5px solid var(--accent); background: var(--accent); }
+  [data-inf-tradeoff-picked] [data-inf-tradeoff-ring="box"]::after {
+    content: ""; position: absolute; inset-inline-start: 2.5px; inset-block-start: 0.5px; width: 3px; height: 5.5px;
+    border: solid var(--bg-0); border-width: 0 1.5px 1.5px 0; transform: rotate(45deg);
+  }
   [data-inf-tradeoff-current] [data-inf-tradeoff-words]::before {
     content: "${AS_BUILT_WORDS}"; display: inline-block; margin-inline-end: var(--space-1); white-space: nowrap;
     color: var(--fg-2); border: 1px solid var(--line-2); border-radius: var(--radius-pill);

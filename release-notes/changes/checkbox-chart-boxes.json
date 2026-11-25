@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "checkbox-chart-boxes",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Card charts show boxes when you may pick several options",
+      "body": "When a card weighs a question's options on a chart and lets you pick more than one, each option now shows a square box that fills with a check, as any checkbox list does. Before, every option showed a round ring, so the question looked like a single pick.",
+      "picture": {
+        "dark": "checkbox-chart-boxes-dark.webp",
+        "light": "checkbox-chart-boxes-light.webp",
+        "alt": "A decision card with three options on small radar charts, the first two ticked with filled square boxes and the third an empty box"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

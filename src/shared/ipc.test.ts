@@ -549,6 +549,7 @@ describe("ipc contract", () => {
       "inf:plugins:app-panels",
       // INF-3660's plan, "Your panels, in every window": a panel asks the first mate from any window.
       "inf:plugins:ask-again",
+      "inf:plugins:ask-firstmate",
       "inf:plugins:db",
       "inf:plugins:fetch",
       "inf:plugins:files",

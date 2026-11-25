@@ -45,7 +45,7 @@ Its words and the key of the panel's command that does the same show on rest, as
 A button that names one of the panel's cards puts it up at the front of the stack (`components/cards/PanelCard.prompt.md`) and leaves the panel as it was, collapsed or not; one that names none opens the panel and is pressed into it, which then puts focus where the button points.
 
 **The collapsed summary.**
-A collapsed panel keeps running and says what it holds, from its own code; the host draws it as its own chrome in the header, after the title and the maker's name and before the buttons, exactly where the Tasks panel's counts sit.
+A collapsed panel keeps running and says what it holds, from its own code; the host draws it as its own chrome in the header, after the title, its status mark and the maker's name and before the buttons, exactly where the Tasks panel's counts sit.
 Mono `--text-xs` `--fg-3`, right-aligned, one line that gives way with an ellipsis, at most three short parts joined by ` · `, and the part that needs the captain in `--fg-1` - "2 waiting · 1 working", with the waiting count lit only while it is not zero.
 A count or two, never a sentence; nothing at all rather than "0 items".
 A panel whose news is a stream (Activity) may instead say its newest line, which takes the title's place: a `FeedLine` row - a 5 px dot in its tone, the task key in mono `--fg-3`, the words in `--text-sm` `--fg-2` cut with an ellipsis - and the short parts after it at the right.
@@ -63,7 +63,16 @@ It puts the learner's goal above a fourteen-day practice strip, a protected prac
 **When a panel stops.**
 A panel whose code throws, or will not load, is one quiet `--fg-3` / `--text-sm` line in its body, "This panel stopped drawing.", and the host's chrome stays.
 A panel drawn in its own frame (one added from elsewhere) that stops answering altogether is torn down to "This panel stopped responding." with a `secondary` `sm` Retry Button on the same row - the card's stopped state, for a panel: no icon, no danger color, chrome unchanged.
-A panel added from elsewhere is attributed by its maker's name in the header, the way the captain's own read "yours".
+A panel added from elsewhere is attributed by its maker's name in the header; the captain's own and the app's own name no maker.
+
+**The status mark.**
+What the host knows about one of the captain's panels that its code cannot say - background work stopped or paused, reads that keep failing, an integration call waiting on the captain or turned down - is one 6 px `StatusDot` right after the title, on the title's line and vertically centered on it, open or folded; nothing is drawn above the panel's body.
+Its press area is 20 px, with the header's own gap between the name and the dot.
+Its tone is `warn` for stopped or failing, `captain` for a call waiting on them, and `idle` for paused or declined, from the most urgent: stopped, failing, waiting on you, paused, declined.
+Rest or Tab focus shows the most urgent line in the app's rest label ("Background reads failing since 9:05 AM").
+A press, Enter or Space opens its details as a popover under it, the `UpdatePanel` look: `--bg-2`, a 1 px `--line-1` border, `--radius-m`, `--shadow-2`, 340 px wide, one section per thing to say, most urgent first, each its host sentence at `--text-sm` / `--fg-2` and one `secondary` `sm` Button (Retry, Ask the first mate, Ask again, Update panel).
+A failing read's newest answer sits under its sentence in mono `--text-xs`, after a 2 px `--line-2` rule; Ask the first mate becomes an off Asked with "The first mate is looking into it." beside it.
+Focus lands on the first button; Esc or a press outside closes it, focus back on the mark.
 
 **The create-your-own-panel slot.**
 The one place the app draws an EMPTY outline on a rail: the invitation to make a panel, at the top of the left rail, once three of the captain's crewmates have finished their tasks and while the captain has no panel of their own.

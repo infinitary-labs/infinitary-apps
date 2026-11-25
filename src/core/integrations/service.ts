@@ -416,10 +416,19 @@ export class IntegrationsService {
         text: `${this.viewOf(row).name} is paused. The captain resumes it in Settings → Integrations.`,
         refused: "refused",
       };
+    const read = (place: string, failure: string | null) => {
+      if (caller.kind !== "panel" || !("connection" in row)) return;
+      caller.panel.reads?.(
+        { kind: "call", integration: row.connection.id, place, action },
+        failure,
+      );
+    };
     try {
       await row.binding.prepare?.(row.connection.id);
     } catch (error) {
-      return { text: this.redact(String(error)), refused: "refused" };
+      const text = this.redact(String(error));
+      read(this.rowName(row), text);
+      return { text, refused: "refused" };
     }
     row = this.find(name);
     if (!("connection" in row)) return row;
@@ -465,6 +474,7 @@ export class IntegrationsService {
         caller.kind === "panel" ? this.panelUse(caller.panel, row)?.why : reason,
       );
     const { answer } = await this.run(row, view.name, spec.name, parsed.data, caller);
+    read(view.name, answer.refused ? answer.text : null);
     return caller.kind === "firstmate" && spec.effect !== "reads" && !answer.refused
       ? { ...answer, ran: spec.effect }
       : answer;
@@ -965,9 +975,27 @@ Do not repeat this call; read ${name} to check what happened first.`
         if (!("connection" in row)) return row;
         const unnamed = this.panelRefusal(panel, row, { event });
         if (unnamed) return unnamed;
+        const read = (failure: string | null) =>
+          panel.reads?.(
+            { kind: "event", integration: row.connection.id, place: this.rowName(row), event },
+            failure,
+            (row.connection.events?.find((spec) => spec.name === event)?.every ?? 0) * 60_000,
+          );
         try {
-          return await this.look(row.connection.id, event, cursor, undefined, row.ref, caller);
+          const look = await this.look(
+            row.connection.id,
+            event,
+            cursor,
+            undefined,
+            row.ref,
+            caller,
+          );
+          read(null);
+          return look;
         } catch (error) {
+          // The app's own refusal - paused, removed, no such event - is no failed read.
+          if (!(error instanceof IntegrationRefusal))
+            read(this.redact(error instanceof Error ? error.message : String(error)));
           return {
             text: this.redact(error instanceof Error ? error.message : String(error)),
             refused: "refused",

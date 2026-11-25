@@ -5,7 +5,11 @@ import {
 } from "@shared/createPanelSlot";
 import type { FmEvent } from "@shared/events";
 import { arrangePanels, knownPanels, panelSlot, RAIL_SLOTS } from "@shared/panelArrangement";
-import type { PersonalExtensionView, PersonalSnapshot } from "@shared/personal/manifest";
+import type {
+  PanelFailingRead,
+  PersonalExtensionView,
+  PersonalSnapshot,
+} from "@shared/personal/manifest";
 import type { PanelMounts } from "@shared/personal/mounts";
 import type { SidePanelPlacement } from "@shared/plugins/manifest";
 import {
@@ -22,6 +26,7 @@ import {
   personalPanelRemovedLine,
 } from "../personal/panelLines";
 import { mountOf, surfaceWord } from "../personal/panelMounts";
+import { panelReadWords } from "../personal/panelReadWords";
 import type { ShellPreferencesService } from "../preferences/shellPreferences";
 import { boundTool, stringEnum } from "../session/tools";
 
@@ -223,6 +228,21 @@ function pausedWords(paused: NonNullable<PersonalExtensionView["paused"]>): stri
   return `; background work paused: its server.ts is written for panel API ${paused.api} and this app serves ${paused.serves.join(" or ")}${paused.asked ? "; the captain pressed Update panel" : ""}`;
 }
 
+/**
+ * A panel's reads that keep failing, on its surfaces row
+ * (docs/personal-panels.md, "Reads that keep failing").
+ */
+function failingWords(failing: readonly PanelFailingRead[]): string {
+  // i18n-exempt: served to the first mate, never shown to a person
+  return `; reads failing: ${failing
+    .map(
+      (row) =>
+        // i18n-exempt: served to the first mate, never shown to a person
+        `${panelReadWords(row.read)} since ${row.since}, ${row.tries} tries${row.asked ? ", the captain asked you to look" : ""}`,
+    )
+    .join("; ")}`;
+}
+
 export function surfaceOwner(
   surface: SurfaceView,
   personal: PersonalSnapshot,
@@ -291,11 +311,13 @@ export function renderSurfacesSection(
             : owner === "added"
               ? ` (added, by ${by})`
               : "";
-      const paused =
+      const extension =
         surface.kind === "personal"
-          ? personal.extensions.find((extension) => extension.id === surface.id)?.paused
+          ? personal.extensions.find((candidate) => candidate.id === surface.id)
           : undefined;
-      return `- ${surface.id} "${surface.title}"${mark}: ${where}; ${state}${paused ? pausedWords(paused) : ""}`;
+      const paused = extension?.paused;
+      const failing = extension?.failing ?? [];
+      return `- ${surface.id} "${surface.title}"${mark}: ${where}; ${state}${paused ? pausedWords(paused) : ""}${failing.length > 0 ? failingWords(failing) : ""}`;
     }),
     ...(more > 0 ? [`- and ${more} more personal panel${more === 1 ? "" : "s"}`] : []),
     // i18n-exempt: served to the agent in its surfaces section, not shown to a person

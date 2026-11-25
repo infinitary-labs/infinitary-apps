@@ -78,7 +78,8 @@ test.describe("a panel of the captain's own puts cards on the stack", () => {
       );
       const chrome = panelCardChrome(page);
       await expect(chrome.title).toHaveText("Reading");
-      await expect(chrome.attribution).toHaveText("yours");
+      // The captain, on the panel status mark: remove the "yours" label; their own panel names no maker.
+      await expect(chrome.attribution).toHaveCount(0);
       await expect(panel).toHaveAttribute("data-side-panel-collapsed", "");
       // A second press brings the same card forward, never a copy.
       await open.click();

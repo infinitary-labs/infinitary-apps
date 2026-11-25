@@ -1461,6 +1461,42 @@
       <string>%1$ld en cours</string>
     </dict>
   </dict>
+  <key>panelFailingJob</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Sa tâche en arrière-plan %2$@ échoue depuis %3$@, %1$ld essai d’affilée.</string>
+      <key>many</key>
+      <string>Sa tâche en arrière-plan %2$@ échoue depuis %3$@, %1$ld essais d’affilée.</string>
+      <key>other</key>
+      <string>Sa tâche en arrière-plan %2$@ échoue depuis %3$@, %1$ld essais d’affilée.</string>
+    </dict>
+  </dict>
+  <key>panelFailingPlace</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Les lectures depuis %2$@ échouent depuis %3$@, %1$ld essai d’affilée.</string>
+      <key>many</key>
+      <string>Les lectures depuis %2$@ échouent depuis %3$@, %1$ld essais d’affilée.</string>
+      <key>other</key>
+      <string>Les lectures depuis %2$@ échouent depuis %3$@, %1$ld essais d’affilée.</string>
+    </dict>
+  </dict>
   <key>phoneAddressSweeping</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

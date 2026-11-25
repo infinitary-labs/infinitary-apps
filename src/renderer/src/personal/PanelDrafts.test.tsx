@@ -55,7 +55,8 @@ describe("PanelDrafts", () => {
     expect(html).toContain('<div data-panel-draft="clock" aria-hidden="true" inert="">');
     expect(html).toContain('data-side-panel="clock.draft"');
     expect(html).toContain('aria-label="Tokyo clock"');
-    expect(html).toContain("data-side-panel-attribution");
+    // The captain, on the panel status mark: remove the "yours" label; a draft of their own names no maker.
+    expect(html).not.toContain("data-side-panel-attribution");
     expect(html).not.toContain("data-side-panel-running");
   });
 });

@@ -294,14 +294,13 @@ Nothing transforms saved data and nothing runs older code in the app's process: 
 A `server.ts` written for a panel API this version no longer serves (`SERVED_PANEL_APIS`) is paused, not stopped (INF-2470).
 The panel log ("The panel log" below) gets one line the first time each version of the file's text is refused.
 The snapshot carries `paused`: the API the manifest names (1 when it names none), the APIs served, and whether the captain already asked for the update.
-The window draws the host's own line and an Update panel button above the panel's body (`BackgroundPaused`, `[data-panel-background-paused]`), outside the panel's code and reached with Tab.
-It draws them only on a live panel, never on a draft, and not while a crewmate is building that panel.
+The panel's status mark says so ("The status mark" below), and its details hold the host's line with an Update panel button, outside the panel's code; a draft's details draw no Update panel.
 Update panel (`inf:plugins:update`) tells the first mate once, as the `panel-update-asked` wake, and the first mate starts one personal-workspace task to update the panel; a second press, or a press while the panel is being built, tells no one.
 Once the task that built the update closes with the panel still paused, the press is free again.
 The first mate's surfaces context says which panels are paused.
 The update steps for each older API have one home, the personal-panel skill's "Updating a panel written for an earlier panel API", which the refusal line names.
 When the files are fixed, the next reconcile accepts the file, the line goes and the background work starts, with no Retry.
-Nothing starts an update without the captain's press, and no notice is sent after an app update: the line on the panel is the notice.
+Nothing starts an update without the captain's press, and no notice is sent after an app update: the mark on the panel is the notice.
 
 **The watch.**
 The process beats every `PANEL_BEAT_MS` (250 ms) from the event loop the panel's code runs on, and starts beating before it imports the module; it sends everything else from that loop too.
@@ -325,9 +324,35 @@ The live runtime stays stopped at any version: a reload, a restart, a reconnect 
 Only the captain's Retry (`inf:plugins:retry`) or the panel's removal clears it.
 A draft is stopped only at its version, so the next save is tried apart.
 The snapshot carries `stopped` (why, when, and which version).
-The window draws the host's own line and a Retry above the panel's body (`BackgroundStopped`, `[data-panel-background-stopped]`), outside the panel's code and reached with Tab.
+The panel's status mark says so, and its details hold the host's line with a Retry ("The status mark" below), outside the panel's code.
 `lint_panel` says the panel is stopped, and its actions are refused.
 Stopping is targeted: the panel's data, its drawing and every other panel stay; the `panels` switch and safe mode above remain the broad fallback.
+
+## The status mark
+
+What the host knows about a panel that its code cannot say is one small dot by the panel's name in the host's header, open or folded (`PanelStatusMark`, `src/renderer/src/personal/PanelStatusMark.tsx`; design skill `Panel.prompt.md`, "The status mark"): its background work stopped or paused, reads that keep failing (below), or an integration call waiting on the captain's approval card or turned down (`docs/integrations.md`, "How a panel reaches them").
+Nothing above the panel's body moves it down: the frame's own line for a page that stopped answering stays where it was (`PanelStoppedLine`).
+On rest and on Tab focus the mark says its most urgent line (`docs/keyboard.md`, "Facts shown on rest"), in this order: stopped, failing, waiting on you, paused, declined; its tone is the warning color for stopped or failing, the captain's for a call waiting on them, and idle for paused or declined.
+A press, Enter or Space opens its details (`[data-panel-status-details]`), most urgent first, each section with the host's sentence and its one button: Retry, Ask the first mate, Ask again or Update panel; Esc or a press outside closes them and focus goes back to the mark.
+A draft shows its own mark, without Update panel or Ask the first mate.
+The phone draws the same mark with the same details as a popover (`docs/ios.md`, "Panels").
+
+## Reads that keep failing
+
+The app counts the reads of the captain's own live panels that it sees fail itself, one row per read, kept in memory (`PanelReadFailures`, `src/core/personal/panelReadFailures.ts`; the panels service's side is `PanelReadCounting`): a background job of the panel's own whose run threw, an integration action it called whose answer was refused or whose connection could not get ready, and an integration event the app looked for on its behalf and could not read.
+A call waiting on the captain's approval or declined, a paused or switched-off integration, an app refusal such as an undeclared action, and paused or stopped background work are never failures: each has its own section.
+Whether a panel's numbers look old is never judged: the count reads only what failed.
+A panel added from elsewhere, a runbook's panel and a draft are their makers' to fix and are not counted.
+
+A row is failing on the automation's rule for a look that keeps failing (`docs/automation.md`, "When every look fails"): at least `LOOKS_FAILING_LOOKS` failures in a row whose span, each failure counting for its read's whole cadence, reaches `LOOKS_FAILING_TICKS` of the app's tick period, an hour on the minute tick.
+So an hourly job is failing at its second failed run, and a job every five minutes after an hour of failed runs.
+The first read that works clears its row; new background code or a new drawing starts the panel's rows over, and a panel that leaves takes them with it.
+The snapshot carries `failing` for each failing row: the read (`background` with its task, `call` with its place and action, or `event` with its place and event), the first failure's time, the tries, the newest answer cut to `PANEL_FAILING_ANSWER_MAX`, and whether the captain asked.
+
+The first mate hears a row turn failing once (the `panel-reads-failing` wake, once per panel, code version and read), with the newest answer as words from outside, and puts up a card only when there is something to decide: a fix it can make, or a step only the captain can take, such as signing in again.
+The mark's failing section says since when each read fails, that the panel still shows what it last read, and that it clears by itself, with Ask the first mate (`inf:plugins:ask-firstmate`): that tells the first mate once per row (`panel-reads-asked`), which finds the cause and starts one personal-workspace task to fix the panel's code, or names the captain's step on one card; the button then reads Asked, and the section says the first mate is looking into it.
+The first mate's surfaces context lists each failing read on the panel's row.
+`panelReadFailures.test.ts` pins the rule on an hourly job that hits a read limit.
 
 ## The panel log
 

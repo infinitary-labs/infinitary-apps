@@ -14,6 +14,7 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody, panelBody } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
 import { resizeWindow } from "./layout";
+import { closePanelStatus, openPanelStatus, panelStatusMark } from "./panelStatus";
 import { seedPersonalWorkspace } from "./personalFixtures";
 import { heroShot, regionShot } from "./pictures";
 import { showCard, shownCard } from "./stack";
@@ -28,10 +29,10 @@ import { pressKey } from "./windowKeys";
  *
  * - Promised result: the panel's first call is kept and raises the app's
  *   approval card, naming the panel and its manifest's why; while it is up
- *   the panel's next call raises no other, and the window draws the host's
- *   line above the panel; Not now leaves the line turned down, and its Ask
- *   again raises the card anew; Always allow takes the line away and the
- *   panel's next call answers what the integration holds.
+ *   the panel's next call raises no other, and the panel's status mark holds
+ *   the host's line in its details; Not now leaves the line turned down, and
+ *   its Ask again raises the card anew; Always allow takes the mark away and
+ *   the panel's next call answers what the integration holds.
  * - Data: a panel whose manifest names the stand-in integration's
  *   `count_items`, and a stand-in items file with two items.
  * - Completion signal: the card on the stack, the line's `data-state`, and
@@ -93,13 +94,17 @@ test("a panel's integration call asks the captain once, and Always allow by keys
   const drawn = panelBody(page, PANEL);
   const count = drawn.getByRole("button", { name: "Count items", exact: true });
   const answer = drawn.locator("[data-fixture-answer]");
-  const line = panel.locator(`[data-panel-integration-ask="stand-in/${STAND_IN_COUNT.name}"]`);
+  const line = page.locator(
+    `[data-panel-status-details="${PANEL}"] [data-panel-integration-ask="stand-in/${STAND_IN_COUNT.name}"]`,
+  );
 
   await test.step("the first call is kept and raises one approval card naming the panel", async () => {
     await pressKey(count, "Enter");
     await expect(answer).toHaveAttribute("data-fixture-answer", "refused", { timeout: 30_000 });
+    await openPanelStatus(page, PANEL);
     await expect(line).toHaveAttribute("data-state", "asking");
     await expect(line).toContainText(integrationAskLine(STAND_IN_COUNT.label, place, "asking"));
+    await closePanelStatus(page, PANEL);
     await expect.poll(approvals, { timeout: 30_000 }).toBe(1);
     await showCard(page, title);
     await expect(cardBody(page, title).locator("body")).toContainText(WHY);
@@ -122,16 +127,20 @@ test("a panel's integration call asks the captain once, and Always allow by keys
       }),
       "Enter",
     );
+    await openPanelStatus(page, PANEL);
     await expect(line).toHaveAttribute("data-state", "declined");
     await expect(line).toContainText(integrationAskLine(STAND_IN_COUNT.label, place, "declined"));
+    await closePanelStatus(page, PANEL);
     await expect.poll(approvals).toBe(0);
     await pressKey(count, "Enter");
     await expect(answer).toContainText(INTEGRATION_APPROVAL_WORDS.deny);
     expect(await approvals()).toBe(0);
     if (evidenceDir) await regionShot(panel, join(evidenceDir, "panel-line-declined-after.png"));
 
+    await openPanelStatus(page, PANEL);
     await pressKey(line.getByRole("button", { name: INTEGRATION_ASK_AGAIN, exact: true }), "Enter");
     await expect(line).toHaveAttribute("data-state", "asking");
+    await closePanelStatus(page, PANEL);
     await expect.poll(approvals).toBe(1);
   });
 
@@ -144,7 +153,7 @@ test("a panel's integration call asks the captain once, and Always allow by keys
       }),
       "Enter",
     );
-    await expect(line).toHaveCount(0);
+    await expect(panelStatusMark(page, PANEL)).toHaveCount(0);
     await pressKey(count, "Enter");
     await expect(answer).toHaveAttribute("data-fixture-answer", "ran");
     // The words are the stand-in's own answer for the same folder.

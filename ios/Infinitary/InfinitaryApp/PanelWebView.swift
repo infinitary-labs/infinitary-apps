@@ -264,10 +264,11 @@ import SwiftUI
         } catch { stand = .couldNotOpen(PhonePanelFailure.unreadable.sentence) }
     }
 
-    /// The channels the parent page may ask on: what the panel reads and does, never the files or the list, which
-    /// native code asks for itself.
+    /// The channels the parent page may ask on: what the panel reads and does, never the files, the list or the status
+    /// mark's buttons, which native code asks for itself.
     private static let pageAsks = Set(PhonePanelRequest.allCases).subtracting([
-        .pluginsFiles, .pluginsLibrary, .pluginsRetry, .pluginsPersonalList, .shellPreferences, .pluginsAppPanels, .pluginsAppPanelFiles,
+        .pluginsFiles, .pluginsLibrary, .pluginsRetry, .pluginsUpdate, .pluginsAskAgain, .pluginsAskFirstmate, .pluginsPersonalList,
+        .shellPreferences, .pluginsAppPanels, .pluginsAppPanelFiles,
     ])
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage,

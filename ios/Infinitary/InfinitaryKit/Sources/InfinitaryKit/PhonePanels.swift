@@ -9,6 +9,29 @@ public struct PhonePanel: Decodable, Sendable, Equatable, Identifiable {
     public struct Frame: Decodable, Sendable, Equatable { public let version: String }
     public struct Server: Decodable, Sendable, Equatable { public let actions: [String] }
     public struct Stopped: Decodable, Sendable, Equatable { public let reason: String }
+    public struct Paused: Decodable, Sendable, Equatable { public let asked: Bool }
+    /// An integration call that waits on the captain's approval card ("asking") or that they turned down ("declined").
+    public struct IntegrationAsk: Decodable, Sendable, Equatable {
+        public let integration: String
+        public let place: String
+        public let action: String
+        public let label: String
+        public let state: String
+    }
+    /// A read that keeps failing (docs/personal-panels.md, "Reads that keep failing").
+    public struct FailingRead: Decodable, Sendable, Equatable {
+        public struct Read: Decodable, Sendable, Equatable {
+            public let kind: String
+            public let task: String?
+            public let place: String?
+        }
+        public let read: Read
+        /// The first failure in the row, ISO wall time.
+        public let since: String
+        public let tries: Int
+        public let answer: String
+        public let asked: Bool
+    }
 
     public let id: String
     /// "personal" for the captain's own, "installed" for an added plugin's, "app" for one of the app's own
@@ -30,6 +53,9 @@ public struct PhonePanel: Decodable, Sendable, Equatable, Identifiable {
     public let frame: Frame?
     public let server: Server?
     public let stopped: Stopped?
+    public let paused: Paused?
+    public let integrationAsks: [IntegrationAsk]?
+    public let failing: [FailingRead]?
     /// Piece 3: its card views (`cards/<view>.tsx`), the cards its manifest names, and the buttons the app draws in its
     /// header. A computer that lists none leaves them empty.
     public let cardViews: [String]?
@@ -40,12 +66,52 @@ public struct PhonePanel: Decodable, Sendable, Equatable, Identifiable {
     public var isApp: Bool { source == PhoneAppPanelList.source }
     /// What `inf:plugins:files` names it by, or "app" for one of the app's own.
     public var filesSource: String { isApp ? PhoneAppPanelList.source : source == "installed" ? "installed" : "yours" }
-    /// The header's owner word: "yours", or the plugin's name; none for the app's own, as the desktop names no maker.
-    public var owner: String? { isApp ? nil : by ?? PhonePanelWords.yours }
+    /// The header's owner word: an added plugin's name; none for the captain's own or the app's own, as on the desktop.
+    public var owner: String? { isApp ? nil : by }
+    /// What the status mark by its name says, most urgent first, as the desktop's `panelStatusSections` orders it.
+    public var statusSections: [PhonePanelStatus] {
+        var sections: [PhonePanelStatus] = []
+        if let stopped { sections.append(.stopped(exited: stopped.reason == "exited")) }
+        if let failing, !failing.isEmpty { sections.append(.failing(failing)) }
+        let asks = integrationAsks ?? []
+        let asking = asks.filter { $0.state == "asking" }
+        if !asking.isEmpty { sections.append(.asking(asking)) }
+        if let paused { sections.append(.paused(asked: paused.asked)) }
+        let declined = asks.filter { $0.state == "declined" }
+        if !declined.isEmpty { sections.append(.declined(declined)) }
+        return sections
+    }
     /// The header's buttons as the desktop's `PanelHeaderButtons` draws them: one that puts up a card in both header
     /// states, one that asks the panel only while it shows its body.
     public func headerButtons(folded: Bool) -> [PhonePanelHeaderButton] {
         (header ?? []).filter { !folded || $0.emits != nil }
+    }
+}
+
+/// One thing the status mark by a panel's name says (design skill Panel.prompt.md, "The status mark").
+public enum PhonePanelStatus: Sendable, Equatable {
+    case stopped(exited: Bool)
+    case failing([PhonePanel.FailingRead])
+    case asking([PhonePanel.IntegrationAsk])
+    case paused(asked: Bool)
+    case declined([PhonePanel.IntegrationAsk])
+
+    /// The mark's tone: the desktop's warn for work stopped or failing, the captain's for a call waiting on them, idle else.
+    public var tone: String {
+        switch self {
+        case .stopped, .failing: "warn"
+        case .asking: "captain"
+        case .paused, .declined: "idle"
+        }
+    }
+    public var key: String {
+        switch self {
+        case .stopped: "stopped"
+        case .failing: "failing"
+        case .asking: "asking"
+        case .paused: "paused"
+        case .declined: "declined"
+        }
     }
 }
 

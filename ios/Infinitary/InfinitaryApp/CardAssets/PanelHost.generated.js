@@ -47483,6 +47483,360 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Expand ${title} · folded for room`;
   }
+  function panelFailingAsk() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `اسأل نائب القبطان`;
+      case "de":
+        return `Ersten Offizier fragen`;
+      case "es":
+        return `Preguntar al primer oficial`;
+      case "fr":
+        return `Demander au second`;
+      case "ja":
+        return `一等航海士に聞く`;
+      case "ko":
+        return `일등항해사에게 묻기`;
+      case "pt-BR":
+        return `Perguntar ao imediato`;
+      case "zh-Hans":
+        return `问大副`;
+      case "zh-Hant":
+        return `問大副`;
+      case "en-XA":
+        return `[Åšķ ţĥé ƒîŕšţ ɱáţé ~~~~~~]`;
+      case "ar-XB":
+        return `‮Ask the first mate‬`;
+    }
+    return `Ask the first mate`;
+  }
+  function panelFailingAsked() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تم السؤال`;
+      case "de":
+        return `Gefragt`;
+      case "es":
+        return `Preguntado`;
+      case "fr":
+        return `Demandé`;
+      case "ja":
+        return `聞きました`;
+      case "ko":
+        return `물어봤어요`;
+      case "pt-BR":
+        return `Perguntado`;
+      case "zh-Hans":
+        return `已问`;
+      case "zh-Hant":
+        return `已問`;
+      case "en-XA":
+        return `[Åšķéð ~~]`;
+      case "ar-XB":
+        return `‮Asked‬`;
+    }
+    return `Asked`;
+  }
+  function panelFailingClears() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعيد المحاولة من تلقاء نفسها، ويختفي هذا عند أول قراءة تنجح.`;
+      case "de":
+        return `Es versucht es von selbst erneut, und das verschwindet beim ersten Lesen, das klappt.`;
+      case "es":
+        return `Lo vuelve a intentar por sí solo, y esto desaparece con la primera lectura que funcione.`;
+      case "fr":
+        return `Il réessaie tout seul, et ceci disparaît à la première lecture qui fonctionne.`;
+      case "ja":
+        return `自動でもう一度試し、読み込みが一度成功するとこの表示は消えます。`;
+      case "ko":
+        return `스스로 다시 시도하고, 읽기가 한 번 성공하면 이 표시는 사라져요.`;
+      case "pt-BR":
+        return `Ele tenta de novo sozinho, e isto some na primeira leitura que funcionar.`;
+      case "zh-Hans":
+        return `它会自己再试，第一次读取成功后这条提示就会消失。`;
+      case "zh-Hant":
+        return `它會自己再試，第一次讀取成功後這則提示就會消失。`;
+      case "en-XA":
+        return `[Îţ ţŕîéš áĝáîñ ƀý îţšéļƒ, áñð ţĥîš çļéáŕš öñ ţĥé ƒîŕšţ ŕéáð ţĥáţ ŵöŕķš. ~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮It tries again by itself, and this clears on the first read that works.‬`;
+    }
+    return `It tries again by itself, and this clears on the first read that works.`;
+  }
+  function panelFailingHeading() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `القراءات الخلفية تفشل`;
+      case "de":
+        return `Lesen im Hintergrund schlägt fehl`;
+      case "es":
+        return `Las lecturas en segundo plano están fallando`;
+      case "fr":
+        return `Les lectures en arrière-plan échouent`;
+      case "ja":
+        return `バックグラウンドの読み込みが失敗しています`;
+      case "ko":
+        return `백그라운드 읽기가 실패하고 있어요`;
+      case "pt-BR":
+        return `As leituras em segundo plano estão falhando`;
+      case "zh-Hans":
+        return `后台读取一直失败`;
+      case "zh-Hant":
+        return `背景讀取一直失敗`;
+      case "en-XA":
+        return `[Ɓáçķĝŕöûñð ŕéáðš áŕé ƒáîļîñĝ ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Background reads are failing‬`;
+    }
+    return `Background reads are failing`;
+  }
+  function panelFailingJob(input2) {
+    const count = formatNumber(input2.count);
+    const job = input2.job;
+    const time2 = input2.time;
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `مهمتها الخلفية ${job} تفشل منذ ${time2}، ${count} محاولة متتالية.`;
+          case "one":
+            return `مهمتها الخلفية ${job} تفشل منذ ${time2}، محاولة واحدة.`;
+          case "two":
+            return `مهمتها الخلفية ${job} تفشل منذ ${time2}، محاولتان متتاليتان.`;
+          case "few":
+            return `مهمتها الخلفية ${job} تفشل منذ ${time2}، ${count} محاولات متتالية.`;
+          case "many":
+            return `مهمتها الخلفية ${job} تفشل منذ ${time2}، ${count} محاولة متتالية.`;
+          default:
+            return `مهمتها الخلفية ${job} تفشل منذ ${time2}، ${count} محاولة متتالية.`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Seine Hintergrundaufgabe ${job} schlägt seit ${time2} fehl, ${count} Versuch in Folge.`;
+          default:
+            return `Seine Hintergrundaufgabe ${job} schlägt seit ${time2} fehl, ${count} Versuche in Folge.`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Su tarea en segundo plano ${job} falla desde las ${time2}, ${count} intento seguido.`;
+          case "many":
+            return `Su tarea en segundo plano ${job} falla desde las ${time2}, ${count} de intentos seguidos.`;
+          default:
+            return `Su tarea en segundo plano ${job} falla desde las ${time2}, ${count} intentos seguidos.`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Sa tâche en arrière-plan ${job} échoue depuis ${time2}, ${count} essai d’affilée.`;
+          case "many":
+            return `Sa tâche en arrière-plan ${job} échoue depuis ${time2}, ${count} essais d’affilée.`;
+          default:
+            return `Sa tâche en arrière-plan ${job} échoue depuis ${time2}, ${count} essais d’affilée.`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `バックグラウンドのジョブ ${job} が ${time2} から失敗しています（${count} 回連続）。`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `백그라운드 작업 ${job}이(가) ${time2}부터 실패하고 있어요. ${count}번 연속이에요.`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `A tarefa em segundo plano ${job} falha desde ${time2}, ${count} tentativa seguida.`;
+          case "many":
+            return `A tarefa em segundo plano ${job} falha desde ${time2}, ${count} tentativas seguidas.`;
+          default:
+            return `A tarefa em segundo plano ${job} falha desde ${time2}, ${count} tentativas seguidas.`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `它的后台任务 ${job} 自 ${time2} 起一直失败，已连续 ${count} 次。`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `它的背景工作 ${job} 自 ${time2} 起一直失敗，已連續 ${count} 次。`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[Îţš ƀáçķĝŕöûñð ĵöƀ ${job} ĥáš ƒáîļéð šîñçé ${time2}, ${count} ţŕý îñ á ŕöŵ. ~~~~~~~~~~~~~~~~~~]`;
+          default:
+            return `[Îţš ƀáçķĝŕöûñð ĵöƀ ${job} ĥáš ƒáîļéð šîñçé ${time2}, ${count} ţŕîéš îñ á ŕöŵ. ~~~~~~~~~~~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `‮Its background job ‬${job}‮ has failed since ‬${time2}‮, ‬${count}‮ try in a row.‬`;
+          default:
+            return `‮Its background job ‬${job}‮ has failed since ‬${time2}‮, ‬${count}‮ tries in a row.‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `Its background job ${job} has failed since ${time2}, ${count} try in a row.`;
+      default:
+        return `Its background job ${job} has failed since ${time2}, ${count} tries in a row.`;
+    }
+  }
+  function panelFailingLooking() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `نائب القبطان يتحقق من الأمر.`;
+      case "de":
+        return `Der erste Offizier sieht es sich an.`;
+      case "es":
+        return `El primer oficial lo está revisando.`;
+      case "fr":
+        return `Le second s’en occupe.`;
+      case "ja":
+        return `一等航海士が調べています。`;
+      case "ko":
+        return `일등항해사가 살펴보고 있어요.`;
+      case "pt-BR":
+        return `O imediato está verificando.`;
+      case "zh-Hans":
+        return `大副正在查看。`;
+      case "zh-Hant":
+        return `大副正在查看。`;
+      case "en-XA":
+        return `[Ţĥé ƒîŕšţ ɱáţé îš ļööķîñĝ îñţö îţ. ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The first mate is looking into it.‬`;
+    }
+    return `The first mate is looking into it.`;
+  }
+  function panelFailingPlace(input2) {
+    const count = formatNumber(input2.count);
+    const place = input2.place;
+    const time2 = input2.time;
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `القراءة من ${place} تفشل منذ ${time2}، ${count} محاولة متتالية.`;
+          case "one":
+            return `القراءة من ${place} تفشل منذ ${time2}، محاولة واحدة.`;
+          case "two":
+            return `القراءة من ${place} تفشل منذ ${time2}، محاولتان متتاليتان.`;
+          case "few":
+            return `القراءة من ${place} تفشل منذ ${time2}، ${count} محاولات متتالية.`;
+          case "many":
+            return `القراءة من ${place} تفشل منذ ${time2}، ${count} محاولة متتالية.`;
+          default:
+            return `القراءة من ${place} تفشل منذ ${time2}، ${count} محاولة متتالية.`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Lesen aus ${place} schlägt seit ${time2} fehl, ${count} Versuch in Folge.`;
+          default:
+            return `Lesen aus ${place} schlägt seit ${time2} fehl, ${count} Versuche in Folge.`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Las lecturas de ${place} fallan desde las ${time2}, ${count} intento seguido.`;
+          case "many":
+            return `Las lecturas de ${place} fallan desde las ${time2}, ${count} de intentos seguidos.`;
+          default:
+            return `Las lecturas de ${place} fallan desde las ${time2}, ${count} intentos seguidos.`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Les lectures depuis ${place} échouent depuis ${time2}, ${count} essai d’affilée.`;
+          case "many":
+            return `Les lectures depuis ${place} échouent depuis ${time2}, ${count} essais d’affilée.`;
+          default:
+            return `Les lectures depuis ${place} échouent depuis ${time2}, ${count} essais d’affilée.`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${place} からの読み込みが ${time2} から失敗しています（${count} 回連続）。`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${place}에서 읽기가 ${time2}부터 실패하고 있어요. ${count}번 연속이에요.`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `As leituras do ${place} falham desde ${time2}, ${count} tentativa seguida.`;
+          case "many":
+            return `As leituras do ${place} falham desde ${time2}, ${count} tentativas seguidas.`;
+          default:
+            return `As leituras do ${place} falham desde ${time2}, ${count} tentativas seguidas.`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `从 ${place} 读取自 ${time2} 起一直失败，已连续 ${count} 次。`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `從 ${place} 讀取自 ${time2} 起一直失敗，已連續 ${count} 次。`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[Ŕéáðš ƒŕöɱ ${place} ĥáṽé ƒáîļéð šîñçé ${time2}, ${count} ţŕý îñ á ŕöŵ. ~~~~~~~~~~~~~~~~]`;
+          default:
+            return `[Ŕéáðš ƒŕöɱ ${place} ĥáṽé ƒáîļéð šîñçé ${time2}, ${count} ţŕîéš îñ á ŕöŵ. ~~~~~~~~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `‮Reads from ‬${place}‮ have failed since ‬${time2}‮, ‬${count}‮ try in a row.‬`;
+          default:
+            return `‮Reads from ‬${place}‮ have failed since ‬${time2}‮, ‬${count}‮ tries in a row.‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `Reads from ${place} have failed since ${time2}, ${count} try in a row.`;
+      default:
+        return `Reads from ${place} have failed since ${time2}, ${count} tries in a row.`;
+    }
+  }
+  function panelFailingStillShows() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا تزال اللوحة تعرض آخر ما قرأته.`;
+      case "de":
+        return `Das Panel zeigt weiter, was es zuletzt gelesen hat.`;
+      case "es":
+        return `El panel sigue mostrando lo último que leyó.`;
+      case "fr":
+        return `Le panneau affiche toujours ce qu’il a lu en dernier.`;
+      case "ja":
+        return `パネルには最後に読み込んだ内容が表示されたままです。`;
+      case "ko":
+        return `패널은 마지막으로 읽은 내용을 계속 보여 줘요.`;
+      case "pt-BR":
+        return `O painel continua mostrando o que leu por último.`;
+      case "zh-Hans":
+        return `面板仍显示它上次读取的内容。`;
+      case "zh-Hant":
+        return `面板仍顯示它上次讀取的內容。`;
+      case "en-XA":
+        return `[Ţĥé þáñéļ šţîļļ šĥöŵš ŵĥáţ îţ ļášţ ŕéáð. ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The panel still shows what it last read.‬`;
+    }
+    return `The panel still shows what it last read.`;
+  }
   function panelHide() {
     switch (currentLanguage()) {
       case "ar":
@@ -47648,6 +48002,172 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Task‬`;
     }
     return `Task`;
+  }
+  function panelMarkAsking(input2) {
+    const place = input2.place;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تنتظر موافقتك على ${place}`;
+      case "de":
+        return `Wartet auf dein OK für ${place}`;
+      case "es":
+        return `Espera tu OK en ${place}`;
+      case "fr":
+        return `Attend votre accord sur ${place}`;
+      case "ja":
+        return `${place} であなたの許可を待っています`;
+      case "ko":
+        return `${place}에서 허락을 기다리고 있어요`;
+      case "pt-BR":
+        return `Espera seu OK no ${place}`;
+      case "zh-Hans":
+        return `正在等你在 ${place} 上批准`;
+      case "zh-Hant":
+        return `正在等你在 ${place} 上核准`;
+      case "en-XA":
+        return `[Ŵáîţš ƒöŕ ýöûŕ ÖĶ öñ ${place} ~~~~~~~]`;
+      case "ar-XB":
+        return `‮Waits for your OK on ‬${place}`;
+    }
+    return `Waits for your OK on ${place}`;
+  }
+  function panelMarkDeclined(input2) {
+    const place = input2.place;
+    switch (currentLanguage()) {
+      case "ar":
+        return `اخترت «ليس الآن» على ${place}`;
+      case "de":
+        return `Du hast „Nicht jetzt“ für ${place} gewählt`;
+      case "es":
+        return `Elegiste Ahora no en ${place}`;
+      case "fr":
+        return `Vous avez choisi Pas maintenant sur ${place}`;
+      case "ja":
+        return `${place} で「今はしない」を選びました`;
+      case "ko":
+        return `${place}에서 나중에를 골랐어요`;
+      case "pt-BR":
+        return `Você escolheu Agora não no ${place}`;
+      case "zh-Hans":
+        return `你在 ${place} 上选择了“暂不”`;
+      case "zh-Hant":
+        return `你在 ${place} 上選了「暫時不要」`;
+      case "en-XA":
+        return `[Ýöû çĥöšé Ñöţ ñöŵ öñ ${place} ~~~~~~~]`;
+      case "ar-XB":
+        return `‮You chose Not now on ‬${place}`;
+    }
+    return `You chose Not now on ${place}`;
+  }
+  function panelMarkDetails(input2) {
+    const title = input2.title;
+    switch (currentLanguage()) {
+      case "ar":
+        return `حول ${title}`;
+      case "de":
+        return `Über ${title}`;
+      case "es":
+        return `Sobre ${title}`;
+      case "fr":
+        return `À propos de ${title}`;
+      case "ja":
+        return `${title} について`;
+      case "ko":
+        return `${title} 정보`;
+      case "pt-BR":
+        return `Sobre ${title}`;
+      case "zh-Hans":
+        return `关于${title}`;
+      case "zh-Hant":
+        return `關於${title}`;
+      case "en-XA":
+        return `[Åƀöûţ ${title} ~~]`;
+      case "ar-XB":
+        return `‮About ‬${title}`;
+    }
+    return `About ${title}`;
+  }
+  function panelMarkFailing(input2) {
+    const time2 = input2.time;
+    switch (currentLanguage()) {
+      case "ar":
+        return `القراءات الخلفية تفشل منذ ${time2}`;
+      case "de":
+        return `Lesen im Hintergrund schlägt seit ${time2} fehl`;
+      case "es":
+        return `Las lecturas en segundo plano fallan desde las ${time2}`;
+      case "fr":
+        return `Les lectures en arrière-plan échouent depuis ${time2}`;
+      case "ja":
+        return `${time2} からバックグラウンドの読み込みが失敗しています`;
+      case "ko":
+        return `${time2}부터 백그라운드 읽기가 실패하고 있어요`;
+      case "pt-BR":
+        return `As leituras em segundo plano falham desde ${time2}`;
+      case "zh-Hans":
+        return `后台读取自 ${time2} 起一直失败`;
+      case "zh-Hant":
+        return `背景讀取自 ${time2} 起一直失敗`;
+      case "en-XA":
+        return `[Ɓáçķĝŕöûñð ŕéáðš ƒáîļîñĝ šîñçé ${time2} ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Background reads failing since ‬${time2}`;
+    }
+    return `Background reads failing since ${time2}`;
+  }
+  function panelMarkPaused() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `العمل الخلفي متوقف مؤقتًا`;
+      case "de":
+        return `Hintergrundarbeit pausiert`;
+      case "es":
+        return `Trabajo en segundo plano en pausa`;
+      case "fr":
+        return `Travail en arrière-plan en pause`;
+      case "ja":
+        return `バックグラウンド処理が一時停止しています`;
+      case "ko":
+        return `백그라운드 작업이 일시 정지됐어요`;
+      case "pt-BR":
+        return `Trabalho em segundo plano pausado`;
+      case "zh-Hans":
+        return `后台工作已暂停`;
+      case "zh-Hant":
+        return `背景工作已暫停`;
+      case "en-XA":
+        return `[Ɓáçķĝŕöûñð ŵöŕķ þáûšéð ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Background work paused‬`;
+    }
+    return `Background work paused`;
+  }
+  function panelMarkStopped() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `توقف العمل الخلفي`;
+      case "de":
+        return `Hintergrundarbeit gestoppt`;
+      case "es":
+        return `Trabajo en segundo plano detenido`;
+      case "fr":
+        return `Travail en arrière-plan arrêté`;
+      case "ja":
+        return `バックグラウンド処理が停止しています`;
+      case "ko":
+        return `백그라운드 작업이 멈췄어요`;
+      case "pt-BR":
+        return `Trabalho em segundo plano parado`;
+      case "zh-Hans":
+        return `后台工作已停止`;
+      case "zh-Hant":
+        return `背景工作已停止`;
+      case "en-XA":
+        return `[Ɓáçķĝŕöûñð ŵöŕķ šţöþþéð ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Background work stopped‬`;
+    }
+    return `Background work stopped`;
   }
   function panelMoveNotAsked() {
     switch (currentLanguage()) {
@@ -113960,12 +114480,26 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     panelCouldNotOpen,
     panelExpand,
     panelExpandFolded,
+    panelFailingAsk,
+    panelFailingAsked,
+    panelFailingClears,
+    panelFailingHeading,
+    panelFailingJob,
+    panelFailingLooking,
+    panelFailingPlace,
+    panelFailingStillShows,
     panelHide,
     panelIntegrationAskAgain,
     panelIntegrationAsking,
     panelIntegrationDeclined,
     panelLineProject,
     panelLineTask,
+    panelMarkAsking,
+    panelMarkDeclined,
+    panelMarkDetails,
+    panelMarkFailing,
+    panelMarkPaused,
+    panelMarkStopped,
     panelMoveNotAsked,
     panelRailFolded,
     panelRailMore,
@@ -117567,12 +118101,26 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "panelCouldNotOpen": ["failure"],
     "panelExpand": ["title"],
     "panelExpandFolded": ["title"],
+    "panelFailingAsk": [],
+    "panelFailingAsked": [],
+    "panelFailingClears": [],
+    "panelFailingHeading": [],
+    "panelFailingJob": ["count", "job", "time"],
+    "panelFailingLooking": [],
+    "panelFailingPlace": ["count", "place", "time"],
+    "panelFailingStillShows": [],
     "panelHide": [],
     "panelIntegrationAskAgain": [],
     "panelIntegrationAsking": ["action", "place"],
     "panelIntegrationDeclined": ["action", "place"],
     "panelLineProject": [],
     "panelLineTask": [],
+    "panelMarkAsking": ["place"],
+    "panelMarkDeclined": ["place"],
+    "panelMarkDetails": ["title"],
+    "panelMarkFailing": ["time"],
+    "panelMarkPaused": [],
+    "panelMarkStopped": [],
     "panelMoveNotAsked": [],
     "panelRailFolded": [],
     "panelRailMore": ["count"],
@@ -121449,6 +121997,31 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     /** Names the offending path, and the import when one is refused. */
     message: string()
   });
+  const PANEL_FAILING_ANSWER_MAX = 300;
+  const panelReadSchema = discriminatedUnion("kind", [
+    object({ kind: literal("background"), task: string().min(1).max(200) }),
+    object({
+      kind: literal("call"),
+      /** The integration's name when it failed. */
+      place: string().min(1).max(200),
+      action: string().min(1).max(200)
+    }),
+    object({
+      kind: literal("event"),
+      place: string().min(1).max(200),
+      event: string().min(1).max(200)
+    })
+  ]);
+  const panelFailingReadSchema = object({
+    read: panelReadSchema,
+    /** The first failure in the row, ISO wall time. */
+    since: string(),
+    tries: number().int().min(1),
+    /** What the newest failure answered, cut short: words from outside, never an instruction. */
+    answer: string().max(PANEL_FAILING_ANSWER_MAX),
+    /** The captain pressed Ask the first mate for this row, and the first mate was told. */
+    asked: boolean()
+  });
   const personalExtensionViewSchema = object({
     id: personalIdSchema,
     /** Where it came from, stamped by the host (Phase A item 1). */
@@ -121564,7 +122137,14 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         /** Its approval card is up, or the captain chose Not now. */
         state: _enum(["asking", "declined"])
       })
-    ).optional()
+    ).optional(),
+    /**
+     * Its reads that keep failing (docs/personal-panels.md, "Reads that keep
+     * failing"): each one the app saw fail at least twice across an hour and
+     * not work since, which the window marks by the panel's name. Absent while
+     * none is.
+     */
+    failing: array(panelFailingReadSchema).optional()
   });
   const PERSONAL_REFUSED_MAX = 500;
   object({

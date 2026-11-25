@@ -19,6 +19,12 @@ export type SidePanelChromeProps = {
    * whose words show on rest (docs/keyboard.md, "Facts shown on rest").
    */
   running?: boolean;
+  /**
+   * What the host knows about the panel that its code cannot say: one small
+   * mark right after the title, centred on its letters, open and folded
+   * (design skill Panel.prompt.md, "The status mark").
+   */
+  status?: React.ReactNode;
   /** Header-inline summary, shown only while collapsed. */
   compact?: React.ReactNode;
   /**
@@ -68,6 +74,7 @@ export function SidePanelChrome({
   collapsed,
   onToggleCollapsed,
   running = false,
+  status,
   compact,
   compactReplacesTitle = false,
   headerAction,
@@ -83,6 +90,10 @@ export function SidePanelChrome({
 }: SidePanelChromeProps) {
   const showCompact = collapsed && compact != null;
   const showTitle = !(showCompact && compactReplacesTitle);
+  // With no maker's name or summary, the title's run takes the header's
+  // room, so what follows it sits at the end; a status mark keeps that room
+  // after itself, so it stays beside the title.
+  const titleTakesRoom = !showCompact && attribution === null;
   return (
     <section
       hidden={hidden}
@@ -132,10 +143,23 @@ export function SidePanelChrome({
               // x-height - so the row centres them on the chevron (design
               // skill readme, Type: one line beside a dot or an icon).
               textBox: "trim-both cap alphabetic",
-              flex: showCompact ? undefined : attribution === null ? 1 : undefined,
+              flex: titleTakesRoom && status == null ? 1 : undefined,
             }}
           >
             {title}
+          </span>
+        )}
+        {status != null && (
+          <span
+            data-side-panel-status=""
+            style={{
+              display: "flex",
+              alignItems: "center",
+              flex: titleTakesRoom ? 1 : undefined,
+              minWidth: 0,
+            }}
+          >
+            {status}
           </span>
         )}
         {!collapsed && headerAction}
@@ -203,6 +227,7 @@ export function SidePanelChrome({
               : m.panelCollapse({ title })
           }
           size={24}
+          data-side-panel-chevron=""
           aria-expanded={!collapsed}
           aria-keyshortcuts={moveKeys}
           onClick={onToggleCollapsed}

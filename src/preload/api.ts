@@ -837,6 +837,7 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
         reportMounts: (mounts) => invoke("inf:plugins:personal:mounts", mounts),
         retry: (extensionId, options) => invoke("inf:plugins:retry", extensionId, options),
         update: (extensionId) => invoke("inf:plugins:update", extensionId),
+        askFirstmate: (extensionId) => invoke("inf:plugins:ask-firstmate", extensionId),
         askAgain: (extensionId, integration, action) =>
           invoke("inf:plugins:ask-again", extensionId, integration, action),
       },

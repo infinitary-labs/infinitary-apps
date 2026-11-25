@@ -335,6 +335,10 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, ActionExceptio
     "crew-only",
     "The captain's Update panel on a panel whose background work the app refused; it tells the first mate, which starts the update, and nothing is set",
   ],
+  "inf:plugins:ask-firstmate": [
+    "crew-only",
+    "The captain's Ask the first mate on a panel whose reads keep failing; it tells the first mate, which looks into them, and nothing is set",
+  ],
   "inf:plugins:integrations": [
     "crew-only",
     "A panel's own call on the captain's integrations; each action keeps its Settings rule, and the first mate reaches them through its own integration tools",

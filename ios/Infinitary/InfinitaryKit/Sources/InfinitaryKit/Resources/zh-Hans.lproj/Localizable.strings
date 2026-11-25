@@ -3944,6 +3944,9 @@
 "settingsUsageConnectionHeaders" = "请求头";
 "settingsUsageConnectionHeadersHint" = "保存在机密中，只发送到这个地址。";
 "settingsUsageConnectionKeep" = "保留连接";
+"settingsUsageConnectionLineRefused" = "船员的用量没有送达 %1$@，即你在设置 → 智能中的报告连接。%1$@ 拒收了上一次发送：请在那里检查连接的地址和请求头。";
+"settingsUsageConnectionLineSecure" = "船员的用量没有送达 %1$@，即你在设置 → 智能中的报告连接。应用无法与 %1$@ 建立安全连接。如果 %1$@ 是你公司自己的，请让这台电脑信任它，然后退出 Infinitary 并重新打开。";
+"settingsUsageConnectionLineUnreachable" = "船员的用量没有送达 %1$@，即你在设置 → 智能中的报告连接。上一次发送无法访问 %1$@。";
 "settingsUsageConnectionNone" = "把船员的用量发送到你指定的监控或追踪工具，例如 Grafana、Datadog 或 Langfuse。在你添加之前，什么都不会发送。";
 "settingsUsageConnectionProblemAddress" = "这个地址无法使用：请写出完整地址，以 https:// 开头，不要包含登录信息、查询或 #。";
 "settingsUsageConnectionProblemDestination" = "这个地址指向 Infinitary 不会连接的地方。";

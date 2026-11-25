@@ -3944,6 +3944,9 @@
 "settingsUsageConnectionHeaders" = "الترويسات";
 "settingsUsageConnectionHeadersHint" = "محفوظة في الأسرار ولا تُرسَل إلا إلى هذا العنوان.";
 "settingsUsageConnectionKeep" = "الإبقاء على الاتصال";
+"settingsUsageConnectionLineRefused" = "لا يصل استخدام طاقمك إلى %1$@، وهو اتصال التقارير الخاص بك في الإعدادات ← الذكاء. رفض %1$@ آخر إرسال: راجع هناك عنوان الاتصال وترويساته.";
+"settingsUsageConnectionLineSecure" = "لا يصل استخدام طاقمك إلى %1$@، وهو اتصال التقارير الخاص بك في الإعدادات ← الذكاء. تعذّر على التطبيق إنشاء اتصال آمن بـ %1$@. إذا كان %1$@ تابعًا لشركتك، فاجعل هذا الحاسوب يثق به، ثم أغلق Infinitary وافتحه من جديد.";
+"settingsUsageConnectionLineUnreachable" = "لا يصل استخدام طاقمك إلى %1$@، وهو اتصال التقارير الخاص بك في الإعدادات ← الذكاء. تعذّر على آخر إرسال الوصول إلى %1$@.";
 "settingsUsageConnectionNone" = "أرسل استخدام طاقمك إلى أداة مراقبة أو تتبّع تختارها، مثل Grafana أو Datadog أو Langfuse. لا يُرسَل شيء حتى تضيف واحدة.";
 "settingsUsageConnectionProblemAddress" = "لا يمكن استخدام هذا العنوان: اكتبه كاملًا مبتدئًا بـ https://، دون بيانات دخول أو استعلام أو #.";
 "settingsUsageConnectionProblemDestination" = "يشير هذا العنوان إلى مكان لا يتصل به Infinitary.";

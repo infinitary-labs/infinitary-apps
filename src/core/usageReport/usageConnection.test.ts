@@ -30,12 +30,16 @@ type Received = { path: string; headers: Record<string, string | string[] | unde
 
 const servers: Server[] = [];
 afterEach(async () => {
+  vi.restoreAllMocks();
   await Promise.all(
     servers.splice(0).map((server) => new Promise<void>((done) => server.close(() => done()))),
   );
 });
 
-async function collector(): Promise<{ url: string; received: Received[] }> {
+/** A local collector answering each batch with `status()`, 200 unless a test says otherwise. */
+async function collector(
+  status: () => number = () => 200,
+): Promise<{ url: string; received: Received[]; server: Server }> {
   const received: Received[] = [];
   const listening = createServer((request, response) => {
     let text = "";
@@ -44,12 +48,17 @@ async function collector(): Promise<{ url: string; received: Received[] }> {
     });
     request.on("end", () => {
       received.push({ path: request.url ?? "", headers: request.headers, body: JSON.parse(text) });
+      response.statusCode = status();
       response.end("{}");
     });
   });
   servers.push(listening);
   await new Promise<void>((done) => listening.listen(0, "127.0.0.1", done));
-  return { url: `http://127.0.0.1:${(listening.address() as AddressInfo).port}`, received };
+  return {
+    url: `http://127.0.0.1:${(listening.address() as AddressInfo).port}`,
+    received,
+    server: listening,
+  };
 }
 
 const TOKEN = "glc_invented-grafana-cloud-token";
@@ -412,6 +421,40 @@ describe("usageConnection", () => {
     expect(connection.view()).toBeNull();
     await damaged.keys.view();
     expect((await damaged.entries()).map((entry) => entry.ref)).toContain(kept);
+  });
+
+  // This task's goal: a send the collector does not take shows beyond the log, in Settings → Usage.
+  it("says why the last send did not get through, until one does or the connection is saved again", async () => {
+    let status = 401;
+    const { url, received, server } = await collector(() => status);
+    const { connection, usage } = setup();
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const sendOnce = async () => {
+      usage.recordUsage(CODEX_CALL);
+      await usage.usageReporter.flush();
+      await connection.stop();
+    };
+    await save(connection, url);
+    expect(connection.refusal()).toBeUndefined();
+
+    await sendOnce();
+    expect(received.map((entry) => entry.path).sort()).toEqual(["/v1/metrics", "/v1/traces"]);
+    expect(connection.refusal()).toBe("refused");
+
+    status = 200;
+    await sendOnce();
+    expect(connection.refusal()).toBeUndefined();
+
+    await new Promise<void>((done) => server.close(() => done()));
+    await sendOnce();
+    expect(connection.refusal()).toBe("unreachable");
+
+    await connection.save({
+      endpoint: url,
+      format: "standard",
+      headers: [{ name: "Authorization" }],
+    });
+    expect(connection.refusal()).toBeUndefined();
   });
 
   it("lets quit go once the deadline passes while a send never answers", async () => {

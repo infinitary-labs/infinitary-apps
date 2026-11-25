@@ -5,6 +5,7 @@ import { isIP } from "node:net";
 import { dirname, join } from "node:path";
 import * as m from "@shared/i18n/messages.generated";
 import type { SecretConsumer } from "@shared/secrets";
+import type { UsageReportingRefusalReason } from "@shared/usage";
 import {
   type UsageConnectionProblem,
   type UsageConnectionSave,
@@ -14,6 +15,7 @@ import {
 } from "@shared/usageConnection";
 import { z } from "zod";
 import { claudeLoginEmail, defaultClaudeConfigDir } from "../claude/claudeQuota";
+import { collectorFailureOf, computerRoots } from "../claude/claudeReporting";
 import type { CoreServices } from "../coreServices";
 import { hostEnv } from "../hostEnv";
 import {
@@ -86,6 +88,12 @@ export type UsageConnection = {
   destinations(company?: CompanyHosts): readonly UsageReportDestination[];
   /** The saved address's host, for Settings → Usage's line. */
   host(): string | null;
+  /**
+   * Why the last send to the saved address did not get through, until a
+   * send does or the connection is saved again or removed: one failed send
+   * already lost ten minutes of usage, so it is said at once.
+   */
+  refusal(): UsageReportingRefusalReason | undefined;
   /** Sends what is waiting, once, as the app stops. */
   stop(): Promise<void>;
 };
@@ -103,8 +111,9 @@ const lookupAll: McpResolver = async (hostname) =>
  * The reporting connection a person adds (docs/usage-report.md, "The
  * person's reporting connection"): an OTLP/HTTP address reached the way an
  * MCP server's is - its network class read on Save and held on every send -
- * its headers kept as hidden Secrets entries the module never reads back,
- * and the one format the tool reading it takes. Save is the person's
+ * but checked against the computer's trusted list, as the company setup's
+ * collector is, its headers kept as hidden Secrets entries the module never
+ * reads back, and the one format the tool reading it takes. Save is the person's
  * consent to send the crew's usage there with those headers, as signing in
  * is to a sign-in's use, so a send asks nothing.
  */
@@ -113,7 +122,11 @@ export function usageConnection(deps: UsageConnectionDeps): UsageConnection {
   const fetchFor =
     deps.fetchFor ??
     ((saved) =>
-      guardedMcpFetch(holdMcpDestination(saved.endpoint, saved.mode), resolve) as typeof fetch);
+      guardedMcpFetch(
+        holdMcpDestination(saved.endpoint, saved.mode),
+        resolve,
+        computerRoots,
+      ) as typeof fetch);
   const loaded = read(deps.file);
   let saved = loaded.saved;
   /** A file this build could not read whole names nothing for certain, so no sweep forgets by it. */
@@ -121,6 +134,7 @@ export function usageConnection(deps: UsageConnectionDeps): UsageConnection {
   /** Each signal's resource entries waiting for the next send, as OTLP's request arrays. */
   let waiting: Partial<Record<OtlpSignal, unknown[]>> = {};
   let timer: ReturnType<typeof setTimeout> | undefined;
+  let refusal: UsageReportingRefusalReason | undefined;
 
   deps.keys.registerBroker(
     reportBroker(
@@ -144,10 +158,10 @@ export function usageConnection(deps: UsageConnectionDeps): UsageConnection {
     }
     if (Object.keys(bodies).length === 0) return;
     const host = new URL(connection.endpoint).host;
-    let statuses: Partial<Record<OtlpSignal, number>>;
+    let answers: SignalAnswers;
     try {
       if (connection.headers.length === 0) {
-        statuses = await postAll(connection, bodies, fetchFor(connection));
+        answers = await postAll(connection, bodies, fetchFor(connection));
       } else {
         const used = await deps.keys.use({
           id: randomUUID(),
@@ -159,16 +173,29 @@ export function usageConnection(deps: UsageConnectionDeps): UsageConnection {
           console.warn(`[usage report] ${host}: kept headers unavailable (${used.state}); dropped`);
           return;
         }
-        statuses = used.result as Partial<Record<OtlpSignal, number>>;
+        answers = used.result as SignalAnswers;
       }
     } catch (caught) {
       const reason = caught instanceof Error ? caught.name : "error";
       console.warn(`[usage report] ${host} unreachable (${reason}); dropped`);
       return;
     }
-    for (const [signal, status] of Object.entries(statuses))
-      if (status < 200 || status >= 300)
-        console.warn(`[usage report] ${host} refused a ${signal} batch (HTTP ${status}); dropped`);
+    let failed: UsageReportingRefusalReason | undefined;
+    for (const [signal, answer] of Object.entries(answers)) {
+      if ("failure" in answer) {
+        console.warn(
+          `[usage report] ${host} unreachable for a ${signal} batch (${answer.failure}); dropped`,
+        );
+        failed ??= answer.failure;
+      } else if (answer.status < 200 || answer.status >= 300) {
+        console.warn(
+          `[usage report] ${host} refused a ${signal} batch (HTTP ${answer.status}); dropped`,
+        );
+        failed ??= "refused";
+      }
+    }
+    // A send that outlived its connection, saved again or removed meanwhile, says nothing of what replaced it.
+    if (saved === connection) refusal = failed;
   };
 
   const destination = (
@@ -205,6 +232,7 @@ export function usageConnection(deps: UsageConnectionDeps): UsageConnection {
   return {
     view: () => viewOf(saved),
     host: () => (saved ? new URL(saved.endpoint).host : null),
+    refusal: () => refusal,
     destinations: (company) => {
       if (!saved) return [];
       const host = hostnameOf(saved.endpoint);
@@ -254,6 +282,7 @@ export function usageConnection(deps: UsageConnectionDeps): UsageConnection {
         write(deps.file, next);
         saved = next;
         unreadable = false;
+        refusal = undefined;
         // What waits was built in the old format for the old address; sent now it would reach
         // the new address, or a tool reading the new format, in the old format, so it is dropped.
         if (before?.endpoint !== next.endpoint || before?.format !== next.format) dropWaiting();
@@ -272,6 +301,7 @@ export function usageConnection(deps: UsageConnectionDeps): UsageConnection {
       rmSync(deps.file, { force: true });
       saved = null;
       unreadable = false;
+      refusal = undefined;
       await forgetUnnamed(before, null);
       return null;
     },
@@ -348,36 +378,58 @@ async function placeOf(
   }
 }
 
+/** Each signal's answer: the collector's HTTP status, or why it gave none. */
+type SignalAnswers = Partial<
+  Record<OtlpSignal, { status: number } | { failure: "secure-connection" | "unreachable" }>
+>;
+
+/**
+ * Posts each signal's body in turn. A signal that gets no answer ends the
+ * send: the ones after it would meet the same collector, so they share its
+ * failure rather than each waiting out its own timeout.
+ */
 async function postAll(
   connection: SavedConnection,
   bodies: Partial<Record<OtlpSignal, string>>,
   send: typeof fetch,
   headers: Headers = new Headers(),
-): Promise<Partial<Record<OtlpSignal, number>>> {
-  const statuses: Partial<Record<OtlpSignal, number>> = {};
+): Promise<SignalAnswers> {
+  const answers: SignalAnswers = {};
+  let failed: { failure: "secure-connection" | "unreachable" } | undefined;
   for (const signal of SIGNALS) {
     const body = bodies[signal];
     if (body === undefined) continue;
+    if (failed) {
+      answers[signal] = failed;
+      continue;
+    }
     const sent = new Headers(headers);
     sent.set("content-type", "application/json");
-    const response = await send(`${connection.endpoint}/v1/${signal}`, {
-      method: "POST",
-      headers: sent,
-      body,
-      redirect: "error",
-      credentials: "omit",
-      signal: AbortSignal.timeout(POST_TIMEOUT_MS),
-    });
-    await response.body?.cancel();
-    statuses[signal] = response.status;
+    try {
+      const response = await send(`${connection.endpoint}/v1/${signal}`, {
+        method: "POST",
+        headers: sent,
+        body,
+        redirect: "error",
+        credentials: "omit",
+        signal: AbortSignal.timeout(POST_TIMEOUT_MS),
+      });
+      await response.body?.cancel();
+      answers[signal] = { status: response.status };
+    } catch (caught) {
+      failed = { failure: collectorFailureOf(caught) };
+      answers[signal] = failed;
+    }
   }
-  return statuses;
+  return answers;
 }
 
 /**
  * A batch to the saved address - what waited up to ten minutes, or the
  * last send at quit - its kept headers applied inside Secrets. It binds the saved address and each signal's body; a body never
- * reaches the journal, only its digest.
+ * reaches the journal, only its digest. Its result is each signal's answer,
+ * a collector that never answered included, so the connection can say why
+ * a send did not get through.
  */
 function reportBroker(
   current: () => SavedConnection | null,
@@ -444,7 +496,12 @@ export function usageReportRoutes(userData: string) {
   const reads: Pick<CoreServices["usage"], "reporting" | "connection"> = {
     reporting: async () => {
       const host = connection?.host();
-      return { ...(await company.reporting()), ...(host ? { connection: host } : {}) };
+      const refusal = connection?.refusal();
+      return {
+        ...(await company.reporting()),
+        ...(host ? { connection: host } : {}),
+        ...(host && refusal ? { connectionRefusal: refusal } : {}),
+      };
     },
     connection: {
       view: () => connection?.view() ?? null,

@@ -3944,6 +3944,9 @@
 "settingsUsageConnectionHeaders" = "ヘッダー";
 "settingsUsageConnectionHeadersHint" = "シークレットに保管され、このアドレスにだけ送られます。";
 "settingsUsageConnectionKeep" = "接続を残す";
+"settingsUsageConnectionLineRefused" = "乗組員の使用量が、設定 → インテリジェンスの報告用の接続 %1$@ に届いていません。%1$@ が前回の送信を拒否しました。そこで接続のアドレスとヘッダーを確認してください。";
+"settingsUsageConnectionLineSecure" = "乗組員の使用量が、設定 → インテリジェンスの報告用の接続 %1$@ に届いていません。アプリが %1$@ に安全に接続できませんでした。%1$@ が会社のものなら、このコンピューターが信頼するように設定してから、Infinitary を終了してもう一度開いてください。";
+"settingsUsageConnectionLineUnreachable" = "乗組員の使用量が、設定 → インテリジェンスの報告用の接続 %1$@ に届いていません。前回の送信は %1$@ に到達できませんでした。";
 "settingsUsageConnectionNone" = "乗組員の使用量を、Grafana、Datadog、Langfuse など、指定した監視・トレースツールに送ります。追加するまで何も送られません。";
 "settingsUsageConnectionProblemAddress" = "このアドレスは使えません。https:// から始めて全体を書き、サインイン情報、クエリ、# を含めないでください。";
 "settingsUsageConnectionProblemDestination" = "このアドレスは Infinitary が接続しない場所を指しています。";

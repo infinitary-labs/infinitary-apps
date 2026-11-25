@@ -3946,6 +3946,9 @@
 "settingsUsageConnectionHeaders" = "헤더";
 "settingsUsageConnectionHeadersHint" = "비밀 정보에 보관되며 이 주소로만 보냅니다.";
 "settingsUsageConnectionKeep" = "연결 유지";
+"settingsUsageConnectionLineRefused" = "선원들의 사용량이 설정 → 지능의 보고 연결인 %1$@에 전달되지 않고 있어요. %1$@에서 마지막 전송을 거부했어요. 거기서 연결의 주소와 헤더를 확인하세요.";
+"settingsUsageConnectionLineSecure" = "선원들의 사용량이 설정 → 지능의 보고 연결인 %1$@에 전달되지 않고 있어요. 앱이 %1$@에 안전하게 연결하지 못했어요. 회사 자체 주소라면 이 컴퓨터에서 신뢰하도록 설정한 뒤 Infinitary를 종료하고 다시 열어 주세요.";
+"settingsUsageConnectionLineUnreachable" = "선원들의 사용량이 설정 → 지능의 보고 연결인 %1$@에 전달되지 않고 있어요. 마지막 전송이 %1$@에 닿지 못했어요.";
 "settingsUsageConnectionNone" = "선원들의 사용량을 Grafana, Datadog, Langfuse처럼 직접 지정한 모니터링 또는 추적 도구로 보냅니다. 추가하기 전에는 아무것도 보내지 않습니다.";
 "settingsUsageConnectionProblemAddress" = "이 주소는 사용할 수 없습니다. https://로 시작하는 전체 주소를 쓰고 로그인 정보, 쿼리, #은 넣지 마세요.";
 "settingsUsageConnectionProblemDestination" = "이 주소는 Infinitary가 연결하지 않는 곳을 가리킵니다.";

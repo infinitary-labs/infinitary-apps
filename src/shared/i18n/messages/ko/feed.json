@@ -113,6 +113,14 @@
   "feedRunsOnThere": "{name}은(는) 이제 {where} 실행돼요. 다음 작업은 그곳에서 시작하고, 이미 실행 중인 작업은 시작한 곳에서 끝나요.",
   "feedStarted": "시작함",
   "feedStopped": "중지됨",
+  "feedTagCheckFinished": {
+    "plural": "count",
+    "other": "{project}: 작업 {count}개의 태그를 확인했습니다."
+  },
+  "feedTagCheckFinishedMissed": {
+    "plural": "count",
+    "other": "{project}: 작업 {count}개의 태그를 확인했습니다. {missed}개는 답을 받지 못해 확인되지 않은 채로 남았습니다."
+  },
   "feedUndelivered": "메시지 전달 안 됨: {why}",
   "feedUnsafeDataReaderReported": "안전하지 않은 데이터 읽기 작업이 보고했습니다. 그 내용은 기록에 있습니다.",
   "feedUpdated": "업데이트: {text}",

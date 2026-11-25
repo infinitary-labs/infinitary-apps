@@ -10,6 +10,13 @@ import { prepared } from "./statements";
  * task's own project.
  */
 
+/**
+ * The revision of a decision-model row whose description is gone, such as
+ * one carried onto another project's tag: revisions start at 1, so no
+ * description matches it and only Check existing tasks asks it again.
+ */
+export const STALE_JUDGMENT = 0;
+
 export type TaskTagRow = {
   taskId: string;
   tagId: string;
@@ -103,6 +110,34 @@ export class TaskTagStore {
            revision = excluded.revision, at = excluded.at`,
       )
       .run(row.taskId, row.tagId, row.on ? "on" : "off", row.by, row.revision, row.at);
+  }
+
+  /**
+   * A task's words changed: every row the decision model set loses the
+   * description revision it was judged at, so automatic tagging asks it
+   * again; a person's or the first mate's row is theirs and is left alone.
+   */
+  forgetJudgments(taskId: string): void {
+    if (!this.exists()) return;
+    this.db
+      // i18n-exempt: SQL, never shown to a person
+      .prepare("UPDATE task_tags SET revision = NULL WHERE task_id = ? AND set_by = 'decision'")
+      .run(taskId);
+  }
+
+  /**
+   * A task that just arrived in a project owes automatic tagging these
+   * tags: an off row of the decision model's with no revision, which it
+   * asks. A row already there is left as it is.
+   */
+  owe(taskId: string, tagIds: readonly string[], at: number): void {
+    if (!this.exists() || tagIds.length === 0) return;
+    const insert = this.db.prepare(
+      // i18n-exempt: SQL, never shown to a person
+      `INSERT INTO task_tags (task_id, tag_id, state, set_by, revision, at)
+       VALUES (?, ?, 'off', 'decision', NULL, ?) ON CONFLICT (task_id, tag_id) DO NOTHING`,
+    );
+    for (const tagId of tagIds) insert.run(taskId, tagId, at);
   }
 
   /** Tasks carrying a tag now. */

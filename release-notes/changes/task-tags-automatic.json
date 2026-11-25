@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "task-tags-automatic",
+      "kind": "feature",
+      "title": "New tasks get your project's tags on their own",
+      "body": "In a project with tags, each new task is checked against them in the background and gets the tags that fit, without holding up its start. Tags you or your first mate set are never changed. Check existing tasks, in the project's Tags box, tags older tasks too: choose open tasks, those done in the last 7 days as well, or every task, see how many requests it makes before you start, and stop it whenever you like. Turn it off with Tag tasks automatically in Settings → Intelligence.",
+      "area": "tasks",
+      "picture": {
+        "dark": "task-tags-automatic-dark.webp",
+        "light": "task-tags-automatic-light.webp",
+        "alt": "A project's Tags box with bug and docs, a line saying Tag tasks automatically is on, and Check existing tasks offering open tasks, Start and how many requests it makes"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -703,6 +703,34 @@
       <string>%1$ld번 고쳤지만 검사를 통과하지 못했어요 - 일등항해사가 어떻게 할지 물어볼 거예요</string>
     </dict>
   </dict>
+  <key>feedTagCheckFinished</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>%2$@: 작업 %1$ld개의 태그를 확인했습니다.</string>
+    </dict>
+  </dict>
+  <key>feedTagCheckFinishedMissed</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>%3$@: 작업 %1$ld개의 태그를 확인했습니다. %2$@개는 답을 받지 못해 확인되지 않은 채로 남았습니다.</string>
+    </dict>
+  </dict>
   <key>filePathsAnnounce</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>
@@ -1975,6 +2003,48 @@
       <string>ld</string>
       <key>other</key>
       <string>저장소 %1$ld개</string>
+    </dict>
+  </dict>
+  <key>settingsProjectsTagsCheckCost</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>요청 %2$ld개(작업마다 1개), %1$@이(가) 답합니다.</string>
+    </dict>
+  </dict>
+  <key>settingsProjectsTagsCheckCostOwn</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>요청 %1$ld개(작업마다 1개), 내 모델이 답합니다.</string>
+    </dict>
+  </dict>
+  <key>settingsProjectsTagsCheckProgress</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@total@</string>
+    <key>total</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>작업 %2$ld개 중 %1$@개 확인함</string>
     </dict>
   </dict>
   <key>settingsProjectsTagsRemoveQuestion</key>

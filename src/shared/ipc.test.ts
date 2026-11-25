@@ -559,6 +559,8 @@ describe("ipc contract", () => {
       "inf:plugins:retry",
       "inf:plugins:update",
       "inf:projects:list",
+      "inf:projects:tag-check",
+      "inf:projects:tag-checks",
       "inf:quota:models",
       "inf:quota:opened",
       "inf:quota:refresh",

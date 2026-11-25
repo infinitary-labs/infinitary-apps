@@ -116,6 +116,16 @@
   "feedRunsOnThere": "{name} runs {where} now. Its next task starts there; one already running finishes where it started.",
   "feedStarted": "Started",
   "feedStopped": "Stopped",
+  "feedTagCheckFinished": {
+    "plural": "count",
+    "one": "{project}: checked one task for tags.",
+    "other": "{project}: checked {count} tasks for tags."
+  },
+  "feedTagCheckFinishedMissed": {
+    "plural": "count",
+    "one": "{project}: checked one task for tags; {missed} got no answer and stay unchecked.",
+    "other": "{project}: checked {count} tasks for tags; {missed} got no answer and stay unchecked."
+  },
   "feedUndelivered": "Message undelivered: {why}",
   "feedUnsafeDataReaderReported": "The unsafe data reader reported; its words are on its record.",
   "feedUpdated": "Updated: {text}",

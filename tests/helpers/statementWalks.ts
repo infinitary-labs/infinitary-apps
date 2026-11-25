@@ -274,4 +274,15 @@ export const WALKS: Record<string, { walks: string[]; reason: string }> = {
     walks: ["SCAN repos"],
     reason: "one row per project the captain adds",
   },
+  "SELECT task_id, tag_id FROM ( SELECT t.id AS task_id, p.id AS tag_id, t.created_at AS created_at FROM tasks t INDEXED BY tasks_created_at JOIN project_tags p ON p.project_id = t.project_id LEFT JOIN task_tags x ON x.task_id = t.id AND x.tag_id = p.id WHERE t.created_at > @since AND t.created_at >= p.created_at AND x.task_id IS NULL UNION SELECT t.id, p.id, t.created_at FROM task_tags x JOIN tasks t ON t.id = x.task_id JOIN project_tags p ON p.id = x.tag_id AND p.project_id = t.project_id WHERE x.set_by = 'decision' AND x.revision IS NULL ) WHERE task_id NOT IN (SELECT value FROM json_each(@skip)) ORDER BY created_at DESC, task_id LIMIT 1000":
+    {
+      walks: [
+        "USE TEMP B-TREE FOR ORDER BY",
+        "SCAN x USING INDEX task_tags_unjudged",
+        "USE TEMP B-TREE FOR ORDER BY",
+        "USE TEMP B-TREE FOR ORDER BY",
+      ],
+      reason:
+        "automatic tagging's next task (tagWork.ts): the scan reads only the partial index of the decision model's rows waiting to be asked again, which each answer empties, and the sorts order only the rows the two halves sought",
+    },
 };

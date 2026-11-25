@@ -19,6 +19,7 @@ import type { HomeSource } from "./connection/connection";
 import type { DecisionModels } from "./decisions/decisionModel";
 import type { EventScreenOffer } from "./decisions/eventScreenOffer";
 import type { startCorrections } from "./decisions/startCorrections";
+import type { startTaskTagger } from "./decisions/taskTagger";
 import type { HomeAnnouncement } from "./devices/announce";
 import type { CaptainPlaces } from "./devices/captainPlaces";
 import type { CardAdds } from "./devices/cardAdds";
@@ -145,6 +146,8 @@ export type CoreServices = {
    */
   stopWorkPresentation: () => void;
   corrections?: ReturnType<typeof startCorrections>;
+  /** Automatic tagging and Check existing tasks (docs/task-tags.md). */
+  tagging?: ReturnType<typeof startTaskTagger>;
   supervisor: CrewSupervisor;
   /** The one task writer (task-system P0/P1); the record every surface reads. */
   tasks: TaskService;

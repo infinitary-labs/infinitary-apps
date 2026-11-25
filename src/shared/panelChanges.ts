@@ -38,6 +38,10 @@ export const PANEL_CHANGES = {
     "destructive",
     "Removing a tag takes it off every task for good; tags are not panel data yet",
   ],
+  "project-tag-check": [
+    "not-a-setting",
+    "Starts or stops a run of decision model requests; nothing is set",
+  ],
   "project-runs-on": true,
   "device-invite": ["credential", "Makes a joining link for a new computer"],
   "private-site-allow": ["consent", "Widens what every task browser may reach"],

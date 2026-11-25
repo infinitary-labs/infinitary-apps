@@ -1,7 +1,7 @@
 import { projectTagChangeSchema } from "@shared/tags";
 import { describe, expect, it } from "vitest";
 import { taskProtocolFixture } from "../../../tests/helpers/taskProtocol";
-import { TaskTagStore } from "../storage/taskTagStore";
+import { STALE_JUDGMENT, TaskTagStore } from "../storage/taskTagStore";
 import { seedProject } from "../workspace/seedProject";
 
 /**
@@ -271,7 +271,7 @@ describe("the tags a task carries", () => {
       ).toEqual([
         [true, "captain", null],
         [false, "decision", 1],
-        [true, "decision", null],
+        [true, "decision", STALE_JUDGMENT],
       ]);
       expect(f.fresh().projects.find((project) => project.id === projectId)?.tags).toBeUndefined();
     } finally {

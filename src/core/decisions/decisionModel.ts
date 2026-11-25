@@ -558,6 +558,23 @@ export class DecisionModels {
     return this.view();
   }
 
+  /**
+   * The Jev or OpenRouter model answering now, by name, or null while the
+   * person's own models answer: what a use's own screen names before it
+   * spends anything.
+   */
+  answererName(): string | null {
+    if (!this.nativeModel()) return null;
+    const { answerer } = this.options.settings.getDecisions();
+    if (answerer.kind === "openrouter")
+      return (
+        this.options.openrouter?.models().find((model) => model.id === answerer.model)?.name ??
+        answerer.model
+      );
+    if (answerer.kind !== "native") return null;
+    return DECISION_MODEL_CATALOG.find((row) => row.id === answerer.id)?.name ?? null;
+  }
+
   /** What the Decisions group renders. Never carries a key or part of one. */
   view(): DecisionsView {
     const settings = this.options.settings.getDecisions();

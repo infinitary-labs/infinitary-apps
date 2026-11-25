@@ -703,6 +703,34 @@
       <string>%1$ld 次修复仍未让检查通过——你的大副会问你接下来怎么办</string>
     </dict>
   </dict>
+  <key>feedTagCheckFinished</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>%2$@：已检查 %1$ld 个任务的标签。</string>
+    </dict>
+  </dict>
+  <key>feedTagCheckFinishedMissed</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>%3$@：已检查 %1$ld 个任务的标签；%2$@ 个没有得到回答，仍未检查。</string>
+    </dict>
+  </dict>
   <key>filePathsAnnounce</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>
@@ -2003,6 +2031,48 @@
       <string>ld</string>
       <key>other</key>
       <string>%1$ld 个仓库</string>
+    </dict>
+  </dict>
+  <key>settingsProjectsTagsCheckCost</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>%2$ld 个请求，每个任务一个，由 %1$@ 回答。</string>
+    </dict>
+  </dict>
+  <key>settingsProjectsTagsCheckCostOwn</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>%1$ld 个请求，每个任务一个，由你自己的模型回答。</string>
+    </dict>
+  </dict>
+  <key>settingsProjectsTagsCheckProgress</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@total@</string>
+    <key>total</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>已检查 %1$@/%2$ld 个任务</string>
     </dict>
   </dict>
   <key>settingsProjectsTagsRemoveQuestion</key>

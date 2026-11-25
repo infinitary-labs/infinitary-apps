@@ -13,7 +13,8 @@ Each question offers `unsure` as its abstention.
 A person's own chat models answer the whole set in one call when the asker sets `together` (`docs/decision-models.md`, "The implementations").
 A native decision model answers a question set in one request whatever it is asked.
 
-Changing any served word in the question raises `TAG_QUESTION_VERSION` and calls for scoring the set again.
+Changing any served word in the question raises `TAG_QUESTION_VERSION` and calls for scoring the set again: `tagQuestion.test.ts` holds the digest of the words scored at each version and fails until the new one is recorded.
+Automatic tagging serves these words to every project with tags (`docs/task-tags.md`, "Automatic tagging").
 
 ## The eval set
 

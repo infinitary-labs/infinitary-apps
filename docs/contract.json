@@ -59948,6 +59948,288 @@
         ]
       }
     },
+    "inf:projects:tag-checks": {
+      "effect": "read",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "object",
+            "properties": {
+              "projectId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "tagIds": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "required": [
+              "projectId"
+            ],
+            "additionalProperties": false
+          }
+        ],
+        "items": false,
+        "maxItems": 1
+      },
+      "response": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "projectId": {
+              "type": "string"
+            },
+            "auto": {
+              "type": "boolean"
+            },
+            "answerer": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "reaches": {
+              "type": "object",
+              "properties": {
+                "open": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "week": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "all": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "open",
+                "week",
+                "all"
+              ]
+            },
+            "running": {
+              "type": "object",
+              "properties": {
+                "reach": {
+                  "type": "string",
+                  "enum": [
+                    "open",
+                    "week",
+                    "all"
+                  ]
+                },
+                "tagIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "total": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "done": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "reach",
+                "total",
+                "done"
+              ]
+            },
+            "elsewhere": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "projectId",
+            "auto",
+            "answerer",
+            "reaches"
+          ]
+        }
+      }
+    },
+    "inf:projects:tag-check": {
+      "effect": "change",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "type": "string",
+                    "const": "start"
+                  },
+                  "projectId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "reach": {
+                    "type": "string",
+                    "enum": [
+                      "open",
+                      "week",
+                      "all"
+                    ]
+                  },
+                  "tagIds": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                },
+                "required": [
+                  "op",
+                  "projectId",
+                  "reach"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "type": "string",
+                    "const": "stop"
+                  },
+                  "projectId": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "op",
+                  "projectId"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        ],
+        "items": false,
+        "minItems": 1,
+        "maxItems": 1
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string"
+          },
+          "auto": {
+            "type": "boolean"
+          },
+          "answerer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reaches": {
+            "type": "object",
+            "properties": {
+              "open": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "week": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "all": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "open",
+              "week",
+              "all"
+            ]
+          },
+          "running": {
+            "type": "object",
+            "properties": {
+              "reach": {
+                "type": "string",
+                "enum": [
+                  "open",
+                  "week",
+                  "all"
+                ]
+              },
+              "tagIds": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "total": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "done": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "reach",
+              "total",
+              "done"
+            ]
+          },
+          "elsewhere": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "projectId",
+          "auto",
+          "answerer",
+          "reaches"
+        ]
+      }
+    },
     "inf:settings:show": {
       "effect": "change",
       "reach": "home",

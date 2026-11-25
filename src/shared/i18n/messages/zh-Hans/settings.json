@@ -254,6 +254,8 @@
   "settingsDecisionUseKindReads": "每个新任务都会用适合这项工作的模型来运行，简单的任务因此更省你的套餐额度。它会读取任务的标题、目标和你的原话，以及所属项目和相关工作。",
   "settingsDecisionUseSavedResetName": "使用已保存的重置还是等待",
   "settingsDecisionUseSavedResetReads": "当工作在等待一个开启了“自动使用已保存的重置”的 Codex 账户时，它权衡是使用一次已保存的重置，还是等待额度恢复。它读取该账户的套餐、每项额度的剩余量和恢复时间、持有的已保存的重置次数，以及等待中的工作。",
+  "settingsDecisionUseTagsName": "自动为任务添加标签",
+  "settingsDecisionUseTagsReads": "有标签的项目中的每个新任务都会与这些标签对照，并获得符合的标签。它读取任务的标题、目标和你的原话、所属项目以及它所属的任务。",
   "settingsDecisionsActions": "决定模型操作",
   "settingsDecisionsAnswerWith": "用 {model} 回答决定",
   "settingsDecisionsAuto": "自动 · 级别中最便宜的模型",
@@ -1027,7 +1029,33 @@
   "settingsProjectsScope": "范围",
   "settingsProjectsScopeDescription": "哪些工作属于这个项目。你的大副会读取它来决定新工作放在哪里。",
   "settingsProjectsTagsAdd": "添加标签",
+  "settingsProjectsTagsAutoOff": "自动为任务添加标签已在 设置 → 智能 中关闭，因此新任务不会自动获得标签。",
+  "settingsProjectsTagsAutoOn": "自动为任务添加标签已开启：{answerer} 会将每个新任务与这些标签对照。",
+  "settingsProjectsTagsAutoOnOwn": "自动为任务添加标签已开启：你自己的模型会将每个新任务与这些标签对照。",
   "settingsProjectsTagsCancel": "取消",
+  "settingsProjectsTagsCheck": "检查现有任务",
+  "settingsProjectsTagsCheckAll": "所有任务",
+  "settingsProjectsTagsCheckCost": {
+    "plural": "count",
+    "other": "{count} 个请求，每个任务一个，由 {answerer} 回答。"
+  },
+  "settingsProjectsTagsCheckCostOwn": {
+    "plural": "count",
+    "other": "{count} 个请求，每个任务一个，由你自己的模型回答。"
+  },
+  "settingsProjectsTagsCheckElsewhere": "正在检查 {project} 的任务。要检查此项目，请停止该检查或等它完成。",
+  "settingsProjectsTagsCheckNamed": "按 {name} 检查现有任务",
+  "settingsProjectsTagsCheckNone": "这些任务都已检查过。",
+  "settingsProjectsTagsCheckNotNow": "暂不",
+  "settingsProjectsTagsCheckOpen": "未完成的任务",
+  "settingsProjectsTagsCheckProgress": {
+    "plural": "total",
+    "other": "已检查 {done}/{total} 个任务"
+  },
+  "settingsProjectsTagsCheckReach": "哪些任务",
+  "settingsProjectsTagsCheckStart": "开始",
+  "settingsProjectsTagsCheckStop": "停止",
+  "settingsProjectsTagsCheckWeek": "未完成的任务和过去 7 天内完成的任务",
   "settingsProjectsTagsDescription": "哪些任务符合",
   "settingsProjectsTagsDescriptionExample": "以前能用、现在坏了的东西",
   "settingsProjectsTagsEdit": "编辑",

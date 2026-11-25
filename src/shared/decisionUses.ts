@@ -45,6 +45,7 @@ export const DECISION_USE_IDS = [
   "event-screen",
   "card-reader",
   "saved-reset",
+  "tags",
 ] as const;
 export type DecisionUseId = (typeof DECISION_USE_IDS)[number];
 
@@ -144,6 +145,16 @@ export const DECISION_USES: readonly DecisionUse[] = [
     reads: englishOf(said("settingsDecisionUseSavedResetReads")),
     // On like the reviewer use: only allowance numbers, and it asks only for
     // an account whose own switch the person turned on (INF-5478, piece 2).
+    kind: "default-on",
+    approval: DECISION_APPROVAL_VERSION,
+  },
+  {
+    id: "tags",
+    name: englishOf(said("settingsDecisionUseTagsName")),
+    reads: englishOf(said("settingsDecisionUseTagsReads")),
+    // On like task classification's facts, which it reads under the same
+    // limits: one request per new task, and none while no project has tags
+    // (docs/task-tags.md, "Automatic tagging").
     kind: "default-on",
     approval: DECISION_APPROVAL_VERSION,
   },

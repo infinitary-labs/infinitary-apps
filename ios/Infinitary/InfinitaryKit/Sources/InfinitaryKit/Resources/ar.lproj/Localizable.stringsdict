@@ -1203,6 +1203,54 @@
       <string>بعد %1$ld محاولة إصلاح لم تنجح الفحوصات - سيسألك نائب القبطان عمّا تريد فعله</string>
     </dict>
   </dict>
+  <key>feedTagCheckFinished</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>%2$@: فُحصت %1$ld مهمة بحثًا عن وسوم.</string>
+      <key>one</key>
+      <string>%2$@: فُحصت مهمة واحدة بحثًا عن وسوم.</string>
+      <key>two</key>
+      <string>%2$@: فُحصت مهمتان بحثًا عن وسوم.</string>
+      <key>few</key>
+      <string>%2$@: فُحصت %1$ld مهام بحثًا عن وسوم.</string>
+      <key>many</key>
+      <string>%2$@: فُحصت %1$ld مهمة بحثًا عن وسوم.</string>
+      <key>other</key>
+      <string>%2$@: فُحصت %1$ld مهمة بحثًا عن وسوم.</string>
+    </dict>
+  </dict>
+  <key>feedTagCheckFinishedMissed</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>%3$@: فُحصت %1$ld مهمة بحثًا عن وسوم؛ و%2$@ لم تتلقَّ إجابة وبقيت دون فحص.</string>
+      <key>one</key>
+      <string>%3$@: فُحصت مهمة واحدة بحثًا عن وسوم؛ و%2$@ لم تتلقَّ إجابة وبقيت دون فحص.</string>
+      <key>two</key>
+      <string>%3$@: فُحصت مهمتان بحثًا عن وسوم؛ و%2$@ لم تتلقَّ إجابة وبقيت دون فحص.</string>
+      <key>few</key>
+      <string>%3$@: فُحصت %1$ld مهام بحثًا عن وسوم؛ و%2$@ لم تتلقَّ إجابة وبقيت دون فحص.</string>
+      <key>many</key>
+      <string>%3$@: فُحصت %1$ld مهمة بحثًا عن وسوم؛ و%2$@ لم تتلقَّ إجابة وبقيت دون فحص.</string>
+      <key>other</key>
+      <string>%3$@: فُحصت %1$ld مهمة بحثًا عن وسوم؛ و%2$@ لم تتلقَّ إجابة وبقيت دون فحص.</string>
+    </dict>
+  </dict>
   <key>filePathsAnnounce</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>
@@ -3433,6 +3481,78 @@
       <string>%1$ld مستودعًا</string>
       <key>other</key>
       <string>%1$ld مستودع</string>
+    </dict>
+  </dict>
+  <key>settingsProjectsTagsCheckCost</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>%2$ld طلب، واحد لكل مهمة، يجيب عنها %1$@.</string>
+      <key>one</key>
+      <string>طلب واحد، يجيب عنه %1$@.</string>
+      <key>two</key>
+      <string>طلبان، واحد لكل مهمة، يجيب عنهما %1$@.</string>
+      <key>few</key>
+      <string>%2$ld طلبات، واحد لكل مهمة، يجيب عنها %1$@.</string>
+      <key>many</key>
+      <string>%2$ld طلبًا، واحد لكل مهمة، يجيب عنها %1$@.</string>
+      <key>other</key>
+      <string>%2$ld طلب، واحد لكل مهمة، يجيب عنها %1$@.</string>
+    </dict>
+  </dict>
+  <key>settingsProjectsTagsCheckCostOwn</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>%1$ld طلب، واحد لكل مهمة، تجيب عنها نماذجك الخاصة.</string>
+      <key>one</key>
+      <string>طلب واحد، تجيب عنه نماذجك الخاصة.</string>
+      <key>two</key>
+      <string>طلبان، واحد لكل مهمة، تجيب عنهما نماذجك الخاصة.</string>
+      <key>few</key>
+      <string>%1$ld طلبات، واحد لكل مهمة، تجيب عنها نماذجك الخاصة.</string>
+      <key>many</key>
+      <string>%1$ld طلبًا، واحد لكل مهمة، تجيب عنها نماذجك الخاصة.</string>
+      <key>other</key>
+      <string>%1$ld طلب، واحد لكل مهمة، تجيب عنها نماذجك الخاصة.</string>
+    </dict>
+  </dict>
+  <key>settingsProjectsTagsCheckProgress</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@total@</string>
+    <key>total</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>فُحصت %1$@ من %2$ld مهمة</string>
+      <key>one</key>
+      <string>فُحصت %1$@ من %2$ld مهمة</string>
+      <key>two</key>
+      <string>فُحصت %1$@ من %2$ld مهمة</string>
+      <key>few</key>
+      <string>فُحصت %1$@ من %2$ld مهام</string>
+      <key>many</key>
+      <string>فُحصت %1$@ من %2$ld مهمة</string>
+      <key>other</key>
+      <string>فُحصت %1$@ من %2$ld مهمة</string>
     </dict>
   </dict>
   <key>settingsProjectsTagsRemoveQuestion</key>

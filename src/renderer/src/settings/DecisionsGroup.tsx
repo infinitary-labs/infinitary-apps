@@ -608,12 +608,15 @@ function DecisionAnswerer({
 
 /** A use's name in the person's language, where the catalog holds it. */
 function nameOf(use: Pick<DecisionUseView, "id" | "name">): string {
-  return use.id === "saved-reset" ? m.settingsDecisionUseSavedResetName() : use.name;
+  if (use.id === "saved-reset") return m.settingsDecisionUseSavedResetName();
+  if (use.id === "tags") return m.settingsDecisionUseTagsName();
+  return use.name;
 }
 
 /** What a use reads, in the person's language where the catalog holds it. */
 function readsOf(use: Pick<DecisionUseView, "id" | "reads">): string {
   if (use.id === "kind") return m.settingsDecisionUseKindReads();
   if (use.id === "saved-reset") return m.settingsDecisionUseSavedResetReads();
+  if (use.id === "tags") return m.settingsDecisionUseTagsReads();
   return use.reads;
 }

@@ -3,6 +3,7 @@ import { type ProjectTagChange, type ProjectTagView, sameTagName } from "@shared
 import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { useProjectTags } from "../app/useProjectTags";
 import { Button, Input } from "../design";
+import { ProjectTagCheck } from "./ProjectTagCheck";
 import { SettingError } from "./settingRows";
 
 /**
@@ -12,7 +13,8 @@ import { SettingError } from "./settingRows";
  * form in the row's place; Remove turns its row into one question that
  * names how many tasks lose the tag, with Cancel focused so Enter never
  * removes. Escape inside a form or a question puts the row back, and goes
- * no further, so the page stays open.
+ * no further, so the page stays open. Under the rows, Check existing tasks
+ * (`ProjectTagCheck`) offers to check a tag just added or newly described.
  */
 
 type Phase =
@@ -35,6 +37,8 @@ export function ProjectTags({ projectId }: { projectId: string }) {
   const [phase, setPhase] = useState<Phase>({ kind: "rest" });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // The tag just added or newly described, which Check existing tasks offers to ask alone.
+  const [offer, setOffer] = useState<string | null>(null);
   const box = useRef<HTMLDivElement>(null);
 
   // Where the keyboard lands once a form or a question closes: its row's
@@ -66,6 +70,9 @@ export function ProjectTags({ projectId }: { projectId: string }) {
       const added =
         change.op === "add" ? result.tags.find((tag) => sameTagName(tag.name, change.name)) : null;
       settle(change.op === "remove" ? null : (added?.id ?? then));
+      if (added) setOffer(added.id);
+      else if (change.op === "edit" && change.description !== undefined) setOffer(change.tagId);
+      else if (change.op === "remove" && change.tagId === offer) setOffer(null);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
     } finally {
@@ -235,6 +242,14 @@ export function ProjectTags({ projectId }: { projectId: string }) {
             {m.settingsProjectsTagsAdd()}
           </Button>
         </div>
+      )}
+      {tags.length > 0 && (
+        <ProjectTagCheck
+          projectId={projectId}
+          tags={tags}
+          only={tags.find((tag) => tag.id === offer) ?? null}
+          onDone={() => setOffer(null)}
+        />
       )}
     </div>
   );

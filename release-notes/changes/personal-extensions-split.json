@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "personal-extensions-split",
+      "reason": "Internal: the personal panel host's lint, capture and place tools move to their own file by owner; nothing a person sees changes."
+    }
+  ]
+}

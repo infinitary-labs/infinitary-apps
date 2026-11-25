@@ -163,6 +163,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | story (a change's) | 變更說明 | |
 | subscription | 訂閱方案 | Used on the first-run screen. |
 | tab | 分頁 | Taiwan writes 分頁, not 標籤頁. |
+| tag (a project's name for a kind of task) | 標籤 | The catalog's word, as in 新增標籤 and 依標籤; Taiwan's everyday word for a label. A tab stays 分頁. Counter 個. |
 | take over (another computer's first mate) | 接手 | The Devices button and its confirm say the same. |
 | task | 任務 | Counter 項, as in 另一項任務. |
 | task board | 任務看板 | 看板 alone for the Board view. |

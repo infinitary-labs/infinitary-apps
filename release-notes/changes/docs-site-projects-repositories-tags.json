@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "docs-site-projects-repositories-tags",
+      "reason": "Brings the documentation site's Projects, Glossary and Tasks and crewmates pages and the task board picture up to date with projects of several repositories, moving a repository and tags, in every language; nothing in the app changes."
+    }
+  ]
+}

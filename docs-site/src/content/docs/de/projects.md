@@ -1,12 +1,13 @@
 ---
-source: d57581294d6dfbfc
+source: cd05627562f4c3e5
 title: Projekte
-description: Wie du ein Projekt zu Infinitary hinzufügst, das Fenster auf eines konzentrierst, wählst, wie seine Änderungen zusammengeführt werden, und es entfernst.
+description: Wie du ein Projekt zu Infinitary hinzufügst, mehrere Repositorys in einem zusammenfasst, ihm Tags gibst, das Fenster auf eines konzentrierst, wählst, wie seine Änderungen zusammengeführt werden, und es entfernst.
 ---
 
-Ein Projekt ist das, woran deine Crew arbeitet: ein Ordner von dir, der mit git verwaltet wird.
+Ein Projekt ist das, woran deine Crew arbeitet: ein Repository oder mehrere, die zusammengehören, etwa eine App und ihr Dienst.
+Ein Repository ist ein Ordner von dir, der mit git verwaltet wird.
 Jede Aufgabe gehört zu einem Projekt, und jedes Aufgabenkürzel beginnt mit dem Kürzel seines Projekts, etwa `WEB-12`.
-Deine Projekte stehen unter **Einstellungen → Projekte**.
+Deine Projekte stehen unter **Einstellungen → Projekte**, und wenn du auf die Zeile eines Projekts drückst, öffnet sich seine Seite.
 
 ## Ein Projekt hinzufügen {#add-a-project}
 
@@ -61,6 +62,56 @@ Deine Anmeldung bleibt auf diesem Computer.
 
 Wenn eine Anmeldung nicht mehr funktioniert, bittet dich eine Karte, dich erneut anzumelden.
 Arbeit, die sie braucht, wartet, bis du das getan hast.
+
+## Mehrere Repositorys in einem Projekt {#several-repositories-in-one-project}
+
+Ein Projekt beginnt mit einem Repository und kann weitere aufnehmen.
+Seine Seite listet sie unter **Repositorys** auf, mit einem Tab für jedes.
+
+Du kannst ein Repository auf zwei Wegen zu einem Projekt hinzufügen.
+
+- **Bitte deinen ersten Offizier.**
+  Sag, zu welchem Projekt das Repository gehören soll.
+  Dein erster Offizier bringt dir eine Karte, und es wird nichts hinzugefügt, bis du auf ihr **Repository hinzufügen** drückst.
+- **Füg es selbst hinzu.**
+  Drück hinter dem letzten Tab auf **Ein Repository hinzufügen** und wähl einen Ordner, ein Projekt zum Klonen oder **Neues Repository**, so wie beim Hinzufügen eines Projekts.
+
+Die Aufgaben des Repositorys tragen das Aufgabenkürzel des Projekts.
+Jede Aufgabe arbeitet in einem Repository, und ihr Tab **Info** nennt es neben dem Projekt.
+Jedes Repository behält seine eigenen Einstellungen, etwa **Wohin Änderungen gehen**, **Vor dem Zusammenführen fragen** und **Sorgfalt**: Wähl seinen Tab, um sie zu ändern.
+Ein Projekt mit mehreren Repositorys hat einen eigenen Namen, den du unter **Name** im Kasten **Projekt** änderst.
+
+## Ein Repository in ein anderes Projekt verschieben {#move-a-repository-to-another-project}
+
+Ein Repository lässt sich in ein anderes Projekt verschieben oder in ein eigenes.
+
+- **Bitte deinen ersten Offizier.**
+  Sagst du genau, welches Repository wohin soll, geschieht das sofort.
+  Schlägt dein erster Offizier eine Verschiebung vor, zeigt eine Karte, wohin jedes Repository geht und welche Aufgaben folgen, und nichts wird verschoben, bis du **Verschiebung anwenden** drückst.
+- **Verschieb es selbst.**
+  Wähl auf dem Tab des Repositorys ein Projekt in der Zeile, die anbietet, das Repository in ein anderes Projekt zu verschieben, drück auf **Verschieben** und drück zur Bestätigung noch einmal auf **Verschieben**.
+
+Das Repository behält seinen Namen, seinen Ordner und seine Einstellungen.
+Seine Aufgaben gehen mit, und jede Aufgabe behält ihr Kürzel.
+Ein Projekt, dem kein Repository bleibt, verlässt die Liste: Seine übrigen Aufgaben, seine Tags und seine Automatisierungen kommen zum anderen Projekt, und sein Kürzel wird nie wieder vergeben.
+Um zwei Projekte zusammenzulegen, verschieb die Repositorys des einen in das andere.
+
+## Tags {#tags}
+
+Jedes Projekt führt seine eigene Liste von Tags, etwa Fehler, Funktion oder Idee.
+Ein Tag hat einen Namen und eine Beschreibung, die sagt, welche Aufgaben dazugehören.
+Tags helfen dir, Aufgaben zu finden und zu gruppieren, und sonst bewirkt ein Tag in Infinitary nichts.
+
+Die Seite eines Projekts listet seine Tags unter **Tags** auf, jedes mit der Zahl der Aufgaben, die es tragen.
+
+- **Tag hinzufügen** fragt nach dem Namen des Tags und danach, welche Aufgaben dazugehören.
+- **Bearbeiten** ändert den Namen oder die Beschreibung eines Tags.
+  Ein umbenanntes Tag bleibt an den Aufgaben, die es tragen.
+- **Entfernen** nimmt das Tag von jeder Aufgabe, die es trägt, nach einer Rückfrage, die sagt, wie viele das sind.
+
+Du kannst auch deinen ersten Offizier bitten, einem Projekt Tags hinzuzufügen, sie zu ändern oder zu entfernen.
+Eine Aufgabe, die in ein anderes Projekt wechselt, verliert ihre Tags, es sei denn, ihr ganzes Projekt ist in dem anderen aufgegangen.
+Wie du eine Aufgabe taggst und Aufgaben nach Tag findest, steht unter [Aufgaben und Crewmitglieder](/de/tasks-and-crewmates/#tags).
 
 ## Arbeitskopien {#working-copies}
 
@@ -117,6 +168,8 @@ Schalte es aus, und Arbeit, die die Überprüfungen besteht, darf ohne Rückfrag
 Beim Entfernen verschwindet das Projekt aus der Liste.
 Sein Ordner und seine fertigen Aufgaben bleiben.
 Hat das Projekt noch Aufgaben, nennt Infinitary sie, und du schließt sie zuerst ab oder gibst sie auf.
+
+Bei einem Projekt mit mehreren Repositorys nimmt **Entfernen** das Repository weg, dessen Tab gewählt ist, und das Projekt behält die anderen.
 
 ## Weiter {#next}
 

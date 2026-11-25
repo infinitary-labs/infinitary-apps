@@ -1,5 +1,5 @@
 ---
-source: e113b8fc8884a051
+source: d1435fbb25dfd2af
 title: Tareas y tripulantes
 description: Qué es una tarea, cómo pasa de pendiente a terminada, dónde seguirla y cómo orientar al tripulante que la hace.
 ---
@@ -62,11 +62,12 @@ Para leer en palabras el estado de una tarea y su motivo, deja el puntero sobre 
 Para una vista más completa, presiona **Abrir el tablero de tareas** en el encabezado de Tareas.
 El tablero muestra Esperándote arriba, y luego tres columnas: Pendientes, En cola y Trabajando.
 
-<img class="picture-dark" src="/pictures/task-board-dark.webp" alt="El tablero de tareas: una tarea que te espera arriba, y luego las columnas Backlog, Queued y Working." width="876" height="493" />
-<img class="picture-light" src="/pictures/task-board-light.webp" alt="El tablero de tareas: una tarea que te espera arriba, y luego las columnas Backlog, Queued y Working." width="876" height="493" />
+<img class="picture-dark" src="/pictures/task-board-dark.webp" alt="El tablero de tareas: una fila con las etiquetas del proyecto, una tarea que te espera arriba, y luego las columnas Backlog, Queued y Working." width="876" height="493" />
+<img class="picture-light" src="/pictures/task-board-light.webp" alt="El tablero de tareas: una fila con las etiquetas del proyecto, una tarea que te espera arriba, y luego las columnas Backlog, Queued y Working." width="876" height="493" />
 
 Sus vistas también enumeran todos los pendientes, Terminadas · 7 d y el trabajo abandonado esta semana.
 Escribe una clave o un título en **Buscar una tarea** para filtrar todas las columnas, incluido el trabajo terminado más antiguo.
+Cuando tu proyecto tiene etiquetas, el tablero muestra una fila con ellas, y presionar una limita el tablero a sus tareas; consulta [Etiquetas](#tags).
 
 Para mover una tarea, arrastra su ficha a otra columna, o usa su menú ⋯:
 
@@ -84,7 +85,7 @@ El tablero nunca fusiona nada: una fusión solo ocurre en la tarjeta de fusión 
 Abre una tarea para ver su tarjeta.
 Debajo de su título hay una fila de pestañas:
 
-- **Info**: lo que pediste, en qué punto está y cómo se entrega.
+- **Info**: lo que pediste, en qué punto está, sus etiquetas y cómo se entrega.
 - **Tarjetas**: las tarjetas que la tarea te ha mostrado, con cuántas son.
 - **Actividad**: cada línea que la tarea ha escrito, en orden.
 - **Tripulante**: la propia conversación del tripulante, línea por línea, mientras trabaja.
@@ -92,6 +93,27 @@ Debajo de su título hay una fila de pestañas:
   Consulta [El navegador de la tripulación](/es/the-crews-browser/).
 
 Una pestaña solo aparece cuando la tarea tiene algo que mostrar en ella.
+
+## Etiquetas {#tags}
+
+Una tarea puede llevar cualquiera de las etiquetas de su proyecto, como error o función.
+Creas las etiquetas de un proyecto en Configuración → Proyectos; consulta [Proyectos](/es/projects/#tags).
+
+Para etiquetar una tarea, abre su pestaña **Info** y presiona **Editar etiquetas** en la fila **Etiquetas**.
+Un menú enumera las etiquetas del proyecto, y cada una que marcas se guarda de inmediato.
+La fila **Etiquetas** aparece cuando el proyecto tiene etiquetas.
+También puedes pedirle a tu primer oficial que etiquete una tarea.
+
+Puedes encontrar tareas por etiqueta en tres lugares:
+
+- **Buscar tareas**, en el encabezado de Tareas, muestra una fila con las etiquetas del proyecto.
+  Presiona una etiqueta para ver solo las tareas que la llevan, **Sin etiqueta** para las tareas que no llevan ninguna, o **Todas las etiquetas** para volver a ver todas las tareas.
+- **Agrupar tareas**, a su lado, enumera tus tareas **Por etiqueta** en lugar de **Por estado**.
+  Cada etiqueta es un grupo, contraído hasta que lo abres.
+- El tablero de tareas tiene su propia fila de etiquetas, y su vista **Por etiqueta** cuenta las tareas de cada etiqueta según en qué punto están.
+
+Las etiquetas se muestran para un proyecto a la vez: el proyecto que está en el centro, o tu único proyecto con etiquetas.
+Para centrarte en un proyecto, consulta [Proyectos](/es/projects/#focus-on-one-project).
 
 ## Orientar a un tripulante {#steering-a-crewmate}
 

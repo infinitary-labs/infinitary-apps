@@ -1,5 +1,5 @@
 ---
-source: 72cf3e89cd5a9c83
+source: 14ae8437d49c7f6c
 title: Glossário
 description: As palavras que o Infinitary usa com um sentido próprio, cada uma em uma ou duas frases, com um link para a página que a explica.
 ---
@@ -134,6 +134,13 @@ Restringir a janela a um projeto, pelo seletor de projeto na barra superior.
 Tarefas, Atividade e os cartões passam a mostrar só esse projeto, e o trabalho novo que você pedir vai para ele, a menos que você diga outro.
 Veja [Projetos](/pt-br/projects/#focus-on-one-project).
 
+## H {#h}
+
+### Computador principal {#home}
+
+O que o mapa em Ajustes → **Dispositivos** escreve embaixo do computador onde o seu imediato vive.
+Veja [Seus outros computadores](/pt-br/your-other-computers/#the-computer-where-your-first-mate-lives).
+
 ## I {#i}
 
 ### Integração {#integration}
@@ -211,7 +218,7 @@ Veja [O navegador da tripulação](/pt-br/the-crews-browser/#private-sites).
 
 ### Projeto {#project}
 
-Uma pasta sua, guardada com git, em que a sua tripulação trabalha.
+Aquilo em que a sua tripulação trabalha: um repositório, ou vários que andam juntos.
 Toda tarefa pertence a um projeto.
 Veja [Projetos](/pt-br/projects/).
 
@@ -241,6 +248,12 @@ Veja [Tarefas e tripulantes](/pt-br/tasks-and-crewmates/#where-a-task-stands).
 O que toda tarefa guarda: o que você pediu, o que mudou, as evidências e o que você decidiu.
 O registro de uma tarefa continua depois que ela é encerrada.
 Veja [Tarefas e tripulantes](/pt-br/tasks-and-crewmates/).
+
+### Repositório {#repository}
+
+Uma pasta sua, guardada com git, que faz parte de um projeto.
+Um projeto tem um repositório ou vários, e cada tarefa trabalha em um deles.
+Veja [Projetos](/pt-br/projects/#several-repositories-in-one-project).
 
 ### Cuidado {#rigor}
 
@@ -281,6 +294,12 @@ Cada uma em que você faz login é uma conta em Ajustes → **Inteligência**.
 Veja [Assinaturas e franquia](/pt-br/subscriptions-and-quota/).
 
 ## T {#t}
+
+### Etiqueta {#tag}
+
+Um nome que um projeto dá a um tipo de tarefa, como bug ou recurso, com uma descrição que diz quais tarefas se encaixam.
+Você ou o seu imediato etiquetam uma tarefa, e Tarefas e o quadro de tarefas podem listar as tarefas por etiqueta.
+Veja [Tarefas e tripulantes](/pt-br/tasks-and-crewmates/#tags).
 
 ### Assumir {#take-over}
 

@@ -155,6 +155,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | stop | 停止 | |
 | story (a change's) | 改动说明 | |
 | subscription | 订阅 | |
+| tag (a project's name for a kind of task) | 标签 | The app's own word in Settings → Projects and in Tasks, and GitHub's Simplified Chinese word for a label; counted with 个. A tab is written 标签页 to keep the two apart. |
 | take over (another computer's first mate) | 接手 | The app's own button. |
 | task | 任务 | |
 | task board | 任务看板 | 看板 alone for the Board view. |

@@ -174,7 +174,7 @@ A check that fails on the newest version sends the pull request back to its auth
 ## After the click
 
 The app sends the ticked rows once each, files each Build row as the maintainer picked it, and tells the round what came of each (`docs/forge.md`, "A reader's writes").
-A reply to an issue whose Build row the maintainer marked Don't file is held back, not sent; before finishing, the round drafts that issue's `declined` reply, which waits on a new approval card.
+A reply to an issue whose Build row the maintainer marked Don't file is held back, not sent; the round drafts that issue's `declined` reply, which waits on a new approval card, and reports and finishes only once it hears what came of that card's click.
 It reports what was sent, what was left unticked, what was held back and what it filed, and finishes; a write GitHub refused is named in the report, and the item comes back next round since nothing reached GitHub.
 
 ## The review

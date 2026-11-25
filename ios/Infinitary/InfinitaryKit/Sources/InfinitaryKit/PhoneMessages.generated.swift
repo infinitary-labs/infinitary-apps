@@ -137,6 +137,7 @@ public enum PhoneMessages {
     public static func `accountsCustomApiHeadersTitle`() -> String { PhoneWords.format("accountsCustomApiHeadersTitle", []) }
     public static func `accountsCustomApiHomeChanged`(`home`: String, `who`: String) -> String { PhoneWords.format("accountsCustomApiHomeChanged", [`home`, `who`]) }
     public static func `accountsCustomApiHomeGone`(`home`: String, `who`: String) -> String { PhoneWords.format("accountsCustomApiHomeGone", [`home`, `who`]) }
+    public static func `accountsCustomApiHomeReplaced`(`home`: String, `who`: String) -> String { PhoneWords.format("accountsCustomApiHomeReplaced", [`home`, `who`]) }
     public static func `accountsCustomApiHomeSets`(`home`: String, `who`: String) -> String { PhoneWords.format("accountsCustomApiHomeSets", [`home`, `who`]) }
     public static func `accountsCustomApiHomeTag`(`home`: String) -> String { PhoneWords.format("accountsCustomApiHomeTag", [`home`]) }
     public static func `accountsCustomApiHostSlow`(`host`: String) -> String { PhoneWords.format("accountsCustomApiHostSlow", [`host`]) }
@@ -4737,6 +4738,7 @@ extension PhoneWords {
         "accountsCustomApiHeadersTitle": [],
         "accountsCustomApiHomeChanged": ["home", "who"],
         "accountsCustomApiHomeGone": ["home", "who"],
+        "accountsCustomApiHomeReplaced": ["home", "who"],
         "accountsCustomApiHomeSets": ["home", "who"],
         "accountsCustomApiHomeTag": ["home"],
         "accountsCustomApiHostSlow": ["host"],

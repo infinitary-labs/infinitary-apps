@@ -351,6 +351,8 @@ The connection saved there follows the home's by that account id.
 A definition is built from the home connection as saved; for one from the connection file that the file has since changed, the file's new definition, so that computer pauses with it, and a file connection the file no longer defines is left out.
 That computer applies them as it applies a connection file (`AccountVault.applyCustomHome`, `CustomApiAccountOwner.applyDefinition`, above): a new name, price or compaction at once, a changed limit or setting checks that model again with its own key, and a new address, protocol or headers pause it there until it is approved again there with **Approve again**.
 A home connection that is gone pauses it, never deleted, until it is disconnected there.
+Approving it again at a new address saves a separate connection there, as on this computer; the paused one then says a newer one from the same connection is in use and waits only to be disconnected.
+A save there applies the home's last send again only to the connections that send names, so one approved since waits for the home's next send rather than reading as gone.
 Its row there says **From this computer** (the first mate's computer, by name on a window that controls it) and why it is paused.
 
 ## Lifecycle

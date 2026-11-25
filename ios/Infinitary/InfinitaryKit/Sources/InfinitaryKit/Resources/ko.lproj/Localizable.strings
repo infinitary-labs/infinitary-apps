@@ -131,6 +131,7 @@
 "accountsCustomApiHeadersTitle" = "추가 요청 헤더";
 "accountsCustomApiHomeChanged" = "%1$@의 연결에서 주소, 프로토콜 또는 헤더가 바뀌어서 다시 승인할 때까지 %2$@의 이 연결은 일시 정지돼요.";
 "accountsCustomApiHomeGone" = "%1$@의 연결이 없어져서 %2$@의 이 연결은 일시 정지됐어요. 필요 없으면 연결을 해제하세요.";
+"accountsCustomApiHomeReplaced" = "%1$@의 같은 연결로 만든 %2$@의 새 연결을 쓰고 있어서 이 연결은 일시 정지된 상태로 남아요. 필요 없으면 연결을 해제하세요.";
 "accountsCustomApiHomeSets" = "이 연결의 이름, 주소, 프로토콜, 헤더, 모델은 %1$@의 연결에서 정해요. %2$@에 보관할 키, 비밀 헤더 값, 정해지지 않은 모델 크기를 입력하고 저장하면 모델마다 확인해요.";
 "accountsCustomApiHomeTag" = "%1$@에서";
 "accountsCustomApiHostSlow" = "%1$@이(가) 답하는 데 너무 오래 걸렸어요.";

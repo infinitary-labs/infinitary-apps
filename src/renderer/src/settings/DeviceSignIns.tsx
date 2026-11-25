@@ -361,10 +361,19 @@ export function DeviceSignInGroups({
                   </div>
                 );
               })}
-              {(device.signIns?.custom ?? []).map((view) => (
+              {(device.signIns?.custom ?? []).map((view, _index, views) => (
                 <RemoteCustomConnection
                   key={view.accountId}
                   view={view}
+                  replaced={
+                    view.home?.state === "changed" &&
+                    views.some(
+                      (other) =>
+                        other !== view &&
+                        other.home?.name === view.home?.name &&
+                        other.home?.state === "current",
+                    )
+                  }
                   {...(view.home && homeDefinitions.has(view.home.name)
                     ? { homeDefinition: homeDefinitions.get(view.home.name) }
                     : {})}

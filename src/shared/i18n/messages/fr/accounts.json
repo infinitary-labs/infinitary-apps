@@ -137,6 +137,7 @@
   "accountsCustomApiHeadersTitle": "En-têtes de requête supplémentaires",
   "accountsCustomApiHomeChanged": "La connexion sur {home} a changé d’adresse, de protocole ou d’en-têtes : celle-ci reste en pause sur {who} jusqu’à ce que vous l’approuviez à nouveau.",
   "accountsCustomApiHomeGone": "La connexion sur {home} n’existe plus : celle-ci est en pause sur {who}. Déconnectez-la si vous n’en avez plus besoin.",
+  "accountsCustomApiHomeReplaced": "Une connexion plus récente sur {who}, issue de la même connexion sur {home}, est utilisée : celle-ci reste en pause. Déconnectez-la si vous n’en avez plus besoin.",
   "accountsCustomApiHomeSets": "La connexion sur {home} fixe le nom, l’adresse, le protocole, les en-têtes et les modèles de cette connexion. Saisissez la clé, les valeurs d’en-têtes secrètes et toute taille de modèle qu’elle omet, à garder sur {who}, puis enregistrez pour vérifier chaque modèle.",
   "accountsCustomApiHomeTag": "Depuis {home}",
   "accountsCustomApiHostSlow": "{host} a mis trop de temps à répondre.",

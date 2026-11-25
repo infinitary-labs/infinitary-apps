@@ -137,6 +137,7 @@
   "accountsCustomApiHeadersTitle": "Cabeçalhos de solicitação extras",
   "accountsCustomApiHomeChanged": "A conexão em {home} mudou o endereço, o protocolo ou os cabeçalhos, então esta fica pausada em {who} até você aprová-la de novo.",
   "accountsCustomApiHomeGone": "A conexão em {home} não existe mais, então esta ficou pausada em {who}. Desconecte-a se não precisar mais dela.",
+  "accountsCustomApiHomeReplaced": "Uma conexão mais nova em {who}, da mesma conexão em {home}, está em uso, então esta continua pausada. Desconecte-a se não precisar mais dela.",
   "accountsCustomApiHomeSets": "A conexão em {home} define o nome, o endereço, o protocolo, os cabeçalhos e os modelos desta conexão. Digite a chave, os valores secretos de cabeçalho e qualquer tamanho de modelo que ela omita, que ficam em {who}, e salve para verificar cada modelo.",
   "accountsCustomApiHomeTag": "De {home}",
   "accountsCustomApiHostSlow": "{host} demorou demais para responder.",

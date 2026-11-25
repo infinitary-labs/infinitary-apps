@@ -67,6 +67,7 @@ export function useHomeCustomDefinitions(active: boolean): Map<string, CustomFil
 export function RemoteCustomConnection({
   view,
   homeDefinition,
+  replaced = false,
   client,
   place,
   onDisconnect,
@@ -76,6 +77,8 @@ export function RemoteCustomConnection({
   view: CustomApiView;
   /** What the first mate's computer's connection it was approved from says now. */
   homeDefinition?: CustomFileDefinition;
+  /** Approved again there as a new connection, the same home connection already runs; this one only waits to be disconnected. */
+  replaced?: boolean;
   client: CustomApiClient;
   place: { who: string; on: string };
   onDisconnect: (accountId: string) => void;
@@ -122,7 +125,7 @@ export function RemoteCustomConnection({
                   : m.accountsCustomApiStatusPausedNotChecked()}
         </span>
         <span className="fm-custom-acts">
-          {view.home?.state === "changed" && homeDefinition ? (
+          {replaced ? null : view.home?.state === "changed" && homeDefinition ? (
             <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
               {m.accountsCustomApiFileApproveAgain()}
             </Button>
@@ -183,7 +186,9 @@ export function RemoteCustomConnection({
       ))}
       {view.home?.state === "changed" && (
         <p className="fm-custom-lock" data-custom-home-held>
-          {m.accountsCustomApiHomeChanged({ home: home.this, who: place.who })}
+          {replaced
+            ? m.accountsCustomApiHomeReplaced({ home: home.this, who: place.who })
+            : m.accountsCustomApiHomeChanged({ home: home.this, who: place.who })}
         </p>
       )}
       {view.home?.state === "missing" && (

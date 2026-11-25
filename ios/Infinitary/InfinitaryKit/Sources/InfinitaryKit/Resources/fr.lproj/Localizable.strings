@@ -131,6 +131,7 @@
 "accountsCustomApiHeadersTitle" = "En-têtes de requête supplémentaires";
 "accountsCustomApiHomeChanged" = "La connexion sur %1$@ a changé d’adresse, de protocole ou d’en-têtes : celle-ci reste en pause sur %2$@ jusqu’à ce que vous l’approuviez à nouveau.";
 "accountsCustomApiHomeGone" = "La connexion sur %1$@ n’existe plus : celle-ci est en pause sur %2$@. Déconnectez-la si vous n’en avez plus besoin.";
+"accountsCustomApiHomeReplaced" = "Une connexion plus récente sur %2$@, issue de la même connexion sur %1$@, est utilisée : celle-ci reste en pause. Déconnectez-la si vous n’en avez plus besoin.";
 "accountsCustomApiHomeSets" = "La connexion sur %1$@ fixe le nom, l’adresse, le protocole, les en-têtes et les modèles de cette connexion. Saisissez la clé, les valeurs d’en-têtes secrètes et toute taille de modèle qu’elle omet, à garder sur %2$@, puis enregistrez pour vérifier chaque modèle.";
 "accountsCustomApiHomeTag" = "Depuis %1$@";
 "accountsCustomApiHostSlow" = "%1$@ a mis trop de temps à répondre.";

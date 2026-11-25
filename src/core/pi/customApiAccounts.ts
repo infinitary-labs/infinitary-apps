@@ -432,6 +432,8 @@ export class CustomApiAccountOwner {
       old.stored.input.key = "";
       old.stored.input.headers = [];
       old.stored = stored;
+      // A replacement may no longer follow what held it; the reapply after every save holds it again if it does.
+      old.followed = undefined;
       // Replacement preserves Pause and use choices; Resume is separate.
       if (old.ready) this.registerRuntime(old, old.ready);
     } else

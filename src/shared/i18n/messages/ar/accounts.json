@@ -140,6 +140,7 @@
   "accountsCustomApiHeadersTitle": "ترويسات طلب إضافية",
   "accountsCustomApiHomeChanged": "غيّر الاتصال على {home} عنوانه أو بروتوكوله أو ترويساته، لذا يبقى هذا الاتصال متوقفًا مؤقتًا على {who} حتى تعتمده من جديد.",
   "accountsCustomApiHomeGone": "لم يعد الاتصال على {home} موجودًا، لذا توقف هذا الاتصال مؤقتًا على {who}. اقطعه إن لم تعد بحاجة إليه.",
+  "accountsCustomApiHomeReplaced": "يُستخدم اتصال أحدث على {who} من الاتصال نفسه على {home}، لذا يبقى هذا الاتصال متوقفًا مؤقتًا. اقطعه إن لم تعد بحاجة إليه.",
   "accountsCustomApiHomeSets": "يحدد الاتصال على {home} اسم هذا الاتصال وعنوانه وبروتوكوله وترويساته ونماذجه. اكتب المفتاح وقيم الترويسات السرية وأي حجم نموذج لا يذكره، لتُحفظ على {who}، ثم احفظ لفحص كل نموذج.",
   "accountsCustomApiHomeTag": "من {home}",
   "accountsCustomApiHostSlow": "استغرق {host} وقتًا طويلًا للإجابة.",

@@ -135,6 +135,7 @@
   "accountsCustomApiHeadersTitle": "追加のリクエストヘッダー",
   "accountsCustomApiHomeChanged": "{home} の接続でアドレス、プロトコル、ヘッダーが変わったため、もう一度承認するまで {who} のこの接続は一時停止しています。",
   "accountsCustomApiHomeGone": "{home} の接続がなくなったため、{who} のこの接続は一時停止しています。不要なら接続を解除してください。",
+  "accountsCustomApiHomeReplaced": "{home} の同じ接続から作った {who} の新しい接続を使っているため、この接続は一時停止したままです。不要なら接続を解除してください。",
   "accountsCustomApiHomeSets": "この接続の名前、アドレス、プロトコル、ヘッダー、モデルは {home} の接続で決まります。{who} に保存するキー、秘密のヘッダー値、決まっていないモデルのサイズを入力し、保存すると各モデルを確認します。",
   "accountsCustomApiHomeTag": "{home} から",
   "accountsCustomApiHostSlow": "{host} の応答に時間がかかりすぎました。",

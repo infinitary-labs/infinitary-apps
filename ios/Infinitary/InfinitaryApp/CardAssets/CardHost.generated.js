@@ -10190,6 +10190,35 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `The connection on ${home} is gone, so this one is paused on ${who}. Disconnect it if you no longer need it.`;
   }
+  function accountsCustomApiHomeReplaced(input2) {
+    const home = input2.home;
+    const who = input2.who;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يُستخدم اتصال أحدث على ${who} من الاتصال نفسه على ${home}، لذا يبقى هذا الاتصال متوقفًا مؤقتًا. اقطعه إن لم تعد بحاجة إليه.`;
+      case "de":
+        return `Eine neuere Verbindung auf ${who} aus derselben Verbindung auf ${home} ist in Gebrauch, deshalb bleibt diese pausiert. Trenne sie, wenn du sie nicht mehr brauchst.`;
+      case "es":
+        return `Una conexión más reciente en ${who}, de la misma conexión en ${home}, está en uso, así que esta sigue en pausa. Desconéctala si ya no la necesitas.`;
+      case "fr":
+        return `Une connexion plus récente sur ${who}, issue de la même connexion sur ${home}, est utilisée : celle-ci reste en pause. Déconnectez-la si vous n’en avez plus besoin.`;
+      case "ja":
+        return `${home} の同じ接続から作った ${who} の新しい接続を使っているため、この接続は一時停止したままです。不要なら接続を解除してください。`;
+      case "ko":
+        return `${home}의 같은 연결로 만든 ${who}의 새 연결을 쓰고 있어서 이 연결은 일시 정지된 상태로 남아요. 필요 없으면 연결을 해제하세요.`;
+      case "pt-BR":
+        return `Uma conexão mais nova em ${who}, da mesma conexão em ${home}, está em uso, então esta continua pausada. Desconecte-a se não precisar mais dela.`;
+      case "zh-Hans":
+        return `${who} 上来自 ${home} 同一连接的较新连接正在使用，因此此连接保持暂停。如果不再需要，请断开连接。`;
+      case "zh-Hant":
+        return `${who} 上來自 ${home} 同一連線的較新連線正在使用，因此這個連線保持暫停。如果不再需要，請中斷連線。`;
+      case "en-XA":
+        return `[Å ñéŵéŕ çöññéçţîöñ öñ ${who} ƒŕöɱ ţĥé šáɱé çöññéçţîöñ öñ ${home} îš îñ ûšé, šö ţĥîš öñé šţáýš þáûšéð. Ðîšçöññéçţ îţ îƒ ýöû ñö ļöñĝéŕ ñééð îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮A newer connection on ‬${who}‮ from the same connection on ‬${home}‮ is in use, so this one stays paused. Disconnect it if you no longer need it.‬`;
+    }
+    return `A newer connection on ${who} from the same connection on ${home} is in use, so this one stays paused. Disconnect it if you no longer need it.`;
+  }
   function accountsCustomApiHomeSets(input2) {
     const home = input2.home;
     const who = input2.who;
@@ -109590,6 +109619,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     accountsCustomApiHeadersTitle,
     accountsCustomApiHomeChanged,
     accountsCustomApiHomeGone,
+    accountsCustomApiHomeReplaced,
     accountsCustomApiHomeSets,
     accountsCustomApiHomeTag,
     accountsCustomApiHostSlow,
@@ -113107,6 +113137,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "accountsCustomApiHeadersTitle": [],
     "accountsCustomApiHomeChanged": ["home", "who"],
     "accountsCustomApiHomeGone": ["home", "who"],
+    "accountsCustomApiHomeReplaced": ["home", "who"],
     "accountsCustomApiHomeSets": ["home", "who"],
     "accountsCustomApiHomeTag": ["home"],
     "accountsCustomApiHostSlow": ["host"],

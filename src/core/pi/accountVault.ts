@@ -547,14 +547,20 @@ export class AccountVault {
     return this.applyFollowed("home", definitions);
   }
 
-  /** Applies what the home last sent again, such as once a connection from it is saved. */
+  /**
+   * Applies what the home last sent again, such as once a connection from it
+   * is saved. A connection that send does not name is left as it is: one
+   * just approved from the home's may be newer than that send, and the
+   * home's next send says whether it is gone.
+   */
   reapplyCustomHome(): Promise<void>[] {
-    return this.homeDefinitions ? this.applyFollowed("home", this.homeDefinitions) : [];
+    return this.homeDefinitions ? this.applyFollowed("home", this.homeDefinitions, true) : [];
   }
 
   private applyFollowed(
     kind: "file" | "home",
     entries: readonly { name: string; definition?: CustomFileDefinition }[] | null,
+    onlyNamed = false,
   ): Promise<void>[] {
     const checks: Promise<void>[] = [];
     let renamed = false;
@@ -566,7 +572,9 @@ export class AccountVault {
         this.pi.custom.releaseFile(account.id);
         continue;
       }
-      const definition = entries.find((entry) => entry.name === source.name)?.definition;
+      const entry = entries.find((each) => each.name === source.name);
+      if (onlyNamed && !entry) continue;
+      const definition = entry?.definition;
       const { applied, recheck } = this.pi.custom.applyDefinition(account.id, definition);
       if (applied && definition && account.label !== definition.label) {
         account.label = definition.label;

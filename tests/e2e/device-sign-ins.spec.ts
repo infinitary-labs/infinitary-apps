@@ -1102,7 +1102,7 @@ test("a custom API here is used on a computer, which keeps its own key and follo
     const followed = customApiBlock(page, thereId);
     await expect(followed.block).toContainText(m.accountsCustomApiHomeTag({ home: HERE.this }));
     await expect(followed.block).toContainText("Ready");
-    // Used there already: offered on no other computer.
+    // Builder follows it now, so it is no longer offered for Builder.
     await expect(here.offerOn("as Builder")).toHaveCount(0);
     // The key went to the computer once; this Mac keeps no copy.
     expect(savedText(app.userDataDir).some(({ text }) => text.includes(thereKey))).toBe(false);

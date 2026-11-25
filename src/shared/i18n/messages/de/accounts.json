@@ -136,6 +136,7 @@
   "accountsCustomApiHeadersTitle": "Zusätzliche Anfrage-Header",
   "accountsCustomApiHomeChanged": "Die Verbindung auf {home} hat Adresse, Protokoll oder Header geändert. Diese hier ist auf {who} pausiert, bis du sie erneut freigibst.",
   "accountsCustomApiHomeGone": "Die Verbindung auf {home} gibt es nicht mehr, deshalb ist diese hier auf {who} pausiert. Trenne sie, wenn du sie nicht mehr brauchst.",
+  "accountsCustomApiHomeReplaced": "Eine neuere Verbindung auf {who} aus derselben Verbindung auf {home} ist in Gebrauch, deshalb bleibt diese pausiert. Trenne sie, wenn du sie nicht mehr brauchst.",
   "accountsCustomApiHomeSets": "Die Verbindung auf {home} legt Name, Adresse, Protokoll, Header und Modelle dieser Verbindung fest. Gib den Schlüssel, die geheimen Header-Werte und jede Modellgröße, die sie offenlässt, für {who} ein und speichere, um jedes Modell zu prüfen.",
   "accountsCustomApiHomeTag": "Von {home}",
   "accountsCustomApiHostSlow": "{host} hat zu lange gebraucht, um zu antworten.",

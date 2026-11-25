@@ -131,6 +131,7 @@
 "accountsCustomApiHeadersTitle" = "追加のリクエストヘッダー";
 "accountsCustomApiHomeChanged" = "%1$@ の接続でアドレス、プロトコル、ヘッダーが変わったため、もう一度承認するまで %2$@ のこの接続は一時停止しています。";
 "accountsCustomApiHomeGone" = "%1$@ の接続がなくなったため、%2$@ のこの接続は一時停止しています。不要なら接続を解除してください。";
+"accountsCustomApiHomeReplaced" = "%1$@ の同じ接続から作った %2$@ の新しい接続を使っているため、この接続は一時停止したままです。不要なら接続を解除してください。";
 "accountsCustomApiHomeSets" = "この接続の名前、アドレス、プロトコル、ヘッダー、モデルは %1$@ の接続で決まります。%2$@ に保存するキー、秘密のヘッダー値、決まっていないモデルのサイズを入力し、保存すると各モデルを確認します。";
 "accountsCustomApiHomeTag" = "%1$@ から";
 "accountsCustomApiHostSlow" = "%1$@ の応答に時間がかかりすぎました。";

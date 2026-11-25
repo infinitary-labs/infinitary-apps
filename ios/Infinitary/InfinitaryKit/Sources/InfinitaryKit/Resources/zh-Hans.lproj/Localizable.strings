@@ -131,6 +131,7 @@
 "accountsCustomApiHeadersTitle" = "额外的请求头";
 "accountsCustomApiHomeChanged" = "%1$@ 上的连接更改了地址、协议或请求头，因此 %2$@ 上的此连接会暂停，直到你重新批准。";
 "accountsCustomApiHomeGone" = "%1$@ 上的连接已不存在，因此 %2$@ 上的此连接已暂停。如果不再需要，请断开连接。";
+"accountsCustomApiHomeReplaced" = "%2$@ 上来自 %1$@ 同一连接的较新连接正在使用，因此此连接保持暂停。如果不再需要，请断开连接。";
 "accountsCustomApiHomeSets" = "此连接的名称、地址、协议、请求头和模型由 %1$@ 上的连接设定。输入要保存在 %2$@ 上的密钥、机密请求头的值以及未写明的模型大小，然后保存以检查每个模型。";
 "accountsCustomApiHomeTag" = "来自 %1$@";
 "accountsCustomApiHostSlow" = "%1$@ 响应时间过长。";

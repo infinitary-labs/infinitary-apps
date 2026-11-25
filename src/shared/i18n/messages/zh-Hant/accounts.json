@@ -135,6 +135,7 @@
   "accountsCustomApiHeadersTitle": "額外的要求標頭",
   "accountsCustomApiHomeChanged": "{home} 上的連線變更了位址、通訊協定或標頭，因此 {who} 上的這個連線會暫停，直到你重新核准。",
   "accountsCustomApiHomeGone": "{home} 上的連線已不存在，因此 {who} 上的這個連線已暫停。如果不再需要，請中斷連線。",
+  "accountsCustomApiHomeReplaced": "{who} 上來自 {home} 同一連線的較新連線正在使用，因此這個連線保持暫停。如果不再需要，請中斷連線。",
   "accountsCustomApiHomeSets": "這個連線的名稱、位址、通訊協定、標頭和模型由 {home} 上的連線設定。輸入要存放在 {who} 上的金鑰、機密標頭的值以及未寫明的模型大小，然後儲存以檢查每個模型。",
   "accountsCustomApiHomeTag": "來自 {home}",
   "accountsCustomApiHostSlow": "{host} 回應時間太久。",

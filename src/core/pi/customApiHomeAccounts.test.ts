@@ -1,4 +1,9 @@
-import type { CustomFileDefinition, CustomHomeDefinition } from "@shared/customApiFile";
+import type { CustomApiInput } from "@shared/customApi";
+import {
+  type CustomFileDefinition,
+  type CustomHomeDefinition,
+  customHomeDefinition,
+} from "@shared/customApiFile";
 import { expect, it } from "vitest";
 import { fixture, input, vault } from "./customApiAccountsFixture";
 
@@ -41,7 +46,20 @@ async function approvedFromHome() {
       .availableModels()
       .filter((model) => model.provider === account.providerId)
       .map((model) => model.id);
-  return { api, world, definition, apply, view, usable };
+  /** Saves a connection here as that computer's form does, checked, then applies the home's last send again as its save does. */
+  const save = async (fields: Partial<CustomApiInput> & { baseUrl: string }) => {
+    const draft = world.vault.customPrepare({
+      ...input(fields.baseUrl),
+      label: definition.label,
+      models: [operator],
+      ...fields,
+    });
+    await world.vault.customCheck(draft.draftId ?? "", operator.id);
+    const saved = await world.vault.customSave(draft.draftId ?? "", false);
+    await Promise.all(world.vault.reapplyCustomHome());
+    return saved;
+  };
+  return { api, world, account, definition, apply, view, usable, save };
 }
 
 it("takes a name and price the home sends at once, and checks a model again with its own key when its limits change", async () => {
@@ -93,4 +111,77 @@ it("pauses a connection the home moved or removed, and never lets a connection f
   });
   expect(usable()).toEqual([]);
   expect(api.requests.length).toBe(before);
+});
+
+// Review of this change: a second connection approved there was held as gone
+// by the home's send from before it existed.
+it("keeps a second connection approved from the home's current until the home says otherwise", async () => {
+  const { api, world, definition, apply, save } = await approvedFromHome();
+  await apply(definition);
+  const second = await save({ baseUrl: api.baseUrl, home: "acct-home-other" });
+  expect(world.vault.customViews().find((entry) => entry.accountId === second.id)?.home).toEqual({
+    name: "acct-home-other",
+    state: "current",
+  });
+  expect(
+    world.vault
+      .availableModels()
+      .filter((model) => model.provider === second.providerId)
+      .map((model) => model.id),
+  ).toEqual(["operator-model"]);
+});
+
+// Review of this change: an edit that no longer follows the home kept the old pause.
+it("serves a connection again once an edit stops it following a home connection that is gone", async () => {
+  const { api, account, apply, view, usable, save } = await approvedFromHome();
+  await apply(undefined);
+  expect(usable()).toEqual([]);
+  await save({ baseUrl: api.baseUrl, replaceAccountId: account.id });
+  expect(view()?.home).toBeUndefined();
+  expect(usable()).toEqual(["operator-model"]);
+});
+
+it("pauses a connection there when the home's connection file moves its address, and approving it again there leaves one working connection", async () => {
+  const there = await approvedFromHome();
+  const moved = await fixture();
+  // The home approved this connection from its connection file, which now names a new address.
+  const home = vault();
+  const draft = home.vault.customPrepare({
+    ...input(there.api.baseUrl),
+    label: there.definition.label,
+    models: [operator],
+    file: "team-gateway",
+  });
+  await home.vault.customCheck(draft.draftId ?? "", operator.id);
+  const homeAccount = await home.vault.customSave(draft.draftId ?? "", false);
+  const reading = [
+    {
+      name: "team-gateway",
+      warnings: [],
+      definition: { ...there.definition, baseUrl: moved.baseUrl },
+    },
+  ];
+  await Promise.all(home.vault.applyCustomFile(reading));
+  const homeView = home.vault.customViews().find((entry) => entry.accountId === homeAccount.id);
+  expect(homeView?.file?.state).toBe("changed");
+  const sent = homeView && customHomeDefinition(homeView, { connections: reading });
+  expect(sent?.baseUrl).toBe(moved.baseUrl);
+
+  await there.apply(sent);
+  expect(there.view()?.home?.state).toBe("changed");
+  expect(there.usable()).toEqual([]);
+
+  const again = await there.save({ baseUrl: moved.baseUrl, home: HOME_ACCOUNT });
+  const views = there.world.vault.customViews();
+  expect(views.find((entry) => entry.accountId === again.id)?.home).toEqual({
+    name: HOME_ACCOUNT,
+    state: "current",
+  });
+  expect(there.view()?.home?.state).toBe("changed");
+  expect(
+    there.world.vault
+      .availableModels()
+      .filter((model) => model.provider.startsWith("fm-custom-"))
+      .map((model) => model.provider),
+  ).toEqual([again.providerId]);
 });

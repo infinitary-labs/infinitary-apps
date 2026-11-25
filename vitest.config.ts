@@ -147,6 +147,7 @@ const isolatedUnit = [
   // Its kept-log reads replace child_process.spawn with owned streams.
   "tests/phone-key-outcome.test.ts",
   // Its observer lifecycle checks replace child_process.spawn with owned streams.
+  "tests/phone-keyboard.photos.test.ts",
   "tests/phone-keyboard.test.ts",
   // Its Photos readiness checks replace child_process.spawn with an owned stream.
   "tests/phone-photos.test.ts",

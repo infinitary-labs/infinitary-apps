@@ -84,6 +84,9 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
   },
   "src/core/claude/claudeCostReports.ts": {
     CLAUDE_COST_REPORT_BODY_MAX: physical("a local export over 1 MiB is refused; terminal usage accounting remains available"),
+    CLAUDE_FORWARD_BODY_MAX: physical(
+      "a batch over the collector's default 20 MiB request limit is refused; terminal usage accounting remains available",
+    ),
   },
   "src/core/pi/customApiToken.ts": {
     CUSTOM_TOKEN_RECENT_LIMIT: {

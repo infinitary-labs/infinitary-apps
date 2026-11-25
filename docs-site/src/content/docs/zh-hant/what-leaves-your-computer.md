@@ -1,5 +1,5 @@
 ---
-source: 67e6220319b54d48
+source: 0683744dededd132
 title: 哪些東西會離開你的電腦
 description: Infinitary 會傳送什麼、傳到哪裡，以及唯一一個會傳東西給我們的開關。
 ---
@@ -40,6 +40,12 @@ Infinitary 在你的電腦上執行，透過你已經有的訂閱方案運作。
 你在設定 → **整合** 連接的整合（例如 Google），會用它自己的登入資訊連線，而這份登入資訊留在你登入的那台電腦上。
 只有在你連接之後，大副和船員才會讀取它。
 請看 [整合](/zh-hant/integrations/)。
+
+## 你公司的用量回報 {#your-companys-usage-reporting}
+
+如果你的 Claude Code 設定檔或 shell 依照 Claude Code 指南為你的公司設定了用量回報，Infinitary 會把在這裡完成的工作的 Claude 用量記錄傳送到同一個地方。
+這些就是 Claude Code 自己會傳送到那裡的記錄，設定 → **用量** 會說明它們送往何處。
+由你公司的管理員為整台電腦管理的設定，會像以前一樣直接作用於 Claude Code。
 
 ## 更新檢查 {#update-checks}
 

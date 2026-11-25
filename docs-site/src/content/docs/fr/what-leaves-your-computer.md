@@ -1,5 +1,5 @@
 ---
-source: 67e6220319b54d48
+source: 0683744dededd132
 title: Ce qui quitte votre ordinateur
 description: Ce qu’envoie Infinitary, où cela va, et le seul interrupteur qui nous envoie quoi que ce soit.
 ---
@@ -40,6 +40,12 @@ Voir [Vos autres ordinateurs](/fr/your-other-computers/).
 Une intégration que vous connectez dans Réglages → **Intégrations**, comme Google, est atteinte avec sa propre connexion, qui reste sur l’ordinateur où vous vous êtes connecté.
 Votre second et votre équipage ne la lisent qu’une fois que vous l’avez connectée.
 Voir [Intégrations](/fr/integrations/).
+
+## Les rapports d’utilisation de votre entreprise {#your-companys-usage-reporting}
+
+Si votre fichier de réglages Claude Code ou votre shell configure des rapports d’utilisation pour votre entreprise, comme le décrit le guide de Claude Code, Infinitary envoie au même endroit les relevés d’utilisation de Claude pour le travail fait ici.
+Ce sont les relevés que Claude Code lui-même y enverrait, et Réglages → **Utilisation** indique où ils vont.
+Une configuration que l’administrateur de votre entreprise gère pour tout l’ordinateur atteint Claude Code directement, comme avant.
 
 ## Les recherches de mises à jour {#update-checks}
 

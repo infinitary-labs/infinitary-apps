@@ -53,7 +53,7 @@ export class ClaudeOneShotSession extends ClaudeQueryCore<SessionEvent> implemen
     private readonly deps: ClaudeSessionDeps,
     /** Hands the account's store back; the lease ignores a second call. */
     private readonly releaseLease: () => void,
-    /** The person's own token command and address, read as the session opened. */
+    /** The person's own token command, address and gateway headers, read as the session opened. */
     private readonly access?: ClaudeAccessSettings,
   ) {
     super(spec.owner);

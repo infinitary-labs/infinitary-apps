@@ -1,5 +1,5 @@
 ---
-source: 67e6220319b54d48
+source: 0683744dededd132
 title: 哪些内容会离开你的电脑
 description: Infinitary 会发送什么、发送到哪里，以及唯一一个会向我们发送内容的开关。
 ---
@@ -40,6 +40,12 @@ Infinitary 在你的电脑上运行，使用的是你已有的订阅。
 你在设置 → “**集成**”中连接的集成，例如 Google，会通过它自己的登录来访问，该登录会留在你登录时所用的电脑上。
 只有在你连接之后，你的大副和船员们才会读取它。
 请参阅[集成](/zh-hans/integrations/)。
+
+## 你公司的用量报告 {#your-companys-usage-reporting}
+
+如果你的 Claude Code 设置文件或 shell 按照 Claude Code 指南为你的公司设置了用量报告，Infinitary 会把在这里完成的工作的 Claude 用量记录发送到同一个地方。
+这些就是 Claude Code 自己会发送到那里的记录，设置 → “**用量**”会说明它们发往何处。
+由你公司的管理员为整台电脑管理的设置，会像以前一样直接作用于 Claude Code。
 
 ## 检查更新 {#update-checks}
 

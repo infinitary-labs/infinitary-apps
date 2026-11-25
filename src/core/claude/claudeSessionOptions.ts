@@ -55,7 +55,8 @@ export const CLAUDE_SESSION_ENV = { CLAUDE_CODE_DISABLE_AUTO_MEMORY: "1" } as co
  * with a "Generated with Claude Code" line; empty text hides both
  * (`claudeAttribution.integration.test.ts`). Flag settings are the app's
  * own layer, so the person's own Claude settings stay unread, but for the
- * token command and address a session signs in with (`claudeAccess.ts`).
+ * token command, address and gateway headers a session is handed
+ * (`claudeAccess.ts`).
  */
 export const CLAUDE_CODING_SETTINGS = { attribution: { commit: "", pr: "" } } as const;
 
@@ -150,8 +151,10 @@ type ClaudeSessionOptionsInput = {
    */
   exit?: ClaudeClientExit;
   /**
-   * The person's own Claude Code token command and address, the only keys
-   * of their settings a session is handed (`claudeAccess.ts`).
+   * The person's own Claude Code token command, address and gateway headers,
+   * the only keys of their settings a session is handed (`claudeAccess.ts`);
+   * their usage reporting setup goes to the app's receiver instead
+   * (`claudeReporting.ts`).
    */
   access?: ClaudeAccessSettings;
   /**
@@ -262,8 +265,10 @@ export function claudeSessionOptions(input: ClaudeSessionOptionsInput): Options 
       },
       // The person's own Claude configuration is not the app's: a session
       // imports no settings source on any machine. Of the person's own
-      // settings only the token command and address it signs in with ride
-      // the flag settings (`accessFlagSettings`), and an organization's
+      // settings only the token command, address and gateway headers ride
+      // the flag settings (`accessFlagSettings`), a company's usage
+      // reporting setup is passed on by the app's receiver
+      // (`claudeReporting.ts`), and an organization's
       // managed settings reach the client whatever this says. Nor is a
       // project's configuration the app's: its settings
       // file would bring its hooks, permission rules and environment, so a
@@ -384,7 +389,7 @@ export function claudeSessionOptions(input: ClaudeSessionOptionsInput): Options 
     },
     settings: { ...input.access, ...CLAUDE_COMPACTION_SETTINGS },
     // The person's own Claude configuration is not the app's, but for the
-    // token command and address above.
+    // token command, address and gateway headers above.
     settingSources: [],
     // The spec's instruction is the only system prompt the app supplies: no
     // preset (the client still adds its identity line).

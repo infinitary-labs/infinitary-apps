@@ -4,8 +4,8 @@ import { fileURLToPath } from "node:url";
 
 /**
  * The prompt-budget check (docs/testing.md, "The prompt budget's two lines";
- * INF-2930). The fixed-context tests fail only past the hard line, one and a
- * half times each budget; this check holds the budget itself. It runs the
+ * INF-2930). The fixed-context tests fail only past each budget's hard line;
+ * this check holds the budget itself. It runs the
  * same budget tests with `PROMPT_BUDGET_LINE=budget`, prints every reading,
  * and exits with a failure naming each reading over its budget.
  *

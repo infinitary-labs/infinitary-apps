@@ -23,28 +23,22 @@ export const LINT_PANEL_TOOL_NAME = "lint_panel";
 export const PLACE_PANEL_TOOL_NAME = "place_panel";
 export const CAPTURE_PANEL_TOOL_NAME = "capture_panel";
 
+/** What each answer asks is the personal-panel skill's "Before you report", which a panel task opens first. */
 export const LINT_PANEL_TOOL_DESCRIPTION = [
-  "Check a personal panel's files against the design rules and the compiler.",
-  "Answers with findings: a refusal must be fixed before the panel mounts, a warning names the nearest token, a note is worth a review; then the compiler's verdict when the extension does not compile.",
+  "Check a personal panel's files against the design rules and the compiler; it rewrites nothing.",
   "Pass id (the extension's directory name) to lint one; omit it to lint every extension you have changed this turn.",
-  "Rewrites nothing. Run it before your report, and again after fixing.",
+  'Run it before your report, and again after fixing; the personal-panel skill\'s "Before you report" says what each finding asks.',
 ].join(" ");
 
 export const PLACE_PANEL_TOOL_DESCRIPTION = [
   "Put the version of a personal panel you are building on the captain's rail, and read back what the window did.",
-  "Until you place it or report, their rail keeps the panel's last commit and your version runs out of sight; a new panel is on no rail at all.",
-  "Answers per panel in the window's own word: drawn (on which rail), collapsed, folded or in the More row, loading, stopped drawing, off its rail, hidden by the captain, or refused, with its reason.",
-  "The placed version shows with the running dot until your report commits it; a save after placing runs out of sight again until you place again.",
   "Pass id (the extension's directory name) to place one; omit it to place every extension you changed. An id you did not change is only looked at.",
-  "Run it before every report, then capture_panel to photograph the panel docked.",
-  "When the window did not draw it and your files cannot change that (a hidden panel, panels switched off), say so in your report and wait on the captain; do not call it done.",
-  "Folded or in the More row, the panel is built and on their rail, which is only too short: say where it sits, and never collapse, move or hide their other panels.",
+  'Run it before every report, then capture_panel to photograph the panel docked; the personal-panel skill\'s "Before you report" says what each answer asks.',
 ].join(" ");
 
 export const CAPTURE_PANEL_TOOL_DESCRIPTION = [
-  "Screenshot a personal panel at rail width, in the dark theme and the light theme.",
-  "While your saved files differ from the captain's rail, it photographs your version drawn out of sight, and says so; once place_panel has put that version on their rail, it photographs the panel docked.",
-  "Returns both images and the files they were written to.",
+  "Screenshot a personal panel at rail width, in the dark theme and the light theme; returns both images and their files.",
+  "It photographs your version drawn out of sight until place_panel puts it on the captain's rail, then the panel docked.",
   "The panel must be drawable: compiled, and its presence rule satisfied (a store-keyed presence needs data in that key first).",
   "Pass id: the extension's directory name.",
 ].join(" ");

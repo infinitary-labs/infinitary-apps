@@ -401,7 +401,8 @@ Two places, and the skill for the data source you need (`github-prs`, `quota`,
 
 - `lint_panel` reads your files and answers with findings. A **refusal** is
   not mountable - fix it. A **warning** names the nearest token - take it. A
-  **note** is a shape worth a second thought.
+  **note** is a shape worth a second thought. When the extension does not
+  compile, the compiler's verdict follows the findings.
 - `capture_panel` screenshots the panel at rail width, dark and light. While
   you work it photographs your draft, drawn out of sight; the captain's rail
   keeps the version he had. Look at both. A panel that reads well in dark and
@@ -412,7 +413,14 @@ Two places, and the skill for the data source you need (`github-prs`, `quota`,
   nothing to show, his layout hides it, or his rail is too short and folded it
   to its header or gathered it into the rail's More row. Then `capture_panel`
   again photographs it docked, as he sees it. Place it and look at it before
-  every report, the first build and every change.
+  every report, the first build and every change. Until you place it or
+  report, the captain's rail keeps the panel's last commit and your version runs out of
+  sight; a new panel is on no rail at all. It answers per panel in the
+  window's own word: drawn (on which rail), collapsed, folded or in the More
+  row, loading, stopped drawing, off its rail, hidden by the captain, or
+  refused, with its reason. The placed version shows with the running dot
+  until your report commits it; a save after placing runs out of sight again
+  until you place again.
 
 If the window drew it, report in one line what the panel does. If it folded it
 for room or gathered it into the More row, the panel is built and on his rail,

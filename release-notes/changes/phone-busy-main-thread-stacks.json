@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-busy-main-thread-stacks",
+      "reason": "The phone check also samples the app when an XCTest query finds its main thread busy, so a frozen app leaves its stacks; this changes only how the project is checked, not the app."
+    }
+  ]
+}

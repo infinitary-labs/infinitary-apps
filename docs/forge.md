@@ -894,7 +894,8 @@ The crewmate reads contributor code before running it, and declares `asks_first`
 To publish its story, the crewmate checks out the reviewed commit without changing it, calls `prepare_change`, then `open_change` with the presentation revision while that fork is selected.
 The saved-story publisher writes and reads back a comment (GitHub issue comment or GitLab merge-request note), with its existing attachment barrier and uncertain-write recovery.
 It never changes the contributor's description or title, pushes to their fork, or opens a replacement request.
-The story comment opens with the crew's title, separate from the contributor's request title.
+The story comment's own section opens with the project's line saying a crewmate wrote it ("Disclosing AI assistance" below), then the crew's title, separate from the contributor's request title.
+Both sit inside the story's markers, so the squash summary never carries them.
 The active naming runbook owns its wording; fork merging adds no conventional-title requirement.
 A merge card's click, for the task's own change or a reviewed pull request, reads the merges the project allows where it lives right before anything is sent (`wayToSend`, `src/core/forge/mergeWays.ts`), and picks one as a batch of one does (`mergeWayFor`): a squash where allowed, otherwise a rebase merge, then a merge commit.
 A project that allows none of them holds the merge with nothing sent, and the click's answer names the project's settings to change.
@@ -919,6 +920,15 @@ For a selected contributor review, `show_merge_card` stops before setup, commit 
 For task-authored changes, those tools and `show_merge_card` act on the branch the working copy has checked out, and the task's own branch only when none is (INF-3717).
 `open_change` makes the change it opened or answered current only once it succeeds, so a refused call leaves the current change as it was; the merge card makes the change whose story it shows current, since its merge acts on the current change.
 A crewmate on a computer that runs work does the same with a branch it checked out there: the home reads its checkout for the story and brings that branch home to read it (`docs/helper.md`, "Reading its branch here").
+
+### Disclosing AI assistance
+
+What the crew posts to an outside contributor opens with a line saying a crewmate wrote it: today, a fork review's story comment.
+The default line is "_Written by an Infinitary crewmate, an AI agent working for this project's maintainer._"
+(`DEFAULT_CONTRIBUTOR_DISCLOSURE`, `src/shared/contributorDisclosure.ts`).
+Each project keeps its own choice (`RepoView.contributorDisclosure`), set in Settings → Projects' Disclose AI assistance, on any project whose changes go through pull or merge requests, or by the first mate's `project-settings`.
+Its switch turns the line off, saved as an empty string, or back on with the default line; its field replaces the line with the project's own, at most 300 characters.
+Every publication of the story comment, the first and each republication (a new story revision, the story shown at a newer version, or a merge that finds the pull request past its published story), writes the project's line as it stands then, so a posted comment's line changes when the crew republishes that story.
 
 ### A change in another project
 

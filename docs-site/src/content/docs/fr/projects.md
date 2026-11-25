@@ -1,5 +1,5 @@
 ---
-source: cd05627562f4c3e5
+source: 045e7219ddbc0b63
 title: Projets
 description: Comment ajouter un projet à Infinitary, y réunir plusieurs dépôts, lui donner des étiquettes, concentrer la fenêtre sur un seul projet, choisir comment ses changements sont fusionnés et le retirer.
 ---
@@ -158,6 +158,10 @@ Il est activé pour un nouveau projet, si bien que le travail terminé attend vo
 Désactivez-le, et le travail qui réussit les vérifications peut fusionner sans vous demander.
 
 **Soin** règle le degré de vérification du travail : **Rapide**, **Par défaut** ou **Minutieux**.
+
+**Signaler l’aide de l’IA** est activé pour un projet dont les changements passent par des demandes de tirage.
+Quand un équipier relit la demande de tirage d’une autre personne, le commentaire qu’il publie commence par une ligne qui dit qu’un équipier d’Infinitary l’a écrit.
+Modifiez la ligne et appuyez sur **Enregistrer**, ou désactivez l’interrupteur pour ne pas l’ajouter.
 
 ## Retirer un projet {#remove-a-project}
 

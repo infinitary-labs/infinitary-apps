@@ -3568,6 +3568,10 @@
 "settingsProjectsDeliveryNoBatch" = "Offered as a pull request where the project lives, or merged locally with no pull request.";
 "settingsProjectsDeliveryTitle" = "Where changes go";
 "settingsProjectsDetailsLabel" = "Details";
+"settingsProjectsDisclosure" = "Disclose AI assistance";
+"settingsProjectsDisclosureLine" = "Disclosure line";
+"settingsProjectsDisclosureOff" = "When a crewmate reviews a pull request someone else opened on this project, its comment does not say AI helped write it.";
+"settingsProjectsDisclosureOn" = "When a crewmate reviews a pull request someone else opened on this project, its comment opens with this line.";
 "settingsProjectsEmpty" = "No projects yet. Add one below, or tell your first mate which project to work on.";
 "settingsProjectsFolder" = "Folder";
 "settingsProjectsFolderCancel" = "Cancel";

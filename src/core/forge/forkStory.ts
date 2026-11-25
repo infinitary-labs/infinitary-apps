@@ -50,8 +50,15 @@ const STORY_COMMENTS: Partial<
  * Reuse the saved-story publisher, receipts and uncertain-write recovery for
  * a comment on a reviewed fork. Never write the contributor's title or body,
  * open a replacement request, push to its source, or discover it by branch.
+ * `disclosure` is the project's line saying a crewmate wrote it
+ * (`contributorDisclosureLine`); undefined posts none.
  */
-export function forkStoryForge(forge: Forge, review: MergeReview, taskId: string): Forge {
+export function forkStoryForge(
+  forge: Forge,
+  review: MergeReview,
+  taskId: string,
+  disclosure: string | undefined,
+): Forge {
   if (!isForkReview(review)) return forge;
   const api = forge.api;
   if (!api || !forge.pull)
@@ -170,6 +177,7 @@ export function forkStoryForge(forge: Forge, review: MergeReview, taskId: string
   };
   const overrides: Partial<Forge> = {
     storyInComment: true,
+    storyDisclosure: disclosure,
     changeFor,
     branchHead: async () => (await pull()).headSha,
     updateChangeBody,

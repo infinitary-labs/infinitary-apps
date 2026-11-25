@@ -172,6 +172,8 @@
   "commandSizeSmaller": "Tout réduire",
   "commandTaskCloseDone": "Clore la tâche comme terminée",
   "commandTaskCloseDoneWords": "terminé, finir, fini, achevé, clore, fermer, fiche, tâche",
+  "commandTaskEditTags": "Modifier les étiquettes de la tâche",
+  "commandTaskEditTagsWords": "étiquettes, étiquette, tag, catégorie, genre, fiche, tâche",
   "commandTaskMoveComputer": "Déplacer la tâche vers un autre ordinateur",
   "commandTaskMoveComputerWords": "ordinateur, déplacer, appareil, fiche",
   "commandUpdatesCheck": "Rechercher les mises à jour",

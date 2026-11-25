@@ -29,6 +29,7 @@
   "refuseShowACardBesideABrowserPageFirst": "先にブラウザのページの横にカードを表示してください",
   "refuseShowAStartedTaskThatCanMove": "先に、別のコンピューターへ移せる開始済みのタスクを表示してください",
   "refuseShowAStartedTasksRecordFirst": "先に開始済みのタスクの記録を表示してください",
+  "refuseShowATaggableTasksRecordFirst": "先にタグのあるプロジェクトのタスクの記録を表示してください",
   "refuseTabIsOnComputer": "{tab} は {computer} にあります",
   "refuseThatTabIsAlreadyShown": "そのタブはすでに表示されています",
   "refuseThereIsNoOtherTabToGo": "移動できる他のタブがありません",

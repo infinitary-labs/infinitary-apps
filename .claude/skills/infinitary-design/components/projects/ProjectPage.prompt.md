@@ -14,7 +14,11 @@ Every project's page has the same parts in the same order, with one repository o
 2. The heading: the project's name at `--text-md`, weight 500, then in quiet mono words its task key and its count of repositories, "HBL · 2 repositories".
 3. The uppercase micro label "Project" over one box holding the Name row: an Input and a small secondary Save.
    In a project of one, Name renames the project and its repository together, in mono, as it always has; in a project of several it names the project alone, and says each repository keeps its own name.
-4. The uppercase micro label "Repositories" over one framed panel, the list box's own `--bg-1`, hairline and `--radius-m`.
+4. The uppercase micro label "Tags" over one box of the project's tags, alphabetical: each row names the tag at `--text-sm`, weight 500, with how many tasks carry it in quiet mono words beside it, its description under it in `--fg-3`, and small ghost Edit and Remove at its end, their names saying which tag.
+   Add a tag, a small secondary Button, ends the box; with no tags a quiet line above it says what a tag is for, naming bug, feature and idea.
+   Edit and Add a tag open a form in the row's place: the name, then which tasks qualify, each an Input, then a small secondary Save and a ghost Cancel; Escape puts the row back without leaving the page.
+   Remove turns its row into one question naming how many tasks lose the tag, with Cancel focused and a danger Remove, as `RemoveProject.prompt.md`'s question.
+5. The uppercase micro label "Repositories" over one framed panel, the list box's own `--bg-1`, hairline and `--radius-m`.
 
 **The Repositories panel.**
 Its top edge is a strip of tabs, one per repository, drawn like the tabs on a task card: the repository's name in mono at `--text-sm`, `--fg-3`, and the chosen tab in `--fg-1` with a 2px `--accent` line under it, sitting on the strip's hairline.
@@ -22,7 +26,7 @@ After the last tab comes Add a repository, drawn the same way with a plus; it is
 A strip too long for one line wraps onto a second, so no name is cut short.
 The strip stays at the top of the Settings view while the page scrolls, so the chosen repository is named beside whichever setting is being changed.
 The strip of tabs is one Tab stop, the chosen tab: ← and → move between tabs, wrapping round, Home and End go to the ends, and Enter or Space chooses one; Tab goes on to Add a repository.
-Choosing a tab changes only what is inside the panel; the Project box above stays.
+Choosing a tab changes only what is inside the panel; the Project and Tags boxes above stay.
 
 Inside the panel sit the chosen repository's settings, each group under its uppercase micro label:
 - **Changes**: Where changes go with its notes, Target project, the held batch panel (it says who has the hold, tinted only while the next step is not the crew's, with Try again and Send back folded under Answer it yourself while a repair or a rule has it), When a batch starts on a batched project, Require pull request checks, Ask before merging, and Rigor with its warning for Careful on a project that merges locally.

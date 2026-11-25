@@ -121,6 +121,7 @@ Every reader takes the installed map ("The installed map"), never the catalog's 
 | `browser.card`, Back to the card | window, run by the shell page | none: chosen by name; from a card docked beside a browser page to that card in front of the stack, with its choices |
 | `task.move-computer`, Move the task to another computer | window, run by the shell page | none: chosen by name (computer, Mac, machine, device and record find it too); presses the shown record's Move to a computer, which opens its picker |
 | `task.close-done`, Close the task as done | window, run by the shell page | none: chosen by name (done, finish, complete, close and record find it too); presses the shown record's Close as done, which opens its one confirm with focus on Cancel |
+| `task.edit-tags`, Edit the task's tags | window, run by the shell page | none: chosen by name (tags, label, category and record find it too); on the shown card or any of a task's tabs, opens its record's Info tab and presses Edit tags there, which opens the menu of its project's tags with focus on the first |
 | `settings.open`, Open Settings | window, run by the shell page | ⌘, |
 | `settings.keyboard`, Open Keyboard settings | window, run by the shell page | none: chosen by name, or Keyboard Settings… in the app menu |
 | `updates.later`, Update later | window, run by the shell page | none: chosen by name (update, later, cancel, saving and work find it too) |

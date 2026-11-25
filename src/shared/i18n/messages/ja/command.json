@@ -172,6 +172,8 @@
   "commandSizeSmaller": "すべてを小さく表示",
   "commandTaskCloseDone": "タスクを完了として閉じる",
   "commandTaskCloseDoneWords": "完了, 終了, 済み, 閉じる, 記録, タスク",
+  "commandTaskEditTags": "タスクのタグを編集",
+  "commandTaskEditTagsWords": "タグ, ラベル, 分類, 種類, 記録, タスク",
   "commandTaskMoveComputer": "タスクを別のコンピューターへ移す",
   "commandTaskMoveComputerWords": "コンピューター, マック, マシン, 移動, デバイス, 記録",
   "commandUpdatesCheck": "アップデートを確認",

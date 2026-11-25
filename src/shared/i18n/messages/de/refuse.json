@@ -29,6 +29,7 @@
   "refuseShowACardBesideABrowserPageFirst": "Zeig zuerst eine Karte neben einer Browserseite",
   "refuseShowAStartedTaskThatCanMove": "Zeig zuerst eine gestartete Aufgabe, die auf einen anderen Computer wechseln kann",
   "refuseShowAStartedTasksRecordFirst": "Zeig zuerst das Protokoll einer gestarteten Aufgabe",
+  "refuseShowATaggableTasksRecordFirst": "Zeig zuerst das Protokoll einer Aufgabe, deren Projekt Tags hat",
   "refuseTabIsOnComputer": "{tab} ist auf {computer}",
   "refuseThatTabIsAlreadyShown": "Dieser Tab wird schon angezeigt",
   "refuseThereIsNoOtherTabToGo": "Es gibt keinen anderen Tab",

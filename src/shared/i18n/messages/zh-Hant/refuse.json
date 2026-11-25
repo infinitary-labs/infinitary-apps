@@ -29,6 +29,7 @@
   "refuseShowACardBesideABrowserPageFirst": "請先在瀏覽器頁面旁顯示一張卡片",
   "refuseShowAStartedTaskThatCanMove": "請先顯示一項已開始且可移到另一台電腦的任務",
   "refuseShowAStartedTasksRecordFirst": "請先顯示一項已開始任務的紀錄",
+  "refuseShowATaggableTasksRecordFirst": "請先顯示一項所在專案有標籤的任務的紀錄",
   "refuseTabIsOnComputer": "{tab} 在 {computer} 上",
   "refuseThatTabIsAlreadyShown": "那個分頁已經顯示",
   "refuseThereIsNoOtherTabToGo": "沒有其他分頁可以前往",

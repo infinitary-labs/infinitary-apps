@@ -172,6 +172,8 @@
   "commandSizeSmaller": "Achicar todo",
   "commandTaskCloseDone": "Cerrar la tarea como hecha",
   "commandTaskCloseDoneWords": "hecho, terminar, terminada, completar, cerrar, registro, tarea",
+  "commandTaskEditTags": "Editar las etiquetas de la tarea",
+  "commandTaskEditTagsWords": "etiquetas, etiqueta, tag, categoría, tipo, registro, tarea",
   "commandTaskMoveComputer": "Mover la tarea a otra computadora",
   "commandTaskMoveComputerWords": "computadora, equipo, mover, dispositivo, registro",
   "commandUpdatesCheck": "Buscar actualizaciones",

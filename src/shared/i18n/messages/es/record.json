@@ -49,6 +49,7 @@
   "recordFactPersonal": "Instrucciones y habilidades globales",
   "recordFactResult": "Resultado",
   "recordFactRunsOn": "Se ejecuta en",
+  "recordFactTags": "Etiquetas",
   "recordFoldedMore": {
     "plural": "count",
     "one": "{count} más",
@@ -102,6 +103,9 @@
   "recordStart": "Iniciar",
   "recordStartAgain": "Volver a iniciar",
   "recordStarting": "Iniciando",
+  "recordTagsEdit": "Editar etiquetas",
+  "recordTagsFailed": "No se pudo guardar tu cambio en las etiquetas.",
+  "recordTagsNone": "Sin etiquetas",
   "recordTryAgain": "Volver a intentar",
   "recordUndated": "Sin fecha · {summary}",
   "recordUnreadable": "No se pudo leer este registro.",

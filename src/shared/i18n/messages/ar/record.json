@@ -58,6 +58,7 @@
   "recordFactPersonal": "التعليمات والمهارات العامة",
   "recordFactResult": "الناتج",
   "recordFactRunsOn": "تعمل على",
+  "recordFactTags": "الوسوم",
   "recordFoldedMore": {
     "plural": "count",
     "zero": "{count} أخرى",
@@ -120,6 +121,9 @@
   "recordStart": "بدء",
   "recordStartAgain": "بدء من جديد",
   "recordStarting": "جارٍ البدء",
+  "recordTagsEdit": "تعديل الوسوم",
+  "recordTagsFailed": "تعذّر حفظ تغييرك على الوسوم.",
+  "recordTagsNone": "لا وسوم",
   "recordTryAgain": "إعادة المحاولة",
   "recordUndated": "بلا تاريخ · {summary}",
   "recordUnreadable": "تعذّرت قراءة هذا السجل.",

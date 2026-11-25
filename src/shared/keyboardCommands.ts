@@ -884,6 +884,21 @@ export const KEYBOARD_COMMANDS = {
       return searchWords(m.commandTaskCloseDoneWords());
     },
   },
+  // The shown task record's Edit tags (docs/task-tags.md): opens its menu
+  // of the project's tags, each ticked on or off.
+  "task.edit-tags": {
+    get label() {
+      return m.commandTaskEditTags();
+    },
+    scope: "window",
+    runs: "shell",
+    repeat: false,
+    risk: "navigate",
+    keys: [],
+    get searchWords() {
+      return searchWords(m.commandTaskEditTagsWords());
+    },
+  },
   "cards.show-browser": {
     get label() {
       return m.commandCardsShowBrowser();

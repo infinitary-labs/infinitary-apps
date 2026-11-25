@@ -172,6 +172,8 @@
   "commandSizeSmaller": "Alles kleiner machen",
   "commandTaskCloseDone": "Aufgabe als erledigt schließen",
   "commandTaskCloseDoneWords": "erledigt, fertig, beenden, abgeschlossen, abschließen, schließen, Protokoll, Aufgabe",
+  "commandTaskEditTags": "Tags der Aufgabe bearbeiten",
+  "commandTaskEditTagsWords": "Tags, Tag, Label, Etikett, Kategorie, Art, Protokoll, Aufgabe",
   "commandTaskMoveComputer": "Aufgabe auf einen anderen Computer verschieben",
   "commandTaskMoveComputerWords": "Computer, Mac, Rechner, verschieben, Gerät, Protokoll",
   "commandUpdatesCheck": "Nach Updates suchen",

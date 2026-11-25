@@ -18,6 +18,7 @@ import {
   sharingViewSchema,
 } from "../sharing";
 import { settingsShowSchema } from "../showActions";
+import { projectTagChangeResultSchema, projectTagChangeSchema } from "../tags";
 import { projectViewSchema } from "../tasks";
 import { type ChannelDeclaration, okSchema } from "./common";
 
@@ -39,6 +40,17 @@ export const settingsChannels = {
     reach: "home",
     request: z.tuple([z.string().min(1), z.string().trim().min(1)]),
     response: z.object({ id: z.string(), name: z.string(), was: z.string() }),
+  },
+  // A project's own tags (docs/task-tags.md, `project-tags.md`): add one,
+  // edit its name or description, or remove it from every task. Settings
+  // and the first mate's `project-tags` line share it; a refusal throws
+  // its words, and nothing is written.
+  "inf:projects:tags": {
+    effect: "change",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([projectTagChangeSchema]),
+    response: projectTagChangeResultSchema,
   },
   // The captain's presentation choices, held by the core so a fresh window
   // profile cannot forget them (src/shared/preferences.ts).

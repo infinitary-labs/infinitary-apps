@@ -33,6 +33,7 @@ import { BatchHoldPanel, BatchWaitPanel } from "./BatchHoldPanel";
 import { FIRSTMATE_SELECT_STYLE } from "./GeneralTab";
 import { MoveRepository } from "./MoveRepository";
 import { ProjectCostLimit } from "./ProjectCostLimit";
+import { ProjectTags } from "./ProjectTags";
 import { PROJECT_COST_WORDS } from "./projectCostWords";
 import type { GroupProject, ProjectEntry } from "./projectGroups";
 import {
@@ -49,7 +50,7 @@ import { ROW_GAP, SETTINGS_TOP_PAD_PX, SettingError } from "./settingRows";
  * One project's own page in Settings -> Projects (design skill
  * components/projects/ProjectPage; INF-4408 from INF-4395's plan). It
  * replaces the list while it is open: Back, the heading, a Project box with
- * the project's Name, then one framed Repositories panel whose top edge is a
+ * the project's Name, a Tags box with the project's tags, then one framed Repositories panel whose top edge is a
  * strip of tabs, one per repository, followed by Add a repository. Inside the
  * panel sit the chosen repository's Changes, Tasks and Details, then Move
  * and Remove naming that repository. A project of one repository opens the same page
@@ -208,6 +209,14 @@ export function ProjectPage({
               />
             )}
           </Box>
+          {project && (
+            <>
+              <GroupLabel>{m.settingsProjectsTagsLabel()}</GroupLabel>
+              <Box>
+                <ProjectTags projectId={project.id} />
+              </Box>
+            </>
+          )}
           <GroupLabel>{m.settingsProjectsRepositoriesLabel()}</GroupLabel>
           <RepositoryPanel
             members={members}

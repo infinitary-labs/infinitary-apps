@@ -43,6 +43,7 @@
   "recordFactPersonal": "全体の指示とスキル",
   "recordFactResult": "成果",
   "recordFactRunsOn": "実行先",
+  "recordFactTags": "タグ",
   "recordFoldedMore": {
     "plural": "count",
     "other": "ほか{count}件"
@@ -90,6 +91,9 @@
   "recordStart": "開始",
   "recordStartAgain": "もう一度開始",
   "recordStarting": "開始中",
+  "recordTagsEdit": "タグを編集",
+  "recordTagsFailed": "タグの変更を保存できませんでした。",
+  "recordTagsNone": "タグなし",
   "recordTryAgain": "もう一度試す",
   "recordUndated": "日付なし · {summary}",
   "recordUnreadable": "この記録を読み取れませんでした。",

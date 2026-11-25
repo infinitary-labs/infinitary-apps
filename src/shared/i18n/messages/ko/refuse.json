@@ -29,6 +29,7 @@
   "refuseShowACardBesideABrowserPageFirst": "먼저 브라우저 페이지 옆에 카드를 표시하세요",
   "refuseShowAStartedTaskThatCanMove": "다른 컴퓨터로 옮길 수 있는 시작된 작업을 먼저 표시하세요",
   "refuseShowAStartedTasksRecordFirst": "시작된 작업의 기록을 먼저 표시하세요",
+  "refuseShowATaggableTasksRecordFirst": "태그가 있는 프로젝트의 작업 기록을 먼저 표시하세요",
   "refuseTabIsOnComputer": "{tab}은(는) {computer}에 있어요",
   "refuseThatTabIsAlreadyShown": "그 탭은 이미 표시되어 있어요",
   "refuseThereIsNoOtherTabToGo": "이동할 다른 탭이 없어요",

@@ -118,12 +118,6 @@ extension PhoneJourney {
         return try XCTUnwrap(seeded["done"] as? String)
     }
 
-    /// INF-6075: a task row's long press, held three seconds. UIKit opens the row's menu only when its long-press timer
-    /// runs on the app's main thread; a lift that reaches the app before then reads as a tap on the row, which opens its
-    /// record instead. XCTest lifts at a fixed time whatever the app is doing, so on a busy runner a main thread that stops
-    /// from just after touch-down until past a 1.2 s lift turns the press into that tap (phone run 44991488174, where it
-    /// stopped 0.17 s after touch-down for 1.35 s). Held three seconds, the touch is still down when the stopped thread
-    /// resumes, so the timer runs first and the menu opens, as it does for a finger that keeps holding.
     /// One chip of the search's tag row, by the tag's name its label starts with.
     private func tagChip(_ name: String) -> XCUIElement {
         app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label BEGINSWITH %@", "tag-chip-", name)).firstMatch
@@ -149,6 +143,12 @@ extension PhoneJourney {
         picture("task-record-tags")
     }
 
+    /// INF-6075: a task row's long press, held three seconds. UIKit opens the row's menu only when its long-press timer
+    /// runs on the app's main thread; a lift that reaches the app before then reads as a tap on the row, which opens its
+    /// record instead. XCTest lifts at a fixed time whatever the app is doing, so on a busy runner a main thread that stops
+    /// from just after touch-down until past a 1.2 s lift turns the press into that tap (phone run 44991488174, where it
+    /// stopped 0.17 s after touch-down for 1.35 s). Held three seconds, the touch is still down when the stopped thread
+    /// resumes, so the timer runs first and the menu opens, as it does for a finger that keeps holding.
     private func pressRow(_ row: XCUIElement) {
         waitForSteadyTarget(row)
         row.press(forDuration: 3)

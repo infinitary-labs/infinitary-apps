@@ -228,7 +228,7 @@ test.describe
  * A panel whose background work holds its loop (INF-2205 piece B, the
  * captain's "Stop only the identified panel; keep the broad fallback").
  * Promised result: the host stops that one panel's background process, the
- * window draws its own stopped line and Retry above the panel, another
+ * stop shows as a mark by the panel's name whose details hold Retry, another
  * panel's background work keeps answering, and Retry - pressed from the
  * keyboard - starts it again. Data: the shared fixtures plus `spinner`, a
  * panel whose `spin` action never gives its loop back. Completion signal:
@@ -319,7 +319,7 @@ test.describe
  * update at once" and "No, the line on the panel is enough": a panel whose
  * `server.ts` is written for the earlier panel API says its background work
  * is paused, Update panel - pressed from the keyboard - tells the first mate
- * once, and the updated files clear the line and run the work with no Retry.
+ * once, and the updated files clear the mark and run the work with no Retry.
  * Data: `counter`, written as panels were before the store answered
  * asynchronously, with a saved count. Completion signal: the snapshot's
  * `paused` field, set and then cleared, and the first mate's request carrying

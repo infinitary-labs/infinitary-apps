@@ -11,6 +11,7 @@
   "taskBrowserStoppedIdle": "stopped after 30 minutes unused",
   "taskBrowserStoppedQuit": "stopped when Infinitary quit",
   "taskBrowserStoppedTaskClosed": "stopped when the task closed",
+  "taskChecksUnattributed": "{host} did not identify the pull request for some workflow runs.",
   "taskGroupBacklog": "backlog",
   "taskGroupLanded": "done · 7d",
   "taskGroupQueued": "queued",

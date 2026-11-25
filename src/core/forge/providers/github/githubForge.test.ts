@@ -158,6 +158,94 @@ describe("GitHubForge", () => {
     ]);
   });
 
+  it.each([true, false])(
+    "keeps shared-head runs on their own PR (GitHub includes PR links: %s)",
+    async (withLinks) => {
+      const change = {
+        number: 1906,
+        url: null,
+        branch: "renovate/major-i18n",
+        headSha: "feedbeef",
+      };
+      const original = {
+        id: 44058666404,
+        name: "CI",
+        head_branch: change.branch,
+        head_repository: { full_name: "octo/meter" },
+        event: "pull_request",
+        run_number: 819,
+        workflow_id: 386227718,
+        check_suite_id: 107973566509,
+        status: "completed",
+        pull_requests: withLinks ? [{ number: 1906 }] : [],
+      };
+      const duplicate = {
+        ...original,
+        id: 44062516965,
+        head_branch: "fm/task-alias",
+        run_number: 820,
+        check_suite_id: 107973566510,
+        pull_requests: withLinks ? [{ number: 1948 }] : [],
+      };
+      const job = (suite: number, conclusion: string) => ({
+        name: "Browser invariants",
+        status: "completed",
+        conclusion,
+        check_suite: { id: suite },
+      });
+      let foreign = duplicate;
+      const request = {
+        ...PULL,
+        number: change.number,
+        head: { sha: change.headSha, ref: change.branch, repo: { full_name: "octo/meter" } },
+      };
+      let requests = [request];
+      const { forge } = await stub({
+        "GET /repos/octo/meter/pulls": () => ({ json: requests }),
+        "GET /repos/octo/meter/commits/feedbeef/check-runs": () => ({
+          json: {
+            check_runs: [
+              job(original.check_suite_id, "success"),
+              job(duplicate.check_suite_id, "failure"),
+            ],
+          },
+        }),
+        "GET /repos/octo/meter/commits/feedbeef/status": () => ({ json: { statuses: [] } }),
+        "GET /repos/octo/meter/actions/runs": () => ({
+          json: { total_count: 2, workflow_runs: [foreign, original] },
+        }),
+      });
+      const read = await forge.checks(change);
+      expect({
+        complete: read.complete,
+        checks: read.items.map(({ state, run }) => [state, run]),
+      }).toEqual({ complete: true, checks: [["success", 44058666404]] });
+      // The same source branch in a different fork can also share this head.
+      foreign = {
+        ...duplicate,
+        head_branch: change.branch,
+        head_repository: { full_name: "someone/meter" },
+        status: "queued",
+      };
+      const withForeignQueued = await forge.checks(change);
+      expect(withForeignQueued.items.map((job) => job.run)).toEqual([original.id]);
+      console.log("Shared-head fixture", {
+        pull: change.number,
+        withLinks,
+        read,
+        withForeignQueued,
+      });
+      if (!withLinks) {
+        requests = [...requests, { ...request, number: 1948 }];
+        expect(await forge.checks(change)).toMatchObject({
+          complete: false,
+          items: [],
+          problem: expect.stringContaining("did not identify"),
+        });
+      }
+    },
+  );
+
   // INF-893: PR #328 read green at 19:07:01Z on its dispatched replay-gate
   // alone, while GitHub was creating its ci, journeys and phone runs. The
   // runs, check and project count below are #328's own, as GitHub gave them.
@@ -178,6 +266,7 @@ describe("GitHubForge", () => {
       id: 39837269252,
       name: "ci",
       event: "pull_request",
+      pull_requests: [{ number: 328 }],
       run_number: 819,
       workflow_id: 386227718,
       check_suite_id: 107973566509,
@@ -612,6 +701,7 @@ describe("GitHubForge", () => {
                     check_suite_id: 410,
                     workflow_id: 7,
                     event: "pull_request",
+                    pull_requests: [{ number: 23 }],
                     run_number: 41,
                     status: "completed",
                   },
@@ -620,6 +710,7 @@ describe("GitHubForge", () => {
                     check_suite_id: 420,
                     workflow_id: 7,
                     event: "pull_request",
+                    pull_requests: [{ number: 23 }],
                     run_number: 42,
                     status: "completed",
                   },
@@ -685,6 +776,7 @@ describe("GitHubForge", () => {
               check_suite_id: run.id * 10,
               workflow_id: run.workflow,
               event: run.event,
+              pull_requests: run.event === "pull_request" ? [{ number: 23 }] : [],
               run_number: run.id,
               status: run.status,
               head_sha: "feedbeef",

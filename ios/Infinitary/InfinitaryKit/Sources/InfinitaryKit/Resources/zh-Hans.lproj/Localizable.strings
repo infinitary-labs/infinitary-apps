@@ -4411,6 +4411,7 @@
 "taskBrowserStoppedIdle" = "闲置 30 分钟后已停止";
 "taskBrowserStoppedQuit" = "Infinitary 退出时已停止";
 "taskBrowserStoppedTaskClosed" = "任务关闭时已停止";
+"taskChecksUnattributed" = "%1$@ 未指明部分工作流运行所属的拉取请求。";
 "taskGroupBacklog" = "待办";
 "taskGroupLanded" = "完成 · 7 天";
 "taskGroupQueued" = "排队中";

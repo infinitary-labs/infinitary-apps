@@ -189,7 +189,7 @@ export class CrewmateCards {
    */
   crewmateCardWrite(
     task: TaskRuntime,
-    input: DeclaredCardInput,
+    input: DeclaredCardInput & { selectedRequest?: number },
   ): string | CardMutation | Promise<string> {
     const caller: CardCaller = { actor: "crewmate", taskId: task.id };
     const target = this.host.cards.targetOf(caller, input.id);
@@ -394,6 +394,7 @@ export class CrewmateCards {
         title: walk.ready.title,
         body: "",
         presentationRevision: walk.ready.revision,
+        selectedRequest: walk.ready.selectedRequest,
         actions: [merge],
         id,
         ...(request.reply?.trim() ? { reply: request.reply.trim() } : {}),
@@ -545,7 +546,7 @@ export class CrewmateCards {
 
   private addCrewmateCard(
     task: TaskRuntime,
-    input: DeclaredCardInput,
+    input: DeclaredCardInput & { selectedRequest?: number },
     checkedHead?: string,
     presentationChecked?: { revision: number; head: string },
   ): string | Promise<string> {
@@ -576,7 +577,12 @@ export class CrewmateCards {
             ? `${CONTRIBUTION_MERGE_REFUSAL} Show the published presentation as a note with no actions.`
             : "A saved-story card is only the merge card of this task's current change: one merge action and the story.",
         );
-      return this.options.completionPresentation(task.id, revision).then(async (presented) => {
+      const { selectedRequest } = input;
+      const completion =
+        selectedRequest === undefined
+          ? this.options.completionPresentation(task.id, revision)
+          : this.options.completionPresentation(task.id, revision, selectedRequest);
+      return completion.then(async (presented) => {
         const { revision: shownRevision, ...story } = presented;
         const record = this.options.tasks.get(task.id);
         try {
@@ -609,7 +615,7 @@ export class CrewmateCards {
             ? undefined
             : await followBase(this.options.tasks, task.id, head);
           if (behind) throw new Error(`Card refused: ${behind}.`);
-          const { presentationRevision: _revision, ...rest } = input;
+          const { presentationRevision: _revision, selectedRequest: _selected, ...rest } = input;
           return await this.addCrewmateCard(
             task,
             {

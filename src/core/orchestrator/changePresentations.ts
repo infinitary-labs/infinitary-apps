@@ -114,6 +114,8 @@ function hostWords(forge: Forge): { place: string; change: string; oneOpen: stri
 
 type PublicationOpening = {
   draft?: boolean;
+  /** A merge-card walk for a selected request may update it, never open a replacement. */
+  selectedRequest?: number;
   /** The branch the change targets when it opens (INF-1873); an open change keeps its own. */
   base?: string;
   /** Recheck and consume the caller's publication authority after preflight, before uploads. */
@@ -468,6 +470,13 @@ export class ChangePresentations {
     if (nativePresentationMedia(destination) && !forge.attachments)
       throw new Error("Native evidence publication is not available on this host.");
     const words = hostWords(forge);
+    const requireSelected = (change: ForgeChange | null) => {
+      if (opening?.selectedRequest !== undefined && change?.number !== opening.selectedRequest)
+        // i18n-exempt: a tool refusal served to the crewmate
+        throw new Error(
+          `The selected ${words.change} is not open for this branch. No replacement will be opened.`,
+        );
+    };
     let ledger = this.ledger(taskId, branch);
     if (ledger.publication && ledger.publication.state !== "confirmed") {
       // Recover a prior write by reading, even if a later push moved the code.
@@ -480,6 +489,7 @@ export class ChangePresentations {
       ledger = this.ledger(taskId, branch);
     }
     const existing = await forge.changeFor(branch);
+    requireSelected(existing);
     if (existing && !ledger.published && ledger.publication?.retryOpening) {
       const reconciled = await this.reconcile(
         story,
@@ -651,6 +661,7 @@ export class ChangePresentations {
       read = await forge.changeFor(branch);
       if (
         !read ||
+        (publication.number !== undefined && read.number !== publication.number) ||
         read.headSha !== story.head ||
         readPresentationRegion(read.body ?? "", taskId) !== presentationLines(region)
       )

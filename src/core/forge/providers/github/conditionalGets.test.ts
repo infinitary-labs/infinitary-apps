@@ -127,6 +127,7 @@ function answersFor(status: "in_progress" | "completed"): Record<string, Answer>
             check_suite_id: 41_200_118_501,
             workflow_id: 99_812_331,
             event: "pull_request",
+            pull_requests: [{ number: CHANGE.number }],
             run_number: 9_120,
             status: status === "completed" ? "completed" : "in_progress",
             run_started_at: "2026-10-31T23:50:05Z",

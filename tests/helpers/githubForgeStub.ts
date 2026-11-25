@@ -76,3 +76,27 @@ export async function stub(routes: Record<string, Route>, sleeps?: number[]) {
   );
   return { seen, forge, base };
 }
+
+export const githubCheckRun = (name: string, conclusion: string, app: string, id: number) => ({
+  id,
+  name,
+  status: "completed",
+  conclusion,
+  started_at: "2026-11-15T20:00:00Z",
+  completed_at: "2026-11-15T20:10:00Z",
+  app: { slug: app },
+  check_suite: { id: 900 + id },
+});
+
+export const passingPrWorkflows = (count: number, number: number) => ({
+  total_count: count,
+  workflow_runs: Array.from({ length: count }, (_, index) => ({
+    id: index + 1,
+    workflow_id: index + 1,
+    check_suite_id: 901 + index,
+    event: "pull_request",
+    run_number: 1,
+    status: "completed",
+    pull_requests: [{ number }],
+  })),
+});

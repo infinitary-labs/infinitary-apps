@@ -1,4 +1,4 @@
-import { BATCH_BRANCH_PREFIX, BATCH_CHECK, type MergeWay, type MergeWays } from "@shared/batches";
+import { BATCH_CHECK, type MergeWay, type MergeWays } from "@shared/batches";
 import { CONTRIBUTION_MERGE_REFUSAL } from "@shared/contributions";
 import { settingFrom } from "@shared/envSettings";
 import { branchComparePage, forgePlace, GITHUB_COM, isGitHubEnterpriseCloud } from "@shared/forge";
@@ -14,13 +14,9 @@ import {
   parseApiRequest,
 } from "../../api";
 import {
-  allowanceResetOf,
-  checkTimes,
   type Forge,
   ForgeBaseMoved,
   type ForgeChange,
-  type ForgeCheck,
-  type ForgeCheckState,
   type ForgeChecks,
   type ForgeComment,
   ForgeError,
@@ -35,13 +31,12 @@ import {
   ForgeWriteError,
   isFullCommitId,
   isSignInForgeFailure,
-  isTransientForgeFailure,
   type MergeAnswer,
-  ownChecksOf,
   type TeamQueueLeftovers,
 } from "../../forge";
 import { waysUnderRules } from "../../mergeWays";
 import { GitHubAttachments, githubStoryDestination } from "./attachments";
+import { GitHubChecks } from "./checkReads";
 import { readCommitFiles, readOwnComments, readPullComments } from "./comments";
 import { GitHubContributions } from "./contributions";
 import { GitHubDownloads } from "./downloads";
@@ -163,26 +158,6 @@ const MAX_CHECK_PAGES = 10;
 /** The most repos one listing reads (100 a page). */
 const MAX_LISTED_PROJECTS = 1000;
 
-type CheckRunJson = {
-  name: string;
-  status: string;
-  conclusion: string | null;
-  check_suite?: { id: number } | null;
-  started_at?: string | null;
-  completed_at?: string | null;
-};
-
-/** A commit status: posted at `created_at`, last changed at `updated_at`. */
-type StatusJson = {
-  id?: number;
-  context: string;
-  state: string;
-  description?: string | null;
-  target_url?: string | null;
-  created_at?: string;
-  updated_at?: string;
-};
-
 /**
  * Where the team queue the app once shipped kept its files in a project on
  * GitHub, by folder: the queue's workflow and the project's batch checks it
@@ -192,18 +167,6 @@ const TEAM_QUEUE_FILES: Record<string, readonly string[]> = {
   ".github/workflows": ["infinitary-queue.yml", "infinitary-batch-checks.yml"],
   ".github/actions/infinitary-batch": ["action.yml", "compose.sh"],
   ".github/infinitary": ["rules.mjs", "message.mjs", "github.mjs"],
-};
-
-/** The workflow run a check suite belongs to, as far as superseding needs it. */
-type SuiteRunJson = {
-  id?: number;
-  name?: string;
-  check_suite_id: number;
-  workflow_id: number;
-  event: string;
-  run_number: number;
-  status: string;
-  run_started_at?: string | null;
 };
 
 export class GitHubForge implements Forge {
@@ -446,6 +409,19 @@ export class GitHubForge implements Forge {
     return changeOf(JSON.parse(answer.body) as PullJson, input.branch);
   }
 
+  checks(change: ForgeChange, movedPast?: string) {
+    return new GitHubChecks({
+      place: this.place,
+      repoPath: this.repoPath(),
+      source:
+        this.location.source?.fullName ??
+        change.headRepo ??
+        `${this.owner()}/${this.location.name}`,
+      read: (path) => this.request("GET", path),
+      pages: (path, itemsOf) => this.pages(path, itemsOf),
+    }).read(change, movedPast);
+  }
+
   async branchChecks(): Promise<{ sha: string; checks: ForgeChecks }> {
     const branch = await this.defaultBranch();
     const sha = await this.readBranchHead(branch, this.repoPath());
@@ -529,139 +505,6 @@ export class GitHubForge implements Forge {
       ? pulls.find((item) => item.head.repo?.full_name === this.location.source?.fullName)
       : pulls[0];
     return pull ? changeOf(pull, branch) : null;
-  }
-
-  async checks(change: ForgeChange, movedPast?: string) {
-    const sha = encodeURIComponent(movedPast ?? change.headSha);
-    const runs = await this.pages<CheckRunJson>(
-      `${this.repoPath()}/commits/${sha}/check-runs`,
-      (page) => (page as { check_runs?: CheckRunJson[] }).check_runs ?? [],
-    );
-    const statuses = await this.pages<StatusJson>(
-      `${this.repoPath()}/commits/${sha}/status`,
-      (page) => (page as { statuses?: StatusJson[] }).statuses ?? [],
-    );
-    // Waiting jobs can have no check yet. Read the workflow runs once for
-    // both that gap and the checks a later run decides. Preserve a refused side list's
-    // reason with the partial facts; existing sign-in/transient boundaries stay intact.
-    let workflowRuns: { total_count?: number; workflow_runs?: SuiteRunJson[] } | null = null;
-    let problem: string | undefined;
-    try {
-      workflowRuns = (await this.request(
-        "GET",
-        `${this.repoPath()}/actions/runs?head_sha=${sha}&per_page=100`,
-      )) as { total_count?: number; workflow_runs?: SuiteRunJson[] };
-    } catch (caught) {
-      // F25: a passing network error is not a lasting refusal, with or without cancellations.
-      if (
-        isSignInForgeFailure(caught) ||
-        isTransientForgeFailure(caught) ||
-        allowanceResetOf(caught) !== undefined
-      )
-        throw caught;
-      const why = caught instanceof Error ? caught.message : String(caught);
-      problem =
-        caught instanceof ForgeError && caught.failure === "permission"
-          ? `${this.place} refused access to the remaining checks. ${why}`
-          : `${this.place} could not provide all check runs: ${why}`;
-    }
-    const workflows = workflowRuns?.workflow_runs ?? [];
-    const read: ForgeCheck[] = [
-      ...this.withoutSupersededRuns(runs.items, workflows),
-      ...statuses.items.map((status) => {
-        const state = STATUS_STATES[status.state] ?? ("pending" as const);
-        // A status starts when it was first posted; a settled one finished at its last change.
-        return {
-          name: status.context,
-          state,
-          ...checkTimes(status.created_at, state === "pending" ? null : status.updated_at),
-          ...(status.description ? { detail: status.description } : {}),
-          ...(status.target_url ? { link: status.target_url } : {}),
-        };
-      }),
-    ];
-    for (const run of workflows) {
-      if (run.status !== "completed") {
-        read.push({
-          name: `${run.name ?? "workflow"} (run ${run.run_number})`,
-          state: "pending",
-          summary: true,
-          run: run.id,
-          workflow: run.workflow_id,
-          event: run.event,
-          ...checkTimes(run.run_started_at, null),
-        });
-      }
-    }
-    // A pull request's checks are the runs it started (INF-1891), and a
-    // batch's the runs its own pushed branch started too; a branch's own
-    // checks, read with no number, keep every run at its version.
-    const items =
-      change.number !== undefined
-        ? ownChecksOf(read, change.branch.startsWith(BATCH_BRANCH_PREFIX))
-        : read;
-    return {
-      items,
-      ...(problem ? { problem } : {}),
-      complete:
-        runs.complete &&
-        statuses.complete &&
-        workflowRuns !== null &&
-        (workflowRuns.total_count ?? workflows.length) <= workflows.length,
-    };
-  }
-
-  /**
-   * A later run of the same workflow, started by the same event at this
-   * version, decides each check of the same name an earlier run left,
-   * whatever that earlier check read: a duplicate the later run cancelled
-   * (captain F26), or a failed request retried by a new one (INF-4584), as a
-   * rerun's newest attempt decides inside one run. While the later run has
-   * not created that check it reads pending; finished without one, the
-   * earlier check counts as it reads. A check the app cannot place in a
-   * workflow run counts as it reads, facts preserved.
-   */
-  private withoutSupersededRuns(runs: CheckRunJson[], workflowRuns: SuiteRunJson[]): ForgeCheck[] {
-    const read = runs.map((run) => {
-      const workflow = workflowRuns.find((item) => item.check_suite_id === run.check_suite?.id);
-      return {
-        run,
-        check: {
-          name: run.name,
-          state: runState(run),
-          status: run.status,
-          conclusion: run.conclusion,
-          ...checkTimes(run.started_at, run.completed_at),
-          ...(workflow
-            ? { run: workflow.id, workflow: workflow.workflow_id, event: workflow.event }
-            : {}),
-        },
-      };
-    });
-    const bySuite = new Map(workflowRuns.map((run) => [run.check_suite_id, run]));
-    const origin = (run: CheckRunJson) =>
-      run.check_suite ? bySuite.get(run.check_suite.id) : undefined;
-    return read.flatMap(({ run, check }): ForgeCheck[] => {
-      const from = origin(run);
-      if (!from) return [check];
-      const later = workflowRuns.filter(
-        (next) =>
-          next.workflow_id === from.workflow_id &&
-          next.event === from.event &&
-          next.run_number > from.run_number,
-      );
-      if (later.length === 0) return [check];
-      const decided = runs.some((other) => {
-        const next = origin(other);
-        return other.name === run.name && next !== undefined && later.includes(next);
-      });
-      if (decided) return [];
-      // The later run holds no check of this name yet: pending until it
-      // does, and as it read if the later run finished without one.
-      return later.some((next) => next.status !== "completed")
-        ? [{ name: check.name, state: "pending" }]
-        : [check];
-    });
   }
 
   /**
@@ -1446,6 +1289,7 @@ function changeOf(pull: PullJson, branch: string): ForgeChange {
     url: pull.html_url,
     branch,
     headSha: pull.head.sha,
+    ...(pull.head.repo?.full_name ? { headRepo: pull.head.repo.full_name } : {}),
     ...(pull.draft ? { draft: true } : {}),
     title: pull.title,
     body: pull.body ?? "",
@@ -1487,30 +1331,6 @@ function numbered(change: ForgeChange): number {
   }
   return change.number;
 }
-
-function runState(run: { status: string; conclusion: string | null }): ForgeCheckState {
-  if (run.status !== "completed") return "pending";
-  return RUN_CONCLUSIONS[run.conclusion ?? ""] ?? "pending";
-}
-
-const RUN_CONCLUSIONS: Record<string, ForgeCheckState> = {
-  success: "success",
-  failure: "failure",
-  cancelled: "cancelled",
-  timed_out: "timed_out",
-  action_required: "action_required",
-  startup_failure: "startup_failure",
-  stale: "stale",
-  skipped: "skipped",
-  neutral: "neutral",
-};
-
-const STATUS_STATES: Record<string, ForgeCheckState> = {
-  success: "success",
-  failure: "failure",
-  error: "error",
-  pending: "pending",
-};
 
 function changeWriteError(status: number, operation: string, body: string): ForgeWriteError {
   const refused = [400, 401, 403, 404, 409, 413, 415, 422, 429].includes(status);

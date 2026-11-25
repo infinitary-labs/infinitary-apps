@@ -299,7 +299,7 @@ export class ChangePublication {
     return this.options.presentations.assertLocal(taskId, destination);
   }
 
-  async completionPresentation(taskId: string, revision: number) {
+  async completionPresentation(taskId: string, revision: number, selectedRequest?: number) {
     if (this.localStoryDestination(taskId)) {
       if (!this.options.presentations) throw new Error("Saved change stories are unavailable.");
       const head = await this.validateLocalStory(taskId);
@@ -319,6 +319,14 @@ export class ChangePublication {
     // Own changes follow the checked-out branch; a fork review stays bound to its numbered request.
     const selected = currentChange(located.record.delivery, located.branch);
     const checkedOut = await this.presentationBranch(taskId).catch(() => undefined);
+    if (
+      selectedRequest !== undefined &&
+      (target?.number !== selectedRequest || (checkedOut && checkedOut !== target.branch))
+    )
+      // i18n-exempt: a tool refusal served to the crewmate
+      throw new Error(
+        "The selected pull request or checkout changed before its card could be shown. Read the request again.",
+      );
     const branch = fork?.branch ?? checkedOut ?? selected.branch;
     // A change that joins a batch of this person's own has no pull request:
     // its story is confirmed on its pushed branch (docs/forge.md, "Batches of your own").
@@ -327,6 +335,9 @@ export class ChangePublication {
       (!fork && branch === located.record.branch && this.context.ownBatch(taskId)
         ? await this.context.pushedBranch(located.forge, branch, located.record.delivery)
         : null);
+    if (selectedRequest !== undefined && change && change.number !== selectedRequest)
+      // i18n-exempt: a tool refusal served to the crewmate
+      throw new Error("The checkout names a different pull request now. No merge card was shown.");
     if (!change) {
       if (fork) throw new Error("The story's pull request is not open.");
       // The story's pull request merged outside the app (INF-3799): its
@@ -402,7 +413,7 @@ export class ChangePublication {
    * that is not a saved story (`redescribe`). Recorded like a reading's change:
    * `pr_opened` on the timeline, the label and link on the delivery facts.
    */
-  async open(taskId: string, input: OpenChangeInput): Promise<string> {
+  async open(taskId: string, input: OpenChangeInput, selectedRequest?: number): Promise<string> {
     const selected = this.options.tasks.get(taskId)?.delivery?.checkTarget;
     if (
       selected &&
@@ -473,6 +484,9 @@ export class ChangePublication {
       const batched = own && !input.base ? this.context.ownBatch(taskId, "own") : undefined;
       const dir = this.context.projectDir(record.repoId, record.repoDir);
       const existing = await forge.changeFor(branch);
+      if (selectedRequest !== undefined && existing?.number !== selectedRequest)
+        // i18n-exempt: a tool refusal served to the crewmate
+        return `The selected ${numberLabel(forge, selectedRequest)} is not the open request for ${branch}. No replacement will be opened.`;
       if (existing && hasChangeRequests(forge.kind))
         requireNamed(
           changeTitle(forge.kind, existing) ?? "",
@@ -704,6 +718,7 @@ export class ChangePublication {
                   ...(prerequisite && !existing ? { draft: hasChangeRequests(forge.kind) } : {}),
                 }
               : {}),
+            ...(selectedRequest !== undefined ? { selectedRequest } : {}),
             ...(input.base ? { base: input.base } : {}),
             ...(located.repo ? { branchOrigin: () => this.context.approvedOrigin(taskId) } : {}),
             ...(read === branch ? {} : { source: read }),

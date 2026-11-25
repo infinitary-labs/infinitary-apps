@@ -4411,6 +4411,7 @@
 "taskBrowserStoppedIdle" = "閒置 30 分鐘後已停止";
 "taskBrowserStoppedQuit" = "Infinitary 結束時已停止";
 "taskBrowserStoppedTaskClosed" = "任務關閉時已停止";
+"taskChecksUnattributed" = "%1$@ 未指出部分工作流程執行所屬的提取要求。";
 "taskGroupBacklog" = "待辦清單";
 "taskGroupLanded" = "完成 · 7 天";
 "taskGroupQueued" = "排入佇列";

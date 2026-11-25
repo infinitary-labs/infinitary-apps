@@ -1110,6 +1110,14 @@ export async function startGitHubStub(
           // One pull request workflow's runs, each a check suite, finished
           // once every check run in it has.
           const numbers = [...new Set(checkRuns.flatMap((check) => check.run ?? []))];
+          const target = [...opened.values(), ...(anyPull ? [anyPull] : [])].find((pull) => {
+            if (pull.closed || pull.merged) return false;
+            try {
+              return headOfPull(pull) === url.searchParams.get("head_sha");
+            } catch {
+              return false;
+            }
+          });
           const runs = numbers.map((number) => ({
             id: number,
             run_number: number,
@@ -1117,6 +1125,7 @@ export async function startGitHubStub(
             workflow_id: 1,
             name: "ci",
             event: "pull_request",
+            pull_requests: target ? [{ number: target.number }] : [],
             head_sha: url.searchParams.get("head_sha"),
             status: checkRuns.every((check) => check.run !== number || check.status === "completed")
               ? "completed"

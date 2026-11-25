@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "selected-pull-request",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Merge cards keep the selected pull request",
+      "body": "A merge card no longer opens a duplicate pull request from another branch at the same commit. GitHub workflow runs for another pull request no longer count toward its checks.",
+      "noPicture": "The card looks the same; the fix changes which pull request and checks it can use.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -22,7 +22,9 @@ import {
   TASK,
 } from "../../../tests/helpers/sessionHostWorld";
 import { CONTRACT_CHANGES } from "../connection/contractChanges";
+import { CREWMATE_COMPACTION } from "../orchestrator/crewSession";
 import { answersDir, savedAnswerText } from "../session/answerFiles";
+import type { SessionSpec } from "../session/session";
 import { PlacedTasks } from "./placedTasks";
 import { PLACED_REQUEST_WAIT_MS } from "./toolWait";
 
@@ -1112,6 +1114,21 @@ describe("a conversation held on a computer that runs work", () => {
     const at = await placed();
     await at.open();
     expect(at.belowUi()).toBe(true);
+  });
+
+  // A user's report: crew conversations summarized far past their model's
+  // 272,000-token price step. One held on a computer that runs work opens
+  // with the rule a crewmate's conversation at home carries.
+  it("opens a crewmate's conversation with the crewmate's rule to summarize below the price step", async () => {
+    const at = await placed();
+    const factory = (
+      at.host() as unknown as {
+        options: { factories: { pi: { open: (spec: SessionSpec) => Promise<unknown> } } };
+      }
+    ).options.factories.pi;
+    const open = vi.spyOn(factory, "open");
+    await at.open();
+    expect(open.mock.calls.map(([spec]) => spec.compaction)).toEqual([CREWMATE_COMPACTION]);
   });
 
   it("refuses an order it does not know, a malformed one, and one for a task it never opened", async () => {

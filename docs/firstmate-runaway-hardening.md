@@ -94,6 +94,9 @@ Pi recomputes its reserve at every prompt boundary: the larger of its existing m
 A smaller model keeps its earlier trigger, including the custom connection and local model budgets.
 Pi's own compactor observes usage after a response and compacts when that count exceeds its trigger; this is not a hard per-request input cap.
 Claude uses the app's flag settings and its own smaller-model clamp (`docs/claude-client.md`, "App-owned automatic compaction").
+A crewmate's Pi conversation, at home and on a computer that runs work, carries `CREWMATE_COMPACTION` instead: it summarizes before its context reaches the model's first price step (the lowest `inputTokensAbove` in the model's listed prices), where every input token costs more.
+Pi's trigger then sits at that step less Pi's own reserve, which leaves room for the tool results a turn adds before Pi checks again; a model with no price step keeps Pi's own trigger.
+Pi checks between a turn's requests but not before a prompt's first one, so one prompt larger than that reserve can still reach past the step once.
 A large new message or tool result can still exceed a model's window, so both backends retain their own overflow compaction and retry first.
 
 An exhausted backend context recovery carries `contextOverflow: true` on `turn_failed`: Claude reads the typed terminal reason, and Pi uses its runtime's overflow classifier after its recoverable attempt has settled.

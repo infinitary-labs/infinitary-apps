@@ -1,11 +1,19 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { setCurrentLanguage } from "@shared/i18n/current";
 import { SOURCE_LANGUAGE } from "@shared/i18n/languages";
 import { expect, it } from "vitest";
+import {
+  beginAnthropicStream,
+  finishAnthropicStream,
+  startStubApi,
+  writeAnthropicText,
+  writeAnthropicToolUse,
+} from "../../../tests/helpers/anthropicDialect";
 import { crewmateToolDelegate } from "../../../tests/helpers/crewmateToolDelegate";
 import { fakeBinding } from "../../../tests/helpers/fakeSession";
+import { codexLimits, piStubRuntime } from "../../../tests/helpers/piStubRuntime";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import {
   appPathsFor,
@@ -21,8 +29,10 @@ import {
   CREWMATE_SECRETS_LINE,
   CREWMATE_SECRETS_THERE_LINE,
 } from "../secrets/commandWords";
+import { catalogRefreshesSettled } from "../pi/modelRuntime";
+import { createPiSessionFactory } from "../pi/sessionFactory";
 import { answersDir, savedAnswerText } from "../session/answerFiles";
-import { LOCAL_MACHINE_ID } from "../session/session";
+import { LOCAL_MACHINE_ID, type SessionEvent } from "../session/session";
 import { crewmateContractStamp, crewmateRestartText, crewmateSessionSpec } from "./crewSession";
 
 it.each(["pi", "claude"] as const)(
@@ -271,3 +281,76 @@ it("tells a crewmate in a new conversation why, where its record is, and its bri
   });
   expect(unopenable).toContain("could not be reopened");
 });
+
+// A user's report: GPT-6.x Sol crew sessions summarized near 483,600 tokens,
+// so a long build sent requests past the 272,000-token price step, where every
+// input token costs twice as much. Here a crewmate reads a long build log in
+// one turn and the service reads each request's real size; the same build on
+// a model with no step shows the reads do carry it past.
+it.each([
+  ["keeps every request below its model's price step", true],
+  ["runs past the step on a model that has none", false],
+])("a crewmate's real Pi session %s", async (_name, priced) => {
+  const root = scratchDir("crew-price-step-");
+  const reads = 30;
+  const linesPerRead = 600;
+  const line = "vitest ran src/core/pi/session.test.ts: 41 passed, 0 failed, in 2.3s\n";
+  writeFileSync(join(root, "build.log"), line.repeat(reads * linesPerRead));
+  const api = await startStubApi(() => true);
+  // GPT-6.1 Sol as Pi ships it: a 500,000-token window, the price doubling past 272,000.
+  const sol = codexLimits("gpt-6.1-sol");
+  const step = sol.cost.tiers?.[0]?.inputTokensAbove ?? 0;
+  const readings: { tokens: number; summary: boolean }[] = [];
+  api.answer((request, res) => {
+    const tokens = Math.ceil(JSON.stringify(request.body).length / 4);
+    const summary = !request.body.tools?.length;
+    const read = readings.filter((reading) => !reading.summary).length;
+    readings.push({ tokens, summary });
+    beginAnthropicStream(res, tokens, request.n);
+    if (summary) writeAnthropicText(res, 0, "The crewmate is reading build.log for the failing test.");
+    else if (read < reads)
+      writeAnthropicToolUse(res, 0, {
+        id: `read-${read}`,
+        name: "read",
+        args: { path: "build.log", offset: read * linesPerRead + 1, limit: linesPerRead },
+      });
+    else writeAnthropicText(res, 0, "No test failed.");
+    finishAnthropicStream(res, !summary && read < reads ? "tool_use" : "end_turn", 16);
+  });
+  const runtime = await piStubRuntime(api.url, {
+    provider: "fm-crew",
+    id: "sol",
+    limits: priced ? sol : { contextWindow: sol.contextWindow, cost: { ...sol.cost, tiers: [] } },
+  });
+  const paths = appPathsFor(root);
+  const session = await createPiSessionFactory({ agentDir: join(root, "pi") }).open(
+    crewmateSessionSpec(
+      paths,
+      {
+        ...crewmateToolDelegate(),
+        machineId: LOCAL_MACHINE_ID,
+        taskId: "task-1",
+        cwd: root,
+        evidenceDir: crewmateEvidenceDir(paths, "task-1"),
+        model: { provider: "fm-crew", id: "sol" },
+      },
+      { backend: "pi", runtime },
+    ),
+  );
+  const events: SessionEvent[] = [];
+  session.subscribe((event) => events.push(event));
+  try {
+    await session.prompt("Find the failing test in build.log.");
+    const largest = Math.max(...readings.map((reading) => reading.tokens));
+    expect(largest > step).toBe(!priced);
+    expect(readings.some((reading) => reading.summary)).toBe(priced);
+    expect(readings.filter((reading) => !reading.summary)).toHaveLength(reads + 1);
+    expect(events.filter((event) => event.type === "turn_failed")).toEqual([]);
+  } finally {
+    session.dispose();
+    await session.closed();
+    await catalogRefreshesSettled();
+    await api.close();
+  }
+});
+

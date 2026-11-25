@@ -115,7 +115,7 @@ test("a background job that keeps failing gets a mark, and Ask the first mate te
   await test.step("the first run that works clears the row and the mark", async () => {
     expect(
       await page.evaluate(() => window.infinitary.plugins.invoke("growth", "raise-limit", null)),
-    ).toBe(true);
+    ).toEqual({ ok: true, result: true });
     await expect.poll(failingOf, { timeout: NEXT_RUN_MS }).toEqual([]);
     await expect(panelStatusMark(page, "growth")).toHaveCount(0);
     await expect(panelStatusDetails(page, "growth")).toHaveCount(0);

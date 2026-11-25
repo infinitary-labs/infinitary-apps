@@ -199,6 +199,8 @@ describe("local direct unit reach", () => {
       "src/core/orchestrator/wakes.words.batches.test.ts",
       "src/core/orchestrator/wakes.words.cards.test.ts",
       "src/core/orchestrator/wakes.words.corrections.test.ts",
+      "src/core/orchestrator/wakes.words.crewmate.checks.test.ts",
+      "src/core/orchestrator/wakes.words.crewmate.forge.test.ts",
       "src/core/orchestrator/wakes.words.crewmate.test.ts",
       "src/core/orchestrator/wakes.words.firstmate.captain.test.ts",
       "src/core/orchestrator/wakes.words.firstmate.idle.test.ts",

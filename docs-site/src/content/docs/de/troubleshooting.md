@@ -1,5 +1,5 @@
 ---
-source: 5a44a232aea453c9
+source: b49e11a26445efba
 title: Fehlerbehebung
 description: Häufige Probleme in Infinitary, die Worte, die die App für jedes zeigt, und was du tun kannst.
 ---
@@ -95,6 +95,32 @@ Siehe [Was deine gespeicherte Arbeit löscht](/de/update-and-remove/#what-delete
 Warte zuerst einen Moment.
 Wenn es hängen bleibt, beende Infinitary und öffne es erneut.
 Nachrichten, die dein erster Offizier oder ein Crewmitglied noch nicht erledigt hatte, werden beim Öffnen wieder aufgenommen.
+
+## Infinitary konnte nicht starten {#infinitary-could-not-start}
+
+Nach zwei Starts, die endeten, bevor Infinitary fertig gestartet war, zeigt es einen Bildschirm mit dem Titel „Infinitary konnte nicht starten“.
+Der Bildschirm sagt: „Es wurde zweimal beendet, bevor es fertig gestartet war. Deine gespeicherte Arbeit wurde nicht verändert.“
+
+- **Erneut versuchen** startet Infinitary noch einmal.
+- **Infinitary zurücksetzen** fängt wie frisch installiert neu an.
+  Es fragt zuerst, mit **Alles behalten** zum Zurückgehen, und dein Computer bestätigt dann, dass du es bist.
+  Es löscht alles, was Infinitary auf diesem Computer aufbewahrt, während Projekte in deinen eigenen Ordnern jede Datei und jeden Commit behalten.
+- **Beenden** schließt den Bildschirm, der beim nächsten Start von Infinitary wieder erscheint.
+
+Auch die Bildschirme, die Infinitary zeigt, wenn es deine gespeicherte Arbeit nicht öffnen kann, bieten **Infinitary zurücksetzen** an.
+Siehe [Infinitary zurücksetzen](/de/update-and-remove/#reset-infinitary) dazu, was ein Zurücksetzen löscht.
+
+### Aus einem Terminal zurücksetzen {#reset-from-a-terminal}
+
+Wenn sich gar kein Fenster öffnet, beende Infinitary und führ das in einem Terminal aus:
+
+```sh
+infinitary reset
+```
+
+Auf einem Mac tippst du `/Applications/Infinitary.app/Contents/MacOS/Infinitary` statt `infinitary`, und bei einem AppImage den Pfad der Datei.
+Dein Computer bestätigt, dass du es bist, und der Befehl antwortet: „Infinitary ist zurückgesetzt. Beim nächsten Mal öffnet es sich mit dem Willkommensbildschirm.“
+Solange Infinitary auf diesem Computer geöffnet ist oder wenn du nicht bestätigst, sagt der Befehl, dass nichts zurückgesetzt wurde.
 
 ## macOS fragt nach Daten anderer Apps {#macos-asks-about-other-apps-data}
 

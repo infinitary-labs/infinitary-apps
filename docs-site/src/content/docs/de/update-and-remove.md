@@ -1,5 +1,5 @@
 ---
-source: 81c1b11c48b639fa
+source: f96837d901679136
 title: Infinitary aktualisieren und entfernen
 description: Wie jede Art von Installation eine neue stabile Version bekommt und wie du Infinitary entfernst, ohne deine gespeicherte Arbeit zu verlieren.
 ---
@@ -67,11 +67,23 @@ Der Hinweis zeigt dann einen Befehl, der dieselbe Version von Hand installiert.
 ## Deine anderen Computer und dein Telefon {#your-other-computers-and-your-phone}
 
 Ein Computer, den du hinzugefügt hast, wird von dem Computer aus aktualisiert, auf dem dein erster Offizier lebt.
-In Einstellungen → **Geräte** zeigt ein Computer mit einer anderen Version in seiner Zeile **Aktualisieren**.
-Er bekommt die Version dieses Computers, seine laufende Arbeit stoppt kurz und geht danach weiter.
+Wenn er sich mit einer älteren Version verbindet, bekommt er die Version jenes Computers von selbst.
+Seine laufende Arbeit wird zuerst gespeichert und geht danach weiter.
+Wenn er sich nicht von selbst aktualisieren kann, etwa weil das Update dort nach einem Passwort fragt, fragt dich stattdessen eine Karte.
+In Einstellungen → **Geräte** zeigt ein Computer mit einer anderen Version in seiner Zeile **Angleichen**.
+Drück darauf, um ihn auf die Version dieses Computers zu bringen, ob diese Version neuer oder älter ist.
 
-Auf einem Computer, der deinen ersten Offizier steuert, hat Einstellungen → **Allgemein** eine Zeile für Infinitary auf dem Computer, auf dem dein erster Offizier lebt.
-Wenn dieser Computer ein Update bereit hat, drück **Aktualisieren** gefolgt von seinem Namen, um das Update von dort aus zu starten, wo du bist.
+Die App, die auf einem Computer geöffnet ist, der deinen ersten Offizier steuert, folgt derselben Version.
+Wenn sie älter ist, holt sie sich diese Version von selbst und startet damit neu, sobald niemand sie dort benutzt.
+Ihre Zeile in Einstellungen → **Geräte** sagt, wie weit sie ist, und **App aktualisieren** holt die Version sofort.
+Worte, die dort getippt und noch nicht gesendet wurden, halten den Neustart auf, bis sie gesendet oder gelöscht sind.
+Wenn sich diese App nicht von selbst aktualisieren kann, etwa eine Kopie von Homebrew, sagen ihre Zeile und eine Karte, was dort zu tun ist.
+
+Von einem Computer aus, der deinen ersten Offizier steuert, kannst du auch den Computer aktualisieren, auf dem dein erster Offizier lebt.
+Einstellungen → **Allgemein** hat eine Zeile für Infinitary auf jenem Computer.
+Wenn jener Computer ein Update bereit hat, drück die Schaltfläche mit seinem Namen und **aktualisieren**.
+Infinitary fragt zuerst: Es nennt die laufende Arbeit, die vor dem Neustart fertig wird, und sagt, dass jemand an jenem Computer sein muss, falls die neue Version nicht startet.
+Während diese Arbeit gespeichert wird, verschiebt **Später aktualisieren** das Update.
 Auch dein Telefon kann dieses Update starten, nachdem es dich zuerst gefragt hat.
 Siehe [Deine anderen Computer](/de/your-other-computers/) und [iPhone und iPad](/de/iphone-and-ipad/).
 
@@ -95,7 +107,27 @@ Diese Schritte löschen diesen Ordner, und was Infinitary dort aufbewahrt hat, g
 - `brew uninstall --zap`.
 - Ein Deinstallationsprogramm, das auch die Hilfsdateien einer App entfernt.
 - Den Ordner selbst in den Papierkorb zu legen oder ihn zu löschen.
+- **Infinitary zurücksetzen**, das für einen Neuanfang da ist: siehe [Infinitary zurücksetzen](#reset-infinitary).
 
 Auf einem Computer, der Arbeit für einen anderen ausführt, enthält dieser Ordner den eigenen Schlüssel des Computers, seine Arbeitskopien und die Dateien seiner Aufgaben.
 Ohne ihn verbindet sich der Computer erneut als neuer Eintrag, und Arbeit, die er noch nicht zurückgebracht hatte, bleibt verloren.
 Siehe [Ein Computer steht zweimal in der Liste](/de/troubleshooting/#a-computer-is-listed-twice).
+
+## Infinitary zurücksetzen {#reset-infinitary}
+
+**Infinitary zurücksetzen**, eine Zeile in Einstellungen → **Allgemein**, setzt Infinitary auf diesem Computer in den Zustand direkt nach der Installation zurück und behält die App.
+Es löscht alles, was Infinitary auf diesem Computer aufbewahrt, darunter Aufgaben, Anmeldungen, Geheimnisse, Einstellungen und gekoppelte Geräte.
+Projekte in deinen eigenen Ordnern behalten jede Datei und jeden Commit.
+Um nur Aufgaben zu löschen, nutze **Aufgabendaten endgültig löschen**, die Zeile darüber.
+
+1. Drück **Zurücksetzen**.
+   Infinitary sagt, was es löscht und wie viele offene Aufgaben beendet werden.
+2. Drück **Infinitary zurücksetzen**, oder **Alles behalten**, um nichts zu ändern.
+3. Bestätige, dass du es bist, so wie dein Computer es verlangt, etwa mit Touch ID oder deinem Passwort.
+4. Infinitary wird beendet und öffnet sich dann mit dem Willkommensbildschirm, wie frisch installiert.
+
+Ein Computer, der Arbeit für einen anderen ausführt, verlässt jenen Computer als Teil seines Zurücksetzens.
+Auf einem Computer, der deinen ersten Offizier steuert, setzt die Zeile Infinitary auf beiden Computern zurück: auf diesem und auf dem Computer, auf dem dein erster Offizier lebt.
+Wenn jener Computer nicht antwortet, wird auf keinem von beiden etwas zurückgesetzt.
+
+Wenn sich Infinitary nicht öffnen lässt, kannst du es trotzdem zurücksetzen: siehe [Infinitary konnte nicht starten](/de/troubleshooting/#infinitary-could-not-start).

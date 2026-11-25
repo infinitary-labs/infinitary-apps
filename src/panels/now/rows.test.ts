@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { RECORD_NEXT_LABELS } from "../../shared/recordBar";
 import { taskMovesOf } from "../../shared/taskMoves";
 import {
+  byTagGroupsOf,
   earlierRowsOf,
   foldRows,
   groupingOf,
@@ -1042,16 +1043,17 @@ describe("the Tasks panel's tags", () => {
     ).toEqual(["FI3-90"]);
   });
 
-  it("groups by tag alphabetically then No tag, working before queued before backlog, a two-tag task under both", () => {
+  it("groups by tag alphabetically then No tag, waiting on you before working before queued before backlog, a two-tag task under both", () => {
     const groups = tagGroupsOf(rowsOf(current, noFilter), tagged);
     expect(groups.map((group) => [group.group, group.name])).toEqual([
       ["tag:tag-b", "bug"],
       ["tag:tag-i", "ios"],
       ["tag:none", "No tag"],
     ]);
-    // Waiting on you (FI3-5), Pinned (FI3-6) and Done (FI3-7) keep their own rows.
+    // Pinned (FI3-6) and Done (FI3-7) keep their own rows.
     expect(groups.map((group) => group.rows.map((row) => [row.task.key, row.group]))).toEqual([
       [
+        ["FI3-5", "waiting"],
         ["FI3-1", "working"],
         ["FI3-2", "queued"],
       ],
@@ -1066,11 +1068,40 @@ describe("the Tasks panel's tags", () => {
     ]);
   });
 
-  it("draws a folded tag group's bar with working tasks in ember and the rest as outlines", () => {
+  it("draws a folded tag group's bar with waiting on you in blue, working in ember and the rest as outlines", () => {
     const [bugs] = tagGroupsOf(rowsOf(current, noFilter), tagged);
     expect(bugs && tagGroupBarOf(bugs)).toEqual([
+      { state: "waiting", id: "a" },
       { state: "working", id: "w" },
       { state: "rest", id: "q" },
+    ]);
+  });
+
+  // INF-6803's plan: tasks waiting on you list in their tag groups instead,
+  // and a folded tag group keeps them listed (the captain's choice 1b).
+  it("orders By tag as Pinned, the tag groups, Done, then Earlier matches, with no Waiting on you group", () => {
+    const rows = rowsOf(current, noFilter);
+    const byStatus = [...rows].map(([group, list]) => ({
+      group,
+      open: true,
+      collapsible: false,
+      taskIds: list.map((row) => row.task.id),
+    }));
+    expect(byStatus.map(({ group }) => group)).toContain("waiting");
+    const groups = byTagGroupsOf(byStatus, tagGroupsOf(rows, tagged), () => false);
+    expect(groups.map(({ group }) => group)).toEqual([
+      "pinned",
+      "tag:tag-b",
+      "tag:tag-i",
+      "tag:none",
+      "landed",
+    ]);
+    expect(groups.map(({ foldedTaskIds }) => foldedTaskIds)).toEqual([
+      undefined,
+      ["a"],
+      [],
+      [],
+      undefined,
     ]);
   });
 

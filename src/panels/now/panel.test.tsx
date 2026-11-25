@@ -171,3 +171,32 @@ describe("a row's pin", () => {
     expect(pinned(card)).not.toContain("data-now-pin");
   });
 });
+
+// INF-6803's plan, with the captain's choice 1b: grouped by tag, a task
+// waiting on you lists in its tag group, and a folded group keeps it listed
+// under the bar with the brighter title Waiting on you gives it.
+describe("a folded tag group", () => {
+  it("lists only its rows waiting on you, each with the waiting row's title", () => {
+    const waiting = task({ id: "tw", key: "FI3-30", waitingCardId: "card-w" });
+    const html = renderToStaticMarkup(
+      <Group
+        group="tag:tag-b"
+        label="bug"
+        rows={[
+          { task: waiting, group: "waiting", depth: 0 },
+          { task: task({ id: "tb", key: "FI3-31" }), group: "backlog", depth: 0 },
+        ]}
+        board={board()}
+        open={false}
+        selectedTaskIds={[]}
+        litTaskId={null}
+        onToggle={() => {}}
+        onOpen={() => {}}
+      />,
+    );
+    expect(html).toContain('data-now-row="tw"');
+    expect(html).toMatch(/data-now-row="tw" data-now-row-group="waiting"/);
+    expect(html).not.toContain('data-now-row="tb"');
+    expect(html).toContain('data-now-count="tag:tag-b">2<');
+  });
+});

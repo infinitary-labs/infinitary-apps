@@ -9,7 +9,7 @@ The app remembers it; the tab opens in Estimated $ until the captain picks token
 
 **Where it is also reported.**
 Under the header, when the Claude Code settings on the first mate's computer name a company's collector, one `--text-sm --fg-3` line names its host and says those settings ask for it: the crew's usage goes there (`settingsUsageReportsTo`), or only Claude work does (`settingsUsageReportsClaudeTo`).
-While that collector has taken nothing for over a minute, the same line in `--warn` takes its place, says the work is not reaching that host, and says why: the host keeps turning the reports away (`settingsUsageReportingRefused`), the app cannot connect to it securely (`settingsUsageReportingSecure`), or the app cannot reach it (`settingsUsageReportingUnreachable`).
+While that collector keeps failing, its first and latest failure a minute or more apart with no batch taken between them, the same line in `--warn` takes its place, says Claude work is not reaching that host, and says why: the host keeps turning the reports away (`settingsUsageReportingRefused`), the app cannot connect to it securely (`settingsUsageReportingSecure`), or the app cannot reach it (`settingsUsageReportingUnreachable`).
 The first two end by pointing the captain to the reporting settings their company gave them.
 It names no certificate or connection detail, and leaves when the collector takes the work again.
 

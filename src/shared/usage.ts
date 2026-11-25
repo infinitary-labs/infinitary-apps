@@ -206,8 +206,9 @@ export type UsageReportingRefusalReason = z.infer<typeof usageReportingRefusalRe
  * collector: its host, or null (docs/usage-report.md, "Destinations").
  * `claudeOnly` when only Claude's own records go there, as for a setup the
  * report cannot send every other model's work to.
- * `refusal` names the collector of the person's own setup that has taken no
- * batch for over a minute, and why.
+ * `refusal` names the collector of the person's own setup whose failures have
+ * gone on for a minute or more, with no batch taken between its first and
+ * latest, and why.
  */
 export const usageReportingSchema = z.object({
   host: z.string().nullable(),

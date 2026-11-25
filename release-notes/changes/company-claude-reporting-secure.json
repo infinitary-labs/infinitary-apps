@@ -14,7 +14,7 @@
       "kind": "improvement",
       "area": "settings",
       "title": "Settings → Usage warns when your company's Claude Code reporting is not getting through",
-      "body": "When your company's collector has taken nothing for over a minute, the line in Settings → Usage that names it says the work is not reaching it, and whether it could not be reached, could not be connected to securely or turned the reports away. It goes back to the usual line once the collector takes the work again.",
+      "body": "When Claude work keeps failing to reach your company's collector for a minute or more, the line in Settings → Usage that names it says the work is not reaching it, and whether it could not be reached, could not be connected to securely or turned the reports away. It goes back to the usual line once the collector takes the work again.",
       "picture": {
         "dark": "company-claude-reporting-warning-dark.webp",
         "light": "company-claude-reporting-warning-light.webp",

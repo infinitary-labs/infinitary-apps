@@ -472,6 +472,10 @@
 "cardKnowledgeConceptRef" = "概念 %1$@：%2$@";
 "cardKnowledgeFindingRef" = "發現 %1$@：%2$@";
 "cardKnowledgeRetired" = "已停用";
+"cardLastPartOpen" = "%1$@ 中仍未關閉的部分只剩 %2$@。";
+"cardLastPartStopped" = "它在等待，是因為你要求它等待；在你開始它之前，什麼都不會開始它。";
+"cardLastPartTitle" = "%1$@ 只在等 %2$@";
+"cardLastPartWays" = "想完成它時，請在任務看板上開始它。要修改或放棄它，請在這裡回覆。";
 "cardLeaveAside" = "放到一旁";
 "cardLeaveAsideRest" = "放到一旁 · 留在任務中，有變動時再回來";
 "cardLeaveHide" = "隱藏";

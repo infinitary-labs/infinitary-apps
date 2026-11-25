@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "stopped-last-part-note",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A part you asked to wait no longer holds up its main task unnoticed",
+      "body": "When every other part of a main task has finished and the one left is a part you asked to wait, a note now tells you once that the main task waits only on it. Start it from the task board, or reply to the note to change or drop it.",
+      "picture": {
+        "dark": "stopped-last-part-note-dark.webp",
+        "light": "stopped-last-part-note-light.webp",
+        "alt": "A note says a main task waits only on the one part you asked to wait"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

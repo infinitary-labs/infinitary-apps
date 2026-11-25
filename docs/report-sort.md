@@ -422,12 +422,33 @@ Begun work is always in one of three states, and a part in none of them stands s
    A put-off is not a stop: work put off is still a reason other work is begun, and the task a close put-off waits for is read as begun through it, as a `blocks` link's is.
 3. Stopped by the captain (`TaskStarts.stoppedByCaptain`): the newest line that stopped or started it is the captain's own move to the backlog or to on-request, or the first mate's record that the captain asked for the wait (`captain_stop` on `update_task`, or on `create_task` when the captain chose to file the work for later, `TaskStarts.declareCaptainStop`); a started task's line counts only from its current stay in the backlog, and a later line that sets its start policy, whoever wrote it, ends the stop.
    A part under a parent the captain stopped is stopped too.
+   A part they stopped that is left as its parent's last open part tells them once ("The last part the captain stopped", below).
 
 A standing part's stay begins at the newest typed fact that left it standing, read from the record and never stored: its creation, its newest line that stopped or started it (a board move, an edit of its start policy, the first mate's record of a captain stop, or a failed start that put it back on request), its move to the backlog, the close of the last work it waited on, the start of the work that made it begun or the moment a put-off that made it begun was kept, and the end of another card about it.
 Once it has stood for `STALL_WAKE_MS` and no news about it waits on the first mate's lane, the first mate gets one typed `next-move` wake (`rule:next-move-wake`), once per stay (`docs/inbox.md`, "Once per fact"), naming why it is begun, telling it to read the task's history for a pause the captain asked for and record that stop, and otherwise the ways to give it a next move: a start, a card to the captain naming it in `task_id` or `related`, or a drop.
 When the first mate has finished a turn on that news and the part still stands, the host raises one card, `card-next-move-<task>` (`rule:next-move-card`): Start it starts the task (host op `start-task`), Leave it only closes the card, and a reply goes to the first mate.
 The card's raised line on the task's timeline keeps it to one per stay, so Leave it does not bring it back until a new stay begins.
 A state answers it, never a turn ending: the card comes down at the next pass once the part moves, the captain holds it, the captain stopped it or it closes, unless a reply under it still waits on the first mate.
+
+### The last part the captain stopped
+
+INF-6663: a captain's stop has no expiry, so one that matched their words when the work was filed can hold the whole parent once every other part closes, and nothing else reads that.
+The same pass reads each part the captain stopped itself (`TaskStarts.stoppedByCaptain`) and tells the captain once when it is left as its parent's last open part (`lastPart` in `nextMove.ts`, `lastPartNote.ts`).
+It goes to the captain, not the first mate: the stop is theirs, so only they lift it.
+
+A stopped part is its parent's last when all of these hold:
+
+- the parent is live, does not deliver an answer (its parts are ideas for later) and is not stopped by the captain itself;
+- every other part of the parent, a delivery step aside, is closed, done or dropped, and there is at least one;
+- the last of them closed after the part's newest line that stopped or started it, since a stop recorded once the parent already waited on the part alone says nothing new;
+- an open part is held at no gate and by no uncleared wait, so the captain's start alone would start it; and
+- the captain does not hold it, as above: a decision card, a first mate question naming it, a put-off, a marked saved answer or its browser in their hands.
+
+Once the last close has stood for `STALL_WAKE_MS`, the host raises one note on the part, `card-last-part-<task>` (`rule:last-part-note`), with no buttons beyond the note's own Got it: the parent waits only on this part, which waits because the captain asked, and they can start it from the task board or reply to change or drop it; a reply goes to the first mate.
+Its words are catalog facts (`cardLastPart*`), so each view words it in its own language.
+Its raised line on the part's timeline keeps it to one per last close, so Got it keeps it down until another part, filed later, closes after it.
+It comes down at the next pass once that no longer holds, such as when the part starts, closes, is no longer stopped or has a sibling open again, unless a reply under it still waits on the first mate.
+A part left last behind other stopped parts is not its parent's only open part, so it raises nothing.
 
 ## The standing list
 

@@ -46,6 +46,7 @@ const IDLE_RULES: ReadonlySet<string> = new Set<IdleRule>([
   "provider-back",
   "next-move-wake",
   "next-move-card",
+  "last-part-note",
 ]);
 
 /**

@@ -507,6 +507,10 @@ public enum PhoneMessages {
     public static func `cardKnowledgeConceptRef`(`id`: String, `title`: String) -> String { PhoneWords.format("cardKnowledgeConceptRef", [`id`, `title`]) }
     public static func `cardKnowledgeFindingRef`(`id`: String, `title`: String) -> String { PhoneWords.format("cardKnowledgeFindingRef", [`id`, `title`]) }
     public static func `cardKnowledgeRetired`() -> String { PhoneWords.format("cardKnowledgeRetired", []) }
+    public static func `cardLastPartOpen`(`parent`: String, `part`: String) -> String { PhoneWords.format("cardLastPartOpen", [`parent`, `part`]) }
+    public static func `cardLastPartStopped`() -> String { PhoneWords.format("cardLastPartStopped", []) }
+    public static func `cardLastPartTitle`(`parent`: String, `part`: String) -> String { PhoneWords.format("cardLastPartTitle", [`parent`, `part`]) }
+    public static func `cardLastPartWays`() -> String { PhoneWords.format("cardLastPartWays", []) }
     public static func `cardLeaveAside`() -> String { PhoneWords.format("cardLeaveAside", []) }
     public static func `cardLeaveAsideRest`() -> String { PhoneWords.format("cardLeaveAsideRest", []) }
     public static func `cardLeaveHide`() -> String { PhoneWords.format("cardLeaveHide", []) }
@@ -5149,6 +5153,10 @@ extension PhoneWords {
         "cardKnowledgeConceptRef": ["id", "title"],
         "cardKnowledgeFindingRef": ["id", "title"],
         "cardKnowledgeRetired": [],
+        "cardLastPartOpen": ["parent", "part"],
+        "cardLastPartStopped": [],
+        "cardLastPartTitle": ["parent", "part"],
+        "cardLastPartWays": [],
         "cardLeaveAside": [],
         "cardLeaveAsideRest": [],
         "cardLeaveHide": [],

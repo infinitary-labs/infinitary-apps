@@ -8,6 +8,7 @@ import { escapeCardText } from "./cardText";
 import { HOST_CARD_PRIORITY } from "./hostCards";
 import type { IdleLadderHost } from "./idleLadder";
 import type { NextMoveBegun } from "./idleWakes";
+import { lastPartNote, lastPartNoteId } from "./lastPartNote";
 import { asksAbout, questionsNaming } from "./reviewCard";
 import type { TypedWake } from "./wakes";
 
@@ -27,6 +28,10 @@ import type { TypedWake } from "./wakes";
  * It adds no queue, timer or scheduler: the ladder's pass runs it, the
  * inbox's once-names keep the wake to one, and the card's own raised line
  * keeps the card to one.
+ *
+ * A part the captain stopped is theirs, so the check asks nothing about it,
+ * except once when it is left as its parent's last open part (INF-6663):
+ * the host's note then tells the captain the parent waits on it alone.
  */
 
 /** The host's card about a part of begun work with no next move. */
@@ -49,6 +54,12 @@ type Standing = {
   begun: NextMoveBegun;
   since: number;
 };
+
+/**
+ * A part the captain stopped, left as the only open part of its parent,
+ * since the close of the last other part.
+ */
+type LastPart = { record: TaskRecord; parent: TaskRecord; since: number };
 
 /**
  * The captain's put-offs as one pass reads them (`putOffsOnTasks`): the
@@ -86,19 +97,32 @@ export class NextMove {
     const tasks = this.host.tasks;
     const pass: Pass = { stopped: new Map(), putOff: new Map() };
     const standing = new Set<string>();
+    const last = new Set<string>();
     const candidates = [
       ...tasks.listOpen().filter((record) => record.startPolicy === "on-request"),
       ...tasks.listActive().filter((record) => record.backlogSince != null),
     ];
     for (const record of candidates) {
       const found = this.standing(record, pass);
-      if (!found) continue;
-      standing.add(record.id);
-      this.act(found, now);
+      if (found) {
+        standing.add(record.id);
+        this.act(found, now);
+        continue;
+      }
+      const left = this.lastPart(record, pass);
+      if (!left) continue;
+      last.add(record.id);
+      this.tellLastPart(left, now);
     }
     for (const card of [...this.host.openCards()]) {
-      if (!card.taskId || card.id !== nextMoveCardId(card.taskId)) continue;
-      if (standing.has(card.taskId) || this.host.answerOwed(card.id)) continue;
+      if (!card.taskId) continue;
+      const still =
+        card.id === nextMoveCardId(card.taskId)
+          ? standing
+          : card.id === lastPartNoteId(card.taskId)
+            ? last
+            : undefined;
+      if (!still || still.has(card.taskId) || this.host.answerOwed(card.id)) continue;
       this.host.withdrawCard(card.id, "moved");
     }
   }
@@ -162,6 +186,44 @@ export class NextMove {
       (parent !== undefined && this.stopped(parent, pass));
     pass.stopped.set(record.id, stopped);
     return stopped;
+  }
+
+  /**
+   * A part the captain stopped (INF-6663) whose every other part closed
+   * after that stop: the stop no longer holds back just this part but the
+   * whole parent, which nothing else reads. A parent the captain stopped,
+   * or one that delivers an answer, whose parts are ideas for later, is not
+   * read; a part held at a gate or by an uncleared wait has another owner
+   * of its start; and a part the captain holds by a card or a put-off is
+   * already theirs. A stop recorded after the last close was
+   * made with the parent already waiting, so it says nothing new.
+   */
+  private lastPart(record: TaskRecord, pass: Pass): LastPart | undefined {
+    const tasks = this.host.tasks;
+    if (record.kind !== "work" || !record.parentId || TaskService.isDeliveryChild(record)) {
+      return undefined;
+    }
+    if (this.host.bypassesSupervision(record.id)) return undefined;
+    const parent = tasks.get(record.parentId);
+    if (!parent || TaskService.isClosed(parent) || parent.shape?.deliverable === "answer") {
+      return undefined;
+    }
+    if (!this.stopped(record, pass) || this.stopped(parent, pass)) return undefined;
+    const open = record.status === "open";
+    if (open && (record.gate || tasks.graph.waitingOn(record.id).length > 0)) return undefined;
+    const others = tasks.graph
+      .children(parent.id)
+      .filter(
+        (part) =>
+          part.id !== record.id && part.kind === "work" && !TaskService.isDeliveryChild(part),
+      );
+    if (others.length === 0 || others.some((part) => !TaskService.isClosed(part))) {
+      return undefined;
+    }
+    const since = Math.max(...others.map((part) => part.closedAt ?? 0));
+    if (since <= (tasks.starts.latestStopAt(record.id) ?? 0)) return undefined;
+    if (this.captainHolds(record, pass)) return undefined;
+    return { record, parent, since };
   }
 
   /**
@@ -246,10 +308,10 @@ export class NextMove {
   private captainHolds(record: TaskRecord, pass: Pass): boolean {
     if (this.putOff(record, pass)) return true;
     if (this.namedByQuestion(record, pass)) return true;
-    const own = nextMoveCardId(record.id);
+    const own = new Set([nextMoveCardId(record.id), lastPartNoteId(record.id)]);
     let anyCard = false;
     for (const card of this.host.openCards()) {
-      if (!asksAbout(card, record.id, this.host.tasks) || card.id === own) continue;
+      if (!asksAbout(card, record.id, this.host.tasks) || own.has(card.id)) continue;
       anyCard = true;
       if (cardWord(card) === "decision") return true;
     }
@@ -356,6 +418,38 @@ export class NextMove {
     const raised = this.host.tasks.capture.cardRaisedAt(record.id, id);
     if (raised !== undefined && raised >= since) return;
     this.raiseCard(found, now);
+  }
+
+  /**
+   * The note once the last close has settled, so a first mate that starts
+   * the part on that news is not raced; once for that close, so Got it
+   * keeps it down until another part closes after a new one opens.
+   */
+  private tellLastPart(found: LastPart, now: number): void {
+    const { record, parent, since } = found;
+    if (now - since < this.settleMs) return;
+    const id = lastPartNoteId(record.id);
+    const raised = this.host.tasks.capture.cardRaisedAt(record.id, id);
+    if (raised !== undefined && raised >= since) return;
+    const card = lastPartNote(record, parent, now);
+    this.host.recordSort(
+      record.id,
+      record.title,
+      `host card ${id}: "${card.title}"`,
+      "captain",
+      // i18n-exempt: the decision ledger's reason, read by no person
+      "every other part of its parent closed after the captain stopped this one; the host told the captain once.",
+      "last-part-note",
+      () => {
+        this.host.raiseCard(card);
+        this.host.tasks.capture.recordCardRaised(record.id, {
+          cardId: id,
+          kind: cardWord(card),
+          title: card.title,
+          actor: "host",
+        });
+      },
+    );
   }
 
   private raiseCard(found: Standing, now: number): void {

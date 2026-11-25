@@ -472,6 +472,10 @@
 "cardKnowledgeConceptRef" = "مفهوم %1$@: %2$@";
 "cardKnowledgeFindingRef" = "نتيجة %1$@: %2$@";
 "cardKnowledgeRetired" = "مُستبعَد";
+"cardLastPartOpen" = "%2$@ هو الجزء الوحيد من %1$@ الذي ما زال مفتوحًا.";
+"cardLastPartStopped" = "إنه ينتظر لأنك طلبت أن ينتظر، لذا لن يبدأه شيء حتى تبدأه أنت.";
+"cardLastPartTitle" = "%1$@ بانتظار %2$@ وحده";
+"cardLastPartWays" = "ابدأه من لوح المهام عندما تريد إنجازه. لتغييره أو إسقاطه، رُدّ هنا.";
 "cardLeaveAside" = "وضع جانبًا";
 "cardLeaveAsideRest" = "وضع جانبًا · تنتظر في المهام وتعود عندما تتغيّر";
 "cardLeaveHide" = "إخفاء";

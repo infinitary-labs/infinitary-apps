@@ -472,6 +472,10 @@
 "cardKnowledgeConceptRef" = "Begriff %1$@: %2$@";
 "cardKnowledgeFindingRef" = "Erkenntnis %1$@: %2$@";
 "cardKnowledgeRetired" = "Zurückgezogen";
+"cardLastPartOpen" = "%2$@ ist der einzige Teil von %1$@, der noch offen ist.";
+"cardLastPartStopped" = "Er wartet, weil du darum gebeten hast, also startet ihn nichts, bis du es tust.";
+"cardLastPartTitle" = "%1$@ wartet nur noch auf %2$@";
+"cardLastPartWays" = "Starte ihn auf dem Aufgabenboard, wenn er erledigt werden soll. Um ihn zu ändern oder aufzugeben, antworte hier.";
 "cardLeaveAside" = "Beiseitelegen";
 "cardLeaveAsideRest" = "Beiseitelegen · wartet in Aufgaben, kommt zurück, sobald sich etwas ändert";
 "cardLeaveHide" = "Ausblenden";

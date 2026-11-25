@@ -472,6 +472,10 @@
 "cardKnowledgeConceptRef" = "Concepto %1$@: %2$@";
 "cardKnowledgeFindingRef" = "Hallazgo %1$@: %2$@";
 "cardKnowledgeRetired" = "Retirado";
+"cardLastPartOpen" = "%2$@ es la única parte de %1$@ que sigue abierta.";
+"cardLastPartStopped" = "Espera porque pediste que esperara, así que nada la iniciará hasta que lo hagas tú.";
+"cardLastPartTitle" = "%1$@ solo espera a %2$@";
+"cardLastPartWays" = "Iníciala desde el tablero de tareas cuando quieras que se haga. Para cambiarla o abandonarla, responde aquí.";
 "cardLeaveAside" = "Apartar";
 "cardLeaveAsideRest" = "Apartar · espera en Tareas y vuelve cuando cambie";
 "cardLeaveHide" = "Ocultar";

@@ -21,8 +21,10 @@ export type BuildRowsHost = {
 
 /**
  * The typed result a bug's reproduce step reports (docs/agents-reach.md,
- * "A reader's Build rows"): whether it reproduced, on which version, and
- * the question for the reporter when one is needed.
+ * "A reader's Build rows"): whether it reproduced, on which version, the
+ * question for the reporter when one is needed, and, once the captain chose
+ * on a step that did not reproduce, what they chose: ask the reporter, close
+ * the issue or keep it for later.
  */
 export const REPRODUCE_RESULT_SCHEMA = {
   type: "object",

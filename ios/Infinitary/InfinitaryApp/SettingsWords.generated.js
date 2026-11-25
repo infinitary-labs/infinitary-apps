@@ -17330,8 +17330,9 @@ ${events}` : prompt;
     /**
      * The captain took the message back before any turn read it, so nothing
      * answered it (docs/task-capture.md, "Taking back a message"). The window
-     * words the line from this in its own language; `text` holds the same
-     * words in the core's language for a reader that draws `text`.
+     * words the line from this in its own language when it shows it; `text`
+     * keeps the same catalog words in English for a reader that words nothing
+     * itself (docs/i18n.md, "Saved facts").
      */
     withdrawn: literal(true).optional(),
     /**

@@ -1,4 +1,5 @@
-import * as m from "@shared/i18n/messages.generated";
+import { setCurrentLanguage } from "@shared/i18n/current";
+import { SOURCE_LANGUAGE } from "@shared/i18n/languages";
 import { describe, expect, it, vi } from "vitest";
 import {
   drained,
@@ -60,11 +61,17 @@ describe("FirstmateAgent taking back a message", () => {
     const f = setup(options);
     await f.agent.converse("start a task to delete the old logs");
     const unread = newest(f);
-    expect(f.agent.takeBack(unread.id)).toEqual({ outcome: "withdrawn" });
-    // A reader that draws `text`, as the phone does, reads the catalog's words.
+    // A saved line keeps its English beside the fact whatever the core speaks
+    // (docs/i18n.md, "Saved facts"), for a reader that words nothing itself.
+    setCurrentLanguage("zh-Hans");
+    try {
+      expect(f.agent.takeBack(unread.id)).toEqual({ outcome: "withdrawn" });
+    } finally {
+      setCurrentLanguage(SOURCE_LANGUAGE);
+    }
     expect(f.tasks.capture.lastTurn()).toMatchObject({
       askId: unread.id,
-      reply: { withdrawn: true, text: m.shellLastTurnRevertedUnread() },
+      reply: { withdrawn: true, text: "Reverted before your first mate read it" },
     });
     expect(f.events.filter((event) => event.type === "firstmate_reply").at(-1)).toMatchObject({
       askId: unread.id,

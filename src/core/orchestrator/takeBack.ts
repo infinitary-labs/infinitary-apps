@@ -1,4 +1,6 @@
 import type { FmEvent } from "@shared/events";
+import { inLanguage } from "@shared/i18n/current";
+import { SOURCE_LANGUAGE } from "@shared/i18n/languages";
 import * as m from "@shared/i18n/messages.generated";
 import { frameServedInput } from "@shared/servedFrame";
 import { TAKE_BACK_WINDOW_MS, type TakeBackRefusal, type TakeBackResult } from "@shared/takeBack";
@@ -254,7 +256,8 @@ export class TakeBacks {
 
   /** No turn read the message, so no turn's line will stand beside it: this typed one does. */
   private withdrawn(askId: string): "withdrawn" {
-    const text = m.shellLastTurnRevertedUnread();
+    // Saved English beside the fact (docs/i18n.md, "Saved facts"); the window words it when shown.
+    const text = inLanguage(SOURCE_LANGUAGE, () => m.shellLastTurnRevertedUnread());
     const reply = { text, eligibility: "completed", withdrawn: true } as const;
     this.host.tasks.capture.setAskReply(askId, reply);
     this.host.broadcastEvent({ type: "firstmate_reply", ...reply, askId });

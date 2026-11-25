@@ -129,8 +129,10 @@ export function DeviceSignInGroups({
 }) {
   const home = useFirstMatePlace();
   const groups = useDeviceSignIns();
-  // The home's own connections, for a computer's connection approved from one of them.
-  const homeDefinitions = useHomeCustomDefinitions(groups.length > 0);
+  // The home's own connections, read only while a computer has a connection approved from one of them.
+  const homeDefinitions = useHomeCustomDefinitions(
+    groups.some((device) => device.signIns?.custom?.some((view) => view.home)),
+  );
   const [choice, setChoice] = useState<{ deviceId: string; provider: ProviderView } | null>(null);
   const [customFor, setCustomFor] = useState<string | null>(null);
 

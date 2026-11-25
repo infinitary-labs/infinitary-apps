@@ -24,6 +24,8 @@ export async function startCustomApiFixture(
     authorization: boolean;
     /** The Authorization scheme word only, and the person's extra `X-Org-Id` header. */
     scheme?: string;
+    /** The key after the scheme word, so a journey can tell which computer's synthetic key asked. */
+    key?: string;
     org?: string;
     body: Record<string, unknown>;
   }[] = [];
@@ -36,6 +38,7 @@ export async function startCustomApiFixture(
       path: req.url ?? "",
       authorization: Boolean(req.headers.authorization),
       scheme: req.headers.authorization?.split(" ")[0],
+      key: req.headers.authorization?.split(" ")[1],
       org: req.headers["x-org-id"] as string | undefined,
       body,
     });

@@ -129,6 +129,11 @@
 "accountsCustomApiHeaders" = "追加のヘッダーを確認してください。各名前は1回だけで値は1行、Infinitary が自分で設定する名前は使えません。新しいアドレスでは、シークレットの値をもう一度入力します。";
 "accountsCustomApiHeadersHint" = "組織のサーバーがすべてのリクエストで必要とするヘッダーです。シークレットの値は伏せられて二度と表示されず、返信にその値が含まれていると拒否されます。";
 "accountsCustomApiHeadersTitle" = "追加のリクエストヘッダー";
+"accountsCustomApiHomeChanged" = "%1$@ の接続でアドレス、プロトコル、ヘッダーが変わったため、もう一度承認するまで %2$@ のこの接続は一時停止しています。";
+"accountsCustomApiHomeGone" = "%1$@ の接続がなくなったため、%2$@ のこの接続は一時停止しています。不要なら接続を解除してください。";
+"accountsCustomApiHomeReplaced" = "%1$@ の同じ接続から作った %2$@ の新しい接続を使っているため、この接続は一時停止したままです。不要なら接続を解除してください。";
+"accountsCustomApiHomeSets" = "この接続の名前、アドレス、プロトコル、ヘッダー、モデルは %1$@ の接続で決まります。%2$@ に保存するキー、秘密のヘッダー値、決まっていないモデルのサイズを入力し、保存すると各モデルを確認します。";
+"accountsCustomApiHomeTag" = "%1$@ から";
 "accountsCustomApiHostSlow" = "%1$@ の応答に時間がかかりすぎました。";
 "accountsCustomApiHttp" = "暗号化されていない HTTP で送信します。ネットワーク経路上の誰でも、キー、プロンプト、プロジェクトのコード、返信を読んだり、%1$@ での作業を指示する返信を書き換えたりできます。";
 "accountsCustomApiHttpApproved" = "このアドレスでは暗号化されていない HTTP が承認されています。";
@@ -237,6 +242,8 @@
 "accountsCustomApiUseFix" = "%1$@ を使う";
 "accountsCustomApiUseForFirstMate" = "一等航海士に %1$@ を使う";
 "accountsCustomApiUseModel" = "%1$@ を使う";
+"accountsCustomApiUseOn" = "使う（%1$@）";
+"accountsCustomApiUseTitle" = "%1$@ を使う（%2$@）";
 "accountsSavedResetBusy" = "Infinitary はすでに %1$@ で保存済みのリセットを使っています。終わるまでお待ちください。";
 "accountsSavedResetCodexStopped" = "Codex が何かを使う前に応答しなくなったため、保存済みのリセットは使われていません。もう一度お試しください。";
 "accountsSavedResetNoCodex" = "Infinitary から保存済みのリセットを使うには、このコンピュータに Codex %1$@ 以降が必要です。Codex をインストールするか、%2$@ でリセットを使ってください。";

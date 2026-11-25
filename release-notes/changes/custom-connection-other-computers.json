@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "custom-connection-other-computers",
+      "kind": "feature",
+      "title": "Use a custom connection on your other computers",
+      "body": "A custom connection in Settings → Intelligence offers Use for each computer that runs work. You type that computer's own key, it checks each model and keeps the key, and this computer keeps no copy. A later name or price change reaches it at once, a changed limit checks the model again there, and a new address or header pauses it there until you approve it again.",
+      "area": "subscriptions",
+      "picture": {
+        "dark": "custom-connection-other-computers-dark.webp",
+        "light": "custom-connection-other-computers-light.webp",
+        "alt": "Settings → Intelligence with a custom connection offering Use as Builder under its models"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -129,6 +129,11 @@
 "accountsCustomApiHeaders" = "請檢查額外標頭：每個名稱只出現一次、值只有一行，而且不能用 Infinitary 自己設定的名稱。換成新位址時，需要重新輸入機密值。";
 "accountsCustomApiHeadersHint" = "你組織的伺服器在每個要求中都需要的標頭。機密值會被遮蔽、不再顯示；若有回覆重複出現它，就會被拒絕。";
 "accountsCustomApiHeadersTitle" = "額外的要求標頭";
+"accountsCustomApiHomeChanged" = "%1$@ 上的連線變更了位址、通訊協定或標頭，因此 %2$@ 上的這個連線會暫停，直到你重新核准。";
+"accountsCustomApiHomeGone" = "%1$@ 上的連線已不存在，因此 %2$@ 上的這個連線已暫停。如果不再需要，請中斷連線。";
+"accountsCustomApiHomeReplaced" = "%2$@ 上來自 %1$@ 同一連線的較新連線正在使用，因此這個連線保持暫停。如果不再需要，請中斷連線。";
+"accountsCustomApiHomeSets" = "這個連線的名稱、位址、通訊協定、標頭和模型由 %1$@ 上的連線設定。輸入要存放在 %2$@ 上的金鑰、機密標頭的值以及未寫明的模型大小，然後儲存以檢查每個模型。";
+"accountsCustomApiHomeTag" = "來自 %1$@";
 "accountsCustomApiHostSlow" = "%1$@ 回應時間太久。";
 "accountsCustomApiHttp" = "透過未加密的 HTTP 傳送。網路路徑上的任何人都能讀取金鑰、提示、專案程式碼和回覆，或竄改會指揮 %1$@ 上工作的回覆。";
 "accountsCustomApiHttpApproved" = "已核准這個位址使用未加密的 HTTP。";
@@ -237,6 +242,8 @@
 "accountsCustomApiUseFix" = "使用 %1$@";
 "accountsCustomApiUseForFirstMate" = "讓你的大副使用 %1$@";
 "accountsCustomApiUseModel" = "使用 %1$@";
+"accountsCustomApiUseOn" = "使用（%1$@）";
+"accountsCustomApiUseTitle" = "使用 %1$@（%2$@）";
 "accountsSavedResetBusy" = "Infinitary 已在 %1$@ 上使用已儲存的重設。請等待它完成。";
 "accountsSavedResetCodexStopped" = "Codex 在使用任何內容之前停止了回應，因此沒有使用已儲存的重設。請再試一次。";
 "accountsSavedResetNoCodex" = "要在 Infinitary 中使用已儲存的重設，這台電腦需要 Codex %1$@ 或更新版本。請安裝 Codex，或在 %2$@ 使用重設。";

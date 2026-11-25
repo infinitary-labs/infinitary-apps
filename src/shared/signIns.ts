@@ -16,6 +16,7 @@ import {
   customListedModelSchema,
   customNetworkModeSchema,
 } from "./customApi";
+import { customHomeDefinitionSchema } from "./customApiFile";
 import { COMPUTER } from "./deviceNames";
 import { computerReachSchema, deviceLabel, userDisplayName } from "./devices";
 import {
@@ -399,6 +400,17 @@ export const signInOrders = {
     response: customApiViewSchema,
   },
   /**
+   * What each of the home's connections that this computer approved one of
+   * its own from says now, from the contract change
+   * `custom-connection-from-home`: whole each time, so one left out is gone
+   * from the home. No key or secret header value crosses.
+   */
+  "inf:sign-ins:custom-definitions": {
+    effect: "change",
+    request: z.tuple([z.array(customHomeDefinitionSchema).max(32)]),
+    response: okSchema,
+  },
+  /**
    * Turns one of that computer's own accounts' Keep going on credits switch
    * on or off (docs/quota.md), saved only there, from the contract change
    * `computer-keep-going`. Only the account id and the switch cross; its
@@ -584,6 +596,12 @@ export const deviceSignInsSchema = z.object({
    * means it does not, so the chip stays disabled.
    */
   customApi: z.boolean().optional(),
+  /**
+   * It approves a connection of the home's own and follows its later edits
+   * (the contract change `custom-connection-from-home`). Absent means it
+   * does not, so the home's connections offer no Use on it.
+   */
+  customFromHome: z.boolean().optional(),
   /**
    * It takes Keep going on credits for its own accounts (the contract change
    * `computer-keep-going`). Absent means it does not, so the item stays dim.

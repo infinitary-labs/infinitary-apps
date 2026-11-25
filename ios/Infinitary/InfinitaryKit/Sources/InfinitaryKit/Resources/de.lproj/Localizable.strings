@@ -129,6 +129,11 @@
 "accountsCustomApiHeaders" = "Prüfe die zusätzlichen Header: jeder Name nur einmal mit einem einzeiligen Wert und kein Name, den Infinitary selbst setzt. Ein geheimer Wert muss für eine neue Adresse erneut eingegeben werden.";
 "accountsCustomApiHeadersHint" = "Header, die der Server deiner Organisation bei jeder Anfrage braucht. Ein geheimer Wert wird verdeckt, nie wieder angezeigt und abgelehnt, wenn eine Antwort ihn wiederholt.";
 "accountsCustomApiHeadersTitle" = "Zusätzliche Anfrage-Header";
+"accountsCustomApiHomeChanged" = "Die Verbindung auf %1$@ hat Adresse, Protokoll oder Header geändert. Diese hier ist auf %2$@ pausiert, bis du sie erneut freigibst.";
+"accountsCustomApiHomeGone" = "Die Verbindung auf %1$@ gibt es nicht mehr, deshalb ist diese hier auf %2$@ pausiert. Trenne sie, wenn du sie nicht mehr brauchst.";
+"accountsCustomApiHomeReplaced" = "Eine neuere Verbindung auf %2$@ aus derselben Verbindung auf %1$@ ist in Gebrauch, deshalb bleibt diese pausiert. Trenne sie, wenn du sie nicht mehr brauchst.";
+"accountsCustomApiHomeSets" = "Die Verbindung auf %1$@ legt Name, Adresse, Protokoll, Header und Modelle dieser Verbindung fest. Gib den Schlüssel, die geheimen Header-Werte und jede Modellgröße, die sie offenlässt, für %2$@ ein und speichere, um jedes Modell zu prüfen.";
+"accountsCustomApiHomeTag" = "Von %1$@";
 "accountsCustomApiHostSlow" = "%1$@ hat zu lange gebraucht, um zu antworten.";
 "accountsCustomApiHttp" = "Über unverschlüsseltes HTTP senden. Jeder auf dem Netzwerkweg kann den Schlüssel, Prompts, Projektcode und Antworten lesen oder Antworten ändern, die die Arbeit auf %1$@ steuern.";
 "accountsCustomApiHttpApproved" = "Unverschlüsseltes HTTP ist für diese Adresse freigegeben.";
@@ -237,6 +242,8 @@
 "accountsCustomApiUseFix" = "%1$@ verwenden";
 "accountsCustomApiUseForFirstMate" = "%1$@ für deinen ersten Offizier verwenden";
 "accountsCustomApiUseModel" = "%1$@ verwenden";
+"accountsCustomApiUseOn" = "Verwenden %1$@";
+"accountsCustomApiUseTitle" = "%1$@ verwenden %2$@";
 "accountsSavedResetBusy" = "Infinitary löst bereits einen gespeicherten Reset für %1$@ ein. Warte, bis es fertig ist.";
 "accountsSavedResetCodexStopped" = "Codex hat nicht mehr geantwortet, bevor etwas eingelöst wurde, daher wurde kein gespeicherter Reset eingelöst. Versuch es noch einmal.";
 "accountsSavedResetNoCodex" = "Um einen gespeicherten Reset aus Infinitary einzulösen, braucht dieser Computer Codex %1$@ oder neuer. Installiere Codex oder löse den Reset auf %2$@ ein.";

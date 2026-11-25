@@ -135,6 +135,11 @@ public enum PhoneMessages {
     public static func `accountsCustomApiHeaders`() -> String { PhoneWords.format("accountsCustomApiHeaders", []) }
     public static func `accountsCustomApiHeadersHint`() -> String { PhoneWords.format("accountsCustomApiHeadersHint", []) }
     public static func `accountsCustomApiHeadersTitle`() -> String { PhoneWords.format("accountsCustomApiHeadersTitle", []) }
+    public static func `accountsCustomApiHomeChanged`(`home`: String, `who`: String) -> String { PhoneWords.format("accountsCustomApiHomeChanged", [`home`, `who`]) }
+    public static func `accountsCustomApiHomeGone`(`home`: String, `who`: String) -> String { PhoneWords.format("accountsCustomApiHomeGone", [`home`, `who`]) }
+    public static func `accountsCustomApiHomeReplaced`(`home`: String, `who`: String) -> String { PhoneWords.format("accountsCustomApiHomeReplaced", [`home`, `who`]) }
+    public static func `accountsCustomApiHomeSets`(`home`: String, `who`: String) -> String { PhoneWords.format("accountsCustomApiHomeSets", [`home`, `who`]) }
+    public static func `accountsCustomApiHomeTag`(`home`: String) -> String { PhoneWords.format("accountsCustomApiHomeTag", [`home`]) }
     public static func `accountsCustomApiHostSlow`(`host`: String) -> String { PhoneWords.format("accountsCustomApiHostSlow", [`host`]) }
     public static func `accountsCustomApiHttp`(`who`: String) -> String { PhoneWords.format("accountsCustomApiHttp", [`who`]) }
     public static func `accountsCustomApiHttpApproved`() -> String { PhoneWords.format("accountsCustomApiHttpApproved", []) }
@@ -244,6 +249,8 @@ public enum PhoneMessages {
     public static func `accountsCustomApiUseFix`(`address`: String) -> String { PhoneWords.format("accountsCustomApiUseFix", [`address`]) }
     public static func `accountsCustomApiUseForFirstMate`(`model`: String) -> String { PhoneWords.format("accountsCustomApiUseForFirstMate", [`model`]) }
     public static func `accountsCustomApiUseModel`(`model`: String) -> String { PhoneWords.format("accountsCustomApiUseModel", [`model`]) }
+    public static func `accountsCustomApiUseOn`(`on`: String) -> String { PhoneWords.format("accountsCustomApiUseOn", [`on`]) }
+    public static func `accountsCustomApiUseTitle`(`name`: String, `on`: String) -> String { PhoneWords.format("accountsCustomApiUseTitle", [`name`, `on`]) }
     public static func `accountsSavedResetBusy`(`account`: String) -> String { PhoneWords.format("accountsSavedResetBusy", [`account`]) }
     public static func `accountsSavedResetCodexStopped`() -> String { PhoneWords.format("accountsSavedResetCodexStopped", []) }
     public static func `accountsSavedResetNoCodex`(`floor`: String, `site`: String) -> String { PhoneWords.format("accountsSavedResetNoCodex", [`floor`, `site`]) }
@@ -4746,6 +4753,11 @@ extension PhoneWords {
         "accountsCustomApiHeaders": [],
         "accountsCustomApiHeadersHint": [],
         "accountsCustomApiHeadersTitle": [],
+        "accountsCustomApiHomeChanged": ["home", "who"],
+        "accountsCustomApiHomeGone": ["home", "who"],
+        "accountsCustomApiHomeReplaced": ["home", "who"],
+        "accountsCustomApiHomeSets": ["home", "who"],
+        "accountsCustomApiHomeTag": ["home"],
         "accountsCustomApiHostSlow": ["host"],
         "accountsCustomApiHttp": ["who"],
         "accountsCustomApiHttpApproved": [],
@@ -4855,6 +4867,8 @@ extension PhoneWords {
         "accountsCustomApiUseFix": ["address"],
         "accountsCustomApiUseForFirstMate": ["model"],
         "accountsCustomApiUseModel": ["model"],
+        "accountsCustomApiUseOn": ["on"],
+        "accountsCustomApiUseTitle": ["name", "on"],
         "accountsSavedResetBusy": ["account"],
         "accountsSavedResetCodexStopped": [],
         "accountsSavedResetNoCodex": ["floor", "site"],

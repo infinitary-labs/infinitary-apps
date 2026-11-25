@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { customCompactionSchema, customModelInputSchema, customProtocolSchema } from "./customApi";
+import {
+  type CustomApiView,
+  customCompactionSchema,
+  customModelInputSchema,
+  customProtocolSchema,
+} from "./customApi";
 
 /**
  * Something in a connection file Infinitary reads but never uses, said
@@ -81,3 +86,43 @@ export const customApiFileViewSchema = z.object({
   connections: z.array(customFileConnectionSchema),
 });
 export type CustomApiFileView = z.infer<typeof customApiFileViewSchema>;
+
+/**
+ * One connection of the first mate's computer as a computer that runs work
+ * follows it: its account id there, and what it says now, with no key and
+ * no secret header value.
+ */
+export const customHomeDefinitionSchema = z.object({
+  name: z.string().min(1).max(256),
+  definition: customFileDefinitionSchema,
+});
+export type CustomHomeDefinition = z.infer<typeof customHomeDefinitionSchema>;
+
+/**
+ * What one of this computer's connections says now, for a computer that
+ * runs work to follow: what was approved here, or, while this computer's
+ * connection file holds it for a new address, protocol or headers, what the
+ * file says, so the other computer holds it too. Absent while the file no
+ * longer has it, so the other computer holds it as gone.
+ */
+export function customHomeDefinition(
+  view: CustomApiView,
+  file: Pick<CustomApiFileView, "connections"> | undefined,
+): CustomFileDefinition | undefined {
+  if (view.file?.state === "missing") return undefined;
+  if (view.file?.state === "changed")
+    return file?.connections.find((entry) => entry.name === view.file?.name)?.definition;
+  const parsed = customFileDefinitionSchema.safeParse({
+    label: view.label,
+    baseUrl: view.baseUrl,
+    protocol: view.protocol,
+    headers: view.headers.map((header) =>
+      header.secret
+        ? { name: header.name, secret: true }
+        : { name: header.name, secret: false, value: header.value ?? "" },
+    ),
+    ...(view.compaction ? { compaction: view.compaction } : {}),
+    models: view.models,
+  });
+  return parsed.success ? parsed.data : undefined;
+}

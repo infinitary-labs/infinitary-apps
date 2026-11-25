@@ -25,7 +25,11 @@ import {
   type CustomApiInput,
   isCustomApiProvider,
 } from "@shared/customApi";
-import type { CustomFileConnection } from "@shared/customApiFile";
+import type {
+  CustomFileConnection,
+  CustomFileDefinition,
+  CustomHomeDefinition,
+} from "@shared/customApiFile";
 import { HERE } from "@shared/deviceNames";
 import type { ReasoningCapabilities } from "@shared/modelSlots";
 import type { BackendId } from "@shared/providers";
@@ -265,6 +269,8 @@ export class AccountVault {
   private readonly fileChecks = new Map<string, Promise<void>>();
   /** The models file edits cost a check, kept until a check of them runs to its end. */
   private readonly fileChecksOwed = new Map<string, Set<string>>();
+  /** What the first mate's computer last sent, on a computer that runs work (`applyCustomHome`). */
+  private homeDefinitions: CustomHomeDefinition[] | undefined;
 
   private constructor(
     private readonly paths: Pick<AppPaths, "accountsDir">,
@@ -523,23 +529,53 @@ export class AccountVault {
   }
   /**
    * The connection file's newest good reading, applied to each connection
-   * approved from it (`CustomApiAccountOwner.applyFile`), whose name follows
-   * the file's; null, with no file chosen, ends every hold a file made.
-   * Answers the fresh checks the reading asked for, each in the background.
+   * approved from it (`CustomApiAccountOwner.applyDefinition`), whose name
+   * follows the file's; null, with no file chosen, ends every hold a file
+   * made. Answers the fresh checks the reading asked for, each in the background.
    */
   applyCustomFile(connections: CustomFileConnection[] | null): Promise<void>[] {
+    return this.applyFollowed("file", connections);
+  }
+
+  /**
+   * On a computer that runs work: what the first mate's computer last sent of
+   * its connections this computer approved one from, whole, so one left out
+   * is gone there. Kept for `reapplyCustomHome`; answers as `applyCustomFile`.
+   */
+  applyCustomHome(definitions: CustomHomeDefinition[]): Promise<void>[] {
+    this.homeDefinitions = definitions;
+    return this.applyFollowed("home", definitions);
+  }
+
+  /**
+   * Applies what the home last sent again, such as once a connection from it
+   * is saved. A connection that send does not name is left as it is: one
+   * just approved from the home's may be newer than that send, and the
+   * home's next send says whether it is gone.
+   */
+  reapplyCustomHome(): Promise<void>[] {
+    return this.homeDefinitions ? this.applyFollowed("home", this.homeDefinitions, true) : [];
+  }
+
+  private applyFollowed(
+    kind: "file" | "home",
+    entries: readonly { name: string; definition?: CustomFileDefinition }[] | null,
+    onlyNamed = false,
+  ): Promise<void>[] {
     const checks: Promise<void>[] = [];
     let renamed = false;
     for (const account of this.liveAccounts()) {
       if (!isCustomApiProvider(account.providerId)) continue;
-      const name = this.pi.custom.fileName(account.id);
-      if (!name) continue;
-      if (connections === null) {
+      const source = this.pi.custom.source(account.id);
+      if (source?.kind !== kind) continue;
+      if (entries === null) {
         this.pi.custom.releaseFile(account.id);
         continue;
       }
-      const definition = connections.find((entry) => entry.name === name)?.definition;
-      const { applied, recheck } = this.pi.custom.applyFile(account.id, definition);
+      const entry = entries.find((each) => each.name === source.name);
+      if (onlyNamed && !entry) continue;
+      const definition = entry?.definition;
+      const { applied, recheck } = this.pi.custom.applyDefinition(account.id, definition);
       if (applied && definition && account.label !== definition.label) {
         account.label = definition.label;
         renamed = true;

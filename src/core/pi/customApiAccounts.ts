@@ -94,11 +94,12 @@ type Live = {
   /** Its fresh check in flight (`recheck`); Disconnect aborts it. */
   rechecking?: AbortController;
   /**
-   * Whether the connection file's newest reading still says what was
-   * approved here. Unread yet, or with no file chosen, it stays unset and
-   * holds nothing; `changed` and `missing` hold it until approved again.
+   * Whether what it follows - the connection file's newest reading, or what
+   * the first mate's computer last sent - still says what was approved here.
+   * Unread yet, or with no file chosen, it stays unset and holds nothing;
+   * `changed` and `missing` hold it until approved again.
    */
-  file?: "current" | "changed" | "missing";
+  followed?: "current" | "changed" | "missing";
 };
 
 export class CustomApiAccountOwner {
@@ -431,6 +432,8 @@ export class CustomApiAccountOwner {
       old.stored.input.key = "";
       old.stored.input.headers = [];
       old.stored = stored;
+      // A replacement may no longer follow what held it; the reapply after every save holds it again if it does.
+      old.followed = undefined;
       // Replacement preserves Pause and use choices; Resume is separate.
       if (old.ready) this.registerRuntime(old, old.ready);
     } else
@@ -529,26 +532,32 @@ export class CustomApiAccountOwner {
     return this.live.get(accountId)?.enabled === true;
   }
 
-  /** The connection file's key it was approved from, if any. */
-  fileName(accountId: string): string | undefined {
+  /**
+   * What it was approved from, if anything: the connection file's key for
+   * it, or the first mate's computer's account id for its own connection.
+   */
+  source(accountId: string): { kind: "file" | "home"; name: string } | undefined {
     const live = this.live.get(accountId);
-    return live && !live.closed ? live.stored.input.file : undefined;
+    if (!live || live.closed) return undefined;
+    const { file, home } = live.stored.input;
+    return file ? { kind: "file", name: file } : home ? { kind: "home", name: home } : undefined;
   }
 
   /** No connection file is chosen now: what the last one held serves again. */
   releaseFile(accountId: string): void {
     const live = this.live.get(accountId);
     if (!live || !held(live)) {
-      if (live) live.file = undefined;
+      if (live) live.followed = undefined;
       return;
     }
-    live.file = undefined;
+    live.followed = undefined;
     if (live.enabled) for (const wake of [...live.waiters]) wake();
   }
 
   /**
-   * The connection file's newest reading of this connection: absent when it
-   * left the file. A changed address, protocol or header holds it until it
+   * The newest reading of this connection from what it follows (`source`):
+   * absent when it left the connection file, or the first mate's computer
+   * no longer has it. A changed address, protocol or header holds it until it
    * is approved again here, and never inherits a key. Otherwise the file's
    * names, prices, limits, pictures, reasoning, cache and compaction apply
    * at once, against the address already approved; `recheck` names each
@@ -557,15 +566,15 @@ export class CustomApiAccountOwner {
    * A model whose reasoning profile this computer's catalog lacks keeps
    * what it had.
    */
-  applyFile(
+  applyDefinition(
     accountId: string,
     definition: CustomFileDefinition | undefined,
   ): { applied: boolean; recheck: string[] } {
     const live = this.live.get(accountId);
-    if (!live || live.closed || !live.stored.input.file) return { applied: false, recheck: [] };
+    if (!live || live.closed || !this.source(accountId)) return { applied: false, recheck: [] };
     const input = live.stored.input;
     if (!definition || approvalOf(input) !== fileApprovalOf(definition, input.mode)) {
-      live.file = definition ? "changed" : "missing";
+      live.followed = definition ? "changed" : "missing";
       return { applied: false, recheck: [] };
     }
     const checkedBefore = new Set(
@@ -617,7 +626,7 @@ export class CustomApiAccountOwner {
     };
     if (!definition.compaction) delete next.input.compaction;
     const wasHeld = held(live);
-    live.file = "current";
+    live.followed = "current";
     if (
       JSON.stringify([next.input, next.capabilities]) !==
       JSON.stringify([input, live.stored.capabilities ?? {}])
@@ -842,6 +851,8 @@ export class CustomApiAccountOwner {
     failures = draft?.failures,
   ): CustomApiView {
     const input = stored.input;
+    const followedState = () =>
+      (accountId ? this.live.get(accountId)?.followed : undefined) ?? "current";
     return {
       ...(draft ? { draftId: draft.id } : {}),
       ...(accountId ? { accountId } : {}),
@@ -864,14 +875,8 @@ export class CustomApiAccountOwner {
       allowStorageDefault: input.allowStorageDefault,
       ...(input.addressException ? { addressException: true } : {}),
       ...(input.compaction ? { compaction: input.compaction } : {}),
-      ...(input.file
-        ? {
-            file: {
-              name: input.file,
-              state: accountId ? (this.live.get(accountId)?.file ?? "current") : "current",
-            },
-          }
-        : {}),
+      ...(input.file ? { file: { name: input.file, state: followedState() } } : {}),
+      ...(input.home ? { home: { name: input.home, state: followedState() } } : {}),
       // Saved identity can still be read after expiry; admission/proof validation
       // continues to parse the actual PEM and refuses invalid trust.
       certificates: stored.reviewedCertificates ?? [],
@@ -970,7 +975,7 @@ function capabilitiesOf(
   return snapshot;
 }
 function held(live: Live): boolean {
-  return live.file === "changed" || live.file === "missing";
+  return live.followed === "changed" || live.followed === "missing";
 }
 /**
  * What a computer approves for a connection: its address, protocol and

@@ -129,6 +129,11 @@
 "accountsCustomApiHeaders" = "Vérifiez les en-têtes supplémentaires : chaque nom une seule fois avec une valeur sur une ligne, et aucun nom qu’Infinitary définit lui-même. Une valeur secrète doit être saisie à nouveau pour une nouvelle adresse.";
 "accountsCustomApiHeadersHint" = "Les en-têtes que le serveur de votre organisation demande à chaque requête. Une valeur secrète est masquée, n’est plus jamais affichée, et est refusée si une réponse la répète.";
 "accountsCustomApiHeadersTitle" = "En-têtes de requête supplémentaires";
+"accountsCustomApiHomeChanged" = "La connexion sur %1$@ a changé d’adresse, de protocole ou d’en-têtes : celle-ci reste en pause sur %2$@ jusqu’à ce que vous l’approuviez à nouveau.";
+"accountsCustomApiHomeGone" = "La connexion sur %1$@ n’existe plus : celle-ci est en pause sur %2$@. Déconnectez-la si vous n’en avez plus besoin.";
+"accountsCustomApiHomeReplaced" = "Une connexion plus récente sur %2$@, issue de la même connexion sur %1$@, est utilisée : celle-ci reste en pause. Déconnectez-la si vous n’en avez plus besoin.";
+"accountsCustomApiHomeSets" = "La connexion sur %1$@ fixe le nom, l’adresse, le protocole, les en-têtes et les modèles de cette connexion. Saisissez la clé, les valeurs d’en-têtes secrètes et toute taille de modèle qu’elle omet, à garder sur %2$@, puis enregistrez pour vérifier chaque modèle.";
+"accountsCustomApiHomeTag" = "Depuis %1$@";
 "accountsCustomApiHostSlow" = "%1$@ a mis trop de temps à répondre.";
 "accountsCustomApiHttp" = "Envoyer en HTTP non chiffré. N’importe qui sur le trajet réseau peut lire la clé, les instructions, le code du projet et les réponses, ou modifier des réponses qui dirigent le travail sur %1$@.";
 "accountsCustomApiHttpApproved" = "Le HTTP non chiffré est approuvé pour cette adresse.";
@@ -237,6 +242,8 @@
 "accountsCustomApiUseFix" = "Utiliser %1$@";
 "accountsCustomApiUseForFirstMate" = "Utiliser %1$@ pour votre second";
 "accountsCustomApiUseModel" = "Utiliser %1$@";
+"accountsCustomApiUseOn" = "Utiliser %1$@";
+"accountsCustomApiUseTitle" = "Utiliser %1$@ %2$@";
 "accountsSavedResetBusy" = "Infinitary utilise déjà une réinitialisation enregistrée sur %1$@. Attendez qu’elle se termine.";
 "accountsSavedResetCodexStopped" = "Codex a cessé de répondre avant d'utiliser quoi que ce soit : aucune réinitialisation enregistrée n'a été utilisée. Réessayez.";
 "accountsSavedResetNoCodex" = "Utiliser une réinitialisation enregistrée depuis Infinitary demande Codex %1$@ ou plus récent sur cet ordinateur. Installez Codex, ou utilisez la réinitialisation sur %2$@.";

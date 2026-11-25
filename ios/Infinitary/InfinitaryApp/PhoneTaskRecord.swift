@@ -168,6 +168,12 @@ struct PhoneTaskRecord: View {
                 if let project = PhoneRecord.projectFact(task, board: session.board) {
                     row(PhoneMessages.phoneRecordProject(), id: "task-record-project") { Text(project).foregroundStyle(PhoneTheme.text) }
                 }
+                if let tags = PhoneRecord.tagsFact(task, board: session.board) {
+                    let none = (task.tags ?? []).isEmpty
+                    row(PhoneMessages.recordFactTags(), id: "task-record-tags-row") {
+                        Text(tags).foregroundStyle(none ? PhoneTheme.muted : PhoneTheme.text).accessibilityIdentifier("task-record-tags")
+                    }
+                }
                 if let current = facts.now {
                     row(PhoneMessages.phoneRecordNow(), id: "task-record-now") {
                         HStack(alignment: .firstTextBaseline, spacing: PhoneTheme.space2) {

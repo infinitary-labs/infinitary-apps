@@ -243,7 +243,10 @@ The first three groups start expanded; Backlog and Done start collapsed, with th
 A row starts with its status mark, mono key, title, then the project in mono; dividers start past the mark, and active parent trees stay together.
 An unstarted task adds the home’s quiet mono wait line below its title, wrapping in full, and its record carries the same line.
 The search waits above the list until it is pulled down from the top; Shift-Command-F opens it, and VoiceOver always shows it.
+While the only project with tags that is not archived has them, the Mac's tag row sits under the field (NowPanel, "Tags"): a horizontal scroller of capsule chips in `PhoneFont.mono`, `secondary` words on a `line` hairline, each 44 points tall to press, All tags first, each tag with its open-task count in `muted`, then No tag.
+The pressed chip turns its words to `text` on the `raised` fill and reads as selected; it narrows the list as words do and keeps the search shown.
 A task opens its record in the same column: goal, captain’s words, progress, outcome and timeline, plus a Crewmate section for the session and its direct message box.
+Its Tags row sits under Project once the task's project has tags or it carries one: the names comma-separated in `text`, or No tags in `muted`, with no way to edit them.
 The timeline's events sit on a hairline rail in caption size, with each time right-aligned.
 The record's heading is the task's own title, with its key in mono at the start of the line below; the bar above it carries no key.
 Start and Continue follow the Mac’s own allowed moves; Steer sends to that crewmate, and Interrupt stops only its current turn.

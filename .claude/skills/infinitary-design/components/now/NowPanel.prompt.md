@@ -129,7 +129,7 @@ While a tag is pressed, grouping by tag shows only that tag's group, open.
 A task's summary (Row hover, below) adds a Tags line under Project while it carries any, its names in mono, comma-separated.
 Command search offers Filter tasks by tag, which opens the filter with focus on the tag row, and Group tasks, which presses the header button so its menu opens; neither has a default key.
 While no tag row shows, Filter tasks by tag stays listed and says why it cannot run.
-The phone keeps its own list; it follows in a later piece.
+The phone's Tasks search draws the same tag row under the same rules while one project has tags, and has no Group tasks (`devices/PhoneView.prompt.md`, Tasks).
 
 ## Start on a backlog row (INF-1663)
 

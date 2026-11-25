@@ -118,6 +118,43 @@ extension PhoneJourney {
         return try XCTUnwrap(seeded["done"] as? String)
     }
 
+    /// One chip of the search's tag row, by the tag's name its label starts with.
+    private func tagChip(_ name: String) -> XCUIElement {
+        app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label BEGINSWITH %@", "tag-chip-", name)).firstMatch
+    }
+
+    /// INF-6620 piece 5: once the project has tags, the search shows the Mac's tag row; a pressed tag narrows the list,
+    /// and the record names the tags the task carries.
+    private func tagRowAndRecord() async throws {
+        _ = try await home("tags-fixture")
+        XCTAssertTrue(app.buttons["tag-chip-all"].waitForPresence(timeout: 10), "The tag row shows once the project has tags")
+        XCTAssertTrue(app.buttons["tag-chip-none"].exists, "No tag ends the row")
+        tapOnPhone(tagChip("bug"))
+        XCTAssertTrue(app.buttons["task-phone-work"].waitForAbsence(timeout: 10), "bug leaves out the task tagged feature")
+        tapOnPhone(tagChip("feature"))
+        XCTAssertTrue(app.buttons["task-phone-work"].waitForPresence(timeout: 10), "feature lists the task tagged feature")
+        XCTAssertTrue(tagChip("feature").isSelected, "The pressed chip reads as pressed")
+        // In light and dark, as the release note's picture pair shows it.
+        try await appearances("task-search-tags", showing: tagChip("feature"))
+        // Closing the search lets go of the tag, as the Mac's does: opened again, All tags is the pressed chip.
+        let search = app.textFields["task-search"]
+        tapOnPhone(app.buttons["close-task-search"])
+        XCTAssertTrue(search.waitForAbsence(timeout: 10), "Close search puts the search away while a tag is pressed")
+        pullDownOnPhone(app.scrollViews["tasks-list"])
+        XCTAssertTrue(app.buttons["tag-chip-all"].waitForPresence(timeout: 10))
+        XCTAssertTrue(app.buttons["tag-chip-all"].isSelected, "Closing the search let go of feature")
+        XCTAssertFalse(tagChip("feature").isSelected, "Closing the search let go of feature")
+        // The words open every group again, so the row is there to open whatever Backlog's fold was.
+        focusForPhoneTyping(search, in: app)
+        search.typeText("harbour")
+        XCTAssertTrue(app.buttons["task-phone-work"].waitForPresence(timeout: 10))
+        tapOnPhone(app.buttons["task-phone-work"])
+        let tags = app.staticTexts["task-record-tags"]
+        XCTAssertTrue(tags.waitForPresence(timeout: 10), "The record shows a Tags row")
+        XCTAssertEqual(tags.label, "feature")
+        picture("task-record-tags")
+    }
+
     /// INF-6075: a task row's long press, held three seconds. UIKit opens the row's menu only when its long-press timer
     /// runs on the app's main thread; a lift that reaches the app before then reads as a tap on the row, which opens its
     /// record instead. XCTest lifts at a fixed time whatever the app is doing, so on a busy runner a main thread that stops
@@ -223,7 +260,7 @@ extension PhoneJourney {
         // A search keeps the groups and opens them, as the Mac's does.
         XCTAssertTrue(app.buttons["group-backlog"].exists, app.debugDescription)
         picture("task-search")
-        tapOnPhone(app.buttons["task-phone-work"])
+        try await tagRowAndRecord()
         XCTAssertTrue(app.buttons["start-task"].waitForPresence(timeout: 10))
         picture("task-before-start")
         _ = try await home("capture-talk-start")

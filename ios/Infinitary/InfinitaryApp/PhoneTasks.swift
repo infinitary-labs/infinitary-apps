@@ -21,6 +21,8 @@ struct PhoneTasks: View {
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
     @Environment(\.verticalSizeClass) private var verticalSize
     @State private var query = ""
+    /// The pressed tag chip (the Mac's `TagFilter`): a tag's id, `PhoneTaskList.noTag`, or nil for All tags.
+    @State private var tag: String?
     @State private var searchOpen = false
     @State private var focusOnOpen = false
     @FocusState private var searchFocused: Bool
@@ -52,7 +54,7 @@ struct PhoneTasks: View {
     private func reading() -> PhoneTasksKept.Reading {
         if !shown, let last = kept.last { return last }
         let reading = PhoneTasksKept.Reading(
-            list: PhoneTaskList(board: session.board, cards: session.cards, query: query, earlier: earlier),
+            list: PhoneTaskList(board: session.board, cards: session.cards, query: query, tag: tag, earlier: earlier),
             asideLine: asideLine)
         kept.last = reading
         PhoneTasksKept.built(shown: shown, seq: reading.list.board?.seq)
@@ -61,8 +63,9 @@ struct PhoneTasks: View {
 
     // INF-589 item 9: search waits above the list until it is pulled down, as the Mac's sits behind its icon.
     // VoiceOver cannot pull past the top of a list, so it always finds the field.
-    private var searchShown: Bool { searchOpen || !query.isEmpty || voiceOver }
-    private var searching: Bool { !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    // A pressed tag keeps it shown, since it narrows the list as words do.
+    private var searchShown: Bool { searchOpen || !query.isEmpty || tag != nil || voiceOver }
+    private var searching: Bool { !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || tag != nil }
     /// INF-2928, the captain's pick: a title may take two lines on an iPhone, which has no pointer to show the rest, and
     /// one on an iPad, as on the Mac.
     private var titleLines: Int { UIDevice.current.userInterfaceIdiom == .pad ? 1 : 2 }
@@ -86,12 +89,15 @@ struct PhoneTasks: View {
         let list = reading.list
         return ScrollView {
             VStack(alignment: .leading, spacing: PhoneTheme.space3) {
-                if searchShown { search }
+                if searchShown {
+                    search
+                    if !list.tagChips.isEmpty { tagRow(list) }
+                }
                 if let problem = problem ?? reading.asideLine ?? sideNotice { Text(problem).foregroundStyle(PhoneTheme.warning).accessibilityIdentifier("tasks-problem") }
                 LazyVStack(alignment: .leading, spacing: PhoneTheme.space2) {
                     // INF-3750: In reach comes before the board's first read, so an empty list says nothing until it is read.
                     if list.isEmpty, !query.isEmpty || list.board != nil {
-                        Text(query.isEmpty ? PhoneMessages.phoneTasksEmpty() : PhoneMessages.phoneTasksNoMatch()).foregroundStyle(PhoneTheme.secondary)
+                        Text(query.isEmpty && list.tag == nil ? PhoneMessages.phoneTasksEmpty() : PhoneMessages.phoneTasksNoMatch()).foregroundStyle(PhoneTheme.secondary)
                     }
                     // INF-2928 piece 1: only the groups with rows show, as on the Mac, and a search opens every one.
                     ForEach(list.parts) { part in
@@ -122,8 +128,12 @@ struct PhoneTasks: View {
         // While a record covers the list in the panel's place, the key finds nothing it can show, so it rests.
         .background { Button(PhoneMessages.phoneTasksFind()) { openSearch() }.keyboardShortcut("f", modifiers: [.command, .shift]).disabled(placed != nil).hidden() }
         .accessibilityIdentifier("tasks-list")
-        .onChange(of: searchFocused) { _, focused in if !focused && query.isEmpty { closeSearch() } }
-        .onDisappear { if query.isEmpty { searchOpen = false } }
+        .onChange(of: searchFocused) { _, focused in if !focused && query.isEmpty && tag == nil { closeSearch() } }
+        .onDisappear { if query.isEmpty && tag == nil { searchOpen = false } }
+        // Once a read board's row no longer offers the pressed tag (removed on the Mac, or a second project has tags), the
+        // list has let go of it, so the view does too, as the Mac's panel does; otherwise it would keep the search open
+        // and narrow again by itself if the row came back.
+        .onChange(of: list.board != nil && tag != nil && list.tag == nil) { _, stale in if stale { tag = nil } }
         .task(id: "\(query)|\(session.contact)") {
             earlier = []; problem = nil
             let requested = query
@@ -227,6 +237,32 @@ struct PhoneTasks: View {
         }.transition(.move(edge: .top).combined(with: .opacity))
     }
 
+    /// The Mac's tag row under the search (design skill NowPanel, "Tags"): All tags, each of the project's tags with how
+    /// many open tasks pressing it would list, then No tag. One is pressed at a time; pressing one narrows every group.
+    private func tagRow(_ list: PhoneTaskList) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: PhoneTheme.space2) {
+                ForEach(list.tagChips, id: \.handle) { chip in
+                    let pressed = chip.id == list.tag
+                    Button { tag = chip.id } label: {
+                        HStack(spacing: 6) {
+                            Text(chip.name)
+                            if let count = chip.count { Text(count, format: .number).foregroundStyle(PhoneTheme.muted) }
+                        }.font(PhoneFont.mono).foregroundStyle(pressed ? PhoneTheme.text : PhoneTheme.secondary)
+                            .padding(.horizontal, PhoneTheme.space3).frame(minHeight: 32)
+                            .background(pressed ? PhoneTheme.raised : .clear, in: Capsule())
+                            .overlay(Capsule().strokeBorder(PhoneTheme.line))
+                            .frame(minHeight: 44).contentShape(Rectangle())
+                    }.buttonStyle(.plain)
+                        .accessibilityAddTraits(pressed ? .isSelected : [])
+                        .accessibilityIdentifier("tag-chip-\(chip.handle)")
+                }
+            }
+        }.accessibilityElement(children: .contain).accessibilityLabel(PhoneMessages.nowPanelTags())
+            .accessibilityIdentifier("tag-row")
+            .transition(.move(edge: .top).combined(with: .opacity))
+    }
+
     // Find a task (Shift-Command-F), the Mac's own key, opens the search with the caret in it.
     private func openSearch() {
         if searchShown { searchFocused = true; return }
@@ -234,9 +270,9 @@ struct PhoneTasks: View {
         withAnimation(.snappy) { searchOpen = true }
     }
 
-    // Closing lets go of the words, so a closed search never narrows the list, as on the Mac.
+    // Closing lets go of the words and the tag, so a closed search never narrows the list, as on the Mac.
     private func closeSearch() {
-        query = ""; searchFocused = false
+        query = ""; tag = nil; searchFocused = false
         withAnimation(.snappy) { searchOpen = false }
     }
 

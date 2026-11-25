@@ -12,7 +12,7 @@ import { staleGeneratedFile } from "./github-errors.ts";
 /** The parts of the Mac's Tasks panel (src/panels/now/rows.ts) this reads; that module builds with the renderer, not here. */
 type NowBoard = PanelTaskBoard;
 type NowRow = { task: PanelTaskRow; depth: number; home?: string | null };
-type NowFilter = { query: string; projectId: string | null };
+type NowFilter = { query: string; projectId: string | null; tag?: string | null };
 type NowRows = {
   NOW_GROUPS: readonly string[];
   OPEN_BY_DEFAULT: ReadonlySet<string>;
@@ -22,6 +22,7 @@ type NowRows = {
   rowTrailing(task: PanelTaskRow): unknown;
   newFilingCount(rows: readonly NowRow[]): number;
   failedStartCount(tasks: readonly PanelTaskRow[]): number;
+  tagChipsOf(board: NowBoard, filter: NowFilter): { id: string | null; name: string; count: number | null }[];
 };
 /** The parts of the Mac's task board (src/panels/now/boardMoves.ts and boardTiles.ts) this reads; they build with the renderer too. */
 type BoardMoves = {
@@ -64,7 +65,7 @@ try {
   const { reasoningWord } = await runner.import<typeof import("../src/shared/reasoning.ts")>(join(REPO_ROOT, "src/shared/reasoning.ts"));
   const { feedRelativeAge } = await runner.import<typeof import("../src/shared/relativeAge.ts")>(join(REPO_ROOT, "src/shared/relativeAge.ts"));
   const { clipPlanLine, foldPlan, planCounts } = await runner.import<typeof import("../src/shared/taskPlan.ts")>(join(REPO_ROOT, "src/shared/taskPlan.ts"));
-  const { earlierRowsOf, failedStartCount, newFilingCount, NOW_GROUPS, OPEN_BY_DEFAULT, rowsOf, rowTrailing, wordOf } = await runner.import<NowRows>(join(REPO_ROOT, "src/panels/now/rows.ts"));
+  const { earlierRowsOf, failedStartCount, newFilingCount, NOW_GROUPS, OPEN_BY_DEFAULT, rowsOf, rowTrailing, tagChipsOf, wordOf } = await runner.import<NowRows>(join(REPO_ROOT, "src/panels/now/rows.ts"));
   const { failedCountWords, newCountWords } = await runner.import<typeof import("../src/panels/now/words.ts")>(join(REPO_ROOT, "src/panels/now/words.ts"));
   const { recordBarOf } = await runner.import<typeof import("../src/shared/recordBar.ts")>(join(REPO_ROOT, "src/shared/recordBar.ts"));
   const { recordAttentionOf, recordClosedLineOf } = await runner.import<typeof import("../src/shared/recordAttention.ts")>(join(REPO_ROOT, "src/shared/recordAttention.ts"));
@@ -433,10 +434,29 @@ try {
     ];
     const several = { tasks, projects: [project("p-inf", "INF", "Infinitary", "infinitary"), project("p-har", "HAR", "Harbour", "harbour")] };
     const single = { tasks, projects: [project("p-inf", "INF", "Infinitary", "infinitary"), project("p-har", "HAR", "Harbour", null)] };
+    // INF-6620 piece 5: the tag row and a pressed tag, read where Infinitary is the only project with tags, and where
+    // both have tags, so no row shows and a tag asked for is let go, as the Mac's panel lets go of it.
+    const tag = (id: string, name: string) => ({ id: `tag-${id}`, name, description: `Tasks about ${name}.`, revision: 1, tasks: 0 });
+    const projectTags = [tag("bug", "bug"), tag("feature", "feature"), tag("idea", "idea")];
+    const carried: Record<string, string[]> = {
+      "INF-2902": ["feature"], "INF-2905": ["bug"], "INF-2907": ["idea"], "INF-2908": ["bug", "feature"],
+      "INF-2912": ["feature"], "INF-2922": ["feature"], "INF-2801": ["bug"],
+    };
+    const tagged = (row: TaskView): TaskView => {
+      const names = carried[row.key];
+      return names ? { ...row, tags: names.map((name) => ({ id: `tag-${name}`, name, by: "captain" as const })) } : row;
+    };
+    const taggedTasks = tasks.map(tagged);
+    const taggedEarlier = earlier.map(tagged);
+    const oneTagged = { tasks: taggedTasks, projects: [{ ...project("p-inf", "INF", "Infinitary", "infinitary"), tags: projectTags },
+      project("p-har", "HAR", "Harbour", "harbour")] };
+    const bothTagged = { tasks: taggedTasks, projects: [{ ...project("p-inf", "INF", "Infinitary", "infinitary"), tags: projectTags },
+      { ...project("p-har", "HAR", "Harbour", "harbour"), tags: [tag("lamp", "lamp")] }] };
     type Board = NowBoard;
-    const read = (name: string, board: typeof several, query: string, found: TaskView[]) => {
+    const read = (name: string, board: typeof several, query: string, found: TaskView[], asked: string | null = null) => {
       const panel = board as unknown as Board;
-      const filter = { query, projectId: null };
+      const chips = tagChipsOf(panel, { query, projectId: null });
+      const filter = { query, projectId: null, tag: chips.some((chip) => chip.id === asked) ? asked : null };
       const groups = rowsOf(panel, filter);
       const older = earlierRowsOf(found as unknown as Board["tasks"], groups, filter);
       const sections = [["pinned" as const, groups.get("pinned") ?? []] as const,
@@ -455,10 +475,15 @@ try {
               wait: (section === "queued" || home === "queued") && task.queueWait && task.status === "open" ? task.queueWait.line : undefined })) };
         });
       // The phone reads a board with its seq, which a panel reading has no use for.
-      return { name, query, now, board: { seq: 1, ...board }, earlier: found, sections };
+      return { name, query, tag: asked, now, board: { seq: 1, ...board }, earlier: found, chips, sections };
     };
     return { readings: [read("several projects", several, "", []), read("one project", single, "", []),
-      read("a search", several, "HARBOUR", earlier)] };
+      read("a search", several, "HARBOUR", earlier),
+      read("the tag row", oneTagged, "", []),
+      read("a tag", oneTagged, "", [], "tag-bug"),
+      read("no tag", oneTagged, "", [], "none"),
+      read("a tag and words", oneTagged, "HARBOUR", taggedEarlier, "tag-bug"),
+      read("two projects with tags", bothTagged, "", [], "tag-bug")] };
   }
   /**
    * INF-2935 (INF-2928 piece 2): the desktop task record's own reading of one task in each state it draws - its bar, its

@@ -236,4 +236,48 @@ struct PhoneBoardTests {
         let emptied = try #require(next.applying(run: [try delta(base: 42, seq: 43, upserts: [], removed: ["t-b"])]))
         #expect(emptied.leftOutDone == 0)
     }
+
+    // INF-6620 piece 5: tags on the phone, as the Mac's Tasks panel and task record read them (docs/task-tags.md).
+    private func tagged(_ tasks: [[String: Any]], projectTags: [String]) throws -> PhoneBoard {
+        let tags = projectTags.map { ["id": "tag-\($0)", "name": $0] }
+        let json: [String: Any] = ["seq": 41, "tasks": tasks, "projects": [["id": "proj-harbour", "name": "Harbour", "tags": tags]]]
+        return try JSONDecoder().decode(PhoneBoard.self, from: JSONSerialization.data(withJSONObject: json))
+    }
+
+    private func carrying(_ row: [String: Any], _ names: [String]) -> [String: Any] {
+        var row = row
+        row["tags"] = names.map { ["id": "tag-\($0)", "name": $0] }
+        return row
+    }
+
+    /// A card put aside with no task carries no tag: it counts under No tag and lists only under All tags or No tag.
+    @Test func aCardPutAsideWithNoTaskListsOnlyUnderAllTagsOrNoTag() throws {
+        let raw = try tagged([
+            carrying(task("t-buoys", key: "INF-13", title: "Count the buoys", status: "open"), ["bug"]),
+            task("t-chart", key: "INF-12", title: "Chart the northern entrance", status: "open"),
+        ], projectTags: ["bug", "idea"])
+        let cards = [try card("c-note", title: "Your phone is reading your Mac", task: nil, minimized: true)]
+        func aside(_ tag: String?) -> [String] {
+            PhoneTaskList(board: raw, cards: cards, tag: tag).parts.flatMap { $0.aside.map(\.title) }
+        }
+        let chips = PhoneTaskList(board: raw, cards: cards).tagChips
+        #expect(chips.map(\.handle) == ["all", "tag-bug", "tag-idea", "none"])
+        #expect(chips.map(\.count) == [nil, 1, 0, 2])
+        #expect(aside(nil) == ["Your phone is reading your Mac"])
+        #expect(aside(PhoneTaskList.noTag) == ["Your phone is reading your Mac"])
+        #expect(aside("tag-bug") == [])
+    }
+
+    /// The record's Tags row: the carried names, No tags once the project has tags, and no row while it has none.
+    @Test func theRecordsTagsRowNamesTheTagsOrNoTags() throws {
+        let raw = try tagged([
+            carrying(task("t-buoys", key: "INF-13", title: "Count the buoys", status: "open"), ["bug", "idea"]),
+            task("t-chart", key: "INF-12", title: "Chart the northern entrance", status: "open"),
+        ], projectTags: ["bug", "idea"])
+        let buoys = try #require(raw.tasks.first { $0.id == "t-buoys" })
+        let chart = try #require(raw.tasks.first { $0.id == "t-chart" })
+        #expect(PhoneRecord.tagsFact(buoys, board: raw) == "bug, idea")
+        #expect(PhoneRecord.tagsFact(chart, board: raw) == PhoneMessages.recordTagsNone())
+        #expect(PhoneRecord.tagsFact(chart, board: try board([])) == nil)
+    }
 }

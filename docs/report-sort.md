@@ -455,7 +455,7 @@ A part left last behind other stopped parts is not its parent's only open part, 
 ## The standing list
 
 INF-6664 piece 1: the waiting work that no wake reports to the first mate, read from typed facts the record already holds.
-The next-move check skips a part the captain stopped, and the first mate's context counts unstarted work per project without listing it, so a part parked half way through begun work stood with nobody reading it again.
+The next-move check wakes no one about a part the captain stopped and asks the captain only once it is its parent's last open part ("The last part the captain stopped" above), and the first mate's context counts unstarted work per project without listing it, so a part parked half way through begun work stood with nobody reading it again.
 `standingWork(host, now)` (`src/core/orchestrator/standingWork.ts`) only reads; nothing serves it yet, and the heartbeat that will is INF-6664 piece 2.
 
 It has two kinds of row:

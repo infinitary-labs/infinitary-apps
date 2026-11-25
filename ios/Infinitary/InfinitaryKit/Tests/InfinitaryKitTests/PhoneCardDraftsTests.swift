@@ -108,6 +108,22 @@ import Testing
         detach()
     }
 
+    /// INF-6671: the captain's words, "the selections i made on my desktop aren't synced to my ios app". A pick of the
+    /// option a card recommends reads unchanged, as the card proposed it, yet it is the captain's and goes to the draft.
+    @Test func aPickOfTheRecommendedOptionGoesOnceTheCaptainPauses() async {
+        let home = await joined()
+        let unpicked: PhoneJSON = .object(["name": .string("merge"), "values": .array([]), "changed": .bool(false)])
+        let recommended: PhoneJSON = .object(["name": .string("merge"), "values": .array([.string("you")]),
+                                              "labels": .array([.string("You")]), "changed": .bool(false)])
+        home.drafts.read("card-1", answers: .array([unpicked]))
+        await home.pause()
+        #expect(home.sent.isEmpty)
+        home.drafts.read("card-1", answers: .array([recommended]))
+        await home.pause()
+        #expect(home.sent.count == 1)
+        #expect(home.sent.first?.change["answers"] == .array([recommended]))
+    }
+
     @Test func aPickMadeOutOfReachGoesOnReturnAgainstTheRevisionItWasMadeAt() async {
         let home = await joined()
         home.drafts.heard(Self.draft("card-1", revision: 3, answers: [Self.answer("size", "small")]))

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "recommended-picks-follow-you",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Picking a card's recommended option now shows on your other screens",
+      "body": "When you pick the option a card recommends and have not answered yet, the pick now shows on your phone and your other windows a moment later, like any other pick. Before, a recommended pick stayed on the screen where you made it.",
+      "noPicture": "This changes which picks reach your other screens, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

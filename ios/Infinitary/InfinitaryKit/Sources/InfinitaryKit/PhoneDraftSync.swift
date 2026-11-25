@@ -124,6 +124,9 @@ public struct PhoneDraftLocal: Equatable, Sendable {
     private var early: [String: PhoneCardDraft] = [:]
     /// Parts changed here and not yet sent, with the revision each goes against, by card.
     private var dirty: [String: [String: Base]] = [:]
+    /// Questions the captain picked here, by card: each moved from no pick to a pick. A pick of the option the card
+    /// recommends reads unchanged, as the card proposed it, yet it is the captain's own and worth a draft.
+    private var picked: [String: Set<String>] = [:]
     private var flying: [String: Flight] = [:]
     private var timers: [String: PhoneDraftTimer] = [:]
     /// Each card's changes refused for their size, none sent again unchanged.
@@ -171,7 +174,12 @@ public struct PhoneDraftLocal: Equatable, Sendable {
         var moved = false
         for (part, value) in now where was[part] != value {
             moved = true
-            if !Self.differs(part, value, expected) { marked[part] = nil }
+            // The body's first reading has no answer before it, so an authored default is never a pick.
+            if part != Self.words, part != Self.notes, let before = was[part], !Self.hasPick(before), Self.hasPick(value) {
+                picked[cardID, default: []].insert(part)
+            }
+            let own = picked[cardID]?.contains(part) == true
+            if !Self.differs(part, value, expected, own: own) { marked[part] = nil }
             else if marked[part] == nil { marked[part] = deps.canSend() ? .latest : .at(revision(cardID)) }
         }
         dirty[cardID] = marked
@@ -181,7 +189,8 @@ public struct PhoneDraftLocal: Equatable, Sendable {
 
     /// The card left the stack, or opened anew: its draft here goes with it.
     public func forget(_ cardID: String) {
-        heard[cardID] = nil; early[cardID] = nil; dirty[cardID] = nil; flying[cardID] = nil; refused[cardID] = nil
+        heard[cardID] = nil; early[cardID] = nil; dirty[cardID] = nil; picked[cardID] = nil; flying[cardID] = nil
+        refused[cardID] = nil
         timers.removeValue(forKey: cardID)?.cancel()
     }
 
@@ -311,8 +320,14 @@ public struct PhoneDraftLocal: Equatable, Sendable {
         !answer["skipped"].flag && (answer["changed"].flag || answer["written"].text != nil)
     }
 
-    private static func differs(_ part: String, _ value: PhoneJSON, _ heard: Parts) -> Bool {
-        guard let there = heard[part] else { return ownAnswer(value) }
+    /// Whether an answer holds a pick: a skip's Default is the card's, never one.
+    static func hasPick(_ answer: PhoneJSON) -> Bool {
+        !answer["skipped"].flag && (!answer["values"].list.isEmpty || answer["written"].text != nil)
+    }
+
+    /// Whether a value here is worth sending against the draft's; `own` marks the captain's pick.
+    private static func differs(_ part: String, _ value: PhoneJSON, _ heard: Parts, own: Bool = false) -> Bool {
+        guard let there = heard[part] else { return own || ownAnswer(value) }
         return there != value
     }
 

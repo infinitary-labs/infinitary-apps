@@ -117,6 +117,8 @@ export class QuestionTurns {
     signal: AbortSignal;
     /** A JSON answer, whose length is its own rather than a word's. */
     json?: boolean;
+    /** A question set answered one line per question, whose length is its own too. */
+    set?: boolean;
     /** A model the person named, tried before the walk. */
     named?: { provider: string; id: string };
   }): Promise<QuestionTurn> {
@@ -157,6 +159,7 @@ export class QuestionTurns {
           model,
           instruction: input.instruction,
           ...(input.json ? { json: true } : {}),
+          ...(input.set ? { set: true } : {}),
         }),
       );
       session = await Promise.race([creating, stopped]);

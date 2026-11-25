@@ -52,8 +52,11 @@ export function classifierVersion(): string {
   return `kc${KIND_CLASSIFIER_INSTRUCTION_VERSION}-${kindClassifierInstructionSha().slice(0, 12)}`;
 }
 
-/** Bounds on what rides the question's state (design: about 1-2k tokens, nothing else). */
-const LIMITS = {
+/**
+ * Bounds on what rides the question's state (design: about 1-2k tokens,
+ * nothing else). The tagging question reads a task under the same bounds.
+ */
+export const LIMITS = {
   title: 200,
   goal: 1_000,
   userWords: 2_000,
@@ -212,7 +215,7 @@ export function buildClassifierPrompt(input: KindInput): string {
   return lines.join("\n");
 }
 
-function clip(text: string, limit: number): string {
+export function clip(text: string, limit: number): string {
   const trimmed = (text ?? "").trim();
   return trimmed.length <= limit ? trimmed : `${cutText(trimmed, limit)}...`;
 }

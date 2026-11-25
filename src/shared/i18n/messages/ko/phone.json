@@ -166,6 +166,8 @@
   "phoneFormatNow": "지금",
   "phoneFormatUnderMinute": "1분 미만",
   "phoneGoogleInvite": "{computer}의 일등항해사가 Gmail과 Calendar를 읽을 수 있게 하세요. 로그인 정보는 {computer}에 머물러요.",
+  "phoneGoogleSetupStays": "Infinitary는 클라이언트의 보안 비밀을 {computer}의 비밀 정보에 보관합니다. 일등항해사와 선원들은 그것을 볼 수 없습니다.",
+  "phoneGoogleSetupStepFile": "Google에 표시되는 클라이언트 파일을 Download JSON으로 내려받은 뒤 여기에서 선택하거나 내용을 붙여 넣으세요.",
   "phoneGoogleSignIn": "로그인",
   "phoneGoogleSignInAgain": "다시 로그인",
   "phoneGoogleSignInAgainNeeded": "Google에서 다시 로그인하라고 요청해요.",

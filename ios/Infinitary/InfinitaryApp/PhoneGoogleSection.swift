@@ -1,11 +1,14 @@
 import InfinitaryKit
 import SafariServices
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// INF-3454's phone part, the captain's choices where=settings ("A Google row in the phone's Settings, showing who is
 /// signed in, with Sign in and Sign out") and how=catch ("Catch it in the app, with pasting the address as the
 /// fallback, like the computers"); docs/ios.md, "Google in Settings". The sign-in and Google's keys stay on the
-/// computer: this row shows its notice and page, and passes the browser's return back.
+/// computer: this row shows its notice and page, and passes the browser's return back. INF-6342, the captain's choice
+/// setup-on-phone ("Bring the client file setup to the phone itself"): the row shows the computer's client states, and
+/// its setup opens Google's page and hands the client file it makes to the computer, which keeps its secret.
 struct PhoneGoogleSection: View {
     let session: ReadOnlySession
     @Bindable var google: PhoneGoogle
@@ -13,8 +16,15 @@ struct PhoneGoogleSection: View {
     @State private var confirmingSignOut = false
 
     private var mac: String { session.mac.name }
-    private var noticeUp: Binding<Bool> {
-        Binding(get: { google.stage == .notice }, set: { if !$0 { google.declineNotice() } })
+    /// The setup and Google's notice share one sheet, so a kept file swaps one for the other.
+    private var sheet: Binding<PhoneGoogleSheet?> {
+        Binding(get: {
+            switch google.stage {
+            case .setup: .setup
+            case .notice: .notice
+            default: nil
+            }
+        }, set: { if $0 == nil { google.declineSetup(); google.declineNotice() } })
     }
     private var pageUp: Binding<Bool> {
         Binding(get: { google.showing != nil }, set: { if !$0 { google.showing = nil } })
@@ -25,7 +35,7 @@ struct PhoneGoogleSection: View {
             Text(PhoneGoogleWords.name).font(PhoneFont.headline)
             switch google.stage {
             case .waiting(let page, let caught): waiting(page: page, caught: caught)
-            case .idle, .notice: standing
+            case .idle, .notice, .setup: standing
             }
             if let problem = google.problem {
                 Text(problem).font(PhoneFont.callout).foregroundStyle(PhoneTheme.warning)
@@ -33,7 +43,12 @@ struct PhoneGoogleSection: View {
             }
         }
         .accessibilityElement(children: .contain).accessibilityIdentifier("google-section")
-        .sheet(isPresented: noticeUp) { PhoneGoogleNotice(google: google) }
+        .sheet(item: sheet) { shown in
+            switch shown {
+            case .setup: PhoneGoogleSetup(google: google, computer: mac)
+            case .notice: PhoneGoogleNotice(google: google)
+            }
+        }
         .sheet(isPresented: pageUp) {
             if let url = google.showing { PhoneSignInPageView(url: url).ignoresSafeArea() }
         }
@@ -44,11 +59,25 @@ struct PhoneGoogleSection: View {
             Text(row.account.map { PhoneMessages.phoneGoogleSignedInAs(account: $0, computer: mac) } ?? PhoneMessages.phoneGoogleSignedIn(computer: mac))
                 .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
                 .accessibilityIdentifier("google-account")
-            if row.health == "needs_reauth" {
+            if let state = google.clientState {
+                Text(state.words).font(PhoneFont.callout)
+                    .foregroundStyle(state.tone == .danger ? PhoneTheme.danger : PhoneTheme.warning)
+                    .accessibilityIdentifier("google-client-state")
+                Text(state.detail).font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
+                    .accessibilityIdentifier("google-client-detail")
+            } else if row.health == "needs_reauth" {
                 Text(PhoneMessages.phoneGoogleSignInAgainNeeded()).font(PhoneFont.callout).foregroundStyle(PhoneTheme.warning)
             }
             PhoneChoiceRow {
-                if row.health == "needs_reauth" { signIn(PhoneMessages.phoneGoogleSignInAgain()) }
+                if let state = google.clientState {
+                    Button(state.nextWords) {
+                        address = ""
+                        if state.next == .signIn { google.begin() } else { google.beginSetup() }
+                    }
+                    .buttonStyle(PhoneChoiceStyle(.primary))
+                    .disabled(google.busy || !session.canChange || !google.homeTakesReturn)
+                    .accessibilityIdentifier("google-client-next")
+                } else if row.health == "needs_reauth" { signIn(PhoneMessages.phoneGoogleSignInAgain()) }
                 Button(PhoneMessages.phoneGoogleSignOut()) { confirmingSignOut = true }
                     .buttonStyle(PhoneChoiceStyle(.secondary))
                     .disabled(google.busy || !session.canChange)
@@ -64,7 +93,16 @@ struct PhoneGoogleSection: View {
             Text(PhoneMessages.phoneGoogleInvite(computer: mac))
                 .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
             if google.homeTakesReturn {
-                PhoneChoiceRow { signIn(PhoneMessages.phoneGoogleSignIn()) }
+                PhoneChoiceRow {
+                    if google.needsSetup {
+                        Button(PhoneMessages.integrationsGoogleSetUp()) { address = ""; google.begin() }
+                            .buttonStyle(PhoneChoiceStyle(.primary))
+                            .disabled(google.busy || !session.canChange)
+                            .accessibilityIdentifier("google-set-up")
+                    } else {
+                        signIn(PhoneMessages.phoneGoogleSignIn())
+                    }
+                }
             } else {
                 Text(PhoneGoogleWords.updateThere(mac)).font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
                     .accessibilityIdentifier("google-update-there")
@@ -112,6 +150,103 @@ struct PhoneGoogleSection: View {
     }
 
     private func send() { Task { await google.paste(address) } }
+}
+
+private enum PhoneGoogleSheet: Identifiable {
+    case setup, notice
+    var id: Self { self }
+}
+
+/// The setup of the person's own Google client, in the computer's Settings words: Google's page opens in the browser,
+/// where the person makes a Desktop app client, and the file Google gives for it is chosen or pasted here. The file
+/// goes to the computer whole, which keeps its secret in Secrets; the field clears either way.
+private struct PhoneGoogleSetup: View {
+    let google: PhoneGoogle
+    let computer: String
+    @Environment(\.openURL) private var openURL
+    @State private var file = ""
+    @State private var chosen: String?
+    @State private var choosing = false
+    @State private var unread: String?
+
+    private var refused: Bool { google.client?.refused != nil }
+    private var filled: Bool { !file.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: PhoneTheme.space4) {
+                    if refused {
+                        Text(PhoneMessages.integrationsGoogleStoppedDetail()).font(PhoneFont.callout)
+                            .foregroundStyle(PhoneTheme.danger).accessibilityIdentifier("google-setup-refused")
+                    }
+                    Text(PhoneMessages.integrationsGoogleSetupLead()).font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
+                    step(1, PhoneMessages.integrationsGoogleSetupStepPage())
+                    PhoneChoiceRow {
+                        Button(PhoneMessages.integrationsGoogleSetupOpenPage()) {
+                            if let url = URL(string: PhoneGoogleWords.setupPage) { openURL(url) }
+                        }
+                        .buttonStyle(PhoneChoiceStyle(.secondary)).accessibilityIdentifier("google-setup-page")
+                    }
+                    step(2, PhoneMessages.phoneGoogleSetupStepFile())
+                    SecureField(PhoneMessages.integrationsGoogleSetupField(), text: $file)
+                        .textFieldStyle(.phone).textInputAutocapitalization(.never).autocorrectionDisabled()
+                        .onChange(of: file) { if chosen != nil, $1.isEmpty { chosen = nil } }
+                        .accessibilityLabel(PhoneMessages.integrationsGoogleSetupField())
+                        .accessibilityIdentifier("google-setup-file")
+                    PhoneChoiceRow {
+                        Button(PhoneMessages.integrationsGoogleSetupChoose()) { choosing = true }
+                            .buttonStyle(PhoneChoiceStyle(.secondary)).disabled(google.busy)
+                            .accessibilityIdentifier("google-setup-choose")
+                    }
+                    if let chosen {
+                        Text(PhoneMessages.integrationsGoogleSetupChosen(name: chosen)).font(PhoneFont.callout)
+                            .foregroundStyle(PhoneTheme.secondary).accessibilityIdentifier("google-setup-chosen")
+                    }
+                    if let problem = unread ?? google.setupProblem {
+                        Text(problem).font(PhoneFont.callout).foregroundStyle(PhoneTheme.danger)
+                            .accessibilityIdentifier("google-setup-problem")
+                    }
+                    Text(PhoneMessages.phoneGoogleSetupStays(computer: computer)).font(PhoneFont.callout)
+                        .foregroundStyle(PhoneTheme.secondary)
+                    PhoneChoiceRow {
+                        Button(google.busy ? PhoneMessages.integrationsGoogleSetupKeeping() : PhoneMessages.integrationsGoogleSetupKeep()) {
+                            let text = file
+                            file = ""; chosen = nil; unread = nil
+                            Task { await google.keepClient(text) }
+                        }
+                        .buttonStyle(PhoneChoiceStyle(.primary)).disabled(!filled || google.busy)
+                        .accessibilityIdentifier("google-setup-keep")
+                        Button(PhoneMessages.integrationsSignInCancel()) { google.declineSetup() }
+                            .buttonStyle(PhoneChoiceStyle(.secondary)).accessibilityIdentifier("google-setup-cancel")
+                    }
+                }.padding(PhoneTheme.space5).frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .phoneTitle(PhoneMessages.integrationsGoogleSetupTitle())
+        }
+        .fileImporter(isPresented: $choosing, allowedContentTypes: [.json]) { take($0) }
+        .font(PhoneFont.body).foregroundStyle(PhoneTheme.text).tint(PhoneTheme.accent)
+        .presentationDragIndicator(.visible).phoneSheetSurface()
+    }
+
+    private func step(_ number: Int, _ words: String) -> some View {
+        (Text("\(number). ").bold() + Text(words)).font(PhoneFont.callout).foregroundStyle(PhoneTheme.text)
+    }
+
+    /// Google's client file is a few hundred bytes; a larger file is not one, and is never read.
+    private func take(_ result: Result<URL, Error>) {
+        unread = nil
+        guard case .success(let url) = result else { return }
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+        guard size <= PhoneGoogleWords.clientFileBytes, let text = try? String(contentsOf: url, encoding: .utf8) else {
+            unread = PhoneMessages.integrationsGoogleClientFileNotJson()
+            return
+        }
+        file = text
+        chosen = url.lastPathComponent
+    }
 }
 
 /// Google's notice, word for word as the computer's Settings shows it; nothing is asked of the computer until Accept.

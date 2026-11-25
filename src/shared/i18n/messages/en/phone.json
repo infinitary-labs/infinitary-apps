@@ -171,6 +171,8 @@
   "phoneFormatNow": "now",
   "phoneFormatUnderMinute": "under 1m",
   "phoneGoogleInvite": "Let your first mate on {computer} read Gmail and Calendar. The sign-in stays on {computer}.",
+  "phoneGoogleSetupStays": "Infinitary keeps the client's secret in Secrets on {computer}. Your first mate and your crew never see it.",
+  "phoneGoogleSetupStepFile": "Download the client file Google shows with Download JSON, then choose it here or paste what it holds.",
   "phoneGoogleSignIn": "Sign in",
   "phoneGoogleSignInAgain": "Sign in again",
   "phoneGoogleSignInAgainNeeded": "Google asks you to sign in again.",

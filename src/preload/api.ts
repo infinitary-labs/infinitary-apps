@@ -807,6 +807,7 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
       remove: (id) => invoke("inf:integrations:remove", id),
       check: (id) => invoke("inf:integrations:check", id),
       secret: (id, slot, value) => invoke("inf:integrations:secret", id, slot, value),
+      keepClient: (kind, file) => invoke("inf:integrations:client", kind, file),
       onChange: (listener) => subscribe("inf:integrations", listener),
     },
     observe: {

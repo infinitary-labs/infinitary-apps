@@ -44,6 +44,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | commit | إيداع | The usual Arabic Git term. |
 | computer | حاسوب | Plural "حواسيب"; used for every computer, never "جهاز ماك" or "خادم". |
 | concept / finding | مفهوم / نتيجة | As the card references already say; "نتيجة" is feminine. |
+| connection file | ملف الاتصالات | The file in Pi's models.json format that Settings → Intelligence reads custom connections from. |
 | conversation | المحادثة | Also said for a crewmate's session ("محادثة فرد الطاقم"), never "جلسة". |
 | credits (a provider's, paid past the allowance) | الاعتمادات | ChatGPT's Codex credits; Claude's are called extra usage. |
 | crew | الطاقم | |

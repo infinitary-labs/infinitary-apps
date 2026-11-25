@@ -378,6 +378,12 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
   "src/core/pi/customApiCertificates.ts": {
     MAX_PEM_BYTES: physical("refused with a generic certificate sentence that names no bound"),
   },
+  "src/core/pi/customApiFile.ts": {
+    MAX_MODELS: record("the entry is shown as not read, as a malformed one is; a connection holds 100 models, as the form allows"),
+  },
+  "src/core/pi/customApiFileSource.ts": {
+    MAX_FILE_BYTES: physical("the row says the file cannot be read and the last good reading stands; split or trim the file"),
+  },
   "src/core/pi/customApiTransport.ts": {
     MAX_BYTES: physical("a big request is refused as overflow so Pi compacts; big replies fail"),
     LIST_LIMITS: physical("fails in words (too slow, too large); models can be typed by hand"),

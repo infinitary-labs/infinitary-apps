@@ -599,6 +599,10 @@ export const HOST_ACTION_EXCEPTIONS: Partial<Record<HostInvokeChannel, ActionExc
     "window",
     "The system's folder picker on the computer the person is at",
   ],
+  "inf:app:choose-file": [
+    "window",
+    "The system's picker for one file on the computer the person is at",
+  ],
   "inf:files:choose": ["window", "The system's file picker on the computer the person is at"],
   "inf:voice:mic-access": ["window", "Whether this computer lets the app use its microphone"],
   "inf:cards:take-notified": [

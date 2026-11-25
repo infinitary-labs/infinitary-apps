@@ -99,6 +99,7 @@ export const PANEL_CHANGES = {
   ],
   "account-disconnect": ["credential", "Forgets an account's sign-in"],
   "projects-folder": true,
+  "custom-connection-file": true,
   "project-batch-answer": true,
   "cost-limit": true,
   notifications: true,

@@ -142,6 +142,10 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
         startAt === undefined
           ? invoke("inf:app:choose-folder")
           : invoke("inf:app:choose-folder", startAt),
+      chooseFile: (startAt) =>
+        startAt === undefined
+          ? invoke("inf:app:choose-file")
+          : invoke("inf:app:choose-file", startAt),
       startHere: () => invoke("inf:app:start-here"),
       restartCommand: () => invoke("inf:app:restart-command"),
       stopCommand: () => invoke("inf:app:stop-command"),
@@ -702,6 +706,8 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
             invoke("inf:accounts:custom:recheck", accountId),
           ),
         list: () => invoke("inf:accounts:custom:list"),
+        file: () => invoke("inf:accounts:custom:file"),
+        setFile: (path) => invoke("inf:accounts:custom:file:set", path),
       },
       list: () => readableRequest("inf:accounts:list", () => invoke("inf:accounts:list")),
       add: (providerId, type, options) =>

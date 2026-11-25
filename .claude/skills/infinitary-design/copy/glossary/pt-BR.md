@@ -38,6 +38,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | concept / finding | conceito / constatação | "constatação" keeps the card's "Constatação {id}". |
 | conflict (avoided) | não combina com trabalho mais recente | The keptConflict line says newer work in the project does not fit with it, then "atualizar". |
 | connection (to a server) | conexão | Feminine, so its status agrees: "Pronta", "Verificada", "Pausada". |
+| connection file | arquivo de conexões | The file in Pi's models.json format that Settings → Intelligence reads custom connections from. |
 | conversation | conversa | Also used for a card's thread. |
 | cost limit | limite de custo | A project's estimated-dollar cap, never the plan's allowance ("franquia"). |
 | credits (a provider's, paid past the allowance) | créditos | ChatGPT's Codex credits; Claude's are called extra usage. |

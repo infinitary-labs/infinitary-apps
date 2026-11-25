@@ -1,0 +1,51 @@
+{
+  "$schema": "https://pi.dev/schemas/models.schema.json",
+  "providers": {
+    "my-provider": {
+      "name": "My provider",
+      "baseUrl": "https://llm-gateway.example.com/v1",
+      "api": "openai-completions",
+      "headers": { "X-Tenant-Id": "team-a" },
+      "infinitary": {
+        "secretHeaders": ["X-Gateway-Token"],
+        "compaction": { "keepRecentTokens": 20000, "reserveTokens": 16384 }
+      },
+      "models": [
+        {
+          "id": "my-large-model",
+          "name": "My Large Model",
+          "contextWindow": 200000,
+          "maxTokens": 32000,
+          "input": ["text", "image"],
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": null,
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "max"
+          },
+          "cost": { "input": 3, "output": 15, "cacheRead": 0.3, "cacheWrite": 3.75 },
+          "infinitary": { "cacheRetention": "short" }
+        },
+        {
+          "id": "my-small-model",
+          "name": "My Small Model",
+          "contextWindow": 128000,
+          "maxTokens": 16000,
+          "cost": { "input": 0.5, "output": 2, "cacheRead": 0.05, "cacheWrite": 0.5 },
+          "infinitary": { "cacheRetention": "none" }
+        }
+      ]
+    },
+    "my-local-server": {
+      "baseUrl": "http://127.0.0.1:8080/v1",
+      "api": "openai-responses",
+      "infinitary": { "compaction": { "keepRecentTokens": 8000, "reserveTokens": 4096 } },
+      "models": [
+        { "id": "local-model", "name": "Local Model", "contextWindow": 32000, "maxTokens": 8000 }
+      ]
+    }
+  }
+}

@@ -240,7 +240,7 @@ describe("ipc contract", () => {
 
   /**
    * The host surface is the shell's own: the browser it opens links in, the
-   * folder picker, the whisper model it serves to the renderer, the login
+   * folder and file pickers, the whisper model it serves to the renderer, the login
    * item and the dock, what this app is on its Mac - the one holding
    * Firstmate, or a view of another (docs/view.md) - with its one push, and
    * the window's keys, which belong to the Mac whose keyboard pressed them
@@ -254,6 +254,7 @@ describe("ipc contract", () => {
    */
   it("keeps the host surface to the shell's own affordances", () => {
     expect([...HOST_INVOKE_CHANNELS].sort()).toEqual([
+      "inf:app:choose-file",
       "inf:app:choose-folder",
       "inf:app:open-external",
       "inf:app:open-runbook-folder",
@@ -364,6 +365,8 @@ describe("ipc contract", () => {
       "inf:accounts:custom:check",
       "inf:accounts:custom:connect",
       "inf:accounts:custom:discover",
+      "inf:accounts:custom:file",
+      "inf:accounts:custom:file:set",
       "inf:accounts:custom:list",
       "inf:accounts:custom:prepare",
       "inf:accounts:custom:profiles",

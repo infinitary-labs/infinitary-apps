@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "custom-connection-file",
+      "kind": "feature",
+      "title": "Read custom connections from a shared connection file",
+      "body": "Settings → Intelligence has a Connection file row: choose a models.json file and Infinitary lists each connection it defines. Each computer approves a connection with its own key and types any model size the file leaves out, a new name or price applies at once, a changed limit checks the model again, and a new address or header pauses the connection until you approve it again. Infinitary only reads the file and never uses a key written in it.",
+      "area": "subscriptions",
+      "picture": {
+        "dark": "custom-connection-file-dark.webp",
+        "light": "custom-connection-file-light.webp",
+        "alt": "Settings → Intelligence with a chosen connection file and a connection from it waiting for Approve"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -352,6 +352,16 @@ describe("the docs site declaration", () => {
       ),
     ).toEqual([]);
     expect(docsSiteProblems(own([entry("covering", [3])]), pages, none)).toEqual([]);
+    // Authors write an empty covers list on notes of their own change, which covers nothing else.
+    expect(
+      docsSiteProblems(
+        own([bare("feature", { provenance: { origin: "change", covers: [] } })]),
+        pages,
+        none,
+      ),
+    ).toEqual([
+      `release-notes/changes/a.json: "a-feature" is a feature: name the docs site pages this change edited in "docsSite", or say in one sentence in "noDocsSite" why no page needs to change`,
+    ]);
   });
 
   it("holds each named page to a hand-written page the same change edited", () => {

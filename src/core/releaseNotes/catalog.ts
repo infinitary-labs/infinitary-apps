@@ -66,7 +66,8 @@ const MAINTENANCE_BEFORE_THE_RULE: readonly string[] = ["pi-1-0"];
  * The kinds whose note from a change names the docs site pages it edited, or
  * says why none needs to change (the captain's INF-6704 pick: features,
  * improvements and removals rename and move steps a page describes; fixes
- * rarely do, so they declare nothing).
+ * rarely do, so they need not declare, though any page one names is still
+ * checked).
  */
 export const DOCS_SITE_KINDS: readonly EntryKind[] = ["feature", "improvement", "removal"];
 /** Where the docs site's English pages live; a page's name is its file name without the extension. */
@@ -706,8 +707,8 @@ function declarationProblems(entry: NoteEntry, path: string): string[] {
  * English pages it edited in `docsSite`, or says in `noDocsSite` why none
  * needs to change, and every page it names exists in `pages` (name to path)
  * and is among the paths the same change added or modified, `edited`. A note
- * that covers other commits declares by shape only, since its pages may have
- * changed there. Whether the page now tells the truth is the reviewing
+ * that names other commits in a non-empty `covers` need not declare, and any
+ * page it names need only exist, since the page may have changed there. Whether the page now tells the truth is the reviewing
  * crewmate's judgment, never this check.
  */
 export function docsSiteProblems(

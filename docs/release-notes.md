@@ -123,8 +123,8 @@ The captain's INF-6704 plan: the docs site (`docs/docs-site.md`) changes in the 
   Keyboard and What's new are written by scripts (`docs/docs-site.md`, "Generated pages"), so a note never names them.
 - **Who declares.**
   A `feature`, `improvement` or `removal` entry of origin `change` that does not name other commits in `covers`.
-  Fixes, exclusions, release-review entries, backfilled history and every entry recorded before the rule declare nothing.
-  An entry with `covers` may declare, and its pages need only exist, since they may have changed in the commits it covers.
+  Fixes, release-review entries, backfilled history and every entry recorded before the rule need not declare, though any page one names is still checked; exclusions never declare.
+  An entry that names commits in `covers` need not declare either, and any page it names need only exist, since they may have changed in the commits it covers.
 - **The check.**
   `change` and `batch` (below) read only the note files the change adds.
   They refuse an entry that should declare and declares neither, a page that is not a hand-written page, and a page whose English file the change did not add or modify; in a batch, the commit that adds the note must edit the page.

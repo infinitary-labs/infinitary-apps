@@ -4,7 +4,7 @@
  * why): the captain's own moves: a stale validation question, a closed answer
  * task, a project setup or change, how an add the first mate's card began
  * ended, and the retry when the captain's message
- * moved nothing.
+ * moved nothing, and the message the captain took back.
  */
 import {
   type FirstmateCaptainWakeKind,
@@ -260,6 +260,60 @@ const CASES: WordsCases<FirstmateCaptainWakeKind> = {
       },
       words:
         '[fm-op] The work for the captain\'s message ended with no card that answers it: 479823ee "Restructure the wakes file", b9299a73 "Review: Restructure the wakes file", so they have no answer yet. Their words, verbatim: "Is the wakes split done?". It was filed on task 479823ee "Restructure the wakes file". Show them the answer the work found now with emit_card and answering true, from its record. If another task took the work over, link it as the replacement with link_tasks instead. Starting, steering, stopping or closing work and changing settings are refused this turn.',
+    },
+  ],
+  "taken-back": [
+    {
+      name: "told to the turn still holding the message",
+      wake: {
+        facts: {
+          kind: "taken-back",
+          stage: "held",
+          askId: "ask-21",
+          excerpt: "Start a task to delete the old logs",
+          sentAt: "2026-11-05T18:32:08.000Z",
+          caused: [],
+        },
+      },
+      words:
+        '[fm-op] The captain took back their message ask-21, sent 2026-11-05T18:32:08.000Z. Their words, verbatim: "Start a task to delete the old logs". Do not carry out what it asked, and finish this turn without it: every call for it is refused from now on, including one that names no message. Work for another message names that message\'s ask_id. Once this turn ends, the app lists what it already caused for you to undo.',
+    },
+    {
+      name: "after the turn, what it caused by task key and the replacement",
+      wake: {
+        facts: {
+          kind: "taken-back",
+          stage: "ended",
+          askId: "ask-22",
+          excerpt: "Start a task to delete the old logs",
+          sentAt: "2026-11-05T18:32:08.000Z",
+          caused: [
+            {
+              tool: "create_task",
+              task: { id: "5c1e9a07", key: "INF-12", title: "Delete the old logs" },
+            },
+            { tool: "emit_card", ref: "card-logs" },
+          ],
+          replacement: "Start a task to archive the old logs",
+        },
+      },
+      words:
+        '[fm-op] The captain took back their message ask-22, sent 2026-11-05T18:32:08.000Z. Their words, verbatim: "Start a task to delete the old logs". Do not carry out what it asked. What it already caused: create_task on task 5c1e9a07 (INF-12) "Delete the old logs"; emit_card (card-logs). Undo each that came only from this message: drop a task it filed, stop a crewmate it started and keep its work, close a card it raised, tell a crewmate it steered to ignore those words, cancel a schedule it made, and retire knowledge or a direction it recorded. Set ask_id to "" on each of these calls. They replaced it with a new message: "Start a task to archive the old logs". That message is their request now: keep what it still asks for. Close with one line for the captain saying what you undid and what you cannot undo, such as a message already sent elsewhere or a merge already made.',
+    },
+    {
+      name: "after the turn, nothing recorded",
+      wake: {
+        facts: {
+          kind: "taken-back",
+          stage: "ended",
+          askId: "ask-23",
+          excerpt: "Start a task to delete the old logs",
+          sentAt: "2026-11-05T18:32:08.000Z",
+          caused: [],
+        },
+      },
+      words:
+        '[fm-op] The captain took back their message ask-23, sent 2026-11-05T18:32:08.000Z. Their words, verbatim: "Start a task to delete the old logs". Do not carry out what it asked. The app recorded nothing it caused. Close with one line for the captain saying what you undid and what you cannot undo, such as a message already sent elsewhere or a merge already made.',
     },
   ],
 };

@@ -87,6 +87,10 @@ export type AskRecord = {
    * piece 3); absent for a message typed in the main input or saved before.
    */
   typedUnder?: AskTypedUnder;
+  /** When the captain took the message back (docs/task-capture.md, "Taking back a message"). */
+  takenBackAt?: number;
+  /** The message this one replaced, which was taken back as it was sent. */
+  correctionOf?: string;
 };
 
 /** Captain-facing words; model readers keep the original text and its full target detail. */
@@ -117,6 +121,8 @@ type Row = {
   through?: string | null;
   typed_card_id?: string | null;
   typed_line?: number | null;
+  taken_back_at?: number | null;
+  correction_of?: string | null;
 };
 
 export function replyOf(json: string | null): LastTurnReply | null {
@@ -201,14 +207,19 @@ function fromRow(row: Row): AskRecord {
     ...(row.typed_card_id && typeof row.typed_line === "number"
       ? { typedUnder: { cardId: row.typed_card_id, line: row.typed_line } }
       : {}),
+    ...(typeof row.taken_back_at === "number" ? { takenBackAt: row.taken_back_at } : {}),
+    ...(row.correction_of ? { correctionOf: row.correction_of } : {}),
   };
 }
 
-/** Where a followed message has not ended: answered, or given its one notice. */
+/** Where a followed message has not ended: answered, given its one notice, or taken back. */
+// i18n-exempt: SQL, never shown to a person
 const NOT_ENDED =
-  "followed = 1 AND answered_at IS NULL AND delivery != 'unresolved' AND turn_state != 'open'";
+  "followed = 1 AND answered_at IS NULL AND delivery != 'unresolved' AND taken_back_at IS NULL AND turn_state != 'open'";
 /** The same, with the messages whose reply is still running (INF-2664). */
-const NOT_ENDED_OR_RUNNING = "followed = 1 AND answered_at IS NULL AND delivery != 'unresolved'";
+// i18n-exempt: SQL, never shown to a person
+const NOT_ENDED_OR_RUNNING =
+  "followed = 1 AND answered_at IS NULL AND delivery != 'unresolved' AND taken_back_at IS NULL";
 
 export class AskStore {
   private readonly captainListeners = new Set<(ask: AskRecord, text: string) => void>();
@@ -236,8 +247,8 @@ export class AskStore {
     const original = captainText !== undefined;
     this.db
       .prepare(
-        `INSERT INTO captain_asks (id, at, text, images_json, hint_task_id, task_id, attached_via, attached_at, turn_state, delivery, delivery_facts, notice_card_id, followed, continues, answer_card_id, accepted_at, answered_at, crewmate_asked_at, through, typed_card_id, typed_line${original ? ", captain_text" : ""})
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?${original ? ", ?" : ""})`,
+        `INSERT INTO captain_asks (id, at, text, images_json, hint_task_id, task_id, attached_via, attached_at, turn_state, delivery, delivery_facts, notice_card_id, followed, continues, answer_card_id, accepted_at, answered_at, crewmate_asked_at, through, typed_card_id, typed_line, correction_of${original ? ", captain_text" : ""})
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?${original ? ", ?" : ""})`,
       )
       .run(
         ask.id,
@@ -269,6 +280,7 @@ export class AskStore {
         ask.through ?? null,
         ask.typedUnder?.cardId ?? null,
         ask.typedUnder?.line ?? null,
+        ask.correctionOf ?? null,
         ...(original ? [captainText] : []),
       );
     if (captainText !== undefined) {
@@ -347,6 +359,25 @@ export class AskStore {
       .run(cardId, at, id);
   }
 
+  /** The captain took the message back; set once, so the first press's time stands. */
+  setTakenBack(id: string, at: number): boolean {
+    return (
+      this.db
+        // i18n-exempt: SQL, never shown to a person
+        .prepare("UPDATE captain_asks SET taken_back_at = ? WHERE id = ? AND taken_back_at IS NULL")
+        .run(at, id).changes > 0
+    );
+  }
+
+  /** The message sent to replace this one, if any: only the newest message takes a replacement, so one at most. */
+  replacementOf(id: string): AskRecord | undefined {
+    // i18n-exempt: SQL, never shown to a person
+    const row = this.db
+      .prepare("SELECT * FROM captain_asks WHERE correction_of = ? LIMIT 1")
+      .get(id) as Row | undefined;
+    return row ? fromRow(row) : undefined;
+  }
+
   setCrewmateAsked(id: string, at: number): void {
     this.db.prepare("UPDATE captain_asks SET crewmate_asked_at = ? WHERE id = ?").run(at, id);
   }
@@ -417,13 +448,19 @@ export class AskStore {
 
   /** The two newest messages and their reply lines: the last turn above the input. */
   lastTurn(): LastTurn | null {
+    type Saved = Pick<
+      Row,
+      "id" | "text" | "reply" | "delivery_facts" | "through" | "taken_back_at"
+    >;
     const [row, before] = this.db
       .prepare(
-        "SELECT text, reply, delivery_facts, through FROM captain_asks WHERE at <= (SELECT MAX(at) FROM captain_asks) ORDER BY at DESC, rowid DESC LIMIT 2",
+        "SELECT id, text, reply, delivery_facts, through, taken_back_at FROM captain_asks WHERE at <= (SELECT MAX(at) FROM captain_asks) ORDER BY at DESC, rowid DESC LIMIT 2",
       )
-      .all() as Pick<Row, "text" | "reply" | "delivery_facts" | "through">[];
+      .all() as Saved[];
     if (!row) return null;
-    const round = (saved: Pick<Row, "text" | "reply" | "delivery_facts" | "through">) => ({
+    const round = (saved: Saved) => ({
+      askId: saved.id,
+      ...(typeof saved.taken_back_at === "number" ? { takenBack: true as const } : {}),
       you: askReceipt({
         text: saved.text,
         deliveryFacts: parseDeliveryFacts(saved.delivery_facts),

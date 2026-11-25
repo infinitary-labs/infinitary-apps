@@ -432,6 +432,29 @@ export class InboxStore {
   }
 
   /**
+   * A captain's own act a lane hears once per fact (the taken-back wake,
+   * docs/task-capture.md "Taking back a message"): its once-name and its
+   * row, stamped with the captain's origin, in one transaction. Answers
+   * null when the name was spent already.
+   */
+  enqueueCaptainOnce(
+    recipient: string,
+    body: TypedWake & { once: string },
+    ref: string,
+  ): number | null {
+    return this.transaction(() => {
+      // i18n-exempt: SQL, never shown to a person
+      const fresh =
+        this.db
+          .prepare(
+            "INSERT INTO inbox_once (ref, once_key, at) VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
+          )
+          .run(ref, body.once, this.now()).changes > 0;
+      return fresh ? this.enqueue(recipient, body, ref, "captain") : null;
+    });
+  }
+
+  /**
    * Record a wake unless it repeats the lane's last one (WI-3): the same
    * content (`wakeIdentity`) as the newest row on this recipient with this
    * ref, or as the newest acked row there when that ack is newer and inside

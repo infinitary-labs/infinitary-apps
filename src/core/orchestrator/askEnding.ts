@@ -5,6 +5,7 @@ import { TaskService } from "../tasks/taskService";
 import { actionTookEffect, noticeAskId } from "./answerDelivery";
 import { answerTaskChoice } from "./answerTaskResponse";
 import { hasMergeLine } from "./settleWords";
+import { TAKEN_BACK_NAMED } from "./takeBack";
 
 /**
  * How a captain's message ends (INF-1610 piece 2, docs/task-capture.md "How
@@ -174,6 +175,7 @@ export class AskEnding {
   nameRefusal(askId: string): string | undefined {
     const ask = this.host.tasks.capture.getAsk(askId);
     if (!ask) return "ask_id must name an open message (open_asks id), or be empty.";
+    if (ask.takenBackAt !== undefined) return TAKEN_BACK_NAMED;
     if (ask.turnState === "open") {
       return "ask_id must name a message a step has read; this one waits for its own step.";
     }

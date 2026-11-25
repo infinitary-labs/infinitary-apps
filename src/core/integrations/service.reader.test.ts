@@ -199,7 +199,8 @@ describe("an unsafe data reader's integrations", () => {
     const f = fixture();
     f.service.setRule("mcp-notes", "list_notes", true);
     f.service.setRule("stand-in", "count_items", true);
-    // A file-saving action is refused for a reader, so it lists as off even when allowed.
+    // A file-saving action is refused for a reader whatever the captain set, so it lists as
+    // closed, never as the captain's Never (INF-6749 finding 2: a reader took "never" for their setting).
     f.service.setRule("stand-in", "fetch_file", true);
     const listed = await f.service.forReader("reader").list();
     // The account each connection signed in as ("sam") is the captain's own, so neither names it.
@@ -220,7 +221,7 @@ describe("an unsafe data reader's integrations", () => {
         "Stand-in",
         [
           { name: "count_items", rule: "allow" },
-          { name: "fetch_file", rule: "never" },
+          { name: "fetch_file", rule: "closed" },
         ],
       ],
     ]);
@@ -238,6 +239,9 @@ describe("an unsafe data reader's integrations", () => {
     const file = await reader.call("Stand-in", "fetch_file", {}, undefined, reason);
     expect(file.refused).toBe("refused");
     expect(file.text).toContain("cannot open");
+    // The refusal names the way through (INF-6749 finding 2), not a setting to change.
+    expect(file.text).toContain("no setting changes this");
+    expect(file.text).toContain("ordinary task");
     expect(f.github.call).not.toHaveBeenCalled();
     expect(f.items.call).not.toHaveBeenCalled();
     expect(f.present).not.toHaveBeenCalled();

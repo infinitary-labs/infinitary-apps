@@ -20,7 +20,9 @@ import { EVERY_STATUS, MISSING_INVARIANTS } from "./taskInvariants";
  * tasks holding a computer move, which the ready sweep seeks each minute
  * instead of reading every task (docs/testing.md, "The scale check"), and
  * the tasks that start at a prerequisite's approval, which the ready list
- * seeks the same way (docs/task-graph.md, "A part that starts at approval").
+ * seeks the same way (docs/task-graph.md, "A part that starts at approval"),
+ * and the tasks linked to an outside issue, which each outside reader's
+ * brief lists as its task starts (`listIssueLinked`).
  * The permission index seeks only recorded overrides for each load round,
  * never the permission-bearing history that has no override, and the
  * unresolved-send index only the approval records holding a merge whose
@@ -126,5 +128,7 @@ export function createQueryIndexes(db: AppDatabase): void {
       ON task_placement_requests (json_type(value_json, '$.computer_move'));
     CREATE INDEX IF NOT EXISTS task_placement_requests_start_at_approval
       ON task_placement_requests (json_type(value_json, '$.start_at_approval'));
+    CREATE INDEX IF NOT EXISTS task_contracts_issue
+      ON task_contracts (json_type(value_json, '$.issue'));
   `);
 }

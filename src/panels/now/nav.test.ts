@@ -50,6 +50,18 @@ describe("the Tasks list's stops", () => {
     expect(rovingKey(finished, resting)).toBe(groupNavKey("landed"));
     expect(rovingKey(ITEMS, rowNavKey("c1"))).toBe(groupNavKey("backlog"));
   });
+
+  // A row in a tag group is its task's in that group; the stop stays with the
+  // task when it leaves the tag group or the list goes back to By status.
+  it("stay with a task whose rest was a tag group's row: its row by status, or the closed group holding it", () => {
+    const inTag = rowNavKey("u2", "tag:tag-b");
+    expect(rovingKey(ITEMS, inTag)).toBe(rowNavKey("u2"));
+    expect(rovingKey(ITEMS, rowNavKey("c2", "tag:tag-b"))).toBe(groupNavKey("backlog"));
+    const waiting = nowNavItems([
+      { group: "waiting", open: true, collapsible: false, taskIds: ["u2"] },
+    ]);
+    expect(rovingKey(waiting, inTag)).toBe(rowNavKey("u2"));
+  });
 });
 
 describe("a key in the Tasks list", () => {

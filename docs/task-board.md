@@ -21,7 +21,7 @@ The same folder added from elsewhere does everything below under its own id (`te
 
 ## Opening and hiding
 
-Open task board is an icon button in the Tasks header, between Search tasks and the chevron while the panel is expanded, and beside the collapsed panel's counts while it is collapsed.
+Open task board is an icon button in the Tasks header, after Search tasks and Group tasks and before the chevron while the panel is expanded, and beside the collapsed panel's counts while it is collapsed.
 A press puts the board up at the front of the stack, or brings the open board forward; focus stays where it was.
 Its command, `panel:now/board` (⌘B), and command search do the same and also give the board the keyboard's focus, on its tiles' stop.
 There is only ever one board: the card's name, `board`, is its id, so a second press revises the open one.

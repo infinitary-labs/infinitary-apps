@@ -7,7 +7,7 @@ In the app it is the Tasks panel's card (`PanelCard.prompt.md`), `src/panels/now
 
 ## Where it opens
 
-Open task board is a header button of the Tasks panel (`Panel.prompt.md`, "Header buttons": `open`, Lucide `maximize-2`, 14px, 1.5 stroke, `--fg-3`), between Search tasks and the chevron while the panel is expanded, and between the panel's counts and the chevron while it is collapsed, where Search tasks is not drawn.
+Open task board is a header button of the Tasks panel (`Panel.prompt.md`, "Header buttons": `open`, Lucide `maximize-2`, 14px, 1.5 stroke, `--fg-3`), after Search tasks and Group tasks, before the chevron, while the panel is expanded, and between the panel's counts and the chevron while it is collapsed, where Search tasks and Group tasks are not drawn.
 Its label is "Open task board" with its key, `⌘B`, drawn after the words.
 A press opens the board at the front of the card stack, or brings the open board forward; there is never a second board.
 The board is a panel's card on the stack: it pages with the cards, it is never a card the first mate wrote or a feed line, and Hide (the shared minus in the card's chrome) or Esc puts it away.

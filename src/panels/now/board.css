@@ -797,9 +797,10 @@
   background: var(--bg-3);
 }
 
+/* The row draws the ring for its name button, inside its own edge as a
+   Tasks row does, so the button draws none of its own. */
 .fm-board-tag-table tbody tr:has(.fm-board-tag-name:focus-visible) {
-  outline: 1px solid var(--line-2);
-  outline-offset: -1px;
+  box-shadow: var(--focus-ring-inset);
   background: var(--bg-3);
 }
 
@@ -813,4 +814,5 @@
   padding: 0;
   cursor: pointer;
   outline: none;
+  box-shadow: none;
 }

@@ -33,6 +33,10 @@ export const groupNavKey = (group: ListGroup): string => `group:${group}`;
 export const rowNavKey = (taskId: string, tagGroup?: string): string =>
   tagGroup === undefined ? `row:${taskId}` : `row:${taskId}@${tagGroup}`;
 
+/** The task a row's stop is, whichever grouping drew it; null for a group's header. */
+const taskOfStop = (key: string | null): string | null =>
+  key?.startsWith("row:") ? (key.slice("row:".length).split("@")[0] ?? null) : null;
+
 /** Every stop in the list, in the order the arrows move through them. */
 export function nowNavItems(groups: readonly NavGroup[]): NowNavItem[] {
   const items: NowNavItem[] = [];
@@ -53,10 +57,10 @@ export function nowNavItems(groups: readonly NavGroup[]): NowNavItem[] {
  */
 export function rovingKey(items: readonly NowNavItem[], last: string | null): string | null {
   if (last !== null && items.some((item) => item.key === last)) return last;
-  const holder = items.find(
-    (item) => item.kind === "group" && item.taskIds.some((id) => rowNavKey(id) === last),
-  );
-  return holder?.key ?? items[0]?.key ?? null;
+  const task = taskOfStop(last);
+  const row = items.find((item) => item.kind === "row" && taskOfStop(item.key) === task);
+  const holder = items.find((item) => item.kind === "group" && item.taskIds.includes(task ?? ""));
+  return row?.key ?? holder?.key ?? items[0]?.key ?? null;
 }
 
 export type NowNavMove = { focus: string } | { toggle: ListGroup } | null;

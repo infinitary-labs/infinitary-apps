@@ -795,8 +795,10 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks, stor
     if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
     const target = event.target as HTMLElement;
     // On a task with parts listed under it, ← collapses it and → expands it;
-    // from a part, ← goes to the row it is listed under.
-    const rowId = target.matches("[data-now-row]") ? target.dataset.nowRow : undefined;
+    // from a part, ← goes to the row it is listed under. A tag group lists
+    // its tasks flat, so its rows fold nothing and ← goes to its header.
+    const flat = target.dataset.nowNav?.includes("@") === true;
+    const rowId = target.matches("[data-now-row]") && !flat ? target.dataset.nowRow : undefined;
     if (rowId && (event.key === "ArrowLeft" || event.key === "ArrowRight")) {
       const shut = !typed && collapsed.has(rowId);
       if (fold.parents.has(rowId) && shut === (event.key === "ArrowRight")) {

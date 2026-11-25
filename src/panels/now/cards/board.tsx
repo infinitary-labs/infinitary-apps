@@ -422,13 +422,6 @@ export default function TaskBoardCard({
     focusSeen.current = projectId;
     patch({ pages: {} });
   }, [projectId, patch]);
-  const earlier: BoardEarlier | null = useMemo(
-    () =>
-      board && found?.tasks && found.query === typed
-        ? boardEarlierOf(found.tasks, board, { query: typed, projectId })
-        : null,
-    [board, found, typed, projectId],
-  );
   // The tag row and the By tag view, while one project's tags apply. A
   // pressed tag the project no longer has is let go.
   const tagChips = useMemo(
@@ -444,6 +437,13 @@ export default function TaskBoardCard({
   useEffect(() => {
     if (board && place.tagId !== null && heldTag === null) patch({ tagId: null, pages: {} });
   }, [board, place.tagId, heldTag, patch]);
+  const earlier: BoardEarlier | null = useMemo(
+    () =>
+      board && found?.tasks && found.query === typed
+        ? boardEarlierOf(found.tasks, board, { query: typed, projectId, tag: heldTag })
+        : null,
+    [board, found, typed, projectId, heldTag],
+  );
 
   // Earlier matches is a view only while Find has words, and By tag only while tags apply.
   const view: BoardView =

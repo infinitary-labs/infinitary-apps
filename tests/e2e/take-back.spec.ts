@@ -5,7 +5,12 @@ import { takenBackRefusalText } from "../../src/core/orchestrator/takeBack";
 import { waitForFirstmateIdle } from "./crew";
 import { type LaunchedApp, launchApp } from "./launch";
 import { promptInput } from "./prompt";
-import { TAKE_BACK_FILED_MARKER, TAKE_BACK_HELD_MARKER, takeBack } from "./scenarios/takeBack";
+import {
+  TAKE_BACK_FILED_MARKER,
+  TAKE_BACK_HELD_MARKER,
+  TAKE_BACK_UNRELATED_TITLE,
+  takeBack,
+} from "./scenarios/takeBack";
 
 /**
  * Taking back a message in the app's core (docs/task-capture.md, "Taking
@@ -62,7 +67,7 @@ const requestWith = (app: LaunchedApp, words: string) =>
   (app.mockProvider?.requestBodies() ?? []).filter((body) => body.includes(words)).at(-1);
 
 // biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured fixture signature.
-test("a message taken back while its turn reads it files nothing", async ({}, testInfo) => {
+test("a message taken back while its turn reads it files nothing for it", async ({}, testInfo) => {
   const app = await start();
   const title = "delete the old build logs";
   const words = `${TAKE_BACK_HELD_MARKER} ${title}`;
@@ -79,6 +84,8 @@ test("a message taken back while its turn reads it files nothing", async ({}, te
   writeFileSync(testInfo.outputPath("refused-request.json"), requestWith(app, refused) ?? "");
   await waitForFirstmateIdle(app.page);
   expect(await task(app.page, title)).toBeUndefined();
+  // A call that names no message with ask_id "" goes through.
+  expect(await task(app.page, TAKE_BACK_UNRELATED_TITLE)).toBeDefined();
   expect(await takeBackAsk(app.page, askId)).toEqual({ outcome: "refused", reason: "taken-back" });
 });
 

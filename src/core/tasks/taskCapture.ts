@@ -701,7 +701,8 @@ export class TaskCapture {
     const run = this.writer.write(() => {
       for (const id of askIds) {
         const ask = this.writer.asks.get(id);
-        if (!ask || !JUDGEABLE_DELIVERY.includes(ask.delivery)) continue;
+        // A taken-back message is covered but keeps its list: its undo names what took effect.
+        if (!ask || (!JUDGEABLE_DELIVERY.includes(ask.delivery) && !ask.takenBackAt)) continue;
         this.writer.asks.setDelivery(id, ask.delivery, {
           ...ask.deliveryFacts,
           entries: [...ask.deliveryFacts.entries, entry],

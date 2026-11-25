@@ -52,6 +52,24 @@ describe("FirstmateAgent taking back a message", () => {
     expect(newest(f).turnState).not.toBe("open");
   });
 
+  it("drops a message taken back while it is still being handed to the first mate", async () => {
+    let release = () => {};
+    const sourceRead = new Promise<never>((resolve) => {
+      release = () => resolve(undefined as never);
+    });
+    const f = setup({ silent: true, selfSourceFactsAsync: () => sourceRead });
+    const sending = f.agent.converse("start a task to delete the old logs");
+    // tick() would wait for this hand-off itself, which the source read holds.
+    await vi.waitFor(() => expect(f.tasks.capture.listAsks()).toHaveLength(1));
+    expect(f.agent.takeBack(newest(f).id)).toEqual({ outcome: "withdrawn" });
+    release();
+    await sending;
+    await tick();
+    expect(f.session.prompts).toEqual([]);
+    expect(f.session.steers).toEqual([]);
+    expect(lane(f)).toEqual([]);
+  });
+
   it("refuses a call naming the taken-back message, and one naming none in the turn that read it", async () => {
     const f = setup({ silent: true });
     await f.agent.converse("start a task to delete the old logs");
@@ -102,7 +120,29 @@ describe("FirstmateAgent taking back a message", () => {
       `create_task on task ${filed?.id} (${filed?.key || filed?.id}) "Delete the old logs"`,
     );
     expect(wake).toContain('Set ask_id to "" on each of these calls.');
+    await finish(f, "Dropped it.");
+    await tick();
+    // Counted across prompts, since two queued wakes may share one turn.
+    const served = f.session.prompts.join("\n").split(`${TAKEN_BACK_OPENING} ${ask.id}`);
+    expect(served).toHaveLength(2);
     expect(f.agent.takeBack(ask.id)).toEqual({ outcome: "refused", reason: "taken-back" });
+  });
+
+  it("lists an action for the message that took effect after the take back", async () => {
+    const f = setup({ silent: true });
+    await f.agent.converse("drop the old logs task");
+    const ask = newest(f);
+    await createTask(f, { title: "Old logs", ask_id: "" });
+    const filed = f.tasks.list().find((task) => task.title === "Old logs");
+    const settling = toolsOf(f.specs)
+      .get("settle_task")
+      ?.execute("t", { task_id: filed?.id, mode: "discard", closing_sentence: "Dropped it." });
+    expect(f.agent.takeBack(ask.id)).toEqual({ outcome: "stopping" });
+    await settling;
+    expect(f.tasks.get(filed?.id ?? "")?.status).toBe("dropped");
+    await finish(f);
+    await drained(f.session, 2);
+    expect(f.session.prompts[1]).toContain(`settle_task on task ${filed?.id}`);
   });
 
   it("gives a taken-back message no answer retry and no notice", async () => {

@@ -55,7 +55,7 @@ import {
   keptMessageWords,
 } from "./seat";
 import { digestEntry, digestFor, keepDigest } from "./seatDigest";
-import { inFlight, TakeBacks } from "./takeBack";
+import { TakeBacks } from "./takeBack";
 import { turnOriginOf } from "./turnOrigins";
 import {
   aboutCardIdFromRef,
@@ -446,8 +446,7 @@ export class FirstmateAgent {
       now: () => this.now(),
       holds: (id) =>
         this.running &&
-        (inFlight(options.inbox, id) ||
-          this.turn.read.has(id) ||
+        (this.turn.read.has(id) ||
           this.turn.liveCaptain?.askId === id ||
           this.acceptedSteers.some((steer) => steer.askId === id)),
       steer: (input) => this.appSteer(input),
@@ -545,6 +544,7 @@ export class FirstmateAgent {
       ...(correctionOf ? { correctionOf } : {}),
     });
     this.asks.select([...this.turn.read].at(-1));
+    this.takeBacks.handing(ask.id);
     if (correctionOf) this.takeBacks.replaced(correctionOf, trimmed);
     try {
       this.options.onCaptainTurnAccepted?.();
@@ -568,8 +568,9 @@ export class FirstmateAgent {
     const sourceFacts = this.options.selfSourceFactsAsync
       ? await this.options.selfSourceFactsAsync()
       : undefined;
-    if (this.disposed) return;
+    if (this.disposed || this.takeBacks.dropped(ask.id)) return;
     const session = await this.seat.ensureSession();
+    if (this.takeBacks.dropped(ask.id)) return;
     if (!session && this.seat.pausedAtAttach) {
       // Paused at the attach: the words wait on the inbox like admission's.
       this.park({ words: trimmed, attachments: kept, aboutCardId, askId: ask.id });
@@ -627,6 +628,7 @@ export class FirstmateAgent {
     // The pre-turn admission check: the flagship binding is re-decided only
     // here, at the idle boundary - never mid-turn.
     const admitted = await this.seat.admitTurn(session);
+    if (this.takeBacks.dropped(ask.id)) return;
     if (!admitted) {
       this.park({ words: trimmed, attachments: kept, aboutCardId, askId: ask.id });
       this.keptReceipt(ask.id);
@@ -816,6 +818,7 @@ export class FirstmateAgent {
   ): Promise<void> {
     const id = this.park({ words, attachments: kept, aboutCardId, askId });
     this.expectRead(input.framed.text, askId ? [askId] : []);
+    if (askId) this.takeBacks.handing(askId, true);
     try {
       await session.steer(input.framed.text, images);
       this.options.inbox.ack([id]);
@@ -1684,10 +1687,7 @@ export class FirstmateAgent {
     this.appSteer(this.servedTurn(this.context.forTurn(), []), true);
   }
 
-  /**
-   * The app's own steer into the running turn. Not queued, a fold's recovery
-   * stays set for the next input, and a take back's refusal gate holds alone.
-   */
+  /** The app's own steer. Not queued, a fold's recovery stays set and a take back's gate holds alone. */
   private appSteer(input: ServedInput, first = false): void {
     const session = this.seat.session;
     if (!session) return;

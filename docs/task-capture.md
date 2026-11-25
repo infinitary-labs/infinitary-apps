@@ -248,7 +248,7 @@ The answer names how far the message had got, and the first mate's agent runs ea
   A replacement's words ride the wake, and the first mate keeps what they still ask for.
 
 A taken-back message has ended: it is no open thread, gets no answer retry and no notice, and its delivery is covered.
-Naming it in `ask_id` is refused on every tool (`AskEnding.nameRefusal`).
+Outside a turn that read it, naming it in `ask_id` is refused on every tool (`AskEnding.nameRefusal`); inside that turn, only the work-changing tools above refuse it.
 Each round of the last turn above the input carries the message's `askId` and `takenBack`, so a view words the mark itself.
 
 ## Where a reply was typed

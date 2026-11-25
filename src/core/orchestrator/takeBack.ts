@@ -60,8 +60,8 @@ export function takenBackOf(tasks: TaskService, askIds: Iterable<string>): strin
 }
 
 /**
- * The asks a tool call would be credited with, as `withAskAttribution` and
- * the delivery record credit them: the message `ask_id` names, none for an
+ * The asks the take-back gate counts a tool call as credited to, as the
+ * delivery record credits them: the message `ask_id` names, none for an
  * empty `ask_id`, and every message the turn read for a call naming none.
  */
 export function creditedAsks(params: unknown, read: ReadonlySet<string>): readonly string[] {
@@ -141,7 +141,7 @@ export type TakeBackHost = {
   inbox: InboxStore;
   asks: AskCapture;
   now(): number;
-  /** Whether a running turn was handed or read the message. */
+  /** Whether a running turn read the message or holds its live words. */
   holds(askId: string): boolean;
   /** Tells the running turn at once; best effort, as the refusal gate holds without it. */
   steer(input: ServedInput): void;
@@ -160,6 +160,12 @@ export type TakeBackHost = {
 export class TakeBacks {
   /** Messages taken back while a running turn held them: their undo is asked for when it ends. */
   private readonly held = new Set<string>();
+  /**
+   * Messages saved but not yet handed to a turn, while sending them awaits
+   * a session or admission (false) or a steer the turn may already read
+   * (true). Cleared once a turn that read them ends.
+   */
+  private readonly handingOff = new Map<string, boolean>();
 
   constructor(private readonly host: TakeBackHost) {}
 
@@ -187,10 +193,23 @@ export class TakeBacks {
     this.after(askId, replacement);
   }
 
+  /** The message is on its way to a turn; `steering` once its words were sent into a running one. */
+  handing(askId: string, steering = false): void {
+    this.handingOff.set(askId, steering);
+  }
+
+  /** Whether the captain took back a message still being handed on, so its words are dropped. */
+  dropped(askId: string): boolean {
+    if (this.host.tasks.capture.getAsk(askId)?.takenBackAt === undefined) return false;
+    this.handingOff.delete(askId);
+    return true;
+  }
+
   private after(askId: string, replacement?: string): "withdrawn" | "stopping" | "undoing" {
     const { inbox, tasks } = this.host;
     const withdrawn = withdrawWaiting(inbox, askId);
-    if (this.host.holds(askId)) {
+    const handing = this.handingOff.get(askId);
+    if (inFlight(inbox, askId) || this.host.holds(askId) || handing === true) {
       this.held.add(askId);
       const wake = heldWake(tasks, askId, replacement);
       const body = wake && renderWake(wake);
@@ -200,6 +219,8 @@ export class TakeBacks {
     }
     this.host.forget(askId);
     this.host.asks.closeTakenBack(askId);
+    // Not read yet: the hand-off drops the words when it sees the take back.
+    if (handing === false) return "withdrawn";
     // Words a failed turn read and parked again may already have caused something.
     const caused = tasks.capture
       .getAsk(askId)
@@ -224,6 +245,7 @@ export class TakeBacks {
     const ids = new Set([...this.held, ...read]);
     this.held.clear();
     for (const id of ids) {
+      this.handingOff.delete(id);
       if (this.host.tasks.capture.getAsk(id)?.takenBackAt === undefined) continue;
       withdrawWaiting(this.host.inbox, id);
       this.host.asks.closeTakenBack(id);

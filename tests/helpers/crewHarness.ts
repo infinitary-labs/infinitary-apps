@@ -317,6 +317,8 @@ export type SetupExtras = {
   };
   /** Where the captain's input comes from (docs/devices.md, "Where the captain is"). */
   captainPlaces?: CrewSupervisorOptions["captainPlaces"];
+  /** The commit name a crewmate session's shell carries (`workspace/commitName.ts`). */
+  commitName?: CrewSupervisorOptions["commitName"];
   /** A panel's held call was answered: the panel hears the choice (`HomeIntegrations`). */
   panelAskAnswered?: CrewSupervisorOptions["panelAskAnswered"];
   checkCi?: CrewSupervisorOptions["checkCi"];
@@ -589,6 +591,7 @@ export function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
     ...(extras.takesNoWorkUntilUpdated
       ? { takesNoWorkUntilUpdated: extras.takesNoWorkUntilUpdated }
       : {}),
+    ...(extras.commitName ? { commitName: extras.commitName } : {}),
     ...(extras.recallUpdateCard ? { recallUpdateCard: extras.recallUpdateCard } : {}),
     ...(extras.programProcess ? { programProcess: extras.programProcess } : {}),
     ...(extras.answerJson ? { answerJson: extras.answerJson } : {}),

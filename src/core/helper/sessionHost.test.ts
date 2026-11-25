@@ -64,6 +64,23 @@ describe("a conversation held on a computer that runs work", () => {
       );
   });
 
+  // INF-6779's approved plan, part 1: a conversation on a computer that runs
+  // work commits under the name resolved in its working copy there.
+  it("opens a conversation with its shell committing under the name its working copy here resolves", async () => {
+    const commitName = vi.fn(async () => ({ name: "Ada Lovelace", email: "ada@example.com" }));
+    const at = await placed({ commitName });
+    await at.open();
+
+    const opened = at.opened[0];
+    expect(commitName.mock.calls).toEqual([[opened?.cwd]]);
+    expect(opened?.shell?.env).toMatchObject({
+      GIT_AUTHOR_NAME: "Ada Lovelace",
+      GIT_AUTHOR_EMAIL: "ada@example.com",
+      GIT_COMMITTER_NAME: "Ada Lovelace",
+      GIT_COMMITTER_EMAIL: "ada@example.com",
+    });
+  });
+
   it("INF-2214 preserves response correlation through the home", async () => {
     const at = await placed();
     await at.open();

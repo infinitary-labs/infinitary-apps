@@ -70,6 +70,7 @@ import {
 import { bindTools, type CrewmateTool, OutcomeUnknownError } from "../session/tools";
 import { changeRecoveryCheck, sameNames } from "../session/workRecovery";
 import { HANDOVER_IN_DIR_NAME } from "../tasks/handoverFiles";
+import { type CommitName, withCommitName } from "../workspace/commitName";
 import { keepOrdered, type PersonalCopy } from "./personalCopy";
 import type { PlacedJob, PlacedTaskState, PlacedTasks } from "./placedTasks";
 import { SecretUsesThere } from "./secretUses";
@@ -182,6 +183,12 @@ export type SessionHostOptions = {
    * a conversation runs in an empty folder of its task's own.
    */
   copies?: WorkingCopies;
+  /**
+   * The commit name a conversation's shell carries, resolved in its working
+   * copy here as it opens (`workspace/commitName.ts`). Absent, as in tests
+   * with no real git, the shell carries none.
+   */
+  commitName?: (cwd: string) => Promise<CommitName>;
   /**
    * This computer's task channel and its task browsers (docs/task-browser.md,
    * "On another computer"): a conversation whose task the home says has a
@@ -907,7 +914,11 @@ export class SessionHost {
         ...(personal ? { personalRoot: personal.root } : {}),
         builtins: "coding",
         tools,
-        ...(granted ? { shell: granted.shell } : {}),
+        ...(this.options.commitName
+          ? { shell: withCommitName(granted?.shell, await this.options.commitName(folders.work)) }
+          : granted
+            ? { shell: granted.shell }
+            : {}),
         shape: {
           turns: "rolling",
           record: {

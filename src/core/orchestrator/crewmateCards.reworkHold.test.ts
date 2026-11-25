@@ -32,6 +32,7 @@ import type { TaskRecord } from "../storage/taskRecords";
 import { TaskService } from "../tasks/taskService";
 import { seedProject } from "../workspace/seedProject";
 import type { WatchedReading } from "./checkWatch";
+import { SUPERVISOR_STEER } from "./crewRuntime";
 import type { MergeCardWalk } from "./mergeCardSteps";
 
 fakeCrewTimersEachTest();
@@ -577,4 +578,123 @@ describe("a reworked merge card's return (INF-6241)", () => {
       "Answered. Checks are running on the new version, and this card comes back to you when they finish.",
     );
   });
+
+  // INF-6342's record: the captain replied under the merge card and put it
+  // aside; the crewmate posted an interim line, pushed and started a run,
+  // then answered naming the reply. While those checks ran, the card came
+  // back each time the crewmate's turn ended.
+  /** The captain replies, optionally puts the card aside; the crewmate pushes, then answers while checks run. */
+  async function answeredWhileChecksRun(aside: boolean) {
+    const at = await shown();
+    at.supervisor.cardActions.replyToCard(at.cardId, "the chip should read plain Google");
+    await tick();
+    if (aside) at.supervisor.cards.setMinimized(at.cardId, true);
+    at.specs[0]?.onReply?.({ cardId: at.cardId, text: "Changing the chip.", interim: true });
+    at.remote.head = PUSHED;
+    at.remote.checks = "pending";
+    seedDelivery(at.tasks, at.taskId, { runWatches: runningWatch(PUSHED) });
+    await endTurn(at.crewmate, at.taskId);
+    await tick();
+    await at.minute();
+    await at.supervisor.steer.steerInternal(
+      at.taskId,
+      "The captain wrote under your card and you have not answered.",
+      SUPERVISOR_STEER,
+    );
+    await tick();
+    at.specs[0]?.onReply?.({
+      cardId: at.cardId,
+      text: "The chip reads Google; checks are running on that version.",
+      answersMessage: askedOn(at.supervisor, at.cardId),
+    });
+    await tick();
+    await endTurn(at.crewmate, at.taskId);
+    await tick();
+    expect(at.tasks.get(at.taskId)?.delivery?.headSha).toBe(PUSHED);
+    expect(at.held()).toBe(true);
+    return at;
+  }
+
+  it("stays aside through the crewmate's answer while the new version's checks run, then returns once", async () => {
+    const at = await answeredWhileChecksRun(true);
+    expect(at.onStage()?.minimized).toBe(true);
+    expect(merges(at.onStage())).toEqual([]);
+    at.remote.checks = "green";
+    seedDelivery(at.tasks, at.taskId, { runWatches: [] });
+    await at.minute();
+    await endTurn(at.crewmate, at.taskId);
+    await tick();
+    expect(at.held()).toBe(false);
+    expect(at.onStage()?.minimized).toBeUndefined();
+    expect(at.raised()).toHaveLength(2);
+  });
+
+  it("stays aside across a restart while held, then returns once when its checks end", async () => {
+    const at = await answeredWhileChecksRun(true);
+    at.supervisor.disposeAll();
+    const tasks = new TaskService({ db: at.db, strict: true });
+    at.reopen(tasks);
+    const resumed = fakeCrewmate();
+    const restarted = reboot(at, async () => resumed, {
+      tasks,
+      readCheckWatch: at.readCheckWatch,
+      checkCi: async () => "green",
+    });
+    restarted.setFirstmateHooks({ notifyOp: vi.fn(), retryConverse: vi.fn() });
+    await tick();
+    const stage = () => restarted.cards.snapshot().find((entry) => entry.id === at.cardId);
+    expect(restarted.cards.get(at.cardId)?.awaiting).toBe("close-out");
+    expect(stage()?.minimized).toBe(true);
+    vi.spyOn(restarted.steer, "steerInternal").mockResolvedValue(undefined as never);
+    at.remote.checks = "green";
+    seedDelivery(tasks, at.taskId, { runWatches: [] });
+    await vi.advanceTimersByTimeAsync(60_000);
+    await restarted.watch.pollCheckWatches(Date.now());
+    await tick();
+    await endTurn(resumed, at.taskId);
+    await tick();
+    expect(restarted.cards.get(at.cardId)?.awaiting).toBeUndefined();
+    expect(stage()?.minimized).toBeUndefined();
+    restarted.disposeAll();
+  });
+
+  it("stays aside across each later crewmate turn while the checks still run", async () => {
+    const at = await answeredWhileChecksRun(false);
+    const returns: number[] = [];
+    for (const turn of [1, 2, 3]) {
+      at.supervisor.cards.setMinimized(at.cardId, true);
+      await at.supervisor.steer.steerInternal(
+        at.taskId,
+        `New check observations for the pushed branch at ${PUSHED.slice(0, 7)}: phone (pending).`,
+        SUPERVISOR_STEER,
+      );
+      await tick();
+      await endTurn(at.crewmate, at.taskId, "The phone jobs are still running.");
+      await tick();
+      expect(at.held()).toBe(true);
+      if (at.onStage()?.minimized !== true) returns.push(turn);
+    }
+    expect(returns).toEqual([]);
+  });
 });
+
+/** A watched run on the pushed version, its checks still running. */
+function runningWatch(head: string) {
+  const startedAt = Date.now();
+  return [
+    {
+      runId: 45_505_472_371,
+      name: "phone",
+      attempt: 1,
+      since: startedAt,
+      nextAt: startedAt + 24 * 60 * 60_000,
+      reading: {
+        head,
+        url: "https://github.com/octo/meter/actions/runs/45505472371",
+        state: "running" as const,
+        since: startedAt,
+        at: startedAt,
+      },
+    },
+  ];
+}

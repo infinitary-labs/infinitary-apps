@@ -874,12 +874,11 @@ export class CardService {
   /**
    * An author closed out (docs/card-threads.md "When a card reaches the
    * stage"): a crewmate's `report` or its idle, the Firstmate's turn end.
-   * Each of its cards that waited on it reaches the stage - a card off it
-   * comes up, one on it redraws in place with the newer write, one put
-   * aside that its author wrote on comes back - and a card the captain's
-   * reply holds stays off it. A report releases only a crewmate's new
-   * cards: one the captain already had on the stage waits for its turn's
-   * end, so it comes back once, with the crewmate's last word (INF-926).
+   * Each of its cards that waited on it reaches the stage - one off it comes
+   * up, one on it redraws with the newer write, one put aside that its author
+   * wrote on comes back - unless the captain's reply or a rework holds it.
+   * A report releases only a crewmate's new cards: one the captain already
+   * had on the stage waits for its turn's end, to come back once (INF-926).
    */
   closeOut(author: CardAuthorRef, reason: CloseOut): void {
     let moved = false;
@@ -898,12 +897,11 @@ export class CardService {
       const { writer } = this.stage.of(card);
       if (!mine && writer !== key) continue;
       if (reason === "report" && this.reachedStage(card)) continue;
-      if (mine) {
-        this.stage.release(card, "answering");
-        if (this.stage.release(card, "aside")) moved = true;
-      }
+      const aside = mine && this.stage.release(card, "aside");
+      if (mine) this.stage.release(card, "answering");
+      moved ||= aside;
       if (writer !== undefined && writer !== key) continue;
-      if (this.releaseWrites(card, reason, released)) moved = true;
+      if (this.releaseWrites(card, reason, released, aside)) moved = true;
     }
     if (moved) this.broadcastReleased(released);
   }
@@ -928,9 +926,9 @@ export class CardService {
    * Release what a card holds for a close-out: its revisions reach the
    * record's offers, and the stage moves from the version it held to the
    * newest write. Whether the stage moved; a released thread is named in
-   * `released`.
+   * `released`; `aside`, whether the stage kept the card aside till now.
    */
-  private releaseWrites(held: Card, reason: CloseOut, released: string[]): boolean {
+  private releaseWrites(held: Card, reason: CloseOut, released: string[], aside = false): boolean {
     let card = held;
     const { shown } = this.stage.of(card);
     this.stage.release(card, "writer");
@@ -949,18 +947,17 @@ export class CardService {
     // The captain put the card aside while its author's newer write - a
     // revision or an answer - waited here, so he never saw it: it comes
     // back with it, the same as a write on a card already aside (INF-1472).
-    const written = wrote || shown !== undefined || answer || card.awaiting === "close-out";
-    if (card.minimized && card.awaiting !== "answer" && written) {
+    const written = wrote || shown !== undefined || answer;
+    if (card.minimized && !card.awaiting && written) {
       const { minimized: _aside, ...back } = card;
-      this.host.cardStore.upsert(back);
-      this.cards.set(card.id, back);
+      this.saveCard(back);
       card = back;
-      moved = true;
     }
     if (card.awaiting === "close-out") {
-      // A reworked merge card held for its new version's checks keeps the
-      // version the captain replied under on the stage (INF-6241).
-      if (!this.release(card, reason) && this.stage.of(card).forChecks) return moved;
+      // A reworked merge card held for its checks stays as the captain left it (INF-6241).
+      const showed = this.release(card, reason);
+      if (!showed && aside) this.saveCard({ ...card, minimized: true });
+      if (!showed && this.stage.of(card).forChecks) return moved;
     } else if (card.awaiting === "answer") return moved;
     else if (shown || answer) {
       // The stage moves from the version it held to the author's newest.
@@ -974,6 +971,11 @@ export class CardService {
     } else return moved;
     this.stage.release(card, "shown");
     return true;
+  }
+
+  private saveCard(card: Card): void {
+    this.host.cardStore.upsert(card);
+    this.cards.set(card.id, card);
   }
 
   private broadcastReleased(released: readonly string[]): void {
@@ -1011,7 +1013,7 @@ export class CardService {
     }
     const before = this.stage.of(card).forChecks;
     this.stage.release(card, "forMerge", "forChecks");
-    const { awaiting: _awaiting, sentBackAt: _sentBackAt, ...shown } = card;
+    const { awaiting: _awaiting, sentBackAt: _sentBackAt, minimized: _aside, ...shown } = card;
     this.host.cardStore.transaction(() => {
       this.host.cardStore.upsert(shown);
       this.evidence.noteStage({ head: shown, shown }, "close-out", {
@@ -1551,8 +1553,7 @@ export class CardService {
     if (Boolean(card.minimized) !== minimized) {
       const { minimized: _previous, ...rest } = card;
       const updated: Card = { ...rest, ...(minimized ? { minimized: true } : {}) };
-      this.host.cardStore.upsert(updated);
-      this.cards.set(cardId, updated);
+      this.saveCard(updated);
     }
     this.scheduleBroadcast();
     this.flushBroadcast();
@@ -1567,8 +1568,7 @@ export class CardService {
     const card = this.cards.get(cardId);
     if (!card?.minimized) return;
     const { minimized: _aside, ...rest } = card;
-    this.host.cardStore.upsert(rest);
-    this.cards.set(cardId, rest);
+    this.saveCard(rest);
     this.stage.hold(rest, { aside: true });
   }
 

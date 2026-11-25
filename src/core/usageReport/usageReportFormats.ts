@@ -143,27 +143,44 @@ export function wordsAttributes(words: TurnWords): Record<string, string> {
   };
 }
 
-/** The messages as JSON within the bound, keeping whole messages from one end, else one message's first parts. */
+/**
+ * The messages as JSON within the bound, keeping whole messages from one
+ * end, else one message's first parts. Each message and part is serialized
+ * once: a crewmate's turn runs from its start to idle and holds hundreds of
+ * messages, read on the main process at each turn's end.
+ */
 function boundedJson(
   messages: readonly { role: string; parts: WordsMessage["parts"] }[],
   keep: "first" | "last",
 ): string | null {
-  let kept = [...messages];
-  let json = JSON.stringify(kept);
-  while (json.length > WORDS_ATTRIBUTE_MAX && kept.length > 1) {
-    kept = keep === "first" ? kept.slice(0, -1) : kept.slice(1);
-    json = JSON.stringify(kept);
+  const ordered = keep === "first" ? messages : [...messages].reverse();
+  const each = ordered.map((message) => JSON.stringify(message));
+  // An array's JSON is its elements' JSON between brackets, joined by commas.
+  const kept = each.slice(0, fittingCount(each, WORDS_ATTRIBUTE_MAX - 2));
+  if (kept.length > 0) return `[${(keep === "first" ? kept : kept.reverse()).join(",")}]`;
+  const only = ordered[0];
+  if (!only) return null;
+  const shell = JSON.stringify([{ ...only, parts: [] }]);
+  const parts = only.parts.slice(
+    0,
+    fittingCount(
+      only.parts.map((part) => JSON.stringify(part)),
+      WORDS_ATTRIBUTE_MAX - shell.length,
+    ),
+  );
+  return parts.length > 0 ? JSON.stringify([{ ...only, parts }]) : null;
+}
+
+/** How many of the JSON texts, from the first, fit within `room` characters joined by commas. */
+function fittingCount(texts: readonly string[], room: number): number {
+  let used = -1;
+  let count = 0;
+  for (const text of texts) {
+    used += text.length + 1;
+    if (used > room) break;
+    count += 1;
   }
-  const only = kept[0];
-  if (json.length > WORDS_ATTRIBUTE_MAX && only) {
-    let parts = only.parts;
-    do {
-      parts = parts.slice(0, -1);
-      json = JSON.stringify([{ ...only, parts }]);
-    } while (json.length > WORDS_ATTRIBUTE_MAX && parts.length > 1);
-    if (parts.length === 0) return null;
-  }
-  return kept.length > 0 ? json : null;
+  return count;
 }
 
 type SumPoint = { attributes: Record<string, string | null>; value: number; at: number };

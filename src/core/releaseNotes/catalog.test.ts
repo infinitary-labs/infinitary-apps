@@ -3,6 +3,7 @@ import { PNG_BASE64, webpBytes } from "../../../tests/helpers/images";
 import {
   buildCatalog,
   coveredCommits,
+  docsSiteProblems,
   entryCommits,
   highlightCandidates,
   type LedgerFile,
@@ -153,6 +154,48 @@ describe("note files", () => {
     ).toContain("not both");
   });
 
+  // The captain's INF-6704 plan: a note names the docs site pages its change edited, or says why none.
+  it("accepts docs site pages or a reason, and refuses both, an empty list, a malformed name and a generated page", () => {
+    const parse = (extra: Record<string, unknown>) =>
+      parseNoteFile(
+        {
+          entries: [
+            {
+              id: "the-change",
+              kind: "feature",
+              title: "A feature",
+              area: "settings",
+              noPicture: "Nothing to see.",
+              provenance: { origin: "change" },
+              ...extra,
+            },
+          ],
+        },
+        "a.json",
+      );
+    const pages = parse({ docsSite: ["settings", "get-help"] });
+    expect(pages.problems).toEqual([]);
+    expect(pages.file.entries[0]?.docsSite).toEqual(["settings", "get-help"]);
+    expect(parse({ noDocsSite: "No page covers automation logs." }).problems).toEqual([]);
+    expect(
+      parse({ docsSite: ["settings"], noDocsSite: "Settings already says this." }).problems,
+    ).toEqual(["a.json.entries[0]: declare docsSite pages or a noDocsSite reason, not both"]);
+    expect(parse({ docsSite: [] }).problems.join()).toContain(
+      "docsSite: expected a non-empty list",
+    );
+    expect(parse({ docsSite: ["settings.md"] }).problems.join()).toContain(
+      "docsSite[0]: expected a page's file name without its extension",
+    );
+    expect(parse({ docsSite: ["settings", "settings"] }).problems.join()).toContain(
+      'names "settings" twice',
+    );
+    for (const generated of ["keyboard", "whats-new"])
+      expect(parse({ docsSite: [generated] }).problems.join()).toContain(
+        `"${generated}" is written by a script`,
+      );
+    expect(parse({ noDocsSite: "" }).problems.join()).toContain("noDocsSite: expected non-empty");
+  });
+
   it("refuses a manifest whose channel disagrees with its version", () => {
     const { manifest: parsed, problems } = parseManifest(
       { ...manifest("1.0.0", 1, []), channel: "alpha" },
@@ -271,6 +314,63 @@ describe("what a change declares", () => {
     );
     expect(problemsOf([pictured("lead-change", { highlight: 1 })])).toEqual([]);
     expect(problemsOf([entry("second-change", [], { highlight: 2 })])).toEqual([]);
+  });
+});
+
+/**
+ * The captain's INF-6704 plan: a feature, improvement or removal note from a
+ * change names the docs site pages that same change edited, or says why none.
+ */
+describe("the docs site declaration", () => {
+  const pages = new Map([
+    ["settings", "docs-site/src/content/docs/settings.md"],
+    ["install", "docs-site/src/content/docs/install.md"],
+  ]);
+  const own = (entries: NoteEntry[]) => file("release-notes/changes/a.json", entries, true);
+  const bare = (kind: NoteEntry["kind"], extra: Partial<NoteEntry> = {}): NoteEntry => ({
+    ...entry(`a-${kind}`),
+    provenance: { origin: "change" },
+    kind,
+    ...extra,
+  });
+
+  it("asks a feature, improvement or removal for pages or a reason, and nothing of a fix, a release review or a note that covers other commits", () => {
+    const none = new Set<string>();
+    for (const kind of ["feature", "improvement", "removal"] as const)
+      expect(docsSiteProblems(own([bare(kind)]), pages, none)).toEqual([
+        `release-notes/changes/a.json: "a-${kind}" is a ${kind}: name the docs site pages this change edited in "docsSite", or say in one sentence in "noDocsSite" why no page needs to change`,
+      ]);
+    expect(docsSiteProblems(own([bare("fix")]), pages, none)).toEqual([]);
+    expect(
+      docsSiteProblems(own([bare("feature", { noDocsSite: "No page covers it." })]), pages, none),
+    ).toEqual([]);
+    expect(
+      docsSiteProblems(
+        own([bare("feature", { provenance: { origin: "release-review" } })]),
+        pages,
+        none,
+      ),
+    ).toEqual([]);
+    expect(docsSiteProblems(own([entry("covering", [3])]), pages, none)).toEqual([]);
+  });
+
+  it("holds each named page to a hand-written page the same change edited", () => {
+    const named = own([bare("feature", { docsSite: ["settings", "install"] })]);
+    expect(
+      docsSiteProblems(named, pages, new Set(["docs-site/src/content/docs/settings.md"])),
+    ).toEqual([
+      'release-notes/changes/a.json: "a-feature" names "install", but this change does not edit docs-site/src/content/docs/install.md: update the page in the same change, or say in "noDocsSite" why it needs no change',
+    ]);
+    expect(docsSiteProblems(named, pages, new Set([...pages.values()]))).toEqual([]);
+    expect(
+      docsSiteProblems(own([bare("fix", { docsSite: ["glossary"] })]), pages, new Set()),
+    ).toEqual([
+      'release-notes/changes/a.json: "a-fix" names "glossary", which is not a hand-written docs site page',
+    ]);
+    // A note covering other commits may have its page edited there, so the page need only exist.
+    expect(
+      docsSiteProblems(own([entry("covering", [3], { docsSite: ["install"] })]), pages, new Set()),
+    ).toEqual([]);
   });
 });
 
@@ -397,6 +497,21 @@ describe("membership and the catalog", () => {
       "0.1.28",
     ]);
     expect(catalog?.entries.map((item) => item.id)).toEqual(["a-first", "b-second"]);
+  });
+
+  it("leaves the docs site declaration out of the packaged catalog", () => {
+    const { catalog } = buildCatalog({
+      target: manifest("0.1.28-alpha.10", 3, ["a-first", "b-second"]),
+      entries: [
+        entry("a-first", [1], { docsSite: ["settings"] }),
+        entry("b-second", [2], { noDocsSite: "No page covers it." }),
+      ],
+      releases: [],
+    });
+    expect(catalog?.entries.map((item) => Object.keys(item).sort())).toEqual([
+      ["area", "id", "kind", "noPicture", "provenance", "title"],
+      ["area", "id", "kind", "noPicture", "provenance", "title"],
+    ]);
   });
 
   it("refuses a version already published from a different source", () => {

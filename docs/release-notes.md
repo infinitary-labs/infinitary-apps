@@ -8,10 +8,12 @@ This page owns that data, who writes it, the checks on it, the version tracking,
 - **The change author** (normally the implementation crewmate) adds a note to the same pull request, in plain language for someone who has never opened a terminal and by the rules in "What a note may say", or an exclusion with a reason for internal work a person does not notice.
   A source change with neither blocks the next alpha.
   The note declares the feature area it belongs to, and a change a person can see keeps its hero picture pair beside the note, or says in one sentence why there is nothing to see ("Hero pictures" below).
+  A feature, improvement or removal also names the docs site pages the same change updated, or says in one sentence why no page needs to change ("The docs site declaration" below).
 - **The reviewing crewmate** checks the notes against the actual changes before merge: accuracy, omissions, repeated descriptions, plain wording, the rules in "What a note may say", and any declared highlight ranks.
   A note about internal work becomes an exclusion, and a product the app does not support is written out of the note.
   Prefer a new feature most people will see and use over a bug fix or a niche case when choosing highlights.
   Inspect each highlight's hero picture; the lead always has one.
+  For each docs site page a note names, read the page and check it now tells the truth about the change, and that its pictures still show the view, retaking a pair that would mislead (`docs/docs-site.md`, "Pictures"); for a `noDocsSite` reason, check it holds.
   An automatic alpha uses the exact fully checked main commit, with no notes-only review commit or follow-up record commit required for publication (`docs/alpha.md`, "Cutting an alpha").
   The existing published-release reader derives an uncommitted manifest from its immutable source tag; committed records remain immutable and are still validated.
   Editorial corrections merge as ordinary changes and wait for their own passing main check.
@@ -57,7 +59,7 @@ Never hand-edit `CHANGELOG.md`; it stopped changing at stable 0.1.30.
 | `releases/<version>.json` | One immutable manifest per published release: exact `version`, `channel`, `sourceCommit`, `date`, `promotedFrom`, and `entryIds`, the cumulative membership. `highlights` is a promoted stable's picked highlights, lead first. `incomplete` marks a range that cannot be recovered. |
 | `archive.json` | The record of past releases ("A fresh history"): where the archived history lives, the newest `stable` and `alpha` it published, and each of its releases' manifest by the SHA-256 of its file. |
 
-An entry has a stable `id`, a `kind` (`feature`, `improvement`, `fix`, `removal`, or `maintenance`, which a change or a release review no longer writes), a `title`, an optional `body`, an optional `highlight` rank, an `area`, a `picture` or a `noPicture` reason, and `provenance` (`origin`: `change`, `release-review` or `changelog-backfill`; `covers`: commits beyond the adding commit).
+An entry has a stable `id`, a `kind` (`feature`, `improvement`, `fix`, `removal`, or `maintenance`, which a change or a release review no longer writes), a `title`, an optional `body`, an optional `highlight` rank, an `area`, a `picture` or a `noPicture` reason, `docsSite` pages or a `noDocsSite` reason, and `provenance` (`origin`: `change`, `release-review` or `changelog-backfill`; `covers`: commits beyond the adding commit).
 The `area` is one of the closed list in `NOTE_AREAS` (`src/core/releaseNotes/catalog.ts`), in the order a person meets them: First mate, Message box, Cards, Tasks, Crewmates, Projects, Subscriptions, Settings and appearance, Your devices, Updates, Other changes.
 Every entry a change or a release review writes declares one; nothing infers an area from the words, and backfilled history declares none.
 An exclusion has an `id`, a `reason`, and optional `covers`.
@@ -110,6 +112,27 @@ The captain's FI3-745 plan: every change a person can see keeps one hero picture
 - **The check** (below) refuses a missing picture or reason, a missing file or half a pair, a file that is not the WebP or PNG its name says, missing alt text, a file wider than 1600 px or larger than 300 KB, a picture taller than it is wide, and a lead highlight with no picture.
   Whether a picture shows the right thing stays with the release crewmate's review.
 
+### The docs site declaration
+
+The captain's INF-6704 plan: the docs site (`docs/docs-site.md`) changes in the same pull request as the code it describes.
+
+- **What it is.**
+  `docsSite` lists the hand-written English pages the change added or edited, each by its file name under `docs-site/src/content/docs/` without the extension, such as `["settings"]`.
+  `noDocsSite` says in one sentence of at most 300 characters why no page needs to change, such as "No page covers automation logs".
+  An entry declares one or the other, never both, and never an empty list.
+  Keyboard and What's new are written by scripts (`docs/docs-site.md`, "Generated pages"), so a note never names them.
+- **Who declares.**
+  A `feature`, `improvement` or `removal` entry of origin `change` that does not name other commits in `covers`.
+  Fixes, exclusions, release-review entries, backfilled history and every entry recorded before the rule declare nothing.
+  An entry with `covers` may declare, and its pages need only exist, since they may have changed in the commits it covers.
+- **The check.**
+  `change` and `batch` (below) read only the note files the change adds.
+  They refuse an entry that should declare and declares neither, a page that is not a hand-written page, and a page whose English file the change did not add or modify; in a batch, the commit that adds the note must edit the page.
+  The refusal lists the page names.
+  Every other check parses the fields by shape only, so renaming a page never breaks an older note, and the packaged catalog leaves both fields out.
+- **Translations** follow the English page through the languages check (`docs/docs-site.md`, "The languages check"), which makes the same change carry all nine.
+- **Whether the page tells the truth** stays with the author and the reviewing crewmate ("Who writes what" above), as a note's prose does.
+
 ### Backfill and its limits
 
 Published stable and alpha history was recovered from tags, the generated stable changelog and the commits between tags.
@@ -140,10 +163,12 @@ Every later job reads the one `notes` result, which holds only when both parts p
 Every change's first check step runs `node scripts/release-notes.ts change` from the commit the change starts at (`ci.yml`, on each push of a task's branch and on a pull request; plain Node with no install, under a second).
 It refuses a change whose commits add no file under `release-notes/changes/` declaring a note or an exclusion: a change merges as one commit, squashed alone or as its own commit of a batch of several (`docs/testing.md`, "The swept batch"), and the commit that adds the file is the one the alpha credits, so this is the alpha's coverage rule applied before merge.
 Editing a note another change added does not count; the change still adds its own file.
+It also refuses a missing or wrong docs site declaration in the files the change adds ("The docs site declaration").
 The same step runs the part of `validate` that needs no git history over the real ledger (`ledgerProblems`), so a note with no area, a new `maintenance` note, a visible change with neither picture nor reason, a picture over the caps, or a manifest that no longer matches the record of past releases also fails on its own change rather than at the next alpha.
 `tests/release-notes-ledger.test.ts` runs that part again with main's unit tests.
 A branch built on a held batch's version skips that step (`docs/testing.md`, "A pushed branch"), so the batch's own run reads its note instead: `batch-checks.yml`'s `notes` job runs `node scripts/release-notes.ts batch --base <the main version the batch left>` with full history on the batch's version.
 It refuses a batch with any commit since that version, one per change, that no note or exclusion covers, as `check` counts it for the alpha, and runs `ledgerProblems` the same way, so a held batch's fix with no note of its own fails the batch before it merges.
+It reads each change's docs site declaration against the pages that change's own commit edits.
 A batch's regenerated commit is no change of its own: a commit carrying the trailer `Batch-regenerated: phone`, with one parent, whose every file the `.gitattributes` of that parent marks `linguist-generated`, needs no note in the batch or at the alpha (`Repo.regenerated`; `docs/testing.md`, "The swept batch"), and the changes whose sources it follows carry their own.
 
 A development or end-to-end build carries a placeholder (`generate --dev`) with an empty pictures folder that never passes `verify-package`; the app reads it as notes unavailable.

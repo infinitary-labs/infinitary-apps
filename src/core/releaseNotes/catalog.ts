@@ -62,6 +62,19 @@ export const PICTURED_KINDS: readonly EntryKind[] = ["feature", "improvement", "
  */
 const MAINTENANCE_BEFORE_THE_RULE: readonly string[] = ["pi-1-0"];
 
+/**
+ * The kinds whose note from a change names the docs site pages it edited, or
+ * says why none needs to change (the captain's INF-6704 pick: features,
+ * improvements and removals rename and move steps a page describes; fixes
+ * rarely do, so they declare nothing).
+ */
+export const DOCS_SITE_KINDS: readonly EntryKind[] = ["feature", "improvement", "removal"];
+/** Where the docs site's English pages live; a page's name is its file name without the extension. */
+export const DOCS_SITE_DIR = "docs-site/src/content/docs";
+/** Pages a script writes from the app's own data (docs/docs-site.md, "Generated pages"), never named in docsSite. */
+export const GENERATED_DOCS_SITE_PAGES: readonly string[] = ["keyboard", "whats-new"];
+const PAGE = /^[a-z0-9][a-z0-9-]*$/;
+
 /** Where an entry's hero pictures live in the repository, beside the notes. */
 export const PICTURES_DIR = "release-notes/pictures";
 /** Where a packaged catalog's hero files sit, relative to the folder that holds the catalog. */
@@ -93,6 +106,10 @@ export type NoteEntry = {
   picture?: NotePicture;
   /** Why it keeps no picture, in one sentence, instead of `picture`. */
   noPicture?: string;
+  /** The hand-written English docs site pages its change edited, by name. */
+  docsSite?: string[];
+  /** Why no docs site page needs to change, in one sentence, instead of `docsSite`. */
+  noDocsSite?: string;
   provenance: {
     origin: ProvenanceOrigin;
     /** Source commits this entry covers beyond the commit that added its file. */
@@ -212,7 +229,19 @@ function parseEntry(value: unknown, where: string, problems: string[]): NoteEntr
   }
   closed(
     value,
-    ["id", "kind", "title", "body", "highlight", "area", "picture", "noPicture", "provenance"],
+    [
+      "id",
+      "kind",
+      "title",
+      "body",
+      "highlight",
+      "area",
+      "picture",
+      "noPicture",
+      "docsSite",
+      "noDocsSite",
+      "provenance",
+    ],
     where,
     problems,
   );
@@ -240,6 +269,14 @@ function parseEntry(value: unknown, where: string, problems: string[]): NoteEntr
       : (text(value.noPicture, `${where}.noPicture`, 300, problems) ?? "");
   if (value.picture !== undefined && value.noPicture !== undefined)
     problems.push(`${where}: declare a picture or a noPicture reason, not both`);
+  const docsSite =
+    value.docsSite === undefined ? undefined : parseDocsSite(value.docsSite, where, problems);
+  const noDocsSite =
+    value.noDocsSite === undefined
+      ? undefined
+      : (text(value.noDocsSite, `${where}.noDocsSite`, 300, problems) ?? "");
+  if (value.docsSite !== undefined && value.noDocsSite !== undefined)
+    problems.push(`${where}: declare docsSite pages or a noDocsSite reason, not both`);
   let provenance: NoteEntry["provenance"] | null = null;
   if (!isRecord(value.provenance)) problems.push(`${where}.provenance: expected an object`);
   else {
@@ -262,8 +299,31 @@ function parseEntry(value: unknown, where: string, problems: string[]): NoteEntr
     ...(value.area !== undefined ? { area: value.area as NoteArea } : {}),
     ...(picture ? { picture } : {}),
     ...(noPicture !== undefined ? { noPicture } : {}),
+    ...(docsSite ? { docsSite } : {}),
+    ...(noDocsSite !== undefined ? { noDocsSite } : {}),
     provenance,
   };
+}
+
+function parseDocsSite(value: unknown, where: string, problems: string[]): string[] | undefined {
+  const at = `${where}.docsSite`;
+  if (!Array.isArray(value) || value.length === 0) {
+    problems.push(`${at}: expected a non-empty list of docs site page names`);
+    return undefined;
+  }
+  const before = problems.length;
+  value.forEach((name, index) => {
+    if (typeof name !== "string" || !PAGE.test(name))
+      problems.push(
+        `${at}[${index}]: expected a page's file name without its extension, such as "settings"`,
+      );
+    else if (GENERATED_DOCS_SITE_PAGES.includes(name))
+      problems.push(
+        `${at}[${index}]: "${name}" is written by a script from the app's own data, so no change names it`,
+      );
+    else if (value.indexOf(name) !== index) problems.push(`${at}: names "${name}" twice`);
+  });
+  return problems.length > before ? undefined : (value as string[]);
 }
 
 function parsePicture(
@@ -639,6 +699,47 @@ function declarationProblems(entry: NoteEntry, path: string): string[] {
 }
 
 /**
+ * What a change's own note file declares about the docs site (INF-6704): a
+ * feature, improvement or removal from a change names the hand-written
+ * English pages it edited in `docsSite`, or says in `noDocsSite` why none
+ * needs to change, and every page it names exists in `pages` (name to path)
+ * and is among the paths the same change added or modified, `edited`. A note
+ * that covers other commits declares by shape only, since its pages may have
+ * changed there. Whether the page now tells the truth is the reviewing
+ * crewmate's judgment, never this check.
+ */
+export function docsSiteProblems(
+  file: LedgerFile,
+  pages: ReadonlyMap<string, string>,
+  edited: ReadonlySet<string>,
+): string[] {
+  const problems: string[] = [];
+  for (const entry of file.file.entries) {
+    const at = `${file.path}: "${entry.id}"`;
+    if (
+      entry.provenance.origin === "change" &&
+      entry.provenance.covers === undefined &&
+      DOCS_SITE_KINDS.includes(entry.kind) &&
+      entry.docsSite === undefined &&
+      entry.noDocsSite === undefined
+    )
+      problems.push(
+        `${at} is a ${entry.kind}: name the docs site pages this change edited in "docsSite", or say in one sentence in "noDocsSite" why no page needs to change`,
+      );
+    for (const name of entry.docsSite ?? []) {
+      const path = pages.get(name);
+      if (path === undefined)
+        problems.push(`${at} names "${name}", which is not a hand-written docs site page`);
+      else if (!entry.provenance.covers && !edited.has(path))
+        problems.push(
+          `${at} names "${name}", but this change does not edit ${path}: update the page in the same change, or say in "noDocsSite" why it needs no change`,
+        );
+    }
+  }
+  return problems;
+}
+
+/**
  * Every hero file the ledger names, read through `read` (a file name under
  * `PICTURES_DIR` to its bytes, or null when it is missing): a WebP or PNG
  * whose header matches its name, at most `MAX_HERO_WIDTH` wide and
@@ -783,7 +884,10 @@ export function buildCatalog(input: CatalogInput): { catalog: Catalog | null; pr
     (a, b) => compareSemver(a.version, b.version) ?? a.version.localeCompare(b.version),
   );
   const wanted = new Set(input.target.entryIds);
-  const entries = input.entries.filter((entry) => wanted.has(entry.id));
+  // The docs site declaration is for the change's review; the app never reads it.
+  const entries = input.entries
+    .filter((entry) => wanted.has(entry.id))
+    .map(({ docsSite: _pages, noDocsSite: _reason, ...entry }) => entry);
   if (entries.length !== wanted.size) problems.push("the release lists an entry the ledger lacks");
   const pictures: Record<string, CatalogPicture> = {};
   for (const file of heroFiles(entries)) {

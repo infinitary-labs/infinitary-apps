@@ -165,11 +165,10 @@ export class CrewTranscripts {
   }
 
   private files(task: TaskRecord): string[] {
-    const files = sessionFilesIn(this.options.recordDirOf(task.id));
-    const current = this.options.currentSession?.(task) ?? null;
-    if (!current || files.includes(current)) return files;
-    // The same session, further along: it stands in for the copy of it.
-    return [...files.filter((file) => basename(file) !== basename(current)), current];
+    return crewSessionFiles(
+      this.options.recordDirOf(task.id),
+      this.options.currentSession?.(task) ?? null,
+    );
   }
 
   private follower(path: string): SessionFollower {
@@ -183,6 +182,18 @@ export class CrewTranscripts {
     }
     return follower;
   }
+}
+
+/**
+ * A crewmate's session files: those its record dir holds, with the file
+ * holding the session it runs now (`currentSession`) in place of the copy
+ * of it by the same name.
+ */
+export function crewSessionFiles(recordDir: string, current: string | null): string[] {
+  const files = sessionFilesIn(recordDir);
+  if (!current || files.includes(current)) return files;
+  // The same session, further along: it stands in for the copy of it.
+  return [...files.filter((file) => basename(file) !== basename(current)), current];
 }
 
 const LIVE_TEXT_MAX = 16_000;

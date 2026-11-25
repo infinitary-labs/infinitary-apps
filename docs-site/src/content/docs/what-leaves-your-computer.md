@@ -53,8 +53,10 @@ Either kind of setup gets only Claude's work when it sends its usage over gRPC, 
 ## Your own usage reporting
 
 A reporting connection you add in Settings → **Intelligence** sends your crew's usage to the monitoring or tracing tool you name, such as Grafana, Datadog or Langfuse, once you save it.
-It sends the same records: timing, models, tokens and estimated cost, whether your first mate or a crewmate did the work and the kind of work, never your words, task titles or project names.
+It sends the same records: timing, models, tokens and estimated cost, whether your first mate or a crewmate did the work and the kind of work, never task titles or project names.
 Each record also carries your Claude Code sign-in email, when this computer has one, so the tool can count your work per person.
+Your words go too only if you turn on **Send prompts and replies too**: the prompts your crew gets, its replies and what it gives its tools, with keys and passwords Infinitary recognizes hidden first.
+A company's reporting setup never gets your words.
 It sends every ten minutes, and once more when you quit.
 Headers the tool asks for, such as a token, are kept in Secrets and sent only to that address.
 Settings → **Usage** names where it goes, and Remove stops it.

@@ -4098,6 +4098,7 @@ public enum PhoneMessages {
     public static func `settingsUsageConnectionAddressHint`() -> String { PhoneWords.format("settingsUsageConnectionAddressHint", []) }
     public static func `settingsUsageConnectionCancel`() -> String { PhoneWords.format("settingsUsageConnectionCancel", []) }
     public static func `settingsUsageConnectionClaudeCode`(`host`: String) -> String { PhoneWords.format("settingsUsageConnectionClaudeCode", [`host`]) }
+    public static func `settingsUsageConnectionClaudeCodeWords`(`host`: String) -> String { PhoneWords.format("settingsUsageConnectionClaudeCodeWords", [`host`]) }
     public static func `settingsUsageConnectionEdit`() -> String { PhoneWords.format("settingsUsageConnectionEdit", []) }
     public static func `settingsUsageConnectionEmailLine`() -> String { PhoneWords.format("settingsUsageConnectionEmailLine", []) }
     public static func `settingsUsageConnectionFailed`() -> String { PhoneWords.format("settingsUsageConnectionFailed", []) }
@@ -4127,10 +4128,13 @@ public enum PhoneMessages {
     public static func `settingsUsageConnectionSaveLine`() -> String { PhoneWords.format("settingsUsageConnectionSaveLine", []) }
     public static func `settingsUsageConnectionSecretLabel`(`name`: String) -> String { PhoneWords.format("settingsUsageConnectionSecretLabel", [`name`]) }
     public static func `settingsUsageConnectionStandard`(`host`: String) -> String { PhoneWords.format("settingsUsageConnectionStandard", [`host`]) }
+    public static func `settingsUsageConnectionStandardWords`(`host`: String) -> String { PhoneWords.format("settingsUsageConnectionStandardWords", [`host`]) }
     public static func `settingsUsageConnectionTitle`() -> String { PhoneWords.format("settingsUsageConnectionTitle", []) }
     public static func `settingsUsageConnectionUseOperation`(`host`: String) -> String { PhoneWords.format("settingsUsageConnectionUseOperation", [`host`]) }
     public static func `settingsUsageConnectionUseReason`(`host`: String) -> String { PhoneWords.format("settingsUsageConnectionUseReason", [`host`]) }
     public static func `settingsUsageConnectionUseResult`() -> String { PhoneWords.format("settingsUsageConnectionUseResult", []) }
+    public static func `settingsUsageConnectionWords`() -> String { PhoneWords.format("settingsUsageConnectionWords", []) }
+    public static func `settingsUsageConnectionWordsHint`() -> String { PhoneWords.format("settingsUsageConnectionWordsHint", []) }
     public static func `settingsUsageCostAllKinds`() -> String { PhoneWords.format("settingsUsageCostAllKinds", []) }
     public static func `settingsUsageCostAllProjects`() -> String { PhoneWords.format("settingsUsageCostAllProjects", []) }
     public static func `settingsUsageCostChange`() -> String { PhoneWords.format("settingsUsageCostChange", []) }
@@ -8798,6 +8802,7 @@ extension PhoneWords {
         "settingsUsageConnectionAddressHint": [],
         "settingsUsageConnectionCancel": [],
         "settingsUsageConnectionClaudeCode": ["host"],
+        "settingsUsageConnectionClaudeCodeWords": ["host"],
         "settingsUsageConnectionEdit": [],
         "settingsUsageConnectionEmailLine": [],
         "settingsUsageConnectionFailed": [],
@@ -8827,10 +8832,13 @@ extension PhoneWords {
         "settingsUsageConnectionSaveLine": [],
         "settingsUsageConnectionSecretLabel": ["name"],
         "settingsUsageConnectionStandard": ["host"],
+        "settingsUsageConnectionStandardWords": ["host"],
         "settingsUsageConnectionTitle": [],
         "settingsUsageConnectionUseOperation": ["host"],
         "settingsUsageConnectionUseReason": ["host"],
         "settingsUsageConnectionUseResult": [],
+        "settingsUsageConnectionWords": [],
+        "settingsUsageConnectionWordsHint": [],
         "settingsUsageCostAllKinds": [],
         "settingsUsageCostAllProjects": [],
         "settingsUsageCostChange": [],

@@ -1,6 +1,7 @@
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, realpathSync, statSync } from "node:fs";
 import { access, readdir } from "node:fs/promises";
 import { join } from "node:path";
+import { sessionFilesIn } from "../storage/sessionReader";
 
 /**
  * Where Claude's own client keeps a session transcript.
@@ -114,5 +115,74 @@ async function exists(path: string): Promise<boolean> {
     return true;
   } catch {
     return false;
+  }
+}
+
+/** A served sidecar's name ends so (`sidecarPathOf`). */
+const SIDECAR_SUFFIX = ".served.jsonl";
+
+/** A file's change time and a turn's times are different clocks' readings. */
+const STAMP_SLACK_MS = 2_000;
+
+/**
+ * Where the client keeps a session it ran in `cwd`, by the known path
+ * alone: the client names the folder after the folder it runs in as the
+ * system resolves it, which differs from `cwd` when a link leads there.
+ */
+export function clientTranscriptAt(
+  configDir: string,
+  cwd: string,
+  sessionId: string,
+): string | null {
+  let resolved = cwd;
+  try {
+    resolved = realpathSync(cwd);
+  } catch {}
+  for (const dir of new Set([cwd, resolved])) {
+    const path = join(configDir, "projects", encodeClaudeProjectDir(dir), `${sessionId}.jsonl`);
+    if (existsSync(path)) return path;
+  }
+  return null;
+}
+
+/**
+ * A Claude seat's session files in its record dir (`SessionRecordStore`),
+ * with the client's own transcript of a session in place of the app's copy
+ * while the client's holds more: the client writes a turn's tail on its own
+ * schedule, after the idle boundary copied it, and a first turn can end
+ * before any copy exists. Only a session served after `since` is looked up.
+ */
+export function seatSessionFiles(
+  recordDir: string,
+  since: number,
+  clientFileOf: (sessionId: string) => string | null,
+): string[] {
+  const files = sessionFilesIn(recordDir);
+  let names: string[];
+  try {
+    names = readdirSync(recordDir);
+  } catch {
+    return files;
+  }
+  for (const name of names) {
+    if (!name.endsWith(SIDECAR_SUFFIX)) continue;
+    if (sizeAndTime(join(recordDir, name)).at < since - STAMP_SLACK_MS) continue;
+    const sessionId = name.slice(0, -SIDECAR_SUFFIX.length);
+    const client = clientFileOf(sessionId);
+    const copy = join(recordDir, `${sessionId}.jsonl`);
+    if (!client || sizeAndTime(client).size <= sizeAndTime(copy).size) continue;
+    const at = files.indexOf(copy);
+    if (at >= 0) files.splice(at, 1);
+    files.push(client);
+  }
+  return files;
+}
+
+function sizeAndTime(path: string): { size: number; at: number } {
+  try {
+    const stat = statSync(path);
+    return { size: stat.size, at: stat.mtimeMs };
+  } catch {
+    return { size: 0, at: Number.NEGATIVE_INFINITY };
   }
 }

@@ -1,6 +1,7 @@
 import {
   closeSync,
   existsSync,
+  fstatSync,
   openSync,
   readdirSync,
   readFileSync,
@@ -16,7 +17,9 @@ import { join } from "node:path";
  * dispatch extractor (C5) and the corpus export over it, the kind-classifier
  * scorer and dev Observe's Firstmate pane - opens a session through here,
  * and so does a task record's Activity, which reads a crewmate's calls
- * (`sessionToolCalls`; docs/task-record.md, "A crewmate's actions"),
+ * (`sessionToolCalls`; docs/task-record.md, "A crewmate's actions"), and
+ * so does the usage report's words for the person's own connection
+ * (`sessionEntriesBetween`; docs/usage-report.md, "Prompts and replies"),
  * whichever backend served it:
  *
  * - **pi**: the Pi session JSONL (`firstmate/sessions/`,
@@ -548,6 +551,122 @@ function wholeLinesBetween(
   } finally {
     closeSync(fd);
   }
+}
+
+/** How much of a session's tail a read back from its end takes at a time. */
+const TAIL_CHUNK = 256 * 1024;
+
+/**
+ * Where a session's lines written after `since` begin: the byte just past
+ * the last whole line, read back from the file's end, whose own time is at
+ * or before `since`, so a long session costs only its tail; 0 when no line
+ * is that old. A line with no time of its own, or one that does not parse,
+ * is passed over, and a torn last line is not a line yet.
+ */
+export function sessionOffsetAfter(path: string, since: number): number {
+  let fd: number;
+  try {
+    fd = openSync(path, "r");
+  } catch {
+    return 0;
+  }
+  try {
+    /** The file's bytes from `bufStart`, read back so far. */
+    let bufStart = fstatSync(fd).size;
+    let buf = Buffer.alloc(0);
+    const more = (): boolean => {
+      if (bufStart === 0) return false;
+      const from = Math.max(0, bufStart - TAIL_CHUNK);
+      const chunk = Buffer.alloc(bufStart - from);
+      const read = readSync(fd, chunk, 0, chunk.length, from);
+      buf = Buffer.concat([chunk.subarray(0, read), buf]);
+      bufStart = from;
+      return true;
+    };
+    /** The byte just past the newline that closes the line being looked at. */
+    let lineEnd: number;
+    for (;;) {
+      const last = buf.lastIndexOf(0x0a);
+      if (last >= 0) {
+        lineEnd = bufStart + last + 1;
+        break;
+      }
+      if (!more()) return 0;
+    }
+    for (;;) {
+      let previous: number;
+      for (;;) {
+        const close = lineEnd - 1 - bufStart;
+        // A negative start would count from the buffer's end.
+        previous = close > 0 ? buf.lastIndexOf(0x0a, close - 1) : -1;
+        if (previous >= 0 || !more()) break;
+      }
+      const lineStart = previous >= 0 ? bufStart + previous + 1 : 0;
+      const entry = parseLine(buf.toString("utf8", lineStart - bufStart, lineEnd - 1 - bufStart));
+      const at = entry ? timeOf(entry) : null;
+      if (at !== null && at <= since) return lineEnd;
+      if (lineStart === 0) return 0;
+      lineEnd = lineStart;
+      buf = buf.subarray(0, lineEnd - bufStart);
+    }
+  } catch {
+    return 0;
+  } finally {
+    closeSync(fd);
+  }
+}
+
+/**
+ * A session's whole lines from byte `from` whose own time is after `since`
+ * and at or before `until`, as Pi-dialect entries (a Claude session's
+ * mapped as `readSession` maps them, without its sidecar's contract
+ * stamps), and `offset`, the byte past the last line at or before `until`,
+ * where a read of the next stretch starts. The first line later than
+ * `until` and every line after it wait for that read. A line with no time
+ * of its own, or one that does not parse, is passed over.
+ */
+export function sessionEntriesBetween(
+  path: string,
+  from: number,
+  since: number,
+  until: number,
+): { dialect: SessionDialect | null; entries: JsonRecord[]; offset: number } {
+  const dialect = sessionDialectAt(path);
+  const none = { dialect, entries: [], offset: from };
+  if (dialect === null) return none;
+  let fd: number;
+  try {
+    fd = openSync(path, "r");
+  } catch {
+    return none;
+  }
+  const lines: JsonRecord[] = [];
+  let offset = from;
+  try {
+    const size = fstatSync(fd).size;
+    if (size <= from) return none;
+    const buffer = Buffer.alloc(size - from);
+    const read = readSync(fd, buffer, 0, buffer.length, from);
+    for (let start = 0; start < read; ) {
+      const close = buffer.indexOf(0x0a, start);
+      if (close < 0 || close >= read) break;
+      const entry = parseLine(buffer.toString("utf8", start, close));
+      const at = entry ? timeOf(entry) : null;
+      if (at !== null && at > until) break;
+      if (entry && at !== null && at > since) lines.push(entry);
+      offset = from + close + 1;
+      start = close + 1;
+    }
+  } catch {
+    return none;
+  } finally {
+    closeSync(fd);
+  }
+  const entries =
+    dialect === "claude"
+      ? claudeSessionEntries(lines, []).filter((entry) => entry.type !== "session")
+      : lines;
+  return { dialect, entries, offset };
 }
 
 /** Only a line that can carry a Claude call or its result is parsed. */

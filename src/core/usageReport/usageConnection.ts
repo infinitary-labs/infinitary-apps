@@ -22,6 +22,7 @@ import {
   type McpResolver,
 } from "../integrations/providers/mcp/guardedFetch";
 import type { IntegrationKeys } from "../integrations/secrets";
+import type { AppPaths } from "../paths";
 import {
   assertCustomHeaders,
   type CustomNetworkMode,
@@ -30,7 +31,9 @@ import {
 } from "../pi/customApiPolicy";
 import type { SecretBroker } from "../secrets/brokers";
 import { canonical, sha256 } from "../secrets/custody";
+import type { HomeUsageFacts } from "../storage/homeUsage";
 import { type CompanyHosts, companyUsageDestinations, hostnameOf } from "./companyDestination";
+import { appSessionWords } from "./sessionWords";
 import type { UsageReportDestination } from "./usageReporter";
 import type { OtlpSignal } from "./usageReportFormats";
 
@@ -56,6 +59,8 @@ const savedSchema = z.object({
   mode: z.enum(["public", "private", "local"]),
   format: usageConnectionFormatSchema,
   headers: z.array(z.object({ name: z.string(), ref: z.string() })),
+  /** Written only while on, so a file saved before the switch existed, or by a build without it, reads as off. */
+  words: z.literal(true).optional(),
 });
 type SavedConnection = z.infer<typeof savedSchema>;
 
@@ -184,6 +189,7 @@ export function usageConnection(deps: UsageConnectionDeps): UsageConnection {
     headers: () => Promise.resolve({}),
     resource: {},
     ...personOf(deps.email?.()),
+    ...(connection.words ? { words: true as const } : {}),
     ...(withoutClaude
       ? { withoutClaude: true as const }
       : connection.format === "claude-code"
@@ -235,7 +241,12 @@ export function usageConnection(deps: UsageConnectionDeps): UsageConnection {
           throw new Refused("header");
         }
         if (headers.length > 0 && !deps.keys.shown()) throw new Refused("no-secrets");
-        const next: SavedConnection = { ...place, format: input.format, headers: [] };
+        const next: SavedConnection = {
+          ...place,
+          format: input.format,
+          headers: [],
+          ...(input.words ? { words: true as const } : {}),
+        };
         for (const header of headers) {
           if (!header.value && header.old) {
             next.headers.push({ name: header.name, ref: header.old.ref });
@@ -256,7 +267,13 @@ export function usageConnection(deps: UsageConnectionDeps): UsageConnection {
         unreadable = false;
         // What waits was built in the old format for the old address; sent now it would reach
         // the new address, or a tool reading the new format, in the old format, so it is dropped.
-        if (before?.endpoint !== next.endpoint || before?.format !== next.format) dropWaiting();
+        // With words just turned off it may hold words the person no longer sends: dropped too.
+        if (
+          before?.endpoint !== next.endpoint ||
+          before?.format !== next.format ||
+          (before?.words && !next.words)
+        )
+          dropWaiting();
         await forgetUnnamed(before, next);
         return { saved: true, view: viewOf(saved) };
       } catch (caught) {
@@ -310,6 +327,7 @@ function viewOf(saved: SavedConnection | null): UsageConnectionView {
         endpoint: saved.endpoint,
         format: saved.format,
         headers: saved.headers.map(({ name }) => ({ name })),
+        ...(saved.words ? { words: true } : {}),
       }
     : null;
 }
@@ -437,8 +455,13 @@ function reportBroker(
  * keys, which are built after the report starts, so it joins once `keys`
  * hands them over; until then it reads as none.
  */
-export function usageReportRoutes(userData: string) {
+export function usageReportRoutes<Task>(
+  paths: AppPaths,
+  taskOf: (taskId: string) => Task | undefined,
+  transcriptOf: (task: Task) => { path: string | null },
+) {
   const company = companyUsageDestinations();
+  const words = appSessionWords(paths, taskOf, transcriptOf);
   const email = claudeEmail();
   let connection: UsageConnection | undefined;
   const reads: Pick<CoreServices["usage"], "reporting" | "connection"> = {
@@ -456,14 +479,18 @@ export function usageReportRoutes(userData: string) {
     },
   };
   return {
-    destinations: (): readonly UsageReportDestination[] => [
-      ...company.destinations(),
-      ...(connection?.destinations(company.hosts()) ?? []),
-    ],
+    /** What the usage report sends where, and the words a destination with them on reads. */
+    facts: {
+      reportDestinations: (): readonly UsageReportDestination[] => [
+        ...company.destinations(),
+        ...(connection?.destinations(company.hosts()) ?? []),
+      ],
+      turnWords: (taskId, since, until) => words.between(taskId, since, until),
+    } satisfies Pick<HomeUsageFacts, "reportDestinations" | "turnWords">,
     /** Builds the connection over the integrations' keys, and returns them unchanged. */
     keys(keys: IntegrationKeys): IntegrationKeys {
       connection = usageConnection({
-        file: join(userData, USAGE_CONNECTION_FILE),
+        file: join(paths.userData, USAGE_CONNECTION_FILE),
         keys,
         email: email.current,
       });

@@ -95147,6 +95147,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Sends your crew’s usage to ${host} in Claude Code’s format: models, tokens and estimated cost, never prompts or replies.`;
   }
+  function settingsUsageConnectionClaudeCodeWords(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يرسل استخدام طاقمك إلى ${host} بتنسيق Claude Code: النماذج والرموز والتكلفة التقديرية، مع المطالبات والردود.`;
+      case "de":
+        return `Sendet die Nutzung deiner Crew an ${host} im Format von Claude Code: Modelle, Tokens und geschätzte Kosten, mit Prompts und Antworten.`;
+      case "es":
+        return `Envía el uso de tu tripulación a ${host} en el formato de Claude Code: modelos, tokens y costo estimado, con prompts y respuestas.`;
+      case "fr":
+        return `Envoie l’utilisation de votre équipage à ${host} au format de Claude Code : modèles, tokens et coût estimé, avec les prompts et les réponses.`;
+      case "ja":
+        return `乗組員の使用量を Claude Code の形式で ${host} に送ります。モデル、トークン、推定コストに加え、プロンプトと返答も送ります。`;
+      case "ko":
+        return `선원들의 사용량을 Claude Code 형식으로 ${host}에 보냅니다. 모델, 토큰, 예상 비용과 함께 프롬프트와 답변도 보냅니다.`;
+      case "pt-BR":
+        return `Envia o uso da sua tripulação para ${host} no formato do Claude Code: modelos, tokens e custo estimado, com prompts e respostas.`;
+      case "zh-Hans":
+        return `以 Claude Code 的格式把船员的用量发送到 ${host}：模型、token 和预估费用，并包含提示和回复。`;
+      case "zh-Hant":
+        return `以 Claude Code 的格式把船員的用量傳送到 ${host}：模型、token 和預估費用，並包含提示和回覆。`;
+      case "en-XA":
+        return `[Šéñðš ýöûŕ çŕéŵ’š ûšáĝé ţö ${host} îñ Çļáûðé Çöðé’š ƒöŕɱáţ: ɱöðéļš, ţöķéñš áñð éšţîɱáţéð çöšţ, ŵîţĥ þŕöɱþţš áñð ŕéþļîéš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Sends your crew’s usage to ‬${host}‮ in Claude Code’s format: models, tokens and estimated cost, with prompts and replies.‬`;
+    }
+    return `Sends your crew’s usage to ${host} in Claude Code’s format: models, tokens and estimated cost, with prompts and replies.`;
+  }
   function settingsUsageConnectionEdit() {
     switch (currentLanguage()) {
       case "ar":
@@ -95932,6 +95960,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Sends your crew’s usage to ${host} in the standard OpenTelemetry format: timing, models, tokens and estimated cost, never prompts or replies.`;
   }
+  function settingsUsageConnectionStandardWords(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يرسل استخدام طاقمك إلى ${host} بتنسيق OpenTelemetry القياسي: الأوقات والنماذج والرموز والتكلفة التقديرية، مع المطالبات والردود.`;
+      case "de":
+        return `Sendet die Nutzung deiner Crew an ${host} im Standardformat von OpenTelemetry: Zeiten, Modelle, Tokens und geschätzte Kosten, mit Prompts und Antworten.`;
+      case "es":
+        return `Envía el uso de tu tripulación a ${host} en el formato estándar de OpenTelemetry: tiempos, modelos, tokens y costo estimado, con prompts y respuestas.`;
+      case "fr":
+        return `Envoie l’utilisation de votre équipage à ${host} au format standard d’OpenTelemetry : durées, modèles, tokens et coût estimé, avec les prompts et les réponses.`;
+      case "ja":
+        return `乗組員の使用量を OpenTelemetry の標準形式で ${host} に送ります。時間、モデル、トークン、推定コストに加え、プロンプトと返答も送ります。`;
+      case "ko":
+        return `선원들의 사용량을 OpenTelemetry 표준 형식으로 ${host}에 보냅니다. 시간, 모델, 토큰, 예상 비용과 함께 프롬프트와 답변도 보냅니다.`;
+      case "pt-BR":
+        return `Envia o uso da sua tripulação para ${host} no formato padrão do OpenTelemetry: tempos, modelos, tokens e custo estimado, com prompts e respostas.`;
+      case "zh-Hans":
+        return `以 OpenTelemetry 标准格式把船员的用量发送到 ${host}：时间、模型、token 和预估费用，并包含提示和回复。`;
+      case "zh-Hant":
+        return `以 OpenTelemetry 標準格式把船員的用量傳送到 ${host}：時間、模型、token 和預估費用，並包含提示和回覆。`;
+      case "en-XA":
+        return `[Šéñðš ýöûŕ çŕéŵ’š ûšáĝé ţö ${host} îñ ţĥé šţáñðáŕð ÖþéñŢéļéɱéţŕý ƒöŕɱáţ: ţîɱîñĝ, ɱöðéļš, ţöķéñš áñð éšţîɱáţéð çöšţ, ŵîţĥ þŕöɱþţš áñð ŕéþļîéš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Sends your crew’s usage to ‬${host}‮ in the standard OpenTelemetry format: timing, models, tokens and estimated cost, with prompts and replies.‬`;
+    }
+    return `Sends your crew’s usage to ${host} in the standard OpenTelemetry format: timing, models, tokens and estimated cost, with prompts and replies.`;
+  }
   function settingsUsageConnectionTitle() {
     switch (currentLanguage()) {
       case "ar":
@@ -96041,6 +96097,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮The tool’s answer to each batch‬`;
     }
     return `The tool’s answer to each batch`;
+  }
+  function settingsUsageConnectionWords() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إرسال المطالبات والردود أيضًا`;
+      case "de":
+        return `Auch Prompts und Antworten senden`;
+      case "es":
+        return `Enviar también prompts y respuestas`;
+      case "fr":
+        return `Envoyer aussi les prompts et les réponses`;
+      case "ja":
+        return `プロンプトと返答も送る`;
+      case "ko":
+        return `프롬프트와 답변도 보내기`;
+      case "pt-BR":
+        return `Enviar também prompts e respostas`;
+      case "zh-Hans":
+        return `同时发送提示和回复`;
+      case "zh-Hant":
+        return `同時傳送提示和回覆`;
+      case "en-XA":
+        return `[Šéñð þŕöɱþţš áñð ŕéþļîéš ţöö ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Send prompts and replies too‬`;
+    }
+    return `Send prompts and replies too`;
+  }
+  function settingsUsageConnectionWordsHint() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يضيف المطالبات التي يتلقاها طاقمك وردوده وما يعطيه لأدواته. تُخفى أولًا المفاتيح وكلمات المرور التي يتعرّف عليها Infinitary فيها.`;
+      case "de":
+        return `Fügt die Prompts deiner Crew, ihre Antworten und das, was sie ihren Werkzeugen gibt, hinzu. Schlüssel und Passwörter, die Infinitary darin erkennt, werden vorher verborgen.`;
+      case "es":
+        return `Añade los prompts que recibe tu tripulación, sus respuestas y lo que da a sus herramientas. Antes se ocultan las claves y contraseñas que Infinitary reconoce en ellos.`;
+      case "fr":
+        return `Ajoute les prompts que reçoit votre équipage, ses réponses et ce qu’il donne à ses outils. Les clés et mots de passe qu’Infinitary y reconnaît sont d’abord masqués.`;
+      case "ja":
+        return `乗組員が受け取るプロンプト、その返答、ツールに渡す内容を加えます。Infinitary が見つけたキーやパスワードは先に伏せます。`;
+      case "ko":
+        return `선원들이 받는 프롬프트, 그 답변, 도구에 건네는 내용을 더합니다. Infinitary가 그 안에서 알아본 키와 비밀번호는 먼저 가립니다.`;
+      case "pt-BR":
+        return `Acrescenta os prompts que sua tripulação recebe, as respostas dela e o que ela passa às ferramentas. Chaves e senhas que o Infinitary reconhece neles são ocultadas antes.`;
+      case "zh-Hans":
+        return `加上船员收到的提示、它的回复以及交给工具的内容。Infinitary 识别出的密钥和密码会先被隐去。`;
+      case "zh-Hant":
+        return `加上船員收到的提示、它的回覆以及交給工具的內容。Infinitary 辨識出的金鑰和密碼會先被隱藏。`;
+      case "en-XA":
+        return `[Åððš ţĥé þŕöɱþţš ýöûŕ çŕéŵ ĝéţš, îţš ŕéþļîéš áñð ŵĥáţ îţ ĝîṽéš îţš ţööļš. Ķéýš áñð þáššŵöŕðš Îñƒîñîţáŕý ŕéçöĝñîžéš îñ ţĥéɱ áŕé ĥîððéñ ƒîŕšţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Adds the prompts your crew gets, its replies and what it gives its tools. Keys and passwords Infinitary recognizes in them are hidden first.‬`;
+    }
+    return `Adds the prompts your crew gets, its replies and what it gives its tools. Keys and passwords Infinitary recognizes in them are hidden first.`;
   }
   function settingsUsageCostAllKinds() {
     switch (currentLanguage()) {
@@ -115583,6 +115693,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsUsageConnectionAddressHint,
     settingsUsageConnectionCancel,
     settingsUsageConnectionClaudeCode,
+    settingsUsageConnectionClaudeCodeWords,
     settingsUsageConnectionEdit,
     settingsUsageConnectionEmailLine,
     settingsUsageConnectionFailed,
@@ -115612,10 +115723,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsUsageConnectionSaveLine,
     settingsUsageConnectionSecretLabel,
     settingsUsageConnectionStandard,
+    settingsUsageConnectionStandardWords,
     settingsUsageConnectionTitle,
     settingsUsageConnectionUseOperation,
     settingsUsageConnectionUseReason,
     settingsUsageConnectionUseResult,
+    settingsUsageConnectionWords,
+    settingsUsageConnectionWordsHint,
     settingsUsageCostAllKinds,
     settingsUsageCostAllProjects,
     settingsUsageCostChange,
@@ -119190,6 +119304,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsUsageConnectionAddressHint": [],
     "settingsUsageConnectionCancel": [],
     "settingsUsageConnectionClaudeCode": ["host"],
+    "settingsUsageConnectionClaudeCodeWords": ["host"],
     "settingsUsageConnectionEdit": [],
     "settingsUsageConnectionEmailLine": [],
     "settingsUsageConnectionFailed": [],
@@ -119219,10 +119334,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsUsageConnectionSaveLine": [],
     "settingsUsageConnectionSecretLabel": ["name"],
     "settingsUsageConnectionStandard": ["host"],
+    "settingsUsageConnectionStandardWords": ["host"],
     "settingsUsageConnectionTitle": [],
     "settingsUsageConnectionUseOperation": ["host"],
     "settingsUsageConnectionUseReason": ["host"],
     "settingsUsageConnectionUseResult": [],
+    "settingsUsageConnectionWords": [],
+    "settingsUsageConnectionWordsHint": [],
     "settingsUsageCostAllKinds": [],
     "settingsUsageCostAllProjects": [],
     "settingsUsageCostChange": [],

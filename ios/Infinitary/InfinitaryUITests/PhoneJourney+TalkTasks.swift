@@ -136,6 +136,18 @@ extension PhoneJourney {
         XCTAssertTrue(tagChip("feature").isSelected, "The pressed chip reads as pressed")
         // In light and dark, as the release note's picture pair shows it.
         try await appearances("task-search-tags", showing: tagChip("feature"))
+        // Closing the search lets go of the tag, as the Mac's does: opened again, All tags is the pressed chip.
+        let search = app.textFields["task-search"]
+        tapOnPhone(app.buttons["close-task-search"])
+        XCTAssertTrue(search.waitForAbsence(timeout: 10), "Close search puts the search away while a tag is pressed")
+        pullDownOnPhone(app.scrollViews["tasks-list"])
+        XCTAssertTrue(app.buttons["tag-chip-all"].waitForPresence(timeout: 10))
+        XCTAssertTrue(app.buttons["tag-chip-all"].isSelected, "Closing the search let go of feature")
+        XCTAssertFalse(tagChip("feature").isSelected, "Closing the search let go of feature")
+        // The words open every group again, so the row is there to open whatever Backlog's fold was.
+        focusForPhoneTyping(search, in: app)
+        search.typeText("harbour")
+        XCTAssertTrue(app.buttons["task-phone-work"].waitForPresence(timeout: 10))
         tapOnPhone(app.buttons["task-phone-work"])
         let tags = app.staticTexts["task-record-tags"]
         XCTAssertTrue(tags.waitForPresence(timeout: 10), "The record shows a Tags row")

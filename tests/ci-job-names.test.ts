@@ -22,6 +22,8 @@ const releaseNeeds = {
   ...Object.fromEntries(
     ["notes", "verify", "linux", "phone", "release", "update"].map((id) => [id, pass]),
   ),
+  // windows.yml's build, which lists the one round its check runs.
+  build: { ...pass, outputs: { rounds: "[1]" } },
 };
 // A main check that waited for the alpha cut from main run 204, as run
 // 42232009514 did, so the wait's own jobs are named too (alpha-wait.yml).

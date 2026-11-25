@@ -9,13 +9,13 @@ name: windows
 # person's yes, the command with no window started through this person's
 # Task Scheduler, a crew turn whose commands run in that Git's Git Bash with
 # its job stopped, and removal that keeps the saved work. The installer
-# stays on the run; nothing here signs or uploads it anywhere else. An
-# alpha's upload job publishes the installer this run checked
+# stays on the run; nothing here signs or uploads it anywhere else. A
+# release's upload job, alpha or stable, publishes the installer this run checked
 # (release.yml).
 #
 # The captain's pick on INF-4243: it runs on each combined batch that
 # touches Windows-relevant files (batch-checks.yml, scripts/windows-paths.ts)
-# and on every alpha (release.yml), and on request.
+# and on every alpha and stable (release.yml), and on request.
 #
 # An outside contributor's pull request (docs/public-ci.md, "Outside
 # contributors") calls it with hosted: the build runs on GitHub's hosted
@@ -245,11 +245,42 @@ jobs:
         if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with: *build-checkout
+      # Every local action here comes from the workflow's own commit and runs
+      # against the source above: a stable builds its alpha's commit, which
+      # may predate an action this workflow uses (docs/windows.md, "The
+      # checks"), with the fetch script the pnpm download runs beside them.
+      # It names only the actions this workflow uses: the batch's run starts
+      # it, and a folder it names counts as one that run reads
+      # (scripts/batch-pull.mjs). It goes after the source, whose checkout
+      # would clear it.
+      - id: tooling
+        name: Check out the workflow's own actions
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        continue-on-error: true
+        with: &build-tooling
+          ref: ${{ github.sha }}
+          path: .release-tooling
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            .github/actions/pnpm/
+            .github/actions/electron-download/
+            .github/actions/electron-builder-tools/
+            scripts/fetch-without-credential.sh
+      - name: Wait until GitHub takes the job's token
+        if: ${{ !cancelled() && steps.tooling.outcome == 'failure' }}
+        env:
+          TOKEN: ${{ github.token }}
+        run: *wait-for-token
+      - name: Check out the workflow's own actions again
+        if: ${{ !cancelled() && steps.tooling.outcome == 'failure' }}
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: *build-tooling
       # pnpm, Electron and electron-builder's tools from the Actions cache, as
       # every other job takes them (docs/testing.md, "pnpm's own download",
       # "Downloads from GitHub's release server"); the portable Git's bash
       # runs their shell steps.
-      - uses: ./.github/actions/pnpm
+      - uses: ./.release-tooling/.github/actions/pnpm
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 24
@@ -267,7 +298,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           ROUNDS: ${{ inputs.rounds }}
         run: node scripts/windows-update-builds.ts
-      - uses: ./.github/actions/electron-download
+      - uses: ./.release-tooling/.github/actions/electron-download
         if: ${{ !steps.reuse.outputs.run }}
       - run: pnpm install --frozen-lockfile
         if: ${{ !steps.reuse.outputs.run }}
@@ -313,7 +344,7 @@ jobs:
         env:
           RELEASE_VERSION: ${{ inputs.version }}
         run: echo "version=${RELEASE_VERSION:-$(node -p 'require("./package.json").version')}" >> "$GITHUB_OUTPUT"
-      - uses: ./.github/actions/electron-builder-tools
+      - uses: ./.release-tooling/.github/actions/electron-builder-tools
         if: ${{ !steps.reuse.outputs.run }}
       # electron-builder reads Electron's zip from the cache the install's
       # download step restored, checked first against Electron's own sums
@@ -324,7 +355,7 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          node .github/actions/electron-download/zips.mjs win32 x64
+          node .release-tooling/.github/actions/electron-download/zips.mjs win32 x64
           pnpm exec electron-builder --win --config electron-builder.win.yml --publish never \
             -c.extraMetadata.version="$VERSION" \
             -c.electronDownload.cache="$electron_config_cache" -c.electronDownload.isVerifyChecksum=false
@@ -347,7 +378,7 @@ jobs:
       - name: Build the update check's test versions
         if: ${{ inputs.update_check && !steps.reuse.outputs.run }}
         run: |
-          node .github/actions/electron-download/zips.mjs win32 x64
+          node .release-tooling/.github/actions/electron-download/zips.mjs win32 x64
           built="$RUNNER_TEMP/update-installers"
           mkdir -p "$built"
           for version in $(node scripts/windows-update-source.ts); do
@@ -362,7 +393,7 @@ jobs:
           (cd windows-installer && sha256sum *.exe | tee SHA256SUMS)
       - name: Keep electron-builder's tools
         if: ${{ !cancelled() && !steps.reuse.outputs.run }}
-        uses: ./.github/actions/electron-builder-tools
+        uses: ./.release-tooling/.github/actions/electron-builder-tools
         with:
           save: 'true'
       # The update check's installers under the key of what they are built
@@ -452,11 +483,36 @@ jobs:
         if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with: *check-checkout
-      - uses: ./.github/actions/pnpm
+      # The workflow's own actions, as the build takes them.
+      - id: tooling
+        name: Check out the workflow's own actions
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        continue-on-error: true
+        with: &check-tooling
+          ref: ${{ github.sha }}
+          path: .release-tooling
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            .github/actions/pnpm/
+            .github/actions/electron-download/
+            .github/actions/electron-builder-tools/
+            scripts/fetch-without-credential.sh
+      - name: Wait until GitHub takes the job's token
+        if: ${{ !cancelled() && steps.tooling.outcome == 'failure' }}
+        shell: bash
+        env:
+          TOKEN: ${{ github.token }}
+        run: *wait-for-token
+      - name: Check out the workflow's own actions again
+        if: ${{ !cancelled() && steps.tooling.outcome == 'failure' }}
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: *check-tooling
+      - uses: ./.release-tooling/.github/actions/pnpm
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 24
-      - uses: ./.github/actions/electron-download
+      - uses: ./.release-tooling/.github/actions/electron-download
       # The journey runs the installed app, so the check's own install builds
       # nothing: the machine has no Python or compiler for native modules. It
       # only refuses an install that left out a package, as the postinstall
@@ -583,11 +639,36 @@ jobs:
         if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with: *update-checkout
-      - uses: ./.github/actions/pnpm
+      # The workflow's own actions, as the build takes them.
+      - id: tooling
+        name: Check out the workflow's own actions
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        continue-on-error: true
+        with: &update-tooling
+          ref: ${{ github.sha }}
+          path: .release-tooling
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            .github/actions/pnpm/
+            .github/actions/electron-download/
+            .github/actions/electron-builder-tools/
+            scripts/fetch-without-credential.sh
+      - name: Wait until GitHub takes the job's token
+        if: ${{ !cancelled() && steps.tooling.outcome == 'failure' }}
+        shell: bash
+        env:
+          TOKEN: ${{ github.token }}
+        run: *wait-for-token
+      - name: Check out the workflow's own actions again
+        if: ${{ !cancelled() && steps.tooling.outcome == 'failure' }}
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: *update-tooling
+      - uses: ./.release-tooling/.github/actions/pnpm
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 24
-      - uses: ./.github/actions/electron-download
+      - uses: ./.release-tooling/.github/actions/electron-download
       # The journey reads the same release source the test versions carry.
       - run: |
           pnpm install --frozen-lockfile --ignore-scripts

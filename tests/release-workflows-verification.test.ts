@@ -499,6 +499,7 @@ describe("the signed channel workflow", () => {
           notes: { result: "success" },
           verify: { result },
           linux: { result: "success" },
+          windows: { result: "success" },
           phone: { result: "success" },
           release: { result: "success" },
           update: { result: required === "true" ? "success" : "skipped" },
@@ -628,6 +629,8 @@ describe("the signed channel workflow", () => {
           ...Object.fromEntries(
             ["notes", "verify", "linux", "phone", "release", "update"].map((id) => [id, pass]),
           ),
+          // windows.yml's build, which lists the one round its check runs.
+          build: { ...pass, outputs: { rounds: "[1]" } },
         },
       });
     // GitHub lists a skipped call under its unevaluated name.

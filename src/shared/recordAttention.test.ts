@@ -3,7 +3,7 @@
 // the body, above the goal"). These moved from the record's frame to the
 // window with the Info tab; each case is the frame test it was ported from.
 import { describe, expect, it } from "vitest";
-import { recordAttentionOf, recordClosedLineOf } from "./recordAttention";
+import { partsDoTheWork, recordAttentionOf, recordClosedLineOf } from "./recordAttention";
 import { waitChainWords } from "./taskPresentation";
 import type { TaskDetail } from "./tasks";
 
@@ -211,6 +211,30 @@ describe("the record's attention sentence", () => {
         }),
       )?.title,
     ).toBe("Waiting on DEMO-38");
+    // Only a parent that never runs itself closes by itself: a program runs its
+    // script while open, and a when-ready parent starts once its parts close.
+    const parts = { children: { total: 2, closed: 1 }, parts: [closed, backlog] };
+    for (const runs of [
+      { ...parent, program: true as const },
+      { ...parent, startPolicy: "when-ready" as const },
+    ])
+      expect(say(task({ ...runs, ...parts }))?.title).toBe("Its 2 parts do the work");
+  });
+
+  // INF-6805 plan, run_facts "hidden": a parent that never runs itself leaves
+  // out Now, Delivery, Runs on and Use; one that runs keeps them.
+  it("counts only an unstarted on-request parent as one that never runs itself", () => {
+    const parent = {
+      status: "open",
+      activity: null,
+      startPolicy: "on-request",
+      children: { total: 2, closed: 1 },
+    } as const;
+    expect(partsDoTheWork(task(parent))).toBe(true);
+    expect(partsDoTheWork(task({ ...parent, program: true }))).toBe(false);
+    expect(partsDoTheWork(task({ ...parent, startPolicy: "when-ready" }))).toBe(false);
+    expect(partsDoTheWork(task({ ...parent, status: "active", activity: "running" }))).toBe(false);
+    expect(partsDoTheWork(task({ ...parent, children: { total: 0, closed: 0 } }))).toBe(false);
   });
 
   it("does not equate needsYou with a decision, and keeps the reported blocker in view", () => {

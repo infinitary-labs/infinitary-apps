@@ -104,7 +104,9 @@ public enum PhoneRecord {
         let preparing = task.startAttempt?.phase == "preparing" || task.activity == "starting"
         let reason = task.startAttempt?.phase == "checking" ? checkingWords
             : since.map { now - $0 >= 15_000 } == true && preparing ? slowStartWords
-            : task.startNotice.map { PhoneMessages.phoneRecordStartFailed(reason: $0.reason) } ?? read.reason
+            : task.startNotice.map { PhoneMessages.phoneRecordStartFailed(reason: $0.reason) }
+            // The attention box says what a parent's parts wait on, so the reason stays empty beside it.
+            ?? (partsAttention(task) != nil ? "" : read.reason)
         return read.with(reason: reason)
     }
 
@@ -272,7 +274,9 @@ public enum PhoneRecord {
     /// `partsAttentionOf`: what an unstarted parent waits on, from what its open parts are doing, most pressing first;
     /// nil on any other task, on a parent a blocker holds, and from an older Mac that sends no parts.
     static func partsAttention(_ task: PhoneTask) -> (String, String)? {
-        guard task.status == "open", task.blockedBy.isEmpty, task.flags?.blocked != true else { return nil }
+        // Only a parent that never runs itself: a program runs while open, and a when-ready parent starts later.
+        guard task.status == "open", task.startPolicy == "on-request", task.program != true,
+              task.blockedBy.isEmpty, task.flags?.blocked != true else { return nil }
         let parts = task.parts ?? []
         let open = parts.filter { $0.status == "open" || $0.status == "active" }
         if open.isEmpty { return nil }

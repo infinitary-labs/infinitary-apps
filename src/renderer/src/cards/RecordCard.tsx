@@ -2,7 +2,7 @@ import type { DropTaskReview, TaskLifecycleOp } from "@shared/cards";
 import * as m from "@shared/i18n/messages.generated";
 import { isSafeCardHref } from "@shared/linkify";
 import type { FrameTheme } from "@shared/plugins/frameDocument";
-import { partsDoTheWork } from "@shared/recordAttention";
+import { partsDoTheWork, partsSentenceSpeaks } from "@shared/recordAttention";
 import { recordBarOf } from "@shared/recordBar";
 import { recordOffersCloseDone } from "@shared/recordCloseDone";
 import { recordProofDemo, recordProofPictures } from "@shared/recordProof";
@@ -301,7 +301,7 @@ export function RecordCard({
             (shown.startAttempt?.phase === "preparing" || shown.activity === "starting")
           ? m.cardRecordStillStarting()
           : // Could not start is said beside Try again, in the bar.
-            shown.startNotice
+            shown.startNotice || partsSentenceSpeaks(shown)
             ? ""
             : base.status.reason;
     return reason === base.status.reason ? base : { ...base, status: { ...base.status, reason } };

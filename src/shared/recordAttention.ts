@@ -40,6 +40,8 @@ type AttentionDetail = Pick<
   | "waits"
   | "waitChain"
   | "parts"
+  | "startPolicy"
+  | "program"
 >;
 
 /** What the record says under "Stuck at its provider". */
@@ -160,10 +162,21 @@ const PART_COUNTS: Record<string, (count: number) => string> = {
  * parent a blocker holds (its blocker leads), and on an older home that
  * sends no parts.
  */
+/**
+ * The attention box says what a parent's parts wait on, so the pill's reason
+ * beside it stays empty rather than repeating it (INF-6805).
+ */
+export function partsSentenceSpeaks(task: AttentionDetail): boolean {
+  return partsAttentionOf(task) !== null;
+}
+
 function partsAttentionOf(
-  task: Pick<AttentionDetail, "status" | "blockedBy" | "flags" | "parts">,
+  task: Pick<
+    AttentionDetail,
+    "status" | "blockedBy" | "flags" | "parts" | "children" | "startPolicy" | "program"
+  >,
 ): { title: string; guidance: string } | null {
-  if (task.status !== "open" || task.blockedBy.length > 0 || task.flags.blocked) return null;
+  if (!partsDoTheWork(task) || task.blockedBy.length > 0 || task.flags.blocked) return null;
   const open = (task.parts ?? []).filter(
     (part) => part.status === "open" || part.status === "active",
   );
@@ -202,8 +215,17 @@ function partsAttentionOf(
  * record leaves out the facts of a run (INF-6805's plan, the captain's
  * answer run_facts: hidden).
  */
-export function partsDoTheWork(task: Pick<TaskView, "status" | "children">): boolean {
-  return task.status === "open" && task.children.total > 0;
+export function partsDoTheWork(
+  task: Pick<TaskView, "status" | "children" | "startPolicy" | "program">,
+): boolean {
+  // Only a parent that never runs itself: a program runs its script while it
+  // stays open, and a when-ready parent starts once its parts close.
+  return (
+    task.status === "open" &&
+    task.children.total > 0 &&
+    task.startPolicy === "on-request" &&
+    !task.program
+  );
 }
 
 /** A part row's word on its parent's record: how it closed, or its status word. */

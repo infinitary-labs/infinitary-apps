@@ -460,8 +460,6 @@ describe("the task protocol (task-system P3)", () => {
     });
   });
 
-  // INF-3908 (INF-3896's piece 2): on the captain's record these three made
-  // 16.1 MB of a 21.5 MB board, and no view draws them from a row.
   // INF-6805: "there's no way to see children parts, and \"waiting for start\" is also misleading".
   it("lists a parent's parts on its record, and a parent never waits for a Start of its own", () => {
     const f = taskProtocolFixture();
@@ -495,6 +493,8 @@ describe("the task protocol (task-system P3)", () => {
     f.db.close();
   });
 
+  // INF-3908 (INF-3896's piece 2): on the captain's record these three made
+  // 16.1 MB of a 21.5 MB board, and no view draws them from a row.
   it("sends no change story, live validation or check repair record on a board row or a record's delivery", () => {
     const { tasks, protocol } = taskProtocolFixture();
     tasks.create({

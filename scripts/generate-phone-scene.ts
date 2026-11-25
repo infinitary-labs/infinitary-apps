@@ -68,7 +68,7 @@ try {
   const { earlierRowsOf, failedStartCount, newFilingCount, NOW_GROUPS, OPEN_BY_DEFAULT, rowsOf, rowTrailing, tagChipsOf, wordOf } = await runner.import<NowRows>(join(REPO_ROOT, "src/panels/now/rows.ts"));
   const { failedCountWords, newCountWords } = await runner.import<typeof import("../src/panels/now/words.ts")>(join(REPO_ROOT, "src/panels/now/words.ts"));
   const { recordBarOf } = await runner.import<typeof import("../src/shared/recordBar.ts")>(join(REPO_ROOT, "src/shared/recordBar.ts"));
-  const { recordAttentionOf, recordClosedLineOf } = await runner.import<typeof import("../src/shared/recordAttention.ts")>(join(REPO_ROOT, "src/shared/recordAttention.ts"));
+  const { partsSentenceSpeaks, recordAttentionOf, recordClosedLineOf } = await runner.import<typeof import("../src/shared/recordAttention.ts")>(join(REPO_ROOT, "src/shared/recordAttention.ts"));
   const { taskWaitStatus } = await runner.import<typeof import("../src/shared/taskWaits.ts")>(join(REPO_ROOT, "src/shared/taskWaits.ts"));
   const { boardMenuOf, boardMoveOf, dropAskOf, moveContextOf } = await runner.import<BoardMoves>(join(REPO_ROOT, "src/panels/now/boardMoves.ts"));
   const { boardLaneOf } = await runner.import<BoardTiles>(join(REPO_ROOT, "src/panels/now/boardTiles.ts"));
@@ -543,12 +543,16 @@ try {
         parts: [...closedParts, openPart(3043, {})] }, null],
       ["a parent whose last part works", { ...unstarted, startPolicy: "on-request", children: { total: 3, closed: 2 },
         parts: [...closedParts, openPart(3043, { status: "active", activity: "running", workPosture: { state: "active", reason: "turn" }, startedAt: now - 9 * min })] }, null],
-      ["a parent whose last part waits on you", { ...unstarted, children: { total: 3, closed: 2 },
+      ["a parent whose last part waits on you", { ...unstarted, startPolicy: "on-request", children: { total: 3, closed: 2 },
         parts: [...closedParts, openPart(3043, { status: "active", activity: "idle", workPosture: { state: "idle", reason: "captain" }, waitingCardId: "card-3043",
           startedAt: now - 9 * min })] }, null],
       ["a parent with three open parts", { ...unstarted, startPolicy: "on-request", children: { total: 4, closed: 1 },
         parts: [closedParts[0], openPart(3043, { status: "active", activity: "running", workPosture: { state: "active", reason: "turn" }, startedAt: now - 9 * min }),
           openPart(3044, {}), openPart(3045, {})] }, null],
+      ["a running program with an open part", { ...unstarted, startPolicy: "on-request", program: true, children: { total: 3, closed: 2 },
+        parts: [...closedParts, openPart(3043, {})] }, null],
+      ["a parent that starts once its parts close", { ...unstarted, startPolicy: "when-ready", children: { total: 3, closed: 2 },
+        parts: [...closedParts, openPart(3043, {})] }, null],
       ["waiting on a task, no time recorded", { activity: "idle", workPosture: { state: "idle", reason: "dependency" }, blockedBy: ["INF-3010"],
         waits: [wait("w-6", "dependency", "INF-3010")] }, null],
       ["interrupted", { activity: "interrupted", workPosture: undefined, problem: "The model stopped answering.", activityLog: log }, null],
@@ -595,7 +599,7 @@ try {
       const reason = row.startAttempt?.phase === "checking" ? "Checking whether it started"
         : since != null && now - since >= 15_000 && (row.startAttempt?.phase === "preparing" || row.activity === "starting")
           ? "Still starting. You can keep working."
-          : row.startNotice ? `Could not start. ${row.startNotice.reason}` : read.reason;
+          : row.startNotice ? `Could not start. ${row.startNotice.reason}` : partsSentenceSpeaks(row) ? "" : read.reason;
       const bar = recordBarOf(row);
       const closed = recordClosedLineOf(row);
       const end = bar?.end === "drop-task" || bar?.end === "stop-task" ? bar.end : null;

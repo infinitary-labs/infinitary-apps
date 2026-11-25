@@ -1,8 +1,9 @@
 import { DELIVERY_BASIS_WORDS, DELIVERY_FACTS_LABEL } from "@shared/deliveryFacts";
 import { formatList, formatNumber } from "@shared/i18n/format";
 import * as m from "@shared/i18n/messages.generated";
+import { nowGroupOf } from "@shared/nowPanel";
 import { partWordOf, recordAttentionOf, recordClosedLineOf } from "@shared/recordAttention";
-import { type TaskStatus, taskStatusOf } from "@shared/taskPresentation";
+import { taskStatusOf } from "@shared/taskPresentation";
 import type { TaskDetail, TaskView } from "@shared/tasks";
 import { type ReactNode, useRef, useState } from "react";
 import { Age, useMinute } from "../design/core/TaskFacts";
@@ -208,11 +209,15 @@ const FOLD_CLOSED_OVER = 8;
 
 const isClosed = (part: TaskView) => part.status === "done" || part.status === "dropped";
 
-/** A part's segment on the bar, in the Tasks panel bar's colors. */
-function barState(mark: TaskStatus): string {
-  if (mark === "done" || mark === "dropped") return "done";
-  if (mark === "waiting") return "waiting";
-  return mark === "working" || mark === "starting" ? "working" : "rest";
+/**
+ * A part's segment on the bar, read as the Tasks panel's bar reads a part
+ * (`partsBarOf`): closed, then its Tasks group - waiting on you, working, or
+ * the rest.
+ */
+function barState(part: TaskView): "done" | "waiting" | "working" | "rest" {
+  if (isClosed(part)) return "done";
+  const group = nowGroupOf(part);
+  return group === "waiting" ? "waiting" : group === "working" ? "working" : "rest";
 }
 
 /**
@@ -239,7 +244,6 @@ function RecordParts({
   });
   const parts = detail.parts ?? [];
   if (parts.length === 0) return <div data-record-fact="children">{count}</div>;
-  const readings = new Map(parts.map((part) => [part.id, taskStatusOf(part)]));
   const closedParts = parts.filter(isClosed);
   const segments = [...closedParts, ...parts.filter((part) => !isClosed(part))];
   const folds = parts.length > FOLD_CLOSED_OVER && closedParts.length > 0;
@@ -258,7 +262,7 @@ function RecordParts({
         <span data-record-fact="children">{count}</span>
         <span className="bar" aria-hidden="true">
           {segments.map((part) => (
-            <i key={part.id} data-part={barState(readings.get(part.id)?.mark ?? "backlog")} />
+            <i key={part.id} data-part={barState(part)} />
           ))}
         </span>
       </summary>

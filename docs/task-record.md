@@ -620,7 +620,7 @@ The window draws its overview from the shared task facts (`TaskFactRows`, `TaskF
    A parent with open parts, neither blocked nor waiting on a dropped task, says what its parts wait on: its last part by name (`Its last part waits for your Start`, `Its last part is waiting on you`, `Waiting for its last part`), or how many are open with each status counted, most pressing first, and that the parent closes by itself once its parts close.
 2. On a task closed as done, the Delivered row: each delivery fact the close read, with how it is known (`RecordDelivered`).
 3. The task's place among other tasks as rows of keys: Part of, Waits on, Holds up and Parts, and the outside issue it answers as a link under Issue (`RecordRelations`; `docs/agents-reach.md`, "A reader's Build rows").
-   Parts is a fold, open at first, its summary the count of closed parts and a bar of them by status; open, it lists every part in filing order, closed parts first, each with its status mark, title, key and status word, and pressing a part opens its record (`RecordParts`, `TaskDetail.parts`, INF-6805).
+   Parts is a fold, open at first, its summary the count of closed parts and a bar of them by status; open, it lists every part in filing order, each with its status mark, title, key and status word, and pressing a part opens its record (`RecordParts`, `TaskDetail.parts`, INF-6805).
    Past eight parts with some closed, the closed rows fold behind one line counting them.
    A part row has no Start or Show the card: the captain opens the part and acts there.
 4. The goal, whole, with the captain's words folded under it, closed, the fold's name counting them ("Your 2 messages"); the fold also holds why a crew filing was filed and why the first mate built without a plan (`RecordGoal`, `recordWordsFoldName`).
@@ -632,7 +632,7 @@ The window draws its overview from the shared task facts (`TaskFactRows`, `TaskF
    An open parent whose parts do its work never runs, so its record leaves out Now, Delivery, Runs on and Use, and keeps Spend (`partsDoTheWork`).
 7. One closed More row at the end, scrolling with the body: the facts the summary leaves out, with their policy sources, Knowledge used and Live validation; a short dim preview beside its name says what it holds.
 
-The words fold, the parts fold and More are remembered per task while its record stays in the stack, as every record section is (`recordOpenSections`): paging away and back keeps them, and closing the record ends its visit, so reopening starts with both closed.
+The words fold, the parts fold and More are remembered per task while its record stays in the stack, as every record section is (`recordOpenSections`): paging away and back keeps them, and closing the record ends its visit, so reopening starts with the words fold and More closed and the parts fold open.
 Cards and Activity are the record's own tabs (`docs/task-card-tabs.md`): the record's sandboxed body draws them and More, and the window tells it which view to show (`view` in its state, `[data-record-view]` on each part).
 
 ## Live resource use

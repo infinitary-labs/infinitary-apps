@@ -197,7 +197,7 @@ When it waits on one task, the reason also says where that wait stops (INF-5578)
 A review that has answered, whose change is still open, waits on that change the same way, `Idle · Waiting on INF-12`, rather than reading as no continuing work; one that has not answered yet keeps its own reason.
 The Tasks row, which shows no reason, adds the dim word `waiting`; its margin arrow points at what it waits on, and its summary names each one.
 A kanban tile uses grouped wait names and the earliest recorded event in its existing status area, with no separate recorded-since line; when its one wait's line goes further or ends in a hold, it names where that line stops instead of the event, wrapping in the column; list rows and older homes keep their previous presentation.
-The summary's Blocked by row lists every standing blocker by its key alone (INF-2528); the task card names its unknown end time and its recorded-since date where known, in the viewing computer's zone.
+The summary's Blocked by row lists every standing blocker by its key alone (INF-2528); the task card names its recorded-since date where known, in the viewing computer's zone.
 The time is when the wait was recorded - the edge's own time or a dated declaration, the earliest when several name one task - never when work stopped; an unknown time is left out, never guessed.
 A ready decision that settles with a merge reads `Waiting on you · Waiting for your merge`, from the typed merge fact alone; other ready decisions keep `A decision card is ready`.
 Paused for access, Background work is unknown and No continuing work keep their own reasons.
@@ -333,7 +333,7 @@ Only desktop task cards enrich their existing fields with the optional structure
 Checks owns every named watch schedule; Blocked by or the existing hold explanation owns dependencies and their recorded dates.
 Remaining check-backs and holds replace the existing header reason; no generic Wait section or extra badge repeats them.
 Suppress a generic reason only when its typed source has another owner in that view; keep failure, interruption and access guidance.
-Unknown end times remain unknown, and a past event says was due rather than resumed.
+A wait with no recorded event shows no time, never a guessed or unknown one, and a past event says was due rather than resumed.
 The Tasks list and board list rows retain their existing status, words, density and behavior.
 
 ## Batch gate

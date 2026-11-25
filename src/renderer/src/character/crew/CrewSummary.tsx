@@ -183,8 +183,8 @@ function ProgramParts({ programId }: { programId: string }) {
 
 /**
  * Named record links for a wait an edge cannot draw, and the complete list:
- * each task's key only (INF-2528). When each wait was recorded, and its
- * unknown end, are the task card's.
+ * each task's key only (INF-2528). When each wait was recorded is the task
+ * card's.
  */
 function BlockedBy({ keys }: { keys: readonly string[] }) {
   const tasks = useBoardTasks();

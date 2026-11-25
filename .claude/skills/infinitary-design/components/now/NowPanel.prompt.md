@@ -115,14 +115,16 @@ The choice is kept across restarts in the panel's own store.
 Where no tags apply (the tag row would not show), By tag stays listed, dim, with a line saying why, such as `SCR has no tags yet`, and Tasks lists by status; the choice stays as picked and comes back when tags apply.
 
 **By tag.**
-With By tag picked, the order is Pinned, Waiting on you, one group per tag alphabetically, No tag, then Done · 7d; a tag no listed task carries has no group.
-A tag group lists the working, queued and backlog tasks carrying it, in that order, each as a flat row reading exactly as in its own group (no indentation, no parts count button); a task with two tags lists under both.
-A task waiting on you lists once, in Waiting on you, and a pinned task stays in Pinned.
+With By tag picked, the order is Pinned, one group per tag alphabetically, No tag, then Done · 7d; a tag no listed task carries has no group, and there is no Waiting on you group.
+A tag group lists the tasks waiting on you, working, queued and in the backlog carrying it, in that order, each as a flat row reading exactly as in its own group (no indentation, no parts count button), a waiting row's title in `--fg-1` as in Waiting on you; a task with two tags lists under both.
+An untagged task waiting on you, or a put-away card with no task, lists under No tag, and a pinned task stays in Pinned.
+The captain's words: "fold "waiting on you" into the tag groups as well. color of the segments in the preview line can already differentiate them".
 A tag group's header names its tag in the chip's mono type, `--fg-2`, never uppercase; No tag is a tag group's header too.
 Tag groups start folded, and each fold is kept in the panel's store; a folded group's header ends with its count and the chevron, as Backlog's does.
-A folded tag group shows a bar under its name, in the look of a collapsed task's parts bar (Parts, above): one segment per task in the group's order, working in `--warn`, queued and backlog as a `--line-2` outline.
+A folded tag group shows a bar under its name, in the look of a collapsed task's parts bar (Parts, above): one segment per task in the group's order, waiting on you in `--accent`, working in `--warn`, queued and backlog as a `--line-2` outline.
+Under the bar it still lists its rows waiting on you, as a collapsed task never hides a part waiting on you, so no decision hides behind a fold; the count includes them.
 Resting on a segment and pressing it work as on a collapsed task's bar: the rest shows that task's summary level with the header, and a press opens that task; a press elsewhere on the header folds or opens the group.
-An open tag group shows rows instead of the bar; folded Backlog and Done · 7d get no bar.
+An open tag group shows all its rows instead of the bar; folded Backlog and Done · 7d get no bar.
 While a tag is pressed, grouping by tag shows only that tag's group, open.
 
 **Elsewhere.**

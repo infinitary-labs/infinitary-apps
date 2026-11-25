@@ -1,5 +1,5 @@
 ---
-source: d1435fbb25dfd2af
+source: 37599270c99ffda1
 title: Tâches et équipiers
 description: Ce qu’est une tâche, comment elle passe de la réserve à terminée, où la suivre et comment orienter l’équipier qui s’en charge.
 ---
@@ -110,6 +110,7 @@ Vous pouvez retrouver des tâches par étiquette à trois endroits :
   Appuyez sur une étiquette pour ne lister que les tâches qui la portent, sur **Sans étiquette** pour celles qui n’en portent aucune, ou sur **Toutes les étiquettes** pour revoir toutes les tâches.
 - **Grouper les tâches**, juste à côté, liste vos tâches **Par étiquette** au lieu de **Par état**.
   Chaque étiquette forme un groupe, replié jusqu’à ce que vous l’ouvriez.
+  Une tâche **En attente de vous** apparaît en tête du groupe de chacune de ses étiquettes, et reste visible même quand ce groupe est replié.
 - Le tableau des tâches a sa propre rangée d’étiquettes, et sa vue **Par étiquette** compte les tâches de chaque étiquette selon leur état.
 
 Les étiquettes s’affichent pour un seul projet à la fois : le projet qui a le focus, ou votre seul projet à avoir des étiquettes.

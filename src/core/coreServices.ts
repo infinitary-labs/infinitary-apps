@@ -13,6 +13,11 @@ import type {
   UsageTasks,
   UsageTasksQuery,
 } from "@shared/usage";
+import type {
+  UsageConnectionSave,
+  UsageConnectionSaved,
+  UsageConnectionView,
+} from "@shared/usageConnection";
 import type { AxiChannel } from "./axi/channel";
 import type { Batches } from "./batches/batches";
 import type { HomeSource } from "./connection/connection";
@@ -138,7 +143,8 @@ export type CoreServices = {
   slots: ModelSlots;
   /** The runtime catalog reads (docs/model-lists.md); never awaited on a user path. */
   servedModels: ServedModels;
-  stopLivenessSweep: () => void;
+  /** Settles once the usage report's last sends have ended, or after `QUIT_SEND_MS` when they have not. */
+  stopLivenessSweep: () => Promise<void>;
   /**
    * Stops the presentation pass with the core: a write that lands after the
    * quit, such as a background job's exit or a closed task's temporary-folder
@@ -174,6 +180,12 @@ export type CoreServices = {
     taskCosts: (query: UsageTaskCostsQuery) => Promise<UsageTaskCosts>;
     /** Settings → Usage's line naming where usage is reported (docs/usage-report.md). */
     reporting: () => Promise<UsageReporting>;
+    /** The reporting connection the person adds in Settings → Intelligence (docs/usage-report.md). */
+    connection: {
+      view: () => UsageConnectionView;
+      save: (input: UsageConnectionSave) => Promise<UsageConnectionSaved>;
+      remove: () => Promise<UsageConnectionView>;
+    };
   };
   /** Settings → Intelligence's cost limit row: the app's own limit and what it would have asked about (docs/usage.md). */
   costLimit: {

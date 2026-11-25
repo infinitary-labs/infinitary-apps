@@ -18,6 +18,8 @@ import {
   standardBodies,
   type UsageReportFormat,
   type UsageRole,
+  withoutClaudeCalls,
+  withoutClaudeClient,
 } from "./usageReportFormats";
 
 /**
@@ -33,8 +35,9 @@ export type UsageReportDestination = {
   endpoints: Partial<Record<OtlpSignal, string>>;
   /**
    * The certificate files a secure signal is sent with, as Claude's client
-   * sends its own reports; a secure signal without them is checked against
-   * the computer's trusted list.
+   * sends its own reports; a secure signal the reporter posts itself without
+   * them is checked against the computer's trusted list. A destination with
+   * its own `post` sends its own way and reads none of this.
    */
   certificates?: Partial<Record<OtlpSignal, CertificateFiles>>;
   /** Asked per batch; values often hold a token, so they are never logged. */
@@ -46,6 +49,23 @@ export type UsageReportDestination = {
    * it (`user.email`): a per-person panel groups by it, not by the resource.
    */
   person?: Record<string, string>;
+  /**
+   * In Claude Code's format, Claude work goes from the ledger too, because
+   * Claude's own client never reports to this destination (a connection the
+   * person adds); a company setup gets Claude's own records instead.
+   */
+  claudeFromLedger?: true;
+  /**
+   * Claude's own client already reports Claude work to this destination's
+   * host (a company setup over gRPC there), so no Claude work goes from the
+   * ledger in either format.
+   */
+  withoutClaude?: true;
+  /**
+   * Sends one signal's body in place of a plain post with `headers`, for a
+   * destination whose headers stay in Secrets; answers the HTTP status.
+   */
+  post?(signal: OtlpSignal, body: unknown): Promise<number>;
 };
 
 export type UsageReporterOptions = {
@@ -277,10 +297,18 @@ export class UsageReporter {
     if (rows.length === 0 && spans.length === 0) return;
     await Promise.all(
       this.options.destinations().map(async (destination) => {
+        const sent = destination.withoutClaude ? withoutClaudeClient(rows) : rows;
+        const sentSpans = destination.withoutClaude ? withoutClaudeCalls(spans) : spans;
         const bodies: OtlpBodies =
           destination.format === "claude-code"
-            ? claudeCodeBodies(rows, destination.resource, since, destination.person)
-            : standardBodies(rows, spans, destination.resource, since);
+            ? claudeCodeBodies(
+                sent,
+                destination.resource,
+                since,
+                destination.person,
+                destination.claudeFromLedger,
+              )
+            : standardBodies(sent, sentSpans, destination.resource, since, destination.person);
         await Promise.all(
           (Object.keys(bodies) as OtlpSignal[]).map((signal) =>
             this.send(destination, signal, bodies[signal]),
@@ -298,14 +326,16 @@ export class UsageReporter {
     const url = destination.endpoints[signal];
     if (!url) return;
     try {
-      const answer = await postOtlpHttp(
-        url,
-        this.connection(destination, signal, url),
-        Buffer.from(JSON.stringify(body)),
-        "application/json",
-        await destination.headers(signal),
-        POST_TIMEOUT_MS,
-      );
+      const answer = destination.post
+        ? refusalOf(await destination.post(signal, body))
+        : await postOtlpHttp(
+            url,
+            this.connection(destination, signal, url),
+            Buffer.from(JSON.stringify(body)),
+            "application/json",
+            await destination.headers(signal),
+            POST_TIMEOUT_MS,
+          );
       if (answer.failure === "refused")
         console.warn(
           `[usage report] ${hostOf(url)} refused a ${signal} batch (HTTP ${answer.status}); dropped`,
@@ -350,6 +380,11 @@ function changedAt(files: CertificateFiles | undefined, cwd: string): (number | 
       return null;
     }
   });
+}
+
+/** A destination's own post's answer, read as `postOtlpHttp` answers one. */
+function refusalOf(status: number): { status: number; failure?: "refused" } {
+  return status >= 200 && status < 300 ? { status } : { status, failure: "refused" };
 }
 
 function hostOf(url: string): string {

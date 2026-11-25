@@ -79,6 +79,16 @@ function isClaudeClientRow(row: UsageRow): boolean {
   return row.provider === CLAUDE_PROVIDER_ID;
 }
 
+/** The rows a destination Claude's own client already reports to still needs. */
+export function withoutClaudeClient<Row extends UsageRow>(rows: readonly Row[]): Row[] {
+  return rows.filter((row) => !isClaudeClientRow(row));
+}
+
+/** The spans such a destination still needs: every turn, and each call but Claude's own client's. */
+export function withoutClaudeCalls(spans: readonly ReportedSpan[]): ReportedSpan[] {
+  return spans.filter((span) => span.attributes["gen_ai.provider.name"] !== CLAUDE_PROVIDER_ID);
+}
+
 function grouping(row: ReportedRow): Record<string, string | null> {
   return { "infinitary.role": row.role, "infinitary.work_kind": row.workKind };
 }
@@ -125,15 +135,18 @@ const CLAUDE_CODE_TOKEN_TYPES = [
  * Claude Code's format: every provider but Claude's own client, under the
  * names Claude Code reports (claude_code.cost.usage, claude_code.token.usage
  * by type, the api_request event), each with a provider attribute so a
- * panel that checks spend against Anthropic's bill can filter.
+ * panel that checks spend against Anthropic's bill can filter. With
+ * `withClaude`, Claude's own client's rows too, for a destination Claude's
+ * client never reports to.
  */
 export function claudeCodeBodies(
   rows: readonly ReportedRow[],
   destination: Record<string, string>,
   since: number,
   person: Record<string, string> = {},
+  withClaude = false,
 ): OtlpBodies {
-  const reported = rows.filter((row) => !isClaudeClientRow(row));
+  const reported = withClaude ? [...rows] : rows.filter((row) => !isClaudeClientRow(row));
   if (reported.length === 0) return {};
   const labels = (row: ReportedRow) => ({
     ...person,
@@ -310,8 +323,10 @@ export function standardBodies(
   spans: readonly ReportedSpan[],
   destination: Record<string, string>,
   since: number,
+  person: Record<string, string> = {},
 ): OtlpBodies {
   const labels = (row: ReportedRow) => ({
+    ...person,
     "gen_ai.operation.name": "chat",
     "gen_ai.provider.name": row.provider ?? "unknown",
     ...genAiModel(row),
@@ -374,7 +389,14 @@ export function standardBodies(
               {
                 resource: resource(destination),
                 schemaUrl: GEN_AI_SCHEMA_URL,
-                scopeSpans: [{ ...scope, spans: spans.map(otlpSpan) }],
+                scopeSpans: [
+                  {
+                    ...scope,
+                    spans: spans.map((span) =>
+                      otlpSpan({ ...span, attributes: { ...person, ...span.attributes } }),
+                    ),
+                  },
+                ],
               },
             ],
           },

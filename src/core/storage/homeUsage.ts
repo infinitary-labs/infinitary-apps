@@ -123,7 +123,7 @@ export function usageReads(
   usageStore: UsageStore,
   slots: { view(): { models: SlotModelView[]; byName: SlotModelView[] } },
   reader?: Pick<RecordReader, "available" | "usageSummary" | "usageTasks" | "usageTaskCosts">,
-): Omit<CoreServices["usage"], "reporting"> {
+): Omit<CoreServices["usage"], "reporting" | "connection"> {
   const names = (): UsageNames => {
     const view = slots.view();
     const rows = [...view.models, ...view.byName];

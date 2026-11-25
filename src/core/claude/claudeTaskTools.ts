@@ -98,6 +98,19 @@ function zodOf(schema: JsonSchema, at: string): z.ZodType {
         ],
       );
     }
+    // A value given as one of several plain shapes, such as one id or a list of them
+    // (`emit_card`'s `ask_id`): each member keeps its own validation.
+    const shapes = members.map((member) => member.type);
+    if (
+      members.length > 1 &&
+      shapes.every((type) => typeof type === "string" && type !== "object" && type !== "null") &&
+      new Set(shapes).size === shapes.length
+    ) {
+      const [first, second, ...rest] = members.map((member, index) =>
+        zodOf(member, `${at}|${index}`),
+      );
+      if (first && second) return z.union([first, second, ...rest]);
+    }
     throw new Error(`${at}: a union Claude's tool server cannot carry`);
   }
   if (schema.const !== undefined) return z.literal(schema.const);

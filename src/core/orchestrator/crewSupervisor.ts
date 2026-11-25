@@ -419,7 +419,18 @@ export class CrewSupervisor {
         queueMicrotask(() => this.hooks.pokeInbox?.());
       },
     });
-    this.askEnding = askEndingOf(options.tasks, this.cards, (id) => options.inbox.requestOpen(id));
+    this.askEnding = askEndingOf(
+      options.tasks,
+      this.cards,
+      (id) => options.inbox.requestOpen(id),
+      (id) => {
+        const line = options.inbox.answeredLine(id);
+        const message = line === undefined ? undefined : options.cardStore.messageById(line);
+        // A closed card's dated clarification is off the captain's stack, so it
+        // ends no message, as the first mate's own clarification ends none.
+        return message?.clarification ? undefined : message?.cardId;
+      },
+    );
     this.placement = new TaskPlacement(options, {
       now: this.now,
       cards: this.cards,

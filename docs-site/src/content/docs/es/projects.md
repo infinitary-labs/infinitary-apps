@@ -1,5 +1,5 @@
 ---
-source: cd05627562f4c3e5
+source: 5825fd5680845fda
 title: Proyectos
 description: Cómo agregar un proyecto a Infinitary, reunir varios repositorios en uno, darle etiquetas, centrar la ventana en uno, elegir cómo se fusionan sus cambios y quitarlo.
 ---
@@ -158,6 +158,10 @@ Está activado para un proyecto nuevo, así que el trabajo terminado espera tu p
 Desactívalo, y el trabajo que supera las comprobaciones puede fusionarse sin preguntarte.
 
 **Cuidado** define con qué minuciosidad se comprueba el trabajo: **Rápido**, **Predeterminado** o **Cuidadoso**.
+
+**Decir que lo escribió un tripulante** está activado en un proyecto cuyos cambios pasan por solicitudes de incorporación de cambios.
+Cuando un tripulante revisa la solicitud de incorporación de cambios de otra persona, el comentario que publica empieza con una línea que dice que lo escribió un tripulante de Infinitary.
+Cambia la línea y pulsa **Guardar**, o desactiva el interruptor para no incluirla.
 
 ## Quitar un proyecto {#remove-a-project}
 

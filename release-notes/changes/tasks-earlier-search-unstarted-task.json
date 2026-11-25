@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "tasks-earlier-search-unstarted-task",
+      "reason": "Test-only repair of the Tasks earlier-search journey: its open fixture task is now one the host never starts, so no sign-in card appears mid-journey and takes the keyboard's focus from the search while the journey types. No app behavior change."
+    }
+  ]
+}

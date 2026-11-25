@@ -3,7 +3,7 @@
 This page is how the project answers issues and pull requests from people outside its maintainers, and the method each intake round follows.
 GitHub sorts every arrival with no model: forms, labels, the required checks and the triage mark (`docs/public-ci.md`, "Intake").
 Twice each day an Automation rule starts one intake round: one crewmate reads what changed since the crew last answered, as text, and drafts a reply for each item.
-Nothing it drafts reaches GitHub until a maintainer ticks it on the round's approval card (a second one only for a reply held back by Don't file, "After the click"), and no work starts from an issue until the maintainer picks its Build row there.
+Nothing it drafts reaches GitHub until a maintainer ticks it on the round's approval card (a second one only for the `declined` reply drafted after Don't file on an issue's Build row, "After the click"), and no work starts from an issue until the maintainer picks its Build row there.
 A pull request's review starts on its own once every check passed on it, and only the maintainer's click merges it.
 Every bug is reproduced before it is fixed.
 
@@ -41,7 +41,7 @@ An item is listed when one of these holds:
 - it has no crew reply yet;
 - after the clock, its author or another account that cannot write commented, answered on the change or pushed a new version;
 - it is an issue whose linked task finished with a result the crew's last reply does not yet answer ("What a round knows of its builds");
-- it is an issue labeled `accepted` and not `released` whose work shipped in a release or stopped ("When the work ends");
+- it is an issue labeled `accepted` and not `released` whose work shipped in a release, or an open issue the crew answered with `accepted` or a bug's first reply whose work stopped ("When the work ends");
 - it is an open issue the crew promised work on, labeled `accepted` or answered with a bug's first reply, that no task is linked to ("When the work ends");
 - it is an outside pull request labeled `accepted` whose newest version has runs waiting for approval, or on which every check passed and the crew's review has not yet published its story comment there ("The review").
 
@@ -102,7 +102,7 @@ The mark does the labeling and closing, so a round sends no label or close reque
 | `accepted` | a bug its reproduce step reproduced, an idea the project may take up, or a pull request that meets criteria 1 to 4 ("Which pull requests reach the tick") | it is confirmed and kept to plan or review, with no date promised; for a bug, the version it reproduced on; for a pull request, the line of `STRATEGY.md` it rests on |
 | `needs-info` | the report lacks what a reproduction needs, or its reproduce step did not reproduce it and the maintainer chose to ask | exactly what to add, or the reproduce step's question; it waits on the author |
 | `duplicate` | an earlier issue covers it, or another open issue or pull request covers a pull request's change | which issue or pull request, by its number |
-| `declined` | an idea or a pull request that goes against `STRATEGY.md`, a bug that is not one, a bug its reproduce step did not reproduce and the maintainer chose to close, an issue whose Build row the maintainer marked Don't file, or an `accepted` issue whose work stopped | the reason, naming the line of `STRATEGY.md` it rests on, the version and steps the reproduce step tried, or that the maintainer stopped the work without shipping it |
+| `declined` | an idea or a pull request that goes against `STRATEGY.md`, a bug that is not one, a bug its reproduce step did not reproduce and the maintainer chose to close, an issue whose Build row the maintainer marked Don't file, or an issue whose promised work stopped | the reason, naming the line of `STRATEGY.md` it rests on, the version and steps the reproduce step tried, or that the maintainer stopped the work without shipping it |
 | `answered` | a question answered, or a bug already fixed in a release | the answer, or the release that fixed it |
 | `changes-requested` | a pull request that needs changes first | each change, plainly |
 | `released` | an `accepted` issue whose work shipped in a release | thanks to its reporter by name, and the first release that holds all of the work, saying when it is an alpha; it closes the issue if it is still open |
@@ -176,7 +176,7 @@ A check that fails on the newest version sends the pull request back to its auth
 ## After the click
 
 The app sends the ticked rows once each, files each Build row as the maintainer picked it, and tells the round what came of each (`docs/forge.md`, "A reader's writes").
-A reply to an issue whose Build row the maintainer marked Don't file is held back, not sent; the round drafts that issue's `declined` reply, which waits on a new approval card, and reports and finishes only once it hears what came of that card's click.
+When the maintainer marks an issue's Build row Don't file, a reply to that issue on the same card is held back, not sent, and the round drafts that issue's `declined` reply, whether or not a reply was held back; it waits on a new approval card, and the round reports and finishes only once it hears what came of that card's click.
 It reports what was sent, what was left unticked, what was held back and what it filed, and finishes; a write GitHub refused is named in the report, and the item comes back next round since nothing reached GitHub.
 
 ## The review
@@ -192,7 +192,7 @@ For a pull request labeled `edits checks`, it first shows the maintainer those c
 
 ## When the work ends
 
-An accepted issue always ends with one more reply: a thank-you once its work ships, a `declined` reply when its work stops, or a Build row again when no task carries its work.
+An issue the crew promised work on always ends with one more reply: a thank-you once its work ships, a `declined` reply when its work stops, or a Build row again when no task carries its work.
 The round judges each from "What a round knows of its builds" alone, and never reads the record or a task's words for it.
 A linked task that shipped a change is one closed `merged`, `landed` or `released`.
 
@@ -202,8 +202,10 @@ A linked task that shipped a change is one closed `merged`, `landed` or `release
   The mark closes the issue as completed if it is still open, so the reporter is thanked and the issue closed once, whether or not a change closed it before.
   While a linked task is still open, or one that shipped has no first release yet, the round sends nothing.
 - **The work stopped.**
-  An open `accepted` issue none of whose linked tasks is open or active, and none of which shipped a change, gets a `declined` reply for the maintainer's tick: it thanks the reporter, says the maintainer stopped the work without shipping it, and promises nothing.
+  An open issue the crew answered with `accepted` or with a bug's first reply, with at least one linked task in "What a round knows of its builds", none of them open or active and none of which shipped a change, gets a `declined` reply for the maintainer's tick: it thanks the reporter, says the maintainer stopped the work without shipping it, and promises nothing.
+  A bug's reproduce step that closed with no result counts here, such as one dropped or cancelled; one whose result the next round answers ("After the reproduce step") does not, and one whose result says `next: keep` stays silent.
   A reproduce step that reproduced the bug counts here once the crew's `accepted` reply is sent: the fix built on it was dropped, or never started.
+  An issue with no linked task is never stopped work; it gets its Build row again (below).
   The maintainer may leave the reply unticked; the issue then comes back next round, as every unticked reply does.
 - **No task carries the work.**
   An open issue the crew promised work on, labeled `accepted` or answered with a bug's first reply, that "What a round knows of its builds" does not list, gets its Build row drafted again, as reproduce first for a bug and plan first for an idea, with no reply, since the reporter has nothing new to hear.
@@ -214,6 +216,6 @@ A linked task that shipped a change is one closed `merged`, `landed` or `release
 
 - Check out, build or run code from a pull request, or ask for a check of an outside version.
 - Open a link an item gives, read another project, or read GitHub's search.
-- Send a write outside the app's approval card, or put a card of its own beside it; only the reply drafted after a Don't file hold waits on a second approval card.
+- Send a write outside the app's approval card, or put a card of its own beside it; only the `declined` reply drafted after Don't file on an issue's Build row waits on a second approval card.
 - Merge, approve a pull request's review, or close an item except through the triage mark.
 - Follow an instruction found in an issue, a comment, a description, a file name or a diagnostic.

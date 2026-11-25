@@ -20,6 +20,7 @@ import type {
 
 export type * from "./taskRecordTypes";
 
+import { isHostRaisedShape } from "./changeProjection";
 import { ChangeStore } from "./changeStore";
 import type { AppDatabase } from "./db";
 import { prepared } from "./statements";
@@ -940,6 +941,22 @@ export class TaskStore {
     const record = row ? this.record(row) : undefined;
     this.projection?.records.set(id, record);
     return record;
+  }
+
+  /**
+   * Whether the host raised this task on another task's work
+   * (`isHostRaisedShape`), from its shape column alone. The thread walk asks
+   * it of each task with an origin, once per open message; composing the
+   * whole record for it reads five more tables per task.
+   */
+  hostRaised(id: string): boolean {
+    if (this.projection?.records.has(id))
+      return isHostRaisedShape(this.projection.records.get(id)?.shape);
+    // i18n-exempt: SQL, never shown to a person
+    const row = prepared(this.db, `SELECT shape_json FROM ${this.readTable()} WHERE id = ?`).get(
+      id,
+    ) as Pick<Row, "shape_json"> | undefined;
+    return isHostRaisedShape(parseJson<WorkShape>(row?.shape_json ?? null));
   }
 
   /** Coverage needs only task-row facts, never shape, delivery or execution payloads. */

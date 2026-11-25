@@ -1,5 +1,4 @@
 import { type AskRecord, askReceipt } from "../storage/askStore";
-import { isHostRaisedShape } from "../storage/changeProjection";
 import type { TaskEvent } from "../storage/taskEventStore";
 import type { TaskRecord } from "../storage/taskRecords";
 
@@ -86,6 +85,8 @@ export type TaskOriginLine =
 /** The facts the walk reads, each a typed read the task service already owns. */
 export type OriginReader = {
   get(id: string): TaskRecord | undefined;
+  /** Whether the host raised it on another task's work, read from its shape alone (`TaskStore.hostRaised`). */
+  hostRaised(id: string): boolean;
   /** The tasks whose work this one took over: the task it replaced, retried or branched from. */
   handedOver(id: string): string[];
   /** Its plan: the task its basis names. */
@@ -131,8 +132,8 @@ type Found =
   | { kind: "relayed"; text: string; at: number; taskId: string }
   | { kind: "saved"; at: number; origin: SavedOrigin };
 
-/** What a task's own origin needs read: the task, its origin events and the messages they name. */
-export type OwnOriginReader = Pick<OriginReader, "get" | "events" | "ask">;
+/** What a task's own origin needs read: whether the host raised it, its origin events and the messages they name. */
+export type OwnOriginReader = Pick<OriginReader, "hostRaised" | "events" | "ask">;
 
 /**
  * A task's own origin: the oldest message that filed or started it, or the
@@ -147,7 +148,7 @@ function ownOrigin(reader: OwnOriginReader, id: string): Found | undefined {
   const found = savedOrAsked(reader, id);
   // Read the task's shape only when it holds an origin, so a walk over parts
   // with none reads no task row (INF-2278).
-  if (found && isHostRaisedShape(reader.get(id)?.shape)) return undefined;
+  if (found && reader.hostRaised(id)) return undefined;
   return found;
 }
 

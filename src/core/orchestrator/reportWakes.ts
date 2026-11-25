@@ -40,6 +40,8 @@ export type ReportFacts =
       status: "answered" | "not-yet-answered";
       question: string;
       excerpt: string;
+      /** The card line the crewmate wrote the response as, which the captain reads. */
+      line?: { cardId: string; messageId: number };
     }
   | {
       kind: "response-missing";
@@ -445,12 +447,25 @@ export const REVIEW_HANDOFF_NEXT = {
     "The captain answered your reviewer's question after its review closed; the history carries the answer word for word, and it governs. If it chose a change, make it under the review's fix rules, commit it, then push and follow your brief's delivery for the new version: a new merge card, with a new review as your rigor asks. If it kept the code as built, nothing more is needed. Do not ask the first mate to relay it.",
 } as const;
 
+/**
+ * What the first mate does with a requested response: one its crewmate
+ * wrote as a card line already answered the captain there (INF-6769).
+ */
+function requestedResponseNext(facts: Extract<ReportFacts, { kind: "requested-response" }>) {
+  // i18n-exempt: served to the first mate, never shown to a person
+  const answered = `The crewmate wrote it as message ${facts.line?.messageId} in the thread of card ${facts.line?.cardId}, where the captain reads it: it is the answer to the captain's message this request was asked for, so do not write it again.`;
+  // i18n-exempt: served to the first mate, never shown to a person
+  const relay =
+    "Answer the captain on the original card when this request concerns their question.";
+  return facts.line && facts.status === "answered" ? answered : relay;
+}
+
 export const REPORT_WORDS: KindWords<ReportFacts> = {
   "review-handoff": (facts) => {
     return `Host handoff from ${facts.from} at ${facts.head}: ${facts.excerpt}${facts.findings?.length ? `\n${facts.stage === "card" ? "Findings for the captain" : "Auto-fix findings"}:\n${facts.findings.map((line) => `- ${line}`).join("\n")}` : ""}${facts.history?.length ? `\n${renderReviewHistory(facts.history)}\n` : ""}\n${REVIEW_HANDOFF_NEXT[facts.stage]}`;
   },
   "requested-response": (facts) =>
-    `${REQUESTED_RESPONSE_OPENING}${facts.responseId} to request ${facts.requestId} for task ${facts.taskId}, submitted by task ${facts.contributorTask} (${facts.status}). Request: ${facts.question}\nResponse: ${facts.excerpt}\nThis is a saved response, independent of later reports and continuing work. Handling acknowledges delivery, not correctness. Answer the captain on the original card when this request concerns their question.`,
+    `${REQUESTED_RESPONSE_OPENING}${facts.responseId} to request ${facts.requestId} for task ${facts.taskId}, submitted by task ${facts.contributorTask} (${facts.status}). Request: ${facts.question}\nResponse: ${facts.excerpt}\nThis is a saved response, independent of later reports and continuing work. Handling acknowledges delivery, not correctness. ${requestedResponseNext(facts)}`,
   "response-missing": (facts) =>
     `${RESPONSE_MISSING_OPENING}task ${facts.taskId} completed turn ${facts.turnId} after consuming request ${facts.requestId} without submitting a matching response. The request remains pending: ${facts.question}${facts.report ? `\nThat turn's report (not treated as an answer): ${facts.report}` : ""}\nRecorded turn references: ${JSON.stringify(facts.references)}. Read that report event and the session's report/reply calls before deciding whether to wait, request a repost, or reassign. This fact does not authorize new work or a captain action.`,
   // A reader's filed titles and card titles sit inline between reader-data marks.

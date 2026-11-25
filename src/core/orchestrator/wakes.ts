@@ -275,7 +275,7 @@ const CARRIER_WORDS: KindWords<CarrierFacts> = {
   "responses-cancelled": (facts, wake) =>
     `${typeof facts.guidance === "string" ? facts.guidance : renderWake({ facts: facts.guidance, ways: wake.ways })}\n\nThe first mate cancelled response requests ${facts.requests.join(", ")}. Their history remains; do not submit new answers for those requests.`,
   "response-request": (facts, wake) =>
-    `${typeof facts.guidance === "string" ? facts.guidance : renderWake({ facts: facts.guidance, ways: wake.ways })}\n\nResponse requested: ${facts.requestId}. In report.responses name request_id, a stable response_id, and status answered or not-yet-answered. The report text is your exact response. Submission saves it and queues the first mate immediately, even while work continues. Ordinary reports do not answer this request.`,
+    `${typeof facts.guidance === "string" ? facts.guidance : renderWake({ facts: facts.guidance, ways: wake.ways })}\n\nResponse requested: ${facts.requestId}. In report.responses name request_id, a stable response_id, and status answered or not-yet-answered. The report text is your exact response. Submission saves it and queues the first mate immediately, even while work continues. Ordinary reports do not answer this request. When the answer belongs in your card's thread, write it there with reply and response instead: that line is your response and the captain's answer, which the first mate does not repeat; an interim line is neither.`,
   "captain-turn": (facts) =>
     `[user]\n${facts.words}${facts.imagesDropped ? `\n\n${ATTACHMENTS_DROPPED_NOTE}` : ""}${
       facts.through ? `\n\n(${CAPTAIN_WORDS_FROM_THE_COMMAND})` : ""

@@ -23,6 +23,7 @@ import type { WorkingCopies } from "../../src/core/helper/workingCopies";
 import type { MediaProbe, TypefaceProbe } from "../../src/core/pi/cardImages";
 import { createPiSessionFactory } from "../../src/core/pi/sessionFactory";
 import type { ModelRuntime } from "../../src/core/pi/types";
+import type { SessionSpec } from "../../src/core/session/session";
 import type { CrewmateTool } from "../../src/core/session/tools";
 import {
   beginAnthropicStream,
@@ -311,6 +312,8 @@ export async function placed(
     leftovers?: SessionHostOptions["leftovers"];
     /** How long a saved update waits for the home before it lets the save go there. */
     updateReturnMs?: number;
+    /** The commit name a conversation's shell carries (`workspace/commitName.ts`). */
+    commitName?: SessionHostOptions["commitName"];
   } = {},
 ) {
   const home = standInHome();
@@ -351,6 +354,8 @@ export async function placed(
 
   let host: SessionHost | undefined;
   let belowUi: boolean | undefined;
+  /** Each session spec this computer's Pi factory was asked to open, in order. */
+  const opened: SessionSpec[] = [];
   const start = () => {
     const started = startHelper({
       dataDir,
@@ -359,11 +364,19 @@ export async function placed(
       conversations: async ({ dataDir: dir, ask, homeVersion, belowUi: below }) => {
         belowUi = below;
         const copies = options.copies ? folderCopies(dir) : undefined;
-        const pi = createPiSessionFactory({ agentDir: join(dir, "pi-agent") });
+        const factory = createPiSessionFactory({ agentDir: join(dir, "pi-agent") });
+        const pi: typeof factory = {
+          ...factory,
+          open: (spec) => {
+            opened.push(spec);
+            return factory.open(spec);
+          },
+        };
         host = new SessionHost({
           tasks: new PlacedTasks(dir, copies?.worktreesDir),
           ...(copies ? { copies } : {}),
           ...(options.leftovers ? { leftovers: options.leftovers } : {}),
+          ...(options.commitName ? { commitName: options.commitName } : {}),
           ask,
           factories: {
             pi: options.toolSignal
@@ -446,6 +459,7 @@ export async function placed(
     },
     order,
     spec,
+    opened,
     host: () => {
       if (!host) throw new Error("No conversation was opened.");
       return host;

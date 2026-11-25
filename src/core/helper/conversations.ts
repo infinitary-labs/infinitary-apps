@@ -23,6 +23,7 @@ import { createPiSessionFactory } from "../pi/sessionFactory";
 import { heldAgainst, sensedLeftOf, spentAllowanceHold } from "../quota/spentAllowance";
 import type { SessionBinding } from "../session/session";
 import { placedLeftovers } from "../tasks/leftoverPrograms";
+import { resolveCommitName } from "../workspace/commitName";
 import type { ComputerAccounts } from "./accounts";
 import { ComputerBrowsers, type ComputerBrowsersOptions } from "./browsers";
 import { computerForgesDir, computerKnownHosts } from "./forges";
@@ -279,6 +280,7 @@ export async function startConversations(options: {
   host = new SessionHost({
     tasks,
     copies,
+    commitName: resolveCommitName,
     secretRunsDir,
     personal: new PersonalCopy(join(options.dataDir, "personal")),
     ...(options.source ? { source: options.source } : {}),

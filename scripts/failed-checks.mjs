@@ -11,9 +11,17 @@
  * - it writes one comment per version, naming each failed job with a link to
  *   its log, and edits that comment when a later workflow of the same
  *   version finishes, so a version never gets two;
+ * - it adds a line saying main is failing too whenever main's newest run
+ *   has a failed job, since main runs none of ci's or docs-site's own jobs
+ *   and so cannot leave those out by name;
  * - the first comment of a version labels the pull request "waiting on
- *   author"; the author's next push takes the label off once the required
- *   checks pass (scripts/intake-labels.mjs).
+ *   author", and its mark records that this note put the label on;
+ * - when a later run of the same version passes, such as a maintainer's
+ *   rerun, it reads the version again: once nothing it names still fails,
+ *   it edits the comment to say so and, if this note put the label on and
+ *   both required checks pass, takes the label off and puts the pull
+ *   request back in triage, as the author's own push does
+ *   (scripts/intake-labels.mjs).
  *
  * Started by hand with a pull request number it is a dry run: it reads the
  * pull request's newest version, writes what it would say to the job
@@ -28,14 +36,17 @@
 
 import { asCode } from "./check-file-flag.mjs";
 import { splitLevel } from "./ci-job-names.mjs";
-import { WAITING } from "./intake-labels.mjs";
+import { NEEDS_TRIAGE, removeLabel, requiredStates, WAITING } from "./intake-labels.mjs";
 
 /** The workflows whose runs on an outside pull request this reads, by their `name:`. */
 export const WORKFLOWS = Object.freeze(["ci", "contributors", "docs-site"]);
 /** The account the workflow's token writes as, the only author of the note. */
 const BOT = "github-actions[bot]";
 const FAILED = new Set(["failure", "timed_out"]);
-const markFor = (sha) => `<!-- failed-checks sha=${sha} -->`;
+// The mark records whether this note put the label on, so a passing rerun
+// never takes off a label a maintainer's reply added.
+const markOf = (sha) => `<!-- failed-checks sha=${sha} `;
+const markFor = (sha, labeled) => `${markOf(sha)}labeled=${labeled ? "yes" : "no"} -->`;
 
 /** Whether a job finished failed. */
 export const failed = (job) => job.status === "completed" && FAILED.has(job.conclusion);
@@ -65,12 +76,21 @@ export function leaveOutMain(jobs, mainJobs) {
  * The note for one version. Each job's log link is built from GitHub's
  * numeric ids alone, never from text the pull request chose.
  */
-export function failedComment({ server, owner, repo, sha, jobs, onMain = [] }) {
+export function failedComment({
+  server,
+  owner,
+  repo,
+  sha,
+  jobs,
+  onMain = [],
+  mainFailing = false,
+  labeled = true,
+}) {
   const log = (job) =>
     `${server}/${owner}/${repo}/actions/runs/${Number(job.run_id)}/job/${Number(job.id)}`;
   return [
-    markFor(sha),
-    "_Posted automatically by this project's GitHub workflow when a check finishes on a pull request._",
+    markFor(sha, labeled),
+    POSTED,
     "",
     `These checks failed on this pull request's version ${sha.slice(0, 7)}, so it is labeled \`${WAITING}\`:`,
     "",
@@ -83,8 +103,35 @@ export function failedComment({ server, owner, repo, sha, jobs, onMain = [] }) {
           ...onMain.map((job) => `- ${asCode(job.name)}`),
         ]
       : []),
+    ...(mainFailing
+      ? [
+          "",
+          "`main`'s newest check has a failed job too right now, so a check named above may not be this pull request's to fix.",
+        ]
+      : []),
     "",
     "Push a fix to this pull request; its checks run again once a maintainer approves the run, and the label comes off once the required checks pass.",
+  ].join("\n");
+}
+
+const POSTED =
+  "_Posted automatically by this project's GitHub workflow when a check finishes on a pull request._";
+
+/** The note once nothing it named still fails at that version. */
+export function clearedComment({ sha, onMain = [], labeled = true }) {
+  return [
+    markFor(sha, labeled),
+    POSTED,
+    "",
+    `Every check this note named on version ${sha.slice(0, 7)} now passes.`,
+    ...(onMain.length > 0
+      ? [
+          "",
+          "These checks still fail, but also fail on `main` right now, so they are not this pull request's to fix:",
+          "",
+          ...onMain.map((job) => `- ${asCode(job.name)}`),
+        ]
+      : []),
   ].join("\n");
 }
 
@@ -156,7 +203,9 @@ export async function noteFailedChecks({ github, context, core, pullNumber }) {
     const run = context.payload.workflow_run;
     if (run?.event !== "pull_request") return "not a pull request";
     if (run.head_repository?.full_name === project) return "own branch";
-    if (!FAILED.has(run.conclusion)) return "passed";
+    // A passing run, such as a maintainer's rerun, may clear what an earlier
+    // run of the version named.
+    if (!FAILED.has(run.conclusion) && run.conclusion !== "success") return run.conclusion ?? "unfinished";
     sha = run.head_sha;
     // GitHub leaves workflow_run.pull_requests empty for a pull request from
     // another copy of the project, so the open pull request at this version
@@ -177,23 +226,21 @@ export async function noteFailedChecks({ github, context, core, pullNumber }) {
   }
 
   const jobs = await failedJobsAt(github, owner, repo, sha);
-  if (jobs.length === 0) return "no failed checks";
-  const { named, onMain } = leaveOutMain(jobs, await mainJobs(github, owner, repo));
-  if (named.length === 0) {
-    const left = onMain.map((job) => `- ${asCode(job.name)}`).join("\n");
-    core.summary.addRaw(`#${pull.number}: every failed check also fails on main.\n\n${left}\n`);
-    await core.summary.write();
-    return "every failed check also fails on main";
-  }
+  const main = await mainJobs(github, owner, repo);
+  const { named, onMain } = leaveOutMain(jobs, main);
+  const mainFailing = main.some(failed);
   const server = context.serverUrl ?? "https://github.com";
-  const body = failedComment({ server, owner, repo, sha, jobs: named, onMain });
+  const left = onMain.map((job) => `- ${asCode(job.name)}`).join("\n");
 
   if (dryRun) {
+    const body =
+      named.length > 0
+        ? failedComment({ server, owner, repo, sha, jobs: named, onMain, mainFailing })
+        : `Nothing to name: every failed check also fails on main, or none failed.\n\n${left}`;
     core.summary.addRaw(`Dry run on #${pull.number}; nothing was written.\n\n${body}\n`);
     await core.summary.write();
-    return `would name ${named.length}`;
+    return named.length > 0 ? `would name ${named.length}` : "would name none";
   }
-  const mark = markFor(sha);
   const comment = (
     await github.paginate(github.rest.issues.listComments, {
       owner,
@@ -201,16 +248,44 @@ export async function noteFailedChecks({ github, context, core, pullNumber }) {
       issue_number: pull.number,
       per_page: 100,
     })
-  ).find((each) => each.user?.login === BOT && each.body?.startsWith(mark));
-  if (comment?.body === body) return "already named";
-  if (comment) {
-    await github.rest.issues.updateComment({ owner, repo, comment_id: comment.id, body });
-    return `named ${named.length} again`;
+  ).find((each) => each.user?.login === BOT && each.body?.startsWith(markOf(sha)));
+  const write = async (body) => {
+    if (comment?.body === body) return false;
+    if (comment)
+      await github.rest.issues.updateComment({ owner, repo, comment_id: comment.id, body });
+    else await github.rest.issues.createComment({ owner, repo, issue_number: pull.number, body });
+    core.summary.addRaw(`#${pull.number}:\n\n${body.slice(body.indexOf("\n") + 1)}\n`);
+    await core.summary.write();
+    return true;
+  };
+  const labels = new Set((pull.labels ?? []).map((label) => label.name));
+
+  if (named.length > 0) {
+    if (comment) {
+      const labeled = comment.body.startsWith(markFor(sha, true));
+      const body = failedComment({ server, owner, repo, sha, jobs: named, onMain, mainFailing, labeled });
+      return (await write(body)) ? `named ${named.length} again` : "already named";
+    }
+    const labeled = !labels.has(WAITING);
+    await write(failedComment({ server, owner, repo, sha, jobs: named, onMain, mainFailing, labeled }));
+    if (labeled)
+      await github.rest.issues.addLabels({ owner, repo, issue_number: pull.number, labels: [WAITING] });
+    return `named ${named.length}`;
   }
-  await github.rest.issues.createComment({ owner, repo, issue_number: pull.number, body });
-  if (!(pull.labels ?? []).some((label) => label.name === WAITING))
-    await github.rest.issues.addLabels({ owner, repo, issue_number: pull.number, labels: [WAITING] });
-  core.summary.addRaw(`#${pull.number}:\n\n${body.slice(mark.length + 1)}\n`);
-  await core.summary.write();
-  return `named ${named.length}`;
+  if (!comment) {
+    if (jobs.length === 0) return "no failed checks";
+    core.summary.addRaw(`#${pull.number}: every failed check also fails on main.\n\n${left}\n`);
+    await core.summary.write();
+    return "every failed check also fails on main";
+  }
+  const labeled = comment.body.startsWith(markFor(sha, true));
+  const edited = await write(clearedComment({ sha, onMain, labeled }));
+  const states = await requiredStates({ github, owner, repo, sha });
+  if (labeled && labels.has(WAITING) && states.every((each) => each === "success")) {
+    await removeLabel({ github, owner, repo, number: pull.number, name: WAITING });
+    if (!labels.has(NEEDS_TRIAGE))
+      await github.rest.issues.addLabels({ owner, repo, issue_number: pull.number, labels: [NEEDS_TRIAGE] });
+    return "cleared";
+  }
+  return edited ? "now passing" : "already passing";
 }

@@ -4,8 +4,10 @@ name: failed-checks
 # "Outside contributors"): when ci, contributors or docs-site finishes a run
 # for an outside pull request, it comments once per version naming each
 # failed job with a link to its log, leaving out checks that also fail in
-# main's newest run, and labels the pull request "waiting on author", so it
-# goes back to its author before any review starts. Started by hand with a
+# main's newest run and saying when main is failing too, and labels the pull
+# request "waiting on author", so it goes back to its author before any
+# review starts. A passing rerun of the same version edits the comment and
+# takes off the label the note put on. Started by hand with a
 # pull request number, it is a dry run: it writes what it would say to the
 # job summary and nothing on the pull request.
 #
@@ -31,7 +33,8 @@ permissions:
   contents: read
 
 # Two workflows of one version can finish together; the second waits, so it
-# edits the first one's comment instead of writing a second.
+# edits the first one's comment instead of writing a second. Each run reads
+# the whole version again, so a run that replaces a waiting one loses nothing.
 concurrency:
   group: failed-checks-${{ github.event.workflow_run.head_sha || inputs.pull }}
   cancel-in-progress: false

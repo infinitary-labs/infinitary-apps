@@ -18,6 +18,16 @@ export function failedComment(note: {
   jobs: readonly { id: number; run_id: number; name: string }[];
   /** Failed jobs left out because their check also fails on main, named without a link. */
   onMain?: readonly { name: string }[];
+  /** Whether main's newest run has any failed job, which adds a line saying so. */
+  mainFailing?: boolean;
+  /** Whether this note put the label on, kept in the comment's mark; true when omitted. */
+  labeled?: boolean;
+}): string;
+/** The note once nothing it named still fails at that version. */
+export function clearedComment(note: {
+  sha: string;
+  onMain?: readonly { name: string }[];
+  labeled?: boolean;
 }): string;
 /** Runs the note for one event and says what it decided; a hand-started run is a dry run. */
 export function noteFailedChecks(script: {

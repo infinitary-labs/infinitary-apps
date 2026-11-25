@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { checkOf, failedComment, noteFailedChecks, WORKFLOWS } from "../scripts/failed-checks.mjs";
-import { WAITING } from "../scripts/intake-labels.mjs";
+import { NEEDS_TRIAGE, REQUIRED, WAITING } from "../scripts/intake-labels.mjs";
 import { loadYamlFile } from "./helpers/releaseWorkflows";
 
 // Piece H of INF-6057's approved plan (the captain's pick "A job on GitHub,
@@ -92,6 +92,7 @@ function gitHub({
   jobs = { [forkCi.id]: forkCiJobs } as Record<number, Job[]>,
   main = mainPassed,
   version = forkSha,
+  statuses = REQUIRED.map((context) => ({ context, state: "success" })),
 } = {}) {
   const labels = new Map(pulls.map((pull) => [pull.number, new Set<string>()]));
   const comments: { id: number; issue: number; user: typeof bot; body: string }[] = [];
@@ -146,6 +147,14 @@ function gitHub({
           for (const name of added) labels.get(issue_number)?.add(name);
           return { data: {} };
         },
+        removeLabel: async ({ issue_number, name }: { issue_number: number; name: string }) => {
+          writes++;
+          labels.get(issue_number)?.delete(name);
+          return { data: {} };
+        },
+      },
+      repos: {
+        listCommitStatusesForRef: async () => ({ data: statuses }),
       },
     },
     paginate: async <T>(list: (params: T) => Promise<{ data: unknown[] }>, params: T) =>
@@ -297,9 +306,89 @@ describe("the failed-check note", () => {
     expect(checkOf("Pull request · Code checks (Linux)")).toBe("Code checks (Linux)");
   });
 
-  it("writes nothing for a passing run, the project's own branch, an older version or a push", async () => {
+  // The captain's pick "Update the comment and take the label off when
+  // checks pass" on the review of this change: a maintainer's rerun that
+  // passes clears what the note named.
+  describe("a passing rerun of the same version", () => {
+    const rerun = forkCiJobs.map((each) => ({
+      ...each,
+      id: each.id + 1000,
+      conclusion: "success",
+    }));
+    async function namedThenRerun(
+      options: Parameters<typeof gitHub>[0] = {},
+      waitingBefore = false,
+    ) {
+      const api = gitHub(options);
+      if (waitingBefore) api.labels.get(35)?.add(WAITING);
+      await noteFailedChecks({ github: api.github, context: finished(), core: core() });
+      api.setJobs({ [forkCi.id]: rerun });
+      const said = await noteFailedChecks({
+        github: api.github,
+        context: finished({ conclusion: "success" }),
+        core: core(),
+      });
+      return { api, said };
+    }
+
+    it("says the named checks now pass, takes its label off and puts the pull request back in triage", async () => {
+      const { api, said } = await namedThenRerun();
+      expect(said).toBe("cleared");
+      expect(api.comments).toHaveLength(1);
+      expect(api.comments[0]?.body).toContain(
+        "Every check this note named on version e357ae4 now passes.",
+      );
+      expect(api.comments[0]?.body).not.toContain("[log]");
+      expect([...(api.labels.get(35) ?? [])]).toEqual([NEEDS_TRIAGE]);
+    });
+
+    it("keeps a label the note did not put on", async () => {
+      const { api, said } = await namedThenRerun({}, true);
+      expect(said).toBe("now passing");
+      expect([...(api.labels.get(35) ?? [])]).toEqual([WAITING]);
+    });
+
+    it("keeps the label while a required check still fails", async () => {
+      const { api, said } = await namedThenRerun({
+        statuses: [
+          { context: REQUIRED[0] as string, state: "failure" },
+          { context: REQUIRED[1] as string, state: "success" },
+        ],
+      });
+      expect(said).toBe("now passing");
+      expect([...(api.labels.get(35) ?? [])]).toEqual([WAITING]);
+    });
+
+    it("writes nothing for a passing run when the note named nothing", async () => {
+      const api = gitHub({ jobs: { [forkCi.id]: rerun } });
+      expect(
+        await noteFailedChecks({
+          github: api.github,
+          context: finished({ conclusion: "success" }),
+          core: core(),
+        }),
+      ).toBe("no failed checks");
+      expect(api.writes()).toBe(0);
+    });
+  });
+
+  // The captain's pick "Add a line saying main is failing too" on the review
+  // of this change: main runs none of ci's own jobs, so they cannot be left
+  // out by name.
+  it("says main is failing too whenever main's newest run has a failed job", async () => {
+    const failing = gitHub({ main: mainFailed });
+    await noteFailedChecks({ github: failing.github, context: finished(), core: core() });
+    expect(failing.comments[0]?.body).toContain(
+      "`main`'s newest check has a failed job too right now",
+    );
+    const passing = gitHub();
+    await noteFailedChecks({ github: passing.github, context: finished(), core: core() });
+    expect(passing.comments[0]?.body).not.toContain("`main`'s newest check");
+  });
+
+  it("writes nothing for a cancelled run, the project's own branch, an older version or a push", async () => {
     for (const context of [
-      finished({ conclusion: "success" }),
+      finished({ conclusion: "cancelled" }),
       finished({ fork: "infinitary-labs/infinitary-apps" }),
       finished({ event: "push" }),
       finished({ sha: "0a1ef3ec3c1f1d6c1b1d8f1e2b3a4c5d6e7f8091" }),

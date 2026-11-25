@@ -3,7 +3,7 @@ import { forgePlace } from "@shared/forge";
 import type { ForgePull } from "../forge";
 import type { MergeAuthorization, MergeWait } from "../storage/taskRecords";
 import { TaskService } from "../tasks/taskService";
-import { directlyLine, directlyTold, mergedReceipt, otherMergedFacts } from "./changeMerge";
+import { afterDirectTold, mergedReceipt, otherMergedFacts } from "./changeMerge";
 import type { KeptApproval } from "./keptApproval";
 import {
   candidateHead,
@@ -179,10 +179,14 @@ export class KeptMerge {
     if (!record || TaskService.isClosed(record)) return false;
     if (record.pendingSettle || this.locks.working(taskId)) return false;
     // A merge sent whose outcome is unread, or a merge request the host
-    // holds, is read before any gate; a hold whose direct merge is due runs
-    // the gates, which send it.
+    // holds, is read before any gate. A hold whose direct merge is due runs
+    // the gates, which send it, only in the run that just read it: a gate
+    // that made it wait has the held request read again first.
     const held = heldMergeOf(authorization);
-    if (authorization.attempt || (held && held.direct !== "due")) {
+    if (
+      authorization.attempt ||
+      (held && !(held.direct === "due" && this.heldJustRead.has(authorization.id)))
+    ) {
       await this.reconcileAttempt(taskId, authorization);
       return false;
     }
@@ -420,8 +424,16 @@ export class KeptMerge {
     const held = heldMergeOf(current);
     if (held && this.followHeld(taskId, current, held, pull, now)) return;
     this.approvals.patchStanding(taskId, { attempt: undefined, retryAt: now });
-    await this.runMergeAuthorization(taskId);
+    this.heldJustRead.add(current.id);
+    try {
+      await this.runMergeAuthorization(taskId);
+    } finally {
+      this.heldJustRead.delete(current.id);
+    }
   }
+
+  /** Approvals whose held merge request this very run read, so their due direct merge may leave. */
+  private readonly heldJustRead = new Set<string>();
 
   /**
    * The pull request reads open while the host holds a merge request of the
@@ -452,6 +464,10 @@ export class KeptMerge {
       });
       return true;
     };
+    // The one direct merge left and its answer is not known: however the
+    // held request stands, only the pull request says how that merge ended,
+    // so nothing clears the hold or sends again.
+    if (held.direct === "sent") return wait();
     // The host says it merged and its pull request does not show it yet: the next read does.
     if (state?.status === "merged") return wait();
     // The host's own merge queue took the held request: the queue's wait from here on.
@@ -519,6 +535,12 @@ export class KeptMerge {
         // approval stands (INF-5193).
         authorization ? (authorization.attempt?.head ?? candidateHead(authorization)) : undefined,
       );
+      // The direct merge sent in place of a held request left and its answer
+      // never came: the read does not say who merged it, and the first mate
+      // is told once.
+      const held = authorization ? heldMergeOf(authorization) : undefined;
+      const direct = held?.direct === "sent";
+      const told = direct ? afterDirectTold(placeOf(this.host.repos, named)) : "";
       // A kept approval of a reviewed pull request merged it (INF-2490):
       // its merge card declared what follows (INF-2744).
       if (authorization?.review) {
@@ -528,26 +550,25 @@ export class KeptMerge {
           authorization.review,
           {
             ok: true,
-            text: `Merged ${changeName(named, pull.number)} on ${placeOf(this.host.repos, named)}.${other.told}${then === "continue" ? " The task stays open." : ""}`,
+            text: `Merged ${changeName(named, pull.number)} on ${placeOf(this.host.repos, named)}.${other.told}${told}${then === "continue" ? " The task stays open." : ""}`,
             ...other.line,
             receipt: mergedReceipt(pull),
           },
           then,
           authorization.issuer === "autonomy" ? "app" : "captain",
         );
-        if (!result.continued)
+        if (direct && result.ok)
+          // i18n-exempt: the tool name a wake served to the first mate carries
+          this.settle.wakeOnSettle(taskId, title, "merge-pr (kept)", result, [], false);
+        else if (!result.continued)
           this.settle.reportOutcome(taskId, title, "merge-pr", undefined, result, undefined);
         return;
       }
       this.approvals.consumeStanding(taskId, mergedReceipt(pull));
       const record = this.host.tasks.get(taskId);
-      // The direct merge sent in place of a held request, whose answer never came, went in.
-      const held = authorization ? heldMergeOf(authorization) : undefined;
-      const direct = held?.direct === "sent" ? { heldMs: this.host.now() - held.since } : undefined;
       const place = placeOf(this.host.repos, record);
-      const text = `Merged ${changeName(record, pull.number)} on ${place}.${other.told}${direct ? directlyTold(place, direct.heldMs) : ""}`;
-      const line =
-        other.line ?? (direct ? directlyLine(place, changeName(record, pull.number)) : undefined);
+      const text = `Merged ${changeName(record, pull.number)} on ${place}.${other.told}${told}`;
+      const line = other.line;
       // Something else on the task still open keeps it open (INF-2525).
       const stillOpen = record
         ? await this.settle.stillOpen(record, pull.number, authorization?.after)

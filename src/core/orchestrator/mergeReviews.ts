@@ -31,6 +31,7 @@ import {
   reviewOf,
 } from "./changeContext";
 import {
+  afterDirectTold,
   atDispatch,
   branchInProject,
   type ChangeMerge,
@@ -836,13 +837,17 @@ export class MergeReviews {
     // The receipt names the version that merged: on a host whose merge names
     // no version, a push after the read may have gone in instead, and is told.
     let direct: { heldMs: number } | undefined;
-    const merged = (sha?: string, head?: string): PrOutcome => {
+    // `confirmed` is the host's own answer to the direct merge; a read that
+    // finds the pull request merged after it left does not say who merged it.
+    const merged = (sha?: string, head?: string, confirmed = true): PrOutcome => {
       const newer = otherMerged(candidate.headSha, head);
       const other = otherMergedFacts(forge.place, forge.label(change), head, candidate.headSha);
       return {
         ok: true,
-        text: `Merged ${forge.label(change)}${forge.place ? ` on ${forge.place}` : ""}.${other.told}${direct ? directlyTold(forge.place, direct.heldMs) : ""}`,
-        ...(direct && forge.place ? directlyLine(forge.place, forge.label(change)) : {}),
+        text: `Merged ${forge.label(change)}${forge.place ? ` on ${forge.place}` : ""}.${other.told}${direct ? (confirmed ? directlyTold(forge.place, direct.heldMs) : afterDirectTold(forge.place)) : ""}`,
+        ...(direct && confirmed && forge.place
+          ? directlyLine(forge.place, forge.label(change))
+          : {}),
         ...(direct ? { mergedDirectly: true as const } : {}),
         ...other.line,
         receipt: this.storeReviewReceipt(
@@ -917,10 +922,23 @@ export class MergeReviews {
       const sent = dispatched && !(caught instanceof ForgeError && caught.beforeSend);
       const after = sent ? await forge.pull?.(review.number).catch(() => undefined) : undefined;
       if (after?.merged && (after.headSha === candidate.headSha || forge.mergeNamesNoVersion))
-        return merged(after.mergedSha, after.headSha);
+        return merged(after.mergedSha, after.headSha, false);
+      // The host's own verdict on the one direct merge: never sent again, and
+      // the refusal the first mate hears, never a wait on an outcome.
+      const directRefused =
+        sent &&
+        direct !== undefined &&
+        !isTransientForgeFailure(caught) &&
+        !isSignInForgeFailure(caught);
       const stop = guard
         ? ((await this.merges.refusalStop(forge, guard, caught, message)) ??
-          (sent ? "outcome" : isTransientForgeFailure(caught) ? "transient" : undefined))
+          (directRefused
+            ? undefined
+            : sent
+              ? "outcome"
+              : isTransientForgeFailure(caught)
+                ? "transient"
+                : undefined))
         : /Head branch was modified/i.test(message)
           ? "moved"
           : undefined;
@@ -933,11 +951,10 @@ export class MergeReviews {
           ? { mergeTask: caught.mergeTask }
           : {}),
         ...(sent && heldBy(caught) ? { mergeHeld: true as const } : {}),
-        // The host's own verdict on the one direct merge: never sent again.
-        ...(sent && direct && !isTransientForgeFailure(caught) && !isSignInForgeFailure(caught)
-          ? { directRefused: true as const }
-          : {}),
-        ...(caught instanceof ForgeBaseMoved && (stop === undefined || stop === "computing")
+        ...(directRefused ? { directRefused: true as const } : {}),
+        ...(caught instanceof ForgeBaseMoved &&
+        !direct &&
+        (stop === undefined || stop === "computing")
           ? { baseMoved: true }
           : {}),
       };

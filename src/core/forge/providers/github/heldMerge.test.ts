@@ -114,6 +114,28 @@ describe("a merge request GitHub already holds for the pull request", () => {
     ]);
   });
 
+  it("keeps the id of a request GitHub took when a read of its result comes back empty or without the id", async () => {
+    let answer: { status?: number; json?: unknown } = {};
+    const { forge } = await stub(
+      {
+        [`PUT ${MERGE_ASYNC}`]: () => ({ status: 202, json: PENDING }),
+        [`GET ${MERGE_ASYNC}/${UUID}`]: () => answer,
+      },
+      [],
+    );
+    await expect(forge.putIn(merging, "feedbeef", "squash")).rejects.toMatchObject({
+      name: "ForgeMergeUnconfirmed",
+      mergeTask: UUID,
+      held: true,
+    });
+    answer = { json: { status: "pending", details: {} } };
+    await expect(forge.putIn(merging, "feedbeef", "squash")).rejects.toMatchObject({
+      name: "ForgeMergeUnconfirmed",
+      mergeTask: UUID,
+      held: true,
+    });
+  });
+
   it("keeps the id of a request GitHub took when a read of its result fails", async () => {
     const { forge, seen } = await stub(
       {

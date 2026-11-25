@@ -109,7 +109,7 @@ async function replay(
   minutes: number,
   conflict: () => ReturnType<Route>,
   direct: (merge: () => void) => ReturnType<Route>,
-  where: { queueBranch?: boolean; held?: () => unknown } = {},
+  where: { queueBranch?: boolean; held?: () => unknown; reviewed?: boolean } = {},
 ) {
   let started = Date.now();
   const minute = () => Math.round((Date.now() - started) / MINUTE);
@@ -127,6 +127,8 @@ async function replay(
     [],
   );
   const h = await approved({
+    // The approval is of a pull request the task pulled to review, not its own.
+    ...(where.reviewed ? { referenced: true } : {}),
     forgeFor: (_repo, own) => {
       standIn = own;
       return sendingThrough(own, github.forge, where.queueBranch ?? false);
@@ -178,7 +180,8 @@ async function replay(
   h.crewmate.finishPrompt();
   await tick();
   stamp();
-  const heard = await pass(minutes, new Set([11, 41, 53, 88]));
+  // The first mate's own merge is of the task's own pull request; a reviewed one has none to try.
+  const heard = await pass(minutes, where.reviewed ? new Set() : new Set([11, 41, 53, 88]));
   return { h, heard, stamped, pass, github };
 }
 
@@ -192,8 +195,17 @@ const fromFirstConflict = (stamped: string[]) =>
 /** Every request that could change the pull request, from the first 409 on. */
 const writes = (stamped: string[]) =>
   fromFirstConflict(stamped).filter((line) => line.includes(" PUT "));
+/**
+ * The same, without the minute: with no first mate asking in between, the
+ * approval's own backoff sets when the first 409 arrives.
+ */
+const reviewedWrites = (stamped: string[]) =>
+  writes(stamped).map((line) => line.split(" ").slice(1).join(" "));
 const timelineOf = (h: Awaited<ReturnType<typeof replay>>["h"]) =>
   h.tasks.timeline(h.taskId).map((event) => event.text ?? "");
+/** What the first mate hears when the pull request reads merged after the direct merge got no answer. */
+const TOLD_UNKNOWN =
+  "GitHub held the first merge request without finishing it, so the app sent its direct merge once at the approved version and got no answer. The pull request reads merged now; whether that merge, the held request or someone else merged it is not known. Tell the captain that once; nothing else is needed.";
 const TOLD_ONCE =
   "GitHub had held the first merge request for 5 minutes without finishing it, so the app merged the pull request directly at the approved version. Tell the captain that once; nothing else is needed.";
 
@@ -271,25 +283,120 @@ describe("a merge request GitHub holds for an approved, clean pull request", () 
     await h.supervisor.disposeAll();
   });
 
-  it("never sends the direct merge again when its answer never came, and reads the pull request instead", async () => {
+  it("never sends anything again when the direct merge's answer never came, even once the held request ends, and says the merge it then reads is of unknown origin", async () => {
+    let ended = false;
     const { h, stamped, pass } = await replay(
       88,
       () => ({ status: 409, json: PENDING }),
-      // GitHub merges it and the answer is lost on the way back.
+      // The answer is lost on the way back.
       () => ({ status: 502, json: { message: "Server Error" } }),
+      {
+        held: () =>
+          ended ? { status: "failed", details: { message: "Merge request timed out" } } : PENDING,
+      },
     );
-    await pass(180);
+    await pass(60);
+    expect(writes(stamped)).toEqual(["41 PUT merge-async", "46 PUT merge"]);
+    expect(h.authorization()?.heldMerge).toMatchObject({ request: UUID, direct: "sent" });
+    // The held request ends without merging while the direct merge's answer is unknown.
+    ended = true;
+    await pass(120);
     expect(writes(stamped)).toEqual(["41 PUT merge-async", "46 PUT merge"]);
     expect(h.authorization()?.heldMerge).toMatchObject({ request: UUID, direct: "sent" });
     expect(h.tasks.get(h.taskId)?.status).toBe("active");
-    // The pull request reads merged: the task closes and the first mate is told once.
+    expect(settleWakes(h.ops).filter((wake) => wake.includes("Merged #7"))).toHaveLength(0);
+    // The pull request reads merged: the task closes and the first mate is told once, without a claim of who merged it.
     h.forge.merged = true;
     await pass(31);
     expect(h.tasks.get(h.taskId)?.status).toBe("done");
     const wakes = settleWakes(h.ops).filter((wake) => wake.includes("Merged #7"));
     expect(wakes).toHaveLength(1);
-    expect(wakes[0]).toContain("Tell the captain that once");
+    expect(wakes[0]).toContain(TOLD_UNKNOWN);
     expect(writes(stamped)).toEqual(["41 PUT merge-async", "46 PUT merge"]);
+    await h.supervisor.disposeAll();
+  });
+
+  it("says a merge of unknown origin when the direct merge's answer is lost and the pull request reads merged at once", async () => {
+    const { h, stamped } = await replay(
+      88,
+      () => ({ status: 409, json: PENDING }),
+      // GitHub merges it and the answer is lost on the way back.
+      (merge) => {
+        merge();
+        return { status: 502, json: { message: "Server Error" } };
+      },
+    );
+    expect(writes(stamped)).toEqual(["41 PUT merge-async", "46 PUT merge"]);
+    expect(h.tasks.get(h.taskId)?.status).toBe("done");
+    const wakes = settleWakes(h.ops).filter((wake) => wake.includes("#7 is already merged"));
+    expect(wakes).toHaveLength(1);
+    expect(wakes[0]).toContain(TOLD_UNKNOWN);
+    await h.supervisor.disposeAll();
+  });
+
+  it("reads the held request again before a direct merge that a pending check delayed, and sends none once the merge queue took the request", async () => {
+    let queued = false;
+    const { h, stamped, pass } = await replay(43, () => ({ status: 409, json: PENDING }), merges, {
+      held: () => (queued ? { status: "enqueued", details: {} } : PENDING),
+    });
+    // A check starts running again before the hold passes five minutes.
+    h.forge.states = ["pending"];
+    await pass(6);
+    expect(h.authorization()?.heldMerge).toMatchObject({ request: UUID, direct: "due" });
+    expect(writes(stamped)).toEqual(["41 PUT merge-async"]);
+    // The merge queue takes the held request, then the check passes.
+    queued = true;
+    h.forge.inQueue = true;
+    h.forge.states = ["success"];
+    await pass(60);
+    expect(writes(stamped)).toEqual(["41 PUT merge-async"]);
+    expect(h.authorization()?.waiting?.on).toBe("host-queue");
+    await h.supervisor.disposeAll();
+  });
+
+  it("merges a reviewed pull request directly once the same way, and wakes the first mate once to tell the captain", async () => {
+    const { h, stamped } = await replay(88, () => ({ status: 409, json: PENDING }), merges, {
+      reviewed: true,
+    });
+    expect(reviewedWrites(stamped)).toEqual(["PUT merge-async", "PUT merge"]);
+    const wakes = settleWakes(h.ops).filter((wake) => wake.includes("Merged #7"));
+    expect(wakes).toHaveLength(1);
+    expect(wakes[0]).toContain(TOLD_ONCE);
+    await h.supervisor.disposeAll();
+  });
+
+  it("wakes the first mate once with GitHub's reason when it refuses the direct merge of a reviewed pull request, and sends nothing after", async () => {
+    // A refusal GitHub words in no way the app reads as a conflict or a moved version.
+    const refusal = "Squash merges are not allowed on this repository.";
+    const { h, stamped, pass } = await replay(
+      88,
+      () => ({ status: 409, json: PENDING }),
+      () => ({ status: 405, json: { message: refusal } }),
+      { reviewed: true },
+    );
+    await pass(180);
+    expect(reviewedWrites(stamped)).toEqual(["PUT merge-async", "PUT merge"]);
+    expect(h.authorization()?.heldMerge).toMatchObject({ request: UUID, direct: "refused" });
+    const wakes = settleWakes(h.ops).filter((wake) => wake.includes(refusal));
+    expect(wakes).toHaveLength(1);
+    expect(wakes[0]).toContain(`GitHub answered 405 to PUT ${DIRECT}: ${refusal}`);
+    await h.supervisor.disposeAll();
+  });
+
+  it("tells the first mate once when a reviewed pull request reads merged after its direct merge got no answer", async () => {
+    const { h, stamped, pass } = await replay(
+      88,
+      () => ({ status: 409, json: PENDING }),
+      () => ({ status: 502, json: { message: "Server Error" } }),
+      { reviewed: true },
+    );
+    expect(h.authorization()?.heldMerge).toMatchObject({ request: UUID, direct: "sent" });
+    h.forge.merged = true;
+    await pass(31);
+    expect(reviewedWrites(stamped)).toEqual(["PUT merge-async", "PUT merge"]);
+    const wakes = settleWakes(h.ops).filter((wake) => wake.includes("Merged #7"));
+    expect(wakes).toHaveLength(1);
+    expect(wakes[0]).toContain(TOLD_UNKNOWN);
     await h.supervisor.disposeAll();
   });
 

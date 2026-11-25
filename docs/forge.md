@@ -1034,7 +1034,7 @@ A request it took and never finishes would otherwise answer 409 to every later o
 The GitHub client reads the request a 409 names once by its id, with the decoder that reads a request it sent itself (`asyncMerge.ts`).
 Pending, or unreadable, the answer is `ForgeMergeUnconfirmed` with that id and `held`; a 409 that names no request answers the same with no id.
 A held request GitHub's merge queue took is the queued answer, and one GitHub says merged keeps its id while the pull request is read.
-A request GitHub took (202) that is still pending after the last read, or whose read fails, answers the same way with its own id.
+A request GitHub took (202) that is still pending after the last read answers the same way with its own id, which is kept from the 202 itself: a later read that fails, comes back empty or leaves the id out does not lose it.
 A held request that ended without merging is a transient failure: the pull request is read before anything else.
 A 409 to a merge past the branch's rules is GitHub's refusal, since that merge is sent once.
 
@@ -1044,12 +1044,15 @@ The approval waits on `outcome` and reads the pull request and, where it knows t
 The pull request merged ends it as any merge read back does.
 The held request taken by GitHub's merge queue hands the approval to the queue's own wait, below, and clears the hold.
 The held request ended without merging, or GitHub no longer keeping it, clears the hold, says so on the task's timeline, and every gate runs again before the merge is sent again.
+A direct merge that becomes due leaves only in the run that just read the held request: when a gate, such as a check running again, makes it wait, the request is read again first, so one the merge queue took or that ended in the meantime gets no direct merge.
 A hold older than five minutes on a pull request that still passes every gate at the approved version gets GitHub's direct merge (`Forge.putInDirectly`) once, with the same version, method and commit words: `sha` makes GitHub refuse it if the version moved, and a pull request the held request merged in the meantime answers that it is merged.
 The approval records that the direct merge is sent before it leaves, so no outcome sends it twice: not a refusal, not a failure with no answer, not a main branch that moved, and not a restart between the send and its answer.
-After it, the approval only reads: an answer that never came is settled by reading the pull request, never by sending again.
+After it, the approval only reads: an answer that never came is settled by reading the pull request, never by sending again, however the held request ends in the meantime.
 A branch whose rules name a merge queue (`Forge.branchRules`) gets no direct merge, since GitHub refuses one there; the approval records that, the first mate is woken once with the reason, and the approval goes on reading.
-A direct merge that went through says "Merged #N on GitHub directly, after GitHub held the first merge request" on Activity and wakes the first mate once, with words to tell the captain once; that holds when the merge is first learned by reading the pull request after a lost answer.
+A direct merge GitHub answers as merged says "Merged #N on GitHub directly, after GitHub held the first merge request" on Activity and wakes the first mate once, with words to tell the captain once.
+A pull request that reads merged after a direct merge left unanswered wakes the first mate once too, in words that say the app sent it and that the read does not show whether it, the held request or a person merged (`afterDirectTold`).
 A direct merge GitHub refuses wakes the first mate once with GitHub's reason, and nothing but reads follows for that hold.
+All three hold for a reviewed pull request as for the task's own.
 A hold GitHub never named is bounded by the same five minutes; after its direct merge is sent, refused or withheld, the approval reads the pull request until it merges, closes or a new version is approved.
 The first mate's own merge of a pull request whose kept approval still reads back a merge or follows a hold runs that approval once and answers with what it found (`SettleService.keptMergeUnread`); it sends nothing beside the approval, whatever that run found.
 A batch's merge keeps to reading the pull request: the direct merge is the kept approval's alone.

@@ -112,20 +112,25 @@ export async function asyncMerge(
     if (instead instanceof ForgeError) throw instead;
     return instead;
   }
+  // The id GitHub gave the request it took is kept apart from every later
+  // answer: a read that fails, comes back empty or cannot be parsed leaves
+  // the request pending under that id - unknown, never sent again.
+  const taken = reading?.status === "pending" ? reading.details?.uuid : undefined;
+  if (!taken) return reading;
   for (const delay of ASYNC_MERGE_READ_DELAYS_MS) {
-    const uuid = reading?.status === "pending" ? reading.details?.uuid : undefined;
-    if (!uuid) break;
+    if (reading?.status !== "pending") break;
     await sleep(delay);
     try {
-      reading = (await ask("GET", `${path}/${encodeURIComponent(uuid)}`)) as AsyncMergeJson | null;
-    } catch (caught) {
-      // A read GitHub refuses, or a result it no longer keeps, leaves the
-      // request GitHub took pending under its id: unknown, never sent again.
-      if (caught instanceof ForgeError) break;
-      throw caught;
+      const next = (await ask(
+        "GET",
+        `${path}/${encodeURIComponent(taken)}`,
+      )) as AsyncMergeJson | null;
+      if (next?.status) reading = next;
+    } catch {
+      break;
     }
   }
-  return reading;
+  return { ...reading, details: { ...reading?.details, uuid: taken } };
 }
 
 /**
@@ -139,9 +144,12 @@ async function stateOf(ask: Ask, path: string): Promise<ForgeMergeRequest | unde
   try {
     reading = (await ask("GET", path)) as AsyncMergeJson | null;
   } catch (caught) {
-    if (!(caught instanceof ForgeError)) throw caught;
-    // GitHub keeps a result for a day after its last change, then answers 404 for its id.
-    return caught.failure === "not-found" ? { status: "gone" } : undefined;
+    // GitHub keeps a result for a day after its last change, then answers
+    // 404 for its id. Any other failure, an answer that cannot be parsed
+    // included, says nothing about the request.
+    return caught instanceof ForgeError && caught.failure === "not-found"
+      ? { status: "gone" }
+      : undefined;
   }
   const message = reading?.details?.message;
   switch (reading?.status) {

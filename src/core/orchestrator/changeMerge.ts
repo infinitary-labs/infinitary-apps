@@ -248,6 +248,8 @@ export type MergeAttempt = PrOutcome & {
   baseMoved?: boolean;
   /** A merge request whose answer never came on a host whose merge names no version: never sent again. */
   noResend?: boolean;
+  /** The one direct merge left in this attempt, after the host held its request that long. */
+  sentDirectly?: { heldMs: number };
 };
 
 /**
@@ -367,7 +369,16 @@ export class ChangeMerge {
       // read the pull request back before anything is sent again (FI3-304).
       if (guard && attempt.dispatched && attempt.transient) {
         const after = await this.readBack(taskId, guard);
-        if (after.merged) return after.merged;
+        // Read merged after the one direct merge got no answer: who merged
+        // it is not known, and the first mate is told once.
+        if (after.merged)
+          return attempt.sentDirectly
+            ? {
+                ...after.merged,
+                text: `${after.merged.text}${afterDirectTold(this.pinnedForge(taskId, guard.place)?.place)}`,
+                mergedDirectly: true,
+              }
+            : after.merged;
         if (after.closed) return after.closed;
         if (after.open !== true || attempt.noResend) {
           return {
@@ -633,7 +644,7 @@ export class ChangeMerge {
       // The main branch moved while the host merged: tried again unless the
       // pull request's own state already says why it cannot merge.
       const baseMoved =
-        caught instanceof ForgeBaseMoved && (stop === undefined || stop === "computing");
+        caught instanceof ForgeBaseMoved && !direct && (stop === undefined || stop === "computing");
       // A request the host says never left sent nothing, whatever was marked.
       const sent = dispatched && !(caught instanceof ForgeError && caught.beforeSend);
       return {
@@ -648,6 +659,7 @@ export class ChangeMerge {
           (isTransientForgeFailure(caught) && (forge.mergeNamesNoVersion || heldBy(caught))))
           ? { noResend: true }
           : {}),
+        ...(sent && direct ? { sentDirectly: direct } : {}),
         ...(caught instanceof ForgeMergeUnconfirmed && caught.mergeTask
           ? { mergeTask: caught.mergeTask }
           : {}),
@@ -1521,6 +1533,16 @@ export function directlyTold(place: string | null | undefined, heldMs: number): 
   return ` ${place ?? "The host"} had held the first merge request for ${Math.round(heldMs / 60_000)} minutes without finishing it, so the app merged the pull request directly at the approved version. Tell the captain that once; nothing else is needed.`;
 }
 
+/**
+ * What the first mate hears when the pull request reads merged after the
+ * one direct merge left and its answer never came: the read does not say
+ * whether that merge, the held request or a person merged it.
+ */
+export function afterDirectTold(place: string | null | undefined): string {
+  // i18n-exempt: served to the first mate in the merge answer, stays English
+  return ` ${place ?? "The host"} held the first merge request without finishing it, so the app sent its direct merge once at the approved version and got no answer. The pull request reads merged now; whether that merge, the held request or someone else merged it is not known. Tell the captain that once; nothing else is needed.`;
+}
+
 /** The Activity line of a merge that was the direct one sent in place of a held request. */
 export function directlyLine(place: string, change: string): { line: string; lineSaid: Said } {
   const lineSaid = said("mergedChangeDirectlyOn", { change, place });
@@ -1684,6 +1706,7 @@ export function stripAttempt(attempt: MergeAttempt): PrOutcome {
     dispatched: _dispatched,
     baseMoved: _baseMoved,
     noResend: _noResend,
+    sentDirectly: _sentDirectly,
     ...outcome
   } = attempt;
   return outcome;

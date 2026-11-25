@@ -1203,7 +1203,8 @@ It asks for that list without each run's pull requests, which it never reads: wo
 It reads each passing run's artifact list and keeps paging past runs without a usable set, including installer-only verifications.
 If no passing run has usable timings, the chooser still schedules every explicitly selected file conservatively.
 Missing timing artifacts change placement, never selection or the need for a new full run; unreadable selections remain an error.
-An artifact-list error or a failed download still fails the chooser.
+It asks GitHub again after an error, three times over about fourteen seconds (github-script's `retries`), since GitHub sometimes answers a list with a server error and an empty body, which would otherwise stop the request before any journey runs.
+An artifact-list error that outlasts those, or a failed download, still fails the chooser.
 `scripts/journey-budget.ts` places every chosen file on Linux, and on the Mac mini (the `journeys` kind's queue or the `MAC_RUNNER` label) only the chosen files that hold a test tagged `MAC_ONLY_TAG`, whose `affected-journeys` job runs only those tests (`--grep @mac-only`), as "Tests that need a Mac" says.
 A file with a tagged test runs on both: its tagged tests on the Mac, and its other tests on Linux, where its tagged tests skip or run their shared steps.
 A tagged test still needs native proof; a Linux-only request does not claim to provide that proof.
@@ -1211,7 +1212,7 @@ A tagged test still needs native proof; a Linux-only request does not claim to p
 It is at most five jobs, one per Linux place on the PC (`LINUX_PLACES`, INF-1720's plan).
 For modest selections the existing grouping and job count stay unchanged.
 For five-job candidate estimates, the chooser additionally reads compact observations from the newest successful default-branch run of each of `journeys.yml` and `verify.yml`.
-Missing or expired reports retain the prior placement, and an artifact-list error still fails the chooser rather than hiding an access problem.
+Missing or expired reports retain the prior placement, and an artifact-list error that outlasts the same retries still fails the chooser rather than hiding an access problem.
 An archive the runner cannot download is left out: its download step stays failed on the run, and the chooser goes on with that report missing, since execution never reads these observations and the selection and executed placement stay the same (INF-3622).
 The timing reader checks schema, Linux X64, run/attempt/checkout identity, successful final job conclusion, complete selection, lane ownership and compatible configured/actual workers.
 It rejects ambiguous reusable-job identities rather than guessing between overlapping jobs.

@@ -226,10 +226,16 @@ jobs:
       # group of the parallel lanes too, a run keeps e2e-results-mac as well,
       # and needs all three. On GitHub's Macs the parallel journeys are four
       # groups, e2e-results-parallel-1 to -4 (INF-6330's plan).
+      # Run 45707263167: GitHub answered the plain list once with a server
+      # error and an empty body, and the request ran no journey. github-script
+      # asks again only when retries is set, waiting 1, 4 and 9 seconds after
+      # a server error; an error that outlasts the retries, or a lasting
+      # refusal such as 404, still fails the chooser.
       - id: timing-run
         name: Find the newest passing full verification
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
         with:
+          retries: 3
           script: |
             const TIMES = [['e2e-results-parallel-1', 'e2e-results-parallel-2', 'e2e-results-parallel-3', 'e2e-results-parallel-4', 'e2e-results-desktop-1', 'e2e-results-desktop-2', 'e2e-results-mac'], ['e2e-results-parallel', 'e2e-results-desktop-1', 'e2e-results-desktop-2', 'e2e-results-mac'], ['e2e-results-parallel', 'e2e-results-desktop', 'e2e-results-mac'], ['e2e-results-parallel', 'e2e-results-desktop'], ['e2e-results']];
             const pages = github.paginate.iterator(github.rest.actions.listWorkflowRuns, {
@@ -274,6 +280,8 @@ jobs:
         name: Find comparable Linux timing observations
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
         with:
+          # The same lists as the step above, asked again after a server error.
+          retries: 3
           script: |
             const fs = require('node:fs');
             const root = process.env.RUNNER_TEMP;

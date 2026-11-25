@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "tag-groups-docs-site-declaration",
+      "reason": "Records the help page already updated by the tag-group improvement. This changes release-note metadata only."
+    }
+  ]
+}

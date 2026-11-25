@@ -86,6 +86,7 @@ INF-6664 piece 2: while a runbook that is on names the `heartbeat` wake (the bui
 - A beat due while the app was closed is dropped and the rule's next run moves 55 minutes on from start; no beat goes while one is still waiting.
 - A beat is an ordinary scheduled delivery: one fixed line (`HEARTBEAT_LINE`) and the standing list, with the run's Found line in History; once it goes out, each new row's once-name is recorded so the row reads new again only at its next milestone.
 - What the first mate does with a beat is in the runbook's guide: act on a row whose next move is already its own, ask the captain once on one card when only they can move it and something changed since they decided, or leave it; a beat gives no new permission.
+  A part the app already asked about on its own card, such as the last-part card (`card-last-part-<task>`, `docs/report-sort.md`, "The last part the captain stopped"), counts as asked, so a beat never asks about it again.
 
 ## A task closes
 

@@ -45,7 +45,6 @@ export function startAtApprovalNotABlocker(named: string): string {
  * The refusal when a side-effect task names a wait whose approval starts it
  * (docs/task-graph.md, "A side-effect task"): its every wait needs the merge.
  */
-// i18n-exempt: a tool answer served to the first mate, not shown to a person
 // i18n-exempt: served to the first mate, never shown to a person
 export const SIDE_EFFECT_START_AT_APPROVAL =
   "A side-effect task starts only once all its work merged, so it takes no start_at_approval: clear one or the other.";
@@ -189,7 +188,6 @@ export function updateTaskFields(
       throw new TaskGraphRefusal("needs_merge can only change on open work that has not started.");
     }
     if (patch.sideEffect !== undefined && !unstarted) {
-      // i18n-exempt: a tool answer served to the first mate, not shown to a person
       // i18n-exempt: served to the first mate's tool, never shown to a person
       throw new TaskGraphRefusal("side_effect can only change on open work that has not started.");
     }

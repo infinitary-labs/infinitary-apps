@@ -2934,6 +2934,7 @@ public enum PhoneMessages {
     public static func `settingsAutomationEnable`() -> String { PhoneWords.format("settingsAutomationEnable", []) }
     public static func `settingsAutomationEventIn`(`event`: String, `integration`: String) -> String { PhoneWords.format("settingsAutomationEventIn", [`event`, `integration`]) }
     public static func `settingsAutomationEventNotConnected`() -> String { PhoneWords.format("settingsAutomationEventNotConnected", []) }
+    public static func `settingsAutomationEventTaskClosed`() -> String { PhoneWords.format("settingsAutomationEventTaskClosed", []) }
     public static func `settingsAutomationEventTaskReleased`() -> String { PhoneWords.format("settingsAutomationEventTaskReleased", []) }
     public static func `settingsAutomationEventsPreview`() -> String { PhoneWords.format("settingsAutomationEventsPreview", []) }
     public static func `settingsAutomationFirstMateGets`() -> String { PhoneWords.format("settingsAutomationFirstMateGets", []) }
@@ -7689,6 +7690,7 @@ extension PhoneWords {
         "settingsAutomationEnable": [],
         "settingsAutomationEventIn": ["event", "integration"],
         "settingsAutomationEventNotConnected": [],
+        "settingsAutomationEventTaskClosed": [],
         "settingsAutomationEventTaskReleased": [],
         "settingsAutomationEventsPreview": [],
         "settingsAutomationFirstMateGets": [],

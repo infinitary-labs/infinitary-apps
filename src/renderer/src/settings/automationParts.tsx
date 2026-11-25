@@ -102,6 +102,7 @@ export function useListenable(): Listenable[] {
  * in English for the agents (src/core/integrations/appEvents.ts).
  */
 const APP_EVENT_LABELS: Record<string, (() => string) | undefined> = {
+  "tasks/task_closed": m.settingsAutomationEventTaskClosed,
   "tasks/task_released": m.settingsAutomationEventTaskReleased,
 };
 

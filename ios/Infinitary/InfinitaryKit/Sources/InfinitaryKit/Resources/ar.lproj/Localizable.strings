@@ -2803,6 +2803,7 @@
 "settingsAutomationEnable" = "تشغيل…";
 "settingsAutomationEventIn" = "%1$@ في %2$@";
 "settingsAutomationEventNotConnected" = "تكامل غير متصل الآن";
+"settingsAutomationEventTaskClosed" = "تُغلق مهمة";
 "settingsAutomationEventTaskReleased" = "يصدر العمل في إصدار";
 "settingsAutomationEventsPreview" = "- (ملخص لكل حدث وصل)";
 "settingsAutomationFirstMateGets" = "ما يتلقاه نائب القبطان";

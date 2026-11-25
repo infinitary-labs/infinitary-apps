@@ -14,7 +14,12 @@ function closedWords(wait: SideEffectWait): string {
   const reason = wait.closedReason ? ` (${wait.closedReason})` : "";
   // i18n-exempt: a crewmate's brief, never shown to a person
   if (wait.status === "dropped") return `dropped${reason}`;
-  if (TaskGraph.mergedAt(wait)) {
+  // A local land revokes its approval and an outside merge has none, so the
+  // closed reason, not a consumed approval, is the record's merged-work fact.
+  if (
+    TaskGraph.mergedAt(wait) ||
+    (wait.status === "done" && (wait.closedReason === "merged" || wait.closedReason === "landed"))
+  ) {
     const release = wait.delivery?.firstRelease;
     // i18n-exempt: a crewmate's brief, never shown to a person
     return release

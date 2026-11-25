@@ -533,10 +533,16 @@ describe("the task graph (R1)", () => {
       startPolicy: "on-request",
     });
     seedTask(tasks, {
+      id: "land",
+      title: "Land the export fix",
+      status: "queued",
+      startPolicy: "on-request",
+    });
+    seedTask(tasks, {
       id: "close-item",
       title: "Close the work item",
       status: "queued",
-      blockedBy: ["fix", "plan"],
+      blockedBy: ["fix", "plan", "land"],
       shape: { kind: "unclear", side_effect: true },
     });
     seedTask(tasks, {
@@ -575,6 +581,15 @@ describe("the task graph (R1)", () => {
       },
     });
     tasks.close("fix", { status: "done", reason: "merged", actor: "host" });
+    // A local land keeps no consumed approval; its closed reason is the merge.
+    seedDelivery(tasks, "land", {
+      firstRelease: {
+        version: "1.4.0-alpha.3",
+        url: "https://github.com/example/nimbus-api/releases/tag/v1.4.0-alpha.3",
+        evidence: "The release's notes list the export fix.",
+      },
+    });
+    tasks.close("land", { status: "done", reason: "landed", actor: "host" });
     await supervisor.watch.sweepGates(Date.now());
     await tick();
     // Both started: the side-effect task and the ordinary task behind the answered plan.
@@ -585,6 +600,9 @@ describe("the task graph (R1)", () => {
     );
     expect(served).toContain(
       `- ${tasks.get("plan")?.key} "Plan the weekly view": done (answered), with no merge`,
+    );
+    expect(served).toContain(
+      `- ${tasks.get("land")?.key} "Land the export fix": merged; first shipped in release 1.4.0-alpha.3 (https://github.com/example/nimbus-api/releases/tag/v1.4.0-alpha.3)`,
     );
     // Only the side-effect task reads the section.
     expect(served.match(/This is a side-effect task/g)).toHaveLength(1);

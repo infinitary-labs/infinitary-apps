@@ -61329,6 +61329,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `An integration not connected now`;
   }
+  function settingsAutomationEventTaskClosed() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تُغلق مهمة`;
+      case "de":
+        return `Eine Aufgabe wird geschlossen`;
+      case "es":
+        return `Una tarea se cierra`;
+      case "fr":
+        return `Une tâche se termine`;
+      case "ja":
+        return `タスクが終了する`;
+      case "ko":
+        return `작업이 닫힘`;
+      case "pt-BR":
+        return `Uma tarefa é fechada`;
+      case "zh-Hans":
+        return `任务关闭`;
+      case "zh-Hant":
+        return `任務關閉`;
+      case "en-XA":
+        return `[Å ţášķ çļöšéš ~~~~~]`;
+      case "ar-XB":
+        return `‮A task closes‬`;
+    }
+    return `A task closes`;
+  }
   function settingsAutomationEventTaskReleased() {
     switch (currentLanguage()) {
       case "ar":
@@ -115860,6 +115887,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsAutomationEnable,
     settingsAutomationEventIn,
     settingsAutomationEventNotConnected,
+    settingsAutomationEventTaskClosed,
     settingsAutomationEventTaskReleased,
     settingsAutomationEventsPreview,
     settingsAutomationFirstMateGets,
@@ -119522,6 +119550,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsAutomationEnable": [],
     "settingsAutomationEventIn": ["event", "integration"],
     "settingsAutomationEventNotConnected": [],
+    "settingsAutomationEventTaskClosed": [],
     "settingsAutomationEventTaskReleased": [],
     "settingsAutomationEventsPreview": [],
     "settingsAutomationFirstMateGets": [],

@@ -767,6 +767,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     if (channel === "inf:work:secret-ask") {
       const uses = (await this.live(this.load(asked.task, deviceId))).callbacks?.secretUses;
       if (!uses?.ask) throw new Error("That tool is not this task's.");
+      this.secretUses.set(asked.task, uses);
       const { input } = request as InvokeRequest<"inf:work:secret-ask">[0];
       return (await uses.ask(
         { id: deviceId, label: this.nameOf(deviceId) },
@@ -778,6 +779,8 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     if (channel === "inf:work:secret-bring") {
       const uses = (await this.live(this.load(asked.task, deviceId))).callbacks?.secretUses;
       if (!uses?.bring) throw new Error("That tool is not this task's.");
+      // Kept so a restart or close there withdraws a waiting bring (`secretUsesGone`).
+      this.secretUses.set(asked.task, uses);
       const { input } = request as InvokeRequest<"inf:work:secret-bring">[0];
       return (await uses.bring(
         { id: deviceId, label: this.nameOf(deviceId) },

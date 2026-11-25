@@ -1313,7 +1313,9 @@ describe("a task that runs on a computer that runs work", () => {
         elsewhere: (task) => ({
           use: async () => ({ receipt: null }),
           take: async () => ({ state: "unavailable" }),
-          gone: () => {},
+          gone: (computer) => {
+            heard.push(["gone", task, computer.id]);
+          },
           bring: async (computer, input) => {
             heard.push([task, computer.id, input]);
             return { ok: true };
@@ -1342,5 +1344,10 @@ describe("a task that runs on a computer that runs work", () => {
     expect(heard).toEqual([["t-bring", at.deviceId, deliver]]);
     const calls = join(crewmatePlacedDir(home.paths, "t-bring"), "calls.jsonl");
     expect(existsSync(calls) ? readFileSync(calls, "utf8") : "").not.toContain("aW52ZW50ZWQ=");
+
+    // A task that only brought, never injected, still hears its conversation
+    // there end, so a waiting bring is withdrawn at once (docs/secrets.md).
+    await home.supervisor.sessions.interruptCrewmate("t-bring", "cancel");
+    await expect.poll(() => heard.at(-1)).toEqual(["gone", "t-bring", at.deviceId]);
   });
 });

@@ -386,7 +386,7 @@ export function startHomeCrew({
     ...(host.secrets
       ? {
           secrets: {
-            // A bring from another tool rides the same command, here only (docs/secrets.md).
+            // A bring from another tool here rides the same command; one there arrives as `elsewhere.bring` (docs/secrets.md).
             forTask: (taskId: string) => ({
               ...later.secrets().commandFor({ task: taskId }),
               ...later.secretBrings().commandFor(taskId),

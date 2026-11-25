@@ -67,6 +67,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | fingerprint (a computer's key) | 指纹 |  |
 | first mate | 大副 | The ship's second-in-command, a common noun, never a name. |
 | fold (where an iPhone Duo folds) | 折痕 | |
+| folder picker (the computer's own) | 文件夹选择器 | What Work in a folder on my computer opens; as the file picker is 文件选择器. |
 | font (Settings → Appearance) | 字体 | |
 | forget (a computer, on the phone) | 忘记 | Leave stays 离开. |
 | gate (the checks work passes before it merges) | 把关 | The same word as the Rigor setting: 不经过任何把关. |
@@ -107,6 +108,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | pin (a task) | 固定 | As for a pinned model. |
 | plan | 套餐 | A subscription plan, distinct from a task's 计划. |
 | plan (a task's list of steps) | 计划 | |
+| port (a computer's SSH port) | 端口 | |
 | PR #N | PR #N | Kept as is in mono. |
 | Premium / Hard / Normal / Simple (a task's level), Difficulty | 顶级 / 困难 / 普通 / 简单, 难度 | How hard the task is, never a reasoning word. |
 | press (a button) / press (a key) | 点击 / 按 | |
@@ -126,6 +128,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | rebase merges, merge commits (the host's settings) | 变基合并、合并提交 | Named only as the settings where the project lives, in GitHub's own Simplified Chinese wording; the app's own action stays 更新到最新. |
 | redacted (decision records) | 脱敏 | The mainland word for records with personal details stripped. |
 | relay (Infinitary's push relay) | Infinitary 的中转服务 | It passes sealed notifications and notes it cannot read; a sealed note is 封好的信. |
+| Remote Login (macOS's own name) | 远程登录 | macOS's own Simplified Chinese name in Sharing, quoted as “远程登录” in sentences. |
 | Remove (a device) | 移除 | |
 | repair (the task repairing a held batch) | 修复 | “{key} 正在修复” for the task at work; the change it makes stays 修正. |
 | report | 汇报 | |

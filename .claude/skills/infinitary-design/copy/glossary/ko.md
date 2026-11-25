@@ -66,6 +66,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | fingerprint (a computer's key) | 지문 |  |
 | first mate | 일등항해사 | The ship's second-in-command, a common noun; the thread's short author tag is 항해사 |
 | fold (where an iPhone Duo folds) | 접히는 부분 | |
+| folder picker | 폴더 선택 창 | The system window for choosing a folder, as the app's own message names it. |
 | font (Settings → Appearance) | 글꼴 | |
 | forget (a computer, on the phone) | 지우기 | As iOS forgets a network; kept apart from 제거 and 나가기. |
 | gate | 관문 | What work passes before it merges; kept apart from 검사 |
@@ -129,6 +130,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | record (a Usage record) | 기록 | "{priced} of {records} records priced" is 기록 {records}개 중 {priced}개에 가격 있음 |
 | relay (Infinitary's push relay) | Infinitary 중계 서버 | It passes sealed notifications and notes it cannot read; a sealed note is 봉인된 메모. |
 | release / released | 릴리스 / 릴리스됨 | |
+| Remote Login (macOS's own name) | 원격 로그인 | macOS's own Korean name in Sharing. |
 | remote, origin, upstream | (not used) | 프로젝트가 있는 곳 instead |
 | Remove (a device) | 제거 | |
 | repair (the task repairing a held batch) | 복구 | "{key}이(가) 복구하고 있어요" for the task at work; the change it makes stays 수정. |

@@ -256,6 +256,25 @@ describe("the stack capture when the app never goes idle", () => {
     expect(f.status()).toContain("Sample ended for Infinitary PID 7221.");
   });
 
+  // INF-6750: the merge card part's app froze for minutes right after its three cards were replaced (run 45597233424).
+  // The runner never said the app missed going idle: the app logged this line 30 seconds in, the runner a UI query
+  // timeout a minute later, and no stack was kept.
+  it("samples the app once when an XCTest query finds its main thread busy", async () => {
+    const busy =
+      '2026-11-25 10:53:48.925 E  Infinitary[10471:10acf] [com.apple.dt.xctest:Default] XCTAS Error: Error Domain=com.apple.dt.xctest.automation-support.error Code=6 "Unable to perform work on main run loop, process main thread busy for 30.0s" UserInfo={NSLocalizedDescription=Unable to perform work on main run loop, process main thread busy for 30.0s}';
+    const f = idleFixture([stuckApp, ...peers]);
+    f.reader.receive(busy);
+    f.reader.receive(busy);
+    await f.reader.close();
+    expect(f.children).toHaveBeenCalledTimes(1);
+    expect(f.sample.mock.calls[0]).toEqual([
+      7221,
+      join(f.evidence, "idle-timeout-Infinitary-7221.log"),
+    ]);
+    expect(f.status()).toContain("Observed: 2026-11-25 10:53:48.925 E  Infinitary[10471:10acf]");
+    expect(f.status()).toContain("Capture completed.");
+  });
+
   it("does not treat an ordinary wait for the app to idle as the app never going idle", async () => {
     const f = idleFixture([stuckApp, ...peers]);
     f.reader.receive("    t =     3.27s         Wait for com.getinfinitary.infinitary to idle");

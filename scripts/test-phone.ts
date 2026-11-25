@@ -738,7 +738,8 @@ const onePart = async () => {
     const services = await run("xcrun", ["simctl", "spawn", owned, "launchctl", "list"]);
     const owner = await phoneLaunchOwner(owned, services, processes);
     writeFileSync(join(evidence, "web-stack-owner.log"), JSON.stringify({ discoveredAt: new Date().toISOString(), owner }, null, 2));
-    // INF-2767: when XCTest reports the app never went idle, sample it and what its turn waits on while still stuck.
+    // INF-2767: when XCTest reports the app never went idle, or (INF-6750) its main thread busy, sample it and what its
+    // turn waits on while still stuck.
     idleStack = capturePhoneIdleTimeout({ evidence, owner, processes,
       children: async () => processes((await run("/usr/bin/pgrep", ["-P", String(owner.launcher.pid)]))
         .split(/\s+/).filter(Boolean).map(Number)),
@@ -785,6 +786,7 @@ const onePart = async () => {
       timeoutStack?.receive(line);
       webContent.receive(line);
       webStacks?.receive(line);
+      idleStack?.receive(line);
     } });
   const testing = new Date();
   let output = "";

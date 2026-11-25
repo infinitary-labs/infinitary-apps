@@ -34,6 +34,13 @@ Runbooks are outside the first mate's hard fixed-context budget; the model's phy
 A switch affects the first mate's next idle boundary and newly opened crew conversations, not a prompt already running.
 No procedure is refused for exceeding the core budget.
 
+## Reading a runbook's crew part
+
+The first mate is served only first-mate sections, so it reads a runbook's crew part on request before saying what that runbook has crewmates do.
+`app_state`'s named read `runbooks.crew` (`src/core/pi/appReads.ts`) answers one runbook, by id or name and whether it is on or off, through `Runbooks.crewPart`: each crew section's text with the selector that serves it, its projects list when it has one, and its skills' names.
+The `app_state` description says the reads include it; the read changes nothing and joins no context a turn builds.
+`src/core/runbooks/crewPart.test.ts` holds it.
+
 ## Adding and removing
 
 Ask the first mate to add a runbook from a full folder path, a git address (optionally pinned with `#ref`) or an npm package.

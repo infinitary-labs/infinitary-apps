@@ -1005,7 +1005,7 @@
     {
       "from": "pi",
       "to": "runbooks",
-      "why": "serves care guidance and runbook skills"
+      "why": "serves care guidance and runbook skills, and reads a runbook's crew part for the first mate"
     },
     {
       "from": "pi",

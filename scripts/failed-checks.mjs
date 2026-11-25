@@ -65,7 +65,7 @@ export function leaveOutMain(jobs, mainJobs) {
  * The note for one version. Each job's log link is built from GitHub's
  * numeric ids alone, never from text the pull request chose.
  */
-export function failedComment({ server, owner, repo, sha, jobs }) {
+export function failedComment({ server, owner, repo, sha, jobs, onMain = [] }) {
   const log = (job) =>
     `${server}/${owner}/${repo}/actions/runs/${Number(job.run_id)}/job/${Number(job.id)}`;
   return [
@@ -75,8 +75,16 @@ export function failedComment({ server, owner, repo, sha, jobs }) {
     `These checks failed on this pull request's version ${sha.slice(0, 7)}, so it is labeled \`${WAITING}\`:`,
     "",
     ...jobs.map((job) => `- ${asCode(job.name)}: [log](${log(job)})`),
+    ...(onMain.length > 0
+      ? [
+          "",
+          "These checks failed too, but also fail on `main` right now, so they are not this pull request's to fix:",
+          "",
+          ...onMain.map((job) => `- ${asCode(job.name)}`),
+        ]
+      : []),
     "",
-    "A check that also fails on `main` right now is left out. Push a fix to this pull request; its checks run again once a maintainer approves the run, and the label comes off once the required checks pass.",
+    "Push a fix to this pull request; its checks run again once a maintainer approves the run, and the label comes off once the required checks pass.",
   ].join("\n");
 }
 
@@ -171,17 +179,17 @@ export async function noteFailedChecks({ github, context, core, pullNumber }) {
   const jobs = await failedJobsAt(github, owner, repo, sha);
   if (jobs.length === 0) return "no failed checks";
   const { named, onMain } = leaveOutMain(jobs, await mainJobs(github, owner, repo));
-  const left = onMain.length > 0 ? `\n\nLeft out, also failing on main:\n\n${onMain.map((job) => `- ${asCode(job.name)}`).join("\n")}` : "";
   if (named.length === 0) {
-    core.summary.addRaw(`#${pull.number}: every failed check also fails on main.${left}\n`);
+    const left = onMain.map((job) => `- ${asCode(job.name)}`).join("\n");
+    core.summary.addRaw(`#${pull.number}: every failed check also fails on main.\n\n${left}\n`);
     await core.summary.write();
     return "every failed check also fails on main";
   }
   const server = context.serverUrl ?? "https://github.com";
-  const body = failedComment({ server, owner, repo, sha, jobs: named });
+  const body = failedComment({ server, owner, repo, sha, jobs: named, onMain });
 
   if (dryRun) {
-    core.summary.addRaw(`Dry run on #${pull.number}; nothing was written.\n\n${body}${left}\n`);
+    core.summary.addRaw(`Dry run on #${pull.number}; nothing was written.\n\n${body}\n`);
     await core.summary.write();
     return `would name ${named.length}`;
   }
@@ -202,7 +210,7 @@ export async function noteFailedChecks({ github, context, core, pullNumber }) {
   await github.rest.issues.createComment({ owner, repo, issue_number: pull.number, body });
   if (!(pull.labels ?? []).some((label) => label.name === WAITING))
     await github.rest.issues.addLabels({ owner, repo, issue_number: pull.number, labels: [WAITING] });
-  core.summary.addRaw(`#${pull.number}:\n\n${body.slice(mark.length + 1)}${left}\n`);
+  core.summary.addRaw(`#${pull.number}:\n\n${body.slice(mark.length + 1)}\n`);
   await core.summary.write();
   return `named ${named.length}`;
 }

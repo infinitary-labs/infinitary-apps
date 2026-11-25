@@ -84,7 +84,7 @@ It starts when `ci`, `contributors` or `docs-site` finishes a run for a pull req
 
 - It reads every job of that version's newest run of each of the three workflows and keeps the failed and timed-out ones; a run GitHub marked failed without starting a job, such as an unapproved run of a closed pull request, names nothing.
 - It leaves out a job whose check also failed in main's newest finished run of `main.yml`, matching the check by the innermost level of the job's name without its trigger (`scripts/ci-job-names.mjs`), so the contributor's `Integration tests (Linux; group 1/2)` and main's are one check.
-- It writes one comment per version, saying it was posted automatically and naming each failed job with a link to its log, and edits that comment when a later workflow of the same version finishes; a version whose every failed check also fails on main gets none.
+- It writes one comment per version, saying it was posted automatically and naming each failed job with a link to its log and then, without links, any failed job it left out because main fails it too, and edits that comment when a later workflow of the same version finishes; a version whose every failed check also fails on main gets none.
 - The version's first comment labels the pull request `waiting on author`; the author's next push takes the label off once both required checks pass ("Intake").
 - A run of an older version, once a newer push replaced it, or of a closed pull request writes nothing.
 

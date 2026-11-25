@@ -9,13 +9,15 @@ export function leaveOutMain<J extends { name: string }>(
   jobs: readonly J[],
   mainJobs: readonly { name: string; status?: string; conclusion?: string | null }[],
 ): { named: J[]; onMain: J[] };
-/** The note for one version, each job with a log link built from its numeric ids. */
+/** The note for one version, each job with a log link built from its numeric ids, then any left out because main fails them too. */
 export function failedComment(note: {
   server: string;
   owner: string;
   repo: string;
   sha: string;
   jobs: readonly { id: number; run_id: number; name: string }[];
+  /** Failed jobs left out because their check also fails on main, named without a link. */
+  onMain?: readonly { name: string }[];
 }): string;
 /** Runs the note for one event and says what it decided; a hand-started run is a dry run. */
 export function noteFailedChecks(script: {

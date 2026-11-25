@@ -91,6 +91,7 @@ function gitHub({
   runs = [forkCi] as { id: number; name: string; event: string }[],
   jobs = { [forkCi.id]: forkCiJobs } as Record<number, Job[]>,
   main = mainPassed,
+  version = forkSha,
 } = {}) {
   const labels = new Map(pulls.map((pull) => [pull.number, new Set<string>()]));
   const comments: { id: number; issue: number; user: typeof bot; body: string }[] = [];
@@ -112,7 +113,7 @@ function gitHub({
       },
       actions: {
         listWorkflowRunsForRepo: async ({ head_sha }: { head_sha: string }) => ({
-          data: head_sha === forkSha ? runs : [],
+          data: head_sha === version ? runs : [],
         }),
         listWorkflowRuns: async () => ({ data: { workflow_runs: main.length ? [mainRun] : [] } }),
         listJobsForWorkflowRun: async ({ run_id }: { run_id: number }) => ({
@@ -260,7 +261,32 @@ describe("the failed-check note", () => {
     expect(
       await noteFailedChecks({ github: mixed.github, context: finished(), core: core() }),
     ).toBe("named 2");
-    expect(mixed.comments[0]?.body).not.toContain("Integration tests");
+    const body = mixed.comments[0]?.body ?? "";
+    const integration = forkContributorsJobs[0] as Job;
+    // Named as also failing on main, with no log link, after the checks to fix.
+    expect(body).not.toContain(log(integration));
+    const [toFix = "", onMain = ""] = body.split("also fail on `main` right now");
+    expect(toFix).not.toContain("Integration tests");
+    expect(onMain).toContain(`- \`${integration.name}\``);
+  });
+
+  it("gives a new version of the pull request its own comment", async () => {
+    const api = gitHub();
+    await noteFailedChecks({ github: api.github, context: finished(), core: core() });
+    // The author's next push: ci fails again at the new version.
+    const pushed = "5b1f0c9e2d7a4b3c8e6f1a0d9c2b7e4f3a8d1c6b";
+    const next = gitHub({ pulls: [pullRequest({ sha: pushed })], version: pushed });
+    next.comments.push(...api.comments);
+    expect(
+      await noteFailedChecks({
+        github: next.github,
+        context: finished({ sha: pushed }),
+        core: core(),
+      }),
+    ).toBe("named 2");
+    expect(next.comments).toHaveLength(2);
+    expect(next.comments[0]?.body).toContain("version e357ae4");
+    expect(next.comments[1]?.body).toContain("version 5b1f0c9");
   });
 
   it("matches a contributor's job to main's by the check it runs, whatever started it", () => {

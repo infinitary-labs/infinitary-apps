@@ -89,14 +89,14 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 ## Conversation length
 
-The seat preset carries an app-owned automatic compaction ceiling of 300,000 tokens (`SESSION_COMPACTION_TOKENS`), not a setting the captain can change.
-Pi recomputes its reserve at every prompt boundary: the larger of its existing model budget and `contextWindow - 300000`.
+Every Pi conversation of the first mate and the crew, at home and on a computer that runs work, carries one app-owned automatic summary rule, `SESSION_COMPACTION`, not a setting the captain can change.
+It summarizes at 300,000 tokens (`SESSION_COMPACTION_TOKENS`), or before the context reaches a price step in the model's listed prices (`inputTokensAbove`), where every input token costs more, when that comes sooner.
+Pi recomputes its reserve at every prompt boundary: the larger of its existing model budget and `contextWindow` less the lower of the two limits.
 A smaller model keeps its earlier trigger, including the custom connection and local model budgets.
 Pi's own compactor observes usage after a response and compacts when that count exceeds its trigger; this is not a hard per-request input cap.
 Claude uses the app's flag settings and its own smaller-model clamp (`docs/claude-client.md`, "App-owned automatic compaction").
-A crewmate's Pi conversation, at home and on a computer that runs work, carries `CREWMATE_COMPACTION` instead: it summarizes before its context reaches a price step in the model's listed prices (`inputTokensAbove`), where every input token costs more.
-Pi's trigger then sits at that step less Pi's own reserve, which leaves room for the incoming prompt and the error in Pi's estimate; Pi counts a turn's tool results before its next request.
-The rule takes the lowest step whose trigger sits a reserve above what a summary keeps (the instructions, tool schemas and Pi's kept turns); with none, or on Copilot, whose plan counts premium requests, Pi's own trigger stays.
+Below a price step, Pi's trigger sits at that step less Pi's own reserve, which leaves room for the incoming prompt and the error in Pi's estimate; Pi counts a turn's tool results before its next request.
+The rule takes the lowest step whose trigger sits a reserve above what a summary keeps (the instructions, tool schemas and Pi's kept turns); with none, or on Copilot, whose plan counts premium requests, only the 300,000 limit applies.
 Pi's check before a prompt's first request leaves the new prompt out of its count, so one prompt larger than the reserve can still reach past the step once.
 A large new message or tool result can still exceed a model's window, so both backends retain their own overflow compaction and retry first.
 

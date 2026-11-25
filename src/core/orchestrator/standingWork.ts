@@ -17,7 +17,11 @@ import { readerSavedLine, servedTaskTitle, withReaderDataReminder } from "./read
 
 const DAY_MS = 24 * 60 * 60_000;
 
-/** At most this many rows, oldest first; the rest are counted. */
+/**
+ * At most this many rows, those marked new first and the rest oldest first;
+ * the rest are counted. New rows lead so a row the cap would cut still
+ * reaches the reader at each milestone.
+ */
 export const STANDING_ROW_CAP = 12;
 
 /**
@@ -129,10 +133,14 @@ function parkedPart(tasks: TaskService, record: TaskRecord): Unmarked | undefine
  * work wait with no end: nothing typed ends it. A gate (a dated hold, an
  * allowance, a card for the captain) is a typed end, so a gated task is not
  * one. A turn that failed after that report ends the wait, as the idle
- * ladder reads a declared wait (`IdleLadder.declaredWait`).
+ * ladder reads a declared wait (`IdleLadder.declaredWait`). Until the idle
+ * ladder reaches its last rung (its stall card) the ladder itself wakes the
+ * first mate about the task, so only a wait past rung 3 with that card gone
+ * is one no wake reports.
  */
 function openEndedWait(tasks: TaskService, record: TaskRecord): Unmarked | undefined {
   if (record.activity !== "idle" || record.backlogSince != null || record.gate) return;
+  if ((record.recoveryRung ?? 0) < 3) return;
   const report = tasks.lastReportEntries(record.id).at(-1);
   const wait = report?.declared.workWait;
   if (!report || !wait || wait.end) return;
@@ -182,12 +190,15 @@ export function standingWork(host: StandingWorkHost, now: number): StandingWork 
     else if (age <= 14 * DAY_MS) filedForLater.days3To14 += 1;
     else filedForLater.over14Days += 1;
   }
-  found.sort((a, b) => a.since - b.since || a.key.localeCompare(b.key));
-  const rows = found.slice(0, STANDING_ROW_CAP).map((row) => {
+  const marked = found.map((row) => {
     const once = standingOnce(row.since, now);
     return { ...row, once, new: !host.inbox.woken(row.taskId, once) } as StandingRow;
   });
-  return { rows, more: found.length - rows.length, filedForLater, savedPlans };
+  marked.sort(
+    (a, b) => Number(b.new) - Number(a.new) || a.since - b.since || a.key.localeCompare(b.key),
+  );
+  const rows = marked.slice(0, STANDING_ROW_CAP);
+  return { rows, more: marked.length - rows.length, filedForLater, savedPlans };
 }
 
 /**
@@ -220,7 +231,7 @@ export function standingWorkText(tasks: TaskService, list: StandingWork, now: nu
   }));
   const standing_work = {
     // i18n-exempt: served to the first mate, never shown to a person
-    note: "Waiting work no wake reports, oldest first. A row is new when it joins the list and again at 1, 3 and 7 days, then every 7 days. Reading it grants no permission.",
+    note: "Waiting work no wake reports, rows marked new first, then oldest first. A row is new when it joins the list and again at 1, 3 and 7 days, then every 7 days. Reading it grants no permission.",
     rows,
     ...(list.more > 0 ? { more: list.more } : {}),
     filed_for_later: {

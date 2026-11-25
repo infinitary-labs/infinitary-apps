@@ -440,12 +440,13 @@ It has two kinds of row:
 - **A parked part** (`parked-part`): live work the captain stopped (`TaskStarts.stoppedByCaptain`) whose parent is begun: live, not a task that delivers an answer, and it or another part started building work, as the next-move check reads it (a part that delivers an answer, a dropped part and a part the captain stopped do not count).
   Its fields are its key and title, its parent's key, since when it stood (its newest line that stopped or started it, `TaskStarts.latestStopAt`), its parent's other open parts, and whether every task it waits on has closed (`TaskGraph.waitingOn`).
   Work the captain stopped under a task that delivers an answer is an idea for later and never a row, as in the next-move check.
-- **An open-ended wait** (`open-ended-wait`): a started, idle task out of the backlog with no gate, whose newest report declared a work wait with no `end` ("Self-resolving work waits" above).
+- **An open-ended wait** (`open-ended-wait`): a started, idle task out of the backlog with no gate, whose newest report declared a work wait with no `end` ("Self-resolving work waits" above), once the idle ladder has reached rung 3.
+  Until then the ladder's own nudge, wakes and stall card report it; the stall card's captain gate keeps it off the list while the card is up, so a row is the wait left standing after that card closes with no new turn.
   Its fields are its key and title, the report's time and the wait's observation as its reason.
   A turn that failed after that report ends the wait, as the idle ladder reads a declared wait.
   A gate is a typed end: a hold has its time and may also end on an event or an app update, an allowance has its reset and a captain gate has its card, so a gated task is never a row.
 
-Rows go oldest first, at most 12 (`STANDING_ROW_CAP`), then the count of the rest.
+Rows marked new go first and the rest oldest first, at most 12 (`STANDING_ROW_CAP`), then the count of the rest, so a row the cap would cut still reaches the reader at each milestone.
 Everything else that waits is counted, never listed: open work on request that is no row, by how long since it was filed (under 3 days, 3 to 14, over 14), and saved plans not built (open work on request whose basis is a closed task that delivers an answer), with the oldest one's filing time.
 A saved plan is not also counted as filed for later.
 

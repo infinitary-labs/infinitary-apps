@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "id": "crew-gpt-cache-reuse",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Crewmates on GPT-6.2 use less of your plan allowance",
+      "body": "A crewmate on GPT-6.2 no longer pays again for its whole instructions on every request. A crewmate on a model that charges more once a conversation gets long, such as GPT-6.2 Sol or GPT-6.1 Sol, now summarizes its conversation before it gets that long, instead of well after.",
+      "noPicture": "This changes what each request to the model costs, not how any view looks.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

@@ -41,6 +41,7 @@ import {
 } from "../integrations";
 import type { JobExit } from "../jobs/jobManager";
 import {
+  CREWMATE_COMPACTION,
   crewmateContractStamp,
   crewmateResume,
   crewmateResumeToken,
@@ -917,6 +918,7 @@ export class SessionHost {
           },
         },
         bounds: { request: { retries: spec.retries ?? RETRIES } },
+        compaction: CREWMATE_COMPACTION,
       };
       const session = await factory.open(sessionSpec);
       // An open that fails once its conversation began lets it go, and says

@@ -28,6 +28,7 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import type { CrewSpeed } from "@shared/crewSpeed";
 import { isCustomApiProvider } from "@shared/customApi";
+import { COPILOT_PROVIDER_ID } from "@shared/providers";
 import type { Reasoning } from "@shared/reasoning";
 import type { BashOutcome } from "../jobs/jobManager";
 import type { ServedInstructions, ServedMessage, ServedState } from "../orchestrator/seat";
@@ -415,7 +416,7 @@ class PiRollingSession implements ModelSession {
       maxModelTurns: number;
       local: boolean;
       perTurn: boolean;
-      maxContextTokens?: number;
+      compaction: SessionSpec["compaction"];
       /** Drop a failed turn's thinking from the live state (the runaway hardening). */
       stripFailed: boolean;
       stamp: ContractStamp | undefined;
@@ -554,7 +555,7 @@ class PiRollingSession implements ModelSession {
     try {
       budgetCustomCompaction(
         this.session,
-        this.options.maxContextTokens,
+        this.options.compaction,
         this.options.local ? LOCAL_CONTEXT_RESERVE : DEFAULT_COMPACTION_SETTINGS.reserveTokens,
       );
       if (this.options.local) {
@@ -1109,19 +1110,20 @@ async function openOneShot(
  * history room and never more than Pi's default; the reserve is sized so the
  * summary is that quarter, and never more than Pi's default. A connection's
  * stated values replace those within the history room, kept turns within
- * what the reserve Pi is given leaves of it. Rebudget at
+ * what the reserve Pi is given leaves of it. The spec's app-owned rule
+ * lowers the trigger further (`compactionCeiling`). Rebudget at
  * each prompt boundary so a resumed session uses the current model. Overflow
  * still uses Pi's real compactor and its single retry.
  */
 function budgetCustomCompaction(
   session: AgentSession,
-  maxContextTokens?: number,
+  compaction: SessionSpec["compaction"],
   defaultReserve = DEFAULT_COMPACTION_SETTINGS.reserveTokens,
 ): void {
   const model = session.model;
   if (!model) return;
   const custom = isCustomApiProvider(model.provider);
-  if (!custom && maxContextTokens === undefined) return;
+  if (!custom && !compaction) return;
   const historyRoom = custom
     ? Math.max(0, model.contextWindow - model.maxTokens - piPrefixTokens(session))
     : 0;
@@ -1133,11 +1135,12 @@ function budgetCustomCompaction(
       ? within(stated.reserveTokens)
       : Math.min(DEFAULT_COMPACTION_SETTINGS.reserveTokens, Math.ceil(quarter / 0.8))
     : defaultReserve;
+  const ceiling = compactionCeiling(session, model, compaction, reserve);
   // Pi triggers above window - reserve. Recompute rather than retaining a
   // previous large-window reserve when the next attachment uses a smaller model.
   const reserveTokens = Math.max(
     reserve,
-    maxContextTokens === undefined ? 0 : model.contextWindow - maxContextTokens,
+    ceiling === undefined ? 0 : model.contextWindow - ceiling,
   );
   session.settingsManager.applyOverrides({
     compaction: {
@@ -1153,6 +1156,41 @@ function budgetCustomCompaction(
       reserveTokens,
     },
   });
+}
+
+/**
+ * The context an app-owned rule keeps a session under, when it states one.
+ * Past a price step every input token costs more, so a session asked to stay
+ * below one treats it as Pi treats the window: it summarizes once the context
+ * passes the step less the same reserve, which leaves room for the incoming
+ * prompt and the error in Pi's estimate.
+ *
+ * A step counts only when that trigger sits a reserve above what a summary
+ * keeps (the instructions, tool schemas and Pi's kept turns); below it Pi
+ * would summarize before every request and never get under, so the rule
+ * takes the model's next step, or leaves Pi's own trigger. Copilot's plan
+ * counts premium requests, not tokens (docs/quota.md), so its listed prices
+ * are no cost a summary saves.
+ */
+function compactionCeiling(
+  session: AgentSession,
+  model: NonNullable<AgentSession["model"]>,
+  compaction: SessionSpec["compaction"],
+  reserve: number,
+): number | undefined {
+  let steps: number[] = [];
+  if (compaction?.belowPriceStep && model.provider !== COPILOT_PROVIDER_ID) {
+    const kept =
+      piPrefixTokens(session) + session.settingsManager.getCompactionKeepRecentTokens(model);
+    steps = (model.cost.tiers ?? [])
+      .map((tier) => tier.inputTokensAbove)
+      .filter((step) => step - reserve > kept + reserve);
+  }
+  const limits = [
+    ...(compaction?.maxContextTokens === undefined ? [] : [compaction.maxContextTokens]),
+    ...(steps.length > 0 ? [Math.min(...steps) - reserve] : []),
+  ];
+  return limits.length > 0 ? Math.min(...limits) : undefined;
 }
 
 /** Instructions and tool schemas, counted the way Pi's compactor counts them. */
@@ -1229,7 +1267,7 @@ async function openRolling(
     maxModelTurns: request?.maxModelTurns ?? 0,
     local,
     perTurn: spec.thinking.perTurn === true,
-    maxContextTokens: spec.compaction?.maxContextTokens,
+    compaction: spec.compaction,
     stripFailed: spec.bounds?.watched !== undefined,
     stamp: record.stamp,
     instructions,
@@ -1363,7 +1401,7 @@ async function openCoding(
     maxModelTurns: request?.maxModelTurns ?? 0,
     local: false,
     perTurn: spec.thinking.perTurn === true,
-    maxContextTokens: spec.compaction?.maxContextTokens,
+    compaction: spec.compaction,
     stripFailed: spec.bounds?.watched !== undefined,
     stamp: record.stamp,
     instructions: { current: undefined },

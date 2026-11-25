@@ -5,6 +5,7 @@ import {
 } from "@earendil-works/pi-ai";
 import type { CrewSpeed, SpeedSelection } from "@shared/crewSpeed";
 import type { SessionSpec } from "../session/session";
+import { instructionsInInput } from "./codexInstructions";
 import type { ModelRuntime } from "./types";
 
 const TIERS: Record<CrewSpeed, string> = {
@@ -29,7 +30,11 @@ export function speedSelection(
   };
 }
 
-/** A per-session facade: sharing an account runtime never shares a crew policy with the seat. */
+/**
+ * A per-session facade: sharing an account runtime never shares a crew policy with the seat.
+ * Every Codex request passes through it, so it also moves the request's
+ * instructions to where the service reuses them (`instructionsInInput`).
+ */
 export function speedRuntime(
   runtime: ModelRuntime,
   spec: SessionSpec,
@@ -98,7 +103,10 @@ export function speedRuntime(
             const changed = await options?.onPayload?.(payload, served);
             const body = changed ?? payload;
             if (body && typeof body === "object" && !Array.isArray(body))
-              return { ...(body as Record<string, unknown>), service_tier: TIERS[selection.sent] };
+              return {
+                ...instructionsInInput(body as Record<string, unknown>),
+                service_tier: TIERS[selection.sent],
+              };
             return body;
           },
           onProviderStreamEvent: async (data, served) => {

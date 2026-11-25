@@ -227,8 +227,13 @@ export type SessionSpec = {
   tools: readonly BoundTool[];
   shape: SessionShape;
   bounds?: SessionBounds;
-  /** App-owned automatic compaction ceiling; smaller model budgets still win. */
-  compaction?: { maxContextTokens: number };
+  /**
+   * App-owned automatic compaction; smaller model budgets still win.
+   * `maxContextTokens` is a ceiling (the first mate's); `belowPriceStep`
+   * summarizes before a request crosses the model's first price step (the
+   * crew's).
+   */
+  compaction?: { maxContextTokens?: number; belowPriceStep?: true };
   needs?: Partial<Pick<ControlProfile, "steer">>;
   /**
    * What the session's shell carries beyond the host's environment: a

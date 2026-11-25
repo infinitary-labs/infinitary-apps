@@ -98,6 +98,7 @@ export type Sheet = {
 export type EvalHost = Awaited<ReturnType<typeof approvalHost>>;
 export type EvaluationModule = {
   name: string;
+  includedAllowanceOnly?: true;
   cases: ApprovalCase[];
   host: typeof approvalHost;
   /** Reserve enough room for full native task reads; included in the approved sheet. */
@@ -461,6 +462,9 @@ export async function runEvaluation(
     );
   write(out, "run-sheet.json", { ...sheet, sheetHash });
   if (!options.live) return { sheet, sheetHash };
+  // The Codex runtime has no request-level ban on paid credits. A quota snapshot
+  // cannot bind billing for a subsequent request, even on a pinned account.
+  if (evaluation.includedAllowanceOnly) throw new Error("Transport cannot guarantee included allowance only");
   // One approved sheet is one run; do not silently spend it again on the same output folder.
   // The pid lets the crewmate hold its turn until this process exits.
   write(out, "run-started.json", { sheetHash, pid: process.pid });
@@ -640,7 +644,10 @@ export async function runEvaluation(
             )
               frames.push({ ...event, request: requestCount });
           });
-          if (!clientEnded) await session.prompt(host.prompt);
+          if (!clientEnded) {
+            if (host.dispatch) await host.dispatch((text) => session!.prompt(text));
+            else await session.prompt(host.prompt);
+          }
           if (requestCount === 0) bounded = "no observed model request";
           if (
             requestCount >= maxTurns &&

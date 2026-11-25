@@ -84,6 +84,7 @@ export async function approvalHost(
   dir: string,
   model: { provider: string; id: string },
   protectedDirs: readonly string[],
+  receiveCrew?: (owner: string, text: string) => Promise<void>,
 ) {
   refuseOverlap(dir, protectedDirs);
   const paths = appPathsFor(dir);
@@ -233,10 +234,12 @@ export async function approvalHost(
     open: async (spec) => {
       starts.push(aliases[spec.owner] ?? spec.owner);
       const session = inertSession();
-      session.steer = async () => {
+      session.steer = async (text) => {
+        await receiveCrew?.(spec.owner, text);
         steered.push(aliases[spec.owner] ?? spec.owner);
       };
-      session.prompt = async () => {
+      session.prompt = async (text) => {
+        await receiveCrew?.(spec.owner, text);
         steered.push(aliases[spec.owner] ?? spec.owner);
       };
       return session;
@@ -575,6 +578,7 @@ export async function approvalHost(
       }
       return "success";
     },
+    dispatch: undefined as undefined | ((send: (text: string) => Promise<void>) => Promise<void>),
     spec: {
       ...spec,
       tools,

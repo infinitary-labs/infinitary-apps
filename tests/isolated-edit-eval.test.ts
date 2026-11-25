@@ -11,23 +11,31 @@ it("returns one independently checkable assigned edit without exposing the other
     try {
       expect(host.spec.builtins).toBe("none");
       expect(host.spec.tools.map((tool) => tool.name)).toEqual(["lookup_source", "return_edit"]);
-      const [lookup, submit] = host.spec.tools;
-      const hidden = readFileSync(join(dir, "other.json"), "utf8");
-      expect(JSON.stringify([host.prompt, host.spec.instructions])).not.toContain(hidden);
-      expect((await lookup!.run({ name: "other.json" })).text).toBe("null");
-      const { version, text } = JSON.parse((await lookup!.run({ name: "labels.json" })).text);
-      expect(text).not.toContain(hidden);
-      const replacement = text.replace('"Draft"', '"Ready"');
-      expect(await submit!.run({ version: "stale", text: replacement })).toMatchObject({
-        details: { refusal: true },
-      });
-      expect(host.state()).toMatchObject({ assignment: { accepted: false } });
-      await submit!.run({ version, text: replacement });
-      expect(await submit!.run({ version, text: "second" })).toMatchObject({
-        details: { refusal: true },
-      });
-      expect(host.state()).toMatchObject({
-        assignment: { accepted: true, before: text, returned: replacement },
+      await host.dispatch!(async (assignment) => {
+        expect(assignment).toBe(editCase.context);
+        const [lookup, submit] = host.spec.tools;
+        const hidden = readFileSync(join(dir, "other.json"), "utf8");
+        expect(JSON.stringify([host.prompt, host.spec.instructions])).not.toContain(hidden);
+        expect((await lookup!.run({ name: "other.json" })).text).toBe("null");
+        const { version, text } = JSON.parse((await lookup!.run({ name: "labels.json" })).text);
+        expect(text).not.toContain(hidden);
+        const replacement = text.replace('"Draft"', '"Ready"');
+        expect(await submit!.run({ version: "stale", text: replacement })).toMatchObject({
+          details: { refusal: true },
+        });
+        expect(host.state()).toMatchObject({ assignment: { accepted: false } });
+        await submit!.run({ version, text: replacement });
+        expect(await submit!.run({ version, text: "second" })).toMatchObject({
+          details: { refusal: true },
+        });
+        expect(host.state()).toMatchObject({
+          assignment: {
+            accepted: true,
+            before: text,
+            returned: replacement,
+            outsideMarker: hidden,
+          },
+        });
       });
     } finally {
       await host.close();

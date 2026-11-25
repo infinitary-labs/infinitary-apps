@@ -1,5 +1,5 @@
 ---
-source: 72cf3e89cd5a9c83
+source: 14ae8437d49c7f6c
 title: 詞彙表
 description: Infinitary 賦予特定意思的詞語，每一個用一兩句話說明，並連結到解釋它的頁面。
 ---
@@ -130,9 +130,16 @@ description: Infinitary 賦予特定意思的詞語，每一個用一兩句話�
 
 ### 聚焦（Focus） {#focus}
 
-從頂端列的專案標籤，把視窗縮小到一個專案。
+從頂端列的專案按鈕，把視窗縮小到一個專案。
 這時「任務」、「動態」和卡片只會顯示那個專案，你要求的新工作也會放到那裡，除非你指定另一個專案。
 請看 [專案](/zh-hant/projects/#focus-on-one-project)。
+
+## H {#h}
+
+### 主機（Home） {#home}
+
+在設定 → **裝置** 的拓撲圖上，標在大副所在的電腦底下的詞。
+請看 [你的其他電腦](/zh-hant/your-other-computers/#the-computer-where-your-first-mate-lives)。
 
 ## I {#i}
 
@@ -211,7 +218,7 @@ description: Infinitary 賦予特定意思的詞語，每一個用一兩句話�
 
 ### 專案（Project） {#project}
 
-你自己的一個用 git 保存的資料夾，由你的船員在上面工作。
+你的船員工作的對象：一個存放庫，或幾個彼此相關的存放庫。
 每項任務都屬於一個專案。
 請看 [專案](/zh-hant/projects/)。
 
@@ -241,6 +248,12 @@ description: Infinitary 賦予特定意思的詞語，每一個用一兩句話�
 每項任務都會保留的東西：你要求了什麼、變更了什麼、證據，以及你的決定。
 任務結束後，它的紀錄仍會保留。
 請看 [任務與船員](/zh-hant/tasks-and-crewmates/)。
+
+### 存放庫（Repository） {#repository}
+
+你自己的一個用 git 保存的資料夾，歸在某個專案底下。
+一個專案有一個或多個存放庫，每項任務都在其中一個存放庫裡進行。
+請看 [專案](/zh-hant/projects/#several-repositories-in-one-project)。
 
 ### 謹慎度（Rigor） {#rigor}
 
@@ -281,6 +294,12 @@ Infinitary 不會再顯示它的值，大副和船員也都拿不到它。
 請看 [訂閱方案與額度](/zh-hant/subscriptions-and-quota/)。
 
 ## T {#t}
+
+### 標籤（Tag） {#tag}
+
+專案替某一類任務取的名稱，例如錯誤或功能，並附上一段說明哪些任務符合的描述。
+你或大副可以替任務加上標籤，「任務」和任務看板都能依標籤列出任務。
+請看 [任務與船員](/zh-hant/tasks-and-crewmates/#tags)。
 
 ### 接手（Take over） {#take-over}
 

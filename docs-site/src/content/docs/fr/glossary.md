@@ -1,5 +1,5 @@
 ---
-source: 72cf3e89cd5a9c83
+source: 14ae8437d49c7f6c
 title: Glossaire
 description: Les mots qu’Infinitary emploie dans un sens qui lui est propre, chacun en une phrase ou deux, avec un lien vers la page qui l’explique.
 ---
@@ -134,6 +134,13 @@ Restreindre la fenêtre à un seul projet, depuis la pastille du projet dans la 
 Tâches, Activité et les cartes n’affichent alors que ce projet, et le nouveau travail que vous demandez y va, sauf si vous en nommez un autre.
 Voir [Projets](/fr/projects/#focus-on-one-project).
 
+## H {#h}
+
+### Ordinateur principal {#home}
+
+Les mots que la carte des appareils, dans Réglages → **Appareils**, place sous l’ordinateur où vit votre second.
+Voir [Vos autres ordinateurs](/fr/your-other-computers/#the-computer-where-your-first-mate-lives).
+
 ## I {#i}
 
 ### Intégration {#integration}
@@ -211,7 +218,7 @@ Voir [Le navigateur de l’équipage](/fr/the-crews-browser/#private-sites).
 
 ### Projet {#project}
 
-Un dossier à vous, géré avec git, sur lequel travaille votre équipage.
+Ce sur quoi travaille votre équipage : un dépôt, ou plusieurs qui vont ensemble.
 Chaque tâche appartient à un projet.
 Voir [Projets](/fr/projects/).
 
@@ -241,6 +248,12 @@ Voir [Tâches et équipiers](/fr/tasks-and-crewmates/#where-a-task-stands).
 Ce que garde chaque tâche : ce que vous avez demandé, ce qui a changé, les éléments et ce que vous avez décidé.
 La fiche d’une tâche reste après la fermeture de la tâche.
 Voir [Tâches et équipiers](/fr/tasks-and-crewmates/).
+
+### Dépôt {#repository}
+
+Un dossier à vous, géré avec git, que contient un projet.
+Un projet contient un ou plusieurs dépôts, et chaque tâche se déroule dans l’un d’eux.
+Voir [Projets](/fr/projects/#several-repositories-in-one-project).
 
 ### Soin {#rigor}
 
@@ -281,6 +294,12 @@ Chacun auquel vous vous connectez est un compte dans Réglages → **Intelligenc
 Voir [Abonnements et allocation](/fr/subscriptions-and-quota/).
 
 ## T {#t}
+
+### Étiquette {#tag}
+
+Un nom qu’un projet donne à un genre de tâche, comme bogue ou fonctionnalité, avec une description qui dit quelles tâches y entrent.
+Vous étiquetez une tâche, ou votre second le fait, et Tâches comme le tableau des tâches peuvent lister les tâches par étiquette.
+Voir [Tâches et équipiers](/fr/tasks-and-crewmates/#tags).
 
 ### Prendre le relais {#take-over}
 

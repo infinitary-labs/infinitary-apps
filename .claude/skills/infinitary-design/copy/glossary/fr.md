@@ -147,6 +147,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | stop | arrêter | |
 | story (a change's) | récit | |
 | subscription | abonnement | "Connectez un abonnement pour commencer". |
+| tag (a project's name for a kind of task) | étiquette | The catalog's own word ("Étiquettes", "Ajouter une étiquette"), plain French for a label put on a thing; feminine, so "une étiquette renommée"; a task "porte" one and the verb is "étiqueter". |
 | task | tâche | Feminine, so feed lines about a task agree ("Terminée", "Écartée"). |
 | task board / its lanes | tableau des tâches / En attente de vous, Réserve, En attente, En cours, Terminées · 7 j | |
 | Text size; Text Size, Control Center (iOS's own names) | Taille du texte; Taille du texte, centre de contrôle | iOS's own French names for the control. |

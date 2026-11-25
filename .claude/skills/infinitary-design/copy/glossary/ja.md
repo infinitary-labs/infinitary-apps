@@ -158,6 +158,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | story (a change's) | ストーリー | |
 | subscription | サブスクリプション | The name on the bill. |
 | System Settings (macOS) | システム設定 | macOS's own name. |
+| tag (a project's name for a kind of task) | タグ | The app's own word and the standard loanword in Japanese software; no plural form. 「タグを付ける」 for tagging a task, 「タグ別」 for By tag. |
 | task | タスク | Standard in Japanese software. |
 | task board | タスクボード | The Tasks panel's board; 列 for its columns. |
 | task key | タスクキー | The letters tasks are numbered with, such as {key}-1, as Japanese project tools say. |

@@ -1,12 +1,13 @@
 ---
-source: d57581294d6dfbfc
+source: cd05627562f4c3e5
 title: Projets
-description: Comment ajouter un projet à Infinitary, concentrer la fenêtre sur l’un d’eux, choisir comment ses changements sont fusionnés et le retirer.
+description: Comment ajouter un projet à Infinitary, y réunir plusieurs dépôts, lui donner des étiquettes, concentrer la fenêtre sur un seul projet, choisir comment ses changements sont fusionnés et le retirer.
 ---
 
-Un projet est ce sur quoi travaille votre équipage : un dossier à vous, géré avec git.
+Un projet est ce sur quoi travaille votre équipage : un dépôt, ou plusieurs qui vont ensemble, comme une app et son service.
+Un dépôt est un dossier à vous, géré avec git.
 Chaque tâche appartient à un projet, et chaque clé de tâche commence par la clé de son projet, comme `WEB-12`.
-Vos projets sont listés dans **Réglages → Projets**.
+Vos projets sont listés dans **Réglages → Projets**, et appuyer sur la ligne d’un projet ouvre sa page.
 
 ## Ajouter un projet {#add-a-project}
 
@@ -61,6 +62,56 @@ Votre connexion reste sur cet ordinateur.
 
 Si une connexion cesse de fonctionner, une carte vous demande de vous reconnecter.
 Le travail qui en a besoin attend que vous le fassiez.
+
+## Plusieurs dépôts dans un même projet {#several-repositories-in-one-project}
+
+Un projet commence avec un seul dépôt et peut en contenir d’autres.
+Sa page les liste sous **Dépôts**, avec un onglet pour chacun.
+
+Vous pouvez ajouter un dépôt à un projet de deux façons.
+
+- **Demandez à votre second.**
+  Dites quel projet le dépôt doit rejoindre.
+  Votre second vous apporte une carte, et rien n’est ajouté tant que vous n’appuyez pas sur **Ajouter un dépôt** sur cette carte.
+- **Ajoutez-le vous-même.**
+  Appuyez sur **Ajouter un dépôt**, après le dernier onglet, et choisissez un dossier, un dépôt à cloner ou **Nouveau dépôt**, comme pour un projet.
+
+Les tâches du dépôt prennent la clé des tâches du projet.
+Chaque tâche se déroule dans un seul dépôt, et l’onglet **Infos** de la tâche le nomme à côté du projet.
+Chaque dépôt garde ses propres réglages, comme **Où vont les modifications**, **Demander avant de fusionner** et **Soin** : choisissez son onglet pour les changer.
+Un projet à plusieurs dépôts porte son propre nom, que **Nom**, dans le cadre **Projet**, permet de changer.
+
+## Déplacer un dépôt dans un autre projet {#move-a-repository-to-another-project}
+
+Un dépôt peut être déplacé dans un autre projet, ou dans un projet à part.
+
+- **Demandez à votre second.**
+  Quand vous indiquez précisément le déplacement voulu, il a lieu aussitôt.
+  Quand c’est votre second qui en propose un, une carte montre où va chaque dépôt et quelles tâches le suivent, et rien ne bouge tant que vous n’appuyez pas sur **Appliquer le déplacement**.
+- **Déplacez-le vous-même.**
+  Dans l’onglet du dépôt, choisissez un projet sur la ligne qui propose de déplacer ce dépôt dans un autre projet, appuyez sur **Déplacer**, puis appuyez de nouveau sur **Déplacer** pour confirmer.
+
+Le dépôt garde son nom, son dossier et ses réglages.
+Ses tâches le suivent, et chaque tâche garde sa clé.
+Un projet qui se retrouve sans dépôt quitte la liste : les tâches qui lui restent, ses étiquettes et ses automatisations rejoignent l’autre projet, et sa clé ne sert plus jamais.
+Pour réunir deux projets, déplacez les dépôts de l’un dans l’autre.
+
+## Étiquettes {#tags}
+
+Chaque projet garde sa propre liste d’étiquettes, comme bogue, fonctionnalité ou idée.
+Une étiquette a un nom et une description qui dit quelles tâches y entrent.
+Les étiquettes vous aident à retrouver et à grouper des tâches, et rien d’autre dans Infinitary n’en tient compte.
+
+La page d’un projet liste ses étiquettes sous **Étiquettes**, chacune avec le nombre de tâches qui la portent.
+
+- **Ajouter une étiquette** demande le nom de l’étiquette et quelles tâches y entrent.
+- **Modifier** change le nom ou la description d’une étiquette.
+  Une étiquette renommée reste sur les tâches qui la portent.
+- **Retirer** enlève l’étiquette de toutes les tâches qui la portent, après une question qui dit combien il y en a.
+
+Vous pouvez aussi demander à votre second d’ajouter, de modifier ou de retirer les étiquettes d’un projet.
+Une tâche qui passe dans un autre projet perd ses étiquettes, sauf si son projet tout entier a rejoint l’autre.
+Pour étiqueter une tâche et retrouver des tâches par étiquette, voir [Tâches et équipiers](/fr/tasks-and-crewmates/#tags).
 
 ## Copies de travail {#working-copies}
 
@@ -117,6 +168,8 @@ Désactivez-le, et le travail qui réussit les vérifications peut fusionner san
 Retirer un projet l’enlève de la liste.
 Son dossier et ses tâches terminées restent.
 Si le projet a encore des tâches, Infinitary les nomme, et vous les terminez ou les écartez d’abord.
+
+Dans un projet à plusieurs dépôts, **Retirer** enlève le dépôt dont l’onglet est choisi, et le projet garde les autres.
 
 ## Pour la suite {#next}
 

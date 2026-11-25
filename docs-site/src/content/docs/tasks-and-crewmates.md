@@ -61,11 +61,12 @@ To read a task's status and its reason in words, rest the pointer on its row, or
 For a fuller view, press **Open task board** in the Tasks header.
 The board shows Waiting on you at the top, then three columns: Backlog, Queued and Working.
 
-<img class="picture-dark" src="/pictures/task-board-dark.webp" alt="The task board: one task waiting on you at the top, then the Backlog, Queued and Working columns." width="876" height="493" />
-<img class="picture-light" src="/pictures/task-board-light.webp" alt="The task board: one task waiting on you at the top, then the Backlog, Queued and Working columns." width="876" height="493" />
+<img class="picture-dark" src="/pictures/task-board-dark.webp" alt="The task board: a row of the project's tags, one task waiting on you at the top, then the Backlog, Queued and Working columns." width="876" height="493" />
+<img class="picture-light" src="/pictures/task-board-light.webp" alt="The task board: a row of the project's tags, one task waiting on you at the top, then the Backlog, Queued and Working columns." width="876" height="493" />
 
 Its views also list the whole backlog, Done · 7d, and work dropped this week.
 Type a key or title in **Find a task** to narrow every lane, including older done work.
+When your project has tags, the board shows a row of them, and pressing one narrows the board to its tasks; see [Tags](#tags).
 
 To move a task, drag its tile to another column, or use its ⋯ menu:
 
@@ -83,7 +84,7 @@ The board never merges anything: a merge happens only on the task's merge card.
 Open a task to see its card.
 Under its title is a row of tabs:
 
-- **Info**: what you asked, where it stands, and how it is delivered.
+- **Info**: what you asked, where it stands, its tags, and how it is delivered.
 - **Cards**: the cards the task has shown you, with how many.
 - **Activity**: every line the task has written, in order.
 - **Crewmate**: the crewmate's own session, line by line, as it works.
@@ -91,6 +92,27 @@ Under its title is a row of tabs:
   See [The crew's browser](/the-crews-browser/).
 
 A tab appears only once the task has something to show there.
+
+## Tags
+
+A task can carry any of its project's tags, such as bug or feature.
+You make a project's tags in Settings → Projects; see [Projects](/projects/#tags).
+
+To tag a task, open its **Info** tab and press **Edit tags** on the **Tags** row.
+A menu lists the project's tags, and each tick is saved at once.
+The **Tags** row shows once the project has tags.
+You can also ask your first mate to tag a task.
+
+You can find tasks by tag in three places:
+
+- **Search tasks**, in the Tasks header, shows a row of the project's tags.
+  Press a tag to list only the tasks that carry it, **No tag** for the tasks that carry none, or **All tags** for every task again.
+- **Group tasks**, beside it, lists your tasks **By tag** instead of **By status**.
+  Each tag is a group, folded until you open it.
+- The task board has a row of tags of its own, and its **By tag** view counts each tag's tasks by where they stand.
+
+Tags show for one project at a time: the project in focus, or your only project with tags.
+To focus on a project, see [Projects](/projects/#focus-on-one-project).
 
 ## Steering a crewmate
 

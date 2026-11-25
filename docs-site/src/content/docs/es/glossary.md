@@ -1,5 +1,5 @@
 ---
-source: 72cf3e89cd5a9c83
+source: 14ae8437d49c7f6c
 title: Glosario
 description: Las palabras que Infinitary usa con un significado propio, cada una en una o dos frases, con un enlace a la página que la explica.
 ---
@@ -134,6 +134,13 @@ Limitar la ventana a un proyecto, desde la píldora del proyecto en la barra sup
 Tareas, Actividad y las tarjetas muestran entonces solo ese proyecto, y el trabajo nuevo que pides va ahí a menos que nombres otro.
 Consulta [Proyectos](/es/projects/#focus-on-one-project).
 
+## H {#h}
+
+### Equipo principal {#home}
+
+Las palabras que el mapa de Configuración → **Dispositivos** pone debajo de la computadora donde vive tu primer oficial.
+Consulta [Tus otras computadoras](/es/your-other-computers/#the-computer-where-your-first-mate-lives).
+
 ## I {#i}
 
 ### Integración {#integration}
@@ -211,7 +218,7 @@ Consulta [El navegador de la tripulación](/es/the-crews-browser/#private-sites)
 
 ### Proyecto {#project}
 
-Una carpeta tuya, guardada con git, en la que trabaja tu tripulación.
+Aquello en lo que trabaja tu tripulación: un repositorio, o varios que van juntos.
 Cada tarea pertenece a un proyecto.
 Consulta [Proyectos](/es/projects/).
 
@@ -241,6 +248,12 @@ Consulta [Tareas y tripulantes](/es/tasks-and-crewmates/#where-a-task-stands).
 Lo que guarda cada tarea: lo que pediste, lo que cambió, las pruebas y lo que decidiste.
 El registro de una tarea se conserva después de que la tarea se cierra.
 Consulta [Tareas y tripulantes](/es/tasks-and-crewmates/).
+
+### Repositorio {#repository}
+
+Una carpeta tuya, guardada con git, que forma parte de un proyecto.
+Un proyecto tiene un repositorio o varios, y cada tarea trabaja en uno de ellos.
+Consulta [Proyectos](/es/projects/#several-repositories-in-one-project).
 
 ### Cuidado {#rigor}
 
@@ -281,6 +294,12 @@ Cada una en la que inicias sesión es una cuenta en Configuración → **Intelig
 Consulta [Suscripciones y asignación](/es/subscriptions-and-quota/).
 
 ## T {#t}
+
+### Etiqueta {#tag}
+
+Un nombre que un proyecto le da a un tipo de tarea, como error o función, con una descripción que dice qué tareas entran.
+Una tarea recibe sus etiquetas de ti o de tu primer oficial, y Tareas y el tablero de tareas pueden enumerar las tareas por etiqueta.
+Consulta [Tareas y tripulantes](/es/tasks-and-crewmates/#tags).
 
 ### Tomar el relevo {#take-over}
 

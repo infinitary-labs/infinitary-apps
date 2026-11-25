@@ -1,12 +1,13 @@
 ---
-source: d57581294d6dfbfc
+source: cd05627562f4c3e5
 title: Proyectos
-description: Cómo agregar un proyecto a Infinitary, centrar la ventana en uno, elegir cómo se fusionan sus cambios y quitarlo.
+description: Cómo agregar un proyecto a Infinitary, reunir varios repositorios en uno, darle etiquetas, centrar la ventana en uno, elegir cómo se fusionan sus cambios y quitarlo.
 ---
 
-Un proyecto es aquello en lo que trabaja tu tripulación: una carpeta tuya, gestionada con git.
+Un proyecto es aquello en lo que trabaja tu tripulación: un repositorio, o varios que van juntos, como una app y su servicio.
+Un repositorio es una carpeta tuya, gestionada con git.
 Cada tarea pertenece a un proyecto, y cada clave de tarea empieza con la clave de su proyecto, como `WEB-12`.
-Tus proyectos aparecen en **Configuración → Proyectos**.
+Tus proyectos aparecen en **Configuración → Proyectos**, y presionar la línea de un proyecto abre su página.
 
 ## Agregar un proyecto {#add-a-project}
 
@@ -61,6 +62,56 @@ Tu inicio de sesión se queda en esta computadora.
 
 Si un inicio de sesión deja de funcionar, una tarjeta te pide que vuelvas a iniciar sesión.
 El trabajo que lo necesita espera hasta que lo hagas.
+
+## Varios repositorios en un proyecto {#several-repositories-in-one-project}
+
+Un proyecto empieza con un repositorio y puede tener más.
+Su página los enumera en **Repositorios**, con una pestaña para cada uno.
+
+Puedes agregar un repositorio a un proyecto de dos formas.
+
+- **Pídeselo a tu primer oficial.**
+  Di a qué proyecto se une el repositorio.
+  Tu primer oficial te trae una tarjeta, y no se agrega nada hasta que presionas **Agregar repositorio** en ella.
+- **Agrégalo tú mismo.**
+  Presiona **Agregar un repositorio**, después de la última pestaña, y elige una carpeta, un repositorio para clonar o **Nuevo repositorio**, como haces con un proyecto.
+
+Las tareas del repositorio llevan la clave de tareas del proyecto.
+Cada tarea trabaja en un solo repositorio, y la pestaña **Info** de la tarea lo nombra junto al proyecto.
+Cada repositorio conserva sus propios ajustes, como **Adónde van los cambios**, **Preguntar antes de fusionar** y **Cuidado**: elige su pestaña para cambiarlos.
+Un proyecto de varios repositorios tiene un nombre propio, que se cambia con **Nombre** en el recuadro **Proyecto**.
+
+## Mover un repositorio a otro proyecto {#move-a-repository-to-another-project}
+
+Un repositorio puede moverse a otro proyecto, o a un proyecto propio.
+
+- **Pídeselo a tu primer oficial.**
+  Cuando le dices exactamente qué mover y adónde, se hace de inmediato.
+  Cuando es tu primer oficial quien sugiere un traslado, una tarjeta muestra adónde va cada repositorio y qué tareas lo siguen, y no se mueve nada hasta que presionas **Aplicar traslado**.
+- **Muévelo tú mismo.**
+  En la pestaña del repositorio, elige un proyecto en la línea que ofrece moverlo a otro proyecto, presiona **Mover** y presiona **Mover** de nuevo para confirmar.
+
+El repositorio conserva su nombre, su carpeta y sus ajustes.
+Sus tareas van con él, y cada tarea conserva su clave.
+Un proyecto que se queda sin repositorios sale de la lista: el resto de sus tareas, sus etiquetas y sus automatizaciones se unen al otro proyecto, y su clave no vuelve a usarse nunca.
+Para combinar dos proyectos, mueve los repositorios de uno al otro.
+
+## Etiquetas {#tags}
+
+Cada proyecto tiene su propia lista de etiquetas, como error, función o idea.
+Una etiqueta tiene un nombre y una descripción que dice qué tareas entran.
+Las etiquetas te ayudan a encontrar y agrupar tareas, y nada más en Infinitary depende de una etiqueta.
+
+La página de un proyecto enumera sus etiquetas en **Etiquetas**, cada una con el número de tareas que la llevan.
+
+- **Añadir una etiqueta** pide el nombre de la etiqueta y qué tareas entran.
+- **Editar** cambia el nombre o la descripción de una etiqueta.
+  Una etiqueta a la que le cambias el nombre sigue en las tareas que la llevan.
+- **Quitar** saca la etiqueta de todas las tareas que la llevan, después de una pregunta que dice cuántas son.
+
+También puedes pedirle a tu primer oficial que agregue, cambie o quite las etiquetas de un proyecto.
+Una tarea que pasa a otro proyecto pierde sus etiquetas, a menos que todo su proyecto se haya unido a ese.
+Para etiquetar una tarea y para encontrar tareas por etiqueta, consulta [Tareas y tripulantes](/es/tasks-and-crewmates/#tags).
 
 ## Copias de trabajo {#working-copies}
 
@@ -117,6 +168,8 @@ Desactívalo, y el trabajo que supera las comprobaciones puede fusionarse sin pr
 Quitarlo saca el proyecto de la lista.
 Su carpeta y sus tareas terminadas se quedan.
 Si el proyecto todavía tiene tareas, Infinitary las nombra, y primero las terminas o las abandonas.
+
+En un proyecto de varios repositorios, **Quitar** saca el repositorio cuya pestaña está elegida, y el proyecto conserva los demás.
 
 ## Siguiente {#next}
 

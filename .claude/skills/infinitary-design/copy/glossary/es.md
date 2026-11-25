@@ -145,6 +145,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | stop | detener | "Detenida". |
 | story (a change's) | historia | |
 | subscription | suscripción | |
+| tag (a project's name for a kind of task) | etiqueta | The app's own word ("Etiquetas", "Por etiqueta"), the usual Spanish for a label that sorts things; feminine, plural "etiquetas"; the verb is "etiquetar" and a task "lleva" a tag ("las tareas que la llevan"). |
 | task | tarea | Feminine, so feed lines agree: "Iniciada", "Terminada", "Fusionada". |
 | task board / its lanes | tablero de tareas / Esperándote, Pendientes, En cola, Trabajando, Terminadas · 7 d | |
 | Text size; Text Size, Control Center (iOS's own names) | Tamaño del texto; Tamaño del texto, Centro de control | iOS's own Spanish names for the control. |

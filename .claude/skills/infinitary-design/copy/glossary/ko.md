@@ -157,6 +157,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | stop | 중지 | Media playback "Stop" is 정지 |
 | story (a change's) | 스토리 | |
 | subscription | 구독 | |
+| tag (a project's name for a kind of task) | 태그 | The app's own word and the usual Korean software loanword, never 라벨; no plural form. "Tag a task" is 작업에 태그를 붙이다, taking one off is 태그를 떼다, "By tag" is 태그별. |
 | task | 작업 | |
 | task board | 작업 보드 | 보드 alone for the board itself. |
 | task key (a project's task numbering, "INF") | 작업 키 | The project's own key is 프로젝트의 키 |

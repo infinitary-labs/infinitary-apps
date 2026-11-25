@@ -1,5 +1,5 @@
 ---
-source: 72cf3e89cd5a9c83
+source: 14ae8437d49c7f6c
 title: Glossar
 description: Die Wörter, die Infinitary mit einer eigenen Bedeutung verwendet, jedes in ein oder zwei Sätzen, mit einem Link zur Seite, die es erklärt.
 ---
@@ -134,6 +134,13 @@ Das Fenster auf ein Projekt einengen, über die Projektmarke in der oberen Leist
 Aufgaben, Aktivität und Karten zeigen dann nur dieses Projekt, und neue Arbeit, um die du bittest, geht dorthin, wenn du kein anderes nennst.
 Siehe [Projekte](/de/projects/#focus-on-one-project).
 
+## H {#h}
+
+### Heimcomputer {#home}
+
+Das Wort, das in den Einstellungen → **Geräte** auf der Karte deiner Geräte unter dem Computer steht, auf dem dein erster Offizier lebt.
+Siehe [Deine anderen Computer](/de/your-other-computers/#the-computer-where-your-first-mate-lives).
+
 ## I {#i}
 
 ### Integration {#integration}
@@ -211,7 +218,7 @@ Siehe [Der Browser der Crew](/de/the-crews-browser/#private-sites).
 
 ### Projekt {#project}
 
-Ein eigener Ordner von dir, mit git geführt, an dem deine Crew arbeitet.
+Woran deine Crew arbeitet: ein Repository oder mehrere, die zusammengehören.
 Jede Aufgabe gehört zu einem Projekt.
 Siehe [Projekte](/de/projects/).
 
@@ -241,6 +248,12 @@ Siehe [Aufgaben und Crewmitglieder](/de/tasks-and-crewmates/#where-a-task-stands
 Was jede Aufgabe festhält: worum du gebeten hast, was sich geändert hat, die Belege und was du entschieden hast.
 Das Protokoll einer Aufgabe bleibt, nachdem die Aufgabe geschlossen wurde.
 Siehe [Aufgaben und Crewmitglieder](/de/tasks-and-crewmates/).
+
+### Repository {#repository}
+
+Ein eigener Ordner von dir, mit git geführt, der zu einem Projekt gehört.
+Ein Projekt enthält ein Repository oder mehrere, und jede Aufgabe arbeitet in einem davon.
+Siehe [Projekte](/de/projects/#several-repositories-in-one-project).
 
 ### Sorgfalt {#rigor}
 
@@ -281,6 +294,12 @@ Jedes, bei dem du dich anmeldest, ist ein Konto in den Einstellungen → **Intel
 Siehe [Abos und Kontingent](/de/subscriptions-and-quota/).
 
 ## T {#t}
+
+### Tag {#tag}
+
+Ein Name, den ein Projekt einer Art von Aufgaben gibt, etwa Fehler oder Funktion, mit einer Beschreibung, die sagt, welche Aufgaben dazugehören.
+Eine Aufgabe wird von dir oder deinem ersten Offizier getaggt, und das Panel „Aufgaben“ und das Aufgabenboard können Aufgaben nach Tag auflisten.
+Siehe [Aufgaben und Crewmitglieder](/de/tasks-and-crewmates/#tags).
 
 ### Übernehmen {#take-over}
 

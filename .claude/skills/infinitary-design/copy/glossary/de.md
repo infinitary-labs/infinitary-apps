@@ -150,6 +150,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | stop | stoppen | |
 | story (a change's) | Geschichte | |
 | subscription | Abo | The short everyday word. |
+| tag (a project's name for a kind of task) | Tag | The loanword the app's catalog already uses and German software commonly says; neuter ("das Tag", "ein Tag"), plural "Tags". Tagging a task is "taggen" ("getaggt"), and a task "trägt" its tags. |
 | task | Aufgabe | Feminine. |
 | task board | Aufgabenboard | "Board" alone for the board itself. |
 | task key (a project's task numbering, "INF") | Aufgabenkürzel, Kürzel | Kept apart from "Schlüssel", which is a key that unlocks something. |

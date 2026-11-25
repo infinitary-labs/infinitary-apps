@@ -46,6 +46,17 @@ export type UsageReportDestination = {
    * it (`user.email`): a per-person panel groups by it, not by the resource.
    */
   person?: Record<string, string>;
+  /**
+   * In Claude Code's format, Claude work goes from the ledger too, because
+   * Claude's own client never reports to this destination (a connection the
+   * person adds); a company setup gets Claude's own records instead.
+   */
+  claudeFromLedger?: true;
+  /**
+   * Sends one signal's body in place of a plain post with `headers`, for a
+   * destination whose headers stay in Secrets; answers the HTTP status.
+   */
+  post?(signal: OtlpSignal, body: unknown): Promise<number>;
 };
 
 export type UsageReporterOptions = {
@@ -279,7 +290,13 @@ export class UsageReporter {
       this.options.destinations().map(async (destination) => {
         const bodies: OtlpBodies =
           destination.format === "claude-code"
-            ? claudeCodeBodies(rows, destination.resource, since, destination.person)
+            ? claudeCodeBodies(
+                rows,
+                destination.resource,
+                since,
+                destination.person,
+                destination.claudeFromLedger,
+              )
             : standardBodies(rows, spans, destination.resource, since);
         await Promise.all(
           (Object.keys(bodies) as OtlpSignal[]).map((signal) =>
@@ -298,14 +315,16 @@ export class UsageReporter {
     const url = destination.endpoints[signal];
     if (!url) return;
     try {
-      const answer = await postOtlpHttp(
-        url,
-        this.connection(destination, signal, url),
-        Buffer.from(JSON.stringify(body)),
-        "application/json",
-        await destination.headers(signal),
-        POST_TIMEOUT_MS,
-      );
+      const answer = destination.post
+        ? refusalOf(await destination.post(signal, body))
+        : await postOtlpHttp(
+            url,
+            this.connection(destination, signal, url),
+            Buffer.from(JSON.stringify(body)),
+            "application/json",
+            await destination.headers(signal),
+            POST_TIMEOUT_MS,
+          );
       if (answer.failure === "refused")
         console.warn(
           `[usage report] ${hostOf(url)} refused a ${signal} batch (HTTP ${answer.status}); dropped`,
@@ -350,6 +369,11 @@ function changedAt(files: CertificateFiles | undefined, cwd: string): (number | 
       return null;
     }
   });
+}
+
+/** A brokered post's HTTP status, read as `postOtlpHttp` answers one. */
+function refusalOf(status: number): { status: number; failure?: "refused" } {
+  return status >= 200 && status < 300 ? { status } : { status, failure: "refused" };
 }
 
 function hostOf(url: string): string {

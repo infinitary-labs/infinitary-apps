@@ -1,4 +1,9 @@
-import type { PanelSummaryPart, PanelTaskBoard, PanelTaskRow } from "@infinitary/contracts";
+import type {
+  PanelProject,
+  PanelSummaryPart,
+  PanelTaskBoard,
+  PanelTaskRow,
+} from "@infinitary/contracts";
 import {
   foldForSearch,
   NOW_GROUP_TITLES,
@@ -82,7 +87,16 @@ export type NowRow = {
   home?: NowGroup | null;
 };
 
-export type NowFilter = { query: string; projectId: string | null };
+/**
+ * The pressed tag (design skill NowPanel, "Tags"): a tag's id, `NO_TAG` for
+ * the tasks that carry none, or null for All tags.
+ */
+export type TagFilter = string | null;
+
+/** The No tag chip's value; a tag's id is never this (`tag-` and a uuid). */
+export const NO_TAG = "none";
+
+export type NowFilter = { query: string; projectId: string | null; tag?: TagFilter };
 
 type StartMarks = {
   startAttempt?: { phase: "preparing" | "checking" };
@@ -208,8 +222,16 @@ function groupsOf(board: PanelTaskBoard): ReadonlyMap<string, NowGroup | null> {
   return groups;
 }
 
+/** Whether a task carries the pressed tag; every task does while none is pressed. */
+export function carriesTag(task: PanelTaskRow, tag: TagFilter | undefined): boolean {
+  if (tag == null) return true;
+  if (tag === NO_TAG) return (task.tags ?? []).length === 0;
+  return (task.tags ?? []).some((carried) => carried.id === tag);
+}
+
 function matches(task: PanelTaskRow, filter: NowFilter): boolean {
   if (filter.projectId && task.projectId !== filter.projectId) return false;
+  if (!carriesTag(task, filter.tag)) return false;
   const q = foldForSearch(filter.query.trim());
   if (!q) return true;
   return foldForSearch(task.title).includes(q) || foldForSearch(task.key).includes(q);
@@ -378,7 +400,10 @@ export function earlierRowsOf(
   const shown = new Set([...listed.values()].flatMap((rows) => rows.map((row) => row.task.id)));
   return found
     .filter(
-      (task) => !shown.has(task.id) && (!filter.projectId || task.projectId === filter.projectId),
+      (task) =>
+        !shown.has(task.id) &&
+        (!filter.projectId || task.projectId === filter.projectId) &&
+        carriesTag(task, filter.tag),
     )
     .sort((a, b) => (b.closedAt ?? 0) - (a.closedAt ?? 0))
     .map((task) => ({ task, group: "earlier" as const, depth: 0 }));
@@ -405,7 +430,149 @@ export function projectChipsOf(board: PanelTaskBoard): ProjectChip[] {
   );
   const projects = board.projects.filter((project) => withRows.has(project.id));
   if (projects.length < 2) return [];
-  return [{ id: null, key: "all" }, ...projects.map((p) => ({ id: p.id, key: p.key }))];
+  return [
+    { id: null, key: m.nowPanelBoardAllProjects() },
+    ...projects.map((p) => ({ id: p.id, key: p.key })),
+  ];
+}
+
+/**
+ * The project whose tags apply (design skill NowPanel, "Tags"): the one in
+ * focus while it has tags, or with none in focus the only project that has
+ * any; otherwise none, and no tag row shows.
+ */
+export function tagProjectOf(
+  board: Pick<PanelTaskBoard, "projects">,
+  projectId: string | null,
+): PanelProject | null {
+  if (projectId !== null) {
+    const focused = board.projects.find((project) => project.id === projectId);
+    return focused && (focused.tags ?? []).length > 0 ? focused : null;
+  }
+  const tagged = board.projects.filter(
+    (project) => !project.archived && (project.tags ?? []).length > 0,
+  );
+  return tagged.length === 1 ? (tagged[0] ?? null) : null;
+}
+
+/** Why no tags apply now, in the panel's words: what command search and the dim By tag say. */
+export function noTagsWhy(
+  board: Pick<PanelTaskBoard, "projects">,
+  projectId: string | null,
+): string {
+  const focused =
+    projectId === null ? null : board.projects.find((project) => project.id === projectId);
+  if (focused) return m.nowPanelTagsNoneYet({ project: focused.key });
+  const tagged = board.projects.filter(
+    (project) => !project.archived && (project.tags ?? []).length > 0,
+  );
+  return tagged.length === 0 ? m.nowPanelTagsNoProject() : m.nowPanelTagsChooseProject();
+}
+
+/** A chip of the tag row: All tags (`id` null, no count), a tag, or No tag. */
+export type TagChip = { id: TagFilter; name: string; count: number | null };
+
+/**
+ * The tag row: All tags, every tag of the project alphabetically, even at
+ * 0, then No tag. A count is how many open tasks pressing the chip would
+ * list, after the project and the typed words; nothing while no tags apply.
+ */
+export function tagChipsOf(board: PanelTaskBoard, filter: NowFilter): TagChip[] {
+  const project = tagProjectOf(board, filter.projectId);
+  if (!project) return [];
+  const listed = new Map<string, PanelTaskRow>();
+  for (const rows of rowsOf(board, { ...filter, tag: null }).values())
+    for (const { task } of rows)
+      if (task.status === "open" || task.status === "active") listed.set(task.id, task);
+  const open = [...listed.values()];
+  const count = (tag: string) => open.filter((task) => carriesTag(task, tag)).length;
+  return [
+    { id: null, name: m.nowPanelAllTags(), count: null },
+    ...(project.tags ?? []).map((tag) => ({ id: tag.id, name: tag.name, count: count(tag.id) })),
+    { id: NO_TAG, name: m.nowPanelNoTag(), count: count(NO_TAG) },
+  ];
+}
+
+/** A tag group's key: `tag:` and the tag's id, or `tag:none` for No tag. */
+export type TagGroupKey = `tag:${string}`;
+
+/** A group of the list: one of the panel's own, or a tag's while grouping by tag. */
+export type ListGroup = PanelGroup | TagGroupKey;
+
+export const tagGroupKey = (tag: string): TagGroupKey => `tag:${tag}`;
+
+export function isTagGroup(group: ListGroup): group is TagGroupKey {
+  return group.startsWith("tag:");
+}
+
+/** How Tasks orders its groups: by what happens next, or by tag (Group tasks). */
+export type Grouping = "status" | "tag";
+
+/** The panel store's key for the Group tasks choice. */
+export const GROUPING_KEY = "grouping";
+
+export function groupingOf(value: unknown): Grouping {
+  return value === "tag" ? "tag" : "status";
+}
+
+/** The panel store's key for the tag groups a press opened; every one starts folded. */
+export const OPEN_TAG_GROUPS_KEY = "openTagGroups";
+
+export function openTagGroupsOf(value: unknown): TagGroupKey[] {
+  return Array.isArray(value)
+    ? value.filter((key): key is TagGroupKey => typeof key === "string" && key.startsWith("tag:"))
+    : [];
+}
+
+export type TagGroup = { group: TagGroupKey; name: string; rows: NowRow[] };
+
+/** The groups a tag group gathers its rows from, in the order it lists them. */
+const TAG_GROUP_SOURCES: readonly NowGroup[] = ["working", "queued", "backlog"];
+
+/**
+ * The groups Tasks lists by tag (design skill NowPanel, "By tag"): one per
+ * tag of the project that a working, queued or backlog task carries,
+ * alphabetically, then No tag. A group lists each such task once, flat,
+ * working first, then queued, then backlog, each row keeping the group it
+ * would list in by status, so it reads as it does there; a task with two
+ * tags lists under both. Waiting on you, Pinned and Done keep their rows,
+ * so a task waiting on you or pinned lists there alone.
+ */
+export function tagGroupsOf(
+  rows: ReadonlyMap<PanelGroup, NowRow[]>,
+  project: Pick<PanelProject, "tags">,
+): TagGroup[] {
+  const seen = new Set<string>();
+  const source: NowRow[] = [];
+  for (const group of TAG_GROUP_SOURCES) {
+    for (const row of rows.get(group) ?? []) {
+      if (seen.has(row.task.id)) continue;
+      seen.add(row.task.id);
+      source.push({ ...row, depth: 0 });
+    }
+  }
+  const groups: TagGroup[] = [];
+  for (const tag of project.tags ?? []) {
+    const tagged = source.filter((row) => carriesTag(row.task, tag.id));
+    if (tagged.length > 0)
+      groups.push({ group: tagGroupKey(tag.id), name: tag.name, rows: tagged });
+  }
+  const untagged = source.filter((row) => carriesTag(row.task, NO_TAG));
+  if (untagged.length > 0)
+    groups.push({ group: tagGroupKey(NO_TAG), name: m.nowPanelNoTag(), rows: untagged });
+  return groups;
+}
+
+/**
+ * A folded tag group's bar: one segment per task in the group's order,
+ * working in ember and the rest as outlines, the colors of a collapsed
+ * task's parts bar (`partsBarOf`).
+ */
+export function tagGroupBarOf(group: TagGroup): PartSegment[] {
+  return group.rows.map(({ task, group: home }) => ({
+    state: home === "working" ? "working" : "rest",
+    id: task.id,
+  }));
 }
 
 /** The newest write among the rows the panel lists, for the lag measure. */

@@ -12,6 +12,7 @@
   },
   "header": [
     { "id": "search", "icon": "search", "label": "Search tasks" },
+    { "id": "group", "icon": "list", "label": "Group tasks" },
     { "id": "board", "icon": "open", "label": "Open task board", "emits": "board" }
   ],
   "commands": [
@@ -63,6 +64,25 @@
       "label": "Expand all parts",
       "asks": "expand-parts",
       "words": ["unfold", "subtasks", "children", "show"]
+    },
+    {
+      "id": "tag-filter",
+      "label": "Filter tasks by tag",
+      "asks": "tag-filter",
+      "words": ["tags", "label"]
+    },
+    {
+      "id": "group",
+      "label": "Group tasks",
+      "presses": "group",
+      "words": ["sort", "tags", "order"]
+    },
+    {
+      "id": "board-tags",
+      "label": "Show tasks by tag",
+      "emits": "board",
+      "data": { "focus": "tags" },
+      "words": ["kanban", "board", "tags", "label"]
     },
     {
       "id": "board-move",

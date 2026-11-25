@@ -4,13 +4,16 @@ import {
   focusWithRing,
   IconButton,
   listEdges,
+  MenuPanel,
   PanelExpandChevron,
   PinGlyph,
   pinActionLabel,
+  stepMenuFocus,
   TaskStatusMark,
   taskStatusLabel,
   taskStatusOf,
   useInPlaceReveal,
+  usePopoverPresence,
   useRestLabel,
 } from "@infinitary/ui";
 import {
@@ -29,6 +32,7 @@ import {
 import * as m from "./messages.generated";
 import { groupNavKey, nowNavItems, nowNavMove, rovingKey, rowNavKey } from "./nav";
 import styles from "./panel.css";
+import { barSegments, barWords, PartsBar, useBarRest } from "./partsBar";
 import { reconcileBoard, reconcileRows } from "./reconcile";
 import {
   COLLAPSED_KEY,
@@ -37,20 +41,27 @@ import {
   type FoldedRows,
   failedStartCount,
   foldRows,
+  GROUPING_KEY,
+  type Grouping,
+  groupingOf,
   hasSingleRegisteredRepoProject,
   isPinned,
+  isTagGroup,
+  type ListGroup,
   leftOutDone,
+  NO_TAG,
   type NowGroup,
   type NowRow,
   newestListedWrite,
   newFilingCount,
+  noTagsWhy,
   OPEN_BY_DEFAULT,
+  OPEN_TAG_GROUPS_KEY,
   onRail,
+  openTagGroupsOf,
   PANEL_GROUP_LABELS,
   PANEL_GROUPS,
   type PanelGroup,
-  type PartSegment,
-  type PartState,
   partsBarOf,
   partsCountOf,
   projectChipsOf,
@@ -59,16 +70,26 @@ import {
   rowsOf,
   rowTrailing,
   summaryOf,
+  type TagFilter,
+  type TagGroupKey,
+  tagChipsOf,
+  tagGroupBarOf,
+  tagGroupKey,
+  tagGroupsOf,
+  tagProjectOf,
   wordOf,
 } from "./rows";
 import {
+  BOARD_TAGS_COMMAND,
   COLLAPSE_ALL_ASK,
   EXPAND_ALL_ASK,
   failedCountWords,
   foldLabel,
+  GROUP_ASK,
   newCountWords,
   partsCountWords,
   ROW_COLLAPSED_WORDS,
+  TAG_FILTER_ASK,
 } from "./words";
 
 /**
@@ -169,6 +190,14 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks, stor
   // collapsed task stays collapsed, kept in the panel's own store slice so a
   // restart finds it as it was.
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set());
+  // The pressed tag (design skill NowPanel, "Tags"): the search's own, as
+  // its words are, so closing the search lets go of it.
+  const [tag, setTag] = useState<TagFilter>(null);
+  // How Tasks groups its tasks (Group tasks) and the tag groups a press
+  // opened, kept in the panel's own store slice; tag groups start folded.
+  const [grouping, setGrouping] = useState<Grouping>("status");
+  const [openTagGroups, setOpenTagGroups] = useState<ReadonlySet<TagGroupKey>>(() => new Set());
+  const [menuOpen, setMenuOpen] = useState(false);
   const groupsRef = useRef<HTMLDivElement>(null);
   const queryRef = useRef<HTMLInputElement>(null);
   const newestSeen = useRef(0);
@@ -292,16 +321,21 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks, stor
 
   useEffect(() => {
     let live = true;
-    const load = () =>
+    const readers: Record<string, (value: unknown) => void> = {
+      [COLLAPSED_KEY]: (value) => setCollapsed(new Set(collapsedIdsOf(value))),
+      [GROUPING_KEY]: (value) => setGrouping(groupingOf(value)),
+      [OPEN_TAG_GROUPS_KEY]: (value) => setOpenTagGroups(new Set(openTagGroupsOf(value))),
+    };
+    const load = (key: string) =>
       void store
-        .get(COLLAPSED_KEY)
+        .get(key)
         .then((value) => {
-          if (live) setCollapsed(new Set(collapsedIdsOf(value)));
+          if (live) readers[key]?.(value);
         })
         .catch(() => {});
-    load();
+    for (const key of Object.keys(readers)) load(key);
     const stop = store.subscribe((key) => {
-      if (key === COLLAPSED_KEY) load();
+      if (key in readers) load(key);
     });
     return () => {
       live = false;
@@ -331,6 +365,27 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks, stor
     [store],
   );
 
+  const chooseGrouping = useCallback(
+    (next: Grouping) => {
+      setGrouping(next);
+      void store.set(GROUPING_KEY, next).catch(() => {});
+    },
+    [store],
+  );
+  const openTagGroupsNow = useRef(openTagGroups);
+  openTagGroupsNow.current = openTagGroups;
+  const toggleTagGroup = useCallback(
+    (group: TagGroupKey) => {
+      const next = new Set(openTagGroupsNow.current);
+      if (next.has(group)) next.delete(group);
+      else next.add(group);
+      openTagGroupsNow.current = next;
+      setOpenTagGroups(next);
+      void store.set(OPEN_TAG_GROUPS_KEY, [...next]).catch(() => {});
+    },
+    [store],
+  );
+
   // On its rail once the board holds an ask's record or a row it lists,
   // saying why not to a command that would open it; collapsed, it says how
   // many wait and how many work.
@@ -350,21 +405,51 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks, stor
   // pill, docs/project-focus.md): a chip here picks it, All clears it.
   const project = view.focusedProjectId;
   const typed = query.trim();
+  // The project whose tags apply: the one in focus, or the only one with tags.
+  const tagProject = useMemo(() => (board ? tagProjectOf(board, project) : null), [board, project]);
+  // Focusing a project that lacks the pressed tag, or has no tags, lets go of it.
+  const tagHeld =
+    tag === null || tag === NO_TAG || (tagProject?.tags ?? []).some(({ id }) => id === tag);
+  const pressedTag: TagFilter = tagProject && tagHeld ? tag : null;
+  useEffect(() => {
+    if (board && tag !== null && pressedTag === null) setTag(null);
+  }, [board, tag, pressedTag]);
+  const tagChips = useMemo(
+    () => (board ? tagChipsOf(board, { query, projectId: project }) : []),
+    [board, query, project],
+  );
+  // Filter tasks by tag and Show tasks by tag say why they cannot run while no tags apply.
+  useEffect(() => {
+    if (!board || !rail) return;
+    const why = tagProject ? null : noTagsWhy(board, project);
+    rail.refuse(TAG_FILTER_ASK, why);
+    rail.refuse(BOARD_TAGS_COMMAND, why);
+  }, [board, rail, tagProject, project]);
   // Hover is view state, not new task data. Keep grouping, sorting and the
   // row objects stable until the board or the captain's filter changes.
   const heldRows = useRef<ReadonlyMap<PanelGroup, NowRow[]>>(new Map());
   const rows = useMemo(() => {
     const next: Map<PanelGroup, NowRow[]> = board
-      ? rowsOf(board, { query, projectId: project })
+      ? rowsOf(board, { query, projectId: project, tag: pressedTag })
       : new Map();
     const earlier =
       board && found.query === typed
-        ? earlierRowsOf(found.tasks, next, { query, projectId: project })
+        ? earlierRowsOf(found.tasks, next, { query, projectId: project, tag: pressedTag })
         : [];
     if (earlier.length > 0) next.set("earlier", earlier);
     heldRows.current = reconcileRows(heldRows.current, next);
     return heldRows.current;
-  }, [board, query, project, found, typed]);
+  }, [board, query, project, pressedTag, found, typed]);
+  // Grouped by tag while tags apply; the choice stays as picked while they do not.
+  const byTag = grouping === "tag" && tagProject !== null;
+  const tagGroups = useMemo(() => {
+    if (!byTag || !tagProject) return [];
+    const groups = tagGroupsOf(rows, tagProject);
+    // A pressed tag shows its own group alone.
+    return pressedTag === null
+      ? groups
+      : groups.filter(({ group }) => group === tagGroupKey(pressedTag));
+  }, [byTag, tagProject, rows, pressedTag]);
   // Each group's rows with the collapsed tasks' parts left out. Typed words
   // show every match, even a part under a collapsed task, and leave what is
   // collapsed as it was.
@@ -499,6 +584,7 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks, stor
   const closeSearch = useCallback((byKeyboard: boolean) => {
     setSearching(false);
     setQuery("");
+    setTag(null);
     if (byKeyboard) setListAsk((n) => n + 1);
   }, []);
 
@@ -524,6 +610,70 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks, stor
   useEffect(() => {
     if (caretAsk > 0) queryRef.current?.focus();
   }, [caretAsk]);
+  // Filter tasks by tag, from command search: the search opens with focus on the tag row.
+  const tagsRef = useRef<HTMLDivElement>(null);
+  const [tagAsk, setTagAsk] = useState(0);
+  useEffect(
+    () =>
+      asks.subscribe((button: string) => {
+        if (button !== TAG_FILTER_ASK) return;
+        setSearching(true);
+        setTagAsk((n) => n + 1);
+      }),
+    [asks],
+  );
+  useEffect(() => {
+    if (tagAsk === 0) return;
+    const at = tagsRef.current?.querySelector<HTMLElement>('[tabindex="0"]');
+    if (at) focusWithRing(at);
+  }, [tagAsk]);
+  // The tag row is one Tab stop (a toolbar): the arrows move along it, Home
+  // and End go to its ends, and Enter or Space presses the chip.
+  const [tagStop, setTagStop] = useState<TagFilter | undefined>(undefined);
+  const tagStopId = tagChips.some((chip) => chip.id === tagStop) ? tagStop : pressedTag;
+  const onTagKey = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    const chips = [...(tagsRef.current?.querySelectorAll<HTMLElement>("[data-now-tag]") ?? [])];
+    const at = chips.indexOf(event.target as HTMLElement);
+    if (at < 0) return;
+    const to =
+      event.key === "ArrowRight"
+        ? Math.min(at + 1, chips.length - 1)
+        : event.key === "ArrowLeft"
+          ? Math.max(at - 1, 0)
+          : event.key === "Home"
+            ? 0
+            : event.key === "End"
+              ? chips.length - 1
+              : null;
+    if (to === null) return;
+    event.preventDefault();
+    const next = chips[to];
+    if (next) focusWithRing(next);
+  };
+
+  // Group tasks: a click opens or closes its menu, its command opens it.
+  // A press outside the panel's page is a blur of the page, so a click on
+  // the header button that closed it that way must not open it again.
+  const menuRef = useRef<HTMLDivElement>(null);
+  const noTrigger = useRef<HTMLElement>(null);
+  const menuDrawn = usePopoverPresence(menuOpen, menuRef, noTrigger);
+  const menuOpenNow = useRef(menuOpen);
+  menuOpenNow.current = menuOpen;
+  const closedByBlurAt = useRef(0);
+  const [menuAsk, setMenuAsk] = useState(0);
+  useEffect(
+    () =>
+      asks.subscribe((button: string, via: PanelAskVia) => {
+        if (button !== GROUP_ASK) return;
+        if (via === "click" && (menuOpenNow.current || Date.now() - closedByBlurAt.current < 400)) {
+          setMenuOpen(false);
+          return;
+        }
+        setMenuOpen(true);
+        setMenuAsk((n) => n + 1);
+      }),
+    [asks],
+  );
   // Collapse all parts and Expand all parts, from command search.
   const parentsNow = useRef(fold.parents);
   parentsNow.current = fold.parents;
@@ -536,7 +686,11 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks, stor
     [asks, setFolded],
   );
 
-  const toggle = (group: PanelGroup) =>
+  const toggle = (group: ListGroup) => {
+    if (isTagGroup(group)) toggleTagGroup(group);
+    else toggleGroup(group);
+  };
+  const toggleGroup = (group: PanelGroup) =>
     setExpanded((current) => {
       const next = new Set(current);
       if (next.has(group)) next.delete(group);
@@ -548,27 +702,42 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks, stor
   // The groups as painted: typed words show every match, even in a group
   // the captain left collapsed.
   const doneLeftOut = board ? leftOutDone(board, project) : 0;
+  // A pressed tag opens the folded groups, as typed words do.
+  const narrowed = typed !== "" || pressedTag !== null;
   useEffect(() => {
-    if (typed !== "" || expanded.has("landed")) setWantsClosed(true);
-  }, [typed, expanded]);
-  const shownGroups = useMemo(
-    () =>
-      PANEL_GROUPS.filter(
-        (group) => (rows.get(group) ?? []).length > 0 || (group === "landed" && doneLeftOut > 0),
-      ).map((group) => ({
-        group,
-        open: typed !== "" || OPEN_BY_DEFAULT.has(group) || expanded.has(group),
-        collapsible: !OPEN_BY_DEFAULT.has(group),
-        taskIds: (folded.get(group)?.shown ?? []).map((row) => row.task.id),
-      })),
-    [rows, folded, typed, expanded, doneLeftOut],
-  );
+    if (narrowed || expanded.has("landed")) setWantsClosed(true);
+  }, [narrowed, expanded]);
+  const shownGroups = useMemo(() => {
+    const byStatus = PANEL_GROUPS.filter(
+      (group) => (rows.get(group) ?? []).length > 0 || (group === "landed" && doneLeftOut > 0),
+    ).map((group) => ({
+      group: group as ListGroup,
+      open: narrowed || OPEN_BY_DEFAULT.has(group) || expanded.has(group),
+      collapsible: !OPEN_BY_DEFAULT.has(group),
+      taskIds: (folded.get(group)?.shown ?? []).map((row) => row.task.id),
+      byTag: false,
+    }));
+    if (!byTag) return byStatus;
+    // By tag: Pinned and Waiting on you, one group per tag, No tag, then Done.
+    const kept = (groups: readonly PanelGroup[]) =>
+      byStatus.filter(({ group }) => groups.includes(group as PanelGroup));
+    const tagged = tagGroups.map(({ group, rows: tagRows }) => ({
+      group: group as ListGroup,
+      open: narrowed || openTagGroups.has(group),
+      collapsible: true,
+      taskIds: tagRows.map((row) => row.task.id),
+      byTag: true,
+    }));
+    return [...kept(["pinned", "waiting"]), ...tagged, ...kept(["landed", "earlier"])];
+  }, [rows, folded, narrowed, expanded, doneLeftOut, byTag, tagGroups, openTagGroups]);
   const navItems = useMemo(() => nowNavItems(shownGroups), [shownGroups]);
   // A row a collapse hid hands its stop to the collapsed task it is under.
   const hiddenStop = lastStop?.startsWith("row:")
     ? fold.hiddenUnder.get(lastStop.slice("row:".length))
     : undefined;
   const stop = rovingKey(navItems, hiddenStop ? rowNavKey(hiddenStop) : lastStop);
+  const stopNow = useRef(stop);
+  stopNow.current = stop;
   // A stop F6 lands on shows the ring: the key was the app's, not this page's.
   // So does the one focus follows to from a row that showed it.
   const focusStop = (
@@ -693,6 +862,79 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks, stor
     if (listAsk > 0) focusStop(landing.current.stop);
   }, [listAsk]);
 
+  // The Group tasks menu: focus on the current choice as it opens; Esc, a
+  // pick or a press outside closes it, and from the keyboard focus goes
+  // back to the list's stop.
+  const pickedByKey = useRef(false);
+  const [menuRoom, setMenuRoom] = useState(0);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const closeMenu = useCallback((toList: boolean) => {
+    setMenuOpen(false);
+    if (toList) setListAsk((n) => n + 1);
+  }, []);
+  useLayoutEffect(() => {
+    if (menuAsk === 0) return;
+    menuRef.current
+      ?.querySelector<HTMLElement>('[role="menuitemradio"][aria-checked="true"]')
+      ?.focus();
+  }, [menuAsk]);
+  // While it shows, the list keeps room under it, so a short Tasks never cuts it.
+  useLayoutEffect(() => {
+    const menu = menuRef.current;
+    const root = rootRef.current;
+    const room =
+      menuDrawn && menu && root
+        ? Math.ceil(menu.getBoundingClientRect().bottom - root.getBoundingClientRect().top) + 8
+        : 0;
+    setMenuRoom((held) => (held === room ? held : room));
+  });
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        // The menu owns this Escape: neither the summary nor the search hears it.
+        event.preventDefault();
+        event.stopPropagation();
+        closeMenu(true);
+        return;
+      }
+      if (event.key === "Enter" || event.key === " ") pickedByKey.current = true;
+      stepMenuFocus(menuRef.current, event);
+    };
+    const onDown = (event: PointerEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) setMenuOpen(false);
+    };
+    const onBlur = () => {
+      closedByBlurAt.current = Date.now();
+      setMenuOpen(false);
+    };
+    document.addEventListener("keydown", onKey, true);
+    document.addEventListener("pointerdown", onDown);
+    window.addEventListener("blur", onBlur);
+    return () => {
+      document.removeEventListener("keydown", onKey, true);
+      document.removeEventListener("pointerdown", onDown);
+      window.removeEventListener("blur", onBlur);
+    };
+  }, [menuOpen, closeMenu]);
+  const groupingWhy = !tagProject && board ? noTagsWhy(board, project) : undefined;
+  const menuItems = [
+    {
+      id: "status",
+      label: m.nowPanelGroupByStatus(),
+      chosen: grouping === "status",
+      onSelect: () => chooseGrouping("status"),
+    },
+    {
+      id: "tag",
+      label: m.nowPanelGroupByTag(),
+      chosen: grouping === "tag",
+      disabled: groupingWhy !== undefined,
+      ...(groupingWhy !== undefined ? { detail: groupingWhy } : {}),
+      onSelect: () => chooseGrouping("tag"),
+    },
+  ];
+
   // Esc in the search, in its order: the summary lets go first (its own
   // listener), then the words empty, then the search closes.
   const onSearchKey = (event: ReactKeyboardEvent<HTMLDivElement>) => {
@@ -709,7 +951,27 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks, stor
   return (
     <>
       <style>{styles}</style>
-      <div data-now="" data-single-project={singleProject ? "true" : "false"}>
+      <div
+        data-now=""
+        data-single-project={singleProject ? "true" : "false"}
+        data-now-grouping={byTag ? "tag" : "status"}
+        ref={rootRef}
+        style={menuRoom > 0 ? { minHeight: menuRoom } : undefined}
+      >
+        {menuDrawn && (
+          <MenuPanel
+            ref={menuRef}
+            label={m.nowPanelGroupTasks()}
+            items={menuItems}
+            style={{ top: 4, right: 10, transformOrigin: "top right" }}
+            onPick={(item) => {
+              const toList = pickedByKey.current;
+              pickedByKey.current = false;
+              item.onSelect?.();
+              closeMenu(toList);
+            }}
+          />
+        )}
         {/* biome-ignore lint/a11y/noStaticElementInteractions: Esc from the field, its close or a chip */}
         <div data-now-filters="" hidden={!searching} onKeyDown={onSearchKey}>
           <div data-now-query-row="">
@@ -770,6 +1032,31 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks, stor
               </button>
             ))}
           </div>
+          {tagChips.length > 0 && (
+            <div
+              data-now-tags=""
+              role="toolbar"
+              aria-label={m.nowPanelTags()}
+              ref={tagsRef}
+              onKeyDown={onTagKey}
+            >
+              {tagChips.map((chip) => (
+                <button
+                  key={chip.id ?? "all"}
+                  type="button"
+                  className="chip"
+                  data-now-tag={chip.id ?? "all"}
+                  aria-pressed={pressedTag === chip.id ? "true" : "false"}
+                  tabIndex={tagStopId === chip.id ? 0 : -1}
+                  onFocus={() => setTagStop(chip.id)}
+                  onClick={() => setTag(chip.id)}
+                >
+                  {chip.name}
+                  {chip.count !== null && <span className="chip-n">{` ${chip.count}`}</span>}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         {/* biome-ignore lint/a11y/noStaticElementInteractions: the arrows move between the buttons inside */}
         <div
@@ -814,39 +1101,47 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks, stor
             </svg>
           )}
           {board &&
-            shownGroups.map(({ group, open: isOpen }) => (
-              <Group
-                key={group}
-                group={group}
-                rows={rows.get(group) ?? []}
-                fold={folded.get(group)}
-                collapsed={typed ? NONE : collapsed}
-                onFold={setFolded}
-                board={board}
-                leftOut={group === "landed" ? doneLeftOut : 0}
-                newCount={
-                  group === "queued" || group === "backlog"
-                    ? newFilingCount(rows.get(group) ?? [])
-                    : 0
-                }
-                open={isOpen}
-                selectedTaskIds={view.openTaskIds}
-                litTaskId={view.litTaskId}
-                stop={stop}
-                onStop={setLastStop}
-                onToggle={() => toggle(group)}
-                onOpen={openTask}
-                onPeek={peek}
-                onPeekPart={peekPart}
-                onLeave={leave}
-                onFocusRow={focusRow}
-                onBlurRow={blurRow}
-                press={tasks ? press : undefined}
-                onStart={startTask}
-                onFocusStart={focusStart}
-                onPin={tasks ? pinTask : undefined}
-              />
-            ))}
+            shownGroups.map(({ group, open: isOpen }) => {
+              const byTagGroup = isTagGroup(group)
+                ? tagGroups.find((candidate) => candidate.group === group)
+                : undefined;
+              const statusGroup = isTagGroup(group) ? null : group;
+              return (
+                <Group
+                  key={group}
+                  group={group}
+                  label={byTagGroup?.name}
+                  rows={byTagGroup ? byTagGroup.rows : (rows.get(statusGroup as PanelGroup) ?? [])}
+                  fold={statusGroup ? folded.get(statusGroup) : undefined}
+                  collapsed={typed || byTagGroup ? NONE : collapsed}
+                  onFold={byTagGroup ? undefined : setFolded}
+                  bar={byTagGroup && !isOpen ? barWords(tagGroupBarOf(byTagGroup)) : undefined}
+                  board={board}
+                  leftOut={group === "landed" ? doneLeftOut : 0}
+                  newCount={
+                    group === "queued" || group === "backlog"
+                      ? newFilingCount(rows.get(group) ?? [])
+                      : 0
+                  }
+                  open={isOpen}
+                  selectedTaskIds={view.openTaskIds}
+                  litTaskId={view.litTaskId}
+                  stop={stop}
+                  onStop={setLastStop}
+                  onToggle={() => toggle(group)}
+                  onOpen={openTask}
+                  onPeek={peek}
+                  onPeekPart={peekPart}
+                  onLeave={leave}
+                  onFocusRow={focusRow}
+                  onBlurRow={blurRow}
+                  press={tasks ? press : undefined}
+                  onStart={startTask}
+                  onFocusStart={focusStart}
+                  onPin={tasks ? pinTask : undefined}
+                />
+              );
+            })}
         </div>
       </div>
     </>
@@ -854,23 +1149,6 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks, stor
 }
 
 const NONE: ReadonlySet<string> = new Set();
-
-/** Past this many parts a collapsed row's bar draws its segments with a hairline gap, so they fit. */
-const MANY_PARTS = 30;
-
-/** A collapsed row's bar as one string, so its memoized row paints again only when it changes. */
-function barWords(bar: readonly PartSegment[]): string {
-  return bar.map(({ state, id }) => `${state}:${id ?? ""}`).join(" ");
-}
-
-/** The segments `barWords` wrote. */
-function barSegments(words: string): PartSegment[] {
-  return words.split(" ").map((word) => {
-    const at = word.indexOf(":");
-    const id = word.slice(at + 1);
-    return { state: word.slice(0, at) as PartState, id: id || null };
-  });
-}
 
 /** The last press on a row's Start: the row as it stood, and the app's refusal once it answered. */
 type StartPress = { taskId: string; updatedAt: number; refusal: string | null };
@@ -883,6 +1161,8 @@ function boxKey(row: HTMLElement): string {
 /** One group: its header, and its rows while it is open. Painted by the panel, and by panel.test.tsx. */
 export function Group({
   group,
+  label,
+  bar,
   rows,
   fold,
   collapsed = NONE,
@@ -907,7 +1187,11 @@ export function Group({
   onFocusStart,
   onPin,
 }: {
-  group: PanelGroup;
+  group: ListGroup;
+  /** A tag group's name: its tag's, or No tag. */
+  label?: string | undefined;
+  /** A folded tag group's bar: each task's state and id (`barWords`), drawn under its name. */
+  bar?: string | undefined;
   rows: NowRow[];
   /** The rows with the collapsed tasks' parts left out; all of them when absent. */
   fold?: FoldedRows | undefined;
@@ -953,7 +1237,8 @@ export function Group({
   /** Set where the panel pins tasks: every row offers its pin, and a press pins or unpins it. */
   onPin?: ((task: PanelTaskRow) => void) | undefined;
 }) {
-  const collapsible = !OPEN_BY_DEFAULT.has(group);
+  const tagGroup = isTagGroup(group) ? group : undefined;
+  const collapsible = tagGroup !== undefined || !OPEN_BY_DEFAULT.has(group as PanelGroup);
   const reveal = useInPlaceReveal(open);
   const projects = board.projects;
   // A crew write in another group leaves this group's actual elements
@@ -961,8 +1246,10 @@ export function Group({
   const body = useMemo(() => {
     if (!open) return null;
     const names = { projects };
-    return (fold?.shown ?? rows).map(({ task, depth, home }) => {
-      const controls = rowControlsOf(task, group, home);
+    return (fold?.shown ?? rows).map(({ task, depth, home, group: rowGroup }) => {
+      // A row in a tag group reads as it does in the group it lists in by status.
+      const controls = rowControlsOf(task, rowGroup, home);
+      const navKey = rowNavKey(task.id, tagGroup);
       const start = press !== undefined ? controls.start : null;
       const pressed =
         press?.taskId === task.id && press.updatedAt === task.updatedAt ? press : null;
@@ -972,14 +1259,15 @@ export function Group({
       return (
         <Row
           key={task.id}
-          group={group}
+          group={rowGroup}
           home={home ?? null}
           task={task}
           depth={depth}
           projectName={projectNameOf(names, task)}
           selected={selectedTaskIds.includes(task.id)}
           lit={litTaskId === task.id}
-          isStop={stop === rowNavKey(task.id)}
+          navKey={navKey}
+          isStop={stop === navKey}
           onStop={onStop}
           onOpen={onOpen}
           onPeek={onPeek}
@@ -1008,7 +1296,6 @@ export function Group({
     collapsed,
     onFold,
     board,
-    group,
     projects,
     selectedTaskIds,
     litTaskId,
@@ -1024,21 +1311,48 @@ export function Group({
     onStart,
     onFocusStart,
     onPin,
+    tagGroup,
   ]);
+  // A folded tag group's bar rests and presses as a collapsed task's does.
+  const segments = bar ? barSegments(bar) : [];
+  const taskOf = (id: string) => rows.find((row) => row.task.id === id)?.task;
+  const barRest = useBarRest(segments, {
+    onPart: (header, partId) => {
+      const task = taskOf(partId);
+      if (task) onPeekPart?.(header, task, partId);
+    },
+    onSelf: (header) => onLeave?.(header),
+    onLeave: (header) => onLeave?.(header),
+    onPress: () => onPeek?.(null),
+  });
   return (
     <div data-now-group={group}>
       <button
         type="button"
         data-now-group-header={group}
+        data-now-barred={bar ? "" : undefined}
         // A group that is always open has a label, not a stop.
         data-now-nav={collapsible ? groupNavKey(group) : undefined}
         tabIndex={collapsible && stop === groupNavKey(group) ? 0 : -1}
         aria-expanded={collapsible ? (open ? "true" : "false") : undefined}
-        onClick={collapsible ? onToggle : undefined}
+        onClick={
+          collapsible
+            ? (event) => {
+                const part = bar ? barRest.partAt(event.target) : null;
+                if (part) onOpen(part.id);
+                else onToggle();
+              }
+            : undefined
+        }
         onFocus={collapsible ? () => onStop?.(groupNavKey(group)) : undefined}
+        {...(bar ? barRest.handlers : {})}
       >
-        <span className="label" data-now-group-label="">
-          {PANEL_GROUP_LABELS[group]}
+        <span
+          className={tagGroup ? "label tag" : "label"}
+          data-now-group-label=""
+          data-now-tag-group={tagGroup ? "" : undefined}
+        >
+          {tagGroup ? label : PANEL_GROUP_LABELS[group as PanelGroup]}
         </span>
         {collapsible && (
           // A collapsed group is its count; the two open groups show their
@@ -1062,6 +1376,7 @@ export function Group({
             </span>
           </>
         )}
+        {bar && <PartsBar segments={segments} restedPart={barRest.restedPart} />}
       </button>
       {open && (
         <div
@@ -1088,6 +1403,7 @@ const Row = memo(function Row({
   projectName,
   selected,
   lit,
+  navKey,
   isStop,
   onStop,
   onOpen,
@@ -1118,6 +1434,8 @@ const Row = memo(function Row({
   projectName: string;
   selected: boolean;
   lit: boolean;
+  /** Its stop in the list (`rowNavKey`): its task's, or its task's in a tag group. */
+  navKey: string;
   isStop: boolean;
   onStop?: (key: string) => void;
   onOpen: (taskId: string) => void;
@@ -1146,21 +1464,16 @@ const Row = memo(function Row({
   onFold?: ((ids: readonly string[], on: boolean) => void) | undefined;
 }) {
   paintedRows += 1;
-  // The part the pointer rests on through the bar: undefined while the
-  // pointer is off the row, null on the rest of the row or a segment that
-  // names no part.
-  const hovered = useRef<string | null | undefined>(undefined);
-  const [restedPart, setRestedPart] = useState<number | null>(null);
-  // A press let the rest go: it stays gone until the pointer leaves the row, as before.
-  const pressed = useRef(false);
   const segments = bar ? barSegments(bar) : [];
-  const partAt = (target: EventTarget): { index: number; id: string } | null => {
-    const at = (target as HTMLElement).closest<HTMLElement>("[data-now-part]");
-    if (!at) return null;
-    const index = Number(at.dataset.nowPartIndex);
-    const id = segments[index]?.id ?? null;
-    return id === null ? null : { index, id };
-  };
+  // The rest follows the pointer between the row and its bar's segments: a
+  // segment that names a part rests on that part, the rest of the row, and
+  // a segment that names none, on the task.
+  const barRest = useBarRest(segments, {
+    onPart: (row, partId) => onPeekPart?.(row, task, partId),
+    onSelf: (row) => onPeek?.(row, task),
+    onLeave: (row) => onLeave?.(row),
+    onPress: () => onPeek?.(null),
+  });
   const word = wordOf(task);
   const trailing = rowTrailing(task);
   const place = task.place ? ` · ${task.place.where}` : "";
@@ -1186,40 +1499,17 @@ const Row = memo(function Row({
       data-now-connecting={trailing.connecting ? "" : undefined}
       data-now-catching-up={trailing.catchingUp ? "" : undefined}
       data-now-collapsed={shut ? "" : undefined}
-      data-now-nav={rowNavKey(task.id)}
+      data-now-nav={navKey}
       tabIndex={isStop ? 0 : -1}
       style={{ "--depth": String(depth) } as CSSProperties}
       aria-label={label}
       // A press opens what a rest there rests on (INF-4172): a segment that
       // names a part opens that part, as its own row does; the rest of the
       // row, a segment that names none, and Enter open the task.
-      onClick={(event) => onOpen(partAt(event.target)?.id ?? task.id)}
-      onPointerOver={(event) => {
-        // The rest follows the pointer between the row and its bar's
-        // segments: a segment that names a part rests on that part, the
-        // rest of the row, and a segment that names none, on the task.
-        if (pressed.current) return;
-        const part = partAt(event.target);
-        const partId = part?.id ?? null;
-        if (hovered.current === partId) return;
-        hovered.current = partId;
-        setRestedPart(part?.index ?? null);
-        if (part) onPeekPart?.(event.currentTarget, task, part.id);
-        else onPeek?.(event.currentTarget, task);
-      }}
-      onPointerLeave={(event) => {
-        hovered.current = undefined;
-        pressed.current = false;
-        setRestedPart(null);
-        onLeave?.(event.currentTarget);
-      }}
-      onPointerDown={() => {
-        pressed.current = true;
-        setRestedPart(null);
-        onPeek?.(null);
-      }}
+      onClick={(event) => onOpen(barRest.partAt(event.target)?.id ?? task.id)}
+      {...barRest.handlers}
       onFocus={(event: FocusEvent<HTMLButtonElement>) => {
-        onStop?.(rowNavKey(task.id));
+        onStop?.(navKey);
         onFocusRow?.(event.currentTarget, task);
       }}
       onBlur={(event) => onBlurRow?.(event.currentTarget)}
@@ -1241,25 +1531,7 @@ const Row = memo(function Row({
       {(group === "queued" || home === "queued") && task.queueWait && task.status === "open" && (
         <span data-now-queue-wait="">{task.queueWait.line}</span>
       )}
-      {bar && (
-        <span
-          data-now-bar=""
-          aria-hidden="true"
-          data-now-many={segments.length > MANY_PARTS ? "" : undefined}
-        >
-          {segments.map(({ state, id }, index) => (
-            <i
-              // The bar is the parts in order; a part it cannot name has no identity here.
-              // biome-ignore lint/suspicious/noArrayIndexKey: one segment per part, in order
-              key={index}
-              data-now-part={state}
-              data-now-part-index={index}
-              data-now-part-id={id ?? undefined}
-              data-now-part-rested={restedPart === index ? "" : undefined}
-            />
-          ))}
-        </span>
-      )}
+      {bar && <PartsBar segments={segments} restedPart={barRest.restedPart} />}
       {trailing.outOfReach && (
         // The row names neither its project nor its computer; it says only
         // why its computer cannot take work now, and a long title never cuts it.
@@ -1271,7 +1543,7 @@ const Row = memo(function Row({
   );
   if (startLabel === undefined && !onPin && parts === undefined && !folds) return row;
   const focusControl = (control: HTMLElement, row: HTMLElement, at: PanelTaskRow) => {
-    onStop?.(rowNavKey(at.id));
+    onStop?.(navKey);
     onFocusStart?.(control, row, at);
   };
   return (

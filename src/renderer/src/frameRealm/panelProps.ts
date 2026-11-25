@@ -287,6 +287,11 @@ export function frameRail(
         .action("rail.show", why === undefined ? shown : { shown, why })
         .catch((error: unknown) => warn("rail.show:", error));
     },
+    refuse: (command, why) => {
+      bridge
+        .action("rail.refuse", { command, why })
+        .catch((error: unknown) => warn("rail.refuse:", error));
+    },
   };
 }
 

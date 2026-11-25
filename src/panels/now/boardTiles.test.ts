@@ -10,6 +10,8 @@ import {
   boardLaneOf,
   boardNavMove,
   boardPageOf,
+  boardTagChipsOf,
+  boardTagRowsOf,
   boardTilesOf,
   clampPage,
   EARLIER_SEARCH_LIMIT,
@@ -530,5 +532,84 @@ describe("the board's arrows", () => {
   it("moves on no other key", () => {
     expect(move("q1", "Enter")).toBeNull();
     expect(move("q1", "a")).toBeNull();
+  });
+});
+
+/**
+ * The board's tag row and its By tag view (the approved plan for tags on
+ * the task board: whole counts, a two-tag task in both rows, the project
+ * chip and Find narrowing them).
+ */
+describe("the board's tags", () => {
+  const tagOf = (id: string, name: string) => ({
+    id,
+    name,
+    description: `Tasks about ${name}.`,
+    revision: 1,
+    tasks: 0,
+  });
+  const carried = (...tags: [string, string][]) =>
+    tags.map(([id, name]) => ({ id, name, by: "captain" as const }));
+  const bug: [string, string] = ["tag-b", "bug"];
+  const ios: [string, string] = ["tag-i", "ios"];
+  const tagged = project({ tags: [tagOf(...bug), tagOf("tag-d", "docs"), tagOf(...ios)] });
+  const other = project({ id: "proj-r2", key: "TID", name: "tide" });
+  const tasks = [
+    task({ id: "c", key: "FI3-1", waitingCardId: "card-1", tags: carried(bug) }),
+    task({ id: "b", key: "FI3-2", title: "Crash on a photo", tags: carried(bug, ios) }),
+    task({ id: "q", key: "FI3-3", startPolicy: "when-ready", tags: carried(ios) }),
+    task({ id: "w", key: "FI3-4", status: "active", activity: "running", title: "Crash at start" }),
+    task({ id: "d", key: "FI3-5", status: "done", closedAt: 5, tags: carried(bug) }),
+    task({ id: "t", key: "TID-1", projectId: "proj-r2" }),
+  ];
+  const current = board(tasks, [tagged, other]);
+  const table = (filter: { query: string; projectId: string | null }) =>
+    boardTagRowsOf(current, filter).map((row) => [
+      row.name,
+      row.counts.waiting,
+      row.counts.backlog,
+      row.counts.queued,
+      row.counts.working,
+      row.counts.landed,
+    ]);
+
+  it("counts each tag and No tag in Waiting on you and the four lanes, a two-tag task in both rows", () => {
+    expect(table(noFilter)).toEqual([
+      // name, waiting, backlog, queued, working, done
+      ["bug", 1, 1, 0, 0, 1],
+      ["docs", 0, 0, 0, 0, 0],
+      ["ios", 0, 1, 1, 0, 0],
+      ["No tag", 0, 1, 0, 1, 0],
+    ]);
+  });
+
+  it("narrows its counts by the project chip and Find", () => {
+    expect(table({ query: "", projectId: "proj-r1" })).toContainEqual(["No tag", 0, 0, 0, 1, 0]);
+    expect(table({ query: "crash", projectId: null })).toEqual([
+      ["bug", 0, 1, 0, 0, 0],
+      ["docs", 0, 0, 0, 0, 0],
+      ["ios", 0, 1, 0, 0, 0],
+      ["No tag", 0, 0, 0, 1, 0],
+    ]);
+  });
+
+  it("offers All tags, each tag even at 0, then No tag, with what a press would show", () => {
+    expect(boardTagChipsOf(current, noFilter).map((chip) => [chip.label, chip.count])).toEqual([
+      ["All tags", null],
+      ["bug", 3],
+      ["docs", 0],
+      ["ios", 2],
+      ["No tag", 2],
+    ]);
+    expect(boardTagChipsOf(current, { query: "", projectId: "proj-r2" })).toEqual([]);
+    expect(boardTagRowsOf(current, { query: "", projectId: "proj-r2" })).toEqual([]);
+  });
+
+  it("a pressed tag narrows every lane", () => {
+    const tiles = boardTilesOf(current, { ...noFilter, tag: "tag-b" });
+    expect(keys(tiles, "waiting")).toEqual(["FI3-1"]);
+    expect(keys(tiles, "backlog")).toEqual(["FI3-2"]);
+    expect(keys(tiles, "queued")).toEqual([]);
+    expect(keys(tiles, "landed")).toEqual(["FI3-5"]);
   });
 });

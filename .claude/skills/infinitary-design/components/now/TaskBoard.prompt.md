@@ -11,7 +11,7 @@ Open task board is a header button of the Tasks panel (`Panel.prompt.md`, "Heade
 Its label is "Open task board" with its key, `⌘B`, drawn after the words.
 A press opens the board at the front of the card stack, or brings the open board forward; there is never a second board.
 The board is a panel's card on the stack: it pages with the cards, it is never a card the first mate wrote or a feed line, and Hide (the shared minus in the card's chrome) or Esc puts it away.
-While it is open it keeps Find, view, each lane's page, selected tile and scroll across paging; after Hide the next board starts fresh on the Board view.
+While it is open it keeps Find, its tag, view, each lane's page, selected tile and scroll across paging; after Hide the next board starts fresh on the Board view.
 Its project chip is the window's project focus (`components/core/ProjectFocus`), so it opens on the focused project and Hide keeps it.
 It is a wide card of `fill` height: up to 800px, giving way to the docks like any wide card, the docks folding only when the stage is under 560px, and as tall as a card may be.
 Under about 700px the columns scroll sideways with the body; text never shrinks.
@@ -25,7 +25,11 @@ The surface is the card stack's own, as tall as a card may be, under the panel c
   Chips are pills in mono `--text-xs`: All projects, then each project's key, shown only when two or more projects have tiles; the pressed one is `--accent-dim` with an `--accent` border.
   Find is a small input ("Find a task") that narrows this board alone by key or title, never the panel; the chip and Find narrow every lane before it is paged.
   While Find on task board has a key, the key sits at the empty field's far end in mono `--text-sm` `--fg-3`, as the placeholder's partner, and goes once the field has focus or words.
-- **The views**, over a `--line-1` hairline: Board, Backlog, Done · 7d, and Earlier matches only while Find has words - text buttons in `--text-sm` `--fg-2`, each list's whole count after it in mono `--text-xs` `--fg-3` (Backlog also `· N new` for crew filings not yet opened, Earlier matches a `+` when the search may have been cut); the pressed one is `--accent-dim` with an `--accent` border, `--fg-1`.
+- **Its tags**, under the project chips and Find, inside the same hairline, only while one project's tags apply (the pressed project, or the only project with tags): All tags, each tag alphabetically with its count, then No tag, in the project chips' look; every tag shows, even at 0.
+  A count is how many tiles of Waiting on you and the four lanes pressing it would show, after the project chip and Find.
+  The pressed tag narrows every view, as the chip and Find do; it is the board's own, separate from the Tasks panel's, and stays until let go (All tags, or a project that lacks it).
+  The row is one Tab stop named "Tags": ← and → move along it, and Enter or Space presses.
+- **The views**, over a `--line-1` hairline: Board, Backlog, Done · 7d, By tag while one project's tags apply, and Earlier matches only while Find has words - text buttons in `--text-sm` `--fg-2`, each list's whole count after it in mono `--text-xs` `--fg-3` (Backlog also `· N new` for crew filings not yet opened, Earlier matches a `+` when the search may have been cut); the pressed one is `--accent-dim` with an `--accent` border, `--fg-1`.
   Board opens first.
   Backlog and Done · 7d show the key of Show the backlog and Show done tasks after their count while it has one, as a text button's key is drawn (`Button.prompt.md`): quiet mono `--text-sm` at six tenths of the button's color; Board has no command, so no key.
 - **Waiting on you**, above every view: its micro label and count, "Cards waiting for you" in `--text-sm` `--fg-3` at the right, and Show all N while more than three wait; then at most three one-line rows (as a list's rows), or "Nothing waits on you".
@@ -37,6 +41,11 @@ The surface is the card stack's own, as tall as a card may be, under the panel c
   Columns sort by priority then oldest first.
   Done · 7d is not a column; its view button opens it as a list, newest first.
   A child sits under its parent, indented `--space-3` per level, only when both are in the same lane.
+- **By tag**: a table of each tag of the project, then No tag, against Waiting on you, Backlog, Queued, Working and Done · 7d, named "Tasks by tag".
+  Its head row is the five micro labels, right-aligned over their numbers; each row starts with the tag in mono `--text-xs` `--fg-2`, then its counts in `--text-base` tabular figures, a 0 in `--fg-3`.
+  Its counts are whole, never paged: a task with two tags counts in both rows, and the project chip and Find narrow it.
+  Its rows are one list: ↑ and ↓ move, Home and End go to its ends, and Enter or a click opens the Board view with that tag pressed; a row is `--bg-3` on hover and draws the focus ring inset.
+  Opening By tag lets go of the board's tag, and the tag row steps aside while the table shows.
 - **A list** - Backlog, Done · 7d, Waiting on you, Dropped · 7d (with "Read-only"), Earlier matches: its micro label and count with Previous and Next at the right, a page of twenty one-line rows, then over a hairline its range ("21–40 of 300") and Previous and Next again; the rows scroll between head and foot while the list has the room.
   Earlier matches may carry one `--text-sm` `--fg-3` line under its head: looking for earlier tasks, that the search stops at its newest matches and narrower words help, or that earlier results are unavailable right now.
 - Previous, Next and Show all are small quiet buttons, `--text-sm` `--fg-2` with a `--line-1` border and `--radius-m`, `--bg-3` on hover; at a lane's end Previous or Next stays, at half opacity, so focus stays on it.
@@ -75,7 +84,8 @@ The tile focus is on is the selected one, and while the board is shown it points
 The tiles and rows are one Tab stop after the board's own row and views: ↑ ↓ within a lane and onto its other pages, Home and End to the lane's real ends, turning its page and bringing the tile into view, ← → to the nearest drawn tile in the next column that has one, ↓ from Waiting on you's last row into the first column and ↑ from a lane's top back to it.
 Space opens the tile's ⋯ menu.
 Esc closes the menu or the summary, then lets go of a move that asks, then clears Find, then hides the board.
-Find on task board, Show the backlog, Show done tasks, Show dropped tasks and Move the selected task are found by name in command search.
+Find on task board, Show the backlog, Show done tasks, Show dropped tasks, Show tasks by tag and Move the selected task are found by name in command search.
+Show tasks by tag opens the board on its By tag view; while no tags apply it stays listed and says why it cannot run.
 Once a person gives one a key in Settings → Keyboard, the control that does the same shows it (Find, the views and Dropped above), and every tile's ⋯ names Move the selected task's key after its words in its label, since the command opens the selected tile's menu.
 When a live change takes the focused tile away, focus goes to the task where the view draws it, or the nearest row, and the live line says where it went.
 

@@ -53,6 +53,7 @@ import {
   dropAskOf,
   moveContextOf,
 } from "../boardMoves";
+import { BoardTagChips, BoardTagTable } from "../boardTags";
 import {
   BOARD_COLUMN_PAGE,
   BOARD_EMPTY_WORDS,
@@ -71,6 +72,8 @@ import {
   boardEarlierOf,
   boardNavMove,
   boardPageOf,
+  boardTagChipsOf,
+  boardTagRowsOf,
   boardTilesOf,
   newInBacklog,
   type TilePoint,
@@ -124,6 +127,8 @@ import * as m from "../messages.generated";
 /** What the board keeps on its card while it pages: its place, and the last ask it answered. */
 type Place = {
   query: string;
+  /** The board's own pressed tag, apart from the Tasks panel's; null is All tags. */
+  tagId: string | null;
   view: BoardView;
   /** Each lane's page, from 0, as its view last showed it. */
   pages: Partial<Record<PageKey, number>>;
@@ -134,7 +139,15 @@ type Place = {
   answered: number;
 };
 
-const VIEWS: readonly BoardView[] = ["board", "backlog", "landed", "waiting", "dropped", "earlier"];
+const VIEWS: readonly BoardView[] = [
+  "board",
+  "backlog",
+  "landed",
+  "waiting",
+  "dropped",
+  "earlier",
+  "tags",
+];
 const LANES: readonly BoardLane[] = [
   "waiting",
   "backlog",
@@ -156,6 +169,7 @@ const pageKeyOf = (view: BoardView, lane: BoardLane): PageKey =>
 
 const FRESH: Place = {
   query: "",
+  tagId: null,
   view: "board",
   pages: {},
   selectedTaskId: null,
@@ -176,6 +190,7 @@ function placeOf(kept: StoreValue): Place {
   }
   return {
     query: typeof k.query === "string" ? k.query : "",
+    tagId: typeof k.tagId === "string" ? k.tagId : null,
     view: VIEWS.includes(k.view as BoardView) ? (k.view as BoardView) : "board",
     pages,
     selectedTaskId: typeof k.selectedTaskId === "string" ? k.selectedTaskId : null,
@@ -188,14 +203,15 @@ function placeOf(kept: StoreValue): Place {
 }
 
 /** Where a key that put the board up asks focus to go, and which view it opens. */
-type FocusAsk = "tiles" | "find" | "dropped" | "menu" | "backlog" | "done";
+type FocusAsk = "tiles" | "find" | "dropped" | "menu" | "backlog" | "done" | "tags";
 
-const ASKS: readonly FocusAsk[] = ["tiles", "find", "dropped", "menu", "backlog", "done"];
+const ASKS: readonly FocusAsk[] = ["tiles", "find", "dropped", "menu", "backlog", "done", "tags"];
 /** The view a key's ask opens; the others keep the view the board is on. */
 const ASK_VIEWS: Partial<Record<FocusAsk, BoardView>> = {
   dropped: "dropped",
   backlog: "backlog",
   done: "landed",
+  tags: "tags",
 };
 
 function focusAskOf(data: StoreValue): FocusAsk | null {
@@ -413,17 +429,39 @@ export default function TaskBoardCard({
         : null,
     [board, found, typed, projectId],
   );
+  // The tag row and the By tag view, while one project's tags apply. A
+  // pressed tag the project no longer has is let go.
+  const tagChips = useMemo(
+    () => (board ? boardTagChipsOf(board, { query: place.query, projectId }) : []),
+    [board, place.query, projectId],
+  );
+  const tagRows = useMemo(
+    () => (board ? boardTagRowsOf(board, { query: place.query, projectId }) : []),
+    [board, place.query, projectId],
+  );
+  const heldTag =
+    place.tagId !== null && tagChips.some((chip) => chip.id === place.tagId) ? place.tagId : null;
+  useEffect(() => {
+    if (board && place.tagId !== null && heldTag === null) patch({ tagId: null, pages: {} });
+  }, [board, place.tagId, heldTag, patch]);
+
+  // Earlier matches is a view only while Find has words, and By tag only while tags apply.
+  const view: BoardView =
+    (place.view === "earlier" && !typed) || (place.view === "tags" && tagRows.length === 0)
+      ? "board"
+      : place.view;
   const listed = useMemo(() => {
     if (!board) return new Map<BoardLane, BoardTile[]>();
-    const lanes = boardTilesOf(board, { query: place.query, projectId });
+    const lanes = boardTilesOf(board, {
+      query: place.query,
+      projectId,
+      tag: view === "tags" ? null : heldTag,
+    });
     lanes.set("earlier", earlier?.tiles ?? []);
     return lanes;
-  }, [board, place.query, projectId, earlier]);
-
-  // Earlier matches is a view only while Find has words.
-  const view: BoardView = place.view === "earlier" && !typed ? "board" : place.view;
+  }, [board, place.query, projectId, heldTag, view, earlier]);
   const columnsOfView: readonly BoardLane[] = useMemo(
-    () => (view === "board" ? BOARD_FOCUS_COLUMNS : [view]),
+    () => (view === "board" ? BOARD_FOCUS_COLUMNS : view === "tags" ? [] : [view]),
     [view],
   );
 
@@ -461,7 +499,8 @@ export default function TaskBoardCard({
   // What this view draws: up to three of Waiting on you above it (none in
   // its own list), then its lanes, a page each. A lane turns to the page
   // that holds a move asking on it.
-  const band = view === "waiting" ? [] : lane("waiting").slice(0, BOARD_WAITING_SHOWN);
+  const band =
+    view === "waiting" || view === "tags" ? [] : lane("waiting").slice(0, BOARD_WAITING_SHOWN);
   const drawn: DrawnLane[] = columnsOfView.map((name) => {
     const size = view === "board" ? BOARD_COLUMN_PAGE : BOARD_LIST_PAGE;
     const whole = lane(name);
@@ -542,7 +581,15 @@ export default function TaskBoardCard({
   const showView = (next: BoardView) => {
     focusedAt.current = null;
     follow.current = null;
-    if (next !== place.view) patch({ view: next });
+    // Opening By tag lets go of the board's tag: its table counts every tag.
+    if (next === "tags") patch({ view: next, tagId: null, pages: {} });
+    else if (next !== place.view) patch({ view: next });
+  };
+  /** A press on a tag chip, or a By tag row: the Board view with that tag, or All tags. */
+  const pressTag = (tagId: string | null, view: BoardView = place.view) => {
+    focusedAt.current = null;
+    follow.current = null;
+    patch({ tagId, view, pages: {} });
   };
   const setPage = (name: BoardLane, page: number) => {
     focusedAt.current = null;
@@ -619,6 +666,13 @@ export default function TaskBoardCard({
   useEffect(() => {
     if (!asked) return;
     setAsked(null);
+    if (asked === "tags") {
+      focusWhenAble(
+        () =>
+          rootRef.current?.querySelector<HTMLElement>('[data-board-tag-row][tabindex="0"]') ?? null,
+      );
+      return;
+    }
     // A key that opens a list lands on its rows: the selected one, else the first.
     const rows = ASK_VIEWS[asked] ? (drawn[0]?.page.tiles ?? []) : [];
     const landing = rows.some((row) => row.task.id === selected)
@@ -1457,6 +1511,9 @@ export default function TaskBoardCard({
           {findKey && <CommandKey target="find" drawn={findKey.keys} />}
         </span>
       </div>
+      {view !== "tags" && (
+        <BoardTagChips chips={tagChips} held={heldTag} onPress={(tagId) => pressTag(tagId)} />
+      )}
       <nav className="fm-board-views" data-board-views="" aria-label={m.nowPanelBoardViews()}>
         {viewTab("board", m.nowPanelBoardViewBoard())}
         {viewTab(
@@ -1465,6 +1522,7 @@ export default function TaskBoardCard({
           `${lane("backlog").length}${fresh > 0 ? ` · ${m.nowPanelBoardNewCount({ count: fresh })}` : ""}`,
         )}
         {viewTab("landed", m.nowPanelBoardViewLanded(), String(lane("landed").length))}
+        {tagRows.length > 0 && viewTab("tags", m.nowPanelGroupByTag())}
         {typed && viewTab("earlier", m.nowPanelBoardViewEarlier(), earlierCount)}
       </nav>
       {/* biome-ignore lint/a11y/noStaticElementInteractions: the arrows move between the tiles inside */}
@@ -1483,7 +1541,7 @@ export default function TaskBoardCard({
           letGoIfMoved();
         }}
       >
-        {view !== "waiting" && (
+        {view !== "waiting" && view !== "tags" && (
           <>
             <div
               className="fm-board-lane fm-board-band"
@@ -1515,7 +1573,9 @@ export default function TaskBoardCard({
             <hr className="fm-board-rule" />
           </>
         )}
-        {view === "board" ? (
+        {view === "tags" ? (
+          <BoardTagTable rows={tagRows} onOpen={(tagId) => pressTag(tagId, "board")} />
+        ) : view === "board" ? (
           <div className="fm-board-columns">{drawn.map(column)}</div>
         ) : (
           drawn.map(list)
@@ -1539,12 +1599,15 @@ export default function TaskBoardCard({
             {DROP_TASK_LABEL}
           </div>
         )}
-        <span className="fm-board-hint" data-board-hint="">
-          {filled(m.nowPanelBoardHint({ enter: fill(0), space: fill(1) }), [
-            <KeyCap key="enter">{"Enter"}</KeyCap>,
-            <KeyCap key="space">{"Space"}</KeyCap>,
-          ])}
-        </span>
+        {/* The tiles' keys; By tag draws no tiles, and its rows open with Enter alone. */}
+        {view !== "tags" && (
+          <span className="fm-board-hint" data-board-hint="">
+            {filled(m.nowPanelBoardHint({ enter: fill(0), space: fill(1) }), [
+              <KeyCap key="enter">{"Enter"}</KeyCap>,
+              <KeyCap key="space">{"Space"}</KeyCap>,
+            ])}
+          </span>
+        )}
       </div>
       <p
         className="fm-board-live"
@@ -1579,6 +1642,7 @@ export default function TaskBoardCard({
 const VIEW_COMMANDS: Partial<Record<BoardView, string>> = {
   backlog: "board-backlog",
   landed: "board-done",
+  tags: "board-tags",
 };
 
 /**

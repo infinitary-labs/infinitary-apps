@@ -258,6 +258,23 @@ describe("a panel's commands", () => {
     expect(panelCommandRefusal(pluginHost, find, false)).toBeNull();
   });
 
+  // The Tasks panel's Filter tasks by tag and Show tasks by tag say why they
+  // cannot run while no tags show (the approved plan for tags in Tasks).
+  it("say why they cannot run while their own page refuses them, until it takes that back", () => {
+    const find = panelCommandId("reading", "find");
+    const open = panelCommandId("reading", "open");
+    content.set("reading");
+    panelRail.refuse("reading", { command: "open", why: "Choose a project to see its tags" });
+    expect(panelCommandRefusal(pluginHost, open, false)).toBe("Choose a project to see its tags");
+    expect(panelCommandRefusal(pluginHost, find, false)).toBeNull();
+    panelRail.refuse("reading", { command: "open", why: null });
+    expect(panelCommandRefusal(pluginHost, open, false)).toBeNull();
+    expect(() => panelRail.refuse("reading", { command: "open", why: "x".repeat(61) })).toThrow(
+      "rail.refuse",
+    );
+    panelRail.forget("reading");
+  });
+
   it("run their card at the front, with focus asked for, or press their button into the panel", async () => {
     useShellStore.setState({ view: "settings" });
     const focused: string[] = [];

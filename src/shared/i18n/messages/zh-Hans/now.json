@@ -1,4 +1,5 @@
 {
+  "nowPanelAllTags": "所有标签",
   "nowPanelBoardAllProjects": "所有项目",
   "nowPanelBoardAnotherTask": "另一个任务",
   "nowPanelBoardAskQueue": "要自动开始吗？{key} 可能会立即开始，并消耗你的套餐额度。",
@@ -111,6 +112,7 @@
   "nowPanelBoardStartLabel": "开始",
   "nowPanelBoardStartNowLabel": "立即开始",
   "nowPanelBoardStartedBacklogText": "它这一轮会停止，工作会保留。它会等你点“开始”。",
+  "nowPanelBoardTagsTable": "按标签分组的任务",
   "nowPanelBoardTileActions": "{key} 的操作",
   "nowPanelBoardTileFoundOn": "在 {key} 中发现",
   "nowPanelBoardTilePartOf": "{key} 的一部分",
@@ -126,8 +128,12 @@
   "nowPanelCloseSearch": "关闭搜索",
   "nowPanelFilterLabel": "筛选任务",
   "nowPanelFilterPlaceholder": "编号或标题",
+  "nowPanelGroupByStatus": "按状态",
+  "nowPanelGroupByTag": "按标签",
   "nowPanelGroupEarlier": "更早",
   "nowPanelGroupPinned": "已固定",
+  "nowPanelGroupTasks": "任务分组",
+  "nowPanelNoTag": "无标签",
   "nowPanelNoTasks": "还没有任务",
   "nowPanelRowAway": "无法联系",
   "nowPanelRowBatch": "批量",
@@ -163,5 +169,9 @@
   "nowPanelSummaryWorking": {
     "plural": "count",
     "other": "{count} 个进行中"
-  }
+  },
+  "nowPanelTags": "标签",
+  "nowPanelTagsChooseProject": "选择一个项目以查看它的标签",
+  "nowPanelTagsNoProject": "还没有项目有标签",
+  "nowPanelTagsNoneYet": "{project} 还没有标签"
 }

@@ -5,13 +5,16 @@ import { taskMovesOf } from "../../shared/taskMoves";
 import {
   earlierRowsOf,
   foldRows,
+  groupingOf,
   hasSingleRegisteredRepoProject,
   isPinned,
   leftOutDone,
+  NO_TAG,
   type NowRow,
   newestListedWrite,
   newFilingCount,
   onRail,
+  openTagGroupsOf,
   partsBarOf,
   partsCountOf,
   projectChipsOf,
@@ -20,6 +23,9 @@ import {
   rowsOf,
   rowTrailing,
   summaryOf,
+  tagChipsOf,
+  tagGroupBarOf,
+  tagGroupsOf,
   wordOf,
 } from "./rows";
 
@@ -183,7 +189,7 @@ describe("the Tasks panel's rows", () => {
     expect(keys({ query: "row chrome", projectId: null })).toEqual(["FI3-12"]);
     expect(keys({ query: "", projectId: "scratch" })).toEqual(["SCR-4"]);
     expect(projectChipsOf(current)).toEqual([
-      { id: null, key: "all" },
+      { id: null, key: "All projects" },
       { id: "proj-r1", key: "FI3" },
       { id: "scratch", key: "SCR" },
     ]);
@@ -933,5 +939,146 @@ describe("a task with parts (INF-3823)", () => {
     const folded = foldRows(rows, new Set(["plan"]));
     expect(folded.shown.map((row) => row.task.id)).toEqual(["plan", "ask"]);
     expect(folded.parentRowOf.get("ask")).toBe("plan");
+  });
+});
+
+/**
+ * Filtering and grouping by tag (the approved plan for tags in Tasks: one
+ * project's tags at a time, one tag pressed, groups by tag).
+ */
+describe("the Tasks panel's tags", () => {
+  const tagOf = (id: string, name: string) => ({
+    id,
+    name,
+    description: `Tasks about ${name}.`,
+    revision: 1,
+    tasks: 0,
+  });
+  const carried = (...tags: [string, string][]) =>
+    tags.map(([id, name]) => ({ id, name, by: "captain" as const }));
+  const bug: [string, string] = ["tag-b", "bug"];
+  const docs: [string, string] = ["tag-d", "docs"];
+  const ios: [string, string] = ["tag-i", "ios"];
+  // The board hands a project's tags in alphabetical order (`byTagName`).
+  const tagged = project({ tags: [tagOf(...bug), tagOf(...docs), tagOf(...ios)] });
+  const open = { status: "open" as const, activity: null };
+  const current = board({
+    projects: [tagged, scratch],
+    tasks: [
+      task({ id: "w", key: "FI3-1", title: "Fix the crash", tags: carried(bug, ios) }),
+      task({ ...open, id: "q", key: "FI3-2", title: "Fix the login", tags: carried(bug) }),
+      task({ ...open, id: "b", key: "FI3-3", startPolicy: "on-request", tags: carried(ios) }),
+      task({ ...open, id: "n", key: "FI3-4", title: "Tidy the settings" }),
+      task({ id: "a", key: "FI3-5", waitingCardId: "card-a", tags: carried(bug) }),
+      task({ id: "p", key: "FI3-6", pinnedAt: 10, tags: carried(bug) }),
+      task({ id: "s", key: "SCR-1", projectId: "scratch", title: "A note" }),
+      task({
+        id: "d",
+        key: "FI3-7",
+        status: "done",
+        activity: null,
+        closedAt: 5,
+        tags: carried(bug),
+      }),
+    ],
+  });
+  const chips = (filter: { query: string; projectId: string | null }) =>
+    tagChipsOf(current, filter).map((chip) => [chip.name, chip.count]);
+
+  it("lists All tags, each tag alphabetically even at 0, then No tag, counting open tasks a press would list", () => {
+    // Open tasks: bug carries w, q, a, p; docs none; ios w, b; none n and,
+    // with no project in focus, the other project's SCR-1. Done work never counts.
+    expect(chips(noFilter)).toEqual([
+      ["All tags", null],
+      ["bug", 4],
+      ["docs", 0],
+      ["ios", 2],
+      ["No tag", 2],
+    ]);
+  });
+
+  it("counts follow the project in focus and the typed words", () => {
+    expect(chips({ query: "", projectId: "proj-r1" })).toContainEqual(["No tag", 1]);
+    expect(chips({ query: "fix", projectId: null })).toEqual([
+      ["All tags", null],
+      ["bug", 2],
+      ["docs", 0],
+      ["ios", 1],
+      ["No tag", 0],
+    ]);
+  });
+
+  it("shows no tag row unless one project's tags apply", () => {
+    const second = project({ id: "proj-r2", key: "SEC", tags: [tagOf("tag-x", "idea")] });
+    const two = board({ projects: [tagged, second], tasks: current.tasks });
+    expect(tagChipsOf(two, noFilter)).toEqual([]);
+    expect(tagChipsOf(two, { query: "", projectId: "proj-r2" }).map((chip) => chip.name)).toEqual([
+      "All tags",
+      "idea",
+      "No tag",
+    ]);
+    expect(tagChipsOf(current, { query: "", projectId: "scratch" })).toEqual([]);
+  });
+
+  it("a pressed tag narrows every group, Earlier matches included", () => {
+    const keys = (tag: string) =>
+      [...rowsOf(current, { ...noFilter, tag }).values()].flat().map((row) => row.task.key);
+    expect(new Set(keys("tag-i"))).toEqual(new Set(["FI3-1", "FI3-3"]));
+    expect(new Set(keys(NO_TAG))).toEqual(new Set(["FI3-4", "SCR-1"]));
+    const older = [
+      task({
+        id: "o1",
+        key: "FI3-90",
+        title: "Old fix",
+        status: "done",
+        activity: null,
+        tags: carried(bug),
+      }),
+      task({ id: "o2", key: "FI3-91", title: "Old fix too", status: "done", activity: null }),
+    ];
+    const filter = { query: "old fix", projectId: null, tag: "tag-b" };
+    expect(
+      earlierRowsOf(older, rowsOf(current, filter), filter).map((row) => row.task.key),
+    ).toEqual(["FI3-90"]);
+  });
+
+  it("groups by tag alphabetically then No tag, working before queued before backlog, a two-tag task under both", () => {
+    const groups = tagGroupsOf(rowsOf(current, noFilter), tagged);
+    expect(groups.map((group) => [group.group, group.name])).toEqual([
+      ["tag:tag-b", "bug"],
+      ["tag:tag-i", "ios"],
+      ["tag:none", "No tag"],
+    ]);
+    // Waiting on you (FI3-5), Pinned (FI3-6) and Done (FI3-7) keep their own rows.
+    expect(groups.map((group) => group.rows.map((row) => [row.task.key, row.group]))).toEqual([
+      [
+        ["FI3-1", "working"],
+        ["FI3-2", "queued"],
+      ],
+      [
+        ["FI3-1", "working"],
+        ["FI3-3", "backlog"],
+      ],
+      [
+        ["SCR-1", "working"],
+        ["FI3-4", "queued"],
+      ],
+    ]);
+  });
+
+  it("draws a folded tag group's bar with working tasks in ember and the rest as outlines", () => {
+    const [bugs] = tagGroupsOf(rowsOf(current, noFilter), tagged);
+    expect(bugs && tagGroupBarOf(bugs)).toEqual([
+      { state: "working", id: "w" },
+      { state: "rest", id: "q" },
+    ]);
+  });
+
+  it("reads the kept Group tasks choice and folds, By status when nothing was kept", () => {
+    expect(groupingOf(undefined)).toBe("status");
+    expect(groupingOf("tag")).toBe("tag");
+    expect(groupingOf("priority")).toBe("status");
+    expect(openTagGroupsOf(["tag:tag-b", "working", 3])).toEqual(["tag:tag-b"]);
+    expect(openTagGroupsOf(null)).toEqual([]);
   });
 });

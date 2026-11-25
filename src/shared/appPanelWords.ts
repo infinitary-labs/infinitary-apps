@@ -43,6 +43,15 @@ export const APP_PANEL_COMMAND_WORDS: Readonly<
     label: m.commandPanelNowExpandParts,
     words: m.commandPanelNowExpandPartsWords,
   },
+  "panel:now/tag-filter": {
+    label: m.commandPanelNowTagFilter,
+    words: m.commandPanelNowTagFilterWords,
+  },
+  "panel:now/group": { label: m.commandPanelNowGroup, words: m.commandPanelNowGroupWords },
+  "panel:now/board-tags": {
+    label: m.commandPanelNowBoardTags,
+    words: m.commandPanelNowBoardTagsWords,
+  },
   "panel:now/board-move": {
     label: m.commandPanelNowBoardMove,
     words: m.commandPanelNowBoardMoveWords,

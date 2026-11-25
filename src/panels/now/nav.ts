@@ -1,4 +1,4 @@
-import type { PanelGroup } from "./rows";
+import type { ListGroup } from "./rows";
 
 /**
  * The Tasks list's keys (docs/keyboard.md, "Lists and Settings"): the list
@@ -11,29 +11,36 @@ import type { PanelGroup } from "./rows";
  */
 
 export type NowNavItem =
-  | { kind: "group"; key: string; group: PanelGroup; open: boolean; taskIds: readonly string[] }
-  | { kind: "row"; key: string; group: PanelGroup };
+  | { kind: "group"; key: string; group: ListGroup; open: boolean; taskIds: readonly string[] }
+  | { kind: "row"; key: string; group: ListGroup };
 
 export type NavGroup = {
-  group: PanelGroup;
+  group: ListGroup;
   open: boolean;
   collapsible: boolean;
   taskIds: readonly string[];
+  /** Grouped by tag: its rows' stops are their tasks' in this group (`rowNavKey`). */
+  byTag?: boolean;
 };
 
-export const groupNavKey = (group: PanelGroup): string => `group:${group}`;
+export const groupNavKey = (group: ListGroup): string => `group:${group}`;
 /**
  * A row's stop is its task's, whatever group lists it: a task that moves to
  * another group (queued to working as its crewmate begins) keeps its stop.
+ * Grouped by tag, a task with two tags lists in two groups, so a row there
+ * is its task's in its tag group.
  */
-export const rowNavKey = (taskId: string): string => `row:${taskId}`;
+export const rowNavKey = (taskId: string, tagGroup?: string): string =>
+  tagGroup === undefined ? `row:${taskId}` : `row:${taskId}@${tagGroup}`;
 
 /** Every stop in the list, in the order the arrows move through them. */
 export function nowNavItems(groups: readonly NavGroup[]): NowNavItem[] {
   const items: NowNavItem[] = [];
-  for (const { group, open, collapsible, taskIds } of groups) {
+  for (const { group, open, collapsible, taskIds, byTag } of groups) {
     if (collapsible) items.push({ kind: "group", key: groupNavKey(group), group, open, taskIds });
-    if (open) for (const id of taskIds) items.push({ kind: "row", key: rowNavKey(id), group });
+    if (open)
+      for (const id of taskIds)
+        items.push({ kind: "row", key: rowNavKey(id, byTag ? group : undefined), group });
   }
   return items;
 }
@@ -52,7 +59,7 @@ export function rovingKey(items: readonly NowNavItem[], last: string | null): st
   return holder?.key ?? items[0]?.key ?? null;
 }
 
-export type NowNavMove = { focus: string } | { toggle: PanelGroup } | null;
+export type NowNavMove = { focus: string } | { toggle: ListGroup } | null;
 
 export function nowNavMove(items: readonly NowNavItem[], from: string, key: string): NowNavMove {
   const at = items.findIndex((item) => item.key === from);

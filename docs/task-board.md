@@ -10,10 +10,11 @@ The same folder added from elsewhere does everything below under its own id (`te
 | Piece | Where |
 | --- | --- |
 | The board's view | `src/panels/now/cards/board.tsx`, its stylesheet `src/panels/now/board.css` |
-| What it lists, where, its words, chips, count, pages, earlier matches and arrows | `src/panels/now/boardTiles.ts` (`boardTilesOf`, `boardLaneOf`, `tileWordOf`, `boardChipsOf`, `boardPageOf`, `boardEarlierOf`, `boardNavMove`) |
+| What it lists, where, its words, chips, count, pages, earlier matches and arrows | `src/panels/now/boardTiles.ts` (`boardTilesOf`, `boardLaneOf`, `tileWordOf`, `boardChipsOf`, `boardPageOf`, `boardEarlierOf`, `boardNavMove`, `boardTagChipsOf`, `boardTagRowsOf`) |
+| Its tag row and the By tag table | `src/panels/now/boardTags.tsx` (`BoardTagChips`, `BoardTagTable`) |
 | What a move does, and a tile's ⋯ menu | `src/panels/now/boardMoves.ts` (`boardMoveOf`, `boardMenuOf`, `dropAskOf`, `moveContextOf`) |
 | Picking a tile up with the pointer | `src/panels/now/boardDrag.ts` (`useTileDrag`) |
-| The card, its header button and its commands | the folder's `manifest.json`: `cards.board` (`wide`, `fill`), the header's `board` button, and the commands `board`, `board-find`, `board-backlog`, `board-done`, `board-dropped`, `board-move` |
+| The card, its header button and its commands | the folder's `manifest.json`: `cards.board` (`wide`, `fill`), the header's `board` button, and the commands `board`, `board-find`, `board-backlog`, `board-done`, `board-dropped`, `board-tags`, `board-move` |
 | Queue and unqueue, and their one guard | `inf:task:run`'s `queue-task` and `unqueue-task`, `TaskService.starts.setQueued`, their words in `src/shared/taskQueue.ts` |
 | The stage entry and what it keeps | a panel's card (`OpenRecord`'s `{ panelCard }` in `src/renderer/src/app/stack.ts`), its place kept with `card.keep` |
 | The summary beside a tile | `src/renderer/src/plugins/point/PeekSummary.tsx`, from the board's `point.peekTask` |
@@ -30,9 +31,9 @@ The app draws its title row - Tasks and Hide - and the board draws the rest in a
 It is a wide card: up to 800 px, giving way to the docks, the docks folding only when the stage is under 560 px; and a card of `fill` height, so it takes the stage's height and its own rows and foot stay while its body scrolls.
 Under about 700 px the columns scroll sideways with the rest of the body; text never shrinks.
 
-While it is open the card keeps its project chip, Find, its view, each lane's page, the selected tile and its scroll (`card.keep`), so paging away and back finds it as it was.
+While it is open the card keeps its project chip, Find, its tag, its view, each lane's page, the selected tile and its scroll (`card.keep`), so paging away and back finds it as it was.
 The Board's Backlog column keeps its page apart from the Backlog list's, since their pages are five and twenty long.
-Hide or Esc closes it and lets go of Find, the view, the pages and the selection: the next board starts fresh on the Board view.
+Hide or Esc closes it and lets go of Find, the tag, the view, the pages and the selection: the next board starts fresh on the Board view.
 The project chip is the window's project focus, the same as the top bar's pill and the Tasks panel's chip (`docs/project-focus.md`), so Hide keeps it and the next board opens on the focused project.
 There is no setting for any of it.
 
@@ -61,11 +62,16 @@ Unstarted list rows name their wait and its recorded time from the shared `queue
 Under the app's title row the board has one row of its own: the count of every task in Waiting on you and the four lanes of work, the project chips (All projects, then each project's key, only when two or more projects have tiles), and Find (a task's key or title, for this board alone).
 The chip and Find narrow every lane before it is paged, and every count is the whole narrowed lane's, never only the tiles drawn.
 
+Under that row, while one project's tags apply (the pressed project, or the only project with tags; `docs/task-tags.md`), sits the tag row in the chips' look: All tags, each tag alphabetically with its count, even at 0, then No tag (`boardTagChipsOf`).
+A count is how many tiles of Waiting on you and the four lanes pressing it would show, after the project chip and Find.
+The pressed tag narrows every view as the chip and Find do; it is the board's own, apart from the Tasks panel's, and stays until All tags lets go of it or the project chip moves to a project that lacks it.
+The row is one Tab stop: ← and → move along it, Home and End go to its ends, and Enter or Space presses.
+
 ### The views
 
-Under that row are the views, a row of buttons: Board, Backlog with its count (and `· N new`), Done · 7d with its count, and Earlier matches with its count only while Find has words.
+Under that row are the views, a row of buttons: Board, Backlog with its count (and `· N new`), Done · 7d with its count, By tag while one project's tags apply, and Earlier matches with its count only while Find has words.
 The pressed one is the view shown; Board opens first.
-Every view draws Waiting on you above it, at most three of its tasks as one-line rows, and Show all N when there are more, which opens Waiting on you as a list of its own.
+Every view but By tag draws Waiting on you above it, at most three of its tasks as one-line rows, and Show all N when there are more, which opens Waiting on you as a list of its own.
 
 - **Board**: the work not yet done in three columns, Backlog, Queued and Working, five tiles a page.
   Each column shows its range ("6–10 of 12") and Previous and Next in its foot once it has a second page; the Backlog view opens the whole backlog as a list.
@@ -74,6 +80,10 @@ Every view draws Waiting on you above it, at most three of its tasks as one-line
 - **Backlog**, **Done · 7d**, Waiting on you's own list, **Dropped · 7d** (the foot's Dropped · N) and **Earlier matches**: one lane as a list, twenty one-line rows a page - the key, the title and the status - with Previous and Next above the rows and the range with Previous and Next below them, the rows scrolling between while the list has the room.
   A child whose parent is on another page stands alone there as part of it, so paging never hides or repeats a task.
   At either end of a lane, Previous or Next stays, dim, so focus stays on it.
+- **By tag**: a table, "Tasks by tag", of each of the project's tags, then No tag, against Waiting on you, Backlog, Queued, Working and Done · 7d (`boardTagRowsOf`).
+  Its counts are whole, never paged: a task with two tags counts in both rows, and the project chip and Find narrow them.
+  Its rows are one Tab stop: ↑ and ↓ move, Home and End go to the ends, and Enter or a click opens the Board view with that tag pressed.
+  Opening By tag lets go of the board's tag, and the tag row steps aside while the table shows.
 
 Nothing draws more than a page of a lane: with 60 in the backlog and 300 done this week, the Board draws at most eighteen tiles and a list at most twenty-three.
 After a live change a lane's page is clamped to the pages it still has.
@@ -166,7 +176,7 @@ When a live change takes the focused tile away - another surface moved its task,
 
 ## Keys
 
-- ⌘B opens or focuses the board; Find on task board opens it with focus in Find, and Show the backlog, Show done tasks and Show dropped tasks open it on that list with focus on its rows.
+- ⌘B opens or focuses the board; Find on task board opens it with focus in Find, Show the backlog, Show done tasks and Show dropped tasks open it on that list with focus on its rows, and Show tasks by tag opens By tag with focus on its first row; while no tags apply, command search says why Show tasks by tag cannot run.
   Each puts the same card up with the place in its data (`{ "focus": "find" }`), and the board answers each time it is put up once (`card.revision`), keeping the one it answered with its place, so a board paged back to moves no focus.
 - F6 lands on it like any shown card, giving its page focus, and Tab goes through its own row, the views, then the tiles as one stop among the lanes' Show all, Previous and Next, then the foot.
 - ↑ ↓ move within a lane and onto its other pages, Home and End to the lane's real first and last task, turning its page and bringing the tile into view; ← → go to the nearest drawn tile in the next column that has one; ↓ from Waiting on you's last row goes to the first column's top, and ↑ from any lane's top back to it (`boardNavMove`).
@@ -179,7 +189,7 @@ When a live change takes the focused tile away - another surface moved its task,
 
 ## Tests
 
-- Unit: `src/panels/now/boardTiles.test.ts` (lanes, words, chips, counts, pages, earlier matches and the arrows), `boardMoves.test.ts` (every drop and the menu, on the moves the app's own rule gives each row), `src/core/personal/appPanels.test.ts` (the folder compiles for the frame realm on the panel library alone, its card view as the app lists it, and the lint passes), `src/renderer/src/app/stackActions.test.ts` (a panel card's aim as the turn's hint), `src/renderer/src/plugins/panelCards.test.ts` (a card put up again is one more revision), `src/shared/keymap.test.ts` (keys saved under `tasks.board*` carried over); `src/core/tasks/taskService.graph.test.ts` and `src/core/orchestrator/hostOps.start.test.ts` (queue and unqueue, and a refused Start's text); `src/core/tasks/taskProtocol.detail.test.ts` (the search's limit of 50).
+- Unit: `src/panels/now/boardTiles.test.ts` (lanes, words, chips, tags, counts, pages, earlier matches and the arrows), `boardMoves.test.ts` (every drop and the menu, on the moves the app's own rule gives each row), `src/core/personal/appPanels.test.ts` (the folder compiles for the frame realm on the panel library alone, its card view as the app lists it, and the lint passes), `src/renderer/src/app/stackActions.test.ts` (a panel card's aim as the turn's hint), `src/renderer/src/plugins/panelCards.test.ts` (a card put up again is one more revision), `src/shared/keymap.test.ts` (keys saved under `tasks.board*` carried over); `src/core/tasks/taskService.graph.test.ts` and `src/core/orchestrator/hostOps.start.test.ts` (queue and unqueue, and a refused Start's text); `src/core/tasks/taskProtocol.detail.test.ts` (the search's limit of 50).
 - E2E: `tests/e2e/task-board.spec.ts`, the journey by keys with a decision waiting behind the board, the window coming forward included, `tests/e2e/task-board-moves.spec.ts`, the moves by drag and by menu, `tests/e2e/task-board-pages.spec.ts`, 60 in the backlog and 300 done this week paged and reached by keys, `tests/e2e/key-hints.spec.ts`, the board's controls naming the keys its commands are given, changed and removed in Keyboard settings, `tests/e2e/key-reminder.spec.ts`, a mouse click on Backlog and Done · 7d naming their keys at the bottom of the window, and `tests/e2e/tasks-from-elsewhere.spec.ts`, the same folder added from elsewhere under another id running the board's journey by keys, drag and menu.
   Their helpers are `tests/e2e/taskBoard.ts`: they read inside the board's page - a tile, a lane, a view and its count, a lane's pages - take the panel whose card it is, press and drag with events dispatched in that page, and read where focus is from the page's own active element and the window's.
   The keyboard, moves and pages journeys prepare the waiting card behind the board (`stagePrepared`) and complete the window's focus handoff (`windowComesForward`) before driving its keys, asserting that its tile keeps focus.

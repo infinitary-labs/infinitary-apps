@@ -181,6 +181,7 @@ A header button shows the key of its panel's command that does the same: the one
 A panel's own page reads its commands' keys too (`PanelProps.keys`; `panelKeys` and `usePanelKeys` in `src/renderer/src/app/keyHints.ts`): each of its commands that has a key now, by its id in the manifest, drawn as this computer draws it, with its `aria-keyshortcuts` where one press makes it.
 The window pushes them into the page's frame with its view state, again whenever a key changes, so a control in the page that does what a command does names that command's key; a crewmate's draft panel gets none, as its commands reach nothing.
 A command that presses a button or asks the panel refuses while its panel is hidden or has nothing to show (for a panel whose own code decides, while it says it does not show, in the words it gave `rail.show` when it gave some); one that puts up a card refuses only while a recording runs, beside what holds every key.
+A panel's page may also say one of its commands cannot run now, and why (`rail.refuse`), whatever the command does; command search keeps it listed with those words until the page takes them back.
 A button that presses is pressed as the captain's key (`via: "key"`), its own click as `click`, so a panel may tell them apart: the Tasks panel's search opens and closes on its click, and its key always opens it.
 
 ### The Tasks panel's commands
@@ -198,6 +199,9 @@ The app's own Tasks panel is an ordinary panel folder (`docs/ui-plugins.md`, "Th
 | `panel:now/board-move`, Move the selected task | the board, the selected tile's ⋯ menu open with focus on its first entry | none: chosen by name |
 | `panel:now/collapse-parts`, Collapse all parts | asks the panel to collapse every task with parts listed under it (`.claude/skills/infinitary-design/components/now/NowPanel.prompt.md`, "Parts"); focus on a hidden part goes to its task's row | none: chosen by name (fold, subtasks, children and hide find it too) |
 | `panel:now/expand-parts`, Expand all parts | asks the panel to expand every collapsed task | none: chosen by name (unfold, subtasks, children and show find it too) |
+| `panel:now/tag-filter`, Filter tasks by tag | asks the panel to open its search with focus on the tag row (`.claude/skills/infinitary-design/components/now/NowPanel.prompt.md`, "Tags"); while no tag row shows it refuses, saying why | none: chosen by name (tags and label find it too) |
+| `panel:now/group`, Group tasks | presses the header's Group tasks: its menu opens with focus on the current choice, By status or By tag | none: chosen by name (sort, tags and order find it too) |
+| `panel:now/board-tags`, Show tasks by tag | the board, its By tag view shown with focus on its rows; while no tags apply it refuses, saying why | none: chosen by name (tags and label find it too) |
 
 The board's commands put the same card up with the place in its data (`{ "focus": "find" }`), and the board answers each time it is put up once (`card.revision`).
 Once one has a key, the board shows it on its own control that does the same (`docs/task-board.md`, "Keys").

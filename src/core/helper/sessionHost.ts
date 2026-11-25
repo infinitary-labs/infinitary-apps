@@ -41,7 +41,6 @@ import {
 } from "../integrations";
 import type { JobExit } from "../jobs/jobManager";
 import {
-  CREWMATE_COMPACTION,
   crewmateContractStamp,
   crewmateResume,
   crewmateResumeToken,
@@ -51,6 +50,7 @@ import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
 import type { SecretsCatalog, SecretsCommand } from "../secrets/requests";
 import { type SelfSourceReader, sourceContext } from "../selfSource/resolve";
 import { serveAnswerFiles } from "../session/answerFiles";
+import { SESSION_COMPACTION } from "../session/compaction";
 import { followCompletions } from "../session/followCompletions";
 import { APP_TOOL_REQUESTS, OpenReads } from "../session/openReads";
 import type { PersonalVersion } from "../session/personalSet";
@@ -918,7 +918,7 @@ export class SessionHost {
           },
         },
         bounds: { request: { retries: spec.retries ?? RETRIES } },
-        compaction: CREWMATE_COMPACTION,
+        compaction: SESSION_COMPACTION,
       };
       const session = await factory.open(sessionSpec);
       // An open that fails once its conversation began lets it go, and says

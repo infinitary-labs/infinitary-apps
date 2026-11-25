@@ -229,9 +229,9 @@ export type SessionSpec = {
   bounds?: SessionBounds;
   /**
    * App-owned automatic compaction; smaller model budgets still win.
-   * `maxContextTokens` is a ceiling (the first mate's); `belowPriceStep`
-   * summarizes before a request crosses the model's first price step (the
-   * crew's).
+   * `maxContextTokens` is a ceiling; `belowPriceStep` summarizes before a
+   * request crosses the model's first price step; the lower of the two wins.
+   * The first mate and the crew carry both (`SESSION_COMPACTION`).
    */
   compaction?: { maxContextTokens?: number; belowPriceStep?: true };
   needs?: Partial<Pick<ControlProfile, "steer">>;

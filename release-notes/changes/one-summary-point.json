@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "id": "one-summary-point",
+      "kind": "improvement",
+      "area": "crewmates",
+      "title": "Long conversations use less of your plan allowance",
+      "body": "The first mate and every crewmate now summarize a long conversation at 300,000 tokens, or sooner on a model that charges more past a certain length, such as GPT-6.1 Sol or Grok. Before, crewmates on Kimi, Copilot, Amazon Bedrock, OpenRouter and custom models could run to about a million tokens, and the first mate kept going past those price steps. Conversations through your Claude sign-in are unchanged.",
+      "noPicture": "This changes when a conversation summarizes, not how any view looks.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

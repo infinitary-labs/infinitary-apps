@@ -17,6 +17,7 @@ import { timeZoneFact } from "../prompts/timeZone";
 import type { SelfSourceFacts } from "../selfSource/resolve";
 import { sourceContext, sourceIdentity } from "../selfSource/resolve";
 import { serveAnswerFiles } from "../session/answerFiles";
+import { SESSION_COMPACTION } from "../session/compaction";
 import type { OpenReads } from "../session/openReads";
 import {
   type ContractStamp,
@@ -114,17 +115,6 @@ const CREWMATE_THINKING: ThinkingLevel = "medium";
 
 /** The retries a crewmate's provider gets before a turn fails. */
 const CREWMATE_RETRIES = 2;
-
-/**
- * A crewmate's long builds summarize before a request would cross its
- * model's first price step, where every input token costs more; a model
- * with no step keeps the backend's own trigger. Both places a crewmate's
- * conversation opens carry it: here, and a computer that runs work
- * (`SessionHost`).
- */
-export const CREWMATE_COMPACTION = { belowPriceStep: true } as const satisfies NonNullable<
-  SessionSpec["compaction"]
->;
 
 /** A Claude session id, as the app mints it and the client reports it. */
 const CLAUDE_SESSION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -362,6 +352,6 @@ export function crewmateSessionSpec(
     },
     // Crew turns are long by design: no time bound, the provider's retries.
     bounds: { request: { retries: CREWMATE_RETRIES } },
-    compaction: CREWMATE_COMPACTION,
+    compaction: SESSION_COMPACTION,
   };
 }

@@ -3,12 +3,12 @@ import XCTest
 /// The panels part (scripts/phone-test-plan.ts): its test and the steps only it takes.
 extension PhoneJourney {
     /// INF-3830 piece 2, the captain's entry=tab and layout=column: the computer's panels on a fourth tab, opened with
-    /// Command-4, each drawn under its title and owner word. Data: the test home's real core serves the fixture panel
+    /// Command-4, each drawn under its title, with no owner word on the captain's own. Data: the test home's real core serves the fixture panel
     /// (tests/fixtures/phone-panels/phone-tally), its built files and the panel library this checkout builds; the panel reads
     /// the board and the computer's music, shows its store's tally and adds one through its background work; a second fixture
     /// (tests/fixtures/phone-panels/phone-shy) decides for itself whether it shows. Completion: the tab is absent with no
     /// panel, and appears and leaves as the self-deciding panel says it shows and does not; a library file the build did not make leaves the panel's place saying so; the panel draws, follows a write
-    /// on the computer, runs one press exactly once, stays folded across a relaunch, shows the computer's stop with Retry,
+    /// on the computer, runs one press exactly once, stays folded across a relaunch, shows the computer's stop as a dot on the title's line whose details hold Retry,
     /// starts a message and opens Settings from its own presses, and the tab leaves once the panel is gone. INF-6295: with a rule saved on the test home's real core (`panel-automation-on`),
     /// the app's own Automation panel joins the tab with no owner word and the rule's name, the Tasks and Activity panels
     /// stay out, an iPad on its side draws it from the sidebar's Panels choice, and the tab leaves once the rule is deleted.
@@ -32,13 +32,14 @@ extension PhoneJourney {
         XCTAssertFalse(app.webViews.staticTexts["Tally 0"].exists, "The panel's code did not run")
         picture("panels-could-not-open")
 
-        // With the library the build made, a fresh launch draws the panel under its title and owner word.
+        // With the library the build made, a fresh launch draws the panel under its title; the captain's own carries no owner word.
         _ = try await home("panel-library-restore")
         app.terminate(); try await launchPhoneApp(app)
         reach("Live", timeout: 20)
         tab("Panels", repeatDiscarded: false)
         XCTAssertTrue(header.waitForPresence(timeout: 20), app.debugDescription)
-        XCTAssertTrue(header.label.contains("TALLY") && header.label.contains("yours"), "Its title and owner word: \(header.label)")
+        XCTAssertTrue(header.label.contains("TALLY") && !header.label.contains("yours"), "Its title, no owner word: \(header.label)")
+        XCTAssertFalse(app.staticTexts["yours"].exists, "The captain's own panel names no owner")
         let tally = { (count: Int) in self.app.webViews.staticTexts["Tally \(count)"] }
         XCTAssertTrue(tally(0).waitForPresence(timeout: 60), app.debugDescription)
         XCTAssertTrue(app.webViews.staticTexts.containing(NSPredicate(format: "label ENDSWITH[c] %@", " tasks")).firstMatch
@@ -97,13 +98,20 @@ extension PhoneJourney {
         try await pressPhoneKey("4", modifiers: .command, in: app)
         XCTAssertTrue(header.waitForPresence(timeout: 20), app.debugDescription)
 
-        // Background work that ended shows the computer's own line and Retry, which starts it again there.
+        // Background work that ended shows a dot on the title's line; its details hold the computer's own sentence and
+        // Retry, which starts the work again there and takes the dot away.
         _ = try await home("panel-quit")
-        let retry = app.buttons["panel-retry-phone-tally"]
-        XCTAssertTrue(retry.waitForPresence(timeout: 20), app.debugDescription)
+        let mark = app.buttons["panel-status-phone-tally"]
+        XCTAssertTrue(mark.waitForPresence(timeout: 20), app.debugDescription)
+        XCTAssertLessThanOrEqual(abs(mark.frame.midY - header.frame.midY), 1,
+                                 "The dot sits on the title's line: \(mark.frame) beside \(header.frame)")
         picture("panels-stopped")
+        tapOnPhone(mark, repeatDiscarded: false)
+        let retry = app.buttons["panel-status-phone-tally/retry"]
+        XCTAssertTrue(retry.waitForPresence(timeout: 20), app.debugDescription)
+        picture("panels-stopped-details")
         tapOnPhone(retry, repeatDiscarded: false)
-        XCTAssertTrue(retry.waitForAbsence(timeout: 30), app.debugDescription)
+        XCTAssertTrue(mark.waitForAbsence(timeout: 30), app.debugDescription)
         let retried = try await home("panel-state", method: "GET")
         XCTAssertTrue(retried["stopped"] is NSNull, "Retry lifted the stop on the computer")
 

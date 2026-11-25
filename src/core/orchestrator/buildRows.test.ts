@@ -1,8 +1,10 @@
+import type { WorkShape } from "@shared/routingPolicy";
 import type { BuildRowAsk } from "@shared/writeAsk";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { seedTask } from "../tasks/seedTask";
+import { resultRefusal } from "../tasks/taskResult";
 import { TaskService } from "../tasks/taskService";
 import { seedProject } from "../workspace/seedProject";
 import { BuildRows, linkedIssuesSection } from "./buildRows";
@@ -19,6 +21,9 @@ import { workShape } from "./workShape";
 // issue number or link; a bug files as a read-only reproduce step with a
 // typed result, and the record keeps the issue as a typed link. Each reader's
 // brief lists the project's tasks linked to an issue.
+// INF-6776's approved plan, part 2: that list groups the tasks by issue with
+// each one's closing reason and first release, and the reproduce step's
+// result gains next, the captain's choice after a step that did not reproduce.
 
 const cleanup: (() => void)[] = [];
 afterEach(() => {
@@ -189,15 +194,75 @@ describe("a reader's Build rows", () => {
 });
 
 describe("a reader's linked-issue section", () => {
-  it("lists the project's tasks linked to an issue with their kind, state and result, and nothing else", async () => {
+  it("groups the project's linked tasks by issue with how each closed and its first release, and nothing else", async () => {
+    const f = fixture();
+    const release = {
+      version: "0.8.10-alpha.3",
+      url: "https://github.com/octo/meter/releases/tag/v0.8.10-alpha.3",
+      evidence: "The release's source holds the fix's merge, absent from every earlier release.",
+    };
+    const linked = (id: string, number: number, kind: WorkShape["kind"], createdAt: number) =>
+      seedTask(f.tasks, {
+        id,
+        title: `Stranger's words ${id}`,
+        status: "idle",
+        repoId: "repo-1",
+        createdAt,
+        shape: { kind, issue: { number, url: `https://github.com/octo/meter/issues/${number}` } },
+      });
+    linked("step-7", 7, "reproduce", 10);
+    f.tasks.turns.recordReport("step-7", {
+      text: "reproduced: yes",
+      declared: { result: { reproduced: true, version: "0.8.9" } },
+    });
+    f.tasks.close("step-7", { status: "done", reason: "answered", actor: "captain" });
+    linked("fix-7", 7, "implement", 20);
+    f.tasks.close("fix-7", { status: "done", reason: "merged", actor: "captain" });
+    f.tasks.delivery.recordFirstRelease("reader", { ...release, tasks: ["fix-7"] });
+    linked("plan-9", 9, "plan", 15);
+    f.tasks.close("plan-9", { status: "dropped", reason: "superseded", actor: "firstmate" });
+    linked("plan-9b", 9, "plan", 30);
+    seedTask(f.tasks, {
+      id: "elsewhere",
+      title: "Another project's task",
+      status: "idle",
+      repoId: null,
+      shape: {
+        kind: "implement",
+        issue: { number: 7, url: "https://github.com/octo/other/issues/7" },
+      },
+    });
+
+    const key = (id: string) => f.tasks.get(id)?.key;
+    const section = linkedIssuesSection(f.tasks, { id: "reader", repoId: "repo-1" }) ?? "";
+    expect(section.split("\n").slice(1)).toEqual([
+      "#9:",
+      `- ${key("plan-9b")}, plan, active`,
+      `- ${key("plan-9")}, plan, dropped, closed superseded`,
+      "#7:",
+      `- ${key("fix-7")}, implement, done, closed merged, first release 0.8.10-alpha.3 (${release.url})`,
+      `- ${key("step-7")}, reproduce, done, closed answered, result {"reproduced":true,"version":"0.8.9"}`,
+    ]);
+    expect(section).not.toContain("Stranger's words");
+    expect(linkedIssuesSection(f.tasks, { id: "reader", repoId: "repo-2" })).toBeUndefined();
+  });
+});
+
+describe("a reproduce step's typed result", () => {
+  it("takes next, the captain's choice after it did not reproduce, and its brief says when to report it", async () => {
     const f = fixture();
     await f.keep();
     await f.rows.answer("reader", f.kept()[0] as BuildRowAsk, "once", "later");
     const [task] = f.filed();
-    const section = linkedIssuesSection(f.tasks, { id: "reader", repoId: "repo-1" }) ?? "";
-    expect(section.split("\n").slice(1)).toEqual([`- #7: ${task?.key}, reproduce, open`]);
-    expect(section).not.toContain(ROW.title);
-    expect(linkedIssuesSection(f.tasks, { id: "reader", repoId: "repo-2" })).toBeUndefined();
+    const schema = task?.shape?.result_schema ?? {};
+    const first = { reproduced: false, version: "0.8.9", question: "Which meter model?" };
+    expect(resultRefusal(schema, first)).toBeUndefined();
+    for (const next of ["ask", "close", "keep"])
+      expect(resultRefusal(schema, { ...first, next })).toBeUndefined();
+    expect(resultRefusal(schema, { ...first, next: "later" })).toMatch(/^result\.next /);
+    expect(task?.prompt).toContain(
+      'declare continues on it, since their choice is not your answer. Once they choose, report again with the same typed result and next: "ask", "keep" or "close", as they chose.',
+    );
   });
 });
 

@@ -84,7 +84,7 @@ An issue a pull request says it closes gets no reply of its own; the pull reques
 
 ### What a round knows of its builds
 
-The round's brief carries one section from the task record: each open issue of this project that a task is linked to, with that task's kind, state and typed result, and nothing else from the record.
+The round's brief carries one section from the task record: each issue of this project that a task is linked to, with each linked task's kind, state, closing reason (such as `merged`, `superseded` or `answered`), first release once its change shipped, and typed result, and nothing else from the record.
 A round reads no other part of the record; this section is how it knows what to tell a reporter.
 An issue with a linked task gets a reply only when that task's result gives it something new to say ("After the reproduce step"); otherwise the round leaves it for the next one.
 
@@ -129,11 +129,13 @@ The brief holds:
 4. any error text only as a literal value.
 
 It names no issue and holds no link, and nothing the report asks the fleet to do.
+When the maintainer picks Don't file on an issue's Build row, the app holds back the same tick's reply to that issue, and the round drafts a `declined` reply for it on a new card in the same round.
 An idea gets a Build row of the kind plan first, whose brief names the problem behind the ask ("What a round answers"), never the ask as a spec.
 
 ### After the reproduce step
 
-The reproduce step's typed result reaches a later round through "What a round knows of its builds", and that round drafts the bug's next reply:
+The reproduce step's typed result reaches a later round through "What a round knows of its builds", and that round drafts the bug's next reply.
+A step that did not reproduce reports the maintainer's choice as its result's `next`: `ask`, `close` or `keep`.
 
 | The reproduce step | The reply | Mark |
 | --- | --- | --- |

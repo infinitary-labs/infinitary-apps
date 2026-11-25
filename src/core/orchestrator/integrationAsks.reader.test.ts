@@ -5,11 +5,18 @@
  * only Not now and Only this time, and one click runs the ticked rows once;
  * and only a reader's session gets the typed integration tools, which reach
  * its reader rules. Each case drives a real CrewSupervisor through the crew harness.
+ * INF-6776's approved plan, part 2: Don't file on an issue's Build row holds
+ * back that click's reply to the same issue, and the reader hears why.
  */
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { allowFieldOf, INTEGRATION_APPROVAL_WORDS, NOT_ALLOWED_WHY } from "@shared/integrations";
-import type { ForgeWriteAsk, IntegrationAsk } from "@shared/writeAsk";
+import {
+  type BuildRowAsk,
+  buildRowFieldOf,
+  type ForgeWriteAsk,
+  type IntegrationAsk,
+} from "@shared/writeAsk";
 import { describe, expect, it, vi } from "vitest";
 import {
   fakeCrewmate,
@@ -156,6 +163,105 @@ describe("an unsafe data reader's one approval card", () => {
     const left = h.tasks.get(taskId)?.delivery?.writeAsks?.find((ask) => ask.id === "note");
     expect(left?.outcome).toEqual({ kind: "refused", why: NOT_ALLOWED_WHY });
     expect(h.supervisor.cards.get("write-ask-comment")).toBeUndefined();
+  });
+});
+
+describe("Don't file on a reader's Build row", () => {
+  it("holds back the same click's reply to that issue and sends the reply to another", async () => {
+    const sent = vi.fn(
+      async (_taskId: string, taken: IntegrationAskTaken): Promise<WriteAskSent> =>
+        "ask" in taken
+          ? {
+              ok: true,
+              ask: taken.ask,
+              call: "",
+              place: "GitHub",
+              outcome: { kind: "answered", status: 201, requestId: null },
+            }
+          : { ok: false, call: "", place: "", outcome: { kind: "refused", why: taken.refused } },
+    );
+    const crewmate = fakeCrewmate();
+    const h = setup(crewmate, { sendTakenIntegrationAsk: sent });
+    const folder = join(h.paths.fleetDir, "meter");
+    mkdirSync(join(folder, ".git"), { recursive: true });
+    const repo = seedProject(h.db, { id: "meter", name: "meter", path: folder, setupKind: "init" });
+    h.repos.configure(repo.id, { origin: "https://github.com/octo/meter.git" });
+    const { taskId } = await h.supervisor.intake.commission({
+      title: "Read the waiting issues",
+      intent: {
+        ...intentOf("read the waiting issues and draft a reply to each"),
+        constraints: [{ kind: "read-only" as const }],
+      },
+      repoId: repo.id,
+      shape: { unsafe_data_reader: true },
+    });
+    await tick();
+
+    const other: ForgeWriteAsk = {
+      ...comment,
+      id: "other",
+      path: "/repos/octo/meter/issues/13/comments",
+      body: JSON.stringify({ body: "Thanks, this is a question we can answer." }),
+      at: 2,
+    };
+    const row: BuildRowAsk = {
+      id: "row",
+      kind: "build",
+      place: "GitHub",
+      issue: 12,
+      issueUrl: "https://github.com/octo/meter/issues/12",
+      start: "reproduce",
+      title: "Reproduce the meter's stuck reading",
+      goal: "The meter's reading updates within a minute after it wakes from sleep.",
+      why: "The reporter sees the same reading for an hour after the meter wakes.",
+      at: 3,
+    };
+    for (const ask of [comment, other, row]) {
+      h.tasks.delivery.keepWriteAsk(taskId, ask);
+      h.supervisor.integrationAsks.askForge(taskId, ask);
+    }
+    await tick();
+    const card = h.supervisor.cards.get("write-ask-comment");
+    expect(card?.body).toContain("POST /repos/octo/meter/issues/13/comments");
+    expect(card?.body).toContain("data-inf-build-row");
+
+    h.supervisor.cardActions.act(
+      "write-ask-comment",
+      "once",
+      "chrome",
+      {
+        answers: [
+          { name: allowFieldOf("comment"), values: ["allow"], changed: false },
+          { name: allowFieldOf("other"), values: ["allow"], changed: false },
+          { name: allowFieldOf("row"), values: ["allow"], changed: false },
+          { name: buildRowFieldOf("row"), values: ["skip"], changed: true },
+        ],
+      },
+      { id: "gesture-0002", lifecycleId: card?.lifecycleId, offerId: card?.offerId },
+    );
+    await tick();
+    await tick();
+
+    expect(sent.mock.calls.map(([, taken]) => ("ask" in taken ? taken.ask.id : "-"))).toEqual([
+      "other",
+    ]);
+    const outcome = (id: string) =>
+      h.tasks.get(taskId)?.delivery?.writeAsks?.find((ask) => ask.id === id)?.outcome;
+    const held =
+      "The captain chose Don't file for issue #12's Build row on the same card, so the app held back this write to issue #12. Nothing was sent.";
+    expect(outcome("comment")).toEqual({
+      kind: "refused",
+      why: `${held} If the issue still needs a reply, write a new one that fits the captain's choice not to file the work.`,
+    });
+    expect(outcome("row")).toEqual({
+      kind: "refused",
+      why: "The captain chose Don't file. Nothing was filed.",
+    });
+    expect(h.tasks.list().filter((task) => task.id !== taskId)).toEqual([]);
+    const heard = [...crewmate.steer.mock.calls.map(([text]) => text), ...crewmate.promptCalls]
+      .filter((text) => text.includes("write-answered") || text.includes("ask comment"))
+      .join("\n");
+    expect(heard).toContain(held);
   });
 });
 

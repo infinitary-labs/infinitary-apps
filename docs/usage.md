@@ -14,6 +14,7 @@ How it looks and reads is the design skill's `components/usage/UsageTab.prompt.m
 | Its recent tasks | `UsageStore.tasks`, served as `services.usage.tasks` on `inf:usage:tasks`, read as `usage.tasks` |
 | Its cost per task | `UsageStore.taskCosts`, served as `services.usage.taskCosts` on `inf:usage:task-costs`, read as `usage.taskCosts` |
 | Its shapes and pure math | `src/shared/usage.ts` |
+| What leaves the computer, and in which format | Infinitary's own usage report (`docs/usage-report.md`) |
 | The tab, its words and numbers | `src/renderer/src/settings/UsageTab.tsx`, `UsageCostPerTask.tsx`, `usageWords.ts`, `usage.css` |
 | The remembered unit | `appearance.usageUnit` (`src/shared/preferences.ts`), written through `setAppearance` |
 | The two commands | `settings.usage` and `usage.unit` (`src/shared/keyboardCommands.ts`, `docs/keyboard.md`) |
@@ -81,6 +82,7 @@ If live reporting is unavailable, the existing terminal report still records spe
 
 A company that reads Claude Code's own usage reports (OpenTelemetry) usually has each developer keep the setup in their own Claude settings file's `env` block or in their shell, as Claude Code's guide says.
 Infinitary reads that setup and passes Claude's own records on to the company's collector, so work done here counts there (`src/core/claude/claudeReporting.ts`).
+Every other provider's work reaches the same collector, and a managed setup's, in Claude Code's names through Infinitary's own usage report (`docs/usage-report.md`).
 
 - **Where it is read.**
   The keys are `CLAUDE_CODE_ENABLE_TELEMETRY` and every `OTEL_*` key, from the app's launch environment, then the login shell, then the person's own settings file, a later place winning, as Claude Code lays its settings file over the environment it started in (`readClaudeCompanyReporting`).
@@ -99,7 +101,7 @@ Infinitary reads that setup and passes Claude's own records on to the company's 
 - **A managed setup.**
   An administrator's managed setup reaches Claude's client directly and cannot be overridden; there the receiver stays off as before and Infinitary passes nothing on, so nothing is counted twice.
 - **What a person sees.**
-  Usage shows one line naming the collector's host for the first mate's computer: an administrator's managed collector, which Claude's client reports to itself (`readManagedClaudeReporting`), or else the person's setup the receiver passes on to (`usage.reporting`, `claudeReportingHost`); each computer that runs work follows its own setup, which the line says.
+  Usage shows one line naming where usage is reported (`usage.reporting`, `companyDestination`'s `reporting`): the host the usage report sends every model's work to, an administrator's managed setup included, or else, marked Claude work only, the host of a setup it cannot send to, such as one over gRPC, where Claude's own client or the receiver still reports Claude's records; each computer that runs work follows its own setup for Claude work, which the line says.
 
 `claudeReporting.integration.test.ts` holds this on the client the product would run, boxed, with stand-in collectors over OTLP/HTTP JSON, protobuf and gRPC and a header command: the collector gets the client's own batches byte for byte, the token and cost counters among them, the person's resource attributes on logs and metrics, prompts only where the person's `OTEL_LOG_USER_PROMPTS` asks, and a managed setup leaves the collector empty.
 

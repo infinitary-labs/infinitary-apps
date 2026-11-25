@@ -1,5 +1,5 @@
 ---
-source: 0683744dededd132
+source: ae4ef93753c8b7d2
 title: 컴퓨터 밖으로 나가는 것
 description: Infinitary가 무엇을 보내는지, 어디로 가는지, 그리고 저희에게 무언가를 보내는 단 하나의 스위치예요.
 ---
@@ -43,9 +43,13 @@ Claude를 쓰면 Infinitary는 설치된 Claude Code를 사용하고, 그 Claude
 
 ## 회사의 사용량 보고 {#your-companys-usage-reporting}
 
-Claude Code 설정 파일이나 셸에서 Claude Code 안내서대로 회사용 사용량 보고를 설정해 두었다면, Infinitary는 여기서 한 작업의 Claude 사용량 기록을 같은 곳으로 보내요.
-Claude Code가 직접 그곳에 보낼 기록과 같은 기록이고, 설정 → **사용량**에서 어디로 가는지 알려 줘요.
-회사 관리자가 컴퓨터 전체에 관리하는 설정은 지금처럼 Claude Code에 바로 닿아요.
+Claude Code 설정 파일이나 셸에서 Claude Code 안내서대로 회사용 사용량 보고를 설정해 두었다면, Infinitary는 여기서 한 모든 작업의 사용량을 같은 곳으로 보내요.
+Claude의 작업은 Claude Code가 직접 그곳에 보낼 기록 그대로 가요.
+다른 모델의 작업은 같은 이름으로, 모델, 제공자, 토큰, 예상 비용, 일등항해사와 크루원 중 누가 했는지, 작업 종류, Claude Code 로그인 이메일과 함께 가요.
+내가 쓴 말, 작업 제목, 프로젝트 이름은 보내지 않아요.
+설정 → **사용량**에서 어디로 가는지 알려 줘요.
+회사 관리자가 컴퓨터 전체에 관리하는 설정은 지금처럼 Claude Code에 바로 닿고, Infinitary는 다른 모델의 작업도 같은 방식으로 그곳에 보내요.
+어느 쪽 설정이든 사용량을 gRPC로 보내면 Claude의 작업만 가고, 그때는 설정 → **사용량**에서도 그렇게 알려 줘요.
 
 ## 업데이트 확인 {#update-checks}
 

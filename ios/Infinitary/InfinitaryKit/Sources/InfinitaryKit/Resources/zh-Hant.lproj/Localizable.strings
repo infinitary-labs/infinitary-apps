@@ -3998,7 +3998,8 @@
 "settingsUsageRecentTokensLegend" = "輸入不含快取的 token。總計中每個類別只算一次。";
 "settingsUsageRecentUsdLegend" = "類別估計只使用已記錄的價格，涵蓋範圍可能與總計不同。";
 "settingsUsageRecordsOf" = "%2$@ 筆紀錄中的 %1$@ 筆";
-"settingsUsageReportsTo" = "依照你大副電腦上的 Claude Code 設定，Claude 在那台電腦上的工作也會回報給 %1$@。其他電腦依各自的設定。";
+"settingsUsageReportsClaudeTo" = "依照你大副電腦上的 Claude Code 設定，Claude 在那台電腦上的工作也會回報給 %1$@。其他電腦依各自的設定。";
+"settingsUsageReportsTo" = "依照你大副電腦上的 Claude Code 設定，船員的用量也會回報給 %1$@：在那台電腦上完成的 Claude 工作，以及其他所有模型的工作。其他電腦上的 Claude 工作依各自的設定。";
 "settingsUsageScopeAll" = "所有工作";
 "settingsUsageScopeFirstmate" = "大副";
 "settingsUsageScopeOther" = "其他工作";

@@ -3998,7 +3998,8 @@
 "settingsUsageRecentTokensLegend" = "La entrada excluye los tokens en caché. El total cuenta cada categoría una sola vez.";
 "settingsUsageRecentUsdLegend" = "Las estimaciones por categoría usan solo precios registrados. Su cobertura puede ser distinta de la del total.";
 "settingsUsageRecordsOf" = "%1$@ de %2$@ registros";
-"settingsUsageReportsTo" = "El trabajo de Claude en la computadora de tu primer oficial también se informa a %1$@, como piden sus ajustes de Claude Code. Las demás computadoras siguen sus propios ajustes.";
+"settingsUsageReportsClaudeTo" = "El trabajo de Claude en la computadora de tu primer oficial también se informa a %1$@, como piden sus ajustes de Claude Code. Las demás computadoras siguen sus propios ajustes.";
+"settingsUsageReportsTo" = "El uso de tu tripulación también se informa a %1$@, como piden los ajustes de Claude Code en la computadora de tu primer oficial: el trabajo de Claude hecho allí y el trabajo de cualquier otro modelo. El trabajo de Claude en otras computadoras sigue sus propios ajustes.";
 "settingsUsageScopeAll" = "Todo el trabajo";
 "settingsUsageScopeFirstmate" = "Primer oficial";
 "settingsUsageScopeOther" = "Otro trabajo";

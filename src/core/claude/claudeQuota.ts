@@ -769,6 +769,14 @@ async function readAccountIdentityRecord(
   }
 }
 
+/** The email address of the Claude Code login kept in this config home, when it has one. */
+export async function claudeLoginEmail(
+  configDir: string,
+  env: NodeJS.ProcessEnv,
+): Promise<string | undefined> {
+  return (await readAccountIdentityRecord(configDir, env))?.identity.label;
+}
+
 /**
  * The real-refusal and made-login records keep their existing non-secret
  * equality key. This is a pure projection of the one read, not another

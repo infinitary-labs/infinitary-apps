@@ -585,6 +585,7 @@ Two headings draw one plane, the first heading up and the second across, with ea
 Each option shows once, on the chart: when every row's option has a label, the chart stands where the first option's row stood (the label itself, or the element around it such as a `div.inf-row`, so a flex row never narrows the chart), each mark in its label's own words, and the labels and their controls leave view (`data-inf-tradeoff-charted`) while staying in the form.
 A write-in or any option without a row keeps its own row, after the chart.
 The As built pill sits on the option marked `data-inf-current` and the Recommended pill, or Default on a question the captain may skip, on the one marked `data-inf-recommended`, whose shape takes the accent.
+Each mark's ring takes its control's shape: round for a radio, and a box with 3px corners for a checkbox (`data-inf-tradeoff-ring="box"`), which fills with the accent and a check when picked, so a question that lets the captain pick several still reads that way on the chart.
 A press on an option's mark picks the question's own option, and the mark shows it picked (`FRAME_TAG_SCRIPT`); the option's own control stays the keyboard's way to reach and pick it, its mark drawing the focus, so the chart adds no stop to the Tab order and is hidden from screen readers, which read the controls and the table.
 The table as written stays where the author put it, folded as The tradeoff as a table.
 The radar tiles wrap to one column and the plane's words wrap in a narrow card, so neither scrolls sideways.

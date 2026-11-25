@@ -17,14 +17,17 @@
  *     the base commit fetched: the commits since the merge base of <ref> and
  *     HEAD add a file under release-notes/changes/ declaring a note or an
  *     exclusion - the file that credits the change's squash commit at the next
- *     alpha - and the ledger passes `ledgerProblems`. ci.yml runs it first.
+ *     alpha - and the ledger passes `ledgerProblems`. Each feature, improvement
+ *     or removal note in an added file names the docs site pages the change
+ *     edited, or says why none needs to. ci.yml runs it first.
  *
  *   node scripts/release-notes.ts batch --base <ref>
  *     A batch pull request's check (batch-checks.yml's notes job), with full
  *     history: each commit since the merge base of <ref> and HEAD - one per
  *     approved change the batch combined - is covered by a note or an
  *     exclusion as `check` counts it for the alpha, and the ledger passes
- *     `ledgerProblems`. A branch built on a batch's version, as a held
+ *     `ledgerProblems`, with each docs site page a note names edited by the
+ *     commit that adds the note. A branch built on a batch's version, as a held
  *     batch's fix is, skips `change` in its own check (ci.yml), so the batch
  *     is where its note is read.
  *
@@ -95,7 +98,10 @@ import {
   buildCatalog,
   type CatalogPicture,
   coveredCommits,
+  DOCS_SITE_DIR,
+  docsSiteProblems,
   entryCommits,
+  GENERATED_DOCS_SITE_PAGES,
   heroFiles,
   highlightCandidates,
   type LedgerFile,
@@ -549,6 +555,26 @@ function validate(repo: Repo, loaded: Loaded, extendingArchive = false): string[
   return problems;
 }
 
+/** The docs site's hand-written English pages, each name to its path. */
+function docsSitePages(root: string): Map<string, string> {
+  const pages = new Map<string, string>();
+  const dir = join(root, DOCS_SITE_DIR);
+  if (!existsSync(dir)) return pages;
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const match = /^(.+)\.mdx?$/.exec(entry.name);
+    if (!entry.isFile() || !match || GENERATED_DOCS_SITE_PAGES.includes(match[1] as string)) continue;
+    pages.set(match[1] as string, `${DOCS_SITE_DIR}/${entry.name}`);
+  }
+  return pages;
+}
+
+function docsSiteRefusal(problems: string[], pages: Map<string, string>): Refusal {
+  return new Refusal([
+    ...problems,
+    `The docs site's hand-written pages: ${[...pages.keys()].sort().join(", ")} (docs/release-notes.md, "The docs site declaration").`,
+  ]);
+}
+
 /**
  * A change - every commit since `--base`'s merge base with HEAD, squashed as
  * one at merge - adds a changes file declaring a note or an exclusion, and the
@@ -573,6 +599,15 @@ function change(repo: Repo, flags: Map<string, string | true>): string {
       `this change adds no file under ${NOTES_DIR}/changes/ with a note or an exclusion.`,
       "Add a plain-language note for a change a person notices, or an exclusion with a reason for internal work, in a new file (docs/release-notes.md).",
     ]);
+  const pages = docsSitePages(repo.root);
+  const edited = new Set(
+    repo
+      .git("diff", "--name-only", "--no-renames", "--diff-filter=AM", base, "HEAD", "--", `${DOCS_SITE_DIR}/`)
+      .split("\n")
+      .filter(Boolean),
+  );
+  const docs = declared.flatMap((item) => docsSiteProblems(item, pages, edited));
+  if (docs.length > 0) throw docsSiteRefusal(docs, pages);
   return `this change adds ${declared.map((item) => item.path).join(", ")}, and the release-notes ledger is consistent`;
 }
 
@@ -590,13 +625,25 @@ function batch(repo: Repo, flags: Map<string, string | true>): string {
   if (problems.length > 0) throw new Refusal(problems);
   // The batch's regenerated commit is no change of its own.
   const range = repo.commits(base, "HEAD").filter((commit) => !repo.regenerated(commit.sha));
-  const missing = uncoveredCommits(range, coveredCommits(load(repo).files, repo.addedBy));
+  const files = load(repo).files;
+  const missing = uncoveredCommits(range, coveredCommits(files, repo.addedBy));
   if (missing.length > 0)
     throw new Refusal([
       `this batch's changes below add no file under ${NOTES_DIR}/changes/ with a note or an exclusion (${missing.length} of ${range.length}):`,
       ...missing.map((commit) => `  ${commit.sha.slice(0, 12)} ${commit.subject}`),
       "Add a plain-language note for a change a person notices, or an exclusion with a reason for internal work, in a new file on that change's branch (docs/release-notes.md).",
     ]);
+  // Each change keeps its own commit, so a page counts only where the commit that adds the note edits it.
+  const pages = docsSitePages(repo.root);
+  const inBatch = new Set(range.map((commit) => commit.sha));
+  const docs: string[] = [];
+  for (const item of files) {
+    const commit = item.selfCovering ? repo.addedBy(item.path) : null;
+    if (commit === null || !inBatch.has(commit)) continue;
+    const edited = new Set(repo.changedPaths(`${commit}^`, commit));
+    docs.push(...docsSiteProblems(item, pages, edited));
+  }
+  if (docs.length > 0) throw docsSiteRefusal(docs, pages);
   return `each of this batch's ${range.length} change(s) adds its note or exclusion, and the release-notes ledger is consistent`;
 }
 

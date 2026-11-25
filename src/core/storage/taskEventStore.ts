@@ -432,14 +432,13 @@ export class TaskEventStore {
   /** The graph's escalation endpoints, without decoding the retained event payload. */
   escalationRefs(taskId: string, side: "escalated_to" | "escalated_from"): string[] {
     return (
-      this.db
-        .prepare(
-          `SELECT ref FROM task_events WHERE task_id = ? AND kind = 'escalated'
+      prepared(
+        this.db,
+        `SELECT ref FROM task_events WHERE task_id = ? AND kind = 'escalated'
          AND ref <> ''
          AND CASE WHEN json_valid(data_json) THEN json_type(data_json, '$.' || ?) END = 'text'
          ORDER BY at, id`,
-        )
-        .all(taskId, side) as { ref: string }[]
+      ).all(taskId, side) as { ref: string }[]
     ).map((row) => row.ref);
   }
 

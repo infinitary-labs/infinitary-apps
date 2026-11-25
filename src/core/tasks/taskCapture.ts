@@ -175,6 +175,7 @@ export class TaskCapture {
     return originAbout(
       {
         get: (taskId) => this.writer.store.get(taskId),
+        hostRaised: (taskId) => this.writer.store.hostRaised(taskId),
         handedOver: (taskId) => this.handedOver(taskId),
         basis: (taskId) => {
           const basis = this.writer.references.list(taskId).find((entry) => entry.kind === "basis");

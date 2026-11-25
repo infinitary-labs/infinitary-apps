@@ -23,7 +23,7 @@ It takes the setup's per-signal addresses, its headers (the header command's inc
 An administrator's managed setup comes first (`readManagedReporting`): Claude's own client reports there itself, and every other provider's calls go there too, from the managed tier's reporting keys laid over the launch environment and its own header command; a managed policy helper, whose answer is never known here, leaves it out.
 Otherwise the person's own setup is the destination only where the receiver passes Claude's records on to it.
 The setup is read again at most once a minute, when the reporter asks.
-Settings → Usage names this destination's host as where the crew's usage goes; where the setup leaves it none, as over gRPC, its line names the setup's host for Claude work only, which Claude's own client or the receiver still reports there (`reporting`).
+Settings → Usage names this destination's host as where the crew's usage goes; where the setup leaves it none, as over gRPC or with certificate files, its line names the setup's host for Claude work only, which Claude's own client or the receiver still reports there (`reporting`).
 
 ## The two formats
 
@@ -53,4 +53,4 @@ The reporter runs on the computer that keeps the ledger, whichever computer the 
 A batch goes five seconds after its first row or span, as Claude's client batches its own reports, and once more as the app stops.
 Each signal is one OTLP/HTTP JSON request with the destination's headers; redirects are refused and a request gives up after ten seconds.
 A refused or unreachable destination drops that batch with one log line naming its host and the HTTP status or failure, never a header value; recording a row never waits on the network.
-A signal a setup sends over gRPC takes no JSON request, so its source offers no address for it; a signal set to `http/protobuf` takes the JSON body at the same address, which the OpenTelemetry Collector accepts.
+A signal a setup sends over gRPC takes no JSON request, and these requests carry none of the certificate files a signal may name, so its source offers no address for either; a signal set to `http/protobuf` takes the JSON body at the same address, which the OpenTelemetry Collector accepts.

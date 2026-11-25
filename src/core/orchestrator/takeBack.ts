@@ -162,8 +162,8 @@ export class TakeBacks {
   private readonly held = new Set<string>();
   /**
    * Messages saved but not yet handed to a turn, while sending them awaits
-   * a session or admission (false) or a steer the turn may already read
-   * (true). Cleared once a turn that read them ends.
+   * a session or admission (false) or a steer the running turn may already
+   * read (true). A steer's mark ends with that turn, or when it is refused.
    */
   private readonly handingOff = new Map<string, boolean>();
 
@@ -244,6 +244,8 @@ export class TakeBacks {
   ended(read: Iterable<string>): void {
     const ids = new Set([...this.held, ...read]);
     this.held.clear();
+    // A steer the turn never read is parked on the lane again, where a take back withdraws it.
+    for (const [id, steering] of this.handingOff) if (steering) this.handingOff.delete(id);
     for (const id of ids) {
       this.handingOff.delete(id);
       if (this.host.tasks.capture.getAsk(id)?.takenBackAt === undefined) continue;

@@ -70,6 +70,25 @@ describe("FirstmateAgent taking back a message", () => {
     expect(lane(f)).toEqual([]);
   });
 
+  it("withdraws a message whose steer the running turn refused", async () => {
+    const f = setup({ silent: true });
+    await f.agent.converse("look at the build logs");
+    const steer = f.session.steer;
+    f.session.steer = async () => {
+      throw new Error("The session refused the steer.");
+    };
+    await f.agent.converse({ text: "start a task to delete the old logs" });
+    const ask = newest(f);
+    f.session.steer = steer;
+    expect(f.agent.takeBack(ask.id)).toEqual({ outcome: "withdrawn" });
+    expect(f.session.steers.filter((text) => text.includes(TAKEN_BACK_OPENING))).toEqual([]);
+    expect(
+      lane(f).filter((row) => row.facts?.kind === "captain-turn" && row.facts.askId === ask.id),
+    ).toEqual([]);
+    expect(f.tasks.capture.getAsk(ask.id)?.turnState).not.toBe("open");
+    await finish(f);
+  });
+
   it("refuses a call naming the taken-back message, and one naming none in the turn that read it", async () => {
     const f = setup({ silent: true });
     await f.agent.converse("start a task to delete the old logs");

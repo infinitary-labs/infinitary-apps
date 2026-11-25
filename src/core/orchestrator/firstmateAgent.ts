@@ -829,7 +829,9 @@ export class FirstmateAgent {
     } catch {
       // The row stays pending; the next drain delivers it as a turn, and that
       // turn reads the message, so this one does not judge it.
-      if (askId) this.unreadAsks.add(askId);
+      if (!askId) return;
+      this.unreadAsks.add(askId);
+      this.takeBacks.handing(askId);
     }
   }
 

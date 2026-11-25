@@ -53,7 +53,7 @@ describe("the note on a stopped part left last under its parent (INF-6663)", () 
     for (const [id, title] of [
       ["forms", "Add the issue forms"],
       ["labels", "Label new issues for triage"],
-    ]) {
+    ] as const) {
       seedTask(h.tasks, { id, title, parentId: parent.id, status: "running", createdAt: h.start });
     }
     const part = seedTask(h.tasks, {

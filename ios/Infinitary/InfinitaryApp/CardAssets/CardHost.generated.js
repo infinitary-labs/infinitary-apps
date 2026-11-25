@@ -19407,6 +19407,118 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Retired`;
   }
+  function cardLastPartOpen(input2) {
+    const parent = input2.parent;
+    const part = input2.part;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${part} هو الجزء الوحيد من ${parent} الذي ما زال مفتوحًا.`;
+      case "de":
+        return `${part} ist der einzige Teil von ${parent}, der noch offen ist.`;
+      case "es":
+        return `${part} es la única parte de ${parent} que sigue abierta.`;
+      case "fr":
+        return `${part} est la seule partie de ${parent} encore ouverte.`;
+      case "ja":
+        return `${parent} のパートでまだ開いているのは ${part} だけです。`;
+      case "ko":
+        return `${parent}에서 아직 열려 있는 부분은 ${part}뿐이에요.`;
+      case "pt-BR":
+        return `${part} é a única parte de ${parent} ainda aberta.`;
+      case "zh-Hans":
+        return `${parent} 中仍未关闭的部分只剩 ${part}。`;
+      case "zh-Hant":
+        return `${parent} 中仍未關閉的部分只剩 ${part}。`;
+      case "en-XA":
+        return `[${part} îš ţĥé öñļý þáŕţ öƒ ${parent} šţîļļ öþéñ. ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${part}‮ is the only part of ‬${parent}‮ still open.‬`;
+    }
+    return `${part} is the only part of ${parent} still open.`;
+  }
+  function cardLastPartStopped() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إنه ينتظر لأنك طلبت أن ينتظر، لذا لن يبدأه شيء حتى تبدأه أنت.`;
+      case "de":
+        return `Er wartet, weil du darum gebeten hast, also startet ihn nichts, bis du es tust.`;
+      case "es":
+        return `Espera porque pediste que esperara, así que nada la iniciará hasta que lo hagas tú.`;
+      case "fr":
+        return `Elle attend parce que vous avez demandé qu’elle attende, donc rien ne la démarrera tant que vous ne le ferez pas.`;
+      case "ja":
+        return `あなたが待つよう求めたため待機しています。あなたが開始するまで、何もこれを開始しません。`;
+      case "ko":
+        return `기다려 달라는 요청에 따라 기다리고 있어서, 직접 시작하기 전에는 아무것도 시작하지 않아요.`;
+      case "pt-BR":
+        return `Ela espera porque você pediu que esperasse, então nada vai iniciá-la até você fazer isso.`;
+      case "zh-Hans":
+        return `它在等待，是因为你要求它等待；在你开始它之前，什么都不会开始它。`;
+      case "zh-Hant":
+        return `它在等待，是因為你要求它等待；在你開始它之前，什麼都不會開始它。`;
+      case "en-XA":
+        return `[Îţ ŵáîţš ƀéçáûšé ýöû ášķéð ƒöŕ îţ ţö ŵáîţ, šö ñöţĥîñĝ ŵîļļ šţáŕţ îţ ûñţîļ ýöû ðö. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮It waits because you asked for it to wait, so nothing will start it until you do.‬`;
+    }
+    return `It waits because you asked for it to wait, so nothing will start it until you do.`;
+  }
+  function cardLastPartTitle(input2) {
+    const parent = input2.parent;
+    const part = input2.part;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${parent} بانتظار ${part} وحده`;
+      case "de":
+        return `${parent} wartet nur noch auf ${part}`;
+      case "es":
+        return `${parent} solo espera a ${part}`;
+      case "fr":
+        return `${parent} n’attend plus que ${part}`;
+      case "ja":
+        return `${parent} は ${part} だけを待っています`;
+      case "ko":
+        return `${parent}은(는) 이제 ${part}만 기다려요`;
+      case "pt-BR":
+        return `${parent} só espera por ${part}`;
+      case "zh-Hans":
+        return `${parent} 只在等 ${part}`;
+      case "zh-Hant":
+        return `${parent} 只在等 ${part}`;
+      case "en-XA":
+        return `[${parent} ŵáîţš öñļý öñ ${part} ~~~~~]`;
+      case "ar-XB":
+        return `${parent}‮ waits only on ‬${part}`;
+    }
+    return `${parent} waits only on ${part}`;
+  }
+  function cardLastPartWays() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ابدأه من لوح المهام عندما تريد إنجازه. لتغييره أو إسقاطه، رُدّ هنا.`;
+      case "de":
+        return `Starte ihn auf dem Aufgabenboard, wenn er erledigt werden soll. Um ihn zu ändern oder aufzugeben, antworte hier.`;
+      case "es":
+        return `Iníciala desde el tablero de tareas cuando quieras que se haga. Para cambiarla o abandonarla, responde aquí.`;
+      case "fr":
+        return `Démarrez-la depuis le tableau des tâches quand vous voulez qu’elle soit faite. Pour la modifier ou l’écarter, répondez ici.`;
+      case "ja":
+        return `進めたいときはタスクボードから開始してください。変更や取りやめは、ここに返信してください。`;
+      case "ko":
+        return `진행하려면 작업 보드에서 시작하세요. 바꾸거나 중단하려면 여기에 답장하세요.`;
+      case "pt-BR":
+        return `Inicie-a pelo quadro de tarefas quando quiser que seja feita. Para mudá-la ou abandoná-la, responda aqui.`;
+      case "zh-Hans":
+        return `想完成它时，请在任务看板上开始它。要修改或放弃它，请在这里回复。`;
+      case "zh-Hant":
+        return `想完成它時，請在任務看板上開始它。要修改或放棄它，請在這裡回覆。`;
+      case "en-XA":
+        return `[Šţáŕţ îţ ƒŕöɱ ţĥé ţášķ ƀöáŕð ŵĥéñ ýöû ŵáñţ îţ ðöñé. Ţö çĥáñĝé öŕ ðŕöþ îţ, ŕéþļý ĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Start it from the task board when you want it done. To change or drop it, reply here.‬`;
+    }
+    return `Start it from the task board when you want it done. To change or drop it, reply here.`;
+  }
   function cardLeaveAside() {
     switch (currentLanguage()) {
       case "ar":
@@ -111095,6 +111207,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardKnowledgeConceptRef,
     cardKnowledgeFindingRef,
     cardKnowledgeRetired,
+    cardLastPartOpen,
+    cardLastPartStopped,
+    cardLastPartTitle,
+    cardLastPartWays,
     cardLeaveAside,
     cardLeaveAsideRest,
     cardLeaveHide,
@@ -114644,6 +114760,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardKnowledgeConceptRef": ["id", "title"],
     "cardKnowledgeFindingRef": ["id", "title"],
     "cardKnowledgeRetired": [],
+    "cardLastPartOpen": ["parent", "part"],
+    "cardLastPartStopped": [],
+    "cardLastPartTitle": ["parent", "part"],
+    "cardLastPartWays": [],
     "cardLeaveAside": [],
     "cardLeaveAsideRest": [],
     "cardLeaveHide": [],

@@ -435,6 +435,7 @@ export class NextMove {
     this.host.recordSort(
       record.id,
       record.title,
+      // i18n-exempt: the decision ledger's record of what went up, read by no person
       `host card ${id}: "${card.title}"`,
       "captain",
       // i18n-exempt: the decision ledger's reason, read by no person

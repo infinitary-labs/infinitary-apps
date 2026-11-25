@@ -1179,10 +1179,11 @@ function compactionCeiling(
   reserve: number,
 ): number | undefined {
   let steps: number[] = [];
-  if (compaction?.belowPriceStep && model.provider !== COPILOT_PROVIDER_ID) {
+  const tiers = model.cost.tiers ?? [];
+  if (compaction?.belowPriceStep && model.provider !== COPILOT_PROVIDER_ID && tiers.length > 0) {
     const kept =
       piPrefixTokens(session) + session.settingsManager.getCompactionKeepRecentTokens(model);
-    steps = (model.cost.tiers ?? [])
+    steps = tiers
       .map((tier) => tier.inputTokensAbove)
       .filter((step) => step - reserve > kept + reserve);
   }

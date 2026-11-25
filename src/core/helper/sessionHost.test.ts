@@ -22,8 +22,8 @@ import {
   TASK,
 } from "../../../tests/helpers/sessionHostWorld";
 import { CONTRACT_CHANGES } from "../connection/contractChanges";
-import { CREWMATE_COMPACTION } from "../orchestrator/crewSession";
 import { answersDir, savedAnswerText } from "../session/answerFiles";
+import { SESSION_COMPACTION } from "../session/compaction";
 import type { SessionSpec } from "../session/session";
 import { PlacedTasks } from "./placedTasks";
 import { PLACED_REQUEST_WAIT_MS } from "./toolWait";
@@ -1117,9 +1117,9 @@ describe("a conversation held on a computer that runs work", () => {
   });
 
   // A user's report: crew conversations summarized far past their model's
-  // 272,000-token price step. One held on a computer that runs work opens
-  // with the rule a crewmate's conversation at home carries.
-  it("opens a crewmate's conversation with the crewmate's rule to summarize below the price step", async () => {
+  // 272,000-token price step. INF-6693: one held on a computer that runs work
+  // opens with the one summary rule the first mate and a crewmate at home carry.
+  it("opens a crewmate's conversation with the shared rule to summarize at 300,000 or below the price step", async () => {
     const at = await placed();
     const factory = (
       at.host() as unknown as {
@@ -1128,7 +1128,7 @@ describe("a conversation held on a computer that runs work", () => {
     ).options.factories.pi;
     const open = vi.spyOn(factory, "open");
     await at.open();
-    expect(open.mock.calls.map(([spec]) => spec.compaction)).toEqual([CREWMATE_COMPACTION]);
+    expect(open.mock.calls.map(([spec]) => spec.compaction)).toEqual([SESSION_COMPACTION]);
   });
 
   it("refuses an order it does not know, a malformed one, and one for a task it never opened", async () => {

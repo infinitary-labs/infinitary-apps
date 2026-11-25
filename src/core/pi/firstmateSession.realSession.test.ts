@@ -28,7 +28,12 @@ const piMocks = vi.hoisted(() => {
     sessionFile: "/tmp/firstmate/sessions/session.jsonl",
     isStreaming: false,
     messages: [] as unknown[],
-    model: { provider: "fm-mock", id: "mock-1", contextWindow: 1_000_000 },
+    model: {
+      provider: "fm-mock",
+      id: "mock-1",
+      contextWindow: 1_000_000,
+      cost: { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 },
+    },
     settingsManager: {
       applyOverrides: vi.fn((_settings: { compaction?: { reserveTokens?: number } }) => {}),
     },

@@ -15,6 +15,7 @@ import {
 } from "../../../tests/helpers/anthropicDialect";
 import { firstmateTools } from "../../../tests/helpers/firstmateTools";
 import { PI_CONTRACT_MODEL, piContractModels } from "../../../tests/helpers/piContractWorld";
+import { catalogLimits } from "../../../tests/helpers/piStubRuntime";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { seatSpec } from "../../../tests/helpers/seatSession";
 import type { ModelSession, SessionEvent } from "../session/session";
@@ -96,6 +97,71 @@ it.each([1_000_000, 200_000])(
     expect(readings.at(-1)?.tokens).toBeLessThan(Math.min(300_000, window));
   },
 );
+
+// INF-6693: the first mate summarized at 300,000 even on a model whose price
+// rises at 272,000 (GPT-6.1 Sol's listed step), so its longest conversations
+// paid the higher price on every request past the step. It now carries the
+// crew's rule too: here its context grows by about 10,000 tokens a turn, less
+// than Pi's reserve, until it summarizes, and the service reads each request.
+it("a first mate's real Pi seat summarizes below its model's 272,000-token price step", async () => {
+  const sol = catalogLimits("openai-codex", "gpt-6.1-sol");
+  api = await startStubApi(() => true);
+  const readings: { tokens: number; summary: boolean }[] = [];
+  api.answer((request, res) => {
+    const tokens = Math.ceil(JSON.stringify(request.body).length / 4);
+    const summary = !request.body.tools?.length;
+    readings.push({ tokens, summary });
+    beginAnthropicStream(res, tokens, request.n);
+    writeAnthropicText(
+      res,
+      0,
+      summary ? "The captain asked about the crew. Continue from the saved task records." : "Aye.",
+    );
+    finishAnthropicStream(res, "end_turn", 16);
+  });
+  const modelsPath = piContractModels(api);
+  const models = JSON.parse(readFileSync(modelsPath, "utf8"));
+  Object.assign(models.providers[PI_CONTRACT_MODEL.provider].models[0], {
+    contextWindow: sol.contextWindow,
+    cost: sol.cost,
+  });
+  writeFileSync(modelsPath, JSON.stringify(models));
+  const runtime = await createModelRuntime({
+    authPath: join(modelsPath, "..", "auth.json"),
+    modelsPath,
+    catalogBaseUrl: api.url,
+  });
+  const root = scratchDir("infinitary-pi-seat-price-step-");
+  const cwd = join(root, "home");
+  mkdirSync(cwd);
+  session = await createPiSessionFactory({ agentDir: join(root, "pi") }).open(
+    seatSpec({
+      cwd,
+      sessionsDir: join(root, "sessions"),
+      binding: { backend: "pi", runtime },
+      model: PI_CONTRACT_MODEL,
+      tools: await firstmateTools(),
+      requestTimeoutMs: 0,
+      turnTimeoutMs: 0,
+    }),
+  );
+  const events: SessionEvent[] = [];
+  session.subscribe((event) => events.push(event));
+  const row =
+    "The composer keeps pasted attachments when the window loses focus. The crew verified the saved draft and completed its task.\n";
+  const context = row.repeat(Math.ceil(40_000 / row.length));
+  for (let turn = 0; turn < 32; turn += 1)
+    await session.prompt(`[fm-op] context (not the user)\n${context}\nturn ${turn}`);
+  const summaries = events.filter(
+    (event) => event.type === "tool_end" && event.callId === "firstmate:compaction",
+  );
+  expect(summaries).toHaveLength(1);
+  expect(events.filter((event) => event.type === "turn_failed")).toEqual([]);
+  // With only the 300,000 limit a request reaches about 303,700 tokens.
+  expect(Math.max(...readings.map((reading) => reading.tokens))).toBeLessThan(
+    sol.cost.tiers?.[0]?.inputTokensAbove ?? 0,
+  );
+});
 
 /** A request the stand-in service saw: the summary of a fold carries no tools. */
 type Seen = { n: number; summary: boolean; raw: string };

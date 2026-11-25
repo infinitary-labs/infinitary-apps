@@ -292,20 +292,22 @@ it("tells a crewmate in a new conversation why, where its record is, and its bri
 
 // A user's report: GPT-6.x Sol crew sessions summarized near 483,600 tokens,
 // so a long build sent requests past the 272,000-token price step, where every
-// input token costs twice as much. Here a crewmate reads a long build log in
-// one turn and the service reads each request's real size; the same build on
-// a model with no step shows the reads do carry it past. The rule leaves
-// alone a first step below what a summary keeps (Qwen3.7 Flash's 32,000),
-// where Pi would summarize before every request, and Copilot, whose plan
-// counts requests rather than tokens.
+// input token costs twice as much. INF-6693: every crewmate summarizes at
+// 300,000 tokens too, or below its step when that comes sooner. Here a
+// crewmate reads a long build log in one turn, about 345,700 tokens in all,
+// and the service reads each request's real size. The step rule leaves alone
+// a first step below what a summary keeps (Qwen3.7 Flash's 32,000), where Pi
+// would summarize before every request, and Copilot, whose plan counts
+// requests rather than tokens, so Copilot stops at 300,000.
 const sol = catalogLimits("openai-codex", "gpt-6.1-sol");
 const qwen = catalogLimits("openrouter", "qwen/qwen3.7-flash");
 const copilotSol = catalogLimits("github-copilot", "gpt-6.1-sol");
+const kimi = catalogLimits("amazon-bedrock", "global.moonshotai.kimi-k3");
 const step = (limits: StubLimits, index: number) =>
   limits.cost.tiers?.[index]?.inputTokensAbove ?? 0;
 const priceSteps: [
   string,
-  { provider: string; limits: StubLimits; below?: number; past?: number },
+  { provider: string; limits: StubLimits; below: number; past?: number },
 ][] = [
   [
     "keeps every request below its model's price step",
@@ -316,11 +318,11 @@ const priceSteps: [
     },
   ],
   [
-    "runs past the step on a model that has none",
+    "summarizes at 300,000 on a flat-priced 1M-token model",
     {
       provider: "fm-crew",
-      limits: { contextWindow: sol.contextWindow, cost: { ...sol.cost, tiers: [] } },
-      past: step(sol, 0),
+      limits: kimi,
+      below: 300_000,
     },
   ],
   [
@@ -328,15 +330,16 @@ const priceSteps: [
     {
       provider: "fm-crew",
       limits: qwen,
-      below: step(qwen, 1),
+      below: Math.min(step(qwen, 1), 300_000),
       past: step(qwen, 0),
     },
   ],
   [
-    "runs past the step on Copilot, whose plan counts requests",
+    "runs past the step on Copilot, whose plan counts requests, and summarizes at 300,000",
     {
       provider: "github-copilot",
       limits: copilotSol,
+      below: 300_000,
       past: step(copilotSol, 0),
     },
   ],
@@ -389,13 +392,11 @@ it.each(priceSteps)(
     try {
       await session.prompt("Find the failing test in build.log.");
       const largest = Math.max(...readings.map((reading) => reading.tokens));
-      if (below !== undefined) expect(largest).toBeLessThan(below);
+      expect(largest).toBeLessThan(below);
       if (past !== undefined) expect(largest).toBeGreaterThan(past);
       // The whole build reaches about 345,700 tokens, so one summary brings it
-      // under a step for good.
-      expect(readings.filter((reading) => reading.summary)).toHaveLength(
-        below === undefined ? 0 : 1,
-      );
+      // under the limit for good.
+      expect(readings.filter((reading) => reading.summary)).toHaveLength(1);
       expect(readings.filter((reading) => !reading.summary)).toHaveLength(reads + 1);
       expect(events.filter((event) => event.type === "turn_failed")).toEqual([]);
     } finally {

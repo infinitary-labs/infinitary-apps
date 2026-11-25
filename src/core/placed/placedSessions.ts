@@ -126,6 +126,8 @@ import type { WorkDevices } from "./workDevices";
 const SECRET_USES_ELSEWHERE = contractChange("secret-uses-elsewhere");
 /** Asks to keep a secret raised on this Mac for a task there (`secret-asks-elsewhere.md`). */
 const SECRET_ASKS_ELSEWHERE = contractChange("secret-asks-elsewhere");
+/** Brings from another tool on that computer, kept by this Mac's Secrets (`secret-brings-elsewhere.md`). */
+const SECRET_BRINGS_ELSEWHERE = contractChange("secret-brings-elsewhere");
 
 /** Jobs the captain asked to keep running past a close (`kept-jobs.md`). */
 const KEPT_JOBS = contractChange("kept-jobs");
@@ -494,6 +496,19 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     );
   }
 
+  /**
+   * Whether the computer's Secrets command brings secrets from another tool
+   * there into this Mac's Secrets, raised on this Mac's own card
+   * (`secret-brings-elsewhere.md`, docs/secrets.md "Bringing secrets from
+   * another tool"); one without the change says a bring is not offered there.
+   */
+  takesSecretBrings(machine: string): boolean {
+    return (
+      this.takesSecretUses(machine) &&
+      listsChange(this.options.devices.version(machine)?.changes, SECRET_BRINGS_ELSEWHERE)
+    );
+  }
+
   prepare(
     machine: string,
     taskId: string,
@@ -754,6 +769,17 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       if (!uses?.ask) throw new Error("That tool is not this task's.");
       const { input } = request as InvokeRequest<"inf:work:secret-ask">[0];
       return (await uses.ask(
+        { id: deviceId, label: this.nameOf(deviceId) },
+        input,
+      )) as InvokeResponse<C>;
+    }
+    // A bring there is raised on this Mac's own card; its delivery carries
+    // values, so it is never kept in the call ledger.
+    if (channel === "inf:work:secret-bring") {
+      const uses = (await this.live(this.load(asked.task, deviceId))).callbacks?.secretUses;
+      if (!uses?.bring) throw new Error("That tool is not this task's.");
+      const { input } = request as InvokeRequest<"inf:work:secret-bring">[0];
+      return (await uses.bring(
         { id: deviceId, label: this.nameOf(deviceId) },
         input,
       )) as InvokeResponse<C>;

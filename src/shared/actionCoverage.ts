@@ -411,6 +411,7 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, ActionExceptio
   "inf:work:secret-use": WORK_REQUEST,
   "inf:work:secret-take": WORK_REQUEST,
   "inf:work:secret-ask": WORK_REQUEST,
+  "inf:work:secret-bring": WORK_REQUEST,
   "inf:work:sign-in": [
     "other-computer",
     "A computer's own sign-in, told to its home; not an app setting",

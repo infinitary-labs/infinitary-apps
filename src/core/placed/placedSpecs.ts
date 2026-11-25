@@ -28,6 +28,7 @@ export type OpenTakes = {
   takesSecrets(machine: string): boolean;
   takesSecretUses(machine: string): boolean;
   takesSecretAsks(machine: string): boolean;
+  takesSecretBrings(machine: string): boolean;
   listsChange(machine: string, change: ContractChangeName): boolean;
 };
 
@@ -87,6 +88,10 @@ export function askedSpec(backend: SessionBackend, spec: HeldSpec, there: OpenTh
     // Its asks to keep a secret, raised on this Mac's own card (docs/secrets.md, "Asking to keep a secret").
     ...(spec.callbacks?.secretUses?.ask && takes.takesSecretAsks(deviceId)
       ? { secretAsks: true }
+      : {}),
+    // Its brings from another tool there, kept by this Mac's Secrets (docs/secrets.md).
+    ...(spec.callbacks?.secretUses?.bring && takes.takesSecretBrings(deviceId)
+      ? { secretBrings: true }
       : {}),
     ...(resume ? { resume } : {}),
     // Only the conversation held there, so a new one routes first (`reattach-only-open.md`).

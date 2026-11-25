@@ -1290,4 +1290,57 @@ describe("a task that runs on a computer that runs work", () => {
       }),
     ).rejects.toThrow("That task is closed on");
   });
+
+  // Intent: INF-4718's plan, piece 4: "bring runs there and values cross once
+  // to the home over the authenticated work route". A bring's requests reach
+  // the home's Secrets for the task and computer the work route names, and a
+  // delivery, which carries values, is never kept in the call ledger. Secrets
+  // on the home are a recording stand-in; bringElsewhere.test.ts owns what
+  // they do.
+  it("answers a bring from that computer outside the call ledger", async () => {
+    const heard: unknown[][] = [];
+    const at = await world(undefined, {
+      taskChannel: await bundleAxiProcess(),
+      secrets: {
+        forTask: () => ({
+          list: async () => [],
+          receipts: () => [],
+          check: async () => ({ problem: "unavailable" }),
+          inject: async (input) => ({ request: input.id, state: "unavailable" }),
+          cancel: async () => undefined,
+          status: () => undefined,
+        }),
+        elsewhere: (task) => ({
+          use: async () => ({ receipt: null }),
+          take: async () => ({ state: "unavailable" }),
+          gone: () => {},
+          bring: async (computer, input) => {
+            heard.push([task, computer.id, input]);
+            return { ok: true };
+          },
+        }),
+      },
+    });
+    model([{ text: "Moving the keys." }]);
+    await at.start("t-bring");
+    const home = at.home();
+    await expect.poll(() => home.tasks.get("t-bring")?.activity).toBe("idle");
+    expect(home.placed.takesSecretBrings(at.deviceId)).toBe(true);
+    const deliver = {
+      op: "deliver" as const,
+      id: "build-keys",
+      run: "run-1",
+      result: { values: { DEPLOY_TOKEN: { value: "aW52ZW50ZWQ=" } } },
+    };
+    await expect(
+      home.placed.answer(at.deviceId, "inf:work:secret-bring", {
+        task: "t-bring",
+        callId: "deliver-1",
+        input: deliver,
+      }),
+    ).resolves.toEqual({ ok: true });
+    expect(heard).toEqual([["t-bring", at.deviceId, deliver]]);
+    const calls = join(crewmatePlacedDir(home.paths, "t-bring"), "calls.jsonl");
+    expect(existsSync(calls) ? readFileSync(calls, "utf8") : "").not.toContain("aW52ZW50ZWQ=");
+  });
 });

@@ -24,9 +24,10 @@ Run `infinitary-secrets-axi bring --help` for the exact `--from` shape before yo
 
 ## Where it runs
 
-A bring runs only on the first mate's computer, where Secrets lives, and the tool must be installed there.
-When your task runs on another computer, the bring answers `unavailable` wherever the tool is: stop, and report to the first mate with `needs_firstmate` that the move must run as a task on the first mate's computer, naming the tool.
-When your task runs on the first mate's computer but the tool is not installed there (its recipe's install check fails), stop and report that, naming the tool and the computer where the captain keeps it.
+A bring runs on the computer your task runs on, and the tool must be installed there.
+On a computer that runs work, Infinitary runs the tool there and sends only the ticked values to Secrets on the first mate's computer, once; `uses` is refused there.
+When the bring answers `unavailable` saying bringing is offered only on the computer that keeps Secrets, that computer's Infinitary cannot carry it yet: stop, and report to the first mate with `needs_firstmate` that the move must run as a task on the first mate's computer, naming the tool.
+When the tool is not installed on your task's computer (its recipe's install check fails), stop and report that, naming the tool and the computer where the captain keeps it.
 
 ## Names and places
 

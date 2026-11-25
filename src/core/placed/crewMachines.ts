@@ -324,6 +324,12 @@ export type CrewMachines = {
    */
   takesSecretAsks?(machine: string): boolean;
   /**
+   * Whether the computer's Secrets command brings secrets from another tool
+   * there into the home's Secrets (docs/secrets.md, "Bringing secrets from
+   * another tool").
+   */
+  takesSecretBrings?(machine: string): boolean;
+  /**
    * Whether the computer gives its crewmates `infinitary-files-axi`, each
    * list and copy asked of the home (docs/files.md); false while the home
    * cannot tell.

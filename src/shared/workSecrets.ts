@@ -7,6 +7,22 @@ import { secretStateSchema } from "./secrets";
  * beside the work requests that carry them (`work.ts`).
  */
 
+/**
+ * The captain's secrets as a task on another computer lists them: each
+ * one's reference, name, saved version and environment label, and nothing
+ * else - no value, receipt or use crosses to that computer.
+ */
+export const placedSecretsSchema = z.object({
+  secrets: z.array(
+    z.object({
+      ref: z.string(),
+      label: z.string(),
+      version: z.string(),
+      environment: z.string().optional(),
+    }),
+  ),
+});
+
 /** A file a recipient there binds, by its real path and the digest of what runs. */
 const boundSecretFileSchema = z.strictObject({
   path: z.string().min(1),
@@ -149,3 +165,156 @@ export const placedSecretAskAnswerSchema = z.union([
   z.strictObject({ withdrawn: z.boolean() }),
 ]);
 export type PlacedSecretAskAnswer = z.infer<typeof placedSecretAskAnswerSchema>;
+
+/**
+ * A bring's source as the computer that runs work bound it there
+ * (docs/secrets.md, "Bringing secrets from another tool"): the program by its
+ * real path and digest, the interpreter its `#!` line names, the arguments as
+ * the asker wrote them and the folder by its real path; or the file by its
+ * real path and digest. The home shows it on its card and hands it back for
+ * the run, and that computer checks every digest again before it runs.
+ */
+const placedBringSourceSchema = z.union([
+  z.strictObject({
+    kind: z.literal("run"),
+    program: boundSecretFileSchema,
+    interpreter: boundSecretFileSchema.extend({ arg: z.string().optional() }).strict().optional(),
+    argv: z.array(z.string().max(4096)).min(1).max(256),
+    folder: z.string().min(1),
+  }),
+  z.strictObject({ kind: z.literal("file"), file: boundSecretFileSchema }),
+]);
+const placedBringReadsSchema = z.enum(["value", "lines", "env0", "json"]);
+
+/**
+ * What a computer that runs work asks of the home's Secrets to bring
+ * secrets from another tool there (`secret-brings-elsewhere.md`;
+ * docs/secrets.md, "Bringing secrets from another tool"). `bring` raises
+ * the home's own card for a source bound there; `next` waits for the
+ * captain's press and answers what to run and read, `deliver` sends what it
+ * read once, and `status` and `cancel` take the asker's id. Only `deliver`
+ * carries values, each in base64, and only for the names `next` asked for.
+ */
+export const placedSecretBringInputSchema = z.discriminatedUnion("op", [
+  z.strictObject({
+    op: z.literal("bring"),
+    id: z.string().min(1),
+    reason: z.string().min(1),
+    from: z.strictObject({
+      tool: z.string().min(1),
+      reads: placedBringReadsSchema,
+      secrets: z
+        .array(
+          z.strictObject({
+            name: z.string(),
+            as: z.string().optional(),
+            place: z.string().optional(),
+            replace: z.string().optional(),
+          }),
+        )
+        .optional(),
+      trim: z.literal("newline").optional(),
+    }),
+    source: placedBringSourceSchema,
+  }),
+  z.strictObject({ op: z.literal("status"), id: z.string().min(1) }),
+  z.strictObject({ op: z.literal("cancel"), id: z.string().min(1) }),
+  z.strictObject({ op: z.literal("next"), id: z.string().min(1) }),
+  z.strictObject({
+    op: z.literal("deliver"),
+    id: z.string().min(1),
+    run: z.string().min(1),
+    result: z.union([
+      z.strictObject({
+        values: z.record(
+          z.string(),
+          z.union([
+            z.strictObject({ value: z.string() }),
+            z.strictObject({ cannot: z.enum(["empty", "too-large", "not-text"]) }),
+          ]),
+        ),
+      }),
+      z.strictObject({
+        failed: z.strictObject({
+          exitCode: z.number().int().optional(),
+          signal: z.string().optional(),
+        }),
+      }),
+      z.strictObject({ ended: z.enum(["changed", "too-large", "invalid-json"]) }),
+    ]),
+  }),
+]);
+export type PlacedSecretBringInput = z.infer<typeof placedSecretBringInputSchema>;
+
+/** How a bring ended, as its asker hears it: names, places, references and outcomes, never a value. */
+const placedBringEndedSchema = z.union([
+  z.strictObject({
+    bring: z.string(),
+    state: z.literal("kept"),
+    secrets: z.array(
+      z.strictObject({
+        name: z.string(),
+        place: z.string(),
+        outcome: z.enum([
+          "kept",
+          "skipped",
+          "not-found",
+          "empty",
+          "too-large",
+          "not-text",
+          "changed",
+        ]),
+        ref: z.string().optional(),
+        version: z.number().int().optional(),
+      }),
+    ),
+  }),
+  z.strictObject({ bring: z.string(), state: z.literal("not-brought") }),
+  z.strictObject({
+    bring: z.string(),
+    state: z.literal("failed"),
+    exitCode: z.number().int().optional(),
+    signal: z.string().optional(),
+    why: z.string(),
+  }),
+  z.strictObject({ bring: z.string(), state: z.literal("changed") }),
+  z.strictObject({ bring: z.string(), state: z.literal("expired") }),
+  z.strictObject({ bring: z.string(), state: z.literal("withdrawn"), why: z.string() }),
+]);
+
+/**
+ * What the home answers: a bring waiting for the captain or unavailable with
+ * the home's words; its status; whether a withdrawal found it waiting; what
+ * to run and read once the captain pressed, `wait` to ask again, or `over`
+ * once the bring ended; and `ok` for a delivery.
+ */
+export const placedSecretBringAnswerSchema = z.union([
+  z.strictObject({
+    bring: z.union([
+      z.strictObject({ bring: z.string(), state: z.literal("waiting") }),
+      z.strictObject({ bring: z.string(), state: z.literal("unavailable"), help: z.string() }),
+    ]),
+  }),
+  z.strictObject({
+    status: z
+      .union([
+        z.strictObject({ bring: z.string(), state: z.literal("waiting") }),
+        placedBringEndedSchema,
+      ])
+      .nullable(),
+  }),
+  z.strictObject({ withdrawn: z.boolean() }),
+  z.strictObject({
+    run: z.strictObject({
+      run: z.string().min(1),
+      source: placedBringSourceSchema,
+      reads: placedBringReadsSchema,
+      trim: z.literal("newline").optional(),
+      names: z.array(z.string()).nullable(),
+    }),
+  }),
+  z.strictObject({ wait: z.literal(true) }),
+  z.strictObject({ over: z.literal(true) }),
+  z.strictObject({ ok: z.literal(true) }),
+]);
+export type PlacedSecretBringAnswer = z.infer<typeof placedSecretBringAnswerSchema>;

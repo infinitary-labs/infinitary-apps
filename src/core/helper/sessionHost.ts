@@ -22,6 +22,7 @@ import {
 } from "@shared/work";
 import {
   placedSecretAskAnswerSchema,
+  placedSecretBringAnswerSchema,
   placedSecretTakeAnswerSchema,
   placedSecretUseAnswerSchema,
 } from "@shared/workSecrets";
@@ -1342,6 +1343,15 @@ export class SessionHost {
             )
         : undefined,
       listsChange(this.options.homeChanges?.() ?? null, SECRET_ASK_HOW),
+    );
+    // Its brings from another tool here, kept by the home's Secrets, while the home takes them.
+    uses.offerBrings(
+      spec.secretBrings
+        ? async (input) =>
+            placedSecretBringAnswerSchema.parse(
+              await this.call(held, "inf:work:secret-bring", { callId: randomUUID(), input }),
+            )
+        : undefined,
     );
     return uses;
   }

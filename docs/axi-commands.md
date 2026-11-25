@@ -240,6 +240,7 @@ A task on a computer that runs work whose app takes such uses is granted the sam
 A task on any other computer is granted the catalog alone and receives `CREWMATE_SECRETS_CATALOG_LINE`: `list` and `show` ask the home, and every use answers `unavailable` ([`secrets.md`](secrets.md), "Current command seam").
 Bare invocation and `list` show the metadata of every secret the captain added, `inject` submits an exact operation using references, `ask` asks the captain to keep a secret by name, place and reason, `bring` asks to bring secrets from another tool's command or file into Secrets, which Infinitary runs or reads itself ([`secrets.md`](secrets.md), "Bringing secrets from another tool"), and `status`/`cancel` read or withdraw unused requests, `cancel` also withdrawing a waiting ask or bring by its id.
 For `bring`, `reads: "json"` selects explicit top-level string fields, and a trusted command that needs a kept key can name a `uses` mapping of environment variables to references, subject to fresh confirmation.
+On a computer that runs work, `bring` runs the tool there and sends only the ticked values to the home once; `uses` is refused there.
 There is no value-returning getter, approval operation, raw output mode or global environment export.
 The channel's task label is organizational context, not authenticated secret authority.
 The channel adds the calling shell's working folder to an `inject` request as its working directory, a fact the owner binds, never authority.

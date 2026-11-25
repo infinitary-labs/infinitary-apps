@@ -1,5 +1,5 @@
 import { SERVER_INTEGRATION_KINDS } from "@shared/forgeKinds";
-import type { IntegrationKind } from "@shared/integrations";
+import type { IntegrationKind, IntegrationRule } from "@shared/integrations";
 import { ANSWER_WHOLE_MAX_CHARACTERS } from "../session/answerFiles";
 
 /**
@@ -33,6 +33,14 @@ export const READER_REFUSED_KINDS: ReadonlySet<IntegrationKind> = new Set<Integr
  */
 export const READER_INTEGRATION_ANSWER_MAX = ANSWER_WHOLE_MAX_CHARACTERS;
 
+/**
+ * An action's rule as it holds for an unsafe data reader: an integration
+ * rule, or `closed` for an action that saves a file, which no setting opens
+ * to a reader (INF-6749 finding 2: a reader that read "never" took it for
+ * the captain's Never setting).
+ */
+export type ReaderRule = IntegrationRule | "closed";
+
 export const READER_WORDS = {
   // i18n-exempt: served only to the reader's model.
   forge:
@@ -41,7 +49,7 @@ export const READER_WORDS = {
   onlyOnce: "an unsafe data reader's call runs only once, on Only this time, so it did not run",
   // i18n-exempt: served only to the reader's model.
   file: (name: string, action: string) =>
-    `Not run: ${name}'s ${action} saves a file into a task's hand-over folder, which an unsafe data reader cannot open.`,
+    `Not run: ${name}'s ${action} saves a file into a task's hand-over folder, which an unsafe data reader cannot open, whatever the captain's setting: no setting changes this. An ordinary task can save and read it, so say in your report that this needs one.`,
   // i18n-exempt: served only to the reader's model.
   tooLong: (name: string, action: string, length: number) =>
     `Not served: ${name}'s ${action} answered ${length} characters, past the ${READER_INTEGRATION_ANSWER_MAX} an unsafe data reader's answer carries whole. Ask for less: fewer items, one item by its id, or a narrower query.`,

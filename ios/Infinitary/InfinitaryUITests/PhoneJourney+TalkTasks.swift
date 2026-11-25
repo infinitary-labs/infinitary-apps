@@ -124,6 +124,31 @@ extension PhoneJourney {
     /// from just after touch-down until past a 1.2 s lift turns the press into that tap (phone run 44991488174, where it
     /// stopped 0.17 s after touch-down for 1.35 s). Held three seconds, the touch is still down when the stopped thread
     /// resumes, so the timer runs first and the menu opens, as it does for a finger that keeps holding.
+    /// One chip of the search's tag row, by the tag's name its label starts with.
+    private func tagChip(_ name: String) -> XCUIElement {
+        app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label BEGINSWITH %@", "tag-chip-", name)).firstMatch
+    }
+
+    /// INF-6620 piece 5: once the project has tags, the search shows the Mac's tag row; a pressed tag narrows the list,
+    /// and the record names the tags the task carries.
+    private func tagRowAndRecord() async throws {
+        _ = try await home("tags-fixture")
+        XCTAssertTrue(app.buttons["tag-chip-all"].waitForPresence(timeout: 10), "The tag row shows once the project has tags")
+        XCTAssertTrue(app.buttons["tag-chip-none"].exists, "No tag ends the row")
+        tapOnPhone(tagChip("bug"))
+        XCTAssertTrue(app.buttons["task-phone-work"].waitForAbsence(timeout: 10), "bug leaves out the task tagged feature")
+        tapOnPhone(tagChip("feature"))
+        XCTAssertTrue(app.buttons["task-phone-work"].waitForPresence(timeout: 10), "feature lists the task tagged feature")
+        XCTAssertTrue(tagChip("feature").isSelected, "The pressed chip reads as pressed")
+        // In light and dark, as the release note's picture pair shows it.
+        try await appearances("task-search-tags", showing: tagChip("feature"))
+        tapOnPhone(app.buttons["task-phone-work"])
+        let tags = app.staticTexts["task-record-tags"]
+        XCTAssertTrue(tags.waitForPresence(timeout: 10), "The record shows a Tags row")
+        XCTAssertEqual(tags.label, "feature")
+        picture("task-record-tags")
+    }
+
     private func pressRow(_ row: XCUIElement) {
         waitForSteadyTarget(row)
         row.press(forDuration: 3)
@@ -223,7 +248,7 @@ extension PhoneJourney {
         // A search keeps the groups and opens them, as the Mac's does.
         XCTAssertTrue(app.buttons["group-backlog"].exists, app.debugDescription)
         picture("task-search")
-        tapOnPhone(app.buttons["task-phone-work"])
+        try await tagRowAndRecord()
         XCTAssertTrue(app.buttons["start-task"].waitForPresence(timeout: 10))
         picture("task-before-start")
         _ = try await home("capture-talk-start")

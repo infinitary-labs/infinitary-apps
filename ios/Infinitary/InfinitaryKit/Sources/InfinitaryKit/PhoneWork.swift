@@ -110,6 +110,10 @@ public struct PhoneTask: Decodable, Identifiable, Sendable {
     public let backlogSince: Double?
     /// INF-3127: when the captain pinned the task to the top of Tasks; nil while it is not pinned, and from an older Mac.
     public let pinnedAt: Double?
+    /// The tags it carries, alphabetical (`taskTagViewSchema`, docs/task-tags.md); absent while it carries none, and
+    /// from an older Mac. The phone shows them and filters by them, and never changes them.
+    public let tags: [Tag]?
+    public struct Tag: Decodable, Sendable { public let id: String; public let name: String }
     /// INF-2935, piece 2: what the Mac's task record reads beyond the facts above (src/shared/tasks.ts
     /// `taskDetailSchema`), each optional so an older Mac's record still decodes. The board row carries the first four.
     public let blocks: [String]?
@@ -321,6 +325,8 @@ public struct PhoneBoard: Decodable, Sendable {
         /// Every repository the project holds, first first; absent from an older Mac, read as `repo` alone.
         public let repos: [Repo]?
         public let archived: Bool?
+        /// The project's own tags, alphabetical (`projectTagViewSchema`); absent while it has none, and from an older Mac.
+        public let tags: [PhoneTask.Tag]?
         public struct Repo: Decodable, Sendable { public let name: String }
 
         /// A task's Project fact (the Mac's `projectFact`): the project's name, and the repository the task works

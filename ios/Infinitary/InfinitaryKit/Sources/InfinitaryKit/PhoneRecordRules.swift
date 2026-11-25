@@ -42,6 +42,15 @@ public enum PhoneRecord {
         return project?.fact(repository: repository) ?? repository
     }
 
+    /// The record's Tags fact (the Mac's `RecordTags`, without its Edit tags menu, which the phone does not offer): the
+    /// tags the task carries, comma-separated, or No tags; shown once its project has tags or the task carries one.
+    public static func tagsFact(_ task: PhoneTask, board: PhoneBoard?) -> String? {
+        let carried = task.tags ?? []
+        let projectTags = board?.projects.first(where: { $0.id == task.projectId })?.tags ?? []
+        if carried.isEmpty && projectTags.isEmpty { return nil }
+        return carried.isEmpty ? PhoneMessages.recordTagsNone() : carried.map(\.name).joined(separator: ", ")
+    }
+
     /// Open work that never started: the only work Drop task drops before a start.
     static func unstartedWork(_ task: PhoneTask) -> Bool {
         task.kind == "work" && task.status == "open" && task.startedAt == nil && task.activity == nil

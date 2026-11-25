@@ -92,6 +92,9 @@ With no project in focus, other projects' tasks count and list under No tag.
 - **The hover summary** names the tags a task carries under its project.
 - **Command search.**
   Filter tasks by tag, Show tasks by tag and Group tasks, with no default keys; the first two say why they cannot run while no tags apply (`rail.refuse`, `docs/ui-plugins.md`).
+- **The phone.**
+  Its Tasks search shows the same tag row while the only project with tags has them, since it keeps no project focus, and its task record shows the Tags row without Edit tags (`docs/ios.md`, "Talk and tasks").
+  It changes no tags and has no Group tasks.
 
 ## Automatic tagging
 
@@ -137,3 +140,4 @@ A record opened at an older version has neither table, and both stores read noth
 An older window, view or phone never sends either request and reads neither `tags` field, so it draws no tags and behaves as before (`src/shared/contract-changes/project-tags.md`).
 Automatic tagging adds no table: it keeps two settings rows, `tag-auto-since` and `tag-check`, and the `revision` column the tags migration already wrote; two query indexes seek its reads (`src/core/storage/queryIndexes.ts`).
 An older window never sends the check requests and draws no Check existing tasks (`src/shared/contract-changes/tag-check.md`).
+A phone that reads the fields from an older computer finds neither and draws no tag row or Tags row.

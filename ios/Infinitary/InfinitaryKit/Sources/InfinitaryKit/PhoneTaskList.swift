@@ -3,7 +3,8 @@ import Foundation
 /// INF-2928 piece 1, the captain's direction A: the phone's Tasks list is the Mac's Tasks panel (src/panels/now/rows.ts),
 /// read from one board in one pass. Pinned tasks list first, each with its parts under it (INF-3127, INF-3512). Only groups with rows show, each in the Mac's order: priority, then oldest first, and
 /// Done newest closed first, with a part under its parent in the same group. A search keeps the groups, narrows them by
-/// title or key as the Mac's does, and adds the computer's older matches as Earlier.
+/// title or key as the Mac's does, and adds the computer's older matches as Earlier. A pressed tag chip narrows every
+/// group the same way (the Mac's `tagChipsOf` and `carriesTag`, docs/task-tags.md).
 /// INF-2764: it is built only while the list shows, and sorts positions in the board rather than copies of every task.
 public struct PhoneTaskList: Sendable {
     /// Where a section comes from: one of the board's groups, or the search's older closed work.
@@ -73,22 +74,61 @@ public struct PhoneTaskList: Sendable {
         public let reach: String
     }
 
+    /// A chip of the search's tag row (the Mac's `TagChip`): All tags (`id` nil, no count), a tag, or No tag.
+    public struct TagChip: Identifiable, Equatable, Sendable {
+        public let id: String?
+        public let name: String
+        public let count: Int?
+        /// A stable name for the chip's control: the tag's id, `all` for All tags, `none` for No tag.
+        public var handle: String { id ?? "all" }
+    }
+
+    /// The No tag chip's value, the Mac's `NO_TAG`; a tag's id is never this.
+    public static let noTag = "none"
+
     /// The board as the Mac's Tasks presents it, with each card put aside under Waiting on you (INF-1517).
     public let board: PhoneBoard?
     public let parts: [Part]
+    /// The tag row: empty while no project's tags apply, as the Mac's row does not show then.
+    public let tagChips: [TagChip]
+    /// The pressed tag the list narrows by: the one asked for while the row offers it, otherwise none, so a tag the
+    /// project no longer has is let go.
+    public let tag: String?
     private let projectNames: [String: String]
 
     public static let maxDepth = 3
 
-    public init(board raw: PhoneBoard?, cards: [PhoneCard], query: String = "", earlier: [PhoneTask] = []) {
+    public init(board raw: PhoneBoard?, cards: [PhoneCard], query: String = "", tag asked: String? = nil,
+                earlier: [PhoneTask] = []) {
         let board = raw?.presenting(cards)
         self.board = board
         let tasks = board?.tasks ?? []
         let groups = board?.groups ?? [:]
         let words = Self.fold(query.trimmingCharacters(in: .whitespacesAndNewlines))
-        func matches(_ title: String, _ key: String = "") -> Bool {
+        func wordsMatch(_ title: String, _ key: String = "") -> Bool {
             words.isEmpty || Self.fold(title).contains(words) || Self.fold(key).contains(words)
         }
+        // The Mac's `tagChipsOf`: All tags, each of the project's tags even at 0, then No tag, each counting the open
+        // tasks the list would show under it after the typed words. A card put aside with no task carries no tag.
+        var chips: [TagChip] = []
+        if let project = Self.tagProject(board) {
+            let open = tasks.filter { task in
+                (task.status == "open" || task.status == "active") && (groups[task.id] != nil || task.pinnedAt != nil)
+                    && wordsMatch(task.title, task.key)
+            }
+            let aside = (board?.tasklessMinimized(cards) ?? []).filter { wordsMatch($0.title) }.count
+            chips = [TagChip(id: nil, name: PhoneMessages.nowPanelAllTags(), count: nil)]
+                + (project.tags ?? []).map { tag in
+                    TagChip(id: tag.id, name: tag.name, count: open.filter { Self.carries($0, tag.id) }.count)
+                }
+                + [TagChip(id: Self.noTag, name: PhoneMessages.nowPanelNoTag(),
+                           count: open.filter { Self.carries($0, Self.noTag) }.count + aside)]
+        }
+        tagChips = chips
+        let tag = asked.flatMap { asked in chips.contains { $0.id == asked } ? asked : nil }
+        self.tag = tag
+        func asideMatches(_ title: String) -> Bool { wordsMatch(title) && (tag == nil || tag == Self.noTag) }
+        func matches(_ task: PhoneTask) -> Bool { wordsMatch(task.title, task.key) && Self.carries(task, tag) }
         // INF-3127: a pinned task lists in Pinned at the top, whatever its state or age, in the order it was pinned,
         // newest last. INF-3512: its parts, and theirs, move there with it, under it, by priority then age, each still
         // unpinned; only parts some group would list come along, and each task lists once (the Mac's `pinnedRowsOf`).
@@ -133,7 +173,7 @@ public struct PhoneTaskList: Sendable {
                 let finished = groups[task.id] == .landed && task.pinnedAt == nil
                 if !finished { held.insert(task.id) }
                 // A search narrows Pinned like any group: a part whose parent it hides moves up in its place.
-                let shown = !finished && (task.pinnedAt != nil || groups[task.id] != nil) && matches(task.title, task.key)
+                let shown = !finished && (task.pinnedAt != nil || groups[task.id] != nil) && matches(task)
                 if shown { pinned.append(Row(task: task, depth: min(depth, Self.maxDepth))) }
                 for part in partsOf[task.id] ?? [] { place(part, shown ? depth + 1 : depth) }
             }
@@ -144,7 +184,7 @@ public struct PhoneTaskList: Sendable {
         var positions: [PhoneTaskGroup: [Int]] = [:]
         var groupOf: [String: PhoneTaskGroup] = [:]
         for (at, task) in tasks.enumerated() {
-            guard !held.contains(task.id), let group = groups[task.id], matches(task.title, task.key) else { continue }
+            guard !held.contains(task.id), let group = groups[task.id], matches(task) else { continue }
             positions[group, default: []].append(at)
             groupOf[task.id] = group
         }
@@ -185,9 +225,9 @@ public struct PhoneTaskList: Sendable {
                 // A part whose parents only name each other has no root; it still lists, at the top level.
                 for at in members where !placed.contains(tasks[at].id) { place(at, 0) }
             }
-            let aside = group == .waiting ? (board?.tasklessMinimized(cards) ?? []).filter { matches($0.title) } : []
-            // A search reads the closed rows whole, so only the unsearched list counts the ones left out.
-            let leftOut = group == .landed && words.isEmpty ? board?.leftOutDone ?? 0 : 0
+            let aside = group == .waiting ? (board?.tasklessMinimized(cards) ?? []).filter { asideMatches($0.title) } : []
+            // A search or a pressed tag reads the closed rows whole, so only the unnarrowed list counts the ones left out.
+            let leftOut = group == .landed && words.isEmpty && tag == nil ? board?.leftOutDone ?? 0 : 0
             if !rows.isEmpty || !aside.isEmpty || leftOut > 0 {
                 parts.append(Part(section: .group(group), rows: rows, aside: aside, leftOut: leftOut))
             }
@@ -195,7 +235,7 @@ public struct PhoneTaskList: Sendable {
         // A search's older closed work from the computer, minus what the groups list, newest closed first.
         if !words.isEmpty {
             let shown = Set(parts.flatMap { $0.rows.map(\.id) })
-            let older = earlier.filter { !shown.contains($0.id) }.enumerated()
+            let older = earlier.filter { !shown.contains($0.id) && Self.carries($0, tag) }.enumerated()
                 .sorted { a, b in
                     let (p, q) = (a.element.closedAt ?? 0, b.element.closedAt ?? 0)
                     return p != q ? p > q : a.offset < b.offset
@@ -211,6 +251,20 @@ public struct PhoneTaskList: Sendable {
     }
 
     public var isEmpty: Bool { parts.isEmpty }
+
+    /// The project whose tags apply (the Mac's `tagProjectOf` with no project in focus, since the phone keeps none): the
+    /// only project that is not archived and has tags; otherwise none, and no tag row shows.
+    public static func tagProject(_ board: PhoneBoard?) -> PhoneBoard.Project? {
+        let tagged = (board?.projects ?? []).filter { $0.archived != true && !($0.tags ?? []).isEmpty }
+        return tagged.count == 1 ? tagged.first : nil
+    }
+
+    /// Whether a task carries the pressed tag (the Mac's `carriesTag`); every task does while none is pressed.
+    public static func carries(_ task: PhoneTask, _ tag: String?) -> Bool {
+        guard let tag else { return true }
+        if tag == noTag { return (task.tags ?? []).isEmpty }
+        return (task.tags ?? []).contains { $0.id == tag }
+    }
 
     /// The project's name for a row's spoken label, where more than one project could be meant; the row never shows it.
     public func projectName(of task: PhoneTask) -> String { projectNames[task.projectId] ?? "" }

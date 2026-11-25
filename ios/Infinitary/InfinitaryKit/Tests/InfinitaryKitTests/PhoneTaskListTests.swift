@@ -5,17 +5,22 @@ import Testing
 /// INF-2928 piece 1, the captain's direction A: the phone's Tasks list reads as the Mac's Tasks panel. These replay the
 /// desktop panel's own reading of one board (`rowsOf`, `earlierRowsOf`, `wordOf`, `trailingOf` and the folding
 /// headers' counts), which scripts/generate-phone-scene.ts records, so the phone's groups, order, depth, words and
-/// trailing words are the Mac's for the same rows.
+/// trailing words are the Mac's for the same rows. INF-6620 piece 5: its search's tag row and a pressed tag are the
+/// Mac's too (`tagChipsOf`, `carriesTag`).
 struct PhoneTaskListTests {
     private struct Fixture: Decodable { let readings: [Reading] }
     private struct Reading: Decodable {
         let name: String
         let query: String
+        /// The tag chip the reading presses, which the Mac lets go of while no tag row shows.
+        let tag: String?
         let now: Double
         let board: PhoneBoard
         let earlier: [PhoneTask]
+        let chips: [Chip]
         let sections: [Section]
     }
+    private struct Chip: Decodable { let id: String?; let name: String; let count: Int? }
     private struct Section: Decodable {
         let section: String
         let folds: Bool
@@ -45,9 +50,11 @@ struct PhoneTaskListTests {
 
     @Test func theListReadsAsTheMacsTasksPanel() throws {
         let all = try readings()
-        #expect(all.count == 3)
+        #expect(all.count == 8)
         for reading in all {
-            let list = PhoneTaskList(board: reading.board, cards: [], query: reading.query, earlier: reading.earlier)
+            let list = PhoneTaskList(board: reading.board, cards: [], query: reading.query, tag: reading.tag, earlier: reading.earlier)
+            #expect(list.tagChips == reading.chips.map { PhoneTaskList.TagChip(id: $0.id, name: $0.name, count: $0.count) },
+                    "\(reading.name): the tag row")
             #expect(list.parts.map(\.section.id) == reading.sections.map(\.section),
                     "\(reading.name): the groups that show")
             for (part, expected) in zip(list.parts, reading.sections) {

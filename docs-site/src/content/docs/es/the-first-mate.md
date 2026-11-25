@@ -1,5 +1,5 @@
 ---
-source: c1b9ffbe11bf0317
+source: 36f0e08a37cc757f
 title: El primer oficial
 description: Quién es tu primer oficial, qué hace y qué no hace, cómo hablarle y cómo elegir el modelo con el que responde.
 ---
@@ -25,8 +25,10 @@ Consulta [Tareas y tripulantes](/es/tasks-and-crewmates/).
 ## Hablar con tu primer oficial {#talking-to-your-first-mate}
 
 Escribe en el cuadro de mensaje de la parte inferior de la ventana y envíalo.
-Tu mensaje y la respuesta corta de tu primer oficial se quedan justo encima del cuadro.
-Haz clic en la respuesta para leerla completa.
+Tus dos últimos mensajes y las respuestas cortas de tu primer oficial se quedan justo encima del cuadro.
+Una respuesta que diste en una tarjeta también aparece ahí.
+El más antiguo de los dos se desvanece después de unos segundos.
+Presiona esas líneas para leer [toda la conversación](#the-whole-conversation).
 
 Algunas cosas ayudan:
 
@@ -56,6 +58,27 @@ Para cambiar la tecla, o desactivar el dictado, usa **Dictado** en [Configuraci�
 Cuando tu primer oficial o un tripulante trae una tarjeta, responde en la propia tarjeta.
 Lo que escribes debajo de una tarjeta le llega a quien la escribió.
 Consulta [Tarjetas y decisiones](/es/cards-and-decisions/).
+
+### Toda la conversación {#the-whole-conversation}
+
+Presiona las líneas que están encima del cuadro de mensaje para abrir la tarjeta **Conversación**.
+**Abrir la conversación** en la búsqueda de comandos también la abre.
+
+Se lee como un chat, con lo más antiguo arriba y una línea para cada día:
+
+- tus mensajes y las respuestas completas de tu primer oficial;
+- cada tarjeta en la que elegiste, como una miniatura con el botón que presionaste;
+- cada línea que escribiste debajo de una tarjeta, con la primera respuesta de su autor.
+
+Desplázate hacia arriba para leer mensajes anteriores.
+La tarjeta tiene dos vistas, **Todo** y **Tarjetas**.
+**Tarjetas** enumera las tarjetas que te esperan y luego las que respondiste, de la más reciente a la más antigua.
+Presiona la miniatura de una tarjeta para abrir esa tarjeta.
+Cuando la respondes o la apartas, la conversación vuelve a donde estabas leyendo.
+
+Un mensaje que envías mientras la conversación está abierta se suma a ella, y la respuesta llega después.
+Escape guarda la conversación.
+Abrirla y leerla no le dice nada a tu primer oficial.
 
 ## Elegir su modelo {#choosing-its-model}
 

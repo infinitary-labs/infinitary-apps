@@ -1,5 +1,5 @@
 ---
-source: 72e8eba0a4de8933
+source: 01d22d3c265a0418
 title: El navegador de la tripulación
 description: Un tripulante puede abrir sitios web en un navegador propio para su tarea. Míralo trabajar, toma el control cuando una página te necesite y decide cuáles de tus inicios de sesión pueden usar las tareas posteriores.
 ---
@@ -9,8 +9,8 @@ Abre sitios web y páginas que sirve tu proyecto, los lee, hace clic y escribe e
 Puedes mirarlo trabajar, tomar el control cuando una página necesita a una persona y devolvérselo.
 Una compra, una reserva o cualquier otra cosa que te comprometa siempre la haces tú.
 
-<img class="picture-dark" src="/pictures/browser-dark.webp" alt="A task's card on its Browser tab while you have control: the row above a made-up garden club page reads that you have control and the crewmate cannot see the page, with Return control, and the crewmate's decision card beside it asks you to sign in to the club page." width="1272" height="636" />
-<img class="picture-light" src="/pictures/browser-light.webp" alt="A task's card on its Browser tab while you have control: the row above a made-up garden club page reads that you have control and the crewmate cannot see the page, with Return control, and the crewmate's decision card beside it asks you to sign in to the club page." width="1272" height="636" />
+<img class="picture-dark" src="/pictures/browser-dark.webp" alt="La tarjeta de una tarea en su pestaña Navegador mientras tienes el control: la fila sobre una página inventada de un club de jardinería dice que tienes el control y que el tripulante no puede ver la página, con Señalar y Devolver el control, y la tarjeta de decisión del tripulante, al lado, te pide iniciar sesión en la página del club." width="1272" height="636" />
+<img class="picture-light" src="/pictures/browser-light.webp" alt="La tarjeta de una tarea en su pestaña Navegador mientras tienes el control: la fila sobre una página inventada de un club de jardinería dice que tienes el control y que el tripulante no puede ver la página, con Señalar y Devolver el control, y la tarjeta de decisión del tripulante, al lado, te pide iniciar sesión en la página del club." width="1272" height="636" />
 
 ## El navegador propio de una tarea {#a-tasks-own-browser}
 
@@ -38,7 +38,7 @@ Abre la tarjeta de la tarea y elige su pestaña **Navegador**, que muestra **Nav
 Desde una tarjeta sobre la tarea, **Mostrar navegador** en la búsqueda de comandos también la abre.
 La tarjeta de un tripulante también puede llevar un botón, como «Pruébalo» o «Ver reserva», que abre el navegador al lado de esa tarjeta.
 
-La fila sobre la página tiene **Atrás**, **Adelante** y **Recargar**, quién lo maneja, **Tomar el control** y **Más**.
+La fila sobre la página tiene **Atrás**, **Adelante** y **Recargar**, quién lo maneja, **Señalar**, **Tomar el control** y **Más**.
 Mientras miras, la página es una imagen de lo que ve el tripulante, y tus clics no la alcanzan.
 **Más** contiene **Ajustar** o **Tamaño real**, **Detener el navegador**, **Copiar la dirección de la página** e **Informar de un problema**, que empieza un mensaje para tu primer oficial que terminas tú.
 
@@ -70,6 +70,27 @@ Mientras tienes el control:
 Después de que se lo devuelves, el tripulante vuelve a mirar la página.
 No lee lo que escribiste en los campos de la página: aparecen como llenos, con sus palabras ocultas.
 Solo toma una foto de la página con una razón que da, que queda en la Actividad de la tarea, y nunca de una página que contiene lo que escribiste.
+
+## Señalar un lugar de la página {#point-at-a-place-on-the-page}
+
+Para hablarle al tripulante de un lugar de la página, señálalo.
+
+1. Presiona **Señalar** en la fila sobre la página, o ⇧⌘A (Ctrl+Shift+A en Linux).
+   La página se queda quieta, y nada de lo que haces la alcanza.
+2. Presiona un punto, arrastra un recuadro, o elige **Línea a mano alzada** y dibuja una línea.
+   Desde el teclado, recorre los elementos de la página con las teclas de flecha y presiona Enter.
+3. Escribe un comentario, o déjalo vacío, y presiona **Poner en cola**.
+   La nota muestra la imagen exacta que se enviará.
+
+Escape sale de **Señalar** sin dejar una nota.
+
+Con una tarjeta al lado de la página, la nota espera con las notas de esa tarjeta y sale con tu respuesta.
+Sin una tarjeta ahí, espera encima del cuadro de mensaje del tripulante, al lado de la página, y sale con tu próximo mensaje al tripulante.
+Nada le llega al tripulante antes de que envíes.
+Entonces el tripulante recibe la imagen con tus marcas, la dirección y el título de la página, y el nombre de lo que marcaste.
+
+**Señalar** funciona mientras miras y mientras tienes el control.
+Mientras tienes el control, la nota dice «Al enviar, el tripulante ve esta imagen de la página.»
 
 ## Cuando una página te necesita {#when-a-page-needs-you}
 

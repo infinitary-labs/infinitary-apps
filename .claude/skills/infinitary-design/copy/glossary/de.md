@@ -67,6 +67,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | evidence | Belege | "Widersprüchliche Belege" |
 | extra usage (Claude's credits past the allowance) | zusätzliche Nutzung | |
 | feed / activity | Aktivität | |
+| feedback (/feedback, to Infinitary's maker) | Feedback | "Feedback senden"; the card's button is "Feedback absenden". |
 | file (to the backlog) | im Backlog ablegen | "Warum sie abgelegt wurde". |
 | fingerprint (a computer's key) | Fingerabdruck |  |
 | first mate | erster Offizier | The German merchant-navy rank for a ship's second-in-command; a common noun with a lowercase adjective mid-sentence ("dein erster Offizier"), "Erster Offizier" only at a sentence start or as a short label. |
@@ -92,6 +93,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | live validation | Live-Prüfung | Trying the change for real; kept apart from "Überprüfungen". |
 | log (a check's kept output) | das Log | "Protokoll" already names the task's record. |
 | main message | Hauptnachricht | |
+| mark (a place marked on a picture or a page) | Markierung | "Markierung {mark}", "Bild mit Markierungen". |
 | median (Usage, Cost per task) | Median | The middle task of a week's finished tasks; never "average". |
 | merge | zusammenführen, Zusammenführen | GitHub's German docs say "Zusammenführen eines Pull Requests"; "mergen" is avoided as jargon. |
 | merge queue (the host's own) | Merge-Warteschlange | |
@@ -102,6 +104,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | model | Modell | |
 | Models board | Modelltafel | The board of models under Intelligenz in the settings. |
 | Not now | Nicht jetzt | |
+| note (a comment pointed at part of a card) | Notiz | The queued comment, "2 Notizen senden"; a note card stays "Hinweis". |
 | on pace / empty (allowance verdicts) | im Plan / leer | "leer in 2h", "jetzt leer". |
 | out of reach | außer Reichweite | Replaces offline and unreachable. |
 | panel | Panel | Neuter, plural "Panels"; common in German software. |
@@ -111,6 +114,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | pin / unpin (a task) | anheften / nicht mehr angeheftet | |
 | plan (a task's steps) | Plan | |
 | plan (subscription) | Tarif | Kept apart from a task's "Plan". |
+| Point at | Zeigen auf | The button; in a sentence "zeig darauf". |
 | port (a computer's SSH port) | Port | Masculine: "seinen Port, falls er nicht 22 ist". |
 | PR #N | PR #N | Stays as is, in mono. |
 | Premium / Hard / Normal / Simple (a task's level), Difficulty | Premium / Schwer / Normal / Einfach, Schwierigkeit | How hard the task is, never a reasoning word. |

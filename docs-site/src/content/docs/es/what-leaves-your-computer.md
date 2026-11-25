@@ -1,5 +1,5 @@
 ---
-source: 4e862d71de30e0c9
+source: 63adaa2fec424fbb
 title: Lo que sale de tu computadora
 description: Lo que envía Infinitary, adónde va, y el único interruptor que nos envía algo a nosotros.
 ---
@@ -90,6 +90,19 @@ Tu teléfono no envía nada por sí mismo; tu computadora envía sus eventos baj
 Para ver exactamente lo que se enviaría, abre **Lo que saldría de esta computadora** en **Compartir**.
 Muestra el identificador de instalación, lo que espera para enviarse, lo que se envió y cada evento que Diagnósticos puede enviar.
 Desactiva **Diagnósticos**, y no se registra ni se envía nada más.
+
+## Los comentarios que envías {#feedback-you-send}
+
+Los comentarios no son uno de los interruptores de **Compartir**: los escribes, los lees y los envías tú.
+Cuando escribes `/feedback`, un tripulante redacta una incidencia para el proyecto público de Infinitary en GitHub.
+Tu clic en **Enviar comentarios** la publica, públicamente, con tu propia cuenta de GitHub.
+
+- La incidencia lleva las palabras del tripulante y unos pocos datos sobre la app y tus computadoras, como versiones, sistemas y tipos de proveedor.
+- Deja fuera tus nombres, tus carpetas, tus proyectos y tus inicios de sesión.
+  Infinitary rechaza un borrador que contiene uno que conoce, una dirección de correo o una clave.
+- Antes de tu clic, una sola cosa va a GitHub: una búsqueda de incidencias parecidas, cuyas palabras pasan la misma comprobación.
+
+Consulta [Obtener ayuda](/es/get-help/#send-feedback-from-the-app).
 
 ## Secretos {#secrets}
 

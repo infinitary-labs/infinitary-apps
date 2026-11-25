@@ -1,5 +1,5 @@
 ---
-source: 4e862d71de30e0c9
+source: 63adaa2fec424fbb
 title: O que sai do seu computador
 description: O que o Infinitary envia, para onde vai e o único botão que envia algo para nós.
 ---
@@ -90,6 +90,19 @@ Seu celular não envia nada por conta própria; seu computador envia os eventos 
 Para ver exatamente o que sairia, abra **O que sairia deste computador** em **Compartilhamento**.
 Ele mostra o ID de instalação, o que aguarda envio, o que foi enviado e todos os eventos que o Diagnóstico pode enviar.
 Desligue o **Diagnóstico**, e nada mais é registrado nem enviado.
+
+## O feedback que você envia {#feedback-you-send}
+
+O feedback não é um dos botões de **Compartilhamento**: você mesmo o escreve, lê e envia.
+Quando você digita `/feedback`, um tripulante redige uma issue para o projeto público do Infinitary no GitHub.
+Seu clique em **Enviar feedback** a publica, publicamente, na sua própria conta do GitHub.
+
+- A issue traz as palavras do tripulante e alguns fatos sobre o app e os seus computadores, como versões, sistemas e tipos de provedor.
+- Ela deixa de fora seus nomes, suas pastas, seus projetos e seus logins.
+  O Infinitary recusa um rascunho que contenha um que ele conhece, um endereço de e-mail ou uma chave.
+- Antes do seu clique, uma única coisa vai para o GitHub: uma busca por issues parecidas, cujas palavras passam pela mesma verificação.
+
+Veja [Obter ajuda](/pt-br/get-help/#send-feedback-from-the-app).
 
 ## Segredos {#secrets}
 

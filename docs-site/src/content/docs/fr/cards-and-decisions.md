@@ -1,5 +1,5 @@
 ---
-source: a59e47a363ec3b9e
+source: 543f9bb4d4d0a6b3
 title: Cartes et décisions
 description: Comment votre second et votre équipage vous apportent réponses et décisions sous forme de cartes, et comment y répondre.
 ---
@@ -21,8 +21,8 @@ Les touches de cette page sont les touches standard ; [Clavier](/fr/keyboard/)
 
 ## Notes et décisions {#notes-and-decisions}
 
-<img class="picture-dark" src="/pictures/window-dark.webp" alt="Une carte de décision au milieu de la fenêtre : une question à deux options, le champ de réponse et les boutons Refuser, Garder pour plus tard et Approuver et construire." width="1280" height="652" />
-<img class="picture-light" src="/pictures/window-light.webp" alt="Une carte de décision au milieu de la fenêtre : une question à deux options, le champ de réponse et les boutons Refuser, Garder pour plus tard et Approuver et construire." width="1280" height="652" />
+<img class="picture-dark" src="/pictures/window-dark.webp" alt="Une carte de décision au milieu de la fenêtre, au-dessus de la zone de message : une question à deux options, le champ de réponse et les boutons Refuser, Garder pour plus tard et Approuver et construire." width="1280" height="720" />
+<img class="picture-light" src="/pictures/window-light.webp" alt="Une carte de décision au milieu de la fenêtre, au-dessus de la zone de message : une question à deux options, le champ de réponse et les boutons Refuser, Garder pour plus tard et Approuver et construire." width="1280" height="720" />
 
 Une carte est de l’un de deux types, indiqué en haut :
 
@@ -65,6 +65,34 @@ Pour replier le fil dans la carte, appuyez sur ⌘\ (Ctrl+\ sous Linux).
 La carte reste à sa place pendant que son auteur traite votre réponse.
 Un équipier redessine sa carte une seule fois, quand il a terminé.
 
+## Désigner une partie d’une carte {#pointing-at-part-of-a-card}
+
+Pour dire de quelle partie d’une carte parlent vos mots, désignez-la.
+
+1. Appuyez sur **Désigner**, le pointeur à côté du champ de réponse, ou sur ⇧⌘A (Ctrl+Shift+A sous Linux).
+2. Cliquez sur une partie de la carte, ou allez-y avec les flèches et appuyez sur Entrée.
+3. Tapez un commentaire, ou laissez-le vide, et appuyez sur **Garder**.
+
+Vous pouvez aussi sélectionner des mots dans la carte et appuyer sur **Annoter**, juste en dessous.
+
+Chaque note attend dans le fil, marquée **Non envoyée**, avec **Modifier** et **Retirer**.
+**Désigner** se désactive après chaque note : appuyez de nouveau dessus pour la partie suivante.
+Avec deux notes en attente, **Discuter** indique **Envoyer 2 notes**, et les envoie ensemble en une seule réponse.
+L’auteur de la carte lit chaque note avec la partie qu’elle désigne.
+
+### Désigner un endroit sur une image {#pointing-at-a-picture}
+
+Cliquez sur une image d’une carte pour l’agrandir.
+Là, appuyez sur **Désigner** pour marquer un endroit sur l’image.
+
+- Avec **Cadre ou point**, tracez un cadre ou appuyez sur un point.
+- Avec **Trait à main levée**, tracez un trait.
+- Au clavier, les flèches déplacent un cadre, Maj avec une flèche le redimensionne, et Entrée écrit la note.
+
+Chaque repère reçoit un numéro, et sa note attend dans le fil avec une petite copie de l’image.
+Quand vous envoyez, l’auteur reçoit l’image avec chaque repère dessiné dessus.
+Une réponse porte jusqu’à quatre images.
+
 ## Mettre une carte de côté {#putting-a-card-aside}
 
 Chaque carte a un signe moins dans son coin, **Mettre de côté**.
@@ -77,6 +105,21 @@ La carte attend sous En attente de vous dans Tâches, et revient quand son auteu
 
 Pour ramener une carte, cliquez sur sa tâche dans Tâches.
 
+## Rechercher des mots dans une carte {#finding-words-in-a-card}
+
+Appuyez sur ⌘F (Ctrl+F sous Linux), ou sur la loupe en haut de la carte, pour rechercher des mots dans la carte à l’écran.
+Tapez dans le champ qui s’ouvre, et les résultats s’allument à mesure que vous tapez.
+Les majuscules et les accents ne comptent pas.
+Un compteur comme « 2 sur 7 » dit sur quel résultat vous êtes.
+
+- **Résultat suivant** : Entrée ou ⌘G (Ctrl+G sous Linux).
+- **Résultat précédent** : Maj+Entrée ou ⇧⌘G (Ctrl+Shift+G sous Linux).
+- **Fermer la recherche** : Échap.
+
+La recherche parcourt toute la carte : son titre, son corps, ses sections repliées et son fil.
+Une section repliée s’ouvre quand le résultat s’y trouve.
+Elle marche de la même façon dans une carte passée, dans [toute la conversation](/fr/the-first-mate/#the-whole-conversation) et sur la carte d’une tâche, sauf sur son onglet Navigateur.
+
 ## Cartes de fusion {#merge-cards}
 
 Quand un changement est prêt, son équipier apporte une carte de fusion.
@@ -85,7 +128,7 @@ Elle raconte le récit du changement : pourquoi, ce qui a changé et ce qui a �
 **Images Avant et Après.**
 Chaque écran que touche le changement montre son aspect avant et son aspect après, côte à côte.
 Un nouvel écran ne montre que Après.
-Cliquez sur une image pour l’agrandir.
+Cliquez sur une image pour l’agrandir, et pour [désigner un endroit dessus](#pointing-at-a-picture).
 Un enregistrement de démo a un bouton de lecture.
 
 **Le dessin du risque.**
@@ -112,3 +155,4 @@ Si cela n’a pas marché, collez ce que vous avez vu dans son champ et choisiss
 
 Une carte à laquelle vous avez répondu est gardée.
 Ouvrez sa tâche et choisissez l’onglet **Cartes** pour la relire, avec ce que vous avez choisi.
+[Toute la conversation](/fr/the-first-mate/#the-whole-conversation) liste aussi les cartes auxquelles vous avez répondu, dans sa vue **Cartes**.

@@ -1,5 +1,5 @@
 ---
-source: 72e8eba0a4de8933
+source: 01d22d3c265a0418
 title: Der Browser der Crew
 description: Ein Crewmitglied kann für seine Aufgabe Websites in einem eigenen Browser öffnen. Sieh ihm zu, übernimm die Steuerung, wenn eine Seite dich braucht, und entscheide, welche deiner Anmeldungen spätere Aufgaben nutzen dürfen.
 ---
@@ -9,8 +9,8 @@ Er öffnet Websites und Seiten, die dein Projekt bereitstellt, liest sie, klickt
 Du kannst ihm bei der Arbeit zusehen, die Steuerung übernehmen, wenn eine Seite einen Menschen braucht, und sie wieder zurückgeben.
 Ein Kauf, eine Buchung oder alles andere, das dich bindet, bleibt immer deine Sache.
 
-<img class="picture-dark" src="/pictures/browser-dark.webp" alt="Die Karte einer Aufgabe auf ihrem Tab „Browser“, während du die Steuerung hast: Die Zeile über einer ausgedachten Seite eines Gartenvereins sagt, dass du die Steuerung hast und das Crewmitglied die Seite nicht sieht, mit „Steuerung zurückgeben“. Daneben bittet die Entscheidungskarte des Crewmitglieds dich, dich auf der Seite des Vereins anzumelden." width="1272" height="636" />
-<img class="picture-light" src="/pictures/browser-light.webp" alt="Die Karte einer Aufgabe auf ihrem Tab „Browser“, während du die Steuerung hast: Die Zeile über einer ausgedachten Seite eines Gartenvereins sagt, dass du die Steuerung hast und das Crewmitglied die Seite nicht sieht, mit „Steuerung zurückgeben“. Daneben bittet die Entscheidungskarte des Crewmitglieds dich, dich auf der Seite des Vereins anzumelden." width="1272" height="636" />
+<img class="picture-dark" src="/pictures/browser-dark.webp" alt="Die Karte einer Aufgabe auf ihrem Tab „Browser“, während du die Steuerung hast: Die Zeile über einer ausgedachten Seite eines Gartenvereins sagt, dass du die Steuerung hast und das Crewmitglied die Seite nicht sieht, mit „Zeigen auf“ und „Steuerung zurückgeben“. Daneben bittet die Entscheidungskarte des Crewmitglieds dich, dich auf der Seite des Vereins anzumelden." width="1272" height="636" />
+<img class="picture-light" src="/pictures/browser-light.webp" alt="Die Karte einer Aufgabe auf ihrem Tab „Browser“, während du die Steuerung hast: Die Zeile über einer ausgedachten Seite eines Gartenvereins sagt, dass du die Steuerung hast und das Crewmitglied die Seite nicht sieht, mit „Zeigen auf“ und „Steuerung zurückgeben“. Daneben bittet die Entscheidungskarte des Crewmitglieds dich, dich auf der Seite des Vereins anzumelden." width="1272" height="636" />
 
 ## Der eigene Browser einer Aufgabe {#a-tasks-own-browser}
 
@@ -38,7 +38,7 @@ Ein Computer führt höchstens vier Aufgabenbrowser gleichzeitig aus.
 Auch **Browser anzeigen** in der Befehlssuche öffnet ihn, wenn du auf einer Karte zur Aufgabe bist.
 Die Karte eines Crewmitglieds kann außerdem eine Schaltfläche tragen, etwa „Try it“ oder „View booking“, die den Browser neben dieser Karte öffnet.
 
-Die Zeile über der Seite zeigt **Zurück**, **Vorwärts** und **Neu laden**, wer gerade steuert, **Steuerung übernehmen** und **Mehr**.
+Die Zeile über der Seite zeigt **Zurück**, **Vorwärts** und **Neu laden**, wer gerade steuert, **Zeigen auf**, **Steuerung übernehmen** und **Mehr**.
 Solange du zusiehst, ist die Seite ein Bild dessen, was das Crewmitglied sieht, und deine Klicks erreichen sie nicht.
 Unter **Mehr** findest du **Einpassen** oder **Originalgröße**, **Browser stoppen**, **Seitenadresse kopieren** und **Problem melden**, was eine Nachricht an deinen ersten Offizier beginnt, die du zu Ende schreibst.
 
@@ -70,6 +70,27 @@ Solange du die Steuerung hast:
 Nachdem du die Steuerung zurückgegeben hast, sieht sich das Crewmitglied die Seite neu an.
 Was du in die Felder der Seite getippt hast, liest es nicht: Sie erscheinen als ausgefüllt, ihre Worte bleiben verborgen.
 Ein Bild der Seite macht es nur mit einem Grund, den es angibt und der in der Aktivität der Aufgabe steht, und nie von einer Seite, die enthält, was du getippt hast.
+
+## Auf eine Stelle der Seite zeigen {#point-at-a-place-on-the-page}
+
+Um dem Crewmitglied etwas zu einer Stelle der Seite zu sagen, zeig darauf.
+
+1. Drück in der Zeile über der Seite **Zeigen auf**, oder ⇧⌘A (Ctrl+Shift+A unter Linux).
+   Die Seite wird angehalten, und nichts, was du tust, erreicht sie.
+2. Drück auf eine Stelle, zieh einen Rahmen, oder wähl **Freihandlinie** und zeichne eine Linie.
+   Mit der Tastatur gehst du mit den Pfeiltasten durch die Dinge auf der Seite und drückst Enter.
+3. Schreib einen Kommentar, oder lass ihn leer, und drück **Vormerken**.
+   Die Notiz zeigt genau das Bild, das gesendet wird.
+
+Esc verlässt **Zeigen auf** ohne Notiz.
+
+Liegt neben der Seite eine Karte, wartet die Notiz bei den Notizen dieser Karte und geht mit deiner Antwort.
+Liegt dort keine Karte, wartet sie über dem Nachrichtenfeld „Crewmitglied“ neben der Seite und geht mit deiner nächsten Nachricht an das Crewmitglied.
+Nichts erreicht das Crewmitglied, bevor du sendest.
+Dann bekommt das Crewmitglied das Bild mit deinen Markierungen, die Adresse und den Titel der Seite und den Namen dessen, was du markiert hast.
+
+**Zeigen auf** funktioniert, während du zusiehst und während du die Steuerung hast.
+Während du die Steuerung hast, sagt die Notiz: „Beim Senden sieht das Crewmitglied dieses Bild der Seite.“
 
 ## Wenn eine Seite dich braucht {#when-a-page-needs-you}
 

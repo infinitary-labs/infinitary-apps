@@ -1,5 +1,5 @@
 ---
-source: a59e47a363ec3b9e
+source: 543f9bb4d4d0a6b3
 title: Cartões e decisões
 description: Como o seu imediato e a sua tripulação trazem respostas e decisões para você em cartões, e como respondê-los.
 ---
@@ -21,8 +21,8 @@ As teclas desta página são as padrão; [Teclado](/pt-br/keyboard/) lista todas
 
 ## Notas e decisões {#notes-and-decisions}
 
-<img class="picture-dark" src="/pictures/window-dark.webp" alt="Um cartão de decisão no meio da janela: uma pergunta com duas opções, o campo de resposta e os botões Recusar, Salvar e adiar, e Aprovar e construir." width="1280" height="652" />
-<img class="picture-light" src="/pictures/window-light.webp" alt="Um cartão de decisão no meio da janela: uma pergunta com duas opções, o campo de resposta e os botões Recusar, Salvar e adiar, e Aprovar e construir." width="1280" height="652" />
+<img class="picture-dark" src="/pictures/window-dark.webp" alt="Um cartão de decisão no meio da janela, acima da caixa de mensagem: uma pergunta com duas opções, o campo de resposta e os botões Recusar, Salvar e adiar, e Aprovar e construir." width="1280" height="720" />
+<img class="picture-light" src="/pictures/window-light.webp" alt="Um cartão de decisão no meio da janela, acima da caixa de mensagem: uma pergunta com duas opções, o campo de resposta e os botões Recusar, Salvar e adiar, e Aprovar e construir." width="1280" height="720" />
 
 Um cartão é de um entre dois tipos, indicado no topo:
 
@@ -65,6 +65,34 @@ Para recolher a conversa de volta para dentro do cartão, pressione ⌘\ (Ctrl+\
 O cartão fica no lugar enquanto o autor trabalha na sua resposta.
 Um tripulante redesenha o cartão uma única vez, quando termina.
 
+## Apontar para uma parte de um cartão {#pointing-at-part-of-a-card}
+
+Para dizer de qual parte de um cartão as suas palavras falam, aponte para ela.
+
+1. Pressione **Apontar para**, o ponteiro ao lado do campo de resposta, ou ⇧⌘A (Ctrl+Shift+A no Linux).
+2. Clique em uma parte do cartão, ou vá até ela com as setas do teclado e pressione Enter.
+3. Digite um comentário, ou deixe-o vazio, e pressione **Pôr na fila**.
+
+Você também pode selecionar palavras no cartão e pressionar **Anotar** embaixo delas.
+
+Cada nota espera na conversa do cartão, marcada **Não enviada**, com **Editar** e **Remover**.
+**Apontar para** se desliga depois de cada nota, então pressione de novo para a próxima parte.
+Com duas notas esperando, **Chat** mostra **Enviar 2 notas**, e as envia juntas como uma única resposta.
+O autor do cartão lê cada nota com a parte para a qual ela aponta.
+
+### Apontar para um lugar em uma imagem {#pointing-at-a-picture}
+
+Clique em uma imagem de um cartão para vê-la maior.
+Ali, pressione **Apontar para** para marcar um lugar nela.
+
+- Com **Caixa ou ponto**, arraste uma caixa ou pressione um ponto.
+- Com **Linha à mão livre**, desenhe uma linha.
+- Pelo teclado, as setas movem uma caixa, Shift com uma seta muda o tamanho dela e Enter escreve a nota.
+
+Cada marca recebe um número, e a nota dela espera na conversa do cartão com uma cópia pequena da imagem.
+Quando você envia, o autor recebe a imagem com todas as marcas desenhadas nela.
+Uma resposta leva até quatro imagens.
+
 ## Deixar um cartão de lado {#putting-a-card-aside}
 
 Cada cartão tem um sinal de menos no canto, **Deixar de lado**.
@@ -77,6 +105,21 @@ O cartão espera em Aguardando você, em Tarefas, e volta quando o autor o muda.
 
 Para trazer um cartão de volta, clique na tarefa dele em Tarefas.
 
+## Buscar palavras em um cartão {#finding-words-in-a-card}
+
+Pressione ⌘F (Ctrl+F no Linux), ou a lupa no alto do cartão, para buscar palavras no cartão que está na tela.
+Digite no campo que se abre, e os resultados se acendem enquanto você digita.
+Maiúsculas e acentos não fazem diferença.
+Um contador como “2 de 7” diz em qual resultado você está.
+
+- **Próximo resultado**: Enter ou ⌘G (Ctrl+G no Linux).
+- **Resultado anterior**: Shift+Enter ou ⇧⌘G (Ctrl+Shift+G no Linux).
+- **Fechar a busca**: Escape.
+
+A busca percorre o cartão inteiro: o título, o corpo, as seções recolhidas e a conversa do cartão.
+Uma seção recolhida se abre quando o resultado está dentro dela.
+Funciona do mesmo jeito em um cartão anterior, na [conversa inteira](/pt-br/the-first-mate/#the-whole-conversation) e no cartão de uma tarefa, menos na aba Navegador.
+
 ## Cartões de mesclagem {#merge-cards}
 
 Quando uma mudança está pronta, o tripulante dela traz um cartão de mesclagem.
@@ -85,7 +128,7 @@ Ele conta a história da mudança: por quê, o que mudou e o que foi verificado.
 **Imagens de Antes e Depois.**
 Cada tela que a mudança toca mostra como era antes e como fica depois, lado a lado.
 Uma tela nova mostra só o Depois.
-Clique em uma imagem para vê-la maior.
+Clique em uma imagem para vê-la maior e para [apontar para um lugar nela](#pointing-at-a-picture).
 Uma gravação de demonstração tem um botão de reproduzir.
 
 **O desenho de risco.**
@@ -112,3 +155,4 @@ Se não deu certo, cole o que você viu no campo dele e escolha **Falhou**, e o 
 
 Um cartão que você respondeu fica guardado.
 Abra a tarefa dele e escolha a aba **Cartões** para lê-lo de novo, com o que você escolheu.
+[A conversa inteira](/pt-br/the-first-mate/#the-whole-conversation) também lista os cartões que você respondeu, na visualização **Cartões**.

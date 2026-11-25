@@ -67,6 +67,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | evidence | الأدلة | "أدلة متعارضة" for differing evidence. |
 | extra usage (Claude's credits past the allowance) | الاستخدام الإضافي | |
 | feed / activity | النشاط | |
+| feedback (/feedback, to Infinitary's maker) | ملاحظات | Plural, as in "إرسال ملاحظات"; the card's button is "تقديم الملاحظات". |
 | file (to the backlog) | إدراج | Used only for the backlog, never for a task that starts now. |
 | fingerprint (a computer's key) | بصمة |  |
 | first mate | نائب القبطان | The ship's second-in-command, a common noun; used without "your" because the captain is the reader, and "النائب" only as the thread's one-word author tag. |
@@ -97,6 +98,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | log (a check's kept output) | سجل التشغيل | Never "سجل" alone, which reads as the task's record ("سجل المهمة"). |
 | machine, server, home computer (never said) | الحاسوب باسمه | "هذا الحاسوب" on itself. |
 | main message | الرسالة الرئيسية | |
+| mark (a place marked on a picture or a page) | علامة | Numbered: "العلامة {mark}"; plural "علامات". |
 | median (Usage, Cost per task) | الوسيط | The middle task of a week's finished tasks; never "average". |
 | merge | دمج | "تعذّر الدمج" for "Cannot merge", "دُمج" for "Merged". |
 | merge card | بطاقة الدمج | |
@@ -106,6 +108,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | middle half (Usage, Cost per task) | النصف الأوسط | The band between the quarter and three-quarter marks of a week's tasks. |
 | model | نموذج | Plural "نماذج"; "نموذج أقوى" for a stronger model. |
 | Models board | جدول النماذج | Not "لوحة", which names a panel. |
+| note (a comment pointed at part of a card) | ملاحظة | The queued comment, "إرسال ملاحظتين"; the same word as feedback in the singular, so the sentence names which. |
 | Observe | المراقبة | |
 | offline, disconnected (never said) | خارج المتناول | |
 | out of reach | خارج المتناول | Chosen over "غير متصل", which is the "offline" the vocabulary avoids. |
@@ -118,6 +121,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | plan (a task's plan) | خطة | |
 | plan (what the person subscribes to) | باقة | Kept apart from a task's "خطة" so one word never names two things. |
 | plugin, extension (never said) | لوحة | |
+| Point at | الإشارة إلى | The button's verbal noun; the imperative in a sentence is "أشر إليه". |
 | port (a computer's SSH port) | منفذ | "ومنفذه إن لم يكن 22". |
 | PR #N | PR #N | Kept as is, in mono. |
 | Premium / Hard / Normal / Simple (a task's level), Difficulty | ممتاز / صعبة / عادية / بسيطة, الصعوبة | How hard the task is, never a reasoning word. |

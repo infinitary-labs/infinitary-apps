@@ -70,11 +70,11 @@ export class GitHubChecks {
 
   async read(change: ForgeChange, movedPast?: string) {
     const sha = encodeURIComponent(movedPast ?? change.headSha);
-    const runs = await this.pages<CheckRunJson>(
+    const runs = await this.options.pages<CheckRunJson>(
       `${this.options.repoPath}/commits/${sha}/check-runs`,
       (page) => (page as { check_runs?: CheckRunJson[] }).check_runs ?? [],
     );
-    const statuses = await this.pages<StatusJson>(
+    const statuses = await this.options.pages<StatusJson>(
       `${this.options.repoPath}/commits/${sha}/status`,
       (page) => (page as { statuses?: StatusJson[] }).statuses ?? [],
     );

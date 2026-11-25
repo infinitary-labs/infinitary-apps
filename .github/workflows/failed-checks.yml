@@ -1,0 +1,77 @@
+name: failed-checks
+
+# The failed-check note (scripts/failed-checks.mjs; docs/public-ci.md,
+# "Outside contributors"): when ci, contributors or docs-site finishes a run
+# for an outside pull request, it comments once per version naming each
+# failed job with a link to its log, leaving out checks that also fail in
+# main's newest run and saying when main is failing too, and labels the pull
+# request "waiting on author", so it goes back to its author before any
+# review starts. A passing rerun of the same version edits the comment and
+# takes off the label the note put on. Started by hand with a
+# pull request number, it is a dry run: it writes what it would say to the
+# job summary and nothing on the pull request.
+#
+# It writes on an outside pull request, so it starts on workflow_run, which
+# runs from this project's default branch rather than from the pull
+# request's own files. It checks out only its scripts from that branch,
+# never the pull request's code, reads job results from GitHub as data, uses
+# no secret beyond its own token, and runs on GitHub's own machines.
+
+on:
+  workflow_run:
+    workflows: [ci, contributors, docs-site]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      pull:
+        description: The pull request number to read, as a dry run that writes nothing
+        required: true
+        type: number
+
+# A read of the project; the job names the writes it needs.
+permissions:
+  contents: read
+
+# Two workflows of one version can finish together; the second waits, so it
+# edits the first one's comment instead of writing a second. Each run reads
+# the whole version again, so a run that replaces a waiting one loses nothing.
+concurrency:
+  group: failed-checks-${{ github.event.workflow_run.head_sha || inputs.pull }}
+  cancel-in-progress: false
+
+jobs:
+  note:
+    # Only a run for a pull request from another copy of the project, or a
+    # dry run by hand; the project's own branches start nothing here.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.event == 'pull_request' &&
+       github.event.workflow_run.head_repository.full_name != github.repository)
+    name: ${{ github.event_name == 'workflow_dispatch' && 'Manual request' || 'Pull request' }} · Failed-check note
+    runs-on: ubuntu-24.04
+    # Actions reads for the runs' jobs. GitHub refuses a comment or a label
+    # on a pull request to a token without pull request writes, even with
+    # issue writes; issue writes stay for making the label the first time.
+    permissions:
+      contents: read
+      actions: read
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/failed-checks.mjs
+            scripts/check-file-flag.mjs
+            scripts/ci-job-names.mjs
+            scripts/intake-labels.mjs
+          sparse-checkout-cone-mode: false
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        env:
+          PULL: ${{ inputs.pull }}
+        with:
+          script: |
+            const {pathToFileURL} = require('node:url');
+            const {noteFailedChecks} = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/failed-checks.mjs`).href);
+            core.info(await noteFailedChecks({github, context, core, pullNumber: process.env.PULL}));

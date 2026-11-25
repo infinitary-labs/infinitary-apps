@@ -109,6 +109,7 @@ You can find tasks by tag in three places:
   Press a tag to list only the tasks that carry it, **No tag** for the tasks that carry none, or **All tags** for every task again.
 - **Group tasks**, beside it, lists your tasks **By tag** instead of **By status**.
   Each tag is a group, folded until you open it.
+  A task waiting on you lists first in the group of each tag it carries, and stays listed even while that group is folded.
 - The task board has a row of tags of its own, and its **By tag** view counts each tag's tasks by where they stand.
 
 Tags show for one project at a time: the project in focus, or your only project with tags.

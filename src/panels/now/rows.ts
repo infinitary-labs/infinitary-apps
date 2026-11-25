@@ -14,6 +14,7 @@ import {
   taskStatusOf,
 } from "@infinitary/ui";
 import * as m from "./messages.generated";
+import type { NavGroup } from "./nav";
 import {
   foundOnWords,
   ROW_CATCHING_UP,
@@ -527,16 +528,16 @@ export function openTagGroupsOf(value: unknown): TagGroupKey[] {
 export type TagGroup = { group: TagGroupKey; name: string; rows: NowRow[] };
 
 /** The groups a tag group gathers its rows from, in the order it lists them. */
-const TAG_GROUP_SOURCES: readonly NowGroup[] = ["working", "queued", "backlog"];
+const TAG_GROUP_SOURCES: readonly NowGroup[] = ["waiting", "working", "queued", "backlog"];
 
 /**
  * The groups Tasks lists by tag (design skill NowPanel, "By tag"): one per
- * tag of the project that a working, queued or backlog task carries,
- * alphabetically, then No tag. A group lists each such task once, flat,
- * working first, then queued, then backlog, each row keeping the group it
- * would list in by status, so it reads as it does there; a task with two
- * tags lists under both. Waiting on you, Pinned and Done keep their rows,
- * so a task waiting on you or pinned lists there alone.
+ * tag of the project that a task waiting on you, working, queued or in the
+ * backlog carries, alphabetically, then No tag. A group lists each such task
+ * once, flat, nearest first - waiting on you, working, queued, then backlog -
+ * each row keeping the group it would list in by status, so it reads as it
+ * does there; a task with two tags lists under both. Pinned and Done keep
+ * their rows, so a pinned task lists there alone.
  */
 export function tagGroupsOf(
   rows: ReadonlyMap<PanelGroup, NowRow[]>,
@@ -565,14 +566,46 @@ export function tagGroupsOf(
 
 /**
  * A folded tag group's bar: one segment per task in the group's order,
- * working in ember and the rest as outlines, the colors of a collapsed
- * task's parts bar (`partsBarOf`).
+ * waiting on you in blue, working in ember and the rest as outlines, the
+ * colors of a collapsed task's parts bar (`partsBarOf`).
  */
 export function tagGroupBarOf(group: TagGroup): PartSegment[] {
   return group.rows.map(({ task, group: home }) => ({
-    state: home === "working" ? "working" : "rest",
+    state: home === "waiting" ? "waiting" : home === "working" ? "working" : "rest",
     id: task.id,
   }));
+}
+
+/**
+ * The rows a tag group still lists while folded (the captain's choice 1b on
+ * INF-6803's plan): its tasks waiting on you, so no decision hides behind a
+ * fold, as a collapsed task never hides a part waiting on you (`foldRows`).
+ */
+export function foldedTagRowsOf(rows: readonly NowRow[]): NowRow[] {
+  return rows.filter((row) => row.group === "waiting");
+}
+
+/**
+ * Tasks' groups by tag, from its groups by status: Pinned, the tag groups,
+ * then Done and Earlier matches. Waiting on you has no group of its own; its
+ * tasks list in their tag groups (`tagGroupsOf`).
+ */
+export function byTagGroupsOf(
+  byStatus: readonly NavGroup[],
+  tagGroups: readonly TagGroup[],
+  isOpen: (group: TagGroupKey) => boolean,
+): NavGroup[] {
+  const kept = (groups: readonly PanelGroup[]) =>
+    byStatus.filter(({ group }) => groups.includes(group as PanelGroup));
+  const tagged = tagGroups.map(({ group, rows }) => ({
+    group,
+    open: isOpen(group),
+    collapsible: true,
+    taskIds: rows.map((row) => row.task.id),
+    foldedTaskIds: foldedTagRowsOf(rows).map((row) => row.task.id),
+    byTag: true,
+  }));
+  return [...kept(["pinned"]), ...tagged, ...kept(["landed", "earlier"])];
 }
 
 /** The newest write among the rows the panel lists, for the lag measure. */

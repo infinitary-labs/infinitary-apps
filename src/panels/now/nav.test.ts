@@ -62,6 +62,25 @@ describe("the Tasks list's stops", () => {
     ]);
     expect(rovingKey(waiting, inTag)).toBe(rowNavKey("u2"));
   });
+
+  // INF-6803's plan, choice 1b: a folded tag group keeps its rows waiting on
+  // you listed under its header, so the keyboard reaches them too.
+  it("include a folded tag group's rows waiting on you, after its header", () => {
+    const folded = nowNavItems([
+      {
+        group: "tag:tag-b",
+        open: false,
+        collapsible: true,
+        taskIds: ["w1", "c1"],
+        foldedTaskIds: ["w1"],
+        byTag: true,
+      },
+    ]);
+    expect(folded.map((item) => item.key)).toEqual([
+      groupNavKey("tag:tag-b"),
+      rowNavKey("w1", "tag:tag-b"),
+    ]);
+  });
 });
 
 describe("a key in the Tasks list", () => {

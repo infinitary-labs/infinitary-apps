@@ -35,11 +35,13 @@ import styles from "./panel.css";
 import { barSegments, barWords, PartsBar, useBarRest } from "./partsBar";
 import { reconcileBoard, reconcileRows } from "./reconcile";
 import {
+  byTagGroupsOf,
   COLLAPSED_KEY,
   collapsedIdsOf,
   earlierRowsOf,
   type FoldedRows,
   failedStartCount,
+  foldedTagRowsOf,
   foldRows,
   GROUPING_KEY,
   type Grouping,
@@ -718,17 +720,7 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks, stor
       byTag: false,
     }));
     if (!byTag) return byStatus;
-    // By tag: Pinned and Waiting on you, one group per tag, No tag, then Done.
-    const kept = (groups: readonly PanelGroup[]) =>
-      byStatus.filter(({ group }) => groups.includes(group as PanelGroup));
-    const tagged = tagGroups.map(({ group, rows: tagRows }) => ({
-      group: group as ListGroup,
-      open: narrowed || openTagGroups.has(group),
-      collapsible: true,
-      taskIds: tagRows.map((row) => row.task.id),
-      byTag: true,
-    }));
-    return [...kept(["pinned", "waiting"]), ...tagged, ...kept(["landed", "earlier"])];
+    return byTagGroupsOf(byStatus, tagGroups, (group) => narrowed || openTagGroups.has(group));
   }, [rows, folded, narrowed, expanded, doneLeftOut, byTag, tagGroups, openTagGroups]);
   const navItems = useMemo(() => nowNavItems(shownGroups), [shownGroups]);
   // A row a collapse hid hands its stop to the collapsed task it is under.
@@ -1247,9 +1239,11 @@ export function Group({
   // A crew write in another group leaves this group's actual elements
   // untouched, not just the Row components' memoized paints (INF-2221).
   const body = useMemo(() => {
-    if (!open) return null;
+    // A folded tag group still lists its rows waiting on you under its bar.
+    const listed = open ? (fold?.shown ?? rows) : tagGroup ? foldedTagRowsOf(rows) : [];
+    if (listed.length === 0) return null;
     const names = { projects };
-    return (fold?.shown ?? rows).map(({ task, depth, home, group: rowGroup }) => {
+    return listed.map(({ task, depth, home, group: rowGroup }) => {
       // A row in a tag group reads as it does in the group it lists in by status.
       const controls = rowControlsOf(task, rowGroup, home);
       const navKey = rowNavKey(task.id, tagGroup);
@@ -1381,9 +1375,9 @@ export function Group({
         )}
         {bar && <PartsBar segments={segments} restedPart={barRest.restedPart} />}
       </button>
-      {open && (
+      {body && (
         <div
-          data-in-place-reveal={reveal ? "drift" : undefined}
+          data-in-place-reveal={open && reveal ? "drift" : undefined}
           style={{ display: "flex", flexDirection: "column", gap: 2 }}
         >
           {body}
@@ -1492,6 +1486,7 @@ const Row = memo(function Row({
     <button
       type="button"
       data-now-row={task.id}
+      data-now-row-group={group}
       data-now-key={task.key}
       data-now-blockers={task.blockedBy.join(" ") || undefined}
       data-now-status={task.status}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "connection-file-bridge-guardrail",
+      "reason": "The desktop journey checks the two connection-file methods in the exact bridge allowlist; test-only, with no app behavior change."
+    }
+  ]
+}

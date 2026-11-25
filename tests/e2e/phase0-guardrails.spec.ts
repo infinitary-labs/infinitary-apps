@@ -186,12 +186,14 @@ test("keeps node globals out of the page and exposes a tamper-proof bridge", asy
     "check",
     "connect",
     "discover",
+    "file",
     "list",
     "prepare",
     "profiles",
     "recheck",
     "review",
     "save",
+    "setFile",
   ]);
   expect(probe.olderKeys.sort()).toEqual(probe.apiKeys.sort());
   expect(probe.reassigned).toBe(false);

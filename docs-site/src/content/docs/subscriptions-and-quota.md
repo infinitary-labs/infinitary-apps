@@ -148,3 +148,16 @@ A line that climbs means tasks are taking more work than before.
 
 Under **Intelligence**, **Ask before a task spends more than** sets an amount.
 A task that passes it stops at a safe point and asks you on a card before it spends more.
+
+## Long conversations
+
+When a conversation grows long, your first mate and crew summarize it and carry on from the summary, so each message costs less and still fits the model.
+Under **Intelligence**, **Summarize long conversations at** sets where that happens.
+
+- **Automatic** summarizes at 300,000 tokens, or sooner where a model charges more past a lower point.
+- **150,000 tokens**, **200,000 tokens**, **300,000 tokens** or **500,000 tokens** summarizes at that number, or at a model's own limit when it is smaller.
+- **Each model's limit** summarizes only near each model's own limit, which can be a million tokens.
+
+A lower number costs less; a higher one keeps more of the conversation in full.
+When the number you pick lets a model run past a point where its requests cost more, the row names that model and the point.
+A conversation already open follows a change at its next message, on your other computers too; a conversation with Claude follows it when it next starts.

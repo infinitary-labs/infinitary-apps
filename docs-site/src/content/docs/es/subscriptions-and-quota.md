@@ -1,5 +1,5 @@
 ---
-source: b09b575fa5a6a2c1
+source: 9c71f435cc6524a0
 title: Suscripciones y asignación
 description: Cómo agregar tus suscripciones de IA, leer cuánto queda de la asignación de tu plan y qué hace tu tripulación cuando se agota.
 ---
@@ -149,3 +149,16 @@ Una línea que sube significa que las tareas requieren más trabajo que antes.
 
 En **Inteligencia**, **Preguntar antes de que una tarea gaste más de** fija una cantidad.
 Una tarea que la supera se detiene en un punto seguro y te pregunta en una tarjeta antes de gastar más.
+
+## Conversaciones largas {#long-conversations}
+
+Cuando una conversación se alarga, tu primer oficial y tu tripulación la resumen y siguen a partir del resumen, para que cada mensaje cueste menos y siga cabiendo en el modelo.
+En **Inteligencia**, **Resumir conversaciones largas a los** fija dónde ocurre.
+
+- **Automático** resume a los 300.000 tokens, o antes si un modelo cobra más a partir de un punto más bajo.
+- **150.000 tokens**, **200.000 tokens**, **300.000 tokens** o **500.000 tokens** resume en ese número, o en el límite propio del modelo si es menor.
+- **El límite de cada modelo** resume solo cerca del límite propio de cada modelo, que puede ser un millón de tokens.
+
+Un número más bajo cuesta menos; uno más alto conserva completa una parte mayor de la conversación.
+Cuando el número que eliges deja que un modelo pase de un punto en el que sus solicitudes cuestan más, la fila nombra ese modelo y ese punto.
+Una conversación ya abierta sigue un cambio en su siguiente mensaje, también en tus otras computadoras; una conversación con Claude lo sigue cuando vuelve a empezar.

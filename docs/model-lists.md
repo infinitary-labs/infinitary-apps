@@ -137,6 +137,12 @@ A structured tier refusal before any output may retry once at Standard; a networ
 Accelerated responses retain token counts but omit Pi’s ordinary listed-price estimates, which do not price subscription acceleration.
 Provider-reported allowance meters are unchanged.
 
+## Codex instructions
+
+The same facade sends every Codex request's instructions as the first message of its input, a developer message, and fixes its `instructions` field to one short line (`src/core/pi/codexInstructions.ts`).
+GPT-6.2 never answers the `instructions` field from its prompt cache, so a long instruction text there is paid for in full on every request, while the input's leading items are reused like the rest of the conversation.
+Pi's OpenAI Responses driver sends a system prompt the same way, and the one fixed line keeps a conversation's requests alike, so its WebSocket still sends only what is new.
+
 ## The news
 
 - **An arrival:** one feed line when a listed model appears that this install never saw - a tracked family's new generation, or a starter row.

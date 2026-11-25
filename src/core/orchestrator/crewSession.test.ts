@@ -1,9 +1,12 @@
-import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import { join } from "node:path";
 import { setCurrentLanguage } from "@shared/i18n/current";
 import { SOURCE_LANGUAGE } from "@shared/i18n/languages";
 import { expect, it } from "vitest";
+import { WebSocketServer } from "ws";
 import {
   beginAnthropicStream,
   finishAnthropicStream,
@@ -22,6 +25,9 @@ import {
   crewmateEvidenceDir,
   crewmateTempDir,
 } from "../paths";
+import { CODEX_INSTRUCTIONS } from "../pi/codexInstructions";
+import { catalogRefreshesSettled, createModelRuntime } from "../pi/modelRuntime";
+import { createPiSessionFactory } from "../pi/sessionFactory";
 import { languageCompletionHeadings } from "../prompts/captainLanguage";
 import { localTimeZoneName, timeZoneFact } from "../prompts/timeZone";
 import {
@@ -29,8 +35,6 @@ import {
   CREWMATE_SECRETS_LINE,
   CREWMATE_SECRETS_THERE_LINE,
 } from "../secrets/commandWords";
-import { catalogRefreshesSettled } from "../pi/modelRuntime";
-import { createPiSessionFactory } from "../pi/sessionFactory";
 import { answersDir, savedAnswerText } from "../session/answerFiles";
 import { LOCAL_MACHINE_ID, type SessionEvent } from "../session/session";
 import { crewmateContractStamp, crewmateRestartText, crewmateSessionSpec } from "./crewSession";
@@ -307,7 +311,8 @@ it.each([
     const read = readings.filter((reading) => !reading.summary).length;
     readings.push({ tokens, summary });
     beginAnthropicStream(res, tokens, request.n);
-    if (summary) writeAnthropicText(res, 0, "The crewmate is reading build.log for the failing test.");
+    if (summary)
+      writeAnthropicText(res, 0, "The crewmate is reading build.log for the failing test.");
     else if (read < reads)
       writeAnthropicToolUse(res, 0, {
         id: `read-${read}`,
@@ -354,3 +359,102 @@ it.each([
   }
 });
 
+// A user's report: GPT-6.2 never reuses a request's `instructions` from its
+// prompt cache, so every request of a crewmate's conversation paid for its
+// whole instructions again, while the input's leading items are reused.
+it("a crewmate's real Pi session on Codex sends its instructions first in the conversation", async () => {
+  const requests: Record<string, unknown>[] = [];
+  const server = createServer((_req, res) => res.writeHead(404).end());
+  const sockets = new WebSocketServer({ server });
+  sockets.on("connection", (socket) =>
+    socket.on("message", (data) => {
+      requests.push(JSON.parse(String(data)));
+      const id = `resp_${requests.length}`;
+      const item = {
+        type: "message",
+        id: `msg_${requests.length}`,
+        role: "assistant",
+        status: "completed",
+        content: [{ type: "output_text", text: "Done." }],
+      };
+      for (const event of [
+        { type: "response.created", response: { id, status: "in_progress" } },
+        { type: "response.output_item.added", output_index: 0, item: { ...item, content: [] } },
+        {
+          type: "response.output_text.delta",
+          output_index: 0,
+          item_id: item.id,
+          content_index: 0,
+          delta: "Done.",
+        },
+        { type: "response.output_item.done", output_index: 0, item },
+        {
+          type: "response.completed",
+          response: {
+            id,
+            status: "completed",
+            output: [item],
+            usage: { input_tokens: 30_000, output_tokens: 3 },
+          },
+        },
+      ])
+        socket.send(JSON.stringify(event));
+    }),
+  );
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  const root = scratchDir("crew-codex-instructions-");
+  const store = join(root, "store");
+  mkdirSync(store);
+  // The service reads the account from the sign-in's claims; this one is made up.
+  const claims = { "https://api.openai.com/auth": { chatgpt_account_id: "account-1" } };
+  const signIn = `e30.${Buffer.from(JSON.stringify(claims)).toString("base64url")}.c2lnbmVk`;
+  writeFileSync(
+    join(store, "models.json"),
+    JSON.stringify({ providers: { "openai-codex": { baseUrl: url, apiKey: signIn } } }),
+  );
+  const runtime = await createModelRuntime({
+    authPath: join(store, "auth.json"),
+    modelsPath: join(store, "models.json"),
+    catalogBaseUrl: url,
+  });
+  const paths = appPathsFor(root);
+  const spec = crewmateSessionSpec(
+    paths,
+    {
+      ...crewmateToolDelegate(),
+      machineId: LOCAL_MACHINE_ID,
+      taskId: "task-1",
+      cwd: root,
+      evidenceDir: crewmateEvidenceDir(paths, "task-1"),
+      model: { provider: "openai-codex", id: "gpt-6.1-sol" },
+    },
+    { backend: "pi", runtime },
+  );
+  const session = await createPiSessionFactory({ agentDir: join(root, "pi") }).open(spec);
+  try {
+    await session.prompt("Build the parser.");
+    await session.prompt("Now the tests.");
+    const [first, second] = requests;
+    expect(requests.map((request) => request.instructions)).toEqual([
+      CODEX_INSTRUCTIONS,
+      CODEX_INSTRUCTIONS,
+    ]);
+    const opening = (first?.input as { role: string; content: string }[] | undefined)?.[0];
+    expect(opening?.role).toBe("developer");
+    expect(opening?.content).toContain(spec.instructions.base);
+    // The second request continues the first on the same socket: it sends
+    // only the new message, so the instructions stay in the reused prefix.
+    expect(second?.previous_response_id).toBe("resp_1");
+    expect(second?.input).toEqual([
+      { role: "user", content: [{ type: "input_text", text: "Now the tests." }] },
+    ]);
+  } finally {
+    session.dispose();
+    await session.closed();
+    await catalogRefreshesSettled();
+    for (const socket of sockets.clients) socket.terminate();
+    sockets.close();
+    await new Promise((resolve) => server.close(resolve));
+  }
+});

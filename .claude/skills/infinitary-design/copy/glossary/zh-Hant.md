@@ -42,6 +42,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | computer | 電腦 | Every computer, Mac, Linux or Windows alike. |
 | concept | 概念 | A Knowledge entry, as on cards. |
 | connection (between concepts) | 關聯 | A graph link, counter 條. |
+| connection file | 連線檔案 | The file in Pi's models.json format that Settings → Intelligence reads custom connections from. |
 | conversation | 對話 | Also used for a crewmate's session; 工作階段 is avoided. |
 | credits (a provider's, paid past the allowance) | 點數 | ChatGPT's Codex credits; Claude's are called extra usage. |
 | crew | 船員 | Chinese needs no plural; the orbit label reads 船員 and counts take 位. |

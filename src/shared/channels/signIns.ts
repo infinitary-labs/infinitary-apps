@@ -11,6 +11,7 @@ import {
   customListedModelSchema,
   customNetworkModeSchema,
 } from "../customApi";
+import { customApiFileViewSchema } from "../customApiFile";
 import {
   forgeBrowserSignInSchema,
   forgeChangesViewSchema,
@@ -144,6 +145,22 @@ export const signInChannels = {
     reach: "views",
     request: z.tuple([z.string()]),
     response: customApiViewSchema,
+  },
+  // The connection file this computer reads custom connections from, as last read.
+  "inf:accounts:custom:file": {
+    effect: "read",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([]),
+    response: customApiFileViewSchema,
+  },
+  // Chooses that file by its full path, or none, and reads it at once. The app never writes it.
+  "inf:accounts:custom:file:set": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([z.string().trim().min(1).max(4096).nullable()]),
+    response: customApiFileViewSchema,
   },
   "inf:accounts:custom:list": {
     effect: "read",

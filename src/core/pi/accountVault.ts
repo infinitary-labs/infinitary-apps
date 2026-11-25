@@ -25,6 +25,7 @@ import {
   type CustomApiInput,
   isCustomApiProvider,
 } from "@shared/customApi";
+import type { CustomFileConnection } from "@shared/customApiFile";
 import { HERE } from "@shared/deviceNames";
 import type { ReasoningCapabilities } from "@shared/modelSlots";
 import type { BackendId } from "@shared/providers";
@@ -260,6 +261,10 @@ export class AccountVault {
   private claudeLoginInFlight = false;
   /** The registry file is there but could not be read (`mayHoldAccounts`). */
   private registryUnread = false;
+  /** Each connection's checks a connection file edit asked for, in order. */
+  private readonly fileChecks = new Map<string, Promise<void>>();
+  /** The models file edits cost a check, kept until a check of them runs to its end. */
+  private readonly fileChecksOwed = new Map<string, Set<string>>();
 
   private constructor(
     private readonly paths: Pick<AppPaths, "accountsDir">,
@@ -508,13 +513,68 @@ export class AccountVault {
    * connection that comes back fully checked gets it here, as a checked
    * replacement does, and its models are offered again.
    */
-  async customRecheck(accountId: string) {
+  async customRecheck(accountId: string, only?: readonly string[]) {
     const account = this.requireAccount(accountId);
     if (!isCustomApiProvider(account.providerId))
       throw new Error("Only a custom connection has saved checks.");
-    const view = await this.pi.custom.recheck(accountId);
+    const view = await this.pi.custom.recheck(accountId, only);
     if (account.enabled && this.pi.custom.checked(accountId)) await this.runtimeFor(accountId);
     return { ...view, label: account.label };
+  }
+  /**
+   * The connection file's newest good reading, applied to each connection
+   * approved from it (`CustomApiAccountOwner.applyFile`), whose name follows
+   * the file's; null, with no file chosen, ends every hold a file made.
+   * Answers the fresh checks the reading asked for, each in the background.
+   */
+  applyCustomFile(connections: CustomFileConnection[] | null): Promise<void>[] {
+    const checks: Promise<void>[] = [];
+    let renamed = false;
+    for (const account of this.liveAccounts()) {
+      if (!isCustomApiProvider(account.providerId)) continue;
+      const name = this.pi.custom.fileName(account.id);
+      if (!name) continue;
+      if (connections === null) {
+        this.pi.custom.releaseFile(account.id);
+        continue;
+      }
+      const definition = connections.find((entry) => entry.name === name)?.definition;
+      const { applied, recheck } = this.pi.custom.applyFile(account.id, definition);
+      if (applied && definition && account.label !== definition.label) {
+        account.label = definition.label;
+        renamed = true;
+      }
+      // A check this reading cancelled, by writing a newer record, runs again too.
+      if (recheck.length || this.fileChecksOwed.get(account.id)?.size)
+        checks.push(this.fileCheck(account.id, recheck));
+      else if (applied && account.enabled && this.pi.custom.checked(account.id))
+        void this.runtimeFor(account.id).catch(() => undefined);
+    }
+    if (renamed) this.saveRegistry();
+    return checks;
+  }
+
+  /** One connection's checks after a file edit, run one after another however often it changes. */
+  private fileCheck(accountId: string, models: readonly string[]): Promise<void> {
+    const owed = this.fileChecksOwed.get(accountId) ?? new Set();
+    for (const model of models) owed.add(model);
+    this.fileChecksOwed.set(accountId, owed);
+    const next = (this.fileChecks.get(accountId) ?? Promise.resolve()).then(async () => {
+      const due = [...owed];
+      if (!due.length) return;
+      try {
+        await this.customRecheck(accountId, due);
+        // A failed model stays unchecked, as its line in Settings says.
+        for (const model of due) owed.delete(model);
+      } catch {
+        // Cancelled by a newer reading or closed: the next check takes these too.
+      }
+    });
+    this.fileChecks.set(accountId, next);
+    void next.then(() => {
+      if (this.fileChecks.get(accountId) === next) this.fileChecks.delete(accountId);
+    });
+    return next;
   }
   customReplacement(draftId: string) {
     return this.pi.custom.draftReplacement(draftId);

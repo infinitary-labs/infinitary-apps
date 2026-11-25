@@ -44,6 +44,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | commit | Commit | Masculine, as GitHub's German docs say it. |
 | computer | Computer | Every computer, never "Rechner" or "Mac" in a sentence. |
 | concept / finding | Begriff / Erkenntnis | As the card references already say |
+| connection file | Verbindungsdatei | The file in Pi's models.json format that Settings → Intelligence reads custom connections from. |
 | conversation | Unterhaltung | Replaces session and transcript. |
 | credits (a provider's, paid past the allowance) | Guthaben | ChatGPT's Codex credits; Claude's are called extra usage. |
 | crew | Crew | Common in German; "Besatzung" reads stiffer. |

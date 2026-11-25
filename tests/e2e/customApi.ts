@@ -127,3 +127,25 @@ export function customApiBlock(page: Page, accountId: string) {
 export function customApiEditDialog(page: Page, name: string): Locator {
   return page.getByRole("dialog", { name: `Edit ${name}`, exact: true });
 }
+
+/**
+ * Settings → Intelligence's Connection file row, and a connection the file
+ * defines that this computer has not approved yet.
+ */
+export function customApiFile(page: Page) {
+  const row = page.locator('[data-setting="custom-connection-file"]');
+  return {
+    row,
+    choose: row.getByRole("button", { name: "Choose file", exact: true }),
+    path: row.locator("[data-custom-file-path]"),
+    status: row.locator("[data-custom-file-status]"),
+    pending: (name: string) => {
+      const block = page.locator(`[data-custom-file-connection="${name}"]`);
+      return {
+        block,
+        approve: block.getByRole("button", { name: "Approve", exact: true }),
+        warnings: block.locator("[data-custom-file-warnings]"),
+      };
+    },
+  };
+}

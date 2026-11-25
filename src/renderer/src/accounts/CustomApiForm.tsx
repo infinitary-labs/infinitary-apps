@@ -29,6 +29,7 @@ import {
   placeCustomApiFailure,
 } from "./customApiFailures";
 import "./customApi.css";
+import type { CustomFileDefinition } from "@shared/customApiFile";
 import { HERE } from "@shared/deviceNames";
 import { formatList } from "@shared/i18n/format";
 import * as m from "@shared/i18n/messages.generated";
@@ -151,6 +152,7 @@ const hereClient: CustomApiClient = {
 
 export function CustomApiForm({
   original,
+  fromFile,
   firstSetup = false,
   onClose,
   onSaved,
@@ -158,6 +160,13 @@ export function CustomApiForm({
   place,
 }: {
   original?: CustomApiView;
+  /**
+   * A connection the connection file defines, approved here: the file sets its
+   * name, address, protocol, visible headers and models, so those stay locked,
+   * and each computer types only its own key, secret header values and any
+   * size the file leaves out.
+   */
+  fromFile?: { name: string; definition: CustomFileDefinition };
   /** First setup asks which model Firstmate answers with once the connection is saved. */
   firstSetup?: boolean;
   onClose: () => void;
@@ -179,10 +188,12 @@ export function CustomApiForm({
   const [profiles, setProfiles] = useState<CustomCapabilityProfile[]>([]);
   const [profileFailure, setProfileFailure] = useState(false);
   const id = useId();
-  const [label, setLabel] = useState(original?.label ?? "");
-  const [baseUrl, setBase] = useState(original?.baseUrl ?? "");
+  const defined = fromFile?.definition;
+  const locked = Boolean(defined);
+  const [label, setLabel] = useState(defined?.label ?? original?.label ?? "");
+  const [baseUrl, setBase] = useState(defined?.baseUrl ?? original?.baseUrl ?? "");
   const [protocol, setProtocol] = useState<CustomApiView["protocol"]>(
-    original?.protocol ?? "openai-completions",
+    defined?.protocol ?? original?.protocol ?? "openai-completions",
   );
   // The first ask starts the live catalogs' download; a protocol change asks
   // again, so models that landed meanwhile are listed.
@@ -209,15 +220,23 @@ export function CustomApiForm({
     original?.tokenCommand?.refreshSeconds ?? 300,
   );
   const [headers, setHeaders] = useState<FormHeader[]>(
-    original?.headers.map((header) => ({
+    (defined?.headers ?? original?.headers)?.map((header) => ({
       ...emptyHeader(),
       name: header.name,
       value: header.value ?? "",
       secret: header.secret,
-      saved: header.secret,
+      // A secret this computer already keeps for the same header stays kept.
+      saved:
+        header.secret &&
+        (!defined ||
+          Boolean(
+            original?.headers.some(
+              (kept) => kept.secret && kept.name.toLowerCase() === header.name.toLowerCase(),
+            ),
+          )),
     })) ?? [],
   );
-  const [headersOpen, setHeadersOpen] = useState(Boolean(original?.headers.length));
+  const [headersOpen, setHeadersOpen] = useState(Boolean((defined ?? original)?.headers.length));
   // After Add or Remove, the keyboard lands on that row's name, a neighbor's, or the section.
   const focusHeaderRow = useRef<number | undefined>(undefined);
   const headersSummary = useRef<HTMLElement>(null);
@@ -232,8 +251,8 @@ export function CustomApiForm({
     if (target) focusWithRing(target);
   }, [headers, id]);
   const [models, setModels] = useState<FormModel[]>(
-    original?.models.map(
-      ({ id, context, output, checked, reasoningProfile, cacheRetention, name, cost }) => ({
+    defined?.models.map(
+      ({ id, context, output, reasoningProfile, cacheRetention, name, cost }) => ({
         reasoningProfile,
         name,
         prices: priceText(cost),
@@ -243,9 +262,23 @@ export function CustomApiForm({
         context,
         output,
         uiId: crypto.randomUUID(),
-        ...(checked ? { state: "ok" as const } : {}),
       }),
-    ) ?? [],
+    ) ??
+      original?.models.map(
+        ({ id, context, output, checked, reasoningProfile, cacheRetention, name, cost }) => ({
+          reasoningProfile,
+          name,
+          prices: priceText(cost),
+          profileChosen: true,
+          cacheRetention,
+          id,
+          context,
+          output,
+          uiId: crypto.randomUUID(),
+          ...(checked ? { state: "ok" as const } : {}),
+        }),
+      ) ??
+      [],
   );
   // Profiles arrive after the form opens: lines typed meanwhile take their match then.
   useEffect(() => {
@@ -439,8 +472,11 @@ export function CustomApiForm({
             cacheRetention,
             ...(name?.trim() ? { name: name.trim() } : {}),
             ...(cost && cost !== "invalid" ? { cost } : {}),
+            ...fileModelFacts(defined, id.trim()),
           };
         }),
+      ...(defined?.compaction ? { compaction: defined.compaction } : {}),
+      ...(fromFile ? { file: fromFile.name } : {}),
       ...(draftId.current ? { sourceDraftId: draftId.current } : {}),
       ...(original?.accountId ? { replaceAccountId: original.accountId } : {}),
     };
@@ -760,13 +796,20 @@ export function CustomApiForm({
   return (
     <section className="fm-custom-api fm-custom-form" data-custom-api-form>
       <h3>
-        {original
-          ? m.accountsCustomApiEditTitle({ name: original.label })
-          : place
-            ? m.accountsCustomApiAddTitleOn({ on: place.on })
-            : m.accountsCustomApiAddTitle()}
+        {fromFile
+          ? m.accountsCustomApiApproveTitle({ name: label })
+          : original
+            ? m.accountsCustomApiEditTitle({ name: original.label })
+            : place
+              ? m.accountsCustomApiAddTitleOn({ on: place.on })
+              : m.accountsCustomApiAddTitle()}
       </h3>
       <p className="fm-custom-hint">{m.accountsCustomApiTrustHint({ who })}</p>
+      {locked && (
+        <p className="fm-custom-hint" data-custom-from-file>
+          {m.accountsCustomApiFileSets({ who })}
+        </p>
+      )}
       {/* Held still while Save runs, so what is checked is what is saved. */}
       <fieldset className="fm-custom-body" disabled={busy === "save"}>
         <div className="fm-custom-field">
@@ -774,6 +817,7 @@ export function CustomApiForm({
           <FormInput
             id={`${id}-label`}
             value={label}
+            readOnly={locked}
             invalid={Boolean(errors.name)}
             onChange={(event) => {
               edited("name");
@@ -790,6 +834,7 @@ export function CustomApiForm({
             spellCheck={false}
             autoComplete="off"
             value={baseUrl}
+            readOnly={locked}
             invalid={Boolean(errors.address)}
             // i18n-exempt: a sample address
             placeholder="https://api.example.com/v1"
@@ -977,6 +1022,7 @@ export function CustomApiForm({
             <select
               id={`${id}-protocol`}
               value={protocol}
+              disabled={locked}
               onChange={(event) => {
                 edited();
                 const next = event.target.value as CustomApiView["protocol"];
@@ -1026,6 +1072,7 @@ export function CustomApiForm({
                   autoComplete="off"
                   spellCheck={false}
                   value={header.name}
+                  readOnly={locked}
                   // i18n-exempt: a sample header name
                   placeholder="X-Example-Header"
                   onChange={(event) =>
@@ -1044,6 +1091,7 @@ export function CustomApiForm({
                   autoComplete="off"
                   spellCheck={false}
                   value={header.value}
+                  readOnly={locked && !header.secret}
                   placeholder={
                     header.saved && sameAddress
                       ? m.accountsCustomApiSavedValueKept()
@@ -1059,6 +1107,7 @@ export function CustomApiForm({
                   <input
                     type="checkbox"
                     checked={header.secret}
+                    disabled={locked}
                     onChange={(event) =>
                       // A saved secret is never shown, so a visible value is typed afresh.
                       changeHeader(header.uiId, {
@@ -1069,21 +1118,23 @@ export function CustomApiForm({
                   />
                   {m.accountsCustomApiSecret()}
                 </label>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    edited("headers");
-                    focusHeaderRow.current = index;
-                    setHeaders(headers.filter((entry) => entry.uiId !== header.uiId));
-                  }}
-                >
-                  {m.accountsCustomApiRemoveHeader()}
-                </Button>
+                {!locked && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      edited("headers");
+                      focusHeaderRow.current = index;
+                      setHeaders(headers.filter((entry) => entry.uiId !== header.uiId));
+                    }}
+                  >
+                    {m.accountsCustomApiRemoveHeader()}
+                  </Button>
+                )}
               </div>
             </div>
           ))}
-          {headers.length < CUSTOM_API_MAX_HEADERS && (
+          {!locked && headers.length < CUSTOM_API_MAX_HEADERS && (
             <Button
               variant="ghost"
               size="sm"
@@ -1197,255 +1248,280 @@ export function CustomApiForm({
             <span>{m.accountsCustomApiStorage()}</span>
           </label>
         )}
-        <div className="fm-custom-models">
-          <div className="fm-custom-models-head">
-            <span className="fm-custom-models-title">{m.accountsCustomApiModelsTitle()}</span>
-            <Button
-              variant="secondary"
-              size="sm"
-              pending={busy === "fetch"}
-              pendingLabel={m.accountsCustomApiFetching()}
-              disabled={busy !== ""}
-              onClick={fetchModels}
-            >
-              {listed ? m.accountsCustomApiFetchAgain() : m.accountsCustomApiFetch()}
-            </Button>
-          </div>
-          {noList && (
-            <p className="fm-custom-hint" data-custom-no-list>
-              {m.accountsCustomApiNoList()}
-            </p>
-          )}
-          {listed && (
-            <div className="fm-custom-avail" data-custom-listed-models>
-              <p className="fm-custom-hint">
-                {listed.length
-                  ? m.accountsCustomApiListed({ count: listed.length })
-                  : m.accountsCustomApiListedNone()}
-              </p>
-              {listed.map((entry) => {
-                const added = models.some((model) => model.id.trim() === entry.id);
-                return (
-                  <button
-                    type="button"
-                    key={entry.id}
-                    className="fm-custom-pick"
-                    data-custom-listed={entry.id}
-                    aria-pressed={added}
-                    disabled={added || busy !== ""}
-                    onClick={() => {
-                      edited("models");
-                      setModels((current) => [
-                        ...current,
-                        withExactProfile(
-                          {
-                            ...emptyModel(),
-                            id: entry.id,
-                            context: entry.context ?? 0,
-                            output: entry.output ?? 0,
-                          },
-                          protocol,
-                          profiles,
-                        ),
-                      ]);
-                    }}
-                  >
-                    {added ? "✓ " : "+ "}
-                    {entry.id}
-                  </button>
-                );
-              })}
+        {/* Not one disabled fieldset: a size the file leaves out stays open to type here. */}
+        <fieldset className="fm-custom-body">
+          <div className="fm-custom-models">
+            <div className="fm-custom-models-head">
+              <span className="fm-custom-models-title">{m.accountsCustomApiModelsTitle()}</span>
+              {!locked && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  pending={busy === "fetch"}
+                  pendingLabel={m.accountsCustomApiFetching()}
+                  disabled={busy !== ""}
+                  onClick={fetchModels}
+                >
+                  {listed ? m.accountsCustomApiFetchAgain() : m.accountsCustomApiFetch()}
+                </Button>
+              )}
             </div>
-          )}
-          {models.length ? (
-            <div className="fm-custom-rows">
-              <div className="fm-custom-cols" aria-hidden="true">
-                <span />
-                <span>{m.accountsCustomApiModelId()}</span>
-                <span>{m.accountsCustomApiContext()}</span>
-                <span>{m.accountsCustomApiOutput()}</span>
-                <span />
-              </div>
-              {models.map((model, index) => {
-                const dot = ROW_DOT[model.state ?? "none"];
-                const name = model.id.trim() || m.accountsCustomApiThisModelLower();
-                return (
-                  <div
-                    className="fm-custom-row"
-                    key={model.uiId}
-                    data-custom-model-row={model.id.trim()}
-                    data-state={model.state}
-                  >
-                    <span className="fm-custom-row-dot">
-                      <StatusDot
-                        tone={dot.tone}
-                        label={m.accountsCustomApiRowState({ name, state: dot.label })}
-                        focusable
-                      />
-                    </span>
-                    <FormInput
-                      id={`${id}-model-${index}`}
-                      mono
-                      spellCheck={false}
-                      autoComplete="off"
-                      aria-label={m.accountsCustomApiModelId()}
-                      invalid={rowErrors[model.uiId]?.at === "id"}
-                      value={model.id}
-                      onChange={(event) => changeModel(model.uiId, { id: event.target.value })}
-                    />
-                    <FormInput
-                      mono
-                      inputMode="numeric"
-                      aria-label={m.accountsCustomApiContextFor({ name })}
-                      invalid={rowErrors[model.uiId]?.at === "sizes" && !model.context}
-                      placeholder={m.accountsCustomApiContext()}
-                      value={model.context ? String(model.context) : ""}
-                      onChange={(event) =>
-                        changeModel(model.uiId, { context: digits(event.target.value) })
-                      }
-                    />
-                    <FormInput
-                      mono
-                      inputMode="numeric"
-                      aria-label={m.accountsCustomApiOutputFor({ name })}
-                      invalid={
-                        rowErrors[model.uiId]?.at === "sizes" &&
-                        (!model.output || model.output >= model.context)
-                      }
-                      placeholder={m.accountsCustomApiOutput()}
-                      value={model.output ? String(model.output) : ""}
-                      onChange={(event) =>
-                        changeModel(model.uiId, { output: digits(event.target.value) })
-                      }
-                    />
-                    <IconButton
-                      label={m.accountsCustomApiRemoveModel({ name })}
-                      size={28}
+            {noList && (
+              <p className="fm-custom-hint" data-custom-no-list>
+                {m.accountsCustomApiNoList()}
+              </p>
+            )}
+            {listed && (
+              <div className="fm-custom-avail" data-custom-listed-models>
+                <p className="fm-custom-hint">
+                  {listed.length
+                    ? m.accountsCustomApiListed({ count: listed.length })
+                    : m.accountsCustomApiListedNone()}
+                </p>
+                {listed.map((entry) => {
+                  const added = models.some((model) => model.id.trim() === entry.id);
+                  return (
+                    <button
+                      type="button"
+                      key={entry.id}
+                      className="fm-custom-pick"
+                      data-custom-listed={entry.id}
+                      aria-pressed={added}
+                      disabled={added || busy !== "" || locked}
                       onClick={() => {
                         edited("models");
-                        focusModelRow.current = index;
-                        setRowErrors(({ [model.uiId]: _, ...rest }) => rest);
-                        setModels((current) =>
-                          current.filter((entry) => entry.uiId !== model.uiId),
-                        );
+                        setModels((current) => [
+                          ...current,
+                          withExactProfile(
+                            {
+                              ...emptyModel(),
+                              id: entry.id,
+                              context: entry.context ?? 0,
+                              output: entry.output ?? 0,
+                            },
+                            protocol,
+                            profiles,
+                          ),
+                        ]);
                       }}
                     >
-                      <svg
-                        width="12"
-                        height="12"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                        aria-hidden="true"
-                      >
-                        <path d="M6 6l12 12M18 6L6 18" />
-                      </svg>
-                    </IconButton>
-                    <div className="fm-custom-capabilities">
-                      <label className="fm-custom-field">
-                        <span>{m.accountsCustomApiReasoning()}</span>
-                        <select
-                          aria-label={m.accountsCustomApiReasoningFor({ name })}
-                          value={model.reasoningProfile ?? ""}
-                          onChange={(event) =>
-                            changeModel(model.uiId, {
-                              reasoningProfile: event.target.value || undefined,
-                              profileChosen: true,
-                              cacheRetention: customDefaultCacheRetention(protocol),
-                            })
-                          }
+                      {added ? "✓ " : "+ "}
+                      {entry.id}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {models.length ? (
+              <div className="fm-custom-rows">
+                <div className="fm-custom-cols" aria-hidden="true">
+                  <span />
+                  <span>{m.accountsCustomApiModelId()}</span>
+                  <span>{m.accountsCustomApiContext()}</span>
+                  <span>{m.accountsCustomApiOutput()}</span>
+                  <span />
+                </div>
+                {models.map((model, index) => {
+                  const dot = ROW_DOT[model.state ?? "none"];
+                  const name = model.id.trim() || m.accountsCustomApiThisModelLower();
+                  const stated = defined?.models.find((entry) => entry.id === model.id.trim());
+                  return (
+                    <div
+                      className="fm-custom-row"
+                      key={model.uiId}
+                      data-custom-model-row={model.id.trim()}
+                      data-state={model.state}
+                    >
+                      <span className="fm-custom-row-dot">
+                        <StatusDot
+                          tone={dot.tone}
+                          label={m.accountsCustomApiRowState({ name, state: dot.label })}
+                          focusable
+                        />
+                      </span>
+                      <FormInput
+                        id={`${id}-model-${index}`}
+                        mono
+                        spellCheck={false}
+                        autoComplete="off"
+                        aria-label={m.accountsCustomApiModelId()}
+                        invalid={rowErrors[model.uiId]?.at === "id"}
+                        disabled={locked}
+                        value={model.id}
+                        onChange={(event) => changeModel(model.uiId, { id: event.target.value })}
+                      />
+                      <FormInput
+                        mono
+                        inputMode="numeric"
+                        aria-label={m.accountsCustomApiContextFor({ name })}
+                        invalid={rowErrors[model.uiId]?.at === "sizes" && !model.context}
+                        placeholder={m.accountsCustomApiContext()}
+                        disabled={locked && Boolean(stated?.context)}
+                        value={model.context ? String(model.context) : ""}
+                        onChange={(event) =>
+                          changeModel(model.uiId, { context: digits(event.target.value) })
+                        }
+                      />
+                      <FormInput
+                        mono
+                        inputMode="numeric"
+                        aria-label={m.accountsCustomApiOutputFor({ name })}
+                        invalid={
+                          rowErrors[model.uiId]?.at === "sizes" &&
+                          (!model.output || model.output >= model.context)
+                        }
+                        placeholder={m.accountsCustomApiOutput()}
+                        disabled={locked && Boolean(stated?.output)}
+                        value={model.output ? String(model.output) : ""}
+                        onChange={(event) =>
+                          changeModel(model.uiId, { output: digits(event.target.value) })
+                        }
+                      />
+                      {locked ? (
+                        // Its cell stays, so the row keeps its columns.
+                        <span />
+                      ) : (
+                        <IconButton
+                          label={m.accountsCustomApiRemoveModel({ name })}
+                          size={28}
+                          onClick={() => {
+                            edited("models");
+                            focusModelRow.current = index;
+                            setRowErrors(({ [model.uiId]: _, ...rest }) => rest);
+                            setModels((current) =>
+                              current.filter((entry) => entry.uiId !== model.uiId),
+                            );
+                          }}
                         >
-                          <option value="">{m.accountsCustomApiReasoningOff()}</option>
-                          {profiles
-                            .filter((profile) => profile.protocol === protocol)
-                            .map((profile) => (
-                              <option key={profile.id} value={profile.id}>
-                                {profile.label}
+                          <svg
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            aria-hidden="true"
+                          >
+                            <path d="M6 6l12 12M18 6L6 18" />
+                          </svg>
+                        </IconButton>
+                      )}
+                      <div className="fm-custom-capabilities">
+                        <label className="fm-custom-field">
+                          <span>{m.accountsCustomApiReasoning()}</span>
+                          <select
+                            aria-label={m.accountsCustomApiReasoningFor({ name })}
+                            disabled={locked}
+                            value={model.reasoningProfile ?? ""}
+                            onChange={(event) =>
+                              changeModel(model.uiId, {
+                                reasoningProfile: event.target.value || undefined,
+                                profileChosen: true,
+                                cacheRetention: customDefaultCacheRetention(protocol),
+                              })
+                            }
+                          >
+                            <option value="">
+                              {fileModelFacts(defined, model.id.trim()).statedReasoning
+                                ? m.accountsCustomApiFileReasoning()
+                                : m.accountsCustomApiReasoningOff()}
+                            </option>
+                            {profiles
+                              .filter((profile) => profile.protocol === protocol)
+                              .map((profile) => (
+                                <option key={profile.id} value={profile.id}>
+                                  {profile.label}
+                                </option>
+                              ))}
+                            {model.reasoningProfile &&
+                              !profiles.some(
+                                (profile) => profile.id === model.reasoningProfile,
+                              ) && (
+                                <option value={model.reasoningProfile}>
+                                  {model.reasoningProfile}
+                                </option>
+                              )}
+                          </select>
+                        </label>
+                        <label className="fm-custom-field">
+                          <span>{m.accountsCustomApiCache()}</span>
+                          <select
+                            aria-label={m.accountsCustomApiCacheFor({ name })}
+                            disabled={locked}
+                            value={model.cacheRetention ?? customDefaultCacheRetention(protocol)}
+                            onChange={(event) =>
+                              changeModel(model.uiId, {
+                                cacheRetention: event.target.value as FormModel["cacheRetention"],
+                              })
+                            }
+                          >
+                            {(["none", "short", "long"] as const).map((retention) => (
+                              <option
+                                key={retention}
+                                value={retention}
+                                disabled={
+                                  !(
+                                    profiles.find(
+                                      (profile) => profile.id === model.reasoningProfile,
+                                    )?.cacheRetentions ?? customUnprofiledRetentions(protocol)
+                                  ).includes(retention)
+                                }
+                              >
+                                {retention === "none"
+                                  ? m.accountsCustomApiCacheNone()
+                                  : retention === "short"
+                                    ? m.accountsCustomApiCacheShort()
+                                    : m.accountsCustomApiCacheLong()}
                               </option>
                             ))}
-                          {model.reasoningProfile &&
-                            !profiles.some((profile) => profile.id === model.reasoningProfile) && (
-                              <option value={model.reasoningProfile}>
-                                {model.reasoningProfile}
-                              </option>
-                            )}
-                        </select>
-                      </label>
-                      <label className="fm-custom-field">
-                        <span>{m.accountsCustomApiCache()}</span>
-                        <select
-                          aria-label={m.accountsCustomApiCacheFor({ name })}
-                          value={model.cacheRetention ?? customDefaultCacheRetention(protocol)}
-                          onChange={(event) =>
-                            changeModel(model.uiId, {
-                              cacheRetention: event.target.value as FormModel["cacheRetention"],
-                            })
-                          }
-                        >
-                          {(["none", "short", "long"] as const).map((retention) => (
-                            <option
-                              key={retention}
-                              value={retention}
-                              disabled={
-                                !(
-                                  profiles.find((profile) => profile.id === model.reasoningProfile)
-                                    ?.cacheRetentions ?? customUnprofiledRetentions(protocol)
-                                ).includes(retention)
-                              }
-                            >
-                              {retention === "none"
-                                ? m.accountsCustomApiCacheNone()
-                                : retention === "short"
-                                  ? m.accountsCustomApiCacheShort()
-                                  : m.accountsCustomApiCacheLong()}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <p className="fm-custom-hint">{m.accountsCustomApiCapabilityHint()}</p>
-                      {profileFailure && (
-                        <p role="alert" className="fm-custom-hint">
-                          {m.accountsCustomApiProfilesFailed()}
+                          </select>
+                        </label>
+                        <p className="fm-custom-hint">{m.accountsCustomApiCapabilityHint()}</p>
+                        {profileFailure && (
+                          <p role="alert" className="fm-custom-hint">
+                            {m.accountsCustomApiProfilesFailed()}
+                          </p>
+                        )}
+                      </div>
+                      <fieldset className="fm-custom-body" disabled={locked}>
+                        <CustomModelPrice
+                          idPrefix={`${id}-model-${index}`}
+                          name={model.name ?? ""}
+                          prices={model.prices}
+                          invalid={rowErrors[model.uiId]?.at === "price"}
+                          onChange={(change) => describeModel(model.uiId, change)}
+                        />
+                      </fieldset>
+                      {rowErrors[model.uiId] && (
+                        <p role="alert" className="fm-custom-field-error fm-custom-row-error">
+                          {rowErrors[model.uiId]?.text}
                         </p>
                       )}
                     </div>
-                    <CustomModelPrice
-                      idPrefix={`${id}-model-${index}`}
-                      name={model.name ?? ""}
-                      prices={model.prices}
-                      invalid={rowErrors[model.uiId]?.at === "price"}
-                      onChange={(change) => describeModel(model.uiId, change)}
-                    />
-                    {rowErrors[model.uiId] && (
-                      <p role="alert" className="fm-custom-field-error fm-custom-row-error">
-                        {rowErrors[model.uiId]?.text}
-                      </p>
-                    )}
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="fm-custom-hint">{m.accountsCustomApiNoModels()}</p>
+            )}
+            {fieldError("models")}
+            <div hidden={locked}>
+              <button
+                ref={addByHand}
+                type="button"
+                className="fm-custom-link"
+                onClick={() => {
+                  edited("models");
+                  focusModelRow.current = models.length;
+                  setModels([...models, emptyModel()]);
+                }}
+              >
+                {m.accountsCustomApiAddByHand()}
+              </button>
             </div>
-          ) : (
-            <p className="fm-custom-hint">{m.accountsCustomApiNoModels()}</p>
-          )}
-          {fieldError("models")}
-          <div>
-            <button
-              ref={addByHand}
-              type="button"
-              className="fm-custom-link"
-              onClick={() => {
-                edited("models");
-                focusModelRow.current = models.length;
-                setModels([...models, emptyModel()]);
-              }}
-            >
-              {m.accountsCustomApiAddByHand()}
-            </button>
           </div>
-        </div>
+        </fieldset>
       </fieldset>
       {original && !sameAddress && (
         <p className="fm-custom-hint">{m.accountsCustomApiSeparate()}</p>
@@ -1496,6 +1572,16 @@ export function CustomApiForm({
       </div>
     </section>
   );
+}
+
+/** What the file states for a model beyond the form's own fields. */
+function fileModelFacts(defined: CustomFileDefinition | undefined, modelId: string) {
+  const stated = defined?.models.find((model) => model.id === modelId);
+  return {
+    ...(stated?.input ? { input: stated.input } : {}),
+    ...(stated?.statedReasoning ? { statedReasoning: stated.statedReasoning } : {}),
+    ...(stated?.compaction ? { compaction: stated.compaction } : {}),
+  };
 }
 
 /** The same bounded, focus-contained aside at every entry point: first setup, Add and Edit. */

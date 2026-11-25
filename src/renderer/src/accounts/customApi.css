@@ -85,6 +85,19 @@
   width: 100%;
   box-sizing: border-box;
 }
+/*
+ * What the connection file sets reads as fixed: shown, not typed into. The
+ * fields draw their fill and text from these tokens inline, so they are
+ * changed here rather than overridden.
+ */
+.fm-custom-api input:read-only:not([type="checkbox"]),
+.fm-custom-api fieldset:disabled input:not([type="checkbox"]),
+.fm-custom-api select:disabled {
+  --surface-input: transparent;
+  --fg-1: var(--fg-2);
+  background: var(--surface-input);
+  color: var(--fg-1);
+}
 .fm-custom-api select:focus-visible,
 .fm-custom-api input:focus-visible,
 .fm-custom-conn input:focus-visible,
@@ -279,6 +292,40 @@
   min-width: 0;
 }
 .fm-custom-conn p {
+  margin: 0;
+}
+/* The Connection file row: which file this computer reads, and how its newest read went. */
+.fm-custom-file {
+  display: grid;
+  gap: var(--space-1);
+  padding: 0 var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--fg-2);
+}
+.fm-custom-file-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.fm-custom-file-title {
+  color: var(--fg-3);
+  white-space: nowrap;
+}
+.fm-custom-file-path {
+  min-width: 0;
+  font-size: var(--text-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fm-custom-file-typed {
+  display: flex;
+  flex: 1;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.fm-custom-file .fm-custom-hint {
   margin: 0;
 }
 .fm-custom-conn-head {

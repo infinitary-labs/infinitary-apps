@@ -21,6 +21,7 @@
   "panelChangeCrewSlots": "The crew's models",
   "panelChangeCrewSlotsReset": "Reset the crew's models",
   "panelChangeCrewSpeed": "The crew's speed",
+  "panelChangeCustomConnectionFile": "The connection file",
   "panelChangeDecisionModel": "The decision model",
   "panelChangeDecisionUseOff": "Turn off one use of the decision model",
   "panelChangeDeviceFixWork": "Fix a computer that runs work",

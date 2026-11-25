@@ -17,6 +17,7 @@ import {
   customDefaultCacheRetention,
   withListedLimits,
 } from "@shared/customApi";
+import type { CustomFileDefinition } from "@shared/customApiFile";
 import type { AccountRef } from "../accounts/accountBackend";
 import {
   approvedCustomApiCertificates,
@@ -38,6 +39,7 @@ import {
   customCatalog,
   customModelCost,
   customPiModel,
+  customStatedCapabilities,
 } from "./customApiModels";
 import {
   assertCustomHeaders,
@@ -57,6 +59,7 @@ import {
   createCustomApiTransport,
   readCustomApiDestination,
 } from "./customApiTransport";
+import { setCustomCompaction } from "./customCompaction";
 import { createModelRuntime } from "./modelRuntime";
 
 // This owner alone may read/write a custom key or secret header. Pi receives only an in-memory
@@ -90,6 +93,12 @@ type Live = {
   active: number;
   /** Its fresh check in flight (`recheck`); Disconnect aborts it. */
   rechecking?: AbortController;
+  /**
+   * Whether the connection file's newest reading still says what was
+   * approved here. Unread yet, or with no file chosen, it stays unset and
+   * holds nothing; `changed` and `missing` hold it until approved again.
+   */
+  file?: "current" | "changed" | "missing";
 };
 
 export class CustomApiAccountOwner {
@@ -324,16 +333,8 @@ export class CustomApiAccountOwner {
       proofs: kept ? { ...kept.proofs } : {},
       capabilities: Object.fromEntries(
         input.models.flatMap((model) => {
-          const retention = model.cacheRetention ?? customDefaultCacheRetention(input.protocol);
-          if (!model.reasoningProfile) {
-            if (!customCacheRetentions(input.protocol).includes(retention))
-              throw new CustomApiError("incompatible");
-            return [];
-          }
-          const snapshot = customCapabilities(input.protocol, model.reasoningProfile, catalog);
-          if (!snapshot.cacheRetentions.includes(retention))
-            throw new CustomApiError("incompatible");
-          return [[model.id, snapshot]];
+          const snapshot = capabilitiesOf(input.protocol, model, catalog);
+          return snapshot ? [[model.id, snapshot]] : [];
         }),
       ),
       reviewedCertificates: input.certificates
@@ -470,9 +471,10 @@ export class CustomApiAccountOwner {
     const live = this.requireLive(accountId);
     return { ...this.viewStored(live.stored, enabled, accountId), label };
   }
+  /** Whether it serves now: a connection the file holds serves nothing until approved again. */
   checked(accountId: string, modelId?: string): boolean {
     const live = this.live.get(accountId);
-    if (!live || live.closed) return false;
+    if (!live || live.closed || held(live)) return false;
     return modelId ? this.proofMatches(live.stored, modelId) : this.allChecked(live.stored);
   }
   unchecked(accountId: string): string[] {
@@ -491,7 +493,7 @@ export class CustomApiAccountOwner {
    * proofs. Each passing model is saved at once; the first failure stops the
    * check and comes back on its model, as a draft's does.
    */
-  async recheck(accountId: string): Promise<CustomApiView> {
+  async recheck(accountId: string, only?: readonly string[]): Promise<CustomApiView> {
     const live = this.requireLive(accountId);
     if (live.rechecking) throw new Error("A connection check is already running.");
     const abort = new AbortController();
@@ -502,7 +504,7 @@ export class CustomApiAccountOwner {
     const superseded = () => live.closed || live.stored !== stored;
     try {
       for (const model of stored.input.models) {
-        if (this.proofMatches(stored, model.id)) continue;
+        if (this.proofMatches(stored, model.id) || (only && !only.includes(model.id))) continue;
         try {
           const proof = await checkCustomApiModel(this.candidate(stored, model.id), abort.signal);
           if (superseded()) throw new CustomApiError("cancelled");
@@ -527,6 +529,118 @@ export class CustomApiAccountOwner {
     return this.live.get(accountId)?.enabled === true;
   }
 
+  /** The connection file's key it was approved from, if any. */
+  fileName(accountId: string): string | undefined {
+    const live = this.live.get(accountId);
+    return live && !live.closed ? live.stored.input.file : undefined;
+  }
+
+  /** No connection file is chosen now: what the last one held serves again. */
+  releaseFile(accountId: string): void {
+    const live = this.live.get(accountId);
+    if (!live || !held(live)) {
+      if (live) live.file = undefined;
+      return;
+    }
+    live.file = undefined;
+    if (live.enabled) for (const wake of [...live.waiters]) wake();
+  }
+
+  /**
+   * The connection file's newest reading of this connection: absent when it
+   * left the file. A changed address, protocol or header holds it until it
+   * is approved again here, and never inherits a key. Otherwise the file's
+   * names, prices, limits, pictures, reasoning, cache and compaction apply
+   * at once, against the address already approved; `recheck` names each
+   * model this reading cost its check or added, which `recheck` then checks.
+   * `applied` says the definition is the one in use, so its name is too.
+   * A model whose reasoning profile this computer's catalog lacks keeps
+   * what it had.
+   */
+  applyFile(
+    accountId: string,
+    definition: CustomFileDefinition | undefined,
+  ): { applied: boolean; recheck: string[] } {
+    const live = this.live.get(accountId);
+    if (!live || live.closed || !live.stored.input.file) return { applied: false, recheck: [] };
+    const input = live.stored.input;
+    if (!definition || approvalOf(input) !== fileApprovalOf(definition, input.mode)) {
+      live.file = definition ? "changed" : "missing";
+      return { applied: false, recheck: [] };
+    }
+    const checkedBefore = new Set(
+      input.models.filter((model) => this.proofMatches(live.stored, model.id)).map((m) => m.id),
+    );
+    const listedBefore = new Set(input.models.map((model) => model.id));
+    const catalog = this.catalog();
+    const capabilities: Record<string, CustomCapabilities> = {};
+    const models: CustomApiInput["models"] = [];
+    for (const stated of definition.models) {
+      const saved = input.models.find((model) => model.id === stated.id);
+      // A limit the file leaves out keeps the one the server's list gave on approval.
+      const model = {
+        ...stated,
+        context: stated.context || saved?.context || 0,
+        output: stated.output || saved?.output || 0,
+      };
+      const sameReasoning =
+        saved &&
+        saved.reasoningProfile === model.reasoningProfile &&
+        JSON.stringify(saved.statedReasoning) === JSON.stringify(model.statedReasoning);
+      try {
+        const snapshot = sameReasoning
+          ? live.stored.capabilities?.[model.id]
+          : capabilitiesOf(input.protocol, model, catalog);
+        const retention = model.cacheRetention ?? customDefaultCacheRetention(input.protocol);
+        if (
+          !(snapshot?.cacheRetentions ?? customCacheRetentions(input.protocol)).includes(retention)
+        )
+          throw new CustomApiError("incompatible");
+        if (snapshot) capabilities[model.id] = snapshot;
+        models.push(model);
+      } catch {
+        if (!saved) continue;
+        const kept = live.stored.capabilities?.[saved.id];
+        if (kept) capabilities[saved.id] = kept;
+        models.push(saved);
+      }
+    }
+    const next: Stored = {
+      ...live.stored,
+      input: {
+        ...input,
+        label: definition.label,
+        compaction: definition.compaction,
+        models,
+      },
+      capabilities,
+    };
+    if (!definition.compaction) delete next.input.compaction;
+    const wasHeld = held(live);
+    live.file = "current";
+    if (
+      JSON.stringify([next.input, next.capabilities]) !==
+      JSON.stringify([input, live.stored.capabilities ?? {}])
+    ) {
+      this.write(live.ref, next);
+      // A new stored record ends a recheck of the old one (`superseded`).
+      live.stored = next;
+      if (live.ready) this.registerRuntime(live, live.ready);
+    }
+    if (wasHeld && live.enabled) for (const wake of [...live.waiters]) wake();
+    // Only a model this reading cost its check, or one it added, is checked
+    // again: a model left unchecked before, such as on a connection saved
+    // paused, waits for the person's own check.
+    const recheck = live.stored.input.models
+      .filter(
+        (model) =>
+          (checkedBefore.has(model.id) || !listedBefore.has(model.id)) &&
+          !this.proofMatches(live.stored, model.id),
+      )
+      .map((model) => model.id);
+    return { applied: true, recheck };
+  }
+
   setEnabled(accountId: string, enabled: boolean): void {
     const live = this.requireLive(accountId);
     if (enabled && !this.allChecked(live.stored))
@@ -540,6 +654,7 @@ export class CustomApiAccountOwner {
     const live = this.live.get(accountId);
     if (!live) return;
     live.closed = true;
+    setCustomCompaction(live.ref.providerId, []);
     live.rechecking?.abort();
     live.transport?.close();
     live.stored.input.key = "";
@@ -590,6 +705,10 @@ export class CustomApiAccountOwner {
         source: "connection availability",
       };
     };
+    setCustomCompaction(
+      live.ref.providerId,
+      input.models.map((model) => [model.id, { ...input.compaction, ...model.compaction }]),
+    );
     runtime.registerProvider(live.ref.providerId, {
       api: input.protocol,
       baseUrl: input.baseUrl,
@@ -656,7 +775,7 @@ export class CustomApiAccountOwner {
   private async admit(live: Live, signal?: AbortSignal): Promise<void> {
     if (live.closed) throw new CustomApiError("closed");
     if (signal?.aborted) throw new CustomApiError("cancelled");
-    if (live.enabled) return;
+    if (live.enabled && !held(live)) return;
     await new Promise<void>((resolve, reject) => {
       const wake = () => {
         live.waiters.delete(wake);
@@ -668,7 +787,7 @@ export class CustomApiAccountOwner {
       live.waiters.add(wake);
       signal?.addEventListener("abort", wake, { once: true });
     });
-    if (!live.enabled) throw new CustomApiError("closed");
+    if (!live.enabled || held(live)) throw new CustomApiError("closed");
   }
 
   private destination(stored: Stored): CustomApiTransportOptions {
@@ -699,6 +818,7 @@ export class CustomApiAccountOwner {
       limits: { context: model.context, output: model.output },
       capabilities: stored.capabilities?.[modelId],
       cacheRetention: model.cacheRetention ?? customDefaultCacheRetention(input.protocol),
+      ...(model.input && !model.input.includes("image") ? { textOnly: true } : {}),
       storage: input.allowStorageDefault
         ? { kind: "server-default", consentRevision: stored.storageRevision }
         : { kind: "no-store" },
@@ -743,6 +863,15 @@ export class CustomApiAccountOwner {
       enabled,
       allowStorageDefault: input.allowStorageDefault,
       ...(input.addressException ? { addressException: true } : {}),
+      ...(input.compaction ? { compaction: input.compaction } : {}),
+      ...(input.file
+        ? {
+            file: {
+              name: input.file,
+              state: accountId ? (this.live.get(accountId)?.file ?? "current") : "current",
+            },
+          }
+        : {}),
       // Saved identity can still be read after expiry; admission/proof validation
       // continues to parse the actual PEM and refuses invalid trust.
       certificates: stored.reviewedCertificates ?? [],
@@ -808,11 +937,68 @@ function onlyNamesOrPrices(saved: CustomApiInput, next: CustomApiInput): boolean
         model.output,
         model.reasoningProfile ?? null,
         model.cacheRetention ?? customDefaultCacheRetention(input.protocol),
+        model.input ?? null,
+        model.statedReasoning ?? null,
       ]),
     ]);
+  // Compaction is the session's own budget, sent nowhere, so it joins names and prices.
   const described = (input: CustomApiInput) =>
-    JSON.stringify(input.models.map(({ name, cost }) => [name ?? null, cost ?? null]));
+    JSON.stringify([
+      input.compaction ?? null,
+      input.models.map(({ name, cost, compaction }) => [
+        name ?? null,
+        cost ?? null,
+        compaction ?? null,
+      ]),
+    ]);
   return checked(saved) === checked(next) && described(saved) !== described(next);
+}
+/** A capability snapshot for a model line: its catalog profile's, the file's stated reasoning, or none. */
+function capabilitiesOf(
+  protocol: CustomApiInput["protocol"],
+  model: CustomApiInput["models"][number],
+  catalog: ReturnType<typeof customCatalog>,
+): CustomCapabilities | undefined {
+  const retention = model.cacheRetention ?? customDefaultCacheRetention(protocol);
+  const snapshot = model.reasoningProfile
+    ? customCapabilities(protocol, model.reasoningProfile, catalog)
+    : model.statedReasoning
+      ? customStatedCapabilities(protocol, model.statedReasoning)
+      : undefined;
+  if (!(snapshot?.cacheRetentions ?? customCacheRetentions(protocol)).includes(retention))
+    throw new CustomApiError("incompatible");
+  return snapshot;
+}
+function held(live: Live): boolean {
+  return live.file === "changed" || live.file === "missing";
+}
+/**
+ * What a computer approves for a connection: its address, protocol and
+ * headers, a secret one by name alone, since its value is typed here.
+ */
+function approvalOf(input: Pick<CustomApiInput, "baseUrl" | "protocol" | "headers">): string {
+  return JSON.stringify([
+    input.baseUrl,
+    input.protocol,
+    input.headers
+      .map((header) => [
+        header.name.toLowerCase(),
+        header.secret,
+        header.secret ? "" : header.value,
+      ])
+      .sort((a, b) => String(a[0]).localeCompare(String(b[0]))),
+  ]);
+}
+function fileApprovalOf(definition: CustomFileDefinition, mode: CustomApiInput["mode"]): string {
+  try {
+    return approvalOf({
+      baseUrl: normalizeCustomApiBase(definition.baseUrl, mode).baseUrl,
+      protocol: definition.protocol,
+      headers: definition.headers.map((header) => ({ ...header, value: header.value ?? "" })),
+    });
+  } catch {
+    return "";
+  }
 }
 function revision(): string {
   return randomBytes(16).toString("hex");

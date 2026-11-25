@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "id": "reader-start-linked-issues-read",
+      "kind": "fix",
+      "title": "Starting a crewmate that reads issues no longer pauses the app",
+      "body": "When a crewmate starts reading a project's issues and other outside messages, the app no longer stops answering clicks and keys for up to a second while it looks up which issues your tasks already cover.",
+      "area": "crewmates",
+      "noPicture": "The window looks the same; the change removes a pause while such a crewmate starts.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

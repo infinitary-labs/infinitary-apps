@@ -86,13 +86,13 @@ export function buildRowShape(row: Pick<BuildRowAsk, "start" | "issue" | "issueU
  * title is left out: a reader's own follow-up's title is a stranger's words.
  */
 export function linkedIssuesSection(
-  tasks: Pick<TaskService, "list" | "latestResult">,
+  tasks: Pick<TaskService, "listIssueLinked" | "latestResult">,
   reader: { id: string; repoId: string | null },
 ): string | undefined {
   if (!reader.repoId) return undefined;
   const linked = tasks
-    .list()
-    .filter((task) => task.id !== reader.id && task.repoId === reader.repoId && task.shape?.issue)
+    .listIssueLinked(reader.repoId)
+    .filter((task) => task.id !== reader.id)
     .sort((a, b) => b.createdAt - a.createdAt);
   if (linked.length === 0) return undefined;
   // Map keeps insertion order, so each issue sits where its newest task first appears.

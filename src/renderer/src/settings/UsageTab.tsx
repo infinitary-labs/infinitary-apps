@@ -163,13 +163,7 @@ export function UsageTab() {
           />
         </div>
       </div>
-      {reporting?.host && (
-        <p className="fm-usage-muted" data-usage-reporting="">
-          {reporting.claudeOnly
-            ? m.settingsUsageReportsClaudeTo({ host: reporting.host })
-            : m.settingsUsageReportsTo({ host: reporting.host })}
-        </p>
-      )}
+      {reporting && <ReportingLine reporting={reporting} />}
       <SettingError error={unitError} surface="usage-unit" />
       <div className="fm-usage-filters">
         <label>
@@ -498,6 +492,30 @@ function WhereItWent({
       )}
       {legend && <p className="fm-usage-legend">{legend}</p>}
     </section>
+  );
+}
+
+/**
+ * Where usage is also reported, or, while the collector of the person's own
+ * setup keeps refusing, that Claude work is not reaching it and why.
+ */
+export function ReportingLine({ reporting }: { reporting: UsageReporting }) {
+  const { refusal, host, claudeOnly } = reporting;
+  if (refusal)
+    return (
+      <p className="fm-usage-muted" data-usage-reporting="" data-tone="warn">
+        {refusal.reason === "unreachable"
+          ? m.settingsUsageReportingUnreachable({ host: refusal.host })
+          : refusal.reason === "secure-connection"
+            ? m.settingsUsageReportingSecure({ host: refusal.host })
+            : m.settingsUsageReportingRefused({ host: refusal.host })}
+      </p>
+    );
+  if (!host) return null;
+  return (
+    <p className="fm-usage-muted" data-usage-reporting="">
+      {claudeOnly ? m.settingsUsageReportsClaudeTo({ host }) : m.settingsUsageReportsTo({ host })}
+    </p>
   );
 }
 

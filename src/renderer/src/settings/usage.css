@@ -24,6 +24,10 @@
   color: var(--fg-3);
 }
 
+.fm-usage-muted[data-tone="warn"] {
+  color: var(--warn);
+}
+
 .fm-usage-head {
   display: flex;
   flex-wrap: wrap;

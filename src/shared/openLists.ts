@@ -2,7 +2,7 @@ import type { z } from "zod";
 import { appFollowReasonSchema } from "./appFollow";
 import { deliverableSchema, workKindSchema } from "./routingPolicy";
 import { taskKindSchema } from "./tasks";
-import { usageWorkKindSchema } from "./usage";
+import { usageReportingRefusalReasonSchema, usageWorkKindSchema } from "./usage";
 import { workSetupReasonSchema } from "./workSetup";
 
 /**
@@ -29,6 +29,8 @@ export const VIEW_OPEN_LISTS: ReadonlyArray<{
   { list: workKindSchema, unknown: "unclear" },
   // Usage's kinds: a kind the list does not know is "Other task work".
   { list: usageWorkKindSchema, unknown: null },
+  // Why a company's collector takes no work: one this view cannot name is a refusal.
+  { list: usageReportingRefusalReasonSchema, unknown: "refused" },
   // Why a Mac's work is not set up: one this view cannot name has not reached the home.
   { list: workSetupReasonSchema, unknown: "not-reached" },
   // Why an app cannot follow its home's version: one this view cannot name is its installation's.

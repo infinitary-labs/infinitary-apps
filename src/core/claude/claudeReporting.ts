@@ -1,6 +1,13 @@
 import { exec } from "node:child_process";
+import { X509Certificate } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { Agent as HttpAgent, request as httpRequest } from "node:http";
 import { connect } from "node:http2";
+import { Agent as HttpsAgent, request as httpsRequest } from "node:https";
+import { resolve as resolvePath } from "node:path";
+import { createSecureContext, getCACertificates, type SecureContext } from "node:tls";
 import type { ResolvedSettings } from "@anthropic-ai/claude-agent-sdk";
+import type { UsageReporting, UsageReportingRefusalReason } from "@shared/usage";
 import { loginPathCapture } from "../hostEnv";
 import { type ResolveClaudeSettings, resolveSettings } from "./claudeAccess";
 import { type ClaudeReportForward, hasClaudeReporting } from "./claudeCostReports";
@@ -29,6 +36,11 @@ export type CompanyDestination = {
   /** The setup's static headers. Values often hold a company token: never logged. */
   headers: Record<string, string>;
   timeoutMs: number;
+  /**
+   * The setup's certificate files for a secure collector, as paths: its own
+   * certificate authority, and a client certificate with its key.
+   */
+  tls?: { ca?: string; cert?: string; key?: string };
 };
 
 export type ClaudeCompanyReporting = {
@@ -56,27 +68,22 @@ export function withoutReportingKeys(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv 
 }
 
 /**
- * Launch keys the receiver's forward cannot carry - a certificate, a client
- * key or an insecure switch, and an exporter other than OTLP, such as
- * Prometheus or the console - which only the client can honor.
+ * A launch exporter the receiver's forward cannot carry - one other than
+ * OTLP, such as Prometheus or the console - which only the client can honor.
  */
-const UNCARRIED_KEY =
-  /^OTEL_EXPORTER_OTLP_(?:(?:LOGS|METRICS|TRACES)_)?(?:CERTIFICATE|CLIENT_KEY|CLIENT_CERTIFICATE|INSECURE)$/;
-
 function uncarried(env: NodeJS.ProcessEnv): boolean {
   return Object.entries(env).some(
     ([key, value]) =>
       value !== undefined &&
-      (UNCARRIED_KEY.test(key) ||
-        ((key === "OTEL_LOGS_EXPORTER" || key === "OTEL_METRICS_EXPORTER") &&
-          value.split(",").some((name) => !["", "otlp", "none"].includes(name.trim())))),
+      (key === "OTEL_LOGS_EXPORTER" || key === "OTEL_METRICS_EXPORTER") &&
+      value.split(",").some((name) => !["", "otlp", "none"].includes(name.trim())),
   );
 }
 
 /**
  * Whether the receiver leaves a session's reporting to the client, as it
  * always has: a reporting choice in the launch environment other than a
- * setup the receiver passes on, or one with a key it cannot carry.
+ * setup the receiver passes on, or an exporter it cannot carry.
  */
 export function receiverStepsAside(env: NodeJS.ProcessEnv): boolean {
   return hasClaudeReporting(withoutReportingKeys(env)) || uncarried(env);
@@ -119,6 +126,11 @@ function destination(
   signal: ReportingSignal,
 ): CompanyDestination | undefined {
   const upper = signal.toUpperCase();
+  // As Claude's client reads them: the signal's own key wins, and an empty one is unset.
+  const pick = (name: string) =>
+    keys[`OTEL_EXPORTER_OTLP_${upper}_${name}`]?.trim() ||
+    keys[`OTEL_EXPORTER_OTLP_${name}`]?.trim() ||
+    undefined;
   const exporters = (keys[`OTEL_${upper}_EXPORTER`] ?? "").split(",").map((name) => name.trim());
   if (!exporters.includes("otlp")) return undefined;
   const protocol = (keys[`OTEL_EXPORTER_OTLP_${upper}_PROTOCOL`] ??
@@ -129,9 +141,14 @@ function destination(
   const base =
     keys.OTEL_EXPORTER_OTLP_ENDPOINT?.trim() ||
     (protocol === "grpc" ? "http://localhost:4317" : "http://localhost:4318");
+  let address = own || base;
+  // Claude's gRPC exporter takes a bare `host:port` as secure unless the
+  // setup's insecure key is "true"; its HTTP exporters need the scheme.
+  if (protocol === "grpc" && !/^[a-z][a-z\d+.-]*:\/\//i.test(address))
+    address = `${pick("INSECURE")?.toLowerCase() === "true" ? "http" : "https"}://${address}`;
   let url: URL;
   try {
-    url = new URL(own || base);
+    url = new URL(address);
   } catch {
     return undefined;
   }
@@ -145,6 +162,9 @@ function destination(
   const timeout = Number(
     keys[`OTEL_EXPORTER_OTLP_${upper}_TIMEOUT`] ?? keys.OTEL_EXPORTER_OTLP_TIMEOUT,
   );
+  const ca = pick("CERTIFICATE");
+  const cert = pick("CLIENT_CERTIFICATE");
+  const key = pick("CLIENT_KEY");
   return {
     endpoint,
     protocol,
@@ -153,6 +173,9 @@ function destination(
       ...parseOtlpHeaders(keys[`OTEL_EXPORTER_OTLP_${upper}_HEADERS`]),
     },
     timeoutMs: Number.isFinite(timeout) && timeout > 0 ? timeout : DEFAULT_TIMEOUT_MS,
+    ...(url.protocol === "https:" && (ca || cert || key)
+      ? { tls: { ...(ca ? { ca } : {}), ...(cert ? { cert } : {}), ...(key ? { key } : {}) } }
+      : {}),
   };
 }
 
@@ -328,8 +351,16 @@ export function resetHeadersHelperForTests(): void {
   helperRuns.clear();
 }
 
-/** What the collector answered, as the client's exporter reads it back. */
-export type ForwardAnswer = { status: number; contentType?: string; body: Buffer };
+/**
+ * What the collector answered, as the client's exporter reads it back, and
+ * why the batch was not taken when it was not.
+ */
+export type ForwardAnswer = {
+  status: number;
+  contentType?: string;
+  body: Buffer;
+  failure?: UsageReportingRefusalReason;
+};
 
 const GRPC_SERVICE: Record<ReportingSignal, string> = {
   logs: "/opentelemetry.proto.collector.logs.v1.LogsService/Export",
@@ -340,40 +371,186 @@ const GRPC_SERVICE: Record<ReportingSignal, string> = {
 const GRPC_RETRYABLE = new Set([1, 4, 8, 10, 11, 14, 15]);
 
 /**
+ * Node's codes for a connection that failed while it was being made secure:
+ * the collector's certificate is not one this computer trusts, or the
+ * collector turned away the client certificate it was sent or missed.
+ */
+const SECURE_FAILURE =
+  /^(?:ERR_SSL_|ERR_TLS_|UNABLE_TO_)|CERT|CRL|^(?:INVALID_CA|INVALID_PURPOSE|PATH_LENGTH_EXCEEDED|HOSTNAME_MISMATCH)$/;
+
+function failureOf(error: unknown): UsageReportingRefusalReason {
+  const code = (error as { code?: unknown } | undefined)?.code;
+  return typeof code === "string" && SECURE_FAILURE.test(code)
+    ? "secure-connection"
+    : "unreachable";
+}
+
+let readSystemRoots: () => readonly string[] = () => getCACertificates("system");
+let systemRoots: { pem: string; endsAt: number }[] | undefined;
+
+/**
+ * The computer's trusted list as Claude's client builds it: Node's own list,
+ * with any `NODE_EXTRA_CA_CERTS`, and the system's, leaving out system
+ * certificates past their end date. Node reads the system's list once per
+ * process and keeps it, so a certificate the computer trusts only after the
+ * app started is not seen until the app starts again.
+ */
+function computerRoots(now = Date.now()): string[] {
+  if (!systemRoots) {
+    let system: readonly string[] = [];
+    try {
+      system = readSystemRoots();
+    } catch {
+      // A system list that cannot be read leaves Node's own.
+    }
+    systemRoots = system.flatMap((pem) => {
+      try {
+        return [{ pem, endsAt: new X509Certificate(pem).validToDate.getTime() }];
+      } catch {
+        return [];
+      }
+    });
+  }
+  const current = systemRoots.filter((root) => root.endsAt > now).map((root) => root.pem);
+  return [...new Set([...getCACertificates("default"), ...current])];
+}
+
+/** Stands a list in for the system's, or restores the real one with none. */
+export function useSystemRootsForTests(read?: () => readonly string[]): void {
+  readSystemRoots = read ?? (() => getCACertificates("system"));
+  systemRoots = undefined;
+}
+
+/**
+ * The secure context for one destination, built as Claude's client builds
+ * its exporter's: the setup's certificate authority in place of the
+ * computer's trusted list, or else that list, and the client certificate
+ * only with its key. A file that cannot be read, or a pair that does not
+ * fit, is left out with a log line, as the client leaves it out with a
+ * warning. Paths resolve against the folder the client runs in.
+ */
+function secureContextFor(
+  files: NonNullable<CompanyDestination["tls"]> | undefined,
+  cwd: string,
+  note: (line: string) => void,
+): SecureContext {
+  const read = (path: string | undefined, what: string) => {
+    if (!path) return undefined;
+    try {
+      return readFileSync(resolvePath(cwd, path));
+    } catch {
+      // i18n-exempt: a log line, never shown to a person
+      note(`could not read the reporting setup's ${what} file; sending without it`);
+      return undefined;
+    }
+  };
+  // i18n-exempt: names for a log line, never shown to a person
+  const [ca, cert, key] = [
+    read(files?.ca, "certificate authority") ?? computerRoots(),
+    read(files?.cert, "client certificate"),
+    read(files?.key, "client key"),
+  ];
+  if (cert && key)
+    try {
+      return createSecureContext({ ca, cert, key });
+    } catch {
+      // i18n-exempt: a log line, never shown to a person
+      note("the reporting setup's client certificate and key do not fit; sending without them");
+    }
+  try {
+    return createSecureContext({ ca });
+  } catch {
+    // i18n-exempt: a log line, never shown to a person
+    note(
+      "the reporting setup's certificate authority file holds no certificate; sending without it",
+    );
+    return createSecureContext({ ca: computerRoots() });
+  }
+}
+
+/**
+ * How long a kept connection to the collector stays open with nothing to
+ * send, which also ends it once its attachment does: a kept connection never
+ * holds the app open.
+ */
+const IDLE_MS = 30_000;
+
+/** One destination's connections: kept open between batches over HTTP, made per batch over gRPC. */
+type Leg = { agent?: HttpAgent; secureContext?: SecureContext };
+
+function legFor(to: CompanyDestination, cwd: string, note: (line: string) => void): Leg {
+  const secure = new URL(to.endpoint).protocol === "https:";
+  const secureContext = secure ? secureContextFor(to.tls, cwd, note) : undefined;
+  if (to.protocol === "grpc") return secureContext ? { secureContext } : {};
+  return {
+    agent: secureContext
+      ? new HttpsAgent({ keepAlive: true, timeout: IDLE_MS, secureContext })
+      : new HttpAgent({ keepAlive: true, timeout: IDLE_MS }),
+  };
+}
+
+/**
  * Send one batch, exactly the bytes Claude's client produced, to the
  * company's collector. OTLP over HTTP posts them as they are; gRPC frames
- * the same protobuf message as one unary call. Redirects are refused: the
- * headers may hold a company token.
+ * the same protobuf message as one unary call. Redirects are not followed:
+ * the headers may hold a company token.
  */
-export async function postCompany(
+function postCompany(
   to: CompanyDestination,
+  leg: Leg,
   signal: ReportingSignal,
   body: Buffer,
   contentType: string,
   headers: Record<string, string>,
 ): Promise<ForwardAnswer> {
-  if (to.protocol === "grpc") return postGrpc(to, signal, body, headers);
-  try {
-    const response = await fetch(to.endpoint, {
-      method: "POST",
-      headers: { ...headers, "content-type": contentType },
-      body: new Uint8Array(body),
-      redirect: "error",
-      signal: AbortSignal.timeout(to.timeoutMs),
-    });
-    const type = response.headers.get("content-type");
-    return {
-      status: response.status,
-      ...(type ? { contentType: type } : {}),
-      body: Buffer.from(await response.arrayBuffer()),
-    };
-  } catch {
-    return { status: 503, body: Buffer.alloc(0) };
-  }
+  if (to.protocol === "grpc") return postGrpc(to, leg, signal, body, headers);
+  return new Promise((resolve) => {
+    const failed = (error: unknown) =>
+      resolve({ status: 503, body: Buffer.alloc(0), failure: failureOf(error) });
+    const url = new URL(to.endpoint);
+    try {
+      const request = (url.protocol === "https:" ? httpsRequest : httpRequest)(
+        url,
+        {
+          method: "POST",
+          ...(leg.agent ? { agent: leg.agent } : {}),
+          headers: {
+            // Node's fetch names itself so, for a proxy that refuses a request
+            // naming nothing; the setup's own User-Agent wins.
+            "user-agent": "node",
+            ...headers,
+            "content-type": contentType,
+            "content-length": body.length,
+          },
+          signal: AbortSignal.timeout(to.timeoutMs),
+        },
+        (response) => {
+          const chunks: Buffer[] = [];
+          response.on("data", (chunk: Buffer) => chunks.push(chunk));
+          response.on("error", failed);
+          response.on("end", () => {
+            const status = response.statusCode ?? 502;
+            const type = response.headers["content-type"];
+            resolve({
+              status,
+              ...(type ? { contentType: type } : {}),
+              body: Buffer.concat(chunks),
+              ...(status >= 200 && status < 300 ? {} : { failure: "refused" as const }),
+            });
+          });
+        },
+      );
+      request.on("error", failed);
+      request.end(body);
+    } catch (caught) {
+      failed(caught);
+    }
+  });
 }
 
 function postGrpc(
   to: CompanyDestination,
+  leg: Leg,
   signal: ReportingSignal,
   body: Buffer,
   headers: Record<string, string>,
@@ -381,7 +558,7 @@ function postGrpc(
   return new Promise((resolve) => {
     let settled = false;
     let status: number | undefined;
-    const finish = (code: number | undefined) => {
+    const finish = (code: number | undefined, error?: unknown) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
@@ -392,15 +569,20 @@ function postGrpc(
           : {
               status: code === undefined || GRPC_RETRYABLE.has(code) ? 503 : 400,
               body: Buffer.alloc(0),
+              // A gRPC status is the collector's own answer; none means it was never reached.
+              failure: code === undefined ? failureOf(error) : "refused",
             },
       );
     };
-    const session = connect(to.endpoint);
+    const session = connect(
+      to.endpoint,
+      leg.secureContext ? { secureContext: leg.secureContext } : {},
+    );
     const timer = setTimeout(() => {
       session.destroy();
       finish(undefined);
     }, to.timeoutMs);
-    session.on("error", () => finish(undefined));
+    session.on("error", (error) => finish(undefined, error));
     const lower = Object.fromEntries(
       Object.entries(headers).map(([name, value]) => [name.toLowerCase(), value]),
     );
@@ -413,8 +595,8 @@ function postGrpc(
         "content-type": "application/grpc",
         te: "trailers",
       });
-    } catch {
-      finish(undefined);
+    } catch (caught) {
+      finish(undefined, caught);
       return;
     }
     const read = (fields: Record<string, unknown>) => {
@@ -423,7 +605,7 @@ function postGrpc(
     };
     request.on("response", (fields) => read(fields));
     request.on("trailers", (fields) => read(fields));
-    request.on("error", () => finish(undefined));
+    request.on("error", (error) => finish(undefined, error));
     request.on("data", () => {});
     request.on("end", () => finish(status ?? 2));
     const frame = Buffer.alloc(5);
@@ -432,12 +614,75 @@ function postGrpc(
   });
 }
 
-/** The receiver's onward leg for one attachment, under this setup. */
+/**
+ * How long a collector's failures must go on, with no batch taken between
+ * them, before Settings → Usage says so: past one batch's retries, which end
+ * within the client's ten-second export time limit, so a passing outage
+ * stays quiet.
+ */
+export const REFUSAL_LASTS_MS = 60_000;
+
+/**
+ * Each destination's run of failures, by its address, while no batch gets
+ * through: when it began, when its latest failure was, and why that one failed.
+ */
+const refusals = new Map<
+  string,
+  { since: number; latest: number; reason: UsageReportingRefusalReason }
+>();
+
+function recordAnswer(
+  to: CompanyDestination,
+  answer: ForwardAnswer,
+  now: number,
+  note: (line: string) => void,
+): void {
+  if (!answer.failure) {
+    refusals.delete(to.endpoint);
+    return;
+  }
+  const run = refusals.get(to.endpoint);
+  // i18n-exempt: a log line, never shown to a person
+  if (!run)
+    note(
+      `the company collector at ${new URL(to.endpoint).host} did not take a batch (${answer.failure})`,
+    );
+  refusals.set(to.endpoint, { since: run?.since ?? now, latest: now, reason: answer.failure });
+}
+
+/**
+ * The first of this setup's collectors whose failures have gone on for at
+ * least `REFUSAL_LASTS_MS`, its first and latest failure that far apart with
+ * no batch taken between them, and why its latest one failed. One failed
+ * batch followed by no more work is not a collector that keeps refusing. A
+ * delivered batch ends the run.
+ */
+export function lastingRefusal(setup: ClaudeCompanyReporting): UsageReporting["refusal"] {
+  for (const to of Object.values(setup.signals)) {
+    const run = refusals.get(to.endpoint);
+    if (run && run.latest - run.since >= REFUSAL_LASTS_MS)
+      return { host: new URL(to.endpoint).host, reason: run.reason };
+  }
+  return undefined;
+}
+
+export function resetRefusalsForTests(): void {
+  refusals.clear();
+}
+
+/**
+ * The receiver's onward leg for one attachment, under this setup. `cwd` is
+ * the folder the client runs in, which its certificate paths resolve
+ * against.
+ */
 export function companyForward(
   setup: ClaudeCompanyReporting,
   env: NodeJS.ProcessEnv,
   note: (line: string) => void,
+  options: { cwd?: string; now?: () => number } = {},
 ): ClaudeReportForward {
+  const now = options.now ?? Date.now;
+  const legs = new Map<ReportingSignal, Leg>();
   const signals: ClaudeReportForward["signals"] = {};
   for (const signal of ["logs", "metrics"] as const) {
     const to = setup.signals[signal];
@@ -449,8 +694,15 @@ export function companyForward(
     send: async (signal, body, contentType) => {
       const to = setup.signals[signal];
       if (!to) return { status: 404, body: Buffer.alloc(0) };
-      const headers = await companyHeaders(setup, signal, env, Date.now, note);
-      return postCompany(to, signal, body, contentType, headers);
+      const headers = await companyHeaders(setup, signal, env, now, note);
+      let leg = legs.get(signal);
+      if (!leg) {
+        leg = legFor(to, options.cwd ?? process.cwd(), note);
+        legs.set(signal, leg);
+      }
+      const answer = await postCompany(to, leg, signal, body, contentType, headers);
+      recordAnswer(to, answer, now(), note);
+      return answer;
     },
   };
 }

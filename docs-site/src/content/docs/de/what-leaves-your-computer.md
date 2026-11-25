@@ -1,5 +1,5 @@
 ---
-source: ae4ef93753c8b7d2
+source: 4e862d71de30e0c9
 title: Was deinen Computer verlässt
 description: Was Infinitary sendet, wohin es geht und der eine Schalter, der überhaupt etwas an uns sendet.
 ---
@@ -47,8 +47,9 @@ Wenn deine Claude-Code-Einstellungsdatei oder deine Shell Nutzungsberichte für 
 Claudes Arbeit geht als die Einträge, die Claude Code selbst dorthin schicken würde.
 Die Arbeit jedes anderen Modells geht unter denselben Namen, mit Modell, Anbieter, Tokens, geschätzten Kosten, ob dein erster Offizier oder ein Crewmitglied sie getan hat, der Art der Arbeit und der E-Mail-Adresse deiner Claude-Code-Anmeldung, nie mit deinen Worten, Aufgabentiteln oder Projektnamen.
 Einstellungen → **Nutzung** nennt, wohin sie geht.
+Weist diese Stelle Claudes Arbeit immer wieder ab oder ist sie nicht erreichbar, sagt diese Zeile das stattdessen.
 Eine Einrichtung, die der Administrator deiner Firma für den ganzen Computer verwaltet, erreicht Claude Code direkt, wie bisher, und Infinitary schickt die Arbeit jedes anderen Modells ebenfalls dorthin, auf dieselbe Weise.
-Beide Arten von Einrichtung bekommen nur Claudes Arbeit, wenn sie ihre Nutzung über gRPC schicken, und Einstellungen → **Nutzung** sagt das dann.
+Beide Arten von Einrichtung bekommen nur Claudes Arbeit, wenn sie ihre Nutzung über gRPC oder mit Zertifikatsdateien schicken, und Einstellungen → **Nutzung** sagt das dann.
 
 ## Suche nach Updates {#update-checks}
 

@@ -1,8 +1,23 @@
 import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
-import { createServer, type IncomingHttpHeaders, type Server } from "node:http";
-import { createServer as createHttp2Server, type Http2Server } from "node:http2";
+import {
+  createServer,
+  type IncomingHttpHeaders,
+  type IncomingMessage,
+  type Server,
+  type ServerResponse,
+} from "node:http";
+import {
+  createServer as createHttp2Server,
+  createSecureServer as createSecureHttp2Server,
+  type IncomingHttpHeaders as Http2Headers,
+  type Http2SecureServer,
+  type Http2Server,
+  type ServerHttp2Stream,
+} from "node:http2";
+import { createServer as createHttpsServer } from "node:https";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
+import type { TLSSocket } from "node:tls";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { writeMockClaudeClient } from "../../../tests/e2e/mockClaudeClient";
 import {
@@ -12,6 +27,7 @@ import {
   writeAnthropicEvent,
   writeAnthropicText,
 } from "../../../tests/helpers/anthropicDialect";
+import { type CollectorTls, collectorTlsFixture } from "../../../tests/helpers/collectorTlsFixture";
 import { crewmateToolDelegate } from "../../../tests/helpers/crewmateToolDelegate";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { crewmateSessionSpec } from "../orchestrator/crewSession";
@@ -32,7 +48,16 @@ import {
   decodeLogsProtobuf,
 } from "./claudeCostReports";
 import { CLAUDE_MODEL_PROVIDER } from "./claudeQueryCore";
-import { readClaudeCompanyReporting, resetHeadersHelperForTests } from "./claudeReporting";
+import {
+  companyForward,
+  companyReportingFrom,
+  lastingRefusal,
+  REFUSAL_LASTS_MS,
+  readClaudeCompanyReporting,
+  resetHeadersHelperForTests,
+  resetRefusalsForTests,
+  useSystemRootsForTests,
+} from "./claudeReporting";
 import { resetStoreLeasesForTest } from "./claudeStoreLease";
 import { createClaudeSessionFactory } from "./session";
 
@@ -92,11 +117,13 @@ afterAll(async () => {
 });
 
 const stores: SessionRecordStore[] = [];
-const servers: (Server | Http2Server)[] = [];
+const servers: (Server | Http2Server | Http2SecureServer)[] = [];
 
 afterEach(async () => {
   vi.unstubAllEnvs();
   resetHeadersHelperForTests();
+  resetRefusalsForTests();
+  useSystemRootsForTests();
   resetStoreLeasesForTest();
   await Promise.all(stores.splice(0).map((store) => store.flushed()));
   await Promise.all(
@@ -104,36 +131,75 @@ afterEach(async () => {
   );
 });
 
-type Received = { path: string; headers: IncomingHttpHeaders; body: Buffer };
+/** One batch as a collector got it, and the name on the client certificate it was sent with, if any. */
+type Received = { path: string; headers: IncomingHttpHeaders; body: Buffer; client?: string };
 
-async function httpCollector(): Promise<{ url: string; received: Received[] }> {
+function peerName(socket: unknown): string | undefined {
+  const name = (socket as Partial<TLSSocket>).getPeerCertificate?.().subject?.CN;
+  return typeof name === "string" ? name : undefined;
+}
+
+async function listening(server: Server | Http2Server | Http2SecureServer, scheme: string) {
+  servers.push(server);
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  return `${scheme}://127.0.0.1:${(server.address() as AddressInfo).port}`;
+}
+
+/**
+ * The company's own certificate authority's collector: it presents a
+ * certificate that authority signed and, with `asks`, takes only a client
+ * certificate the same authority signed.
+ */
+function companyTls(tls: CollectorTls, asks: boolean) {
+  return {
+    cert: tls.serverCert,
+    key: tls.serverKey,
+    ...(asks ? { ca: tls.ca, requestCert: true, rejectUnauthorized: true } : {}),
+  };
+}
+
+async function httpCollector(
+  tls?: CollectorTls,
+  asks = false,
+): Promise<{ url: string; received: Received[] }> {
   const received: Received[] = [];
-  const server = createServer((req, res) => {
+  const handle = (req: IncomingMessage, res: ServerResponse) => {
     const chunks: Buffer[] = [];
     req.on("data", (chunk: Buffer) => chunks.push(chunk));
     req.on("end", () => {
-      received.push({ path: req.url ?? "", headers: req.headers, body: Buffer.concat(chunks) });
+      const client = peerName(req.socket);
+      received.push({
+        path: req.url ?? "",
+        headers: req.headers,
+        body: Buffer.concat(chunks),
+        ...(client ? { client } : {}),
+      });
       res.writeHead(200, { "content-type": "application/json" }).end("{}");
     });
-  });
-  servers.push(server);
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-  return { url: `http://127.0.0.1:${(server.address() as AddressInfo).port}`, received };
+  };
+  const url = tls
+    ? await listening(createHttpsServer(companyTls(tls, asks), handle), "https")
+    : await listening(createServer(handle), "http");
+  return { url, received };
 }
 
 /** A gRPC collector: one unary Export per call, answered OK with an empty response. */
-async function grpcCollector(): Promise<{ url: string; received: Received[] }> {
+async function grpcCollector(
+  tls?: CollectorTls,
+  asks = false,
+): Promise<{ url: string; received: Received[] }> {
   const received: Received[] = [];
-  const server = createHttp2Server();
-  server.on("stream", (stream, headers) => {
+  const handle = (stream: ServerHttp2Stream, headers: Http2Headers) => {
     const chunks: Buffer[] = [];
     stream.on("data", (chunk: Buffer) => chunks.push(chunk));
     stream.on("end", () => {
       const framed = Buffer.concat(chunks);
+      const client = peerName(stream.session?.socket);
       received.push({
         path: String(headers[":path"]),
         headers: headers as IncomingHttpHeaders,
         body: framed.subarray(5, 5 + framed.readUInt32BE(1)),
+        ...(client ? { client } : {}),
       });
       stream.respond(
         { ":status": 200, "content-type": "application/grpc" },
@@ -142,10 +208,10 @@ async function grpcCollector(): Promise<{ url: string; received: Received[] }> {
       stream.on("wantTrailers", () => stream.sendTrailers({ "grpc-status": "0" }));
       stream.end(Buffer.from([0, 0, 0, 0, 0]));
     });
-  });
-  servers.push(server);
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-  return { url: `http://127.0.0.1:${(server.address() as AddressInfo).port}`, received };
+  };
+  const server = tls ? createSecureHttp2Server(companyTls(tls, asks)) : createHttp2Server();
+  server.on("stream", handle);
+  return { url: await listening(server, tls ? "https" : "http"), received };
 }
 
 /**
@@ -430,9 +496,98 @@ describe("a company's Claude Code setup in the person's settings file", () => {
     ).toBe(true);
   });
 
+  it.each([
+    ["OTLP/HTTP", "http/json", httpCollector, "/v1/logs"],
+    ["gRPC", "grpc", grpcCollector, "/opentelemetry.proto.collector.logs.v1.LogsService/Export"],
+  ] as const)(
+    "reaches a collector on the company's own certificate authority that takes only its client certificates, over %s",
+    async (_name, protocol, start, logsPath) => {
+      const tls = collectorTlsFixture(scratchDir("infinitary-collector-tls-"));
+      const collector = await start(tls, true);
+      const { priced } = await turnWithSettings({
+        ...setup(protocol, collector.url),
+        OTEL_EXPORTER_OTLP_CERTIFICATE: tls.caPath,
+        OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE: tls.clientCertPath,
+        OTEL_EXPORTER_OTLP_CLIENT_KEY: tls.clientKeyPath,
+      });
+      const logs = collector.received.filter((r) => r.path === logsPath);
+      const ids = logs.flatMap((r) =>
+        requestIds(
+          protocol === "grpc" ? decodeLogsProtobuf(r.body) : JSON.parse(r.body.toString("utf8")),
+        ),
+      );
+      expect(priced.length).toBeGreaterThan(0);
+      expect(ids.sort(), "every priced call reached the company").toEqual(
+        priced.map((cost) => cost.requestId).sort(),
+      );
+      expect(
+        collector.received.map((r) => r.client),
+        "every batch came with the developer's client certificate",
+      ).toEqual(collector.received.map(() => "dev@example.com"));
+      expect(logs[0]?.headers.authorization).toBe(`Bearer ${COMPANY_TOKEN}`);
+    },
+  );
+
   it("gets nothing from Infinitary where an administrator's managed setup reports for Claude's client", async () => {
     const collector = await httpCollector();
     await turnWithSettings(setup("http/json", collector.url), { managed: true });
     expect(collector.received).toEqual([]);
+  });
+});
+
+describe("a secure collector without the setup's certificate authority", () => {
+  const LOGS = Buffer.from(JSON.stringify({ resourceLogs: [] }));
+
+  function forwardTo(url: string, keys: Record<string, string>, clock = { at: Date.now() }) {
+    const company = companyReportingFrom({
+      CLAUDE_CODE_ENABLE_TELEMETRY: "1",
+      OTEL_LOGS_EXPORTER: "otlp",
+      OTEL_EXPORTER_OTLP_PROTOCOL: "http/json",
+      OTEL_EXPORTER_OTLP_ENDPOINT: url,
+      ...keys,
+    });
+    if (!company) throw new Error("the setup reads as a setup");
+    const forward = companyForward(company, {}, () => {}, { now: () => clock.at });
+    return { company, send: () => forward.send("logs", LOGS, "application/json") };
+  }
+
+  it("is reached when the computer's own trusted list holds the company's authority", async () => {
+    const tls = collectorTlsFixture(scratchDir("infinitary-collector-tls-"));
+    const collector = await httpCollector(tls);
+    useSystemRootsForTests(() => [tls.ca]);
+    expect((await forwardTo(collector.url, {}).send()).status).toBe(200);
+    expect(collector.received.map((r) => r.path)).toEqual(["/v1/logs"]);
+  });
+
+  it("is named in Usage as not connecting securely once that has gone on for a minute", async () => {
+    const tls = collectorTlsFixture(scratchDir("infinitary-collector-tls-"));
+    const collector = await httpCollector(tls);
+    useSystemRootsForTests(() => []);
+    const clock = { at: 1_000_000 };
+    const { company, send } = forwardTo(collector.url, {}, clock);
+    expect((await send()).status, "the client retries it, as an unreachable collector").toBe(503);
+    clock.at += REFUSAL_LASTS_MS;
+    await send();
+    expect(collector.received).toEqual([]);
+    expect(lastingRefusal(company)).toEqual({
+      host: new URL(collector.url).host,
+      reason: "secure-connection",
+    });
+  });
+
+  it("is named the same way when it takes only client certificates and the setup has none", async () => {
+    const tls = collectorTlsFixture(scratchDir("infinitary-collector-tls-"));
+    const collector = await httpCollector(tls, true);
+    const clock = { at: 1_000_000 };
+    const { company, send } = forwardTo(
+      collector.url,
+      { OTEL_EXPORTER_OTLP_CERTIFICATE: tls.caPath },
+      clock,
+    );
+    await send();
+    clock.at += REFUSAL_LASTS_MS;
+    await send();
+    expect(collector.received).toEqual([]);
+    expect(lastingRefusal(company)?.reason).toBe("secure-connection");
   });
 });

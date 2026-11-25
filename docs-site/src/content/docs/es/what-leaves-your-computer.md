@@ -1,5 +1,5 @@
 ---
-source: ae4ef93753c8b7d2
+source: 4e862d71de30e0c9
 title: Lo que sale de tu computadora
 description: Lo que envía Infinitary, adónde va, y el único interruptor que nos envía algo a nosotros.
 ---
@@ -47,8 +47,9 @@ Si tu archivo de ajustes de Claude Code o tu shell configura informes de uso par
 El trabajo de Claude va como los registros que el propio Claude Code enviaría allí.
 El trabajo de cualquier otro modelo va con los mismos nombres, con su modelo, proveedor, tokens, costo estimado, si lo hizo tu primer oficial o un tripulante, el tipo de trabajo y el correo de tu inicio de sesión de Claude Code, nunca tus palabras, títulos de tareas ni nombres de proyectos.
 Configuración → **Uso** dice a dónde va.
+Si ese lugar sigue rechazando el trabajo de Claude, o no se puede llegar a él, esa línea lo dice en su lugar.
 Una configuración que el administrador de tu empresa gestiona para toda la computadora llega a Claude Code directamente, como siempre, e Infinitary también envía allí el trabajo de cualquier otro modelo, del mismo modo.
-Cualquiera de las dos configuraciones recibe solo el trabajo de Claude si envía su uso por gRPC, y Configuración → **Uso** lo indica entonces.
+Cualquiera de las dos configuraciones recibe solo el trabajo de Claude si envía su uso por gRPC o con archivos de certificado, y Configuración → **Uso** lo indica entonces.
 
 ## Búsqueda de actualizaciones {#update-checks}
 

@@ -1,3 +1,4 @@
+import * as m from "@shared/i18n/messages.generated";
 import {
   costSeries,
   EMPTY_USAGE_AMOUNT,
@@ -8,7 +9,7 @@ import {
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { CostBody } from "./UsageCostPerTask";
-import { RecentTasksView, type RecentTasksViewProps } from "./UsageTab";
+import { RecentTasksView, type RecentTasksViewProps, ReportingLine } from "./UsageTab";
 
 /**
  * Usage's recent tasks as the captain reads them (FI3-993): what the list
@@ -125,5 +126,48 @@ describe("Usage's cost per task", () => {
     expect(markup).toContain("data-usage-cost-empty");
     expect(markup).not.toContain("data-usage-cost-line");
     expect(markup).not.toContain("$0.00");
+  });
+});
+
+describe("Usage's line on where usage is also reported", () => {
+  const HOST = "otel.example.com:4318";
+  const line = (reporting: Parameters<typeof ReportingLine>[0]["reporting"]) =>
+    renderToStaticMarkup(<ReportingLine reporting={reporting} />);
+
+  it("names the collector the work is reported to", () => {
+    const markup = line({ host: HOST });
+    expect(markup).toContain(m.settingsUsageReportsTo({ host: HOST }));
+    expect(markup).not.toContain('data-tone="warn"');
+  });
+
+  it("says when only Claude work goes to that collector, and warns there too", () => {
+    expect(line({ host: HOST, claudeOnly: true })).toContain(
+      m.settingsUsageReportsClaudeTo({ host: HOST }),
+    );
+    const warning = line({
+      host: HOST,
+      claudeOnly: true,
+      refusal: { host: HOST, reason: "refused" },
+    });
+    expect(warning).toContain('data-tone="warn"');
+    expect(warning).toContain(m.settingsUsageReportingRefused({ host: HOST }));
+  });
+
+  it.each([
+    ["unreachable", m.settingsUsageReportingUnreachable],
+    ["secure-connection", m.settingsUsageReportingSecure],
+    ["refused", m.settingsUsageReportingRefused],
+  ] as const)(
+    "warns, in place of that line, while the collector keeps refusing: %s",
+    (reason, words) => {
+      const markup = line({ host: HOST, refusal: { host: HOST, reason } });
+      expect(markup).toContain('data-tone="warn"');
+      expect(markup).toContain(words({ host: HOST }));
+      expect(markup).not.toContain(m.settingsUsageReportsTo({ host: HOST }));
+    },
+  );
+
+  it("is not drawn where no collector is named", () => {
+    expect(line({ host: null })).toBe("");
   });
 });

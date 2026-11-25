@@ -4,7 +4,12 @@ import { DEFAULT_COST_LIMIT } from "@shared/costLimit";
 import type { FmEvent } from "@shared/events";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ResolveClaudeSettings } from "../claude/claudeAccess";
-import { companyReportingFrom } from "../claude/claudeReporting";
+import {
+  companyForward,
+  companyReportingFrom,
+  REFUSAL_LASTS_MS,
+  resetRefusalsForTests,
+} from "../claude/claudeReporting";
 import { openInMemoryDatabase } from "../storage/db";
 import { homeUsage } from "../storage/homeUsage";
 import { seedTask } from "../tasks/seedTask";
@@ -513,8 +518,8 @@ describe("the company's Claude Code setup as a destination", () => {
   it("sends nothing where the receiver leaves reporting to Claude's client", async () => {
     const { url, received } = await collector();
     const source = companyDestination({
-      // A collector that needs a client certificate, which this request never carries.
-      env: () => ({ OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE: "/etc/otel/client.pem" }),
+      // An exporter only Claude's client can honor.
+      env: () => ({ OTEL_METRICS_EXPORTER: "prometheus" }),
       managed: async () => undefined,
       costReportingAllowed: async () => true,
       read: async () => companySetup(url),
@@ -526,6 +531,33 @@ describe("the company's Claude Code setup as a destination", () => {
     usage.recordUsage(CODEX_CALL);
     await usage.usageReporter.flush();
     expect(received).toEqual([]);
+  });
+
+  it("sends nothing to a collector that needs a client certificate, which its requests never carry", async () => {
+    const { url, received } = await collector();
+    const needsCertificate = companyReportingFrom({
+      CLAUDE_CODE_ENABLE_TELEMETRY: "1",
+      OTEL_LOGS_EXPORTER: "otlp",
+      OTEL_EXPORTER_OTLP_PROTOCOL: "http/json",
+      OTEL_EXPORTER_OTLP_ENDPOINT: url.replace("http:", "https:"),
+      OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE: "/etc/otel/client.pem",
+      OTEL_EXPORTER_OTLP_CLIENT_KEY: "/etc/otel/client.key",
+    });
+    const source = companyDestination({
+      env: () => ({}),
+      managed: async () => undefined,
+      costReportingAllowed: async () => true,
+      read: async () => needsCertificate,
+      email: async () => "dev@example.com",
+    });
+    await source.refresh();
+    expect(source.destinations()).toEqual([]);
+    const { usage } = home(source.destinations);
+    usage.recordUsage(CODEX_CALL);
+    await usage.usageReporter.flush();
+    expect(received).toEqual([]);
+    // The receiver carries the certificate for Claude's own records.
+    expect(await source.reporting()).toEqual({ host: new URL(url).host, claudeOnly: true });
   });
 
   it("sends other providers' calls to a managed setup's collector, which Claude's client reports to", async () => {
@@ -655,5 +687,40 @@ describe("the company's Claude Code setup as a destination", () => {
     // A managed policy helper: Claude's client reports somewhere this app cannot know.
     expect(await sourceWith(null, companySetup(url)).reporting()).toEqual({ host: null });
     expect(await sourceWith(undefined, undefined).reporting()).toEqual({ host: null });
+  });
+
+  describe("while its collector keeps refusing", () => {
+    afterEach(() => resetRefusalsForTests());
+
+    it("warns beside the person's own setup, and not beside a managed one", async () => {
+      const { url } = await collector([403, 403]);
+      const host = new URL(url).host;
+      const refusing = companyReportingFrom({
+        CLAUDE_CODE_ENABLE_TELEMETRY: "1",
+        OTEL_LOGS_EXPORTER: "otlp",
+        OTEL_EXPORTER_OTLP_PROTOCOL: "http/json",
+        OTEL_EXPORTER_OTLP_ENDPOINT: url,
+      });
+      if (!refusing) throw new Error("the setup reads as a setup");
+      // The forward's first refusal came a minute before the read.
+      let at = Date.now() - REFUSAL_LASTS_MS;
+      const forward = companyForward(refusing, {}, () => {}, { now: () => at });
+      await forward.send("logs", Buffer.from("{}"), "application/json");
+      at = Date.now();
+      await forward.send("logs", Buffer.from("{}"), "application/json");
+      const sourceWith = (managed: typeof refusing | undefined) =>
+        companyDestination({
+          env: () => ({}),
+          managed: async () => managed,
+          costReportingAllowed: async () => true,
+          read: async () => refusing,
+          email: async () => undefined,
+        });
+      expect(await sourceWith(undefined).reporting()).toEqual({
+        host,
+        refusal: { host, reason: "refused" },
+      });
+      expect(await sourceWith(refusing).reporting()).toEqual({ host });
+    });
   });
 });

@@ -1643,6 +1643,16 @@
       "why": "runs Claude sessions and sign-ins"
     },
     {
+      "from": "claude",
+      "to": "the system",
+      "why": "trusts the computer's certificates for a company collector"
+    },
+    {
+      "from": "claude",
+      "to": "usage collectors",
+      "why": "passes Claude's usage reports on, over OTLP/HTTP or gRPC"
+    },
+    {
       "from": "codex",
       "to": "claude",
       "why": "compares client versions"

@@ -18075,9 +18075,15 @@ ${events}` : prompt;
     /** Tasks finished across all retained history, for the milestones. */
     finishedEver: number()
   });
+  const usageReportingRefusalReasonSchema = _enum([
+    "unreachable",
+    "secure-connection",
+    "refused"
+  ]);
   object({
     host: string().nullable(),
-    claudeOnly: literal(true).optional()
+    claudeOnly: literal(true).optional(),
+    refusal: object({ host: string(), reason: usageReportingRefusalReasonSchema }).optional()
   });
   const USAGE_TASKS_MAX = 5e3;
   const usageTasksQuerySchema = strictObject({

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "approved-plan-settles-review",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Reviewers no longer ask you what your approved plan already decided",
+      "body": "When a reviewer finds something your approved plan already answers, it sends the fix to the builder instead of asking you, even when the builder had its own reason for a different way. A question about your plan still reaches you when the plan cannot be built as written or a fact changed since you approved it, and the card then quotes the plan.",
+      "noPicture": "This changes which cards reach the screen, not how any card or view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

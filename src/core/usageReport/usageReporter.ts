@@ -35,8 +35,9 @@ export type UsageReportDestination = {
   endpoints: Partial<Record<OtlpSignal, string>>;
   /**
    * The certificate files a secure signal is sent with, as Claude's client
-   * sends its own reports; a secure signal without them is checked against
-   * the computer's trusted list.
+   * sends its own reports; a secure signal the reporter posts itself without
+   * them is checked against the computer's trusted list. A destination with
+   * its own `post` sends its own way and reads none of this.
    */
   certificates?: Partial<Record<OtlpSignal, CertificateFiles>>;
   /** Asked per batch; values often hold a token, so they are never logged. */
@@ -381,7 +382,7 @@ function changedAt(files: CertificateFiles | undefined, cwd: string): (number | 
   });
 }
 
-/** A brokered post's HTTP status, read as `postOtlpHttp` answers one. */
+/** A destination's own post's answer, read as `postOtlpHttp` answers one. */
 function refusalOf(status: number): { status: number; failure?: "refused" } {
   return status >= 200 && status < 300 ? { status } : { status, failure: "refused" };
 }

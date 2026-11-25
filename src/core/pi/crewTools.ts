@@ -401,7 +401,7 @@ const SHAPE_FIELD_RULES = {
   runs_on_ask: "As update_task's runs_on.",
   internal_step: INTERNAL_STEP_DESCRIPTION,
   unsafe_data_reader:
-    "True only on a read-only task whose brief reads words strangers can write, such as its project's issues and pull requests. Its crewmate gets no shell or browser and reads only its own project (or with no repo_id an empty folder of its own), the integrations' reads the captain set to Always allow, and public web pages, each new address waiting for the captain's click once it holds something of theirs; every other call it makes waits for the captain's click.",
+    "True only on a read-only task whose brief reads words strangers can write, such as its project's issues and pull requests. Its crewmate gets no shell or browser and reads only its own project (or with no repo_id an empty folder of its own), the integrations' reads the captain set to Always allow, and public web pages, each new address waiting for the captain's click once it holds something of theirs; every other call it makes waits for the captain's click. It has no folder for files, so it can never open an email's attachment or any other file an integration saves: a brief that needs one is not a reader's.",
   in_folder: "Operate in the project's folder; ships nothing.",
   closes_issue:
     "True only on a plan's last piece, when its basis answers an outside issue: its change closes that issue. A fix on a reproduce step closes it unmarked.",

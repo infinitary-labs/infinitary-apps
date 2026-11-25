@@ -36,13 +36,15 @@ test("a project's page opens, moves between its repositories and goes back by ke
     await expect(back).toHaveText(m.settingsProjectsLabel());
     await expect(projectSettings(page, wallet.id)).toBeVisible();
 
-    // The strip of tabs is one Tab stop after the project's Name, on the chosen tab.
     const walletTab = page.locator(`[data-repository-tab="${wallet.id}"]`);
     const apiTab = page.locator(`[data-repository-tab="${api.id}"]`);
     const name = page
       .locator("[data-project-box]")
       .getByLabel(m.settingsProjectsNameLabel(), { exact: true });
+    const addTag = page.locator("[data-tag-add]");
     await pressKey(name, "Tab");
+    await expect(addTag).toBeFocused();
+    await pressKey(addTag, "Tab");
     await expect(walletTab).toBeFocused();
     await expect(walletTab).toHaveAttribute("aria-selected", "true");
 

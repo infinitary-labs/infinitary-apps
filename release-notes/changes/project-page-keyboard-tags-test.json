@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "project-page-keyboard-tags-test",
+      "reason": "The desktop journey checks the Add tag focus stop before the repository tabs; test-only, with no app behavior change."
+    }
+  ]
+}

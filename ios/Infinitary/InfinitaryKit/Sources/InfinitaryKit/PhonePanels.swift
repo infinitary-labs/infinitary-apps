@@ -48,6 +48,8 @@ public struct PhonePanel: Decodable, Sendable, Equatable, Identifiable {
     /// Its own code decides whether it shows (`rail.show`).
     public let ownPresence: Bool
     public let moves: Bool
+    /// A task is building it right now; an older computer that sends none reads as not.
+    public let running: Bool?
     public let reads: [String]
     public let sql: [String]
     public let frame: Frame?
@@ -76,7 +78,8 @@ public struct PhonePanel: Decodable, Sendable, Equatable, Identifiable {
         let asks = integrationAsks ?? []
         let asking = asks.filter { $0.state == "asking" }
         if !asking.isEmpty { sections.append(.asking(asking)) }
-        if let paused { sections.append(.paused(asked: paused.asked)) }
+        // Not while a task builds it, as the desktop's `framedCode` holds it back.
+        if let paused, running != true { sections.append(.paused(asked: paused.asked)) }
         let declined = asks.filter { $0.state == "declined" }
         if !declined.isEmpty { sections.append(.declined(declined)) }
         return sections

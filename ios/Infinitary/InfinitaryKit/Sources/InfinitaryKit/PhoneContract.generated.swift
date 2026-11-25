@@ -440,8 +440,6 @@ public enum PhonePanelRequest: String, Sendable, CaseIterable {
 }
 
 public enum PhonePanelWords {
-    public static let backgroundStopped = PhoneMessages.`panelBackgroundStopped`()
-    public static let backgroundExited = PhoneMessages.`panelBackgroundExited`()
     public static let retry = PhoneMessages.`panelRetry`()
     public static let unresponsive = PhoneMessages.`panelUnresponsiveLine`()
     public static func couldNotOpen(_ failure: String) -> String { PhoneMessages.`panelCouldNotOpen`(failure: failure) }

@@ -29,6 +29,7 @@ import {
   panelsOffLine,
   refusedRunbookPanels,
   SURFACES_CONTEXT_LIMIT,
+  servedFailingReads,
   surfaceOwner,
   surfaceState,
 } from "../pi/personalizeTool";
@@ -788,17 +789,21 @@ export class FirstmateContext {
     return {
       description: "app_change panel and personalize remove act on these ids",
       theme: preferences.appearance.theme,
-      panels: shown.map((surface) => ({
-        id: surface.id,
-        title: surface.title,
-        ...surfaceOwner(surface, personal),
-        rail: surface.placement.x,
-        position: surface.placement.y,
-        // Its place in that slot, from the top: "2 of 3".
-        ...(surface.place ? { order: surface.place, of: surface.of } : {}),
-        // The window's own word on it (docs/personal-panels.md, "Placed on the rail").
-        state: surfaceState(surface, mounts),
-      })),
+      panels: shown.map((surface) => {
+        const failing = servedFailingReads(surface, personal);
+        return {
+          id: surface.id,
+          title: surface.title,
+          ...surfaceOwner(surface, personal),
+          rail: surface.placement.x,
+          position: surface.placement.y,
+          // Its place in that slot, from the top: "2 of 3".
+          ...(surface.place ? { order: surface.place, of: surface.of } : {}),
+          // The window's own word on it (docs/personal-panels.md, "Placed on the rail").
+          state: surfaceState(surface, mounts),
+          ...(failing ? { reads_failing: failing } : {}),
+        };
+      }),
       ...(omitted > 0 ? { personal_panels_omitted: omitted } : {}),
       // A runbook's panel left off, beside the one that holds its id (docs/runbooks.md, "Panels").
       ...(refused.rows.length > 0 ? { refused_runbook_panels: refused.rows } : {}),

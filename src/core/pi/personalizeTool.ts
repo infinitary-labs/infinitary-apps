@@ -243,6 +243,26 @@ function failingWords(failing: readonly PanelFailingRead[]): string {
     .join("; ")}`;
 }
 
+/**
+ * A personal panel's failing reads as the first mate's served surfaces carry
+ * them (docs/personal-panels.md, "Reads that keep failing"). The newest answer
+ * stays out: it is words from outside, told once by the panel-reads-failing wake.
+ */
+export function servedFailingReads(
+  surface: SurfaceView,
+  personal: PersonalSnapshot,
+): { read: string; since: string; tries: number; asked?: true }[] | undefined {
+  if (surface.kind !== "personal") return undefined;
+  const failing = personal.extensions.find((extension) => extension.id === surface.id)?.failing;
+  if (!failing || failing.length === 0) return undefined;
+  return failing.map((row) => ({
+    read: panelReadWords(row.read),
+    since: row.since,
+    tries: row.tries,
+    ...(row.asked ? { asked: true as const } : {}),
+  }));
+}
+
 export function surfaceOwner(
   surface: SurfaceView,
   personal: PersonalSnapshot,

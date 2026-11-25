@@ -85,6 +85,18 @@ struct PhonePanelsTests {
         #expect(try #require(PhonePanelList.decode(.object(["extensions": .array([try panel("quiet")])])).first).statusSections.isEmpty)
     }
 
+    /// The desktop's `framedCode` shows paused only while no task builds the panel; the phone holds it back the same way.
+    @Test func aPausedPanelATaskIsBuildingShowsNoPausedSection() throws {
+        guard case .object(var entry) = try panel("building") else { Issue.record("no panel"); return }
+        entry["paused"] = try PhoneJSON.read(["api": 1, "serves": [2], "asked": false] as [String: Any])
+        entry["running"] = .bool(true)
+        let building = try #require(PhonePanelList.decode(.object(["extensions": .array([.object(entry)])])).first)
+        #expect(building.statusSections.isEmpty)
+        entry["running"] = .bool(false)
+        let idle = try #require(PhonePanelList.decode(.object(["extensions": .array([.object(entry)])])).first)
+        #expect(idle.statusSections.map(\.key) == ["paused"])
+    }
+
     @Test func aLibraryFileThatFailsItsPinIsRefused() throws {
         let good = Data("export const a = 1;".utf8)
         let answer = { (pin: String) in PhoneJSON.object(["version": .string("1.0.0"), "files": .array([.object([

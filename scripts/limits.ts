@@ -334,7 +334,7 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
     FIRSTMATE_MAX_MODEL_TURNS: physical("the turn ends saying it stopped after 40 model requests"),
     CLASSIFIER_MAX_OUTPUT_TOKENS: physical("a cut-short answer is still read for its option word"),
   },
-  // The captain's pick in INF-6664's approved plan: 12 rows, oldest first.
+  // INF-6664's approved plan set 12 rows; the captain's review choice puts rows marked new first, then oldest first.
   "src/core/orchestrator/standingWork.ts": {
     STANDING_ROW_CAP: {
       rests: "consent",

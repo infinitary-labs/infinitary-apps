@@ -265,13 +265,20 @@ export function ciJobs(
             base: { outputs: { batch } },
             paths: { outputs: {} },
             "critical-path": { outcome: "skipped" },
+            "window-methods": { outcome: "skipped" },
           }
         : {
             base: { outputs: {} },
             paths: { outputs: { build: String(paths.build), browser: String(paths.browser) } },
             "critical-path": { outcome: paths.build ? "success" : "skipped" },
+            "window-methods": { outcome: paths.build ? "success" : "skipped" },
           }
-      : { base: { outputs: {} }, paths: { outputs: {} }, "critical-path": { outcome: "skipped" } };
+      : {
+          base: { outputs: {} },
+          paths: { outputs: {} },
+          "critical-path": { outcome: "skipped" },
+          "window-methods": { outcome: "skipped" },
+        };
   // A request asks for the sweep through ci.yml's `sweep` input.
   const inputs = { sweep };
   // The code checks' count of the parts, when its step runs, in the output

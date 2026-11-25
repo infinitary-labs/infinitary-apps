@@ -36,6 +36,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | computer | computadora | The most widely used word across Spanish-speaking countries; never "máquina", "equipo" or "servidor". |
 | concept / finding | concepto / hallazgo | "hallazgo" keeps the card's "Hallazgo {id}". |
 | connection (to a server) | conexión | Feminine, so its status agrees: "Lista", "Comprobada", "En pausa". |
+| connection file | archivo de conexiones | The file in Pi's models.json format that Settings → Intelligence reads custom connections from. |
 | conversation | conversación | A crewmate's session is "las notas del tripulante". |
 | cost limit | límite de costo | A project's estimated-dollar cap; kept apart from the plan's allowance, which never says "límite". |
 | credits (a provider's, paid past the allowance) | créditos | ChatGPT's Codex credits; Claude's are called extra usage. |

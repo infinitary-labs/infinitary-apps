@@ -10,6 +10,7 @@ import type { HostCapabilities } from "./host";
 import { OwnWindow } from "./ownWindow";
 import type { AppPaths } from "./paths";
 import { appPanelGatesOf, appPanelsFor, watchAppPanels } from "./personal/appPanelsServed";
+import { followCustomApiFile } from "./pi/customApiFileSource";
 import { createServices } from "./services";
 import { SIGN_IN_RETURN, SIGN_IN_RETURN_WORDS, SignInReturns } from "./signInReturns";
 import { type Standbys, standbyCopies } from "./standby/wiring";
@@ -149,10 +150,17 @@ export async function startCore(given: HostCapabilities, options: CoreOptions = 
     );
   if (paused) await homeMove?.resume();
   else askSignInsAgainAt(services, (sink) => events.subscribe(sink));
+  // The connection file (docs/custom-api.md, "Connection file").
+  const customApiFile = followCustomApiFile(services.settings, services.vault, () => {
+    services.slots.reconcile();
+    services.firstRun.reconcile();
+    events.emit("inf:models:changed", { ok: true });
+  });
   const dispatch = createCoreDispatcher({
     services,
     host,
     signInReturns,
+    customApiFile,
     ...(homeMove ? { homeMove } : {}),
     ...(standbys ? { standbys } : {}),
     ...(ownWindow ? { ownWindow } : {}),
@@ -232,6 +240,7 @@ export async function startCore(given: HostCapabilities, options: CoreOptions = 
       services.launchWatch.dispose();
       // Stop the Diagnostics retry and let an event already on the wire finish.
       void services.sharing.close(1_000);
+      customApiFile.close();
       // A custom connection's catalog fetch stops, so no late write puts its store back.
       const catalog = services.vault.closeCustomCatalog();
       return Promise.all([firstmate, crew, placedCopies, records, catalog]).then(() => undefined);

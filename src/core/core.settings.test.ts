@@ -384,6 +384,7 @@ describe("the core, driven with no Electron in the process", () => {
       "account-use-reset",
       "account-use-saved-resets",
       "account-disconnect",
+      "custom-connection-file",
       "projects-folder",
       "panel-retry",
       "private-site-remove",

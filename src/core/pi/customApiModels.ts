@@ -12,6 +12,7 @@ import type { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import {
   type CustomCapabilityProfile,
   type CustomModelCost,
+  type CustomStatedReasoning,
   customUnprofiledRetentions,
 } from "@shared/customApi";
 import { CustomApiError } from "./customApiPolicy";
@@ -218,6 +219,37 @@ export function customCapabilities(
   if (!source || !withHonestReasoning(source).reasoning) throw new CustomApiError("incompatible");
   return snapshotOf(source, profile);
 }
+
+/**
+ * The reasoning a connection file states for a model with no profile, in a
+ * profile's own snapshot shape, so the check, the model menu and the actual
+ * request read it the same way. Only the reasoning and history settings the
+ * file names change the app's own request policy; the server's short cache
+ * is offered on the formats whose adapter honors it, never the long one.
+ */
+export function customStatedCapabilities(
+  protocol: CustomApiProtocol,
+  stated: CustomStatedReasoning,
+): CustomCapabilities {
+  const base =
+    protocol === "anthropic-messages"
+      ? messagesPolicy
+      : protocol === "openai-completions"
+        ? // A model the file says reasons is sent its level, unless the file says the server refuses one.
+          { ...chatPolicy, supportsReasoningEffort: true }
+        : responsesPolicy;
+  const capabilities: CustomCapabilities = {
+    profile: STATED_PROFILE,
+    reasoning: true,
+    ...(stated.thinkingLevelMap ? { thinkingLevelMap: { ...stated.thinkingLevelMap } } : {}),
+    compat: { ...base, ...stated.compat } as CustomCapabilities["compat"],
+    cacheRetentions: protocol === "openai-completions" ? ["none"] : ["none", "short"],
+  };
+  if (!withHonestReasoning(capabilities).reasoning) throw new CustomApiError("incompatible");
+  return capabilities;
+}
+/** The profile name a file's stated reasoning is saved under; no catalog profile has it. */
+export const STATED_PROFILE = "connection-file";
 
 function snapshotOf(source: Model<CustomApiProtocol>, profile: string): CustomCapabilities {
   const protocol = source.api;

@@ -35,6 +35,7 @@ public enum PhoneMessages {
     public static func `accountsCustomApiAnswerKind`(`address`: String, `kind`: String) -> String { PhoneWords.format("accountsCustomApiAnswerKind", [`address`, `kind`]) }
     public static func `accountsCustomApiAnswerReserved`(`address`: String) -> String { PhoneWords.format("accountsCustomApiAnswerReserved", [`address`]) }
     public static func `accountsCustomApiApproveCertificates`() -> String { PhoneWords.format("accountsCustomApiApproveCertificates", []) }
+    public static func `accountsCustomApiApproveTitle`(`name`: String) -> String { PhoneWords.format("accountsCustomApiApproveTitle", [`name`]) }
     public static func `accountsCustomApiAuthKey`() -> String { PhoneWords.format("accountsCustomApiAuthKey", []) }
     public static func `accountsCustomApiCache`() -> String { PhoneWords.format("accountsCustomApiCache", []) }
     public static func `accountsCustomApiCacheFor`(`name`: String) -> String { PhoneWords.format("accountsCustomApiCacheFor", [`name`]) }
@@ -92,6 +93,40 @@ public enum PhoneMessages {
     public static func `accountsCustomApiFetchAgain`() -> String { PhoneWords.format("accountsCustomApiFetchAgain", []) }
     public static func `accountsCustomApiFetchFailed`() -> String { PhoneWords.format("accountsCustomApiFetchFailed", []) }
     public static func `accountsCustomApiFetching`() -> String { PhoneWords.format("accountsCustomApiFetching", []) }
+    public static func `accountsCustomApiFileApprove`() -> String { PhoneWords.format("accountsCustomApiFileApprove", []) }
+    public static func `accountsCustomApiFileApproveAgain`() -> String { PhoneWords.format("accountsCustomApiFileApproveAgain", []) }
+    public static func `accountsCustomApiFileApproveToUse`() -> String { PhoneWords.format("accountsCustomApiFileApproveToUse", []) }
+    public static func `accountsCustomApiFileBuiltIn`(`name`: String) -> String { PhoneWords.format("accountsCustomApiFileBuiltIn", [`name`]) }
+    public static func `accountsCustomApiFileChanged`() -> String { PhoneWords.format("accountsCustomApiFileChanged", []) }
+    public static func `accountsCustomApiFileChoose`() -> String { PhoneWords.format("accountsCustomApiFileChoose", []) }
+    public static func `accountsCustomApiFileChoosing`() -> String { PhoneWords.format("accountsCustomApiFileChoosing", []) }
+    public static func `accountsCustomApiFileCompaction`(`model`: String) -> String { PhoneWords.format("accountsCustomApiFileCompaction", [`model`]) }
+    public static func `accountsCustomApiFileDone`(`path`: String) -> String { PhoneWords.format("accountsCustomApiFileDone", [`path`]) }
+    public static func `accountsCustomApiFileDoneNone`() -> String { PhoneWords.format("accountsCustomApiFileDoneNone", []) }
+    public static func `accountsCustomApiFileGone`() -> String { PhoneWords.format("accountsCustomApiFileGone", []) }
+    public static func `accountsCustomApiFileHint`() -> String { PhoneWords.format("accountsCustomApiFileHint", []) }
+    public static func `accountsCustomApiFileInvalid`() -> String { PhoneWords.format("accountsCustomApiFileInvalid", []) }
+    public static func `accountsCustomApiFileInvalidEntry`() -> String { PhoneWords.format("accountsCustomApiFileInvalidEntry", []) }
+    public static func `accountsCustomApiFileKey`() -> String { PhoneWords.format("accountsCustomApiFileKey", []) }
+    public static func `accountsCustomApiFileMissing`() -> String { PhoneWords.format("accountsCustomApiFileMissing", []) }
+    public static func `accountsCustomApiFileNew`() -> String { PhoneWords.format("accountsCustomApiFileNew", []) }
+    public static func `accountsCustomApiFileNoAddress`() -> String { PhoneWords.format("accountsCustomApiFileNoAddress", []) }
+    public static func `accountsCustomApiFileNoProtocol`() -> String { PhoneWords.format("accountsCustomApiFileNoProtocol", []) }
+    public static func `accountsCustomApiFileNone`() -> String { PhoneWords.format("accountsCustomApiFileNone", []) }
+    public static func `accountsCustomApiFileNotRead`() -> String { PhoneWords.format("accountsCustomApiFileNotRead", []) }
+    public static func `accountsCustomApiFilePathOn`(`computer`: String) -> String { PhoneWords.format("accountsCustomApiFilePathOn", [`computer`]) }
+    public static func `accountsCustomApiFilePickerFailed`() -> String { PhoneWords.format("accountsCustomApiFilePickerFailed", []) }
+    public static func `accountsCustomApiFileRead`(`count`: Int) -> String { PhoneWords.format("accountsCustomApiFileRead", [`count`]) }
+    public static func `accountsCustomApiFileReadFailed`() -> String { PhoneWords.format("accountsCustomApiFileReadFailed", []) }
+    public static func `accountsCustomApiFileReadThis`() -> String { PhoneWords.format("accountsCustomApiFileReadThis", []) }
+    public static func `accountsCustomApiFileReasoning`() -> String { PhoneWords.format("accountsCustomApiFileReasoning", []) }
+    public static func `accountsCustomApiFileReplaced`() -> String { PhoneWords.format("accountsCustomApiFileReplaced", []) }
+    public static func `accountsCustomApiFileSets`(`who`: String) -> String { PhoneWords.format("accountsCustomApiFileSets", [`who`]) }
+    public static func `accountsCustomApiFileStop`() -> String { PhoneWords.format("accountsCustomApiFileStop", []) }
+    public static func `accountsCustomApiFileTag`() -> String { PhoneWords.format("accountsCustomApiFileTag", []) }
+    public static func `accountsCustomApiFileTitle`() -> String { PhoneWords.format("accountsCustomApiFileTitle", []) }
+    public static func `accountsCustomApiFileUnreadable`() -> String { PhoneWords.format("accountsCustomApiFileUnreadable", []) }
+    public static func `accountsCustomApiFileUnused`(`keys`: String) -> String { PhoneWords.format("accountsCustomApiFileUnused", [`keys`]) }
     public static func `accountsCustomApiFirstMate`() -> String { PhoneWords.format("accountsCustomApiFirstMate", []) }
     public static func `accountsCustomApiFootHint`(`sent`: String) -> String { PhoneWords.format("accountsCustomApiFootHint", [`sent`]) }
     public static func `accountsCustomApiFullAddress`() -> String { PhoneWords.format("accountsCustomApiFullAddress", []) }
@@ -1680,6 +1715,7 @@ public enum PhoneMessages {
     public static func `panelChangeCrewSlots`() -> String { PhoneWords.format("panelChangeCrewSlots", []) }
     public static func `panelChangeCrewSlotsReset`() -> String { PhoneWords.format("panelChangeCrewSlotsReset", []) }
     public static func `panelChangeCrewSpeed`() -> String { PhoneWords.format("panelChangeCrewSpeed", []) }
+    public static func `panelChangeCustomConnectionFile`() -> String { PhoneWords.format("panelChangeCustomConnectionFile", []) }
     public static func `panelChangeDecisionModel`() -> String { PhoneWords.format("panelChangeDecisionModel", []) }
     public static func `panelChangeDecisionUseOff`() -> String { PhoneWords.format("panelChangeDecisionUseOff", []) }
     public static func `panelChangeDeviceFixWork`() -> String { PhoneWords.format("panelChangeDeviceFixWork", []) }
@@ -4533,6 +4569,7 @@ extension PhoneWords {
         "accountsCustomApiAnswerKind": ["address", "kind"],
         "accountsCustomApiAnswerReserved": ["address"],
         "accountsCustomApiApproveCertificates": [],
+        "accountsCustomApiApproveTitle": ["name"],
         "accountsCustomApiAuthKey": [],
         "accountsCustomApiCache": [],
         "accountsCustomApiCacheFor": ["name"],
@@ -4590,6 +4627,40 @@ extension PhoneWords {
         "accountsCustomApiFetchAgain": [],
         "accountsCustomApiFetchFailed": [],
         "accountsCustomApiFetching": [],
+        "accountsCustomApiFileApprove": [],
+        "accountsCustomApiFileApproveAgain": [],
+        "accountsCustomApiFileApproveToUse": [],
+        "accountsCustomApiFileBuiltIn": ["name"],
+        "accountsCustomApiFileChanged": [],
+        "accountsCustomApiFileChoose": [],
+        "accountsCustomApiFileChoosing": [],
+        "accountsCustomApiFileCompaction": ["model"],
+        "accountsCustomApiFileDone": ["path"],
+        "accountsCustomApiFileDoneNone": [],
+        "accountsCustomApiFileGone": [],
+        "accountsCustomApiFileHint": [],
+        "accountsCustomApiFileInvalid": [],
+        "accountsCustomApiFileInvalidEntry": [],
+        "accountsCustomApiFileKey": [],
+        "accountsCustomApiFileMissing": [],
+        "accountsCustomApiFileNew": [],
+        "accountsCustomApiFileNoAddress": [],
+        "accountsCustomApiFileNoProtocol": [],
+        "accountsCustomApiFileNone": [],
+        "accountsCustomApiFileNotRead": [],
+        "accountsCustomApiFilePathOn": ["computer"],
+        "accountsCustomApiFilePickerFailed": [],
+        "accountsCustomApiFileRead": ["count"],
+        "accountsCustomApiFileReadFailed": [],
+        "accountsCustomApiFileReadThis": [],
+        "accountsCustomApiFileReasoning": [],
+        "accountsCustomApiFileReplaced": [],
+        "accountsCustomApiFileSets": ["who"],
+        "accountsCustomApiFileStop": [],
+        "accountsCustomApiFileTag": [],
+        "accountsCustomApiFileTitle": [],
+        "accountsCustomApiFileUnreadable": [],
+        "accountsCustomApiFileUnused": ["keys"],
         "accountsCustomApiFirstMate": [],
         "accountsCustomApiFootHint": ["sent"],
         "accountsCustomApiFullAddress": [],
@@ -6178,6 +6249,7 @@ extension PhoneWords {
         "panelChangeCrewSlots": [],
         "panelChangeCrewSlotsReset": [],
         "panelChangeCrewSpeed": [],
+        "panelChangeCustomConnectionFile": [],
         "panelChangeDecisionModel": [],
         "panelChangeDecisionUseOff": [],
         "panelChangeDeviceFixWork": [],
@@ -8999,6 +9071,7 @@ extension PhoneWords {
 
     /// The fill whose count picks each plural message's form.
     static let counts: [String: String] = [
+        "accountsCustomApiFileRead": "count",
         "accountsCustomApiListed": "count",
         "accountsSavedResetUsed": "count",
         "accountsSavedResetUsedAuto": "count",

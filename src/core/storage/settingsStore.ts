@@ -627,6 +627,19 @@ export class SettingsStore {
     this.set("projects-folder", path === null ? null : { path });
   }
 
+  /**
+   * The connection file this computer reads custom connections from
+   * (Settings → Intelligence); null = none. `CustomApiFileSource` checks each write.
+   */
+  getCustomApiFile(): string | null {
+    const parsed = projectsFolderSchema.safeParse(this.get("custom-api-file"));
+    return parsed.success ? parsed.data.path : null;
+  }
+
+  setCustomApiFile(path: string | null): void {
+    this.set("custom-api-file", path === null ? null : { path });
+  }
+
   /** Presence default (D-17): dock on. Start-at-login lives with the OS. */
   getShowInDock(): boolean {
     const parsed = dockSchema.safeParse(this.get("dock"));

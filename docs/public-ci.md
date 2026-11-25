@@ -44,15 +44,21 @@ So the fresh Windows 11 check, the phone check, the signed installer checks, sig
 1. **It opens.**
    GitHub starts the contributor agreement check and the Careful review check at once, which need no run approval ("The contributor agreement check", "The Careful review check"); every other check waits for the captain's approval of the run.
    The check-file flag labels it `needs triage` ("Intake").
-2. **The crew reads it when the captain asks.**
-   Nothing reads new outside pull requests on a schedule.
-   A crewmate reviews one the captain names (`check_change pull`), reads its code and GitHub's runs, and puts it on a card for the captain.
-3. **The captain starts its checks.**
-   The captain approves each run on GitHub, after reading any change under `.github/`, `scripts/`, the package and lock files or the packaging settings, since a pull request runs the check files it carries.
+2. **An intake round reads it.**
+   Twice each day an intake round reads what changed since the crew last answered and drafts a reply for each item (`docs/outside-intake.md`).
+   While either required check fails the pull request waits on its author unread.
+   Once both pass, the round judges it against five criteria, among them its size and how it fits `STRATEGY.md` ("Which pull requests reach the tick"), and drafts the reply that fits; one that passes all five also gets a row for each run waiting for approval, one pull request a round.
+3. **The captain ticks the round's card.**
+   The ticked replies go out and each ticked row approves its run on GitHub.
+   A pull request labeled `edits checks` gets no run rows: the captain approves its runs on GitHub after its review shows the check files, since a pull request runs the check files it carries.
 4. **GitHub's machines run them.**
    The checks in the list above run on the pull request's own version, merged with the current `main`.
-5. **The captain merges it.**
-   With every check passing, the crewmate shows the merge card with `asks_first`, and only the captain's click merges the contributor's pull request; no standing rule that lets a change merge on its own covers an outside one.
+   If any check fails, the pull request goes back to its author, and the author's next push brings it back to the round.
+5. **The crew reviews it once every check passes.**
+   The next round files its review, and the first mate starts it at once under the intake rules' standing yes ("The review" in `docs/outside-intake.md`).
+   A crewmate reads its code and GitHub's runs, never runs the change, and shows the merge card with `asks_first`.
+6. **The captain merges it.**
+   Only the captain's click merges the contributor's pull request; no standing rule that lets a change merge on its own covers an outside one.
    A later push needs a new review and a new click.
 
 The crew's safety rule: a crewmate reviewing an outside pull request runs nothing from it on the project's own machines or the captain's computers before the click; it reads the change and GitHub's runs, and starts nothing on the project's own runners for it.

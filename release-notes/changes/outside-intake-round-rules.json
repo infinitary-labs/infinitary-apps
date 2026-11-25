@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "outside-intake-round-rules",
+      "reason": "Rewrites this project's own outside-intake method and public CI page: which items a round lists, the disclosure line on replies, the five criteria with a 2,100-line limit, failed checks going back to their author and reviews starting once checks pass; nothing in the app changes."
+    }
+  ]
+}

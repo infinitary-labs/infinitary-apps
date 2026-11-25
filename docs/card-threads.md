@@ -64,6 +64,7 @@ Three facts carry the answer to the agent that might ask again, and one refusal 
 - The card read (`tasks card`, `CardService.cardRead`) of a closed card carries `ended`: how it ended, who closed it, when, the choice's id and label, and the answers sent with it, from `CardStore.past`.
 - The crewmate's card rules and the reviewer's Review finding round say an answered question is settled: read the earlier card before asking it again, and act on its answer.
   The round's decisions are written when the round starts, so an answer that arrives later shows only on the card.
+  The crewmate's card rules add that the approved plan its work is built from settles what it names in the same way (INF-6608's plan, part 5).
 - A builder's report wake names its reviewer's open Review finding cards (`CardThreads.wakeCards`), so the first mate asks nobody for a card already on the captain's screen.
 - `emit_card` refuses a decision whose radio, checkbox or select question repeats one on a closed card the captain answered (`answeredQuestionRefusal`, `answeredQuestion.ts`).
   A question repeats when it has the same control name and the same set of option values (`cardChoiceQuestions`, `cardLint.ts`), whatever its title, legend or body say; a Something else row is no option.

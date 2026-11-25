@@ -578,12 +578,31 @@ describe("reviewed contributor changes", () => {
     ]);
   });
 
-  it.each([false, true])(
-    "blocks a reviewed fork merge on its failed unlinked run (another fork configured: %s)",
-    async (configured) => {
+  it.each([
+    { configured: false, previousHead: undefined, reason: "the checks failed" },
+    { configured: true, previousHead: undefined, reason: "the checks failed" },
+    { configured: false, previousHead: MERGED, reason: "the checks failed" },
+    { configured: false, previousHead: HEAD, reason: "the checks cannot be read" },
+  ])(
+    "holds a reviewed fork with an unlinked run (configured: $configured, earlier request head: $previousHead)",
+    async ({ configured, previousHead, reason }) => {
       const at = await onGitHub();
       const headRepo = "contributor/y";
-      const branch = "fix/reader";
+      const branch = "main";
+      const sourceHead = { ref: branch, sha: HEAD, repo: { id: 912, full_name: headRepo } };
+      const requests = [
+        { number: 23, state: "open", merged: false, head: sourceHead },
+        ...(previousHead
+          ? [
+              {
+                number: 22,
+                state: "closed",
+                merged: true,
+                head: { ...sourceHead, sha: previousHead },
+              },
+            ]
+          : []),
+      ];
       at.host.pull = openPull({ branch, headRepo, headRepoId: 912 });
       const { forge: host, seen } = await stub(
         {
@@ -625,7 +644,7 @@ describe("reviewed contributor changes", () => {
             json:
               new URL(call.url, "https://api.github.com").searchParams.get("head") ===
               `contributor:${branch}`
-                ? [{ number: 23, head: { ref: branch, repo: { id: 912, full_name: headRepo } } }]
+                ? requests
                 : [],
           }),
         },
@@ -641,12 +660,12 @@ describe("reviewed contributor changes", () => {
       const gate = await at.service.reviews.reviewGate(at.task.id, review.id);
       const click = await at.service.reviews.mergeReview(at.task.id, review.id);
       const mergeCalls = at.forge.calls.filter((call) => call.startsWith("putIn"));
-      console.log("Fork check gate", { configured, gate, click, mergeCalls });
-      expect(gate).toBe("Card refused: the checks failed");
+      console.log("Fork check gate", { configured, previousHead, gate, click, mergeCalls });
+      expect(gate).toContain(`Card refused: ${reason}`);
       expect(click).toMatchObject({
         ok: false,
         stop: "checks",
-        text: expect.stringContaining("the checks failed"),
+        text: expect.stringContaining(reason),
       });
       expect(mergeCalls).toEqual([]);
       expect(seen.every(({ method }) => method === "GET")).toBe(true);

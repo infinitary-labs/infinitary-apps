@@ -53,7 +53,7 @@ type RunRepository = { id?: number; full_name?: string };
 
 type BranchRequest = {
   number: number;
-  head: { ref: string; repo?: RunRepository | null };
+  head: { ref: string; sha?: string; repo?: RunRepository | null };
 };
 
 function repositoryMatch(
@@ -81,7 +81,8 @@ export class GitHubChecks {
   constructor(private readonly options: CheckReads) {}
 
   async read(change: ForgeChange, movedPast?: string) {
-    const sha = encodeURIComponent(movedPast ?? change.headSha);
+    const head = movedPast ?? change.headSha;
+    const sha = encodeURIComponent(head);
     const runs = await this.options.pages<CheckRunJson>(
       `${this.options.repoPath}/commits/${sha}/check-runs`,
       (page) => (page as { check_runs?: CheckRunJson[] }).check_runs ?? [],
@@ -100,7 +101,7 @@ export class GitHubChecks {
       workflowRuns = (await this.options.read(
         `${this.options.repoPath}/actions/runs?head_sha=${sha}&per_page=100`,
       )) as { total_count?: number; workflow_runs?: SuiteRunJson[] };
-      const ownership = await this.scopeWorkflows(change, workflowRuns.workflow_runs ?? []);
+      const ownership = await this.scopeWorkflows(change, head, workflowRuns.workflow_runs ?? []);
       scoped = ownership.runs;
       if (ownership.ambiguous) problem = m.taskChecksUnattributed({ host: this.options.place });
     } catch (caught) {
@@ -180,7 +181,7 @@ export class GitHubChecks {
   }
 
   /** GitHub can omit the PR links even for same-repository Actions runs. */
-  private async scopeWorkflows(change: ForgeChange, runs: SuiteRunJson[]) {
+  private async scopeWorkflows(change: ForgeChange, head: string, runs: SuiteRunJson[]) {
     if (change.number === undefined) return { runs, ambiguous: false };
     const { source } = this.options;
     const sameSource = (repo: string | undefined) => repo?.toLowerCase() === source.toLowerCase();
@@ -201,16 +202,16 @@ export class GitHubChecks {
       if (run.event !== "pull_request" && run.event !== "pull_request_target") continue;
       const linked = run.pull_requests ?? [];
       if (linked.length && !linked.some((pull) => pull.number === change.number)) continue;
-      if (linked.length === 1) {
-        matched.push(run);
-        continue;
-      }
       const runSource = run.head_repository?.full_name;
       if (
         (run.head_branch && run.head_branch !== change.branch) ||
         (runSource && !sameSource(runSource))
       )
         continue;
+      if (linked.length === 1) {
+        matched.push(run);
+        continue;
+      }
       if (run.head_branch !== change.branch || !sameSource(runSource)) {
         ambiguous = true;
         continue;
@@ -239,16 +240,19 @@ export class GitHubChecks {
       const requests = (await this.options.read(
         `${this.options.repoPath}/pulls?head=${branch}&state=all&per_page=100`,
       )) as BranchRequest[];
-      // Include closed requests: a branch may have been used to target two bases at the same commit.
-      const fromSource = requests.filter(
+      // Include closed requests at this commit: a source branch can target two bases.
+      const candidates = requests.filter(
         (pull) =>
+          (pull.head.sha === undefined || pull.head.sha === head) &&
           pull.head.ref === change.branch &&
-          (!pull.head.repo || sameSource(pull.head.repo.full_name)),
+          (!pull.head.repo?.full_name || sameSource(pull.head.repo.full_name)),
       );
       if (
         requests.length < 100 &&
-        fromSource.length === 1 &&
-        fromSource[0]?.number === change.number
+        candidates.length === 1 &&
+        candidates[0]?.number === change.number &&
+        candidates[0].head.sha === head &&
+        sameSource(candidates[0].head.repo?.full_name)
       )
         matched.push(...unlinked);
       else ambiguous = true;

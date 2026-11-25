@@ -220,11 +220,19 @@ describe("GitHubForge", () => {
         complete: read.complete,
         checks: read.items.map(({ state, run }) => [state, run]),
       }).toEqual({ complete: true, checks: [["success", 44058666404]] });
+      if (withLinks) {
+        // Once the duplicate closes, GitHub can link its run only to the surviving request.
+        foreign = { ...duplicate, pull_requests: original.pull_requests };
+        expect((await forge.checks(change)).items.map((job) => [job.state, job.run])).toEqual([
+          ["success", original.id],
+        ]);
+      }
       // The same source branch in a different fork can also share this head.
       foreign = {
         ...duplicate,
         head_branch: change.branch,
         head_repository: { full_name: "someone/meter" },
+        pull_requests: original.pull_requests,
         status: "queued",
       };
       const withForeignQueued = await forge.checks(change);

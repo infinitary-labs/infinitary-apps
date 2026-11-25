@@ -191,6 +191,48 @@ export const integrationDoorViewSchema = z
   .strict();
 export type IntegrationDoorView = z.infer<typeof integrationDoorViewSchema>;
 
+/**
+ * The client a kind signs in as, for a kind that signs in as the person's
+ * own client (Google's, docs/integrations.md "Google"): typed
+ * facts the row draws its state from, never the client's id or secret.
+ */
+export const integrationClientViewSchema = z
+  .object({
+    /** The person keeps a client of their own here. */
+    kept: z.boolean(),
+    /** The place refused that client itself (Google's `invalid_client` or `deleted_client`). */
+    refused: z.enum(["invalid_client", "deleted_client"]).optional(),
+    /**
+     * The sign-in was made with the app's own client, which still renews it
+     * but takes no new sign-in: the row asks the person to set up their own.
+     */
+    retiring: z.literal(true).optional(),
+    /** A new sign-in needs no client of the person's: the run names its own, as a development or test run does. */
+    runClient: z.literal(true).optional(),
+    /**
+     * When the place said the sign-in itself ends, on the home's clock: a
+     * client not in Google's Personal mode, whose sign-ins last 7 days.
+     */
+    endsAt: z.number().optional(),
+  })
+  .strict();
+export type IntegrationClientView = z.infer<typeof integrationClientViewSchema>;
+
+/**
+ * The page where a person makes their own Google client in Personal mode,
+ * with a Desktop app client and the Workspace APIs filled in: only the
+ * account that makes it can sign in with it, and Google neither reviews it
+ * nor ends its sign-ins after 7 days (INF-6340's proof run).
+ */
+export const GOOGLE_CLIENT_SETUP_PAGE =
+  "https://console.cloud.google.com/auth/overview/personal?apis=ws&clientType=desktop";
+
+/** A client file as the person drops or pastes it: Google's JSON is a few hundred bytes. */
+export const integrationClientFileSchema = z
+  .string()
+  .min(1)
+  .max(16 * 1024);
+
 export const integrationViewSchema = z
   .object({
     id: integrationIdSchema,
@@ -226,6 +268,8 @@ export const integrationViewSchema = z
      * its row (an MCP server that asked for a sign-in); absent otherwise.
      */
     signIn: z.literal(true).optional(),
+    /** The client it signs in as, for a kind that signs in as the person's own (Google). */
+    client: integrationClientViewSchema.optional(),
   })
   .strict();
 export type IntegrationView = z.infer<typeof integrationViewSchema>;
@@ -234,7 +278,18 @@ export const integrationsViewSchema = z
   .object({
     integrations: z.array(integrationViewSchema).max(64),
     /** The kinds that can be connected now, each once: the tab's add chips. */
-    addable: z.array(z.object({ kind: integrationKindSchema, name: z.string() }).strict()).max(16),
+    addable: z
+      .array(
+        z
+          .object({
+            kind: integrationKindSchema,
+            name: z.string(),
+            /** Whether the person keeps their own client, for a kind that signs in as one. */
+            client: integrationClientViewSchema.optional(),
+          })
+          .strict(),
+      )
+      .max(16),
     /**
      * The app's own events, always there with nothing to connect, which a
      * rule listens to as it does an integration's (docs/automation.md, "A

@@ -1255,9 +1255,37 @@ public enum PhoneMessages {
     public static func `handoverStoppingTitle`(`from`: String) -> String { PhoneWords.format("handoverStoppingTitle", [`from`]) }
     public static func `handoverWontStopText`(`to`: String) -> String { PhoneWords.format("handoverWontStopText", [`to`]) }
     public static func `handoverWontStopTitle`(`from`: String) -> String { PhoneWords.format("handoverWontStopTitle", [`from`]) }
+    public static func `integrationsClientFileNotTaken`(`name`: String) -> String { PhoneWords.format("integrationsClientFileNotTaken", [`name`]) }
+    public static func `integrationsGoogleClientFileIncomplete`() -> String { PhoneWords.format("integrationsGoogleClientFileIncomplete", []) }
+    public static func `integrationsGoogleClientFileNotJson`() -> String { PhoneWords.format("integrationsGoogleClientFileNotJson", []) }
+    public static func `integrationsGoogleClientFileWeb`() -> String { PhoneWords.format("integrationsGoogleClientFileWeb", []) }
     public static func `integrationsGoogleExchangeOperation`() -> String { PhoneWords.format("integrationsGoogleExchangeOperation", []) }
     public static func `integrationsGoogleExchangeReason`() -> String { PhoneWords.format("integrationsGoogleExchangeReason", []) }
     public static func `integrationsGoogleExchangeResult`() -> String { PhoneWords.format("integrationsGoogleExchangeResult", []) }
+    public static func `integrationsGoogleReadyDetail`() -> String { PhoneWords.format("integrationsGoogleReadyDetail", []) }
+    public static func `integrationsGoogleRetiring`() -> String { PhoneWords.format("integrationsGoogleRetiring", []) }
+    public static func `integrationsGoogleRetiringDetail`() -> String { PhoneWords.format("integrationsGoogleRetiringDetail", []) }
+    public static func `integrationsGoogleSetUp`() -> String { PhoneWords.format("integrationsGoogleSetUp", []) }
+    public static func `integrationsGoogleSetUpAgain`() -> String { PhoneWords.format("integrationsGoogleSetUpAgain", []) }
+    public static func `integrationsGoogleSetUpFirst`() -> String { PhoneWords.format("integrationsGoogleSetUpFirst", []) }
+    public static func `integrationsGoogleSetupChoose`() -> String { PhoneWords.format("integrationsGoogleSetupChoose", []) }
+    public static func `integrationsGoogleSetupChosen`(`name`: String) -> String { PhoneWords.format("integrationsGoogleSetupChosen", [`name`]) }
+    public static func `integrationsGoogleSetupDrop`() -> String { PhoneWords.format("integrationsGoogleSetupDrop", []) }
+    public static func `integrationsGoogleSetupField`() -> String { PhoneWords.format("integrationsGoogleSetupField", []) }
+    public static func `integrationsGoogleSetupKeep`() -> String { PhoneWords.format("integrationsGoogleSetupKeep", []) }
+    public static func `integrationsGoogleSetupKeeping`() -> String { PhoneWords.format("integrationsGoogleSetupKeeping", []) }
+    public static func `integrationsGoogleSetupLead`() -> String { PhoneWords.format("integrationsGoogleSetupLead", []) }
+    public static func `integrationsGoogleSetupOpenPage`() -> String { PhoneWords.format("integrationsGoogleSetupOpenPage", []) }
+    public static func `integrationsGoogleSetupStays`() -> String { PhoneWords.format("integrationsGoogleSetupStays", []) }
+    public static func `integrationsGoogleSetupStepFile`() -> String { PhoneWords.format("integrationsGoogleSetupStepFile", []) }
+    public static func `integrationsGoogleSetupStepPage`() -> String { PhoneWords.format("integrationsGoogleSetupStepPage", []) }
+    public static func `integrationsGoogleSetupTitle`() -> String { PhoneWords.format("integrationsGoogleSetupTitle", []) }
+    public static func `integrationsGoogleSignIn`() -> String { PhoneWords.format("integrationsGoogleSignIn", []) }
+    public static func `integrationsGoogleSignInHint`() -> String { PhoneWords.format("integrationsGoogleSignInHint", []) }
+    public static func `integrationsGoogleStopped`() -> String { PhoneWords.format("integrationsGoogleStopped", []) }
+    public static func `integrationsGoogleStoppedDetail`() -> String { PhoneWords.format("integrationsGoogleStoppedDetail", []) }
+    public static func `integrationsGoogleStops`(`date`: String) -> String { PhoneWords.format("integrationsGoogleStops", [`date`]) }
+    public static func `integrationsGoogleStopsDetail`(`date`: String) -> String { PhoneWords.format("integrationsGoogleStopsDetail", [`date`]) }
     public static func `integrationsMcpAdd`(`name`: String) -> String { PhoneWords.format("integrationsMcpAdd", [`name`]) }
     public static func `integrationsMcpNeedsSignIn`() -> String { PhoneWords.format("integrationsMcpNeedsSignIn", []) }
     public static func `integrationsMcpOfferBody`(`name`: String) -> String { PhoneWords.format("integrationsMcpOfferBody", [`name`]) }
@@ -1962,6 +1990,8 @@ public enum PhoneMessages {
     public static func `phoneFormatNow`() -> String { PhoneWords.format("phoneFormatNow", []) }
     public static func `phoneFormatUnderMinute`() -> String { PhoneWords.format("phoneFormatUnderMinute", []) }
     public static func `phoneGoogleInvite`(`computer`: String) -> String { PhoneWords.format("phoneGoogleInvite", [`computer`]) }
+    public static func `phoneGoogleSetupStays`(`computer`: String) -> String { PhoneWords.format("phoneGoogleSetupStays", [`computer`]) }
+    public static func `phoneGoogleSetupStepFile`() -> String { PhoneWords.format("phoneGoogleSetupStepFile", []) }
     public static func `phoneGoogleSignIn`() -> String { PhoneWords.format("phoneGoogleSignIn", []) }
     public static func `phoneGoogleSignInAgain`() -> String { PhoneWords.format("phoneGoogleSignInAgain", []) }
     public static func `phoneGoogleSignInAgainNeeded`() -> String { PhoneWords.format("phoneGoogleSignInAgainNeeded", []) }
@@ -5789,9 +5819,37 @@ extension PhoneWords {
         "handoverStoppingTitle": ["from"],
         "handoverWontStopText": ["to"],
         "handoverWontStopTitle": ["from"],
+        "integrationsClientFileNotTaken": ["name"],
+        "integrationsGoogleClientFileIncomplete": [],
+        "integrationsGoogleClientFileNotJson": [],
+        "integrationsGoogleClientFileWeb": [],
         "integrationsGoogleExchangeOperation": [],
         "integrationsGoogleExchangeReason": [],
         "integrationsGoogleExchangeResult": [],
+        "integrationsGoogleReadyDetail": [],
+        "integrationsGoogleRetiring": [],
+        "integrationsGoogleRetiringDetail": [],
+        "integrationsGoogleSetUp": [],
+        "integrationsGoogleSetUpAgain": [],
+        "integrationsGoogleSetUpFirst": [],
+        "integrationsGoogleSetupChoose": [],
+        "integrationsGoogleSetupChosen": ["name"],
+        "integrationsGoogleSetupDrop": [],
+        "integrationsGoogleSetupField": [],
+        "integrationsGoogleSetupKeep": [],
+        "integrationsGoogleSetupKeeping": [],
+        "integrationsGoogleSetupLead": [],
+        "integrationsGoogleSetupOpenPage": [],
+        "integrationsGoogleSetupStays": [],
+        "integrationsGoogleSetupStepFile": [],
+        "integrationsGoogleSetupStepPage": [],
+        "integrationsGoogleSetupTitle": [],
+        "integrationsGoogleSignIn": [],
+        "integrationsGoogleSignInHint": [],
+        "integrationsGoogleStopped": [],
+        "integrationsGoogleStoppedDetail": [],
+        "integrationsGoogleStops": ["date"],
+        "integrationsGoogleStopsDetail": ["date"],
         "integrationsMcpAdd": ["name"],
         "integrationsMcpNeedsSignIn": [],
         "integrationsMcpOfferBody": ["name"],
@@ -6496,6 +6554,8 @@ extension PhoneWords {
         "phoneFormatNow": [],
         "phoneFormatUnderMinute": [],
         "phoneGoogleInvite": ["computer"],
+        "phoneGoogleSetupStays": ["computer"],
+        "phoneGoogleSetupStepFile": [],
         "phoneGoogleSignIn": [],
         "phoneGoogleSignInAgain": [],
         "phoneGoogleSignInAgainNeeded": [],

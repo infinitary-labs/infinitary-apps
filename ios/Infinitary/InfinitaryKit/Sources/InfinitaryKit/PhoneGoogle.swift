@@ -3,13 +3,73 @@ import Observation
 
 /// What the computer says of its connections (`inf:integrations:list`), as far as Google's row reads it.
 public struct PhoneIntegrations: Decodable, Sendable, Equatable {
+    /// What the computer says of the person's own client for a row whose sign-in runs as it (`IntegrationClientView`).
+    /// A computer from before INF-6342 sends none, and its sign-in needs no setup.
+    public struct Client: Decodable, Sendable, Equatable {
+        public let kept: Bool
+        public let refused: String?
+        public let retiring: Bool?
+        public let runClient: Bool?
+        /// When Google ends the sign-in, in milliseconds on the computer's clock.
+        public let endsAt: Double?
+        public init(kept: Bool, refused: String? = nil, retiring: Bool? = nil, runClient: Bool? = nil, endsAt: Double? = nil) {
+            self.kept = kept; self.refused = refused; self.retiring = retiring; self.runClient = runClient; self.endsAt = endsAt
+        }
+    }
     public struct Row: Decodable, Sendable, Equatable {
         public let id: String
         public let kind: String
         public let account: String?
         public let health: String
+        public let client: Client?
+    }
+    public struct Addable: Decodable, Sendable, Equatable {
+        public let kind: String
+        public let client: Client?
     }
     public let integrations: [Row]
+    public let addable: [Addable]?
+}
+
+/// What the Google row says of its client when that outranks its health, and its one next step: the computer's
+/// `googleClientState` (src/renderer/src/settings/GoogleClientSetup.tsx), in the same order.
+public struct PhoneGoogleClientState: Equatable, Sendable {
+    public enum Next: Sendable { case setUp, setUpAgain, signIn }
+    public enum Tone: Sendable { case danger, warning }
+    public let words: String
+    public let detail: String
+    public let tone: Tone
+    public let next: Next
+
+    public static func of(_ client: PhoneIntegrations.Client?, health: String?) -> PhoneGoogleClientState? {
+        guard let client else { return nil }
+        if client.refused != nil {
+            return .init(words: PhoneMessages.integrationsGoogleStopped(), detail: PhoneMessages.integrationsGoogleStoppedDetail(),
+                         tone: .danger, next: .setUpAgain)
+        }
+        guard let health, health != "needs_reauth" else { return nil }
+        if client.retiring == true {
+            return client.kept
+                ? .init(words: PhoneMessages.integrationsGoogleRetiring(), detail: PhoneMessages.integrationsGoogleReadyDetail(),
+                        tone: .warning, next: .signIn)
+                : .init(words: PhoneMessages.integrationsGoogleRetiring(), detail: PhoneMessages.integrationsGoogleRetiringDetail(),
+                        tone: .warning, next: .setUp)
+        }
+        if let endsAt = client.endsAt {
+            let date = Date(timeIntervalSince1970: endsAt / 1000).formatted(date: .abbreviated, time: .omitted)
+            return .init(words: PhoneMessages.integrationsGoogleStops(date: date),
+                         detail: PhoneMessages.integrationsGoogleStopsDetail(date: date), tone: .warning, next: .setUpAgain)
+        }
+        return nil
+    }
+
+    public var nextWords: String {
+        switch next {
+        case .signIn: PhoneMessages.integrationsGoogleSignIn()
+        case .setUp: PhoneMessages.integrationsGoogleSetUp()
+        case .setUpAgain: PhoneMessages.integrationsGoogleSetUpAgain()
+        }
+    }
 }
 
 private struct PhoneSignedIn: Decodable, Sendable { let id: String; let view: PhoneIntegrations }
@@ -22,6 +82,8 @@ private struct PhoneSignedIn: Decodable, Sendable { let id: String; let view: Ph
         case idle
         /// Google's notice is up; nothing is asked of the computer until it is accepted.
         case notice
+        /// The setup of the person's own client is up: Google's page, then its client file for the computer to keep.
+        case setup
         /// The computer's sign-in waits. `page` is its page once heard; `caught` says this phone listens for the
         /// return, and false asks for the address instead.
         case waiting(page: PhoneSignInPage?, caught: Bool)
@@ -29,6 +91,10 @@ private struct PhoneSignedIn: Decodable, Sendable { let id: String; let view: Ph
 
     /// Google's connection on the computer, or nil when it has none.
     public private(set) var row: PhoneIntegrations.Row?
+    /// The computer's facts on the person's own Google client, from its row or, with none, its addable entry.
+    public private(set) var client: PhoneIntegrations.Client?
+    /// Why the computer refused the client file, under the setup's field.
+    public private(set) var setupProblem: String?
     /// The computer answered its connections: the row shows only then.
     public private(set) var read = false
     public private(set) var stage: Stage = .idle
@@ -64,10 +130,40 @@ private struct PhoneSignedIn: Decodable, Sendable { let id: String; let view: Ph
         }
     }
 
-    /// Sign in: shows Google's notice first, which must be accepted before anything is asked of the computer.
-    public func begin() { problem = nil; refused = nil; stage = .notice }
+    /// Google signs in only as the person's own client: with none kept, or one Google refused, a sign-in is its setup.
+    public var needsSetup: Bool {
+        guard let client else { return false }
+        return (!client.kept && client.runClient != true) || client.refused != nil
+    }
+
+    /// The row's client state, when it outranks the row's health.
+    public var clientState: PhoneGoogleClientState? { PhoneGoogleClientState.of(client, health: row?.health) }
+
+    /// Sign in: shows Google's notice first, which must be accepted before anything is asked of the computer; with no
+    /// client of the person's kept, the setup comes first.
+    public func begin() {
+        problem = nil; refused = nil; setupProblem = nil
+        stage = needsSetup ? .setup : .notice
+    }
+
+    /// Set up (again): the setup, whatever is kept now.
+    public func beginSetup() { problem = nil; refused = nil; setupProblem = nil; stage = .setup }
 
     public func declineNotice() { if stage == .notice { stage = .idle } }
+
+    public func declineSetup() { if stage == .setup { stage = .idle } }
+
+    /// Hands the client file to the computer, which keeps its secret in Secrets and answers its connections; kept, the
+    /// sign-in goes on to Google's notice, as on the computer.
+    public func keepClient(_ file: String) async {
+        guard stage == .setup, !file.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        busy = true; setupProblem = nil; defer { busy = false }
+        do {
+            let view = try await session.request(.keepClient, args: [PhoneGoogleWords.kind, file], as: PhoneIntegrations.self)
+            take(view)
+            if stage == .setup { stage = .notice }
+        } catch { setupProblem = error.localizedDescription }
+    }
 
     /// The notice was accepted: the computer starts its sign-in and answers once the browser came back.
     public func accept() {
@@ -176,6 +272,7 @@ private struct PhoneSignedIn: Decodable, Sendable { let id: String; let view: Ph
 
     private func take(_ view: PhoneIntegrations) {
         row = view.integrations.first { $0.kind == PhoneGoogleWords.kind }
+        client = row?.client ?? view.addable?.first { $0.kind == PhoneGoogleWords.kind }?.client
         read = true
     }
 

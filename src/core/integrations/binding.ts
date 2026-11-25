@@ -1,5 +1,10 @@
 import type { ForgeSignInState } from "@shared/forges";
-import type { IntegrationDoorView, IntegrationEffect, IntegrationKind } from "@shared/integrations";
+import type {
+  IntegrationClientView,
+  IntegrationDoorView,
+  IntegrationEffect,
+  IntegrationKind,
+} from "@shared/integrations";
 import type { PanelIntegrationUse } from "@shared/personal/contracts";
 import type { IntegrationScope } from "@shared/writeAsk";
 import type { z } from "zod";
@@ -235,6 +240,17 @@ export type IntegrationBinding = {
    * throws words when it cannot, and ends when `signal` aborts.
    */
   signIn?: (signal: AbortSignal) => Promise<string>;
+  /**
+   * The client a kind signs in as, when it signs in as the person's own
+   * (Google's): whether one is kept, and what the place said of it and of
+   * the sign-in made with it (`IntegrationView.client`).
+   */
+  client?: () => IntegrationClientView;
+  /**
+   * Keep the person's own client from the file its place gave them, as they
+   * dropped or pasted it; throws words when it is not such a file.
+   */
+  keepClientFile?: (text: string) => Promise<void>;
   /** Ask the place who the person is now, and keep its answer as the health. */
   check: (id: string) => Promise<void>;
   /** Forget the connection's sign-in, and tell the place to forget it where it can. */

@@ -13,6 +13,7 @@ import {
   runCalendarAction,
 } from "./calendar";
 import { GMAIL_SCOPE, GOOGLE_SCOPES, type GoogleClient, type GoogleEndpoints } from "./client";
+import { readGoogleClientFile } from "./clientFile";
 import {
   GMAIL_ACTIONS,
   GMAIL_MESSAGE_EVENT,
@@ -34,8 +35,12 @@ import { type GoogleClientRecord, GoogleClientStore, GoogleSignInStore } from ".
  * Google as an integration (docs/integrations.md, "Google"): one row that
  * signs in once, in the person's own browser, for every permission Gmail
  * and Calendar need (the captain's q8 on INF-775), as the person's own
- * Google client when they keep one (INF-5549's plan, piece 2), or else as
- * the run's own client (`googleSetup`). The own client's secret is a
+ * Google client, kept from the file Google gives for it (INF-5549's plan,
+ * pieces 2 and 3). A new sign-in takes only an own client, unless the run
+ * names a client of its own for development or tests (`googleSetup`'s
+ * `signsIn`); a sign-in made earlier with Infinitary's registered client
+ * still renews with it, and its row says to set up an own client
+ * (`retiring`). The own client's secret is a
  * second hidden Secrets entry the same broker adds to the code exchange and
  * every renewal, so it never reaches this code either. Its lasting key
  * lives in Secrets, as a hidden entry used only through the renewal broker
@@ -88,8 +93,18 @@ export type GoogleIntegrationOptions = {
   root: string;
   /** Secrets, where the lasting key is kept (`IntegrationKeys`). */
   keys: IntegrationKeys;
-  /** The run's own client, used while the person keeps none of their own. */
+  /**
+   * The run's own client: it renews a sign-in made with it while the person
+   * keeps no client of their own.
+   */
   client: GoogleClient;
+  /**
+   * Whether the run's own client also takes new sign-ins: only a client a
+   * development run names (`googleSetup`). Otherwise a new sign-in needs the
+   * person's own client, and a sign-in made with the run's reads as retiring.
+   * Absent, it does.
+   */
+  runSignsIn?: boolean;
   endpoints: GoogleEndpoints;
   /** Opens Google's consent page in the person's browser (`LoopbackSignInOptions.open`). */
   open: LoopbackSignInOptions["open"];
@@ -137,6 +152,7 @@ type RenewingClient = { own?: GoogleClientRecord };
 
 export function googleIntegration(options: GoogleIntegrationOptions): IntegrationBinding & {
   moveKeys: () => Promise<void>;
+  client: NonNullable<IntegrationBinding["client"]>;
   /**
    * Keep the person's own client: its secret in Secrets, its id and that
    * secret's reference in the client record. The next sign-in uses it; a
@@ -150,6 +166,7 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
   const fetchImpl = options.fetch ?? fetch;
   const gmailRoot = `${options.endpoints.gmail.replace(/\/+$/, "")}/gmail/v1/users/me`;
   const calendarRoot = `${options.endpoints.calendar.replace(/\/+$/, "")}/calendar/v3`;
+  const runSignsIn = options.runSignsIn ?? true;
   const runClient = {
     client_id: options.client.id,
     ...(options.client.secret ? { client_secret: options.client.secret } : {}),
@@ -564,6 +581,26 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
       }
     };
 
+  const keep = async ({ id, secret }: GoogleOwnClient) => {
+    if (!id.trim()) throw new Error("A Google client needs its client id.");
+    if (!options.keys.shown()) throw new Error(NO_SECRETS);
+    const earlier = clients.read();
+    // The same client's new secret replaces the old in place; another client gets its own entry.
+    const ref = await options.keys.keepHidden({
+      ...(earlier?.id === id ? { ref: earlier.secret } : {}),
+      label: CLIENT_LABEL,
+      value: secret,
+    });
+    if (!ref) throw new Error(SECRETS_LOCKED);
+    clients.write({ id, secret: ref });
+    if (earlier && earlier.secret !== ref) await options.keys.forgetHidden(earlier.secret);
+    // A sign-in made with the client just replaced can no longer renew: say so
+    // now, as its next renewal would, so the row offers Sign in again.
+    const signedIn = store.read();
+    if (signedIn && !renewingClient(signedIn)) setHealth("needs_reauth");
+    options.changed();
+  };
+
   return {
     /**
      * The one move at start: a sign-in an earlier version kept in its own
@@ -602,23 +639,26 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
         },
       ];
     },
-    keepClient: async ({ id, secret }) => {
-      if (!id.trim()) throw new Error("A Google client needs its client id.");
-      if (!options.keys.shown()) throw new Error(NO_SECRETS);
-      const earlier = clients.read();
-      // The same client's new secret replaces the old in place; another client gets its own entry.
-      const ref = await options.keys.keepHidden({
-        ...(earlier?.id === id ? { ref: earlier.secret } : {}),
-        label: CLIENT_LABEL,
-        value: secret,
-      });
-      if (!ref) throw new Error(SECRETS_LOCKED);
-      clients.write({ id, secret: ref });
-      if (earlier && earlier.secret !== ref) await options.keys.forgetHidden(earlier.secret);
-      options.changed();
+    client: () => {
+      const own = clients.read();
+      const record = store.read();
+      return {
+        kept: own !== undefined,
+        ...(own?.refused ? { refused: own.refused.error } : {}),
+        ...(record && !record.client && !runSignsIn ? { retiring: true as const } : {}),
+        ...(record?.endsAt !== undefined ? { endsAt: record.endsAt } : {}),
+        ...(runSignsIn ? { runClient: true as const } : {}),
+      };
     },
+    keepClientFile: async (text) => {
+      const { id, secret } = readGoogleClientFile(text);
+      await keep({ id, secret: Buffer.from(secret, "utf8") });
+    },
+    keepClient: (client) => keep(client),
     signIn: async (signal) => {
       const own = clients.read();
+      // The run's own client renews the sign-ins made with it but takes no new one.
+      if (!own && !runSignsIn) throw new Error(m.integrationsGoogleSetUpFirst());
       const issued = await signInOnLoopback({
         client: own ? { id: own.id } : options.client,
         endpoints: options.endpoints,

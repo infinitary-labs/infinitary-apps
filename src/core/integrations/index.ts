@@ -4,6 +4,13 @@
  * under `./providers/` is reachable only through it and the composition
  * root, the way the forge's providers are.
  */
+
+export type {
+  IntegrationAskSent,
+  IntegrationAskStore,
+  IntegrationAskTaken,
+  PanelAskKept,
+} from "./askStore";
 export type {
   IntegrationActionSpec,
   IntegrationAnswer,
@@ -71,15 +78,11 @@ export {
 } from "./savedOutsideData";
 export { type IntegrationKeys, REDACTED } from "./secrets";
 export {
-  type IntegrationAskSent,
-  type IntegrationAskStore,
-  type IntegrationAskTaken,
   type IntegrationListen,
   IntegrationRefusal,
   IntegrationsService,
   type IntegrationsServiceOptions,
   isIntegrationAnswer,
-  type PanelAskKept,
   type PanelIntegrationsReach,
   type TaskIntegrations,
 } from "./service";

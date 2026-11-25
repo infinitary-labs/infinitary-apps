@@ -191,6 +191,8 @@
   "phoneFormatNow": "الآن",
   "phoneFormatUnderMinute": "أقل من 1 د",
   "phoneGoogleInvite": "اسمح لنائب القبطان على {computer} بقراءة Gmail وCalendar. يبقى تسجيل الدخول على {computer}.",
+  "phoneGoogleSetupStays": "يحفظ Infinitary سرّ العميل في الأسرار على {computer}. لا يراه نائب القبطان ولا الطاقم أبدًا.",
+  "phoneGoogleSetupStepFile": "نزّل ملف العميل الذي تعرضه Google بزر Download JSON، ثم اختره هنا أو الصق محتواه.",
   "phoneGoogleSignIn": "تسجيل الدخول",
   "phoneGoogleSignInAgain": "تسجيل الدخول مجددًا",
   "phoneGoogleSignInAgainNeeded": "تطلب Google منك تسجيل الدخول مجددًا.",

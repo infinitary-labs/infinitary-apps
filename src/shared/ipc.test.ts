@@ -514,6 +514,7 @@ describe("ipc contract", () => {
       "inf:home-update:status",
       "inf:integrations:add",
       "inf:integrations:check",
+      "inf:integrations:client",
       "inf:integrations:configure",
       "inf:integrations:inbox-link",
       "inf:integrations:list",

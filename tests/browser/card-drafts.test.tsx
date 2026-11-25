@@ -92,7 +92,13 @@ test("a card's unsent picks and words follow the captain between windows, sent o
   // Section: words typed key by key go as one request after the pause.
   await userEvent.click(page.elementLocator(field()));
   await userEvent.keyboard("{End}");
-  await userEvent.keyboard(TYPED);
+  // The page types each key itself, as the window's own field types one
+  // (ComposerField's typeAtCaret). Keys sent from the command process arrive
+  // one round trip apart, and on a loaded runner a stalled round trip can
+  // outlast the quiet window (DRAFT_QUIET_MS) mid-word: a pause the captain
+  // never made, after which the words so far rightly go.
+  for (const key of TYPED)
+    if (!document.execCommand("insertText", false, key)) throw new Error("The page typed no key");
   // Sent key by key, the second request would carry only the first key.
   await expect.poll(() => bridge.requests("inf:cards:draft").length).toBe(2);
   expect(bridge.requests("inf:cards:draft")[1]?.[1]?.words).toBe(LEFT_WORDS + TYPED);

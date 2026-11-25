@@ -60,11 +60,13 @@ describe("a merge request GitHub already holds for the pull request", () => {
     expect(lines(seen)).toEqual([`PUT ${MERGE_ASYNC}`]);
   });
 
-  it("calls a held request that already ended a failure to read the pull request after, never a hold", async () => {
+  it("reads a held request that ended without merging as a failure to read the pull request after, never a hold", async () => {
     const { forge } = await stub(
       {
         [`PUT ${MERGE_ASYNC}`]: () => ({ status: 409, json: PENDING }),
-        [`GET ${MERGE_ASYNC}/${UUID}`]: () => ({ json: { status: "merged" } }),
+        [`GET ${MERGE_ASYNC}/${UUID}`]: () => ({
+          json: { status: "failed", details: { message: "Required status check is failing" } },
+        }),
       },
       [],
     );
@@ -73,9 +75,59 @@ describe("a merge request GitHub already holds for the pull request", () => {
       name: "ForgeError",
       failure: "transient",
       message:
-        "the earlier merge request of #23 that GitHub was holding ended (merged), so this one was not taken",
+        "the earlier merge request of #23 that GitHub was holding ended without merging (failed), so this one was not taken",
     });
     expect(caught.held).toBeUndefined();
+  });
+
+  it("answers a held request GitHub's merge queue took as queued, and keeps the id of one it says merged or cannot read", async () => {
+    let held: { status?: number; json?: unknown } = { json: { status: "enqueued", details: {} } };
+    const { forge, seen } = await stub(
+      {
+        [`PUT ${MERGE_ASYNC}`]: () => ({ status: 409, json: PENDING }),
+        [`GET ${MERGE_ASYNC}/${UUID}`]: () => held,
+      },
+      [],
+    );
+    await expect(forge.putIn(merging, "feedbeef", "squash")).resolves.toEqual({ queued: true });
+    held = { json: { status: "merged", details: {} } };
+    await expect(forge.putIn(merging, "feedbeef", "squash")).rejects.toMatchObject({
+      name: "ForgeMergeUnconfirmed",
+      mergeTask: UUID,
+      held: true,
+      message: `GitHub says an earlier merge request of #23 (${UUID}) merged it, so this one was not taken`,
+    });
+    held = { status: 500 };
+    await expect(forge.putIn(merging, "feedbeef", "squash")).rejects.toMatchObject({
+      name: "ForgeMergeUnconfirmed",
+      mergeTask: UUID,
+      held: true,
+    });
+    // One request and one read each time, and nothing else.
+    expect(lines(seen)).toEqual([
+      `PUT ${MERGE_ASYNC}`,
+      `GET ${MERGE_ASYNC}/${UUID}`,
+      `PUT ${MERGE_ASYNC}`,
+      `GET ${MERGE_ASYNC}/${UUID}`,
+      `PUT ${MERGE_ASYNC}`,
+      `GET ${MERGE_ASYNC}/${UUID}`,
+    ]);
+  });
+
+  it("keeps the id of a request GitHub took when a read of its result fails", async () => {
+    const { forge, seen } = await stub(
+      {
+        [`PUT ${MERGE_ASYNC}`]: () => ({ status: 202, json: PENDING }),
+        [`GET ${MERGE_ASYNC}/${UUID}`]: () => ({ status: 500 }),
+      },
+      [],
+    );
+    await expect(forge.putIn(merging, "feedbeef", "squash")).rejects.toMatchObject({
+      name: "ForgeMergeUnconfirmed",
+      mergeTask: UUID,
+      held: true,
+    });
+    expect(lines(seen)).toEqual([`PUT ${MERGE_ASYNC}`, `GET ${MERGE_ASYNC}/${UUID}`]);
   });
 
   it("keeps the id of a request GitHub took and had not finished when the reads ended", async () => {

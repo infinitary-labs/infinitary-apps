@@ -55,7 +55,6 @@ import {
   asyncMerge,
   heldMergeState,
   mergeAlreadyHeld,
-  pendingId,
 } from "./asyncMerge";
 import { GitHubAttachments, githubStoryDestination } from "./attachments";
 import { readCommitFiles, readOwnComments, readPullComments } from "./comments";
@@ -764,13 +763,13 @@ export class GitHubForge implements Forge {
         ? new ForgeBaseMoved(what)
         : new ForgeError("refused", what);
     }
-    // Still running when the reads ended: unknown, and GitHub holds the
-    // request, so its id is kept for the reads that follow it and nothing
-    // is sent again.
+    // Still running when the reads ended, or read in no word the app knows:
+    // unknown, and GitHub holds the request, so its id is kept for the reads
+    // that follow it and nothing is sent again.
     throw new ForgeMergeUnconfirmed(
       // i18n-exempt: a forge failure's words, read by the first mate and kept on the timeline in English
       `${this.place} had not finished merging ${this.label(change)} when the app stopped reading`,
-      pendingId(reading),
+      reading?.details?.uuid,
       true,
     );
   }

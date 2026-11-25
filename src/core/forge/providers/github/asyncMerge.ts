@@ -78,11 +78,11 @@ export function mergeAlreadyHeld(
  * Send one asynchronous merge and read its result by the id GitHub
  * returns until it is no longer pending or the reads end. Sent once: a
  * result the app could not read in time is unknown, never a reason to
- * send again. `ordinary` marks a merge within the rules, whose request
- * GitHub may answer with one it already holds for that pull request (a
- * 409): that request is read once by its id, and while it is still pending
- * the answer is `ForgeMergeUnconfirmed` with the id. `direct` is the merge
- * for a GitHub that does not know the call.
+ * send again, and a read that fails leaves the request pending under its
+ * id. `ordinary` marks a merge within the rules, whose request GitHub may
+ * answer with one it already holds for that pull request (a 409): that
+ * request is read once by its id (`heldInstead`). `direct` is the merge for
+ * a GitHub that does not know the call.
  */
 export async function asyncMerge(
   ask: Ask,
@@ -108,83 +108,40 @@ export async function asyncMerge(
     if (!(caught instanceof MergeAlreadyHeld)) throw caught;
     // A merge past the rules reads no other request's outcome: its 409 is GitHub's refusal.
     if (!how?.ordinary) throw new ForgeError("refused", caught.message);
-    throw await heldInstead(ask, path, how.ordinary, caught);
+    const instead = await heldInstead(ask, path, how.ordinary, caught);
+    if (instead instanceof ForgeError) throw instead;
+    return instead;
   }
   for (const delay of ASYNC_MERGE_READ_DELAYS_MS) {
-    const uuid = pendingId(reading);
+    const uuid = reading?.status === "pending" ? reading.details?.uuid : undefined;
     if (!uuid) break;
     await sleep(delay);
     try {
       reading = (await ask("GET", `${path}/${encodeURIComponent(uuid)}`)) as AsyncMergeJson | null;
     } catch (caught) {
-      // A result GitHub no longer keeps leaves the outcome unknown, like one still pending.
-      if (caught instanceof ForgeError && caught.failure === "not-found") break;
+      // A read GitHub refuses, or a result it no longer keeps, leaves the
+      // request GitHub took pending under its id: unknown, never sent again.
+      if (caught instanceof ForgeError) break;
       throw caught;
     }
   }
   return reading;
 }
 
-/** The id of a request GitHub took and has not finished. */
-export function pendingId(reading: AsyncMergeJson | null): string | undefined {
-  return reading?.status === "pending" ? reading.details?.uuid : undefined;
-}
-
 /**
- * GitHub answered a merge request with one it already holds for that pull
- * request. The held request is read once by its id: still pending, nothing
- * was sent on and it is the one to follow; ended, or not named, the pull
- * request is read before anything else.
+ * How the request at `path` stands, read once by its id: the one decoder of
+ * GitHub's answer, for the request a 409 names and for every later read.
+ * Undefined is a read GitHub refused or an answer in no word the app knows,
+ * which says nothing about the request.
  */
-async function heldInstead(
-  ask: Ask,
-  path: string,
-  { place, label }: Ordinary,
-  held: MergeAlreadyHeld,
-): Promise<ForgeError> {
-  if (!held.request)
-    return new ForgeMergeUnconfirmed(
-      // i18n-exempt: a forge failure's words, read by the first mate and kept on the timeline in English
-      `${place} is holding an earlier merge request of ${label} and did not name it, so this one was not taken`,
-      undefined,
-      true,
-    );
-  let reading: AsyncMergeJson | null = null;
-  try {
-    reading = (await ask(
-      "GET",
-      `${path}/${encodeURIComponent(held.request)}`,
-    )) as AsyncMergeJson | null;
-  } catch (caught) {
-    if (!(caught instanceof ForgeError)) throw caught;
-  }
-  if (reading === null || reading.status === "pending")
-    return new ForgeMergeUnconfirmed(
-      // i18n-exempt: a forge failure's words, read by the first mate and kept on the timeline in English
-      `${place} is holding an earlier merge request of ${label} (${held.request}) that has not finished, so this one was not taken`,
-      held.request,
-      true,
-    );
-  return new ForgeError(
-    "transient",
-    // i18n-exempt: a forge failure's words, read by the first mate and kept on the timeline in English
-    `the earlier merge request of ${label} that ${place} was holding ended (${reading.status ?? "no status"}), so this one was not taken`,
-  );
-}
-
-/** How the merge request GitHub holds under `path` stands, by its id (`Forge.heldMergeState`). */
-export async function heldMergeState(
-  ask: Ask,
-  path: string,
-  place: string,
-): Promise<ForgeMergeRequest> {
+async function stateOf(ask: Ask, path: string): Promise<ForgeMergeRequest | undefined> {
   let reading: AsyncMergeJson | null;
   try {
     reading = (await ask("GET", path)) as AsyncMergeJson | null;
   } catch (caught) {
+    if (!(caught instanceof ForgeError)) throw caught;
     // GitHub keeps a result for a day after its last change, then answers 404 for its id.
-    if (caught instanceof ForgeError && caught.failure === "not-found") return { status: "gone" };
-    throw caught;
+    return caught.failure === "not-found" ? { status: "gone" } : undefined;
   }
   const message = reading?.details?.message;
   switch (reading?.status) {
@@ -197,7 +154,58 @@ export async function heldMergeState(
     case "failed":
       return { status: "failed", ...(message ? { message } : {}) };
     default:
-      // i18n-exempt: a forge failure's words, read by the first mate and kept on the timeline in English
-      throw new ForgeError("transient", `${place} did not say how a held merge request stands`);
+      return undefined;
   }
+}
+
+/**
+ * GitHub answered a merge request with one it already holds for that pull
+ * request. The held request is read once by its id. In the merge queue, it
+ * is the queued answer this request would have had. Ended without merging,
+ * the pull request is read before anything else. Anything else - pending,
+ * merged, unreadable or not named - nothing was sent on and the held
+ * request is the one to follow, under its id when GitHub named it.
+ */
+async function heldInstead(
+  ask: Ask,
+  path: string,
+  { place, label }: Ordinary,
+  held: MergeAlreadyHeld,
+): Promise<ForgeError | AsyncMergeJson> {
+  if (!held.request)
+    return new ForgeMergeUnconfirmed(
+      // i18n-exempt: a forge failure's words, read by the first mate and kept on the timeline in English
+      `${place} is holding an earlier merge request of ${label} and did not name it, so this one was not taken`,
+      undefined,
+      true,
+    );
+  const state = await stateOf(ask, `${path}/${encodeURIComponent(held.request)}`);
+  if (state?.status === "queued") return { status: "enqueued" };
+  if (state?.status === "failed" || state?.status === "gone")
+    return new ForgeError(
+      "transient",
+      // i18n-exempt: a forge failure's words, read by the first mate and kept on the timeline in English
+      `the earlier merge request of ${label} that ${place} was holding ended without merging (${state.status}), so this one was not taken`,
+    );
+  return new ForgeMergeUnconfirmed(
+    state?.status === "merged"
+      ? // i18n-exempt: a forge failure's words, read by the first mate and kept on the timeline in English
+        `${place} says an earlier merge request of ${label} (${held.request}) merged it, so this one was not taken`
+      : // i18n-exempt: a forge failure's words, read by the first mate and kept on the timeline in English
+        `${place} is holding an earlier merge request of ${label} (${held.request}) that has not finished, so this one was not taken`,
+    held.request,
+    true,
+  );
+}
+
+/** How the merge request GitHub holds under `path` stands, by its id (`Forge.heldMergeState`). */
+export async function heldMergeState(
+  ask: Ask,
+  path: string,
+  place: string,
+): Promise<ForgeMergeRequest> {
+  const state = await stateOf(ask, path);
+  if (state) return state;
+  // i18n-exempt: a forge failure's words, read by the first mate and kept on the timeline in English
+  throw new ForgeError("transient", `${place} did not say how a held merge request stands`);
 }

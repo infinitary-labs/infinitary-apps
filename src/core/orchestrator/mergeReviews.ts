@@ -34,6 +34,8 @@ import {
   atDispatch,
   branchInProject,
   type ChangeMerge,
+  directlyLine,
+  directlyTold,
   heldBy,
   hostQueued,
   MERGE_RETRY_DELAYS_MS,
@@ -48,6 +50,7 @@ import {
   readinessStop,
   sleep,
   stripAttempt,
+  throughHold,
   UNDECIDED_REREAD_MS,
 } from "./changeMerge";
 import { MERGE_CHECKS_HOLD_REASON, standingAuthorization } from "./mergeAuthorization";
@@ -832,12 +835,15 @@ export class MergeReviews {
     };
     // The receipt names the version that merged: on a host whose merge names
     // no version, a push after the read may have gone in instead, and is told.
+    let direct: { heldMs: number } | undefined;
     const merged = (sha?: string, head?: string): PrOutcome => {
       const newer = otherMerged(candidate.headSha, head);
       const other = otherMergedFacts(forge.place, forge.label(change), head, candidate.headSha);
       return {
         ok: true,
-        text: `Merged ${forge.label(change)}${forge.place ? ` on ${forge.place}` : ""}.${other.told}`,
+        text: `Merged ${forge.label(change)}${forge.place ? ` on ${forge.place}` : ""}.${other.told}${direct ? directlyTold(forge.place, direct.heldMs) : ""}`,
+        ...(direct && forge.place ? directlyLine(forge.place, forge.label(change)) : {}),
+        ...(direct ? { mergedDirectly: true as const } : {}),
         ...other.line,
         receipt: this.storeReviewReceipt(
           taskId,
@@ -849,7 +855,6 @@ export class MergeReviews {
       };
     };
     let dispatched = false;
-    let direct = false;
     try {
       if (!isForkReview(review) && hasChangeRequests(forge.kind))
         requireNamed(change.title ?? "", "pull request title", this.options.namingRule?.() ?? null);
@@ -881,6 +886,8 @@ export class MergeReviews {
       }
       // The merge the project allows, read where it lives before anything is sent.
       const way = await wayToSend(forge, change);
+      const through = await throughHold(forge, guard, change, way);
+      if ("stopped" in through) return through.stopped;
       const leaving = atDispatch(
         forge,
         guard,
@@ -889,14 +896,13 @@ export class MergeReviews {
           dispatched = true;
         },
       );
-      // Read after the last look, which is what records the send.
-      direct = (way && forge.putInDirectly ? guard?.direct?.() : undefined) !== undefined;
-      const sent =
-        direct && way && forge.putInDirectly
-          ? await forge.putInDirectly(change, candidate.headSha, way)
-          : leaving
-            ? await forge.putIn(change, candidate.headSha, way, leaving)
-            : await forge.putIn(change, candidate.headSha, way);
+      // Recorded as sent after the last look and before it leaves.
+      direct = through.direct?.();
+      const sent = through.direct
+        ? await through.direct.send(candidate.headSha)
+        : leaving
+          ? await forge.putIn(change, candidate.headSha, way, leaving)
+          : await forge.putIn(change, candidate.headSha, way);
       if (sent?.queued) return hostQueued(forge, change);
       return merged(sent?.sha, sent?.mergedHead);
     } catch (caught) {

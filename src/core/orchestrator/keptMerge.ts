@@ -3,7 +3,7 @@ import { forgePlace } from "@shared/forge";
 import type { ForgePull } from "../forge";
 import type { MergeAuthorization, MergeWait } from "../storage/taskRecords";
 import { TaskService } from "../tasks/taskService";
-import { mergedReceipt, otherMergedFacts } from "./changeMerge";
+import { directlyLine, directlyTold, mergedReceipt, otherMergedFacts } from "./changeMerge";
 import type { KeptApproval } from "./keptApproval";
 import {
   candidateHead,
@@ -122,7 +122,13 @@ export class KeptMerge {
       }
       const then = declared ?? approved?.after ?? "continue";
       const actor = approved?.issuer === "autonomy" ? "app" : "captain";
-      return await this.settle.finishReviewMerge(taskId, review, result, then, actor);
+      const finished = await this.settle.finishReviewMerge(taskId, review, result, then, actor);
+      // The direct merge sent in place of a request the host held: the first
+      // mate is told once, as for the task's own pull request.
+      if (finished.ok && result.mergedDirectly)
+        // i18n-exempt: the tool name a wake served to the first mate carries
+        this.settle.wakeOnSettle(taskId, record.title, "merge-pr (kept)", finished, [], false);
+      return finished;
     } finally {
       lease.release();
     }
@@ -172,7 +178,11 @@ export class KeptMerge {
     const record = this.host.tasks.get(taskId);
     if (!record || TaskService.isClosed(record)) return false;
     if (record.pendingSettle || this.locks.working(taskId)) return false;
-    if (authorization.attempt) {
+    // A merge sent whose outcome is unread, or a merge request the host
+    // holds, is read before any gate; a hold whose direct merge is due runs
+    // the gates, which send it.
+    const held = heldMergeOf(authorization);
+    if (authorization.attempt || (held && held.direct !== "due")) {
       await this.reconcileAttempt(taskId, authorization);
       return false;
     }
@@ -416,11 +426,11 @@ export class KeptMerge {
   /**
    * The pull request reads open while the host holds a merge request of the
    * approved version (docs/forge.md, "A merge request GitHub holds").
-   * Returns true when the approval keeps waiting on that request, read only;
-   * false when every gate runs again: the request ended without merging,
-   * the host never named it, so only another request can say whether it is
-   * still held, or its hold passed the bound, and that run sends the host's
-   * direct merge once in its place.
+   * Returns true when the approval keeps waiting, read only: the request is
+   * within the bound, the host's merge queue took it, or the one direct
+   * merge was already sent, refused or withheld. False when every gate runs
+   * again: the request ended without merging, or its hold passed the bound,
+   * and that run sends the host's direct merge once in its place.
    */
   private followHeld(
     taskId: string,
@@ -444,6 +454,26 @@ export class KeptMerge {
     };
     // The host says it merged and its pull request does not show it yet: the next read does.
     if (state?.status === "merged") return wait();
+    // The host's own merge queue took the held request: the queue's wait from here on.
+    if (state?.status === "queued") {
+      this.approvals.patchStanding(taskId, {
+        waiting: { on: "host-queue", head: held.head, at: now },
+        handed: { head: held.head, at: now },
+        heldMerge: undefined,
+        attempt: undefined,
+        retries: 0,
+        retryAt: retryAfter("host-queue", 0, now),
+      });
+      this.settle.settleLine(
+        taskId,
+        keptFeedSaid(
+          "host-queue",
+          placeOf(this.host.repos, record, ""),
+          currentCheckStatus(record?.delivery),
+        ),
+      );
+      return true;
+    }
     if (state && state.status !== "pending") {
       this.approvals.patchStanding(taskId, { heldMerge: undefined });
       this.host.tasks.note(
@@ -454,11 +484,11 @@ export class KeptMerge {
       );
       return false;
     }
-    // Still pending, unreadable, or never named. A request the host named is
-    // read, never sent again; one it did not name can only be asked about by
-    // sending another.
-    if (held.direct === "refused" || now - held.since < HELD_MERGE_BOUND_MS)
-      return held.request ? wait() : false;
+    // Still pending, unreadable, or never named: nothing is sent while the
+    // hold stands, and the one direct merge, once sent, refused or withheld,
+    // is never sent again.
+    if ((held.direct && held.direct !== "due") || now - held.since < HELD_MERGE_BOUND_MS)
+      return wait();
     if (held.direct !== "due") {
       this.approvals.patchStanding(taskId, { heldMerge: { ...held, direct: "due" } });
       this.host.tasks.note(
@@ -511,7 +541,13 @@ export class KeptMerge {
       }
       this.approvals.consumeStanding(taskId, mergedReceipt(pull));
       const record = this.host.tasks.get(taskId);
-      const text = `Merged ${changeName(record, pull.number)} on ${placeOf(this.host.repos, record)}.${other.told}`;
+      // The direct merge sent in place of a held request, whose answer never came, went in.
+      const held = authorization ? heldMergeOf(authorization) : undefined;
+      const direct = held?.direct === "sent" ? { heldMs: this.host.now() - held.since } : undefined;
+      const place = placeOf(this.host.repos, record);
+      const text = `Merged ${changeName(record, pull.number)} on ${place}.${other.told}${direct ? directlyTold(place, direct.heldMs) : ""}`;
+      const line =
+        other.line ?? (direct ? directlyLine(place, changeName(record, pull.number)) : undefined);
       // Something else on the task still open keeps it open (INF-2525).
       const stillOpen = record
         ? await this.settle.stillOpen(record, pull.number, authorization?.after)
@@ -523,7 +559,13 @@ export class KeptMerge {
           ciAt: this.host.now(),
           ciWatch: undefined,
         });
-        const continued = { ok: true, text, continued: true, stillOpen };
+        const continued = {
+          ok: true,
+          text,
+          continued: true,
+          stillOpen,
+          ...(direct ? { mergedDirectly: true as const } : {}),
+        };
         this.settle.finishContinued(taskId, undefined, continued);
         this.settle.reportOutcome(taskId, title, "merge-pr", undefined, continued, undefined);
         return;
@@ -533,7 +575,7 @@ export class KeptMerge {
         reason: "merged",
         actor: authorization?.issuer === "autonomy" ? "host" : "captain",
         text,
-        ...(other.line ? { data: { line: other.line.line, lineSaid: other.line.lineSaid } } : {}),
+        ...(line ? { data: { line: line.line, lineSaid: line.lineSaid } } : {}),
         delivery: { landedMode: "pr", ...(pull.mergedSha ? { mergedSha: pull.mergedSha } : {}) },
       });
       this.settle.reportOutcome(
@@ -541,7 +583,7 @@ export class KeptMerge {
         title,
         "merge-pr",
         undefined,
-        { ok: true, text },
+        { ok: true, text, ...(direct ? { mergedDirectly: true as const } : {}) },
         undefined,
       );
     } finally {

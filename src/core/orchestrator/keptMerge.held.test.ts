@@ -13,10 +13,10 @@
  */
 
 import { describe, expect, it, vi } from "vitest";
-import { fakeCrewTimersEachTest, tick } from "../../../tests/helpers/crewHarness";
+import { fakeCrewTimersEachTest, settleWakes, tick } from "../../../tests/helpers/crewHarness";
 import { APPROVED, approved, type KeptForge } from "../../../tests/helpers/crewHarnessGit";
 import { type Route, stub } from "../../../tests/helpers/githubForgeStub";
-import type { Forge } from "../forge";
+import type { Forge, ForgeRuleset } from "../forge";
 
 vi.mock("../utilityQos", async (importOriginal) =>
   (await import("../../../tests/helpers/unclampedQos")).unclampedQos(importOriginal),
@@ -45,12 +45,14 @@ const PENDING = {
  * the first send: 502 "Server Error" then, 500 with no words from minute 11,
  * and 409 from minute 41 to minute 88. The answers between those recorded
  * moments are this script's filler. The merge request GitHub holds never
- * finishes, and `direct` is GitHub's answer to the direct merge.
+ * finishes unless `held` says otherwise, and `direct` is GitHub's answer to
+ * the direct merge.
  */
 function stuck(
   minute: () => number,
   conflict: () => ReturnType<Route>,
   direct: () => ReturnType<Route>,
+  held: () => unknown,
 ): Record<string, Route> {
   return {
     [`PUT ${MERGE_ASYNC}`]: () => {
@@ -59,7 +61,7 @@ function stuck(
       if (at < 41) return { status: 500 };
       return conflict();
     },
-    [`GET ${MERGE_ASYNC}/${UUID}`]: () => ({ json: PENDING }),
+    [`GET ${MERGE_ASYNC}/${UUID}`]: () => ({ json: held() }),
     [`PUT ${DIRECT}`]: direct,
   };
 }
@@ -68,9 +70,17 @@ function stuck(
  * The harness's GitHub stand-in, with its merges and its reads of a held
  * merge request sent by the app's real GitHub client.
  */
-function sendingThrough(own: KeptForge, real: Awaited<ReturnType<typeof stub>>["forge"]): Forge {
+function sendingThrough(
+  own: KeptForge,
+  real: Awaited<ReturnType<typeof stub>>["forge"],
+  queueBranch: boolean,
+): Forge {
   return new Proxy(own, {
     get(target, key, receiver) {
+      // GitHub's rules for the branch: a merge queue, where the scenario has one.
+      if (key === "branchRules")
+        return async (): Promise<ForgeRuleset[]> =>
+          queueBranch ? [{ id: 1, name: "queue", bypass: "never", rules: ["merge_queue"] }] : [];
       if (key === "putIn") return real.putIn.bind(real);
       if (key === "putInDirectly") return real.putInDirectly.bind(real);
       if (key === "heldMergeState") return real.heldMergeState.bind(real);
@@ -99,22 +109,27 @@ async function replay(
   minutes: number,
   conflict: () => ReturnType<Route>,
   direct: (merge: () => void) => ReturnType<Route>,
+  where: { queueBranch?: boolean; held?: () => unknown } = {},
 ) {
   let started = Date.now();
   const minute = () => Math.round((Date.now() - started) / MINUTE);
   let standIn: KeptForge | undefined;
   const github = await stub(
-    stuck(minute, conflict, () =>
-      direct(() => {
-        if (standIn) standIn.merged = true;
-      }),
+    stuck(
+      minute,
+      conflict,
+      () =>
+        direct(() => {
+          if (standIn) standIn.merged = true;
+        }),
+      where.held ?? (() => PENDING),
     ),
     [],
   );
   const h = await approved({
     forgeFor: (_repo, own) => {
       standIn = own;
-      return sendingThrough(own, github.forge);
+      return sendingThrough(own, github.forge, where.queueBranch ?? false);
     },
   });
   const repoId = h.tasks.get(h.taskId)?.repoId;
@@ -164,8 +179,7 @@ async function replay(
   await tick();
   stamp();
   const heard = await pass(minutes, new Set([11, 41, 53, 88]));
-  const of = (what: string) => stamped.filter((line) => line.endsWith(` ${what}`));
-  return { h, heard, stamped, of, pass, github };
+  return { h, heard, stamped, pass, github };
 }
 
 const merges = (merge: () => void) => {
@@ -175,11 +189,16 @@ const merges = (merge: () => void) => {
 /** The requests GitHub saw from the first 409 on, each with its minute. */
 const fromFirstConflict = (stamped: string[]) =>
   stamped.filter((line) => Number(line.split(" ")[0]) >= 41);
+/** Every request that could change the pull request, from the first 409 on. */
+const writes = (stamped: string[]) =>
+  fromFirstConflict(stamped).filter((line) => line.includes(" PUT "));
 const timelineOf = (h: Awaited<ReturnType<typeof replay>>["h"]) =>
   h.tasks.timeline(h.taskId).map((event) => event.text ?? "");
+const TOLD_ONCE =
+  "GitHub had held the first merge request for 5 minutes without finishing it, so the app merged the pull request directly at the approved version. Tell the captain that once; nothing else is needed.";
 
 describe("a merge request GitHub holds for an approved, clean pull request", () => {
-  it("follows the request a 409 names without sending it again, merges directly once five minutes on, and says so", async () => {
+  it("follows the request a 409 names without sending it again, merges directly once five minutes on, and wakes the first mate once to tell the captain", async () => {
     const { h, heard, stamped, github } = await replay(
       88,
       () => ({ status: 409, json: PENDING }),
@@ -207,11 +226,13 @@ describe("a merge request GitHub holds for an approved, clean pull request", () 
       "#7 is already merged on GitHub.",
       "#7 is already merged on GitHub.",
     ]);
-    // The captain is told on the task's Activity, and the first mate to say it once.
-    const told = timelineOf(h).filter((text) => text.startsWith("Merged #7"));
-    expect(told).toEqual([
-      "Merged #7 on GitHub directly, after GitHub held the first merge request. https://github.com/o/r/pull/7 GitHub had held the first merge request for 5 minutes without finishing it, so the app merged the pull request directly at the approved version. Tell the captain that once; nothing else is needed.",
+    // Activity says it, and one wake tells the first mate to tell the captain.
+    expect(timelineOf(h).filter((text) => text.startsWith("Merged #7"))).toEqual([
+      `Merged #7 on GitHub directly, after GitHub held the first merge request. https://github.com/o/r/pull/7 ${TOLD_ONCE}`,
     ]);
+    const wakes = settleWakes(h.ops).filter((wake) => wake.includes("Merged #7"));
+    expect(wakes).toHaveLength(1);
+    expect(wakes[0]).toContain(TOLD_ONCE);
     expect(h.cards()).toHaveLength(0);
     await h.supervisor.disposeAll();
   });
@@ -225,38 +246,83 @@ describe("a merge request GitHub holds for an approved, clean pull request", () 
     await h.supervisor.disposeAll();
   });
 
-  it("sends the direct merge once: when GitHub refuses it the captain is told once and nothing but reads follows", async () => {
-    const refusal = "Changes must be made through the merge queue";
-    const { h, stamped, of, pass } = await replay(
+  it("sends the direct merge once: when GitHub refuses it the first mate is woken once with the reason and nothing but reads follows", async () => {
+    const refusal = "Pull Request is not mergeable";
+    const { h, stamped, pass } = await replay(
       88,
       () => ({ status: 409, json: PENDING }),
       () => ({ status: 405, json: { message: refusal } }),
     );
     // Three more hours.
     await pass(180);
-    expect(of("merge")).toEqual(["46 PUT merge"]);
-    // The first mate's merge at minute 53 asks GitHub once more, hears 409 again, and the app goes back to reading.
-    expect(fromFirstConflict(stamped).filter((line) => line.endsWith("PUT merge-async"))).toEqual([
-      "41 PUT merge-async",
-      "53 PUT merge-async",
-    ]);
+    // Neither the rider nor the first mate's merges at minutes 53 and 88 send anything more.
+    expect(writes(stamped)).toEqual(["41 PUT merge-async", "46 PUT merge"]);
     expect(h.tasks.get(h.taskId)?.status).toBe("active");
     expect(h.authorization()?.status).toBe("standing");
     expect(h.authorization()?.heldMerge).toMatchObject({ request: UUID, direct: "refused" });
-    const timeline = timelineOf(h);
-    expect(timeline.filter((text) => text.includes(refusal))).toEqual([
-      `The kept merge did not run yet: Cannot merge: GitHub answered 405 to PUT ${DIRECT}: ${refusal}`,
-    ]);
-    expect(
-      timeline.filter((text) => text.startsWith("Cannot merge yet: GitHub refused it")),
-    ).toEqual([
-      "Cannot merge yet: GitHub refused it. Your merge is kept and runs again once its crewmate has fixed the cause.",
-    ]);
+    const wakes = settleWakes(h.ops).filter((wake) => wake.includes(refusal));
+    expect(wakes).toHaveLength(1);
+    expect(wakes[0]).toContain(`GitHub answered 405 to PUT ${DIRECT}: ${refusal}`);
     expect(h.cards()).toHaveLength(0);
     // A merge by hand on GitHub is still read and closes the task.
     h.forge.merged = true;
     await pass(31);
     expect(h.tasks.get(h.taskId)?.status).toBe("done");
+    await h.supervisor.disposeAll();
+  });
+
+  it("never sends the direct merge again when its answer never came, and reads the pull request instead", async () => {
+    const { h, stamped, pass } = await replay(
+      88,
+      () => ({ status: 409, json: PENDING }),
+      // GitHub merges it and the answer is lost on the way back.
+      () => ({ status: 502, json: { message: "Server Error" } }),
+    );
+    await pass(180);
+    expect(writes(stamped)).toEqual(["41 PUT merge-async", "46 PUT merge"]);
+    expect(h.authorization()?.heldMerge).toMatchObject({ request: UUID, direct: "sent" });
+    expect(h.tasks.get(h.taskId)?.status).toBe("active");
+    // The pull request reads merged: the task closes and the first mate is told once.
+    h.forge.merged = true;
+    await pass(31);
+    expect(h.tasks.get(h.taskId)?.status).toBe("done");
+    const wakes = settleWakes(h.ops).filter((wake) => wake.includes("Merged #7"));
+    expect(wakes).toHaveLength(1);
+    expect(wakes[0]).toContain("Tell the captain that once");
+    expect(writes(stamped)).toEqual(["41 PUT merge-async", "46 PUT merge"]);
+    await h.supervisor.disposeAll();
+  });
+
+  it("sends no direct merge where the branch takes merges only through its merge queue, and wakes the first mate once to say so", async () => {
+    const { h, stamped, pass } = await replay(88, () => ({ status: 409, json: PENDING }), merges, {
+      queueBranch: true,
+    });
+    await pass(180);
+    expect(writes(stamped)).toEqual(["41 PUT merge-async"]);
+    expect(h.authorization()?.heldMerge).toMatchObject({ request: UUID, direct: "queue" });
+    expect(h.tasks.get(h.taskId)?.status).toBe("active");
+    const wakes = settleWakes(h.ops).filter((wake) => wake.includes("merge queue"));
+    expect(wakes).toHaveLength(1);
+    expect(wakes[0]).toContain(
+      "GitHub has held an earlier merge request of #7 for 5 minutes without finishing it, and main takes merges only through its merge queue, so the app does not send its direct merge",
+    );
+    await h.supervisor.disposeAll();
+  });
+
+  it("hands a held request GitHub's merge queue took to the queue's own wait, and sends nothing", async () => {
+    let queued = false;
+    const { h, stamped, pass } = await replay(43, () => ({ status: 409, json: PENDING }), merges, {
+      held: () => (queued ? { status: "enqueued", details: {} } : PENDING),
+    });
+    expect(h.authorization()?.heldMerge).toMatchObject({ request: UUID });
+    queued = true;
+    // The pull request reads in the queue from then on.
+    h.forge.inQueue = true;
+    await pass(60);
+    expect(writes(stamped)).toEqual(["41 PUT merge-async"]);
+    expect(h.authorization()?.waiting?.on).toBe("host-queue");
+    expect(h.authorization()?.handed).toMatchObject({ head: APPROVED });
+    expect(h.authorization()?.heldMerge).toBeUndefined();
     await h.supervisor.disposeAll();
   });
 });

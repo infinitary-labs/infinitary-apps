@@ -2,7 +2,12 @@ import { seedTask } from "@core/tasks/seedTask";
 import { dropConfirmLead } from "@shared/recordDrop";
 import { type RecordStartInput, recordStartOf } from "@shared/recordStart";
 import type { TaskService } from "../../src/core/tasks/taskService";
-import { CLAUDE_CREW_PROMPT_MARKER } from "../e2e/crewScripts";
+import {
+  CLAUDE_CREW_PROMPT_MARKER,
+  CLAUDE_STEER_MARKER,
+  MOCK_CLAUDE_STEERED_REPORT,
+} from "../e2e/crewScripts";
+import { ANSWER_PROMPT_MARKER } from "../e2e/mockProvider";
 
 /** The board as the phone reads it: each row with the moves its record's rule allows. */
 type BoardRead = {
@@ -83,6 +88,17 @@ export function seedTalkWork(tasks: TaskService) {
       constraints: [{ kind: "read-only" }],
     },
   });
+}
+
+export function seedTalkFixture(tasks: TaskService, heroId: string) {
+  seedTalkWork(tasks);
+  return {
+    text: `Read my harbour note and ${ANSWER_PROMPT_MARKER}`,
+    // The hero's creator owns its identity, independent of its title.
+    visibleCardId: heroId,
+    steer: CLAUDE_STEER_MARKER,
+    report: MOCK_CLAUDE_STEERED_REPORT,
+  };
 }
 
 /**

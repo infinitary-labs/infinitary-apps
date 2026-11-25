@@ -82,7 +82,7 @@ import { startPhonePushRelay } from "./phonePushRelay";
 import { CARD_RECORDINGS } from "./phoneRecordings";
 import { removeEveryDevice } from "./phoneRemove";
 import { raiseRevisedCard, reviseRevisedCard } from "./phoneRevisedCard";
-import { seedRowMoves, seedTalkTags, seedTalkWork } from "./phoneRowMoves";
+import { seedRowMoves, seedTalkFixture, seedTalkTags } from "./phoneRowMoves";
 import { phoneSceneFixture } from "./phoneScene";
 import { phoneSecondHome } from "./phoneSecondHome";
 import { secretAskShown } from "./phoneSecretAsk";
@@ -3393,17 +3393,9 @@ export async function startPhoneHome(
         case "POST reply-reading-fixture":
           result = seedReplyReading(core.services.tasks);
           break;
-        case "POST talk-fixture": {
-          seedTalkWork(core.services.tasks);
-          result = {
-            text: `Read my harbour note and ${ANSWER_PROMPT_MARKER}`,
-            // INF-1892: the hero's creator owns its identity, independent of its title.
-            visibleCardId: heroId,
-            steer: CLAUDE_STEER_MARKER,
-            report: MOCK_CLAUDE_STEERED_REPORT,
-          };
+        case "POST talk-fixture":
+          result = seedTalkFixture(core.services.tasks, heroId);
           break;
-        }
         case "POST tags-fixture":
           result = seedTalkTags(core.services.tasks, "phone-work");
           break;

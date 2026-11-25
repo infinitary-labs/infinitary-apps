@@ -781,12 +781,18 @@ public enum PhoneMessages {
     public static func `commandPanelNowBoardFindWords`() -> String { PhoneWords.format("commandPanelNowBoardFindWords", []) }
     public static func `commandPanelNowBoardMove`() -> String { PhoneWords.format("commandPanelNowBoardMove", []) }
     public static func `commandPanelNowBoardMoveWords`() -> String { PhoneWords.format("commandPanelNowBoardMoveWords", []) }
+    public static func `commandPanelNowBoardTags`() -> String { PhoneWords.format("commandPanelNowBoardTags", []) }
+    public static func `commandPanelNowBoardTagsWords`() -> String { PhoneWords.format("commandPanelNowBoardTagsWords", []) }
     public static func `commandPanelNowBoardWords`() -> String { PhoneWords.format("commandPanelNowBoardWords", []) }
     public static func `commandPanelNowCollapseParts`() -> String { PhoneWords.format("commandPanelNowCollapseParts", []) }
     public static func `commandPanelNowCollapsePartsWords`() -> String { PhoneWords.format("commandPanelNowCollapsePartsWords", []) }
     public static func `commandPanelNowExpandParts`() -> String { PhoneWords.format("commandPanelNowExpandParts", []) }
     public static func `commandPanelNowExpandPartsWords`() -> String { PhoneWords.format("commandPanelNowExpandPartsWords", []) }
     public static func `commandPanelNowFind`() -> String { PhoneWords.format("commandPanelNowFind", []) }
+    public static func `commandPanelNowGroup`() -> String { PhoneWords.format("commandPanelNowGroup", []) }
+    public static func `commandPanelNowGroupWords`() -> String { PhoneWords.format("commandPanelNowGroupWords", []) }
+    public static func `commandPanelNowTagFilter`() -> String { PhoneWords.format("commandPanelNowTagFilter", []) }
+    public static func `commandPanelNowTagFilterWords`() -> String { PhoneWords.format("commandPanelNowTagFilterWords", []) }
     public static func `commandProjectFocusClear`() -> String { PhoneWords.format("commandProjectFocusClear", []) }
     public static func `commandProjectFocusClearWords`() -> String { PhoneWords.format("commandProjectFocusClearWords", []) }
     public static func `commandProjectFocusOpen`() -> String { PhoneWords.format("commandProjectFocusOpen", []) }
@@ -1588,6 +1594,7 @@ public enum PhoneMessages {
     public static func `noticeAskInProject`(`ask`: String, `project`: String) -> String { PhoneWords.format("noticeAskInProject", [`ask`, `project`]) }
     public static func `noticeReadyToMerge`() -> String { PhoneWords.format("noticeReadyToMerge", []) }
     public static func `noticeReply`() -> String { PhoneWords.format("noticeReply", []) }
+    public static func `nowPanelAllTags`() -> String { PhoneWords.format("nowPanelAllTags", []) }
     public static func `nowPanelBoardAllProjects`() -> String { PhoneWords.format("nowPanelBoardAllProjects", []) }
     public static func `nowPanelBoardAnotherTask`() -> String { PhoneWords.format("nowPanelBoardAnotherTask", []) }
     public static func `nowPanelBoardAskQueue`(`key`: String) -> String { PhoneWords.format("nowPanelBoardAskQueue", [`key`]) }
@@ -1685,6 +1692,7 @@ public enum PhoneMessages {
     public static func `nowPanelBoardStartLabel`() -> String { PhoneWords.format("nowPanelBoardStartLabel", []) }
     public static func `nowPanelBoardStartNowLabel`() -> String { PhoneWords.format("nowPanelBoardStartNowLabel", []) }
     public static func `nowPanelBoardStartedBacklogText`() -> String { PhoneWords.format("nowPanelBoardStartedBacklogText", []) }
+    public static func `nowPanelBoardTagsTable`() -> String { PhoneWords.format("nowPanelBoardTagsTable", []) }
     public static func `nowPanelBoardTileActions`(`key`: String) -> String { PhoneWords.format("nowPanelBoardTileActions", [`key`]) }
     public static func `nowPanelBoardTileFoundOn`(`key`: String) -> String { PhoneWords.format("nowPanelBoardTileFoundOn", [`key`]) }
     public static func `nowPanelBoardTilePartOf`(`key`: String) -> String { PhoneWords.format("nowPanelBoardTilePartOf", [`key`]) }
@@ -1700,8 +1708,12 @@ public enum PhoneMessages {
     public static func `nowPanelCloseSearch`() -> String { PhoneWords.format("nowPanelCloseSearch", []) }
     public static func `nowPanelFilterLabel`() -> String { PhoneWords.format("nowPanelFilterLabel", []) }
     public static func `nowPanelFilterPlaceholder`() -> String { PhoneWords.format("nowPanelFilterPlaceholder", []) }
+    public static func `nowPanelGroupByStatus`() -> String { PhoneWords.format("nowPanelGroupByStatus", []) }
+    public static func `nowPanelGroupByTag`() -> String { PhoneWords.format("nowPanelGroupByTag", []) }
     public static func `nowPanelGroupEarlier`() -> String { PhoneWords.format("nowPanelGroupEarlier", []) }
     public static func `nowPanelGroupPinned`() -> String { PhoneWords.format("nowPanelGroupPinned", []) }
+    public static func `nowPanelGroupTasks`() -> String { PhoneWords.format("nowPanelGroupTasks", []) }
+    public static func `nowPanelNoTag`() -> String { PhoneWords.format("nowPanelNoTag", []) }
     public static func `nowPanelNoTasks`() -> String { PhoneWords.format("nowPanelNoTasks", []) }
     public static func `nowPanelRowAway`() -> String { PhoneWords.format("nowPanelRowAway", []) }
     public static func `nowPanelRowBatch`() -> String { PhoneWords.format("nowPanelRowBatch", []) }
@@ -1723,6 +1735,10 @@ public enum PhoneMessages {
     public static func `nowPanelSummaryFailed`(`count`: Int) -> String { PhoneWords.format("nowPanelSummaryFailed", [`count`]) }
     public static func `nowPanelSummaryWaiting`(`count`: Int) -> String { PhoneWords.format("nowPanelSummaryWaiting", [`count`]) }
     public static func `nowPanelSummaryWorking`(`count`: Int) -> String { PhoneWords.format("nowPanelSummaryWorking", [`count`]) }
+    public static func `nowPanelTags`() -> String { PhoneWords.format("nowPanelTags", []) }
+    public static func `nowPanelTagsChooseProject`() -> String { PhoneWords.format("nowPanelTagsChooseProject", []) }
+    public static func `nowPanelTagsNoProject`() -> String { PhoneWords.format("nowPanelTagsNoProject", []) }
+    public static func `nowPanelTagsNoneYet`(`project`: String) -> String { PhoneWords.format("nowPanelTagsNoneYet", [`project`]) }
     public static func `panelBackgroundExited`() -> String { PhoneWords.format("panelBackgroundExited", []) }
     public static func `panelBackgroundPaused`() -> String { PhoneWords.format("panelBackgroundPaused", []) }
     public static func `panelBackgroundStopped`() -> String { PhoneWords.format("panelBackgroundStopped", []) }
@@ -5376,12 +5392,18 @@ extension PhoneWords {
         "commandPanelNowBoardFindWords": [],
         "commandPanelNowBoardMove": [],
         "commandPanelNowBoardMoveWords": [],
+        "commandPanelNowBoardTags": [],
+        "commandPanelNowBoardTagsWords": [],
         "commandPanelNowBoardWords": [],
         "commandPanelNowCollapseParts": [],
         "commandPanelNowCollapsePartsWords": [],
         "commandPanelNowExpandParts": [],
         "commandPanelNowExpandPartsWords": [],
         "commandPanelNowFind": [],
+        "commandPanelNowGroup": [],
+        "commandPanelNowGroupWords": [],
+        "commandPanelNowTagFilter": [],
+        "commandPanelNowTagFilterWords": [],
         "commandProjectFocusClear": [],
         "commandProjectFocusClearWords": [],
         "commandProjectFocusOpen": [],
@@ -6183,6 +6205,7 @@ extension PhoneWords {
         "noticeAskInProject": ["ask", "project"],
         "noticeReadyToMerge": [],
         "noticeReply": [],
+        "nowPanelAllTags": [],
         "nowPanelBoardAllProjects": [],
         "nowPanelBoardAnotherTask": [],
         "nowPanelBoardAskQueue": ["key"],
@@ -6280,6 +6303,7 @@ extension PhoneWords {
         "nowPanelBoardStartLabel": [],
         "nowPanelBoardStartNowLabel": [],
         "nowPanelBoardStartedBacklogText": [],
+        "nowPanelBoardTagsTable": [],
         "nowPanelBoardTileActions": ["key"],
         "nowPanelBoardTileFoundOn": ["key"],
         "nowPanelBoardTilePartOf": ["key"],
@@ -6295,8 +6319,12 @@ extension PhoneWords {
         "nowPanelCloseSearch": [],
         "nowPanelFilterLabel": [],
         "nowPanelFilterPlaceholder": [],
+        "nowPanelGroupByStatus": [],
+        "nowPanelGroupByTag": [],
         "nowPanelGroupEarlier": [],
         "nowPanelGroupPinned": [],
+        "nowPanelGroupTasks": [],
+        "nowPanelNoTag": [],
         "nowPanelNoTasks": [],
         "nowPanelRowAway": [],
         "nowPanelRowBatch": [],
@@ -6318,6 +6346,10 @@ extension PhoneWords {
         "nowPanelSummaryFailed": ["count"],
         "nowPanelSummaryWaiting": ["count"],
         "nowPanelSummaryWorking": ["count"],
+        "nowPanelTags": [],
+        "nowPanelTagsChooseProject": [],
+        "nowPanelTagsNoProject": [],
+        "nowPanelTagsNoneYet": ["project"],
         "panelBackgroundExited": [],
         "panelBackgroundPaused": [],
         "panelBackgroundStopped": [],

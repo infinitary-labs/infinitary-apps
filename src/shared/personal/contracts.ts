@@ -234,40 +234,40 @@ export type PanelTaskRow = {
   /** needsYou is broader attention, not a ready decision. */
   flags: { blocked: boolean; held: boolean; needsYou: boolean; ready: boolean };
   /**
-   * How never-started work starts: `on-request` waits for the captain's
-   * word (the board's Backlog), `when-ready` starts by itself once nothing
-   * holds it (Queued).
+   * How never-started work starts: `on-request` waits for the captain's word (the board's Backlog),
+   * `when-ready` starts by itself once nothing holds it (Queued).
    */
   startPolicy: "when-ready" | "on-request";
   /** Keys of the open tasks it waits on. */
   blockedBy: string[];
   /**
-   * When each of those waits was recorded, by key; a key with no known time
-   * is absent, and so is the whole field on an older home.
+   * When each of those waits was recorded, by key; a key with no known time is absent, and so is
+   * the whole field on an older home.
    */
   blockedSince?: Record<string, number>;
   /**
-   * Started work waiting on one task: that task's key (`on`), the last task
-   * in its line of waits when another (`end`), and that last task's hold -
-   * when it ends (`until`, epoch ms) or that it waits for an app update.
-   * Absent otherwise, and on an older home.
+   * Started work waiting on one task: that task's key (`on`), the last task in its line of waits
+   * when another (`end`), and that last task's hold - when it ends (`until`, epoch ms) or that it
+   * waits for an app update. Absent otherwise, and on an older home.
    */
   waitChain?: { on: string; end?: string; until?: number; update?: true };
   /** The home’s dated start-wait line, also read by the first mate. */
   queueWait?: { line: string; since?: number };
   /**
-   * Started work that went back to the backlog: when it went. It waits for
-   * Start with its work kept. Absent otherwise, and on an older home.
+   * Started work that went back to the backlog: when it went. It waits for Start with its work
+   * kept. Absent otherwise, and on an older home.
    */
   backlogSince?: number;
+  /** Its project's tags it carries, alphabetical, with who set each; absent while none. */
+  tags?: { id: string; name: string; by: "decision" | "captain" | "firstmate" }[];
   /**
-   * When the captain pinned it to the top of Tasks: the Tasks panel lists it
-   * in Pinned whatever its state. Absent while it is not pinned, and on an older home.
+   * When the captain pinned it to the top of Tasks: the Tasks panel lists it in Pinned whatever its
+   * state. Absent while it is not pinned, and on an older home.
    */
   pinnedAt?: number;
   /**
-   * Its parts: how many, how many are closed, and the closed ones' ids in
-   * the order they closed, oldest first (absent on an older home).
+   * Its parts: how many, how many are closed, and the closed ones' ids in the order they closed,
+   * oldest first (absent on an older home).
    */
   children: { total: number; closed: number; closedIds?: string[] };
   /** Reachable shown ready decision, null on hidden/working/closed tasks. */
@@ -291,18 +291,16 @@ export type PanelTaskRow = {
   /** A crewmate filed it and the captain has not opened its record yet. */
   filingNew?: boolean;
   /**
-   * Open or underway work only: which of the six moves it allows now, and
-   * why not, by the task record's own rule. The app checks again when a
-   * move runs.
+   * Open or underway work only: which of the six moves it allows now, and why not, by the task
+   * record's own rule. The app checks again when a move runs.
    */
   moves?: Record<PanelTaskMove, PanelMoveAllowance>;
   /**
-   * Where it runs when another computer runs it: that computer's name as the
-   * feed says it, where as the row says it after the project (`on <name>`,
-   * or `as <user>` for another user of this computer), and, on open or
-   * underway work, the core's single reach reading; `catchingUpSince`
-   * (epoch ms) while that computer is connected and still catching up with
-   * the task. Absent for a task this computer runs.
+   * Where it runs when another computer runs it: that computer's name as the feed says it, where as
+   * the row says it after the project (`on <name>`, or `as <user>` for another user of this
+   * computer), and, on open or underway work, the core's single reach reading; `catchingUpSince`
+   * (epoch ms) while that computer is connected and still catching up with the task. Absent for a
+   * task this computer runs.
    */
   place?: {
     name: string;
@@ -334,6 +332,11 @@ export type PanelProject = {
   /** Every repository it holds, by name, first first; absent from an older app. */
   repos?: { name: string }[];
   archived: boolean;
+  /**
+   * Its own tags, alphabetical: which tasks qualify, a revision raised when that changes, and how
+   * many tasks carry it. Absent while it has none, and on an older home.
+   */
+  tags?: { id: string; name: string; description: string; revision: number; tasks: number }[];
   counts: {
     needsYou: number;
     waitingOnYou: number;
@@ -1300,12 +1303,10 @@ export type PanelPoint = {
    */
   draft: (text: string) => Promise<boolean>;
   /**
-   * Opens Settings at one of its sections, by id (`automation`, say), and
-   * hands that section `item` to show - an id the section knows, such as an
-   * automation rule's - which the section reads once and ignores when it
-   * knows no such item. Any panel may; counts only from their own click or
-   * key in this panel or card, and answers false for a section this window
-   * does not offer.
+   * Opens Settings at one of its sections, by id (`automation`, say), and hands that section `item`
+   * to show - an id the section knows, such as an automation rule's - which the section reads once
+   * and ignores when it knows no such item. Any panel may; counts only from their own click or key
+   * in this panel or card, and answers false for a section this window does not offer.
    */
   openSettings: (section: string, item?: string) => Promise<boolean>;
   /**
@@ -1503,23 +1504,26 @@ export type PanelRail = {
   /** It is collapsed now: its page runs on, out of sight. */
   collapsed: boolean;
   /**
-   * What it holds, drawn by the app in its header while it is collapsed:
-   * at most three parts of at most 32 characters, such as
-   * `[{ text: "2 waiting", strong: true }, { text: "1 working" }]`. One
-   * of them may be a line instead (`PanelSummaryLine`), such as
-   * `[{ line: "merged", lead: "FI3-12", tone: "ok" }, { text: "now" }]`:
-   * it takes the title's place while it shows. Null clears it.
+   * What it holds, drawn by the app in its header while it is collapsed: at most three parts of at
+   * most 32 characters, such as `[{ text: "2 waiting", strong: true }, { text: "1 working" }]`. One
+   * of them may be a line instead (`PanelSummaryLine`), such as `[{ line: "merged", lead: "FI3-12",
+   * tone: "ok" }, { text: "now" }]`: it takes the title's place while it shows. Null clears it.
    */
   summarize: (parts: PanelSummaryPart[] | null) => void;
   /**
-   * Shows the panel on its rail, or takes it off while its page runs on
-   * out of sight. Only a panel whose `presence` is `{ "code": true }`
-   * decides: such a panel starts off its rail until it says `show(true)`.
-   * Off its rail, `why` (at most 60 characters, such as "There are no
-   * tasks yet") is what command search says beside a command that would
-   * press into it; without one, the app says the panel has nothing to show.
+   * Shows the panel on its rail, or takes it off while its page runs on out of sight. Only a panel
+   * whose `presence` is `{ "code": true }` decides: such a panel starts off its rail until it says
+   * `show(true)`. Off its rail, `why` (at most 60 characters, such as "There are no tasks yet") is
+   * what command search says beside a command that would press into it; without one, the app says
+   * the panel has nothing to show.
    */
   show: (shown: boolean, why?: string) => void;
+  /**
+   * One of its own commands, by its `manifest.json` id, cannot run now, and why (at most 60
+   * characters, such as "SCR has no tags yet"): command search lists it with those words and
+   * refuses it. Null takes the words back.
+   */
+  refuse: (command: string, why: string | null) => void;
 };
 
 /**
@@ -1674,12 +1678,10 @@ export type ServerModule = {
 // --- the manifest -----------------------------------------------------------------
 
 /**
- * When the panel is on the rail. `always` (the default when `manifest.json`
- * says nothing) shows it whenever it compiles; `store` shows it only while
- * the named key of the extension's store slice is non-empty (a value other
- * than `null`, `""`, `[]` or `{}`), so an empty list docks nothing; `code`
- * lets its own code decide (`rail.show`): its page runs out of sight until
- * it says to show.
+ * When the panel is on the rail. `always` (the default when `manifest.json` says nothing) shows it
+ * whenever it compiles; `store` shows it only while the named key of the extension's store slice is
+ * non-empty (a value other than `null`, `""`, `[]` or `{}`), so an empty list docks nothing; `code`
+ * lets its own code decide (`rail.show`): its page runs out of sight until it says to show.
  */
 export type PersonalPresence =
   | { always: true }
@@ -1825,13 +1827,11 @@ export type PersonalManifest = {
    */
   sql?: SqlViewName[];
   /**
-   * The integrations it uses (Settings -> Integrations), each by the
-   * connection's name or id, with the actions it calls, the events it hears
-   * and one line of why. A call or event it does not name is refused. Each
-   * call follows that action's own rule in Settings, the same rule the
-   * first mate and every crewmate follow. A panel brings no host, key or
-   * sign-in of its own: a service outside your projects is reached only
-   * through an integration.
+   * The integrations it uses (Settings -> Integrations), each by the connection's name or id, with
+   * the actions it calls, the events it hears and one line of why. A call or event it does not name
+   * is refused. Each call follows that action's own rule in Settings, the same rule the first mate
+   * and every crewmate follow. A panel brings no host, key or sign-in of its own: a service outside
+   * your projects is reached only through an integration.
    */
   integrations?: PanelIntegrationUse[];
   /**

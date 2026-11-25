@@ -10,6 +10,7 @@ import {
   IconButton,
   Input,
   KeyCap,
+  MenuPanel,
   MicroLabel,
   PanelExpandChevron,
   PanelTaskKeyText,
@@ -62,6 +63,7 @@ export const STAGE_ONLY_EXPORTS: readonly string[] = [
  * an automation rule says, which Settings and the Automation panel share.
  * The blocked-by and wait projections and the shared minute clock draw nothing themselves.
  * The pin button's Pin and Unpin words, and which pinned work is past the board's week, draw nothing.
+ * The keys that walk a menu and a popover's open-and-close motion draw nothing either.
  */
 export const HELPER_EXPORTS: readonly string[] = [
   "AUTOMATION_STATE_TONES",
@@ -105,6 +107,8 @@ export const HELPER_EXPORTS: readonly string[] = [
   "UNPIN_LABEL",
   "pinActionLabel",
   "pinnedPastWeek",
+  "stepMenuFocus",
+  "usePopoverPresence",
 ];
 
 /** A gallery's pointing goes nowhere: it has no tasks to point at. */
@@ -251,6 +255,17 @@ export function UiKitGallery() {
       </Item>
       <Item name="RowMenu">
         <RowMenu label="Row actions" items={[{ id: "open", label: "Open" }]} size={24} />
+      </Item>
+      <Item name="MenuPanel">
+        <MenuPanel
+          label="Group tasks"
+          items={[
+            { id: "status", label: "By status", chosen: true },
+            { id: "tag", label: "By tag", chosen: false },
+          ]}
+          style={{ position: "static" }}
+          onPick={() => {}}
+        />
       </Item>
       <Item name="QuotaMicroMeter">
         <QuotaMicroMeter label="session" percentRemaining={62} pace="behind" clockPercent={40} />

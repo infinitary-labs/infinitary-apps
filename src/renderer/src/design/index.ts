@@ -82,6 +82,9 @@ export {
 export { IconButton, type IconButtonProps, type IconButtonTone } from "./core/IconButton";
 export { Input, type InputProps } from "./core/Input";
 export { KeyCap, type KeyCapProps } from "./core/KeyCap";
+// The row menu's own panel, for a panel that opens it from its own control
+// (Tasks' Group tasks), with the keys that walk it and its motion.
+export { MenuPanel, stepMenuFocus } from "./core/MenuPanel";
 export { textIsHidden, useOverflowTitle } from "./core/overflowTitle";
 export { PinGlyph } from "./core/PinGlyph";
 export { RowMenu, type RowMenuItem, type RowMenuProps } from "./core/RowMenu";
@@ -92,6 +95,7 @@ export { Switch, type SwitchProps } from "./core/Switch";
 export { TaskStatusMark } from "./core/TaskStatusMark";
 export { useMinute } from "./core/useMinute";
 export { focusWithRing } from "./focus";
+export { usePopoverPresence } from "./motion";
 export { Disclosure, type DisclosureProps } from "./panel/Disclosure";
 export { Empty, type EmptyProps } from "./panel/Empty";
 export { FeedLine, type FeedLineProps, type FeedLineTone } from "./panel/FeedLine";

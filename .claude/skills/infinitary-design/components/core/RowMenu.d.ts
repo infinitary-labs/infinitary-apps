@@ -13,6 +13,8 @@ export type RowMenuItem =
       disabled?: boolean;
       /** An on/off setting: a small switch at its end in this state; a pick flips it and the menu stays open. */
       checked?: boolean;
+      /** One of a few choices: a check at its end while it is the current one; a pick makes it the choice and closes the menu. */
+      chosen?: boolean;
     }
   | { separator: true };
 export interface RowMenuProps {

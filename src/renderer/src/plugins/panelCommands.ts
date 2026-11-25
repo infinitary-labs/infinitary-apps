@@ -77,7 +77,8 @@ function resolve(host: PluginHost, id: PanelCommandId) {
  * Why a panel's command cannot run now, beyond what holds every key: one
  * that presses a button or asks the panel needs its panel on a rail with something to show -
  * for a panel whose own code decides, one it says shows; one that puts up
- * a card works from anywhere, Settings included, the panel collapsed or not.
+ * a card works from anywhere, Settings included, the panel collapsed or not;
+ * and none runs while its own page says it cannot (`rail.refuse`).
  */
 export function panelCommandRefusal(
   host: PluginHost,
@@ -87,6 +88,9 @@ export function panelCommandRefusal(
   const found = resolve(host, id);
   if (!found) return m.panelCommandGone();
   if (recording) return m.panelCommandRecording();
+  // Its own page's word on this one command, whatever the command does.
+  const refused = panelRail.get(found.panel.id).refused[found.command.id];
+  if (refused !== undefined) return refused;
   if (found.command.emits !== undefined) return null;
   if (railStore.isHidden(found.panel.id)) return m.panelCommandHidden({ title: found.panel.title });
   if (found.panel.source.get() === null)

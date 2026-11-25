@@ -743,3 +743,76 @@
   container-type: inline-size;
   width: 100%;
 }
+
+/* The board's tag row, under the project chips and Find inside the same
+   hairline: the chips' look, each tag's count after it. */
+.fm-board-chrome:has(+ .fm-board-tags) {
+  border-bottom: none;
+  padding-bottom: var(--space-1);
+}
+
+.fm-board-tags {
+  padding: 0 var(--space-4) var(--space-2);
+  border-bottom: 1px solid var(--line-1);
+  flex-shrink: 0;
+}
+
+.fm-board-tag-n {
+  margin-inline-start: var(--space-1);
+  color: var(--fg-3);
+}
+
+/* By tag: each tag and No tag against the five lanes, whole counts. */
+.fm-board-tag-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.fm-board-tag-table th,
+.fm-board-tag-table td {
+  padding: var(--space-1) var(--space-2);
+  text-align: end;
+  border-bottom: 1px solid var(--line-1);
+}
+
+.fm-board-tag-table th:first-child {
+  text-align: start;
+}
+
+.fm-board-tag-table td {
+  font-size: var(--text-base);
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-1);
+}
+
+.fm-board-tag-table td[data-board-zero] {
+  color: var(--fg-3);
+}
+
+.fm-board-tag-table tbody tr {
+  cursor: pointer;
+}
+
+.fm-board-tag-table tbody tr:hover {
+  background: var(--bg-3);
+}
+
+/* The row draws the ring for its name button, inside its own edge as a
+   Tasks row does, so the button draws none of its own. */
+.fm-board-tag-table tbody tr:has(.fm-board-tag-name:focus-visible) {
+  box-shadow: var(--focus-ring-inset);
+  background: var(--bg-3);
+}
+
+.fm-board-tag-name {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 400;
+  color: var(--fg-2);
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  outline: none;
+  box-shadow: none;
+}

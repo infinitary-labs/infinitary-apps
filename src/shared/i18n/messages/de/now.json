@@ -1,4 +1,5 @@
 {
+  "nowPanelAllTags": "Alle Tags",
   "nowPanelBoardAllProjects": "Alle Projekte",
   "nowPanelBoardAnotherTask": "eine andere Aufgabe",
   "nowPanelBoardAskQueue": "Automatisch starten? {key} kann sofort beginnen und verbraucht das Kontingent deines Tarifs.",
@@ -116,6 +117,7 @@
   "nowPanelBoardStartLabel": "Starten",
   "nowPanelBoardStartNowLabel": "Jetzt starten",
   "nowPanelBoardStartedBacklogText": "Ihr Durchgang endet, ihre Arbeit bleibt. Sie wartet auf dein „Starten“.",
+  "nowPanelBoardTagsTable": "Aufgaben nach Tag",
   "nowPanelBoardTileActions": "Aktionen für {key}",
   "nowPanelBoardTileFoundOn": "gefunden bei {key}",
   "nowPanelBoardTilePartOf": "Teil von {key}",
@@ -131,8 +133,12 @@
   "nowPanelCloseSearch": "Suche schließen",
   "nowPanelFilterLabel": "Aufgaben filtern",
   "nowPanelFilterPlaceholder": "Schlüssel oder Titel",
+  "nowPanelGroupByStatus": "Nach Status",
+  "nowPanelGroupByTag": "Nach Tag",
   "nowPanelGroupEarlier": "früher",
   "nowPanelGroupPinned": "angeheftet",
+  "nowPanelGroupTasks": "Aufgaben gruppieren",
+  "nowPanelNoTag": "Ohne Tag",
   "nowPanelNoTasks": "Es gibt noch keine Aufgaben",
   "nowPanelRowAway": "außer Reichweite",
   "nowPanelRowBatch": "Sammelprüfung",
@@ -173,5 +179,9 @@
     "plural": "count",
     "one": "{count} arbeitet",
     "other": "{count} arbeiten"
-  }
+  },
+  "nowPanelTags": "Tags",
+  "nowPanelTagsChooseProject": "Wähl ein Projekt, um seine Tags zu sehen",
+  "nowPanelTagsNoProject": "Noch kein Projekt hat Tags",
+  "nowPanelTagsNoneYet": "{project} hat noch keine Tags"
 }

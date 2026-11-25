@@ -110,14 +110,17 @@ export function RowMenu({
 
   // The first placement runs before the panel exists, so the flip decision
   // is re-taken the moment it mounts and has a height - in the commit, before
-  // paint, so it never shows up in the wrong place. Focus lands on the first
-  // item then.
+  // paint, so it never shows up in the wrong place. Focus lands on the current
+  // choice then, or on the first item.
   const mountMenu = useCallback(
     (node: HTMLDivElement | null) => {
       menu.current = node;
       if (!node) return;
       place();
-      node.querySelector<HTMLButtonElement>(MENU_ITEMS)?.focus();
+      (
+        node.querySelector<HTMLButtonElement>('[role="menuitemradio"][aria-checked="true"]') ??
+        node.querySelector<HTMLButtonElement>(MENU_ITEMS)
+      )?.focus();
     },
     [place],
   );

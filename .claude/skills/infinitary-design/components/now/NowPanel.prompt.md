@@ -1,13 +1,13 @@
 The now panel: what IS, as the `Now` panel of the right side rail (the activity feed on the left says what happened).
-When expanded, it has no waiting/working counts line: the host title row carries the panel's two header buttons, a dim search icon and the Open task board icon, beside the title and collapse button (`components/panel/Panel.prompt.md`, "Header buttons").
-Their accessible names and tooltips are "Search tasks" and "Open task board".
+When expanded, it has no waiting/working counts line: the host title row carries the panel's three header buttons, a dim search icon, the Group tasks list icon and the Open task board icon, beside the title and collapse button (`components/panel/Panel.prompt.md`, "Header buttons").
+Their accessible names and tooltips are "Search tasks", "Group tasks" and "Open task board".
 The list starts below that row with rows for "waiting on you", "working" and "queued", and two collapsed groups that show only their count until clicked: "backlog", "done · 7d".
 The order is nearest to happening first: waiting on you, working, queued, backlog, done · 7d.
 Queued is open work that starts by itself when nothing holds it (start policy when ready), and a task that is starting until its crewmate begins; backlog is open work that waits for the captain's word (start policy on request).
 A blocker or a hold never moves a row between them: it is the row's one dim word and its status reason.
 The task board opened from the panel (`TaskBoard.prompt.md`) names its row and columns with the same five words.
 Empty groups are absent.
-When collapsed, the host header draws what the panel says it holds, `N waiting · N working` (`Panel.prompt.md`, "The collapsed summary"), and Open task board beside the chevron; Search tasks is drawn only while the panel is expanded.
+When collapsed, the host header draws what the panel says it holds, `N waiting · N working` (`Panel.prompt.md`, "The collapsed summary"), and Open task board beside the chevron; Search tasks and Group tasks are drawn only while the panel is expanded.
 
 Waiting on you means a live task has a reachable ready decision: `waitingCardId`, not the broader `flags.needsYou` attention flag.
 Hidden replies, Working cards, ordinary notes, no-card holds, dead dependencies and closed tasks do not create a waiting row or compact count unless they have a minimized card.
@@ -47,7 +47,7 @@ A card already in front stays there, and a held card comes forward without a tas
 One entry per task can remain open; each row reads selected while its record is open, even when paged away (FI3-309, replacing the gutter pane).
 Open task board in its header shows every task at once on the stage (`TaskBoard.prompt.md`).
 The panel's buttons that change a task are a backlog row's Start and every row's pin (below); it has no drag, no inline editing and no manual create - the record's action bar carries Drop task and the one next step (`TaskRecord`), and every other write happens by talking to the first mate.
-The filter (a key/title search and project chips) sits behind the search icon; its words are the panel's own state, and its project chip is the window's project focus, the same as the top bar's project pill (`components/core/ProjectFocus`).
+The filter (a key/title search, then a row of project chips starting with All projects, then a row of tag chips; Tags, below) sits behind the search icon; its words are the panel's own state, and its project chip is the window's project focus, the same as the top bar's project pill (`components/core/ProjectFocus`).
 While the window is focused on a project the panel lists only that project's tasks, the filter closed or open, and its collapsed summary counts only them.
 Close search sits 6px right of the field: a 24px icon button with Lucide `x` at 14px in `--fg-3`, the next stop after the field, labelled "Close search" with the key Esc.
 Search tasks still opens and closes the filter, and Find a task (⇧⌘F) still opens it with the caret in the field.
@@ -89,6 +89,46 @@ Typed words in the filter show every match, a part under a collapsed task includ
 Group counts and the collapsed summary still count every task; a blocker line to a hidden row is not drawn, as for a folded group.
 A row focus rested on that a collapse hid hands focus to the collapsed task's row.
 Command search offers `Collapse all parts` and `Expand all parts`, with no default key.
+The phone keeps its own list; it follows in a later piece.
+
+## Tags (INF-6634)
+
+The captain's words: "then we should also think about good UX to help people group/filter by tags, especially in the tasks panel", and on the plan: "we need to disambiguate the two "all" pills above", and a "group by" dropdown on the title bar, with "a mini preview" of what a folded tag group holds, "similar to how we collapse a parent task".
+A project's tags are its own (`docs/task-tags.md`); Tasks reads them from the board and lists them alphabetically.
+
+**The tag row.**
+In the filter, under the project row, a row of tag chips in the project chips' look (mono `--text-xs`, a `--line-1` pill, `--bg-3` and `--fg-1` while pressed) narrows the list to one tag.
+It starts with All tags, which lets go of the tag as All projects lets go of the project, then each tag of the project alphabetically, then No tag; every tag shows, even at 0.
+Each chip but All tags ends with its count: how many open tasks pressing it would list, following the project and the typed words.
+The row shows only while one project's tags apply: the project in focus, or, with none in focus, the only project with tags; there other projects' tasks count and list under No tag.
+One tag at a time: a pressed tag narrows every group and its count, Earlier matches included, and opens the folded groups as typed words do.
+Closing the filter lets go of the tag, as it lets go of the words; focusing a project that lacks the pressed tag lets go of it too.
+The row is one Tab stop: ← and → move along it, Home and End go to its ends, and Enter or Space presses; the project row keeps its own keys.
+Its accessible name is "Tags", and each chip is a toggle reporting pressed.
+
+**Group tasks.**
+Group tasks, the header's list icon between Search tasks and Open task board, opens a row menu (`../core/RowMenu.prompt.md`) under the header at the panel's right end, drawn over the list, with two one-of choices: By status, first and the default, and By tag; a check marks the current one.
+Its accessible name is "Group tasks", and pressing the button again, Esc or a press outside closes it; ↑ and ↓ move, Enter picks, and a pick closes it.
+It opens with focus on the current choice and gives focus back to the list's stop on Esc or a pick from the keyboard.
+While it shows, the list keeps room under it, so a short Tasks never cuts it; the panel's frame never clips it.
+The choice is kept across restarts in the panel's own store.
+Where no tags apply (the tag row would not show), By tag stays listed, dim, with a line saying why, such as `SCR has no tags yet`, and Tasks lists by status; the choice stays as picked and comes back when tags apply.
+
+**By tag.**
+With By tag picked, the order is Pinned, Waiting on you, one group per tag alphabetically, No tag, then Done · 7d; a tag no listed task carries has no group.
+A tag group lists the working, queued and backlog tasks carrying it, in that order, each as a flat row reading exactly as in its own group (no indentation, no parts count button); a task with two tags lists under both.
+A task waiting on you lists once, in Waiting on you, and a pinned task stays in Pinned.
+A tag group's header names its tag in the chip's mono type, `--fg-2`, never uppercase; No tag is a tag group's header too.
+Tag groups start folded, and each fold is kept in the panel's store; a folded group's header ends with its count and the chevron, as Backlog's does.
+A folded tag group shows a bar under its name, in the look of a collapsed task's parts bar (Parts, above): one segment per task in the group's order, working in `--warn`, queued and backlog as a `--line-2` outline.
+Resting on a segment and pressing it work as on a collapsed task's bar: the rest shows that task's summary level with the header, and a press opens that task; a press elsewhere on the header folds or opens the group.
+An open tag group shows rows instead of the bar; folded Backlog and Done · 7d get no bar.
+While a tag is pressed, grouping by tag shows only that tag's group, open.
+
+**Elsewhere.**
+A task's summary (Row hover, below) adds a Tags line under Project while it carries any, its names in mono, comma-separated.
+Command search offers Filter tasks by tag, which opens the filter with focus on the tag row, and Group tasks, which presses the header button so its menu opens; neither has a default key.
+While no tag row shows, Filter tasks by tag stays listed and says why it cannot run.
 The phone keeps its own list; it follows in a later piece.
 
 ## Start on a backlog row (INF-1663)
@@ -272,6 +312,8 @@ On a backlog row, → moves to its Start, Enter or Space presses it, ← goes ba
 A task that starts from there moves to Queued, then Working, and focus follows its row.
 The header of a group that is always open is a label, not a stop.
 In the search, ↓ goes to the first match, and F6 brings focus to the row it was last on.
+The tag row is one stop after the project chips (Tags, above).
+A tag group's header is a stop like Backlog's: → opens it, ← folds it.
 Closed from the keyboard (Esc, or Enter on Close search), the filter gives focus to the list's stop, the row it was last on.
 Focus is the `--focus-ring` hairline and glow, drawn over whatever the row paints: a row whose record is open keeps its `--accent-dim` tint, so focus and the open task never read as one.
 A row and a group header span the panel's frame, which cuts whatever is drawn past its edge, so each draws it inside its own edge (`--focus-ring-inset`).

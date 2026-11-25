@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "task-tag-filter",
+      "kind": "feature",
+      "title": "Filter and group your tasks by tag",
+      "body": "Search tasks now shows your project's tags under its projects: press one to list only the tasks that carry it, each with how many it would show. Group tasks, beside Search tasks, lists your tasks by tag instead of by status, each tag folded to a bar of its tasks until you open it. The task board has its own tag row and a By tag view that counts each tag's tasks in every lane, and a task's hover summary names its tags.",
+      "area": "tasks",
+      "picture": {
+        "dark": "task-tag-filter-dark.webp",
+        "light": "task-tag-filter-light.webp",
+        "alt": "The task board with its tag row under the project chips: All tags, bug pressed with 3, docs, feature, ios and No tag with their counts, and By tag after Done among the views"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

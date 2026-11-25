@@ -7,6 +7,7 @@ import {
   pinnedPastWeek,
 } from "@infinitary/ui";
 import * as m from "./messages.generated";
+import { carriesTag, NO_TAG, type TagFilter, tagProjectOf } from "./rows";
 
 /**
  * What the task board lists and where (docs/task-board.md; the design
@@ -54,7 +55,7 @@ export const BOARD_FOCUS_COLUMNS = ["backlog", "queued", "working"] as const;
  * What the board shows under Waiting on you: the Board view's columns, or
  * one lane as a paged list. Board opens first.
  */
-export type BoardView = "board" | "backlog" | "landed" | "waiting" | "dropped" | "earlier";
+export type BoardView = "board" | "backlog" | "landed" | "waiting" | "dropped" | "earlier" | "tags";
 
 /** How many tiles a Board column shows at once: a display batch, never a work-in-progress limit. */
 export const BOARD_COLUMN_PAGE = 5;
@@ -104,7 +105,8 @@ export type BoardTile = {
   word: string;
 };
 
-export type BoardFilter = { query: string; projectId: string | null };
+/** The project chip, Find's words, and the board's own pressed tag (null: All tags). */
+export type BoardFilter = { query: string; projectId: string | null; tag?: TagFilter };
 
 /**
  * Where a task's tile is, or null when the board leaves it out: pinned work
@@ -133,6 +135,7 @@ export function tileWordOf(task: PanelTaskRow, partOf: string | null): string {
 
 function matches(task: PanelTaskRow, filter: BoardFilter): boolean {
   if (filter.projectId && task.projectId !== filter.projectId) return false;
+  if (!carriesTag(task, filter.tag)) return false;
   const q = foldForSearch(filter.query.trim());
   if (!q) return true;
   return foldForSearch(task.title).includes(q) || foldForSearch(task.key).includes(q);
@@ -297,6 +300,55 @@ export function boardCountOf(tiles: ReadonlyMap<BoardLane, readonly BoardTile[]>
 /** Crew filings in the backlog the captain has not opened, for its "· N new". */
 export function newInBacklog(tiles: ReadonlyMap<BoardLane, readonly BoardTile[]>): number {
   return (tiles.get("backlog") ?? []).filter((tile) => tile.task.filingNew).length;
+}
+
+/** The lanes a tag's count and the By tag view count: Waiting on you and the four of work. */
+export const BOARD_TAG_LANES = ["waiting", "backlog", "queued", "working", "landed"] as const;
+export type BoardTagLane = (typeof BOARD_TAG_LANES)[number];
+
+/** A chip of the board's tag row: All tags (`id` null, no count), a tag, or No tag. */
+export type BoardTagChip = { id: TagFilter; label: string; count: number | null };
+
+/** One row of the By tag view: a tag, or No tag, and its whole count in each lane. */
+export type BoardTagRow = { id: string; name: string; counts: Record<BoardTagLane, number> };
+
+/**
+ * The board's tag row, while one project's tags apply (the chip's project,
+ * or the only one with tags): All tags, each tag alphabetically, even at 0,
+ * then No tag. A count is how many tiles of Waiting on you and the four
+ * lanes pressing the chip would show, after the project chip and Find.
+ */
+export function boardTagChipsOf(board: PanelTaskBoard, filter: BoardFilter): BoardTagChip[] {
+  const rows = boardTagRowsOf(board, filter);
+  if (rows.length === 0) return [];
+  const total = (row: BoardTagRow) =>
+    BOARD_TAG_LANES.reduce((sum, lane) => sum + row.counts[lane], 0);
+  return [
+    { id: null, label: m.nowPanelAllTags(), count: null },
+    ...rows.map((row) => ({ id: row.id, label: row.name, count: total(row) })),
+  ];
+}
+
+/**
+ * The By tag view: each tag of the project, then No tag, against Waiting on
+ * you and the four lanes. The counts are whole, never paged; a task with
+ * two tags counts in both rows, and the project chip and Find narrow them.
+ * Nothing while no tags apply.
+ */
+export function boardTagRowsOf(board: PanelTaskBoard, filter: BoardFilter): BoardTagRow[] {
+  const project = tagProjectOf(board, filter.projectId);
+  if (!project) return [];
+  const tiles = boardTilesOf(board, { ...filter, tag: null });
+  const row = (id: string, name: string): BoardTagRow => {
+    const counts = {} as Record<BoardTagLane, number>;
+    for (const lane of BOARD_TAG_LANES)
+      counts[lane] = (tiles.get(lane) ?? []).filter((tile) => carriesTag(tile.task, id)).length;
+    return { id, name, counts };
+  };
+  return [
+    ...(project.tags ?? []).map((tag) => row(tag.id, tag.name)),
+    row(NO_TAG, m.nowPanelNoTag()),
+  ];
 }
 
 export type BoardChip = { id: string | null; label: string };

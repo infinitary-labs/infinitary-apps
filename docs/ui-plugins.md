@@ -311,9 +311,9 @@ Which rows it lists, and under which of its five groups (waiting on you, working
 Its collapsed header counts each task by its own state (`nowGroupOf`), not the contextual tree rows the expanded Working group shows (`summaryOf` in `rows.ts`, said with `rail.summarize`).
 Dropped rows and closed question/operation rows are deliberately outside the panel: an answered question is not landed work, and every plain captain turn files one (P1).
 
-Minimal by default: a counts line, a Search tasks button in its header (a key/title search and project chips, the document's own state, so the header is never rebuilt), rows for the two open groups, the other three collapsed to a count.
+Minimal by default: a counts line, a Search tasks button in its header (a key/title search with project chips and, while one project's tags apply, tag chips, the document's own state, so the header is never rebuilt), Group tasks while it is open (By status or By tag, `docs/task-tags.md`), rows for the two open groups, the other three collapsed to a count.
 Typed text opens every group that holds a match, so a key or title the search finds is always a row in view.
-Close search beside the field, Esc once its words are empty, and Search tasks close the search, and closing lets go of its words and project, so every task is listed again.
+Close search beside the field, Esc once its words are empty, and Search tasks close the search, and closing lets go of its words, project and tag, so every task is listed again.
 A row is a status dot, the task key in dim mono at the start of the title, and the project name in dim mono (ellipsized so the title is not crushed), with at most one dim word (`blocked`, `held`, `checks`, `waiting`); a child indents under its parent when both are in the same group.
 The task key also stays on hover, search, and the row locator; project chips keep the project key as the filter handle.
 
@@ -646,7 +646,7 @@ The request reaches only this computer's own window (`reach: "home"`), so a pane
 ### A collapsed panel speaks for itself (piece 5)
 
 The captain chose "Its own code, in a page kept running while it is collapsed".
-Every panel of the one shape keeps its body mounted while its dock is collapsed (`SidePanelBinding.rail`, `SidePanelChrome` `keepBody`), so its page runs on, and `PanelProps.rail` (the panel itself, never a card view) carries `collapsed` and two calls (`panelRail.ts`):
+Every panel of the one shape keeps its body mounted while its dock is collapsed (`SidePanelBinding.rail`, `SidePanelChrome` `keepBody`), so its page runs on, and `PanelProps.rail` (the panel itself, never a card view) carries `collapsed` and three calls (`panelRail.ts`):
 
 - `rail.summarize(parts | null)`: at most three parts of at most 32 characters, drawn by the app in the collapsed header as its own chrome (`[data-panel-summary]`), a `strong` part in the primary color as the Tasks panel's waiting count is.
   One part may be a line instead (`PanelSummaryLine`: `line` of at most 500 characters, a `lead` of at most 32 such as a task key, and a `tone` from the feed's own five).
@@ -658,9 +658,10 @@ Every panel of the one shape keeps its body mounted while its dock is collapsed 
   A line that holds focus as a newer one replaces it hands focus to the newer line, read as the old line leaves in the commit that draws the swap, so a Shift+Tab that lands on it while the swap waits to draw keeps its place (`tests/browser/collapsed-line-focus-swap.test.tsx`).
 - `rail.show(shown, why?)`: only a panel whose `presence` is `{ "code": true }` decides; it starts off its rail until it says `show(true)`, and off it, its section stays in the rail, `hidden`, its page running.
   Off its rail, `why` (at most 60 characters) is what command search says beside a command that would press into it, as the Tasks panel's "There are no tasks yet"; without one the app says the panel has nothing to show.
+- `rail.refuse(command, why | null)`: while `why` (at most 60 characters) is set, command search lists the panel's own command but says why it cannot run, as the Tasks panel's Filter tasks by tag says "Choose a project to see its tags"; null lets it run again.
 
 The rail docks only while it holds a shown panel (`[data-rail]:has(> [data-side-panel]:not([hidden]))` in `design/styles.css`), so a hidden panel takes no width.
-In a frame the two calls are actions (`PANEL_RAIL_ACTIONS`) and `collapsed` rides view state.
+In a frame the three calls are actions (`PANEL_RAIL_ACTIONS`) and `collapsed` rides view state.
 
 ### The panel library grows (piece 6)
 

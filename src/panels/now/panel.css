@@ -96,6 +96,12 @@
 [data-now-projects]:empty {
   display: none;
 }
+/* The tag row: the project chips' look, under them (design skill NowPanel, "Tags"). */
+[data-now-tags] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
 .chip {
   font-family: var(--font-mono);
   font-size: var(--text-xs);
@@ -166,6 +172,19 @@
   letter-spacing: var(--tracking-label);
   text-transform: uppercase;
   color: var(--fg-3);
+}
+/* A tag group names its tag as its chip does: mono, never uppercase. */
+.label.tag {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--fg-2);
+}
+/* A folded tag group's bar takes its own line under the name. */
+[data-now-group-header][data-now-barred] {
+  flex-wrap: wrap;
+  row-gap: 0;
 }
 .n {
   font-family: var(--font-mono);
@@ -356,6 +375,11 @@
   height: 11px;
   margin: 0 -1px -5px;
   overflow: hidden;
+}
+/* A folded tag group's bar under its name, the header's full width. */
+[data-now-group-header] [data-now-bar] {
+  flex-basis: 100%;
+  margin: 0 -1px -4px;
 }
 [data-now-bar] i {
   flex: 1 1 0;

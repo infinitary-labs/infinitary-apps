@@ -31,7 +31,8 @@ import "./summary.css";
  * text of a note cut short here. The status, the task title and the project
  * wrap in full. How it comes and goes is its holder's (./summaryMotion.ts).
  * A pinned task wears the Tasks row's filled pin beside its key (INF-3634):
- * its crewmate is a fixed star on the stage, and this says why.
+ * its crewmate is a fixed star on the stage, and this says why. The tags
+ * the task carries sit under its project (INF-6634).
  */
 export function CrewSummary({ taskId, facts }: { taskId: string; facts: CrewFacts }) {
   const shown = useCrewRecord(taskId, facts);
@@ -72,12 +73,28 @@ export function CrewSummary({ taskId, facts }: { taskId: string; facts: CrewFact
         facts={shown}
         withTask
         project={project}
+        afterProject={<SummaryTags names={(facts.task.tags ?? []).map((tag) => tag.name)} />}
         strip="summary"
         // A closed task's plan is the record's to keep; the summary draws none.
         planView={
           shown.status.mark === "done" || shown.status.mark === "dropped" ? undefined : "dots"
         }
       />
+    </div>
+  );
+}
+
+/** The tags a task carries, under its project (docs/task-tags.md); none, no line. */
+function SummaryTags({ names }: { names: readonly string[] }) {
+  if (names.length === 0) return null;
+  return (
+    <div className="row">
+      <div className="label" data-task-fact-label="">
+        {m.recordFactTags()}
+      </div>
+      <div className="title" data-task-fact="tags" style={{ fontFamily: "var(--font-mono)" }}>
+        {names.join(", ")}
+      </div>
     </div>
   );
 }

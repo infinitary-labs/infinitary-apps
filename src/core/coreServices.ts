@@ -169,9 +169,9 @@ export type CoreServices = {
   crewLive: CrewLiveText;
   /** Settings → Usage (docs/usage.md): the ledger summed by period, work, day, model and place, and its recent tasks. */
   usage: {
-    summary: (query: UsageQuery) => UsageSummary;
-    tasks: (query: UsageTasksQuery) => UsageTasks;
-    taskCosts: (query: UsageTaskCostsQuery) => UsageTaskCosts;
+    summary: (query: UsageQuery) => Promise<UsageSummary>;
+    tasks: (query: UsageTasksQuery) => Promise<UsageTasks>;
+    taskCosts: (query: UsageTaskCostsQuery) => Promise<UsageTaskCosts>;
     /** Settings → Usage's line naming where usage is reported (docs/usage-report.md). */
     reporting: () => Promise<UsageReporting>;
   };

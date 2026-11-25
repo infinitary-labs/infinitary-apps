@@ -212,7 +212,20 @@ export type UsageRollup = {
 };
 
 export class UsageStore {
-  constructor(private readonly db: AppDatabase) {}
+  /**
+   * `folds: false` is the read-only record process's store
+   * (`src/core/recordReads/`): it cannot write, so its reads take the daily
+   * totals as the core's connection, their one writer, last folded them.
+   */
+  constructor(
+    private readonly db: AppDatabase,
+    private readonly options: { folds: boolean } = { folds: true },
+  ) {}
+
+  /** Brings the daily totals up to the ledger's newest row (`foldUsageDays`). */
+  fold(): void {
+    if (this.options.folds) foldUsageDays(this.db);
+  }
 
   /** This calendar month's estimate from this account alone; missing prices are not free. */
   monthlyAccountEstimate(
@@ -307,7 +320,7 @@ export class UsageStore {
   summary(query: UsageQuery, options: { now: number; names: UsageNames }): UsageSummary {
     const { now, names } = options;
     const periodSince = periodStart(query.period, now);
-    foldUsageDays(this.db);
+    this.fold();
     const groups = this.db
       .prepare(
         `WITH placed AS (
@@ -387,11 +400,7 @@ export class UsageStore {
       const model = first?.model ?? null;
       return {
         id: key,
-        provider,
-        providerName: provider === null ? null : names.provider(provider),
-        model,
-        name:
-          model === null ? null : provider === null ? model : names.model({ provider, id: model }),
+        ...modelNamesOf(provider, model, names),
         attribution: attributionOf(slice),
         priceSources: priceSourcesOf(slice),
         amount: addUsageAmounts(slice.map(amountOf)),
@@ -494,7 +503,7 @@ export class UsageStore {
       since: since === null ? null : localDate(since),
       limit: query.limit,
     };
-    foldUsageDays(this.db);
+    this.fold();
     // The task's daily totals in the period and work, summed over their own
     // columns before any task column joins them.
     const recorded = `recorded AS (
@@ -564,7 +573,7 @@ export class UsageStore {
    * the summary's rule. Reads the daily totals, never the ledger.
    */
   taskCosts(query: UsageTaskCostsQuery, options: { now: number }): UsageTaskCosts {
-    foldUsageDays(this.db);
+    this.fold();
     const periodSince = periodStart(query.period, options.now);
     const reach = periodSince === null ? null : localDayStart(periodSince, -COST_WINDOW_DAYS);
     // Read the two owners of the fields, not the compatibility view's composed shape.
@@ -666,7 +675,7 @@ export class UsageStore {
    * polls a whole list never pays a query per task.
    */
   byTask(taskId?: string): UsageRollup[] {
-    foldUsageDays(this.db);
+    this.fold();
     const rows = this.db
       .prepare(
         `SELECT task_id, provider, model,
@@ -743,6 +752,41 @@ export class UsageStore {
     }
     return [...tasks.values()];
   }
+}
+
+/** A model's provider and model with the names Settings gives them. */
+function modelNamesOf(
+  provider: string | null,
+  model: string | null,
+  names: UsageNames,
+): Pick<UsageModel, "provider" | "providerName" | "model" | "name"> {
+  return {
+    provider,
+    providerName: provider === null ? null : names.provider(provider),
+    model,
+    name: model === null ? null : provider === null ? model : names.model({ provider, id: model }),
+  };
+}
+
+/**
+ * The names a process without Settings gives: the recorded ids. The record
+ * process answers the summary with these, and the core names its models
+ * again with `nameUsageSummary`.
+ */
+export const RECORDED_USAGE_NAMES: UsageNames = {
+  model: (ref) => ref.id,
+  provider: (provider) => provider,
+};
+
+/** A summary with its models named as Settings names them. */
+export function nameUsageSummary(summary: UsageSummary, names: UsageNames): UsageSummary {
+  return {
+    ...summary,
+    models: summary.models.map((model) => ({
+      ...model,
+      ...modelNamesOf(model.provider, model.model, names),
+    })),
+  };
 }
 
 /** A saved kind Where it went names, or null for none, `unclear` or one it does not know. */

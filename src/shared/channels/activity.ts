@@ -16,6 +16,7 @@ import {
 } from "../observe";
 import {
   usageQuerySchema,
+  usageReportingSchema,
   usageSummarySchema,
   usageTaskCostsQuerySchema,
   usageTaskCostsSchema,
@@ -182,5 +183,13 @@ export const activityChannels = {
     reach: "views",
     request: z.tuple([usageTaskCostsQuerySchema]),
     response: usageTaskCostsSchema,
+  },
+  // Usage's reporting line: the host a company's Claude Code setup has Claude work sent to.
+  "inf:usage:reporting": {
+    effect: "read",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([]),
+    response: usageReportingSchema,
   },
 } as const satisfies Record<string, ChannelDeclaration>;

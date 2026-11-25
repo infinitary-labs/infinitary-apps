@@ -46,6 +46,7 @@ describe("the read catalog", () => {
       "tasks.keys",
       "tasks.search",
       "update.status",
+      "usage.reporting",
       "usage.summary",
       "usage.taskCosts",
       "usage.tasks",

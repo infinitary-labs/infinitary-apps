@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import type { ResolvedSettings, ResolveSettingsOptions } from "@anthropic-ai/claude-agent-sdk";
 import type { ClaudeAccessSource } from "@shared/claudeAccess";
+import { loginPathCapture } from "../hostEnv";
 
 /**
  * Claude access that is not a Claude subscription sign-in: a token command
@@ -21,9 +22,13 @@ import type { ClaudeAccessSource } from "@shared/claudeAccess";
  * Infinitary never runs the command and never sees what it prints. The
  * organization's tier needs nothing from the app: the client reads it in
  * every session whatever `settingSources` says. Of the person's own
- * settings only these two keys reach a session, as the app's own flag
- * settings (`accessSettings`); everything else in that file stays out, as
- * it always has.
+ * settings only these two keys, and the custom headers a gateway asks for
+ * (`ANTHROPIC_CUSTOM_HEADERS`, such as a team id), reach a session as the
+ * app's own flag settings (`accessSettings`). The only other part of that
+ * file read is a company's usage reporting setup, which the app's receiver
+ * passes on (`claudeReporting.ts`); everything else stays out. The headers
+ * may also come from the person's login shell, where the settings file's own
+ * win, as they do in the client.
  */
 
 /** The organization's access, or the person's own, as a fact the row and the store stamp read. */
@@ -37,16 +42,16 @@ export type ClaudeAccess = {
   digest: string;
 };
 
-/** The two keys of the person's own settings a session is handed, when they set any. */
+/** The keys of the person's own settings a session is handed, when they set any. */
 export type ClaudeAccessSettings = {
   apiKeyHelper?: string;
-  env?: { ANTHROPIC_BASE_URL: string };
+  env?: { ANTHROPIC_BASE_URL?: string; ANTHROPIC_CUSTOM_HEADERS?: string };
 };
 
 export type ClaudeAccessRead = {
   /** Present when a token command is set: the client signs in with it, ahead of a subscription. */
   access?: ClaudeAccess;
-  /** The person's own token command and address, for the app's flag settings. */
+  /** The person's own token command, address and gateway headers, for the app's flag settings. */
   settings?: ClaudeAccessSettings;
   /**
    * Who set the address requests go to when no tier sets a token command:
@@ -95,14 +100,25 @@ export async function assertClaudeWorkSettings(
   }
 }
 
-function tierKeys(settings: unknown): { command?: string; address?: string } {
+type TierKeys = { command?: string; address?: string; headers?: string };
+
+function tierKeys(settings: unknown): TierKeys {
   if (!settings || typeof settings !== "object") return {};
   const record = settings as Record<string, unknown>;
   const command = typeof record.apiKeyHelper === "string" ? record.apiKeyHelper.trim() : "";
-  const env = record.env && typeof record.env === "object" ? record.env : {};
-  const raw = (env as Record<string, unknown>).ANTHROPIC_BASE_URL;
+  const env = (record.env && typeof record.env === "object" ? record.env : {}) as Record<
+    string,
+    unknown
+  >;
+  const raw = env.ANTHROPIC_BASE_URL;
   const address = typeof raw === "string" ? raw.trim() : "";
-  return { ...(command ? { command } : {}), ...(address ? { address } : {}) };
+  const headers =
+    typeof env.ANTHROPIC_CUSTOM_HEADERS === "string" ? env.ANTHROPIC_CUSTOM_HEADERS : "";
+  return {
+    ...(command ? { command } : {}),
+    ...(address ? { address } : {}),
+    ...(headers.trim() ? { headers } : {}),
+  };
 }
 
 /**
@@ -113,15 +129,19 @@ function tierKeys(settings: unknown): { command?: string; address?: string } {
  */
 export async function readClaudeAccess(
   resolve: ResolveClaudeSettings = resolveSettings,
+  shell: () => Readonly<Record<string, string>> | undefined = () => loginPathCapture()?.claudeKeys,
 ): Promise<ClaudeAccessRead> {
+  const shellHeaders = shell()?.ANTHROPIC_CUSTOM_HEADERS ?? "";
   let resolved: ResolvedSettings;
   try {
     resolved = await resolve({ settingSources: ["user"] });
   } catch {
-    return {};
+    return shellHeaders.trim()
+      ? { settings: { env: { ANTHROPIC_CUSTOM_HEADERS: shellHeaders } } }
+      : {};
   }
-  let organization: { command?: string; address?: string } = {};
-  let own: { command?: string; address?: string } = {};
+  let organization: TierKeys = {};
+  let own: TierKeys = shellHeaders.trim() ? { headers: shellHeaders } : {};
   // Sources run low to high precedence: a later tier of the same kind wins.
   for (const tier of resolved.sources) {
     if (tier.source === "managed") {
@@ -129,9 +149,13 @@ export async function readClaudeAccess(
     }
     if (tier.source === "user") own = { ...own, ...tierKeys(tier.settings) };
   }
+  const env = {
+    ...(own.address ? { ANTHROPIC_BASE_URL: own.address } : {}),
+    ...(own.headers ? { ANTHROPIC_CUSTOM_HEADERS: own.headers } : {}),
+  };
   const settings: ClaudeAccessSettings = {
     ...(own.command ? { apiKeyHelper: own.command } : {}),
-    ...(own.address ? { env: { ANTHROPIC_BASE_URL: own.address } } : {}),
+    ...(Object.keys(env).length > 0 ? { env } : {}),
   };
   const command = organization.command ?? own.command;
   const source: ClaudeAccessSource | undefined = organization.command
@@ -164,9 +188,9 @@ function accessDigest(source: ClaudeAccessSource, command: string, address: stri
 
 /**
  * The flag settings a session lays over the app's own: the person's token
- * command and address, and nothing else of their settings. The
- * organization's tier ranks above flag settings in the client, so where it
- * sets either key, its own wins.
+ * command, address and gateway headers, and nothing else of their access
+ * settings. The organization's tier ranks above flag settings in the client,
+ * so where it sets any of these, its own wins.
  */
 export function accessFlagSettings(read: ClaudeAccessRead | undefined): ClaudeAccessSettings {
   return read?.settings ?? {};

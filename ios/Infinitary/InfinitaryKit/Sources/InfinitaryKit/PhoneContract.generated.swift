@@ -418,6 +418,7 @@ public enum PhonePanelRequest: String, Sendable, CaseIterable {
     case `tasksDetail` = "inf:tasks:detail"
     case `tasksKeys` = "inf:tasks:keys"
     case `tasksSearch` = "inf:tasks:search"
+    case `usageReporting` = "inf:usage:reporting"
     case `usageSummary` = "inf:usage:summary"
     case `usageTaskCosts` = "inf:usage:task-costs"
     case `usageTasks` = "inf:usage:tasks"

@@ -1475,6 +1475,7 @@
   "settingsUsageRecentTokensLegend": "Eingabe enthält keine zwischengespeicherten Tokens. Die Summe zählt jede Kategorie einmal.",
   "settingsUsageRecentUsdLegend": "Schätzungen pro Kategorie verwenden nur erfasste Preise. Ihre Abdeckung kann von der Summe abweichen.",
   "settingsUsageRecordsOf": "{count} von {records} Einträgen",
+  "settingsUsageReportsTo": "Claude-Arbeit auf dem Computer deines ersten Offiziers wird außerdem an {host} gemeldet, wie es dessen Claude-Code-Einstellungen verlangen. Andere Computer folgen ihren eigenen Einstellungen.",
   "settingsUsageScopeAll": "Alle Arbeit",
   "settingsUsageScopeFirstmate": "Erster Offizier",
   "settingsUsageScopeOther": "Andere Arbeit",

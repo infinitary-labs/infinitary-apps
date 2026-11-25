@@ -324,6 +324,16 @@ export const readCatalog = {
     description:
       "Recorded model usage by period and kind of work, in tokens and estimated dollars.",
   }),
+  // Read on opening and every minute: the setup lives in files and a shell the app does not watch.
+  "usage.reporting": entry({
+    channel: "inf:usage:reporting",
+    args: noArgs,
+    toRequest: () => [],
+    invalidate: { pollMs: 60_000 },
+    // i18n-exempt: served only to the first mate, as the read's description (src/core/pi/appReads.ts).
+    description:
+      "The host a company's Claude Code reporting setup has Claude work sent to, or null.",
+  }),
   "usage.tasks": entry({
     channel: "inf:usage:tasks",
     args: usageTasksQuerySchema,

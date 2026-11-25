@@ -1,9 +1,21 @@
 import { randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { ClaudeCallCost } from "./claudeCallUsage";
+import type { ForwardAnswer, ReportingSignal } from "./claudeReporting";
 
-/** Bound transient local log bodies; an oversized export retains result-only accounting. */
+/**
+ * Bound the log bodies priced here; an oversized export retains result-only
+ * accounting, and with a company setup is still passed on (`CLAUDE_FORWARD_BODY_MAX`).
+ */
 export const CLAUDE_COST_REPORT_BODY_MAX = 1024 * 1024;
+
+/**
+ * Bound a batch passed on to a company's collector: the OpenTelemetry
+ * Collector's own default request limit (20 MiB). A batch over the pricing
+ * bound is still passed on, unpriced, since the client never resends a
+ * refused one and the company's content switches can make batches large.
+ */
+export const CLAUDE_FORWARD_BODY_MAX = 20 * 1024 * 1024;
 
 export type ClaudeCostSubscription = {
   env: NodeJS.ProcessEnv;
@@ -11,7 +23,25 @@ export type ClaudeCostSubscription = {
   close(): void;
 };
 
-type Recipient = { sessionId: string; report: (cost: ClaudeCallCost) => void };
+/**
+ * Where a session's batches go on to, beyond this receiver: a company's
+ * Claude Code setup (`claudeReporting.ts`). `send` posts the bytes unchanged
+ * and answers what the collector said, which the client's exporter reads.
+ */
+export type ClaudeReportForward = {
+  signals: Partial<Record<ReportingSignal, { protocol: "http/json" | "http/protobuf" | "grpc" }>>;
+  /** Content keys and other setup keys the client keeps, such as `OTEL_RESOURCE_ATTRIBUTES`. */
+  clientEnv: Record<string, string>;
+  send(signal: ReportingSignal, body: Buffer, contentType: string): Promise<ForwardAnswer>;
+};
+
+type Recipient = {
+  sessionId: string;
+  report: (cost: ClaudeCallCost) => void;
+  forward?: ClaudeReportForward;
+};
+
+const PROTOBUF = "application/x-protobuf";
 
 /** Any pre-existing reporting choice belongs to the person or organization, not this receiver. */
 export function hasClaudeReporting(env: NodeJS.ProcessEnv): boolean {
@@ -34,15 +64,21 @@ export function hasClaudeReporting(env: NodeJS.ProcessEnv): boolean {
  * work. An unguessable attachment path selects one recipient. Only priced
  * request fields are projected out of the OTLP body; raw logs, prompts,
  * resource attributes, email and account identifiers are never retained.
+ * With a company setup (`ClaudeReportForward`) a batch's bytes are held only
+ * until the collector answers, then dropped.
  */
 export class ClaudeCostReports {
   private server: Server | undefined;
   private opening: Promise<Server> | undefined;
   private readonly recipients = new Map<string, Recipient>();
 
-  async subscribe(sessionId: string, report: Recipient["report"]): Promise<ClaudeCostSubscription> {
+  async subscribe(
+    sessionId: string,
+    report: Recipient["report"],
+    forward?: ClaudeReportForward,
+  ): Promise<ClaudeCostSubscription> {
     const token = randomUUID();
-    this.recipients.set(token, { sessionId, report });
+    this.recipients.set(token, { sessionId, report, ...(forward ? { forward } : {}) });
     try {
       const server = await this.listen();
       const address = server.address();
@@ -50,23 +86,7 @@ export class ClaudeCostReports {
       let closed = false;
       return {
         redact: (text) => text.replaceAll(token, "[local cost report]"),
-        env: {
-          CLAUDE_CODE_ENABLE_TELEMETRY: "1",
-          OTEL_LOGS_EXPORTER: "otlp",
-          OTEL_METRICS_EXPORTER: "none",
-          OTEL_TRACES_EXPORTER: "none",
-          OTEL_EXPORTER_OTLP_LOGS_PROTOCOL: "http/json",
-          OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: `http://127.0.0.1:${address.port}/${token}`,
-          OTEL_EXPORTER_OTLP_LOGS_HEADERS: "",
-          OTEL_EXPORTER_OTLP_HEADERS: "",
-          OTEL_EXPORTER_OTLP_LOGS_COMPRESSION: "none",
-          OTEL_LOG_USER_PROMPTS: "0",
-          OTEL_LOG_ASSISTANT_RESPONSES: "0",
-          OTEL_LOG_TOOL_CONTENT: "0",
-          OTEL_LOG_TOOL_DETAILS: "0",
-          OTEL_LOG_RAW_API_BODIES: "0",
-          // OTEL_LOGS_EXPORT_INTERVAL stays unset: keep the client's five-second default.
-        },
+        env: receiverEnv(`http://127.0.0.1:${address.port}/${token}`, forward),
         close: () => {
           if (closed) return;
           closed = true;
@@ -108,34 +128,112 @@ export class ClaudeCostReports {
   }
 
   private async receive(req: IncomingMessage, res: ServerResponse): Promise<void> {
-    const token = req.url?.slice(1);
+    const [token, signal] = (req.url ?? "").slice(1).split("/");
     const recipient = token ? this.recipients.get(token) : undefined;
-    if (req.method !== "POST" || !recipient) {
+    if (
+      req.method !== "POST" ||
+      !recipient ||
+      (signal !== "logs" && !(signal === "metrics" && recipient.forward?.signals.metrics))
+    ) {
       res.writeHead(404).end();
       req.resume();
       return;
     }
+    const forward = recipient.forward?.signals[signal] ? recipient.forward : undefined;
+    const max = forward ? CLAUDE_FORWARD_BODY_MAX : CLAUDE_COST_REPORT_BODY_MAX;
     const chunks: Buffer[] = [];
     let size = 0;
     try {
       for await (const chunk of req) {
         size += chunk.length;
-        if (size > CLAUDE_COST_REPORT_BODY_MAX) {
+        if (size > max) {
           res.writeHead(413).end();
           return;
         }
         chunks.push(Buffer.from(chunk));
       }
-      const body: unknown = JSON.parse(Buffer.concat(chunks).toString("utf8"));
-      // A subscription may have ended while its final export was in flight.
-      if (this.recipients.get(token as string) === recipient)
-        for (const cost of callCosts(body, recipient.sessionId)) recipient.report(cost);
-      res.writeHead(200, { "content-type": "application/json" }).end("{}");
     } catch {
-      // Neither a malformed body nor a listener fault can escape into Claude's pump.
+      // The client hung up mid-export; it sends again or gives up on its own.
       if (!res.headersSent) res.writeHead(400).end();
+      return;
     }
+    const body = Buffer.concat(chunks);
+    const contentType = req.headers["content-type"] ?? "application/json";
+    let priced = true;
+    if (signal === "logs" && size <= CLAUDE_COST_REPORT_BODY_MAX) {
+      try {
+        const logs = contentType.startsWith(PROTOBUF)
+          ? decodeLogsProtobuf(body)
+          : JSON.parse(body.toString("utf8"));
+        // A subscription may have ended while its final export was in flight.
+        if (this.recipients.get(token as string) === recipient)
+          for (const cost of callCosts(logs, recipient.sessionId)) recipient.report(cost);
+      } catch {
+        // Neither a malformed body nor a listener fault can escape into Claude's pump.
+        priced = false;
+      }
+    }
+    if (!forward) {
+      if (priced) res.writeHead(200, { "content-type": "application/json" }).end("{}");
+      else res.writeHead(400).end();
+      return;
+    }
+    // The client's own exporter reads the collector's answer, so a refused
+    // or unreachable collector gets the client's own retries; a repeated
+    // batch is priced once, by its request ids (`claudeCallUsage.ts`).
+    const answer = await forward
+      .send(signal, body, contentType)
+      .catch((): ForwardAnswer => ({ status: 503, body: Buffer.alloc(0) }));
+    if (!res.headersSent)
+      res
+        .writeHead(answer.status, answer.contentType ? { "content-type": answer.contentType } : {})
+        .end(answer.body);
   }
+}
+
+/**
+ * The client's reporting keys for one attachment. Logs always come here, to
+ * be priced; with a company setup, metrics come here too, each in the
+ * encoding the collector takes, and the setup's own keys (content switches,
+ * resource attributes, intervals) are the client's as they would have been.
+ */
+function receiverEnv(route: string, forward: ClaudeReportForward | undefined): NodeJS.ProcessEnv {
+  const encoding = (signal: ReportingSignal) => {
+    const protocol = forward?.signals[signal]?.protocol;
+    return protocol && protocol !== "http/json" ? "http/protobuf" : "http/json";
+  };
+  const env: NodeJS.ProcessEnv = {
+    CLAUDE_CODE_ENABLE_TELEMETRY: "1",
+    OTEL_LOG_USER_PROMPTS: "0",
+    OTEL_LOG_ASSISTANT_RESPONSES: "0",
+    OTEL_LOG_TOOL_CONTENT: "0",
+    OTEL_LOG_TOOL_DETAILS: "0",
+    OTEL_LOG_RAW_API_BODIES: "0",
+    // OTEL_LOGS_EXPORT_INTERVAL stays unset: keep the client's five-second default.
+  };
+  // Content goes only where the company's setup sends logs, as its client would have.
+  if (forward)
+    for (const [key, value] of Object.entries(forward.clientEnv))
+      if (forward.signals.logs || !key.startsWith("OTEL_LOG_")) env[key] = value;
+  return {
+    ...env,
+    OTEL_LOGS_EXPORTER: "otlp",
+    OTEL_METRICS_EXPORTER: forward?.signals.metrics ? "otlp" : "none",
+    OTEL_TRACES_EXPORTER: "none",
+    OTEL_EXPORTER_OTLP_LOGS_PROTOCOL: encoding("logs"),
+    OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: `${route}/logs`,
+    OTEL_EXPORTER_OTLP_LOGS_HEADERS: "",
+    OTEL_EXPORTER_OTLP_HEADERS: "",
+    OTEL_EXPORTER_OTLP_LOGS_COMPRESSION: "none",
+    ...(forward?.signals.metrics
+      ? {
+          OTEL_EXPORTER_OTLP_METRICS_PROTOCOL: encoding("metrics"),
+          OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: `${route}/metrics`,
+          OTEL_EXPORTER_OTLP_METRICS_HEADERS: "",
+          OTEL_EXPORTER_OTLP_METRICS_COMPRESSION: "none",
+        }
+      : {}),
+  };
 }
 
 function record(value: unknown): Record<string, unknown> | undefined {
@@ -210,4 +308,91 @@ export function callCosts(body: unknown, sessionId: string): ClaudeCallCost[] {
         });
       }
   return costs;
+}
+
+/** One protobuf field as the wire carries it. */
+type WireField = { field: number; varint?: bigint; bytes?: Buffer; fixed64?: Buffer };
+
+function varint(buf: Buffer, at: number): [bigint, number] {
+  let value = 0n;
+  let shift = 0n;
+  for (;;) {
+    const byte = buf[at++];
+    if (byte === undefined) throw new Error("truncated");
+    value |= BigInt(byte & 0x7f) << shift;
+    if ((byte & 0x80) === 0) return [value, at];
+    shift += 7n;
+    if (shift > 63n) throw new Error("varint too long");
+  }
+}
+
+function wireFields(buf: Buffer): WireField[] {
+  const fields: WireField[] = [];
+  let at = 0;
+  while (at < buf.length) {
+    const [tag, next] = varint(buf, at);
+    at = next;
+    const field = Number(tag >> 3n);
+    const type = Number(tag & 7n);
+    if (type === 0) {
+      const [value, after] = varint(buf, at);
+      fields.push({ field, varint: value });
+      at = after;
+    } else if (type === 1) {
+      if (at + 8 > buf.length) throw new Error("truncated");
+      fields.push({ field, fixed64: buf.subarray(at, at + 8) });
+      at += 8;
+    } else if (type === 2) {
+      const [length, after] = varint(buf, at);
+      const end = after + Number(length);
+      if (end > buf.length) throw new Error("truncated");
+      fields.push({ field, bytes: buf.subarray(after, end) });
+      at = end;
+    } else if (type === 5) {
+      at += 4;
+    } else throw new Error("unsupported wire type");
+  }
+  return fields;
+}
+
+function nested(buf: Buffer | undefined, field: number): Buffer[] {
+  return buf
+    ? wireFields(buf)
+        .filter((entry) => entry.field === field && entry.bytes)
+        .map((entry) => entry.bytes as Buffer)
+    : [];
+}
+
+/** OTLP's AnyValue, only its scalar shapes, as the JSON encoding names them. */
+function anyValue(buf: Buffer): Record<string, unknown> {
+  for (const entry of wireFields(buf)) {
+    if (entry.field === 1 && entry.bytes) return { stringValue: entry.bytes.toString("utf8") };
+    if (entry.field === 3 && entry.varint !== undefined)
+      return { intValue: String(BigInt.asIntN(64, entry.varint)) };
+    if (entry.field === 4 && entry.fixed64) return { doubleValue: entry.fixed64.readDoubleLE(0) };
+  }
+  return {};
+}
+
+/**
+ * The log attributes of an OTLP protobuf logs export, in the JSON
+ * encoding's shape `callCosts` reads: ExportLogsServiceRequest.resource_logs
+ * (1), ResourceLogs.scope_logs (2), ScopeLogs.log_records (2),
+ * LogRecord.attributes (6), KeyValue key (1) and value (2). Nothing else of
+ * the body is decoded.
+ */
+export function decodeLogsProtobuf(body: Buffer): unknown {
+  return {
+    resourceLogs: nested(body, 1).map((resource) => ({
+      scopeLogs: nested(resource, 2).map((scope) => ({
+        logRecords: nested(scope, 2).map((log) => ({
+          attributes: nested(log, 6).map((pair) => {
+            const key = nested(pair, 1)[0]?.toString("utf8");
+            const value = nested(pair, 2)[0];
+            return { key, value: value ? anyValue(value) : {} };
+          }),
+        })),
+      })),
+    })),
+  };
 }

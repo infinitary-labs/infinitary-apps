@@ -45,7 +45,8 @@ Releases are **properly signed and notarized**, never ad-hoc signed (captain-dir
   The local door listens on loopback alone for as long as the app runs, over TLS 1.3 with a key of its own, and admits only a client that read its key from a folder only this account can open (`docs/connection.md`, "The local door").
   A task browser's connection guard also listens: on loopback alone, only while that browser is open, answering only that browser's session, which signs in with a secret made for it, and carrying nothing but its tunnels to public addresses.
   Claude call-cost recording also permits one private loopback receiver per session factory on the computer running work, with an unguessable route per client attachment (`docs/usage.md`, "Claude calls during a turn").
-  It accepts only app-scoped cost reports, persists no content or identity data, and stops when its last attachment ends; it grants no external endpoint or general listening permission.
+  It accepts only app-scoped cost reports, persists no content or identity data, and stops when its last attachment ends; it grants no general listening permission.
+  Its one onward destination is the collector a company's Claude Code setup in the person's own settings file or shell names, which receives the client's own records unchanged, as Claude Code would send them there (`docs/usage.md`, "A company's Claude Code setup").
 - **BYO subscriptions.**
   Users authenticate with their own plans.
   We never provide model access and never hold user credentials anywhere but the user's machine.

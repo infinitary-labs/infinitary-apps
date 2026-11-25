@@ -208,7 +208,7 @@ export class AskThreads {
   private originOf(id: string): ThreadOrigin | undefined {
     return threadOrigin(
       {
-        get: (taskId) => this.writer.store.get(taskId),
+        hostRaised: (taskId) => this.writer.store.hostRaised(taskId),
         events: (taskId) => this.writer.events.listOriginEvents(taskId),
         ask: (askId) => this.writer.asks.get(askId),
       },

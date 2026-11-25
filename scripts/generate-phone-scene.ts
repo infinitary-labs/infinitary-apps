@@ -551,7 +551,7 @@ try {
           openPart(3044, {}), openPart(3045, {})] }, null],
       ["a running program with an open part", { ...unstarted, startPolicy: "on-request", program: true, children: { total: 3, closed: 2 },
         parts: [...closedParts, openPart(3043, {})] }, null],
-      ["a parent that starts once its parts close", { ...unstarted, startPolicy: "when-ready", children: { total: 3, closed: 2 },
+      ["a parent that starts by itself when nothing holds it", { ...unstarted, startPolicy: "when-ready", children: { total: 3, closed: 2 },
         parts: [...closedParts, openPart(3043, {})] }, null],
       ["waiting on a task, no time recorded", { activity: "idle", workPosture: { state: "idle", reason: "dependency" }, blockedBy: ["INF-3010"],
         waits: [wait("w-6", "dependency", "INF-3010")] }, null],

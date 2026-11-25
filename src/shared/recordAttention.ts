@@ -219,7 +219,7 @@ export function partsDoTheWork(
   task: Pick<TaskView, "status" | "children" | "startPolicy" | "program">,
 ): boolean {
   // Only a parent that never runs itself: a program runs its script while it
-  // stays open, and a when-ready parent starts once its parts close.
+  // stays open, and a when-ready parent starts by itself when nothing holds it.
   return (
     task.status === "open" &&
     task.children.total > 0 &&

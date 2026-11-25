@@ -618,7 +618,7 @@ The window draws its overview from the shared task facts (`TaskFactRows`, `TaskF
 
 1. The attention sentence, when something is wrong or the task waits: a failure, an interruption, a hold or a wait (`recordAttentionOf`, `src/shared/recordAttention.ts`), with a charted filing's Why and a closed task's one line (`recordClosedLineOf`) beside it (`RecordAttention`, `src/renderer/src/cards/RecordHead.tsx`).
    A backlog parent with open parts, one that waits for your Start and runs no program of its own, neither blocked nor waiting on a dropped task, says what its parts wait on: its last part by name (`Its last part waits for your Start`, `Its last part is waiting on you`, `Waiting for its last part`), or how many are open with each status counted, most pressing first, and that the parent closes by itself once its parts close; the status pill shows no reason beside it.
-   A queued parent, which starts by itself once its parts close, and a program keep `Its N parts do the work`.
+   A queued parent, which starts by itself when nothing holds it, and a program keep `Its N parts do the work`.
 2. On a task closed as done, the Delivered row: each delivery fact the close read, with how it is known (`RecordDelivered`).
 3. The task's place among other tasks as rows of keys: Part of, Waits on, Holds up and Parts, and the outside issue it answers as a link under Issue (`RecordRelations`; `docs/agents-reach.md`, "A reader's Build rows").
    Parts is a fold, open at first, its summary the count of closed parts and a bar of them by status; open, it lists every part in filing order, each with its status mark, title, key and status word, and pressing a part opens its record (`RecordParts`, `TaskDetail.parts`, INF-6805).

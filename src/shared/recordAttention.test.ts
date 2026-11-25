@@ -212,7 +212,8 @@ describe("the record's attention sentence", () => {
       )?.title,
     ).toBe("Waiting on DEMO-38");
     // Only a parent that never runs itself closes by itself: a program runs its
-    // script while open, and a when-ready parent starts once its parts close.
+    // script while open, and a when-ready parent starts by itself when nothing
+    // holds it.
     const parts = { children: { total: 2, closed: 1 }, parts: [closed, backlog] };
     for (const runs of [
       { ...parent, program: true as const },

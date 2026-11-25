@@ -2519,7 +2519,7 @@
       }
     },
     {
-      "name": "a parent that starts once its parts close",
+      "name": "a parent that starts by itself when nothing holds it",
       "row": {
         "id": "t-3001",
         "key": "INF-3001",

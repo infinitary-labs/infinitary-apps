@@ -16,7 +16,11 @@ import {
 } from "../../../tests/helpers/anthropicDialect";
 import { crewmateToolDelegate } from "../../../tests/helpers/crewmateToolDelegate";
 import { fakeBinding } from "../../../tests/helpers/fakeSession";
-import { codexLimits, piStubRuntime } from "../../../tests/helpers/piStubRuntime";
+import {
+  catalogLimits,
+  piStubRuntime,
+  type StubLimits,
+} from "../../../tests/helpers/piStubRuntime";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import {
   appPathsFor,
@@ -290,74 +294,118 @@ it("tells a crewmate in a new conversation why, where its record is, and its bri
 // so a long build sent requests past the 272,000-token price step, where every
 // input token costs twice as much. Here a crewmate reads a long build log in
 // one turn and the service reads each request's real size; the same build on
-// a model with no step shows the reads do carry it past.
-it.each([
-  ["keeps every request below its model's price step", true],
-  ["runs past the step on a model that has none", false],
-])("a crewmate's real Pi session %s", async (_name, priced) => {
-  const root = scratchDir("crew-price-step-");
-  const reads = 30;
-  const linesPerRead = 600;
-  const line = "vitest ran src/core/pi/session.test.ts: 41 passed, 0 failed, in 2.3s\n";
-  writeFileSync(join(root, "build.log"), line.repeat(reads * linesPerRead));
-  const api = await startStubApi(() => true);
-  // GPT-6.1 Sol as Pi ships it: a 500,000-token window, the price doubling past 272,000.
-  const sol = codexLimits("gpt-6.1-sol");
-  const step = sol.cost.tiers?.[0]?.inputTokensAbove ?? 0;
-  const readings: { tokens: number; summary: boolean }[] = [];
-  api.answer((request, res) => {
-    const tokens = Math.ceil(JSON.stringify(request.body).length / 4);
-    const summary = !request.body.tools?.length;
-    const read = readings.filter((reading) => !reading.summary).length;
-    readings.push({ tokens, summary });
-    beginAnthropicStream(res, tokens, request.n);
-    if (summary)
-      writeAnthropicText(res, 0, "The crewmate is reading build.log for the failing test.");
-    else if (read < reads)
-      writeAnthropicToolUse(res, 0, {
-        id: `read-${read}`,
-        name: "read",
-        args: { path: "build.log", offset: read * linesPerRead + 1, limit: linesPerRead },
-      });
-    else writeAnthropicText(res, 0, "No test failed.");
-    finishAnthropicStream(res, !summary && read < reads ? "tool_use" : "end_turn", 16);
-  });
-  const runtime = await piStubRuntime(api.url, {
-    provider: "fm-crew",
-    id: "sol",
-    limits: priced ? sol : { contextWindow: sol.contextWindow, cost: { ...sol.cost, tiers: [] } },
-  });
-  const paths = appPathsFor(root);
-  const session = await createPiSessionFactory({ agentDir: join(root, "pi") }).open(
-    crewmateSessionSpec(
-      paths,
-      {
-        ...crewmateToolDelegate(),
-        machineId: LOCAL_MACHINE_ID,
-        taskId: "task-1",
-        cwd: root,
-        evidenceDir: crewmateEvidenceDir(paths, "task-1"),
-        model: { provider: "fm-crew", id: "sol" },
-      },
-      { backend: "pi", runtime },
-    ),
-  );
-  const events: SessionEvent[] = [];
-  session.subscribe((event) => events.push(event));
-  try {
-    await session.prompt("Find the failing test in build.log.");
-    const largest = Math.max(...readings.map((reading) => reading.tokens));
-    expect(largest > step).toBe(!priced);
-    expect(readings.some((reading) => reading.summary)).toBe(priced);
-    expect(readings.filter((reading) => !reading.summary)).toHaveLength(reads + 1);
-    expect(events.filter((event) => event.type === "turn_failed")).toEqual([]);
-  } finally {
-    session.dispose();
-    await session.closed();
-    await catalogRefreshesSettled();
-    await api.close();
-  }
-});
+// a model with no step shows the reads do carry it past. The rule leaves
+// alone a first step below what a summary keeps (Qwen3.7 Flash's 32,000),
+// where Pi would summarize before every request, and Copilot, whose plan
+// counts requests rather than tokens.
+const sol = catalogLimits("openai-codex", "gpt-6.1-sol");
+const qwen = catalogLimits("openrouter", "qwen/qwen3.7-flash");
+const copilotSol = catalogLimits("github-copilot", "gpt-6.1-sol");
+const step = (limits: StubLimits, index: number) =>
+  limits.cost.tiers?.[index]?.inputTokensAbove ?? 0;
+const priceSteps: [
+  string,
+  { provider: string; limits: StubLimits; below?: number; past?: number },
+][] = [
+  [
+    "keeps every request below its model's price step",
+    {
+      provider: "fm-crew",
+      limits: sol,
+      below: step(sol, 0),
+    },
+  ],
+  [
+    "runs past the step on a model that has none",
+    {
+      provider: "fm-crew",
+      limits: { contextWindow: sol.contextWindow, cost: { ...sol.cost, tiers: [] } },
+      past: step(sol, 0),
+    },
+  ],
+  [
+    "keeps below the next step when the first sits under what a summary keeps",
+    {
+      provider: "fm-crew",
+      limits: qwen,
+      below: step(qwen, 1),
+      past: step(qwen, 0),
+    },
+  ],
+  [
+    "runs past the step on Copilot, whose plan counts requests",
+    {
+      provider: "github-copilot",
+      limits: copilotSol,
+      past: step(copilotSol, 0),
+    },
+  ],
+];
+it.each(priceSteps)(
+  "a crewmate's real Pi session %s",
+  async (_name, { provider, limits, below, past }) => {
+    const root = scratchDir("crew-price-step-");
+    const reads = 30;
+    const linesPerRead = 600;
+    const line = "vitest ran src/core/pi/session.test.ts: 41 passed, 0 failed, in 2.3s\n";
+    writeFileSync(join(root, "build.log"), line.repeat(reads * linesPerRead));
+    const api = await startStubApi(() => true);
+    const readings: { tokens: number; summary: boolean }[] = [];
+    api.answer((request, res) => {
+      const tokens = Math.ceil(JSON.stringify(request.body).length / 4);
+      const summary = !request.body.tools?.length;
+      const read = readings.filter((reading) => !reading.summary).length;
+      readings.push({ tokens, summary });
+      beginAnthropicStream(res, tokens, request.n);
+      if (summary)
+        writeAnthropicText(res, 0, "The crewmate is reading build.log for the failing test.");
+      else if (read < reads)
+        writeAnthropicToolUse(res, 0, {
+          id: `read-${read}`,
+          name: "read",
+          args: { path: "build.log", offset: read * linesPerRead + 1, limit: linesPerRead },
+        });
+      else writeAnthropicText(res, 0, "No test failed.");
+      finishAnthropicStream(res, !summary && read < reads ? "tool_use" : "end_turn", 16);
+    });
+    const runtime = await piStubRuntime(api.url, { provider, id: "sol", limits });
+    const paths = appPathsFor(root);
+    const session = await createPiSessionFactory({ agentDir: join(root, "pi") }).open(
+      crewmateSessionSpec(
+        paths,
+        {
+          ...crewmateToolDelegate(),
+          machineId: LOCAL_MACHINE_ID,
+          taskId: "task-1",
+          cwd: root,
+          evidenceDir: crewmateEvidenceDir(paths, "task-1"),
+          model: { provider, id: "sol" },
+        },
+        { backend: "pi", runtime },
+      ),
+    );
+    const events: SessionEvent[] = [];
+    session.subscribe((event) => events.push(event));
+    try {
+      await session.prompt("Find the failing test in build.log.");
+      const largest = Math.max(...readings.map((reading) => reading.tokens));
+      if (below !== undefined) expect(largest).toBeLessThan(below);
+      if (past !== undefined) expect(largest).toBeGreaterThan(past);
+      // The whole build reaches about 345,700 tokens, so one summary brings it
+      // under a step for good.
+      expect(readings.filter((reading) => reading.summary)).toHaveLength(
+        below === undefined ? 0 : 1,
+      );
+      expect(readings.filter((reading) => !reading.summary)).toHaveLength(reads + 1);
+      expect(events.filter((event) => event.type === "turn_failed")).toEqual([]);
+    } finally {
+      session.dispose();
+      await session.closed();
+      await catalogRefreshesSettled();
+      await api.close();
+    }
+  },
+);
 
 // A user's report: GPT-6.2 never reuses a request's `instructions` from its
 // prompt cache, so every request of a crewmate's conversation paid for its

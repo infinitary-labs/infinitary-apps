@@ -28,6 +28,7 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import type { CrewSpeed } from "@shared/crewSpeed";
 import { isCustomApiProvider } from "@shared/customApi";
+import { COPILOT_PROVIDER_ID } from "@shared/providers";
 import type { Reasoning } from "@shared/reasoning";
 import type { BashOutcome } from "../jobs/jobManager";
 import type { ServedInstructions, ServedMessage, ServedState } from "../orchestrator/seat";
@@ -1134,7 +1135,7 @@ function budgetCustomCompaction(
       ? within(stated.reserveTokens)
       : Math.min(DEFAULT_COMPACTION_SETTINGS.reserveTokens, Math.ceil(quarter / 0.8))
     : defaultReserve;
-  const ceiling = compactionCeiling(model, compaction, reserve);
+  const ceiling = compactionCeiling(session, model, compaction, reserve);
   // Pi triggers above window - reserve. Recompute rather than retaining a
   // previous large-window reserve when the next attachment uses a smaller model.
   const reserveTokens = Math.max(
@@ -1159,19 +1160,32 @@ function budgetCustomCompaction(
 
 /**
  * The context an app-owned rule keeps a session under, when it states one.
- * Past the model's first price step every input token costs more, so a
- * session asked to stay below it treats the step as Pi treats the window:
- * it summarizes once the context passes the step less the same reserve,
- * which leaves room for what the next request adds before Pi checks again.
+ * Past a price step every input token costs more, so a session asked to stay
+ * below one treats it as Pi treats the window: it summarizes once the context
+ * passes the step less the same reserve, which leaves room for the incoming
+ * prompt and the error in Pi's estimate.
+ *
+ * A step counts only when that trigger sits a reserve above what a summary
+ * keeps (the instructions, tool schemas and Pi's kept turns); below it Pi
+ * would summarize before every request and never get under, so the rule
+ * takes the model's next step, or leaves Pi's own trigger. Copilot's plan
+ * counts premium requests, not tokens (docs/quota.md), so its listed prices
+ * are no cost a summary saves.
  */
 function compactionCeiling(
+  session: AgentSession,
   model: NonNullable<AgentSession["model"]>,
   compaction: SessionSpec["compaction"],
   reserve: number,
 ): number | undefined {
-  const steps = compaction?.belowPriceStep
-    ? (model.cost.tiers ?? []).map((tier) => tier.inputTokensAbove).filter((step) => step > reserve)
-    : [];
+  let steps: number[] = [];
+  if (compaction?.belowPriceStep && model.provider !== COPILOT_PROVIDER_ID) {
+    const kept =
+      piPrefixTokens(session) + session.settingsManager.getCompactionKeepRecentTokens(model);
+    steps = (model.cost.tiers ?? [])
+      .map((tier) => tier.inputTokensAbove)
+      .filter((step) => step - reserve > kept + reserve);
+  }
   const limits = [
     ...(compaction?.maxContextTokens === undefined ? [] : [compaction.maxContextTokens]),
     ...(steps.length > 0 ? [Math.min(...steps) - reserve] : []),

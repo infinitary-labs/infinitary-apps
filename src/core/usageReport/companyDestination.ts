@@ -95,7 +95,7 @@ export function companyDestination(deps: CompanyDestinationDeps): {
      * Settings → Usage's line: where the report sends every other model's
      * work, or else where only Claude's own records go: a managed setup's
      * client, or the receiver for the person's own, reports Claude's work to
-     * a setup the report cannot send to over gRPC.
+     * a setup the report cannot send to over gRPC or with certificate files.
      */
     async reporting() {
       await refresh();

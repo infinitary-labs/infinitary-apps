@@ -90,7 +90,7 @@
   "src/core/orchestrator/handedResult.test.ts": 1.1,
   "src/core/orchestrator/holdRules.inbox.test.ts": 2.5,
   "src/core/orchestrator/idleLadder.mergeLine.test.ts": 2.8,
-  "src/core/orchestrator/idleLadder.waits.test.ts": 5.3,
+  "src/core/orchestrator/idleLadder.waits.test.ts": 3.9,
   "src/core/orchestrator/inPlaceWork.folders.test.ts": 7.6,
   "src/core/orchestrator/intake.git.test.ts": 9.2,
   "src/core/orchestrator/mergeReviews.test.ts": 4.7,

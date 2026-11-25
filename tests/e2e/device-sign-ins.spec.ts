@@ -34,6 +34,7 @@ import {
   addCustomHeader,
   customApiBlock,
   customApiEditDialog,
+  customApiFile,
   customApiForm,
   fillCustomApi,
   saveCustomApi,
@@ -1170,5 +1171,115 @@ test("a custom API here is used on a computer, which keeps its own key and follo
     );
   } finally {
     await api.close();
+  }
+});
+
+// INF-6581's plan, piece 3: a connection from the connection file here is
+// used on a computer too, and the file moving its address pauses it there
+// until it is approved again there, which leaves one working connection.
+test("a connection from the connection file here is used on a computer, and a new address there is approved again there", async () => {
+  test.setTimeout(150_000);
+  const { app, page, deviceId } = await homeAndComputer();
+  const port = app.mockProvider?.port;
+  if (!port) throw new Error("The stand-in provider did not start.");
+  const list = {
+    object: "list",
+    data: [{ id: "operator-model", context_length: 8192, max_completion_tokens: 1024 }],
+  };
+  const api = await startCustomApiFixture(port, undefined, list);
+  const moved = await startCustomApiFixture(port, undefined, list);
+  const thereKey = "sk-e2e-custom-file-there";
+  const path = join(scratchDir("custom-connection-file-"), "models.json");
+  const reading = (baseUrl: string) =>
+    JSON.stringify({
+      providers: {
+        "team-gateway": {
+          name: "Team gateway",
+          baseUrl,
+          api: "openai-completions",
+          models: [{ id: "operator-model", contextWindow: 8192, maxTokens: 1024 }],
+        },
+      },
+    });
+  /** The computer's connections that follow the one here, as it says them. */
+  const there = (homeId: string) =>
+    page.evaluate(
+      ({ id, homeId }) =>
+        window.infinitary.devices
+          .signIns()
+          .then(
+            (rows) =>
+              rows
+                .find((row) => row.deviceId === id)
+                ?.signIns?.custom?.filter((view) => view.home?.name === homeId) ?? [],
+          ),
+      { id: deviceId, homeId },
+    );
+  try {
+    writeFileSync(path, reading(api.baseUrl));
+    // The picker is the system's own sheet, answered in the main process.
+    await app.app.evaluate(({ dialog }, answer) => {
+      dialog.showOpenDialog = (async () => ({
+        canceled: false,
+        filePaths: [answer],
+      })) as unknown as typeof dialog.showOpenDialog;
+    }, path);
+    await openIntelligence(page);
+    const file = customApiFile(page);
+    await file.choose.click();
+    await file.pending("team-gateway").approve.click();
+    const f = customApiForm(page);
+    await f.http.check();
+    await f.key.fill("sk-e2e-custom-file-here");
+    expect(await saveCustomApi(page)).toBe("saved");
+    const homeId = await page.evaluate(() =>
+      window.infinitary.accounts.custom.list().then((rows) => rows[0]?.accountId ?? ""),
+    );
+    const here = customApiBlock(page, homeId);
+    await expect(here.block).toContainText("Ready");
+
+    await here.offerOn("as Builder").click();
+    await expect(f.address).toHaveValue(api.baseUrl);
+    await f.http.check();
+    await f.key.fill(thereKey);
+    expect(await saveCustomApi(page)).toBe("saved");
+    await expect
+      .poll(async () => (await there(homeId)).map((view) => view.home?.state))
+      .toEqual(["current"]);
+    const firstId = (await there(homeId))[0]?.accountId ?? "";
+    const first = customApiBlock(page, firstId);
+    await expect(first.block).toContainText("Ready");
+
+    // The file names a new address: paused there until approved again there.
+    writeFileSync(path, reading(moved.baseUrl));
+    await expect
+      .poll(async () => (await there(homeId)).map((view) => view.home?.state))
+      .toEqual(["changed"]);
+    await expect(first.block).toContainText(
+      m.accountsCustomApiHomeChanged({ home: HERE.this, who: PLACE.who }),
+    );
+    await first.approveAgain.click();
+    await expect(f.address).toHaveValue(moved.baseUrl);
+    await f.http.check();
+    await f.key.fill(thereKey);
+    expect(await saveCustomApi(page)).toBe("saved");
+
+    // One connection works there, at the new address; the old one only waits to be disconnected.
+    await expect
+      .poll(async () =>
+        (await there(homeId)).map((view) => `${view.home?.state}:${view.baseUrl}`).sort(),
+      )
+      .toEqual([`changed:${api.baseUrl}`, `current:${moved.baseUrl}`].sort());
+    const nextId =
+      (await there(homeId)).find((view) => view.home?.state === "current")?.accountId ?? "";
+    await expect(customApiBlock(page, nextId).block).toContainText("Ready");
+    await expect(first.block).toContainText(
+      m.accountsCustomApiHomeReplaced({ home: HERE.this, who: PLACE.who }),
+    );
+    await expect(first.approveAgain).toHaveCount(0);
+    expect(moved.requests.some(({ key }) => key === thereKey)).toBe(true);
+  } finally {
+    await api.close();
+    await moved.close();
   }
 });

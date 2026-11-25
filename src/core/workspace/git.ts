@@ -21,13 +21,6 @@ export const APP_GIT_IDENTITY = [
   `user.email=${APP_GIT_EMAIL}`,
 ];
 
-export const APP_GIT_ENV = {
-  GIT_AUTHOR_NAME: APP_GIT_NAME,
-  GIT_AUTHOR_EMAIL: APP_GIT_EMAIL,
-  GIT_COMMITTER_NAME: APP_GIT_NAME,
-  GIT_COMMITTER_EMAIL: APP_GIT_EMAIL,
-};
-
 /**
  * How long one fetch or push may wait on the place a project lives. A slow
  * or silent remote must not hold what waits behind the call: a dispatch

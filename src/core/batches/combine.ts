@@ -1,7 +1,7 @@
 import { rm } from "node:fs/promises";
 import { resolve } from "node:path";
 import type { BatchChange, BatchMember } from "@shared/batches";
-import { APP_GIT_ENV, git, gitFailure, REMOTE_TIMEOUT_MS } from "../workspace/git";
+import { APP_GIT_IDENTITY, git, gitFailure, REMOTE_TIMEOUT_MS } from "../workspace/git";
 
 /**
  * The combine of batches of your own (docs/forge.md, "Batches of your
@@ -446,9 +446,15 @@ async function readable(repoDir: string, version: string): Promise<boolean> {
  * no newer git than `merge-tree --write-tree` does.
  */
 async function rebased(repoDir: string, ours: string, base: string): Promise<string> {
-  return git(repoDir, ["commit-tree", `${ours}^{tree}`, "-p", base, "-m", "batch"], {
-    env: APP_GIT_ENV,
-  });
+  return git(repoDir, [
+    ...APP_GIT_IDENTITY,
+    "commit-tree",
+    `${ours}^{tree}`,
+    "-p",
+    base,
+    "-m",
+    "batch",
+  ]);
 }
 
 /**

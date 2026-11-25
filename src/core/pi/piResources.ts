@@ -12,8 +12,8 @@ import careQuickGuide from "../../../resources/runbooks/care/quick.json" with { 
 import { BROWSER_COMMAND } from "../browser/commandWords";
 import { CREWMATE_INTEGRATIONS_LINE, INFINITARY_COMMAND } from "../integrations";
 import {
-  CARD_AUTHORING,
   CARD_REPLY,
+  CREWMATE_CARD_AUTHORING,
   CREWMATE_HANDOFF,
   FIRSTMATE_CARD_AUTHORING,
   FIRSTMATE_HANDOFF,
@@ -323,7 +323,7 @@ The user sees cards and their threads, never a chat of your own. Follow emit_car
           ...(!procedure || opensPullRequest(procedure.delivery) ? [deliveryGuide.trim()] : []),
         ]
       : [runbookText]),
-    CARD_AUTHORING,
+    CREWMATE_CARD_AUTHORING,
     CARD_REPLY,
     CREWMATE_HANDOFF,
     ...(backend ? [crewmateBackendNote(backend)] : []),

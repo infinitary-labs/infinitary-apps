@@ -17,7 +17,7 @@ import {
   riskDeclarationSchema,
 } from "@shared/risk";
 import { isPublishedView, SQL_VIEWS } from "@shared/sql";
-import { TASK_BROWSER_REQUEST_MAX, UNKNOWN_OUTCOME_WORDS } from "@shared/taskBrowser";
+import { TASK_BROWSER_REQUEST_MAX } from "@shared/taskBrowser";
 import { cutText } from "@shared/textCut";
 import { type Static, type TSchema, Type } from "typebox";
 import { browserCommand } from "../browser/commandWords";
@@ -728,8 +728,8 @@ const BROWSER_PAGE_DESCRIPTION = [
 
 /** The label the request's description gives as its example of the captain's step to sign in. */
 export const BROWSER_SIGN_IN_STEP = "Open browser and sign in";
-/** And its example of the captain's step to pay, on a review. */
-export const BROWSER_PAY_STEP = "Open browser and pay";
+/** And its example of the captain's step to pay, which the browser's purchase review names. */
+export { BROWSER_PAY_STEP } from "@shared/taskBrowser";
 
 /**
  * The request for the captain to take over the browser, on the same
@@ -742,11 +742,10 @@ const BROWSER_HANDOFF_DESCRIPTION = [
   `The card is an ordinary decision naming the site and why, with exactly one action whose effect is { kind: "open", target: "browser" }, labeled as the captain's step, such as ${BROWSER_SIGN_IN_STEP}, beside one such as Leave waiting.`,
   "The app pauses your browser before the card goes up; its commands refuse until the captain returns control, and only their Return control resumes you, once, with your earlier refs gone. Put the steps and values to copy in the card body.",
   `Returning control gives this task the signed-in site, never permission to buy, pay or submit something that matters. ${browserCommand("stop")} withdraws a waiting request.`,
-  "A purchase, booking or other submission that commits the captain is the captain's to make: prepare it up to its last step and ask here, with the card as its review.",
-  `The review names what the captain commits to, read from the page now - for a trip the route, dates and times with time zones, passengers, seller, total and currency, baggage and fare rules - with anything uncertain and what changed; label the step, such as ${BROWSER_PAY_STEP}, beside one such as Stop here.`,
-  "If the price or terms change after a review, stop and review again: an earlier choice does not cover them.",
-  "If the page does not confirm the captain's last step, the outcome is unknown: never submit, reload or resend it; check where the site lists it; ask the captain.",
-  UNKNOWN_OUTCOME_WORDS,
+  // What a purchase review names lives in the browser's home view and the
+  // help of the commands that press (`BROWSER_RULES.review`), read when the
+  // work reaches a purchase; this keeps who makes it (INF-6570's budget card).
+  "A purchase, booking or other submission that commits the captain is the captain's to make: prepare it up to its last step and ask here, with the card as its review; your browser's home view says what a review names.",
 ].join(" ");
 
 /**

@@ -713,7 +713,7 @@ A crewmate prepares it up to its last step and stops there; it never presses tha
 It asks on an ordinary decision card with `browser_handoff`, which is the review: the card names what the captain commits to, read from the page as it is now - for a trip the route, dates and times with their time zones, passengers, seller, total and currency, baggage and fare rules - with anything still uncertain, and marks what changed since the captain last chose.
 Its open-browser action is labeled as the step, such as `Open browser and pay`, beside one such as `Stop here`.
 If the price or terms change after a review, the crewmate stops and asks again on a new one: an earlier choice does not cover them.
-What a review names, and when one is needed, is the crewmate's knowledge, carried in `browser_handoff`'s description, its prompt line and the help of the commands that press; the host reads none of it, and there is no booking runner and no card kind for it.
+What a review names, and when one is needed, is the crewmate's knowledge: its prompt line and `browser_handoff`'s description say the step is the captain's and the card is its review, and the browser's home view and the help of the commands that press say what the review names (`BROWSER_RULES.review`, `src/core/axi/browserCommands.ts`), so only a crewmate whose work reaches a purchase reads it; the host reads none of it, and there is no booking runner and no card kind for it.
 The host handles the review card as any request ("Asking for help"): the browser pauses before it goes up, and the action's click hands the captain the page.
 
 **The captain's step.**
@@ -722,7 +722,7 @@ The captain's Return control wakes the crewmate once, and the wake (`browser-ret
 Whether the captain paid or not, the card details the captain typed stay the captain's: a payment page handed back reads its card fields as filled, with their values hidden, and is not photographed ("A signed-in page").
 If the page does not confirm it - an error, a page still processing, no answer, or a browser that is gone - the outcome is unknown: the crewmate never submits, reloads or resends it, checks where the site lists it, such as its bookings, and asks the captain on a card to check in the browser.
 Until the seller or its payment service shows what happened, the crewmate says plainly that it does not know whether it went through: a missing booking or charge proves nothing, so it never guesses either way and never suggests trying again.
-The handoff's description and both browser wakes that meet an unknown outcome carry these words from one constant, `UNKNOWN_OUTCOME_WORDS` (`src/shared/taskBrowser.ts`).
+The browser's review rule and both browser wakes that meet an unknown outcome carry these words from one constant, `UNKNOWN_OUTCOME_WORDS` (`src/shared/taskBrowser.ts`).
 
 **Never sent twice.**
 The browser never sends a form twice.

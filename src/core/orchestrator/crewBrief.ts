@@ -347,7 +347,14 @@ export class CrewBrief {
         sections.push([CONTRIBUTION_DELIVERY_WORDS]);
       }
       const basis = basisFacts(this.options, this.host.cards, record);
-      if (basis) sections.push(basisSectionParts(await this.withCardFile(taskId, basis)));
+      if (basis)
+        sections.push(
+          basisSectionParts(
+            await this.withCardFile(taskId, basis),
+            "basis",
+            record?.shape?.kind !== "review",
+          ),
+        );
       // A review's basis is the builder it reads; the task that builder is
       // built on, such as its plan, may settle a finding (INF-6608).
       const reviewed =

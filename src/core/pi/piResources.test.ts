@@ -1,12 +1,16 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { renderBasisSection } from "../orchestrator/intentBrief";
+import { renderAnswerShapeSection, renderBasisSection } from "../orchestrator/intentBrief";
 import { SEQUENCES_SEED } from "../personal/sequencesSkill";
 import {
+  ANSWER_CARD_AUTHORING,
+  ANSWER_HANDOFF,
+  BASIS_HANDOFF,
   CARD_AUTHORING,
   CARD_MECHANICS,
   CARD_REPLY,
   CLAUDE_TOOL_DESCRIPTION_CAP,
+  CREWMATE_CARD_AUTHORING,
   CREWMATE_EMIT_CARD_DESCRIPTION,
   CREWMATE_HANDOFF,
   cardAuthoringSentences,
@@ -197,50 +201,97 @@ describe("the plan-to-build handoff reaches every agent that acts on it", () => 
     choice: "Approve and build",
     answers: ['- look: {"tiltDeg":57}, changed'],
   });
-  const agents = [
-    ["firstmate", `${buildFirstmateSystemPrompt()}\n\n${SEQUENCES_SEED}`],
-    ["crewmate", `${buildCrewmateSystemPrompt()}\n\n${builderBasis}`],
-    ["crewmate/pi", `${buildCrewmateSystemPrompt("pi")}\n\n${builderBasis}`],
-    ["crewmate/claude", `${buildCrewmateSystemPrompt("claude")}\n\n${builderBasis}`],
-  ] as const;
-
-  it("tells every agent what authorizes implementation and what does not", () => {
-    const facts = [
-      "The captain's Approve and build submits the current values, including unchanged defaults, and authorizes implementation, not merging",
-      "No prior capture or second approval is required.",
-      "explicit build or ship words authorize implementation",
-      "without another approval click",
-      "Selection alone, praise, finish/keep, dismissal and script-triggered actions are not build permission",
-      "with settings builds nothing",
-      "feedback revises the preview",
-      "a reply is not a closing choice and does not authorize merging",
-      "answer a reply with one thread line naming who is next, card unchanged",
-      "Revise the same card once, naming the started builder as next owner",
-    ];
-    for (const [name, served] of agents) {
+  // A crewmate reads what only a planner acts on in an answer task's
+  // answer-shape section, and what only a builder acts on in the basis
+  // section of the answer it builds on (INF-6570's budget card). A task has
+  // one deliverable, so a planner and a builder are read apart.
+  const planner = renderAnswerShapeSection();
+  const backends = [undefined, "pi", "claude"] as const;
+  const runtime = (backend?: "pi" | "claude") => (backend ? `/${backend}` : "");
+  type Agent = readonly [name: string, served: string];
+  type Role = "firstmate" | "planner" | "builder";
+  const firstmateAgent: Agent = [
+    "firstmate",
+    `${buildFirstmateSystemPrompt()}\n\n${SEQUENCES_SEED}`,
+  ];
+  const roles: Record<Role, readonly Agent[]> = {
+    firstmate: [firstmateAgent],
+    planner: backends.map((backend) => [
+      `planner${runtime(backend)}`,
+      `${buildCrewmateSystemPrompt(backend)}\n\n${planner}`,
+    ]),
+    builder: backends.map((backend) => [
+      `builder${runtime(backend)}`,
+      `${buildCrewmateSystemPrompt(backend)}\n\n${builderBasis}`,
+    ]),
+  };
+  const agents = [...roles.firstmate, ...roles.planner, ...roles.builder];
+  const crew = [...roles.planner, ...roles.builder];
+  const reaches = (facts: readonly string[], who: readonly Role[]) => {
+    for (const [name, served] of who.flatMap((role) => roles[role])) {
       for (const fact of facts) expect(served, `${name}: ${fact}`).toContain(fact);
     }
+  };
+  const missing = (facts: readonly string[], who: readonly Role[]) => {
+    for (const [name, served] of who.flatMap((role) => roles[role])) {
+      for (const fact of facts) expect(served, `${name}: ${fact}`).not.toContain(fact);
+    }
+  };
+
+  it("tells every agent what authorizes implementation and what does not", () => {
+    reaches(
+      [
+        "The captain's Approve and build submits the current values, including unchanged defaults, and authorizes implementation, not merging",
+        "No prior capture or second approval is required.",
+        "explicit build or ship words authorize implementation",
+        "without another approval click",
+        "Selection alone, praise, finish/keep, dismissal and script-triggered actions are not build permission",
+        "with settings builds nothing",
+        "feedback revises the preview",
+        "answer a reply with one thread line naming who is next, card unchanged",
+        "Revise the same card once, naming the started builder as next owner",
+      ],
+      ["firstmate", "planner"],
+    );
+    reaches(
+      ["a reply is not a closing choice and does not authorize merging"],
+      ["firstmate", "planner", "builder"],
+    );
   });
 
   it("serves requested-plan acceptance and recovery safeguards to every agent", () => {
-    const facts = [
-      'A read-only planner defaults a product change to "Approve and build"',
-      'and an operation to "Start the next step", beside "Save and defer" and "Abandon", with changes by reply',
-      // INF-87 P1/P4: Queued owns continuation; Backlog and authorization boundaries remain.
-      "Acceptance queues approved plan pieces (when-ready)",
-      "the host starts each as its prerequisites clear",
-      // INF-3170: the builder fixes its own work's failures without a second approval.
-      "It authorizes no credential command, permission change, merge, or repair outside the approved work; fixing the approved work's own failures is part of building it.",
-      "Backlog (on-request) waits for the captain's word",
-      "do not requeue a piece they moved there without fresh authorization",
-      "At a captain-only action, its crewmate asks on a card",
-      "design-only limits even a filed build",
-      "Never steer an unstarted builder or closed planner",
-      "Every planned or recovered builder keeps the full accepted specification",
-      "Implementation approval, plan closure, saved answers and passing validation never grant merge permission",
-    ];
+    reaches(
+      [
+        'A read-only planner defaults a product change to "Approve and build"',
+        'and an operation to "Start the next step", beside "Save and defer" and "Abandon", with changes by reply',
+        "Read-only limits the planner, not its authorized successor.",
+      ],
+      ["firstmate", "planner"],
+    );
+    reaches(
+      [
+        // INF-87 P1/P4: Queued owns continuation; Backlog and authorization boundaries remain.
+        "Acceptance queues approved plan pieces (when-ready)",
+        "the host starts each as its prerequisites clear",
+        // INF-3170: the builder fixes its own work's failures without a second approval.
+        "It authorizes no credential command, permission change, merge, or repair outside the approved work; fixing the approved work's own failures is part of building it.",
+        "Backlog (on-request) waits for the captain's word",
+        "do not requeue a piece they moved there without fresh authorization",
+        "At a captain-only action, its crewmate asks on a card",
+        "design-only limits even a filed build",
+        "Start bounded work only when the settled scope authorizes it.",
+      ],
+      ["firstmate", "builder"],
+    );
+    reaches(
+      [
+        "Never steer an unstarted builder or closed planner",
+        "Every planned or recovered builder keeps the full accepted specification",
+        "Implementation approval, plan closure, saved answers and passing validation never grant merge permission",
+      ],
+      ["firstmate", "planner", "builder"],
+    );
     for (const [name, served] of agents) {
-      for (const fact of facts) expect(served, `${name}: ${fact}`).toContain(fact);
       // Contract 4.65 (FI3-642): a plan's changes come by reply, so no agent
       // is told to set a revision beside the handoff as a button.
       expect(served, name).not.toContain("with revision or deferral separate");
@@ -251,15 +302,20 @@ describe("the plan-to-build handoff reaches every agent that acts on it", () => 
   });
 
   it("tells each builder how to acknowledge the chosen result", () => {
-    const facts = [
-      "A planner never edits product code: on an approval by reply it reports the approval words and current settings with needs_firstmate, for the first mate to start implementation grounded on its answer",
-      "Latest submitted values supersede earlier ones.",
-      "the resolved implementation spec before product edits, without reopening approval",
-      "product settings from demo-only theme, sample crew, layout and playback",
-    ];
-    for (const [name, served] of agents.slice(1)) {
-      for (const fact of facts) expect(served, `${name}: ${fact}`).toContain(fact);
-    }
+    reaches(
+      [
+        "A planner never edits product code: on an approval by reply it reports the approval words and current settings with needs_firstmate, for the first mate to start implementation grounded on its answer",
+      ],
+      ["planner"],
+    );
+    reaches(["Latest submitted values supersede earlier ones."], ["planner", "builder"]);
+    reaches(
+      [
+        "the resolved implementation spec before product edits, without reopening approval",
+        "product settings from demo-only theme, sample crew, layout and playback",
+      ],
+      ["builder"],
+    );
   });
 
   it("tells every agent what Save and defer keeps, who files the build, and what starts it", () => {
@@ -272,12 +328,12 @@ describe("the plan-to-build handoff reaches every agent that acts on it", () => 
       "The captain's Start on a saved build, or their words to build it, authorizes it",
       "its basis's Save and defer choice is not a refusal",
     ];
-    for (const [name, served] of agents.slice(0, 1)) {
+    for (const [name, served] of roles.firstmate) {
       for (const fact of facts) expect(served, `${name}: ${fact}`).toContain(fact);
     }
     // The planned build waits for the captain: the sequences document says so
     // where the Firstmate reads the implement step's line.
-    expect(agents[0][1].replace(/\s+/g, " ")).toContain(
+    expect(firstmateAgent[1].replace(/\s+/g, " ")).toContain(
       "on Save and defer it waits on request until I press Start or ask",
     );
   });
@@ -291,29 +347,31 @@ describe("the plan-to-build handoff reaches every agent that acts on it", () => 
       "the first mate emits the question on the open parent or successor",
       "then call update_task start_now separately in this same turn",
     ];
-    const crewOnly = [
-      "Declare asking true on a question card",
+    reaches(firstmateOnly, ["firstmate"]);
+    missing(firstmateOnly, ["planner", "builder"]);
+    const plannerOnly = [
       "A planner never edits product code",
-      "The builder records and acknowledges the resolved implementation spec",
-      "A saved build first checks the plan against the current code",
       "After an answer authorizes a build, report without a new captain wait",
       "A preview ships nothing: scratch stays private in the working copy",
       "footer choices and author-directed replies submit current settings",
+    ];
+    const builderOnly = [
+      "The builder records and acknowledges the resolved implementation spec",
+      "A saved build first checks the plan against the current code",
+    ];
+    const everyCrewmate = [
+      "Declare asking true on a question card",
       // INF-2715: the Firstmate's own cards are static, so a card script is the crew's alone.
       "An inline <script> (no src) may add behavior",
     ];
-    for (const [name, served] of agents) {
-      for (const fact of firstmateOnly) {
-        if (name === "firstmate") expect(served).toContain(fact);
-        else expect(served).not.toContain(fact);
-      }
-      for (const fact of crewOnly) {
-        if (name === "firstmate") expect(served).not.toContain(fact);
-        else expect(served).toContain(fact);
-      }
-    }
+    reaches(plannerOnly, ["planner"]);
+    missing(plannerOnly, ["firstmate", "builder"]);
+    reaches(builderOnly, ["builder"]);
+    missing(builderOnly, ["firstmate", "planner"]);
+    reaches(everyCrewmate, ["planner", "builder"]);
+    missing(everyCrewmate, ["firstmate"]);
     // INF-416 piece H: reading the saved plan by key stays in the core, not a second time in HANDOFF.
-    const [, firstmate] = agents[0];
+    const [, firstmate] = firstmateAgent;
     expect(firstmate).toContain(
       "Read saved plans with tasks by key and create accepted work yourself",
     );
@@ -350,7 +408,7 @@ describe("the plan-to-build handoff reaches every agent that acts on it", () => 
   });
 
   it("sends an ask for a prototype to a plan with a preview, and grounds its builder", () => {
-    const [, firstmate] = agents[0];
+    const [, firstmate] = firstmateAgent;
     for (const fact of [
       "an ask for a prototype, a mock-up or a try is a plan with a playable preview, relayed as the plan line says",
       "When I ask for a prototype, a mock-up or to try something, it is this plan with a playable preview as the card: the thing itself, adjustable, its settings staged for the build.",
@@ -362,7 +420,7 @@ describe("the plan-to-build handoff reaches every agent that acts on it", () => 
     }
     // FI3-872: no crewmate is told of a prototype of its own; the
     // Firstmate's whole fixed context is held in firstmate-fixed-context.test.ts.
-    for (const [name, served] of agents.slice(1)) {
+    for (const [name, served] of crew) {
       expect(served, name).not.toMatch(/prototype/i);
     }
   });
@@ -390,10 +448,16 @@ describe("the card contract is re-homed by kind (contract v3.6, captain lock 1)"
       "An answer implying any captain next step, even optional, is a decision; only a pure fact is a note.";
     expect(CARD_AUTHORING.split(decisionFirst).length - 1).toBe(1);
     for (const [name, prompt] of personas) {
-      const text = name === "firstmate" ? FIRSTMATE_CARD_AUTHORING : CARD_AUTHORING;
+      const text = name === "firstmate" ? FIRSTMATE_CARD_AUTHORING : CREWMATE_CARD_AUTHORING;
       expect(prompt.split(text).length - 1, name).toBe(1);
       expect(prompt.split(decisionFirst).length - 1, name).toBe(1);
+      // A preview's rules are an answer's (INF-6570's budget card, the
+      // captain's choice): no prompt carries them.
+      expect(prompt, name).not.toContain(ANSWER_CARD_AUTHORING);
     }
+    // An answer task reads them once, in its answer-shape section.
+    expect(renderAnswerShapeSection().split(ANSWER_CARD_AUTHORING).length - 1).toBe(1);
+    expect(ANSWER_CARD_AUTHORING).toContain("A preview ships nothing");
   });
 
   it("gives every persona the five sentence habits for card copy, once (contract v4.58)", () => {
@@ -496,8 +560,22 @@ describe("the card contract is re-homed by kind (contract v3.6, captain lock 1)"
       choice: "Approve and build",
       answers: ['- look: {"tiltDeg":57}, changed'],
     });
+    // INF-6570's budget card, the captain's choice: what only a planner acts
+    // on is served once in an answer task's answer-shape section, and what
+    // only a builder acts on once in the basis section; neither section says
+    // a hand-over sentence beyond its own part or one the prompt already says.
+    for (const [section, part] of [
+      [renderAnswerShapeSection(), ANSWER_HANDOFF],
+      [basis, BASIS_HANDOFF],
+    ] as const) {
+      expect(section.split(part).length - 1, part).toBe(1);
+      const rest = section.replace(part, "");
+      for (const sentence of handoff) {
+        expect(rest, sentence).not.toContain(sentence);
+        if (part.includes(sentence)) expect(CREWMATE_HANDOFF, sentence).not.toContain(sentence);
+      }
+    }
     for (const text of [
-      basis,
       FIRSTMATE_EMIT_CARD_DESCRIPTION,
       ...CREWMATE_TOOLS.map((tool) => tool.description),
     ]) {
@@ -728,9 +806,10 @@ it("keeps the full authoring and handoff sources word for word", () => {
   // INF-6293's approved plan adds the one tradeoff chart text every author reads; the token list, the write-in row and time and language say the same in fewer words.
   // The fact strip's wording calls the task's setting its rigor level.
   // INF-6614's approved plan names tradeoff headings positively so high is better (save cost), the suggestions examples only.
+  // INF-6639 (the captain's yes) moves a preview's rules to an answer's brief and restores its app's-look sentence.
   const hash = (text: string) => createHash("sha256").update(text).digest("hex");
   expect(hash(CARD_AUTHORING)).toBe(
-    "6d9a0aaab3e4dccda666edae8528bd7402bcf0ba63c499ef64e60f6442ababce",
+    "e7e9a4ab1e1c7b4960b9a4b105b7438f4a0664b0f879457bed7e7081d0c267da",
   );
   // INF-416 piece H drops HANDOFF's restatement of reading the saved plan by key; the core still says it.
   // INF-976 widens the first mate's check before a start to filing, read off the built-on work.
@@ -743,5 +822,6 @@ it("keeps the full authoring and handoff sources word for word", () => {
   // A prompt-budget trim after INF-4425 says the first mate's filing of a plan's pieces in fewer words.
   // A later prompt-budget trim drops three restatements: the planner's read-only limit, the closed-answer line and the bounded-work line.
   // INF-6293's approved plan makes room for the tradeoff chart text: the merge permission line says the same in fewer words.
-  expect(hash(HANDOFF)).toBe("60089ed6f97cdb96a4ce0617e436615551f23720121fab969685c498a935ea8e");
+  // INF-6639 (the captain's yes) restores the read-only, closed-answer, bounded-work, last-piece and parent lines and "more than one part", and serves the planner's and builder's parts in their briefs.
+  expect(hash(HANDOFF)).toBe("40dfd591664691d124e6843efd42e4045210d7523e805c245f0c50befc07f22a");
 });

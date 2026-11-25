@@ -17,6 +17,9 @@ It is a `menuitemcheckbox` with `aria-checked`; a pick, by click, Enter or Space
 Settings come first, then a separator, then the actions, then the one destructive item behind its own separator.
 A setting that cannot change now keeps its state's fill, dimmed, with its `detail` saying why (Switch's "off").
 A glyph that belongs to the setting (the ✱ of Prefer for crew work) sits beside its label, since the switch holds the end.
+One of a few: where the items are choices of which only one holds at a time (Tasks' Group tasks: By status, By tag), each passes `chosen`, true on the current one, which draws a check at its end (Lucide `check` at 14px in `--accent`) and nothing on the others.
+It is a `menuitemradio` with `aria-checked`; a pick, by click, Enter or Space, makes it the choice and closes the menu, as an action does, and focus lands on the current choice when the menu opens.
+A choice that cannot hold now stays listed, dim, with its `detail` saying why, as any dim item.
 Use it when a row would otherwise carry three or more controls; the one action that must stay inline is the one nothing moves without (a "Sign in" on a row that needs it).
 In a row of chrome whose other controls are words, a word may stand in for the kebab as a small ghost Button (`word="More"`, a task's browser view); the popover is the same, right-aligned under it.
 An item that cannot run now stays listed, dim (`--fg-3`), with its `detail` saying why, and a pick on it does nothing; any item may carry a `detail` sub-line in `--text-xs` (`--fg-3`) under its label saying what it does ("Asks once").

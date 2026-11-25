@@ -15,7 +15,7 @@ import { z } from "zod";
  */
 
 /** The ids a panel's frame speaks to its rail through (`inf.action`). */
-export const PANEL_RAIL_ACTIONS = ["rail.summarize", "rail.show"] as const;
+export const PANEL_RAIL_ACTIONS = ["rail.summarize", "rail.show", "rail.refuse"] as const;
 
 /** Why a panel is off its rail, in its own words: at most this many characters. */
 export const PANEL_OFF_RAIL_WHY_MAX = 60;
@@ -28,6 +28,12 @@ const showSchema = z.union([
     why: z.string().min(1).max(PANEL_OFF_RAIL_WHY_MAX).optional(),
   }),
 ]);
+
+/** `rail.refuse`'s value from a frame: the command's id, and why it cannot run now or null. */
+const refuseSchema = z.strictObject({
+  command: z.string().min(1),
+  why: z.string().min(1).max(PANEL_OFF_RAIL_WHY_MAX).nullable(),
+});
 
 /** At most three parts, each at most 32 characters: the header is a rail wide. */
 export const PANEL_SUMMARY_PARTS_MAX = 3;
@@ -65,9 +71,16 @@ export type RailSaid = {
   shown: boolean | undefined;
   /** Off its rail, why, in its own words; null when it said none. */
   why: string | null;
+  /** Its commands that cannot run now, by id, and why, in its own words. */
+  refused: Readonly<Record<string, string>>;
 };
 
-const NOTHING_SAID: RailSaid = Object.freeze({ summary: null, shown: undefined, why: null });
+const NOTHING_SAID: RailSaid = Object.freeze({
+  summary: null,
+  shown: undefined,
+  why: null,
+  refused: Object.freeze({}),
+});
 
 let said = new Map<string, RailSaid>();
 const listeners = new Set<() => void>();
@@ -118,6 +131,18 @@ export const panelRail = {
       typeof parsed.data === "boolean" ? { shown: parsed.data, why: undefined } : parsed.data;
     write(panel, { shown, why: shown ? null : (why ?? null) });
   },
+  /** One of its commands cannot run now, and why; null takes the words back. */
+  refuse(panel: string, value: unknown): void {
+    const parsed = refuseSchema.safeParse(value);
+    if (!parsed.success) {
+      throw new Error(
+        `rail.refuse: a command's id, and why it cannot run in at most ${PANEL_OFF_RAIL_WHY_MAX} characters, or null`,
+      );
+    }
+    const { command, why } = parsed.data;
+    const { [command]: _, ...rest } = panelRail.get(panel).refused;
+    write(panel, { refused: why === null ? rest : { ...rest, [command]: why } });
+  },
   /** Forgets what a panel said: it left the app. */
   forget(panel: string): void {
     if (!said.has(panel)) return;
@@ -135,13 +160,14 @@ export function useRailSaid(panel: string): RailSaid {
   );
 }
 
-/** `PanelProps.rail` for a panel's own page: whether it is collapsed, and its two calls. */
+/** `PanelProps.rail` for a panel's own page: whether it is collapsed, and its calls. */
 export function railProp(panel: string, collapsed: boolean, decides: boolean): PanelRail {
   return {
     collapsed,
     summarize: (parts) => panelRail.summarize(panel, parts),
     show: (shown, why) =>
       panelRail.show(panel, why === undefined ? shown : { shown, why }, decides),
+    refuse: (command, why) => panelRail.refuse(panel, { command, why }),
   };
 }
 
@@ -153,6 +179,7 @@ export function frameRailAction(
   return async (id, value) => {
     if (id === "rail.summarize") panelRail.summarize(panel, value);
     else if (id === "rail.show") panelRail.show(panel, value, decides);
+    else if (id === "rail.refuse") panelRail.refuse(panel, value);
     else throw new Error(`"${id}" is not one of a panel's rail actions`);
     return undefined;
   };

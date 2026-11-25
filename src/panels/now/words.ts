@@ -100,3 +100,9 @@ export function foldLabel(collapsed: boolean, key: string): string {
 /** The panel's asks from command search: collapse every task with parts listed under it, or expand all. */
 export const COLLAPSE_ALL_ASK = "collapse-parts";
 export const EXPAND_ALL_ASK = "expand-parts";
+/** Filter tasks by tag, from command search: the search opens with focus on the tag row. */
+export const TAG_FILTER_ASK = "tag-filter";
+/** The header's Group tasks, pressed by a click or by the Group tasks command. */
+export const GROUP_ASK = "group";
+/** Show tasks by tag: the command that opens the task board on its By tag view. */
+export const BOARD_TAGS_COMMAND = "board-tags";

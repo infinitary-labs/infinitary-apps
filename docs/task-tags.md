@@ -67,6 +67,28 @@ Until any task carries a tag, building a row's view reads only one row of `task_
   On update_task they apply after the call's other edits, so a move to another project comes first.
   The tasks tool lists a task's tags by name.
 
+## Finding and grouping work by tag
+
+The Tasks panel and the task board filter and group by tag, one project's tags at a time: the project in focus, or the only project with tags (`tagProjectOf`, `src/panels/now/rows.ts`).
+With no project in focus, other projects' tasks count and list under No tag.
+
+- **Tasks' search.**
+  Under the words field sit the project row (All projects first) and, while one project's tags apply, the tag row: All tags, each tag alphabetically with how many open tasks pressing it would list, even at 0, then No tag (`tagChipsOf`).
+  One tag at a time; a pressed tag narrows every group and count, Earlier matches included, and opens folded groups as typed words do.
+  Closing the search, or focusing a project that lacks the tag, lets go of it.
+  The tag row is one Tab stop: ← and → move along it, and Enter or Space presses.
+- **Group tasks.**
+  Tasks' third header button, drawn while the panel is open, opens a menu of By status (the default) and By tag; the choice is kept in the panel's store across restarts.
+  By tag lists Pinned, Waiting on you, one group per tag that has tasks, No tag, then Done · 7d (`tagGroupsOf`).
+  Tag groups start folded and keep each fold; inside one, rows run working, queued, then backlog and read as in their own groups, and a task with two tags lists under both.
+  A folded tag group draws a bar of one segment per task, working ones in ember, that rests and presses as a folded parent task's bar does (`tagGroupBarOf`).
+  While a tag is pressed only its group shows, open; where no tags apply, By tag is dim with a line saying why and the list stays by status.
+- **The task board.**
+  Its own tag row and By tag view (`docs/task-board.md`).
+- **The hover summary** names the tags a task carries under its project.
+- **Command search.**
+  Filter tasks by tag, Show tasks by tag and Group tasks, with no default keys; the first two say why they cannot run while no tags apply (`rail.refuse`, `docs/ui-plugins.md`).
+
 ## Saved data and older sides
 
 The tags migration adds both tables; an existing record upgrades with no step for the person, and every task starts with no tags (`docs/saved-data-compatibility.md`).

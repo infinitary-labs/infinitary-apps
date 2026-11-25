@@ -27511,6 +27511,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `kanban, board, queue, start, backlog, drop`;
   }
+  function commandPanelNowBoardTags() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `عرض المهام حسب الوسم`;
+      case "de":
+        return `Aufgaben nach Tag zeigen`;
+      case "es":
+        return `Mostrar tareas por etiqueta`;
+      case "fr":
+        return `Afficher les tâches par étiquette`;
+      case "ja":
+        return `タグ別にタスクを表示`;
+      case "ko":
+        return `태그별 작업 보기`;
+      case "pt-BR":
+        return `Mostrar tarefas por etiqueta`;
+      case "zh-Hans":
+        return `按标签显示任务`;
+      case "zh-Hant":
+        return `依標籤顯示任務`;
+      case "en-XA":
+        return `[Šĥöŵ ţášķš ƀý ţáĝ ~~~~~~]`;
+      case "ar-XB":
+        return `‮Show tasks by tag‬`;
+    }
+    return `Show tasks by tag`;
+  }
+  function commandPanelNowBoardTagsWords() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `كانبان, لوح, وسوم, تصنيف`;
+      case "de":
+        return `Kanban, Board, Tags, Label`;
+      case "es":
+        return `kanban, tablero, etiquetas, tags`;
+      case "fr":
+        return `kanban, tableau, étiquettes, tags`;
+      case "ja":
+        return `カンバン, ボード, タグ, ラベル`;
+      case "ko":
+        return `칸반, 보드, 태그, 라벨`;
+      case "pt-BR":
+        return `kanban, quadro, etiquetas, tags`;
+      case "zh-Hans":
+        return `看板, 标签, 分类`;
+      case "zh-Hant":
+        return `看板, 標籤, 分類`;
+      case "en-XA":
+        return `[ķáñƀáñ, ƀöáŕð, ţáĝš, ļáƀéļ ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮kanban, board, tags, label‬`;
+    }
+    return `kanban, board, tags, label`;
+  }
   function commandPanelNowBoardWords() {
     switch (currentLanguage()) {
       case "ar":
@@ -27672,6 +27726,114 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Find a task‬`;
     }
     return `Find a task`;
+  }
+  function commandPanelNowGroup() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تجميع المهام`;
+      case "de":
+        return `Aufgaben gruppieren`;
+      case "es":
+        return `Agrupar tareas`;
+      case "fr":
+        return `Grouper les tâches`;
+      case "ja":
+        return `タスクをグループ化`;
+      case "ko":
+        return `작업 묶기`;
+      case "pt-BR":
+        return `Agrupar tarefas`;
+      case "zh-Hans":
+        return `任务分组`;
+      case "zh-Hant":
+        return `任務分組`;
+      case "en-XA":
+        return `[Ĝŕöûþ ţášķš ~~~~]`;
+      case "ar-XB":
+        return `‮Group tasks‬`;
+    }
+    return `Group tasks`;
+  }
+  function commandPanelNowGroupWords() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ترتيب, وسوم, تصنيف`;
+      case "de":
+        return `sortieren, Tags, Reihenfolge`;
+      case "es":
+        return `ordenar, etiquetas, orden`;
+      case "fr":
+        return `trier, étiquettes, ordre`;
+      case "ja":
+        return `並べ替え, タグ, 順序`;
+      case "ko":
+        return `정렬, 태그, 순서`;
+      case "pt-BR":
+        return `ordenar, etiquetas, ordem`;
+      case "zh-Hans":
+        return `排序, 标签, 顺序`;
+      case "zh-Hant":
+        return `排序, 標籤, 順序`;
+      case "en-XA":
+        return `[šöŕţ, ţáĝš, öŕðéŕ ~~~~~~]`;
+      case "ar-XB":
+        return `‮sort, tags, order‬`;
+    }
+    return `sort, tags, order`;
+  }
+  function commandPanelNowTagFilter() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تصفية المهام حسب الوسم`;
+      case "de":
+        return `Aufgaben nach Tag filtern`;
+      case "es":
+        return `Filtrar tareas por etiqueta`;
+      case "fr":
+        return `Filtrer les tâches par étiquette`;
+      case "ja":
+        return `タグでタスクを絞り込む`;
+      case "ko":
+        return `태그로 작업 필터링`;
+      case "pt-BR":
+        return `Filtrar tarefas por etiqueta`;
+      case "zh-Hans":
+        return `按标签筛选任务`;
+      case "zh-Hant":
+        return `依標籤篩選任務`;
+      case "en-XA":
+        return `[Ƒîļţéŕ ţášķš ƀý ţáĝ ~~~~~~~]`;
+      case "ar-XB":
+        return `‮Filter tasks by tag‬`;
+    }
+    return `Filter tasks by tag`;
+  }
+  function commandPanelNowTagFilterWords() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `وسوم, وسم, تصنيف`;
+      case "de":
+        return `Tags, Label`;
+      case "es":
+        return `etiquetas, tags`;
+      case "fr":
+        return `étiquettes, tags`;
+      case "ja":
+        return `タグ, ラベル`;
+      case "ko":
+        return `태그, 라벨`;
+      case "pt-BR":
+        return `etiquetas, tags`;
+      case "zh-Hans":
+        return `标签, 分类`;
+      case "zh-Hant":
+        return `標籤, 分類`;
+      case "en-XA":
+        return `[ţáĝš, ļáƀéļ ~~~~]`;
+      case "ar-XB":
+        return `‮tags, label‬`;
+    }
+    return `tags, label`;
   }
   function commandProjectFocusClear() {
     switch (currentLanguage()) {
@@ -110012,12 +110174,18 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     commandPanelNowBoardFindWords,
     commandPanelNowBoardMove,
     commandPanelNowBoardMoveWords,
+    commandPanelNowBoardTags,
+    commandPanelNowBoardTagsWords,
     commandPanelNowBoardWords,
     commandPanelNowCollapseParts,
     commandPanelNowCollapsePartsWords,
     commandPanelNowExpandParts,
     commandPanelNowExpandPartsWords,
     commandPanelNowFind,
+    commandPanelNowGroup,
+    commandPanelNowGroupWords,
+    commandPanelNowTagFilter,
+    commandPanelNowTagFilterWords,
     commandProjectFocusClear,
     commandProjectFocusClearWords,
     commandProjectFocusOpen,
@@ -113524,12 +113692,18 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "commandPanelNowBoardFindWords": [],
     "commandPanelNowBoardMove": [],
     "commandPanelNowBoardMoveWords": [],
+    "commandPanelNowBoardTags": [],
+    "commandPanelNowBoardTagsWords": [],
     "commandPanelNowBoardWords": [],
     "commandPanelNowCollapseParts": [],
     "commandPanelNowCollapsePartsWords": [],
     "commandPanelNowExpandParts": [],
     "commandPanelNowExpandPartsWords": [],
     "commandPanelNowFind": [],
+    "commandPanelNowGroup": [],
+    "commandPanelNowGroupWords": [],
+    "commandPanelNowTagFilter": [],
+    "commandPanelNowTagFilterWords": [],
     "commandProjectFocusClear": [],
     "commandProjectFocusClearWords": [],
     "commandProjectFocusOpen": [],

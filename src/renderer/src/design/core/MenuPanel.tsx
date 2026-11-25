@@ -27,6 +27,13 @@ export type RowMenuItem =
        * with the menu left open (design skill RowMenu, "Settings").
        */
       checked?: boolean;
+      /**
+       * One of a few choices of which only one holds (Group tasks: By
+       * status, By tag): a check at its end while it is the current one,
+       * and a pick makes it the choice and closes the menu, as an action
+       * does (design skill RowMenu, "One of a few").
+       */
+      chosen?: boolean;
       /** The key that runs it outside the menu, drawn at its end as a key hint (`⌘C`). */
       keys?: string;
       /** Every key that runs it, as `aria-keyshortcuts` names them; pass it with `keys`. */
@@ -34,8 +41,8 @@ export type RowMenuItem =
     }
   | { separator: true };
 
-/** Every item a key can reach: actions and on/off settings. */
-export const MENU_ITEMS = '[role="menuitem"], [role="menuitemcheckbox"]';
+/** Every item a key can reach: actions, on/off settings and one-of choices. */
+export const MENU_ITEMS = '[role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"]';
 
 /** The least room a panel keeps from the window's edge. */
 export const EDGE = 8;
@@ -119,6 +126,7 @@ function MenuItem({ item, onPick }: { item: MenuAction; onPick: () => void }) {
   const [hover, setHover] = useState(false);
   const dim = item.disabled === true;
   const setting = item.checked !== undefined;
+  const choice = item.chosen !== undefined;
   const label = setting ? (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
       <span>{item.label}</span>
@@ -132,7 +140,9 @@ function MenuItem({ item, onPick }: { item: MenuAction; onPick: () => void }) {
       type="button"
       {...(setting
         ? { role: "menuitemcheckbox", "aria-checked": item.checked }
-        : { role: "menuitem" })}
+        : choice
+          ? { role: "menuitemradio", "aria-checked": item.chosen }
+          : { role: "menuitem" })}
       data-menu-item={item.id}
       aria-keyshortcuts={item.keyShortcuts}
       aria-disabled={dim || undefined}
@@ -176,6 +186,8 @@ function MenuItem({ item, onPick }: { item: MenuAction; onPick: () => void }) {
       )}
       {setting ? (
         <MenuSwitch on={item.checked === true} dim={dim} />
+      ) : choice ? (
+        <MenuCheck on={item.chosen === true} />
       ) : item.keys ? (
         <span
           data-menu-keys=""
@@ -192,6 +204,36 @@ function MenuItem({ item, onPick }: { item: MenuAction; onPick: () => void }) {
         item.trailing
       )}
     </button>
+  );
+}
+
+/**
+ * The check at the end of a one-of choice: drawn only on the current one,
+ * its room kept on the others so every label starts and ends alike.
+ */
+function MenuCheck({ on }: { on: boolean }) {
+  return (
+    <span
+      aria-hidden="true"
+      data-menu-check={on ? "on" : "off"}
+      style={{ display: "inline-flex", flexShrink: 0, width: 14, color: "var(--accent)" }}
+    >
+      {on ? (
+        <svg
+          aria-hidden="true"
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M20 6 9 17l-5-5" />
+        </svg>
+      ) : null}
+    </span>
   );
 }
 

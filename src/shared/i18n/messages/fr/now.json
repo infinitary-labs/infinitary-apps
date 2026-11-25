@@ -1,4 +1,5 @@
 {
+  "nowPanelAllTags": "Toutes les étiquettes",
   "nowPanelBoardAllProjects": "Tous les projets",
   "nowPanelBoardAnotherTask": "une autre tâche",
   "nowPanelBoardAskQueue": "Démarrer automatiquement ? {key} peut commencer immédiatement et consomme l’allocation de votre forfait.",
@@ -121,6 +122,7 @@
   "nowPanelBoardStartLabel": "Démarrer",
   "nowPanelBoardStartNowLabel": "Démarrer maintenant",
   "nowPanelBoardStartedBacklogText": "Son tour s’arrête et son travail reste. Elle attend votre Démarrer.",
+  "nowPanelBoardTagsTable": "Tâches par étiquette",
   "nowPanelBoardTileActions": "Actions de {key}",
   "nowPanelBoardTileFoundOn": "trouvée sur {key}",
   "nowPanelBoardTilePartOf": "partie de {key}",
@@ -136,8 +138,12 @@
   "nowPanelCloseSearch": "Fermer la recherche",
   "nowPanelFilterLabel": "Filtrer les tâches",
   "nowPanelFilterPlaceholder": "clé ou titre",
+  "nowPanelGroupByStatus": "Par état",
+  "nowPanelGroupByTag": "Par étiquette",
   "nowPanelGroupEarlier": "plus tôt",
   "nowPanelGroupPinned": "épinglées",
+  "nowPanelGroupTasks": "Grouper les tâches",
+  "nowPanelNoTag": "Sans étiquette",
   "nowPanelNoTasks": "Aucune tâche pour l’instant",
   "nowPanelRowAway": "hors de portée",
   "nowPanelRowBatch": "groupe",
@@ -183,5 +189,9 @@
     "one": "{count} en cours",
     "many": "{count} en cours",
     "other": "{count} en cours"
-  }
+  },
+  "nowPanelTags": "Étiquettes",
+  "nowPanelTagsChooseProject": "Choisissez un projet pour voir ses étiquettes",
+  "nowPanelTagsNoProject": "Aucun projet n’a encore d’étiquettes",
+  "nowPanelTagsNoneYet": "{project} n’a pas encore d’étiquettes"
 }

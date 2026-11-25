@@ -1,4 +1,5 @@
 {
+  "nowPanelAllTags": "All tags",
   "nowPanelBoardAllProjects": "All projects",
   "nowPanelBoardAnotherTask": "another task",
   "nowPanelBoardAskQueue": "Start automatically? {key} can begin at once and spends your plan's allowance.",
@@ -116,6 +117,7 @@
   "nowPanelBoardStartLabel": "Start",
   "nowPanelBoardStartNowLabel": "Start now",
   "nowPanelBoardStartedBacklogText": "Its turn stops and its work stays. It waits for your Start.",
+  "nowPanelBoardTagsTable": "Tasks by tag",
   "nowPanelBoardTileActions": "{key} actions",
   "nowPanelBoardTileFoundOn": "found on {key}",
   "nowPanelBoardTilePartOf": "part of {key}",
@@ -131,8 +133,12 @@
   "nowPanelCloseSearch": "Close search",
   "nowPanelFilterLabel": "Filter tasks",
   "nowPanelFilterPlaceholder": "key or title",
+  "nowPanelGroupByStatus": "By status",
+  "nowPanelGroupByTag": "By tag",
   "nowPanelGroupEarlier": "earlier",
   "nowPanelGroupPinned": "pinned",
+  "nowPanelGroupTasks": "Group tasks",
+  "nowPanelNoTag": "No tag",
   "nowPanelNoTasks": "There are no tasks yet",
   "nowPanelRowAway": "out of reach",
   "nowPanelRowBatch": "batch",
@@ -173,5 +179,9 @@
     "plural": "count",
     "one": "{count} working",
     "other": "{count} working"
-  }
+  },
+  "nowPanelTags": "Tags",
+  "nowPanelTagsChooseProject": "Choose a project to see its tags",
+  "nowPanelTagsNoProject": "No project has tags yet",
+  "nowPanelTagsNoneYet": "{project} has no tags yet"
 }

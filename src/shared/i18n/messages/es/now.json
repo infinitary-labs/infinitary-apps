@@ -1,4 +1,5 @@
 {
+  "nowPanelAllTags": "Todas las etiquetas",
   "nowPanelBoardAllProjects": "Todos los proyectos",
   "nowPanelBoardAnotherTask": "otra tarea",
   "nowPanelBoardAskQueue": "¿Iniciar automáticamente? {key} puede empezar al instante y gasta la asignación de tu plan.",
@@ -121,6 +122,7 @@
   "nowPanelBoardStartLabel": "Iniciar",
   "nowPanelBoardStartNowLabel": "Iniciar ahora",
   "nowPanelBoardStartedBacklogText": "Su turno se detiene y su trabajo se conserva. Espera a que presiones Iniciar.",
+  "nowPanelBoardTagsTable": "Tareas por etiqueta",
   "nowPanelBoardTileActions": "Acciones de {key}",
   "nowPanelBoardTileFoundOn": "encontrada en {key}",
   "nowPanelBoardTilePartOf": "parte de {key}",
@@ -136,8 +138,12 @@
   "nowPanelCloseSearch": "Cerrar búsqueda",
   "nowPanelFilterLabel": "Filtrar tareas",
   "nowPanelFilterPlaceholder": "clave o título",
+  "nowPanelGroupByStatus": "Por estado",
+  "nowPanelGroupByTag": "Por etiqueta",
   "nowPanelGroupEarlier": "anteriores",
   "nowPanelGroupPinned": "fijadas",
+  "nowPanelGroupTasks": "Agrupar tareas",
+  "nowPanelNoTag": "Sin etiqueta",
   "nowPanelNoTasks": "Todavía no hay tareas",
   "nowPanelRowAway": "fuera de alcance",
   "nowPanelRowBatch": "lote",
@@ -183,5 +189,9 @@
     "one": "trabajando: {count}",
     "many": "trabajando: {count}",
     "other": "trabajando: {count}"
-  }
+  },
+  "nowPanelTags": "Etiquetas",
+  "nowPanelTagsChooseProject": "Elige un proyecto para ver sus etiquetas",
+  "nowPanelTagsNoProject": "Ningún proyecto tiene etiquetas aún",
+  "nowPanelTagsNoneYet": "{project} aún no tiene etiquetas"
 }

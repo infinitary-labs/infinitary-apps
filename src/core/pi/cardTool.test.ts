@@ -314,7 +314,7 @@ describe("createEmitCardTool", () => {
   // INF-3060: three saved-story merge cards in a day repeated the story's
   // risk or required actions and were refused; the tool hands such a copy to
   // the home, which leaves out an exact repeat and refuses a differing one
-  // (crewmateCards.completion.test.ts).
+  // (crewmateCards.storyNote.test.ts).
   it("hands a saved-story merge card and a copy of its risk or required actions to the home, refusing a body (INF-2744, INF-3060)", async () => {
     const onCard = vi.fn(() => "card-task-story");
     const tool = piToolOf(bindTool(EMIT_CARD_TOOL, { onCard })) as unknown as AnyTool;

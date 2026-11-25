@@ -241,11 +241,11 @@
   },
   "talk-tasks": {
     "iphone": {
-      "reads": 323,
+      "reads": 409,
       "launches": 3
     },
     "ipad": {
-      "reads": 305,
+      "reads": 394,
       "launches": 3
     }
   }

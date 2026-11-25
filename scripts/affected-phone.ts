@@ -47,7 +47,7 @@ const INPUTS = [
   // INF-2625: the phone check's test home answers the phone's crewmates and first mate through the journey stand-in,
   // its crew scripts, its models.json and the request readers it answers by.
   "tests/e2e/mockProvider.ts", "tests/e2e/crewScripts.ts", "tests/e2e/mockModels.ts", "tests/e2e/providerRequest.ts",
-  // INF-2928 piece 3: the test home's Backlog row for a long press and a swipe.
+  // INF-2928 piece 3: the test home's Backlog row for a long press and a swipe, and the talk parts' task and its tags.
   "tests/helpers/phoneRowMoves.ts",
   // INF-1242: the test home's Google sign-in stand-in.
   "tests/helpers/phoneGoogle.ts",

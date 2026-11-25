@@ -47,11 +47,7 @@ import { CONTRACT_CHANGES } from "../../src/core/connection/contractChanges";
 import { letterBox } from "../../src/core/phoneLetters";
 import { REQUIRED_ACTIONS_LEAD } from "../../src/renderer/src/cards/requiredActionsWords";
 import { contributorWords, THREAD_WHO_LABELS } from "../../src/renderer/src/cards/threadWords";
-import {
-  CLAUDE_CREW_PROMPT_MARKER,
-  CLAUDE_STEER_MARKER,
-  MOCK_CLAUDE_STEERED_REPORT,
-} from "../e2e/crewScripts";
+import { CLAUDE_STEER_MARKER, MOCK_CLAUDE_STEERED_REPORT } from "../e2e/crewScripts";
 import { MOCK_PROVIDER_ID, mockModelsJson } from "../e2e/mockModels";
 import {
   ANSWER_PROMPT_MARKER,
@@ -84,7 +80,7 @@ import { phonePanelControls } from "./phonePanels";
 import { startPhonePushRelay } from "./phonePushRelay";
 import { CARD_RECORDINGS } from "./phoneRecordings";
 import { removeEveryDevice } from "./phoneRemove";
-import { seedRowMoves } from "./phoneRowMoves";
+import { seedRowMoves, seedTalkTags, seedTalkWork } from "./phoneRowMoves";
 import { phoneSceneFixture } from "./phoneScene";
 import { phoneSecondHome } from "./phoneSecondHome";
 import { secretAskShown } from "./phoneSecretAsk";
@@ -3441,19 +3437,7 @@ export async function startPhoneHome(
           result = seedReplyReading(core.services.tasks);
           break;
         case "POST talk-fixture": {
-          // INF-64 piece 5: the existing provider holds a real Pi turn until the captain steers or interrupts it.
-          seedTask(core.services.tasks, {
-            id: "phone-work",
-            title: "Count the harbour lights",
-            status: "queued",
-            startPolicy: "on-request",
-            prompt: `Count the harbour lights ${CLAUDE_CREW_PROMPT_MARKER}.`,
-            intent: {
-              goal: "Count the harbour lights",
-              userWords: `Count the harbour lights ${CLAUDE_CREW_PROMPT_MARKER}.`,
-              constraints: [{ kind: "read-only" }],
-            },
-          });
+          seedTalkWork(core.services.tasks);
           result = {
             text: `Read my harbour note and ${ANSWER_PROMPT_MARKER}`,
             // INF-1892: the hero's creator owns its identity, independent of its title.
@@ -3463,6 +3447,9 @@ export async function startPhoneHome(
           };
           break;
         }
+        case "POST tags-fixture":
+          result = seedTalkTags(core.services.tasks, "phone-work");
+          break;
         case "POST row-moves-fixture":
           result = await seedRowMoves(core.services.tasks, "phone-work", () =>
             core.dispatch("inf:tasks:board", []),

@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "task-tags-on-the-phone",
+      "kind": "feature",
+      "area": "devices",
+      "title": "Task tags on your iPhone and iPad",
+      "body": "A task's record on your iPhone and iPad now names the tags it carries. Search in Tasks shows your project's tags under the search field, each with how many open tasks it would list: press one to list only the tasks that carry it, or No tag for the rest.",
+      "picture": {
+        "dark": "task-tags-on-the-phone-dark.webp",
+        "light": "task-tags-on-the-phone-light.webp",
+        "alt": "Tasks search on an iPhone with harbour typed and the tag row under the search field: All tags, bug 0, feature 1 pressed, idea 0 and the start of No tag, and the one matching task listed under Backlog"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

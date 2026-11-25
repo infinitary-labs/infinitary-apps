@@ -708,6 +708,9 @@ A row with none of these opens the task's record.
 While the phone cannot make changes, it brings nothing back and shows again no step put off, so a row shows only a card already on the stack.
 A first mate question is the one exception: its card shows no task key and the phone's cards have no Info tab, so its row opens its record, where Decline is.
 A search keeps the groups, opens every one, matches the title or the key as the Mac's does, and adds Earlier with the Mac's older closed matches, newest closed first.
+Under the field sits the Mac's tag row while the only project with tags that is not archived has them, since the phone keeps no project focus (`docs/task-tags.md`): All tags, each of its tags with how many open tasks pressing it would list, then No tag (`PhoneTaskList.tagChips`, the Mac's `tagChipsOf`).
+One chip is pressed at a time; it narrows every group, Pinned and Earlier included, opens the folded ones as words do, and keeps the search shown; closing the search, or the project losing that tag, lets go of it.
+`PhoneTaskListTests` replays the Mac panel's own readings of the tag row and of a pressed tag.
 The search waits above the list until the list is pulled down from its top, as the Mac's waits behind its icon.
 Find a task (Shift-Command-F, the Mac's key) opens it with the caret in the field; Close search, or Escape on an empty field, puts it away.
 VoiceOver cannot pull past the top of a list, so the search is always shown while it runs.
@@ -730,7 +733,7 @@ Its top row is the Mac's status pill, with the Tasks list's mark and word, then 
 While a start is in flight the record says Starting with no wait line under it, as the Mac's host leaves the start wait out.
 Its tabs are the Mac's: Info, Cards with its count, Activity and Crewmate, each shown only when the Mac shows it; a task with only Info shows none.
 Info follows the Mac's order: what needs attention, a charted filing's Why, how a closed task closed, then Part of, Waits on, Holds up and Parts, each key opening that task's record in the same sheet, or in the panel's place on a foldable's pages.
-The goal follows with the captain's words folded under it, then Project, Now and Progress, the row of facts (Model, Reasoning, the pull request with its checks, Review, Delivery and Runs on) and a closed More with the crewmate, the branch and the task's policies.
+The goal follows with the captain's words folded under it, then Project, Tags, Now and Progress, the row of facts (Model, Reasoning, the pull request with its checks, Review, Delivery and Runs on) and a closed More with the crewmate, the branch and the task's policies.
 Cards lists every card the task showed, newest first: an open card shows on Home, one put aside comes back first, and a closed one shows as a past card.
 Activity takes the old timeline's place: the task's activity oldest first, the last eight with Show earlier for the rest, each row with its age, its words, the task it came from and the events folded under it.
 Info, Cards and Activity end with the Mac's record bar (`recordBarOf`): Drop task, or Decline for a first mate question, at the leading edge, and Start, Try again, Starting, Start again, Continue, Show the card or Done at the trailing edge.
@@ -745,6 +748,7 @@ Start, Try again, Continue and Start again use the Mac's own moves; Stop and Ste
 Stop ends a running turn and keeps its task steerable; Continue is offered only when the Mac marks a task Interrupted, such as after recovery.
 Unlike the Mac's, the record stays open after Start, Start again, Drop task and Stop, since it already shows their result.
 Tool results open on demand through their published read.
+Tags shows the tags the task carries, or No tags, once its project has tags or it carries one, as the Mac's record does; the phone offers no Edit tags.
 Browser pages, Move to a computer, Knowledge used, Why this model and rich transcript pictures remain outside this piece.
 
 A mutation requires both **In reach** and the welcome’s `full` access.

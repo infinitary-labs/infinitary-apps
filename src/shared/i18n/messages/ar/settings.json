@@ -78,6 +78,7 @@
   "settingsAppearanceWashDescription": "مقدار ما يغطيه لون السمة من الخلفية المموّهة. القيمة الافتراضية 0%.",
   "settingsAppearanceWashValue": "عتامة {percent}%",
   "settingsAutomationBack": "رجوع",
+  "settingsAutomationBroughtNote": "يأتي مع دليل التشغيل Heartbeat. لتغييره أو إزالته، أوقف دليل التشغيل من الإعدادات، أدلة التشغيل.",
   "settingsAutomationCancelCleared": "مُسحت محادثة نائب القبطان قبل أن يقرأ هذه.",
   "settingsAutomationCancelEdited": "سُحبت قبل أن يقرأها نائب القبطان، لأن الأتمتة تغيّرت.",
   "settingsAutomationCancelPaused": "سُحبت قبل أن يقرأها نائب القبطان، لأن الأتمتة أُوقفت مؤقتًا.",

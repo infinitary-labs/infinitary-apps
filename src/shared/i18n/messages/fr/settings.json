@@ -72,6 +72,7 @@
   "settingsAppearanceWashDescription": "La part de la couleur du thème qui couvre l’arrière-plan flou. 0 % est la valeur par défaut.",
   "settingsAppearanceWashValue": "{percent} % d’opacité",
   "settingsAutomationBack": "Retour",
+  "settingsAutomationBroughtNote": "Fournie par la procédure Heartbeat. Pour la modifier ou la retirer, désactivez la procédure dans Réglages, Procédures.",
   "settingsAutomationCancelCleared": "La conversation de votre second a été effacée avant qu’il ne lise ceci.",
   "settingsAutomationCancelEdited": "Retirée avant que votre second ne la lise, car l’automatisation a été modifiée.",
   "settingsAutomationCancelPaused": "Retirée avant que votre second ne la lise, car l’automatisation a été mise en pause.",

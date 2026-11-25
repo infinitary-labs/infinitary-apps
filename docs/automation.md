@@ -44,6 +44,7 @@ A rule `schedule_prompt` makes, and a one-time rule leaving once it ran, say the
   The first mate's prompt names that project's key and name while it is live; an archived or removed project is left out.
 - Schedules are every N minutes (15 at least), every day at a time, on chosen weekdays at a time, once, or each time an integration's event arrives ("Events").
 - `card` names a card the rule shows again instead of a prompt ("A rule that shows a card").
+- `brought` marks the rule a runbook's wake brings ("The heartbeat"): read from its reserved id, never saved in a column.
 
 ## A rule that shows a card
 
@@ -69,6 +70,23 @@ The task's timeline keeps that steer with a note in place of each fenced passage
 Whatever ends the hold first takes the rule away: `hold` null, any turn of the task, the hold's own time, a new hold, or the task's close; `HoldRules` reads the task's gate on every task change and deletes each waiting rule its gate no longer names, so no path keeps a rule of its own.
 A run whose hold already ended, or was replaced, ends nothing.
 
+## The heartbeat
+
+INF-6664 piece 2: while a runbook that is on names the `heartbeat` wake (the built-in Heartbeat runbook, off by default; `docs/runbooks.md`, "Built-ins"), the host keeps one rule that brings the first mate a beat, a scheduled turn with no news in it that carries the standing list (`docs/report-sort.md`, "The standing list").
+
+- `Scheduler.keepBrought` runs at start and on every runbook switch: on, it adds the rule under the reserved id `heartbeat` (`HEARTBEAT_RULE_ID`), named Heartbeat, every 55 minutes, turned on and stamped as the captain's, since turning the runbook on is their click; off, it takes back an unsent beat and removes the rule, keeping its runs under the 30-day rule ("History and retention"), so the rule finds them again if the runbook comes back.
+  A rule already there keeps its state, so a paused one stays paused.
+- Pause, Resume and Pause all act on it as on any rule; an edit or a delete, from Settings or the first mate, is refused with words that point to Settings, Runbooks (`BROUGHT_RULE_REFUSAL`).
+  Its page shows no Setup, only History and Notes, under a note that it comes with the Heartbeat runbook.
+- Once its 55 minutes passed, each tick asks `heartbeatDue` (`src/core/orchestrator/heartbeat.ts`), and a beat goes out only when one of two reasons holds, the captain's choice on the plan:
+  - the standing list has a row marked new, and 55 minutes passed since the last beat;
+  - or the first mate's seat is known to keep its prompt cache for an hour (the Claude seat; any other seat gets only the first kind), 50 minutes passed since its last request ended, as the usage ledger records it when the request ends, and the heartbeat is not resting.
+- The heartbeat rests after 12 quiet beats in a row, or after a beat whose first request read less than half its input from the cache, until the first mate's next turn of another kind.
+  A beat's turn is the span from its run's firing to its settling, and a first mate request outside every beat's span is another turn.
+- A beat due while the app was closed is dropped and the rule's next run moves 55 minutes on from start; no beat goes while one is still waiting.
+- A beat is an ordinary scheduled delivery: one fixed line (`HEARTBEAT_LINE`) and the standing list, with the run's Found line in History; once it goes out, each new row's once-name is recorded so the row reads new again only at its next milestone.
+- What the first mate does with a beat is in the runbook's guide: act on a row whose next move is already its own, ask the captain once on one card when only they can move it and something changed since they decided, or leave it; a beat gives no new permission.
+
 ## A task closes
 
 The app's own tasks tell one event an event rule can listen for beside the integrations' (`taskEvents` in `src/core/orchestrator/taskEvents.ts`): `tasks/task_closed`, "A task closes", with a required `task` filter naming the task by key or id.
@@ -84,7 +102,7 @@ It declares `atOnce`, and every close looks at once at the rules listening to it
 Settings → Automation lists the rules on the left, with New automation at the list's foot, and shows the picked rule's page on the right in four parts, each holding its own actions (`AutomationTab.tsx` and its parts beside it).
 
 - **The header**: the rule's name as the title, then its state with its dot (Failing in red), its schedule, its next run and who set it up, and Pause or Resume, which acts at once.
-  One note under it says why a failing rule gets nothing new, that a stopped rule waits for its integration, or that a draft never runs.
+  One note under it says why a failing rule gets nothing new, that a stopped rule waits for its integration, that a rule comes with the Heartbeat runbook ("The heartbeat"), or that a draft never runs.
 - **Setup**: Name and Project in one row; one When group holding the kind, its time, the time zone, the weekdays, and an event with its filters and Only if, under one caption that says what is missing, else the next three runs, else how often the app looks; the prompt with one button per schedule detail; Preview, which opens what the rule will do in place; and a foot with Save, lit once something changed, and Discard changes, or a draft's Turn on… and Save draft, with Delete at the far end asking once as Delete for good.
 - **History** and **Notes**, each its own tab beside Setup, one Tab stop moved between with the arrow keys.
   Every tab stays drawn while another is shown, so unsaved edits survive a switch; a new automation, not saved yet, has Setup alone.

@@ -1987,6 +1987,7 @@
   {"said":{"m":"settingsAppearanceWashDescription"},"words":"How much of the theme color covers the blurred background. 0% is the default."},
   {"said":{"m":"settingsAppearanceWashValue","a":{"percent":"‹percent›"}},"words":"‹percent›% opacity"},
   {"said":{"m":"settingsAutomationBack"},"words":"Back"},
+  {"said":{"m":"settingsAutomationBroughtNote"},"words":"Comes with the Heartbeat runbook. To change or remove it, turn the runbook off in Settings, Runbooks."},
   {"said":{"m":"settingsAutomationCancelCleared"},"words":"Your first mate's conversation was cleared before it read this."},
   {"said":{"m":"settingsAutomationCancelEdited"},"words":"Taken back before your first mate read it, because the automation was changed."},
   {"said":{"m":"settingsAutomationCancelPaused"},"words":"Taken back before your first mate read it, because the automation was paused."},

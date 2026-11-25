@@ -1327,9 +1327,8 @@ export async function createServices(
     onSeat: (seat) => firstmateForSeat?.setLocalOrchestrator(seat),
   });
   const localSeat = await localOrchestrator.boot();
-  // Persistent cron prompts (R3): due schedules wake the Firstmate agent
-  // through the durable inbox; late-bound because the agent is built below.
-  // The scheduler follows each delivery's row there (docs/automation.md).
+  // Persistent cron prompts (R3) wake the first mate through the inbox, late-bound as it is built
+  // below; the scheduler follows each delivery's row, and runbooks bring the heartbeat's rule.
   let notifyFirstmate: (wake: TypedWake, origin: "scheduled") => number | null = () => null;
   const { scheduleStore, eventScreenOffer, scheduler } = startHomeAutomation({
     db,
@@ -1342,6 +1341,7 @@ export async function createServices(
     tasks,
     integrations,
     integrationInbox,
+    runbooks,
   });
   const homeComputerName = await ownComputerName({ packaged: host.app.packaged, env: process.env });
   const decisionUses = { db, tasks, models: decisions, settings, ticker };

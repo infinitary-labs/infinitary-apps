@@ -2758,6 +2758,7 @@
 "settingsAppearanceWashDescription" = "ぼかした背景をテーマの色がどれだけ覆うかを設定します。標準は0%%です。";
 "settingsAppearanceWashValue" = "不透明度%1$@%%";
 "settingsAutomationBack" = "戻る";
+"settingsAutomationBroughtNote" = "ランブック「Heartbeat」に付属しています。変更や削除をするには、設定のランブックでこのランブックをオフにしてください。";
 "settingsAutomationCancelCleared" = "一等航海士がこれを読む前に、会話が消去されました。";
 "settingsAutomationCancelEdited" = "自動化が変更されたため、一等航海士が読む前に取り消されました。";
 "settingsAutomationCancelPaused" = "自動化が一時停止されたため、一等航海士が読む前に取り消されました。";

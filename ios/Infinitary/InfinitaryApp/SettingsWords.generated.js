@@ -6403,7 +6403,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
      * was, and what the newest answered, in the integration's own words. It
      * keeps looking, and this goes once a look answers.
      */
-    failing: strictObject({ since: number(), reason: string() }).optional()
+    failing: strictObject({ since: number(), reason: string() }).optional(),
+    /**
+     * The runbook wake that brought the rule (docs/automation.md, "The
+     * heartbeat"): it comes and goes with that runbook's switch, and nobody
+     * edits or deletes it; Pause and Resume still work.
+     */
+    brought: literal("heartbeat").optional()
   });
   discriminatedUnion("state", [
     strictObject({ state: literal("ready"), rules: array(automationRuleSchema) }),

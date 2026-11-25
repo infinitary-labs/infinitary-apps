@@ -13219,6 +13219,12 @@
                                       },
                                       "signInByMs": {
                                         "type": "number"
+                                      },
+                                      "models": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string"
+                                        }
                                       }
                                     },
                                     "required": [
@@ -13231,6 +13237,10 @@
                                       "signInEnded",
                                       "signInSoon"
                                     ]
+                                  },
+                                  "fromProxy": {
+                                    "type": "boolean",
+                                    "const": true
                                   },
                                   "detail": {
                                     "type": "string"
@@ -39042,6 +39052,12 @@
                         },
                         "signInByMs": {
                           "type": "number"
+                        },
+                        "models": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
                         }
                       },
                       "required": [
@@ -39054,6 +39070,10 @@
                         "signInEnded",
                         "signInSoon"
                       ]
+                    },
+                    "fromProxy": {
+                      "type": "boolean",
+                      "const": true
                     },
                     "detail": {
                       "type": "string"
@@ -39289,6 +39309,12 @@
                         },
                         "signInByMs": {
                           "type": "number"
+                        },
+                        "models": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
                         }
                       },
                       "required": [
@@ -39301,6 +39327,10 @@
                         "signInEnded",
                         "signInSoon"
                       ]
+                    },
+                    "fromProxy": {
+                      "type": "boolean",
+                      "const": true
                     },
                     "detail": {
                       "type": "string"
@@ -39536,6 +39566,12 @@
                         },
                         "signInByMs": {
                           "type": "number"
+                        },
+                        "models": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
                         }
                       },
                       "required": [
@@ -39548,6 +39584,10 @@
                         "signInEnded",
                         "signInSoon"
                       ]
+                    },
+                    "fromProxy": {
+                      "type": "boolean",
+                      "const": true
                     },
                     "detail": {
                       "type": "string"
@@ -95361,6 +95401,12 @@
                                 },
                                 "signInByMs": {
                                   "type": "number"
+                                },
+                                "models": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
                                 }
                               },
                               "required": [
@@ -95373,6 +95419,10 @@
                                 "signInEnded",
                                 "signInSoon"
                               ]
+                            },
+                            "fromProxy": {
+                              "type": "boolean",
+                              "const": true
                             },
                             "detail": {
                               "type": "string"
@@ -100414,6 +100464,12 @@
                     },
                     "signInByMs": {
                       "type": "number"
+                    },
+                    "models": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
                     }
                   },
                   "required": [
@@ -100426,6 +100482,10 @@
                     "signInEnded",
                     "signInSoon"
                   ]
+                },
+                "fromProxy": {
+                  "type": "boolean",
+                  "const": true
                 },
                 "detail": {
                   "type": "string"
@@ -110565,6 +110625,12 @@
                                       },
                                       "signInByMs": {
                                         "type": "number"
+                                      },
+                                      "models": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string"
+                                        }
                                       }
                                     },
                                     "required": [
@@ -110577,6 +110643,10 @@
                                       "signInEnded",
                                       "signInSoon"
                                     ]
+                                  },
+                                  "fromProxy": {
+                                    "type": "boolean",
+                                    "const": true
                                   },
                                   "detail": {
                                     "type": "string"
@@ -112423,6 +112493,12 @@
                                       },
                                       "signInByMs": {
                                         "type": "number"
+                                      },
+                                      "models": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string"
+                                        }
                                       }
                                     },
                                     "required": [
@@ -112435,6 +112511,10 @@
                                       "signInEnded",
                                       "signInSoon"
                                     ]
+                                  },
+                                  "fromProxy": {
+                                    "type": "boolean",
+                                    "const": true
                                   },
                                   "detail": {
                                     "type": "string"
@@ -116746,6 +116826,12 @@
                               },
                               "signInByMs": {
                                 "type": "number"
+                              },
+                              "models": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
                               }
                             },
                             "required": [
@@ -116758,6 +116844,10 @@
                               "signInEnded",
                               "signInSoon"
                             ]
+                          },
+                          "fromProxy": {
+                            "type": "boolean",
+                            "const": true
                           },
                           "detail": {
                             "type": "string"

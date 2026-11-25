@@ -1218,6 +1218,8 @@ public enum PhoneMessages {
     public static func `feedRunsOnThere`(`name`: String, `where`: String) -> String { PhoneWords.format("feedRunsOnThere", [`name`, `where`]) }
     public static func `feedStarted`() -> String { PhoneWords.format("feedStarted", []) }
     public static func `feedStopped`() -> String { PhoneWords.format("feedStopped", []) }
+    public static func `feedTagCheckFinished`(`count`: Int, `project`: String) -> String { PhoneWords.format("feedTagCheckFinished", [`count`, `project`]) }
+    public static func `feedTagCheckFinishedMissed`(`count`: Int, `missed`: String, `project`: String) -> String { PhoneWords.format("feedTagCheckFinishedMissed", [`count`, `missed`, `project`]) }
     public static func `feedUndelivered`(`why`: String) -> String { PhoneWords.format("feedUndelivered", [`why`]) }
     public static func `feedUnsafeDataReaderReported`() -> String { PhoneWords.format("feedUnsafeDataReaderReported", []) }
     public static func `feedUpdated`(`text`: String) -> String { PhoneWords.format("feedUpdated", [`text`]) }
@@ -3052,6 +3054,8 @@ public enum PhoneMessages {
     public static func `settingsDecisionUseKindReads`() -> String { PhoneWords.format("settingsDecisionUseKindReads", []) }
     public static func `settingsDecisionUseSavedResetName`() -> String { PhoneWords.format("settingsDecisionUseSavedResetName", []) }
     public static func `settingsDecisionUseSavedResetReads`() -> String { PhoneWords.format("settingsDecisionUseSavedResetReads", []) }
+    public static func `settingsDecisionUseTagsName`() -> String { PhoneWords.format("settingsDecisionUseTagsName", []) }
+    public static func `settingsDecisionUseTagsReads`() -> String { PhoneWords.format("settingsDecisionUseTagsReads", []) }
     public static func `settingsDecisionsActions`() -> String { PhoneWords.format("settingsDecisionsActions", []) }
     public static func `settingsDecisionsAnswerWith`(`model`: String) -> String { PhoneWords.format("settingsDecisionsAnswerWith", [`model`]) }
     public static func `settingsDecisionsAuto`() -> String { PhoneWords.format("settingsDecisionsAuto", []) }
@@ -3765,7 +3769,24 @@ public enum PhoneMessages {
     public static func `settingsProjectsScope`() -> String { PhoneWords.format("settingsProjectsScope", []) }
     public static func `settingsProjectsScopeDescription`() -> String { PhoneWords.format("settingsProjectsScopeDescription", []) }
     public static func `settingsProjectsTagsAdd`() -> String { PhoneWords.format("settingsProjectsTagsAdd", []) }
+    public static func `settingsProjectsTagsAutoOff`() -> String { PhoneWords.format("settingsProjectsTagsAutoOff", []) }
+    public static func `settingsProjectsTagsAutoOn`(`answerer`: String) -> String { PhoneWords.format("settingsProjectsTagsAutoOn", [`answerer`]) }
+    public static func `settingsProjectsTagsAutoOnOwn`() -> String { PhoneWords.format("settingsProjectsTagsAutoOnOwn", []) }
     public static func `settingsProjectsTagsCancel`() -> String { PhoneWords.format("settingsProjectsTagsCancel", []) }
+    public static func `settingsProjectsTagsCheck`() -> String { PhoneWords.format("settingsProjectsTagsCheck", []) }
+    public static func `settingsProjectsTagsCheckAll`() -> String { PhoneWords.format("settingsProjectsTagsCheckAll", []) }
+    public static func `settingsProjectsTagsCheckCost`(`answerer`: String, `count`: Int) -> String { PhoneWords.format("settingsProjectsTagsCheckCost", [`answerer`, `count`]) }
+    public static func `settingsProjectsTagsCheckCostOwn`(`count`: Int) -> String { PhoneWords.format("settingsProjectsTagsCheckCostOwn", [`count`]) }
+    public static func `settingsProjectsTagsCheckElsewhere`(`project`: String) -> String { PhoneWords.format("settingsProjectsTagsCheckElsewhere", [`project`]) }
+    public static func `settingsProjectsTagsCheckNamed`(`name`: String) -> String { PhoneWords.format("settingsProjectsTagsCheckNamed", [`name`]) }
+    public static func `settingsProjectsTagsCheckNone`() -> String { PhoneWords.format("settingsProjectsTagsCheckNone", []) }
+    public static func `settingsProjectsTagsCheckNotNow`() -> String { PhoneWords.format("settingsProjectsTagsCheckNotNow", []) }
+    public static func `settingsProjectsTagsCheckOpen`() -> String { PhoneWords.format("settingsProjectsTagsCheckOpen", []) }
+    public static func `settingsProjectsTagsCheckProgress`(`done`: String, `total`: Int) -> String { PhoneWords.format("settingsProjectsTagsCheckProgress", [`done`, `total`]) }
+    public static func `settingsProjectsTagsCheckReach`() -> String { PhoneWords.format("settingsProjectsTagsCheckReach", []) }
+    public static func `settingsProjectsTagsCheckStart`() -> String { PhoneWords.format("settingsProjectsTagsCheckStart", []) }
+    public static func `settingsProjectsTagsCheckStop`() -> String { PhoneWords.format("settingsProjectsTagsCheckStop", []) }
+    public static func `settingsProjectsTagsCheckWeek`() -> String { PhoneWords.format("settingsProjectsTagsCheckWeek", []) }
     public static func `settingsProjectsTagsDescription`() -> String { PhoneWords.format("settingsProjectsTagsDescription", []) }
     public static func `settingsProjectsTagsDescriptionExample`() -> String { PhoneWords.format("settingsProjectsTagsDescriptionExample", []) }
     public static func `settingsProjectsTagsEdit`() -> String { PhoneWords.format("settingsProjectsTagsEdit", []) }
@@ -5836,6 +5857,8 @@ extension PhoneWords {
         "feedRunsOnThere": ["name", "where"],
         "feedStarted": [],
         "feedStopped": [],
+        "feedTagCheckFinished": ["count", "project"],
+        "feedTagCheckFinishedMissed": ["count", "missed", "project"],
         "feedUndelivered": ["why"],
         "feedUnsafeDataReaderReported": [],
         "feedUpdated": ["text"],
@@ -7670,6 +7693,8 @@ extension PhoneWords {
         "settingsDecisionUseKindReads": [],
         "settingsDecisionUseSavedResetName": [],
         "settingsDecisionUseSavedResetReads": [],
+        "settingsDecisionUseTagsName": [],
+        "settingsDecisionUseTagsReads": [],
         "settingsDecisionsActions": [],
         "settingsDecisionsAnswerWith": ["model"],
         "settingsDecisionsAuto": [],
@@ -8383,7 +8408,24 @@ extension PhoneWords {
         "settingsProjectsScope": [],
         "settingsProjectsScopeDescription": [],
         "settingsProjectsTagsAdd": [],
+        "settingsProjectsTagsAutoOff": [],
+        "settingsProjectsTagsAutoOn": ["answerer"],
+        "settingsProjectsTagsAutoOnOwn": [],
         "settingsProjectsTagsCancel": [],
+        "settingsProjectsTagsCheck": [],
+        "settingsProjectsTagsCheckAll": [],
+        "settingsProjectsTagsCheckCost": ["answerer", "count"],
+        "settingsProjectsTagsCheckCostOwn": ["count"],
+        "settingsProjectsTagsCheckElsewhere": ["project"],
+        "settingsProjectsTagsCheckNamed": ["name"],
+        "settingsProjectsTagsCheckNone": [],
+        "settingsProjectsTagsCheckNotNow": [],
+        "settingsProjectsTagsCheckOpen": [],
+        "settingsProjectsTagsCheckProgress": ["done", "total"],
+        "settingsProjectsTagsCheckReach": [],
+        "settingsProjectsTagsCheckStart": [],
+        "settingsProjectsTagsCheckStop": [],
+        "settingsProjectsTagsCheckWeek": [],
         "settingsProjectsTagsDescription": [],
         "settingsProjectsTagsDescriptionExample": [],
         "settingsProjectsTagsEdit": [],
@@ -9289,6 +9331,8 @@ extension PhoneWords {
         "feedBatchFormedMany": "count",
         "feedBatchMergedMany": "count",
         "feedRepairsCapped": "rounds",
+        "feedTagCheckFinished": "count",
+        "feedTagCheckFinishedMissed": "count",
         "filePathsAnnounce": "count",
         "knowledgePanelAllDirections": "count",
         "knowledgePanelCheckCount": "count",
@@ -9382,6 +9426,9 @@ extension PhoneWords {
         "settingsProjectsBatchSentBack": "count",
         "settingsProjectsCount": "count",
         "settingsProjectsRepositoryCount": "count",
+        "settingsProjectsTagsCheckCost": "count",
+        "settingsProjectsTagsCheckCostOwn": "count",
+        "settingsProjectsTagsCheckProgress": "total",
         "settingsProjectsTagsRemoveQuestion": "count",
         "settingsProjectsTagsTasks": "count",
         "settingsSubscriptionsSavedResets": "count",

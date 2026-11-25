@@ -119,6 +119,18 @@
   "feedRunsOnThere": "{name} agora roda {where}. A próxima tarefa começa lá; uma que já esteja rodando termina onde começou.",
   "feedStarted": "Iniciada",
   "feedStopped": "Parada",
+  "feedTagCheckFinished": {
+    "plural": "count",
+    "one": "{project}: uma tarefa verificada quanto a etiquetas.",
+    "many": "{project}: {count} de tarefas verificadas quanto a etiquetas.",
+    "other": "{project}: {count} tarefas verificadas quanto a etiquetas."
+  },
+  "feedTagCheckFinishedMissed": {
+    "plural": "count",
+    "one": "{project}: uma tarefa verificada quanto a etiquetas; {missed} ficaram sem resposta e continuam sem verificação.",
+    "many": "{project}: {count} de tarefas verificadas quanto a etiquetas; {missed} ficaram sem resposta e continuam sem verificação.",
+    "other": "{project}: {count} tarefas verificadas quanto a etiquetas; {missed} ficaram sem resposta e continuam sem verificação."
+  },
   "feedUndelivered": "Mensagem não entregue: {why}",
   "feedUnsafeDataReaderReported": "O leitor de dados não seguros relatou; as palavras dele estão no registro.",
   "feedUpdated": "Atualizada: {text}",

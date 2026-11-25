@@ -112,8 +112,14 @@ export function moveIntoProject(
   for (const { row, repoId: to } of moves) {
     const { seq, key } = writer.projects.allocateSeq(project.id);
     writer.patch(row.id, { projectId: project.id, key, seq, repoId: to, updatedAt: at });
-    // A tag belongs to its project, so a task leaves its tags behind (docs/task-tags.md).
+    // A tag belongs to its project, so a task leaves its tags behind, and
+    // owes automatic tagging its new project's tags (docs/task-tags.md).
     writer.store.tags.deleteFor(row.id);
+    writer.store.tags.owe(
+      row.id,
+      writer.projects.tags.of(project.id).map((tag) => tag.id),
+      at,
+    );
     writer.addEvent({
       taskId: row.id,
       at,

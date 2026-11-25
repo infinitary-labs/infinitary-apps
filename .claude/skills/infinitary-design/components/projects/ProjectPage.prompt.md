@@ -18,6 +18,10 @@ Every project's page has the same parts in the same order, with one repository o
    Add a tag, a small secondary Button, ends the box; with no tags a quiet line above it says what a tag is for, naming bug, feature and idea.
    Edit and Add a tag open a form in the row's place: the name, then which tasks qualify, each an Input, then a small secondary Save and a ghost Cancel; Escape puts the row back without leaving the page.
    Remove turns its row into one question naming how many tasks lose the tag, with Cancel focused and a danger Remove, as `RemoveProject.prompt.md`'s question.
+   Under Add a tag, once the project has a tag, a quiet `--text-xs` `--fg-3` line says whether Tag tasks automatically checks each new task against these tags and which model answers, or that it is off in Settings → Intelligence.
+   While it is on, Check existing tasks follows at `--text-sm`, weight 500: a select of which tasks (open tasks; open tasks and those done in the last 7 days; every task), a small secondary Start, and under them a quiet line saying how many requests that choice makes, one per task, and who answers them; Start is disabled when every one of those tasks is already checked.
+   While a check runs, the same place says in quiet mono words how many tasks it has checked of how many, with a small ghost Stop; while another project's check runs, it names that project instead of offering Start.
+   After a tag is added or its description changed, the title names that tag and the check asks only it, with a ghost Not now beside Start that returns it to every tag.
 5. The uppercase micro label "Repositories" over one framed panel, the list box's own `--bg-1`, hairline and `--radius-m`.
 
 **The Repositories panel.**

@@ -903,6 +903,42 @@
       <string>%1$ld tentativas de correção não fizeram as verificações passarem - seu imediato vai perguntar o que fazer</string>
     </dict>
   </dict>
+  <key>feedTagCheckFinished</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%2$@: uma tarefa verificada quanto a etiquetas.</string>
+      <key>many</key>
+      <string>%2$@: %1$ld de tarefas verificadas quanto a etiquetas.</string>
+      <key>other</key>
+      <string>%2$@: %1$ld tarefas verificadas quanto a etiquetas.</string>
+    </dict>
+  </dict>
+  <key>feedTagCheckFinishedMissed</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%3$@: uma tarefa verificada quanto a etiquetas; %2$@ ficaram sem resposta e continuam sem verificação.</string>
+      <key>many</key>
+      <string>%3$@: %1$ld de tarefas verificadas quanto a etiquetas; %2$@ ficaram sem resposta e continuam sem verificação.</string>
+      <key>other</key>
+      <string>%3$@: %1$ld tarefas verificadas quanto a etiquetas; %2$@ ficaram sem resposta e continuam sem verificação.</string>
+    </dict>
+  </dict>
   <key>filePathsAnnounce</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>
@@ -2575,6 +2611,60 @@
       <string>%1$ld repositórios</string>
       <key>other</key>
       <string>%1$ld repositórios</string>
+    </dict>
+  </dict>
+  <key>settingsProjectsTagsCheckCost</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Uma solicitação, respondida por %1$@.</string>
+      <key>many</key>
+      <string>%2$ld de solicitações, uma por tarefa, respondidas por %1$@.</string>
+      <key>other</key>
+      <string>%2$ld solicitações, uma por tarefa, respondidas por %1$@.</string>
+    </dict>
+  </dict>
+  <key>settingsProjectsTagsCheckCostOwn</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Uma solicitação, respondida pelos seus próprios modelos.</string>
+      <key>many</key>
+      <string>%1$ld de solicitações, uma por tarefa, respondidas pelos seus próprios modelos.</string>
+      <key>other</key>
+      <string>%1$ld solicitações, uma por tarefa, respondidas pelos seus próprios modelos.</string>
+    </dict>
+  </dict>
+  <key>settingsProjectsTagsCheckProgress</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@total@</string>
+    <key>total</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$@ de %2$ld tarefa verificada</string>
+      <key>many</key>
+      <string>%1$@ de %2$ld de tarefas verificadas</string>
+      <key>other</key>
+      <string>%1$@ de %2$ld tarefas verificadas</string>
     </dict>
   </dict>
   <key>settingsProjectsTagsRemoveQuestion</key>

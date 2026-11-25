@@ -162,6 +162,7 @@ import type {
 import type { SharingAskAnswer, SharingChannel, SharingPreview, SharingView } from "./sharing";
 import type { DeviceSignInEvent, DeviceSignIns } from "./signIns";
 import type { StandbyReady, StandbyViews } from "./standby";
+import type { TagCheckChange, TagCheckRead, TagCheckView } from "./tagCheck";
 import type { ProjectTagChange, ProjectTagChangeResult } from "./tags";
 import type {
   SavedSignInsView,
@@ -835,6 +836,10 @@ export type FirstmateApi = {
     rename: (projectId: string, name: string) => Promise<{ id: string; name: string }>;
     /** Add, edit or remove one of a project's tags (docs/task-tags.md). */
     tags: (change: ProjectTagChange) => Promise<ProjectTagChangeResult>;
+    /** Each project's Check existing tasks, or the one named, counted for these tags. */
+    tagChecks: (read?: TagCheckRead) => Promise<TagCheckView[]>;
+    /** Start or stop a project's Check existing tasks. */
+    tagCheck: (change: TagCheckChange) => Promise<TagCheckView>;
   };
   quota: {
     snapshot: () => Promise<QuotaSnapshotView | null>;

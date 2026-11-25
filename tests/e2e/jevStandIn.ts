@@ -8,21 +8,23 @@ import { DECISION_APPROVAL_VERSION } from "../../src/shared/decisionUses";
  * it answers each question the app sends with the option `choose` names, at
  * a high confidence, and abstains on every other question (a confidence of
  * zero), so the app's own fallback decides it as with no decision model.
- * `asked` keeps each question's id and the facts it came with.
+ * `asked` keeps each question's id, the facts it came with and the number
+ * of the request that held it, counted from 1.
  */
 export type JevStandIn = {
   url: string;
-  asked: { id: string; state: Record<string, unknown> }[];
+  asked: { id: string; state: Record<string, unknown>; request: number }[];
   close: () => Promise<void>;
 };
 
 type Question = { criteria: Record<string, string> };
 
 export async function startJevStandIn(
-  choose: (id: string, options: string[]) => string | undefined,
+  choose: (id: string, options: string[], state: Record<string, unknown>) => string | undefined,
 ): Promise<JevStandIn> {
   const server: Server = createServer();
   const asked: JevStandIn["asked"] = [];
+  let requests = 0;
   server.on("request", (request, response) => {
     const chunks: Buffer[] = [];
     request.on("data", (chunk: Buffer) => chunks.push(chunk));
@@ -31,11 +33,12 @@ export async function startJevStandIn(
         state: Record<string, unknown>;
         questions: Record<string, Question>;
       };
+      requests += 1;
       const answers = Object.fromEntries(
         Object.entries(body.questions).map(([id, question]) => {
-          asked.push({ id, state: body.state });
+          asked.push({ id, state: body.state, request: requests });
           const options = Object.keys(question.criteria);
-          const named = choose(id, options);
+          const named = choose(id, options, body.state);
           const choice = named ?? options[0] ?? "";
           const confidence = named ? 0.95 : 0;
           return [

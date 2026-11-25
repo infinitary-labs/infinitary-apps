@@ -1,10 +1,11 @@
+import { createHash } from "node:crypto";
 import type { ModelsCatalogView } from "@shared/quota";
 import { describe, expect, it } from "vitest";
 import { FAKE_CONTROL_PROFILE, fakeSession } from "../../../tests/helpers/fakeSession";
 import type { ModelRuntime } from "../pi/types";
 import type { ModelSession, SessionEvent, SessionSpec } from "../session/session";
 import { AdaptedDecisionModel } from "./decisionModel";
-import { tagQuestions, tagState } from "./tagQuestion";
+import { TAG_QUESTION_VERSION, tagQuestions, tagState } from "./tagQuestion";
 
 /**
  * Piece 2 of the task tags plan: the tagging question is one yes-or-no
@@ -103,6 +104,18 @@ describe("the tagging question", () => {
     );
     expect(Object.keys(questions.tag3?.criteria ?? {})).toEqual(["yes", "no"]);
     expect(questions.tag3?.abstain).toBe("unsure");
+  });
+
+  // The eval set was scored at each version here (docs/task-tags-eval.md);
+  // automatic tagging serves these words to every project with tags.
+  it("serves the words the eval set was scored at", () => {
+    const SCORED: Record<string, string> = { tg1: "81ff12ba1f98" };
+    const served = JSON.stringify([tagQuestions(TAGS).questions, TASK.adapterText]);
+    const digest = createHash("sha256").update(served).digest("hex").slice(0, 12);
+    expect(
+      digest,
+      "the tagging question's words changed: raise TAG_QUESTION_VERSION, run pnpm score:tags and record the new digest here",
+    ).toBe(SCORED[TAG_QUESTION_VERSION]);
   });
 });
 

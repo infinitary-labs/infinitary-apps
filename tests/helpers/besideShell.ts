@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import { type HomeConnection, startConnection } from "@core/connection/connection";
+import { claimLink } from "@core/devices/dial";
 import { HomeLink } from "@core/devices/homeLink";
 import { JoinedHome } from "@core/devices/joinedHome";
 import { DevicePairing } from "@core/devices/pairing";
@@ -14,7 +15,7 @@ import type { OwnedRun } from "../../src/main/runCommand";
 import type { RunStatus } from "../../src/main/runStatus";
 import { Shell } from "../../src/main/shell";
 import { scratchDir } from "./scratchDirs";
-import { ownCore, ownUpdates, stops } from "./shellStandIns";
+import { type otherMac, ownCore, ownUpdates, stops } from "./shellStandIns";
 
 /**
  * The stand-ins for the window opened beside a command's first mate
@@ -308,4 +309,14 @@ export function besideShell(
     program,
     starter,
   };
+}
+
+/** The grant a home that added this computer leaves in its work folder. */
+export async function grantFrom(pro: Awaited<ReturnType<typeof otherMac>>, workDir: string) {
+  const grant = await claimLink(await pro.link("mac"), {
+    kind: "mac",
+    name: "Mac mini",
+    user: { name: "sam", uid: 501 },
+  });
+  new JoinedHome(workDir).join(grant, Date.now());
 }

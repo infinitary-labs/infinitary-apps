@@ -1,8 +1,8 @@
 import { existsSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { expect, it, vi } from "vitest";
-import { editCase, editHost, evaluation } from "../scripts/evals/isolatedEdit";
 import { ACCEPTANCE_WAIT_MS } from "../scripts/evals/host";
+import { editCase, editHost, evaluation } from "../scripts/evals/isolatedEdit";
 import { allowanceRefusal, runEvaluation } from "../scripts/evals/runner";
 import { scratchDir } from "./helpers/scratchDirs";
 

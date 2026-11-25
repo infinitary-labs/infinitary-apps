@@ -53,7 +53,7 @@ So the fresh Windows 11 check, the phone check, the signed installer checks, sig
    A pull request labeled `edits checks` gets no run rows: the captain approves its runs on GitHub after its review shows the check files, since a pull request runs the check files it carries.
 4. **GitHub's machines run them.**
    The checks in the list above run on the pull request's own version, merged with the current `main`.
-   If any check fails, the pull request goes back to its author, and the author's next push brings it back to the round.
+   If any check fails, the failed-check note sends the pull request back to its author ("The failed-check note"), and the author's next push brings it back to the round.
 5. **The crew reviews it once every check passes.**
    The next round files its review, and the first mate starts it at once under the intake rules' standing yes ("The review" in `docs/outside-intake.md`).
    A crewmate reads its code and GitHub's runs, never runs the change, and shows the merge card with `asks_first`.
@@ -76,6 +76,20 @@ It marks and never fails or blocks a pull request, and leaves the project's own 
 Like the agreement check below, it runs from the default branch on `pull_request_target`, checks out only its script and `scripts/intake-labels.mjs`, never the pull request's code, uses no secret beyond its own token, holds only issue and pull request writes (GitHub refuses a label on a pull request without pull request writes), and runs on GitHub's hosted Ubuntu (`tests/check-file-flag.test.ts`).
 Started by hand with a pull request number, it reads any pull request of the project, its own included, so the flag can be proved before an outside copy exists.
 Keep fork workflow write tokens and secrets restricted at the host: an outside pull request gets a read-only token and no secrets.
+
+### The failed-check note
+
+`failed-checks.yml` tells an outside pull request's author which checks failed, so the pull request goes back to them before any review starts (`scripts/failed-checks.mjs`).
+It starts when `ci`, `contributors` or `docs-site` finishes a run for a pull request from another copy of the project; the project's own branches start nothing here.
+
+- It reads every job of that version's newest run of each of the three workflows and keeps the failed and timed-out ones; a run GitHub marked failed without starting a job, such as an unapproved run of a closed pull request, names nothing.
+- It leaves out a job whose check also failed in main's newest finished run of `main.yml`, matching the check by the innermost level of the job's name without its trigger (`scripts/ci-job-names.mjs`), so the contributor's `Integration tests (Linux; group 1/2)` and main's are one check.
+- It writes one comment per version, saying it was posted automatically and naming each failed job with a link to its log, and edits that comment when a later workflow of the same version finishes; a version whose every failed check also fails on main gets none.
+- The version's first comment labels the pull request `waiting on author`; the author's next push takes the label off once both required checks pass ("Intake").
+- A run of an older version, once a newer push replaced it, or of a closed pull request writes nothing.
+
+Started by hand with a pull request number, it is a dry run on any pull request of the project: it writes what it would say to the job summary and nothing on the pull request.
+GitHub runs a `workflow_run` workflow from the default branch, so it checks out only its script, `scripts/check-file-flag.mjs`, `scripts/ci-job-names.mjs` and `scripts/intake-labels.mjs` from there, never the pull request's code, reads job results from GitHub as data and writes job names, which the pull request's own workflow files choose, only as code, uses no secret beyond its own token, holds only Actions reads and issue and pull request writes, and runs on GitHub's hosted Ubuntu (`tests/failed-checks.test.ts`).
 
 ### A check requested by hand
 
@@ -110,6 +124,7 @@ GitHub sorts each new outside issue and pull request with no model, and a mainta
 - **Waiting on the author.**
   After each required check writes its status, it labels an outside pull request `waiting on author` while either required check fails; once both pass on the author's own event (a push, an edit, a reopening or an acceptance), the label comes off and `needs triage` goes on (`scripts/intake-labels.mjs`).
   A maintainer's event never takes the label off, so a reply asking for changes holds although both checks pass.
+  A failed run of `ci`, `contributors` or `docs-site` also adds the label, through the failed-check note ("The failed-check note").
 - **The triage mark.**
   `triage-mark.yml` reads each new comment (`scripts/triage-mark.mjs`).
   A comment from an account that can write to the project, judged by GitHub's collaborator permission API and never by the comment's author relation, may end with `<!-- infinitary-triage v1 disposition=NAME -->`.

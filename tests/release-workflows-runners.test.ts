@@ -539,6 +539,9 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
     // token on any issue or pull request (docs/public-ci.md, "Intake").
     "triage-mark.yml:mark",
     "waiting-on-author.yml:tick",
+    // The failed-check note, which holds a write token for an outside pull
+    // request (docs/public-ci.md, "Outside contributors").
+    "failed-checks.yml:note",
   ];
   // DOP-251's plan: each kind is one stage of moving Linux jobs to the Mac
   // mini's Linux guests (docs/testing.md, "Each Linux job's kind").

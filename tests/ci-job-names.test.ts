@@ -369,6 +369,30 @@ const SCENARIOS: { file: string; trigger: string; scenario: Scenario }[] = [
     trigger: "Manual request",
     scenario: { github: { event_name: "workflow_dispatch" } },
   },
+  // The failed-check note (failed-checks.yml, docs/public-ci.md "Outside
+  // contributors"): a check workflow finishing for an outside pull request,
+  // and a dry run started by hand.
+  {
+    file: "failed-checks.yml",
+    trigger: "Pull request",
+    scenario: {
+      github: {
+        event_name: "workflow_run",
+        repository: "infinitary-labs/infinitary-apps",
+        event: {
+          workflow_run: {
+            event: "pull_request",
+            head_repository: { full_name: "octo-contributor/infinitary-apps" },
+          },
+        },
+      },
+    },
+  },
+  {
+    file: "failed-checks.yml",
+    trigger: "Manual request",
+    scenario: { github: { event_name: "workflow_dispatch" } },
+  },
   // The Careful review check (careful-review-check.yml, docs/public-ci.md
   // "The Careful review check"): an outside pull request, and a run started by hand.
   {

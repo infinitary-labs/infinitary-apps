@@ -19,7 +19,7 @@ Task attribution and its limitations are owned by `docs/helper.md`, "Running tas
 
 ## A crewmate's shell
 
-A crewmate's coding session hands its client the task's shell: the task channel's variables, and the app's command folder first on the search path (`withTaskShell`; `docs/axi-commands.md`, "The channel").
+A crewmate's coding session hands its client the task's shell: the task channel's variables, its commit name in `GIT_AUTHOR_*` and `GIT_COMMITTER_*`, and the app's command folder first on the search path (`withTaskShell`; `docs/axi-commands.md`, "The channel").
 It also sets `CLAUDE_CODE_SHELL_PREFIX` to that folder's `infinitary-crew-shell`, and `CLAUDE_CODE_SHELL` to the shell the client picks first anyway (`withCrewShell` in `src/core/claude/claudeCrewShell.ts`): its own setting when that names a bash or zsh that runs, then the person's login shell when it is one, then the system's zsh or bash, in the client's order.
 The client starts each command's shell leading a process group of its own and, with a prefix, runs `'<prefix>' '<command>'` in it.
 The program tells the task channel its process number with the task's key, then runs the command in `CLAUDE_CODE_SHELL`, so the door refuses a program the command left running with `&` or nohup until its task closes (`docs/axi-commands.md`, "Never the crew's").

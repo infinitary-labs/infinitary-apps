@@ -16,6 +16,17 @@ export const CREW_FALLBACK_COMMIT_NAME: CommitName = {
 const RESOLVE_TIMEOUT_MS = 10 * 1000;
 
 /**
+ * The variables git reads a commit's author from ahead of saved settings,
+ * dropped for the read: an app started from a crewmate's shell inherits
+ * that shell's pair.
+ */
+const INHERITED_AUTHOR = {
+  GIT_AUTHOR_NAME: undefined,
+  GIT_AUTHOR_EMAIL: undefined,
+  EMAIL: undefined,
+};
+
+/**
  * The name git would commit under in `cwd` from saved settings alone: the
  * repository's, then the person's, then the system's. `useConfigOnly` stops
  * git guessing one from the account and computer names, so a computer with
@@ -23,6 +34,7 @@ const RESOLVE_TIMEOUT_MS = 10 * 1000;
  */
 export async function resolveCommitName(cwd: string): Promise<CommitName> {
   const ident = await git(cwd, ["-c", "user.useConfigOnly=true", "var", "GIT_AUTHOR_IDENT"], {
+    env: INHERITED_AUTHOR,
     timeoutMs: RESOLVE_TIMEOUT_MS,
   }).catch(() => "");
   // "Name <email> 1764000000 -0800"
@@ -33,8 +45,9 @@ export async function resolveCommitName(cwd: string): Promise<CommitName> {
 /**
  * A crewmate session's shell with its commit name laid over it. Git reads
  * these variables ahead of `-c user.name` and every saved setting, so a
- * command that passes another name still commits under this one; only
- * `--author` outranks the author pair.
+ * command that passes another name that way still commits under this one;
+ * a command's own `--author`, or its own `GIT_AUTHOR_*` or
+ * `GIT_COMMITTER_*` prefix, still outranks them.
  */
 export function withCommitName(shell: TaskShell | undefined, commit: CommitName): TaskShell {
   return {

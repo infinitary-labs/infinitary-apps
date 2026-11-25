@@ -36,7 +36,8 @@ export async function git(
   repoDir: string,
   args: string[],
   options: {
-    env?: Record<string, string>;
+    /** Laid over the app's environment; a name set to undefined drops the inherited one. */
+    env?: NodeJS.ProcessEnv;
     timeoutMs?: number;
     trim?: boolean;
     /**
@@ -288,7 +289,7 @@ async function runGit(
   repoDir: string,
   args: string[],
   options: {
-    env?: Record<string, string>;
+    env?: NodeJS.ProcessEnv;
     timeoutMs?: number;
     trim?: boolean;
     signal?: AbortSignal;

@@ -39,7 +39,7 @@ describe("a crewmate session's commit name", () => {
     vi.unstubAllEnvs();
   });
 
-  /** A commit made the way the old served sentence told crewmates to, in the session's shell. */
+  /** Commits in the session's shell with a stand-in name passed by `-c`, and reads the commit's author and committer. */
   async function commitWithStandIn(): Promise<string> {
     const shell = withCommitName(undefined, await resolveCommitName(repo));
     const env = withTaskShell(hostEnv(), shell);
@@ -76,6 +76,23 @@ describe("a crewmate session's commit name", () => {
     expect(await commitWithStandIn()).toBe(
       "Ada Lovelace <ada@example.com> | Ada Lovelace <ada@example.com>",
     );
+  });
+
+  // An app started from a crewmate's shell inherits that shell's pair; the
+  // plan reads the name from saved settings alone.
+  it("resolves the saved name, not one the app inherited", async () => {
+    writeFileSync(
+      join(home, ".gitconfig"),
+      "[user]\n\tname = Ada Lovelace\n\temail = ada@example.com\n",
+    );
+    vi.stubEnv("GIT_AUTHOR_NAME", "Crewmate");
+    vi.stubEnv("GIT_AUTHOR_EMAIL", "crew@infinitary.invalid");
+    vi.stubEnv("EMAIL", "crew@infinitary.invalid");
+
+    expect(await resolveCommitName(repo)).toEqual({
+      name: "Ada Lovelace",
+      email: "ada@example.com",
+    });
   });
 
   it("commits as Infinitary on a computer with no saved name", async () => {

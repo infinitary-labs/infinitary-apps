@@ -472,10 +472,12 @@
 "cardKnowledgeConceptRef" = "Concept %1$@: %2$@";
 "cardKnowledgeFindingRef" = "Finding %1$@: %2$@";
 "cardKnowledgeRetired" = "Retired";
+"cardLastPartKeep" = "Keep it waiting";
 "cardLastPartOpen" = "%2$@ is the only part of %1$@ still open.";
+"cardLastPartStart" = "Start now";
 "cardLastPartStopped" = "It waits because you asked for it to wait, so nothing will start it until you do.";
 "cardLastPartTitle" = "%1$@ waits only on %2$@";
-"cardLastPartWays" = "Start it from the task board when you want it done. To change or drop it, reply here.";
+"cardLastPartWays" = "Start now starts it. Keep it waiting leaves it as it is, and this card comes back only if another part finishes later. To change or drop it, reply here.";
 "cardLeaveAside" = "Put aside";
 "cardLeaveAsideRest" = "Put aside · waits in Tasks, back when it changes";
 "cardLeaveHide" = "Hide";

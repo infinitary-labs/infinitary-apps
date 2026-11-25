@@ -472,10 +472,12 @@
 "cardKnowledgeConceptRef" = "概念 %1$@：%2$@";
 "cardKnowledgeFindingRef" = "知見 %1$@：%2$@";
 "cardKnowledgeRetired" = "廃止";
+"cardLastPartKeep" = "待たせておく";
 "cardLastPartOpen" = "%1$@ のパートでまだ開いているのは %2$@ だけです。";
+"cardLastPartStart" = "今すぐ開始";
 "cardLastPartStopped" = "あなたが待つよう求めたため待機しています。あなたが開始するまで、何もこれを開始しません。";
 "cardLastPartTitle" = "%1$@ は %2$@ だけを待っています";
-"cardLastPartWays" = "進めたいときはタスクボードから開始してください。変更や取りやめは、ここに返信してください。";
+"cardLastPartWays" = "今すぐ開始 で開始します。待たせておく ではそのままにし、後で別のパートが終わったときだけこのカードが戻ります。変更や取りやめは、ここに返信してください。";
 "cardLeaveAside" = "脇に置く";
 "cardLeaveAsideRest" = "脇に置く · タスクで待機し、変化があると戻ります";
 "cardLeaveHide" = "隠す";

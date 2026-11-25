@@ -8,7 +8,7 @@ import { escapeCardText } from "./cardText";
 import { HOST_CARD_PRIORITY } from "./hostCards";
 import type { IdleLadderHost } from "./idleLadder";
 import type { NextMoveBegun } from "./idleWakes";
-import { lastPartNote, lastPartNoteId } from "./lastPartNote";
+import { lastPartCard, lastPartCardId } from "./lastPartCard";
 import { asksAbout, questionsNaming } from "./reviewCard";
 import type { TypedWake } from "./wakes";
 
@@ -31,7 +31,7 @@ import type { TypedWake } from "./wakes";
  *
  * A part the captain stopped is theirs, so the check asks nothing about it,
  * except once when it is left as its parent's last open part (INF-6663):
- * the host's note then tells the captain the parent waits on it alone.
+ * the host then asks the captain to start it or keep it waiting.
  */
 
 /** The host's card about a part of begun work with no next move. */
@@ -119,7 +119,7 @@ export class NextMove {
       const still =
         card.id === nextMoveCardId(card.taskId)
           ? standing
-          : card.id === lastPartNoteId(card.taskId)
+          : card.id === lastPartCardId(card.taskId)
             ? last
             : undefined;
       if (!still || still.has(card.taskId) || this.host.answerOwed(card.id)) continue;
@@ -308,7 +308,7 @@ export class NextMove {
   private captainHolds(record: TaskRecord, pass: Pass): boolean {
     if (this.putOff(record, pass)) return true;
     if (this.namedByQuestion(record, pass)) return true;
-    const own = new Set([nextMoveCardId(record.id), lastPartNoteId(record.id)]);
+    const own = new Set([nextMoveCardId(record.id), lastPartCardId(record.id)]);
     let anyCard = false;
     for (const card of this.host.openCards()) {
       if (!asksAbout(card, record.id, this.host.tasks) || own.has(card.id)) continue;
@@ -421,17 +421,17 @@ export class NextMove {
   }
 
   /**
-   * The note once the last close has settled, so a first mate that starts
-   * the part on that news is not raced; once for that close, so Got it
-   * keeps it down until another part closes after a new one opens.
+   * The card once the last close has settled, so a first mate that starts
+   * the part on that news is not raced; once for that close, so Keep it
+   * waiting keeps it down until another part closes after a new one opens.
    */
   private tellLastPart(found: LastPart, now: number): void {
     const { record, parent, since } = found;
     if (now - since < this.settleMs) return;
-    const id = lastPartNoteId(record.id);
+    const id = lastPartCardId(record.id);
     const raised = this.host.tasks.capture.cardRaisedAt(record.id, id);
     if (raised !== undefined && raised >= since) return;
-    const card = lastPartNote(record, parent, now);
+    const card = lastPartCard(record, parent, now);
     this.host.recordSort(
       record.id,
       record.title,
@@ -439,8 +439,8 @@ export class NextMove {
       `host card ${id}: "${card.title}"`,
       "captain",
       // i18n-exempt: the decision ledger's reason, read by no person
-      "every other part of its parent closed after the captain stopped this one; the host told the captain once.",
-      "last-part-note",
+      "every other part of its parent closed after the captain stopped this one; the host asked the captain once.",
+      "last-part-card",
       () => {
         this.host.raiseCard(card);
         this.host.tasks.capture.recordCardRaised(record.id, {

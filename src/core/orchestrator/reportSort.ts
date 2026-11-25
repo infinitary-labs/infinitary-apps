@@ -134,13 +134,13 @@ export type ReportSortRule =
  * the crewmate, the wake to the Firstmate and its repeat, the host's own
  * card, a background job past its bound, an account whose crewmates a
  * cut-off paused, or let go on, the next-move check's wake and card on
- * begun work nothing will move (INF-3846 piece 2), and its note on a part
+ * begun work nothing will move (INF-3846 piece 2), and its card on a part
  * the captain stopped that is left as its parent's last (INF-6663).
  */
 export type IdleRule =
   | "next-move-wake"
   | "next-move-card"
-  | "last-part-note"
+  | "last-part-card"
   | "idle-nudge"
   | "idle-wake"
   | "idle-repeat"

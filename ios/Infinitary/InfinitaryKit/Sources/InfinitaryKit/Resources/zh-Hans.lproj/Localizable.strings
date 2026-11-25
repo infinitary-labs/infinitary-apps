@@ -472,10 +472,12 @@
 "cardKnowledgeConceptRef" = "概念 %1$@：%2$@";
 "cardKnowledgeFindingRef" = "发现 %1$@：%2$@";
 "cardKnowledgeRetired" = "已停用";
+"cardLastPartKeep" = "让它继续等";
 "cardLastPartOpen" = "%1$@ 中仍未关闭的部分只剩 %2$@。";
+"cardLastPartStart" = "立即开始";
 "cardLastPartStopped" = "它在等待，是因为你要求它等待；在你开始它之前，什么都不会开始它。";
 "cardLastPartTitle" = "%1$@ 只在等 %2$@";
-"cardLastPartWays" = "想完成它时，请在任务看板上开始它。要修改或放弃它，请在这里回复。";
+"cardLastPartWays" = "立即开始会开始它。让它继续等会保持原样，只有之后另一部分完成时这张卡片才会回来。要修改或放弃它，请在这里回复。";
 "cardLeaveAside" = "放到一边";
 "cardLeaveAsideRest" = "放到一边 · 在任务中等候，有变化时再回来";
 "cardLeaveHide" = "隐藏";

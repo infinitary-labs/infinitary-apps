@@ -19407,6 +19407,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Retired`;
   }
+  function cardLastPartKeep() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `دعه ينتظر`;
+      case "de":
+        return `Weiter warten lassen`;
+      case "es":
+        return `Dejar que espere`;
+      case "fr":
+        return `La laisser attendre`;
+      case "ja":
+        return `待たせておく`;
+      case "ko":
+        return `계속 기다리게 두기`;
+      case "pt-BR":
+        return `Deixar esperando`;
+      case "zh-Hans":
+        return `让它继续等`;
+      case "zh-Hant":
+        return `讓它繼續等`;
+      case "en-XA":
+        return `[Ķééþ îţ ŵáîţîñĝ ~~~~~]`;
+      case "ar-XB":
+        return `‮Keep it waiting‬`;
+    }
+    return `Keep it waiting`;
+  }
   function cardLastPartOpen(input2) {
     const parent = input2.parent;
     const part = input2.part;
@@ -19435,6 +19462,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `${part}‮ is the only part of ‬${parent}‮ still open.‬`;
     }
     return `${part} is the only part of ${parent} still open.`;
+  }
+  function cardLastPartStart() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ابدأ الآن`;
+      case "de":
+        return `Jetzt starten`;
+      case "es":
+        return `Empezar ahora`;
+      case "fr":
+        return `Démarrer maintenant`;
+      case "ja":
+        return `今すぐ開始`;
+      case "ko":
+        return `지금 시작`;
+      case "pt-BR":
+        return `Começar agora`;
+      case "zh-Hans":
+        return `立即开始`;
+      case "zh-Hant":
+        return `立即開始`;
+      case "en-XA":
+        return `[Šţáŕţ ñöŵ ~~~]`;
+      case "ar-XB":
+        return `‮Start now‬`;
+    }
+    return `Start now`;
   }
   function cardLastPartStopped() {
     switch (currentLanguage()) {
@@ -19495,29 +19549,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function cardLastPartWays() {
     switch (currentLanguage()) {
       case "ar":
-        return `ابدأه من لوح المهام عندما تريد إنجازه. لتغييره أو إسقاطه، رُدّ هنا.`;
+        return `«ابدأ الآن» يبدؤه. «دعه ينتظر» يتركه كما هو، ولا تعود هذه البطاقة إلا إذا انتهى جزء آخر لاحقًا. لتغييره أو إسقاطه، رُدّ هنا.`;
       case "de":
-        return `Starte ihn auf dem Aufgabenboard, wenn er erledigt werden soll. Um ihn zu ändern oder aufzugeben, antworte hier.`;
+        return `Jetzt starten startet ihn. Weiter warten lassen lässt ihn, wie er ist, und diese Karte kommt nur zurück, wenn später ein anderer Teil fertig wird. Um ihn zu ändern oder aufzugeben, antworte hier.`;
       case "es":
-        return `Iníciala desde el tablero de tareas cuando quieras que se haga. Para cambiarla o abandonarla, responde aquí.`;
+        return `Empezar ahora la empieza. Dejar que espere la deja como está, y esta tarjeta solo vuelve si otra parte termina más adelante. Para cambiarla o abandonarla, responde aquí.`;
       case "fr":
-        return `Démarrez-la depuis le tableau des tâches quand vous voulez qu’elle soit faite. Pour la modifier ou l’écarter, répondez ici.`;
+        return `Démarrer maintenant la démarre. La laisser attendre la laisse telle quelle, et cette carte ne revient que si une autre partie se termine plus tard. Pour la modifier ou l’écarter, répondez ici.`;
       case "ja":
-        return `進めたいときはタスクボードから開始してください。変更や取りやめは、ここに返信してください。`;
+        return `今すぐ開始 で開始します。待たせておく ではそのままにし、後で別のパートが終わったときだけこのカードが戻ります。変更や取りやめは、ここに返信してください。`;
       case "ko":
-        return `진행하려면 작업 보드에서 시작하세요. 바꾸거나 중단하려면 여기에 답장하세요.`;
+        return `지금 시작을 누르면 시작해요. 계속 기다리게 두기를 누르면 그대로 두고, 나중에 다른 부분이 끝날 때만 이 카드가 다시 돌아와요. 바꾸거나 중단하려면 여기에 답장하세요.`;
       case "pt-BR":
-        return `Inicie-a pelo quadro de tarefas quando quiser que seja feita. Para mudá-la ou abandoná-la, responda aqui.`;
+        return `Começar agora a começa. Deixar esperando a deixa como está, e este cartão só volta se outra parte terminar depois. Para mudá-la ou abandoná-la, responda aqui.`;
       case "zh-Hans":
-        return `想完成它时，请在任务看板上开始它。要修改或放弃它，请在这里回复。`;
+        return `立即开始会开始它。让它继续等会保持原样，只有之后另一部分完成时这张卡片才会回来。要修改或放弃它，请在这里回复。`;
       case "zh-Hant":
-        return `想完成它時，請在任務看板上開始它。要修改或放棄它，請在這裡回覆。`;
+        return `立即開始會開始它。讓它繼續等會保持原樣，只有之後另一部分完成時這張卡片才會回來。要修改或放棄它，請在這裡回覆。`;
       case "en-XA":
-        return `[Šţáŕţ îţ ƒŕöɱ ţĥé ţášķ ƀöáŕð ŵĥéñ ýöû ŵáñţ îţ ðöñé. Ţö çĥáñĝé öŕ ðŕöþ îţ, ŕéþļý ĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Šţáŕţ ñöŵ šţáŕţš îţ. Ķééþ îţ ŵáîţîñĝ ļéáṽéš îţ áš îţ îš, áñð ţĥîš çáŕð çöɱéš ƀáçķ öñļý îƒ áñöţĥéŕ þáŕţ ƒîñîšĥéš ļáţéŕ. Ţö çĥáñĝé öŕ ðŕöþ îţ, ŕéþļý ĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Start it from the task board when you want it done. To change or drop it, reply here.‬`;
+        return `‮Start now starts it. Keep it waiting leaves it as it is, and this card comes back only if another part finishes later. To change or drop it, reply here.‬`;
     }
-    return `Start it from the task board when you want it done. To change or drop it, reply here.`;
+    return `Start now starts it. Keep it waiting leaves it as it is, and this card comes back only if another part finishes later. To change or drop it, reply here.`;
   }
   function cardLeaveAside() {
     switch (currentLanguage()) {
@@ -111207,7 +111261,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardKnowledgeConceptRef,
     cardKnowledgeFindingRef,
     cardKnowledgeRetired,
+    cardLastPartKeep,
     cardLastPartOpen,
+    cardLastPartStart,
     cardLastPartStopped,
     cardLastPartTitle,
     cardLastPartWays,
@@ -114760,7 +114816,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardKnowledgeConceptRef": ["id", "title"],
     "cardKnowledgeFindingRef": ["id", "title"],
     "cardKnowledgeRetired": [],
+    "cardLastPartKeep": [],
     "cardLastPartOpen": ["parent", "part"],
+    "cardLastPartStart": [],
     "cardLastPartStopped": [],
     "cardLastPartTitle": ["parent", "part"],
     "cardLastPartWays": [],

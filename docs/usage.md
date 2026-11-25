@@ -61,7 +61,7 @@ The client keeps its five-second default log batching; the app makes no allowanc
 With no company setup ("A company's Claude Code setup" below) it disables content, metric and trace exports for this app-owned path.
 It projects only required request-cost fields, and never persists the raw export, prompts, identity metadata or endpoint secret.
 The last attachment removes its route and stops the receiver; a failed startup or malformed export never fails the model prompt.
-A reporting choice in the host environment other than a company setup's keys, a setup key the receiver cannot carry (a certificate, client key or insecure switch, or an exporter other than OTLP), a managed reporting setting, a policy helper or an unavailable policy read keeps result-only accounting rather than overwriting that configuration (`claudeCostPolicy.ts`).
+A reporting choice in the host environment other than a company setup's keys, an exporter the receiver cannot carry (one other than OTLP), a managed reporting setting, a policy helper or an unavailable policy read keeps result-only accounting rather than overwriting that configuration (`claudeCostPolicy.ts`).
 The policy read loads no personal settings or credential.
 
 A provider request ID must join a completed SDK-streamed call to the client's price; model IDs use the existing canonical model-name owner.
@@ -94,16 +94,21 @@ Every other provider's work reaches the same collector, and a managed setup's, i
   It prices each call from the logs as before, so cost limits stay live (a batch over 1 MiB is passed on unpriced, up to the collector's default 20 MiB), and posts each batch's bytes unchanged to the collector, over OTLP/HTTP or as one gRPC call; the collector's answer goes back to the client's exporter, so the client's own retries apply and a repeated batch is priced once.
   The setup's other keys, such as `OTEL_RESOURCE_ATTRIBUTES`, an export interval or the switches that put prompts in the logs, reach the client unchanged, so the company receives what Claude's client would have sent; traces stay off.
 - **Headers.**
-  The setup's static headers and what its header command prints (run with the session's environment, at most once each 29 minutes, as Claude Code runs it) ride each post; they are held in memory only, redirects are refused, and a failed command sends without its headers, leaves one log line without its output and runs again after 10 seconds.
+  The setup's static headers and what its header command prints (run with the session's environment, at most once each 29 minutes, as Claude Code runs it) ride each post; they are held in memory only, redirects are not followed, and a failed command sends without its headers, leaves one log line without its output and runs again after 10 seconds.
 - **Certificates.**
-  The forward checks a collector's certificate against the list of certificate authorities built into the app, not the computer's own trusted certificates, and sends no client certificate; a certificate, client key or insecure key in the person's settings file or shell is not honored.
-  So a collector on a company's own certificate authority, or one that asks for a client certificate, refuses every batch and receives nothing from Infinitary; the client hears the refusal, and nothing in the app says so yet.
+  A secure collector is checked as Claude's client checks it: against the file `OTEL_EXPORTER_OTLP_CERTIFICATE` names, which replaces every other authority, or else against Node's own list with any `NODE_EXTRA_CA_CERTS` and the computer's trusted certificates, less those past their end date (read again after five minutes).
+  `OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE` and `OTEL_EXPORTER_OTLP_CLIENT_KEY` are sent as a pair, over OTLP/HTTP and gRPC alike; each key's signal form (`OTEL_EXPORTER_OTLP_LOGS_CERTIFICATE`) wins over the general one, an empty one reads as unset, and a path resolves against the folder the client runs in.
+  A file that cannot be read, or a pair that does not fit, is left out with a log line, as the client leaves it out with a warning.
+  A gRPC address with no scheme (`collector.example.com:4317`) is secure unless the setup's `OTEL_EXPORTER_OTLP_INSECURE` is `true`, as in Claude's gRPC exporter.
 - **A managed setup.**
   An administrator's managed setup reaches Claude's client directly and cannot be overridden; there the receiver stays off as before and Infinitary passes nothing on, so nothing is counted twice.
 - **What a person sees.**
   Usage shows one line naming where usage is reported (`usage.reporting`, `companyDestination`'s `reporting`): the host the usage report sends every model's work to, an administrator's managed setup included, or else, marked Claude work only, the host of a setup it cannot send to, such as one over gRPC, where Claude's own client or the receiver still reports Claude's records; each computer that runs work follows its own setup for Claude work, which the line says.
+  When a collector of the person's setup has taken no batch for a minute (`REFUSAL_LASTS_MS`, past one batch's retries within the client's ten-second export limit), the line turns to a warning that Claude work is not reaching it and why: it could not be reached, the connection could not be made secure (an untrusted certificate, or a client certificate it turned away or missed), or it answered with a refusal; the next batch it takes brings the line back (`lastingRefusal`).
+  A managed collector's answers reach only Claude's client, so its line never warns.
 
 `claudeReporting.integration.test.ts` holds this on the client the product would run, boxed, with stand-in collectors over OTLP/HTTP JSON, protobuf and gRPC and a header command: the collector gets the client's own batches byte for byte, the token and cost counters among them, the person's resource attributes on logs and metrics, prompts only where the person's `OTEL_LOG_USER_PROMPTS` asks, and a managed setup leaves the collector empty.
+Collectors on a certificate authority of their own, over OTLP/HTTP and gRPC, take only the setup's client certificate and get every priced call; one the computer's trusted list vouches for is reached with no certificate key, and an untrusted one is named as not connecting securely.
 
 ## Daily totals
 

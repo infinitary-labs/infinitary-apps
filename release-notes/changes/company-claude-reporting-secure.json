@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "id": "company-claude-reporting-secure",
+      "kind": "fix",
+      "area": "subscriptions",
+      "title": "Your company's Claude Code reporting reaches a collector your company secures itself",
+      "body": "When your Claude Code settings name the security files your company gave you for usage reporting, Infinitary now uses them, as Claude Code does, over every kind of connection your company's collector takes. A collector your computer already trusts is reached with no extra settings. Before, such a collector got nothing from Infinitary.",
+      "noPicture": "The change is in what your company's collector receives; nothing on screen changes for it.",
+      "provenance": { "origin": "change" }
+    },
+    {
+      "id": "company-claude-reporting-warning",
+      "kind": "improvement",
+      "area": "settings",
+      "title": "Settings → Usage warns when your company's Claude Code reporting is not getting through",
+      "body": "When your company's collector has taken nothing for over a minute, the line in Settings → Usage that names it says the work is not reaching it, and whether it could not be reached, could not be connected to securely or turned the reports away. It goes back to the usual line once the collector takes the work again.",
+      "picture": {
+        "dark": "company-claude-reporting-warning-dark.webp",
+        "light": "company-claude-reporting-warning-light.webp",
+        "alt": "Settings → Usage warning that Claude work is not reaching the company's collector because it could not be connected to securely"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -8,6 +8,7 @@ import {
   companyHeaders,
   companyReportingFrom,
   isReportingKey,
+  lastingRefusal,
   parseOtlpHeaders,
   readClaudeCompanyReporting,
   receiverStepsAside,
@@ -42,7 +43,13 @@ export type CompanyDestinationDeps = {
  * and every other provider's calls go there too. Otherwise the person's own
  * setup, unless the receiver steps aside (`receiverStepsAside`), the rule
  * Settings → Usage names its host by.
- * A signal the setup sends over gRPC takes no JSON request, so it is left out.
+ * A signal the setup sends over gRPC takes no JSON request, and the report's
+ * requests carry none of the certificate files a signal may name, so either
+ * is left out; Claude's own records still reach it through the receiver or
+ * Claude's own client, which carry them.
+ * The line warns while the person's own setup keeps refusing the receiver's
+ * forward (`lastingRefusal`); a managed collector's answers reach only
+ * Claude's client, so it carries no refusal.
  */
 export function companyDestination(deps: CompanyDestinationDeps): {
   destinations(): readonly UsageReportDestination[];
@@ -52,6 +59,8 @@ export function companyDestination(deps: CompanyDestinationDeps): {
   let held: readonly UsageReportDestination[] = [];
   /** The setup read last, where Claude's own records go even when the report cannot send there. */
   let setupHost: string | null = null;
+  /** The person's own setup read last, whose collector the receiver passes Claude's records on to. */
+  let ownSetup: ClaudeCompanyReporting | undefined;
   let readAt = Number.NEGATIVE_INFINITY;
   let reading: Promise<void> | undefined;
 
@@ -69,6 +78,7 @@ export function companyDestination(deps: CompanyDestinationDeps): {
       const email = setup ? await deps.email(env).catch(() => undefined) : undefined;
       held = setup ? toDestination(setup, deps.env, email) : [];
       setupHost = setup?.host ?? null;
+      ownSetup = managed === undefined ? setup : undefined;
     })().finally(() => {
       reading = undefined;
     });
@@ -89,9 +99,14 @@ export function companyDestination(deps: CompanyDestinationDeps): {
      */
     async reporting() {
       await refresh();
+      const refusal = ownSetup ? lastingRefusal(ownSetup) : undefined;
       const endpoint = held[0]?.endpoints.logs ?? held[0]?.endpoints.metrics;
-      if (endpoint) return { host: new URL(endpoint).host };
-      return setupHost ? { host: setupHost, claudeOnly: true } : { host: null };
+      const line: UsageReporting = endpoint
+        ? { host: new URL(endpoint).host }
+        : setupHost
+          ? { host: setupHost, claudeOnly: true }
+          : { host: null };
+      return refusal ? { ...line, refusal } : line;
     },
   };
 }
@@ -104,7 +119,7 @@ function toDestination(
   const endpoints: UsageReportDestination["endpoints"] = {};
   for (const signal of ["logs", "metrics"] as const) {
     const found = setup.signals[signal];
-    if (found && found.protocol !== "grpc") endpoints[signal] = found.endpoint;
+    if (found && found.protocol !== "grpc" && !found.tls) endpoints[signal] = found.endpoint;
   }
   if (!endpoints.logs && !endpoints.metrics) return [];
   const serviceName = setup.clientEnv.OTEL_SERVICE_NAME?.trim();

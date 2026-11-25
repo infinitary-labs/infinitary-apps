@@ -4021,6 +4021,9 @@
 "settingsUsageRecentTokensLegend" = "入力にはキャッシュされたトークンは含まれません。合計では各カテゴリを一度だけ数えます。";
 "settingsUsageRecentUsdLegend" = "カテゴリ別の推定には記録された価格のみを使います。対象範囲が合計と異なる場合があります。";
 "settingsUsageRecordsOf" = "%2$@件の記録のうち%1$@件";
+"settingsUsageReportingRefused" = "一等航海士のコンピューターでの Claude の作業が、その Claude Code の設定が指定する %1$@ に届いていません。%1$@ が報告を拒否し続けています。会社から渡された Claude Code の報告設定を確認してください。";
+"settingsUsageReportingSecure" = "一等航海士のコンピューターでの Claude の作業が、その Claude Code の設定が指定する %1$@ に届いていません。アプリが %1$@ に安全に接続できない状態が続いています。会社から渡された Claude Code の報告設定を確認してください。";
+"settingsUsageReportingUnreachable" = "一等航海士のコンピューターでの Claude の作業が、その Claude Code の設定が指定する %1$@ に届いていません。アプリが %1$@ に到達できない状態が続いています。";
 "settingsUsageReportsClaudeTo" = "一等航海士のコンピューターでの Claude の作業は、その Claude Code の設定に従い %1$@ にも報告されます。ほかのコンピューターはそれぞれの設定に従います。";
 "settingsUsageReportsTo" = "一等航海士のコンピューターの Claude Code の設定に従い、クルーの使用量は %1$@ にも報告されます。そこで行った Claude の作業と、ほかのすべてのモデルの作業です。ほかのコンピューターでの Claude の作業は、それぞれの設定に従います。";
 "settingsUsageScopeAll" = "すべての作業";

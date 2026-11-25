@@ -46,6 +46,7 @@ If your Claude Code settings file or your shell sets up usage reporting for your
 Claude's work goes as the records Claude Code itself would send there.
 Every other model's work goes under the same names, with its model, provider, tokens, estimated cost, whether your first mate or a crewmate did it, the kind of work and your Claude Code sign-in's email, never your words, task titles or project names.
 Settings → **Usage** names where it goes.
+If that place keeps turning Claude's work away, or cannot be reached, that line says so instead.
 A setup your company's administrator manages for the whole computer reaches Claude Code directly, as it always did, and Infinitary sends every other model's work there too, the same way.
 Either kind of setup gets only Claude's work when it sends its usage over gRPC, and Settings → **Usage** then says so.
 

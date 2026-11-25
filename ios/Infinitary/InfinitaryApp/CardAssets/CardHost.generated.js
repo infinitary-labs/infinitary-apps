@@ -97068,6 +97068,90 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `${count} of ${records} records`;
   }
+  function settingsUsageReportingRefused(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يصل عمل Claude على حاسوب نائب القبطان إلى ${host}، وهو ما تحدده إعدادات Claude Code عليه. لا يزال ${host} يرفض التقارير. راجع إعدادات التقارير الخاصة بـ Claude Code التي أعطتك إياها شركتك.`;
+      case "de":
+        return `Claude-Arbeit auf dem Computer deines ersten Offiziers kommt nicht bei ${host} an, wohin dessen Claude-Code-Einstellungen sie melden. ${host} weist die Berichte immer wieder ab. Prüfe die Berichtseinstellungen für Claude Code, die dir deine Firma gegeben hat.`;
+      case "es":
+        return `El trabajo de Claude en la computadora de tu primer oficial no está llegando a ${host}, adonde lo envían sus ajustes de Claude Code. ${host} sigue rechazando los informes. Revisa los ajustes de informes de Claude Code que te dio tu empresa.`;
+      case "fr":
+        return `Le travail de Claude sur l’ordinateur de votre second n’arrive pas à ${host}, où l’envoient ses réglages Claude Code. ${host} continue de refuser les rapports. Vérifiez les réglages de rapport Claude Code fournis par votre entreprise.`;
+      case "ja":
+        return `一等航海士のコンピューターでの Claude の作業が、その Claude Code の設定が指定する ${host} に届いていません。${host} が報告を拒否し続けています。会社から渡された Claude Code の報告設定を確認してください。`;
+      case "ko":
+        return `일등항해사의 컴퓨터에서 하는 Claude 작업이 그 컴퓨터의 Claude Code 설정이 지정한 ${host}에 전달되지 않고 있어요. ${host}에서 보고를 계속 거부하고 있어요. 회사에서 받은 Claude Code 보고 설정을 확인하세요.`;
+      case "pt-BR":
+        return `O trabalho do Claude no computador do seu imediato não está chegando a ${host}, para onde os ajustes do Claude Code dele o enviam. ${host} continua recusando os relatórios. Confira os ajustes de relatórios do Claude Code que sua empresa passou para você.`;
+      case "zh-Hans":
+        return `你大副电脑上的 Claude 工作没有送达其 Claude Code 设置指定的 ${host}。${host} 一直拒收报告。请检查公司给你的 Claude Code 报告设置。`;
+      case "zh-Hant":
+        return `你大副電腦上的 Claude 工作沒有送達其 Claude Code 設定指定的 ${host}。${host} 一直拒收回報。請檢查公司給你的 Claude Code 回報設定。`;
+      case "en-XA":
+        return `[Çļáûðé ŵöŕķ öñ ýöûŕ ƒîŕšţ ɱáţé’š çöɱþûţéŕ îš ñöţ ŕéáçĥîñĝ ${host}, ŵĥîçĥ îţš Çļáûðé Çöðé šéţţîñĝš ñáɱé. ${host} ķééþš ţûŕñîñĝ ţĥé ŕéþöŕţš áŵáý. Çĥéçķ ţĥé ŕéþöŕţîñĝ šéţţîñĝš ýöûŕ çöɱþáñý ĝáṽé ýöû ƒöŕ Çļáûðé Çöðé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Claude work on your first mate’s computer is not reaching ‬${host}‮, which its Claude Code settings name. ‬${host}‮ keeps turning the reports away. Check the reporting settings your company gave you for Claude Code.‬`;
+    }
+    return `Claude work on your first mate’s computer is not reaching ${host}, which its Claude Code settings name. ${host} keeps turning the reports away. Check the reporting settings your company gave you for Claude Code.`;
+  }
+  function settingsUsageReportingSecure(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يصل عمل Claude على حاسوب نائب القبطان إلى ${host}، وهو ما تحدده إعدادات Claude Code عليه. لا يزال يتعذر على التطبيق إنشاء اتصال آمن بـ ${host}. راجع إعدادات التقارير الخاصة بـ Claude Code التي أعطتك إياها شركتك.`;
+      case "de":
+        return `Claude-Arbeit auf dem Computer deines ersten Offiziers kommt nicht bei ${host} an, wohin dessen Claude-Code-Einstellungen sie melden. Die App kann immer wieder keine sichere Verbindung zu ${host} herstellen. Prüfe die Berichtseinstellungen für Claude Code, die dir deine Firma gegeben hat.`;
+      case "es":
+        return `El trabajo de Claude en la computadora de tu primer oficial no está llegando a ${host}, adonde lo envían sus ajustes de Claude Code. La app sigue sin poder conectarse de forma segura a ${host}. Revisa los ajustes de informes de Claude Code que te dio tu empresa.`;
+      case "fr":
+        return `Le travail de Claude sur l’ordinateur de votre second n’arrive pas à ${host}, où l’envoient ses réglages Claude Code. L’app ne parvient toujours pas à se connecter de façon sécurisée à ${host}. Vérifiez les réglages de rapport Claude Code fournis par votre entreprise.`;
+      case "ja":
+        return `一等航海士のコンピューターでの Claude の作業が、その Claude Code の設定が指定する ${host} に届いていません。アプリが ${host} に安全に接続できない状態が続いています。会社から渡された Claude Code の報告設定を確認してください。`;
+      case "ko":
+        return `일등항해사의 컴퓨터에서 하는 Claude 작업이 그 컴퓨터의 Claude Code 설정이 지정한 ${host}에 전달되지 않고 있어요. 앱이 ${host}에 계속 안전하게 연결하지 못하고 있어요. 회사에서 받은 Claude Code 보고 설정을 확인하세요.`;
+      case "pt-BR":
+        return `O trabalho do Claude no computador do seu imediato não está chegando a ${host}, para onde os ajustes do Claude Code dele o enviam. O app continua sem conseguir se conectar com segurança a ${host}. Confira os ajustes de relatórios do Claude Code que sua empresa passou para você.`;
+      case "zh-Hans":
+        return `你大副电脑上的 Claude 工作没有送达其 Claude Code 设置指定的 ${host}。应用一直无法与 ${host} 建立安全连接。请检查公司给你的 Claude Code 报告设置。`;
+      case "zh-Hant":
+        return `你大副電腦上的 Claude 工作沒有送達其 Claude Code 設定指定的 ${host}。程式一直無法與 ${host} 建立安全連線。請檢查公司給你的 Claude Code 回報設定。`;
+      case "en-XA":
+        return `[Çļáûðé ŵöŕķ öñ ýöûŕ ƒîŕšţ ɱáţé’š çöɱþûţéŕ îš ñöţ ŕéáçĥîñĝ ${host}, ŵĥîçĥ îţš Çļáûðé Çöðé šéţţîñĝš ñáɱé. Ţĥé áþþ ķééþš ƒáîļîñĝ ţö çöññéçţ ţö ${host} šéçûŕéļý. Çĥéçķ ţĥé ŕéþöŕţîñĝ šéţţîñĝš ýöûŕ çöɱþáñý ĝáṽé ýöû ƒöŕ Çļáûðé Çöðé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Claude work on your first mate’s computer is not reaching ‬${host}‮, which its Claude Code settings name. The app keeps failing to connect to ‬${host}‮ securely. Check the reporting settings your company gave you for Claude Code.‬`;
+    }
+    return `Claude work on your first mate’s computer is not reaching ${host}, which its Claude Code settings name. The app keeps failing to connect to ${host} securely. Check the reporting settings your company gave you for Claude Code.`;
+  }
+  function settingsUsageReportingUnreachable(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يصل عمل Claude على حاسوب نائب القبطان إلى ${host}، وهو ما تحدده إعدادات Claude Code عليه. لا يزال يتعذر على التطبيق الوصول إلى ${host}.`;
+      case "de":
+        return `Claude-Arbeit auf dem Computer deines ersten Offiziers kommt nicht bei ${host} an, wohin dessen Claude-Code-Einstellungen sie melden. Die App erreicht ${host} immer wieder nicht.`;
+      case "es":
+        return `El trabajo de Claude en la computadora de tu primer oficial no está llegando a ${host}, adonde lo envían sus ajustes de Claude Code. La app sigue sin poder llegar a ${host}.`;
+      case "fr":
+        return `Le travail de Claude sur l’ordinateur de votre second n’arrive pas à ${host}, où l’envoient ses réglages Claude Code. L’app ne parvient toujours pas à joindre ${host}.`;
+      case "ja":
+        return `一等航海士のコンピューターでの Claude の作業が、その Claude Code の設定が指定する ${host} に届いていません。アプリが ${host} に到達できない状態が続いています。`;
+      case "ko":
+        return `일등항해사의 컴퓨터에서 하는 Claude 작업이 그 컴퓨터의 Claude Code 설정이 지정한 ${host}에 전달되지 않고 있어요. 앱이 ${host}에 계속 닿지 못하고 있어요.`;
+      case "pt-BR":
+        return `O trabalho do Claude no computador do seu imediato não está chegando a ${host}, para onde os ajustes do Claude Code dele o enviam. O app continua sem conseguir alcançar ${host}.`;
+      case "zh-Hans":
+        return `你大副电脑上的 Claude 工作没有送达其 Claude Code 设置指定的 ${host}。应用一直无法访问 ${host}。`;
+      case "zh-Hant":
+        return `你大副電腦上的 Claude 工作沒有送達其 Claude Code 設定指定的 ${host}。程式一直連不上 ${host}。`;
+      case "en-XA":
+        return `[Çļáûðé ŵöŕķ öñ ýöûŕ ƒîŕšţ ɱáţé’š çöɱþûţéŕ îš ñöţ ŕéáçĥîñĝ ${host}, ŵĥîçĥ îţš Çļáûðé Çöðé šéţţîñĝš ñáɱé. Ţĥé áþþ ķééþš ƒáîļîñĝ ţö ŕéáçĥ ${host}. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Claude work on your first mate’s computer is not reaching ‬${host}‮, which its Claude Code settings name. The app keeps failing to reach ‬${host}‮.‬`;
+    }
+    return `Claude work on your first mate’s computer is not reaching ${host}, which its Claude Code settings name. The app keeps failing to reach ${host}.`;
+  }
   function settingsUsageReportsClaudeTo(input2) {
     const host = input2.host;
     switch (currentLanguage()) {
@@ -112760,6 +112844,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsUsageRecentTokensLegend,
     settingsUsageRecentUsdLegend,
     settingsUsageRecordsOf,
+    settingsUsageReportingRefused,
+    settingsUsageReportingSecure,
+    settingsUsageReportingUnreachable,
     settingsUsageReportsClaudeTo,
     settingsUsageReportsTo,
     settingsUsageScopeAll,
@@ -116285,6 +116372,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsUsageRecentTokensLegend": [],
     "settingsUsageRecentUsdLegend": [],
     "settingsUsageRecordsOf": ["count", "records"],
+    "settingsUsageReportingRefused": ["host"],
+    "settingsUsageReportingSecure": ["host"],
+    "settingsUsageReportingUnreachable": ["host"],
     "settingsUsageReportsClaudeTo": ["host"],
     "settingsUsageReportsTo": ["host"],
     "settingsUsageScopeAll": [],
@@ -135287,9 +135377,15 @@ ${startersHtml()}`;
     /** Tasks finished across all retained history, for the milestones. */
     finishedEver: number()
   });
+  const usageReportingRefusalReasonSchema = _enum([
+    "unreachable",
+    "secure-connection",
+    "refused"
+  ]);
   object({
     host: string().nullable(),
-    claudeOnly: literal(true).optional()
+    claudeOnly: literal(true).optional(),
+    refusal: object({ host: string(), reason: usageReportingRefusalReasonSchema }).optional()
   });
   const USAGE_TASKS_MAX = 5e3;
   const usageTasksQuerySchema = strictObject({

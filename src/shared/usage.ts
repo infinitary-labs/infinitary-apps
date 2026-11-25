@@ -190,14 +190,29 @@ export const usageSummarySchema = z.object({
 export type UsageSummary = z.infer<typeof usageSummarySchema>;
 
 /**
+ * Why a company's collector has not taken this computer's Claude work for a
+ * while: it could not be reached, the connection to it could not be made
+ * secure, or it answered with a refusal.
+ */
+export const usageReportingRefusalReasonSchema = z.enum([
+  "unreachable",
+  "secure-connection",
+  "refused",
+]);
+export type UsageReportingRefusalReason = z.infer<typeof usageReportingRefusalReasonSchema>;
+
+/**
  * Where usage is also reported, when a company's Claude Code setup names a
  * collector: its host, or null (docs/usage-report.md, "Destinations").
  * `claudeOnly` when only Claude's own records go there, as for a setup the
  * report cannot send every other model's work to.
+ * `refusal` names the collector of the person's own setup that has taken no
+ * batch for over a minute, and why.
  */
 export const usageReportingSchema = z.object({
   host: z.string().nullable(),
   claudeOnly: z.literal(true).optional(),
+  refusal: z.object({ host: z.string(), reason: usageReportingRefusalReasonSchema }).optional(),
 });
 export type UsageReporting = z.infer<typeof usageReportingSchema>;
 

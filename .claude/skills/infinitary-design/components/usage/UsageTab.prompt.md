@@ -7,6 +7,12 @@ The micro label `USAGE`, then one row: the `--text-sm --fg-2` line "Your first m
 The switch changes every amount in the tab together - readouts, bars, model rows, a model's categories, the daily values - and nothing outside it; counts stay counts.
 The app remembers it; the tab opens in Estimated $ until the captain picks tokens.
 
+**Where it is also reported.**
+Under the header, when the Claude Code settings on the first mate's computer name a company's collector, one `--text-sm --fg-3` line names its host and says those settings ask for it: the crew's usage goes there (`settingsUsageReportsTo`), or only Claude work does (`settingsUsageReportsClaudeTo`).
+While that collector has taken nothing for over a minute, the same line in `--warn` takes its place, says the work is not reaching that host, and says why: the host keeps turning the reports away (`settingsUsageReportingRefused`), the app cannot connect to it securely (`settingsUsageReportingSecure`), or the app cannot reach it (`settingsUsageReportingUnreachable`).
+The first two end by pointing the captain to the reporting settings their company gave them.
+It names no certificate or connection detail, and leaves when the collector takes the work again.
+
 **Filters.**
 Under the header, a row of two labeled selects in `--text-sm` on `--bg-2` with a `--line-1` hairline and `--radius-m`: Period (Last 7 days, Last 30 days, All recorded time) and Work (All work, Task work, First mate, Other work), then the dates in `--fg-3`: "Sep 6–Oct 5 · Local dates", or "Since Sep 6 · Local dates" for all time.
 They open at Last 30 days and All work every time.

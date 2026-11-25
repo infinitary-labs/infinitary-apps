@@ -620,7 +620,9 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
             this.id,
             (report) =>
               calls.report({ ...report, model: canonicalClaudeModelId({ value: report.model }) }),
-            company ? companyForward(company, env, (line) => this.note(line)) : undefined,
+            company
+              ? companyForward(company, env, (line) => this.note(line), { cwd: this.spec.cwd })
+              : undefined,
           );
         } catch {
           this.note("local cost reporting unavailable; retaining turn-end accounting");

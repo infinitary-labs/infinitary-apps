@@ -4021,6 +4021,9 @@
 "settingsUsageRecentTokensLegend" = "A entrada exclui tokens em cache. O total conta cada categoria só uma vez.";
 "settingsUsageRecentUsdLegend" = "As estimativas por categoria usam só preços registrados. A cobertura delas pode ser diferente da do total.";
 "settingsUsageRecordsOf" = "%1$@ de %2$@ registros";
+"settingsUsageReportingRefused" = "O trabalho do Claude no computador do seu imediato não está chegando a %1$@, para onde os ajustes do Claude Code dele o enviam. %1$@ continua recusando os relatórios. Confira os ajustes de relatórios do Claude Code que sua empresa passou para você.";
+"settingsUsageReportingSecure" = "O trabalho do Claude no computador do seu imediato não está chegando a %1$@, para onde os ajustes do Claude Code dele o enviam. O app continua sem conseguir se conectar com segurança a %1$@. Confira os ajustes de relatórios do Claude Code que sua empresa passou para você.";
+"settingsUsageReportingUnreachable" = "O trabalho do Claude no computador do seu imediato não está chegando a %1$@, para onde os ajustes do Claude Code dele o enviam. O app continua sem conseguir alcançar %1$@.";
 "settingsUsageReportsClaudeTo" = "O trabalho do Claude no computador do seu imediato também é informado a %1$@, como pedem os ajustes do Claude Code dele. Os outros computadores seguem os próprios ajustes.";
 "settingsUsageReportsTo" = "O uso da sua tripulação também é informado a %1$@, como pedem os ajustes do Claude Code no computador do seu imediato: o trabalho do Claude feito lá e o trabalho de qualquer outro modelo. O trabalho do Claude em outros computadores segue os próprios ajustes deles.";
 "settingsUsageScopeAll" = "Todo o trabalho";

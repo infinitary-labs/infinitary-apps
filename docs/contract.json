@@ -58,6 +58,14 @@
       },
       {
         "members": [
+          "unreachable",
+          "secure-connection",
+          "refused"
+        ],
+        "unknown": "refused"
+      },
+      {
+        "members": [
           "other-home",
           "other-entry",
           "removal-unfinished",
@@ -79421,6 +79429,26 @@
           "claudeOnly": {
             "type": "boolean",
             "const": true
+          },
+          "refusal": {
+            "type": "object",
+            "properties": {
+              "host": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string",
+                "enum": [
+                  "unreachable",
+                  "secure-connection",
+                  "refused"
+                ]
+              }
+            },
+            "required": [
+              "host",
+              "reason"
+            ]
           }
         },
         "required": [

@@ -4178,6 +4178,9 @@ public enum PhoneMessages {
     public static func `settingsUsageRecentTokensLegend`() -> String { PhoneWords.format("settingsUsageRecentTokensLegend", []) }
     public static func `settingsUsageRecentUsdLegend`() -> String { PhoneWords.format("settingsUsageRecentUsdLegend", []) }
     public static func `settingsUsageRecordsOf`(`count`: String, `records`: String) -> String { PhoneWords.format("settingsUsageRecordsOf", [`count`, `records`]) }
+    public static func `settingsUsageReportingRefused`(`host`: String) -> String { PhoneWords.format("settingsUsageReportingRefused", [`host`]) }
+    public static func `settingsUsageReportingSecure`(`host`: String) -> String { PhoneWords.format("settingsUsageReportingSecure", [`host`]) }
+    public static func `settingsUsageReportingUnreachable`(`host`: String) -> String { PhoneWords.format("settingsUsageReportingUnreachable", [`host`]) }
     public static func `settingsUsageReportsClaudeTo`(`host`: String) -> String { PhoneWords.format("settingsUsageReportsClaudeTo", [`host`]) }
     public static func `settingsUsageReportsTo`(`host`: String) -> String { PhoneWords.format("settingsUsageReportsTo", [`host`]) }
     public static func `settingsUsageScopeAll`() -> String { PhoneWords.format("settingsUsageScopeAll", []) }
@@ -8796,6 +8799,9 @@ extension PhoneWords {
         "settingsUsageRecentTokensLegend": [],
         "settingsUsageRecentUsdLegend": [],
         "settingsUsageRecordsOf": ["count", "records"],
+        "settingsUsageReportingRefused": ["host"],
+        "settingsUsageReportingSecure": ["host"],
+        "settingsUsageReportingUnreachable": ["host"],
         "settingsUsageReportsClaudeTo": ["host"],
         "settingsUsageReportsTo": ["host"],
         "settingsUsageScopeAll": [],

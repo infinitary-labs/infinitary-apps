@@ -9,6 +9,7 @@ import {
 } from "../../../tests/helpers/savedStory";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import type { ForgePull } from "../forge";
+import { git } from "../workspace/git";
 
 // Integration cohort (docs/test-cohorts.md): real git at the run's own
 // priority, the slowest test (the first, which loads the file's modules)
@@ -222,7 +223,10 @@ describe("a selected pull request on the way to its merge card", () => {
       at.service.publication.completionPresentation("ab12cd34", 1, 1906),
     ).rejects.toThrow("The checkout names a different pull request");
     const own = at.tasks.changeFor("ab12cd34");
-    if (!own) throw new Error("The fixture requires a task change.");
+    const repoDir = at.tasks.get("ab12cd34")?.repoDir;
+    if (!own || !repoDir) throw new Error("The fixture requires a task change with a project.");
+    await git(repoDir, ["branch", own.head.branch, "HEAD"]);
+    at.bringBranchHome.mockResolvedValue(repoDir);
     checkedOut.branch = own.head.branch;
     const ownBranch = await at.service.mergeCard.walk("ab12cd34");
     expect(ownBranch.stop?.missing).toContain(`check_change({ change: "${own.id}" })`);

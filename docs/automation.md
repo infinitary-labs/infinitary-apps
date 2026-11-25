@@ -80,7 +80,7 @@ INF-6664 piece 2: while a runbook that is on names the `heartbeat` wake (the bui
   Its page shows no Setup, only History and Notes, under a note that it comes with the Heartbeat runbook.
 - Once its 55 minutes passed, each tick asks `heartbeatDue` (`src/core/orchestrator/heartbeat.ts`), and a beat goes out only when one of two reasons holds, the captain's choice on the plan:
   - the standing list has a row marked new, and 55 minutes passed since the last beat;
-  - or the first mate's seat is known to keep its prompt cache for an hour (the Claude seat; any other seat gets only the first kind), 50 minutes passed since its last request ended, as the usage ledger records it when the request ends, and the heartbeat is not resting.
+  - or the first mate's seat is known to keep its prompt cache for an hour (the Claude seat; any other seat gets only the first kind), from 50 to under 58 minutes passed since its last request ended, as the usage ledger records it when the request ends, inside the cache's hour (`QUIET_UNTIL_MINUTES`; once the cache's hour has ended, after a sleep, a resume or a start with nothing run since, no quiet beat goes), and the heartbeat is not resting.
 - The heartbeat rests after 12 quiet beats in a row, or after a beat whose first request read less than half its input from the cache, until the first mate's next turn of another kind.
   A beat's turn is the span from its run's firing to its settling, and a first mate request outside every beat's span is another turn.
 - A beat due while the app was closed is dropped and the rule's next run moves 55 minutes on from start; no beat goes while one is still waiting.

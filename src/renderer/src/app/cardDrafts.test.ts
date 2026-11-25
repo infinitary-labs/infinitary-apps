@@ -268,6 +268,31 @@ describe("startCardDrafts", () => {
     });
   });
 
+  // Intent (INF-6671): a pick of the recommended option reads unchanged, yet
+  // one this window kept as unsent still goes after its restart.
+  it("sends a recommended pick restored at start that was never sent, though its answer reads unchanged", async () => {
+    vi.useFakeTimers();
+    stubStorage({
+      "infinitary.cardDraftBase.card-1": JSON.stringify({
+        lifecycle: "opening-1",
+        revision: 0,
+        parts: { "answer:harbour": 0 },
+      }),
+    });
+    const recommended = {
+      ...PICKED,
+      changed: 0,
+      answers: [{ name: "harbour", values: ["north"], changed: false }],
+    };
+    const at = windowWith([CARD_DRAFTS], undefined, { cardAnswers: { "card-1": recommended } });
+    at.stack([{ id: "card-1", lifecycleId: "opening-1" }]);
+    await vi.advanceTimersByTimeAsync(DRAFT_QUIET_MS * 2);
+    expect(at.draft).toHaveBeenCalledTimes(1);
+    expect(at.draft.mock.calls[0]?.[1]).toMatchObject({
+      answers: [{ name: "harbour", values: ["north"], changed: false }],
+    });
+  });
+
   it("takes a reopened card's draft that arrived before the stack held the new opening", async () => {
     vi.useFakeTimers();
     stubStorage();

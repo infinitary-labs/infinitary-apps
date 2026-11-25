@@ -247,7 +247,7 @@ function failingWords(failing: readonly PanelFailingRead[]): string {
  * A personal panel's failing reads as the first mate's served surfaces carry
  * them (docs/personal-panels.md, "Reads that keep failing"). The newest answer
  * rides under a key that names it outside words, already cut to
- * PANEL_FAILING_ANSWER_MAX by the snapshot's schema.
+ * PANEL_FAILING_ANSWER_MAX by PanelReadFailures when it was kept.
  */
 export function servedFailingReads(
   surface: SurfaceView,

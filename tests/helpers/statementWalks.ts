@@ -244,7 +244,7 @@ export const WALKS: Record<string, { walks: string[]; reason: string }> = {
     {
       walks: ["SCAN t"],
       reason:
-        "every project's tags with how many tasks carry each (ProjectTagStore.views): one row per tag the captain adds, each count read from the task_tags_tag index",
+        "every project's tags with how many tasks carry each (ProjectTagStore.views): one row per tag the captain adds, each count read from the task_tags_tag index alone, which holds each row's state",
     },
   "SELECT 1 FROM task_tags LIMIT 1": {
     walks: ["SCAN task_tags USING COVERING INDEX task_tags_tag"],

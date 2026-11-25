@@ -1544,9 +1544,10 @@ export const MIGRATIONS: readonly Migration[] = [
   // each task carries, one row per task and tag with who set it and the
   // tag's description revision it was judged at. A row whose state is off
   // keeps a tag a person or the first mate removed, so the decision model
-  // never puts it back. Empty on every existing install. `ProjectStore` is
-  // the only writer of `project_tags` and `TaskService` of `task_tags`; no
-  // published view reads them. Dropping both tables reverses it.
+  // never puts it back. The tag index holds each row's state, so a tag's
+  // count of the tasks carrying it reads the index alone. Empty on every
+  // existing install. `ProjectStore` is the only writer of `project_tags`
+  // and `TaskService` of `task_tags`; no published view reads them. Dropping both tables reverses it.
   // i18n-exempt: SQL, never shown
   `
   CREATE TABLE IF NOT EXISTS project_tags (
@@ -1568,7 +1569,7 @@ export const MIGRATIONS: readonly Migration[] = [
     at INTEGER NOT NULL,
     PRIMARY KEY (task_id, tag_id)
   ) WITHOUT ROWID;
-  CREATE INDEX IF NOT EXISTS task_tags_tag ON task_tags (tag_id);
+  CREATE INDEX IF NOT EXISTS task_tags_tag ON task_tags (tag_id, state);
   `,
 ];
 

@@ -629,6 +629,35 @@ describe("a reworked merge card's return (INF-6241)", () => {
     expect(at.raised()).toHaveLength(2);
   });
 
+  it("stays aside across a restart while held, then returns once when its checks end", async () => {
+    const at = await answeredWhileChecksRun(true);
+    at.supervisor.disposeAll();
+    const tasks = new TaskService({ db: at.db, strict: true });
+    at.reopen(tasks);
+    const resumed = fakeCrewmate();
+    const restarted = reboot(at, async () => resumed, {
+      tasks,
+      readCheckWatch: at.readCheckWatch,
+      checkCi: async () => "green",
+    });
+    restarted.setFirstmateHooks({ notifyOp: vi.fn(), retryConverse: vi.fn() });
+    await tick();
+    const stage = () => restarted.cards.snapshot().find((entry) => entry.id === at.cardId);
+    expect(restarted.cards.get(at.cardId)?.awaiting).toBe("close-out");
+    expect(stage()?.minimized).toBe(true);
+    vi.spyOn(restarted.steer, "steerInternal").mockResolvedValue(undefined as never);
+    at.remote.checks = "green";
+    seedDelivery(tasks, at.taskId, { runWatches: [] });
+    await vi.advanceTimersByTimeAsync(60_000);
+    await restarted.watch.pollCheckWatches(Date.now());
+    await tick();
+    await endTurn(resumed, at.taskId);
+    await tick();
+    expect(restarted.cards.get(at.cardId)?.awaiting).toBeUndefined();
+    expect(stage()?.minimized).toBeUndefined();
+    restarted.disposeAll();
+  });
+
   it("stays aside across each later crewmate turn while the checks still run", async () => {
     const at = await answeredWhileChecksRun(false);
     const returns: number[] = [];

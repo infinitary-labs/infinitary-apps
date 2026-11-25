@@ -878,7 +878,7 @@ export class CardService {
    * up, one on it redraws with the newer write, one put aside that its author
    * wrote on comes back - unless the captain's reply or a rework holds it.
    * A report releases only a crewmate's new cards: one the captain already
-   * saw waits for its turn's end, to come back once with its last word (INF-926).
+   * had on the stage waits for its turn's end, to come back once (INF-926).
    */
   closeOut(author: CardAuthorRef, reason: CloseOut): void {
     let moved = false;

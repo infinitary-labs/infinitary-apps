@@ -41,7 +41,7 @@ export function panelCommandsOf(panels: readonly SidePanelContribution[]): Panel
         keys: chord ? [chord as KeyBinding] : [],
         ...(command.words?.length ? { words: [...command.words] } : {}),
         // The app's own panels carry no maker's name, and their commands read as the window's.
-        ...(panel.attribution === null ? { own: true as const } : {}),
+        ...(panel.firstParty ? { own: true as const } : {}),
       };
     }),
   );

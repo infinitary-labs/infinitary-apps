@@ -401,6 +401,8 @@ public enum PhonePanelRequest: String, Sendable, CaseIterable {
     case `knowledgeUses` = "inf:knowledge:uses"
     case `pluginsAppPanelFiles` = "inf:plugins:app-panel-files"
     case `pluginsAppPanels` = "inf:plugins:app-panels"
+    case `pluginsAskAgain` = "inf:plugins:ask-again"
+    case `pluginsAskFirstmate` = "inf:plugins:ask-firstmate"
     case `pluginsDb` = "inf:plugins:db"
     case `pluginsFetch` = "inf:plugins:fetch"
     case `pluginsFiles` = "inf:plugins:files"
@@ -409,6 +411,7 @@ public enum PhonePanelRequest: String, Sendable, CaseIterable {
     case `pluginsLibrary` = "inf:plugins:library"
     case `pluginsPersonalList` = "inf:plugins:personal:list"
     case `pluginsRetry` = "inf:plugins:retry"
+    case `pluginsUpdate` = "inf:plugins:update"
     case `projectsList` = "inf:projects:list"
     case `quotaSnapshot` = "inf:quota:snapshot"
     case `reposList` = "inf:repos:list"
@@ -426,7 +429,7 @@ public enum PhonePanelRequest: String, Sendable, CaseIterable {
     case `usageTaskCosts` = "inf:usage:task-costs"
     case `usageTasks` = "inf:usage:tasks"
     public var changes: Bool {
-        switch self { case .pluginsDb, .pluginsFetch, .pluginsIntegrations, .pluginsInvoke, .pluginsRetry: true; default: false }
+        switch self { case .pluginsAskAgain, .pluginsAskFirstmate, .pluginsDb, .pluginsFetch, .pluginsIntegrations, .pluginsInvoke, .pluginsRetry, .pluginsUpdate: true; default: false }
     }
     /// The pushes a panel's page hears: what its reads re-read on, and its store's and the panel list's own.
     public static let pushes: Set<String> = ["inf:cards", "inf:computers:resources", "inf:event", "inf:forges", "inf:plugins:app-panels", "inf:plugins:db", "inf:plugins:personal", "inf:quota", "inf:shell:preferences", "inf:tasks", "inf:tasks:delta"]
@@ -437,9 +440,6 @@ public enum PhonePanelRequest: String, Sendable, CaseIterable {
 }
 
 public enum PhonePanelWords {
-    public static let yours = "yours"
-    public static let backgroundStopped = PhoneMessages.`panelBackgroundStopped`()
-    public static let backgroundExited = PhoneMessages.`panelBackgroundExited`()
     public static let retry = PhoneMessages.`panelRetry`()
     public static let unresponsive = PhoneMessages.`panelUnresponsiveLine`()
     public static func couldNotOpen(_ failure: String) -> String { PhoneMessages.`panelCouldNotOpen`(failure: failure) }

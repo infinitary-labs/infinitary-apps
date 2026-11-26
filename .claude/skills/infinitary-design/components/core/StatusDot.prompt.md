@@ -9,3 +9,4 @@ Pass `nativeTitle={false}` only where those same words are already shown; the ac
 Pass `focusable` on a row whose state the dot alone says (an account, a forge sign-in): the dot is a Tab stop of its own and its words show in the label the app draws for an icon button, on the pointer's rest and the keyboard's focus alike, in place of the native title (readme, "Facts shown on rest").
 Never pass it inside a control, which names the dot already.
 Use it where a Badge per row would repeat the same word down the page; keep Badge for one-off states with room.
+A panel's status mark is a StatusDot inside its own press target, which carries its words on rest and opens its details (`Panel.prompt.md`, "The status mark"); the dot there takes `nativeTitle={false}`.

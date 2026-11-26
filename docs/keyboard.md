@@ -495,6 +495,7 @@ The task record's body is a page of its own, which the window's label cannot rea
 - A task's browser: Back, Forward and Reload while someone else drives, their labels saying who.
 - The picture viewer: Actual size on a picture shown at its own size.
 - A side panel's busy dot, while its work runs.
+- A panel's status mark, named by its most urgent line; Enter or Space opens its details, and Esc closes them with focus back on the mark (`docs/personal-panels.md`, "The status mark").
 
 A dot inside a control, or one whose words are already written beside it, stays out of the Tab order: an Activity line's kind dot is such a dot, because the line's own words say what its color does, so it shows nothing on rest.
 

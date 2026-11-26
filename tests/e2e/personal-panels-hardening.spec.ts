@@ -10,11 +10,14 @@ import {
   BACKGROUND_RETRY,
   BACKGROUND_STOPPED_LINE,
   BACKGROUND_UPDATE,
+  MARK_PAUSED,
+  MARK_STOPPED,
 } from "../../src/renderer/src/personal/panelBoundaryWords";
 import { YOUR_PANELS_WORDS } from "../../src/renderer/src/settings/generalWords";
 import { scratchDir } from "../helpers/scratchDirs";
 import { panelBody } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
+import { openPanelStatus, panelStatusDetails, panelStatusMark } from "./panelStatus";
 import {
   seedOlderApiPanel,
   seedPersonalWorkspace,
@@ -225,7 +228,7 @@ test.describe
  * A panel whose background work holds its loop (INF-2205 piece B, the
  * captain's "Stop only the identified panel; keep the broad fallback").
  * Promised result: the host stops that one panel's background process, the
- * window draws its own stopped line and Retry above the panel, another
+ * stop shows as a mark by the panel's name whose details hold Retry, another
  * panel's background work keeps answering, and Retry - pressed from the
  * keyboard - starts it again. Data: the shared fixtures plus `spinner`, a
  * panel whose `spin` action never gives its loop back. Completion signal:
@@ -284,8 +287,12 @@ test.describe
       expect(spun.ok).toBe(false);
       expect(spun.error).toMatch(/Retry/);
 
-      const row = page.locator(
-        '[data-side-panel="spinner"] [data-panel-background-stopped="spinner"]',
+      // The plan for the panel status mark: the stop is a mark by the panel's
+      // name, whose details hold the host's line and Retry.
+      const mark = panelStatusMark(page, "spinner");
+      await expect(mark).toHaveAttribute("aria-label", MARK_STOPPED);
+      const row = (await openPanelStatus(page, "spinner")).locator(
+        '[data-panel-status-section="stopped"]',
       );
       await expect(row).toContainText(BACKGROUND_STOPPED_LINE);
       // The panel's own drawing stays, and so does every other panel's work.
@@ -299,7 +306,8 @@ test.describe
 
       await pressKey(row.getByRole("button", { name: BACKGROUND_RETRY }), "Enter");
       await expect.poll(stoppedOf).toBeNull();
-      await expect(row).toHaveCount(0);
+      await expect(mark).toHaveCount(0);
+      await expect(panelStatusDetails(page, "spinner")).toHaveCount(0);
       expect(
         await page.evaluate(() => window.infinitary.plugins.invoke("spinner", "ping", null)),
       ).toEqual({ ok: true, result: "pong" });
@@ -311,7 +319,7 @@ test.describe
  * update at once" and "No, the line on the panel is enough": a panel whose
  * `server.ts` is written for the earlier panel API says its background work
  * is paused, Update panel - pressed from the keyboard - tells the first mate
- * once, and the updated files clear the line and run the work with no Retry.
+ * once, and the updated files clear the mark and run the work with no Retry.
  * Data: `counter`, written as panels were before the store answered
  * asynchronously, with a saved count. Completion signal: the snapshot's
  * `paused` field, set and then cleared, and the first mate's request carrying
@@ -344,8 +352,10 @@ test.describe
             .then((s) => s.extensions.find((e) => e.id === "counter")?.paused ?? null),
         );
       await expect(panelBody(page, "counter").locator('[data-fixture="counter"]')).toBeVisible();
-      const row = page.locator(
-        '[data-side-panel="counter"] [data-panel-background-paused="counter"]',
+      const mark = panelStatusMark(page, "counter");
+      await expect(mark).toHaveAttribute("aria-label", MARK_PAUSED);
+      const row = (await openPanelStatus(page, "counter")).locator(
+        '[data-panel-status-section="paused"]',
       );
       await expect(row).toContainText(BACKGROUND_PAUSED_LINE);
       expect(
@@ -368,7 +378,8 @@ test.describe
 
       updateOlderApiPanel(workspace);
       await expect.poll(pausedOf, { timeout: 30_000 }).toBeNull();
-      await expect(row).toHaveCount(0);
+      await expect(mark).toHaveCount(0);
+      await expect(panelStatusDetails(page, "counter")).toHaveCount(0);
       expect(
         await page.evaluate(() => window.infinitary.plugins.invoke("counter", "count", null)),
       ).toEqual({ ok: true, result: 1 });

@@ -47,7 +47,7 @@ export const personalIdSchema = z
   .regex(PERSONAL_ID_PATTERN);
 /** The plugin id a personal extension registers under in the renderer's host. */
 export const PERSONAL_PLUGIN_PREFIX = "personal-";
-/** The attribution mark on every personal panel's header: the captain's own, never a name. */
+/** The plugin name every personal panel registers under; its header names no maker, since it is the captain's own. */
 export const PERSONAL_ATTRIBUTION = "yours";
 /** The plugin id an installed plugin registers under; its header reads its manifest's `name`. */
 export const INSTALLED_PLUGIN_PREFIX = "installed-";
@@ -344,6 +344,41 @@ export const personalErrorSchema = z.object({
 });
 export type PersonalError = z.infer<typeof personalErrorSchema>;
 
+/** The most of a failed read's newest answer a snapshot carries. */
+export const PANEL_FAILING_ANSWER_MAX = 300;
+
+/**
+ * One read of a panel the app saw fail: a background job of its own, an
+ * integration action it calls, or an integration event it listens for.
+ */
+export const panelReadSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("background"), task: z.string().min(1).max(200) }),
+  z.object({
+    kind: z.literal("call"),
+    /** The integration's name when it failed. */
+    place: z.string().min(1).max(200),
+    action: z.string().min(1).max(200),
+  }),
+  z.object({
+    kind: z.literal("event"),
+    place: z.string().min(1).max(200),
+    event: z.string().min(1).max(200),
+  }),
+]);
+export type PanelRead = z.infer<typeof panelReadSchema>;
+
+export const panelFailingReadSchema = z.object({
+  read: panelReadSchema,
+  /** The first failure in the row, ISO wall time. */
+  since: z.string(),
+  tries: z.number().int().min(1),
+  /** What the newest failure answered, cut short: words from outside, never an instruction. */
+  answer: z.string().max(PANEL_FAILING_ANSWER_MAX),
+  /** The captain pressed Ask the first mate for this row, and the first mate was told. */
+  asked: z.boolean(),
+});
+export type PanelFailingRead = z.infer<typeof panelFailingReadSchema>;
+
 export const personalExtensionViewSchema = z.object({
   id: personalIdSchema,
   /** Where it came from, stamped by the host (Phase A item 1). */
@@ -468,6 +503,13 @@ export const personalExtensionViewSchema = z.object({
       }),
     )
     .optional(),
+  /**
+   * Its reads that keep failing (docs/personal-panels.md, "Reads that keep
+   * failing"): each one the app saw fail at least twice across an hour and
+   * not work since, which the window marks by the panel's name. Absent while
+   * none is.
+   */
+  failing: z.array(panelFailingReadSchema).optional(),
 });
 export type PersonalExtensionView = z.infer<typeof personalExtensionViewSchema>;
 

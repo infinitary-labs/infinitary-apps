@@ -217,12 +217,13 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneSignInReturn.swift",
   ] },
   // INF-3830 pieces 2 and 3: the Panels tab, its frames and the panel order; a panel's title-row buttons and its cards on Home;
-  // where a panel's point.openSettings opens Settings.
+  // where a panel's point.openSettings opens Settings; the status mark by a panel's title.
   { parts: family("panels"), files: [
     "ios/Infinitary/CardRuntime/panelHost.ts",
     "ios/Infinitary/InfinitaryApp/CardAssets/PanelHost.generated.js",
     "ios/Infinitary/InfinitaryApp/PanelWebView.swift",
     "ios/Infinitary/InfinitaryApp/PhonePanelCardPane.swift",
+    "ios/Infinitary/InfinitaryApp/PhonePanelStatusMark.swift",
     "ios/Infinitary/InfinitaryApp/PhonePanels.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhonePanelCards.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhonePanels.swift",

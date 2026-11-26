@@ -99,19 +99,22 @@ export class PluginHost {
    *
    * `firstParty` marks the host's own UI (the built-in plugin): its panels
    * carry no attribution, because the app never names itself in its own
-   * chrome. Every other plugin is attributed by its manifest name.
+   * chrome. `unattributed` marks the captain's own panels, which name no
+   * maker either: they are the captain's. Every other plugin is attributed by its
+   * manifest name.
    */
   registerPlugin(
     manifest: PluginManifest,
     bindings: PluginBindings = {},
-    options: { firstParty?: boolean } = {},
+    options: { firstParty?: boolean; unattributed?: boolean } = {},
   ): () => void {
     const refused = unservableGrants(manifest.capabilities, this.support);
     if (refused.length > 0) {
       throw new PluginCapabilityError(manifest.id, refused);
     }
     const { id: pluginId, contributes } = manifest;
-    const attribution = options.firstParty ? null : manifest.name;
+    const attribution = options.firstParty || options.unattributed ? null : manifest.name;
+    const firstParty = options.firstParty ? { firstParty: true as const } : {};
     if (this.capabilities.has(pluginId)) {
       throw new ContributionError("settings-section", `plugin "${pluginId}" is already registered`);
     }
@@ -147,7 +150,9 @@ export class PluginHost {
       for (const entry of contributes.sidePanels) {
         const binding = bindings.sidePanels?.[entry.id];
         if (!binding) continue;
-        undo.push(this.sidePanels.register({ ...entry, ...binding, pluginId, attribution }));
+        undo.push(
+          this.sidePanels.register({ ...entry, ...binding, pluginId, attribution, ...firstParty }),
+        );
       }
     } catch (error) {
       for (const remove of undo.reverse()) remove();

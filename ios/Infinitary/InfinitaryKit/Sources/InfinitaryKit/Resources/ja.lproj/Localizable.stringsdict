@@ -1137,6 +1137,34 @@
       <string>%1$ld件が作業中</string>
     </dict>
   </dict>
+  <key>panelFailingJob</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>バックグラウンドのジョブ %2$@ が %3$@ から失敗しています（%1$ld 回連続）。</string>
+    </dict>
+  </dict>
+  <key>panelFailingPlace</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>%2$@ からの読み込みが %3$@ から失敗しています（%1$ld 回連続）。</string>
+    </dict>
+  </dict>
   <key>phoneAddressSweeping</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

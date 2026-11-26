@@ -11,9 +11,9 @@ import { pluginHost } from "../plugins/host";
  * cards"; the design skill's `components/cards/PanelCard.prompt.md`): a
  * shell-held stack entry like a task's record, put up by its panel's
  * `cards.emit`, a header button or a command. The app draws its one row of
- * chrome - the card's title, then "yours" or its maker's name (nothing for
- * the app's own), and Hide - and the panel's card view draws the rest,
- * where its panel runs (the binding's `CardBody`).
+ * chrome - the card's title, then an added panel's maker's name (nothing for
+ * the captain's own or the app's own), and Hide - and the panel's card view
+ * draws the rest, where its panel runs (the binding's `CardBody`).
  *
  * Only the shown card draws a body: the stage prepares no held entry, so a
  * card waiting its turn runs no page at all.

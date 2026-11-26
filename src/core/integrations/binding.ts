@@ -39,7 +39,20 @@ export type PanelCaller = {
   key: string;
   title: string;
   uses: readonly PanelIntegrationUse[];
+  /**
+   * Hears whether each of its reads worked (docs/personal-panels.md, "Reads
+   * that keep failing"): `failure` is the place's answer when the binding
+   * refused or threw, null when it answered. An ask that waits on the
+   * captain, a paused or off integration and a refusal of the app's own are
+   * neither. `everyMs` is an event's cadence.
+   */
+  reads?: (read: PanelReadOutcome, failure: string | null, everyMs?: number) => void;
 };
+
+/** One read a panel makes of an integration: `place` is the name it shows now. */
+export type PanelReadOutcome =
+  | { kind: "call"; integration: string; place: string; action: string }
+  | { kind: "event"; integration: string; place: string; event: string };
 
 export type IntegrationActionSpec = {
   name: string;

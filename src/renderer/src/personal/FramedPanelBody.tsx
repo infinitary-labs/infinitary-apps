@@ -29,9 +29,7 @@ import { usePanelView } from "../plugins/panelPoint";
 import { panelRail } from "../plugins/panelRail";
 import { FRAME_PANEL_MAX_AUTO_HEIGHT } from "../plugins/Rail";
 import { usePanelCollapsed } from "../plugins/railStore";
-import { BackgroundAsking } from "./BackgroundAsking";
-import { BackgroundPaused } from "./BackgroundPaused";
-import { BackgroundStopped } from "./BackgroundStopped";
+import { PanelStatusMark } from "./PanelStatusMark";
 import { panelBodies } from "./panelBodies";
 import { PanelStoppedLine } from "./panelBoundary";
 
@@ -64,9 +62,11 @@ import { PanelStoppedLine } from "./panelBoundary";
  * pings, so it keeps refreshing when it can run again.
  *
  * A panel of the captain's own may have background work (`server`), which
- * its `invoke` reaches through the host; when the app stopped that work
- * (INF-2205 piece B) the window draws the status and a Retry above the
- * frame, outside the panel's code. Its page on the rail says how its body
+ * its `invoke` reaches through the host; what the host knows about it and
+ * its code cannot say - that work stopped or paused, reads that keep
+ * failing, an integration call waiting on the captain - is one mark beside
+ * its title in the header (`FramedPanelStatus`), never a line above the
+ * frame. Its page on the rail says how its body
  * fared (`panel.body`), for the window's answer about its panels. The
  * version a crewmate is building (`draft`) is drawn by the same body bound
  * apart: its own store and background work, the rail of its out-of-sight
@@ -104,9 +104,38 @@ export type FramedPanelContent = {
   paused?: { asked: boolean };
   /** Its integration calls waiting on the captain or turned down: the window draws each, and Ask again. */
   integrationAsks?: NonNullable<PersonalExtensionView["integrationAsks"]>;
+  /** Its reads that keep failing (docs/personal-panels.md, "Reads that keep failing"). */
+  failing?: NonNullable<PersonalExtensionView["failing"]>;
   /** The version a crewmate is building, drawn out of sight ("Built apart"). */
   draft?: true;
 };
+
+/**
+ * The mark beside a framed panel's title (`SidePanelBinding.Status`): its
+ * stopped or paused background work, its reads that keep failing and its
+ * integration calls waiting on the captain or turned down.
+ */
+export function FramedPanelStatus({
+  content,
+  title,
+}: {
+  content: FramedPanelContent;
+  title: string;
+}) {
+  return (
+    <PanelStatusMark
+      id={content.id}
+      title={title}
+      draft={content.draft === true}
+      status={{
+        ...(content.stopped ? { stopped: content.stopped } : {}),
+        ...(content.failing ? { failing: content.failing } : {}),
+        ...(content.paused ? { paused: content.paused } : {}),
+        ...(content.integrationAsks ? { integrationAsks: content.integrationAsks } : {}),
+      }}
+    />
+  );
+}
 
 /**
  * The page can no longer refresh what it last said. The header says the
@@ -318,11 +347,6 @@ export function FramedPanelBody({ content }: { content: FramedPanelContent }) {
       data-installed-version={source === "installed" ? version : undefined}
       style={{ display: "contents" }}
     >
-      {content.stopped && <BackgroundStopped id={id} draft={draft} reason={content.stopped} />}
-      {content.paused && !draft && <BackgroundPaused id={id} asked={content.paused.asked} />}
-      {content.integrationAsks?.length ? (
-        <BackgroundAsking id={id} asks={content.integrationAsks} />
-      ) : null}
       <FrameMount
         title={title}
         panel={panel}

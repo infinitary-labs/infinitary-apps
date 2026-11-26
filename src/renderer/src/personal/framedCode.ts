@@ -32,5 +32,7 @@ export function framedCodeOf(view: PersonalExtensionView): FramedPanelContent | 
     ...(!installed && view.paused && !view.running ? { paused: { asked: view.paused.asked } } : {}),
     // Its integration calls waiting on the captain or turned down, whatever its source.
     ...(view.integrationAsks?.length ? { integrationAsks: view.integrationAsks } : {}),
+    // Its reads that keep failing: the core counts only the captain's own panels.
+    ...(!installed && view.failing?.length ? { failing: view.failing } : {}),
   };
 }

@@ -3240,6 +3240,15 @@
                     "type": "string"
                   }
                 },
+                "fixHeads": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                },
                 "formed": {
                   "type": "number"
                 },
@@ -4295,6 +4304,15 @@
                     }
                   },
                   "fixBases": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  },
+                  "fixHeads": {
                     "type": "object",
                     "propertyNames": {
                       "type": "string"
@@ -5706,6 +5724,15 @@
                 }
               },
               "fixBases": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "fixHeads": {
                 "type": "object",
                 "propertyNames": {
                   "type": "string"
@@ -12770,6 +12797,15 @@
                 }
               },
               "fixBases": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "fixHeads": {
                 "type": "object",
                 "propertyNames": {
                   "type": "string"
@@ -119252,6 +119288,9 @@
                 "head": {
                   "type": "string",
                   "pattern": "^[0-9a-f]{40}(?:[0-9a-f]{24})?$"
+                },
+                "dirty": {
+                  "type": "boolean"
                 }
               },
               "required": [

@@ -16,6 +16,7 @@ import {
   carried,
   clashesEnded,
   combined,
+  declared,
   enqueue,
   finishedWithin,
   fixWaits,
@@ -362,6 +363,64 @@ describe("a held batch", () => {
     );
     expect(fixed.open?.hold).toBeUndefined();
     expect(fixed.line).toEqual([]);
+  });
+
+  // Intent: upstream issue #55's second review, a bug being fixed: the held version an
+  // approval verified a declared fix on was kept with its repair's declaration alone, so
+  // another task's delivery of that fix lost it when the repair's task closed.
+  it("keeps the held version an approval verified with the approved version, in line already or not", () => {
+    const held = hold(openBatch(), failed).record;
+    const delivered = { ...LEGEND, taskId: "t-takeover", at: 4_000 };
+    const approved = { ...delivered, fix: true as const, heldBase: failed.head };
+    const declaredAt = (record: BatchRecord) => declared(record, "t-repair", delivered.head);
+    for (const record of [
+      enqueue(declaredAt(held), approved),
+      // Approved as an ordinary change before the repair declared its commit, then again.
+      enqueue(declaredAt(enqueue(held, delivered)), approved),
+    ]) {
+      expect(record.line).toEqual([approved]);
+      expect(record.fixBases).toEqual({ "t-repair": failed.head });
+      const closed = pruned(record, (taskId) => taskId !== "t-repair");
+      expect(closed.fixes).toBeUndefined();
+      expect(closed.fixBases).toBeUndefined();
+      expect(closed.line).toEqual([{ ...delivered, heldBase: failed.head }]);
+      expect(carried(closed, "line").at(-1)).toEqual({ ...delivered, heldBase: failed.head });
+    }
+  });
+
+  // Intent: upstream issue #55's third review, a bug being fixed: the base of whichever
+  // declaration a waiting version carried replaced the held version its own approval verified,
+  // and the combine that carried the version would have replaced that declaration's in turn.
+  it("keeps the held version verified for an approved version and the one its repair was verified on apart", () => {
+    const held = hold(openBatch(), failed).record;
+    const approved = { ...LEGEND, taskId: "t-takeover", at: 4_000, heldBase: failed.head };
+    const record = {
+      ...declared({ ...held, line: [approved] }, "t-repair", approved.head),
+      fixBases: { "t-repair": PARSER_COMMIT },
+    };
+    const fix = carried(record, "line").at(-1);
+    expect(fix).toEqual({ ...approved, fix: true });
+    const pushed = combined(record, combineOf([member(fix ?? approved, LEGEND_COMMIT)]), {
+      branch: "infinitary-batch/7c41",
+      at: 7_000,
+    });
+    expect(pushed.fixBases).toEqual(record.fixBases);
+  });
+
+  // Intent: the same review's finding, a bug being fixed: a takeover that declared the fix
+  // itself too was measured as its own declaration, not as the fix its batch waits for.
+  it("measures a takeover that declared the fix too from the version the awaited repair was verified on", () => {
+    const { open, ...held } = hold(openBatch(), failed).record;
+    if (!open) throw new Error("expected a held batch");
+    const delivered = { ...LEGEND, taskId: "t-takeover", at: 4_000 };
+    const waiting: BatchRecord = { ...held, open: { ...open, awaits: "t-repair" } };
+    const both = declared(
+      declared(waiting, "t-repair", delivered.head),
+      "t-takeover",
+      delivered.head,
+    );
+    const record = enqueue({ ...both, fixBases: { "t-repair": failed.head } }, delivered);
+    expect(carried(record, "line").at(-1)).toEqual({ ...delivered, heldBase: failed.head });
   });
 
   it("ends when its checks run again", () => {

@@ -68,6 +68,7 @@ import {
   carried,
   clashesEnded,
   combined,
+  declarationsOf,
   declared,
   enqueue,
   fixWaits,
@@ -447,13 +448,13 @@ export class Batches {
   }
 
   /**
-   * Put an approved change in line and start a pass. A change a repair
-   * declared the held batch's fix is marked so, whichever came first.
+   * Put an approved change in line and start a pass. A change that carries a
+   * repair's declaration of the held batch's fix is marked so, whichever came first.
    */
   async enqueue(repoId: string, change: BatchChange): Promise<void> {
     await this.write(repoId, (record) => {
       // Still a fix after its batch was closed and put back in line, until a batch merges or ends.
-      const fix = (record.fixes ?? []).includes(change.taskId);
+      const fix = declarationsOf(record, change).length > 0;
       return enqueue(record, fix ? { ...change, fix: true } : change);
     });
     void this.pass(repoId);
@@ -491,21 +492,24 @@ export class Batches {
   }
 
   /**
-   * A repair declares its own change the held batch's fix: approved, it
-   * joins that batch with the changes waiting in line and ends the hold.
-   * A change already approved and waiting in line is marked now and joins
-   * on the pass this starts; one approved later is marked as it goes in
-   * line. Refused in words when no batch of this project is held.
+   * A repair declares its own change the held batch's fix: approved, it joins that batch with
+   * the changes waiting in line and ends the hold. One already waiting in line is marked now
+   * and joins on this pass; one approved later, as it goes in line (`at`: its commit as
+   * declared). Refused in words when no batch is held, or not at the version its task read.
    */
-  async declareFix(repoId: string, taskId: string): Promise<string | undefined> {
+  async declareFix(
+    repoId: string,
+    taskId: string,
+    at?: string,
+    held?: string,
+  ): Promise<string | undefined> {
     let refused: string | undefined;
     await this.write(repoId, (record) => {
-      if (!record.open?.hold) {
-        refused = "No batch of this project is held, so there is nothing to fix.";
-        return record;
-      }
+      const hold = record.open?.hold;
+      if (!hold) refused = "No batch of this project is held, so there is nothing to fix.";
+      else if (held && hold.head !== held) refused = BATCH_WORDS.ended;
       // The task that declared the fix is the hold's repair (`OpenBatch.repair`).
-      return repaired(declared(record, taskId), taskId);
+      return refused ? record : repaired(declared(record, taskId, at), taskId);
     });
     if (!refused) void this.pass(repoId);
     return refused;
@@ -546,6 +550,8 @@ export class Batches {
     fix?: string,
     /** The task that declared it, recorded as the hold's repair (`OpenBatch.repair`). */
     by?: string,
+    /** The commit `fix` had committed as it declared it (`fixHeads`). */
+    at?: string,
   ): Promise<BatchPassedRefusal | undefined> {
     let refused: BatchPassedRefusal | undefined;
     await this.write(repoId, (record) => {
@@ -557,7 +563,7 @@ export class Batches {
       if (refused || !open?.hold) return record;
       const passed = { ...record, open: { ...open, passed: { head, checks: open.hold.checks } } };
       const next = by ? repaired(passed, by) : passed;
-      return fix ? declared(next, fix) : next;
+      return fix ? declared(next, fix, at) : next;
     });
     if (!refused) void this.pass(repoId);
     return refused;
@@ -574,10 +580,10 @@ export class Batches {
    * combine again with the line. Answers the refusal in English words, as
    * the first mate and a repair read it, or nothing.
    *
-   * A repair that sends changes back and declares its own change the fix in
-   * one declaration names that task as `fix`: the named changes leave, and
-   * the batch stays held at its version, combining nothing, until the fix is
-   * approved and joins with the rest and every change waiting in line.
+   * A repair that sends changes back and declares its own change the fix in one declaration
+   * names that task as `fix`, at the commit `at` it had committed (`fixHeads`): the named
+   * changes leave, and the batch stays held at its version, combining nothing, until the fix
+   * is approved and joins with the rest and every change waiting in line.
    */
   async answer(
     repoId: string,
@@ -585,8 +591,9 @@ export class Batches {
     fix?: string,
     /** A repair's own task, when its declaration sent changes back: recorded as the hold's repair. */
     by?: string,
+    at?: string,
   ): Promise<string | undefined> {
-    const refused = await this.answered(repoId, answer, fix, by);
+    const refused = await this.answered(repoId, answer, fix, by, at);
     return refused === undefined || typeof refused === "string" ? refused : englishOf(refused);
   }
 
@@ -606,6 +613,7 @@ export class Batches {
     answer: BatchAnswer,
     fix?: string,
     by?: string,
+    at?: string,
   ): Promise<string | Said | undefined> {
     const refused = await this.serial(repoId, async (): Promise<string | Said | undefined> => {
       const repo = this.options.repos.get(repoId);
@@ -664,7 +672,9 @@ export class Batches {
       // Held for the fix: the next pass combines once it is approved (`follow`).
       this.save(
         repoId,
-        fix ? declared({ ...next, open: { ...(next.open as OpenBatch), awaits: fix } }, fix) : next,
+        fix
+          ? declared({ ...next, open: { ...(next.open as OpenBatch), awaits: fix } }, fix, at)
+          : next,
       );
       for (const { member, entry, earlier } of sent) {
         this.options.note(BATCH_WORDS.sentBack(repo.name, member.title, entry.reason));
@@ -786,7 +796,7 @@ export class Batches {
     let next = record;
     for (const change of record.line) {
       if (change.onBatch || change.fix || change.after || change.base) continue;
-      if ((record.fixes ?? []).includes(change.taskId)) continue;
+      if (declarationsOf(record, change).length) continue;
       const told = record.rebuilds?.find((entry) => entry.taskId === change.taskId)?.on;
       const versions = [...new Set([told, open].filter((version) => version !== undefined))];
       if (versions.length === 0) continue;
@@ -1378,7 +1388,7 @@ export class Batches {
       repo.id,
       unfixed(
         merged(record, landed, this.options.now()),
-        open.members.map((member) => member.taskId),
+        open.members.flatMap((member) => declarationsOf(record, member)),
       ),
     );
     this.options.note(BATCH_WORDS.merged(repo.name, label, open.members.length));
@@ -1483,7 +1493,7 @@ export class Batches {
     if (!this.stillAt(repo)) return record;
     // The base this combine verified for a declared fix is kept before the push, which may
     // never come back: it joins the saved record alone, whose hold and version stay as they were.
-    this.save(repo.id, withBases(this.record(repo.id), result));
+    const { fixBases } = this.save(repo.id, withBases(this.record(repo.id), result));
     if (result.members.length)
       await (this.options.push ?? pushBatch)({
         repoDir: repo.path,
@@ -1495,11 +1505,11 @@ export class Batches {
     // Moved while the push ran: its result belongs to the former address, not the project now.
     if (!this.stillAt(repo)) return record;
     // A declared fix stays declared once it joins, until a batch merges with it or its task
-    // closes: a new version of it is still the fix, carried from the same base.
-    let next = this.save(
-      repo.id,
-      combined(release(record), result, { branch, at, origin: repo.origin }),
-    );
+    // closes. Its base is the one kept above, where the batch still said which fix it awaited.
+    let next = this.save(repo.id, {
+      ...combined(release(record), result, { branch, at, origin: repo.origin }),
+      ...(fixBases ? { fixBases } : {}),
+    });
     for (const left of result.leftOut) {
       // A clash while a batch stays open is answered now: its crewmate rebuilds on that batch.
       if (left.clash && next.open && this.options.rebuild) {

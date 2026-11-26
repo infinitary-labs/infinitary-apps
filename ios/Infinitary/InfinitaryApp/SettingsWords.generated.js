@@ -14570,9 +14570,10 @@ ${events}` : prompt;
     /** Declared the held batch's fix: it joins that batch and ends the hold. */
     fix: literal(true).optional(),
     /**
-     * The held batch version a fix was built on, once a combine verified it:
-     * the fix is carried as its own difference from it from then on, and is
-     * left out, never carried whole, when its branch no longer builds on it.
+     * The held batch version a fix was built on, once its approval or a combine
+     * verified it: the fix is carried as its own difference from it from then
+     * on, and is left out, never carried whole, when its branch no longer builds
+     * on it.
      */
     heldBase: string().optional(),
     /**
@@ -14774,6 +14775,12 @@ ${events}` : prompt;
      * the fix is carried from it, or left out when it no longer builds on it.
      */
     fixBases: record(string(), string()).optional(),
+    /**
+     * The exact commit each declared fix's task had committed as it declared
+     * it, by task, kept as long as the declaration: another task's change
+     * approved at that commit, and no other, carries the same declaration.
+     */
+    fixHeads: record(string(), string()).optional(),
     /**
      * When the project's last batch formed from the line (epoch ms): a
      * project's batch gap counts from it (`batchGap` on the project). A held

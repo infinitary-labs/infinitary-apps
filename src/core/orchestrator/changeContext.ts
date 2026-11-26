@@ -10,7 +10,7 @@ import { deliveryForRecord, opensPullRequest, type RepoView } from "@shared/repo
 import type { NamingRule } from "../../shared/runbooks";
 import type { Batches } from "../batches/batches";
 import { fixBase } from "../batches/combine";
-import { heldVersions } from "../batches/line";
+import { declarationOf, heldVersions } from "../batches/line";
 import {
   type Forge,
   type ForgeChange,
@@ -21,7 +21,7 @@ import {
 } from "../forge";
 import type { TaskRecord } from "../storage/taskRecords";
 import type { TaskService } from "../tasks/taskService";
-import { git } from "../workspace/git";
+import { checkoutOf, git } from "../workspace/git";
 import { requireNamedRange } from "../workspace/naming";
 import type { RepoRegistry } from "../workspace/repoRegistry";
 import type { ChangePresentations } from "./changePresentations";
@@ -95,10 +95,12 @@ export type ChangeDeliveryOptions = {
   ) => Promise<string | undefined>;
   /**
    * The branch a placed task's working copy has checked out there, null
-   * when detached, and its commit (INF-2490); null when that computer is
-   * out of reach or cannot say.
+   * when detached, its commit (INF-2490), and whether it holds work left to
+   * commit; null when that computer is out of reach or cannot say.
    */
-  checkedOut?: (taskId: string) => Promise<{ branch: string | null; head: string } | null>;
+  checkedOut?: (
+    taskId: string,
+  ) => Promise<{ branch: string | null; head: string; dirty?: boolean } | null>;
 };
 
 /** Where a sign-in was missing, and the project it was for. */
@@ -421,17 +423,24 @@ export class ChangeContext {
     // held version the combine carries it from, never the members' it builds on; any other
     // change names every commit past the default branch (docs/forge.md, "A held batch").
     const record = repoId && fixOf ? this.batches?.record(repoId) : undefined;
-    const entry = [...(record?.line ?? []), ...(record?.open?.members ?? [])].find(
-      (change) => change.taskId === fixOf,
+    const kept = [...(record?.line ?? []), ...(record?.open?.members ?? [])].filter(
+      (change) => change.taskId === fixOf && change.heldBase,
     );
+    // Another task's branch at the exact commit a repair declared carries that repair's
+    // declaration, and is measured from the version that repair was verified on.
+    const at =
+      record?.fixHeads || kept.length
+        ? await git(dir, ["rev-parse", "--verify", "--quiet", `${head}^{commit}`]).catch(() => head)
+        : head;
+    const repair = record && fixOf ? declarationOf(record, { taskId: fixOf, head: at }) : undefined;
+    // The held version verified for this exact version, in line or in the batch, comes first,
+    // as the combine reads it (`carried`): another version of the task lends it none.
+    const verified =
+      kept.find((change) => change.head === at)?.heldBase ??
+      (repair ? record?.fixBases?.[repair] : undefined);
     const found =
-      record && fixOf && record.fixes?.includes(fixOf)
-        ? await fixBase(
-            dir,
-            head,
-            record.fixBases?.[fixOf] ?? entry?.heldBase,
-            heldVersions(record),
-          )
+      record && (repair || verified)
+        ? await fixBase(dir, head, verified, heldVersions(record))
         : undefined;
     if (found && "lost" in found)
       throw new Error(
@@ -444,6 +453,24 @@ export class ChangeContext {
     const base = found?.held ?? (await this.defaultRangeBase(dir, task, forge, head));
     await requireNamedRange(dir, base, head, this.options.namingRule?.() ?? null);
     return { dir, ...(found?.held ? { heldBase: found.held } : {}) };
+  }
+
+  /**
+   * The commit a task has committed for the held batch's fix it declares (docs/forge.md, "A
+   * held batch"): the one its own branch has checked out in its working copy, with nothing
+   * left to commit there, untracked files included. Undefined on another branch or a detached
+   * checkout, with work left to commit, or when nobody can say: it then binds no commit.
+   */
+  async ownCommit(task: TaskRecord): Promise<string | undefined> {
+    if (!task.branch) return undefined;
+    // The same reading on either computer (`checkoutOf`): its own takes it here, and a task
+    // placed on another answers with the one that computer took.
+    const at = task.deviceId
+      ? await this.options.checkedOut?.(task.id).catch(() => null)
+      : task.worktreeDir
+        ? await checkoutOf(task.worktreeDir)
+        : null;
+    return at?.branch === task.branch && at.dirty === false ? at.head : undefined;
   }
 
   /** Read the name and tip together, and only reuse a cached ref at that exact tip. */

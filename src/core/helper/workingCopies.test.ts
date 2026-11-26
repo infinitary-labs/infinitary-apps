@@ -363,7 +363,7 @@ describe("the working copies a computer that runs work keeps", () => {
       dirty: true,
       unlandedCommits: 1,
       origin,
-      checkedOut: { branch: "fm/task-t-keep", head: tip },
+      checkedOut: { branch: "fm/task-t-keep", head: tip, dirty: true },
     });
 
     const { kept } = await copies.keep("t-keep");
@@ -418,7 +418,7 @@ describe("the working copies a computer that runs work keeps", () => {
       dirty: false,
       unlandedCommits: 1,
       origin,
-      checkedOut: { branch: null, head: checkedOut },
+      checkedOut: { branch: null, head: checkedOut, dirty: false },
     });
 
     const { kept } = await copies.keep(task);
@@ -542,7 +542,7 @@ describe("the working copies a computer that runs work keeps", () => {
       dirty: true,
       unlandedCommits: 0,
       origin,
-      checkedOut: { branch: `fm/task-${task}`, head: main },
+      checkedOut: { branch: `fm/task-${task}`, head: main, dirty: true },
     });
     const { kept } = await copies.keep(task);
     if (!kept) throw new Error("expected kept work");
@@ -701,7 +701,7 @@ describe("the working copies a computer that runs work keeps", () => {
       dirty: true,
       unlandedCommits: 1,
       origin: null,
-      checkedOut: { branch: "fm/task-t-meter", head },
+      checkedOut: { branch: "fm/task-t-meter", head, dirty: true },
     });
     const { kept } = await copies.keep("t-meter");
     expect(kept).toMatchObject({ dirty: true, unlandedCommits: 1 });

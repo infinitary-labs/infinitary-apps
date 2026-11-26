@@ -71,7 +71,6 @@ Click it to start the ask in the message box.
 Click its **Hide** to put it away for good.
 
 A panel you asked for lands at the top of the left rail unless you say where.
-Its header says **yours**.
 You move it like any other panel.
 To change it, tell your first mate what you want different.
 To take it away, ask your first mate to remove it.
@@ -87,4 +86,10 @@ The switch then says so.
 Turn them back on when you are ready.
 
 If one of your panels stops working, the panel says so, and the rest of the window carries on.
-When a panel's work in the background stops responding, its **Retry** button starts it again.
+
+When one of your panels needs a look, a small dot appears beside its name.
+The dot shows when the panel's work in the background stopped or is paused, when it waits for your OK to reach a service, or when its background reads keep failing.
+Rest on the dot, or reach it with Tab, to see one line about it.
+Press the dot, or press Enter, to open its details, then use the button there: **Retry**, **Update panel**, **Ask again** or **Ask the first mate**.
+Press Esc to close the details.
+The Infinitary app on your iPhone or iPad shows the same dot; tap it to read the details.

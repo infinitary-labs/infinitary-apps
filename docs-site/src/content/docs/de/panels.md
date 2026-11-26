@@ -1,5 +1,5 @@
 ---
-source: c3a4eb8bec45d0bf
+source: 8c3b2ba30e330a7b
 title: Panels
 description: Panels sitzen links und rechts im Fenster und zeigen deine Aufgaben, die Aktivität deiner Crew und alles, was du deinen ersten Offizier bauen lässt.
 ---
@@ -72,7 +72,6 @@ Klick darauf, um die Bitte im Nachrichtenfeld zu beginnen.
 Mit **Ausblenden** darin räumst du ihn für immer weg.
 
 Ein Panel, um das du gebeten hast, landet oben auf der linken Leiste, wenn du nichts anderes sagst.
-In seiner Kopfzeile steht **deins**.
 Du verschiebst es wie jedes andere Panel.
 Um es zu ändern, sag deinem ersten Offizier, was anders sein soll.
 Um es zu entfernen, bitte deinen ersten Offizier darum.
@@ -88,4 +87,10 @@ Der Schalter sagt es dann.
 Schalt sie wieder ein, wenn du so weit bist.
 
 Wenn eines deiner Panels nicht mehr funktioniert, sagt das Panel es, und der Rest des Fensters läuft weiter.
-Wenn die Hintergrundarbeit eines Panels nicht mehr reagiert, startet seine Schaltfläche **Erneut versuchen** sie neu.
+
+Wenn eines deiner Panels einen Blick braucht, erscheint ein kleiner Punkt neben seinem Namen.
+Der Punkt erscheint, wenn die Hintergrundarbeit des Panels gestoppt oder pausiert ist, wenn es auf dein OK wartet, um einen Dienst zu erreichen, oder wenn sein Lesen im Hintergrund immer wieder fehlschlägt.
+Bleib mit dem Zeiger auf dem Punkt, oder erreiche ihn mit Tab, um eine Zeile dazu zu sehen.
+Drück den Punkt, oder drück Enter, um seine Details zu öffnen, und nutze dann die Schaltfläche dort: **Erneut versuchen**, **Panel aktualisieren**, **Erneut fragen** oder **Ersten Offizier fragen**.
+Drück Esc, um die Details zu schließen.
+Die Infinitary-App auf deinem iPhone oder iPad zeigt denselben Punkt; tipp darauf, um die Details zu lesen.

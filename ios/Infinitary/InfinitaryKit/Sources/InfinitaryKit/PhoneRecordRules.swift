@@ -96,23 +96,30 @@ public enum PhoneRecord {
     static var checkingWords: String { PhoneMessages.phoneRecordStartChecking() }
     static var slowStartWords: String { PhoneMessages.phoneRecordStartSlow() }
 
-    /// The pill's word and the reason beside it: the shared status with the task's waits, then a start in flight or
-    /// a failed start said plainly. The reason's tone is `reasonTone`'s.
+    /// The pill's word and the reason beside it: the shared status with the task's waits, then a start in flight said
+    /// plainly. A failed start leaves the reason empty, since the bar says why (`startNotice`), as the Mac's
+    /// `recordStartOf` does. The reason's tone is `reasonTone`'s.
     public static func status(_ task: PhoneTask, now: Double, zone: TimeZone = .current) -> PhoneTaskFacts.Status {
         let read = waitStatus(task, PhoneTaskFacts.status(task, now: now), now: now, zone: zone)
         let since = task.startAttempt?.since ?? (task.activity == "starting" ? task.startedAt : nil)
         let preparing = task.startAttempt?.phase == "preparing" || task.activity == "starting"
         let reason = task.startAttempt?.phase == "checking" ? checkingWords
             : since.map { now - $0 >= 15_000 } == true && preparing ? slowStartWords
-            : task.startNotice.map { PhoneMessages.phoneRecordStartFailed(reason: $0.reason) }
+            : task.startNotice != nil ? ""
             // The attention box says what a parent's parts wait on, so the reason stays empty beside it.
-            ?? (partsAttention(task) != nil ? "" : read.reason)
+            : partsAttention(task) != nil ? "" : read.reason
         return read.with(reason: reason)
     }
 
-    /// `warning` for a failed start, `plain` for a start in flight, `quiet` for every other reason.
+    /// Why a start could not begin, which the bar says above its buttons, as the Mac's says it between Drop task and
+    /// Try again; nil when no start failed.
+    public static func startNotice(_ task: PhoneTask) -> String? {
+        task.startNotice.map { PhoneMessages.phoneRecordStartFailed(reason: $0.reason) }
+    }
+
+    /// `plain` for a start in flight, `quiet` for every other reason.
     public static func reasonTone(_ reason: String) -> String {
-        reason.hasPrefix(PhoneMessages.phoneRecordCouldNotStart()) ? "warning" : reason == checkingWords || reason == slowStartWords ? "plain" : "quiet"
+        reason == checkingWords || reason == slowStartWords ? "plain" : "quiet"
     }
 
     /// `taskWaitStatus`: the waits the attention sentence does not own join the reason, unless a typed warning stands.

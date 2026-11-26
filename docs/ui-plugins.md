@@ -352,6 +352,7 @@ The captain's picks on the task popup board (2026-09-28: "1C 2B 3C 4A", then "sh
 FI3-565 direction A piece 4 gave them one shape: every open record's footer is the action bar (`RecordPaneFooter`, `cards/RecordPaneChrome.tsx`) - one row of buttons under the fact strip, the end slot at its left edge and the next slot at its right (FI3-948, the captain's layout B), so neither button moves between states.
 The bar says nothing of its own at rest: the status reason beside the pill says what happens next, and the body's attention box carries what the reason cannot - a blocker, a dropped dependency, a parent whose parts do the work, a hold or another need.
 The one exception is a start that could not begin: Could not start and its reason sit between Drop task and Try again, never in the title row (`RecordPaneFooter`'s `notice`).
+The shared `recordStartOf` (`src/shared/recordStart.ts`) reads that line and the pill's reason while a start is in flight from the task's typed start fields and the time, for the record and for the phone's record alike.
 Its state is read only from the task's typed fields through the shared `recordBarOf` (`src/shared/recordBar.ts`), never its prose; Done records and rows with no button have no bar; eligible dropped work offers Start again in the next slot (`docs/task-record.md`, "Starting dropped work again").
 The design skill's `TaskRecord` owns the layout and the attention box's words.
 

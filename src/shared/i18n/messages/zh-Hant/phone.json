@@ -306,7 +306,6 @@
   "phoneRecordClosedReleased": "已發布",
   "phoneRecordClosedSuperseded": "已被取代",
   "phoneRecordClosedWithNote": "{age}{status}：{note}",
-  "phoneRecordCouldNotStart": "無法開始",
   "phoneRecordCrewEarlier": {
     "plural": "count",
     "other": "未顯示較早的 {count} 筆項目。"

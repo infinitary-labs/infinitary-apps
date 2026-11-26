@@ -318,7 +318,6 @@
   "phoneRecordClosedReleased": "Publicada",
   "phoneRecordClosedSuperseded": "Sustituida",
   "phoneRecordClosedWithNote": "{status} {age}: {note}",
-  "phoneRecordCouldNotStart": "No se pudo iniciar",
   "phoneRecordCrewEarlier": {
     "plural": "count",
     "one": "No se muestra {count} entrada anterior.",

@@ -312,7 +312,6 @@
   "phoneRecordClosedReleased": "Released",
   "phoneRecordClosedSuperseded": "Superseded",
   "phoneRecordClosedWithNote": "{status} {age}: {note}",
-  "phoneRecordCouldNotStart": "Could not start",
   "phoneRecordCrewEarlier": {
     "plural": "count",
     "one": "{count} earlier entries are not shown.",

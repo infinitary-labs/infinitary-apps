@@ -100,6 +100,7 @@
         "word": "Working",
         "reason": ""
       },
+      "notice": null,
       "tabs": [
         {
           "kind": "info",
@@ -208,6 +209,7 @@
         "word": "Idle",
         "reason": "No continuing work"
       },
+      "notice": null,
       "tabs": [
         {
           "kind": "info",
@@ -319,6 +321,7 @@
         "word": "Backlog",
         "reason": "Starts when you press Start"
       },
+      "notice": null,
       "tabs": [],
       "crew": "idle",
       "attention": null,
@@ -410,6 +413,7 @@
         "word": "Queued",
         "reason": "Waiting for a free crewmate · since 9:40 AM"
       },
+      "notice": null,
       "tabs": [],
       "crew": "idle",
       "attention": {
@@ -520,6 +524,7 @@
         "word": "Backlog",
         "reason": "Blocked by another task"
       },
+      "notice": null,
       "tabs": [],
       "crew": "idle",
       "attention": {
@@ -612,6 +617,7 @@
         "word": "Starting",
         "reason": ""
       },
+      "notice": null,
       "tabs": [],
       "crew": "idle",
       "attention": null,
@@ -696,6 +702,7 @@
         "word": "Starting",
         "reason": "Still starting. You can keep working."
       },
+      "notice": null,
       "tabs": [],
       "crew": "idle",
       "attention": null,
@@ -780,6 +787,7 @@
         "word": "Starting",
         "reason": "Checking whether it started"
       },
+      "notice": null,
       "tabs": [],
       "crew": "idle",
       "attention": null,
@@ -866,8 +874,9 @@
       "status": {
         "mark": "backlog",
         "word": "Backlog",
-        "reason": "Could not start. No crewmate could start."
+        "reason": ""
       },
+      "notice": "Could not start. No crewmate could start.",
       "tabs": [],
       "crew": "idle",
       "attention": null,
@@ -951,6 +960,7 @@
         "word": "Queued",
         "reason": "Blocked by another task"
       },
+      "notice": null,
       "tabs": [],
       "crew": "idle",
       "attention": {
@@ -1055,6 +1065,7 @@
         "word": "Queued",
         "reason": "Its 3 parts do the work"
       },
+      "notice": null,
       "tabs": [],
       "crew": "idle",
       "attention": {
@@ -1159,6 +1170,7 @@
         "word": "Queued",
         "reason": "Its 2 parts do the work"
       },
+      "notice": null,
       "tabs": [],
       "crew": "idle",
       "attention": {
@@ -1414,6 +1426,7 @@
         "word": "Backlog",
         "reason": ""
       },
+      "notice": null,
       "tabs": [],
       "crew": "idle",
       "attention": {
@@ -1673,6 +1686,7 @@
         "word": "Backlog",
         "reason": ""
       },
+      "notice": null,
       "tabs": [],
       "crew": "idle",
       "attention": {
@@ -1932,6 +1946,7 @@
         "word": "Backlog",
         "reason": ""
       },
+      "notice": null,
       "tabs": [],
       "crew": "idle",
       "attention": {
@@ -2246,6 +2261,7 @@
         "word": "Backlog",
         "reason": ""
       },
+      "notice": null,
       "tabs": [],
       "crew": "idle",
       "attention": {
@@ -2502,6 +2518,7 @@
         "word": "Backlog",
         "reason": "Its 3 parts do the work"
       },
+      "notice": null,
       "tabs": [],
       "crew": "idle",
       "attention": {
@@ -2757,6 +2774,7 @@
         "word": "Queued",
         "reason": "Its 3 parts do the work"
       },
+      "notice": null,
       "tabs": [],
       "crew": "idle",
       "attention": {
@@ -2858,6 +2876,7 @@
         "word": "Idle",
         "reason": ""
       },
+      "notice": null,
       "tabs": [
         {
           "kind": "info",
@@ -2962,6 +2981,7 @@
         "word": "Interrupted",
         "reason": "Work was interrupted"
       },
+      "notice": null,
       "tabs": [
         {
           "kind": "info",
@@ -3063,6 +3083,7 @@
         "word": "Interrupted",
         "reason": "Work was interrupted"
       },
+      "notice": null,
       "tabs": [
         {
           "kind": "info",
@@ -3180,6 +3201,7 @@
         "word": "Waiting on you",
         "reason": "A decision card is ready"
       },
+      "notice": null,
       "tabs": [
         {
           "kind": "info",
@@ -3277,6 +3299,7 @@
         "word": "Waiting on you",
         "reason": "A decision card is ready"
       },
+      "notice": null,
       "tabs": [],
       "crew": "waiting",
       "attention": null,
@@ -3363,6 +3386,7 @@
         "word": "Waiting on you",
         "reason": "Answer ready · waiting 1h 35m"
       },
+      "notice": null,
       "tabs": [
         {
           "kind": "info",
@@ -3459,6 +3483,7 @@
         "word": "Waiting on you",
         "reason": ""
       },
+      "notice": null,
       "tabs": [],
       "crew": "idle",
       "attention": null,
@@ -3547,6 +3572,7 @@
         "word": "Idle",
         "reason": "Work is paused"
       },
+      "notice": null,
       "tabs": [
         {
           "kind": "info",
@@ -3648,6 +3674,7 @@
         "word": "Idle",
         "reason": "Work is paused"
       },
+      "notice": null,
       "tabs": [
         {
           "kind": "info",
@@ -3753,6 +3780,7 @@
         "word": "Idle",
         "reason": "No continuing work"
       },
+      "notice": null,
       "tabs": [
         {
           "kind": "info",
@@ -3866,6 +3894,7 @@
         "word": "Idle",
         "reason": ""
       },
+      "notice": null,
       "tabs": [
         {
           "kind": "info",
@@ -3974,6 +4003,7 @@
         "word": "Working",
         "reason": "Sounding job"
       },
+      "notice": null,
       "tabs": [
         {
           "kind": "info",
@@ -4077,6 +4107,7 @@
         "word": "Waiting on you",
         "reason": "A decision card is ready"
       },
+      "notice": null,
       "tabs": [
         {
           "kind": "info",
@@ -4180,6 +4211,7 @@
         "word": "Working",
         "reason": ""
       },
+      "notice": null,
       "tabs": [
         {
           "kind": "info",
@@ -4279,6 +4311,7 @@
         "word": "Backlog",
         "reason": "Started · its work waits for your Start"
       },
+      "notice": null,
       "tabs": [
         {
           "kind": "info",
@@ -4387,6 +4420,7 @@
         "word": "Idle",
         "reason": "No continuing work"
       },
+      "notice": null,
       "tabs": [
         {
           "kind": "info",
@@ -4506,6 +4540,7 @@
         "word": "Done",
         "reason": ""
       },
+      "notice": null,
       "tabs": [
         {
           "kind": "info",
@@ -4604,6 +4639,7 @@
         "word": "Done",
         "reason": ""
       },
+      "notice": null,
       "tabs": [
         {
           "kind": "info",
@@ -4692,6 +4728,7 @@
         "word": "Done",
         "reason": ""
       },
+      "notice": null,
       "tabs": [
         {
           "kind": "info",
@@ -4784,6 +4821,7 @@
         "word": "Dropped",
         "reason": ""
       },
+      "notice": null,
       "tabs": [
         {
           "kind": "info",
@@ -4870,6 +4908,7 @@
         "word": "Dropped",
         "reason": ""
       },
+      "notice": null,
       "tabs": [
         {
           "kind": "info",
@@ -4959,6 +4998,7 @@
         "word": "Dropped",
         "reason": "Failed"
       },
+      "notice": null,
       "tabs": [
         {
           "kind": "info",
@@ -5049,6 +5089,7 @@
         "word": "Done",
         "reason": ""
       },
+      "notice": null,
       "tabs": [
         {
           "kind": "info",
@@ -5160,6 +5201,7 @@
         "word": "Backlog",
         "reason": "Starts when you press Start"
       },
+      "notice": null,
       "tabs": [],
       "crew": "idle",
       "attention": null,
@@ -5260,6 +5302,7 @@
         "word": "Working",
         "reason": ""
       },
+      "notice": null,
       "tabs": [
         {
           "kind": "info",
@@ -5355,6 +5398,7 @@
         "word": "Working",
         "reason": ""
       },
+      "notice": null,
       "tabs": [
         {
           "kind": "info",

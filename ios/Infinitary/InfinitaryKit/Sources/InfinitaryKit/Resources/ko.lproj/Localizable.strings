@@ -540,6 +540,7 @@
 "cardRecordCare" = "주의 수준: %1$@";
 "cardRecordChecking" = "시작됐는지 확인하는 중";
 "cardRecordChildrenClosed" = "%2$@개 중 %1$@개 닫힘";
+"cardRecordCouldNotStart" = "시작하지 못했어요. %1$@";
 "cardRecordDelivery" = "전달 방식";
 "cardRecordDeliveryDirectPr" = "끌어오기 요청";
 "cardRecordDeliveryInPlace" = "그 자리에서 만듦";
@@ -2099,7 +2100,6 @@
 "phoneRecordClosedReleased" = "릴리스됨";
 "phoneRecordClosedSuperseded" = "대체됨";
 "phoneRecordClosedWithNote" = "%1$@ %3$@: %2$@";
-"phoneRecordCouldNotStart" = "시작하지 못했어요";
 "phoneRecordDelivery" = "전달 방식";
 "phoneRecordDeliveryBatched" = "일괄 끌어오기 요청";
 "phoneRecordDeliveryInPlace" = "그 자리에서 만듦";

@@ -37,8 +37,8 @@ extension PhoneJourney {
     /// row Start, dim with the Mac's reason when it cannot start; a long press shows the row's moves under its summary,
     /// a move that cannot run stays dim, and Drop task asks in the record's words before the Mac drops it. One press on
     /// a Start that can run sends the Mac's start, and a refusal says why. The long press offers that same Start, as the
-    /// Mac's row shows it at rest, and it too starts at once with no ask. Answers the finished task the fixture seeds.
-    private func rowMoves() async throws -> String {
+    /// Mac's row shows it at rest, and it too starts at once with no ask. Answers what the fixture seeded.
+    private func rowMoves() async throws -> [String: Any] {
         let seeded = try await home("row-moves-fixture")
         let id = try XCTUnwrap(seeded["id"] as? String)
         let row = app.buttons["task-\(id)"]
@@ -115,7 +115,28 @@ extension PhoneJourney {
         XCTAssertEqual(starts.count, 2, "The long press's Start is the Mac's start")
         tapOnPhone(notice)
         XCTAssertTrue(notice.waitForAbsence(timeout: 10))
-        return try XCTUnwrap(seeded["done"] as? String)
+        return seeded
+    }
+
+    /// INF-6022: a start that could not begin says why in the record's bar, above Drop task and its next step, in the
+    /// Mac's record's words, and the title row's pill says nothing beside it, as on the Mac. Answers the task the row
+    /// moves' fixture seeds.
+    private func failedStartRecord(_ seeded: [String: Any]) async throws {
+        let id = try XCTUnwrap(seeded["startFailed"] as? String)
+        let row = app.buttons["task-\(id)"]
+        XCTAssertTrue(row.waitForPresence(timeout: 10), app.debugDescription)
+        tapOnPhone(row)
+        let notice = app.staticTexts["record-start-notice"]
+        XCTAssertTrue(notice.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(notice.label, seeded["startNotice"] as? String, "The bar says why in the Mac's record's words")
+        let drop = app.buttons["drop-task"]
+        XCTAssertTrue(drop.exists, "The notice sits in the bar beside Drop task")
+        XCTAssertLessThan(notice.frame.maxY, drop.frame.minY, "The notice sits above the bar's buttons")
+        XCTAssertFalse(app.staticTexts["task-record-reason"].exists, "The pill says nothing beside it")
+        // In light and dark, as the release note's picture pair shows it.
+        try await appearances("task-record-could-not-start", showing: notice)
+        tapOnPhone(app.buttons["close-record"])
+        XCTAssertTrue(notice.waitForAbsence(timeout: 10), app.debugDescription)
     }
 
     /// One chip of the search's tag row, by the tag's name its label starts with.
@@ -231,9 +252,10 @@ extension PhoneJourney {
         tapOnPhone(app.buttons["group-backlog"])
         XCTAssertTrue(app.buttons["task-phone-work"].waitForPresence(timeout: 10))
         picture("tasks-backlog")
-        let finished = try await rowMoves()
+        let seeded = try await rowMoves()
+        try await failedStartRecord(seeded)
         pinRow("phone-work")
-        pinDoneRow(finished)
+        pinDoneRow(try XCTUnwrap(seeded["done"] as? String))
         // INF-589 item 9: search waits above the list until it is pulled down, and Find a task opens it by key, as on the Mac.
         let search = app.textFields["task-search"]
         XCTAssertFalse(search.exists)

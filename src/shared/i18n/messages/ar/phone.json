@@ -336,7 +336,6 @@
   "phoneRecordClosedReleased": "أُصدرت",
   "phoneRecordClosedSuperseded": "حلّ محلها غيرها",
   "phoneRecordClosedWithNote": "{status} {age}: {note}",
-  "phoneRecordCouldNotStart": "تعذّر البدء",
   "phoneRecordCrewEarlier": {
     "plural": "count",
     "zero": "لا يُعرض {count} إدخال سابق.",

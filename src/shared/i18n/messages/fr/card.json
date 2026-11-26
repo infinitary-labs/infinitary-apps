@@ -306,6 +306,7 @@
   "cardRecordCare": "Soin : {care}",
   "cardRecordChecking": "Vérification du démarrage",
   "cardRecordChildrenClosed": "{closed} sur {total} closes",
+  "cardRecordCouldNotStart": "Démarrage impossible. {reason}",
   "cardRecordDelivery": "Livraison",
   "cardRecordDeliveryDirectPr": "Demande de tirage",
   "cardRecordDeliveryInPlace": "Construit sur place",

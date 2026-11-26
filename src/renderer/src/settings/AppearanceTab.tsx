@@ -226,14 +226,20 @@ export function AppearanceTab() {
           }
         />
         <SettingRow
-          id="theme"
-          error={errorFor("theme")}
-          title={m.settingsAppearanceTheme()}
-          description={m.settingsAppearanceThemeDescription()}
-          detail={<ThemeTiles />}
-          control={null}
+          id="crew-model-names"
+          error={errorFor("showCrewModelNames")}
+          title={m.settingsAppearanceCrewModelNames()}
+          description={m.settingsAppearanceCrewModelNamesDescription()}
+          control={
+            <Switch
+              checked={showCrewModelNames}
+              aria-label={m.settingsAppearanceCrewModelNames()}
+              onChange={setShowCrewModelNames}
+            />
+          }
         />
-        {/* Only a window over the system's material has a wash (docs/translucent-window.md). */}
+        {/* Only a window over the system's material has a wash (docs/translucent-window.md);
+            it takes the theme's color (docs/themes.md), so it sits just above the tiles. */}
         {desktop.material && (
           <SettingRow
             id="window-wash"
@@ -269,18 +275,14 @@ export function AppearanceTab() {
             }
           />
         )}
+        {/* The tiles are tall: below the rows above, so they stay on screen in the smallest window. */}
         <SettingRow
-          id="crew-model-names"
-          error={errorFor("showCrewModelNames")}
-          title={m.settingsAppearanceCrewModelNames()}
-          description={m.settingsAppearanceCrewModelNamesDescription()}
-          control={
-            <Switch
-              checked={showCrewModelNames}
-              aria-label={m.settingsAppearanceCrewModelNames()}
-              onChange={setShowCrewModelNames}
-            />
-          }
+          id="theme"
+          error={errorFor("theme")}
+          title={m.settingsAppearanceTheme()}
+          description={m.settingsAppearanceThemeDescription()}
+          detail={<ThemeTiles />}
+          control={null}
         />
         {/* Below the rows above, so they stay on screen in the smallest window. */}
         <FontRows />

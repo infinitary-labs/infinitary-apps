@@ -10,6 +10,7 @@
   "refuseNoCardIsShown": "No se muestra ninguna tarjeta",
   "refuseNoCardIsShownOrPutAside": "No se muestra ni está apartada ninguna tarjeta",
   "refuseNoCardThreadIsReadAboveIts": "Ningún hilo de tarjeta está leído por encima de su último mensaje",
+  "refuseNoMessageToRevert": "No hay mensaje que revertir: tiene más de un minuto o ya se revirtió",
   "refuseNoOtherCardIsNew": "No hay otra tarjeta nueva",
   "refuseNoPageToPointAt": "No se muestra ninguna página que señalar",
   "refuseNoPictureIsOpen": "Abre primero una imagen de una tarjeta",

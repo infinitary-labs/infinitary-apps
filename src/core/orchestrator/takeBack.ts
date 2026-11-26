@@ -1,5 +1,10 @@
+import type { FmEvent } from "@shared/events";
+import { inLanguage } from "@shared/i18n/current";
+import { SOURCE_LANGUAGE } from "@shared/i18n/languages";
+import * as m from "@shared/i18n/messages.generated";
 import { frameServedInput } from "@shared/servedFrame";
 import { TAKE_BACK_WINDOW_MS, type TakeBackRefusal, type TakeBackResult } from "@shared/takeBack";
+import { throughNow } from "../askedFromTheCommand";
 import { FIRSTMATE_RECIPIENT, type InboxRow, type InboxStore } from "../storage/inboxStore";
 import type { TaskService } from "../tasks/taskService";
 import { excerptOf } from "./answerDelivery";
@@ -14,6 +19,21 @@ import { renderWake, type TypedWake } from "./wakes";
  * undo what a message the captain took back would cause. The record write
  * is `TaskCapture.takeBack`; the agent owns when each step runs.
  */
+
+/**
+ * The receipt of a message just saved (`user_turn`), sent after its ask
+ * opens: its id and time let any window take it back without a reload.
+ */
+export function receiptOf(text: string, ask: { id: string; at: number }): FmEvent {
+  const through = throughNow();
+  return {
+    type: "user_turn",
+    text,
+    ...(through ? { through } : {}),
+    askId: ask.id,
+    sentAt: ask.at,
+  };
+}
 
 /** The inbox ref the taken-back wake rides; its once-name keeps it to one per message. */
 export const TAKEN_BACK_REF = "taken-back";
@@ -147,6 +167,7 @@ export type TakeBackHost = {
   steer(input: ServedInput): void;
   /** The message leaves the turn's unread list. */
   forget(askId: string): void;
+  broadcastEvent(event: FmEvent): void;
   /** Serves a queued wake now if the seat is idle. */
   drain(): void;
 };
@@ -166,6 +187,8 @@ export class TakeBacks {
    * read (true). A steer's mark ends with that turn, or when it is refused.
    */
   private readonly handingOff = new Map<string, boolean>();
+  /** Messages whose undo wake the running turn was served: its reply line is theirs. */
+  private readonly undoing = new Set<string>();
 
   constructor(private readonly host: TakeBackHost) {}
 
@@ -220,15 +243,46 @@ export class TakeBacks {
     this.host.forget(askId);
     this.host.asks.closeTakenBack(askId);
     // Not read yet: the hand-off drops the words when it sees the take back.
-    if (handing === false) return "withdrawn";
+    if (handing === false) return this.withdrawn(askId);
     // Words a failed turn read and parked again may already have caused something.
     const caused = tasks.capture
       .getAsk(askId)
       ?.deliveryFacts.entries.some((entry) => entry.outcome === "action");
-    if (withdrawn && !caused) return "withdrawn";
+    if (withdrawn && !caused) return this.withdrawn(askId);
     queueTakenBackWake(tasks, inbox, askId);
     this.host.drain();
     return "undoing";
+  }
+
+  /** No turn read the message, so no turn's line will stand beside it: this typed one does. */
+  private withdrawn(askId: string): "withdrawn" {
+    // Saved English beside the fact (docs/i18n.md, "Saved facts"); the window words it when shown.
+    const text = inLanguage(SOURCE_LANGUAGE, () => m.shellLastTurnRevertedUnread());
+    const reply = { text, eligibility: "completed", withdrawn: true } as const;
+    this.host.tasks.capture.setAskReply(askId, reply);
+    this.host.broadcastEvent({ type: "firstmate_reply", ...reply, askId });
+    return "withdrawn";
+  }
+
+  /** The batch a turn is served: each undo wake in it names the message the turn undoes. */
+  serving(rows: readonly InboxRow[]): void {
+    this.undoing.clear();
+    for (const row of rows)
+      if (row.facts?.kind === "taken-back" && row.facts.stage === "ended")
+        this.undoing.add(row.facts.askId);
+  }
+
+  /**
+   * Where the running turn's reply line goes (docs/task-capture.md, "Taking
+   * back a message"): the newest message when the turn read it, as for any
+   * turn; else, for a turn that read no message, each message whose undo
+   * it was served, so the line saying what was undone stands beside the
+   * message the captain took back.
+   */
+  replyTargets(read: readonly string[]): readonly string[] {
+    const latest = this.host.tasks.capture.latestAskId();
+    if (latest && read.includes(latest)) return [latest];
+    return read.length === 0 ? [...this.undoing] : [];
   }
 
   /** Before the turn's capture floor: a held message's words never wait on the lane for another turn. */
@@ -244,6 +298,7 @@ export class TakeBacks {
   ended(read: Iterable<string>): void {
     const ids = new Set([...this.held, ...read]);
     this.held.clear();
+    this.undoing.clear();
     // A steer the turn never read is parked on the lane again, where a take back withdraws it.
     for (const [id, steering] of this.handingOff) if (steering) this.handingOff.delete(id);
     for (const id of ids) {

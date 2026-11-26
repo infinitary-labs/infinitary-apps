@@ -184,6 +184,69 @@ describe("the last turn above the input (./LastTurn, docs/composer.md)", () => {
     });
   });
 
+  // INF-6763's approved plan, part 2: the undo turn's line stands on the
+  // message taken back, which a replacement has made the older round.
+  it("puts an undo line beside the taken-back message it names, and others beside the newest", () => {
+    useShellStore.setState({
+      lastTurn: {
+        askId: "second",
+        you: "rename the beta channel instead",
+        reply: { text: "Filed the rename." },
+        previous: {
+          askId: "first",
+          you: "rename the release channel",
+          reply: null,
+          takenBack: true,
+        },
+      },
+    });
+    const seq = state().lastTurnReplySeq;
+    state().applyEvent({
+      type: "firstmate_reply",
+      text: "Took it back: dropped its task.",
+      askId: "first",
+    });
+    expect(state().lastTurn).toMatchObject({
+      reply: { text: "Filed the rename." },
+      previous: { askId: "first", reply: { text: "Took it back: dropped its task." } },
+    });
+    expect(state().lastTurnReplySeq).toBe(seq);
+    state().applyEvent({ type: "firstmate_reply", text: "Renamed it.", askId: "second" });
+    expect(state().lastTurn?.reply).toEqual({ text: "Renamed it." });
+    expect(state().lastTurnReplySeq).toBe(seq + 1);
+  });
+
+  // The review of the desktop take back: a message sent from anywhere (a
+  // card's line, the command, the phone) is named by its receipt, so it
+  // may be taken back without a reload; and a line naming neither round
+  // never lands on the newest.
+  it("names the newest round from its receipt, and draws no line naming neither round", () => {
+    state().applyEvent({
+      type: "user_turn",
+      text: "rename the release channel",
+      askId: "first",
+      sentAt: 1_000,
+    });
+    state().applyEvent({
+      type: "user_turn",
+      text: "and the beta one",
+      askId: "second",
+      sentAt: 2_000,
+    });
+    expect(state().lastTurn).toMatchObject({
+      askId: "second",
+      sentAt: 2_000,
+      previous: { askId: "first", sentAt: 1_000 },
+    });
+    const before = state().lastTurn;
+    state().applyEvent({
+      type: "firstmate_reply",
+      text: "Took it back: dropped its task.",
+      askId: "older-than-both",
+    });
+    expect(state().lastTurn).toBe(before);
+  });
+
   it("puts no reply up before any message, and leaves emote words to the reply line", () => {
     state().applyEvent({ type: "firstmate_reply", text: "Got it" });
     expect(state().lastTurn).toBeNull();

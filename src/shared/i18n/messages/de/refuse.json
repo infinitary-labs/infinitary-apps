@@ -10,6 +10,7 @@
   "refuseNoCardIsShown": "Es wird keine Karte angezeigt",
   "refuseNoCardIsShownOrPutAside": "Keine Karte wird angezeigt oder liegt beiseite",
   "refuseNoCardThreadIsReadAboveIts": "Kein Kartenverlauf ist oberhalb seiner neuesten Nachricht gelesen",
+  "refuseNoMessageToRevert": "Keine Nachricht zum Zurücknehmen: Sie ist älter als eine Minute oder schon zurückgenommen",
   "refuseNoOtherCardIsNew": "Keine andere Karte ist neu",
   "refuseNoPageToPointAt": "Es wird keine Seite angezeigt, auf die du zeigen kannst",
   "refuseNoPictureIsOpen": "Öffne zuerst ein Bild in einer Karte",

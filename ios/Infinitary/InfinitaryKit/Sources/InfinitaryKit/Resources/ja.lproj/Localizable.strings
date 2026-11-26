@@ -711,6 +711,8 @@
 "commandMessageDeleteWordBefore" = "カーソルの前の単語を削除";
 "commandMessagePutBackDeleted" = "最後に削除したものを元に戻す";
 "commandMessageRecall" = "最後に送ったメッセージを呼び戻す";
+"commandMessageTakeBack" = "最後のメッセージを取り消す";
+"commandMessageTakeBackWords" = "取り消し, 元に戻す, 送信取消, メッセージ";
 "commandMoveDown" = "下へ移動";
 "commandMoveDownWords" = "矢印, 下, 次";
 "commandMoveFirst" = "先頭へ移動";
@@ -819,6 +821,9 @@
 "composerFolderNotProject" = "そのフォルダをプロジェクトとして追加できませんでした。";
 "composerFolderProject" = "そのフォルダはすでにプロジェクトに入っています。";
 "composerHintFeedback" = "%1$@：Infinitary の開発者に問題やアイデアを伝えます";
+"composerHintReplaces" = "置き換え ·";
+"composerHintSendsAsNew" = "新しく送信";
+"composerReplacesLast" = "最後のメッセージを置き換えます";
 "composerTooLongShorten" = "長すぎて送信できません。先に短くしてください。";
 "composerWordsOnly" = "Infinitary が更新されるまで、送れるのは文字だけです。送るには画像とファイルを取り除いてください。";
 "crewAPart" = "パート";
@@ -2539,6 +2544,7 @@
 "refuseNoCardIsShown" = "カードが表示されていません";
 "refuseNoCardIsShownOrPutAside" = "表示中のカードも脇に置いたカードもありません";
 "refuseNoCardThreadIsReadAboveIts" = "最新メッセージより上を読んでいるカードのスレッドはありません";
+"refuseNoMessageToRevert" = "取り消せるメッセージがありません。送信から 1 分を過ぎたか、すでに取り消しています";
 "refuseNoOtherCardIsNew" = "ほかに新着カードはありません";
 "refuseNoPageToPointAt" = "指し示せるページが表示されていません";
 "refuseNoPictureIsOpen" = "まずカードの画像を開いてください";
@@ -4209,6 +4215,7 @@
 "shellConversationCards" = "カード";
 "shellConversationChose" = "「%1$@」を選択";
 "shellConversationCrewmate" = "乗組員";
+"shellConversationEdited" = "編集済み";
 "shellConversationEmpty" = "まだ何もありません。あなたのメッセージと回答したカードがここに表示されます。";
 "shellConversationEverything" = "すべて";
 "shellConversationHeading" = "会話";
@@ -4255,6 +4262,9 @@
 "shellKeyReminderNotTyping" = "入力中以外";
 "shellLastTurnFromCommand" = "%1$@ から";
 "shellLastTurnPictureOnly" = "画像";
+"shellLastTurnRevert" = "最後のメッセージを取り消す";
+"shellLastTurnReverted" = "取り消し済み";
+"shellLastTurnRevertedUnread" = "一等航海士が読む前に取り消しました";
 "shellLastTurnWorking" = "作業中…";
 "shellMainMessageConnectFirst" = "先にサブスクリプションを接続してください";
 "shellMainMessagePickingKey" = "設定が音声入力のキーを待っています";

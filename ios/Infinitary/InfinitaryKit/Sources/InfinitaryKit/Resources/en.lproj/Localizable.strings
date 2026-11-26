@@ -711,6 +711,8 @@
 "commandMessageDeleteWordBefore" = "Delete the word before the cursor";
 "commandMessagePutBackDeleted" = "Put back what was last deleted";
 "commandMessageRecall" = "Bring back the last message sent";
+"commandMessageTakeBack" = "Revert your last message";
+"commandMessageTakeBackWords" = "revert, undo, take back, unsend, retract, message";
 "commandMoveDown" = "Move down";
 "commandMoveDownWords" = "arrow, down, next";
 "commandMoveFirst" = "Move to the start";
@@ -819,6 +821,9 @@
 "composerFolderNotProject" = "That folder could not be added as a project.";
 "composerFolderProject" = "That folder is already one of your projects.";
 "composerHintFeedback" = "%1$@: tell Infinitary's maker about a problem or an idea";
+"composerHintReplaces" = "replaces ·";
+"composerHintSendsAsNew" = "sends as new";
+"composerReplacesLast" = "Replaces your last message";
 "composerTooLongShorten" = "Too long to send. Shorten it first.";
 "composerWordsOnly" = "Only words can go until Infinitary is updated. Remove the pictures and files to send this.";
 "crewAPart" = "A part";
@@ -2539,6 +2544,7 @@
 "refuseNoCardIsShown" = "No card is shown";
 "refuseNoCardIsShownOrPutAside" = "No card is shown or put aside";
 "refuseNoCardThreadIsReadAboveIts" = "No card thread is read above its latest message";
+"refuseNoMessageToRevert" = "No message to revert: it is past a minute old or already reverted";
 "refuseNoOtherCardIsNew" = "No other card is new";
 "refuseNoPageToPointAt" = "No page is shown to point at";
 "refuseNoPictureIsOpen" = "Open a picture in a card first";
@@ -4209,6 +4215,7 @@
 "shellConversationCards" = "Cards";
 "shellConversationChose" = "Chose “%1$@”";
 "shellConversationCrewmate" = "Crewmate";
+"shellConversationEdited" = "Edited";
 "shellConversationEmpty" = "Nothing here yet. Your messages and the cards you answer show here.";
 "shellConversationEverything" = "Everything";
 "shellConversationHeading" = "Conversation";
@@ -4255,6 +4262,9 @@
 "shellKeyReminderNotTyping" = "when not typing";
 "shellLastTurnFromCommand" = "From %1$@";
 "shellLastTurnPictureOnly" = "A picture";
+"shellLastTurnRevert" = "Revert your last message";
+"shellLastTurnReverted" = "Reverted";
+"shellLastTurnRevertedUnread" = "Reverted before your first mate read it";
 "shellLastTurnWorking" = "Working…";
 "shellMainMessageConnectFirst" = "Connect a subscription first";
 "shellMainMessagePickingKey" = "Settings is waiting for a dictation key";

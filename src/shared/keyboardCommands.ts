@@ -1081,6 +1081,21 @@ export const KEYBOARD_COMMANDS = {
       return searchWords(m.commandFirstmateReplyWords());
     },
   },
+  // Taking back the newest message within a minute of sending it
+  // (docs/composer.md "The last turn"): chosen by name, with no default key.
+  "message.take-back": {
+    get label() {
+      return m.commandMessageTakeBack();
+    },
+    scope: "window",
+    runs: "shell",
+    repeat: false,
+    risk: "close",
+    keys: [],
+    get searchWords() {
+      return searchWords(m.commandMessageTakeBackWords());
+    },
+  },
   "settings.runbooks": {
     get label() {
       return m.commandSettingsRunbooks();

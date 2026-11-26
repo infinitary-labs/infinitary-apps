@@ -10,6 +10,7 @@
   "refuseNoCardIsShown": "Aucune carte n’est affichée",
   "refuseNoCardIsShownOrPutAside": "Aucune carte n’est affichée ni mise de côté",
   "refuseNoCardThreadIsReadAboveIts": "Aucun fil de carte n’est lu au-dessus de son dernier message",
+  "refuseNoMessageToRevert": "Aucun message à annuler : il date de plus d’une minute ou a déjà été annulé",
   "refuseNoOtherCardIsNew": "Aucune autre carte n’est nouvelle",
   "refuseNoPageToPointAt": "Aucune page n’est affichée à désigner",
   "refuseNoPictureIsOpen": "Ouvre d’abord une image d’une carte",

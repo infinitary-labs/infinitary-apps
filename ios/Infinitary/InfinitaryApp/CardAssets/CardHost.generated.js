@@ -27038,6 +27038,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Bring back the last message sent`;
   }
+  function commandMessageTakeBack() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `التراجع عن آخر رسالة لك`;
+      case "de":
+        return `Deine letzte Nachricht zurücknehmen`;
+      case "es":
+        return `Revertir tu último mensaje`;
+      case "fr":
+        return `Annuler votre dernier message`;
+      case "ja":
+        return `最後のメッセージを取り消す`;
+      case "ko":
+        return `마지막 메시지 되돌리기`;
+      case "pt-BR":
+        return `Reverter sua última mensagem`;
+      case "zh-Hans":
+        return `撤回你的上一条消息`;
+      case "zh-Hant":
+        return `撤回你的上一則訊息`;
+      case "en-XA":
+        return `[Ŕéṽéŕţ ýöûŕ ļášţ ɱéššáĝé ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Revert your last message‬`;
+    }
+    return `Revert your last message`;
+  }
+  function commandMessageTakeBackWords() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تراجع, إلغاء, سحب, رسالة`;
+      case "de":
+        return `zurücknehmen, rückgängig, widerrufen, Nachricht`;
+      case "es":
+        return `revertir, deshacer, retirar, mensaje`;
+      case "fr":
+        return `annuler, défaire, retirer, message`;
+      case "ja":
+        return `取り消し, 元に戻す, 送信取消, メッセージ`;
+      case "ko":
+        return `되돌리기, 취소, 보내기 취소, 메시지`;
+      case "pt-BR":
+        return `reverter, desfazer, retirar, mensagem`;
+      case "zh-Hans":
+        return `撤回, 撤销, 取消发送, 消息`;
+      case "zh-Hant":
+        return `撤回, 復原, 取消傳送, 訊息`;
+      case "en-XA":
+        return `[ŕéṽéŕţ, ûñðö, ţáķé ƀáçķ, ûñšéñð, ŕéţŕáçţ, ɱéššáĝé ~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮revert, undo, take back, unsend, retract, message‬`;
+    }
+    return `revert, undo, take back, unsend, retract, message`;
+  }
   function commandMoveDown() {
     switch (currentLanguage()) {
       case "ar":
@@ -29955,6 +30009,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `${command}: tell Infinitary's maker about a problem or an idea`;
   }
+  function composerHintReplaces() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يستبدل ·`;
+      case "de":
+        return `ersetzt ·`;
+      case "es":
+        return `reemplaza ·`;
+      case "fr":
+        return `remplace ·`;
+      case "ja":
+        return `置き換え ·`;
+      case "ko":
+        return `대신 보내기 ·`;
+      case "pt-BR":
+        return `substitui ·`;
+      case "zh-Hans":
+        return `替换 ·`;
+      case "zh-Hant":
+        return `取代 ·`;
+      case "en-XA":
+        return `[ŕéþļáçéš · ~~~~]`;
+      case "ar-XB":
+        return `‮replaces ·‬`;
+    }
+    return `replaces ·`;
+  }
+  function composerHintSendsAsNew() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يرسل كرسالة جديدة`;
+      case "de":
+        return `sendet als neue`;
+      case "es":
+        return `envía como nuevo`;
+      case "fr":
+        return `envoie comme nouveau`;
+      case "ja":
+        return `新しく送信`;
+      case "ko":
+        return `새로 보내기`;
+      case "pt-BR":
+        return `envia como nova`;
+      case "zh-Hans":
+        return `作为新消息发送`;
+      case "zh-Hant":
+        return `作為新訊息送出`;
+      case "en-XA":
+        return `[šéñðš áš ñéŵ ~~~~]`;
+      case "ar-XB":
+        return `‮sends as new‬`;
+    }
+    return `sends as new`;
+  }
   function composerLines(input2) {
     const count = formatNumber(input2.count);
     switch (currentLanguage()) {
@@ -30048,6 +30156,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       default:
         return `${count} lines`;
     }
+  }
+  function composerReplacesLast() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تحل محل آخر رسالة لك`;
+      case "de":
+        return `Ersetzt deine letzte Nachricht`;
+      case "es":
+        return `Reemplaza tu último mensaje`;
+      case "fr":
+        return `Remplace votre dernier message`;
+      case "ja":
+        return `最後のメッセージを置き換えます`;
+      case "ko":
+        return `마지막 메시지를 대신해요`;
+      case "pt-BR":
+        return `Substitui sua última mensagem`;
+      case "zh-Hans":
+        return `替换你的上一条消息`;
+      case "zh-Hant":
+        return `取代你的上一則訊息`;
+      case "en-XA":
+        return `[Ŕéþļáçéš ýöûŕ ļášţ ɱéššáĝé ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Replaces your last message‬`;
+    }
+    return `Replaces your last message`;
   }
   function composerTooLongShorten() {
     switch (currentLanguage()) {
@@ -53390,6 +53525,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮No card thread is read above its latest message‬`;
     }
     return `No card thread is read above its latest message`;
+  }
+  function refuseNoMessageToRevert() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا توجد رسالة للتراجع عنها: مرّت عليها أكثر من دقيقة أو تم التراجع عنها`;
+      case "de":
+        return `Keine Nachricht zum Zurücknehmen: Sie ist älter als eine Minute oder schon zurückgenommen`;
+      case "es":
+        return `No hay mensaje que revertir: tiene más de un minuto o ya se revirtió`;
+      case "fr":
+        return `Aucun message à annuler : il date de plus d’une minute ou a déjà été annulé`;
+      case "ja":
+        return `取り消せるメッセージがありません。送信から 1 分を過ぎたか、すでに取り消しています`;
+      case "ko":
+        return `되돌릴 메시지가 없어요. 1분이 지났거나 이미 되돌렸어요`;
+      case "pt-BR":
+        return `Nenhuma mensagem para reverter: já passou de um minuto ou já foi revertida`;
+      case "zh-Hans":
+        return `没有可撤回的消息：已超过一分钟或已经撤回`;
+      case "zh-Hant":
+        return `沒有可撤回的訊息：已超過一分鐘或已經撤回`;
+      case "en-XA":
+        return `[Ñö ɱéššáĝé ţö ŕéṽéŕţ: îţ îš þášţ á ɱîñûţé öļð öŕ áļŕéáðý ŕéṽéŕţéð ~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮No message to revert: it is past a minute old or already reverted‬`;
+    }
+    return `No message to revert: it is past a minute old or already reverted`;
   }
   function refuseNoOtherCardIsNew() {
     switch (currentLanguage()) {
@@ -103051,6 +103213,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Crewmate`;
   }
+  function shellConversationEdited() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `معدّلة`;
+      case "de":
+        return `Bearbeitet`;
+      case "es":
+        return `Editado`;
+      case "fr":
+        return `Modifié`;
+      case "ja":
+        return `編集済み`;
+      case "ko":
+        return `수정됨`;
+      case "pt-BR":
+        return `Editada`;
+      case "zh-Hans":
+        return `已编辑`;
+      case "zh-Hant":
+        return `已編輯`;
+      case "en-XA":
+        return `[Éðîţéð ~~]`;
+      case "ar-XB":
+        return `‮Edited‬`;
+    }
+    return `Edited`;
+  }
   function shellConversationEmpty() {
     switch (currentLanguage()) {
       case "ar":
@@ -104394,6 +104583,87 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮A picture‬`;
     }
     return `A picture`;
+  }
+  function shellLastTurnRevert() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `التراجع عن آخر رسالة لك`;
+      case "de":
+        return `Deine letzte Nachricht zurücknehmen`;
+      case "es":
+        return `Revertir tu último mensaje`;
+      case "fr":
+        return `Annuler votre dernier message`;
+      case "ja":
+        return `最後のメッセージを取り消す`;
+      case "ko":
+        return `마지막 메시지 되돌리기`;
+      case "pt-BR":
+        return `Reverter sua última mensagem`;
+      case "zh-Hans":
+        return `撤回你的上一条消息`;
+      case "zh-Hant":
+        return `撤回你的上一則訊息`;
+      case "en-XA":
+        return `[Ŕéṽéŕţ ýöûŕ ļášţ ɱéššáĝé ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Revert your last message‬`;
+    }
+    return `Revert your last message`;
+  }
+  function shellLastTurnReverted() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تم التراجع`;
+      case "de":
+        return `Zurückgenommen`;
+      case "es":
+        return `Revertido`;
+      case "fr":
+        return `Annulé`;
+      case "ja":
+        return `取り消し済み`;
+      case "ko":
+        return `되돌림`;
+      case "pt-BR":
+        return `Revertida`;
+      case "zh-Hans":
+        return `已撤回`;
+      case "zh-Hant":
+        return `已撤回`;
+      case "en-XA":
+        return `[Ŕéṽéŕţéð ~~~]`;
+      case "ar-XB":
+        return `‮Reverted‬`;
+    }
+    return `Reverted`;
+  }
+  function shellLastTurnRevertedUnread() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تم التراجع قبل أن يقرأها نائب القبطان`;
+      case "de":
+        return `Zurückgenommen, bevor dein erster Offizier sie gelesen hat`;
+      case "es":
+        return `Revertido antes de que tu primer oficial lo leyera`;
+      case "fr":
+        return `Annulé avant que votre second ne le lise`;
+      case "ja":
+        return `一等航海士が読む前に取り消しました`;
+      case "ko":
+        return `일등항해사가 읽기 전에 되돌렸어요`;
+      case "pt-BR":
+        return `Revertida antes que seu imediato a lesse`;
+      case "zh-Hans":
+        return `在你的大副读到之前已撤回`;
+      case "zh-Hant":
+        return `在你的大副讀到之前已撤回`;
+      case "en-XA":
+        return `[Ŕéṽéŕţéð ƀéƒöŕé ýöûŕ ƒîŕšţ ɱáţé ŕéáð îţ ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Reverted before your first mate read it‬`;
+    }
+    return `Reverted before your first mate read it`;
   }
   function shellLastTurnWorking() {
     switch (currentLanguage()) {
@@ -113958,6 +114228,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     commandMessageDeleteWordBefore,
     commandMessagePutBackDeleted,
     commandMessageRecall,
+    commandMessageTakeBack,
+    commandMessageTakeBackWords,
     commandMoveDown,
     commandMoveDownWords,
     commandMoveFirst,
@@ -114066,7 +114338,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     composerFolderNotProject,
     composerFolderProject,
     composerHintFeedback,
+    composerHintReplaces,
+    composerHintSendsAsNew,
     composerLines,
+    composerReplacesLast,
     composerTooLongShorten,
     composerWordsOnly,
     crewAPart,
@@ -114850,6 +115125,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     refuseNoCardIsShown,
     refuseNoCardIsShownOrPutAside,
     refuseNoCardThreadIsReadAboveIts,
+    refuseNoMessageToRevert,
     refuseNoOtherCardIsNew,
     refuseNoPageToPointAt,
     refuseNoPictureIsOpen,
@@ -116563,6 +116839,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     shellConversationCards,
     shellConversationChose,
     shellConversationCrewmate,
+    shellConversationEdited,
     shellConversationEmpty,
     shellConversationEverything,
     shellConversationHeading,
@@ -116610,6 +116887,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     shellKeyReminderNotTyping,
     shellLastTurnFromCommand,
     shellLastTurnPictureOnly,
+    shellLastTurnRevert,
+    shellLastTurnReverted,
+    shellLastTurnRevertedUnread,
     shellLastTurnWorking,
     shellMainMessageConnectFirst,
     shellMainMessagePickingKey,
@@ -117593,6 +117873,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "commandMessageDeleteWordBefore": [],
     "commandMessagePutBackDeleted": [],
     "commandMessageRecall": [],
+    "commandMessageTakeBack": [],
+    "commandMessageTakeBackWords": [],
     "commandMoveDown": [],
     "commandMoveDownWords": [],
     "commandMoveFirst": [],
@@ -117701,7 +117983,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "composerFolderNotProject": [],
     "composerFolderProject": [],
     "composerHintFeedback": ["command"],
+    "composerHintReplaces": [],
+    "composerHintSendsAsNew": [],
     "composerLines": ["count"],
+    "composerReplacesLast": [],
     "composerTooLongShorten": [],
     "composerWordsOnly": [],
     "crewAPart": [],
@@ -118485,6 +118770,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "refuseNoCardIsShown": [],
     "refuseNoCardIsShownOrPutAside": [],
     "refuseNoCardThreadIsReadAboveIts": [],
+    "refuseNoMessageToRevert": [],
     "refuseNoOtherCardIsNew": [],
     "refuseNoPageToPointAt": [],
     "refuseNoPictureIsOpen": [],
@@ -120198,6 +120484,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "shellConversationCards": [],
     "shellConversationChose": ["label"],
     "shellConversationCrewmate": [],
+    "shellConversationEdited": [],
     "shellConversationEmpty": [],
     "shellConversationEverything": [],
     "shellConversationHeading": [],
@@ -120245,6 +120532,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "shellKeyReminderNotTyping": [],
     "shellLastTurnFromCommand": ["command"],
     "shellLastTurnPictureOnly": [],
+    "shellLastTurnRevert": [],
+    "shellLastTurnReverted": [],
+    "shellLastTurnRevertedUnread": [],
     "shellLastTurnWorking": [],
     "shellMainMessageConnectFirst": [],
     "shellMainMessagePickingKey": [],
@@ -126668,6 +126958,21 @@ ${FRAME_KEYBOARD_SCRIPT}
         return searchWords(commandFirstmateReplyWords());
       }
     },
+    // Taking back the newest message within a minute of sending it
+    // (docs/composer.md "The last turn"): chosen by name, with no default key.
+    "message.take-back": {
+      get label() {
+        return commandMessageTakeBack();
+      },
+      scope: "window",
+      runs: "shell",
+      repeat: false,
+      risk: "close",
+      keys: [],
+      get searchWords() {
+        return searchWords(commandMessageTakeBackWords());
+      }
+    },
     "settings.runbooks": {
       get label() {
         return commandSettingsRunbooks();
@@ -132868,6 +133173,14 @@ ${startersHtml()}`;
     /** Typed, never inferred from the words. Absent is unknown, and the line stays. */
     eligibility: lastTurnEligibilitySchema.optional(),
     /**
+     * The captain took the message back before any turn read it, so nothing
+     * answered it (docs/task-capture.md, "Taking back a message"). The window
+     * words the line from this in its own language when it shows it; `text`
+     * keeps the same catalog words in English for a reader that words nothing
+     * itself (docs/i18n.md, "Saved facts").
+     */
+    withdrawn: literal(true).optional(),
+    /**
      * The Firstmate's closing words as it wrote them, line breaks kept, when
      * they differ from the one-line `text`: the conversation shows them
      * (docs/composer.md "The conversation"). Absent, it shows `text`.
@@ -132883,6 +133196,11 @@ ${startersHtml()}`;
     through: throughSchema.optional(),
     /** The message's id, which a take back names; absent from an older core. */
     askId: string().optional(),
+    /**
+     * When the core accepted the message, in ms since the epoch: the take-back
+     * window runs from it (`TAKE_BACK_WINDOW_MS`). Absent from an older core.
+     */
+    sentAt: number().optional(),
     /** The captain took the message back (docs/task-capture.md, "Taking back a message"). */
     takenBack: literal(true).optional()
   });
@@ -135721,7 +136039,11 @@ ${startersHtml()}`;
       type: literal("user_turn"),
       text: string(),
       /** Sent from the captain's own command, `infinitary-axi`, not the window. */
-      through: throughSchema.optional()
+      through: throughSchema.optional(),
+      /** The message's id, which a take back names (src/shared/lastTurn.ts). Absent from an older core. */
+      askId: string().optional(),
+      /** When the core accepted the message, in ms since the epoch. Absent from an older core. */
+      sentAt: number().optional()
     }),
     /**
      * The Firstmate's reply line to the captain's last message, sent as the
@@ -135736,7 +136058,15 @@ ${startersHtml()}`;
       /** Typed completion: absent is unknown, and the line stays. */
       eligibility: lastTurnEligibilitySchema.optional(),
       /** The closing words as written, when they differ from `text` (src/shared/lastTurn.ts). */
-      words: string().optional()
+      words: string().optional(),
+      /** Taken back before any turn read it (src/shared/lastTurn.ts). */
+      withdrawn: literal(true).optional(),
+      /**
+       * The message the line stands beside: the newest, or one the captain
+       * took back, whose undo the turn did or no turn read (docs/task-capture.md,
+       * "Taking back a message"). Absent from an older core, and the line is the newest's.
+       */
+      askId: string().optional()
     }),
     /**
      * A task record changed (task-system P3): per-task invalidation for

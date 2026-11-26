@@ -711,6 +711,8 @@
 "commandMessageDeleteWordBefore" = "Borrar la palabra antes del cursor";
 "commandMessagePutBackDeleted" = "Recuperar lo último que se borró";
 "commandMessageRecall" = "Recuperar el último mensaje enviado";
+"commandMessageTakeBack" = "Revertir tu último mensaje";
+"commandMessageTakeBackWords" = "revertir, deshacer, retirar, mensaje";
 "commandMoveDown" = "Mover hacia abajo";
 "commandMoveDownWords" = "flecha, abajo, siguiente";
 "commandMoveFirst" = "Ir al principio";
@@ -819,6 +821,9 @@
 "composerFolderNotProject" = "No se pudo añadir esa carpeta como proyecto.";
 "composerFolderProject" = "Esa carpeta ya es uno de tus proyectos.";
 "composerHintFeedback" = "%1$@: cuéntale al creador de Infinitary un problema o una idea";
+"composerHintReplaces" = "reemplaza ·";
+"composerHintSendsAsNew" = "envía como nuevo";
+"composerReplacesLast" = "Reemplaza tu último mensaje";
 "composerTooLongShorten" = "Demasiado largo para enviar. Acórtalo primero.";
 "composerWordsOnly" = "Solo se pueden enviar palabras hasta que se actualice Infinitary. Quita las imágenes y los archivos para enviar esto.";
 "crewAPart" = "Una parte";
@@ -2539,6 +2544,7 @@
 "refuseNoCardIsShown" = "No se muestra ninguna tarjeta";
 "refuseNoCardIsShownOrPutAside" = "No se muestra ni está apartada ninguna tarjeta";
 "refuseNoCardThreadIsReadAboveIts" = "Ningún hilo de tarjeta está leído por encima de su último mensaje";
+"refuseNoMessageToRevert" = "No hay mensaje que revertir: tiene más de un minuto o ya se revirtió";
 "refuseNoOtherCardIsNew" = "No hay otra tarjeta nueva";
 "refuseNoPageToPointAt" = "No se muestra ninguna página que señalar";
 "refuseNoPictureIsOpen" = "Abre primero una imagen de una tarjeta";
@@ -4209,6 +4215,7 @@
 "shellConversationCards" = "Tarjetas";
 "shellConversationChose" = "Elegiste «%1$@»";
 "shellConversationCrewmate" = "Tripulante";
+"shellConversationEdited" = "Editado";
 "shellConversationEmpty" = "Aún no hay nada. Aquí aparecen tus mensajes y las tarjetas que respondes.";
 "shellConversationEverything" = "Todo";
 "shellConversationHeading" = "Conversación";
@@ -4255,6 +4262,9 @@
 "shellKeyReminderNotTyping" = "cuando no escribes";
 "shellLastTurnFromCommand" = "Desde %1$@";
 "shellLastTurnPictureOnly" = "Una imagen";
+"shellLastTurnRevert" = "Revertir tu último mensaje";
+"shellLastTurnReverted" = "Revertido";
+"shellLastTurnRevertedUnread" = "Revertido antes de que tu primer oficial lo leyera";
 "shellLastTurnWorking" = "Trabajando…";
 "shellMainMessageConnectFirst" = "Primero conecta una suscripción";
 "shellMainMessagePickingKey" = "Configuración está esperando una tecla de dictado";

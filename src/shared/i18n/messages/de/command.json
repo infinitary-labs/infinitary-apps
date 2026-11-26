@@ -89,6 +89,8 @@
   "commandMessageDeleteWordBefore": "Wort vor dem Cursor löschen",
   "commandMessagePutBackDeleted": "Zuletzt Gelöschtes wiederherstellen",
   "commandMessageRecall": "Zuletzt gesendete Nachricht zurückholen",
+  "commandMessageTakeBack": "Deine letzte Nachricht zurücknehmen",
+  "commandMessageTakeBackWords": "zurücknehmen, rückgängig, widerrufen, Nachricht",
   "commandMoveDown": "Nach unten",
   "commandMoveDownWords": "Pfeil, unten, runter, nächste",
   "commandMoveFirst": "Zum Anfang",

@@ -178,4 +178,26 @@ describe("the conversation's read", () => {
     );
     expect(said).toEqual(Array.from({ length: 35 }, (_, i) => `message ${35 - i}`));
   });
+
+  // INF-6763's approved plan, part 2: the conversation shows a taken-back
+  // message marked, and a replacement as edited with the earlier words.
+  it("marks a taken-back message and gives a replacement the words it replaced", () => {
+    const { db, tasks, message, tick } = fixture();
+    message("withdrawn", "delete the old logs");
+    tasks.capture.takeBack("withdrawn");
+    message("first", "rename the release channel");
+    tasks.capture.openAsk({
+      id: "second",
+      text: "rename the beta channel instead",
+      correctionOf: "first",
+      at: tick(),
+    });
+    const [second, first, withdrawn] = readConversation(db).rounds;
+    expect(second).toMatchObject({ you: "rename the beta channel instead" });
+    expect(second).toHaveProperty("replaces", "rename the release channel");
+    expect(second).not.toHaveProperty("takenBack");
+    expect(first).toMatchObject({ you: "rename the release channel", takenBack: true });
+    expect(first).not.toHaveProperty("replaces");
+    expect(withdrawn).toMatchObject({ you: "delete the old logs", takenBack: true });
+  });
 });

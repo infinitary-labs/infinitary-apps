@@ -45,8 +45,9 @@ const BEFORE = "at <= ? AND (at < ? OR key < ?)";
 
 // i18n-exempt: SQL, never shown to a person
 const ASKS = `SELECT * FROM (
-  SELECT 'a:' || printf('%019d', rowid) AS key, rowid AS seq, at, text, reply, delivery_facts, through, typed_card_id, typed_line
-  FROM captain_asks) WHERE ${BEFORE} ORDER BY at DESC, seq DESC LIMIT ?`;
+  SELECT 'a:' || printf('%019d', rowid) AS key, rowid AS seq, at, text, reply, delivery_facts, through, typed_card_id, typed_line,
+    taken_back_at, (SELECT o.text FROM captain_asks AS o WHERE o.id = q.correction_of) AS replaced
+  FROM captain_asks AS q) WHERE ${BEFORE} ORDER BY at DESC, seq DESC LIMIT ?`;
 
 // i18n-exempt: SQL, never shown to a person
 const ACTIONS = `SELECT * FROM (
@@ -86,6 +87,9 @@ type AskRow = Keyed & {
   through: string | null;
   typed_card_id: string | null;
   typed_line: number | null;
+  taken_back_at: number | null;
+  /** The words of the message this one replaced, when it did. */
+  replaced: string | null;
 };
 type ActionRow = Keyed & { card_id: string; payload_json: string };
 type LineRow = Keyed & { line: number; card_id: string; text: string };
@@ -190,6 +194,8 @@ function roundOf(
       you,
       reply,
       ...(row.through === THROUGH_THE_COMMAND ? { through: THROUGH_THE_COMMAND } : {}),
+      ...(row.taken_back_at !== null ? { takenBack: true as const } : {}),
+      ...(row.replaced !== null ? { replaces: row.replaced } : {}),
     };
   }
   const card = cardOf(item.row.card_id);

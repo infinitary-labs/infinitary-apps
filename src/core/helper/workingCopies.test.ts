@@ -261,6 +261,48 @@ describe("the working copies a computer that runs work keeps", () => {
     expect(await git(later.dir, ["rev-parse", "HEAD"])).toBe(newer);
   });
 
+  // This computer's git fetches the project's SSH address over another
+  // route (`url.<base>.insteadOf`, as `url.https://github.com/.insteadOf
+  // git@github.com:` does), so git answers the clone's origin rewritten,
+  // while the clone keeps the address it was made from. Until the app
+  // restarts, the clone it made is reused without that check.
+  it("reuses its clone of a project whose address this computer's git rewrites after a restart, and still refuses one that names another origin", async () => {
+    const { origin } = await project();
+    const forge = join(origin, "..");
+    const address = "git@forge.example.test:owner/origin.git";
+    const config = join(scratchDir("infinitary-copies-rewrite-"), "gitconfig");
+    writeFileSync(config, `[url "${forge}/"]\n\tinsteadOf = git@forge.example.test:owner/\n`);
+    vi.stubEnv("GIT_CONFIG_GLOBAL", config);
+    vi.stubEnv("GIT_CONFIG_NOSYSTEM", "1");
+    try {
+      const { dataDir, copies } = computer();
+      const first = await copies.prepare("t-first", { origin: address });
+      expect(first.cloned).toBe(true);
+      expect(await git(first.dir, ["remote", "get-url", "origin"])).toBe(`${forge}/origin.git`);
+
+      const restarted = new WorkingCopies(dataDir, { pool: false });
+      const second = await restarted.prepare("t-second", { origin: address });
+      expect(second.cloned).toBe(false);
+      expect(await git(second.dir, ["rev-parse", "HEAD"])).toBe(
+        await git(origin, ["rev-parse", "main"]),
+      );
+      expect(await restarted.status("t-second")).toMatchObject({ present: true, origin: address });
+
+      const [clone] = readdirSync(join(dataDir, "repos"));
+      await git(join(dataDir, "repos", `${clone}`), [
+        "remote",
+        "set-url",
+        "origin",
+        "git@forge.example.test:owner/other.git",
+      ]);
+      await expect(
+        new WorkingCopies(dataDir, { pool: false }).prepare("t-third", { origin: address }),
+      ).rejects.toThrow("This computer's clone of the project names another origin.");
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it("refuses a project it cannot clone, and leaves nothing half made", async () => {
     const { copies, dataDir } = computer();
     const missing = join(scratchDir("infinitary-copies-missing-"), "nowhere.git");

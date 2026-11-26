@@ -21,6 +21,7 @@ import {
   statusLine,
   taskKey,
 } from "./rails";
+import { readSavedData } from "./savedData";
 import {
   ANSWER_CONSENT_MARKER,
   ANSWER_CONSENT_TITLE,
@@ -290,6 +291,39 @@ test("a choice on an answer task's consent card resumes its crewmate, and the an
   });
   try {
     const { page, mockProvider } = own;
+    // Observe before either card appears so the final click keeps its original ordering.
+    const pointerTrace = await page.evaluateHandle(() => {
+      const describe = (element: EventTarget | null) => {
+        if (!(element instanceof Element)) return null;
+        return {
+          tag: element.tagName,
+          choice: element.closest("[data-card-choice]")?.getAttribute("data-card-choice"),
+          stage: element.closest("[data-stage-entry]")?.getAttribute("data-stage-entry"),
+          shield: element.hasAttribute("data-stage-shield"),
+        };
+      };
+      const events: Array<{
+        type: string;
+        at: number;
+        trusted: boolean;
+        target: ReturnType<typeof describe>;
+        hit: ReturnType<typeof describe>;
+      }> = [];
+      const record = (event: MouseEvent) => {
+        events.push({
+          type: event.type,
+          at: event.timeStamp,
+          trusted: event.isTrusted,
+          target: describe(event.target),
+          hit: describe(document.elementFromPoint(event.clientX, event.clientY)),
+        });
+        if (events.length > 24) events.shift();
+      };
+      for (const type of ["pointerdown", "pointerup", "click"] as const) {
+        document.addEventListener(type, record, { capture: true, passive: true });
+      }
+      return events;
+    });
     const input = promptInput(page);
     await input.click();
     await input.fill(`${ANSWER_CONSENT_MARKER} ${ANSWER_CONSENT_TITLE}`);
@@ -325,11 +359,43 @@ test("a choice on an answer task's consent card resumes its crewmate, and the an
 
     const [answer] = await page.evaluate(() => window.infinitary.cards.list());
     if (!answer || answer.taskId !== taskId) throw new Error("the answer card is not the task's");
-    await signed.getByRole("button", { name: SIGNED_CHOICE.label }).click();
-    await expect.poll(detail, { timeout: 30_000 }).toMatchObject({
-      status: "done",
-      closedReason: "answered",
-    });
+    try {
+      await signed.getByRole("button", { name: SIGNED_CHOICE.label }).click();
+      await expect.poll(detail, { timeout: 30_000 }).toMatchObject({
+        status: "done",
+        closedReason: "answered",
+      });
+    } catch (failure) {
+      const pointer = await pointerTrace
+        .jsonValue()
+        .catch((error: unknown) => ({ error: String(error) }));
+      let saved: unknown;
+      try {
+        saved = readSavedData(
+          own.userDataDir,
+          (db) =>
+            db
+              .prepare<[string], { chosen_action: string | null; resolved_at: number | null }>(
+                "SELECT chosen_action, resolved_at FROM cards WHERE id = ?",
+              )
+              .get(answer.id) ?? null,
+        );
+      } catch (error) {
+        saved = { error: String(error) };
+      }
+      await test
+        .info()
+        .attach("answer-close-trace", {
+          body: JSON.stringify(
+            { cardId: answer.id, expectedChoice: SIGNED_CHOICE.id, pointer, saved },
+            null,
+            2,
+          ),
+          contentType: "application/json",
+        })
+        .catch((error: unknown) => console.warn("Could not attach the answer-close trace:", error));
+      throw failure;
+    }
     await expect(statusLine(page, key).filter({ hasText: SIGNED_CHOICE.label })).toBeVisible({
       timeout: 30_000,
     });

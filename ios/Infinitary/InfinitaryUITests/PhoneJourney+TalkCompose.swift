@@ -404,6 +404,7 @@ extension PhoneJourney {
                        "The Conversation reads both messages Reverted: \(app.debugDescription)")
         let edited = app.buttons["conversation-edited"]
         XCTAssertTrue(edited.waitForPresence(timeout: 10), "The replacement keeps its Edited mark: \(app.debugDescription)")
+        XCTAssertFalse(app.staticTexts["conversation-replaced"].exists, "The replaced words start folded under Edited")
         tapOnPhone(edited)
         let replaced = app.staticTexts.matching(identifier: "conversation-replaced").firstMatch
         XCTAssertTrue(replaced.waitForPresence(timeout: 10), app.debugDescription)

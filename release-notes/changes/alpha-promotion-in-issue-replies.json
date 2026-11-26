@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "alpha-promotion-in-issue-replies",
+      "reason": "Changes the wording the docs tell a crewmate to use in a drafted reply; no screen or setting changes."
+    }
+  ]
+}

@@ -41,8 +41,11 @@ test("a project's page opens, moves between its repositories and goes back by ke
     const name = page
       .locator("[data-project-box]")
       .getByLabel(m.settingsProjectsNameLabel(), { exact: true });
+    const suggestTags = page.getByRole("button", { name: m.settingsProjectsTagsSuggest() });
     const addTag = page.locator("[data-tag-add]");
     await pressKey(name, "Tab");
+    await expect(suggestTags).toBeFocused();
+    await pressKey(suggestTags, "Tab");
     await expect(addTag).toBeFocused();
     await pressKey(addTag, "Tab");
     await expect(walletTab).toBeFocused();

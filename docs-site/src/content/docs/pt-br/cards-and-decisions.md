@@ -1,5 +1,5 @@
 ---
-source: 543f9bb4d4d0a6b3
+source: 28dbb83c4a64e09c
 title: Cartões e decisões
 description: Como o seu imediato e a sua tripulação trazem respostas e decisões para você em cartões, e como respondê-los.
 ---
@@ -13,8 +13,8 @@ Os cartões aparecem no meio da janela, por cima do seu imediato.
 Quando há mais de um cartão esperando, eles formam uma pilha, e você vê um de cada vez.
 Um cartão novo chega sem tirar do lugar o que você está lendo.
 
-- **Mostrar o próximo cartão**: ⇧⌘] (Ctrl+Shift+] no Linux).
-- **Mostrar o cartão anterior**: ⇧⌘[ (Ctrl+Shift+[ no Linux).
+- **Mostrar o próximo cartão**: ⇧⌘] (Ctrl+Shift+] no Linux e no Windows).
+- **Mostrar o cartão anterior**: ⇧⌘[ (Ctrl+Shift+[ no Linux e no Windows).
 
 Uma tarefa com um cartão esperando por você aparece em Aguardando você, em Tarefas.
 As teclas desta página são as padrão; [Teclado](/pt-br/keyboard/) lista todas as teclas, para cada conjunto de teclas que você pode escolher.
@@ -36,7 +36,7 @@ A maioria das decisões também tem um botão discreto, **Recusar**, para dizer 
 ## Responder a uma decisão {#answering-a-decision}
 
 Pressione um botão para escolher.
-⌘1 (Ctrl+1 no Linux) pressiona o botão principal, e ⌘2 a ⌘4, os outros.
+⌘1 (Ctrl+1 no Linux e no Windows) pressiona o botão principal, e ⌘2 a ⌘4, os outros.
 
 Alguns cartões fazem mais de uma pergunta no corpo, ao lado da parte de que cada pergunta trata.
 Escolha uma resposta para cada uma e depois pressione um botão para enviar todas juntas.
@@ -60,7 +60,7 @@ Todo cartão do seu imediato ou de um tripulante tem, embaixo do corpo, um campo
 Uma resposta vai para quem escreveu o cartão.
 A primeira resposta abre uma conversa ao lado do cartão, e o autor responde ali.
 Quando o autor muda o cartão em resposta, o cartão é revisado no mesmo lugar, e a conversa avisa.
-Para recolher a conversa de volta para dentro do cartão, pressione ⌘\ (Ctrl+\ no Linux).
+Para recolher a conversa de volta para dentro do cartão, pressione ⌘\ (Ctrl+\ no Linux e no Windows).
 
 O cartão fica no lugar enquanto o autor trabalha na sua resposta.
 Um tripulante redesenha o cartão uma única vez, quando termina.
@@ -69,7 +69,7 @@ Um tripulante redesenha o cartão uma única vez, quando termina.
 
 Para dizer de qual parte de um cartão as suas palavras falam, aponte para ela.
 
-1. Pressione **Apontar para**, o ponteiro ao lado do campo de resposta, ou ⇧⌘A (Ctrl+Shift+A no Linux).
+1. Pressione **Apontar para**, o ponteiro ao lado do campo de resposta, ou ⇧⌘A (Ctrl+Shift+A no Linux e no Windows).
 2. Clique em uma parte do cartão, ou vá até ela com as setas do teclado e pressione Enter.
 3. Digite um comentário, ou deixe-o vazio, e pressione **Pôr na fila**.
 
@@ -100,20 +100,20 @@ Ele esconde o cartão sem respondê-lo.
 Suas escolhas e o que você digitou ficam com ele.
 O cartão espera em Aguardando você, em Tarefas, e volta quando o autor o muda.
 
-- **Deixar o cartão de lado**: ⇧⌘M (Ctrl+Shift+M no Linux).
-- **Deixar todos os cartões de lado ou trazê-los de volta**: ⌥⇧⌘M (Ctrl+Alt+Shift+M no Linux).
+- **Deixar o cartão de lado**: ⇧⌘M (Ctrl+Shift+M no Linux e no Windows).
+- **Deixar todos os cartões de lado ou trazê-los de volta**: ⌥⇧⌘M (Ctrl+Alt+Shift+M no Linux e no Windows).
 
 Para trazer um cartão de volta, clique na tarefa dele em Tarefas.
 
 ## Buscar palavras em um cartão {#finding-words-in-a-card}
 
-Pressione ⌘F (Ctrl+F no Linux), ou a lupa no alto do cartão, para buscar palavras no cartão que está na tela.
+Pressione ⌘F (Ctrl+F no Linux e no Windows), ou a lupa no alto do cartão, para buscar palavras no cartão que está na tela.
 Digite no campo que se abre, e os resultados se acendem enquanto você digita.
 Maiúsculas e acentos não fazem diferença.
 Um contador como “2 de 7” diz em qual resultado você está.
 
-- **Próximo resultado**: Enter ou ⌘G (Ctrl+G no Linux).
-- **Resultado anterior**: Shift+Enter ou ⇧⌘G (Ctrl+Shift+G no Linux).
+- **Próximo resultado**: Enter ou ⌘G (Ctrl+G no Linux e no Windows).
+- **Resultado anterior**: Shift+Enter ou ⇧⌘G (Ctrl+Shift+G no Linux e no Windows).
 - **Fechar a busca**: Escape.
 
 A busca percorre o cartão inteiro: o título, o corpo, as seções recolhidas e a conversa do cartão.

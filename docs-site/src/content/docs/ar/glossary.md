@@ -1,5 +1,5 @@
 ---
-source: 14ae8437d49c7f6c
+source: 7e9417b77cb76760
 title: المصطلحات
 description: الكلمات التي يستخدمها Infinitary بمعنى خاص به، كل منها في جملة أو جملتين، مع رابط إلى الصفحة التي تشرحه.
 ---
@@ -68,7 +68,7 @@ description: الكلمات التي يستخدمها Infinitary بمعنى خا
 ### البحث في الأوامر {#command-search}
 
 مربع بحث يجد أي أمر في Infinitary ويعرض مفاتيحه.
-اضغط <bdi dir="ltr">⌘K</bdi> على Mac، أو <bdi dir="ltr">Ctrl+K</bdi> على Linux.
+اضغط <bdi dir="ltr">⌘K</bdi> على Mac، أو <bdi dir="ltr">Ctrl+K</bdi> على Linux وWindows.
 انظر [لوحة المفاتيح](/ar/keyboard/#command-search).
 
 ### حاسوب يشغّل العمل {#computer-that-runs-work}
@@ -173,7 +173,7 @@ description: الكلمات التي يستخدمها Infinitary بمعنى خا
 ### مربع الرسالة {#message-box}
 
 المربع في أسفل النافذة، حيث تكتب إلى نائب القبطان أو تتحدث بدلًا من الكتابة.
-اضغط <bdi dir="ltr">⌘L</bdi> (أو <bdi dir="ltr">Ctrl+L</bdi> على Linux) للانتقال إليه من أي مكان.
+اضغط <bdi dir="ltr">⌘L</bdi> (أو <bdi dir="ltr">Ctrl+L</bdi> على Linux وWindows) للانتقال إليه من أي مكان.
 انظر [نائب القبطان](/ar/the-first-mate/#talking-to-your-first-mate).
 
 ## N {#n}

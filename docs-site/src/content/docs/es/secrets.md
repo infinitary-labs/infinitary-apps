@@ -1,5 +1,5 @@
 ---
-source: 45896475239d4a1f
+source: 91a924b8c4a1a2d6
 title: Secretos
 description: Guarda las contraseñas y claves que necesita tu tripulación, permite cada uso en una tarjeta y mira qué las usó.
 ---
@@ -19,7 +19,7 @@ Abre **Configuración** y luego **Secretos**, o busca **Abrir Secretos** en la b
 **Buscar secretos** encuentra uno por su nombre, su lugar o la tarea que lo usó por última vez.
 
 En una Mac, la línea debajo de la lista dice «Se guardan en esta computadora. Tu tripulación los usa pero nunca los ve, salvo que copies uno».
-En Linux, dice que tu tripulación solo los usa con tu aprobación, pero que cualquier programa que ejecutes puede alcanzarlos mientras el almacén de secretos de tu sistema esté desbloqueado.
+En Linux y Windows, dice que tu tripulación solo los usa con tu aprobación, pero que cualquier programa que ejecutes puede alcanzarlos mientras el almacén de secretos de tu sistema esté desbloqueado.
 
 Los secretos se quedan en la computadora donde vive tu primer oficial.
 Una computadora que controla a tu primer oficial desde otro lugar no tiene una sección Secretos propia.
@@ -53,10 +53,10 @@ Escribe un secreto solo en un campo que dibuje Infinitary, nunca en el campo de 
 ## Copiar un valor {#copy-a-value}
 
 Cuando necesitas tú mismo un valor, por ejemplo para pegar una clave en un sitio web, abre la fila del secreto y elige **Copiar valor**.
-Cada vez, tu computadora te pide confirmar que eres tú: en una Mac con Touch ID o tu contraseña, y en Linux con tu contraseña.
+Cada vez, tu computadora te pide confirmar que eres tú: en una Mac con Touch ID o tu contraseña, en Linux con tu contraseña, y en Windows con Windows Hello o tu contraseña de Windows.
 
 El valor va al portapapeles de esta computadora, y a ningún otro.
-En una Mac, no viaja a tus otros dispositivos.
+En una Mac y en Windows, no viaja a tus otros dispositivos.
 En Linux, una herramienta de historial del portapapeles podría conservarlo de todos modos, y la fila lo dice.
 
 La fila dice entonces «Copiado. Sale del portapapeles a las» y una hora, 90 segundos después de la copia.
@@ -87,7 +87,7 @@ Luego elige:
   Cualquier diferencia vuelve a preguntar.
 - **No permitir** lo rechaza, y la próxima ejecución vuelve a preguntar.
 
-Cada permiso te pide confirmar primero: en una Mac con Touch ID o tu contraseña, y en Linux con tu contraseña.
+Cada permiso te pide confirmar primero: en una Mac con Touch ID o tu contraseña, en Linux con tu contraseña, y en Windows con Windows Hello o tu contraseña de Windows.
 Lo que recibe un secreto puede guardarlo.
 Permitir nunca aprueba una acción aparte, como desplegar o enviar algo.
 El tripulante solo se entera de si la ejecución terminó, no de lo que imprimió.

@@ -1,5 +1,5 @@
 ---
-source: 14ae8437d49c7f6c
+source: 7e9417b77cb76760
 title: Glossar
 description: Die Wörter, die Infinitary mit einer eigenen Bedeutung verwendet, jedes in ein oder zwei Sätzen, mit einem Link zur Seite, die es erklärt.
 ---
@@ -68,7 +68,7 @@ Siehe [Deine erste Aufgabe](/de/your-first-task/#5-merge-it).
 ### Befehlssuche {#command-search}
 
 Ein Suchfeld, das jeden Befehl in Infinitary findet und seine Tasten zeigt.
-Drück ⌘K auf einem Mac oder Ctrl+K unter Linux.
+Drück ⌘K auf einem Mac oder Ctrl+K unter Linux und Windows.
 Siehe [Tastatur](/de/keyboard/#command-search).
 
 ### Computer, der Arbeit ausführt {#computer-that-runs-work}
@@ -173,7 +173,7 @@ Siehe [Karten und Entscheidungen](/de/cards-and-decisions/#merge-cards).
 ### Nachrichtenfeld {#message-box}
 
 Das Feld unten im Fenster, in das du deinem ersten Offizier schreibst oder in das du sprichst, statt zu tippen.
-Drück ⌘L (Ctrl+L unter Linux), um von überall dorthin zu springen.
+Drück ⌘L (Ctrl+L unter Linux und Windows), um von überall dorthin zu springen.
 Siehe [Der erste Offizier](/de/the-first-mate/#talking-to-your-first-mate).
 
 ## N {#n}

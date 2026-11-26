@@ -1,5 +1,5 @@
 ---
-source: f96837d901679136
+source: ef5bb091529f56f5
 title: Infinitary のアップデートと削除
 description: インストール方法ごとに新しい安定版を入手する方法と、保存した作業を残したまま Infinitary を削除する方法です。
 ---
@@ -64,6 +64,14 @@ Homebrew は置き換えの間 Infinitary を終了させるので、終わっ�
 インストールを完了できなかった場合は何も変わらず、乗組員の作業もそのまま続きます。
 その場合、お知らせには同じバージョンを手動でインストールするコマンドが表示されます。
 
+## Windows {#windows}
+
+1. **アップデートして再起動** を押します。
+2. Infinitary が新しいインストーラーをダウンロードしてチェックサムを確認し、乗組員の作業を保存します。
+3. Infinitary が閉じ、インストーラーが置き換えたあと、新しいバージョンの Infinitary が再び開きます。
+
+インストールを完了できない場合は何も変わらず、乗組員の作業はそのまま続きます。
+
 ## ほかのコンピューターとスマートフォン {#your-other-computers-and-your-phone}
 
 追加したコンピューターは、一等航海士がいるコンピューターからアップデートされます。
@@ -97,8 +105,9 @@ Infinitary は先に確認し、再起動の前に終わる実行中の作業を
   `--zap` は決して付けないでください。保存した作業が削除されます。
 - **Linux**：インストールに使ったソフトウェアインストーラーまたはパッケージマネージャーで、パッケージを削除します。
   AppImage の場合は、ファイルを削除します。
+- **Windows**：Windows の設定 → **アプリ** → **インストールされているアプリ** で、Infinitary のメニューから **アンインストール** を選びます。
 
-保存した作業は、Mac では `~/Library/Application Support/infinitary`、Linux では `~/.config/infinitary` に残ります。
+保存した作業は、Mac では `~/Library/Application Support/infinitary`、Linux では `~/.config/infinitary`、Windows では `%APPDATA%\infinitary` に残ります。
 
 ### 保存した作業が削除される操作 {#what-deletes-your-saved-work}
 

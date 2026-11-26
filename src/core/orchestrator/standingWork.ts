@@ -4,13 +4,15 @@ import type { InboxStore } from "../storage/inboxStore";
 import type { TaskRecord } from "../storage/taskRecords";
 import { TaskService } from "../tasks/taskService";
 import { keyOrId } from "../tasks/taskWriter";
+import type { IdleLadder } from "./idleLadder";
 import { startedBuilding } from "./nextMove";
 import { readerSavedLine, servedTaskTitle, withReaderDataReminder } from "./readerData";
 
 /**
  * The standing list (INF-6664 piece 1; docs/report-sort.md, "The standing
- * list"): waiting work that no wake reports to the first mate, read from
- * typed facts the record already holds. It only reads; each store keeps its
+ * list"): waiting work that no wake reports to the first mate, and every
+ * hold and wait on unstarted work (INF-6853), read from typed facts the
+ * record already holds. It only reads; each store keeps its
  * one writer, and the new mark rides the inbox's once-names, so it adds no
  * store.
  */
@@ -39,11 +41,18 @@ function milestoneDays(ageMs: number): number {
 /**
  * The once-name that marks a row seen at its current milestone, recorded
  * about the row's task: one per stay (its since) and milestone, so a new
- * stay or the next milestone reads new again.
+ * stay or the next milestone reads new again. A parked part that had
+ * prerequisites and whose prerequisites have all closed carries
+ * `:prerequisites-closed` too, so that close reads new again inside the
+ * same milestone.
  */
-export function standingOnce(since: number, now: number): string {
-  return `standing:${since}:${milestoneDays(now - since)}`;
+export function standingOnce(since: number, now: number, prerequisitesClosed = false): string {
+  const name = `standing:${since}:${milestoneDays(now - since)}`;
+  return prerequisitesClosed ? `${name}:prerequisites-closed` : name;
 }
+
+/** A hold set more than this far ahead is a wait, not a check-back. */
+const HELD_ROW_MS = DAY_MS;
 
 type RowBase = {
   taskId: string;
@@ -70,6 +79,20 @@ export type StandingRow =
       kind: "open-ended-wait";
       /** The newest report's observation of what it waits for. */
       reason: string;
+    })
+  | (RowBase & {
+      kind: "held";
+      /** The hold's time. */
+      until: number;
+      /** The hold's reason, as the first mate wrote it. */
+      reason: string;
+      /** Whether an Automation event or an app update ends it sooner. */
+      endsSooner: { event: boolean; update: boolean };
+    })
+  | (RowBase & {
+      kind: "linked-wait";
+      /** The work only a start begins that it waits on, and whether the captain stopped each. */
+      waits: { taskId: string; key: string; title: string; stopped: boolean }[];
     });
 
 /** A row before its new mark is read. */
@@ -88,6 +111,8 @@ export type StandingWork = {
 export type StandingWorkHost = {
   tasks: TaskService;
   inbox: Pick<InboxStore, "woken">;
+  /** The work a task waits on, as the idle ladder reads it. */
+  waits: Pick<IdleLadder, "unstartedWaits" | "underwayWaits">;
 };
 
 /**
@@ -155,6 +180,57 @@ function openEndedWait(tasks: TaskService, record: TaskRecord): Unmarked | undef
   };
 }
 
+/**
+ * A started task out of the backlog that the first mate held for more than
+ * a day from when it set the hold (`TaskTurns.holdSetAt`): a hold's reason
+ * is words no code reads, so nothing else reports what it waits for until
+ * its time. A shorter hold is a check-back its time soon ends.
+ */
+function heldRow(tasks: TaskService, record: TaskRecord): Unmarked | undefined {
+  const gate = record.gate;
+  if (record.backlogSince != null || gate?.kind !== "at-time" || gate.until === undefined) return;
+  const since = tasks.turns.holdSetAt(record);
+  if (since === undefined || gate.until - since <= HELD_ROW_MS) return;
+  return {
+    kind: "held",
+    taskId: record.id,
+    key: keyOrId(record),
+    title: record.title,
+    since,
+    until: gate.until,
+    reason: gate.reason ?? "",
+    endsSooner: { event: gate.ref !== undefined, update: gate.update !== undefined },
+  };
+}
+
+/**
+ * A started, idle task out of the backlog, with no gate, whose waits end
+ * only in work nobody has started (`IdleLadder.unstartedWaits`), work the
+ * captain stopped included. A wait on work underway beside them is no row:
+ * that work's close wakes the task. Its stay starts at its newest live
+ * `blocks` link, or when it went idle for a wait no link names.
+ */
+function linkedWait(host: StandingWorkHost, record: TaskRecord): Unmarked | undefined {
+  if (record.activity !== "idle" || record.backlogSince != null || record.gate) return;
+  const { tasks } = host;
+  const waited = host.waits.unstartedWaits(record);
+  if (waited.length === 0 || host.waits.underwayWaits(record).length > 0) return;
+  const linkedAt = tasks.graph.liveBlocks(record.id).map(({ link }) => link.createdAt);
+  return {
+    kind: "linked-wait",
+    taskId: record.id,
+    key: keyOrId(record),
+    title: record.title,
+    since: linkedAt.length > 0 ? Math.max(...linkedAt) : (record.idleSince ?? record.updatedAt),
+    waits: waited.map((task) => ({
+      taskId: task.id,
+      key: keyOrId(task),
+      title: task.title,
+      stopped: tasks.starts.stoppedByCaptain(task),
+    })),
+  };
+}
+
 function savedPlan(tasks: TaskService, record: TaskRecord): boolean {
   const basis = tasks.graph.basisOf(record);
   const plan = basis ? tasks.resolve(basis.ref) : undefined;
@@ -173,7 +249,7 @@ export function standingWork(host: StandingWorkHost, now: number): StandingWork 
       onRequest || record.backlogSince != null
         ? parkedPart(tasks, record)
         : record.status === "active"
-          ? openEndedWait(tasks, record)
+          ? (heldRow(tasks, record) ?? linkedWait(host, record) ?? openEndedWait(tasks, record))
           : undefined;
     if (row) {
       found.push(row);
@@ -191,7 +267,12 @@ export function standingWork(host: StandingWorkHost, now: number): StandingWork 
     else filedForLater.over14Days += 1;
   }
   const marked = found.map((row) => {
-    const once = standingOnce(row.since, now);
+    // Only a part that had prerequisites reads new on their close.
+    const closed =
+      row.kind === "parked-part" &&
+      row.prerequisitesClosed &&
+      tasks.graph.linksTo(row.taskId).some((link) => link.type === "blocks");
+    const once = standingOnce(row.since, now, closed);
     return { ...row, once, new: !host.inbox.woken(row.taskId, once) } as StandingRow;
   });
   marked.sort(
@@ -208,12 +289,41 @@ export function standingWork(host: StandingWorkHost, now: number): StandingWork 
  */
 export function standingWorkText(tasks: TaskService, list: StandingWork, now: number): string {
   const iso = (at: number) => new Date(at).toISOString();
-  const title = (row: StandingRow) =>
+  const title = (task: { taskId: string; title: string }) =>
     servedTaskTitle(
-      { id: row.taskId, title: row.title },
-      tasks.graph.discoveredOrigins(row.taskId),
+      { id: task.taskId, title: task.title },
+      tasks.graph.discoveredOrigins(task.taskId),
       "line",
     );
+  const reason = (row: { taskId: string; reason: string }) =>
+    readerSavedLine(`standing:${row.taskId}:reason`, row.reason);
+  const fields = (row: StandingRow) => {
+    switch (row.kind) {
+      case "parked-part":
+        return {
+          parent: row.parent,
+          open_siblings: row.openSiblings,
+          prerequisites_closed: row.prerequisitesClosed,
+        };
+      case "open-ended-wait":
+        return { reason: reason(row) };
+      case "held":
+        return {
+          until: iso(row.until),
+          reason: reason(row),
+          ends_sooner_on_event: row.endsSooner.event,
+          ends_sooner_on_update: row.endsSooner.update,
+        };
+      case "linked-wait":
+        return {
+          waits_on: row.waits.map((task) => ({
+            task: task.key,
+            title: title(task),
+            stopped_by_captain: task.stopped,
+          })),
+        };
+    }
+  };
   const rows = list.rows.map((row) => ({
     kind: row.kind,
     task: row.key,
@@ -221,17 +331,11 @@ export function standingWorkText(tasks: TaskService, list: StandingWork, now: nu
     since: iso(row.since),
     waited: formatDurationShort(now - row.since),
     new: row.new,
-    ...(row.kind === "parked-part"
-      ? {
-          parent: row.parent,
-          open_siblings: row.openSiblings,
-          prerequisites_closed: row.prerequisitesClosed,
-        }
-      : { reason: readerSavedLine(`standing:${row.taskId}:reason`, row.reason) }),
+    ...fields(row),
   }));
   const standing_work = {
     // i18n-exempt: sent to the first mate in English; a heartbeat's History shows it as sent
-    note: "Waiting work no wake reports, rows marked new first, then oldest first. A row is new when it joins the list and again at 1, 3 and 7 days, then every 7 days. Reading it grants no permission.",
+    note: "Waiting work: parked parts, waits nothing ends, holds over a day and waits on unstarted work, rows marked new first, then oldest first. A row is new when it joins the list and again at 1, 3 and 7 days, then every 7 days. Reading it grants no permission.",
     rows,
     ...(list.more > 0 ? { more: list.more } : {}),
     filed_for_later: {

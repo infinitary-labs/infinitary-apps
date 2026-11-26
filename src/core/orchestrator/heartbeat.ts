@@ -4,7 +4,7 @@ import type { InboxStore } from "../storage/inboxStore";
 import type { ScheduleStore } from "../storage/scheduleStore";
 import { FIRSTMATE_USAGE_TASK_ID, type UsageStore } from "../storage/usageStore";
 import type { TaskService } from "../tasks/taskService";
-import { standingWork, standingWorkText } from "./standingWork";
+import { type StandingWorkHost, standingWork, standingWorkText } from "./standingWork";
 
 /**
  * The heartbeat (INF-6664 piece 2; docs/automation.md, "The heartbeat"): the
@@ -99,6 +99,7 @@ export type HeartbeatHost = {
   usage: Pick<UsageStore, "readingsSince" | "lastReading">;
   tasks: TaskService;
   inbox: Pick<InboxStore, "woken" | "recordOnce">;
+  waits: StandingWorkHost["waits"];
 };
 
 /** A beat ready to go: its prompt, and the step that marks its new rows told. */

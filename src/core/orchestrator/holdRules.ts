@@ -98,6 +98,29 @@ export class HoldRules {
    * leaves that one as it was.
    */
   async hold(taskId: string, hold: HoldInput | null): Promise<{ ok: boolean; text: string }> {
+    const held = await this.place(taskId, hold);
+    return held.ok && hold !== null
+      ? { ok: true, text: `${held.text}${this.links(taskId)}` }
+      : held;
+  }
+
+  /**
+   * The tasks a `blocks` link holds the held task on (`TaskGraph.waitingOn`),
+   * as a typed fact the first mate reads beside a hold that may repeat one;
+   * the host judges nothing about the hold's words.
+   */
+  private links(taskId: string): string {
+    const waits = this.host.tasks.graph.waitingOn(taskId);
+    if (waits.length === 0) return "";
+    const named = waits.map((task) => `${task.key || task.id} "${cutText(task.title, 60)}"`);
+    // i18n-exempt: a tool answer served to the first mate, not shown to a person
+    return ` It also waits on ${named.join(", ")} through a link, whose close wakes it.`;
+  }
+
+  private async place(
+    taskId: string,
+    hold: HoldInput | null,
+  ): Promise<{ ok: boolean; text: string }> {
     const turns = this.host.tasks.turns;
     if (hold === null) return turns.hold(taskId, null);
     const waited = hold.onUpdate ? this.updateWait(taskId, hold.onUpdate.version) : undefined;

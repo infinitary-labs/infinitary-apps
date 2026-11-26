@@ -159,6 +159,7 @@ A rehearsal checks and lists the installer and writes it into its rehearsed buil
 A stable promotion builds its own installer at the stable version from the alpha's commit; when it hands its version to alpha, alpha's entry names that installer too.
 The alpha's release notes call it an unsigned early build; the stable's call it an experimental build, not yet signed with a certificate Microsoft verifies; both say Windows warns before it runs, and a PC with Smart App Control on blocks it until the signed build.
 This gives the downloads page the entry it reads; the page lists a channel's installer once its own change is deployed.
+The builds file that lists Windows is the one download storage serves at `feeds/infinitary-builds.json` (`docs/alpha.md`, "Download storage"); the Homebrew tap keeps its own copy of `infinitary-builds.json`, which lists macOS and Linux and never Windows, so a check for a release's Windows build reads the download storage copy.
 
 ## The update check
 

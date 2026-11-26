@@ -77,6 +77,8 @@ export type PanelRuntimeServices = {
   log: (message: string) => void;
   /** Absent: its manifest names no integration, and every call is refused. */
   integrations?: PanelRuntimeIntegrations;
+  /** One background run ended, as the process reports it; absent, no one counts them. */
+  ran?: (task: string, everyMs: number, failure: string | null) => void;
 };
 
 export const NO_PANEL_INTEGRATIONS =
@@ -378,6 +380,12 @@ class Runtime implements PanelRuntime {
       case "log":
         this.services.log(message.message);
         return;
+      case "ran": {
+        const task = this.background.find((candidate) => candidate.id === message.task);
+        if (!task) return;
+        this.services.ran?.(task.id, task.everyMs, message.ok ? null : message.message);
+        return;
+      }
       case "ask":
         void this.answer(message.ask, message.op, message.input);
         return;

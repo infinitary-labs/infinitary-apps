@@ -1947,6 +1947,54 @@
       <string>قيد العمل: %1$ld</string>
     </dict>
   </dict>
+  <key>panelFailingJob</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>مهمتها الخلفية %2$@ تفشل منذ %3$@، %1$ld محاولة متتالية.</string>
+      <key>one</key>
+      <string>مهمتها الخلفية %2$@ تفشل منذ %3$@، محاولة واحدة.</string>
+      <key>two</key>
+      <string>مهمتها الخلفية %2$@ تفشل منذ %3$@، محاولتان متتاليتان.</string>
+      <key>few</key>
+      <string>مهمتها الخلفية %2$@ تفشل منذ %3$@، %1$ld محاولات متتالية.</string>
+      <key>many</key>
+      <string>مهمتها الخلفية %2$@ تفشل منذ %3$@، %1$ld محاولة متتالية.</string>
+      <key>other</key>
+      <string>مهمتها الخلفية %2$@ تفشل منذ %3$@، %1$ld محاولة متتالية.</string>
+    </dict>
+  </dict>
+  <key>panelFailingPlace</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>القراءة من %2$@ تفشل منذ %3$@، %1$ld محاولة متتالية.</string>
+      <key>one</key>
+      <string>القراءة من %2$@ تفشل منذ %3$@، محاولة واحدة.</string>
+      <key>two</key>
+      <string>القراءة من %2$@ تفشل منذ %3$@، محاولتان متتاليتان.</string>
+      <key>few</key>
+      <string>القراءة من %2$@ تفشل منذ %3$@، %1$ld محاولات متتالية.</string>
+      <key>many</key>
+      <string>القراءة من %2$@ تفشل منذ %3$@، %1$ld محاولة متتالية.</string>
+      <key>other</key>
+      <string>القراءة من %2$@ تفشل منذ %3$@، %1$ld محاولة متتالية.</string>
+    </dict>
+  </dict>
   <key>phoneAddressSweeping</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

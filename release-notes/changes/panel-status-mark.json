@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "panel-status-mark",
+      "kind": "improvement",
+      "title": "A small dot by a panel's name says when it needs a look",
+      "body": "A paused or stopped panel, or one waiting for your OK, now shows a small dot beside its name instead of a line above its content. Rest on the dot, or reach it with Tab, to see one line; press it to read the details and act. The dot also appears when a panel's background reads keep failing, and Ask the first mate has it look into why. Your own panels no longer carry the word yours. The phone shows the same dot.",
+      "area": "other",
+      "picture": {
+        "dark": "panel-status-mark-dark.webp",
+        "light": "panel-status-mark-light.webp",
+        "alt": "A Growth panel with an orange dot by its name, and its details open: background reads are failing, with the connector's answer and an Ask the first mate button"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -310,4 +310,28 @@ describe("PanelRuntimes' watch", () => {
     expect(writes).toEqual([]);
     expect(child.sent.filter((m) => m.type === "answer")).toEqual([]);
   });
+  // The captain's plan for the panel status mark: the app counts each failed
+  // run of a panel's background job, at the job's own cadence.
+  it("reports each background run with the job's cadence, and nothing for a job it never loaded", async () => {
+    const runs: [string, number, string | null][] = [];
+    const { children, runtimes } = setup();
+    const started = runtimes.start(identity, "/tmp/server.mjs", {
+      ...services,
+      ran: (task, everyMs, failure) => runs.push([task, everyMs, failure]),
+    });
+    const child = children[0] as StandIn;
+    child.say({
+      type: "loaded",
+      actions: [],
+      background: [{ id: "refresh", everyMs: 3_600_000, declaredMs: 3_600_000 }],
+    });
+    await started;
+    child.say({ type: "ran", task: "refresh", ok: false, message: "Error: 429 Too Many Requests" });
+    child.say({ type: "ran", task: "refresh", ok: true });
+    child.say({ type: "ran", task: "elsewhere", ok: false, message: "Error: no such job" });
+    expect(runs).toEqual([
+      ["refresh", 3_600_000, "Error: 429 Too Many Requests"],
+      ["refresh", 3_600_000, null],
+    ]);
+  });
 });

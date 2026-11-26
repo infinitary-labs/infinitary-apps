@@ -444,8 +444,9 @@ A call follows the action's rule in Settings, as every caller's does: Always all
 The panel has no task, so the card is a host card whose own row the host files and keeps the call on, as the first mate's is; the ask is marked `by: "panel"` and its click runs the call as that panel's, and nobody is woken with the outcome.
 One ask stands per panel and action at a time (`PanelAsks`, `src/core/integrations/panelAsks.ts`, in `userData/integrations/panel-asks.json`): while its card is up, the panel's next calls answer that they wait on it, and once the captain chooses Not now, they answer that the captain declined, without a card.
 Putting the card aside instead leaves the ask pending and the next calls waiting on it.
-Meanwhile the window draws a line above the panel for each such ask, with Ask again, which shows the open card again or raises it anew (`inf:plugins:ask-again`, `BackgroundAsking`).
+Meanwhile the panel's status mark says so, and its details hold a line for each such ask with Ask again, which shows the open card again or raises it anew (`inf:plugins:ask-again`; `docs/personal-panels.md`, "The status mark").
 Always allow takes the line away, and the panel's next call runs; Only this time runs the kept call once and leaves Asks you.
+A call or event look of the captain's own panel that fails for another reason is counted toward its reads that keep failing (`docs/personal-panels.md`, "Reads that keep failing").
 A panel the captain added from elsewhere has no background code, so it reaches its integrations from its drawing, and its consent card lists each connection it names with its actions, events and why; an update that names more asks again, as any other wider grant does.
 A panel's calls spend no task's or seat's allowance: GitHub's go through the gateway's `readAsPanel` and `writeAsPanel` under the same shape checks and caps.
 An action that saves a file into a task's hand-over folder is refused to a panel, as it is to the first mate.

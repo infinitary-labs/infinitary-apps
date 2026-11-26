@@ -228,8 +228,10 @@ async function load(message: Extract<PanelParentMessage, { type: "load" }>): Pro
       running = true;
       try {
         await task.run(context);
+        port.send({ type: "ran", task: id, ok: true });
       } catch (error) {
         log(`background task "${id}" failed: ${errorText(error)}`);
+        port.send({ type: "ran", task: id, ok: false, message: errorText(error).slice(0, 4_000) });
       } finally {
         running = false;
       }

@@ -959,7 +959,7 @@ export async function createServices(
     crew: () => supervisor,
     pluginRecords,
     runbooks,
-    now: ticker.now,
+    clock: ticker,
     emit,
   });
   const { personal, panelMounts } = homePersonal;

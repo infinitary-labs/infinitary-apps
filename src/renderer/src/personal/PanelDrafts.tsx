@@ -1,13 +1,9 @@
-import {
-  PERSONAL_ATTRIBUTION,
-  type PersonalExtensionView,
-  personalDraftPanelId,
-} from "@shared/personal/manifest";
+import { type PersonalExtensionView, personalDraftPanelId } from "@shared/personal/manifest";
 import { useSyncExternalStore } from "react";
 import { PanelHeaderButtons } from "../plugins/PanelHeaderButtons";
 import { panelRail, useRailSaid } from "../plugins/panelRail";
 import { SidePanelChrome } from "../plugins/SidePanelChrome";
-import { FramedPanelBody } from "./FramedPanelBody";
+import { FramedPanelBody, FramedPanelStatus } from "./FramedPanelBody";
 import { framedCodeOf } from "./framedCode";
 
 /**
@@ -65,7 +61,8 @@ function DraftPanel({ view }: { view: PersonalExtensionView }) {
     <SidePanelChrome
       id={id}
       title={view.title}
-      attribution={PERSONAL_ATTRIBUTION}
+      attribution={null}
+      status={<FramedPanelStatus content={{ ...code, draft: true }} title={view.title} />}
       size={view.size}
       placementY={view.placement.y}
       collapsed={false}

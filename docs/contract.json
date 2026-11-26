@@ -81171,6 +81171,106 @@
                       "state"
                     ]
                   }
+                },
+                "failing": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "read": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "background"
+                              },
+                              "task": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "task"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "call"
+                              },
+                              "place": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              },
+                              "action": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "place",
+                              "action"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "event"
+                              },
+                              "place": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              },
+                              "event": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "place",
+                              "event"
+                            ]
+                          }
+                        ]
+                      },
+                      "since": {
+                        "type": "string"
+                      },
+                      "tries": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991
+                      },
+                      "answer": {
+                        "type": "string",
+                        "maxLength": 300
+                      },
+                      "asked": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "read",
+                      "since",
+                      "tries",
+                      "answer",
+                      "asked"
+                    ]
+                  }
                 }
               },
               "required": [
@@ -81746,6 +81846,106 @@
                       "action",
                       "label",
                       "state"
+                    ]
+                  }
+                },
+                "failing": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "read": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "background"
+                              },
+                              "task": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "task"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "call"
+                              },
+                              "place": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              },
+                              "action": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "place",
+                              "action"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "event"
+                              },
+                              "place": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              },
+                              "event": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "place",
+                              "event"
+                            ]
+                          }
+                        ]
+                      },
+                      "since": {
+                        "type": "string"
+                      },
+                      "tries": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991
+                      },
+                      "answer": {
+                        "type": "string",
+                        "maxLength": 300
+                      },
+                      "asked": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "read",
+                      "since",
+                      "tries",
+                      "answer",
+                      "asked"
                     ]
                   }
                 }
@@ -82800,6 +83000,27 @@
       }
     },
     "inf:plugins:update": {
+      "effect": "change",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 48,
+            "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+          }
+        ],
+        "items": false,
+        "minItems": 1,
+        "maxItems": 1
+      },
+      "response": {
+        "type": "boolean"
+      }
+    },
+    "inf:plugins:ask-firstmate": {
       "effect": "change",
       "reach": "views",
       "request": {
@@ -106034,6 +106255,106 @@
                       "state"
                     ]
                   }
+                },
+                "failing": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "read": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "background"
+                              },
+                              "task": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "task"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "call"
+                              },
+                              "place": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              },
+                              "action": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "place",
+                              "action"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "event"
+                              },
+                              "place": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              },
+                              "event": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "place",
+                              "event"
+                            ]
+                          }
+                        ]
+                      },
+                      "since": {
+                        "type": "string"
+                      },
+                      "tries": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991
+                      },
+                      "answer": {
+                        "type": "string",
+                        "maxLength": 300
+                      },
+                      "asked": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "read",
+                      "since",
+                      "tries",
+                      "answer",
+                      "asked"
+                    ]
+                  }
                 }
               },
               "required": [
@@ -106609,6 +106930,106 @@
                       "action",
                       "label",
                       "state"
+                    ]
+                  }
+                },
+                "failing": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "read": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "background"
+                              },
+                              "task": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "task"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "call"
+                              },
+                              "place": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              },
+                              "action": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "place",
+                              "action"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "event"
+                              },
+                              "place": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              },
+                              "event": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "place",
+                              "event"
+                            ]
+                          }
+                        ]
+                      },
+                      "since": {
+                        "type": "string"
+                      },
+                      "tries": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991
+                      },
+                      "answer": {
+                        "type": "string",
+                        "maxLength": 300
+                      },
+                      "asked": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "read",
+                      "since",
+                      "tries",
+                      "answer",
+                      "asked"
                     ]
                   }
                 }

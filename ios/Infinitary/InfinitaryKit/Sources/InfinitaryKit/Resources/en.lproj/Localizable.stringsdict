@@ -1299,6 +1299,38 @@
       <string>%1$ld working</string>
     </dict>
   </dict>
+  <key>panelFailingJob</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Its background job %2$@ has failed since %3$@, %1$ld try in a row.</string>
+      <key>other</key>
+      <string>Its background job %2$@ has failed since %3$@, %1$ld tries in a row.</string>
+    </dict>
+  </dict>
+  <key>panelFailingPlace</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Reads from %2$@ have failed since %3$@, %1$ld try in a row.</string>
+      <key>other</key>
+      <string>Reads from %2$@ have failed since %3$@, %1$ld tries in a row.</string>
+    </dict>
+  </dict>
   <key>phoneAddressSweeping</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

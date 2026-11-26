@@ -1295,4 +1295,37 @@ describe("a panel is one more caller (INF-2334 piece 1)", () => {
     expect((await f.panel.call("Notes", "list_notes", {})).text).toContain("dentist");
     expect(f.cards).toHaveLength(2);
   });
+  // The captain's plan for the panel status mark: a panel's call counts toward
+  // its reads that keep failing only when it ran and failed; a call waiting on
+  // the captain's approval card or turned down has its own line and counts for nothing.
+  it("reports a panel's call that ran to its reads, and never one waiting on the captain", async () => {
+    const f = fixture();
+    const reads: [unknown, string | null][] = [];
+    const panel = f.service.forPanel({
+      key: "workspace:notes-board",
+      title: "Notes board",
+      uses: [{ integration: "Notes", actions: ["list_notes"], why: "Shows your notes." }],
+      reads: (read, failure) => reads.push([read, failure]),
+    });
+    await panel.call("Notes", "list_notes", {});
+    expect(f.cards).toHaveLength(1);
+    expect(reads).toEqual([]);
+
+    const [ask] = [...f.kept.values()];
+    if (!ask) throw new Error("the panel's call kept no ask");
+    await f.service.sendAsk("host-row", ask.id, "always");
+    f.panelAsks.answered(ask.id, false);
+    vi.mocked(f.binding.call).mockRejectedValueOnce(
+      new Error("429 Too Many Requests: 150 reads a day"),
+    );
+    const failed = await panel.call("Notes", "list_notes", {});
+    expect(failed.refused).toBeTruthy();
+    await panel.call("Notes", "list_notes", {});
+    const read = { kind: "call", integration: "mcp-notes", place: "Notes", action: "list_notes" };
+    expect(reads).toEqual([
+      [read, failed.text],
+      [read, null],
+    ]);
+    expect(failed.text).toContain("429 Too Many Requests");
+  });
 });

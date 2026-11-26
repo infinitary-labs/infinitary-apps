@@ -86,6 +86,7 @@ import {
 } from "./panelBuildTools";
 import { PanelEvents, type PanelListening } from "./panelEvents";
 import type { PanelMountsHolder } from "./panelMounts";
+import { type PanelFailingReadsOptions, PanelReadCounting } from "./panelReadCounting";
 import type { PersonalStore } from "./personalStore";
 import { retiredViewsLine } from "./retiredViews";
 import { seedPersonalWorkspace } from "./workspace";
@@ -234,6 +235,8 @@ export type PersonalExtensionsOptions = {
     askAgain: (panel: string, integration: string, action: string) => boolean;
     subscribe: (listener: () => void) => () => void;
   };
+  /** The reads of the captain's own panels that keep failing; absent, nothing is counted. */
+  failingReads?: PanelFailingReadsOptions;
 };
 
 /** A panel whose `server.ts` the app refused, as the first mate hears the captain asked to update it. */
@@ -372,6 +375,8 @@ export class PersonalExtensions {
   private enabled: boolean;
 
   private readonly buildTools: PanelBuildTools;
+  /** Whose reads count toward "Reads that keep failing" (docs/personal-panels.md), and what they tell. */
+  private readonly reads: PanelReadCounting;
 
   private constructor(private readonly options: PersonalExtensionsOptions) {
     this.log = options.log ?? (() => {});
@@ -393,6 +398,12 @@ export class PersonalExtensions {
       hold: (id, tree, taskId) => {
         this.placed.set(id, { tree, taskId });
       },
+    });
+    this.reads = new PanelReadCounting(options.failingReads, {
+      loaded: () => this.loaded.values(),
+      get: (id) => this.loaded.get(id),
+      keyOf: panelKey,
+      isLive: (slice) => runtimeOf(slice) === "live",
     });
   }
 
@@ -422,6 +433,7 @@ export class PersonalExtensions {
       }),
       options.tasks.onChange(() => service.pushIfChanged()),
       options.panelAsks?.subscribe(() => service.pushIfChanged()) ?? (() => {}),
+      ...service.reads.watch(() => service.pushIfChanged()),
       options.runtimes?.onStop((runtime, stop) => service.stoppedRuntime(runtime, stop)) ??
         (() => {}),
     );
@@ -695,7 +707,13 @@ export class PersonalExtensions {
       key: panelKey(entry),
       title: entry.manifest.title ?? entry.id,
       uses: entry.granted.integrations ?? [],
+      ...this.reads.callerReads(entry),
     };
+  }
+
+  /** The captain's Ask the first mate on a panel's failing reads; false when it told no one. */
+  askFirstmate(extensionId: string): boolean {
+    return this.reads.ask(this.loaded.get(extensionId));
   }
 
   private async answerIntegrations(
@@ -876,6 +894,7 @@ export class PersonalExtensions {
       this.options.runtimes?.clear({ source: "yours", id, runtime });
     }
     this.loaded.delete(id);
+    this.reads.drop(id);
     this.placed.delete(id);
     this.dropDraft(id);
     const committed = await this.serialWrite(async () => {
@@ -935,7 +954,10 @@ export class PersonalExtensions {
   }
 
   private unloadAll(): void {
-    for (const entry of this.loaded.values()) entry.server?.dispose();
+    for (const [id, entry] of this.loaded) {
+      entry.server?.dispose();
+      this.reads.drop(id);
+    }
     this.loaded.clear();
     this.placed.clear();
     this.refusedRunbookPanels = [];
@@ -1063,6 +1085,7 @@ export class PersonalExtensions {
       if (entry.source === "yours" && !live.has(id)) {
         entry.server?.dispose();
         this.loaded.delete(id);
+        this.reads.drop(id);
       }
     }
     for (const id of [...this.drafts.keys()]) {
@@ -1371,6 +1394,7 @@ export class PersonalExtensions {
           next.server?.dispose();
           next.server = null;
           next.serverHash = compiled.hash;
+          this.reads.restart(id, slice, next.panel?.hash ?? null);
           next.server = await this.startServer(id, slice, compiled.hash, compiled.entryPath);
         }
       } catch (error) {
@@ -1475,6 +1499,7 @@ export class PersonalExtensions {
       },
       sql: (text, params) => this.querySql(slice, text, params),
       log: (message) => this.log(`personal ${id}: ${message}`),
+      ran: this.reads.ran(id, slice),
       // Read at each call, so a manifest that names another action reaches it
       // without its background code restarting.
       integrations: {
@@ -1648,6 +1673,7 @@ export class PersonalExtensions {
           }
         : {}),
       ...this.askLines(entry),
+      ...this.reads.lines(entry),
       ...(entry.stopped
         ? {
             stopped: {
@@ -1677,6 +1703,7 @@ export class PersonalExtensions {
   }
 
   private push(): void {
+    this.reads.sweep();
     this.lastSnapshot = this.build();
     this.options.emit("inf:plugins:personal", this.lastSnapshot);
   }
@@ -1684,6 +1711,7 @@ export class PersonalExtensions {
   /** Presence and running are derived from data that moves without a file changing. */
   private pushIfChanged(): void {
     if (!this.enabled || this.disposed) return;
+    this.reads.sweep();
     const next = this.build();
     if (JSON.stringify(next) === JSON.stringify(this.lastSnapshot)) return;
     this.lastSnapshot = next;

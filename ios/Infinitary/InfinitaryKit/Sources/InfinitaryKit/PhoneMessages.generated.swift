@@ -1835,12 +1835,26 @@ public enum PhoneMessages {
     public static func `panelCouldNotOpen`(`failure`: String) -> String { PhoneWords.format("panelCouldNotOpen", [`failure`]) }
     public static func `panelExpand`(`title`: String) -> String { PhoneWords.format("panelExpand", [`title`]) }
     public static func `panelExpandFolded`(`title`: String) -> String { PhoneWords.format("panelExpandFolded", [`title`]) }
+    public static func `panelFailingAsk`() -> String { PhoneWords.format("panelFailingAsk", []) }
+    public static func `panelFailingAsked`() -> String { PhoneWords.format("panelFailingAsked", []) }
+    public static func `panelFailingClears`() -> String { PhoneWords.format("panelFailingClears", []) }
+    public static func `panelFailingHeading`() -> String { PhoneWords.format("panelFailingHeading", []) }
+    public static func `panelFailingJob`(`count`: Int, `job`: String, `time`: String) -> String { PhoneWords.format("panelFailingJob", [`count`, `job`, `time`]) }
+    public static func `panelFailingLooking`() -> String { PhoneWords.format("panelFailingLooking", []) }
+    public static func `panelFailingPlace`(`count`: Int, `place`: String, `time`: String) -> String { PhoneWords.format("panelFailingPlace", [`count`, `place`, `time`]) }
+    public static func `panelFailingStillShows`() -> String { PhoneWords.format("panelFailingStillShows", []) }
     public static func `panelHide`() -> String { PhoneWords.format("panelHide", []) }
     public static func `panelIntegrationAskAgain`() -> String { PhoneWords.format("panelIntegrationAskAgain", []) }
     public static func `panelIntegrationAsking`(`action`: String, `place`: String) -> String { PhoneWords.format("panelIntegrationAsking", [`action`, `place`]) }
     public static func `panelIntegrationDeclined`(`action`: String, `place`: String) -> String { PhoneWords.format("panelIntegrationDeclined", [`action`, `place`]) }
     public static func `panelLineProject`() -> String { PhoneWords.format("panelLineProject", []) }
     public static func `panelLineTask`() -> String { PhoneWords.format("panelLineTask", []) }
+    public static func `panelMarkAsking`(`place`: String) -> String { PhoneWords.format("panelMarkAsking", [`place`]) }
+    public static func `panelMarkDeclined`(`place`: String) -> String { PhoneWords.format("panelMarkDeclined", [`place`]) }
+    public static func `panelMarkDetails`(`title`: String) -> String { PhoneWords.format("panelMarkDetails", [`title`]) }
+    public static func `panelMarkFailing`(`time`: String) -> String { PhoneWords.format("panelMarkFailing", [`time`]) }
+    public static func `panelMarkPaused`() -> String { PhoneWords.format("panelMarkPaused", []) }
+    public static func `panelMarkStopped`() -> String { PhoneWords.format("panelMarkStopped", []) }
     public static func `panelMoveNotAsked`() -> String { PhoneWords.format("panelMoveNotAsked", []) }
     public static func `panelRailFolded`() -> String { PhoneWords.format("panelRailFolded", []) }
     public static func `panelRailMore`(`count`: String) -> String { PhoneWords.format("panelRailMore", [`count`]) }
@@ -6549,12 +6563,26 @@ extension PhoneWords {
         "panelCouldNotOpen": ["failure"],
         "panelExpand": ["title"],
         "panelExpandFolded": ["title"],
+        "panelFailingAsk": [],
+        "panelFailingAsked": [],
+        "panelFailingClears": [],
+        "panelFailingHeading": [],
+        "panelFailingJob": ["count", "job", "time"],
+        "panelFailingLooking": [],
+        "panelFailingPlace": ["count", "place", "time"],
+        "panelFailingStillShows": [],
         "panelHide": [],
         "panelIntegrationAskAgain": [],
         "panelIntegrationAsking": ["action", "place"],
         "panelIntegrationDeclined": ["action", "place"],
         "panelLineProject": [],
         "panelLineTask": [],
+        "panelMarkAsking": ["place"],
+        "panelMarkDeclined": ["place"],
+        "panelMarkDetails": ["title"],
+        "panelMarkFailing": ["time"],
+        "panelMarkPaused": [],
+        "panelMarkStopped": [],
         "panelMoveNotAsked": [],
         "panelRailFolded": [],
         "panelRailMore": ["count"],
@@ -9512,6 +9540,8 @@ extension PhoneWords {
         "nowPanelSummaryFailed": "count",
         "nowPanelSummaryWaiting": "count",
         "nowPanelSummaryWorking": "count",
+        "panelFailingJob": "count",
+        "panelFailingPlace": "count",
         "phoneAddressSweeping": "count",
         "phoneAskedLabelThrough": "count",
         "phoneCardFiles": "count",

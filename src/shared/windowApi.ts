@@ -1196,6 +1196,8 @@ export type FirstmateApi = {
       retry: (extensionId: string, options?: PersonalInvokeOptions) => Promise<boolean>;
       /** The captain's Update panel on a panel whose background work the app refused. */
       update: (extensionId: string) => Promise<boolean>;
+      /** The captain's Ask the first mate on a panel whose reads keep failing. */
+      askFirstmate: (extensionId: string) => Promise<boolean>;
       /** The captain's Ask again on a panel's integration call waiting on him or turned down. */
       askAgain: (extensionId: string, integration: string, action: string) => Promise<boolean>;
     };

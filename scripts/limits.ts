@@ -634,6 +634,7 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
     PERSONAL_STORE_VALUE_MAX_BYTES: physical("the write throws naming the bound; nothing changes"),
     PERSONAL_STORE_KEY_MAX_LENGTH: physical("the write throws naming the bound; nothing changes"),
     PERSONAL_REFUSED_MAX: physical("the panels past it are named in the panel log alone"),
+    PANEL_FAILING_ANSWER_MAX: physical("cut short with an ellipsis; the rest of the answer is not kept"),
   },
   "src/shared/personal/mounts.ts": {
     PANEL_MOUNT_WHY_MAX: physical("clipped with an ellipsis at the window; the rest is not sent"),

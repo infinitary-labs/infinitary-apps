@@ -310,6 +310,8 @@ export function setup(
     quotaModels?: () => ModelsCatalogView | undefined;
     slotsOf?: (ref: { provider: string; id: string }) => Slot[];
     listedModels?: () => { provider: string; id: string }[];
+    readsPictures?: ConstructorParameters<typeof FirstmateAgent>[0]["readsPictures"];
+    modelName?: ConstructorParameters<typeof FirstmateAgent>[0]["modelName"];
     /** Task records that exist before the agent boots (a crew already at work). */
     seedTasks?: TaskSeed[];
     /** Open cards the supervisor restores at boot (a crewmate's card on screen). */
@@ -453,6 +455,8 @@ export function setup(
       quotaModels: options.quotaModels ?? (() => undefined),
       ...(options.slotsOf ? { slotsOf: options.slotsOf } : {}),
       ...(options.listedModels ? { listedModels: options.listedModels } : {}),
+      ...(options.readsPictures ? { readsPictures: options.readsPictures } : {}),
+      ...(options.modelName ? { modelName: options.modelName } : {}),
       quotaLine: () => "codex 62% weekly on_pace",
       repos,
       supervisor,

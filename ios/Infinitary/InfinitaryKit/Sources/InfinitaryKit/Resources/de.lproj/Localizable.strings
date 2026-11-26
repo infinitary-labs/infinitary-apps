@@ -3668,6 +3668,14 @@
 "settingsProjectsTagsRemoveNamed" = "%1$@ entfernen";
 "settingsProjectsTagsRemoveQuestionNone" = "%1$@ entfernen? Keine Aufgabe trägt es.";
 "settingsProjectsTagsSave" = "Speichern";
+"settingsProjectsTagsSuggest" = "Tags vorschlagen";
+"settingsProjectsTagsSuggestHint" = "Tags vorschlagen fragt deinen ersten Offizier, der auf einer Karte antwortet.";
+"settingsProjectsTagsSuggestNotSent" = "Dein erster Offizier konnte nicht gefragt werden. Bitte versuch es noch einmal.";
+"settingsProjectsTagsSuggestRemoved" = "%1$@ wurde entfernt, daher wurde nichts gesendet.";
+"settingsProjectsTagsSuggestStarting" = "Infinitary startet noch. Versuch es gleich noch einmal.";
+"settingsProjectsTagsSuggestTagged" = "%1$@ hat jetzt ein Tag, daher wurde nichts gesendet.";
+"settingsProjectsTagsSuggestUnknown" = "Dieses Projekt gibt es nicht mehr, daher wurde nichts gesendet.";
+"settingsProjectsTagsSuggestWords" = "Schlag Tags für %1$@ vor";
 "settingsProjectsTasksLabel" = "Aufgaben";
 "settingsProjectsWorkspace" = "Arbeitsbereich";
 "settingsProjectsWorkspaceDescription" = "Baut direkt im Ordner: keine Arbeitskopie und kein Pull Request.";

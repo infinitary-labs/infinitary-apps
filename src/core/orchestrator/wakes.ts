@@ -46,6 +46,7 @@ import { NOTICE_WORDS, type NoticeFacts } from "./noticeWakes";
 import { OUTAGE_WORDS, type OutageFacts } from "./outageWakes";
 import { REPORT_WORDS, type ReportFacts } from "./reportWakes";
 import { START_WORDS, type StartFacts } from "./startWakes";
+import { type TagSuggestionFacts, tagSuggestionNote } from "./tagSuggestionNote";
 import { TURN_WORDS, type TurnFacts } from "./turnWakes";
 
 /**
@@ -111,6 +112,8 @@ type CarrierFacts =
       askId?: string;
       /** The message came from the captain's own command, `infinitary-axi` (INF-3898 piece 2). */
       through?: Through;
+      /** The captain pressed Suggest tags, which sent these words (docs/task-tags.md, "Suggesting tags"). */
+      tagSuggestion?: TagSuggestionFacts;
     }
   | {
       /** Guidance whose pictures a legacy durable copy could not keep, and says so. */
@@ -215,6 +218,7 @@ export function captainTurn(
   attachments?: readonly AttachmentRef[],
   askId?: string,
   through?: Through,
+  tagSuggestion?: TagSuggestionFacts,
 ): TypedWake {
   return {
     facts: {
@@ -224,6 +228,7 @@ export function captainTurn(
       ...(attachments?.length ? { attachments: [...attachments] } : {}),
       ...(askId ? { askId } : {}),
       ...(through ? { through } : {}),
+      ...(tagSuggestion ? { tagSuggestion } : {}),
     },
   };
 }
@@ -279,7 +284,9 @@ const CARRIER_WORDS: KindWords<CarrierFacts> = {
   "captain-turn": (facts) =>
     `[user]\n${facts.words}${facts.imagesDropped ? `\n\n${ATTACHMENTS_DROPPED_NOTE}` : ""}${
       facts.through ? `\n\n(${CAPTAIN_WORDS_FROM_THE_COMMAND})` : ""
-    }${isFeedbackRequest(facts.words) ? `\n\n${FEEDBACK_REQUEST_NOTE}` : ""}`,
+    }${isFeedbackRequest(facts.words) ? `\n\n${FEEDBACK_REQUEST_NOTE}` : ""}${
+      facts.tagSuggestion ? `\n\n${tagSuggestionNote(facts.tagSuggestion)}` : ""
+    }`,
   "attachments-kept": (facts, wake) =>
     `${
       typeof facts.guidance === "string"

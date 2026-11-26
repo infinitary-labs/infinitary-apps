@@ -1,0 +1,23 @@
+{
+  "entries": [
+    {
+      "id": "suggest-tags",
+      "kind": "feature",
+      "area": "settings",
+      "title": "Ask your first mate to suggest a project's tags",
+      "body": "A project with no tags now shows Suggest tags in its Tags box in Settings → Projects. One press takes you home, where your first mate reads the project's open tasks and puts up one card of suggested tags, each with a description and example tasks. Reply to rename, add or drop suggestions; tick the ones you want, choose which existing tasks to check, and your first mate adds them and starts the check.",
+      "picture": {
+        "dark": "suggest-tags-dark.webp",
+        "light": "suggest-tags-light.webp",
+        "alt": "A project's empty Tags box in Settings, with Suggest tags before Add a tag and a line saying it asks your first mate, who answers on a card"
+      },
+      "docsSite": [
+        "projects"
+      ],
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

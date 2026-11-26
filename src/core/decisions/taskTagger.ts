@@ -1,7 +1,9 @@
 import type { DecisionAnswer } from "@shared/decisions";
 import type { FmEvent } from "@shared/events";
 import { type Said, said, saidLine } from "@shared/i18n/said";
-import type { TagCheckChange, TagCheckRead, TagCheckView } from "@shared/tagCheck";
+import type { TagCheckChange, TagCheckReach, TagCheckRead, TagCheckView } from "@shared/tagCheck";
+import type { TagSuggestionRefusal } from "@shared/tagSuggestion";
+import type { TagSuggestionFacts } from "../orchestrator/tagSuggestionNote";
 import { TICK_PERIOD_MS, type Ticker } from "../orchestrator/ticker";
 import type { AppDatabase } from "../storage/db";
 import type { SavedTagCheck, SettingsStore } from "../storage/settingsStore";
@@ -278,6 +280,28 @@ export class TaskTagger {
           }
         : {}),
       ...(elsewhere ? { elsewhere } : {}),
+    };
+  }
+
+  /**
+   * What a Suggest tags press tells the first mate about a project
+   * (docs/task-tags.md, "Suggesting tags"), or why the press sends nothing:
+   * no such project, a removed one, or one that has a tag already.
+   */
+  suggestion(projectId: string): TagSuggestionFacts | TagSuggestionRefusal {
+    const project = this.options.tasks.projects.get(projectId);
+    if (!project) return "unknown";
+    if (project.archivedAt !== null) return "removed";
+    if (this.options.tasks.projects.tags.of(project.id).length > 0) return "tagged";
+    const at = this.options.now();
+    const count = (reach: TagCheckReach) => this.options.work.tasksIn(project.id, reach, at);
+    return {
+      projectId: project.id,
+      key: project.key,
+      name: project.name,
+      reaches: { open: count("open"), week: count("week"), all: count("all") },
+      auto: this.options.models.allowsUse("tags"),
+      answerer: this.options.models.answererName(),
     };
   }
 

@@ -139,6 +139,21 @@ export class TagWork {
     return row.n;
   }
 
+  /**
+   * How many of a project's tasks a reach holds, tags or none: what a check
+   * of every tag would ask once the project has tags, one request each.
+   */
+  tasksIn(projectId: string, reach: TagCheckReach, at: number): number {
+    const row = this.db
+      .prepare(
+        // i18n-exempt: SQL, never shown to a person
+        `SELECT COUNT(*) AS n FROM tasks t
+         WHERE t.project_id = @project AND t.created_at <= @at AND ${reachClause(reach)}`,
+      )
+      .get(this.params({ projectId, reach, tagIds: null, at }, {})) as { n: number };
+    return row.n;
+  }
+
   private params(scope: TagCheckScope, extra: Record<string, string>) {
     return {
       project: scope.projectId,

@@ -1,5 +1,5 @@
 ---
-source: 045e7219ddbc0b63
+source: 668341763c6348cb
 title: Proyectos
 description: Cómo agregar un proyecto a Infinitary, reunir varios repositorios en uno, darle etiquetas, centrar la ventana en uno, elegir cómo se fusionan sus cambios y quitarlo.
 ---
@@ -104,6 +104,7 @@ Las etiquetas te ayudan a encontrar y agrupar tareas, y nada más en Infinitary 
 
 La página de un proyecto enumera sus etiquetas en **Etiquetas**, cada una con el número de tareas que la llevan.
 
+- **Sugerir etiquetas**, que aparece mientras un proyecto no tiene etiquetas, pide a tu primer oficial que lea las tareas del proyecto y responda con una tarjeta de etiquetas sugeridas que puedes cambiar respondiendo.
 - **Añadir una etiqueta** pide el nombre de la etiqueta y qué tareas entran.
 - **Editar** cambia el nombre o la descripción de una etiqueta.
   Una etiqueta a la que le cambias el nombre sigue en las tareas que la llevan.

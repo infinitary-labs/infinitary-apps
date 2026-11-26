@@ -272,14 +272,13 @@ export const workShapeSchema = z.object({
    * The outside issue this task answers, where its project lives
    * (docs/agents-reach.md, "A reader's Build rows"): written by the host
    * when the captain's click files a reader's Build row, and carried by a
-   * task built on such a task (`basis`). `closes` marks the change that
-   * closes the issue when it merges: a fix, or a plan's last piece.
+   * task built on such a task (`basis`). A fact for the intake round only:
+   * the app writes no closing words from it.
    */
   issue: z
     .object({
       number: z.number().int().positive(),
       url: z.string(),
-      closes: z.boolean().optional(),
     })
     .optional(),
   /**
@@ -304,6 +303,13 @@ export const workShapeSchema = z.object({
    * its merge on batched pull requests too.
    */
   needs_merge: z.array(z.string()).optional(),
+  /**
+   * The first mate's mark on a task whose only job is an outside action
+   * that waits on work, such as closing a work item (docs/task-graph.md,
+   * "A side-effect task"): every one of its waits needs the merge, the ones
+   * added later too, so no approval starts or releases it.
+   */
+  side_effect: z.boolean().optional(),
   /**
    * The approved version of an earlier part this task's working copy
    * started on (`start_at_approval`): that task, its pushed branch and the
@@ -497,6 +503,7 @@ export const CAPTAIN_OWNED_SHAPE_FIELDS = [
   "branch_from",
   "start_at_approval",
   "needs_merge",
+  "side_effect",
   "branch",
   "program",
 ] as const satisfies readonly (keyof WorkShape)[];
@@ -584,6 +591,7 @@ export const workShapeAskSchema = workShapeSchema
     branch_from: true,
     start_at_approval: true,
     needs_merge: true,
+    side_effect: true,
     branch: true,
     program: true,
   })
@@ -602,13 +610,6 @@ export const workShapeAskSchema = workShapeSchema
      * `in_place: { folder: true }` from it.
      */
     in_folder: z.boolean().optional(),
-    /**
-     * The first mate's mark on a task built on one that answers an outside
-     * issue (`WorkShape.issue`): its change closes that issue when it
-     * merges, as a plan's last piece does. A fix built on a reproduce step
-     * closes it unmarked.
-     */
-    closes_issue: z.boolean().optional(),
   });
 export type WorkShapeAsk = z.infer<typeof workShapeAskSchema>;
 

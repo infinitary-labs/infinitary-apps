@@ -32,6 +32,7 @@ export const PLACEMENT_FIELDS = [
   "away_copies",
   "start_at_approval",
   "needs_merge",
+  "side_effect",
 ] as const satisfies readonly (keyof WorkShape)[];
 export const ROUTING_FIELDS = [
   "intelligence",

@@ -2782,6 +2782,8 @@
 "settingsAutomationEnable" = "オンにする…";
 "settingsAutomationEventIn" = "%2$@ の %1$@";
 "settingsAutomationEventNotConnected" = "現在接続されていない連携";
+"settingsAutomationEventTaskClosed" = "タスクが終了する";
+"settingsAutomationEventTaskReleased" = "作業がリリースに含まれる";
 "settingsAutomationEventsPreview" = "-（届いた各イベントの要約）";
 "settingsAutomationFirstMateGets" = "一等航海士が受け取る内容";
 "settingsAutomationFri" = "金";

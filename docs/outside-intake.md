@@ -144,7 +144,7 @@ A step that did not reproduce reports the maintainer's choice as its result's `n
 | did not, and the maintainer chose to close | the version and the steps it tried | `declined` |
 
 While the step has no result, or the maintainer kept it for later, the round sends nothing more.
-On reproduced, the first mate starts the fix built on the reproduction, and the fix's change closes the issue when it merges.
+On reproduced, the first mate starts the fix built on the reproduction; the app writes no closing words for the fix's change, so the issue stays open after it merges (`docs/forge.md`, "A change that answers an issue").
 
 ## Which pull requests reach the tick
 

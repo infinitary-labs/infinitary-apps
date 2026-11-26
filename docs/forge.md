@@ -718,9 +718,9 @@ A reader's Build row joins the same card but is never sent: the click files it a
 
 ### A change that answers an issue
 
-A task filed from a reader's Build row, and every task built on it, keeps the outside issue it answers (`WorkShape.issue`).
-Where its change is published on GitHub, the description says `Closes #N` for a fix built on a reproduce step or a plan's last piece, and `Part of #N` for any other piece (`issueLine`, `src/core/batches/description.ts`).
-The line sits between the words around the story and the story on a pull request's first publication and on a batch of one, and after the change's title in a batch of several's list and squash message; other hosts get no line.
+A task filed from a reader's Build row, and every task built on it, keeps the outside issue it answers (`WorkShape.issue`) as a fact for the intake round.
+The app writes no closing words of its own for it: a published change, a batch's description and its squash message carry only the crewmate's words around the story, the story, and the changes' titles.
+An outside action that waits on work, such as closing a work item, is its own task waiting on that work (`docs/task-graph.md`, "A side-effect task"), and an outside reporter's issue is answered by the intake round (`docs/outside-intake.md`).
 
 ### On GitLab
 

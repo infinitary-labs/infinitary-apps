@@ -37,7 +37,6 @@ import {
 } from "@shared/presentationDestination";
 import { presentationValidation } from "@shared/presentationValidation";
 import type { NamingRule } from "../../shared/runbooks";
-import { issueLine } from "../batches/description";
 import {
   AttachmentUploadError,
   changeTitle,
@@ -546,13 +545,7 @@ export class ChangePresentations {
       const replaced =
         current && previousRegion !== undefined
           ? replacePresentationRegion(current.body ?? "", previousRegion, region, taskId)
-          : [
-              story.projectText,
-              issueLine(this.options.tasks.get(taskId)?.shape?.issue, forge.kind),
-              region,
-            ]
-              .filter(Boolean)
-              .join("\n\n");
+          : [story.projectText, region].filter(Boolean).join("\n\n");
       const changed = around
         ? replaceAroundPresentation(
             replaced,

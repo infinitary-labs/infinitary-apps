@@ -91,6 +91,8 @@
   "settingsAutomationEnable": "開啟…",
   "settingsAutomationEventIn": "{integration} 中的 {event}",
   "settingsAutomationEventNotConnected": "目前未連結的整合",
+  "settingsAutomationEventTaskClosed": "任務關閉",
+  "settingsAutomationEventTaskReleased": "工作隨版本發布",
   "settingsAutomationEventsPreview": "- （每個到達事件的摘要）",
   "settingsAutomationFirstMateGets": "你的大副會收到",
   "settingsAutomationFri": "週五",

@@ -919,6 +919,57 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
     expect(await read()).toMatchObject({ needs_merge: [notes.key] });
   });
 
+  // INF-6776 part 1, the captain's pick "Its own task, waiting on every task that does the
+  // work": the first mate files an outside action as a side-effect task, which the tasks
+  // reader shows, and which never starts at a wait's approval.
+  it("files, shows and changes a side-effect task, refusing a start at a wait's approval", async () => {
+    const { agent, specs, tasks } = setup();
+    await agent.converse("close the work item once the fix merges");
+    const tools = piToolsOf(specs[0]?.tools ?? []) as unknown as GraphTool[];
+    const text = async (name: string, params: Record<string, unknown>) =>
+      (
+        await tools
+          .find((tool) => tool.name === name)!
+          .execute("c", params, undefined, undefined, {})
+      ).content[0]?.text ?? "";
+    await text("create_task", { title: "Fix", goal: "Fix", user_words: "fix it" });
+    const fix = tasks.byKey("SCR-1")!;
+
+    expect(
+      await text("create_task", {
+        title: "Close the work item",
+        goal: "Close the work item",
+        user_words: "close the work item once the fix merges",
+        blocked_by: [fix.key],
+        side_effect: true,
+        start_at_approval: fix.key,
+      }),
+    ).toContain("A side-effect task starts only once all its work merged");
+    expect(tasks.list().map((record) => record.title)).toEqual(["Fix"]);
+
+    await text("create_task", {
+      title: "Close the work item",
+      goal: "Close the work item",
+      user_words: "close the work item once the fix merges",
+      blocked_by: [fix.key],
+      side_effect: true,
+    });
+    const close = tasks.byKey("SCR-2")!;
+    const read = async () => readTaskQueryText(await text("tasks", { key: close.key }))[0];
+    expect(await read()).toMatchObject({ side_effect: true });
+    expect(await text("update_task", { task: close.key, start_at_approval: fix.key })).toContain(
+      "A side-effect task starts only once all its work merged",
+    );
+    expect(await text("update_task", { task: close.key, side_effect: false })).toBe(
+      `Updated ${close.key}: side_effect cleared.`,
+    );
+    expect((await read())?.side_effect).toBeUndefined();
+    expect(await text("update_task", { task: close.key, side_effect: true })).toBe(
+      `Updated ${close.key}: side-effect task.`,
+    );
+    expect(await read()).toMatchObject({ side_effect: true });
+  });
+
   // The review's finding: adding an already approved wait the task needs merged, with its
   // merge need in the same update_task call, leaves queued work unstarted until that merge.
   it("keeps queued work unstarted when one call adds an approved wait it needs merged", async () => {

@@ -174,6 +174,11 @@ export type UpdateTaskPatch = {
   /** The blocked_by tasks whose merge it needs, before it starts; empty clears it. */
   needsMerge?: string[];
   /**
+   * Whether unstarted work is a side-effect task (`shape.side_effect`):
+   * every wait needs the merge (docs/task-graph.md, "A side-effect task").
+   */
+  sideEffect?: boolean;
+  /**
    * Whether open work that has not started is the first mate's own, not the
    * captain's ask (`shape.internal_step`, INF-1467): set when it starts a
    * crewmate's filing unasked.

@@ -93,6 +93,8 @@
   "settingsAutomationEnable": "Einschalten …",
   "settingsAutomationEventIn": "{event} in {integration}",
   "settingsAutomationEventNotConnected": "Eine gerade nicht verbundene Integration",
+  "settingsAutomationEventTaskClosed": "Eine Aufgabe wird geschlossen",
+  "settingsAutomationEventTaskReleased": "Arbeit erscheint in einem Release",
   "settingsAutomationEventsPreview": "- (eine Zusammenfassung jedes eingetroffenen Ereignisses)",
   "settingsAutomationFirstMateGets": "Dein erster Offizier bekommt",
   "settingsAutomationFri": "Fr",

@@ -267,7 +267,9 @@ describe("a reproduce step's typed result", () => {
 });
 
 describe("work built on a linked step", () => {
-  it("carries the issue: a fix on a reproduce step closes it, a plan's piece is part of it unless marked last", async () => {
+  // INF-6776 part 1: the issue link stays a fact for the intake round, and the
+  // app no longer marks any change as the one that closes it.
+  it("carries the issue to work built on a reproduce step or a plan, marking no change as its closer", async () => {
     const f = fixture();
     await f.keep();
     await f.keep({ title: "Show the week's readings", startAs: "plan" });
@@ -279,14 +281,8 @@ describe("work built on a linked step", () => {
     expect(workShape(f.tasks, { basis: reproduce?.key }).issue).toEqual({
       number: 7,
       url: ISSUE_URL,
-      closes: true,
     });
     expect(workShape(f.tasks, { basis: plan?.key }).issue).toEqual({ number: 7, url: ISSUE_URL });
-    expect(workShape(f.tasks, { basis: plan?.key, closes_issue: true }).issue).toEqual({
-      number: 7,
-      url: ISSUE_URL,
-      closes: true,
-    });
     expect(workShape(f.tasks, { basis: "builder" }).issue).toBeUndefined();
   });
 });

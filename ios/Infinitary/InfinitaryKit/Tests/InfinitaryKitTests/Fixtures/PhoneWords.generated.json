@@ -2011,6 +2011,8 @@
   {"said":{"m":"settingsAutomationEnable"},"words":"Turn on…"},
   {"said":{"m":"settingsAutomationEventIn","a":{"event":"‹event›","integration":"‹integration›"}},"words":"‹event› in ‹integration›"},
   {"said":{"m":"settingsAutomationEventNotConnected"},"words":"An integration not connected now"},
+  {"said":{"m":"settingsAutomationEventTaskClosed"},"words":"A task closes"},
+  {"said":{"m":"settingsAutomationEventTaskReleased"},"words":"Work ships in a release"},
   {"said":{"m":"settingsAutomationEventsPreview"},"words":"- (a summary of each event that arrived)"},
   {"said":{"m":"settingsAutomationFirstMateGets"},"words":"Your first mate gets"},
   {"said":{"m":"settingsAutomationFri"},"words":"Fri"},

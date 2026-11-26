@@ -2782,6 +2782,8 @@
 "settingsAutomationEnable" = "打开…";
 "settingsAutomationEventIn" = "%2$@ 中的 %1$@";
 "settingsAutomationEventNotConnected" = "当前未连接的集成";
+"settingsAutomationEventTaskClosed" = "任务关闭";
+"settingsAutomationEventTaskReleased" = "工作随版本发布";
 "settingsAutomationEventsPreview" = "- （每个到达事件的摘要）";
 "settingsAutomationFirstMateGets" = "你的大副会收到";
 "settingsAutomationFri" = "周五";

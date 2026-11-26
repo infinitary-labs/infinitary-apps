@@ -379,6 +379,7 @@ describe("Automation on an integration's event", () => {
     const root = scratchDir("fm-automation-tick-");
     const standIn = standInIntegration({ dir: root });
     let reads = 0;
+    let looks = 0;
     const integrations = new IntegrationsService({
       bindings: [
         {
@@ -386,6 +387,12 @@ describe("Automation on an integration's event", () => {
           connections: () => {
             reads++;
             return standIn.connections();
+          },
+          look: (...args) => {
+            looks++;
+            return (
+              standIn.look?.(...args) ?? Promise.reject(new Error("The stand-in has no look."))
+            );
           },
         },
       ],
@@ -413,14 +420,16 @@ describe("Automation on an integration's event", () => {
 
     // The stand-in's event is looked at on every tick, so all eight rules look.
     reads = 0;
+    looks = 0;
     now += 60_000;
     scheduler.tick(now);
     await scheduler.settled();
-    expect(reads).toBe(1);
+    expect({ reads, looks }).toEqual({ reads: 1, looks: 8 });
 
     reads = 0;
+    looks = 0;
     scheduler.lookNow("stand-in");
     await scheduler.settled();
-    expect(reads).toBe(1);
+    expect({ reads, looks }).toEqual({ reads: 1, looks: 8 });
   });
 });

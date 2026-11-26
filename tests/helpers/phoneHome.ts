@@ -4,7 +4,7 @@ import { appendFileSync, copyFileSync, mkdirSync, readFileSync, writeFileSync } 
 import { createServer, type IncomingMessage } from "node:http";
 import { createConnection, createServer as createTCPServer, type Socket } from "node:net";
 import { join } from "node:path";
-import { type PairedDevice, startConnection } from "@core/connection/connection";
+import { type PairedDevice, RELOAD_READS, startConnection } from "@core/connection/connection";
 import { type JournalEntry, replayBytes, replayOf } from "@core/connection/journal";
 import { claimLink } from "@core/devices/dial";
 import { createKeyIdentity } from "@core/devices/identity";
@@ -579,6 +579,13 @@ export async function startPhoneHome(
   // INF-1390: the core reaches each connection this home starts, as the app's shell attaches its
   // own (src/main/shell.ts), so the core's door answers the phone's link once it listens.
   let unreach = () => {};
+  const answerBytes = (value: unknown) => Buffer.byteLength(JSON.stringify(value) ?? "null");
+  const reloadWeight = async (board: [] | [{ closed: false }]) => {
+    let total = 0;
+    for (const read of RELOAD_READS)
+      total += answerBytes(await core.dispatch(read, read === "inf:tasks:board" ? board : []));
+    return total;
+  };
   const connect = (
     protocolVersion = PROTOCOL_VERSION,
     sceneSupport = true,
@@ -3135,10 +3142,10 @@ export async function startPhoneHome(
         case "POST heavy-away": {
           // INF-2669: what a phone misses while away from a long-running computer whose card list grows by about
           // 80 KB, four cards of about 20 KB each: four card lists, each pushed whole, and the task board pushed whole
-          // with each. Each list waits for
-          // its own push, as `away-traffic`'s do, so none is coalesced; `away-cleanup` closes the cards. Both grow
-          // with what the journeys sharing this home left, so a check sizes its link from `replayBytes`, what a replay
-          // of the pushes while away sends (INF-3750's option C: only the newest card list and board go whole).
+          // with each. Each list waits for its own push, as `away-traffic`'s do, so none is coalesced; `away-cleanup`
+          // closes the cards. Both grow with what the journeys sharing this home left. The home sends the lighter of
+          // a replay, `replayBytes` (INF-3750's option C: only the newest list and board go whole), and the phone's
+          // re-read, `reloadBytes`, whose board leaves out closed rows (INF-6832): a check sizes its link by the lighter.
           const cardsPushed = new Set<string>();
           const away: JournalEntry[] = [];
           const stopWatching = core.events.subscribe((channel, payload) => {
@@ -3174,7 +3181,8 @@ export async function startPhoneHome(
           } finally {
             stopWatching();
           }
-          result = { cards, replayBytes: replayBytes(replayOf(away)) };
+          const reloadBytes = await reloadWeight([{ closed: false }]);
+          result = { cards, replayBytes: replayBytes(replayOf(away)), reloadBytes };
           break;
         }
         case "POST heavy-card": {
@@ -3191,16 +3199,8 @@ export async function startPhoneHome(
             actions: [],
           });
           awayCards.push(card);
-          const bytes = (value: unknown) => Buffer.byteLength(JSON.stringify(value) ?? "null");
-          const listBytes = bytes(await core.dispatch("inf:cards:list", []));
-          const reloadBytes =
-            listBytes +
-            bytes(await core.dispatch("inf:feed:recent", [])) +
-            bytes(await core.dispatch("inf:tasks:board", [])) +
-            bytes(await core.dispatch("inf:conversation:last-turn", [])) +
-            bytes(await core.dispatch("inf:conversation:state", [])) +
-            bytes(await core.dispatch("inf:computers:presence", []));
-          result = { card, listBytes, reloadBytes };
+          const listBytes = answerBytes(await core.dispatch("inf:cards:list", []));
+          result = { card, listBytes, reloadBytes: await reloadWeight([]) };
           break;
         }
         case "POST emote":

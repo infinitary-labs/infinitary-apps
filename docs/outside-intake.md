@@ -29,7 +29,7 @@ A schedule holds one time a day, so the two times are two rules with the same pr
 > When the captain files a Build row from a round, file that issue's waiting task as the Outside work items runbook says, its goal naming the address the app's notice gives and saying it replies and closes as docs/outside-intake.md, "When the work ends", says.
 
 The first mate's wake carries only these words, so a stranger's text never reaches it.
-The issue addresses it hands a round are its own: each came from the app's notice of a filed Build row, which names the address the app read open (`docs/agents-reach.md`, "A reader's Build rows").
+The issue addresses it hands a round are its own: each came from the app's notice of a filed Build row, which names the address the app read open, or from the issue a task keeps as a typed link (`docs/agents-reach.md`, "A reader's Build rows").
 The round's crewmate is an unsafe data reader (`docs/agents-reach.md`, "An unsafe data reader"): it has no shell and no browser, reads only this project, the integration reads the captain set to Always allow, and public web pages (a new address waits for the captain's click once it holds something of theirs; `docs/agents-reach.md`, "Web pages"), and every GitHub write it makes waits on the app's approval card (`docs/forge.md`, "A reader's writes").
 Its words reach the first mate marked as data.
 The reader writes no file, so it keeps no rule notes; what a later round needs to know lives on GitHub as labels and replies.
@@ -205,7 +205,8 @@ For a pull request labeled `edits checks`, it first shows the maintainer those c
 An issue the crew promised work on always ends with one more reply, and its own waiting task sends it, never a round.
 When the captain files an issue's Build row, the app's notice gives the first mate the issue's address, and the first mate files the issue's waiting task as the Outside work items runbook says ("The rules"): a read-only side-effect task, started as an unsafe data reader since strangers write issues, whose goal names the issue's address, the first release that ships the work as its moment, and this section as how it replies and closes.
 It waits on the filed reproduce or plan step.
-The first mate adds the fix, or the plan's build pieces, to its waits before it closes that step; when the step ends with no work built on it, the first mate drops the waiting task, and a round answers the issue ("After the reproduce step").
+The first mate adds the fix, or the plan's build pieces, to its waits before it closes that step.
+When the step ends with nothing built on it, the first mate drops the waiting task only when a round answers that step's result ("After the reproduce step"); otherwise the work stopped (below).
 
 At its moment, the waiting task's crewmate reads the issue and drafts one reply for the maintainer's tick, with the crewmate line and the mark ("What a round answers"):
 
@@ -215,8 +216,10 @@ At its moment, the waiting task's crewmate reads the issue and drafts one reply 
   The mark closes the issue as completed if it is still open, so the reporter is thanked and the issue closed once, whether or not a change closed it before.
   While a merged wait is in no release yet, the first mate holds the task until the work ships in a release (`docs/task-graph.md`, "A side-effect task").
 - **The work stopped.**
-  When a wait was dropped or its change closed without merging, it sends nothing and reports which, and the first mate asks the maintainer what the issue should hear.
-  A `declined` reply drafted on their word thanks the reporter, says the maintainer stopped the work without shipping it, and promises nothing.
+  Work stopped when a wait was dropped, its change closed without merging, or its step ended with nothing built on it, such as an idea whose plan is never built or a reproduced bug whose fix never starts.
+  A dropped wait never clears, so the waiting task does not start, and the first mate hears that its wait can never end (`docs/task-graph.md`, "A side-effect task"); a change closed without merging clears its wait, and the waiting task starts, sends nothing and reports which.
+  Either way the first mate asks the maintainer what the issue should hear.
+  On their word, the waiting task, its waits cleared and its words saying the work stopped, drafts a `declined` reply that thanks the reporter, says the maintainer stopped the work without shipping it, and promises nothing.
 
 A round handles one ending itself:
 

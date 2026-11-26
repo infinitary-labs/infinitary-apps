@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "answer-close-failure-trace",
+      "reason": "The answer-task journey keeps diagnostic evidence on failure; the app and its behavior are unchanged."
+    }
+  ]
+}

@@ -459,7 +459,10 @@ import XCTest
                 continue
             }
             tries += 1
-            if element.isHittable && !stale { return }
+            // A stale element is scrolled, never asked whether it is hittable: XCTest takes its hit point from the same
+            // stale frames, and when they put the element outside an ancestor's frame, as the body's choice once read below
+            // its page's container, XCTest records "Activation point invalid" as a test failure instead of answering false.
+            if !stale && element.isHittable { return }
             // Use the card's actual viewport: a whole-screen swipe hits the keyboard while replying.
             let down = stale || (element.exists && !view.isNull && element.frame.maxY < view.minY)
             if view.isNull { if down { scroll.swipeDown() } else { scroll.swipeUp() }; continue }
@@ -474,9 +477,9 @@ import XCTest
             from.press(forDuration: 0.05, thenDragTo: from.withOffset(CGVector(dx: 0, dy: travel)),
                        withVelocity: XCUIGestureVelocity(rawValue: 1000), thenHoldForDuration: 0)
         }
-        XCTAssertTrue(element.isHittable, app.debugDescription)
         XCTAssertFalse(readsStale(element, in: body),
                        "\(element) reads at \(element.frame), where the card body at \(body.frame) no longer draws it")
+        XCTAssertTrue(element.isHittable, app.debugDescription)
     }
 
     /// INF-1651, INF-6677: iOS 27.0 reads every element of the card body's page through one screen transform that it does

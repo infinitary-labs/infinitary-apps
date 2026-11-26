@@ -18,7 +18,8 @@ const bytes = (value: unknown) => Buffer.byteLength(JSON.stringify(value) ?? "nu
  * replay carries the newest one, so it always outweighs the light board; on a short record `away-traffic`'s two whole
  * card lists outweigh it too. Opens tasks until the board is past the trigger, so each change goes out as a delta, and
  * the light board outweighs the traffic, sized from the card list now since other checks' cards stay on this home;
- * `closeCatchUpBoard` closes them, so later checks read the board as before.
+ * `closeCatchUpBoard` closes them, so a later check's light board again holds only its own open work; the closed rows
+ * keep the whole board past the trigger, and its pushes deltas, for the rest of that home.
  */
 export async function openCatchUpBoard(core: Core, opened: string[]) {
   const target = 4 * bytes(await core.dispatch("inf:cards:list", [])) + 64_000;

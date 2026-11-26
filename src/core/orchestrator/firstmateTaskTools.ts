@@ -271,6 +271,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
               ? { startAtApproval: input.startAtApproval }
               : {}),
             ...(input.needsMerge !== undefined ? { needsMerge: input.needsMerge } : {}),
+            ...(input.sideEffect !== undefined ? { sideEffect: input.sideEffect } : {}),
             ...(input.internalStep !== undefined ? { internalStep: input.internalStep } : {}),
             ...(input.speed !== undefined ? { speed: input.speed } : {}),
             ...(input.model !== undefined && !moveTo ? { model: input.model } : {}),

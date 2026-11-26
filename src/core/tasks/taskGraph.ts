@@ -617,8 +617,11 @@ export class TaskGraph {
    * elsewhere every wait holds until the merge. The one `start_at_approval`
    * names while it is still an unfinished wait; otherwise each unfinished wait in
    * the task's own project, the one whose recorded base carries the most
-   * of the others first. A wait `needs_merge` names never starts it.
-   * `among` keeps only that one wait: the part a started task was built on.
+   * of the others first. A wait `needs_merge` names never starts it, and
+   * neither does any wait of a side-effect task (`shape.side_effect`),
+   * whose outside action must follow work that merged ("A side-effect
+   * task"). `among` keeps only that one wait: the part a started task was
+   * built on.
    */
   private approvedPrerequisite(
     record: Pick<TaskRecord, "id" | "shape">,
@@ -626,6 +629,7 @@ export class TaskGraph {
   ): ApprovedBase | undefined {
     const full = this.writer.store.get(record.id);
     if (!full || this.tasks.policiesOf(full)?.delivery.value !== "queue-pr") return undefined;
+    if (full.shape?.side_effect) return undefined;
     const needs = this.needsMerge(record);
     const waits = this.blocksIn(
       record.id,

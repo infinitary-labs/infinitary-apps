@@ -6,6 +6,7 @@ import type {
   StoryAround,
 } from "@shared/changePresentation";
 import { RISK_DIMENSIONS, type RiskDeclaration } from "@shared/risk";
+import type { WorkShape } from "@shared/routingPolicy";
 import { onTestFinished, vi } from "vitest";
 import type { Forge, ForgeChange } from "../../src/core/forge";
 import { ChangePresentations } from "../../src/core/orchestrator/changePresentations";
@@ -28,7 +29,7 @@ export const risk = Object.fromEntries(
     { level: "low", why: `The ${dimension} assessment for this fixture.` },
   ]),
 ) as RiskDeclaration;
-export async function arrange() {
+export async function arrange(options: { shape?: WorkShape } = {}) {
   const root = scratchDir("infinitary-presentation-");
   const media = join(root, "cards");
   const worktree = join(root, "work");
@@ -49,6 +50,7 @@ export async function arrange() {
     worktreeDir: worktree,
     repoDir: worktree,
     status: "idle",
+    ...(options.shape ? { shape: options.shape } : {}),
   });
   // The unit pool shares module caches; register cleanup for each fixture's actual test.
   onTestFinished(() => {

@@ -1,5 +1,5 @@
 ---
-source: 37599270c99ffda1
+source: 47dc716341146fd8
 title: Aufgaben und Crewmitglieder
 description: Was eine Aufgabe ist, wie sie vom Backlog bis zu „Fertig“ wandert, wo du sie verfolgst und wie du das Crewmitglied lenkst, das sie bearbeitet.
 ---
@@ -148,6 +148,17 @@ Der Schalter **Vor dem Zusammenführen fragen** in Einstellungen → Projekte le
 Wenn er an ist, wartet fertige Arbeit auf deine Karte zum Zusammenführen.
 Wenn er aus ist, darf Arbeit, die die Überprüfungen besteht, ohne Rückfrage zusammengeführt werden, und du bekommst danach eine Karte mit ihrer Geschichte.
 Um das für eine einzelne Aufgabe zu ändern, sag es deinem ersten Offizier.
+
+## Ein Schritt, der auf Arbeit wartet {#a-step-that-waits-on-work}
+
+Wenn du etwas außerhalb deines Projekts verlangst, sobald Arbeit fertig ist, etwa ein Issue zu schließen oder ein Update zu posten, legt dein erster Offizier diesen Schritt als eigene Aufgabe an.
+Sie wartet auf jede Aufgabe, die die Arbeit macht, auch auf Teile, die später dazukommen.
+
+- Sie startet erst, wenn jede dieser Aufgaben ihre Änderung zusammengeführt hat oder ohne etwas zum Zusammenführen fertig ist.
+- Wird eine davon aufgegeben, tut der Schritt nichts, und dein erster Offizier sagt es dir.
+- Hast du den Schritt erst verlangt, wenn die Arbeit in einem Release ist, wartet er, bis deine Crew ein Release mit der Arbeit festhält; siehe [Automatisierung](/de/automation/#when-it-runs).
+
+Infinitary fügt einer zusammengeführten Änderung keine Worte hinzu, die ein Issue schließen, also schließt sich ein Issue über die eigene Aufgabe dieses Schritts.
 
 ## Eine Aufgabe schließen {#closing-a-task}
 

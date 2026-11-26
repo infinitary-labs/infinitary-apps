@@ -8,7 +8,7 @@ import { z } from "zod";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { integrationNameSchema } from "../../shared/integrations";
 import { githubIntegration, IntegrationSettingsStore, IntegrationsService, PanelAsks } from ".";
-import { APP_EVENTS, TASK_CLOSED_EVENT, TASK_EVENTS_ID } from "./appEvents";
+import { APP_EVENTS, TASK_CLOSED_EVENT, TASK_EVENTS_ID, TASK_RELEASED_EVENT } from "./appEvents";
 import type { IntegrationActionSpec, IntegrationBinding } from "./binding";
 import { IntegrationOutcomeUnknown } from "./binding";
 import { OLDER_BUILD_OFF_MAX } from "./store";
@@ -276,10 +276,11 @@ describe("IntegrationsService", () => {
     signIns.set("github.com", { state: "ok", login: "octo" });
     expect(open().view().integrations[0]).toMatchObject({ name: "GitHub", paused: false });
   });
-  it("lists the app's own task-close event beside the integrations, and keeps its name", () => {
+  it("lists the app's own task events beside the integrations, and keeps their name", () => {
     // The captain's answer on the put-off review: declare "A task closes" in
     // the integrations listing, so Settings → Automation and the agents'
-    // integrations tool read and name it, its Task field with it.
+    // integrations tool read and name it, its Task field with it. The approved
+    // side-effect-task plan adds "Work ships in a release" beside it.
     const dir = join(scratchDir("fm-integrations-"), "integrations");
     const service = new IntegrationsService({
       bindings: [mcpNames([{ id: "mcp-notes", name: "Notes" }])],
@@ -296,6 +297,12 @@ describe("IntegrationsService", () => {
             every: 1,
             filters: [{ name: "task", label: "Task" }],
           },
+          {
+            name: TASK_RELEASED_EVENT.name,
+            label: "Work ships in a release",
+            every: 1,
+            filters: [{ name: "task", label: "Task" }],
+          },
         ],
       },
     ]);
@@ -303,7 +310,7 @@ describe("IntegrationsService", () => {
       name: "Tasks",
       id: TASK_EVENTS_ID,
       kind: "app",
-      events: [TASK_CLOSED_EVENT.name],
+      events: [TASK_CLOSED_EVENT.name, TASK_RELEASED_EVENT.name],
     });
     expect(service.show("tasks")).toMatchObject({
       integration: "Tasks",
@@ -312,6 +319,10 @@ describe("IntegrationsService", () => {
         expect.objectContaining({
           label: "A task closes",
           listen: expect.stringContaining(`"${TASK_EVENTS_ID}/${TASK_CLOSED_EVENT.name}"`),
+        }),
+        expect.objectContaining({
+          label: "Work ships in a release",
+          listen: expect.stringContaining(`"${TASK_EVENTS_ID}/${TASK_RELEASED_EVENT.name}"`),
         }),
       ],
     });

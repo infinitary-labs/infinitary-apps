@@ -81,6 +81,21 @@ A prerequisite counts as merged only when it closed done by a merge, which spent
 A started part's close is released by the approval only when its `built_on` names that prerequisite, and a part started before it was approved keeps waiting for the merge.
 Its approved merge waits in the batch line behind its prerequisite (docs/forge.md, "Batches of your own").
 
+## A side-effect task
+
+An outside action that waits on work finishing, such as closing a work item, sending a message or posting an update, is its own task: a side-effect task, marked `side_effect` on its shape (INF-6776 part 1, the captain's pick "Its own task, waiting on every task that does the work").
+The first mate files it with `create_task` `side_effect`, blocked by every task that does the work, and adds each piece filed later to its `blocked_by`; `update_task` sets or clears the mark before it starts, and the tasks reader shows it.
+Whether words ask for such an action is the first mate's judgment (HANDOFF); words that only mention an item ask for nothing, and the builders' briefs carry no closing duty.
+
+Every wait of a side-effect task needs the merge, a wait added later too: `TaskGraph.approvedPrerequisite` answers nothing for it, so no approval starts it, carries a wait for it, or releases its close ("A part that starts at approval" above).
+A `start_at_approval` on it is refused, on filing and on `update_task`, and nothing is filed or changed.
+It starts as any task does once each wait closed done; dropped work never clears its wait, and the first mate hears of that dead wait once (`listDeadBlocked`), so it points the action at the work that carries on, or drops it.
+A replaced piece's wait moves to its replacement (`TaskService.moveWaits`), as every wait does.
+
+A wait also clears when work closes done without a merge, so the task's brief names each wait from the record at its start: its key, title and how it closed - merged, with its first release or none yet, done with its reason and no merge, dropped with its reason, or still open (`renderSideEffectSection`, `src/core/orchestrator/sideEffectBrief.ts`).
+The same section tells its crewmate to act only once every wait that ships a change merged, through the item's tracker's integration or where the project lives, and to do nothing outside when a wait was dropped or its change closed without merging.
+When its words name a release as the moment and a merged wait is in no release yet, the crewmate reports it, and the first mate holds the task on "Work ships in a release" naming that work (`docs/automation.md`).
+
 ## Following the part under it
 
 A started part follows the part its `built_on` names while that part's work has not merged (`IdleLadder.followBase`, `newestBase`).

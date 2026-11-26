@@ -1,5 +1,5 @@
 ---
-source: 196a49ab4dfdf816
+source: e0dc8618b3364025
 title: Automação
 description: Dê ao seu imediato um pedido que roda em um horário marcado ou quando algo acontece, e pause, mude ou releia qualquer um deles em Ajustes.
 ---
@@ -43,7 +43,10 @@ Nada é enviado.
 - **Todo dia** roda em um horário do dia.
 - **Nos dias escolhidos** roda nos dias da semana que você escolher, em um horário do dia.
 - **Uma vez** roda em uma data e um horário.
-- **Quando algo acontece** roda sempre que algo novo acontece, como **Uma tarefa é encerrada**, ou um evento de algo que você conectou em Ajustes.
+- **Quando algo acontece** roda sempre que algo novo acontece, como **Uma tarefa é fechada**, **O trabalho sai em uma versão publicada**, ou um evento de algo que você conectou em Ajustes.
+
+**O trabalho sai em uma versão publicada** acontece quando sua tripulação registra pela primeira vez o trabalho de uma tarefa em uma versão do seu projeto, o que ela faz quando publica ou confere uma.
+Um projeto que nunca registra versões nunca tem esse evento.
 
 Uma automação diária ou semanal mantém o **Fuso horário** que você escolher, então ela roda no mesmo horário onde quer que o seu computador esteja.
 

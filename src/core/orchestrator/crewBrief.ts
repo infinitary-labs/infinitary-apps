@@ -47,6 +47,7 @@ import {
   withoutOriginReadLine,
 } from "./intentBrief";
 import { lostComputer, SourceOutOfReach } from "./lostStarts";
+import { renderSideEffectSection } from "./sideEffectBrief";
 import {
   basisFacts,
   branchFromSource,
@@ -279,6 +280,9 @@ export class CrewBrief {
       if (linked) sections.push([linked]);
     }
     if (deliverable === "operation") sections.push([renderOperationShapeSection()]);
+    // The waits' closes are read now, at the start they cleared for.
+    if (record?.shape?.side_effect)
+      sections.push([renderSideEffectSection(this.options.tasks.graph.blockers(taskId))]);
     // A typed hand-off (INF-799): the result shape the report must fit, and
     // the task whose last commit the working copy began at.
     if (record?.shape?.result_schema)

@@ -87,12 +87,24 @@ export function useListenable(): Listenable[] {
     (integration.events ?? []).map((event) => ({
       value: `${integration.id}/${event.name}`,
       when: automationEventWords(event.label, integration.name),
-      label: m.settingsAutomationEventIn({ event: event.label, integration: integration.name }),
+      label: m.settingsAutomationEventIn({
+        event: APP_EVENT_LABELS[`${integration.id}/${event.name}`]?.() ?? event.label,
+        integration: integration.name,
+      }),
       every: event.every,
       filters: event.filters,
     })),
   );
 }
+
+/**
+ * The app's own events in the person's language; the core keeps each label
+ * in English for the agents (src/core/integrations/appEvents.ts).
+ */
+const APP_EVENT_LABELS: Record<string, (() => string) | undefined> = {
+  "tasks/task_closed": m.settingsAutomationEventTaskClosed,
+  "tasks/task_released": m.settingsAutomationEventTaskReleased,
+};
 
 /** The prompt exactly as Firstmate gets it. */
 export function PromptBox({ prompt, preview = false }: { prompt: string; preview?: boolean }) {

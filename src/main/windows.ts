@@ -24,7 +24,7 @@ const startingOver = new WeakSet<WebContents>();
  * shows: the leaving page would draw it, such as a view's "in reach" line,
  * and whatever reads that page reads one about to go. So until the new page
  * commits, or the start-over ends without one, the window hears no push
- * (`isStartingOver`); the new page reads what is current as it starts.
+ * (`pushWindows`); the new page reads what is current as it starts.
  */
 export function startWindowsOver(): void {
   for (const win of appWindows()) {
@@ -38,16 +38,20 @@ export function startWindowsOver(): void {
         contents.off("did-stop-loading", begun);
       };
       contents.on("did-navigate", begun);
-      // A start-over that ends without a new page, failed or stopped, leaves the page it had.
+      // A start-over that ends without the app's new page sends no did-navigate, but its loading
+      // stops: a stopped one keeps the page it had, and a failed one shows the browser's error page.
       contents.on("did-stop-loading", begun);
     }
     contents.reload();
   }
 }
 
-/** Whether `contents` is starting over and hears no push until its new page commits (`startWindowsOver`). */
-export function isStartingOver(contents: WebContents): boolean {
-  return startingOver.has(contents);
+/** The app windows a push reaches now: each open one but a window starting over (`startWindowsOver`). */
+export function pushWindows(): BrowserWindow[] {
+  return appWindows().filter(
+    (win) =>
+      !win.isDestroyed() && !win.webContents.isDestroyed() && !startingOver.has(win.webContents),
+  );
 }
 
 const mainWindows = new WeakSet<BrowserWindow>();

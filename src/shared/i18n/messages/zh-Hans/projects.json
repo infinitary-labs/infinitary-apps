@@ -37,5 +37,6 @@
     "other": "{count} 项未完成的任务加入 {project}，编号不变："
   },
   "projectsMoveTitleInto": "把 {repositories} 移入 {project}？",
-  "projectsMoveTitleOwn": "把 {repositories} 移入一个单独的项目？"
+  "projectsMoveTitleOwn": "把 {repositories} 移入一个单独的项目？",
+  "projectsSetupLeftFolder": "它的文件夹还在你的项目文件夹中，所以添加时会关联这个文件夹，而不是再克隆一份。"
 }

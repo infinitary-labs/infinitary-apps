@@ -21,6 +21,7 @@
   "settingsAddProjectAddFolder": "إضافة مجلد",
   "settingsAddProjectAdded": "أُضيف {name}.",
   "settingsAddProjectAddedGit": "أُضيف {name}. بدأ git في هذا المجلد بإيداع أول فارغ.",
+  "settingsAddProjectAddedLeftFolder": "أُضيف {name}. كان مجلده لا يزال في مجلد مشاريعك، لذا رُبط ذلك المجلد بدل استنساخ المشروع من جديد.",
   "settingsAddProjectAddedMark": "مضاف",
   "settingsAddProjectAdding": "جارٍ الإضافة...",
   "settingsAddProjectAlreadyAdded": "{name} مضاف بالفعل. صفه مفتوح.",

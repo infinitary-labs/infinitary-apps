@@ -67,5 +67,6 @@
     "other": "تنضم {count} مهمة مفتوحة إلى {project} مع الاحتفاظ برموزها:"
   },
   "projectsMoveTitleInto": "هل تنقل {repositories} إلى {project}؟",
-  "projectsMoveTitleOwn": "هل تنقل {repositories} إلى مشروع مستقل؟"
+  "projectsMoveTitleOwn": "هل تنقل {repositories} إلى مشروع مستقل؟",
+  "projectsSetupLeftFolder": "مجلده لا يزال في مجلد مشاريعك، لذا تربط إضافتُه ذلك المجلد بدل استنساخ المشروع مرة أخرى."
 }

@@ -1,5 +1,5 @@
 ---
-source: e909f21ae958ea29
+source: d2c121d3a9fe9728
 title: Projetos
 description: Como adicionar um projeto ao Infinitary, reunir vários repositórios em um só, criar etiquetas para ele, focar a janela em um deles, escolher como as mudanças dele são mescladas e removê-lo.
 ---
@@ -173,6 +173,7 @@ Mude a linha e pressione **Salvar**, ou desligue a chave para deixá-la de fora.
 
 Remover tira o projeto da lista.
 A pasta dele e as tarefas terminadas ficam.
+Se você adicioná-lo de novo, o Infinitary usa a pasta que ele deixou na sua pasta de projetos em vez de clonar uma segunda cópia, e o projeto recomeça com os ajustes padrão.
 Se o projeto ainda tiver tarefas, o Infinitary diz quais são, e você as termina ou abandona antes.
 
 Em um projeto com vários repositórios, **Remover** tira o repositório cuja aba está escolhida, e o projeto fica com os outros.

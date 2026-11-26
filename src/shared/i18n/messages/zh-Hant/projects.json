@@ -37,5 +37,6 @@
     "other": "{count} 項未完成的任務加入 {project}，編號不變："
   },
   "projectsMoveTitleInto": "將 {repositories} 移入 {project}？",
-  "projectsMoveTitleOwn": "將 {repositories} 移入一個單獨的專案？"
+  "projectsMoveTitleOwn": "將 {repositories} 移入一個單獨的專案？",
+  "projectsSetupLeftFolder": "它的資料夾還在你的專案資料夾中，所以加入時會連結這個資料夾，而不是再複製一份。"
 }

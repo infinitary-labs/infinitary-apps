@@ -1,5 +1,5 @@
 ---
-source: e909f21ae958ea29
+source: d2c121d3a9fe9728
 title: Projekte
 description: Wie du ein Projekt zu Infinitary hinzufügst, mehrere Repositorys in einem zusammenfasst, ihm Tags gibst, das Fenster auf eines konzentrierst, wählst, wie seine Änderungen zusammengeführt werden, und es entfernst.
 ---
@@ -173,6 +173,7 @@ Wenn ein Crewmitglied den Pull Request einer anderen Person prüft, beginnt sein
 
 Beim Entfernen verschwindet das Projekt aus der Liste.
 Sein Ordner und seine fertigen Aufgaben bleiben.
+Fügst du es wieder hinzu, nutzt Infinitary den Ordner, den es in deinem Projektordner gelassen hat, statt eine zweite Kopie zu klonen, und das Projekt beginnt neu mit den Standardeinstellungen.
 Hat das Projekt noch Aufgaben, nennt Infinitary sie, und du schließt sie zuerst ab oder gibst sie auf.
 
 Bei einem Projekt mit mehreren Repositorys nimmt **Entfernen** das Repository weg, dessen Tab gewählt ist, und das Projekt behält die anderen.

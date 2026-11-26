@@ -37,5 +37,6 @@
     "other": "未完了のタスク{count}件が {project} に加わります。キーはそのままです："
   },
   "projectsMoveTitleInto": "{repositories} を {project} に移動しますか？",
-  "projectsMoveTitleOwn": "{repositories} を単独のプロジェクトに移動しますか？"
+  "projectsMoveTitleOwn": "{repositories} を単独のプロジェクトに移動しますか？",
+  "projectsSetupLeftFolder": "フォルダがまだプロジェクトのフォルダに残っているので、追加するともう一度クローンせずにそのフォルダをリンクします。"
 }

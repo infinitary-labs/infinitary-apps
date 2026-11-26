@@ -43,5 +43,6 @@
     "other": "{count} open tasks join {project}, keys kept:"
   },
   "projectsMoveTitleInto": "Move {repositories} into {project}?",
-  "projectsMoveTitleOwn": "Move {repositories} into a project of its own?"
+  "projectsMoveTitleOwn": "Move {repositories} into a project of its own?",
+  "projectsSetupLeftFolder": "Its folder is still in your projects folder, so adding it links that folder instead of cloning a second copy."
 }

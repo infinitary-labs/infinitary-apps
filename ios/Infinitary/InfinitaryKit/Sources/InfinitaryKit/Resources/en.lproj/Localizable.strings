@@ -2465,6 +2465,7 @@
 "projectsMoveNotNow" = "Not now";
 "projectsMoveTitleInto" = "Move %2$@ into %1$@?";
 "projectsMoveTitleOwn" = "Move %1$@ into a project of its own?";
+"projectsSetupLeftFolder" = "Its folder is still in your projects folder, so adding it links that folder instead of cloning a second copy.";
 "recordAgeJustNow" = "just now";
 "recordAgeShortDays" = "%1$@d";
 "recordAgeShortHours" = "%1$@h";
@@ -2746,6 +2747,7 @@
 "settingsAddProjectAddFolder" = "Add folder";
 "settingsAddProjectAdded" = "Added %1$@.";
 "settingsAddProjectAddedGit" = "Added %1$@. Started git in this folder with an empty first commit.";
+"settingsAddProjectAddedLeftFolder" = "Added %1$@. Its folder was still in your projects folder, so that folder is linked instead of cloned again.";
 "settingsAddProjectAddedMark" = "added";
 "settingsAddProjectAdding" = "Adding...";
 "settingsAddProjectAlreadyAdded" = "%1$@ is already added. Its row is open.";

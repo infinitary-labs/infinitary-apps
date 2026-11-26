@@ -2465,6 +2465,7 @@
 "projectsMoveNotNow" = "暂不";
 "projectsMoveTitleInto" = "把 %2$@ 移入 %1$@？";
 "projectsMoveTitleOwn" = "把 %1$@ 移入一个单独的项目？";
+"projectsSetupLeftFolder" = "它的文件夹还在你的项目文件夹中，所以添加时会关联这个文件夹，而不是再克隆一份。";
 "recordAgeJustNow" = "刚刚";
 "recordAgeShortDays" = "%1$@ 天";
 "recordAgeShortHours" = "%1$@ 小时";
@@ -2746,6 +2747,7 @@
 "settingsAddProjectAddFolder" = "添加文件夹";
 "settingsAddProjectAdded" = "已添加 %1$@。";
 "settingsAddProjectAddedGit" = "已添加 %1$@。已在这个文件夹中初始化 git，并创建了一个空的首次提交。";
+"settingsAddProjectAddedLeftFolder" = "已添加 %1$@。它的文件夹还在你的项目文件夹中，所以直接关联了它，没有重新克隆。";
 "settingsAddProjectAddedMark" = "已添加";
 "settingsAddProjectAdding" = "正在添加...";
 "settingsAddProjectAlreadyAdded" = "%1$@ 已添加过。它的行已打开。";

@@ -9,6 +9,8 @@ An added project empties it; a refusal, such as a key another project has, keeps
 Folder opens the system picker immediately, links in place and opens the resulting project's page, with the confirmation in its panel (`ProjectPage.prompt.md`).
 A plain folder is initialized and the quiet status below says so.
 Duplicate additions open the existing project's page, saying it is already added.
+A repo whose folder a removed project left in the projects folder links that folder instead of cloning a second copy, and the confirmation says so: "Added {name}.
+Its folder was still in your projects folder, so that folder is linked instead of cloned again."
 Repo and New project buttons reveal forms below the same row, separated by a hairline; switching forms clears refusal/status.
 Forms use labeled Input and small Buttons, never a modal: a modal is for consent alone (`components/core/ConsentDialog.prompt.md`).
 A ghost Close hides the form without cancelling an addition.

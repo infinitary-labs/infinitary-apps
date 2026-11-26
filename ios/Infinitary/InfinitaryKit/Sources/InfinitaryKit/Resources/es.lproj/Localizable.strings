@@ -2465,6 +2465,7 @@
 "projectsMoveNotNow" = "Ahora no";
 "projectsMoveTitleInto" = "¿Mover %2$@ a %1$@?";
 "projectsMoveTitleOwn" = "¿Mover %1$@ a un proyecto propio?";
+"projectsSetupLeftFolder" = "Su carpeta sigue en tu carpeta de proyectos, así que al agregarlo se vincula esa carpeta en lugar de clonar el proyecto otra vez.";
 "recordAgeJustNow" = "justo ahora";
 "recordAgeShortDays" = "%1$@ d";
 "recordAgeShortHours" = "%1$@ h";
@@ -2746,6 +2747,7 @@
 "settingsAddProjectAddFolder" = "Agregar carpeta";
 "settingsAddProjectAdded" = "Se agregó %1$@.";
 "settingsAddProjectAddedGit" = "Se agregó %1$@. Se inició git en esta carpeta con una primera confirmación vacía.";
+"settingsAddProjectAddedLeftFolder" = "Se agregó %1$@. Su carpeta seguía en tu carpeta de proyectos, así que se vinculó esa carpeta en lugar de clonar el proyecto otra vez.";
 "settingsAddProjectAddedMark" = "agregado";
 "settingsAddProjectAdding" = "Agregando...";
 "settingsAddProjectAlreadyAdded" = "%1$@ ya está agregado. Su fila está abierta.";

@@ -11,6 +11,7 @@
   "settingsAddProjectAddFolder": "添加文件夹",
   "settingsAddProjectAdded": "已添加 {name}。",
   "settingsAddProjectAddedGit": "已添加 {name}。已在这个文件夹中初始化 git，并创建了一个空的首次提交。",
+  "settingsAddProjectAddedLeftFolder": "已添加 {name}。它的文件夹还在你的项目文件夹中，所以直接关联了它，没有重新克隆。",
   "settingsAddProjectAddedMark": "已添加",
   "settingsAddProjectAdding": "正在添加...",
   "settingsAddProjectAlreadyAdded": "{name} 已添加过。它的行已打开。",

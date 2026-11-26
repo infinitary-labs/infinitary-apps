@@ -1,5 +1,5 @@
 ---
-source: e909f21ae958ea29
+source: d2c121d3a9fe9728
 title: Projets
 description: Comment ajouter un projet à Infinitary, y réunir plusieurs dépôts, lui donner des étiquettes, concentrer la fenêtre sur un seul projet, choisir comment ses changements sont fusionnés et le retirer.
 ---
@@ -173,6 +173,7 @@ Modifiez la ligne et appuyez sur **Enregistrer**, ou désactivez l’interrupteu
 
 Retirer un projet l’enlève de la liste.
 Son dossier et ses tâches terminées restent.
+Si vous l’ajoutez de nouveau, Infinitary utilise le dossier qu’il a laissé dans votre dossier de projets au lieu de cloner une deuxième copie, et le projet repart avec les réglages par défaut.
 Si le projet a encore des tâches, Infinitary les nomme, et vous les terminez ou les écartez d’abord.
 
 Dans un projet à plusieurs dépôts, **Retirer** enlève le dépôt dont l’onglet est choisi, et le projet garde les autres.

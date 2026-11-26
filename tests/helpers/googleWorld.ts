@@ -67,6 +67,8 @@ export async function googleWorld(
   keyOptions?: Parameters<typeof integrationKeys>[0],
   /** False is a released build: a new sign-in needs the person's own client, as `googleSetup`'s `signsIn` says. */
   runSignsIn = true,
+  /** False is a build after Infinitary's own client retired: no client renews an earlier sign-in. */
+  runClient = true,
 ): Promise<GoogleWorld> {
   const google: GoogleStandIn = await startGoogleStandIn();
   cleanup.push(() => google.close());
@@ -101,7 +103,7 @@ export async function googleWorld(
   const binding = googleIntegration({
     root: dir,
     keys: keys.keys,
-    client: setup.client,
+    ...(runClient && setup.client ? { client: setup.client } : {}),
     endpoints: setup.endpoints,
     runSignsIn,
     // The person's browser: it opens the page and follows Google back to the app.

@@ -123,7 +123,7 @@ Markdown in `docs/`, `primitives/` and the design skill is one sentence per line
 - `windows-feasibility.md`: observations from the Windows feasibility work.
 - `linux-packages.md`: Linux packages, their recipes and clean-system checks.
 - `docs-site.md`: the public docs site, how it is built, checked and published.
-- `google-verification.md`: the submission copy and evidence for the Google integration's verification.
+- `google-verification.md`: how Google's data moves through the app, and what it does against a message written to mislead an agent.
 
 ## Sharing and data
 

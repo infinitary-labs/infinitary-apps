@@ -35,7 +35,8 @@ const recordSchema = z
     key: z.string().min(1).max(64).optional(),
     /**
      * The id of the person's own client this sign-in was made with; absent,
-     * it was made with the run's own client (`googleSetup`), which renews it.
+     * it was made with Infinitary's retired client, or a development run's own
+     * (`googleSetup`); a packaged run names none, so nothing renews it.
      */
     client: z.string().min(1).max(256).optional(),
     /**

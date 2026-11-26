@@ -34,6 +34,7 @@ async function waitingSignIn(returns: SignInReturns) {
       INFINITARY_GOOGLE_URL: google.base,
     },
   });
+  if (!setup.client) throw new Error("a run that names a client has one");
   const cancel = new AbortController();
   let opened: (page: { url: string; id: string; port: number }) => void = () => {};
   const page = new Promise<{ url: string; id: string; port: number }>((resolve) => {
@@ -41,6 +42,7 @@ async function waitingSignIn(returns: SignInReturns) {
   });
   const signedIn: Promise<GoogleIssued> = signInOnLoopback({
     ...setup,
+    client: setup.client,
     scopes: GOOGLE_SCOPES,
     open: async (url, to) => opened({ url, id: returns.open(to), port: to.port }),
     signal: cancel.signal,

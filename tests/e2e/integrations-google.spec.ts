@@ -319,15 +319,19 @@ test("the Google row moves a sign-in to the person's own client by keys", async 
   const detail = tab.locator('[data-integration-client-detail="google"]');
   const setup = tab.locator('[data-integration-setup="google"]');
 
-  await test.step("the sign-in on Infinitary's client says to set up an own one", async () => {
-    await expect(state).toHaveText(m.integrationsGoogleRetiring());
-    await expect(detail).toHaveText(m.integrationsGoogleRetiringDetail());
-    await expect(next(m.integrationsGoogleSetUp())).toBeVisible();
-    await expect(row).toHaveAttribute("data-integration-state", "ok");
+  const signInAgain = row.getByRole("button", {
+    name: m.settingsIntegrationsSignInAgain(),
+    exact: true,
   });
 
-  await test.step("a Web application client's file is refused and nothing is kept", async () => {
-    await pressKey(next(m.integrationsGoogleSetUp()), "Enter");
+  await test.step("the sign-in on Infinitary's retired client asks to sign in again", async () => {
+    await expect(row).toHaveAttribute("data-integration-state", "needs_reauth");
+    await expect(state).toHaveCount(0);
+    await expect(signInAgain).toBeVisible();
+  });
+
+  await test.step("Sign in again opens the setup, and a Web application client's file is refused", async () => {
+    await pressKey(signInAgain, "Enter");
     await expect(setup).toBeFocused();
     await keepClientFile(
       setup,
@@ -336,7 +340,7 @@ test("the Google row moves a sign-in to the person's own client by keys", async 
     await expect(setup.locator("[data-integration-setup-problem]")).toHaveText(
       m.integrationsGoogleClientFileWeb(),
     );
-    await expect(state).toHaveText(m.integrationsGoogleRetiring());
+    await expect(row).toHaveAttribute("data-integration-state", "needs_reauth");
   });
 
   await test.step("the own client's file is kept and Google's page names that client", async () => {

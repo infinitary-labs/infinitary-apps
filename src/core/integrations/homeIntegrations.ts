@@ -71,8 +71,8 @@ export function startHomeIntegrations(options: {
   emit: CoreEventSink;
 }): HomeIntegrations {
   const { host, paths, standIns, forgeSignIns, gateway: githubGateway, tasks, now } = options;
-  // Google signs in as the person's own client; the run's renews only the
-  // sign-ins made with it, unless a development run names its own.
+  // Google signs in as the person's own client; a packaged run names none, so
+  // a sign-in made with Infinitary's retired client cannot renew.
   const { signsIn: runSignsIn, ...google } = googleSetup({ packaged: host.app.packaged });
   // A binding's own change reaches the service once it exists.
   let integrationsChanged: () => void = () => {};

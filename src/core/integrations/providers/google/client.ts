@@ -3,25 +3,14 @@ import { settingFrom } from "@shared/envSettings";
 /**
  * Who Infinitary is to Google, and where Google answers (docs/integrations.md,
  * "Google"). Each person signs in as their own Google client, made in
- * Google's Personal mode (INF-5549's plan); Infinitary's registered client
- * only renews the sign-ins made with it before then, and takes no new one.
+ * Google's Personal mode (INF-5549's plan). Infinitary ships no client of its
+ * own: only a development run names one (`googleSetup`), for tests.
  *
  * A desktop client is public: Google gives it an id, and a secret that an
- * installed app carries and Google does not treat as confidential, so both
- * live in the code the way the GitHub client id does
- * (`GITHUB_OAUTH_CLIENT_ID`). PKCE is what ties a sign-in to the app that
- * began it.
+ * installed app carries and Google does not treat as confidential. PKCE is
+ * what ties a sign-in to the app that began it.
  */
 export type GoogleClient = { id: string; secret?: string };
-
-/**
- * Infinitary's registered public Desktop app client, shared by development
- * and released builds: it renews the sign-ins made with it until it retires.
- */
-export const GOOGLE_OAUTH_CLIENT: GoogleClient = {
-  id: "634239586896-ucb4ehoc6m5o6ph8cer0n599u38m8mm1.apps.googleusercontent.com",
-  secret: "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",
-};
 
 /** Gmail: read, search, label, draft and send - everything but deleting for good. */
 export const GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.modify";
@@ -67,23 +56,24 @@ const GOOGLE_ENDPOINTS: GoogleEndpoints = {
  * (`INFINITARY_GOOGLE_URL`, every address under it) and a client
  * (`INFINITARY_GOOGLE_CLIENT_ID`, `INFINITARY_GOOGLE_CLIENT_SECRET`), which
  * then also takes new sign-ins (`signsIn`); a packaged build reaches only
- * Google, and Infinitary's own client there only renews.
+ * Google and names no client, so a sign-in made with Infinitary's retired
+ * client cannot renew.
  */
 export function googleSetup(options: { packaged: boolean; env?: NodeJS.ProcessEnv }): {
-  client: GoogleClient;
+  client?: GoogleClient;
   signsIn: boolean;
   endpoints: GoogleEndpoints;
 } {
   const env = options.env ?? process.env;
   const named = options.packaged ? undefined : settingFrom(env, "GOOGLE_CLIENT_ID")?.trim();
   const secret = options.packaged ? undefined : settingFrom(env, "GOOGLE_CLIENT_SECRET")?.trim();
-  const client = named ? { id: named, ...(secret ? { secret } : {}) } : GOOGLE_OAUTH_CLIENT;
+  const client = named ? { id: named, ...(secret ? { secret } : {}) } : undefined;
   const signsIn = named !== undefined && named !== "";
   const base = options.packaged ? undefined : settingFrom(env, "GOOGLE_URL")?.trim();
-  if (!base) return { client, signsIn, endpoints: GOOGLE_ENDPOINTS };
+  if (!base) return { ...(client ? { client } : {}), signsIn, endpoints: GOOGLE_ENDPOINTS };
   const root = base.replace(/\/+$/, "");
   return {
-    client,
+    ...(client ? { client } : {}),
     signsIn,
     endpoints: {
       auth: `${root}/o/oauth2/v2/auth`,

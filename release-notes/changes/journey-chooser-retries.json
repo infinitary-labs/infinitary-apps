@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "journey-chooser-retries",
+      "reason": "The journeys workflow's chooser asks GitHub again after a server error while it reads earlier runs' timings, so one failed answer no longer stops a requested check before any journey runs; nothing in the app changes."
+    }
+  ]
+}

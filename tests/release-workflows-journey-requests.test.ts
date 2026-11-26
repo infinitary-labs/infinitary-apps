@@ -502,6 +502,34 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
   );
 
   /**
+   * Run 45707263167, a journey request on a task branch, ran no journey: GitHub
+   * answered the chooser's plain list of verify.yml runs with a server error and
+   * an empty body, which github-script reports as status 500, and the step set no
+   * retries. github-script asks again after an error only when its `retries` input
+   * is set, and waits before asking only for a status its
+   * `retry-exempt-status-codes` input leaves out.
+   */
+  it("asks GitHub again after a server error in every chooser step that reads its lists", () => {
+    const journeys = loadYamlFile(".github/workflows/journeys.yml") as {
+      jobs: Record<string, { steps: Step[] }>;
+    };
+    const steps = (journeys.jobs["choose-journeys"]?.steps ?? []).filter((step) =>
+      step.uses?.startsWith("actions/github-script@"),
+    );
+    expect(steps.map((step) => step.id)).toEqual(["timing-run", "linux-timing-runs"]);
+    for (const step of steps) {
+      expect(Number(step.with?.retries), step.id).toBeGreaterThan(0);
+      const exempt = String(step.with?.["retry-exempt-status-codes"] ?? "")
+        .split(",")
+        .map(Number);
+      expect(
+        exempt.filter((status) => status >= 500),
+        step.id,
+      ).toEqual([]);
+    }
+  });
+
+  /**
    * INF-3622: every proof request's chooser failed downloading main run
    * 42921411028's Linux timing archive, which the PC's runners could no
    * longer fetch, and no named journey ran. Those observations train only

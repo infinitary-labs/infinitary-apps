@@ -694,7 +694,7 @@ describe("the commit-name check of a held batch's fix", () => {
     expect(await service.publication.open("ab12cd34", ask)).toContain(inherited);
     // With its verified version, a call that opens a pull request of its own, as one with a
     // body does, still merges the branch whole and names every commit; the route that confirms
-    // the story on the branch is owned by ownBatchChange.test.ts.
+    // the story on the branch is owned by ownBatchChange.held.test.ts.
     record = {
       ...EMPTY_BATCH_RECORD,
       held: [held],

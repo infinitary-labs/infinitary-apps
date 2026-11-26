@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "own-batch-change-test-split",
+      "reason": "Internal: the tests of a repair's answer to its project's held batch move from the batched change's test file to their own file without changing app behavior."
+    }
+  ]
+}

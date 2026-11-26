@@ -600,6 +600,9 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
     CREW_TRANSCRIPT_LINES_MAX: physical("earlier lines are counted, not sent; the tab names how many"),
     CREW_DIFF_LINES_MAX: physical("the rest are counted; the line names how many more"),
   },
+  "src/shared/customApi.ts": {
+    CUSTOM_API_REASON_MAX: physical("a longer refusal reason is cut and marked beside Save; the provider's console has the rest"),
+  },
   "src/shared/devices.ts": {
     PAIRING_LINK_ALSO_MAX: outside("installed readers refuse more; a link carries the first, the welcome all"),
   },

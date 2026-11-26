@@ -14053,6 +14053,7 @@ ${events}` : prompt;
     address: string().max(64),
     kind: _enum(["local", "private", "public", "reserved"])
   });
+  const CUSTOM_API_REASON_MAX = 240;
   const customApiFailureCategorySchema = _enum([
     "address",
     "destination",
@@ -14251,7 +14252,11 @@ ${events}` : prompt;
         ]),
         failure: string().optional(),
         /** Why the last check failed, for the form to place at the row or field at fault. */
-        category: customApiFailureCategorySchema.optional()
+        category: customApiFailureCategorySchema.optional(),
+        /** The HTTP status the server answered the check with, when it answered with one. */
+        status: number().int().optional(),
+        /** A refusal's own reason: a short excerpt the transport cut and checked for echoed secrets. */
+        reason: string().max(CUSTOM_API_REASON_MAX + 1).optional()
       })
     )
   });

@@ -11474,6 +11474,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `This server could not be reached.`;
   }
+  function accountsCustomApiNotSaved() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يُحفظ.`;
+      case "de":
+        return `Nicht gespeichert.`;
+      case "es":
+        return `No se guardó.`;
+      case "fr":
+        return `Non enregistré.`;
+      case "ja":
+        return `保存されていません。`;
+      case "ko":
+        return `저장되지 않았어요.`;
+      case "pt-BR":
+        return `Não salvo.`;
+      case "zh-Hans":
+        return `未保存。`;
+      case "zh-Hant":
+        return `未儲存。`;
+      case "en-XA":
+        return `[Ñöţ šáṽéð. ~~~~]`;
+      case "ar-XB":
+        return `‮Not saved.‬`;
+    }
+    return `Not saved.`;
+  }
   function accountsCustomApiNotSavedField() {
     switch (currentLanguage()) {
       case "ar":
@@ -12345,6 +12372,61 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Refresh after (seconds)‬`;
     }
     return `Refresh after (seconds)`;
+  }
+  function accountsCustomApiRefused() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `رفض الخادم الطلب. تحقّق من إعدادات هذا الاتصال لدى مزوّده.`;
+      case "de":
+        return `Der Server hat die Anfrage abgelehnt. Prüfe die Einstellungen dieser Verbindung bei ihrem Anbieter.`;
+      case "es":
+        return `El servidor rechazó la solicitud. Revisa la configuración de esta conexión con su proveedor.`;
+      case "fr":
+        return `Le serveur a refusé la requête. Vérifiez les réglages de cette connexion auprès de son fournisseur.`;
+      case "ja":
+        return `サーバーがリクエストを拒否しました。この接続の設定をプロバイダー側で確認してください。`;
+      case "ko":
+        return `서버가 요청을 거부했어요. 이 연결의 설정을 제공업체에서 확인하세요.`;
+      case "pt-BR":
+        return `O servidor recusou a solicitação. Verifique as configurações desta conexão com o provedor.`;
+      case "zh-Hans":
+        return `服务器拒绝了请求。请在提供方处检查此连接的设置。`;
+      case "zh-Hant":
+        return `伺服器拒絕了要求。請到提供者那裡確認這個連線的設定。`;
+      case "en-XA":
+        return `[Ţĥé šéŕṽéŕ ŕéƒûšéð ţĥé ŕéǫûéšţ. Çĥéçķ ţĥîš çöññéçţîöñ'š šéţţîñĝš ŵîţĥ îţš þŕöṽîðéŕ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The server refused the request. Check this connection's settings with its provider.‬`;
+    }
+    return `The server refused the request. Check this connection's settings with its provider.`;
+  }
+  function accountsCustomApiRefusedSaid(input2) {
+    const reason = input2.reason;
+    switch (currentLanguage()) {
+      case "ar":
+        return `رفض الخادم الطلب. قال: «${reason}»`;
+      case "de":
+        return `Der Server hat die Anfrage abgelehnt. Er sagt: „${reason}“`;
+      case "es":
+        return `El servidor rechazó la solicitud. Dijo: «${reason}»`;
+      case "fr":
+        return `Le serveur a refusé la requête. Il a répondu : « ${reason} »`;
+      case "ja":
+        return `サーバーがリクエストを拒否しました。理由:「${reason}」`;
+      case "ko":
+        return `서버가 요청을 거부했어요. 서버의 답: "${reason}"`;
+      case "pt-BR":
+        return `O servidor recusou a solicitação. Ele disse: “${reason}”`;
+      case "zh-Hans":
+        return `服务器拒绝了请求。它的回复：“${reason}”`;
+      case "zh-Hant":
+        return `伺服器拒絕了要求。它的回覆：「${reason}」`;
+      case "en-XA":
+        return `[Ţĥé šéŕṽéŕ ŕéƒûšéð ţĥé ŕéǫûéšţ. Îţ šáîð: “${reason}” ~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The server refused the request. It said: “‬${reason}‮”‬`;
+    }
+    return `The server refused the request. It said: “${reason}”`;
   }
   function accountsCustomApiRemoveCertificate() {
     switch (currentLanguage()) {
@@ -112749,6 +112831,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     accountsCustomApiNoModels,
     accountsCustomApiNotOffered,
     accountsCustomApiNotReached,
+    accountsCustomApiNotSaved,
     accountsCustomApiNotSavedField,
     accountsCustomApiNotSavedRow,
     accountsCustomApiNothingAnswered,
@@ -112781,6 +112864,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     accountsCustomApiReasoningOff,
     accountsCustomApiRedirect,
     accountsCustomApiRefreshAfter,
+    accountsCustomApiRefused,
+    accountsCustomApiRefusedSaid,
     accountsCustomApiRemoveCertificate,
     accountsCustomApiRemoveHeader,
     accountsCustomApiRemoveModel,
@@ -116356,6 +116441,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "accountsCustomApiNoModels": [],
     "accountsCustomApiNotOffered": ["model"],
     "accountsCustomApiNotReached": [],
+    "accountsCustomApiNotSaved": [],
     "accountsCustomApiNotSavedField": [],
     "accountsCustomApiNotSavedRow": [],
     "accountsCustomApiNothingAnswered": ["operation", "where"],
@@ -116388,6 +116474,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "accountsCustomApiReasoningOff": [],
     "accountsCustomApiRedirect": [],
     "accountsCustomApiRefreshAfter": [],
+    "accountsCustomApiRefused": [],
+    "accountsCustomApiRefusedSaid": ["reason"],
     "accountsCustomApiRemoveCertificate": [],
     "accountsCustomApiRemoveHeader": [],
     "accountsCustomApiRemoveModel": ["name"],
@@ -128719,6 +128807,7 @@ ${FRAME_KEYBOARD_SCRIPT}
     address: string().max(64),
     kind: _enum(["local", "private", "public", "reserved"])
   });
+  const CUSTOM_API_REASON_MAX = 240;
   const customApiFailureCategorySchema = _enum([
     "address",
     "destination",
@@ -128917,7 +129006,11 @@ ${FRAME_KEYBOARD_SCRIPT}
         ]),
         failure: string().optional(),
         /** Why the last check failed, for the form to place at the row or field at fault. */
-        category: customApiFailureCategorySchema.optional()
+        category: customApiFailureCategorySchema.optional(),
+        /** The HTTP status the server answered the check with, when it answered with one. */
+        status: number().int().optional(),
+        /** A refusal's own reason: a short excerpt the transport cut and checked for echoed secrets. */
+        reason: string().max(CUSTOM_API_REASON_MAX + 1).optional()
       })
     )
   });

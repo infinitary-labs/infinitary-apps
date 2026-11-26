@@ -1,5 +1,6 @@
 import type { Core } from "@core/index";
 import { seedTask } from "@core/tasks/seedTask";
+import { BOARD_DELTA_TRIGGER } from "@shared/tasks";
 
 /** What the test home lends the catch-up check's steps: its board task numbers, its away cards and its wait. */
 export type CatchUpHome = {
@@ -13,15 +14,17 @@ const bytes = (value: unknown) => Buffer.byteLength(JSON.stringify(value) ?? "nu
 /**
  * The test home's `catch-up-board` (INF-6817 piece 2, `PhoneCatchUpTests`): a returning phone replays what it
  * missed only while the replay weighs no more than its reload, whose board is the light board it last read
- * (docs/connection.md, "Catching up"). On a short record `away-traffic`'s two whole card lists outweigh that, and the
- * phone reads everything again instead. Opens tasks until the light board outweighs the traffic, sized from the card
- * list now since other checks' cards stay on this home; `closeCatchUpBoard` closes them, so later checks read the
- * light board as before.
+ * (docs/connection.md, "Catching up"). Below the delta trigger every board change goes out as the whole board, and a
+ * replay carries the newest one, so it always outweighs the light board; on a short record `away-traffic`'s two whole
+ * card lists outweigh it too. Opens tasks until the board is past the trigger, so each change goes out as a delta, and
+ * the light board outweighs the traffic, sized from the card list now since other checks' cards stay on this home;
+ * `closeCatchUpBoard` closes them, so later checks read the board as before.
  */
 export async function openCatchUpBoard(core: Core, opened: string[]) {
   const target = 4 * bytes(await core.dispatch("inf:cards:list", [])) + 64_000;
   const light = async () => bytes(await core.dispatch("inf:tasks:board", [{ closed: false }]));
-  while ((await light()) < target)
+  const rows = async () => (await core.dispatch("inf:tasks:board", [])).tasks.length;
+  while ((await rows()) <= BOARD_DELTA_TRIGGER.rows || (await light()) < target)
     for (let i = 0; i < 25; i++)
       opened.push(
         seedTask(core.services.tasks, {
@@ -31,7 +34,7 @@ export async function openCatchUpBoard(core: Core, opened: string[]) {
           startPolicy: "on-request",
         }).id,
       );
-  return { tasks: opened.length, lightBytes: await light(), target };
+  return { tasks: opened.length, rows: await rows(), lightBytes: await light(), target };
 }
 
 export function closeCatchUpBoard(core: Core, opened: string[]): void {

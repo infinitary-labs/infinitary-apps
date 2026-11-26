@@ -8,9 +8,12 @@ import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { elsewhereWords } from "../../src/shared/projectFocus";
 import { scratchDir } from "../helpers/scratchDirs";
+import { waitForFirstmateIdle } from "./crew";
 import { launchApp } from "./launch";
 import { MOCK_MODEL_ID, MOCK_PROVIDER_ID } from "./mockModels";
 import { seedHostedOrigins, seedProject } from "./projectSeed";
+import { promptInput } from "./prompt";
+import { latestServedTurn, servedContext } from "./providerRequest";
 import { activityFrame, expandDock, nowFrame } from "./rails";
 import { pager, showCard } from "./stack";
 import { pressKey, pressWindowKey, runFromSearch } from "./windowKeys";
@@ -47,6 +50,38 @@ const WORK = [
 
 /** The tasks that wait on the captain: one in infinitary, one in quota-lab. */
 const WAITS_ON = ["inf-1", "lab-1"] as const;
+
+/**
+ * Send words from the main message box and read the project filter line the
+ * first mate's input carried (INF-6860, the captain's "are you aware of the
+ * project filter i set at the top of the desktop app?").
+ */
+async function filterLineFor(
+  launched: Awaited<ReturnType<typeof launchApp>>,
+  words: string,
+): Promise<unknown> {
+  const { page, mockProvider } = launched;
+  if (!mockProvider) throw new Error("The journey launches with the mock provider");
+  await waitForFirstmateIdle(page);
+  const before = mockProvider.requestBodies().length;
+  const input = promptInput(page);
+  await input.fill(words);
+  await pressKey(input, "Enter");
+  // The input that carries these words, not a wake served beside it.
+  const asked = () => {
+    const body = mockProvider
+      .requestBodies()
+      .slice(before)
+      .find((one) =>
+        latestServedTurn(one)?.segments.some(
+          (segment) => segment.kind === "user" && segment.body.includes(words),
+        ),
+      );
+    return body ? servedContext(body) : undefined;
+  };
+  await expect.poll(asked).toBeDefined();
+  return asked()?.project_filter;
+}
 
 function repo(dir: string): string {
   const git = (...args: string[]) => execFileSync("git", args, { stdio: "pipe" });
@@ -247,12 +282,26 @@ test("the top bar's pill focuses the window on one project by keys, keeps it acr
       await expect.poll(() => listedKeys(page)).toEqual(infKeys);
     });
 
+    await test.step("a message from the main box names the focused project as the filter", async () => {
+      expect(await filterLineFor(launched, "Fix the login bug")).toEqual(
+        expect.stringMatching(
+          /^INF "infinitary" - the project filter at the top of the captain's window\./,
+        ),
+      );
+    });
+
     await test.step("Show all projects lets the focus go", async () => {
       await runFromSearch(app, page, "project-focus.clear");
       await expect(pill(page)).toContainText("All projects");
       await expect(pill(page)).not.toHaveAttribute("data-pf-focused", "");
       await expect.poll(() => listedKeys(page)).toEqual(everyKey);
       await expect.poll(() => crewLight(page, "lab-1")).toBeGreaterThan(0.6);
+    });
+
+    await test.step("a message with All projects picked says All projects", async () => {
+      expect(await filterLineFor(launched, "What is waiting on me?")).toEqual(
+        expect.stringMatching(/^All projects - the project filter at the top/),
+      );
     });
   } finally {
     await launched.close();

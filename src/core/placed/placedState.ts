@@ -187,6 +187,7 @@ export function loadPlaced(
   } catch (caught) {
     // A task loads wherever its computer is heard, its roster included: answers
     // that cannot be read fail each call that needs them, not that computer.
+    // i18n-exempt: a log line for reading later, never shown in the window
     log(`could not read ${task}'s kept answers: ${errorText(caught)}`);
   }
   return placed;

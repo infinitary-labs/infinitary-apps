@@ -6,7 +6,7 @@ import type { BuildRowAsk, BuildRowChoice, BuildRowStart, WriteAsk } from "@shar
 import { scanKnowledgeThreat } from "../knowledge/threatScan";
 import type { FollowupInput } from "../session/tools";
 import { TaskService } from "../tasks/taskService";
-import type { CrewSupervisorOptions } from "./crewSupervisorOptions";
+import type { CrewSupervisorOptions, FirstmateHooks } from "./crewSupervisorOptions";
 import type { WriteAskSent } from "./githubGateway";
 import { readerDataAnswer, readerDataLine } from "./readerData";
 
@@ -16,6 +16,8 @@ export type BuildRowsHost = {
   present: (taskId: string, ask: BuildRowAsk, dropped: WriteAsk[]) => void;
   /** The captain's Start on a filed task, as the task record's Start sends it. */
   startNow: (key: string) => Promise<string>;
+  /** Queue an operational message for the first mate (`FirstmateHooks.notifyOp`). */
+  notifyOp: FirstmateHooks["notifyOp"];
   now: () => number;
 };
 
@@ -231,7 +233,8 @@ export class BuildRows {
    * nothing; Keep for later files the row's task, which waits on request;
    * Start now files it and starts it. The filed brief is the row's goal and
    * why as shown, without the issue's number or link, which the record
-   * keeps as a typed link.
+   * keeps as a typed link; the first mate hears the filed task and the
+   * issue's address the host read open (`build-row-filed`).
    */
   async answer(
     taskId: string,
@@ -269,6 +272,24 @@ export class BuildRows {
       actor: "captain",
     });
     const key = record.key || record.id;
+    // The first mate hears the filing before the Start's own wake, so the
+    // issue's address reaches it from the host, never from the reader's
+    // words; the row's title is the reader's, so the wake names keys only.
+    this.host.notifyOp(
+      {
+        facts: {
+          kind: "build-row-filed",
+          task: { id: record.id, key },
+          reader: { id: origin.id, key: origin.key || origin.id },
+          issue: ask.issue,
+          url: ask.issueUrl,
+          start: pick === "start",
+        },
+        once: `build-row-filed:${ask.id}`,
+      },
+      "agent",
+      record.id,
+    );
     // Start now is the captain's Start on the filed task, so the first mate
     // applies the captain's standing directions before a crewmate begins.
     const started =

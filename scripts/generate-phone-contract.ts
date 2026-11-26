@@ -118,10 +118,11 @@ try {
   // sent once they pause for the Mac's own quiet period.
   const { CARD_DRAFTS: cardDraftsChange } = await runner.import<typeof import("../src/shared/cardDrafts.ts")>(join(REPO_ROOT, "src/shared/cardDrafts.ts"));
   if (!existsSync(join(REPO_ROOT, `src/shared/contract-changes/${cardDraftsChange}.md`))) throw new Error(`No contract change ${cardDraftsChange}`);
-  // INF-5608 piece 2: a card button on the phone carries its field's photos and notes once its home lists this change,
-  // and the phone lists it so a past card keeps what went with its choice.
+  // INF-6817 piece 2: a phone lists it, and tells a home that lists it too how long its catch-up took to show.
   const { CATCH_UP_SHOWN: catchUpShownChange } = await runner.import<typeof import("../src/shared/connection.ts")>(join(REPO_ROOT, "src/shared/connection.ts"));
   if (!existsSync(join(REPO_ROOT, `src/shared/contract-changes/${catchUpShownChange}.md`))) throw new Error(`No contract change ${catchUpShownChange}`);
+  // INF-5608 piece 2: a card button on the phone carries its field's photos and notes once its home lists this change,
+  // and the phone lists it so a past card keeps what went with its choice.
   const { CHOICE_ATTACHMENTS: choiceAttachmentsChange } = await runner.import<typeof import("../src/shared/choiceCarried.ts")>(join(REPO_ROOT, "src/shared/choiceCarried.ts"));
   if (!existsSync(join(REPO_ROOT, `src/shared/contract-changes/${choiceAttachmentsChange}.md`))) throw new Error(`No contract change ${choiceAttachmentsChange}`);
   const { DRAFT_QUIET_MS } = await runner.import<typeof import("../src/renderer/src/app/draftSync.ts")>(join(REPO_ROOT, "src/renderer/src/app/draftSync.ts"));

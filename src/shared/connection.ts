@@ -374,7 +374,8 @@ const resultFrameSchemas = [
  * `leave` when its person leaves this home: the home takes the device off
  * its list and closes it as `unpaired` (docs/devices.md, "Leave"). A
  * computer that runs work also answers what the home asks it, with one
- * `result` per request id (src/shared/work.ts).
+ * `result` per request id (src/shared/work.ts). A phone whose home lists
+ * `CATCH_UP_SHOWN` sends one `shown` once its catch-up shows.
  */
 export const clientFrameSchema = z.union([
   z.discriminatedUnion("t", [

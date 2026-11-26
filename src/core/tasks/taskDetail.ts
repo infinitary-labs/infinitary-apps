@@ -58,17 +58,34 @@ export function taskDetailOf(
   // Its parts, in filing order: the record lists each as its Tasks row
   // reads it (INF-6805's plan, item 1).
   const partRows = tasks.graph.children(id);
-  for (const part of partRows) named.delete(part.id);
-  named.delete(id);
-  const graph = graphFor(options, [record, ...partRows, ...tasks.getMany([...named])]);
+  // Its status word, and each part's, follows the open work beneath it as
+  // its board row's does (INF-6805's plan, piece 2): an open part's own
+  // open parts are read too, down to the deepest, since a closed row's
+  // parts never count.
+  const deeper: TaskRecord[] = [];
+  const seen = new Set([id, ...partRows.map((part) => part.id)]);
+  const reach = [...partRows];
+  for (let row = reach.pop(); row; row = reach.pop()) {
+    if (TaskService.isClosed(row)) continue;
+    for (const part of tasks.graph.openChildren(row.id)) {
+      if (seen.has(part.id)) continue;
+      seen.add(part.id);
+      deeper.push(part);
+      reach.push(part);
+    }
+  }
+  for (const each of seen) named.delete(each);
+  const graph = graphFor(options, [record, ...partRows, ...deeper, ...tasks.getMany([...named])]);
   const own = viewOf(options, record, graph, tiersOf(options, [record]), liveFacts(record));
-  const partTiers = tiersOf(options, partRows);
-  const parts = partRows.map((part) => viewOf(options, part, graph, partTiers, liveFacts(part)));
-  // Its status word follows its parts, as its board row's does (INF-6805's
-  // plan, piece 2); a part's own parts are not read here.
-  const view =
-    settlePartsStatus(new Map([own, ...parts].map((each) => [each.id, each] as const))).get(id) ??
-    own;
+  const viewsOf = (rows: TaskRecord[]) => {
+    const rowTiers = tiersOf(options, rows);
+    return rows.map((row) => viewOf(options, row, graph, rowTiers, liveFacts(row)));
+  };
+  const read = viewsOf(partRows);
+  const under = new Map([own, ...read, ...viewsOf(deeper)].map((each) => [each.id, each] as const));
+  const moved = settlePartsStatus(under);
+  const view = moved.get(id) ?? own;
+  const parts = read.map((part) => moved.get(part.id) ?? part);
   const origin = crewFilingOrigin(record, graph);
   const timeline = tasks.timeline(id);
   const why = timeline.find((event) => typeof event.data?.why === "string")?.data?.why;

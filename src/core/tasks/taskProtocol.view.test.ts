@@ -867,4 +867,33 @@ describe("the task protocol (task-system P3)", () => {
     f.protocol.dispose();
     f.db.close();
   });
+
+  // INF-6805's plan, piece 2: a parent of a parent follows its deepest work, on its record as on
+  // its row.
+  it("reads a backlog parent's status on its record from its parts' own parts, as its row does", () => {
+    const f = taskProtocolFixture();
+    const unstarted = { status: "queued", startPolicy: "on-request" } as const;
+    seedTask(f.tasks, { id: "launch", title: "Launch the site", ...unstarted });
+    seedTask(f.tasks, { id: "copy", title: "Write the copy", parentId: "launch", ...unstarted });
+    seedTask(f.tasks, { id: "hero", title: "Write the hero", parentId: "copy", ...unstarted });
+    f.cards.push({
+      id: "card-hero",
+      taskId: "hero",
+      author: "crewmate",
+      priority: 1,
+      title: "Which headline?",
+      meta: "",
+      body: "",
+      actions: [{ id: "yes", label: "Yes", default: true }],
+      status: "ready",
+      createdAt: f.clock(),
+    });
+    const row = f.protocol.board().tasks.find((task) => task.id === "launch");
+    expect(row?.partsStatus).toBe("waiting");
+    const detail = f.protocol.detail("launch");
+    expect(detail.partsStatus).toBe("waiting");
+    expect(detail.parts?.map((part) => [part.id, part.partsStatus])).toEqual([["copy", "waiting"]]);
+    f.protocol.dispose();
+    f.db.close();
+  });
 });

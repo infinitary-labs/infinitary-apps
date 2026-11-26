@@ -165,7 +165,9 @@ export function* rebuildParts(
  * active rows whose standing waits name a touched row, and any row whose
  * card facts moved. After a host fact moved with no row written, every
  * row's live facts are read again and the rows they moved on are rebuilt
- * too. Every other row keeps its view, and a touched row closed before
+ * too. Then every shown parent reads its parts' views again, and a parent
+ * whose parts' status word moved takes a new view with no rebuild. Every
+ * other row keeps its view, and a touched row closed before
  * the board's window that no shown row holds is ruled out from the
  * record its write left, with no read.
  */

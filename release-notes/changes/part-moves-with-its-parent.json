@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "part-moves-with-its-parent",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A part of a task no longer stays under a task in another project",
+      "body": "When your first mate moves one part of a larger task to another project, it now moves the whole task with its parts, or takes that part out of the task in the same step. A task no longer shows a part that belongs to a different project.",
+      "noPicture": "The change decides which tasks move together; no view or control changes, and a part under a parent elsewhere looked like any other part.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

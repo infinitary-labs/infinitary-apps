@@ -590,6 +590,44 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
     expect(tasks.get(id)).toEqual(before);
   });
 
+  // INF-70: a part moved on its own stayed under its parent in the project it left.
+  it("refuses update_task's project on a part whose parent stays behind, and moves it with its parent cleared in the same call", async () => {
+    const { agent, specs, tasks, repos } = setup();
+    const notes = await repos.setup({ kind: "init", name: "notes", key: "NOTE" });
+    await repos.setup({ kind: "init", name: "website", key: "WEB" });
+    await agent.converse("plan the launch, and write its checklist");
+    const tools = piToolsOf(specs[0]?.tools ?? []) as unknown as GraphTool[];
+    const text = async (name: string, params: Record<string, unknown>) => {
+      const tool = tools.find((entry) => entry.name === name);
+      if (!tool) throw new Error(`missing ${name}`);
+      return (await tool.execute("c", params, undefined, undefined, {})).content[0]?.text ?? "";
+    };
+    await text("create_task", {
+      title: "Plan the launch",
+      goal: "The launch is planned",
+      user_words: "plan the launch",
+      repo_id: notes.repo.id,
+    });
+    await text("create_task", {
+      title: "Write the launch checklist",
+      goal: "The launch checklist is written",
+      user_words: "write its checklist",
+      parent: "NOTE-1",
+    });
+    const id = tasks.byKey("NOTE-2")?.id as string;
+    const before = tasks.get(id);
+
+    expect(await text("update_task", { task: "NOTE-2", project: "WEB" })).toBe(
+      `Refused: NOTE-2 is a part of NOTE-1, which stays in notes, and a part lives in its parent's project. Move NOTE-1 instead, and its parts go with it, or clear NOTE-2's parent in the same update_task (parent "") to move it on its own; NOTE-1 then no longer waits for it.`,
+    );
+    expect(tasks.get(id)).toEqual(before);
+
+    expect(await text("update_task", { task: "NOTE-2", project: "WEB", parent: "" })).toBe(
+      "Updated WEB-1: moved to website as WEB-1, parent cleared.",
+    );
+    expect(tasks.get(id)).toMatchObject({ key: "WEB-1", parentId: null });
+  });
+
   it("plans, edits, links and queries records, attaching the turn's ask to each task it acts on", async () => {
     const { agent, specs, tasks, supervisor, db } = setup();
     await agent.converse("plan the ADR, then the implementation behind it");

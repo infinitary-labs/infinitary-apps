@@ -542,6 +542,9 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
     // The failed-check note, which holds a write token for an outside pull
     // request (docs/public-ci.md, "Outside contributors").
     "failed-checks.yml:note",
+    // The rerun of a batch's jobs GitHub never placed, which holds an Actions
+    // write token (docs/testing.md, "A job GitHub never placed").
+    "unplaced-jobs.yml:rerun",
   ];
   // DOP-251's plan: each kind is one stage of moving Linux jobs to the Mac
   // mini's Linux guests (docs/testing.md, "Each Linux job's kind").

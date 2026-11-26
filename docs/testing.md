@@ -839,6 +839,24 @@ The batch's run holds what the repair reads: its failed jobs, the test files the
 A file the repair's computer cannot run, such as a journey where journeys run only through CI, is judged from its log and the changes' diffs, or run through `journeys.yml` with `files` on a branch the repair pushes at the batch's version.
 The batch's version is its branch's, `infinitary-batch/<id>`, which any clone fetches: one commit per change on the `main` version its last job names.
 A fix built on that version runs its branch's own check, which finds that version, skips every other step and passes in about a minute ("A pushed branch"), and the fix requests no journeys of its own: once it joins, the batch's rebuild runs every check and every journey on it with every change beside it, its release notes included ("The swept batch").
+A batch whose only failed checks are jobs GitHub never placed on a runner reruns them itself once its run ends ("A job GitHub never placed"), so its repair finds those checks running again.
+
+## A job GitHub never placed
+
+GitHub's own Macs run a batch's native tests and parallel journeys (the `native` kind, "Each Mac job's kind and size"), and when GitHub finds no Mac for one of them it cancels the job itself after a wait of up to about twenty minutes.
+Such a job ends with no runner and no step, and its check carries GitHub's own annotation, `The job was not acquired by Runner of type hosted even after multiple attempts`.
+No test ran in it, so no confirm has a test file to run again, yet the app reads its cancelled check as failed and holds the batch at once, waking its repair as for any failed check (`docs/forge.md`, "A held batch").
+`unplaced-jobs.yml` starts when a batch pull request's run of `batch-pull-request.yml` ends without passing, and reads the attempt that ended (`scripts/unplaced-jobs.mjs`).
+When every job of that attempt that neither passed nor skipped is one GitHub never placed, it asks GitHub to rerun the run's failed jobs: those jobs on the same queue, and the jobs after them that skipped, such as the confirms and the last job, while every job that passed keeps its result.
+The rerun is a new attempt of the same run, so the app reads the checks running again and ends the hold by its own reading, as after a repair's rerun, and the batch merges once the new attempt passes.
+Any other ended job reruns nothing, since a rerun does not answer it: a failed test, or a check cancelled by a newer version of the batch or by the batch's own stop; the repair reads that run as before, the job GitHub never placed included.
+It asks at most twice for one run, so the run's third attempt is its last, only while the batch's pull request is open at the run's version, and never once the run has run again, so a repair's own rerun is never doubled; a rerun GitHub refuses because the run started again first counts as that rerun.
+The runner policy is unchanged: the rerun asks for the same kind on the same queue, and the desktop journeys keep the project's Macs.
+Main's check, an alpha cut and an outside pull request never start it, since a main check is never retried and an outside run waits for a maintainer's approval.
+GitHub runs a `workflow_run` workflow from the default branch, so it checks out only `scripts/unplaced-jobs.mjs` and `scripts/batch-pull.mjs` from there, never the batch's code, reads jobs and annotations from GitHub as data, holds only Actions writes and check and pull request reads, uses no secret beyond its own token, and runs on GitHub's hosted Ubuntu.
+Its job summary names each job GitHub never placed and why it reran or did not.
+Started by hand with a batch run's id, and an attempt when wanted, it is a dry run: its summary says what it would do, and it reruns nothing.
+`tests/unplaced-jobs.test.ts` runs the workflow's own step on recorded batch runs: one whose only failure was a job GitHub never placed, one with such a job beside a failed test, and one with failed tests alone.
 
 ## A batch pull request
 
@@ -1781,6 +1799,7 @@ A dry run asks for the ordinary kinds, so a rehearsal never takes a release's pl
 The batch checks' sweep, the alpha's full check, hands `release_split` the same way.
 The `native` kind is the one kind whose queue is GitHub's, `macos-15`, free in a public project: its five jobs take GitHub's five Macs for about half an hour each and leave the project's Macs to the desktop journeys (INF-6330's plan, option D).
 Those lanes read it before `verify.yml`'s `mac_runner` input, so a batch and a release send them there too, while the desktop lanes keep the input's queue; a request's own `native_runner` input comes first, to measure another runner, such as `macos-15-intel`, before a switch.
+A batch's job there that GitHub cancels because no Mac took it runs again on the same queue once the batch's run ends ("A job GitHub never placed").
 Removing `native` from `MAC_QUEUES` sends them back to `split` in one parallel journeys job.
 The full Mac check's lanes ask for `split`, then the `journeys` kind, whose queue already takes journeys-sized jobs, then `check`, then the old label, so until `MAC_QUEUES` names `split` they run where journeys run.
 The placement service starts `release_build` before `release_sign`, so a publishing release's signed installer build starts first; on the Mac mini the build's place and the signing job's cores do not fit together, so signing waits until the build job, with its installed check, ends; until `MAC_QUEUES` names it, the build asks for its `build` kind, as in a dry run.

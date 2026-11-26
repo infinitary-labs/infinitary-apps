@@ -1,5 +1,5 @@
 ---
-source: 37599270c99ffda1
+source: 47dc716341146fd8
 title: Tareas y tripulantes
 description: Qué es una tarea, cómo pasa de pendiente a terminada, dónde seguirla y cómo orientar al tripulante que la hace.
 ---
@@ -148,6 +148,17 @@ El interruptor **Preguntar antes de fusionar** de Configuración → Proyectos l
 Cuando está activado, el trabajo terminado espera tu tarjeta de fusión.
 Cuando está desactivado, el trabajo que supera las comprobaciones puede fusionarse sin preguntarte, y después recibes una tarjeta con su historia.
 Para cambiarlo en una tarea, díselo a tu primer oficial.
+
+## Un paso que espera al trabajo {#a-step-that-waits-on-work}
+
+Cuando pides algo fuera de tu proyecto para cuando el trabajo termine, como cerrar una incidencia o publicar una novedad, tu primer oficial registra ese paso como una tarea propia.
+Espera a cada tarea que hace el trabajo, incluidas las partes que se añadan después.
+
+- Empieza solo cuando cada una de esas tareas ha fusionado su cambio, o ha terminado sin nada que fusionar.
+- Si una de ellas se abandona, el paso no hace nada y tu primer oficial te avisa.
+- Si pediste el paso para cuando el trabajo esté en una versión publicada, espera hasta que tu tripulación registre una versión que contenga el trabajo; consulta [Automatización](/es/automation/#when-it-runs).
+
+Infinitary no añade a un cambio fusionado palabras que cierren una incidencia, así que una incidencia se cierra mediante la tarea propia de ese paso.
 
 ## Cerrar una tarea {#closing-a-task}
 

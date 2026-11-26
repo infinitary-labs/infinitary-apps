@@ -1,5 +1,5 @@
 ---
-source: 37599270c99ffda1
+source: 47dc716341146fd8
 title: Tâches et équipiers
 description: Ce qu’est une tâche, comment elle passe de la réserve à terminée, où la suivre et comment orienter l’équipier qui s’en charge.
 ---
@@ -148,6 +148,17 @@ L’interrupteur **Demander avant de fusionner** dans Réglages → Projets en d
 Quand il est activé, le travail terminé attend votre carte de fusion.
 Quand il est désactivé, le travail qui réussit les vérifications peut fusionner sans vous demander, et vous recevez ensuite une carte avec son récit.
 Pour le changer pour une seule tâche, dites-le à votre second.
+
+## Une étape qui attend du travail {#a-step-that-waits-on-work}
+
+Quand vous demandez quelque chose hors de votre projet une fois le travail fini, comme fermer un ticket ou publier une nouvelle, votre second enregistre cette étape comme une tâche à part.
+Elle attend chaque tâche qui fait le travail, y compris les parties ajoutées plus tard.
+
+- Elle ne démarre qu’une fois que chacune de ces tâches a fusionné son changement, ou s’est terminée sans rien à fusionner.
+- Si l’une d’elles est abandonnée, l’étape ne fait rien et votre second vous prévient.
+- Si vous avez demandé l’étape pour quand le travail sera dans une version publiée, elle attend que votre équipage enregistre une version qui contient le travail ; voir [Automatisation](/fr/automation/#when-it-runs).
+
+Infinitary n’ajoute à un changement fusionné aucun mot qui ferme un ticket, donc un ticket se ferme par la tâche propre à cette étape.
 
 ## Fermer une tâche {#closing-a-task}
 

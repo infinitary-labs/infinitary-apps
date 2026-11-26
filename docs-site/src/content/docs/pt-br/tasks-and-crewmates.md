@@ -1,5 +1,5 @@
 ---
-source: 37599270c99ffda1
+source: 47dc716341146fd8
 title: Tarefas e tripulantes
 description: O que é uma tarefa, como ela vai do backlog até concluída, onde acompanhá-la e como orientar o tripulante que a faz.
 ---
@@ -148,6 +148,17 @@ O interruptor **Perguntar antes de mesclar** em Ajustes → Projetos define isso
 Quando ele está ligado, o trabalho terminado espera o seu cartão de mesclagem.
 Quando está desligado, o trabalho que passa nas verificações pode ser mesclado sem perguntar a você, e você recebe depois um cartão com a história dele.
 Para mudar isso em uma tarefa só, diga ao seu imediato.
+
+## Um passo que espera o trabalho {#a-step-that-waits-on-work}
+
+Quando você pede algo fora do seu projeto para quando o trabalho terminar, como fechar uma issue ou publicar uma novidade, seu imediato registra esse passo como uma tarefa própria.
+Ela espera cada tarefa que faz o trabalho, inclusive as partes adicionadas depois.
+
+- Ela só começa quando cada uma dessas tarefas mesclou a sua mudança, ou terminou sem nada para mesclar.
+- Se uma delas for abandonada, o passo não faz nada e seu imediato avisa você.
+- Se você pediu o passo para quando o trabalho estiver em uma versão publicada, ele espera até sua tripulação registrar uma versão que contenha o trabalho; veja [Automação](/pt-br/automation/#when-it-runs).
+
+O Infinitary não adiciona a uma mudança mesclada palavras que fechem uma issue, então uma issue se fecha pela própria tarefa desse passo.
 
 ## Fechar uma tarefa {#closing-a-task}
 

@@ -7,6 +7,7 @@
       "title": "An outside step that waits on work becomes its own task",
       "body": "When you ask for something outside your project once work is done, such as closing an issue, your first mate files it as its own task that waits for every piece of the work. It starts only once each piece has merged, even pieces added later, and if any piece is dropped it does nothing and tells you. Merged changes no longer close an issue on their own. Automation also gains a Work ships in a release event, so a step like this can wait until the work is in a release.",
       "noPicture": "This changes how your first mate files work and adds one event to the existing Automation list, not how any view looks.",
+      "docsSite": ["tasks-and-crewmates", "automation"],
       "provenance": { "origin": "change" }
     }
   ],

@@ -42,7 +42,10 @@ Nothing is sent.
 - **Every day** runs at a time of day.
 - **On chosen days** runs on the weekdays you pick, at a time of day.
 - **Once** runs at one date and time.
-- **When something happens** runs each time something new happens, such as **A task closes**, or an event from something you connected in Settings.
+- **When something happens** runs each time something new happens, such as **A task closes**, **Work ships in a release**, or an event from something you connected in Settings.
+
+**Work ships in a release** happens when your crew first records a task's work in a release of your project, which it does when it publishes or checks one.
+A project that never records releases never has it.
 
 A daily or weekly automation keeps the **Time zone** you pick, so it runs at the same time wherever your computer is.
 

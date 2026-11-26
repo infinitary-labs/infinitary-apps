@@ -1,5 +1,5 @@
 ---
-source: 196a49ab4dfdf816
+source: e0dc8618b3364025
 title: Automatisation
 description: Donnez à votre second une consigne qui s’exécute selon un horaire ou quand quelque chose se produit, et mettez en pause, modifiez ou relisez chacune dans les Réglages.
 ---
@@ -43,7 +43,10 @@ Rien n’est envoyé.
 - **Tous les jours** s’exécute à une heure de la journée.
 - **Les jours choisis** s’exécute les jours de la semaine que vous choisissez, à une heure de la journée.
 - **Une fois** s’exécute à une date et une heure.
-- **Quand quelque chose se produit** s’exécute chaque fois que quelque chose de nouveau se produit, comme **Une tâche se ferme**, ou un événement venant de quelque chose que vous avez connecté dans les Réglages.
+- **Quand quelque chose se produit** s’exécute chaque fois que quelque chose de nouveau se produit, comme **Une tâche se termine**, **Le travail paraît dans une version publiée**, ou un événement venant de quelque chose que vous avez connecté dans les Réglages.
+
+**Le travail paraît dans une version publiée** se produit quand votre équipage enregistre pour la première fois le travail d’une tâche dans une version de votre projet, ce qu’il fait quand il en publie ou en vérifie une.
+Un projet qui n’enregistre jamais de versions ne l’a jamais.
 
 Une automatisation quotidienne ou hebdomadaire garde le **Fuseau horaire** que vous choisissez, pour s’exécuter à la même heure où que se trouve votre ordinateur.
 

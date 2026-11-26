@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "card-drafts-test-typing",
+      "reason": "The browser test of a card's unsent words now types each key from the page, so a stalled round trip from the test's command process can no longer open a typing pause mid-word and fail the test; nothing in the app changes."
+    }
+  ]
+}

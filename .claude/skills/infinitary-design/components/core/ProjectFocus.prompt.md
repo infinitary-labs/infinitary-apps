@@ -23,7 +23,8 @@ Reduced motion makes both a cut.
 
 **Keys and focus.**
 The arrows, Home and End move along the row; Enter or Space picks and folds it.
-Esc closes the menu first, then folds the row; a press outside, the window changing size or losing focus folds it too.
+Esc closes the menu first, then folds the row, wherever focus is: a row the pointer opened folds on an Esc from the message box too.
+A press outside, the window changing size or losing focus folds it too.
 Focus on a project (⇧⌘P) opens the row with focus on the checked pill, and folding returns focus to the pill.
 
 **Light.**

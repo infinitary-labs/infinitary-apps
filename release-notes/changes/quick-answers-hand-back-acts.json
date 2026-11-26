@@ -4,10 +4,12 @@
       "id": "quick-answers-hand-back-acts",
       "kind": "fix",
       "title": "Work that asks for something done no longer stops at a quick answer",
-      "body": "When a task asks for something to be done, such as a review published, a change merged or a merge card shown, and it starts as a quick answer, it now hands the work back to your first mate, which starts it right away as real work. Before, it showed a card saying what it had read, with Look deeper as the only way on. Such work starts twice, the second time on a stronger model, so it uses a little more of your plan's allowance.",
+      "body": "A task that asks for something to be done, such as a review published, a change merged or a merge card shown, now starts as real work instead of as a quick answer. If one still starts as a quick answer, it hands the work back to your first mate, which starts it right away. Before, such a task could show a card saying what it had read, with Look deeper as the only way on. Real work runs on a stronger model, so these tasks use more of your plan's allowance than a quick answer did.",
       "area": "crewmates",
       "noPicture": "This change is in what crewmates, the first mate and the part of the app that sorts new work are told, so no view changes.",
-      "provenance": { "origin": "change" }
+      "provenance": {
+        "origin": "change"
+      }
     }
   ],
   "exclusions": []

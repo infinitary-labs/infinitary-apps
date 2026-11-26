@@ -138,12 +138,13 @@ export class ChangeContext {
    * (docs/forge.md, "Batches of your own"): a task of a project on the
    * batched delivery; undefined for every other task. A pull request the
    * task names by number is never batched, and neither is a contribution
-   * through a fork.
+   * through a fork; `change` "own" asks about the task's own branch, whatever
+   * pull request is selected (`mergesInOwnBatch`).
    */
-  ownBatch(taskId: string): RepoView | undefined {
+  ownBatch(taskId: string, change: "current" | "own" = "current"): RepoView | undefined {
     const record = this.options.tasks.get(taskId);
     const repo = record?.repoId ? this.options.repos.get(record.repoId) : undefined;
-    return mergesInOwnBatch(record, repo) ? repo : undefined;
+    return mergesInOwnBatch(record, repo, change) ? repo : undefined;
   }
 
   /** The task's effective approved address, including an explicitly pinned publication route. */

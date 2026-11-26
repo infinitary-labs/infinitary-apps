@@ -139,6 +139,8 @@ export class BatchHostForge extends FakeForge {
       headSha: this.batchHead,
       base: "main",
       branch: batch.branch,
+      // The app pushes the batch branch to the project itself, never to a fork.
+      headRepo: "acme/meter",
       title: batch.title,
       readiness: batch.readiness,
     };

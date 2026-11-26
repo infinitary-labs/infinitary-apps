@@ -65,13 +65,18 @@ export function taskContributesUpstream(
  * Whether a task's change joins this person's own batches (docs/forge.md,
  * "Batches of your own"): a task of a project on the batched delivery. A
  * pull request the task names by number is never batched, and neither is
- * a contribution through a fork.
+ * a contribution through a fork. `change` "own" asks about the task's own
+ * branch, which a pull request selected by number leaves batched: a held
+ * batch's repair selects the batch's pull request to read its checks, and
+ * its own branch still joins that batch as its fix (INF-6910).
  */
 export function mergesInOwnBatch(
   record: TaskRecord | undefined,
   repo: RepoView | undefined,
+  change: "current" | "own" = "current",
 ): boolean {
-  if (!record?.repoId || record.delivery?.checkTarget || !repo) return false;
+  if (!record?.repoId || !repo) return false;
+  if (change === "current" && record.delivery?.checkTarget) return false;
   if (taskContributesUpstream(record, repo)) return false;
   return ownsBatches(deliveryForRecord(record, repo.delivery), repo);
 }

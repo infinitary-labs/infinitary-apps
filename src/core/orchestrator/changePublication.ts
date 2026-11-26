@@ -470,7 +470,7 @@ export class ChangePublication {
       // branch from the computer that runs the task at the task's own ref
       // for it (INF-2490).
       const read = own || !record.deviceId ? branch : await this.otherBranchHome(record, branch);
-      const batched = own && !input.base ? this.context.ownBatch(taskId) : undefined;
+      const batched = own && !input.base ? this.context.ownBatch(taskId, "own") : undefined;
       const dir = this.context.projectDir(record.repoId, record.repoDir);
       const existing = await forge.changeFor(branch);
       if (existing && hasChangeRequests(forge.kind))
@@ -663,6 +663,13 @@ export class ChangePublication {
           input.title,
           validationHead ? { beforePublish: beginPublication } : undefined,
         );
+        // The confirmed branch becomes current as an opened pull request does below, so the
+        // checks, the merge card's offer and its approval act on it, not on a selected one.
+        if (this.options.tasks.get(taskId)?.delivery?.checkTarget)
+          this.options.tasks.delivery.selectOwnChange(taskId, {
+            ...confirmed,
+            url: forge.url(confirmed) ?? null,
+          });
         this.checks.noteChange(record.id, { change: confirmed, forge });
         // A story revised under a kept approval: the change keeps its
         // place in line or in its batch, which takes the story's words.

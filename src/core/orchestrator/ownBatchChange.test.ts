@@ -1684,6 +1684,50 @@ describe("a repair's answer to its project's held batch", () => {
     expect(at.forge.batch?.title).toBe("chore: merge 4 approved changes");
   });
 
+  // Intent: INF-6910's defect, a bug being fixed: the repair read the held batch's checks with
+  // check_change pull, which made the batch's pull request its current change, so
+  // show_merge_card judged the repair's own branch by that selection and opened a pull request
+  // of its own instead of confirming the declared fix on its pushed branch.
+  it("confirms its declared fix on its pushed branch while it reads the held batch's pull request, and the fix joins the batch", async () => {
+    const at = await held();
+    const before = at.forge.batchHead;
+    const batch = at.forge.batch?.number as number;
+    await at.service.checkTool.checkForCrew(TASK, { pull: batch });
+    expect(at.tasks.get(TASK)?.delivery?.checkTarget).toMatchObject({ number: batch });
+    expect(await at.service.checkTool.checkForCrew(TASK, { batch: { fix: true, evidence } })).toBe(
+      BATCH_DECLARATION_WORDS.fix,
+    );
+    // The story is saved for the branch the working copy has checked out, the repair's own;
+    // changePublication's tests own reading that branch and its version with git.
+    at.tasks.delivery.updateChangePresentation(
+      TASK,
+      () => ({ revisions: [STORY], receipts: [] }),
+      BRANCH,
+    );
+    vi.spyOn(at.service.publication, "presentationHead").mockResolvedValue(HEAD);
+    vi.spyOn(at.service.publication, "presentationBranch").mockResolvedValue(BRANCH);
+
+    expect(await at.service.mergeCard.walk(TASK)).toEqual({
+      did: [MERGE_CARD_WORDS.batchConfirmed(BRANCH)],
+      ready: { revision: 1, title: STORY.title, head: HEAD },
+    });
+    // The batch's own pull request is the only one opened.
+    expect(at.forge.calls.filter((call) => call.startsWith(`openChange ${BRANCH}`))).toEqual([]);
+    // The confirmed branch is the change the merge card and its approval act on.
+    expect(at.tasks.get(TASK)?.delivery?.checkTarget).toBeUndefined();
+
+    await at.service.merges.merge(TASK, at.guard());
+    await at.pass();
+    expect(at.open()?.members.map((member) => member.taskId)).toEqual([
+      "parser01",
+      "export02",
+      "legend03",
+      TASK,
+    ]);
+    expect(at.open()?.hold).toBeUndefined();
+    expect(at.forge.batchHead).not.toBe(before);
+  });
+
   // Intent: the captain's fix 2 from the daily velocity review: "Merge a held batch once its
   // version passes, even on a rerun, and send a test-only fix declared meanwhile to the next
   // batch." The project's own rerun passed the failed test, while the host still reads it failed.

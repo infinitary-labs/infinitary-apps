@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "batch-fix-joins-its-batch",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A held batch's fix joins the batch instead of opening its own pull request",
+      "body": "On a project that merges your approved changes in batches, a crewmate repairing a held batch now confirms its fix on its pushed branch, and once the fix is approved it joins that batch. Before, a crewmate that had looked at the batch's pull request first opened a separate pull request for the fix, and the held batch never took it. The same goes for any change whose crewmate looked at another pull request first.",
+      "noPicture": "No view changes; the difference is which pull requests appear where the project lives and whether the held batch takes the fix.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

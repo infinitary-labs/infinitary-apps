@@ -946,6 +946,67 @@ describe("the task graph (task-system P2)", () => {
       ]);
     });
 
+    // INF-70: four steps moved on their own into another project stayed
+    // parts of a parent left behind in the first.
+    it("refuses to move a part on its own away from its parent's project, writing nothing, unless the same update clears or replaces its parent", () => {
+      const { db, tasks, work } = setup();
+      seedProject(db, { id: "r2", name: "notes", path: "/fleet/notes", addedAt: 2, key: "NOTE" });
+      work("plan", { repoId: "r1" });
+      work("step", { parentId: "plan" });
+      work("sub", { parentId: "step" });
+      const subtree = () => ["plan", "step", "sub"].map((id) => tasks.get(id));
+      const before = subtree();
+
+      expect(() => tasks.updateFields("step", { project: "NOTE" }, "firstmate")).toThrow(
+        `Refused: NIA-2 is a part of NIA-1, which stays in nimbus-api, and a part lives in its parent's project. Move NIA-1 instead, and its parts go with it, or clear NIA-2's parent in the same update_task (parent "") to move it on its own; NIA-1 then no longer waits for it.`,
+      );
+      expect(subtree()).toEqual(before);
+      expect(tasks.timeline("step").map((event) => event.kind)).toEqual(["created"]);
+      // The refused move took no key in notes.
+      expect(work("there", { repoId: "r2" }).key).toBe("NOTE-1");
+
+      // A parent where it lands, given in the same update, takes it.
+      expect(
+        tasks.updateFields("step", { project: "NOTE", parent: "NOTE-1" }, "firstmate"),
+      ).toEqual(["moved to notes as NOTE-2", "parent NOTE-1"]);
+      expect(tasks.get("step")).toMatchObject({ projectId: "proj-r2", parentId: "there" });
+      expect(tasks.get("sub")).toMatchObject({ key: "NOTE-3", parentId: "step" });
+
+      // Its parent cleared in the same update, it moves on its own.
+      expect(tasks.updateFields("step", { project: "NIA", parent: "" }, "firstmate")).toEqual([
+        "moved to nimbus-api as NIA-4",
+        "parent cleared",
+      ]);
+      expect(tasks.get("step")).toMatchObject({ projectId: "proj-r1", parentId: null });
+      expect(tasks.get("sub")).toMatchObject({ projectId: "proj-r1", parentId: "step" });
+
+      // Naming the parent it already has keeps it apart, so it is refused.
+      work("mine", { parentId: "plan" });
+      expect(() =>
+        tasks.updateFields("mine", { project: "NOTE", parent: "NIA-1" }, "firstmate"),
+      ).toThrow(/^Refused: NIA-6 is a part of NIA-1, which stays in nimbus-api/);
+
+      // A parent that cannot move is not offered; one that closed waits on nothing.
+      seedTask(tasks, {
+        id: "running",
+        title: "running",
+        status: "running",
+        worktreeDir: "/wt",
+        repoId: "r1",
+      });
+      const started = tasks.get("running")?.key;
+      work("busy", { parentId: "running" });
+      expect(() => tasks.updateFields("busy", { project: "NOTE" }, "firstmate")).toThrow(
+        `Refused: NIA-8 is a part of ${started}, which stays in nimbus-api, and a part lives in its parent's project. Clear NIA-8's parent in the same update_task (parent "") to move it on its own; ${started} then no longer waits for it.`,
+      );
+      work("shipped", { repoId: "r1" });
+      tasks.close("shipped", { status: "done", reason: "merged", actor: "captain" });
+      work("late", { parentId: "shipped" });
+      expect(() => tasks.updateFields("late", { project: "NOTE" }, "firstmate")).toThrow(
+        `Refused: NIA-10 is a part of NIA-9, which stays in nimbus-api, and a part lives in its parent's project. Clear NIA-10's parent in the same update_task (parent "") to move it on its own.`,
+      );
+    });
+
     // INF-61's F3: the captain's answer was to refuse, as a plan is refused.
     it("refuses to move a task asked to ship as a pull request into a project whose repository has no remote", () => {
       const db = openInMemoryDatabase();

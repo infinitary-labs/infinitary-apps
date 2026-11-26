@@ -17,6 +17,7 @@ import type { ProjectStore } from "../storage/projectStore";
 import type { TaskEventActor } from "../storage/taskEventStore";
 import type { TaskRecord, TaskStore } from "../storage/taskRecords";
 import type { TaskReferenceKind } from "../storage/taskReferenceStore";
+import { refuseApartFromParent } from "./projectMove";
 import { repositoryName } from "./repositoryMove";
 import { TaskGraphRefusal } from "./taskGraph";
 import { referenceRefusal } from "./taskRelationships";
@@ -134,6 +135,7 @@ export function updateTaskFields(
       changes.push("required action reopened; previous confirmation kept in history");
       record = writer.mustGet(id);
     }
+    const unmoved = record;
     const project =
       patch.project !== undefined
         ? (projects.byKey(patch.project) ?? projects.get(patch.project))
@@ -159,6 +161,9 @@ export function updateTaskFields(
       changes.push(parent ? `parent ${keyOrId(parent)}` : "parent cleared");
       record = writer.mustGet(id);
     }
+    // After the parent edit, so one update may move a part and clear or
+    // replace its parent.
+    if (record.projectId !== unmoved.projectId) refuseApartFromParent(writer, record, unmoved);
     const unstarted =
       record.status === "open" &&
       record.startedAt === null &&

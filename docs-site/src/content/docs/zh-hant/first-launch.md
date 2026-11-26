@@ -1,5 +1,5 @@
 ---
-source: 042bc7f3959ec370
+source: 75bebd4c6bb16a9e
 title: 第一次啟動
 description: 第一次打開 Infinitary 時會看到什麼、如何選擇大副住在哪裡、如何連結訂閱方案，以及如何加入你的第一個專案。
 ---
@@ -167,8 +167,8 @@ Windows PC 和 Arm Linux 電腦只會顯示 **貼上它的連結** 和 **用位�
 
 大副第一次把要求交給船員時，會出現一張標題為 **一位船員已接手** 的卡片。
 
-<img class="picture-dark" src="/pictures/first-launch-crewmate-dark.webp" alt="「一位船員已接手」卡片：大副派出一位船員；「現在」面板寫著船員在工作、不必盯著看；「之後」面板寫著卡片會帶著一個答案或一個選擇回到這裡；還有「知道了」。" width="1070" height="602" />
-<img class="picture-light" src="/pictures/first-launch-crewmate-light.webp" alt="「一位船員已接手」卡片：大副派出一位船員；「現在」面板寫著船員在工作、不必盯著看；「之後」面板寫著卡片會帶著一個答案或一個選擇回到這裡；還有「知道了」。" width="1070" height="602" />
+<img class="picture-dark" src="/pictures/first-launch-crewmate-dark.webp" alt="「一位船員已接手」卡片：大副派出一位船員；「現在」面板寫著船員在工作、不必盯著看；「之後」面板寫著卡片會帶著一個答案或一個選擇回到這裡；還有「知道了」。" width="1163" height="654" />
+<img class="picture-light" src="/pictures/first-launch-crewmate-light.webp" alt="「一位船員已接手」卡片：大副派出一位船員；「現在」面板寫著船員在工作、不必盯著看；「之後」面板寫著卡片會帶著一個答案或一個選擇回到這裡；還有「知道了」。" width="1163" height="654" />
 
 它說明船員會在背景工作，可能需要一些時間，你不必盯著看。
 等船員有了答案，或需要你做選擇時，就會以卡片的形式回來。

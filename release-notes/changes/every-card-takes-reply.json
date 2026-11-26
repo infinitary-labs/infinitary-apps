@@ -11,7 +11,7 @@
         "light": "every-card-takes-reply-light.webp",
         "alt": "The Allow writes on GitHub? card with its reply field above Not now and Only this time"
       },
-      "docsSite": ["cards-and-decisions"],
+      "docsSite": ["cards-and-decisions", "first-launch"],
       "provenance": { "origin": "change" }
     }
   ],

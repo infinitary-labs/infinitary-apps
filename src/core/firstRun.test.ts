@@ -441,9 +441,10 @@ describe("the first crewmate's note", () => {
       id: record.firstCrewmateNoteId,
       author: "firstmate",
       actions: [],
-      replies: false,
       width: "regular",
     });
+    // The captain's choice on INF-7001's review: the note takes a reply the first mate answers.
+    expect(f.cards().snapshot()[0]).not.toHaveProperty("replies");
     // Its record keeps the note in words, and the welcome is settled as put away.
     expect(f.tasks.capture.taskForCard(record.firstCrewmateNoteId as string)).toMatchObject({
       kind: "question",

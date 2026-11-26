@@ -246,7 +246,8 @@ Both are the app's own stage part (`docs/card-authoring.md`, "The app's own stag
 Every run of words is a saved fact (`saidMark`) and the title's fact rides `cardWordsMark` (docs/i18n.md, "Saved facts"), so the window and the phone word the note in their own language when they draw it.
 Its record keeps the note's sentences in English as its answer, without the panels.
 
-It is a first-mate note like the welcome: committed with its completed answer through `CardService.addRecordedFirstmateNote`, no reply row, the regular width, and one button, Got it, on Command-1.
+It is a first-mate note like the welcome: committed with its completed answer through `CardService.addRecordedFirstmateNote`, the regular width, and one button, Got it, on Command-1.
+Unlike the welcome it takes a reply, which the first mate answers (docs/card-threads.md, "Who answers a card").
 It promises no system notification, and follows the standing notification rule like any note.
 
 - **When.**

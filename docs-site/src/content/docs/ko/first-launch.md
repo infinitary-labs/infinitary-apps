@@ -1,5 +1,5 @@
 ---
-source: 042bc7f3959ec370
+source: 75bebd4c6bb16a9e
 title: 처음 실행하기
 description: Infinitary를 처음 열면 무엇이 보이는지, 일등항해사가 살 곳을 고르는 방법, 구독을 연결하는 방법, 그리고 첫 프로젝트를 추가하는 방법이에요.
 ---
@@ -167,8 +167,8 @@ Windows PC와 Arm Linux 컴퓨터에는 **링크 붙여넣기**와 **주소로 �
 
 일등항해사가 처음으로 요청을 선원에게 넘기면 **선원이 맡았어요**라는 카드가 나타나요.
 
-<img class="picture-dark" src="/pictures/first-launch-crewmate-dark.webp" alt="선원이 맡았어요 카드: 선원을 내보내는 일등항해사, 선원이 일하는 중이고 지켜볼 필요 없다는 지금 패널, 답변이나 선택지를 담은 카드가 여기로 돌아온다는 나중에 패널, 그리고 확인." width="1070" height="602" />
-<img class="picture-light" src="/pictures/first-launch-crewmate-light.webp" alt="선원이 맡았어요 카드: 선원을 내보내는 일등항해사, 선원이 일하는 중이고 지켜볼 필요 없다는 지금 패널, 답변이나 선택지를 담은 카드가 여기로 돌아온다는 나중에 패널, 그리고 확인." width="1070" height="602" />
+<img class="picture-dark" src="/pictures/first-launch-crewmate-dark.webp" alt="선원이 맡았어요 카드: 선원을 내보내는 일등항해사, 선원이 일하는 중이고 지켜볼 필요 없다는 지금 패널, 답변이나 선택지를 담은 카드가 여기로 돌아온다는 나중에 패널, 그리고 확인." width="1163" height="654" />
+<img class="picture-light" src="/pictures/first-launch-crewmate-light.webp" alt="선원이 맡았어요 카드: 선원을 내보내는 일등항해사, 선원이 일하는 중이고 지켜볼 필요 없다는 지금 패널, 답변이나 선택지를 담은 카드가 여기로 돌아온다는 나중에 패널, 그리고 확인." width="1163" height="654" />
 
 카드는 선원이 뒤에서 일해서 시간이 좀 걸릴 수 있고, 지켜볼 필요가 없다고 알려 줘요.
 선원에게 답이 나오거나 선장님이 골라야 할 것이 생기면 카드로 돌아와요.

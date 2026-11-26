@@ -1,5 +1,5 @@
 ---
-source: 042bc7f3959ec370
+source: 75bebd4c6bb16a9e
 title: Primer inicio
 description: Lo que Infinitary muestra la primera vez que lo abres, cómo elegir dónde vive tu primer oficial, cómo conectar una suscripción y cómo agregar tu primer proyecto.
 ---
@@ -167,8 +167,8 @@ Presiona **Entendido** para guardarla cuando quieras.
 
 La primera vez que tu primer oficial le pasa una petición a un tripulante, aparece una tarjeta titulada **Un tripulante se encarga**.
 
-<img class="picture-dark" src="/pictures/first-launch-crewmate-dark.webp" alt="La tarjeta Un tripulante se encarga: el primer oficial enviando a un tripulante, un recuadro Ahora que dice que un tripulante trabaja y que no hace falta vigilarlo, un recuadro Después que dice que vuelve aquí una tarjeta con una respuesta o una elección, y Entendido." width="1070" height="602" />
-<img class="picture-light" src="/pictures/first-launch-crewmate-light.webp" alt="La tarjeta Un tripulante se encarga: el primer oficial enviando a un tripulante, un recuadro Ahora que dice que un tripulante trabaja y que no hace falta vigilarlo, un recuadro Después que dice que vuelve aquí una tarjeta con una respuesta o una elección, y Entendido." width="1070" height="602" />
+<img class="picture-dark" src="/pictures/first-launch-crewmate-dark.webp" alt="La tarjeta Un tripulante se encarga: el primer oficial enviando a un tripulante, un recuadro Ahora que dice que un tripulante trabaja y que no hace falta vigilarlo, un recuadro Después que dice que vuelve aquí una tarjeta con una respuesta o una elección, y Entendido." width="1163" height="654" />
+<img class="picture-light" src="/pictures/first-launch-crewmate-light.webp" alt="La tarjeta Un tripulante se encarga: el primer oficial enviando a un tripulante, un recuadro Ahora que dice que un tripulante trabaja y que no hace falta vigilarlo, un recuadro Después que dice que vuelve aquí una tarjeta con una respuesta o una elección, y Entendido." width="1163" height="654" />
 
 Dice que el tripulante trabaja en segundo plano, lo que puede llevar un rato, y que no hace falta que lo vigiles.
 Cuando el tripulante tiene una respuesta, o necesita que elijas, vuelve como una tarjeta.

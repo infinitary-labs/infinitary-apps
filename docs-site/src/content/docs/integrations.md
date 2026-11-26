@@ -128,7 +128,7 @@ The form says to finish signing in there and names the page's address, with **Op
 Once you finish in your browser, the new row opens on the server's actions.
 If you cancel, Infinitary keeps no row and no key.
 
-**Notion** and **Linear**, beside **MCP server**, connect those two services with one press.
+**Notion**, **Linear** and **Atlassian**, beside **MCP server**, connect those three services with one press.
 
 Infinitary keeps the sign-in in [Secrets](/secrets/) and renews it by itself.
 When the service ends it, the row says **needs a sign-in again**, with **Sign in again** on the row and in its menu.

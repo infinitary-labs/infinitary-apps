@@ -4,6 +4,7 @@ import { request as httpsRequest } from "node:https";
 import { isIP } from "node:net";
 import { rootCertificates } from "node:tls";
 import { type AssistantMessage, isContextOverflow } from "@earendil-works/pi-ai";
+import { CUSTOM_API_REASON_MAX } from "@shared/customApi";
 import {
   approvedCustomApiCertificates,
   type CustomCertificateApproval,
@@ -337,9 +338,10 @@ export function createCustomApiTransport(
               const category = statusCategory(status);
               // Listing, redirects and auth failures are classified without
               // reading. A generation failure is read only far enough to tell
-              // an overflow, which Pi compacts on, from any other server error.
+              // an overflow, which Pi compacts on, from any other server error,
+              // and to keep a short excerpt of a refusal's reason.
               if (category === "server" && operation !== "models") {
-                classifyServerError(reply, status, fail, heard);
+                classifyServerError(reply, status, fail, heard, (text) => !echoes(text));
                 return;
               }
               fail(new CustomApiError(category, status));
@@ -464,27 +466,32 @@ export function createCustomApiTransport(
     }
   }
 
+  /** Whether any string in `value` carries a key, token or secret header value, raw or JSON-escaped. */
+  function echoes(value: unknown): boolean {
+    const forms = [...(key ? [key] : []), ...(token?.secrets() ?? []), ...secrets].flatMap(
+      (secret) => {
+        const escaped = JSON.stringify(secret).slice(1, -1);
+        return [secret, escaped, JSON.stringify(escaped).slice(1, -1)];
+      },
+    );
+    if (!forms.length) return false;
+    const pending: unknown[] = [value];
+    while (pending.length) {
+      const next = pending.pop();
+      if (typeof next === "string" && forms.some((form) => next.includes(form))) return true;
+      if (Array.isArray(next)) pending.push(...next);
+      else if (next && typeof next === "object") {
+        for (const [name, value] of Object.entries(next)) pending.push(name, value);
+      }
+    }
+    return false;
+  }
+
   return {
     request,
     assertSafeOutput: (value) => {
       if (closed) throw new CustomApiError("closed");
-      const echoes = [...(key ? [key] : []), ...(token?.secrets() ?? []), ...secrets].flatMap(
-        (secret) => {
-          const escaped = JSON.stringify(secret).slice(1, -1);
-          return [secret, escaped, JSON.stringify(escaped).slice(1, -1)];
-        },
-      );
-      if (!echoes.length) return;
-      const pending: unknown[] = [value];
-      while (pending.length) {
-        const next = pending.pop();
-        if (typeof next === "string" && echoes.some((echo) => next.includes(echo)))
-          throw new CustomApiError("incompatible");
-        if (Array.isArray(next)) pending.push(...next);
-        else if (next && typeof next === "object") {
-          for (const [name, value] of Object.entries(next)) pending.push(name, value);
-        }
-      }
+      if (echoes(value)) throw new CustomApiError("incompatible");
     },
     close() {
       closed = true;
@@ -516,13 +523,16 @@ const certificateCodes = new Set([
 
 /**
  * Read at most 16 KiB of bytes from a generation error, test the decoded text
- * with Pi's overflow check, and discard it. Only the yes or no leaves the transport.
+ * with Pi's overflow check, and discard it. Only the yes or no leaves the
+ * transport, and for a refusal a short excerpt of its reason, kept only when
+ * `safe` finds no echoed secret in the excerpt or the whole reason it was cut from.
  */
 function classifyServerError(
   reply: IncomingMessage,
   status: number,
   fail: (error: CustomApiError) => void,
   heard: () => void,
+  safe: (text: string) => boolean,
 ): void {
   const chunks: Buffer[] = [];
   let bytes = 0;
@@ -536,7 +546,16 @@ function classifyServerError(
       stopReason: "error",
       errorMessage: text,
     } as AssistantMessage);
-    fail(new CustomApiError(overflow ? "context-limit" : "server", status));
+    if (overflow) fail(new CustomApiError("context-limit", status));
+    // Only a 4xx is a refusal whose reason may be shown; a 5xx keeps no text.
+    else if (status < 400 || status >= 500) fail(new CustomApiError("server", status));
+    else {
+      const said = serverSaid(text, reply.headers["content-type"]);
+      const cut = said === undefined ? undefined : excerpt(said);
+      const reason =
+        said !== undefined && cut !== undefined && safe(said) && safe(cut) ? cut : undefined;
+      fail(new CustomApiError("server", status, undefined, undefined, reason));
+    }
     reply.destroy();
   };
   reply.on("data", (chunk: Buffer) => {
@@ -561,4 +580,53 @@ function statusCategory(status: number): CustomApiFailure {
   if (status === 404) return "not-found";
   if (status === 429) return "rate-limit";
   return "server";
+}
+
+/**
+ * The reason a refusal's body states: a JSON error's message, as OpenAI,
+ * Anthropic and most compatible servers write it, or a plain-text body.
+ * Anything else, such as an HTML page or JSON cut off at the read limit, says nothing.
+ */
+function serverSaid(text: string, contentType: string | undefined): string | undefined {
+  const type = contentType?.split(";", 1)[0]?.trim().toLowerCase();
+  if (type === "text/plain") return text;
+  if (type !== "application/json" && !type?.endsWith("+json")) return undefined;
+  let body: unknown;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    return undefined;
+  }
+  // Some servers answer with a list holding one error.
+  if (Array.isArray(body)) body = body[0];
+  if (!body || typeof body !== "object") return undefined;
+  const fields = body as Record<string, unknown>;
+  const error = fields.error;
+  if (typeof error === "string") return error;
+  if (error && typeof error === "object") {
+    const message = (error as Record<string, unknown>).message;
+    if (typeof message === "string") return message;
+  }
+  for (const name of ["message", "detail", "error_description"]) {
+    const value = fields[name];
+    if (typeof value === "string") return value;
+  }
+  return undefined;
+}
+
+/**
+ * One line for the form: control, format and line-separator characters (direction
+ * overrides among them) become spaces, and a reason over the limit is cut and marked.
+ */
+function excerpt(said: string): string | undefined {
+  const line = said
+    .replace(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!line) return undefined;
+  if (line.length <= CUSTOM_API_REASON_MAX) return line;
+  let cut = line.slice(0, CUSTOM_API_REASON_MAX);
+  // Never end on half of a surrogate pair.
+  if (/[\uD800-\uDBFF]$/.test(cut)) cut = cut.slice(0, -1);
+  return `${cut.trimEnd()}…`;
 }

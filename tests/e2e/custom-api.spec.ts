@@ -10,6 +10,7 @@ import {
 } from "../../src/renderer/src/accounts/customApiFailures";
 import * as m from "../../src/shared/i18n/messages.generated";
 import { customApiCaFixture } from "../helpers/customApiCaFixture";
+import { customChatCall, customChatText, sendCustomStream } from "../helpers/customApiDialect";
 import { scratchDir } from "../helpers/scratchDirs";
 import {
   customApiBlock,
@@ -162,6 +163,81 @@ test("first setup reads a named loopback site's models, takes its /v1 address in
     });
   } finally {
     writeFileSync(test.info().outputPath("local-name-wire.json"), JSON.stringify(wire, null, 2));
+    server.closeAllConnections();
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }
+});
+
+// A provider that refuses one model's check with HTTP 400 and its own reason,
+// as a provider asking for an account setting does (INF-6842's reproduction).
+test("a provider's 400 refusal of a model's check is told beside Save with its reason, and the summary marks no field", async () => {
+  const passes = "model-passes";
+  const refused = "model-needs-global";
+  const reason = `Model ${refused} is hosted outside Europe and the United States. Turn on the Global region setting in your console to use it.`;
+  const server = createServer((req, res) => {
+    let raw = "";
+    req.on("data", (chunk) => {
+      raw += chunk;
+    });
+    req.on("end", () => {
+      if (req.method === "GET") {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(
+          JSON.stringify({
+            data: [passes, refused].map((id) => ({
+              id,
+              context_length: 200000,
+              max_completion_tokens: 32768,
+            })),
+          }),
+        );
+        return;
+      }
+      const body = JSON.parse(raw) as { model?: string };
+      if (body.model === refused) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(
+          JSON.stringify({
+            type: "error",
+            error: { type: "invalid_request_error", message: reason },
+          }),
+        );
+        return;
+      }
+      if (raw.includes("data:image/png;base64,")) sendCustomStream(res, customChatText("unknown"));
+      else if (raw.includes('"role":"tool"'))
+        sendCustomStream(res, customChatText("FIRSTMATE_CUSTOM_API_OK"));
+      else
+        sendCustomStream(
+          res,
+          customChatCall("firstmate_echo", '{"text":"FIRSTMATE_CUSTOM_API_OK"}'),
+        );
+    });
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  if (!address || typeof address === "string") throw new Error("Missing server address");
+  try {
+    launched = await launchApp({ modelsJson: () => JSON.stringify({ providers: {} }) });
+    const page = launched.page;
+    await page.getByRole("button", { name: "Settings", exact: true }).click();
+    await page.getByRole("tab", { name: "Intelligence" }).click();
+    await page.locator('[data-connect-chips="foot"] [data-connect-custom-api]').click();
+    const f = customApiForm(page);
+    await fillCustomApi(page, {
+      name: "Refusing provider",
+      address: `http://127.0.0.1:${address.port}/v1`,
+      network: "local",
+      key: "sk-synthetic-refusal-key-0000000000",
+      protocol: "openai-completions",
+      pick: [passes, refused],
+    });
+    expect(await saveCustomApi(page)).toBe("failed");
+    await expect(f.error("save")).toContainText(reason);
+    await expect(f.error("save")).not.toContainText(m.accountsCustomApiServer());
+    await expect(f.form.locator("[data-custom-error]")).toHaveCount(1);
+    await expect(f.summary).not.toContainText(m.accountsCustomApiNotSavedField());
+  } finally {
     server.closeAllConnections();
     await new Promise<void>((resolve) => server.close(() => resolve()));
   }

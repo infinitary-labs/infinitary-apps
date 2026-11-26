@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "custom-api-provider-refusal",
+      "kind": "fix",
+      "title": "A custom API that refuses a model's check says why",
+      "body": "When a server refuses a model's test on Save, such as asking for a setting in its console, the form now says the server refused and shows a short excerpt of its own reason, instead of a server error and advice to try again. The line under it no longer asks you to fix a marked field when none is marked.",
+      "area": "subscriptions",
+      "picture": {
+        "dark": "custom-api-provider-refusal-dark.webp",
+        "light": "custom-api-provider-refusal-light.webp",
+        "alt": "The Add a custom API form after Save: above Save, the server refused the request and its reason quoted, then Not saved and Save paused without checking"
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

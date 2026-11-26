@@ -48,6 +48,8 @@ export function customApiForm(page: Page) {
     fix: form.locator('[data-custom-error="address"]').getByRole("button", { name: /^Use / }),
     addByHand: form.getByRole("button", { name: "+ Add by hand", exact: true }),
     save: form.getByRole("button", { name: "Save", exact: true }),
+    /** The line under Save saying the connection was not saved, and what to fix. */
+    summary: form.locator("[data-custom-summary]"),
     savePaused: form.getByRole("button", { name: "Save paused without checking", exact: true }),
     /** First setup's question once a connection is saved and ready. */
     choose: page.locator("[data-custom-choose]"),
@@ -116,7 +118,7 @@ export async function saveCustomApi(page: Page): Promise<"saved" | "failed"> {
   await f.save.click();
   const outcome = async () => {
     if ((await f.choose.count()) > 0 || (await f.form.count()) === 0) return "saved";
-    if ((await f.form.locator("[data-custom-summary]").count()) > 0) return "failed";
+    if ((await f.summary.count()) > 0) return "failed";
     return "pending";
   };
   await expect.poll(outcome, { timeout: 60_000 }).not.toBe("pending");

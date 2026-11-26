@@ -167,6 +167,7 @@
 "accountsCustomApiNoModels" = "No models yet. Fetch them from the server, or add one by hand.";
 "accountsCustomApiNotOffered" = "This server doesn't offer %1$@.";
 "accountsCustomApiNotReached" = "This server could not be reached.";
+"accountsCustomApiNotSaved" = "Not saved.";
 "accountsCustomApiNotSavedField" = "Not saved. Fix the marked field and press Save again.";
 "accountsCustomApiNotSavedRow" = "Not saved. Fix the marked row and press Save again.";
 "accountsCustomApiNothingAnswered" = "Nothing answered at %2$@/%1$@.";
@@ -199,6 +200,8 @@
 "accountsCustomApiReasoningOff" = "Not set (model's default)";
 "accountsCustomApiRedirect" = "The server sent the request somewhere else. Enter the address it redirects to.";
 "accountsCustomApiRefreshAfter" = "Refresh after (seconds)";
+"accountsCustomApiRefused" = "The server refused the request. Check this connection's settings with its provider.";
+"accountsCustomApiRefusedSaid" = "The server refused the request. It said: “%1$@”";
 "accountsCustomApiRemoveCertificate" = "Remove certificate";
 "accountsCustomApiRemoveHeader" = "Remove header";
 "accountsCustomApiRemoveModel" = "Remove %1$@";

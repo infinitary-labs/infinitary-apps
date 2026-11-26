@@ -88,7 +88,9 @@ This is a transport lifetime, not the account Pause policy.
   Fixed keys have no automatic retries; token commands have the one 401 renewal described below.
 - Redirects, 401 key rejection, 403 access refusal, 404 path/model and 429 rate limit are translated before their bodies or headers are read.
   A generation request's other server failure is read only far enough to tell whether it is a context overflow, at most 16 KiB, and the text is then discarded.
-  Only that yes or no leaves the transport: an overflow becomes the context refusal a rolling session already compacts and retries on, and any other wording stays a server failure.
+  An overflow becomes the context refusal a rolling session already compacts and retries on, and any other wording stays a server failure.
+  A 4xx among them is a refusal, and it also keeps the server's own reason, read from a JSON error's message or a plain-text body: one line, without control or direction marks, cut to `CUSTOM_API_REASON_MAX` characters, and dropped whole when it or the reason it was cut from carries the key, a token or a secret header value, raw or JSON-escaped (the transport's echo guard).
+  A checked model carries the answer's HTTP `status` and that `reason` beside its `category`, never in the error's message (`custom-check-refusal-reason.md`).
   A model-list error is not read.
   Raw network/TLS errors and abort reasons are also discarded, without a raw `cause`.
   Successful replies expose only a validated JSON/SSE content type, not arbitrary headers, links or request IDs.
@@ -114,7 +116,8 @@ This is a transport lifetime, not the account Pause policy.
    It checks the form, sending nothing; it reaches the server, reading the network, preparing a draft and reading the model list; it tests each model one at a time, with progress on its line; and it saves checked and returns to the list, where first setup then asks which model the first mate answers with.
    An edit that changes nothing but model names and prices keeps the saved checks: Save reads the model list again and sends no check.
    Any other Save, one with no change included, tests every model again, so Save is how a check is retried.
-   A failure keeps the form open and saves nothing, with a plain sentence beside the field at fault: the address (unreachable, redirected, refused, untrusted certificate, or nothing at the path, with a one-press `/v1` when the path has no version), the key (refused, needed, access refused), a model's line (sizes unknown, no tool call, too slow, not offered) or above Save (rate limit, server error).
+   A failure keeps the form open and saves nothing, with a plain sentence beside the field at fault: the address (unreachable, redirected, refused, untrusted certificate, or nothing at the path, with a one-press `/v1` when the path has no version), the key (refused, needed, access refused), a model's line (sizes unknown, no tool call, too slow, not offered) or above Save (rate limit, server error, or a refusal with the server's own reason and no advice to try again).
+   The line under it asks to fix the marked field only when a field is marked, the marked row when only a model's line is, and otherwise says only that nothing was saved.
    The owner returns each failure as a closed category (`customApiFailureSchema`, and `category` on a checked model), never text the form parses; `customApiFailures.ts` places it and words it, and no raw state word reaches the screen.
    A 404 is the model's when the model list answered, and the address's when it did not.
    A server with no model list still saves: its models' checks tell.

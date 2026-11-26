@@ -167,6 +167,7 @@
 "accountsCustomApiNoModels" = "モデルはまだありません。サーバーから取得するか、手動で追加してください。";
 "accountsCustomApiNotOffered" = "このサーバーは %1$@ を提供していません。";
 "accountsCustomApiNotReached" = "このサーバーに接続できませんでした。";
+"accountsCustomApiNotSaved" = "保存されていません。";
 "accountsCustomApiNotSavedField" = "保存されていません。印の付いた項目を直して、もう一度「保存」を押してください。";
 "accountsCustomApiNotSavedRow" = "保存されていません。印の付いた行を直して、もう一度「保存」を押してください。";
 "accountsCustomApiNothingAnswered" = "%2$@/%1$@ から応答がありませんでした。";
@@ -199,6 +200,8 @@
 "accountsCustomApiReasoningOff" = "未設定（モデルの既定）";
 "accountsCustomApiRedirect" = "サーバーがリクエストを別の場所に転送しました。転送先のアドレスを入力してください。";
 "accountsCustomApiRefreshAfter" = "更新間隔（秒）";
+"accountsCustomApiRefused" = "サーバーがリクエストを拒否しました。この接続の設定をプロバイダー側で確認してください。";
+"accountsCustomApiRefusedSaid" = "サーバーがリクエストを拒否しました。理由:「%1$@」";
 "accountsCustomApiRemoveCertificate" = "証明書を削除";
 "accountsCustomApiRemoveHeader" = "ヘッダーを削除";
 "accountsCustomApiRemoveModel" = "%1$@ を削除";

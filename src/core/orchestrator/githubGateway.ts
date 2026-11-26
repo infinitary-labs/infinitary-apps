@@ -861,7 +861,7 @@ export class GithubGatewayService {
       return "this task only answers, so every write it makes but a run start or rerun on its own project asks the captain";
     }
     // An outside action's reply or close is the captain's to send (docs/task-graph.md,
-    // "An outside action that waits on work"), whatever constraint the task was filed with.
+    // "A side-effect task"), whatever constraint the task was filed with.
     if (shape?.side_effect && !startsRun(target.forge, route)) {
       // i18n-exempt: served to the crewmate as a tool answer or write-answered outcome
       return "this task does an outside action, so every write it makes but a run start or rerun on its own project asks the captain";

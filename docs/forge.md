@@ -681,7 +681,7 @@ Outside-project and account writes retain the same consent boundary.
 
 ### A write that asks
 
-FI3-1571 piece 4, the captain's answers: the crewmate asks, and the app adds the exact call and the button; a task that only answers asks for every write it makes but a run start or rerun on its own project (INF-729 way D), and so does a side-effect task, whose reply or close on an outside item is the captain's to send (`docs/task-graph.md`, "An outside action that waits on work"); GitLab follows the same rule.
+FI3-1571 piece 4, the captain's answers: the crewmate asks, and the app adds the exact call and the button; a task that only answers asks for every write it makes but a run start or rerun on its own project (INF-729 way D), and so does a side-effect task, whose reply or close on an outside item is the captain's to send (`docs/task-graph.md`, "A side-effect task"); GitLab follows the same rule.
 `github_write` keeps, instead of sending, a write outside the task's own project, any other write of a task that only answers - cancelling a run included - and any write through the github.com sign-in.
 The merge guard runs first: a merge or default-branch move on the task's own project is refused with its pointer to the merge card, asked or not, and so is deleting a GitLab project or a GraphQL call.
 The kept write is a `WriteAsk` on the task's delivery facts - its host, whose sign-in sends it (`project` or `account`), the method, the policy's path, the JSON body, and for a release file the path of that file in the working copy - kept through `TaskService` (`keepWriteAsk`), newest first, at most 8 (`WRITE_ASK_CAP`).

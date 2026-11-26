@@ -539,7 +539,7 @@ export async function fixture(
     status: "idle",
     shape: { kind: "research", deliverable: "answer", unsafe_data_reader: true },
   });
-  // A side-effect task filed without the read-only constraint (docs/task-graph.md, "An outside action that waits on work").
+  // A side-effect task filed without the read-only constraint (docs/task-graph.md, "A side-effect task").
   seedTask(tasks, {
     id: "task-side-effect",
     title: "Tell the issue how the fix ended",

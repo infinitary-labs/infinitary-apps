@@ -325,13 +325,25 @@ A bring waits the request lifetime from its card, and again after a read.
 
 When the bring ends, its asker hears once through its inbox (`secrets-bring-ended`): each secret's name, place and outcome (kept with its reference and version, skipped, not-found, empty, too-large, not-text or changed), or that it was not brought, failed with its exit code, changed, expired or withdrawn; never a value.
 The journal records each run or read of a bring's source, Read it included, as a use whose `requested` line names the tool (`brought`) and the references it would keep, and Settings → Secrets → Use history shows it as brought from that tool.
-Bring is offered only on the computer that keeps Secrets: a task on a computer that runs work gets words telling it to name the tool and secrets in its report.
+
+#### A tool on a computer that runs work
+
+A crewmate on a computer that runs work brings from a tool there the same way (INF-4718's plan, piece 4): the source is bound there, by that computer's command (`SecretBringsThere`, `src/core/helper/secretBrings.ts`), and the card goes up on the home.
+The home must take such brings (`takesSecretBrings`: the computer takes uses and lists `secret-brings-elsewhere`), and the task's spec then carries `secretBrings`; every step rides one work request, `inf:work:secret-bring`, for the task and computer the work route names, never the request's words (`SecretBrings.elsewhere`).
+`bring` sends the bound source, names, places and the reason, and the home's card adds the computer's name ("On computer") above the command, and the journal names it on the bring's use.
+That computer then waits with `next`, which answers once the captain presses: the source exactly as the card showed it, how to read it and which names to read, the ticked rows' names for Bring into Secrets or every name for Read it.
+It checks every digest again, runs or reads the source as a bring here does, reads only those names, fills every buffer with zeros, and sends them once with `deliver`, each value in base64, or how the source ended (`failed` with its exit code or signal, `changed`, too large or invalid JSON).
+The home judges each value again (empty, larger than 1 MiB or not text), seals the ticked ones and tells the asker as it does for a bring here; a delivery for another run, computer or a bring that ended keeps nothing.
+The values cross only the authenticated work route, as base64 strings that JavaScript cannot fill with zeros, and the home answers `inf:work:secret-bring` outside the call ledger, so no delivery is kept there.
+A press waits at most the request lifetime for the delivery and then ends the bring `failed` with words saying the computer did not send it; once the home hears that the task's conversation there closed or restarted, each of its waiting brings ends `withdrawn`.
+`uses` is refused there before anything is asked, since kept keys are handed only to a program on the home.
+A computer whose app or home does not list the change keeps its `bring` answering `unavailable` with words telling it to name the tool and secrets in its report.
 Another Mac's window lists the contract change `secrets-bring` to draw the rows and send Bring; a view that does not, the phone among them, gets the card without Bring into Secrets, and with a line, hidden in the card's body until the host leaves the button out for that view, saying to pick in Infinitary's window on the first mate's computer.
 
 #### How a move starts
 
 A move starts from the captain's words to the first mate, or from Settings → Secrets' Move from another tool, beside Add secret, and the command of the same name (`secrets.move`), which go home and start the ask in the message box for the captain to name the tool (`startSecretsMove`, `src/renderer/src/settings/secretsMove.ts`; INF-4718's plan, piece 2).
-The drafted ask asks for one crewmate on the first mate's own computer, so the captain's words place the move where Secrets lives and a bring is offered.
+The drafted ask asks for one crewmate on the first mate's own computer; a captain whose tool is on a computer that runs work names that computer in their words instead, and a bring is offered there too ("A tool on a computer that runs work").
 The first mate's `ask_secret` description says, in one sentence, that secrets already in another tool are never asked for: a crewmate moves them with the `bring-secrets` skill.
 That skill is the built-in runbook Moving secrets in (`resources/runbooks/bring-secrets/`), which holds the skill and nothing else, so no session is served any of its guidance: every crewmate's skill list carries its name and one-sentence description, and a crewmate opens it only when its task is a move.
 The skill holds the rules - never run a command that prints a value, never open a secrets file, names only, one bring per source, the source left untouched - and each tool's recipe is its own file beside it, read only for the tool being moved: Automic Vault (`av list --json` for names, then one `av inject +NAME ... -- /usr/bin/env -0` read as `env0` for the value used everywhere and one per project folder with the project's name as the place), a `.env` file (read as `lines`, its names listed on the card first) and the macOS Keychain (`security find-generic-password ... -w` read as a `value`).

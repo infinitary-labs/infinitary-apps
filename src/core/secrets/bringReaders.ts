@@ -37,7 +37,7 @@ export function isText(bytes: Buffer): boolean {
 }
 
 /** A copy of the value, or why it cannot be kept. */
-function judged(bytes: Buffer): ReadValue {
+export function judged(bytes: Buffer): ReadValue {
   if (bytes.length === 0) return "empty";
   if (bytes.length > BRING_VALUE_MAX_BYTES) return "too-large";
   if (!isText(bytes)) return "not-text";

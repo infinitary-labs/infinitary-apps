@@ -8,19 +8,13 @@ import {
   type SecretBringInput,
   type SecretBringOffer,
 } from "@shared/secretBring";
+import type { PlacedSecretBringAnswer, PlacedSecretBringInput } from "@shared/workSecrets";
 import { z } from "zod";
 import { bringCardBody, bringCardId, bringCardTitle } from "./bringCard";
-import { readJson } from "./bringJson";
 import type { SourceOutput } from "./bringOutput";
-import {
-  type BringReads,
-  type ReadValue,
-  readEnv0,
-  readLines,
-  readValue,
-  zeroFill,
-} from "./bringReaders";
-import { type BoundSource, type BringSourceInput, bindSource, readSource } from "./bringSource";
+import { type BringRead, readBrought } from "./bringRead";
+import { type BringReads, judged, type ReadValue, zeroFill } from "./bringReaders";
+import { type BoundSource, type BringSourceInput, bindSource } from "./bringSource";
 import { type PreparedBringUnlock, prepareBringUnlock, validBringUses } from "./bringUnlock";
 import { SECRET_BRING_WORDS } from "./commandWords";
 import { canonical, sha256 } from "./custody";
@@ -217,6 +211,12 @@ const bringSchema = z.strictObject({
   ]),
   /** Null until a read of `lines` with no named secrets lists what the source holds. */
   rows: z.array(rowSchema).nullable(),
+  /**
+   * The computer that runs work the source is on, for a bring asked there
+   * (docs/secrets.md, "Bringing secrets from another tool"): it runs or
+   * reads the source on the press and sends what it read once.
+   */
+  computer: z.strictObject({ id: z.string(), label: z.string() }).optional(),
 });
 type BringRow = z.infer<typeof rowSchema>;
 export type WaitingBring = z.infer<typeof bringSchema>;
@@ -299,11 +299,29 @@ export type SecretBringsOptions = {
 
 type Offer = { key: string; kind: "bring" | "read" | "dont" };
 
+/** A computer that runs work, by its id and the name the person knows it by. */
+export type BringComputer = { id: string; label: string };
+
+/**
+ * A press on a bring whose source is on a computer that runs work: what that
+ * computer is to run and read, until it delivers once or the bring ends.
+ */
+type RunThere = {
+  run: string;
+  names: string[] | null;
+  delivered: boolean;
+  /** False when the press already ended, so the caller still owns what it read. */
+  settle: (read: BringRead | { ended: SecretBringEnded }) => boolean;
+};
+
 /** The command a task's shell reaches for brings (`infinitary-secrets-axi bring`). */
 export type SecretBringCommand = {
   bring: (input: SecretBringRequest, cwd?: string) => Promise<SecretBringStarted>;
-  bringStatus: (id: string) => SecretBringStatus | undefined;
-  cancelBring: (id: string) => boolean;
+  /** Answered at once here, or asked of the home from a computer that runs work. */
+  bringStatus: (
+    id: string,
+  ) => SecretBringStatus | undefined | Promise<SecretBringStatus | undefined>;
+  cancelBring: (id: string) => boolean | Promise<boolean>;
 };
 
 /**
@@ -323,6 +341,10 @@ export class SecretBrings {
   private readonly timers = new Map<string, ReturnType<typeof setTimeout>>();
   /** Brings whose press is running: a second press does nothing. */
   private readonly running = new Set<string>();
+  /** Presses waiting on the computer that runs work each bring's source is on. */
+  private readonly there = new Map<string, RunThere>();
+  /** That computer's `next` calls waiting for a press, by bring. */
+  private readonly waiters = new Map<string, Set<() => void>>();
   private readonly now: () => number;
   private readonly lifetime: number;
 
@@ -340,19 +362,197 @@ export class SecretBrings {
   commandFor(task: string): SecretBringCommand {
     return {
       bring: (input, cwd) => this.start(task, input, cwd),
-      bringStatus: (id) => {
-        const key = SecretBrings.key(task, id);
-        if (this.book.get(key)) return { bring: id, state: "waiting" };
-        return this.ended.get(key);
-      },
-      cancelBring: (id) => {
-        const key = SecretBrings.key(task, id);
-        // A press already running cannot be called back: its outcome reaches the inbox.
-        if (!this.book.get(key) || this.running.has(key)) return false;
-        this.end(key, { bring: id, state: "withdrawn", why: SECRET_BRING_WORDS.cancelled }, false);
-        return true;
+      bringStatus: (id) => this.statusOf(task, id),
+      cancelBring: (id) => this.cancel(task, id),
+    };
+  }
+
+  private statusOf(task: string, id: string): SecretBringStatus | undefined {
+    const key = SecretBrings.key(task, id);
+    if (this.book.get(key)) return { bring: id, state: "waiting" };
+    return this.ended.get(key);
+  }
+
+  private cancel(task: string, id: string): boolean {
+    const key = SecretBrings.key(task, id);
+    // A press already running cannot be called back: its outcome reaches the inbox.
+    if (!this.book.get(key) || this.running.has(key)) return false;
+    this.end(key, { bring: id, state: "withdrawn", why: SECRET_BRING_WORDS.cancelled }, false);
+    return true;
+  }
+
+  /**
+   * A task's bring from a computer that runs work (`inf:work:secret-bring`;
+   * docs/secrets.md, "Bringing secrets from another tool"). The task and
+   * computer are the work route's own, never the request's words. The
+   * source was bound there; the card goes up here and names that computer,
+   * and on the press that computer runs or reads it once and delivers only
+   * the names asked for, once.
+   */
+  async elsewhere(
+    task: string,
+    computer: BringComputer,
+    input: PlacedSecretBringInput,
+  ): Promise<PlacedSecretBringAnswer> {
+    if (input.op === "status") return { status: this.statusOf(task, input.id) ?? null };
+    if (input.op === "cancel") return { withdrawn: this.cancel(task, input.id) };
+    const key = SecretBrings.key(task, input.id);
+    if (input.op === "next") return this.next(key, computer);
+    if (input.op === "deliver") return this.deliver(key, computer, input);
+    const source = boundFrom(input.source);
+    const request: SecretBringRequest = {
+      id: input.id,
+      reason: input.reason,
+      from: {
+        ...structuredClone(input.from),
+        source:
+          source.kind === "run"
+            ? { run: [...source.argv], folder: source.folder }
+            : { file: source.file.path },
       },
     };
+    return { bring: await this.start(task, request, undefined, { computer, source }) };
+  }
+
+  /**
+   * That computer's wait for the press: what to run and read once the
+   * captain pressed, `wait` to ask again after a lifetime with no press, and
+   * `over` once the bring ended or is not that computer's.
+   */
+  private async next(key: string, computer: BringComputer): Promise<PlacedSecretBringAnswer> {
+    for (;;) {
+      const bring = this.book.get(key);
+      if (!bring || bring.computer?.id !== computer.id) return { over: true };
+      const pending = this.there.get(key);
+      if (pending && !pending.delivered)
+        return {
+          run: {
+            run: pending.run,
+            source: bring.source,
+            reads: bring.reads,
+            ...(bring.trim ? { trim: bring.trim } : {}),
+            names: pending.names,
+          },
+        };
+      if (!(await this.waitFor(key))) return { wait: true };
+    }
+  }
+
+  /**
+   * What that computer read for one run, once: the values for the names the
+   * run asked for, judged again here, or why there are none. A delivery for
+   * another run, another computer or a bring that ended keeps nothing.
+   */
+  private deliver(
+    key: string,
+    computer: BringComputer,
+    input: Extract<PlacedSecretBringInput, { op: "deliver" }>,
+  ): PlacedSecretBringAnswer {
+    const bring = this.book.get(key);
+    const pending = this.there.get(key);
+    if (
+      !bring ||
+      bring.computer?.id !== computer.id ||
+      !pending ||
+      pending.run !== input.run ||
+      pending.delivered
+    )
+      return { ok: true };
+    pending.delivered = true;
+    const result = input.result;
+    let read: BringRead;
+    if ("values" in result) {
+      const values = new Map<string, ReadValue>();
+      for (const [name, one] of Object.entries(result.values)) {
+        if (pending.names !== null && !pending.names.includes(name)) continue;
+        if ("cannot" in one) {
+          values.set(name, one.cannot);
+          continue;
+        }
+        const bytes = Buffer.from(one.value, "base64");
+        values.set(name, judged(bytes));
+        bytes.fill(0);
+      }
+      read = { values };
+    } else read = result;
+    if (!pending.settle(read) && "values" in read) zeroFill(read.values.values());
+    return { ok: true };
+  }
+
+  /**
+   * Asks the computer that runs work the bring's source is on to run or read
+   * it once and deliver the named values, waiting at most the bring's
+   * lifetime for them.
+   */
+  private fromThere(
+    bring: WaitingBring,
+    names: string[] | null,
+  ): Promise<BringRead | { ended: SecretBringEnded }> {
+    return new Promise((resolve) => {
+      let done = false;
+      const settle = (read: BringRead | { ended: SecretBringEnded }) => {
+        if (done) return false;
+        done = true;
+        clearTimeout(timer);
+        if (this.there.get(bring.key) === entry) this.there.delete(bring.key);
+        resolve(read);
+        return true;
+      };
+      const entry: RunThere = { run: randomUUID(), names, delivered: false, settle };
+      const timer = setTimeout(
+        () =>
+          settle({
+            ended: { bring: bring.id, state: "failed", why: SECRET_BRING_WORDS.unreached },
+          }),
+        this.lifetime,
+      );
+      timer.unref?.();
+      this.there.set(bring.key, entry);
+      this.wake(bring.key);
+    });
+  }
+
+  /** Resolves true when this bring's press or end wakes it, false after a lifetime. */
+  private waitFor(key: string): Promise<boolean> {
+    return new Promise((resolve) => {
+      const waiting = this.waiters.get(key) ?? new Set<() => void>();
+      const woken = () => {
+        clearTimeout(timer);
+        waiting.delete(woken);
+        if (waiting.size === 0) this.waiters.delete(key);
+        resolve(true);
+      };
+      const timer = setTimeout(() => {
+        waiting.delete(woken);
+        if (waiting.size === 0) this.waiters.delete(key);
+        resolve(false);
+      }, this.lifetime);
+      timer.unref?.();
+      waiting.add(woken);
+      this.waiters.set(key, waiting);
+    });
+  }
+
+  private wake(key: string): void {
+    for (const woken of [...(this.waiters.get(key) ?? [])]) woken();
+  }
+
+  /**
+   * The task's conversation on that computer closed for good or restarted
+   * there, so nothing there runs its brings any more: each one waiting ends
+   * withdrawn, and a press waiting on it ends the same way.
+   */
+  gone(task: string, computer: BringComputer): void {
+    for (const bring of this.book.all()) {
+      if (bring.task !== task || bring.computer?.id !== computer.id) continue;
+      const ended: SecretBringEnded = {
+        bring: bring.id,
+        state: "withdrawn",
+        why: SECRET_BRING_WORDS.gone,
+      };
+      if (this.running.has(bring.key)) this.there.get(bring.key)?.settle({ ended });
+      else this.end(bring.key, ended);
+    }
   }
 
   /** Whether this owner made the pass: Don't bring and Read it ride the shared card decision. */
@@ -372,6 +572,7 @@ export class SecretBrings {
     task: string,
     input: SecretBringRequest,
     cwd?: string,
+    there?: { computer: BringComputer; source: BoundSource },
   ): Promise<SecretBringStarted> {
     const copied = structuredClone(input);
     if (!validSecretBring(copied)) throw new Error("Invalid bring.");
@@ -381,6 +582,8 @@ export class SecretBrings {
       help,
     });
     if (!this.options.offered) return unavailable(SECRET_BRING_WORDS.notOffered);
+    // Kept keys are handed only to a program on this computer.
+    if (there && copied.from.uses) return unavailable(SECRET_BRING_WORDS.usesNotThere);
     const key = SecretBrings.key(task, copied.id);
     const waiting = this.book.get(key);
     if (waiting) {
@@ -388,9 +591,11 @@ export class SecretBrings {
       if (!this.running.has(key)) this.raise(waiting);
       return { bring: copied.id, state: "waiting" };
     }
-    const bound = await bindSource(copied.from.source, this.options.environment(), cwd).catch(
-      () => "program" as const,
-    );
+    const bound =
+      there?.source ??
+      (await bindSource(copied.from.source, this.options.environment(), cwd).catch(
+        () => "program" as const,
+      ));
     if (typeof bound === "string") return unavailable(SECRET_BRING_WORDS.refused[bound]);
     const owner = await this.options.owner().catch(() => undefined);
     const state = owner ? await owner.status().catch(() => "unavailable" as const) : "unavailable";
@@ -469,6 +674,7 @@ export class SecretBrings {
       source: bound,
       ...(unlocks ? { unlocks } : {}),
       rows,
+      ...(there ? { computer: { id: there.computer.id, label: there.computer.label } } : {}),
     };
     this.ended.delete(key);
     this.book.put(bring);
@@ -603,7 +809,7 @@ export class SecretBrings {
         this.reraise(bring, SECRET_BRING_CARD_WORDS.unavailable);
         return;
       }
-      const read = await this.readOnce(bring);
+      const read = await this.readOnce(bring, null);
       await use.ended("values" in read ? undefined : read.ended);
       if (!("values" in read)) {
         this.end(bring.key, read.ended);
@@ -640,46 +846,45 @@ export class SecretBrings {
     return false;
   }
 
-  /** Runs or reads the source once and reads its output by the bring's shape. */
+  /**
+   * Runs or reads the source once and reads its output by the bring's shape:
+   * here, or on the computer that runs work the source is on, which reads
+   * only `names` (null for every name) and delivers them once.
+   */
   private async readOnce(
     bring: WaitingBring,
+    names: string[] | null,
     captured?: SourceOutput,
   ): Promise<{ values: Map<string, ReadValue> } | { ended: SecretBringEnded }> {
-    const output =
-      captured ??
-      (await readSource(
-        bring.source as BoundSource,
-        this.options.environment(),
-        this.lifetime,
-      ).catch(() => ({ failed: {} }) as const));
-    if (output === "changed") return { ended: { bring: bring.id, state: "changed" } };
-    if (output === "too-large")
-      return {
-        ended: { bring: bring.id, state: "failed", why: SECRET_BRING_WORDS.tooLarge },
-      };
-    if ("failed" in output)
+    const read = bring.computer
+      ? await this.fromThere(bring, names)
+      : await readBrought(
+          bring.source as BoundSource,
+          this.options.environment(),
+          this.lifetime,
+          { reads: bring.reads, ...(bring.trim ? { trim: bring.trim } : {}), names },
+          captured,
+        );
+    if ("values" in read) return read;
+    if ("failed" in read)
       return {
         ended: {
           bring: bring.id,
           state: "failed",
-          ...output.failed,
+          ...read.failed,
           why: SECRET_BRING_WORDS.failed,
         },
       };
-    try {
-      if (bring.reads === "json") {
-        const values = readJson(output.output, bring.rows?.map((row) => row.source) ?? []);
-        return values
-          ? { values }
-          : { ended: { bring: bring.id, state: "failed", why: SECRET_BRING_WORDS.invalidJson } };
-      }
-      if (bring.reads === "env0") return { values: readEnv0(output.output) };
-      if (bring.reads === "lines") return { values: readLines(output.output) };
-      const only = bring.rows?.[0]?.source ?? "";
-      return { values: new Map([[only, readValue(output.output, bring.trim)]]) };
-    } finally {
-      output.output.fill(0);
-    }
+    if (typeof read.ended === "object") return { ended: read.ended };
+    if (read.ended === "changed") return { ended: { bring: bring.id, state: "changed" } };
+    return {
+      ended: {
+        bring: bring.id,
+        state: "failed",
+        why:
+          read.ended === "too-large" ? SECRET_BRING_WORDS.tooLarge : SECRET_BRING_WORDS.invalidJson,
+      },
+    };
   }
 
   /**
@@ -746,7 +951,12 @@ export class SecretBrings {
           }
           captured = unlocked.output;
         }
-        const read = await this.readOnce(bring, captured);
+        // A computer that runs work sends only the ticked values; here every named one is read.
+        const read = await this.readOnce(
+          bring,
+          bring.computer ? chosen.map((row) => row.source) : rows.map((row) => row.source),
+          captured,
+        );
         if (!("values" in read)) {
           await use.ended(read.ended);
           this.end(bring.key, read.ended);
@@ -856,6 +1066,8 @@ export class SecretBrings {
     if (held) zeroFill(held.values());
     this.held.delete(key);
     for (const [id, offer] of this.offers) if (offer.key === key) this.offers.delete(id);
+    this.there.get(key)?.settle({ ended });
+    this.wake(key);
     if (!bring) return;
     this.ended.set(key, ended);
     this.options.withdraw(bringCardId(bring.task, bring.id), "This bring ended.");
@@ -889,6 +1101,7 @@ async function journaled(
     reason: bring.reason,
     rule: "ask",
     brought: bring.tool,
+    ...(bring.computer ? { computer: bring.computer.label } : {}),
   });
   await owner.journalBring({ kind: "consumed", request });
   return {
@@ -905,5 +1118,29 @@ async function journaled(
             : { kind: "ended", request, state: "invalidated" };
       await owner.journalBring(line).catch(() => undefined);
     },
+  };
+}
+
+/** A source as the work route carries it, with only the fields it holds. */
+export function boundFrom(
+  source: Extract<PlacedSecretBringInput, { op: "bring" }>["source"],
+): BoundSource {
+  if (source.kind === "file")
+    return { kind: "file", file: { path: source.file.path, sha256: source.file.sha256 } };
+  const interpreter = source.interpreter;
+  return {
+    kind: "run",
+    program: { path: source.program.path, sha256: source.program.sha256 },
+    ...(interpreter
+      ? {
+          interpreter: {
+            path: interpreter.path,
+            sha256: interpreter.sha256,
+            ...(interpreter.arg !== undefined ? { arg: interpreter.arg } : {}),
+          },
+        }
+      : {}),
+    argv: [...source.argv],
+    folder: source.folder,
   };
 }

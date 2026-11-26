@@ -588,7 +588,7 @@ printf '%s' "$VAULT_SESSION" >&2`,
           discoverable: true,
         });
       await f.brings.bringInto({ pass: f.offer().pass, picked: ["s1"] });
-      expect(f.command.bringStatus(input.id)?.state).toBe(
+      expect((await f.command.bringStatus(input.id))?.state).toBe(
         why === "replaced" ? "changed" : "not-brought",
       );
       expect(readdirSync(f.project)).not.toContain("ran");

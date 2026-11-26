@@ -1,4 +1,5 @@
 import { z } from "zod";
+import * as m from "./i18n/messages.generated";
 
 /**
  * Bringing secrets from another tool (docs/secrets.md, "Bringing secrets
@@ -93,6 +94,8 @@ export const SECRET_BRING_CARD_WORDS = {
       : `Bring ${count === 1 ? "1 secret" : `${count} secrets`} from ${tool}?`,
   from: "From",
   fromValue: (tool: string) => `${tool}, in the crewmate's word`,
+  /** A bring from a computer that runs work: that computer, by the name the person knows it by. */
+  computer: () => m.secretsApprovalComputer(),
   runs: "Runs",
   reads: "Reads",
   folder: "In folder",

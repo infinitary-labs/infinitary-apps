@@ -6,8 +6,9 @@ name: failed-checks
 # failed job with a link to its log, leaving out checks that also fail in
 # main's newest run and saying when main is failing too, and labels the pull
 # request "waiting on author", so it goes back to its author before any
-# review starts. A passing rerun of the same version edits the comment and
-# takes off the label the note put on. Started by hand with a
+# review starts. A version whose every failed check also fails on main gets a
+# comment saying so and no label. A passing rerun of the same version edits
+# the comment and takes off the label the note put on. Started by hand with a
 # pull request number, it is a dry run: it writes what it would say to the
 # job summary and nothing on the pull request.
 #

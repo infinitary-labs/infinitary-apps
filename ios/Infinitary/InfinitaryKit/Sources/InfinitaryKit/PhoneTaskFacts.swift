@@ -104,7 +104,8 @@ public struct PhoneTaskFacts: Sendable {
     /// The Mac's `formatDurationShort` (src/shared/quotaSignals.ts): whole minutes as 2d 3h, 1h 35m or 4m.
     static func durationShort(_ ms: Double) -> String { PhoneFormats.durationShort(ms) }
 
-    public static func status(_ task: PhoneTask, now: Double = Date().timeIntervalSince1970 * 1000) -> Status {
+    /// `followParts` false reads a parent's own status, as its record's bar does (`recordBarOf`).
+    public static func status(_ task: PhoneTask, now: Double = Date().timeIntervalSince1970 * 1000, followParts: Bool = true) -> Status {
         func reading(_ mark: String, _ reason: String, outOfReach: Bool = false, wait: String? = nil,
                      since: Double? = nil, waitsOn: [String]? = nil) -> Status {
             let word = statusWords[mark] ?? mark
@@ -145,7 +146,8 @@ public struct PhoneTaskFacts: Sendable {
             return reading(onRequest ? "backlog" : "queued", PhoneMessages.phoneTaskFactsCouldNotStart())
         }
         if task.status == "open" {
-            let mark = onRequest ? "backlog" : "queued"
+            // A backlog parent reads its open parts' most pressing word, its own reason beside it (INF-6805 piece 2).
+            let mark = (followParts ? task.partsStatus : nil) ?? (onRequest ? "backlog" : "queued")
             if let wait = task.queueWait { return reading(mark, wait.line) }
             let parts = task.children?.total ?? 0
             let holds = task.flags?.blocked == true ? PhoneMessages.phoneTaskFactsBlockedByAnother()

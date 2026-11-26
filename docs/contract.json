@@ -48445,6 +48445,18 @@
                     "closed"
                   ]
                 },
+                "partsStatus": {
+                  "type": "string",
+                  "enum": [
+                    "waiting",
+                    "interrupted",
+                    "working",
+                    "starting",
+                    "idle",
+                    "queued",
+                    "backlog"
+                  ]
+                },
                 "assignee": {
                   "anyOf": [
                     {
@@ -50299,6 +50311,18 @@
               "closed"
             ]
           },
+          "partsStatus": {
+            "type": "string",
+            "enum": [
+              "waiting",
+              "interrupted",
+              "working",
+              "starting",
+              "idle",
+              "queued",
+              "backlog"
+            ]
+          },
           "assignee": {
             "anyOf": [
               {
@@ -52067,6 +52091,18 @@
                   "required": [
                     "total",
                     "closed"
+                  ]
+                },
+                "partsStatus": {
+                  "type": "string",
+                  "enum": [
+                    "waiting",
+                    "interrupted",
+                    "working",
+                    "starting",
+                    "idle",
+                    "queued",
+                    "backlog"
                   ]
                 },
                 "assignee": {
@@ -57265,6 +57301,18 @@
                 "closed"
               ]
             },
+            "partsStatus": {
+              "type": "string",
+              "enum": [
+                "waiting",
+                "interrupted",
+                "working",
+                "starting",
+                "idle",
+                "queued",
+                "backlog"
+              ]
+            },
             "assignee": {
               "anyOf": [
                 {
@@ -59031,6 +59079,18 @@
               "required": [
                 "total",
                 "closed"
+              ]
+            },
+            "partsStatus": {
+              "type": "string",
+              "enum": [
+                "waiting",
+                "interrupted",
+                "working",
+                "starting",
+                "idle",
+                "queued",
+                "backlog"
               ]
             },
             "assignee": {
@@ -104376,6 +104436,18 @@
                     "closed"
                   ]
                 },
+                "partsStatus": {
+                  "type": "string",
+                  "enum": [
+                    "waiting",
+                    "interrupted",
+                    "working",
+                    "starting",
+                    "idle",
+                    "queued",
+                    "backlog"
+                  ]
+                },
                 "assignee": {
                   "anyOf": [
                     {
@@ -106191,6 +106263,18 @@
                   "required": [
                     "total",
                     "closed"
+                  ]
+                },
+                "partsStatus": {
+                  "type": "string",
+                  "enum": [
+                    "waiting",
+                    "interrupted",
+                    "working",
+                    "starting",
+                    "idle",
+                    "queued",
+                    "backlog"
                   ]
                 },
                 "assignee": {

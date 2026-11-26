@@ -230,6 +230,24 @@ describe("one task status", () => {
     ).toBe("");
   });
 
+  // INF-6805's plan, piece 2, the captain's answer status_word: "Follow its parts: Working while
+  // a part works, Waiting on you while a part's card waits".
+  it("reads a parent's word from its parts' status, its own reason beside it", () => {
+    const parent = { children: { total: 3, closed: 1 } };
+    expect(taskStatusLabel(read({ ...parent, partsStatus: "working" }))).toBe(
+      "Working · Its 3 parts do the work",
+    );
+    expect(
+      read({
+        ...parent,
+        partsStatus: "waiting",
+        queueWait: { line: "Waiting for its parts", since: 1 },
+      }),
+    ).toMatchObject({ mark: "waiting", word: "Waiting on you", reason: "Waiting for its parts" });
+    // The parent's own card still leads.
+    expect(read({ ...parent, partsStatus: "working", waitingCardId: "card" }).mark).toBe("waiting");
+  });
+
   it("says a task on a computer whose connection is being made is connecting, with no warn mark", () => {
     const place = { name: "Mac mini", where: "on Mac mini" };
     const away = read({

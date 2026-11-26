@@ -68,7 +68,7 @@ try {
   const { earlierRowsOf, failedStartCount, newFilingCount, NOW_GROUPS, OPEN_BY_DEFAULT, rowsOf, rowTrailing, tagChipsOf, wordOf } = await runner.import<NowRows>(join(REPO_ROOT, "src/panels/now/rows.ts"));
   const { failedCountWords, newCountWords } = await runner.import<typeof import("../src/panels/now/words.ts")>(join(REPO_ROOT, "src/panels/now/words.ts"));
   const { recordBarOf } = await runner.import<typeof import("../src/shared/recordBar.ts")>(join(REPO_ROOT, "src/shared/recordBar.ts"));
-  const { partsSentenceSpeaks, recordAttentionOf, recordClosedLineOf } = await runner.import<typeof import("../src/shared/recordAttention.ts")>(join(REPO_ROOT, "src/shared/recordAttention.ts"));
+  const { partsSentenceSpeaks, partsStatusOf, recordAttentionOf, recordClosedLineOf } = await runner.import<typeof import("../src/shared/recordAttention.ts")>(join(REPO_ROOT, "src/shared/recordAttention.ts"));
   const { recordStartOf } = await runner.import<typeof import("../src/shared/recordStart.ts")>(join(REPO_ROOT, "src/shared/recordStart.ts"));
   const { taskWaitStatus } = await runner.import<typeof import("../src/shared/taskWaits.ts")>(join(REPO_ROOT, "src/shared/taskWaits.ts"));
   const { boardMenuOf, boardMoveOf, dropAskOf, moveContextOf } = await runner.import<BoardMoves>(join(REPO_ROOT, "src/panels/now/boardMoves.ts"));
@@ -277,6 +277,10 @@ try {
       ["backlog, blocked", { status: "open", activity: null, workPosture: undefined, startPolicy: "on-request", flags: { blocked: true, held: false, needsYou: false, ready: false } }],
       ["queued, held", { status: "open", activity: null, workPosture: undefined, flags: { blocked: false, held: true, needsYou: false, ready: false } }],
       ["a program waiting on its parts", { status: "open", activity: null, workPosture: undefined, program: true, children: { total: 3, closed: 1 } }],
+      ["a backlog parent whose part works", { status: "open", activity: null, workPosture: undefined, startPolicy: "on-request", children: { total: 3, closed: 1 },
+        partsStatus: "working" }],
+      ["a backlog parent whose part waits on you", { status: "open", activity: null, workPosture: undefined, startPolicy: "on-request", children: { total: 3, closed: 1 },
+        partsStatus: "waiting" }],
       ["a program waiting on its one part", { status: "open", activity: null, workPosture: undefined, program: true, children: { total: 1, closed: 0 } }],
       ["backlog on a computer out of reach", { status: "open", activity: null, workPosture: undefined, startPolicy: "on-request",
         executionDeviceId: "dev-mini", place: { name: "Mac mini", where: "on Mac mini", reach: "out-of-reach" } }],
@@ -547,6 +551,8 @@ try {
       ["a parent whose last part waits on you", { ...unstarted, startPolicy: "on-request", children: { total: 3, closed: 2 },
         parts: [...closedParts, openPart(3043, { status: "active", activity: "idle", workPosture: { state: "idle", reason: "captain" }, waitingCardId: "card-3043",
           startedAt: now - 9 * min })] }, null],
+      ["a parent whose last part was interrupted", { ...unstarted, startPolicy: "on-request", children: { total: 3, closed: 2 },
+        parts: [...closedParts, openPart(3043, { status: "active", activity: "interrupted", workPosture: undefined, startedAt: now - 9 * min })] }, null],
       ["a parent with three open parts", { ...unstarted, startPolicy: "on-request", children: { total: 4, closed: 1 },
         parts: [closedParts[0], openPart(3043, { status: "active", activity: "running", workPosture: { state: "active", reason: "turn" }, startedAt: now - 9 * min }),
           openPart(3044, {}), openPart(3045, {})] }, null],
@@ -594,7 +600,10 @@ try {
       ["a first mate's own operation", { kind: "operation", intent: null }, null],
     ];
     return { now, cases: cases.map(([name, patch, live]) => {
-      const row = { ...base, ...patch } as unknown as TaskDetail;
+      const given = { ...base, ...patch } as unknown as TaskDetail;
+      // The host's own fact on a parent: its open parts' most pressing word (`settlePartsStatus`).
+      const partsStatus = given.parts ? partsStatusOf(given, given.parts) : undefined;
+      const row = partsStatus ? { ...given, partsStatus } : given;
       const read = taskWaitStatus(row, taskStatusOf(row, now), now);
       const start = recordStartOf(row, now);
       const reason = start.reason ?? (partsSentenceSpeaks(row) ? "" : read.reason);

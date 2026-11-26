@@ -16,6 +16,7 @@ import { currentChange, taskPullRequestsOf } from "../storage/changeProjection";
 import type { TaskEvent } from "../storage/taskEventStore";
 import type { TaskRecord } from "../storage/taskRecords";
 import { standingDependencyWaits } from "./dependencyWaits";
+import { settlePartsStatus } from "./partsStatus";
 import { type ConcernedEventView, condenseActivity } from "./recordActivity";
 import type { TaskProtocolOptions } from "./taskProtocolOptions";
 import { TaskService } from "./taskService";
@@ -60,9 +61,14 @@ export function taskDetailOf(
   for (const part of partRows) named.delete(part.id);
   named.delete(id);
   const graph = graphFor(options, [record, ...partRows, ...tasks.getMany([...named])]);
-  const view = viewOf(options, record, graph, tiersOf(options, [record]), liveFacts(record));
+  const own = viewOf(options, record, graph, tiersOf(options, [record]), liveFacts(record));
   const partTiers = tiersOf(options, partRows);
   const parts = partRows.map((part) => viewOf(options, part, graph, partTiers, liveFacts(part)));
+  // Its status word follows its parts, as its board row's does (INF-6805's
+  // plan, piece 2); a part's own parts are not read here.
+  const view =
+    settlePartsStatus(new Map([own, ...parts].map((each) => [each.id, each] as const))).get(id) ??
+    own;
   const origin = crewFilingOrigin(record, graph);
   const timeline = tasks.timeline(id);
   const why = timeline.find((event) => typeof event.data?.why === "string")?.data?.why;

@@ -136132,7 +136132,7 @@ ${FRAME_KEYBOARD_SCRIPT}
       return reading(mark, "Could not start");
     }
     if (task.status === "open") {
-      const mark = task.startPolicy === "on-request" ? "backlog" : "queued";
+      const mark = task.partsStatus ?? (task.startPolicy === "on-request" ? "backlog" : "queued");
       if (task.queueWait) return reading(mark, task.queueWait.line);
       const parts = task.children.total;
       const holds = task.flags.blocked ? "Blocked by another task" : task.flags.held ? "Held" : parts > 0 ? `Its ${parts} ${parts === 1 ? "part does" : "parts do"} the work` : null;
@@ -136606,6 +136606,13 @@ ${FRAME_KEYBOARD_SCRIPT}
       closed: number(),
       closedIds: array(string()).optional()
     }),
+    /**
+     * The most pressing status among its open parts, on a backlog parent that
+     * runs no program and nothing blocks (INF-6805's plan, piece 2): its parts
+     * do its work, so its status word follows them. Absent on every other
+     * task, on a row read without its parts, and from an older home.
+     */
+    partsStatus: _enum(["waiting", "interrupted", "working", "starting", "idle", "queued", "backlog"]).optional(),
     assignee: string().nullable(),
     model: string().nullable(),
     /**
@@ -139609,7 +139616,7 @@ ${autoHeight ? PANEL_AUTO_HEIGHT_STYLE : PANEL_FILL_STYLE}`;
     if (task.answerNoteId) return { end: "stop-task", next: "answer-done", blocked: false };
     const work = task.kind === "work";
     const end = !work ? task.kind === "decision" && task.waitingCardId ? "dismiss-question" : null : isUnstartedWork(task) ? "drop-task" : task.status === "active" ? "stop-task" : null;
-    const { mark } = taskStatusOf(task);
+    const { mark } = taskStatusOf(task.partsStatus ? { ...task, partsStatus: void 0 } : task);
     const parent = task.status === "open" && task.children.total > 0;
     const backlog = task.status === "active" && task.backlogSince !== void 0;
     const blocked = !backlog && (task.blockedBy.length > 0 || task.flags.blocked);

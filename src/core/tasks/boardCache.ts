@@ -10,6 +10,7 @@ import {
 } from "@shared/tasks";
 import type { TaskLink } from "../storage/taskLinkStore";
 import type { PartCounts, TaskRecord } from "../storage/taskRecords";
+import { settlePartsStatus } from "./partsStatus";
 import type { TaskProtocolOptions } from "./taskProtocolOptions";
 import { TaskService } from "./taskService";
 import {
@@ -141,6 +142,7 @@ export function* rebuildParts(
   yield records;
   const views = new Map<string, CachedView>();
   for (const record of rows) views.set(record.id, cachedView(reads, record, graph, tiers));
+  settleParents(views);
   return {
     records,
     shown,
@@ -297,13 +299,16 @@ export function refresh(
   const rebuilt = [...rebuild].map((id) => records.get(id) as TaskRecord);
   const tiers = tiersOf(reads.options, rebuilt);
   for (const record of rebuilt) cache.views.set(record.id, cachedView(reads, record, graph, tiers));
+  // A part's word can move with no write of its parent (its card raised or
+  // answered, its crewmate starting), so every parent reads its parts again.
+  const parentsMoved = settleParents(cache.views);
   // The rows in order: a changed membership sorts again; otherwise each
   // rebuilt view takes its row's place, and a board nothing reached
   // keeps its array.
   let rows = cache.tasks;
   if (entered.length > 0 || left.length > 0)
     rows = sortBoardTasks([...cache.views.values()].map((cached) => cached.view));
-  else if (rebuild.size > 0)
+  else if (rebuild.size > 0 || parentsMoved)
     rows = cache.tasks.map((view) => cache.views.get(view.id)?.view ?? view);
   return { ...cache, shown, graph, tasks: rows, ...linkViewsOf(links, shown, cache) };
 }
@@ -378,6 +383,22 @@ function readEnds(
 
 function sameWaitChain(a: TaskView["waitChain"], b: TaskView["waitChain"]): boolean {
   return a?.on === b?.on && a?.end === b?.end && a?.until === b?.until && a?.update === b?.update;
+}
+
+/**
+ * Each shown parent's `partsStatus`, from its shown parts' views (INF-6805's
+ * plan, piece 2): every live part is shown, so a parent reads them all.
+ * Whether any parent's view moved.
+ */
+function settleParents(views: Map<string, CachedView>): boolean {
+  const moved = settlePartsStatus(
+    new Map([...views].map(([id, cached]) => [id, cached.view] as const)),
+  );
+  for (const [id, view] of moved) {
+    const cached = views.get(id);
+    if (cached) views.set(id, { ...cached, view });
+  }
+  return moved.size > 0;
 }
 
 function cachedView(

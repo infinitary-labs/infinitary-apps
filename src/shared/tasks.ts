@@ -445,6 +445,15 @@ export const taskViewSchema = z.object({
     closed: z.number(),
     closedIds: z.array(z.string()).optional(),
   }),
+  /**
+   * The most pressing status among its open parts, on a backlog parent that
+   * runs no program and nothing blocks (INF-6805's plan, piece 2): its parts
+   * do its work, so its status word follows them. Absent on every other
+   * task, on a row read without its parts, and from an older home.
+   */
+  partsStatus: z
+    .enum(["waiting", "interrupted", "working", "starting", "idle", "queued", "backlog"])
+    .optional(),
   assignee: z.string().nullable(),
   model: z.string().nullable(),
   /**

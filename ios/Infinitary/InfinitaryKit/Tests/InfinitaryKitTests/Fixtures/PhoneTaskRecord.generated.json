@@ -1412,7 +1412,8 @@
             "problem": null,
             "asks": []
           }
-        ]
+        ],
+        "partsStatus": "backlog"
       },
       "live": null,
       "bar": {
@@ -1672,7 +1673,8 @@
             "problem": null,
             "asks": []
           }
-        ]
+        ],
+        "partsStatus": "working"
       },
       "live": null,
       "bar": {
@@ -1682,8 +1684,8 @@
       },
       "pillTone": "neutral",
       "status": {
-        "mark": "backlog",
-        "word": "Backlog",
+        "mark": "working",
+        "word": "Working",
         "reason": ""
       },
       "notice": null,
@@ -1932,7 +1934,8 @@
             "problem": null,
             "asks": []
           }
-        ]
+        ],
+        "partsStatus": "waiting"
       },
       "live": null,
       "bar": {
@@ -1940,10 +1943,10 @@
         "next": null,
         "blocked": false
       },
-      "pillTone": "neutral",
+      "pillTone": "accent",
       "status": {
-        "mark": "backlog",
-        "word": "Backlog",
+        "mark": "waiting",
+        "word": "Waiting on you",
         "reason": ""
       },
       "notice": null,
@@ -1952,6 +1955,263 @@
       "attention": {
         "title": "Its last part is waiting on you",
         "guidance": "INF-3043 has a card for you. This task closes by itself once its parts close.",
+        "urgent": false,
+        "danger": false
+      },
+      "closed": null,
+      "fold": "Your 1 message",
+      "asks": [],
+      "drop": {
+        "refusal": "This task changed. Review it again before dropping it.",
+        "question": null
+      }
+    },
+    {
+      "name": "a parent whose last part was interrupted",
+      "row": {
+        "id": "t-3001",
+        "key": "INF-3001",
+        "projectId": "p-har",
+        "parentId": null,
+        "kind": "work",
+        "title": "Chart the outer harbour",
+        "goal": "Chart the outer harbour before the storm.",
+        "priority": 2,
+        "status": "open",
+        "activity": null,
+        "closedReason": null,
+        "startPolicy": "on-request",
+        "flags": {
+          "blocked": false,
+          "held": false,
+          "needsYou": false,
+          "ready": false
+        },
+        "blockedBy": [],
+        "blocks": [],
+        "children": {
+          "total": 3,
+          "closed": 2
+        },
+        "assignee": "crewmate",
+        "model": null,
+        "tier": null,
+        "repo": {
+          "name": "harbour",
+          "branch": "fm/task-3001"
+        },
+        "delivery": null,
+        "outcomeSummary": null,
+        "waitingCardId": null,
+        "createdAt": 1793982600000,
+        "updatedAt": 1793987940000,
+        "startedAt": null,
+        "closedAt": null,
+        "intent": {
+          "goal": "Chart the outer harbour before the storm.",
+          "userWords": "chart the outer harbour before the storm"
+        },
+        "rigor": "standard",
+        "deliverable": "change",
+        "basis": null,
+        "skippedPlanBecause": null,
+        "brief": "",
+        "outcome": null,
+        "modelLabel": null,
+        "cards": [],
+        "events": [],
+        "activityLog": [],
+        "plan": null,
+        "closing": null,
+        "problem": null,
+        "asks": [],
+        "parts": [
+          {
+            "id": "t-3041",
+            "key": "INF-3041",
+            "projectId": "p-har",
+            "parentId": "t-3001",
+            "kind": "work",
+            "title": "Survey the channel",
+            "goal": null,
+            "priority": 2,
+            "status": "done",
+            "activity": null,
+            "closedReason": "answered",
+            "startPolicy": "on-request",
+            "flags": {
+              "blocked": false,
+              "held": false,
+              "needsYou": false,
+              "ready": false
+            },
+            "blockedBy": [],
+            "blocks": [],
+            "children": {
+              "total": 0,
+              "closed": 0
+            },
+            "assignee": "crewmate",
+            "model": null,
+            "tier": null,
+            "repo": {
+              "name": "harbour",
+              "branch": "fm/task-3001"
+            },
+            "delivery": null,
+            "outcomeSummary": null,
+            "waitingCardId": null,
+            "createdAt": 1793982600000,
+            "updatedAt": 1793987940000,
+            "startedAt": null,
+            "closedAt": 1793984400000,
+            "intent": null,
+            "rigor": "standard",
+            "deliverable": "change",
+            "basis": null,
+            "skippedPlanBecause": null,
+            "brief": "",
+            "outcome": null,
+            "modelLabel": null,
+            "cards": [],
+            "events": [],
+            "activityLog": [],
+            "plan": null,
+            "closing": null,
+            "problem": null,
+            "asks": []
+          },
+          {
+            "id": "t-3042",
+            "key": "INF-3042",
+            "projectId": "p-har",
+            "parentId": "t-3001",
+            "kind": "work",
+            "title": "Buoy the shoal",
+            "goal": null,
+            "priority": 2,
+            "status": "done",
+            "activity": null,
+            "closedReason": "merged",
+            "startPolicy": "on-request",
+            "flags": {
+              "blocked": false,
+              "held": false,
+              "needsYou": false,
+              "ready": false
+            },
+            "blockedBy": [],
+            "blocks": [],
+            "children": {
+              "total": 0,
+              "closed": 0
+            },
+            "assignee": "crewmate",
+            "model": null,
+            "tier": null,
+            "repo": {
+              "name": "harbour",
+              "branch": "fm/task-3001"
+            },
+            "delivery": null,
+            "outcomeSummary": null,
+            "waitingCardId": null,
+            "createdAt": 1793982600000,
+            "updatedAt": 1793987940000,
+            "startedAt": null,
+            "closedAt": 1793980800000,
+            "intent": null,
+            "rigor": "standard",
+            "deliverable": "change",
+            "basis": null,
+            "skippedPlanBecause": null,
+            "brief": "",
+            "outcome": null,
+            "modelLabel": null,
+            "cards": [],
+            "events": [],
+            "activityLog": [],
+            "plan": null,
+            "closing": null,
+            "problem": null,
+            "asks": []
+          },
+          {
+            "id": "t-3043",
+            "key": "INF-3043",
+            "projectId": "p-har",
+            "parentId": "t-3001",
+            "kind": "work",
+            "title": "Mark the reef",
+            "goal": null,
+            "priority": 2,
+            "status": "active",
+            "activity": "interrupted",
+            "closedReason": null,
+            "startPolicy": "on-request",
+            "flags": {
+              "blocked": false,
+              "held": false,
+              "needsYou": false,
+              "ready": false
+            },
+            "blockedBy": [],
+            "blocks": [],
+            "children": {
+              "total": 0,
+              "closed": 0
+            },
+            "assignee": "crewmate",
+            "model": null,
+            "tier": null,
+            "repo": {
+              "name": "harbour",
+              "branch": "fm/task-3001"
+            },
+            "delivery": null,
+            "outcomeSummary": null,
+            "waitingCardId": null,
+            "createdAt": 1793982600000,
+            "updatedAt": 1793987940000,
+            "startedAt": 1793987460000,
+            "closedAt": null,
+            "intent": null,
+            "rigor": "standard",
+            "deliverable": "change",
+            "basis": null,
+            "skippedPlanBecause": null,
+            "brief": "",
+            "outcome": null,
+            "modelLabel": null,
+            "cards": [],
+            "events": [],
+            "activityLog": [],
+            "plan": null,
+            "closing": null,
+            "problem": null,
+            "asks": []
+          }
+        ],
+        "partsStatus": "interrupted"
+      },
+      "live": null,
+      "bar": {
+        "end": "drop-task",
+        "next": null,
+        "blocked": false
+      },
+      "pillTone": "danger",
+      "status": {
+        "mark": "interrupted",
+        "word": "Interrupted",
+        "reason": ""
+      },
+      "notice": null,
+      "tabs": [],
+      "crew": "idle",
+      "attention": {
+        "title": "Waiting for its last part",
+        "guidance": "INF-3043 was interrupted. This task closes by itself once its parts close.",
         "urgent": false,
         "danger": false
       },
@@ -2247,7 +2507,8 @@
             "problem": null,
             "asks": []
           }
-        ]
+        ],
+        "partsStatus": "working"
       },
       "live": null,
       "bar": {
@@ -2257,8 +2518,8 @@
       },
       "pillTone": "neutral",
       "status": {
-        "mark": "backlog",
-        "word": "Backlog",
+        "mark": "working",
+        "word": "Working",
         "reason": ""
       },
       "notice": null,

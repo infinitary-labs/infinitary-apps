@@ -1,6 +1,6 @@
 import { formatList, formatNumber } from "./i18n/format";
 import * as m from "./i18n/messages.generated";
-import { type TaskStatus, taskStatusOf } from "./taskPresentation";
+import { PRESSING_STATUS, type TaskStatus, taskStatusOf } from "./taskPresentation";
 import type { TaskDetail, TaskView } from "./tasks";
 import { recordAttentionWaits, taskWaitText, waitStopsOf } from "./taskWaits";
 import { AT_PROVIDER_WORDS } from "./workPosture";
@@ -123,20 +123,6 @@ export function recordAttentionOf(task: AttentionDetail, now: number): RecordAtt
   return title ? { title, guidance, urgent, danger } : null;
 }
 
-/**
- * The open parts' status words, most pressing first: the order a parent's
- * sentence counts them in (INF-6805's plan, item 2).
- */
-const PRESSING: readonly TaskStatus[] = [
-  "waiting",
-  "interrupted",
-  "working",
-  "starting",
-  "idle",
-  "queued",
-  "backlog",
-];
-
 const LAST_PART: Partial<Record<TaskStatus, (key: string) => string>> = {
   interrupted: (key) => m.recordPartsLastInterrupted({ key }),
   working: (key) => m.recordPartsLastWorking({ key }),
@@ -190,7 +176,7 @@ function partsAttentionOf(
     const said = LAST_PART[mark];
     return said ? { title: m.recordPartsLast(), guidance: said(key) } : null;
   }
-  const counts = PRESSING.flatMap((mark) => {
+  const counts = PRESSING_STATUS.flatMap((mark) => {
     const count = marks.filter((entry) => entry.mark === mark).length;
     const said = PART_COUNTS[mark];
     return count > 0 && said ? [said(count)] : [];
@@ -226,6 +212,28 @@ export function partsDoTheWork(
     task.startPolicy === "on-request" &&
     !task.program
   );
+}
+
+/**
+ * The status word a backlog parent reads from its open parts: the most
+ * pressing among them (INF-6805's plan, piece 2, the captain's answer
+ * status_word: parts). Undefined for any other task, for a parent a blocker
+ * holds (its blocker leads, as in its sentence), and with no open part.
+ * The host sets it as the row's `partsStatus`; each part is read as its own
+ * row reads, its own `partsStatus` included.
+ */
+export function partsStatusOf(
+  parent: Pick<TaskView, "status" | "children" | "startPolicy" | "program" | "blockedBy" | "flags">,
+  parts: readonly TaskView[],
+): NonNullable<TaskView["partsStatus"]> | undefined {
+  if (!partsDoTheWork(parent) || parent.blockedBy.length > 0 || parent.flags.blocked)
+    return undefined;
+  const marks = new Set(
+    parts
+      .filter((part) => part.status === "open" || part.status === "active")
+      .map((part) => taskStatusOf(part).mark),
+  );
+  return PRESSING_STATUS.find((mark) => marks.has(mark));
 }
 
 /** A part row's word on its parent's record: how it closed, or its status word. */

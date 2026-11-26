@@ -3,7 +3,12 @@
 // the body, above the goal"). These moved from the record's frame to the
 // window with the Info tab; each case is the frame test it was ported from.
 import { describe, expect, it } from "vitest";
-import { partsDoTheWork, recordAttentionOf, recordClosedLineOf } from "./recordAttention";
+import {
+  partsDoTheWork,
+  partsStatusOf,
+  recordAttentionOf,
+  recordClosedLineOf,
+} from "./recordAttention";
 import { waitChainWords } from "./taskPresentation";
 import type { TaskDetail } from "./tasks";
 
@@ -220,6 +225,37 @@ describe("the record's attention sentence", () => {
       { ...parent, startPolicy: "when-ready" as const },
     ])
       expect(say(task({ ...runs, ...parts }))?.title).toBe("Its 2 parts do the work");
+  });
+
+  // INF-6805's plan, piece 2: "The order is Waiting on you, Interrupted, Working, Starting, Idle,
+  // Queued, Backlog", for a parent that never runs.
+  it("gives a parent that never runs its open parts' most pressing status", () => {
+    const parent = task({
+      status: "open",
+      activity: null,
+      startPolicy: "on-request",
+      children: { total: 3, closed: 1 },
+    });
+    const backlog = task({ status: "open", activity: null, startPolicy: "on-request" });
+    const idle = task({ activity: "idle", workPosture: { state: "idle", reason: "inactive" } });
+    const working = task();
+    const interrupted = task({ activity: "interrupted" });
+    const waiting = task({ activity: "idle", waitingCardId: "card" });
+    const closed = task({ status: "done", activity: null, closedReason: "merged" });
+    const of = (...parts: TaskDetail[]) => partsStatusOf(parent, parts);
+    expect(of(backlog, idle)).toBe("idle");
+    expect(of(backlog, idle, working)).toBe("working");
+    expect(of(working, interrupted)).toBe("interrupted");
+    expect(of(interrupted, waiting, backlog)).toBe("waiting");
+    expect(of(closed, backlog)).toBe("backlog");
+    expect(of(closed)).toBeUndefined();
+    // A blocked parent, a program and a when-ready parent keep their own word.
+    for (const own of [
+      { ...parent, blockedBy: ["DEMO-38"] },
+      { ...parent, program: true as const },
+      { ...parent, startPolicy: "when-ready" as const },
+    ])
+      expect(partsStatusOf(own, [waiting])).toBeUndefined();
   });
 
   // INF-6805 plan, run_facts "hidden": a parent that never runs itself leaves

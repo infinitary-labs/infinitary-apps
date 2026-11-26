@@ -822,4 +822,49 @@ describe("the task protocol (task-system P3)", () => {
     expect(protocol.board().tasks.find((task) => task.id === "plan")?.children).toEqual(children);
     expect(protocol.detail("plan")?.children).toEqual(children);
   });
+
+  // INF-6805's plan, piece 2, the captain's answer status_word: "Follow its parts: Working while
+  // a part works, Waiting on you while a part's card waits".
+  it("reads a backlog parent's status from its open parts, following a part's card with no write of the parent", () => {
+    const f = taskProtocolFixture();
+    const unstarted = { status: "queued", startPolicy: "on-request" } as const;
+    seedTask(f.tasks, { id: "parent", title: "Import secrets", ...unstarted });
+    seedTask(f.tasks, { id: "read", title: "Read the export", parentId: "parent", ...unstarted });
+    seedTask(f.tasks, { id: "map", title: "Map the fields", parentId: "parent", ...unstarted });
+    seedTask(f.tasks, { id: "done", title: "Plan it", parentId: "parent", ...unstarted });
+    f.tasks.close("done", { status: "done", reason: "merged", actor: "host" });
+    seedTask(f.tasks, { id: "blocker", title: "Fix search", ...unstarted });
+    seedTask(f.tasks, { id: "held", title: "Paint the lighthouse", ...unstarted });
+    seedTask(f.tasks, { id: "paint", title: "Pick the paint", parentId: "held", ...unstarted });
+    f.tasks.graph.link("blocker", "held", "blocks", "host");
+    const row = (id: string) => f.protocol.board().tasks.find((task) => task.id === id);
+    expect(row("parent")?.partsStatus).toBe("backlog");
+    expect(row("blocker")?.partsStatus).toBeUndefined();
+    const card = (id: string, taskId: string) => ({
+      id,
+      taskId,
+      author: "crewmate" as const,
+      priority: 1,
+      title: "Which export first?",
+      meta: "",
+      body: "",
+      actions: [{ id: "yes", label: "Yes", default: true }],
+      status: "ready" as const,
+      createdAt: f.clock(),
+    });
+    f.cards.push(card("card-map", "map"), card("card-paint", "paint"));
+    expect(row("parent")?.partsStatus).toBe("waiting");
+    expect(f.protocol.detail("parent").partsStatus).toBe("waiting");
+    // A blocked parent's blocker leads its status, as it leads its sentence.
+    expect(row("held")?.partsStatus).toBeUndefined();
+    expect(f.protocol.board().tasks).toEqual(f.fresh().tasks);
+    f.cards.length = 0;
+    expect(row("parent")?.partsStatus).toBe("backlog");
+    f.tasks.close("read", { status: "dropped", reason: "superseded", actor: "host" });
+    f.tasks.close("map", { status: "done", reason: "merged", actor: "host" });
+    // Closed parts never count: with none open, the parent reads its own word.
+    expect(row("parent")?.partsStatus).toBeUndefined();
+    f.protocol.dispose();
+    f.db.close();
+  });
 });

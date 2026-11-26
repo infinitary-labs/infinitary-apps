@@ -67,7 +67,8 @@ public enum PhoneRecord {
         let work = task.kind == "work"
         let end: End? = !work ? (task.kind == "decision" && task.waitingCardId != nil ? .dismissQuestion : nil)
             : unstartedWork(task) ? .dropTask : task.status == "active" ? .stopTask : nil
-        let mark = PhoneTaskFacts.status(task).mark
+        // The bar acts on this task, never on its parts, so it reads the parent's own status (`recordBarOf`).
+        let mark = PhoneTaskFacts.status(task, followParts: false).mark
         let parent = task.status == "open" && parts > 0
         // Start picks started work up from the backlog whatever it waits on: its crewmate goes on waiting.
         let backlog = task.status == "active" && task.backlogSince != nil

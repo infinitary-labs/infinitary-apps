@@ -148,6 +148,18 @@ describe("the record's action bar, from typed state only", () => {
     );
   });
 
+  // INF-6805's plan, piece 2: a parent's word follows its parts, but a part's card or
+  // interruption is that part's own record's to answer.
+  it("keeps a parent's bar its own while its word follows its parts", () => {
+    const parent = { children: { total: 3, closed: 1 } };
+    for (const partsStatus of ["waiting", "interrupted", "starting", "working"] as const)
+      expect(recordBarOf(task({ ...parent, partsStatus }))).toEqual({
+        end: "drop-task",
+        next: null,
+        blocked: false,
+      });
+  });
+
   it("lets a waiting decision outrank an interruption or a blocker, as the status does", () => {
     expect(recordBarOf(active({ activity: "interrupted", waitingCardId: "card-1" }))).toMatchObject(
       { next: "show-card" },

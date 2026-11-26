@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "parent-status-follows-parts",
+      "kind": "improvement",
+      "title": "A task split into parts shows what its parts are doing",
+      "body": "A task whose parts do its work no longer reads Backlog while those parts move. Its status follows its busiest open part: Waiting on you while a part's card waits, Working while a part works. It shows on its record, in Tasks, on the board and on your iPhone.",
+      "area": "tasks",
+      "picture": {
+        "dark": "parent-status-follows-parts-dark.webp",
+        "light": "parent-status-follows-parts-light.webp",
+        "alt": "A task's record whose status reads Waiting on you because one of its two open parts has a card waiting."
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

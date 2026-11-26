@@ -74,10 +74,26 @@ export type TaskStatusInput = Pick<
       | "backlogSince"
       | "answerNoteId"
       | "answerSince"
+      | "partsStatus"
     >
   > & {
     closedReason: string | null;
   };
+
+/**
+ * Open work's status words, most pressing first: the order a parent's
+ * sentence counts its open parts in, and the word it reads from them
+ * (INF-6805's plan, items 2 and piece 2).
+ */
+export const PRESSING_STATUS = [
+  "waiting",
+  "interrupted",
+  "working",
+  "starting",
+  "idle",
+  "queued",
+  "backlog",
+] as const satisfies readonly TaskStatus[];
 
 /** The reason beside Backlog on started work that went back there (INF-2062). */
 export const STARTED_BACKLOG_REASON = "Started · its work waits for your Start";
@@ -98,8 +114,11 @@ const words: Record<TaskStatus, string> = {
  * Presentation only. Lifecycle and ready decisions take precedence over stale
  * activity. Open work reads by its start policy, the Tasks panel's Backlog
  * and Queued groups (src/shared/nowPanel.ts): Backlog waits for the
- * captain's word, Queued starts by itself; a blocker, a hold or a parent's
- * parts is the reason beside the word, never a different word. Open,
+ * captain's word, Queued starts by itself; a blocker or a hold is the reason
+ * beside the word, never a different word. A backlog parent whose parts do
+ * its work reads its open parts' most pressing word (`partsStatus`, INF-6805
+ * piece 2), with its own reason beside it; the Tasks groups and the board's
+ * columns still place it by its own state (`nowGroupOf`). Open,
  * working or idle work whose computer is out of reach says so: its mark in
  * `--warn`, and its reason ("Mac mini is out of reach", or "Mac mini takes no new work" while it
  * is connected on an older Firstmate; "Mac mini is updating", with the mark as it was, while the
@@ -191,7 +210,7 @@ export function taskStatusOf(task: TaskStatusInput, now = Date.now()): TaskStatu
     return reading(mark, "Could not start");
   }
   if (task.status === "open") {
-    const mark = task.startPolicy === "on-request" ? "backlog" : "queued";
+    const mark = task.partsStatus ?? (task.startPolicy === "on-request" ? "backlog" : "queued");
     if (task.queueWait) return reading(mark, task.queueWait.line);
     const parts = task.children.total;
     const holds = task.flags.blocked

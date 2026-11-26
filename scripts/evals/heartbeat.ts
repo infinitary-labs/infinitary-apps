@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import { heartbeatBeat } from "../../src/core/orchestrator/heartbeat.ts";
+import { IdleLadder, type IdleLadderHost } from "../../src/core/orchestrator/idleLadder.ts";
 import { Scheduler } from "../../src/core/orchestrator/scheduler.ts";
 import { standingWork } from "../../src/core/orchestrator/standingWork.ts";
 import { FIRSTMATE_USAGE_TASK_ID } from "../../src/core/storage/usageStore.ts";
@@ -150,6 +151,7 @@ async function serveBeat(
   }
   const now = Date.now();
   const { schedules, usage } = host;
+  const waits = new IdleLadder({ tasks: host.tasks } as IdleLadderHost);
   if (test.list !== "empty") seedLastPart(host, clock);
   if (test.list !== "new-last-part") {
     // No row is new, so only the quiet reason sends this beat: a Claude request 52 minutes ago.
@@ -161,7 +163,7 @@ async function serveBeat(
     });
   }
   if (test.list === "told-last-part") {
-    for (const row of standingWork(host, now).rows) host.inbox.recordOnce(row.taskId, row.once);
+    for (const row of standingWork({ ...host, waits }, now).rows) host.inbox.recordOnce(row.taskId, row.once);
     // The earlier beat's card, shown through the production tool as the first mate's own.
     const emit = host.spec.tools.find((tool) => tool.name === "emit_card");
     if (!emit) throw new Error("The production first mate has no emit_card");
@@ -181,7 +183,8 @@ async function serveBeat(
     inbox: host.inbox,
     notify: (wake, origin) => host.firstmate.notifyOp(wake, origin),
     broadcastEvent: () => {},
-    heartbeat: (at) => heartbeatBeat({ schedules, usage, tasks: host.tasks, inbox: host.inbox }, at),
+    heartbeat: (at) =>
+      heartbeatBeat({ schedules, usage, tasks: host.tasks, inbox: host.inbox, waits }, at),
   });
   scheduler.keepBrought(true);
   schedules.setNextFire(HEARTBEAT_RULE_ID, now);

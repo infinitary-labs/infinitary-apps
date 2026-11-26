@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "devices-address-add-completion-test",
+      "reason": "The keyboard journey waits for device setup to finish before opening a fresh address form. No app behavior changes."
+    }
+  ]
+}

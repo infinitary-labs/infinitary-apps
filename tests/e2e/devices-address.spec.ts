@@ -476,7 +476,10 @@ test("+ A computer’s address form lists Macs nearby but this one, and adds one
     await expect
       .poll(async () => (await page.evaluate(() => window.infinitary.devices.list())).length)
       .toBe(1);
-    await expect(page.locator("[data-device-address-question]")).toHaveCount(0);
+    // Pairing lists the Mac before the add reply. Until setup ends, opening
+    // the form adopts that add and its success closes the form (docs/devices.md).
+    await expect(page.locator("[data-device-adding]")).toHaveCount(0);
+    await expect(question).toHaveCount(0);
 
     await pressKey(page.locator('[data-device-add="mac"]'), "Enter");
     await expect(nearby.locator("[data-device-nearby-on-list]")).toHaveText(nearbyMacsWords.onList);

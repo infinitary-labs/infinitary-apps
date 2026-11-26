@@ -127,9 +127,10 @@ A damaged saved connection clears only the saved computer, keeps this device's i
 ## Panels
 
 Panels is the computer's own side panels, one under another in one scrolling column, in the order its rails hold them read left top, left bottom, right top, right bottom.
-Each sits under a header row: its title in micro capitals in the secondary color, its owner word, yours or the plugin's name, in the muted color, and a chevron at the trailing edge that folds it; a fold is kept on the device.
+Each sits under a header row: its title in micro capitals in the secondary color, the status mark's dot right after it on the title's line when the computer has something to say about the panel, an added panel's maker in the muted color (the person's own panels carry no owner word), and a chevron at the trailing edge that folds it; a fold is kept on the device.
 The panel draws below in its own frame with the computer's panel stylesheet, as tall as it draws, or most of the column's height when it fills.
-A stopped panel, one that stops answering and one that could not be opened each show one callout line in the secondary color, with a secondary Retry where there is one.
+A tap on the dot opens a popover with the desktop's sections: stopped background work with Retry, paused code with Update panel, an integration ask waiting or turned down with Ask again, and reads that keep failing with Ask the first mate.
+A panel whose page stops answering and one that could not be opened each show one callout line in the secondary color, with a secondary Retry where there is one.
 The tab shows only while the computer has a panel to draw; Computer keeps its place in the bar.
 
 ## Stage and rails

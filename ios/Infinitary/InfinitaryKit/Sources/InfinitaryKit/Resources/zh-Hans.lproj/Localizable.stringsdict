@@ -1137,6 +1137,34 @@
       <string>%1$ld 个进行中</string>
     </dict>
   </dict>
+  <key>panelFailingJob</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>它的后台任务 %2$@ 自 %3$@ 起一直失败，已连续 %1$ld 次。</string>
+    </dict>
+  </dict>
+  <key>panelFailingPlace</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>从 %2$@ 读取自 %3$@ 起一直失败，已连续 %1$ld 次。</string>
+    </dict>
+  </dict>
   <key>phoneAddressSweeping</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

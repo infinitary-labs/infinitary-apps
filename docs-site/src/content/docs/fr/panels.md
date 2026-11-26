@@ -1,5 +1,5 @@
 ---
-source: c3a4eb8bec45d0bf
+source: 8c3b2ba30e330a7b
 title: Panneaux
 description: Les panneaux se trouvent sur les côtés gauche et droit de la fenêtre et affichent vos tâches, l’activité de votre équipage et tout ce que vous demandez à votre second de construire.
 ---
@@ -72,7 +72,6 @@ Cliquez dessus pour commencer la demande dans la zone de message.
 Cliquez sur son **Masquer** pour le ranger définitivement.
 
 Un panneau que vous avez demandé se place en haut de la colonne de gauche, sauf si vous dites où.
-Son en-tête indique **le vôtre**.
 Vous le déplacez comme n’importe quel autre panneau.
 Pour le changer, dites à votre second ce que vous voulez de différent.
 Pour l’enlever, demandez à votre second de le retirer.
@@ -88,4 +87,10 @@ L’interrupteur le signale alors.
 Réactivez-les quand vous êtes prêt.
 
 Si l’un de vos panneaux cesse de fonctionner, le panneau le signale, et le reste de la fenêtre continue.
-Quand le travail en arrière-plan d’un panneau cesse de répondre, son bouton **Réessayer** le relance.
+
+Quand l’un de vos panneaux demande un coup d’œil, un petit point apparaît à côté de son nom.
+Le point apparaît quand le travail en arrière-plan du panneau s’est arrêté ou est en pause, quand il attend votre accord pour joindre un service, ou quand ses lectures en arrière-plan continuent d’échouer.
+Laissez le pointeur sur le point, ou atteignez-le avec Tab, pour voir une ligne à son sujet.
+Appuyez sur le point, ou sur Entrée, pour ouvrir ses détails, puis utilisez le bouton qui s’y trouve : **Réessayer**, **Mettre à jour le panneau**, **Redemander** ou **Demander au second**.
+Appuyez sur Échap pour fermer les détails.
+L’app Infinitary sur votre iPhone ou votre iPad affiche le même point ; touchez-le pour lire les détails.

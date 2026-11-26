@@ -88,7 +88,8 @@ export type TickerOptions = {
 export class Ticker {
   /** The one clock; hand it to anything whose arithmetic the passes compare against. */
   readonly now: Clock;
-  private readonly periodMs: number;
+  /** How often it passes: a minute, shorter in a development or end-to-end run. */
+  readonly periodMs: number;
   private readonly timers: TickerTimers;
   private readonly registrations: Registration[] = [];
   private readonly measured: TickerOptions["measured"];

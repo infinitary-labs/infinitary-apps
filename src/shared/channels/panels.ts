@@ -153,6 +153,17 @@ export const panelChannels = {
     request: z.tuple([personalIdSchema]),
     response: z.boolean(),
   },
+  // The captain's Ask the first mate on a panel whose reads keep failing
+  // (docs/personal-panels.md, "Reads that keep failing"): the first mate
+  // looks into each failing read not asked about before. False when nothing
+  // was told: nothing is failing, or every failing read was asked already.
+  "inf:plugins:ask-firstmate": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([personalIdSchema]),
+    response: z.boolean(),
+  },
   // A panel drawing's call on its integrations (docs/integrations.md,
   // "Panels"): list, show or call, over only what its own manifest names,
   // with the answer every caller gets. The core reads the panel's

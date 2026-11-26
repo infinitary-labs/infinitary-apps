@@ -9,6 +9,7 @@ import type { IntegrationsService, PanelAsks } from "../integrations";
 import type { KnowledgeService } from "../knowledge/knowledgeService";
 import type { CrewSupervisor } from "../orchestrator/crewSupervisor";
 import type { PersonalLiveDelegate } from "../orchestrator/crewSupervisorOptions";
+import type { Ticker } from "../orchestrator/ticker";
 import type { TypedWake } from "../orchestrator/wakes";
 import { PanelLog } from "../panels/panelLog";
 import { PanelRuntimes } from "../panels/panelRuntimes";
@@ -24,6 +25,7 @@ import type { RepoRegistry } from "../workspace/repoRegistry";
 import { agreedGrant } from "./framedPanels";
 import { carryPanelInstructions } from "./panelInstructions";
 import { PanelMountsHolder } from "./panelMounts";
+import { PanelReadFailures } from "./panelReadFailures";
 import { PersonalExtensions } from "./personalExtensions";
 import type { PersonalStore } from "./personalStore";
 
@@ -42,7 +44,10 @@ export type HomePersonal = {
   panelMounts: PanelMountsHolder;
   /** The live build loop's seam (Step 4), the supervisor's delegate. */
   live: PersonalLiveDelegate;
-  /** The captain's Update panel press reaches the first mate from here on (INF-2470). */
+  /**
+   * The captain's Update panel and Ask the first mate presses, and a panel's
+   * reads that keep failing, reach the first mate from here on.
+   */
   attachFirstmate: (tell: (wake: TypedWake) => void) => void;
 };
 
@@ -78,7 +83,8 @@ export async function startHomePersonal(options: {
   pluginRecords: Pick<PluginRecords, "installed" | "get">;
   /** The runbooks, whose panels show while each is on (docs/runbooks.md, "Panels"). */
   runbooks: Pick<Runbooks, "panels" | "subscribe">;
-  now: () => number;
+  /** The app's clock and tick period, which sets how long a panel's reads fail before they show. */
+  clock: Pick<Ticker, "now" | "periodMs">;
   emit: CoreEventSink;
 }): Promise<HomePersonal> {
   const { host, paths, repos, tasks, preferences, panelAsks, pluginRecords, runbooks } = options;
@@ -99,9 +105,13 @@ export async function startHomePersonal(options: {
     knowledge: options.knowledge,
     log,
   });
-  // The captain's Update panel press reaches the first mate (INF-2470);
+  // The captain's presses and a panel's failing reads reach the first mate;
   // late-bound because the first mate is built below.
-  let tellPanelUpdate: (wake: TypedWake) => void = () => {};
+  let tellFirstmate: (wake: TypedWake) => void = () => {};
+  const readFailures = new PanelReadFailures({
+    now: options.clock.now,
+    periodMs: options.clock.periodMs,
+  });
   const personal = await PersonalExtensions.start({
     workspaceDir: paths.personalWorkspaceDir,
     namingRule: options.namingRule,
@@ -136,7 +146,7 @@ export async function startHomePersonal(options: {
     }),
     askUpdate: (ask) => {
       const repoId = repos.personal()?.id;
-      tellPanelUpdate({
+      tellFirstmate({
         facts: {
           kind: "panel-update-asked",
           panel: { id: ask.id, title: ask.title },
@@ -145,6 +155,32 @@ export async function startHomePersonal(options: {
           ...(repoId ? { repoId } : {}),
         },
       });
+    },
+    // A panel's reads that keep failing (docs/personal-panels.md, "Reads
+    // that keep failing"): the first mate hears each once per code version,
+    // and the captain's Ask the first mate once per read.
+    failingReads: {
+      failures: readFailures,
+      tell: (told) =>
+        tellFirstmate({
+          facts: {
+            kind: "panel-reads-failing",
+            panel: { id: told.id, title: told.title },
+            failing: told.failing,
+          },
+          once: `panel-reads-failing:${told.id}:${told.version}:${told.read}`,
+        }),
+      ask: (ask) => {
+        const repoId = repos.personal()?.id;
+        tellFirstmate({
+          facts: {
+            kind: "panel-reads-asked",
+            panel: { id: ask.id, title: ask.title },
+            failing: ask.failing,
+            ...(repoId ? { repoId } : {}),
+          },
+        });
+      },
     },
     // Every panel reaches outside your projects through the integrations,
     // the same way every other caller does (docs/integrations.md, "Panels").
@@ -164,7 +200,7 @@ export async function startHomePersonal(options: {
         const ask = {
           ...held.ask,
           id: `ia${randomBytes(6).toString("hex")}`,
-          at: options.now(),
+          at: options.clock.now(),
         };
         panelAsks.asking(ask, options.crew().integrationAsks.askIntegrationForPanel(ask));
         return true;
@@ -245,7 +281,7 @@ export async function startHomePersonal(options: {
     panelMounts,
     live,
     attachFirstmate: (tell) => {
-      tellPanelUpdate = tell;
+      tellFirstmate = tell;
     },
   };
 }

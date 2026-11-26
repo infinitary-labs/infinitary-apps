@@ -1,5 +1,5 @@
 ---
-source: c3a4eb8bec45d0bf
+source: 8c3b2ba30e330a7b
 title: Paneles
 description: Los paneles están a los lados izquierdo y derecho de la ventana y muestran tus tareas, la actividad de tu tripulación y cualquier otra cosa que pidas a tu primer oficial que construya.
 ---
@@ -72,7 +72,6 @@ Haz clic en él para empezar el pedido en el cuadro de mensaje.
 Haz clic en su **Ocultar** para retirarlo para siempre.
 
 Un panel que pediste aparece en la parte superior de la barra izquierda a menos que digas dónde.
-Su encabezado dice **tuyo**.
 Lo mueves como cualquier otro panel.
 Para cambiarlo, dile a tu primer oficial lo que quieres distinto.
 Para retirarlo, pide a tu primer oficial que lo quite.
@@ -88,4 +87,10 @@ El interruptor lo dice entonces.
 Vuelve a activarlos cuando estés listo.
 
 Si uno de tus paneles deja de funcionar, el panel lo dice, y el resto de la ventana sigue adelante.
-Cuando el trabajo de fondo de un panel deja de responder, su botón **Reintentar** lo vuelve a iniciar.
+
+Cuando uno de tus paneles necesita que lo mires, aparece un pequeño punto junto a su nombre.
+El punto aparece cuando el trabajo de fondo del panel se detuvo o está en pausa, cuando espera tu OK para llegar a un servicio, o cuando sus lecturas en segundo plano siguen fallando.
+Deja el puntero sobre el punto, o llega a él con Tab, para ver una línea sobre él.
+Pulsa el punto, o pulsa Enter, para abrir sus detalles, y usa el botón que hay ahí: **Reintentar**, **Actualizar el panel**, **Volver a preguntar** o **Preguntar al primer oficial**.
+Pulsa Esc para cerrar los detalles.
+La app Infinitary en tu iPhone o iPad muestra el mismo punto; tócalo para leer los detalles.

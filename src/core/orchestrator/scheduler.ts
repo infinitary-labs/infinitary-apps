@@ -202,7 +202,7 @@ const TICK_MS = 60 * 1000;
  */
 export const LOOKS_FAILING_TICKS = 60;
 /** At least this many failed looks: one failed look changes nothing, whatever the cadence. */
-const LOOKS_FAILING_LOOKS = 2;
+export const LOOKS_FAILING_LOOKS = 2;
 /** The most of a failed look's answer that is kept as its reason. */
 const FAILURE_EXCERPT = 300;
 

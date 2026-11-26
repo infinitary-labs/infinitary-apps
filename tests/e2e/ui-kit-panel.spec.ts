@@ -174,9 +174,10 @@ test.describe("the fixture extensions the data skills teach", () => {
     const clock = panelBody(page, "tokyo-clock");
     await expect(clock.getByText(/^\d\d:\d\d$/)).toBeVisible();
 
-    // The host owns the chrome: the title comes from the manifest and the
-    // panel is marked as the captain's own, not by a plugin name.
+    // The host owns the chrome: the title comes from the manifest, and the
+    // captain's own panel names no maker (the captain, on the panel status
+    // mark: remove the "yours" label).
     await expect(openPrs.getByText("Open changes")).toBeVisible();
-    await expect(openPrs.locator("[data-side-panel-attribution]")).toHaveText("yours");
+    await expect(openPrs.locator("[data-side-panel-attribution]")).toHaveCount(0);
   });
 });

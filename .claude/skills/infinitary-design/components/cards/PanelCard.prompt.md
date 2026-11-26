@@ -13,7 +13,7 @@ Putting up a card whose id is open revises it in place: its title, width and dat
 **One row of chrome**: `--space-2` padding with `--space-4` at its start, a `--line-1` hairline under it.
 
 - The card's title at `--text-md`, `--fg-1`, weight 500, on one line that gives way with an ellipsis.
-- Who made the panel in mono `--text-xs` `--fg-3` right after it: `yours` for the captain's own, the maker's name for one the captain added, nothing for the app's own panels.
+- Who made the panel in mono `--text-xs` `--fg-3` right after it: the maker's name for one the captain added, nothing for the captain's own or the app's own panels.
 - Hide, the shared minus (`IconButton`, label `Hide`), at the row's end, with the size control right before it (`ResponseCard.prompt.md`, "Maximize").
 
 **The body.**

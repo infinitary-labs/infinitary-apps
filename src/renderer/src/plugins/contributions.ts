@@ -74,6 +74,13 @@ export type SidePanelBinding<T> = {
    */
   rail?: { decides: boolean };
   /**
+   * What the host knows about the panel that its code cannot say, drawn as
+   * one mark beside its title in the host's header, open and folded
+   * (design skill Panel.prompt.md, "The status mark"); nothing when there
+   * is nothing to say.
+   */
+  Status?: ComponentType<{ content: T; title: string }>;
+  /**
    * Draws one of the panel's cards on the main card stack (docs/ui-plugins.md,
    * "A panel's cards"), where its panel runs: in the app's window for the
    * captain's own, in a frame of its own for one from elsewhere. The host
@@ -96,9 +103,12 @@ export type SidePanelContribution<T = unknown> = Contribution &
   SidePanelBinding<T> & {
     /**
      * Host-rendered, from the manifest's plugin name - never plugin-authored.
-     * `null` for the host's own UI: the app does not attribute itself.
+     * `null` for the host's own UI, which the app does not attribute, and for
+     * the captain's own panels, which are theirs.
      */
     readonly attribution: string | null;
+    /** One of the app's own panels (the built-in plugin). */
+    readonly firstParty?: true;
   };
 
 export type PanelCardBodyProps = {

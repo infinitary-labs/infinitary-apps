@@ -67,7 +67,10 @@ export type PanelChildMessage =
   | { type: "result"; call: number; ok: true; value: unknown }
   | { type: "result"; call: number; ok: false; message: string }
   | { type: "ask"; ask: number; op: PanelAskOp; input: unknown[] }
-  | { type: "log"; message: string };
+  | { type: "log"; message: string }
+  /** One background run ended: whether it threw, and its words when it did. */
+  | { type: "ran"; task: string; ok: true }
+  | { type: "ran"; task: string; ok: false; message: string };
 
 /** How often the panel process beats while its event loop is free. */
 export const PANEL_BEAT_MS = 250;

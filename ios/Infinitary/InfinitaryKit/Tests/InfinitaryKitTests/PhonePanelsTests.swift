@@ -49,8 +49,52 @@ struct PhonePanelsTests {
         let layout = PhonePanelLayout(hiddenPanels: ["hidden": true])
         let shown = PhonePanelOrder.shown(PhonePanelList.decode(snapshot), layout: layout)
         #expect(shown.map(\.id) == ["reviews", "tokens"])
-        #expect(shown.map(\.owner) == ["Review Desk", "yours"])
+        // The captain, on the panel status mark: remove the "yours" label; only an added panel names its maker.
+        #expect(shown.map(\.owner) == ["Review Desk", nil])
         #expect(shown.map(\.filesSource) == ["installed", "yours"])
+    }
+
+    /// The captain's own panel as the computer lists it with everything its status mark can say, in the desktop's words
+    /// (`PersonalExtensionView`): the mark reads stopped work first, then failing reads, a call waiting on them, paused
+    /// work and a call they turned down, as the desktop's `panelStatusSections` orders them.
+    @Test func theStatusMarkSaysTheMostUrgentFirst() throws {
+        let entry = try PhoneJSON.read([
+            "id": "tokens", "source": "personal", "by": NSNull(), "title": "Tokens",
+            "placement": ["x": "left", "y": "top"], "order": 100, "size": "content", "present": true, "ownPresence": false,
+            "moves": false, "running": false, "reads": [], "sql": [], "panel": NSNull(),
+            "frame": ["version": "0123456789abcdef"], "cardViews": [], "cards": [:], "header": [], "commands": [],
+            "server": NSNull(), "error": NSNull(),
+            "integrationAsks": [
+                ["integration": "int-1", "place": "GitHub", "action": "list_pulls", "label": "Read from GitHub", "state": "declined"],
+                ["integration": "int-2", "place": "Linear", "action": "issues", "label": "Read issues", "state": "asking"],
+            ],
+            "paused": ["api": 1, "serves": [2], "asked": false],
+            "failing": [[
+                "read": ["kind": "background", "task": "usage"], "since": "2026-11-24T09:00:00.000Z", "tries": 6,
+                "answer": "Error: 429 Too Many Requests: rate limit reached for this hour", "asked": false,
+            ]],
+            "stopped": ["reason": "unresponsive", "at": "2026-11-24T10:00:00.000Z", "version": "abc"],
+        ] as [String: Any])
+        let decoded = try #require(PhonePanelList.decode(.object(["extensions": .array([entry])])).first)
+        #expect(decoded.statusSections.map(\.key) == ["stopped", "failing", "asking", "paused", "declined"])
+        #expect(decoded.statusSections.map(\.tone) == ["warn", "warn", "captain", "idle", "idle"])
+        guard case .failing(let rows) = decoded.statusSections[1] else { Issue.record("no failing section"); return }
+        #expect(rows.first?.read.task == "usage")
+        #expect(rows.first?.tries == 6)
+        // A panel the computer says nothing about draws no mark.
+        #expect(try #require(PhonePanelList.decode(.object(["extensions": .array([try panel("quiet")])])).first).statusSections.isEmpty)
+    }
+
+    /// The desktop's `framedCode` shows paused only while no task builds the panel; the phone holds it back the same way.
+    @Test func aPausedPanelATaskIsBuildingShowsNoPausedSection() throws {
+        guard case .object(var entry) = try panel("building") else { Issue.record("no panel"); return }
+        entry["paused"] = try PhoneJSON.read(["api": 1, "serves": [2], "asked": false] as [String: Any])
+        entry["running"] = .bool(true)
+        let building = try #require(PhonePanelList.decode(.object(["extensions": .array([.object(entry)])])).first)
+        #expect(building.statusSections.isEmpty)
+        entry["running"] = .bool(false)
+        let idle = try #require(PhonePanelList.decode(.object(["extensions": .array([.object(entry)])])).first)
+        #expect(idle.statusSections.map(\.key) == ["paused"])
     }
 
     @Test func aLibraryFileThatFailsItsPinIsRefused() throws {

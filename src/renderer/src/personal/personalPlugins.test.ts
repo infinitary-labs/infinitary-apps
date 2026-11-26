@@ -57,7 +57,8 @@ describe("PersonalPlugins", () => {
       id: "clock",
       pluginId: "personal-clock",
       title: "Tokyo",
-      attribution: "yours",
+      // The captain, on the panel status mark: remove the "yours" label.
+      attribution: null,
       preferredPlacement: { x: "right", y: "top" },
     });
     expect(clock?.source.get()).toEqual({

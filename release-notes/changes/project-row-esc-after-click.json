@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "id": "project-row-esc-after-click",
+      "kind": "fix",
+      "area": "projects",
+      "title": "Esc closes the project row after you click the project pill",
+      "body": "When you clicked the project pill at the top of the window to open the row of your projects, Esc did nothing until you clicked somewhere else. Esc now closes the row however you opened it, and you keep typing where you were.",
+      "noPicture": "The row closes to the same pill it always closed to, so there is nothing new to see.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

@@ -141376,6 +141376,7 @@ svg { ${pinned} }
       frame.setAttribute("sandbox", FRAME_SANDBOX);
       frame.style.cssText = value.expanded ? "display:block;width:100%;height:100%;border:0" : "display:block;width:100%;height:48px;border:0";
       if (value.expanded) window.document.documentElement.style.height = window.document.body.style.height = "100%";
+      else frame.setAttribute("scrolling", "no");
       frame.srcdoc = document2;
       window.document.body.replaceChildren(frame);
     },

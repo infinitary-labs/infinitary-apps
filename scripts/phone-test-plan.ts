@@ -82,6 +82,8 @@ export const PHONE_PARTS = [
   { name: "cards-revise", test: "testRevisionKeepsTheThreadShowing", photos: false },
   // INF-6136: only a card's one-line top bar stays in place, its minus on that line, and its choices can be pressed.
   { name: "cards-top-bar", test: "testCardTopBar", photos: false },
+  // INF-6865: a long card revised in place into folded sections while read at its end still scrolls to its choices.
+  { name: "cards-revised-scroll", test: "testRevisedCardScrollsToItsChoices", photos: false },
   // INF-6388: a card from an unsafe data reader says a link or request on it may come from a stranger.
   { name: "cards-reader", test: "testReaderCardUnsafeLine", photos: false },
   // INF-3124: a thread read from its start keeps its place as new lines arrive.

@@ -46,6 +46,7 @@ import { FirstmateSeat, formatFlagshipError } from "./firstmateSeat";
 import { buildFirstmateTools, type FirstmateToolHost } from "./firstmateTools";
 import { FIRSTMATE_FAILURE_CARD_ID } from "./hostCards";
 import type { LocalOrchestratorSeat } from "./localOrchestrator";
+import type { ProjectFilter } from "./projectFilter";
 import { type ReplyFacts, replyLine, replyWords } from "./replyLine";
 import {
   FIRSTMATE_CAPTAIN_THINKING_LEVEL,
@@ -229,11 +230,8 @@ type TurnPayload =
       retryOf?: string;
       /** The newest message, which this one replaces and takes back (docs/task-capture.md). */
       replaces?: string;
-      /**
-       * The project the captain's window is focused on (the top bar's
-       * project pill, docs/project-focus.md): a hint below a shown record.
-       */
-      focusedProjectId?: string;
+      /** The message's project filter; null says none, absent keeps the last (docs/project-focus.md). */
+      projectFilter?: ProjectFilter | null;
       /** Set only by the home's Suggest tags press (docs/task-tags.md, "Suggesting tags"). */
       tagSuggestion?: TagSuggestionFacts;
     };
@@ -469,7 +467,7 @@ export class FirstmateAgent {
         this.options.inbox.endOutage(FIRSTMATE_RECIPIENT);
         void this.drainInbox();
       },
-      converseAboutCard: (cardId, text, images, messageFiles, receipt, line) => {
+      converseAboutCard: (cardId, text, images, messageFiles, receipt, line, projectFilter) => {
         void this.converse({
           text,
           receipt,
@@ -478,6 +476,7 @@ export class FirstmateAgent {
           visibleCardId: cardId,
           aboutCardId: cardId,
           ...(line !== undefined ? { aboutLine: line } : {}),
+          projectFilter,
         });
       },
       moveFlagship: (providerId) => {
@@ -509,9 +508,9 @@ export class FirstmateAgent {
     const aboutLine = typeof turn === "string" ? undefined : turn.aboutLine;
     const typedUnder =
       aboutCardId && aboutLine !== undefined ? { cardId: aboutCardId, line: aboutLine } : undefined;
-    // The window's focus rides every turn until the captain's next one says otherwise.
-    this.context.captainFocus =
-      typeof turn === "string" ? undefined : turn.focusedProjectId?.trim() || undefined;
+    // The filter rides every input until the captain's next message says otherwise.
+    if (typeof turn !== "string" && turn.projectFilter !== undefined)
+      this.context.captainFilter = turn.projectFilter ?? undefined;
     const trimmed = text.trim();
     if (!trimmed && !images) return;
     // An accepted turn owns copies of its pictures before anything records
@@ -1081,14 +1080,14 @@ export class FirstmateAgent {
     hintTaskId?: string,
     aboutCardId?: string,
     pastCardId?: string,
-    focusedProjectId?: string,
+    filter?: ProjectFilter,
   ): string {
     return this.context.buildContextBlock(
       visibleCardId,
       hintTaskId,
       aboutCardId ? { cardId: aboutCardId } : undefined,
       pastCardId,
-      focusedProjectId,
+      filter,
     );
   }
 

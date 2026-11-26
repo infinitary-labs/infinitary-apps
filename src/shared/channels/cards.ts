@@ -346,6 +346,13 @@ export const cardChannels = {
           images: z.array(turnImageSchema).max(TURN_IMAGES_MAX).optional(),
           answers: cardAnswersSchema.optional(),
           notes: cardNotesSchema.optional(),
+          /**
+           * The window's project filter, as `inf:converse` carries it
+           * (`project-filter-on-every-message.md`): a reply under a first
+           * mate card tells it, and a crewmate's ignores it.
+           */
+          focusedProjectId: z.string().min(1).max(64).optional(),
+          allProjects: z.literal(true).optional(),
         }),
       ]),
       z.unknown().optional(),

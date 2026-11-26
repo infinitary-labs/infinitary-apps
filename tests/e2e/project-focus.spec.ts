@@ -1,18 +1,24 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { claimLink } from "@core/devices/dial";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
+import { FEEDBACK_WORD } from "../../src/shared/feedback";
 import { elsewhereWords } from "../../src/shared/projectFocus";
+import { connectClient } from "../helpers/connectionClient";
 import { scratchDir } from "../helpers/scratchDirs";
+import { waitForFirstmateIdle } from "./crew";
 import { launchApp } from "./launch";
 import { MOCK_MODEL_ID, MOCK_PROVIDER_ID } from "./mockModels";
 import { seedHostedOrigins, seedProject } from "./projectSeed";
+import { promptInput } from "./prompt";
+import { latestServedTurn, servedContext } from "./providerRequest";
 import { activityFrame, expandDock, nowFrame } from "./rails";
-import { pager, showCard } from "./stack";
+import { cardReply, pager, showCard } from "./stack";
 import { pressKey, pressWindowKey, runFromSearch } from "./windowKeys";
 
 /**
@@ -28,7 +34,10 @@ import { pressKey, pressWindowKey, runFromSearch } from "./windowKeys";
  * cards back and Activity hides their lines (INF-1098, the captain's
  * answers to INF-1091's questions 2 and 3). A still click on the pill, and
  * the pointer lighting a project, are the browser test's
- * (tests/browser/project-focus-still-click.test.tsx).
+ * (tests/browser/project-focus-still-click.test.tsx). Every message to the
+ * first mate names the filter (INF-6860): from the main box with a project or
+ * All projects picked, under a card, kept by a Crewmate tab /feedback line,
+ * and from a paired phone as every project.
  */
 
 const PROJECTS = [
@@ -47,6 +56,41 @@ const WORK = [
 
 /** The tasks that wait on the captain: one in infinitary, one in quota-lab. */
 const WAITS_ON = ["inf-1", "lab-1"] as const;
+
+/**
+ * Send words, from the main message box unless `send` says otherwise, and read
+ * the project filter line the first mate's input carried (INF-6860, the captain's "are you aware of the
+ * project filter i set at the top of the desktop app?").
+ */
+async function filterLineFor(
+  launched: Awaited<ReturnType<typeof launchApp>>,
+  words: string,
+  send: () => Promise<unknown> = async () => {
+    const input = promptInput(launched.page);
+    await input.fill(words);
+    await pressKey(input, "Enter");
+  },
+): Promise<unknown> {
+  const { page, mockProvider } = launched;
+  if (!mockProvider) throw new Error("The journey launches with the mock provider");
+  await waitForFirstmateIdle(page);
+  const before = mockProvider.requestBodies().length;
+  await send();
+  // The input that carries these words, not a wake served beside it.
+  const asked = () => {
+    const body = mockProvider
+      .requestBodies()
+      .slice(before)
+      .find((one) =>
+        latestServedTurn(one)?.segments.some(
+          (segment) => segment.kind === "user" && segment.body.includes(words),
+        ),
+      );
+    return body ? servedContext(body) : undefined;
+  };
+  await expect.poll(asked).toBeDefined();
+  return asked()?.project_filter;
+}
 
 function repo(dir: string): string {
   const git = (...args: string[]) => execFileSync("git", args, { stdio: "pipe" });
@@ -247,12 +291,26 @@ test("the top bar's pill focuses the window on one project by keys, keeps it acr
       await expect.poll(() => listedKeys(page)).toEqual(infKeys);
     });
 
+    await test.step("a message from the main box names the focused project as the filter", async () => {
+      expect(await filterLineFor(launched, "Fix the login bug")).toEqual(
+        expect.stringMatching(
+          /^INF "infinitary" - the project filter at the top of the captain's window\./,
+        ),
+      );
+    });
+
     await test.step("Show all projects lets the focus go", async () => {
       await runFromSearch(app, page, "project-focus.clear");
       await expect(pill(page)).toContainText("All projects");
       await expect(pill(page)).not.toHaveAttribute("data-pf-focused", "");
       await expect.poll(() => listedKeys(page)).toEqual(everyKey);
       await expect.poll(() => crewLight(page, "lab-1")).toBeGreaterThan(0.6);
+    });
+
+    await test.step("a message with All projects picked says All projects", async () => {
+      expect(await filterLineFor(launched, "What is waiting on me?")).toEqual(
+        expect.stringMatching(/^All projects - the project filter at the top/),
+      );
     });
   } finally {
     await launched.close();
@@ -289,6 +347,63 @@ test("under focus the stack holds other projects' cards back and Activity hides 
       await showCard(page, CARDS[3].title);
       expect((await openCards()).sort()).toEqual(CARDS.map((card) => card.id).sort());
       await expect.poll(() => feedProjects(page)).toEqual(["INF"]);
+    });
+
+    await test.step("a reply under the first mate's card carries the focused project as the filter", async () => {
+      await showCard(page, CARDS[3].title);
+      const words = "Only the infinitary ones";
+      expect(
+        await filterLineFor(launched, words, async () => {
+          await cardReply(page).field.fill(words);
+          await cardReply(page).send.click();
+        }),
+      ).toEqual(
+        expect.stringMatching(
+          /^INF "infinitary" - the project filter at the top of the captain's window\./,
+        ),
+      );
+    });
+
+    await test.step("a Crewmate tab /feedback line, which states no filter, keeps the reply's", async () => {
+      const words = `${FEEDBACK_WORD} The retry probe stalls`;
+      expect(
+        await filterLineFor(launched, words, () =>
+          page.evaluate((text) => window.infinitary.task.steer("inf-2", text), words),
+        ),
+      ).toEqual(
+        expect.stringMatching(
+          /^INF "infinitary" - the project filter at the top of the captain's window\./,
+        ),
+      );
+    });
+
+    await test.step("a message from a paired phone covers every project, whatever the window picked", async () => {
+      // The captain's answer: "Every project: say it came from the phone, which shows them all".
+      const { link } = await page.evaluate(() => window.infinitary.devices.invite({ kind: "mac" }));
+      const phone = await connectClient(
+        await claimLink(link, { kind: "mac", name: "A phone", system: "ios" }),
+      );
+      try {
+        const infId = (await page.evaluate(() => window.infinitary.tasks.board())).projects.find(
+          (project) => project.key === "INF",
+        )?.id;
+        if (!infId) throw new Error("The board lists the infinitary project");
+        // Once naming the window's own project, once naming none: neither narrows a phone message.
+        for (const fields of [{ focusedProjectId: infId }, {}]) {
+          const words = `What waits on me today? ${Object.keys(fields).length}`;
+          expect(
+            await filterLineFor(launched, words, () =>
+              phone.invoke("inf:converse", [{ text: words, ...fields }]),
+            ),
+          ).toEqual(
+            expect.stringMatching(
+              /^every project - the captain's latest message came from their phone/,
+            ),
+          );
+        }
+      } finally {
+        await phone.close();
+      }
     });
 
     await test.step("Show all projects brings the held cards and the hidden lines back", async () => {

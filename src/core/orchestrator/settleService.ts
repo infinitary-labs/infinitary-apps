@@ -138,7 +138,11 @@ export class SettleService {
     return mergeGate(this.host, record, mode, actor, asksFirst, scope);
   }
 
-  /** Last synchronous check, after every asynchronous read and before each send. */
+  /**
+   * Last synchronous check, after every asynchronous read and before each
+   * send. `mark` is the same look before a version goes in line for its
+   * project's batch: no request goes out, so the lease is not marked sent.
+   */
   private mergeBoundary(
     lease: SettleLease,
     taskId: string,
@@ -154,7 +158,7 @@ export class SettleService {
     const initialStory = initial?.pendingSettle
       ? initial.pendingSettle.story
       : readyPresentation(initial?.delivery?.presentation);
-    return (head?: string): string | undefined => {
+    return (head?: string, mark?: boolean): string | undefined => {
       const record = this.host.tasks.get(taskId);
       if (!record || TaskService.isClosed(record)) return "the task closed";
       if (
@@ -194,17 +198,17 @@ export class SettleService {
         if (ready.head !== initialStory.head)
           return `another commit came after the merge card. ${softHoldWords("story", "firstmate")}`;
       }
-      if (actor !== "captain") {
+      if (!clickedByCaptain(record, actor)) {
         const decisions = this.decisionsHold(record, taskId, at);
         if (decisions) return decisions;
       }
-      lease.sent();
+      if (!mark) lease.sent();
       return undefined;
     };
   }
 
   /**
-   * The decisions hold on a merge the captain did not click: an open
+   * The decisions hold on a merge the captain did not click (`clickedByCaptain`): an open
    * question, write request or validation question about the task, a
    * recorded wait on the captain, or a gate on the task, unless his words
    * recorded as an override pass `decisions` at version `at`. Undefined
@@ -379,7 +383,7 @@ export class SettleService {
     taskId: string,
     actor: MergeActor,
     guard?: MergeGuard,
-    beforeDispatch?: (head: string) => string | undefined,
+    beforeDispatch?: (head: string, mark?: boolean) => string | undefined,
     after?: "close" | "continue",
   ): Promise<SettleOutcome> {
     if (this.locks.working(taskId)) {
@@ -1129,7 +1133,7 @@ export class SettleService {
     actor: MergeActor,
     proceedWithOpen: boolean,
     guard?: MergeGuard,
-    boundary?: (head?: string) => string | undefined,
+    boundary?: (head?: string, mark?: boolean) => string | undefined,
     after?: "close" | "continue",
   ): Promise<SettleOutcome> {
     const record = this.host.tasks.get(taskId);
@@ -1283,7 +1287,7 @@ export class SettleService {
         },
         proceedWithOpen,
         undefined,
-        { after: open.after },
+        { after: open.after, fromWords: true },
       );
       if (minted !== "standing") return undefined;
       this.host.cards.takeDown(card.id, "approved-by-captain-words");
@@ -1577,4 +1581,17 @@ export class SettleService {
 
 function closeActor(actor: MergeActor): TaskClose["actor"] {
   return actor === "app" ? "host" : actor;
+}
+
+/**
+ * Whether this merge is the captain's own click, which passes the open
+ * decisions. A captain-run merge under an approval the app took under
+ * autonomy, or one kept from the captain's recorded words, is not: it waits
+ * on them as the app's and the first mate's merges do. The guard's own look
+ * runs first, so the approval standing here is the one the merge runs under.
+ */
+function clickedByCaptain(record: TaskRecord, actor: MergeActor): boolean {
+  if (actor !== "captain") return false;
+  const approval = standingAuthorization(record.delivery);
+  return approval?.issuer !== "autonomy" && !approval?.fromWords;
 }

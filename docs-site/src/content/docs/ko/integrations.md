@@ -1,5 +1,5 @@
 ---
-source: 73e387523c5a3dd9
+source: e71da6c9134d6753
 title: 연동
 description: GitHub, GitLab, Bitbucket, Google, MCP 서버를 연결해 일등항해사와 선원들이 닿을 수 있게 하고, 각각이 묻지 않고 할 수 있는 일을 정하세요.
 ---
@@ -60,7 +60,9 @@ Google은 이 클라이언트를 검토하지 않고, 경고를 보여 주지 �
 
 1. **Google**을 눌러 **내 Google 연결 설정**을 여세요.
 2. **Google 페이지 열기**를 누르고, 그곳에서 연결할 Google 계정으로 로그인하세요.
-   프로젝트 이름을 정하고, Google의 정책에 동의한 다음 Continue를 누르세요.
+   프로젝트 이름을 정하고 "Use this client for an AI-powered agent"는 체크하지 않은 채로 두세요.
+   이 체크박스는 Google의 MCP 도구를 쓰는 클라이언트 전용이에요.
+   그런 다음 Google의 정책에 동의하고 Continue를 누르세요.
 3. Google이 보여 주는 클라이언트 파일을 Download JSON으로 내려받으세요.
 4. 그 파일을 **여기에 클라이언트 파일을 놓으세요**에 끌어다 놓거나, **파일 선택**으로 고르거나, 파일에 담긴 내용을 **클라이언트 파일**에 붙여 넣으세요.
 5. **보관하고 로그인**을 누르세요.

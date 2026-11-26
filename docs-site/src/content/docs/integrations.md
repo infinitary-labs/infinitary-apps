@@ -59,7 +59,8 @@ Google does not review it, shows no warning, and does not end its sign-in after 
 
 1. Press **Google**, which opens **Set up your own Google connection**.
 2. Press **Open Google's page**, and sign in there with the Google account you will connect.
-   Name the project, accept Google's policy and press Continue.
+   Name the project and leave "Use this client for an AI-powered agent" unticked, since that box is only for clients that use Google's MCP tools.
+   Then accept Google's policy and press Continue.
 3. Download the client file Google shows, with Download JSON.
 4. Drop that file on **Drop the client file here**, pick it with **Choose file**, or paste what it holds into **Client file**.
 5. Press **Keep and sign in**.

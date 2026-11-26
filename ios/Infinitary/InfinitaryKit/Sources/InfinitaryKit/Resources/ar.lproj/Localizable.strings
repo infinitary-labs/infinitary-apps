@@ -1268,7 +1268,7 @@
 "integrationsGoogleSetupOpenPage" = "فتح صفحة Google";
 "integrationsGoogleSetupStays" = "يحفظ Infinitary سرّ العميل في الأسرار على هذا الحاسوب. لا يراه نائب القبطان ولا الطاقم أبدًا.";
 "integrationsGoogleSetupStepFile" = "نزّل ملف العميل الذي تعرضه Google بزر Download JSON، ثم أفلته هنا أو اختره أو الصق محتواه.";
-"integrationsGoogleSetupStepPage" = "افتح صفحة Google وسجّل الدخول بحساب Google الذي ستربطه. سمِّ المشروع، واقبل سياسة Google، واضغط Continue.";
+"integrationsGoogleSetupStepPage" = "افتح صفحة Google وسجّل الدخول بحساب Google الذي ستربطه. سمِّ المشروع واترك مربع «Use this client for an AI-powered agent» دون تحديد، فهو مخصص فقط للعملاء الذين يستخدمون أدوات MCP من Google. ثم اقبل سياسة Google واضغط Continue.";
 "integrationsGoogleSetupTitle" = "أعدّ اتصال Google الخاص بك";
 "integrationsGoogleSignIn" = "تسجيل الدخول";
 "integrationsGoogleSignInHint" = "سجّل الدخول بحساب Google الذي أنشأ عميلك: فهو لا يخدم إلا ذلك الحساب.";

@@ -1,5 +1,5 @@
 ---
-source: 73e387523c5a3dd9
+source: e71da6c9134d6753
 title: 集成
 description: 连接 GitHub、GitLab、Bitbucket、Google 和 MCP 服务器，让你的大副和船员能够访问它们，并选择每一项可以不经询问就做什么。
 ---
@@ -60,7 +60,8 @@ Google 不会审核它，不显示警告，也不会在 7 天后结束它的登�
 
 1. 点击“**Google**”，会打开“**设置你自己的 Google 连接**”。
 2. 点击“**打开 Google 的页面**”，在那里用你要连接的 Google 账户登录。
-   为项目命名，接受 Google 的政策，然后点击 Continue。
+   为项目命名，并让“Use this client for an AI-powered agent”保持未勾选，因为这个复选框只用于使用 Google MCP 工具的客户端。
+   然后接受 Google 的政策，再点击 Continue。
 3. 用 Download JSON 下载 Google 显示的客户端文件。
 4. 把这个文件拖到“**把客户端文件拖到这里**”上，或用“**选择文件**”选中它，或把它的内容粘贴到“**客户端文件**”中。
 5. 点击“**保存并登录**”。

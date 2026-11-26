@@ -1,5 +1,5 @@
 ---
-source: 73e387523c5a3dd9
+source: e71da6c9134d6753
 title: Integraciones
 description: Conecta GitHub, GitLab, Bitbucket, Google y servidores MCP para que tu primer oficial y tu tripulación puedan alcanzarlos, y elige lo que cada uno puede hacer sin preguntarte.
 ---
@@ -60,7 +60,8 @@ Google no lo revisa, no muestra ninguna advertencia y no cierra su sesión a los
 
 1. Presiona **Google**, que abre **Configura tu propia conexión con Google**.
 2. Presiona **Abrir la página de Google**, e inicia sesión ahí con la cuenta de Google que vas a conectar.
-   Ponle nombre al proyecto, acepta la política de Google y presiona Continue.
+   Ponle nombre al proyecto y deja sin marcar la casilla «Use this client for an AI-powered agent», porque solo es para clientes que usan las herramientas MCP de Google.
+   Luego acepta la política de Google y presiona Continue.
 3. Descarga el archivo de cliente que muestra Google, con Download JSON.
 4. Suelta ese archivo en **Suelta aquí el archivo de cliente**, elígelo con **Elegir archivo**, o pega su contenido en **Archivo de cliente**.
 5. Presiona **Guardar e iniciar sesión**.

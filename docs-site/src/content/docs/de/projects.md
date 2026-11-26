@@ -1,5 +1,5 @@
 ---
-source: 045e7219ddbc0b63
+source: 668341763c6348cb
 title: Projekte
 description: Wie du ein Projekt zu Infinitary hinzufügst, mehrere Repositorys in einem zusammenfasst, ihm Tags gibst, das Fenster auf eines konzentrierst, wählst, wie seine Änderungen zusammengeführt werden, und es entfernst.
 ---
@@ -104,6 +104,7 @@ Tags helfen dir, Aufgaben zu finden und zu gruppieren, und sonst bewirkt ein Tag
 
 Die Seite eines Projekts listet seine Tags unter **Tags** auf, jedes mit der Zahl der Aufgaben, die es tragen.
 
+- **Tags vorschlagen** erscheint, solange ein Projekt keine Tags hat, und bittet deinen ersten Offizier, die Aufgaben des Projekts zu lesen und mit einer Karte vorgeschlagener Tags zu antworten, die du per Antwort ändern kannst.
 - **Tag hinzufügen** fragt nach dem Namen des Tags und danach, welche Aufgaben dazugehören.
 - **Bearbeiten** ändert den Namen oder die Beschreibung eines Tags.
   Ein umbenanntes Tag bleibt an den Aufgaben, die es tragen.

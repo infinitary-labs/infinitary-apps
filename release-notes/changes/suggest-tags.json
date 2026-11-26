@@ -11,7 +11,12 @@
         "light": "suggest-tags-light.webp",
         "alt": "A project's empty Tags box in Settings, with Suggest tags before Add a tag and a line saying it asks your first mate, who answers on a card"
       },
-      "provenance": { "origin": "change" }
+      "docsSite": [
+        "projects"
+      ],
+      "provenance": {
+        "origin": "change"
+      }
     }
   ],
   "exclusions": []

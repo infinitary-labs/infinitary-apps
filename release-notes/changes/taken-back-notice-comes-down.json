@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "taken-back-notice-comes-down",
+      "reason": "Fixes the unreleased take-back change: a message taken back, alone or by sending its replacement, kept the missed-message notice that had gone up for it, or got one later from a retry still waiting. The take-back notes already describe a taken-back message as ended; no released behavior changes."
+    }
+  ]
+}

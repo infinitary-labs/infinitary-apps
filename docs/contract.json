@@ -80361,6 +80361,14 @@
           },
           "connection": {
             "type": "string"
+          },
+          "connectionRefusal": {
+            "type": "string",
+            "enum": [
+              "unreachable",
+              "secure-connection",
+              "refused"
+            ]
           }
         },
         "required": [

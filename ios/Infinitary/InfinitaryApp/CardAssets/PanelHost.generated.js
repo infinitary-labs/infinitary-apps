@@ -95911,6 +95911,90 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Keep connection`;
   }
+  function settingsUsageConnectionLineRefused(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يصل استخدام طاقمك إلى ${host}، وهو اتصال التقارير الخاص بك في الإعدادات ← الذكاء. رفض ${host} آخر إرسال: راجع هناك عنوان الاتصال وترويساته.`;
+      case "de":
+        return `Die Nutzung deiner Crew kommt nicht bei ${host} an, deiner Berichtsverbindung in Einstellungen → Intelligenz. ${host} hat den letzten Versand abgewiesen: Prüfe dort Adresse und Header der Verbindung.`;
+      case "es":
+        return `El uso de tu tripulación no está llegando a ${host}, tu conexión de informes en Configuración → Inteligencia. ${host} rechazó el último envío: revisa allí la dirección y los encabezados de la conexión.`;
+      case "fr":
+        return `L’utilisation de votre équipage n’arrive pas à ${host}, votre connexion de rapports dans Réglages → Intelligence. ${host} a refusé le dernier envoi : vérifiez-y l’adresse et les en-têtes de la connexion.`;
+      case "ja":
+        return `乗組員の使用量が、設定 → インテリジェンスの報告用の接続 ${host} に届いていません。${host} が前回の送信を拒否しました。そこで接続のアドレスとヘッダーを確認してください。`;
+      case "ko":
+        return `선원들의 사용량이 설정 → 지능의 보고 연결인 ${host}에 전달되지 않고 있어요. ${host}에서 마지막 전송을 거부했어요. 거기서 연결의 주소와 헤더를 확인하세요.`;
+      case "pt-BR":
+        return `O uso da sua tripulação não está chegando a ${host}, sua conexão de relatórios em Ajustes → Inteligência. ${host} recusou o último envio: confira lá o endereço e os cabeçalhos da conexão.`;
+      case "zh-Hans":
+        return `船员的用量没有送达 ${host}，即你在设置 → 智能中的报告连接。${host} 拒收了上一次发送：请在那里检查连接的地址和请求头。`;
+      case "zh-Hant":
+        return `船員的用量沒有送達 ${host}，也就是你在設定 → 智慧等級中的回報連線。${host} 拒收了上一次傳送：請在那裡檢查連線的位址和標頭。`;
+      case "en-XA":
+        return `[Ýöûŕ çŕéŵ’š ûšáĝé îš ñöţ ŕéáçĥîñĝ ${host}, ýöûŕ ŕéþöŕţîñĝ çöññéçţîöñ îñ Šéţţîñĝš → Îñţéļļîĝéñçé. ${host} ţûŕñéð ţĥé ļášţ šéñð áŵáý: çĥéçķ ţĥé çöññéçţîöñ’š áððŕéšš áñð ĥéáðéŕš ţĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your crew’s usage is not reaching ‬${host}‮, your reporting connection in Settings → Intelligence. ‬${host}‮ turned the last send away: check the connection’s address and headers there.‬`;
+    }
+    return `Your crew’s usage is not reaching ${host}, your reporting connection in Settings → Intelligence. ${host} turned the last send away: check the connection’s address and headers there.`;
+  }
+  function settingsUsageConnectionLineSecure(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يصل استخدام طاقمك إلى ${host}، وهو اتصال التقارير الخاص بك في الإعدادات ← الذكاء. تعذّر على التطبيق إنشاء اتصال آمن بـ ${host}. إذا كان ${host} تابعًا لشركتك، فاجعل هذا الحاسوب يثق به، ثم أغلق Infinitary وافتحه من جديد.`;
+      case "de":
+        return `Die Nutzung deiner Crew kommt nicht bei ${host} an, deiner Berichtsverbindung in Einstellungen → Intelligenz. Die App konnte keine sichere Verbindung zu ${host} herstellen. Gehört ${host} deiner Firma, lass diesen Computer ihm vertrauen, beende Infinitary dann und öffne es erneut.`;
+      case "es":
+        return `El uso de tu tripulación no está llegando a ${host}, tu conexión de informes en Configuración → Inteligencia. La app no pudo conectarse de forma segura a ${host}. Si ${host} es de tu empresa, haz que esta computadora confíe en él; luego cierra Infinitary y vuelve a abrirlo.`;
+      case "fr":
+        return `L’utilisation de votre équipage n’arrive pas à ${host}, votre connexion de rapports dans Réglages → Intelligence. L’app n’a pas pu se connecter de façon sécurisée à ${host}. Si ${host} appartient à votre entreprise, faites en sorte que cet ordinateur lui fasse confiance, puis quittez Infinitary et rouvrez-le.`;
+      case "ja":
+        return `乗組員の使用量が、設定 → インテリジェンスの報告用の接続 ${host} に届いていません。アプリが ${host} に安全に接続できませんでした。${host} が会社のものなら、このコンピューターが信頼するように設定してから、Infinitary を終了してもう一度開いてください。`;
+      case "ko":
+        return `선원들의 사용량이 설정 → 지능의 보고 연결인 ${host}에 전달되지 않고 있어요. 앱이 ${host}에 안전하게 연결하지 못했어요. 회사 자체 주소라면 이 컴퓨터에서 신뢰하도록 설정한 뒤 Infinitary를 종료하고 다시 열어 주세요.`;
+      case "pt-BR":
+        return `O uso da sua tripulação não está chegando a ${host}, sua conexão de relatórios em Ajustes → Inteligência. O app não conseguiu se conectar com segurança a ${host}. Se ${host} for da sua empresa, faça este computador confiar nele e depois encerre o Infinitary e abra-o novamente.`;
+      case "zh-Hans":
+        return `船员的用量没有送达 ${host}，即你在设置 → 智能中的报告连接。应用无法与 ${host} 建立安全连接。如果 ${host} 是你公司自己的，请让这台电脑信任它，然后退出 Infinitary 并重新打开。`;
+      case "zh-Hant":
+        return `船員的用量沒有送達 ${host}，也就是你在設定 → 智慧等級中的回報連線。程式無法與 ${host} 建立安全連線。如果 ${host} 是你公司自己的，請讓這台電腦信任它，然後結束 Infinitary 並重新開啟。`;
+      case "en-XA":
+        return `[Ýöûŕ çŕéŵ’š ûšáĝé îš ñöţ ŕéáçĥîñĝ ${host}, ýöûŕ ŕéþöŕţîñĝ çöññéçţîöñ îñ Šéţţîñĝš → Îñţéļļîĝéñçé. Ţĥé áþþ çöûļð ñöţ çöññéçţ ţö ${host} šéçûŕéļý. Îƒ ${host} îš ýöûŕ çöɱþáñý’š öŵñ, ĥáṽé ţĥîš çöɱþûţéŕ ţŕûšţ îţ, ţĥéñ ǫûîţ áñð ŕéöþéñ Îñƒîñîţáŕý. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your crew’s usage is not reaching ‬${host}‮, your reporting connection in Settings → Intelligence. The app could not connect to ‬${host}‮ securely. If ‬${host}‮ is your company’s own, have this computer trust it, then quit and reopen Infinitary.‬`;
+    }
+    return `Your crew’s usage is not reaching ${host}, your reporting connection in Settings → Intelligence. The app could not connect to ${host} securely. If ${host} is your company’s own, have this computer trust it, then quit and reopen Infinitary.`;
+  }
+  function settingsUsageConnectionLineUnreachable(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يصل استخدام طاقمك إلى ${host}، وهو اتصال التقارير الخاص بك في الإعدادات ← الذكاء. تعذّر على آخر إرسال الوصول إلى ${host}.`;
+      case "de":
+        return `Die Nutzung deiner Crew kommt nicht bei ${host} an, deiner Berichtsverbindung in Einstellungen → Intelligenz. Der letzte Versand hat ${host} nicht erreicht.`;
+      case "es":
+        return `El uso de tu tripulación no está llegando a ${host}, tu conexión de informes en Configuración → Inteligencia. El último envío no pudo llegar a ${host}.`;
+      case "fr":
+        return `L’utilisation de votre équipage n’arrive pas à ${host}, votre connexion de rapports dans Réglages → Intelligence. Le dernier envoi n’a pas pu joindre ${host}.`;
+      case "ja":
+        return `乗組員の使用量が、設定 → インテリジェンスの報告用の接続 ${host} に届いていません。前回の送信は ${host} に到達できませんでした。`;
+      case "ko":
+        return `선원들의 사용량이 설정 → 지능의 보고 연결인 ${host}에 전달되지 않고 있어요. 마지막 전송이 ${host}에 닿지 못했어요.`;
+      case "pt-BR":
+        return `O uso da sua tripulação não está chegando a ${host}, sua conexão de relatórios em Ajustes → Inteligência. O último envio não conseguiu alcançar ${host}.`;
+      case "zh-Hans":
+        return `船员的用量没有送达 ${host}，即你在设置 → 智能中的报告连接。上一次发送无法访问 ${host}。`;
+      case "zh-Hant":
+        return `船員的用量沒有送達 ${host}，也就是你在設定 → 智慧等級中的回報連線。上一次傳送連不上 ${host}。`;
+      case "en-XA":
+        return `[Ýöûŕ çŕéŵ’š ûšáĝé îš ñöţ ŕéáçĥîñĝ ${host}, ýöûŕ ŕéþöŕţîñĝ çöññéçţîöñ îñ Šéţţîñĝš → Îñţéļļîĝéñçé. Ţĥé ļášţ šéñð çöûļð ñöţ ŕéáçĥ ${host}. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your crew’s usage is not reaching ‬${host}‮, your reporting connection in Settings → Intelligence. The last send could not reach ‬${host}‮.‬`;
+    }
+    return `Your crew’s usage is not reaching ${host}, your reporting connection in Settings → Intelligence. The last send could not reach ${host}.`;
+  }
   function settingsUsageConnectionNone() {
     switch (currentLanguage()) {
       case "ar":
@@ -116322,6 +116406,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsUsageConnectionHeaders,
     settingsUsageConnectionHeadersHint,
     settingsUsageConnectionKeep,
+    settingsUsageConnectionLineRefused,
+    settingsUsageConnectionLineSecure,
+    settingsUsageConnectionLineUnreachable,
     settingsUsageConnectionNone,
     settingsUsageConnectionProblemAddress,
     settingsUsageConnectionProblemDestination,
@@ -119955,6 +120042,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsUsageConnectionHeaders": [],
     "settingsUsageConnectionHeadersHint": [],
     "settingsUsageConnectionKeep": [],
+    "settingsUsageConnectionLineRefused": ["host"],
+    "settingsUsageConnectionLineSecure": ["host"],
+    "settingsUsageConnectionLineUnreachable": ["host"],
     "settingsUsageConnectionNone": [],
     "settingsUsageConnectionProblemAddress": [],
     "settingsUsageConnectionProblemDestination": [],
@@ -134833,7 +134923,9 @@ ${FRAME_KEYBOARD_SCRIPT}
     claudeOnly: literal(true).optional(),
     refusal: object({ host: string(), reason: usageReportingRefusalReasonSchema }).optional(),
     /** The host of the reporting connection the person added, which gets every model's work. */
-    connection: string().optional()
+    connection: string().optional(),
+    /** Why that connection's last send did not get through, until one does or it is saved again. */
+    connectionRefusal: usageReportingRefusalReasonSchema.optional()
   });
   const USAGE_TASKS_MAX = 5e3;
   const usageTasksQuerySchema = strictObject({
@@ -135048,7 +135140,7 @@ ${FRAME_KEYBOARD_SCRIPT}
       toRequest: () => [],
       invalidate: { pollMs: 6e4 },
       // i18n-exempt: served only to the first mate, as the read's description (src/core/pi/appReads.ts).
-      description: "The host the usage report sends every model's work to, from a company's Claude Code reporting setup; claudeOnly when only Claude's own records go there, such as a setup over gRPC; null when no host is known, which includes Claude's own client reporting straight to a company setup this app cannot read; connection is the host of the reporting connection the person added in Settings → Intelligence, which gets the same work too."
+      description: "The host the usage report sends every model's work to, from a company's Claude Code reporting setup; claudeOnly when only Claude's own records go there, such as a setup over gRPC; null when no host is known, which includes Claude's own client reporting straight to a company setup this app cannot read; connection is the host of the reporting connection the person added in Settings → Intelligence, which gets the same work too; connectionRefusal is why that connection's last send did not get through (unreachable, secure-connection or refused), until a send does or the person saves it again."
     }),
     "usage.tasks": entry({
       channel: "inf:usage:tasks",

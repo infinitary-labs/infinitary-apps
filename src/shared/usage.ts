@@ -190,9 +190,9 @@ export const usageSummarySchema = z.object({
 export type UsageSummary = z.infer<typeof usageSummarySchema>;
 
 /**
- * Why a company's collector has not taken this computer's Claude work for a
- * while: it could not be reached, the connection to it could not be made
- * secure, or it answered with a refusal.
+ * Why a collector is not taking the work sent to it: it could not be
+ * reached, the connection to it could not be made secure, or it answered
+ * with a refusal.
  */
 export const usageReportingRefusalReasonSchema = z.enum([
   "unreachable",
@@ -217,6 +217,8 @@ export const usageReportingSchema = z.object({
   refusal: z.object({ host: z.string(), reason: usageReportingRefusalReasonSchema }).optional(),
   /** The host of the reporting connection the person added, which gets every model's work. */
   connection: z.string().optional(),
+  /** Why that connection's last send did not get through, until one does or it is saved again. */
+  connectionRefusal: usageReportingRefusalReasonSchema.optional(),
 });
 export type UsageReporting = z.infer<typeof usageReportingSchema>;
 

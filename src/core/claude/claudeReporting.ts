@@ -380,7 +380,8 @@ const GRPC_RETRYABLE = new Set([1, 4, 8, 10, 11, 14, 15]);
 const SECURE_FAILURE =
   /^(?:ERR_SSL_|ERR_TLS_|UNABLE_TO_)|CERT|CRL|^(?:INVALID_CA|INVALID_PURPOSE|PATH_LENGTH_EXCEEDED|HOSTNAME_MISMATCH)$/;
 
-function failureOf(error: unknown): UsageReportingRefusalReason {
+/** Why a request that got no answer failed: it never connected securely, or never connected. */
+export function collectorFailureOf(error: unknown): "secure-connection" | "unreachable" {
   const code = (error as { code?: unknown } | undefined)?.code;
   return typeof code === "string" && SECURE_FAILURE.test(code)
     ? "secure-connection"
@@ -397,7 +398,7 @@ let systemRoots: { pem: string; endsAt: number }[] | undefined;
  * process and keeps it, so a certificate the computer trusts only after the
  * app started is not seen until the app starts again.
  */
-function computerRoots(now = Date.now()): string[] {
+export function computerRoots(now = Date.now()): string[] {
   if (!systemRoots) {
     let system: readonly string[] = [];
     try {
@@ -541,7 +542,7 @@ export function postOtlpHttp(
 ): Promise<ForwardAnswer> {
   return new Promise((resolve) => {
     const failed = (error: unknown) =>
-      resolve({ status: 503, body: Buffer.alloc(0), failure: failureOf(error) });
+      resolve({ status: 503, body: Buffer.alloc(0), failure: collectorFailureOf(error) });
     const url = new URL(endpoint);
     try {
       const request = (url.protocol === "https:" ? httpsRequest : httpRequest)(
@@ -605,7 +606,7 @@ function postGrpc(
               status: code === undefined || GRPC_RETRYABLE.has(code) ? 503 : 400,
               body: Buffer.alloc(0),
               // A gRPC status is the collector's own answer; none means it was never reached.
-              failure: code === undefined ? failureOf(error) : "refused",
+              failure: code === undefined ? collectorFailureOf(error) : "refused",
             },
       );
     };

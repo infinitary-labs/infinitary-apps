@@ -3968,6 +3968,9 @@
 "settingsUsageConnectionHeaders" = "Encabezados";
 "settingsUsageConnectionHeadersHint" = "Guardados en Secretos y enviados solo a esta dirección.";
 "settingsUsageConnectionKeep" = "Conservar conexión";
+"settingsUsageConnectionLineRefused" = "El uso de tu tripulación no está llegando a %1$@, tu conexión de informes en Configuración → Inteligencia. %1$@ rechazó el último envío: revisa allí la dirección y los encabezados de la conexión.";
+"settingsUsageConnectionLineSecure" = "El uso de tu tripulación no está llegando a %1$@, tu conexión de informes en Configuración → Inteligencia. La app no pudo conectarse de forma segura a %1$@. Si %1$@ es de tu empresa, haz que esta computadora confíe en él; luego cierra Infinitary y vuelve a abrirlo.";
+"settingsUsageConnectionLineUnreachable" = "El uso de tu tripulación no está llegando a %1$@, tu conexión de informes en Configuración → Inteligencia. El último envío no pudo llegar a %1$@.";
 "settingsUsageConnectionNone" = "Envía el uso de tu tripulación a una herramienta de monitoreo o trazas que elijas, como Grafana, Datadog o Langfuse. No se envía nada hasta que agregues una.";
 "settingsUsageConnectionProblemAddress" = "Esa dirección no se puede usar: escríbela completa, empezando por https://, sin inicio de sesión, consulta ni #.";
 "settingsUsageConnectionProblemDestination" = "Esa dirección apunta a un lugar al que Infinitary no se conecta.";

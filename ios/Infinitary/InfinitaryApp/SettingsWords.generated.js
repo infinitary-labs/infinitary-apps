@@ -18242,7 +18242,9 @@ ${events}` : prompt;
     claudeOnly: literal(true).optional(),
     refusal: object({ host: string(), reason: usageReportingRefusalReasonSchema }).optional(),
     /** The host of the reporting connection the person added, which gets every model's work. */
-    connection: string().optional()
+    connection: string().optional(),
+    /** Why that connection's last send did not get through, until one does or it is saved again. */
+    connectionRefusal: usageReportingRefusalReasonSchema.optional()
   });
   const USAGE_TASKS_MAX = 5e3;
   const usageTasksQuerySchema = strictObject({

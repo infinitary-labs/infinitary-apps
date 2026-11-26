@@ -164,11 +164,7 @@ export function UsageTab() {
         </div>
       </div>
       {reporting && <ReportingLine reporting={reporting} />}
-      {reporting?.connection && (
-        <p className="fm-usage-muted" data-usage-reporting-connection="">
-          {m.settingsUsageReportsConnectionTo({ host: reporting.connection })}
-        </p>
-      )}
+      {reporting && <ConnectionLine reporting={reporting} />}
       <SettingError error={unitError} surface="usage-unit" />
       <div className="fm-usage-filters">
         <label>
@@ -520,6 +516,31 @@ export function ReportingLine({ reporting }: { reporting: UsageReporting }) {
   return (
     <p className="fm-usage-muted" data-usage-reporting="">
       {claudeOnly ? m.settingsUsageReportsClaudeTo({ host }) : m.settingsUsageReportsTo({ host })}
+    </p>
+  );
+}
+
+/**
+ * Where the person's own reporting connection sends the crew's usage, or,
+ * while its last send did not get through, that usage is not reaching it
+ * and why.
+ */
+export function ConnectionLine({ reporting }: { reporting: UsageReporting }) {
+  const { connection: host, connectionRefusal: refusal } = reporting;
+  if (!host) return null;
+  return (
+    <p
+      className="fm-usage-muted"
+      data-usage-reporting-connection=""
+      {...(refusal ? { "data-tone": "warn" } : {})}
+    >
+      {refusal === "unreachable"
+        ? m.settingsUsageConnectionLineUnreachable({ host })
+        : refusal === "secure-connection"
+          ? m.settingsUsageConnectionLineSecure({ host })
+          : refusal === "refused"
+            ? m.settingsUsageConnectionLineRefused({ host })
+            : m.settingsUsageReportsConnectionTo({ host })}
     </p>
   );
 }

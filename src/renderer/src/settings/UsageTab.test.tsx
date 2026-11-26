@@ -9,7 +9,12 @@ import {
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { CostBody } from "./UsageCostPerTask";
-import { RecentTasksView, type RecentTasksViewProps, ReportingLine } from "./UsageTab";
+import {
+  ConnectionLine,
+  RecentTasksView,
+  type RecentTasksViewProps,
+  ReportingLine,
+} from "./UsageTab";
 
 /**
  * Usage's recent tasks as the captain reads them (FI3-993): what the list
@@ -169,5 +174,36 @@ describe("Usage's line on where usage is also reported", () => {
 
   it("is not drawn where no collector is named", () => {
     expect(line({ host: null })).toBe("");
+  });
+});
+
+// This task's goal: a send the person's reporting connection could not deliver shows in Usage, not only the log.
+describe("Usage's line on the person's reporting connection", () => {
+  const HOST = "otlp.grafana.example.net";
+  const line = (reporting: Parameters<typeof ConnectionLine>[0]["reporting"]) =>
+    renderToStaticMarkup(<ConnectionLine reporting={reporting} />);
+
+  it("names the connection's host while its sends get through", () => {
+    const markup = line({ host: null, connection: HOST });
+    expect(markup).toContain(m.settingsUsageReportsConnectionTo({ host: HOST }));
+    expect(markup).not.toContain('data-tone="warn"');
+  });
+
+  it.each([
+    ["unreachable", m.settingsUsageConnectionLineUnreachable],
+    ["secure-connection", m.settingsUsageConnectionLineSecure],
+    ["refused", m.settingsUsageConnectionLineRefused],
+  ] as const)(
+    "warns, in place of that line, after a send that did not get through: %s",
+    (reason, words) => {
+      const markup = line({ host: null, connection: HOST, connectionRefusal: reason });
+      expect(markup).toContain('data-tone="warn"');
+      expect(markup).toContain(words({ host: HOST }));
+      expect(markup).not.toContain(m.settingsUsageReportsConnectionTo({ host: HOST }));
+    },
+  );
+
+  it("is not drawn without a connection", () => {
+    expect(line({ host: "otel.example.com:4318" })).toBe("");
   });
 });

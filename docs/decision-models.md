@@ -211,9 +211,6 @@ Adding a second consumer is adding a question.
 
 `pnpm score:kinds --decision-model jev --models <models.json> --provider <p> --model <m>` scores the native model over the same 31 hand labels as the adapter, with `--provider`/`--model` as the fallback the service uses when it cannot answer.
 The key is read from `TYPESAFE_API_KEY` for that offline run only and is never written anywhere; the app itself reads only the user's own stored key.
-`pnpm score:kinds --cases <cases.jsonl> --decision-model <provider>:<model> --decision-key-env <NAME>` scores a provider's decision model the same way, through the code Decisions uses, with the provider's key read from that variable into the runtime's memory only.
-Without `--provider` and `--model` no fallback answers, so a row the model cannot answer reads as failed and nothing else is spent; the report's `answered_by_decision_model` counts the rows the model answered itself.
-`INFINITARY_DECISIONS_BASE_URL` points that run at a stand-in.
 The scorer sits behind Observe's development gate like the other offline tools.
 
 `pnpm score:computers --cases <cases.jsonl> --decision-model jev --models <models.json> --provider <p> --model <m>` scores the computer question the same way, over labeled cases of a task, its standing directions and its computers' facts, and reports accuracy overall, by scenario, by what the task delivers and by expected answer; `--split dev` or `--split test` keeps wording work on one split and measures it on the other.
@@ -339,7 +336,7 @@ TypeSafe Jev and its separate key form remain.
 The accepted direction A uses `ModelRuntime.classify()` behind `src/core/pi/decisionModels.ts` (`classifyWithProvider`), with the account selected by the same `AccountSelector` as work.
 Pi owns and resolves that account's credential; the app neither reads it nor adds a second transport.
 The catalog's classifier type alone does not say which question types a model accepts, so `CHOICE_MODELS` keeps the established choice-capable IDs per provider, with each model's maker, intersected with Pi's catalog.
-A model joins `CHOICE_MODELS` when its provider says it answers a choice, with no scoring run first, the way a subscription's chat models are offered; `pnpm score:kinds` can still measure one ("Scoring it").
+A model joins `CHOICE_MODELS` when its provider says it answers a choice, with no scoring run first, the way a subscription's chat models are offered.
 Span's three yes/no-only models and unknown choice capabilities are excluded.
 
 The first selection opens the consent dialog naming the model, its maker, the provider and the cost (`providerDecisionConsent()`): a subscription's call counts against its allowance at the model's list price, and an account with an API key pays that price.
@@ -383,7 +380,7 @@ Liquid D1 is not currently in that catalog.
 
 OpenCode Go serves decision models at `https://opencode.ai/inference/go/systemone/v1` under the same Go key as its chat models, and each call counts against the Go allowance at list price.
 Pi 1.5.0 lists none for its opencode-go provider, so `src/core/pi/openCodeGoDecisions.ts` wraps that provider the way Amazon Bedrock's is wrapped: it adds Jev 1.14 ($0.042 per million input tokens), GPT-6 Luna Decision and Gemini Decision 1 (each $0.10), as OpenCode's own model list names and prices them, and the System One call.
-The wrap steps aside as soon as Pi's own provider lists a classifier, and is deleted with the Pi update that lists them.
+A decision model Pi lists for opencode-go, from its bundled list or the pi.dev catalog, replaces the wrap's entry of the same id, and the wrap keeps adding the System One call until Pi's own provider can classify; it is deleted with the Pi update whose provider classifies.
 Decisions offers all three; `CHOICE_MODELS` lists them.
 `INFINITARY_OPENCODE_GO_DECISIONS_BASE_URL` redirects Go's decision address in unpackaged dev/e2e runs, and the e2e launcher points it at a closed port so no journey reaches OpenCode.
 

@@ -35,16 +35,27 @@ export const OPENCODE_GO_DECISION_MODELS: readonly ClassifierModel<"typesafe-sys
 
 /**
  * Pi's opencode-go provider with Go's decision models and the System One
- * call added. Once Pi's own provider lists any classifier, it is returned
- * unchanged: delete this wrap with the Pi update that lists them.
+ * call added. Only a provider that can classify is returned unchanged: the
+ * pi.dev catalog overlay may list Go's classifiers on a Pi whose provider
+ * still has no `classify`, so a listing alone never retires the wrap, and a
+ * model Pi lists replaces ours of the same id. Delete this wrap with the Pi
+ * update whose provider classifies.
  */
 export function withOpenCodeGoDecisions(stock: Provider): Provider {
+  if (stock.classify) return stock;
   const all = () => stock.getAllModels?.() ?? stock.getModels();
-  if (stock.classify || all().some((model) => model.type === "classifier")) return stock;
   const api = typesafeSystemOneApi();
   return {
     ...stock,
-    getAllModels: () => [...all(), ...OPENCODE_GO_DECISION_MODELS],
+    getAllModels: () => {
+      const listed = all();
+      return [
+        ...listed,
+        ...OPENCODE_GO_DECISION_MODELS.filter(
+          (ours) => !listed.some((model) => model.type === "classifier" && model.id === ours.id),
+        ),
+      ];
+    },
     classify: (model, context, options) =>
       api.classify(model as ClassifierModel<"typesafe-system-one">, context, options),
   };

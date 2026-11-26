@@ -111,12 +111,26 @@ it("lists Go's decision models on the Go account and asks them under the Go key"
   }
 });
 
-it("steps aside once Pi's own provider lists a decision model", () => {
-  const listed = { type: "classifier", id: "jev-1.14", provider: OPENCODE_GO_PROVIDER_ID };
-  const stock = {
+it("keeps Go's decision models callable once Pi's catalog lists one, and steps aside for a provider that classifies", () => {
+  const listed = {
+    type: "classifier",
+    id: "jev-1.14",
+    name: "Jev 1.14 from the catalog",
+    provider: OPENCODE_GO_PROVIDER_ID,
+  };
+  const listing = {
     id: OPENCODE_GO_PROVIDER_ID,
     getModels: () => [],
     getAllModels: () => [listed],
   } as unknown as Provider;
-  expect(withOpenCodeGoDecisions(stock)).toBe(stock);
+  const wrapped = withOpenCodeGoDecisions(listing);
+  expect(wrapped.classify).toBeTypeOf("function");
+  expect(
+    wrapped
+      .getAllModels?.()
+      .filter((model) => model.type === "classifier")
+      .map((model) => model.name),
+  ).toEqual(["Jev 1.14 from the catalog", "GPT-6 Luna Decision", "Gemini Decision 1"]);
+  const classifying = { ...listing, classify: () => undefined } as unknown as Provider;
+  expect(withOpenCodeGoDecisions(classifying)).toBe(classifying);
 });

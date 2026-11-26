@@ -444,7 +444,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: ${{ fromJSON(contains(needs.failures.outputs.jobs, '(Mac)') && (contains(needs.failures.outputs.jobs, '(Linux') && '["linux","mac"]' || '["mac"]') || '["linux"]') }}
+        platform: ${{ fromJSON((contains(needs.failures.outputs.jobs, '(Mac)') || contains(needs.failures.outputs.jobs, '(Mac; group ')) && (contains(needs.failures.outputs.jobs, '(Linux') && '["linux","mac"]' || '["mac"]') || '["linux"]') }}
     runs-on: ${{ matrix.platform == 'mac' && (fromJSON(vars.MAC_QUEUES || '{}').release_split || fromJSON(vars.MAC_QUEUES || '{}').split || vars.MAC_RUNNER || 'macos-15') || 'ubuntu-24.04' }}
     timeout-minutes: 60
     steps:

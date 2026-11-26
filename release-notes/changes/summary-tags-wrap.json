@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "summary-tags-wrap",
+      "kind": "fix",
+      "title": "A task's tags stay inside its hover summary",
+      "body": "When a task carries several tags, the Tags line in its hover summary now wraps onto more lines inside the summary, the way the task's title does. Before, a long list of tags ran past the summary's right edge.",
+      "area": "tasks",
+      "picture": {
+        "dark": "summary-tags-wrap-dark.webp",
+        "light": "summary-tags-wrap-light.webp",
+        "alt": "A task's hover summary with six tags, Bug, Enhancement, Refactor, Reliability, Security and Test system, wrapped over three lines inside the summary"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

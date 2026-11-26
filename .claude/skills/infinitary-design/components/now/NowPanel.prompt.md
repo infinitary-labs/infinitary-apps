@@ -224,7 +224,7 @@ The summary draws them in that order, leaves the browser out, and adds a Project
 Its fact strip is one row (INF-2528, the captain's direction B: "the preview should remain concise and only the most critical information"): MODEL, the name alone, DIFFICULTY, the task's own level as its `SlotBadge`, then PULL REQUEST, the change's label with its checks as one state and its time (`#813 ○ running for 11m`, `passed in 14m`, `failed after 9m`); with no change the second cell is CHECKS.
 The row never wraps: a long model name gives way first, down to its label's width, then a long branch name, each ending in an ellipsis with the whole name on hover; a review's verdict takes a second row.
 Reasoning, the footnote, the check counts, a refusal's reason, how long ago the checks finished and each watch's next read are the record's alone; a check the app cannot read keeps the warning dot and says `cannot read all checks`.
-The status, the task title and the project wrap in full; other summary facts stay one line.
+The status, the task title, the project and the tags wrap in full; other summary facts stay one line.
 The task record's Info tab is shaped like the summary (INF-2261): its relations as rows of keys and the goal with the captain's words folded under it lead, then Project, Now, Progress and the browser line, then the same one row of facts the summary ends with, grown by what the record adds - REASONING and REVIEW cells, DELIVERY, RUNS ON, a dim mono USE and a RUN cell - with the footnote under it, then a closed More row (`../cards/TaskRecord.prompt.md`, "The Info tab").
 The summary itself does not change.
 A smaller surface shows fewer of them, never different ones; the Tasks row stays a mark, key and title.

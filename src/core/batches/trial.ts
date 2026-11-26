@@ -226,16 +226,8 @@ export async function followTrial(
     const failed = checks.items
       .filter((item) => isRedCheckState(item.state))
       .map((item) => item.name);
-    // Approved at the failed version, it reads failed and is never put in line by its merge:
-    // it goes in line here, so Try again takes it with the line, as an approved fix today.
-    let current = record;
-    if (!approved && fix && options.approved(trial.task, trial.version, repo) === true) {
-      const { commit: _commit, ...change } = fix;
-      current = owner.save(repo.id, {
-        ...record,
-        line: [...record.line, { ...change, at: options.now() }],
-      });
-    }
+    const inLine = approvedFixInLine(options, repo, record);
+    const current = inLine === record ? record : owner.save(repo.id, inLine);
     if (JSON.stringify(trial.failed) === JSON.stringify(failed)) return current;
     const saved = owner.save(repo.id, {
       ...current,
@@ -268,6 +260,27 @@ export async function followTrial(
   )
     return owner.follow(repo, owner.save(repo.id, promoted(record, approved)));
   return owner.recombine(repo, owner.save(repo.id, withoutTrial(record)), "line");
+}
+
+/**
+ * The record with the early run's fix in line once its approval stands at the run's version.
+ * Approved at a failed run's version, the fix reads failed, so its merge never puts it in line
+ * (`standing`): the run's follow and a by-hand answer put it there, so Try again or a send-back
+ * takes it with the line, as an approved fix without a run.
+ */
+export function approvedFixInLine(
+  options: Pick<BatchesOptions, "approved" | "now">,
+  repo: RepoView,
+  record: BatchRecord,
+): BatchRecord {
+  const trial = record.open?.trial;
+  const fix = trial?.members.at(-1);
+  if (!trial || fix?.taskId !== trial.task) return record;
+  if (record.line.some((entry) => entry.taskId === trial.task && entry.head === trial.version))
+    return record;
+  if (options.approved(trial.task, trial.version, repo) !== true) return record;
+  const { commit: _commit, ...change } = fix;
+  return { ...record, line: [...record.line, { ...change, at: options.now() }] };
 }
 
 /**

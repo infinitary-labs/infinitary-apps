@@ -131,6 +131,9 @@ describe("a held batch's early run with its declared fix", () => {
     await home.pass();
 
     expect(home.host.merges).toEqual([expect.objectContaining({ number: 31, head: trial?.head })]);
+    // Approved, the merged pull request no longer names the fix as not approved yet.
+    expect(home.host.pulls.get(31)?.body).toContain(FIX.title);
+    expect(home.host.pulls.get(31)?.body).not.toContain(BATCH_DESCRIPTION_WORDS.trial(FIX.title));
     for (const change of [PARSER, EXPORT, FIX])
       expect(home.place(change)).toMatchObject({ state: "merged" });
     expect(home.heard.settled.flat()).toEqual(
@@ -292,22 +295,27 @@ describe("a held batch's early run with its declared fix", () => {
     expect(home.heard.pushes).toHaveLength(pushes);
   });
 
-  it("drops the run when a held member is reworded, and combines the batch again as before, without the fix", async () => {
-    const { home, held } = await heldWithFix();
-    await confirm(home, FIX);
-    const trial = home.open().trial;
-    const body = "- A report exports as CSV, quoted.";
+  it.each([
+    ["body", { body: "- A report exports as CSV, quoted." }],
+    ["title", { title: "Export reports as quoted CSV" }],
+  ])(
+    "drops the run when a held member's %s is reworded, and combines the batch again as before, without the fix",
+    async (_part, words) => {
+      const { home, held } = await heldWithFix();
+      await confirm(home, FIX);
+      const trial = home.open().trial;
 
-    await home.batches.revise(REPO, { ...EXPORT, body });
-    await home.pass();
+      await home.batches.revise(REPO, { ...EXPORT, ...words });
+      await home.pass();
 
-    expect(home.open().trial).toBeUndefined();
-    expect(home.members()).toEqual(["t-parser", "t-export"]);
-    expect(home.open().members.at(-1)?.body).toBe(body);
-    expect([held.head, trial?.head]).not.toContain(home.open().head);
-    expect(home.record().line.map((change) => change.taskId)).toEqual(["t-legend"]);
-    expect(home.host.merges).toEqual([]);
-  });
+      expect(home.open().trial).toBeUndefined();
+      expect(home.members()).toEqual(["t-parser", "t-export"]);
+      expect(home.open().members.at(-1)).toMatchObject(words);
+      expect([held.head, trial?.head]).not.toContain(home.open().head);
+      expect(home.record().line.map((change) => change.taskId)).toEqual(["t-legend"]);
+      expect(home.host.merges).toEqual([]);
+    },
+  );
 
   it("merges the held version as it is when a rerun is declared passed during the run, with the fix left for the next batch", async () => {
     const { home, held } = await heldWithFix();
@@ -379,6 +387,23 @@ describe("a held batch's early run with its declared fix", () => {
     await home.approve(FIX);
     await home.pass();
     expect(home.host.merges).toEqual([expect.objectContaining({ number: 31, head: trial?.head })]);
+  });
+
+  it("takes a fix approved after its run failed when Try again comes before any pass reads it", async () => {
+    const { home, held } = await heldWithFix();
+    await confirm(home, FIX);
+    home.host.report([passed("build"), failed("unit-tests")]);
+    await home.pass();
+    // The captain's merge click on the failed version records only the approval, and Try
+    // again comes before the next pass.
+    home.approvals.set(FIX.taskId, FIX.head);
+    expect(home.record().line.map((change) => change.taskId)).toEqual(["t-legend"]);
+
+    expect(
+      await home.batches.answer(REPO, { action: "try-again", head: held.head }),
+    ).toBeUndefined();
+    expect(home.members()).toEqual(["t-parser", "t-export", "t-fix", "t-legend"]);
+    expect(home.open().hold).toBeUndefined();
   });
 
   it("puts a fix approved after its run failed in line, so Try again combines it with the line", async () => {

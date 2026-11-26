@@ -95,6 +95,7 @@ import {
   withdraw,
 } from "./line";
 import {
+  approvedFixInLine,
   type ConfirmedFix,
   followTrial,
   mergedAtTrial,
@@ -268,12 +269,22 @@ export type BatchesOptions = {
  * checks hold it until a change is sent back, a declared fix is approved,
  * or its checks run again. The app reruns nothing and files nothing.
  */
+/**
+ * The described mark for an early run's words at its commit (`followTrial`): that commit becomes
+ * the batch's version once promoted, and its words then name the fix as not approved yet, so
+ * the batch's own mark differs and the promoted batch is described again before it merges.
+ */
+function trialMark(head: string): string {
+  return `trial ${head}`;
+}
+
 export class Batches {
   /** One pass per project at a time; a pass asked for meanwhile runs after it. */
   private readonly passes = new Map<string, Promise<void>>();
   /**
    * The version of each project's open batch whose pull request this run
-   * read carrying the batch's own title and description. Nothing is kept
+   * read carrying the batch's own title and description, or an early run's
+   * commit carrying the run's words (`trialMark`). Nothing is kept
    * across a restart, so the first pass after one reads it again.
    */
   private readonly described = new Map<string, string>();
@@ -428,7 +439,8 @@ export class Batches {
       stillAt: (repo) => this.stillAt(repo),
       generated: (repo, branch, head, pushed) => this.writeGenerated(repo, branch, head, pushed),
       describe: async (repo, open, forge) => {
-        if (this.described.get(repo.id) !== open.head) await this.describe(repo, open, forge, true);
+        if (this.described.get(repo.id) !== trialMark(open.head))
+          await this.describe(repo, open, forge, true);
       },
     };
   }
@@ -565,6 +577,8 @@ export class Batches {
       const waiting = answer.action === "try-again" && mergeWait(open)?.head === answer.head;
       if (!repo || !open || (!waiting && open.hold?.head !== answer.head)) return BATCH_WORDS.ended;
       if (!this.atBatchAddress(repo, open)) return BATCH_WORDS.ended;
+      const inLine = approvedFixInLine(this.options, repo, record);
+      if (inLine !== record) record = this.save(repoId, inLine);
       const label = this.label(repo, open);
       if (answer.action === "try-again") {
         if (waiting) {
@@ -1608,7 +1622,8 @@ export class Batches {
         throw caught;
       }
     }
-    if (await this.continueIn(forge, open.number, comments, false)) this.wrote(repo, open, missing);
+    if (await this.continueIn(forge, open.number, comments, false))
+      this.wrote(repo, open, missing, trial ? trialMark(open.head) : open.head);
   }
 
   /**
@@ -1652,9 +1667,14 @@ export class Batches {
    * that could not be written is said once for that version of its change,
    * and the description is written again on each pass until it is there.
    */
-  private wrote(repo: RepoView, open: OpenBatch, missing: readonly BatchMember[]): void {
+  private wrote(
+    repo: RepoView,
+    open: OpenBatch,
+    missing: readonly BatchMember[],
+    mark: string = open.head,
+  ): void {
     if (missing.length === 0) {
-      this.described.set(repo.id, open.head);
+      this.described.set(repo.id, mark);
       this.storyless.delete(repo.id);
       return;
     }

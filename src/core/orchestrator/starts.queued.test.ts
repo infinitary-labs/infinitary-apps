@@ -171,7 +171,7 @@ describe("the task graph (R1)", () => {
         await tick();
         expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "answered" });
         expect(heard.mock.calls).toEqual([
-          [cardId, words, undefined, undefined, undefined, expect.any(Number)],
+          [cardId, words, undefined, undefined, undefined, expect.any(Number), undefined],
         ]);
       } finally {
         release.resolve();

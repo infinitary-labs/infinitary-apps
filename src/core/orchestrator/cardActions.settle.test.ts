@@ -873,6 +873,7 @@ describe("CrewSupervisor: the card thread", () => {
       undefined,
       undefined,
       expect.any(Number),
+      undefined,
     );
     expect(() => h.supervisor.cardActions.act(card.id, "confirm")).toThrow();
     // Reopening and repeating a refused confirmation must not erase the pending reply.
@@ -945,6 +946,7 @@ describe("CrewSupervisor: the card thread", () => {
       undefined,
       undefined,
       expect.any(Number),
+      undefined,
     );
     expect(() => h.supervisor.cardActions.act(card.id, "confirm")).toThrow();
     await tick();
@@ -1402,6 +1404,7 @@ describe("CrewSupervisor: the card thread", () => {
       undefined,
       undefined,
       expect.any(Number),
+      undefined,
     );
     expect(crewmate.promptCalls.some((call) => call.includes("which build is it?"))).toBe(false);
   });
@@ -1423,7 +1426,7 @@ describe("CrewSupervisor: the card thread", () => {
     await tick();
     const thread = harness.supervisor.cardActions.replyToCard(cardId, "the second option is wrong");
     expect(thread.messages).toMatchObject([{ who: "captain", text: "the second option is wrong" }]);
-    // The turn keeps the line the reply was saved as (INF-6115 piece 3).
+    // The turn keeps the saved line (INF-6115 piece 3) and leaves the last filter in place (INF-6860).
     expect(converseAboutCard).toHaveBeenCalledWith(
       cardId,
       "the second option is wrong",
@@ -1431,6 +1434,7 @@ describe("CrewSupervisor: the card thread", () => {
       undefined,
       undefined,
       thread.messages[0]?.id,
+      undefined,
     );
     const answers = [
       { name: "look", values: ['{"tiltDeg":57}'], changed: true, json: true as const },
@@ -1449,6 +1453,7 @@ describe("CrewSupervisor: the card thread", () => {
       undefined,
       undefined,
       expect.any(Number),
+      undefined,
     );
     expect(
       harness.cardStore

@@ -15,9 +15,10 @@ import type { ModelRuntime } from "./types";
 /**
  * The decision models that answer the app's six-way choice, one row per
  * model with the id each provider serves it under. Pi's classifier catalog
- * has no question-capability field, and Span answers only yes/no, so a model
- * stays out until its choice answers are established: Go's were admitted on
- * a `pnpm score:kinds` run through OpenCode Go (`docs/decision-models.md`).
+ * has no question-capability field, and Span answers only yes/no, so this
+ * list names the models whose providers say they answer a choice. A model
+ * joins on that word alone, the way a subscription's chat models do, with no
+ * scoring run first.
  */
 // i18n-exempt: company names
 const CHOICE_MODELS: ReadonlyArray<{

@@ -339,7 +339,7 @@ TypeSafe Jev and its separate key form remain.
 The accepted direction A uses `ModelRuntime.classify()` behind `src/core/pi/decisionModels.ts` (`classifyWithProvider`), with the account selected by the same `AccountSelector` as work.
 Pi owns and resolves that account's credential; the app neither reads it nor adds a second transport.
 The catalog's classifier type alone does not say which question types a model accepts, so `CHOICE_MODELS` keeps the established choice-capable IDs per provider, with each model's maker, intersected with Pi's catalog.
-A model joins `CHOICE_MODELS` only after `pnpm score:kinds` shows it answers the six-way kind-of-work choice itself ("Scoring it").
+A model joins `CHOICE_MODELS` when its provider says it answers a choice, with no scoring run first, the way a subscription's chat models are offered; `pnpm score:kinds` can still measure one ("Scoring it").
 Span's three yes/no-only models and unknown choice capabilities are excluded.
 
 The first selection opens the consent dialog naming the model, its maker, the provider and the cost (`providerDecisionConsent()`): a subscription's call counts against its allowance at the model's list price, and an account with an API key pays that price.
@@ -384,7 +384,7 @@ Liquid D1 is not currently in that catalog.
 OpenCode Go serves decision models at `https://opencode.ai/inference/go/systemone/v1` under the same Go key as its chat models, and each call counts against the Go allowance at list price.
 Pi 1.5.0 lists none for its opencode-go provider, so `src/core/pi/openCodeGoDecisions.ts` wraps that provider the way Amazon Bedrock's is wrapped: it adds Jev 1.14 ($0.042 per million input tokens), GPT-6 Luna Decision and Gemini Decision 1 (each $0.10), as OpenCode's own model list names and prices them, and the System One call.
 The wrap steps aside as soon as Pi's own provider lists a classifier, and is deleted with the Pi update that lists them.
-Of those three, Decisions offers only the ones `CHOICE_MODELS` admits.
+Decisions offers all three; `CHOICE_MODELS` lists them.
 `INFINITARY_OPENCODE_GO_DECISIONS_BASE_URL` redirects Go's decision address in unpackaged dev/e2e runs, and the e2e launcher points it at a closed port so no journey reaches OpenCode.
 
 ### Learned charge facts

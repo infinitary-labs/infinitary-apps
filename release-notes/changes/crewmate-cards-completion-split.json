@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "crewmate-cards-completion-split",
+      "reason": "Internal: the crewmate completion card tests split by owner, the published story's note and merge cases in their own file; nothing a person sees changes."
+    }
+  ]
+}

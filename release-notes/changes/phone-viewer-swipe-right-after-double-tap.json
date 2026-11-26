@@ -5,7 +5,7 @@
       "kind": "fix",
       "area": "devices",
       "title": "A swipe down right after a double-tap closes the picture viewer on your iPhone",
-      "body": "On your iPhone or iPad, a swipe down that started while the full-screen viewer for a picture or a diagram was still zooming from a double-tap did nothing, and the viewer stayed open. The viewer now reads that swipe and closes.",
+      "body": "On your iPhone or iPad, a swipe down that started while the full-screen viewer for a picture or a diagram was still zooming back out from a double-tap did nothing, and the viewer stayed open. The viewer now reads that swipe and closes.",
       "noPicture": "The viewer looks the same; only a swipe down that came right after a double-tap, and did nothing before, now closes it.",
       "provenance": { "origin": "change" }
     }

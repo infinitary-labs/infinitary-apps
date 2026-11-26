@@ -33,21 +33,27 @@ import XCTest
     func testAZoomedOutDiagramDrawsOnlyItsSharpTilesInDark() async throws { try await zoomedOut(.dark) }
     func testAZoomedOutDiagramDrawsOnlyItsSharpTilesInLight() async throws { try await zoomedOut(.light) }
 
-    /// UIKit ignores a touch that starts on a view while that view animates, and the viewer's scroll view animates for 0.3 s
-    /// after its double-tap zooms. In phone run 45809067421 the double-tap that fitted the diagram again ran late, the swipe
-    /// down after it began inside that zoom, and the viewer stayed open. A touch starting during the zoom lands on the
-    /// viewer's own view, which carries its swipe down and double-tap.
-    func testATouchStartingDuringTheDoubleTapZoomLandsOnTheViewer() async throws {
+    /// UIKit ignores a touch that starts on a view animating without interaction, and the scroll view's own animated zoom is
+    /// one. In phone run 45809067421 the double-tap that fitted the diagram again ran late, the swipe down after it began
+    /// inside that zoom, and the viewer stayed open. During the viewer's zoom back to fitted, a touch still reaches the
+    /// diagram inside the scroll view, as it does at rest, instead of stopping at the scroll view.
+    func testATouchStartingDuringTheZoomBackToFittedReachesTheDiagram() async throws {
         guard let shown = try await shownFitted(.light) else { return }
         let (window, viewer) = shown
         defer { window.isHidden = true; window.rootViewController = nil }
         let scroll = viewer.scrollView
-        // Where the first double-tap leaves the diagram, then the second double-tap's zoom back to fitted.
+        let centre = viewer.convert(CGPoint(x: viewer.bounds.midX, y: viewer.bounds.midY), to: window)
+        func named(_ view: UIView?) -> String { view.map { String(describing: type(of: $0)) } ?? "nothing" }
+        // Where the double-tap that enlarges leaves the diagram.
         try await hold(viewer, at: scroll.minimumZoomScale * 2)
-        scroll.setZoomScale(scroll.minimumZoomScale, animated: true)
+        let atRest = window.hitTest(centre, with: nil)
+        XCTAssertTrue(atRest.map { $0 !== scroll && $0.isDescendant(of: scroll) } ?? false,
+                      "At rest a touch reaches the diagram, not \(named(atRest))")
+        CardMediaZoom.fit(scroll)
         XCTAssertFalse(scroll.layer.animationKeys()?.isEmpty ?? true, "The zoom back to fitted animates")
-        let hit = window.hitTest(viewer.convert(CGPoint(x: viewer.bounds.midX, y: viewer.bounds.midY), to: window), with: nil)
-        XCTAssertTrue(hit === viewer, "A touch starting during the zoom lands on \(hit.map { String(describing: type(of: $0)) } ?? "nothing"), not the viewer")
+        let during = window.hitTest(centre, with: nil)
+        XCTAssertTrue(during.map { $0 !== scroll && $0.isDescendant(of: scroll) } ?? false,
+                      "A touch starting during the zoom back to fitted stops at \(named(during)), not the diagram")
     }
 
     private func zoomedOut(_ style: UIUserInterfaceStyle) async throws {

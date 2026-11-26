@@ -720,7 +720,7 @@ A reader's Build row joins the same card but is never sent: the click files it a
 
 A task filed from a reader's Build row, and every task built on it, keeps the outside issue it answers (`WorkShape.issue`) as a fact for the intake round.
 The app writes no closing words of its own for it: a published change, a batch's description and its squash message carry only the crewmate's words around the story, the story, and the changes' titles.
-An outside action that waits on work, such as closing a work item, is its own task waiting on that work (`docs/task-graph.md`, "A side-effect task"), and an outside reporter's issue is answered by the intake round (`docs/outside-intake.md`).
+An outside action that waits on work, such as closing a work item, is its own task waiting on that work (`docs/task-graph.md`, "A side-effect task"), and a filed Build row's notice names its issue's address for that task's words (`docs/agents-reach.md`, "A reader's Build rows").
 
 ### On GitLab
 

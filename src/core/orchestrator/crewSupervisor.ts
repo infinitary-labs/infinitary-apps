@@ -644,6 +644,7 @@ export class CrewSupervisor {
         this.integrationAsks.askForge(taskId, ask, dropped);
       },
       startNow: (key) => this.starts.startQueuedNow(key, { audience: "captain" }),
+      notifyOp: (wake, origin, ref) => this.hooks.notifyOp(wake, origin, ref),
       now: this.now,
     });
     this.reportIntake = new ReportIntake(options, {

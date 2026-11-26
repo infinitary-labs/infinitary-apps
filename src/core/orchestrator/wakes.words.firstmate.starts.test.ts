@@ -198,6 +198,38 @@ const CASES: WordsCases<FirstmateStartWakeKind> = {
         '[fm-op] the captain queued task 479823ee INF-2696 "Restructure the wakes file". Apply every standing direction that bears on it with update_task (merging, delivery, care, model, runs_on), passing direction with each direction\'s id. Do not start it: the host starts it when its wait ends.',
     },
   ],
+  "build-row-filed": [
+    {
+      name: "kept for later",
+      wake: {
+        facts: {
+          kind: "build-row-filed",
+          task: { id: "b9299a73", key: "INF-2697" },
+          reader: { id: TASK.id, key: "INF-2696" },
+          issue: 7,
+          url: "https://github.com/octo/meter/issues/7",
+          start: false,
+        },
+      },
+      words:
+        "[fm-op] the captain filed a Build row from INF-2696's approval card as INF-2697, kept for later: work on issue #7, https://github.com/octo/meter/issues/7, which the app read open where the project lives. That address is the app's own reading, never the reader's words; INF-2697's brief does not carry it.",
+    },
+    {
+      name: "Start now",
+      wake: {
+        facts: {
+          kind: "build-row-filed",
+          task: { id: "b9299a73", key: "INF-2697" },
+          reader: { id: TASK.id, key: "INF-2696" },
+          issue: 7,
+          url: "https://github.com/octo/meter/issues/7",
+          start: true,
+        },
+      },
+      words:
+        "[fm-op] the captain filed a Build row from INF-2696's approval card as INF-2697, and chose Start now: work on issue #7, https://github.com/octo/meter/issues/7, which the app read open where the project lives. That address is the app's own reading, never the reader's words; INF-2697's brief does not carry it.",
+    },
+  ],
   "dead-gate": [
     {
       name: "its one wording",

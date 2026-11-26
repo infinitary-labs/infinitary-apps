@@ -13,6 +13,7 @@ import {
   placedWorldHooks,
   world,
 } from "../../../tests/helpers/placedWorld";
+import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { Computers } from "../devices/computers";
 import { removeFromHome } from "../helper/fromHome";
 import { seedTask } from "../tasks/seedTask";
@@ -126,6 +127,42 @@ describe("leftovers on a computer that runs work", () => {
       await git(project.home, ["merge-base", "--is-ancestor", tip, kept]).then(() => true),
     ).toBe(true);
     // Its work came home whole, so nothing was said.
+    expect(feed(home).filter((line) => line.includes("leftover"))).toEqual([]);
+  });
+
+  it("brings a purged task's work home to the project its clone there was made from, though each computer's git rewrites that address its own way", async () => {
+    const project = await gitProject();
+    const forge = join(project.origin, "..");
+    const address = "git@forge.example.test:owner/origin.git";
+    // That computer reaches the address through a rule for its whole host;
+    // the checkout here through a rule of its own, which names it another way.
+    const config = join(scratchDir("infinitary-placed-rewrite-"), "gitconfig");
+    writeFileSync(config, `[url "${forge}/"]\n\tinsteadOf = git@forge.example.test:owner/\n`);
+    vi.stubEnv("GIT_CONFIG_GLOBAL", config);
+    vi.stubEnv("GIT_CONFIG_NOSYSTEM", "1");
+    await git(project.home, ["remote", "set-url", "origin", address]);
+    await git(project.home, ["config", `url.file://${forge}/origin.git.insteadOf`, address]);
+    const at = await world(() => project.forge(Buffer.alloc(0)));
+    const home = at.home();
+    const { repo } = await adoptHere(home.repos, project.home);
+    model([{ text: "Started on the footer." }]);
+    await at.start("t-rewritten", "Make the footer blue.", repo.id);
+    await expect.poll(() => home.tasks.get("t-rewritten")?.activity).toBe("idle");
+    const work = at.folders("t-rewritten").work;
+    expect(await git(work, ["remote", "get-url", "origin"])).toBe(`${forge}/origin.git`);
+    expect(await git(project.home, ["remote", "get-url", "origin"])).toBe(
+      `file://${forge}/origin.git`,
+    );
+    writeFileSync(join(work, "footer.html"), "<footer>blue</footer>\n");
+    const tip = await commit(work, "feat: a blue footer");
+
+    await home.supervisor.purgeAllTasks();
+
+    await expect.poll(() => at.holds()).toEqual({ tasks: [], workingCopies: [] });
+    const kept = await git(project.home, ["rev-parse", keptRefFor("t-rewritten")]);
+    expect(
+      await git(project.home, ["merge-base", "--is-ancestor", tip, kept]).then(() => true),
+    ).toBe(true);
     expect(feed(home).filter((line) => line.includes("leftover"))).toEqual([]);
   });
 

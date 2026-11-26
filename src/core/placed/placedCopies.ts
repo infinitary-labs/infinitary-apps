@@ -1228,7 +1228,9 @@ export class PlacedCopies {
     for (const repoId of this.options.projects()) {
       const repoDir = await this.options.homeRepo(repoId);
       if (!repoDir) continue;
-      const here = await git(repoDir, ["remote", "get-url", "origin"]).catch(() => "");
+      // Saved addresses on both sides: that computer's git and this one's
+      // may rewrite the same address (`url.<base>.insteadOf`) differently.
+      const here = await git(repoDir, ["config", "--get", "remote.origin.url"]).catch(() => "");
       if (here && withoutSignIn(here) === origin) return repoDir;
     }
     return undefined;

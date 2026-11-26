@@ -188,7 +188,11 @@ export class PlacedLedger {
     let text = "";
     try {
       text = readFileSync(this.callsFile, "utf8");
-    } catch {}
+    } catch (error) {
+      // Only a missing file holds no answers. Read as empty, an unreadable one
+      // would do answered callbacks again and append to answers never read.
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
     for (const line of text.split("\n")) {
       if (!line) continue;
       try {

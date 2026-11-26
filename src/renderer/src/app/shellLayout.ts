@@ -82,6 +82,7 @@ export function useShellLayout(): ShellLayout {
 export type RailFold = "card" | "prompt";
 
 const folding = new Set<RailFold>();
+const foldListeners = new Set<() => void>();
 
 /**
  * The fold's one writer (design/styles.css, `data-rails-folded`): the
@@ -90,7 +91,22 @@ const folding = new Set<RailFold>();
  * round. Each reason says so whenever it changes, and gives way as it goes.
  */
 export function foldRails(reason: RailFold, folds: boolean): void {
+  const was = folding.size > 0;
   if (folds) folding.add(reason);
   else folding.delete(reason);
   document.documentElement.toggleAttribute("data-rails-folded", folding.size > 0);
+  if (was !== folding.size > 0) for (const listener of [...foldListeners]) listener();
+}
+
+/** Whether the docked rails are folded away now, for any reason. */
+export function railsFolded(): boolean {
+  return folding.size > 0;
+}
+
+/** Calls `listener` whenever the rails fold or unfold; returns the stop function. */
+export function onRailFold(listener: () => void): () => void {
+  foldListeners.add(listener);
+  return () => {
+    foldListeners.delete(listener);
+  };
 }

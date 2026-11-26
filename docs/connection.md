@@ -232,7 +232,7 @@ A repeated `close()` waits behind the same drain, including one already underway
 HTTP requests do not extend this grace.
 
 The home pings every device every 30 seconds and drops one that has answered no ping since the previous one (see "Pacing and liveness").
-A frame may be up to `CONNECTION_MAX_FRAME_BYTES` (64 MiB), room for the largest turn the contract admits.
+A frame may be up to `CONNECTION_MAX_FRAME_BYTES` (64 MiB); the complete encoded request must fit even when each field is within its own limit.
 
 ### Holding for a move
 

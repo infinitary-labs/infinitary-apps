@@ -56,7 +56,9 @@ const changes = Object.entries(requests).filter(([, channel]) => contract.reques
   .map(([name]) => `.${name}`).join(", ");
 const requestEnum = `\npublic enum PhoneRequest: String, Sendable {\n${requestCases}\n    public var changes: Bool {\n        switch self { case ${changes}: true; default: false }\n    }\n}\n`;
 const imageSchema = contract.requests[requests.converse].request.prefixItems[0].anyOf[1].properties;
-const limits = `\npublic enum PhoneLimits {\n    public static let images = ${imageSchema.images.maxItems}\n    public static let imageBase64 = ${imageSchema.images.items.properties.data.maxLength}\n    public static let text = ${imageSchema.text.maxLength}\n    public static let steer = ${contract.requests[requests.steer].request.prefixItems[1].maxLength}\n    public static let reply = ${contract.requests["inf:cards:reply"].request.prefixItems[1].anyOf.find((part: { type: string }) => part.type === "object").properties.text.maxLength}\n}\n`;
+// Both native pickers share one limit, so they must fit card replies and older homes.
+const replySchema = contract.requests["inf:cards:reply"].request.prefixItems[1].anyOf.find((part: { type: string }) => part.type === "object").properties;
+const limits = `\npublic enum PhoneLimits {\n    public static let images = ${replySchema.images.maxItems}\n    public static let imageBase64 = ${imageSchema.images.items.properties.data.maxLength}\n    public static let text = ${imageSchema.text.maxLength}\n    public static let steer = ${contract.requests[requests.steer].request.prefixItems[1].maxLength}\n    public static let reply = ${replySchema.text.maxLength}\n}\n`;
 const cardRequests = {
   act: "inf:cards:act", close: "inf:cards:close", seen: "inf:cards:seen", seenUpdate: "inf:cards:seen-update",
   thread: "inf:cards:thread", past: "inf:cards:past", reply: "inf:cards:reply",

@@ -8,6 +8,7 @@ How the connection carries it is `docs/connection.md`; how a device pairs is `do
 
 A first mate conversation accepts up to ten pictures in one turn (`conversation-ten-images`).
 A client sends more than four only when the home lists that change; an older home retains the four-picture limit.
+The complete encoded request, including its envelope, must fit the existing 64 MiB connection frame limit even when its individual files are within their limits.
 Card replies and other surfaces keep their existing limits.
 
 ## Shared card sightings

@@ -277,9 +277,8 @@ export const LOCAL_DOOR_KEY_HEADER = "x-infinitary-local-key";
 export const COMMAND_PATH = "/command";
 
 /**
- * The largest frame either side accepts. Sized to the largest request the
- * contract admits - a turn with its images and pasted files at their caps -
- * with room to spare.
+ * The largest frame either side accepts. A request's serialized envelope
+ * must fit this bound even when its individual fields meet their limits.
  */
 export const CONNECTION_MAX_FRAME_BYTES = 64 * 1024 * 1024;
 

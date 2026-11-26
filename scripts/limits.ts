@@ -570,7 +570,7 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
     CARD_QUESTION_LABEL_MAX: physical("clipped; the definition records the gap label-truncated"),
     CARD_QUESTIONS_MAX_BYTES: physical("definitions not sent, gap too-large; the answers still go"),
     REVISION_TARGETS_MAX: physical("past it the revision offers one Whole card target"),
-    TURN_IMAGES_MAX: physical("refused out loud: up to 4 per message; briefs name extras by path"),
+    TURN_IMAGES_MAX: physical("desktop and native inputs, replies and steers stop at four; crewmate briefs name extra pictures by path"),
     CONVERSATION_IMAGES_MAX: {
       rests: "consent",
       way: "a client refuses more than ten pictures; remove extras before sending",

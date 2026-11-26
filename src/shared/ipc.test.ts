@@ -94,8 +94,34 @@ describe("ipc contract", () => {
     expect(() => parseInvokeRequest("inf:converse", [`${at}x`])).toThrow();
     expect(() => parseInvokeRequest("inf:converse", [{ text: `${at}x` }])).toThrow();
     const full = Array.from({ length: 10 }, () => image);
+    const files = [
+      { name: "notes.txt", text: "Review the attached pictures." },
+      { name: "room.txt", text: "The room is facing north." },
+      { name: "colors.txt", text: "Use the existing colors." },
+      { name: "details.txt", text: "Keep the original proportions." },
+    ];
+    const mixed = { text: "Please compare these pictures.", images: full, files };
     expect(parseInvokeRequest("inf:converse", [{ images: full }])).toEqual([{ images: full }]);
-    expect(() => parseInvokeRequest("inf:converse", [{ images: [...full, image] }])).toThrow();
+    expect(parseInvokeRequest("inf:converse", [mixed])).toEqual([mixed]);
+    expect(() =>
+      parseInvokeRequest("inf:converse", [{ ...mixed, images: [...full, image] }]),
+    ).toThrow();
+    const four = full.slice(0, 4);
+    expect(parseInvokeRequest("inf:cards:reply", ["card-1", { images: four }])).toEqual([
+      "card-1",
+      { images: four },
+    ]);
+    expect(() =>
+      parseInvokeRequest("inf:cards:reply", ["card-1", { images: full.slice(0, 5) }]),
+    ).toThrow();
+    expect(parseInvokeRequest("inf:task:steer", ["task-1", "Look", { images: four }])).toEqual([
+      "task-1",
+      "Look",
+      { images: four },
+    ]);
+    expect(() =>
+      parseInvokeRequest("inf:task:steer", ["task-1", "Look", { images: full.slice(0, 5) }]),
+    ).toThrow();
   });
 
   it("allows four file pastes in turns and replies but refuses a fifth or oversized UTF-8 text", () => {

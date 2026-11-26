@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "project-page-suggest-tags-keyboard-check",
+      "reason": "The project keyboard journey checks the intended Suggest tags tab stop without changing what the app does."
+    }
+  ]
+}

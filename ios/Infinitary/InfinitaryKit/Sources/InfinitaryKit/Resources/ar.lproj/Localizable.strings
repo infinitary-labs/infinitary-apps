@@ -3972,6 +3972,7 @@
 "settingsUsageConnectionAddressHint" = "عنوان OpenTelemetry الخاص بالأداة عبر HTTP. يذهب كل نوع من السجلات إلى مساره الخاص تحته.";
 "settingsUsageConnectionCancel" = "إلغاء";
 "settingsUsageConnectionClaudeCode" = "يرسل استخدام طاقمك إلى %1$@ بتنسيق Claude Code: النماذج والرموز والتكلفة التقديرية، ولا يرسل المطالبات أو الردود أبدًا.";
+"settingsUsageConnectionClaudeCodeWords" = "يرسل استخدام طاقمك إلى %1$@ بتنسيق Claude Code: النماذج والرموز والتكلفة التقديرية، مع المطالبات والردود.";
 "settingsUsageConnectionEdit" = "تعديل";
 "settingsUsageConnectionEmailLine" = "يحمل كل سجل بريد تسجيل دخولك إلى Claude Code، إن كان على هذا الكمبيوتر تسجيل دخول، كي يحسب عرضٌ لكل شخص عملك.";
 "settingsUsageConnectionFailed" = "تعذّر حفظ الاتصال. حاول مرة أخرى.";
@@ -4001,10 +4002,13 @@
 "settingsUsageConnectionSaveLine" = "عند الحفظ يبدأ Infinitary بإرسال استخدام طاقمك إلى هذا العنوان.";
 "settingsUsageConnectionSecretLabel" = "تقارير الاستخدام: %1$@";
 "settingsUsageConnectionStandard" = "يرسل استخدام طاقمك إلى %1$@ بتنسيق OpenTelemetry القياسي: الأوقات والنماذج والرموز والتكلفة التقديرية، ولا يرسل المطالبات أو الردود أبدًا.";
+"settingsUsageConnectionStandardWords" = "يرسل استخدام طاقمك إلى %1$@ بتنسيق OpenTelemetry القياسي: الأوقات والنماذج والرموز والتكلفة التقديرية، مع المطالبات والردود.";
 "settingsUsageConnectionTitle" = "تقارير الاستخدام";
 "settingsUsageConnectionUseOperation" = "إرسال استخدام الطاقم إلى %1$@";
 "settingsUsageConnectionUseReason" = "يرسل Infinitary استخدام طاقمك إلى %1$@، كما يطلب اتصال التقارير لديك.";
 "settingsUsageConnectionUseResult" = "رد الأداة على كل دفعة";
+"settingsUsageConnectionWords" = "إرسال المطالبات والردود أيضًا";
+"settingsUsageConnectionWordsHint" = "يضيف المطالبات التي يتلقاها طاقمك وردوده وما يعطيه لأدواته. تُخفى أولًا المفاتيح وكلمات المرور التي يتعرّف عليها Infinitary فيها.";
 "settingsUsageCostAllKinds" = "كل الأنواع";
 "settingsUsageCostAllProjects" = "كل المشاريع";
 "settingsUsageCostChange" = "التغيّر";

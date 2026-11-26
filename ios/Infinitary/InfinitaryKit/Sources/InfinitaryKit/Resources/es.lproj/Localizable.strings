@@ -3972,6 +3972,7 @@
 "settingsUsageConnectionAddressHint" = "La dirección de OpenTelemetry de la herramienta por HTTP. Cada tipo de registro va a su propia ruta debajo de ella.";
 "settingsUsageConnectionCancel" = "Cancelar";
 "settingsUsageConnectionClaudeCode" = "Envía el uso de tu tripulación a %1$@ en el formato de Claude Code: modelos, tokens y costo estimado, nunca prompts ni respuestas.";
+"settingsUsageConnectionClaudeCodeWords" = "Envía el uso de tu tripulación a %1$@ en el formato de Claude Code: modelos, tokens y costo estimado, con prompts y respuestas.";
 "settingsUsageConnectionEdit" = "Editar";
 "settingsUsageConnectionEmailLine" = "Cada registro lleva el correo de tu inicio de sesión en Claude Code, si este computador tiene uno, para que una vista por persona cuente tu trabajo.";
 "settingsUsageConnectionFailed" = "No se pudo guardar la conexión. Inténtalo de nuevo.";
@@ -4001,10 +4002,13 @@
 "settingsUsageConnectionSaveLine" = "Al guardar, Infinitary empieza a enviar el uso de tu tripulación a esta dirección.";
 "settingsUsageConnectionSecretLabel" = "Informes de uso: %1$@";
 "settingsUsageConnectionStandard" = "Envía el uso de tu tripulación a %1$@ en el formato estándar de OpenTelemetry: tiempos, modelos, tokens y costo estimado, nunca prompts ni respuestas.";
+"settingsUsageConnectionStandardWords" = "Envía el uso de tu tripulación a %1$@ en el formato estándar de OpenTelemetry: tiempos, modelos, tokens y costo estimado, con prompts y respuestas.";
 "settingsUsageConnectionTitle" = "Informes de uso";
 "settingsUsageConnectionUseOperation" = "Enviar el uso de la tripulación a %1$@";
 "settingsUsageConnectionUseReason" = "Infinitary envía el uso de tu tripulación a %1$@, como pide tu conexión de informes.";
 "settingsUsageConnectionUseResult" = "La respuesta de la herramienta a cada lote";
+"settingsUsageConnectionWords" = "Enviar también prompts y respuestas";
+"settingsUsageConnectionWordsHint" = "Añade los prompts que recibe tu tripulación, sus respuestas y lo que da a sus herramientas. Antes se ocultan las claves y contraseñas que Infinitary reconoce en ellos.";
 "settingsUsageCostAllKinds" = "Todos los tipos";
 "settingsUsageCostAllProjects" = "Todos los proyectos";
 "settingsUsageCostChange" = "Cambio";

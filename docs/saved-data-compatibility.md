@@ -272,11 +272,12 @@ No database migration or saved-data format revision is needed.
 
 ## The reporting connection
 
-The reporting connection saves `<userData>/usage-connection.json` (`docs/usage-report.md`, "The person's reporting connection"): the address, its network class, the format and each header's name and Secrets reference, never a value.
+The reporting connection saves `<userData>/usage-connection.json` (`docs/usage-report.md`, "The person's reporting connection"): the address, its network class, the format, each header's name and Secrets reference, never a value, and `words: true` only while prompts and replies are on.
 An older build never reads the file, so it sends nothing there and Settings shows no connection; going back to a newer build sends again.
 Each header's vault record, and its entry in a recovery archive, carries `consumer: "usage-report"` (`docs/secrets.md`, "App sign-ins").
 An older build still opens such a record, since its check covers the stored fields, and lists it as a kept sign-in; its strict recovery-archive schema refuses an archive holding one, as it does one holding `forProgram`.
 A damaged file reads as no connection and forgets no header, since a file that cannot be read names nothing for certain; a field a newer build adds is ignored.
+A file saved before `words` existed reads as off, and a build without it ignores the field and sends no words; its next save drops the field, so going back to a newer build reads the switch as off.
 The format revision therefore stays at 1.
 
 ## An ask's how-to in waiting asks

@@ -7,7 +7,9 @@ import {
   readSession,
   sessionDialect,
   sessionDialectAt,
+  sessionEntriesBetween,
   sessionFilesIn,
+  sessionOffsetAfter,
   sessionToolCalls,
   sidecarPathOf,
 } from "./sessionReader";
@@ -531,5 +533,130 @@ describe("the one session reader (W1 S11)", () => {
     writeFileSync(pi, `\n${JSON.stringify({ type: "session", id: "p" })}`);
     expect(sessionDialectAt(pi)).toBe("pi");
     expect(sessionDialectAt(join(dir, "missing.jsonl"))).toBeNull();
+  });
+});
+
+/**
+ * docs/usage-report.md, "Prompts and replies": the person's reporting
+ * connection reads each turn's words from the session's lines written in
+ * that turn, read back from the file's end for the first turn and from
+ * where the last read stopped for each turn after it.
+ */
+describe("a session's lines between two moments", () => {
+  const at = (seconds: number) => Date.parse("2026-11-20T09:00:00.000Z") + seconds * 1000;
+  const message = (seconds: number, id: string, body: Line): Line => ({
+    type: "message",
+    id,
+    timestamp: new Date(at(seconds)).toISOString(),
+    message: body,
+  });
+  const ids = (entries: readonly Line[]) => entries.map((entry) => entry.id);
+
+  it("reads one turn of a Pi session by its lines' own times, from the byte after the last earlier line", () => {
+    // A file read whole by a tool is one line longer than the stretch read back at a time.
+    const read = "é".repeat(200_000);
+    const lines = [
+      { type: "session", id: "pi-1", timestamp: new Date(at(0)).toISOString() },
+      message(1, "u1", {
+        role: "user",
+        content: [{ type: "text", text: "Résumé the café notes" }],
+      }),
+      message(2, "a1", {
+        role: "assistant",
+        content: [{ type: "toolCall", id: "c1", name: "read", arguments: { path: "notes.md" } }],
+        stopReason: "toolUse",
+      }),
+      message(3, "r1", {
+        role: "toolResult",
+        toolCallId: "c1",
+        toolName: "read",
+        content: [{ type: "text", text: read }],
+        isError: false,
+      }),
+      message(4, "a2", { role: "assistant", content: [{ type: "text", text: "Done." }] }),
+      message(10, "u2", { role: "user", content: [{ type: "text", text: "And the menu?" }] }),
+      message(11, "a3", { role: "assistant", content: [{ type: "text", text: "Read too." }] }),
+      message(20, "u3", { role: "user", content: [{ type: "text", text: "Later." }] }),
+    ];
+    const path = join(scratchDir("infinitary-session-window-"), "pi.jsonl");
+    const text = `${jsonl(lines)}{"type":"message","id":"torn`;
+    writeFileSync(path, text);
+    const offsetAfter = (id: string) => {
+      const end = text.indexOf("\n", text.indexOf(`"id":"${id}"`)) + 1;
+      return Buffer.byteLength(text.slice(0, end));
+    };
+
+    expect(sessionOffsetAfter(path, at(0))).toBe(offsetAfter("pi-1"));
+    expect(sessionOffsetAfter(path, at(5))).toBe(offsetAfter("a2"));
+    expect(sessionOffsetAfter(path, at(30))).toBe(offsetAfter("u3"));
+    expect(sessionOffsetAfter(path, at(-1))).toBe(0);
+
+    const first = sessionEntriesBetween(path, sessionOffsetAfter(path, at(0)), at(0), at(5));
+    expect(first.dialect).toBe("pi");
+    expect(ids(first.entries)).toEqual(["u1", "a1", "r1", "a2"]);
+    expect(first.offset).toBe(offsetAfter("a2"));
+
+    const second = sessionEntriesBetween(path, first.offset, at(5), at(12));
+    expect(ids(second.entries)).toEqual(["u2", "a3"]);
+    expect(second.offset).toBe(offsetAfter("a3"));
+    // A read from the file's start passes over what came before the turn.
+    expect(ids(sessionEntriesBetween(path, 0, at(5), at(12)).entries)).toEqual(["u2", "a3"]);
+  });
+
+  it("maps one turn of a Claude-served session into the Pi dialect's messages", () => {
+    const user = (seconds: number, uuid: string, content: unknown) =>
+      claude({
+        type: "user",
+        uuid,
+        timestamp: new Date(at(seconds)).toISOString(),
+        message: { role: "user", content },
+      });
+    const assistant = (seconds: number, uuid: string, id: string, content: unknown[]) =>
+      claude({
+        type: "assistant",
+        uuid,
+        timestamp: new Date(at(seconds)).toISOString(),
+        message: { id, role: "assistant", model: "claude-opus-5-5", content },
+      });
+    const path = claudeSession(
+      [
+        user(1, "u1", "how is the crew?"),
+        assistant(2, "x1", "msg_1", [{ type: "text", text: "All idle." }]),
+        user(10, "u2", "start the fix"),
+        assistant(11, "x2", "msg_2", [
+          { type: "text", text: "Started." },
+          {
+            type: "tool_use",
+            id: "toolu_1",
+            name: "mcp__infinitary__emit_card",
+            input: { title: "Fix started" },
+          },
+        ]),
+      ],
+      [],
+    );
+    const read = sessionEntriesBetween(path, sessionOffsetAfter(path, at(5)), at(5), at(12));
+    expect(read.dialect).toBe("claude");
+    expect(
+      read.entries.map((entry) => {
+        const body = entry.message as Line;
+        return [entry.type, body.role, JSON.stringify(body.content)];
+      }),
+    ).toEqual([
+      ["message", "user", JSON.stringify("start the fix")],
+      [
+        "message",
+        "assistant",
+        JSON.stringify([
+          { type: "text", text: "Started." },
+          {
+            type: "toolCall",
+            id: "toolu_1",
+            name: "emit_card",
+            arguments: { title: "Fix started" },
+          },
+        ]),
+      ],
+    ]);
   });
 });

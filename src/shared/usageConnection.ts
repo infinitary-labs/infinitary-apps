@@ -3,8 +3,9 @@ import { z } from "zod";
 /**
  * The reporting connection a person adds in Settings → Intelligence
  * (docs/usage-report.md, "The person's reporting connection"): an
- * OTLP/HTTP address, its headers kept in Secrets, and the one format the
- * tool reading it takes. A view never carries a header's value.
+ * OTLP/HTTP address, its headers kept in Secrets, the one format the
+ * tool reading it takes, and whether each turn's prompts and replies go
+ * too. A view never carries a header's value.
  */
 
 export const USAGE_CONNECTION_FORMATS = ["standard", "claude-code"] as const;
@@ -17,6 +18,8 @@ export const usageConnectionViewSchema = z
     endpoint: z.string(),
     format: usageConnectionFormatSchema,
     headers: z.array(z.object({ name: z.string() })),
+    /** Each turn's prompts, replies and tool calls go too; left out while off, as an older home leaves it. */
+    words: z.boolean().optional(),
   })
   .nullable();
 export type UsageConnectionView = z.infer<typeof usageConnectionViewSchema>;
@@ -31,6 +34,8 @@ export const usageConnectionSaveSchema = z.object({
   headers: z
     .array(z.object({ name: z.string().max(128), value: z.string().max(8192).optional() }))
     .max(20),
+  /** Prompts and replies go too; an older window leaves it out, which saves the switch off. */
+  words: z.boolean().optional(),
 });
 export type UsageConnectionSave = z.infer<typeof usageConnectionSaveSchema>;
 

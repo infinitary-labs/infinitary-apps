@@ -1,8 +1,11 @@
+import { writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
+import { join } from "node:path";
 import { DEFAULT_COST_LIMIT } from "@shared/costLimit";
 import type { FmEvent } from "@shared/events";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import type { ResolveClaudeSettings } from "../claude/claudeAccess";
 import {
   companyForward,
@@ -15,6 +18,7 @@ import { homeUsage } from "../storage/homeUsage";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
 import { companyDestination, readManagedReporting } from "./companyDestination";
+import { SessionWords } from "./sessionWords";
 import type { UsageReportDestination } from "./usageReporter";
 
 /**
@@ -28,6 +32,7 @@ type Received = { path: string; headers: Record<string, string | string[] | unde
 let server: Server | undefined;
 afterEach(async () => {
   vi.restoreAllMocks();
+  vi.useRealTimers();
   await new Promise<void>((resolve) => (server ? server.close(() => resolve()) : resolve()));
   server = undefined;
 });
@@ -68,7 +73,10 @@ function destination(
   };
 }
 
-function home(destinations: () => readonly UsageReportDestination[]) {
+function home(
+  destinations: () => readonly UsageReportDestination[],
+  sessionFiles: (taskId: string) => readonly string[] = () => [],
+) {
   const db = openInMemoryDatabase();
   const tasks = new TaskService({ db });
   seedTask(tasks, {
@@ -79,6 +87,7 @@ function home(destinations: () => readonly UsageReportDestination[]) {
     shape: { kind: "fix" },
   });
   let hear: (event: FmEvent) => void = () => {};
+  const words = new SessionWords(sessionFiles);
   const usage = homeUsage(db, {
     appLimit: () => DEFAULT_COST_LIMIT,
     projectLimit: () => null,
@@ -87,6 +96,7 @@ function home(destinations: () => readonly UsageReportDestination[]) {
       hear = listener;
     },
     reportDestinations: destinations,
+    turnWords: (taskId, since, until) => words.between(taskId, since, until),
   });
   return { usage, hear: (event: FmEvent) => hear(event) };
 }
@@ -427,6 +437,249 @@ describe("UsageReporter", () => {
     expect(warn.mock.calls.map(([line]) => line)).toEqual([
       "[usage report] skipped one update (TypeError)",
       "[usage report] skipped one update (TypeError)",
+    ]);
+  });
+});
+
+/**
+ * INF-6587's approved plan, piece 3: with the content switch on, a turn
+ * carries its prompts, outputs and tool arguments from Infinitary's own
+ * session records, and only to the destination whose switch it is. The
+ * record is a crewmate's Pi session file.
+ */
+describe("a turn's prompts and replies", () => {
+  /** One crewmate turn: a prompt, a reply that reads a file, then a closing reply. */
+  function crewTurn(dir: string, start: number): string {
+    const line = (offset: number, id: string, message: Record<string, unknown>) => ({
+      type: "message",
+      id,
+      timestamp: new Date(start + offset).toISOString(),
+      message,
+    });
+    const path = join(dir, "2026-11-20_pi.jsonl");
+    writeFileSync(
+      path,
+      `${[
+        { type: "session", id: "pi-1", timestamp: new Date(start - 60_000).toISOString() },
+        line(100, "u1", {
+          role: "user",
+          content: [{ type: "text", text: "Fix the login timeout" }],
+        }),
+        line(200, "a1", {
+          role: "assistant",
+          content: [
+            { type: "thinking", thinking: "The timeout lives in auth.ts." },
+            { type: "toolCall", id: "call-7", name: "read", arguments: { path: "src/auth.ts" } },
+          ],
+          stopReason: "toolUse",
+        }),
+        line(300, "r1", {
+          role: "toolResult",
+          toolCallId: "call-7",
+          toolName: "read",
+          content: [{ type: "text", text: "export const TIMEOUT_MS = 500;" }],
+          isError: false,
+        }),
+        line(400, "a2", {
+          role: "assistant",
+          content: [{ type: "text", text: "Raised the timeout to five seconds." }],
+          stopReason: "stop",
+        }),
+      ]
+        .map((entry) => JSON.stringify(entry))
+        .join("\n")}\n`,
+    );
+    return path;
+  }
+
+  function spansAt(received: Received[], prefix: string): any[] {
+    return received
+      .filter((entry) => entry.path.startsWith(prefix) && entry.path.endsWith("/v1/traces"))
+      .flatMap((entry) => entry.body.resourceSpans[0].scopeSpans[0].spans);
+  }
+
+  it("go only to the destination whose switch is on, on the turn's span once its records settle", async () => {
+    const { url, received } = await collector();
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const start = Date.now();
+    const sessions = scratchDir("infinitary-usage-words-");
+    const { usage, hear } = home(
+      () => [
+        destination(url, "claude-code", "company"),
+        destination(url, "standard", "tool"),
+        { ...destination(url, "standard", "mine"), words: true },
+      ],
+      (taskId) => (taskId === "task-1" ? [crewTurn(sessions, start)] : []),
+    );
+    hear({
+      type: "task_changed",
+      taskId: "task-1",
+      key: "INF-1",
+      kind: "work",
+      status: "active",
+      from: "open",
+      activity: "running",
+      closedReason: null,
+      seq: 1,
+    });
+    vi.setSystemTime(start + 150);
+    hear({ type: "tool_start", taskId: "task-1", callId: "call-7", toolName: "read" });
+    vi.setSystemTime(start + 350);
+    hear({
+      type: "tool_end",
+      taskId: "task-1",
+      callId: "call-7",
+      toolName: "read",
+      isError: false,
+    });
+    usage.recordUsage(CODEX_CALL);
+    vi.setSystemTime(start + 500);
+    hear({
+      type: "task_changed",
+      taskId: "task-1",
+      key: "INF-1",
+      kind: "work",
+      status: "active",
+      from: "active",
+      activity: "idle",
+      closedReason: null,
+      seq: 2,
+    });
+    await usage.usageReporter.flush();
+
+    const turnOf = (prefix: string) =>
+      spansAt(received, prefix).filter((span) => span.name === "invoke_agent crewmate");
+    expect(turnOf("/tool/").map(attrs)).toEqual([
+      {
+        "gen_ai.operation.name": "invoke_agent",
+        "gen_ai.agent.name": "crewmate",
+        "infinitary.role": "crewmate",
+        "infinitary.work_kind": "fix",
+      },
+    ]);
+    // The session may still be writing the turn's last lines: its span waits for them.
+    expect(turnOf("/mine/")).toEqual([]);
+    expect(
+      spansAt(received, "/mine/")
+        .map((span) => span.name)
+        .sort(),
+    ).toEqual(["chat gpt-5.5", "execute_tool read"]);
+
+    vi.setSystemTime(start + 5_500);
+    await usage.usageReporter.flush();
+    const [turn] = turnOf("/mine/");
+    expect(JSON.parse(String(attrs(turn)["gen_ai.input.messages"]))).toEqual([
+      { role: "user", parts: [{ type: "text", content: "Fix the login timeout" }] },
+    ]);
+    expect(JSON.parse(String(attrs(turn)["gen_ai.output.messages"]))).toEqual([
+      {
+        role: "assistant",
+        parts: [
+          { type: "tool_call", id: "call-7", name: "read", arguments: { path: "src/auth.ts" } },
+        ],
+        finish_reason: "tool_call",
+      },
+      {
+        role: "assistant",
+        parts: [{ type: "text", content: "Raised the timeout to five seconds." }],
+        finish_reason: "stop",
+      },
+    ]);
+    expect(turnOf("/mine/")).toHaveLength(1);
+    expect(turnOf("/tool/")).toHaveLength(1);
+    for (const prefix of ["/company/", "/tool/"]) {
+      const sent = JSON.stringify(received.filter((entry) => entry.path.startsWith(prefix)));
+      expect(sent).not.toContain("Fix the login timeout");
+      expect(sent).not.toContain("src/auth.ts");
+    }
+    expect(JSON.stringify(received)).not.toContain("The timeout lives in auth.ts.");
+    expect(JSON.stringify(received)).not.toContain("TIMEOUT_MS");
+  });
+
+  it("go to a destination in Claude Code's format as its prompt, response and tool events", async () => {
+    const { url, received } = await collector();
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const start = Date.now();
+    const sessions = scratchDir("infinitary-usage-words-");
+    const { usage, hear } = home(
+      () => [{ ...destination(url, "claude-code", "mine"), words: true }],
+      () => [crewTurn(sessions, start)],
+    );
+    hear({
+      type: "task_changed",
+      taskId: "task-1",
+      key: "INF-1",
+      kind: "work",
+      status: "active",
+      from: "open",
+      activity: "running",
+      closedReason: null,
+      seq: 1,
+    });
+    vi.setSystemTime(start + 150);
+    hear({ type: "tool_start", taskId: "task-1", callId: "call-7", toolName: "read" });
+    vi.setSystemTime(start + 350);
+    hear({
+      type: "tool_end",
+      taskId: "task-1",
+      callId: "call-7",
+      toolName: "read",
+      isError: false,
+    });
+    vi.setSystemTime(start + 500);
+    hear({
+      type: "task_changed",
+      taskId: "task-1",
+      key: "INF-1",
+      kind: "work",
+      status: "active",
+      from: "active",
+      activity: "idle",
+      closedReason: null,
+      seq: 2,
+    });
+    // Quitting reads every ended turn's words at once.
+    await usage.usageReporter.stop();
+
+    const events = received
+      .filter((entry) => entry.path === "/mine/v1/logs")
+      .flatMap((entry) => entry.body.resourceLogs[0].scopeLogs[0].logRecords)
+      .map((record: any) => [record.body.stringValue, attrs(record)]);
+    const grouping = { "infinitary.role": "crewmate", "infinitary.work_kind": "fix" };
+    expect(events).toEqual([
+      [
+        "claude_code.user_prompt",
+        {
+          "event.name": "user_prompt",
+          "event.timestamp": new Date(start + 100).toISOString(),
+          ...grouping,
+          prompt_length: "21",
+          prompt: "Fix the login timeout",
+        },
+      ],
+      [
+        "claude_code.tool_result",
+        {
+          "event.name": "tool_result",
+          "event.timestamp": new Date(start + 200).toISOString(),
+          ...grouping,
+          tool_name: "read",
+          tool_use_id: "call-7",
+          tool_input: JSON.stringify({ path: "src/auth.ts" }),
+          success: "true",
+          duration_ms: "200",
+        },
+      ],
+      [
+        "claude_code.assistant_response",
+        {
+          "event.name": "assistant_response",
+          "event.timestamp": new Date(start + 400).toISOString(),
+          ...grouping,
+          response_length: "35",
+          response: "Raised the timeout to five seconds.",
+        },
+      ],
     ]);
   });
 });

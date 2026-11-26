@@ -3974,6 +3974,7 @@
 "settingsUsageConnectionAddressHint" = "도구의 HTTP OpenTelemetry 주소입니다. 기록 종류마다 그 아래의 경로로 보냅니다.";
 "settingsUsageConnectionCancel" = "취소";
 "settingsUsageConnectionClaudeCode" = "선원들의 사용량을 Claude Code 형식으로 %1$@에 보냅니다. 모델, 토큰, 예상 비용만 보내며 프롬프트나 답변은 보내지 않습니다.";
+"settingsUsageConnectionClaudeCodeWords" = "선원들의 사용량을 Claude Code 형식으로 %1$@에 보냅니다. 모델, 토큰, 예상 비용과 함께 프롬프트와 답변도 보냅니다.";
 "settingsUsageConnectionEdit" = "편집";
 "settingsUsageConnectionEmailLine" = "이 컴퓨터에 Claude Code 로그인이 있으면 각 기록에 그 이메일이 담겨, 사람별 보기에서 내 작업이 집계됩니다.";
 "settingsUsageConnectionFailed" = "연결을 저장하지 못했습니다. 다시 시도하세요.";
@@ -4003,10 +4004,13 @@
 "settingsUsageConnectionSaveLine" = "저장하면 선원들의 사용량을 이 주소로 보내기 시작합니다.";
 "settingsUsageConnectionSecretLabel" = "사용량 보고: %1$@";
 "settingsUsageConnectionStandard" = "선원들의 사용량을 OpenTelemetry 표준 형식으로 %1$@에 보냅니다. 시간, 모델, 토큰, 예상 비용만 보내며 프롬프트나 답변은 보내지 않습니다.";
+"settingsUsageConnectionStandardWords" = "선원들의 사용량을 OpenTelemetry 표준 형식으로 %1$@에 보냅니다. 시간, 모델, 토큰, 예상 비용과 함께 프롬프트와 답변도 보냅니다.";
 "settingsUsageConnectionTitle" = "사용량 보고";
 "settingsUsageConnectionUseOperation" = "크루의 사용량을 %1$@(으)로 보내기";
 "settingsUsageConnectionUseReason" = "보고 연결에 따라 Infinitary가 크루의 사용량을 %1$@(으)로 보냅니다.";
 "settingsUsageConnectionUseResult" = "각 묶음에 대한 도구의 응답";
+"settingsUsageConnectionWords" = "프롬프트와 답변도 보내기";
+"settingsUsageConnectionWordsHint" = "선원들이 받는 프롬프트, 그 답변, 도구에 건네는 내용을 더합니다. Infinitary가 그 안에서 알아본 키와 비밀번호는 먼저 가립니다.";
 "settingsUsageCostAllKinds" = "모든 종류";
 "settingsUsageCostAllProjects" = "모든 프로젝트";
 "settingsUsageCostChange" = "변화";

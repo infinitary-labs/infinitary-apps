@@ -2160,6 +2160,7 @@
 "phoneRecordWaitDueRead" = "次回の取得は %1$@ の予定でした";
 "phoneRecordWaitDueReset" = "リセットは %1$@ の予定でした";
 "phoneRecordWaitDueStart" = "開始は %1$@ の予定でした";
+"phoneRecordWaitLabelRecorded" = "%1$@ · %2$@ に待機を記録";
 "phoneRecordWaitLine" = "%2$@ · %1$@";
 "phoneRecordWaitLineRecorded" = "%2$@ · %1$@ · %3$@ に待機を記録";
 "phoneRecordWaitNextCheckBack" = "再確認 %1$@";
@@ -2167,7 +2168,6 @@
 "phoneRecordWaitNextRead" = "次回の取得 %1$@";
 "phoneRecordWaitNextReset" = "リセット %1$@";
 "phoneRecordWaitNextStart" = "開始時刻 %1$@";
-"phoneRecordWaitTimeUnknown" = "時刻不明";
 "phoneRecordWaitsOn" = "待機対象";
 "phoneRecordWhy" = "理由";
 "phoneRecordWhyFiled" = "登録した理由";
@@ -2507,6 +2507,17 @@
 "recordMoreDelivery" = "届け方";
 "recordMoreValidation" = "実地検証";
 "recordOpenKeptEvidence" = "保存された証拠を開く";
+"recordPartsLast" = "最後のパートを待っています";
+"recordPartsLastBacklog" = "最後のパートがあなたの「開始」を待っています";
+"recordPartsLastBacklogGuidance" = "%1$@ はバックログにあります。パートがすべて終了すると、このタスクは自動で終了します。";
+"recordPartsLastIdle" = "%1$@ は待機中です。パートがすべて終了すると、このタスクは自動で終了します。";
+"recordPartsLastInterrupted" = "%1$@ は中断されました。パートがすべて終了すると、このタスクは自動で終了します。";
+"recordPartsLastQueued" = "%1$@ はキューにあります。パートがすべて終了すると、このタスクは自動で終了します。";
+"recordPartsLastStarting" = "%1$@ は開始中です。パートがすべて終了すると、このタスクは自動で終了します。";
+"recordPartsLastWaiting" = "最後のパートがあなたを待っています";
+"recordPartsLastWaitingGuidance" = "%1$@ にあなた宛てのカードがあります。パートがすべて終了すると、このタスクは自動で終了します。";
+"recordPartsLastWorking" = "%1$@ は作業中です。パートがすべて終了すると、このタスクは自動で終了します。";
+"recordPartsOpenGuidance" = "%1$@。パートがすべて終了すると、このタスクは自動で終了します。";
 "recordPersonalNone" = "なし（%1$@）";
 "recordPersonalVersion" = "%3$@ のバージョン %2$@（%1$@）";
 "recordPolicyParentTask" = "親タスク";

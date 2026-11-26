@@ -2160,6 +2160,7 @@
 "phoneRecordWaitDueRead" = "prochaine lecture en retard depuis %1$@";
 "phoneRecordWaitDueReset" = "renouvellement en retard depuis %1$@";
 "phoneRecordWaitDueStart" = "démarrage en retard depuis %1$@";
+"phoneRecordWaitLabelRecorded" = "%1$@ · attente enregistrée %2$@";
 "phoneRecordWaitLine" = "%2$@ · %1$@";
 "phoneRecordWaitLineRecorded" = "%2$@ · %1$@ · attente enregistrée %3$@";
 "phoneRecordWaitNextCheckBack" = "nouveau point %1$@";
@@ -2167,7 +2168,6 @@
 "phoneRecordWaitNextRead" = "prochaine lecture %1$@";
 "phoneRecordWaitNextReset" = "renouvellement %1$@";
 "phoneRecordWaitNextStart" = "démarrage prévu %1$@";
-"phoneRecordWaitTimeUnknown" = "heure inconnue";
 "phoneRecordWaitsOn" = "Attend";
 "phoneRecordWhy" = "Pourquoi";
 "phoneRecordWhyFiled" = "Pourquoi elle a été classée";
@@ -2507,6 +2507,17 @@
 "recordMoreDelivery" = "livraison";
 "recordMoreValidation" = "validation en direct";
 "recordOpenKeptEvidence" = "Ouvrir la preuve conservée";
+"recordPartsLast" = "En attente de sa dernière partie";
+"recordPartsLastBacklog" = "Sa dernière partie attend que vous appuyiez sur Démarrer";
+"recordPartsLastBacklogGuidance" = "%1$@ est dans votre réserve. Cette tâche se ferme d’elle-même une fois ses parties closes.";
+"recordPartsLastIdle" = "%1$@ est inactive. Cette tâche se ferme d’elle-même une fois ses parties closes.";
+"recordPartsLastInterrupted" = "%1$@ a été interrompue. Cette tâche se ferme d’elle-même une fois ses parties closes.";
+"recordPartsLastQueued" = "%1$@ est en file d’attente. Cette tâche se ferme d’elle-même une fois ses parties closes.";
+"recordPartsLastStarting" = "%1$@ est en train de démarrer. Cette tâche se ferme d’elle-même une fois ses parties closes.";
+"recordPartsLastWaiting" = "Sa dernière partie vous attend";
+"recordPartsLastWaitingGuidance" = "%1$@ a une carte pour vous. Cette tâche se ferme d’elle-même une fois ses parties closes.";
+"recordPartsLastWorking" = "%1$@ est en cours. Cette tâche se ferme d’elle-même une fois ses parties closes.";
+"recordPartsOpenGuidance" = "%1$@. Cette tâche se ferme d’elle-même une fois ses parties closes.";
 "recordPersonalNone" = "Aucune, sur %1$@";
 "recordPersonalVersion" = "Version %2$@ du %3$@, sur %1$@";
 "recordPolicyParentTask" = "Tâche parente";

@@ -3,7 +3,7 @@
 // the body, above the goal"). These moved from the record's frame to the
 // window with the Info tab; each case is the frame test it was ported from.
 import { describe, expect, it } from "vitest";
-import { recordAttentionOf, recordClosedLineOf } from "./recordAttention";
+import { partsDoTheWork, recordAttentionOf, recordClosedLineOf } from "./recordAttention";
 import { waitChainWords } from "./taskPresentation";
 import type { TaskDetail } from "./tasks";
 
@@ -75,7 +75,12 @@ describe("the record's attention sentence", () => {
       "Waiting on DEMO-38",
     );
     expect(
-      say(task({ activity: "interrupted", problem: "The connection dropped - try again." })),
+      say(
+        task({
+          activity: "interrupted",
+          problem: "The connection dropped - try again.",
+        }),
+      ),
     ).toEqual({
       title: "Work was interrupted",
       guidance: "The connection dropped - try again.",
@@ -114,12 +119,21 @@ describe("the record's attention sentence", () => {
       say(
         task({
           activity: "idle",
-          delivery: { mode: "direct-pr", prNumber: 57, changeLabel: "#57", ci: "pending" },
+          delivery: {
+            mode: "direct-pr",
+            prNumber: 57,
+            changeLabel: "#57",
+            ci: "pending",
+          },
         }),
       ),
     ).toBeNull();
     expect(say(task({ status: "open", activity: null, startPolicy: "on-request" }))).toBeNull();
-    const parent = { status: "open", activity: null, startPolicy: "on-request" } as const;
+    const parent = {
+      status: "open",
+      activity: null,
+      startPolicy: "on-request",
+    } as const;
     expect(say(task({ ...parent, children: { total: 5, closed: 3 } }))).toMatchObject({
       title: "Its 5 parts do the work",
       guidance: "3 closed, 2 still open.",
@@ -129,13 +143,108 @@ describe("the record's attention sentence", () => {
       guidance: "0 closed, 1 still open.",
     });
     expect(
-      say(task({ ...parent, blockedBy: ["DEMO-38"], children: { total: 5, closed: 3 } }))?.title,
+      say(
+        task({
+          ...parent,
+          blockedBy: ["DEMO-38"],
+          children: { total: 5, closed: 3 },
+        }),
+      )?.title,
     ).toBe("Waiting on DEMO-38");
+  });
+
+  // INF-6805: "there's no way to see children parts, and \"waiting for start\" is also misleading" -
+  // a parent with open parts says what its parts wait on, never a Start of its own.
+  it("says what a parent's open parts wait on, with the most pressing first", () => {
+    const parent = {
+      status: "open",
+      activity: null,
+      startPolicy: "on-request",
+    } as const;
+    const closed = task({
+      key: "DEMO-43",
+      status: "done",
+      activity: null,
+      closedReason: "merged",
+    });
+    const backlog = task({ key: "DEMO-44", ...parent });
+    const working = task({ key: "DEMO-45" });
+    const waiting = task({
+      key: "DEMO-46",
+      activity: "idle",
+      waitingCardId: "card",
+    });
+    const of = (...parts: TaskDetail[]) =>
+      say(
+        task({
+          ...parent,
+          children: { total: parts.length, closed: 1 },
+          parts,
+        }),
+      );
+    expect(of(closed, backlog)).toEqual({
+      title: "Its last part waits for your Start",
+      guidance: "DEMO-44 is in your backlog. This task closes by itself once its parts close.",
+      urgent: false,
+      danger: false,
+    });
+    expect(of(closed, working)).toMatchObject({
+      title: "Waiting for its last part",
+      guidance: "DEMO-45 is working. This task closes by itself once its parts close.",
+    });
+    expect(of(closed, waiting)).toMatchObject({
+      title: "Its last part is waiting on you",
+      guidance: "DEMO-46 has a card for you. This task closes by itself once its parts close.",
+    });
+    expect(of(closed, backlog, working, waiting)).toMatchObject({
+      title: "Waiting for 3 of its 4 parts",
+      guidance:
+        "1 waiting on you, 1 working and 1 in your backlog. This task closes by itself once its parts close.",
+    });
+    expect(
+      say(
+        task({
+          ...parent,
+          blockedBy: ["DEMO-38"],
+          children: { total: 2, closed: 1 },
+          parts: [closed, backlog],
+        }),
+      )?.title,
+    ).toBe("Waiting on DEMO-38");
+    // Only a parent that never runs itself closes by itself: a program runs its
+    // script while open, and a when-ready parent starts by itself when nothing
+    // holds it.
+    const parts = { children: { total: 2, closed: 1 }, parts: [closed, backlog] };
+    for (const runs of [
+      { ...parent, program: true as const },
+      { ...parent, startPolicy: "when-ready" as const },
+    ])
+      expect(say(task({ ...runs, ...parts }))?.title).toBe("Its 2 parts do the work");
+  });
+
+  // INF-6805 plan, run_facts "hidden": a parent that never runs itself leaves
+  // out Now, Delivery, Runs on and Use; one that runs keeps them.
+  it("counts only an unstarted on-request parent as one that never runs itself", () => {
+    const parent = {
+      status: "open",
+      activity: null,
+      startPolicy: "on-request",
+      children: { total: 2, closed: 1 },
+    } as const;
+    expect(partsDoTheWork(task(parent))).toBe(true);
+    expect(partsDoTheWork(task({ ...parent, program: true }))).toBe(false);
+    expect(partsDoTheWork(task({ ...parent, startPolicy: "when-ready" }))).toBe(false);
+    expect(partsDoTheWork(task({ ...parent, status: "active", activity: "running" }))).toBe(false);
+    expect(partsDoTheWork(task({ ...parent, children: { total: 0, closed: 0 } }))).toBe(false);
   });
 
   it("does not equate needsYou with a decision, and keeps the reported blocker in view", () => {
     expect(
-      say(task({ flags: { blocked: false, held: true, needsYou: true, ready: false } }))?.title,
+      say(
+        task({
+          flags: { blocked: false, held: true, needsYou: true, ready: false },
+        }),
+      )?.title,
     ).toBe("Work is paused");
     expect(
       say(
@@ -168,7 +277,13 @@ describe("the record's attention sentence", () => {
       "No reason has been reported yet.",
     );
     expect(
-      say(task({ activity: "idle", waitingCardId: "choice", outcomeSummary: "An older blocker." })),
+      say(
+        task({
+          activity: "idle",
+          waitingCardId: "choice",
+          outcomeSummary: "An older blocker.",
+        }),
+      ),
     ).toBeNull();
   });
 
@@ -221,11 +336,11 @@ describe("the record's attention sentence", () => {
     );
     expect(failed?.title).toBe("Work was interrupted");
     expect(failed?.guidance).toMatch(/^The computer disconnected\./);
-    expect(failed?.guidance).toContain("WEB-41 · time unknown · wait recorded");
+    expect(failed?.guidance).toContain("Waiting on WEB-41 · wait recorded");
     expect(failed?.guidance).toContain("start time was due");
     expect(failed?.guidance).not.toContain("Website checks");
     const waiting = say(task({ blockedBy: ["WEB-41"], waits }));
-    expect(waiting?.title).toContain("WEB-41 · time unknown");
+    expect(waiting?.title).toContain("Waiting on WEB-41 · wait recorded");
     expect(waiting?.title).toContain("start time was due");
   });
 
@@ -233,7 +348,12 @@ describe("the record's attention sentence", () => {
   // record named only the task waited on; the record says the same as the tile.
   it("names where a lone task wait's line stops, keeping when the wait was recorded", () => {
     const waits: NonNullable<TaskDetail["waits"]> = [
-      { id: "dependency:web", kind: "dependency", label: "WEB-41", since: now - 60000 },
+      {
+        id: "dependency:web",
+        kind: "dependency",
+        label: "WEB-41",
+        since: now - 60000,
+      },
     ];
     for (const waitChain of [
       { on: "WEB-41", end: "WEB-40", update: true as const },
@@ -245,9 +365,14 @@ describe("the record's attention sentence", () => {
     }
     // A line that stops at the task waited on, with no hold, keeps the wait's own words.
     const plain = say(
-      task({ activity: "idle", blockedBy: ["WEB-41"], waits, waitChain: { on: "WEB-41" } }),
+      task({
+        activity: "idle",
+        blockedBy: ["WEB-41"],
+        waits,
+        waitChain: { on: "WEB-41" },
+      }),
     );
-    expect(plain?.title).toMatch(/^WEB-41 · time unknown · wait recorded/);
+    expect(plain?.title).toMatch(/^Waiting on WEB-41 · wait recorded/);
   });
 });
 

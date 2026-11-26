@@ -617,17 +617,24 @@ The record's Info tab is shaped like the crew summary a task's circle shows on h
 The window draws its overview from the shared task facts (`TaskFactRows`, `TaskFactStrip`, `src/renderer/src/design/core/TaskFacts.tsx`), in this order:
 
 1. The attention sentence, when something is wrong or the task waits: a failure, an interruption, a hold or a wait (`recordAttentionOf`, `src/shared/recordAttention.ts`), with a charted filing's Why and a closed task's one line (`recordClosedLineOf`) beside it (`RecordAttention`, `src/renderer/src/cards/RecordHead.tsx`).
+   A backlog parent with open parts, one that waits for your Start and runs no program of its own, neither blocked nor waiting on a dropped task, says what its parts wait on: its last part by name (`Its last part waits for your Start`, `Its last part is waiting on you`, `Waiting for its last part`), or how many are open with each status counted, most pressing first, and that the parent closes by itself once its parts close; the status pill shows no reason beside it.
+   A queued parent, which starts by itself when nothing holds it, and a program say their queue line, `Waiting for its parts · since <date>` (`queueWaitOf`, `src/core/tasks/queueWait.ts`).
 2. On a task closed as done, the Delivered row: each delivery fact the close read, with how it is known (`RecordDelivered`).
 3. The task's place among other tasks as rows of keys: Part of, Waits on, Holds up and Parts, and the outside issue it answers as a link under Issue (`RecordRelations`; `docs/agents-reach.md`, "A reader's Build rows").
+   Parts is a fold, open at first, its summary the count of closed parts and a bar of them by status; open, it lists every part in filing order, each with its status mark, title, key and status word, and pressing a part opens its record (`RecordParts`, `TaskDetail.parts`, INF-6805).
+   Past eight parts with some closed, the closed rows fold behind one line counting them.
+   A part row has no Start or Show the card: the captain opens the part and acts there.
+   Each part row is its own Tab stop, an exception to the one-Tab-stop list rule (`docs/keyboard.md`) that the captain chose for this list.
 4. The goal, whole, with the captain's words folded under it, closed, the fold's name counting them ("Your 2 messages"); the fold also holds why a crew filing was filed and why the first mate built without a plan (`RecordGoal`, `recordWordsFoldName`).
    The title stays the task's one line in the chrome.
 5. Project, Now, Progress and the Browser line, as the summary draws them.
    Project names the task's project, and in a project of several repositories the repository it works in beside it ("Harbor Ledger · ledger-api"; `projectFact`, `src/renderer/src/character/crew/projectFact.ts`, and `PhoneRecord.projectFact` on the phone).
    Tags follows Project once the project has tags or the task carries one: the tags it carries, then Edit tags (`RecordTags`, `docs/task-tags.md`).
 6. One row of facts under a hairline, as the summary's footer row: the model, the task's Difficulty badge (the level its routing asked for), the reasoning, the change with its checks as one cell, the review, Delivery, Runs on, a dim mono Use cell and a Run cell beside it ("Live resource use"), then Why this model.
+   A backlog parent that runs no program never runs itself, so its record leaves out Now, Delivery, Runs on and Use, and keeps Spend (`partsDoTheWork`); a queued parent and a program keep every fact.
 7. One closed More row at the end, scrolling with the body: the facts the summary leaves out, with their policy sources, Knowledge used and Live validation; a short dim preview beside its name says what it holds.
 
-The words fold and More are remembered per task while its record stays in the stack, as every record section is (`recordOpenSections`): paging away and back keeps them, and closing the record ends its visit, so reopening starts with both closed.
+The words fold, the parts fold and More are remembered per task while its record stays in the stack, as every record section is (`recordOpenSections`): paging away and back keeps them, and closing the record ends its visit, so reopening starts with the words fold and More closed and the parts fold open.
 Cards and Activity are the record's own tabs (`docs/task-card-tabs.md`): the record's sandboxed body draws them and More, and the window tells it which view to show (`view` in its state, `[data-record-view]` on each part).
 
 ## Live resource use
@@ -841,8 +848,8 @@ Desktop kanban tiles replace their generic status reason with grouped standing w
 The Tasks list and board list rows retain their existing presentation.
 The task card reconciles every structured wait into its existing header, Checks and blocker or hold explanation, without another Wait section; the hover preview keeps its short status, blocker keys and one-row fact strip (INF-2528), its status naming where a lone wait's line stops and that task's hold (INF-5578).
 Checks keeps each named watch and its own next read separate from other runs’ results.
-Dependencies retain their keys and recorded-since dates; missing end times stay unknown.
+Dependencies say `Waiting on` and their keys, with their recorded-since dates; a wait with no recorded event shows no time at all.
 A lone dependency whose line goes further or ends in a hold names where it stops in the blocker explanation, as its tile does, keeping when the wait was recorded (`waitStopsOf`, INF-5578).
 Only recorded events carry clock times: next read, check-back, reset or start time.
-Past events say was due, not resumed; Backlog still requires Start.
+Past events say was due, not resumed; Backlog still requires Start, and a parent whose parts do its work never waits for a Start of its own (`taskWaitsOf`).
 Older homes without the optional projection retain the previous presentation.

@@ -117,7 +117,7 @@ async function appToolDescriptions(): Promise<Map<string, string>> {
 // the same way through both session backends, which alone knows the task's
 // autonomy, and neither accepts content that competes with the saved story.
 // INF-3060: a copy of the story's risk or required actions goes to the home,
-// which holds it against the story (crewmateCards.completion.test.ts).
+// which holds it against the story (crewmateCards.storyNote.test.ts).
 it.each(["Pi", "Claude"] as const)(
   "forwards saved-story merge cards and copies of their risk or required actions through %s, refusing competing content",
   async (backend) => {

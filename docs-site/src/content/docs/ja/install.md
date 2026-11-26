@@ -1,5 +1,5 @@
 ---
-source: 2633a75241365106
+source: a8386567e2fc7990
 title: インストール
 description: Mac、Linux、Windows 用の安定版 Infinitary をダウンロードするか、iPhone と iPad 用の非公開 TestFlight への招待をリクエストします。
 ---
@@ -46,7 +46,7 @@ iPhone と iPad 用の Infinitary は、非公開の TestFlight で提供して�
 - **コンピューター。**
   macOS 12 以降の Mac、x64 プロセッサーを搭載した Linux コンピューター、または x64 プロセッサーを搭載した Windows 11 PC（試験版）。
 - **AI のサブスクリプション。**
-  一等航海士には、応答できるサブスクリプションが少なくとも 1 つ必要です：Codex、Grok、Claude、Kimi Code、Copilot、API キーを使う OpenRouter、または AWS へのサインインを使う Amazon Bedrock。
+  一等航海士には、応答できるサブスクリプションが少なくとも 1 つ必要です：Codex、Grok、Claude、Kimi Code、Copilot、OpenCode Go、API キーを使う OpenRouter、または AWS へのサインインを使う Amazon Bedrock。
 - **Claude を使う場合は Claude Code。**
   Claude のサブスクリプションを使う場合は、先にそのコンピューターに Claude Code をインストールしてください。
   Infinitary は、インストールした Claude Code を使います。

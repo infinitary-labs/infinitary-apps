@@ -31,7 +31,8 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
     `mergeStaleProviders` keeps last-known-good with its age through everything else, dropping windows whose own reset has passed.
     A no-window fallback is never a success and unknown is never zero.
   - **The credential-and-request layer has real coverage.**
-    `tests/e2e/quota-live-sensor.spec.ts` is the one e2e that does NOT use the fixture seam: it runs the real `createQuotaFetcher` against a local stub of the vendor endpoint (`INFINITARY_CLAUDE_USAGE_URL`, `INFINITARY_GROK_USAGE_URL`, `INFINITARY_GROK_KEY_URL`, `INFINITARY_KIMI_USAGE_URL`, `INFINITARY_OPENCODE_GO_USAGE_URL`, dev/e2e-gated exactly like `INFINITARY_QUOTA_FIXTURE_DIR`).
+    `tests/e2e/quota-live-sensor.spec.ts` is an e2e that does NOT use the fixture seam: it runs the real `createQuotaFetcher` against a local stub of the vendor endpoint (`INFINITARY_CLAUDE_USAGE_URL`, `INFINITARY_GROK_USAGE_URL`, `INFINITARY_GROK_KEY_URL`, `INFINITARY_KIMI_USAGE_URL`, dev/e2e-gated exactly like `INFINITARY_QUOTA_FIXTURE_DIR`).
+    `tests/e2e/opencode-go.spec.ts` does the same for OpenCode Go's reading through `INFINITARY_OPENCODE_GO_USAGE_URL`.
     Two provider defects reached the captain twice because that layer had none.
     Grok is METERED since the 2026-09-05 dogfood fix: `providers/grok.ts` reads the consumer credits meter (`grok.com/grok_api_v2.GrokBuildBilling/GetGrokCreditsConfig`, an UNDOCUMENTED gRPC-web endpoint that can change without notice) with the account's own Pi OAuth token and no browser headers: the meter answers with the bearer, the gRPC-web content type and marker alone, so Infinitary sends nothing that claims to be a browser or another client.
     `src/core/quota/grpcWeb.ts` is the schema-less reader (framing, trailers, a bounded protobuf field scanner); the field map in grok.ts is reverse-engineered and confirmed against a live capture (`providers/grok.test.ts` carries the bytes).

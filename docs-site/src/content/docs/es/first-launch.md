@@ -1,5 +1,5 @@
 ---
-source: c16d193883332656
+source: 042bc7f3959ec370
 title: Primer inicio
 description: Lo que Infinitary muestra la primera vez que lo abres, cómo elegir dónde vive tu primer oficial, cómo conectar una suscripción y cómo agregar tu primer proyecto.
 ---
@@ -40,13 +40,14 @@ Nada más funciona hasta que una suscripción pueda responder a tu primer oficia
 ## Conectar una suscripción {#connect-a-subscription}
 
 Elige **Esta computadora** para que tu primer oficial se quede aquí.
-Aparece un botón para cada proveedor que tu primer oficial puede usar: Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter, Amazon Bedrock y API personalizada.
+Aparece un botón para cada proveedor que tu primer oficial puede usar: Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter, Amazon Bedrock y API personalizada.
 
 1. Elige el botón de tu proveedor.
 2. Inicia sesión como te lo pida ese proveedor.
    Algunos abren la página de inicio de sesión en tu navegador.
    Copilot y Kimi Code muestran un código: presiona **Copiar código** y luego escríbelo en el sitio del proveedor.
    OpenRouter recibe una clave de API que pegas.
+   OpenCode Go recibe la clave que pegas desde la OpenCode Console.
    Con Amazon Bedrock, elige una región y usa un perfil de AWS de esta computadora o pega una clave de API de Bedrock.
    Un proveedor que ofrece ambas opciones pregunta si quieres **Iniciar sesión con tu navegador** o pegar una **Clave de API**.
 3. Espera mientras la ventana dice que se está conectando.

@@ -63,7 +63,7 @@ Changing the starting levels is a commit to that file in the tap; a development 
 | Codex, Grok | Pi's catalog (bundled plus the pi.dev overlay), filtered by the account's **own list**: `chatgpt.com/backend-api/codex/models?client_version=…` and `api.x.ai/v1/models`, read with the account's auth the way quota reads it, through the same bounded transport with a wider 8 MiB reply limit (a meter's is 64 KB; a list describing every model may run past that) | Pi's catalog, unfiltered |
 | Kimi Code | Pi's catalog (Kimi serves no list of its own) | - |
 | Copilot | Pi's catalog, which Pi itself narrows at sign-in to the models the account may use (it stores their ids with the sign-in) | - |
-| OpenCode Go | Pi's catalog (OpenCode Go serves no list of its own) | - |
+| OpenCode Go | Pi's catalog; OpenCode publishes its own list at `opencode.ai/inference/go/v1/models`, which pi.dev's overlay follows and the app does not read itself | - |
 | OpenRouter | Pi's catalog | - |
 
 Claude ships Haiku 5.5 (`claude-haiku-5-5`) as its low starter; Sonnet 5.5 remains medium, Opus 5.5 high and Fable 5.2 premium.

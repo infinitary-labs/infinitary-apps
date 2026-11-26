@@ -82,6 +82,13 @@ From the keyboard, Tab from the model's dropdown reaches the account's, which dr
 It is a setting chosen now and then rather than an action a person repeats, so it adds no command, as First mate model adds none.
 `SubscriptionsTab.test.ts` and `intelligenceBoard.test.tsx` own the choices and the picker's words; `tests/e2e/subscriptions-instruments.spec.ts` owns the journey, driven by keys, and `tests/e2e/phase5-quota.spec.ts` the crew pin's.
 
+## A key sign-in
+
+OpenCode Go signs in only with a pasted key (`keySignIn` in `src/shared/providers.ts`; INF-6873).
+Pi offers it no browser sign-in, so its chip asks no browser-or-key question and goes straight to Pi's key prompt, a secret field.
+Under the prompt a line says the key is on the OpenCode Console (`accountsConnectKeyWhere`, naming `keySignIn.site`).
+The key comes only from the account's own store: an `OPENCODE_API_KEY` in the computer's environment signs nothing in.
+
 ## A code sign-in
 
 Copilot and Kimi Code sign in with a code the person enters on the provider's site (`codeSignIn` in `src/shared/providers.ts`; INF-842, the captain's answers on INF-838).

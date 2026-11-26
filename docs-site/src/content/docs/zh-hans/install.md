@@ -1,5 +1,5 @@
 ---
-source: 2633a75241365106
+source: a8386567e2fc7990
 title: 安装
 description: 下载适用于 Mac、Linux 或 Windows 的 Infinitary 稳定版，或申请 iPhone 和 iPad 版的 TestFlight 私密邀请。
 ---
@@ -46,7 +46,7 @@ iPhone 和 iPad 版 Infinitary 正处于 TestFlight 私密测试阶段。
 - **一台电脑。**
   一台运行 macOS 12 或更高版本的 Mac、一台使用 x64 处理器的 Linux 电脑，或一台使用 x64 处理器的 Windows 11 电脑（实验版）。
 - **一个 AI 订阅。**
-  你的大副至少需要一个能够作答的订阅：Codex、Grok、Claude、Kimi Code、Copilot、使用 API 密钥的 OpenRouter，或使用你的 AWS 登录的 Amazon Bedrock。
+  你的大副至少需要一个能够作答的订阅：Codex、Grok、Claude、Kimi Code、Copilot、OpenCode Go、使用 API 密钥的 OpenRouter，或使用你的 AWS 登录的 Amazon Bedrock。
 - **使用 Claude 需要 Claude Code。**
   如果你使用 Claude 订阅，请先在那台电脑上安装 Claude Code。
   Infinitary 会使用你安装的 Claude Code。

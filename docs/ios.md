@@ -691,6 +691,12 @@ A send carries the visible entry’s `visibleCardId`, `pastCardId` or `taskId` t
 The native multiline field uses the keyboard’s own dictation; Infinitary adds no speech model or microphone permission.
 Photos uses the system library picker, converts selected images to orientation-correct JPEG thumbnails up to 2,048 pixels, and bounds each attachment and turn by the published limits.
 Selected photos appear as removable chips; a send clears the box and its photos at the tap, and a refusal puts them back in front of anything typed since.
+The newest message may be taken back for its first minute by the Mac's rules (`docs/composer.md`, "Taking back"; INF-6763's plan), once the computer lists `take-back-message` and while changes are on (`ReadOnlySession.canTakeBack`, `PhoneTakeBack` in the kit).
+While it may, a revert icon (`arrow.uturn.backward`, no words of its own; the captain's words on the plan: "don't make the button literally "take back". use a "revert" icon or something like that") stands just left of its bubble in a 44-point touch area, labeled Revert your last message, and a long press on the bubble offers Revert your last message and Edit your last message; both leave when the minute ends, and never stand on a card round or the older round.
+Revert sends `inf:conversation:take-back` and the round reads Reverted at the tap, settling on the next last turn, which the phone reads again; a refusal takes it back with the Mac's words.
+Edit puts the message's words in the box, in front of anything typed, marked Replaces your last message with a cross that keeps the words and sends them as a new message, as Esc does on the Mac; an emptied box drops the mark, and a send past the minute, or as plain words to a computer between versions, sends as new.
+The send carries `replaces`, so the computer takes the old message back as it keeps the new one, and the strip shows both at the tap.
+A message taken back reads Reverted before its faint bubble, its words struck, on the strip and in the Conversation, and a replacement folds the words it replaced under Edited in the Conversation; a reply withdrawn before any turn read the message reads Reverted before your first mate read it.
 Command-Return sends from either message field; native controls retain hardware-keyboard focus, VoiceOver and Dynamic Type.
 
 The Tasks tab is the Mac's Tasks panel in a phone's hands (INF-2928, the captain's direction A): its groups, order, rows, search and tap are the Mac's (`src/panels/now/rows.ts`), ported in `PhoneTaskList`.
@@ -782,6 +788,7 @@ The session (`ReadOnlySession`) keeps the computer's last snapshots untouched an
 A close or a choice takes the card off Home and the next card is up; putting a card aside moves it to its task row, and bringing cards back puts them on Home with the first one up.
 A reply joins the card's thread marked Sending… where its time will be, and the draft and photos clear.
 A message clears the box and stands as the last turn, marked Sending… until the computer has it.
+Taking a message back, by the revert icon or a replacement's send, reads it Reverted at once, and settles on the last turn that marks it taken back; a last turn without that message voids it.
 Start and Continue read Starting on the record and its row, Stop reads Stopping, and a steer shows in the transcript marked Sending… as its draft clears.
 A shown, drawn card's sighting reads at once, so it leaves the new count and the chevrons' dots and N new walks on to the next card before the computer's seen mark comes back; a sighting the computer did not take leaves the card new, with no notice (INF-4541).
 An explicit Done or Decline shows its selected ending on the record and row at the tap, and settles only when the home's task reading carries the matching status and reason.

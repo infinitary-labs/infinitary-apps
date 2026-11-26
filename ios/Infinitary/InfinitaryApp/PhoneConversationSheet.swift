@@ -269,7 +269,7 @@ private struct PhoneConversationRoundView: View {
             if let answer = round.answer {
                 mate(answer.text, problem: false, crewmate: answer.who == "crewmate")
             } else if let reply = round.reply {
-                mate(reply.words ?? reply.text, problem: reply.problem == true, crewmate: false)
+                mate(reply.whole, problem: reply.problem == true, crewmate: false)
             } else if working {
                 mate(nil, problem: false, crewmate: false)
             }
@@ -286,10 +286,28 @@ private struct PhoneConversationRoundView: View {
                 if round.through {
                     Text(PhoneMessages.shellLastTurnFromCommand(command: "infinitary-axi")).font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted) // i18n-exempt: the command's own name
                 }
-                Text(words).font(PhoneFont.callout).foregroundStyle(PhoneTheme.text).textSelection(.enabled)
-                    .padding(.vertical, 6).padding(.horizontal, 12)
-                    .background(PhoneTheme.text.opacity(0.1), in: PhoneConversationBubble())
-                    .accessibilityIdentifier("conversation-you")
+                // A message taken back reads Reverted before its struck bubble, as on the strip and the Mac.
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    if round.takenBack {
+                        Text(PhoneMessages.shellLastTurnReverted()).font(PhoneFont.caption).foregroundStyle(PhoneTheme.muted)
+                            .fixedSize().accessibilityIdentifier("conversation-reverted")
+                    }
+                    Text(words).font(PhoneFont.callout).strikethrough(round.takenBack)
+                        .foregroundStyle(round.takenBack ? PhoneTheme.muted : PhoneTheme.text).textSelection(.enabled)
+                        .padding(.vertical, 6).padding(.horizontal, 12)
+                        .background(PhoneTheme.text.opacity(round.takenBack ? 0.04 : 0.1), in: PhoneConversationBubble())
+                        .accessibilityIdentifier("conversation-you")
+                }
+                // A replacement folds the words it replaced under Edited.
+                if let replaced = round.replaces {
+                    DisclosureGroup {
+                        Text(replaced.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? PhoneMessages.phoneComposerPictureOnly() : replaced)
+                            .font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary).textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .trailing).accessibilityIdentifier("conversation-replaced")
+                    } label: {
+                        Text(PhoneMessages.shellConversationEdited()).font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted)
+                    }.tint(PhoneTheme.muted).accessibilityIdentifier("conversation-edited")
+                }
             }
         }
     }

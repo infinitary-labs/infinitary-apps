@@ -2014,11 +2014,13 @@ public enum PhoneMessages {
     public static func `phoneCommonTryAgain`() -> String { PhoneWords.format("phoneCommonTryAgain", []) }
     public static func `phoneComposerAddingPhotos`() -> String { PhoneWords.format("phoneComposerAddingPhotos", []) }
     public static func `phoneComposerConversationHint`() -> String { PhoneWords.format("phoneComposerConversationHint", []) }
+    public static func `phoneComposerEditLast`() -> String { PhoneWords.format("phoneComposerEditLast", []) }
     public static func `phoneComposerPhotoFailed`() -> String { PhoneWords.format("phoneComposerPhotoFailed", []) }
     public static func `phoneComposerPhotoTooLarge`() -> String { PhoneWords.format("phoneComposerPhotoTooLarge", []) }
     public static func `phoneComposerPhotos`() -> String { PhoneWords.format("phoneComposerPhotos", []) }
     public static func `phoneComposerPictureOnly`() -> String { PhoneWords.format("phoneComposerPictureOnly", []) }
     public static func `phoneComposerPlaceholder`() -> String { PhoneWords.format("phoneComposerPlaceholder", []) }
+    public static func `phoneComposerSendAsNew`() -> String { PhoneWords.format("phoneComposerSendAsNew", []) }
     public static func `phoneComposerTooLong`() -> String { PhoneWords.format("phoneComposerTooLong", []) }
     public static func `phoneComposerWorking`() -> String { PhoneWords.format("phoneComposerWorking", []) }
     public static func `phoneComputerAddLine`() -> String { PhoneWords.format("phoneComputerAddLine", []) }
@@ -6770,11 +6772,13 @@ extension PhoneWords {
         "phoneCommonTryAgain": [],
         "phoneComposerAddingPhotos": [],
         "phoneComposerConversationHint": [],
+        "phoneComposerEditLast": [],
         "phoneComposerPhotoFailed": [],
         "phoneComposerPhotoTooLarge": [],
         "phoneComposerPhotos": [],
         "phoneComposerPictureOnly": [],
         "phoneComposerPlaceholder": [],
+        "phoneComposerSendAsNew": [],
         "phoneComposerTooLong": [],
         "phoneComposerWorking": [],
         "phoneComputerAddLine": [],

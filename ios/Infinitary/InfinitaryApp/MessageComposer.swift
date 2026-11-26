@@ -24,6 +24,10 @@ struct MessageComposer: View {
     @State private var fadeKey: String?
     @State private var remaining = Self.readingTime
     @State private var faded = false
+    /// INF-6763's plan, part 3: the message an Edit put back in the box, which the next send replaces; and the clock the
+    /// revert icon reads, moved on when the newest message leaves the minute.
+    @State private var replacing: String?
+    @State private var now = Date()
 
     /// The Mac's `READING_MS` (src/renderer/src/app/lastTurnFade.ts): the captain's choice.
     private static let readingTime = Duration.seconds(15)
@@ -51,12 +55,33 @@ struct MessageComposer: View {
                     words: session.lastTurn?.reply?.words, rounds: session.stripRounds.map(\.id))
     }
 
+    /// The newest message's id while it may be taken back from this phone (docs/composer.md, "Taking back").
+    private var revertible: String? {
+        guard session.canTakeBack, let newest = session.stripRounds.first else { return nil }
+        return PhoneTakeBack.revertible(newest, now: now)
+    }
+
     typealias Photo = PhonePhoto
 
     var body: some View {
         VStack(alignment: .leading, spacing: PhoneTheme.space2) {
             // INF-589 item 17: on its side an iPhone gives the card this height; the last turn returns upright.
             if !session.stripRounds.isEmpty, !compact, !messageContext.replyTucked { lastTurn(session.stripRounds) }
+            // The Mac's mark on a recalled draft: an Edit put the newest message's words back, and the next send replaces
+            // it; the cross keeps the words and sends them as a new message.
+            if let replacing, replacing == revertible {
+                HStack(spacing: 6) {
+                    Image(systemName: "pencil").foregroundStyle(PhoneTheme.muted)
+                    Text(PhoneMessages.composerReplacesLast()).foregroundStyle(PhoneTheme.secondary)
+                        .accessibilityIdentifier("replacing-mark")
+                    Spacer(minLength: 0)
+                    Button { self.replacing = nil } label: {
+                        Image(systemName: "xmark").font(.system(size: 12, weight: .semibold)).foregroundStyle(PhoneTheme.secondary)
+                            .frame(width: 44, height: 32).contentShape(Rectangle())
+                    }.buttonStyle(.plain).accessibilityLabel(PhoneMessages.phoneComposerSendAsNew())
+                        .accessibilityIdentifier("replacing-drop")
+                }.font(PhoneFont.caption).padding(.leading, PhoneTheme.space3)
+            }
             // AnyLayout moves the same controls; neither rotation nor a tab creates a second draft.
             draftLayout {
                 if !photos.isEmpty {
@@ -135,6 +160,8 @@ struct MessageComposer: View {
                 if focused { messageContext.replyTucked = false }
             }
             .onChange(of: turnReading) { messageContext.replyTucked = false }
+            // An emptied box replaces nothing: the next words are a new message, as on the Mac.
+            .onChange(of: text) { _, text in if text.isEmpty && photos.isEmpty { replacing = nil } }
             .onDisappear { if focused { messageContext.composerFocused = false } }
             // INF-1524: a card's draft button puts its words at the start of the box, unsent, for the captain to finish.
             .onChange(of: messageContext.draft, initial: true) { _, draft in
@@ -184,6 +211,12 @@ struct MessageComposer: View {
             // The composer's stack adds 8 points; these 4 make the 12 above the box.
             .frame(maxWidth: .infinity).padding(.bottom, 4)
             .task(id: "\(key ?? "")|\(readable)") { await read(key, readable: readable) }
+            // The revert icon and Edit leave when the minute ends: the clock moves on then and draws the strip again.
+            .task(id: PhoneTakeBack.remaining(rounds[0], now: now) == nil ? nil : rounds[0].askId) {
+                guard let left = PhoneTakeBack.remaining(rounds[0], now: Date()) else { return }
+                try? await Task.sleep(for: left)
+                if !Task.isCancelled { now = Date() }
+            }
     }
 
     /// One round: the captain's bubble, then the first mate's line, 4 points apart. The bubble hugs its words up to three
@@ -204,14 +237,30 @@ struct MessageComposer: View {
                 cardRow(round, card: card, id: id, working: newest && session.firstmateBusy && !round.sentAsMessage, open: open)
                     .opacity(strength)
             } else {
-                BubbleColumn { bubble(round, id: id, open: open).opacity(strength) }
+                BubbleColumn {
+                    HStack(spacing: 4) {
+                        // The captain's words on the plan: a revert icon, never a button reading Take back.
+                        if newest, let ask = revertible, ask == round.askId {
+                            Button { Task { await session.takeBack(ask: ask) } } label: {
+                                Image(systemName: "arrow.uturn.backward").font(.system(size: 14, weight: .medium))
+                                    .foregroundStyle(PhoneTheme.secondary).frame(width: 44, height: 32).contentShape(Rectangle())
+                            }.buttonStyle(.plain).accessibilityLabel(PhoneMessages.shellLastTurnRevert())
+                                .accessibilityIdentifier("\(id)-revert")
+                        }
+                        if round.takenBack {
+                            Text(PhoneMessages.shellLastTurnReverted()).font(PhoneFont.caption).foregroundStyle(PhoneTheme.muted)
+                                .fixedSize().accessibilityIdentifier("\(id)-reverted")
+                        }
+                        bubble(round, id: id, open: open)
+                    }.opacity(strength)
+                }
             }
             if round.sentAsMessage && (round.reply != nil || busy || (newest && session.messageSending && round.card == nil)) {
                 HStack(spacing: 8) {
                     MateMark(working: busy, still: reduceMotion).frame(width: 16, height: 16)
                     if let reply = round.reply {
                         Button(action: open) {
-                            WholeWordsLine(words: reply.text).foregroundStyle(reply.problem == true ? PhoneTheme.danger : PhoneTheme.secondary)
+                            WholeWordsLine(words: reply.shown).foregroundStyle(reply.problem == true ? PhoneTheme.danger : PhoneTheme.secondary)
                                 .frame(maxWidth: .infinity, minHeight: 24, alignment: .leading).contentShape(Rectangle())
                         }.buttonStyle(.plain).accessibilityHint(PhoneMessages.phoneComposerConversationHint())
                             .accessibilityIdentifier("\(id)-reply")
@@ -237,14 +286,27 @@ struct MessageComposer: View {
     private func bubble(_ round: PhoneConversationRound, id: String, open: @escaping () -> Void) -> some View {
         let shape = PhoneConversationBubble()
         let choice = round.kind == .choice
+        // A message taken back, as on the Mac: its words struck in the muted colour, its bubble faint.
+        let struck = round.takenBack
         let words = WholeWordsLine(words: round.you.isEmpty ? PhoneMessages.phoneComposerPictureOnly() : round.you)
-            .foregroundStyle(PhoneTheme.text)
+            .strikethrough(struck).foregroundStyle(struck ? PhoneTheme.muted : PhoneTheme.text)
             .padding(.vertical, 4).padding(.horizontal, 12)
-            .background(choice ? Color.clear : PhoneTheme.text.opacity(0.1), in: shape)
+            .background(choice ? Color.clear : PhoneTheme.text.opacity(struck ? 0.04 : 0.1), in: shape)
             .overlay { if choice { shape.stroke(PhoneTheme.text.opacity(0.3), lineWidth: 1) } }
             .background(PhoneTheme.background, in: shape)
             .contentShape(shape)
-        if round.card == nil {
+        if round.card == nil, let ask = revertible, ask == round.askId, id == "last-turn" {
+            // Plan part 3: a long press on the newest message offers Revert and Edit.
+            words.onTapGesture(perform: open).accessibilityIdentifier("\(id)-you")
+                .contextMenu {
+                    Button { Task { await session.takeBack(ask: ask) } } label: {
+                        Label(PhoneMessages.shellLastTurnRevert(), systemImage: "arrow.uturn.backward")
+                    }.accessibilityIdentifier("last-turn-menu-revert")
+                    Button { edit(round, ask: ask) } label: {
+                        Label(PhoneMessages.phoneComposerEditLast(), systemImage: "pencil")
+                    }.accessibilityIdentifier("last-turn-menu-edit")
+                }
+        } else if round.card == nil {
             words.onTapGesture(perform: open).accessibilityIdentifier("\(id)-you")
         } else {
             Button(action: open) { words }.buttonStyle(.plain)
@@ -313,6 +375,14 @@ struct MessageComposer: View {
         withAnimation(reduceMotion ? nil : .linear(duration: 0.7)) { faded = true }
     }
 
+    /// Edit on the newest message: its words come back to the box, in front of anything typed, marked as replacing it.
+    private func edit(_ round: PhoneConversationRound, ask: String) {
+        text = text.isEmpty ? round.you : round.you + "\n" + text
+        replacing = ask
+        messageContext.replyTucked = false
+        focused = true
+    }
+
     /// INF-2553: the box clears at the tap and the message is the last turn, marked sending; a refusal puts the words and
     /// pictures back in front of anything typed since, and the session says why.
     private func send() {
@@ -324,7 +394,11 @@ struct MessageComposer: View {
         let words = text, pictures = photos
         var payload: [String: Any] = ["text": words, "images": pictures.map(\.wire)]
         for (key, value) in messageContext.fields { payload[key] = value }
+        // Only the newest message inside the minute is replaced, and never by plain words to a computer between versions.
+        let replaces = plain ? nil : replacing.flatMap { $0 == revertible ? $0 : nil }
+        if let replaces { payload["replaces"] = replaces }
         let args: [Any] = plain ? [words] : [payload]
+        replacing = nil
         focused = false
         problem = nil
         text = ""; photos = []
@@ -337,7 +411,8 @@ struct MessageComposer: View {
                     box.wrappedValue = box.wrappedValue.isEmpty ? words : words + "\n" + box.wrappedValue
                     shelf.wrappedValue = Array((pictures + shelf.wrappedValue).prefix(PhoneLimits.images))
                 }
-                try await session.change(intent, .converse, args: args, restore: restore)
+                if let replaces { try await session.replace(replaces, with: intent, args: args, restore: restore) }
+                else { try await session.change(intent, .converse, args: args, restore: restore) }
                 sent += 1
             } catch {}
         }

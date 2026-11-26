@@ -36,6 +36,8 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/InfinitaryApp/PhoneConversationSheet.swift",
     // The conversation's rounds every part's strip reads (ReadOnlySession.swift).
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneConversation.swift",
+    // Which newest message the revert icon and Edit may name on every part's strip (MessageComposer.swift).
+    "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneTakeBack.swift",
     "ios/Infinitary/InfinitaryApp/Notices/swift-asn1-LICENSE.txt",
     "ios/Infinitary/InfinitaryApp/Notices/swift-asn1-NOTICE.txt",
     "ios/Infinitary/InfinitaryApp/Notices/swift-certificates-LICENSE.txt",

@@ -1,5 +1,5 @@
 ---
-source: 8556e6631058959f
+source: 1cfc8b1c01326a70
 title: Der erste Offizier
 description: Wer dein erster Offizier ist, was er tut und was nicht, wie du mit ihm sprichst und wie du das Modell wählst, mit dem er antwortet.
 ---
@@ -47,6 +47,8 @@ Dein erster Offizier stoppt, was die Nachricht begonnen hat, macht rückgängig,
 Um die Nachricht stattdessen zu ändern, drück ↑ in einem leeren Nachrichtenfeld.
 Im Feld steht dann „Ersetzt deine letzte Nachricht“: Enter sendet deine Änderung an ihrer Stelle, und Esc sendet sie als neue Nachricht.
 In [der ganzen Unterhaltung](#the-whole-conversation) ist eine zurückgenommene Nachricht durchgestrichen, und eine bearbeitete behält ihren früheren Wortlaut.
+Auf einem iPhone oder iPad steht dasselbe Symbol neben der Nachricht.
+Halte die Nachricht gedrückt für **Deine letzte Nachricht zurücknehmen** oder **Deine letzte Nachricht bearbeiten**, das ihren Wortlaut zurück ins Feld setzt, damit du ihn an ihrer Stelle sendest.
 
 ### Bilder und Dateien hinzufügen {#add-pictures-and-files}
 

@@ -46,6 +46,8 @@ Your first mate stops what the message started, undoes what it already did, and 
 To change the message instead, press ↑ in an empty message box.
 The box reads "Replaces your last message": Enter sends your edit in its place, and Esc sends it as a new message.
 In [the whole conversation](#the-whole-conversation), a reverted message is struck through, and an edited one keeps its earlier words.
+On an iPhone or iPad the same icon sits beside the message.
+Touch and hold the message for **Revert your last message** or **Edit your last message**, which puts its words back in the box to send in its place.
 
 ### Add pictures and files
 

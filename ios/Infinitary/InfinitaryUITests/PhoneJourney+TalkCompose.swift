@@ -346,6 +346,77 @@ extension PhoneJourney {
         try await verifyLongReplyReading()
         if UIDevice.current.userInterfaceIdiom == .pad { try await pencilSteadyThenOff() }
         try await verifyConversationCards()
+        try await verifyTakeBack()
+    }
+
+    /// INF-6763's plan, part 3, and the captain's words on it ("use a "revert" icon or something like that"): a long press
+    /// on the newest message offers Edit, whose send replaces that message; the revert icon beside the replacement takes
+    /// it back; the strip and the Conversation read both marks. The test home's real core takes each back.
+    /// Data: this part's test home, a new message after the card rounds above. Resources: this part's own simulator.
+    private func verifyTakeBack() async throws {
+        let words = "Chart the buoys by colour", added = ", then by depth"
+        let input = app.textFields["message-box"]
+        focusForPhoneTyping(input, in: app); input.typeText(words)
+        tapOnPhone(app.buttons["send-message"])
+        let sent = try await ask(words, takenBack: false)
+        let first = try XCTUnwrap(sent["lastTurn"] as? [String: Any])
+        XCTAssertEqual(first["you"] as? String, words)
+        let firstAsk = try XCTUnwrap(first["askId"] as? String)
+        XCTAssertTrue(app.buttons["last-turn-revert"].waitForPresence(timeout: 15), "The revert icon stands beside the newest message: \(app.debugDescription)")
+        XCTAssertEqual(app.buttons["last-turn-revert"].label, "Revert your last message", "The icon has no words; its label names it")
+
+        app.staticTexts["last-turn-you"].press(forDuration: 1.2)
+        let edit = app.buttons["last-turn-menu-edit"]
+        XCTAssertTrue(edit.waitForPresence(timeout: 10), "A long press offers Edit: \(app.debugDescription)")
+        XCTAssertTrue(app.buttons["last-turn-menu-revert"].exists, "and Revert")
+        tapOnPhone(edit)
+        XCTAssertTrue(app.staticTexts["replacing-mark"].waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(input.value as? String, words, "Edit puts the message's words back in the box")
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "hasKeyboardFocus == true"), object: input, timeout: 10), .completed)
+        input.typeText(added)
+        picture("last-turn-replacing")
+        tapOnPhone(app.buttons["send-message"])
+        _ = try await ask(words, takenBack: true)
+        let state = try await ask(words + added, takenBack: false)
+        let second = try XCTUnwrap(state["lastTurn"] as? [String: Any])
+        XCTAssertEqual(second["you"] as? String, words + added)
+        XCTAssertEqual((second["previous"] as? [String: Any])?["takenBack"] as? Bool, true, "The replacement takes the first message back")
+        let converse = try XCTUnwrap((state["writes"] as? [[String: Any]])?.last { $0["channel"] as? String == "inf:converse" })
+        let payload = try XCTUnwrap((converse["args"] as? [[String: Any]])?.first)
+        XCTAssertEqual(payload["replaces"] as? String, firstAsk, "The send names the message it replaces")
+
+        let revert = app.buttons["last-turn-revert"]
+        XCTAssertTrue(revert.waitForPresence(timeout: 15), "The replacement can be taken back too: \(app.debugDescription)")
+        try await appearances("last-turn-revert", showing: revert)
+        tapOnPhone(revert)
+        XCTAssertTrue(app.staticTexts["last-turn-reverted"].waitForPresence(timeout: 10), "The message reads Reverted at the tap: \(app.debugDescription)")
+        XCTAssertTrue(revert.waitForAbsence(timeout: 10), "Once taken back the icon leaves")
+        let reverted = try await ask(words + added, takenBack: true)
+        XCTAssertEqual((reverted["lastTurn"] as? [String: Any])?["takenBack"] as? Bool, true)
+        let revertWrites = try XCTUnwrap(reverted["writes"] as? [[String: Any]])
+            .filter { $0["channel"] as? String == "inf:conversation:take-back" }
+        XCTAssertEqual(revertWrites.count, 1, "The icon sent one take back; the replacement took the first back itself")
+        picture("last-turn-reverted")
+
+        tapOnPhone(app.staticTexts["last-turn-you"])
+        let marks = app.staticTexts.matching(identifier: "conversation-reverted")
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate { _, _ in marks.count == 2 }, object: nil, timeout: 10), .completed,
+                       "The Conversation reads both messages Reverted: \(app.debugDescription)")
+        let edited = app.descendants(matching: .any)["conversation-edited"]
+        XCTAssertTrue(edited.waitForPresence(timeout: 10), "The replacement keeps its Edited mark: \(app.debugDescription)")
+        tapOnPhone(edited)
+        let replaced = app.staticTexts.matching(identifier: "conversation-replaced").firstMatch
+        XCTAssertTrue(replaced.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(replaced.label, words, "Edited unfolds the words it replaced")
+        picture("conversation-take-back")
+        tapOnPhone(app.buttons["close-conversation"])
+        XCTAssertTrue(app.buttons["close-conversation"].waitForAbsence(timeout: 10))
+    }
+
+    /// Waits on the test home until the message with these words is saved, taken back or not.
+    private func ask(_ text: String, takenBack: Bool) async throws -> [String: Any] {
+        let body = try JSONSerialization.data(withJSONObject: ["text": text, "takenBack": takenBack])
+        return try await home("talk-ask", body: String(decoding: body, as: UTF8.self))
     }
 
     /// INF-209 and INF-82 integration: one composer retains the actual typed/photo draft across tabs and rotation.

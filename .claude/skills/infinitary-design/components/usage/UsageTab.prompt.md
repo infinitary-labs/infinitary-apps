@@ -13,6 +13,7 @@ While that collector keeps failing, its first and latest failure a minute or mor
 The first two end by pointing the captain to the reporting settings their company gave them.
 It names no certificate or connection detail, and leaves when the collector takes the work again.
 When the captain has added a reporting connection in Settings → Intelligence, a second `--text-sm --fg-3` line under the company line or its warning names that connection's host (`settingsUsageReportsConnectionTo`); it shows alone when there is no company collector.
+From its first send that does not get through until one does, that line in `--warn` says the crew's usage is not reaching that host, names the connection in Settings → Intelligence, and says why: the host turned the last send away (`settingsUsageConnectionLineRefused`), the app cannot connect to it securely (`settingsUsageConnectionLineSecure`), which asks the captain to have this computer trust their company's own collector and reopen the app, or the last send could not reach it (`settingsUsageConnectionLineUnreachable`).
 
 **Filters.**
 Under the header, a row of two labeled selects in `--text-sm` on `--bg-2` with a `--line-1` hairline and `--radius-m`: Period (Last 7 days, Last 30 days, All recorded time) and Work (All work, Task work, First mate, Other work), then the dates in `--fg-3`: "Sep 6–Oct 5 · Local dates", or "Since Sep 6 · Local dates" for all time.

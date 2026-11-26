@@ -108,11 +108,12 @@ Every other provider's work reaches the same collector, and a managed setup's, i
   When a collector of the person's setup keeps failing, its first and latest failure a minute or more apart with no batch taken between them (`REFUSAL_LASTS_MS`, past one batch's retries within the client's ten-second export limit), the line turns to a warning that Claude work is not reaching it and why: it could not be reached, the connection could not be made secure (an untrusted certificate, or a client certificate it turned away or missed), or it answered with a refusal.
   One failed batch followed by no more work stays quiet, and the next batch the collector takes brings the line back (`lastingRefusal`).
   A managed collector's answers reach only Claude's client, so its line never warns.
-  A reporting connection the person added in Settings → Intelligence gets a second line naming its host (`usage.reporting`'s `connection`; docs/usage-report.md, "The person's reporting connection").
+  A reporting connection the person added in Settings → Intelligence gets a second line naming its host (`usage.reporting`'s `connection`; docs/usage-report.md, "The person's reporting connection"), which turns to a warning from its first send that does not get through, saying why (`connectionRefusal`).
 
 `claudeReporting.integration.test.ts` holds this on the client the product would run, boxed, with stand-in collectors over OTLP/HTTP JSON, protobuf and gRPC and a header command: the collector gets the client's own batches byte for byte, the token and cost counters among them, the person's resource attributes on logs and metrics, prompts only where the person's `OTEL_LOG_USER_PROMPTS` asks, and a managed setup leaves the collector empty.
 Collectors on a certificate authority of their own, over OTLP/HTTP and gRPC, take only the setup's client certificate and get every priced call; one the computer's trusted list vouches for is reached with no certificate key, and an untrusted one is named as not connecting securely.
 `usageReporter.integration.test.ts` holds the same for the usage report: a Codex call reaches a collector that takes only the setup's client certificate and one the computer's trusted list vouches for, a certificate authority file renewed in place is used from the next batch, and an untrusted collector drops the batch with a log line saying the connection could not be made secure.
+`usageConnection.integration.test.ts` holds it for the person's reporting connection: one the computer's trusted list vouches for gets the batch with its kept header, and an untrusted one gets nothing and the connection names it as not connecting securely.
 
 ## Daily totals
 

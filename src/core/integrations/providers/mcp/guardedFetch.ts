@@ -83,10 +83,16 @@ export function holdMcpDestination(address: string, mode: CustomNetworkMode): Cu
   return destination;
 }
 
-/** The fetch every request to one server goes through. */
+/**
+ * The fetch every request to one server goes through. `roots` are the
+ * certificate authorities an https address is checked against, the normal
+ * roots unless its caller trusts more, as the usage report's connection
+ * trusts the computer's list.
+ */
 export function guardedMcpFetch(
   destination: CustomApiDestination,
   resolve: McpResolver = lookupAll,
+  roots: () => readonly string[] = () => normalRoots,
 ): McpFetch {
   const origin = new URL(destination.baseUrl).origin;
   return async (input, init = {}) => {
@@ -111,6 +117,7 @@ export function guardedMcpFetch(
         new McpAddressError(
           "The server redirected the request elsewhere; add the address it ends at instead.",
         ),
+      roots(),
     );
   };
 }
@@ -187,14 +194,15 @@ export async function checkSignInAddress(
 
 /**
  * Send one request to `url` on a fresh connection to the checked
- * `addresses` alone, with the normal certificate roots; a redirect is
- * refused with the `redirected` error.
+ * `addresses` alone, checked against `roots`; a redirect is refused with
+ * the `redirected` error.
  */
 function sendPinned(
   url: URL,
   init: RequestInit,
   addresses: readonly string[],
   redirected: () => McpAddressError,
+  roots: readonly string[] = normalRoots,
 ): Promise<Response> {
   return (async () => {
     const address = addresses[0] as string;
@@ -214,7 +222,7 @@ function sendPinned(
           method: init.method ?? "GET",
           agent: false,
           ...(addresses.length > 1 ? { autoSelectFamily: true } : { family: isIP(address) }),
-          ...(url.protocol === "https:" ? { ca: normalRoots, rejectUnauthorized: true } : {}),
+          ...(url.protocol === "https:" ? { ca: [...roots], rejectUnauthorized: true } : {}),
           // No second DNS answer between the check and the connection.
           lookup: (_hostname, options, callback) => {
             if (options.all)

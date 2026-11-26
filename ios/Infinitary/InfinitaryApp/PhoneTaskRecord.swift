@@ -110,9 +110,8 @@ struct PhoneTaskRecord: View {
                     .background(tone == "accent" ? PhoneTheme.accentDim : tone == "danger" ? PhoneTheme.danger.opacity(0.14) : PhoneTheme.raised,
                                 in: Capsule())
                 if !status.reason.isEmpty {
-                    let reasonTone = PhoneRecord.reasonTone(status.reason)
                     Text(status.reason).font(PhoneFont.caption)
-                        .foregroundStyle(reasonTone == "warning" ? PhoneTheme.warning : reasonTone == "plain" ? PhoneTheme.secondary : PhoneTheme.muted)
+                        .foregroundStyle(PhoneRecord.reasonTone(status.reason) == "plain" ? PhoneTheme.secondary : PhoneTheme.muted)
                         .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("task-record-reason")
                 }
                 Text(task.key).font(PhoneFont.mono).foregroundStyle(PhoneTheme.muted).lineLimit(1)
@@ -610,7 +609,7 @@ struct PhoneTaskRecord: View {
     }
 
     /// The Mac's record bar: Drop task or Decline at the leading edge, the next step at the trailing edge; Drop task asks
-    /// once between them before it drops.
+    /// once between them before it drops, and a start that could not begin says why above them.
     @ViewBuilder private func recordBar(_ bar: PhoneRecord.Bar) -> some View {
         if dropping, let end = bar.end, end != .dismissQuestion {
             VStack(alignment: .leading, spacing: PhoneTheme.space2) {
@@ -624,6 +623,10 @@ struct PhoneTaskRecord: View {
                 }
             }
         } else {
+            if let notice = PhoneRecord.startNotice(task) {
+                Text(notice).font(PhoneFont.callout).foregroundStyle(PhoneTheme.warning)
+                    .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("record-start-notice")
+            }
             PhoneChoiceRow {
                 switch bar.end {
                 case .dismissQuestion:

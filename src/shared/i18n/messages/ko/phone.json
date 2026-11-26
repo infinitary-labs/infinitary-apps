@@ -306,7 +306,6 @@
   "phoneRecordClosedReleased": "릴리스됨",
   "phoneRecordClosedSuperseded": "대체됨",
   "phoneRecordClosedWithNote": "{age} {status}: {note}",
-  "phoneRecordCouldNotStart": "시작하지 못했어요",
   "phoneRecordCrewEarlier": {
     "plural": "count",
     "other": "이전 항목 {count}개는 표시하지 않아요."

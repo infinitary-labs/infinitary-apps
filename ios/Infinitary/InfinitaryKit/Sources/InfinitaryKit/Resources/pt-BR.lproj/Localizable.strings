@@ -540,6 +540,7 @@
 "cardRecordCare" = "Cuidado %1$@";
 "cardRecordChecking" = "Verificando se começou";
 "cardRecordChildrenClosed" = "%1$@ de %2$@ encerradas";
+"cardRecordCouldNotStart" = "Não foi possível iniciar. %1$@";
 "cardRecordDelivery" = "Entrega";
 "cardRecordDeliveryDirectPr" = "Solicitação de pull";
 "cardRecordDeliveryInPlace" = "Feito no local";
@@ -2099,7 +2100,6 @@
 "phoneRecordClosedReleased" = "Publicada";
 "phoneRecordClosedSuperseded" = "Substituída";
 "phoneRecordClosedWithNote" = "%3$@ %1$@: %2$@";
-"phoneRecordCouldNotStart" = "Não foi possível iniciar";
 "phoneRecordDelivery" = "Entrega";
 "phoneRecordDeliveryBatched" = "Solicitação de pull em lote";
 "phoneRecordDeliveryInPlace" = "Feita no local";

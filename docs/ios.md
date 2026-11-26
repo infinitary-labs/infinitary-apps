@@ -750,6 +750,7 @@ The goal follows with the captain's words folded under it, then Project, Tags, N
 Cards lists every card the task showed, newest first: an open card shows on Home, one put aside comes back first, and a closed one shows as a past card.
 Activity takes the old timeline's place: the task's activity oldest first, the last eight with Show earlier for the rest, each row with its age, its words, the task it came from and the events folded under it.
 Info, Cards and Activity end with the Mac's record bar (`recordBarOf`): Drop task, or Decline for a first mate question, at the leading edge, and Start, Try again, Starting, Start again, Continue, Show the card or Done at the trailing edge.
+A start that could not begin says Could not start and its reason above the bar's buttons, where the Mac says it between Drop task and Try again, and never beside the pill; both read it, and the pill's reason while a start is in flight, from the Mac's `recordStartOf` (`src/shared/recordStart.ts`).
 Drop task asks once in the Mac's words before it drops, naming the tasks still waiting on the work and the ones already working, and says why instead when the record changed or a part is still open.
 Show the card asks the Mac to show it again, then takes the captain to Home with that card.
 The Crewmate tab reads the redacted session and live words from their Mac owners and ends with the Mac's status line: Working with how long the turn has run and Stop, Paused while the captain holds its browser, Waiting on you or Idle.

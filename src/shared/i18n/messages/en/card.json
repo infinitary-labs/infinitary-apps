@@ -287,6 +287,7 @@
   "cardRecordCare": "{care} rigor",
   "cardRecordChecking": "Checking whether it started",
   "cardRecordChildrenClosed": "{closed} of {total} closed",
+  "cardRecordCouldNotStart": "Could not start. {reason}",
   "cardRecordDelivery": "Delivery",
   "cardRecordDeliveryDirectPr": "Pull request",
   "cardRecordDeliveryInPlace": "Built in place",

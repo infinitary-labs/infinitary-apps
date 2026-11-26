@@ -540,6 +540,7 @@
 "cardRecordCare" = "العناية: %1$@";
 "cardRecordChecking" = "جارٍ التحقق مما إذا كانت قد بدأت";
 "cardRecordChildrenClosed" = "أُغلق %1$@ من %2$@";
+"cardRecordCouldNotStart" = "تعذّر البدء. %1$@";
 "cardRecordDelivery" = "التسليم";
 "cardRecordDeliveryDirectPr" = "طلب سحب";
 "cardRecordDeliveryInPlace" = "بناء في المكان";
@@ -2099,7 +2100,6 @@
 "phoneRecordClosedReleased" = "أُصدرت";
 "phoneRecordClosedSuperseded" = "حلّ محلها غيرها";
 "phoneRecordClosedWithNote" = "%3$@ %1$@: %2$@";
-"phoneRecordCouldNotStart" = "تعذّر البدء";
 "phoneRecordDelivery" = "التسليم";
 "phoneRecordDeliveryBatched" = "طلب سحب مجمّع";
 "phoneRecordDeliveryInPlace" = "بُنيت في مكانها";

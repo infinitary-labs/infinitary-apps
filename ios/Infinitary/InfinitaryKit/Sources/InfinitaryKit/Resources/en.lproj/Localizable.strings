@@ -540,6 +540,7 @@
 "cardRecordCare" = "%1$@ rigor";
 "cardRecordChecking" = "Checking whether it started";
 "cardRecordChildrenClosed" = "%1$@ of %2$@ closed";
+"cardRecordCouldNotStart" = "Could not start. %1$@";
 "cardRecordDelivery" = "Delivery";
 "cardRecordDeliveryDirectPr" = "Pull request";
 "cardRecordDeliveryInPlace" = "Built in place";
@@ -2099,7 +2100,6 @@
 "phoneRecordClosedReleased" = "Released";
 "phoneRecordClosedSuperseded" = "Superseded";
 "phoneRecordClosedWithNote" = "%3$@ %1$@: %2$@";
-"phoneRecordCouldNotStart" = "Could not start";
 "phoneRecordDelivery" = "Delivery";
 "phoneRecordDeliveryBatched" = "Batched pull request";
 "phoneRecordDeliveryInPlace" = "Built in place";

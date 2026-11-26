@@ -6,6 +6,7 @@ import { partsDoTheWork, partsSentenceSpeaks } from "@shared/recordAttention";
 import { recordBarOf } from "@shared/recordBar";
 import { recordOffersCloseDone } from "@shared/recordCloseDone";
 import { recordProofDemo, recordProofPictures } from "@shared/recordProof";
+import { recordStartOf } from "@shared/recordStart";
 import { browserDriverOf } from "@shared/taskBrowser";
 import { taskFactsOf } from "@shared/taskFacts";
 import type { TaskDetail } from "@shared/tasks";
@@ -283,6 +284,7 @@ export function RecordCard({
     return () => clearInterval(timer);
   }, [shown?.startAttempt?.phase, shown?.activity, shown?.answerNoteId]);
   const meta = shown ? shown.key : unreadable ? m.cardRecordUnreadable() : "";
+  const start = useMemo(() => (shown ? recordStartOf(shown, clock) : null), [shown, clock]);
   // The crew summary's projection of the same read, so both say the same.
   const facts = useMemo(() => {
     if (!shown) return null;
@@ -291,21 +293,9 @@ export function RecordCard({
       ...read,
       status: taskWaitStatus(shown, read.status, Math.max(clock, minute)),
     };
-    const since =
-      shown.startAttempt?.since ?? (shown.activity === "starting" ? shown.startedAt : null);
-    const reason =
-      shown.startAttempt?.phase === "checking"
-        ? m.cardRecordChecking()
-        : since != null &&
-            clock - since >= 15_000 &&
-            (shown.startAttempt?.phase === "preparing" || shown.activity === "starting")
-          ? m.cardRecordStillStarting()
-          : // Could not start is said beside Try again, in the bar.
-            shown.startNotice || partsSentenceSpeaks(shown)
-            ? ""
-            : base.status.reason;
+    const reason = start?.reason ?? (partsSentenceSpeaks(shown) ? "" : base.status.reason);
     return reason === base.status.reason ? base : { ...base, status: { ...base.status, reason } };
-  }, [shown, modelName, clock, minute]);
+  }, [shown, start, modelName, clock, minute]);
   const openLink = (href: string) => {
     if (isSafeCardHref(href)) void window.infinitary.app.openExternal(href).catch(() => {});
   };
@@ -380,7 +370,7 @@ export function RecordCard({
             taskId={taskId}
             taskKey={shown.key}
             revision={shown}
-            notice={shown.startNotice ? `Could not start. ${shown.startNotice.reason}` : undefined}
+            notice={start?.notice ?? undefined}
             onRun={runOp}
             onShowCard={() => void showCard().catch(() => {})}
             move={{

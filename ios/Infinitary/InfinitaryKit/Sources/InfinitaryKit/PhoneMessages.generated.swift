@@ -580,6 +580,7 @@ public enum PhoneMessages {
     public static func `cardRecordCare`(`care`: String) -> String { PhoneWords.format("cardRecordCare", [`care`]) }
     public static func `cardRecordChecking`() -> String { PhoneWords.format("cardRecordChecking", []) }
     public static func `cardRecordChildrenClosed`(`closed`: String, `total`: String) -> String { PhoneWords.format("cardRecordChildrenClosed", [`closed`, `total`]) }
+    public static func `cardRecordCouldNotStart`(`reason`: String) -> String { PhoneWords.format("cardRecordCouldNotStart", [`reason`]) }
     public static func `cardRecordDelivery`() -> String { PhoneWords.format("cardRecordDelivery", []) }
     public static func `cardRecordDeliveryDirectPr`() -> String { PhoneWords.format("cardRecordDeliveryDirectPr", []) }
     public static func `cardRecordDeliveryInPlace`() -> String { PhoneWords.format("cardRecordDeliveryInPlace", []) }
@@ -2193,7 +2194,6 @@ public enum PhoneMessages {
     public static func `phoneRecordClosedReleased`() -> String { PhoneWords.format("phoneRecordClosedReleased", []) }
     public static func `phoneRecordClosedSuperseded`() -> String { PhoneWords.format("phoneRecordClosedSuperseded", []) }
     public static func `phoneRecordClosedWithNote`(`age`: String, `note`: String, `status`: String) -> String { PhoneWords.format("phoneRecordClosedWithNote", [`age`, `note`, `status`]) }
-    public static func `phoneRecordCouldNotStart`() -> String { PhoneWords.format("phoneRecordCouldNotStart", []) }
     public static func `phoneRecordCrewEarlier`(`count`: Int) -> String { PhoneWords.format("phoneRecordCrewEarlier", [`count`]) }
     public static func `phoneRecordDelivery`() -> String { PhoneWords.format("phoneRecordDelivery", []) }
     public static func `phoneRecordDeliveryBatched`() -> String { PhoneWords.format("phoneRecordDeliveryBatched", []) }
@@ -5371,6 +5371,7 @@ extension PhoneWords {
         "cardRecordCare": ["care"],
         "cardRecordChecking": [],
         "cardRecordChildrenClosed": ["closed", "total"],
+        "cardRecordCouldNotStart": ["reason"],
         "cardRecordDelivery": [],
         "cardRecordDeliveryDirectPr": [],
         "cardRecordDeliveryInPlace": [],
@@ -6984,7 +6985,6 @@ extension PhoneWords {
         "phoneRecordClosedReleased": [],
         "phoneRecordClosedSuperseded": [],
         "phoneRecordClosedWithNote": ["age", "note", "status"],
-        "phoneRecordCouldNotStart": [],
         "phoneRecordCrewEarlier": ["count"],
         "phoneRecordDelivery": [],
         "phoneRecordDeliveryBatched": [],

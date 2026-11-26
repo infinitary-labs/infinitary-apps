@@ -569,6 +569,7 @@
   {"said":{"m":"cardRecordCare","a":{"care":"‹care›"}},"words":"‹care› rigor"},
   {"said":{"m":"cardRecordChecking"},"words":"Checking whether it started"},
   {"said":{"m":"cardRecordChildrenClosed","a":{"closed":"‹closed›","total":"‹total›"}},"words":"‹closed› of ‹total› closed"},
+  {"said":{"m":"cardRecordCouldNotStart","a":{"reason":"‹reason›"}},"words":"Could not start. ‹reason›"},
   {"said":{"m":"cardRecordDelivery"},"words":"Delivery"},
   {"said":{"m":"cardRecordDeliveryDirectPr"},"words":"Pull request"},
   {"said":{"m":"cardRecordDeliveryInPlace"},"words":"Built in place"},

@@ -306,7 +306,6 @@
   "phoneRecordClosedReleased": "已发布",
   "phoneRecordClosedSuperseded": "已被取代",
   "phoneRecordClosedWithNote": "{age}{status}：{note}",
-  "phoneRecordCouldNotStart": "无法开始",
   "phoneRecordCrewEarlier": {
     "plural": "count",
     "other": "还有 {count} 条更早的记录未显示。"

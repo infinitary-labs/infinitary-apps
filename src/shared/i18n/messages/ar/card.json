@@ -363,6 +363,7 @@
   "cardRecordCare": "العناية: {care}",
   "cardRecordChecking": "جارٍ التحقق مما إذا كانت قد بدأت",
   "cardRecordChildrenClosed": "أُغلق {closed} من {total}",
+  "cardRecordCouldNotStart": "تعذّر البدء. {reason}",
   "cardRecordDelivery": "التسليم",
   "cardRecordDeliveryDirectPr": "طلب سحب",
   "cardRecordDeliveryInPlace": "بناء في المكان",

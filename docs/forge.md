@@ -1841,7 +1841,7 @@ The crewmate then prepares the story with that title, or asks the captain on a c
 A rename that races the write is answered once the story is confirmed, as the words around it are, and the next publication treats it as a person's.
 Each publication records the title it leaves; one recorded before that counts only its own version-2 story's title as the app's, and answers any other as a title the app has no record of setting, as on a pull request whose earlier republication kept its opening title.
 A version-1 story never renames its change.
-Evidence: `tests/githubStub.test.ts` ("a saved story's title through the real GitHub forge and the stand-in"), `tests/gitlabStub.test.ts` (a draft renamed and squashed under the new title), `changePresentations.test.ts` ("the title of a republished story": the races and older records), both forges' tests (the write itself) and `changePublication.stories.test.ts` (its answers).
+Evidence: `tests/githubStub.test.ts` ("a saved story's title through the real GitHub forge and the stand-in"), `tests/gitlabStub.test.ts` (a draft renamed and squashed under the new title), `changePresentations.words.test.ts` ("the title of a republished story": the races and older records), both forges' tests (the write itself) and `changePublication.stories.test.ts` (its answers).
 
 `open_change`'s `around` changes one passage of the words around a published story on its open pull or merge request, such as an outdated summary or a `BREAKING CHANGE:` footer the squash reads, while the story stays as published.
 `from` is the passage exactly as the description shows it, found once above or below the story, and `to` replaces it in place; an empty `from` adds words only where nothing surrounds the story.
@@ -1851,7 +1851,7 @@ On GitLab, a line of the new words that starts with a quick action escapes its s
 The read after the write confirms the story by its region as before; when the words around it differ from those sent, the answer says so rather than claiming them.
 Before the first publication there is no description to change, so the words go in `projectText`, and a pull request without a saved story takes `body` instead.
 A home before `STORY_AROUND_SINCE` (10.1.0) would drop `around` and answer as if nothing was asked, so a work computer refuses the call to it and sends nothing.
-Evidence: `presentation.test.ts` and `changePresentations.test.ts` ("the words around a published story"), `changePublication.stories.test.ts` (open_change's answers) and `sessionHost.test.ts` (the older home).
+Evidence: `presentation.test.ts` and `changePresentations.words.test.ts` ("the words around a published story"), `changePublication.stories.test.ts` (open_change's answers) and `sessionHost.test.ts` (the older home).
 
 Missing or mismatched evidence holds the merge card and the final own-task merge boundary independently of checks and merge authority.
 The completion call gives `emit_card presentation` and one merge action, or omits actions for a note when the task merges on its own, without a second body, risk declaration or required-action list.

@@ -1387,7 +1387,7 @@ export async function createServices(
     broadcastEvent,
     sessionFactories,
     localSeat,
-    availableModels,
+    routing: homeRouting,
     slots,
     homeQuota,
     repos,

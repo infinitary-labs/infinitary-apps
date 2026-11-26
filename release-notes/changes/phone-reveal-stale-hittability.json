@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-reveal-stale-hittability",
+      "reason": "Test-only repair of the phone journeys' reveal of card body controls: a control whose position reads stale is scrolled before XCTest is asked whether it can be pressed, since XCTest fails outright when a stale position leaves it no point to press. No app behavior change."
+    }
+  ]
+}

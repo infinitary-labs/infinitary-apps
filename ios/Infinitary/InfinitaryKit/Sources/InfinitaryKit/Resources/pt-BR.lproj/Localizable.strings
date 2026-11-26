@@ -2157,6 +2157,7 @@
 "phoneRecordWaitDueRead" = "a próxima leitura era para %1$@";
 "phoneRecordWaitDueReset" = "a renovação era para %1$@";
 "phoneRecordWaitDueStart" = "o início era para %1$@";
+"phoneRecordWaitLabelRecorded" = "%1$@ · espera registrada %2$@";
 "phoneRecordWaitLine" = "%2$@ · %1$@";
 "phoneRecordWaitLineRecorded" = "%2$@ · %1$@ · espera registrada %3$@";
 "phoneRecordWaitNextCheckBack" = "retorno %1$@";
@@ -2164,7 +2165,6 @@
 "phoneRecordWaitNextRead" = "próxima leitura %1$@";
 "phoneRecordWaitNextReset" = "renova %1$@";
 "phoneRecordWaitNextStart" = "início %1$@";
-"phoneRecordWaitTimeUnknown" = "horário desconhecido";
 "phoneRecordWaitsOn" = "Aguarda";
 "phoneRecordWhy" = "Por quê";
 "phoneRecordWhyFiled" = "Por que foi registrada";
@@ -2504,6 +2504,17 @@
 "recordMoreDelivery" = "entrega";
 "recordMoreValidation" = "validação ao vivo";
 "recordOpenKeptEvidence" = "Abrir a evidência guardada";
+"recordPartsLast" = "Aguardando a última parte dela";
+"recordPartsLastBacklog" = "A última parte dela aguarda você tocar em Iniciar";
+"recordPartsLastBacklogGuidance" = "%1$@ está no seu backlog. Esta tarefa se encerra sozinha quando as partes dela se encerrarem.";
+"recordPartsLastIdle" = "%1$@ está ociosa. Esta tarefa se encerra sozinha quando as partes dela se encerrarem.";
+"recordPartsLastInterrupted" = "%1$@ foi interrompida. Esta tarefa se encerra sozinha quando as partes dela se encerrarem.";
+"recordPartsLastQueued" = "%1$@ está na fila. Esta tarefa se encerra sozinha quando as partes dela se encerrarem.";
+"recordPartsLastStarting" = "%1$@ está iniciando. Esta tarefa se encerra sozinha quando as partes dela se encerrarem.";
+"recordPartsLastWaiting" = "A última parte dela está aguardando você";
+"recordPartsLastWaitingGuidance" = "%1$@ tem um cartão para você. Esta tarefa se encerra sozinha quando as partes dela se encerrarem.";
+"recordPartsLastWorking" = "%1$@ está trabalhando. Esta tarefa se encerra sozinha quando as partes dela se encerrarem.";
+"recordPartsOpenGuidance" = "%1$@. Esta tarefa se encerra sozinha quando as partes dela se encerrarem.";
 "recordPersonalNone" = "Nenhuma, em %1$@";
 "recordPersonalVersion" = "Versão %2$@ de %3$@, em %1$@";
 "recordPolicyParentTask" = "Tarefa principal";

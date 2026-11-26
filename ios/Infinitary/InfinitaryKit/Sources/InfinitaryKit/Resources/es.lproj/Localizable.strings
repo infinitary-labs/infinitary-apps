@@ -2157,6 +2157,7 @@
 "phoneRecordWaitDueRead" = "próxima lectura vencida %1$@";
 "phoneRecordWaitDueReset" = "renovación vencida %1$@";
 "phoneRecordWaitDueStart" = "hora de inicio vencida %1$@";
+"phoneRecordWaitLabelRecorded" = "%1$@ · espera registrada %2$@";
 "phoneRecordWaitLine" = "%2$@ · %1$@";
 "phoneRecordWaitLineRecorded" = "%2$@ · %1$@ · espera registrada %3$@";
 "phoneRecordWaitNextCheckBack" = "vuelta a mirar %1$@";
@@ -2164,7 +2165,6 @@
 "phoneRecordWaitNextRead" = "próxima lectura %1$@";
 "phoneRecordWaitNextReset" = "renovación %1$@";
 "phoneRecordWaitNextStart" = "hora de inicio %1$@";
-"phoneRecordWaitTimeUnknown" = "hora desconocida";
 "phoneRecordWaitsOn" = "Espera a";
 "phoneRecordWhy" = "Por qué";
 "phoneRecordWhyFiled" = "Por qué se anotó";
@@ -2504,6 +2504,17 @@
 "recordMoreDelivery" = "entrega";
 "recordMoreValidation" = "validación en vivo";
 "recordOpenKeptEvidence" = "Abrir la evidencia guardada";
+"recordPartsLast" = "Esperando su última parte";
+"recordPartsLastBacklog" = "Su última parte espera que presiones Iniciar";
+"recordPartsLastBacklogGuidance" = "%1$@ está en tus pendientes. Esta tarea se cierra sola cuando se cierran sus partes.";
+"recordPartsLastIdle" = "%1$@ está inactiva. Esta tarea se cierra sola cuando se cierran sus partes.";
+"recordPartsLastInterrupted" = "%1$@ se interrumpió. Esta tarea se cierra sola cuando se cierran sus partes.";
+"recordPartsLastQueued" = "%1$@ está en cola. Esta tarea se cierra sola cuando se cierran sus partes.";
+"recordPartsLastStarting" = "%1$@ se está iniciando. Esta tarea se cierra sola cuando se cierran sus partes.";
+"recordPartsLastWaiting" = "Su última parte te está esperando";
+"recordPartsLastWaitingGuidance" = "%1$@ tiene una tarjeta para ti. Esta tarea se cierra sola cuando se cierran sus partes.";
+"recordPartsLastWorking" = "%1$@ está trabajando. Esta tarea se cierra sola cuando se cierran sus partes.";
+"recordPartsOpenGuidance" = "%1$@. Esta tarea se cierra sola cuando se cierran sus partes.";
 "recordPersonalNone" = "Ninguna, en %1$@";
 "recordPersonalVersion" = "Versión %2$@ del %3$@, en %1$@";
 "recordPolicyParentTask" = "Tarea principal";

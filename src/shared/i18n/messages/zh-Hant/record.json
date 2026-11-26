@@ -73,6 +73,53 @@
   },
   "recordMoreValidation": "實際驗證",
   "recordOpenKeptEvidence": "開啟保存的證據",
+  "recordPartsClosedFold": {
+    "plural": "count",
+    "other": "{count} 個已關閉的部分"
+  },
+  "recordPartsCountBacklog": {
+    "plural": "count",
+    "other": "{count} 個在你的待辦清單中"
+  },
+  "recordPartsCountIdle": {
+    "plural": "count",
+    "other": "{count} 個閒置"
+  },
+  "recordPartsCountInterrupted": {
+    "plural": "count",
+    "other": "{count} 個已中斷"
+  },
+  "recordPartsCountQueued": {
+    "plural": "count",
+    "other": "{count} 個排隊中"
+  },
+  "recordPartsCountStarting": {
+    "plural": "count",
+    "other": "{count} 個正在啟動"
+  },
+  "recordPartsCountWaiting": {
+    "plural": "count",
+    "other": "{count} 個在等你"
+  },
+  "recordPartsCountWorking": {
+    "plural": "count",
+    "other": "{count} 個正在工作"
+  },
+  "recordPartsLast": "正在等待它的最後一個部分",
+  "recordPartsLastBacklog": "它的最後一個部分在等你按下「開始」",
+  "recordPartsLastBacklogGuidance": "{key} 在你的待辦清單中。它的部分全部關閉後，此任務會自動關閉。",
+  "recordPartsLastIdle": "{key} 處於閒置。它的部分全部關閉後，此任務會自動關閉。",
+  "recordPartsLastInterrupted": "{key} 已中斷。它的部分全部關閉後，此任務會自動關閉。",
+  "recordPartsLastQueued": "{key} 正在排隊。它的部分全部關閉後，此任務會自動關閉。",
+  "recordPartsLastStarting": "{key} 正在啟動。它的部分全部關閉後，此任務會自動關閉。",
+  "recordPartsLastWaiting": "它的最後一個部分在等你",
+  "recordPartsLastWaitingGuidance": "{key} 有一張給你的卡片。它的部分全部關閉後，此任務會自動關閉。",
+  "recordPartsLastWorking": "{key} 正在工作。它的部分全部關閉後，此任務會自動關閉。",
+  "recordPartsOpen": {
+    "plural": "total",
+    "other": "正在等待它 {total} 個部分中的 {open} 個"
+  },
+  "recordPartsOpenGuidance": "{counts}。它的部分全部關閉後，此任務會自動關閉。",
   "recordPersonalNone": "無，{computer}",
   "recordPersonalVersion": "{when} 的版本 {version}，{computer}",
   "recordPolicyParentTask": "上層任務",

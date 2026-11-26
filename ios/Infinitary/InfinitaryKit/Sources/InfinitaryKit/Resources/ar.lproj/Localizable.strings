@@ -2157,6 +2157,7 @@
 "phoneRecordWaitDueRead" = "كانت القراءة التالية مستحقة %1$@";
 "phoneRecordWaitDueReset" = "كانت إعادة التعيين مستحقة %1$@";
 "phoneRecordWaitDueStart" = "كان وقت البدء مستحقًا %1$@";
+"phoneRecordWaitLabelRecorded" = "%1$@ · سُجّل الانتظار %2$@";
 "phoneRecordWaitLine" = "%2$@ · %1$@";
 "phoneRecordWaitLineRecorded" = "%2$@ · %1$@ · سُجّل الانتظار %3$@";
 "phoneRecordWaitNextCheckBack" = "العودة للتحقق %1$@";
@@ -2164,7 +2165,6 @@
 "phoneRecordWaitNextRead" = "القراءة التالية %1$@";
 "phoneRecordWaitNextReset" = "إعادة التعيين %1$@";
 "phoneRecordWaitNextStart" = "وقت البدء %1$@";
-"phoneRecordWaitTimeUnknown" = "الوقت غير معروف";
 "phoneRecordWaitsOn" = "تنتظر";
 "phoneRecordWhy" = "السبب";
 "phoneRecordWhyFiled" = "سبب إدراجها";
@@ -2504,6 +2504,17 @@
 "recordMoreDelivery" = "التسليم";
 "recordMoreValidation" = "التحقق المباشر";
 "recordOpenKeptEvidence" = "فتح الدليل المحفوظ";
+"recordPartsLast" = "بانتظار جزئها الأخير";
+"recordPartsLastBacklog" = "جزؤها الأخير ينتظر أن تضغط «بدء»";
+"recordPartsLastBacklogGuidance" = "%1$@ في المهام المؤجلة لديك. تُغلق هذه المهمة من تلقاء نفسها عند إغلاق أجزائها.";
+"recordPartsLastIdle" = "%1$@ خامل. تُغلق هذه المهمة من تلقاء نفسها عند إغلاق أجزائها.";
+"recordPartsLastInterrupted" = "توقف %1$@. تُغلق هذه المهمة من تلقاء نفسها عند إغلاق أجزائها.";
+"recordPartsLastQueued" = "%1$@ في قائمة الانتظار. تُغلق هذه المهمة من تلقاء نفسها عند إغلاق أجزائها.";
+"recordPartsLastStarting" = "%1$@ قيد البدء. تُغلق هذه المهمة من تلقاء نفسها عند إغلاق أجزائها.";
+"recordPartsLastWaiting" = "جزؤها الأخير ينتظرك";
+"recordPartsLastWaitingGuidance" = "لدى %1$@ بطاقة لك. تُغلق هذه المهمة من تلقاء نفسها عند إغلاق أجزائها.";
+"recordPartsLastWorking" = "%1$@ قيد العمل. تُغلق هذه المهمة من تلقاء نفسها عند إغلاق أجزائها.";
+"recordPartsOpenGuidance" = "%1$@. تُغلق هذه المهمة من تلقاء نفسها عند إغلاق أجزائها.";
 "recordPersonalNone" = "لا شيء، على %1$@";
 "recordPersonalVersion" = "النسخة %2$@ من %3$@، على %1$@";
 "recordPolicyParentTask" = "المهمة الأم";

@@ -54,9 +54,15 @@ export function taskDetailOf(
     ? options.cards.snapshot().find((card) => card.id === gateRef)?.taskId
     : undefined;
   if (gateTask) named.add(gateTask);
+  // Its parts, in filing order: the record lists each as its Tasks row
+  // reads it (INF-6805's plan, item 1).
+  const partRows = tasks.graph.children(id);
+  for (const part of partRows) named.delete(part.id);
   named.delete(id);
-  const graph = graphFor(options, [record, ...tasks.getMany([...named])]);
+  const graph = graphFor(options, [record, ...partRows, ...tasks.getMany([...named])]);
   const view = viewOf(options, record, graph, tiersOf(options, [record]), liveFacts(record));
+  const partTiers = tiersOf(options, partRows);
+  const parts = partRows.map((part) => viewOf(options, part, graph, partTiers, liveFacts(part)));
   const origin = crewFilingOrigin(record, graph);
   const timeline = tasks.timeline(id);
   const why = timeline.find((event) => typeof event.data?.why === "string")?.data?.why;
@@ -167,6 +173,7 @@ export function taskDetailOf(
         }
       : {}),
     ...(cost ? { cost } : {}),
+    ...(parts.length > 0 ? { parts } : {}),
     intent: record.intent,
     liveValidation: proof,
     // The rigor the host derived at dispatch (delivery rigor phase 2), off

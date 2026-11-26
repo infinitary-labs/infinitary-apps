@@ -98,6 +98,98 @@
   },
   "recordMoreValidation": "التحقق المباشر",
   "recordOpenKeptEvidence": "فتح الدليل المحفوظ",
+  "recordPartsClosedFold": {
+    "plural": "count",
+    "zero": "{count} جزء مغلق",
+    "one": "{count} جزء مغلق",
+    "two": "{count} جزآن مغلقان",
+    "few": "{count} أجزاء مغلقة",
+    "many": "{count} جزءًا مغلقًا",
+    "other": "{count} جزء مغلق"
+  },
+  "recordPartsCountBacklog": {
+    "plural": "count",
+    "zero": "{count} في المهام المؤجلة لديك",
+    "one": "{count} في المهام المؤجلة لديك",
+    "two": "{count} في المهام المؤجلة لديك",
+    "few": "{count} في المهام المؤجلة لديك",
+    "many": "{count} في المهام المؤجلة لديك",
+    "other": "{count} في المهام المؤجلة لديك"
+  },
+  "recordPartsCountIdle": {
+    "plural": "count",
+    "zero": "{count} خامل",
+    "one": "{count} خامل",
+    "two": "{count} خامل",
+    "few": "{count} خامل",
+    "many": "{count} خامل",
+    "other": "{count} خامل"
+  },
+  "recordPartsCountInterrupted": {
+    "plural": "count",
+    "zero": "{count} متوقف",
+    "one": "{count} متوقف",
+    "two": "{count} متوقف",
+    "few": "{count} متوقف",
+    "many": "{count} متوقف",
+    "other": "{count} متوقف"
+  },
+  "recordPartsCountQueued": {
+    "plural": "count",
+    "zero": "{count} في قائمة الانتظار",
+    "one": "{count} في قائمة الانتظار",
+    "two": "{count} في قائمة الانتظار",
+    "few": "{count} في قائمة الانتظار",
+    "many": "{count} في قائمة الانتظار",
+    "other": "{count} في قائمة الانتظار"
+  },
+  "recordPartsCountStarting": {
+    "plural": "count",
+    "zero": "{count} قيد البدء",
+    "one": "{count} قيد البدء",
+    "two": "{count} قيد البدء",
+    "few": "{count} قيد البدء",
+    "many": "{count} قيد البدء",
+    "other": "{count} قيد البدء"
+  },
+  "recordPartsCountWaiting": {
+    "plural": "count",
+    "zero": "{count} ينتظرك",
+    "one": "{count} ينتظرك",
+    "two": "{count} ينتظرك",
+    "few": "{count} ينتظرك",
+    "many": "{count} ينتظرك",
+    "other": "{count} ينتظرك"
+  },
+  "recordPartsCountWorking": {
+    "plural": "count",
+    "zero": "{count} قيد العمل",
+    "one": "{count} قيد العمل",
+    "two": "{count} قيد العمل",
+    "few": "{count} قيد العمل",
+    "many": "{count} قيد العمل",
+    "other": "{count} قيد العمل"
+  },
+  "recordPartsLast": "بانتظار جزئها الأخير",
+  "recordPartsLastBacklog": "جزؤها الأخير ينتظر أن تضغط «بدء»",
+  "recordPartsLastBacklogGuidance": "{key} في المهام المؤجلة لديك. تُغلق هذه المهمة من تلقاء نفسها عند إغلاق أجزائها.",
+  "recordPartsLastIdle": "{key} خامل. تُغلق هذه المهمة من تلقاء نفسها عند إغلاق أجزائها.",
+  "recordPartsLastInterrupted": "توقف {key}. تُغلق هذه المهمة من تلقاء نفسها عند إغلاق أجزائها.",
+  "recordPartsLastQueued": "{key} في قائمة الانتظار. تُغلق هذه المهمة من تلقاء نفسها عند إغلاق أجزائها.",
+  "recordPartsLastStarting": "{key} قيد البدء. تُغلق هذه المهمة من تلقاء نفسها عند إغلاق أجزائها.",
+  "recordPartsLastWaiting": "جزؤها الأخير ينتظرك",
+  "recordPartsLastWaitingGuidance": "لدى {key} بطاقة لك. تُغلق هذه المهمة من تلقاء نفسها عند إغلاق أجزائها.",
+  "recordPartsLastWorking": "{key} قيد العمل. تُغلق هذه المهمة من تلقاء نفسها عند إغلاق أجزائها.",
+  "recordPartsOpen": {
+    "plural": "total",
+    "zero": "بانتظار {open} من أجزائها الـ {total}",
+    "one": "بانتظار {open} من جزئها الواحد",
+    "two": "بانتظار {open} من جزأيها الاثنين",
+    "few": "بانتظار {open} من أجزائها الـ {total}",
+    "many": "بانتظار {open} من أجزائها الـ {total}",
+    "other": "بانتظار {open} من أجزائها الـ {total}"
+  },
+  "recordPartsOpenGuidance": "{counts}. تُغلق هذه المهمة من تلقاء نفسها عند إغلاق أجزائها.",
   "recordPersonalNone": "لا شيء، على {computer}",
   "recordPersonalVersion": "النسخة {version} من {when}، على {computer}",
   "recordPolicyParentTask": "المهمة الأم",

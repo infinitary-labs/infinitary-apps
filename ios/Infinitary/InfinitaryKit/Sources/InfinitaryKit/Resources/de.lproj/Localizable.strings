@@ -2157,6 +2157,7 @@
 "phoneRecordWaitDueRead" = "nächstes Lesen war fällig %1$@";
 "phoneRecordWaitDueReset" = "Zurücksetzung war fällig %1$@";
 "phoneRecordWaitDueStart" = "Startzeit war fällig %1$@";
+"phoneRecordWaitLabelRecorded" = "%1$@ · Warten festgehalten %2$@";
 "phoneRecordWaitLine" = "%2$@ · %1$@";
 "phoneRecordWaitLineRecorded" = "%2$@ · %1$@ · Warten festgehalten %3$@";
 "phoneRecordWaitNextCheckBack" = "nächster Blick %1$@";
@@ -2164,7 +2165,6 @@
 "phoneRecordWaitNextRead" = "nächstes Lesen %1$@";
 "phoneRecordWaitNextReset" = "Zurücksetzung %1$@";
 "phoneRecordWaitNextStart" = "Startzeit %1$@";
-"phoneRecordWaitTimeUnknown" = "Zeit unbekannt";
 "phoneRecordWaitsOn" = "Wartet auf";
 "phoneRecordWhy" = "Warum";
 "phoneRecordWhyFiled" = "Warum sie abgelegt wurde";
@@ -2504,6 +2504,17 @@
 "recordMoreDelivery" = "Lieferung";
 "recordMoreValidation" = "Live-Prüfung";
 "recordOpenKeptEvidence" = "Aufbewahrten Nachweis öffnen";
+"recordPartsLast" = "Wartet auf ihren letzten Teil";
+"recordPartsLastBacklog" = "Ihr letzter Teil wartet auf dein Starten";
+"recordPartsLastBacklogGuidance" = "%1$@ liegt in deinem Backlog. Diese Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.";
+"recordPartsLastIdle" = "%1$@ ist untätig. Diese Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.";
+"recordPartsLastInterrupted" = "%1$@ wurde unterbrochen. Diese Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.";
+"recordPartsLastQueued" = "%1$@ steht in der Warteschlange. Diese Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.";
+"recordPartsLastStarting" = "%1$@ startet gerade. Diese Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.";
+"recordPartsLastWaiting" = "Ihr letzter Teil wartet auf dich";
+"recordPartsLastWaitingGuidance" = "%1$@ hat eine Karte für dich. Diese Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.";
+"recordPartsLastWorking" = "%1$@ arbeitet. Diese Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.";
+"recordPartsOpenGuidance" = "%1$@. Diese Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.";
 "recordPersonalNone" = "Keine, auf %1$@";
 "recordPersonalVersion" = "Version %2$@ vom %3$@, auf %1$@";
 "recordPolicyParentTask" = "Übergeordnete Aufgabe";

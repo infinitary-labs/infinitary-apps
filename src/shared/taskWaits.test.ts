@@ -47,7 +47,7 @@ describe("recorded task wait presentation", () => {
     expect(summary.event).toBe(taskWaitText(watches[0], now + 90000, false));
     expect(summary.event).toContain("was due");
     expect(taskWaitText(watches[1], now, true)).toContain("Phone checks");
-    expect(taskWaitText(watches[2], now)).toBe("WEB-41 · time unknown");
+    expect(taskWaitText(watches[2], now)).toBe("Waiting on WEB-41");
   });
   it("combines equal-time event labels without attaching one event to another cause", () => {
     const equal = [
@@ -149,7 +149,7 @@ it("keeps each decision wait in its current owner without losing its recorded ti
   };
   expect(recordAttentionWaits(ready)).toEqual([]);
   expect(taskWaitStatus(ready, taskStatusOf(ready), now).reason).toContain(
-    "Waiting for your merge · time unknown · wait recorded",
+    "Waiting for your merge · wait recorded",
   );
   const paused = {
     ...task,

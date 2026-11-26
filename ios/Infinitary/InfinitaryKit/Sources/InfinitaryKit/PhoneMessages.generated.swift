@@ -2263,6 +2263,7 @@ public enum PhoneMessages {
     public static func `phoneRecordWaitDueRead`(`time`: String) -> String { PhoneWords.format("phoneRecordWaitDueRead", [`time`]) }
     public static func `phoneRecordWaitDueReset`(`time`: String) -> String { PhoneWords.format("phoneRecordWaitDueReset", [`time`]) }
     public static func `phoneRecordWaitDueStart`(`time`: String) -> String { PhoneWords.format("phoneRecordWaitDueStart", [`time`]) }
+    public static func `phoneRecordWaitLabelRecorded`(`label`: String, `time`: String) -> String { PhoneWords.format("phoneRecordWaitLabelRecorded", [`label`, `time`]) }
     public static func `phoneRecordWaitLine`(`event`: String, `label`: String) -> String { PhoneWords.format("phoneRecordWaitLine", [`event`, `label`]) }
     public static func `phoneRecordWaitLineRecorded`(`event`: String, `label`: String, `time`: String) -> String { PhoneWords.format("phoneRecordWaitLineRecorded", [`event`, `label`, `time`]) }
     public static func `phoneRecordWaitNextCheckBack`(`time`: String) -> String { PhoneWords.format("phoneRecordWaitNextCheckBack", [`time`]) }
@@ -2270,7 +2271,6 @@ public enum PhoneMessages {
     public static func `phoneRecordWaitNextRead`(`time`: String) -> String { PhoneWords.format("phoneRecordWaitNextRead", [`time`]) }
     public static func `phoneRecordWaitNextReset`(`time`: String) -> String { PhoneWords.format("phoneRecordWaitNextReset", [`time`]) }
     public static func `phoneRecordWaitNextStart`(`time`: String) -> String { PhoneWords.format("phoneRecordWaitNextStart", [`time`]) }
-    public static func `phoneRecordWaitTimeUnknown`() -> String { PhoneWords.format("phoneRecordWaitTimeUnknown", []) }
     public static func `phoneRecordWaitsOn`() -> String { PhoneWords.format("phoneRecordWaitsOn", []) }
     public static func `phoneRecordWhy`() -> String { PhoneWords.format("phoneRecordWhy", []) }
     public static func `phoneRecordWhyFiled`() -> String { PhoneWords.format("phoneRecordWhyFiled", []) }
@@ -2625,6 +2625,26 @@ public enum PhoneMessages {
     public static func `recordMoreKnowledge`(`count`: Int) -> String { PhoneWords.format("recordMoreKnowledge", [`count`]) }
     public static func `recordMoreValidation`() -> String { PhoneWords.format("recordMoreValidation", []) }
     public static func `recordOpenKeptEvidence`() -> String { PhoneWords.format("recordOpenKeptEvidence", []) }
+    public static func `recordPartsClosedFold`(`count`: Int) -> String { PhoneWords.format("recordPartsClosedFold", [`count`]) }
+    public static func `recordPartsCountBacklog`(`count`: Int) -> String { PhoneWords.format("recordPartsCountBacklog", [`count`]) }
+    public static func `recordPartsCountIdle`(`count`: Int) -> String { PhoneWords.format("recordPartsCountIdle", [`count`]) }
+    public static func `recordPartsCountInterrupted`(`count`: Int) -> String { PhoneWords.format("recordPartsCountInterrupted", [`count`]) }
+    public static func `recordPartsCountQueued`(`count`: Int) -> String { PhoneWords.format("recordPartsCountQueued", [`count`]) }
+    public static func `recordPartsCountStarting`(`count`: Int) -> String { PhoneWords.format("recordPartsCountStarting", [`count`]) }
+    public static func `recordPartsCountWaiting`(`count`: Int) -> String { PhoneWords.format("recordPartsCountWaiting", [`count`]) }
+    public static func `recordPartsCountWorking`(`count`: Int) -> String { PhoneWords.format("recordPartsCountWorking", [`count`]) }
+    public static func `recordPartsLast`() -> String { PhoneWords.format("recordPartsLast", []) }
+    public static func `recordPartsLastBacklog`() -> String { PhoneWords.format("recordPartsLastBacklog", []) }
+    public static func `recordPartsLastBacklogGuidance`(`key`: String) -> String { PhoneWords.format("recordPartsLastBacklogGuidance", [`key`]) }
+    public static func `recordPartsLastIdle`(`key`: String) -> String { PhoneWords.format("recordPartsLastIdle", [`key`]) }
+    public static func `recordPartsLastInterrupted`(`key`: String) -> String { PhoneWords.format("recordPartsLastInterrupted", [`key`]) }
+    public static func `recordPartsLastQueued`(`key`: String) -> String { PhoneWords.format("recordPartsLastQueued", [`key`]) }
+    public static func `recordPartsLastStarting`(`key`: String) -> String { PhoneWords.format("recordPartsLastStarting", [`key`]) }
+    public static func `recordPartsLastWaiting`() -> String { PhoneWords.format("recordPartsLastWaiting", []) }
+    public static func `recordPartsLastWaitingGuidance`(`key`: String) -> String { PhoneWords.format("recordPartsLastWaitingGuidance", [`key`]) }
+    public static func `recordPartsLastWorking`(`key`: String) -> String { PhoneWords.format("recordPartsLastWorking", [`key`]) }
+    public static func `recordPartsOpen`(`open`: String, `total`: Int) -> String { PhoneWords.format("recordPartsOpen", [`open`, `total`]) }
+    public static func `recordPartsOpenGuidance`(`counts`: String) -> String { PhoneWords.format("recordPartsOpenGuidance", [`counts`]) }
     public static func `recordPersonalNone`(`computer`: String) -> String { PhoneWords.format("recordPersonalNone", [`computer`]) }
     public static func `recordPersonalVersion`(`computer`: String, `version`: String, `when`: String) -> String { PhoneWords.format("recordPersonalVersion", [`computer`, `version`, `when`]) }
     public static func `recordPolicyParentTask`() -> String { PhoneWords.format("recordPolicyParentTask", []) }
@@ -7014,6 +7034,7 @@ extension PhoneWords {
         "phoneRecordWaitDueRead": ["time"],
         "phoneRecordWaitDueReset": ["time"],
         "phoneRecordWaitDueStart": ["time"],
+        "phoneRecordWaitLabelRecorded": ["label", "time"],
         "phoneRecordWaitLine": ["event", "label"],
         "phoneRecordWaitLineRecorded": ["event", "label", "time"],
         "phoneRecordWaitNextCheckBack": ["time"],
@@ -7021,7 +7042,6 @@ extension PhoneWords {
         "phoneRecordWaitNextRead": ["time"],
         "phoneRecordWaitNextReset": ["time"],
         "phoneRecordWaitNextStart": ["time"],
-        "phoneRecordWaitTimeUnknown": [],
         "phoneRecordWaitsOn": [],
         "phoneRecordWhy": [],
         "phoneRecordWhyFiled": [],
@@ -7376,6 +7396,26 @@ extension PhoneWords {
         "recordMoreKnowledge": ["count"],
         "recordMoreValidation": [],
         "recordOpenKeptEvidence": [],
+        "recordPartsClosedFold": ["count"],
+        "recordPartsCountBacklog": ["count"],
+        "recordPartsCountIdle": ["count"],
+        "recordPartsCountInterrupted": ["count"],
+        "recordPartsCountQueued": ["count"],
+        "recordPartsCountStarting": ["count"],
+        "recordPartsCountWaiting": ["count"],
+        "recordPartsCountWorking": ["count"],
+        "recordPartsLast": [],
+        "recordPartsLastBacklog": [],
+        "recordPartsLastBacklogGuidance": ["key"],
+        "recordPartsLastIdle": ["key"],
+        "recordPartsLastInterrupted": ["key"],
+        "recordPartsLastQueued": ["key"],
+        "recordPartsLastStarting": ["key"],
+        "recordPartsLastWaiting": [],
+        "recordPartsLastWaitingGuidance": ["key"],
+        "recordPartsLastWorking": ["key"],
+        "recordPartsOpen": ["open", "total"],
+        "recordPartsOpenGuidance": ["counts"],
         "recordPersonalNone": ["computer"],
         "recordPersonalVersion": ["computer", "version", "when"],
         "recordPolicyParentTask": [],
@@ -9621,6 +9661,15 @@ extension PhoneWords {
         "recordAgeMinutes": "count",
         "recordFoldedMore": "count",
         "recordMoreKnowledge": "count",
+        "recordPartsClosedFold": "count",
+        "recordPartsCountBacklog": "count",
+        "recordPartsCountIdle": "count",
+        "recordPartsCountInterrupted": "count",
+        "recordPartsCountQueued": "count",
+        "recordPartsCountStarting": "count",
+        "recordPartsCountWaiting": "count",
+        "recordPartsCountWorking": "count",
+        "recordPartsOpen": "total",
         "recordShowEarlier": "count",
         "recordUsesMore": "count",
         "secretsAllowShort": "minutes",

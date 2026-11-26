@@ -247,7 +247,7 @@ Each input the first mate is served opens with one context, and a context carrie
   `directions` is one section: when any direction changes, every current direction goes again whole under its authority line, so the model never holds part of the set.
   `saved_knowledge` says only how much the captain's collection holds, never a saved entry; the first mate searches it when a message needs it (`docs/knowledge.md`, "Knowledge as needed").
 - **The facts of one input.**
-  `as_of`, `captain_resolutions`, `thread_activity`, `visible_card_hint`, `about`, `focused_project` and `recovery` belong to the input they ride and are sent whenever they apply.
+  `as_of`, `captain_resolutions`, `thread_activity`, `visible_card_hint`, `about`, `project_filter` and `recovery` belong to the input they ride and are sent whenever they apply.
 - **The crew lists started work.**
   `crew` lists every active task: running, idle, paused, held, and work on a computer that cannot be reached.
   Unstarted work is the `backlog` section's count per project; the `tasks` query reads it, a page at a time: a list that stops short names the `next` that alone reads its later pages from the one cut its first page took, under that page's filters, and a `next` whose cut is no longer kept, or was taken by an earlier session's tool, is refused.

@@ -227,6 +227,10 @@ export type PlacedToolFieldCoverage = CarriedFields<
       keyof InvokeRequest<"inf:work:card">[0]["card"]
     >
   | Exclude<
+      keyof DeclaredAction,
+      keyof InvokeRequest<"inf:work:card">[0]["card"]["actions"][number]
+    >
+  | Exclude<
       keyof NonNullable<DeclaredCardInput["browserHandoff"]>,
       keyof NonNullable<InvokeRequest<"inf:work:card">[0]["card"]["browserHandoff"]>
     >

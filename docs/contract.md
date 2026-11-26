@@ -282,8 +282,8 @@ The home sends `integrations` only to a computer whose roster says `browsers`, s
 A crewmate there lists the home's Secrets catalog (`docs/secrets.md`, "Current command seam") over the metadata-only `inf:work:secrets` read and the placed spec's `secrets`; no work request asks for a use.
 The home sends `secrets` on the same terms as `integrations`, and its transport is included in the current work major.
 
-A placed card carries the optional `riskDeclaration`, `browserHandoff.signIn`, `asking`, `designOnly`, `continues`, `answering` and `request_write` effects, and a placed `check_change` the optional `pull`, `absentChecks` and `skipRules` declarations of a merge review.
-`PlacedToolFieldCoverage` (`src/core/session/tools.ts`) fails the build when a crewmate-declared top-level field of a card or of its `browserHandoff`, `check_change`, knowledge read or knowledge record has no place in its work request; host-resolved card fields (`attachment`, `risk`) and the first mate's `taskId` and `reviewTaskId` are left out.
+A placed card carries the optional `riskDeclaration`, `browserHandoff.signIn`, an action's `declines`, `asking`, `designOnly`, `continues`, `answering` and `request_write` effects, and a placed `check_change` the optional `pull`, `absentChecks` and `skipRules` declarations of a merge review.
+`PlacedToolFieldCoverage` (`src/core/session/tools.ts`) fails the build when a crewmate-declared top-level field of a card, of one of its actions or of its `browserHandoff`, `check_change`, knowledge read or knowledge record has no place in its work request; host-resolved card fields (`attachment`, `risk`) and the first mate's `taskId` and `reviewTaskId` are left out.
 A placed crewmate's `inf:work:read-workflow` may leave out `jobId` for the run's short read, which saves the home's run watch (`docs/forge.md`, "The run watch").
 
 The read-only `inf:working-copy:revision` order reads a task's committed revision.

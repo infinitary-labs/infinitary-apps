@@ -253,6 +253,14 @@ function SettingsScreen({theme,onTheme}){
       {tab==="appearance"&&<div>
         <SectionLabel>Appearance</SectionLabel>
         <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 18px",background:"var(--bg-1)",border:"1px solid var(--line-1)",borderRadius:"var(--radius-m)"}}>
+            <div><div style={{fontSize:"var(--text-base)",color:"var(--fg-1)",fontWeight:500}}>Crew model names</div><div style={{fontSize:"var(--text-sm)",color:"var(--fg-3)"}}>Show model names while crewmates use only one orbit.</div></div>
+            <Switch checked={modelNames} onChange={setModelNames}/>
+          </div>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 18px",background:"var(--bg-1)",border:"1px solid var(--line-1)",borderRadius:"var(--radius-m)"}}>
+            <div><div style={{fontSize:"var(--text-base)",color:"var(--fg-1)",fontWeight:500}}>Window wash</div><div style={{fontSize:"var(--text-sm)",color:"var(--fg-3)"}}>How much of the theme color covers the blurred background. 0% is the default.</div></div>
+            <label><input aria-label="Window wash" type="range" min={0} max={100} value={wash} onChange={e=>setWash(Number(e.target.value))}/><span style={{fontFamily:"var(--font-mono)"}}>{wash}%</span></label>
+          </div>
           <div style={{padding:"14px 18px",background:"var(--bg-1)",border:"1px solid var(--line-1)",borderRadius:"var(--radius-m)"}}>
             <div style={{fontSize:"var(--text-base)",color:"var(--fg-1)",fontWeight:500}}>Theme</div>
             <div style={{fontSize:"var(--text-sm)",color:"var(--fg-3)"}}>Dark, Light, or a theme its maker named. Every color in the window follows.</div>
@@ -275,14 +283,6 @@ function SettingsScreen({theme,onTheme}){
                 );
               })}
             </div>
-          </div>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 18px",background:"var(--bg-1)",border:"1px solid var(--line-1)",borderRadius:"var(--radius-m)"}}>
-            <div><div style={{fontSize:"var(--text-base)",color:"var(--fg-1)",fontWeight:500}}>Window wash</div><div style={{fontSize:"var(--text-sm)",color:"var(--fg-3)"}}>How much of the theme color covers the blurred background. 0% is the default.</div></div>
-            <label><input aria-label="Window wash" type="range" min={0} max={100} value={wash} onChange={e=>setWash(Number(e.target.value))}/><span style={{fontFamily:"var(--font-mono)"}}>{wash}%</span></label>
-          </div>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 18px",background:"var(--bg-1)",border:"1px solid var(--line-1)",borderRadius:"var(--radius-m)"}}>
-            <div><div style={{fontSize:"var(--text-base)",color:"var(--fg-1)",fontWeight:500}}>Crew model names</div><div style={{fontSize:"var(--text-sm)",color:"var(--fg-3)"}}>Show model names while crewmates use only one orbit.</div></div>
-            <Switch checked={modelNames} onChange={setModelNames}/>
           </div>
         </div>
       </div>}

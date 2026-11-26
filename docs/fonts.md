@@ -1,6 +1,6 @@
 # Fonts
 
-Settings → Appearance lets a person choose the font of three places, in the rows after Crew model names.
+Settings → Appearance lets a person choose the font of three places, in the rows after Theme.
 They sit below the rows that must stay on screen in the smallest window, as the Language row does.
 Each is Infinitary's own font until chosen.
 

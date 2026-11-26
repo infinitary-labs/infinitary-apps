@@ -3,24 +3,20 @@ import { CONTRIBUTION_MERGE_REFUSAL } from "@shared/contributions";
 import { settingFrom } from "@shared/envSettings";
 import { branchComparePage, forgePlace, GITHUB_COM, isGitHubEnterpriseCloud } from "@shared/forge";
 import { notSignedInText } from "@shared/forges";
-import { cutText } from "@shared/textCut";
 import type { NamingRule } from "../../../../shared/runbooks";
 import { requireNamed } from "../../../workspace/naming";
 import {
   type ApiProject,
-  type ApiRoute,
   type ForgeApi,
   type ForgeApiResponse,
   gatewayAnswerBytes,
   nextPagePath,
   parseApiRequest,
-  type ReleaseUpload,
 } from "../../api";
 import {
   allowanceResetOf,
   checkTimes,
   type Forge,
-  ForgeAllowanceSpent,
   ForgeBaseMoved,
   type ForgeChange,
   type ForgeCheck,
@@ -45,11 +41,12 @@ import {
   type TeamQueueLeftovers,
 } from "../../forge";
 import { waysUnderRules } from "../../mergeWays";
-import { RELEASE_UPLOAD_TIMEOUT_MS } from "../../releaseFile";
-import type { ArchiveRanges } from "../../workflows";
 import { GitHubAttachments, githubStoryDestination } from "./attachments";
 import { readCommitFiles, readOwnComments, readPullComments } from "./comments";
 import { GitHubContributions } from "./contributions";
+import { GitHubDownloads } from "./downloads";
+import { failureOf } from "./failures";
+import { GitHubReleaseUploads, githubUploadOrigin } from "./releaseUploads";
 import { GitHubWorkflows } from "./workflows";
 
 /**
@@ -63,6 +60,7 @@ import { GitHubWorkflows } from "./workflows";
  * Readiness, supersession and repair settlement are crew declarations.
  */
 
+export { githubUploadOrigin };
 export const GITHUB_API_URL = "https://api.github.com";
 /** GitHub's page size for a list read that names no `per_page`. */
 const GITHUB_DEFAULT_PER_PAGE = 30;
@@ -101,20 +99,6 @@ export function githubApiBaseFor(
   if (!options.packaged && override) return override.replace(/\/+$/, "");
   return isGitHubEnterpriseCloud(host) ? `https://api.${host}` : `https://${host}/api/v3`;
 }
-
-/**
- * Where a release file goes (`docs/forge.md`, "Release files"): github.com's
- * `uploads.github.com`, a GitHub Enterprise Cloud host's `uploads.<name>.ghe.com`,
- * or a GitHub Enterprise Server's `/api/uploads`. An unpackaged API stand-in
- * is not this address; the forge sends the file to the stand-in instead.
- */
-export function githubUploadOrigin(host: string): string {
-  if (host === GITHUB_COM) return "https://uploads.github.com";
-  if (isGitHubEnterpriseCloud(host)) return `https://uploads.${host}`;
-  return `https://${host}/api/uploads`;
-}
-
-const RELEASE_ASSET = /^releases\/\d+\/assets$/;
 
 /** GitHub's GraphQL address beside a REST API base: `/api/graphql` on a GitHub Enterprise Server. */
 export function githubGraphqlUrl(apiBase: string): string {
@@ -232,6 +216,8 @@ export class GitHubForge implements Forge {
   readonly api: ForgeApi;
   private readonly base: string;
   private readonly fetcher: typeof fetch;
+  private readonly downloads: GitHubDownloads;
+  private readonly uploads: GitHubReleaseUploads;
 
   constructor(
     readonly location: ForgeLocation,
@@ -245,11 +231,28 @@ export class GitHubForge implements Forge {
       route: (method, raw, bodyBytes) => parseApiRequest(method, raw, this.apiProject(), bodyBytes),
       nextPath: (link) => nextPagePath(link, this.base, this.apiProject()),
       call: (method, path, body) => this.apiCall(method, path, body),
-      releaseUpload: (raw, filename) => this.releaseUploadRoute(raw, filename),
-      upload: (route, file) => this.uploadRelease(route, file),
+      releaseUpload: (raw, filename) => this.uploads.releaseUploadRoute(raw, filename),
+      upload: (route, file) => this.uploads.uploadRelease(route, file),
     };
     this.base = (options.apiBaseUrl ?? GITHUB_API_URL).replace(/\/+$/, "");
     this.fetcher = options.fetch ?? fetch;
+    const wire = {
+      base: this.base,
+      place: this.place,
+      host: this.host,
+      fetch: this.fetcher,
+      token: () => options.token(),
+    };
+    this.downloads = new GitHubDownloads({
+      ...wire,
+      onSignInRejected: () => options.onSignInRejected?.(),
+    });
+    this.uploads = new GitHubReleaseUploads({
+      ...wire,
+      apiProject: () => this.apiProject(),
+      canonicalBase: () => githubApiBaseFor(this.host ?? GITHUB_COM, { packaged: true }),
+      readAnswer: (response) => this.readAnswer(response),
+    });
     if (location.host === GITHUB_COM && location.owner && location.name) {
       this.attachments = new GitHubAttachments({
         fullName: `${location.owner}/${location.name}`,
@@ -263,7 +266,7 @@ export class GitHubForge implements Forge {
             );
           return JSON.parse(answer.body) as unknown;
         },
-        uploadBaseUrl: this.uploadOrigin(),
+        uploadBaseUrl: this.uploads.uploadOrigin(),
         fetch: this.fetcher,
         // A key GitHub still answers for makes the upload's 401 a permission;
         // the read's own 401 asks the health service to look again.
@@ -277,8 +280,8 @@ export class GitHubForge implements Forge {
     this.workflows = new GitHubWorkflows(
       () => this.repoPath(),
       (path) => this.request("GET", path),
-      (path, maxBytes) => this.downloadBytes(path, maxBytes),
-      (path, size) => this.archiveRanges(path, size),
+      (path, maxBytes) => this.downloads.downloadBytes(path, maxBytes),
+      (path, size) => this.downloads.archiveRanges(path, size),
     );
   }
 
@@ -1308,260 +1311,6 @@ export class GitHubForge implements Forge {
     return `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(this.location.name as string)}`;
   }
 
-  /** Follow signed download redirects manually: the sign-in never leaves the API origin. */
-  private async downloadBytes(path: string, maxBytes: number): Promise<Uint8Array> {
-    const token = await this.options.token();
-    if (!token)
-      throw new ForgeError("sign-in", notSignedInText(this.place, this.host ?? GITHUB_COM));
-    const signal = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
-    return downloadAnswer(async () => {
-      const { response } = await this.signedGet(
-        { url: new URL(`${this.base}${path}`), authenticated: true },
-        token,
-        path,
-        signal,
-      );
-      return await boundedBytes(response, maxBytes);
-    });
-  }
-
-  /**
-   * The archive behind `path` read in parts (`ArchiveRanges`): the first
-   * part follows the redirects as a whole download does, later parts go
-   * straight to the storage it reached, and each part has its own request
-   * bound. A large file may take longer than a single request. Storage that
-   * does not answer a part with exactly those bytes is refused, never read whole.
-   */
-  private async archiveRanges(path: string, size: number): Promise<ArchiveRanges> {
-    const token = await this.options.token();
-    if (!token)
-      throw new ForgeError("sign-in", notSignedInText(this.place, this.host ?? GITHUB_COM));
-    let at = { url: new URL(`${this.base}${path}`), authenticated: true };
-    const read = (start: number, end: number) =>
-      downloadAnswer(async () => {
-        if (!Number.isSafeInteger(start) || start < 0 || end > size || start >= end)
-          throw new ForgeError("refused", "The archive part asked for is outside the archive.");
-        const reached = await this.signedGet(
-          at,
-          token,
-          path,
-          AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-          `bytes=${start}-${end - 1}`,
-        );
-        at = { url: reached.url, authenticated: reached.authenticated };
-        const { response } = reached;
-        if (
-          response.status !== 206 ||
-          !samePart(response.headers.get("content-range"), start, end, size)
-        ) {
-          await response.body?.cancel();
-          throw new ForgeError(
-            "refused",
-            "GitHub's storage did not send the part of the archive asked for, so the archive cannot be read in parts.",
-          );
-        }
-        const bytes = await boundedBytes(response, end - start, "The archive part");
-        if (bytes.byteLength !== end - start)
-          throw new ForgeError(
-            "transient",
-            "GitHub's storage sent a part of the archive short; try a fresh read.",
-          );
-        return bytes;
-      });
-    return { size, read };
-  }
-
-  /**
-   * One GET of a workflow download through GitHub's signed redirects: the
-   * sign-in goes only with the request to the API, and a next address must
-   * be GitHub's HTTPS storage. Answers the final response and where it came
-   * from, so a later part can go straight there.
-   */
-  private async signedGet(
-    from: { url: URL; authenticated: boolean },
-    token: string,
-    path: string,
-    signal: AbortSignal,
-    range?: string,
-  ): Promise<{ response: Response; url: URL; authenticated: boolean }> {
-    let { url, authenticated } = from;
-    const apiOrigin = new URL(this.base).origin;
-    for (let hops = 0; hops <= 3; hops++) {
-      const response = await this.fetcher(url, {
-        method: "GET",
-        redirect: "manual",
-        signal,
-        headers: {
-          ...(authenticated
-            ? {
-                Authorization: `Bearer ${token}`,
-                Accept: "application/vnd.github+json",
-                "X-GitHub-Api-Version": API_VERSION,
-              }
-            : {}),
-          ...(range ? { Range: range } : {}),
-        },
-      });
-      if ([301, 302, 303, 307, 308].includes(response.status)) {
-        await response.body?.cancel();
-        const location = response.headers.get("location");
-        if (!location) throw new ForgeError("refused", "GitHub supplied no download address.");
-        const next = new URL(location, url);
-        // Dev stubs can redirect within their own origin. Production only follows
-        // GitHub's HTTPS storage; neither credentials nor a signed URL are returned.
-        const storage =
-          next.protocol === "https:" &&
-          (next.hostname.endsWith(".githubusercontent.com") ||
-            next.hostname.endsWith(".blob.core.windows.net"));
-        if (next.username || next.password || (next.origin !== apiOrigin && !storage)) {
-          throw new ForgeError("refused", "GitHub supplied an unsafe download address.");
-        }
-        url = next;
-        authenticated = false;
-        continue;
-      }
-      if (!response.ok) {
-        await response.body?.cancel();
-        if (authenticated && response.status === 401) this.options.onSignInRejected?.();
-        if (response.status === 410)
-          throw new ForgeError("not-found", "The workflow evidence has expired on GitHub.");
-        if (!authenticated)
-          throw new ForgeError(
-            "refused",
-            `The workflow download answered ${response.status}; request a fresh download.`,
-          );
-        throw failureOf(response, "GET", path, "");
-      }
-      return { response, url, authenticated };
-    }
-    throw new ForgeError("refused", "GitHub redirected the workflow download too many times.");
-  }
-
-  /**
-   * The release's own upload address, or a relative assets path, accepted
-   * only on this host's upload origin. A stand-in's origin is the API base
-   * the test pointed here, never uploads.github.com.
-   */
-  private releaseUploadRoute(raw: string, filename: string): ApiRoute {
-    const relative = this.releaseAssetPath(raw, filename);
-    const route = parseApiRequest("POST", relative, this.apiProject(), 0);
-    const rest = route.rest
-      .split("/")
-      .map((part) => decodeURIComponent(part))
-      .join("/")
-      .replace(/\/+$/, "");
-    if (!RELEASE_ASSET.test(rest)) {
-      throw new ForgeError(
-        "refused",
-        "A release file goes to the release's upload address, /repos/{owner}/{repo}/releases/{id}/assets, not this path.",
-      );
-    }
-    return route;
-  }
-
-  private releaseAssetPath(raw: string, filename: string): string {
-    const relative = /^https?:\/\//i.test(raw) ? this.uploadPath(raw) : raw;
-    const queryAt = relative.indexOf("?");
-    const base = queryAt === -1 ? relative : relative.slice(0, queryAt);
-    const params = new URLSearchParams(queryAt === -1 ? "" : relative.slice(queryAt + 1));
-    if (!params.get("name")) params.set("name", filename);
-    const kept = new URLSearchParams();
-    const name = params.get("name");
-    const label = params.get("label");
-    if (name) kept.set("name", name);
-    if (label) kept.set("label", label);
-    const query = kept.toString();
-    return query ? `${base}?${query}` : base;
-  }
-
-  private uploadPath(raw: string): string {
-    let url: URL;
-    try {
-      url = new URL(raw);
-    } catch {
-      throw new ForgeError("refused", "The upload address could not be read.");
-    }
-    if (url.username || url.password || url.origin !== new URL(this.uploadOrigin()).origin) {
-      throw new ForgeError(
-        "refused",
-        "A release file is accepted only on GitHub's upload address.",
-      );
-    }
-    if (/[{}]|%7[Bb]|%7[Dd]/.test(`${url.pathname}${url.search}`)) {
-      throw new ForgeError(
-        "refused",
-        "Replace {?name,label} in the release's upload address with ?name= and the file's name.",
-      );
-    }
-    const prefix = this.uploadPrefix();
-    if (prefix && url.pathname !== prefix && !url.pathname.startsWith(`${prefix}/`)) {
-      throw new ForgeError(
-        "refused",
-        "A release file is accepted only on GitHub's upload address.",
-      );
-    }
-    const pathname = prefix ? url.pathname.slice(prefix.length) || "/" : url.pathname;
-    if (!pathname.startsWith("/")) {
-      throw new ForgeError(
-        "refused",
-        "A release file is accepted only on GitHub's upload address.",
-      );
-    }
-    return `${pathname}${url.search}`;
-  }
-
-  /** The path under the upload origin, such as `/api/uploads` on GitHub Enterprise Server. */
-  private uploadPrefix(): string {
-    const pathname = new URL(this.uploadOrigin()).pathname.replace(/\/+$/, "");
-    return pathname === "" || pathname === "/" ? "" : pathname;
-  }
-
-  /** github.com's upload host, or the stand-in when this forge was pointed at one. */
-  private uploadOrigin(): string {
-    const canonical = githubApiBaseFor(this.host ?? GITHUB_COM, { packaged: true });
-    if (this.base !== canonical) return this.base;
-    return githubUploadOrigin(this.host ?? GITHUB_COM);
-  }
-
-  /** Stream the file to the upload origin. Redirects are never followed; the answer stays bounded. */
-  private async uploadRelease(route: ApiRoute, file: ReleaseUpload): Promise<ForgeApiResponse> {
-    const token = await this.options.token();
-    if (!token) {
-      throw new ForgeError("sign-in", notSignedInText(this.place, this.host ?? GITHUB_COM));
-    }
-    const origin = this.uploadOrigin().replace(/\/+$/, "");
-    const url = `${origin}${route.path}`;
-    if (new URL(url).origin !== new URL(origin).origin) {
-      throw new ForgeError(
-        "refused",
-        "A release file is accepted only on GitHub's upload address.",
-        true,
-      );
-    }
-    let response: Response;
-    try {
-      response = await this.fetcher(url, {
-        method: "POST",
-        redirect: "manual",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/vnd.github+json",
-          "X-GitHub-Api-Version": API_VERSION,
-          "Content-Type": file.contentType,
-          "Content-Length": String(file.size),
-        },
-        // Node's fetch reads a stream and requires duplex; the DOM types name neither.
-        body: file.stream,
-        duplex: "half",
-        signal: AbortSignal.timeout(RELEASE_UPLOAD_TIMEOUT_MS),
-      } as unknown as RequestInit);
-    } catch (caught) {
-      const message = caught instanceof Error ? caught.message : String(caught);
-      throw new ForgeError("transient", `could not reach ${this.place}: ${message}`);
-    }
-    return this.readAnswer(response);
-  }
-
   /** The gateway's raw call: every status answers, redirects are never followed, the body is bounded. */
   private async apiCall(method: string, path: string, body?: string): Promise<ForgeApiResponse> {
     const token = await this.options.token();
@@ -1760,102 +1509,6 @@ const STATUS_STATES: Record<string, ForgeCheckState> = {
   error: "error",
   pending: "pending",
 };
-
-function failureOf(response: Response, method: string, path: string, text: string): ForgeError {
-  let said = "";
-  try {
-    const answer = JSON.parse(text) as { message?: string; errors?: unknown };
-    said = answer.message ?? "";
-    // GitHub's 400 for a header it refuses (such as an API version it does
-    // not support) says only "Bad Request" and gives its reason in `errors`.
-    if (/^Bad Request$/i.test(said) && typeof answer.errors === "string" && answer.errors)
-      said = `${said}: ${cutText(answer.errors, 300)}`;
-  } catch {
-    said = cutText(text, 200);
-  }
-  const what = `GitHub answered ${response.status} to ${method} ${path.split("?")[0]}${said ? `: ${said}` : ""}`;
-  if (response.status === 401) return new ForgeError("sign-in", what);
-  if (response.status === 403 || response.status === 429) {
-    const spent = response.headers.get("x-ratelimit-remaining") === "0";
-    const reset = Number(response.headers.get("x-ratelimit-reset"));
-    if (spent && Number.isFinite(reset) && reset > 0)
-      return new ForgeAllowanceSpent(reset * 1000, `${what} (the hourly allowance is spent)`);
-    if (response.status === 403)
-      return new ForgeError("permission", spent ? `${what} (the hourly allowance is spent)` : what);
-  }
-  if (response.status === 404) return new ForgeError("not-found", what);
-  // GitHub refuses a merge when the main branch moved while it merged: the
-  // pull request may still merge once GitHub has read it again.
-  if (
-    response.status === 405 &&
-    method === "PUT" &&
-    /\/pulls\/\d+\/merge(?:-async)?(\?|$)/.test(path) &&
-    /^Base branch was modified\b/i.test(said)
-  )
-    return new ForgeBaseMoved(what);
-  // Any 5xx is the host's own failure, not a verdict on what was asked: a
-  // read retries it quietly, and a write's outcome stays unknown (INF-2675
-  // finding 7: a 500 on a commit's statuses ended two check watches).
-  if (response.status >= 500) return new ForgeError("transient", what);
-  return new ForgeError("refused", what);
-}
-
-/** A workflow download's answer: fetch failures may hold a signed storage URL, so they are never echoed. */
-async function downloadAnswer<T>(run: () => Promise<T>): Promise<T> {
-  try {
-    return await run();
-  } catch (caught) {
-    if (caught instanceof ForgeError) throw caught;
-    throw new ForgeError(
-      "transient",
-      "Could not finish the workflow download from GitHub; try a fresh read.",
-    );
-  }
-}
-
-/** Whether storage's Content-Range names exactly the part asked for, of an archive this size. */
-function samePart(header: string | null, start: number, end: number, size: number): boolean {
-  const match = /^bytes (\d+)-(\d+)\/(\d+)$/.exec(header?.trim() ?? "");
-  return (
-    !!match &&
-    Number(match[1]) === start &&
-    Number(match[2]) === end - 1 &&
-    Number(match[3]) === size
-  );
-}
-
-/** Bound the actual response, not only the host's size metadata. */
-async function boundedBytes(
-  response: Response,
-  maxBytes: number,
-  what = "The workflow evidence",
-): Promise<Uint8Array> {
-  const limit =
-    maxBytes >= 1024 * 1024 ? `${maxBytes / 1024 / 1024} MiB` : `${maxBytes / 1024} KiB`;
-  if (Number(response.headers.get("content-length")) > maxBytes) {
-    await response.body?.cancel();
-    throw new ForgeError("refused", `${what} exceeds the ${limit} read limit.`);
-  }
-  const reader = response.body?.getReader();
-  if (!reader) return new Uint8Array();
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      size += value.byteLength;
-      if (size > maxBytes) {
-        await reader.cancel();
-        throw new ForgeError("refused", `${what} exceeds the ${limit} read limit.`);
-      }
-      chunks.push(value);
-    }
-    return Buffer.concat(chunks, size);
-  } finally {
-    reader.releaseLock();
-  }
-}
 
 function changeWriteError(status: number, operation: string, body: string): ForgeWriteError {
   const refused = [400, 401, 403, 404, 409, 413, 415, 422, 429].includes(status);

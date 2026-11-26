@@ -6,7 +6,10 @@ import { CLAUDE_CREW_PROMPT_MARKER } from "../e2e/crewScripts";
 
 /** The board as the phone reads it: each row with the moves its record's rule allows. */
 type BoardRead = {
-  tasks: { id: string; moves?: Record<string, { ok: boolean; text?: string }> }[];
+  tasks: (RecordStartInput & {
+    id: string;
+    moves?: Record<string, { ok: boolean; text?: string }>;
+  })[];
 };
 
 /**
@@ -14,7 +17,9 @@ type BoardRead = {
  * row Start cannot run and says why, and a long press offers Queue it, that dim Start and Drop task. What the phone
  * must show is read from its owners: the row's moves as the board the phone reads carries them, and the record's
  * Drop task question. Beside it a finished task under Done, which the Mac's board offers no menu for and its Tasks
- * panel row still pins and unpins at rest, so its long press must too.
+ * panel row still pins and unpins at rest, so its long press must too. INF-6022 adds a Backlog task whose start could
+ * not begin: the phone's record must say why in its bar in the Mac's record's words, its reading of that task as the
+ * board carries it.
  */
 export async function seedRowMoves(
   tasks: TaskService,
@@ -34,31 +39,31 @@ export async function seedRowMoves(
     status: "completed",
   });
   tasks.close(done.id, { status: "done", reason: "finished", actor: "host" });
-  const read = (await board()).tasks.find((task) => task.id === row.id);
-  const startReason = read?.moves?.["start-task"]?.text;
-  if (!startReason) throw new Error("The row's Start must say why it cannot run");
-  return { id: row.id, key: row.key, startReason, drop: dropConfirmLead(row.key), done: done.id };
-}
-
-/**
- * INF-6022: a Backlog task whose start could not begin. The phone's record must say why in its bar, as the Mac's does,
- * so what it must say is the Mac's record's reading of this task as the board carries it.
- */
-export async function seedFailedStart(
-  tasks: TaskService,
-  board: () => Promise<{ tasks: (RecordStartInput & { id: string })[] }>,
-) {
-  const row = seedTask(tasks, {
+  const failed = seedTask(tasks, {
     id: "start-failed",
     title: "Chart the sandbar",
     status: "queued",
     startPolicy: "on-request",
   });
-  tasks.starts.returnStart(row.id, { kind: "failed", reason: "its working copy could not be made" });
-  const read = (await board()).tasks.find((task) => task.id === row.id);
-  const notice = read && recordStartOf(read, Date.now()).notice;
-  if (!notice) throw new Error("The record must say why the start could not begin");
-  return { id: row.id, notice };
+  tasks.starts.returnStart(failed.id, {
+    kind: "failed",
+    reason: "its working copy could not be made",
+  });
+  const read = (await board()).tasks;
+  const startReason = read.find((task) => task.id === row.id)?.moves?.["start-task"]?.text;
+  if (!startReason) throw new Error("The row's Start must say why it cannot run");
+  const failedRead = read.find((task) => task.id === failed.id);
+  const startNotice = failedRead && recordStartOf(failedRead, Date.now()).notice;
+  if (!startNotice) throw new Error("The record must say why the start could not begin");
+  return {
+    id: row.id,
+    key: row.key,
+    startReason,
+    drop: dropConfirmLead(row.key),
+    done: done.id,
+    startFailed: failed.id,
+    startNotice,
+  };
 }
 
 /**

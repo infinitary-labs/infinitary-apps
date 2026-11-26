@@ -1,5 +1,6 @@
 import type { PlacedRosterTask, PlacedSpec } from "@shared/work";
 import { type AppPaths, crewmatePlacedDir, crewmateSessionsDir } from "../paths";
+import { errorText } from "../personal/errorText";
 import { type CallLine, PlacedLedger } from "./placedLedger";
 import type { PlacedSession } from "./placedSession";
 import { RecordCopy, type RecordCopyOptions } from "./recordCopy";
@@ -179,9 +180,15 @@ export function loadPlaced(
   };
   known.set(task, placed);
   // The reports a turn this Mac had not finished gave: a restart here replays them.
-  placed.replays = ledger
-    .lines()
-    .filter((line) => line.report !== undefined && line.after >= placed.ended);
+  try {
+    placed.replays = ledger
+      .lines()
+      .filter((line) => line.report !== undefined && line.after >= placed.ended);
+  } catch (caught) {
+    // A task loads wherever its computer is heard, its roster included: answers
+    // that cannot be read fail each call that needs them, not that computer.
+    log(`could not read ${task}'s kept answers: ${errorText(caught)}`);
+  }
   return placed;
 }
 

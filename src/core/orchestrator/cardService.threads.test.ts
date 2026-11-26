@@ -189,7 +189,7 @@ describe("card threads", () => {
     );
     expect(
       refusal(cards.replyAs(crewmate, { cardId: FIRSTMATE_FAILURE_CARD_ID, text: "Hi." })),
-    ).toBe("this card has no thread.");
+    ).toBe("this card takes no reply.");
     expect(refusal(cards.replyAs(crewmate, { cardId: id, text: "   " }))).toBe(
       "a reply needs some words.",
     );

@@ -153,7 +153,7 @@ A press sends nothing and leaves the welcome up, and while the box is held - a r
 A starter is a `data-inf-draft` button, the frame bridge's own message for a body that starts the captain's message, which the window takes only from the card on screen whose frame holds its focus, as a link opens only then (`docs/card-authoring.md` "Style").
 A press of a starter, Next or Back is not the first turn.
 
-The note has an ordinary close, normal priority, no footer buttons, no provider personalization, and no reply row: the captain asked for none on this card, since the message box under it is where to type (`docs/card-threads.md` "A card with no reply row").
+The note has an ordinary close, normal priority, no footer buttons, no provider personalization, and no reply row: the captain asked for none on this card, since the message box under it is where to type (`docs/card-threads.md` "Who answers a card").
 It is a regular card, the width its picture was drawn for, which the host sets when it presents the note.
 It teaches default positions, never opens panels or overrides the captain's choices.
 Sending a message does not close it; if that message starts the first crewmate, the welcome steps aside for the first crewmate's note (“The first crewmate's note” below).

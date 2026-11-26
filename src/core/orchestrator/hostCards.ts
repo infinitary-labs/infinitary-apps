@@ -250,6 +250,8 @@ export function firstmatePauseCard(id: string, input: FirstmatePauseCard): HostC
     meta: FIRSTMATE_CARD_META,
     body: input.body,
     actions: firstmatePauseActions(input),
+    // The paused first mate cannot answer a reply (`Card.replies`).
+    replies: false,
   });
 }
 
@@ -491,12 +493,15 @@ export function authDecisionCard(
     move?: { arg: string; modelName: string };
     /** Claude access set up for Claude Code was refused: renewed there, not signed in here. */
     access?: ClaudeAccessSource;
+    /** The first mate's own sign-in: it cannot answer a reply until it is back (`Card.replies`). */
+    noReply?: true;
   },
 ): HostCard {
   const restoreAccountId = options?.restoreAccountId;
   return hostCard({
     id,
     ...(options?.taskId ? { taskId: options.taskId } : {}),
+    ...(options?.noReply ? { replies: false as const } : {}),
     title: restoreAccountId
       ? body
       : options?.access
@@ -643,6 +648,7 @@ export function firstmateFailureCard(body: string): HostCard {
     title: FIRSTMATE_FAILURE_TITLE,
     meta: FIRSTMATE_CARD_META,
     body,
+    replies: false,
     actions: [
       {
         id: "retry-firstmate",

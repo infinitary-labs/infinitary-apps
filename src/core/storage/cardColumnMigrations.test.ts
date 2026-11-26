@@ -379,7 +379,9 @@ const CARD_COLUMNS: CardColumnCase[] = [
     from: CARD_ANSWERER_MIGRATION_VERSION - 1,
     card: "INSERT INTO cards (id, task_id, kind, author, priority, title, meta, body, actions_json, status, created_at) VALUES ('card-stall-a99caa29', 'a99caa29', 'card', 'host', 90, 'Move integration secrets has been stuck for 1h 21m', '', '<p>It stopped with nothing running and no question for you.</p>', '[]', 'ready', 1)",
     id: "card-stall-a99caa29",
-    legacy: (alert) => expect(alert).not.toHaveProperty("answeredBy"),
+    // A host card saved with no answerer reads as the first mate's to answer
+    // (`withHostAnswerer`).
+    legacy: (alert) => expect(alert.answeredBy).toBe("firstmate"),
     write: (alert, store) => store.upsert({ ...alert, answeredBy: "firstmate" }),
     readBack: (store, alert) =>
       expect(store.get(alert.id)).toMatchObject({

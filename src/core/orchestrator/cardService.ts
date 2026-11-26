@@ -28,6 +28,7 @@ import {
   keepsTaskOpen,
   onStage,
   type PastCard,
+  withHostAnswerer,
 } from "@shared/cards";
 import { shortTaskTitle } from "@shared/taskTitle";
 import { decidedCardWidth } from "../pi/cardWidth";
@@ -1337,10 +1338,12 @@ export class CardService {
    * Put a card the host authors on the stack: a new one, or a revision under
    * its id. A card raised again under an id it once had reopens its row, so
    * the stack and the row agree and it survives a restart like any other.
+   * A host card that names no answerer gets the first mate here, the one door
+   * every such card goes through (`withHostAnswerer`).
    */
   put(next: Card, options: { revise?: boolean } = {}): void {
     const stamped = this.evidence.stamp({
-      ...next,
+      ...withHostAnswerer(next),
       width: decidedCardWidth({
         body: next.body,
         pictures: next.pictures,

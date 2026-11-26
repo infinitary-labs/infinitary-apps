@@ -1,5 +1,5 @@
 ---
-source: 28dbb83c4a64e09c
+source: 6359195aeec7c814
 title: Karten und Entscheidungen
 description: Wie dein erster Offizier und deine Crew dir Antworten und Entscheidungen als Karten bringen und wie du sie beantwortest.
 ---
@@ -52,12 +52,13 @@ Ein Klick in die Karte sendet nie von selbst etwas.
 
 ## Das Antwortfeld und der Verlauf {#the-reply-field-and-the-thread}
 
-Jede Karte von deinem ersten Offizier oder einem Crewmitglied hat unter ihrem Text ein Feld mit dem Hinweis „noch etwas hinzuzufügen?“.
+Jede Karte hat unter ihrem Text ein Feld mit dem Hinweis „noch etwas hinzuzufügen?“, außer der Begrüßungskarte und den Karten, die erscheinen, während dein erster Offizier ausfällt.
 
 - Schreib hinein und drück auf **Chat**, um eine Antwort zu senden, ohne zu wählen.
 - Schreib hinein und drück auf eine Möglichkeit, um deine Worte mit dieser Wahl zu senden.
 
 Eine Antwort geht an den, der die Karte geschrieben hat.
+Auf einer Karte, die Infinitary selbst zeigt, geht eine Antwort an das Crewmitglied, das sie angefragt hat, sonst an deinen ersten Offizier.
 Die erste Antwort öffnet neben der Karte einen Verlauf, und der Verfasser antwortet dort.
 Ändert der Verfasser die Karte als Antwort, wird die Karte an Ort und Stelle überarbeitet, und der Verlauf sagt das.
 Um den Verlauf wieder in die Karte einzuklappen, drück ⌘\ (Ctrl+\ unter Linux und Windows).

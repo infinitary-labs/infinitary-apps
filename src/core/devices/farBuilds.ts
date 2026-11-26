@@ -1,5 +1,5 @@
 import { createReadStream } from "node:fs";
-import type { Readable } from "node:stream";
+import type { Readable, Writable } from "node:stream";
 import type { DeviceChip } from "@shared/devices";
 import type { RemoteLoginRefusal } from "@shared/remoteLogin";
 import { packApp } from "./appArchive";
@@ -175,4 +175,29 @@ export function copyStream(build: FarBuild): {
     stream.once("close", () => reject(new Error("The copy stopped before its end.")));
   });
   return { stream, ended, stop: () => stream.destroy() };
+}
+
+/**
+ * Sends the copy into the other computer's input: a bundle as one gzipped
+ * tar made as it goes, anything else as its file; `sent` hears the size of
+ * each piece as it is handed over.
+ */
+export function sendCopy(
+  build: FarBuild,
+  sink: Writable,
+  sent?: (bytes: number) => void,
+): Promise<void> {
+  const { stream, ended, stop } = copyStream(build);
+  // SSH may stop reading long before tar fills its output pipe (INF-320).
+  const closed = () => stop();
+  sink.once("close", closed);
+  sink.once("error", closed);
+  if (sent) stream.on("data", (chunk: Buffer) => sent(chunk.length));
+  stream.pipe(sink, { end: false });
+  return ended.finally(() => {
+    sink.off("close", closed);
+    sink.off("error", closed);
+    stream.unpipe(sink);
+    stop();
+  });
 }

@@ -12,6 +12,7 @@ import {
 } from "./actionCoverage";
 import { ACTION_NAMES, ACTIONS, actionRefusal } from "./actions";
 import { deviceUpdateBody, sourceMatchCard } from "./deviceUpdateNudge";
+import { inLanguage } from "./i18n/current";
 import * as m from "./i18n/messages.generated.ts";
 import {
   CORE_INVOKE_CHANNELS,
@@ -104,6 +105,31 @@ describe("action permissions and channel parity", () => {
     expect(() =>
       add.offer?.({ kind: "google", host: "code.example.com" }, view, { platform: "darwin" }),
     ).toThrow("host is used only");
+  });
+  // INF-950: every action of a new connection, reads included, starts at Asks you.
+  it("integration-add's Connect card says each action, reads included, asks until Always allow, in the app's language", () => {
+    const add = ACTIONS["integration-add"];
+    const view = { integrations: [], addable: [{ kind: "gitlab", name: "GitLab" }] };
+    const connect = () => add.offer?.({ kind: "gitlab" }, view, { platform: "darwin" });
+    expect(connect()).toMatchObject({
+      cardId: "app-integration-add-gitlab",
+      title: "Connect GitLab",
+      paragraphs: [
+        "Your first mate and your crew can then reach GitLab with your sign-in. Each of its actions, reads included, asks you on a card until you choose Always allow.",
+        "Open Integrations to sign in to GitLab.",
+      ],
+      label: "Open Integrations",
+      decline: "Not now",
+    });
+    expect(inLanguage("ja", connect)).toMatchObject({
+      title: "GitLab に接続",
+      paragraphs: [
+        "その後、一等航海士と乗組員はあなたのサインインで GitLab を利用できます。読み取りも含め、どの操作も「常に許可」を選ぶまでカードで確認します。",
+        "連携を開いて GitLab にサインインしてください。",
+      ],
+      label: "連携を開く",
+      decline: "今はしない",
+    });
   });
   it("INF-5348: integration-add for the inbox opens the Infinitary command's switch, never a server key form", () => {
     const add = ACTIONS["integration-add"];

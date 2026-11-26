@@ -84,8 +84,8 @@ Everything comes through `github_read` on this project's own paths, fenced as da
   Once both pass it reads the description, the file list and the changes (`/pulls/{number}/files`), up to the size limit ("Which pull requests reach the tick"); a larger one is asked to split, or to settle the change in an issue first.
   A file whose changes GitHub does not show in full counts as unread, so the round asks for a split.
   It also reads the runs and check results on the newest version, to know whether runs wait for approval, any check failed, or every check passed.
-  When a check failed, it reads the failed-check note's comment on that version, whose hidden first line `<!-- failed-checks sha=<version> labeled=… waits=main -->` says every failed check also fails on `main` (`docs/public-ci.md`, "The failed-check note"), and then `main`'s newest finished run of `main.yml` that was not cancelled (`/repos/{owner}/{repo}/actions/workflows/main.yml/runs?branch=main&status=completed&per_page=20`, skipping each run whose `conclusion` is `cancelled`).
-  A cancelled run checked nothing: a paused one, one a newer push replaced, or one that left an outside merge to the next batch (`docs/testing.md`, "Main's desktop release check").
+  When a check failed, it reads the failed-check note's comment on that version, whose hidden first line `<!-- failed-checks sha=<version> labeled=… waits=main -->` says every failed check also fails on `main` (`docs/public-ci.md`, "The failed-check note"), and then `main`'s newest finished run of `main.yml` that checked something (`/repos/{owner}/{repo}/actions/workflows/main.yml/runs?branch=main&status=completed&per_page=20`, passing over each run whose `conclusion` is `cancelled` and whose jobs, `/actions/runs/{run_id}/jobs`, include no failed one).
+  A cancelled run with no failed job checked nothing: a paused one, one a newer push replaced, or one that left an outside merge to the next batch (`docs/testing.md`, "Main's desktop release check"); one cancelled after a job failed, so a newer run could start, still shows `main` failing.
 - **The project's own code and docs**, in the round's working copy, to check a report against what the code does now, to find whether a fix already shipped, and to search for anything that already does what an idea asks and the first release that has it.
 - **Earlier answers**: open and closed issues listed by label (`duplicate`, `idea`, `accepted`) to find a duplicate or an idea already declined.
   GitHub's search reaches past this project's paths, so the round lists instead.
@@ -191,7 +191,7 @@ The exception is a version whose every failed check also fails on `main`: the fa
 
 ### Once main passes
 
-A pull request waiting on `main` comes back once `main`'s newest finished run of `main.yml` that was not cancelled concluded `success` and every run of its newest version finished.
+A pull request waiting on `main` comes back once `main`'s newest finished run of `main.yml` that checked something ("What a round reads") concluded `success` and every run of its newest version finished.
 The round then drafts one rerun row for each of that version's newest runs of `ci`, `contributors` and `docs-site` with a failed job, `POST /repos/{owner}/{repo}/actions/runs/{run_id}/rerun-failed-jobs`, and no reply, since the note's comment already told the author.
 Rerun rows follow the run rows' rules: all five criteria, one pull request a round, and the maintainer's tick as the yes for each; an unticked row starts nothing, and the pull request comes back next round.
 One labeled `edits checks` gets no rerun rows and is not listed for them, as it gets no run rows: the maintainer reruns its checks on GitHub after reading its check files.

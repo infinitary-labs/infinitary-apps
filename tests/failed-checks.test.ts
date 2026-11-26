@@ -537,13 +537,10 @@ describe("the failed-check note", () => {
     });
   });
 
-  // The captain's pick "Add a line saying main is failing too" on the review
-  // of this change: main runs none of ci's own jobs, so they cannot be left
-  // out by name.
   // INF-6982, the captain: "make outside PRs not trigger this at all, and
   // simply ride my next alpha cut from my batches". Main's run on an outside
   // merge cancels itself, as a paused one does, and checks nothing.
-  it("reads main's newest run that was not cancelled, past one that left an outside merge to the next batch", async () => {
+  it("reads main's newest run that checked something, past one that left an outside merge to the next batch", async () => {
     const left = [
       job(45600000001, 139100000001, "success", "Main push · Compare with checked batches"),
       job(
@@ -571,6 +568,27 @@ describe("the failed-check note", () => {
     expect(api.comments[0]?.body).toContain("also fail on `main` right now");
   });
 
+  // Main's check cancelled after a job failed, so a newer one could start
+  // (the captain's standing direction on failed main checks), still shows
+  // main failing.
+  it("reads a main run cancelled after a job failed as main failing", async () => {
+    const cancelledAfterFailure = mainFailed.map((each, index) =>
+      index === 1 ? { ...each, conclusion: "cancelled" } : each,
+    );
+    const api = gitHub({
+      runs: [forkContributors],
+      jobs: { [forkContributors.id]: forkContributorsJobs },
+      main: mainPassed,
+      newer: [cancelledAfterFailure],
+    });
+    expect(await noteFailedChecks({ github: api.github, context: finished(), core: core() })).toBe(
+      "every failed check also fails on main",
+    );
+  });
+
+  // The captain's pick "Add a line saying main is failing too" on the review
+  // of this change: main runs none of ci's own jobs, so they cannot be left
+  // out by name.
   it("says main is failing too whenever main's newest run has a failed job", async () => {
     const failing = gitHub({ main: mainFailed });
     await noteFailedChecks({ github: failing.github, context: finished(), core: core() });

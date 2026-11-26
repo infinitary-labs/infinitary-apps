@@ -206,7 +206,8 @@ jobs:
             const pull = Number(process.env.PULL);
             await core.summary.addHeading('Left to the next batch').addRaw(`This push merged pull request #${pull} from another copy of the project, so this check of ${context.sha} cancels itself and cuts no alpha. The next batch, combined on top of main, checks this change, and its alpha ships it.`).write();
             await github.rest.actions.cancelWorkflowRun({...context.repo, run_id: context.runId});
-            // GitHub stops this job within moments; until it does, no check behind the sort starts.
+            // GitHub stops this job within moments. The wait keeps the run from ending passed before the
+            // cancel lands, which would move main's green mark onto a version no main check ran.
             await new Promise((done) => setTimeout(done, 10 * 60_000));
             core.setFailed('GitHub had not cancelled this check after ten minutes.');
   # The full check's checks part: the Linux checks, and the Mac lanes with

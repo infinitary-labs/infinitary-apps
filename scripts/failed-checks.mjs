@@ -7,9 +7,11 @@
  * - it reads every job of that version's runs of WORKFLOWS and keeps the
  *   failed ones;
  * - it leaves out a job whose check also failed in main's newest finished
- *   run of main.yml that was not cancelled, since the contributor did not
- *   break it; a cancelled run, such as a paused one or one that left an
- *   outside merge to the next batch, checked nothing;
+ *   run of main.yml that is not a cancelled run with no failed job, since
+ *   the contributor did not break it; such a run, a paused one or one that
+ *   left an outside merge to the next batch, checked nothing, while a run
+ *   cancelled after a job failed, so a newer one could start, still shows
+ *   main failing;
  * - it writes one comment per version, naming each failed job with a link to
  *   its log, and edits that comment when a later workflow of the same
  *   version finishes, so a version never gets two;
@@ -191,8 +193,9 @@ async function failedJobsAt(github, owner, repo, sha) {
 }
 
 /**
- * The jobs of main's newest finished run of main.yml that was not cancelled;
- * none when main has no such run among its newest twenty.
+ * The jobs of main's newest finished run of main.yml that is not a cancelled
+ * run with no failed job; none when main has no such run among its newest
+ * twenty.
  */
 async function mainJobs(github, owner, repo) {
   const { data } = await github.rest.actions.listWorkflowRuns({
@@ -204,8 +207,11 @@ async function mainJobs(github, owner, repo) {
     exclude_pull_requests: true,
     per_page: 20,
   });
-  const run = (data.workflow_runs ?? []).find((each) => each.conclusion !== "cancelled");
-  return run ? jobsOf(github, owner, repo, [run]) : [];
+  for (const run of data.workflow_runs ?? []) {
+    const jobs = await jobsOf(github, owner, repo, [run]);
+    if (run.conclusion !== "cancelled" || jobs.some(failed)) return jobs;
+  }
+  return [];
 }
 
 /**

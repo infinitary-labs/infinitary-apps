@@ -37,7 +37,7 @@ An outside contributor's pull request runs only on GitHub's hosted machines, wha
 
 Nothing from an outside change runs on the project's own machines, before or after the captain's merge click.
 An outside change never joins the swept batch: once approved it merges as its own pull request (`docs/forge.md`, "Batches of your own").
-So the fresh Windows 11 check, the phone check, the signed installer checks, signing and TestFlight first meet it after it reaches `main`, in the captain's next batch and that batch's alpha (`docs/alpha.md`).
+So the fresh Windows 11 check, the signed installer checks and signing first meet it after it reaches `main`, in the captain's next batch and that batch's alpha (`docs/alpha.md`), and the phone check and TestFlight at the next phone release (`docs/ios.md`).
 Its merge starts no main check and no alpha of its own: main's check leaves it to the next batch, which, combined on top of `main`, checks it with the batch's own changes, and that batch's alpha ships it (`docs/testing.md`, "Main's desktop release check").
 
 ### How an outside pull request moves
@@ -86,7 +86,8 @@ Keep fork workflow write tokens and secrets restricted at the host: an outside p
 It starts when `ci`, `contributors` or `docs-site` finishes a run for a pull request from another copy of the project; the project's own branches start nothing here.
 
 - It reads every job of that version's newest run of each of the three workflows and keeps the failed and timed-out ones; a run GitHub marked failed without starting a job, such as an unapproved run of a closed pull request, names nothing.
-- It leaves out a job whose check also failed in main's newest finished run of `main.yml` that was not cancelled, such as a paused run or one that left an outside merge to the next batch, matching the check by the innermost level of the job's name without its trigger (`scripts/ci-job-names.mjs`), so the contributor's `Integration tests (Linux; group 1/2)` and main's are one check.
+- It leaves out a job whose check also failed in main's newest finished run of `main.yml` that checked something, matching the check by the innermost level of the job's name without its trigger (`scripts/ci-job-names.mjs`), so the contributor's `Integration tests (Linux; group 1/2)` and main's are one check.
+  A cancelled run with no failed job, such as a paused run or one that left an outside merge to the next batch, checked nothing and is passed over; a run cancelled after a job failed, so a newer run could start, still counts.
   Only the jobs `contributors` runs through `verify.yml` and `linux-startup.yml` have a counterpart on main; main runs none of the jobs `ci` and `docs-site` run on a pull request, so those are never left out.
   Whenever main's newest run has any failed job, the comment adds a line saying main is failing too, so a check it names may not be the contributor's to fix.
 - It writes one comment per version, saying it was posted automatically and naming each failed job with a link to its log and then, without links, any failed job it left out because main fails it too, and edits that comment when a later workflow of the same version finishes.

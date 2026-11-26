@@ -250,7 +250,9 @@ export function workShape(
       ...(unsafeDataReader ? { unsafe_data_reader: true } : {}),
       ...(inFolder ? { in_place: { folder: true as const } } : {}),
       ...(ask?.skipped_plan_because ? { skipped_plan_because: ask.skipped_plan_because } : {}),
-      ...(inherited?.issue ? { issue: inherited.issue } : {}),
+      ...(inherited?.issue
+        ? { issue: { number: inherited.issue.number, url: inherited.issue.url } }
+        : {}),
       escalate_from: escalation.stamp.from,
       escalation: escalation.stamp,
     };
@@ -274,25 +276,18 @@ export function workShape(
     ...(ask?.unsafe_data_reader ? { unsafe_data_reader: true } : {}),
     ...(ask?.in_folder ? { in_place: { folder: true as const } } : {}),
     ...(ask?.skipped_plan_because ? { skipped_plan_because: ask.skipped_plan_because } : {}),
-    ...issueFromBasis(tasks, basis, ask?.closes_issue === true),
+    ...issueFromBasis(tasks, basis),
   };
 }
 
 /**
  * The outside issue a task built on another carries (docs/agents-reach.md,
- * "A reader's Build rows"): its basis's issue, closed by this task's change
- * when the basis is a reproduce step, whose fix this is, or when the first
- * mate marks it a plan's last piece.
+ * "A reader's Build rows"): its basis's issue, a fact for the intake round
+ * that closes nothing by itself.
  */
-function issueFromBasis(
-  tasks: TaskService,
-  basis: string | undefined,
-  marked: boolean,
-): Pick<WorkShape, "issue"> {
+function issueFromBasis(tasks: TaskService, basis: string | undefined): Pick<WorkShape, "issue"> {
   const issue = basis ? tasks.resolve(basis)?.shape?.issue : undefined;
-  if (!issue || !basis) return {};
-  const closes = marked || tasks.resolve(basis)?.shape?.kind === "reproduce";
-  return { issue: { number: issue.number, url: issue.url, ...(closes ? { closes: true } : {}) } };
+  return issue ? { issue: { number: issue.number, url: issue.url } } : {};
 }
 
 /**

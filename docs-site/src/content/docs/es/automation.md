@@ -1,5 +1,5 @@
 ---
-source: 196a49ab4dfdf816
+source: e0dc8618b3364025
 title: Automatización
 description: Dale a tu primer oficial una indicación que se ejecuta según un horario o cuando pasa algo, y pausa, cambia o vuelve a leer cualquiera de ellas en Configuración.
 ---
@@ -43,7 +43,10 @@ No se envía nada.
 - **Todos los días** se ejecuta a una hora del día.
 - **Los días elegidos** se ejecuta los días de la semana que elijas, a una hora del día.
 - **Una vez** se ejecuta en una fecha y hora.
-- **Cuando pasa algo** se ejecuta cada vez que pasa algo nuevo, como **Se cierra una tarea**, o un evento de algo que conectaste en Configuración.
+- **Cuando pasa algo** se ejecuta cada vez que pasa algo nuevo, como **Una tarea se cierra**, **El trabajo sale en una versión publicada**, o un evento de algo que conectaste en Configuración.
+
+**El trabajo sale en una versión publicada** ocurre cuando tu tripulación registra por primera vez el trabajo de una tarea en una versión de tu proyecto, lo que hace cuando publica o comprueba una.
+Un proyecto que nunca registra versiones nunca lo tiene.
 
 Una automatización diaria o semanal conserva la **Zona horaria** que elijas, así que se ejecuta a la misma hora dondequiera que esté tu computadora.
 

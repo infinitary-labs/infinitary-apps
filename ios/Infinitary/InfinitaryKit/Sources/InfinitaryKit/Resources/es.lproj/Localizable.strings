@@ -2803,6 +2803,8 @@
 "settingsAutomationEnable" = "Activar…";
 "settingsAutomationEventIn" = "%1$@ en %2$@";
 "settingsAutomationEventNotConnected" = "Una integración que ahora no está conectada";
+"settingsAutomationEventTaskClosed" = "Una tarea se cierra";
+"settingsAutomationEventTaskReleased" = "El trabajo sale en una versión publicada";
 "settingsAutomationEventsPreview" = "- (un resumen de cada evento que llegó)";
 "settingsAutomationFirstMateGets" = "Tu primer oficial recibe";
 "settingsAutomationFri" = "Vie";

@@ -93,6 +93,8 @@
   "settingsAutomationEnable": "Turn on…",
   "settingsAutomationEventIn": "{event} in {integration}",
   "settingsAutomationEventNotConnected": "An integration not connected now",
+  "settingsAutomationEventTaskClosed": "A task closes",
+  "settingsAutomationEventTaskReleased": "Work ships in a release",
   "settingsAutomationEventsPreview": "- (a summary of each event that arrived)",
   "settingsAutomationFirstMateGets": "Your first mate gets",
   "settingsAutomationFri": "Fri",

@@ -1,5 +1,5 @@
 ---
-source: 196a49ab4dfdf816
+source: e0dc8618b3364025
 title: Automatisierung
 description: Gib deinem ersten Offizier eine Nachricht, die nach Zeitplan oder bei einem Ereignis läuft, und pausiere, ändere oder lies jede davon in den Einstellungen nach.
 ---
@@ -43,7 +43,10 @@ Es wird nichts gesendet.
 - **Jeden Tag** läuft zu einer Uhrzeit.
 - **An gewählten Tagen** läuft an den Wochentagen, die du wählst, zu einer Uhrzeit.
 - **Einmal** läuft zu einem Datum und einer Uhrzeit.
-- **Wenn etwas passiert** läuft jedes Mal, wenn etwas Neues passiert, zum Beispiel wenn eine Aufgabe abgeschlossen wird, oder bei einem Ereignis von etwas, das du in den Einstellungen verbunden hast.
+- **Wenn etwas passiert** läuft jedes Mal, wenn etwas Neues passiert, zum Beispiel **Eine Aufgabe wird geschlossen**, **Arbeit erscheint in einem Release**, oder bei einem Ereignis von etwas, das du in den Einstellungen verbunden hast.
+
+**Arbeit erscheint in einem Release** passiert, wenn deine Crew die Arbeit einer Aufgabe zum ersten Mal in einem Release deines Projekts festhält, was sie tut, wenn sie eines veröffentlicht oder prüft.
+Ein Projekt, das nie Releases festhält, hat es nie.
 
 Eine tägliche oder wöchentliche Automatisierung behält die **Zeitzone**, die du wählst, und läuft deshalb zur selben Zeit, wo auch immer dein Computer steht.
 

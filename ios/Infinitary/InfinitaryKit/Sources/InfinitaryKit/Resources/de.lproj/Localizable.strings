@@ -2803,6 +2803,8 @@
 "settingsAutomationEnable" = "Einschalten …";
 "settingsAutomationEventIn" = "%1$@ in %2$@";
 "settingsAutomationEventNotConnected" = "Eine gerade nicht verbundene Integration";
+"settingsAutomationEventTaskClosed" = "Eine Aufgabe wird geschlossen";
+"settingsAutomationEventTaskReleased" = "Arbeit erscheint in einem Release";
 "settingsAutomationEventsPreview" = "- (eine Zusammenfassung jedes eingetroffenen Ereignisses)";
 "settingsAutomationFirstMateGets" = "Dein erster Offizier bekommt";
 "settingsAutomationFri" = "Fr";

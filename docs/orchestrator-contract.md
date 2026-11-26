@@ -275,6 +275,13 @@ The same boundary holds for what the host does on its own: a behavior keyed to t
 `tests/served-boundary.test.ts` holds the part that is a fact of the tree: a served text names no file this repository tracks, no workflow of its own and no `INFINITARY_` setting the app itself never reads.
 Whether a sentence would read true in a project that is not this one is judged in review and measured by replay, never matched against a word list (INF-1549 removed the first such sentence, on signing inside a disposable virtual Mac; INF-1553's audit removed the rest).
 
+## An outside action that waits on work
+
+When the captain's or a task's words make an outside action wait on work finishing, HANDOFF has the first mate file the action as its own side-effect task, blocked by every task doing the work, and `create_task`'s `side_effect` says what the host holds for it (`docs/task-graph.md`, "A side-effect task").
+The host keeps only typed facts: the mark, its waits, that each needs the merge, and how each closed.
+Its crewmate's rule rides that task's own brief, so no other crewmate reads it.
+The app writes no closing words of its own where a change is published (`docs/forge.md`, "A change that answers an issue").
+
 ## An answer's closing receipt
 
 Every `answer-closed` receipt carries a `read` naming the exact `tasks` key; only the `next` instruction to use it is conditional.

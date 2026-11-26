@@ -2,7 +2,9 @@ import {
   appEventSource,
   TASK_CLOSED_EVENT as TASK_CLOSED_SPEC,
   TASK_EVENTS_ID,
+  TASK_RELEASED_EVENT as TASK_RELEASED_SPEC,
 } from "../integrations/appEvents";
+import type { IntegrationEventSpec } from "../integrations/binding";
 import type { IntegrationsService } from "../integrations/service";
 import type { TaskRecord } from "../storage/taskRecords";
 import { closedIn } from "../tasks/taskCloses";
@@ -19,18 +21,20 @@ import type { EventFinder, EventLook, ListenedEvent, SchedulerEvents } from "./s
  */
 export { TASK_EVENTS_ID };
 export const TASK_CLOSED_EVENT = TASK_CLOSED_SPEC.name;
+/** A task's work shipped in a release: the record holds its first release (docs/automation.md). */
+export const TASK_RELEASED_EVENT = TASK_RELEASED_SPEC.name;
 
 type TaskReader = { resolve(ref: string): TaskRecord | undefined };
 
-function taskClosed(tasks: TaskReader): ListenedEvent {
+function taskEvent(tasks: TaskReader, spec: IntegrationEventSpec): ListenedEvent {
   return {
     integration: TASK_EVENTS_ID,
     connection: TASK_EVENTS_ID,
     name: appEventSource(TASK_EVENTS_ID)?.name ?? "Tasks",
-    event: TASK_CLOSED_SPEC.name,
-    label: TASK_CLOSED_SPEC.label,
-    every: TASK_CLOSED_SPEC.every,
-    filters: [...(TASK_CLOSED_SPEC.filters ?? [])],
+    event: spec.name,
+    label: spec.label,
+    every: spec.every,
+    filters: [...(spec.filters ?? [])],
     atOnce: true,
     // A task key that names no task could only fire at once: refuse it.
     checkFilter: (filter) => {
@@ -42,20 +46,42 @@ function taskClosed(tasks: TaskReader): ListenedEvent {
   };
 }
 
+const TASK_EVENT_SPECS = [TASK_CLOSED_SPEC, TASK_RELEASED_SPEC];
+
 /**
- * The task events as an event rule reaches them. A look answers the named
- * task's close once it is closed, whatever closed it; a task the record no
- * longer holds counts as closed. Its cursor only marks that the rule looked,
- * so a task that closed before the rule's first look still fires it on the
- * next one, and the close's id is carried once, so it never fires twice.
+ * The task events as an event rule reaches them. A close look answers the
+ * named task's close once it is closed, whatever closed it; a task the
+ * record no longer holds counts as closed. A release look answers once the
+ * record holds the task's first release, and never for a task it does not
+ * hold, which can ship nothing more. Each cursor only marks that the rule
+ * looked, so what happened before the rule's first look still fires it on
+ * the next one, and the item's id is carried once, so it never fires twice.
  */
 export function taskEvents(tasks: TaskReader): SchedulerEvents {
   return {
-    find: (integration, event) =>
-      isTaskEvents(integration) && event === TASK_CLOSED_EVENT ? taskClosed(tasks) : undefined,
-    look: async (_integration, _event, _cursor, filter): Promise<EventLook> => {
+    find: (integration, event) => {
+      const spec = TASK_EVENT_SPECS.find((known) => known.name === event);
+      return isTaskEvents(integration) && spec ? taskEvent(tasks, spec) : undefined;
+    },
+    look: async (_integration, event, _cursor, filter): Promise<EventLook> => {
       const ref = filter?.task ?? "";
       const task = tasks.resolve(ref);
+      if (event === TASK_RELEASED_EVENT) {
+        const release = task?.delivery?.firstRelease;
+        return {
+          cursor: "looked",
+          items:
+            task && release
+              ? [
+                  {
+                    id: `released:${task.id}:${release.version}`,
+                    // i18n-exempt: the event's item, served to the first mate in the rule's prompt
+                    summary: `${task.key} ${task.title} shipped in release ${release.version} (${release.url})`,
+                  },
+                ]
+              : [],
+        };
+      }
       if (task && !TaskService.isClosed(task)) return { cursor: "looked", items: [] };
       return {
         cursor: "looked",

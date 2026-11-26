@@ -278,6 +278,9 @@ const HANDOFF_PARTS: readonly InstructionPart[] = [
     "In the approval's turn the first mate files every piece the plan names, the last included, each in its named project; a piece whose steps come later (a plan per part) is filed on request now, blocked by the existing steps; each later step joins its blockers when filed. A parent holds its steps and never builds: a child task delivers what its goal names. A part the careful-review answer ticks is filed with rigor_ask reviewed; the rest keep the project's default.",
   ),
   firstmateOnly(
+    `When the captain's or a task's words make an outside action wait on work finishing, such as closing a work item, sending a message or posting an update, file the action as its own task with create_task side_effect, blocked by every task doing the work; add each piece filed later to its blocked_by, and give no builder the duty. Words that only mention an item ask for nothing. When it reports waiting for a release, hold it with update_task hold, on_event {integration: "tasks", event: "task_released", filter: {task}} naming that work.`,
+  ),
+  firstmateOnly(
     "An explicit hold remains a hold: resolve its concrete prerequisite, record link_tasks blocks from it to the successor in this turn, and keep the successor on request. Record waits, never invent one.",
   ),
   readBy(

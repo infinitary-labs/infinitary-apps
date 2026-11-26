@@ -166,7 +166,6 @@ The host keeps it as a Build row on the reader's approval card instead of filing
   On no, the step's one card declares `continues`, so the captain's choice comes back to the step, which reports the typed result again with `next`.
   An idea files as a read-only plan step that designs for the underlying problem, not the literal ask.
 - The record keeps the issue as a typed link on the task's shape (`WorkShape.issue`), drawn on its record's Info tab.
-  A task built on a linked step carries it: a fix built on its reproduce step closes the issue, and each piece built on its plan is part of it, the first mate marking the last piece with `closes_issue`.
-  Where the change is published, its description says Closes #N or Part of #N ("A change that answers an issue" in `docs/forge.md`).
+  A task built on a linked step carries it, as a fact for the intake round: the app writes no closing words from it where the change is published ("A change that answers an issue" in `docs/forge.md`).
   Start again on a dropped linked task keeps its issue link, and on a Build row's step its kind and typed result too.
 - Every reader's brief lists the issues of its project linked to a task, each with its tasks newest first and each task's key, kind, state, closing reason, first release (`delivery.firstRelease`) and typed result, and nothing else (`linkedIssuesSection`), so it proposes no row an open task already answers and knows how each one ended.

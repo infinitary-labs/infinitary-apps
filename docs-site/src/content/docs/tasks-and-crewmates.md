@@ -148,6 +148,17 @@ When it is on, finished work waits for your merge card.
 When it is off, work that passes the checks may merge without asking you, and you get a card with its story afterwards.
 To change it for one task, tell your first mate.
 
+## A step that waits on work
+
+When you ask for something outside your project once work is done, such as closing an issue or posting an update, your first mate files that step as its own task.
+It waits on every task that does the work, including parts added later.
+
+- It starts only once each of those tasks has merged its change, or finished with nothing to merge.
+- If one of them is dropped, the step does nothing and your first mate tells you.
+- If you asked for the step once the work is in a release, it waits until your crew records a release that has the work; see [Automation](/automation/#when-it-runs).
+
+Infinitary adds no closing words to a merged change, so an issue closes through that step's own task.
+
 ## Closing a task
 
 Most tasks close by themselves:

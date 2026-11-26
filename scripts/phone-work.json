@@ -183,11 +183,11 @@
   },
   "panels": {
     "iphone": {
-      "reads": 311,
+      "reads": 484,
       "launches": 3
     },
     "ipad": {
-      "reads": 324,
+      "reads": 547,
       "launches": 3
     }
   },

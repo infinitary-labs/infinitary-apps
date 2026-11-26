@@ -2807,7 +2807,7 @@
 "settingsAppearanceSizeDescriptionKeys" = "Text und alles drumherum größer machen. %1$@ und %2$@ ändern dieselbe Größe.";
 "settingsAppearanceTheme" = "Design";
 "settingsAppearanceThemeDark" = "Dunkel";
-"settingsAppearanceThemeDescription" = "Dunkel wie der tiefe Weltraum oder hell wie das Tageslicht.";
+"settingsAppearanceThemeDescription" = "Dunkel, Hell oder ein Design unter dem Namen seiner Macher. Jede Farbe im Fenster folgt.";
 "settingsAppearanceThemeLight" = "Hell";
 "settingsAppearanceWash" = "Fenstertönung";
 "settingsAppearanceWashDescription" = "Wie stark die Designfarbe den unscharfen Hintergrund überdeckt. 0 %% ist der Standard.";

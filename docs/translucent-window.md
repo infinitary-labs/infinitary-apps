@@ -16,7 +16,7 @@ No island surfaces; hairlines at 1.5x, halo at 1.2x, no vignette, no text halo.
   The wash defaults to 0%.
 - **The renderer draws the tint, once.**
   The preload reads the material from its argv (`src/shared/windowMaterial.ts`, passed as `additionalArguments`) and marks `<html data-window-material>` before the first paint; on a translucent window `design/styles.css` paints `--material-tint` (the void color) at the chosen wash opacity.
-  The default is 0%; the slider spans 0–100% opacity: dark #05070d, light #eef1f7.
+  The default is 0%; the slider spans 0–100% opacity: dark #05070d, light #eef1f7, or a color theme's own background (`docs/themes.md`).
   One-time conversion maps the old 78%-ceiling settings to actual opacity; old full/default wash becomes 20% on that conversion.
   A subsequent one-time migration moves saved 20% to 0%, leaves other opacities alone, and records completion even when no wash is saved.
   Later choices of 20% are preserved.

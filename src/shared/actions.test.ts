@@ -33,6 +33,7 @@ const inventoryFiles = [
   "src/shared/quota.ts",
   "src/shared/settingsActs.ts",
   "src/shared/sharing.ts",
+  "src/shared/themeActions.ts",
   "src/shared/update.ts",
 ] as const;
 // The selector reads this declaration statically, never by importing a test.
@@ -238,6 +239,27 @@ describe("action permissions and channel parity", () => {
   it("composes the accepted notification trail wording", () => {
     expect(ACTIONS.notifications.done({ enabled: false })).toBe("notifications off");
     expect(ACTIONS.notifications.done({ enabled: true })).toBe("notifications on");
+  });
+  // The approved plan for color themes (INF-6888, part 1): the theme line takes a built-in
+  // theme's id, saves its base beside it, clears it for Dark or Light and refuses an unknown id.
+  it("saves a built-in theme with its base, clears it for Dark or Light, and refuses an unknown id", () => {
+    const action = ACTIONS.theme;
+    const saved = { theme: "light" as const, washStrength: 20, colorTheme: "one-light" };
+    expect(action.toRequest({ theme: "dracula" }, saved, (path) => path)).toEqual([
+      { ...saved, theme: "dark", colorTheme: "dracula" },
+    ]);
+    expect(action.toRequest({ theme: "dark" }, saved, (path) => path)).toEqual([
+      { theme: "dark", washStrength: 20 },
+    ]);
+    expect(action.readValue(saved)).toEqual({ theme: "one-light" });
+    expect(action.readValue({ theme: "dark" })).toEqual({ theme: "dark" });
+    expect(action.done({ theme: "catppuccin-frappe" })).toBe(
+      "switched to the Catppuccin Frappé theme",
+    );
+    const refused = action.value.safeParse({ theme: "solarized" });
+    expect(refused.success).toBe(false);
+    expect(refused.error?.issues[0]?.message).toContain("dark, light, rose-pine,");
+    expect(refused.error?.issues[0]?.message).toContain("tokyo-night");
   });
   it("composes migrated theme and panel trail wording", () => {
     expect(ACTIONS.theme.done({ theme: "light" })).toBe("switched to the light theme");

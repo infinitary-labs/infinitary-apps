@@ -1084,6 +1084,7 @@ export const RAW_WORDS_LEDGER: Readonly<Record<string, number>> = {
   "src/shared/taskQueue.ts": 15,
   "src/shared/taskTitle.ts": 1,
   "src/shared/taskWaits.ts": 9,
+  "src/shared/themeActions.ts": 1,
   "src/shared/threadLines.ts": 2,
   "src/shared/threadWait.ts": 12,
   "src/shared/timelineWords.ts": 13,

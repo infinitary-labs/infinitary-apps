@@ -62275,29 +62275,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function settingsAppearanceThemeDescription() {
     switch (currentLanguage()) {
       case "ar":
-        return `داكنة كالفضاء العميق، أو فاتحة كضوء النهار.`;
+        return `داكنة أو فاتحة أو سمة باسم صانعيها. تتبعها كل ألوان النافذة.`;
       case "de":
-        return `Dunkel wie der tiefe Weltraum oder hell wie das Tageslicht.`;
+        return `Dunkel, Hell oder ein Design unter dem Namen seiner Macher. Jede Farbe im Fenster folgt.`;
       case "es":
-        return `Oscuro como el espacio profundo o claro como la luz del día.`;
+        return `Oscuro, Claro o un tema con el nombre que le dio su autor. Todos los colores de la ventana lo siguen.`;
       case "fr":
-        return `Sombre comme l’espace lointain, ou clair comme le jour.`;
+        return `Sombre, Clair ou un thème sous le nom donné par ses auteurs. Toutes les couleurs de la fenêtre suivent.`;
       case "ja":
-        return `深宇宙のダーク、または日中のライト。`;
+        return `ダーク、ライト、または作者が名付けたテーマ。ウィンドウのすべての色が切り替わります。`;
       case "ko":
-        return `깊은 우주 같은 다크, 또는 한낮 같은 라이트.`;
+        return `다크, 라이트, 또는 제작자가 이름 붙인 테마. 창의 모든 색이 따라 바뀝니다.`;
       case "pt-BR":
-        return `Escuro como o espaço profundo ou claro como a luz do dia.`;
+        return `Escuro, Claro ou um tema com o nome dado por quem o criou. Todas as cores da janela acompanham.`;
       case "zh-Hans":
-        return `深空般的深色，或日光般的浅色。`;
+        return `深色、浅色，或由作者命名的主题。窗口中的所有颜色都会随之改变。`;
       case "zh-Hant":
-        return `深空般的深色，或日光般的淺色。`;
+        return `深色、淺色，或由作者命名的主題。視窗中的所有顏色都會隨之改變。`;
       case "en-XA":
-        return `[Ðééþ-šþáçé ðáŕķ, öŕ ðáýļîĝĥţ ļîĝĥţ. ~~~~~~~~~~~~]`;
+        return `[Ðáŕķ, Ļîĝĥţ, öŕ á ţĥéɱé îţš ɱáķéŕ ñáɱéð. Éṽéŕý çöļöŕ îñ ţĥé ŵîñðöŵ ƒöļļöŵš. ~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Deep-space dark, or daylight light.‬`;
+        return `‮Dark, Light, or a theme its maker named. Every color in the window follows.‬`;
     }
-    return `Deep-space dark, or daylight light.`;
+    return `Dark, Light, or a theme its maker named. Every color in the window follows.`;
   }
   function settingsAppearanceThemeLight() {
     switch (currentLanguage()) {
@@ -127751,6 +127751,16 @@ ${FRAME_EXPAND_SCRIPT}${FRAME_SOUND_SCRIPT}
       theme = data.theme;
       document.documentElement.setAttribute("data-theme", theme);
       if (document.body) document.body.setAttribute("data-theme", theme);
+      // The window's color theme (docs/themes.md): one sheet, last in the head, over the birth rule.
+      if (typeof data.colors === "string") {
+        var sheet = document.getElementById("inf-color-theme");
+        if (!sheet) {
+          sheet = document.createElement("style");
+          sheet.id = "inf-color-theme";
+        }
+        if (sheet.textContent !== data.colors) sheet.textContent = data.colors;
+        if (document.head && sheet.parentNode !== document.head) document.head.appendChild(sheet);
+      }
       themeListeners.slice().forEach(function (listener) { listener(theme); });
     }
   });
@@ -127994,7 +128004,7 @@ ${FRAME_KEYBOARD_SCRIPT}
   }, true);
   post({ type: "ready", reuseReads: true });
 })();`;
-  const FRAME_BRIDGE_SHA256 = "sha256-3s+lc8EyIu8oPbb32Wz/fP+y7kyabpwqLGrvK1Xj+so=";
+  const FRAME_BRIDGE_SHA256 = "sha256-W2drWP9C8H3IKy0tj8waardcDqxp9m62C/4vPW7IjyI=";
   const APP_FRAME_SCHEME = "app-frame";
   const CARD_PICTURE_HOST = "images";
   const CARD_MEDIA_HOST = "media";
@@ -133375,6 +133385,7 @@ details[open]::details-content {
   --accent-strong: #38aae6;
   --accent-dim: rgba(127, 220, 255, 0.14);
   --accent-glow: rgba(127, 220, 255, 0.35);
+  --on-accent: #05070d; /* words and marks on an accent-filled control */
   /* semantic — two chromatic families only: ice cyan (calm) and ember (hot) */
   --ok: #7fdcff; /* calm cyan — done, pace ahead (same family as accent) */
   --ok-dim: rgba(127, 220, 255, 0.14);
@@ -133422,6 +133433,7 @@ details[open]::details-content {
   --accent-strong: #0a72a8;
   --accent-dim: rgba(14, 143, 208, 0.1);
   --accent-glow: rgba(14, 143, 208, 0.25);
+  --on-accent: #05070d;
   --ok: #0e8fd0;
   --ok-dim: rgba(14, 143, 208, 0.1);
   --hot: #d97a1f;

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { COLOR_THEME_ATTRIBUTE } from "@shared/colorThemes";
 import { app, BrowserWindow, type WebContents } from "electron";
 import { appWindows } from "../windows";
 import { pngSize } from "./pageProtocol";
@@ -37,6 +38,8 @@ type Snapshot = {
   width: number;
   height: number;
   frames: FramePlace[];
+  /** The window's color theme (docs/themes.md), or null for plain Dark or Light. */
+  colorTheme: string | null;
 };
 
 function appWindow(): BrowserWindow | null {
@@ -146,7 +149,8 @@ function panelSnapshotScript(panelId: string): string {
     clone.querySelectorAll("script, object, embed, link, meta").forEach((node) => node.remove());
     const html = clone.outerHTML;
 ${CSS_COLLECTOR}
-    return collectCss().then((css) => ({ html, css, width: box.width, height: box.height, frames }));
+    const colorTheme = document.body.getAttribute(${JSON.stringify(COLOR_THEME_ATTRIBUTE)});
+    return collectCss().then((css) => ({ html, css, width: box.width, height: box.height, frames, colorTheme }));
   })()`;
 }
 
@@ -280,6 +284,7 @@ async function renderSnapshot(
         panelHtml: snapshot.html,
         frames,
         theme,
+        colorTheme: snapshot.colorTheme,
         width,
         height,
       }),

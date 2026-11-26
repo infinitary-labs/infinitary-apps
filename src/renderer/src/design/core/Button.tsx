@@ -66,7 +66,7 @@ const base: React.CSSProperties = {
 };
 
 const variants: Record<ButtonVariant, React.CSSProperties> = {
-  primary: { background: "var(--accent)", color: "#05070d", borderColor: "transparent" },
+  primary: { background: "var(--accent)", color: "var(--on-accent)", borderColor: "transparent" },
   secondary: { background: "transparent", color: "var(--fg-1)", borderColor: "var(--line-2)" },
   ghost: { background: "transparent", color: "var(--fg-2)", borderColor: "transparent" },
   danger: { background: "transparent", color: "var(--danger)", borderColor: "var(--danger)" },

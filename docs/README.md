@@ -72,6 +72,7 @@ Markdown in `docs/`, `primitives/` and the design skill is one sentence per line
 - `first-launch.md`: the first launch.
 - `translucent-window.md`: the translucent window and what stays opaque.
 - `fonts.md`: the font choice and how it reaches every view and frame.
+- `themes.md`: color themes, how six colors become every token with readability floors, and how a theme reaches the window and its frames.
 - `ambient-music.md`: the ambient music, its composer and player.
 - `ui-plugins.md`: the UI plugin system and the app's own panels.
 - `personal-panels.md`: writing panels: the library, skills, lint, build loop and switch.

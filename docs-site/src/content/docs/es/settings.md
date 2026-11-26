@@ -1,5 +1,5 @@
 ---
-source: e40976e5ca452a82
+source: 03beda67f640ee09
 title: Configuración
 description: Lo que contiene cada sección de Configuración, con General y Apariencia explicadas aquí y un enlace para el resto.
 ---
@@ -64,7 +64,8 @@ En la computadora donde vive tu primer oficial, están en **Sitios con sesión i
 - **Tamaño predeterminado de las tarjetas** elige cómo se abren las tarjetas: **Habitual**, **Ancha**, **Completa** o **Maximizada**.
   Aun así puedes cambiar el tamaño de cada tarjeta.
 - **Mantener las tarjetas maximizadas** mantiene maximizada cada tarjeta después de que maximizas una, hasta que restauras una.
-- **Tema** es **Oscuro** o **Claro**.
+- **Tema** es **Oscuro**, **Claro** o uno de trece temas con el nombre que les dio su autor, como **Dracula**, **Catppuccin Mocha** o **Rosé Pine Dawn**.
+  Tu elección cambia al instante los colores de la ventana, sus tarjetas y sus paneles, y las flechas del teclado pasan de una opción a otra.
 - **Velo de la ventana**, en una Mac, define cuánto del color del tema cubre el fondo difuminado.
   0 % es el valor predeterminado.
 - **Nombres de los modelos de la tripulación** muestra los nombres de los modelos mientras tus tripulantes usan una sola órbita.

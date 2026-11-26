@@ -63,7 +63,7 @@
   "settingsAppearanceSizeDescriptionKeys": "放大文字和它周圍的一切。{larger} 和 {smaller} 調整的是同一個大小。",
   "settingsAppearanceTheme": "主題",
   "settingsAppearanceThemeDark": "深色",
-  "settingsAppearanceThemeDescription": "深空般的深色，或日光般的淺色。",
+  "settingsAppearanceThemeDescription": "深色、淺色，或由作者命名的主題。視窗中的所有顏色都會隨之改變。",
   "settingsAppearanceThemeLight": "淺色",
   "settingsAppearanceWash": "視窗底色",
   "settingsAppearanceWashDescription": "主題顏色覆蓋模糊背景的程度。預設為 0%。",

@@ -120,8 +120,9 @@ html[data-window-material="translucent"] body {
 [data-card-body]:focus-visible {
   box-shadow: var(--focus-ring-inset);
 }
-/* A pill's radio is unseen, so the pill draws the ring for it. */
-[data-grouped-pill]:has(> input:focus-visible) {
+/* A pill's or theme tile's radio is unseen, so the pill or tile draws the ring for it. */
+[data-grouped-pill]:has(> input:focus-visible),
+[data-theme-tile]:has(> input:focus-visible) {
   box-shadow: var(--focus-ring);
 }
 

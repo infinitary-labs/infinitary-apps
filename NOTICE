@@ -37,3 +37,40 @@ The Swift package notices are in ios/Infinitary/InfinitaryApp/Notices/.
 Electron and Chromium carry their own bundled license files.
 The Claude Agent SDK is separately licensed under its accompanying terms, which
 ship with the app as licenses/claude-agent-sdk-LICENSE.md.
+
+The built-in color themes take their six colors from these themes, each
+licensed under the MIT License:
+  Rosé Pine (https://github.com/rose-pine/vscode),
+    Copyright (c) 2021 Rosé Pine
+  Catppuccin (https://github.com/catppuccin/vscode),
+    Copyright (c) 2021 Catppuccin
+  One Dark Pro (https://github.com/Binaryify/OneDark-Pro),
+    Copyright (c) 2013-2022 Binaryify
+  One Light (https://github.com/akamud/vscode-theme-onelight),
+    Copyright (c) 2015 Mahmoud Ali
+  Dracula (https://github.com/dracula/visual-studio-code),
+    Copyright (c) 2016 Dracula Theme
+  Night Owl and Night Owl Light (https://github.com/sdras/night-owl-vscode-theme),
+    Copyright (c) 2018 Sarah Drasner
+  Tokyo Night (https://github.com/tokyo-night/tokyo-night-vscode-theme),
+    Copyright (c) 2018-present Enkia
+
+Each is used under these terms:
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

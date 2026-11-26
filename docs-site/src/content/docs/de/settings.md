@@ -1,5 +1,5 @@
 ---
-source: e40976e5ca452a82
+source: 03beda67f640ee09
 title: Einstellungen
 description: Was jeder Bereich der Einstellungen enthält – Allgemein und Erscheinungsbild hier erklärt, für den Rest ein Link.
 ---
@@ -64,7 +64,8 @@ Auf dem Computer, auf dem dein erster Offizier lebt, stehen sie unter **Angemeld
 - **Standardgröße der Karten** legt fest, wie Karten sich öffnen: **Normal**, **Breit**, **Voll** oder **Maximiert**.
   Du kannst jede Karte trotzdem in der Größe ändern.
 - **Karten maximiert lassen** hält jede Karte maximiert, nachdem du eine maximiert hast, bis du eine wiederherstellst.
-- **Design** ist **Dunkel** oder **Hell**.
+- **Design** ist **Dunkel**, **Hell** oder eines von dreizehn Designs unter den Namen ihrer Macher, etwa **Dracula**, **Catppuccin Mocha** oder **Rosé Pine Dawn**.
+  Deine Wahl färbt das Fenster, seine Karten und seine Panels sofort um, und die Pfeiltasten wechseln zwischen den Möglichkeiten.
 - **Fenstertönung** legt auf einem Mac fest, wie viel von der Farbe des Designs den unscharfen Hintergrund bedeckt.
   0 % ist die Standardeinstellung.
 - **Modellnamen der Crew** zeigt Modellnamen, während deine Crewmitglieder nur eine Umlaufbahn nutzen.

@@ -2,6 +2,7 @@ import * as m from "@shared/i18n/messages.generated";
 import type { Theme } from "@shared/preferences";
 import type React from "react";
 import { useCallback, useEffect, useRef } from "react";
+import { useThemeColorsDrawn } from "../app/colorTheme";
 import { readLiveVoiceLevel } from "../voice/liveVoiceLevel";
 import { crewRush } from "./crew/rush";
 import { crewSupernova } from "./crew/supernova";
@@ -126,7 +127,10 @@ export function Firstmate({
   const drawnRef = useRef<DrawnFrame | null>(null);
   /** Whether the canvas holds a picture: a new or resized backing holds none. */
   const pictureRef = useRef(false);
-  const lastTheme = useRef(theme);
+  // The base and the color theme over it (docs/themes.md): either one repaints.
+  const colorsDrawn = useThemeColorsDrawn();
+  const shownColors = `${theme ?? ""}:${colorsDrawn}`;
+  const lastTheme = useRef(shownColors);
 
   useEffect(() => {
     const canvas = ref.current;
@@ -312,15 +316,15 @@ export function Firstmate({
   // A theme switch re-reads the colors on the next frame rather than at the
   // next timed re-read; the still comes back in the new colors.
   useEffect(() => {
-    if (lastTheme.current === theme) return;
-    lastTheme.current = theme;
+    if (lastTheme.current === shownColors) return;
+    lastTheme.current = shownColors;
     const sim = simRef.current;
     if (!sim) return;
     sim.lastRead = 0;
     if (!prefersReducedMotion()) return;
     const raf = redrawStill();
     return () => cancelAnimationFrame(raf);
-  }, [theme, redrawStill]);
+  }, [shownColors, redrawStill]);
 
   // A size change (the window's zoom) or a move to another display changes
   // the pixel ratio but not the size prop. The moving loop refits on its next

@@ -1,5 +1,10 @@
 {
   "integrationsClientFileNotTaken": "이 버전의 Infinitary에서는 {name}이(가) 클라이언트 파일을 받지 않습니다.",
+  "integrationsConnectOfferBody": "그 뒤 일등항해사와 선원들이 내 로그인으로 {name}에 접근할 수 있어요. 읽기를 포함해 모든 동작은 “항상 허용”을 고를 때까지 카드로 물어봐요.",
+  "integrationsConnectOfferButton": "연동 열기",
+  "integrationsConnectOfferNotNow": "나중에",
+  "integrationsConnectOfferOpen": "연동을 열어 {name}에 로그인하세요.",
+  "integrationsConnectOfferTitle": "{name} 연결",
   "integrationsGoogleClientFileIncomplete": "이 클라이언트 파일에 클라이언트 ID나 보안 비밀이 없습니다. Google 페이지에서 다시 내려받으세요.",
   "integrationsGoogleClientFileNotJson": "Google 클라이언트 파일이 아닙니다. Google 페이지에서 Download JSON으로 클라이언트 파일을 내려받은 뒤 여기에 놓으세요.",
   "integrationsGoogleClientFileWeb": "웹 애플리케이션 클라이언트의 파일입니다. Google 페이지에서 데스크톱 앱 클라이언트를 만든 뒤 그 파일을 여기에 놓으세요.",

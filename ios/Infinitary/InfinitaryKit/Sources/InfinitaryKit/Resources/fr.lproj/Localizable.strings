@@ -1232,6 +1232,11 @@
 "handoverWontStopText" = "%1$@ lui a demandé d’enregistrer et de s’arrêter, et il garde encore votre travail enregistré ouvert. L’arrêter maintenant le ferme sans attendre. Rien n’a été modifié.";
 "handoverWontStopTitle" = "%1$@ ne s’est pas arrêté";
 "integrationsClientFileNotTaken" = "%1$@ n’accepte pas de fichier de client dans cette version d’Infinitary.";
+"integrationsConnectOfferBody" = "Votre second et votre équipage pourront alors accéder à %1$@ avec votre connexion. Chacune de ses actions, y compris les lectures, vous demande sur une carte, jusqu’à ce que vous choisissiez « Toujours autorisée ».";
+"integrationsConnectOfferButton" = "Ouvrir Intégrations";
+"integrationsConnectOfferNotNow" = "Pas maintenant";
+"integrationsConnectOfferOpen" = "Ouvrez Intégrations pour vous connecter à %1$@.";
+"integrationsConnectOfferTitle" = "Connecter %1$@";
 "integrationsGoogleClientFileIncomplete" = "Ce fichier de client n’a pas d’identifiant ou de secret de client. Téléchargez-le de nouveau depuis la page de Google.";
 "integrationsGoogleClientFileNotJson" = "Ce n’est pas un fichier de client Google. Sur la page de Google, téléchargez le fichier de votre client avec Download JSON, puis déposez-le ici.";
 "integrationsGoogleClientFileWeb" = "Ce fichier est celui d’un client d’application Web. Créez un client d’application de bureau sur la page de Google, puis déposez son fichier ici.";

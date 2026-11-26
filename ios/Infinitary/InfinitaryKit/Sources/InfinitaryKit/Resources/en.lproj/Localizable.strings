@@ -1232,6 +1232,11 @@
 "handoverWontStopText" = "%1$@ asked it to save and stop, and it still holds your saved work. Stop it now ends it without waiting. Nothing has been changed.";
 "handoverWontStopTitle" = "%1$@ has not stopped";
 "integrationsClientFileNotTaken" = "%1$@ takes no client file in this version of Infinitary.";
+"integrationsConnectOfferBody" = "Your first mate and your crew can then reach %1$@ with your sign-in. Each of its actions, reads included, asks you on a card until you choose Always allow.";
+"integrationsConnectOfferButton" = "Open Integrations";
+"integrationsConnectOfferNotNow" = "Not now";
+"integrationsConnectOfferOpen" = "Open Integrations to sign in to %1$@.";
+"integrationsConnectOfferTitle" = "Connect %1$@";
 "integrationsGoogleClientFileIncomplete" = "That client file has no client ID or secret. Download it again from Google's page.";
 "integrationsGoogleClientFileNotJson" = "That isn't a Google client file. On Google's page, download your client's file with Download JSON, then drop it here.";
 "integrationsGoogleClientFileWeb" = "That file is for a web application client. Make a Desktop app client on Google's page, then drop its file here.";

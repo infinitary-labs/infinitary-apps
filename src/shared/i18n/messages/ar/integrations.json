@@ -1,5 +1,10 @@
 {
   "integrationsClientFileNotTaken": "لا يقبل {name} ملف عميل في هذا الإصدار من Infinitary.",
+  "integrationsConnectOfferBody": "بعدها يستطيع نائب القبطان والطاقم الوصول إلى {name} بتسجيل دخولك. كل إجراء من إجراءاته، بما في ذلك إجراءات القراءة، يسألك في بطاقة حتى تختار «مسموح دائمًا».",
+  "integrationsConnectOfferButton": "فتح التكاملات",
+  "integrationsConnectOfferNotNow": "ليس الآن",
+  "integrationsConnectOfferOpen": "افتح التكاملات لتسجيل الدخول إلى {name}.",
+  "integrationsConnectOfferTitle": "ربط {name}",
   "integrationsGoogleClientFileIncomplete": "ملف العميل هذا لا يحتوي على معرّف العميل أو سرّه. نزّله من صفحة Google مجددًا.",
   "integrationsGoogleClientFileNotJson": "هذا ليس ملف عميل Google. نزّل ملف العميل من صفحة Google بزر Download JSON، ثم أفلته هنا.",
   "integrationsGoogleClientFileWeb": "هذا الملف لعميل تطبيق ويب. أنشئ عميل Desktop app في صفحة Google، ثم أفلت ملفه هنا.",

@@ -1,5 +1,10 @@
 {
   "integrationsClientFileNotTaken": "このバージョンの Infinitary では、{name} はクライアント ファイルを受け付けません。",
+  "integrationsConnectOfferBody": "その後、一等航海士と乗組員はあなたのサインインで {name} を利用できます。読み取りも含め、どの操作も「常に許可」を選ぶまでカードで確認します。",
+  "integrationsConnectOfferButton": "連携を開く",
+  "integrationsConnectOfferNotNow": "今はしない",
+  "integrationsConnectOfferOpen": "連携を開いて {name} にサインインしてください。",
+  "integrationsConnectOfferTitle": "{name} に接続",
   "integrationsGoogleClientFileIncomplete": "このクライアント ファイルにはクライアント ID かシークレットがありません。Google のページからもう一度ダウンロードしてください。",
   "integrationsGoogleClientFileNotJson": "これは Google のクライアント ファイルではありません。Google のページで Download JSON からクライアントのファイルをダウンロードし、ここにドロップしてください。",
   "integrationsGoogleClientFileWeb": "このファイルはウェブ アプリケーション用のクライアントのものです。Google のページでデスクトップ アプリのクライアントを作成し、そのファイルをここにドロップしてください。",

@@ -1232,6 +1232,11 @@
 "handoverWontStopText" = "%1$@ は保存して停止するよう求めましたが、保存した作業をまだ開いたままです。「今すぐ停止」を選ぶと、待たずに終了させます。何も変更していません。";
 "handoverWontStopTitle" = "%1$@ が停止していません";
 "integrationsClientFileNotTaken" = "このバージョンの Infinitary では、%1$@ はクライアント ファイルを受け付けません。";
+"integrationsConnectOfferBody" = "その後、一等航海士と乗組員はあなたのサインインで %1$@ を利用できます。読み取りも含め、どの操作も「常に許可」を選ぶまでカードで確認します。";
+"integrationsConnectOfferButton" = "連携を開く";
+"integrationsConnectOfferNotNow" = "今はしない";
+"integrationsConnectOfferOpen" = "連携を開いて %1$@ にサインインしてください。";
+"integrationsConnectOfferTitle" = "%1$@ に接続";
 "integrationsGoogleClientFileIncomplete" = "このクライアント ファイルにはクライアント ID かシークレットがありません。Google のページからもう一度ダウンロードしてください。";
 "integrationsGoogleClientFileNotJson" = "これは Google のクライアント ファイルではありません。Google のページで Download JSON からクライアントのファイルをダウンロードし、ここにドロップしてください。";
 "integrationsGoogleClientFileWeb" = "このファイルはウェブ アプリケーション用のクライアントのものです。Google のページでデスクトップ アプリのクライアントを作成し、そのファイルをここにドロップしてください。";

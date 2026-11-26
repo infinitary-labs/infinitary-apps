@@ -1,5 +1,10 @@
 {
   "integrationsClientFileNotTaken": "{name} nimmt in dieser Version von Infinitary keine Client-Datei an.",
+  "integrationsConnectOfferBody": "Dein erster Offizier und deine Crew erreichen {name} dann mit deiner Anmeldung. Jede seiner Aktionen, auch Leseaktionen, fragt dich auf einer Karte, bis du „Immer erlaubt“ wählst.",
+  "integrationsConnectOfferButton": "Integrationen öffnen",
+  "integrationsConnectOfferNotNow": "Nicht jetzt",
+  "integrationsConnectOfferOpen": "Öffne Integrationen, um dich bei {name} anzumelden.",
+  "integrationsConnectOfferTitle": "{name} verbinden",
   "integrationsGoogleClientFileIncomplete": "In dieser Client-Datei fehlen Client-ID oder Geheimnis. Lade sie auf Googles Seite erneut herunter.",
   "integrationsGoogleClientFileNotJson": "Das ist keine Google-Client-Datei. Lade auf Googles Seite die Datei deines Clients mit Download JSON herunter und lege sie dann hier ab.",
   "integrationsGoogleClientFileWeb": "Diese Datei gehört zu einem Client für eine Webanwendung. Erstelle auf Googles Seite einen Desktop-App-Client und lege dann dessen Datei hier ab.",

@@ -1232,6 +1232,11 @@
 "handoverWontStopText" = "%1$@ le pidió que guardara y se detuviera, y todavía tiene abierto tu trabajo guardado. Detenerlo ahora lo cierra sin esperar. No se ha cambiado nada.";
 "handoverWontStopTitle" = "%1$@ no se ha detenido";
 "integrationsClientFileNotTaken" = "%1$@ no acepta archivos de cliente en esta versión de Infinitary.";
+"integrationsConnectOfferBody" = "Después, tu primer oficial y tu tripulación pueden acceder a %1$@ con tu sesión. Cada una de sus acciones, incluidas las lecturas, te pregunta en una tarjeta hasta que eliges «Siempre permitida».";
+"integrationsConnectOfferButton" = "Abrir Integraciones";
+"integrationsConnectOfferNotNow" = "Ahora no";
+"integrationsConnectOfferOpen" = "Abre Integraciones para iniciar sesión en %1$@.";
+"integrationsConnectOfferTitle" = "Conectar %1$@";
 "integrationsGoogleClientFileIncomplete" = "A ese archivo de cliente le falta el ID o el secreto del cliente. Vuelve a descargarlo desde la página de Google.";
 "integrationsGoogleClientFileNotJson" = "Ese no es un archivo de cliente de Google. En la página de Google, descarga el archivo de tu cliente con Download JSON y suéltalo aquí.";
 "integrationsGoogleClientFileWeb" = "Ese archivo es de un cliente de aplicación web. Crea un cliente de app de escritorio en la página de Google y suelta aquí su archivo.";

@@ -1232,6 +1232,11 @@
 "handoverWontStopText" = "%1$@ 已請它儲存並停止，但它仍佔用著你儲存的工作。「立即停止」會直接結束它，不再等待。沒有做任何變更。";
 "handoverWontStopTitle" = "%1$@ 沒有停止";
 "integrationsClientFileNotTaken" = "此版本的 Infinitary 中，%1$@ 不接受用戶端檔案。";
+"integrationsConnectOfferBody" = "之後，你的大副和船員可以用你的登入存取 %1$@。它的每個動作，包括讀取，都會在卡片上詢問你，直到你選擇「一律允許」。";
+"integrationsConnectOfferButton" = "開啟整合";
+"integrationsConnectOfferNotNow" = "暫時不要";
+"integrationsConnectOfferOpen" = "開啟「整合」登入 %1$@。";
+"integrationsConnectOfferTitle" = "連結 %1$@";
 "integrationsGoogleClientFileIncomplete" = "這個用戶端檔案缺少用戶端 ID 或密鑰。請從 Google 的頁面重新下載。";
 "integrationsGoogleClientFileNotJson" = "這不是 Google 用戶端檔案。請在 Google 的頁面上用 Download JSON 下載用戶端檔案，然後拖到這裡。";
 "integrationsGoogleClientFileWeb" = "這個檔案屬於網頁應用程式用戶端。請在 Google 的頁面上建立桌面應用程式用戶端，然後把它的檔案拖到這裡。";

@@ -185,7 +185,8 @@ jobs:
   # A push that merged an outside pull request on a commit main's check
   # accounted for (scripts/batch.mjs): the run stops itself, as alpha-wait.yml
   # stops a paused one. The next sort reads this job's name to know the run
-  # left its push to the next batch.
+  # left its push to the next batch. It waits for no alpha cut, so the run
+  # never holds main's queue behind one.
   outside:
     needs: sort
     if: needs.sort.outputs.kind == 'outside'
@@ -241,7 +242,7 @@ jobs:
   # end and reads its proof (scripts/main-alpha-proof.mjs). A check started
   # by hand cuts no alpha.
   alpha:
-    needs: [alpha-wait, sort, covered, verify, startup]
+    needs: [alpha-wait, sort, covered, outside, verify, startup]
     if: ${{ !cancelled() && !failure() && github.event_name != 'workflow_dispatch' && (needs.sort.outputs.kind == 'full' || needs.sort.outputs.kind == 'covered') }}
     name: ${{ format('{0} · Start the alpha cut', (github.event_name != 'workflow_dispatch' && 'Main push' || 'Manual request')) }}
     runs-on: ubuntu-24.04

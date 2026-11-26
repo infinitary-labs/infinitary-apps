@@ -1,5 +1,15 @@
 import { createHash } from "node:crypto";
-import { existsSync, lstatSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PROTOCOL_VERSION } from "@shared/ipc";
@@ -1089,6 +1099,46 @@ describe("a task that runs on a computer that runs work", () => {
       answered,
     );
     expect(progress()).toHaveLength(2);
+    slow.open();
+  });
+
+  // INF-6032: kept answers the home could not read were read as none, so a
+  // change asked again was refused as cut short, and that refusal was kept
+  // over its answer once they could be read again.
+  it("fails a call asked again while its kept answers cannot be read, and answers it once they can", async () => {
+    const at = await world();
+    const slow = gate();
+    model([{ held: slow.held, text: "Finished after the failed read." }]);
+    await at.start("t-unread");
+    await expect.poll(() => api.openRequests()).toBe(1);
+    const calls = join(crewmatePlacedDir(at.home().paths, "t-unread"), "calls.jsonl");
+    const request = { task: "t-unread", callId: "progress-kept", text: "Kept before the quit." };
+    const answered = await at.home().placed.answer(at.deviceId, "inf:work:progress", request);
+    const progress = () =>
+      at
+        .home()
+        .tasks.timeline("t-unread")
+        .filter((event) => event.kind === "progress");
+    expect(progress()).toHaveLength(1);
+    // A folder where the file belongs cannot be read on macOS, Linux or Windows.
+    await at.restartHome(() => {
+      renameSync(calls, `${calls}.aside`);
+      mkdirSync(calls);
+    });
+    await at.inReach("t-unread");
+    const home = at.home();
+    for (let repeat = 0; repeat < 2; repeat++)
+      await expect(home.placed.answer(at.deviceId, "inf:work:progress", request)).rejects.toThrow(
+        "EISDIR: illegal operation on a directory, read",
+      );
+    expect(progress()).toHaveLength(1);
+    rmSync(calls, { recursive: true });
+    renameSync(`${calls}.aside`, calls);
+    await expect(home.placed.answer(at.deviceId, "inf:work:progress", request)).resolves.toEqual(
+      answered,
+    );
+    expect(progress()).toHaveLength(1);
+    expect(readFileSync(calls, "utf8").trim().split("\n")).toHaveLength(1);
     slow.open();
   });
 

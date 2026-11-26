@@ -754,6 +754,7 @@ Its parts sit beside it in `src/core/placed/`: what the crew reads of the comput
 - **Work requests.**
   The home refuses one about a task its record does not place on the computer that asks, or one closed here.
   Each callback is done once, by the task's open session's callbacks, and its answer - or its refusal - is kept in `crewmates/<task>/placed/calls.jsonl` before it is returned, so one asked again is answered from there (`PlacedLedger`).
+  Only a missing file holds no answers: while it cannot be read, a callback asked fails with the read's error, so nothing is done again or kept over the answers it holds.
   A computer that runs work sends a project font only to a home on protocol 8.9 or later (`CARD_TYPEFACES_SINCE`); to an older home it refuses the card itself, in words saying to draw the preview in the app's own typefaces until the home is updated.
   It sends a card's data file home before the card that names it (`docs/card-authoring.md`, "Data by reference").
   A card picture's bytes are kept where this Mac's cards show their pictures from, and so is a project font's, only under the task's own id; a demo recording's pieces are written into a partial file there that becomes the recording only with its last piece, and a job's end reaches the task's lane as a local job's does.

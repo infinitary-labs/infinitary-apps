@@ -299,6 +299,7 @@ test("a choice on an answer task's consent card resumes its crewmate, and the an
           tag: element.tagName,
           choice: element.closest("[data-card-choice]")?.getAttribute("data-card-choice"),
           stage: element.closest("[data-stage-entry]")?.getAttribute("data-stage-entry"),
+          shield: element.hasAttribute("data-stage-shield"),
         };
       };
       const events: Array<{

@@ -696,7 +696,7 @@ export const QUICK_ANSWER_LINE_WORDS =
  */
 export const QUICK_ANSWER_ACT_WORDS =
   // i18n-exempt: served to the crewmate's model in its brief, stays English
-  "When the goal asks for something done rather than known - a review written, a comment or story published, something sent, merged, built or changed, or a merge card shown - that work is past this reach, even when the goal names it as the state it wants: show no card, and report with needs_firstmate what the goal asks done and what you read, and the first mate starts that work at once, as asked.";
+  "When the goal asks for something done rather than known - a comment or story published, something sent, merged, built or changed, or a merge card shown - that work is past this reach, even when the goal names it as the state it wants: show no card, and report with needs_firstmate what the goal asks done and what you read, and the first mate starts that work at once, as asked.";
 export const QUICK_ANSWER_STRAIGHT_DEEPER_WORDS =
   "When these sources cannot give a meaningful answer to the question at all, show no card: report with needs_firstmate what you read, why it cannot answer, and the source the answer needs, and the first mate starts that research step at once, as if the captain had chosen " +
   `${LOOK_DEEPER_LABEL}.`;

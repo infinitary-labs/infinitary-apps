@@ -10,7 +10,7 @@ What the first mate is now told, in the sequences document's explainer section:
 
 What crewmates are now told, in their brief (`renderAnswerShapeSection`, `QUICK_ANSWER_ACT_WORDS`, after the reach):
 
-- A quick answer whose goal asks for something done rather than known - a review written, a comment or story published, something sent, merged, built or changed, or a merge card shown - shows no card, even when the goal names it as the state it wants, and reports with needs_firstmate what the goal asks done and what it read.
+- A quick answer whose goal asks for something done rather than known - a comment or story published, something sent, merged, built or changed, or a merge card shown - shows no card, even when the goal names it as the state it wants, and reports with needs_firstmate what the goal asks done and what it read.
 
 What the kind classifier is now told, in its retrieval boundary (`RETRIEVAL_BOUNDARY`): such a goal is never retrieval, even when reading comes first or the goal names the state it wants.
 

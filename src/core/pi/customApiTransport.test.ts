@@ -401,7 +401,7 @@ describe("opt-in custom transport on actual sockets", () => {
     const plain = await transport(other, key)
       .request("chat/completions", "{}")
       .catch((e: unknown) => e);
-    expect(plain).toMatchObject({ category: "server", status: 400 });
+    expect(plain).toMatchObject({ category: "server", status: 400, reason: undefined });
     expect(JSON.stringify(plain)).not.toContain(key);
 
     const late = await fixture((_req, res) => {
@@ -411,8 +411,76 @@ describe("opt-in custom transport on actual sockets", () => {
     const missed = await transport(late)
       .request("chat/completions", "{}")
       .catch((e: unknown) => e);
-    expect(missed).toMatchObject({ category: "server", status: 400 });
+    expect(missed).toMatchObject({ category: "server", status: 400, reason: undefined });
     expect(String(missed)).not.toContain("exceeds the context window");
+  });
+
+  // A provider's 4xx refusal reaches the form with its own reason (INF-6842):
+  // cut, on one line, and never carrying a key or secret header it echoed.
+  it("keeps a short, one-line, secret-free excerpt of a generation refusal's reason", async () => {
+    const key = "opaque-synthetic-secret";
+    const region =
+      "Model model-needs-global is hosted outside Europe and the United States. Turn on the Global region setting in your console to use it.";
+    const refusing = (status: number, type: string, body: string) =>
+      fixture((_req, res) => {
+        res.writeHead(status, { "Content-Type": type });
+        res.end(body);
+      });
+    const refusal = async (base: string) =>
+      transport(base, key)
+        .request("chat/completions", "{}")
+        .catch((e: unknown) => e);
+
+    const anthropic = await refusing(
+      400,
+      "application/json",
+      JSON.stringify({ type: "error", error: { type: "invalid_request_error", message: region } }),
+    );
+    expect(await refusal(anthropic)).toMatchObject({
+      category: "server",
+      status: 400,
+      reason: region,
+    });
+
+    const spaced = await refusing(
+      422,
+      "application/json; charset=utf-8",
+      JSON.stringify({ detail: "Unknown\n\tparameter \u202Ereversed\u202C here" }),
+    );
+    expect(await refusal(spaced)).toMatchObject({
+      category: "server",
+      status: 422,
+      reason: "Unknown parameter reversed here",
+    });
+
+    const long = await refusing(400, "text/plain", `${"word ".repeat(100)}end`);
+    expect(await refusal(long)).toMatchObject({
+      category: "server",
+      reason: `${"word ".repeat(48).trimEnd()}…`,
+    });
+
+    for (const echoed of [key, JSON.stringify(key).slice(1, -1)]) {
+      const echo = await refusing(
+        400,
+        "application/json",
+        JSON.stringify({ error: { message: `The key ${echoed} cannot use this model.` } }),
+      );
+      const error = await refusal(echo);
+      expect(error).toMatchObject({ category: "server", reason: undefined });
+      expect(JSON.stringify(error)).not.toContain(key);
+    }
+
+    const page = await refusing(400, "text/html", `<html><body>${region}</body></html>`);
+    expect(await refusal(page)).toMatchObject({ category: "server", reason: undefined });
+
+    const failed = await refusing(
+      500,
+      "application/json",
+      JSON.stringify({ error: { message: region } }),
+    );
+    const server = await refusal(failed);
+    expect(server).toMatchObject({ category: "server", status: 500 });
+    expect(server).not.toHaveProperty("reason", region);
   });
 
   it("bounds chunked replies and refuses unsupported content types", async () => {

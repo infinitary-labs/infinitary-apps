@@ -174,6 +174,7 @@ public enum PhoneMessages {
     public static func `accountsCustomApiNoModels`() -> String { PhoneWords.format("accountsCustomApiNoModels", []) }
     public static func `accountsCustomApiNotOffered`(`model`: String) -> String { PhoneWords.format("accountsCustomApiNotOffered", [`model`]) }
     public static func `accountsCustomApiNotReached`() -> String { PhoneWords.format("accountsCustomApiNotReached", []) }
+    public static func `accountsCustomApiNotSaved`() -> String { PhoneWords.format("accountsCustomApiNotSaved", []) }
     public static func `accountsCustomApiNotSavedField`() -> String { PhoneWords.format("accountsCustomApiNotSavedField", []) }
     public static func `accountsCustomApiNotSavedRow`() -> String { PhoneWords.format("accountsCustomApiNotSavedRow", []) }
     public static func `accountsCustomApiNothingAnswered`(`operation`: String, `where`: String) -> String { PhoneWords.format("accountsCustomApiNothingAnswered", [`operation`, `where`]) }
@@ -206,6 +207,8 @@ public enum PhoneMessages {
     public static func `accountsCustomApiReasoningOff`() -> String { PhoneWords.format("accountsCustomApiReasoningOff", []) }
     public static func `accountsCustomApiRedirect`() -> String { PhoneWords.format("accountsCustomApiRedirect", []) }
     public static func `accountsCustomApiRefreshAfter`() -> String { PhoneWords.format("accountsCustomApiRefreshAfter", []) }
+    public static func `accountsCustomApiRefused`() -> String { PhoneWords.format("accountsCustomApiRefused", []) }
+    public static func `accountsCustomApiRefusedSaid`(`reason`: String) -> String { PhoneWords.format("accountsCustomApiRefusedSaid", [`reason`]) }
     public static func `accountsCustomApiRemoveCertificate`() -> String { PhoneWords.format("accountsCustomApiRemoveCertificate", []) }
     public static func `accountsCustomApiRemoveHeader`() -> String { PhoneWords.format("accountsCustomApiRemoveHeader", []) }
     public static func `accountsCustomApiRemoveModel`(`name`: String) -> String { PhoneWords.format("accountsCustomApiRemoveModel", [`name`]) }
@@ -4945,6 +4948,7 @@ extension PhoneWords {
         "accountsCustomApiNoModels": [],
         "accountsCustomApiNotOffered": ["model"],
         "accountsCustomApiNotReached": [],
+        "accountsCustomApiNotSaved": [],
         "accountsCustomApiNotSavedField": [],
         "accountsCustomApiNotSavedRow": [],
         "accountsCustomApiNothingAnswered": ["operation", "where"],
@@ -4977,6 +4981,8 @@ extension PhoneWords {
         "accountsCustomApiReasoningOff": [],
         "accountsCustomApiRedirect": [],
         "accountsCustomApiRefreshAfter": [],
+        "accountsCustomApiRefused": [],
+        "accountsCustomApiRefusedSaid": ["reason"],
         "accountsCustomApiRemoveCertificate": [],
         "accountsCustomApiRemoveHeader": [],
         "accountsCustomApiRemoveModel": ["name"],

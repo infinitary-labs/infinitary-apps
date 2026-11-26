@@ -167,6 +167,7 @@
 "accountsCustomApiNoModels" = "لا نماذج بعد. اجلبها من الخادم، أو أضف واحدًا يدويًا.";
 "accountsCustomApiNotOffered" = "لا يوفّر هذا الخادم %1$@.";
 "accountsCustomApiNotReached" = "تعذّر الوصول إلى هذا الخادم.";
+"accountsCustomApiNotSaved" = "لم يُحفظ.";
 "accountsCustomApiNotSavedField" = "لم يُحفظ. أصلح الحقل المعلَّم واضغط «حفظ» مرة أخرى.";
 "accountsCustomApiNotSavedRow" = "لم يُحفظ. أصلح الصف المعلَّم واضغط «حفظ» مرة أخرى.";
 "accountsCustomApiNothingAnswered" = "لم يُجب شيء عند %2$@/%1$@.";
@@ -199,6 +200,8 @@
 "accountsCustomApiReasoningOff" = "غير محدد (الافتراضي للنموذج)";
 "accountsCustomApiRedirect" = "أرسل الخادم الطلب إلى مكان آخر. أدخل العنوان الذي يعيد التوجيه إليه.";
 "accountsCustomApiRefreshAfter" = "التجديد بعد (ثوانٍ)";
+"accountsCustomApiRefused" = "رفض الخادم الطلب. تحقّق من إعدادات هذا الاتصال لدى مزوّده.";
+"accountsCustomApiRefusedSaid" = "رفض الخادم الطلب. قال: «%1$@»";
 "accountsCustomApiRemoveCertificate" = "إزالة الشهادة";
 "accountsCustomApiRemoveHeader" = "إزالة الترويسة";
 "accountsCustomApiRemoveModel" = "إزالة %1$@";

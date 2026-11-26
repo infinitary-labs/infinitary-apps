@@ -167,6 +167,7 @@
 "accountsCustomApiNoModels" = "Ainda não há modelos. Busque-os no servidor ou adicione um manualmente.";
 "accountsCustomApiNotOffered" = "Este servidor não oferece %1$@.";
 "accountsCustomApiNotReached" = "Não foi possível acessar este servidor.";
+"accountsCustomApiNotSaved" = "Não salvo.";
 "accountsCustomApiNotSavedField" = "Não salvo. Corrija o campo marcado e clique em Salvar de novo.";
 "accountsCustomApiNotSavedRow" = "Não salvo. Corrija a linha marcada e clique em Salvar de novo.";
 "accountsCustomApiNothingAnswered" = "Nada respondeu em %2$@/%1$@.";
@@ -199,6 +200,8 @@
 "accountsCustomApiReasoningOff" = "Não definido (padrão do modelo)";
 "accountsCustomApiRedirect" = "O servidor enviou a solicitação para outro lugar. Digite o endereço para o qual ele redireciona.";
 "accountsCustomApiRefreshAfter" = "Renovar depois de (segundos)";
+"accountsCustomApiRefused" = "O servidor recusou a solicitação. Verifique as configurações desta conexão com o provedor.";
+"accountsCustomApiRefusedSaid" = "O servidor recusou a solicitação. Ele disse: “%1$@”";
 "accountsCustomApiRemoveCertificate" = "Remover certificado";
 "accountsCustomApiRemoveHeader" = "Remover cabeçalho";
 "accountsCustomApiRemoveModel" = "Remover %1$@";

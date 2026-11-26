@@ -77,6 +77,27 @@ describe("where a custom connection's failure is told", () => {
     expect(row("server").at).toBe("save");
   });
 
+  // INF-6842: a provider's refusal said "Try again in a moment", which never helps.
+  it("tells a refusal above Save with the server's reason and no retry", () => {
+    const reason = "Turn on the Global region setting in your console to use it.";
+    expect(
+      placeCustomApiFailure("server", { address, stage: "check", status: 400, reason }),
+    ).toEqual({
+      at: "save",
+      text: "The server refused the request. It said: “Turn on the Global region setting in your console to use it.”",
+    });
+    expect(placeCustomApiFailure("server", { address, stage: "check", status: 422 })).toEqual({
+      at: "save",
+      text: "The server refused the request. Check this connection's settings with its provider.",
+    });
+    // A 5xx, or an older computer that sends no status, keeps the passing-trouble words.
+    for (const status of [500, undefined])
+      expect(placeCustomApiFailure("server", { address, stage: "check", status })).toEqual({
+        at: "save",
+        text: "The server could not complete the request. Try again in a moment.",
+      });
+  });
+
   it("offers an organization's certificate only on an organization network", () => {
     expect(
       placeCustomApiFailure("certificate", { address, stage: "list", network: "private" }),

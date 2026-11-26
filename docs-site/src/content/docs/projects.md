@@ -103,6 +103,7 @@ Tags help you find and group tasks, and nothing else in Infinitary acts on a tag
 
 A project's page lists its tags under **Tags**, each with how many tasks carry it.
 
+- **Suggest tags**, shown while a project has no tags, asks your first mate, which reads the project's tasks and answers with one card of suggested tags that you can change by reply.
 - **Add a tag** asks for the tag's name and which tasks qualify.
 - **Edit** changes a tag's name or description.
   A renamed tag stays on the tasks that carry it.

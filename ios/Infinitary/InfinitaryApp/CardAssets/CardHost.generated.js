@@ -87345,6 +87345,225 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Save`;
   }
+  function settingsProjectsTagsSuggest() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `اقتراح وسوم`;
+      case "de":
+        return `Tags vorschlagen`;
+      case "es":
+        return `Sugerir etiquetas`;
+      case "fr":
+        return `Suggérer des étiquettes`;
+      case "ja":
+        return `タグを提案`;
+      case "ko":
+        return `태그 제안`;
+      case "pt-BR":
+        return `Sugerir etiquetas`;
+      case "zh-Hans":
+        return `建议标签`;
+      case "zh-Hant":
+        return `建議標籤`;
+      case "en-XA":
+        return `[Šûĝĝéšţ ţáĝš ~~~~]`;
+      case "ar-XB":
+        return `‮Suggest tags‬`;
+    }
+    return `Suggest tags`;
+  }
+  function settingsProjectsTagsSuggestHint() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يطلب «اقتراح وسوم» من نائب القبطان، فيجيب على بطاقة.`;
+      case "de":
+        return `Tags vorschlagen fragt deinen ersten Offizier, der auf einer Karte antwortet.`;
+      case "es":
+        return `Sugerir etiquetas se lo pide a tu primer oficial, que responde en una tarjeta.`;
+      case "fr":
+        return `Suggérer des étiquettes le demande à votre second, qui répond sur une carte.`;
+      case "ja":
+        return `「タグを提案」は一等航海士に頼み、一等航海士がカードで答えます。`;
+      case "ko":
+        return `태그 제안은 일등항해사에게 요청하고, 일등항해사가 카드로 답해요.`;
+      case "pt-BR":
+        return `Sugerir etiquetas pede ao seu imediato, que responde em um cartão.`;
+      case "zh-Hans":
+        return `“建议标签”会请你的大副给出建议，大副会在卡片上回答。`;
+      case "zh-Hant":
+        return `「建議標籤」會請你的大副提出建議，大副會在卡片上回答。`;
+      case "en-XA":
+        return `[Šûĝĝéšţ ţáĝš ášķš ýöûŕ ƒîŕšţ ɱáţé, ŵĥö áñšŵéŕš öñ á çáŕð. ~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Suggest tags asks your first mate, who answers on a card.‬`;
+    }
+    return `Suggest tags asks your first mate, who answers on a card.`;
+  }
+  function settingsProjectsTagsSuggestNotSent() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر سؤال نائب القبطان. حاول مرة أخرى.`;
+      case "de":
+        return `Dein erster Offizier konnte nicht gefragt werden. Bitte versuch es noch einmal.`;
+      case "es":
+        return `No se pudo preguntar a tu primer oficial. Inténtalo de nuevo.`;
+      case "fr":
+        return `Impossible de demander à votre second. Veuillez réessayer.`;
+      case "ja":
+        return `一等航海士に頼めませんでした。もう一度お試しください。`;
+      case "ko":
+        return `일등항해사에게 요청하지 못했어요. 다시 시도해 주세요.`;
+      case "pt-BR":
+        return `Não foi possível pedir ao seu imediato. Tente de novo.`;
+      case "zh-Hans":
+        return `无法请你的大副给出建议。请再试一次。`;
+      case "zh-Hant":
+        return `無法請你的大副提出建議。請再試一次。`;
+      case "en-XA":
+        return `[Çöûļð ñöţ ášķ ýöûŕ ƒîŕšţ ɱáţé. Þļéášé ţŕý áĝáîñ. ~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Could not ask your first mate. Please try again.‬`;
+    }
+    return `Could not ask your first mate. Please try again.`;
+  }
+  function settingsProjectsTagsSuggestRemoved(input2) {
+    const project = input2.project;
+    switch (currentLanguage()) {
+      case "ar":
+        return `أُزيل ${project}، لذا لم يُرسَل شيء.`;
+      case "de":
+        return `${project} wurde entfernt, daher wurde nichts gesendet.`;
+      case "es":
+        return `${project} se quitó, así que no se envió nada.`;
+      case "fr":
+        return `${project} a été retiré, donc rien n’a été envoyé.`;
+      case "ja":
+        return `${project} は削除されたため、何も送信していません。`;
+      case "ko":
+        return `${project}이(가) 제거되어 아무것도 보내지 않았어요.`;
+      case "pt-BR":
+        return `${project} foi removido, então nada foi enviado.`;
+      case "zh-Hans":
+        return `${project} 已被移除，因此没有发送任何内容。`;
+      case "zh-Hant":
+        return `${project} 已被移除，因此沒有傳送任何內容。`;
+      case "en-XA":
+        return `[${project} ŵáš ŕéɱöṽéð, šö ñöţĥîñĝ ŵáš šéñţ. ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${project}‮ was removed, so nothing was sent.‬`;
+    }
+    return `${project} was removed, so nothing was sent.`;
+  }
+  function settingsProjectsTagsSuggestStarting() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يزال Infinitary يبدأ. حاول مرة أخرى بعد لحظة.`;
+      case "de":
+        return `Infinitary startet noch. Versuch es gleich noch einmal.`;
+      case "es":
+        return `Infinitary todavía se está iniciando. Inténtalo de nuevo en un momento.`;
+      case "fr":
+        return `Infinitary démarre encore. Réessayez dans un instant.`;
+      case "ja":
+        return `Infinitary はまだ起動中です。少し待ってからもう一度お試しください。`;
+      case "ko":
+        return `Infinitary가 아직 시작 중이에요. 잠시 후 다시 시도해 주세요.`;
+      case "pt-BR":
+        return `O Infinitary ainda está iniciando. Tente de novo em um instante.`;
+      case "zh-Hans":
+        return `Infinitary 仍在启动。请稍后再试。`;
+      case "zh-Hant":
+        return `Infinitary 仍在啟動。請稍後再試。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý îš šţîļļ šţáŕţîñĝ. Ţŕý áĝáîñ îñ á ɱöɱéñţ. ~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary is still starting. Try again in a moment.‬`;
+    }
+    return `Infinitary is still starting. Try again in a moment.`;
+  }
+  function settingsProjectsTagsSuggestTagged(input2) {
+    const project = input2.project;
+    switch (currentLanguage()) {
+      case "ar":
+        return `صار لـ ${project} وسم الآن، لذا لم يُرسَل شيء.`;
+      case "de":
+        return `${project} hat jetzt ein Tag, daher wurde nichts gesendet.`;
+      case "es":
+        return `${project} ya tiene una etiqueta, así que no se envió nada.`;
+      case "fr":
+        return `${project} a maintenant une étiquette, donc rien n’a été envoyé.`;
+      case "ja":
+        return `${project} にはもうタグがあるため、何も送信していません。`;
+      case "ko":
+        return `${project}에 이제 태그가 있어 아무것도 보내지 않았어요.`;
+      case "pt-BR":
+        return `${project} já tem uma etiqueta, então nada foi enviado.`;
+      case "zh-Hans":
+        return `${project} 现在已有标签，因此没有发送任何内容。`;
+      case "zh-Hant":
+        return `${project} 現在已有標籤，因此沒有傳送任何內容。`;
+      case "en-XA":
+        return `[${project} ĥáš á ţáĝ ñöŵ, šö ñöţĥîñĝ ŵáš šéñţ. ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${project}‮ has a tag now, so nothing was sent.‬`;
+    }
+    return `${project} has a tag now, so nothing was sent.`;
+  }
+  function settingsProjectsTagsSuggestUnknown() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يعد هذا المشروع موجودًا، لذا لم يُرسَل شيء.`;
+      case "de":
+        return `Dieses Projekt gibt es nicht mehr, daher wurde nichts gesendet.`;
+      case "es":
+        return `Este proyecto ya no existe, así que no se envió nada.`;
+      case "fr":
+        return `Ce projet n’existe plus, donc rien n’a été envoyé.`;
+      case "ja":
+        return `このプロジェクトはもうないため、何も送信していません。`;
+      case "ko":
+        return `이 프로젝트가 더 이상 없어 아무것도 보내지 않았어요.`;
+      case "pt-BR":
+        return `Este projeto não existe mais, então nada foi enviado.`;
+      case "zh-Hans":
+        return `这个项目已不存在，因此没有发送任何内容。`;
+      case "zh-Hant":
+        return `這個專案已不存在，因此沒有傳送任何內容。`;
+      case "en-XA":
+        return `[Ţĥîš þŕöĵéçţ îš ĝöñé, šö ñöţĥîñĝ ŵáš šéñţ. ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This project is gone, so nothing was sent.‬`;
+    }
+    return `This project is gone, so nothing was sent.`;
+  }
+  function settingsProjectsTagsSuggestWords(input2) {
+    const project = input2.project;
+    switch (currentLanguage()) {
+      case "ar":
+        return `اقترح وسومًا لـ ${project}`;
+      case "de":
+        return `Schlag Tags für ${project} vor`;
+      case "es":
+        return `Sugiere etiquetas para ${project}`;
+      case "fr":
+        return `Suggère des étiquettes pour ${project}`;
+      case "ja":
+        return `${project} のタグを提案して`;
+      case "ko":
+        return `${project}의 태그를 제안해 줘`;
+      case "pt-BR":
+        return `Sugira etiquetas para ${project}`;
+      case "zh-Hans":
+        return `为 ${project} 建议标签`;
+      case "zh-Hant":
+        return `為 ${project} 建議標籤`;
+      case "en-XA":
+        return `[Šûĝĝéšţ ţáĝš ƒöŕ ${project} ~~~~~~]`;
+      case "ar-XB":
+        return `‮Suggest tags for ‬${project}`;
+    }
+    return `Suggest tags for ${project}`;
+  }
   function settingsProjectsTagsTasks(input2) {
     const count = formatNumber(input2.count);
     switch (currentLanguage()) {
@@ -115902,6 +116121,14 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsProjectsTagsRemoveQuestion,
     settingsProjectsTagsRemoveQuestionNone,
     settingsProjectsTagsSave,
+    settingsProjectsTagsSuggest,
+    settingsProjectsTagsSuggestHint,
+    settingsProjectsTagsSuggestNotSent,
+    settingsProjectsTagsSuggestRemoved,
+    settingsProjectsTagsSuggestStarting,
+    settingsProjectsTagsSuggestTagged,
+    settingsProjectsTagsSuggestUnknown,
+    settingsProjectsTagsSuggestWords,
     settingsProjectsTagsTasks,
     settingsProjectsTasksLabel,
     settingsProjectsWorkspace,
@@ -119538,6 +119765,14 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsProjectsTagsRemoveQuestion": ["count", "name"],
     "settingsProjectsTagsRemoveQuestionNone": ["name"],
     "settingsProjectsTagsSave": [],
+    "settingsProjectsTagsSuggest": [],
+    "settingsProjectsTagsSuggestHint": [],
+    "settingsProjectsTagsSuggestNotSent": [],
+    "settingsProjectsTagsSuggestRemoved": ["project"],
+    "settingsProjectsTagsSuggestStarting": [],
+    "settingsProjectsTagsSuggestTagged": ["project"],
+    "settingsProjectsTagsSuggestUnknown": [],
+    "settingsProjectsTagsSuggestWords": ["project"],
     "settingsProjectsTagsTasks": ["count"],
     "settingsProjectsTasksLabel": [],
     "settingsProjectsWorkspace": [],

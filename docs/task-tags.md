@@ -133,6 +133,21 @@ New tasks go first; the check takes the turns left.
 One check runs at a time across every project, kept in the `tag-check` settings row, so a restart resumes it; Stop keeps every answer recorded so far.
 A finished check writes one Activity line naming its project and how many tasks it checked, and how many got no answer.
 
+## Suggesting tags
+
+While a project has no tags and no form is open, Suggest tags, a small primary button, leads Add a tag, with a quiet line under them: "Suggest tags asks your first mate, who answers on a card."
+It is a Tab stop like any button and has no window command, since a person presses it once per project.
+While the main message refuses (`mainMessageRefusal`, `src/renderer/src/app/composer.ts`), the button is held and the quiet line says why.
+
+The press sends `inf:projects:suggest-tags` (`src/shared/tagSuggestion.ts`) with the project and the words "Suggest tags for <project>" in the person's language, and the window goes home, where the words show as the person's own message.
+Any window may press it, a view on another computer included, and the press counts as the captain's input like a message (`CAPTAIN_INPUT_CHANNELS`, `docs/devices.md`, "Where the captain is"); it names no project focus, since the note names the project.
+The home refuses an unknown or removed project, one that already has a tag, and a start before tagging is ready, answering the reason; the window says it under the button, and nothing is sent.
+The first mate's turn carries the words and one note, `[tag suggestion request]` (`tagSuggestionNote`, `src/core/orchestrator/tagSuggestionNote.ts`), which the press adds and the words never do.
+The note names the project; how many tasks each check reach holds, read by `TagWork.tasksIn`; whether Tag tasks automatically asks now and who answers; and the steps.
+The steps: read the open tasks with the tasks tool, propose 8 to 14 tags, kind tags worded so a task fits at most one and part tags named the way the project names them, siblings together, each described with the nearest work that does not qualify and example task keys; put up one decision card with a box per tag and one question on which existing tasks to check; revise it by reply; on the click, add the ticked tags with `project-tags` and start `project-tag-check`.
+The first mate never tags a task itself, because a tag it sets is fixed for good.
+The note rides only that turn and its parked copy, which a failed turn serves again, so it costs the first mate's standing context nothing; Ask again on an unanswered message sends the words alone.
+
 ## Saved data and older sides
 
 The tags migration adds both tables; an existing record upgrades with no step for the person, and every task starts with no tags (`docs/saved-data-compatibility.md`).
@@ -140,4 +155,5 @@ A record opened at an older version has neither table, and both stores read noth
 An older window, view or phone never sends either request and reads neither `tags` field, so it draws no tags and behaves as before (`src/shared/contract-changes/project-tags.md`).
 Automatic tagging adds no table: it keeps two settings rows, `tag-auto-since` and `tag-check`, and the `revision` column the tags migration already wrote; two query indexes seek its reads (`src/core/storage/queryIndexes.ts`).
 An older window never sends the check requests and draws no Check existing tasks (`src/shared/contract-changes/tag-check.md`).
+An older window never sends Suggest tags; an older home answers an unknown channel, and the window says the first mate could not be asked (`src/shared/contract-changes/suggest-tags.md`).
 A phone that reads the fields from an older computer finds neither and draws no tag row or Tags row.

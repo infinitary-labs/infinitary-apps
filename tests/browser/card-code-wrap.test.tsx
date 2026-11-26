@@ -13,18 +13,35 @@ const TITLE = "Commands to update a server to stable 0.8.10";
 const TOKEN = "a1b2c3d4e5f60718".repeat(14);
 const BODY = `<p>Run this on the server.</p>
 <details open><summary>Command</summary>
-<pre><code>curl -fLO https://example.com/download/${TOKEN}</code></pre>
+<pre><code>cd /tmp
+  curl -fLO https://example.com/download/${TOKEN}</code></pre>
 </details>`;
 
-type Read = { frameWidth: number; pageOverflow: number; rows: number; hidden: number };
+type Read = {
+  frameWidth: number;
+  pageOverflow: number;
+  rows: number;
+  hidden: number;
+  ownRow: boolean;
+  indented: boolean;
+};
 
-/** The open card's code block: how many rows its text takes and how far it runs past the frame's right edge. */
 function readBlock(): Read {
   const root = document.documentElement;
   const range = document.createRange();
   range.selectNodeContents(document.querySelector("pre") as HTMLElement);
   const rects = [...range.getClientRects()];
+  const text = (document.querySelector("pre code") as HTMLElement).firstChild as Text;
+  const first = document.createRange();
+  first.setStart(text, text.data.indexOf("cd"));
+  first.setEnd(text, text.data.indexOf("cd") + 2);
+  const second = document.createRange();
+  second.setStart(text, text.data.indexOf("curl"));
+  second.setEnd(text, text.data.indexOf("curl") + 4);
+  const [a, b] = [first.getBoundingClientRect(), second.getBoundingClientRect()];
   return {
+    ownRow: b.top >= a.bottom - 1,
+    indented: b.left > a.left + 5,
     frameWidth: root.clientWidth,
     pageOverflow: root.scrollWidth - root.clientWidth,
     rows: new Set(rects.map((rect) => Math.round(rect.top))).size,
@@ -36,9 +53,12 @@ function readBlock(): Read {
 }
 
 // The card frame does not scroll sideways, so a command wider than the frame
-// is cut off with no way to read its end. It wraps onto more rows instead.
+// is cut off with no way to read its end. It wraps onto more rows instead,
+// and the authored line break and indent stay.
 function expectWhole(read: Read): void {
-  expect(read.rows).toBeGreaterThan(1);
+  expect(read.rows).toBeGreaterThan(2);
+  expect(read.ownRow).toBe(true);
+  expect(read.indented).toBe(true);
   expect(read.hidden).toBe(0);
   expect(read.pageOverflow).toBe(0);
 }

@@ -110,6 +110,9 @@ public struct PhoneTask: Decodable, Identifiable, Sendable {
     public struct Flags: Decodable, Sendable { public let blocked: Bool; public let held: Bool; public let needsYou: Bool? }
     public let children: Children?
     public struct Children: Decodable, Sendable { public let total: Int; public let closed: Int }
+    /// The most pressing status among its open parts, on a backlog parent that runs no program and nothing blocks
+    /// (`taskViewSchema.partsStatus`): its status word follows them. Absent on every other task and from an older Mac.
+    public let partsStatus: String?
     public let startNotice: StartNotice?
     public struct StartNotice: Decodable, Sendable { public let reason: String }
     public let waitingCardMerges: Bool?

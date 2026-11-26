@@ -48,7 +48,7 @@ A Dropped work record has only Start again in its next slot unless a replacement
 | Starting | empty | `Starting`, unavailable | Still starting. You can keep working. after 15 seconds, or Checking whether it started if contact is lost. |
 | Backlog, could not start | Drop task | `Try again` | - (the bar says Could not start and the concrete reason between its buttons) |
 | Backlog or Queued, blocked | Drop task | `Start`, disabled | Waiting on FI3-6 (a dropped dependency: A task it waits on was dropped, Ask your first mate about its dependencies before starting.) |
-| Backlog, with parts and no program | Drop task | empty | What its open parts wait on: Its last part waits for your Start, FI3-9 is in your backlog. This task closes by itself once its parts close. Several open: Waiting for 2 of its 5 parts, 1 working and 1 in your backlog. |
+| Backlog, with parts and no program (its pill reads its open parts' most pressing word, Working or Waiting on you among them) | Drop task | empty | What its open parts wait on: Its last part waits for your Start, FI3-9 is in your backlog. This task closes by itself once its parts close. Several open: Waiting for 2 of its 5 parts, 1 working and 1 in your backlog. |
 | Queued with parts, or a program | Drop task | empty | Its queue line: Waiting for its parts · since Nov 17, 4:44 PM |
 | Queued, held or not | Drop task | empty - no Start now | - (held: what it waits for and what ends the wait, Waiting for a premium model, You asked for premium, and no premium model has allowance now. It starts by itself once one does. Ask your first mate to start it sooner on another model.) |
 | Dropped, with no replacement or parts | empty | `Start again` | - |

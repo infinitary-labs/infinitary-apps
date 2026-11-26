@@ -258,6 +258,8 @@ export type PanelTaskRow = {
    * kept. Absent otherwise, and on an older home.
    */
   backlogSince?: number;
+  /** On a backlog parent that runs no program and nothing blocks: its open parts' status. */
+  partsStatus?: "waiting" | "interrupted" | "working" | "starting" | "idle" | "queued" | "backlog";
   /** Its project's tags it carries, alphabetical, with who set each; absent while none. */
   tags?: { id: string; name: string; by: "decision" | "captain" | "firstmate" }[];
   /**
@@ -368,10 +370,9 @@ export type PanelTaskBoard = {
 export type PanelDropEffect = { key: string; title: string };
 
 /**
- * `tasks.detail` (`reads.subscribe("tasks.detail", { id }, listener)`): one
- * task in full - its board row, the brief its crewmate ran from, its latest
- * report, and while Drop task applies the tasks it would name. A task that
- * is not there is a read that fails: the listener is not called.
+ * `tasks.detail` (`reads.subscribe("tasks.detail", { id }, listener)`): one task in full - its
+ * board row, the brief its crewmate ran from, its latest report, and while Drop task applies the
+ * tasks it would name. A task that is not there is a read that fails: the listener is not called.
  */
 export type PanelTaskDetail = PanelTaskRow & {
   /** The rendered brief its crewmate ran from. */
@@ -583,11 +584,10 @@ export type PanelBatchRepo = {
 export type PanelBatches = { repos: PanelBatchRepo[] };
 
 /**
- * `tasks.search` (`reads.subscribe("tasks.search", { query }, listener)`):
- * closed work the board no longer lists - done before its seven days, or
- * dropped - whose key or title holds the words, newest first, at most 50:
- * an answer of 50 may have been cut, so ask for narrower words. Nothing is
- * read for empty words.
+ * `tasks.search` (`reads.subscribe("tasks.search", { query }, listener)`): closed work the board no
+ * longer lists - done before its seven days, or dropped - whose key or title holds the words,
+ * newest first, at most 50: an answer of 50 may have been cut, so ask for narrower words. Nothing
+ * is read for empty words.
  */
 export type PanelTaskSearch = PanelTaskRow[];
 

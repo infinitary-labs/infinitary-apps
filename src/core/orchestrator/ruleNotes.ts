@@ -62,7 +62,7 @@ function ruleName(rule: ScheduleRecord): string {
 
 export class RuleNotes {
   constructor(
-    private readonly tasks: Pick<TaskService, "capture" | "note">,
+    private readonly tasks: Pick<TaskService, "capture" | "get" | "note">,
     private readonly rules: RuleNotesRules,
     private readonly deliver: DeliverHandover,
   ) {}
@@ -93,11 +93,13 @@ export class RuleNotes {
    * The brief's section for a crewmate an automation's run started: the
    * notes file delivered into its hand-over folder and named by its path,
    * or, for a rule with none yet, where to make one. Words every project
-   * has, served in English. Undefined for any other task, and for a rule
-   * that never runs again: a one-time rule or a put-off card's, which is
-   * deleted once its run settles.
+   * has, served in English. Undefined for any other task, for a rule that
+   * never runs again (a one-time rule or a put-off card's, which is deleted
+   * once its run settles), and for an unsafe data reader, whose fence lets it
+   * neither read the hand-over folder nor write any file.
    */
   async briefSection(taskId: string): Promise<string | undefined> {
+    if (this.tasks.get(taskId)?.shape?.unsafe_data_reader === true) return undefined;
     const rule = this.ruleOf(taskId);
     if (!rule || rule.state === "completed") return undefined;
     const standing = this.rules.notes(rule.id);

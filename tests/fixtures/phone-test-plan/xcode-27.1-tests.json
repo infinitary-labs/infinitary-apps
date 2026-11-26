@@ -73,6 +73,7 @@
   "InfinitaryUITests/PhoneJourney/testPanelsTab",
   "InfinitaryUITests/PhoneJourney/testRevisionKeepsTheThreadShowing",
   "InfinitaryUITests/PhoneJourney/testCardTopBar",
+  "InfinitaryUITests/PhoneJourney/testRevisedCardScrollsToItsChoices",
   "InfinitaryUITests/PhoneJourney/testReaderCardUnsafeLine",
   "InfinitaryUITests/PhoneJourney/testSecretAskKeptFromPhone",
   "InfinitaryUITests/PhoneJourney/testSettingsPages",

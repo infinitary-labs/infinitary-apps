@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "phone-revised-card-reaches-choices",
+      "kind": "fix",
+      "area": "devices",
+      "title": "A long card revised while you read it scrolls to its choices on your iPhone and iPad",
+      "body": "When a crewmate revised a long card into folded sections while you were reading near its end, a swipe on your iPhone or iPad could slide the words up inside the card and leave blank space, and its choices stayed out of reach. A swipe now always moves the whole card, so you can reach every part of it and press its choices.",
+      "noPicture": "The card looks as it did; this fix changes only where a swipe on a revised card takes you.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -246,6 +246,7 @@ private struct PhoneConversationRoundView: View {
     let before: PhoneConversationRound?
     let working: Bool
     let openCard: (String) -> Void
+    @State private var showsReplaced = false
 
     var body: some View {
         let newDay = round.at > 0 && (before.map { !PhoneConversationTime.sameDay($0.at, round.at) } ?? true)
@@ -298,15 +299,20 @@ private struct PhoneConversationRoundView: View {
                         .background(PhoneTheme.text.opacity(round.takenBack ? 0.04 : 0.1), in: PhoneConversationBubble())
                         .accessibilityIdentifier("conversation-you")
                 }
-                // A replacement folds the words it replaced under Edited.
+                // A replacement folds the words it replaced under Edited. A DisclosureGroup is not used: it
+                // starts unfolded in this list and lends its identifier to the words it folds.
                 if let replaced = round.replaces {
-                    DisclosureGroup {
+                    Button { showsReplaced.toggle() } label: {
+                        HStack(spacing: 4) {
+                            Text(PhoneMessages.shellConversationEdited()).font(PhoneFont.micro)
+                            Image(systemName: showsReplaced ? "chevron.up" : "chevron.down").font(PhoneFont.micro)
+                        }.foregroundStyle(PhoneTheme.muted)
+                    }.buttonStyle(.plain).accessibilityIdentifier("conversation-edited")
+                    if showsReplaced {
                         Text(replaced.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? PhoneMessages.phoneComposerPictureOnly() : replaced)
                             .font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary).textSelection(.enabled)
-                            .frame(maxWidth: .infinity, alignment: .trailing).accessibilityIdentifier("conversation-replaced")
-                    } label: {
-                        Text(PhoneMessages.shellConversationEdited()).font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted)
-                    }.tint(PhoneTheme.muted).accessibilityIdentifier("conversation-edited")
+                            .accessibilityIdentifier("conversation-replaced")
+                    }
                 }
             }
         }

@@ -402,7 +402,7 @@ extension PhoneJourney {
         let marks = app.staticTexts.matching(identifier: "conversation-reverted")
         XCTAssertEqual(waitForPhonePredicate(NSPredicate { _, _ in marks.count == 2 }, object: nil, timeout: 10), .completed,
                        "The Conversation reads both messages Reverted: \(app.debugDescription)")
-        let edited = app.descendants(matching: .any)["conversation-edited"]
+        let edited = app.buttons["conversation-edited"]
         XCTAssertTrue(edited.waitForPresence(timeout: 10), "The replacement keeps its Edited mark: \(app.debugDescription)")
         tapOnPhone(edited)
         let replaced = app.staticTexts.matching(identifier: "conversation-replaced").firstMatch

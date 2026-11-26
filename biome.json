@@ -382,6 +382,7 @@
         "!src/core/orchestrator/intake.git.test.ts",
         "!src/core/orchestrator/repositoryMoves.git.test.ts",
         "!src/core/orchestrator/reviews.tier.test.ts",
+        "!src/core/orchestrator/settleOwners.autonomy.test.ts",
         "!src/core/orchestrator/settleOwners.keptMerge.test.ts",
         "!src/core/orchestrator/settleOwners.keptMergeRepairs.test.ts",
         "!src/core/orchestrator/settleOwners.keptMergeUnknown.test.ts",

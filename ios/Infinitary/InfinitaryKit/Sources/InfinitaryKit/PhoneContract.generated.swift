@@ -141,7 +141,7 @@ public enum PhoneRequest: String, Sendable {
 }
 
 public enum PhoneLimits {
-    public static let images = 4
+    public static let images = 10
     public static let imageBase64 = 7500000
     public static let text = 20000
     public static let steer = 4000

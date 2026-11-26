@@ -13,11 +13,14 @@ How it looks is the design skill's `components/voice/VoiceInput.prompt.md`; this
 | The card reply row | `ReplyRow` in `src/renderer/src/cards/CardThread.tsx` |
 | The key model, the shell keys and the code-block test | `src/renderer/src/design/core/composerKeys.ts` (`enterAction`, `messageKey`, `killRange`, `joinKill`, `isInsideOpenFence`); the shell keys' and recall's keys are keyboard commands (`docs/keyboard.md`) |
 | Trim, long-paste threshold, limit band, limits' words | `src/shared/composer.ts` (`composeTurnText`, `shouldChip`, `limitBand`, `COMPOSER_HINTS`, `PASTED_TEXT_WORDS`) |
-| The send limits | `src/shared/cards.ts` (`CONVERSE_TEXT_MAX_CHARS`, `TURN_IMAGES_MAX`) |
+| The send limits | `src/shared/cards.ts` (`CONVERSE_TEXT_MAX_CHARS`, `TURN_IMAGES_MAX`, `CONVERSATION_IMAGES_MAX`) |
 | Compose state, send, recall, transcript | `src/renderer/src/app/composer.ts` (`inputText`, `pastes`, `attachments`, `inputCaret`, `lastSent`, `submit`) |
 | Growth and the stage's reflow | `HomePrompt` in `src/renderer/src/app/HomePrompt.tsx`; `src/renderer/src/app/promptGeometry.ts`; what the input's foot stands on, `src/renderer/src/app/promptFoot.ts` |
 | The last turn above the input | `src/renderer/src/app/LastTurn.tsx`, `lastTurn.css`, its whole-word cut `src/renderer/src/design/core/wholeWords.ts`; the shell store's `lastTurn`; `src/shared/lastTurn.ts`; the reply line's rule `src/core/orchestrator/replyLine.ts` |
 | The IME guard | `src/renderer/src/design/core/composing.ts` (`isComposing`) |
+
+The desktop input keeps its four-picture selection limit.
+The conversation protocol accepts up to ten pictures from a compatible client; card replies and other surfaces retain their existing limits (`docs/contract.md`, "Conversation pictures").
 
 ## Keys
 

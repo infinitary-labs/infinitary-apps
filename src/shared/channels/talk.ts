@@ -3,6 +3,7 @@ import { batchAnswerSchema, batchesViewSchema } from "../batches";
 import { cardNotesSchema } from "../cardNotes";
 import {
   CARD_REPLY_MAX_CHARS,
+  CONVERSATION_IMAGES_MAX,
   CONVERSE_TEXT_MAX_CHARS,
   dropTaskReviewSchema,
   TURN_IMAGES_MAX,
@@ -50,7 +51,7 @@ export const talkChannels = {
                 name: z.string().max(120).optional(),
               }),
             )
-            .max(TURN_IMAGES_MAX)
+            .max(CONVERSATION_IMAGES_MAX)
             .optional(),
           /** The card currently on screen, if any. A hint, not the topic. */
           visibleCardId: z.string().min(1).max(128).optional(),

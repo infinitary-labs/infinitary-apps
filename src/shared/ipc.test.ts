@@ -1,5 +1,6 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { CONVERSE_TEXT_MAX_CHARS, TURN_IMAGES_MAX } from "./cards";
+import { CONVERSE_TEXT_MAX_CHARS } from "./cards";
 import {
   CHANGE_PRESENTATIONS_SINCE,
   contractAccess,
@@ -83,13 +84,16 @@ describe("ipc contract", () => {
     expect(missing.success).toBe(false);
   });
 
-  it("bounds a captain turn by the limits the composer reads", () => {
+  it("bounds conversation text and images as approved in INP-16", () => {
     const at = "x".repeat(CONVERSE_TEXT_MAX_CHARS);
-    const image = { mimeType: "image/png" as const, data: "iVBORw0KGgo=" };
+    const image = {
+      mimeType: "image/png" as const,
+      data: readFileSync("tests/e2e/fixtures/contribution-picture.png").toString("base64"),
+    };
     expect(parseInvokeRequest("inf:converse", [at])).toEqual([at]);
     expect(() => parseInvokeRequest("inf:converse", [`${at}x`])).toThrow();
     expect(() => parseInvokeRequest("inf:converse", [{ text: `${at}x` }])).toThrow();
-    const full = Array.from({ length: TURN_IMAGES_MAX }, () => image);
+    const full = Array.from({ length: 10 }, () => image);
     expect(parseInvokeRequest("inf:converse", [{ images: full }])).toEqual([{ images: full }]);
     expect(() => parseInvokeRequest("inf:converse", [{ images: [...full, image] }])).toThrow();
   });

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "conversation-ten-images",
+      "reason": "The conversation protocol accepts ten images, but existing app inputs retain their current limits until a compatible client uses it."
+    }
+  ]
+}

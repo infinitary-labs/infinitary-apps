@@ -4,6 +4,12 @@ What a client of the home is written against: `docs/contract.json`, every core r
 A paired view, the helper and a native app read the same file.
 How the connection carries it is `docs/connection.md`; how a device pairs is `docs/devices.md`.
 
+## Conversation pictures
+
+A first mate conversation accepts up to ten pictures in one turn (`conversation-ten-images`).
+A client sends more than four only when the home lists that change; an older home retains the four-picture limit.
+Card replies and other surfaces keep their existing limits.
+
 ## Shared card sightings
 
 `card-current-update-seen` adds optional `currentUpdateId` and `currentUpdateSeen` snapshot fields and a separate `inf:cards:seen-update(cardId, lifecycleId, updateId)` request.

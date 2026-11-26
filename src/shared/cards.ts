@@ -1325,6 +1325,7 @@ export const turnImageSchema = z.strictObject({
 export type TurnImage = z.infer<typeof turnImageSchema>;
 
 export const TURN_IMAGES_MAX = 4;
+export const CONVERSATION_IMAGES_MAX = 10;
 
 /** A pasted picture's size cap, before base64 (the schema's data cap mirrors it). */
 export const TURN_IMAGE_MAX_BYTES = 5 * 1024 * 1024;

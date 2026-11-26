@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { AskAttachedVia } from "../storage/askStore";
 import { openInMemoryDatabase } from "../storage/db";
+import { TaskEventStore } from "../storage/taskEventStore";
 import { seedTask } from "./seedTask";
 import { TaskService } from "./taskService";
 
@@ -329,5 +330,43 @@ describe("where a card's work came from", () => {
       through: 0,
     });
     threadAgrees(tasks, "alpha", "slow");
+  });
+
+  it("reads no task beyond the nearest one that holds the origin", () => {
+    // The card stack draws this line for every open card each time it
+    // rebuilds; a walk that read every task a card's work follows up on
+    // paused the window while a checks reading redrew one card (INF-6958).
+    const { tasks, said } = setup();
+    const chain = ["older", "old", "start"];
+    chain.forEach((id, index) => {
+      seedTask(tasks, {
+        id,
+        title: `Fix the slow journey, round ${index + 1}`,
+        status: "completed",
+      });
+      said(
+        `ask-${id}`,
+        `look at the slow journey again, round ${index + 1}`,
+        id,
+        "tool:create_task",
+        true,
+      );
+      const earlier = chain[index - 1];
+      if (earlier) tasks.graph.link(id, earlier, "discovered-from", "firstmate");
+    });
+    seedTask(tasks, { id: "part", title: "Time the journey", status: "idle", parentId: "start" });
+    const read = vi.spyOn(TaskEventStore.prototype, "listOriginEvents");
+    try {
+      expect(tasks.capture.originAbout("part")).toMatchObject({
+        kind: "asked",
+        text: "look at the slow journey again, round 3",
+        through: 1,
+      });
+      expect(new Set(read.mock.calls.map(([taskId]) => taskId))).toEqual(
+        new Set(["part", "start"]),
+      );
+    } finally {
+      read.mockRestore();
+    }
   });
 });

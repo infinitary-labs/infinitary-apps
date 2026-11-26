@@ -1,14 +1,5 @@
-import { clamp01, easeInOut, TAU } from "./face";
-import {
-  mixRgb,
-  type Rgb,
-  rgba,
-  type SkyColors,
-  type SkyDots,
-  type SkyPt,
-  twinkle,
-  WHITE,
-} from "./sky";
+import { clamp01, easeInOut, noise1, TAU } from "./face";
+import { mixRgb, type Rgb, rgba, type SkyColors, type SkyDots, type SkyPt, WHITE } from "./sky";
 
 // Two constellation fidgets: Orion and the Big Dipper. The 16 vertices glide
 // onto the figure's stars - on a small arc each, so the wind-up reads as
@@ -205,7 +196,7 @@ export function placeConstellationVertices(
     // A settled star reads as the near, bright family.
     p[3] += (0.7 - p[3]) * bi;
     dots.scale[i] = (dots.scale[i] as number) * (1 + (starScale(s.mag) - 1) * bi);
-    dots.fade[i] = (dots.fade[i] as number) * (1 + 0.18 * twinkle(tSec * 5 + si * 2.3) * bi);
+    dots.fade[i] = (dots.fade[i] as number) * (1 + 0.18 * noise1(tSec * 5 + si * 2.3) * bi);
     if (s.white) dots.white[i] = 0.85 * bi;
     else if (s.nebula) dots.white[i] = 0.35 * bi;
   }

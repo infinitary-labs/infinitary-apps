@@ -50,6 +50,3 @@ export const mixRgb = (a: Rgb, b: Rgb, t: number): Rgb => [
 
 export const rgba = (c: Rgb, a: number): string =>
   `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${Math.max(0, Math.min(1, a))})`;
-
-export const twinkle = (t: number): number =>
-  Math.sin(t * 1.7) * 0.5 + Math.sin(t * 2.9 + 1.3) * 0.3 + Math.sin(t * 4.7 + 4.1) * 0.2;

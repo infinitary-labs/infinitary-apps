@@ -10,7 +10,7 @@ Registration alone does not establish verification readiness.
 The captain registers the Desktop app client in Google Cloud, accepts Google's terms, verifies the domain with their own sign-in, submits the verification, and engages an assessor if Google requires one.
 The fleet prepares and checks the code, website copy, permission explanations, demonstration and technical answers.
 The captain's registration is INF-903; client integration and this material are INF-887; verification submission is INF-904; assessment is INF-905.
-No sample client belongs in `GOOGLE_OAUTH_CLIENT`.
+Infinitary registers no client of its own: each person signs in as their own (INF-5549's plan), so no registered client is submitted for verification here.
 
 | Requirement | What the submission must establish |
 | --- | --- |
@@ -22,7 +22,7 @@ No sample client belongs in `GOOGLE_OAUTH_CLIENT`.
 | Real demonstration | Infinitary's actual registered client, real consent screen and each requested permission's user-facing function appear in the verification video. A local stand-in is only rehearsal. |
 | Assessment | Google or its assessor confirms the applicable scope and assurance level. Draft answers and passing product tests are not a letter of assessment. |
 
-`GOOGLE_OAUTH_CLIENT` holds the registered Desktop app configuration for development and packaged builds on both channels.
+Infinitary's registered Desktop app client no longer exists in the code; packaged builds offer the Google connection on both channels through each person's own client.
 The captain's private experimental rollout uses stable for private testers and alpha for personal development.
 Packaged builds offer the existing Google connection but ignore development client and endpoint overrides.
 The app does not infer verification or assessment from the build channel or Google's publishing status.

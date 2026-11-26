@@ -47,7 +47,7 @@ export {
   githubIntegration,
 } from "./providers/github";
 export { CALENDAR_ACTIONS, CALENDAR_CHANGED_EVENT } from "./providers/google/calendar";
-export { GOOGLE_OAUTH_CLIENT, GOOGLE_SCOPES, googleSetup } from "./providers/google/client";
+export { GOOGLE_SCOPES, googleSetup } from "./providers/google/client";
 export { GMAIL_ACTIONS, GMAIL_MESSAGE_EVENT } from "./providers/google/gmail";
 export {
   GOOGLE_DATA_FENCE,

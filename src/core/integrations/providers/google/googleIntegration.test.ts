@@ -34,7 +34,6 @@ import { ScheduleStore } from "../../../storage/scheduleStore";
 import { atUtilityQos } from "../../../utilityQos";
 import {
   GOOGLE_DATA_FENCE,
-  GOOGLE_OAUTH_CLIENT,
   GOOGLE_SCOPES,
   googleIntegration,
   googleSetup,
@@ -951,8 +950,8 @@ describe("Google as an integration", () => {
     expect(await secrets.entries()).toEqual([]);
   });
 
-  it("keeps released Google on Infinitary's client and endpoints despite development overrides", () => {
-    // INF-887: the captain enables packaged private testing, not replacement clients or endpoints.
+  it("gives a packaged build no client of its own and ignores development overrides", () => {
+    // INF-6344: Infinitary's registered client is retired; a packaged build names none.
     const setup = googleSetup({
       packaged: true,
       env: {
@@ -961,27 +960,29 @@ describe("Google as an integration", () => {
         INFINITARY_GOOGLE_URL: "http://127.0.0.1:1",
       },
     });
-    // Compare booleans so a failure never prints the desktop client configuration.
-    expect(setup.client === GOOGLE_OAUTH_CLIENT).toBe(true);
-    expect(setup.endpoints).toEqual(googleSetup({ packaged: true, env: {} }).endpoints);
+    expect(setup.client).toBeUndefined();
+    expect(setup.signsIn).toBe(false);
+    expect(setup.endpoints).toEqual({
+      auth: "https://accounts.google.com/o/oauth2/v2/auth",
+      token: "https://oauth2.googleapis.com/token",
+      revoke: "https://oauth2.googleapis.com/revoke",
+      gmail: "https://gmail.googleapis.com",
+      calendar: "https://www.googleapis.com",
+    });
   });
 
-  it.each([false, true])(
-    "uses the registered client and Google endpoints without a local handoff file (packaged: %s)",
-    (packaged) => {
-      // INF-887: "can you update this PR to reflect that?" enables both packaged channels for private testing.
-      const setup = googleSetup({ packaged, env: {} });
-      expect(setup.client === GOOGLE_OAUTH_CLIENT).toBe(true);
-      expect(Boolean(setup.client.id && setup.client.secret)).toBe(true);
-      expect(setup.endpoints).toEqual({
-        auth: "https://accounts.google.com/o/oauth2/v2/auth",
-        token: "https://oauth2.googleapis.com/token",
-        revoke: "https://oauth2.googleapis.com/revoke",
-        gmail: "https://gmail.googleapis.com",
-        calendar: "https://www.googleapis.com",
-      });
-    },
-  );
+  it("names a client only for an unpackaged run that asks for one", () => {
+    expect(googleSetup({ packaged: false, env: {} }).client).toBeUndefined();
+    const named = googleSetup({
+      packaged: false,
+      env: {
+        INFINITARY_GOOGLE_CLIENT_ID: STAND_IN_CLIENT_ID,
+        INFINITARY_GOOGLE_CLIENT_SECRET: STAND_IN_CLIENT_SECRET,
+      },
+    });
+    expect(named.client).toEqual({ id: STAND_IN_CLIENT_ID, secret: STAND_IN_CLIENT_SECRET });
+    expect(named.signsIn).toBe(true);
+  });
 });
 
 /**

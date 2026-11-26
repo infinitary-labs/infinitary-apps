@@ -1,5 +1,5 @@
 ---
-source: 7a56385e256eae30
+source: 0f80b78b2636fcc9
 title: Aufgaben und Crewmitglieder
 description: Was eine Aufgabe ist, wie sie vom Backlog bis zu „Fertig“ wandert, wo du sie verfolgst und wie du das Crewmitglied lenkst, das sie bearbeitet.
 ---
@@ -53,7 +53,7 @@ Zum Beispiel zeigt eine Backlog-Aufgabe auf diesem Computer <svg class="task-mar
 
 Eine in Teile aufgeteilte Aufgabe listet ihre Teile unter sich auf.
 Sobald einer ihrer Teile startet, steht die Aufgabe unter Arbeitet, mit ihren offenen Teilen darunter.
-Die Aufgabe behält dort ihr eigenes Zeichen, deshalb kann eine Aufgabe, deren Teile die Arbeit erledigen, unter Arbeitet das Zeichen für Backlog oder Eingereiht zeigen.
+Eine eingereihte Aufgabe behält dort das Zeichen für Eingereiht, eine Backlog-Aufgabe, deren Teile die Arbeit erledigen, zeigt dagegen das Zeichen ihres dringendsten offenen Teils, etwa Wartet auf dich, während die Karte eines Teils wartet.
 
 Um den Status einer Aufgabe und seinen Grund in Worten zu lesen, halte den Zeiger über ihre Zeile oder geh mit der Tastatur zur Zeile.
 

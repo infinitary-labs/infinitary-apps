@@ -11,6 +11,9 @@
         "light": "parent-status-follows-parts-light.webp",
         "alt": "A task's record whose status reads Waiting on you because one of its two open parts has a card waiting."
       },
+      "docsSite": [
+        "tasks-and-crewmates"
+      ],
       "provenance": {
         "origin": "change"
       }

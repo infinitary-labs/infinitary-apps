@@ -1,5 +1,5 @@
 ---
-source: 7a56385e256eae30
+source: 0f80b78b2636fcc9
 title: Tâches et équipiers
 description: Ce qu’est une tâche, comment elle passe de la réserve à terminée, où la suivre et comment orienter l’équipier qui s’en charge.
 ---
@@ -53,7 +53,7 @@ Par exemple, une tâche de la réserve sur cet ordinateur affiche <svg class="ta
 
 Une tâche découpée en parties liste ses parties en dessous.
 Dès que l’une de ses parties démarre, la tâche se range sous En cours, avec ses parties ouvertes en dessous.
-La tâche y garde sa propre marque, si bien qu’une tâche dont les parties font le travail peut afficher la marque Réserve ou En attente sous En cours.
+Une tâche en attente y garde la marque En attente, tandis qu’une tâche de la réserve dont les parties font le travail prend la marque de sa partie ouverte la plus urgente, comme En attente de vous pendant que la carte d’une partie attend.
 
 Pour lire en toutes lettres l’état d’une tâche et sa raison, laissez le pointeur sur sa ligne, ou placez-vous sur la ligne avec le clavier.
 

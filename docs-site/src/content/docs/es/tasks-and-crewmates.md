@@ -1,5 +1,5 @@
 ---
-source: 7a56385e256eae30
+source: 0f80b78b2636fcc9
 title: Tareas y tripulantes
 description: Qué es una tarea, cómo pasa de pendiente a terminada, dónde seguirla y cómo orientar al tripulante que la hace.
 ---
@@ -53,7 +53,7 @@ Por ejemplo, una tarea Pendiente en esa computadora muestra <svg class="task-mar
 
 Una tarea dividida en partes enumera sus partes debajo.
 Cuando una de sus partes empieza, la tarea aparece en Trabajando, con sus partes abiertas debajo.
-La tarea conserva ahí su propia marca, así que una tarea cuyas partes hacen el trabajo puede mostrar la marca de Pendientes o de En cola dentro de Trabajando.
+Una tarea en cola conserva ahí la marca de En cola, mientras que una tarea de Pendientes cuyas partes hacen el trabajo toma la marca de su parte abierta más urgente, como Esperándote mientras la tarjeta de una parte espera.
 
 Para leer en palabras el estado de una tarea y su motivo, deja el puntero sobre su fila, o ve a la fila con el teclado.
 

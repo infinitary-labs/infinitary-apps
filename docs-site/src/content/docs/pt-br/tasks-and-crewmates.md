@@ -1,5 +1,5 @@
 ---
-source: 7a56385e256eae30
+source: 0f80b78b2636fcc9
 title: Tarefas e tripulantes
 description: O que é uma tarefa, como ela vai do backlog até concluída, onde acompanhá-la e como orientar o tripulante que a faz.
 ---
@@ -53,7 +53,7 @@ Por exemplo, uma tarefa do Backlog nesse computador mostra <svg class="task-mark
 
 Uma tarefa dividida em partes lista as partes embaixo dela.
 Assim que uma das partes começa, a tarefa passa a aparecer em Trabalhando, com as partes abertas embaixo dela.
-A tarefa mantém a própria marca ali, então uma tarefa cujas partes fazem o trabalho pode mostrar a marca de Backlog ou de Na fila em Trabalhando.
+Uma tarefa na fila mantém ali a marca de Na fila, enquanto uma tarefa do Backlog cujas partes fazem o trabalho mostra a marca da parte aberta mais urgente, como Aguardando você enquanto o cartão de uma parte espera.
 
 Para ler em palavras o status de uma tarefa e o motivo dele, deixe o ponteiro sobre a linha dela ou vá até a linha com o teclado.
 

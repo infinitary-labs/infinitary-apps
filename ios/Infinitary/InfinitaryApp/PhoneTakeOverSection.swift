@@ -2,7 +2,7 @@ import InfinitaryKit
 import LocalAuthentication
 import SwiftUI
 
-/// INF-4207 piece 9: Take over on the computer's sheet while the home is out of reach (docs/devices.md, "Taking over
+/// INF-4207 piece 9: Take over on Settings' Your computer page while the home is out of reach (docs/devices.md, "Taking over
 /// from a phone"; design skill `components/devices/PhoneView`, "Taking over"). Each computer that keeps a copy is
 /// read live: when its copy is from, where the home stands as it hears it, and every other copy with whether it may
 /// be newer, as its own window shows them. Take over asks once in place, then Face ID or the passcode, and that

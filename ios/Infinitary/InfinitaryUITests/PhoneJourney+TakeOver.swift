@@ -2,7 +2,7 @@ import XCTest
 
 /// The take-over part (scripts/phone-test-plan.ts): its test and the steps only it takes.
 extension PhoneJourney {
-    /// INF-4207 piece 9 (decision 9): with the home out of reach, the computer's sheet lists the computer that keeps a
+    /// INF-4207 piece 9 (decision 9): with the home out of reach, Settings' Your computer page lists the computer that keeps a
     /// copy with what Take over rests on there, and Take over, confirmed with Face ID, takes over there; the phone then
     /// follows the home at number 2 with no new code, and refuses number 1 coming back and a second home at number 2.
     /// Data: the test home's real record, copied to a computer that keeps a copy beside it (tests/helpers/phoneTakeOver.ts),
@@ -23,10 +23,9 @@ extension PhoneJourney {
         XCTAssertTrue(row.staticTexts["It cannot reach Test Mac mini either."].waitForPresence(timeout: 20), app.debugDescription)
         let button = app.buttons["take-over-\(id)"]
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "enabled == true"), object: button, timeout: 20), .completed, app.debugDescription)
-        // The sheet opens at half height with Take over below its edge: pulled up by its grabber, as a person does, the
-        // whole row is in view. A swipe on the row itself starts below the sheet's edge whenever the row's middle is.
-        let grabber = app.buttons["Sheet Grabber"].firstMatch
-        for _ in 0..<3 where !app.frame.contains(button.frame) { grabber.swipeUp(); waitForSteadyTarget(row) }
+        // Take over sits below the kept computers, under the fold on a small phone: Your computer's own page scrolls it
+        // into view, as a person does.
+        revealForProbe(button, in: app.scrollViews.containing(.other, identifier: "standby-\(id)").firstMatch)
         XCTAssertTrue(app.frame.contains(button.frame), app.debugDescription)
         // Both themes, for the change's pictures and its release note's hero picture.
         try await appearances("take-over-offer", showing: row.staticTexts["It cannot reach Test Mac mini either."])

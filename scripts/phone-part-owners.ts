@@ -112,7 +112,7 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/SimulatorNotifications.entitlements",
     "tests/helpers/phonePushRelay.ts",
   ] },
-  // INF-5265: the kept computers, the computer sheet that switches them and the second computer beside the test home.
+  // INF-5265: the kept computers, Settings' Your computer page that switches them and the second computer beside the test home.
   { parts: family("homes"), files: [
     "tests/helpers/phoneSecondHome.ts",
     "tests/helpers/phoneSecondHomeProcess.ts",

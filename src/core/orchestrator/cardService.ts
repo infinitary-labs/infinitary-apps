@@ -127,6 +127,7 @@ export class CardService {
   /** The reading each merge card behind its change was last handed on at (`mergeFellBehind`). */
   private readonly toldBehind = new Map<string, string>();
   private broadcastTimer: ReturnType<typeof setTimeout> | undefined;
+  private presentationCheck: ReturnType<typeof setImmediate> | undefined;
   private readonly unsubscribeTasks: () => void;
 
   constructor(private readonly host: CardServiceHost) {
@@ -240,6 +241,8 @@ export class CardService {
     this.unsubscribeTasks();
     if (this.broadcastTimer) clearTimeout(this.broadcastTimer);
     this.broadcastTimer = undefined;
+    if (this.presentationCheck) clearImmediate(this.presentationCheck);
+    this.presentationCheck = undefined;
   }
 
   /**
@@ -1620,13 +1623,29 @@ export class CardService {
   }
 
   scheduleBroadcast(): void {
-    const presentation = JSON.stringify(this.snapshot());
-    if (presentation !== this.presentation) {
-      this.presentation = presentation;
-      this.host.presentationChanged?.();
-    }
+    this.comparePresentation();
     if (this.broadcastTimer) return;
     this.broadcastTimer = setTimeout(() => this.flushBroadcast(), 60);
+  }
+
+  /**
+   * Whether the stack's presentation moved, read once the current turn's
+   * changes are in rather than once per change. Node drains every
+   * microtask after one I/O callback, so a check watch pass whose readings
+   * landed in one turn rebuilt every open card once per reading: 27
+   * readings on a record with 34 open cards held the main thread about a
+   * quarter of a second (INF-6958). An immediate runs before the board's
+   * coalescing timer, so the board push still sees this turn's mark.
+   */
+  private comparePresentation(): void {
+    if (this.presentationCheck) return;
+    this.presentationCheck = setImmediate(() => {
+      this.presentationCheck = undefined;
+      const presentation = JSON.stringify(this.snapshot());
+      if (presentation === this.presentation) return;
+      this.presentation = presentation;
+      this.host.presentationChanged?.();
+    });
   }
 }
 

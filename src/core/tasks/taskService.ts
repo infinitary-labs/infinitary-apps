@@ -1199,6 +1199,9 @@ export class TaskService {
    * event carries both. Children follow their parent's project, so the
    * subtree moves with it, into this project's repository when it has one,
    * except a part bound to a repository of its own (`moveIntoProject`).
+   * It leaves the task's own parent as it was: `updateFields` refuses a
+   * move that ends with the task under a parent in another project
+   * (`refuseApartFromParent`).
    */
   moveToProject(
     id: string,

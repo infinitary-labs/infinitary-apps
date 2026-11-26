@@ -28,6 +28,7 @@ import {
   RemoteLoginRefusedError,
   sendCopy,
 } from "./remoteLogin";
+import type { RemoteLoginUbuntu } from "./remoteLoginUbuntu";
 import { runSsh, SSH_FAILED } from "./ssh";
 import { sshRefusal } from "./sshRefusal";
 import { UBUNTU_PACKAGE_BIN, ubuntuPackageRelease } from "./ubuntuPackage";
@@ -61,7 +62,7 @@ export type HomeReach = {
   look: RemoteLogin["look"];
   withPassword: RemoteLogin["withPassword"];
   refusedOver: RemoteLogin["refusedOver"];
-  installUbuntu: RemoteLogin["installUbuntu"];
+  installUbuntu: RemoteLoginUbuntu["installUbuntu"];
   askLink: RemoteLogin["askLink"];
   sshFor: RemoteLogin["sshFor"];
   stepper: (address: string) => ReturnType<RemoteLogin["stepper"]>;

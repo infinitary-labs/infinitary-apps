@@ -749,13 +749,13 @@ export async function createServices(
     runtimeFor: (accountId) => vault.runtimeFor(accountId),
     baseRuntime: auth.modelRuntime,
   });
-  const usageRoutes = usageReportRoutes(paths.userData);
+  const usageRoutes = usageReportRoutes(paths, (taskId) => tasks.get(taskId), crewmateTranscript);
   const { usageStore, costLimitStore, appCostLimitView, recordUsage, ...usage } = homeUsage(db, {
     appLimit: () => settings.getTaskCostLimit(),
     projectLimit: (repoId) => repos.get(repoId)?.costLimit,
     isTask: (taskId) => tasks.get(taskId) !== undefined,
     hearEvents: (hear) => eventSeam.attachUsageReport(hear),
-    reportDestinations: usageRoutes.destinations,
+    ...usageRoutes.facts,
   });
   taskCostOf = usage.taskCostOf;
   // Card-worthy moments reach Notification Center, and each paired phone

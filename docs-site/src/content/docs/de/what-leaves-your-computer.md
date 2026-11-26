@@ -1,5 +1,5 @@
 ---
-source: bb4790dc9c25e709
+source: 2bc19810a789f3f6
 title: Was deinen Computer verlässt
 description: Was Infinitary sendet, wohin es geht und der eine Schalter, der überhaupt etwas an uns sendet.
 ---
@@ -54,8 +54,10 @@ Beide Arten von Einrichtung bekommen nur Claudes Arbeit, wenn sie ihre Nutzung �
 ## Deine eigenen Nutzungsberichte {#your-own-usage-reporting}
 
 Eine Berichtsverbindung, die du in Einstellungen → **Intelligenz** hinzufügst, schickt die Nutzung deiner Crew an das Überwachungs- oder Tracing-Werkzeug, das du nennst, etwa Grafana, Datadog oder Langfuse, sobald du sie speicherst.
-Sie schickt dieselben Einträge: Zeiten, Modelle, Tokens und geschätzte Kosten, ob dein erster Offizier oder ein Crewmitglied die Arbeit getan hat und die Art der Arbeit, nie deine Worte, Aufgabentitel oder Projektnamen.
+Sie schickt dieselben Einträge: Zeiten, Modelle, Tokens und geschätzte Kosten, ob dein erster Offizier oder ein Crewmitglied die Arbeit getan hat und die Art der Arbeit, nie Aufgabentitel oder Projektnamen.
 Jeder Eintrag trägt außerdem die E-Mail-Adresse deiner Claude-Code-Anmeldung, wenn dieser Computer eine hat, damit das Werkzeug deine Arbeit pro Person zählen kann.
+Deine Worte gehen nur mit, wenn du **Auch Prompts und Antworten senden** einschaltest: die Prompts deiner Crew, ihre Antworten und das, was sie ihren Werkzeugen gibt, wobei Schlüssel und Passwörter, die Infinitary erkennt, vorher verborgen werden.
+Die Berichtseinrichtung einer Firma bekommt deine Worte nie.
 Sie schickt alle zehn Minuten und noch einmal, wenn du die App beendest.
 Header, die das Werkzeug verlangt, etwa ein Token, bleiben in Geheimnisse und gehen nur an diese Adresse.
 Einstellungen → **Nutzung** nennt, wohin sie geht, und Entfernen beendet sie.

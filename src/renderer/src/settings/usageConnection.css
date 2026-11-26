@@ -23,6 +23,10 @@
   font-size: var(--text-sm);
   color: var(--fg-2);
 }
+/* The switch's label is its press target: only as wide as its words, not the form. */
+.fm-usage-conn-words > label {
+  justify-self: start;
+}
 .fm-usage-conn-hint {
   font-size: var(--text-sm);
   color: var(--fg-3);

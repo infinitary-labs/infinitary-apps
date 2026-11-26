@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "batch-mac-group-confirmation",
+      "reason": "Routes failed Mac journey groups to macOS confirmation in batch CI; the app is unchanged."
+    }
+  ]
+}

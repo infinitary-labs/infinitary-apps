@@ -2429,8 +2429,12 @@
 "phoneWorkStateWorking" = "Trabajando";
 "phoneWorkspaceShow" = "Mostrar";
 "phoneWorkspaceTabs" = "Pestañas";
+"placeAs" = "como %1$@";
 "placeHere" = "aquí";
 "placeOn" = "en %1$@";
+"placeOnOther" = "en la otra computadora";
+"placeOther" = "La otra computadora";
+"placeRunningAs" = "Se ejecuta como %1$@";
 "placeThisComputer" = "esta computadora";
 "policyAsksFirst" = "Pregunta antes";
 "policyCareBound" = "La fusión local usa el cuidado Predeterminado; Cuidadoso sigue solicitado para las solicitudes de incorporación de cambios.";
@@ -3052,7 +3056,7 @@
 "settingsDevicesExpiredPhone" = "El enlace caducó antes de que algún teléfono lo usara.";
 "settingsDevicesExpiredPhoneReady" = "Crea uno nuevo cuando el teléfono esté listo.";
 "settingsDevicesFixIt" = "Arreglar";
-"settingsDevicesFixItNamed" = "Volver a preparar el trabajo en %1$@";
+"settingsDevicesFixItNamed" = "Volver a preparar el trabajo: %1$@";
 "settingsDevicesHeldLine" = "No ha llegado a esta computadora desde que se unió. macOS deja que Infinitary en %1$@ use tu red local solo cuando alguien allí lo permite. Si agregas %1$@ por su dirección, esta computadora se conecta con tu clave SSH.";
 "settingsDevicesIdle" = "sin actividad";
 "settingsDevicesIntroHere" = "Tu primer oficial vive en esta computadora. Sus tareas y su conversación se quedan aquí. Desde cualquier computadora que agregues puedes controlarlo, y cualquier computadora que agregues puede ejecutar el trabajo de un proyecto. Otro usuario en esta computadora ejecuta trabajo, y tu primer oficial puede mudarse allí. %1$@";
@@ -3278,6 +3282,7 @@
 "settingsForgeNotSignedIn" = "sin sesión iniciada en %1$@";
 "settingsForgeOpenHost" = "Abrir %1$@";
 "settingsForgeRowActions" = "Acciones de %1$@ %2$@";
+"settingsForgeServerOn" = "%1$@ %2$@";
 "settingsForgeSignIn" = "Iniciar sesión";
 "settingsForgeSignInAgain" = "Volver a iniciar sesión";
 "settingsForgeSignInAgainSay" = "Vuelve a iniciar sesión.";

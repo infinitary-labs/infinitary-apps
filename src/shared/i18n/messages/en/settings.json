@@ -628,6 +628,7 @@
   "settingsForgeNotSignedIn": "not signed in to {host}",
   "settingsForgeOpenHost": "Open {host}",
   "settingsForgeRowActions": "{host} {where} actions",
+  "settingsForgeServerOn": "{name} {where}",
   "settingsForgeSignIn": "Sign in",
   "settingsForgeSignInAgain": "Sign in again",
   "settingsForgeSignInAgainSay": "Sign in again.",

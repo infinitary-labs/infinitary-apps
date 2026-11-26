@@ -1,8 +1,10 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Card } from "@shared/cards";
+import { inLanguage } from "@shared/i18n/current";
+import { wordSaidMarks } from "@shared/i18n/said";
 import type { QuotaProviderView } from "@shared/quota";
-import type { ComputerSignIns } from "@shared/signIns";
+import { type ComputerSignIns, signInPlace } from "@shared/signIns";
 import { describe, expect, it } from "vitest";
 import { CreditsCards } from "./creditsCards";
 import { parseCodexUsage } from "./providers/codex";
@@ -114,7 +116,8 @@ function home(
         signIns.now = said(100, on);
       },
       lastSaid: (deviceId) => (deviceId === "mini" ? signIns.now : null),
-      placeOf: (deviceId) => (deviceId === "mini" ? { where: "on Mac mini" } : undefined),
+      placeOf: (deviceId) =>
+        deviceId === "mini" ? signInPlace({ name: "Mac mini", onThisMac: false }) : undefined,
       canUseSavedReset: () => canUseSavedReset,
     },
     offersAutoResets: () => offersAutoResets,
@@ -178,6 +181,16 @@ describe("a computer's own account that used up its allowance", () => {
     );
     resetsOnly.cards.spentAt(["openai-codex"], "mini");
     expect(resetsOnly.raised).toEqual([]);
+  });
+
+  it("names the computer whose crew waits in the reader's language", () => {
+    const world = home({ now: said(100, false, { credits: false, savedResets: true }) });
+    world.cards.spentAt(["openai-codex"], "mini");
+    const body = world.raised[0]?.body ?? "";
+    expect(wordSaidMarks(body)).toContain("Crew work on Mac mini drops to a weaker model");
+    const german = inLanguage("de", () => wordSaidMarks(body));
+    expect(german).toContain("Crew-Arbeit auf Mac mini wechselt zu einem schwächeren Modell");
+    expect(german).not.toContain("on Mac mini");
   });
 
   // INF-5478's plan, piece 2: the run-out card offers Use saved resets on their own beside the reset.

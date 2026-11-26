@@ -4,7 +4,12 @@ import { keyFormStartHost } from "@shared/forgeKinds";
 import { FORGE_CLI_WORDS, type ForgeServerView } from "@shared/forges";
 import * as m from "@shared/i18n/messages.generated";
 import type { ComputerForges, DeviceSignIns } from "@shared/signIns";
-import { REMOTE_SIGN_IN_UPDATE_NOTE, signInPlace } from "@shared/signIns";
+import {
+  REMOTE_SIGN_IN_UPDATE_NOTE,
+  type SignInPlace,
+  signInPlace,
+  wordedPlace,
+} from "@shared/signIns";
 import { useCallback, useEffect, useState } from "react";
 import { useShellStore } from "../app/store";
 import { Badge, Button, RowMenu, StatusDot, type StatusDotTone } from "../design";
@@ -42,7 +47,7 @@ export type DeviceForgeRow = {
   host: string;
   /** The person's word for the host ("GitHub"). */
   hostName: string;
-  place: ReturnType<typeof signInPlace>;
+  place: SignInPlace;
   inReach: boolean;
   /** Out of reach only because its connection is being made. */
   connecting: boolean;
@@ -88,13 +93,13 @@ export function deviceForgeRowView(row: DeviceForgeRow): {
     return {
       tone: "idle",
       label: m.settingsForgeNotSignedIn({ host: row.hostName }),
-      title: row.place.label,
+      title: wordedPlace(row.place).label,
       line: `${m.settingsForgeNotSignedIn({ host: row.hostName })}${away}`,
       reauth: false,
     };
   const title = row.signIn.login ? `${row.hostName} · ${row.signIn.login}` : row.hostName;
   const through = row.signIn.way === "cli" ? ` · ${FORGE_CLI_WORDS.through}` : "";
-  const line = `${row.place.label}${through} · ${DEVICE_FORGE_WORDS.deviceRole}${away}`;
+  const line = `${wordedPlace(row.place).label}${through} · ${DEVICE_FORGE_WORDS.deviceRole}${away}`;
   switch (row.signIn.state) {
     case "ok":
       return { tone: "ok", label: m.settingsForgeSignedIn(), title, line, reauth: false };
@@ -263,7 +268,7 @@ export function DeviceForgeRows({ onAny }: { onAny?: (any: boolean) => void } = 
                 <span className="fm-forges-dot" aria-hidden="true">
                   <StatusDot tone="idle" label={line} />
                 </span>
-                <span className="fm-forges-name">{place.label}</span>
+                <span className="fm-forges-name">{wordedPlace(place).label}</span>
                 <span className="fm-forges-who">
                   <span className="fm-forges-sub">{line}</span>
                 </span>
@@ -338,7 +343,10 @@ export function DeviceForgeRows({ onAny }: { onAny?: (any: boolean) => void } = 
                       key={server.kind}
                       host={{
                         host: `${server.kind}@${device.deviceId}`,
-                        name: `${server.name} ${place.where}`,
+                        name: m.settingsForgeServerOn({
+                          name: server.name,
+                          where: wordedPlace(place).where,
+                        }),
                       }}
                       busy={false}
                       onConnect={() =>
@@ -441,7 +449,10 @@ function DeviceForgeRowLine({
       <span className="fm-forges-menu">
         {row.signIn && (
           <RowMenu
-            label={m.settingsForgeRowActions({ host: row.hostName, where: row.place.where })}
+            label={m.settingsForgeRowActions({
+              host: row.hostName,
+              where: wordedPlace(row.place).where,
+            })}
             items={[
               {
                 id: "sign-out",

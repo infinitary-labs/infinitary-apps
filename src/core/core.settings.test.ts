@@ -7,6 +7,7 @@ import { feedLineFrom } from "@shared/feed";
 import { englishOf, said } from "@shared/i18n/said";
 import { type KeymapSnapshot, keymapSnapshot } from "@shared/keymap";
 import { PANEL_SETTING_NAMES } from "@shared/panelSettingNames";
+import { signInPlace } from "@shared/signIns";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { fakeHost, quotaFixture } from "../../tests/helpers/bootedCore";
 import { scratchDir } from "../../tests/helpers/scratchDirs";
@@ -1247,7 +1248,7 @@ describe("the core, driven with no Electron in the process", () => {
     const placeOf = vi
       .spyOn(computer, "placeOf")
       .mockImplementation((id) =>
-        id === "mini" ? { label: "Mac mini", who: "Mac mini", where: "on Mac mini" } : undefined,
+        id === "mini" ? signInPlace({ name: "Mac mini", onThisMac: false }) : undefined,
       );
     const setAccount = vi.spyOn(computer, "setAccount").mockImplementation(async (_id, order) => {
       if (order.kind === "set-enabled")

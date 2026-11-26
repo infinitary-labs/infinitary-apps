@@ -1,6 +1,6 @@
 import type { Card } from "@shared/cards";
 import type { QuotaSnapshotView } from "@shared/quota";
-import type { ComputerSignIns } from "@shared/signIns";
+import type { ComputerSignIns, SignInPlace } from "@shared/signIns";
 import { creditsOfferCard, creditsOfferCardId } from "../orchestrator/hostCards";
 import {
   type CreditsOffer,
@@ -29,7 +29,7 @@ export type CreditsCardsOptions = {
   computers: {
     keepGoing: (deviceId: string, accountId: string, on: boolean) => Promise<unknown>;
     lastSaid: (deviceId: string) => ComputerSignIns | null;
-    placeOf: (deviceId: string) => { where: string } | undefined;
+    placeOf: (deviceId: string) => Pick<SignInPlace, "where" | "said"> | undefined;
     /** Whether that computer can use a saved reset now: it takes the order and is in reach. */
     canUseSavedReset: (deviceId: string) => boolean;
   };
@@ -82,8 +82,8 @@ export class CreditsCards {
         );
       return;
     }
-    const where = this.options.computers.placeOf(deviceId)?.where;
-    if (!where) return;
+    const place = this.options.computers.placeOf(deviceId);
+    if (!place) return;
     const resets = this.options.computers.canUseSavedReset(deviceId);
     for (const offer of creditsOffers(
       this.options.computers.lastSaid(deviceId)?.quota ?? undefined,
@@ -100,7 +100,7 @@ export class CreditsCards {
         creditsOfferCard({
           ...shown,
           ...this.autoOffer(shown, shown.accountId, deviceId),
-          computer: { deviceId, where },
+          computer: { deviceId, where: place.where, said: place.said },
         }),
       );
     }

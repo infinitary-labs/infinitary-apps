@@ -187,6 +187,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | token, credential (never said) | تسجيل الدخول | "رموز" appears only for counted model tokens in Usage. |
 | unsafe data reader | قارئ البيانات غير الآمنة | A crewmate that reads words anyone can write. |
 | Usage | الاستخدام | |
+| user (another user account on this computer) | مستخدم | "as {user}" is "باسم {user}", as in "التشغيل باسم مستخدم آخر". |
 | version | نسخة | Said in place of SHA or head. |
 | Waiting on you (board lane) | بانتظارك | |
 | where the project lives | حيث يُستضاف المشروع | "مستضيف المشروع" for "the project's host". |

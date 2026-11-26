@@ -1,5 +1,9 @@
 {
+  "placeAs": "sous l’utilisateur {user}",
   "placeHere": "ici",
   "placeOn": "sur {computer}",
+  "placeOnOther": "sur l’autre ordinateur",
+  "placeOther": "L’autre ordinateur",
+  "placeRunningAs": "Sous l’utilisateur {user}",
   "placeThisComputer": "cet ordinateur"
 }

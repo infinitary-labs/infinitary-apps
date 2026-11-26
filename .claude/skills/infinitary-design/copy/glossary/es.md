@@ -167,6 +167,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | unmerged work | trabajo sin fusionar | What another computer still holds when it is removed: "Su trabajo sin fusionar viene primero a esta computadora". |
 | unsafe data reader | lector de datos no seguros | A crewmate that reads words anyone can write. |
 | Usage | Uso | |
+| user (another user account on this computer) | usuario | "as {user}" is "como {user}"; "Se ejecuta como {user}" for running as that user. |
 | where the project lives | donde se aloja el proyecto | |
 | window wash | velo de la ventana | The theme color laid over the blurred background. |
 | working copy | copia de trabajo | |

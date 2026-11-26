@@ -1,5 +1,9 @@
 {
+  "placeAs": "以 {user} 身份",
   "placeHere": "在这里",
   "placeOn": "在 {computer} 上",
+  "placeOnOther": "在另一台电脑上",
+  "placeOther": "另一台电脑",
+  "placeRunningAs": "以 {user} 身份运行",
   "placeThisComputer": "这台电脑"
 }

@@ -2539,8 +2539,12 @@ public enum PhoneMessages {
     public static func `phoneWorkStateWorking`() -> String { PhoneWords.format("phoneWorkStateWorking", []) }
     public static func `phoneWorkspaceShow`() -> String { PhoneWords.format("phoneWorkspaceShow", []) }
     public static func `phoneWorkspaceTabs`() -> String { PhoneWords.format("phoneWorkspaceTabs", []) }
+    public static func `placeAs`(`user`: String) -> String { PhoneWords.format("placeAs", [`user`]) }
     public static func `placeHere`() -> String { PhoneWords.format("placeHere", []) }
     public static func `placeOn`(`computer`: String) -> String { PhoneWords.format("placeOn", [`computer`]) }
+    public static func `placeOnOther`() -> String { PhoneWords.format("placeOnOther", []) }
+    public static func `placeOther`() -> String { PhoneWords.format("placeOther", []) }
+    public static func `placeRunningAs`(`user`: String) -> String { PhoneWords.format("placeRunningAs", [`user`]) }
     public static func `placeThisComputer`() -> String { PhoneWords.format("placeThisComputer", []) }
     public static func `policyAsksFirst`() -> String { PhoneWords.format("policyAsksFirst", []) }
     public static func `policyCareBound`() -> String { PhoneWords.format("policyCareBound", []) }
@@ -3421,6 +3425,7 @@ public enum PhoneMessages {
     public static func `settingsForgeNotSignedIn`(`host`: String) -> String { PhoneWords.format("settingsForgeNotSignedIn", [`host`]) }
     public static func `settingsForgeOpenHost`(`host`: String) -> String { PhoneWords.format("settingsForgeOpenHost", [`host`]) }
     public static func `settingsForgeRowActions`(`host`: String, `where`: String) -> String { PhoneWords.format("settingsForgeRowActions", [`host`, `where`]) }
+    public static func `settingsForgeServerOn`(`name`: String, `where`: String) -> String { PhoneWords.format("settingsForgeServerOn", [`name`, `where`]) }
     public static func `settingsForgeSignIn`() -> String { PhoneWords.format("settingsForgeSignIn", []) }
     public static func `settingsForgeSignInAgain`() -> String { PhoneWords.format("settingsForgeSignInAgain", []) }
     public static func `settingsForgeSignInAgainSay`() -> String { PhoneWords.format("settingsForgeSignInAgainSay", []) }
@@ -7295,8 +7300,12 @@ extension PhoneWords {
         "phoneWorkStateWorking": [],
         "phoneWorkspaceShow": [],
         "phoneWorkspaceTabs": [],
+        "placeAs": ["user"],
         "placeHere": [],
         "placeOn": ["computer"],
+        "placeOnOther": [],
+        "placeOther": [],
+        "placeRunningAs": ["user"],
         "placeThisComputer": [],
         "policyAsksFirst": [],
         "policyCareBound": [],
@@ -8177,6 +8186,7 @@ extension PhoneWords {
         "settingsForgeNotSignedIn": ["host"],
         "settingsForgeOpenHost": ["host"],
         "settingsForgeRowActions": ["host", "where"],
+        "settingsForgeServerOn": ["name", "where"],
         "settingsForgeSignIn": [],
         "settingsForgeSignInAgain": [],
         "settingsForgeSignInAgainSay": [],

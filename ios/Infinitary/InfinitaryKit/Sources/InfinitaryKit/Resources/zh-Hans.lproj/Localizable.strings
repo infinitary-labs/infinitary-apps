@@ -24,7 +24,7 @@
 "accountsCustomApiAddByHand" = "+ 手动添加";
 "accountsCustomApiAddHeader" = "添加请求头";
 "accountsCustomApiAddTitle" = "添加自定义 API";
-"accountsCustomApiAddTitleOn" = "添加自定义 API（%1$@）";
+"accountsCustomApiAddTitleOn" = "%1$@添加自定义 API";
 "accountsCustomApiAddressLabel" = "地址";
 "accountsCustomApiAddressNeeded" = "请输入服务器的地址。";
 "accountsCustomApiAnswerKind" = "%1$@（%2$@）";
@@ -245,8 +245,8 @@
 "accountsCustomApiUseFix" = "使用 %1$@";
 "accountsCustomApiUseForFirstMate" = "让大副使用 %1$@";
 "accountsCustomApiUseModel" = "使用 %1$@";
-"accountsCustomApiUseOn" = "使用（%1$@）";
-"accountsCustomApiUseTitle" = "使用 %1$@（%2$@）";
+"accountsCustomApiUseOn" = "%1$@使用";
+"accountsCustomApiUseTitle" = "%2$@使用 %1$@";
 "accountsSavedResetBusy" = "Infinitary 已在 %1$@ 上使用已保存的重置。请等待它完成。";
 "accountsSavedResetCodexStopped" = "Codex 在使用任何内容之前停止了响应，因此没有使用已保存的重置。请重试。";
 "accountsSavedResetNoCodex" = "要在 Infinitary 中使用已保存的重置，这台电脑需要 Codex %1$@ 或更高版本。请安装 Codex，或在 %2$@ 使用重置。";
@@ -575,7 +575,7 @@
 "cardRevisionMore" = "还有 %1$@ 个";
 "cardRevisionShowFewer" = "收起";
 "cardSavedResetCrewWaits" = "除非你使用一次已保存的重置，否则船员的工作会改用较弱的模型，或等到额度重置。";
-"cardSavedResetCrewWaitsThere" = "除非你使用一次已保存的重置，否则%1$@的船员工作会改用较弱的模型，或等到额度重置。";
+"cardSavedResetCrewWaitsThere" = "除非你使用一次已保存的重置，否则船员%1$@进行的工作会改用较弱的模型，或等到额度重置。";
 "cardSavedResetsOpenPage" = "在 %1$@ 打开用量页面";
 "cardSinceSeenApproved" = "你批准了较早的版本 · %1$@";
 "cardSinceSeenChose" = "你选择了“%1$@” · %2$@";
@@ -1174,9 +1174,9 @@
 "feedRunProjectHereInstead" = "要改为%2$@运行，请把 %3$@ 设为运行于 %1$@。";
 "feedRunTaskHereInstead" = "要改为%2$@运行，请让你的大副在 %1$@ 上运行 %3$@。";
 "feedRunsOnAutomatic" = "Infinitary 会为 %1$@ 中的每个新任务选择一台电脑。已开始的任务留在开始的地方。";
-"feedRunsOnFromHere" = "%2$@ 现在运行于 %3$@。它的下一个任务会在那里开始；%1$@运行中的任务会%1$@完成。";
+"feedRunsOnFromHere" = "%2$@ 现在改为%3$@运行。它的下一个任务会在那里开始；%1$@运行中的任务会%1$@完成。";
 "feedRunsOnHere" = "%3$@ 现在运行于 %1$@。它的下一个任务会%2$@开始。";
-"feedRunsOnThere" = "%1$@ 现在运行于 %2$@。它的下一个任务会在那里开始；已在运行的任务会在开始的地方完成。";
+"feedRunsOnThere" = "%1$@ 现在改为%2$@运行。它的下一个任务会在那里开始；已在运行的任务会在开始的地方完成。";
 "feedStarted" = "已开始";
 "feedStopped" = "已停止";
 "feedUndelivered" = "消息未送达：%1$@";
@@ -2429,8 +2429,12 @@
 "phoneWorkStateWorking" = "工作中";
 "phoneWorkspaceShow" = "显示";
 "phoneWorkspaceTabs" = "标签页";
+"placeAs" = "以 %1$@ 身份";
 "placeHere" = "在这里";
 "placeOn" = "在 %1$@ 上";
+"placeOnOther" = "在另一台电脑上";
+"placeOther" = "另一台电脑";
+"placeRunningAs" = "以 %1$@ 身份运行";
 "placeThisComputer" = "这台电脑";
 "policyAsksFirst" = "先询问";
 "policyCareBound" = "本地合并使用默认把关；拉取请求仍然要求谨慎把关。";
@@ -3052,7 +3056,7 @@
 "settingsDevicesExpiredPhone" = "链接在任何手机使用前就已过期。";
 "settingsDevicesExpiredPhoneReady" = "手机准备好后再生成一个新的。";
 "settingsDevicesFixIt" = "修复";
-"settingsDevicesFixItNamed" = "重新设置 %1$@ 上的工作";
+"settingsDevicesFixItNamed" = "重新设置工作：%1$@";
 "settingsDevicesHeldLine" = "它加入后还没有连上过这台电脑。只有当 %1$@ 那边有人允许后，macOS 才会让那里的 Infinitary 使用你的本地网络。如果按地址添加，这台电脑会改用你的 SSH 密钥连接它。";
 "settingsDevicesIdle" = "空闲";
 "settingsDevicesIntroHere" = "你的大副在这台电脑上。它的任务和对话都留在这里。你可以从任何添加的电脑控制它，任何添加的电脑也都能运行项目的工作。在这台电脑上以另一个用户身份运行会运行工作，你的大副也可以搬到那里。%1$@";
@@ -3144,7 +3148,7 @@
 "settingsDevicesRemovedOnceUpdatedLine" = "它更新后会被移除。";
 "settingsDevicesRemovedWhenBackLine" = "它恢复联系后会被移除。";
 "settingsDevicesRemoving" = "正在移除...";
-"settingsDevicesRemovingSetUp" = "正在移除 Infinitary %1$@ 设置的内容…";
+"settingsDevicesRemovingSetUp" = "正在移除 Infinitary %1$@设置的内容…";
 "settingsDevicesRowActions" = "%1$@ 的操作";
 "settingsDevicesRunningAs" = "以 %1$@ 身份运行";
 "settingsDevicesRuns" = "运行 %1$@";
@@ -3159,9 +3163,9 @@
 "settingsDevicesSignInsAddAccount" = "添加账户";
 "settingsDevicesSignInsAddressFor" = "%1$@ 的地址";
 "settingsDevicesSignInsAsOf" = "截至 %1$@";
-"settingsDevicesSignInsClaudeCode" = "Claude Code 会 %1$@ 自行登录。在那里登录一次，Infinitary 就会使用该登录。";
+"settingsDevicesSignInsClaudeCode" = "Claude Code 会%1$@自行登录。在那里登录一次，Infinitary 就会使用该登录。";
 "settingsDevicesSignInsCodeFor" = "%1$@ 的代码";
-"settingsDevicesSignInsCustomApi" = "%1$@ 添加自定义 API";
+"settingsDevicesSignInsCustomApi" = "%1$@添加自定义 API";
 "settingsDevicesSignInsDisconnect" = "断开连接";
 "settingsDevicesSignInsEnterCode" = "在这里的浏览器中打开链接并输入此代码。%1$@ 会自行完成登录。";
 "settingsDevicesSignInsFailed" = "%2$@ 无法登录 %1$@。";
@@ -3170,7 +3174,7 @@
 "settingsDevicesSignInsKeyFor" = "%1$@ 的密钥";
 "settingsDevicesSignInsNone" = "尚无登录。";
 "settingsDevicesSignInsOpenLink" = "打开链接";
-"settingsDevicesSignInsOwn" = "它自己的登录。%1$@ 运行的任务只使用这些登录。";
+"settingsDevicesSignInsOwn" = "它自己的登录。%1$@运行的任务只使用这些登录。";
 "settingsDevicesSignInsPasteAddress" = "粘贴地址";
 "settingsDevicesSignInsPasteBackAddress" = "在这里的浏览器中打开链接并登录。之后浏览器会停在一个无法访问的页面。复制该页面的地址并粘贴到这里。";
 "settingsDevicesSignInsPasteBackCode" = "在这里的浏览器中打开链接并登录。然后粘贴它显示的代码。";
@@ -3181,7 +3185,7 @@
 "settingsDevicesSignInsPasteYourKey" = "粘贴你的密钥";
 "settingsDevicesSignInsSendTo" = "发送到 %1$@";
 "settingsDevicesSignInsSigningIn" = "%2$@ 正在登录 %1$@。";
-"settingsDevicesSignInsTitle" = "%2$@ 登录 %1$@";
+"settingsDevicesSignInsTitle" = "%2$@登录 %1$@";
 "settingsDevicesSignInsUnanswered" = "%2$@ 没有说明它登录了什么。它可能需要与 %1$@ 相同版本的 Infinitary。";
 "settingsDevicesSignInsWaiting" = "正在等你在浏览器中完成";
 "settingsDevicesSignedInTo" = "已登录 %1$@";
@@ -3277,7 +3281,8 @@
 "settingsForgeNewCode" = "获取新代码";
 "settingsForgeNotSignedIn" = "未登录 %1$@";
 "settingsForgeOpenHost" = "打开 %1$@";
-"settingsForgeRowActions" = "%2$@ 的 %1$@ 操作";
+"settingsForgeRowActions" = "%1$@ 操作（%2$@）";
+"settingsForgeServerOn" = "%1$@（%2$@）";
 "settingsForgeSignIn" = "登录";
 "settingsForgeSignInAgain" = "重新登录";
 "settingsForgeSignInAgainSay" = "请重新登录。";
@@ -3526,7 +3531,7 @@
 "settingsPhoneProjectsThere" = "要添加或移除项目，或更改它的文件夹，请在 %1$@ 上打开“设置” → “项目”。";
 "settingsPhoneRunbooksLead" = "你的大副和船员们遵循的指南。关闭其中一份，工作时就不再使用它。";
 "settingsPhoneSave" = "保存";
-"settingsPhoneSignIn" = "%2$@ %1$@。";
+"settingsPhoneSignIn" = "%2$@%1$@。";
 "settingsPhoneSignInAction" = "登录";
 "settingsPhoneStoppedThere" = "%2$@ 请在 %1$@ 上的“设置” → “自动化”中重新选择它的集成。";
 "settingsPhoneTodayPartial" = "今天尚未结束";
@@ -3651,7 +3656,7 @@
 "settingsProjectsRowLinked" = "已关联";
 "settingsProjectsRowNoChecks" = "无检查";
 "settingsProjectsRowPersonal" = "就地构建";
-"settingsProjectsRowRuns" = "%1$@ 运行";
+"settingsProjectsRowRuns" = "%1$@运行";
 "settingsProjectsSaveDetails" = "保存详细信息";
 "settingsProjectsScope" = "范围";
 "settingsProjectsScopeDescription" = "哪些工作属于这个项目。你的大副会读取它来决定新工作放在哪里。";

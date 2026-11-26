@@ -6897,6 +6897,144 @@ ${events}` : prompt;
     }
     return `updating`;
   }
+  function placeAs(input) {
+    const user = input.user;
+    switch (currentLanguage()) {
+      case "ar":
+        return `باسم ${user}`;
+      case "de":
+        return `als ${user}`;
+      case "es":
+        return `como ${user}`;
+      case "fr":
+        return `sous l’utilisateur ${user}`;
+      case "ja":
+        return ` ${user} として`;
+      case "ko":
+        return `${user}(으)로`;
+      case "pt-BR":
+        return `como ${user}`;
+      case "zh-Hans":
+        return `以 ${user} 身份`;
+      case "zh-Hant":
+        return `以 ${user} 身分`;
+      case "en-XA":
+        return `[áš ${user} ~]`;
+      case "ar-XB":
+        return `‮as ‬${user}`;
+    }
+    return `as ${user}`;
+  }
+  function placeOn(input) {
+    const computer = input.computer;
+    switch (currentLanguage()) {
+      case "ar":
+        return `على ${computer}`;
+      case "de":
+        return `auf ${computer}`;
+      case "es":
+        return `en ${computer}`;
+      case "fr":
+        return `sur ${computer}`;
+      case "ja":
+        return ` ${computer} で`;
+      case "ko":
+        return `${computer}에서`;
+      case "pt-BR":
+        return `em ${computer}`;
+      case "zh-Hans":
+        return `在 ${computer} 上`;
+      case "zh-Hant":
+        return `在 ${computer} 上`;
+      case "en-XA":
+        return `[öñ ${computer} ~]`;
+      case "ar-XB":
+        return `‮on ‬${computer}`;
+    }
+    return `on ${computer}`;
+  }
+  function placeOnOther() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `على الحاسوب الآخر`;
+      case "de":
+        return `auf dem anderen Computer`;
+      case "es":
+        return `en la otra computadora`;
+      case "fr":
+        return `sur l’autre ordinateur`;
+      case "ja":
+        return `別のコンピューターで`;
+      case "ko":
+        return `다른 컴퓨터에서`;
+      case "pt-BR":
+        return `no outro computador`;
+      case "zh-Hans":
+        return `在另一台电脑上`;
+      case "zh-Hant":
+        return `在另一台電腦上`;
+      case "en-XA":
+        return `[öñ ţĥé öţĥéŕ çöɱþûţéŕ ~~~~~~~]`;
+      case "ar-XB":
+        return `‮on the other computer‬`;
+    }
+    return `on the other computer`;
+  }
+  function placeOther() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الحاسوب الآخر`;
+      case "de":
+        return `Der andere Computer`;
+      case "es":
+        return `La otra computadora`;
+      case "fr":
+        return `L’autre ordinateur`;
+      case "ja":
+        return `別のコンピューター`;
+      case "ko":
+        return `다른 컴퓨터`;
+      case "pt-BR":
+        return `O outro computador`;
+      case "zh-Hans":
+        return `另一台电脑`;
+      case "zh-Hant":
+        return `另一台電腦`;
+      case "en-XA":
+        return `[Ţĥé öţĥéŕ çöɱþûţéŕ ~~~~~~]`;
+      case "ar-XB":
+        return `‮The other computer‬`;
+    }
+    return `The other computer`;
+  }
+  function placeRunningAs(input) {
+    const user = input.user;
+    switch (currentLanguage()) {
+      case "ar":
+        return `التشغيل باسم ${user}`;
+      case "de":
+        return `Läuft als ${user}`;
+      case "es":
+        return `Se ejecuta como ${user}`;
+      case "fr":
+        return `Sous l’utilisateur ${user}`;
+      case "ja":
+        return `${user} として実行`;
+      case "ko":
+        return `${user}(으)로 실행`;
+      case "pt-BR":
+        return `Rodando como ${user}`;
+      case "zh-Hans":
+        return `以 ${user} 身份运行`;
+      case "zh-Hant":
+        return `以 ${user} 身分執行`;
+      case "en-XA":
+        return `[Ŕûññîñĝ áš ${user} ~~~~]`;
+      case "ar-XB":
+        return `‮Running as ‬${user}`;
+    }
+    return `Running as ${user}`;
+  }
   function settingsAccountsCount(input) {
     const count = formatNumber(input.count);
     switch (currentLanguage()) {
@@ -9046,15 +9184,15 @@ ${events}` : prompt;
       case "fr":
         return `Ses propres connexions. Une tâche qui s’exécute ${where} n’utilise que celles-ci.`;
       case "ja":
-        return `専用のサインインです。${where} 実行するタスクはこれだけを使います。`;
+        return `専用のサインインです。タスクを${where}実行するときは、これだけを使います。`;
       case "ko":
-        return `이 컴퓨터만의 로그인이에요. ${where} 실행되는 작업은 이 로그인만 써요.`;
+        return `전용 로그인이에요. ${where} 실행되는 작업은 이 로그인만 써요.`;
       case "pt-BR":
         return `Os logins próprios dele. Uma tarefa que roda ${where} usa só estes.`;
       case "zh-Hans":
-        return `它自己的登录。${where} 运行的任务只使用这些登录。`;
+        return `它自己的登录。${where}运行的任务只使用这些登录。`;
       case "zh-Hant":
-        return `它自己的登入。${where} 執行的任務只會使用這些登入。`;
+        return `它自己的登入。${where}執行的任務只會使用這些登入。`;
       case "en-XA":
         return `[Îţš öŵñ šîĝñ-îñš. Å ţášķ ţĥáţ ŕûñš ${where} ûšéš öñļý ţĥéšé. ~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
@@ -9560,9 +9698,9 @@ ${events}` : prompt;
       case "pt-BR":
         return `${action} ${where}.`;
       case "zh-Hans":
-        return `${where} ${action}。`;
+        return `${where}${action}。`;
       case "zh-Hant":
-        return `${where} ${action}。`;
+        return `${where}${action}。`;
       case "en-XA":
         return `[${action} ${where}. ~]`;
       case "ar-XB":
@@ -10749,15 +10887,15 @@ ${events}` : prompt;
       case "fr":
         return `s’exécute ${where}`;
       case "ja":
-        return `${where} 実行`;
+        return `実行は${where}`;
       case "ko":
-        return `실행 위치: ${where}`;
+        return `${where} 실행`;
       case "pt-BR":
         return `roda ${where}`;
       case "zh-Hans":
-        return `${where} 运行`;
+        return `${where}运行`;
       case "zh-Hant":
-        return `${where} 執行`;
+        return `${where}執行`;
       case "en-XA":
         return `[ŕûñš ${where} ~~]`;
       case "ar-XB":
@@ -16920,20 +17058,52 @@ ${events}` : prompt;
   function signInPlace(device) {
     const user = device.onThisMac && device.user ? userDisplayName(device.user) : void 0;
     return {
-      /** The group's label: "Mac mini", "Running as Builder". */
       label: deviceLabel(device),
-      /** After a verb: "Sign in to Codex on Mac mini", "... as Builder". */
       where: user ? `as ${user}` : `on ${device.name}`,
-      /** As a subject or an object: "Send to Mac mini", "Builder is signed in to Codex." */
-      who: user ?? device.name
+      who: user ?? device.name,
+      said: {
+        label: user ? { m: "placeRunningAs", a: { user } } : device.name,
+        where: user ? { m: "placeAs", a: { user } } : { m: "placeOn", a: { computer: device.name } },
+        who: user ?? device.name
+      }
+    };
+  }
+  function wordedPlace(place) {
+    const word = (fill) => {
+      if (typeof fill === "string") return fill;
+      switch (fill.m) {
+        case "placeOn":
+          return placeOn(fill.a);
+        case "placeAs":
+          return placeAs(fill.a);
+        case "placeRunningAs":
+          return placeRunningAs(fill.a);
+        case "placeOnOther":
+          return placeOnOther();
+        case "placeOther":
+          return placeOther();
+      }
+    };
+    return {
+      label: word(place.said.label),
+      where: word(place.said.where),
+      who: word(place.said.who)
     };
   }
   function devicePlace(devices, deviceId) {
     const device = devices.find((entry) => entry.id === deviceId);
-    return device ? signInPlace({ name: device.name, user: device.user, onThisMac: device.onThisMac ?? false }) : {
+    if (device)
+      return signInPlace({
+        name: device.name,
+        user: device.user,
+        onThisMac: device.onThisMac ?? false
+      });
+    const other = { m: "placeOther" };
+    return {
       label: `The other ${COMPUTER.one}`,
       where: `on the other ${COMPUTER.one}`,
-      who: `The other ${COMPUTER.one}`
+      who: `The other ${COMPUTER.one}`,
+      said: { label: other, where: { m: "placeOnOther" }, who: other }
     };
   }
   const placementSystemSchema = _enum(["macos", "linux"]);
@@ -19163,9 +19333,11 @@ ${events}` : prompt;
   function runsOnWhere(repo, computers) {
     if (!repo.runsOn) return null;
     if (repo.runsOn === AUTOMATIC_COMPUTER) return settingsRunsOnAutomatically();
-    return devicePlace(
-      computers.map((computer) => ({ ...computer, id: computer.deviceId })),
-      repo.runsOn
+    return wordedPlace(
+      devicePlace(
+        computers.map((computer) => ({ ...computer, id: computer.deviceId })),
+        repo.runsOn
+      )
     ).where;
   }
   const USAGE_WORDS = {
@@ -19443,7 +19615,7 @@ ${events}` : prompt;
         account,
         snapshot,
         nameIn(providers),
-        { who: home, where: `on ${home}` },
+        { who: home, where: placeOn({ computer: home }) },
         input.firstmateAccount === account.id,
         now
       )
@@ -19456,7 +19628,7 @@ ${events}` : prompt;
         rows: homeRows
       },
       ...devices.map((device) => {
-        const place = signInPlace(device);
+        const place = wordedPlace(signInPlace(device));
         const note = awayNote(device);
         const rows = (device.signIns?.accounts ?? []).map(
           (account) => accountRow(

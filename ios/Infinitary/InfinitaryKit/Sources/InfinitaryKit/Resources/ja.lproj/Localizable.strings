@@ -24,7 +24,7 @@
 "accountsCustomApiAddByHand" = "+ 手動で追加";
 "accountsCustomApiAddHeader" = "ヘッダーを追加";
 "accountsCustomApiAddTitle" = "カスタム API を追加";
-"accountsCustomApiAddTitleOn" = "カスタム API を追加（%1$@）";
+"accountsCustomApiAddTitleOn" = "カスタム API を%1$@追加";
 "accountsCustomApiAddressLabel" = "アドレス";
 "accountsCustomApiAddressNeeded" = "サーバーのアドレスを入力してください。";
 "accountsCustomApiAnswerKind" = "%1$@（%2$@）";
@@ -245,8 +245,8 @@
 "accountsCustomApiUseFix" = "%1$@ を使う";
 "accountsCustomApiUseForFirstMate" = "一等航海士に %1$@ を使う";
 "accountsCustomApiUseModel" = "%1$@ を使う";
-"accountsCustomApiUseOn" = "使う（%1$@）";
-"accountsCustomApiUseTitle" = "%1$@ を使う（%2$@）";
+"accountsCustomApiUseOn" = "これを%1$@使う";
+"accountsCustomApiUseTitle" = "%1$@ を%2$@使う";
 "accountsSavedResetBusy" = "Infinitary はすでに %1$@ で保存済みのリセットを使っています。終わるまでお待ちください。";
 "accountsSavedResetCodexStopped" = "Codex が何かを使う前に応答しなくなったため、保存済みのリセットは使われていません。もう一度お試しください。";
 "accountsSavedResetNoCodex" = "Infinitary から保存済みのリセットを使うには、このコンピュータに Codex %1$@ 以降が必要です。Codex をインストールするか、%2$@ でリセットを使ってください。";
@@ -575,7 +575,7 @@
 "cardRevisionMore" = "ほか%1$@件";
 "cardRevisionShowFewer" = "表示を減らす";
 "cardSavedResetCrewWaits" = "保存済みのリセットを使わない限り、乗組員の作業は弱いモデルに切り替わるか、利用枠がリセットされるまで待ちます。";
-"cardSavedResetCrewWaitsThere" = "保存済みのリセットを使わない限り、%1$@の乗組員の作業は弱いモデルに切り替わるか、利用枠がリセットされるまで待ちます。";
+"cardSavedResetCrewWaitsThere" = "保存済みのリセットを使わない限り、乗組員が%1$@行う作業は弱いモデルに切り替わるか、利用枠がリセットされるまで待ちます。";
 "cardSavedResetsOpenPage" = "%1$@ の使用量ページを開く";
 "cardSinceSeenApproved" = "以前のバージョンを承認しました · %1$@";
 "cardSinceSeenChose" = "「%1$@」を選択しました · %2$@";
@@ -1174,9 +1174,9 @@
 "feedRunProjectHereInstead" = "代わりに%2$@実行するには、%3$@ の実行先を %1$@ に設定してください。";
 "feedRunTaskHereInstead" = "代わりに%2$@実行するには、一等航海士に %3$@ を %1$@ で実行するよう頼んでください。";
 "feedRunsOnAutomatic" = "Infinitary が %1$@ の新しいタスクごとにコンピューターを選びます。開始済みのタスクは開始した場所に残ります。";
-"feedRunsOnFromHere" = "%2$@ は今後 %3$@ で実行されます。次のタスクはそちらで開始し、現在%1$@実行中のタスクは%1$@完了します。";
+"feedRunsOnFromHere" = "%2$@ は今後%3$@実行されます。次のタスクはそちらで開始し、現在%1$@実行中のタスクは%1$@完了します。";
 "feedRunsOnHere" = "%3$@ は今後 %1$@ で実行されます。次のタスクは%2$@開始します。";
-"feedRunsOnThere" = "%1$@ は今後 %2$@ で実行されます。次のタスクはそちらで開始し、実行中のタスクは開始した場所で完了します。";
+"feedRunsOnThere" = "%1$@ は今後%2$@実行されます。次のタスクはそちらで開始し、実行中のタスクは開始した場所で完了します。";
 "feedStarted" = "開始";
 "feedStopped" = "停止";
 "feedUndelivered" = "メッセージ未送達：%1$@";
@@ -2429,8 +2429,12 @@
 "phoneWorkStateWorking" = "作業中";
 "phoneWorkspaceShow" = "表示";
 "phoneWorkspaceTabs" = "タブ";
+"placeAs" = " %1$@ として";
 "placeHere" = "ここで";
 "placeOn" = " %1$@ で";
+"placeOnOther" = "別のコンピューターで";
+"placeOther" = "別のコンピューター";
+"placeRunningAs" = "%1$@ として実行";
 "placeThisComputer" = "このコンピューター";
 "policyAsksFirst" = "先に確認";
 "policyCareBound" = "ローカルマージでは慎重さは標準になります。プルリクエストでは引き続き「慎重」を求めます。";
@@ -3052,7 +3056,7 @@
 "settingsDevicesExpiredPhone" = "どのスマートフォンにも使われないまま、リンクの期限が切れました。";
 "settingsDevicesExpiredPhoneReady" = "スマートフォンの準備ができたら、新しく作成してください。";
 "settingsDevicesFixIt" = "修正";
-"settingsDevicesFixItNamed" = "%1$@ の作業をもう一度設定";
+"settingsDevicesFixItNamed" = "作業をもう一度設定：%1$@";
 "settingsDevicesHeldLine" = "参加してから一度もこのコンピューターに接続していません。macOS では、%1$@ 側で誰かが許可するまで、そちらの Infinitary はローカルネットワークを使えません。アドレスで追加すると、このコンピューターが代わりに SSH キーで接続します。";
 "settingsDevicesIdle" = "待機中";
 "settingsDevicesIntroHere" = "一等航海士はこのコンピューターにいます。タスクと会話はここに残ります。追加したどのコンピューターからでも一等航海士を操作でき、追加したどのコンピューターでもプロジェクトの作業を実行できます。このコンピューターで別のユーザーとして実行する場合は作業を実行し、一等航海士をそこへ移すこともできます。%1$@";
@@ -3144,7 +3148,7 @@
 "settingsDevicesRemovedOnceUpdatedLine" = "更新後に削除されます。";
 "settingsDevicesRemovedWhenBackLine" = "戻ったら削除されます。";
 "settingsDevicesRemoving" = "削除中...";
-"settingsDevicesRemovingSetUp" = "Infinitary が %1$@ 準備したものを削除しています…";
+"settingsDevicesRemovingSetUp" = "Infinitary が%1$@準備したものを削除しています…";
 "settingsDevicesRowActions" = "%1$@ の操作";
 "settingsDevicesRunningAs" = "%1$@ として実行中";
 "settingsDevicesRuns" = "%1$@ を実行";
@@ -3159,9 +3163,9 @@
 "settingsDevicesSignInsAddAccount" = "アカウントを追加";
 "settingsDevicesSignInsAddressFor" = "%1$@ のアドレス";
 "settingsDevicesSignInsAsOf" = "%1$@ 時点";
-"settingsDevicesSignInsClaudeCode" = "Claude Code は %1$@ 自分でサインインします。そちらで一度ログインすれば、Infinitary はそのログインを使います。";
+"settingsDevicesSignInsClaudeCode" = "Claude Code は%1$@自分でサインインします。そちらで一度ログインすれば、Infinitary はそのログインを使います。";
 "settingsDevicesSignInsCodeFor" = "%1$@ のコード";
-"settingsDevicesSignInsCustomApi" = "%1$@ カスタム API を追加";
+"settingsDevicesSignInsCustomApi" = "カスタム API を%1$@追加";
 "settingsDevicesSignInsDisconnect" = "接続を解除";
 "settingsDevicesSignInsEnterCode" = "ここのブラウザでリンクを開き、このコードを入力してください。サインインは %1$@ が自分で完了します。";
 "settingsDevicesSignInsFailed" = "%2$@ は %1$@ にサインインできませんでした。";
@@ -3170,7 +3174,7 @@
 "settingsDevicesSignInsKeyFor" = "%1$@ のキー";
 "settingsDevicesSignInsNone" = "サインインはまだありません。";
 "settingsDevicesSignInsOpenLink" = "リンクを開く";
-"settingsDevicesSignInsOwn" = "専用のサインインです。%1$@ 実行するタスクはこれだけを使います。";
+"settingsDevicesSignInsOwn" = "専用のサインインです。タスクを%1$@実行するときは、これだけを使います。";
 "settingsDevicesSignInsPasteAddress" = "アドレスを貼り付け";
 "settingsDevicesSignInsPasteBackAddress" = "ここのブラウザでリンクを開いてサインインしてください。ブラウザは最後に接続できないページを開きます。そのページのアドレスをコピーしてここに貼り付けてください。";
 "settingsDevicesSignInsPasteBackCode" = "ここのブラウザでリンクを開いてサインインしてください。そのあと表示されたコードを貼り付けてください。";
@@ -3181,7 +3185,7 @@
 "settingsDevicesSignInsPasteYourKey" = "キーを貼り付け";
 "settingsDevicesSignInsSendTo" = "%1$@ に送信";
 "settingsDevicesSignInsSigningIn" = "%2$@ が %1$@ にサインインしています。";
-"settingsDevicesSignInsTitle" = "%2$@ %1$@ にサインイン";
+"settingsDevicesSignInsTitle" = "%1$@ に%2$@サインイン";
 "settingsDevicesSignInsUnanswered" = "%2$@ から、サインイン先の応答がありませんでした。%1$@ と同じバージョンの Infinitary が必要な可能性があります。";
 "settingsDevicesSignInsWaiting" = "ブラウザでの完了を待っています";
 "settingsDevicesSignedInTo" = "%1$@ にサインイン済み";
@@ -3277,7 +3281,8 @@
 "settingsForgeNewCode" = "新しいコードを取得";
 "settingsForgeNotSignedIn" = "%1$@ にサインインしていません";
 "settingsForgeOpenHost" = "%1$@ を開く";
-"settingsForgeRowActions" = "%2$@ の %1$@ の操作";
+"settingsForgeRowActions" = "%1$@ に%2$@行う操作";
+"settingsForgeServerOn" = "%1$@ は%2$@";
 "settingsForgeSignIn" = "サインイン";
 "settingsForgeSignInAgain" = "もう一度サインイン";
 "settingsForgeSignInAgainSay" = "もう一度サインインしてください。";
@@ -3651,7 +3656,7 @@
 "settingsProjectsRowLinked" = "リンク済み";
 "settingsProjectsRowNoChecks" = "チェックなし";
 "settingsProjectsRowPersonal" = "その場で作成";
-"settingsProjectsRowRuns" = "%1$@ 実行";
+"settingsProjectsRowRuns" = "実行は%1$@";
 "settingsProjectsSaveDetails" = "詳細を保存";
 "settingsProjectsScope" = "範囲";
 "settingsProjectsScopeDescription" = "このプロジェクトに含める作業です。一等航海士はこれを読んで、新しい作業の行き先を選びます。";

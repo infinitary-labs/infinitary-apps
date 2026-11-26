@@ -176,6 +176,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | token (on the Usage page) | token | Billable tokens stay as token, as in the first-run check line. |
 | unsafe data reader | 不安全数据读取者 | A crewmate that reads words anyone can write. |
 | Usage (the Settings section) | 用量 | |
+| user (another user account on this computer) | 用户 | "as {user}" is 以 {user} 身份, as in 以另一个用户身份运行. |
 | version | 版本 | Used instead of SHA, hash or head. |
 | where the project lives | 项目托管处 | Used instead of remote, origin or upstream. |
 | working copy | 工作副本 | Used instead of worktree. |

@@ -2429,8 +2429,12 @@
 "phoneWorkStateWorking" = "Au travail";
 "phoneWorkspaceShow" = "Afficher";
 "phoneWorkspaceTabs" = "Onglets";
+"placeAs" = "sous l’utilisateur %1$@";
 "placeHere" = "ici";
 "placeOn" = "sur %1$@";
+"placeOnOther" = "sur l’autre ordinateur";
+"placeOther" = "L’autre ordinateur";
+"placeRunningAs" = "Sous l’utilisateur %1$@";
 "placeThisComputer" = "cet ordinateur";
 "policyAsksFirst" = "Demande d’abord";
 "policyCareBound" = "La fusion locale utilise le soin Par défaut ; Minutieux reste demandé pour les demandes de tirage.";
@@ -3052,7 +3056,7 @@
 "settingsDevicesExpiredPhone" = "Le lien a expiré avant qu’un téléphone l’utilise.";
 "settingsDevicesExpiredPhoneReady" = "Créez-en un nouveau quand le téléphone est prêt.";
 "settingsDevicesFixIt" = "Réparer";
-"settingsDevicesFixItNamed" = "Remettre en place le travail sur %1$@";
+"settingsDevicesFixItNamed" = "Remettre en place le travail : %1$@";
 "settingsDevicesHeldLine" = "Il n’a pas joint cet ordinateur depuis qu’il a rejoint. macOS ne laisse Infinitary sur %1$@ utiliser votre réseau local qu’une fois que quelqu’un l’y autorise sur place. Ajouté par son adresse, il est joint par cet ordinateur avec votre clé SSH.";
 "settingsDevicesIdle" = "inactif";
 "settingsDevicesIntroHere" = "Votre second se trouve sur cet ordinateur. Ses tâches et sa conversation restent ici. Depuis tout ordinateur que vous ajoutez, vous pouvez le contrôler, et tout ordinateur que vous ajoutez peut exécuter le travail d’un projet. Un autre utilisateur de cet ordinateur exécute du travail, et vous pouvez y déplacer votre second. %1$@";
@@ -3278,6 +3282,7 @@
 "settingsForgeNotSignedIn" = "non connecté à %1$@";
 "settingsForgeOpenHost" = "Ouvrir %1$@";
 "settingsForgeRowActions" = "Actions %1$@ %2$@";
+"settingsForgeServerOn" = "%1$@ %2$@";
 "settingsForgeSignIn" = "Se connecter";
 "settingsForgeSignInAgain" = "Se reconnecter";
 "settingsForgeSignInAgainSay" = "Reconnectez-vous.";

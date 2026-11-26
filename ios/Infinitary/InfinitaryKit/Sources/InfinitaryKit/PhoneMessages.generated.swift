@@ -1819,6 +1819,7 @@ public enum PhoneMessages {
     public static func `panelChangeShowInDock`() -> String { PhoneWords.format("panelChangeShowInDock", []) }
     public static func `panelChangeShowWhatsNew`() -> String { PhoneWords.format("panelChangeShowWhatsNew", []) }
     public static func `panelChangeStartAtLogin`() -> String { PhoneWords.format("panelChangeStartAtLogin", []) }
+    public static func `panelChangeSummaryPoint`() -> String { PhoneWords.format("panelChangeSummaryPoint", []) }
     public static func `panelChangeTheme`() -> String { PhoneWords.format("panelChangeTheme", []) }
     public static func `panelChangeUpdateChannel`() -> String { PhoneWords.format("panelChangeUpdateChannel", []) }
     public static func `panelChangeUpdateCheck`() -> String { PhoneWords.format("panelChangeUpdateCheck", []) }
@@ -4069,6 +4070,17 @@ public enum PhoneMessages {
     public static func `settingsSubscriptionsSignedOutHoldLabel`() -> String { PhoneWords.format("settingsSubscriptionsSignedOutHoldLabel", []) }
     public static func `settingsSubscriptionsSignedOutHoldText`() -> String { PhoneWords.format("settingsSubscriptionsSignedOutHoldText", []) }
     public static func `settingsSubscriptionsStale`() -> String { PhoneWords.format("settingsSubscriptionsStale", []) }
+    public static func `settingsSummaryPointAutomatic`() -> String { PhoneWords.format("settingsSummaryPointAutomatic", []) }
+    public static func `settingsSummaryPointDescriptionAutomatic`(`tokens`: String) -> String { PhoneWords.format("settingsSummaryPointDescriptionAutomatic", [`tokens`]) }
+    public static func `settingsSummaryPointDescriptionModelLimit`() -> String { PhoneWords.format("settingsSummaryPointDescriptionModelLimit", []) }
+    public static func `settingsSummaryPointDescriptionTokens`(`tokens`: String) -> String { PhoneWords.format("settingsSummaryPointDescriptionTokens", [`tokens`]) }
+    public static func `settingsSummaryPointDescriptionUnread`() -> String { PhoneWords.format("settingsSummaryPointDescriptionUnread", []) }
+    public static func `settingsSummaryPointModelLimit`() -> String { PhoneWords.format("settingsSummaryPointModelLimit", []) }
+    public static func `settingsSummaryPointSaveFailed`() -> String { PhoneWords.format("settingsSummaryPointSaveFailed", []) }
+    public static func `settingsSummaryPointStep`(`name`: String, `tokens`: String) -> String { PhoneWords.format("settingsSummaryPointStep", [`name`, `tokens`]) }
+    public static func `settingsSummaryPointSteps`(`models`: String) -> String { PhoneWords.format("settingsSummaryPointSteps", [`models`]) }
+    public static func `settingsSummaryPointTitle`() -> String { PhoneWords.format("settingsSummaryPointTitle", []) }
+    public static func `settingsSummaryPointTokens`(`tokens`: String) -> String { PhoneWords.format("settingsSummaryPointTokens", [`tokens`]) }
     public static func `settingsTakeOverAfter`(`name`: String) -> String { PhoneWords.format("settingsTakeOverAfter", [`name`]) }
     public static func `settingsTakeOverAsk`() -> String { PhoneWords.format("settingsTakeOverAsk", []) }
     public static func `settingsTakeOverAskWindows`() -> String { PhoneWords.format("settingsTakeOverAskWindows", []) }
@@ -6519,6 +6531,7 @@ extension PhoneWords {
         "panelChangeShowInDock": [],
         "panelChangeShowWhatsNew": [],
         "panelChangeStartAtLogin": [],
+        "panelChangeSummaryPoint": [],
         "panelChangeTheme": [],
         "panelChangeUpdateChannel": [],
         "panelChangeUpdateCheck": [],
@@ -8769,6 +8782,17 @@ extension PhoneWords {
         "settingsSubscriptionsSignedOutHoldLabel": [],
         "settingsSubscriptionsSignedOutHoldText": [],
         "settingsSubscriptionsStale": [],
+        "settingsSummaryPointAutomatic": [],
+        "settingsSummaryPointDescriptionAutomatic": ["tokens"],
+        "settingsSummaryPointDescriptionModelLimit": [],
+        "settingsSummaryPointDescriptionTokens": ["tokens"],
+        "settingsSummaryPointDescriptionUnread": [],
+        "settingsSummaryPointModelLimit": [],
+        "settingsSummaryPointSaveFailed": [],
+        "settingsSummaryPointStep": ["name", "tokens"],
+        "settingsSummaryPointSteps": ["models"],
+        "settingsSummaryPointTitle": [],
+        "settingsSummaryPointTokens": ["tokens"],
         "settingsTakeOverAfter": ["name"],
         "settingsTakeOverAsk": [],
         "settingsTakeOverAskWindows": [],

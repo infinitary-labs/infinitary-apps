@@ -162,6 +162,7 @@ import type {
 import type { SharingAskAnswer, SharingChannel, SharingPreview, SharingView } from "./sharing";
 import type { DeviceSignInEvent, DeviceSignIns } from "./signIns";
 import type { StandbyReady, StandbyViews } from "./standby";
+import type { SummaryPoint, SummaryPointView } from "./summaryPoint";
 import type { TagCheckChange, TagCheckRead, TagCheckView } from "./tagCheck";
 import type { ProjectTagChange, ProjectTagChangeResult } from "./tags";
 import type { TakeBackResult } from "./takeBack";
@@ -886,6 +887,9 @@ export type FirstmateApi = {
     getUsageConnection: () => Promise<UsageConnectionView>;
     saveUsageConnection: (input: UsageConnectionSave) => Promise<UsageConnectionSaved>;
     removeUsageConnection: () => Promise<UsageConnectionView>;
+    /** Where long conversations summarize (Settings → Intelligence; INF-6693). */
+    getSummaryPoint: () => Promise<SummaryPointView>;
+    setSummaryPoint: (point: SummaryPoint) => Promise<SummaryPointView>;
     getNotifications: () => Promise<boolean>;
     setNotifications: (enabled: boolean) => Promise<boolean>;
     getAppearance: () => Promise<Appearance>;

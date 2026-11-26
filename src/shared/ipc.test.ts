@@ -611,6 +611,8 @@ describe("ipc contract", () => {
       "inf:settings:sharing:preview",
       "inf:settings:sharing:set",
       "inf:settings:sharing:viewed",
+      "inf:settings:summary-point:get",
+      "inf:settings:summary-point:set",
       "inf:settings:usage-connection:get",
       "inf:settings:usage-connection:remove",
       "inf:settings:usage-connection:save",

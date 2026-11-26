@@ -306,7 +306,8 @@ A file one of the browser's pages downloads - a link the site serves as an attac
 The host asks the core where each download goes as it starts (`HostBrowserOpen.onDownload`), and the core answers with the name the site suggested, reduced to one name in that folder (no folder parts, no control characters, not hidden), or `download` when it gave none.
 A name already there is never overwritten: the next is `name-2`, `name-3` and so on before its extension, claimed the moment the download starts.
 A finished file is the owner's alone (0600), since it holds whatever the site put in it; one that was cancelled or interrupted is removed, and nothing of it is kept.
-The crewmate's next answer lists each finished file by its path and size and where it came from, or says a download did not finish, and names any still running; an address that turned out to be a file says so in the answer to the `open`.
+When a permission or something else at the path stops that removal, the partial file stays and the warning log says why.
+The crewmate's next answer lists each finished file by its path and size and where it came from, or says a download did not finish and that nothing was kept, or that its partial file is still at its path, and names any still running; an address that turned out to be a file says so in the answer to the `open`.
 The task's timeline gets one line for each finished download.
 A download the captain makes while holding the page is saved and told the same way, since the file is now in the task's folder.
 A download still running when the browser stops is cancelled.

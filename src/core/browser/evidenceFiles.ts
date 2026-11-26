@@ -97,11 +97,20 @@ export function saveDownload(
         notices.keepDownload(`${path} (${bytesWords(outcome.bytes)}, from ${site})`);
         told.saved(`its browser downloaded ${basename(path)} from ${site}`);
       } else {
+        // i18n-exempt: served only to the crewmate's model
+        let kept = "nothing was kept";
         try {
           rmSync(path, { force: true });
-        } catch {}
+        } catch (error) {
+          console.warn(
+            `[task-browser] could not remove an unfinished download: ${error instanceof Error ? error.message : String(error)}`,
+          );
+          // i18n-exempt: served only to the crewmate's model
+          kept = `its partial file could not be removed and is still at ${path}`;
+        }
         notices.keepDownload(
-          `${quoted(clip(offer.name))} from ${site} did not finish downloading (${outcome.state}); nothing was kept.`,
+          // i18n-exempt: served only to the crewmate's model
+          `${quoted(clip(offer.name))} from ${site} did not finish downloading (${outcome.state}); ${kept}.`,
         );
       }
       told.ended();

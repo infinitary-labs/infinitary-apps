@@ -1,5 +1,5 @@
 ---
-source: 47dc716341146fd8
+source: 7a56385e256eae30
 title: Tareas y tripulantes
 description: Qué es una tarea, cómo pasa de pendiente a terminada, dónde seguirla y cómo orientar al tripulante que la hace.
 ---
@@ -93,6 +93,16 @@ Debajo de su título hay una fila de pestañas:
   Consulta [El navegador de la tripulación](/es/the-crews-browser/).
 
 Una pestaña solo aparece cuando la tarea tiene algo que mostrar en ella.
+
+## Una tarea dividida en partes {#a-task-split-into-parts}
+
+En la pestaña **Info** de una tarea dividida en partes, la fila **Partes** cuenta las partes cerradas y lista cada parte con su estado, en el orden en que se registraron.
+Presiona el recuento para plegar la lista, y presiónalo otra vez para abrirla.
+Con más de ocho partes, las cerradas se pliegan tras una línea que puedes abrir.
+Para abrir la tarjeta de una parte, haz clic en ella, o llega a ella con el teclado y presiona Enter; iníciala o respóndela allí.
+
+Una tarea de tus pendientes cuyas partes hacen el trabajo nunca te pide su propio **Iniciar**.
+En su lugar, lo alto de su pestaña **Info** dice qué esperan sus partes, como «Su última parte espera que presiones Iniciar», y la tarea se cierra sola cuando se cierran sus partes.
 
 ## Etiquetas {#tags}
 

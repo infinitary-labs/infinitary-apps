@@ -83,6 +83,71 @@
   },
   "recordMoreValidation": "validação ao vivo",
   "recordOpenKeptEvidence": "Abrir a evidência guardada",
+  "recordPartsClosedFold": {
+    "plural": "count",
+    "one": "{count} parte encerrada",
+    "many": "{count} partes encerradas",
+    "other": "{count} partes encerradas"
+  },
+  "recordPartsCountBacklog": {
+    "plural": "count",
+    "one": "{count} no seu backlog",
+    "many": "{count} no seu backlog",
+    "other": "{count} no seu backlog"
+  },
+  "recordPartsCountIdle": {
+    "plural": "count",
+    "one": "{count} ociosa",
+    "many": "{count} ociosas",
+    "other": "{count} ociosas"
+  },
+  "recordPartsCountInterrupted": {
+    "plural": "count",
+    "one": "{count} interrompida",
+    "many": "{count} interrompidas",
+    "other": "{count} interrompidas"
+  },
+  "recordPartsCountQueued": {
+    "plural": "count",
+    "one": "{count} na fila",
+    "many": "{count} na fila",
+    "other": "{count} na fila"
+  },
+  "recordPartsCountStarting": {
+    "plural": "count",
+    "one": "{count} iniciando",
+    "many": "{count} iniciando",
+    "other": "{count} iniciando"
+  },
+  "recordPartsCountWaiting": {
+    "plural": "count",
+    "one": "{count} aguardando você",
+    "many": "{count} aguardando você",
+    "other": "{count} aguardando você"
+  },
+  "recordPartsCountWorking": {
+    "plural": "count",
+    "one": "{count} trabalhando",
+    "many": "{count} trabalhando",
+    "other": "{count} trabalhando"
+  },
+  "recordPartsLast": "Aguardando a última parte dela",
+  "recordPartsLastBacklog": "A última parte dela aguarda você tocar em Iniciar",
+  "recordPartsLastBacklogGuidance": "{key} está no seu backlog. Esta tarefa se encerra sozinha quando as partes dela se encerrarem.",
+  "recordPartsLastIdle": "{key} está ociosa. Esta tarefa se encerra sozinha quando as partes dela se encerrarem.",
+  "recordPartsLastInterrupted": "{key} foi interrompida. Esta tarefa se encerra sozinha quando as partes dela se encerrarem.",
+  "recordPartsLastQueued": "{key} está na fila. Esta tarefa se encerra sozinha quando as partes dela se encerrarem.",
+  "recordPartsLastStarting": "{key} está iniciando. Esta tarefa se encerra sozinha quando as partes dela se encerrarem.",
+  "recordPartsLastWaiting": "A última parte dela está aguardando você",
+  "recordPartsLastWaitingGuidance": "{key} tem um cartão para você. Esta tarefa se encerra sozinha quando as partes dela se encerrarem.",
+  "recordPartsLastWorking": "{key} está trabalhando. Esta tarefa se encerra sozinha quando as partes dela se encerrarem.",
+  "recordPartsOpen": {
+    "plural": "total",
+    "one": "Aguardando {open} da {total} parte dela",
+    "many": "Aguardando {open} das {total} partes dela",
+    "other": "Aguardando {open} das {total} partes dela"
+  },
+  "recordPartsOpenGuidance": "{counts}. Esta tarefa se encerra sozinha quando as partes dela se encerrarem.",
   "recordPersonalNone": "Nenhuma, em {computer}",
   "recordPersonalVersion": "Versão {version} de {when}, em {computer}",
   "recordPolicyParentTask": "Tarefa principal",

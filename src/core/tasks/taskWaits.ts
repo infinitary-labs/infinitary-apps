@@ -14,8 +14,10 @@ export function taskWaitsOf(input: {
   posture?: WorkPosture;
   facts?: TaskWaitFacts;
   decision: boolean;
+  /** It has parts of its own, which do its work; absent counts as none. */
+  parts?: boolean;
 }): TaskWait[] {
-  const { record, holding, since, posture, facts, decision } = input;
+  const { record, holding, since, posture, facts, decision, parts } = input;
   if (record.status !== "open" && record.status !== "active") return [];
   const waits: TaskWait[] = holding.map((task) => ({
     id: `dependency:${task.id}`,
@@ -114,8 +116,10 @@ export function taskWaitsOf(input: {
       label: "Waiting for your decision",
       ...(delivery?.captainWait ? { since: delivery.captainWait.at } : {}),
     });
+  // A parent's parts do its work and it has no Start, so it never waits for
+  // one: its record names what its parts do (INF-6805's plan, item 2).
   if (
-    (record.status === "open" && record.startPolicy === "on-request") ||
+    (record.status === "open" && record.startPolicy === "on-request" && !parts) ||
     (record.status === "active" && record.backlogSince != null)
   )
     waits.push({

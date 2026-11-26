@@ -2160,6 +2160,7 @@
 "phoneRecordWaitDueRead" = "下次讀取原定於 %1$@";
 "phoneRecordWaitDueReset" = "重設原定於 %1$@";
 "phoneRecordWaitDueStart" = "開始時間原定於 %1$@";
+"phoneRecordWaitLabelRecorded" = "%1$@ · 等待記錄於 %2$@";
 "phoneRecordWaitLine" = "%2$@ · %1$@";
 "phoneRecordWaitLineRecorded" = "%2$@ · %1$@ · 等待記錄於 %3$@";
 "phoneRecordWaitNextCheckBack" = "回頭查看 %1$@";
@@ -2167,7 +2168,6 @@
 "phoneRecordWaitNextRead" = "下次讀取 %1$@";
 "phoneRecordWaitNextReset" = "重設 %1$@";
 "phoneRecordWaitNextStart" = "開始時間 %1$@";
-"phoneRecordWaitTimeUnknown" = "時間不明";
 "phoneRecordWaitsOn" = "等待";
 "phoneRecordWhy" = "原因";
 "phoneRecordWhyFiled" = "排入的原因";
@@ -2507,6 +2507,17 @@
 "recordMoreDelivery" = "交付方式";
 "recordMoreValidation" = "實際驗證";
 "recordOpenKeptEvidence" = "開啟保存的證據";
+"recordPartsLast" = "正在等待它的最後一個部分";
+"recordPartsLastBacklog" = "它的最後一個部分在等你按下「開始」";
+"recordPartsLastBacklogGuidance" = "%1$@ 在你的待辦清單中。它的部分全部關閉後，此任務會自動關閉。";
+"recordPartsLastIdle" = "%1$@ 處於閒置。它的部分全部關閉後，此任務會自動關閉。";
+"recordPartsLastInterrupted" = "%1$@ 已中斷。它的部分全部關閉後，此任務會自動關閉。";
+"recordPartsLastQueued" = "%1$@ 正在排隊。它的部分全部關閉後，此任務會自動關閉。";
+"recordPartsLastStarting" = "%1$@ 正在啟動。它的部分全部關閉後，此任務會自動關閉。";
+"recordPartsLastWaiting" = "它的最後一個部分在等你";
+"recordPartsLastWaitingGuidance" = "%1$@ 有一張給你的卡片。它的部分全部關閉後，此任務會自動關閉。";
+"recordPartsLastWorking" = "%1$@ 正在工作。它的部分全部關閉後，此任務會自動關閉。";
+"recordPartsOpenGuidance" = "%1$@。它的部分全部關閉後，此任務會自動關閉。";
 "recordPersonalNone" = "無，%1$@";
 "recordPersonalVersion" = "%3$@ 的版本 %2$@，%1$@";
 "recordPolicyParentTask" = "上層任務";

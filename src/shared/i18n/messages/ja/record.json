@@ -73,6 +73,53 @@
   },
   "recordMoreValidation": "実地検証",
   "recordOpenKeptEvidence": "保存された証拠を開く",
+  "recordPartsClosedFold": {
+    "plural": "count",
+    "other": "終了したパート{count}件"
+  },
+  "recordPartsCountBacklog": {
+    "plural": "count",
+    "other": "バックログ{count}件"
+  },
+  "recordPartsCountIdle": {
+    "plural": "count",
+    "other": "待機中{count}件"
+  },
+  "recordPartsCountInterrupted": {
+    "plural": "count",
+    "other": "中断{count}件"
+  },
+  "recordPartsCountQueued": {
+    "plural": "count",
+    "other": "キュー{count}件"
+  },
+  "recordPartsCountStarting": {
+    "plural": "count",
+    "other": "開始中{count}件"
+  },
+  "recordPartsCountWaiting": {
+    "plural": "count",
+    "other": "あなたを待っているもの{count}件"
+  },
+  "recordPartsCountWorking": {
+    "plural": "count",
+    "other": "作業中{count}件"
+  },
+  "recordPartsLast": "最後のパートを待っています",
+  "recordPartsLastBacklog": "最後のパートがあなたの「開始」を待っています",
+  "recordPartsLastBacklogGuidance": "{key} はバックログにあります。パートがすべて終了すると、このタスクは自動で終了します。",
+  "recordPartsLastIdle": "{key} は待機中です。パートがすべて終了すると、このタスクは自動で終了します。",
+  "recordPartsLastInterrupted": "{key} は中断されました。パートがすべて終了すると、このタスクは自動で終了します。",
+  "recordPartsLastQueued": "{key} はキューにあります。パートがすべて終了すると、このタスクは自動で終了します。",
+  "recordPartsLastStarting": "{key} は開始中です。パートがすべて終了すると、このタスクは自動で終了します。",
+  "recordPartsLastWaiting": "最後のパートがあなたを待っています",
+  "recordPartsLastWaitingGuidance": "{key} にあなた宛てのカードがあります。パートがすべて終了すると、このタスクは自動で終了します。",
+  "recordPartsLastWorking": "{key} は作業中です。パートがすべて終了すると、このタスクは自動で終了します。",
+  "recordPartsOpen": {
+    "plural": "total",
+    "other": "{total}件のパートのうち{open}件を待っています"
+  },
+  "recordPartsOpenGuidance": "{counts}。パートがすべて終了すると、このタスクは自動で終了します。",
   "recordPersonalNone": "なし（{computer}）",
   "recordPersonalVersion": "{when} のバージョン {version}（{computer}）",
   "recordPolicyParentTask": "親タスク",

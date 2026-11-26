@@ -1,5 +1,5 @@
 ---
-source: 47dc716341146fd8
+source: 7a56385e256eae30
 title: Tarefas e tripulantes
 description: O que é uma tarefa, como ela vai do backlog até concluída, onde acompanhá-la e como orientar o tripulante que a faz.
 ---
@@ -93,6 +93,16 @@ Embaixo do título fica uma fileira de abas:
   Veja [O navegador da tripulação](/pt-br/the-crews-browser/).
 
 Uma aba só aparece quando a tarefa tem algo para mostrar nela.
+
+## Uma tarefa dividida em partes {#a-task-split-into-parts}
+
+Na aba **Info** de uma tarefa dividida em partes, a linha **Partes** conta as partes encerradas e lista cada parte com o status dela, na ordem em que foram registradas.
+Toque na contagem para recolher a lista, e toque de novo para abri-la.
+Com mais de oito partes, as encerradas ficam recolhidas atrás de uma linha que você pode abrir.
+Para abrir o cartão de uma parte, clique nela, ou chegue até ela pelo teclado e pressione Enter; inicie-a ou responda a ela lá.
+
+Uma tarefa do seu backlog cujas partes fazem o trabalho nunca pede o próprio **Iniciar**.
+Em vez disso, o topo da aba **Info** dela diz o que as partes aguardam, como "A última parte dela aguarda você tocar em Iniciar", e a tarefa se encerra sozinha quando as partes dela se encerrarem.
 
 ## Etiquetas {#tags}
 

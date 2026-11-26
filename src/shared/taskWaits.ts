@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { dateTimeFormat } from "./i18n/format.ts";
+import * as m from "./i18n/messages.generated";
 import { type TaskStatusInput, type TaskStatusReading, waitChainWords } from "./taskPresentation";
 
 /** Read-only standing facts; absent on older homes, empty when nothing stands. */
@@ -10,7 +11,10 @@ export const taskWaitSchema = z.object({
   taskKeys: z.array(z.string()).optional(),
   since: z.number().optional(),
   next: z
-    .object({ kind: z.enum(["next-read", "check-back", "reset", "start"]), at: z.number() })
+    .object({
+      kind: z.enum(["next-read", "check-back", "reset", "start"]),
+      at: z.number(),
+    })
     .optional(),
 });
 export type TaskWait = z.infer<typeof taskWaitSchema>;
@@ -47,22 +51,30 @@ export function taskWaitText(
     reset: "reset",
     start: "start time",
   };
+  // A wait with no next event says nothing of time: the captain found "time
+  // unknown" unnecessary on every task (INF-6805's plan, item 3).
   const event = wait.next
     ? `${words[wait.next.kind]}${wait.next.at <= now ? " was due" : ""} ${clock(wait.next.at)}`
-    : "time unknown";
+    : null;
   const recorded =
     detail && wait.since !== undefined ? ` · wait recorded ${clock(wait.since)}` : "";
   // A lone task wait whose line goes further, or ends in a hold, says where
-  // it stops in place of its label and unknown time, as the tile does (INF-5578).
+  // it stops in place of its label, as the tile does (INF-5578).
   if (line) return `${waitChainWords(line, now)}${recorded}`;
-  return `${detail ? `${wait.label} · ` : ""}${event}${recorded}`;
+  if (!detail) return event ?? "";
+  // A task wait's label is the bare key it waits on.
+  const label = wait.kind === "dependency" ? m.taskWaitOn({ on: wait.label }) : wait.label;
+  return `${[label, event].filter(Boolean).join(" · ")}${recorded}`;
 }
 
-/** Group only names, never facts; a standing overdue event stays before a later event. */
+/**
+ * Group only names, never facts; a standing overdue event stays before a
+ * later event. `event` is null when no wait has a next event.
+ */
 export function taskWaitSummary(
   waits: readonly TaskWait[],
   now: number,
-): { names: string; event: string } | null {
+): { names: string; event: string | null } | null {
   if (!waits.length) return null;
   const groups = new Map<TaskWait["kind"], TaskWait[]>();
   for (const wait of waits) groups.set(wait.kind, [...(groups.get(wait.kind) ?? []), wait]);
@@ -81,7 +93,7 @@ export function taskWaitSummary(
     .flatMap((wait) => (wait.next ? [{ wait, next: wait.next }] : []))
     .sort((a, b) => a.next.at - b.next.at);
   const first = events[0];
-  if (!first) return { names, event: "time unknown" };
+  if (!first) return { names, event: null };
   const tied = events.filter((wait) => wait.next.at === first.next.at);
   const kinds = new Set(tied.map((wait) => wait.next.kind));
   const event =
@@ -186,6 +198,9 @@ export function taskWaitStatus(
     task.startNotice;
   if (!warning && represented) return { ...reading, reason };
   return reason
-    ? { ...reading, reason: [reading.reason, reason].filter(Boolean).join(" · ") }
+    ? {
+        ...reading,
+        reason: [reading.reason, reason].filter(Boolean).join(" · "),
+      }
     : reading;
 }

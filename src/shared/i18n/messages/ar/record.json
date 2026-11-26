@@ -196,8 +196,8 @@
   "recordPolicyProject": "إعداد المشروع",
   "recordPolicyThisTask": "هذه المهمة",
   "recordRecordedDetails": "التفاصيل المسجّلة",
-  "recordReviewCarried": "تحمل هذه المهمة المراجعة التي اجتازتها {key} عند {head}: الالتزام نفسه.",
-  "recordReviewCarriedProof": "تحمل هذه المهمة المراجعة التي اجتازتها {key} عند {head}، والإثبات المقبول هناك: الالتزام نفسه.",
+  "recordReviewCarried": "تحمل هذه المهمة المراجعة التي اجتازتها {key} عند {head}: الإيداع نفسه.",
+  "recordReviewCarriedProof": "تحمل هذه المهمة المراجعة التي اجتازتها {key} عند {head}، والإثبات المقبول هناك: الإيداع نفسه.",
   "recordReviewPassedIn": "اجتازت في {key}",
   "recordShowCard": "عرض البطاقة",
   "recordShowEarlier": {

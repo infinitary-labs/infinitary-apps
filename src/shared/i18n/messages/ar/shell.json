@@ -45,7 +45,7 @@
   "shellGateCommandsHead": "أعدّني على حاسوب آخر بالأوامر",
   "shellGateCommandsInstall": "ثبّت Infinitary هناك.",
   "shellGateCommandsLink": "أنشئ هناك رابطًا لهذا الحاسوب:",
-  "shellGateCommandsMac": "على جهاز Mac، اكتب {path} بدلًا من infinitary.",
+  "shellGateCommandsMac": "على حاسوب Mac، اكتب {path} بدلًا من infinitary.",
   "shellGateCommandsPaste": "الصق هنا الرابط الذي يطبعه.",
   "shellGateCommandsStart": "شغّلني هناك:",
   "shellGateConnecting": "جارٍ ربط {name}",

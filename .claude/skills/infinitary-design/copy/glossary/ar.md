@@ -41,8 +41,8 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | clone | استنساخ | "استُنسخ" for "cloned", never "نُسخ" (copied). |
 | collection | مجموعة | |
 | command search | البحث في الأوامر | |
-| commit | إيداع | The usual Arabic Git term. |
-| computer | حاسوب | Plural "حواسيب"; used for every computer, never "جهاز ماك" or "خادم". |
+| commit | إيداع | The usual Arabic Git term; "مودَعة" for committed and "غير مودَعة" for changes not committed, never a form of "التزام". |
+| computer | حاسوب | Plural "حواسيب"; used for every computer, a Mac included ("حاسوب Mac"), never "كمبيوتر", "جهاز Mac" or "خادم". A quote of the system's own words keeps them, such as Windows' "حماية Windows لجهاز الكمبيوتر الخاص بك". |
 | concept / finding | مفهوم / نتيجة | As the card references already say; "نتيجة" is feminine. |
 | connection file | ملف الاتصالات | The file in Pi's models.json format that Settings → Intelligence reads custom connections from. |
 | conversation | المحادثة | Also said for a crewmate's session ("محادثة فرد الطاقم"), never "جلسة". |

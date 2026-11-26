@@ -8,7 +8,7 @@ For a large change, open an issue to discuss it before sending a pull request.
 
 Before a contribution from outside the maintainers can be merged, its author accepts the [Contributor License Agreement](CLA.md).
 You accept once, and it covers that contribution and every later one.
-To accept, tick the box at the end of the pull request template, or reply to your pull request with exactly this sentence:
+To accept, reply to your pull request with exactly this sentence:
 
 > I agree that my submission is governed by the Contributor License Agreement
 

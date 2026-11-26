@@ -169,7 +169,7 @@ An outside pull request merges only once its author accepted the Contributor Lic
 
 - a pull request from one of the project's own branches, a task's or a batch's, passes at once;
 - an outside one passes when its author's numeric GitHub id accepted the version named on `CLA.md`'s "Version" line;
-- otherwise the author's ticked template box or reply with the agreement's sentence writes one entry to the record and passes, while anyone else's reply changes nothing;
+- otherwise the author's reply with the agreement's sentence writes one entry to the record and passes, while anyone else's reply changes nothing;
 - until then it fails and leaves one comment saying how to accept.
 
 The record is a locked issue of the project titled "Contributor License Agreement record", opened by a maintainer; each entry is a comment the Actions token writes there, naming the login, numeric id, pull request, the box or reply, the version and the time, and the check reads back only those comments.

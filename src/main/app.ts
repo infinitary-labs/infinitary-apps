@@ -162,6 +162,7 @@ import {
   markMainWindow,
   openMainWindows,
   personWindows,
+  startWindowsOver,
 } from "./windows";
 import { ensureWindowsGit, GIT_SETUP_WORDS, windowsGitDeps } from "./windowsGitSetup";
 import { windowsAppUserModelId } from "./windowsStartup";
@@ -1554,9 +1555,7 @@ export async function startApp(
         appVersion:
           (!app.isPackaged && settingFrom(process.env, "UPDATE_CURRENT_VERSION")?.trim()) ||
           app.getVersion(),
-        restartWindows: () => {
-          for (const win of appWindows()) if (!win.isDestroyed()) win.webContents.reload();
-        },
+        restartWindows: startWindowsOver,
         relaunch: (how) => {
           // Start it here is asked for one start: no later one carries it on.
           const args = process.argv

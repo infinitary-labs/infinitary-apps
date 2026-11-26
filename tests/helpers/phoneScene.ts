@@ -80,6 +80,14 @@ export function phoneSceneFixture(core: Core, userData: string, ready: () => Pro
         "chrome",
       ]);
       if (deferred.refusal) throw new Error(deferred.refusal);
+      // INF-6951, the captain's approved plan: crew of two projects on both computers, so an open summary lights one
+      // project's crew and leaves the other's at a quarter of its light. Added through the setup a person uses, once
+      // per home: a later fixture finds them by name.
+      const project = async (name: string, key: string) =>
+        core.services.repos.list().find((repo) => repo.name === name)?.id ??
+        (await core.dispatch("inf:repos:setup", [{ kind: "init", name, key }])).repo.id;
+      const harbour = await project("harbour-charts", "HBC");
+      const offshore = await project("offshore-survey", "OFS");
       const ledgerDB = openDatabase(userData);
       const ledger = new DecisionStore(ledgerDB);
       const add = (name: string, title: string, patch: Partial<TaskSeed> = {}) => {
@@ -125,7 +133,12 @@ export function phoneSceneFixture(core: Core, userData: string, ready: () => Pro
         );
         const crew = [first, second, ...parallel];
         // Cross both desktop orbits, retaining every glyph at its readable size.
-        for (let i = 0; i < 21; i++) crew.push(add(`crew-${i}`, `Check harbour marker ${i + 1}`));
+        for (let i = 0; i < 21; i++)
+          crew.push(
+            add(`crew-${i}`, `Check harbour marker ${i + 1}`, {
+              repoId: i % 2 ? offshore : harbour,
+            }),
+          );
         // INF-2039: the crew that ride the home orbits themselves, never a program's ring.
         const orbiting = crew.slice(2 + parallel.length);
         // INF-1543: one crewmate waits on the captain's decision, so the scene draws its beacon.
@@ -205,7 +218,10 @@ export function phoneSceneFixture(core: Core, userData: string, ready: () => Pro
                     : BATCH_WAITING_WORDS,
             },
           });
-        const remote = add("remote", "Read the offshore chart", { deviceId: computer });
+        const remote = add("remote", "Read the offshore chart", {
+          deviceId: computer,
+          repoId: offshore,
+        });
         const remotePart = add("remote-part", "Verify the offshore tide", {
           deviceId: computer,
           parentId: program,

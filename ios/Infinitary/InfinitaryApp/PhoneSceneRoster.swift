@@ -291,7 +291,7 @@ final class PhoneSceneMotion: @unchecked Sendable {
         var id: String { computerID + ":" + task.id }
     }
     struct Frame {
-        let glyphs: [Glyph]; let marks: [Mark]; let packets: [(CGPoint, Double)]; let links: [(CGPoint, CGPoint, Bool)]
+        var glyphs: [Glyph]; let marks: [Mark]; let packets: [(CGPoint, Double)]; let links: [(CGPoint, CGPoint, Bool)]
         /// The hairline joining neighbouring fixed stars within one corner of the sky, by task id, drawn under the crew.
         var starJoins: [(from: String, to: String)] = []
     }

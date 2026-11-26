@@ -221,7 +221,7 @@ final class PhoneSceneRenderer: NSObject, @unchecked Sendable {
     }
 
     /// The scene as the Canvas drew it: the warp's backdrop and the supernova's blast, the crew, the first mate, then the selection and brackets.
-    func paint(_ input: Input, lightElapsed: Double = 0, in pen: inout ScenePen) {
+    func paint(_ input: Input, lightElapsed: Double, in pen: inout ScenePen) {
         #if DEBUG
         let started = ProcessInfo.processInfo.systemUptime
         #endif
@@ -260,10 +260,8 @@ extension PhoneSceneRenderer {
         lightMoving = PhoneFocusLight.step(frame.glyphs.map { ($0.task.id, $0.task.projectId) }, lit: project, state: &lights,
                                            elapsed: elapsed, duration: duration)
         guard lights.values.contains(where: { $0 != 1 }) else { return frame }
-        var glyphs = frame.glyphs
-        for i in glyphs.indices { glyphs[i].alpha *= lights[glyphs[i].task.id] ?? 1 }
-        var drawn = PhoneSceneMotion.Frame(glyphs: glyphs, marks: frame.marks, packets: frame.packets, links: frame.links)
-        drawn.starJoins = frame.starJoins
+        var drawn = frame
+        for i in drawn.glyphs.indices { drawn.glyphs[i].alpha *= lights[drawn.glyphs[i].task.id] ?? 1 }
         return drawn
     }
 }

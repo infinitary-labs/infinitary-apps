@@ -1,5 +1,5 @@
 ---
-source: c78bd352e2745a60
+source: 8556e6631058959f
 title: Le second
 description: Qui est votre second, ce qu’il fait et ne fait pas, comment lui parler et comment choisir le modèle avec lequel il répond.
 ---
@@ -33,7 +33,7 @@ Appuyez sur ces lignes pour lire [toute la conversation](#the-whole-conversation
 Quelques astuces aident :
 
 - **Aller à la zone de message depuis n’importe où.**
-  Appuyez sur ⌘L (Ctrl+L sous Linux).
+  Appuyez sur ⌘L (Ctrl+L sous Linux et Windows).
 - **Rappeler votre dernier message.**
   Appuyez sur ↑ dans une zone de message vide.
 - **Coller beaucoup de texte.**
@@ -58,7 +58,7 @@ Pour les autres types de fichiers, comme un PDF, la zone ajoute l’emplacement 
 
 Appuyez sur la touche de dictée, ou maintenez-la, pour parler.
 L’indication dans la zone de message la nomme : « tapez, ou appuyez/maintenez ⌥ droite pour parler ».
-Sous Linux, la touche est Ctrl droite.
+Sous Linux et Windows, la touche est Ctrl droite.
 Ce que vous dites est transformé en texte sur votre ordinateur, et vous pouvez le modifier avant de l’envoyer.
 Pour changer la touche, ou désactiver la dictée, utilisez **Dictée** dans [Réglages → Général](/fr/settings/#general).
 

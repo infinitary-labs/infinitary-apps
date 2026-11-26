@@ -18,7 +18,7 @@ Open **Settings**, then **Secrets**, or search for **Open Secrets** in command s
 **Search secrets** finds one by its name, its place or the task that last used it.
 
 On a Mac, the line under the list reads "Kept on this computer. Your crew uses them but never sees them, unless you copy one."
-On Linux, it says your crew uses them only with your approval, but any program you run can reach them while your system's secret store is unlocked.
+On Linux and Windows, it says your crew uses them only with your approval, but any program you run can reach them while your system's secret store is unlocked.
 
 Secrets stay on the computer where your first mate lives.
 A computer that controls your first mate from elsewhere has no Secrets section of its own.
@@ -52,10 +52,10 @@ Type a secret only into a field Infinitary draws, never into a card's reply fiel
 ## Copy a value
 
 When you need a value yourself, such as to paste a key into a website, open the secret's row and choose **Copy value**.
-Each time, your computer asks you to confirm it is you: on a Mac with Touch ID or your password, and on Linux with your password.
+Each time, your computer asks you to confirm it is you: on a Mac with Touch ID or your password, on Linux with your password, and on Windows with Windows Hello or your Windows password.
 
 The value goes onto this computer's clipboard, and no other.
-On a Mac, it does not travel to your other devices.
+On a Mac and on Windows, it does not travel to your other devices.
 On Linux, a clipboard history tool may still keep it, and the row says so.
 
 The row then says "Copied. It leaves the clipboard at" a time, 90 seconds after the copy.
@@ -86,7 +86,7 @@ Then choose:
   Anything different asks again.
 - **Don't allow** refuses, and the next run asks again.
 
-Each allow asks you to confirm first: on a Mac with Touch ID or your password, and on Linux with your password.
+Each allow asks you to confirm first: on a Mac with Touch ID or your password, on Linux with your password, and on Windows with Windows Hello or your Windows password.
 What receives a secret can keep it.
 Allowing never approves a separate action, such as deploying or sending something.
 The crewmate hears only whether the run finished, not what it printed.

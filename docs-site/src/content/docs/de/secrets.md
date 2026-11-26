@@ -1,5 +1,5 @@
 ---
-source: 45896475239d4a1f
+source: 91a924b8c4a1a2d6
 title: Geheimnisse
 description: Bewahre die Passwörter und Schlüssel auf, die deine Crew braucht, erlaube jede Nutzung auf einer Karte und sieh, was sie genutzt hat.
 ---
@@ -19,7 +19,7 @@ Jeder Wert geht direkt in Geheimnisse auf deinem Computer: Weder der erste Offiz
 **Geheimnisse durchsuchen** findet eines über seinen Namen, seinen Ort oder die Aufgabe, die es zuletzt genutzt hat.
 
 Auf einem Mac steht in der Zeile unter der Liste: „Auf diesem Computer aufbewahrt. Deine Crew nutzt sie, sieht sie aber nie, außer du kopierst eines.“
-Unter Linux steht dort, dass deine Crew sie nur mit deiner Freigabe nutzt, dass aber jedes Programm, das du ausführst, sie erreichen kann, solange der Geheimnisspeicher deines Systems entsperrt ist.
+Unter Linux und Windows steht dort, dass deine Crew sie nur mit deiner Freigabe nutzt, dass aber jedes Programm, das du ausführst, sie erreichen kann, solange der Geheimnisspeicher deines Systems entsperrt ist.
 
 Geheimnisse bleiben auf dem Computer, auf dem dein erster Offizier lebt.
 Ein Computer, der deinen ersten Offizier von woanders aus steuert, hat keinen eigenen Bereich Geheimnisse.
@@ -53,10 +53,10 @@ Gib ein Geheimnis nur in ein Feld ein, das Infinitary zeichnet, nie in das Antwo
 ## Einen Wert kopieren {#copy-a-value}
 
 Wenn du einen Wert selbst brauchst, etwa um einen Schlüssel auf einer Website einzufügen, öffne die Zeile des Geheimnisses und wähl **Wert kopieren**.
-Jedes Mal bittet dich dein Computer, zu bestätigen, dass du es bist: auf einem Mac mit Touch ID oder deinem Passwort, unter Linux mit deinem Passwort.
+Jedes Mal bittet dich dein Computer, zu bestätigen, dass du es bist: auf einem Mac mit Touch ID oder deinem Passwort, unter Linux mit deinem Passwort und unter Windows mit Windows Hello oder deinem Windows-Passwort.
 
 Der Wert kommt in die Zwischenablage dieses Computers und in keine andere.
-Auf einem Mac wandert er nicht auf deine anderen Geräte.
+Auf einem Mac und unter Windows wandert er nicht auf deine anderen Geräte.
 Unter Linux kann ein Verlaufswerkzeug der Zwischenablage ihn trotzdem behalten, und die Zeile sagt das.
 
 Die Zeile sagt dann „Kopiert. Um … wird er aus der Zwischenablage entfernt.“ und nennt dabei die Uhrzeit, 90 Sekunden nach dem Kopieren.
@@ -87,7 +87,7 @@ Wähl dann:
   Alles andere fragt erneut.
 - **Nicht erlauben** lehnt ab, und der nächste Lauf fragt erneut.
 
-Jedes Erlauben bittet dich zuerst um eine Bestätigung: auf einem Mac mit Touch ID oder deinem Passwort, unter Linux mit deinem Passwort.
+Jedes Erlauben bittet dich zuerst um eine Bestätigung: auf einem Mac mit Touch ID oder deinem Passwort, unter Linux mit deinem Passwort und unter Windows mit Windows Hello oder deinem Windows-Passwort.
 Was ein Geheimnis erhält, kann es behalten.
 Erlauben bestätigt nie eine eigene Handlung, etwa ein Deployment oder das Senden von etwas.
 Das Crewmitglied erfährt nur, ob der Lauf zu Ende gegangen ist, nicht, was er ausgegeben hat.

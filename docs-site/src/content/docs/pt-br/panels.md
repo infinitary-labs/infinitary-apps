@@ -1,5 +1,5 @@
 ---
-source: 8c3b2ba30e330a7b
+source: 6f29448fa6eb6dcb
 title: Painéis
 description: Os painéis ficam nos lados esquerdo e direito da janela e mostram suas tarefas, a atividade da sua tripulação e qualquer outra coisa que você peça ao seu imediato para criar.
 ---
@@ -55,7 +55,7 @@ Escolha um ali para trazê-lo de volta à barra lateral.
 
 - Pressione F6 para ir à próxima parte da janela, painéis incluídos.
   Shift+F6 volta.
-- Pressione ⌘, (Ctrl+, no Linux) para abrir **Ajustes**.
+- Pressione ⌘, (Ctrl+, no Linux e no Windows) para abrir **Ajustes**.
 
 Alguns painéis acrescentam comandos próprios, como **Buscar uma tarefa** e **Abrir Conhecimento**.
 Você os encontra na busca de comandos e pode dar uma tecla a eles em **Ajustes**, **Teclado**.

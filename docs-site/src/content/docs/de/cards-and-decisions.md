@@ -1,5 +1,5 @@
 ---
-source: 543f9bb4d4d0a6b3
+source: 28dbb83c4a64e09c
 title: Karten und Entscheidungen
 description: Wie dein erster Offizier und deine Crew dir Antworten und Entscheidungen als Karten bringen und wie du sie beantwortest.
 ---
@@ -13,8 +13,8 @@ Karten erscheinen in der Mitte des Fensters, über deinem ersten Offizier.
 Wenn mehr als eine Karte wartet, bilden sie einen Stapel, und du siehst jeweils eine.
 Eine neue Karte kommt an, ohne die zur Seite zu schieben, die du gerade liest.
 
-- **Nächste Karte anzeigen**: ⇧⌘] (Ctrl+Shift+] unter Linux).
-- **Vorherige Karte anzeigen**: ⇧⌘[ (Ctrl+Shift+[ unter Linux).
+- **Nächste Karte anzeigen**: ⇧⌘] (Ctrl+Shift+] unter Linux und Windows).
+- **Vorherige Karte anzeigen**: ⇧⌘[ (Ctrl+Shift+[ unter Linux und Windows).
 
 Eine Aufgabe mit einer Karte, die auf dich wartet, steht in „Aufgaben“ unter „Wartet auf dich“.
 Die Tasten auf dieser Seite sind die Standardtasten; [Tastatur](/de/keyboard/) listet jede Taste auf, für jeden Tastensatz, den du wählen kannst.
@@ -36,7 +36,7 @@ Die meisten Entscheidungen haben außerdem eine dezente Schaltfläche **Ablehnen
 ## Eine Entscheidung beantworten {#answering-a-decision}
 
 Drück eine Schaltfläche, um zu wählen.
-⌘1 (Ctrl+1 unter Linux) drückt die Hauptschaltfläche, und ⌘2 bis ⌘4 die anderen.
+⌘1 (Ctrl+1 unter Linux und Windows) drückt die Hauptschaltfläche, und ⌘2 bis ⌘4 die anderen.
 
 Manche Karten stellen in ihrem Text mehr als eine Frage, jeweils neben dem Teil, auf den sich die Frage bezieht.
 Wähl für jede eine Antwort und drück dann eine Schaltfläche, um alle zusammen zu senden.
@@ -60,7 +60,7 @@ Jede Karte von deinem ersten Offizier oder einem Crewmitglied hat unter ihrem Te
 Eine Antwort geht an den, der die Karte geschrieben hat.
 Die erste Antwort öffnet neben der Karte einen Verlauf, und der Verfasser antwortet dort.
 Ändert der Verfasser die Karte als Antwort, wird die Karte an Ort und Stelle überarbeitet, und der Verlauf sagt das.
-Um den Verlauf wieder in die Karte einzuklappen, drück ⌘\ (Ctrl+\ unter Linux).
+Um den Verlauf wieder in die Karte einzuklappen, drück ⌘\ (Ctrl+\ unter Linux und Windows).
 
 Die Karte bleibt an ihrem Platz, während ihr Verfasser an deiner Antwort arbeitet.
 Ein Crewmitglied zeichnet seine Karte einmal neu, wenn es fertig ist.
@@ -69,7 +69,7 @@ Ein Crewmitglied zeichnet seine Karte einmal neu, wenn es fertig ist.
 
 Um zu sagen, um welchen Teil einer Karte es dir geht, zeig darauf.
 
-1. Drück **Zeigen auf**, den Zeiger neben dem Antwortfeld, oder ⇧⌘A (Ctrl+Shift+A unter Linux).
+1. Drück **Zeigen auf**, den Zeiger neben dem Antwortfeld, oder ⇧⌘A (Ctrl+Shift+A unter Linux und Windows).
 2. Klick auf einen Teil der Karte, oder geh mit den Pfeiltasten dorthin und drück Enter.
 3. Schreib einen Kommentar, oder lass ihn leer, und drück **Vormerken**.
 
@@ -100,20 +100,20 @@ Es blendet die Karte aus, ohne sie zu beantworten.
 Deine Auswahl und alles, was du getippt hast, bleiben bei ihr.
 Die Karte wartet in „Aufgaben“ unter „Wartet auf dich“ und kommt zurück, wenn ihr Verfasser sie ändert.
 
-- **Karte beiseitelegen**: ⇧⌘M (Ctrl+Shift+M unter Linux).
-- **Alle Karten beiseitelegen oder zurückholen**: ⌥⇧⌘M (Ctrl+Alt+Shift+M unter Linux).
+- **Karte beiseitelegen**: ⇧⌘M (Ctrl+Shift+M unter Linux und Windows).
+- **Alle Karten beiseitelegen oder zurückholen**: ⌥⇧⌘M (Ctrl+Alt+Shift+M unter Linux und Windows).
 
 Um eine Karte zurückzuholen, klick in „Aufgaben“ auf ihre Aufgabe.
 
 ## Worte in einer Karte suchen {#finding-words-in-a-card}
 
-Drück ⌘F (Ctrl+F unter Linux) oder die Lupe oben in der Karte, um in der Karte auf dem Bildschirm nach Worten zu suchen.
+Drück ⌘F (Ctrl+F unter Linux und Windows) oder die Lupe oben in der Karte, um in der Karte auf dem Bildschirm nach Worten zu suchen.
 Schreib in das Feld, das sich öffnet, und die Treffer leuchten auf, während du tippst.
 Groß- und Kleinschreibung und Akzente spielen keine Rolle.
 Ein Zähler wie „2 von 7“ sagt, bei welchem Treffer du bist.
 
-- **Nächster Treffer**: Enter oder ⌘G (Ctrl+G unter Linux).
-- **Vorheriger Treffer**: Shift+Enter oder ⇧⌘G (Ctrl+Shift+G unter Linux).
+- **Nächster Treffer**: Enter oder ⌘G (Ctrl+G unter Linux und Windows).
+- **Vorheriger Treffer**: Shift+Enter oder ⇧⌘G (Ctrl+Shift+G unter Linux und Windows).
 - **Suche schließen**: Esc.
 
 Die Suche geht durch die ganze Karte: ihren Titel, ihren Text, ihre eingeklappten Abschnitte und ihren Verlauf.

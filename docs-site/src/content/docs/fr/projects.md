@@ -1,5 +1,5 @@
 ---
-source: 668341763c6348cb
+source: e0f16d58d735b925
 title: Projets
 description: Comment ajouter un projet à Infinitary, y réunir plusieurs dépôts, lui donner des étiquettes, concentrer la fenêtre sur un seul projet, choisir comment ses changements sont fusionnés et le retirer.
 ---
@@ -123,7 +123,7 @@ Vos fichiers restent tels quels jusqu’à ce que vous fusionniez un changement.
 ## Se concentrer sur un projet {#focus-on-one-project}
 
 À partir de deux projets, la barre du haut affiche une pastille de projet.
-Appuyez dessus, ou appuyez sur ⇧⌘P (Ctrl+Shift+P sous Linux), pour ouvrir une rangée de vos projets.
+Appuyez dessus, ou appuyez sur ⇧⌘P (Ctrl+Shift+P sous Linux et Windows), pour ouvrir une rangée de vos projets.
 Chaque pastille compte les tâches qui vous attendent et les tâches en cours.
 Choisissez un projet pour y concentrer la fenêtre.
 

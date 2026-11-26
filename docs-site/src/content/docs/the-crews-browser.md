@@ -74,7 +74,7 @@ It takes a picture of the page only with a reason it gives, which goes in the ta
 
 To tell the crewmate about one place on the page, point at it.
 
-1. Press **Point at** in the row above the page, or ⇧⌘A (Ctrl+Shift+A on Linux).
+1. Press **Point at** in the row above the page, or ⇧⌘A (Ctrl+Shift+A on Linux and Windows).
    The page is held still, and nothing you do reaches it.
 2. Press a spot, drag a box, or choose **Freehand line** and draw one line.
    From the keyboard, step through the things on the page with the arrow keys, and press Enter.

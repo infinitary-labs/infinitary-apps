@@ -1,5 +1,5 @@
 ---
-source: 01d22d3c265a0418
+source: d48d479419254865
 title: Le navigateur de l’équipage
 description: Un équipier peut ouvrir des sites web dans son propre navigateur pour sa tâche. Regardez-le, prenez le contrôle quand une page a besoin de vous, et décidez lesquelles de vos connexions les tâches suivantes peuvent utiliser.
 ---
@@ -75,7 +75,7 @@ Il ne prend une image de la page qu’avec une raison qu’il donne, qui va dans
 
 Pour parler à l’équipier d’un endroit précis de la page, désignez-le.
 
-1. Appuyez sur **Désigner** dans la rangée au-dessus de la page, ou sur ⇧⌘A (Ctrl+Shift+A sous Linux).
+1. Appuyez sur **Désigner** dans la rangée au-dessus de la page, ou sur ⇧⌘A (Ctrl+Shift+A sous Linux et Windows).
    La page est figée, et rien de ce que vous faites ne l’atteint.
 2. Appuyez sur un point, tracez un cadre, ou choisissez **Trait à main levée** et tracez un trait.
    Au clavier, parcourez les éléments de la page avec les flèches, et appuyez sur Entrée.

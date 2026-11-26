@@ -12,8 +12,8 @@ Cards come up in the middle of the window, over your first mate.
 When more than one card is waiting, they form a stack, and you see one at a time.
 A new card arrives without pushing aside the one you are reading.
 
-- **Show the next card**: ⇧⌘] (Ctrl+Shift+] on Linux).
-- **Show the previous card**: ⇧⌘[ (Ctrl+Shift+[ on Linux).
+- **Show the next card**: ⇧⌘] (Ctrl+Shift+] on Linux and Windows).
+- **Show the previous card**: ⇧⌘[ (Ctrl+Shift+[ on Linux and Windows).
 
 A task with a card waiting for you is listed under Waiting on you in Tasks.
 The keys on this page are the standard ones; [Keyboard](/keyboard/) lists every key, for each set of keys you can choose.
@@ -35,7 +35,7 @@ Most decisions also have a quiet **Decline** button, to say no to every choice.
 ## Answering a decision
 
 Press a button to choose.
-⌘1 (Ctrl+1 on Linux) presses the main button, and ⌘2 to ⌘4 the others.
+⌘1 (Ctrl+1 on Linux and Windows) presses the main button, and ⌘2 to ⌘4 the others.
 
 Some cards ask more than one question in their body, beside the part each question is about.
 Pick an answer for each, then press a button to send them all together.
@@ -59,7 +59,7 @@ Every card from your first mate or a crewmate has a field under its body that re
 A reply goes to whoever wrote the card.
 The first reply opens a thread beside the card, and the author answers there.
 When the author changes the card in answer, the card is revised in place, and the thread says so.
-To fold the thread back into the card, press ⌘\ (Ctrl+\ on Linux).
+To fold the thread back into the card, press ⌘\ (Ctrl+\ on Linux and Windows).
 
 The card stays in its place while its author works on your reply.
 A crewmate redraws its card once, when it has finished.
@@ -68,7 +68,7 @@ A crewmate redraws its card once, when it has finished.
 
 To say which part of a card your words are about, point at it.
 
-1. Press **Point at**, the pointer beside the reply field, or ⇧⌘A (Ctrl+Shift+A on Linux).
+1. Press **Point at**, the pointer beside the reply field, or ⇧⌘A (Ctrl+Shift+A on Linux and Windows).
 2. Click a part of the card, or move to it with the arrow keys and press Enter.
 3. Type a comment, or leave it empty, and press **Queue**.
 
@@ -99,20 +99,20 @@ It hides the card without answering it.
 Your picks and anything you typed stay with it.
 The card waits under Waiting on you in Tasks, and comes back when its author changes it.
 
-- **Put card aside**: ⇧⌘M (Ctrl+Shift+M on Linux).
-- **Put every card aside or bring them back**: ⌥⇧⌘M (Ctrl+Alt+Shift+M on Linux).
+- **Put card aside**: ⇧⌘M (Ctrl+Shift+M on Linux and Windows).
+- **Put every card aside or bring them back**: ⌥⇧⌘M (Ctrl+Alt+Shift+M on Linux and Windows).
 
 To bring a card back, click its task in Tasks.
 
 ## Finding words in a card
 
-Press ⌘F (Ctrl+F on Linux), or the magnifying glass at the card's top, to find words in the card on screen.
+Press ⌘F (Ctrl+F on Linux and Windows), or the magnifying glass at the card's top, to find words in the card on screen.
 Type in the field that opens, and the matches light up as you type.
 Capital letters and accents make no difference.
 A count such as "2 of 7" says which match you are on.
 
-- **Next match**: Enter or ⌘G (Ctrl+G on Linux).
-- **Previous match**: Shift+Enter or ⇧⌘G (Ctrl+Shift+G on Linux).
+- **Next match**: Enter or ⌘G (Ctrl+G on Linux and Windows).
+- **Previous match**: Shift+Enter or ⇧⌘G (Ctrl+Shift+G on Linux and Windows).
 - **Close find**: Escape.
 
 It looks through the whole card: its title, its body, its folded sections and its thread.

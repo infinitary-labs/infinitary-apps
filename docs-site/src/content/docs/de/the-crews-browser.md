@@ -1,5 +1,5 @@
 ---
-source: 01d22d3c265a0418
+source: d48d479419254865
 title: Der Browser der Crew
 description: Ein Crewmitglied kann für seine Aufgabe Websites in einem eigenen Browser öffnen. Sieh ihm zu, übernimm die Steuerung, wenn eine Seite dich braucht, und entscheide, welche deiner Anmeldungen spätere Aufgaben nutzen dürfen.
 ---
@@ -75,7 +75,7 @@ Ein Bild der Seite macht es nur mit einem Grund, den es angibt und der in der Ak
 
 Um dem Crewmitglied etwas zu einer Stelle der Seite zu sagen, zeig darauf.
 
-1. Drück in der Zeile über der Seite **Zeigen auf**, oder ⇧⌘A (Ctrl+Shift+A unter Linux).
+1. Drück in der Zeile über der Seite **Zeigen auf**, oder ⇧⌘A (Ctrl+Shift+A unter Linux und Windows).
    Die Seite wird angehalten, und nichts, was du tust, erreicht sie.
 2. Drück auf eine Stelle, zieh einen Rahmen, oder wähl **Freihandlinie** und zeichne eine Linie.
    Mit der Tastatur gehst du mit den Pfeiltasten durch die Dinge auf der Seite und drückst Enter.

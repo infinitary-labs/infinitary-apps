@@ -1,5 +1,5 @@
 ---
-source: 45896475239d4a1f
+source: 91a924b8c4a1a2d6
 title: Segredos
 description: Guarde as senhas e chaves de que sua tripulação precisa, permita cada uso em um cartão e veja o que as usou.
 ---
@@ -19,7 +19,7 @@ Abra **Ajustes** e depois **Segredos**, ou procure **Abrir Segredos** na busca d
 **Buscar segredos** encontra um pelo nome, pelo lugar ou pela tarefa que o usou por último.
 
 No Mac, a linha abaixo da lista diz “Guardados neste computador. Sua tripulação os usa, mas nunca os vê, a menos que você copie um.”
-No Linux, ela diz que sua tripulação só os usa com a sua aprovação, mas que qualquer programa que você executa pode alcançá-los enquanto o cofre de segredos do seu sistema estiver desbloqueado.
+No Linux e no Windows, ela diz que sua tripulação só os usa com a sua aprovação, mas que qualquer programa que você executa pode alcançá-los enquanto o cofre de segredos do seu sistema estiver desbloqueado.
 
 Os segredos ficam no computador onde seu imediato mora.
 Um computador que controla seu imediato de outro lugar não tem uma seção Segredos própria.
@@ -53,10 +53,10 @@ Digite um segredo só em um campo que o Infinitary desenha, nunca no campo de re
 ## Copiar um valor {#copy-a-value}
 
 Quando você mesmo precisar de um valor, por exemplo para colar uma chave em um site, abra a linha do segredo e escolha **Copiar valor**.
-A cada vez, seu computador pede que você confirme que é você: no Mac com Touch ID ou sua senha, e no Linux com sua senha.
+A cada vez, seu computador pede que você confirme que é você: no Mac com Touch ID ou sua senha, no Linux com sua senha, e no Windows com o Windows Hello ou sua senha do Windows.
 
 O valor vai para a área de transferência deste computador, e de nenhum outro.
-No Mac, ele não passa para seus outros dispositivos.
+No Mac e no Windows, ele não passa para seus outros dispositivos.
 No Linux, uma ferramenta de histórico da área de transferência ainda pode guardá-lo, e a linha avisa isso.
 
 A linha então diz “Copiado. Ele sai da área de transferência às” e um horário, 90 segundos depois da cópia.
@@ -87,7 +87,7 @@ Depois escolha:
   Qualquer coisa diferente pergunta de novo.
 - **Não permitir** recusa, e a próxima execução pergunta de novo.
 
-Cada permissão pede que você confirme antes: no Mac com Touch ID ou sua senha, e no Linux com sua senha.
+Cada permissão pede que você confirme antes: no Mac com Touch ID ou sua senha, no Linux com sua senha, e no Windows com o Windows Hello ou sua senha do Windows.
 O que recebe um segredo pode guardá-lo.
 Permitir nunca aprova uma ação separada, como implantar ou enviar algo.
 O tripulante fica sabendo só se a execução terminou, não o que ela imprimiu.

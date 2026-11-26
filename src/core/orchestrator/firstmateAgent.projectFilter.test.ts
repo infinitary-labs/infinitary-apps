@@ -45,7 +45,7 @@ describe("the project filter on a first mate input", () => {
     void agent.converse({ text: "what's waiting on me?", projectFilter: "phone" });
     await drained(session, 1);
     expect(decodeContext(session.prompts[0] as string).project_filter).toBe(
-      "every project - this message came from the captain's phone, which has no project filter and shows every project, so nothing narrows new work, answers or actions",
+      "every project - the captain's latest message came from their phone, which has no project filter and shows every project, so nothing narrows new work, answers or actions",
     );
   });
 

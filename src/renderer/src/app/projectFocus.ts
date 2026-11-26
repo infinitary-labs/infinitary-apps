@@ -14,7 +14,8 @@ import { appReadExecutor } from "../plugins/reads/appExecutor";
 /**
  * The window's project focus (docs/project-focus.md), as every surface
  * reads it: the top bar's pill, the Tasks panel and the board through
- * `PanelProps.view`, the stage's dimming, and the turn's hint. The saved
+ * `PanelProps.view`, the stage's dimming, and the project filter each
+ * message to the first mate carries. The saved
  * choice is the layout's (`railStore.focusProject`); what holds is that
  * choice while its project still has a pill (`heldFocus`).
  *

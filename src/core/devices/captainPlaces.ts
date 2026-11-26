@@ -1,7 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { ActionActor } from "@shared/actions";
 import { HOME } from "@shared/deviceNames";
-import type { DeviceView } from "@shared/devices";
+import { type DeviceView, isPhone } from "@shared/devices";
 import type { CoreInvokeChannel } from "@shared/ipc";
 import { askingView } from "../askedFromAView";
 
@@ -84,7 +84,8 @@ export class CaptainPlaces implements CaptainPlaceReads {
   fromPhone(): boolean {
     const view = askingView();
     if (view === undefined) return false;
-    return this.options.devices().find((each) => each.id === view)?.system === "ios";
+    const device = this.options.devices().find((each) => each.id === view);
+    return device !== undefined && isPhone(device);
   }
 
   inputFrom(): string | undefined {

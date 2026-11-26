@@ -135,18 +135,6 @@ export class CardActions {
     this.writeAsks = new CardWriteAsks(core);
   }
 
-  /**
-   * The captain's reply, typed under a card. A crewmate card's reply is a
-   * captain steer to that crewmate - the same control-plane path a card
-   * click takes, stamped `via: "thread"`. A Firstmate card's reply is a
-   * captain turn about that card. It resolves nothing: the card's buttons
-   * stay pinned and the decision is still his to make.
-   *
-   * Delivery is not awaited, exactly as a card click's round-trip is not:
-   * the message is on the record the moment it is typed, and a delivery
-   * failure is a feed line rather than a lost reply. Images ride where the
-   * session can carry them.
-   */
   /** A reply as a window or the phone sends it (`inf:cards:reply`), with the filter it came with. */
   replyFromView(
     cardId: string,
@@ -169,6 +157,18 @@ export class CardActions {
     );
   }
 
+  /**
+   * The captain's reply, typed under a card. A crewmate card's reply is a
+   * captain steer to that crewmate - the same control-plane path a card
+   * click takes, stamped `via: "thread"`. A Firstmate card's reply is a
+   * captain turn about that card. It resolves nothing: the card's buttons
+   * stay pinned and the decision is still his to make.
+   *
+   * Delivery is not awaited, exactly as a card click's round-trip is not:
+   * the message is on the record the moment it is typed, and a delivery
+   * failure is a feed line rather than a lost reply. Images ride where the
+   * session can carry them.
+   */
   replyToCard(
     cardId: string,
     rawText: string,

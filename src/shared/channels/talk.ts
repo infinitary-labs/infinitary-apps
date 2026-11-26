@@ -67,7 +67,8 @@ export const talkChannels = {
           pastCardId: z.string().min(1).max(128).optional(),
           /**
            * The project the window is focused on (the top bar's project
-           * pill, docs/project-focus.md): a hint below a shown record.
+           * pill, docs/project-focus.md): the project filter the first mate
+           * hears with the message.
            */
           focusedProjectId: z.string().min(1).max(64).optional(),
           /**

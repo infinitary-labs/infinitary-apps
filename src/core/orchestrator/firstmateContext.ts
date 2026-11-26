@@ -484,7 +484,7 @@ export class FirstmateContext {
       return "All projects - the project filter at the top of the captain's window shows every project, so nothing narrows new work, answers or actions";
     if (filter === "phone")
       // i18n-exempt: the project filter line, served only to the first mate's model
-      return "every project - this message came from the captain's phone, which has no project filter and shows every project, so nothing narrows new work, answers or actions";
+      return "every project - the captain's latest message came from their phone, which has no project filter and shows every project, so nothing narrows new work, answers or actions";
     const project = filter ? this.options.tasks.projects.get(filter.project) : undefined;
     if (!project || project.archivedAt !== null) return undefined;
     // i18n-exempt: the project filter line, served only to the first mate's model

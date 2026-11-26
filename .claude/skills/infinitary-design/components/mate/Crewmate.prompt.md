@@ -75,7 +75,7 @@ A value the record cannot say leaves its cell out; the strip is absent until the
 The reasoning, its footnote, the check counts, how long ago the checks finished and each watch's next read are the task record's alone.
 These are the shared task facts (`components/now/NowPanel`, Shared task facts): the task record shows the same values with the details above, and places its full strip just above its action bar.
 A level is never a bare word in the panel: it is the badge.
-The status, the task title and the project wrap in full.
+The status, the task title, the project and the tags wrap in full.
 The other facts stay one line: the panel is as wide as its longest line up to 360px - wide enough that every state the app can show reads whole beside its key - and a longer note ends in an ellipsis while the age stays whole.
 The status, the task title and the project may wrap; the status to two lines at most.
 Its type is never scaled with a fitted formation.

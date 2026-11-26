@@ -345,5 +345,51 @@
       "currentUpdateSeen": false,
       "seen": false
     }
-  ]
+  ],
+  "takeBack": {
+    "lastTurn": {
+      "askId": "ask-edit",
+      "sentAt": 1795454000000,
+      "takenBack": true,
+      "you": "chart the open tasks by project",
+      "reply": null,
+      "previous": {
+        "askId": "ask-first",
+        "sentAt": 1795453980000,
+        "takenBack": true,
+        "you": "chart the open tasks",
+        "reply": {
+          "text": "Reverted before your first mate read it",
+          "eligibility": "completed",
+          "withdrawn": true
+        }
+      }
+    },
+    "strip": {
+      "rounds": [
+        {
+          "id": "a:0000000000000000002",
+          "at": 1795454000000,
+          "kind": "message",
+          "you": "chart the open tasks by project",
+          "reply": null,
+          "takenBack": true,
+          "replaces": "chart the open tasks"
+        },
+        {
+          "id": "a:0000000000000000001",
+          "at": 1795453980000,
+          "kind": "message",
+          "you": "chart the open tasks",
+          "reply": {
+            "text": "Reverted before your first mate read it",
+            "eligibility": "completed",
+            "withdrawn": true
+          },
+          "takenBack": true
+        }
+      ],
+      "more": false
+    }
+  }
 }

@@ -52,6 +52,13 @@ export const INTENT_TABLE = {
     shows: "The box clears; the message is the last turn, marked sending.",
     settles: "A last-turn snapshot that follows the last turn shown at the tap.",
   },
+  // i18n-exempt: the table's description for a view's author, never shown to a person.
+  takeBack: {
+    shows:
+      "The newest message reads Reverted, its words struck; a replacement's send shows beside it.",
+    settles:
+      "A last-turn snapshot that marks the message taken back; one without the message voids it.",
+  },
   start: {
     shows: "The record and its row read Starting.",
     settles: "A board or record snapshot showing the start.",

@@ -28,9 +28,16 @@ public struct PhoneConversationRound: Decodable, Identifiable, Sendable, Equatab
         public let problem: Bool?
         public let eligibility: String?
         public let words: String?
+        /// The captain took the message back before any turn read it (`PhoneLastTurn.Reply.withdrawn`).
+        public let withdrawn: Bool?
         public init(_ reply: PhoneLastTurn.Reply) {
             text = reply.text; problem = reply.problem; eligibility = reply.eligibility; words = reply.words
+            withdrawn = reply.withdrawn
         }
+        /// The line as the phone shows it: its own words for a message withdrawn unread.
+        public var shown: String { withdrawn == true ? PhoneMessages.shellLastTurnRevertedUnread() : text }
+        /// The whole reply as the Conversation shows it.
+        public var whole: String { withdrawn == true ? shown : words ?? text }
     }
 
     /// Unique and ordered with `at`; the page cursor names it.
@@ -48,8 +55,16 @@ public struct PhoneConversationRound: Decodable, Identifiable, Sendable, Equatab
     public let through: Bool
     /// A line typed under the first mate's own card, which is also a message.
     public let typedAsMessage: Bool
+    /// The captain took the message back (docs/task-capture.md, "Taking back a message").
+    public internal(set) var takenBack: Bool
+    /// The words of the message this one replaced, which the captain took back to send it.
+    public let replaces: String?
+    /// The message's id and when the computer accepted it, from the last turn, which a take back names; nil on a round
+    /// the last turn does not hold, or from an older computer.
+    public internal(set) var askId: String?
+    public internal(set) var sentAt: Double?
 
-    private enum Keys: String, CodingKey { case id, at, kind, you, label, card, reply, answer, through }
+    private enum Keys: String, CodingKey { case id, at, kind, you, label, card, reply, answer, through, takenBack, replaces }
 
     public init(from decoder: Decoder) throws {
         let keys = try decoder.container(keyedBy: Keys.self)
@@ -63,18 +78,25 @@ public struct PhoneConversationRound: Decodable, Identifiable, Sendable, Equatab
         through = keys.contains(.through)
         // A reply round names its first mate's reply line, null while none was given, only when it was also a message.
         typedAsMessage = kind == .reply && keys.contains(.reply)
+        takenBack = try keys.decodeIfPresent(Bool.self, forKey: .takenBack) ?? false
+        replaces = try keys.decodeIfPresent(String.self, forKey: .replaces)
+        askId = nil; sentAt = nil
     }
 
     /// A message the phone holds before the computer read it: the last turn's.
-    init(held you: String, reply: PhoneLastTurn.Reply?, id: String) {
-        self.id = id; at = 0; kind = .message; self.you = you; card = nil
-        self.reply = reply.map(Reply.init); answer = nil; through = false; typedAsMessage = false
+    init(held round: PhoneLastRound, id: String) {
+        self.id = id; at = 0; kind = .message; you = round.you; card = nil
+        reply = round.reply.map(Reply.init); answer = nil; through = false; typedAsMessage = false
+        takenBack = round.takenBack == true; replaces = nil; askId = round.askId; sentAt = round.sentAt
     }
 
-    /// The same round with the reply line the last turn holds, which a live reply reaches first.
-    func replying(_ line: PhoneLastTurn.Reply?) -> PhoneConversationRound {
+    /// The same round with what the last turn holds of it: the reply line, which a live reply reaches first, the id and
+    /// time a take back names, and whether it was taken back.
+    func replying(_ held: PhoneLastRound) -> PhoneConversationRound {
         var round = self
-        round.reply = line.map(Reply.init)
+        round.reply = held.reply.map(Reply.init)
+        round.askId = held.askId; round.sentAt = held.sentAt
+        if held.takenBack == true { round.takenBack = true }
         return round
     }
 
@@ -110,8 +132,8 @@ public enum PhoneConversation {
     /// The two rounds the last turn holds, for a computer that cannot answer the read.
     public static func fallback(_ turn: PhoneLastTurn?) -> [PhoneConversationRound] {
         guard let turn else { return [] }
-        var rounds = [PhoneConversationRound(held: turn.you, reply: turn.reply, id: "last:1")]
-        if let older = turn.previous { rounds.append(PhoneConversationRound(held: older.you, reply: older.reply, id: "last:0")) }
+        var rounds = [PhoneConversationRound(held: turn.round, id: "last:1")]
+        if let older = turn.previous { rounds.append(PhoneConversationRound(held: older, id: "last:0")) }
         return rounds
     }
 
@@ -133,17 +155,15 @@ public enum PhoneConversation {
     public static func strip(turn: PhoneLastTurn?, page: [PhoneConversationRound]?, readAt: PhoneLastTurn?,
                              cardRounds: Bool = true, count: Int = roundsAtRest) -> [PhoneConversationRound] {
         guard let page else { return Array(fallback(turn).prefix(count)) }
-        let held: [(you: String, reply: PhoneLastTurn.Reply?)] = turn.map { turn in
-            [(turn.you, turn.reply)] + (turn.previous.map { [($0.you, $0.reply)] } ?? [])
-        } ?? []
+        let held: [PhoneLastRound] = turn.map { [$0.round] + ($0.previous.map { [$0] } ?? []) } ?? []
         let lag = min(sentSince(readAt, turn), held.count)
         var rounds = page.filter { cardRounds || $0.sentAsMessage }
         for (place, index) in rounds.indices.filter({ rounds[$0].sentAsMessage }).enumerated()
         where place + lag < held.count && rounds[index].you == held[place + lag].you {
-            rounds[index] = rounds[index].replying(held[place + lag].reply)
+            rounds[index] = rounds[index].replying(held[place + lag])
         }
         let sent = held.prefix(lag).enumerated().map { place, said in
-            PhoneConversationRound(held: said.you, reply: said.reply, id: place == 0 ? "held:\(said.you)" : "held:1:\(said.you)")
+            PhoneConversationRound(held: said, id: place == 0 ? "held:\(said.you)" : "held:1:\(said.you)")
         }
         return Array((sent + rounds).prefix(count))
     }

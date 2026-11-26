@@ -1,5 +1,5 @@
 ---
-source: 8556e6631058959f
+source: 1cfc8b1c01326a70
 title: El primer oficial
 description: Quién es tu primer oficial, qué hace y qué no hace, cómo hablarle y cómo elegir el modelo con el que responde.
 ---
@@ -47,6 +47,8 @@ Tu primer oficial detiene lo que el mensaje inició, deshace lo que ya hizo y di
 Para cambiar el mensaje en su lugar, presiona ↑ en un cuadro de mensaje vacío.
 El cuadro dice "Reemplaza tu último mensaje": Enter envía tu edición en su lugar, y Esc la envía como un mensaje nuevo.
 En [toda la conversación](#the-whole-conversation), un mensaje revertido aparece tachado, y uno editado conserva sus palabras anteriores.
+En un iPhone o iPad, el mismo icono aparece junto al mensaje.
+Mantén pulsado el mensaje para **Revertir tu último mensaje** o **Editar tu último mensaje**, que devuelve sus palabras al cuadro para enviarlas en su lugar.
 
 ### Agregar imágenes y archivos {#add-pictures-and-files}
 

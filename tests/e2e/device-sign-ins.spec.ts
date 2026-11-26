@@ -1229,7 +1229,14 @@ test("a connection from the connection file here is used on a computer, and a ne
     await file.choose.click();
     await file.pending("team-gateway").approve.click();
     const f = customApiForm(page);
-    await f.http.check();
+    // The line under the address answers after the form opens and pushes the
+    // HTTP box down a line; a click whose press and release straddle that move
+    // lands its release on the line and toggles nothing (INF-6840).
+    const approveHttp = async (address: string) => {
+      await expect(f.sendsTo).toContainText(address);
+      await f.http.check();
+    };
+    await approveHttp(api.baseUrl);
     await f.key.fill("sk-e2e-custom-file-here");
     expect(await saveCustomApi(page)).toBe("saved");
     const homeId = await page.evaluate(() =>
@@ -1240,7 +1247,7 @@ test("a connection from the connection file here is used on a computer, and a ne
 
     await here.offerOn("as Builder").click();
     await expect(f.address).toHaveValue(api.baseUrl);
-    await f.http.check();
+    await approveHttp(api.baseUrl);
     await f.key.fill(thereKey);
     expect(await saveCustomApi(page)).toBe("saved");
     await expect
@@ -1260,7 +1267,7 @@ test("a connection from the connection file here is used on a computer, and a ne
     );
     await first.approveAgain.click();
     await expect(f.address).toHaveValue(moved.baseUrl);
-    await f.http.check();
+    await approveHttp(moved.baseUrl);
     await f.key.fill(thereKey);
     expect(await saveCustomApi(page)).toBe("saved");
 

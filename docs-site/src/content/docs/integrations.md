@@ -75,8 +75,8 @@ Each time you sign in to Google, the notice shows first.
 
 The Google row says when the connection needs you:
 
-- **Sign in again**, with **Set up**: a connection made earlier through the client Infinitary used to share with everyone no longer works, because that client is gone.
-  Press **Set up** to make your own client and connect again.
+- **Sign in again**: a connection made earlier through the client Infinitary used to share with everyone no longer works, because that client is gone.
+  Press **Sign in again**, which opens **Set up your own Google connection**, to make your own client and connect again.
 - **Stops**, with a date: your client is not in Personal mode, so Google ends its sign-in on that date.
   Press **Set up again**, and make a client in Personal mode.
 - **Your Google client stopped**: Google no longer accepts your client, perhaps because it was deleted in Google Cloud.

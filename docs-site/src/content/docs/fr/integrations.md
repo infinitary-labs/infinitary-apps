@@ -1,5 +1,5 @@
 ---
-source: 8197fb5a554a0b4e
+source: 73e387523c5a3dd9
 title: Intégrations
 description: Connectez GitHub, GitLab, Bitbucket, Google et des serveurs MCP pour que votre second et votre équipage puissent les joindre, et choisissez ce que chacun peut faire sans vous demander.
 ---
@@ -76,8 +76,8 @@ Chaque fois que vous vous connectez à Google, l’avis s’affiche d’abord.
 
 La ligne Google indique quand la connexion a besoin de vous :
 
-- **Reconnectez-vous**, avec **Configurer** : une connexion faite auparavant avec le client qu’Infinitary partageait avec tout le monde ne fonctionne plus, car ce client n’existe plus.
-  Appuyez sur **Configurer** pour créer votre propre client et vous reconnecter.
+- **Se reconnecter** : une connexion faite auparavant avec le client qu’Infinitary partageait avec tout le monde ne fonctionne plus, car ce client n’existe plus.
+  Appuyez sur **Se reconnecter**, ce qui ouvre **Configurer votre propre connexion Google**, pour créer votre propre client et vous reconnecter.
 - **S’arrête le**, suivi d’une date : votre client n’est pas en mode personnel, donc Google met fin à sa connexion à cette date.
   Appuyez sur **Configurer de nouveau**, et créez un client en mode personnel.
 - **Votre client Google ne fonctionne plus** : Google n’accepte plus votre client, peut-être parce qu’il a été supprimé dans Google Cloud.

@@ -972,7 +972,9 @@ describe("Google as an integration", () => {
   });
 
   it("names a client only for an unpackaged run that asks for one", () => {
-    expect(googleSetup({ packaged: false, env: {} }).client).toBeUndefined();
+    const unnamed = googleSetup({ packaged: false, env: {} });
+    expect(unnamed.client).toBeUndefined();
+    expect(unnamed.endpoints).toEqual(googleSetup({ packaged: true, env: {} }).endpoints);
     const named = googleSetup({
       packaged: false,
       env: {

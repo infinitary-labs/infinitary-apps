@@ -1,5 +1,5 @@
 ---
-source: 8197fb5a554a0b4e
+source: 73e387523c5a3dd9
 title: Integraciones
 description: Conecta GitHub, GitLab, Bitbucket, Google y servidores MCP para que tu primer oficial y tu tripulación puedan alcanzarlos, y elige lo que cada uno puede hacer sin preguntarte.
 ---
@@ -76,8 +76,8 @@ Cada vez que inicias sesión en Google, el aviso aparece primero.
 
 La fila de Google dice cuándo la conexión te necesita:
 
-- **Inicia sesión de nuevo**, con **Configurar**: una conexión hecha antes con el cliente que Infinitary compartía con todos ya no funciona, porque ese cliente ya no existe.
-  Presiona **Configurar** para crear tu propio cliente y conectarte otra vez.
+- **Volver a iniciar sesión**: una conexión hecha antes con el cliente que Infinitary compartía con todos ya no funciona, porque ese cliente ya no existe.
+  Presiona **Volver a iniciar sesión**, que abre **Configura tu propia conexión con Google**, para crear tu propio cliente y conectarte otra vez.
 - **Deja de funcionar**, con una fecha: tu cliente no está en modo personal, así que Google cerrará su sesión en esa fecha.
   Presiona **Volver a configurar**, y crea un cliente en modo personal.
 - **Tu cliente de Google dejó de funcionar**: Google ya no acepta tu cliente, quizá porque se eliminó en Google Cloud.

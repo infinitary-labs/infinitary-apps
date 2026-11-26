@@ -56,7 +56,8 @@ const GOOGLE_ENDPOINTS: GoogleEndpoints = {
  * (`INFINITARY_GOOGLE_URL`, every address under it) and a client
  * (`INFINITARY_GOOGLE_CLIENT_ID`, `INFINITARY_GOOGLE_CLIENT_SECRET`), which
  * then also takes new sign-ins (`signsIn`); a packaged build reaches only
- * Google, and Infinitary's own client there only renews.
+ * Google and names no client, so a sign-in made with Infinitary's retired
+ * client cannot renew.
  */
 export function googleSetup(options: { packaged: boolean; env?: NodeJS.ProcessEnv }): {
   client?: GoogleClient;

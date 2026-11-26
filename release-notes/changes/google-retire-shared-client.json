@@ -7,7 +7,11 @@
       "body": "Infinitary no longer carries a Google client of its own, so a Google connection made earlier with it asks you to sign in again, and the Google row in Settings → Integrations sets up your own client first. Connections made with your own client are unchanged.",
       "area": "settings",
       "docsSite": ["integrations"],
-      "noPicture": "The change is the Google row's existing Set up step, already shown by the own-client setup note.",
+      "picture": {
+        "dark": "google-retire-shared-client-dark.webp",
+        "light": "google-retire-shared-client-light.webp",
+        "alt": "The Google row in Settings → Integrations reading Sign in again, with a Sign in again button"
+      },
       "provenance": { "origin": "change" }
     }
   ],

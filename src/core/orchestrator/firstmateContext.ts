@@ -558,7 +558,7 @@ export class FirstmateContext {
       ? `; required captain action task_id ${requiredActionTask}. Answer with emit_card using this same id, task_id and reply; the host preserves instructions and controls. For failure, read the output, arrange repair through the crew and keep repair status in this thread. Never confirm for the captain.`
       : "";
     // A host card naming the first mate as its answerer: every host card
-    // but an ask's and one taking no reply (`withHostAnswerer`).
+    // but a crewmate's ask and one taking no reply (`withHostAnswerer`).
     const hostAlertGuide =
       aboutCard?.author === "host" && aboutCard.answeredBy === "firstmate"
         ? `; the app's own card${aboutCard.taskId ? `, task_id ${aboutCard.taskId}` : ""}, which you answer and cannot revise: any act it asks goes through your tools, and its buttons stay the captain's`

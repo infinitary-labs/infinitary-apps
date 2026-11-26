@@ -942,8 +942,8 @@ export const MIGRATIONS: readonly Migration[] = [
   // published view reads the column. Additive and reversible: dropping the
   // column undoes it.
   (db) => addColumn(db, "cards", "risk_json", "TEXT"),
-  // 70: a card that takes no reply (FI3-1164; docs/card-threads.md "A card
-  // with no reply row"), as 0: its chrome draws no reply row and the core
+  // 70: a card that takes no reply (FI3-1164; docs/card-threads.md "Who
+  // answers a card"), as 0: its chrome draws no reply row and the core
   // refuses one, whoever its author is. The host writes it on the welcome
   // only; null on every other card and on every card written before it,
   // which take replies as their author allows. No published view reads the

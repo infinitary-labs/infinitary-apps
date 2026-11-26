@@ -294,7 +294,7 @@ The main process's own commands, the size keys, are never refused by the page.
   In the Browser tab it focuses a docked card's reply field or, with no card docked, opens the Crewmate column and focuses its message box.
   `browser.page`, Go to the browser page, takes focus back to the page while you hold control; a request card's open-browser click puts focus there by itself once the page is yours (`docs/task-browser.md`, "Asking for help").
   Command search also finds it by "anything to add" and "comment".
-  It refuses when no card is shown, when the shown entry takes no reply (a host card, a task record, a past card) and while a recording runs.
+  It refuses when no card is shown, when the shown entry takes no reply (a card marked as taking none, such as the welcome, a task record, a past card) and while a recording runs.
   It focuses the reply of the card that was shown when it ran, never another one shown since.
 - `focus.card-body`, Go to the card's body, puts focus in the shown entry's body, a card's, a task's record or a past card, ringed inside its edge: the reading keys scroll it, and Tab goes on to its first control ("Cards and frames").
   The body takes focus only from this command, never from a click, so a click on a card's words never takes focus from the main message.

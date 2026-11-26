@@ -384,8 +384,12 @@ test("under focus the stack holds other projects' cards back and Activity hides 
         await claimLink(link, { kind: "mac", name: "A phone", system: "ios" }),
       );
       try {
+        const infId = (await page.evaluate(() => window.infinitary.tasks.board())).projects.find(
+          (project) => project.key === "INF",
+        )?.id;
+        if (!infId) throw new Error("The board lists the infinitary project");
         // Once naming the window's own project, once naming none: neither narrows a phone message.
-        for (const fields of [{ focusedProjectId: PROJECTS[0].repoId }, {}]) {
+        for (const fields of [{ focusedProjectId: infId }, {}]) {
           const words = `What waits on me today? ${Object.keys(fields).length}`;
           expect(
             await filterLineFor(launched, words, () =>

@@ -260,8 +260,8 @@ it("gates old checked models until the recovered account is checked again (INF-4
 });
 
 it("keeps a connected account to its checked models once its refreshes settle (INF-3451)", async () => {
-  // Batch #109 sent OpenCode Go back for registering in this runtime: the
-  // unscoped refresh that fired re-listed every stock Bedrock model.
+  // Registering another provider in this runtime fires refreshes that
+  // re-list every stock Bedrock model.
   const dir = scratchDir("bedrock-checked-");
   const authPath = join(dir, "auth.json");
   const id = "us.anthropic.claude-sonnet-5-5";

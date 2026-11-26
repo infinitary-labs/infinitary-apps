@@ -116,15 +116,19 @@ export async function createModelRuntime(options: ModelRuntimeOptions): Promise<
   // provider fires one), and it calls them through this property, so it is
   // wrapped before any registration below and every refresh is tracked.
   const refresh = runtime.refresh?.bind(runtime);
+  let lastRefresh: Promise<unknown> = Promise.resolve();
   if (refresh)
-    runtime.refresh = (refreshOptions) =>
-      tracked(
+    runtime.refresh = (refreshOptions) => {
+      const work = tracked(
         refresh(
           options.connectionProvider
             ? { ...refreshOptions, allowNetwork: false, providers: [options.connectionProvider] }
             : refreshOptions,
         ),
       );
+      lastRefresh = work;
+      return work;
+    };
   const snapshot = runtime.getAvailableSnapshot.bind(runtime);
   const allows = (model: ModelDef) =>
     options.bedrockAccount
@@ -140,16 +144,21 @@ export async function createModelRuntime(options: ModelRuntimeOptions): Promise<
     );
     await runtime.refresh({ allowNetwork: false, providers: [BEDROCK_PROVIDER_ID] });
   }
-  // A Bedrock account's runtime never serves OpenCode Go, and registering a
-  // provider fires Pi's unscoped refresh, which would undo the Bedrock
-  // provider's checked model list above.
+  // Registering a provider and refreshing one provider both reset Pi's
+  // available list to every model of each signed-in provider; only an
+  // unscoped refresh's availability pass narrows them again (Copilot to the
+  // ids stored at its sign-in, OpenCode Go to a stored key). Registering
+  // fires exactly that refresh, so it alone is awaited: a second refresh
+  // racing it can leave the reset list standing. A Bedrock account's
+  // runtime, which never serves OpenCode Go and keeps only its checked list
+  // above, does not register it at all.
   const openCodeGo =
     options.connectionProvider || options.bedrockAccount
       ? undefined
       : runtime.getProvider(OPENCODE_GO_PROVIDER_ID);
   if (openCodeGo) {
     runtime.registerNativeProvider(storedKeyOnly(openCodeGo));
-    await runtime.refresh({ allowNetwork: false, providers: [OPENCODE_GO_PROVIDER_ID] });
+    await lastRefresh;
   }
   const getAuth = runtime.getAuth.bind(runtime);
   runtime.getAuth = ((model, overrides) => {

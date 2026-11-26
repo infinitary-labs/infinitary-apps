@@ -316,6 +316,42 @@ describe("OpenCode Go's key", () => {
   });
 });
 
+describe("GitHub Copilot's own list", () => {
+  // Pi narrows Copilot to the model ids it stored at sign-in
+  // (docs/model-lists.md); registering OpenCode Go in the same runtime must
+  // not widen it again before the background refresh lands.
+  it("lists only the account's own Copilot models as soon as the runtime is created", async () => {
+    const dir = scratchDir("infinitary-model-runtime-copilot-");
+    mkdirSync(dir, { recursive: true });
+    const authPath = join(dir, "auth.json");
+    writeFileSync(
+      authPath,
+      JSON.stringify({
+        "github-copilot": {
+          type: "oauth",
+          refresh: "ghu-stored-at-sign-in",
+          access: "tid-stored-at-sign-in",
+          expires: Date.now() + 3_600_000,
+          availableModelIds: ["claude-sonnet-5.5"],
+        },
+      }),
+      { mode: 0o600 },
+    );
+    const catalogBaseUrl = await startCatalog(({ hang }) => hang());
+    const runtime = await createModelRuntime({
+      authPath,
+      modelsPath: join(dir, "models.json"),
+      catalogBaseUrl,
+    });
+    expect(
+      runtime
+        .getAvailableSnapshot()
+        .filter((model) => model.provider === "github-copilot")
+        .map((model) => model.id),
+    ).toEqual(["claude-sonnet-5.5"]);
+  });
+});
+
 describe("catalogRefreshesSettled", () => {
   // A paused merge batch: the Codex sign-in test ended while its runtime's
   // background refresh still ran, the file's cleanup removed the test's

@@ -143,7 +143,7 @@ GitHub sorts each new outside issue and pull request with no model, and a mainta
   | `declined` | none | as not planned |
   | `answered` | none | as completed |
   | `changes-requested` (pull requests only) | adds `waiting on author` | no |
-  | `released` | adds `released` | no |
+  | `released` | adds `released` | as completed, if still open |
 
   Every disposition but the two that wait on the author takes `waiting on author` off too, and a pull request closes with no reason, which GitHub keeps for issues.
   The same mark from anyone else changes nothing, and a name off the list is no mark.

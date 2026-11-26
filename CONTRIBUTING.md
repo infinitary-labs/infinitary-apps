@@ -36,8 +36,8 @@ An issue opened from a form or with `/feedback`, and a new pull request from you
 
 The answer says what happens next, with a label:
 
-- `accepted`: the project takes it on. A problem is reproduced before it is fixed, so it is accepted only once the maintainers' crew has made it happen on the version named in the answer; until then its first answer says it was read and keeps `needs triage`. An accepted problem closes when its fix merges, linking the change.
-- `released`: the release named in the answer holds the fix, and the answer thanks you.
+- `accepted`: the project takes it on. A problem is reproduced before it is fixed, so it is accepted only once the maintainers' crew has made it happen on the version named in the answer; until then its first answer says it was read and keeps `needs triage`. If the maintainers later stop the work without shipping it, a new answer says so and closes the issue as declined.
+- `released`: the release named in the answer holds the work, and the answer thanks you and closes the issue if it is still open.
 - `waiting on author`: the answer asks you for something, such as more detail, the steps for a problem that did not happen when the maintainers' crew tried it, or a change. Your reply, or a new version of your pull request, puts it back in line.
 - `duplicate`, declined or answered: the issue or pull request is closed, and the answer says why.
 

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "drop-agreement-box",
+      "reason": "Internal: the pull request template no longer carries the agreement box; first-time outside contributors accept by replying with the sentence."
+    }
+  ]
+}

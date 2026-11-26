@@ -1,0 +1,7 @@
+{
+  "entries": [],
+  "exclusions": [{
+    "id": "start-over-hears-no-push",
+    "reason": "Internal: a window starting over as another computer's view hears no app push until its new page loads, so the page it leaves no longer draws that computer's state for the instant before it goes. It fixes an intermittent journey failure; nothing a person uses changes."
+  }]
+}

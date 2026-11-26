@@ -42,6 +42,7 @@ A link joins only by being pasted there and confirmed: nothing on either Mac ans
 3. `inf:devices:join` uses the link once as the link's kind - `mac`, or an older home's `view` - under this Mac's own name (`computerName`, `src/core/devices/computerName.ts`: the name macOS shows in System Settings, or the network name without `.local`), saying it joins with its window and, for a Mac, the macOS user its work runs as, and saves the grant.
    Paired as a Mac, it also sets its work up (below, "A Mac that runs work").
 4. The shell stops this Mac's own core and its connection, becomes a view, and every window starts over as the other Mac's.
+   Until a window's new page commits it hears no push (`startWindowsOver`, `src/main/windows.ts`), so the page it leaves never draws the other Mac's state, such as its "in reach" line, and a window showing that line is already the other Mac's.
 
 A refusal changes nothing here and says what happened: not a link, a link for another user on that Mac, used, expired, no longer open, nothing answering at the address, or something answering there that is not the Mac that made the link.
 A Windows PC joins a Mac's, a Linux computer's or a Windows PC's first mate the same way, saying its security identifier in place of a user number (`docs/devices.md`, "Joining").

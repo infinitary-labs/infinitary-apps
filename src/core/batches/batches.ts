@@ -624,6 +624,8 @@ export class Batches {
           // as on any hold, on the same pull request.
           record = await this.follow(repo, record);
           const now = record.open;
+          // The reading itself moved a batch whose changes left or changed (`settleUnconfirmed`).
+          if (now && now.branch !== open.branch) return undefined;
           if (now && mergeWait(now)?.head === answer.head) {
             const refusal = await this.replaceWaited(repo, record);
             if (refusal) return refusal;
@@ -967,9 +969,11 @@ export class Batches {
     const forge = this.options.forgeFor(repo);
     let open = record.open as OpenBatch;
     if (!this.atBatchAddress(repo, open)) return record;
+    // A merge that may still finish takes whatever the branch holds then (`settleUnconfirmed`).
+    const sent = open.unconfirmed?.head === open.head;
     // Every member left: the line takes the batch's branch and pull request, or it ends,
     // unless the batch waits for its repair's fix, which it takes the same way once approved.
-    if (open.members.length === 0 && !(open.hold && open.awaits !== undefined))
+    if (open.members.length === 0 && !sent && !(open.hold && open.awaits !== undefined))
       return record.line.length
         ? this.recombine(repo, record, "line")
         : this.abandon(repo, record, forge);
@@ -1014,6 +1018,7 @@ export class Batches {
       if (!awaitedJoins(record)) return record;
       return this.recombine(repo, record, "line");
     }
+    if (sent) return this.settleUnconfirmed(repo, record, forge, open);
     if (open.stale) return this.recombine(repo, record, "none");
     if (pull.headSha !== open.head) {
       // A pull request can trail its branch for a moment after a push: the
@@ -1052,10 +1057,6 @@ export class Batches {
       if (held.fresh)
         this.options.note(BATCH_WORDS.removedHeld(repo.name, this.label(repo, open), forge.place));
       return held.record;
-    }
-    if (open.unconfirmed?.head === open.head) {
-      const settled = await this.settleUnconfirmed(repo, record, forge, open);
-      if (settled) return settled;
     }
     // A held batch's approved fix joins it, and the changes waiting in line join with it.
     // A batch held for its checks reads them first: a version that passes on a rerun
@@ -1151,15 +1152,17 @@ export class Batches {
    * holding it reads as queued; the host's own word that the merge failed,
    * or no word at all, holds the batch with nothing sent until Try again;
    * a merge the host still reports as running waits, shown from the first
-   * such reading with Try again (`mergeWait`). Undefined once the
-   * passes go on as before, the record cleared of it.
+   * such reading with Try again (`mergeWait`). A batch whose changes left,
+   * or whose words changed, while that merge runs moves to a new pull
+   * request as Try again does, or keeps waiting where the host did not
+   * close it, since its merge could take a new version whose checks never ran.
    */
   private async settleUnconfirmed(
     repo: RepoView,
     record: BatchRecord,
     forge: Forge,
     open: OpenBatch,
-  ): Promise<BatchRecord | undefined> {
+  ): Promise<BatchRecord> {
     const { unconfirmed, ...rest } = open;
     const number = open.number as number;
     if (forge.inHostQueue && (await forge.inHostQueue(number))) {
@@ -1174,6 +1177,11 @@ export class Batches {
     // such reading Settings shows the wait with Try again, and the feed says it once, since a
     // host can read a merge that never ends as running too.
     if (!refused) {
+      if (open.stale || open.members.length === 0) {
+        await this.replaceWaited(repo, record);
+        const now = this.record(repo.id);
+        if (now.open?.branch !== open.branch) return now;
+      }
       if (unconfirmed?.pending !== undefined) return record;
       const waiting = this.save(repo.id, {
         ...record,
@@ -1202,12 +1210,13 @@ export class Batches {
   }
 
   /**
-   * Try again on a merge the host still reads as running (`mergeWait`): that
-   * merge may still finish, and a host whose merge names no version would
-   * merge whatever its branch holds then, so no new version goes on its pull
-   * request. The pull request is closed first and read again; once it reads
-   * closed, its branch goes and its changes combine with the line on a new
-   * branch and pull request. A close the host refused or did not take keeps
+   * Try again, or a pass whose batch's changes left or changed, on a merge
+   * the host still reads as running (`mergeWait`): that merge may still
+   * finish, and a host whose merge names no version would merge whatever its
+   * branch holds then, so no new version goes on its pull request. The pull
+   * request is closed first and read again; once it reads closed, it is kept
+   * as closed, its branch goes and its changes combine with the line on a
+   * new branch and pull request. A close the host refused or did not take keeps
    * the wait and answers so; a merge that finished meanwhile is recorded as
    * merged. Answers the refusal, or nothing once the new batch is combined.
    */
@@ -1237,7 +1246,7 @@ export class Batches {
     }
     if (pull.state !== "closed") return BATCH_WORDS.stillOpen(this.label(repo, open), forge.place);
     await forge.deleteBranch?.(open.branch).catch(() => {});
-    const saved = this.save(repo.id, reopened(record));
+    const saved = this.save(repo.id, reopened(record, this.options.now()));
     this.settleTold(saved, open.branch);
     await this.recombine(repo, saved, "line");
     return undefined;

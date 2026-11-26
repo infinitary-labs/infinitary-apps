@@ -49,4 +49,14 @@ struct PhoneScreen {
     func all(_ type: XCUIElement.ElementType, where matches: (Element) -> Bool = { _ in true }) -> [Element] {
         elements.dropFirst().filter { $0.type == type && matches($0) }
     }
+
+    /// Where the app stops showing above the keyboard, or nil with no keyboard. XCUITest's keyboard frame is its keys
+    /// alone; the suggestion row and, on an iPhone, WebKit's form bar (previous, next, Done) stand above them in the
+    /// keyboard's own container, whose top is that line.
+    func keyboardDrawnTop() -> CGFloat? {
+        guard let keys = first(.keyboard) else { return nil }
+        let window = first(.window)?.frame ?? .null
+        let tops = all(.other) { $0.holdsKeyboard }.map(\.frame.minY).filter { $0 > window.minY + 0.5 && $0 < keys.frame.minY }
+        return tops.max() ?? keys.frame.minY
+    }
 }

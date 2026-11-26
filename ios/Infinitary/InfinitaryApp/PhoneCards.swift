@@ -53,7 +53,7 @@ struct PhoneCards<Content: View>: View {
     private var card: PhoneCard? { past ?? stack.first(where: { $0.id == selected }) ?? stack.first }
 
     private var hasPager: Bool {
-        !stack.isEmpty && !(messageContext.keyboardUp && (phoneOnItsSide(verticalSize) || messageContext.replyFocused))
+        !stack.isEmpty && !messageContext.composerAside && !(messageContext.keyboardUp && phoneOnItsSide(verticalSize))
     }
 
     private var stage: some View {
@@ -925,7 +925,8 @@ struct PhoneCardPane: View {
     /// INF-3468, the captain's pick: a typing reply comes to rest with the card's choices showing under it where the
     /// field, the choices and the card's foot fit in the room; otherwise with the margin under it.
     var typingOverflows: Bool {
-        ((replyFocus == .face && !pinsFrame) || messageContext.composerAside) && contentHeight > scrollFrame + 0.5
+        ((replyFocus == .face && !pinsFrame) || (messageContext.keyboardUp && messageContext.replyFocused))
+            && contentHeight > scrollFrame + 0.5
             && scrollFrame > 0
     }
 

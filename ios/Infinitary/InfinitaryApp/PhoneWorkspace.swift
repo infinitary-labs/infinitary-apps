@@ -47,12 +47,13 @@ extension EnvironmentValues {
     /// INF-1208's direction C: a panel's own text field holds the keyboard's focus on a foldable's pages.
     var panelFieldFocused = false
     /// INF-1208's direction C: a text box in a panel's own card on Home holds the keyboard's focus, which places a
-    /// foldable's pages as the message box does; unlike `replyFocused` it moves nothing on an iPhone or an iPad.
+    /// foldable's pages as the message box does.
     var panelCardTyping = false
     /// INF-3468, the captain: "hide pager and everything below the card (the main chat input etc) to make more space.
-    /// they come back when the keyboard gets collapsed". On an iPhone or an iPad, upright or on its side, while a text box
-    /// in the card holds the keyboard, the pager and the message box with its last turn step aside for the card.
-    var composerAside: Bool { keyboardUp && replyFocused }
+    /// they come back when the keyboard gets collapsed". On every device, upright or on its side, while a text box in the
+    /// shown card holds the keyboard, the pager and the message box with its last turn step aside for the card, a
+    /// computer's card or a panel's own card (INF-4350).
+    var composerAside: Bool { keyboardUp && (replyFocused || panelCardTyping) }
     /// The captain's Approve and build on comfortable Apple Pencil input: where the Pencil's move rule puts the message
     /// box (`PhonePencilPlacement`), and when a touch last came down and whether it was the Pencil, so a field's focus
     /// knows what gave it. Held only while Infinitary runs.
@@ -201,7 +202,7 @@ struct PhoneWorkspace<Tasks: View, Composer: View>: View {
         return PhoneLayout.cardNeedsPanelRoom(width: messageContext.cardWidth, stage: viewport.width - sidebarWidth - 1)
     }
     private var sharedFoot: Bool {
-        openDuo && messageContext.cardShown && !maximized && !composerAside && !pages.homeWaits
+        openDuo && messageContext.cardShown && !maximized && !messageContext.composerAside && !pages.homeWaits
             && !messageContext.keyboardUp && !composerSeparate
     }
     private var composerSeparate: Bool { composerUnderPanel && !panelsFolded }
@@ -466,16 +467,17 @@ struct PhoneWorkspace<Tasks: View, Composer: View>: View {
                     .fixedSize(horizontal: false, vertical: true)
                     // Stepped aside, it answers to its own name, so a reading of the message box never finds it undrawn.
                     .accessibilityElement(children: .contain)
-                    .accessibilityIdentifier(composerAside ? "phone-composer-aside" : "phone-composer")
+                    .accessibilityIdentifier(messageContext.composerAside ? "phone-composer-aside" : "phone-composer")
                     .padding(.horizontal, PhoneTheme.space4)
                     .padding(.bottom, PhoneTheme.space2)
                     // INF-2568 and INF-3468, the captain: "hide pager and everything below the card (the main chat
                     // input etc) to make more space". While a text box in a card holds the keyboard, the message box,
                     // the last turn and its notes step aside, kept in place so the draft stays, and the card keeps
                     // the message box's 8 points above the keyboard.
-                    .frame(height: composerAside ? 0 : nil, alignment: .top)
-                    .opacity(composerAside ? 0 : 1).allowsHitTesting(!composerAside).accessibilityHidden(composerAside)
-                    .padding(.bottom, composerAside ? PhoneTheme.space2 : 0)
+                    .frame(height: messageContext.composerAside ? 0 : nil, alignment: .top)
+                    .opacity(messageContext.composerAside ? 0 : 1).allowsHitTesting(!messageContext.composerAside)
+                    .accessibilityHidden(messageContext.composerAside)
+                    .padding(.bottom, messageContext.composerAside ? PhoneTheme.space2 : 0)
                     // INF-1208's direction A: the layout keeps the message box to the card's side of the fold.
                     // Under a maximized card the message box waits hidden, its draft kept, as the Mac's main message does.
                     .phoneWaits(pages.homeWaits || maximized)
@@ -484,14 +486,6 @@ struct PhoneWorkspace<Tasks: View, Composer: View>: View {
         }.phoneReadsRoom($room).phoneSceneBackdrop().background(PhoneTheme.background)
             // INF-1208's direction C: the crew scene's Open task brings the record to the Tasks panel's place too.
             .environment(\.phoneRecordInPlace, recordInPlace)
-    }
-
-    /// INF-1208's direction C: on a foldable's pages a text box in a panel's own card steps the message box and its last
-    /// turn aside too, as a computer card's does (INF-3468), so the card keeps the page above the keyboard; an iPad's
-    /// sidebar, with no fold, keeps its message box as before.
-    private var composerAside: Bool {
-        messageContext.composerAside
-            || (paged && !folds.isEmpty && messageContext.keyboardUp && messageContext.panelCardTyping)
     }
 
     /// INF-1062, the captain's pick: the computer's name left the bar, so one line under it on every tab says the reach

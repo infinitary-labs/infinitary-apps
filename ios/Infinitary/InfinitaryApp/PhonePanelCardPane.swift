@@ -11,7 +11,8 @@ struct PhonePanelCardPane: View {
     let visible: Bool
     @Environment(\.colorScheme) private var scheme
     @Environment(PhoneMessageContext.self) private var messageContext
-    @State private var room: CGFloat = 0
+    /// The page's height as drawn, which a card that fills gives its page.
+    @State private var pageHeight: CGFloat = 0
 
     private var entry: PhonePanelCardEntry? { model.cards.entry(entryID) }
     private var host: PanelWebHost? { model.cardHosts[entryID] }
@@ -27,11 +28,12 @@ struct PhonePanelCardPane: View {
                 .phoneCardSurface()
                 .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("panel-card-\(entry.panel)-\(entry.id)")
+                // The card takes the stage's room before the space under it, which only fills what the card leaves.
+                .layoutPriority(1)
             }
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { room = $0 }
         .onChange(of: shown, initial: true) { _, shown in if shown { _ = model.cardHost(entryID) } }
         .onChange(of: visible, initial: true) { _, visible in if visible { model.seen(entryID) } }
         // INF-1208's direction C: only the shown card speaks for its page's text box, as a computer's card does.
@@ -66,10 +68,10 @@ struct PhonePanelCardPane: View {
     }
 
     /// The panel's own card view: at its page's height up to the room the stage has, scrolling past it, or the whole
-    /// room for a card that fills.
+    /// room for a card that fills. INF-4350: it can shrink to nothing, so Home's column fits the card into the room the
+    /// keyboard leaves; a card that cannot shrink overflows the column centred, its title under the bar and the message
+    /// box under the keyboard.
     @ViewBuilder private func page(_ entry: PhonePanelCardEntry) -> some View {
-        let headRoom: CGFloat = 64
-        let most = max(120, room - headRoom - PhoneTheme.space3)
         Group {
             if let host {
                 switch host.stand {
@@ -81,15 +83,16 @@ struct PhonePanelCardPane: View {
                         Button(PhonePanelWords.retry, action: host.retry).buttonStyle(PhoneChoiceStyle(.secondary))
                     }
                 default:
-                    let height = entry.height == "fill" ? most : min(most, host.contentHeight)
+                    let fills = entry.height == "fill"
                     ScrollView {
                         PanelWebView(host: host, theme: scheme == .dark ? "dark" : "light")
                             .id(host.generation)
-                            .frame(height: entry.height == "fill" ? most : host.contentHeight)
+                            .frame(height: fills ? pageHeight : host.contentHeight)
                             .opacity(host.stand != .drawn ? 0 : 1)
                     }
-                    .scrollDisabled(entry.height == "fill" || host.contentHeight <= most)
-                    .frame(height: entry.height == "fill" ? most : height)
+                    .scrollDisabled(fills || host.contentHeight <= pageHeight + 0.5)
+                    .frame(minHeight: 0, maxHeight: fills ? .infinity : host.contentHeight)
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { pageHeight = $0 }
                 }
             } else {
                 Color.clear.frame(height: 48)

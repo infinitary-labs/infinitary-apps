@@ -12,6 +12,8 @@ extension PhoneJourney {
     /// starts a message and opens Settings from its own presses, and the tab leaves once the panel is gone. INF-6295: with a rule saved on the test home's real core (`panel-automation-on`),
     /// the app's own Automation panel joins the tab with no owner word and the rule's name, the Tasks and Activity panels
     /// stay out, an iPad on its side draws it from the sidebar's Panels choice, and the tab leaves once the rule is deleted.
+    /// INF-4350: a text box in the panel's note on Home, typed in upright and beside an iPad's sidebar, keeps the note
+    /// between the bar and the keyboard (`verifyPanelCardTyping`).
     func testPanelsTab() async throws {
         try await launchFresh()
         try await join()
@@ -93,6 +95,8 @@ extension PhoneJourney {
             tapOnPhone(choice, repeatDiscarded: false)
             XCTAssertTrue(tally(42).waitForPresence(timeout: 60), app.debugDescription)
             picture("panels-ipad-sidebar")
+            // INF-4350: beside the sidebar, the note the panel raised still shows on Home, and its text box types there.
+            try await verifyPanelCardTyping("beside the sidebar", card: "panel-card-phone-tally-card-1")
             XCUIDevice.shared.orientation = .portrait
             XCTAssertTrue(panelsTab.waitForPresence(timeout: 20), app.debugDescription)
         }
@@ -225,6 +229,7 @@ extension PhoneJourney {
         XCTAssertTrue(app.webViews.staticTexts["Noted 1"].waitForPresence(timeout: 20), app.debugDescription)
         XCTAssertTrue(app.webViews.staticTexts["Put up 1 times"].exists, "The same card, not put up again: \(app.debugDescription)")
         picture("panel-card-hears-push")
+        try await verifyPanelCardTyping("upright", card: "panel-card-phone-tally-note")
 
         tapOnPhone(app.webViews.buttons["Open the record"], repeatDiscarded: false)
         let recordTitle = app.staticTexts["task-record-title"]
@@ -255,6 +260,87 @@ extension PhoneJourney {
         XCTAssertEqual(recordTitle.label, "Check the phone connection")
         tapOnPhone(close)
         XCTAssertTrue(close.waitForAbsence(timeout: 10), app.debugDescription)
+    }
+
+    /// INF-4350: a text box in a panel's own card on Home, typed in with the keyboard up, keeps the card's title below the
+    /// bar and the box above the keyboard, with the pager and the message box stepped aside as for a computer card's text
+    /// box (INF-3468); once the keyboard closes they come back, the message box above the keyboard's place. It fails when
+    /// the card cannot shrink to the room the keyboard leaves, as Home's column then lets it overflow centred, its title
+    /// under the bar and the message box under the keyboard. `card` names the card's surface (`panel-card-<panel>-<card>`),
+    /// whose box is "A reply to the note".
+    func verifyPanelCardTyping(_ situation: String, card: String) async throws {
+        let field = app.webViews.textFields["A reply to the note"].firstMatch
+        XCTAssertTrue(field.waitForPresence(timeout: 20), app.debugDescription)
+        var failures: [String] = []
+        panelCardFieldProbe("\(situation), before the tap", card: card, field, keyboardExpected: false, into: &failures)
+        focusForPhoneTyping(field, in: app)
+        field.typeText("Tide")
+        panelCardFieldProbe("\(situation), typed", card: card, field, into: &failures)
+        XCTAssertEqual(field.value as? String, "Tide", "The box shows what was typed")
+        try await dismissKeyboardForProbe()
+        panelCardFieldProbe("\(situation), after the keyboard closed", card: card, field, keyboardExpected: false, into: &failures)
+        finishKeyboardChecks(failures)
+    }
+
+    /// Where a panel's card and its text box sit against the bar's foot and the keyboard's drawn top, from one steady read
+    /// of the screen: the card wholly between them, its title below the bar and the box inside the card's room.
+    func panelCardFieldProbe(_ situation: String, card: String, _ field: XCUIElement, keyboardExpected: Bool = true,
+                             into failures: inout [String]) {
+        if keyboardExpected {
+            XCTAssertTrue(app.keyboards.firstMatch.waitForPresence(timeout: 10), "\(situation): no keyboard")
+        }
+        var steady = PhoneSteadyReading<[CGRect]>()
+        var look: (field: CGRect, screen: PhoneScreen)?
+        let still = NSPredicate { _, _ in
+            guard let f = (try? field.snapshot())?.frame, let screen = PhoneScreen(self.app) else { return steady.read(nil) }
+            look = (f, screen)
+            return steady.read([f] + [screen.first(.keyboard), screen.first(card), screen.first("phone-composer")].map { $0?.frame ?? .null })
+        }
+        let held = waitForPhonePredicate(still, object: nil, timeout: 10)
+        guard let look else {
+            failures.append("PANEL CARD FIELD \(situation): the box was never read")
+            return
+        }
+        let screen = look.screen
+        let window = screen.first(.window)?.frame ?? .null
+        let keyTop = screen.keyboardDrawnTop() ?? window.maxY
+        let barFoot = screen.first(.navigationBar)?.frame.maxY ?? window.minY
+        let surface = screen.first(card)?.frame ?? .null
+        // The card's own title: a panel's card beside it in Home's row has one too.
+        let title = screen.all(.staticText) { $0.identifier == "panel-card-title" && surface.contains(CGPoint(x: $0.frame.midX, y: $0.frame.midY)) }
+            .first?.frame ?? .null
+        let composer = screen.first("phone-composer")
+        let f = look.field
+        var problems: [String] = []
+        if title.isNull { problems.append("its title is not drawn") } else if title.minY < barFoot - 0.5 {
+            problems.append(String(format: "its title's top is %.0f pt under the bar", barFoot - title.minY))
+        }
+        if surface.isNull { problems.append("the card is not drawn") } else {
+            if surface.minY < barFoot - 0.5 { problems.append(String(format: "the card's top is %.0f pt under the bar", barFoot - surface.minY)) }
+            if surface.maxY > keyTop + 0.5 { problems.append(String(format: "the card's foot is %.0f pt behind the keyboard", surface.maxY - keyTop)) }
+            let top = max(surface.minY, barFoot), foot = min(surface.maxY, keyTop)
+            if f.minY < top - 0.5 || f.maxY > foot + 0.5 { problems.append("the box is not wholly inside the card's room above the keyboard") }
+        }
+        // INF-3468, the captain: "hide pager and everything below the card (the main chat input etc) to make more space.
+        // they come back when the keyboard gets collapsed".
+        let aside = screen.first("phone-composer-aside") != nil, pager = screen.first("card-pager") != nil
+        if keyboardExpected {
+            if !aside { problems.append("the message box stayed in view") }
+            if pager { problems.append("the pager stayed in view") }
+            if !((field.value(forKey: "hasKeyboardFocus") as? Bool) ?? false) { problems.append("the box lost the keyboard's focus") }
+        } else {
+            if aside || composer == nil { problems.append("the message box is not in view") }
+            if !pager { problems.append("the pager is not in view") }
+        }
+        if let composer, composer.frame.maxY > keyTop + 0.5 {
+            problems.append(String(format: "the message box is %.0f pt behind the keyboard", composer.frame.maxY - keyTop))
+        }
+        let line = "PANEL CARD FIELD \(situation): held \(held == .completed) box \(f) card \(surface) title \(title) bar-foot \(barFoot)"
+            + " keyboard-top \(keyTop) composer \(composer.map { "\($0.frame)" } ?? "absent") window \(window) -> "
+            + (problems.isEmpty ? "in view" : problems.joined(separator: "; "))
+        print(line)
+        picture("panel card field " + situation)
+        if !problems.isEmpty { failures.append(line) }
     }
 
     /// INF-6295's piece B, the captain's "Build them now as a second piece": `point.draft` and `point.openSettings` work

@@ -133,14 +133,7 @@ extension PhoneJourney {
         let body = screen.first("card-body", .webView), lead = screen.first(leadWords, .staticText, inWebView: true)
         let composer = screen.first("phone-composer")
         let window = screen.first(.window)?.frame ?? .null
-        // XCUITest's keyboard frame is its keys alone. The suggestion row and, on an iPhone, WebKit's form bar (previous,
-        // next, Done) stand above them in the keyboard's own container, whose top is where the card stops showing.
-        let keyTop: CGFloat = {
-            guard let keys else { return window.maxY }
-            let tops = screen.all(.other) { $0.holdsKeyboard }.map(\.frame.minY)
-                .filter { $0 > window.minY + 0.5 && $0 < keys.frame.minY }
-            return tops.max() ?? keys.frame.minY
-        }()
+        let keyTop = screen.keyboardDrawnTop() ?? window.maxY
         let barFoot = screen.first(.navigationBar)?.frame.maxY ?? window.minY
         let f = look.field
         let top = max(scroll?.frame.minY ?? window.minY, barFoot)

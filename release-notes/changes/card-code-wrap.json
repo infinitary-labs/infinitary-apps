@@ -6,9 +6,15 @@
       "area": "cards",
       "title": "Long commands in a card wrap instead of running off the edge",
       "body": "A command or other code in a card that is wider than the card now wraps onto the next line, so you can read and copy all of it. Before, its end was cut off with no way to scroll to it, on your computer and on your iPhone or iPad.",
-      "noPicture": "The change is how long lines of code wrap in a card, which needs a card holding a command wider than the card to show.",
+      "picture": {
+        "dark": "card-code-wrap-dark.webp",
+        "light": "card-code-wrap-light.webp",
+        "alt": "A card with two long commands, each wrapped onto a second line so its whole text shows"
+      },
       "noDocsSite": "No docs site page describes how code inside a card is drawn.",
-      "provenance": { "origin": "change" }
+      "provenance": {
+        "origin": "change"
+      }
     }
   ],
   "exclusions": []

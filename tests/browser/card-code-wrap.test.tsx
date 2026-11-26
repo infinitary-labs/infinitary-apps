@@ -8,50 +8,39 @@ import { openWindow } from "./window";
 
 const TITLE = "Commands to update a server to stable 0.8.10";
 
-// A note an agent wrote: two commands longer than the card is wide, in a fold.
-const BODY = `<p>Run these on the server.</p>
-<details open><summary>Commands</summary>
-<p>1. Download the package:</p>
-<pre><code>curl -fLO https://github.com/infinitary-labs/infinitary-apps/releases/download/v0.8.10/infinitary-0.8.10-linux-amd64.deb</code></pre>
-<p>2. Check it against the published SHA-256. Continue only if it says OK:</p>
-<pre><code>printf '%s  %s\\n' 'c1391421ba483430d449252bdfcf01340c8793388a8566893af03b4aa6bc1f6e' 'infinitary-0.8.10-linux-amd64.deb' | sha256sum -c -</code></pre>
+// The last argument is one unbroken token wider than the card at both sizes, so only
+// breaking inside a word can keep it whole.
+const TOKEN = "a1b2c3d4e5f60718".repeat(14);
+const BODY = `<p>Run this on the server.</p>
+<details open><summary>Command</summary>
+<pre><code>curl -fLO https://example.com/download/${TOKEN}</code></pre>
 </details>`;
 
-type Read = {
-  frameWidth: number;
-  pageOverflow: number;
-  blocks: { line: string; whiteSpace: string; hidden: number }[];
-};
+type Read = { frameWidth: number; pageOverflow: number; rows: number; hidden: number };
 
-/** What each pre block of the open card shows: its wrapping and how far its text runs past the frame's right edge. */
-function readBlocks(): Read {
+/** The open card's code block: how many rows its text takes and how far it runs past the frame's right edge. */
+function readBlock(): Read {
   const root = document.documentElement;
-  const blocks = [...document.querySelectorAll("pre")].map((pre) => {
-    const range = document.createRange();
-    range.selectNodeContents(pre);
-    const right = Math.max(...[...range.getClientRects()].map((rect) => rect.right));
-    return {
-      line: (pre.textContent ?? "").slice(0, 20),
-      whiteSpace: getComputedStyle(pre).whiteSpace,
-      hidden: Math.max(0, Math.round(right - root.clientWidth)),
-    };
-  });
+  const range = document.createRange();
+  range.selectNodeContents(document.querySelector("pre") as HTMLElement);
+  const rects = [...range.getClientRects()];
   return {
     frameWidth: root.clientWidth,
     pageOverflow: root.scrollWidth - root.clientWidth,
-    blocks,
+    rows: new Set(rects.map((rect) => Math.round(rect.top))).size,
+    hidden: Math.max(
+      0,
+      Math.round(Math.max(...rects.map((rect) => rect.right)) - root.clientWidth),
+    ),
   };
 }
 
 // The card frame does not scroll sideways, so a command wider than the frame
-// is cut off with no way to read its end. Every command wraps instead.
-function expectWrapped(read: Read): void {
-  expect(read.blocks).toHaveLength(2);
+// is cut off with no way to read its end. It wraps onto more rows instead.
+function expectWhole(read: Read): void {
+  expect(read.rows).toBeGreaterThan(1);
+  expect(read.hidden).toBe(0);
   expect(read.pageOverflow).toBe(0);
-  for (const block of read.blocks) {
-    expect(block.whiteSpace, block.line).toBe("pre-wrap");
-    expect(block.hidden, block.line).toBe(0);
-  }
 }
 
 test("a long command wraps inside the card at its usual and maximized size", async () => {
@@ -62,7 +51,8 @@ test("a long command wraps inside the card at its usual and maximized size", asy
   await expect.element(page.getByRole("region", { name: TITLE, exact: true })).toBeVisible();
   await bodyDrawn(TITLE);
 
-  expectWrapped(await inCardBody(TITLE, readBlocks));
+  const usual = await inCardBody(TITLE, readBlock);
+  expectWhole(usual);
 
   const button = page
     .getByRole("button", { name: MAXIMIZE_LABEL, exact: true })
@@ -72,5 +62,7 @@ test("a long command wraps inside the card at its usual and maximized size", asy
   await expect
     .poll(() => document.querySelector("[data-card-layer][data-card-maximized]") !== null)
     .toBe(true);
-  expectWrapped(await inCardBody(TITLE, readBlocks));
+  const maximized = await inCardBody(TITLE, readBlock);
+  expect(maximized.frameWidth).toBeGreaterThan(usual.frameWidth);
+  expectWhole(maximized);
 });

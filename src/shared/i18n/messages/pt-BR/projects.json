@@ -49,5 +49,6 @@
     "other": "{count} tarefas abertas entram em {project}, com as chaves mantidas:"
   },
   "projectsMoveTitleInto": "Mover {repositories} para {project}?",
-  "projectsMoveTitleOwn": "Mover {repositories} para um projeto próprio?"
+  "projectsMoveTitleOwn": "Mover {repositories} para um projeto próprio?",
+  "projectsSetupLeftFolder": "A pasta dele ainda está na sua pasta de projetos, então adicioná-lo vincula essa pasta em vez de clonar o projeto de novo."
 }

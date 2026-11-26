@@ -15,6 +15,7 @@
   "settingsAddProjectAddFolder": "Ajouter le dossier",
   "settingsAddProjectAdded": "{name} ajouté.",
   "settingsAddProjectAddedGit": "{name} ajouté. Git initialisé dans ce dossier avec un premier commit vide.",
+  "settingsAddProjectAddedLeftFolder": "{name} ajouté. Son dossier était encore dans votre dossier de projets, donc ce dossier est lié au lieu de cloner à nouveau le projet.",
   "settingsAddProjectAddedMark": "ajouté",
   "settingsAddProjectAdding": "Ajout...",
   "settingsAddProjectAlreadyAdded": "{name} est déjà ajouté. Sa ligne est ouverte.",

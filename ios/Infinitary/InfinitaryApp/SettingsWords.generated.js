@@ -17445,7 +17445,13 @@ ${events}` : prompt;
     repo: repoViewSchema,
     created: boolean(),
     initializedGit: boolean().optional(),
-    createdInitialCommit: boolean().optional()
+    createdInitialCommit: boolean().optional(),
+    /**
+     * The folder a removed project left in the projects folder, linked where it
+     * is instead of cloning a second copy (docs/fleet.md, "Adding a removed
+     * project back").
+     */
+    leftFolder: string().optional()
   });
   discriminatedUnion("kind", [
     object({ kind: literal("card"), cardId: string().min(1) }),

@@ -43,5 +43,6 @@
     "other": "{count} offene Aufgaben kommen zu {project}, ihre Kürzel bleiben:"
   },
   "projectsMoveTitleInto": "{repositories} in {project} verschieben?",
-  "projectsMoveTitleOwn": "{repositories} in ein eigenes Projekt verschieben?"
+  "projectsMoveTitleOwn": "{repositories} in ein eigenes Projekt verschieben?",
+  "projectsSetupLeftFolder": "Sein Ordner liegt noch in deinem Projektordner, daher verknüpft das Hinzufügen diesen Ordner, statt das Projekt ein zweites Mal zu klonen."
 }

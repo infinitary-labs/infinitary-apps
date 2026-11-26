@@ -491,6 +491,7 @@
         "!src/core/secrets/bring.test.ts",
         "!src/core/utilityQos.test.ts",
         "!src/core/workspace/repoRegistry.test.ts",
+        "!src/core/workspace/repoRegistry.addBack.test.ts",
         "!src/core/workspace/projectContributions.test.ts",
         "!src/core/workspace/git.test.ts",
         "!src/core/workspace/commitName.test.ts",

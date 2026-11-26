@@ -2581,6 +2581,7 @@ public enum PhoneMessages {
     public static func `projectsMoveOpenTasks`(`count`: Int, `project`: String) -> String { PhoneWords.format("projectsMoveOpenTasks", [`count`, `project`]) }
     public static func `projectsMoveTitleInto`(`project`: String, `repositories`: String) -> String { PhoneWords.format("projectsMoveTitleInto", [`project`, `repositories`]) }
     public static func `projectsMoveTitleOwn`(`repositories`: String) -> String { PhoneWords.format("projectsMoveTitleOwn", [`repositories`]) }
+    public static func `projectsSetupLeftFolder`() -> String { PhoneWords.format("projectsSetupLeftFolder", []) }
     public static func `recordAgeDays`(`count`: Int) -> String { PhoneWords.format("recordAgeDays", [`count`]) }
     public static func `recordAgeHours`(`count`: Int) -> String { PhoneWords.format("recordAgeHours", [`count`]) }
     public static func `recordAgeJustNow`() -> String { PhoneWords.format("recordAgeJustNow", []) }
@@ -2886,6 +2887,7 @@ public enum PhoneMessages {
     public static func `settingsAddProjectAddFolder`() -> String { PhoneWords.format("settingsAddProjectAddFolder", []) }
     public static func `settingsAddProjectAdded`(`name`: String) -> String { PhoneWords.format("settingsAddProjectAdded", [`name`]) }
     public static func `settingsAddProjectAddedGit`(`name`: String) -> String { PhoneWords.format("settingsAddProjectAddedGit", [`name`]) }
+    public static func `settingsAddProjectAddedLeftFolder`(`name`: String) -> String { PhoneWords.format("settingsAddProjectAddedLeftFolder", [`name`]) }
     public static func `settingsAddProjectAddedMark`() -> String { PhoneWords.format("settingsAddProjectAddedMark", []) }
     public static func `settingsAddProjectAdding`() -> String { PhoneWords.format("settingsAddProjectAdding", []) }
     public static func `settingsAddProjectAlreadyAdded`(`name`: String) -> String { PhoneWords.format("settingsAddProjectAlreadyAdded", [`name`]) }
@@ -7370,6 +7372,7 @@ extension PhoneWords {
         "projectsMoveOpenTasks": ["count", "project"],
         "projectsMoveTitleInto": ["project", "repositories"],
         "projectsMoveTitleOwn": ["repositories"],
+        "projectsSetupLeftFolder": [],
         "recordAgeDays": ["count"],
         "recordAgeHours": ["count"],
         "recordAgeJustNow": [],
@@ -7675,6 +7678,7 @@ extension PhoneWords {
         "settingsAddProjectAddFolder": [],
         "settingsAddProjectAdded": ["name"],
         "settingsAddProjectAddedGit": ["name"],
+        "settingsAddProjectAddedLeftFolder": ["name"],
         "settingsAddProjectAddedMark": [],
         "settingsAddProjectAdding": [],
         "settingsAddProjectAlreadyAdded": ["name"],

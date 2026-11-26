@@ -63,6 +63,18 @@ The card keeps one digest of what it showed, the move and the tasks and automati
 Settings offers the same move on each repository's page, on its Move line above Remove (`MoveRepository`, design skill `components/projects/MoveRepository`): a chosen project, or a project of its own when the repository shares its project, asks once in place and then calls `inf:repos:move` at once, with no card, as Add a repository does; the catalog's `project-move` line writes its feed line.
 Combining two projects is moving the repositories of one into the other, never removing and adding them back.
 
+## Adding a removed project back
+
+Removing a project removes its row and its fleet-root link and deletes no folder, so a project cloned into the projects folder leaves its folder there (`RepoRegistry.unregister`).
+Adding it back links that folder where it is instead of cloning a second copy beside it named with -2 (`RepoRegistry.leftFolder`, `src/core/workspace/repoRegistry.ts`).
+A clone looks under the name it would take and each numbered name after it, up to the first free one, in the projects folder and in the fleet root, where projects went before another folder was chosen.
+It takes a real folder that no project holds, that is the top of its own git repository, and whose remote is the same project: the same address, or the same owner and name on the same host however the address is spelled, ignoring case where the host does (`sameProject`).
+A folder in a chosen projects folder is taken only while its name is free in the fleet root, where it is linked again.
+Picking that folder links it in place too, in Settings or through the first mate's `adopt`: a real folder directly in the fleet root is accepted, and one a project still holds answers as that project.
+The fleet root itself, a link in it, a folder inside a project and the personal workspace are still refused as already inside the fleet root.
+The project comes back with a new id, a task key derived anew because a removed project keeps its key, and today's default settings; its tasks and settings stay with the removed project.
+The setup card names the folder and says it is linked where it is, with no fresh clone to choose, and Settings says the folder was linked instead of cloned again; `inf:repos:setup` answers with `leftFolder` (contract change `setup-left-folder`).
+
 ## Choosing a task key
 
 A project's key prefixes every task key it mints, such as `INF` in `INF-12`, and it is chosen once, when the project is added (FI3-1787, step 4 of the Infinitary rename).
@@ -110,7 +122,7 @@ How a project joined, its key and its workspace kind are provenance, not editabl
 Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 - Adding and configuring projects are shared by Settings and the first mate through `app_change project-setup` and `app_change project-settings` (`src/shared/actions.ts`); the first mate's `project-setup` puts up the setup card above, and only the captain's click there adds; removal is the own-words `project-remove` line (`inf:repos:remove`, guarded by `inf:repos:removal`), and `unregister_repo` is retired.
-  The app-owned fleet root is `userData/fleet` (`paths.fleetDir`), the index of every managed repo: clone/init create real directories in the projects folder, which is the fleet root unless the person chose another folder in Settings → Projects (the projects folder's line under Add project, `RepoRegistry.setProjectsFolder` over the `projects-folder` settings row, picked with the shell's `inf:app:choose-folder`); a project created or cloned in a chosen folder gets a fleet-root symlink exactly like an adopted one; adopt links an existing folder in place via a fleet-root symlink (captain's call - adopted data never moves), so `RepoView.path` is always the real working directory.
+  The app-owned fleet root is `userData/fleet` (`paths.fleetDir`), the index of every managed repo: clone/init create real directories in the projects folder, which is the fleet root unless the person chose another folder in Settings → Projects (the projects folder's line under Add project, `RepoRegistry.setProjectsFolder` over the `projects-folder` settings row, picked with the shell's `inf:app:choose-folder`); a project created or cloned in a chosen folder gets a fleet-root symlink exactly like an adopted one; adopt links an existing folder in place via a fleet-root symlink (captain's call - adopted data never moves), and a folder a removed project left in the fleet root is linked where it is ("Adding a removed project back" above), so `RepoView.path` is always the real working directory.
   Changing the projects folder never moves a project already set up.
   A chosen folder is refused, with the reason beside the row, when it is not there, sits inside the app's own data or inside a managed project, or cannot be written to; one that has gone missing since (a drive not plugged in) refuses the next clone/init rather than being created anew.
   The person changes it in Settings or asks the first mate to change it on their own words through the action catalog's `projects-folder` line.

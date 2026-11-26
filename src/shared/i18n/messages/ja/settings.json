@@ -11,6 +11,7 @@
   "settingsAddProjectAddFolder": "フォルダを追加",
   "settingsAddProjectAdded": "{name} を追加しました。",
   "settingsAddProjectAddedGit": "{name} を追加しました。このフォルダで git を開始し、空の最初のコミットを作成しました。",
+  "settingsAddProjectAddedLeftFolder": "{name} を追加しました。フォルダがプロジェクトのフォルダに残っていたので、もう一度クローンせずにそのフォルダをリンクしました。",
   "settingsAddProjectAddedMark": "追加済み",
   "settingsAddProjectAdding": "追加中...",
   "settingsAddProjectAlreadyAdded": "{name} はすでに追加されています。その行を開きました。",

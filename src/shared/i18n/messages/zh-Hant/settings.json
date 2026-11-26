@@ -11,6 +11,7 @@
   "settingsAddProjectAddFolder": "加入資料夾",
   "settingsAddProjectAdded": "已加入 {name}。",
   "settingsAddProjectAddedGit": "已加入 {name}。已在這個資料夾中啟用 git，並建立一個空的第一次提交。",
+  "settingsAddProjectAddedLeftFolder": "已加入 {name}。它的資料夾還在你的專案資料夾中，所以直接連結了它，沒有重新複製。",
   "settingsAddProjectAddedMark": "已加入",
   "settingsAddProjectAdding": "正在加入…",
   "settingsAddProjectAlreadyAdded": "{name} 已經加入過了。它的那一列已開啟。",

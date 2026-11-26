@@ -11,7 +11,7 @@ import {
   symlinkSync,
   unlinkSync,
 } from "node:fs";
-import { basename, isAbsolute, join, resolve, sep } from "node:path";
+import { basename, dirname, isAbsolute, join, resolve, sep } from "node:path";
 import { type BatchRecord, batchRecordSchema } from "@shared/batches";
 import {
   type ContributionRoute,
@@ -19,6 +19,7 @@ import {
   contributionRouteSchema,
 } from "@shared/contributions";
 import { type ForgeKind, forgeOf, type KnownForgeHost } from "@shared/forge";
+import { changeRequestHost } from "@shared/forgeKinds";
 import { AUTOMATIC_COMPUTER, placementRequirementsSchema } from "@shared/placement";
 import {
   BATCH_HOST_REFUSAL,
@@ -487,7 +488,18 @@ export class RepoRegistry {
       if (!origin) throw new Error("clone needs a remote URL in origin.");
       const existing = sameOrigin(origin);
       if (existing) return { existing: fromRow(existing) };
-      const name = this.uniqueName(spec.name ?? nameFromOrigin(origin), this.newProjectParent());
+      const parent = this.newProjectParent();
+      const left = await this.leftFolder(spec.name ?? nameFromOrigin(origin), parent, origin);
+      if (left)
+        return {
+          name: left.name,
+          origin: left.origin,
+          host: lives(left.origin),
+          startsGit: false,
+          leftFolder: left.path,
+          ...this.chosenPlace(spec),
+        };
+      const name = this.uniqueName(spec.name ?? nameFromOrigin(origin), parent);
       return { name, origin, host: lives(origin), startsGit: false, ...this.chosenPlace(spec) };
     }
     if (spec.kind === "init") {
@@ -510,13 +522,9 @@ export class RepoRegistry {
       isDirectory = false;
     }
     if (!isDirectory) throw new Error(`No folder exists at ${abs}.`);
-    if (abs === this.fleetRoot || abs.startsWith(this.fleetRoot + sep)) {
-      throw new Error(`${abs} is already inside the fleet root; it needs no adoption.`);
-    }
-    const here = this.db.prepare(`SELECT ${ROW_COLUMNS} FROM repos WHERE path = ?`).get(abs) as
-      | Row
-      | undefined;
-    if (here) return { existing: fromRow(here) };
+    const left = this.inFleetRoot(abs);
+    const here = left ? this.ownerOf(left) : this.atPath(abs);
+    if (here) return { existing: here };
     const startsGit = !(await isGitRepo(abs));
     const origin = startsGit
       ? null
@@ -526,10 +534,11 @@ export class RepoRegistry {
     const existing = sameOrigin(origin);
     if (existing) return { existing: fromRow(existing) };
     return {
-      name: this.uniqueName(spec.name ?? basename(abs)),
+      name: this.uniqueName(spec.name ?? basename(abs), undefined, left && realPath(left)),
       origin,
       host: lives(origin),
       startsGit,
+      ...(left ? { leftFolder: left } : {}),
       ...this.chosenPlace(spec),
     };
   }
@@ -1073,6 +1082,26 @@ export class RepoRegistry {
     if (existing) return { repo: fromRow(existing), created: false };
     const place = this.placeOf(into);
     const parent = this.newProjectParent();
+    const left = await this.leftFolder(name ?? nameFromOrigin(origin), parent, origin);
+    if (left) {
+      const index = join(this.fleetRoot, left.name);
+      if (left.path !== index) linkFolder(left.path, index);
+      const createdInitialCommit = await this.ensureInitialCommit(left.path);
+      const repo = this.insert({
+        name: left.name,
+        path: left.path,
+        setupKind: "clone",
+        origin: left.origin,
+        delivery: "direct-pr",
+        ...place,
+      });
+      return {
+        repo,
+        created: true,
+        leftFolder: left.path,
+        ...(createdInitialCommit ? { createdInitialCommit } : {}),
+      };
+    }
     const repoName = this.uniqueName(name ?? nameFromOrigin(origin), parent);
     const target = join(parent, repoName);
     // "--" so an origin starting with "-" can never be read as a git option.
@@ -1132,28 +1161,26 @@ export class RepoRegistry {
       isDirectory = false;
     }
     if (!isDirectory) throw new Error(`No folder exists at ${abs}.`);
-    if (abs === this.fleetRoot || abs.startsWith(this.fleetRoot + sep)) {
-      throw new Error(`${abs} is already inside the fleet root; it needs no adoption.`);
-    }
-    const existing = this.db.prepare(`SELECT ${ROW_COLUMNS} FROM repos WHERE path = ?`).get(abs) as
-      | Row
-      | undefined;
-    if (existing) return { repo: fromRow(existing), created: false };
+    const left = this.inFleetRoot(abs);
+    const existing = left ? this.ownerOf(left) : this.atPath(abs);
+    if (existing) return { repo: existing, created: false };
     const place = this.placeOf(into);
+    const path = left ?? abs;
 
-    const initializedGit = !(await isGitRepo(abs));
-    if (initializedGit) await git(abs, ["init", "-b", "main"]);
-    const createdInitialCommit = await this.ensureInitialCommit(abs);
-    const origin = await git(abs, ["config", "--get", "remote.origin.url"])
+    const initializedGit = !(await isGitRepo(path));
+    if (initializedGit) await git(path, ["init", "-b", "main"]);
+    const createdInitialCommit = await this.ensureInitialCommit(path);
+    const origin = await git(path, ["config", "--get", "remote.origin.url"])
       .then((url) => url || null)
       .catch(() => null);
-    const repoName = this.uniqueName(name ?? basename(abs));
+    const repoName = this.uniqueName(name ?? basename(path), undefined, left && realPath(left));
     // The linked reference (captain's call): the fleet root indexes the
-    // repo, the data stays put.
-    linkFolder(abs, join(this.fleetRoot, repoName));
+    // repo, the data stays put. A folder already in the fleet root indexes
+    // itself under its own name.
+    if (path !== join(this.fleetRoot, repoName)) linkFolder(path, join(this.fleetRoot, repoName));
     const repo = this.insert({
       name: repoName,
-      path: abs,
+      path,
       setupKind: "adopt",
       origin,
       delivery: origin ? "direct-pr" : "local-only",
@@ -1164,7 +1191,74 @@ export class RepoRegistry {
       created: true,
       ...(initializedGit ? { initializedGit } : {}),
       ...(createdInitialCommit ? { createdInitialCommit } : {}),
+      ...(left ? { leftFolder: left } : {}),
     };
+  }
+
+  /**
+   * A folder picked inside the fleet root, as the fleet root names it: only
+   * a real folder directly in it, not the personal workspace's, is added -
+   * a removed project's folder, linked where it is (docs/fleet.md, "Adding
+   * a removed project back"). The root itself, an index link and a folder
+   * inside a project are refused. Undefined for a folder outside the fleet
+   * root.
+   */
+  private inFleetRoot(abs: string): string | undefined {
+    const roots = [this.fleetRoot, realPath(this.fleetRoot)];
+    if (!roots.some((root) => sameOrInside(abs, root))) return undefined;
+    const name = basename(abs);
+    if (!roots.includes(dirname(abs)) || name === PERSONAL_WORKSPACE_NAME || !isRealFolder(abs))
+      throw new Error(`${abs} is already inside the fleet root; it needs no adoption.`);
+    return join(this.fleetRoot, name);
+  }
+
+  /** The registered repository at exactly `path`. */
+  private atPath(path: string): RepoView | undefined {
+    const row = this.db.prepare(`SELECT ${ROW_COLUMNS} FROM repos WHERE path = ?`).get(path) as
+      | Row
+      | undefined;
+    return row && fromRow(row);
+  }
+
+  /** The registered repository whose working folder `path` is, however either path is spelled. */
+  private ownerOf(path: string): RepoView | undefined {
+    const real = realPath(path);
+    return this.list().find((repo) => repo.path === path || realPath(repo.path) === real);
+  }
+
+  /**
+   * The folder a removed project left where new projects go, or in the
+   * fleet root where they went before another folder was chosen: under the
+   * name a clone of `origin` would take or a numbered name after it, a real
+   * folder no project holds, the top of its own git repository, whose remote
+   * is the same project. Removing a project leaves its folder, so adding it
+   * back links that folder where it is instead of cloning a second copy
+   * beside it named with -2.
+   */
+  private async leftFolder(
+    base: string,
+    parent: string,
+    origin: string,
+  ): Promise<{ name: string; path: string; origin: string } | undefined> {
+    const known = this.options.knownHosts?.() ?? [];
+    const cleaned = cleanName(base);
+    for (let i = 0; ; i += 1) {
+      const name = i === 0 ? cleaned : `${cleaned}-${i + 1}`;
+      // The numbered names a clone would skip end at the first free one.
+      if (!this.nameTaken(name, parent)) return undefined;
+      if (name === PERSONAL_WORKSPACE_NAME) continue;
+      if (this.named(name)) continue;
+      const index = join(this.fleetRoot, name);
+      // A folder in a chosen folder is linked from the fleet root under its
+      // name, so it is taken only while that name is free there.
+      const places = parent === this.fleetRoot ? [index] : [join(parent, name), index];
+      for (const path of places) {
+        if (path !== index && exists(index)) continue;
+        if (!isRealFolder(path) || this.ownerOf(path)) continue;
+        const remote = await remoteOf(path);
+        if (remote && sameProject(remote, origin, known)) return { name, path, origin: remote };
+      }
+    }
   }
 
   private insert(spec: {
@@ -1236,6 +1330,11 @@ export class RepoRegistry {
     linkFolder(join(parent, name), join(this.fleetRoot, name));
   }
 
+  /** Whether a registered repository has this name. */
+  private named(name: string): boolean {
+    return this.db.prepare("SELECT 1 FROM repos WHERE name = ?").get(name) !== undefined;
+  }
+
   /**
    * Taken in the registry, in the fleet root's index, or - for a directory
    * about to be created in a chosen projects folder - already there.
@@ -1244,7 +1343,7 @@ export class RepoRegistry {
     // The personal workspace's name is reserved even before its directory
     // exists, so a clone or init never lands where the seeder will write.
     if (name === PERSONAL_WORKSPACE_NAME) return true;
-    if (this.db.prepare("SELECT 1 FROM repos WHERE name = ?").get(name)) return true;
+    if (this.named(name)) return true;
     return [this.fleetRoot, ...(parent && parent !== this.fleetRoot ? [parent] : [])].some(
       (dir) => {
         try {
@@ -1259,13 +1358,64 @@ export class RepoRegistry {
     );
   }
 
-  private uniqueName(base: string, parent?: string): string {
-    const cleaned = base.replace(/[^\w.-]+/g, "-").replace(/^[-.]+|[-.]+$/g, "") || "repo";
+  /** `ownFolder`, a real path, is the folder being added, which never takes its own name. */
+  private uniqueName(base: string, parent?: string, ownFolder?: string): string {
+    const cleaned = cleanName(base);
     for (let i = 0; ; i += 1) {
       const candidate = i === 0 ? cleaned : `${cleaned}-${i + 1}`;
-      if (!this.nameTaken(candidate, parent)) return candidate;
+      if (!this.nameTaken(candidate, parent, ownFolder)) return candidate;
     }
   }
+}
+
+function cleanName(base: string): string {
+  return base.replace(/[^\w.-]+/g, "-").replace(/^[-.]+|[-.]+$/g, "") || "repo";
+}
+
+/** A folder itself, never a link to one: a fleet-root index link is not a project's folder. */
+function isRealFolder(path: string): boolean {
+  try {
+    return lstatSync(path).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+function exists(path: string): boolean {
+  try {
+    lstatSync(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** The remote a folder's own git repository names as origin; undefined inside another repository. */
+async function remoteOf(dir: string): Promise<string | undefined> {
+  try {
+    if (realPath(await git(dir, ["rev-parse", "--show-toplevel"])) !== realPath(dir))
+      return undefined;
+    return (await git(dir, ["config", "--get", "remote.origin.url"])) || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Two addresses of one project: the same words, or the same project path on
+ * the same host however it is reached - https or ssh, with or without .git -
+ * folding case where the host does (`contributionOriginMatches`).
+ */
+function sameProject(a: string, b: string, known: readonly KnownForgeHost[]): boolean {
+  if (a.trim() === b.trim()) return true;
+  const one = forgeOf(a, known);
+  const other = forgeOf(b, known);
+  if (!one.host || one.host !== other.host || !one.owner || !one.name) return false;
+  const path = `${one.owner}/${one.name}`;
+  const otherPath = `${other.owner}/${other.name}`;
+  return changeRequestHost(one.kind)?.foldsNames
+    ? path.toLowerCase() === otherPath.toLowerCase()
+    : path === otherPath;
 }
 
 function realPath(path: string): string {

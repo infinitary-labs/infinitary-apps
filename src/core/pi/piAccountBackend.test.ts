@@ -75,6 +75,7 @@ vi.mock("@earendil-works/pi-coding-agent", async (importOriginal) => {
             getAvailableSnapshot: () => [{ provider: "openai-codex", id: "gpt-5.5" }],
             getModel: () => undefined,
             getModels: () => [],
+            getProvider: () => undefined,
           };
         },
       ),

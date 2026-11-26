@@ -107,6 +107,14 @@ export type FirstmateAgentOptions = {
   listedModels?: () => { provider: string; id: string }[];
   /** The slots an offering sits in; omitted means treat as medium. */
   slotsOf?: (ref: { provider: string; id: string }) => Slot[];
+  /**
+   * Whether a model reads pictures, from its loaded description; undefined
+   * when no description is loaded, which counts as reading them, the rule
+   * routing uses. Omitted means every model reads them (tests).
+   */
+  readsPictures?: (ref: { provider: string; id: string }) => boolean | undefined;
+  /** The name a person reads for a model; omitted means its id. */
+  modelName?: (ref: { provider: string; id: string }) => string;
   quotaModels: () => ModelsCatalogView | undefined;
   quotaLine: () => string;
   repos: RepoRegistry;

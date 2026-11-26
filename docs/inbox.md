@@ -361,6 +361,9 @@ A crewmate's brief row keeps the captain's pictures its task came with the same 
 A copy that is missing or changed does not become words alone: the row stays on its lane, the feed says once that the message is waiting and which picture is unavailable, and it is served when the copy is back.
 Delivery is at least once per app message (the row is the one message; a retry never makes a second), with no promise of exactly-once provider inference.
 A model that says it takes no pictures refuses them by name (`refuseUnreadablePictures`), keeping the words and the row.
+The first mate never meets that refusal for the captain's own message (`FirstmatePictures`): while its model's description says it reads words only, a message with pictures waits on the lane, steered or not, and messages without pictures go on being served.
+One host card, `card-fm-pictures-unread` "Your first mate's model cannot read pictures", says so: its default moves the first mate to the model that reads pictures the automatic pick would choose (host op `move-flagship` with `provider/model`), and with no such model it opens Settings.
+The move, or a model that reads pictures picked in Settings, serves the waiting message with its pictures, and the card comes down once the lane holds no such message; another words-only model revises the card to name it.
 
 Migration 73 freezes every outstanding `card-explain` envelope as its original prose before removing the live wake kind.
 This includes in-flight rows that a restart may deliver again.

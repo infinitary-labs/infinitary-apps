@@ -59,6 +59,7 @@ export type FirstmateWakeKind =
   | "commit-failed"
   | "program-bound"
   | "program-ended"
+  | "build-row-filed"
   | "report"
   | "review-orphan"
   | "review-unstated"

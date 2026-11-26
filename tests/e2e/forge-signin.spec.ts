@@ -94,6 +94,7 @@ import {
   copiesOf,
   crewmateTurnTools,
   expectBuildRowFiled,
+  expectBuildRowNotice,
   expectBuildRowShown,
   firstmateTurnWith,
   READER_RUNTIMES,
@@ -1143,8 +1144,9 @@ for (const runtime of READER_RUNTIMES) {
       }),
     ]);
     await expectBuildRowFiled(page, github.requests());
+    const notice = await expectBuildRowNotice(page, id, launched.mockProvider);
     const detail = await page.evaluate((taskId) => window.infinitary.tasks.detail(taskId), id);
-    const transcript = `First report:\n${firstReport}\n\nAfter the click:\n${detail?.outcome ?? ""}\n\nSaved asks:\n${JSON.stringify(oldestFirst, null, 2)}\n\nSession tools:\n${JSON.stringify(tools[0])}\n\nRequests:\n${github.requests().join("\n")}`;
+    const transcript = `First report:\n${firstReport}\n\nAfter the click:\n${detail?.outcome ?? ""}\n\nThe first mate's notice:\n${notice}\n\nSaved asks:\n${JSON.stringify(oldestFirst, null, 2)}\n\nSession tools:\n${JSON.stringify(tools[0])}\n\nRequests:\n${github.requests().join("\n")}`;
     await test.info().attach(shot, { body: transcript, contentType: "text/plain" });
     await expect(card).toBeHidden();
     if (evidence) {

@@ -1,5 +1,5 @@
 ---
-source: c2ba34584adeb9c5
+source: e909f21ae958ea29
 title: 專案
 description: 如何把專案加入 Infinitary、在一個專案裡放進多個存放庫、為專案建立標籤、讓視窗聚焦在一個專案、選擇變更的合併方式，以及移除專案。
 ---

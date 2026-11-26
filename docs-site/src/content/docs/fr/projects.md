@@ -1,5 +1,5 @@
 ---
-source: c2ba34584adeb9c5
+source: e909f21ae958ea29
 title: Projets
 description: Comment ajouter un projet à Infinitary, y réunir plusieurs dépôts, lui donner des étiquettes, concentrer la fenêtre sur un seul projet, choisir comment ses changements sont fusionnés et le retirer.
 ---

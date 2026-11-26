@@ -1,5 +1,5 @@
 ---
-source: c2ba34584adeb9c5
+source: e909f21ae958ea29
 title: 项目
 description: 如何把项目添加到 Infinitary、在一个项目中放入多个仓库、为它设置标签、让窗口聚焦于一个项目、选择它的改动如何合并，以及如何移除它。
 ---

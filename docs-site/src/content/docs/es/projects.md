@@ -1,5 +1,5 @@
 ---
-source: c2ba34584adeb9c5
+source: e909f21ae958ea29
 title: Proyectos
 description: Cómo agregar un proyecto a Infinitary, reunir varios repositorios en uno, darle etiquetas, centrar la ventana en uno, elegir cómo se fusionan sus cambios y quitarlo.
 ---

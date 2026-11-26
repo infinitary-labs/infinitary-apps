@@ -366,6 +366,7 @@ A saved ready answer offers Done in the next slot; otherwise the record keeps ge
 A ready choice outranks a blocker or an interruption in the action bar, whose next slot is then Show the card, while the body's attention box still names the blocker or interruption.
 
 CardService declares stack changes through `presentationChanged` at its broadcast seam, including pending shown-version revisions, reply holds, close-out, Working/ready, retirement and restoration.
+It compares the stack's presentation once per event-loop turn, in an immediate that runs before the board's coalescing timer, so readings that land in one turn rebuild the stack once rather than once each.
 `TaskService` alone advances `task_board.seq` for that invalidation, without changing task rows, updated/idle/recovery clocks, timeline or feed.
 TaskProtocol delivers the focusable card snapshot before its board snapshot or delta, explicitly, not by relative timer delays.
 Its task-flag read uses the card owner's staged versions and durable open heads, without rebuilding each card's message graph, task title or seen state.

@@ -689,6 +689,14 @@ export const QUICK_ANSWER_FIRST_WORDS =
 export const QUICK_ANSWER_LINE_WORDS =
   "Stop at work past that reach - a cause traced across past runs, a reproduction, a measurement, a computer the app does not reach or the web. When the answer stops short, the open card ends with one line that begins " +
   `"${QUICK_ANSWER_MARK}." and says what you did not check and what ${LOOK_DEEPER_LABEL} would add, and makes ${LOOK_DEEPER_LABEL} its default action, which the first mate answers with a research step built on this answer. A complete answer offers no ${LOOK_DEEPER_LABEL}.`;
+/**
+ * A goal that asks for something done is past a quick answer's reach (INF-6952
+ * part B): INF-6947 and INF-6948, intake reviews sorted as lookups, each showed
+ * a status card the captain had to click on to get the review the goal named.
+ */
+export const QUICK_ANSWER_ACT_WORDS =
+  // i18n-exempt: served to the crewmate's model in its brief, stays English
+  "When the goal asks for something done rather than known - a review written, a comment or story published, something sent, merged, built or changed, or a merge card shown - that work is past this reach, even when the goal names it as the state it wants: show no card, and report with needs_firstmate what the goal asks done and what you read, and the first mate starts that work at once, as asked.";
 export const QUICK_ANSWER_STRAIGHT_DEEPER_WORDS =
   "When these sources cannot give a meaningful answer to the question at all, show no card: report with needs_firstmate what you read, why it cannot answer, and the source the answer needs, and the first mate starts that research step at once, as if the captain had chosen " +
   `${LOOK_DEEPER_LABEL}.`;
@@ -705,6 +713,7 @@ export const QUICK_ANSWER_GENERAL_KNOWLEDGE_WORDS =
   'That reply may add one sentence from general knowledge that begins "Not checked here:"; it never replaces the hand-off.';
 export const RETRIEVAL_BOUNDARY_WORDS = [
   QUICK_ANSWER_REACH_WORDS,
+  QUICK_ANSWER_ACT_WORDS,
   QUICK_ANSWER_FIRST_WORDS,
   QUICK_ANSWER_LINE_WORDS,
   QUICK_ANSWER_STRAIGHT_DEEPER_WORDS,

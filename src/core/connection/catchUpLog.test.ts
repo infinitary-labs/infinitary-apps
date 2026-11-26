@@ -1,6 +1,6 @@
 import type { NetworkInterfaceInfo } from "node:os";
 import { describe, expect, it } from "vitest";
-import { connectClient } from "../../../tests/helpers/connectionClient";
+import { type ConnectionClient, connectClient } from "../../../tests/helpers/connectionClient";
 import { changed, home } from "../../../tests/helpers/connectionHome";
 import type { CoreDispatch } from "../dispatcher";
 import { describeCatchUp, type PhoneCatchUp, routeOf } from "./catchUpLog";
@@ -38,6 +38,12 @@ const reads = (async (channel) => {
 
 const PHONE = { system: { system: "ios" }, appVersion: "0.18.0" } as const;
 
+/** A phone's reload as the phone asks it (`refresh`, `ReadOnlySession.swift`): the board without its closed rows. */
+async function phoneReloads(phone: ConnectionClient) {
+  for (const channel of RELOADS)
+    await phone.invoke(channel, channel === "inf:tasks:board" ? [{ closed: false }] : []);
+}
+
 async function phoneHome(journal?: { entries: number; bytes: number }) {
   const lines: PhoneCatchUp[] = [];
   let heard: () => void = () => {};
@@ -63,7 +69,7 @@ describe("the home's line for each phone's catch-up", () => {
   it("logs a first reload once the phone acknowledged its first reads, and a replay once it acknowledged the missed updates", async () => {
     const { at, grant, next } = await phoneHome();
     const first = await connectClient(grant, PHONE);
-    for (const channel of RELOADS) await first.invoke(channel, []);
+    await phoneReloads(first);
     const reload = await next(1);
     expect(reload).toMatchObject({
       kind: "reload",
@@ -96,7 +102,7 @@ describe("the home's line for each phone's catch-up", () => {
   it("says why a phone read everything again: a restart, kept updates too short, or missed updates heavier", async () => {
     const { at, grant, next } = await phoneHome({ entries: 2, bytes: 1_000_000 });
     const first = await connectClient(grant, PHONE);
-    for (const channel of RELOADS) await first.invoke(channel, []);
+    await phoneReloads(first);
     await next(1);
     const { epoch } = first.welcome;
     await first.close();
@@ -110,7 +116,7 @@ describe("the home's line for each phone's catch-up", () => {
     expect(await next(2)).toMatchObject({ kind: "reload", why: "restart", acknowledged: false });
 
     const old = await connectClient(grant, { ...PHONE, cursor: { epoch, seq: 0 } });
-    for (const channel of RELOADS) await old.invoke(channel, []);
+    await phoneReloads(old);
     expect(await next(3)).toMatchObject({ kind: "reload", why: "kept-too-short" });
     await old.close();
   });
@@ -118,7 +124,7 @@ describe("the home's line for each phone's catch-up", () => {
   it("reloads as heavier when the missed updates outweigh the first reads", async () => {
     const { at, grant, next } = await phoneHome();
     const first = await connectClient(grant, PHONE);
-    for (const channel of RELOADS) await first.invoke(channel, []);
+    await phoneReloads(first);
     await next(1);
     const cursor = first.cursor();
     await first.close();
@@ -127,7 +133,7 @@ describe("the home's line for each phone's catch-up", () => {
         at.events.emit("inf:event", { type: "firstmate_reply", text: `${word} is the answer.` });
     const long = await connectClient(grant, { ...PHONE, cursor });
     expect(long.welcome.catchUp).toBe("reload");
-    for (const channel of RELOADS) await long.invoke(channel, []);
+    await phoneReloads(long);
     const line = await next(2);
     expect(line).toMatchObject({ kind: "reload", why: "heavier", missedUpdates: 44 });
     expect(line.missedBytes).toBeGreaterThan(line.reloadWeight ?? Infinity);

@@ -71,6 +71,12 @@ export const talkChannels = {
            */
           focusedProjectId: z.string().min(1).max(64).optional(),
           /**
+           * All projects is picked while the window shows the project pill
+           * (`project-filter-on-every-message.md`): the first mate hears
+           * it, so no filter field never stands for All projects.
+           */
+          allProjects: z.literal(true).optional(),
+          /**
            * The captain's newest message, which this one replaces: it is
            * taken back as this one is saved (docs/task-capture.md,
            * "Taking back a message"). A home without `take-back-message`

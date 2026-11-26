@@ -38,6 +38,7 @@ import type { ImageAttachment } from "../design";
 import { changesOff, changesOffWords, doneThereWords, isView } from "../devices/viewWords";
 import { takePictures } from "./composer";
 import { pressesSoFar } from "./presses";
+import { messageProjectFilter } from "./projectFocus";
 import { pickProjectFolder } from "./projectFolder";
 import { savedCardAnswers } from "./savedCardAnswers";
 import { withoutKey } from "./stack";
@@ -763,11 +764,20 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
           throw new Error(CARD_ANSWERS_TOO_LONG);
         }
         const drawn = await marked;
+        // The window's project filter rides a reply too: the first mate hears
+        // it under its own card, a crewmate's ignores it (docs/project-focus.md).
+        const filter = messageProjectFilter();
         // Sending hands the turn to the author; the card stays where it is.
         const payload =
-          images.length > 0 || files.length > 0 || answers?.length || notes.length > 0
+          images.length > 0 ||
+          files.length > 0 ||
+          answers?.length ||
+          notes.length > 0 ||
+          filter.focusedProjectId ||
+          filter.allProjects
             ? {
                 text: text || undefined,
+                ...filter,
                 ...(notes.length ? { notes } : {}),
                 ...(files.length ? { files } : {}),
                 ...(answers?.length ? { answers } : {}),

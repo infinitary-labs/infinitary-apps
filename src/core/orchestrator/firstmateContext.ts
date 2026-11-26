@@ -52,6 +52,7 @@ import {
 } from "./contextDelivery";
 import type { FirstmateAgentOptions, FirstmateTurn } from "./firstmateAgent";
 import { asksInTurn, IN_TURN } from "./openWork";
+import type { ProjectFilter } from "./projectFilter";
 import {
   answersWithAuthorWordsMarked,
   readerDataLine,
@@ -195,8 +196,8 @@ export type AboutCard = { cardId: string; line?: number };
 export class FirstmateContext {
   /** What this model context has read of the saved facts (INF-1712). */
   readonly delivery = new ContextDelivery();
-  /** The project the captain's window was focused on at their latest turn (docs/project-focus.md). */
-  captainFocus: string | undefined;
+  /** The project filter at the captain's latest message that said one (docs/project-focus.md). */
+  captainFilter: ProjectFilter | undefined;
   /** When the last turn's context block was built: its resolutions are already told. */
   private resolutionsSeenThrough = 0;
   /** The same watermark for thread activity: a message already listed is not listed again. */
@@ -245,7 +246,7 @@ export class FirstmateContext {
         hintTaskId,
         about,
         pastCardId,
-        this.captainFocus,
+        this.captainFilter,
         sourceFacts,
       ),
     );
@@ -472,6 +473,25 @@ export class FirstmateContext {
   }
 
   /**
+   * The project filter's line (INF-6860, the captain's answers: scope new
+   * work, answers and actions, naming what it left out; a phone message
+   * covers every project). Which words outrank the filter is the first
+   * mate's judgment, so the order rides the line and the host parses none.
+   */
+  private projectFilterLine(filter: ProjectFilter | undefined): string | undefined {
+    if (filter === "all")
+      // i18n-exempt: the project filter line, served only to the first mate's model
+      return "All projects - the project filter at the top of the captain's window shows every project, so nothing narrows new work, answers or actions";
+    if (filter === "phone")
+      // i18n-exempt: the project filter line, served only to the first mate's model
+      return "every project - this message came from the captain's phone, which has no project filter and shows every project, so nothing narrows new work, answers or actions";
+    const project = filter ? this.options.tasks.projects.get(filter.project) : undefined;
+    if (!project || project.archivedAt !== null) return undefined;
+    // i18n-exempt: the project filter line, served only to the first mate's model
+    return `${project.key} "${project.name}" - the project filter at the top of the captain's window. What decides a message's project, strongest first: a project, repository or task their words name; the card they replied under; the shown record or card; this filter. Where nothing stronger names one, new work goes in ${project.key}, answers cover ${project.key}'s work and say how much waits elsewhere, and actions on many tasks act on ${project.key}'s alone and name what they left out. Say in a few words when the filter decided something they did not say. Never change the filter; only the captain does`;
+  }
+
+  /**
    * The project a repository belongs to (INF-4220): its key, and its name
    * where it is not the repository's, as in a project of several.
    */
@@ -495,10 +515,10 @@ export class FirstmateContext {
     hintTaskId?: string,
     about?: AboutCard,
     pastCardId?: string,
-    focusedProjectId?: string,
+    filter?: ProjectFilter,
   ): string {
     const parts = this.options.tasks.readProjection(() =>
-      this.contextParts(visibleCardId, hintTaskId, about, pastCardId, focusedProjectId),
+      this.contextParts(visibleCardId, hintTaskId, about, pastCardId, filter),
     );
     const { payload } = new ContextDelivery().render(parts.saved);
     return contextText({ delivery: DELIVERY_COMPLETE, ...payload, ...parts.turn });
@@ -515,7 +535,7 @@ export class FirstmateContext {
     hintTaskId?: string,
     replied?: AboutCard,
     pastCardId?: string,
-    focusedProjectId?: string,
+    filter?: ProjectFilter,
     sourceFacts?: SelfSourceFacts,
   ): { saved: Record<string, ContextSection>; turn: Record<string, unknown> } {
     const repos = this.options.repos.list();
@@ -590,15 +610,7 @@ export class FirstmateContext {
       (hinted
         ? `about: ${hinted.key || hinted.id} "${this.taskTitle(hinted)}" (${indexStatus(hinted)}) - task_id ${hinted.id}; the open card points at it`
         : undefined);
-    // The captain's window is focused on one project: a hint like the
-    // shown record, one step weaker, never a limit on what can be done.
-    const focusedProject = focusedProjectId
-      ? this.options.tasks.projects.get(focusedProjectId)
-      : undefined;
-    const focusLine =
-      focusedProject && focusedProject.archivedAt === null
-        ? `${focusedProject.key} "${focusedProject.name}" - the captain's window is focused on this project, so new work they ask for belongs to it unless they name another; a hint, never a limit`
-        : undefined;
+    const filterLine = this.projectFilterLine(filter);
     const directions = this.options.knowledge
       ? renderDirections(
           this.options.knowledge.directions.standing({
@@ -724,7 +736,7 @@ export class FirstmateContext {
       ...(threadActivity.length > 0 ? { thread_activity: threadActivity } : {}),
       ...(maybeCard ? { visible_card_hint: maybeCard } : {}),
       ...(about ? { about } : {}),
-      ...(focusLine ? { focused_project: focusLine } : {}),
+      ...(filterLine ? { project_filter: filterLine } : {}),
     };
     return { saved, turn };
   }

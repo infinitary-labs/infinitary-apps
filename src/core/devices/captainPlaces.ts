@@ -77,6 +77,16 @@ export class CaptainPlaces implements CaptainPlaceReads {
     return this.input.run(words, work);
   }
 
+  /**
+   * Whether the request running now came from a paired phone or iPad, which
+   * has no project filter (docs/project-focus.md, "The first mate").
+   */
+  fromPhone(): boolean {
+    const view = askingView();
+    if (view === undefined) return false;
+    return this.options.devices().find((each) => each.id === view)?.system === "ios";
+  }
+
   inputFrom(): string | undefined {
     return this.input.getStore();
   }

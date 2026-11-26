@@ -130,9 +130,19 @@ export function useProjectFocus(): ProjectFocusState {
   return useSyncExternalStore(projectFocus.subscribe, projectFocus.state, projectFocus.state);
 }
 
-/** The focus that holds now, outside React: the turn's hint, the panels' view. */
+/** The focus that holds now, outside React: the stack's hold, the panels' view. */
 export function heldProjectFocus(): string | null {
   return snapshot.focus;
+}
+
+/**
+ * The project filter a message to the first mate carries
+ * (docs/project-focus.md, "The first mate"): the focused project, or All
+ * projects while the pill shows; nothing while there is no choice to make.
+ */
+export function messageProjectFilter(): { focusedProjectId?: string; allProjects?: true } {
+  if (snapshot.focus !== null) return { focusedProjectId: snapshot.focus };
+  return snapshot.shown ? { allProjects: true } : {};
 }
 
 /**

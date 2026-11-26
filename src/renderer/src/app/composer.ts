@@ -11,7 +11,7 @@ import type { ImageAttachment } from "../design";
 import { changesOff, messagesWhileReading } from "../devices/viewWords";
 import { voiceController } from "../voice/voiceController";
 import { insertVoiceTranscript } from "../voice/voiceInput";
-import { heldProjectFocus } from "./projectFocus";
+import { messageProjectFilter } from "./projectFocus";
 import { isHeldEntry, shownEntry } from "./stack";
 import type { ShellGet, ShellSet, ShellState } from "./store";
 import { markedTakenBack, revertible } from "./takeBack";
@@ -363,8 +363,8 @@ export function composerSlice(set: ShellSet, get: ShellGet): ComposerSlice {
           entry?.panelCard?.aim ??
           undefined;
         const pastCardId = entry?.pastCardId;
-        // The project the window is focused on: the first mate's hint (docs/project-focus.md).
-        const focusedProjectId = heldProjectFocus() ?? undefined;
+        // The window's project filter (docs/project-focus.md, "The first mate").
+        const filter = messageProjectFilter();
         // A plain-words send to a first mate two versions apart replaces nothing.
         const replaces = wordsOnly ? undefined : (get().replacing ?? undefined);
         const sent = { text: draft, pastes, attachments };
@@ -390,7 +390,8 @@ export function composerSlice(set: ShellSet, get: ShellGet): ComposerSlice {
             visibleCardId ||
             taskId ||
             pastCardId ||
-            focusedProjectId ||
+            filter.focusedProjectId ||
+            filter.allProjects ||
             replaces)
             ? {
                 text: text || undefined,
@@ -401,7 +402,7 @@ export function composerSlice(set: ShellSet, get: ShellGet): ComposerSlice {
                 visibleCardId,
                 taskId,
                 pastCardId,
-                focusedProjectId,
+                ...filter,
                 ...(replaces ? { replaces } : {}),
               }
             : text;

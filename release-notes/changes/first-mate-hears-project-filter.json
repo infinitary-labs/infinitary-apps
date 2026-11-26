@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "first-mate-hears-project-filter",
+      "kind": "improvement",
+      "title": "Your first mate follows the project you focus on",
+      "body": "Your first mate now hears the project you picked at the top of the window with every message, including replies under its cards, and also hears when you picked All projects. Unless you name another project, it puts new work there, answers about that project's work, acts only on its tasks and says what it left out. A message from your iPhone or iPad covers every project.",
+      "area": "firstmate",
+      "noPicture": "Nothing on screen changes; the first mate's answers and actions follow the focus the top bar already shows.",
+      "docsSite": ["projects"],
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

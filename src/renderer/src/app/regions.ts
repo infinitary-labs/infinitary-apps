@@ -76,7 +76,7 @@ function enter(kind: WindowRegion, root: HTMLElement): boolean {
       // starts on its first control.
       const start =
         (body && firstTabbable(body)) ??
-        root.querySelector<HTMLElement>("header button[aria-expanded]") ??
+        root.querySelector<HTMLElement>("header [data-side-panel-chevron]") ??
         firstTabbable(root);
       if (start) land(start);
       // A panel in the window starts on its first control, and is asked too.

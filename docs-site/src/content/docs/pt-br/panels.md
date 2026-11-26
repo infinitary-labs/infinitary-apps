@@ -1,5 +1,5 @@
 ---
-source: c3a4eb8bec45d0bf
+source: 8c3b2ba30e330a7b
 title: Painéis
 description: Os painéis ficam nos lados esquerdo e direito da janela e mostram suas tarefas, a atividade da sua tripulação e qualquer outra coisa que você peça ao seu imediato para criar.
 ---
@@ -72,7 +72,6 @@ Clique nela para começar o pedido na caixa de mensagem.
 Clique em **Ocultar** nela para tirá-la de vez.
 
 Um painel que você pediu fica no alto da barra lateral esquerda, a não ser que você diga onde.
-O cabeçalho dele diz **seu**.
 Você o move como qualquer outro painel.
 Para mudá-lo, diga ao seu imediato o que você quer diferente.
 Para tirá-lo, peça ao seu imediato que o remova.
@@ -88,4 +87,10 @@ A chave então avisa isso.
 Ative-os de novo quando estiver pronto.
 
 Se um dos seus painéis parar de funcionar, o painel avisa, e o resto da janela continua.
-Quando o trabalho de um painel em segundo plano para de responder, o botão **Tentar de novo** dele o inicia de novo.
+
+Quando um dos seus painéis precisa de atenção, um pequeno ponto aparece ao lado do nome dele.
+O ponto aparece quando o trabalho do painel em segundo plano parou ou está pausado, quando ele espera seu OK para acessar um serviço, ou quando as leituras dele em segundo plano continuam falhando.
+Deixe o ponteiro sobre o ponto, ou chegue até ele com Tab, para ver uma linha sobre ele.
+Pressione o ponto, ou pressione Enter, para abrir os detalhes, e use o botão que estiver lá: **Tentar de novo**, **Atualizar o painel**, **Perguntar de novo** ou **Perguntar ao imediato**.
+Pressione Esc para fechar os detalhes.
+O app Infinitary no seu iPhone ou iPad mostra o mesmo ponto; toque nele para ler os detalhes.

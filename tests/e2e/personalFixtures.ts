@@ -79,6 +79,54 @@ export function seedUnresponsivePanel(workspace: string): void {
 }
 
 /**
+ * The captain's plan for the panel status mark: a panel whose background job
+ * fails every run, as the one that showed the gap did when its connector's
+ * daily read limit ran out, while the panel still drew what it last read.
+ * The job runs at the shortest cadence the app allows, so two failed runs
+ * span the app's window on the journeys' short tick. Its `raise-limit`
+ * action stands for the limit coming back: the next run works.
+ */
+/** What each failed run answers: the error's own message, as the panel process reports it. */
+export const FAILING_READ_ANSWER = "429 Too Many Requests: the connector allows 150 reads a day";
+export function seedFailingReadPanel(workspace: string): void {
+  const growth = join(workspace, "growth");
+  mkdirSync(growth);
+  writeFileSync(
+    join(growth, "manifest.json"),
+    JSON.stringify({ title: "Growth", api: 2, placement: { x: "left", y: "top" }, order: 0 }),
+  );
+  writeFileSync(
+    join(growth, "panel.tsx"),
+    [
+      'import type { PanelProps } from "@infinitary/contracts";',
+      "export default function Panel({ id }: PanelProps) {",
+      "  return <p data-fixture={id} style={{ margin: 0 }}>Visitors, Nov 22: 1,284</p>;",
+      "}",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(growth, "server.ts"),
+    [
+      "let limited = true;",
+      "export const actions = {",
+      '  "raise-limit": () => {',
+      "    limited = false;",
+      "    return true;",
+      "  },",
+      "};",
+      "export const background = {",
+      "  refresh: {",
+      "    everyMs: 60_000,",
+      "    run: async () => {",
+      `      if (limited) throw new Error(${JSON.stringify(FAILING_READ_ANSWER)});`,
+      "    },",
+      "  },",
+      "};",
+    ].join("\n"),
+  );
+}
+
+/**
  * A panel written before the panel API's store answered asynchronously
  * (INF-2470): its manifest names no `api`, and its `server.ts` reads
  * `context.db` as if it answered at once, as such panels were written.

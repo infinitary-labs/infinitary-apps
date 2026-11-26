@@ -16,7 +16,12 @@ import { panelRail } from "../plugins/panelRail";
 import { createPanelSource } from "../plugins/panelSource";
 import { railRefusals, refusalWords } from "../plugins/railRefusals";
 import { onResync } from "../plugins/reads/resync";
-import { FramedPanelBody, type FramedPanelContent, framedCardBody } from "./FramedPanelBody";
+import {
+  FramedPanelBody,
+  type FramedPanelContent,
+  FramedPanelStatus,
+  framedCardBody,
+} from "./FramedPanelBody";
 import { framedCodeOf } from "./framedCode";
 import { panelDrafts } from "./PanelDrafts";
 
@@ -25,8 +30,8 @@ import { panelDrafts } from "./PanelDrafts";
  * the renderer's host (talk-to-personalize Step 2), through the same door
  * the built-in UI and any third-party plugin use: `registerPlugin` with a
  * manifest and a Tier-1 side-panel binding. Nothing about the rails learns
- * a new concept - a personal panel is a side-panel contribution whose
- * attribution reads "yours".
+ * a new concept - a personal panel is a side-panel contribution that names
+ * no maker, since it is the captain's own.
  *
  * The snapshot is the whole truth: a new extension registers, one that is
  * gone unregisters, one whose manifest data moved (title, placement, order,
@@ -40,7 +45,7 @@ import { panelDrafts } from "./PanelDrafts";
  * panels reads (docs/personal-panels.md, "Placed on the rail"), never a crash.
  *
  * One snapshot carries both sources (one plugin vehicle, Phase A item 5):
- * the captain's own panels register as `personal-<id>` and read "yours",
+ * the captain's own panels register as `personal-<id>` and name no maker,
  * the ones he added as `installed-<id>` and read the plugin's own name.
  * Both register through the same door with the grants they are served, and
  * neither's code runs in this window: each body is a frame in the frame
@@ -178,17 +183,22 @@ export class PersonalPlugins {
     });
     let unregister: () => void;
     try {
-      unregister = this.host.registerPlugin(manifest, {
-        sidePanels: {
-          [view.id]: sidePanelBinding<FramedPanelContent>({
-            source: frame.source,
-            running: running.source,
-            rail: { decides: view.ownPresence },
-            Body: FramedPanelBody,
-            CardBody: framedCardBody(pinned.source),
-          }),
+      unregister = this.host.registerPlugin(
+        manifest,
+        {
+          sidePanels: {
+            [view.id]: sidePanelBinding<FramedPanelContent>({
+              source: frame.source,
+              running: running.source,
+              rail: { decides: view.ownPresence },
+              Body: FramedPanelBody,
+              Status: FramedPanelStatus,
+              CardBody: framedCardBody(pinned.source),
+            }),
+          },
         },
-      });
+        installed ? {} : { unattributed: true },
+      );
     } catch (error) {
       // i18n-exempt: not shown (console text)
       this.warn(`personal panel "${view.id}" was not mounted: ${String(error)}`);

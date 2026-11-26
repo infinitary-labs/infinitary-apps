@@ -1,0 +1,3 @@
+A panel on the personal snapshot (`inf:plugins:personal`) gains the optional `failing`: each read of the captain's own panel that keeps failing, with what it reads, since when, how many tries in a row, the newest answer and whether the captain asked the first mate (docs/personal-panels.md, "Reads that keep failing").
+A new request, `inf:plugins:ask-firstmate`, is the captain's Ask the first mate on such a panel, answering false when nothing was told.
+A view without this change ignores `failing` and never sends the request; a home without it sends no `failing` and the view shows no failing reads.

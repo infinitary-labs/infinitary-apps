@@ -163,7 +163,7 @@ export function Rail({
                 requestAnimationFrame(() =>
                   document
                     .querySelector<HTMLButtonElement>(
-                      `[data-side-panel="${CSS.escape(panel.id)}"] header button[aria-expanded]`,
+                      `[data-side-panel="${CSS.escape(panel.id)}"] header [data-side-panel-chevron]`,
                     )
                     ?.focus(),
                 );
@@ -274,7 +274,7 @@ function PanelMount({
     if (!moved) return;
     requestAnimationFrame(() => {
       const chevron = document.querySelector<HTMLButtonElement>(
-        `[data-side-panel="${CSS.escape(panel.id)}"] header button[aria-expanded]`,
+        `[data-side-panel="${CSS.escape(panel.id)}"] header [data-side-panel-chevron]`,
       );
       if (chevron) focusWithRing(chevron);
     });
@@ -293,6 +293,7 @@ function PanelMount({
       title={panel.title}
       attribution={panel.attribution}
       running={busy}
+      status={panel.Status ? <panel.Status content={content} title={panel.title} /> : undefined}
       size={panel.size}
       newestLast={panel.newestLast}
       placementY={panel.preferredPlacement.y}

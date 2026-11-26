@@ -38,6 +38,8 @@ export type FirstmateWakeKind =
   | "line-blocked"
   | "freeze-recorded"
   | "panel-update-asked"
+  | "panel-reads-failing"
+  | "panel-reads-asked"
   | "team-queue-left"
   | "automation-looks-failing"
   | "validation-question-stale"

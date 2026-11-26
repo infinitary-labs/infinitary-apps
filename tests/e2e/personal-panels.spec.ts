@@ -103,7 +103,8 @@ test.describe("the personal extension host (Step 2)", () => {
 
     await expect(panel).toBeVisible();
     await expect(panel.locator("header")).toContainText("Open items");
-    await expect(panel.locator("[data-side-panel-attribution]")).toHaveText("yours");
+    // The captain, on the panel status mark: remove the "yours" label; their own panel names no maker.
+    await expect(panel.locator("[data-side-panel-attribution]")).toHaveCount(0);
     await expect(body.locator("[data-fixture-item]")).toHaveCount(3);
     await expect(body.getByText("3 open")).toBeVisible();
     await expect(page.locator('[data-rail="right"] [data-side-panel="open-items"]')).toHaveCount(1);
@@ -535,7 +536,7 @@ test.describe("the build loop: an ask becomes a panel (Step 4)", () => {
       expect(await awaitTurnCommit(userDataDir, key)).toEqual({ commit: expect.any(String) });
       await expect(panel()).toBeVisible({ timeout: 30_000 });
       await expect(panel().locator("header")).toContainText(MOCK_PANEL_TITLE);
-      await expect(panel().locator("[data-side-panel-attribution]")).toHaveText("yours");
+      await expect(panel().locator("[data-side-panel-attribution]")).toHaveCount(0);
       await expect(body().locator("[data-mock-rows='regular']")).toHaveCount(1);
       // It was built apart, then placed (docs/personal-panels.md, "Placed on
       // the rail"): drawn out of sight while the rail had nothing of it, then

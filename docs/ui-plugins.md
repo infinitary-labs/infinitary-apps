@@ -462,12 +462,12 @@ The security review is `docs/live-prototype-security.md`, "Live reads on a crewm
 | where it runs | the frame realm | the frame realm; its `server.ts` in a process of its own | the frame realm |
 | data | declared reads | declared reads, views, integrations, its store slice, its own `server.ts` | the reads, views, integrations and store slice the captain agreed to; no server |
 | can it act? | the host's own gestures (`open`, `point`) and view state | its server's actions, its cards on the stack, pointing, and its moves | its cards on the stack, pointing, and the moves the captain agreed to, nothing else |
-| chrome | no attribution | "yours" | the plugin's name |
+| chrome | no attribution | no attribution, and the host's status mark | the plugin's name |
 | control | `personalize` moves or hides it | the switch, safe mode, `personalize remove` | consent, the switch, safe mode, `personalize remove` |
 
 **One manifest** (items 1 and 5; PR 326): the personal `manifest.json` is the plugin manifest (`personalManifestSchema`); its capability keys `reads`, `sql`, `integrations`, `storage`, `moves` and `actions` are the grant block `manifestCapabilities` reads, and the retired `net` and `secrets` are refused for every source.
 The host stamps `source` (`yours` | `installed`) from the root it found the plugin in.
-`personalPlugins.ts` registers both sources from one snapshot through `registerPlugin`, attributed "yours" or by the plugin's name, with the grants it is served.
+`personalPlugins.ts` registers both sources from one snapshot through `registerPlugin`, the captain's own unattributed and an added one by the plugin's name, with the grants it is served.
 
 **Two roots, one scan** (item 2): `PersonalExtensions` scans `userData/plugins/<id>` from the `plugins` table (migration 43, `PluginRecords` its one writer: id, source, pinned version, installed-at, the consented capabilities).
 An added plugin is served only what the captain consented to: a tree on disk asking for anything else, or holding a `server.ts`, mounts nothing, with the reason named.
@@ -510,7 +510,7 @@ Four pieces:
   The bridge reports a body's exact height, and a panel mount takes it unrounded, so it lays out exactly as the panel's own content does.
 
 The compiler points every panel's host imports at `app-frame://lib/<file>`; the allowlist is the same for every source.
-`FramedPanelBody` is that frame for every panel, and for the captain's own it also draws the host's line when its background work stopped (`BackgroundStopped`, with Retry), above the frame.
+`FramedPanelBody` is that frame for every panel; what the host knows about the captain's own that its code cannot say, such as background work it stopped, is the status mark beside the title (`FramedPanelStatus`; `docs/personal-panels.md`, "The status mark"), never a line above the frame.
 `capture_panel` photographs a framed panel by reading each frame's own markup and CSS inside that frame and setting it back as a script-free `srcdoc` frame in the hidden capture document (`src/main/host/panelCapture.ts`).
 
 The evidence: `tests/e2e/installed-panels.spec.ts` (an added panel drawn in its frame from its consented view), `tests/e2e/installed-panel-containment.spec.ts` (a hostile panel refused at every way out, and a runaway one torn down while its sibling draws), and `docs/live-prototype-security.md` ("The frame realm") for the review.
@@ -551,7 +551,7 @@ A name that points at nothing the folder has is the panel's error: the captain's
 A card is a shell-held entry, `OpenRecord`'s `{ panelCard: { panel, id, view, title, width, data } }` (`src/renderer/src/app/stack.ts`), any number per panel, never saved.
 From the captain's own click or key - the app's header button or command, or inside the panel or a card - it comes to the front; otherwise it waits behind the entry the captain is reading, marked new (`emitPanelCard`).
 That is the panel's frame holding the window's focus (`framePanelCardAction`, `frameHoldsFocus`); a header button or command is the window's own gesture (`windowPanelCards`, `windowGesture`).
-The stage draws `PanelCardView`: the app's one row of chrome - the title, `yours` or the maker's name, Hide - and the panel binding's `CardBody` under it.
+The stage draws `PanelCardView`: the app's one row of chrome - the title, an added panel's maker's name, Hide - and the panel binding's `CardBody` under it.
 A card runs where its panel runs, in a frame of its own (`framedCardBody`, a `kind: "panel"` mount whose `panel.view` names the card view - the module `cards/<view>.mjs` beside `panel.mjs` - and whose config carries the card's id; its data rides view state).
 Only the shown card runs a page: the stage prepares no held entry, so waiting cards cost nothing and the 16-mount cap is never met by them.
 Hide or an Escape nothing in the card used hides it (the bridge's `escape`), F6 lands on it and gives the card's page focus (`enterCard`), and a panel that leaves the core's snapshot - removed, or every panel taken back by the switch or safe mode - takes its cards with it (`PersonalPlugins.closeCards`).
@@ -713,7 +713,7 @@ Output is content-addressed, `userData/cache/personal/<id>/<hash>/<relative>.mjs
 The compiler rewrites an admitted host import into a default import of the frame lib's module plus a destructuring (`app-frame://lib/<file>`, "The frame realm" below), so **the `@infinitary/ui` surface is list-free: Step 3 adds a component by exporting it from `design/index.ts` and nothing else moves** - the lib builds that barrel as it stands.
 No panel code is imported by the app's window.
 
-**Mounting** goes through the host's one door: `src/renderer/src/personal/personalPlugins.ts` registers every extension in the core's snapshot with `registerPlugin` as a plugin `personal-<id>` whose one side-panel contribution binds a Tier-1 `Body` (`FramedPanelBody`, the frame every panel draws in), so the rails learn no new concept; its attribution reads `yours` (`PERSONAL_ATTRIBUTION`), never a plugin name.
+**Mounting** goes through the host's one door: `src/renderer/src/personal/personalPlugins.ts` registers every extension in the core's snapshot with `registerPlugin` as a plugin `personal-<id>` whose one side-panel contribution binds a Tier-1 `Body` (`FramedPanelBody`, the frame every panel draws in), so the rails learn no new concept; it registers unattributed, so its header names no maker, never a plugin name.
 Two things ride sources rather than registration: the panel's content (`null` while its presence rule is unsatisfied or it has no compiled panel, so the rail shows no chrome - visibility stays data, D5) and `running` (a new optional `PanelSource<boolean>` on `SidePanelBinding`: the host draws a `busy` `StatusDot` in the header while true - the design skill's StatusDot gained that tone, ember, the working crewmate's heat).
 A change to the manifest data (title, placement, order, size) re-registers; a rail holds every panel placed on it, and only a real error in registering a panel, such as an id another plugin holds, is a refusal, which the window logs, keeps with its own words (`railRefusals`) and reports to the core with its answer about every panel, so the crewmate that placed the panel and the first mate both read why it is missing (`docs/personal-panels.md`, "Placed on the rail").
 `FramedPanelBody` mounts the panel's pinned version in a frame of its own (`code.source: "personal"`), whose runtime hands the component `PanelProps` (`id`, its `store` slice through the bridge, `invoke` through the host's `server.invoke` to `inf:plugins:invoke`, the theme), and keeps a throw - or a module that will not import - inside one boundary that shows the design system's quiet line (`This panel stopped drawing.`, `[data-personal-stopped]`, inside the frame) with the chrome staying; the next version is a new frame, never a timer.
@@ -825,7 +825,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
   The compiler (`src/core/personal/compiler.ts`) is the coherence gate: `react`, the JSX runtimes, `@infinitary/ui`, type-only `@infinitary/contracts`, and local files for a panel, `node:*` and local files for a server, everything else refused as `<id>/<file> imports "x"...` - never relax it at display time.
   `@infinitary/ui` is `src/renderer/src/design/index.ts`, built into the frame lib; host imports are rewritten to destructure the lib's module, so adding a component is exporting it there, with no list to maintain.
   Output is content-addressed under `userData/cache/personal/<id>/<hash>/` and the hash IS the version: a new hash is the hot reload, a new frame, and the core's module-cache bust.
-  Visibility stays data: the core evaluates `presence` against the store and pushes `present` in one snapshot (`inf:plugins:personal`); the renderer's `personalPlugins.ts` registers each through `registerPlugin` (attribution `yours`, `running` source for the busy dot, a Tier-1 `FramedPanelBody` whose frame holds the error boundary and the quiet line).
+  Visibility stays data: the core evaluates `presence` against the store and pushes `present` in one snapshot (`inf:plugins:personal`); the renderer's `personalPlugins.ts` registers each through `registerPlugin` (unattributed, `running` source for the busy dot, a Tier-1 `FramedPanelBody` whose frame holds the error boundary and the quiet line).
   `src/shared/personal/contracts.ts` is TYPE-ONLY and generates the workspace's `infinitary-env.d.ts` (`pnpm generate:personal-env`; `firstmateEnv.test.ts` fails on drift) - a change there is a contract change.
   `plugin_kv` (migration 33, `PersonalStore`) is the one store, namespaced and capped, cleared by the D-13 purge with the compiled cache; the workspace's files are never deleted by the app.
   The words "extension" and "plugin" reach no user surface (`tests/e2e/personal-panels.spec.ts`).

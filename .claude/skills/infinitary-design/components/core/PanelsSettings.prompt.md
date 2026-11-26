@@ -10,7 +10,7 @@ The blocks sit side by side when the section has room for two 300 px columns, an
 A group with no panel shows "No panels" at `--text-sm` / `--fg-3` inside its box.
 
 **A row.**
-Left to right: a 14 px grip (Lucide grip-vertical) at `--fg-3`; the panel's title at `--text-base` / `--fg-1` / 500, ellipsized, with "yours" or the maker's name after it in dim mono as its header shows; then its state at `--text-sm` / `--fg-3`, right-aligned: "Shown", "Collapsed" or "Hidden".
+Left to right: a 14 px grip (Lucide grip-vertical) at `--fg-3`; the panel's title at `--text-base` / `--fg-1` / 500, ellipsized, with an added panel's maker's name after it in dim mono as its header shows; then its state at `--text-sm` / `--fg-3`, right-aligned: "Shown", "Collapsed" or "Hidden".
 A panel that would not be on the rail for a reason outside the arrangement says that reason instead, in the same place: "Nothing to show right now", "In the More row", "Shows when a rule is saved", "Shows once there is knowledge".
 Its trailing control is a `Switch` named for it ("Show Tasks"), off while it is hidden; it takes the pointer, and the row answers Space for it, so it is no Tab stop of its own.
 A hidden row's title drops to `--fg-3`, so the list reads as the rail does.

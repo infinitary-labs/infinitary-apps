@@ -18,8 +18,8 @@ import SwiftUI
     private(set) var folded: Set<String>
     /// Whether the column is on the screen: a panel that is not runs on, out of sight, and is never stopped for it.
     var visible = false { didSet { if visible != oldValue { tellStates() } } }
-    /// A stopped panel's Try again is on its way to the computer.
-    private(set) var retrying: Set<String> = []
+    /// The status mark's presses on their way to the computer, by panel and button (`statusPress`).
+    private(set) var pressing: Set<String> = []
     /// The panels' cards on Home, held on this phone only.
     private(set) var cards = PhonePanelCards()
     /// The page of the card Home shows. Only the shown card runs a page, as on the desktop: a card paged away from is
@@ -292,18 +292,26 @@ import SwiftUI
         for (id, host) in hosts { host.setState(collapsed: folded.contains(id), shown: visible) }
     }
 
-    /// A stopped panel's Try again: the computer lifts the stop and starts its background work again.
-    func retry(_ panel: PhonePanel) {
-        guard !retrying.contains(panel.id) else { return }
-        retrying.insert(panel.id)
+    /// A button in a panel's status mark, sent once as the desktop's details send it: Retry lifts a stop, Update panel
+    /// and Ask the first mate tell the first mate, Ask again shows an integration's approval card again.
+    func statusPress(_ press: PhonePanelStatusPress, of panel: PhonePanel) {
+        let key = press.key(panel.id)
+        guard !pressing.contains(key) else { return }
+        pressing.insert(key)
         Task {
-            defer { retrying.remove(panel.id) }
-            _ = try? await session.panelAsk(.pluginsRetry, [.string(panel.id)])
+            defer { pressing.remove(key) }
+            switch press {
+            case .retry: _ = try? await session.panelAsk(.pluginsRetry, [.string(panel.id)])
+            case .update: _ = try? await session.panelAsk(.pluginsUpdate, [.string(panel.id)])
+            case .askFirstmate: _ = try? await session.panelAsk(.pluginsAskFirstmate, [.string(panel.id)])
+            case .askAgain(let integration, let action):
+                _ = try? await session.panelAsk(.pluginsAskAgain, [.string(panel.id), .string(integration), .string(action)])
+            }
         }
     }
 }
 
-/// The Panels tab: every panel under its title and owner word, one under another, at the column's width.
+/// The Panels tab: every panel under its title, its status mark and an added one's owner word, one under another, at the column's width.
 struct PhonePanelsColumn: View {
     let model: PhonePanelsModel
     @State private var room: CGFloat = 600
@@ -314,8 +322,8 @@ struct PhonePanelsColumn: View {
                 ForEach(model.drawn) { panel in
                     if let host = model.hosts[panel.id] {
                         PhonePanelSection(panel: panel, host: host, folded: model.folded.contains(panel.id),
-                                          retrying: model.retrying.contains(panel.id), fillHeight: max(240, room * 0.7),
-                                          fold: { model.toggleFold(panel.id) }, retry: { model.retry(panel) },
+                                          pressing: { model.pressing.contains($0.key(panel.id)) }, fillHeight: max(240, room * 0.7),
+                                          fold: { model.toggleFold(panel.id) }, statusPress: { model.statusPress($0, of: panel) },
                                           press: { model.press($0, of: panel) })
                     }
                 }
@@ -330,15 +338,15 @@ struct PhonePanelsColumn: View {
     }
 }
 
-/// One panel, as a rail draws it on the computer: its title, whose it is and a fold, then its body.
+/// One panel, as a rail draws it on the computer: its title, its status mark, an added one's maker and a fold, then its body.
 private struct PhonePanelSection: View {
     let panel: PhonePanel
     let host: PanelWebHost
     let folded: Bool
-    let retrying: Bool
+    let pressing: (PhonePanelStatusPress) -> Bool
     let fillHeight: CGFloat
     let fold: () -> Void
-    let retry: () -> Void
+    let statusPress: (PhonePanelStatusPress) -> Void
     /// INF-3830 piece 3: a title-row button's press.
     let press: (PhonePanelHeaderButton) -> Void
     @Environment(\.colorScheme) private var scheme
@@ -348,19 +356,30 @@ private struct PhonePanelSection: View {
             // As on the computer's rail, the panel's own buttons sit in its title row beside the fold; one that asks the
             // panel shows only while its body does (`headerButtons(folded:)`).
             HStack(alignment: .center, spacing: 0) {
+                // The mark sits on the title's line, between the title and the fold's room, in both header states.
+                Button(action: fold) {
+                    Text(panel.title.uppercased()).font(PhoneFont.micro).tracking(PhoneFont.labelTracking).foregroundStyle(PhoneTheme.secondary).lineLimit(1)
+                        .frame(minHeight: 44).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("panel-header-\(panel.id)")
+                .accessibilityValue(folded ? "folded" : "open")
+                if !panel.statusSections.isEmpty {
+                    PhonePanelStatusMark(panel: panel, pressing: pressing, press: statusPress)
+                }
                 Button(action: fold) {
                     HStack(alignment: .center, spacing: PhoneTheme.space2) {
-                        Text(panel.title.uppercased()).font(PhoneFont.micro).tracking(PhoneFont.labelTracking).foregroundStyle(PhoneTheme.secondary).lineLimit(1)
                         if let owner = panel.owner {
                             Text(owner).font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted).lineLimit(1)
                         }
                         Spacer(minLength: 0)
                     }
+                    .padding(.leading, PhoneTheme.space2)
                     .frame(minHeight: 44).contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityIdentifier("panel-header-\(panel.id)")
-                .accessibilityValue(folded ? "folded" : "open")
+                // The title already folds it; the owner word is read as the row's words.
+                .accessibilityHidden(panel.owner == nil)
                 ForEach(panel.headerButtons(folded: folded), id: \.id) { button in
                     Button { press(button) } label: {
                         Label(button.label, systemImage: button.symbol).labelStyle(.iconOnly)
@@ -377,10 +396,6 @@ private struct PhonePanelSection: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityHidden(true)
-            }
-            if !folded, let stopped = panel.stopped {
-                line(stopped.reason == "exited" ? PhonePanelWords.backgroundExited : PhonePanelWords.backgroundStopped,
-                     action: PhonePanelWords.retry, id: "panel-retry-\(panel.id)", busy: retrying, perform: retry)
             }
             switch host.stand {
             case .couldNotOpen(let failure) where !folded:
@@ -404,12 +419,11 @@ private struct PhonePanelSection: View {
         .accessibilityIdentifier("panel-\(panel.id)")
     }
 
-    private func line(_ words: String, action: String? = nil, id: String, busy: Bool = false,
-                      perform: @escaping () -> Void = {}) -> some View {
+    private func line(_ words: String, action: String? = nil, id: String, perform: @escaping () -> Void = {}) -> some View {
         VStack(alignment: .leading, spacing: PhoneTheme.space2) {
             Text(words).font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary).fixedSize(horizontal: false, vertical: true)
             if let action {
-                Button(action, action: perform).buttonStyle(PhoneChoiceStyle(.secondary)).disabled(busy)
+                Button(action, action: perform).buttonStyle(PhoneChoiceStyle(.secondary))
                     .accessibilityIdentifier(id)
             }
         }

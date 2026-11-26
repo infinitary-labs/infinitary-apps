@@ -541,7 +541,7 @@ export function setup(
             });
             continue;
           }
-          // As git answers it (combine.test.ts): a fix carries its difference from the held
+          // As git answers it (combine.held.test.ts): a fix carries its difference from the held
           // version its branch builds on, and a branch that lost a verified one is left out.
           if (change.fix || change.heldBase) {
             const on = builtOn.get(change.head);

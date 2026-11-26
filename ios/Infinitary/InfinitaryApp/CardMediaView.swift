@@ -97,6 +97,15 @@ struct CardMediaZoom: Equatable {
         let own = 1 / fitted
         return min(Self.deepest, own > 1.05 ? own : 2)
     }
+    /// A double-tap's zoom back to fitted. The scroll view's own animated zoom ignores every touch that starts during its
+    /// 0.3 s, so a swipe down begun just after this double-tap never reached the viewer; this animation lets it through.
+    /// The zoom in keeps the scroll view's own animation, since WebKit puts the page's scale back over a zoom set in code
+    /// until the page has heard one (`CardDiagramZoomTests`), and fitted is the page's own scale, so putting it back changes nothing.
+    @MainActor static func fit(_ scroll: UIScrollView) {
+        UIView.animate(withDuration: 0.3, delay: 0, options: [.allowUserInteraction, .beginFromCurrentState, .curveEaseInOut]) {
+            scroll.setZoomScale(scroll.minimumZoomScale, animated: false)
+        }
+    }
 }
 
 /// A diagram the card wrote out (`DRAWING_SOURCE_PREFIX`): its typefaces go inside it, since a picture loads nothing.
@@ -201,7 +210,7 @@ private struct PassiveCardMedia: UIViewRepresentable {
         @objc func doubleTapped(_ gesture: UITapGestureRecognizer) {
             guard let view = gesture.view as? WKWebView, let zoom else { return }
             let scroll = view.scrollView
-            if scroll.zoomScale > scroll.minimumZoomScale + 0.01 { scroll.setZoomScale(scroll.minimumZoomScale, animated: true); return }
+            if scroll.zoomScale > scroll.minimumZoomScale + 0.01 { CardMediaZoom.fit(scroll); return }
             // WebKit keeps its zooming view to itself, so the tap is read in the scroll view and divided by the
             // current zoom, the zooming view's own units.
             let scale = zoom.doubleTapScale(room: scroll.bounds.size)

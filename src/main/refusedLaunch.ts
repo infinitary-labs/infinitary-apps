@@ -7,6 +7,7 @@ import { hostPlatform } from "../core/platform";
 import { OPEN_ONCE_CLOSED } from "./personWord";
 import {
   answerLaunch,
+  bringWindowForward,
   commandPipe,
   commandPipeHeld,
   holderIsWindow,
@@ -19,7 +20,7 @@ import {
 } from "./runCommand";
 import { endRefusedLaunch } from "./runReopen";
 import { personTeller } from "./tellPerson";
-import { bringWindowForward, personWindows } from "./windows";
+import { personWindows } from "./windows";
 
 /**
  * What a launch refused the folder's lock does while it waits to learn who holds the

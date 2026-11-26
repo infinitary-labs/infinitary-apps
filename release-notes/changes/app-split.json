@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "app-split",
+      "reason": "Internal: the refused-launch watch and the second-launch answer move from the app's start into their own module; nothing a person sees changes."
+    }
+  ]
+}

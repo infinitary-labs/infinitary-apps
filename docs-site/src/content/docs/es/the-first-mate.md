@@ -1,5 +1,5 @@
 ---
-source: 36f0e08a37cc757f
+source: c78bd352e2745a60
 title: El primer oficial
 description: Quién es tu primer oficial, qué hace y qué no hace, cómo hablarle y cómo elegir el modelo con el que responde.
 ---
@@ -38,6 +38,15 @@ Algunas cosas ayudan:
   Presiona ↑ en un cuadro de mensaje vacío.
 - **Pegar mucho texto.**
   Un texto largo pegado se convierte en una ficha de archivo en el cuadro, y va completo con tu mensaje.
+
+### Retirar un mensaje {#take-back-a-message}
+
+Durante un minuto después de enviar un mensaje, aparece un ícono de revertir junto a él, encima del cuadro de mensaje.
+Presiónalo, o usa **Revertir tu último mensaje** en la búsqueda de comandos.
+Tu primer oficial detiene lo que el mensaje inició, deshace lo que ya hizo y dice junto al mensaje qué deshizo.
+Para cambiar el mensaje en su lugar, presiona ↑ en un cuadro de mensaje vacío.
+El cuadro dice "Reemplaza tu último mensaje": Enter envía tu edición en su lugar, y Esc la envía como un mensaje nuevo.
+En [toda la conversación](#the-whole-conversation), un mensaje revertido aparece tachado, y uno editado conserva sus palabras anteriores.
 
 ### Agregar imágenes y archivos {#add-pictures-and-files}
 

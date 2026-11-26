@@ -37,6 +37,7 @@ import {
 } from "./stack";
 import { cardsPutAside } from "./stackActions";
 import type { ShellState } from "./store";
+import { revertible } from "./takeBack";
 
 /**
  * Why a window command cannot run now (docs/keyboard.md), in the words
@@ -437,6 +438,13 @@ const REFUSALS: Readonly<
   // From anywhere, Settings included: it goes home to the conversation,
   // which says so while it holds nothing yet.
   "firstmate.reply": () => null,
+  // Only the newest message, for a minute after it was sent, from a window that may change things.
+  "message.take-back": (s) =>
+    changesOff(s.thisMac) && isView(s.thisMac)
+      ? changesOffWords(s.thisMac)
+      : revertible(s.lastTurn, Date.now())
+        ? null
+        : m.refuseNoMessageToRevert(),
   "settings.runbooks": () => null,
   "runbooks.open-folder": (s) =>
     isView(s.thisMac) ? m.refuseRunbooksFolderOn({ computer: s.thisMac.name }) : null,

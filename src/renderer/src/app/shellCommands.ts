@@ -424,6 +424,7 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, (via: CommandVia) => void>
     if (s.view !== "home") s.setView("home");
     s.openConversation();
   },
+  "message.take-back": () => void useShellStore.getState().takeBackLast(),
   "settings.runbooks": () => openSettingsAt("runbooks", "[data-runbooks] button"),
   "runbooks.open-folder": () =>
     openSettingsAt("runbooks", "[data-runbooks-open-folder]", (button) => button.click()),

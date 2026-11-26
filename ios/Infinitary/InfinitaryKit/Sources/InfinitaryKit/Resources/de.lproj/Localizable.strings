@@ -711,6 +711,8 @@
 "commandMessageDeleteWordBefore" = "Wort vor dem Cursor löschen";
 "commandMessagePutBackDeleted" = "Zuletzt Gelöschtes wiederherstellen";
 "commandMessageRecall" = "Zuletzt gesendete Nachricht zurückholen";
+"commandMessageTakeBack" = "Deine letzte Nachricht zurücknehmen";
+"commandMessageTakeBackWords" = "zurücknehmen, rückgängig, widerrufen, Nachricht";
 "commandMoveDown" = "Nach unten";
 "commandMoveDownWords" = "Pfeil, unten, runter, nächste";
 "commandMoveFirst" = "Zum Anfang";
@@ -819,6 +821,9 @@
 "composerFolderNotProject" = "Dieser Ordner konnte nicht als Projekt hinzugefügt werden.";
 "composerFolderProject" = "Dieser Ordner ist schon eines deiner Projekte.";
 "composerHintFeedback" = "%1$@: dem Macher von Infinitary ein Problem oder eine Idee mitteilen";
+"composerHintReplaces" = "ersetzt ·";
+"composerHintSendsAsNew" = "sendet als neue";
+"composerReplacesLast" = "Ersetzt deine letzte Nachricht";
 "composerTooLongShorten" = "Zu lang zum Senden. Kürze es zuerst.";
 "composerWordsOnly" = "Bis Infinitary aktualisiert ist, können nur Worte gesendet werden. Entferne die Bilder und Dateien, um dies zu senden.";
 "crewAPart" = "Ein Teil";
@@ -2527,6 +2532,7 @@
 "refuseNoCardIsShown" = "Es wird keine Karte angezeigt";
 "refuseNoCardIsShownOrPutAside" = "Keine Karte wird angezeigt oder liegt beiseite";
 "refuseNoCardThreadIsReadAboveIts" = "Kein Kartenverlauf ist oberhalb seiner neuesten Nachricht gelesen";
+"refuseNoMessageToRevert" = "Keine Nachricht zum Zurücknehmen: Sie ist älter als eine Minute oder schon zurückgenommen";
 "refuseNoOtherCardIsNew" = "Keine andere Karte ist neu";
 "refuseNoPageToPointAt" = "Es wird keine Seite angezeigt, auf die du zeigen kannst";
 "refuseNoPictureIsOpen" = "Öffne zuerst ein Bild in einer Karte";
@@ -4195,6 +4201,7 @@
 "shellConversationCards" = "Karten";
 "shellConversationChose" = "„%1$@“ gewählt";
 "shellConversationCrewmate" = "Crewmitglied";
+"shellConversationEdited" = "Bearbeitet";
 "shellConversationEmpty" = "Hier ist noch nichts. Deine Nachrichten und die Karten, die du beantwortest, erscheinen hier.";
 "shellConversationEverything" = "Alles";
 "shellConversationHeading" = "Unterhaltung";
@@ -4241,6 +4248,9 @@
 "shellKeyReminderNotTyping" = "außer beim Tippen";
 "shellLastTurnFromCommand" = "Von %1$@";
 "shellLastTurnPictureOnly" = "Ein Bild";
+"shellLastTurnRevert" = "Deine letzte Nachricht zurücknehmen";
+"shellLastTurnReverted" = "Zurückgenommen";
+"shellLastTurnRevertedUnread" = "Zurückgenommen, bevor dein erster Offizier sie gelesen hat";
 "shellLastTurnWorking" = "Arbeitet …";
 "shellMainMessageConnectFirst" = "Verbinde zuerst ein Abo";
 "shellMainMessagePickingKey" = "Die Einstellungen warten auf eine Diktiertaste";

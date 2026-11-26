@@ -711,6 +711,8 @@
 "commandMessageDeleteWordBefore" = "删除光标前的词";
 "commandMessagePutBackDeleted" = "恢复上次删除的内容";
 "commandMessageRecall" = "找回上一条发送的消息";
+"commandMessageTakeBack" = "撤回你的上一条消息";
+"commandMessageTakeBackWords" = "撤回, 撤销, 取消发送, 消息";
 "commandMoveDown" = "向下移动";
 "commandMoveDownWords" = "方向键, 下, 下一个";
 "commandMoveFirst" = "移到开头";
@@ -819,6 +821,9 @@
 "composerFolderNotProject" = "无法将该文件夹添加为项目。";
 "composerFolderProject" = "该文件夹已经是你的项目了。";
 "composerHintFeedback" = "%1$@：向 Infinitary 的开发者报告问题或提出想法";
+"composerHintReplaces" = "替换 ·";
+"composerHintSendsAsNew" = "作为新消息发送";
+"composerReplacesLast" = "替换你的上一条消息";
 "composerTooLongShorten" = "太长了，无法发送。请先缩短。";
 "composerWordsOnly" = "在 Infinitary 更新之前只能发送文字。请移除图片和文件后再发送。";
 "crewAPart" = "一个部分";
@@ -2527,6 +2532,7 @@
 "refuseNoCardIsShown" = "没有显示任何卡片";
 "refuseNoCardIsShownOrPutAside" = "没有显示或放到一边的卡片";
 "refuseNoCardThreadIsReadAboveIts" = "没有哪张卡片的讨论停在最新消息之上";
+"refuseNoMessageToRevert" = "没有可撤回的消息：已超过一分钟或已经撤回";
 "refuseNoOtherCardIsNew" = "没有其他新卡片";
 "refuseNoPageToPointAt" = "没有可指向的页面";
 "refuseNoPictureIsOpen" = "请先打开卡片中的图片";
@@ -4195,6 +4201,7 @@
 "shellConversationCards" = "卡片";
 "shellConversationChose" = "选择了“%1$@”";
 "shellConversationCrewmate" = "船员";
+"shellConversationEdited" = "已编辑";
 "shellConversationEmpty" = "这里还没有内容。你发的消息和回答过的卡片会显示在这里。";
 "shellConversationEverything" = "全部";
 "shellConversationHeading" = "对话";
@@ -4241,6 +4248,9 @@
 "shellKeyReminderNotTyping" = "不在打字时";
 "shellLastTurnFromCommand" = "来自 %1$@";
 "shellLastTurnPictureOnly" = "一张图片";
+"shellLastTurnRevert" = "撤回你的上一条消息";
+"shellLastTurnReverted" = "已撤回";
+"shellLastTurnRevertedUnread" = "在你的大副读到之前已撤回";
 "shellLastTurnWorking" = "处理中…";
 "shellMainMessageConnectFirst" = "请先连接一个订阅";
 "shellMainMessagePickingKey" = "设置正在等待听写按键";

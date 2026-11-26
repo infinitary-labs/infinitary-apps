@@ -89,6 +89,8 @@
   "commandMessageDeleteWordBefore": "حذف الكلمة التي قبل المؤشر",
   "commandMessagePutBackDeleted": "إرجاع آخر ما حُذف",
   "commandMessageRecall": "استعادة آخر رسالة مُرسلة",
+  "commandMessageTakeBack": "التراجع عن آخر رسالة لك",
+  "commandMessageTakeBackWords": "تراجع, إلغاء, سحب, رسالة",
   "commandMoveDown": "التحرك لأسفل",
   "commandMoveDownWords": "سهم, أسفل, التالي",
   "commandMoveFirst": "الانتقال إلى البداية",

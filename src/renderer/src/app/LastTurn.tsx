@@ -14,7 +14,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { prefersReducedMotion } from "../character/reducedMotion";
-import { useRestLabel } from "../design";
+import { IconButton, useRestLabel } from "../design";
 import { useOverflowTitle } from "../design/core/overflowTitle";
 import { useWholeWords } from "../design/core/wholeWords";
 import { useCommandKeys } from "./keyHints";
@@ -31,6 +31,7 @@ import { LAST_TURN_GAP, lastTurnLane } from "./promptGeometry";
 import { type ConversationEntry, shownEntry, stackOf } from "./stack";
 import { useShellStore } from "./store";
 import { shownStrip, stripRoundHeight } from "./strip";
+import { replyText, revertControlFor, revertibleFor } from "./takeBack";
 import "./lastTurn.css";
 
 /**
@@ -87,8 +88,57 @@ type Mate = { kind: "working" } | { kind: "reply"; text: string; problem: boolea
 
 function mateOf(busy: boolean, round: LastRound): Mate | null {
   if (round.reply)
-    return { kind: "reply", text: round.reply.text, problem: round.reply.problem === true };
+    return { kind: "reply", text: replyText(round.reply), problem: round.reply.problem === true };
   return busy ? { kind: "working" } : null;
+}
+
+/**
+ * Lucide's `undo-2`: the revert control's glyph, the captain's pick over a
+ * button that says its words ("use a \"revert\" icon or something like that").
+ */
+const REVERT_GLYPH = (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M9 14 4 9l5-5" />
+    <path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11" />
+  </svg>
+);
+
+/**
+ * The revert control beside the newest message while it may be taken back
+ * (docs/composer.md "The last turn"): an icon with no words of its own, its
+ * label and any key drawn on rest or focus. Its press is its own, never the
+ * round's, so it opens no conversation.
+ */
+function RevertControl({ onRevert }: { onRevert: () => void }) {
+  const keys = useCommandKeys("message.take-back");
+  return (
+    <IconButton
+      label={m.shellLastTurnRevert()}
+      keys={keys.keys}
+      aria-keyshortcuts={keys["aria-keyshortcuts"]}
+      size={20}
+      className="revert"
+      // lastTurn.css shows it on rest or focus and sets its color.
+      style={{ opacity: undefined, color: undefined, transition: undefined }}
+      data-last-turn-revert=""
+      onClick={(event) => {
+        event.stopPropagation();
+        onRevert();
+      }}
+    >
+      {REVERT_GLYPH}
+    </IconButton>
+  );
 }
 
 function mateKey(mate: Mate | null): string {
@@ -367,6 +417,7 @@ export function LastTurnRound({
   card,
   act,
   opens = {},
+  onRevert,
 }: {
   round: LastRound;
   /** The Firstmate works on the newest round. */
@@ -391,6 +442,8 @@ export function LastTurnRound({
   act?: "choice" | "reply";
   /** Where a press on the round opens the conversation. */
   opens?: ConversationEntry;
+  /** The newest message may still be taken back: the revert control stands beside it. */
+  onRevert?: () => void;
 }) {
   const said = round.you.trim();
   const you = said || m.shellLastTurnPictureOnly();
@@ -411,6 +464,7 @@ export function LastTurnRound({
       data-leaving={leaving ? "" : undefined}
       data-fading={fading ? "" : undefined}
       data-card-round={act}
+      data-taken-back={round.takenBack ? "" : undefined}
       inert={leaving || fading}
       aria-hidden={leaving || undefined}
     >
@@ -427,6 +481,12 @@ export function LastTurnRound({
         ) : null}
         {card ? (
           <CardName card={card} leaving={leaving} older={older} {...(act ? { opens } : {})} />
+        ) : null}
+        {onRevert && !act && !older && !leaving ? <RevertControl onRevert={onRevert} /> : null}
+        {round.takenBack ? (
+          <span className="reverted" data-last-turn-reverted="">
+            {m.shellLastTurnReverted()}
+          </span>
         ) : null}
         <span
           data-last-turn-bubble="you"
@@ -490,12 +550,14 @@ function StripRoundView({
   leaving = false,
   fading = false,
   announce = false,
+  onRevert,
 }: {
   shown: Shown;
   busy: boolean;
   leaving?: boolean;
   fading?: boolean;
   announce?: boolean;
+  onRevert?: () => void;
 }) {
   const { strip, older } = shown;
   const common = {
@@ -507,7 +569,14 @@ function StripRoundView({
     ...(strip.card ? { card: strip.card } : {}),
   };
   if (strip.kind === "message")
-    return <LastTurnRound round={strip.round} busy={busy} {...common} />;
+    return (
+      <LastTurnRound
+        round={strip.round}
+        busy={busy}
+        {...common}
+        {...(onRevert ? { onRevert } : {})}
+      />
+    );
   return (
     <LastTurnRound
       round={{ you: strip.kind === "choice" ? strip.label : strip.you, reply: null }}
@@ -527,7 +596,18 @@ export function LastTurn() {
   const threads = useShellStore((s) => s.threads);
   const busy = useShellStore((s) => s.firstmateBusy);
   const view = useShellStore((s) => s.view);
+  const takeBackLast = useShellStore((s) => s.takeBackLast);
+  const thisMac = useShellStore((s) => s.thisMac);
   const cardUp = useCardUp();
+  // The revert control stands until the minute ends, then a render takes it away.
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const wait = revertibleFor(turn, Date.now());
+    if (wait === null) return;
+    const id = window.setTimeout(() => setTick((tick) => tick + 1), wait);
+    return () => window.clearTimeout(id);
+  }, [turn]);
+  const revertAsk = revertControlFor(turn, Date.now(), thisMac);
   const conversationShown = useConversationShown();
   const fade = useSyncExternalStore(subscribeFade, getFade, getFade);
   const [outgoing, setOutgoing] = useState<Outgoing | null>(null);
@@ -690,6 +770,11 @@ export function LastTurn() {
               busy={busy && shown.strip.key === newestKey}
               fading={shown.older && fading}
               announce={!shown.older && spoken.current === announcement}
+              {...(revertAsk &&
+              shown.strip.kind === "message" &&
+              shown.strip.round.askId === revertAsk
+                ? { onRevert: () => void takeBackLast() }
+                : {})}
             />
           </div>
         ),

@@ -10,6 +10,7 @@
   "refuseNoCardIsShown": "No card is shown",
   "refuseNoCardIsShownOrPutAside": "No card is shown or put aside",
   "refuseNoCardThreadIsReadAboveIts": "No card thread is read above its latest message",
+  "refuseNoMessageToRevert": "No message to revert: it is past a minute old or already reverted",
   "refuseNoOtherCardIsNew": "No other card is new",
   "refuseNoPageToPointAt": "No page is shown to point at",
   "refuseNoPictureIsOpen": "Open a picture in a card first",

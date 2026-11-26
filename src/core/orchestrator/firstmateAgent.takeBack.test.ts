@@ -1,3 +1,5 @@
+import { setCurrentLanguage } from "@shared/i18n/current";
+import { SOURCE_LANGUAGE } from "@shared/i18n/languages";
 import { describe, expect, it, vi } from "vitest";
 import {
   drained,
@@ -52,6 +54,45 @@ describe("FirstmateAgent taking back a message", () => {
     expect(newest(f).turnState).not.toBe("open");
   });
 
+  it("types the line of a message no turn read as withdrawn, and never of one a turn is reading", async () => {
+    // The review of the desktop take back: the window words "taken back
+    // before your first mate read it" from this fact, never from a missing line.
+    const options = { silent: true, failCreate: "Conversation could not start." };
+    const f = setup(options);
+    await f.agent.converse("start a task to delete the old logs");
+    const unread = newest(f);
+    // A saved line keeps its English beside the fact whatever the core speaks
+    // (docs/i18n.md, "Saved facts"), for a reader that words nothing itself.
+    setCurrentLanguage("zh-Hans");
+    try {
+      expect(f.agent.takeBack(unread.id)).toEqual({ outcome: "withdrawn" });
+    } finally {
+      setCurrentLanguage(SOURCE_LANGUAGE);
+    }
+    expect(f.tasks.capture.lastTurn()).toMatchObject({
+      askId: unread.id,
+      reply: { withdrawn: true, text: "Reverted before your first mate read it" },
+    });
+    expect(f.events.filter((event) => event.type === "firstmate_reply").at(-1)).toMatchObject({
+      askId: unread.id,
+      withdrawn: true,
+    });
+
+    options.failCreate = "";
+    await f.agent.converse("start a task to archive the old logs");
+    await drained(f.session, 1);
+    const reading = newest(f);
+    await f.agent.converse({ text: "archive only last year's logs", replaces: reading.id });
+    expect(f.tasks.capture.lastTurn()?.previous).toMatchObject({
+      askId: reading.id,
+      takenBack: true,
+    });
+    expect(f.tasks.capture.lastTurn()?.previous?.reply).toBeNull();
+    expect(
+      f.events.filter((event) => event.type === "firstmate_reply" && event.askId === reading.id),
+    ).toEqual([]);
+  });
+
   it("drops a message taken back while it is still being handed to the first mate", async () => {
     let release = () => {};
     const sourceRead = new Promise<never>((resolve) => {
@@ -86,6 +127,7 @@ describe("FirstmateAgent taking back a message", () => {
       lane(f).filter((row) => row.facts?.kind === "captain-turn" && row.facts.askId === ask.id),
     ).toEqual([]);
     expect(f.tasks.capture.getAsk(ask.id)?.turnState).not.toBe("open");
+    expect(f.tasks.capture.lastTurn()?.reply).toMatchObject({ withdrawn: true });
     await finish(f);
   });
 
@@ -218,5 +260,41 @@ describe("FirstmateAgent taking back a message", () => {
     expect(wake).toContain(
       'They replaced it with a new message: "start a task to archive the old logs".',
     );
+  });
+
+  it("writes the undo turn's closing line beside the message it took back", async () => {
+    const f = setup({ silent: true });
+    await f.agent.converse("start a task to delete the old logs");
+    const ask = newest(f);
+    await createTask(f, { title: "Delete the old logs" });
+    await finish(f, "Filed it.");
+    expect(f.agent.takeBack(ask.id)).toEqual({ outcome: "undoing" });
+    await drained(f.session, 2);
+    await finish(f, "Took it back: dropped its task.");
+    expect(f.tasks.capture.lastTurn()).toMatchObject({
+      askId: ask.id,
+      reply: { text: "Took it back: dropped its task." },
+    });
+    const lines = f.events.filter((event) => event.type === "firstmate_reply");
+    expect(lines.at(-1)).toMatchObject({ text: "Took it back: dropped its task.", askId: ask.id });
+  });
+
+  it("keeps the line beside a replacement whose turn also carries the undo", async () => {
+    const f = setup({ silent: true });
+    await f.agent.converse("start a task to delete the old logs");
+    const first = newest(f);
+    await createTask(f, { title: "Delete the old logs" });
+    await finish(f, "Filed it.");
+    await f.agent.converse({ text: "start a task to archive the old logs", replaces: first.id });
+    const second = newest(f);
+    await drained(f.session, 2);
+    expect(f.session.prompts[1]).toContain(`${TAKEN_BACK_OPENING} ${first.id}`);
+    await createTask(f, { title: "Archive the old logs", ask_id: second.id });
+    await finish(f, "Dropped the delete task and filed the archive task.");
+    expect(f.tasks.capture.lastTurn()).toMatchObject({
+      askId: second.id,
+      reply: { text: "Dropped the delete task and filed the archive task." },
+      previous: { askId: first.id, takenBack: true, reply: { text: "Filed it." } },
+    });
   });
 });

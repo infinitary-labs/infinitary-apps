@@ -164,8 +164,8 @@
         "message": "<Switch> doesn't accept that prop. Declared props: checked, onChange, label, disabled, aria-label, tabIndex, off, note."
       },
       {
-        "selector": "JSXOpeningElement[name.name='VoiceInput'] > JSXAttribute > JSXIdentifier[name!=/^(?:mode|keybindHint|disabled|value|onChange|level|onActivate|onAbandon|onAccept|onSubmit|onFocusChange|onKeystroke|width|style|inputRef|shellRef|maxHeight|attachments|onAttach|onPictureTooBig|onRemoveAttachment|onPaste|pastes|onPasteText|onInlinePaste|onRemovePaste|onCaretChange|onRecall|key|ref|className|style|children)$/]",
-        "message": "<VoiceInput> doesn't accept that prop. Declared props: mode, keybindHint, disabled, value, onChange, level, onActivate, onAbandon, onAccept, onSubmit, onFocusChange, onKeystroke, width, style, inputRef, shellRef, maxHeight, attachments, onAttach, onPictureTooBig, onRemoveAttachment, onPaste, pastes, onPasteText, onInlinePaste, onRemovePaste, onCaretChange, onRecall."
+        "selector": "JSXOpeningElement[name.name='VoiceInput'] > JSXAttribute > JSXIdentifier[name!=/^(?:mode|keybindHint|disabled|value|onChange|level|onActivate|onAbandon|onAccept|onSubmit|onFocusChange|onKeystroke|width|style|inputRef|shellRef|maxHeight|attachments|onAttach|onPictureTooBig|onRemoveAttachment|onPaste|pastes|onPasteText|onInlinePaste|onRemovePaste|onCaretChange|onRecall|replacing|key|ref|className|style|children)$/]",
+        "message": "<VoiceInput> doesn't accept that prop. Declared props: mode, keybindHint, disabled, value, onChange, level, onActivate, onAbandon, onAccept, onSubmit, onFocusChange, onKeystroke, width, style, inputRef, shellRef, maxHeight, attachments, onAttach, onPictureTooBig, onRemoveAttachment, onPaste, pastes, onPasteText, onInlinePaste, onRemovePaste, onCaretChange, onRecall, replacing."
       },
       {
         "selector": "JSXOpeningElement[name.name='VoiceInput'] > JSXAttribute[name.name='mode'] > Literal[value!=/^(?:idle|recording)$/]",

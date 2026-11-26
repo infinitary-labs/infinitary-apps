@@ -89,6 +89,8 @@
   "commandMessageDeleteWordBefore": "删除光标前的词",
   "commandMessagePutBackDeleted": "恢复上次删除的内容",
   "commandMessageRecall": "找回上一条发送的消息",
+  "commandMessageTakeBack": "撤回你的上一条消息",
+  "commandMessageTakeBackWords": "撤回, 撤销, 取消发送, 消息",
   "commandMoveDown": "向下移动",
   "commandMoveDownWords": "方向键, 下, 下一个",
   "commandMoveFirst": "移到开头",

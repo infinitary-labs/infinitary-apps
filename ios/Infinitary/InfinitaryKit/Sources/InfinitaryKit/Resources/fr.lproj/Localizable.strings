@@ -711,6 +711,8 @@
 "commandMessageDeleteWordBefore" = "Supprimer le mot avant le curseur";
 "commandMessagePutBackDeleted" = "Rétablir le dernier texte supprimé";
 "commandMessageRecall" = "Rappeler le dernier message envoyé";
+"commandMessageTakeBack" = "Annuler votre dernier message";
+"commandMessageTakeBackWords" = "annuler, défaire, retirer, message";
 "commandMoveDown" = "Descendre";
 "commandMoveDownWords" = "flèche, bas, suivant";
 "commandMoveFirst" = "Aller au début";
@@ -819,6 +821,9 @@
 "composerFolderNotProject" = "Impossible d’ajouter ce dossier comme projet.";
 "composerFolderProject" = "Ce dossier fait déjà partie de vos projets.";
 "composerHintFeedback" = "%1$@ : signalez un problème ou une idée au créateur d’Infinitary";
+"composerHintReplaces" = "remplace ·";
+"composerHintSendsAsNew" = "envoie comme nouveau";
+"composerReplacesLast" = "Remplace votre dernier message";
 "composerTooLongShorten" = "Trop long pour être envoyé. Raccourcissez-le d’abord.";
 "composerWordsOnly" = "Seuls des mots peuvent partir tant qu’Infinitary n’est pas mis à jour. Retirez les images et les fichiers pour envoyer ceci.";
 "crewAPart" = "Une partie";
@@ -2527,6 +2532,7 @@
 "refuseNoCardIsShown" = "Aucune carte n’est affichée";
 "refuseNoCardIsShownOrPutAside" = "Aucune carte n’est affichée ni mise de côté";
 "refuseNoCardThreadIsReadAboveIts" = "Aucun fil de carte n’est lu au-dessus de son dernier message";
+"refuseNoMessageToRevert" = "Aucun message à annuler : il date de plus d’une minute ou a déjà été annulé";
 "refuseNoOtherCardIsNew" = "Aucune autre carte n’est nouvelle";
 "refuseNoPageToPointAt" = "Aucune page n’est affichée à désigner";
 "refuseNoPictureIsOpen" = "Ouvre d’abord une image d’une carte";
@@ -4195,6 +4201,7 @@
 "shellConversationCards" = "Cartes";
 "shellConversationChose" = "Choix : « %1$@ »";
 "shellConversationCrewmate" = "Équipier";
+"shellConversationEdited" = "Modifié";
 "shellConversationEmpty" = "Rien pour l’instant. Vos messages et les cartes auxquelles vous répondez s’affichent ici.";
 "shellConversationEverything" = "Tout";
 "shellConversationHeading" = "Conversation";
@@ -4241,6 +4248,9 @@
 "shellKeyReminderNotTyping" = "hors saisie";
 "shellLastTurnFromCommand" = "Depuis %1$@";
 "shellLastTurnPictureOnly" = "Une image";
+"shellLastTurnRevert" = "Annuler votre dernier message";
+"shellLastTurnReverted" = "Annulé";
+"shellLastTurnRevertedUnread" = "Annulé avant que votre second ne le lise";
 "shellLastTurnWorking" = "En cours…";
 "shellMainMessageConnectFirst" = "Connectez d’abord un abonnement";
 "shellMainMessagePickingKey" = "Les Réglages attendent une touche de dictée";

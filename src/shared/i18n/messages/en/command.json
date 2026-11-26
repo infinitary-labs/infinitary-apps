@@ -89,6 +89,8 @@
   "commandMessageDeleteWordBefore": "Delete the word before the cursor",
   "commandMessagePutBackDeleted": "Put back what was last deleted",
   "commandMessageRecall": "Bring back the last message sent",
+  "commandMessageTakeBack": "Revert your last message",
+  "commandMessageTakeBackWords": "revert, undo, take back, unsend, retract, message",
   "commandMoveDown": "Move down",
   "commandMoveDownWords": "arrow, down, next",
   "commandMoveFirst": "Move to the start",

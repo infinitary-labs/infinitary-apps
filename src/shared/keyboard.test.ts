@@ -108,6 +108,7 @@ describe("the command catalog", () => {
       "whats-new.show",
       "feedback.start", // INF-6172: /feedback in the message box, chosen by name or from the Help menu.
       "firstmate.reply",
+      "message.take-back", // INF-6763: taking back the newest message is chosen by name; its icon sits beside the message.
       // INF-1988: the approved Runbooks tab and folder are chosen by name.
       "settings.runbooks",
       "runbooks.open-folder",
@@ -216,6 +217,7 @@ describe("the command catalog", () => {
       "whats-new.show",
       "feedback.start",
       "firstmate.reply",
+      "message.take-back", // INF-6763: the shell takes back the newest message.
       // INF-1988: the shell opens the approved Runbooks tab and folder.
       "settings.runbooks",
       "runbooks.open-folder",

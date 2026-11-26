@@ -281,6 +281,7 @@ When the captain's or a task's words make an outside action wait on work finishi
 The host keeps only typed facts: the mark, its waits, that each needs the merge, and how each closed.
 Its crewmate's rule rides that task's own brief, so no other crewmate reads it.
 The app writes no closing words of its own where a change is published (`docs/forge.md`, "A change that answers an issue").
+When that action is telling an issue, ticket or request kept outside the app how the work ended, the Outside work items runbook's guide says how to file it, a fenced reader where strangers write to the item, and when the item hears the ending; that task names the item in its own words (`docs/runbooks.md`, "Built-ins").
 
 ## An answer's closing receipt
 

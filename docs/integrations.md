@@ -432,6 +432,12 @@ What a crewmate there read stays in its conversation on that computer for the sa
 It is cleaned there, and in this Mac's copy of its record, on the first pass that finds that computer in reach, on the current contract major, able to remove a saved file from outside when one is due, with no open of that conversation unanswered or still being checked here and no turn running; each later pass asks again until then.
 The answers this Mac kept for its callbacks go at once.
 
+## An outside work item
+
+An issue, ticket or request kept in a tracker an integration reaches is read, answered and closed through that integration's own actions, by the item's side-effect task (`docs/task-graph.md`, "A side-effect task"; the Outside work items runbook in `docs/runbooks.md`).
+That task is an ordinary crewmate unless its item is one strangers can write to, so its calls follow the rules above for its kind of task: an ordinary one's change or send at Asks you waits for the captain's click, and a reader's every call joins its one approval card ("A reader's integrations").
+The app holds no tracker of its own: the side-effect task names the item's address in its own words.
+
 ## How a panel reaches them
 
 A panel is a caller like the others (INF-2334, piece 1): its background code has `context.integrations` and its drawing `props.integrations`, each with `list`, `show`, `call` and `on`, answering what every caller gets (`PanelIntegrations`, `src/shared/personal/contracts.ts`).

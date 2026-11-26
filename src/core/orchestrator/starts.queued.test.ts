@@ -7,6 +7,7 @@
  * Each case drives a real CrewSupervisor through the crew harness
  * (tests/helpers/crewHarness.ts) and reads what it answers, the cards and the record.
  */
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { noteDoneOf } from "@shared/cardLeave";
 import { withAnythingElse } from "@shared/cards";
@@ -17,6 +18,7 @@ import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import type { WorkShape } from "@shared/routingPolicy";
 import { describe, expect, it, vi } from "vitest";
 import {
+  bundledRunbooks,
   fakeCrewmate,
   fakeCrewTimersEachTest,
   intentOf,
@@ -32,7 +34,8 @@ import type { TaskEvent } from "../storage/taskEventStore";
 import { legacyStateOf, seedTask } from "../tasks/seedTask";
 import { TaskProtocol } from "../tasks/taskProtocol";
 import { buildRowShape, REPRODUCE_RESULT_SCHEMA } from "./buildRows";
-import { READER_DATA_LABEL } from "./readerData";
+import { READER_DATA_LABEL, readerReport } from "./readerData";
+import { renderSideEffectSection } from "./sideEffectBrief";
 import { renderWake } from "./wakes";
 
 fakeCrewTimersEachTest();
@@ -606,6 +609,107 @@ describe("the task graph (R1)", () => {
     );
     // Only the side-effect task reads the section.
     expect(served.match(/This is a side-effect task/g)).toHaveLength(1);
+  });
+
+  // INF-6845's piece 1: the waiting task's brief carries what each finished wait reported, so
+  // its crewmate can say what a reproduce step found without reading tasks, and the Outside
+  // work items crew section reaches the waiting task's crewmate and no other.
+  it("briefs a waiting task with each finished wait's report and serves it the outside item section", async () => {
+    const crew = fakeCrewmate();
+    const { supervisor, tasks, specs } = setup(crew, { runbooks: bundledRunbooks() });
+    const section = readFileSync(
+      join(__dirname, "../../../resources/runbooks/outside-work-items/crew.md"),
+      "utf8",
+    ).trim();
+    for (const [id, title] of [
+      ["repro", "Reproduce the negative reading"],
+      ["triage", "Read the reporter's steps"],
+      ["fix", "Fix the negative reading"],
+    ] as const)
+      seedTask(tasks, {
+        id,
+        title,
+        status: "queued",
+        startPolicy: "on-request",
+        ...(id === "triage" ? { shape: { kind: "research", unsafe_data_reader: true } } : {}),
+      });
+    seedTask(tasks, {
+      id: "tell-item",
+      title: "Tell the issue how the fix ended",
+      status: "queued",
+      blockedBy: ["repro", "triage", "fix"],
+      shape: { kind: "unclear", side_effect: true },
+    });
+    seedTask(tasks, {
+      id: "ordinary",
+      title: "Write the notes",
+      status: "queued",
+      blockedBy: ["repro"],
+    });
+    tasks.turns.recordReport("repro", {
+      text: "reproduced: yes. A reset leaves the meter at -3 on 1.4.0.",
+      summary: "Reproduced on 1.4.0: a reset leaves the meter at -3.",
+      declared: { result: { reproduced: true, version: "1.4.0" } },
+    });
+    tasks.close("repro", { status: "done", reason: "answered", actor: "host" });
+    // A reader's report is saved as its session saves it: marked, under the host's headline.
+    const [readerText, readerSummary] = readerReport(
+      "The reporter resets the meter twice, then reads it.",
+      undefined,
+      Date.now(),
+    );
+    tasks.turns.recordReport("triage", { text: readerText, summary: readerSummary });
+    tasks.close("triage", { status: "done", reason: "answered", actor: "host" });
+    tasks.turns.recordReport("fix", {
+      text: "A reset now leaves the meter at zero.",
+      summary: "A reset now leaves the meter at zero.",
+    });
+    tasks.close("fix", { status: "done", reason: "merged", actor: "host" });
+    await supervisor.watch.sweepGates(Date.now());
+    await tick();
+    expect(crew.promptCalls).toHaveLength(2);
+    const waiting = crew.promptCalls.find((call) => call.includes("This is a side-effect task"));
+    expect(waiting).toContain(
+      `- ${tasks.get("repro")?.key} "Reproduce the negative reading": done (answered), with no merge\n  Reported: Reproduced on 1.4.0: a reset leaves the meter at -3.\n  Typed result: {"reproduced":true,"version":"1.4.0"}`,
+    );
+    // A reader's own report, never the host's headline, is served under its wait,
+    // between the marks and reminders it was saved with.
+    expect(waiting).toContain(
+      `- ${tasks.get("triage")?.key} "Read the reporter's steps": done (answered), with no merge\n  Reported:\n${readerText}`,
+    );
+    const marked = fencedSpans(waiting ?? "")
+      .filter((span) => span.label === READER_DATA_LABEL && span.closed)
+      .map((span) => span.words.trim());
+    expect(marked).toEqual(["The reporter resets the meter twice, then reads it."]);
+    expect(waiting).not.toContain(readerSummary);
+    expect(waiting).toContain(
+      `- ${tasks.get("fix")?.key} "Fix the negative reading": merged; in no release yet\n  Reported: A reset now leaves the meter at zero.`,
+    );
+    const runbookText = (id: string) => specs.find((spec) => spec.taskId === id)?.runbookText ?? "";
+    expect(runbookText("tell-item")).toContain(section);
+    expect(runbookText("ordinary")).not.toContain(section);
+    expect(runbookText("ordinary")).not.toBe("");
+  });
+
+  // The same piece: an open wait's latest report is progress, never what the work found.
+  it("names no report under a wait that is still open", () => {
+    const section = renderSideEffectSection([
+      {
+        id: "fix",
+        key: "INF-12",
+        title: "Fix the negative reading",
+        status: "active",
+        closedReason: null,
+        delivery: null,
+        outcome: "Halfway through the fix; the reset path is next.",
+        outcomeSummary: "Halfway through the fix.",
+        shape: null,
+        result: { reproduced: true, version: "1.4.0" },
+      },
+    ]);
+    expect(section).toContain(`- INF-12 "Fix the negative reading": still open`);
+    expect(section).not.toContain("Halfway through the fix.");
+    expect(section).not.toContain("Typed result");
   });
 
   it("delivers historical full reports and uncut card amendments, then pins the served content", async () => {

@@ -1,5 +1,5 @@
 ---
-source: b17e14176dad1387
+source: 24d50cb6fd4f7420
 title: Procédures
 description: Les consignes écrites que suivent votre second et votre équipage pour certains types de travail, et comment les activer ou les désactiver, les lire, créer les vôtres ou en ajouter.
 ---
@@ -56,6 +56,9 @@ Quatre restent désactivées jusqu’à ce que vous les activiez : **Demandes d
   Voir [Projets](/fr/projects/#how-changes-reach-your-project).
 - **Commentaires de demande de tirage** : un équipier répond aux commentaires sur sa demande de tirage jusqu’à sa fusion.
   Il fait seul les corrections claires, et vous soumet les moins claires sous forme de choix.
+- **Éléments de travail externes** : quand un travail répond à un ticket, une issue ou une demande gardée hors d’Infinitary, une tâche dédiée répond à cet élément et le ferme une fois le travail livré.
+  Chaque réponse ou fermeture attend votre clic, sauf si vous l’avez autorisée.
+  Voir [Une étape qui attend du travail](/fr/tasks-and-crewmates/#a-step-that-waits-on-work).
 - **Battement de cœur** : quand un travail se met à attendre sans que rien ne le signale, ou après un long calme, votre second passe en revue le travail en attente, le fait avancer ou vous pose la question une fois.
   Elle apporte une automatisation que vous pouvez mettre en pause dans Réglages → **Automatisation**, et désactiver la procédure la retire.
 - **Nettoyage de l’ordinateur** : un examen qui ne fait que lire, après votre accord, et une carte pour choisir quels restes arrêter.

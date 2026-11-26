@@ -21,7 +21,7 @@ The first mate declares the kind on spawn or create; the classifier sorts only u
 An answer that needs past runs compared, a computer the app does not reach, a reproduction, a measurement or the web is research or reproduce.
 When the captain chooses Look deeper on a retrieval answer's card, the first mate starts a read-only research step built on that answer, its goal naming the source the answer said was missing.
 When a retrieval crewmate reports that its sources hold no meaningful answer, the first mate starts that research step at once, with no card for the captain, and closes the retrieval as answered (INF-4344).
-When a retrieval crewmate hands back a goal that asks for something done, the first mate starts that work at once as the change or action it asks for, never as research or another lookup (INF-6952).
+When a retrieval crewmate hands back a goal that asks for something done, the first mate starts that work at once as the change or action it asks for, never as research or another lookup; a goal asking for something merged or a merge card shown starts as a change, never read-only or as an operation, because an operation has no pull request tools or merge card (INF-6952).
 When a retrieval crewmate hands back a reply its sources cannot solve, the first mate starts the work the captain's words need at once, built on that answer, as if the captain had asked; and it adds to a step's goal no limit narrower than the kind's own unless the captain asked for one (INF-4583).
 
 The Lessons and Casual projects runbooks draw the line between lessons, projects and panels.

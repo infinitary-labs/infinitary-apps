@@ -6,7 +6,7 @@ No served sentence told a quick answer what to do with a goal that asks for some
 
 What the first mate is now told, in the sequences document's explainer section:
 
-- A goal that a retrieval hands back as asking for something done starts at once as that change or action, never as research or another lookup.
+- A goal that a retrieval hands back as asking for something done starts at once as that change or action, never as research or another lookup; one asking for something merged or a merge card shown starts as a change, never read-only or as an operation, which has no pull request tools or merge card.
 
 What crewmates are now told, in their brief (`renderAnswerShapeSection`, `QUICK_ANSWER_ACT_WORDS`, after the reach):
 
@@ -15,6 +15,6 @@ What crewmates are now told, in their brief (`renderAnswerShapeSection`, `QUICK_
 What the kind classifier is now told, in its retrieval boundary (`RETRIEVAL_BOUNDARY`): such a goal is never retrieval, research, plan or reproduce, even when reading comes first or the goal names the state it wants: it delivers a change. The captain chose this wider line over ruling out retrieval alone, so a goal that asks for something done is never left as a read-only answer that can neither hand back nor do the work.
 
 Homes: the first mate's rule is the sequences document's, the crewmate's is its brief's, and the classifier's is the boundary's; none is said twice.
-The explainer section grows by about 25 tokens, and the fixed context stays inside its boundary (`tests/firstmate-fixed-context.test.ts`).
+The explainer section grows by about 45 tokens, and the fixed context stays inside its boundary (`tests/firstmate-fixed-context.test.ts`).
 The host adds no parser or refusal: whether a goal asks for something done stays the crewmate's and the classifier's judgment, and what to start stays the first mate's.
 Look deeper, the Quick answer mark, the reach and every other answer shape stay as they were.

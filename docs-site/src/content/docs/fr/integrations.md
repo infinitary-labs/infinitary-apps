@@ -76,8 +76,8 @@ Chaque fois que vous vous connectez à Google, l’avis s’affiche d’abord.
 
 La ligne Google indique quand la connexion a besoin de vous :
 
-- **Configurez votre propre connexion** : cette connexion passe encore par un client qu’Infinitary partage avec tout le monde, et qui va être retiré.
-  Elle fonctionne jusque-là ; appuyez sur **Configurer** pour rester connecté.
+- **Reconnectez-vous**, avec **Configurer** : une connexion faite auparavant avec le client qu’Infinitary partageait avec tout le monde ne fonctionne plus, car ce client n’existe plus.
+  Appuyez sur **Configurer** pour créer votre propre client et vous reconnecter.
 - **S’arrête le**, suivi d’une date : votre client n’est pas en mode personnel, donc Google met fin à sa connexion à cette date.
   Appuyez sur **Configurer de nouveau**, et créez un client en mode personnel.
 - **Votre client Google ne fonctionne plus** : Google n’accepte plus votre client, peut-être parce qu’il a été supprimé dans Google Cloud.

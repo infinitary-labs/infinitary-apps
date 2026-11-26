@@ -673,8 +673,10 @@ export class ChangePublication {
         this.checks.noteChange(record.id, { change: confirmed, forge });
         // A story revised under a kept approval: the change keeps its
         // place in line or in its batch, which takes the story's words.
+        // A held batch's declared fix also starts the batch's own checks with it.
         await this.context.batches?.revise(batched.id, {
           taskId,
+          branch,
           head: confirmed.headSha,
           ...presentations.batchCommit(taskId, branch, confirmed.headSha),
         });

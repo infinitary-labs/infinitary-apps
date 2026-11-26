@@ -14672,7 +14672,29 @@ ${events}` : prompt;
      * wrote it again under its own push (docs/forge.md, "A generated commit"):
      * then `head`. Taken once per combine; the next combine starts without it.
      */
-    generated: string().optional()
+    generated: string().optional(),
+    /**
+     * The batch's own checks run early on a held batch's declared fix
+     * (docs/forge.md, "A held batch"): once the fix's story is confirmed on
+     * its own branch at `version`, built on the newest held version, the held
+     * members plus the fix's own difference are combined at `head` and pushed
+     * to the batch's branch and pull request, while `head` and `members` above
+     * stay the held version. The fix is no member until approved; approved at
+     * `version` with the checks at `head` passed, the batch merges `head` as it
+     * is. `failed` names the checks that failed there.
+     */
+    trial: object({
+      /** The fix's task, whose story was confirmed. */
+      task: string(),
+      /** The fix's confirmed version on its own branch. */
+      version: string(),
+      head: string(),
+      base: string(),
+      /** The held members, then the fix, each with its commit at `head`. */
+      members: array(batchMemberSchema),
+      at: number(),
+      failed: array(string()).optional()
+    }).optional()
   });
   const batchReceiptSchema = object({
     taskId: string(),

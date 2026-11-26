@@ -1102,6 +1102,9 @@
 "feedBatchQueuedHost" = "%2$@: Der Host des Projekts hat %1$@ in die Merge-Warteschlange des Hauptbranchs aufgenommen. Er wird dort zusammengeführt, sobald die Überprüfungen der Warteschlange erfolgreich sind.";
 "feedBatchRetried" = "%2$@: %1$@ wurde neu zusammengestellt, und seine Überprüfungen laufen erneut.";
 "feedBatchSentBack" = "%1$@: „%3$@“ wurde aus seinem Bündel zurückgeschickt: %2$@";
+"feedBatchTrial" = "%2$@: %1$@ führt seine Überprüfungen mit der angekündigten Korrektur aus, bevor die Korrektur bestätigt ist. Wird die Korrektur in dieser Version bestätigt und bestehen diese Überprüfungen, wird der Stapel so zusammengeführt, wie er ist.";
+"feedBatchTrialFailed" = "%3$@: %2$@ bleibt angehalten, weil diese Überprüfungen mit der angekündigten Korrektur fehlgeschlagen sind: %1$@. Das Crewmitglied der Korrektur repariert sie in einer neuen Version.";
+"feedBatchTrialFailedUnnamed" = "%2$@: %1$@ bleibt angehalten, weil seine Überprüfungen mit der angekündigten Korrektur fehlgeschlagen sind. Das Crewmitglied der Korrektur repariert sie in einer neuen Version.";
 "feedBranchPushed" = "Den Branch gepusht";
 "feedBuildRowKept" = "„%2$@“ als %1$@ für später abgelegt.";
 "feedBuildRowNotFiled" = "„%1$@“ nicht abgelegt.";

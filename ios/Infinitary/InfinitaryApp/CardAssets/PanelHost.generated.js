@@ -38813,6 +38813,94 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `${project}: "${title}" was sent back from its batch: ${reason}`;
   }
+  function feedBatchTrial(input2) {
+    const label = input2.label;
+    const project = input2.project;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${project}: تشغّل الدفعة ${label} فحوصاتها مع التصحيح المعلَن قبل الموافقة على التصحيح. حين يُوافق على التصحيح بهذا الإصدار وتنجح هذه الفحوصات، تُدمج الدفعة كما هي.`;
+      case "de":
+        return `${project}: ${label} führt seine Überprüfungen mit der angekündigten Korrektur aus, bevor die Korrektur bestätigt ist. Wird die Korrektur in dieser Version bestätigt und bestehen diese Überprüfungen, wird der Stapel so zusammengeführt, wie er ist.`;
+      case "es":
+        return `${project}: ${label} ejecuta sus comprobaciones con su corrección declarada antes de que se apruebe la corrección. Cuando la corrección se apruebe en esta versión y estas comprobaciones pasen, el lote se fusiona tal como está.`;
+      case "fr":
+        return `${project} : ${label} exécute ses vérifications avec son correctif déclaré, avant l’approbation du correctif. Une fois le correctif approuvé à cette version et ces vérifications réussies, le lot est fusionné tel quel.`;
+      case "ja":
+        return `${project}：${label} は、宣言された修正が承認される前に、その修正を含めてチェックを実行しています。修正がこのバージョンで承認され、これらのチェックが通れば、バッチはそのままマージされます。`;
+      case "ko":
+        return `${project}: ${label}은(는) 선언된 수정이 승인되기 전에 그 수정을 포함해 검사를 실행해요. 수정이 이 버전으로 승인되고 이 검사가 통과하면 묶음은 그대로 병합돼요.`;
+      case "pt-BR":
+        return `${project}: ${label} roda as verificações com a correção declarada antes de a correção ser aprovada. Quando a correção for aprovada nesta versão e estas verificações passarem, o lote é mesclado como está.`;
+      case "zh-Hans":
+        return `${project}：${label} 在声明的修正获批前，就带着这个修正运行检查。修正在这个版本获批且这些检查通过后，这批改动会原样合并。`;
+      case "zh-Hant":
+        return `${project}：${label} 在宣告的修正核准前，就帶著這個修正執行檢查。修正在這個版本核准且這些檢查通過後，這批變更會原樣合併。`;
+      case "en-XA":
+        return `[${project}: ${label} ŕûñš îţš çĥéçķš ŵîţĥ îţš ðéçļáŕéð ƒîẋ ƀéƒöŕé ţĥé ƒîẋ îš áþþŕöṽéð. Öñçé ţĥé ƒîẋ îš áþþŕöṽéð áţ ţĥîš ṽéŕšîöñ áñð ţĥéšé çĥéçķš þášš, ţĥé ƀáţçĥ ɱéŕĝéš áš îţ îš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${project}‮: ‬${label}‮ runs its checks with its declared fix before the fix is approved. Once the fix is approved at this version and these checks pass, the batch merges as it is.‬`;
+    }
+    return `${project}: ${label} runs its checks with its declared fix before the fix is approved. Once the fix is approved at this version and these checks pass, the batch merges as it is.`;
+  }
+  function feedBatchTrialFailed(input2) {
+    const checks = input2.checks;
+    const label = input2.label;
+    const project = input2.project;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${project}: تبقى الدفعة ${label} معلّقة لأن هذه الفحوصات فشلت مع التصحيح المعلَن: ${checks}. يصلحه فرد طاقم التصحيح في إصدار جديد.`;
+      case "de":
+        return `${project}: ${label} bleibt angehalten, weil diese Überprüfungen mit der angekündigten Korrektur fehlgeschlagen sind: ${checks}. Das Crewmitglied der Korrektur repariert sie in einer neuen Version.`;
+      case "es":
+        return `${project}: ${label} sigue retenido porque fallaron estas comprobaciones con su corrección declarada: ${checks}. El tripulante de la corrección la repara en una nueva versión.`;
+      case "fr":
+        return `${project} : ${label} reste retenu, car ces vérifications ont échoué avec son correctif déclaré : ${checks}. L’équipier du correctif le répare dans une nouvelle version.`;
+      case "ja":
+        return `${project}：宣言された修正を含めて次のチェックが失敗したため、${label} は保留のままです：${checks}。修正の乗組員が新しいバージョンで直します。`;
+      case "ko":
+        return `${project}: 선언된 수정을 포함해 다음 검사가 실패해서 ${label}은(는) 계속 보류돼요: ${checks}. 수정의 선원이 새 버전으로 고쳐요.`;
+      case "pt-BR":
+        return `${project}: ${label} continua retido porque estas verificações falharam com a correção declarada: ${checks}. O tripulante da correção a repara em uma nova versão.`;
+      case "zh-Hans":
+        return `${project}：带着声明的修正，以下检查失败，所以 ${label} 仍暂缓：${checks}。修正的船员会用新版本修好它。`;
+      case "zh-Hant":
+        return `${project}：帶著宣告的修正，以下檢查失敗，所以 ${label} 仍暫緩：${checks}。修正的船員會用新版本修好它。`;
+      case "en-XA":
+        return `[${project}: ${label} šţáýš ĥéļð ƀéçáûšé ${checks} ƒáîļéð ŵîţĥ îţš ðéçļáŕéð ƒîẋ. Ţĥé ƒîẋ'š çŕéŵɱáţé ŕéþáîŕš îţ îñ á ñéŵ ṽéŕšîöñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${project}‮: ‬${label}‮ stays held because ‬${checks}‮ failed with its declared fix. The fix's crewmate repairs it in a new version.‬`;
+    }
+    return `${project}: ${label} stays held because ${checks} failed with its declared fix. The fix's crewmate repairs it in a new version.`;
+  }
+  function feedBatchTrialFailedUnnamed(input2) {
+    const label = input2.label;
+    const project = input2.project;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${project}: تبقى الدفعة ${label} معلّقة لأن فحوصاتها فشلت مع التصحيح المعلَن. يصلحه فرد طاقم التصحيح في إصدار جديد.`;
+      case "de":
+        return `${project}: ${label} bleibt angehalten, weil seine Überprüfungen mit der angekündigten Korrektur fehlgeschlagen sind. Das Crewmitglied der Korrektur repariert sie in einer neuen Version.`;
+      case "es":
+        return `${project}: ${label} sigue retenido porque fallaron sus comprobaciones con su corrección declarada. El tripulante de la corrección la repara en una nueva versión.`;
+      case "fr":
+        return `${project} : ${label} reste retenu, car ses vérifications ont échoué avec son correctif déclaré. L’équipier du correctif le répare dans une nouvelle version.`;
+      case "ja":
+        return `${project}：宣言された修正を含めてチェックが失敗したため、${label} は保留のままです。修正の乗組員が新しいバージョンで直します。`;
+      case "ko":
+        return `${project}: 선언된 수정을 포함해 검사가 실패해서 ${label}은(는) 계속 보류돼요. 수정의 선원이 새 버전으로 고쳐요.`;
+      case "pt-BR":
+        return `${project}: ${label} continua retido porque as verificações falharam com a correção declarada. O tripulante da correção a repara em uma nova versão.`;
+      case "zh-Hans":
+        return `${project}：带着声明的修正，检查失败，所以 ${label} 仍暂缓。修正的船员会用新版本修好它。`;
+      case "zh-Hant":
+        return `${project}：帶著宣告的修正，檢查失敗，所以 ${label} 仍暫緩。修正的船員會用新版本修好它。`;
+      case "en-XA":
+        return `[${project}: ${label} šţáýš ĥéļð ƀéçáûšé îţš çĥéçķš ƒáîļéð ŵîţĥ îţš ðéçļáŕéð ƒîẋ. Ţĥé ƒîẋ'š çŕéŵɱáţé ŕéþáîŕš îţ îñ á ñéŵ ṽéŕšîöñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${project}‮: ‬${label}‮ stays held because its checks failed with its declared fix. The fix's crewmate repairs it in a new version.‬`;
+    }
+    return `${project}: ${label} stays held because its checks failed with its declared fix. The fix's crewmate repairs it in a new version.`;
+  }
   function feedBranchPushed() {
     switch (currentLanguage()) {
       case "ar":
@@ -116864,6 +116952,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     feedBatchQueuedHost,
     feedBatchRetried,
     feedBatchSentBack,
+    feedBatchTrial,
+    feedBatchTrialFailed,
+    feedBatchTrialFailedUnnamed,
     feedBranchPushed,
     feedBuildRowKept,
     feedBuildRowNotFiled,
@@ -120561,6 +120652,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "feedBatchQueuedHost": ["label", "project"],
     "feedBatchRetried": ["label", "project"],
     "feedBatchSentBack": ["project", "reason", "title"],
+    "feedBatchTrial": ["label", "project"],
+    "feedBatchTrialFailed": ["checks", "label", "project"],
+    "feedBatchTrialFailedUnnamed": ["label", "project"],
     "feedBranchPushed": [],
     "feedBuildRowKept": ["task", "title"],
     "feedBuildRowNotFiled": ["title"],
@@ -131547,7 +131641,29 @@ ${FRAME_KEYBOARD_SCRIPT}
      * wrote it again under its own push (docs/forge.md, "A generated commit"):
      * then `head`. Taken once per combine; the next combine starts without it.
      */
-    generated: string().optional()
+    generated: string().optional(),
+    /**
+     * The batch's own checks run early on a held batch's declared fix
+     * (docs/forge.md, "A held batch"): once the fix's story is confirmed on
+     * its own branch at `version`, built on the newest held version, the held
+     * members plus the fix's own difference are combined at `head` and pushed
+     * to the batch's branch and pull request, while `head` and `members` above
+     * stay the held version. The fix is no member until approved; approved at
+     * `version` with the checks at `head` passed, the batch merges `head` as it
+     * is. `failed` names the checks that failed there.
+     */
+    trial: object({
+      /** The fix's task, whose story was confirmed. */
+      task: string(),
+      /** The fix's confirmed version on its own branch. */
+      version: string(),
+      head: string(),
+      base: string(),
+      /** The held members, then the fix, each with its commit at `head`. */
+      members: array(batchMemberSchema),
+      at: number(),
+      failed: array(string()).optional()
+    }).optional()
   });
   const batchReceiptSchema = object({
     taskId: string(),

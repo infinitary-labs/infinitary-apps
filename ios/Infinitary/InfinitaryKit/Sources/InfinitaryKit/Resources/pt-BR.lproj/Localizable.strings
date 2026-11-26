@@ -1102,6 +1102,9 @@
 "feedBatchQueuedHost" = "%2$@: o host do projeto colocou %1$@ na fila de mesclagem do branch principal. Ele é mesclado lá assim que as verificações da fila passarem.";
 "feedBatchRetried" = "%2$@: %1$@ foi combinado de novo e as verificações rodam outra vez.";
 "feedBatchSentBack" = "%1$@: “%3$@” foi devolvida do lote: %2$@";
+"feedBatchTrial" = "%2$@: %1$@ roda as verificações com a correção declarada antes de a correção ser aprovada. Quando a correção for aprovada nesta versão e estas verificações passarem, o lote é mesclado como está.";
+"feedBatchTrialFailed" = "%3$@: %2$@ continua retido porque estas verificações falharam com a correção declarada: %1$@. O tripulante da correção a repara em uma nova versão.";
+"feedBatchTrialFailedUnnamed" = "%2$@: %1$@ continua retido porque as verificações falharam com a correção declarada. O tripulante da correção a repara em uma nova versão.";
 "feedBranchPushed" = "Fez push do branch";
 "feedBuildRowKept" = "“%2$@” registrada como %1$@ para depois.";
 "feedBuildRowNotFiled" = "“%1$@” não foi registrada.";

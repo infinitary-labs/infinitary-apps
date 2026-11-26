@@ -425,6 +425,8 @@ export function setup(
     sentBack: [] as { taskId: string; reason: string }[],
     addressMoved: [] as { taskId: string; reason: string }[],
     held: [] as BatchHeld[],
+    /** Each failure of a held batch's early run with its fix: the fix's task and the checks that failed. */
+    trialFailed: [] as { task: string; failed: string[] | undefined }[],
     notes: [] as Said[],
     taskNotes: [] as { taskId: string; text: string }[],
     pushes: [] as { branch: string; head: string; expected: string | null }[],
@@ -482,6 +484,8 @@ export function setup(
       // A former address's change leaves the line with its approval ended, and no send-back.
       addressMoved: (change, reason) => heard.addressMoved.push({ taskId: change.taskId, reason }),
       held: (held) => heard.held.push(held),
+      trialFailed: ({ trial }) =>
+        heard.trialFailed.push({ task: trial.task, failed: trial.failed }),
       note: (fact) => heard.notes.push(fact),
       checksRead: (repoId) => heard.checksRead.push(repoId),
       taskNote: (taskId, text) => heard.taskNotes.push({ taskId, text }),

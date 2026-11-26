@@ -162,8 +162,34 @@ export const openBatchSchema = z.object({
    * then `head`. Taken once per combine; the next combine starts without it.
    */
   generated: z.string().optional(),
+  /**
+   * The batch's own checks run early on a held batch's declared fix
+   * (docs/forge.md, "A held batch"): once the fix's story is confirmed on
+   * its own branch at `version`, built on the newest held version, the held
+   * members plus the fix's own difference are combined at `head` and pushed
+   * to the batch's branch and pull request, while `head` and `members` above
+   * stay the held version. The fix is no member until approved; approved at
+   * `version` with the checks at `head` passed, the batch merges `head` as it
+   * is. `failed` names the checks that failed there.
+   */
+  trial: z
+    .object({
+      /** The fix's task, whose story was confirmed. */
+      task: z.string(),
+      /** The fix's confirmed version on its own branch. */
+      version: z.string(),
+      head: z.string(),
+      base: z.string(),
+      /** The held members, then the fix, each with its commit at `head`. */
+      members: z.array(batchMemberSchema),
+      at: z.number(),
+      failed: z.array(z.string()).optional(),
+    })
+    .optional(),
 });
 export type OpenBatch = z.infer<typeof openBatchSchema>;
+/** A held batch's early run with its declared fix (`OpenBatch.trial`). */
+export type BatchTrial = NonNullable<OpenBatch["trial"]>;
 
 /**
  * The merge an open batch waits on while its host still reads it as running

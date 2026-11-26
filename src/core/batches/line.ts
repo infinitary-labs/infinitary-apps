@@ -75,6 +75,16 @@ export function standing(record: BatchRecord, taskId: string, head: string): Sta
         ? { state: "waiting", place: "held", hold: hold.reason, ...request }
         : { state: "waiting", place: "batch", ...request };
   }
+  // A held batch's fix whose early run failed at this version, approved or not: its crewmate
+  // repairs it in a new version, and the hold stays (`OpenBatch.trial`).
+  const trial = record.open?.trial;
+  if (trial?.failed && trial.task === taskId && trial.version === head)
+    return {
+      state: "failed",
+      checks: trial.failed,
+      ...(record.open?.number !== undefined ? { number: record.open.number } : {}),
+      ...(record.open?.url !== undefined ? { url: record.open.url } : {}),
+    };
   if (record.line.some((entry) => entry.taskId === taskId && entry.head === head)) {
     // Told to rebuild while in line, with that rebuild standing: no batch carries this version,
     // and its merge waits for the version rebuilt on that batch.
@@ -637,11 +647,85 @@ export function hold(
   };
 }
 
-/** End the open batch's hold, and any wait for a fix: its checks run again, or it was combined again. */
+/**
+ * End the open batch's hold, any wait for a fix and any early run with one: its checks run
+ * again, or it was combined again.
+ */
 export function release(record: BatchRecord): BatchRecord {
   if (!record.open?.hold) return record;
-  const { hold: _hold, awaits: _awaits, ...open } = record.open;
+  const { hold: _hold, awaits: _awaits, trial: _trial, ...open } = record.open;
   return { ...record, open };
+}
+
+/**
+ * Whether the open batch's early run with its declared fix (`OpenBatch.trial`) still answers
+ * the batch as it stands: held for its checks at its version, with no rerun declared passed
+ * there and no merge sent, and carrying the same members, at the same versions and words, as
+ * the run was combined from. Otherwise the batch combines as it would without one.
+ */
+export function trialStands(record: BatchRecord): boolean {
+  const open = record.open;
+  const trial = open?.trial;
+  if (!open || !trial || open.hold?.reason !== "checks" || open.hold.head !== open.head)
+    return false;
+  if (open.passed?.head === open.head || open.unconfirmed || open.queued) return false;
+  const held = trial.members.slice(0, -1);
+  return (
+    held.length === open.members.length &&
+    held.every((member, at) => {
+      const now = open.members[at];
+      return (
+        now?.taskId === member.taskId &&
+        now.head === member.head &&
+        now.title === member.title &&
+        now.body === member.body
+      );
+    })
+  );
+}
+
+/** The record with no early run on its open batch. */
+export function withoutTrial(record: BatchRecord): BatchRecord {
+  if (!record.open?.trial) return record;
+  const { trial: _trial, ...open } = record.open;
+  return { ...record, open };
+}
+
+/**
+ * The record once the fix was approved at its early run's version and that run passed: the
+ * run's commit is the batch's version, with the fix, as approved, its last member, and no
+ * hold. The fix leaves the line; every other change in it waits for the next batch.
+ */
+export function promoted(record: BatchRecord, approved: BatchChange): BatchRecord {
+  const open = record.open;
+  const trial = open?.trial;
+  const fix = trial?.members.at(-1);
+  if (!open || !trial || !fix) return record;
+  const {
+    hold: _hold,
+    awaits: _awaits,
+    passed: _passed,
+    stale: _stale,
+    generated: _generated,
+    trial: _trial,
+    ...rest
+  } = open;
+  const heldBase = approved.heldBase ?? fix.heldBase;
+  return {
+    ...record,
+    line: record.line.filter(
+      (entry) => entry.taskId !== approved.taskId || entry.head !== approved.head,
+    ),
+    open: {
+      ...rest,
+      head: trial.head,
+      base: trial.base,
+      members: [
+        ...trial.members.slice(0, -1),
+        { ...approved, ...(heldBase ? { heldBase } : {}), commit: fix.commit },
+      ],
+    },
+  };
 }
 
 /**

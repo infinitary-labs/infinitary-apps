@@ -10,6 +10,7 @@ import {
   type BatchRecord,
   type BatchSendBack,
   type BatchStatus,
+  type BatchTrial,
   EMPTY_BATCH_RECORD,
   keepsCommits,
   type MergeWays,
@@ -24,8 +25,8 @@ import {
   checksThatRan,
   isRedCheckState,
 } from "@shared/checkSnapshot";
-import { formatList, formatTime } from "@shared/i18n/format";
-import { englishOf, type Said, said, wordSaid } from "@shared/i18n/said";
+import { formatTime } from "@shared/i18n/format";
+import { englishOf, type Said, wordSaid } from "@shared/i18n/said";
 import type { RepoView } from "@shared/repos";
 import type { NamingRule } from "@shared/runbooks";
 import {
@@ -93,6 +94,16 @@ import {
   withBases,
   withdraw,
 } from "./line";
+import {
+  type ConfirmedFix,
+  followTrial,
+  mergedAtTrial,
+  startTrial,
+  type TrialOwner,
+} from "./trial";
+import { BATCH_WORDS } from "./words";
+
+export { BATCH_WORDS };
 
 /** A host on which the app can read, write and delete its own comments, to keep a batch's stories there. */
 type CommentingForge = Forge &
@@ -101,110 +112,6 @@ const keepsComments = (forge: Forge): forge is CommentingForge =>
   Boolean(forge.ownComments && forge.writeComment && forge.deleteComment);
 
 const TIME_OF_DAY: Intl.DateTimeFormatOptions = { hour: "numeric", minute: "2-digit" };
-
-/** The words a batch puts on the Activity feed and its tasks, from one owner. */
-export const BATCH_WORDS = {
-  formed: (project: string, label: string, count: number): Said =>
-    count === 1
-      ? said("feedBatchFormedOne", { project, label })
-      : said("feedBatchFormedMany", { project, label, count }),
-  merged: (project: string, label: string, count: number): Said =>
-    count === 1
-      ? said("feedBatchMergedOne", { project, label })
-      : said("feedBatchMergedMany", { project, label, count }),
-  held: (project: string, label: string, checks: readonly string[]): Said =>
-    checks.length
-      ? said("feedBatchHeldChecks", { project, label, checks: checks.join(", ") })
-      : said("feedBatchHeldUnnamed", { project, label }),
-  noWay: (project: string, label: string): Said => said("feedBatchHeldNoWay", { project, label }),
-  /** The host's own words on a refused merge, kept as it gave them. */
-  refused: (project: string, label: string, detail: string): Said =>
-    said("feedBatchHeldRefused", { project, label, detail }),
-  /** A merge the host never answered, whose pull request is still open: held, never called refused. */
-  unanswered: (project: string, label: string, place: string | null | undefined): Said =>
-    place
-      ? said("feedBatchHeldUnanswered", { project, label, place })
-      : said("feedBatchHeldUnansweredHost", { project, label }),
-  /** The host's merge queue removed the batch without merging it. */
-  removedHeld: (project: string, label: string, place: string | null | undefined): Said =>
-    place
-      ? said("feedBatchHeldRemoved", { project, label, place })
-      : said("feedBatchHeldRemovedHost", { project, label }),
-  queued: (project: string, label: string, place: string | null | undefined): Said =>
-    place
-      ? said("feedBatchQueued", { project, label, place })
-      : said("feedBatchQueuedHost", { project, label }),
-  /** A merge the host took and still reads as running: said once, and never sent again. */
-  mergeRunning: (project: string, label: string, place: string | null | undefined): Said =>
-    place
-      ? said("feedBatchMergeRunning", { project, label, place })
-      : said("feedBatchMergeRunningHost", { project, label }),
-  /**
-   * Try again on a wait whose pull request the host did not close: its merge
-   * may still finish, so nothing new was sent and the wait stays.
-   */
-  stillOpen: (label: string, place: string | null | undefined): Said =>
-    place
-      ? said("settingsProjectsBatchWaitingStillOpen", { label, place })
-      : said("settingsProjectsBatchWaitingStillOpenHost", { label }),
-  /** A hold detail's name for a host that names no place of its own. */
-  host: "The project's host",
-  /** The hold's saved detail, which the batch's status reads in English. */
-  removed: (place: string) =>
-    `${place} removed the pull request from its merge queue without merging it; its page there says why.`,
-  /** The hold's saved detail for a merge the host took and then did not make. */
-  // i18n-exempt: a hold's saved detail is English text shown beside the host's own refusals (docs/i18n.md, "Saved facts")
-  notMerged: (place: string) =>
-    `${place} took the merge and did not make it; its page there says why. Nothing was sent again: Try again sends a new merge.`,
-  /** The hold's saved detail for a merge whose answer never came and that has not happened. */
-  // i18n-exempt: a hold's saved detail is English text shown beside the host's own refusals (docs/i18n.md, "Saved facts")
-  unconfirmed: (place: string) =>
-    `${place} did not confirm the merge and the pull request is still open there. Nothing was sent again: Try again sends a new merge.`,
-  blocked: (project: string, label: string, place: string | null | undefined): Said =>
-    place
-      ? said("feedBatchBlocked", { project, label, place })
-      : said("feedBatchBlockedHost", { project, label }),
-  /** The repair a held batch waited for, after it sent changes back beside its fix, closed first. */
-  fixClosed: (project: string, label: string): Said =>
-    said("feedBatchFixClosed", { project, label }),
-  retried: (project: string, label: string): Said => said("feedBatchRetried", { project, label }),
-  noStory: (project: string, label: string, titles: readonly string[]): Said =>
-    said("feedBatchNoStory", {
-      project,
-      label,
-      titles: formatList(titles.map((title) => `"${title}"`)),
-    }),
-  sentBack: (project: string, title: string, reason: string): Said =>
-    said("feedBatchSentBack", { project, title, reason }),
-  leftOut: (reason: string) =>
-    `This change was left out of its batch because ${reason}. Bring the branch up to date and show a new version; the other changes went on.`,
-  /** Left out for a clash with a change ahead only: the default branch does not hold that change yet. */
-  leftOutAhead: (reason: string) =>
-    `This change was left out of its batch because ${reason}. Nothing can be done yet, since the default branch does not hold that change: its merge goes on once that batch merges or that change leaves it.`,
-  /**
-   * Its crewmate was told to rebuild the change on the open batch's version
-   * (docs/forge.md, "A change rebuilt on an open batch"), as a line on its task.
-   */
-  // i18n-exempt: a task line beside the left-out lines here, which carry the batch's English reasons
-  rebuild: (reason: string, head: string) =>
-    `This change clashes with the open batch: ${reason}. Its crewmate was told to rebuild it on the batch's version ${head} now, so it goes in line right behind that batch's changes.`,
-  /** The change ahead that a left-out change clashed with merged with its batch. */
-  clashMerged:
-    "The change this one clashed with merged with its batch, so this change can be brought up to date with the default branch now.",
-  /** The change ahead that a left-out change clashed with left its batch. */
-  clashLeft:
-    "The change this one clashed with left its batch, so this change goes back in line at the version approved.",
-  sentBackTask: (reason: string) => `This change was sent back from its batch: ${reason}`,
-  superseded: (label: string, link: string | null) =>
-    `This change merged as part of ${label}${link ? ` (${link})` : ""}, so this pull request is closed.`,
-  ended:
-    "That batch is no longer held or waiting at that version, so nothing was done; Settings shows it as it is now.",
-  // i18n-exempt: a refusal served to the first mate's tool, never shown to a person
-  noRepairHeld: "No batch of this project is held, so there is no repair to record.",
-  notMember: (task: string) => `${task} is not in the held batch, so nothing was sent back.`,
-  namedTwice: (task: string) =>
-    `${task} is named more than once, so nothing was sent back: name each change once, with one reason.`,
-} as const;
 
 /**
  * The checks of a held batch's reading that never ran to an end on its
@@ -313,6 +220,11 @@ export type BatchesOptions = {
   }) => void;
   /** A batch of several is held: the first mate hears it once. */
   held: (held: BatchHeld) => void;
+  /**
+   * A held batch's early run with its declared fix failed (`OpenBatch.trial`): the fix's
+   * crewmate and the batch's repair hear it once. Absent, nobody hears it.
+   */
+  trialFailed?: (failed: { repo: RepoView; open: OpenBatch; trial: BatchTrial }) => void;
   /** A line for the Activity feed, as a fact so it follows the language. */
   note: (fact: Said) => void;
   /**
@@ -393,7 +305,11 @@ export class Batches {
   /** The open batch's checks as last read at its version; undefined before the first reading. */
   checksReading(repoId: string): BatchChecksReading | undefined {
     const reading = this.readings.get(repoId);
-    return reading && reading.head === this.record(repoId).open?.head ? reading : undefined;
+    const open = this.record(repoId).open;
+    // An early run with a held batch's fix is read at its own commit (`OpenBatch.trial`).
+    return reading && (reading.head === open?.head || reading.head === open?.trial?.head)
+      ? reading
+      : undefined;
   }
 
   /** Keeps a pass's reading of the open batch's checks, and says so only when it changed. */
@@ -478,7 +394,7 @@ export class Batches {
    */
   async revise(
     repoId: string,
-    change: Pick<BatchChange, "taskId" | "head" | "title" | "body">,
+    change: Omit<ConfirmedFix, "branch"> & Partial<Pick<ConfirmedFix, "branch">>,
   ): Promise<void> {
     let member = false;
     const changed = await this.write(repoId, (record) => {
@@ -488,7 +404,29 @@ export class Batches {
       if (member) this.described.delete(repoId);
       return JSON.stringify(next) === JSON.stringify(record) ? record : next;
     });
+    // A held batch's declared fix starts the batch's own checks with it (`startTrial`).
+    const { branch } = change;
+    if (branch)
+      void this.serial(repoId, () => startTrial(this.trials, repoId, { ...change, branch })).catch(
+        (caught: unknown) => console.warn(`[batches] ${repoId}: ${gitFailure(caught)}`),
+      );
     if (changed || member) void this.pass(repoId);
+  }
+
+  /** What an early run with a held batch's fix reaches of this owner (`TrialOwner`). */
+  private get trials(): TrialOwner {
+    return {
+      options: this.options,
+      record: (repoId) => this.record(repoId),
+      save: (repoId, record) => this.save(repoId, record),
+      recombine: (repo, record, join) => this.recombine(repo, record, join),
+      follow: (repo, record) => this.follow(repo, record),
+      pushedHead: (forge, branch) => this.pushedHead(forge, branch),
+      read: (repoId, head, items) => this.read(repoId, head, items),
+      label: (repo, open) => this.label(repo, open),
+      atBatchAddress: (repo, open) => this.atBatchAddress(repo, open),
+      stillAt: (repo) => this.stillAt(repo),
+    };
   }
 
   /**
@@ -1009,8 +947,12 @@ export class Batches {
       (pull.branch && pull.branch !== open.branch)
     )
       return record;
-    if (pull.merged)
+    if (pull.merged) {
+      // Merged by hand where the project lives at the early run's commit: it carried the fix.
+      const ran = mergedAtTrial(record, pull.headSha);
+      if (ran) return this.finish(repo, this.save(repo.id, ran), forge, pull.mergedSha);
       return pull.headSha === open.head ? this.finish(repo, record, forge, pull.mergedSha) : record;
+    }
     if (pull.state === "closed") {
       // Closed where the project lives without a merge: the changes go back in line.
       await forge.deleteBranch?.(open.branch).catch(() => {});
@@ -1022,6 +964,13 @@ export class Batches {
     await this.options.comments?.({ repo, open, pull, forge }).catch((caught: unknown) => {
       console.warn("[batches] could not read the batch's comments:", caught);
     });
+    // An early run with the held batch's fix decides first, while it still answers the batch.
+    if (open.trial) {
+      const tried = await followTrial(this.trials, repo, record, forge, pull);
+      if (tried) return tried;
+      record = this.record(repo.id);
+      open = record.open as OpenBatch;
+    }
     // A held batch whose repair sent changes back beside its own fix waits for that fix,
     // so it is combined once, with the fix, and never merges what was sent back meanwhile.
     if (open.hold && open.awaits !== undefined) {

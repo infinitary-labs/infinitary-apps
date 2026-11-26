@@ -1102,6 +1102,9 @@
 "feedBatchQueuedHost" = "%2$@: the project's host took %1$@ into the main branch's merge queue. It merges there once the queue's checks pass.";
 "feedBatchRetried" = "%2$@: %1$@ was combined again and its checks run again.";
 "feedBatchSentBack" = "%1$@: \"%3$@\" was sent back from its batch: %2$@";
+"feedBatchTrial" = "%2$@: %1$@ runs its checks with its declared fix before the fix is approved. Once the fix is approved at this version and these checks pass, the batch merges as it is.";
+"feedBatchTrialFailed" = "%3$@: %2$@ stays held because %1$@ failed with its declared fix. The fix's crewmate repairs it in a new version.";
+"feedBatchTrialFailedUnnamed" = "%2$@: %1$@ stays held because its checks failed with its declared fix. The fix's crewmate repairs it in a new version.";
 "feedBranchPushed" = "Pushed the branch";
 "feedBuildRowKept" = "Filed “%2$@” as %1$@ for later.";
 "feedBuildRowNotFiled" = "Did not file “%1$@”.";

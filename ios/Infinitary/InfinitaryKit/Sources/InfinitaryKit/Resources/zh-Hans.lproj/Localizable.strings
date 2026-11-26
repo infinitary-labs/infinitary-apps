@@ -1102,6 +1102,9 @@
 "feedBatchQueuedHost" = "%2$@：项目的托管平台已把 %1$@ 放入主分支的合并队列。队列的检查通过后，它会在那里合并。";
 "feedBatchRetried" = "%2$@：%1$@ 已重新合成，检查会再次运行。";
 "feedBatchSentBack" = "%1$@：“%3$@”已从这批改动中退回：%2$@";
+"feedBatchTrial" = "%2$@：%1$@ 在声明的修正获批前，就带着这个修正运行检查。修正在这个版本获批且这些检查通过后，这批改动会原样合并。";
+"feedBatchTrialFailed" = "%3$@：带着声明的修正，以下检查失败，所以 %2$@ 仍暂缓：%1$@。修正的船员会用新版本修好它。";
+"feedBatchTrialFailedUnnamed" = "%2$@：带着声明的修正，检查失败，所以 %1$@ 仍暂缓。修正的船员会用新版本修好它。";
 "feedBranchPushed" = "已推送分支";
 "feedBuildRowKept" = "已将“%2$@”创建为 %1$@，留待以后。";
 "feedBuildRowNotFiled" = "未放入“%1$@”。";

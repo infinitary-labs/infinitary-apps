@@ -447,9 +447,12 @@ export class Scheduler {
     this.ticks += 1;
     for (const id of this.failedLooks.keys())
       if (!this.options.store.get(id)) this.failedLooks.delete(id);
+    // One reading of what is connected for every rule: reading it per rule
+    // stalled the main process by about 0.4 ms a rule on each tick (INF-6885).
+    const finder = this.eventsNow();
     for (const record of this.options.store.list()) {
       if (record.spec.kind === "event") {
-        this.listen(record);
+        this.listen(record, false, finder);
         continue;
       }
       if (record.state !== "enabled" || record.nextFire > now) continue;
@@ -634,7 +637,7 @@ export class Scheduler {
    * still looking looks again once that look ends, so nothing dropped
    * meanwhile waits for the next minute.
    */
-  private listen(record: ScheduleRecord, now = false): void {
+  private listen(record: ScheduleRecord, now = false, finder?: EventFinder): void {
     const events = this.options.events;
     if (!events || record.state !== "enabled" || record.spec.kind !== "event") {
       this.failedLooks.delete(record.id);
@@ -644,7 +647,7 @@ export class Scheduler {
       if (now) this.again.add(record.id);
       return;
     }
-    const found = events.find(record.spec.integration, record.spec.event);
+    const found = (finder ?? events).find(record.spec.integration, record.spec.event);
     // A rule that does not look now has no row of failed looks to carry on.
     if (!found || found.connection !== record.connection || found.paused) {
       this.failedLooks.delete(record.id);
@@ -674,9 +677,10 @@ export class Scheduler {
    * listening to it looks now rather than at the next minute.
    */
   lookNow(integration: string): void {
+    const finder = this.eventsNow();
     for (const record of this.options.store.list())
       if (record.spec.kind === "event" && record.spec.integration === integration)
-        this.listen(record, true);
+        this.listen(record, true, finder);
   }
 
   /**

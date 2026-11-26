@@ -370,4 +370,54 @@ describe("Automation on an integration's event", () => {
     expect(one.rules[0]?.when).toBeTruthy();
     expect(four.rules.map((rule) => rule.when)).toEqual(four.rules.map(() => one.rules[0]?.when));
   });
+
+  it("reads what is connected once on each tick, however many rules listen", async () => {
+    // Intent: INF-6885's diagnosis. Alpha 0.8.11-alpha.55's minute pass read
+    // every connection once for each event rule on each tick, about 0.4 ms
+    // a rule on the main thread, and the startup catch-up tick's 370 ms
+    // stall ran the same reads.
+    const root = scratchDir("fm-automation-tick-");
+    const standIn = standInIntegration({ dir: root });
+    let reads = 0;
+    const integrations = new IntegrationsService({
+      bindings: [
+        {
+          ...standIn,
+          connections: () => {
+            reads++;
+            // Looks every five ticks, so the ticks between looks read only to find each rule's event.
+            return standIn.connections().map((connection) => ({
+              ...connection,
+              events: connection.events?.map((event) => ({ ...event, every: 5 })),
+            }));
+          },
+        },
+      ],
+      store: new IntegrationSettingsStore(join(root, "integrations")),
+    });
+    let now = Date.UTC(2026, 10, 25, 16, 0);
+    // The events the core wires (src/core/services.ts).
+    const scheduler = new Scheduler({
+      store: new ScheduleStore(openInMemoryDatabase()),
+      notify: () => null,
+      broadcastEvent: () => {},
+      now: () => now,
+      events: withTaskEvents({ resolve: () => undefined }, integrationEvents(integrations)),
+    });
+    for (let rule = 1; rule <= 8; rule++)
+      scheduler.create(
+        { kind: "event", integration: "Stand-in", event: "item_arrived" },
+        "Triage these: {{events}}",
+        true,
+        `Rule ${rule}`,
+      );
+    now += 60_000;
+    scheduler.tick(now);
+    await scheduler.settled();
+
+    reads = 0;
+    now += 60_000;
+    scheduler.tick(now);
+    expect(reads).toBe(1);
+  });
 });

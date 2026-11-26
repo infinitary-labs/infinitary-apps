@@ -703,7 +703,7 @@ test("a Build row's bug that reproduces: the fix starts built on the reproductio
   expect(started).not.toContain(SEQ_ROW_ISSUE.url);
 
   // "reproduced: yes" starts the fix built on the reproduction; the issue
-  // rides with it, and its change closes the issue.
+  // rides with it for the intake round's facts, and no change closes it.
   const fix = await rowTitled(page, SEQ_ROW_YES.fix);
   await expect.poll(detailOf(page, fix.id), { timeout: 30_000 }).toMatchObject({
     status: "active",
@@ -712,10 +712,9 @@ test("a Build row's bug that reproduces: the fix starts built on the reproductio
   const brief = await servedBrief(SEQ_ROW_FIX_GOAL);
   expect(brief).toContain(`grounded in ${reproduce.key}`);
   expect(brief).toContain(SEQ_ROW_REPRODUCED_YES);
-  expect(readSavedData(userDataDir, (db) => new TaskStore(db).get(fix.id)?.shape?.issue)).toEqual({
-    ...SEQ_ROW_ISSUE,
-    closes: true,
-  });
+  expect(readSavedData(userDataDir, (db) => new TaskStore(db).get(fix.id)?.shape?.issue)).toEqual(
+    SEQ_ROW_ISSUE,
+  );
   await expect.poll(reproduceDetail, { timeout: 30_000 }).toMatchObject({
     status: "done",
     closedReason: "answered",

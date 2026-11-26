@@ -113,7 +113,9 @@ That journey checks, in order:
 
 1. The install is for this person alone, under `%LOCALAPPDATA%\Programs`, and the Start menu entry carries the release's identity.
 2. The app opened after install with Explorer as its parent, as the Start menu opens it.
-3. The Git for Windows offer is up; the journey presses its install button through Windows' accessibility tree, and the pinned Git installs for this person and the app's saved data appears.
+3. The Git for Windows offer is up.
+   While it is, the window holds the data folder and has opened no door yet, so `Infinitary.exe link --phone` says Infinitary is open here but did not answer (`docs/run.md`, "A link by command").
+   The journey then presses its install button through Windows' accessibility tree, and the pinned Git installs for this person and the app's saved data appears.
    That first window started no command, since a run could not have found Git then.
    Opened again from the Start menu, the window starts the command with no window through this person's Task Scheduler (`docs/run.md`, "On Windows"): the run's task runs `Infinitary.exe run --agent <label>` as this person in their session, its sign-in trigger off, and closing the window leaves that run going until a stop asked through the data folder ends it.
    `Infinitary.exe start-at-boot` then turns the task's sign-in trigger on and starts it, and `start-at-boot --off` takes the task away; Task Scheduler's own answer for that task, which a refused removal reads, is there before and not found after.

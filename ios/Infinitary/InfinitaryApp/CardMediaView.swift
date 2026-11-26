@@ -238,6 +238,13 @@ private struct PassiveCardMedia: UIViewRepresentable {
 /// Turning the device refits the picture: a new size starts fitted again.
 private final class FittingWebView: WKWebView {
     private var laidOut: CGSize = .zero
+    /// UIKit ignores a touch that starts on a view while that view animates, and the scroll view animates for 0.3 s after
+    /// each double-tap zoom: a touch starting then lands on the web view itself, where the viewer's own swipe down and
+    /// double-tap read it, instead of being lost.
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let hit = super.hitTest(point, with: event)
+        return hit != nil && scrollView.layer.animationKeys()?.isEmpty == false ? self : hit
+    }
     override func layoutSubviews() {
         super.layoutSubviews()
         guard bounds.size != laidOut else { return }

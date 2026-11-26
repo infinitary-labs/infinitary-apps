@@ -11,6 +11,9 @@
         "light": "record-parts-list-light.webp",
         "alt": "A task's record showing its sentence about its last part, and its parts list with one open part and four closed ones."
       },
+      "docsSite": [
+        "tasks-and-crewmates"
+      ],
       "provenance": {
         "origin": "change"
       }

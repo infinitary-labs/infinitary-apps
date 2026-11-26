@@ -93,6 +93,16 @@ Under its title is a row of tabs:
 
 A tab appears only once the task has something to show there.
 
+## A task split into parts
+
+On the **Info** tab of a task split into parts, the **Parts** row counts the closed parts and lists every part with its status, in the order they were filed.
+Press the count to fold the list away, and press it again to open it.
+Past eight parts, the closed ones fold behind one line you can open.
+To open a part's card, click the part, or move to it with the keyboard and press Enter; start it or answer it there.
+
+A task in your backlog whose parts do the work never asks for its own **Start**.
+The top of its **Info** tab says what its parts wait on instead, such as "Its last part waits for your Start", and the task closes by itself once its parts close.
+
 ## Tags
 
 A task can carry any of its project's tags, such as bug or feature.

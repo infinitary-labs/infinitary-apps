@@ -230,6 +230,23 @@ export function keyboardSettings(page: Page): {
 }
 
 /**
+ * Picks a closed native select's option by typing its label's first
+ * character, which works on every system: a Mac's popup lives outside
+ * Chromium's key driver, so arrows there open the menu instead. Tab first
+ * clears the previous search, so each pick starts a new one. The caller
+ * owns the value assertion, and the option's first character must be unique.
+ */
+export async function typeToOption(select: Locator, value: string): Promise<void> {
+  await pressKey(select, "Tab");
+  const initial = await select.evaluate((node, wanted) => {
+    const option = [...(node as HTMLSelectElement).options].find((item) => item.value === wanted);
+    if (!option) throw new Error(`Missing option: ${wanted}`);
+    return option.label.trim().charAt(0).toLowerCase();
+  }, value);
+  await pressKey(select, initial);
+}
+
+/**
  * Chooses a key's place through its native select, using real keys on each system.
  * Mac's popup lives outside Chromium's key driver; its closed-select typeahead
  * navigates by the option's actual label. Tab first clears the previous search.
@@ -242,13 +259,7 @@ export async function chooseKeyPlace(
   // A map push can change the value before its save reply reenables this control.
   await expect(place).toBeEnabled();
   if (process.platform === "darwin") {
-    await pressKey(place, "Tab");
-    const initial = await place.evaluate((node, wanted) => {
-      const option = [...(node as HTMLSelectElement).options].find((item) => item.value === wanted);
-      if (!option) throw new Error(`Missing place option: ${wanted}`);
-      return option.label.trim().charAt(0).toLowerCase();
-    }, value);
-    await pressKey(place, initial);
+    await typeToOption(place, value);
   } else {
     await pressKey(place, value === "not-typing" ? "ArrowDown" : "ArrowUp");
   }

@@ -60,6 +60,7 @@ import {
   type ModelSession,
   type SessionBackend,
   type SessionBinding,
+  type SessionCompaction,
   type SessionEvent,
   type SessionFactories,
   type SessionRenewal,
@@ -274,6 +275,12 @@ type Held = {
   session: ModelSession | null;
   /** Reopening the home’s side can enable the policy without interrupting this conversation. */
   speed: boolean;
+  /**
+   * The home's summary rule: its open's, then the newest a prompt carried,
+   * read at each prompt so a changed Settings choice applies at the next
+   * message (`summary-point.md`); unset keeps the app's own rule.
+   */
+  compaction?: SessionCompaction | undefined;
   backend: SessionBackend | null;
   /** The version of the home's personal set the open conversation read, when it read one. */
   personal?: PersonalVersion | undefined;
@@ -659,6 +666,7 @@ export class SessionHost {
       }
       case "inf:session:prompt": {
         const [prompt] = request as WorkOrderRequest<"inf:session:prompt">;
+        if (prompt.compaction) held.compaction = prompt.compaction;
         answer = this.prompt(held, prompt.orderId, prompt.text, prompt.images);
         break;
       }
@@ -795,6 +803,7 @@ export class SessionHost {
     const sourceFacts = sourceContext(await this.options.source?.(), spec.homeSource);
     if (this.stopped) throw new Error("This computer is stopping.");
     held.speed = spec.speed === true;
+    held.compaction = spec.compaction;
     if (held.opening) await held.opening;
     if (held.session) {
       // An idle conversation whose named tools, instructions or model
@@ -929,7 +938,7 @@ export class SessionHost {
           },
         },
         bounds: { request: { retries: spec.retries ?? RETRIES } },
-        compaction: SESSION_COMPACTION,
+        compaction: () => held.compaction ?? SESSION_COMPACTION,
       };
       const session = await factory.open(sessionSpec);
       // An open that fails once its conversation began lets it go, and says

@@ -14,6 +14,7 @@ import {
   placedTaskFolders,
   type WorkingCopyBase,
   type WorkOrderChannel,
+  type WorkOrderRequest,
   type WorkOrderResponse,
   workOrders,
 } from "@shared/work";
@@ -28,6 +29,7 @@ import { crewmateResumeToken } from "../orchestrator/crewSession";
 import { type AppPaths, crewmatePlacedDir, crewmateSessionsDir } from "../paths";
 import { errorText } from "../personal/errorText";
 import type { ComputerPool } from "../routing/computerPool";
+import { compactionNow } from "../session/compaction";
 import type { PersonalVersion } from "../session/personalSet";
 import type {
   ControlProfile,
@@ -934,6 +936,13 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
             turnOrigin = await this.copies.followProject(deviceId, task, turnOrigin);
             // A reopen that began while the project was followed is waited for too.
             if ((await placed.reopening) === false) throw new NotOpenThere(task);
+            // The home's summary rule as it is now, so a changed Settings
+            // choice reaches the conversation at this message (`summary-point.md`).
+            const rule = compactionNow(spec.compaction);
+            if (rule) {
+              const [prompt] = args as WorkOrderRequest<"inf:session:prompt">;
+              args = [{ ...prompt, compaction: rule }];
+            }
           }
           return this.options.devices.ask(deviceId, channel, args) as Promise<WorkOrderResponse<C>>;
         },

@@ -15,6 +15,7 @@
   "settingsAddProjectAddFolder": "Adicionar pasta",
   "settingsAddProjectAdded": "{name} adicionado.",
   "settingsAddProjectAddedGit": "{name} adicionado. O git foi iniciado nesta pasta com um primeiro commit vazio.",
+  "settingsAddProjectAddedLeftFolder": "{name} adicionado. A pasta dele ainda estava na sua pasta de projetos, então essa pasta foi vinculada em vez de clonar o projeto de novo.",
   "settingsAddProjectAddedMark": "adicionado",
   "settingsAddProjectAdding": "Adicionando...",
   "settingsAddProjectAlreadyAdded": "{name} já foi adicionado. A linha dele está aberta.",

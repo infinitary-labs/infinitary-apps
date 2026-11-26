@@ -6,6 +6,7 @@ import { type Card, type CardAnswer, FIRSTMATE_CARD_META } from "@shared/cards";
 import { COMPUTER, HERE } from "@shared/deviceNames";
 import { type DeviceView, deviceRunsWork } from "@shared/devices";
 import type { FmEvent } from "@shared/events";
+import { said, saidMark } from "@shared/i18n/said";
 import { AUTOMATIC_COMPUTER, AUTOMATIC_WORD } from "@shared/placement";
 import {
   SETUP_CARD_FIELDS as FIELDS,
@@ -168,7 +169,10 @@ export class ProjectSetups {
     const offer: ProjectSetupOffer = {
       name: checked.name,
       setup: spec,
-      ...(spec.kind === "adopt" && checked.origin
+      // A folder a removed project left is linked whichever way it comes,
+      // so it offers no fresh clone beside it (docs/fleet.md, "Adding a
+      // removed project back").
+      ...(spec.kind === "adopt" && checked.origin && !checked.leftFolder
         ? // A clone picked instead keeps the name and task key the card shows.
           {
             clone: {
@@ -387,21 +391,25 @@ function setupCard(
   computers: readonly DeviceView[],
 ): Omit<Card, "author" | "priority" | "status" | "createdAt"> {
   const { setup, proposed } = offer;
+  const left = checked.leftFolder;
+  // A clone that finds the folder a removed project left links that folder,
+  // so its card reads as a folder linked where it is.
+  const folder = setup.kind === "adopt" ? setup.path : left;
   const where =
-    setup.kind === "clone"
+    folder !== undefined
       ? [
-          fact("From", setup.origin, true),
-          fact(`On ${HERE.this}`, "Cloned into your projects folder"),
+          fact("Folder", folder, true),
+          ...(checked.origin ? [fact("From", checked.origin, true)] : []),
+          ...(offer.clone ? [] : [fact(`On ${HERE.this}`, "Linked where it is")]),
         ]
-      : setup.kind === "init"
+      : setup.kind === "clone"
         ? [
-            fact("From", "A new project"),
-            fact(`On ${HERE.this}`, "Started in your projects folder"),
+            fact("From", setup.origin, true),
+            fact(`On ${HERE.this}`, "Cloned into your projects folder"),
           ]
         : [
-            fact("Folder", setup.path, true),
-            ...(checked.origin ? [fact("From", checked.origin, true)] : []),
-            ...(offer.clone ? [] : [fact(`On ${HERE.this}`, "Linked where it is")]),
+            fact("From", "A new project"),
+            fact(`On ${HERE.this}`, "Started in your projects folder"),
           ];
   // The project it joins (INF-4220), or the key Firstmate asked for, as the
   // check normalized it; neither, and the app derives a key.
@@ -485,6 +493,7 @@ function setupCard(
           ? `<p>Your first mate asks to add the repository <b>${escapeCardText(offer.name)}</b> to your project <b>${escapeCardText(into.name)}</b>. Its tasks take the key ${escapeCardText(into.key)}. Nothing changes until you click ${WORDS.addInto}.</p>`
           : `<p>Your first mate asks to add <b>${escapeCardText(offer.name)}</b> to your projects. Nothing changes until you click ${WORDS.add}.</p>`,
       work,
+      left ? saidMark(said("projectsSetupLeftFolder"), "p") : "",
       `<div class="inf-facts">${facts.join("")}</div>`,
       startsGit,
       `<div style="margin-top: var(--space-3); border-bottom: 1px solid var(--line-1)">${settings.join("")}</div>`,

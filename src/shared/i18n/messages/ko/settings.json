@@ -11,6 +11,7 @@
   "settingsAddProjectAddFolder": "폴더 추가",
   "settingsAddProjectAdded": "{name}을(를) 추가했어요.",
   "settingsAddProjectAddedGit": "{name}을(를) 추가했어요. 이 폴더에서 빈 첫 커밋으로 git을 시작했어요.",
+  "settingsAddProjectAddedLeftFolder": "{name}을(를) 추가했어요. 폴더가 프로젝트 폴더에 남아 있어서 다시 복제하지 않고 그 폴더를 연결했어요.",
   "settingsAddProjectAddedMark": "추가됨",
   "settingsAddProjectAdding": "추가 중...",
   "settingsAddProjectAlreadyAdded": "{name}은(는) 이미 추가되어 있어요. 해당 행이 열려 있어요.",

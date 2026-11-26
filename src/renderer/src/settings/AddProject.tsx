@@ -140,9 +140,11 @@ export function AddProject({
           ? m.settingsAddRepositoryAdded({ name: result.repo.name, project: into.name })
           : result.initializedGit
             ? m.settingsAddProjectAddedGit({ name: result.repo.name })
-            : result.created
-              ? m.settingsAddProjectAdded({ name: result.repo.name })
-              : m.settingsAddProjectAlreadyAdded({ name: result.repo.name });
+            : result.leftFolder
+              ? m.settingsAddProjectAddedLeftFolder({ name: result.repo.name })
+              : result.created
+                ? m.settingsAddProjectAdded({ name: result.repo.name })
+                : m.settingsAddProjectAlreadyAdded({ name: result.repo.name });
       onAdded(result.repo, said, !!into);
       if (result.created) setTaskKey("");
       setStatus(said);

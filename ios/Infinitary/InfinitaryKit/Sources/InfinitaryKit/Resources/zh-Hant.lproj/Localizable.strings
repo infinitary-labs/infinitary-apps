@@ -2465,6 +2465,7 @@
 "projectsMoveNotNow" = "暫時不要";
 "projectsMoveTitleInto" = "將 %2$@ 移入 %1$@？";
 "projectsMoveTitleOwn" = "將 %1$@ 移入一個單獨的專案？";
+"projectsSetupLeftFolder" = "它的資料夾還在你的專案資料夾中，所以加入時會連結這個資料夾，而不是再複製一份。";
 "recordAgeJustNow" = "剛剛";
 "recordAgeShortDays" = "%1$@ 天";
 "recordAgeShortHours" = "%1$@ 小時";
@@ -2746,6 +2747,7 @@
 "settingsAddProjectAddFolder" = "加入資料夾";
 "settingsAddProjectAdded" = "已加入 %1$@。";
 "settingsAddProjectAddedGit" = "已加入 %1$@。已在這個資料夾中啟用 git，並建立一個空的第一次提交。";
+"settingsAddProjectAddedLeftFolder" = "已加入 %1$@。它的資料夾還在你的專案資料夾中，所以直接連結了它，沒有重新複製。";
 "settingsAddProjectAddedMark" = "已加入";
 "settingsAddProjectAdding" = "正在加入…";
 "settingsAddProjectAlreadyAdded" = "%1$@ 已經加入過了。它的那一列已開啟。";

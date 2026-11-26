@@ -4488,6 +4488,9 @@
           },
           "createdInitialCommit": {
             "type": "boolean"
+          },
+          "leftFolder": {
+            "type": "string"
           }
         },
         "required": [

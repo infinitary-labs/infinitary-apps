@@ -2465,6 +2465,7 @@
 "projectsMoveNotNow" = "Nicht jetzt";
 "projectsMoveTitleInto" = "%2$@ in %1$@ verschieben?";
 "projectsMoveTitleOwn" = "%1$@ in ein eigenes Projekt verschieben?";
+"projectsSetupLeftFolder" = "Sein Ordner liegt noch in deinem Projektordner, daher verknüpft das Hinzufügen diesen Ordner, statt das Projekt ein zweites Mal zu klonen.";
 "recordAgeJustNow" = "gerade eben";
 "recordAgeShortDays" = "%1$@ Tg.";
 "recordAgeShortHours" = "%1$@ Std.";
@@ -2746,6 +2747,7 @@
 "settingsAddProjectAddFolder" = "Ordner hinzufügen";
 "settingsAddProjectAdded" = "%1$@ hinzugefügt.";
 "settingsAddProjectAddedGit" = "%1$@ hinzugefügt. Git in diesem Ordner gestartet, mit einem leeren ersten Commit.";
+"settingsAddProjectAddedLeftFolder" = "%1$@ hinzugefügt. Sein Ordner lag noch in deinem Projektordner, also wurde dieser Ordner verknüpft, statt das Projekt neu zu klonen.";
 "settingsAddProjectAddedMark" = "hinzugefügt";
 "settingsAddProjectAdding" = "Wird hinzugefügt ...";
 "settingsAddProjectAlreadyAdded" = "%1$@ ist schon hinzugefügt. Seine Zeile ist offen.";

@@ -1,0 +1,23 @@
+{
+  "entries": [
+    {
+      "id": "add-back-removed-project",
+      "kind": "fix",
+      "area": "projects",
+      "title": "Adding back a removed project uses the folder it left",
+      "body": "When you remove a project, its folder stays in your projects folder. Adding the same project again, from Settings or by asking your first mate, now uses that folder with its files instead of cloning a second copy whose name ends in -2. Picking that folder in Settings works too. The project comes back with default settings.",
+      "picture": {
+        "dark": "add-back-removed-project-dark.webp",
+        "light": "add-back-removed-project-light.webp",
+        "alt": "Settings shows field-notes added back, saying its folder was still in the projects folder, so that folder is linked instead of cloned again"
+      },
+      "docsSite": [
+        "projects"
+      ],
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

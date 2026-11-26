@@ -2465,6 +2465,7 @@
 "projectsMoveNotNow" = "今はしない";
 "projectsMoveTitleInto" = "%2$@ を %1$@ に移動しますか？";
 "projectsMoveTitleOwn" = "%1$@ を単独のプロジェクトに移動しますか？";
+"projectsSetupLeftFolder" = "フォルダがまだプロジェクトのフォルダに残っているので、追加するともう一度クローンせずにそのフォルダをリンクします。";
 "recordAgeJustNow" = "たった今";
 "recordAgeShortDays" = "%1$@日";
 "recordAgeShortHours" = "%1$@時間";
@@ -2746,6 +2747,7 @@
 "settingsAddProjectAddFolder" = "フォルダを追加";
 "settingsAddProjectAdded" = "%1$@ を追加しました。";
 "settingsAddProjectAddedGit" = "%1$@ を追加しました。このフォルダで git を開始し、空の最初のコミットを作成しました。";
+"settingsAddProjectAddedLeftFolder" = "%1$@ を追加しました。フォルダがプロジェクトのフォルダに残っていたので、もう一度クローンせずにそのフォルダをリンクしました。";
 "settingsAddProjectAddedMark" = "追加済み";
 "settingsAddProjectAdding" = "追加中...";
 "settingsAddProjectAlreadyAdded" = "%1$@ はすでに追加されています。その行を開きました。";

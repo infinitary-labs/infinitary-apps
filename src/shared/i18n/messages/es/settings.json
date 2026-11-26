@@ -15,6 +15,7 @@
   "settingsAddProjectAddFolder": "Agregar carpeta",
   "settingsAddProjectAdded": "Se agregó {name}.",
   "settingsAddProjectAddedGit": "Se agregó {name}. Se inició git en esta carpeta con una primera confirmación vacía.",
+  "settingsAddProjectAddedLeftFolder": "Se agregó {name}. Su carpeta seguía en tu carpeta de proyectos, así que se vinculó esa carpeta en lugar de clonar el proyecto otra vez.",
   "settingsAddProjectAddedMark": "agregado",
   "settingsAddProjectAdding": "Agregando...",
   "settingsAddProjectAlreadyAdded": "{name} ya está agregado. Su fila está abierta.",

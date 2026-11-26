@@ -37,5 +37,6 @@
     "other": "열린 작업 {count}개가 {project}에 합류하고, 키는 그대로예요:"
   },
   "projectsMoveTitleInto": "{repositories}을(를) {project}(으)로 옮길까요?",
-  "projectsMoveTitleOwn": "{repositories}을(를) 별도 프로젝트로 옮길까요?"
+  "projectsMoveTitleOwn": "{repositories}을(를) 별도 프로젝트로 옮길까요?",
+  "projectsSetupLeftFolder": "폴더가 아직 프로젝트 폴더에 남아 있어서, 추가하면 다시 복제하지 않고 그 폴더를 연결해요."
 }

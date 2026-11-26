@@ -2465,6 +2465,7 @@
 "projectsMoveNotNow" = "ليس الآن";
 "projectsMoveTitleInto" = "هل تنقل %2$@ إلى %1$@؟";
 "projectsMoveTitleOwn" = "هل تنقل %1$@ إلى مشروع مستقل؟";
+"projectsSetupLeftFolder" = "مجلده لا يزال في مجلد مشاريعك، لذا تربط إضافتُه ذلك المجلد بدل استنساخ المشروع مرة أخرى.";
 "recordAgeJustNow" = "قبل لحظات";
 "recordAgeShortDays" = "%1$@ ي";
 "recordAgeShortHours" = "%1$@ س";
@@ -2746,6 +2747,7 @@
 "settingsAddProjectAddFolder" = "إضافة مجلد";
 "settingsAddProjectAdded" = "أُضيف %1$@.";
 "settingsAddProjectAddedGit" = "أُضيف %1$@. بدأ git في هذا المجلد بإيداع أول فارغ.";
+"settingsAddProjectAddedLeftFolder" = "أُضيف %1$@. كان مجلده لا يزال في مجلد مشاريعك، لذا رُبط ذلك المجلد بدل استنساخ المشروع من جديد.";
 "settingsAddProjectAddedMark" = "مضاف";
 "settingsAddProjectAdding" = "جارٍ الإضافة...";
 "settingsAddProjectAlreadyAdded" = "%1$@ مضاف بالفعل. صفه مفتوح.";

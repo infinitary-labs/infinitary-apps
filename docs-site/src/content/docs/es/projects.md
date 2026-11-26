@@ -1,5 +1,5 @@
 ---
-source: e909f21ae958ea29
+source: d2c121d3a9fe9728
 title: Proyectos
 description: Cómo agregar un proyecto a Infinitary, reunir varios repositorios en uno, darle etiquetas, centrar la ventana en uno, elegir cómo se fusionan sus cambios y quitarlo.
 ---
@@ -173,6 +173,7 @@ Cambia la línea y pulsa **Guardar**, o desactiva el interruptor para no incluir
 
 Quitarlo saca el proyecto de la lista.
 Su carpeta y sus tareas terminadas se quedan.
+Si lo vuelves a agregar, se usa la carpeta que dejó en tu carpeta de proyectos en lugar de clonar una segunda copia, y el proyecto empieza de nuevo con la configuración predeterminada.
 Si el proyecto todavía tiene tareas, Infinitary las nombra, y primero las terminas o las abandonas.
 
 En un proyecto de varios repositorios, **Quitar** saca el repositorio cuya pestaña está elegida, y el proyecto conserva los demás.

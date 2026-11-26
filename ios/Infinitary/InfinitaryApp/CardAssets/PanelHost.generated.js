@@ -50867,6 +50867,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Move ${repositories} into a project of its own?`;
   }
+  function projectsSetupLeftFolder() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `مجلده لا يزال في مجلد مشاريعك، لذا تربط إضافتُه ذلك المجلد بدل استنساخ المشروع مرة أخرى.`;
+      case "de":
+        return `Sein Ordner liegt noch in deinem Projektordner, daher verknüpft das Hinzufügen diesen Ordner, statt das Projekt ein zweites Mal zu klonen.`;
+      case "es":
+        return `Su carpeta sigue en tu carpeta de proyectos, así que al agregarlo se vincula esa carpeta en lugar de clonar el proyecto otra vez.`;
+      case "fr":
+        return `Son dossier est encore dans votre dossier de projets, donc l’ajouter lie ce dossier au lieu de cloner le projet une deuxième fois.`;
+      case "ja":
+        return `フォルダがまだプロジェクトのフォルダに残っているので、追加するともう一度クローンせずにそのフォルダをリンクします。`;
+      case "ko":
+        return `폴더가 아직 프로젝트 폴더에 남아 있어서, 추가하면 다시 복제하지 않고 그 폴더를 연결해요.`;
+      case "pt-BR":
+        return `A pasta dele ainda está na sua pasta de projetos, então adicioná-lo vincula essa pasta em vez de clonar o projeto de novo.`;
+      case "zh-Hans":
+        return `它的文件夹还在你的项目文件夹中，所以添加时会关联这个文件夹，而不是再克隆一份。`;
+      case "zh-Hant":
+        return `它的資料夾還在你的專案資料夾中，所以加入時會連結這個資料夾，而不是再複製一份。`;
+      case "en-XA":
+        return `[Îţš ƒöļðéŕ îš šţîļļ îñ ýöûŕ þŕöĵéçţš ƒöļðéŕ, šö áððîñĝ îţ ļîñķš ţĥáţ ƒöļðéŕ îñšţéáð öƒ çļöñîñĝ á šéçöñð çöþý. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Its folder is still in your projects folder, so adding it links that folder instead of cloning a second copy.‬`;
+    }
+    return `Its folder is still in your projects folder, so adding it links that folder instead of cloning a second copy.`;
+  }
   function recordAgeDays(input2) {
     const count = formatNumber(input2.count);
     switch (currentLanguage()) {
@@ -60768,6 +60795,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Added ‬${name}‮. Started git in this folder with an empty first commit.‬`;
     }
     return `Added ${name}. Started git in this folder with an empty first commit.`;
+  }
+  function settingsAddProjectAddedLeftFolder(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `أُضيف ${name}. كان مجلده لا يزال في مجلد مشاريعك، لذا رُبط ذلك المجلد بدل استنساخ المشروع من جديد.`;
+      case "de":
+        return `${name} hinzugefügt. Sein Ordner lag noch in deinem Projektordner, also wurde dieser Ordner verknüpft, statt das Projekt neu zu klonen.`;
+      case "es":
+        return `Se agregó ${name}. Su carpeta seguía en tu carpeta de proyectos, así que se vinculó esa carpeta en lugar de clonar el proyecto otra vez.`;
+      case "fr":
+        return `${name} ajouté. Son dossier était encore dans votre dossier de projets, donc ce dossier est lié au lieu de cloner à nouveau le projet.`;
+      case "ja":
+        return `${name} を追加しました。フォルダがプロジェクトのフォルダに残っていたので、もう一度クローンせずにそのフォルダをリンクしました。`;
+      case "ko":
+        return `${name}을(를) 추가했어요. 폴더가 프로젝트 폴더에 남아 있어서 다시 복제하지 않고 그 폴더를 연결했어요.`;
+      case "pt-BR":
+        return `${name} adicionado. A pasta dele ainda estava na sua pasta de projetos, então essa pasta foi vinculada em vez de clonar o projeto de novo.`;
+      case "zh-Hans":
+        return `已添加 ${name}。它的文件夹还在你的项目文件夹中，所以直接关联了它，没有重新克隆。`;
+      case "zh-Hant":
+        return `已加入 ${name}。它的資料夾還在你的專案資料夾中，所以直接連結了它，沒有重新複製。`;
+      case "en-XA":
+        return `[Åððéð ${name}. Îţš ƒöļðéŕ ŵáš šţîļļ îñ ýöûŕ þŕöĵéçţš ƒöļðéŕ, šö ţĥáţ ƒöļðéŕ îš ļîñķéð îñšţéáð öƒ çļöñéð áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Added ‬${name}‮. Its folder was still in your projects folder, so that folder is linked instead of cloned again.‬`;
+    }
+    return `Added ${name}. Its folder was still in your projects folder, so that folder is linked instead of cloned again.`;
   }
   function settingsAddProjectAddedMark() {
     switch (currentLanguage()) {
@@ -117190,6 +117245,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     projectsMoveOpenTasks,
     projectsMoveTitleInto,
     projectsMoveTitleOwn,
+    projectsSetupLeftFolder,
     recordAgeDays,
     recordAgeHours,
     recordAgeJustNow,
@@ -117495,6 +117551,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsAddProjectAddFolder,
     settingsAddProjectAdded,
     settingsAddProjectAddedGit,
+    settingsAddProjectAddedLeftFolder,
     settingsAddProjectAddedMark,
     settingsAddProjectAdding,
     settingsAddProjectAlreadyAdded,
@@ -120884,6 +120941,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "projectsMoveOpenTasks": ["count", "project"],
     "projectsMoveTitleInto": ["project", "repositories"],
     "projectsMoveTitleOwn": ["repositories"],
+    "projectsSetupLeftFolder": [],
     "recordAgeDays": ["count"],
     "recordAgeHours": ["count"],
     "recordAgeJustNow": [],
@@ -121189,6 +121247,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsAddProjectAddFolder": [],
     "settingsAddProjectAdded": ["name"],
     "settingsAddProjectAddedGit": ["name"],
+    "settingsAddProjectAddedLeftFolder": ["name"],
     "settingsAddProjectAddedMark": [],
     "settingsAddProjectAdding": [],
     "settingsAddProjectAlreadyAdded": ["name"],
@@ -133443,7 +133502,13 @@ ${FRAME_KEYBOARD_SCRIPT}
     repo: repoViewSchema,
     created: boolean(),
     initializedGit: boolean().optional(),
-    createdInitialCommit: boolean().optional()
+    createdInitialCommit: boolean().optional(),
+    /**
+     * The folder a removed project left in the projects folder, linked where it
+     * is instead of cloning a second copy (docs/fleet.md, "Adding a removed
+     * project back").
+     */
+    leftFolder: string().optional()
   });
   discriminatedUnion("kind", [
     object({ kind: literal("card"), cardId: string().min(1) }),

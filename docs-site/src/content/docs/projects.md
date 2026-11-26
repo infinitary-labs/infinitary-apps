@@ -172,6 +172,7 @@ Change the line and press **Save**, or turn the switch off to leave it out.
 
 Removing takes the project off the list.
 Its folder and its finished tasks stay.
+Adding it again uses the folder it left in your projects folder instead of cloning a second copy, and the project starts over with default settings.
 If the project still has tasks, Infinitary names them, and you finish or drop them first.
 
 In a project of several repositories, **Remove** takes away the repository whose tab is chosen, and the project keeps the others.

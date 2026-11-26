@@ -13,6 +13,7 @@
   "settingsAddProjectAddFolder": "Ordner hinzufügen",
   "settingsAddProjectAdded": "{name} hinzugefügt.",
   "settingsAddProjectAddedGit": "{name} hinzugefügt. Git in diesem Ordner gestartet, mit einem leeren ersten Commit.",
+  "settingsAddProjectAddedLeftFolder": "{name} hinzugefügt. Sein Ordner lag noch in deinem Projektordner, also wurde dieser Ordner verknüpft, statt das Projekt neu zu klonen.",
   "settingsAddProjectAddedMark": "hinzugefügt",
   "settingsAddProjectAdding": "Wird hinzugefügt ...",
   "settingsAddProjectAlreadyAdded": "{name} ist schon hinzugefügt. Seine Zeile ist offen.",

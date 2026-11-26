@@ -1,5 +1,5 @@
 ---
-source: 3e0fd8cde41ac0cf
+source: 74efc9cd832fcc88
 title: Seus outros computadores
 description: Adicione seus outros computadores para controlar seu imediato de qualquer um deles, deixar que eles rodem o trabalho dos seus projetos e manter uma cópia que possa assumir.
 ---
@@ -153,8 +153,8 @@ Seus outros computadores e seu celular o encontram lá sozinhos, sem um novo lin
 Um cartão lá pede cada login que falta, e você adiciona seus Segredos de novo, a menos que ele os tenha guardado.
 
 Seu celular também pode pedir que um computador assuma.
-Enquanto seu computador estiver fora de alcance, toque no botão do computador à direita da barra superior do celular.
-A tela dele oferece **Assumir** para cada computador que mantém uma cópia, e depois pede Face ID ou o código.
+Enquanto seu computador estiver fora de alcance, toque na linha abaixo da barra superior do celular que avisa isso, ou abra Ajustes no celular e toque em **Seu computador**.
+Ali aparece **Assumir** para cada computador que mantém uma cópia, e depois é pedido Face ID ou o código.
 
 ### Se o computador perdido voltar {#if-the-lost-computer-comes-back}
 

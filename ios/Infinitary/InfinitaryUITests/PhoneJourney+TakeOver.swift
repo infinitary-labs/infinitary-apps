@@ -48,7 +48,7 @@ extension PhoneJourney {
         let after = try await home("standby-state", method: "GET")
         XCTAssertEqual(after["homeNumber"] as? Int, 2, "\(after)")
         XCTAssertNotNil(after["takeOver"] as? String, "\(after)")
-        if app.buttons["close-computer-details"].exists { tapOnPhone(app.buttons["close-computer-details"]) }
+        if app.buttons["close-phone-settings"].exists { closeComputerDetails() }
         XCTAssertTrue(cardHeading("Your phone is reading your Mac").waitForPresence(timeout: 10), app.debugDescription)
         picture("took-over-live")
 

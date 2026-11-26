@@ -152,8 +152,8 @@ Your other computers and your phone find it there by themselves, with no new lin
 A card there asks for each sign-in it lacks, and you add your Secrets again unless it kept them.
 
 Your phone can also ask a computer to take over.
-While your computer is out of reach, tap the computer button at the right of the phone's top bar.
-Its sheet offers **Take over** for each computer that keeps a copy, then asks for Face ID or your passcode.
+While your computer is out of reach, tap the line under the phone's top bar that says so, or open the phone's Settings and tap **Your computer**.
+It offers **Take over** for each computer that keeps a copy, then asks for Face ID or your passcode.
 
 ### If the lost computer comes back
 

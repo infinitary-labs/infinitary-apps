@@ -56,19 +56,18 @@ extension ReadOnlySession {
     }
 }
 
-/// INF-1062: the computer's own sheet. INF-6131, the captain's pick: one list in the shared row look, the computer
+/// INF-1062: the computer's own page. INF-6131, the captain's pick: one list in the shared row look, the computer
 /// shown first with its role, reach and address and a small plain Leave, or Forget while out of reach, at its trailing
 /// edge (the Mac draws Leave on its own device row this way); the other kept computers next (INF-5265); and Add another
-/// computer last. Leave stays the sheet's first control, so it is in view as the sheet opens at every Text Size.
-/// The sheet opens just tall enough for its rows, never past half height, and can still be pulled up (INF-6131).
-/// This device's own facts live in `PhoneSettingsSheet`.
-struct PhoneComputerSheet: View {
+/// computer last. Leave stays the page's first control, so it is in view as the page opens at every Text Size.
+/// INF-2820 piece 1: it is Settings' first page, Your computer (`PhoneSettingsSheet`), and each choice closes Settings.
+struct PhoneComputerPage: View {
     let session: ReadOnlySession
     let model: PhoneModel
     /// INF-5265: each acts on the computer its confirmation named, even when another shows by the time it is answered.
     let leave: (ReadOnlySession) -> Void
     let forget: (String) -> Void
-    /// Opens a way in to join one more computer, after this sheet closes.
+    /// Opens a way in to join one more computer, after Settings closes.
     let add: (PhoneAddWay) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var leaving = false
@@ -77,60 +76,39 @@ struct PhoneComputerSheet: View {
     @State private var named: ReadOnlySession?
     @State private var choosingWay = false
     @FocusState private var focusedRow: String?
-    /// The rows' own height, the height the scroll view shows them in, and the whole sheet's height: the sheet less the
-    /// scroll view is its bar and edges, so the fitted sheet is the rows plus those.
-    @State private var rows: CGFloat = 0
-    @State private var shown: CGFloat = 0
-    @State private var sheet: CGFloat = 0
-    /// The height the sheet stands at, kept while the rows refit so a sheet pulled up stays up.
-    @State private var detent = PresentationDetent.custom(PhoneFittedDetent.self)
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: PhoneTheme.space5) {
-                    computers
-                    // INF-4207 piece 9: while the home is out of reach, a computer that keeps a copy can take over. It
-                    // stays through a reopen's Reaching, as Face ID makes, so a takeover under way keeps its row.
-                    if session.homeLost, let standbys = session.mac.standbys, !standbys.isEmpty {
-                        PhoneTakeOverSection(session: session, standbys: standbys)
-                    }
-                }.padding(PhoneTheme.space5).frame(maxWidth: .infinity, alignment: .leading)
-                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { rows = $0 }
-            }
-            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { shown = $0 }
-            .onAppear { model.lookAtOthers() }
-            // Another computer showing closes a confirmation that named the one before.
-            .onChange(of: session.mac.pin) { leaving = false; forgetting = false; named = nil }
-            .phoneTitle(PhoneMessages.phoneComputerTitle())
-            .toolbar { ToolbarItem(placement: .confirmationAction) {
-                Button(PhoneMessages.phoneCommonDone()) { dismiss() }.accessibilityIdentifier("close-computer-details")
-            } }
-            // Alerts keep the cancel choice in view; a popover from the button would hide it.
-            .alert(PhoneMessages.phoneComputerLeaveAsk(computer: session.mac.name), isPresented: $leaving) {
-                Button(PhoneMessages.phoneComputerLeaveConfirm(), role: .destructive) {
-                    dismiss(); if let named { leave(named) }
-                }.accessibilityIdentifier("confirm-leave")
-                Button(PhoneMessages.phoneComputerKeep(), role: .cancel) {}
-            } message: { Text(PhoneMessages.phoneComputerLeaveWarning()) }
-            .alert(PhoneMessages.phoneComputerForgetAsk(), isPresented: $forgetting) {
-                Button(PhoneMessages.phoneComputerForgetConfirm(), role: .destructive) {
-                    dismiss(); if let named { forget(named.mac.pin) }
-                }.accessibilityIdentifier("confirm-forget")
-                Button(PhoneMessages.phoneComputerKeep(), role: .cancel) {}
-            } message: { Text(PhoneMessages.phoneComputerForgetWarning()) }
-            .confirmationDialog(PhoneMessages.phoneComputerAddTitle(), isPresented: $choosingWay, titleVisibility: .visible) {
-                Button(PhoneMessages.phoneJoinScanTitle()) { pick(.scan) }.accessibilityIdentifier("add-scan-code")
-                Button(PhoneMessages.phoneJoinPasteTitle()) { pick(.paste) }.accessibilityIdentifier("add-paste-link")
-                Button(PhoneMessages.phoneJoinAddressTitle()) { pick(.address) }.accessibilityIdentifier("add-by-address")
-                Button(PhoneMessages.phoneCommonCancel(), role: .cancel) {}
+        VStack(alignment: .leading, spacing: PhoneTheme.space5) {
+            computers
+            // INF-4207 piece 9: while the home is out of reach, a computer that keeps a copy can take over. It
+            // stays through a reopen's Reaching, as Face ID makes, so a takeover under way keeps its row.
+            if session.homeLost, let standbys = session.mac.standbys, !standbys.isEmpty {
+                PhoneTakeOverSection(session: session, standbys: standbys)
             }
         }
-        .onGeometryChange(for: CGFloat.self) { $0.size.height + $0.safeAreaInsets.top + $0.safeAreaInsets.bottom } action: { sheet = $0 }
-        .font(PhoneFont.body).foregroundStyle(PhoneTheme.text).tint(PhoneTheme.accent)
-        .presentationDetents([.custom(PhoneFittedDetent.self), .large], selection: $detent).presentationDragIndicator(.visible)
-        .presentationContentInteraction(.resizes)
-        .environment(\.phoneSheetFit, rows > 0 && shown > 0 && sheet > shown ? rows + sheet - shown : 0).phoneSheetSurface()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .onAppear { model.lookAtOthers() }
+        // Another computer showing closes a confirmation that named the one before.
+        .onChange(of: session.mac.pin) { leaving = false; forgetting = false; named = nil }
+        // Alerts keep the cancel choice in view; a popover from the button would hide it.
+        .alert(PhoneMessages.phoneComputerLeaveAsk(computer: session.mac.name), isPresented: $leaving) {
+            Button(PhoneMessages.phoneComputerLeaveConfirm(), role: .destructive) {
+                dismiss(); if let named { leave(named) }
+            }.accessibilityIdentifier("confirm-leave")
+            Button(PhoneMessages.phoneComputerKeep(), role: .cancel) {}
+        } message: { Text(PhoneMessages.phoneComputerLeaveWarning()) }
+        .alert(PhoneMessages.phoneComputerForgetAsk(), isPresented: $forgetting) {
+            Button(PhoneMessages.phoneComputerForgetConfirm(), role: .destructive) {
+                dismiss(); if let named { forget(named.mac.pin) }
+            }.accessibilityIdentifier("confirm-forget")
+            Button(PhoneMessages.phoneComputerKeep(), role: .cancel) {}
+        } message: { Text(PhoneMessages.phoneComputerForgetWarning()) }
+        .confirmationDialog(PhoneMessages.phoneComputerAddTitle(), isPresented: $choosingWay, titleVisibility: .visible) {
+            Button(PhoneMessages.phoneJoinScanTitle()) { pick(.scan) }.accessibilityIdentifier("add-scan-code")
+            Button(PhoneMessages.phoneJoinPasteTitle()) { pick(.paste) }.accessibilityIdentifier("add-paste-link")
+            Button(PhoneMessages.phoneJoinAddressTitle()) { pick(.address) }.accessibilityIdentifier("add-by-address")
+            Button(PhoneMessages.phoneCommonCancel(), role: .cancel) {}
+        }
     }
 
     private func pick(_ way: PhoneAddWay) {
@@ -138,7 +116,7 @@ struct PhoneComputerSheet: View {
         dismiss()
     }
 
-    /// The sheet's one list: the computer shown, the other kept computers, and Add another computer last. A tap on
+    /// The page's one list: the computer shown, the other kept computers, and Add another computer last. A tap on
     /// another computer shows it: the phone never switches by itself (the captain's pick, Stay), so a mark only says
     /// which one answers now. On an iPad keyboard the arrows move among those rows, on to Add another computer, and
     /// Return or Space presses one; a press with Command held is left to the app's own commands.
@@ -177,7 +155,7 @@ struct PhoneComputerSheet: View {
                 if let last = model.kept.others.last { focusedRow = last.pin }
             }
         }.buttonStyle(PhoneRowStyle()).frame(maxWidth: .infinity, alignment: .leading)
-            // With other computers kept, the sheet opens with the first of them focused, so a keyboard's arrows and
+            // With other computers kept, the page opens with the first of them focused, so a keyboard's arrows and
             // Return reach the list at once.
             .onAppear { if !model.kept.others.isEmpty { focusedRow = order.first } }
     }
@@ -244,7 +222,7 @@ struct PhoneComputerSheet: View {
         }
     }
 
-    // Close the sheet on confirmation so any failure remains visible in the root's problem notice.
+    // Close Settings on confirmation so any failure remains visible in the root's problem notice.
     // INF-6131: a fitted button in the hairline outline, since the row already names the computer and the alert says
     // what leaving costs in the danger color; it keeps the spoken name that names the computer.
     @ViewBuilder private var exitControl: some View {
@@ -260,20 +238,6 @@ struct PhoneComputerSheet: View {
                 .accessibilityIdentifier("forget-mac")
         }
     }
-}
-
-/// INF-6131: the computer sheet opens just tall enough for its rows, and never past half height; before its rows are
-/// measured it opens at half height, as it did before.
-private struct PhoneFittedDetent: CustomPresentationDetent {
-    static func height(in context: Context) -> CGFloat? {
-        let half = context.maxDetentValue / 2
-        return context.phoneSheetFit > 0 ? min(context.phoneSheetFit, half) : half
-    }
-}
-
-extension EnvironmentValues {
-    /// The height the computer sheet's rows ask for, read by its fitted detent.
-    @Entry var phoneSheetFit: CGFloat = 0
 }
 
 private extension VerticalAlignment {

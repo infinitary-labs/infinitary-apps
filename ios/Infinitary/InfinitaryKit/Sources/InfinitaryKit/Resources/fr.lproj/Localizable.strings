@@ -2284,6 +2284,7 @@
 "phoneSettingsBackTo" = "Retour à %1$@";
 "phoneSettingsCapabilityFull" = "Répond aux cartes, envoie des messages et pilote les tâches sur votre ordinateur.";
 "phoneSettingsCapabilityRead" = "Lit les cartes, l’Activité et les tâches. %1$@";
+"phoneSettingsComputerSummary" = "%1$@ · %2$@";
 "phoneSettingsConversationStays" = "La conversation reste sur votre ordinateur.";
 "phoneSettingsDevices" = "Appareils";
 "phoneSettingsFoldSplit" = "Séparer au pli";

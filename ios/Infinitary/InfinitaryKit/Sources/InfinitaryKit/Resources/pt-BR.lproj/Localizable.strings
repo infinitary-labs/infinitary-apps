@@ -2284,6 +2284,7 @@
 "phoneSettingsBackTo" = "Voltar para %1$@";
 "phoneSettingsCapabilityFull" = "Responde a cartões, envia mensagens e controla tarefas no seu computador.";
 "phoneSettingsCapabilityRead" = "Lê cartões, Atividade e tarefas. %1$@";
+"phoneSettingsComputerSummary" = "%1$@ · %2$@";
 "phoneSettingsConversationStays" = "A conversa fica no seu computador.";
 "phoneSettingsDevices" = "Dispositivos";
 "phoneSettingsFoldSplit" = "Dividir na dobra";

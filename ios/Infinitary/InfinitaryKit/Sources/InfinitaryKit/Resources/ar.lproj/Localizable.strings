@@ -2284,6 +2284,7 @@
 "phoneSettingsBackTo" = "العودة إلى %1$@";
 "phoneSettingsCapabilityFull" = "يجيب عن البطاقات ويرسل الرسائل ويتحكم في المهام على حاسوبك.";
 "phoneSettingsCapabilityRead" = "يقرأ البطاقات والنشاط والمهام. %1$@";
+"phoneSettingsComputerSummary" = "%1$@ · %2$@";
 "phoneSettingsConversationStays" = "تبقى المحادثة على حاسوبك.";
 "phoneSettingsDevices" = "الأجهزة";
 "phoneSettingsFoldSplit" = "التقسيم عند الطيّة";

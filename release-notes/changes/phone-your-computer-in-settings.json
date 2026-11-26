@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "phone-your-computer-in-settings",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "Your computer is the first row of Settings on iPhone and iPad",
+      "body": "On your iPhone and iPad, Settings now starts with Your computer, which names the computer shown and whether it is in reach. It holds what the computer button showed: Leave, or Forget while out of reach, your other computers, Add another computer and Take over. The computer button and Command-I open it there, and while your computer is out of reach, tapping the line under the top bar opens it too.",
+      "picture": {
+        "dark": "phone-your-computer-in-settings-dark.webp",
+        "light": "phone-your-computer-in-settings-light.webp",
+        "alt": "The phone's Settings list with Your computer as its first row, reading Test Mac mini · Live, above General and Appearance"
+      },
+      "docsSite": ["iphone-and-ipad", "your-other-computers"],
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

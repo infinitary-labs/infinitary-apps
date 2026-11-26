@@ -112,7 +112,7 @@ import XCTest
     XCTAssertEqual(app.buttons.matching(identifier: "photo-chip").count, 1)
     // The full journey has relaunched before this point: sibling app commands must still work too.
     try await pressPhoneKey("i", modifiers: .command, in: app)
-    let closeDetails = app.buttons["close-computer-details"]
+    let closeDetails = app.buttons["close-phone-settings"]
     XCTAssertTrue(closeDetails.waitForPresence(timeout: 10))
     // INF-499 #8: one real press must not send the retained text/photo behind a native sheet.
     try await pressPhoneKey(XCUIKeyboardKey.return.rawValue, modifiers: .command, in: app)

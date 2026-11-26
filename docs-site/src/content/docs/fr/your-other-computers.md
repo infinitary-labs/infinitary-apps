@@ -1,5 +1,5 @@
 ---
-source: 3e0fd8cde41ac0cf
+source: 74efc9cd832fcc88
 title: Vos autres ordinateurs
 description: Ajoutez vos autres ordinateurs pour piloter votre second depuis n’importe lequel d’entre eux, leur confier le travail de vos projets et garder une copie capable de prendre le relais.
 ---
@@ -153,8 +153,8 @@ Vos autres ordinateurs et votre téléphone l’y trouvent d’eux-mêmes, sans 
 Une carte y demande chaque connexion qui lui manque, et vous ajoutez de nouveau vos Secrets, sauf s’il les a gardés.
 
 Votre téléphone peut aussi demander à un ordinateur de prendre le relais.
-Pendant que votre ordinateur est hors de portée, touchez le bouton de l’ordinateur à droite de la barre du haut du téléphone.
-Sa feuille propose **Prendre le relais** pour chaque ordinateur qui garde une copie, puis demande Face ID ou votre code.
+Pendant que votre ordinateur est hors de portée, touchez la ligne sous la barre du haut du téléphone qui l’indique, ou ouvrez Réglages sur le téléphone et touchez **Votre ordinateur**.
+Vous y trouvez **Prendre le relais** pour chaque ordinateur qui garde une copie, puis Face ID ou votre code vous est demandé.
 
 ### Si l’ordinateur perdu revient {#if-the-lost-computer-comes-back}
 

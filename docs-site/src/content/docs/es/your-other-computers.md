@@ -1,5 +1,5 @@
 ---
-source: 3e0fd8cde41ac0cf
+source: 74efc9cd832fcc88
 title: Tus otras computadoras
 description: Agrega tus otras computadoras para controlar a tu primer oficial desde cualquiera de ellas, dejar que hagan el trabajo de tus proyectos y guardar una copia que pueda tomar el relevo.
 ---
@@ -153,8 +153,8 @@ Tus otras computadoras y tu teléfono la encuentran ahí por sí solos, sin un e
 Una tarjeta ahí pide cada inicio de sesión que le falta, y vuelves a agregar tus Secretos a menos que los guardara.
 
 Tu teléfono también puede pedirle a una computadora que tome el relevo.
-Mientras tu computadora está fuera de alcance, toca el botón de la computadora a la derecha de la barra superior del teléfono.
-Su hoja ofrece **Tomar el relevo** para cada computadora que guarda una copia, y luego pide Face ID o tu código.
+Mientras tu computadora está fuera de alcance, toca la línea debajo de la barra superior del teléfono que lo dice, o abre Configuración en el teléfono y toca **Tu computadora**.
+Ahí se ofrece **Tomar el relevo** para cada computadora que guarda una copia, y luego se pide Face ID o tu código.
 
 ### Si la computadora perdida vuelve {#if-the-lost-computer-comes-back}
 

@@ -2284,6 +2284,7 @@
 "phoneSettingsBackTo" = "返回 %1$@";
 "phoneSettingsCapabilityFull" = "在你的电脑上回答卡片、发送消息并控制任务。";
 "phoneSettingsCapabilityRead" = "读取卡片、动态和任务。%1$@";
+"phoneSettingsComputerSummary" = "%1$@ · %2$@";
 "phoneSettingsConversationStays" = "对话保留在你的电脑上。";
 "phoneSettingsDevices" = "设备";
 "phoneSettingsFoldSplit" = "在折痕处分开";

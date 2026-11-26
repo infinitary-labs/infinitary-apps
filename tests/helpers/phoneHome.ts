@@ -64,6 +64,7 @@ import { disposableCustody } from "./disposableCustody";
 import { standInDnsSd } from "./dnsSdStandIn";
 import { phoneCardReadControls } from "./phoneCardReads";
 import { carriedHeard, raiseCarriedCard, showCarriedPast } from "./phoneCarried";
+import { awayTraffic, closeCatchUpBoard, openCatchUpBoard } from "./phoneCatchUp";
 import { clearPhoneCards, raiseReaderCard } from "./phoneCrewCards";
 import { phoneGoogleControls, startPhoneGoogle } from "./phoneGoogle";
 import type {
@@ -742,6 +743,7 @@ export async function startPhoneHome(
   let changed = 0;
   let boardTasks = 0;
   const awayCards: string[] = [];
+  const catchUpBoard: string[] = [];
   let ssh: SshServer | undefined;
   const control = createServer(async (request, response) => {
     const [_, supplied, command] = (request.url ?? "").split("/");
@@ -3090,55 +3092,12 @@ export async function startPhoneHome(
           result = { id: added.id };
           break;
         }
-        case "POST away-traffic": {
-          // INF-2773: what a phone misses while away, replayed at its return: board updates, cards and a reaction.
-          // The board and the cards each go out on their own short timer, so each change waits for its own push:
-          // six board updates and two card lists, never one coalesced update, and none the phone reads live.
-          const pushed = new Set<string>();
-          const cardsPushed = new Set<string>();
-          const stopWatching = core.events.subscribe((channel, payload) => {
-            const rows =
-              channel === "inf:tasks:delta"
-                ? (payload as { upserts: { id: string }[] }).upserts
-                : channel === "inf:tasks"
-                  ? (payload as { tasks: { id: string }[] }).tasks
-                  : [];
-            for (const row of rows) pushed.add(row.id);
-            if (channel === "inf:cards")
-              for (const card of payload as { id: string }[]) cardsPushed.add(card.id);
-          });
-          const ids: string[] = [];
-          const cards: string[] = [];
-          try {
-            for (let i = 0; i < 6; i++) {
-              boardTasks += 1;
-              const id = seedTask(core.services.tasks, {
-                id: `phone-board-${boardTasks}`,
-                title: `Chart the harbour's ${boardTasks}th mooring`,
-                status: "queued",
-                startPolicy: "on-request",
-              }).id;
-              ids.push(id);
-              await until(() => pushed.has(id));
-            }
-            for (const [n, title] of ["The pilot boat came in", "The tide turned"].entries()) {
-              const card = core.services.supervisor.addFirstmateCard({
-                id: `phone-away-${n}`,
-                title,
-                body: `<p>${title} while you were away.</p>`,
-                actions: [],
-              });
-              cards.push(card);
-              awayCards.push(card);
-              await until(() => cardsPushed.has(card));
-            }
-          } finally {
-            stopWatching();
-          }
-          core.events.emit("inf:event", { type: "firstmate_emote", emote: "salute" });
-          result = { ids, cards };
+        case "POST catch-up-board":
+          result = await openCatchUpBoard(core, catchUpBoard);
           break;
-        }
+        case "POST away-traffic":
+          result = await awayTraffic(core, { nextBoardTask: () => ++boardTasks, awayCards, until });
+          break;
         case "POST heavy-away": {
           // INF-2669: what a phone misses while away from a long-running computer whose card list grows by about
           // 80 KB, four cards of about 20 KB each: four card lists, each pushed whole, and the task board pushed whole
@@ -3210,6 +3169,7 @@ export async function startPhoneHome(
         case "POST away-cleanup":
           for (const card of awayCards.splice(0))
             core.services.supervisor.closeCard(card, { kind: "firstmate" }, "Catch-up test");
+          closeCatchUpBoard(core, catchUpBoard);
           result = { ok: true };
           break;
         case "POST empty-cards":

@@ -59,6 +59,8 @@ declare global {
       state(value: { collapsed: boolean; shown: boolean; asks?: Record<string, number> }): void;
       card(value: { data: unknown; kept: unknown; revision: number }): void;
       push(channel: string, payload: unknown): void;
+      /** A replay's pushes, in order, handed over at once so the panel's reads run once for them all. */
+      pushes(list: { channel: string; payload: unknown }[]): void;
       resync(): void;
       textScale(value: number): void;
       pressMoved(): void;
@@ -353,6 +355,7 @@ window.phonePanel = {
     controller?.setState(viewState() as never);
   },
   push(channel, payload) { reads.push(channel, payload); },
+  pushes(list) { for (const { channel, payload } of list) reads.push(channel, payload); },
   resync() { reads.resync(); },
   // The device's Text Size changed while the panel shows: it redraws at it in place.
   textScale(value) { scale = textScale(value); sendScale(); },

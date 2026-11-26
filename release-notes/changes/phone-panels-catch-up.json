@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "phone-panels-catch-up",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "Panels on your iPhone or iPad no longer slow its catch-up",
+      "body": "When your iPhone or iPad comes back after being away, each panel it runs now hears everything it missed at once, once the catch-up is read, instead of one update at a time, so the panels no longer add to the wait. The phone also tells the computer where your first mate lives how long its catch-up took, which that computer keeps in its own log.",
+      "noPicture": "This changes how long a catch-up takes, not how any view looks.",
+      "noDocsSite": "No docs site page describes how the phone catches up or the computer's catch-up log.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

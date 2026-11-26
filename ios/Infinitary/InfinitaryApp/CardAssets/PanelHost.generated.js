@@ -134032,7 +134032,13 @@ ${FRAME_KEYBOARD_SCRIPT}
         changes: changesSchema
       }),
       invokeFrameSchema,
-      object({ t: literal("leave") })
+      object({ t: literal("leave") }),
+      /**
+       * A phone's catch-up showed (`CATCH_UP_SHOWN`): its replay was read, or
+       * a re-read's first reads were answered, `ms` after it sent its hello by
+       * its own clock. Sent once per connection.
+       */
+      object({ t: literal("shown"), ms: number().int().nonnegative() })
     ]),
     ...resultFrameSchemas
   ]);
@@ -138454,6 +138460,9 @@ svg { ${pinned} }
     },
     push(channel, payload) {
       reads.push(channel, payload);
+    },
+    pushes(list) {
+      for (const { channel, payload } of list) reads.push(channel, payload);
     },
     resync() {
       reads.resync();

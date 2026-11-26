@@ -252,14 +252,19 @@ public struct PhoneNotice: Equatable, Sendable {
     /// INF-6295 piece A: the computer also serves the app's own panels it shows (`app-panels-on-the-phone`); an older one
     /// answers only the captain's.
     public private(set) var servesAppPanels = false
-    /// Each push a panel's page hears (`PhonePanelRequest.pushes`), live or replayed, and each welcome that reloads what
-    /// the phone held, after which every panel read runs again.
-    @ObservationIgnored public var onPanelPush: ((String, PhoneJSON) -> Void)?
+    /// The pushes a panel's page hears (`PhonePanelRequest.pushes`), in order: each live one alone, and a welcome's
+    /// replayed ones together once the replay is read (INF-6817 piece 2), and each welcome that reloads what the phone
+    /// held, after which every panel read runs again.
+    @ObservationIgnored public var onPanelPush: (([PhonePanelPush]) -> Void)?
     @ObservationIgnored public var onPanelResync: (() -> Void)?
     /// INF-5531 piece 2: each crewmate card's page that reads live (`hearReads`) hears the same pushes and reloads.
     @ObservationIgnored private var readPages: [UUID: (push: (String, PhoneJSON) -> Void, resync: () -> Void)] = [:]
     @ObservationIgnored private var homeLeavesClosed = false
     @ObservationIgnored private var closedRowsWanted = false
+    /// INF-6817 piece 2: the computer's welcome lists `catch-up-shown`, so it hears how long this phone's catch-up took.
+    @ObservationIgnored private var homeHearsShown = false
+    /// When this connection's hello went, until the phone has said how long its catch-up took to show.
+    @ObservationIgnored private var helloSent: ContinuousClock.Instant?
     @ObservationIgnored private let phone: PhoneIdentity
     @ObservationIgnored private var loop: Task<Void, Never>?
     @ObservationIgnored private var socket: URLSessionWebSocketTask?
@@ -311,6 +316,8 @@ public struct PhoneNotice: Equatable, Sendable {
         var work = false
         var busy: Bool?
         var computers: [PhoneComputerPresence]?
+        /// The replayed pushes panels hear, handed to them in one call once the replay is read.
+        var panelPushes: [PhonePanelPush] = []
     }
     /// INF-3750's option A: the first reads In reach waits for, each small. The computer answers in the order asked,
     /// so these go before the task board, which on a large record outweighs them all and fills in once it arrives.
@@ -778,6 +785,7 @@ public struct PhoneNotice: Equatable, Sendable {
         if fold.work { workRevision += 1 }
         if let busy = fold.busy { firstmateBusy = busy; firstmateObserved = true }
         if let computers = fold.computers { self.computers = computers }
+        if !fold.panelPushes.isEmpty { onPanelPush?(fold.panelPushes) }
     }
 
     private func refold() {
@@ -1132,7 +1140,7 @@ public struct PhoneNotice: Equatable, Sendable {
             "as": "view", "viewFloor": PhoneContract.viewFloor, "system": "ios", "spellings": ["inf"],
             "changes": [PhoneContract.frameParts, PhoneContract.cardAnnotations, PhoneGoogleWords.signInReturn, PhoneContract.secretsAsk,
                         PhoneContract.cardAnswerSkipped, PhoneContract.cardDrafts, PhoneContract.settingsCurrent,
-                        PhoneContract.choiceAttachments, PhoneContract.cardAnsweredByCrewmate]]
+                        PhoneContract.choiceAttachments, PhoneContract.cardAnsweredByCrewmate, PhoneContract.catchUpShown]]
         if let epoch { hello["cursor"] = ["epoch": epoch, "seq": sequence] }
         // Its own version, as Settings shows it, which the computer's Devices lists.
         if let version = PhoneAppVersion.forHello(Bundle.main.infoDictionary) { hello["appVersion"] = version }
@@ -1174,6 +1182,7 @@ public struct PhoneNotice: Equatable, Sendable {
         }
         var reading = messages.makeAsyncIterator()
         do {
+            helloSent = .now
             try await send(hello, on: socket)
             while !Task.isCancelled {
                 // The stream ends without an error only when this task is cancelled.
@@ -1271,6 +1280,7 @@ public struct PhoneNotice: Equatable, Sendable {
             homeReadsSkips = (frame["changes"] as? [String] ?? []).contains(PhoneContract.cardAnswerSkipped)
             homeKeepsDrafts = (frame["changes"] as? [String] ?? []).contains(PhoneContract.cardDrafts)
             homeTakesChoiceAttachments = (frame["changes"] as? [String] ?? []).contains(PhoneContract.choiceAttachments)
+            homeHearsShown = (frame["changes"] as? [String] ?? []).contains(PhoneContract.catchUpShown)
             homeTakesPushes = (frame["changes"] as? [String] ?? []).contains(PhoneContract.phonePush)
             homeTakesWithdrawals = (frame["changes"] as? [String] ?? []).contains(PhoneContract.phonePushWithdraw)
             servesPanels = folded || (frame["changes"] as? [String] ?? []).contains(PhonePanelRequest.change)
@@ -1387,7 +1397,9 @@ public struct PhoneNotice: Equatable, Sendable {
             }
             if onPanelPush != nil || !readPages.isEmpty, servesPanels, let channel = frame["channel"] as? String,
                PhonePanelRequest.pushes.contains(channel), let payload = frame["payload"], let value = try? PhoneJSON.read(payload) {
-                onPanelPush?(channel, value)
+                // Each page's reads then run once for the whole replay rather than once a push.
+                if held != nil { held?.panelPushes.append(PhonePanelPush(channel: channel, payload: value)) }
+                else { onPanelPush?([PhonePanelPush(channel: channel, payload: value)]) }
                 for page in readPages.values { page.push(channel, value) }
             }
             if frame["channel"] as? String == "inf:secrets:changed" { onSecretsChanged?() }
@@ -1503,8 +1515,19 @@ public struct PhoneNotice: Equatable, Sendable {
 
     /// INF-4207 piece 2: the catch-up ends once every first read has answered and the replay's last push is shown.
     private func settleCatchUp() {
-        guard catchingUp != nil, contact == "in-reach", caughtUp, sequence >= welcomeSeq, held == nil else { return }
+        guard contact == "in-reach", caughtUp, sequence >= welcomeSeq, held == nil else { return }
+        tellShown()
         catchingUp = nil
+    }
+
+    /// INF-6817 piece 2: the computer's catch-up line hears how long this connection's catch-up took to show, by this
+    /// phone's clock, since the computer's own acknowledgment comes once the bytes arrive, before they are read.
+    private func tellShown() {
+        guard let sent = helloSent, let socket else { return }
+        helloSent = nil
+        guard homeHearsShown else { return }
+        let ms = Int(((ContinuousClock.now - sent) / .milliseconds(1)).rounded())
+        Task { try? await self.send(["t": "shown", "ms": max(0, ms)], on: socket) }
     }
 
     /// INF-2773: the route and its preference are worked out once per connection, in the step that turns it In reach,

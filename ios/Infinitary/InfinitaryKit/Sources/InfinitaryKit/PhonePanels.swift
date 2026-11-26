@@ -266,6 +266,13 @@ public enum PhoneAppPanelList {
     }
 }
 
+/// One of the computer's pushes a panel's page hears (`PhonePanelRequest.pushes`).
+public struct PhonePanelPush: Sendable, Equatable {
+    public let channel: String
+    public let payload: PhoneJSON
+    public init(channel: String, payload: PhoneJSON) { self.channel = channel; self.payload = payload }
+}
+
 /// One file the phone serves a panel's frame: its bytes and the `sha256-<base64>` pin its import map carries.
 public struct PhonePanelFile: Sendable, Equatable {
     public let data: Data

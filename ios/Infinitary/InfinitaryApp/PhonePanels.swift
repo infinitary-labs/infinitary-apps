@@ -55,7 +55,7 @@ import SwiftUI
 
     /// Reads the computer's panels and layout and hears their pushes, for as long as the computer serves them.
     func run() async {
-        session.onPanelPush = { [weak self] channel, payload in self?.heard(channel, payload) }
+        session.onPanelPush = { [weak self] pushes in self?.heard(pushes) }
         session.onPanelResync = { [weak self] in
             guard let self else { return }
             for host in pages { host.resync() }
@@ -76,7 +76,20 @@ import SwiftUI
               layout: prefs.map(PhonePanelLayout.of(preferences:)) ?? layout)
     }
 
-    private func heard(_ channel: String, _ payload: PhoneJSON) {
+    /// One live push, or a replay's pushes in order, which each page hears in one call.
+    private func heard(_ pushes: [PhonePanelPush]) {
+        for push in pushes { heardList(push.channel, push.payload) }
+        if pushes.count == 1, let push = pushes.first {
+            for host in pages { host.push(push.channel, push.payload) }
+            return
+        }
+        // Read into the page's form once for every page, rather than once a page.
+        let list = pushes.compactMap { push in (try? push.payload.foundation).map { ["channel": push.channel, "payload": $0] as [String: Any] } }
+        guard !list.isEmpty else { return }
+        for host in pages { host.pushes(list) }
+    }
+
+    private func heardList(_ channel: String, _ payload: PhoneJSON) {
         switch channel {
         case "inf:plugins:personal":
             let next = PhonePanelList.decode(payload)
@@ -87,7 +100,6 @@ import SwiftUI
         case "inf:shell:preferences": apply(panels: personal, app: app, layout: PhonePanelLayout.of(preferences: payload))
         default: break
         }
-        for host in pages { host.push(channel, payload) }
     }
 
     private func readApp() async {

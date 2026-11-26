@@ -1,5 +1,5 @@
 ---
-source: c71bc8e7d8a6ffd4
+source: 1ce217aea874fab1
 title: Integrationen
 description: Verbinde GitHub, GitLab, Bitbucket, Google und MCP-Server, damit dein erster Offizier und deine Crew sie erreichen, und lege fest, was jede Integration ohne Rückfrage tun darf.
 ---
@@ -129,7 +129,7 @@ Das Formular sagt, dass du die Anmeldung dort abschließen sollst, und nennt die
 Sobald du in deinem Browser fertig bist, öffnet sich die neue Zeile mit den Aktionen des Servers.
 Wenn du abbrichst, behält Infinitary keine Zeile und keinen Schlüssel.
 
-**Notion** und **Linear**, neben **MCP-Server**, verbinden diese beiden Dienste mit einem Klick.
+**Notion**, **Linear** und **Atlassian**, neben **MCP-Server**, verbinden diese drei Dienste mit einem Klick.
 
 Infinitary bewahrt die Anmeldung in [Geheimnisse](/de/secrets/) auf und erneuert sie von selbst.
 Wenn der Dienst sie beendet, sagt die Zeile **muss neu angemeldet werden**, mit **Erneut anmelden** in der Zeile und in ihrem Menü.

@@ -28,6 +28,15 @@ name: main
 # that waited while main moved cancels itself for the waiting one.
 # The newest passing run of this workflow is main's green mark
 # (docs/testing.md, "Main's desktop release check"); nothing else records it.
+#
+# A push that merged an outside contributor's pull request is left to the
+# next batch (INF-6982, the captain: "make outside PRs not trigger this at
+# all, and simply ride my next alpha cut from my batches"): the sort reads it,
+# and the run cancels itself, as a paused one does, before any check or alpha
+# starts. It ends cancelled rather than passed, so main's green mark stays on
+# a version a main check ran, and the next run's alpha wait reads no alpha
+# this run would have started. The next batch, combined on top of main,
+# checks the change, and its alpha ships it.
 
 # Phone-only and docs-only pushes do not start this workflow (INF-2492).
 # The shared font notice and generated contract are desktop inputs; see
@@ -90,6 +99,7 @@ jobs:
     outputs:
       kind: ${{ steps.sort.outputs.kind }}
       batch: ${{ steps.sort.outputs.batch }}
+      pull: ${{ steps.sort.outputs.pull }}
     steps:
       # GitHub can refuse a job's token for minutes, past actions/checkout's
       # own three tries in about 40 seconds, so every checkout of main's check
@@ -100,11 +110,12 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         continue-on-error: true
         with: &sort-checkout
-          # The sort, its reader of a batch pull request's own run, and the
-          # check files that run reads.
+          # The sort, its reader of a batch pull request's own run, the job
+          # names' reader, and the check files that run reads.
           sparse-checkout: |
             scripts/batch.mjs
             scripts/batch-pull.mjs
+            scripts/ci-job-names.mjs
             .github/
           sparse-checkout-cone-mode: false
       - name: Wait until GitHub takes the job's token
@@ -159,6 +170,7 @@ jobs:
             }
             core.setOutput('kind', sorted.kind);
             core.setOutput('batch', String(sorted.run ?? ''));
+            core.setOutput('pull', String(sorted.pull ?? ''));
   # A push whose files are a passed batch's. The alpha's proof follows its
   # name to the batch run (scripts/main-alpha-proof.mjs).
   covered:
@@ -170,12 +182,38 @@ jobs:
       - env:
           BATCH: ${{ needs.sort.outputs.batch }}
         run: echo "Batch run $BATCH swept exactly these files."
+  # A push that merged an outside pull request on a commit main's check
+  # accounted for (scripts/batch.mjs): the run stops itself, as alpha-wait.yml
+  # stops a paused one. The next sort reads this job's name to know the run
+  # left its push to the next batch.
+  outside:
+    needs: sort
+    if: needs.sort.outputs.kind == 'outside'
+    name: ${{ format('{0} · Left to the next batch (pull request {1})', (github.event_name != 'workflow_dispatch' && 'Main push' || 'Manual request'), needs.sort.outputs.pull) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      actions: write
+    steps:
+      - name: Leave this push to the next batch
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        env:
+          PULL: ${{ needs.sort.outputs.pull }}
+        with:
+          retries: 3
+          script: |
+            const pull = Number(process.env.PULL);
+            await core.summary.addHeading('Left to the next batch').addRaw(`This push merged pull request #${pull} from another copy of the project, so this check of ${context.sha} cancels itself and cuts no alpha. The next batch, combined on top of main, checks this change, and its alpha ships it.`).write();
+            await github.rest.actions.cancelWorkflowRun({...context.repo, run_id: context.runId});
+            // GitHub stops this job within moments; until it does, no check behind the sort starts.
+            await new Promise((done) => setTimeout(done, 10 * 60_000));
+            core.setFailed('GitHub had not cancelled this check after ten minutes.');
   # The full check's checks part: the Linux checks, and the Mac lanes with
   # only the journeys tagged MAC_ONLY_TAG. The rest of the journeys run at the
   # release (INF-2480).
   verify:
     needs: [alpha-wait, sort]
-    if: ${{ !cancelled() && needs.sort.outputs.kind != 'covered' }}
+    if: ${{ !cancelled() && needs.sort.outputs.kind != 'covered' && needs.sort.outputs.kind != 'outside' }}
     name: ${{ format('{0} · Desktop checks', (github.event_name != 'workflow_dispatch' && 'Main push' || 'Manual request')) }}
     uses: ./.github/workflows/verify.yml
     with:
@@ -191,7 +229,7 @@ jobs:
   # hosted Ubuntu; a covered push's batch ran them (batch-checks.yml).
   startup:
     needs: [alpha-wait, sort]
-    if: ${{ !cancelled() && needs.sort.outputs.kind != 'covered' }}
+    if: ${{ !cancelled() && needs.sort.outputs.kind != 'covered' && needs.sort.outputs.kind != 'outside' }}
     name: ${{ format('{0} · Linux startup', (github.event_name != 'workflow_dispatch' && 'Main push' || 'Manual request')) }}
     uses: ./.github/workflows/linux-startup.yml
     with:

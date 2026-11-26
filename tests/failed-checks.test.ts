@@ -91,6 +91,7 @@ function gitHub({
   runs = [forkCi] as { id: number; name: string; event: string }[],
   jobs = { [forkCi.id]: forkCiJobs } as Record<number, Job[]>,
   main = mainPassed,
+  newer = [] as Job[][],
   version = forkSha,
   statuses = REQUIRED.map((context) => ({ context, state: "success" })),
 } = {}) {
@@ -98,8 +99,16 @@ function gitHub({
   const comments: { id: number; issue: number; user: typeof bot; body: string }[] = [];
   let writes = 0;
   let mainNow = main;
-  const mainRun = { id: main[0]?.run_id ?? 0 };
-  const allJobs: Record<number, Job[]> = { ...jobs, [mainRun.id]: main };
+  const conclusionOf = (each: Job[]) =>
+    each.some((one) => one.conclusion === "failure") ? "failure" : "success";
+  const mainRun = { id: main[0]?.run_id ?? 0, conclusion: conclusionOf(main) };
+  // Cancelled runs GitHub lists ahead of main's run, newest first.
+  const cancelled = newer.map((each) => ({ id: each[0]?.run_id ?? 0, conclusion: "cancelled" }));
+  const allJobs: Record<number, Job[]> = {
+    ...jobs,
+    [mainRun.id]: main,
+    ...Object.fromEntries(newer.map((each) => [each[0]?.run_id ?? 0, each])),
+  };
   const github = {
     rest: {
       pulls: {
@@ -118,7 +127,7 @@ function gitHub({
           data: head_sha === version ? runs : [],
         }),
         listWorkflowRuns: async () => ({
-          data: { workflow_runs: mainNow.length ? [{ ...mainRun }] : [] },
+          data: { workflow_runs: [...cancelled, ...(mainNow.length ? [{ ...mainRun }] : [])] },
         }),
         listJobsForWorkflowRun: async ({ run_id }: { run_id: number }) => ({
           data: allJobs[run_id] ?? [],
@@ -173,6 +182,7 @@ function gitHub({
     setMain: (next: Job[]) => {
       mainNow = next;
       mainRun.id = next[0]?.run_id ?? 0;
+      mainRun.conclusion = conclusionOf(next);
       allJobs[mainRun.id] = next;
     },
   };
@@ -530,6 +540,37 @@ describe("the failed-check note", () => {
   // The captain's pick "Add a line saying main is failing too" on the review
   // of this change: main runs none of ci's own jobs, so they cannot be left
   // out by name.
+  // INF-6982, the captain: "make outside PRs not trigger this at all, and
+  // simply ride my next alpha cut from my batches". Main's run on an outside
+  // merge cancels itself, as a paused one does, and checks nothing.
+  it("reads main's newest run that was not cancelled, past one that left an outside merge to the next batch", async () => {
+    const left = [
+      job(45600000001, 139100000001, "success", "Main push · Compare with checked batches"),
+      job(
+        45600000001,
+        139100000002,
+        "cancelled",
+        "Main push · Left to the next batch (pull request 93)",
+      ),
+      job(
+        45600000001,
+        139100000003,
+        "cancelled",
+        "Main push · Alpha cut wait / Main push · Find the alpha cuts to wait for",
+      ),
+    ];
+    const api = gitHub({
+      runs: [forkContributors],
+      jobs: { [forkContributors.id]: forkContributorsJobs },
+      main: mainFailed,
+      newer: [left],
+    });
+    expect(await noteFailedChecks({ github: api.github, context: finished(), core: core() })).toBe(
+      "every failed check also fails on main",
+    );
+    expect(api.comments[0]?.body).toContain("also fail on `main` right now");
+  });
+
   it("says main is failing too whenever main's newest run has a failed job", async () => {
     const failing = gitHub({ main: mainFailed });
     await noteFailedChecks({ github: failing.github, context: finished(), core: core() });

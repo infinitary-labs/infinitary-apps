@@ -406,18 +406,23 @@ export class IdleLadder {
   /**
    * A wait on work nobody has started is the Firstmate's to start (FI3-671);
    * a wait on work underway, with nothing unstarted beside it, moves on its
-   * own: the sweep resumes it when that work closes (FI3-250).
+   * own: the sweep resumes it when that work closes (FI3-250). A wait whose
+   * unstarted work is all work the captain stopped waits on the captain
+   * (INF-6853's no-hold choice): starting it is theirs, so it is no wake
+   * asking the first mate to start it.
    */
   private waitWitnesses(
     record: TaskRecord,
-  ): Pick<Witnesses, "waitsOnUnstarted" | "waitsOnUnderway"> {
+  ): Pick<Witnesses, "waitsOnUnstarted" | "waitsOnUnderway" | "waitsOnStopped"> {
     const waits = this.awaited(record);
-    const unstarted = waits.some(
-      (task) => this.chainOf(task, new Set([record.id])).unstarted.length > 0,
-    );
+    const unstarted = this.unstartedWaits(record);
+    const stopped =
+      unstarted.length > 0 &&
+      unstarted.every((task) => this.host.tasks.starts.stoppedByCaptain(task));
     return {
-      waitsOnUnstarted: unstarted,
-      waitsOnUnderway: !unstarted && waits.length > 0,
+      waitsOnUnstarted: unstarted.length > 0 && !stopped,
+      waitsOnUnderway: unstarted.length === 0 && waits.length > 0,
+      ...(stopped ? { waitsOnStopped: true } : {}),
     };
   }
 
@@ -792,6 +797,7 @@ export class IdleLadder {
           // An approved change waiting in a line is not stalled (INF-4497 finding 2).
           witnesses.mergeInLine === true ||
           (witnesses.putOff !== undefined && !witnesses.waitsOnUnstarted) ||
+          witnesses.waitsOnStopped === true ||
           witnesses.finishedCardUp === true ||
           witnesses.finishedNoCard === true;
     if ((record.recoveryRung ?? 0) < 3 && held) return undefined;

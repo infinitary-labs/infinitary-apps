@@ -19,6 +19,7 @@ import { FIRSTMATE_USAGE_TASK_ID, UsageStore } from "../storage/usageStore";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
 import { HEARTBEAT_LINE, heartbeatBeat } from "./heartbeat";
+import { IdleLadder, type IdleLadderHost } from "./idleLadder";
 import { BROUGHT_RULE_REFUSAL, Scheduler } from "./scheduler";
 
 const MINUTE = 60_000;
@@ -94,7 +95,11 @@ function fixture(seat: string = CLAUDE_PROVIDER_ID) {
       if (event.type === "firstmate_note") notes.push(event.text);
     },
     now,
-    heartbeat: (at) => heartbeatBeat({ schedules, usage, tasks, inbox }, at),
+    heartbeat: (at) =>
+      heartbeatBeat(
+        { schedules, usage, tasks, inbox, waits: new IdleLadder({ tasks } as IdleLadderHost) },
+        at,
+      ),
   });
   /**
    * One first mate request ending now. Its default is the plan's median quiet

@@ -313,3 +313,30 @@ describe("a hold an app update ends (INF-5578 finding 4)", () => {
     expect(h.tasks.get(h.taskId)?.gate).toBeNull();
   });
 });
+
+// INF-6853: a wait on another task's end is a link alone, so a hold's reply
+// names the links already holding the task, and the first mate sees a hold
+// that would repeat one.
+describe("a hold's reply", () => {
+  const { stopped } = idleLadderHarness();
+
+  it("names each task a link already holds the held task on", async () => {
+    const harness = await stopped();
+    const release = seedTask(harness.tasks, {
+      id: "stable-release",
+      title: "Promote a stable that lists Windows",
+      status: "queued",
+      startPolicy: "on-request",
+    });
+    const update = firstmateUpdateTask(harness);
+    const hold = {
+      until: new Date(harness.idleSince + minutes(48 * 60)).toISOString(),
+      reason: "stable",
+    };
+    expect(await update({ task: harness.taskId, hold })).not.toContain("through a link");
+    harness.tasks.graph.link(release.id, harness.taskId, "blocks", "firstmate");
+    expect(await update({ task: harness.taskId, hold })).toContain(
+      `It also waits on ${release.key} "Promote a stable that lists Windows" through a link, whose close wakes it.`,
+    );
+  });
+});

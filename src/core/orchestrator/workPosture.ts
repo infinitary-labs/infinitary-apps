@@ -56,7 +56,12 @@ export function deriveWorkPosture(record: TaskRecord, gather: () => PostureFacts
     };
   if (facts.timedWait && Number.isFinite(record.gate?.until))
     return { state: "active", reason: "timed-wait" };
-  if (facts.decisionCardOpen || facts.captainGateOwed || facts.putOff === "word")
+  if (
+    facts.decisionCardOpen ||
+    facts.captainGateOwed ||
+    facts.putOff === "word" ||
+    facts.waitsOnStopped === true
+  )
     return { state: "idle", reason: "captain" };
   // A blocks edge holding its close, or a wait it declared on other work
   // (FI3-671, FI3-250): either way it waits on another task. A put-off an

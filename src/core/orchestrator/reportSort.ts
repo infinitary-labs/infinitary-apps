@@ -117,6 +117,7 @@ export type ReportSortRule =
   | "proof-unread"
   | "captain-card"
   | "put-off"
+  | "waits-stopped"
   | "finished"
   | "filed-followups"
   | "in-backlog"
@@ -274,6 +275,14 @@ export type Witnesses = {
    * into one steer on its lane.
    */
   waitsOnUnderway?: boolean;
+  /**
+   * The work only a start begins that the task waits on is all work the
+   * captain stopped (`TaskStarts.stoppedByCaptain`; INF-6853's no-hold
+   * choice): it waits on the captain, as for a put-off, and never also
+   * reads `waitsOnUnstarted`. Nobody nudges it and its report wakes no one;
+   * the Heartbeat's standing list names the wait instead.
+   */
+  waitsOnStopped?: boolean;
   /**
    * A delivery child (`TaskService.isDeliveryChild`, INF-1876) still has
    * work to run. The idle ladder alone reads it: an idle retained reader
@@ -443,6 +452,16 @@ export function sortReport(facts: ReportSortFacts): ReportSortResult {
       wake: false,
       reason:
         "the captain put off its card until a task closes, a time, an event or their word; an automation rule raises it again then.",
+    };
+  }
+  if (facts.waitsOnStopped && !facts.finished && !facts.filedFollowups) {
+    return {
+      rule: "waits-stopped",
+      verdict: "routine",
+      wake: false,
+      reason:
+        // i18n-exempt: the sort's record for the first mate and the replay scorer
+        "it waits only on work the captain stopped; starting that work is theirs, and the Heartbeat lists the wait.",
     };
   }
   if (facts.finished) {
@@ -618,6 +637,8 @@ export function idleTurn(witnesses: Witnesses): IdleTurn {
     witnesses.decisionCardOpen ||
     // A put-off card is the captain's to bring back (INF-3846 piece 3).
     (witnesses.putOff && !witnesses.waitsOnUnstarted) ||
+    // So is a wait on work the captain stopped (INF-6853's no-hold choice).
+    witnesses.waitsOnStopped === true ||
     witnesses.finishedCardUp ||
     witnesses.finishedNoCard
   )

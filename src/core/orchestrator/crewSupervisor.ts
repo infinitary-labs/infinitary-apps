@@ -1363,6 +1363,11 @@ export class CrewSupervisor {
    * a merge he clicked. The work stays where it is; the task's merge is
    * his again, past project autonomy, until he clicks a new completion card.
    */
+  /** The work a task waits on, as the idle ladder reads it, for the Heartbeat's standing list. */
+  get waits(): Pick<IdleLadder, "unstartedWaits" | "underwayWaits"> {
+    return this.ladder;
+  }
+
   withdrawMergeApproval(taskId: string): { ok: boolean; text: string } {
     const record = this.options.tasks.get(taskId);
     if (!record) throw new Error(`Unknown task "${taskId}".`);

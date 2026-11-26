@@ -1,5 +1,6 @@
 {
   "mergedAt": "{at} にマージ",
+  "mergedChangeDirectlyOn": "{place} が最初のマージリクエストを保留したため、{place} で {change} を直接マージしました",
   "mergedChangeNewerOn": "{place} で {change} をマージしました。承認後のバージョンへのプッシュも含まれています",
   "mergedChangeOn": "{place} で {change} をマージしました",
   "mergedChangeOnHost": "プロジェクトのホストで {change} をマージしました",

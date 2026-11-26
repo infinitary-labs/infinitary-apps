@@ -35,7 +35,9 @@ import {
   atDispatch,
   branchInProject,
   type ChangeMerge,
+  heldBy,
   hostQueued,
+  isRefusal,
   MERGE_RETRY_DELAYS_MS,
   type MergeAttempt,
   type MergeGuard,
@@ -50,6 +52,7 @@ import {
   stripAttempt,
   UNDECIDED_REREAD_MS,
 } from "./changeMerge";
+import { afterDirectTold, directlyLine, directlyTold, throughHold } from "./heldMergeGate";
 import { MERGE_CHECKS_HOLD_REASON, standingAuthorization } from "./mergeAuthorization";
 import { taskContributesUpstream } from "./workShape";
 
@@ -832,12 +835,20 @@ export class MergeReviews {
     };
     // The receipt names the version that merged: on a host whose merge names
     // no version, a push after the read may have gone in instead, and is told.
-    const merged = (sha?: string, head?: string): PrOutcome => {
+    let direct: { heldMs: number } | undefined;
+    // `confirmed` is the host's own answer to the direct merge; a read that
+    // finds the pull request merged after it left does not say who merged it.
+    // `refusal` is the host's own refusal of that merge, in its words.
+    const merged = (sha?: string, head?: string, confirmed = true, refusal?: string): PrOutcome => {
       const newer = otherMerged(candidate.headSha, head);
       const other = otherMergedFacts(forge.place, forge.label(change), head, candidate.headSha);
       return {
         ok: true,
-        text: `Merged ${forge.label(change)}${forge.place ? ` on ${forge.place}` : ""}.${other.told}`,
+        text: `Merged ${forge.label(change)}${forge.place ? ` on ${forge.place}` : ""}.${other.told}${direct ? (confirmed ? directlyTold(forge.place, direct.heldMs) : afterDirectTold(forge.place, refusal)) : ""}`,
+        ...(direct && confirmed && forge.place
+          ? directlyLine(forge.place, forge.label(change))
+          : {}),
+        ...(direct ? { mergedDirectly: true as const } : {}),
         ...other.line,
         receipt: this.storeReviewReceipt(
           taskId,
@@ -886,6 +897,8 @@ export class MergeReviews {
       }
       // The merge the project allows, read where it lives before anything is sent.
       const way = await wayToSend(forge, change);
+      const through = await throughHold(forge, guard, change, way);
+      if ("stopped" in through) return through.stopped;
       const leaving = atDispatch(
         forge,
         guard,
@@ -894,9 +907,13 @@ export class MergeReviews {
           dispatched = true;
         },
       );
-      const sent = leaving
-        ? await forge.putIn(change, candidate.headSha, way, leaving)
-        : await forge.putIn(change, candidate.headSha, way);
+      // Recorded as sent after the last look and before it leaves.
+      direct = through.direct?.();
+      const sent = through.direct
+        ? await through.direct.send(candidate.headSha)
+        : leaving
+          ? await forge.putIn(change, candidate.headSha, way, leaving)
+          : await forge.putIn(change, candidate.headSha, way);
       if (sent?.queued) return hostQueued(forge, change);
       return merged(sent?.sha, sent?.mergedHead);
     } catch (caught) {
@@ -911,10 +928,25 @@ export class MergeReviews {
       const sent = dispatched && !(caught instanceof ForgeError && caught.beforeSend);
       const after = sent ? await forge.pull?.(review.number).catch(() => undefined) : undefined;
       if (after?.merged && (after.headSha === candidate.headSha || forge.mergeNamesNoVersion))
-        return merged(after.mergedSha, after.headSha);
+        return merged(
+          after.mergedSha,
+          after.headSha,
+          false,
+          isRefusal(caught) ? message : undefined,
+        );
+      // The host's own verdict on the one direct merge: never sent again, and
+      // the refusal the first mate hears, never a wait on an outcome.
+      const directRefused = sent && direct !== undefined && isRefusal(caught);
+      const read = guard ? await this.merges.refusalStop(forge, guard, caught, message) : undefined;
       const stop = guard
-        ? ((await this.merges.refusalStop(forge, guard, caught, message)) ??
-          (sent ? "outcome" : isTransientForgeFailure(caught) ? "transient" : undefined))
+        ? ((directRefused && read === "computing" ? undefined : read) ??
+          (directRefused
+            ? undefined
+            : sent
+              ? "outcome"
+              : isTransientForgeFailure(caught)
+                ? "transient"
+                : undefined))
         : /Head branch was modified/i.test(message)
           ? "moved"
           : undefined;
@@ -926,7 +958,11 @@ export class MergeReviews {
         ...(caught instanceof ForgeMergeUnconfirmed && caught.mergeTask
           ? { mergeTask: caught.mergeTask }
           : {}),
-        ...(caught instanceof ForgeBaseMoved && (stop === undefined || stop === "computing")
+        ...(sent && heldBy(caught) ? { mergeHeld: true as const } : {}),
+        ...(directRefused ? { directRefused: true as const } : {}),
+        ...(caught instanceof ForgeBaseMoved &&
+        !direct &&
+        (stop === undefined || stop === "computing")
           ? { baseMoved: true }
           : {}),
       };

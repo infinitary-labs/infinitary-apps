@@ -1,5 +1,6 @@
 {
   "mergedAt": "Merged at {at}",
+  "mergedChangeDirectlyOn": "Merged {change} on {place} directly, after {place} held the first merge request",
   "mergedChangeNewerOn": "Merged {change} on {place}, with a push made after the approved version",
   "mergedChangeOn": "Merged {change} on {place}",
   "mergedChangeOnHost": "Merged {change} on the project's host",

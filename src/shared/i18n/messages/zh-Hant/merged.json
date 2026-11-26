@@ -1,5 +1,6 @@
 {
   "mergedAt": "已於 {at} 合併",
+  "mergedChangeDirectlyOn": "{place} 擱置了第一個合併請求，已在 {place} 直接合併 {change}",
   "mergedChangeNewerOn": "已在 {place} 合併 {change}，其中包含核准版本之後的推送",
   "mergedChangeOn": "已在 {place} 合併 {change}",
   "mergedChangeOnHost": "已在專案的主機上合併 {change}",

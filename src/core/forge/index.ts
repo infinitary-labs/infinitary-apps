@@ -69,6 +69,7 @@ export type {
   ForgeComment,
   ForgeFailure,
   ForgeLocation,
+  ForgeMergeRequest,
   ForgeOverall,
   ForgeProject,
   ForgePull,

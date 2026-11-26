@@ -1,5 +1,6 @@
 {
   "mergedAt": "Mesclada às {at}",
+  "mergedChangeDirectlyOn": "{change} mesclada diretamente no {place}, depois que o {place} reteve o primeiro pedido de mesclagem",
   "mergedChangeNewerOn": "{change} mesclada no {place}, com um envio feito depois da versão aprovada",
   "mergedChangeOn": "{change} mesclada no {place}",
   "mergedChangeOnHost": "{change} mesclada no host do projeto",

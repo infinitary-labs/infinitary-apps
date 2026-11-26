@@ -1529,6 +1529,7 @@
 "mergeSetInProject" = "مضبوط في إعدادات هذا المشروع.";
 "mergeWaitsForReview" = "ينتظر هذا الدمج إجابتك عن المراجعة:";
 "mergedAt" = "دُمج في %1$@";
+"mergedChangeDirectlyOn" = "دُمج %1$@ على %2$@ مباشرةً بعد أن علّق %2$@ طلب الدمج الأول";
 "mergedChangeNewerOn" = "دُمج %1$@ على %2$@ مع دفع أُجري بعد النسخة المعتمدة";
 "mergedChangeOn" = "دُمج %1$@ على %2$@";
 "mergedChangeOnHost" = "دُمج %1$@ على مستضيف المشروع";

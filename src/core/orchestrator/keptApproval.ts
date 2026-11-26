@@ -21,6 +21,8 @@ import {
   endedAuthorization,
   FAILED_BATCH_NOTE,
   type HostKindAt,
+  heldMergeOf,
+  heldRetryAfter,
   outstandingGuidance,
   putInFront,
   retryAfter,
@@ -721,6 +723,19 @@ export class KeptApproval {
       unattended,
       approvedAt: authorization.at,
       place: authorization.target,
+      hold: () => {
+        const now = standingAuthorization(this.host.tasks.get(taskId)?.delivery);
+        const held = now?.id === authorization.id ? heldMergeOf(now) : undefined;
+        if (!held || held.head !== head) return undefined;
+        const heldMs = this.host.now() - held.since;
+        return held.direct === "due"
+          ? {
+              heldMs,
+              dispatch: () =>
+                this.patchStanding(taskId, { heldMerge: { ...held, direct: "sent" } }),
+            }
+          : { heldMs };
+      },
       unresolved: () =>
         this.unresolvedSend(taskId, authorization.target, sent)
           ? // i18n-exempt: served in the merge answer, stays English
@@ -864,7 +879,29 @@ export class KeptApproval {
     const head = candidateHead(current);
     const changed = current.waiting?.on !== wait || current.waiting.head !== head;
     const retries = changed ? 0 : (current.retries ?? 0) + 1;
-    const retryAt = retryAfter(wait, retries, now);
+    // The host said it holds a merge request of this version: kept on the
+    // approval from the first time it said so, with the id once it names it,
+    // and marked when the host refused the one direct merge sent in its
+    // place or the branch's merge queue kept the app from sending one. The
+    // host's merge queue taking the version ends the hold.
+    const before = heldMergeOf(current);
+    const said = result.mergeHeld
+      ? {
+          ...(before ?? { head, since: now }),
+          ...(result.mergeTask ? { request: result.mergeTask } : {}),
+        }
+      : before;
+    const marked = result.directRefused
+      ? ("refused" as const)
+      : result.directWithheld
+        ? ("queue" as const)
+        : undefined;
+    const heldMerge =
+      wait === "host-queue" ? undefined : said && marked ? { ...said, direct: marked } : said;
+    // A held request is read again whatever the wait, so its end is seen.
+    const retryAt = heldMerge
+      ? heldRetryAfter(heldMerge, retries, now)
+      : retryAfter(wait, retries, now);
     // The host's own merge queue took this version, or was read to have
     // removed it: kept apart from the wait, which any later stop replaces.
     const handed =
@@ -881,6 +918,7 @@ export class KeptApproval {
         waiting: { on: wait, head, at: now },
         retries,
         retryAt,
+        heldMerge,
         ...(handed ? { handed } : {}),
         // Only the attempt this run recorded is spent by its answer: one
         // standing from before it is a merge still to read back.

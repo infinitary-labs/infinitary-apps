@@ -1,5 +1,6 @@
 {
   "mergedAt": "Se fusionó a las {at}",
+  "mergedChangeDirectlyOn": "Se fusionó {change} en {place} directamente, después de que {place} retuviera la primera solicitud de fusión",
   "mergedChangeNewerOn": "Se fusionó {change} en {place}, con un envío posterior a la versión aprobada",
   "mergedChangeOn": "Se fusionó {change} en {place}",
   "mergedChangeOnHost": "Se fusionó {change} en el sitio que aloja el proyecto",

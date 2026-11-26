@@ -331,6 +331,24 @@ export type MergeAuthorization = {
    */
   attempt?: { token: string; head: string; at: number; task?: string };
   /**
+   * The host said it holds a merge request of this pull request at `head`
+   * to run in the background (docs/forge.md, "A merge request GitHub
+   * holds"): `since` is when it first said so and `request` its own id for
+   * that request, when it named it. While it stays pending the request is
+   * read, and no merge is sent while the hold stands. `direct` is the one
+   * direct merge sent in its place once the hold passed the bound: `due`
+   * until it is sent, `sent` from just before it leaves, so an answer that
+   * never came is read back and never sent again, `refused` once the host
+   * refused it, and `queue` when the branch takes merges only through its
+   * merge queue, so none is sent.
+   */
+  heldMerge?: {
+    head: string;
+    since: number;
+    request?: string;
+    direct?: "due" | "sent" | "refused" | "queue";
+  };
+  /**
    * Merges sent under earlier approvals of the task's other pull requests,
    * or of this one, whose outcome was never read back, kept by pull request
    * through every approval that replaces them; a later approval of that pull

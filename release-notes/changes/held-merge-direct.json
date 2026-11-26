@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "held-merge-direct",
+      "kind": "fix",
+      "title": "An approved merge no longer waits forever on a merge request GitHub is holding",
+      "body": "When GitHub kept an earlier merge request of your pull request without finishing it, every new try was turned away and the pull request stayed open until you merged it yourself. The app now follows that request instead of sending it again. If GitHub still holds it after five minutes and the pull request is ready at the version you approved, the app merges it directly and Activity says so.",
+      "area": "projects",
+      "noPicture": "The merge happens on GitHub with no view of its own; the only change on screen is one Activity line.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

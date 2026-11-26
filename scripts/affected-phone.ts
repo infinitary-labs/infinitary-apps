@@ -63,6 +63,8 @@ const INPUTS = [
   "tests/helpers/phoneSecondHome.ts", "tests/helpers/phoneSecondHomeProcess.ts",
   // INF-5608's plan, piece 2: the cards-carried part's card and what reached the computer from its choice.
   "tests/helpers/phoneCarried.ts",
+  // INF-6865: the cards-revised-scroll part's long card, revised in place.
+  "tests/helpers/phoneRevisedCard.ts",
   // INF-6476: the test home's removal, which many parts start from and the weak-link part's removal check reads.
   "tests/helpers/phoneRemove.ts",
 ] as const;

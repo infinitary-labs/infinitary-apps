@@ -485,6 +485,23 @@ describe("runbooks over existing prompt and skill doors", () => {
     expect(off.crewSections({ ...code, kind: "review", care: "none" })).not.toContain(passage);
   });
   // Intent: INF-2435 and review INF-2557, a queue-pr crewmate drives its pull request green like direct-pr.
+  // Intent: INF-6845's piece 1, the captain's "focus on how to handle externally stored work
+  // items": a built-in runbook on by default whose crew section reaches only a side-effect task.
+  it("serves Outside work items on by default, its crew section only to a side-effect task", () => {
+    const { books, db } = fixture();
+    const guide = readFileSync(join(root, "outside-work-items/guide.md"), "utf8").trim();
+    const section = readFileSync(join(root, "outside-work-items/crew.md"), "utf8").trim();
+    expect(books.list().find((book) => book.id === "outside-work-items")?.enabled).toBe(true);
+    expect(books.firstmate().text).toContain(guide);
+    expect(books.crew({ ...code, kind: "unclear", sideEffect: true }).text).toContain(section);
+    expect(books.crew({ ...code, kind: "unclear", sideEffect: false }).text).not.toContain(section);
+    expect(books.crew({ ...code, kind: "unclear" }).text).not.toContain(section);
+    expect(books.crew({ ...code, sideEffect: false }).text).not.toContain(section);
+    books.set("outside-work-items", false);
+    const off = new Runbooks(root, new SettingsStore(db));
+    expect(off.firstmate().text).not.toContain(guide);
+    expect(off.crew({ ...code, kind: "unclear", sideEffect: true }).text).not.toContain(section);
+  });
   it("serves delivery judgment only to pull request crew, and its switch removes it", () => {
     const { books, db } = fixture();
     const passage = readFileSync(join(root, "delivery/crew.md"), "utf8").trim();

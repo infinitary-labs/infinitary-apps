@@ -125,7 +125,7 @@ An invalid personal folder supplies no guidance until repaired; the saved switch
 
 ## Typed crew reach
 
-A crew section's manifest selectors match only the kind, project or personal place, delivery, care, backend and project id already known at dispatch.
+A crew section's manifest selectors match only the kind, project or personal place, delivery, care, backend, project id and whether the task is a side-effect task (`sideEffect`, `shape.side_effect`, `docs/task-graph.md`) already known at dispatch.
 Each supplied selector must match; an omitted selector is unrestricted, and an empty selector matches nothing.
 The kinds selected by the testing runbook are data: plan, reproduce, implement, fix and chore on a project.
 Research, retrieval, review and the personal workspace receive none of that section.
@@ -176,6 +176,10 @@ While on, it serves its crew section to a crewmate whose change goes through a p
 `wakes` is a closed list the host can read (`RUNBOOK_WAKES`, `src/shared/pullComments.ts`); the host asks whether any enabled runbook names a wake (`Runbooks.wakes`), never which one, so a personal copy keeps it.
 A switch reaches only newly opened crew conversations, so the host sends the wake only to a crewmate whose conversation was served a section that asks for it (`Runbooks.crew`'s `wakes`, kept on the task as `servedWakes`).
 The crew section holds every judgment: how to sort a comment as a clear fix, a choice for the captain or nothing to do, what each author's relation allows, how to reply and sign it, and what it never does on GitHub.
+Outside work items starts on and is one switch for the whole app.
+An outside work item is an issue, ticket, request or report kept outside the app, where a project lives or in a tracker an integration reaches; the runbook covers one item's three moments and no triage of many.
+Its first-mate guide says when a task reading an item starts as an unsafe data reader, how to link work to an item with one side-effect task whose words name the item's address and whose waits name the work (filed with `create_task` `side_effect`, `blocked_by` and, where strangers write, `unsafe_data_reader`), and that the item hears the ending at the first release that ships the work, or at its merge where the project publishes no releases.
+Its crew section is served only to a side-effect task (`when: {sideEffect: [true]}`) and holds how its crewmate replies once and closes the item the tracker's own way, each write waiting for the captain's click unless they allowed it.
 Heartbeat starts off (`startsOff`) and is one switch for the whole app.
 Its manifest's `wakes` names `heartbeat` (`HEARTBEAT_WAKE`, `src/shared/heartbeat.ts`), and the host asks only whether an enabled runbook names it: while one does, the host keeps the heartbeat rule in Automation, and once none does it removes it (`docs/automation.md`, "The heartbeat").
 Its first-mate guide holds every judgment about a beat: what to do with each row marked new, the one heartbeat card, and the Found line that ends each beat, with no tool call when no row is new.

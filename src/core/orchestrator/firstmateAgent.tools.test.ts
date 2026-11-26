@@ -970,6 +970,53 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
     expect(await read()).toMatchObject({ side_effect: true });
   });
 
+  // INF-6845's piece 1: the first mate files, in one call, a waiting task that starts as a fenced
+  // reader, and create_task refuses the mark on anything but an answer, as spawn_crewmate does.
+  it("files a waiting task that starts as a reader in one call, refusing the mark on work that is not an answer", async () => {
+    const { agent, specs, tasks, repos } = setup();
+    await agent.converse("fix the issue a stranger opened and tell it once the fix ships");
+    const tools = piToolsOf(specs[0]?.tools ?? []) as unknown as GraphTool[];
+    const text = async (name: string, params: Record<string, unknown>) =>
+      (
+        await tools
+          .find((tool) => tool.name === name)!
+          .execute("c", params, undefined, undefined, {})
+      ).content[0]?.text ?? "";
+    await text("create_task", { title: "Fix", goal: "Fix", user_words: "fix it" });
+    const fix = tasks.byKey("SCR-1")!;
+    const waiting = {
+      title: "Tell the issue how the fix ended",
+      goal: "Reply on https://github.com/example/nimbus-api/issues/7 and close it once the fix ships",
+      user_words: "fix the issue a stranger opened and tell it once the fix ships",
+      blocked_by: [fix.key],
+      side_effect: true,
+      unsafe_data_reader: true,
+    };
+    const refusal =
+      "Nothing was filed. An unsafe data reader only answers in words: give it the read-only constraint, and neither operation, in_folder nor result_schema.";
+    expect(await text("create_task", waiting)).toBe(refusal);
+    const personal = repos.ensurePersonal(scratchDir("infinitary-personal-"));
+    expect(
+      await text("create_task", {
+        ...waiting,
+        constraints: [{ kind: "read-only" }],
+        repo_id: personal.id,
+      }),
+    ).toBe(
+      "Nothing was filed. An unsafe data reader never runs in the personal workspace, whose files are the captain's own: name another project as repo_id, or none for an empty folder of its own.",
+    );
+    expect(tasks.list().map((record) => record.title)).toEqual(["Fix"]);
+
+    await text("create_task", { ...waiting, constraints: [{ kind: "read-only" }] });
+    const filed = tasks.byKey("SCR-2")!;
+    expect(filed.shape).toMatchObject({
+      side_effect: true,
+      unsafe_data_reader: true,
+      deliverable: "answer",
+    });
+    expect(tasks.graph.blockers(filed.id).map((record) => record.key)).toEqual([fix.key]);
+  });
+
   // The review's finding: adding an already approved wait the task needs merged, with its
   // merge need in the same update_task call, leaves queued work unstarted until that merge.
   it("keeps queued work unstarted when one call adds an approved wait it needs merged", async () => {

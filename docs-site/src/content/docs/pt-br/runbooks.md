@@ -1,5 +1,5 @@
 ---
-source: b17e14176dad1387
+source: 24d50cb6fd4f7420
 title: Manuais
 description: As orientações escritas que seu imediato e sua tripulação seguem em cada tipo de trabalho, e como ativá-las ou desativá-las, lê-las e criar ou adicionar as suas.
 ---
@@ -56,6 +56,9 @@ Quatro começam desativados até você ativá-los: **Batched pull requests**, **
   Veja [Projetos](/pt-br/projects/#how-changes-reach-your-project).
 - **Pull request comments**: um tripulante responde aos comentários na solicitação de pull dele até ela ser mesclada.
   Ele faz sozinho as correções claras e traz as que não estão claras para você, como uma escolha.
+- **Outside work items**: quando um trabalho responde a uma issue, um ticket ou um pedido guardado fora do Infinitary, uma tarefa própria responde a esse item e o fecha quando o trabalho é lançado.
+  Cada resposta ou fechamento espera o seu clique, a menos que você tenha permitido.
+  Veja [Um passo que espera o trabalho](/pt-br/tasks-and-crewmates/#a-step-that-waits-on-work).
 - **Heartbeat**: quando um trabalho começa a esperar sem nada que o mencione, ou depois de um longo período de calma, seu imediato revisa o trabalho em espera, faz ele avançar ou pergunta a você uma vez.
   Ele traz uma automação que você pode pausar em Ajustes → **Automação**, e desativar o manual a remove.
 - **Computer cleanup**: uma análise que só lê, depois que você concorda, e um cartão para escolher quais sobras parar.

@@ -1526,7 +1526,7 @@ A lost view can therefore ask for those until the captain removes it here, and i
 
 The captain may click and write from more than one window: the one on the computer where the first mate lives, a computer that controls it, or a phone.
 Each request says which, as a typed fact the connection proved: the window on the first mate's own computer asks as the captain with no device, and a paired view asks naming its device (`docs/connection.md`, "Requests").
-`CaptainPlaces` (`src/core/devices/captainPlaces.ts`) reads it for the captain's own input - a message, a card's choice, close or Got it, a reply under a card, and a line in the Crewmate tab (`CAPTAIN_INPUT_CHANNELS`) - and keeps the latest, in memory only, with its time.
+`CaptainPlaces` (`src/core/devices/captainPlaces.ts`) reads it for the captain's own input - a message, a Suggest tags press, a card's choice, close or Got it, a reply under a card, and a line in the Crewmate tab (`CAPTAIN_INPUT_CHANNELS`) - and keeps the latest, in memory only, with its time.
 
 A crewmate hears it in three places, and only while another computer or phone is paired: with one computer there is nowhere else to be.
 

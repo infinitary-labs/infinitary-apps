@@ -1,5 +1,5 @@
 ---
-source: 045e7219ddbc0b63
+source: 668341763c6348cb
 title: Projets
 description: Comment ajouter un projet à Infinitary, y réunir plusieurs dépôts, lui donner des étiquettes, concentrer la fenêtre sur un seul projet, choisir comment ses changements sont fusionnés et le retirer.
 ---
@@ -104,6 +104,7 @@ Les étiquettes vous aident à retrouver et à grouper des tâches, et rien d’
 
 La page d’un projet liste ses étiquettes sous **Étiquettes**, chacune avec le nombre de tâches qui la portent.
 
+- **Suggérer des étiquettes**, affiché tant qu’un projet n’a pas d’étiquette, demande à votre second de lire les tâches du projet et de répondre par une carte d’étiquettes suggérées, que vous modifiez en répondant.
 - **Ajouter une étiquette** demande le nom de l’étiquette et quelles tâches y entrent.
 - **Modifier** change le nom ou la description d’une étiquette.
   Une étiquette renommée reste sur les tâches qui la portent.

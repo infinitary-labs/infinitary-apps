@@ -83,6 +83,10 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, ActionExceptio
   ],
   "inf:converse": ["not-a-setting", "Conversation, not an app setting"],
   "inf:conversation:take-back": ["not-a-setting", "Conversation, not an app setting"],
+  "inf:projects:suggest-tags": [
+    "not-a-setting",
+    "Conversation: the captain's Suggest tags press asks the first mate for tags, not an app setting",
+  ],
   "inf:repos:offer-folder": [
     "consent",
     // i18n-exempt: an inventory reason the channel parity test reads, never shown

@@ -3668,6 +3668,14 @@
 "settingsProjectsTagsRemoveNamed" = "移除 %1$@";
 "settingsProjectsTagsRemoveQuestionNone" = "移除 %1$@？沒有任務帶有它。";
 "settingsProjectsTagsSave" = "儲存";
+"settingsProjectsTagsSuggest" = "建議標籤";
+"settingsProjectsTagsSuggestHint" = "「建議標籤」會請你的大副提出建議，大副會在卡片上回答。";
+"settingsProjectsTagsSuggestNotSent" = "無法請你的大副提出建議。請再試一次。";
+"settingsProjectsTagsSuggestRemoved" = "%1$@ 已被移除，因此沒有傳送任何內容。";
+"settingsProjectsTagsSuggestStarting" = "Infinitary 仍在啟動。請稍後再試。";
+"settingsProjectsTagsSuggestTagged" = "%1$@ 現在已有標籤，因此沒有傳送任何內容。";
+"settingsProjectsTagsSuggestUnknown" = "這個專案已不存在，因此沒有傳送任何內容。";
+"settingsProjectsTagsSuggestWords" = "為 %1$@ 建議標籤";
 "settingsProjectsTasksLabel" = "任務";
 "settingsProjectsWorkspace" = "工作區";
 "settingsProjectsWorkspaceDescription" = "就地建置：沒有工作副本，也沒有 pull request。";

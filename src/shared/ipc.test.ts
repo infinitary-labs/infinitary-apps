@@ -560,6 +560,7 @@ describe("ipc contract", () => {
       "inf:plugins:retry",
       "inf:plugins:update",
       "inf:projects:list",
+      "inf:projects:suggest-tags",
       "inf:projects:tag-check",
       "inf:projects:tag-checks",
       "inf:quota:models",

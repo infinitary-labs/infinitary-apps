@@ -6,8 +6,8 @@ import type { CoreInvokeChannel } from "@shared/ipc";
 import { askingView } from "../askedFromAView";
 
 /**
- * The captain's own input: a message, a card's choice, close or Got it, a
- * reply under a card, and a line in the Crewmate tab. Each is kept as the
+ * The captain's own input: a message, a Suggest tags press, a card's choice,
+ * close or Got it, a reply under a card, and a line in the Crewmate tab. Each is kept as the
  * captain's latest input, with the computer or phone it came from.
  */
 const CAPTAIN_INPUT_CHANNELS = new Set<CoreInvokeChannel>([
@@ -16,6 +16,7 @@ const CAPTAIN_INPUT_CHANNELS = new Set<CoreInvokeChannel>([
   "inf:cards:close",
   "inf:cards:note-done",
   "inf:cards:reply",
+  "inf:projects:suggest-tags",
   "inf:task:steer",
 ]);
 

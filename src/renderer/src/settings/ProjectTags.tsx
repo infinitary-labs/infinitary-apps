@@ -1,6 +1,9 @@
 import * as m from "@shared/i18n/messages.generated";
+import type { TagSuggestionRefusal } from "@shared/tagSuggestion";
 import { type ProjectTagChange, type ProjectTagView, sameTagName } from "@shared/tags";
 import { type KeyboardEvent, useEffect, useRef, useState } from "react";
+import { mainMessageRefusal } from "../app/composer";
+import { useShellStore } from "../app/store";
 import { useProjectTags } from "../app/useProjectTags";
 import { Button, Input } from "../design";
 import { ProjectTagCheck } from "./ProjectTagCheck";
@@ -14,7 +17,8 @@ import { SettingError } from "./settingRows";
  * names how many tasks lose the tag, with Cancel focused so Enter never
  * removes. Escape inside a form or a question puts the row back, and goes
  * no further, so the page stays open. Under the rows, Check existing tasks
- * (`ProjectTagCheck`) offers to check a tag just added or newly described.
+ * (`ProjectTagCheck`) offers to check a tag just added or newly described;
+ * with no tags, Suggest tags leads Add a tag instead (`useSuggestTags`).
  */
 
 type Phase =
@@ -32,9 +36,17 @@ const ROW_STYLE = {
   flexWrap: "wrap",
 } as const;
 
-export function ProjectTags({ projectId }: { projectId: string }) {
+export function ProjectTags({
+  projectId,
+  projectName,
+}: {
+  projectId: string;
+  projectName: string;
+}) {
   const tags = useProjectTags(projectId);
   const [phase, setPhase] = useState<Phase>({ kind: "rest" });
+  const suggest = useSuggestTags(projectId, projectName);
+  const suggesting = tags.length === 0 && phase.kind === "rest";
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   // The tag just added or newly described, which Check existing tasks offers to ask alone.
@@ -228,19 +240,44 @@ export function ProjectTags({ projectId }: { projectId: string }) {
           }
         />
       ) : (
-        <div style={ROW_STYLE}>
-          <Button
-            variant="secondary"
-            size="sm"
-            data-tag-add
-            disabled={phase.kind !== "rest"}
-            onClick={() => {
-              setError(null);
-              setPhase({ kind: "editing", tagId: null });
-            }}
-          >
-            {m.settingsProjectsTagsAdd()}
-          </Button>
+        <div style={suggesting ? { ...ROW_STYLE, justifyContent: "flex-start" } : ROW_STYLE}>
+          <span style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {suggesting && (
+              <Button
+                variant="primary"
+                size="sm"
+                data-tag-suggest
+                pending={suggest.busy}
+                disabled={suggest.held !== null}
+                onClick={() => void suggest.press()}
+              >
+                {m.settingsProjectsTagsSuggest()}
+              </Button>
+            )}
+            <Button
+              variant="secondary"
+              size="sm"
+              data-tag-add
+              disabled={phase.kind !== "rest"}
+              onClick={() => {
+                setError(null);
+                setPhase({ kind: "editing", tagId: null });
+              }}
+            >
+              {m.settingsProjectsTagsAdd()}
+            </Button>
+          </span>
+          {suggesting && (
+            <div style={{ flexBasis: "100%" }}>
+              <div
+                data-tag-suggest-line
+                style={{ fontSize: "var(--text-xs)", color: "var(--fg-3)" }}
+              >
+                {suggest.held ?? m.settingsProjectsTagsSuggestHint()}
+              </div>
+              <SettingError error={suggest.refusal} surface="project-tags-suggest" />
+            </div>
+          )}
         </div>
       )}
       {tags.length > 0 && (
@@ -253,6 +290,45 @@ export function ProjectTags({ projectId }: { projectId: string }) {
       )}
     </div>
   );
+}
+
+/**
+ * Suggest tags (docs/task-tags.md, "Suggesting tags"): while a project has
+ * no tags, one press asks the first mate for some. The home sends the
+ * person's words as their own message, with a note the press adds, and the
+ * window goes home, where the first mate answers on a card. It is held
+ * while the main message is, and the quiet line under it says why.
+ */
+function useSuggestTags(projectId: string, projectName: string) {
+  const held = useShellStore(mainMessageRefusal);
+  const [busy, setBusy] = useState(false);
+  const [refusal, setRefusal] = useState<string | null>(null);
+  const press = async () => {
+    if (held !== null || busy) return;
+    setBusy(true);
+    setRefusal(null);
+    try {
+      const result = await window.infinitary.projects.suggestTags({
+        projectId,
+        words: m.settingsProjectsTagsSuggestWords({ project: projectName }),
+      });
+      if (result.ok) useShellStore.getState().focusMainMessage();
+      else setRefusal(suggestRefusalWords(result.refused, projectName));
+    } catch {
+      // An older home answers an unknown request; nothing was sent either way.
+      setRefusal(m.settingsProjectsTagsSuggestNotSent());
+    } finally {
+      setBusy(false);
+    }
+  };
+  return { held, busy, refusal, press };
+}
+
+function suggestRefusalWords(refused: TagSuggestionRefusal, project: string): string {
+  if (refused === "removed") return m.settingsProjectsTagsSuggestRemoved({ project });
+  if (refused === "tagged") return m.settingsProjectsTagsSuggestTagged({ project });
+  if (refused === "starting") return m.settingsProjectsTagsSuggestStarting();
+  return m.settingsProjectsTagsSuggestUnknown();
 }
 
 /**

@@ -218,7 +218,7 @@ export function ProjectPage({
             <>
               <GroupLabel>{m.settingsProjectsTagsLabel()}</GroupLabel>
               <Box>
-                <ProjectTags projectId={project.id} />
+                <ProjectTags projectId={project.id} projectName={project.name} />
               </Box>
             </>
           )}

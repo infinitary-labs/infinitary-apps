@@ -1,5 +1,5 @@
 ---
-source: d2c121d3a9fe9728
+source: c51b6ca36743cf77
 title: Projekte
 description: Wie du ein Projekt zu Infinitary hinzufügst, mehrere Repositorys in einem zusammenfasst, ihm Tags gibst, das Fenster auf eines konzentrierst, wählst, wie seine Änderungen zusammengeführt werden, und es entfernst.
 ---
@@ -136,6 +136,10 @@ Solange ein Projekt im Fokus ist:
 - Eine kurze Zeile neben der Auswahl sagt, wie viele Aufgaben anderswo auf dich warten, etwa „2 warten woanders“.
 - Dein erster Offizier erfährt die Auswahl mit jeder Nachricht, die du sendest.
   Solange du kein anderes Projekt nennst, legt er neue Arbeit in diesem Projekt an, und seine Antworten und Aktionen über viele Aufgaben betreffen nur dieses Projekt und sagen, was sie ausgelassen haben.
+
+Um zu sehen, wo die Arbeit eines Projekts läuft, ohne die Ansicht darauf zu beschränken, zeig auf ein Crewmitglied in der Mitte des Fensters oder tipp es auf deinem Telefon an.
+Solange seine Übersicht offen ist, leuchtet jedes Crewmitglied eines anderen Projekts nur noch mit einem Viertel seines Lichts, auf jedem Computer, und niemand bewegt sich.
+Schließ die Übersicht, und das Licht kehrt zurück.
 
 Drück auf das **×** neben der Auswahl (**Alle Projekte anzeigen**) oder wähl **Alle Projekte** in der Reihe, um wieder alles zu sehen.
 Infinitary merkt sich deinen Fokus, wenn du es neu startest.

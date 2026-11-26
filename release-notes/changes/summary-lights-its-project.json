@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "summary-lights-its-project",
+      "kind": "improvement",
+      "title": "A crewmate's summary lights its project on every computer",
+      "body": "While a crewmate's summary is open, every crewmate of another project dims to a quarter of its light, on this computer and your other computers, and nobody moves. You can see where one project's work runs without changing the window's focus. It works on your iPhone and iPad too, when you tap a crewmate or select one with Browse crew. Close the summary and the light goes back.",
+      "area": "crewmates",
+      "picture": {
+        "dark": "summary-lights-its-project-dark.webp",
+        "light": "summary-lights-its-project-light.webp",
+        "alt": "A shop task's summary open on the stage, the shop crew lit on this computer and on Studio Mac 1, and the website crew dimmed on both"
+      },
+      "docsSite": ["projects"],
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -27,6 +27,8 @@ final class PhoneSceneRenderer: NSObject, @unchecked Sendable {
         var selection: String?
         /// The crewmate whose summary is open, by task and computer, which wears the desktop's corner brackets.
         var bracketed: (task: String, computer: String)?
+        /// The project in light (`PhoneFocusLight`): every other project's crew keep a quarter of their light. Nil lights all.
+        var lit: String?
         /// Names the drawing for the DEBUG frame sample (`characterEvidenceSource`).
         var source = ""
     }
@@ -52,6 +54,11 @@ final class PhoneSceneRenderer: NSObject, @unchecked Sendable {
     private var now = 0.0
     private var last: Double?
     private var rate: Float?
+    /// Each crewmate's light as it eases toward the lit project (`PhoneFocusLight`), and when it last moved, on the
+    /// display's clock: the light eases in real time, even while an open summary holds the scene's clock.
+    private var lights: [String: Double] = [:]
+    private var lightAt: Double?
+    private var lightMoving = false
     private let cache = CharacterPainter.Cache()
     /// Built on the render thread at its first frame, since compiling the shaders takes a moment the main thread should not wait.
     private var gpu: ScenePenGPU?
@@ -173,9 +180,13 @@ final class PhoneSceneRenderer: NSObject, @unchecked Sendable {
             if let last { now += max(0, link.timestamp - last) }
             last = link.timestamp
         } else {
-            last = nil; link.isPaused = true
+            last = nil
         }
-        draw(input, pan: pan, size: size, scale: scale, into: layer)
+        let lightElapsed = lightAt.map { max(0, link.timestamp - $0) } ?? 0
+        lightAt = link.timestamp
+        draw(input, pan: pan, size: size, scale: scale, lightElapsed: lightElapsed, into: layer)
+        // A stopped clock draws on only while the light still eases.
+        if !input.running && !lightMoving { link.isPaused = true; lightAt = nil }
     }
 
     private func pace(_ link: CADisplayLink) {
@@ -187,7 +198,7 @@ final class PhoneSceneRenderer: NSObject, @unchecked Sendable {
         link.preferredFrameRateRange = PhoneSceneRate.range(lowPower: lowPower, screen: screen)
     }
 
-    private func draw(_ input: Input, pan: CGPoint, size: CGSize, scale: CGFloat, into layer: CAMetalLayer) {
+    private func draw(_ input: Input, pan: CGPoint, size: CGSize, scale: CGFloat, lightElapsed: Double, into layer: CAMetalLayer) {
         let width = Int((size.width * scale).rounded(.up)), height = Int((size.height * scale).rounded(.up))
         guard width > 0, height > 0, let queue, let gpu else { return }
         if layer.drawableSize != CGSize(width: width, height: height) {
@@ -199,7 +210,7 @@ final class PhoneSceneRenderer: NSObject, @unchecked Sendable {
         batch.reset(width: width, height: height, scale: scale)
         var pen = ScenePen(batch)
         pen.translateBy(x: input.offset.width - pan.x, y: input.offset.height - pan.y)
-        paint(input, in: &pen)
+        paint(input, lightElapsed: lightElapsed, in: &pen)
         inFlight.wait()
         guard let drawable = layer.nextDrawable(), let commands = queue.makeCommandBuffer() else { inFlight.signal(); return }
         next = (next + 1) % slots.count
@@ -210,7 +221,7 @@ final class PhoneSceneRenderer: NSObject, @unchecked Sendable {
     }
 
     /// The scene as the Canvas drew it: the warp's backdrop and the supernova's blast, the crew, the first mate, then the selection and brackets.
-    func paint(_ input: Input, in pen: inout ScenePen) {
+    func paint(_ input: Input, lightElapsed: Double = 0, in pen: inout ScenePen) {
         #if DEBUG
         let started = ProcessInfo.processInfo.systemUptime
         #endif
@@ -218,8 +229,9 @@ final class PhoneSceneRenderer: NSObject, @unchecked Sendable {
         let pose = still ? CharacterPose.still(input.state, folding: input.fold.folding, at: 0)
             : character.advance(to: now, state: input.state, fold: input.fold)
         // A warp takes the home crew along (CharacterWarp), as the first mate's 280-point drawing plays it.
-        let frame = crew.frame(roster: roster, now: now, settled: still, warp: CharacterWarp.frame(pose, coreR: 280 * 0.27),
-                               supernova: CharacterSupernova.frame(pose, coreR: 280 * 0.27))
+        let frame = lit(crew.frame(roster: roster, now: now, settled: still, warp: CharacterWarp.frame(pose, coreR: 280 * 0.27),
+                                   supernova: CharacterSupernova.frame(pose, coreR: 280 * 0.27)),
+                        project: input.lit, elapsed: lightElapsed, duration: still ? 0 : PhoneTheme.surfaceSeconds)
         let palette = input.palette
         // A warp's wormhole and stars lie behind every crewmate and the first mate.
         if let warp = crew.warp {
@@ -239,6 +251,20 @@ final class PhoneSceneRenderer: NSObject, @unchecked Sendable {
         // The scene scope excludes the nested first mate's separate character reading.
         CharacterFrameMetrics.shared.record(start: started, source: input.source, mode: pose.mode.rawValue, heat: pose.heat, rotation: pose.a, drawing: .scene)
         #endif
+    }
+}
+
+extension PhoneSceneRenderer {
+    /// The frame with each crewmate's light eased toward the lit project and folded into its alpha; nothing moves.
+    fileprivate func lit(_ frame: PhoneSceneMotion.Frame, project: String?, elapsed: Double, duration: Double) -> PhoneSceneMotion.Frame {
+        lightMoving = PhoneFocusLight.step(frame.glyphs.map { ($0.task.id, $0.task.projectId) }, lit: project, state: &lights,
+                                           elapsed: elapsed, duration: duration)
+        guard lights.values.contains(where: { $0 != 1 }) else { return frame }
+        var glyphs = frame.glyphs
+        for i in glyphs.indices { glyphs[i].alpha *= lights[glyphs[i].task.id] ?? 1 }
+        var drawn = PhoneSceneMotion.Frame(glyphs: glyphs, marks: frame.marks, packets: frame.packets, links: frame.links)
+        drawn.starJoins = frame.starJoins
+        return drawn
     }
 }
 
@@ -284,6 +310,7 @@ struct PhoneSceneBackdrop {
     let offset: CGSize
     let selection: String?
     let bracketed: (task: String, computer: String)?
+    var lit: String? = nil
 
     struct Key: PreferenceKey {
         static let defaultValue: PhoneSceneBackdrop? = nil
@@ -302,7 +329,7 @@ extension View {
                     PhoneSceneSurface(renderer: backdrop.renderer, roster: backdrop.roster, state: backdrop.state, fold: backdrop.fold,
                                       still: backdrop.still, running: backdrop.running,
                                       offset: CGSize(width: backdrop.offset.width + stage.minX, height: backdrop.offset.height + stage.minY),
-                                      selection: backdrop.selection, bracketed: backdrop.bracketed)
+                                      selection: backdrop.selection, bracketed: backdrop.bracketed, lit: backdrop.lit)
                         // One surface per renderer: a new scene attaches its own drawing rather than borrowing the last one's.
                         .id(ObjectIdentifier(backdrop.renderer))
                 }
@@ -323,6 +350,7 @@ struct PhoneSceneSurface: UIViewRepresentable {
     var offset: CGSize = .zero
     var selection: String?
     var bracketed: (task: String, computer: String)?
+    var lit: String?
 
     func makeUIView(context: Context) -> PhoneSceneSurfaceView {
         let view = PhoneSceneSurfaceView()
@@ -338,7 +366,7 @@ struct PhoneSceneSurface: UIViewRepresentable {
         let source = ""
         #endif
         renderer.update(.init(roster: roster, state: state, fold: fold, still: still, running: running, offset: offset,
-                              palette: CharacterPainter.Palette(context.environment), selection: selection, bracketed: bracketed, source: source))
+                              palette: CharacterPainter.Palette(context.environment), selection: selection, bracketed: bracketed, lit: lit, source: source))
     }
 
     static func dismantleUIView(_ view: PhoneSceneSurfaceView, coordinator: ()) {

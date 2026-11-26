@@ -12,6 +12,7 @@ enum PhoneTheme {
     static let cardRadius: CGFloat = 16
     static let surfaceMove = Animation.timingCurve(0.32, 0.72, 0, 1, duration: 0.36)
     static let glide: (Double, Double, Double, Double) = (0.32, 0.72, 0, 1)
+    static let surfaceSeconds: Double = 0.36
     static let pageSeconds: Double = 0.3
     static let fadeSeconds: Double = 0.16
     static let background = Color(uiColor: UIColor { traits in

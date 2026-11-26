@@ -409,6 +409,7 @@
         "!src/core/orchestrator/firstmateAgent.tools.test.ts",
         "!src/core/orchestrator/firstmateAgent.turns.test.ts",
         "!src/core/orchestrator/changeChecks.test.ts",
+        "!src/core/orchestrator/changeChecks.watch.test.ts",
         "!src/core/orchestrator/changeCutover.test.ts",
         "!src/core/orchestrator/changeMerge.test.ts",
         "!src/core/orchestrator/changePublication.test.ts",

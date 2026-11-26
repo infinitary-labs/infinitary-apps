@@ -44,4 +44,30 @@ describe("implausibleReport", () => {
     expect(implausibleReport(report)).toBeUndefined();
     expect(implausibleReport("Готово, تم, and done")).toBeUndefined();
   });
+
+  it("accepts Japanese prose whose katakana words carry the long-vowel mark", () => {
+    // Unicode files ー (U+30FC) under no script of its own, so these words once read as katakana
+    // mixed with another writing system and the report was refused.
+    expect(
+      implausibleReport(
+        "コンピューターでクルーの作業を確認しました。サーバーとユーザーの設定のテストが通り、PRを開きました。",
+      ),
+    ).toBeUndefined();
+    expect(
+      implausibleReport(
+        "Two messages use クルー for crew, and nine spell コンピュータ where the glossary says コンピューター.",
+      ),
+    ).toBeUndefined();
+    // Halfwidth katakana: the prolonged mark ｰ and the sound mark ﾟ are script-less too.
+    expect(implausibleReport("ｺﾝﾋﾟｭｰﾀｰの設定を確認しました。")).toBeUndefined();
+  });
+
+  it("lets a script-less letter take the writing system beside it", () => {
+    expect(implausibleReport("Latency dropped from 40ms to 3µs after caching.")).toBeUndefined();
+    expect(implausibleReport("Перевод слова мʼясо готов.")).toBeUndefined();
+    expect(implausibleReport("ترجمة كـتاب جاهزة الآن.")).toBeUndefined();
+    expect(implausibleReport("Checked the コンピューターпривет line")).toBe(
+      "it mixes writing systems inside one word",
+    );
+  });
 });

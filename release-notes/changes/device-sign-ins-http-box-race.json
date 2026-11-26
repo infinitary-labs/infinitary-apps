@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "device-sign-ins-http-box-race",
+      "reason": "The journey that uses a connection from the connection file on another computer ticks the plain-HTTP box only once the line under the address has answered, since that line's arrival moves the box and a click straddling the move toggled nothing; only a test changes."
+    }
+  ]
+}

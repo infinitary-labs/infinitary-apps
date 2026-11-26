@@ -106,7 +106,8 @@ The check runs at the turn's end, after reply capture and the first mate's close
    Older messages with no retained picture copies keep their text-only retry.
    It never quotes closing words, refusal text or an error, and the host's own record for it files no crewmate task.
    The message ends `unresolved`.
-5. A card that can answer the message, offered on the stage after its notice, takes the notice back (`AnswerDeliveryCheck.withdrawNotices`, run whenever a card goes up, is revised or leaves its close-out hold, and on every sweep): the message is `covered` again and waits on that card.
+5. A card that can answer the message, offered on the stage after its notice, takes the notice back (`AnswerDeliveryCheck.withdrawNotices`, run whenever a card goes up, is revised or leaves its close-out hold, on every sweep, and on a take back): the message is `covered` again and waits on that card.
+   A notice for a message the captain took back ("Taking back a message" below) comes down for good.
    A crewmate's card still held for its close-out takes nothing back until it reaches the stage, since the captain sees neither until then.
    While its notice is up the first mate may still name the message on work, so that work's card can be the one.
    The message keeps `notice_card_id`, so if it goes unanswered again the same notice comes back, with no second retry.
@@ -249,6 +250,8 @@ The answer names how far the message had got, and the first mate's agent runs ea
   A replacement's words ride the wake, and the first mate keeps what they still ask for.
 
 A taken-back message has ended: it is no open thread, gets no answer retry and no notice, and its delivery is covered.
+The take back, alone or by a replacement, ends what the answer check started for it (`AnswerDeliveryCheck.takenBack`): its one retry still waiting on the lane leaves it, and its notice, if one is up, comes down, so a replacement sent after the notice went up never leaves it standing over the message it replaced.
+A retry a turn was already handed finds the message covered when that turn ends, and raises nothing.
 Outside a turn that read it, naming it in `ask_id` is refused on every tool (`AskEnding.nameRefusal`); inside that turn, only the work-changing tools above refuse it.
 Each round of the last turn above the input carries the message's `askId`, `sentAt` (when the core accepted it, which the minute runs from) and `takenBack`, so a view draws the control and words the mark itself; a conversation round carries `takenBack`, and a replacement `replaces`, the words of the message it took back (`docs/composer.md`, "Taking back").
 The undo wake's turn reads no message, so its closing line would stand nowhere: the core keeps it as the reply line of the message taken back and sends it with that message's `askId` (`TakeBacks.replyTargets`, served from the `ended` wakes the turn was handed).

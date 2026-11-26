@@ -39,6 +39,8 @@ describe("FirstmateAgent taking back a message", () => {
   const textOf = (result: { content: { text?: string }[] } | undefined) =>
     result?.content[0]?.text ?? "";
   const lane = (f: Fixture) => new InboxStore(f.db).allFor(FIRSTMATE_RECIPIENT);
+  const noticeOf = (f: Fixture) =>
+    f.supervisor.cards.snapshot().find((card) => card.title === ANSWER_NOTICE_TITLE);
 
   it("withdraws a message no turn read, and never serves it", async () => {
     const options = { silent: true, failCreate: "Conversation could not start." };
@@ -220,6 +222,58 @@ describe("FirstmateAgent taking back a message", () => {
       ANSWER_NOTICE_TITLE,
     );
     expect(f.tasks.capture.getAsk(ask.id)?.delivery).toBe("covered");
+  });
+
+  // The phone's take-back journey (INF-6775): the first mate closed the
+  // message's turn and its one retry with words alone, so the notice went
+  // up, and the replacement sent within the minute left it standing.
+  it("takes down the notice of a message the captain replaces", async () => {
+    const f = setup({ silent: true });
+    await f.agent.converse("chart the buoys by colour");
+    const first = newest(f);
+    await finish(f);
+    await drained(f.session, 2);
+    await finish(f);
+    await vi.waitFor(() => expect(noticeOf(f)?.id).toBe(`card-ask-${first.id}`));
+
+    await f.agent.converse({
+      text: "chart the buoys by colour, then by depth",
+      replaces: first.id,
+    });
+    expect(noticeOf(f)).toBeUndefined();
+    expect(f.tasks.capture.getAsk(first.id)?.delivery).toBe("covered");
+    await drained(f.session, 3);
+    await finish(f);
+    await tick();
+    expect(f.supervisor.cards.snapshot().map((card) => card.id)).not.toContain(
+      `card-ask-${first.id}`,
+    );
+  });
+
+  it("raises no notice for a message replaced while its answer retry waits", async () => {
+    const f = setup({ silent: true });
+    await f.agent.converse("chart the buoys by colour");
+    await drained(f.session, 1);
+    // Sent while the first message's turn runs: that turn reads it too.
+    await f.agent.converse("and mark the harbour entrance");
+    const second = newest(f);
+    await finish(f);
+    // Each message has its own retry, served alone: the second one waits on the lane.
+    await drained(f.session, 2);
+    const retrying = () =>
+      lane(f).flatMap((row) => (row.facts?.kind === "answer-missing" ? [row.facts.askId] : []));
+    expect(retrying()).toEqual([second.id]);
+
+    await f.agent.converse({
+      text: "mark the harbour entrance and the north basin",
+      replaces: second.id,
+    });
+    // Every turn served from here on ends with words alone, as the first two did.
+    for (let ended = 1; ended < f.session.prompts.length; ended += 1) await finish(f);
+    expect(f.supervisor.cards.snapshot().map((card) => card.id)).not.toContain(
+      `card-ask-${second.id}`,
+    );
+    expect(f.tasks.capture.getAsk(second.id)?.delivery).toBe("covered");
   });
 
   it("asks for the undo at once when the turn that acted on the message already ended", async () => {

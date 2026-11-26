@@ -20,7 +20,7 @@
   "integrationsGoogleSetupKeeping": "جارٍ الحفظ…",
   "integrationsGoogleSetupLead": "يصل Infinitary إلى Gmail والتقويم عبر عميل تنشئه في مشروعك الخاص على Google Cloud، في الوضع الشخصي من Google. لا تراجعه Google، ولا تعرض تحذيرًا، ولا تُنهي تسجيل دخوله بعد 7 أيام.",
   "integrationsGoogleSetupOpenPage": "فتح صفحة Google",
-  "integrationsGoogleSetupStays": "يحفظ Infinitary سرّ العميل في الأسرار على هذا الكمبيوتر. لا يراه نائب القبطان ولا الطاقم أبدًا.",
+  "integrationsGoogleSetupStays": "يحفظ Infinitary سرّ العميل في الأسرار على هذا الحاسوب. لا يراه نائب القبطان ولا الطاقم أبدًا.",
   "integrationsGoogleSetupStepFile": "نزّل ملف العميل الذي تعرضه Google بزر Download JSON، ثم أفلته هنا أو اختره أو الصق محتواه.",
   "integrationsGoogleSetupStepPage": "افتح صفحة Google وسجّل الدخول بحساب Google الذي ستربطه. سمِّ المشروع، واقبل سياسة Google، واضغط Continue.",
   "integrationsGoogleSetupTitle": "أعدّ اتصال Google الخاص بك",

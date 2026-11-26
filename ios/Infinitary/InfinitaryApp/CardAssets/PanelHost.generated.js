@@ -9429,7 +9429,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function accountsCustomApiFileHint() {
     switch (currentLanguage()) {
       case "ar":
-        return `يستطيع Infinitary قراءة الاتصالات المخصصة من ملف بتنسيق models.json الخاص بـ Pi، ولا يغيّره أبدًا. تعتمد كل اتصال هنا بمفتاح هذا الكمبيوتر نفسه.`;
+        return `يستطيع Infinitary قراءة الاتصالات المخصصة من ملف بتنسيق models.json الخاص بـ Pi، ولا يغيّره أبدًا. تعتمد كل اتصال هنا بمفتاح هذا الحاسوب نفسه.`;
       case "de":
         return `Infinitary kann eigene Verbindungen aus einer Datei im models.json-Format von Pi lesen und ändert sie nie. Du gibst jede Verbindung hier mit dem eigenen Schlüssel dieses Computers frei.`;
       case "es":
@@ -9510,7 +9510,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function accountsCustomApiFileKey() {
     switch (currentLanguage()) {
       case "ar":
-        return `لا يستخدم Infinitary أي مفتاح من الملف. اكتب مفتاح هذا الكمبيوتر نفسه عند الاعتماد.`;
+        return `لا يستخدم Infinitary أي مفتاح من الملف. اكتب مفتاح هذا الحاسوب نفسه عند الاعتماد.`;
       case "de":
         return `Infinitary verwendet nie einen Schlüssel aus der Datei. Gib beim Freigeben den eigenen Schlüssel dieses Computers ein.`;
       case "es":
@@ -36656,7 +36656,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `يبني ${device} شيفرة هذا الكمبيوتر.`;
+        return `يبني ${device} شيفرة هذا الحاسوب.`;
       case "de":
         return `${device} baut den Code dieses Computers.`;
       case "es":
@@ -36713,7 +36713,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `يشغّل هذا الكمبيوتر Infinitary من شيفرته عند الالتزام ${commit}، ويشغّل ${device} بناءً آخر. تجعل «مطابقة» ${device} يجلب تلك الشيفرة الملتزَمة ويبنيها ويبدأ منها. تبقى التغييرات غير الملتزَمة على هذا الكمبيوتر.`;
+        return `يشغّل هذا الحاسوب Infinitary من شيفرته عند الإيداع ${commit}، ويشغّل ${device} بناءً آخر. تجعل «مطابقة» ${device} يجلب تلك الشيفرة المودَعة ويبنيها ويبدأ منها. تبقى التغييرات غير المودَعة على هذا الحاسوب.`;
       case "de":
         return `Dieser Computer führt Infinitary aus seinem Code beim Commit ${commit} aus, und ${device} führt einen anderen Build aus. Angleichen lässt ${device} diesen committeten Code holen, bauen und damit starten. Nicht committete Änderungen bleiben auf diesem Computer.`;
       case "es":
@@ -36823,7 +36823,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `يُطرح عليك هذا السؤال مرة واحدة بشأن ${device}. بعدها يطابق هذا الكمبيوتر تلقائيًا كلما شغّل هذا الكمبيوتر شيفرة أخرى.`;
+        return `يُطرح عليك هذا السؤال مرة واحدة بشأن ${device}. بعدها يطابق هذا الحاسوب تلقائيًا كلما شغّل هذا الحاسوب شيفرة أخرى.`;
       case "de":
         return `Du wirst für ${device} nur einmal gefragt. Danach gleicht er sich von selbst an, sobald dieser Computer anderen Code ausführt.`;
       case "es":
@@ -36879,7 +36879,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `هل تريد تشغيل شيفرة هذا الكمبيوتر على ${device}؟`;
+        return `هل تريد تشغيل شيفرة هذا الحاسوب على ${device}؟`;
       case "de":
         return `Den Code dieses Computers auf ${device} ausführen?`;
       case "es":
@@ -36907,7 +36907,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `تعذّر على ${device} بناء شيفرة هذا الكمبيوتر.`;
+        return `تعذّر على ${device} بناء شيفرة هذا الحاسوب.`;
       case "de":
         return `${device} konnte den Code dieses Computers nicht bauen.`;
       case "es":
@@ -36935,7 +36935,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `تعذّر على ${device} جلب شيفرة هذا الكمبيوتر.`;
+        return `تعذّر على ${device} جلب شيفرة هذا الحاسوب.`;
       case "de":
         return `${device} konnte den Code dieses Computers nicht holen.`;
       case "es":
@@ -36963,7 +36963,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `لم يتمكن ${device} من تشغيل بنائه لشيفرة هذا الكمبيوتر، لذا لا يبنيها «مطابقة» هناك مرة أخرى حتى يشغّل هذا الكمبيوتر شيفرة أخرى.`;
+        return `لم يتمكن ${device} من تشغيل بنائه لشيفرة هذا الحاسوب، لذا لا يبنيها «مطابقة» هناك مرة أخرى حتى يشغّل هذا الحاسوب شيفرة أخرى.`;
       case "de":
         return `${device} konnte seinen Build des Codes dieses Computers nicht starten. Angleichen baut ihn dort erst wieder, wenn dieser Computer anderen Code ausführt.`;
       case "es":
@@ -36991,7 +36991,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `تعذّر على ${device} تثبيت ما تحتاجه شيفرة هذا الكمبيوتر.`;
+        return `تعذّر على ${device} تثبيت ما تحتاجه شيفرة هذا الحاسوب.`;
       case "de":
         return `${device} konnte nicht installieren, was der Code dieses Computers braucht.`;
       case "es":
@@ -37019,7 +37019,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `بنى ${device} شيفرة هذا الكمبيوتر لكنه لم يتمكن من التشغيل منها.`;
+        return `بنى ${device} شيفرة هذا الحاسوب لكنه لم يتمكن من التشغيل منها.`;
       case "de":
         return `${device} hat den Code dieses Computers gebaut, konnte aber nicht damit starten.`;
       case "es":
@@ -37047,7 +37047,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `يحتاج ${device} إلى Node وpnpm لبناء شيفرة هذا الكمبيوتر.`;
+        return `يحتاج ${device} إلى Node وpnpm لبناء شيفرة هذا الحاسوب.`;
       case "de":
         return `${device} braucht Node und pnpm, um den Code dieses Computers zu bauen.`;
       case "es":
@@ -37075,7 +37075,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `يجلب ${device} شيفرة هذا الكمبيوتر.`;
+        return `يجلب ${device} شيفرة هذا الحاسوب.`;
       case "de":
         return `${device} holt den Code dieses Computers.`;
       case "es":
@@ -37103,7 +37103,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `يثبّت ${device} ما تحتاجه شيفرة هذا الكمبيوتر.`;
+        return `يثبّت ${device} ما تحتاجه شيفرة هذا الحاسوب.`;
       case "de":
         return `${device} installiert, was der Code dieses Computers braucht.`;
       case "es":
@@ -37185,7 +37185,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `لا يبني Infinitary من الشيفرة إلا جهاز Mac، و${device} ليس جهاز Mac.`;
+        return `لا يبني Infinitary من الشيفرة إلا حاسوب Mac، و${device} ليس حاسوب Mac.`;
       case "de":
         return `Nur ein Mac baut Infinitary aus Code, und ${device} ist kein Mac.`;
       case "es":
@@ -37213,7 +37213,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const commit = input2.commit;
     switch (currentLanguage()) {
       case "ar":
-        return `يشغّل بناءً غير بناء هذا الكمبيوتر، الذي يشغّل شيفرته عند الالتزام ${commit}.`;
+        return `يشغّل بناءً غير بناء هذا الحاسوب، الذي يشغّل شيفرته عند الإيداع ${commit}.`;
       case "de":
         return `Führt einen anderen Build aus als dieser Computer, der seinen Code beim Commit ${commit} ausführt.`;
       case "es":
@@ -37241,7 +37241,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `يشغّل ${device} بناءً غير شيفرة هذا الكمبيوتر.`;
+        return `يشغّل ${device} بناءً غير شيفرة هذا الحاسوب.`;
       case "de":
         return `${device} führt einen anderen Build aus als den Code dieses Computers.`;
       case "es":
@@ -37269,7 +37269,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `إصدار Infinitary على ${device} أقدم من أن يبني شيفرة هذا الكمبيوتر.`;
+        return `إصدار Infinitary على ${device} أقدم من أن يبني شيفرة هذا الحاسوب.`;
       case "de":
         return `${device} hat ein zu altes Infinitary, um den Code dieses Computers zu bauen.`;
       case "es":
@@ -37324,7 +37324,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `عاد ${device} إلى النسخة التي كان يشغّلها من قبل، لأن بناءه لشيفرة هذا الكمبيوتر لم يصل إلى هذا الكمبيوتر في الوقت المحدد.`;
+        return `عاد ${device} إلى النسخة التي كان يشغّلها من قبل، لأن بناءه لشيفرة هذا الحاسوب لم يصل إلى هذا الحاسوب في الوقت المحدد.`;
       case "de":
         return `${device} ist zur vorherigen Kopie zurückgekehrt, weil sein Build des Codes dieses Computers diesen Computer nicht rechtzeitig erreicht hat.`;
       case "es":
@@ -43368,7 +43368,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function integrationsGoogleSetupStays() {
     switch (currentLanguage()) {
       case "ar":
-        return `يحفظ Infinitary سرّ العميل في الأسرار على هذا الكمبيوتر. لا يراه نائب القبطان ولا الطاقم أبدًا.`;
+        return `يحفظ Infinitary سرّ العميل في الأسرار على هذا الحاسوب. لا يراه نائب القبطان ولا الطاقم أبدًا.`;
       case "de":
         return `Infinitary bewahrt das Geheimnis des Clients in Geheimnisse auf diesem Computer auf. Dein erster Offizier und deine Crew sehen es nie.`;
       case "es":
@@ -53877,7 +53877,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const key = input2.key;
     switch (currentLanguage()) {
       case "ar":
-        return `تحمل هذه المهمة المراجعة التي اجتازتها ${key} عند ${head2}: الالتزام نفسه.`;
+        return `تحمل هذه المهمة المراجعة التي اجتازتها ${key} عند ${head2}: الإيداع نفسه.`;
       case "de":
         return `Diese Aufgabe übernimmt das Review, das ${key} bei ${head2} bestanden hat: derselbe Commit.`;
       case "es":
@@ -53906,7 +53906,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const key = input2.key;
     switch (currentLanguage()) {
       case "ar":
-        return `تحمل هذه المهمة المراجعة التي اجتازتها ${key} عند ${head2}، والإثبات المقبول هناك: الالتزام نفسه.`;
+        return `تحمل هذه المهمة المراجعة التي اجتازتها ${key} عند ${head2}، والإثبات المقبول هناك: الإيداع نفسه.`;
       case "de":
         return `Diese Aufgabe übernimmt das Review, das ${key} bei ${head2} bestanden hat, und den dort akzeptierten Nachweis: derselbe Commit.`;
       case "es":
@@ -56210,7 +56210,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function resetCommandNoConfirmation() {
     switch (currentLanguage()) {
       case "ar":
-        return `لا يستطيع هذا الكمبيوتر التأكد هنا من أنك أنت، لذا لم يُعَد تعيين أي شيء. استخدم إعادة تعيين Infinitary في الإعدادات ← عام، أو على الشاشة التي يعرضها Infinitary عندما يتعذّر فتحه.`;
+        return `لا يستطيع هذا الحاسوب التأكد هنا من أنك أنت، لذا لم يُعَد تعيين أي شيء. استخدم إعادة تعيين Infinitary في الإعدادات ← عام، أو على الشاشة التي يعرضها Infinitary عندما يتعذّر فتحه.`;
       case "de":
         return `Dieser Computer kann hier nicht bestätigen, dass du es bist, also wurde nichts zurückgesetzt. Nutze Infinitary zurücksetzen unter Einstellungen → Allgemein oder auf dem Bildschirm, den Infinitary zeigt, wenn es sich nicht öffnen kann.`;
       case "es":
@@ -56237,7 +56237,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function resetCommandRunning() {
     switch (currentLanguage()) {
       case "ar":
-        return `Infinitary مفتوح على هذا الكمبيوتر، لذا لم يُعَد تعيين أي شيء. استخدم إعادة تعيين Infinitary في الإعدادات ← عام، أو أغلق Infinitary وشغّل هذا الأمر مرة أخرى.`;
+        return `Infinitary مفتوح على هذا الحاسوب، لذا لم يُعَد تعيين أي شيء. استخدم إعادة تعيين Infinitary في الإعدادات ← عام، أو أغلق Infinitary وشغّل هذا الأمر مرة أخرى.`;
       case "de":
         return `Infinitary ist auf diesem Computer geöffnet, also wurde nichts zurückgesetzt. Nutze Infinitary zurücksetzen unter Einstellungen → Allgemein, oder beende Infinitary und führe dies erneut aus.`;
       case "es":
@@ -56264,7 +56264,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function resetConfirmReason() {
     switch (currentLanguage()) {
       case "ar":
-        return `إعادة تعيين Infinitary على هذا الكمبيوتر.`;
+        return `إعادة تعيين Infinitary على هذا الحاسوب.`;
       case "de":
         return `Infinitary auf diesem Computer zurücksetzen.`;
       case "es":
@@ -56292,7 +56292,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const home = input2.home;
     switch (currentLanguage()) {
       case "ar":
-        return `إعادة تعيين Infinitary على ${home} وعلى هذا الكمبيوتر.`;
+        return `إعادة تعيين Infinitary على ${home} وعلى هذا الحاسوب.`;
       case "de":
         return `Infinitary auf ${home} und diesem Computer zurücksetzen.`;
       case "es":
@@ -56320,7 +56320,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const home = input2.home;
     switch (currentLanguage()) {
       case "ar":
-        return `إعادة تعيين Infinitary على ${home} وعلى هذا الكمبيوتر`;
+        return `إعادة تعيين Infinitary على ${home} وعلى هذا الحاسوب`;
       case "de":
         return `Infinitary auf ${home} und diesem Computer zurückzusetzen`;
       case "es":
@@ -56347,7 +56347,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function resetConfirmReasonMac() {
     switch (currentLanguage()) {
       case "ar":
-        return `إعادة تعيين Infinitary على هذا الكمبيوتر`;
+        return `إعادة تعيين Infinitary على هذا الحاسوب`;
       case "de":
         return `Infinitary auf diesem Computer zurückzusetzen`;
       case "es":
@@ -56673,7 +56673,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function resetScreenKeeps() {
     switch (currentLanguage()) {
       case "ar":
-        return `تحتفظ المشاريع الموجودة في مجلداتك بكل ملفاتها والتزاماتها.`;
+        return `تحتفظ المشاريع الموجودة في مجلداتك بكل ملفاتها وإيداعاتها.`;
       case "de":
         return `Projekte in deinen eigenen Ordnern behalten jede Datei und jeden Commit.`;
       case "es":
@@ -71062,7 +71062,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `مطابقة ${device} مع هذا الكمبيوتر`;
+        return `مطابقة ${device} مع هذا الحاسوب`;
       case "de":
         return `${device} an diesen Computer angleichen`;
       case "es":
@@ -77925,7 +77925,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function settingsGeneralResetDeletesBoth() {
     switch (currentLanguage()) {
       case "ar":
-        return `يحذف Infinitary كل ما يحتفظ به على الجهازين، ومن ذلك المهام وتسجيلات الدخول والأسرار والإعدادات والأجهزة المقترنة، ثم يفتح كل منهما كأنه ثُبّت للتو.`;
+        return `يحذف Infinitary كل ما يحتفظ به على الحاسوبين، ومن ذلك المهام وتسجيلات الدخول والأسرار والإعدادات والأجهزة المقترنة، ثم يفتح كل منهما كأنه ثُبّت للتو.`;
       case "de":
         return `Infinitary löscht alles, was es auf beiden aufbewahrt, darunter Aufgaben, Anmeldungen, Geheimnisse, Einstellungen und gekoppelte Geräte, und beide öffnen sich dann wie frisch installiert.`;
       case "es":
@@ -78034,7 +78034,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function settingsGeneralResetKeeps() {
     switch (currentLanguage()) {
       case "ar":
-        return `تحتفظ المشاريع الموجودة في مجلداتك بكل ملفاتها والتزاماتها. لمحو المهام فقط، استخدم محو بيانات المهام.`;
+        return `تحتفظ المشاريع الموجودة في مجلداتك بكل ملفاتها وإيداعاتها. لمحو المهام فقط، استخدم محو بيانات المهام.`;
       case "de":
         return `Projekte in deinen eigenen Ordnern behalten jede Datei und jeden Commit. Um nur Aufgaben zu löschen, nutze Aufgabendaten endgültig löschen.`;
       case "es":
@@ -90872,7 +90872,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function settingsSecretsCopyCannotConfirm() {
     switch (currentLanguage()) {
       case "ar":
-        return `لا يستطيع هذا الكمبيوتر التأكد من أنك أنت الآن، لذا لا يمكنه نسخ قيمة.`;
+        return `لا يستطيع هذا الحاسوب التأكد من أنك أنت الآن، لذا لا يمكنه نسخ قيمة.`;
       case "de":
         return `Dieser Computer kann gerade nicht bestätigen, dass du es bist, und daher keinen Wert kopieren.`;
       case "es":
@@ -90954,7 +90954,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const name = input2.name;
     switch (currentLanguage()) {
       case "ar":
-        return `نسخ ${name} إلى حافظة هذا الكمبيوتر.`;
+        return `نسخ ${name} إلى حافظة هذا الحاسوب.`;
       case "de":
         return `${name} in die Zwischenablage dieses Computers kopieren.`;
       case "es":
@@ -91089,7 +91089,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function settingsSecretsCustodyMac() {
     switch (currentLanguage()) {
       case "ar":
-        return `محفوظة على هذا الكمبيوتر. يستخدمها طاقمك لكنه لا يراها أبدًا، إلا إذا نسخت واحدًا منها.`;
+        return `محفوظة على هذا الحاسوب. يستخدمها طاقمك لكنه لا يراها أبدًا، إلا إذا نسخت واحدًا منها.`;
       case "de":
         return `Auf diesem Computer aufbewahrt. Deine Crew nutzt sie, sieht sie aber nie, außer du kopierst eines.`;
       case "es":
@@ -91876,7 +91876,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const seconds = input2.seconds;
     switch (currentLanguage()) {
       case "ar":
-        return `«نسخ القيمة» في صفه يضع القيمة في حافظة هذا الكمبيوتر بعد أن يتأكد كمبيوترك من أنك أنت، ويمسحها بعد ${seconds} ثانية. ما تفعله هناك يبقى قرارك.`;
+        return `«نسخ القيمة» في صفه يضع القيمة في حافظة هذا الحاسوب بعد أن يتأكد حاسوبك من أنك أنت، ويمسحها بعد ${seconds} ثانية. ما تفعله هناك يبقى قرارك.`;
       case "de":
         return `„Wert kopieren“ in seiner Zeile legt den Wert in die Zwischenablage dieses Computers, sobald dein Computer bestätigt, dass du es bist, und entfernt ihn ${seconds} Sekunden später. Was du dort tust, bleibt deine Sache.`;
       case "es":
@@ -97752,7 +97752,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function settingsUsageConnectionEmailLine() {
     switch (currentLanguage()) {
       case "ar":
-        return `يحمل كل سجل بريد تسجيل دخولك إلى Claude Code، إن كان على هذا الكمبيوتر تسجيل دخول، كي يحسب عرضٌ لكل شخص عملك.`;
+        return `يحمل كل سجل بريد تسجيل دخولك إلى Claude Code، إن كان على هذا الحاسوب تسجيل دخول، كي يحسب عرضٌ لكل شخص عملك.`;
       case "de":
         return `Jeder Eintrag trägt die E-Mail-Adresse deiner Claude-Code-Anmeldung, wenn dieser Computer eine hat, damit eine Ansicht pro Person deine Arbeit zählt.`;
       case "es":
@@ -105824,7 +105824,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const path = input2.path;
     switch (currentLanguage()) {
       case "ar":
-        return `على جهاز Mac، اكتب ${path} بدلًا من infinitary.`;
+        return `على حاسوب Mac، اكتب ${path} بدلًا من infinitary.`;
       case "de":
         return `Auf einem Mac tippst du ${path} statt infinitary.`;
       case "es":

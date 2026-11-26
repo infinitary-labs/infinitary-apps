@@ -1,5 +1,10 @@
 import { z } from "zod";
 import { formatUsd } from "./i18n/format";
+import type {
+  PanelQuotaProvider,
+  PanelQuotaSnapshot,
+  PanelQuotaWindow,
+} from "./personal/contracts";
 
 export {
   AUTO_ROUTABLE_BUCKETS,
@@ -336,6 +341,45 @@ export const quotaSnapshotViewSchema = z.object({
   providers: z.array(quotaProviderViewSchema),
 });
 export type QuotaSnapshotView = z.infer<typeof quotaSnapshotViewSchema>;
+
+/**
+ * What a panel or a card granted `quota.snapshot` is handed: exactly
+ * `PanelQuotaSnapshot`, built field by field. The account's internal id, the
+ * identity the provider reports (an email or an organization), credits, saved
+ * resets and the sensor's machine reasons stay on the reading Settings draws.
+ * Naming what a panel keeps, rather than what it loses, keeps a field later
+ * added to the reading away from panels until the panel contract names it.
+ */
+export function panelQuotaSnapshot(view: QuotaSnapshotView | null): PanelQuotaSnapshot {
+  if (!view) return null;
+  return { fetchedAt: view.fetchedAt, providers: view.providers.map(panelQuotaProvider) };
+}
+
+function panelQuotaProvider(row: QuotaProviderView): PanelQuotaProvider {
+  return {
+    provider: row.provider,
+    label: row.label,
+    ...(row.accountLabel === undefined ? {} : { accountLabel: row.accountLabel }),
+    ...(row.plan === undefined ? {} : { plan: row.plan }),
+    status: row.status,
+    stale: row.stale,
+    ...(row.measuredAt === undefined ? {} : { measuredAt: row.measuredAt }),
+    ...(row.detail === undefined ? {} : { detail: row.detail }),
+    windows: row.windows.map(panelQuotaWindow),
+  };
+}
+
+function panelQuotaWindow(window: QuotaWindowView): PanelQuotaWindow {
+  return {
+    id: window.id,
+    label: window.label,
+    ...(window.percentRemaining === undefined ? {} : { percentRemaining: window.percentRemaining }),
+    ...(window.pace === undefined ? {} : { pace: window.pace }),
+    ...(window.resetText === undefined ? {} : { resetText: window.resetText }),
+    ...(window.resetsAtMs === undefined ? {} : { resetsAtMs: window.resetsAtMs }),
+    ...(window.windowSeconds === undefined ? {} : { windowSeconds: window.windowSeconds }),
+  };
+}
 
 /**
  * Slot names still ride routing_decisions.bucket, difficulty, and quota-gate

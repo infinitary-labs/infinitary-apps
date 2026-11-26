@@ -1,5 +1,6 @@
 import type { Card } from "@shared/cards";
 import { macBookResourcesView } from "@shared/macBookResourceReading";
+import type { QuotaSnapshotView } from "@shared/quota";
 import { panelComputerResources } from "@shared/resources";
 import type { ProjectView, TaskBoard, TaskBoardDelta, TaskView } from "@shared/tasks";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -143,5 +144,57 @@ describe("the app read executor's computer readings", () => {
     expect(firstmateReadApi().present?.("computers.resources", macBookResourcesView)).toEqual(
       panelComputerResources(macBookResourcesView),
     );
+  });
+});
+
+/** What a panel or a card reading `quota.snapshot` through the window's executor is handed. */
+describe("the app read executor's quota reading", () => {
+  it("hands a reader the panel contract's fields, never the account's id or provider identity", async () => {
+    const reading: QuotaSnapshotView = {
+      generatedAt: "2026-11-26T00:00:00.000Z",
+      fetchedAt: 1_795_000_000_000,
+      providers: [
+        {
+          provider: "claude",
+          label: "Claude",
+          accountId: "acct-claude-7f3e",
+          accountLabel: "Personal",
+          account: "someone@example.com",
+          status: "ok",
+          stale: false,
+          credits: { state: "available", usedPercent: 12 },
+          windows: [{ id: "session", label: "session", percentRemaining: 62, startsAtMs: 1 }],
+        },
+      ],
+    };
+    vi.stubGlobal("window", {
+      infinitary: {
+        plugins: { read: vi.fn(async () => reading) },
+        events: { on: () => () => {} },
+        quota: { onSnapshot: () => () => {} },
+      },
+    });
+    const { appReadExecutor } = await import("./appExecutor");
+    const seen: unknown[] = [];
+    const stop = appReadExecutor().subscribe(
+      "quota.snapshot",
+      {},
+      { onValue: (value) => seen.push(value), onError: () => {} },
+    );
+    await vi.waitFor(() => expect(seen).toHaveLength(1));
+    expect(seen[0]).toStrictEqual({
+      fetchedAt: 1_795_000_000_000,
+      providers: [
+        {
+          provider: "claude",
+          label: "Claude",
+          accountLabel: "Personal",
+          status: "ok",
+          stale: false,
+          windows: [{ id: "session", label: "session", percentRemaining: 62 }],
+        },
+      ],
+    });
+    stop();
   });
 });

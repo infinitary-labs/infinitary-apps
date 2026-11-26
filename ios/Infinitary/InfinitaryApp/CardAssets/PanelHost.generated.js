@@ -132322,6 +132322,34 @@ ${FRAME_KEYBOARD_SCRIPT}
     fetchedAt: number(),
     providers: array(quotaProviderViewSchema)
   });
+  function panelQuotaSnapshot(view) {
+    if (!view) return null;
+    return { fetchedAt: view.fetchedAt, providers: view.providers.map(panelQuotaProvider) };
+  }
+  function panelQuotaProvider(row) {
+    return {
+      provider: row.provider,
+      label: row.label,
+      ...row.accountLabel === void 0 ? {} : { accountLabel: row.accountLabel },
+      ...row.plan === void 0 ? {} : { plan: row.plan },
+      status: row.status,
+      stale: row.stale,
+      ...row.measuredAt === void 0 ? {} : { measuredAt: row.measuredAt },
+      ...row.detail === void 0 ? {} : { detail: row.detail },
+      windows: row.windows.map(panelQuotaWindow)
+    };
+  }
+  function panelQuotaWindow(window2) {
+    return {
+      id: window2.id,
+      label: window2.label,
+      ...window2.percentRemaining === void 0 ? {} : { percentRemaining: window2.percentRemaining },
+      ...window2.pace === void 0 ? {} : { pace: window2.pace },
+      ...window2.resetText === void 0 ? {} : { resetText: window2.resetText },
+      ...window2.resetsAtMs === void 0 ? {} : { resetsAtMs: window2.resetsAtMs },
+      ...window2.windowSeconds === void 0 ? {} : { windowSeconds: window2.windowSeconds }
+    };
+  }
   const catalogModelViewSchema = object({
     /** Quota provider id. */
     provider: string(),
@@ -139405,6 +139433,7 @@ ${autoHeight ? PANEL_AUTO_HEIGHT_STYLE : PANEL_FILL_STYLE}`;
           return value.map(({ said: said2, ...line2 }) => said2 ? { ...line2, text: wordedLine({ text: line2.text, said: said2 }) } : line2);
         }
         if (name === "computers.resources") return panelComputerResources(value);
+        if (name === "quota.snapshot") return panelQuotaSnapshot(value);
         return value;
       },
       onPresentation: (listener) => {

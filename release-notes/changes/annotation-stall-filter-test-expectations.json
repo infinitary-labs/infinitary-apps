@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "annotation-stall-filter-test-expectations",
+      "reason": "Align annotation and stall card tests with the existing project-filter argument."
+    }
+  ]
+}

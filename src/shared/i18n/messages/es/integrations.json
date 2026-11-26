@@ -1,5 +1,10 @@
 {
   "integrationsClientFileNotTaken": "{name} no acepta archivos de cliente en esta versión de Infinitary.",
+  "integrationsConnectOfferBody": "Después, tu primer oficial y tu tripulación pueden acceder a {name} con tu sesión. Cada una de sus acciones, incluidas las lecturas, te pregunta en una tarjeta hasta que eliges «Siempre permitida».",
+  "integrationsConnectOfferButton": "Abrir Integraciones",
+  "integrationsConnectOfferNotNow": "Ahora no",
+  "integrationsConnectOfferOpen": "Abre Integraciones para iniciar sesión en {name}.",
+  "integrationsConnectOfferTitle": "Conectar {name}",
   "integrationsGoogleClientFileIncomplete": "A ese archivo de cliente le falta el ID o el secreto del cliente. Vuelve a descargarlo desde la página de Google.",
   "integrationsGoogleClientFileNotJson": "Ese no es un archivo de cliente de Google. En la página de Google, descarga el archivo de tu cliente con Download JSON y suéltalo aquí.",
   "integrationsGoogleClientFileWeb": "Ese archivo es de un cliente de aplicación web. Crea un cliente de app de escritorio en la página de Google y suelta aquí su archivo.",

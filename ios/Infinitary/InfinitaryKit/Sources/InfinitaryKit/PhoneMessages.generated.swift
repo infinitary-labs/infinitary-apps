@@ -1291,6 +1291,11 @@ public enum PhoneMessages {
     public static func `handoverWontStopText`(`to`: String) -> String { PhoneWords.format("handoverWontStopText", [`to`]) }
     public static func `handoverWontStopTitle`(`from`: String) -> String { PhoneWords.format("handoverWontStopTitle", [`from`]) }
     public static func `integrationsClientFileNotTaken`(`name`: String) -> String { PhoneWords.format("integrationsClientFileNotTaken", [`name`]) }
+    public static func `integrationsConnectOfferBody`(`name`: String) -> String { PhoneWords.format("integrationsConnectOfferBody", [`name`]) }
+    public static func `integrationsConnectOfferButton`() -> String { PhoneWords.format("integrationsConnectOfferButton", []) }
+    public static func `integrationsConnectOfferNotNow`() -> String { PhoneWords.format("integrationsConnectOfferNotNow", []) }
+    public static func `integrationsConnectOfferOpen`(`name`: String) -> String { PhoneWords.format("integrationsConnectOfferOpen", [`name`]) }
+    public static func `integrationsConnectOfferTitle`(`name`: String) -> String { PhoneWords.format("integrationsConnectOfferTitle", [`name`]) }
     public static func `integrationsGoogleClientFileIncomplete`() -> String { PhoneWords.format("integrationsGoogleClientFileIncomplete", []) }
     public static func `integrationsGoogleClientFileNotJson`() -> String { PhoneWords.format("integrationsGoogleClientFileNotJson", []) }
     public static func `integrationsGoogleClientFileWeb`() -> String { PhoneWords.format("integrationsGoogleClientFileWeb", []) }
@@ -6047,6 +6052,11 @@ extension PhoneWords {
         "handoverWontStopText": ["to"],
         "handoverWontStopTitle": ["from"],
         "integrationsClientFileNotTaken": ["name"],
+        "integrationsConnectOfferBody": ["name"],
+        "integrationsConnectOfferButton": [],
+        "integrationsConnectOfferNotNow": [],
+        "integrationsConnectOfferOpen": ["name"],
+        "integrationsConnectOfferTitle": ["name"],
         "integrationsGoogleClientFileIncomplete": [],
         "integrationsGoogleClientFileNotJson": [],
         "integrationsGoogleClientFileWeb": [],

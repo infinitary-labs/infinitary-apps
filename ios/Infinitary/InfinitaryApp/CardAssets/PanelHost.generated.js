@@ -42797,6 +42797,144 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `${name} takes no client file in this version of Infinitary.`;
   }
+  function integrationsConnectOfferBody(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `بعدها يستطيع نائب القبطان والطاقم الوصول إلى ${name} بتسجيل دخولك. كل إجراء من إجراءاته، بما في ذلك إجراءات القراءة، يسألك في بطاقة حتى تختار «مسموح دائمًا».`;
+      case "de":
+        return `Dein erster Offizier und deine Crew erreichen ${name} dann mit deiner Anmeldung. Jede seiner Aktionen, auch Leseaktionen, fragt dich auf einer Karte, bis du „Immer erlaubt“ wählst.`;
+      case "es":
+        return `Después, tu primer oficial y tu tripulación pueden acceder a ${name} con tu sesión. Cada una de sus acciones, incluidas las lecturas, te pregunta en una tarjeta hasta que eliges «Siempre permitida».`;
+      case "fr":
+        return `Votre second et votre équipage pourront alors accéder à ${name} avec votre connexion. Chacune de ses actions, y compris les lectures, vous demande sur une carte, jusqu’à ce que vous choisissiez « Toujours autorisée ».`;
+      case "ja":
+        return `その後、一等航海士と乗組員はあなたのサインインで ${name} を利用できます。読み取りも含め、どの操作も「常に許可」を選ぶまでカードで確認します。`;
+      case "ko":
+        return `그 뒤 일등항해사와 선원들이 내 로그인으로 ${name}에 접근할 수 있어요. 읽기를 포함해 모든 동작은 “항상 허용”을 고를 때까지 카드로 물어봐요.`;
+      case "pt-BR":
+        return `Depois, seu imediato e sua tripulação podem acessar ${name} com o seu login. Cada ação, inclusive as leituras, pergunta a você em um cartão até você escolher “Sempre permitida”.`;
+      case "zh-Hans":
+        return `之后，你的大副和船员可以用你的登录访问 ${name}。它的每个操作，包括读取，都会在卡片上询问你，直到你选择“始终允许”。`;
+      case "zh-Hant":
+        return `之後，你的大副和船員可以用你的登入存取 ${name}。它的每個動作，包括讀取，都會在卡片上詢問你，直到你選擇「一律允許」。`;
+      case "en-XA":
+        return `[Ýöûŕ ƒîŕšţ ɱáţé áñð ýöûŕ çŕéŵ çáñ ţĥéñ ŕéáçĥ ${name} ŵîţĥ ýöûŕ šîĝñ-îñ. Éáçĥ öƒ îţš áçţîöñš, ŕéáðš îñçļûðéð, ášķš ýöû öñ á çáŕð ûñţîļ ýöû çĥööšé Åļŵáýš áļļöŵ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your first mate and your crew can then reach ‬${name}‮ with your sign-in. Each of its actions, reads included, asks you on a card until you choose Always allow.‬`;
+    }
+    return `Your first mate and your crew can then reach ${name} with your sign-in. Each of its actions, reads included, asks you on a card until you choose Always allow.`;
+  }
+  function integrationsConnectOfferButton() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `فتح التكاملات`;
+      case "de":
+        return `Integrationen öffnen`;
+      case "es":
+        return `Abrir Integraciones`;
+      case "fr":
+        return `Ouvrir Intégrations`;
+      case "ja":
+        return `連携を開く`;
+      case "ko":
+        return `연동 열기`;
+      case "pt-BR":
+        return `Abrir Integrações`;
+      case "zh-Hans":
+        return `打开集成`;
+      case "zh-Hant":
+        return `開啟整合`;
+      case "en-XA":
+        return `[Öþéñ Îñţéĝŕáţîöñš ~~~~~~]`;
+      case "ar-XB":
+        return `‮Open Integrations‬`;
+    }
+    return `Open Integrations`;
+  }
+  function integrationsConnectOfferNotNow() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ليس الآن`;
+      case "de":
+        return `Nicht jetzt`;
+      case "es":
+        return `Ahora no`;
+      case "fr":
+        return `Pas maintenant`;
+      case "ja":
+        return `今はしない`;
+      case "ko":
+        return `나중에`;
+      case "pt-BR":
+        return `Agora não`;
+      case "zh-Hans":
+        return `暂不`;
+      case "zh-Hant":
+        return `暫時不要`;
+      case "en-XA":
+        return `[Ñöţ ñöŵ ~~~]`;
+      case "ar-XB":
+        return `‮Not now‬`;
+    }
+    return `Not now`;
+  }
+  function integrationsConnectOfferOpen(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `افتح التكاملات لتسجيل الدخول إلى ${name}.`;
+      case "de":
+        return `Öffne Integrationen, um dich bei ${name} anzumelden.`;
+      case "es":
+        return `Abre Integraciones para iniciar sesión en ${name}.`;
+      case "fr":
+        return `Ouvrez Intégrations pour vous connecter à ${name}.`;
+      case "ja":
+        return `連携を開いて ${name} にサインインしてください。`;
+      case "ko":
+        return `연동을 열어 ${name}에 로그인하세요.`;
+      case "pt-BR":
+        return `Abra Integrações para fazer login em ${name}.`;
+      case "zh-Hans":
+        return `打开“集成”登录 ${name}。`;
+      case "zh-Hant":
+        return `開啟「整合」登入 ${name}。`;
+      case "en-XA":
+        return `[Öþéñ Îñţéĝŕáţîöñš ţö šîĝñ îñ ţö ${name}. ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Open Integrations to sign in to ‬${name}‮.‬`;
+    }
+    return `Open Integrations to sign in to ${name}.`;
+  }
+  function integrationsConnectOfferTitle(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `ربط ${name}`;
+      case "de":
+        return `${name} verbinden`;
+      case "es":
+        return `Conectar ${name}`;
+      case "fr":
+        return `Connecter ${name}`;
+      case "ja":
+        return `${name} に接続`;
+      case "ko":
+        return `${name} 연결`;
+      case "pt-BR":
+        return `Conectar ${name}`;
+      case "zh-Hans":
+        return `连接 ${name}`;
+      case "zh-Hant":
+        return `連結 ${name}`;
+      case "en-XA":
+        return `[Çöññéçţ ${name} ~~~]`;
+      case "ar-XB":
+        return `‮Connect ‬${name}`;
+    }
+    return `Connect ${name}`;
+  }
   function integrationsGoogleClientFileIncomplete() {
     switch (currentLanguage()) {
       case "ar":
@@ -115458,6 +115596,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     handoverWontStopText,
     handoverWontStopTitle,
     integrationsClientFileNotTaken,
+    integrationsConnectOfferBody,
+    integrationsConnectOfferButton,
+    integrationsConnectOfferNotNow,
+    integrationsConnectOfferOpen,
+    integrationsConnectOfferTitle,
     integrationsGoogleClientFileIncomplete,
     integrationsGoogleClientFileNotJson,
     integrationsGoogleClientFileWeb,
@@ -119121,6 +119264,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "handoverWontStopText": ["to"],
     "handoverWontStopTitle": ["from"],
     "integrationsClientFileNotTaken": ["name"],
+    "integrationsConnectOfferBody": ["name"],
+    "integrationsConnectOfferButton": [],
+    "integrationsConnectOfferNotNow": [],
+    "integrationsConnectOfferOpen": ["name"],
+    "integrationsConnectOfferTitle": ["name"],
     "integrationsGoogleClientFileIncomplete": [],
     "integrationsGoogleClientFileNotJson": [],
     "integrationsGoogleClientFileWeb": [],

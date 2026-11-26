@@ -1231,6 +1231,11 @@
 "handoverWontStopText" = "%1$@ hat es gebeten, zu speichern und zu stoppen, und es hält deine gespeicherte Arbeit noch. Jetzt stoppen beendet es, ohne zu warten. Es wurde nichts geändert.";
 "handoverWontStopTitle" = "%1$@ hat nicht gestoppt";
 "integrationsClientFileNotTaken" = "%1$@ nimmt in dieser Version von Infinitary keine Client-Datei an.";
+"integrationsConnectOfferBody" = "Dein erster Offizier und deine Crew erreichen %1$@ dann mit deiner Anmeldung. Jede seiner Aktionen, auch Leseaktionen, fragt dich auf einer Karte, bis du „Immer erlaubt“ wählst.";
+"integrationsConnectOfferButton" = "Integrationen öffnen";
+"integrationsConnectOfferNotNow" = "Nicht jetzt";
+"integrationsConnectOfferOpen" = "Öffne Integrationen, um dich bei %1$@ anzumelden.";
+"integrationsConnectOfferTitle" = "%1$@ verbinden";
 "integrationsGoogleClientFileIncomplete" = "In dieser Client-Datei fehlen Client-ID oder Geheimnis. Lade sie auf Googles Seite erneut herunter.";
 "integrationsGoogleClientFileNotJson" = "Das ist keine Google-Client-Datei. Lade auf Googles Seite die Datei deines Clients mit Download JSON herunter und lege sie dann hier ab.";
 "integrationsGoogleClientFileWeb" = "Diese Datei gehört zu einem Client für eine Webanwendung. Erstelle auf Googles Seite einen Desktop-App-Client und lege dann dessen Datei hier ab.";

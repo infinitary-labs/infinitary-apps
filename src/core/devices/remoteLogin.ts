@@ -259,7 +259,6 @@ export class RemoteLogin {
   private readonly builds: FarBuilds;
   /** Setups from the welcome screen the person cancelled, by address, until they stop. */
   private readonly homeCancels = new Set<string>();
-  /** The Ubuntu package's install and update (`RemoteLoginUbuntu`). */
   private readonly ubuntu: RemoteLoginUbuntu;
 
   constructor(private readonly options: RemoteLoginOptions) {

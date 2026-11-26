@@ -3958,6 +3958,7 @@
 "settingsUsageConnectionAddressHint" = "Die OpenTelemetry-Adresse des Werkzeugs über HTTP. Jede Art von Eintrag geht an einen eigenen Pfad darunter.";
 "settingsUsageConnectionCancel" = "Abbrechen";
 "settingsUsageConnectionClaudeCode" = "Sendet die Nutzung deiner Crew an %1$@ im Format von Claude Code: Modelle, Tokens und geschätzte Kosten, nie Prompts oder Antworten.";
+"settingsUsageConnectionClaudeCodeWords" = "Sendet die Nutzung deiner Crew an %1$@ im Format von Claude Code: Modelle, Tokens und geschätzte Kosten, mit Prompts und Antworten.";
 "settingsUsageConnectionEdit" = "Bearbeiten";
 "settingsUsageConnectionEmailLine" = "Jeder Eintrag trägt die E-Mail-Adresse deiner Claude-Code-Anmeldung, wenn dieser Computer eine hat, damit eine Ansicht pro Person deine Arbeit zählt.";
 "settingsUsageConnectionFailed" = "Die Verbindung konnte nicht gespeichert werden. Bitte versuch es noch einmal.";
@@ -3987,10 +3988,13 @@
 "settingsUsageConnectionSaveLine" = "Mit Speichern beginnt Infinitary, die Nutzung deiner Crew an diese Adresse zu senden.";
 "settingsUsageConnectionSecretLabel" = "Nutzungsberichte: %1$@";
 "settingsUsageConnectionStandard" = "Sendet die Nutzung deiner Crew an %1$@ im Standardformat von OpenTelemetry: Zeiten, Modelle, Tokens und geschätzte Kosten, nie Prompts oder Antworten.";
+"settingsUsageConnectionStandardWords" = "Sendet die Nutzung deiner Crew an %1$@ im Standardformat von OpenTelemetry: Zeiten, Modelle, Tokens und geschätzte Kosten, mit Prompts und Antworten.";
 "settingsUsageConnectionTitle" = "Nutzungsberichte";
 "settingsUsageConnectionUseOperation" = "Die Nutzung der Crew an %1$@ senden";
 "settingsUsageConnectionUseReason" = "Infinitary sendet die Nutzung deiner Crew an %1$@, wie es deine Berichtsverbindung vorsieht.";
 "settingsUsageConnectionUseResult" = "Die Antwort des Werkzeugs auf jeden Stapel";
+"settingsUsageConnectionWords" = "Auch Prompts und Antworten senden";
+"settingsUsageConnectionWordsHint" = "Fügt die Prompts deiner Crew, ihre Antworten und das, was sie ihren Werkzeugen gibt, hinzu. Schlüssel und Passwörter, die Infinitary darin erkennt, werden vorher verborgen.";
 "settingsUsageCostAllKinds" = "Alle Arten";
 "settingsUsageCostAllProjects" = "Alle Projekte";
 "settingsUsageCostChange" = "Veränderung";

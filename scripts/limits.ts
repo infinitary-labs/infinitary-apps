@@ -502,6 +502,18 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
   "src/core/tasks/timelineCompaction.ts": {
     TIMELINE_CAP: physical("the oldest fold into one counted head; their words are gone"),
   },
+  "src/core/usageReport/sessionWords.ts": {
+    WORDS_TEXT_MAX: physical(
+      "the part keeps its first and last 4,000 characters or so with a mark between; the task's session records keep it whole",
+    ),
+    WORDS_ARGUMENTS_MAX: physical("the call's arguments go as their cut JSON text; the session records keep them whole"),
+    CURSORS_MAX: physical("the least recently read file is let go and read back from its end at its next turn"),
+  },
+  "src/core/usageReport/usageReportFormats.ts": {
+    WORDS_ATTRIBUTE_MAX: physical(
+      "the prompts keep their first messages and the replies their last; the session records keep every message",
+    ),
+  },
   "src/core/videoFormat.ts": {
     MAX_DEMO_LONG_SIDE: physical("refused in words naming 1920 by 1080; scale it down"),
     MAX_DEMO_SHORT_SIDE: physical("refused in words naming 1920 by 1080; scale it down"),

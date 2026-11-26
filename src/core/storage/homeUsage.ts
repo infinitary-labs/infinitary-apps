@@ -13,6 +13,7 @@ import { modelNames } from "@shared/modelDisplayName";
 import { offeringKey, providerLabel, type SlotModelView } from "@shared/modelSlots";
 import type { CoreServices } from "../coreServices";
 import type { RecordReader } from "../recordReads/recordReader";
+import type { TurnWords } from "../usageReport/sessionWords";
 import { type UsageReportDestination, UsageReporter } from "../usageReport/usageReporter";
 import { CostLimitStore } from "./costLimitStore";
 import type { AppDatabase } from "./db";
@@ -40,6 +41,11 @@ export type HomeUsageFacts = {
    * so it answers from what its sources already hold.
    */
   reportDestinations?(): readonly UsageReportDestination[];
+  /**
+   * A task's turn's words from its session records (`SessionWords`), read
+   * only for a destination whose prompts and replies are on.
+   */
+  turnWords?(taskId: string, since: number, until: number): TurnWords | null;
 };
 
 /**
@@ -71,6 +77,7 @@ export function homeUsage(db: AppDatabase, facts: HomeUsageFacts): HomeUsage {
     workKind: (taskId) => usageStore.workKind(taskId),
     isTask: facts.isTask,
     firstmateTaskId: FIRSTMATE_USAGE_TASK_ID,
+    ...(facts.turnWords ? { words: facts.turnWords } : {}),
   });
   // The report never costs a turn its cost limit or a window its event.
   const reporting = (run: () => void): void => {

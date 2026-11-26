@@ -287,6 +287,7 @@
 "automationWaitsForPlaceholder" = "كل حدث";
 "batchesPanelAfter" = "بعد #%1$@";
 "batchesPanelChecking" = "قيد الفحص منذ %1$@";
+"batchesPanelCheckingFix" = "تعمل الفحوصات مع الإصلاح %1$@ قبل الموافقة عليه";
 "batchesPanelChecksFull" = "الفحوصات: نجح %2$@، فشل %1$@، قيد التشغيل %3$@، كما قُرئت عند %4$@";
 "batchesPanelChecksPassed" = "الفحوصات الناجحة: %1$@ من %2$@";
 "batchesPanelChecksUnread" = "لم تُقرأ الفحوصات بعد";
@@ -3567,6 +3568,7 @@
 "settingsProjectsBatchAnswerRuleNote" = "لا تفي أيّ من الإجابتين بالقاعدة. كل منهما تغيّر ما تحمله الدفعة.";
 "settingsProjectsBatchAnswerYourself" = "أجب بنفسك";
 "settingsProjectsBatchChanges" = "التغييرات المراد إرجاعها";
+"settingsProjectsBatchCheckingFix" = "تعمل فحوصاتها الآن مع التصحيح من %1$@، قبل أن توافق على ذلك التصحيح. إذا نجحت، فإن الموافقة عليه تدمج الدفعة كما هي.";
 "settingsProjectsBatchGap" = "متى تبدأ الدفعة";
 "settingsProjectsBatchGapDescription" = "كلما طال الفاصل دخلت تغييرات موافق عليها أكثر في كل دفعة، فتعمل فحوصاتها مرات أقل. إصلاح الدفعة المعلّقة لا ينتظره أبدًا.";
 "settingsProjectsBatchGapNow" = "بمجرد الموافقة على تغيير";

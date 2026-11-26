@@ -301,6 +301,7 @@ public enum PhoneMessages {
     public static func `batchesPanelAfter`(`number`: String) -> String { PhoneWords.format("batchesPanelAfter", [`number`]) }
     public static func `batchesPanelBatchTitle`(`count`: Int, `number`: String) -> String { PhoneWords.format("batchesPanelBatchTitle", [`count`, `number`]) }
     public static func `batchesPanelChecking`(`duration`: String) -> String { PhoneWords.format("batchesPanelChecking", [`duration`]) }
+    public static func `batchesPanelCheckingFix`(`key`: String) -> String { PhoneWords.format("batchesPanelCheckingFix", [`key`]) }
     public static func `batchesPanelChecksFull`(`failed`: String, `passed`: String, `running`: String, `time`: String) -> String { PhoneWords.format("batchesPanelChecksFull", [`failed`, `passed`, `running`, `time`]) }
     public static func `batchesPanelChecksPassed`(`passed`: String, `total`: String) -> String { PhoneWords.format("batchesPanelChecksPassed", [`passed`, `total`]) }
     public static func `batchesPanelChecksUnread`() -> String { PhoneWords.format("batchesPanelChecksUnread", []) }
@@ -3723,6 +3724,7 @@ public enum PhoneMessages {
     public static func `settingsProjectsBatchAnswerRuleNote`() -> String { PhoneWords.format("settingsProjectsBatchAnswerRuleNote", []) }
     public static func `settingsProjectsBatchAnswerYourself`() -> String { PhoneWords.format("settingsProjectsBatchAnswerYourself", []) }
     public static func `settingsProjectsBatchChanges`() -> String { PhoneWords.format("settingsProjectsBatchChanges", []) }
+    public static func `settingsProjectsBatchCheckingFix`(`key`: String) -> String { PhoneWords.format("settingsProjectsBatchCheckingFix", [`key`]) }
     public static func `settingsProjectsBatchGap`() -> String { PhoneWords.format("settingsProjectsBatchGap", []) }
     public static func `settingsProjectsBatchGapDescription`() -> String { PhoneWords.format("settingsProjectsBatchGapDescription", []) }
     public static func `settingsProjectsBatchGapHours`(`count`: Int) -> String { PhoneWords.format("settingsProjectsBatchGapHours", [`count`]) }
@@ -5095,6 +5097,7 @@ extension PhoneWords {
         "batchesPanelAfter": ["number"],
         "batchesPanelBatchTitle": ["count", "number"],
         "batchesPanelChecking": ["duration"],
+        "batchesPanelCheckingFix": ["key"],
         "batchesPanelChecksFull": ["failed", "passed", "running", "time"],
         "batchesPanelChecksPassed": ["passed", "total"],
         "batchesPanelChecksUnread": [],
@@ -8517,6 +8520,7 @@ extension PhoneWords {
         "settingsProjectsBatchAnswerRuleNote": [],
         "settingsProjectsBatchAnswerYourself": [],
         "settingsProjectsBatchChanges": [],
+        "settingsProjectsBatchCheckingFix": ["key"],
         "settingsProjectsBatchGap": [],
         "settingsProjectsBatchGapDescription": [],
         "settingsProjectsBatchGapHours": ["count"],

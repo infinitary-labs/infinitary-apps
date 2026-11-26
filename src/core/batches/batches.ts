@@ -426,6 +426,10 @@ export class Batches {
       label: (repo, open) => this.label(repo, open),
       atBatchAddress: (repo, open) => this.atBatchAddress(repo, open),
       stillAt: (repo) => this.stillAt(repo),
+      generated: (repo, branch, head, pushed) => this.writeGenerated(repo, branch, head, pushed),
+      describe: async (repo, open, forge) => {
+        if (this.described.get(repo.id) !== open.head) await this.describe(repo, open, forge, true);
+      },
     };
   }
 
@@ -989,7 +993,7 @@ export class Batches {
       if (pushed === open.head) return record;
       // The project's own checks may add one commit of generated files on top: it stands
       // as the batch's version, and the checks run on it (docs/forge.md, "A generated commit").
-      const taken = pushed ? await this.takeGenerated(repo, record, forge, pushed) : undefined;
+      const taken = pushed ? await this.takeGenerated(repo, record, pushed) : undefined;
       if (taken) return taken;
       return this.recombine(repo, record, "none", pushed);
     }
@@ -1517,32 +1521,46 @@ export class Batches {
   private async takeGenerated(
     repo: RepoView,
     record: BatchRecord,
-    forge: Forge,
     pushed: string,
   ): Promise<BatchRecord | undefined> {
     const open = record.open as OpenBatch;
     if (open.generated !== undefined || open.hold) return undefined;
+    const written = await this.writeGenerated(repo, open.branch, open.head, pushed);
+    if (written === null) return record;
+    if (!written) return undefined;
+    const { passed: _passed, ...kept } = open;
+    return this.save(repo.id, { ...record, open: { ...kept, head: written, generated: written } });
+  }
+
+  /**
+   * The generated commit `pushed` written again on `head` and pushed over it to `branch`
+   * (`takeGenerated`, and the early run's in `followTrial`); undefined when `pushed` is no
+   * such commit, null when the project moved meanwhile, so nothing goes to a former address.
+   */
+  private async writeGenerated(
+    repo: RepoView,
+    branch: string,
+    head: string,
+    pushed: string,
+  ): Promise<string | null | undefined> {
     const written = await (this.options.generated ?? generatedOnTop)({
       repoDir: repo.path,
-      branch: open.branch,
-      head: open.head,
+      branch,
+      head,
       pushed,
       at: this.options.now(),
       ...(repo.origin ? { remote: repo.origin } : {}),
     });
     if (!written) return undefined;
-    // The project may have moved during the read: nothing goes to a former address.
-    if (!this.stillAt(repo)) return record;
+    if (!this.stillAt(repo)) return null;
     await (this.options.push ?? pushBatch)({
       repoDir: repo.path,
-      branch: open.branch,
+      branch,
       ...(repo.origin ? { remote: repo.origin } : {}),
       head: written,
       expected: pushed,
     });
-    if (!this.stillAt(repo)) return record;
-    const { passed: _passed, ...kept } = open;
-    return this.save(repo.id, { ...record, open: { ...kept, head: written, generated: written } });
+    return this.stillAt(repo) ? written : null;
   }
 
   /** The batch branch's version where the project lives; undefined when it is not there. */
@@ -1564,11 +1582,17 @@ export class Batches {
    * read, so the pull request is read first; a rewrite the host did not take
    * is sent again on the next pass.
    */
-  private async describe(repo: RepoView, open: OpenBatch, forge: Forge): Promise<void> {
+  private async describe(
+    repo: RepoView,
+    open: OpenBatch,
+    forge: Forge,
+    /** `open` is the early run with the held batch's fix (`followTrial`), its last member the fix. */
+    trial = false,
+  ): Promise<void> {
     if (!forge.updateChangeBody || open.number === undefined) return;
     const held = await forge.changeFor(open.branch);
     if (!held || held.number !== open.number || held.headSha !== open.head) return;
-    const { body, comments, missing } = await this.body(open, forge);
+    const { body, comments, missing } = await this.body(open, forge, trial);
     const title = this.title(open.members);
     if ((held.body ?? "") !== body || held.title !== title) {
       try {
@@ -1659,6 +1683,7 @@ export class Batches {
   private async body(
     open: OpenBatch,
     forge: Forge,
+    trial = false,
   ): Promise<{ body: string; comments: string[]; missing: BatchMember[] }> {
     const stories = await Promise.all(
       open.members.map((member) => this.options.story(member, forge).catch(() => undefined)),
@@ -1675,6 +1700,7 @@ export class Batches {
         region: stories[index]?.region,
       })),
       this.limits(forge),
+      trial ? open.members.at(-1)?.title : undefined,
     );
     return {
       body,

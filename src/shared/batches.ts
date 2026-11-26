@@ -183,7 +183,13 @@ export const openBatchSchema = z.object({
       /** The held members, then the fix, each with its commit at `head`. */
       members: z.array(batchMemberSchema),
       at: z.number(),
+      /** The checks that failed at `head` as last read; gone once they read otherwise. */
       failed: z.array(z.string()).optional(),
+      /**
+       * The commit of generated files the project's checks added on the run, written again
+       * on it and pushed: `head` then names it (docs/forge.md, "A generated commit").
+       */
+      generated: z.string().optional(),
     })
     .optional(),
 });
@@ -624,6 +630,8 @@ export const batchesViewSchema = z.object({
           awaitsFix: z.boolean(),
           /** Its repair declared that a rerun passed the failed checks at its version. */
           passed: z.boolean(),
+          /** The declared fix its checks run with before approval (`OpenBatch.trial`), until they fail. */
+          checkingFix: batchTaskSchema.nullable(),
         })
         .nullable(),
       leftOut: z.array(

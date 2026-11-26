@@ -287,6 +287,7 @@
 "automationWaitsForPlaceholder" = "每个事件";
 "batchesPanelAfter" = "排在 #%1$@ 之后";
 "batchesPanelChecking" = "检查中 %1$@";
+"batchesPanelCheckingFix" = "正在带上修正 %1$@ 运行检查，尚未批准";
 "batchesPanelChecksFull" = "检查：%2$@ 项已通过，%1$@ 项未通过，%3$@ 项正在运行，读取于 %4$@";
 "batchesPanelChecksPassed" = "%2$@ 项检查中已通过 %1$@ 项";
 "batchesPanelChecksUnread" = "尚未读取检查";
@@ -3567,6 +3568,7 @@
 "settingsProjectsBatchAnswerRuleNote" = "两个回答都不满足这条规则。每个都会改变这批改动包含的内容。";
 "settingsProjectsBatchAnswerYourself" = "自己回答";
 "settingsProjectsBatchChanges" = "要退回的改动";
+"settingsProjectsBatchCheckingFix" = "在你批准 %1$@ 的修正之前，检查正在带上这个修正运行。若检查通过，批准该修正即会按原样合并这批改动。";
 "settingsProjectsBatchGap" = "何时开始一批改动";
 "settingsProjectsBatchGapDescription" = "间隔越长，每批包含的已批准改动越多，检查运行得越少。暂缓的这批改动，其修复从不等待。";
 "settingsProjectsBatchGapNow" = "改动一获批准就开始";

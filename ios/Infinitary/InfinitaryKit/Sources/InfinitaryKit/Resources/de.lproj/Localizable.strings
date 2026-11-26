@@ -287,6 +287,7 @@
 "automationWaitsForPlaceholder" = "Jedes Ereignis";
 "batchesPanelAfter" = "nach #%1$@";
 "batchesPanelChecking" = "prüft seit %1$@";
+"batchesPanelCheckingFix" = "Überprüfungen laufen mit Korrektur %1$@ vor ihrer Freigabe";
 "batchesPanelChecksFull" = "Überprüfungen: %2$@ erfolgreich, %1$@ fehlgeschlagen, %3$@ laufen, Stand %4$@";
 "batchesPanelChecksPassed" = "%1$@ von %2$@ Überprüfungen erfolgreich";
 "batchesPanelChecksUnread" = "Überprüfungen noch nicht gelesen";
@@ -3567,6 +3568,7 @@
 "settingsProjectsBatchAnswerRuleNote" = "Keine der Antworten erfüllt die Regel. Jede ändert, was das Bündel enthält.";
 "settingsProjectsBatchAnswerYourself" = "Selbst antworten";
 "settingsProjectsBatchChanges" = "Änderungen zum Zurückschicken";
+"settingsProjectsBatchCheckingFix" = "Die Überprüfungen laufen jetzt mit der Korrektur aus %1$@, bevor du sie freigibst. Sind sie erfolgreich, wird das Bündel mit deiner Freigabe so zusammengeführt, wie es ist.";
 "settingsProjectsBatchGap" = "Wann ein Bündel startet";
 "settingsProjectsBatchGapDescription" = "Ein längerer Abstand bringt mehr bestätigte Änderungen in jedes Bündel, sodass seine Überprüfungen seltener laufen. Die Reparatur eines angehaltenen Bündels wartet nie darauf.";
 "settingsProjectsBatchGapNow" = "Sobald eine Änderung bestätigt ist";

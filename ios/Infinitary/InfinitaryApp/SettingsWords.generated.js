@@ -14693,7 +14693,13 @@ ${events}` : prompt;
       /** The held members, then the fix, each with its commit at `head`. */
       members: array(batchMemberSchema),
       at: number(),
-      failed: array(string()).optional()
+      /** The checks that failed at `head` as last read; gone once they read otherwise. */
+      failed: array(string()).optional(),
+      /**
+       * The commit of generated files the project's checks added on the run, written again
+       * on it and pushed: `head` then names it (docs/forge.md, "A generated commit").
+       */
+      generated: string().optional()
     }).optional()
   });
   const batchReceiptSchema = object({
@@ -14913,7 +14919,9 @@ ${events}` : prompt;
           /** It waits for its repair's fix after changes were sent back (`OpenBatch.awaits`). */
           awaitsFix: boolean(),
           /** Its repair declared that a rerun passed the failed checks at its version. */
-          passed: boolean()
+          passed: boolean(),
+          /** The declared fix its checks run with before approval (`OpenBatch.trial`), until they fail. */
+          checkingFix: batchTaskSchema.nullable()
         }).nullable(),
         leftOut: array(
           batchTaskSchema.extend({

@@ -6,6 +6,7 @@
     "other": "Batch #{number} · {count} changes"
   },
   "batchesPanelChecking": "checking {duration}",
+  "batchesPanelCheckingFix": "checks run with fix {key} before its approval",
   "batchesPanelChecksFull": "Checks: {passed} passed, {failed} failed, {running} running, as read at {time}",
   "batchesPanelChecksPassed": "{passed} of {total} checks passed",
   "batchesPanelChecksUnread": "checks not read yet",

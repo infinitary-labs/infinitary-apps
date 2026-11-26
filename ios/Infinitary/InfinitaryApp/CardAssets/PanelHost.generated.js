@@ -84785,6 +84785,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Changes to send back`;
   }
+  function settingsProjectsBatchCheckingFix(input2) {
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعمل فحوصاتها الآن مع التصحيح من ${key}، قبل أن توافق على ذلك التصحيح. إذا نجحت، فإن الموافقة عليه تدمج الدفعة كما هي.`;
+      case "de":
+        return `Die Überprüfungen laufen jetzt mit der Korrektur aus ${key}, bevor du sie freigibst. Sind sie erfolgreich, wird das Bündel mit deiner Freigabe so zusammengeführt, wie es ist.`;
+      case "es":
+        return `Sus comprobaciones se están ejecutando ahora con la corrección de ${key}, antes de que la apruebes. Si se superan, al aprobarla el lote se fusiona tal como está.`;
+      case "fr":
+        return `Ses vérifications tournent maintenant avec le correctif de ${key}, avant que vous l’approuviez. Si elles réussissent, l’approuver fusionne le lot tel quel.`;
+      case "ja":
+        return `${key} の修正を承認する前に、その修正を含めてチェックを実行しています。合格すれば、修正を承認するとこの一括プルリクエストがそのままマージされます。`;
+      case "ko":
+        return `${key}의 수정을 승인하기 전에, 그 수정을 포함해 검사를 실행하고 있어요. 통과하면 수정을 승인할 때 이 일괄 끌어오기 요청이 그대로 병합돼요.`;
+      case "pt-BR":
+        return `As verificações estão rodando agora com a correção de ${key}, antes de você aprová-la. Se passarem, aprovar a correção mescla o lote como está.`;
+      case "zh-Hans":
+        return `在你批准 ${key} 的修正之前，检查正在带上这个修正运行。若检查通过，批准该修正即会按原样合并这批改动。`;
+      case "zh-Hant":
+        return `在你核准 ${key} 的修正之前，檢查正帶上這個修正執行。若檢查通過，核准該修正就會照原樣合併這個批次。`;
+      case "en-XA":
+        return `[Îţš çĥéçķš áŕé ŕûññîñĝ ñöŵ ŵîţĥ ţĥé ƒîẋ ƒŕöɱ ${key}, ƀéƒöŕé ýöû áþþŕöṽé ţĥáţ ƒîẋ. Îƒ ţĥéý þášš, áþþŕöṽîñĝ îţ ɱéŕĝéš ţĥé ƀáţçĥ áš îţ îš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Its checks are running now with the fix from ‬${key}‮, before you approve that fix. If they pass, approving it merges the batch as it is.‬`;
+    }
+    return `Its checks are running now with the fix from ${key}, before you approve that fix. If they pass, approving it merges the batch as it is.`;
+  }
   function settingsProjectsBatchGap() {
     switch (currentLanguage()) {
       case "ar":
@@ -118504,6 +118532,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsProjectsBatchAnswerRuleNote,
     settingsProjectsBatchAnswerYourself,
     settingsProjectsBatchChanges,
+    settingsProjectsBatchCheckingFix,
     settingsProjectsBatchGap,
     settingsProjectsBatchGapDescription,
     settingsProjectsBatchGapHours,
@@ -122204,6 +122233,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsProjectsBatchAnswerRuleNote": [],
     "settingsProjectsBatchAnswerYourself": [],
     "settingsProjectsBatchChanges": [],
+    "settingsProjectsBatchCheckingFix": ["key"],
     "settingsProjectsBatchGap": [],
     "settingsProjectsBatchGapDescription": [],
     "settingsProjectsBatchGapHours": ["count"],
@@ -131662,7 +131692,13 @@ ${FRAME_KEYBOARD_SCRIPT}
       /** The held members, then the fix, each with its commit at `head`. */
       members: array(batchMemberSchema),
       at: number(),
-      failed: array(string()).optional()
+      /** The checks that failed at `head` as last read; gone once they read otherwise. */
+      failed: array(string()).optional(),
+      /**
+       * The commit of generated files the project's checks added on the run, written again
+       * on it and pushed: `head` then names it (docs/forge.md, "A generated commit").
+       */
+      generated: string().optional()
     }).optional()
   });
   const batchReceiptSchema = object({
@@ -131882,7 +131918,9 @@ ${FRAME_KEYBOARD_SCRIPT}
           /** It waits for its repair's fix after changes were sent back (`OpenBatch.awaits`). */
           awaitsFix: boolean(),
           /** Its repair declared that a rerun passed the failed checks at its version. */
-          passed: boolean()
+          passed: boolean(),
+          /** The declared fix its checks run with before approval (`OpenBatch.trial`), until they fail. */
+          checkingFix: batchTaskSchema.nullable()
         }).nullable(),
         leftOut: array(
           batchTaskSchema.extend({

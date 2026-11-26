@@ -910,6 +910,7 @@
   "settingsProjectsBatchAnswerRuleNote": "Keine der Antworten erfüllt die Regel. Jede ändert, was das Bündel enthält.",
   "settingsProjectsBatchAnswerYourself": "Selbst antworten",
   "settingsProjectsBatchChanges": "Änderungen zum Zurückschicken",
+  "settingsProjectsBatchCheckingFix": "Die Überprüfungen laufen jetzt mit der Korrektur aus {key}, bevor du sie freigibst. Sind sie erfolgreich, wird das Bündel mit deiner Freigabe so zusammengeführt, wie es ist.",
   "settingsProjectsBatchGap": "Wann ein Bündel startet",
   "settingsProjectsBatchGapDescription": "Ein längerer Abstand bringt mehr bestätigte Änderungen in jedes Bündel, sodass seine Überprüfungen seltener laufen. Die Reparatur eines angehaltenen Bündels wartet nie darauf.",
   "settingsProjectsBatchGapHours": {

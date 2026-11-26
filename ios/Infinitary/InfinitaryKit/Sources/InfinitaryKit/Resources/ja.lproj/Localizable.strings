@@ -287,6 +287,7 @@
 "automationWaitsForPlaceholder" = "すべてのイベント";
 "batchesPanelAfter" = "#%1$@ の後";
 "batchesPanelChecking" = "チェック中 %1$@";
+"batchesPanelCheckingFix" = "承認前の修正 %1$@ を含めてチェック中";
 "batchesPanelChecksFull" = "チェック：合格 %2$@、失敗 %1$@、実行中 %3$@（%4$@ 時点）";
 "batchesPanelChecksPassed" = "%2$@件中%1$@件のチェックに合格";
 "batchesPanelChecksUnread" = "チェックをまだ読み取っていません";
@@ -3567,6 +3568,7 @@
 "settingsProjectsBatchAnswerRuleNote" = "どちらの回答もルールを満たしません。どちらも一括プルリクエストの中身を変えます。";
 "settingsProjectsBatchAnswerYourself" = "自分で回答する";
 "settingsProjectsBatchChanges" = "差し戻す変更";
+"settingsProjectsBatchCheckingFix" = "%1$@ の修正を承認する前に、その修正を含めてチェックを実行しています。合格すれば、修正を承認するとこの一括プルリクエストがそのままマージされます。";
 "settingsProjectsBatchGap" = "一括プルリクエストを始めるタイミング";
 "settingsProjectsBatchGapDescription" = "間隔を長くすると、1つの一括プルリクエストに入る承認済みの変更が増え、チェックの実行回数が減ります。保留中の一括プルリクエストの修正は待ちません。";
 "settingsProjectsBatchGapNow" = "変更が承認されたらすぐ";

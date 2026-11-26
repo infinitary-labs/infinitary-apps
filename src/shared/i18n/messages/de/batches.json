@@ -6,6 +6,7 @@
     "other": "Bündel #{number} · {count} Änderungen"
   },
   "batchesPanelChecking": "prüft seit {duration}",
+  "batchesPanelCheckingFix": "Überprüfungen laufen mit Korrektur {key} vor ihrer Freigabe",
   "batchesPanelChecksFull": "Überprüfungen: {passed} erfolgreich, {failed} fehlgeschlagen, {running} laufen, Stand {time}",
   "batchesPanelChecksPassed": "{passed} von {total} Überprüfungen erfolgreich",
   "batchesPanelChecksUnread": "Überprüfungen noch nicht gelesen",

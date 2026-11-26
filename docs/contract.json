@@ -3161,6 +3161,9 @@
                           "items": {
                             "type": "string"
                           }
+                        },
+                        "generated": {
+                          "type": "string"
                         }
                       },
                       "required": [
@@ -4353,6 +4356,9 @@
                             "items": {
                               "type": "string"
                             }
+                          },
+                          "generated": {
+                            "type": "string"
                           }
                         },
                         "required": [
@@ -5893,6 +5899,9 @@
                         "items": {
                           "type": "string"
                         }
+                      },
+                      "generated": {
+                        "type": "string"
                       }
                     },
                     "required": [
@@ -6686,6 +6695,39 @@
                         },
                         "passed": {
                           "type": "boolean"
+                        },
+                        "checkingFix": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "taskId": {
+                                  "type": "string"
+                                },
+                                "key": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "title": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "taskId",
+                                "key",
+                                "title"
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
                         }
                       },
                       "required": [
@@ -6700,7 +6742,8 @@
                         "checks",
                         "repair",
                         "awaitsFix",
-                        "passed"
+                        "passed",
+                        "checkingFix"
                       ]
                     },
                     {
@@ -13086,6 +13129,9 @@
                         "items": {
                           "type": "string"
                         }
+                      },
+                      "generated": {
+                        "type": "string"
                       }
                     },
                     "required": [

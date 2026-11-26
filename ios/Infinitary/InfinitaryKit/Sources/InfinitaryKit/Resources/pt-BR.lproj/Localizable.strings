@@ -287,6 +287,7 @@
 "automationWaitsForPlaceholder" = "Todo evento";
 "batchesPanelAfter" = "após #%1$@";
 "batchesPanelChecking" = "verificando há %1$@";
+"batchesPanelCheckingFix" = "as verificações rodam com a correção %1$@ antes da aprovação";
 "batchesPanelChecksFull" = "Verificações: %2$@ passaram, %1$@ falharam, %3$@ em execução, lidas às %4$@";
 "batchesPanelChecksPassed" = "%1$@ de %2$@ verificações passaram";
 "batchesPanelChecksUnread" = "verificações ainda não lidas";
@@ -3567,6 +3568,7 @@
 "settingsProjectsBatchAnswerRuleNote" = "Nenhuma das respostas atende à regra. Cada uma muda o que o lote contém.";
 "settingsProjectsBatchAnswerYourself" = "Responder você mesmo";
 "settingsProjectsBatchChanges" = "Alterações para devolver";
+"settingsProjectsBatchCheckingFix" = "As verificações estão rodando agora com a correção de %1$@, antes de você aprová-la. Se passarem, aprovar a correção mescla o lote como está.";
 "settingsProjectsBatchGap" = "Quando um lote começa";
 "settingsProjectsBatchGapDescription" = "Um intervalo maior coloca mais alterações aprovadas em cada lote, então as verificações rodam com menos frequência. O reparo de um lote retido nunca espera.";
 "settingsProjectsBatchGapNow" = "Assim que uma alteração é aprovada";

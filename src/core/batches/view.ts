@@ -102,6 +102,10 @@ function repoView(
           repair: repairView(batchRepairOf(open, record.fixes), taskOf),
           awaitsFix: Boolean(open.awaits),
           passed: open.passed?.head === open.head,
+          checkingFix:
+            open.trial && !open.trial.failed
+              ? taskOf(open.trial.task, open.trial.members.at(-1)?.title)
+              : null,
         }
       : null,
     leftOut: [

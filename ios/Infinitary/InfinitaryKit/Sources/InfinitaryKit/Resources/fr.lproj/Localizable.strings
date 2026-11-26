@@ -287,6 +287,7 @@
 "automationWaitsForPlaceholder" = "Chaque événement";
 "batchesPanelAfter" = "après #%1$@";
 "batchesPanelChecking" = "vérification depuis %1$@";
+"batchesPanelCheckingFix" = "les vérifications tournent avec le correctif %1$@ avant son approbation";
 "batchesPanelChecksFull" = "Vérifications : %2$@ réussies, %1$@ échouées, %3$@ en cours, lues à %4$@";
 "batchesPanelChecksPassed" = "%1$@ vérifications réussies sur %2$@";
 "batchesPanelChecksUnread" = "vérifications pas encore lues";
@@ -3567,6 +3568,7 @@
 "settingsProjectsBatchAnswerRuleNote" = "Aucune des deux réponses ne satisfait la règle. Chacune change ce que contient le lot.";
 "settingsProjectsBatchAnswerYourself" = "Répondre vous-même";
 "settingsProjectsBatchChanges" = "Modifications à renvoyer";
+"settingsProjectsBatchCheckingFix" = "Ses vérifications tournent maintenant avec le correctif de %1$@, avant que vous l’approuviez. Si elles réussissent, l’approuver fusionne le lot tel quel.";
 "settingsProjectsBatchGap" = "Quand un lot démarre";
 "settingsProjectsBatchGapDescription" = "Un intervalle plus long met plus de modifications approuvées dans chaque lot, donc ses vérifications s’exécutent moins souvent. La réparation d’un lot retenu n’attend jamais.";
 "settingsProjectsBatchGapNow" = "Dès qu’une modification est approuvée";

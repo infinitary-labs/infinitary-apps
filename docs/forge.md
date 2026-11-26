@@ -1307,12 +1307,15 @@ Once the fix's story is confirmed on its own branch at a version that builds on 
 It is kept as the batch's early run (`OpenBatch.trial`): the batch's version, its members and its hold stay as they were, the fix is no member, and nothing waiting in line joins.
 It starts only while the batch is held for its checks at its version, with no rerun declared passed and nothing queued or unconfirmed, the fix declared and its task open, the awaited fix after a send-back, and that version not approved yet; otherwise nothing is pushed.
 A new version of the fix, or its story confirmed in new words, starts a new run in place of the earlier one; the same story confirmed again starts nothing.
-Each pass reads the run's checks at its commit (`followTrial`).
-A run that fails keeps the hold at the batch's version, its fix's version stands failed on the fix's batch check, and the fix's crewmate and the batch's repair, where another task, each hear it once in the `batch-trial-failed` wake; an approval of that version leaves the batch held.
+Each pass reads the run's checks at its commit (`followTrial`), and the batch's pull request description, the Batches panel and the batch's box in Settings say its checks run with the fix before approval.
+A generated commit the project's checks add on the run is written again and stands as the run's commit, as on any batch.
+A run that fails keeps the hold at the batch's version, its fix's version stands failed on the fix's batch check, and the fix's crewmate and the batch's repair, where another task, each hear it once in the `batch-trial-failed` wake; an approval of that version leaves the batch held and puts the fix in line, so Try again takes it.
+Checks at the run's commit that then read otherwise end the failure, as they end a held version's hold.
 A run that passes waits for the fix's approval and merges nothing.
 Approved at the run's version and words once it passed, the run's commit becomes the batch's version and merges as it is, after the same last look as any batch, and changes waiting in line stay there for the next batch (`promoted`, `src/core/batches/line.ts`).
-Approved while the run still runs, at another version or in other words, the batch combines with the fix and the line as above.
-A member that left or was reworded, a hold that ended, a declared rerun that passed, another fix approved, or a batch branch moved by someone else drops the run, and the batch goes on as without one (`trialStands`).
+Approved while the run still runs, at another version or in other words, or with the pull request behind or conflicting with the default branch, the batch combines with the fix and the line as above.
+A member that left or was reworded, a hold that ended, a declared rerun that passed, another fix approved, or a batch branch moved by someone else drops the run (`trialStands`).
+A dropped run whose commit is still on the batch's branch puts the held version back there, so the batch goes on held where it was; a reworded member then combines the batch again, as without a run.
 When the fix's task closes, the run is left as it is and the batch stays held.
 A pull request merged by hand at the run's commit settles the fix with the members.
 A batch held for its checks reads them before an approved fix joins: a version whose checks pass on a rerun merges as it is, and the fix waits in line for the next batch, still declared, with the version it was built on.

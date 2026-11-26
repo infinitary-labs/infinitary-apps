@@ -37,7 +37,11 @@ export type Standing =
       number?: number;
       url?: string | null;
     }
-  /** The only change of a batch whose checks failed: its own crewmate repairs it. */
+  /**
+   * The only change of a batch whose checks failed, or a held batch's declared fix whose
+   * early run with the batch failed at this version (`OpenBatch.trial`): its own crewmate
+   * repairs it in a new version.
+   */
   | { state: "failed"; checks: string[]; number?: number; url?: string | null }
   /**
    * Left out; `ahead` names the task of the unmerged change ahead it clashes
@@ -720,6 +724,7 @@ export function promoted(record: BatchRecord, approved: BatchChange): BatchRecor
       ...rest,
       head: trial.head,
       base: trial.base,
+      ...(trial.generated ? { generated: trial.generated } : {}),
       members: [
         ...trial.members.slice(0, -1),
         { ...approved, ...(heldBase ? { heldBase } : {}), commit: fix.commit },

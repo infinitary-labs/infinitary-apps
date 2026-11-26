@@ -187,6 +187,8 @@ export const BATCH_HOLD_WORDS = {
         return null;
     }
   },
+  /** The declared fix its checks run with before approval (`OpenBatch.trial`), by key or title. */
+  checkingFix: (key: string) => m.settingsProjectsBatchCheckingFix({ key }),
   latestReport: (report: string) => m.settingsProjectsBatchLatestReport({ report }),
   openTask: (key: string) => m.settingsProjectsBatchOpenTask({ key }),
   get answerYourself() {

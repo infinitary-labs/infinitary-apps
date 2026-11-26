@@ -32,6 +32,15 @@ export type TrialOwner = {
   label: (repo: RepoView, open: OpenBatch) => string;
   atBatchAddress: (repo: RepoView, open: OpenBatch) => boolean;
   stillAt: (repo: RepoView) => boolean;
+  /** A generated commit on `head` written again and pushed: undefined for none, null once moved away. */
+  generated: (
+    repo: RepoView,
+    branch: string,
+    head: string,
+    pushed: string,
+  ) => Promise<string | null | undefined>;
+  /** Give the pull request the run's words: `open` at the run's commit, with its members. */
+  describe: (repo: RepoView, open: OpenBatch, forge: Forge) => Promise<void>;
 };
 
 /** The fix's story as confirmed on its own branch, at its version. */
@@ -132,11 +141,17 @@ export async function startTrial(owner: TrialOwner, repoId: string, fix: Confirm
  *
  * - The fix approved at the run's version with the run passed: the run's commit becomes the
  *   batch's version and merges as it is, after the same last look as any batch.
- * - Approved while the run still runs, at another version, or another fix approved: the batch
- *   combines with the line, as without a run.
+ * - Approved while the run still runs, at another version, with the pull request behind or
+ *   conflicting, or another fix approved: the batch combines with the line, as without a run.
  * - Failed: the hold stays at its version, approved or not, and the fix's crewmate and the
- *   batch's repair hear it once.
+ *   batch's repair hear it once; an approval meanwhile goes in line, so Try again takes it.
+ *   Checks that then read otherwise end the failure, as they end a held version's hold.
+ * - The project's checks added a generated commit on the run: it is written again and stands
+ *   as the run's commit, as on any batch.
  * - The fix's task closed: the batch stays held, as without a run.
+ *
+ * A run dropped while the branch is still at its commit puts the held version back on it,
+ * so the batch goes on held where it was.
  */
 export async function followTrial(
   owner: TrialOwner,
@@ -148,16 +163,35 @@ export async function followTrial(
   const { options } = owner;
   const open = record.open as OpenBatch;
   const trial = open.trial as BatchTrial;
-  const drop = () => {
-    owner.save(repo.id, withoutTrial(record));
+  const drop = async (pushed?: string) => {
+    const at = pushed ?? (await owner.pushedHead(forge, open.branch));
+    if (at === trial.head && owner.stillAt(repo))
+      await (options.push ?? pushBatch)({
+        repoDir: repo.path,
+        branch: open.branch,
+        ...(repo.origin ? { remote: repo.origin } : {}),
+        head: open.head,
+        expected: at,
+      });
+    owner.save(repo.id, withoutTrial(owner.record(repo.id)));
     return undefined;
   };
   // A member left or was reworded, the hold ended, or a rerun was declared passed.
   if (!trialStands(record)) return drop();
   if (pull.headSha !== trial.head) {
+    const pushed = await owner.pushedHead(forge, open.branch);
     // A pull request can trail its branch for a moment after a push.
-    if ((await owner.pushedHead(forge, open.branch)) === trial.head) return record;
-    return drop();
+    if (pushed === trial.head) return record;
+    if (pushed && trial.generated === undefined) {
+      const written = await owner.generated(repo, open.branch, trial.head, pushed);
+      if (written === null) return record;
+      if (written) {
+        const taken = { ...trial, head: written, generated: written };
+        const { failed: _failed, ...run } = taken;
+        return owner.save(repo.id, { ...record, open: { ...open, trial: run } });
+      }
+    }
+    return drop(pushed);
   }
   const approved = record.line.find(
     (entry) => entry.taskId === trial.task && entry.head === trial.version,
@@ -169,6 +203,7 @@ export async function followTrial(
   if (!options.live(trial.task)) return record;
   if (!declarationsOf(record, { taskId: trial.task, head: trial.version }).length) return drop();
   const fix = trial.members.at(-1);
+  await owner.describe(repo, { ...open, head: trial.head, members: trial.members }, forge);
   const change: ForgeChange = {
     number: pull.number,
     url: open.url ?? null,
@@ -191,9 +226,19 @@ export async function followTrial(
     const failed = checks.items
       .filter((item) => isRedCheckState(item.state))
       .map((item) => item.name);
-    if (JSON.stringify(trial.failed) === JSON.stringify(failed)) return record;
+    // Approved at the failed version, it reads failed and is never put in line by its merge:
+    // it goes in line here, so Try again takes it with the line, as an approved fix today.
+    let current = record;
+    if (!approved && fix && options.approved(trial.task, trial.version, repo) === true) {
+      const { commit: _commit, ...change } = fix;
+      current = owner.save(repo.id, {
+        ...record,
+        line: [...record.line, { ...change, at: options.now() }],
+      });
+    }
+    if (JSON.stringify(trial.failed) === JSON.stringify(failed)) return current;
     const saved = owner.save(repo.id, {
-      ...record,
+      ...current,
       open: { ...open, trial: { ...trial, failed } },
     });
     if (!trial.failed) {
@@ -207,9 +252,20 @@ export async function followTrial(
     }
     return saved;
   }
+  if (trial.failed) {
+    const { failed: _failed, ...run } = trial;
+    record = owner.save(repo.id, { ...record, open: { ...open, trial: run } });
+  }
   if (!approved) return record;
-  // The approved words are the commit's: a story revised since the run combines again.
-  if (summary.overall === "green" && approved.title === fix?.title && approved.body === fix.body)
+  // The approved words are the commit's: a story revised since the run combines again, as
+  // does a run the host reads behind or conflicting with the default branch.
+  if (
+    summary.overall === "green" &&
+    approved.title === fix?.title &&
+    approved.body === fix.body &&
+    pull.readiness !== "behind" &&
+    pull.readiness !== "conflict"
+  )
     return owner.follow(repo, owner.save(repo.id, promoted(record, approved)));
   return owner.recombine(repo, owner.save(repo.id, withoutTrial(record)), "line");
 }

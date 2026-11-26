@@ -900,6 +900,8 @@ export class CustomApiAccountOwner {
                   ? "checked"
                   : "untested",
           ...(failure ? { failure: failure.message, category: failure.category } : {}),
+          ...(failure?.status !== undefined ? { status: failure.status } : {}),
+          ...(failure?.reason ? { reason: failure.reason } : {}),
         };
       }),
     };

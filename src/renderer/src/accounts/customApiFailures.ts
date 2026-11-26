@@ -50,6 +50,10 @@ export type FailureContext = {
   answers?: readonly CustomApiAnswer[];
   /** `destination`: whether an exception for this address can be made. */
   exceptionOffered?: boolean;
+  /** `server`: the HTTP status the server answered with; a 4xx there is a refusal. */
+  status?: number;
+  /** A refusal's own reason, as the core cut and checked it. */
+  reason?: string;
   /** The computer that reads the address, as the form names it. Absent, this Mac. */
   who?: string;
 };
@@ -214,6 +218,14 @@ export function placeCustomApiFailure(
         text: m.accountsCustomApiRateLimit(),
       };
     case "server":
+      // A 4xx is the server's answer, not a passing trouble: no retry is offered.
+      if (context.status !== undefined && context.status >= 400 && context.status < 500)
+        return {
+          at: "save",
+          text: context.reason
+            ? m.accountsCustomApiRefusedSaid({ reason: context.reason })
+            : m.accountsCustomApiRefused(),
+        };
       return {
         at: "save",
         text: m.accountsCustomApiServer(),

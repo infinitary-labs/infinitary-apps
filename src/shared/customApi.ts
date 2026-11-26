@@ -29,6 +29,8 @@ export const customApiAnswerSchema = z.object({
   kind: z.enum(["local", "private", "public", "reserved"]),
 });
 export type CustomApiAnswer = z.infer<typeof customApiAnswerSchema>;
+/** Characters of a server's refusal reason the form may show, before the cut is marked. */
+export const CUSTOM_API_REASON_MAX = 240;
 /** Why a custom connection's step failed, as a closed category the form places at its field. */
 export const customApiFailureCategorySchema = z.enum([
   "address",
@@ -335,6 +337,13 @@ export const customApiViewSchema = z.object({
       failure: z.string().optional(),
       /** Why the last check failed, for the form to place at the row or field at fault. */
       category: customApiFailureCategorySchema.optional(),
+      /** The HTTP status the server answered the check with, when it answered with one. */
+      status: z.number().int().optional(),
+      /** A refusal's own reason: a short excerpt the transport cut and checked for echoed secrets. */
+      reason: z
+        .string()
+        .max(CUSTOM_API_REASON_MAX + 1)
+        .optional(),
     }),
   ),
 });

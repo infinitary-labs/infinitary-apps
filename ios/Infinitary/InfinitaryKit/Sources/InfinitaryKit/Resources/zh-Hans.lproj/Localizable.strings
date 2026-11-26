@@ -167,6 +167,7 @@
 "accountsCustomApiNoModels" = "还没有模型。从服务器获取，或手动添加一个。";
 "accountsCustomApiNotOffered" = "此服务器不提供 %1$@。";
 "accountsCustomApiNotReached" = "无法连接到此服务器。";
+"accountsCustomApiNotSaved" = "未保存。";
 "accountsCustomApiNotSavedField" = "未保存。请修正标出的字段，然后再次点击“保存”。";
 "accountsCustomApiNotSavedRow" = "未保存。请修正标出的那一行，然后再次点击“保存”。";
 "accountsCustomApiNothingAnswered" = "%2$@/%1$@ 没有任何响应。";
@@ -199,6 +200,8 @@
 "accountsCustomApiReasoningOff" = "未设置（模型默认）";
 "accountsCustomApiRedirect" = "服务器把请求转到了别处。请输入它重定向到的地址。";
 "accountsCustomApiRefreshAfter" = "刷新间隔（秒）";
+"accountsCustomApiRefused" = "服务器拒绝了请求。请在提供方处检查此连接的设置。";
+"accountsCustomApiRefusedSaid" = "服务器拒绝了请求。它的回复：“%1$@”";
 "accountsCustomApiRemoveCertificate" = "移除证书";
 "accountsCustomApiRemoveHeader" = "移除请求头";
 "accountsCustomApiRemoveModel" = "移除 %1$@";

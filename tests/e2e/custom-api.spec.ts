@@ -233,8 +233,6 @@ test("a provider's 400 refusal of a model's check is told beside Save with its r
       pick: [passes, refused],
     });
     expect(await saveCustomApi(page)).toBe("failed");
-    await f.summary.scrollIntoViewIfNeeded();
-    await page.screenshot({ path: test.info().outputPath("refusal-summary.png") });
     await expect(f.error("save")).toContainText(reason);
     await expect(f.error("save")).not.toContainText(m.accountsCustomApiServer());
     await expect(f.form.locator("[data-custom-error]")).toHaveCount(1);

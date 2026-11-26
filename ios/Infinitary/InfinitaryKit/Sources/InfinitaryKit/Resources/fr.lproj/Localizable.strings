@@ -167,6 +167,7 @@
 "accountsCustomApiNoModels" = "Aucun modèle pour l’instant. Récupérez-les depuis le serveur, ou ajoutez-en un à la main.";
 "accountsCustomApiNotOffered" = "Ce serveur ne propose pas %1$@.";
 "accountsCustomApiNotReached" = "Ce serveur n’a pas pu être joint.";
+"accountsCustomApiNotSaved" = "Non enregistré.";
 "accountsCustomApiNotSavedField" = "Non enregistré. Corrigez le champ signalé et appuyez de nouveau sur Enregistrer.";
 "accountsCustomApiNotSavedRow" = "Non enregistré. Corrigez la ligne signalée et appuyez de nouveau sur Enregistrer.";
 "accountsCustomApiNothingAnswered" = "Rien n’a répondu à %2$@/%1$@.";
@@ -199,6 +200,8 @@
 "accountsCustomApiReasoningOff" = "Non défini (réglage du modèle)";
 "accountsCustomApiRedirect" = "Le serveur a envoyé la requête ailleurs. Saisissez l’adresse vers laquelle il redirige.";
 "accountsCustomApiRefreshAfter" = "Renouveler après (secondes)";
+"accountsCustomApiRefused" = "Le serveur a refusé la requête. Vérifiez les réglages de cette connexion auprès de son fournisseur.";
+"accountsCustomApiRefusedSaid" = "Le serveur a refusé la requête. Il a répondu : « %1$@ »";
 "accountsCustomApiRemoveCertificate" = "Retirer le certificat";
 "accountsCustomApiRemoveHeader" = "Retirer l’en-tête";
 "accountsCustomApiRemoveModel" = "Retirer %1$@";

@@ -82,7 +82,7 @@ Everything comes through `github_read` on this project's own paths, fenced as da
   A file whose changes GitHub does not show in full counts as unread, so the round asks for a split.
   It also reads the runs and check results on the newest version, to know whether runs wait for approval, any check failed, or every check passed.
   When a check failed, it reads the failed-check note's comment on that version, whose hidden first line `<!-- failed-checks sha=<version> labeled=… waits=main -->` says every failed check also fails on `main` (`docs/public-ci.md`, "The failed-check note"), and then `main`'s newest finished run of `main.yml` (`/repos/{owner}/{repo}/actions/workflows/main.yml/runs?branch=main&status=completed&per_page=1`).
-- **The project's own code and docs**, in the round's working copy, to check a report against what the code does now and to find whether a fix already shipped.
+- **The project's own code and docs**, in the round's working copy, to check a report against what the code does now, to find whether a fix already shipped, and to search for anything that already does what an idea asks and the first release that has it.
 - **Earlier answers**: open and closed issues listed by label (`duplicate`, `idea`, `accepted`) to find a duplicate or an idea already declined.
   GitHub's search reaches past this project's paths, so the round lists instead.
 
@@ -113,11 +113,11 @@ The mark does the labeling and closing, so a round sends no label or close reque
 | `needs-info` | the report lacks what a reproduction needs, or its reproduce step did not reproduce it and the maintainer chose to ask | exactly what to add, or the reproduce step's question; it waits on the author |
 | `duplicate` | an earlier issue covers it, or another open issue or pull request covers a pull request's change | which issue or pull request, by its number |
 | `declined` | an idea or a pull request that goes against `STRATEGY.md`, a bug that is not one, a bug its reproduce step did not reproduce and the maintainer chose to close, an issue whose Build row the maintainer marked Don't file, or an issue whose promised work stopped | the reason, naming the line of `STRATEGY.md` it rests on, the version and steps the reproduce step tried, or that the maintainer stopped the work without shipping it |
-| `answered` | a question answered, or a bug already fixed in a release | the answer, or the release that fixed it |
+| `answered` | a question answered, a bug already fixed in a release, or an idea a release already meets | the answer, or the release that fixed it |
 | `changes-requested` | a pull request that needs changes first | each change, plainly |
 | `released` | an `accepted` issue whose work shipped in a release | thanks to its reporter by name, and the first release that holds all of the work, saying when it is an alpha; it closes the issue if it is still open |
 
-An idea is read as a symptom of a problem: the reply names the problem it found and whether the project already plans for it.
+An idea is read as a symptom of a problem: the reply names the problem it found, what a release already does about it, and whether the project already plans for it.
 A pull request's `accepted` row on the approval card also says whether the change restores behavior the project promised, adds something a person turns on, or changes what happens by default, so the maintainer sees it at the tick.
 Every reply carries a mark, since the mark sets the labels.
 The one reply without a mark is a bug's first, so `accepted` on a bug always means the maintainer's crew reproduced it ("Reproduce first").

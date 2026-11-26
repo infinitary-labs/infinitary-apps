@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "intake-check-existing-features",
+      "reason": "Docs only: outside intake's rules now say to search for what a release already does when reading an idea, and an idea a release already meets gets the answered mark; the maintainer's approval cards read the same."
+    }
+  ]
+}

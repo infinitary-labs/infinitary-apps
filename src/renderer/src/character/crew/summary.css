@@ -2,9 +2,9 @@
    one instrument-style panel beside the crewmate the pointer is on. It sits
    in a layer whose origin is the formation's centre and which is not scaled
    with the crowded formation, so its type stays at size. The status, the
-   task title and the project wrap in full. The other facts stay one line,
-   and a longer one ends in an ellipsis; the footnote under the model may
-   take a second line. Read-only, so it never takes the pointer. */
+   task title, the project and the tags wrap in full. The other facts stay
+   one line, and a longer one ends in an ellipsis; the footnote under the
+   model may take a second line. Read-only, so it never takes the pointer. */
 .fm-crew-summary-layer {
   position: absolute;
   left: 50%; /* physical: the stage centre the orbit is measured from */
@@ -75,7 +75,7 @@
   line-height: 1.35;
 }
 /* Its rows are the shared task facts (design/core/taskFacts.css). Status,
-   task and project wrap; the other facts stay one line. */
+   task, project and tags wrap; the other facts stay one line. */
 .fm-crew-summary > div {
   white-space: nowrap;
 }
@@ -107,7 +107,8 @@
 }
 .fm-crew-summary .state,
 .fm-crew-summary [data-task-fact="task"],
-.fm-crew-summary [data-task-fact="project"] {
+.fm-crew-summary [data-task-fact="project"],
+.fm-crew-summary [data-task-fact="tags"] {
   white-space: normal;
   overflow: visible;
   text-overflow: unset;

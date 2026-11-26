@@ -1,4 +1,4 @@
-import type { DeviceChip, DeviceSystem } from "@shared/devices";
+import type { DeviceChip, DeviceSystem, DeviceView } from "@shared/devices";
 import { type BuildFlavor, userDataFoldersNewestFirst } from "@shared/userDataFolders";
 import { RETIRED_PROFILE_MARKER } from "../storage/retiredProfile";
 import { UPDATE_STARTING, VERIFY_MAC_APP } from "./remoteDownload";
@@ -94,6 +94,21 @@ export function farFolderArgs(flavor: BuildFlavor): [string, string] {
     flavor,
   ];
 }
+
+/**
+ * Whether a computer runs on this Mac, as its list found where it joined
+ * from (`onThisMac`), as an update's arguments say it (`--on-home-mac`);
+ * empty while the list does not say. The update there keeps it on its
+ * grant before it sets its agent up anew: this Mac's Update holds its SSH
+ * connection to that computer, so the update cannot dial this Mac to hear
+ * it (docs/helper.md, "Started by the home").
+ */
+export function onHomeMacWord(device: Pick<DeviceView, "onThisMac">): "true" | "false" | "" {
+  return device.onThisMac === undefined ? "" : device.onThisMac ? "true" : "false";
+}
+
+/** What a bootstrap's path may be: absolute, and nothing a shell or SSH would read. */
+export const REMOTE_PATH = /^\/[A-Za-z0-9._/-]{1,1000}$/;
 
 /**
  * A development stand-in's value under either of its names, Infinitary's

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "remote-login-split",
+      "reason": "Internal: installing and updating the Ubuntu package over Remote Login moves to its own file, unchanged; nothing a person sees changes."
+    }
+  ]
+}

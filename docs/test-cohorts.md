@@ -147,6 +147,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/core/placed/loadLine.integration.test.ts` | real native wrappers, command processes, process groups and two-second admission/lifetime cadence | 35 s |
 | `src/core/workspace/worktreePool.test.ts` | real git, real pnpm, at the run's own priority | 15 s for the file; the real-pnpm measurement test is 600 s |
 | `src/core/orchestrator/changeChecks.test.ts` | real git at the run's own priority | 5 s default (Mac slowest case 0.59 s) |
+| `src/core/orchestrator/changeChecks.watch.test.ts` | real git at the run's own priority | 5 s default (Mac slowest case 0.36 s) |
 | `src/core/orchestrator/changeCutover.test.ts` | real Git project setup and isolated forge | 5 s default |
 | `src/core/orchestrator/changeMerge.test.ts` | real git at the run's own priority, the put-in's 300 + 900 ms backoff | 10 s (Mac slowest case 1.3 s, the retried put-in) |
 | `src/core/orchestrator/changePublication.test.ts` | real git at the run's own priority | 5 s default (Mac slowest case 0.66 s) |

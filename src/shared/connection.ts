@@ -294,6 +294,14 @@ const versionSchema = z.string().regex(/^\d+\.\d+\.\d+$/);
  */
 export const REPLACED_PUSH_CHANNEL = "inf:replaced";
 
+/**
+ * The contract change by which a phone says how long its catch-up took
+ * (docs/connection.md, "The catch-up log"): a phone that lists it sends
+ * `shown` once, and only to a home whose welcome lists it, since an older
+ * home closes a connection on a frame it does not know.
+ */
+export const CATCH_UP_SHOWN = "catch-up-shown";
+
 /** A place in the numbered pushes: the journal's run and the last push seen. */
 export const connectionCursorSchema = z.strictObject({
   epoch: z.string().min(1).max(64),
@@ -432,6 +440,12 @@ export const clientFrameSchema = z.union([
     }),
     invokeFrameSchema,
     z.object({ t: z.literal("leave") }),
+    /**
+     * A phone's catch-up showed (`CATCH_UP_SHOWN`): its replay was read, or
+     * a re-read's first reads were answered, `ms` after it sent its hello by
+     * its own clock. Sent once per connection.
+     */
+    z.object({ t: z.literal("shown"), ms: z.number().int().nonnegative() }),
   ]),
   ...resultFrameSchemas,
 ]);

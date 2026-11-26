@@ -146,10 +146,14 @@ It starts at the phone's hello and says:
 - how many updates it missed and what they weigh as a replay sends them, or that they are no longer kept, and the reload weight they were measured against, or that it is not weighed yet;
 - the route its socket came from: the same network as one of this computer's own, a private network service's shared range, this computer itself (a relay here, say) or another route, never the address;
 - the time from its hello until the phone acknowledged every byte of the catch-up (`Outbox.whenAnswered`), or until it went before acknowledging it all;
+- the time from its hello until its catch-up showed, by the phone's own clock, when the phone said it;
 - the app version its hello said.
 
 A replay's catch-up is written with the welcome; a reload's once the home has answered each read in `RELOAD_READS`, which the phone asks first on a reload, the board last (`initialReads`, `ReadOnlySession.swift`).
 The outbox names the catch-up's last byte with a ping once it is written, so the acknowledgment never waits for the heartbeat.
+A phone reads ahead of what it is handling, so the acknowledgment says when the bytes arrived, not when the phone had read them; the phone says that itself.
+A phone whose hello lists `catch-up-shown` (`CATCH_UP_SHOWN`, `src/shared/connection.ts`) sends `{"t":"shown","ms":N}` once per connection, once its replay is read or its re-read's first reads are answered, and only to a home whose welcome lists the change, since an older home closes a connection on a frame it does not know.
+For such a phone the line waits for that word after the acknowledgment, and is told without it if the connection goes first; the time stays in this line, and nothing else the home keeps or sends carries it.
 A computer's window and the local door's clients log nothing.
 The line goes to the home's console as `[connection] phone catch-up: ...`; `onCatchUp` hears it instead where the connection is started with one.
 

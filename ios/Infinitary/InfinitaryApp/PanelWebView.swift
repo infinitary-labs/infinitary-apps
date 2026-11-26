@@ -244,6 +244,12 @@ import SwiftUI
                                  in: nil, in: .page, completionHandler: nil)
     }
 
+    /// A replay's pushes, each `channel` and `payload`, in order in one call, so the page's reads run once for them all.
+    func pushes(_ list: [[String: Any]]) {
+        guard stand == .drawn, let view else { return }
+        view.callAsyncJavaScript("window.phonePanel.pushes(list)", arguments: ["list": list], in: nil, in: .page, completionHandler: nil)
+    }
+
     /// The phone reloaded what it held: every read the page made runs again.
     func resync() {
         guard stand == .drawn else { return }

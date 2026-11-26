@@ -1100,6 +1100,7 @@
   "settingsProjectsWorkspaceDescription": "その場で作成：作業コピーもプルリクエストもありません。",
   "settingsReasoningAuto": "自動",
   "settingsReasoningLabel": "{provider} {model}の{slot}向け推論",
+  "settingsReasoningMax": "最大",
   "settingsReasoningSaveFailed": "推論を保存できませんでした。以前の選択が表示されたままです。もう一度お試しください。",
   "settingsReasoningSavedUnavailable": "{reasoning} · 保存済み、利用不可",
   "settingsReasoningUnavailable": "推論の選択肢を利用できません",

@@ -268,7 +268,7 @@ Membership changes never copy reasoning to another level, and removing and re-ad
 Provider/model keys follow the existing placements across projects and computers, never individual accounts.
 
 Pi's `getSupportedThinkingLevels` and the Claude coding resolver own capability choices, and the Models view carries those choices rather than a second renderer catalog.
-The app's selectable crew range is Low through Extra high; Minimal's catalog alias is not another menu choice, and Max and new None choices are not supported.
+The app's selectable crew range is Low through Max, each offered only where the model lists it, so a model whose top level is Max offers Max without Extra high; Minimal's catalog alias is not another menu choice, and new None choices are not supported.
 A fixed model shows None or Model's own, and unknown capabilities offer no menu.
 A saved choice that loses support remains saved beside its effective value; unknown capabilities say choices are unavailable instead of inventing support.
 Failed writes keep the saved view and show an inline explanation, and a keyboard save returns focus after the settings writer re-enables its controls.

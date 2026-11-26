@@ -52,7 +52,7 @@ const slotMembershipSchema = z
   .union([slotSchema, z.array(slotSchema)])
   .transform((value) => (Array.isArray(value) ? value : [value]));
 
-export const reasoningChoiceSchema = z.enum(["low", "medium", "high", "xhigh"]);
+export const reasoningChoiceSchema = z.enum(["low", "medium", "high", "xhigh", "max"]);
 export type ReasoningChoice = z.infer<typeof reasoningChoiceSchema>;
 export const reasoningCapabilitiesSchema = z.object({
   levels: z.array(reasoningChoiceSchema),

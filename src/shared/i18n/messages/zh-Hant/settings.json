@@ -1100,6 +1100,7 @@
   "settingsProjectsWorkspaceDescription": "就地建置：沒有工作副本，也沒有 pull request。",
   "settingsReasoningAuto": "自動",
   "settingsReasoningLabel": "{provider} {model}用於{slot}的推理",
+  "settingsReasoningMax": "最大",
   "settingsReasoningSaveFailed": "無法儲存推理設定。仍顯示你先前的選擇。請再試一次。",
   "settingsReasoningSavedUnavailable": "{reasoning} · 已儲存，無法使用",
   "settingsReasoningUnavailable": "無法使用推理選項",

@@ -2378,6 +2378,7 @@
 "phoneTaskFactsLevelExtraHigh" = "Extra high";
 "phoneTaskFactsLevelHigh" = "High";
 "phoneTaskFactsLevelLow" = "Low";
+"phoneTaskFactsLevelMax" = "Max";
 "phoneTaskFactsLevelMedium" = "Medium";
 "phoneTaskFactsLevelMinimal" = "Minimal";
 "phoneTaskFactsLevelModelDefault" = "Model's own";
@@ -3724,6 +3725,7 @@
 "settingsProjectsWorkspaceDescription" = "Builds in place: no working copy and no pull request.";
 "settingsReasoningAuto" = "Auto";
 "settingsReasoningLabel" = "%2$@ %1$@ reasoning for %3$@";
+"settingsReasoningMax" = "Max";
 "settingsReasoningSaveFailed" = "Could not save reasoning. Your previous choice is still shown. Try again.";
 "settingsReasoningSavedUnavailable" = "%1$@ · saved, unavailable";
 "settingsReasoningUnavailable" = "Reasoning choices unavailable";

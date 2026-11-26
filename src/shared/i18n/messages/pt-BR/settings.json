@@ -1160,6 +1160,7 @@
   "settingsProjectsWorkspaceDescription": "Feito no local: sem cópia de trabalho e sem solicitação de pull.",
   "settingsReasoningAuto": "Automático",
   "settingsReasoningLabel": "Raciocínio de {provider} {model} para {slot}",
+  "settingsReasoningMax": "Máximo",
   "settingsReasoningSaveFailed": "Não foi possível salvar o raciocínio. Sua escolha anterior continua aparecendo. Tente de novo.",
   "settingsReasoningSavedUnavailable": "{reasoning} · salvo, indisponível",
   "settingsReasoningUnavailable": "Opções de raciocínio indisponíveis",

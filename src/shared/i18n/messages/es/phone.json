@@ -680,6 +680,7 @@
   "phoneTaskFactsLevelExtraHigh": "Muy alto",
   "phoneTaskFactsLevelHigh": "Alto",
   "phoneTaskFactsLevelLow": "Bajo",
+  "phoneTaskFactsLevelMax": "Máximo",
   "phoneTaskFactsLevelMedium": "Medio",
   "phoneTaskFactsLevelMinimal": "Mínimo",
   "phoneTaskFactsLevelModelDefault": "El del modelo",

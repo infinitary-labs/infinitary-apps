@@ -2486,6 +2486,7 @@ public enum PhoneMessages {
     public static func `phoneTaskFactsLevelExtraHigh`() -> String { PhoneWords.format("phoneTaskFactsLevelExtraHigh", []) }
     public static func `phoneTaskFactsLevelHigh`() -> String { PhoneWords.format("phoneTaskFactsLevelHigh", []) }
     public static func `phoneTaskFactsLevelLow`() -> String { PhoneWords.format("phoneTaskFactsLevelLow", []) }
+    public static func `phoneTaskFactsLevelMax`() -> String { PhoneWords.format("phoneTaskFactsLevelMax", []) }
     public static func `phoneTaskFactsLevelMedium`() -> String { PhoneWords.format("phoneTaskFactsLevelMedium", []) }
     public static func `phoneTaskFactsLevelMinimal`() -> String { PhoneWords.format("phoneTaskFactsLevelMinimal", []) }
     public static func `phoneTaskFactsLevelModelDefault`() -> String { PhoneWords.format("phoneTaskFactsLevelModelDefault", []) }
@@ -3892,6 +3893,7 @@ public enum PhoneMessages {
     public static func `settingsProjectsWorkspaceDescription`() -> String { PhoneWords.format("settingsProjectsWorkspaceDescription", []) }
     public static func `settingsReasoningAuto`() -> String { PhoneWords.format("settingsReasoningAuto", []) }
     public static func `settingsReasoningLabel`(`model`: String, `provider`: String, `slot`: String) -> String { PhoneWords.format("settingsReasoningLabel", [`model`, `provider`, `slot`]) }
+    public static func `settingsReasoningMax`() -> String { PhoneWords.format("settingsReasoningMax", []) }
     public static func `settingsReasoningSaveFailed`() -> String { PhoneWords.format("settingsReasoningSaveFailed", []) }
     public static func `settingsReasoningSavedUnavailable`(`reasoning`: String) -> String { PhoneWords.format("settingsReasoningSavedUnavailable", [`reasoning`]) }
     public static func `settingsReasoningUnavailable`() -> String { PhoneWords.format("settingsReasoningUnavailable", []) }
@@ -7277,6 +7279,7 @@ extension PhoneWords {
         "phoneTaskFactsLevelExtraHigh": [],
         "phoneTaskFactsLevelHigh": [],
         "phoneTaskFactsLevelLow": [],
+        "phoneTaskFactsLevelMax": [],
         "phoneTaskFactsLevelMedium": [],
         "phoneTaskFactsLevelMinimal": [],
         "phoneTaskFactsLevelModelDefault": [],
@@ -8683,6 +8686,7 @@ extension PhoneWords {
         "settingsProjectsWorkspaceDescription": [],
         "settingsReasoningAuto": [],
         "settingsReasoningLabel": ["model", "provider", "slot"],
+        "settingsReasoningMax": [],
         "settingsReasoningSaveFailed": [],
         "settingsReasoningSavedUnavailable": ["reasoning"],
         "settingsReasoningUnavailable": [],

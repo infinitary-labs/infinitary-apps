@@ -2378,6 +2378,7 @@
 "phoneTaskFactsLevelExtraHigh" = "Très élevé";
 "phoneTaskFactsLevelHigh" = "Élevé";
 "phoneTaskFactsLevelLow" = "Faible";
+"phoneTaskFactsLevelMax" = "Max.";
 "phoneTaskFactsLevelMedium" = "Moyen";
 "phoneTaskFactsLevelMinimal" = "Minimal";
 "phoneTaskFactsLevelModelDefault" = "Celui du modèle";
@@ -3724,6 +3725,7 @@
 "settingsProjectsWorkspaceDescription" = "Construit sur place : pas de copie de travail ni de demande de tirage.";
 "settingsReasoningAuto" = "Automatique";
 "settingsReasoningLabel" = "Raisonnement de %2$@ %1$@ pour %3$@";
+"settingsReasoningMax" = "Max.";
 "settingsReasoningSaveFailed" = "Impossible d’enregistrer le raisonnement. Votre choix précédent reste affiché. Réessayez.";
 "settingsReasoningSavedUnavailable" = "%1$@ · enregistré, indisponible";
 "settingsReasoningUnavailable" = "Choix de raisonnement indisponibles";

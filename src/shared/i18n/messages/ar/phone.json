@@ -740,6 +740,7 @@
   "phoneTaskFactsLevelExtraHigh": "مرتفع جدًا",
   "phoneTaskFactsLevelHigh": "مرتفع",
   "phoneTaskFactsLevelLow": "منخفض",
+  "phoneTaskFactsLevelMax": "أقصى",
   "phoneTaskFactsLevelMedium": "متوسط",
   "phoneTaskFactsLevelMinimal": "أدنى",
   "phoneTaskFactsLevelModelDefault": "افتراضي النموذج",

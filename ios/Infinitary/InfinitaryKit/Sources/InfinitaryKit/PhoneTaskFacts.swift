@@ -382,6 +382,7 @@ public struct PhoneTaskFacts: Sendable {
         ["off": PhoneMessages.phoneTaskFactsLevelNone(), "minimal": PhoneMessages.phoneTaskFactsLevelMinimal(),
          "low": PhoneMessages.phoneTaskFactsLevelLow(), "medium": PhoneMessages.phoneTaskFactsLevelMedium(),
          "high": PhoneMessages.phoneTaskFactsLevelHigh(), "xhigh": PhoneMessages.phoneTaskFactsLevelExtraHigh(),
+         "max": PhoneMessages.phoneTaskFactsLevelMax(),
          "default": PhoneMessages.phoneTaskFactsLevelModelDefault()]
     }
 

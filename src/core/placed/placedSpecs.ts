@@ -2,11 +2,14 @@
 import { offeringKey } from "@shared/modelSlots";
 import { backendForProvider } from "@shared/providers";
 import { type PlacedSpec, placedSpecSchema } from "@shared/work";
-import type { ContractChangeName } from "../connection/contractChanges";
+import { type ContractChangeName, contractChange } from "../connection/contractChanges";
 import { compactionNow } from "../session/compaction";
 import type { SessionBackend, SessionShape, SessionSpec } from "../session/session";
 import { sameNames } from "../session/workRecovery";
 import { FRESH_OPEN, OPEN_NOT_OPENED, REATTACH_ONLY_OPEN } from "./crewMachines";
+
+/** A computer that opens a session at the Max reasoning level (`reasoning-max.md`). */
+const REASONING_ABOVE_XHIGH = contractChange("reasoning-max");
 
 /** A session spec for a rolling session, the only shape a conversation held on another computer serves. */
 export type HeldSpec = SessionSpec & { shape: Extract<SessionShape, { turns: "rolling" }> };
@@ -62,7 +65,11 @@ export function askedSpec(backend: SessionBackend, spec: HeldSpec, there: OpenTh
     ...(spec.model ? { model: spec.model } : {}),
     ...(spec.speed && supportsSpeed ? { speed: true } : {}),
     thinking: {
-      level: spec.thinking.level,
+      // An older computer refuses the whole spec over a level it has no word for.
+      level:
+        spec.thinking.level === "max" && !takes.listsChange(deviceId, REASONING_ABOVE_XHIGH)
+          ? "xhigh"
+          : spec.thinking.level,
       ...(spec.thinking.quick ? { quick: true } : {}),
     },
     instructions: spec.instructions.base,

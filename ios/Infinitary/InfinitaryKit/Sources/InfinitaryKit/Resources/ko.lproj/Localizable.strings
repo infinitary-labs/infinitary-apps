@@ -2378,6 +2378,7 @@
 "phoneTaskFactsLevelExtraHigh" = "매우 높음";
 "phoneTaskFactsLevelHigh" = "높음";
 "phoneTaskFactsLevelLow" = "낮음";
+"phoneTaskFactsLevelMax" = "최대";
 "phoneTaskFactsLevelMedium" = "중간";
 "phoneTaskFactsLevelMinimal" = "최소";
 "phoneTaskFactsLevelModelDefault" = "모델 기본값";
@@ -3726,6 +3727,7 @@
 "settingsProjectsWorkspaceDescription" = "그 자리에서 만들어요: 작업 사본도, 끌어오기 요청도 없어요.";
 "settingsReasoningAuto" = "자동";
 "settingsReasoningLabel" = "%2$@ %1$@의 %3$@ 추론";
+"settingsReasoningMax" = "최대";
 "settingsReasoningSaveFailed" = "추론을 저장할 수 없었어요. 이전 선택이 그대로 보여요. 다시 시도하세요.";
 "settingsReasoningSavedUnavailable" = "%1$@ · 저장됨, 사용 불가";
 "settingsReasoningUnavailable" = "추론 선택지를 쓸 수 없음";

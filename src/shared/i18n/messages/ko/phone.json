@@ -640,6 +640,7 @@
   "phoneTaskFactsLevelExtraHigh": "매우 높음",
   "phoneTaskFactsLevelHigh": "높음",
   "phoneTaskFactsLevelLow": "낮음",
+  "phoneTaskFactsLevelMax": "최대",
   "phoneTaskFactsLevelMedium": "중간",
   "phoneTaskFactsLevelMinimal": "최소",
   "phoneTaskFactsLevelModelDefault": "모델 기본값",

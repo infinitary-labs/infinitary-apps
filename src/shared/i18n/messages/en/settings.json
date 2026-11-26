@@ -1130,6 +1130,7 @@
   "settingsProjectsWorkspaceDescription": "Builds in place: no working copy and no pull request.",
   "settingsReasoningAuto": "Auto",
   "settingsReasoningLabel": "{provider} {model} reasoning for {slot}",
+  "settingsReasoningMax": "Max",
   "settingsReasoningSaveFailed": "Could not save reasoning. Your previous choice is still shown. Try again.",
   "settingsReasoningSavedUnavailable": "{reasoning} · saved, unavailable",
   "settingsReasoningUnavailable": "Reasoning choices unavailable",

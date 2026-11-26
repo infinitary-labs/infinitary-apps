@@ -120,7 +120,7 @@ A move, a stop, a quit or a close that takes the task while it routes supersedes
 
 ## A level's words
 
-A level names how hard a task is, so a person never reads it as the reasoning, whose words are Low, Medium, High and Extra high.
+A level names how hard a task is, so a person never reads it as the reasoning, whose words are Low, Medium, High, Extra high and Max.
 The saved values stay premium, high, medium and low; a person reads Premium, Hard, Normal and Simple (`src/shared/levelWords.ts`).
 `levelWord` is the badge's word in the app's language, `levelList` names the work a model takes ("hard and normal tasks"), and `levelModel` and `levelModels` name a level's models in a sentence ("a model for hard tasks", "premium models").
 Premium names models, since the app sorts no work into it on its own.
@@ -180,6 +180,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 - Reasoning effort: a fresh crewmate with a routed model inherits the served slot's table level (`src/shared/routingPolicy.ts`: premium/high xhigh, medium/low medium).
   Pi clamps to the nearest offered level at or below it (or the lowest offered); Claude sends the level explicitly on its opening query for supported models and omits it for legacy Haiku.
   Haiku 5.5 receives medium for ordinary low-slot work and low for Quick; saved slot choices remain untouched.
+  Max is offered only where Pi lists it for the model; the Claude client caps a Max request to Extra high, and a computer that runs work without the `reasoning-max` contract change is asked for Extra high instead.
   Settings → Intelligence → Models offers a reasoning menu beside each model in each used level.
   An explicit provider/model/served-level choice overrides that default, after routing, and keeps its chosen level under Quick care, bounded by the executing backend's capabilities.
   A reasoning effort the captain named for the task (`override_reasoning` on its shape) outranks that choice for this task alone and is treated the same way; the Settings choice is unchanged.

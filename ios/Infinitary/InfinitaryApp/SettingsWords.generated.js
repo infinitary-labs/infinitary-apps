@@ -16365,12 +16365,12 @@ ${events}` : prompt;
     changes: array(forgeChangeRowSchema)
   }).strict();
   const reasoningSchema = object({
-    level: _enum(["off", "minimal", "low", "medium", "high", "xhigh", "default"]),
+    level: _enum(["off", "minimal", "low", "medium", "high", "xhigh", "max", "default"]),
     lower: _enum(["quick", "capped"]).optional()
   });
   const slotSchema = _enum(["premium", "high", "medium", "low"]);
   const slotMembershipSchema = union([slotSchema, array(slotSchema)]).transform((value) => Array.isArray(value) ? value : [value]);
-  const reasoningChoiceSchema = _enum(["low", "medium", "high", "xhigh"]);
+  const reasoningChoiceSchema = _enum(["low", "medium", "high", "xhigh", "max"]);
   const reasoningCapabilitiesSchema = object({
     levels: array(reasoningChoiceSchema),
     fixed: _enum(["off", "default"]).optional()

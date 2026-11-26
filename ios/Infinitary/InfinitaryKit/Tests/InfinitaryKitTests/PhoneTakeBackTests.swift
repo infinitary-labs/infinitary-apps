@@ -52,13 +52,33 @@ struct PhoneTakeBackTests {
         #expect(PhoneTakeBack.revertible(rounds[0], now: Date(timeIntervalSince1970: sentAt / 1000)) == nil)
         // The message replaced before any turn read it carries the computer's typed line, worded on the phone.
         #expect(rounds[1].reply?.withdrawn == true)
-        #expect(rounds[1].reply?.whole == PhoneMessages.shellLastTurnRevertedUnread())
         #expect(back.lastTurn.previous?.reply?.withdrawn == true)
+    }
+
+    /// The computer saves the withdrawn line's English beside the fact; the phone words the line from its own catalog,
+    /// whatever English a computer saved, here an earlier wording.
+    @Test func aWithdrawnLineIsWordedOnThePhone() throws {
+        let saved = #"{"text":"Taken back before any turn read it","eligibility":"completed","withdrawn":true}"#
+        let reply = try JSONDecoder().decode(PhoneConversationRound.Reply.self, from: Data(saved.utf8))
+        #expect(reply.whole == PhoneMessages.shellLastTurnRevertedUnread())
+        let turnReply = try JSONDecoder().decode(PhoneLastTurn.Reply.self, from: Data(saved.utf8))
+        #expect(turnReply.shown == PhoneMessages.shellLastTurnRevertedUnread())
+    }
+
+    /// The approved plan: "A mark already shown stays even if the window ends while you edit". The draft keeps
+    /// replacing the newest message past the minute, and stops once that message is taken back or no longer newest.
+    @Test func anEditMarkOutlivesTheMinuteWhileItsMessageIsNewest() {
+        let rounds = strip(reading.lastTurn, reading.strip)
+        #expect(PhoneTakeBack.replaces("ask-2", newest: rounds[0]) == "ask-2")
+        #expect(PhoneTakeBack.replaces("ask-2", newest: rounds[1]) == nil)
+        let back = strip(reading.takeBack.lastTurn, reading.takeBack.strip)
+        #expect(PhoneTakeBack.replaces("ask-edit", newest: back[0]) == nil)
+        #expect(PhoneTakeBack.replaces(nil, newest: rounds[0]) == nil)
     }
 
     /// The revert icon's tap draws Reverted at once over the computer's last turn, and settles on the last turn that
     /// marks it: the turn read before the tap lacks it, the marked one holds it, and one without the message voids it.
-    @Test func aTakeBackShowsAtTheTapAndSettlesOnTheMarkedTurn() {
+    @Test func aTakeBackShowsAtTheTapAndSettlesOnTheMarkedTurn() throws {
         var ledger = PhoneIntentLedger()
         ledger.add(.takeBack(ask: "ask-2"))
         let shown = PhoneIntentFold.lastTurn(reading.lastTurn, ledger.intents)
@@ -68,6 +88,10 @@ struct PhoneTakeBackTests {
         #expect(PhoneIntentLedger.evidence(.takeBack(ask: "ask-2"), .turn(reading.lastTurn)) == .lacks)
         #expect(PhoneIntentLedger.evidence(.takeBack(ask: "ask-2"), .turn(marked)) == .holds)
         #expect(PhoneIntentLedger.evidence(.takeBack(ask: "ask-2"), .turn(reading.takeBack.lastTurn)) == .void)
+        // The strip draws the newest round Reverted at the tap, though the page it read still shows it standing.
+        #expect(reading.strip.rounds[0].takenBack == false)
+        let drawn = PhoneConversation.strip(turn: try #require(shown), page: reading.strip.rounds, readAt: reading.lastTurn)
+        #expect(drawn[0].id == reading.strip.rounds[0].id && drawn[0].takenBack)
         #expect(ledger.saw(.turn(reading.lastTurn), welcome: 1).isEmpty && !ledger.isEmpty)
         _ = ledger.saw(.turn(marked), welcome: 1)
         #expect(ledger.isEmpty)

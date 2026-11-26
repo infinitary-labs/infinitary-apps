@@ -11,6 +11,13 @@ public enum PhoneTakeBack {
         return round.askId
     }
 
+    /// The message a draft marked by Edit still replaces: the newest message, not taken back. The window only gates
+    /// offering Edit, so a mark already shown outlives the minute (docs/task-capture.md, "Taking back a message").
+    public static func replaces(_ replacing: String?, newest round: PhoneConversationRound?) -> String? {
+        guard let replacing, let round, round.kind == .message, !round.takenBack, round.askId == replacing else { return nil }
+        return replacing
+    }
+
     /// How long until the round leaves the window; nil once it has or never could.
     public static func remaining(_ round: PhoneConversationRound, now: Date = Date()) -> Duration? {
         guard round.kind == .message, !round.takenBack, round.askId != nil, let sentAt = round.sentAt else { return nil }

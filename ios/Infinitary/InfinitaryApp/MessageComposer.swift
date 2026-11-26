@@ -24,8 +24,8 @@ struct MessageComposer: View {
     @State private var fadeKey: String?
     @State private var remaining = Self.readingTime
     @State private var faded = false
-    /// INF-6763's plan, part 3: the message an Edit put back in the box, which the next send replaces; and the clock the
-    /// revert icon reads, moved on when the newest message leaves the minute.
+    /// INF-6763's plan, part 3: the message an Edit put back in the box, which the next send replaces; and a tick that
+    /// draws the strip again when the newest message leaves the minute. The window rule reads the clock itself.
     @State private var replacing: String?
     @State private var now = Date()
 
@@ -55,10 +55,17 @@ struct MessageComposer: View {
                     words: session.lastTurn?.reply?.words, rounds: session.stripRounds.map(\.id))
     }
 
-    /// The newest message's id while it may be taken back from this phone (docs/composer.md, "Taking back").
+    /// The newest message's id while it may be taken back from this phone (docs/composer.md, "Taking back"). It reads
+    /// the clock on every draw, as the Mac does, since the strip can be hidden while the minute ends; `now` only redraws.
     private var revertible: String? {
+        _ = now
         guard session.canTakeBack, let newest = session.stripRounds.first else { return nil }
-        return PhoneTakeBack.revertible(newest, now: now)
+        return PhoneTakeBack.revertible(newest, now: Date())
+    }
+
+    /// The message the Edit draft still replaces, past the minute too.
+    private var replaces: String? {
+        session.canTakeBack ? PhoneTakeBack.replaces(replacing, newest: session.stripRounds.first) : nil
     }
 
     typealias Photo = PhonePhoto
@@ -68,8 +75,8 @@ struct MessageComposer: View {
             // INF-589 item 17: on its side an iPhone gives the card this height; the last turn returns upright.
             if !session.stripRounds.isEmpty, !compact, !messageContext.replyTucked { lastTurn(session.stripRounds) }
             // The Mac's mark on a recalled draft: an Edit put the newest message's words back, and the next send replaces
-            // it; the cross keeps the words and sends them as a new message.
-            if let replacing, replacing == revertible {
+            // it; the cross drops the mark and keeps the words, so the next send goes as a new message.
+            if replaces != nil {
                 HStack(spacing: 6) {
                     Image(systemName: "pencil").foregroundStyle(PhoneTheme.muted)
                     Text(PhoneMessages.composerReplacesLast()).foregroundStyle(PhoneTheme.secondary)
@@ -212,7 +219,7 @@ struct MessageComposer: View {
             .frame(maxWidth: .infinity).padding(.bottom, 4)
             .task(id: "\(key ?? "")|\(readable)") { await read(key, readable: readable) }
             // The revert icon and Edit leave when the minute ends: the clock moves on then and draws the strip again.
-            .task(id: PhoneTakeBack.remaining(rounds[0], now: now) == nil ? nil : rounds[0].askId) {
+            .task(id: PhoneTakeBack.remaining(rounds[0], now: Date()) == nil ? nil : rounds[0].askId) {
                 guard let left = PhoneTakeBack.remaining(rounds[0], now: Date()) else { return }
                 try? await Task.sleep(for: left)
                 if !Task.isCancelled { now = Date() }
@@ -394,8 +401,7 @@ struct MessageComposer: View {
         let words = text, pictures = photos
         var payload: [String: Any] = ["text": words, "images": pictures.map(\.wire)]
         for (key, value) in messageContext.fields { payload[key] = value }
-        // Only the newest message inside the minute is replaced, and never by plain words to a computer between versions.
-        let replaces = plain ? nil : replacing.flatMap { $0 == revertible ? $0 : nil }
+        let replaces = self.replaces
         if let replaces { payload["replaces"] = replaces }
         let args: [Any] = plain ? [words] : [payload]
         replacing = nil

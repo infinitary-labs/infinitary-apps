@@ -11420,6 +11420,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `No models yet. Fetch them from the server, or add one by hand.`;
   }
+  function accountsCustomApiNotChat() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ليس نموذج محادثة`;
+      case "de":
+        return `Kein Chatmodell`;
+      case "es":
+        return `No es un modelo de chat`;
+      case "fr":
+        return `Pas un modèle de chat`;
+      case "ja":
+        return `チャットモデルではありません`;
+      case "ko":
+        return `채팅 모델이 아니에요`;
+      case "pt-BR":
+        return `Não é um modelo de chat`;
+      case "zh-Hans":
+        return `不是聊天模型`;
+      case "zh-Hant":
+        return `不是聊天模型`;
+      case "en-XA":
+        return `[Ñöţ á çĥáţ ɱöðéļ ~~~~~~]`;
+      case "ar-XB":
+        return `‮Not a chat model‬`;
+    }
+    return `Not a chat model`;
+  }
   function accountsCustomApiNotOffered(input2) {
     const model = input2.model;
     switch (currentLanguage()) {
@@ -115569,6 +115596,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     accountsCustomApiNameNeeded,
     accountsCustomApiNoList,
     accountsCustomApiNoModels,
+    accountsCustomApiNotChat,
     accountsCustomApiNotOffered,
     accountsCustomApiNotReached,
     accountsCustomApiNotSaved,
@@ -119252,6 +119280,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "accountsCustomApiNameNeeded": [],
     "accountsCustomApiNoList": [],
     "accountsCustomApiNoModels": [],
+    "accountsCustomApiNotChat": [],
     "accountsCustomApiNotOffered": ["model"],
     "accountsCustomApiNotReached": [],
     "accountsCustomApiNotSaved": [],
@@ -131893,7 +131922,9 @@ ${FRAME_KEYBOARD_SCRIPT}
   const customListedModelSchema = object({
     id: string().min(1).max(256),
     context: number().int().positive().optional(),
-    output: number().int().positive().optional()
+    output: number().int().positive().optional(),
+    /** The server says this model takes no chat turn; the form shows it unpickable. */
+    notChat: literal(true).optional()
   });
   const customCertificateViewSchema = object({
     subject: string(),

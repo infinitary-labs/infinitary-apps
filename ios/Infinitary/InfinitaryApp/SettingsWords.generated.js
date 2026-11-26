@@ -14193,7 +14193,9 @@ ${events}` : prompt;
   const customListedModelSchema = object({
     id: string().min(1).max(256),
     context: number().int().positive().optional(),
-    output: number().int().positive().optional()
+    output: number().int().positive().optional(),
+    /** The server says this model takes no chat turn; the form shows it unpickable. */
+    notChat: literal(true).optional()
   });
   const customCertificateViewSchema = object({
     subject: string(),

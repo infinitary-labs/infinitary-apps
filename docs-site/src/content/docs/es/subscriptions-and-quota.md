@@ -1,5 +1,5 @@
 ---
-source: 9c71f435cc6524a0
+source: f1e95aa2b9433f4a
 title: Suscripciones y asignación
 description: Cómo agregar tus suscripciones de IA, leer cuánto queda de la asignación de tu plan y qué hace tu tripulación cuando se agota.
 ---
@@ -10,7 +10,7 @@ Las gestionas en Configuración, en **Inteligencia**, en la lista **Suscripcione
 ## Agregar una suscripción {#add-a-subscription}
 
 1. Abre Configuración y elige **Inteligencia**.
-2. Al pie de **Suscripciones de IA**, en **Agregar cuenta**, elige tu proveedor: Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter o Amazon Bedrock.
+2. Al pie de **Suscripciones de IA**, en **Agregar cuenta**, elige tu proveedor: Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter o Amazon Bedrock.
 3. Inicia sesión como te lo pida el proveedor.
    Algunos abren tu navegador, algunos muestran un código para escribir en su sitio, y algunos reciben una clave que pegas.
 4. Cuando termina el inicio de sesión, la nueva cuenta aparece en la lista.

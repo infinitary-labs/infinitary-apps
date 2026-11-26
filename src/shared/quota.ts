@@ -454,6 +454,8 @@ export const QUOTA_TO_PI_PROVIDER: Readonly<Record<string, string>> = {
   claude: "anthropic-claude",
   kimi: "kimi-coding",
   copilot: "github-copilot",
+  // Its own name in both worlds: "opencode" is Pi's id for OpenCode Zen.
+  "opencode-go": "opencode-go",
 };
 
 /**
@@ -508,7 +510,7 @@ export function restoredPins(routing: RoutingSettings): RoutingSettings {
 
 /**
  * Whether Infinitary reads an allowance for this provider id. Sensed providers
- * (Codex, Grok, Claude, Kimi Code, Copilot) get a pending "reading…" row until the first
+ * (Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go) get a pending "reading…" row until the first
  * sensor pass lands; everyone else (OpenRouter today) keeps the no-reader
  * sentence. Matches the sensor's own catalog (`QUOTA_PROVIDERS` in core).
  */

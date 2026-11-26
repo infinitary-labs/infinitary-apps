@@ -17,6 +17,7 @@ public enum PhoneMessages {
     public static func `accountsConnectCustomApi`() -> String { PhoneWords.format("accountsConnectCustomApi", []) }
     public static func `accountsConnectHow`(`provider`: String) -> String { PhoneWords.format("accountsConnectHow", [`provider`]) }
     public static func `accountsConnectInstallClaudeThere`() -> String { PhoneWords.format("accountsConnectInstallClaudeThere", []) }
+    public static func `accountsConnectKeyWhere`(`provider`: String, `site`: String) -> String { PhoneWords.format("accountsConnectKeyWhere", [`provider`, `site`]) }
     public static func `accountsConnectNotSignedIn`() -> String { PhoneWords.format("accountsConnectNotSignedIn", []) }
     public static func `accountsConnectNotSignedInYet`(`here`: String, `provider`: String) -> String { PhoneWords.format("accountsConnectNotSignedInYet", [`here`, `provider`]) }
     public static func `accountsConnectOpenSignIn`() -> String { PhoneWords.format("accountsConnectOpenSignIn", []) }
@@ -255,6 +256,7 @@ public enum PhoneMessages {
     public static func `accountsCustomApiUseModel`(`model`: String) -> String { PhoneWords.format("accountsCustomApiUseModel", [`model`]) }
     public static func `accountsCustomApiUseOn`(`on`: String) -> String { PhoneWords.format("accountsCustomApiUseOn", [`on`]) }
     public static func `accountsCustomApiUseTitle`(`name`: String, `on`: String) -> String { PhoneWords.format("accountsCustomApiUseTitle", [`name`, `on`]) }
+    public static func `accountsQuotaOpenCodeGoNoPlan`() -> String { PhoneWords.format("accountsQuotaOpenCodeGoNoPlan", []) }
     public static func `accountsSavedResetBusy`(`account`: String) -> String { PhoneWords.format("accountsSavedResetBusy", [`account`]) }
     public static func `accountsSavedResetCodexStopped`() -> String { PhoneWords.format("accountsSavedResetCodexStopped", []) }
     public static func `accountsSavedResetNoCodex`(`floor`: String, `site`: String) -> String { PhoneWords.format("accountsSavedResetNoCodex", [`floor`, `site`]) }
@@ -4808,6 +4810,7 @@ extension PhoneWords {
         "accountsConnectCustomApi": [],
         "accountsConnectHow": ["provider"],
         "accountsConnectInstallClaudeThere": [],
+        "accountsConnectKeyWhere": ["provider", "site"],
         "accountsConnectNotSignedIn": [],
         "accountsConnectNotSignedInYet": ["here", "provider"],
         "accountsConnectOpenSignIn": [],
@@ -5046,6 +5049,7 @@ extension PhoneWords {
         "accountsCustomApiUseModel": ["model"],
         "accountsCustomApiUseOn": ["on"],
         "accountsCustomApiUseTitle": ["name", "on"],
+        "accountsQuotaOpenCodeGoNoPlan": [],
         "accountsSavedResetBusy": ["account"],
         "accountsSavedResetCodexStopped": [],
         "accountsSavedResetNoCodex": ["floor", "site"],

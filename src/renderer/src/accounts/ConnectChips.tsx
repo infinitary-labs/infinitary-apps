@@ -316,7 +316,7 @@ export const CONNECT_CHIP_NOTES = {
 /**
  * The sign-in a provider offers; two means the person picks first. A
  * provider that signs in with a code (Copilot, Kimi Code) starts it at once
- * (INF-838).
+ * (INF-838), and one Pi offers only a key for (OpenCode Go) asks for it.
  */
 export function connectMethods(
   provider: Pick<ProviderView, "id" | "authTypes">,
@@ -399,12 +399,19 @@ export function AuthPromptPanel({
   onPromptValue: (value: string) => void;
   onAnswer: (value: string | null) => void;
 }) {
+  const entry = catalogEntry(prompt.providerId);
+  const keyWhere = prompt.kind === "secret" ? entry?.keySignIn : undefined;
   return (
     <div
       className="fm-connect-aside"
       style={{ display: "flex", flexDirection: "column", gap: 10, paddingTop: 4 }}
     >
       <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-1)" }}>{prompt.message}</div>
+      {keyWhere && entry && (
+        <div data-connect-key-where="" style={{ fontSize: "var(--text-sm)", color: "var(--fg-2)" }}>
+          {m.accountsConnectKeyWhere({ site: keyWhere.site, provider: entry.name })}
+        </div>
+      )}
       {prompt.kind === "select" && prompt.options ? (
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {prompt.options.map((option) => (

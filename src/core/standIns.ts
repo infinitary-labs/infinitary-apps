@@ -35,6 +35,7 @@ export type StandIns = {
     grokKeyUrl?: string;
     kimiUsageUrl?: string;
     copilotUsageUrl?: string;
+    openCodeGoUsageUrl?: string;
   };
   /** Local Bedrock endpoint owned by the hermetic launcher. */
   bedrockUrl?: string;
@@ -113,6 +114,7 @@ export function readStandIns(
       grokKeyUrl: text(env, "GROK_KEY_URL"),
       kimiUsageUrl: text(env, "KIMI_USAGE_URL"),
       copilotUsageUrl: text(env, "COPILOT_USAGE_URL"),
+      openCodeGoUsageUrl: text(env, "OPENCODE_GO_USAGE_URL"),
     },
     bedrockUrl: text(env, "BEDROCK_TEST_URL"),
     awsCli: text(env, "AWS_CLI"),

@@ -1,5 +1,5 @@
 ---
-source: 9c71f435cc6524a0
+source: f1e95aa2b9433f4a
 title: 订阅和额度
 description: 如何添加你的 AI 订阅、查看你的套餐额度还剩多少，以及额度用完时你的船员们会怎么做。
 ---
@@ -10,7 +10,7 @@ description: 如何添加你的 AI 订阅、查看你的套餐额度还剩多少
 ## 添加订阅 {#add-a-subscription}
 
 1. 打开“设置”并选择 **智能**。
-2. 在 **AI 订阅** 底部的 **添加账户** 下，选择你的服务商：Codex、Grok、Claude、Kimi Code、Copilot、OpenRouter 或 Amazon Bedrock。
+2. 在 **AI 订阅** 底部的 **添加账户** 下，选择你的服务商：Codex、Grok、Claude、Kimi Code、Copilot、OpenCode Go、OpenRouter 或 Amazon Bedrock。
 3. 按服务商要求的方式登录。
    有些会打开你的浏览器，有些会显示一个代码让你在它们的网站上输入，有些则需要你粘贴一个密钥。
 4. 登录完成后，新账户会出现在列表中。

@@ -1,5 +1,5 @@
 ---
-source: 9c71f435cc6524a0
+source: f1e95aa2b9433f4a
 title: サブスクリプションと利用枠
 description: AI サブスクリプションの追加方法、プランの利用枠の残りの見方、そして利用枠がなくなったときに乗組員がどうするかを説明します。
 ---
@@ -10,7 +10,7 @@ description: AI サブスクリプションの追加方法、プランの利用�
 ## サブスクリプションを追加する {#add-a-subscription}
 
 1. 設定を開き、**インテリジェンス** を選びます。
-2. **AI サブスクリプション** のいちばん下の **アカウントを追加** で、プロバイダーを選びます：Codex、Grok、Claude、Kimi Code、Copilot、OpenRouter、Amazon Bedrock のいずれかです。
+2. **AI サブスクリプション** のいちばん下の **アカウントを追加** で、プロバイダーを選びます：Codex、Grok、Claude、Kimi Code、Copilot、OpenCode Go、OpenRouter、Amazon Bedrock のいずれかです。
 3. プロバイダーの求める方法でサインインします。
    ブラウザが開くもの、サイトで入力するコードが表示されるもの、キーを貼り付けるものがあります。
 4. サインインが終わると、新しいアカウントが一覧に表示されます。

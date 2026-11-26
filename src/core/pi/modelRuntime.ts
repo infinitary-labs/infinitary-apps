@@ -2,8 +2,9 @@ import { dirname, join } from "node:path";
 import { InMemoryCredentialStore, type ThinkingLevelMap } from "@earendil-works/pi-ai";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 
-import { BEDROCK_PROVIDER_ID } from "@shared/providers";
+import { BEDROCK_PROVIDER_ID, OPENCODE_GO_PROVIDER_ID } from "@shared/providers";
 import { bedrockAccountProvider } from "./bedrock";
+import { storedKeyOnly } from "./storedKeyOnly";
 
 /**
  * The one place Infinitary creates a Pi ModelRuntime, so the live-catalog policy
@@ -125,6 +126,13 @@ export async function createModelRuntime(options: ModelRuntimeOptions): Promise<
       bedrockAccountProvider(stock, options.bedrockUrl, options.bedrockProfileUnavailable),
     );
     await runtime.refresh({ allowNetwork: false, providers: [BEDROCK_PROVIDER_ID] });
+  }
+  const openCodeGo = options.connectionProvider
+    ? undefined
+    : runtime.getProvider(OPENCODE_GO_PROVIDER_ID);
+  if (openCodeGo) {
+    runtime.registerNativeProvider(storedKeyOnly(openCodeGo));
+    await runtime.refresh({ allowNetwork: false, providers: [OPENCODE_GO_PROVIDER_ID] });
   }
   const getAuth = runtime.getAuth.bind(runtime);
   runtime.getAuth = ((model, overrides) => {

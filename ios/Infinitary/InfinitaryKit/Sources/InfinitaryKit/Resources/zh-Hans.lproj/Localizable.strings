@@ -12,6 +12,7 @@
 "accountsConnectCustomApi" = "自定义 API";
 "accountsConnectHow" = "你想如何连接 %1$@？";
 "accountsConnectInstallClaudeThere" = "请先在那里安装 Claude Code";
+"accountsConnectKeyWhere" = "订阅 %1$@ 后，从 %2$@ 复制你的密钥。";
 "accountsConnectNotSignedIn" = "未登录";
 "accountsConnectNotSignedInYet" = "%2$@ 尚未在 %1$@ 上登录。";
 "accountsConnectOpenSignIn" = "打开登录页面";
@@ -248,6 +249,7 @@
 "accountsCustomApiUseModel" = "使用 %1$@";
 "accountsCustomApiUseOn" = "%1$@使用";
 "accountsCustomApiUseTitle" = "%2$@使用 %1$@";
+"accountsQuotaOpenCodeGoNoPlan" = "OpenCode Go 没有找到这个密钥的有效 Go 套餐。";
 "accountsSavedResetBusy" = "Infinitary 已在 %1$@ 上使用已保存的重置。请等待它完成。";
 "accountsSavedResetCodexStopped" = "Codex 在使用任何内容之前停止了响应，因此没有使用已保存的重置。请重试。";
 "accountsSavedResetNoCodex" = "要在 Infinitary 中使用已保存的重置，这台电脑需要 Codex %1$@ 或更高版本。请安装 Codex，或在 %2$@ 使用重置。";
@@ -4299,7 +4301,7 @@
 "shellGateRecoveryTitle" = "在这台电脑上设置你的大副";
 "shellGateRunLine" = "为 %1$@ 上的大副连接一个订阅。它会从这里登录。";
 "shellGateStaysOn" = "请选一台保持开机的电脑。其他电脑需要它保持运行。";
-"shellGateStillNeeds" = "你的大副还需要一个能应答的账号：Codex、Grok、Claude、Kimi Code、Copilot、使用 API 密钥的 OpenRouter，或使用 AWS 登录的 Amazon Bedrock。";
+"shellGateStillNeeds" = "你的大副还需要一个能应答的账号：Codex、Grok、Claude、Kimi Code、Copilot、OpenCode Go、使用 API 密钥的 OpenRouter，或使用 AWS 登录的 Amazon Bedrock。";
 "shellGateTitle" = "连接一个订阅即可开始";
 "shellGateWhere" = "我应该住在哪里？请选一台尽量保持开机的电脑。";
 "shellKeyReminderHint" = "按一次后不再显示";

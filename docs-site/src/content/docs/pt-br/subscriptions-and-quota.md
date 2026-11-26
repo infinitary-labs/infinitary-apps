@@ -1,5 +1,5 @@
 ---
-source: 9c71f435cc6524a0
+source: f1e95aa2b9433f4a
 title: Assinaturas e franquia
 description: Como adicionar suas assinaturas de IA, ver quanto ainda resta da franquia do seu plano e o que sua tripulação faz quando ela acaba.
 ---
@@ -10,7 +10,7 @@ Você as gerencia nos Ajustes, em **Inteligência**, na lista **Assinaturas de I
 ## Adicionar uma assinatura {#add-a-subscription}
 
 1. Abra os Ajustes e escolha **Inteligência**.
-2. No pé de **Assinaturas de IA**, em **Adicionar conta**, escolha seu provedor: Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter ou Amazon Bedrock.
+2. No pé de **Assinaturas de IA**, em **Adicionar conta**, escolha seu provedor: Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter ou Amazon Bedrock.
 3. Faça login do jeito que o provedor pedir.
    Alguns abrem seu navegador, alguns mostram um código para digitar no site deles, e alguns pedem uma chave que você cola.
 4. Quando o login terminar, a nova conta aparece na lista.

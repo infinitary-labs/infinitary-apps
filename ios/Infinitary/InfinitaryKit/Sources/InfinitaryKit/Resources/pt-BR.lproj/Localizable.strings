@@ -12,6 +12,7 @@
 "accountsConnectCustomApi" = "API personalizada";
 "accountsConnectHow" = "Como você quer conectar %1$@?";
 "accountsConnectInstallClaudeThere" = "instale o Claude Code lá primeiro";
+"accountsConnectKeyWhere" = "Copie sua chave no %2$@ depois de assinar o %1$@.";
 "accountsConnectNotSignedIn" = "sem login";
 "accountsConnectNotSignedInYet" = "%2$@ ainda não tem login feito em %1$@.";
 "accountsConnectOpenSignIn" = "Abrir a página de login";
@@ -248,6 +249,7 @@
 "accountsCustomApiUseModel" = "Usar %1$@";
 "accountsCustomApiUseOn" = "Usar %1$@";
 "accountsCustomApiUseTitle" = "Usar %1$@ %2$@";
+"accountsQuotaOpenCodeGoNoPlan" = "O OpenCode Go não encontrou um plano Go ativo para esta chave.";
 "accountsSavedResetBusy" = "O Infinitary já está usando uma redefinição salva em %1$@. Espere terminar.";
 "accountsSavedResetCodexStopped" = "O Codex parou de responder antes de usar qualquer coisa, então nenhuma redefinição salva foi usada. Tente de novo.";
 "accountsSavedResetNoCodex" = "Para usar uma redefinição salva pelo Infinitary, este computador precisa do Codex %1$@ ou mais recente. Instale o Codex ou use a redefinição em %2$@.";
@@ -4299,7 +4301,7 @@
 "shellGateRecoveryTitle" = "Configure seu imediato neste computador";
 "shellGateRunLine" = "Conecte uma para o seu imediato em %1$@. O login é feito daqui.";
 "shellGateStaysOn" = "Escolha um computador que fique ligado. Os outros computadores precisam dele acordado.";
-"shellGateStillNeeds" = "Seu imediato ainda precisa de uma conta que responda: Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter com uma chave de API ou Amazon Bedrock com seu login da AWS.";
+"shellGateStillNeeds" = "Seu imediato ainda precisa de uma conta que responda: Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter com uma chave de API ou Amazon Bedrock com seu login da AWS.";
 "shellGateTitle" = "Conecte uma assinatura para começar";
 "shellGateWhere" = "Onde devo morar? Escolha um computador que fique ligado o máximo possível.";
 "shellKeyReminderHint" = "pressione uma vez e isto para";

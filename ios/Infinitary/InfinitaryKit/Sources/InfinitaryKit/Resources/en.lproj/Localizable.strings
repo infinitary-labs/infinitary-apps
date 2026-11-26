@@ -12,6 +12,7 @@
 "accountsConnectCustomApi" = "Custom API";
 "accountsConnectHow" = "How do you want to connect %1$@?";
 "accountsConnectInstallClaudeThere" = "install Claude Code there first";
+"accountsConnectKeyWhere" = "Copy your key from the %2$@ after you subscribe to %1$@.";
 "accountsConnectNotSignedIn" = "not signed in";
 "accountsConnectNotSignedInYet" = "%2$@ is not signed in on %1$@ yet.";
 "accountsConnectOpenSignIn" = "Open the sign-in page";
@@ -248,6 +249,7 @@
 "accountsCustomApiUseModel" = "Use %1$@";
 "accountsCustomApiUseOn" = "Use %1$@";
 "accountsCustomApiUseTitle" = "Use %1$@ %2$@";
+"accountsQuotaOpenCodeGoNoPlan" = "OpenCode Go found no active Go plan for this key.";
 "accountsSavedResetBusy" = "Infinitary is already using a saved reset on %1$@. Wait for it to finish.";
 "accountsSavedResetCodexStopped" = "Codex stopped answering before it used anything, so no saved reset was used. Try again.";
 "accountsSavedResetNoCodex" = "Using a saved reset from Infinitary needs Codex %1$@ or later on this computer. Install Codex, or use the reset on %2$@.";
@@ -4299,7 +4301,7 @@
 "shellGateRecoveryTitle" = "Set up your first mate on this computer";
 "shellGateRunLine" = "Connect one for your first mate on %1$@. It signs in from here.";
 "shellGateStaysOn" = "Pick a computer that stays on. Other computers need it awake.";
-"shellGateStillNeeds" = "Your first mate still needs an account that answers: Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter with an API key, or Amazon Bedrock with your AWS sign-in.";
+"shellGateStillNeeds" = "Your first mate still needs an account that answers: Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter with an API key, or Amazon Bedrock with your AWS sign-in.";
 "shellGateTitle" = "Connect a subscription to begin";
 "shellGateWhere" = "Where should I live? Pick a computer that stays on as much as possible.";
 "shellKeyReminderHint" = "press it once and this stops";

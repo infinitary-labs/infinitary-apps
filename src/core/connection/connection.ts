@@ -321,6 +321,10 @@ const WHOLE_LIST_READS: Partial<Record<string, (typeof RELOAD_READS)[number]>> =
   "inf:tasks": "inf:tasks:board",
 };
 
+/** Whether a board read asks for it without its closed rows, as a phone's reload does (`tasks.board` in src/shared/reads.ts). */
+const asksLightBoard = (args: unknown): boolean =>
+  Array.isArray(args) && (args[0] as { closed?: unknown } | null)?.closed === false;
+
 /** What each refusal at `FETCH_APP_PATH` says; none echoes the code. */
 const FETCH_APP_REASONS: Record<FetchAppRefusal, string> = {
   malformed: "The request for Infinitary is not one this home reads.",
@@ -552,6 +556,10 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
     let journal = new EventJournal(options.journal ?? DEFAULT_JOURNAL_LIMITS);
     // The bytes of the newest answer to each read a view's reload makes first.
     const reloadWeights = new Map<string, number>();
+    // A phone's reload reads the board without its closed rows, which on a long
+    // record weighs a fraction of the whole board, so it is weighed apart; a
+    // whole board pushed never sets it. A computer's window keeps `reloadWeights`.
+    let lightBoardWeight: number | undefined;
     const clients = new Set<Client>();
     const sockets = new WebSocketServer({
       noServer: true,
@@ -704,13 +712,15 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
     /**
      * What a view's reload would read first, weighed from the newest answer
      * to each this home wrote in this run, or the newest whole list it pushed
-     * since; undefined while any of them has not been written, and a view
+     * since; a phone's board by the newest light board answered, never a
+     * pushed one. Undefined while any of them has not been written, and a view
      * then replays (docs/connection.md, "Catching up").
      */
-    const reloadBytes = (): number | undefined => {
+    const reloadBytes = (phone: boolean): number | undefined => {
       let total = 0;
       for (const channel of RELOAD_READS) {
-        const bytes = reloadWeights.get(channel);
+        const bytes =
+          phone && channel === "inf:tasks:board" ? lightBoardWeight : reloadWeights.get(channel);
         if (bytes === undefined) return undefined;
         total += bytes;
       }
@@ -727,7 +737,8 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       client.role = role;
       // A replay that would weigh more than what a reload reads first reloads instead.
       const replay = replayFor(role, hello);
-      const reload = replay ? reloadBytes() : undefined;
+      const phone = role === "view" && hello.system === "ios";
+      const reload = replay ? reloadBytes(phone) : undefined;
       const missed =
         replay && (reload === undefined || replayBytes(replay) <= reload) ? replay : null;
       client.speaks = hello.protocolVersion;
@@ -790,7 +801,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       // whose work never reached this Mac since it joined (docs/devices.md).
       client.nameOnly = role === "work" && hello.nameOnly === true;
       client.takesWork = takes && !client.nameOnly;
-      client.phone = role === "view" && hello.system === "ios";
+      client.phone = phone;
       const name = homeName();
       const takeOverId = devices.takeOver?.() ?? null;
       if (client.phone)
@@ -798,7 +809,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
           lost: hello.cursor ? journal.lost(hello.cursor) : "no-place",
           replay,
           replaying: Boolean(missed),
-          weight: replay ? reload : reloadBytes(),
+          weight: replay ? reload : reloadBytes(true),
           remote: client.remote,
           appVersion: hello.appVersion,
           helloAt,
@@ -894,6 +905,8 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         }
         if (outcome.ok && RELOAD_READ_SET.has(frame.channel))
           reloadWeights.set(frame.channel, Buffer.byteLength(text));
+        if (outcome.ok && frame.channel === "inf:tasks:board" && asksLightBoard(frame.args))
+          lightBoardWeight = Buffer.byteLength(text);
         send(client, text);
         if (client.catchUp?.answered(frame.channel, text)) settleCatchUp(client);
       };

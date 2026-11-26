@@ -131,6 +131,7 @@ A device from before the change ignores that push, as it does any push on a chan
 The home then weighs the replay against a reload and answers `reload` when the replay would send more bytes.
 A reload is weighed by what a view reads first on one (`RELOAD_READS`, `src/core/connection/connection.ts`): the card list, Activity, the whole board, the last reply, the conversation's state and the computers in reach.
 Each is weighed by the newest answer to it the home wrote to any device in this run, or by the newest card list or whole board it pushed since, so the welcome never waits on a read.
+A phone is weighed by the shape it reads instead: its reload reads the board without its closed rows (`refresh`, `ReadOnlySession.swift`), which on a long record weighs a fraction of the whole board, so its board weighs as the newest such answer, and a whole board pushed never sets it.
 While any of them has not been answered in this run, the device replays, as before the weighing.
 A computer's window reads more than those on a reload, such as each thread it had read, so the weighing can choose a reload slightly heavier than the replay for it.
 
@@ -302,6 +303,7 @@ The names are open strings: a client ignores one it does not know, and a newer h
 ## Tests
 
 - `src/core/connection/connection.test.ts`: admission, pairing, the numbering and catch-up, and where it listens said only when that changes, against a stand-in core, the real event bus and the real pairing; `connection.reach.test.ts`: which requests a view may ask; `connection.work.test.ts`: the work requests and the home's own requests to a computer that runs work, the versions it reports, and a view heard coming and going.
+- `src/core/connection/connection.weighing.test.ts`, "weighing each device's re-read by the shape it reads": a phone whose replay outweighs its light re-read reloads while a window replays, and a whole board pushed leaves the phone's weight alone.
 - `src/core/connection/localDoor.test.ts`, "the local door": its folder and files, its key admitting the captain with no device row and two clients at once, its refusals, no pairing on it, an earlier key refused, no pushes kept while nothing is paired, and its clients kept while devices' listeners restart.
 - `src/core/connection/journal.test.ts` and `addresses.test.ts`: the numbering and the listening rule on their own.
 - `src/core/connection/livePushes.test.ts`, "keeps streamed reply pieces and tool events out of the numbering" and "sends the computers' readings outside the numbering, and none to a phone": a returning device replays past a stream that outgrew the journal, a current view reads the stream and the readings live, a view from before the change under the newest number, and a phone none of it.

@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "id": "phone-catch-up-weight",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Your iPhone or iPad catches up sooner after being away",
+      "body": "When your iPhone or iPad comes back after being away, the computer where your first mate lives now weighs what the phone missed against what the phone itself reads when it starts fresh. When the missed updates weigh more, the phone reads everything again instead of working through them one by one, so a long wait after a busy stretch is now a short one.",
+      "noPicture": "This changes how long an existing catch-up takes, not how any view looks.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

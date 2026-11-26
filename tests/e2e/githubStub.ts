@@ -121,6 +121,10 @@ export type GitHubStub = {
   requests: () => string[];
   /** Every issue GitHub opened, with the repository's path and the JSON body as it came. */
   openedIssues: () => Array<{ path: string; body: string }>;
+  /** The comments GitHub keeps on an issue or pull request, by its number, oldest first. */
+  commentsOn: (number: number) => string[];
+  /** Whether the open issue every stand-in project holds is still open or was closed. */
+  openIssueState: () => "open" | "closed";
   /** Every merge GitHub accepted, in order; a refused one is only a request. */
   merges: () => StubMerge[];
   /**
@@ -313,6 +317,8 @@ export async function startGitHubStub(
   const webHost = options.host ?? "github.com";
   const log: string[] = [];
   const openedIssues: Array<{ path: string; body: string }> = [];
+  /** The open issue's state, which a PATCH closes or opens again. */
+  let openIssueState: "open" | "closed" = "open";
   const evidenceProjects = new Set<number>();
   const evidence = new Map<string, { bytes: Buffer; mediaType: string }>();
   const merges: StubMerge[] = [];
@@ -828,7 +834,7 @@ export async function startGitHubStub(
           const pull =
             [...opened.values()].find((pull) => pull.number === number) ??
             (anyPull?.number === number ? anyPull : undefined);
-          if (!pull) {
+          if (!pull && number !== STUB_OPEN_ISSUE) {
             send(404, { message: "Not Found" });
             return;
           }
@@ -892,10 +898,14 @@ export async function startGitHubStub(
           send(200, { permission: "write" });
           return;
         }
-        if (method === "GET" && rest === `/issues/${STUB_OPEN_ISSUE}`) {
+        if (rest === `/issues/${STUB_OPEN_ISSUE}` && (method === "GET" || method === "PATCH")) {
+          if (method === "PATCH") {
+            const state = (JSON.parse(raw || "{}") as { state?: string }).state;
+            if (state === "open" || state === "closed") openIssueState = state;
+          }
           send(200, {
             number: STUB_OPEN_ISSUE,
-            state: "open",
+            state: openIssueState,
             html_url: `https://${webHost}/${owner}/${name}/issues/${STUB_OPEN_ISSUE}`,
           });
           return;
@@ -1371,6 +1381,8 @@ export async function startGitHubStub(
     },
     requests: () => [...log],
     openedIssues: () => [...openedIssues],
+    commentsOn: (number) => (issueComments.get(number) ?? []).map((row) => row.body),
+    openIssueState: () => openIssueState,
     merges: () => [...merges],
     mergeRequests: () =>
       log.filter((request) => /^PUT \S+\/pulls\/\d+\/merge(?:-async)?$/.test(request)),

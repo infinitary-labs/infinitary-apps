@@ -2358,13 +2358,19 @@
         {
           "from": "waiting for its merge",
           "to": "checking",
-          "why": "Try again closes its pull request and combines its changes with the line on a new branch and pull request",
+          "why": "Try again, a withdrawn change or revised commit words close its pull request and combine its changes with the line on a new branch and pull request",
           "by": "batches"
         },
         {
           "from": "waiting for its merge",
           "to": "waiting for its merge",
-          "why": "the host does not close its pull request on Try again, so its merge may still finish",
+          "why": "the host does not close its pull request on Try again or when a change leaves, so its merge may still finish",
+          "by": "batches"
+        },
+        {
+          "from": "waiting for its merge",
+          "to": "withdrawn",
+          "why": "every change in it lost its approval and none waits in line, so its pull request is closed",
           "by": "batches"
         },
         {

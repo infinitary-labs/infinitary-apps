@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "batch-moves-when-change-leaves-during-merge",
+      "kind": "fix",
+      "area": "projects",
+      "title": "A change that leaves a batch Bitbucket is still merging no longer slips into that merge",
+      "body": "When a change loses its approval, or its commit words change, while Bitbucket still shows its batch's merge as running, the app now declines that pull request and opens a new one with the changes that remain and any approved meanwhile. Before, the next pass put a new version on the waiting pull request, and a merge that finished late could take it before its checks ran.",
+      "noPicture": "This changes which pull request a batch's changes go on, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

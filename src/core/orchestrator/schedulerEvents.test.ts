@@ -371,11 +371,11 @@ describe("Automation on an integration's event", () => {
     expect(four.rules.map((rule) => rule.when)).toEqual(four.rules.map(() => one.rules[0]?.when));
   });
 
-  it("reads what is connected once on each tick, however many rules listen", async () => {
-    // Intent: INF-6885's diagnosis. Alpha 0.8.11-alpha.55's minute pass read
-    // every connection once for each event rule on each tick, about 0.4 ms
-    // a rule on the main thread, and the startup catch-up tick's 370 ms
-    // stall ran the same reads.
+  it("reads what is connected once on each tick, however many rules listen and look", async () => {
+    // Intent: INF-6885's diagnosis and the captain's choice on INF-6886's
+    // review. Alpha 0.8.11-alpha.55's minute pass read every connection once
+    // to find each event rule's event and again for each rule's look, on
+    // the main thread, and the startup catch-up tick ran the same reads.
     const root = scratchDir("fm-automation-tick-");
     const standIn = standInIntegration({ dir: root });
     let reads = 0;
@@ -385,11 +385,7 @@ describe("Automation on an integration's event", () => {
           ...standIn,
           connections: () => {
             reads++;
-            // Looks every five ticks, so the ticks between looks read only to find each rule's event.
-            return standIn.connections().map((connection) => ({
-              ...connection,
-              events: connection.events?.map((event) => ({ ...event, every: 5 })),
-            }));
+            return standIn.connections();
           },
         },
       ],
@@ -415,9 +411,16 @@ describe("Automation on an integration's event", () => {
     scheduler.tick(now);
     await scheduler.settled();
 
+    // The stand-in's event is looked at on every tick, so all eight rules look.
     reads = 0;
     now += 60_000;
     scheduler.tick(now);
+    await scheduler.settled();
+    expect(reads).toBe(1);
+
+    reads = 0;
+    scheduler.lookNow("stand-in");
+    await scheduler.settled();
     expect(reads).toBe(1);
   });
 });

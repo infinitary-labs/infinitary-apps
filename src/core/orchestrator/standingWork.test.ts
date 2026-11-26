@@ -6,7 +6,7 @@
  * (INF-4734), and a part the captain filed for later (INF-5322).
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
 import { InboxStore } from "../storage/inboxStore";
 import { seedTask } from "../tasks/seedTask";
@@ -48,7 +48,7 @@ function fixture() {
   /** The idle ladder's last rung: it raised its stall card (`raiseStallCard`) after two wakes. */
   const laddered = (id: string) =>
     tasks.turns.recordRecovery(id, { rung: 3, count: 2, at: clock.now });
-  return { tasks, inbox, at, read, parked, merge, laddered };
+  return { db, tasks, inbox, at, read, parked, merge, laddered };
 }
 
 describe("the standing list", () => {
@@ -549,5 +549,24 @@ describe("the standing list", () => {
     expect(text).toContain("ends_sooner_on_event: false");
     expect(text).toContain("kind: linked-wait");
     expect(text).toMatch(new RegExp(`${release.key},Promote stable,true`));
+  });
+
+  it("compiles no statement for each live task when read again", () => {
+    // Intent: INF-6885's diagnosis. Once the Heartbeat rule came due, alpha
+    // 0.8.11-alpha.55 read this list on every minute pass, and compiling the
+    // stop-line read again for each task on request cost the main thread
+    // about 5 ms a pass with 215 live tasks.
+    const compiledOnSecondRead = (parts: number) => {
+      const f = fixture();
+      seedTask(f.tasks, { id: "plan", title: "Plan", status: "queued", createdAt: T0 });
+      seedTask(f.tasks, { id: "p0", title: "Part 0", parentId: "plan", status: "running" });
+      for (let part = 1; part <= parts; part++) f.parked(`p${part}`, `Part ${part}`, "plan");
+      f.at(1 * HOUR);
+      expect(f.read().rows).toHaveLength(Math.min(parts, 12));
+      const prepare = vi.spyOn(f.db, "prepare");
+      f.read();
+      return prepare.mock.calls.length;
+    };
+    expect(compiledOnSecondRead(40)).toBe(compiledOnSecondRead(2));
   });
 });

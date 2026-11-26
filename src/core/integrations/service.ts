@@ -359,17 +359,17 @@ export class IntegrationsService {
   }
 
   /**
-   * Every event a rule may listen for, found as `listenable` finds one,
-   * from one read of what is connected: for a caller that asks about many
-   * rules at once, such as the Automation list, which would otherwise read
-   * every connection once per rule. It reads at its first lookup, so a list
-   * with no event rule reads nothing.
+   * `listenable` and `look` from one read of what is connected, read at first
+   * use, for a caller asking about many rules in one synchronous pass (the
+   * Automation list, the scheduler's tick); a look takes its row before it awaits.
    */
-  listenables(): (integration: string, event: string) => IntegrationListen | undefined {
+  reading(): Pick<IntegrationsService, "listenable" | "look"> {
     let rows: Row[] | undefined;
-    return (integration, event) => {
-      rows ??= this.rows();
-      return this.listenableIn(rows, integration, event);
+    const read = () => (rows ??= this.rows());
+    return {
+      listenable: (integration, event) => this.listenableIn(read(), integration, event),
+      look: (id, event, cursor, filter, connection, reader) =>
+        this.look(id, event, cursor, filter, connection, reader, read()),
     };
   }
 
@@ -1318,8 +1318,9 @@ Do not repeat this call; read ${name} to check what happened first.`
     filter?: Record<string, string>,
     connection?: string,
     reader: IntegrationCaller = { kind: "firstmate" },
+    rows?: Row[],
   ): Promise<IntegrationLook> {
-    const row = this.byId(id);
+    const row = this.byId(id, rows);
     const view = this.viewOf(row);
     if (connection !== undefined && connection !== row.ref)
       throw new IntegrationRefusal(
@@ -1749,8 +1750,8 @@ Do not repeat this call; read ${name} to check what happened first.`
     };
   }
 
-  private byId(id: string): Row {
-    const row = this.rows().find((entry) => entry.connection.id === id);
+  private byId(id: string, rows: Row[] = this.rows()): Row {
+    const row = rows.find((entry) => entry.connection.id === id);
     if (!row) throw new IntegrationRefusal(this.unknown(id).text);
     return row;
   }

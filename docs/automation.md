@@ -13,6 +13,7 @@ The `inf:automation:*` channels (`src/shared/channels/activity.ts`, reach `views
 The first mate reads a rule's runs, the jobs kept running and a schedule's next dates through `app_state`'s named reads (`src/core/pi/appReads.ts`).
 `automation.list` answers `ready` with every rule, or `unavailable` with the app's words when the rules cannot be read, never an empty list in its place.
 The window reads it every 30 seconds while it is connected, since the Automation panel's gate follows it, so one read reads what is connected at most once for all its event rules (`automationRulesOf`, `SchedulerEvents.snapshot`), never once per rule.
+Each tick, and each round of looks an arrival starts at once (`Scheduler.lookNow`), reads what is connected once for all the event rules it walks, both to find each rule's event and for each rule's look (`IntegrationsService.reading`).
 
 Settings and the first mate change a rule through one path: each change channel is a line of the app action catalog (`src/shared/actions.ts`, `docs/orchestrator-contract.md` "App action catalog"), run by the dispatcher.
 `automation-edit` is Save in Setup and its Turn on, `automation-state` is Pause and Resume, `automation-pause-all` is Pause all and `automation-delete` is Delete.

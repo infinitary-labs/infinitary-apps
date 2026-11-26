@@ -39,17 +39,17 @@
   /></a>
 </p>
 
-Not another bot, assistant, or factory. A studio that's yours. A place to focus on your taste, craft, and ambition.
+Run agents at extreme velocity. The endgame harness for the most ambitious minds.
 
 Infinitary is a free, open source desktop app for macOS, Linux and Windows. You tell one first mate what you want, by typing or by holding a key and speaking. It plans the work and hands each task to a crewmate, an AI agent that does that one task in its own working copy. The work comes back to you as cards: a decision to make, or a result to see.
 
-- **Tell one first mate. A crew does the work.** - Brought to you by the creator of [firstmate](https://github.com/kunchenguid/firstmate), Infinitary offers a state-of-the-art orchestrator agent that manages your entire crew. Many crewmates work at once, each on its own task.
+- **Tell one first mate. A crew does the work.** - Brought to you by the creator of [firstmate](https://github.com/kunchenguid/firstmate), Infinitary allows you to talk to just one first mate that plans your ask, hands each task to a team of crewmates and follows through. No session list for you to manage. Many crewmates work at once, each on its own task.
 - **Decisions come to you as cards.** - Your crew brings back intelligently generated cards for efficient decision making. A card carries what changed and the evidence: pictures, recordings, test results.
-- **Rigorous engineering.** - Infinitary guides your LLMs to write good code by default, through a rigorous engineering stack. A crewmate runs your project's own tests and checks, a change can get an independent review, and nothing merges until you say so.
-- **Your computers, your subscriptions.** - Run your crew on your own computers and the AI subscriptions you already have. Add your other Macs, Linux computers and Windows PCs once; they connect over your own private network.
+- **Rigorous engineering.** - Infinitary guides your LLMs to write good code by default, through a rigorous engineering stack. A crewmate runs your project's own tests and checks, a change can get an independent review, and it is proven to work before it reaches you.
+- **Your computers, your subscriptions.** - Your crew runs on your own computers. The AI models run at your provider, on the subscriptions, keys, or custom endpoints you already have, and your work goes there straight from your computer. Add your other Macs, Linux computers and Windows PCs once; they connect over your own private network.
 - **Intelligent model routing.** - Use the full power of every AI model you have. Infinitary gives each task the right model.
 - **Automate repetitive work.** - Give your chores to your first mate and watch it get done. It runs the schedules you set, answers research questions on a card and drives a web page while you watch.
-- **Make it personal.** - Tell your first mate to make [custom widgets](https://docs.getinfinitary.com/panels/) that turn Infinitary into exactly what you need.
+- **Make it personal.** - Tell your first mate to make [custom widgets](https://docs.getinfinitary.com/panels/) that turn Infinitary into exactly what you need. Tell it how you like work done, and it keeps that as memory for every task after.
 
 Watch each of these at [getinfinitary.com](https://getinfinitary.com).
 
@@ -82,7 +82,7 @@ Infinitary for iPhone and iPad is in private TestFlight; the [downloads page](ht
 Infinitary is free and open source. It runs on your computer, through the AI subscriptions you already have.
 
 - **Your computer.** The first mate, the crew and your projects live on your computer. Work happens in working copies of your own projects, and your files stay where they are.
-- **Your model account.** Infinitary works through the subscriptions you already have. No credits and no metering: your provider's bill is your model bill. Sign in with the Claude, Codex or Grok subscription you already pay for, or connect OpenRouter or another provider with a key. Your work goes straight from your computer to that provider.
+- **Your model account.** Infinitary works through the subscriptions, keys, or custom endpoints you already have, and your work goes straight from your computer to your provider. Sign in with the Claude, Codex or Grok subscription you already pay for, or connect OpenRouter or another provider with a key.
 - **Your record.** Every task leaves a record: what you asked, what changed, the evidence and what you decided. It stays with you, not with us.
 
 ### What leaves your computer

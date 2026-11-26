@@ -2,12 +2,15 @@
   "composerFolderNotProject": "Não foi possível adicionar essa pasta como projeto.",
   "composerFolderProject": "Essa pasta já é um dos seus projetos.",
   "composerHintFeedback": "{command}: conte ao criador do Infinitary um problema ou uma ideia",
+  "composerHintReplaces": "substitui ·",
+  "composerHintSendsAsNew": "envia como nova",
   "composerLines": {
     "plural": "count",
     "one": "{count} linha",
     "many": "{count} linhas",
     "other": "{count} linhas"
   },
+  "composerReplacesLast": "Substitui sua última mensagem",
   "composerTooLongShorten": "Longo demais para enviar. Encurte primeiro.",
   "composerWordsOnly": "Só palavras podem ir até o Infinitary ser atualizado. Remova as imagens e os arquivos para enviar isto."
 }

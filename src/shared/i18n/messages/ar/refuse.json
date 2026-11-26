@@ -10,6 +10,7 @@
   "refuseNoCardIsShown": "لا توجد بطاقة معروضة",
   "refuseNoCardIsShownOrPutAside": "لا توجد بطاقة معروضة أو موضوعة جانبًا",
   "refuseNoCardThreadIsReadAboveIts": "لا توجد سلسلة بطاقة مقروءة حتى ما قبل أحدث رسائلها",
+  "refuseNoMessageToRevert": "لا توجد رسالة للتراجع عنها: مرّت عليها أكثر من دقيقة أو تم التراجع عنها",
   "refuseNoOtherCardIsNew": "لا توجد بطاقة جديدة أخرى",
   "refuseNoPageToPointAt": "لا توجد صفحة معروضة للإشارة إليها",
   "refuseNoPictureIsOpen": "افتح صورة في بطاقة أولًا",

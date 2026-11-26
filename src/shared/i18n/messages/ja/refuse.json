@@ -10,6 +10,7 @@
   "refuseNoCardIsShown": "カードが表示されていません",
   "refuseNoCardIsShownOrPutAside": "表示中のカードも脇に置いたカードもありません",
   "refuseNoCardThreadIsReadAboveIts": "最新メッセージより上を読んでいるカードのスレッドはありません",
+  "refuseNoMessageToRevert": "取り消せるメッセージがありません。送信から 1 分を過ぎたか、すでに取り消しています",
   "refuseNoOtherCardIsNew": "ほかに新着カードはありません",
   "refuseNoPageToPointAt": "指し示せるページが表示されていません",
   "refuseNoPictureIsOpen": "まずカードの画像を開いてください",

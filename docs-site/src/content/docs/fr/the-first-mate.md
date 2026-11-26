@@ -1,5 +1,5 @@
 ---
-source: 36f0e08a37cc757f
+source: c78bd352e2745a60
 title: Le second
 description: Qui est votre second, ce qu’il fait et ne fait pas, comment lui parler et comment choisir le modèle avec lequel il répond.
 ---
@@ -38,6 +38,15 @@ Quelques astuces aident :
   Appuyez sur ↑ dans une zone de message vide.
 - **Coller beaucoup de texte.**
   Un long collage devient une pastille de fichier dans la zone, et part en entier avec votre message.
+
+### Annuler un message {#take-back-a-message}
+
+Pendant une minute après l’envoi d’un message, une icône d’annulation apparaît à côté de lui, au-dessus de la zone de message.
+Appuyez dessus, ou utilisez **Annuler votre dernier message** dans la recherche de commandes.
+Votre second arrête ce que le message a lancé, défait ce qu’il a déjà fait, et indique à côté du message ce qu’il a défait.
+Pour modifier le message à la place, appuyez sur ↑ dans une zone de message vide.
+La zone indique « Remplace votre dernier message » : Entrée envoie votre modification à sa place, et Échap l’envoie comme un nouveau message.
+Dans [toute la conversation](#the-whole-conversation), un message annulé est barré, et un message modifié garde ses mots d’avant.
 
 ### Ajouter des images et des fichiers {#add-pictures-and-files}
 

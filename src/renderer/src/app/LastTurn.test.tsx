@@ -1,7 +1,9 @@
 import type { LastRound } from "@shared/lastTurn";
+import { TAKE_BACK_WINDOW_MS } from "@shared/takeBack";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { LastTurnRound, PICTURE_ONLY_WORDS, WORKING_WORDS } from "./LastTurn";
+import { revertControlFor } from "./takeBack";
 
 /**
  * The last turn's words and states (docs/composer.md "The last turn"): what
@@ -210,5 +212,67 @@ describe("a round of the last turn above the input", () => {
     expect(newest).not.toContain(WORKING_WORDS);
     expect(newest).not.toContain('data-last-turn-bubble="firstmate"');
     expect(round(true)).not.toContain("data-last-turn-mark");
+  });
+
+  // INF-6763's approved plan, part 2, and the captain's words on it: "don't
+  // make the button literally "take back". use a "revert" icon or something
+  // like that".
+  it("puts a revert icon with no words of its own beside a message that may be taken back", () => {
+    const round = { you: "Rename the release channel", reply: null };
+    const markup = (onRevert?: () => void, older = false) =>
+      renderToStaticMarkup(
+        <LastTurnRound round={round} busy={false} older={older} onRevert={onRevert} />,
+      );
+    const control = markup(() => {}).match(
+      /<button[^>]*data-last-turn-revert=""[^>]*>(.*?)<\/button>/,
+    );
+    expect(control?.[0]).toContain('aria-label="Revert your last message"');
+    expect(control?.[1]).toMatch(/^<svg[^>]*>.*<\/svg>$/);
+    expect(control?.[1]).not.toMatch(/>[^<]+</);
+    expect(markup()).not.toContain("data-last-turn-revert");
+    expect(markup(() => {}, true)).not.toContain("data-last-turn-revert");
+  });
+
+  it("marks a taken-back message, and says so in its line when no turn read it", () => {
+    const unread = render({
+      you: "Delete the old logs",
+      reply: { text: "Taken back before your first mate read it.", withdrawn: true },
+      takenBack: true,
+    });
+    expect(unread.html).toMatch(/data-taken-back=""/);
+    expect(unread.html).toMatch(/data-last-turn-reverted="">Reverted</);
+    expect(unread.mate?.words).toBe("Reverted before your first mate read it");
+    // The review of the desktop take back: a message a turn was reading
+    // has no line yet, and is never called unread for that.
+    const reading = render({ you: "Delete the old logs", reply: null, takenBack: true });
+    expect(reading.html).not.toContain("before your first mate read it");
+    const undone = render({
+      you: "Delete the old logs",
+      reply: { text: "Took it back: dropped its task." },
+      takenBack: true,
+    });
+    expect(undone.mate?.words).toBe("Took it back: dropped its task.");
+    expect(render({ you: "Delete the old logs", reply: null }).html).not.toContain("Reverted");
+  });
+
+  // The required no-mark-outside scenario: the control stands only inside
+  // the minute, and never on a window whose changes are off.
+  it("names the newest message for the revert control inside the minute, and none after it or with changes off", () => {
+    const turn = { askId: "newest", sentAt: 10_000, you: "Delete the old logs", reply: null };
+    expect(revertControlFor(turn, 10_000 + TAKE_BACK_WINDOW_MS, null)).toBe("newest");
+    expect(revertControlFor(turn, 10_000 + TAKE_BACK_WINDOW_MS + 1, null)).toBeUndefined();
+    expect(revertControlFor({ ...turn, takenBack: true }, 10_000, null)).toBeUndefined();
+    const reading = {
+      role: "view" as const,
+      name: "Studio",
+      address: "studio.local",
+      joinedAt: 1_000,
+      contact: "in-reach" as const,
+      readOnly: "older-there" as const,
+      heardAt: 2_000,
+      caughtUp: 0,
+    };
+    expect(revertControlFor(turn, 10_000, reading)).toBeUndefined();
+    expect(revertControlFor(turn, 10_000, { ...reading, readOnly: null })).toBe("newest");
   });
 });

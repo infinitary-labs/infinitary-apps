@@ -221,6 +221,12 @@ export type VoiceInputProps = {
   onCaretChange?: (caret: number) => void;
   /** Up in an empty field: bring back the last message sent. */
   onRecall?: () => void;
+  /**
+   * The draft replaces the newest message (docs/composer.md "Recall and a
+   * failed send"): a quiet line above the field says so, and the foot row
+   * names Enter and Esc.
+   */
+  replacing?: boolean;
   /** Dropping and choosing files (`docs/composer.md`, "Files"); absent, the input takes none. */
   files?: FileIntake;
 };
@@ -383,6 +389,7 @@ export function VoiceInput({
   onRemovePaste,
   onCaretChange,
   onRecall,
+  replacing = false,
   files,
 }: VoiceInputProps) {
   const recording = mode === "recording";
@@ -406,10 +413,18 @@ export function VoiceInput({
   const multiLine = text.includes("\n") || wrapped || hasChips;
   // A slash command being typed shows the foot row, whose hint names it.
   const slash = typingSlashCommand(text);
-  const foot = multiLine || recording || slash;
+  const foot = multiLine || recording || slash || replacing;
   // Recording from an empty field is the one-row waveform pill.
   const showText = !(recording && text === "");
-  const hint: ComposerHint = over ? "too-long" : inFence ? "fence" : slash ? "command" : "keys";
+  const hint: ComposerHint = over
+    ? "too-long"
+    : inFence
+      ? "fence"
+      : slash
+        ? "command"
+        : replacing
+          ? "replace"
+          : "keys";
 
   // Stable, so React never detaches them between commits: the field
   // measures the shell in its own layout effect, which runs before a
@@ -485,6 +500,20 @@ export function VoiceInput({
       data-file-drop={drop.over ? "over" : files ? "ready" : undefined}
       {...drop.handlers}
     >
+      {replacing && !recording && (
+        <div
+          data-voice-input-replaces=""
+          style={{
+            paddingTop: "var(--space-2)",
+            paddingInline: FIELD_PAD,
+            fontSize: "var(--text-xs)",
+            lineHeight: "var(--leading-body)",
+            color: "var(--fg-3)",
+          }}
+        >
+          {m.composerReplacesLast()}
+        </div>
+      )}
       {hasChips && (
         <div
           data-voice-input-chips=""

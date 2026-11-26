@@ -338,3 +338,44 @@ button[data-last-turn-bubble] {
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* The revert control beside the newest message while it may be taken back
+   (docs/composer.md "The last turn"): a 20 px icon button 6 px before the
+   bubble, its glyph in --fg-2. It shows while the round is rested on or
+   holds focus, and takes its Tab stop at every moment, so the keyboard
+   reaches it as the pointer does. */
+[data-last-turn] .revert {
+  flex: none;
+  margin-inline-end: 6px;
+  /* The browser's own button padding would squeeze the glyph to 6 px. */
+  padding: 0;
+  color: var(--fg-2);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+[data-last-turn-pair]:hover .revert,
+[data-last-turn-pair]:has(button:focus) .revert {
+  opacity: 1;
+  pointer-events: auto;
+}
+[data-last-turn] .revert:is(:hover, :focus-visible) {
+  color: var(--fg-1);
+}
+/* A message the captain took back: its words struck in --fg-3 in a 4%
+   bubble, after a quiet "Reverted" mark. */
+[data-last-turn] .row.you .reverted {
+  flex: none;
+  margin-inline-end: 8px;
+  color: var(--fg-3);
+  font-size: var(--text-xs);
+  line-height: 18px;
+  white-space: nowrap;
+}
+[data-last-turn-pair][data-taken-back] [data-last-turn-bubble="you"]:not([data-choice]) {
+  background: color-mix(in srgb, var(--fg-1) 4%, transparent);
+  color: var(--fg-3);
+}
+[data-last-turn-pair][data-taken-back] [data-last-turn-bubble="you"] .words {
+  text-decoration: line-through;
+}

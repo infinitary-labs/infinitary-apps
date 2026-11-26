@@ -23,7 +23,6 @@ import {
   type ServedWakeOrigin,
 } from "@shared/servedFrame";
 import type { TakeBackResult } from "@shared/takeBack";
-import { THROUGH_THE_COMMAND, throughNow } from "../askedFromTheCommand";
 import { AttachmentUnavailableError, keepImages, loadImages } from "../attachments";
 import type { CoreDispatch } from "../dispatcher";
 import { classifyInboxBatch, type KnowledgeOrigin } from "../knowledge/origin";
@@ -55,7 +54,7 @@ import {
   keptMessageWords,
 } from "./seat";
 import { digestEntry, digestFor, keepDigest } from "./seatDigest";
-import { TakeBacks } from "./takeBack";
+import { receiptOf, TakeBacks } from "./takeBack";
 import { turnOriginOf } from "./turnOrigins";
 import {
   aboutCardIdFromRef,
@@ -520,13 +519,6 @@ export class FirstmateAgent {
     // An accepted turn owns copies of its pictures before anything records
     // or acknowledges it, so a parked or retried turn still has its bytes.
     const kept = images ? keepImages(randomUUID(), images) : undefined;
-    // The feed line is the receipt: fire before session work so submit
-    // is visible even when Firstmate is already mid-turn (steer path).
-    this.options.broadcastEvent({
-      type: "user_turn",
-      text: typeof turn === "string" ? trimmed : (turn.receipt ?? trimmed),
-      ...(throughNow() ? { through: THROUGH_THE_COMMAND } : {}),
-    });
     // The ask row exists before anything runs (capture, P1): the open card
     // or the record card is the hint the fallback prefers.
     const hintTaskId = this.resolveHint(turn, visibleCardId, pastCardId);
@@ -543,6 +535,11 @@ export class FirstmateAgent {
       ...(typedUnder ? { typedUnder } : {}),
       ...(correctionOf ? { correctionOf } : {}),
     });
+    // The feed line is the receipt: fire before session work so submit
+    // is visible even when Firstmate is already mid-turn (steer path).
+    this.options.broadcastEvent(
+      receiptOf(typeof turn === "string" ? trimmed : (turn.receipt ?? trimmed), ask),
+    );
     this.asks.select([...this.turn.read].at(-1));
     this.takeBacks.handing(ask.id);
     if (correctionOf) this.takeBacks.replaced(correctionOf, trimmed);
@@ -1429,10 +1426,10 @@ export class FirstmateAgent {
 
   private keepReplyLine(read: readonly string[], reply: LastTurnReply): void {
     try {
-      const latest = this.options.tasks.capture.latestAskId();
-      if (!latest || !read.includes(latest)) return;
-      this.options.tasks.capture.setAskReply(latest, reply);
-      this.options.broadcastEvent({ type: "firstmate_reply", ...reply });
+      for (const askId of this.takeBacks.replyTargets(read)) {
+        this.options.tasks.capture.setAskReply(askId, reply);
+        this.options.broadcastEvent({ type: "firstmate_reply", ...reply, askId });
+      }
     } catch (caught) {
       console.warn("[firstmate] the reply line could not be kept:", caught);
     }
@@ -1635,6 +1632,7 @@ export class FirstmateAgent {
       }),
     );
     this.delivery.adopt(batch);
+    this.takeBacks.serving(batch);
     this.turn.aboutCardId = aboutCardId;
     void this.runTurn(
       admitted,

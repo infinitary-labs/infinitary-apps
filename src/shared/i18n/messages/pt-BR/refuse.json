@@ -10,6 +10,7 @@
   "refuseNoCardIsShown": "Nenhum cartão está sendo mostrado",
   "refuseNoCardIsShownOrPutAside": "Nenhum cartão está sendo mostrado nem foi deixado de lado",
   "refuseNoCardThreadIsReadAboveIts": "Nenhuma conversa de cartão está sendo lida acima da última mensagem",
+  "refuseNoMessageToRevert": "Nenhuma mensagem para reverter: já passou de um minuto ou já foi revertida",
   "refuseNoOtherCardIsNew": "Nenhum outro cartão é novo",
   "refuseNoPageToPointAt": "Nenhuma página está sendo mostrada para apontar",
   "refuseNoPictureIsOpen": "Abra primeiro uma imagem de um cartão",

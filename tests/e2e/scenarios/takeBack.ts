@@ -11,11 +11,14 @@ import type { Scenario, ScenarioRequest } from "../mockProvider";
  * files that task and an unrelated one with `ask_id` "", one that files a
  * task at once, one whose answer retry for a marked message is held so a
  * new message waits unread on the lane, and one that undoes what the
- * taken-back wake lists by discarding the task it names, with `ask_id` "".
+ * taken-back wake lists by discarding the task it names, with `ask_id` "",
+ * and closes that turn with its own line.
  */
 export const TAKE_BACK_HELD_MARKER = "take back while held:";
 export const TAKE_BACK_FILED_MARKER = "take back after filing:";
 export const TAKE_BACK_UNRELATED_TITLE = "tidy the build cache";
+/** The undo turn's closing words, which the strip shows beside the message taken back. */
+export const TAKE_BACK_UNDO_LINE = "Took it back: dropped its task.";
 /** Rides a message the stock stand-in answers silently, so its one answer retry is served alone. */
 export const TAKE_BACK_ALONE_MARKER = "take back while answering alone:";
 
@@ -29,13 +32,19 @@ function namedTaskId(latestUserTail: string): string | undefined {
   return latestUserTail.match(/create_task on task (\S+) \(/)?.[1];
 }
 
-export const takeBack: Scenario =
-  () =>
-  ({ isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {
-    if (!isFirstmate || !wantsStream || hasToolResults) return undefined;
+export const takeBack: Scenario = () => {
+  let undoing = false;
+  return ({ isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {
+    if (!isFirstmate || !wantsStream) return undefined;
+    if (hasToolResults) {
+      if (!undoing) return undefined;
+      undoing = false;
+      return { text: TAKE_BACK_UNDO_LINE };
+    }
     if (latestUserTail.includes(TAKEN_BACK_OPENING)) {
       const id = namedTaskId(latestUserTail);
       if (!id) return undefined;
+      undoing = true;
       return {
         calls: [
           {
@@ -57,6 +66,7 @@ export const takeBack: Scenario =
     if (filed) return { calls: [fileTaskCall(filed)] };
     return undefined;
   };
+};
 
 /**
  * Holds the answer retry for a message carrying `TAKE_BACK_ALONE_MARKER`.

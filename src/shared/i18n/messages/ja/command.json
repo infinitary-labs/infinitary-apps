@@ -89,6 +89,8 @@
   "commandMessageDeleteWordBefore": "カーソルの前の単語を削除",
   "commandMessagePutBackDeleted": "最後に削除したものを元に戻す",
   "commandMessageRecall": "最後に送ったメッセージを呼び戻す",
+  "commandMessageTakeBack": "最後のメッセージを取り消す",
+  "commandMessageTakeBackWords": "取り消し, 元に戻す, 送信取消, メッセージ",
   "commandMoveDown": "下へ移動",
   "commandMoveDownWords": "矢印, 下, 次",
   "commandMoveFirst": "先頭へ移動",

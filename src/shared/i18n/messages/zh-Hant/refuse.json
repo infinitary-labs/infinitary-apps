@@ -10,6 +10,7 @@
   "refuseNoCardIsShown": "目前沒有顯示卡片",
   "refuseNoCardIsShownOrPutAside": "目前沒有顯示或放到一旁的卡片",
   "refuseNoCardThreadIsReadAboveIts": "沒有卡片討論串停在最新訊息之前",
+  "refuseNoMessageToRevert": "沒有可撤回的訊息：已超過一分鐘或已經撤回",
   "refuseNoOtherCardIsNew": "沒有其他新卡片",
   "refuseNoPageToPointAt": "沒有可指向的頁面",
   "refuseNoPictureIsOpen": "請先開啟卡片中的圖片",

@@ -450,16 +450,17 @@ export class AskStore {
   lastTurn(): LastTurn | null {
     type Saved = Pick<
       Row,
-      "id" | "text" | "reply" | "delivery_facts" | "through" | "taken_back_at"
+      "id" | "at" | "text" | "reply" | "delivery_facts" | "through" | "taken_back_at"
     >;
     const [row, before] = this.db
       .prepare(
-        "SELECT id, text, reply, delivery_facts, through, taken_back_at FROM captain_asks WHERE at <= (SELECT MAX(at) FROM captain_asks) ORDER BY at DESC, rowid DESC LIMIT 2",
+        "SELECT id, at, text, reply, delivery_facts, through, taken_back_at FROM captain_asks WHERE at <= (SELECT MAX(at) FROM captain_asks) ORDER BY at DESC, rowid DESC LIMIT 2",
       )
       .all() as Saved[];
     if (!row) return null;
     const round = (saved: Saved) => ({
       askId: saved.id,
+      sentAt: saved.at,
       ...(typeof saved.taken_back_at === "number" ? { takenBack: true as const } : {}),
       you: askReceipt({
         text: saved.text,

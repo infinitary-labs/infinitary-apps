@@ -792,7 +792,12 @@ describe("FirstmateAgent", () => {
     expect(turn).toContain("[user]\nhello there");
     const userPart = turn.split("[user]\n")[1];
     expect(userPart).toBe("hello there");
-    expect(events).toContainEqual({ type: "user_turn", text: "hello there" });
+    expect(events).toContainEqual({
+      type: "user_turn",
+      text: "hello there",
+      askId: expect.any(String),
+      sentAt: expect.any(Number),
+    });
   });
 
   it("does not reject an already accepted ask when its introductory witness cannot be saved", async () => {
@@ -1244,12 +1249,15 @@ describe("FirstmateAgent", () => {
   });
 
   it("broadcasts user_turn when steering a busy session", async () => {
-    const { agent, events } = setup();
+    const { agent, events, tasks } = setup();
     await agent.converse("first");
     await agent.converse("actually, second");
+    // Each receipt names its saved message, so any window can take it back
+    // without reading the last turn again (review of the desktop take back).
+    const [first, second] = tasks.capture.listAsks();
     expect(events.filter((event) => event.type === "user_turn")).toEqual([
-      { type: "user_turn", text: "first" },
-      { type: "user_turn", text: "actually, second" },
+      { type: "user_turn", text: "first", askId: first?.id, sentAt: first?.at },
+      { type: "user_turn", text: "actually, second", askId: second?.id, sentAt: second?.at },
     ]);
   });
 
@@ -1263,7 +1271,12 @@ describe("FirstmateAgent", () => {
   it("broadcasts user_turn for an image-only submit", async () => {
     const { agent, events } = setup();
     await agent.converse({ images: [pngImage] });
-    expect(events).toContainEqual({ type: "user_turn", text: "" });
+    expect(events).toContainEqual({
+      type: "user_turn",
+      text: "",
+      askId: expect.any(String),
+      sentAt: expect.any(Number),
+    });
   });
 
   it("carries pasted images beside the turn text, on prompts and steers alike", async () => {

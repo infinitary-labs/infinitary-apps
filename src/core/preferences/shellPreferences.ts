@@ -84,8 +84,10 @@ export class ShellPreferencesService {
     return this.settings.getLayout();
   }
 
+  /** Dark or Light, with no color theme over it (docs/themes.md). */
   setTheme(theme: Theme): Appearance {
-    return this.setAppearance({ ...this.settings.getAppearance(), theme });
+    const { colorTheme: _was, ...look } = this.settings.getAppearance();
+    return this.setAppearance({ ...look, theme });
   }
 
   /**

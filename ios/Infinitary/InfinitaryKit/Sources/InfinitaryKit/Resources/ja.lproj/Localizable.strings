@@ -2799,7 +2799,7 @@
 "settingsAppearanceSizeDescriptionKeys" = "テキストとその周りのすべてを大きくします。%1$@ と %2$@ でも同じサイズを変更できます。";
 "settingsAppearanceTheme" = "テーマ";
 "settingsAppearanceThemeDark" = "ダーク";
-"settingsAppearanceThemeDescription" = "深宇宙のダーク、または日中のライト。";
+"settingsAppearanceThemeDescription" = "ダーク、ライト、または作者が名付けたテーマ。ウィンドウのすべての色が切り替わります。";
 "settingsAppearanceThemeLight" = "ライト";
 "settingsAppearanceWash" = "ウインドウの色合い";
 "settingsAppearanceWashDescription" = "ぼかした背景をテーマの色がどれだけ覆うかを設定します。標準は0%%です。";

@@ -62486,6 +62486,12 @@
               "light"
             ]
           },
+          "colorTheme": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40,
+            "pattern": "^[a-z0-9-]+$"
+          },
           "defaultCardSize": {
             "type": "string",
             "enum": [
@@ -64310,6 +64316,12 @@
                   "dark",
                   "light"
                 ]
+              },
+              "colorTheme": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40,
+                "pattern": "^[a-z0-9-]+$"
               },
               "defaultCardSize": {
                 "type": "string",
@@ -66160,6 +66172,12 @@
               "dark",
               "light"
             ]
+          },
+          "colorTheme": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40,
+            "pattern": "^[a-z0-9-]+$"
           },
           "defaultCardSize": {
             "type": "string",
@@ -68541,6 +68559,12 @@
                   "dark",
                   "light"
                 ]
+              },
+              "colorTheme": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40,
+                "pattern": "^[a-z0-9-]+$"
               },
               "defaultCardSize": {
                 "type": "string",
@@ -109592,6 +109616,12 @@
                   "dark",
                   "light"
                 ]
+              },
+              "colorTheme": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40,
+                "pattern": "^[a-z0-9-]+$"
               },
               "defaultCardSize": {
                 "type": "string",

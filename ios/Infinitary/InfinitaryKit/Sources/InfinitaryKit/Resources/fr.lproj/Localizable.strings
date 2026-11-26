@@ -2799,7 +2799,7 @@
 "settingsAppearanceSizeDescriptionKeys" = "Agrandir le texte et tout ce qui l’entoure. %1$@ et %2$@ modifient la même taille.";
 "settingsAppearanceTheme" = "Thème";
 "settingsAppearanceThemeDark" = "Sombre";
-"settingsAppearanceThemeDescription" = "Sombre comme l’espace lointain, ou clair comme le jour.";
+"settingsAppearanceThemeDescription" = "Sombre, Clair ou un thème sous le nom donné par ses auteurs. Toutes les couleurs de la fenêtre suivent.";
 "settingsAppearanceThemeLight" = "Clair";
 "settingsAppearanceWash" = "Voile de la fenêtre";
 "settingsAppearanceWashDescription" = "La part de la couleur du thème qui couvre l’arrière-plan flou. 0 %% est la valeur par défaut.";

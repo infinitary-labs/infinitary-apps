@@ -8,6 +8,7 @@ import {
   type PictureSize,
 } from "@shared/cardNoteMarks";
 import { type NotePlace, type PlacePoint, placeBounds } from "@shared/cardNotes";
+import { COLOR_THEME_ATTRIBUTE } from "@shared/colorThemes";
 import type React from "react";
 import { useRef, useState, useSyncExternalStore } from "react";
 
@@ -47,13 +48,17 @@ export function markLook(): MarkLook {
 
 function onTheme(changed: () => void): () => void {
   const observer = new MutationObserver(changed);
-  observer.observe(document.body, { attributes: true, attributeFilter: ["data-theme"] });
+  observer.observe(document.body, {
+    attributes: true,
+    attributeFilter: ["data-theme", COLOR_THEME_ATTRIBUTE],
+  });
   return () => observer.disconnect();
 }
 
-const shownTheme = () => document.body.dataset.theme ?? "";
+const shownTheme = () =>
+  `${document.body.dataset.theme ?? ""}:${document.body.getAttribute(COLOR_THEME_ATTRIBUTE) ?? ""}`;
 
-/** The marks' look in a view: a mark's colors are part of its drawing, so a change of theme draws it again. */
+/** The marks' look in a view: a mark's colors are part of its drawing, so a change of theme or color theme draws it again. */
 export function useMarkLook(): MarkLook {
   useSyncExternalStore(onTheme, shownTheme);
   return markLook();

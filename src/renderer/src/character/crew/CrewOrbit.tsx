@@ -12,6 +12,7 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
+import { useThemeColorsDrawn } from "../../app/colorTheme";
 import { useCommandKeys } from "../../app/keyHints";
 import { motionToken } from "../../design/motion";
 import { litTask, useLitTaskId } from "../../plugins/point/litTask";
@@ -500,7 +501,10 @@ export function CrewOrbit({
     boost: 1,
   });
   const lastRead = useRef(0);
-  const paintedTheme = useRef<Theme | undefined>(undefined);
+  // The base and the color theme over it: either one changes what the ring reads.
+  const colorsDrawn = useThemeColorsDrawn();
+  const shownColors = `${theme ?? ""}:${colorsDrawn}`;
+  const paintedTheme = useRef<string | undefined>(undefined);
   const ariaRef = useRef("");
   /** Whether the last frame painted anything, so an empty ring skips the clears. */
   const paintedRef = useRef(true);
@@ -1003,10 +1007,12 @@ export function CrewOrbit({
       paintedRef.current = !empty;
       if (
         !empty &&
-        (lastRead.current === 0 || paintedTheme.current !== theme || real - lastRead.current > 400)
+        (lastRead.current === 0 ||
+          paintedTheme.current !== shownColors ||
+          real - lastRead.current > 400)
       ) {
-        paintedTheme.current = theme;
-        // Live theme switches re-paint: the wire tokens follow data-theme.
+        paintedTheme.current = shownColors;
+        // Live theme switches re-paint: the wire tokens follow data-theme and the color theme.
         const cs = getComputedStyle(near.canvas);
         const accent = cs.getPropertyValue("--wire-accent") || cs.getPropertyValue("--accent");
         const hot = cs.getPropertyValue("--wire-hot") || cs.getPropertyValue("--hot");
@@ -1034,7 +1040,7 @@ export function CrewOrbit({
         supernova,
       );
     },
-    `${extent}:${version}:${viewportWidth}:${viewportHeight}:${nameKey}:${theme}:${focus?.project ?? ""}`,
+    `${extent}:${version}:${viewportWidth}:${viewportHeight}:${nameKey}:${shownColors}:${focus?.project ?? ""}`,
   );
 
   // A move to another display, or the size control's zoom, changes the pixel

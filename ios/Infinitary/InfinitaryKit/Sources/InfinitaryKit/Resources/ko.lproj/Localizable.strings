@@ -2799,7 +2799,7 @@
 "settingsAppearanceSizeDescriptionKeys" = "글자와 그 주변의 모든 것을 크게 해요. %1$@, %2$@ 키로도 같은 크기를 바꿀 수 있어요.";
 "settingsAppearanceTheme" = "테마";
 "settingsAppearanceThemeDark" = "다크";
-"settingsAppearanceThemeDescription" = "깊은 우주 같은 다크, 또는 한낮 같은 라이트.";
+"settingsAppearanceThemeDescription" = "다크, 라이트, 또는 제작자가 이름 붙인 테마. 창의 모든 색이 따라 바뀝니다.";
 "settingsAppearanceThemeLight" = "라이트";
 "settingsAppearanceWash" = "창 색조";
 "settingsAppearanceWashDescription" = "흐린 배경 위에 테마 색을 얼마나 덮을지 정해요. 기본값은 0%%예요.";

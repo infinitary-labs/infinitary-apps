@@ -1,5 +1,5 @@
 ---
-source: e40976e5ca452a82
+source: 03beda67f640ee09
 title: Réglages
 description: Ce que contient chaque section des Réglages, avec Général et Apparence expliqués ici et un lien pour le reste.
 ---
@@ -64,7 +64,8 @@ Sur l’ordinateur où vit votre second, ils se trouvent sous **Sites connectés
 - **Taille des cartes par défaut** choisit comment les cartes s’ouvrent : **Habituelle**, **Large**, **Pleine** ou **Agrandie**.
   Vous pouvez toujours redimensionner chaque carte.
 - **Garder les cartes agrandies** garde chaque carte agrandie après que vous en avez agrandi une, jusqu’à ce que vous en restauriez une.
-- **Thème** est **Sombre** ou **Clair**.
+- **Thème** est **Sombre**, **Clair** ou l’un de treize thèmes sous le nom que leur a donné leur auteur, comme **Dracula**, **Catppuccin Mocha** ou **Rosé Pine Dawn**.
+  Votre choix recolore aussitôt la fenêtre, ses cartes et ses panneaux, et les touches fléchées passent d’un choix à l’autre.
 - **Voile de la fenêtre**, sur un Mac, règle la part de la couleur du thème qui recouvre l’arrière-plan flouté.
   0 % est la valeur par défaut.
 - **Noms des modèles de l’équipage** affiche le nom des modèles tant que vos équipiers n’utilisent qu’une seule orbite.

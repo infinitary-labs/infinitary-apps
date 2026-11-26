@@ -86,7 +86,7 @@ export function Switch({
             width: 14,
             height: 14,
             borderRadius: "50%",
-            background: checked ? "#05070d" : "var(--fg-2)",
+            background: checked ? "var(--on-accent)" : "var(--fg-2)",
             transition:
               "left var(--dur-med) var(--ease-out),background var(--dur-med) var(--ease-out)",
           }}

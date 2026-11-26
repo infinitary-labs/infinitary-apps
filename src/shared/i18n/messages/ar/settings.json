@@ -73,7 +73,7 @@
   "settingsAppearanceSizeDescriptionKeys": "تكبير النص وكل ما حوله. {larger} و{smaller} يغيّران الحجم نفسه.",
   "settingsAppearanceTheme": "السمة",
   "settingsAppearanceThemeDark": "داكنة",
-  "settingsAppearanceThemeDescription": "داكنة كالفضاء العميق، أو فاتحة كضوء النهار.",
+  "settingsAppearanceThemeDescription": "داكنة أو فاتحة أو سمة باسم صانعيها. تتبعها كل ألوان النافذة.",
   "settingsAppearanceThemeLight": "فاتحة",
   "settingsAppearanceWash": "تلوين النافذة",
   "settingsAppearanceWashDescription": "مقدار ما يغطيه لون السمة من الخلفية المموّهة. القيمة الافتراضية 0%.",

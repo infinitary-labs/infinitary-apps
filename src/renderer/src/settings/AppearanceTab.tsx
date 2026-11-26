@@ -17,6 +17,7 @@ import { isView } from "../devices/viewWords";
 import { FontRows } from "./FontRows";
 import { FIRSTMATE_SELECT_STYLE } from "./GeneralTab";
 import { ROW_GAP, SECTION_GAP, SectionLabel, SettingRow } from "./settingRows";
+import { ThemeTiles } from "./ThemeTiles";
 
 /** The language picker's value for no choice, the default language: never a language tag. */
 const NO_CHOICE = "";
@@ -147,8 +148,6 @@ export function AppearanceTab() {
   const setDefaultCardSize = useShellStore((s) => s.setDefaultCardSize);
   const keepCardsMaximized = useShellStore((s) => s.keepCardsMaximized);
   const setKeepCardsMaximized = useShellStore((s) => s.setKeepCardsMaximized);
-  const theme = useShellStore((s) => s.theme);
-  const setTheme = useShellStore((s) => s.setTheme);
   const washStrength = useShellStore((s) => s.washStrength);
   const setWashStrength = useShellStore((s) => s.setWashStrength);
   const showCrewModelNames = useShellStore((s) => s.showCrewModelNames);
@@ -231,18 +230,8 @@ export function AppearanceTab() {
           error={errorFor("theme")}
           title={m.settingsAppearanceTheme()}
           description={m.settingsAppearanceThemeDescription()}
-          control={
-            <GroupedPills
-              name={m.settingsAppearanceTheme()}
-              htmlName="appearance-theme"
-              value={theme}
-              options={[
-                { value: "dark", label: m.settingsAppearanceThemeDark() },
-                { value: "light", label: m.settingsAppearanceThemeLight() },
-              ]}
-              onChange={setTheme}
-            />
-          }
+          detail={<ThemeTiles />}
+          control={null}
         />
         {/* Only a window over the system's material has a wash (docs/translucent-window.md). */}
         {desktop.material && (

@@ -63,7 +63,8 @@ On the computer where your first mate lives, they are under **Signed-in sites** 
 - **Default card size** chooses how cards open: **Usual**, **Wide**, **Full** or **Maximized**.
   You can still resize each card.
 - **Keep cards maximized** keeps every card maximized after you maximize one, until you restore one.
-- **Theme** is **Dark** or **Light**.
+- **Theme** is **Dark**, **Light**, or one of thirteen themes under their makers' names, such as **Dracula**, **Catppuccin Mocha** or **Rosé Pine Dawn**.
+  A pick recolors the window, its cards and its panels at once, and the arrow keys move between the choices.
 - **Window wash**, on a Mac, sets how much of the theme color covers the blurred background.
   0% is the default.
 - **Crew model names** shows model names while your crewmates use only one orbit.

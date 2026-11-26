@@ -51,7 +51,7 @@ export function standingOnce(since: number, now: number, prerequisitesClosed = f
   return prerequisitesClosed ? `${name}:prerequisites-closed` : name;
 }
 
-/** A hold set at least this far ahead is a wait, not a check-back. */
+/** A hold set more than this far ahead is a wait, not a check-back. */
 const HELD_ROW_MS = DAY_MS;
 
 type RowBase = {

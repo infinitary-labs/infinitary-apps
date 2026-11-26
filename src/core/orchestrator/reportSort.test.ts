@@ -791,4 +791,16 @@ describe("a wait only on work the captain stopped", () => {
       "filed-followups",
     );
   });
+
+  // The review of INF-6878: only the wake asking the first mate to start the
+  // stopped work goes quiet; what else the first mate owes still reaches it.
+  it("still wakes the first mate for an owed card, recovery findings or a step's answer", () => {
+    const owed = facts({ waitsOnStopped: true, captainGateOwed: true });
+    expect(sortReport(owed)).toMatchObject({ rule: "captain-gate", wake: true });
+    expect(idleTurn(owed)).toBe("owed");
+    expect(sortReport(facts({ waitsOnStopped: true, recovery: true })).rule).toBe("recovery");
+    expect(sortReport(facts({ waitsOnStopped: true, internalStep: true })).rule).toBe(
+      "step-answered",
+    );
+  });
 });

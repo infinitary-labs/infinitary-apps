@@ -195,6 +195,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
     description: [
       "File, add, note or backlog without starting, including saved plans, waits and containers.",
       "when-ready can start now; declare blocked_by. Basis checked at start.",
+      "When its close ends held work's wait, link_tasks blocks from it to that work this turn and lift the hold that named it; a hold's reason wakes nothing.",
     ].join(" "),
     parameters: Type.Object({
       title: Type.String({

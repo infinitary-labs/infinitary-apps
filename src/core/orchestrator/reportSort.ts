@@ -454,7 +454,16 @@ export function sortReport(facts: ReportSortFacts): ReportSortResult {
         "the captain put off its card until a task closes, a time, an event or their word; an automation rule raises it again then.",
     };
   }
-  if (facts.waitsOnStopped && !facts.finished && !facts.filedFollowups) {
+  // Only the wake asking the first mate to start that work goes quiet: an owed
+  // card, recovery findings or a step's answer still need the first mate.
+  if (
+    facts.waitsOnStopped &&
+    !facts.finished &&
+    !facts.filedFollowups &&
+    !facts.captainGateOwed &&
+    !facts.recovery &&
+    !facts.internalStep
+  ) {
     return {
       rule: "waits-stopped",
       verdict: "routine",
@@ -637,8 +646,9 @@ export function idleTurn(witnesses: Witnesses): IdleTurn {
     witnesses.decisionCardOpen ||
     // A put-off card is the captain's to bring back (INF-3846 piece 3).
     (witnesses.putOff && !witnesses.waitsOnUnstarted) ||
-    // So is a wait on work the captain stopped (INF-6853's no-hold choice).
-    witnesses.waitsOnStopped === true ||
+    // So is a wait on work the captain stopped (INF-6853's no-hold choice),
+    // unless the first mate owes the captain a card.
+    (witnesses.waitsOnStopped === true && !witnesses.captainGateOwed) ||
     witnesses.finishedCardUp ||
     witnesses.finishedNoCard
   )

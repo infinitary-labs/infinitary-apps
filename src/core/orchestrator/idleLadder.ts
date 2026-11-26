@@ -797,7 +797,7 @@ export class IdleLadder {
           // An approved change waiting in a line is not stalled (INF-4497 finding 2).
           witnesses.mergeInLine === true ||
           (witnesses.putOff !== undefined && !witnesses.waitsOnUnstarted) ||
-          witnesses.waitsOnStopped === true ||
+          (witnesses.waitsOnStopped === true && !witnesses.captainGateOwed) ||
           witnesses.finishedCardUp === true ||
           witnesses.finishedNoCard === true;
     if ((record.recoveryRung ?? 0) < 3 && held) return undefined;

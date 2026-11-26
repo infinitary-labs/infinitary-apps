@@ -917,7 +917,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
 
     // INF-6853's no-hold choice: a link alone models a wait on work the
     // captain stopped, with no hold beside it to keep the ladder quiet.
-    it("a wait only on work the captain stopped is theirs: no nudge, wake or card past every rung, and the task reads as waiting on them", async () => {
+    it("a wait only on work the captain stopped is theirs: no nudge, wake or card past every rung, and the task still reads as waiting on that work", async () => {
       const { supervisor, crewmate, ops, cards, tasks, taskId, at } = await stopped();
       const release = seedTask(tasks, {
         id: "stable-release",
@@ -936,7 +936,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       const record = tasks.get(taskId);
       expect(record && supervisor.postures.workPosture(record)).toEqual({
         state: "idle",
-        reason: "captain",
+        reason: "dependency",
       });
     });
   });

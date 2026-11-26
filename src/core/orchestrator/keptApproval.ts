@@ -241,7 +241,7 @@ export class KeptApproval {
     approval: MergeApproval,
     proceedWithOpen: boolean,
     reviewId?: string,
-    declared: { after?: "close" | "continue"; issuer?: "autonomy" } = {},
+    declared: { after?: "close" | "continue"; issuer?: "autonomy"; fromWords?: true } = {},
   ): "standing" | "queued" | undefined {
     const record = this.host.tasks.get(taskId);
     if (!record || TaskService.isClosed(record)) return undefined;
@@ -500,7 +500,7 @@ export class KeptApproval {
     generation: number,
     now: number,
     reviewId?: string,
-    declared: { after?: "close" | "continue"; issuer?: "autonomy" } = {},
+    declared: { after?: "close" | "continue"; issuer?: "autonomy"; fromWords?: true } = {},
   ): MergeAuthorization | undefined {
     const repo = record.repoId ? this.host.repos.get(record.repoId) : undefined;
     const review = reviewId
@@ -550,6 +550,7 @@ export class KeptApproval {
       id: randomUUID(),
       generation,
       issuer: declared.issuer ?? "captain",
+      ...(declared.fromWords ? { fromWords: true } : {}),
       at: now,
       card: {
         id: approval.cardId,

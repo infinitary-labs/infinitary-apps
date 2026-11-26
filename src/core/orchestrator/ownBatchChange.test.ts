@@ -209,9 +209,10 @@ function repairedProject() {
 
 /**
  * The app's kept merge over the project's record (`createSettleOwners`), as the check
- * watch runs it once a change's checks settle; the cards it raised.
+ * watch runs it once a change's checks settle; the cards it raised. `autonomy` is whether
+ * the task merges on its own.
  */
-function keptMerge(at: ReturnType<typeof home>) {
+function keptMerge(at: ReturnType<typeof home>, { autonomy = false } = {}) {
   const now = () => 20_000;
   const cards = new CardService({
     now,
@@ -241,7 +242,7 @@ function keptMerge(at: ReturnType<typeof home>) {
     isPersonalTask: () => false,
     deliverableOf: () => "change",
     taskDelivery: () => "queue-pr",
-    taskAutonomy: () => false,
+    taskAutonomy: () => autonomy,
     resolveTaskRef: (ref) => {
       const record = at.tasks.resolve(ref);
       if (!record) throw new Error(`Unknown task "${ref}".`);
@@ -260,6 +261,36 @@ function keptMerge(at: ReturnType<typeof home>) {
     stack: cards,
     settle,
   };
+}
+
+const QUESTION = "card-question";
+
+/** What the project's line and open batch carry, as `[task, version]`, once a pass ran. */
+async function carried(at: ReturnType<typeof home>): Promise<string[][]> {
+  await at.pass();
+  return [...at.line(), ...(at.open()?.members ?? [])].map((change) => [
+    change.taskId,
+    change.head,
+  ]);
+}
+
+/** The crewmate's question about the task, as its card goes up on the stack. */
+function askZone(kept: ReturnType<typeof keptMerge>): void {
+  kept.stack.put({
+    id: QUESTION,
+    taskId: TASK,
+    author: "crewmate",
+    priority: 1,
+    title: "Which zone reads first?",
+    meta: TASK,
+    body: "<p>Which zone reads first?</p>",
+    actions: [
+      { id: "local", label: "The local zone", default: true },
+      { id: "utc", label: "UTC" },
+    ],
+    status: "ready",
+    createdAt: 1_200,
+  });
 }
 
 describe("a change of a project that gets batches of the person's own", () => {
@@ -566,6 +597,175 @@ describe("the merge of a change that joins a batch", () => {
       expect(at.tasks.get(TASK)?.delivery?.mergeAuthorization).toBeUndefined();
       expect(kept.cards().map((card) => card.id)).toContain(CARD);
       expect(at.line()).toEqual([]);
+    });
+
+    // Intent: the approval these words keep is not the captain's click, so a question
+    // opened while its checks still ran holds it before it goes in line, as the decisions
+    // hold holds the first mate's merge of a pull request of its own at its last look.
+    it("holds the kept approval when a question opens while its checks run, until it is answered", async () => {
+      const { at, kept } = await merging();
+      at.forge.states = ["pending"];
+      const waiting = await kept.settle.settleTaskDetailed(TASK, "merge-pr");
+      expect(waiting.text).not.toContain("Approved and in line");
+      expect(at.tasks.get(TASK)?.delivery?.mergeAuthorization).toMatchObject({
+        status: "standing",
+        issuer: "captain",
+        waiting: { on: "checks" },
+      });
+      expect(await carried(at)).toEqual([]);
+
+      askZone(kept);
+      at.forge.states = ["success"];
+      await kept.runMergeAuthorization(TASK);
+      expect(await carried(at)).toEqual([]);
+      expect(at.tasks.get(TASK)?.delivery?.mergeAuthorization).toMatchObject({
+        status: "standing",
+        waiting: { on: "refused", head: HEAD },
+      });
+      expect(
+        at.tasks
+          .timeline(TASK)
+          .some((event) => event.text?.includes('the open question "Which zone reads first?"')),
+      ).toBe(true);
+
+      kept.stack.takeDown(QUESTION, "The zone order is settled.");
+      await kept.runMergeAuthorization(TASK);
+      expect(await carried(at)).toEqual([[TASK, HEAD]]);
+    });
+  });
+
+  // Intent: a batched change approved by the app under autonomy, or by the first mate on
+  // the captain's words, waits on an open crewmate question, a recorded captain wait, or a
+  // captain, time or allowance gate on its task before it goes in line, as a merge of its
+  // own pull request does. The captain's own click passes them.
+  describe("at the last look before it goes in line", () => {
+    type Hold = (at: ReturnType<typeof home>, kept: ReturnType<typeof keptMerge>) => () => void;
+    /** A standing approval at HEAD: the app's under autonomy, or the captain's click. */
+    const approved = (at: ReturnType<typeof home>, issuer: MergeAuthorization["issuer"]) =>
+      at.tasks.delivery.recordPermissionRecords(TASK, {
+        mergeAuthorization: {
+          version: 1,
+          id: "auth-1",
+          generation: 1,
+          issuer,
+          at: 1,
+          card: { id: `card-${TASK}-1`, offerId: "offer-1", actionId: "merge" },
+          target: {
+            repoId: REPO,
+            host: "github.com",
+            owner: "acme",
+            name: "meter",
+            branch: BRANCH,
+            delivery: "direct-pr",
+            method: "squash",
+          },
+          approvedHead: HEAD,
+          lineage: [],
+          proceedWithOpen: false,
+          status: "standing",
+        },
+      });
+
+    it.each<[string, Hold, string]>([
+      [
+        "a crewmate's open question",
+        (_at, kept) => {
+          askZone(kept);
+          return () => kept.stack.takeDown(QUESTION, "The zone order is settled.");
+        },
+        'the open question "Which zone reads first?" needs an answer',
+      ],
+      [
+        "a recorded wait on the captain",
+        (at) => {
+          at.tasks.turns.recordReport(TASK, {
+            text: "Choose the zone order before merging.",
+            declared: { wait: { reason: "Choose the zone order", cardId: "card-plan" } },
+          });
+          return () => at.tasks.turns.recordReport(TASK, { text: "The zone order is chosen." });
+        },
+        "the crewmate is waiting on the captain: Choose the zone order",
+      ],
+      [
+        "a captain gate",
+        (at) => {
+          at.tasks.placement.setGate(TASK, { kind: "captain", ref: "card-plan" });
+          return () => at.tasks.placement.setGate(TASK, null);
+        },
+        "the task is parked on the captain",
+      ],
+      [
+        "an allowance gate",
+        (at) => {
+          at.tasks.placement.setGate(TASK, { kind: "quota-reset", ref: "bucket:high" });
+          return () => at.tasks.placement.setGate(TASK, null);
+        },
+        "the task is waiting for your plan's allowance",
+      ],
+      [
+        "a scheduled continuation",
+        (at) => {
+          at.tasks.placement.setGate(TASK, { kind: "at-time", until: 1_200_000 });
+          return () => at.tasks.placement.setGate(TASK, null);
+        },
+        "the task is waiting for its scheduled continuation",
+      ],
+    ])(
+      "holds the app's approval under autonomy while %s stands, and puts it in line once it is gone",
+      async (_hold, hold, words) => {
+        const at = home();
+        const kept = keptMerge(at, { autonomy: true });
+        await at.confirmed();
+        approved(at, "autonomy");
+        const release = hold(at, kept);
+
+        await kept.runMergeAuthorization(TASK);
+        expect(await carried(at)).toEqual([]);
+        expect(at.tasks.get(TASK)?.delivery?.mergeAuthorization).toMatchObject({
+          status: "standing",
+          waiting: { on: "refused", head: HEAD },
+        });
+        expect(at.tasks.timeline(TASK).some((event) => event.text?.includes(words))).toBe(true);
+
+        release();
+        await kept.runMergeAuthorization(TASK);
+        expect(await carried(at)).toEqual([[TASK, HEAD]]);
+      },
+    );
+
+    it("holds the app's approval that the first mate runs on the captain's words passing only asking first", async () => {
+      const at = home();
+      const kept = keptMerge(at, { autonomy: true });
+      await at.confirmed();
+      at.tasks.delivery.recordChangeEvidence(TASK, { headSha: HEAD });
+      approved(at, "autonomy");
+      at.tasks.delivery.recordPermissionRecords(TASK, {
+        override: {
+          words: "merge",
+          holds: ["asks-first"],
+          until: "version",
+          head: HEAD,
+          at: 1_100,
+        },
+      });
+      askZone(kept);
+
+      const held = await kept.settle.settleTaskDetailed(TASK, "merge-pr");
+      expect(held.ok).toBe(false);
+      expect(held.text).toContain('the open question "Which zone reads first?" needs an answer');
+      expect(held.text).toContain(softHoldWords("decisions", "firstmate"));
+      expect(await carried(at)).toEqual([]);
+    });
+
+    it("puts the captain's own click in line past an open question", async () => {
+      const at = home();
+      const kept = keptMerge(at);
+      await at.confirmed();
+      approved(at, "captain");
+      askZone(kept);
+
+      await kept.runMergeAuthorization(TASK);
+      expect(await carried(at)).toEqual([[TASK, HEAD]]);
     });
   });
 

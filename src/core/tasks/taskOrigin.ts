@@ -275,9 +275,17 @@ export function originAbout(reader: OriginReader, id: string): TaskOriginLine | 
     order.push({ id: next, through, beyond });
   };
   place(id, 0, false);
+  // Each task's own origin is read as the walk reaches it, and the first one
+  // ends the walk: the walk only appends, so every task it would place
+  // later comes after this one in the same order. The card stack walks once
+  // for each open card on every rebuild; reading the graph past the nearest
+  // origin was a fifth to a third of a rebuild on a long record (INF-6958).
   for (let index = 0; index < order.length; index += 1) {
     const at = order[index] as { id: string; through: number; beyond: boolean };
     if (at.beyond) continue;
+    const found = ownOrigin(reader, at.id);
+    const line = found && originLine(found, at.through);
+    if (line) return line;
     const beyond = startedByFirstMate(reader, reader.get(at.id));
     for (const next of sources(reader, at.id)) {
       if (seen.has(next) || !reader.get(next)) continue;
@@ -287,27 +295,6 @@ export function originAbout(reader: OriginReader, id: string): TaskOriginLine | 
   }
   const quotable = order.filter((entry) => !entry.beyond);
   for (const { id: taskId, through } of quotable) {
-    const found = ownOrigin(reader, taskId);
-    if (!found) continue;
-    if (found.kind === "asked")
-      return { kind: "asked", at: found.ask.at, text: askReceipt(found.ask), through };
-    // The words sit on the reporting task, one further back.
-    if (found.kind === "relayed")
-      return { kind: "asked", at: found.at, text: found.text, through: through + 1 };
-    const origin = found.origin;
-    if (origin.kind === "automation")
-      return { kind: "automation", at: found.at, name: origin.name ?? "", through };
-    if (origin.kind === "chose")
-      return {
-        kind: "chose",
-        at: found.at,
-        choice: origin.choice,
-        card: typeof origin.card === "string" ? origin.card : "",
-        text: origin.written ?? "",
-        through,
-      };
-  }
-  for (const { id: taskId, through } of quotable) {
     const ask = ownSaying(reader, taskId);
     if (ask) return { kind: "said", at: ask.at, text: askReceipt(ask), through };
   }
@@ -316,4 +303,26 @@ export function originAbout(reader: OriginReader, id: string): TaskOriginLine | 
   return task
     ? { kind: "from", at: task.createdAt, key: task.key || task.id, title: task.title }
     : undefined;
+}
+
+/** The line a task's own origin gives, `through` tasks from the card's. */
+function originLine(found: Found, through: number): TaskOriginLine | undefined {
+  if (found.kind === "asked")
+    return { kind: "asked", at: found.ask.at, text: askReceipt(found.ask), through };
+  // The words sit on the reporting task, one further back.
+  if (found.kind === "relayed")
+    return { kind: "asked", at: found.at, text: found.text, through: through + 1 };
+  const origin = found.origin;
+  if (origin.kind === "automation")
+    return { kind: "automation", at: found.at, name: origin.name ?? "", through };
+  if (origin.kind === "chose")
+    return {
+      kind: "chose",
+      at: found.at,
+      choice: origin.choice,
+      card: typeof origin.card === "string" ? origin.card : "",
+      text: origin.written ?? "",
+      through,
+    };
+  return undefined;
 }

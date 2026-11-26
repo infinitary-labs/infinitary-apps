@@ -97,6 +97,7 @@ function gitHub({
   const labels = new Map(pulls.map((pull) => [pull.number, new Set<string>()]));
   const comments: { id: number; issue: number; user: typeof bot; body: string }[] = [];
   let writes = 0;
+  let mainNow = main;
   const mainRun = { id: main[0]?.run_id ?? 0 };
   const allJobs: Record<number, Job[]> = { ...jobs, [mainRun.id]: main };
   const github = {
@@ -116,7 +117,9 @@ function gitHub({
         listWorkflowRunsForRepo: async ({ head_sha }: { head_sha: string }) => ({
           data: head_sha === version ? runs : [],
         }),
-        listWorkflowRuns: async () => ({ data: { workflow_runs: main.length ? [mainRun] : [] } }),
+        listWorkflowRuns: async () => ({
+          data: { workflow_runs: mainNow.length ? [{ ...mainRun }] : [] },
+        }),
         listJobsForWorkflowRun: async ({ run_id }: { run_id: number }) => ({
           data: allJobs[run_id] ?? [],
         }),
@@ -166,6 +169,12 @@ function gitHub({
     comments,
     writes: () => writes,
     setJobs: (more: Record<number, Job[]>) => Object.assign(allJobs, more),
+    /** Main's newest finished run of main.yml becomes the one with these jobs. */
+    setMain: (next: Job[]) => {
+      mainNow = next;
+      mainRun.id = next[0]?.run_id ?? 0;
+      allJobs[mainRun.id] = next;
+    },
   };
 }
 
@@ -249,7 +258,7 @@ describe("the failed-check note", () => {
     );
   });
 
-  it("leaves out a check that also failed in main's newest run, and writes nothing when every one did", async () => {
+  it("leaves out a check that also failed in main's newest run, and names none to fix when every one did", async () => {
     const api = gitHub({
       runs: [forkContributors],
       jobs: { [forkContributors.id]: forkContributorsJobs },
@@ -259,7 +268,9 @@ describe("the failed-check note", () => {
     expect(await noteFailedChecks({ github: api.github, context: finished(), core: reading })).toBe(
       "every failed check also fails on main",
     );
-    expect(api.writes()).toBe(0);
+    expect(api.comments).toHaveLength(1);
+    expect(api.comments[0]?.body).not.toContain("[log]");
+    expect([...(api.labels.get(35) ?? [])]).toEqual([]);
     expect(reading.summary.text.join("")).toContain("Integration tests (Linux; group 1/2)");
 
     const mixed = gitHub({
@@ -296,6 +307,130 @@ describe("the failed-check note", () => {
     expect(next.comments).toHaveLength(2);
     expect(next.comments[0]?.body).toContain("version e357ae4");
     expect(next.comments[1]?.body).toContain("version 5b1f0c9");
+  });
+
+  // INF-6753: an outside pull request whose only failures are main's was
+  // told nothing and waited unlisted until its author acted. The note now
+  // tells its author and marks the version waiting on main, which the intake
+  // round reads to offer a rerun once main passes (docs/outside-intake.md,
+  // "Check starts").
+  describe("a version whose every failed check also fails on main", () => {
+    const integration = forkContributorsJobs[0] as Job;
+    const rerun = forkContributorsJobs.map((each) => ({
+      ...each,
+      id: each.id + 1000,
+      conclusion: "success",
+    }));
+    const onlyMain = (main = mainFailed) =>
+      gitHub({
+        runs: [forkContributors],
+        jobs: { [forkContributors.id]: forkContributorsJobs },
+        main,
+      });
+    const note = (api: ReturnType<typeof gitHub>, conclusion = "failure") =>
+      noteFailedChecks({ github: api.github, context: finished({ conclusion }), core: core() });
+    const mark = (api: ReturnType<typeof gitHub>) => api.comments[0]?.body.split("\n")[0];
+
+    it("tells its author so in one comment, puts no label on, and marks it waiting on main", async () => {
+      const api = onlyMain();
+      expect(await note(api)).toBe("every failed check also fails on main");
+      expect(api.comments).toHaveLength(1);
+      expect(mark(api)).toBe(`<!-- failed-checks sha=${forkSha} labeled=no waits=main -->`);
+      const body = api.comments[0]?.body ?? "";
+      expect(body).toContain("Posted automatically");
+      expect(body).toContain(
+        "failed on this pull request's version e357ae4, but also fail on `main` right now, so they are not this pull request's to fix:",
+      );
+      expect(body).toContain(`- \`${integration.name}\``);
+      expect(body).not.toContain("[log]");
+      expect(body).not.toContain(WAITING);
+      expect(body).toContain(
+        "They need nothing from you: once `main` passes, a maintainer can run them again on this version.",
+      );
+      expect([...(api.labels.get(35) ?? [])]).toEqual([]);
+      // Another workflow of the version finishing with the same reading writes nothing more.
+      const writes = api.writes();
+      expect(await note(api)).toBe("already said");
+      expect(api.writes()).toBe(writes);
+    });
+
+    it("says nothing is left to fix when a rerun passes once main does, and puts no label on", async () => {
+      const api = onlyMain();
+      await note(api);
+      api.setMain(mainPassed);
+      api.setJobs({ [forkContributors.id]: rerun });
+      expect(await note(api, "success")).toBe("now passing");
+      expect(api.comments).toHaveLength(1);
+      expect(mark(api)).toBe(`<!-- failed-checks sha=${forkSha} labeled=no waits=none -->`);
+      expect(api.comments[0]?.body).toContain(
+        "Nothing this note named on version e357ae4 is left for this pull request to fix.",
+      );
+      expect([...(api.labels.get(35) ?? [])]).toEqual([]);
+    });
+
+    it("sends it back to its author when a rerun still fails once main passes", async () => {
+      const api = onlyMain();
+      await note(api);
+      api.setMain(mainPassed);
+      expect(await note(api)).toBe("named 1 again");
+      expect(api.comments).toHaveLength(1);
+      expect(mark(api)).toBe(`<!-- failed-checks sha=${forkSha} labeled=yes waits=author -->`);
+      expect(api.comments[0]?.body).toContain(
+        `- \`${integration.name}\`: [log](${log(integration)})`,
+      );
+      expect([...(api.labels.get(35) ?? [])]).toEqual([WAITING]);
+    });
+
+    it("leaves a version waiting on main once main fails every check the note named", async () => {
+      const api = onlyMain(mainPassed);
+      expect(await note(api)).toBe("named 1");
+      expect([...(api.labels.get(35) ?? [])]).toEqual([WAITING]);
+      api.setMain(mainFailed);
+      expect(await note(api)).toBe("cleared");
+      expect(mark(api)).toBe(`<!-- failed-checks sha=${forkSha} labeled=yes waits=main -->`);
+      expect(api.comments[0]?.body).toContain(`- \`${integration.name}\``);
+      expect(api.comments[0]?.body).toContain("They need nothing from you");
+      expect([...(api.labels.get(35) ?? [])]).toEqual([NEEDS_TRIAGE]);
+    });
+
+    it("says so in a dry run by hand, writing nothing", async () => {
+      const api = onlyMain();
+      const reading = core();
+      expect(
+        await noteFailedChecks({
+          github: api.github,
+          context: {
+            repo: project,
+            serverUrl: server,
+            eventName: "workflow_dispatch",
+            payload: {},
+          },
+          core: reading,
+          pullNumber: "35",
+        }),
+      ).toBe("would say every failed check also fails on main");
+      expect(api.writes()).toBe(0);
+      expect(reading.summary.text.join("")).toContain("They need nothing from you");
+    });
+  });
+
+  // A comment the note wrote before its mark said whom the version waits on.
+  it("reads a mark that predates whom the version waits on", async () => {
+    const api = gitHub();
+    api.comments.push({
+      id: 1,
+      issue: 35,
+      user: bot,
+      body: `<!-- failed-checks sha=${forkSha} labeled=yes -->\n_Posted automatically by this project's GitHub workflow when a check finishes on a pull request._\n\nNothing this note named on version e357ae4 is left for this pull request to fix.`,
+    });
+    // A failure after that clear puts the label back and keeps the note's claim to it.
+    expect(await noteFailedChecks({ github: api.github, context: finished(), core: core() })).toBe(
+      "named 2 again",
+    );
+    expect(api.comments[0]?.body.split("\n")[0]).toBe(
+      `<!-- failed-checks sha=${forkSha} labeled=yes waits=author -->`,
+    );
+    expect([...(api.labels.get(35) ?? [])]).toEqual([WAITING]);
   });
 
   it("matches a contributor's job to main's by the check it runs, whatever started it", () => {

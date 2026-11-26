@@ -9,6 +9,7 @@ import type {
   PlacedSecretUseInput,
 } from "@shared/workSecrets";
 import { type SecretAskAnswer, type SecretAskInput, validSecretAsk } from "../secrets/asks";
+import type { SecretBringCommand } from "../secrets/bring";
 import { type LaunchResult, type PreparedRecipient, prepareRecipient } from "../secrets/recipient";
 import {
   type Injection,
@@ -20,6 +21,7 @@ import {
   type UseReceipt,
   validInjection,
 } from "../secrets/requests";
+import { type SecretBringsHome, SecretBringsThere } from "./secretBrings";
 
 /** How this computer reaches the home's Secrets for one task: the work requests, nothing else. */
 export type SecretUsesHome = {
@@ -68,7 +70,44 @@ export class SecretUsesThere implements SecretsCommand {
   /** Withdraws this task's waiting ask by its id; false when none waits. */
   cancelAsk?: (id: string) => Promise<boolean>;
 
+  /**
+   * Brings secrets from another tool here into the home's Secrets
+   * (docs/secrets.md, "Bringing secrets from another tool"), present only
+   * while the home says it takes brings from here.
+   */
+  bring?: SecretBringCommand["bring"];
+  bringStatus?: SecretBringCommand["bringStatus"];
+  cancelBring?: SecretBringCommand["cancelBring"];
+  /** The home's brings for this task while it takes them; one follower, so a press runs once. */
+  private bringsHome: SecretBringsHome | undefined;
+  private brings: SecretBringsThere | undefined;
+
   constructor(private readonly options: SecretUsesThereOptions) {}
+
+  /** The home takes brings from here, or no longer does (a conversation opened again without them). */
+  offerBrings(home: SecretBringsHome | undefined): void {
+    this.bringsHome = home;
+    if (!home) {
+      this.bring = undefined;
+      this.bringStatus = undefined;
+      this.cancelBring = undefined;
+      return;
+    }
+    const brings =
+      this.brings ??
+      new SecretBringsThere({
+        home: (input) => {
+          if (!this.bringsHome) throw new Error("The home no longer takes brings from here.");
+          return this.bringsHome(input);
+        },
+        environment: this.options.environment,
+        ...(this.options.log ? { log: this.options.log } : {}),
+      });
+    this.brings = brings;
+    this.bring = (input, cwd) => brings.bring(input, cwd);
+    this.bringStatus = (id) => brings.bringStatus(id);
+    this.cancelBring = (id) => brings.cancelBring(id);
+  }
 
   /**
    * The home takes asks from here, or no longer does (a conversation opened

@@ -1,5 +1,5 @@
 ---
-source: 0c5daa67e1edf076
+source: 45896475239d4a1f
 title: Secrets
 description: Gardez les mots de passe et les clés dont votre équipage a besoin, autorisez chaque utilisation sur une carte et voyez ce qui les a utilisés.
 ---
@@ -131,6 +131,11 @@ Infinitary exécute la commande ou lit le fichier lui-même, et ne garde que ce 
 Pour un fichier comme un fichier .env, **Le lire** liste d’abord les noms qu’il contient.
 L’équipier reçoit des noms, jamais une valeur, et la copie dans l’autre outil reste telle quelle.
 Vous choisissez les secrets dans la fenêtre d’Infinitary sur l’ordinateur où vit votre second, pas sur votre téléphone.
+
+Si l’outil se trouve sur un autre de vos ordinateurs qui exécutent du travail, nommez cet ordinateur dans votre demande, et un équipier qui y travaille importe les secrets depuis celui-ci.
+La carte s’affiche toujours sur l’ordinateur où vit votre second, avec une ligne **Sur l’ordinateur** qui nomme l’ordinateur où la commande s’exécute.
+Quand vous choisissez **Importer dans Secrets**, cet ordinateur exécute la commande et n’envoie que les secrets que vous avez cochés, une seule fois, par la connexion entre vos ordinateurs.
+**Le lire** envoie une fois chaque valeur que contient le fichier, pour que la carte puisse lister leurs noms, et Secrets ne garde toujours que ce que vous cochez.
 
 ## Les clés de vos intégrations {#keys-for-your-integrations}
 

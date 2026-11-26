@@ -13,6 +13,8 @@ import type { RiskAssessment, RiskDeclaration } from "@shared/risk";
 import type {
   PlacedSecretAskAnswer,
   PlacedSecretAskInput,
+  PlacedSecretBringAnswer,
+  PlacedSecretBringInput,
   PlacedSecretTakeAnswer,
   PlacedSecretUseAnswer,
   PlacedSecretUseInput,
@@ -598,6 +600,13 @@ export type SecretUsesElsewhere = {
    * computer's command offers no ask.
    */
   ask?(computer: UseComputer, input: PlacedSecretAskInput): Promise<PlacedSecretAskAnswer>;
+  /**
+   * A bring from another tool there, raised on the home's own card, and its
+   * press, delivery, status and withdrawal (docs/secrets.md, "Bringing
+   * secrets from another tool"); absent where that computer's command
+   * offers no bring.
+   */
+  bring?(computer: UseComputer, input: PlacedSecretBringInput): Promise<PlacedSecretBringAnswer>;
 };
 
 export type ToolOutput = {

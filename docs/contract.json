@@ -91224,6 +91224,829 @@
         ]
       }
     },
+    "inf:work:secret-bring": {
+      "effect": "change",
+      "reach": "work",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "object",
+            "properties": {
+              "task": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{1,64}$"
+              },
+              "callId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "input": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "op": {
+                        "type": "string",
+                        "const": "bring"
+                      },
+                      "id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "reason": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "from": {
+                        "type": "object",
+                        "properties": {
+                          "tool": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "reads": {
+                            "type": "string",
+                            "enum": [
+                              "value",
+                              "lines",
+                              "env0",
+                              "json"
+                            ]
+                          },
+                          "secrets": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "name": {
+                                  "type": "string"
+                                },
+                                "as": {
+                                  "type": "string"
+                                },
+                                "place": {
+                                  "type": "string"
+                                },
+                                "replace": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "name"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "trim": {
+                            "type": "string",
+                            "const": "newline"
+                          }
+                        },
+                        "required": [
+                          "tool",
+                          "reads"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "source": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "run"
+                              },
+                              "program": {
+                                "type": "object",
+                                "properties": {
+                                  "path": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "sha256": {
+                                    "type": "string",
+                                    "pattern": "^[0-9a-f]{64}$"
+                                  }
+                                },
+                                "required": [
+                                  "path",
+                                  "sha256"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "interpreter": {
+                                "type": "object",
+                                "properties": {
+                                  "path": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "sha256": {
+                                    "type": "string",
+                                    "pattern": "^[0-9a-f]{64}$"
+                                  },
+                                  "arg": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "path",
+                                  "sha256"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "argv": {
+                                "minItems": 1,
+                                "maxItems": 256,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "maxLength": 4096
+                                }
+                              },
+                              "folder": {
+                                "type": "string",
+                                "minLength": 1
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "program",
+                              "argv",
+                              "folder"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "file"
+                              },
+                              "file": {
+                                "type": "object",
+                                "properties": {
+                                  "path": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "sha256": {
+                                    "type": "string",
+                                    "pattern": "^[0-9a-f]{64}$"
+                                  }
+                                },
+                                "required": [
+                                  "path",
+                                  "sha256"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "file"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "op",
+                      "id",
+                      "reason",
+                      "from",
+                      "source"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "op": {
+                        "type": "string",
+                        "const": "status"
+                      },
+                      "id": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "op",
+                      "id"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "op": {
+                        "type": "string",
+                        "const": "cancel"
+                      },
+                      "id": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "op",
+                      "id"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "op": {
+                        "type": "string",
+                        "const": "next"
+                      },
+                      "id": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "op",
+                      "id"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "op": {
+                        "type": "string",
+                        "const": "deliver"
+                      },
+                      "id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "run": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "result": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "values": {
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string"
+                                },
+                                "additionalProperties": {
+                                  "anyOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "value": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "value"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "cannot": {
+                                          "type": "string",
+                                          "enum": [
+                                            "empty",
+                                            "too-large",
+                                            "not-text"
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "cannot"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  ]
+                                }
+                              }
+                            },
+                            "required": [
+                              "values"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "failed": {
+                                "type": "object",
+                                "properties": {
+                                  "exitCode": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "signal": {
+                                    "type": "string"
+                                  }
+                                },
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "failed"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "ended": {
+                                "type": "string",
+                                "enum": [
+                                  "changed",
+                                  "too-large",
+                                  "invalid-json"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "ended"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "op",
+                      "id",
+                      "run",
+                      "result"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            },
+            "required": [
+              "task",
+              "callId",
+              "input"
+            ]
+          }
+        ],
+        "items": false,
+        "minItems": 1,
+        "maxItems": 1
+      },
+      "response": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "bring": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "bring": {
+                        "type": "string"
+                      },
+                      "state": {
+                        "type": "string",
+                        "const": "waiting"
+                      }
+                    },
+                    "required": [
+                      "bring",
+                      "state"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "bring": {
+                        "type": "string"
+                      },
+                      "state": {
+                        "type": "string",
+                        "const": "unavailable"
+                      },
+                      "help": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "bring",
+                      "state",
+                      "help"
+                    ]
+                  }
+                ]
+              }
+            },
+            "required": [
+              "bring"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "bring": {
+                            "type": "string"
+                          },
+                          "state": {
+                            "type": "string",
+                            "const": "waiting"
+                          }
+                        },
+                        "required": [
+                          "bring",
+                          "state"
+                        ]
+                      },
+                      {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "bring": {
+                                "type": "string"
+                              },
+                              "state": {
+                                "type": "string",
+                                "const": "kept"
+                              },
+                              "secrets": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "name": {
+                                      "type": "string"
+                                    },
+                                    "place": {
+                                      "type": "string"
+                                    },
+                                    "outcome": {
+                                      "type": "string",
+                                      "enum": [
+                                        "kept",
+                                        "skipped",
+                                        "not-found",
+                                        "empty",
+                                        "too-large",
+                                        "not-text",
+                                        "changed"
+                                      ]
+                                    },
+                                    "ref": {
+                                      "type": "string"
+                                    },
+                                    "version": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "name",
+                                    "place",
+                                    "outcome"
+                                  ]
+                                }
+                              }
+                            },
+                            "required": [
+                              "bring",
+                              "state",
+                              "secrets"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "bring": {
+                                "type": "string"
+                              },
+                              "state": {
+                                "type": "string",
+                                "const": "not-brought"
+                              }
+                            },
+                            "required": [
+                              "bring",
+                              "state"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "bring": {
+                                "type": "string"
+                              },
+                              "state": {
+                                "type": "string",
+                                "const": "failed"
+                              },
+                              "exitCode": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "signal": {
+                                "type": "string"
+                              },
+                              "why": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "bring",
+                              "state",
+                              "why"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "bring": {
+                                "type": "string"
+                              },
+                              "state": {
+                                "type": "string",
+                                "const": "changed"
+                              }
+                            },
+                            "required": [
+                              "bring",
+                              "state"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "bring": {
+                                "type": "string"
+                              },
+                              "state": {
+                                "type": "string",
+                                "const": "expired"
+                              }
+                            },
+                            "required": [
+                              "bring",
+                              "state"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "bring": {
+                                "type": "string"
+                              },
+                              "state": {
+                                "type": "string",
+                                "const": "withdrawn"
+                              },
+                              "why": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "bring",
+                              "state",
+                              "why"
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "withdrawn": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "withdrawn"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "run": {
+                "type": "object",
+                "properties": {
+                  "run": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "source": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "run"
+                          },
+                          "program": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "sha256": {
+                                "type": "string",
+                                "pattern": "^[0-9a-f]{64}$"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "sha256"
+                            ]
+                          },
+                          "interpreter": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "sha256": {
+                                "type": "string",
+                                "pattern": "^[0-9a-f]{64}$"
+                              },
+                              "arg": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "sha256"
+                            ]
+                          },
+                          "argv": {
+                            "minItems": 1,
+                            "maxItems": 256,
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "maxLength": 4096
+                            }
+                          },
+                          "folder": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "program",
+                          "argv",
+                          "folder"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "file"
+                          },
+                          "file": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "sha256": {
+                                "type": "string",
+                                "pattern": "^[0-9a-f]{64}$"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "sha256"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "file"
+                        ]
+                      }
+                    ]
+                  },
+                  "reads": {
+                    "type": "string",
+                    "enum": [
+                      "value",
+                      "lines",
+                      "env0",
+                      "json"
+                    ]
+                  },
+                  "trim": {
+                    "type": "string",
+                    "const": "newline"
+                  },
+                  "names": {
+                    "anyOf": [
+                      {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "run",
+                  "source",
+                  "reads",
+                  "names"
+                ]
+              }
+            },
+            "required": [
+              "run"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "wait": {
+                "type": "boolean",
+                "const": true
+              }
+            },
+            "required": [
+              "wait"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "over": {
+                "type": "boolean",
+                "const": true
+              }
+            },
+            "required": [
+              "over"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "ok": {
+                "type": "boolean",
+                "const": true
+              }
+            },
+            "required": [
+              "ok"
+            ]
+          }
+        ]
+      }
+    },
     "inf:work:picture": {
       "effect": "change",
       "reach": "work",
@@ -114033,6 +114856,9 @@
                       "type": "boolean"
                     },
                     "secretAsks": {
+                      "type": "boolean"
+                    },
+                    "secretBrings": {
                       "type": "boolean"
                     },
                     "reattach": {

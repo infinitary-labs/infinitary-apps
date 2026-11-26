@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "settle-owners-kept-merge-test-split",
+      "reason": "Internal: the tests of task-level autonomy and the host's merge hold move from the kept merge approval's test file to their own file without changing app behavior."
+    }
+  ]
+}

@@ -159,15 +159,16 @@ export default defineConfig({
     resolve: {
       alias: {
         "@shared": resolve(__dirname, "src/shared"),
-        // The two specifiers a personal panel imports, under Infinitary's
-        // names and Firstmate 3000's. The extension host serves them as host
-        // modules at runtime (src/shared/plugins/uiModule.ts); in this build
-        // they resolve to the same modules directly, so the fixture
-        // extensions compile and the e2e can mount them.
+        // The specifiers a panel imports, under Infinitary's names and
+        // Firstmate 3000's, resolve to the files tsconfig.web.json's paths
+        // name (tests/panel-contracts-aliases.test.ts). A panel never reaches
+        // them through this build: the panel compiler
+        // (src/core/personal/compiler.ts) rewrites `ui` to the frame realm's
+        // host module and admits `contracts` for types only.
         "@infinitary/ui": resolve(__dirname, "src/renderer/src/design/index.ts"),
-        "@infinitary/contracts": resolve(__dirname, "src/shared/plugins/personalPanel.ts"),
+        "@infinitary/contracts": resolve(__dirname, "src/shared/personal/contracts.ts"),
         "@firstmate/ui": resolve(__dirname, "src/renderer/src/design/index.ts"),
-        "@firstmate/contracts": resolve(__dirname, "src/shared/plugins/personalPanel.ts"),
+        "@firstmate/contracts": resolve(__dirname, "src/shared/personal/contracts.ts"),
       },
     },
     plugins: [react(), cspMetaPlugin()],

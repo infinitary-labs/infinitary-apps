@@ -183,10 +183,12 @@ export default defineConfig({
     alias: {
       "@core": resolve(__dirname, "src/core"),
       "@shared": resolve(__dirname, "src/shared"),
+      // The files tsconfig.web.json's paths name for the specifiers a panel
+      // imports (tests/panel-contracts-aliases.test.ts).
       "@infinitary/ui": resolve(__dirname, "src/renderer/src/design/index.ts"),
-      "@infinitary/contracts": resolve(__dirname, "src/shared/plugins/personalPanel.ts"),
+      "@infinitary/contracts": resolve(__dirname, "src/shared/personal/contracts.ts"),
       "@firstmate/ui": resolve(__dirname, "src/renderer/src/design/index.ts"),
-      "@firstmate/contracts": resolve(__dirname, "src/shared/plugins/personalPanel.ts"),
+      "@firstmate/contracts": resolve(__dirname, "src/shared/personal/contracts.ts"),
     },
   },
   test: {

@@ -44,13 +44,16 @@ export type ClaudeQuotaAuth = {
   subscriptionType?: string;
 };
 
-const SEC_ITEM_NOT_FOUND_CLI = 44;
 /** errSecItemNotFound as Security.framework OSStatus. */
 const SEC_ITEM_NOT_FOUND = -25300;
 /** errSecInteractionNotAllowed - no SecurityAgent dialog could be presented. */
 const SEC_INTERACTION_NOT_ALLOWED = -25308;
 /** errSecInteractionRequired - the same refusal, as newer macOS reports it. */
 const SEC_INTERACTION_REQUIRED = -25315;
+/** errSecUserCanceled - the person dismissed the dialog. */
+const SEC_USER_CANCELED = -128;
+/** errSecAuthFailed - macOS refused the read. */
+const SEC_AUTH_FAILED = -25293;
 
 /**
  * A declined VALUE read must not re-ask until Retry. Four reasons are not
@@ -339,43 +342,30 @@ type KeychainRead =
   | { kind: "absent" };
 
 /**
- * Classify a failed Keychain VALUE or presence read. The codes are macOS
- * Security.framework OSStatus values as the host reports them. Residual
- * `security(1)` shapes (exit 44, a killed child) stay for the classifier
- * tests and any leftover error objects.
+ * Classify a failed Keychain VALUE or presence read by the code the host's
+ * reader reports: a macOS Security.framework OSStatus, or
+ * KEYCHAIN_READ_INCOMPLETE_CODE for a read that did not finish. Anything
+ * else, whatever its code or wording, is `keychain_unavailable`.
+ *
+ * The one codeless verdict is the unanswered dialog: the Keychain process
+ * (src/main/host/keychainProcess.ts) reports an interactive operation that
+ * outlived its dialog allowance with a message that says it timed out, and
+ * no code. Only a codeless failure is read for those words, so a coded one
+ * never turns into a timeout by its message.
  */
 export function classifyKeychainValueError(error: unknown): KeychainValueFailure {
-  const err = error as {
-    killed?: boolean;
-    code?: unknown;
-    message?: string;
-    stderr?: string;
-  } | null;
-  if (err?.code === KEYCHAIN_READ_INCOMPLETE_CODE) return "keychain_read_incomplete";
-  if (err?.killed === true) return "keychain_prompt_timeout";
-  const message = `${err?.message ?? ""}\n${err?.stderr ?? ""}`.toLowerCase();
-  if (/timed out|timeout/.test(message)) return "keychain_prompt_timeout";
+  const err = error as { code?: unknown; message?: unknown } | null;
   const code = err?.code;
-  // The dialog could not be presented. Match before the generic "not allowed"
-  // denied class: nobody declined. WHY it could not be presented is not in the
-  // status - see `interactionFailure`, which knows whether we were the ones
-  // who suppressed it.
-  if (
-    code === SEC_INTERACTION_NOT_ALLOWED ||
-    code === SEC_INTERACTION_REQUIRED ||
-    /user interaction is not allowed|interaction (is )?required|cssmerr_csp_no_user_interaction/.test(
-      message,
-    )
-  ) {
+  if (code === KEYCHAIN_READ_INCOMPLETE_CODE) return "keychain_read_incomplete";
+  // The dialog could not be presented and nobody declined. WHY it could not
+  // be presented is not in the status - see `interactionFailure`, which knows
+  // whether we were the ones who suppressed it.
+  if (code === SEC_INTERACTION_NOT_ALLOWED || code === SEC_INTERACTION_REQUIRED) {
     return "keychain_no_interactive_session";
   }
-  // errSecUserCanceled (-128), errSecAuthFailed (-25293), and the 128 that
-  // some `security` builds surface for a dismissed dialog.
-  if (code === -128 || code === -25293 || code === 128 || code === "128") {
-    return "keychain_access_denied";
-  }
-  if (/cancel|denied|not allowed|auth failed/.test(message)) {
-    return "keychain_access_denied";
+  if (code === SEC_USER_CANCELED || code === SEC_AUTH_FAILED) return "keychain_access_denied";
+  if (code === undefined && typeof err?.message === "string" && /timed out/i.test(err.message)) {
+    return "keychain_prompt_timeout";
   }
   return "keychain_unavailable";
 }
@@ -387,7 +377,7 @@ function classifyHostFailure(outcome: { code?: number; message: string }): Keych
 function isAbsentOutcome(outcome: HostKeychainOutcome | HostKeychainUnlockOutcome): boolean {
   if (outcome.kind === "absent") return true;
   if (outcome.kind !== "failed") return false;
-  return outcome.code === SEC_ITEM_NOT_FOUND || outcome.code === SEC_ITEM_NOT_FOUND_CLI;
+  return outcome.code === SEC_ITEM_NOT_FOUND;
 }
 
 function lockFromFailure(

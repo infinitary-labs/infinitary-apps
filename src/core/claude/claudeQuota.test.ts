@@ -438,14 +438,18 @@ describe("readClaudeStore", () => {
     );
   });
 
-  it("classifies a killed value read as a timeout and a canceled dialog as denied", () => {
-    expect(classifyKeychainValueError({ killed: true, message: "timeout" })).toBe(
-      "keychain_prompt_timeout",
-    );
+  it("classifies an unanswered dialog as a timeout and a canceled or refused read as denied", () => {
+    // The Keychain process's own report when a dialog outlives its allowance.
+    expect(
+      classifyKeychainValueError({ message: "The password dialog timed out without an answer." }),
+    ).toBe("keychain_prompt_timeout");
     expect(classifyKeychainValueError({ code: -128, message: "User canceled the request." })).toBe(
       "keychain_access_denied",
     );
-    expect(classifyKeychainValueError(new Error("security: mysterious failure"))).toBe(
+    expect(classifyKeychainValueError({ code: -25293, message: "Auth failed." })).toBe(
+      "keychain_access_denied",
+    );
+    expect(classifyKeychainValueError(new Error("The host cannot reach the macOS Keychain."))).toBe(
       "keychain_unavailable",
     );
     expect(
@@ -453,9 +457,50 @@ describe("readClaudeStore", () => {
         Object.assign(new Error("User interaction is not allowed."), { code: -25308 }),
       ),
     ).toBe("keychain_no_interactive_session");
-    expect(classifyKeychainValueError(new Error("CSSMERR_CSP_NO_USER_INTERACTION"))).toBe(
-      "keychain_no_interactive_session",
-    );
+  });
+
+  it("reads no refusal, timeout or missing dialog from a shape the host's readers never report", () => {
+    // Apple's security tool's exit statuses and printed words, a killed child,
+    // and a coded failure whose words mention a timeout: none is a host
+    // report, so none may stand for one.
+    for (const shape of [
+      { killed: true, message: "Command failed" },
+      { code: 128, message: "Command failed" },
+      { code: "128", message: "Command failed" },
+      new Error("CSSMERR_CSP_NO_USER_INTERACTION"),
+      { code: 1, message: "Command failed", stderr: "User canceled the operation." },
+      new Error("permission denied"),
+      { code: -60008, message: "The read timed out." },
+    ]) {
+      expect(classifyKeychainValueError(shape)).toBe("keychain_unavailable");
+    }
+  });
+
+  it("only errSecItemNotFound is a missing item, never exit status 44", async () => {
+    // 44 is how Apple's security tool reported errSecItemNotFound. A reader
+    // that returns 44 for anything else must not sign the Mac out.
+    const failure: HostKeychainOutcome = { kind: "failed", code: 44, message: "Command failed" };
+    const dir = storeDir();
+    expect(
+      await readClaudeStore(dir, {
+        keychain: fakeKeychain({ find: failure }),
+        env: { USER: "kun" },
+      }),
+    ).toEqual({ state: "unreadable", reason: "keychain_unavailable" });
+    expect(
+      await readClaudeStore(dir, {
+        keychain: fakeKeychain({ read: failure }),
+        env: { USER: "kun" },
+      }),
+    ).toEqual({ state: "unreadable", reason: "keychain_unavailable" });
+    expect(
+      await readClaudeStore(dir, {
+        keychain: fakeKeychain({
+          find: { kind: "failed", code: -25300, message: "OSStatus -25300" },
+        }),
+        env: { USER: "kun" },
+      }),
+    ).toEqual({ state: "absent" });
   });
 
   it("prefers the Keychain over an expired sidecar - the client keeps it authoritative", async () => {
@@ -623,6 +668,22 @@ describe("a locked store", () => {
       allowPrompt: true,
     });
     expect(result).toEqual({ state: "unreadable", reason: "keychain_no_interactive_session" });
+  });
+
+  it("an unlock that finds no item is no login, and exit status 44 leaves the store locked", async () => {
+    const missing = lockedStore({
+      unlock: () => ({ kind: "failed", code: -25300, message: "OSStatus -25300" }),
+    });
+    expect(
+      await readClaudeStore(storeDir(), { keychain: missing.keychain, env, allowPrompt: true }),
+    ).toEqual({ state: "absent" });
+    const exit44 = lockedStore({
+      unlock: () => ({ kind: "failed", code: 44, message: "Command failed" }),
+    });
+    expect(
+      await readClaudeStore(storeDir(), { keychain: exit44.keychain, env, allowPrompt: true }),
+    ).toEqual({ state: "unreadable", reason: "keychain_locked" });
+    expect(exit44.keychain.reads).toHaveLength(0);
   });
 
   it("an unlock the host could not run at all is not promised to a Retry", async () => {

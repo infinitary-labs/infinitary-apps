@@ -12,7 +12,7 @@ What crewmates are now told, in their brief (`renderAnswerShapeSection`, `QUICK_
 
 - A quick answer whose goal asks for something done rather than known - a comment or story published, something sent, merged, built or changed, or a merge card shown - shows no card, even when the goal names it as the state it wants, and reports with needs_firstmate what the goal asks done and what it read.
 
-What the kind classifier is now told, in its retrieval boundary (`RETRIEVAL_BOUNDARY`): such a goal is never retrieval, even when reading comes first or the goal names the state it wants.
+What the kind classifier is now told, in its retrieval boundary (`RETRIEVAL_BOUNDARY`): such a goal is never retrieval, research, plan or reproduce, even when reading comes first or the goal names the state it wants: it delivers a change. The captain chose this wider line over ruling out retrieval alone, so a goal that asks for something done is never left as a read-only answer that can neither hand back nor do the work.
 
 Homes: the first mate's rule is the sequences document's, the crewmate's is its brief's, and the classifier's is the boundary's; none is said twice.
 The explainer section grows by about 25 tokens, and the fixed context stays inside its boundary (`tests/firstmate-fixed-context.test.ts`).

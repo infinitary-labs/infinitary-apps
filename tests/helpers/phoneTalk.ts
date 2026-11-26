@@ -1,6 +1,15 @@
 import type { Core } from "@core/index";
 import { ANSWER_PROMPT_MARKER } from "../e2e/mockProvider";
 
+/** The captain's requests the talk parts read back from the test home as its writes. */
+export const TALK_WRITES: readonly string[] = [
+  "inf:converse",
+  "inf:conversation:take-back",
+  "inf:task:run",
+  "inf:task:steer",
+  "inf:task:interrupt",
+];
+
 /**
  * The computer's side of the talk-compose part's messages
  * (ios/Infinitary/InfinitaryUITests/PhoneJourney+TalkCompose.swift): each waits, on the core's own events, for the

@@ -93,7 +93,7 @@ import {
   seedPhoneSettings,
 } from "./phoneSettings";
 import { phoneTakeOverControls } from "./phoneTakeOver";
-import { phoneTalkControls } from "./phoneTalk";
+import { phoneTalkControls, TALK_WRITES } from "./phoneTalk";
 import { raiseConversationCard, seedReplyReading } from "./replyReading";
 import { startScriptedClient } from "./scriptedClient";
 import { bundleSqlProcess } from "./sqlProcessBundle";
@@ -624,9 +624,7 @@ export async function startPhoneHome(
           cardRequests.push({ channel, args });
         if (channel === "inf:cards:draft")
           draftChanges.push(structuredClone((args as unknown[])[1]));
-        if (
-          ["inf:converse", "inf:task:run", "inf:task:steer", "inf:task:interrupt"].includes(channel)
-        ) {
+        if (TALK_WRITES.includes(channel)) {
           const safe = (Array.isArray(args) ? args : []).map((arg: unknown) =>
             typeof arg === "object" && arg !== null && "images" in arg
               ? {

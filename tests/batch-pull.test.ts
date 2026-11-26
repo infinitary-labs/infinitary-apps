@@ -269,10 +269,16 @@ describe("batch-checks.yml", () => {
         ),
         { needs: { failures: { outputs: { jobs } } } },
       );
-    const mac = "Merge batch · Desktop checks / Merge batch · Parallel journeys (Mac)";
     expect(platforms(FAILED_JOB)).toEqual(["linux"]);
-    expect(platforms(mac)).toEqual(["mac"]);
-    expect(platforms(`${mac}\n${FAILED_JOB}`)).toEqual(["linux", "mac"]);
+    for (const lane of [
+      "Native tests, replay and package (Mac)",
+      "Desktop journeys (Mac; group 2/2)",
+      "Parallel journeys (Mac; group 3/4)",
+    ]) {
+      const mac = `Merge batch · Desktop checks / Merge batch · ${lane}`;
+      expect(platforms(mac), lane).toEqual(["mac"]);
+      expect(platforms(`${mac}\n${FAILED_JOB}`), lane).toEqual(["linux", "mac"]);
+    }
   });
 
   it("names the tree in its last job once every check passed, or once every failed job's files passed their confirm", () => {
@@ -899,7 +905,7 @@ describe("the alpha's proof following a covered push to a batch pull request's r
 describe("the batch's verdict and the alpha's proof, as they stood with the first-failure job", () => {
   const SWEEP = "Merge batch · Desktop checks / Merge batch · ";
   const unit = `${SWEEP}${FAILED_JOB.slice(FAILED_JOB.lastIndexOf(" · ") + " · ".length)}`;
-  const macJourneys = `${SWEEP}Desktop journeys (Mac; group 1/2)`;
+  const macJourneys = `${SWEEP}Desktop journeys (Mac; group 2/2)`;
   const macNative = `${SWEEP}Native tests, replay and package (Mac)`;
   const linuxJourney = `${SWEEP}Linux journeys / Merge batch · App journeys (Linux; serial group 3/3)`;
   const codeChecks = `${SWEEP}Code checks and build (Linux)`;
@@ -917,7 +923,7 @@ describe("the batch's verdict and the alpha's proof, as they stood with the firs
     /** Jobs the code checks' stop cancelled. */
     cancelled?: string[];
     /** What each confirm's rounds did on the files it ran. */
-    rounds?: { group?: string; later?: string };
+    rounds?: { group?: string; linux?: string; mac?: string };
     runCancelled?: boolean;
   };
   const rows: Row[] = [
@@ -948,25 +954,49 @@ describe("the batch's verdict and the alpha's proof, as they stood with the firs
       row: "a Linux test group and a Mac lane failed, and both passed their rounds",
       verdict: true,
       failed: { [unit]: FAILED_LOG, [macJourneys]: playwrightLog("now-collapse.spec.ts") },
-      rounds: { group: "success", later: "success" },
+      rounds: { group: "success", mac: "success" },
     },
     {
       row: "a Linux test group and a Mac lane failed, and the Mac lane's files failed again",
       verdict: false,
       failed: { [unit]: FAILED_LOG, [macJourneys]: playwrightLog("now-collapse.spec.ts") },
-      rounds: { group: "success", later: "failure" },
+      rounds: { group: "success", mac: "failure" },
+    },
+    {
+      row: "a grouped Mac journey failed, and only Linux could confirm its file",
+      verdict: false,
+      failed: { [macJourneys]: playwrightLog("devices-address.spec.ts") },
+      rounds: { linux: "success" },
+    },
+    {
+      row: "Mac and Linux journeys failed, and only the Linux confirmation passed",
+      verdict: false,
+      failed: {
+        [macJourneys]: playwrightLog("devices-address.spec.ts"),
+        [linuxJourney]: playwrightLog("main-thread-freeze.spec.ts"),
+      },
+      rounds: { linux: "success", mac: "failure" },
+    },
+    {
+      row: "Mac and Linux journeys failed, and both confirmations passed",
+      verdict: true,
+      failed: {
+        [macJourneys]: playwrightLog("devices-address.spec.ts"),
+        [linuxJourney]: playwrightLog("main-thread-freeze.spec.ts"),
+      },
+      rounds: { linux: "success", mac: "success" },
     },
     {
       row: "a Mac lane failed a journey and its package step, and the journey passed three rounds",
       verdict: true,
       failed: { [macNative]: mixed },
-      rounds: { later: "success" },
+      rounds: { mac: "success" },
     },
     {
       row: "a Linux journey failed, and its file passed three rounds",
       verdict: true,
       failed: { [linuxJourney]: playwrightLog("main-thread-freeze.spec.ts") },
-      rounds: { later: "success" },
+      rounds: { linux: "success" },
     },
     {
       row: "a Linux journey failed, and its log named no test file",
@@ -1063,15 +1093,27 @@ describe("the batch's verdict and the alpha's proof, as they stood with the firs
           }),
         );
         needs.failures = { result: "success", outputs };
-        if (outputs.left === "confirm") needs["confirm-later"] = { result: rounds.later! };
+        const results = listed()
+          .filter((job) => job.name.startsWith(`${BATCH_PULL_CHECKS}${BATCH_PULL_CONFIRM}`))
+          .map((job) => {
+            const platform = job.name.endsWith("(Mac, later failures)") ? "mac" : "linux";
+            const result = rounds[platform] ?? "skipped";
+            conclusions.set(job.name, result);
+            return result;
+          });
+        if (results.length)
+          needs["confirm-later"] = {
+            result: results.includes("failure")
+              ? "failure"
+              : results.every((result) => result === "success")
+                ? "success"
+                : "skipped",
+          };
       } else needs.failures = { result: "skipped" };
       verdict = Boolean(
         workflowValue(String(workflow("batch-checks.yml").jobs.passed!.if), { needs }),
       );
     }
-    for (const job of listed())
-      if (job.name.startsWith(`${BATCH_PULL_CHECKS}${BATCH_PULL_CONFIRM}`))
-        conclusions.set(job.name, needs["confirm-later"]!.result!);
     const jobs = listed().filter((job) => job.name !== PASSED || verdict);
     const conclusion =
       ended.length || runCancelled ? (runCancelled ? "cancelled" : "failure") : "success";

@@ -5,7 +5,7 @@ name: contributor-agreement
 # on each pull request's newest commit, which main's branch rule requires.
 # A pull request from this project's own branches passes at once; an outside
 # one passes once its author accepted the agreement's current version, by
-# ticking the template's box or replying with its sentence, and the check
+# replying with its sentence, and the check
 # writes each acceptance to the project's locked record issue
 # (scripts/contributor-agreement.mjs). After it writes the status, it labels
 # an outside pull request "waiting on author" while either required check

@@ -350,17 +350,17 @@ export function decisionProviderName(provider: string): string {
   return catalogEntry(provider)?.name ?? provider;
 }
 
+/** Dollars per million input tokens, never fewer than two places: 0.1 reads 0.10, 0.042 stays. */
+export function decisionPrice(dollars: number): string {
+  return dollars.toFixed(Math.max(2, (String(dollars).split(".")[1] ?? "").length));
+}
+
 /**
  * The approval screen for a decision model reached through the person's own
  * account. It names the provider, the maker and what a call costs: a
  * subscription draws on its allowance at the model's list price, and an
  * account with an API key pays that price itself.
  */
-/** Dollars per million input tokens, never fewer than two places: 0.1 reads 0.10, 0.042 stays. */
-export function decisionPrice(dollars: number): string {
-  return dollars.toFixed(Math.max(2, (String(dollars).split(".")[1] ?? "").length));
-}
-
 export function providerDecisionConsent(
   model: DecisionOffering,
   provider: string,

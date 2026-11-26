@@ -27,7 +27,7 @@ Implementations of the `DecisionModel` interface:
 
 - `AdaptedDecisionModel` (session-backed): renders the question as a byte-stable instruction plus one user message and parses one word back, over the one-question session `questionSessionSpec` ([`../src/core/session/questionSession.ts`](../src/core/session/questionSession.ts)), walking the routable pool low-first, never premium.
 - `JevDecisionModel` (native, [`../src/core/decisions/jev/jevClient.ts`](../src/core/decisions/jev/jevClient.ts)): TypeSafe's Jev, serving the typed question as its own API.
-- `OpenRouterDecisionModel` (native through Pi, [`../src/core/decisions/openRouterDecisionModel.ts`](../src/core/decisions/openRouterDecisionModel.ts)), with Pi's side in [`../src/core/pi/decisionModels.ts`](../src/core/pi/decisionModels.ts).
+- `ProviderDecisionModel` (native through Pi, [`../src/core/decisions/providerDecisionModel.ts`](../src/core/decisions/providerDecisionModel.ts)): a decision model a signed-in provider such as OpenRouter or OpenCode Go serves, with Pi's side in [`../src/core/pi/decisionModels.ts`](../src/core/pi/decisionModels.ts).
 
 ## Operations and lifecycle
 
@@ -43,9 +43,9 @@ Usage lands in `usage_events` under the caller's task, or under its `purpose` wh
 
 Jev is fenced to `src/core/decisions/`: a Biome rule (`biome.json`) lets only that folder import `decisions/jev/`, the home's decision wiring (`homeDecisions.ts`) among it, so nothing else may build a request to that endpoint or read that key.
 A native model is off by default: `DecisionModels` builds no client unless the row names it, its egress is on, an approval is recorded, and the user's own key is stored.
-Before any model or key is read, the service checks the caller's use: its switch, and whether the answering Jev or OpenRouter approval covers it; a use that is off or predates the approval asks nothing, and the person's own models do not answer in its place.
+Before any model or key is read, the service checks the caller's use: its switch, and whether the answering Jev or provider approval covers it; a use that is off or predates the approval asks nothing, and the person's own models do not answer in its place.
 The key is entered only in Settings and stored 0600 under `userData/decisions/<id>/` (`DecisionKeyStore`), never in the settings table, an environment variable, a log, a feed line or a card.
-The approval screen's three rows (`decisionConsent`, `openRouterDecisionConsent`) treat a decision model like the person's other models: they name who answers, that the listed uses can send words and code, how to turn a use off, and who pays.
+The approval screen's three rows (`decisionConsent`, `providerDecisionConsent`) treat a decision model like the person's other models: they name who answers, that the listed uses can send words and code, how to turn a use off, and who pays.
 The egress entry's `consentedVersion` records which approval screen the person saw; an approval from the first screen keeps task classification working and holds every newer use until the person allows it once.
 The view's `stateVersion` and the key call keep the first screen's meaning, so an older view's approval counts as old, and a view approves only the screen bundled with its own code.
 The endpoint is listed as an egress in [architecture](../docs/architecture.md) §1.
@@ -76,7 +76,7 @@ A typed cut-off the adapter's session sees is recorded on the account (`noteCutO
 ## Checks
 
 - [`../src/core/decisions/decisionModel.test.ts`](../src/core/decisions/decisionModel.test.ts): the adapter walk, abstention, fallback and bounds.
-- [`../src/core/decisions/openRouterDecisionModel.test.ts`](../src/core/decisions/openRouterDecisionModel.test.ts) and [`../src/core/decisions/jev/jevClient.test.ts`](../src/core/decisions/jev/jevClient.test.ts): the native clients.
+- [`../src/core/decisions/providerDecisionModel.test.ts`](../src/core/decisions/providerDecisionModel.test.ts) and [`../src/core/decisions/jev/jevClient.test.ts`](../src/core/decisions/jev/jevClient.test.ts): the native clients.
 - [`../src/core/routing/decisionKindClassifier.test.ts`](../src/core/routing/decisionKindClassifier.test.ts) and [`../src/core/program/programAsk.test.ts`](../src/core/program/programAsk.test.ts): the two consumers.
 - [`../tests/e2e/decision-models.spec.ts`](../tests/e2e/decision-models.spec.ts): the binding test, including that a fresh install makes zero requests.
 - The Biome `noRestrictedImports` fence on `decisions/jev/` in `biome.json`.
@@ -84,5 +84,5 @@ A typed cut-off the adapter's session sees is recorded on the account (`noteCutO
 ## Where the detail lives
 
 Decision models `docs/decision-models.md`.
-Sections of [decision models](../docs/decision-models.md): "What a decision model is", "The interface", "The implementations", "Egress and opt-in", "The surface", "The first consumer", "OpenRouter decision models (FI3-505)".
+Sections of [decision models](../docs/decision-models.md): "What a decision model is", "The interface", "The implementations", "Egress and opt-in", "The surface", "The first consumer", "Decision models from a provider".
 [Programs](../docs/programs.md), "The dialect", for `ask()`; [the decision ledger](../docs/decision-models.md) "The decision ledger" for what the host records, which is not this primitive.

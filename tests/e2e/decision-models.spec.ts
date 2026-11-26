@@ -976,6 +976,12 @@ test("OpenCode Go's decision model is chosen from its own row, named with its co
     const offered = (
       await page.evaluate(() => window.infinitary.models.decisions())
     ).providers?.find((entry) => entry.provider === OPENCODE_GO_PROVIDER_ID)?.models;
+    // The captain chose to offer all three of Go's decision models, with no scoring run first.
+    expect(offered?.map((model) => model.id)).toEqual([
+      "jev-1.14",
+      "gpt-6-luna-decision",
+      "gemini-decision-1",
+    ]);
     const jev = offered?.find((model) => model.id === "jev-1.14");
     expect(jev).toEqual({
       id: "jev-1.14",

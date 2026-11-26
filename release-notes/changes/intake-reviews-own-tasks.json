@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "intake-reviews-own-tasks",
+      "reason": "Rewrites this project's own outside-intake method and public CI page so the first mate starts each intake review as a fresh review task instead of the round's filed follow-up; nothing in the app changes."
+    }
+  ]
+}

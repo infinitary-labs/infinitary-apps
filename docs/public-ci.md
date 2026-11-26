@@ -56,7 +56,7 @@ So the fresh Windows 11 check, the phone check, the signed installer checks, sig
    If any check fails, the failed-check note sends the pull request back to its author ("The failed-check note"), and the author's next push brings it back to the round.
    When every failed check also fails on `main`, the note tells the author so and the pull request waits on `main` instead: the first round after `main` passes offers the captain a rerun of its failed jobs ("Once main passes" in `docs/outside-intake.md`).
 5. **The crew reviews it once every check passes.**
-   The next round files its review, and the first mate starts it at once under the intake rules' standing yes ("The review" in `docs/outside-intake.md`).
+   The next round files its review, and the first mate starts it under the intake rules' standing yes as a fresh review task naming the pull request's number, never the filed follow-up itself, unless a review of that pull request is already open ("The review" in `docs/outside-intake.md`).
    A crewmate reads its code and GitHub's runs, never runs the change, and shows the merge card with `asks_first`.
 6. **The captain merges it.**
    Only the captain's click merges the contributor's pull request; no standing rule that lets a change merge on its own covers an outside one.

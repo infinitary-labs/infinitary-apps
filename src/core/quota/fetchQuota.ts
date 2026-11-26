@@ -21,6 +21,7 @@ import { fetchCodexQuota } from "./providers/codex";
 import { fetchCopilotQuota } from "./providers/copilot";
 import { fetchGrokQuota } from "./providers/grok";
 import { fetchKimiQuota } from "./providers/kimi";
+import { fetchOpenCodeGoQuota } from "./providers/opencodeGo";
 
 /** Anthropic's usage service is asked at most this often per account. */
 export const CLAUDE_ASK_INTERVAL_MS = 5 * 60 * 1000;
@@ -64,6 +65,7 @@ export type QuotaFetcherOptions = {
     grokKeyUrl?: string;
     kimiUsageUrl?: string;
     copilotUsageUrl?: string;
+    openCodeGoUsageUrl?: string;
   };
   /**
    * The vendor just accepted this account's credential: a fresh allowance
@@ -288,5 +290,7 @@ async function dispatch(
       return fetchKimiQuota(http, auth, now, options.endpoints?.kimiUsageUrl);
     case "copilot":
       return fetchCopilotQuota(http, auth, now, options.endpoints?.copilotUsageUrl);
+    case "opencode-go":
+      return fetchOpenCodeGoQuota(http, auth, now, options.endpoints?.openCodeGoUsageUrl);
   }
 }

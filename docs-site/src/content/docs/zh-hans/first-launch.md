@@ -1,5 +1,5 @@
 ---
-source: c16d193883332656
+source: 042bc7f3959ec370
 title: 首次启动
 description: 你第一次打开 Infinitary 时会看到什么，如何选择大副住在哪里，如何连接订阅，以及如何添加你的第一个项目。
 ---
@@ -40,13 +40,14 @@ description: 你第一次打开 Infinitary 时会看到什么，如何选择大�
 ## 连接订阅 {#connect-a-subscription}
 
 选择“**这台电脑**”，让大副留在这里。
-随后会出现大副可以使用的每个服务商的按钮：Codex、Grok、Claude、Kimi Code、Copilot、OpenRouter、Amazon Bedrock 和自定义 API。
+随后会出现大副可以使用的每个服务商的按钮：Codex、Grok、Claude、Kimi Code、Copilot、OpenCode Go、OpenRouter、Amazon Bedrock 和自定义 API。
 
 1. 点击你的服务商的按钮。
 2. 按该服务商的要求登录。
    有些会在你的浏览器中打开登录页面。
    Copilot 和 Kimi Code 会显示一个代码：点击“**复制代码**”，然后在服务商的网站上输入它。
    OpenRouter 需要你粘贴一个 API 密钥。
+   OpenCode Go 需要你粘贴来自 OpenCode Console 的密钥。
    使用 Amazon Bedrock 时，选择一个区域，并使用这台电脑上的 AWS 配置文件，或粘贴一个 Bedrock API 密钥。
    两种方式都支持的服务商会询问你是“**用浏览器登录**”，还是粘贴“**API 密钥**”。
 3. 等待窗口显示正在连接。

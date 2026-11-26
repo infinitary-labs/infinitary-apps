@@ -1,5 +1,5 @@
 ---
-source: 9c71f435cc6524a0
+source: f1e95aa2b9433f4a
 title: Abonnements et allocation
 description: Comment ajouter vos abonnements d’IA, voir ce qui reste de l’allocation de votre forfait, et ce que fait votre équipage quand elle est épuisée.
 ---
@@ -10,7 +10,7 @@ Vous les gérez dans les Réglages, sous **Intelligence**, dans la liste **Abonn
 ## Ajouter un abonnement {#add-a-subscription}
 
 1. Ouvrez les Réglages et choisissez **Intelligence**.
-2. Au bas de **Abonnements d’IA**, sous **Ajouter un compte**, choisissez votre fournisseur : Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter ou Amazon Bedrock.
+2. Au bas de **Abonnements d’IA**, sous **Ajouter un compte**, choisissez votre fournisseur : Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter ou Amazon Bedrock.
 3. Connectez-vous de la façon que demande le fournisseur.
    Certains ouvrent votre navigateur, d’autres affichent un code à saisir sur leur site, et d’autres demandent une clé que vous collez.
 4. Une fois la connexion terminée, le nouveau compte apparaît dans la liste.

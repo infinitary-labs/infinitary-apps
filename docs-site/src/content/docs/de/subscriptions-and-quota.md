@@ -1,5 +1,5 @@
 ---
-source: 9c71f435cc6524a0
+source: f1e95aa2b9433f4a
 title: Abos und Kontingent
 description: Wie du deine KI-Abos hinzufügst, das Kontingent deines Tarifs ablesen kannst und was deine Crew tut, wenn es aufgebraucht ist.
 ---
@@ -10,7 +10,7 @@ Du verwaltest sie in den Einstellungen unter **Intelligenz** in der Liste **KI-A
 ## Ein Abo hinzufügen {#add-a-subscription}
 
 1. Öffne die Einstellungen und wähl **Intelligenz**.
-2. Wähl am Ende von **KI-Abos** unter **Konto hinzufügen** deinen Anbieter: Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter oder Amazon Bedrock.
+2. Wähl am Ende von **KI-Abos** unter **Konto hinzufügen** deinen Anbieter: Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter oder Amazon Bedrock.
 3. Melde dich so an, wie der Anbieter es verlangt.
    Manche öffnen deinen Browser, manche zeigen einen Code, den du auf ihrer Seite eingibst, und manche nehmen einen Schlüssel, den du einfügst.
 4. Wenn die Anmeldung abgeschlossen ist, erscheint das neue Konto in der Liste.

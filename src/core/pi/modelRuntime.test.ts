@@ -244,6 +244,114 @@ describe("createModelRuntime", () => {
   });
 });
 
+/**
+ * INF-6873: an OpenCode Go account comes only from the person's own pasted
+ * key. Pi's OpenCode Go key auth falls back to OPENCODE_API_KEY when nothing
+ * is stored, so a variable set on the computer must sign nothing in.
+ */
+describe("OpenCode Go's key", () => {
+  const VARIABLE = "OPENCODE_API_KEY";
+  let saved: string | undefined;
+
+  function storeWith(entries: Record<string, unknown>) {
+    const dir = scratchDir("infinitary-model-runtime-opencode-");
+    mkdirSync(dir, { recursive: true });
+    const authPath = join(dir, "auth.json");
+    writeFileSync(authPath, JSON.stringify(entries), { mode: 0o600 });
+    return { authPath, modelsPath: join(dir, "models.json") };
+  }
+
+  function servesOpenCodeGo(runtime: Awaited<ReturnType<typeof createModelRuntime>>): boolean {
+    return runtime.getAvailableSnapshot().some((model) => model.provider === "opencode-go");
+  }
+
+  afterEach(() => {
+    if (saved === undefined) delete process.env[VARIABLE];
+    else process.env[VARIABLE] = saved;
+  });
+
+  it("signs in no account, and lends no other account its models, from a key in the environment", async () => {
+    saved = process.env[VARIABLE];
+    process.env[VARIABLE] = "sk-from-the-environment";
+    const catalogBaseUrl = await startCatalog(({ status }) => status(500, "offline"));
+
+    const signedOut = await createModelRuntime({ ...storeWith({}), catalogBaseUrl });
+    expect(signedOut.hasConfiguredAuth("opencode-go")).toBe(false);
+    expect(await signedOut.getAuth("opencode-go")).toBeUndefined();
+    expect(servesOpenCodeGo(signedOut)).toBe(false);
+
+    const grok = await createModelRuntime({ ...signedInStore(), catalogBaseUrl });
+    expect(grok.getAvailableSnapshot().some((model) => model.provider === "xai")).toBe(true);
+    expect(servesOpenCodeGo(grok)).toBe(false);
+  });
+
+  it("answers with the account's own stored key, the environment's set or not", async () => {
+    saved = process.env[VARIABLE];
+    process.env[VARIABLE] = "sk-from-the-environment";
+    const catalogBaseUrl = await startCatalog(({ status }) => status(500, "offline"));
+    const runtime = await createModelRuntime({
+      ...storeWith({ "opencode-go": { type: "api_key", key: "sk-pasted-by-the-person" } }),
+      catalogBaseUrl,
+    });
+    expect(runtime.hasConfiguredAuth("opencode-go")).toBe(true);
+    expect((await runtime.getAuth("opencode-go"))?.auth.apiKey).toBe("sk-pasted-by-the-person");
+    expect(runtime.getModel("opencode-go", "kimi-k3")).toBeDefined();
+    expect(servesOpenCodeGo(runtime)).toBe(true);
+  });
+
+  it("still takes pi.dev's OpenCode Go list over the bundled one", async () => {
+    const catalogBaseUrl = await startCatalog(({ status }) =>
+      status(200, JSON.stringify([{ id: "kimi-k9", name: "Kimi K9", api: "openai-completions" }]), {
+        "last-modified": new Date(Date.now() + 60_000).toUTCString(),
+      }),
+    );
+    const { runtime, refreshed } = await createWithRefresh({
+      ...storeWith({ "opencode-go": { type: "api_key", key: "sk-pasted-by-the-person" } }),
+      catalogBaseUrl,
+    });
+    await refreshed;
+    const ids = runtime.getModels("opencode-go").map((model) => model.id);
+    expect(ids).toContain("kimi-k9");
+    expect(ids).toContain("kimi-k3");
+  });
+});
+
+describe("GitHub Copilot's own list", () => {
+  // Pi narrows Copilot to the model ids it stored at sign-in
+  // (docs/model-lists.md); registering OpenCode Go in the same runtime must
+  // not widen it again before the background refresh lands.
+  it("lists only the account's own Copilot models as soon as the runtime is created", async () => {
+    const dir = scratchDir("infinitary-model-runtime-copilot-");
+    mkdirSync(dir, { recursive: true });
+    const authPath = join(dir, "auth.json");
+    writeFileSync(
+      authPath,
+      JSON.stringify({
+        "github-copilot": {
+          type: "oauth",
+          refresh: "ghu-stored-at-sign-in",
+          access: "tid-stored-at-sign-in",
+          expires: Date.now() + 3_600_000,
+          availableModelIds: ["claude-sonnet-5.5"],
+        },
+      }),
+      { mode: 0o600 },
+    );
+    const catalogBaseUrl = await startCatalog(({ hang }) => hang());
+    const runtime = await createModelRuntime({
+      authPath,
+      modelsPath: join(dir, "models.json"),
+      catalogBaseUrl,
+    });
+    expect(
+      runtime
+        .getAvailableSnapshot()
+        .filter((model) => model.provider === "github-copilot")
+        .map((model) => model.id),
+    ).toEqual(["claude-sonnet-5.5"]);
+  });
+});
+
 describe("catalogRefreshesSettled", () => {
   // A paused merge batch: the Codex sign-in test ended while its runtime's
   // background refresh still ran, the file's cleanup removed the test's

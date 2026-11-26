@@ -170,7 +170,7 @@ export function autoResetsAction(accountKey: string): CardAction {
 export const PROVIDER_SIGN_IN_TITLE = "A provider needs sign in";
 
 export const FIRSTMATE_NO_PROVIDER_SIGN_IN_WORDS =
-  "Your first mate needs a signed-in subscription to answer - Codex, Grok, Claude, Kimi Code or Copilot, OpenRouter with an API key, or Amazon Bedrock with your AWS sign-in.";
+  "Your first mate needs a signed-in subscription to answer - Codex, Grok, Claude, Kimi Code, Copilot or OpenCode Go, OpenRouter with an API key, or Amazon Bedrock with your AWS sign-in.";
 
 /** A move's button: a paused seat's names a provider, a crewmate's sign-in card the model. */
 export function moveLabel(to: string): string {

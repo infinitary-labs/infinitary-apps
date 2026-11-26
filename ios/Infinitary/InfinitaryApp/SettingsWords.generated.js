@@ -14475,6 +14475,7 @@ ${events}` : prompt;
   _enum(["pi", "claude"]);
   const CLAUDE_PROVIDER_ID = "anthropic-claude";
   const BEDROCK_PROVIDER_ID = "amazon-bedrock";
+  const OPENCODE_GO_PROVIDER_ID = "opencode-go";
   const BEDROCK_PROFILE_UNAVAILABLE = "bedrock_profile_unavailable";
   const PROVIDER_CATALOG = [
     {
@@ -14521,6 +14522,17 @@ ${events}` : prompt;
       backend: "pi",
       roles: ["firstmate", "crewmate"],
       codeSignIn: { site: "GitHub", enterprise: true }
+    },
+    {
+      // Pi's own provider: a pasted OpenCode key, the only way in (INF-6873).
+      id: OPENCODE_GO_PROVIDER_ID,
+      name: "OpenCode Go",
+      // i18n-exempt: a product's own name
+      tier: "subscription",
+      backend: "pi",
+      roles: ["firstmate", "crewmate"],
+      keySignIn: { site: "OpenCode Console" }
+      // i18n-exempt: a product's own page name
     },
     {
       id: "openrouter",
@@ -16623,7 +16635,9 @@ ${events}` : prompt;
     grok: "xai",
     claude: "anthropic-claude",
     kimi: "kimi-coding",
-    copilot: "github-copilot"
+    copilot: "github-copilot",
+    // Its own name in both worlds: "opencode" is Pi's id for OpenCode Zen.
+    "opencode-go": "opencode-go"
   };
   function allowanceProviderOf(provider) {
     return Object.keys(QUOTA_TO_PI_PROVIDER).find((id) => QUOTA_TO_PI_PROVIDER[id] === provider);

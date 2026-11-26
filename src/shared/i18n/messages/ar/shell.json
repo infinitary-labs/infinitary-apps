@@ -67,7 +67,7 @@
   "shellGateRecoveryTitle": "إعداد نائب القبطان على هذا الحاسوب",
   "shellGateRunLine": "اربط اشتراكًا لنائب القبطان على {computer}. يُسجَّل الدخول إليه من هنا.",
   "shellGateStaysOn": "اختر حاسوبًا يبقى قيد التشغيل. الحواسيب الأخرى تحتاج إليه مستيقظًا.",
-  "shellGateStillNeeds": "لا يزال نائب القبطان يحتاج إلى حساب يستجيب: Codex أو Grok أو Claude أو Kimi Code أو Copilot أو OpenRouter بمفتاح API أو Amazon Bedrock بتسجيل دخول AWS.",
+  "shellGateStillNeeds": "لا يزال نائب القبطان يحتاج إلى حساب يستجيب: Codex أو Grok أو Claude أو Kimi Code أو Copilot أو OpenCode Go أو OpenRouter بمفتاح API أو Amazon Bedrock بتسجيل دخول AWS.",
   "shellGateTitle": "اربط اشتراكًا للبدء",
   "shellGateWhere": "أين أسكن؟ اختر حاسوبًا يبقى قيد التشغيل قدر الإمكان.",
   "shellKeyReminderHint": "اضغطه مرة واحدة ولن يظهر هذا بعدها",

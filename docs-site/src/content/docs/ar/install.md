@@ -1,5 +1,5 @@
 ---
-source: 2633a75241365106
+source: a8386567e2fc7990
 title: التثبيت
 description: نزّل الإصدار المستقر من Infinitary لـ Mac أو Linux أو Windows، أو اطلب دعوة خاصة إلى TestFlight لـ iPhone وiPad.
 ---
@@ -46,7 +46,7 @@ Infinitary لـ iPhone وiPad متاح في TestFlight الخاص.
 - **حاسوب.**
   Mac بنظام macOS 12 أو أحدث، أو حاسوب Linux بمعالج x64، أو حاسوب Windows 11 بمعالج x64 (تجريبي).
 - **اشتراك في الذكاء الاصطناعي.**
-  يحتاج نائب القبطان إلى اشتراك واحد على الأقل يمكنه الإجابة: Codex أو Grok أو Claude أو Kimi Code أو Copilot، أو OpenRouter بمفتاح API، أو Amazon Bedrock بتسجيل دخولك إلى AWS.
+  يحتاج نائب القبطان إلى اشتراك واحد على الأقل يمكنه الإجابة: Codex أو Grok أو Claude أو Kimi Code أو Copilot أو OpenCode Go، أو OpenRouter بمفتاح API، أو Amazon Bedrock بتسجيل دخولك إلى AWS.
 - **Claude Code، من أجل Claude.**
   إذا كنت تستخدم اشتراك Claude، فثبّت Claude Code على ذلك الحاسوب أولًا.
   يستخدم Infinitary نسخة Claude Code التي ثبّتها.

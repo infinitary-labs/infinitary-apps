@@ -942,7 +942,7 @@ export const cardSchema = z.strictObject({
    * integration call, an unsafe data reader's held calls), so the crewmate
    * that asked answers in the thread while its ask stays open; "firstmate"
    * on every other host card that does not turn replies off, named by its
-   * builder or filled in as the card goes up and as it loads
+   * builder or filled in as the card goes up and as it is restored
    * (`withHostAnswerer`), so the first mate answers in the thread, never the
    * task's crewmate. Absent on a crewmate's or the first mate's own card,
    * which its author answers.
@@ -1293,22 +1293,6 @@ export function cardAnswerer(
   if ((card.author === "crewmate" || card.answeredBy === "crewmate") && card.taskId !== undefined)
     return "crewmate";
   return undefined;
-}
-
-/**
- * The card as it goes up and as it loads (`CardService.put`, the card store's
- * read): a host card whose builder names no answerer and does not turn
- * replies off is answered by the first mate, which can pass words on to a
- * crewmate, so a builder that forgets to name one still draws the reply
- * field (docs/card-threads.md, "Who answers a card"). Every other card is
- * returned as it is.
- */
-export function withHostAnswerer<T extends Pick<Card, "author" | "replies" | "answeredBy">>(
-  card: T,
-): T {
-  return card.author === "host" && card.answeredBy === undefined && card.replies !== false
-    ? { ...card, answeredBy: "firstmate" }
-    : card;
 }
 
 /**

@@ -124391,7 +124391,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
      * integration call, an unsafe data reader's held calls), so the crewmate
      * that asked answers in the thread while its ask stays open; "firstmate"
      * on every other host card that does not turn replies off, named by its
-     * builder or filled in as the card goes up and as it loads
+     * builder or filled in as the card goes up and as it is restored
      * (`withHostAnswerer`), so the first mate answers in the thread, never the
      * task's crewmate. Absent on a crewmate's or the first mate's own card,
      * which its author answers.

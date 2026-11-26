@@ -456,7 +456,10 @@ describe("host cards", () => {
       takesReplies: true,
       answeredBy: "firstmate",
     });
-    expect(takes(restarted, "card-welcome")).toEqual({ takesReplies: false, answeredBy: undefined });
+    expect(takes(restarted, "card-welcome")).toEqual({
+      takesReplies: false,
+      answeredBy: undefined,
+    });
     restarted.dispose();
   });
 

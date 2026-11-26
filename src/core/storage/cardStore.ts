@@ -31,7 +31,6 @@ import {
   type PastCard,
   type PastEnding,
   savedAnswerer,
-  withHostAnswerer,
 } from "@shared/cards";
 import { cardWrittenText } from "@shared/cardWrittenText";
 import { type CardEnded, cardEndedSchema } from "@shared/endedCard";
@@ -296,10 +295,7 @@ function fromRow(row: Row): Card | undefined {
     ...(row.lifecycle_id ? { lifecycleId: row.lifecycle_id } : {}),
     ...(row.offer_id ? { offerId: row.offer_id } : {}),
   });
-  // A card saved before its builder named an answerer reads with the rule
-  // every card now goes up with, so one already up when the app updates
-  // takes a reply too.
-  return parsed.success ? withHostAnswerer(parsed.data) : undefined;
+  return parsed.success ? parsed.data : undefined;
 }
 
 type ObservationRow = {

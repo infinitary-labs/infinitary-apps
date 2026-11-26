@@ -28,7 +28,6 @@ import {
   keepsTaskOpen,
   onStage,
   type PastCard,
-  withHostAnswerer,
 } from "@shared/cards";
 import { shortTaskTitle } from "@shared/taskTitle";
 import { decidedCardWidth } from "../pi/cardWidth";
@@ -54,6 +53,7 @@ import {
 } from "./cardThreads";
 import { ENDED_STAYS, EndedCards } from "./endedCards";
 import { HostCardStack } from "./hostCardStack";
+import { withHostAnswerer } from "./hostCards";
 import { PutOffs } from "./putOffs";
 import type { WakeCard } from "./reportWakes";
 import { requiredActionCard, requiredActionProvenance } from "./requiredActionCard";
@@ -177,9 +177,10 @@ export class CardService {
     // Unresolved cards survive restarts (D-9). Migration 73 has retired
     // their keep-open actions and streaming state. A card with a lifecycle
     // resumes it; one written before the capture is seeded as a snapshot
-    // whose start is unknown, never given a history it did not have.
+    // whose start is unknown, never given a history it did not have. A host
+    // card saved with no answerer comes back with the one it now goes up with.
     for (const card of host.cardStore.listOpen()) {
-      const ready = card;
+      const ready = withHostAnswerer(card);
       if (ready.lifecycleId && ready.offerId) {
         this.cards.set(ready.id, ready);
         continue;

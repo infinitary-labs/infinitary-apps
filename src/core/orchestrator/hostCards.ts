@@ -216,6 +216,21 @@ export function hostCard(
 }
 
 /**
+ * A host card as it goes up and as it is restored (`CardService.put`, its
+ * restart): one that names no answerer and does not turn replies off is
+ * answered by the first mate, which can pass words on to a crewmate, so a
+ * builder that forgets to name one still draws the reply field, and a card
+ * saved before its builder named one takes a reply after an update
+ * (docs/card-threads.md, "Who answers a card"). Every other card is
+ * returned as it is.
+ */
+export function withHostAnswerer(card: Card): Card {
+  return card.author === "host" && card.answeredBy === undefined && card.replies !== false
+    ? { ...card, answeredBy: "firstmate" }
+    : card;
+}
+
+/**
  * Which pause card a pause asks on: with a place to move (rung 2) it asks
  * to move under `card-fm-flagship-move`; without one (rung 3) it says the
  * seat waits, under `card-fm-refused` for a refusal and

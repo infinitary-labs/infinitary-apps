@@ -131886,6 +131886,10 @@ a:hover {
   a[data-inf-entry][data-inf-standing="ok"]::before { background: var(--ok); }
   a[data-inf-entry][data-inf-standing="warn"]::before { background: var(--warn); }
   code, pre, .inf-mono { font-family: var(--font-mono); font-size: var(--text-sm); color: var(--fg-1); }
+  /* A card's frame never scrolls sideways, so a command wider than it would be cut off
+     with no way to read its end: a code block wraps instead, breaking inside a word only
+     when it has no other break (a URL, a hash). */
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
   /* A link in mono - a pull request a body names by its number (FI3-1307) - reads as
      every pull request link the app draws: the accent, underlined only while rested on. */
   a.inf-mono { color: var(--accent); text-decoration: none; }

@@ -14,7 +14,7 @@ import { calledTool, providerMessages, sinceLastUser } from "../providerRequest"
  *
  * Two items: an issue on GitHub that strangers can write to, told by an unsafe
  * data reader through `github_write`, and a ticket in the captain's Notes
- * tracker, an MCP server, told by an ordinary crewmate through the
+ * tracker, an MCP server, told by a crewmate that is no reader through the
  * integrations command in its shell.
  */
 
@@ -98,6 +98,7 @@ export const outsideWorkItemsFirstmate: Scenario =
                 blocked_by: [OUTSIDE_FIX.id],
                 start_policy: "when-ready",
                 side_effect: true,
+                constraints: [{ kind: "read-only" }],
               },
         },
       ],
@@ -146,7 +147,7 @@ export const outsideIssueCrew: Scenario =
   };
 
 /**
- * The ticket's waiting task: an ordinary crewmate that adds its note through
+ * The ticket's waiting task: a crewmate that is no reader, adding its note through
  * the integrations command, whose card the app raises under the Notes rule.
  */
 export const outsideTicketCrew: Scenario =

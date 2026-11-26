@@ -34,7 +34,7 @@ import type { TaskEvent } from "../storage/taskEventStore";
 import { legacyStateOf, seedTask } from "../tasks/seedTask";
 import { TaskProtocol } from "../tasks/taskProtocol";
 import { buildRowShape, REPRODUCE_RESULT_SCHEMA } from "./buildRows";
-import { READER_DATA_LABEL } from "./readerData";
+import { READER_DATA_LABEL, readerReport } from "./readerData";
 import { renderSideEffectSection } from "./sideEffectBrief";
 import { renderWake } from "./wakes";
 
@@ -652,11 +652,13 @@ describe("the task graph (R1)", () => {
       declared: { result: { reproduced: true, version: "1.4.0" } },
     });
     tasks.close("repro", { status: "done", reason: "answered", actor: "host" });
-    tasks.turns.recordReport("triage", {
-      text: "The reporter resets the meter twice, then reads it.",
-      summary: "The reporter resets the meter twice, then reads it.",
-      declared: { result: { steps: 2 } },
-    });
+    // A reader's report is saved as its session saves it: marked, under the host's headline.
+    const [readerText, readerSummary] = readerReport(
+      "The reporter resets the meter twice, then reads it.",
+      undefined,
+      Date.now(),
+    );
+    tasks.turns.recordReport("triage", { text: readerText, summary: readerSummary });
     tasks.close("triage", { status: "done", reason: "answered", actor: "host" });
     tasks.turns.recordReport("fix", {
       text: "A reset now leaves the meter at zero.",
@@ -670,12 +672,16 @@ describe("the task graph (R1)", () => {
     expect(waiting).toContain(
       `- ${tasks.get("repro")?.key} "Reproduce the negative reading": done (answered), with no merge\n  Reported: Reproduced on 1.4.0: a reset leaves the meter at -3.\n  Typed result: {"reproduced":true,"version":"1.4.0"}`,
     );
-    // A reader's summary and result are outside words, marked as data inside the brief.
+    // A reader's own report, never the host's headline, is served under its wait,
+    // between the marks and reminders it was saved with.
+    expect(waiting).toContain(
+      `- ${tasks.get("triage")?.key} "Read the reporter's steps": done (answered), with no merge\n  Reported:\n${readerText}`,
+    );
     const marked = fencedSpans(waiting ?? "")
       .filter((span) => span.label === READER_DATA_LABEL && span.closed)
-      .map((span) => span.words);
-    expect(marked).toEqual(["The reporter resets the meter twice, then reads it.", '{"steps":2}']);
-    expect(waiting).toContain(fencedListReminder(READER_DATA_LABEL));
+      .map((span) => span.words.trim());
+    expect(marked).toEqual(["The reporter resets the meter twice, then reads it."]);
+    expect(waiting).not.toContain(readerSummary);
     expect(waiting).toContain(
       `- ${tasks.get("fix")?.key} "Fix the negative reading": merged; in no release yet\n  Reported: A reset now leaves the meter at zero.`,
     );
@@ -695,6 +701,7 @@ describe("the task graph (R1)", () => {
         status: "active",
         closedReason: null,
         delivery: null,
+        outcome: "Halfway through the fix; the reset path is next.",
         outcomeSummary: "Halfway through the fix.",
         shape: null,
         result: { reproduced: true, version: "1.4.0" },

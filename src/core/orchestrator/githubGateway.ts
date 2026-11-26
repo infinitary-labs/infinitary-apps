@@ -840,8 +840,9 @@ export class GithubGatewayService {
   /**
    * Why a write waits on the captain instead of going at once, or undefined
    * when it goes: it reaches past the task's own project, the task only
-   * answers and the write is not a run start or rerun on its own project
-   * (INF-729 way D), or it goes through the github.com sign-in.
+   * answers or does an outside action and the write is not a run start or
+   * rerun on its own project (INF-729 way D), or it goes through the
+   * github.com sign-in.
    */
   private askReason(taskId: string, route: ApiRoute, target: Target): string | undefined {
     if (this.isReader(taskId))
@@ -855,11 +856,15 @@ export class GithubGatewayService {
         ? "this task's project has no API where it lives, so its writes go through the captain's github.com sign-in, and each one asks the captain"
         : "this task has no project, so its writes go through the captain's github.com sign-in, and each one asks the captain";
     }
-    if (
-      this.options.tasks.get(taskId)?.shape?.deliverable === "answer" &&
-      !startsRun(target.forge, route)
-    ) {
+    const shape = this.options.tasks.get(taskId)?.shape;
+    if (shape?.deliverable === "answer" && !startsRun(target.forge, route)) {
       return "this task only answers, so every write it makes but a run start or rerun on its own project asks the captain";
+    }
+    // An outside action's reply or close is the captain's to send (docs/task-graph.md,
+    // "An outside action that waits on work"), whatever constraint the task was filed with.
+    if (shape?.side_effect && !startsRun(target.forge, route)) {
+      // i18n-exempt: served to the crewmate as a tool answer or write-answered outcome
+      return "this task does an outside action, so every write it makes but a run start or rerun on its own project asks the captain";
     }
     if (!route.own) return "it goes outside this task's own project, so it asks the captain";
     return undefined;

@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { openDatabase } from "../../src/core/storage/db";
+import { TaskStore } from "../../src/core/storage/taskRecords";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { cardReaderWritesTitle } from "../../src/shared/i18n/messages.generated";
@@ -20,6 +21,7 @@ import { resizeWindow } from "./layout";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
+import { readSavedData } from "./savedData";
 import {
   OUTSIDE_ANSWERED,
   OUTSIDE_FIX,
@@ -53,9 +55,10 @@ import { pressKey } from "./windowKeys";
  *   On GitHub the task is an unsafe data reader: it reads the issue, and its
  *   reply and its close wait as two rows on the app's one approval card;
  *   Only this time sends both, once each, and nothing is sent before.
- *   In the captain's Notes tracker, an MCP server, the task is an ordinary
- *   crewmate: its call follows the server's Ask rule, so the app's own card
- *   holds it, and Only this time adds the note once.
+ *   In the captain's Notes tracker, an MCP server, only the captain's people
+ *   write the ticket, so the task is no reader: its call follows the
+ *   server's Ask rule, so the app's own card holds it, and Only this time
+ *   adds the note once.
  * - Data: a project on GitHub over a bare repository here, the GitHub
  *   stand-in signed in with its one open issue, the fix seeded merged with
  *   its first release recorded, and the MCP notes stand-in
@@ -275,8 +278,10 @@ test("a ticket in the captain's tracker hears how its fix ended through that int
   await send(page, OUTSIDE_TICKET_ASK);
   const id = await rowTitled(page, OUTSIDE_TICKET_TITLE);
   const detail = () => page.evaluate((taskId) => window.infinitary.tasks.detail(taskId), id);
-  // An ordinary waiting task: it may change its project, so it is no answer.
-  expect((await detail())?.deliverable).not.toBe("answer");
+  // Filed read-only as the guide says, and with no reader mark: only the captain's people write the ticket.
+  expect(
+    readSavedData(userDataDir, (db) => new TaskStore(db).get(id)?.shape?.unsafe_data_reader),
+  ).toBeUndefined();
 
   const title = integrationApprovalTitle(NOTES_ADD_TOOL, "Notes");
   await expect

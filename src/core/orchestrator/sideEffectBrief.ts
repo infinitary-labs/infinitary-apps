@@ -1,7 +1,5 @@
-import { fencedListReminder } from "@shared/outsideData";
 import type { TaskRecord } from "../storage/taskRecords";
 import { TaskGraph } from "../tasks/taskGraph";
-import { READER_DATA_LABEL, readerSavedLine } from "./readerData";
 
 /**
  * One wait of a side-effect task as its brief names it: the record, and the
@@ -9,7 +7,15 @@ import { READER_DATA_LABEL, readerSavedLine } from "./readerData";
  */
 export type SideEffectWait = Pick<
   TaskRecord,
-  "id" | "key" | "title" | "status" | "closedReason" | "delivery" | "outcomeSummary" | "shape"
+  | "id"
+  | "key"
+  | "title"
+  | "status"
+  | "closedReason"
+  | "delivery"
+  | "outcome"
+  | "outcomeSummary"
+  | "shape"
 > & { result?: Record<string, unknown> };
 
 /** How a wait closed, in the record's own words: a merge is a fact, never read from a report. */
@@ -42,23 +48,21 @@ function closedWords(wait: SideEffectWait): string {
  * reads the rule. Model-facing words stay English.
  */
 export function renderSideEffectSection(waits: readonly SideEffectWait[]): string {
-  let marked = false;
   const lines = waits.flatMap((wait) => {
     const line = `- ${wait.key || wait.id} "${wait.title}": ${closedWords(wait)}`;
     // Only a finished wait's report says what the work found; an open
     // wait's latest report is progress.
     if (wait.status !== "done" && wait.status !== "dropped") return [line];
-    // A reader may report a result with no declared shape, which is its
-    // own words as much as its summary is.
-    const reader = wait.shape?.unsafe_data_reader === true;
-    const kept = (kind: string, words: string | undefined): string | undefined => {
-      if (!words) return undefined;
-      if (!reader) return words;
-      marked = true;
-      return readerSavedLine(`${kind}:${wait.id}`, words);
-    };
-    const said = kept("summary", wait.outcomeSummary?.trim());
-    const result = kept("result", wait.result ? JSON.stringify(wait.result) : undefined);
+    // A reader's saved headline is the host's own line, and its report takes
+    // no result (`readerReportRefusal`): its report itself, kept between
+    // reader-data marks with their reminder (`readerReport`), is what it found.
+    if (wait.shape?.unsafe_data_reader === true) {
+      const report = wait.outcome?.trim();
+      // i18n-exempt: a crewmate's brief, never shown to a person
+      return report ? [line, "  Reported:", report] : [line];
+    }
+    const said = wait.outcomeSummary?.trim();
+    const result = wait.result ? JSON.stringify(wait.result) : undefined;
     // i18n-exempt: a crewmate's brief, never shown to a person
     return [
       line,
@@ -70,7 +74,6 @@ export function renderSideEffectSection(waits: readonly SideEffectWait[]): strin
   return [
     "This is a side-effect task: its only job is the outside action its words name, such as closing a work item, sending a message or posting an update, once the work it waits on is done. Each task it waits on, and how the record says it closed, with a finished wait's reported summary and typed result, which say what that work found:",
     ...(lines.length ? lines : ["- none"]),
-    ...(marked ? [fencedListReminder(READER_DATA_LABEL)] : []),
     "Act only when every wait that ships a change merged; a wait done with no change, such as an answer, counts as done. When the words name a release as the moment and a merged wait is in no release yet, report with needs_firstmate naming those tasks, so the first mate holds you until the work ships in a release, and end your turn. Do the action through the integration for the item's tracker, or where the project lives, and say in your report what you did and where. When a wait was dropped, or its change closed with no merge, do nothing outside: report which wait and how it closed.",
   ].join("\n");
 }

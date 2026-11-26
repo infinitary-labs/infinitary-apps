@@ -96,7 +96,7 @@ A replaced piece's wait moves to its replacement (`TaskService.moveWaits`), as e
 
 A wait also clears when work closes done without a merge, so the task's brief names each wait from the record at its start: its key, title and how it closed - merged, with its first release or none yet, done with its reason and no merge, dropped with its reason, or still open (`renderSideEffectSection`, `src/core/orchestrator/sideEffectBrief.ts`).
 Under each finished wait it adds the summary of that wait's newest report and the typed result its reports last carried (`TaskService.latestResult`), so its crewmate can say what a reproduce step found without reading tasks; an open wait's report is progress and is left out.
-A summary or result an unsafe data reader wrote is marked as reader data, with the reminder after the list.
+Under an unsafe data reader's wait it serves that reader's report itself, kept between reader-data marks with their reminders since it was saved, since its saved summary is the host's own line and its report takes no result.
 The same section tells its crewmate to act only once every wait that ships a change merged, through the item's tracker's integration or where the project lives, and to do nothing outside when a wait was dropped or its change closed without merging.
 When its words name a release as the moment and a merged wait is in no release yet, the crewmate reports it, and the first mate holds the task on "Work ships in a release" naming that work (`docs/automation.md`).
 

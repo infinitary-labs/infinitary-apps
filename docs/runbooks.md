@@ -29,7 +29,7 @@ The manifest may declare a replacement; enabling it turns the named runbook off 
 Adding a runbook from elsewhere uses the existing installer; personal copies use the same guidance reader and switches.
 
 Enabled first-mate sections go through the appended-instructions door at each idle boundary, with `instructions_sha` over the exact joined text.
-They are joined in list order - the shared `BUILTIN_RUNBOOK_ORDER` (Common workflows, Delivery judgment, Testing rules, Rigor levels, Commit and PR naming, Programs, Casual projects, Lessons, Batched pull requests, Pull request comments, Heartbeat, Computer cleanup, Moving secrets in, Feedback, Advanced architecture), then added and personal ones - so a section names the runbook that holds a rule it relies on, never a place above or below it.
+They are joined in list order - the shared `BUILTIN_RUNBOOK_ORDER` (Common workflows, Delivery judgment, Testing rules, Rigor levels, Commit and PR naming, Programs, Casual projects, Lessons, Batched pull requests, Pull request comments, Outside work items, Heartbeat, Computer cleanup, Moving secrets in, Feedback, Advanced architecture), then added and personal ones - so a section names the runbook that holds a rule it relies on, never a place above or below it.
 Runbooks are outside the first mate's hard fixed-context budget; the model's physical context window still applies.
 A switch affects the first mate's next idle boundary and newly opened crew conversations, not a prompt already running.
 No procedure is refused for exceeding the core budget.
@@ -179,7 +179,7 @@ The crew section holds every judgment: how to sort a comment as a clear fix, a c
 Outside work items starts on and is one switch for the whole app.
 An outside work item is an issue, ticket, request or report kept outside the app, where a project lives or in a tracker an integration reaches; the runbook covers one item's three moments and no triage of many.
 Its first-mate guide says when a task reading an item starts as an unsafe data reader, how to link work to an item with one side-effect task whose words name the item's address and whose waits name the work (filed with `create_task` `side_effect`, `blocked_by` and, where strangers write, `unsafe_data_reader`), and that the item hears the ending at the first release that ships the work, or at its merge where the project publishes no releases.
-Its crew section is served only to a side-effect task (`when: {sideEffect: [true]}`) and holds how its crewmate replies once and closes the item the tracker's own way, each write waiting for the captain's click unless they allowed it.
+Its crew section is served only to a side-effect task (`when: {sideEffect: [true]}`) and holds how its crewmate replies once and closes the item the tracker's own way, each write waiting for the captain's click unless they allowed it: the host keeps every write a side-effect task makes where a project lives, but a run start or rerun on its own, and an integration call follows that action's rule.
 Heartbeat starts off (`startsOff`) and is one switch for the whole app.
 Its manifest's `wakes` names `heartbeat` (`HEARTBEAT_WAKE`, `src/shared/heartbeat.ts`), and the host asks only whether an enabled runbook names it: while one does, the host keeps the heartbeat rule in Automation, and once none does it removes it (`docs/automation.md`, "The heartbeat").
 Its first-mate guide holds every judgment about a beat: what to do with each row marked new, the one heartbeat card, and the Found line that ends each beat, with no tool call when no row is new.

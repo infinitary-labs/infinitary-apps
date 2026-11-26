@@ -1,5 +1,5 @@
 ---
-source: c71bc8e7d8a6ffd4
+source: 1ce217aea874fab1
 title: Intégrations
 description: Connectez GitHub, GitLab, Bitbucket, Google et des serveurs MCP pour que votre second et votre équipage puissent les joindre, et choisissez ce que chacun peut faire sans vous demander.
 ---
@@ -129,7 +129,7 @@ Le formulaire vous dit d’y terminer la connexion et indique l’adresse de la 
 Une fois que vous avez terminé dans votre navigateur, la nouvelle ligne s’ouvre sur les actions du serveur.
 Si vous annulez, Infinitary ne garde ni ligne ni clé.
 
-**Notion** et **Linear**, à côté de **Serveur MCP**, connectent ces deux services en un seul appui.
+**Notion**, **Linear** et **Atlassian**, à côté de **Serveur MCP**, connectent ces trois services en un seul appui.
 
 Infinitary garde la connexion dans [Secrets](/fr/secrets/) et la renouvelle de lui-même.
 Quand le service y met fin, la ligne indique **doit se reconnecter**, avec **Se reconnecter** sur la ligne et dans son menu.

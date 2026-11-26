@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "atlassian-integration-pick",
+      "kind": "feature",
+      "area": "settings",
+      "title": "Connect Atlassian with one press",
+      "body": "Settings → Integrations now has Atlassian beside Notion and Linear. Press it and Atlassian's sign-in page opens in your browser; once you finish there, Atlassian's tools appear in its row, each asking you before it runs.",
+      "docsSite": ["integrations"],
+      "picture": {
+        "dark": "atlassian-integration-pick-dark.webp",
+        "light": "atlassian-integration-pick-light.webp",
+        "alt": "Settings, Integrations, with Atlassian beside Notion and Linear after the MCP server chip"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,5 +1,5 @@
 ---
-source: c71bc8e7d8a6ffd4
+source: 1ce217aea874fab1
 title: 연동
 description: GitHub, GitLab, Bitbucket, Google, MCP 서버를 연결해 일등항해사와 선원들이 닿을 수 있게 하고, 각각이 묻지 않고 할 수 있는 일을 정하세요.
 ---
@@ -129,7 +129,7 @@ Infinitary는 키를 [비밀 정보](/ko/secrets/)로 옮기고, 줄에는 그 �
 브라우저에서 로그인을 마치면 새 줄이 서버의 동작이 보이게 열려요.
 취소하면 Infinitary는 줄도 키도 남기지 않아요.
 
-**MCP 서버** 옆의 **Notion**과 **Linear**는 한 번만 누르면 그 두 서비스를 연결해요.
+**MCP 서버** 옆의 **Notion**, **Linear**, **Atlassian**은 한 번만 누르면 그 세 서비스를 연결해요.
 
 Infinitary는 이 로그인을 [비밀 정보](/ko/secrets/)에 보관하고 스스로 갱신해요.
 서비스가 로그인을 끝내면 줄에 **다시 로그인해야 함**이라고 표시되고, 줄과 그 메뉴에 **다시 로그인**이 있어요.

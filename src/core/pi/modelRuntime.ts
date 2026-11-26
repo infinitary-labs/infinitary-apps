@@ -112,6 +112,19 @@ export async function createModelRuntime(options: ModelRuntimeOptions): Promise<
   // Offline: the bundled catalog and this store's last overlay, no network.
   const runtime = await ModelRuntime.create({ ...base, allowModelNetwork: false });
   if (options.connectionProvider) connectionProviders.set(runtime, options.connectionProvider);
+  // Pi starts refreshes of its own that nobody awaits (registering a
+  // provider fires one), and it calls them through this property, so it is
+  // wrapped before any registration below and every refresh is tracked.
+  const refresh = runtime.refresh?.bind(runtime);
+  if (refresh)
+    runtime.refresh = (refreshOptions) =>
+      tracked(
+        refresh(
+          options.connectionProvider
+            ? { ...refreshOptions, allowNetwork: false, providers: [options.connectionProvider] }
+            : refreshOptions,
+        ),
+      );
   const snapshot = runtime.getAvailableSnapshot.bind(runtime);
   const allows = (model: ModelDef) =>
     options.bedrockAccount
@@ -127,9 +140,13 @@ export async function createModelRuntime(options: ModelRuntimeOptions): Promise<
     );
     await runtime.refresh({ allowNetwork: false, providers: [BEDROCK_PROVIDER_ID] });
   }
-  const openCodeGo = options.connectionProvider
-    ? undefined
-    : runtime.getProvider(OPENCODE_GO_PROVIDER_ID);
+  // A Bedrock account's runtime never serves OpenCode Go, and registering a
+  // provider fires Pi's unscoped refresh, which would undo the Bedrock
+  // provider's checked model list above.
+  const openCodeGo =
+    options.connectionProvider || options.bedrockAccount
+      ? undefined
+      : runtime.getProvider(OPENCODE_GO_PROVIDER_ID);
   if (openCodeGo) {
     runtime.registerNativeProvider(storedKeyOnly(openCodeGo));
     await runtime.refresh({ allowNetwork: false, providers: [OPENCODE_GO_PROVIDER_ID] });
@@ -161,19 +178,6 @@ export async function createModelRuntime(options: ModelRuntimeOptions): Promise<
       ? withHonestReasoning(model)
       : undefined;
   };
-  // Pi starts refreshes of its own that nobody awaits (registering a
-  // provider fires one), and it calls them through this property, so every
-  // refresh this runtime runs is tracked here.
-  const refresh = runtime.refresh?.bind(runtime);
-  if (refresh)
-    runtime.refresh = (refreshOptions) =>
-      tracked(
-        refresh(
-          options.connectionProvider
-            ? { ...refreshOptions, allowNetwork: false, providers: [options.connectionProvider] }
-            : refreshOptions,
-        ),
-      );
   if (!options.connectionProvider && !options.bedrockAccount)
     void tracked(refreshInBackground(runtime, options.onCatalogRefreshed));
   return runtime;

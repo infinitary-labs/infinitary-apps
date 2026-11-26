@@ -259,6 +259,31 @@ it("gates old checked models until the recovered account is checked again (INF-4
   expect((await runtime.getAuth("amazon-bedrock"))?.env?.AWS_PROFILE).toBe("fixture");
 });
 
+it("keeps a connected account to its checked models once its refreshes settle (INF-3451)", async () => {
+  // Batch #109 sent OpenCode Go back for registering in this runtime: the
+  // unscoped refresh that fired re-listed every stock Bedrock model.
+  const dir = scratchDir("bedrock-checked-");
+  const authPath = join(dir, "auth.json");
+  const id = "us.anthropic.claude-sonnet-5-5";
+  writeFileSync(
+    authPath,
+    JSON.stringify({
+      "amazon-bedrock": {
+        type: "api_key",
+        env: { AWS_PROFILE: "fixture", AWS_REGION: "us-west-2", INFINITARY_BEDROCK_MODELS: id },
+      },
+    }),
+    { mode: 0o600 },
+  );
+  const runtime = await createModelRuntime({
+    authPath,
+    modelsPath: join(dir, "models.json"),
+    bedrockAccount: true,
+  });
+  await catalogRefreshesSettled();
+  expect(runtime.getAvailableSnapshot().map((model) => model.id)).toEqual([id]);
+});
+
 it("groups Bedrock regions by the actual AWS sign-in cache, not the profile name (INF-4973)", () => {
   const profiles = {
     workUs: { sso_session: "team", region: "us-west-2" },

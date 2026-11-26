@@ -176,6 +176,53 @@ describe("setting up the person's own Google client", () => {
     });
   });
 
+  it("reads a sign-in made with Infinitary's retired client as needing a sign-in, and never sends it to Google", async () => {
+    // INF-6344: Infinitary's own client is gone, so nothing can renew such a sign-in.
+    const { google, clock, integrations } = await googleWorld(
+      cleanup,
+      undefined,
+      false,
+      async (dir, google, keys) => {
+        const { refresh } = google.grantEarlier([...GOOGLE_SCOPES]);
+        const key = await keys.keys.keepHidden({
+          label: "Google sign-in",
+          value: Buffer.from(refresh, "utf8"),
+        });
+        if (!key) throw new Error("Secrets keeps the sign-in");
+        new GoogleSignInStore(dir).write({
+          account: STAND_IN_ACCOUNT,
+          scopes: [...GOOGLE_SCOPES],
+          expiresAt: Date.UTC(2026, 9, 22, 15),
+          health: "ok",
+          signedInAt: Date.UTC(2026, 9, 1),
+          key,
+        });
+      },
+      undefined,
+      false,
+      false,
+    );
+    allowIntegrationReads(integrations);
+    expect(integrations.view().integrations[0]?.health).toBe("needs_reauth");
+    expect(integrations.view().integrations[0]?.client).toEqual({ kept: false });
+
+    clock.now += 60_000;
+    const answer = await integrations
+      .forTask("task-1")
+      .call(
+        "Google",
+        "search_mail",
+        { max: 1 },
+        undefined,
+        "To perform the task’s requested action.",
+      );
+    expect(answer.refused).toBeDefined();
+    expect(google.tokens).toEqual([]);
+    await expect(integrations.signIn("google", NOTICE_ACCEPTED)).rejects.toThrow(
+      "Set up your own Google client first",
+    );
+  });
+
   it("turns a sign-in to Sign in again when another client is kept in its place, and keeps it for a new secret", async () => {
     const { integrations } = await released();
     await integrations.keepClient("google", desktopFile());

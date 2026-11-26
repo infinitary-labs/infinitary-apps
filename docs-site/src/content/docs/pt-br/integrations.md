@@ -1,5 +1,5 @@
 ---
-source: 1ce217aea874fab1
+source: 73e387523c5a3dd9
 title: Integrações
 description: Conecte GitHub, GitLab, Bitbucket, Google e servidores MCP para que seu imediato e sua tripulação possam alcançá-los, e escolha o que cada um pode fazer sem perguntar a você.
 ---
@@ -76,8 +76,8 @@ Toda vez que você faz login no Google, o aviso aparece primeiro.
 
 A linha do Google diz quando a conexão precisa de você:
 
-- **Configure sua própria conexão**: este login ainda passa por um cliente que o Infinitary compartilha com todos, e que vai ser desativado.
-  Ele continua funcionando até lá; aperte **Configurar** para continuar conectado.
+- **Fazer login de novo**: uma conexão feita antes pelo cliente que o Infinitary compartilhava com todos não funciona mais, porque esse cliente deixou de existir.
+  Aperte **Fazer login de novo**, que abre **Configure sua própria conexão com o Google**, para criar seu próprio cliente e conectar de novo.
 - **Para em**, com uma data: seu cliente não está no modo pessoal, então o Google encerra o login dele nessa data.
   Aperte **Configurar de novo** e crie um cliente no modo pessoal.
 - **Seu cliente do Google parou**: o Google não aceita mais seu cliente, talvez porque ele foi excluído no Google Cloud.

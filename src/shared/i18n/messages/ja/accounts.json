@@ -173,6 +173,7 @@
   "accountsCustomApiNameNeeded": "この接続に名前を付けてください。",
   "accountsCustomApiNoList": "このサーバーはモデルの一覧を公開していません。手動で追加してください。",
   "accountsCustomApiNoModels": "モデルはまだありません。サーバーから取得するか、手動で追加してください。",
+  "accountsCustomApiNotChat": "チャットモデルではありません",
   "accountsCustomApiNotOffered": "このサーバーは {model} を提供していません。",
   "accountsCustomApiNotReached": "このサーバーに接続できませんでした。",
   "accountsCustomApiNotSaved": "保存されていません。",

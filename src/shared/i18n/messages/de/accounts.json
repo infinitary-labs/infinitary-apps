@@ -175,6 +175,7 @@
   "accountsCustomApiNameNeeded": "Gib dieser Verbindung einen Namen.",
   "accountsCustomApiNoList": "Dieser Server listet seine Modelle nicht auf. Füge sie von Hand hinzu.",
   "accountsCustomApiNoModels": "Noch keine Modelle. Ruf sie vom Server ab oder füge eins von Hand hinzu.",
+  "accountsCustomApiNotChat": "Kein Chatmodell",
   "accountsCustomApiNotOffered": "Dieser Server bietet {model} nicht an.",
   "accountsCustomApiNotReached": "Dieser Server war nicht erreichbar.",
   "accountsCustomApiNotSaved": "Nicht gespeichert.",

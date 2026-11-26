@@ -367,7 +367,7 @@ export function createCatalogDispatch({
           repo.runsOn === AUTOMATIC_COMPUTER
             ? "automatically"
             : repo.runsOn
-              ? devicePlace(services.devices.list(), repo.runsOn).where
+              ? devicePlace(services.devices.list(), repo.runsOn).said.where
               : null;
         trail(name, { repo, fromHere: !was?.runsOn, where }, actor);
       } else if (name === "panel") {

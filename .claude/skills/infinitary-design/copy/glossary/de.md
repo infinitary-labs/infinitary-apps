@@ -174,6 +174,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | token (a sign-in token a command prints) | Token | Neuter ("das Token"); only in the custom API form, plural "Tokens" for counted model tokens. |
 | unsafe data reader | Leser unsicherer Daten | A crewmate that reads words anyone can write. |
 | Usage | Nutzung | |
+| user (another user account on this computer) | Benutzer | "as {user}" is "als {user}"; "Läuft als {user}" for running as that user. |
 | version (replaces SHA, hash) | Version | |
 | Waiting on you (board lane) | Wartet auf dich | |
 | where the project lives | wo das Projekt liegt | "dort, wo das Projekt liegt". |

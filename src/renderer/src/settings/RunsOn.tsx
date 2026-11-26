@@ -1,6 +1,6 @@
 import { AUTOMATIC_COMPUTER, AUTOMATIC_WORD } from "@shared/placement";
 import { type RepoView, runsHereOnly } from "@shared/repos";
-import { type DeviceSignIns, signInPlace } from "@shared/signIns";
+import { type DeviceSignIns, signInPlace, wordedPlace } from "@shared/signIns";
 import { useEffect, useState } from "react";
 import "./devices.css";
 import { awayWord } from "@shared/devices";
@@ -76,7 +76,7 @@ export function RunsOnControl({
     !computers.some((computer) => computer.deviceId === repo.runsOn);
   const option = (computer: DeviceSignIns) => (
     <option key={computer.deviceId} value={computer.deviceId}>
-      {signInPlace(computer).label}
+      {wordedPlace(signInPlace(computer)).label}
       {notNow(computer)}
     </option>
   );

@@ -1,5 +1,9 @@
 {
+  "placeAs": "{user}(으)로",
   "placeHere": "여기에서",
   "placeOn": "{computer}에서",
+  "placeOnOther": "다른 컴퓨터에서",
+  "placeOther": "다른 컴퓨터",
+  "placeRunningAs": "{user}(으)로 실행",
   "placeThisComputer": "이 컴퓨터"
 }

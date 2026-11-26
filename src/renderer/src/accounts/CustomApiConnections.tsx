@@ -11,7 +11,7 @@ import {
 } from "@shared/customApiFile";
 import { HERE } from "@shared/deviceNames";
 import * as m from "@shared/i18n/messages.generated";
-import { type DeviceSignIns, signInPlace } from "@shared/signIns";
+import { type DeviceSignIns, signInPlace, wordedPlace } from "@shared/signIns";
 import { useFirstMatePlace } from "../devices/useFirstMatePlace";
 import { useDeviceSignIns } from "../settings/useDeviceSignIns";
 import { CustomApiFileRow, FileApproval, FileConnectionRow, FileWarnings } from "./CustomApiFile";
@@ -485,7 +485,7 @@ export function CustomApiAccountsSection() {
                       size="sm"
                       onClick={() => setUsing({ view, definition, device })}
                     >
-                      {m.accountsCustomApiUseOn({ on: signInPlace(device).where })}
+                      {m.accountsCustomApiUseOn({ on: wordedPlace(signInPlace(device)).where })}
                     </Button>
                   ))}
                 </p>
@@ -545,7 +545,7 @@ export function CustomApiAccountsSection() {
         })()}
       {using &&
         (() => {
-          const place = signInPlace(using.device);
+          const place = wordedPlace(signInPlace(using.device));
           const close = () => {
             setUsing(undefined);
             refresh();

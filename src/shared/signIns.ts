@@ -28,6 +28,7 @@ import {
   forgeServerViewSchema,
   forgeSignInStateSchema,
 } from "./forges";
+import * as m from "./i18n/messages.generated.ts";
 import { listedIds } from "./modelListing";
 import { reasoningCapabilitiesSchema } from "./modelSlots";
 import { authNoticeSchema, authPromptSchema, providerViewSchema } from "./providers";
@@ -642,6 +643,48 @@ export const deviceSignInEventSchema = z.object({
 export type DeviceSignInEvent = z.infer<typeof deviceSignInEventSchema>;
 
 /**
+ * One of the app's own words about a place as a saved fact's part
+ * (docs/i18n.md, "Saved facts"), naming its catalog message and fills.
+ */
+export type PlaceFact =
+  | { m: "placeOn"; a: { computer: string } }
+  | { m: "placeAs"; a: { user: string } }
+  | { m: "placeRunningAs"; a: { user: string } }
+  | { m: "placeOnOther" }
+  | { m: "placeOther" };
+
+/**
+ * A place's words as facts: a name stays as it is, and the words around it
+ * are a `PlaceFact`, so a saved line fills a blank with them and
+ * `wordedPlace` words them for a person.
+ */
+export type PlaceSaid = {
+  label: string | PlaceFact;
+  where: PlaceFact;
+  who: string | PlaceFact;
+};
+
+/**
+ * How the home names a computer that runs work in its words about sign-ins.
+ * `label`, `where` and `who` are English: served text, the English lines
+ * still typed in the code, and code that tells a user from a computer by
+ * `where` read them. A window, the phone and a translated message read
+ * `wordedPlace` instead, and a saved line fills its blanks with `said`.
+ */
+export type SignInPlace = {
+  /** The group's label: "Mac mini", "Running as Builder". */
+  label: string;
+  /** After a verb: "Sign in to Codex on Mac mini", "... as Builder". */
+  where: string;
+  /** As a subject or an object: "Send to Mac mini", "Builder is signed in to Codex." */
+  who: string;
+  said: PlaceSaid;
+};
+
+/** A place's words alone, in English or worded (`wordedPlace`), for code that reads no fact. */
+export type PlaceWords = Pick<SignInPlace, "label" | "where" | "who">;
+
+/**
  * How the home names a computer that runs work in its words about sign-ins
  * (the design skill's `components/devices/SignInOnAMac`): another Mac by its
  * own name, and another macOS user on this Mac by that user.
@@ -650,15 +693,48 @@ export function signInPlace(device: {
   name: string;
   user?: string | undefined;
   onThisMac: boolean;
-}) {
+}): SignInPlace {
   const user = device.onThisMac && device.user ? userDisplayName(device.user) : undefined;
   return {
-    /** The group's label: "Mac mini", "Running as Builder". */
     label: deviceLabel(device),
-    /** After a verb: "Sign in to Codex on Mac mini", "... as Builder". */
     where: user ? `as ${user}` : `on ${device.name}`,
-    /** As a subject or an object: "Send to Mac mini", "Builder is signed in to Codex." */
     who: user ?? device.name,
+    said: {
+      label: user ? { m: "placeRunningAs", a: { user } } : device.name,
+      where: user ? { m: "placeAs", a: { user } } : { m: "placeOn", a: { computer: device.name } },
+      who: user ?? device.name,
+    },
+  };
+}
+
+/**
+ * A place's words for a person, in the language the process speaks when it
+ * is called: "auf Mac mini", "als Builder". What a window or the phone shows
+ * and what fills a translated message; served text keeps `signInPlace`'s
+ * English. Each message is called by name, never looked up as `wordSaid`
+ * does: a lookup by any name keeps the whole catalog in the phone's settings
+ * pages, which call this.
+ */
+export function wordedPlace(place: SignInPlace): PlaceWords {
+  const word = (fill: string | PlaceFact): string => {
+    if (typeof fill === "string") return fill;
+    switch (fill.m) {
+      case "placeOn":
+        return m.placeOn(fill.a);
+      case "placeAs":
+        return m.placeAs(fill.a);
+      case "placeRunningAs":
+        return m.placeRunningAs(fill.a);
+      case "placeOnOther":
+        return m.placeOnOther();
+      case "placeOther":
+        return m.placeOther();
+    }
+  };
+  return {
+    label: word(place.said.label),
+    where: word(place.said.where),
+    who: word(place.said.who),
   };
 }
 
@@ -747,13 +823,19 @@ export function devicePlace(
     onThisMac?: boolean | undefined;
   }[],
   deviceId: string,
-): ReturnType<typeof signInPlace> {
+): SignInPlace {
   const device = devices.find((entry) => entry.id === deviceId);
-  return device
-    ? signInPlace({ name: device.name, user: device.user, onThisMac: device.onThisMac ?? false })
-    : {
-        label: `The other ${COMPUTER.one}`,
-        where: `on the other ${COMPUTER.one}`,
-        who: `The other ${COMPUTER.one}`,
-      };
+  if (device)
+    return signInPlace({
+      name: device.name,
+      user: device.user,
+      onThisMac: device.onThisMac ?? false,
+    });
+  const other: PlaceFact = { m: "placeOther" };
+  return {
+    label: `The other ${COMPUTER.one}`,
+    where: `on the other ${COMPUTER.one}`,
+    who: `The other ${COMPUTER.one}`,
+    said: { label: other, where: { m: "placeOnOther" }, who: other },
+  };
 }

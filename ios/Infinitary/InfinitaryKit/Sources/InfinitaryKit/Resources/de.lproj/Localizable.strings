@@ -24,7 +24,7 @@
 "accountsCustomApiAddByHand" = "+ Von Hand hinzufügen";
 "accountsCustomApiAddHeader" = "Header hinzufügen";
 "accountsCustomApiAddTitle" = "Eigene API hinzufügen";
-"accountsCustomApiAddTitleOn" = "Eigene API hinzufügen %1$@";
+"accountsCustomApiAddTitleOn" = "Eigene API %1$@ hinzufügen";
 "accountsCustomApiAddressLabel" = "Adresse";
 "accountsCustomApiAddressNeeded" = "Gib die Adresse des Servers ein.";
 "accountsCustomApiAnswerKind" = "%1$@ (%2$@)";
@@ -247,7 +247,7 @@
 "accountsCustomApiUseForFirstMate" = "%1$@ für deinen ersten Offizier verwenden";
 "accountsCustomApiUseModel" = "%1$@ verwenden";
 "accountsCustomApiUseOn" = "Verwenden %1$@";
-"accountsCustomApiUseTitle" = "%1$@ verwenden %2$@";
+"accountsCustomApiUseTitle" = "%1$@ %2$@ verwenden";
 "accountsSavedResetBusy" = "Infinitary löst bereits einen gespeicherten Reset für %1$@ ein. Warte, bis es fertig ist.";
 "accountsSavedResetCodexStopped" = "Codex hat nicht mehr geantwortet, bevor etwas eingelöst wurde, daher wurde kein gespeicherter Reset eingelöst. Versuch es noch einmal.";
 "accountsSavedResetNoCodex" = "Um einen gespeicherten Reset aus Infinitary einzulösen, braucht dieser Computer Codex %1$@ oder neuer. Installiere Codex oder löse den Reset auf %2$@ ein.";
@@ -2437,8 +2437,12 @@
 "phoneWorkStateWorking" = "Arbeitet";
 "phoneWorkspaceShow" = "Anzeigen";
 "phoneWorkspaceTabs" = "Tabs";
+"placeAs" = "als %1$@";
 "placeHere" = "hier";
 "placeOn" = "auf %1$@";
+"placeOnOther" = "auf dem anderen Computer";
+"placeOther" = "Der andere Computer";
+"placeRunningAs" = "Läuft als %1$@";
 "placeThisComputer" = "diesem Computer";
 "policyAsksFirst" = "Fragt vorher";
 "policyCareBound" = "Lokales Zusammenführen nutzt die Sorgfalt „Standard“; für Pull Requests bleibt „Sorgfältig“ angefordert.";
@@ -3071,7 +3075,7 @@
 "settingsDevicesExpiredPhone" = "Der Link ist abgelaufen, bevor ein Telefon ihn genutzt hat.";
 "settingsDevicesExpiredPhoneReady" = "Erstell einen neuen, wenn das Telefon bereit ist.";
 "settingsDevicesFixIt" = "Beheben";
-"settingsDevicesFixItNamed" = "Die Arbeit auf %1$@ neu einrichten";
+"settingsDevicesFixItNamed" = "Die Arbeit neu einrichten: %1$@";
 "settingsDevicesHeldLine" = "Er hat diesen Computer seit seinem Beitritt nicht erreicht. macOS lässt Infinitary auf %1$@ dein lokales Netzwerk erst nutzen, wenn jemand dort es erlaubt. Fügst du ihn über seine Adresse hinzu, erreicht dieser Computer ihn stattdessen mit deinem SSH-Schlüssel.";
 "settingsDevicesIdle" = "frei";
 "settingsDevicesIntroHere" = "Dein erster Offizier lebt auf diesem Computer. Seine Aufgaben und die Unterhaltung bleiben hier. Von jedem Computer, den du hinzufügst, kannst du ihn steuern, und jeder hinzugefügte Computer kann die Arbeit eines Projekts ausführen. Ein anderer Benutzer auf diesem Computer führt Arbeit aus, und dein erster Offizier kann dorthin umziehen. %1$@";
@@ -3297,6 +3301,7 @@
 "settingsForgeNotSignedIn" = "nicht bei %1$@ angemeldet";
 "settingsForgeOpenHost" = "%1$@ öffnen";
 "settingsForgeRowActions" = "Aktionen für %1$@ %2$@";
+"settingsForgeServerOn" = "%1$@ %2$@";
 "settingsForgeSignIn" = "Anmelden";
 "settingsForgeSignInAgain" = "Erneut anmelden";
 "settingsForgeSignInAgainSay" = "Melde dich erneut an.";

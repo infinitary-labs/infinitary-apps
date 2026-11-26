@@ -108,9 +108,9 @@
   "feedRunProjectHereInstead": "要改为{here}运行，请把 {project} 设为运行于 {computer}。",
   "feedRunTaskHereInstead": "要改为{here}运行，请让你的大副在 {computer} 上运行 {task}。",
   "feedRunsOnAutomatic": "Infinitary 会为 {name} 中的每个新任务选择一台电脑。已开始的任务留在开始的地方。",
-  "feedRunsOnFromHere": "{name} 现在运行于 {where}。它的下一个任务会在那里开始；{here}运行中的任务会{here}完成。",
+  "feedRunsOnFromHere": "{name} 现在改为{where}运行。它的下一个任务会在那里开始；{here}运行中的任务会{here}完成。",
   "feedRunsOnHere": "{name} 现在运行于 {computer}。它的下一个任务会{here}开始。",
-  "feedRunsOnThere": "{name} 现在运行于 {where}。它的下一个任务会在那里开始；已在运行的任务会在开始的地方完成。",
+  "feedRunsOnThere": "{name} 现在改为{where}运行。它的下一个任务会在那里开始；已在运行的任务会在开始的地方完成。",
   "feedStarted": "已开始",
   "feedStopped": "已停止",
   "feedTagCheckFinished": {

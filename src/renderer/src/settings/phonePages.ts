@@ -29,7 +29,7 @@ import type { QuotaSnapshotView } from "@shared/quota";
 import { hostTakesBatches, projectDeliveryChoices, type RepoView } from "@shared/repos";
 import type { RunbookView } from "@shared/runbooks";
 import { runbooksSummary } from "@shared/runbookWords";
-import { type DeviceSignIns, signInPlace } from "@shared/signIns";
+import { type DeviceSignIns, signInPlace, wordedPlace } from "@shared/signIns";
 import type { ProjectView } from "@shared/tasks";
 import {
   DEFAULT_USAGE_QUERY,
@@ -277,7 +277,7 @@ export function intelligencePage(input: IntelligenceInput): PhoneIntelligence {
       account,
       snapshot,
       nameIn(providers),
-      { who: home, where: `on ${home}` },
+      { who: home, where: m.placeOn({ computer: home }) },
       input.firstmateAccount === account.id,
       now,
     ),
@@ -290,7 +290,7 @@ export function intelligencePage(input: IntelligenceInput): PhoneIntelligence {
       rows: homeRows,
     },
     ...devices.map((device): PhoneAccountGroup => {
-      const place = signInPlace(device);
+      const place = wordedPlace(signInPlace(device));
       const note = awayNote(device);
       const rows = (device.signIns?.accounts ?? []).map((account) =>
         accountRow(

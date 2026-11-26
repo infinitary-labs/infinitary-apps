@@ -169,6 +169,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | unsafe data reader | lecteur de données non sûres | A crewmate that reads words anyone can write. |
 | Usage (Settings section) | Utilisation | The section's name, as in "Ouvrir Utilisation". |
 | usage record | entrée | One recorded model response in Usage ("entrées avec prix"); "fiche" stays for a task's record and "enregistrement" for a recording. |
+| user (another user account on this computer) | utilisateur | "as {user}" is "sous l’utilisateur {user}", as in "Sous un autre utilisateur". |
 | where the project lives | là où le projet est hébergé | |
 | window wash | voile de la fenêtre | The theme color laid over the blurred background. |
 | working copy | copie de travail | |

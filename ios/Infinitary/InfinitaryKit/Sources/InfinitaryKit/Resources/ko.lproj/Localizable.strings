@@ -24,7 +24,7 @@
 "accountsCustomApiAddByHand" = "+ 직접 추가";
 "accountsCustomApiAddHeader" = "헤더 추가";
 "accountsCustomApiAddTitle" = "사용자 지정 API 추가";
-"accountsCustomApiAddTitleOn" = "사용자 지정 API 추가 %1$@";
+"accountsCustomApiAddTitleOn" = "%1$@ 사용자 지정 API 추가";
 "accountsCustomApiAddressLabel" = "주소";
 "accountsCustomApiAddressNeeded" = "서버 주소를 입력하세요.";
 "accountsCustomApiAnswerKind" = "%1$@ (%2$@)";
@@ -246,8 +246,8 @@
 "accountsCustomApiUseFix" = "%1$@ 사용";
 "accountsCustomApiUseForFirstMate" = "일등항해사에 %1$@ 사용";
 "accountsCustomApiUseModel" = "%1$@ 사용";
-"accountsCustomApiUseOn" = "사용 %1$@";
-"accountsCustomApiUseTitle" = "%1$@ 사용 %2$@";
+"accountsCustomApiUseOn" = "%1$@ 사용";
+"accountsCustomApiUseTitle" = "%2$@ %1$@ 사용";
 "accountsSavedResetBusy" = "Infinitary가 이미 %1$@에서 저장된 재설정을 사용하고 있어요. 끝날 때까지 기다리세요.";
 "accountsSavedResetCodexStopped" = "Codex가 무엇이든 사용하기 전에 응답을 멈춰서 저장된 재설정은 사용되지 않았습니다. 다시 시도하세요.";
 "accountsSavedResetNoCodex" = "Infinitary에서 저장된 재설정을 사용하려면 이 컴퓨터에 Codex %1$@ 이상이 필요해요. Codex를 설치하거나 %2$@에서 재설정을 사용하세요.";
@@ -576,7 +576,7 @@
 "cardRevisionMore" = "%1$@개 더";
 "cardRevisionShowFewer" = "적게 보기";
 "cardSavedResetCrewWaits" = "저장된 재설정을 사용하지 않으면 선원들의 작업은 더 약한 모델로 바뀌거나 사용량이 재설정될 때까지 기다려요.";
-"cardSavedResetCrewWaitsThere" = "저장된 재설정을 사용하지 않으면 %1$@ 선원들의 작업은 더 약한 모델로 바뀌거나 사용량이 재설정될 때까지 기다려요.";
+"cardSavedResetCrewWaitsThere" = "저장된 재설정을 사용하지 않으면 선원들이 %1$@ 하는 작업은 더 약한 모델로 바뀌거나 사용량이 재설정될 때까지 기다려요.";
 "cardSavedResetsOpenPage" = "%1$@에서 사용량 페이지 열기";
 "cardSinceSeenApproved" = "이전 버전을 승인함 · %1$@";
 "cardSinceSeenChose" = "“%1$@”을(를) 고름 · %2$@";
@@ -2437,8 +2437,12 @@
 "phoneWorkStateWorking" = "작업 중";
 "phoneWorkspaceShow" = "보기";
 "phoneWorkspaceTabs" = "탭";
+"placeAs" = "%1$@(으)로";
 "placeHere" = "여기에서";
 "placeOn" = "%1$@에서";
+"placeOnOther" = "다른 컴퓨터에서";
+"placeOther" = "다른 컴퓨터";
+"placeRunningAs" = "%1$@(으)로 실행";
 "placeThisComputer" = "이 컴퓨터";
 "policyAsksFirst" = "먼저 물어봄";
 "policyCareBound" = "로컬 병합은 주의 수준 기본으로 하고, 끌어오기 요청에는 신중하게를 계속 요청해요.";
@@ -3071,7 +3075,7 @@
 "settingsDevicesExpiredPhone" = "어떤 휴대폰도 사용하기 전에 링크가 만료됐어요.";
 "settingsDevicesExpiredPhoneReady" = "휴대폰이 준비되면 새로 만드세요.";
 "settingsDevicesFixIt" = "고치기";
-"settingsDevicesFixItNamed" = "%1$@의 작업 다시 설정";
+"settingsDevicesFixItNamed" = "작업 다시 설정: %1$@";
 "settingsDevicesHeldLine" = "참여한 뒤로 이 컴퓨터에 연결된 적이 없어요. macOS는 %1$@에서 누군가 허용해야만 그곳의 Infinitary가 로컬 네트워크를 쓰게 해요. 주소로 추가하면 이 컴퓨터가 대신 SSH 키로 연결해요.";
 "settingsDevicesIdle" = "대기";
 "settingsDevicesIntroHere" = "일등항해사는 이 컴퓨터에 있어요. 작업과 대화도 여기에 남아요. 추가한 어느 컴퓨터에서든 일등항해사를 제어할 수 있고, 추가한 어느 컴퓨터든 프로젝트 작업을 실행할 수 있어요. 이 컴퓨터의 다른 사용자로 실행하면 작업을 실행하고, 일등항해사를 그곳으로 옮길 수도 있어요. %1$@";
@@ -3189,7 +3193,7 @@
 "settingsDevicesSignInsKeyFor" = "%1$@에서 쓸 키";
 "settingsDevicesSignInsNone" = "아직 로그인이 없어요.";
 "settingsDevicesSignInsOpenLink" = "링크 열기";
-"settingsDevicesSignInsOwn" = "이 컴퓨터만의 로그인이에요. %1$@ 실행되는 작업은 이 로그인만 써요.";
+"settingsDevicesSignInsOwn" = "전용 로그인이에요. %1$@ 실행되는 작업은 이 로그인만 써요.";
 "settingsDevicesSignInsPasteAddress" = "주소 붙여 넣기";
 "settingsDevicesSignInsPasteBackAddress" = "여기 브라우저에서 링크를 열고 로그인하세요. 그러면 브라우저가 연결할 수 없는 페이지에서 멈춰요. 그 페이지의 주소를 복사해 여기에 붙여 넣으세요.";
 "settingsDevicesSignInsPasteBackCode" = "여기 브라우저에서 링크를 열고 로그인하세요. 그다음 화면에 나온 코드를 붙여 넣으세요.";
@@ -3296,7 +3300,8 @@
 "settingsForgeNewCode" = "새 코드 받기";
 "settingsForgeNotSignedIn" = "%1$@에 로그인하지 않음";
 "settingsForgeOpenHost" = "%1$@ 열기";
-"settingsForgeRowActions" = "%1$@ %2$@ 작업";
+"settingsForgeRowActions" = "%2$@ %1$@ 작업";
+"settingsForgeServerOn" = "%2$@ %1$@";
 "settingsForgeSignIn" = "로그인";
 "settingsForgeSignInAgain" = "다시 로그인";
 "settingsForgeSignInAgainSay" = "다시 로그인하세요.";
@@ -3672,7 +3677,7 @@
 "settingsProjectsRowLinked" = "연결됨";
 "settingsProjectsRowNoChecks" = "검사 없음";
 "settingsProjectsRowPersonal" = "그 자리에서 만듦";
-"settingsProjectsRowRuns" = "실행 위치: %1$@";
+"settingsProjectsRowRuns" = "%1$@ 실행";
 "settingsProjectsSaveDetails" = "세부 정보 저장";
 "settingsProjectsScope" = "범위";
 "settingsProjectsScopeDescription" = "이 프로젝트에 속하는 작업이에요. 일등항해사는 이것을 읽고 새 작업을 어디에 둘지 정해요.";

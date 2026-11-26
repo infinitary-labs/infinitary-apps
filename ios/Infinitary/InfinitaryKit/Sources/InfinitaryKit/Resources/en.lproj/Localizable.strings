@@ -2437,8 +2437,12 @@
 "phoneWorkStateWorking" = "Working";
 "phoneWorkspaceShow" = "Show";
 "phoneWorkspaceTabs" = "Tabs";
+"placeAs" = "as %1$@";
 "placeHere" = "here";
 "placeOn" = "on %1$@";
+"placeOnOther" = "on the other computer";
+"placeOther" = "The other computer";
+"placeRunningAs" = "Running as %1$@";
 "placeThisComputer" = "this computer";
 "policyAsksFirst" = "Asks first";
 "policyCareBound" = "Local merge uses Default rigor; Careful remains requested for pull requests.";
@@ -3297,6 +3301,7 @@
 "settingsForgeNotSignedIn" = "not signed in to %1$@";
 "settingsForgeOpenHost" = "Open %1$@";
 "settingsForgeRowActions" = "%1$@ %2$@ actions";
+"settingsForgeServerOn" = "%1$@ %2$@";
 "settingsForgeSignIn" = "Sign in";
 "settingsForgeSignInAgain" = "Sign in again";
 "settingsForgeSignInAgainSay" = "Sign in again.";

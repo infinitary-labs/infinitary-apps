@@ -18,6 +18,7 @@ import {
 import { cardWordsMark, englishOf, type Said, said, saidMark } from "@shared/i18n/said";
 import { INTEGRATIONS_WORDS } from "@shared/integrations";
 import { SAVED_RESETS_PAGE } from "@shared/quota";
+import type { SignInPlace } from "@shared/signIns";
 import type { SeatPauseClass } from "./seat";
 
 /**
@@ -404,10 +405,11 @@ export function creditsOfferCard(input: {
   offerAutoResets?: boolean;
   /**
    * The computer that runs work the account is on, by id and as words say
-   * where ("on Mac mini"): its switch is saved there, so the button sends
-   * the account's key there (`accountKey`, src/core/placed/placedAccounts.ts).
+   * where ("on Mac mini"), in English and as the fact its body's line fills
+   * (`SignInPlace`): its switch is saved there, so the button sends the
+   * account's key there (`accountKey`, src/core/placed/placedAccounts.ts).
    */
-  computer?: { deviceId: string; where: string };
+  computer?: { deviceId: string } & Pick<SignInPlace, "where" | "said">;
 }): Omit<Card, "author" | "priority" | "status" | "createdAt"> {
   const { computer } = input;
   const until = input.resetsAt ? ` until ${input.resetsAt}` : "";
@@ -422,7 +424,7 @@ export function creditsOfferCard(input: {
   const key = computer ? `${input.accountId}@${computer.deviceId}` : input.accountId;
   const { credits } = input;
   const waits = computer
-    ? saidMark(said("cardSavedResetCrewWaitsThere", { where: computer.where }))
+    ? saidMark(said("cardSavedResetCrewWaitsThere", { where: computer.said.where }))
     : saidMark(said("cardSavedResetCrewWaits"));
   return {
     id: creditsOfferCardId(input.accountId, computer?.deviceId),

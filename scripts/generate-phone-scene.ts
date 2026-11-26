@@ -69,6 +69,7 @@ try {
   const { failedCountWords, newCountWords } = await runner.import<typeof import("../src/panels/now/words.ts")>(join(REPO_ROOT, "src/panels/now/words.ts"));
   const { recordBarOf } = await runner.import<typeof import("../src/shared/recordBar.ts")>(join(REPO_ROOT, "src/shared/recordBar.ts"));
   const { partsSentenceSpeaks, recordAttentionOf, recordClosedLineOf } = await runner.import<typeof import("../src/shared/recordAttention.ts")>(join(REPO_ROOT, "src/shared/recordAttention.ts"));
+  const { recordStartOf } = await runner.import<typeof import("../src/shared/recordStart.ts")>(join(REPO_ROOT, "src/shared/recordStart.ts"));
   const { taskWaitStatus } = await runner.import<typeof import("../src/shared/taskWaits.ts")>(join(REPO_ROOT, "src/shared/taskWaits.ts"));
   const { boardMenuOf, boardMoveOf, dropAskOf, moveContextOf } = await runner.import<BoardMoves>(join(REPO_ROOT, "src/panels/now/boardMoves.ts"));
   const { boardLaneOf } = await runner.import<BoardTiles>(join(REPO_ROOT, "src/panels/now/boardTiles.ts"));
@@ -487,9 +488,9 @@ try {
   }
   /**
    * INF-2935 (INF-2928 piece 2): the desktop task record's own reading of one task in each state it draws - its bar, its
-   * pill's tone and reason, its tabs, the attention sentence, the closed line, the fold under the goal, Drop task's
-   * question and the Crewmate tab's state - for the phone's record to replay. A wait carries no time here: the clock's
-   * words are each platform's own formatter.
+   * pill's tone and reason, why a start could not begin, its tabs, the attention sentence, the closed line, the fold under
+   * the goal, Drop task's question and the Crewmate tab's state - for the phone's record to replay. A wait carries no
+   * time here: the clock's words are each platform's own formatter.
    */
   function taskRecordReadings() {
     const now = Date.UTC(2026, 10, 6, 18, 0);
@@ -595,11 +596,8 @@ try {
     return { now, cases: cases.map(([name, patch, live]) => {
       const row = { ...base, ...patch } as unknown as TaskDetail;
       const read = taskWaitStatus(row, taskStatusOf(row, now), now);
-      const since = row.startAttempt?.since ?? (row.activity === "starting" ? row.startedAt : null);
-      const reason = row.startAttempt?.phase === "checking" ? "Checking whether it started"
-        : since != null && now - since >= 15_000 && (row.startAttempt?.phase === "preparing" || row.activity === "starting")
-          ? "Still starting. You can keep working."
-          : row.startNotice ? `Could not start. ${row.startNotice.reason}` : partsSentenceSpeaks(row) ? "" : read.reason;
+      const start = recordStartOf(row, now);
+      const reason = start.reason ?? (partsSentenceSpeaks(row) ? "" : read.reason);
       const bar = recordBarOf(row);
       const closed = recordClosedLineOf(row);
       const end = bar?.end === "drop-task" || bar?.end === "stop-task" ? bar.end : null;
@@ -607,7 +605,7 @@ try {
       const refusal = end ? dropRefusalOf(end, effects) : null;
       const question = end && !refusal ? dropQuestionOf(row.key, end, effects) : null;
       return { name, row, live: live ? { text: "", since: live.since } : null, bar, pillTone: recordPillToneOf(row),
-        status: { mark: read.mark, word: read.word, reason },
+        status: { mark: read.mark, word: read.word, reason }, notice: start.notice,
         tabs: taskTabsOf(null, taskTabFactsOf(row)).map((tab) => ({ kind: tab.kind, label: tab.label, count: tab.count })),
         crew: crewStateOf(row, live ? { taskId: row.id, text: "", since: live.since } : null),
         attention: recordAttentionOf(row, now),

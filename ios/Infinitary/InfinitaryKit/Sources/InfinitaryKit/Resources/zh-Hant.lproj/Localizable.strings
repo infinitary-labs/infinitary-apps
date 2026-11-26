@@ -540,6 +540,7 @@
 "cardRecordCare" = "謹慎度：%1$@";
 "cardRecordChecking" = "正在確認是否已開始";
 "cardRecordChildrenClosed" = "已關閉 %1$@/%2$@";
+"cardRecordCouldNotStart" = "無法開始。%1$@";
 "cardRecordDelivery" = "交付方式";
 "cardRecordDeliveryDirectPr" = "Pull request";
 "cardRecordDeliveryInPlace" = "就地建置";
@@ -2099,7 +2100,6 @@
 "phoneRecordClosedReleased" = "已發布";
 "phoneRecordClosedSuperseded" = "已被取代";
 "phoneRecordClosedWithNote" = "%1$@%3$@：%2$@";
-"phoneRecordCouldNotStart" = "無法開始";
 "phoneRecordDelivery" = "交付方式";
 "phoneRecordDeliveryBatched" = "批次 pull request";
 "phoneRecordDeliveryInPlace" = "就地建置";

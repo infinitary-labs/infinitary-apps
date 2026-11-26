@@ -21935,6 +21935,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `${closed} of ${total} closed`;
   }
+  function cardRecordCouldNotStart(input2) {
+    const reason = input2.reason;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر البدء. ${reason}`;
+      case "de":
+        return `Konnte nicht starten. ${reason}`;
+      case "es":
+        return `No se pudo iniciar. ${reason}`;
+      case "fr":
+        return `Démarrage impossible. ${reason}`;
+      case "ja":
+        return `開始できませんでした。${reason}`;
+      case "ko":
+        return `시작하지 못했어요. ${reason}`;
+      case "pt-BR":
+        return `Não foi possível iniciar. ${reason}`;
+      case "zh-Hans":
+        return `无法开始。${reason}`;
+      case "zh-Hant":
+        return `無法開始。${reason}`;
+      case "en-XA":
+        return `[Çöûļð ñöţ šţáŕţ. ${reason} ~~~~~~]`;
+      case "ar-XB":
+        return `‮Could not start. ‬${reason}`;
+    }
+    return `Could not start. ${reason}`;
+  }
   function cardRecordDelivery() {
     switch (currentLanguage()) {
       case "ar":
@@ -116203,6 +116231,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardRecordCare,
     cardRecordChecking,
     cardRecordChildrenClosed,
+    cardRecordCouldNotStart,
     cardRecordDelivery,
     cardRecordDeliveryDirectPr,
     cardRecordDeliveryInPlace,
@@ -119897,6 +119926,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardRecordCare": ["care"],
     "cardRecordChecking": [],
     "cardRecordChildrenClosed": ["closed", "total"],
+    "cardRecordCouldNotStart": ["reason"],
     "cardRecordDelivery": [],
     "cardRecordDeliveryDirectPr": [],
     "cardRecordDeliveryInPlace": [],

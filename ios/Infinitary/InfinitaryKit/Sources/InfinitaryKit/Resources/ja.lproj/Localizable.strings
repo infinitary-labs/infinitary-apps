@@ -540,6 +540,7 @@
 "cardRecordCare" = "慎重さ：%1$@";
 "cardRecordChecking" = "開始したか確認中";
 "cardRecordChildrenClosed" = "%2$@件中%1$@件終了";
+"cardRecordCouldNotStart" = "開始できませんでした。%1$@";
 "cardRecordDelivery" = "届け方";
 "cardRecordDeliveryDirectPr" = "プルリクエスト";
 "cardRecordDeliveryInPlace" = "その場で作成";
@@ -2099,7 +2100,6 @@
 "phoneRecordClosedReleased" = "リリース済み";
 "phoneRecordClosedSuperseded" = "置き換え済み";
 "phoneRecordClosedWithNote" = "%3$@ %1$@：%2$@";
-"phoneRecordCouldNotStart" = "開始できませんでした";
 "phoneRecordDelivery" = "届け方";
 "phoneRecordDeliveryBatched" = "一括プルリクエスト";
 "phoneRecordDeliveryInPlace" = "その場で作成";

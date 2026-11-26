@@ -306,7 +306,6 @@
   "phoneRecordClosedReleased": "リリース済み",
   "phoneRecordClosedSuperseded": "置き換え済み",
   "phoneRecordClosedWithNote": "{status} {age}：{note}",
-  "phoneRecordCouldNotStart": "開始できませんでした",
   "phoneRecordCrewEarlier": {
     "plural": "count",
     "other": "以前の{count}件の項目は表示されていません。"

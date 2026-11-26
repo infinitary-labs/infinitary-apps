@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "record-start-notice-everywhere",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A task that could not start says why in the same place on every screen",
+      "body": "On iPhone and iPad, a task whose start could not begin now says Could not start and why just above Drop task and its next step, as it does on your computer. Before, the phone said it beside the status instead. On your computer, that line now follows the language you chose.",
+      "picture": {
+        "dark": "record-start-notice-everywhere-dark.webp",
+        "light": "record-start-notice-everywhere-light.webp",
+        "alt": "An iPhone task record whose bar says Could not start and why above Drop task"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

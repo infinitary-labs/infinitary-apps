@@ -1,5 +1,6 @@
 import { seedTask } from "@core/tasks/seedTask";
 import { dropConfirmLead } from "@shared/recordDrop";
+import { type RecordStartInput, recordStartOf } from "@shared/recordStart";
 import type { TaskService } from "../../src/core/tasks/taskService";
 import { CLAUDE_CREW_PROMPT_MARKER } from "../e2e/crewScripts";
 
@@ -37,6 +38,27 @@ export async function seedRowMoves(
   const startReason = read?.moves?.["start-task"]?.text;
   if (!startReason) throw new Error("The row's Start must say why it cannot run");
   return { id: row.id, key: row.key, startReason, drop: dropConfirmLead(row.key), done: done.id };
+}
+
+/**
+ * INF-6022: a Backlog task whose start could not begin. The phone's record must say why in its bar, as the Mac's does,
+ * so what it must say is the Mac's record's reading of this task as the board carries it.
+ */
+export async function seedFailedStart(
+  tasks: TaskService,
+  board: () => Promise<{ tasks: (RecordStartInput & { id: string })[] }>,
+) {
+  const row = seedTask(tasks, {
+    id: "start-failed",
+    title: "Chart the sandbar",
+    status: "queued",
+    startPolicy: "on-request",
+  });
+  tasks.starts.returnStart(row.id, { kind: "failed", reason: "its working copy could not be made" });
+  const read = (await board()).tasks.find((task) => task.id === row.id);
+  const notice = read && recordStartOf(read, Date.now()).notice;
+  if (!notice) throw new Error("The record must say why the start could not begin");
+  return { id: row.id, notice };
 }
 
 /**

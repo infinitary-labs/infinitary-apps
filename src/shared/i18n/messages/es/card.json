@@ -306,6 +306,7 @@
   "cardRecordCare": "Cuidado: {care}",
   "cardRecordChecking": "Comprobando si se inició",
   "cardRecordChildrenClosed": "{closed} de {total} cerradas",
+  "cardRecordCouldNotStart": "No se pudo iniciar. {reason}",
   "cardRecordDelivery": "Entrega",
   "cardRecordDeliveryDirectPr": "Solicitud de incorporación de cambios",
   "cardRecordDeliveryInPlace": "Construido en el lugar",

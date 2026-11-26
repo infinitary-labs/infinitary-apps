@@ -268,6 +268,7 @@
   "cardRecordCare": "{care}把关",
   "cardRecordChecking": "正在确认它是否已开始",
   "cardRecordChildrenClosed": "已关闭 {closed} / {total}",
+  "cardRecordCouldNotStart": "无法开始。{reason}",
   "cardRecordDelivery": "交付方式",
   "cardRecordDeliveryDirectPr": "拉取请求",
   "cardRecordDeliveryInPlace": "就地构建",

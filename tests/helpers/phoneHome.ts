@@ -82,7 +82,7 @@ import { startPhonePushRelay } from "./phonePushRelay";
 import { CARD_RECORDINGS } from "./phoneRecordings";
 import { removeEveryDevice } from "./phoneRemove";
 import { raiseRevisedCard, reviseRevisedCard } from "./phoneRevisedCard";
-import { seedRowMoves, seedTalkTags, seedTalkWork } from "./phoneRowMoves";
+import { seedFailedStart, seedRowMoves, seedTalkTags, seedTalkWork } from "./phoneRowMoves";
 import { phoneSceneFixture } from "./phoneScene";
 import { phoneSecondHome } from "./phoneSecondHome";
 import { secretAskShown } from "./phoneSecretAsk";
@@ -3408,6 +3408,11 @@ export async function startPhoneHome(
           break;
         case "POST row-moves-fixture":
           result = await seedRowMoves(core.services.tasks, "phone-work", () =>
+            core.dispatch("inf:tasks:board", []),
+          );
+          break;
+        case "POST start-failed-fixture":
+          result = await seedFailedStart(core.services.tasks, () =>
             core.dispatch("inf:tasks:board", []),
           );
           break;

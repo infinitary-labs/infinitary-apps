@@ -384,7 +384,7 @@ Ubuntu 24.04 and 26.04 added by address run from Infinitary's Ubuntu package, no
 The owner turns on that computer's SSH server, then types the address and, when the package is missing or another version, that account's password once.
 The look also reads whether the account may install software (`sudo -n true`) and the installed `infinitary` version.
 An account that may not is refused as `cannot-install`, unless the package already matches this computer's version, in which case no password is asked.
-This computer gets the deb for its own version from the tap, checks it, and sends it.
+This computer gets the deb for its own version from the tap, checks it, and sends it (`RemoteLoginUbuntu`, `src/core/devices/remoteLoginUbuntu.ts`).
 Root copies the received deb from the account's cache into a root-owned directory under `/tmp`, checks that copy against the SHA-256, and gives only that copy to `apt-get`.
 Only after verification does root allow apt's unprivileged reader into the directory; unverified contents stay private even if the received path points at a root-only file.
 The directory and package allow apt's unprivileged reader to read, but only root may change them, so replacing the account's received file cannot change what apt installs.

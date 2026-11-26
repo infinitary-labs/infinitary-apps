@@ -404,7 +404,7 @@ export const RAW_WORDS_LEDGER: Readonly<Record<string, number>> = {
   "src/core/devices/phoneDoor.ts": 3,
   "src/core/devices/publishedBuilds.ts": 1,
   "src/core/devices/remoteDownload.ts": 23,
-  "src/core/devices/remoteLogin.ts": 1,
+  "src/core/devices/remoteLoginUbuntu.ts": 1,
   "src/core/devices/sshPassword.ts": 11,
   "src/core/devices/ubuntuPackage.ts": 44,
   "src/core/devices/windowsAnnounce.ts": 1,

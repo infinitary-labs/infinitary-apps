@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import type { Writable } from "node:stream";
 import { COMPUTER } from "@shared/deviceNames";
 import {
   type DeviceChip,
@@ -18,7 +17,6 @@ import {
   readComputerLinkAnswer,
 } from "@shared/phoneLink";
 import {
-  type BackgroundState,
   LINUX_INSTALLERS,
   type LinuxInstaller,
   type LinuxInstalls,
@@ -42,13 +40,15 @@ import type { BuildFlavor } from "@shared/userDataFolders";
 import { hostPlatform, thisDeviceSystem } from "../platform";
 import { copyCount } from "./appArchive";
 import { asDeviceName } from "./computerName";
-import { copyStream, type FarBuild, FarBuilds } from "./farBuilds";
+import { type FarBuild, FarBuilds, sendCopy } from "./farBuilds";
 import {
   type FarSystem,
   farFolderArgs,
   farSystemNamed,
   farSystemOf,
   LOOK,
+  onHomeMacWord,
+  REMOTE_PATH,
   REMOVE,
 } from "./farSystems";
 import { type HomeReach, homeAt } from "./homeAt";
@@ -65,21 +65,11 @@ import {
   readDownloadCount,
   UPDATE_STARTING,
 } from "./remoteDownload";
+import { afterLogoutLines, RemoteLoginUbuntu } from "./remoteLoginUbuntu";
 import { runSsh, SSH_FAILED, SSH_OPTIONS, SshMaster, type SshProgram, type SshResult } from "./ssh";
 import { type PasswordMethod, passwordMethods, placeOwnKey } from "./sshPassword";
 import { sshRefusal } from "./sshRefusal";
-import {
-  lingerOff,
-  PACKAGE_SETUP,
-  RECEIVE_DEB,
-  type SudoRight,
-  sudoInstallCommand,
-  sudoRejected,
-  UBUNTU_PACKAGE_BIN,
-  ubuntuInstallNeed,
-  ubuntuPackageRelease,
-  writeSecret,
-} from "./ubuntuPackage";
+import { PACKAGE_SETUP, type SudoRight, ubuntuPackageRelease } from "./ubuntuPackage";
 
 /**
  * Adding a Mac or a Linux computer by its address over SSH (docs/devices.md,
@@ -254,13 +244,6 @@ export type Look = {
   systemd?: boolean;
 };
 
-/**
- * An Ubuntu package that matches this computer's version there: `ready`, or
- * `linger-off` when the install just made it so but could not let that
- * user's work keep running after they log out, where systemd does not run.
- */
-type UbuntuReady = "ready" | "linger-off";
-
 const LOOK_TIMEOUT_MS = 90_000;
 const SEND_TIMEOUT_MS = REMOTE_LOGIN_TIME_LIMIT_MS;
 /** More than any system's pipe holds before SSH reads from it. */
@@ -269,9 +252,6 @@ const PIPE_HOLDS = 1024 * 1024;
 const COPY_EVERY_MS = 1_000;
 const IDLE_TIMEOUT_MS = 2 * 60_000;
 
-/** What a bootstrap's path may be: absolute, and nothing a shell or SSH would read. */
-const REMOTE_PATH = /^\/[A-Za-z0-9._/-]{1,1000}$/;
-
 export class RemoteLogin {
   /** Addresses and devices with an operation under way. */
   private readonly underWay = new Set<string>();
@@ -279,6 +259,8 @@ export class RemoteLogin {
   private readonly builds: FarBuilds;
   /** Setups from the welcome screen the person cancelled, by address, until they stop. */
   private readonly homeCancels = new Set<string>();
+  /** The Ubuntu package's install and update (`RemoteLoginUbuntu`). */
+  private readonly ubuntu: RemoteLoginUbuntu;
 
   constructor(private readonly options: RemoteLoginOptions) {
     this.builds =
@@ -288,6 +270,13 @@ export class RemoteLogin {
         published: null,
         chip: thisDeviceSystem().chip ?? null,
       });
+    this.ubuntu = new RemoteLoginUbuntu({
+      options,
+      builds: this.builds,
+      sshFor: (address) => this.sshFor(address),
+      refusedOver: (address, refusal, sending) => this.refusedOver(address, refusal, sending),
+      device: (deviceId) => this.device(deviceId),
+    });
   }
 
   /** Adds the Mac at `text` as a computer that runs work; answers it on the list, or rejects with the refusal or the question. */
@@ -501,7 +490,7 @@ export class RemoteLogin {
       withPassword: (address, password, step, attempt) =>
         this.withPassword(address, password, step, attempt),
       refusedOver: (address, refusal, sending) => this.refusedOver(address, refusal, sending),
-      installUbuntu: (look, at) => this.installUbuntu(look, at),
+      installUbuntu: (look, at) => this.ubuntu.installUbuntu(look, at),
       askLink: (address) => this.askLink(address),
       sshFor: (address) => this.sshFor(address),
       stepper: (address) => this.stepper(address, "add"),
@@ -603,7 +592,14 @@ export class RemoteLogin {
           )
             return step.packageAddressRefused();
           step.say("updating", remoteLoginWords.updating(device), { deviceId });
-          const outcome = await this.updateUbuntu(device, look, options, step, address, true);
+          const outcome = await this.ubuntu.updateUbuntu(
+            device,
+            look,
+            options,
+            step,
+            address,
+            true,
+          );
           if (!("asks" in outcome))
             this.options.pairing.rememberPackageUpdateAddress(deviceId, address);
           return outcome;
@@ -624,7 +620,8 @@ export class RemoteLogin {
         if (far.system === "linux" && this.builds.readsPublished()) {
           const looked = await this.look(address, "");
           if ("refusal" in looked) return step.refuse(looked.refusal, reachOf(looked.reach));
-          if (ubuntuPackageRelease(looked)) return this.updateUbuntu(device, looked, options, step);
+          if (ubuntuPackageRelease(looked))
+            return this.ubuntu.updateUbuntu(device, looked, options, step);
         }
         if (!this.builds.canSend(far, chip)) return step.refuse("cannot-send");
         await options.pause?.(() => step.refuse("out-of-reach"));
@@ -917,7 +914,7 @@ export class RemoteLogin {
       // The install put the package there but could not keep the work on after logout.
       let lingersNot = false;
       if (at.package) {
-        const installed = await this.installUbuntu(at.package, {
+        const installed = await this.ubuntu.installUbuntu(at.package, {
           address,
           name,
           step,
@@ -1224,247 +1221,6 @@ export class RemoteLogin {
     return this.options.connections
       ? this.options.connections.hold(deviceId, operation)
       : operation();
-  }
-
-  /**
-   * Installs the Ubuntu package when it is missing or another version, with
-   * the password on `sudo -S`'s input. `ready` once the package matches, or
-   * `linger-off` once this install put it there but could not let that
-   * user's work keep running after they log out (`LINGER_OFF_LINE`).
-   * A password that did not work is asked again; it is not logged.
-   */
-  private async installUbuntu(
-    look: Look,
-    at: {
-      address: string;
-      name: string;
-      step: ReturnType<RemoteLogin["stepper"]>;
-      secret: Buffer | null;
-      stage: "setting-up" | "finding" | "updating";
-      deviceId?: string;
-      /** Runs once the install goes ahead, past the password question and before anything is sent. */
-      beforeInstall?: () => Promise<void>;
-    },
-  ): Promise<RemoteLoginAddAnswer | UbuntuReady> {
-    const need = ubuntuInstallNeed(look, this.options.version ?? "");
-    if (need === "ready") return "ready";
-    if (need === "refused") return at.step.refuse("cannot-install", { name: at.name });
-    if (need === "ask" && !at.secret) {
-      return {
-        asks: "password",
-        address: at.address,
-        ...(look.user ? { user: look.user } : {}),
-        for: at.stage === "updating" ? "update" : "install",
-        ...(at.deviceId ? { deviceId: at.deviceId } : {}),
-      };
-    }
-    await at.beforeInstall?.();
-    const said = {
-      name: at.name,
-      ...(at.deviceId ? { deviceId: at.deviceId } : {}),
-      copy: { state: "preparing" as const },
-    };
-    at.step.say(
-      at.stage === "updating" ? "updating" : at.stage,
-      remoteLoginWords.gettingBuild(at.name),
-      said,
-    );
-    const linux = farSystemOf("Linux");
-    if (!linux) return at.step.refuse("other-system", { name: at.name });
-    const build = await this.builds.for(linux, "x64", "deb");
-    if ("refusal" in build) return at.step.refuse(build.refusal, { name: at.name });
-    if (build.form === "bundle") return at.step.refuse("failed", { name: at.name });
-    const sent = await this.sendDeb(at.address, build, at);
-    if (sent === "stopped") return at.step.stopped(at.name, "timeout");
-    if (sent === "failed") return at.step.refuse("failed", { name: at.name });
-    at.step.say(
-      at.stage === "updating" ? "updating" : at.stage,
-      remoteLoginWords.installing(at.name),
-      { name: at.name, ...(at.deviceId ? { deviceId: at.deviceId } : {}) },
-    );
-    const outcome = await this.runInstall(
-      at.address,
-      sent,
-      build.sha256,
-      need === "ask" ? at.secret : null,
-    );
-    if (outcome === "wrong") {
-      at.step.warn("password-wrong");
-      return {
-        asks: "password",
-        address: at.address,
-        ...(look.user ? { user: look.user } : {}),
-        wrong: true,
-        for: at.stage === "updating" ? "update" : "install",
-        ...(at.deviceId ? { deviceId: at.deviceId } : {}),
-      };
-    }
-    if (outcome === "mismatch") return at.step.refuse("build-unverified", { name: at.name });
-    // Stopped while the installer ran: it may already have installed it.
-    if (outcome === "stopped")
-      return at.stage === "updating"
-        ? at.step.uncertain(at.name)
-        : at.step.stopped(at.name, "timeout");
-    if (outcome === "linger-off") return "linger-off";
-    if (outcome !== "ok") return at.step.refuse("failed", { name: at.name });
-    return "ready";
-  }
-
-  /** Sends the checked deb and answers the path it was kept at, `stopped` by the time limit, or `failed`. */
-  private async sendDeb(
-    address: string,
-    build: Exclude<FarBuild, { form: "bundle" }>,
-    at: {
-      name: string;
-      step: ReturnType<RemoteLogin["stepper"]>;
-      stage: RemoteLoginStage;
-      deviceId?: string;
-    },
-  ): Promise<string | "stopped" | "failed"> {
-    const run = { id: `copy-${randomUUID()}` };
-    const copy = copyCount(
-      (bytes) =>
-        at.step.say(
-          at.stage === "updating" ? "updating" : at.stage,
-          remoteLoginWords.sending(at.name, bytes),
-          {
-            name: at.name,
-            ...(at.deviceId ? { deviceId: at.deviceId } : {}),
-            copy: { state: "sending", sent: bytes },
-            run,
-          },
-        ),
-      this.options.copyEveryMs ?? COPY_EVERY_MS,
-    );
-    const ran = await runSsh({
-      ...this.sshFor(address),
-      command: ["/bin/sh", "-c", RECEIVE_DEB, "firstmate", build.sha256],
-      stdin: (sink) => sendCopy(build, sink, copy.add),
-      timeoutMs: this.options.sendTimeoutMs ?? SEND_TIMEOUT_MS,
-    });
-    copy.end();
-    if (ran.stopped) return "stopped";
-    const path = /^infinitary:deb=(\/\S+)$/m.exec(ran.stdout)?.[1] ?? "";
-    if (ran.code !== 0 || !REMOTE_PATH.test(path)) return "failed";
-    return path;
-  }
-
-  /**
-   * Installs the deb already checked there. The password, when one is
-   * needed, is written to `sudo -S` and then zeroed by the caller. stderr
-   * is read only for sudo's own refusal, and is not logged; stdout only for
-   * the line that says linger could not be turned on (`linger-off`).
-   */
-  private async runInstall(
-    address: string,
-    debPath: string,
-    sha256: string,
-    secret: Buffer | null,
-  ): Promise<"ok" | "linger-off" | "wrong" | "mismatch" | "stopped" | "failed"> {
-    const ran = await runSsh({
-      ...this.sshFor(address),
-      command: sudoInstallCommand(debPath, sha256, secret !== null),
-      ...(secret ? { stdin: (sink: Writable) => writeSecret(secret, sink) } : {}),
-      timeoutMs: this.options.sendTimeoutMs ?? SEND_TIMEOUT_MS,
-    });
-    if (ran.stopped) return "stopped";
-    if (ran.code === 0) return lingerOff(ran.stdout) ? "linger-off" : "ok";
-    if (ran.code === 65) return "mismatch";
-    if (secret && sudoRejected(ran.stderr)) return "wrong";
-    if (ran.code === SSH_FAILED) return "failed";
-    return "failed";
-  }
-
-  /** Updates an Ubuntu package computer: the password again, then the new package, then a restart. */
-  private async updateUbuntu(
-    device: DeviceView,
-    look: Look,
-    options: { password?: string; pause?: SaveBeforeUpdate },
-    step: ReturnType<RemoteLogin["stepper"]>,
-    address = device.remoteLogin ?? "",
-    verifyReturn = false,
-  ): Promise<DeviceView | RemoteLoginPasswordQuestion> {
-    if (!verifyReturn && ubuntuInstallNeed(look, this.options.version ?? "") === "ready")
-      return step.refuse("current");
-    const secret = options.password ? Buffer.from(options.password, "utf8") : null;
-    // Its crew's work is saved once, past the password question and before
-    // the package is sent, or before `work update` when none is installed.
-    let saved = false;
-    const save = async () => {
-      if (saved) return;
-      saved = true;
-      await options.pause?.(() => step.refuse("out-of-reach"));
-    };
-    try {
-      const installed = await this.installUbuntu(look, {
-        address,
-        name: deviceLabel(device),
-        step,
-        secret,
-        stage: "updating",
-        deviceId: device.id,
-        beforeInstall: save,
-      });
-      if (installed !== "ready" && installed !== "linger-off") {
-        if ("asks" in installed && installed.asks === "password") return installed;
-        return step.refuse("failed");
-      }
-      await save();
-      if (verifyReturn) {
-        const name = deviceLabel(device);
-        step.say("updating", remoteLoginWords.starting(name), {
-          deviceId: device.id,
-          name,
-          copy: { state: "starting" },
-        });
-      }
-      const onHomeMac = onHomeMacWord(device);
-      const ran = await runSsh({
-        ...this.sshFor(address),
-        command: [
-          UBUNTU_PACKAGE_BIN,
-          "work",
-          "update",
-          "--from-home",
-          "--home",
-          this.options.pairing.identity().pin,
-          "--device",
-          device.id,
-          ...(onHomeMac ? ["--on-home-mac", onHomeMac] : []),
-        ],
-        timeoutMs: this.options.sendTimeoutMs ?? SEND_TIMEOUT_MS,
-      });
-      const outcome = readWorkOutcome(ran.stdout);
-      if (outcome?.firstmate === "updated") {
-        if (outcome.background === "unavailable" || outcome.background === "unknown") {
-          this.options.pairing.noteSystem(device.id, { automaticStartup: outcome.background });
-          step.caution([remoteLoginWords.startup(device, outcome.background)], {
-            deviceId: device.id,
-          });
-        }
-        if (!verifyReturn)
-          step.say("done", remoteLoginWords.updated(device, outcome.background), {
-            deviceId: device.id,
-          });
-        if (outcome.background === "failed")
-          step.caution(remoteLoginWords.notInBackground(device, "update"), { deviceId: device.id });
-        if (installed === "linger-off")
-          step.caution(afterLogoutLines(device, device.user ?? look.user, outcome.background), {
-            deviceId: device.id,
-          });
-        return this.device(device.id);
-      }
-      // Stopped by the time limit while `work update` ran there: it may already have updated.
-      if (ran.stopped) return step.uncertain(deviceLabel(device));
-      // The package is already there: a connection lost now is lost while sending.
-      if (ran.code === SSH_FAILED) {
-        const refused = await this.refusedOver(address, sshRefusal(ran.stderr), true);
-        return step.refuse(refused.refusal, reachOf(refused.reach));
-      }
-      return step.refuse("failed");
-    } finally {
-      secret?.fill(0);
-    }
   }
 
   /**
@@ -1791,21 +1547,6 @@ export class RemoteLogin {
   }
 }
 
-/**
- * After an Ubuntu install that could not turn on linger there, once the work
- * runs in the background or starts at the next login: the one line an
- * administrator runs there so it keeps running after `user` logs out. None
- * when it could not set itself up there, whose own lines say so.
- */
-function afterLogoutLines(
-  device: DeviceView,
-  user: string | undefined,
-  background: BackgroundState,
-): readonly string[] {
-  if (!user || (background !== "running" && background !== "at-login")) return [];
-  return remoteLoginWords.afterLogout(device, user);
-}
-
 function tokenField(
   key: "distro" | "release",
   value: string | undefined,
@@ -1826,18 +1567,6 @@ function pkgField(value: string | undefined): string {
 
 function sudoField(value: string | undefined): { sudo?: SudoRight } {
   return value === "free" || value === "password" || value === "no" ? { sudo: value } : {};
-}
-
-/**
- * Whether a computer runs on this Mac, as its list found where it joined
- * from (`onThisMac`), as an update's arguments say it (`--on-home-mac`);
- * empty while the list does not say. The update there keeps it on its
- * grant before it sets its agent up anew: this Mac's Update holds its SSH
- * connection to that computer, so the update cannot dial this Mac to hear
- * it (docs/helper.md, "Started by the home").
- */
-function onHomeMacWord(device: Pick<DeviceView, "onThisMac">): "true" | "false" | "" {
-  return device.onThisMac === undefined ? "" : device.onThisMac ? "true" : "false";
 }
 
 /** Why the work mode there would not join, as the home says it. */
@@ -1862,31 +1591,6 @@ type StepFacts = {
   run?: { id: string };
 };
 
-/**
- * Sends the copy into the other computer's input: a bundle as one gzipped
- * tar made as it goes, anything else as its file; `sent` hears the size of
- * each piece as it is handed over.
- */
-export function sendCopy(
-  build: FarBuild,
-  sink: Writable,
-  sent?: (bytes: number) => void,
-): Promise<void> {
-  const { stream, ended, stop } = copyStream(build);
-  // SSH may stop reading long before tar fills its output pipe (INF-320).
-  const closed = () => stop();
-  sink.once("close", closed);
-  sink.once("error", closed);
-  if (sent) stream.on("data", (chunk: Buffer) => sent(chunk.length));
-  stream.pipe(sink, { end: false });
-  return ended.finally(() => {
-    sink.off("close", closed);
-    sink.off("error", closed);
-    stream.unpipe(sink);
-    stop();
-  });
-}
-
 function linkNoneRefusal(none: ComputerLinkNone): JoinAtRefusal {
   switch (none) {
     case COMPUTER_LINK_NONE.notOpen:
@@ -1906,3 +1610,5 @@ function linkNoneRefusal(none: ComputerLinkNone): JoinAtRefusal {
 function reachOf(reach: RemoteLoginReach | undefined): { reach?: RemoteLoginReach } {
   return reach ? { reach } : {};
 }
+
+export { sendCopy } from "./farBuilds";

@@ -186,6 +186,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | unsafe data reader | 不安全資料讀取者 | A crewmate that reads words anyone can write. |
 | Usage | 用量 | Standard. |
 | usage record (on the Usage page) | 紀錄 | Counter 筆, as in 12 筆紀錄. |
+| user (another user account on this computer) | 使用者 | "as {user}" is 以 {user} 身分, as in 以另一位使用者身分執行. |
 | where the project lives | 專案所在處 | Used for the host in general; a named host follows 在, as in 在 GitHub 合併. |
 | working copy | 工作副本 | Not 工作樹 (worktree). |
 | workspace (the personal workspace) | 工作區 | Taiwan's software word; 工作空間 is avoided. |

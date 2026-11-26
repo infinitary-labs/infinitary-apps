@@ -5,7 +5,7 @@ import { awayWord, type ComputerReach } from "@shared/devices";
 import type { FmEvent } from "@shared/events";
 import { said, saidLine } from "@shared/i18n/said";
 import type { InvokeRequest, InvokeResponse, WorkInvokeChannel } from "@shared/ipc";
-import type { ComputerSignIns, signInPlace } from "@shared/signIns";
+import { type ComputerSignIns, signInPlace } from "@shared/signIns";
 import {
   type PlacedEventRecord,
   type PlacedRosterTask,
@@ -1637,8 +1637,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
 
   placeOf(deviceId: string): ReturnType<typeof signInPlace> {
     if (this.options.devicePlace) return this.options.devicePlace(deviceId);
-    const name = this.nameOf(deviceId);
-    return { label: name, where: `on ${name}`, who: name };
+    return signInPlace({ name: this.nameOf(deviceId), onThisMac: false });
   }
 
   private projectsOf(deviceId: string): string {

@@ -108,9 +108,9 @@
   "feedRunProjectHereInstead": "代わりに{here}実行するには、{project} の実行先を {computer} に設定してください。",
   "feedRunTaskHereInstead": "代わりに{here}実行するには、一等航海士に {task} を {computer} で実行するよう頼んでください。",
   "feedRunsOnAutomatic": "Infinitary が {name} の新しいタスクごとにコンピューターを選びます。開始済みのタスクは開始した場所に残ります。",
-  "feedRunsOnFromHere": "{name} は今後 {where} で実行されます。次のタスクはそちらで開始し、現在{here}実行中のタスクは{here}完了します。",
+  "feedRunsOnFromHere": "{name} は今後{where}実行されます。次のタスクはそちらで開始し、現在{here}実行中のタスクは{here}完了します。",
   "feedRunsOnHere": "{name} は今後 {computer} で実行されます。次のタスクは{here}開始します。",
-  "feedRunsOnThere": "{name} は今後 {where} で実行されます。次のタスクはそちらで開始し、実行中のタスクは開始した場所で完了します。",
+  "feedRunsOnThere": "{name} は今後{where}実行されます。次のタスクはそちらで開始し、実行中のタスクは開始した場所で完了します。",
   "feedStarted": "開始",
   "feedStopped": "停止",
   "feedTagCheckFinished": {

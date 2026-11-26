@@ -316,7 +316,7 @@
   "cardRevisionMore": "还有 {count} 个",
   "cardRevisionShowFewer": "收起",
   "cardSavedResetCrewWaits": "除非你使用一次已保存的重置，否则船员的工作会改用较弱的模型，或等到额度重置。",
-  "cardSavedResetCrewWaitsThere": "除非你使用一次已保存的重置，否则{where}的船员工作会改用较弱的模型，或等到额度重置。",
+  "cardSavedResetCrewWaitsThere": "除非你使用一次已保存的重置，否则船员{where}进行的工作会改用较弱的模型，或等到额度重置。",
   "cardSavedResetsNow": {
     "plural": "count",
     "other": "{account} 有 {count} 次已保存的重置可以立即使用，用来恢复额度。"

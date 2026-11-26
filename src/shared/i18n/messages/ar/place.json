@@ -1,5 +1,9 @@
 {
+  "placeAs": "باسم {user}",
   "placeHere": "هنا",
   "placeOn": "على {computer}",
+  "placeOnOther": "على الحاسوب الآخر",
+  "placeOther": "الحاسوب الآخر",
+  "placeRunningAs": "التشغيل باسم {user}",
   "placeThisComputer": "هذا الحاسوب"
 }

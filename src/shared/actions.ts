@@ -35,7 +35,7 @@ import { signInHost } from "./forgeKinds";
 import type { ForgesView } from "./forges";
 import { handoverLines } from "./handoverActions";
 import * as m from "./i18n/messages.generated.ts";
-import { englishOf, type Said, said } from "./i18n/said";
+import { englishOf, type Said, type SaidPart, said } from "./i18n/said";
 import { integrationLines, integrationsBrief } from "./integrationActions";
 import {
   INTEGRATIONS_SIGN_IN_HOST,
@@ -373,7 +373,7 @@ const DIRECTION_DONE = { add: "saved", revise: "revised", retire: "retired" } as
 export function runsOnDoneSaid(v: Record<string, unknown>): Said {
   return runsOnSaid(
     (v.repo as RepoView).name,
-    (v.where as string | null | undefined) ?? null,
+    (v.where as string | SaidPart | null | undefined) ?? null,
     v.fromHere !== false,
     (v.repo as RepoView).runsOn === AUTOMATIC_COMPUTER,
   );

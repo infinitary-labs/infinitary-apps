@@ -316,7 +316,7 @@
   "cardRevisionMore": "ほか{count}件",
   "cardRevisionShowFewer": "表示を減らす",
   "cardSavedResetCrewWaits": "保存済みのリセットを使わない限り、乗組員の作業は弱いモデルに切り替わるか、利用枠がリセットされるまで待ちます。",
-  "cardSavedResetCrewWaitsThere": "保存済みのリセットを使わない限り、{where}の乗組員の作業は弱いモデルに切り替わるか、利用枠がリセットされるまで待ちます。",
+  "cardSavedResetCrewWaitsThere": "保存済みのリセットを使わない限り、乗組員が{where}行う作業は弱いモデルに切り替わるか、利用枠がリセットされるまで待ちます。",
   "cardSavedResetsNow": {
     "plural": "count",
     "other": "{account} には今すぐ使える保存済みのリセットが {count} 回分あり、利用枠を回復できます。"

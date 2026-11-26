@@ -20,7 +20,7 @@ import {
 import { PLATFORM_ATTRIBUTE } from "../../../shared/platform";
 import { catalogEntry } from "../../../shared/providers";
 import { type RemoteLoginCopy, remoteLoginWords } from "../../../shared/remoteLogin";
-import { type DeviceSignIns, signInPlace } from "../../../shared/signIns";
+import { type DeviceSignIns, signInPlace, wordedPlace } from "../../../shared/signIns";
 import { runsForAnotherFirstmate, sshConnectionWords } from "../../../shared/sshConnection";
 import { sinceWhen } from "../devices/viewWords";
 
@@ -376,7 +376,7 @@ export function deviceSummary(device: DeviceView, signIns: DeviceSignIns | undef
       : m.settingsDevicesBringingWork();
   if (device.removal === "cleaning-up")
     return m.settingsDevicesRemovingSetUp({
-      where: signInPlace({ ...device, onThisMac: device.onThisMac ?? false }).where,
+      where: wordedPlace(signInPlace({ ...device, onThisMac: device.onThisMac ?? false })).where,
     });
   const parts = [
     ...controlling,

@@ -1,5 +1,5 @@
 import * as m from "@shared/i18n/messages.generated";
-import { type DeviceSignIns, signInPlace } from "@shared/signIns";
+import { type DeviceSignIns, signInPlace, wordedPlace } from "@shared/signIns";
 import { workSetupWords } from "@shared/workSetupWords";
 import { useState } from "react";
 import { Button } from "../design";
@@ -8,7 +8,7 @@ import { offersFixWork } from "./devicesWords";
 
 /** While there is no report, never mistake missing sign-in facts for an empty account list. */
 export function deviceSignInWaitLine(device: DeviceSignIns, home: string): string {
-  const { label, who } = signInPlace(device);
+  const { label, who } = wordedPlace(signInPlace(device));
   if (device.reach !== "in-reach")
     return (
       workSetupWords(label, device.workSetup, device.heldOnLocalNetwork) ?? awayNote(device) ?? ""
@@ -40,7 +40,9 @@ export function DeviceSignInWait({ device, line }: { device: DeviceSignIns; line
             <Button
               variant="secondary"
               size="sm"
-              aria-label={m.settingsDevicesFixItNamed({ device: signInPlace(device).label })}
+              aria-label={m.settingsDevicesFixItNamed({
+                device: wordedPlace(signInPlace(device)).label,
+              })}
               onClick={() => void retry()}
             >
               {m.settingsDevicesFixIt()}

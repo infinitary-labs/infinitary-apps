@@ -51,6 +51,8 @@ import XCTest
         throw PhoneError.refused("This check requires a disposable simulator.")
         #endif
         _ = try await home("remove")
+        // The home replays only what weighs less than reading again, which a light board this short would not.
+        _ = try await home("catch-up-board")
         let invitation = try await home("link")
         let link = try JoinLink(XCTUnwrap(invitation["link"] as? String))
         let phone = try PhoneIdentity.loadOrCreate()

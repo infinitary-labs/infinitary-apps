@@ -1,5 +1,5 @@
 ---
-source: 0c5daa67e1edf076
+source: 45896475239d4a1f
 title: Segredos
 description: Guarde as senhas e chaves de que sua tripulação precisa, permita cada uso em um cartão e veja o que as usou.
 ---
@@ -131,6 +131,11 @@ O Infinitary executa o comando ou lê o arquivo por conta própria, e guarda só
 Para um arquivo como um arquivo .env, **Ler** primeiro lista os nomes que ele contém.
 O tripulante recebe nomes, nunca um valor, e a cópia na outra ferramenta continua como está.
 Você escolhe os segredos na janela do Infinitary no computador onde seu imediato mora, não no celular.
+
+Se a ferramenta está em outro dos seus computadores que executam trabalho, diga o nome desse computador no seu pedido, e um tripulante que trabalha lá traz os segredos dele.
+O cartão continua aparecendo no computador onde seu imediato mora, com uma linha **No computador** que diz o nome do computador onde o comando é executado.
+Quando você escolhe **Trazer para Segredos**, esse computador executa o comando e envia só os segredos que você marcou, uma vez, pela conexão entre seus computadores.
+**Ler** envia uma vez cada valor que o arquivo contém, para que o cartão possa listar os nomes, e Segredos continua guardando só o que você marcar.
 
 ## Chaves das suas integrações {#keys-for-your-integrations}
 

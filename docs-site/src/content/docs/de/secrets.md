@@ -1,5 +1,5 @@
 ---
-source: 0c5daa67e1edf076
+source: 45896475239d4a1f
 title: Geheimnisse
 description: Bewahre die Passwörter und Schlüssel auf, die deine Crew braucht, erlaube jede Nutzung auf einer Karte und sieh, was sie genutzt hat.
 ---
@@ -131,6 +131,11 @@ Infinitary führt den Befehl selbst aus oder liest die Datei selbst und behält 
 Bei einer Datei wie einer .env-Datei listet **Datei lesen** zuerst die Namen auf, die sie enthält.
 Das Crewmitglied bekommt Namen, nie einen Wert, und die Kopie im anderen Werkzeug bleibt, wie sie ist.
 Du wählst die Geheimnisse im Fenster von Infinitary auf dem Computer, auf dem dein erster Offizier lebt, nicht auf deinem Telefon.
+
+Wenn das Werkzeug auf einem anderen deiner Computer liegt, der Arbeit ausführt, nenn diesen Computer in deiner Anfrage, und ein Crewmitglied dort übernimmt die Geheimnisse von ihm.
+Die Karte erscheint trotzdem auf dem Computer, auf dem dein erster Offizier lebt, mit einer Zeile **Auf Computer**, die den Computer nennt, auf dem der Befehl läuft.
+Wenn du **In Geheimnisse übernehmen** wählst, führt dieser Computer den Befehl aus und schickt nur die angehakten Geheimnisse einmal über die Verbindung zwischen deinen Computern.
+**Datei lesen** schickt jeden Wert der Datei einmal, damit die Karte ihre Namen auflisten kann, und Geheimnisse behält trotzdem nur, was du anhakst.
 
 ## Schlüssel für deine Integrationen {#keys-for-your-integrations}
 

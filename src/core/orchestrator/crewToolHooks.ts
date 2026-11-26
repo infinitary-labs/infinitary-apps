@@ -291,9 +291,14 @@ export class CrewToolHooks {
    * told to ask what its command there cannot ask.
    */
   private secretUsesThere(uses: SecretUsesElsewhere, machine: string): SecretUsesElsewhere {
-    if (uses.ask && this.core.options.machines?.takesSecretAsks?.(machine)) return uses;
-    const { ask: _ask, ...withoutAsk } = uses;
-    return withoutAsk;
+    const machines = this.core.options.machines;
+    const { ask, bring, ...rest } = uses;
+    return {
+      ...rest,
+      ...(ask && machines?.takesSecretAsks?.(machine) ? { ask } : {}),
+      // A bring there, likewise, only where that computer's command offers it.
+      ...(bring && machines?.takesSecretBrings?.(machine) ? { bring } : {}),
+    };
   }
 
   /**

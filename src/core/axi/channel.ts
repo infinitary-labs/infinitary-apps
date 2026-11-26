@@ -1031,7 +1031,7 @@ export class AxiChannel {
         case "secrets.status": {
           const id = (message.input as { request: string }).request;
           // A bring answers by the id it was asked with: its state and each outcome, never a value.
-          const bring = secrets.bringStatus?.(id);
+          const bring = await secrets.bringStatus?.(id);
           if (bring) return { bring };
           const receipt = await secrets.status(id);
           return receipt ? { receipt } : { unavailable: true };
@@ -1057,7 +1057,7 @@ export class AxiChannel {
           // An ask this task is waiting on is withdrawn by the same id it asked with.
           if (await secrets.cancelAsk?.(request))
             return { ask: { ask: request, state: "withdrawn" } };
-          if (secrets.cancelBring?.(request))
+          if (await secrets.cancelBring?.(request))
             return { bring: { bring: request, state: "withdrawn" } };
           const receipt = await secrets.cancel(request);
           return receipt ? { receipt } : { unavailable: true };

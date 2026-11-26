@@ -49,16 +49,12 @@ import {
   keptWorkSchema,
   readableRefSchema,
 } from "./workCopies";
-import { commitSchema, placedTaskIdSchema, workingCopyBaseSchema } from "./workIdentity";
+import { asked, commitSchema, placedTaskIdSchema, workingCopyBaseSchema } from "./workIdentity";
 import { knowledgeReadInputSchema, recordKnowledgeInputSchema } from "./workKnowledge";
-import {
-  placedSecretAskAnswerSchema,
-  placedSecretAskInputSchema,
-  placedSecretTakeAnswerSchema,
-  placedSecretUseAnswerSchema,
-  placedSecretUseInputSchema,
-} from "./workSecrets";
+import { secretWorkRequests } from "./workSecretRequests";
 import { updateSaveOrders } from "./workUpdate";
+
+export { placedSecretsSchema } from "./workSecrets";
 
 /**
  * A crewmate's conversation held on a computer that runs work (piece 8,
@@ -88,7 +84,12 @@ import { updateSaveOrders } from "./workUpdate";
  */
 
 /** A task id as the home mints it; it names a folder on the computer, so nothing else passes. */
-export { placedTaskIdSchema, type WorkingCopyBase, workingCopyBaseSchema } from "./workIdentity";
+export {
+  placedTaskIdSchema,
+  type WorkingCopyBase,
+  workCallIdSchema,
+  workingCopyBaseSchema,
+} from "./workIdentity";
 
 /**
  * The refs a source bundle may name its starting work by
@@ -97,9 +98,6 @@ export { placedTaskIdSchema, type WorkingCopyBase, workingCopyBaseSchema } from 
  * as `release/1.2`, crosses under a stand-in ref the sender makes.
  */
 export const SOURCE_REF_FROM = /^refs\/(heads|infinitary\/kept|fm3000\/kept)\/[A-Za-z0-9_/-]+$/;
-
-/** The computer's own id for one callback, the same each time it asks again. */
-export const workCallIdSchema = z.string().min(1).max(128);
 
 /**
  * An order's id, taken from what the home saved before it asked: the inbox
@@ -300,6 +298,8 @@ export const placedSpecSchema = z.object({
   secretUses: z.boolean().optional(),
   /** With `secretUses`, asks to keep a secret raised on the home (`secret-asks-elsewhere.md`). */
   secretAsks: z.boolean().optional(),
+  /** With `secretUses`, brings from another tool run there and kept on the home (`secret-brings-elsewhere.md`). */
+  secretBrings: z.boolean().optional(),
   /**
    * Only reattach to the conversation held there (`reattach-only-open.md`):
    * one held and running, or idle with the same contract, answers its
@@ -422,10 +422,6 @@ export const handoverFileSchema = z.object({
 });
 export type HandoverFile = z.infer<typeof handoverFileSchema>;
 
-function asked<T extends z.ZodRawShape>(shape: T) {
-  return z.tuple([z.object({ task: placedTaskIdSchema, callId: workCallIdSchema, ...shape })]);
-}
-
 /**
  * A card a crewmate on that computer emitted, as declared: an action may come
  * without a label, which the home's host words or refuses (FI3-249).
@@ -522,22 +518,6 @@ const integrationAnswerSchema = z.object({
   data: z.record(z.string(), z.unknown()).optional(),
   text: z.string().optional(),
   refused: z.enum(["refused", "invalid"]).optional(),
-});
-
-/**
- * The captain's secrets as a task on another computer lists them: each
- * one's reference, name, saved version and environment label, and nothing
- * else - no value, receipt or use crosses to that computer.
- */
-export const placedSecretsSchema = z.object({
-  secrets: z.array(
-    z.object({
-      ref: z.string(),
-      label: z.string(),
-      version: z.string(),
-      environment: z.string().optional(),
-    }),
-  ),
 });
 
 /**
@@ -863,47 +843,8 @@ export const workRequests = {
     request: asked({ input: z.object({ target: z.string().min(1).max(4200) }) }),
     response: filesAnswerSchema,
   },
-  /**
-   * The Secrets command's list and show: the home reads its own catalog
-   * for the crewmate, the same one a crewmate of its own lists
-   * (docs/secrets.md, "Current command seam"). It answers metadata only;
-   * a use's values leave the home only through `inf:work:secret-take`.
-   */
-  "inf:work:secrets": {
-    effect: "read",
-    request: asked({ input: z.strictObject({}) }),
-    response: placedSecretsSchema,
-  },
-  /** The Secrets command's uses there, decided on the home, answered with receipts, never kept. */
-  "inf:work:secret-use": {
-    effect: "change",
-    repeats: "safe",
-    request: asked({ input: placedSecretUseInputSchema }),
-    response: placedSecretUseAnswerSchema,
-  },
-  /**
-   * An approved use's values, taken once and never kept in the call ledger,
-   * or the state it ended in. The take spends the values, and the same call
-   * asked again after a cut-off receives the same values until the use ends.
-   */
-  "inf:work:secret-take": {
-    effect: "change",
-    repeats: "safe",
-    request: asked({ request: z.string().min(1) }),
-    response: placedSecretTakeAnswerSchema,
-  },
-  /**
-   * The Secrets command's ask to keep a secret there, raised on the home's
-   * own card (`secret-asks-elsewhere.md`; docs/secrets.md, "Asking to keep a
-   * secret"): names, places, a reason and the asker's id, or a withdrawal,
-   * never a value. Asked again with a waiting ask's id, it raises nothing new.
-   */
-  "inf:work:secret-ask": {
-    effect: "change",
-    repeats: "safe",
-    request: asked({ input: placedSecretAskInputSchema }),
-    response: placedSecretAskAnswerSchema,
-  },
+  // The Secrets command's requests there (docs/secrets.md, "On a computer that runs work").
+  ...secretWorkRequests,
   /** One card picture's verified copy, asked before the card that names it. */
   "inf:work:picture": {
     effect: "change",

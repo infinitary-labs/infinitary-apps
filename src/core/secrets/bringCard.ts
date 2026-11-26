@@ -60,6 +60,7 @@ export function bringCardBody(bring: WaitingBring, notice?: string): string {
     ${notice ? `<p role="status">${text(notice)}</p>` : ""}
     <dl aria-label="The bring">
       ${row(words.from, text(words.fromValue(bring.tool)))}
+      ${bring.computer ? row(words.computer(), `<span data-secret-bring-computer>${text(bring.computer.label)}</span>`) : ""}
       ${what}
       ${
         bring.unlocks

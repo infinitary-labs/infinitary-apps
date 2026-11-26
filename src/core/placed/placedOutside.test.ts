@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import {
+  chmodSync,
   existsSync,
   mkdirSync,
   readdirSync,
@@ -17,6 +18,7 @@ import { FILES_COMMAND } from "@shared/files";
 import { GOOGLE_DATA_KEPT, NOTICE_ACCEPTED } from "@shared/integrations";
 import { PROTOCOL_VERSION } from "@shared/ipc";
 import { outsideDataDeletedNote } from "@shared/savedOutsideData";
+import { secretBringRows } from "@shared/secretBring";
 import { secretKeepFields } from "@shared/secrets";
 import { decode } from "@toon-format/toon";
 import Database from "better-sqlite3";
@@ -49,11 +51,13 @@ import { crewmatePlacedDir, crewmateSessionsDir, crewmateTempDir } from "../path
 import { backgroundJobReceipt } from "../pi/bashWords";
 import { CREWMATE_STOPS_LINE } from "../pi/piResources";
 import type { SecretAskEnded } from "../secrets/asks";
+import { type SecretBringEnded, SecretBrings } from "../secrets/bring";
 import {
   CREWMATE_SECRETS_CATALOG_LINE,
   CREWMATE_SECRETS_LINE,
   CREWMATE_SECRETS_THERE_LINE,
   SECRET_ASK_WORDS,
+  SECRET_BRING_WORDS,
   SECRETS_COMMAND,
 } from "../secrets/commandWords";
 import { ProtectedSecrets } from "../secrets/protected";
@@ -787,6 +791,148 @@ describe("asking to keep a secret from a computer that runs work", () => {
     expect(system).toContain(CREWMATE_SECRETS_THERE_LINE);
     expect(system).not.toContain(CREWMATE_SECRETS_LINE);
     expect(asked.output).toContain(SECRET_ASK_WORDS.notHere);
+    expect(raised).toEqual([]);
+    expect(heard).toEqual([]);
+  });
+});
+
+// INF-4718's plan, piece 4, approved by the captain: "a way for users who
+// have secrets stored in automic vault to easily migrate secrets into
+// infinitary... we need to handle secrets safely not leaking it in plain text
+// into unintended places". The plan: "a tool on a computer that runs work:
+// bring runs there and values cross once to the home over the authenticated
+// work route, with a named contract change." The bring runs in the
+// crewmate's shell there through the real launcher, command process and task
+// channel, and crosses the real connection to this Mac's Secrets, whose
+// custody is a disposable stand-in; the tool is a /bin/sh program there
+// printing an invented value.
+describe("bringing secrets from a tool on a computer that runs work", () => {
+  let entry: string;
+  beforeAll(async () => {
+    entry = await bundleAxiProcess();
+  }, 60_000);
+
+  beforeEach(onlyFixtureTools);
+
+  const VALUE = "av_invented_placed_bring_value";
+
+  /** This Mac's Secrets, a computer joined to it that lists `changes`, and a crewmate there that brings once. */
+  async function bringThere(changes?: readonly string[]) {
+    const raised: Omit<Card, "author" | "priority" | "status" | "createdAt">[] = [];
+    const heard: { task: string; ended: SecretBringEnded }[] = [];
+    const owner = await ProtectedSecrets.open({
+      dir: scratchDir("infinitary-placed-secret-brings-"),
+      custody: disposableCustody(),
+      initialize: true,
+      environment: () => ({}),
+      now,
+      authentication: { available: async () => true, confirm: async () => true },
+    });
+    const settings = new SecretsSettings({
+      open: async () => owner,
+      raise: () => {},
+      withdraw: () => {},
+      settled: () => {},
+      changed: () => {},
+      now,
+    });
+    const brings = new SecretBrings({
+      owner: async () => owner,
+      offered: true,
+      environment: () => hostEnvironment.hostEnv(),
+      raise: (card) => {
+        raised.push(card);
+      },
+      withdraw: () => {},
+      changed: () => {},
+      brought: (task, ended) => {
+        heard.push({ task, ended });
+      },
+      taskOpen: () => true,
+      taskTitle: () => "Move the deploy key",
+    });
+    const computers = new Set<string>();
+    const tools = realpathSync(scratchDir("infinitary-placed-bring-tool-"));
+    const av = join(tools, "av");
+    writeFileSync(av, `#!/bin/sh\nprintf 'DEPLOY_TOKEN=${VALUE}\\0'\n`);
+    chmodSync(av, 0o755);
+    const from = JSON.stringify({
+      tool: "Automic Vault",
+      source: { run: [av], folder: tools },
+      reads: "env0",
+      secrets: [{ name: "DEPLOY_TOKEN" }],
+    });
+    const at = await world(undefined, {
+      jobs: true,
+      taskChannel: entry,
+      secretRuns: true,
+      ...(changes ? { changes } : {}),
+      secrets: {
+        forTask: (task) => settings.commandFor({ task }),
+        elsewhere: (task) => ({
+          use: (computer, input) => settings.elsewhere({ task, computer }, input),
+          take: (computer, request, call) => settings.take({ task, computer }, request, call),
+          gone: (computer) => {
+            settings.elsewhereGone({ task, computer: computer.id });
+            brings.gone(task, computer);
+          },
+          bring: (computer, input) => {
+            computers.add(computer.label);
+            return brings.elsewhere(task, computer, input);
+          },
+        }),
+      },
+    });
+    model([
+      {
+        tools: [
+          shellCommand(
+            `infinitary-secrets-axi bring --from '${from}' --reason 'Move the deploy key' --id deploy`,
+          ),
+        ],
+      },
+      { text: "Asked to bring the deploy key." },
+    ]);
+    const requests = api.requests.length;
+    await at.start("t-bring");
+    const home = at.home();
+    await expect
+      .poll(() => home.tasks.get("t-bring")?.outcome)
+      .toBe("Asked to bring the deploy key.");
+    return {
+      at,
+      owner,
+      brings,
+      raised,
+      heard,
+      computers,
+      brought: shellAnswer(api.requests[requests + 1]),
+    };
+  }
+
+  it("raises this Mac's card naming that computer, runs the tool there on the press and keeps the value, never saving it elsewhere", async () => {
+    const { at, owner, brings, raised, heard, computers, brought } = await bringThere();
+    expect(brought.exit).toBe(0);
+    expect(brought.output).toContain("waiting");
+    const card = raised.at(-1);
+    expect(card?.taskId).toBe("t-bring");
+    expect(card?.body).toContain("data-secret-bring-computer");
+    // The work route named the computer; the card names it beside the tool.
+    expect([...computers]).toEqual(["Mac mini"]);
+    expect(card?.body).toMatch(/data-secret-bring-computer[^>]*>Mac mini</);
+    const offer = card && secretBringRows({ ...card, author: "host" });
+    if (!offer) throw new Error("The card offers no rows.");
+    await brings.bringInto({ pass: offer.pass, picked: [offer.rows[0]?.id ?? ""] });
+    await expect.poll(() => heard.at(-1)?.ended.state).toBe("kept");
+    expect((await owner.metadata()).map((secret) => secret.label)).toEqual(["DEPLOY_TOKEN"]);
+    expect(filesHolding(at.dataDir, VALUE)).toEqual([]);
+    expect(filesHolding(at.dataDir, Buffer.from(VALUE).toString("base64"))).toEqual([]);
+  });
+
+  it("a computer without the change says bringing is not offered there, and nothing is raised here", async () => {
+    const older = CONTRACT_CHANGES.names.filter((name) => name !== "secret-brings-elsewhere");
+    const { raised, heard, brought } = await bringThere(older);
+    expect(brought.output).toContain(SECRET_BRING_WORDS.notHere);
     expect(raised).toEqual([]);
     expect(heard).toEqual([]);
   });

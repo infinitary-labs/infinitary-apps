@@ -387,7 +387,7 @@ export function startHomeCrew({
     ...(host.secrets
       ? {
           secrets: {
-            // A bring from another tool rides the same command, here only (docs/secrets.md).
+            // A bring from another tool here rides the same command; one there arrives as `elsewhere.bring` (docs/secrets.md).
             forTask: (taskId: string) => ({
               ...later.secrets().commandFor({ task: taskId }),
               ...later.secretBrings().commandFor(taskId),
@@ -397,10 +397,14 @@ export function startHomeCrew({
                 later.secrets().elsewhere({ task: taskId, computer }, input),
               take: (computer, request, call) =>
                 later.secrets().take({ task: taskId, computer }, request, call),
-              gone: (computer) =>
-                later.secrets().elsewhereGone({ task: taskId, computer: computer.id }),
+              gone: (computer) => {
+                later.secrets().elsewhereGone({ task: taskId, computer: computer.id });
+                later.secretBrings().gone(taskId, computer);
+              },
               // An ask there is the same ask as one here: the task's own, raised on this Mac's card.
               ask: (_computer, input) => later.secrets().askElsewhere(taskId, input),
+              // A bring there is kept here; the card names that computer.
+              bring: (computer, input) => later.secretBrings().elsewhere(taskId, computer, input),
             }),
           },
         }

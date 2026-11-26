@@ -131,6 +131,11 @@ For a file such as a .env file, **Read it** first lists the names it holds.
 The crewmate gets names, never a value, and the copy in the other tool stays as it is.
 You pick the secrets in Infinitary's window on the computer where your first mate lives, not on your phone.
 
+When the tool is on another of your computers that runs work, name that computer in your request, and a crewmate working there brings from it.
+The card still appears on the computer where your first mate lives, with an **On computer** line naming the computer the command runs on.
+When you choose **Bring into Secrets**, that computer runs the command and sends only the secrets you ticked, once, over the connection between your computers.
+**Read it** sends every value the file holds once, so the card can list their names, and Secrets still keeps only what you tick.
+
 ## Keys for your integrations
 
 When you sign in to Google or to an MCP server, or add an MCP server with keys, in Settings → **Integrations**, Infinitary keeps those keys in Secrets.

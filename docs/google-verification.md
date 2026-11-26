@@ -4,7 +4,7 @@ This page owns how Google's data moves through the app and what the app does aga
 Each person signs in as their own Google client, so Infinitary submits nothing to Google for verification and holds no registered client; the privacy copy for Google lives on the website.
 The implementation is described in [Integrations](integrations.md#google).
 
-## Architecture and data inventory for reviewers
+## Architecture and data inventory
 
 Infinitary is a desktop application, with an iPhone and iPad app that controls it, not a hosted mail service.
 The computer running the first mate makes OAuth, Gmail and Calendar requests directly to Google.
@@ -68,7 +68,7 @@ Infinitary takes the second route, in three layers:
 
 Model Armor is not used: it runs in a Google Cloud project with billing, so every message would pass either through a service Infinitary runs, which the app does not have for this: the one service of ours the person's work passes through is the phone push relay, which forwards only cards sealed for a paired phone and cannot read them (`docs/phone-push.md`); or through each person's own Cloud project.
 A local classifier that judges whether words try to steer an agent is not used either: it would be the host's verdict on natural language, which the project's principles leave to the agent (`docs/principles.md`, "Put ambiguous judgments in agent instructions" and "Build the agent's reach, never its verdicts").
-The fence makes a model less likely to follow words it read, but it cannot guarantee that a model never does, so only Google's review decides whether this protection is enough.
+The fence makes a model less likely to follow words it read, but it cannot guarantee that a model never does, so the person's own judgment about what to connect and approve stays part of the protection.
 
 ### Ways out without an ask
 

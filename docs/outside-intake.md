@@ -115,7 +115,7 @@ The mark does the labeling and closing, so a round sends no label or close reque
 | `declined` | an idea or a pull request that goes against `STRATEGY.md`, a bug that is not one, a bug its reproduce step did not reproduce and the maintainer chose to close, an issue whose Build row the maintainer marked Don't file, or an issue whose promised work stopped | the reason, naming the line of `STRATEGY.md` it rests on, the version and steps the reproduce step tried, or that the maintainer stopped the work without shipping it |
 | `answered` | a question answered, or a bug already fixed in a release | the answer, or the release that fixed it |
 | `changes-requested` | a pull request that needs changes first | each change, plainly |
-| `released` | an `accepted` issue whose work shipped in a release | thanks to its reporter by name, and the first release that holds all of the work, saying when it is an alpha; it closes the issue if it is still open |
+| `released` | an `accepted` issue whose work shipped in a release | thanks to its reporter by name, and the first release that holds all of the work, saying when it is an alpha and, then, that an alpha is usually promoted to stable within a day; it closes the issue if it is still open |
 
 An idea is read as a symptom of a problem: the reply names the problem it found and whether the project already plans for it.
 A pull request's `accepted` row on the approval card also says whether the change restores behavior the project promised, adds something a person turns on, or changes what happens by default, so the maintainer sees it at the tick.
@@ -225,7 +225,7 @@ At its moment, the waiting task's crewmate reads the issue and drafts one reply 
 
 - **The work shipped.**
   Once at least one wait shipped a change, and every wait that ships a change merged and is in a release, it drafts the thank-you with the `released` mark.
-  It names the newest of those first releases, the first one that holds all of the work, and says when that release is an alpha.
+  It names the newest of those first releases, the first one that holds all of the work, and says when that release is an alpha, adding that an alpha release is usually promoted to stable within a day.
   The mark closes the issue as completed if it is still open, so the reporter is thanked and the issue closed once, whether or not a change closed it before.
   While a merged wait is in no release yet, the first mate holds the task until the work ships in a release (`docs/task-graph.md`, "A side-effect task").
 - **The work stopped.**

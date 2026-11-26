@@ -1046,6 +1046,10 @@
                     "minLength": 1,
                     "maxLength": 64
                   },
+                  "allProjects": {
+                    "type": "boolean",
+                    "const": true
+                  },
                   "replaces": {
                     "type": "string",
                     "minLength": 1,
@@ -26117,6 +26121,15 @@
                         "line"
                       ]
                     }
+                  },
+                  "focusedProjectId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  },
+                  "allProjects": {
+                    "type": "boolean",
+                    "const": true
                   }
                 }
               }

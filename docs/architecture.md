@@ -144,7 +144,7 @@ An explicitly named registered project wins; a clear follow-up inherits its refe
 Each ordinary project has optional scope text set in Settings or by talking; the personal workspace takes none.
 A separate prominent scope snapshot lists all ordinary projects and "not set" for empty scopes, only after a project or scope changes or after context loss.
 Session attachment (including rebound and restart) and a backend-neutral successful-compaction event invalidate the in-process shown snapshot, so the next turn carries scopes again.
-The per-turn project index and focus hint do not repeat them, and the host never judges scope fit.
+The per-turn project index and project filter line do not repeat them, and the host never judges scope fit.
 
 **Context discipline** (context held as a variable rather than replayed, deliberately without an IPython runtime): the context is a compact index (repos, started crew, the backlog's count, quota one-liner) served whole once per conversation and then as changes (`docs/orchestrator-contract.md`, "What a context carries"), and `crew_status`, `tasks` and `open_work` are the query side; the host - the **crew supervisor** plus SQLite - is the authoritative registry, so the agent's transcript stays lossy and compactable without ever losing the fleet.
 `spawn_crewmate` follows the admission-handle discipline: it returns the task id immediately and results arrive only as `[fm-op]` messages through the **durable inbox** (delivered when the agent session is idle, surviving app quits; the wake diet, P3/WI-13, holds the first pending wake a short window so a burst drains as one turn, and a captain turn carries the pending wakes with it), and an unknown `repo_id` rejects the spawn loudly instead of silently defaulting.

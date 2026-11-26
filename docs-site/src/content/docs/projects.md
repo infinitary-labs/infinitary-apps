@@ -133,7 +133,8 @@ While a project is in focus:
 - Cards about other projects wait until the focus changes.
   Nothing is closed, and every project still sends notifications.
 - A short line beside the pill says how many tasks wait on you elsewhere, such as "2 waiting elsewhere".
-- Your first mate puts new work you ask for in that project, unless you name another.
+- Your first mate hears the focus with each message you send.
+  Unless you name another project, it puts new work in that project, and its answers and its actions on many tasks cover only that project and say what they left out.
 
 Press the **×** beside the pill (**Show all projects**), or pick **All projects** in the row, to see everything again.
 Infinitary remembers your focus when you restart it.

@@ -291,6 +291,7 @@ export type FirstmateApi = {
             taskId?: string;
             pastCardId?: string;
             focusedProjectId?: string;
+            allProjects?: true;
             replaces?: string;
           },
     ) => Promise<{ ok: true }>;
@@ -740,6 +741,8 @@ export type FirstmateApi = {
               mimeType: "image/png" | "image/jpeg" | "image/gif" | "image/webp";
               data: string;
             }>;
+            focusedProjectId?: string;
+            allProjects?: true;
           },
       submission?: CardSubmission,
     ) => Promise<CardThread>;

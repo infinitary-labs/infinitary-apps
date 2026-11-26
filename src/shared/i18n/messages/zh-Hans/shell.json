@@ -62,7 +62,7 @@
   "shellGateRecoveryTitle": "在这台电脑上设置你的大副",
   "shellGateRunLine": "为 {computer} 上的大副连接一个订阅。它会从这里登录。",
   "shellGateStaysOn": "请选一台保持开机的电脑。其他电脑需要它保持运行。",
-  "shellGateStillNeeds": "你的大副还需要一个能应答的账号：Codex、Grok、Claude、Kimi Code、Copilot、使用 API 密钥的 OpenRouter，或使用 AWS 登录的 Amazon Bedrock。",
+  "shellGateStillNeeds": "你的大副还需要一个能应答的账号：Codex、Grok、Claude、Kimi Code、Copilot、OpenCode Go、使用 API 密钥的 OpenRouter，或使用 AWS 登录的 Amazon Bedrock。",
   "shellGateTitle": "连接一个订阅即可开始",
   "shellGateWhere": "我应该住在哪里？请选一台尽量保持开机的电脑。",
   "shellKeyReminderHint": "按一次后不再显示",

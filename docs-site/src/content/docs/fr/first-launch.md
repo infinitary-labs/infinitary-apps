@@ -1,5 +1,5 @@
 ---
-source: c16d193883332656
+source: 042bc7f3959ec370
 title: Premier lancement
 description: Ce qu’Infinitary affiche la première fois que vous l’ouvrez, comment choisir où vit votre second, comment connecter un abonnement et comment ajouter votre premier projet.
 ---
@@ -40,13 +40,14 @@ Rien d’autre ne fonctionne tant qu’aucun abonnement ne peut répondre à vot
 ## Connecter un abonnement {#connect-a-subscription}
 
 Choisissez **Cet ordinateur** pour garder votre second ici.
-Un bouton apparaît pour chaque fournisseur que votre second peut utiliser : Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter, Amazon Bedrock et API personnalisée.
+Un bouton apparaît pour chaque fournisseur que votre second peut utiliser : Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter, Amazon Bedrock et API personnalisée.
 
 1. Choisissez le bouton de votre fournisseur.
 2. Connectez-vous de la façon que demande ce fournisseur.
    Certains ouvrent la page de connexion dans votre navigateur.
    Copilot et Kimi Code affichent un code : appuyez sur **Copier le code**, puis saisissez-le sur le site du fournisseur.
    OpenRouter demande une clé API que vous collez.
+   OpenCode Go demande la clé que vous collez depuis la OpenCode Console.
    Avec Amazon Bedrock, choisissez une région et utilisez un profil AWS de cet ordinateur, ou collez une clé API Bedrock.
    Un fournisseur qui propose les deux vous demande s’il faut **Se connecter avec votre navigateur** ou coller une **Clé API**.
 3. Patientez pendant que la fenêtre indique la connexion en cours.

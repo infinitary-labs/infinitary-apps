@@ -64,7 +64,7 @@
   "shellGateRecoveryTitle": "Configurez votre second sur cet ordinateur",
   "shellGateRunLine": "Connectez-en un pour votre second sur {computer}. La connexion se fait depuis ici.",
   "shellGateStaysOn": "Choisissez un ordinateur qui reste allumé. Les autres ordinateurs ont besoin qu’il soit éveillé.",
-  "shellGateStillNeeds": "Votre second a encore besoin d’un compte qui répond : Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter avec une clé API, ou Amazon Bedrock avec votre connexion AWS.",
+  "shellGateStillNeeds": "Votre second a encore besoin d’un compte qui répond : Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter avec une clé API, ou Amazon Bedrock avec votre connexion AWS.",
   "shellGateTitle": "Connectez un abonnement pour commencer",
   "shellGateWhere": "Où dois-je vivre ? Choisissez un ordinateur qui reste allumé le plus possible.",
   "shellKeyReminderHint": "appuyez une fois et ce rappel s’arrête",

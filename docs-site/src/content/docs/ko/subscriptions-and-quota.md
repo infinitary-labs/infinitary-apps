@@ -1,5 +1,5 @@
 ---
-source: 9c71f435cc6524a0
+source: f1e95aa2b9433f4a
 title: 구독과 사용 한도
 description: AI 구독을 추가하는 방법, 요금제의 사용 한도가 얼마나 남았는지 읽는 방법, 그리고 다 썼을 때 선원들이 하는 일이에요.
 ---
@@ -10,7 +10,7 @@ description: AI 구독을 추가하는 방법, 요금제의 사용 한도가 얼
 ## 구독 추가하기 {#add-a-subscription}
 
 1. 설정을 열고 **지능**을 고르세요.
-2. **AI 구독** 아래쪽의 **계정 추가**에서 제공자를 고르세요: Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter, Amazon Bedrock이에요.
+2. **AI 구독** 아래쪽의 **계정 추가**에서 제공자를 고르세요: Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter, Amazon Bedrock이에요.
 3. 제공자가 요청하는 방식으로 로그인하세요.
    브라우저를 여는 제공자도 있고, 사이트에 입력할 코드를 보여 주는 제공자도 있고, 붙여 넣는 키를 받는 제공자도 있어요.
 4. 로그인이 끝나면 새 계정이 목록에 나타나요.

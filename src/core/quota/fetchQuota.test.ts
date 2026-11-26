@@ -422,6 +422,7 @@ describe("buildModelsCatalog across accounts", () => {
       { provider: "xai", id: "grok-4.7", name: "Grok 4.7" },
       { provider: "kimi-coding", id: "k3", name: "Kimi K3" },
       { provider: "github-copilot", id: "claude-opus-5.5", name: "Claude Opus 5.5" },
+      { provider: "opencode-go", id: "kimi-k3", name: "Kimi K3" },
     ];
     const catalog = buildModelsCatalog(served, [], "2026-10-15T12:00:00Z");
     expect(catalog.models.map((row) => row.provider).sort()).toEqual(

@@ -1,5 +1,5 @@
 ---
-source: c16d193883332656
+source: 042bc7f3959ec370
 title: Primeira abertura
 description: O que o Infinitary mostra na primeira vez que você o abre, como escolher onde seu imediato mora, como conectar uma assinatura e como adicionar seu primeiro projeto.
 ---
@@ -40,13 +40,14 @@ Nada mais funciona até que uma assinatura consiga responder ao seu imediato.
 ## Conectar uma assinatura {#connect-a-subscription}
 
 Escolha **Este computador** para manter seu imediato aqui.
-Aparece um botão para cada provedor que seu imediato pode usar: Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter, Amazon Bedrock e API personalizada.
+Aparece um botão para cada provedor que seu imediato pode usar: Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter, Amazon Bedrock e API personalizada.
 
 1. Escolha o botão do seu provedor.
 2. Faça login do jeito que esse provedor pedir.
    Alguns abrem a página de login no seu navegador.
    O Copilot e o Kimi Code mostram um código: pressione **Copiar código** e depois digite-o no site do provedor.
    O OpenRouter pede uma chave de API que você cola.
+   O OpenCode Go pede a chave que você cola do OpenCode Console.
    Com o Amazon Bedrock, escolha uma região e use um perfil da AWS neste computador ou cole uma chave de API do Bedrock.
    Um provedor que oferece as duas opções pergunta se você quer **Fazer login pelo navegador** ou colar uma **Chave de API**.
 3. Aguarde enquanto a janela diz que está conectando.

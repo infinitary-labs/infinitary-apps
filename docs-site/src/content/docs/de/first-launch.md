@@ -1,5 +1,5 @@
 ---
-source: c16d193883332656
+source: 042bc7f3959ec370
 title: Der erste Start
 description: Was Infinitary beim ersten Öffnen zeigt, wie du wählst, wo dein erster Offizier lebt, wie du ein Abo verbindest und wie du dein erstes Projekt hinzufügst.
 ---
@@ -40,13 +40,14 @@ Nichts anderes funktioniert, bis ein Abo deinem ersten Offizier antworten kann.
 ## Ein Abo verbinden {#connect-a-subscription}
 
 Wähl **Dieser Computer**, damit dein erster Offizier hier bleibt.
-Für jeden Anbieter, den dein erster Offizier nutzen kann, erscheint eine Schaltfläche: Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter, Amazon Bedrock und Eigene API.
+Für jeden Anbieter, den dein erster Offizier nutzen kann, erscheint eine Schaltfläche: Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter, Amazon Bedrock und Eigene API.
 
 1. Wähl die Schaltfläche deines Anbieters.
 2. Melde dich so an, wie dieser Anbieter es verlangt.
    Manche öffnen die Anmeldeseite in deinem Browser.
    Copilot und Kimi Code zeigen einen Code: Drück **Code kopieren** und gib ihn dann auf der Seite des Anbieters ein.
    OpenRouter nimmt einen API-Schlüssel, den du einfügst.
+   OpenCode Go nimmt den Schlüssel, den du aus der OpenCode Console einfügst.
    Bei Amazon Bedrock wählst du eine Region und nutzt ein AWS-Profil auf diesem Computer oder fügst einen Bedrock-API-Schlüssel ein.
    Ein Anbieter, der beides anbietet, fragt, ob du dich **Mit deinem Browser anmelden** oder einen **API-Schlüssel** einfügen willst.
 3. Warte, solange das Fenster sagt, dass es verbindet.

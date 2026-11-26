@@ -64,7 +64,7 @@
   "shellGateRecoveryTitle": "Configura tu primer oficial en esta computadora",
   "shellGateRunLine": "Conecta una para tu primer oficial en {computer}. Inicia sesión desde aquí.",
   "shellGateStaysOn": "Elige una computadora que se quede encendida. Las otras computadoras la necesitan despierta.",
-  "shellGateStillNeeds": "Tu primer oficial todavía necesita una cuenta que responda: Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter con una clave de API o Amazon Bedrock con tu inicio de sesión de AWS.",
+  "shellGateStillNeeds": "Tu primer oficial todavía necesita una cuenta que responda: Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter con una clave de API o Amazon Bedrock con tu inicio de sesión de AWS.",
   "shellGateTitle": "Conecta una suscripción para empezar",
   "shellGateWhere": "¿Dónde debo vivir? Elige una computadora que esté encendida el mayor tiempo posible.",
   "shellKeyReminderHint": "presiónala una vez y esto deja de salir",

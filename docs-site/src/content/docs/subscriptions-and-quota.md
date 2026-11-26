@@ -9,7 +9,7 @@ You manage them in Settings, under **Intelligence**, in the **AI subscriptions**
 ## Add a subscription
 
 1. Open Settings and choose **Intelligence**.
-2. At the foot of **AI subscriptions**, under **Add account**, choose your provider: Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter or Amazon Bedrock.
+2. At the foot of **AI subscriptions**, under **Add account**, choose your provider: Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter or Amazon Bedrock.
 3. Sign in the way the provider asks.
    Some open your browser, some show a code to enter on their site, and some take a key you paste.
 4. When the sign-in finishes, the new account appears in the list.

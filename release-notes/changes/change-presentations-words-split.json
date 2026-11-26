@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "change-presentations-words-split",
+      "reason": "Internal: story wording tests move to their own file without changing app behavior."
+    }
+  ]
+}

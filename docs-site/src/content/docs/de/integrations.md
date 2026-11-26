@@ -1,5 +1,5 @@
 ---
-source: 1ce217aea874fab1
+source: 8197fb5a554a0b4e
 title: Integrationen
 description: Verbinde GitHub, GitLab, Bitbucket, Google und MCP-Server, damit dein erster Offizier und deine Crew sie erreichen, und lege fest, was jede Integration ohne Rückfrage tun darf.
 ---
@@ -76,8 +76,8 @@ Bei jeder Anmeldung bei Google erscheint zuerst der Hinweis.
 
 Die Google-Zeile sagt es, wenn die Verbindung dich braucht:
 
-- **Eigene Verbindung einrichten**: Diese Anmeldung läuft noch über einen Client, den Infinitary mit allen teilt und der eingestellt wird.
-  Bis dahin funktioniert sie weiter; drück **Einrichten**, um verbunden zu bleiben.
+- **Erneut anmelden**, mit **Einrichten**: Eine frühere Verbindung über den Client, den Infinitary mit allen geteilt hat, funktioniert nicht mehr, weil dieser Client weg ist.
+  Drück **Einrichten**, um deinen eigenen Client zu erstellen und dich neu zu verbinden.
 - **Endet**, mit einem Datum: Dein Client ist nicht im persönlichen Modus, daher beendet Google seine Anmeldung an diesem Tag.
   Drück **Erneut einrichten** und erstelle einen Client im persönlichen Modus.
 - **Dein Google-Client funktioniert nicht mehr**: Google akzeptiert deinen Client nicht mehr, vielleicht weil er in Google Cloud gelöscht wurde.

@@ -1,5 +1,5 @@
 ---
-source: 1ce217aea874fab1
+source: 8197fb5a554a0b4e
 title: 整合
 description: 連結 GitHub、GitLab、Bitbucket、Google 和 MCP 伺服器，讓你的大副和船員能使用它們，並選擇每一個可以不經詢問就做哪些事。
 ---

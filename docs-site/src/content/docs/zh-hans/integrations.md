@@ -1,5 +1,5 @@
 ---
-source: 1ce217aea874fab1
+source: 8197fb5a554a0b4e
 title: 集成
 description: 连接 GitHub、GitLab、Bitbucket、Google 和 MCP 服务器，让你的大副和船员能够访问它们，并选择每一项可以不经询问就做什么。
 ---

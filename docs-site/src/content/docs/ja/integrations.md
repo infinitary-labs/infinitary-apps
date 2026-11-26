@@ -1,5 +1,5 @@
 ---
-source: 1ce217aea874fab1
+source: 8197fb5a554a0b4e
 title: 連携
 description: GitHub、GitLab、Bitbucket、Google、MCP サーバーを接続して一等航海士と乗組員がアクセスできるようにし、それぞれがあなたに確認せずにできることを選びます。
 ---

@@ -1,5 +1,5 @@
 ---
-source: 1ce217aea874fab1
+source: 8197fb5a554a0b4e
 title: Intégrations
 description: Connectez GitHub, GitLab, Bitbucket, Google et des serveurs MCP pour que votre second et votre équipage puissent les joindre, et choisissez ce que chacun peut faire sans vous demander.
 ---

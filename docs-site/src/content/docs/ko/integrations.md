@@ -1,5 +1,5 @@
 ---
-source: 1ce217aea874fab1
+source: 8197fb5a554a0b4e
 title: 연동
 description: GitHub, GitLab, Bitbucket, Google, MCP 서버를 연결해 일등항해사와 선원들이 닿을 수 있게 하고, 각각이 묻지 않고 할 수 있는 일을 정하세요.
 ---

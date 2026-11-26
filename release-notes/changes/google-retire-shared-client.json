@@ -6,6 +6,7 @@
       "title": "Google connections made with Infinitary's shared client end",
       "body": "Infinitary no longer carries a Google client of its own, so a Google connection made earlier with it asks you to sign in again, and the Google row in Settings → Integrations sets up your own client first. Connections made with your own client are unchanged.",
       "area": "settings",
+      "docsSite": ["integrations"],
       "noPicture": "The change is the Google row's existing Set up step, already shown by the own-client setup note.",
       "provenance": { "origin": "change" }
     }

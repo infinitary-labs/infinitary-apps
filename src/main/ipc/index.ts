@@ -43,7 +43,7 @@ import type { RendererSourceOptions } from "../security/rendererSource";
 import type { Shell } from "../shell";
 import { micAccess, micSettingsUrl } from "../voice/micAccess";
 import { controlWindow, windowState } from "../windowControls";
-import { appWindows } from "../windows";
+import { pushWindows } from "../windows";
 import { markDownload } from "./downloadMark";
 import { eventBatch } from "./eventBatch";
 import { pictureFile } from "./pictureSave";
@@ -74,11 +74,7 @@ export function broadcast<C extends PushChannel>(channel: C, payload: PushPayloa
 }
 
 function send<C extends PushChannel>(channel: C, payload: PushPayload<C>): void {
-  for (const win of appWindows()) {
-    if (!win.isDestroyed() && !win.webContents.isDestroyed()) {
-      win.webContents.send(channel, payload);
-    }
-  }
+  for (const win of pushWindows()) win.webContents.send(channel, payload);
 }
 
 export type IpcOptions = {

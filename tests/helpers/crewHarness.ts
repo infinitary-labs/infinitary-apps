@@ -315,6 +315,8 @@ export type SetupExtras = {
     enabled: () => boolean;
     version: () => import("@shared/personalSet").PersonalVersion;
   };
+  /** The home's Settings choice of where conversations summarize (INF-6693). */
+  summaryPoint?: CrewSupervisorOptions["summaryPoint"];
   /** Where the captain's input comes from (docs/devices.md, "Where the captain is"). */
   captainPlaces?: CrewSupervisorOptions["captainPlaces"];
   /** The commit name a crewmate session's shell carries (`workspace/commitName.ts`). */
@@ -588,6 +590,7 @@ export function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
             (extras.personal as NonNullable<typeof extras.personal>).version(),
         }
       : {}),
+    ...(extras.summaryPoint ? { summaryPoint: extras.summaryPoint } : {}),
     ...(extras.takesNoWorkUntilUpdated
       ? { takesNoWorkUntilUpdated: extras.takesNoWorkUntilUpdated }
       : {}),

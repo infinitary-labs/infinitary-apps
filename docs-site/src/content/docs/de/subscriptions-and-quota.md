@@ -1,5 +1,5 @@
 ---
-source: b09b575fa5a6a2c1
+source: 9c71f435cc6524a0
 title: Abos und Kontingent
 description: Wie du deine KI-Abos hinzufügst, das Kontingent deines Tarifs ablesen kannst und was deine Crew tut, wenn es aufgebraucht ist.
 ---
@@ -149,3 +149,16 @@ Eine steigende Linie heißt, dass Aufgaben mehr Arbeit brauchen als zuvor.
 
 Unter **Intelligenz** legt **Fragen, bevor eine Aufgabe mehr ausgibt als** einen Betrag fest.
 Eine Aufgabe, die ihn überschreitet, hält an einem sicheren Punkt an und fragt dich auf einer Karte, bevor sie mehr ausgibt.
+
+## Lange Unterhaltungen {#long-conversations}
+
+Wenn eine Unterhaltung lang wird, fassen dein erster Offizier und deine Crew sie zusammen und machen mit der Zusammenfassung weiter, damit jede Nachricht weniger kostet und weiter in das Modell passt.
+Unter **Intelligenz** legt **Lange Unterhaltungen zusammenfassen bei** fest, wann das passiert.
+
+- **Automatisch** fasst bei 300.000 Tokens zusammen, oder früher, wo ein Modell schon ab einem niedrigeren Punkt mehr berechnet.
+- **150.000 Tokens**, **200.000 Tokens**, **300.000 Tokens** oder **500.000 Tokens** fasst bei dieser Zahl zusammen, oder an der eigenen Grenze des Modells, wenn sie kleiner ist.
+- **Grenze des jeweiligen Modells** fasst erst nahe der eigenen Grenze jedes Modells zusammen, die bei einer Million Tokens liegen kann.
+
+Eine niedrigere Zahl kostet weniger; eine höhere behält mehr von der Unterhaltung vollständig.
+Wenn die gewählte Zahl ein Modell über einen Punkt hinauslaufen lässt, ab dem seine Anfragen mehr kosten, nennt die Zeile dieses Modell und den Punkt.
+Eine schon offene Unterhaltung folgt einer Änderung bei ihrer nächsten Nachricht, auch auf deinen anderen Computern; eine Unterhaltung mit Claude folgt ihr, wenn sie das nächste Mal startet.

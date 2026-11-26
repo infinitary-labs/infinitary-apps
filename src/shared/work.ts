@@ -38,6 +38,7 @@ import { keptRecoveryWaySchema, workWaitSchema } from "./recovery";
 import { requiredActionRevisionInputSchema, requiredActionsSchema } from "./requiredActions";
 import { runbookSkillFilesSchema } from "./runbooks";
 import { sourceIdentitySchema } from "./selfSource";
+import { placedCompactionSchema } from "./summaryPoint";
 import { heldSignInSchema, taskBrowserFactSchema, taskBrowserFrameSchema } from "./taskBrowser";
 import { firstReleaseReportSchema } from "./taskRelease";
 import { toolObservationSchema } from "./toolCompletion";
@@ -249,6 +250,8 @@ export const placedSpecSchema = z.object({
   resume: z.string().min(1).max(4096).optional(),
   /** The provider's retries before a turn fails. */
   retries: z.number().int().nonnegative().max(16).optional(),
+  /** Where it summarizes, the home's Settings choice (`summary-point.md`); absent keeps the app's rule. */
+  compaction: placedCompactionSchema.optional(),
   /**
    * The task has its own browser on that computer (docs/task-browser.md,
    * "On another computer"): its crewmate's shell is given `infinitary-browser-axi`
@@ -1294,12 +1297,13 @@ export const workOrders = {
       notOpened: z.string().optional(),
     }),
   },
-  /** Starts a turn; answers once it has started, and its end is an event. */
+  /** Starts a turn, with the home's summary rule now (`summary-point.md`); answers once it has started. */
   "inf:session:prompt": {
     effect: "change",
     request: ordered({
       text: z.string(),
       images: z.array(sessionImageSchema).max(16).optional(),
+      compaction: placedCompactionSchema.optional(),
     }),
     response: z.object({ turn: z.number().int().positive() }),
   },
@@ -1402,10 +1406,7 @@ export const workOrders = {
           }),
         )
         .max(64),
-      /**
-       * Files from outside due in the task's hand-over folder, by kept name,
-       * removed first.
-       */
+      /** Files from outside due in the task's hand-over folder, by kept name, removed first. */
       files: z.array(z.string().regex(HANDOVER_FILE_NAME)).max(1024).optional(),
       /**
        * The conversation it lets go of is not opened again there; the

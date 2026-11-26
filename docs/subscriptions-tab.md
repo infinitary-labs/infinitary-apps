@@ -88,6 +88,7 @@ OpenCode Go signs in only with a pasted key (`keySignIn` in `src/shared/provider
 Pi offers it no browser sign-in, so its chip asks no browser-or-key question and goes straight to Pi's key prompt, a secret field.
 Under the prompt a line says the key is on the OpenCode Console (`accountsConnectKeyWhere`, naming `keySignIn.site`).
 The key comes only from the account's own store: an `OPENCODE_API_KEY` in the computer's environment signs nothing in.
+The same holds for every key sign-in, Grok's, OpenRouter's, Kimi Code's and Copilot's included: with `XAI_API_KEY`, `OPENROUTER_API_KEY`, `KIMI_API_KEY` or `COPILOT_GITHUB_TOKEN` set, an account with no stored sign-in reads signed out with its Sign in button, reads no allowance, and no account lists that provider's models (`docs/architecture.md` §5, "Provider set"; `tests/e2e/computer-keys.spec.ts`).
 
 ## A code sign-in
 

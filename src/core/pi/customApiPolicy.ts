@@ -41,6 +41,8 @@ const messages: Record<CustomApiFailure, string> = {
  * Never retain a raw error, body, header, URL or credential as message/cause.
  * A refused destination keeps the DNS answers it was refused for, so the form
  * can say what DNS answered; they are addresses, never part of the message.
+ * A refused request keeps a short excerpt of the server's reason, cut, cleaned
+ * and checked for echoed secrets by the transport; it too stays off the message.
  */
 export class CustomApiError extends Error {
   constructor(
@@ -48,6 +50,7 @@ export class CustomApiError extends Error {
     readonly status?: number,
     readonly baseSuggestion?: string,
     readonly addresses?: readonly string[],
+    readonly reason?: string,
   ) {
     super(messages[category]);
     this.name = "CustomApiError";

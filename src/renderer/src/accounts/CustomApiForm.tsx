@@ -637,10 +637,14 @@ export function CustomApiForm({
       const stop = () => {
         setErrors(found);
         setRowErrors(rows);
+        // The words beside Save mark no field, so they alone never ask for one to be fixed.
+        const fields = Object.keys(found).filter((field) => field !== "save");
         setSummary(
-          Object.keys(rows).length && !Object.keys(found).length
-            ? m.accountsCustomApiNotSavedRow()
-            : m.accountsCustomApiNotSavedField(),
+          fields.length
+            ? m.accountsCustomApiNotSavedField()
+            : Object.keys(rows).length
+              ? m.accountsCustomApiNotSavedRow()
+              : m.accountsCustomApiNotSaved(),
         );
         setPausedDraft(failedDraft);
       };
@@ -749,6 +753,8 @@ export function CustomApiForm({
             ...context,
             stage: "check",
             model: modelId,
+            ...(after?.status !== undefined ? { status: after.status } : {}),
+            ...(after?.reason ? { reason: after.reason } : {}),
           });
           if (placed.at === "row")
             rows[row.uiId] = { text: placed.text, at: category === "limits" ? "sizes" : "model" };

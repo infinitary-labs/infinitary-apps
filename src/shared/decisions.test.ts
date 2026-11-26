@@ -5,6 +5,7 @@ import {
   type DecisionsView,
   decisionConsent,
   decisionKeyRejectedNote,
+  decisionProviderPick,
   decisionsSettingsSchema,
   decisionsViewBeforeProviders,
   providerDecisionConsent,
@@ -105,13 +106,15 @@ describe("decision settings from before decision-providers", () => {
     natives: [],
   });
 
-  it("still reads a saved OpenRouter pick", () => {
-    expect(
-      decisionsSettingsSchema.parse({
-        ...DEFAULT_DECISIONS,
-        answerer: { kind: "openrouter", model: "typesafe/jev-1.13" },
-      }).answerer,
-    ).toEqual({ kind: "openrouter", model: "typesafe/jev-1.13" });
+  it("reads a saved OpenRouter pick as provider openrouter", () => {
+    const saved = decisionsSettingsSchema.parse({
+      ...DEFAULT_DECISIONS,
+      answerer: { kind: "openrouter", model: "typesafe/jev-1.13" },
+    });
+    expect(decisionProviderPick(saved.answerer)).toEqual({
+      provider: "openrouter",
+      model: "typesafe/jev-1.13",
+    });
   });
 
   it("gives an older view OpenRouter's row and pick in the shape it knows", () => {

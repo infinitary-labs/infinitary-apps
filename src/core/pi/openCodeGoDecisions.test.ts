@@ -68,6 +68,11 @@ it("lists Go's decision models on the Go account and asks them under the Go key"
       vendor: "TypeSafe",
       inputPrice: 0.042,
     });
+    expect(
+      runtime
+        .getModelsOfType("classifier", OPENCODE_GO_PROVIDER_ID)
+        .find((model) => model.id === "jev-1.14")?.baseUrl,
+    ).toBe("https://opencode.ai/inference/go/systemone/v1");
     // A decision model never joins the chat models routing places.
     expect(runtime.getAvailableSnapshot().some((model) => model.id === "jev-1.14")).toBe(false);
     const call = await classifyWithProvider(

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "contracts-build-aliases",
+      "reason": "Internal: the window's build and the tests now resolve a panel's contracts specifiers to the contracts file the type checker reads, instead of a file that no longer exists, with a test that holds both to it; nothing a person sees changes."
+    }
+  ]
+}

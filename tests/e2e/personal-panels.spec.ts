@@ -744,11 +744,12 @@ test.describe("the build loop: an ask becomes a panel (Step 4)", () => {
       const revisingId = () => readTasks(userDataDir).find((task) => task.key === key)?.id ?? "";
       const captureFile = () =>
         join(userDataDir, "crewmates", revisingId(), "captures", `${MOCK_PANEL_ID}-dark.png`);
+      const photoAt = () => (existsSync(captureFile()) ? statSync(captureFile()).mtimeMs : 0);
       let draftPhotoAt = 0;
       await placeOnceDrafted(page, "rail rows=regular running | draft rows=small", async () => {
-        // The draft's photo comes before the place (crewScripts.ts).
-        await expect.poll(() => existsSync(captureFile())).toBe(true);
-        draftPhotoAt = statSync(captureFile()).mtimeMs;
+        // The draft's photo, before the place (crewScripts.ts), may have
+        // been taken or refused while the draft still loaded.
+        draftPhotoAt = photoAt();
         await showCard(page, WIDE_CARD_TITLE);
         await shownEntry(page).getByRole("button", { name: MAXIMIZE_LABEL, exact: true }).click();
         await expect(panel()).toBeHidden();
@@ -768,10 +769,8 @@ test.describe("the build loop: an ask becomes a panel (Step 4)", () => {
         })
         .toBe(true);
       // The photo of the placed panel, taken while the rails stay folded,
-      // writes its files again after the draft's.
-      await expect
-        .poll(() => statSync(captureFile()).mtimeMs, { timeout: 45_000 })
-        .toBeGreaterThan(draftPhotoAt);
+      // writes its files, after any of the draft's.
+      await expect.poll(photoAt, { timeout: 45_000 }).toBeGreaterThan(draftPhotoAt);
       await shownEntry(page).getByRole("button", { name: RESTORE_LABEL, exact: true }).click();
       await expect(panel()).toBeVisible();
       await page.evaluate((id) => window.infinitary.cards.noteDone(id), WIDE_CARD_ID);

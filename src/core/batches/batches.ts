@@ -258,6 +258,15 @@ export type BatchesOptions = {
 };
 
 /**
+ * The described mark for an early run's words at its commit (`followTrial`): that commit becomes
+ * the batch's version once promoted, and its words then name the fix as not approved yet, so
+ * the batch's own mark differs and the promoted batch is described again before it merges.
+ */
+function trialMark(head: string): string {
+  return `trial ${head}`;
+}
+
+/**
  * Batches of your own (docs/forge.md, "Batches of your own"): the one
  * writer of a project's line of approved changes and its one open batch.
  * An approved change is a pushed branch with no pull request of its own.
@@ -269,15 +278,6 @@ export type BatchesOptions = {
  * checks hold it until a change is sent back, a declared fix is approved,
  * or its checks run again. The app reruns nothing and files nothing.
  */
-/**
- * The described mark for an early run's words at its commit (`followTrial`): that commit becomes
- * the batch's version once promoted, and its words then name the fix as not approved yet, so
- * the batch's own mark differs and the promoted batch is described again before it merges.
- */
-function trialMark(head: string): string {
-  return `trial ${head}`;
-}
-
 export class Batches {
   /** One pass per project at a time; a pass asked for meanwhile runs after it. */
   private readonly passes = new Map<string, Promise<void>>();

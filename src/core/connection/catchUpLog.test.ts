@@ -140,6 +140,36 @@ describe("the home's line for each phone's catch-up", () => {
     await long.close();
   });
 
+  // INF-6817's approved plan, piece 2: the phone says how long its own catch-up took, and the home's line carries it.
+  it("carries the phone's own catch-up time, waiting for it after the acknowledgment", async () => {
+    const { at, grant, lines, next } = await phoneHome();
+    const SAYS_SHOWN = { ...PHONE, appVersion: "0.22.0", changes: ["catch-up-shown"] } as const;
+    const first = await connectClient(grant, SAYS_SHOWN);
+    expect(first.welcome.changes).toContain("catch-up-shown");
+    await phoneReloads(first);
+    // Every read is answered and acknowledged, so only the phone's own word is still to come.
+    await first.invoke("inf:conversation:state", []);
+    expect(lines).toEqual([]);
+    first.sendRaw(JSON.stringify({ t: "shown", ms: 1_840 }));
+    const reload = await next(1);
+    expect(reload).toMatchObject({ kind: "reload", acknowledged: true, shownMs: 1_840 });
+    expect(describeCatchUp(reload)).toContain("; shown 1840 ms after its hello;");
+    changed(at.events);
+    await first.push(() => true);
+    const cursor = first.cursor();
+    await first.close();
+
+    // A replay that went before the phone said: the line is still told, with no shown time.
+    changed(at.events);
+    const back = await connectClient(grant, { ...SAYS_SHOWN, cursor });
+    expect(back.welcome.catchUp).toBe("replay");
+    await back.close();
+    const went = await next(2);
+    expect(went.kind).toBe("replay");
+    expect(went.shownMs).toBeUndefined();
+    expect(describeCatchUp(went)).not.toContain("shown");
+  });
+
   it("logs nothing for a computer's window", async () => {
     const { grant, lines } = await phoneHome();
     const window = await connectClient(grant);

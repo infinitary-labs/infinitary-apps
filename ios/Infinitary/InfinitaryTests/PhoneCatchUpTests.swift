@@ -51,6 +51,8 @@ import XCTest
         throw PhoneError.refused("This check requires a disposable simulator.")
         #endif
         _ = try await home("remove")
+        // The home replays only what weighs less than reading again, which a light board this short would not.
+        _ = try await home("catch-up-board")
         let invitation = try await home("link")
         let link = try JoinLink(XCTUnwrap(invitation["link"] as? String))
         let phone = try PhoneIdentity.loadOrCreate()
@@ -76,6 +78,10 @@ import XCTest
         let cards = try XCTUnwrap(away["cards"] as? [String])
         XCTAssertEqual(cards.count, 2)
         let shown = Shown(session)
+        // INF-6817 piece 2: the panels' pages hear what they missed too, every update in order, handed over once the
+        // replay is read rather than one call an update.
+        var panelCalls: [[PhonePanelPush]] = []
+        session.onPanelPush = { panelCalls.append($0) }
         session.start()
         try await until("the board and cards from while away") {
             let ids = Set(session.board?.tasks.map(\.id) ?? [])
@@ -84,6 +90,15 @@ import XCTest
         }
         XCTAssertEqual(shown.boards, 1, "The catch-up of six board updates changed the shown board once")
         XCTAssertEqual(shown.cards, 1, "The catch-up of two card lists changed the shown cards once")
+        let replayed = try XCTUnwrap(panelCalls.first, "The panels heard the catch-up")
+        let boardUpdates = replayed.filter { $0.channel == "inf:tasks:delta" }
+            .flatMap { $0.payload["upserts"].list.compactMap { $0["id"].text } }
+        XCTAssertEqual(boardUpdates.filter(added.contains), added, "The panels heard each board update from while away, in order, in one call")
+        // A replay sends only the newest card list whole (docs/connection.md, "Catching up"), which holds both cards.
+        let cardLists = replayed.filter { $0.channel == "inf:cards" }
+        XCTAssertEqual(cardLists.count, 1)
+        XCTAssertEqual(Set(cardLists.last?.payload.list.compactMap { $0["id"].text } ?? []).intersection(cards), Set(cards),
+                       "The panels heard the newest card list in the same call")
         XCTAssertEqual(emotes, [], "A reaction from while the phone was away did not play")
 
         // The board read into the held copy is the one the computer reads fresh, read the way the session holds it.

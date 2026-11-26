@@ -14,6 +14,7 @@ import {
   spellingFor,
 } from "@shared/codeNames";
 import {
+  CATCH_UP_SHOWN,
   type ClientFrame,
   COMMAND_PATH,
   CONNECTION_CLOSE,
@@ -89,7 +90,7 @@ import type {
   WorkDeviceContact,
   WorkDeviceVersion,
 } from "./connectionTypes";
-import { CONTRACT_CHANGES, listsChange } from "./contractChanges";
+import { CONTRACT_CHANGES, contractChange, listsChange } from "./contractChanges";
 import { readsFrameParts } from "./frameParts";
 import { heldAsks } from "./heldAsks";
 import { answerSource } from "./homeSource";
@@ -102,6 +103,9 @@ import {
   replayOf,
 } from "./journal";
 import { type OpenLocalDoor, openLocalDoor } from "./localDoor";
+
+/** A phone says how long its catch-up took (`catch-up-shown.md`). */
+const CATCH_UP_SHOWN_CHANGE = contractChange(CATCH_UP_SHOWN);
 
 /** The name on the local door's own certificate. */
 const LOCAL_DOOR_NAME = "Infinitary local door";
@@ -814,6 +818,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
           appVersion: hello.appVersion,
           helloAt,
           reads: RELOAD_READS,
+          saysShown: listsChange(hello.changes, CATCH_UP_SHOWN_CHANGE),
           tell: onCatchUp,
         });
       sendCatchUp(
@@ -1079,7 +1084,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       });
       ws.on("close", () => {
         clients.delete(client);
-        client.catchUp?.end(false);
+        client.catchUp?.gone();
         windowAsked.left(client);
         const heard = client.gone;
         client.gone = [];
@@ -1146,6 +1151,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
           else welcome(client, frame);
         } else if (!client.welcomed) cut(client, CONNECTION_CLOSE.protocol, "hello first");
         else if (frame.t === "leave") leave(client);
+        else if (frame.t === "shown") client.catchUp?.shown(frame.ms);
         else if (frame.t === "result") {
           // The answer to something the home asked; one it did not ask is ignored.
           const waiting = client.asked.get(Number(frame.id));

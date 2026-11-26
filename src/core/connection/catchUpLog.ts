@@ -7,8 +7,9 @@ import { type ReplayEntry, replayBytes } from "./journal";
  * The home's line for each phone that comes back (docs/connection.md, "The
  * catch-up log"): whether it was sent the updates it missed or read
  * everything again, why, the bytes sent and the weight they were measured
- * against, the route it came by, and how long it took from its hello until
- * it answered for the whole catch-up. It names no address and no content.
+ * against, the route it came by, how long it took from its hello until
+ * it answered for the whole catch-up, and how long the phone itself says it
+ * took to show it. It names no address and no content.
  */
 
 /** Why a phone replayed or reloaded. */
@@ -52,6 +53,11 @@ export type PhoneCatchUp = {
   ms: number;
   /** False when the connection went before the phone answered for the whole catch-up. */
   acknowledged: boolean;
+  /**
+   * From its hello until its catch-up showed, by the phone's own clock
+   * (`CATCH_UP_SHOWN`); absent when the phone did not say before the line was told.
+   */
+  shownMs?: number;
   /** The version of the app its hello said it runs. */
   appVersion?: string;
 };
@@ -125,18 +131,24 @@ export function describeCatchUp(catchUp: PhoneCatchUp): string {
     catchUp.acknowledged
       ? `acknowledged ${ms} ms after its hello`
       : `went ${ms} ms after its hello, before acknowledging it all`,
+    ...(catchUp.shownMs !== undefined ? [`shown ${catchUp.shownMs} ms after its hello`] : []),
     ...(catchUp.appVersion ? [`app ${catchUp.appVersion}`] : []),
   ].join("; ");
 }
 
 /**
  * One phone's catch-up while it goes: the bytes written for it and, for a
- * reload, the reads it still waits on. `end` tells the line once.
+ * reload, the reads it still waits on. The line is told once: when the
+ * phone has answered for it all and, for a phone that says when its
+ * catch-up showed, once it has said so; or when the connection goes.
  */
 export class CatchUpWatch {
   private sentBytes = 0;
   private told = false;
   private readonly reads: Set<string>;
+  /** The home's side, kept from the first `end` until the line is told. */
+  private ended: { acknowledged: boolean; ms: number } | undefined;
+  private shownMs: number | undefined;
 
   constructor(
     private readonly start: Omit<PhoneCatchUp, "sentBytes" | "ms" | "acknowledged">,
@@ -145,6 +157,8 @@ export class CatchUpWatch {
     reads: readonly string[],
     private readonly now: () => number,
     private readonly tell: (catchUp: PhoneCatchUp) => void,
+    /** The phone listed `CATCH_UP_SHOWN`, so the line waits for its own time. */
+    private readonly saysShown = false,
   ) {
     this.reads = new Set(reads);
   }
@@ -166,14 +180,34 @@ export class CatchUpWatch {
     return this.reads.size === 0;
   }
 
+  /** The home's side ended: the phone answered for every byte, or the connection went first. */
   end(acknowledged: boolean): void {
-    if (this.told) return;
+    if (this.told || this.ended) return;
+    this.ended = { acknowledged, ms: Math.max(0, this.now() - this.startedAt) };
+    if (!acknowledged || !this.saysShown || this.shownMs !== undefined) this.tellOnce();
+  }
+
+  /** The phone said its catch-up showed `ms` after its hello; only its first word counts. */
+  shown(ms: number): void {
+    if (this.told || this.shownMs !== undefined) return;
+    this.shownMs = ms;
+    if (this.ended) this.tellOnce();
+  }
+
+  /** The connection went: the line is told with what it has. */
+  gone(): void {
+    if (this.ended) this.tellOnce();
+    else this.end(false);
+  }
+
+  private tellOnce(): void {
+    if (this.told || !this.ended) return;
     this.told = true;
     this.tell({
       ...this.start,
       sentBytes: this.sentBytes,
-      ms: Math.max(0, this.now() - this.startedAt),
-      acknowledged,
+      ...this.ended,
+      ...(this.shownMs !== undefined ? { shownMs: this.shownMs } : {}),
     });
   }
 }
@@ -193,6 +227,8 @@ export function watchCatchUp(at: {
   helloAt: number;
   /** What a reload reads first: a reload's catch-up is written once each is answered. */
   reads: readonly string[];
+  /** The phone's hello listed `CATCH_UP_SHOWN`. */
+  saysShown?: boolean;
   tell: (catchUp: PhoneCatchUp) => void;
   now?: () => number;
 }): CatchUpWatch {
@@ -211,5 +247,6 @@ export function watchCatchUp(at: {
     at.replaying ? [] : at.reads,
     at.now ?? Date.now,
     at.tell,
+    at.saysShown ?? false,
   );
 }

@@ -654,6 +654,50 @@ it("reads the context and output limits common model lists state", async () => {
   await expect(listCustomApiModels(client(base))).rejects.toMatchObject({ category: "malformed" });
 });
 
+// OpenCode's model list, as it answers: sizes sit in a nested
+// limit object, and decision and embedding models state no tool support.
+it("reads OpenCode's nested limits and marks the models that take no chat turn", async () => {
+  const base = await fixture((_req, res) => {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(
+      JSON.stringify({
+        object: "list",
+        data: [
+          {
+            id: "gpt-6-luna",
+            type: "chat",
+            capabilities: { tools: { supported: true } },
+            limit: { context: 1050000, input: 922000, output: 128000 },
+          },
+          // No window stated: the prompt's own cap stands in for it.
+          { id: "input-only", type: "chat", limit: { input: 192000, output: 65536 } },
+          // A flat window wins over the nested one.
+          { id: "both-shapes", context_length: 32768, limit: { context: 65536, output: 4096 } },
+          {
+            id: "jev-1.14",
+            type: "decision",
+            capabilities: { tools: { supported: false } },
+            limit: { context: 64000 },
+          },
+          { id: "qwen3-embedding-8b", type: "embedding", limit: { context: 32768, output: 0 } },
+          { id: "no-tools", capabilities: { tools: { supported: false } } },
+          // Other servers' capability shapes leave a model pickable.
+          { id: "mistral-model", capabilities: { tools: true }, type: "model" },
+        ],
+      }),
+    );
+  });
+  expect(await listCustomApiModels(client(base))).toEqual([
+    { id: "gpt-6-luna", context: 1050000, output: 128000 },
+    { id: "input-only", context: 192000, output: 65536 },
+    { id: "both-shapes", context: 32768, output: 4096 },
+    { id: "jev-1.14", context: 64000, notChat: true },
+    { id: "qwen3-embedding-8b", context: 32768, notChat: true },
+    { id: "no-tools", notChat: true },
+    { id: "mistral-model" },
+  ]);
+});
+
 describe.each(["openai-completions", "openai-responses"] as const)(
   "%s safe publication",
   (protocol) => {

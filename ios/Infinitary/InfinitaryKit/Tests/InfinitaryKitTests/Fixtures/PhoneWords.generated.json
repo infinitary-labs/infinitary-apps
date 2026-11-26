@@ -173,6 +173,7 @@
   {"said":{"m":"accountsCustomApiNameNeeded"},"words":"Name this connection."},
   {"said":{"m":"accountsCustomApiNoList"},"words":"This server doesn’t list its models. Add them by hand."},
   {"said":{"m":"accountsCustomApiNoModels"},"words":"No models yet. Fetch them from the server, or add one by hand."},
+  {"said":{"m":"accountsCustomApiNotChat"},"words":"Not a chat model"},
   {"said":{"m":"accountsCustomApiNotOffered","a":{"model":"‹model›"}},"words":"This server doesn't offer ‹model›."},
   {"said":{"m":"accountsCustomApiNotReached"},"words":"This server could not be reached."},
   {"said":{"m":"accountsCustomApiNotSaved"},"words":"Not saved."},

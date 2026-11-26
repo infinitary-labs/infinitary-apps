@@ -77,7 +77,7 @@ try {
     rowStartOf: (task: PanelTaskRow) => { label: string; reason: string | null } | null;
     rowControlsOf: (task: PanelTaskRow, group: string, home?: string | null) => unknown;
   }>(join(REPO_ROOT, "src/panels/now/rows.ts"));
-  const { DROP_REVIEW_STALE, dropConfirmLead, dropPartsLine, dropUnderwayLine, dropWaitingLine } = await runner.import<typeof import("../src/shared/recordDrop.ts")>(join(REPO_ROOT, "src/shared/recordDrop.ts"));
+  const { dropQuestionOf, dropRefusalOf } = await runner.import<typeof import("../src/shared/recordDrop.ts")>(join(REPO_ROOT, "src/shared/recordDrop.ts"));
   const { recordPillToneOf } = await runner.import<typeof import("../src/renderer/src/cards/recordFooter.ts")>(join(REPO_ROOT, "src/renderer/src/cards/recordFooter.ts"));
   // The record's tabs and head are renderer modules the scripts' project does not compile (a store behind the tabs,
   // JSX in the head), so these name only the shapes this reading takes from them.
@@ -581,10 +581,8 @@ try {
       const closed = recordClosedLineOf(row);
       const end = bar?.end === "drop-task" || bar?.end === "stop-task" ? bar.end : null;
       const effects = row.dropEffects ?? null;
-      const refusal = end === "drop-task" ? (!effects ? DROP_REVIEW_STALE : null) : null;
-      const question = end && !refusal ? [dropConfirmLead(row.key, end === "stop-task"), end === "drop-task" && effects ? dropPartsLine(effects.parts) : null,
-        end === "drop-task" && effects ? dropWaitingLine(effects.waiting) : null,
-        end === "drop-task" && effects ? dropUnderwayLine(effects.underway) : null].filter(Boolean).join(" ") : null;
+      const refusal = end ? dropRefusalOf(end, effects) : null;
+      const question = end && !refusal ? dropQuestionOf(row.key, end, effects) : null;
       return { name, row, live: live ? { text: "", since: live.since } : null, bar, pillTone: recordPillToneOf(row),
         status: { mark: read.mark, word: read.word, reason },
         tabs: taskTabsOf(null, taskTabFactsOf(row)).map((tab) => ({ kind: tab.kind, label: tab.label, count: tab.count })),

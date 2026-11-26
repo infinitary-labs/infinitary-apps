@@ -1,5 +1,7 @@
 import type { DropTaskReview } from "./cards";
 import * as m from "./i18n/messages.generated.ts";
+import type { RecordBarEnd } from "./recordBar";
+import type { DropEffects } from "./tasks";
 
 /**
  * The captain's Drop task (FI3-243, from the accepted plan FI3-242; in every
@@ -68,6 +70,40 @@ export function dropPartsLine(
   else if (started.length > 1)
     lines.push(`Its ${started.length} parts that started (${started.join(", ")}) keep working.`);
   return lines.join(" ");
+}
+
+/**
+ * Drop task's first press on the record: never-started work whose record
+ * lists no effects is refused, since the question could not name what the
+ * drop leaves behind. Worded at the call, so the window says it in its own
+ * language and the phone's generated record in the source language.
+ */
+export function dropRefusalOf(
+  end: RecordBarEnd,
+  effects: DropEffects | null | undefined,
+): string | null {
+  return end === "drop-task" && !effects ? m.recordDropReviewStale() : null;
+}
+
+/**
+ * Drop task's question on the record: its lead, then, for never-started
+ * work, what happens to its parts and to the tasks waiting on it or already
+ * working.
+ */
+export function dropQuestionOf(
+  key: string,
+  end: RecordBarEnd,
+  effects: DropEffects | null | undefined,
+): string {
+  const consequences =
+    end === "drop-task" && effects
+      ? [
+          dropPartsLine(effects.parts),
+          dropWaitingLine(effects.waiting),
+          dropUnderwayLine(effects.underway),
+        ]
+      : [];
+  return [dropConfirmLead(key, end === "stop-task"), ...consequences].filter(Boolean).join(" ");
 }
 
 export function dropStartedRefusal(taskKey: string): string {

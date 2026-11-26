@@ -6844,6 +6844,35 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `install Claude Code there first`;
   }
+  function accountsConnectKeyWhere(input2) {
+    const provider = input2.provider;
+    const site = input2.site;
+    switch (currentLanguage()) {
+      case "ar":
+        return `انسخ مفتاحك من ${site} بعد اشتراكك في ${provider}.`;
+      case "de":
+        return `Kopiere deinen Schlüssel aus der ${site}, nachdem du ${provider} abonniert hast.`;
+      case "es":
+        return `Copia tu clave desde ${site} después de suscribirte a ${provider}.`;
+      case "fr":
+        return `Copiez votre clé depuis ${site} après vous être abonné à ${provider}.`;
+      case "ja":
+        return `${provider} を購読したあと、${site} からキーをコピーしてください。`;
+      case "ko":
+        return `${provider}을(를) 구독한 뒤 ${site}에서 키를 복사하세요.`;
+      case "pt-BR":
+        return `Copie sua chave no ${site} depois de assinar o ${provider}.`;
+      case "zh-Hans":
+        return `订阅 ${provider} 后，从 ${site} 复制你的密钥。`;
+      case "zh-Hant":
+        return `訂閱 ${provider} 後，從 ${site} 複製你的金鑰。`;
+      case "en-XA":
+        return `[Çöþý ýöûŕ ķéý ƒŕöɱ ţĥé ${site} áƒţéŕ ýöû šûƀšçŕîƀé ţö ${provider}. ~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Copy your key from the ‬${site}‮ after you subscribe to ‬${provider}‮.‬`;
+    }
+    return `Copy your key from the ${site} after you subscribe to ${provider}.`;
+  }
   function accountsConnectNotSignedIn() {
     switch (currentLanguage()) {
       case "ar":
@@ -13482,6 +13511,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Use ‬${name}‮ ‬${on}`;
     }
     return `Use ${name} ${on}`;
+  }
+  function accountsQuotaOpenCodeGoNoPlan() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يجد OpenCode Go خطة Go نشطة لهذا المفتاح.`;
+      case "de":
+        return `OpenCode Go hat für diesen Schlüssel kein aktives Go-Abo gefunden.`;
+      case "es":
+        return `OpenCode Go no encontró un plan Go activo para esta clave.`;
+      case "fr":
+        return `OpenCode Go n’a trouvé aucun forfait Go actif pour cette clé.`;
+      case "ja":
+        return `OpenCode Go で、このキーに有効な Go プランが見つかりませんでした。`;
+      case "ko":
+        return `OpenCode Go에서 이 키에 활성 Go 요금제를 찾지 못했어요.`;
+      case "pt-BR":
+        return `O OpenCode Go não encontrou um plano Go ativo para esta chave.`;
+      case "zh-Hans":
+        return `OpenCode Go 没有找到这个密钥的有效 Go 套餐。`;
+      case "zh-Hant":
+        return `OpenCode Go 找不到這個金鑰的有效 Go 方案。`;
+      case "en-XA":
+        return `[ÖþéñÇöðé Ĝö ƒöûñð ñö áçţîṽé Ĝö þļáñ ƒöŕ ţĥîš ķéý. ~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮OpenCode Go found no active Go plan for this key.‬`;
+    }
+    return `OpenCode Go found no active Go plan for this key.`;
   }
   function accountsSavedResetBusy(input2) {
     const account = input2.account;
@@ -106431,29 +106487,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function shellGateStillNeeds() {
     switch (currentLanguage()) {
       case "ar":
-        return `لا يزال نائب القبطان يحتاج إلى حساب يستجيب: Codex أو Grok أو Claude أو Kimi Code أو Copilot أو OpenRouter بمفتاح API أو Amazon Bedrock بتسجيل دخول AWS.`;
+        return `لا يزال نائب القبطان يحتاج إلى حساب يستجيب: Codex أو Grok أو Claude أو Kimi Code أو Copilot أو OpenCode Go أو OpenRouter بمفتاح API أو Amazon Bedrock بتسجيل دخول AWS.`;
       case "de":
-        return `Dein erster Offizier braucht noch ein Konto, das antwortet: Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter mit einem API-Schlüssel oder Amazon Bedrock mit deiner AWS-Anmeldung.`;
+        return `Dein erster Offizier braucht noch ein Konto, das antwortet: Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter mit einem API-Schlüssel oder Amazon Bedrock mit deiner AWS-Anmeldung.`;
       case "es":
-        return `Tu primer oficial todavía necesita una cuenta que responda: Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter con una clave de API o Amazon Bedrock con tu inicio de sesión de AWS.`;
+        return `Tu primer oficial todavía necesita una cuenta que responda: Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter con una clave de API o Amazon Bedrock con tu inicio de sesión de AWS.`;
       case "fr":
-        return `Votre second a encore besoin d’un compte qui répond : Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter avec une clé API, ou Amazon Bedrock avec votre connexion AWS.`;
+        return `Votre second a encore besoin d’un compte qui répond : Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter avec une clé API, ou Amazon Bedrock avec votre connexion AWS.`;
       case "ja":
-        return `一等航海士には、応答するアカウントがまだ必要です。Codex、Grok、Claude、Kimi Code、Copilot、API キーを使う OpenRouter、または AWS でサインインする Amazon Bedrock を接続してください。`;
+        return `一等航海士には、応答するアカウントがまだ必要です。Codex、Grok、Claude、Kimi Code、Copilot、OpenCode Go、API キーを使う OpenRouter、または AWS でサインインする Amazon Bedrock を接続してください。`;
       case "ko":
-        return `일등항해사에게 아직 응답하는 계정이 필요해요. Codex, Grok, Claude, Kimi Code, Copilot, API 키를 사용하는 OpenRouter 또는 AWS로 로그인하는 Amazon Bedrock을 연결하세요.`;
+        return `일등항해사에게 아직 응답하는 계정이 필요해요. Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, API 키를 사용하는 OpenRouter 또는 AWS로 로그인하는 Amazon Bedrock을 연결하세요.`;
       case "pt-BR":
-        return `Seu imediato ainda precisa de uma conta que responda: Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter com uma chave de API ou Amazon Bedrock com seu login da AWS.`;
+        return `Seu imediato ainda precisa de uma conta que responda: Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter com uma chave de API ou Amazon Bedrock com seu login da AWS.`;
       case "zh-Hans":
-        return `你的大副还需要一个能应答的账号：Codex、Grok、Claude、Kimi Code、Copilot、使用 API 密钥的 OpenRouter，或使用 AWS 登录的 Amazon Bedrock。`;
+        return `你的大副还需要一个能应答的账号：Codex、Grok、Claude、Kimi Code、Copilot、OpenCode Go、使用 API 密钥的 OpenRouter，或使用 AWS 登录的 Amazon Bedrock。`;
       case "zh-Hant":
-        return `你的大副還需要一個能回應的帳號：Codex、Grok、Claude、Kimi Code、Copilot、使用 API 金鑰的 OpenRouter，或使用 AWS 登入的 Amazon Bedrock。`;
+        return `你的大副還需要一個能回應的帳號：Codex、Grok、Claude、Kimi Code、Copilot、OpenCode Go、使用 API 金鑰的 OpenRouter，或使用 AWS 登入的 Amazon Bedrock。`;
       case "en-XA":
-        return `[Ýöûŕ ƒîŕšţ ɱáţé šţîļļ ñééðš áñ áççöûñţ ţĥáţ áñšŵéŕš: Çöðéẋ, Ĝŕöķ, Çļáûðé, Ķîɱî Çöðé, Çöþîļöţ, ÖþéñŔöûţéŕ ŵîţĥ áñ ÅÞÎ ķéý, öŕ Åɱážöñ Ɓéðŕöçķ ŵîţĥ ýöûŕ ÅŴŠ šîĝñ-îñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Ýöûŕ ƒîŕšţ ɱáţé šţîļļ ñééðš áñ áççöûñţ ţĥáţ áñšŵéŕš: Çöðéẋ, Ĝŕöķ, Çļáûðé, Ķîɱî Çöðé, Çöþîļöţ, ÖþéñÇöðé Ĝö, ÖþéñŔöûţéŕ ŵîţĥ áñ ÅÞÎ ķéý, öŕ Åɱážöñ Ɓéðŕöçķ ŵîţĥ ýöûŕ ÅŴŠ šîĝñ-îñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Your first mate still needs an account that answers: Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter with an API key, or Amazon Bedrock with your AWS sign-in.‬`;
+        return `‮Your first mate still needs an account that answers: Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter with an API key, or Amazon Bedrock with your AWS sign-in.‬`;
     }
-    return `Your first mate still needs an account that answers: Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter with an API key, or Amazon Bedrock with your AWS sign-in.`;
+    return `Your first mate still needs an account that answers: Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter with an API key, or Amazon Bedrock with your AWS sign-in.`;
   }
   function shellGateTitle() {
     switch (currentLanguage()) {
@@ -115599,6 +115655,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     accountsConnectCustomApi,
     accountsConnectHow,
     accountsConnectInstallClaudeThere,
+    accountsConnectKeyWhere,
     accountsConnectNotSignedIn,
     accountsConnectNotSignedInYet,
     accountsConnectOpenSignIn,
@@ -115837,6 +115894,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     accountsCustomApiUseModel,
     accountsCustomApiUseOn,
     accountsCustomApiUseTitle,
+    accountsQuotaOpenCodeGoNoPlan,
     accountsSavedResetBusy,
     accountsSavedResetCodexStopped,
     accountsSavedResetNoCodex,
@@ -119296,6 +119354,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "accountsConnectCustomApi": [],
     "accountsConnectHow": ["provider"],
     "accountsConnectInstallClaudeThere": [],
+    "accountsConnectKeyWhere": ["provider", "site"],
     "accountsConnectNotSignedIn": [],
     "accountsConnectNotSignedInYet": ["here", "provider"],
     "accountsConnectOpenSignIn": [],
@@ -119534,6 +119593,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "accountsCustomApiUseModel": ["model"],
     "accountsCustomApiUseOn": ["on"],
     "accountsCustomApiUseTitle": ["name", "on"],
+    "accountsQuotaOpenCodeGoNoPlan": [],
     "accountsSavedResetBusy": ["account"],
     "accountsSavedResetCodexStopped": [],
     "accountsSavedResetNoCodex": ["floor", "site"],

@@ -1,5 +1,5 @@
 ---
-source: 9c71f435cc6524a0
+source: f1e95aa2b9433f4a
 title: 訂閱方案與額度
 description: 如何加入你的 AI 訂閱方案、查看方案額度還剩多少，以及額度用完時船員會怎麼做。
 ---
@@ -10,7 +10,7 @@ description: 如何加入你的 AI 訂閱方案、查看方案額度還剩多少
 ## 加入訂閱方案 {#add-a-subscription}
 
 1. 打開設定，選擇 **智慧等級**。
-2. 在 **AI 訂閱方案** 底部的 **新增帳號** 底下，選擇你的供應商：Codex、Grok、Claude、Kimi Code、Copilot、OpenRouter 或 Amazon Bedrock。
+2. 在 **AI 訂閱方案** 底部的 **新增帳號** 底下，選擇你的供應商：Codex、Grok、Claude、Kimi Code、Copilot、OpenCode Go、OpenRouter 或 Amazon Bedrock。
 3. 依照供應商的要求登入。
    有些會打開你的瀏覽器，有些會顯示一組要在它們網站上輸入的代碼，有些則要你貼上一組金鑰。
 4. 登入完成後，新的帳號會出現在清單裡。

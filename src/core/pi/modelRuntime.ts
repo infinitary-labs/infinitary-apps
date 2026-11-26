@@ -2,8 +2,9 @@ import { dirname, join } from "node:path";
 import { InMemoryCredentialStore, type ThinkingLevelMap } from "@earendil-works/pi-ai";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 
-import { BEDROCK_PROVIDER_ID } from "@shared/providers";
+import { BEDROCK_PROVIDER_ID, OPENCODE_GO_PROVIDER_ID } from "@shared/providers";
 import { bedrockAccountProvider } from "./bedrock";
+import { storedKeyOnly } from "./storedKeyOnly";
 
 /**
  * The one place Infinitary creates a Pi ModelRuntime, so the live-catalog policy
@@ -111,6 +112,23 @@ export async function createModelRuntime(options: ModelRuntimeOptions): Promise<
   // Offline: the bundled catalog and this store's last overlay, no network.
   const runtime = await ModelRuntime.create({ ...base, allowModelNetwork: false });
   if (options.connectionProvider) connectionProviders.set(runtime, options.connectionProvider);
+  // Pi starts refreshes of its own that nobody awaits (registering a
+  // provider fires one), and it calls them through this property, so it is
+  // wrapped before any registration below and every refresh is tracked.
+  const refresh = runtime.refresh?.bind(runtime);
+  let lastRefresh: Promise<unknown> = Promise.resolve();
+  if (refresh)
+    runtime.refresh = (refreshOptions) => {
+      const work = tracked(
+        refresh(
+          options.connectionProvider
+            ? { ...refreshOptions, allowNetwork: false, providers: [options.connectionProvider] }
+            : refreshOptions,
+        ),
+      );
+      lastRefresh = work;
+      return work;
+    };
   const snapshot = runtime.getAvailableSnapshot.bind(runtime);
   const allows = (model: ModelDef) =>
     options.bedrockAccount
@@ -125,6 +143,22 @@ export async function createModelRuntime(options: ModelRuntimeOptions): Promise<
       bedrockAccountProvider(stock, options.bedrockUrl, options.bedrockProfileUnavailable),
     );
     await runtime.refresh({ allowNetwork: false, providers: [BEDROCK_PROVIDER_ID] });
+  }
+  // Registering a provider and refreshing one provider both reset Pi's
+  // available list to every model of each signed-in provider; only an
+  // unscoped refresh's availability pass narrows them again (Copilot to the
+  // ids stored at its sign-in, OpenCode Go to a stored key). Registering
+  // fires exactly that refresh, so it alone is awaited: a second refresh
+  // racing it can leave the reset list standing. A Bedrock account's
+  // runtime, which never serves OpenCode Go and keeps only its checked list
+  // above, does not register it at all.
+  const openCodeGo =
+    options.connectionProvider || options.bedrockAccount
+      ? undefined
+      : runtime.getProvider(OPENCODE_GO_PROVIDER_ID);
+  if (openCodeGo) {
+    runtime.registerNativeProvider(storedKeyOnly(openCodeGo));
+    await lastRefresh;
   }
   const getAuth = runtime.getAuth.bind(runtime);
   runtime.getAuth = ((model, overrides) => {
@@ -153,19 +187,6 @@ export async function createModelRuntime(options: ModelRuntimeOptions): Promise<
       ? withHonestReasoning(model)
       : undefined;
   };
-  // Pi starts refreshes of its own that nobody awaits (registering a
-  // provider fires one), and it calls them through this property, so every
-  // refresh this runtime runs is tracked here.
-  const refresh = runtime.refresh?.bind(runtime);
-  if (refresh)
-    runtime.refresh = (refreshOptions) =>
-      tracked(
-        refresh(
-          options.connectionProvider
-            ? { ...refreshOptions, allowNetwork: false, providers: [options.connectionProvider] }
-            : refreshOptions,
-        ),
-      );
   if (!options.connectionProvider && !options.bedrockAccount)
     void tracked(refreshInBackground(runtime, options.onCatalogRefreshed));
   return runtime;

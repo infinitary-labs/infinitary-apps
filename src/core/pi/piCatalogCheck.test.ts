@@ -21,6 +21,7 @@ const PI_PROVIDERS = [
   "xai",
   "kimi-coding",
   "github-copilot",
+  "opencode-go",
   "openrouter",
 ] as const;
 

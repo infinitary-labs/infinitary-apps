@@ -14,13 +14,14 @@ import {
 import { isSensedProvider, QUOTA_TO_PI_PROVIDER, quotaSnapshotViewSchema } from "./quota";
 
 describe("PROVIDER_CATALOG", () => {
-  it("offers Amazon Bedrock as a distinct built-in provider alongside the existing six", () => {
+  it("offers Amazon Bedrock as a distinct built-in provider alongside the existing seven", () => {
     expect(PROVIDER_CATALOG.map((entry) => entry.id)).toEqual([
       "openai-codex",
       "xai",
       CLAUDE_PROVIDER_ID,
       "kimi-coding",
       "github-copilot",
+      "opencode-go",
       "openrouter",
       BEDROCK_PROVIDER_ID,
     ]);
@@ -31,6 +32,7 @@ describe("PROVIDER_CATALOG", () => {
       "Claude",
       "Kimi Code",
       "Copilot",
+      "OpenCode Go",
       "OpenRouter",
       "Amazon Bedrock",
     ]);

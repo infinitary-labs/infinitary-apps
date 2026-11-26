@@ -12,6 +12,7 @@
 "accountsConnectCustomApi" = "API مخصصة";
 "accountsConnectHow" = "كيف تريد ربط %1$@؟";
 "accountsConnectInstallClaudeThere" = "ثبّت Claude Code هناك أولًا";
+"accountsConnectKeyWhere" = "انسخ مفتاحك من %2$@ بعد اشتراكك في %1$@.";
 "accountsConnectNotSignedIn" = "لم يُسجَّل الدخول";
 "accountsConnectNotSignedInYet" = "لم يُسجَّل الدخول إلى %2$@ على %1$@ بعد.";
 "accountsConnectOpenSignIn" = "فتح صفحة تسجيل الدخول";
@@ -248,6 +249,7 @@
 "accountsCustomApiUseModel" = "استخدام %1$@";
 "accountsCustomApiUseOn" = "استخدام %1$@";
 "accountsCustomApiUseTitle" = "استخدام %1$@ %2$@";
+"accountsQuotaOpenCodeGoNoPlan" = "لم يجد OpenCode Go خطة Go نشطة لهذا المفتاح.";
 "accountsSavedResetBusy" = "يستخدم Infinitary إعادة تعيين محفوظة على %1$@ بالفعل. انتظر حتى ينتهي.";
 "accountsSavedResetCodexStopped" = "توقف Codex عن الرد قبل أن يستخدم أي شيء، لذلك لم تُستخدم أي إعادة تعيين محفوظة. حاول مرة أخرى.";
 "accountsSavedResetNoCodex" = "لاستخدام إعادة تعيين محفوظة من Infinitary يحتاج هذا الحاسوب إلى Codex %1$@ أو أحدث. ثبّت Codex، أو استخدم إعادة التعيين على %2$@.";
@@ -4299,7 +4301,7 @@
 "shellGateRecoveryTitle" = "إعداد نائب القبطان على هذا الحاسوب";
 "shellGateRunLine" = "اربط اشتراكًا لنائب القبطان على %1$@. يُسجَّل الدخول إليه من هنا.";
 "shellGateStaysOn" = "اختر حاسوبًا يبقى قيد التشغيل. الحواسيب الأخرى تحتاج إليه مستيقظًا.";
-"shellGateStillNeeds" = "لا يزال نائب القبطان يحتاج إلى حساب يستجيب: Codex أو Grok أو Claude أو Kimi Code أو Copilot أو OpenRouter بمفتاح API أو Amazon Bedrock بتسجيل دخول AWS.";
+"shellGateStillNeeds" = "لا يزال نائب القبطان يحتاج إلى حساب يستجيب: Codex أو Grok أو Claude أو Kimi Code أو Copilot أو OpenCode Go أو OpenRouter بمفتاح API أو Amazon Bedrock بتسجيل دخول AWS.";
 "shellGateTitle" = "اربط اشتراكًا للبدء";
 "shellGateWhere" = "أين أسكن؟ اختر حاسوبًا يبقى قيد التشغيل قدر الإمكان.";
 "shellKeyReminderHint" = "اضغطه مرة واحدة ولن يظهر هذا بعدها";

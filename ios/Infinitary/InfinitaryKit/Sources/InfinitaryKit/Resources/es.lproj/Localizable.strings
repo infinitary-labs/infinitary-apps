@@ -12,6 +12,7 @@
 "accountsConnectCustomApi" = "API personalizada";
 "accountsConnectHow" = "¿Cómo quieres conectar %1$@?";
 "accountsConnectInstallClaudeThere" = "primero instala Claude Code allí";
+"accountsConnectKeyWhere" = "Copia tu clave desde %2$@ después de suscribirte a %1$@.";
 "accountsConnectNotSignedIn" = "sin iniciar sesión";
 "accountsConnectNotSignedInYet" = "%2$@ todavía no tiene la sesión iniciada en %1$@.";
 "accountsConnectOpenSignIn" = "Abrir la página de inicio de sesión";
@@ -248,6 +249,7 @@
 "accountsCustomApiUseModel" = "Usar %1$@";
 "accountsCustomApiUseOn" = "Usar %1$@";
 "accountsCustomApiUseTitle" = "Usar %1$@ %2$@";
+"accountsQuotaOpenCodeGoNoPlan" = "OpenCode Go no encontró un plan Go activo para esta clave.";
 "accountsSavedResetBusy" = "Infinitary ya está usando un restablecimiento guardado en %1$@. Espera a que termine.";
 "accountsSavedResetCodexStopped" = "Codex dejó de responder antes de usar nada, así que no se usó ningún reinicio guardado. Inténtalo de nuevo.";
 "accountsSavedResetNoCodex" = "Para usar un restablecimiento guardado desde Infinitary, este equipo necesita Codex %1$@ o posterior. Instala Codex o usa el restablecimiento en %2$@.";
@@ -4299,7 +4301,7 @@
 "shellGateRecoveryTitle" = "Configura tu primer oficial en esta computadora";
 "shellGateRunLine" = "Conecta una para tu primer oficial en %1$@. Inicia sesión desde aquí.";
 "shellGateStaysOn" = "Elige una computadora que se quede encendida. Las otras computadoras la necesitan despierta.";
-"shellGateStillNeeds" = "Tu primer oficial todavía necesita una cuenta que responda: Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter con una clave de API o Amazon Bedrock con tu inicio de sesión de AWS.";
+"shellGateStillNeeds" = "Tu primer oficial todavía necesita una cuenta que responda: Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter con una clave de API o Amazon Bedrock con tu inicio de sesión de AWS.";
 "shellGateTitle" = "Conecta una suscripción para empezar";
 "shellGateWhere" = "¿Dónde debo vivir? Elige una computadora que esté encendida el mayor tiempo posible.";
 "shellKeyReminderHint" = "presiónala una vez y esto deja de salir";

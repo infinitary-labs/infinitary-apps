@@ -435,6 +435,8 @@ export function hermeticEnv(input: {
     // listens on (9, discard), never to xAI with a made-up key; a spec
     // that serves the read names its own stub in `env`.
     INFINITARY_GROK_KEY_URL: "http://127.0.0.1:9/v1/api-key",
+    // An OpenCode Go key's allowance read goes there too, never to OpenCode.
+    INFINITARY_OPENCODE_GO_USAGE_URL: "http://127.0.0.1:9/inference/go/v1/usage",
     // The served starter list is asked of the same unused port, so every
     // journey starts on the shipped starter map (docs/model-lists.md).
     INFINITARY_STARTERS_URL: "http://127.0.0.1:9/infinitary-starters.json",

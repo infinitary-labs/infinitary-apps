@@ -12,6 +12,7 @@
 "accountsConnectCustomApi" = "カスタム API";
 "accountsConnectHow" = "%1$@ にどの方法で接続しますか？";
 "accountsConnectInstallClaudeThere" = "先にそちらに Claude Code をインストールしてください";
+"accountsConnectKeyWhere" = "%1$@ を購読したあと、%2$@ からキーをコピーしてください。";
 "accountsConnectNotSignedIn" = "未サインイン";
 "accountsConnectNotSignedInYet" = "%1$@ ではまだ %2$@ にサインインしていません。";
 "accountsConnectOpenSignIn" = "サインインページを開く";
@@ -248,6 +249,7 @@
 "accountsCustomApiUseModel" = "%1$@ を使う";
 "accountsCustomApiUseOn" = "これを%1$@使う";
 "accountsCustomApiUseTitle" = "%1$@ を%2$@使う";
+"accountsQuotaOpenCodeGoNoPlan" = "OpenCode Go で、このキーに有効な Go プランが見つかりませんでした。";
 "accountsSavedResetBusy" = "Infinitary はすでに %1$@ で保存済みのリセットを使っています。終わるまでお待ちください。";
 "accountsSavedResetCodexStopped" = "Codex が何かを使う前に応答しなくなったため、保存済みのリセットは使われていません。もう一度お試しください。";
 "accountsSavedResetNoCodex" = "Infinitary から保存済みのリセットを使うには、このコンピュータに Codex %1$@ 以降が必要です。Codex をインストールするか、%2$@ でリセットを使ってください。";
@@ -4299,7 +4301,7 @@
 "shellGateRecoveryTitle" = "このコンピューターで一等航海士を準備";
 "shellGateRunLine" = "%1$@ の一等航海士用に1つ接続してください。サインインはここから行います。";
 "shellGateStaysOn" = "電源が入ったままのコンピューターを選んでください。ほかのコンピューターは、それが起きていることを必要とします。";
-"shellGateStillNeeds" = "一等航海士には、応答するアカウントがまだ必要です。Codex、Grok、Claude、Kimi Code、Copilot、API キーを使う OpenRouter、または AWS でサインインする Amazon Bedrock を接続してください。";
+"shellGateStillNeeds" = "一等航海士には、応答するアカウントがまだ必要です。Codex、Grok、Claude、Kimi Code、Copilot、OpenCode Go、API キーを使う OpenRouter、または AWS でサインインする Amazon Bedrock を接続してください。";
 "shellGateTitle" = "始めるにはサブスクリプションを接続してください";
 "shellGateWhere" = "私はどこに住めばよいですか？できるだけ電源が入ったままのコンピューターを選んでください。";
 "shellKeyReminderHint" = "一度押すとこの表示は出なくなります";

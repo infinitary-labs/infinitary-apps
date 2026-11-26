@@ -12,6 +12,7 @@
 "accountsConnectCustomApi" = "Eigene API";
 "accountsConnectHow" = "Wie möchtest du %1$@ verbinden?";
 "accountsConnectInstallClaudeThere" = "dort zuerst Claude Code installieren";
+"accountsConnectKeyWhere" = "Kopiere deinen Schlüssel aus der %2$@, nachdem du %1$@ abonniert hast.";
 "accountsConnectNotSignedIn" = "nicht angemeldet";
 "accountsConnectNotSignedInYet" = "%2$@ ist auf %1$@ noch nicht angemeldet.";
 "accountsConnectOpenSignIn" = "Anmeldeseite öffnen";
@@ -248,6 +249,7 @@
 "accountsCustomApiUseModel" = "%1$@ verwenden";
 "accountsCustomApiUseOn" = "Verwenden %1$@";
 "accountsCustomApiUseTitle" = "%1$@ %2$@ verwenden";
+"accountsQuotaOpenCodeGoNoPlan" = "OpenCode Go hat für diesen Schlüssel kein aktives Go-Abo gefunden.";
 "accountsSavedResetBusy" = "Infinitary löst bereits einen gespeicherten Reset für %1$@ ein. Warte, bis es fertig ist.";
 "accountsSavedResetCodexStopped" = "Codex hat nicht mehr geantwortet, bevor etwas eingelöst wurde, daher wurde kein gespeicherter Reset eingelöst. Versuch es noch einmal.";
 "accountsSavedResetNoCodex" = "Um einen gespeicherten Reset aus Infinitary einzulösen, braucht dieser Computer Codex %1$@ oder neuer. Installiere Codex oder löse den Reset auf %2$@ ein.";
@@ -4299,7 +4301,7 @@
 "shellGateRecoveryTitle" = "Richte deinen ersten Offizier auf diesem Computer ein";
 "shellGateRunLine" = "Verbinde eins für deinen ersten Offizier auf %1$@. Die Anmeldung läuft von hier aus.";
 "shellGateStaysOn" = "Wähl einen Computer, der eingeschaltet bleibt. Andere Computer brauchen ihn wach.";
-"shellGateStillNeeds" = "Dein erster Offizier braucht noch ein Konto, das antwortet: Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter mit einem API-Schlüssel oder Amazon Bedrock mit deiner AWS-Anmeldung.";
+"shellGateStillNeeds" = "Dein erster Offizier braucht noch ein Konto, das antwortet: Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter mit einem API-Schlüssel oder Amazon Bedrock mit deiner AWS-Anmeldung.";
 "shellGateTitle" = "Verbinde ein Abo, um anzufangen";
 "shellGateWhere" = "Wo soll ich wohnen? Wähl einen Computer, der möglichst immer eingeschaltet bleibt.";
 "shellKeyReminderHint" = "einmal drücken, dann endet dieser Hinweis";

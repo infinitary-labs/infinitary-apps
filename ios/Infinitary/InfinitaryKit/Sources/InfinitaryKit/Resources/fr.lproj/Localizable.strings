@@ -12,6 +12,7 @@
 "accountsConnectCustomApi" = "API personnalisée";
 "accountsConnectHow" = "Comment voulez-vous connecter %1$@ ?";
 "accountsConnectInstallClaudeThere" = "installez d’abord Claude Code là-bas";
+"accountsConnectKeyWhere" = "Copiez votre clé depuis %2$@ après vous être abonné à %1$@.";
 "accountsConnectNotSignedIn" = "non connecté";
 "accountsConnectNotSignedInYet" = "%2$@ n’est pas encore connecté sur %1$@.";
 "accountsConnectOpenSignIn" = "Ouvrir la page de connexion";
@@ -248,6 +249,7 @@
 "accountsCustomApiUseModel" = "Utiliser %1$@";
 "accountsCustomApiUseOn" = "Utiliser %1$@";
 "accountsCustomApiUseTitle" = "Utiliser %1$@ %2$@";
+"accountsQuotaOpenCodeGoNoPlan" = "OpenCode Go n’a trouvé aucun forfait Go actif pour cette clé.";
 "accountsSavedResetBusy" = "Infinitary utilise déjà une réinitialisation enregistrée sur %1$@. Attendez qu’elle se termine.";
 "accountsSavedResetCodexStopped" = "Codex a cessé de répondre avant d'utiliser quoi que ce soit : aucune réinitialisation enregistrée n'a été utilisée. Réessayez.";
 "accountsSavedResetNoCodex" = "Utiliser une réinitialisation enregistrée depuis Infinitary demande Codex %1$@ ou plus récent sur cet ordinateur. Installez Codex, ou utilisez la réinitialisation sur %2$@.";
@@ -4299,7 +4301,7 @@
 "shellGateRecoveryTitle" = "Configurez votre second sur cet ordinateur";
 "shellGateRunLine" = "Connectez-en un pour votre second sur %1$@. La connexion se fait depuis ici.";
 "shellGateStaysOn" = "Choisissez un ordinateur qui reste allumé. Les autres ordinateurs ont besoin qu’il soit éveillé.";
-"shellGateStillNeeds" = "Votre second a encore besoin d’un compte qui répond : Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter avec une clé API, ou Amazon Bedrock avec votre connexion AWS.";
+"shellGateStillNeeds" = "Votre second a encore besoin d’un compte qui répond : Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter avec une clé API, ou Amazon Bedrock avec votre connexion AWS.";
 "shellGateTitle" = "Connectez un abonnement pour commencer";
 "shellGateWhere" = "Où dois-je vivre ? Choisissez un ordinateur qui reste allumé le plus possible.";
 "shellKeyReminderHint" = "appuyez une fois et ce rappel s’arrête";

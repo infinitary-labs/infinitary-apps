@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { expect, type Locator, type Page, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import { HOST_CARD_PRIORITY } from "../../src/core/orchestrator/hostCards";
 import { appPathsFor } from "../../src/core/paths";
 import { CardStore } from "../../src/core/storage/cardStore";
@@ -23,7 +23,7 @@ import { type LaunchedApp, launchApp } from "./launch";
 import { mockModelsJson } from "./mockModels";
 import { type MockProviderServer, startMockProvider } from "./mockProvider";
 import { showCard, shownCard } from "./stack";
-import { pressKey } from "./windowKeys";
+import { pressKey, pressKeyEndingApp } from "./windowKeys";
 
 /**
  * The window opened beside Infinitary started by a command (docs/run.md,
@@ -92,22 +92,6 @@ const ended = (opened: LaunchedApp) =>
   new Promise<void>((resolve) => opened.app.process().once("exit", () => resolve()));
 
 /**
- * Presses Enter on a button whose press ends the window's own program, and
- * returns once that program ended. The press's own answer can be lost with
- * the window it closes, so only a press that failed for another reason
- * fails the journey.
- */
-async function pressToEnd(opened: LaunchedApp, button: Locator): Promise<void> {
-  const windowEnded = ended(opened);
-  const failed = new Promise<never>((_resolve, reject) => {
-    pressKey(button, "Enter").catch((error: Error) => {
-      if (!error.message.includes("has been closed")) reject(error);
-    });
-  });
-  await Promise.race([windowEnded, failed]);
-}
-
-/**
  * INF-1352's plan, piece 6, the captain's answer window_joins=join ("it
  * joins the run as a view"), and INF-3660's plan, restart=wait-for-entry:
  * "offer it at once when none will restart the run". Promised result: the
@@ -169,7 +153,7 @@ test("Infinitary's window opened while a command runs joins it, and offers Start
       await expectNotice(page, stopped);
       await pressKey(quit, "Tab");
       await expect(startHere).toBeFocused();
-      await pressToEnd(opened, startHere);
+      await pressKeyEndingApp(opened.app, startHere, "Enter");
     } finally {
       await opened.close();
     }
@@ -208,7 +192,7 @@ test("a command killed under its window is told as stopped without saying why, w
       await ran.exited;
       await expectNotice(page, { state: "stopped", ending: "crashed" });
       const quit = noticeOver(page).getByRole("button", { name: COMMAND_NOTICE_WORDS.quit });
-      await pressToEnd(opened, quit);
+      await pressKeyEndingApp(opened.app, quit, "Enter");
     } finally {
       await opened.close();
     }

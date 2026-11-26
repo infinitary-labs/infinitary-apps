@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "report-katakana-long-vowel",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A crewmate's report with Japanese words is kept",
+      "body": "A crewmate whose report held a Japanese word with the long-vowel mark, such as コンピューター or ユーザー, had its report set aside and its turn counted as failed. Those reports now reach your first mate, whether they quote Japanese words or are written in Japanese.",
+      "noPicture": "This changes which crewmate reports are accepted, not a view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -423,8 +423,7 @@ export class FirstmateAgent {
       inbox: options.inbox,
       now: () => this.now(),
       raiseNotice: (card) => options.supervisor.cards.hostCards.raiseHostCard(card),
-      withdrawNotice: (cardId) =>
-        options.supervisor.cards.hostCards.withdrawHostCard(cardId, "an answering card went up"),
+      withdrawNotice: (id, why) => options.supervisor.cards.hostCards.withdrawHostCard(id, why),
       ...cardLookups(options.supervisor.cards),
       ending: options.supervisor.askEnding,
       observe: options.answerDelivery === "observe",
@@ -448,6 +447,7 @@ export class FirstmateAgent {
           this.acceptedSteers.some((steer) => steer.askId === id)),
       steer: (input) => this.appSteer(input),
       forget: (id) => this.unreadAsks.delete(id),
+      answerEnded: (id) => this.delivery.takenBack(id),
       drain: () => void this.drainInbox(),
     });
     this.takeBacks.ended(stranded);

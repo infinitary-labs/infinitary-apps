@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "combine-test-split",
+      "reason": "Internal: the tests of a held batch's fix move from the combine's test file to their own file without changing app behavior."
+    }
+  ]
+}

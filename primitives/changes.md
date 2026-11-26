@@ -99,6 +99,7 @@ A remote version the host has not seen pushed carries nothing until it is; a rev
 - [`../src/core/orchestrator/changeMerge.test.ts`](../src/core/orchestrator/changeMerge.test.ts): the merge and its checks at the put-in, what a kept merge stops on, and a lost answer read back before anything is sent again.
 - [`../src/core/orchestrator/ownBatchChange.test.ts`](../src/core/orchestrator/ownBatchChange.test.ts): a batched change's story, checks, merge card and approval on its pushed branch, its place in the batch and its receipt.
 - [`../src/core/batches/batches.test.ts`](../src/core/batches/batches.test.ts), [`../src/core/batches/line.test.ts`](../src/core/batches/line.test.ts) and [`../src/core/batches/combine.test.ts`](../src/core/batches/combine.test.ts): the line, the combine, a held batch and its answers, an approval withdrawn, and the reconcile after a start.
+- [`../src/core/batches/combine.held.test.ts`](../src/core/batches/combine.held.test.ts): a held batch's fix combined with only its own difference from the version that held.
 - [`../tests/holds.test.ts`](../tests/holds.test.ts) and `scripts/holds.ts`: every hold the host places reads a typed fact, none the care's name.
 
 ## Where the detail lives

@@ -72,6 +72,9 @@
   "cards-top-bar": {
     "iphone": 120000
   },
+  "cards-revised-scroll": {
+    "iphone": 200000
+  },
   "cards-reader": {
     "iphone": 60000
   },

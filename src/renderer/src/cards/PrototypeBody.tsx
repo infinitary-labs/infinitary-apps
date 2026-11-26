@@ -1180,5 +1180,3 @@ function ScriptedCardBody(props: SrcdocProps) {
     />
   );
 }
-
-export const PrototypeBody = HtmlCardBody;

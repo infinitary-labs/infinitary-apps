@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { budgetTimer, type DeadlineTimer } from "../tests/helpers/budgets.ts";
 import { logTime } from "../tests/helpers/phonePhotos.ts";
 import type { PhoneDevice } from "./phone-test-plan.ts";
@@ -239,5 +240,130 @@ export async function phonePrewarmFinished({
       ? `${device}: simulator ${simulator}'s wallpaper prewarm had not finished ${minutes} minutes after its boot` +
           " finished, so the gate stopped waiting rather than let it run during a part"
       : `${device}: simulator ${simulator}'s log stream ended before its wallpaper prewarm finished`,
+  );
+}
+
+/**
+ * How long the gate waits for a simulator's Face ID interface to start (INF-7013). On the phone Macs its start took 1
+ * to 10 seconds. The wait runs on the load clock, so a busy Mac stretches it, up to the clock's wall cap.
+ */
+export const PHONE_FACE_ID_BUDGET_MS = 2 * 60_000;
+
+/** The system service that draws iOS's Face ID prompt. */
+export const FACE_ID_INTERFACE = "com.apple.LocalAuthenticationUIService";
+/** The Face ID interface's own lines about its app's life and its requests. */
+export const FACE_ID_LOG =
+  'process == "LocalAuthenticationUIService" AND subsystem == "com.apple.LocalAuthentication" AND category == "UI"';
+// The interface's words once its process has started.
+const FACE_ID_STARTED =
+  /\sLocalAuthenticationUIService\[[^\]]*\] \[com\.apple\.LocalAuthentication:UI\] application\(_:didFinishLaunchingWithOptions:\)/;
+/** What says why the interface had not started: its own lines, and SpringBoard's and RunningBoard's about it. */
+export const FACE_ID_FAILURE_LOG = 'process == "LocalAuthenticationUIService"' +
+  ' OR ((process == "SpringBoard" OR process == "runningboardd") AND eventMessage CONTAINS "LocalAuthenticationUIService")';
+
+/** Builds the Face ID helper, scripts/phone-face-id.m, once for the iOS simulator into `folder` and answers its path. */
+export async function buildPhoneFaceId(run: (command: string, args: string[]) => Promise<string>, folder: string) {
+  const helper = join(folder, "phone-face-id");
+  await run("xcrun", ["-sdk", "iphonesimulator", "clang", "-fobjc-arc", "-O2", "-arch", "arm64",
+    "-mios-simulator-version-min=17.0", "-framework", "Foundation", "-framework", "LocalAuthentication",
+    fileURLToPath(new URL("./phone-face-id.m", import.meta.url)), "-o", helper]);
+  return helper;
+}
+
+/**
+ * Starts the simulator's Face ID interface, unless it already runs, and waits until its process has started
+ * (INF-7013). iOS gives a Face ID request five seconds to show its prompt, and a request that finds no interface
+ * running starts its process inside those five seconds; on a busy phone Mac that start took up to 10 seconds, and the
+ * request failed with LocalAuthentication's error -1000. Once started, the interface stays running, suspended between
+ * prompts, and every later request on that simulator uses it. `run` runs `xcrun` with the given arguments, giving each
+ * line it prints to `heard` until `stop`, and answers its output: `launchctl list`, which says whether the interface
+ * runs; a `log stream` of its lines; then `helper`, the Face ID helper, whose request starts it and which the wait
+ * stops once it has, cancelling that request. An interface not started within `budget` fails the wait, naming the
+ * device and simulator, after the simulator's log about it since the wait began is kept with the command logs.
+ */
+export async function phoneFaceIdStarted({
+  device,
+  simulator,
+  helper,
+  run,
+  budget = PHONE_FACE_ID_BUDGET_MS,
+}: {
+  device: PhoneDevice;
+  simulator: string;
+  helper: string;
+  run: (args: string[], heard?: (line: string) => void, stop?: AbortSignal) => Promise<string>;
+  budget?: number;
+}): Promise<void> {
+  const jobs = await run(["simctl", "spawn", simulator, "launchctl", "list"]);
+  const [pid] = jobs.split("\n").map((row) => row.split("\t")).find((row) => row[2] === FACE_ID_INTERFACE) ?? [];
+  if (pid && /^\d+$/.test(pid)) return;
+  const began = new Date();
+  let asked: Date | undefined;
+  let listening!: () => void;
+  const streamed = new Promise<"listening">((resolve) => {
+    listening = () => resolve("listening");
+  });
+  let launched!: () => void;
+  const started = new Promise<"started">((resolve) => {
+    launched = () => resolve("started");
+  });
+  const hear = (line: string) => {
+    if (line.startsWith("Filtering the log data using ")) listening();
+    else if (FACE_ID_STARTED.test(line)) launched();
+  };
+  const stopping = new AbortController();
+  const streaming = run(["simctl", "spawn", simulator, "log", "stream", "--style", "compact", "--predicate", FACE_ID_LOG],
+    hear, stopping.signal);
+  const ended = streaming.then(() => "ended" as const, () => "ended" as const);
+  const answering = new AbortController();
+  let answer = "it printed no answer";
+  // How the helper ended when it ended before the wait stopped it.
+  let unasked: string | undefined;
+  let asking: Promise<void> | undefined;
+  let timer: DeadlineTimer | undefined;
+  const late = new Promise<"late">((resolve) => {
+    timer = budgetTimer(() => resolve("late"), budget);
+  });
+  let outcome: "started" | "ended" | "late";
+  try {
+    const first = await Promise.race([streamed, ended, late]);
+    if (first === "listening") {
+      asked = new Date();
+      asking = run(["simctl", "spawn", simulator, helper], (line) => {
+        if (line.startsWith("answered: ")) answer = line.slice("answered: ".length);
+      }, answering.signal).then(() => {
+        if (!answering.signal.aborted) unasked = `its request was answered: ${answer}`;
+      }, (problem: Error) => {
+        if (!answering.signal.aborted) unasked = `it failed: ${problem.message}`;
+      });
+      outcome = await Promise.race([started, ended, late]);
+    } else outcome = first;
+  } finally {
+    timer?.cancel();
+    stopping.abort();
+    answering.abort();
+    // The stopped stream ends with a failure of its own, which is not the wait's.
+    await streaming.catch(() => {});
+  }
+  // The stopped helper cancels its request, and its request ends with it however it ends, so a stopped helper's own
+  // end leaves no prompt behind and says nothing about the interface.
+  await asking;
+  const helped = unasked ? `; the Face ID helper ended first: ${unasked}` : "";
+  if (outcome === "started") {
+    const seconds = ((Date.now() - asked!.getTime()) / 1000).toFixed(1);
+    console.log(`${device}: simulator ${simulator}'s Face ID interface started ${seconds} seconds after the gate asked for Face ID${helped}`);
+    return;
+  }
+  await run(["simctl", "spawn", simulator, "log", "show", "--style", "compact", "--info", "--start", logTime(began),
+    "--predicate", FACE_ID_FAILURE_LOG])
+    .then(() => console.log("The simulator's log about its Face ID interface since the wait began is kept with the command logs"))
+    .catch((problem: Error) => console.log(`The simulator's log about its Face ID interface could not be kept: ${problem.message}`));
+  const minutes = ((Date.now() - began.getTime()) / 60_000).toFixed(1);
+  const why = asked ? helped : "; its log stream never began, so the gate did not ask for Face ID";
+  throw new Error(
+    outcome === "late"
+      ? `${device}: simulator ${simulator}'s Face ID interface had not started ${minutes} minutes after the gate began` +
+          ` starting it, so the gate stopped waiting rather than let a Face ID prompt miss its five seconds${why}`
+      : `${device}: simulator ${simulator}'s log stream ended before its Face ID interface started${why}`,
   );
 }

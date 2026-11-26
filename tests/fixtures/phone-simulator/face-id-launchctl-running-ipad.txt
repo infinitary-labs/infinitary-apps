@@ -1,0 +1,8 @@
+PID	Status	Label
+-	0	com.apple.accessibility.axAuditDaemon.deviceservice
+-	0	com.apple.guidedbrowsingd
+-	0	com.apple.migrationpluginwrapper
+98222	-9	com.apple.LocalAuthenticationUIService
+46392	0	com.apple.nanotimekitcompaniond
+43565	0	com.apple.sociallayerd
+46393	0	com.apple.deviceaccessd

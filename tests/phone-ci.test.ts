@@ -237,6 +237,8 @@ describe("the native gate on an affected request", () => {
     "scripts/heavy-run-place.ts",
     "scripts/phone-hinge.ts",
     "scripts/phone-hinge.m",
+    // INF-7013: the Face ID helper's source, which the gate builds and runs before every part.
+    "scripts/phone-face-id.m",
     "scripts/phone-work.json",
     "scripts/phone-part-times.json",
     "release-notes/pictures/activity-settles-setting-runs-light.png",

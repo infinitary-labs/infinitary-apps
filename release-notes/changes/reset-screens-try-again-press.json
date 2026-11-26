@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "reset-screens-try-again-press",
+      "reason": "A journey's Enter on Try again no longer fails when the app quits before the key's release reaches its window; the press that ends the app moves to a shared test helper, with no app behavior change."
+    }
+  ]
+}

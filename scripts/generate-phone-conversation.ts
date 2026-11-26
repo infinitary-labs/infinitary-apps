@@ -7,7 +7,9 @@ import { staleGeneratedFile } from "./github-errors.ts";
  * INF-6366: the phone's strip and Conversation read the computer's conversation (`inf:conversation:thread`) and
  * its last turn (`inf:conversation:last-turn`). This records both as the core answers them, after the captain's
  * acts are written by their real owners - the capture side for messages, the card service for presses and lines -
- * so the phone package's tests replay real readings (`PhoneConversationTests`).
+ * so the phone package's tests replay real readings (`PhoneConversationTests`). `takeBack` is a second conversation
+ * where a message was replaced before any turn read it and the replacement was then taken back (INF-6763's plan,
+ * part 3; `PhoneTakeBackTests`).
  */
 const OUT = join(REPO_ROOT, "ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/Fixtures/PhoneConversation.generated.json");
 
@@ -20,6 +22,9 @@ try {
   const { TaskService } = await runner.import<typeof import("../src/core/tasks/taskService.ts")>(at("src/core/tasks/taskService.ts"));
   const { CardStore } = await runner.import<typeof import("../src/core/storage/cardStore.ts")>(at("src/core/storage/cardStore.ts"));
   const { readConversation } = await runner.import<typeof import("../src/core/storage/conversationRead.ts")>(at("src/core/storage/conversationRead.ts"));
+  const { inLanguage } = await runner.import<typeof import("../src/shared/i18n/current.ts")>(at("src/shared/i18n/current.ts"));
+  const { SOURCE_LANGUAGE } = await runner.import<typeof import("../src/shared/i18n/languages.ts")>(at("src/shared/i18n/languages.ts"));
+  const m = await runner.import<typeof import("../src/shared/i18n/messages.generated.ts")>(at("src/shared/i18n/messages.generated.ts"));
   type Card = import("../src/shared/cards.ts").Card;
 
   // A fixed clock, so the readings are the same on every run; the card service reads Date.now in places.
@@ -99,6 +104,19 @@ try {
       const oldest = pages.at(-1)!.rounds.at(-1)!;
       pages.push(readConversation(db, { before: { at: oldest.at, id: oldest.id }, limit: 3 }));
     }
+    // The take back's own owners: a replacement saves with `correctionOf`, which takes the message back in the same
+    // write; the withdrawn line is the reply `TakeBacks` saves for a message no turn read; `takeBack` marks the newest.
+    const backDb = freshDatabase();
+    const back = new TaskService({ db: backDb, strict: true, now: () => clock });
+    back.capture.openAsk({ id: "ask-first", text: "chart the open tasks", at: tick() });
+    back.capture.openAsk({ id: "ask-edit", text: "chart the open tasks by project", at: tick(20_000), correctionOf: "ask-first" });
+    back.capture.setAskReply("ask-first", {
+      text: inLanguage(SOURCE_LANGUAGE, () => m.shellLastTurnRevertedUnread()),
+      eligibility: "completed",
+      withdrawn: true,
+    });
+    tick(10_000);
+    back.capture.takeBack("ask-edit");
     const reading = {
       lastTurn: tasks.capture.lastTurn(),
       whole,
@@ -106,6 +124,7 @@ try {
       // The newest page the strip reads, two rounds (the plan's rounds at rest).
       strip: readConversation(db, { limit: 2 }),
       cards: cards.snapshot(),
+      takeBack: { lastTurn: back.capture.lastTurn(), strip: readConversation(backDb, { limit: 2 }) },
     };
     // The core draws card ids and offer ids at random; each gets a stable stand-in, the same one wherever it recurs.
     const stable = new Map<string, string>();

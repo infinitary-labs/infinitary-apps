@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "phone-panel-card-typing-fits",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A panel's card you type in on your iPhone or iPad stays between the top bar and the keyboard",
+      "body": "Typing in a text box inside a panel's own card on Home could push the card's title under the top bar and the message box under the keyboard, on an iPhone, an iPad and a closed iPhone Duo. The card now fits the room above the keyboard and scrolls inside it, and the pager and the message box step aside while you type, as they do for a card from your computer, coming back when the keyboard closes.",
+      "picture": {
+        "dark": "phone-panel-card-typing-fits-dark.webp",
+        "light": "phone-panel-card-typing-fits-light.webp",
+        "alt": "An iPad on its side with a panel's note on Home beside the sidebar, its text box typed in and the whole note between the top bar and the keyboard"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

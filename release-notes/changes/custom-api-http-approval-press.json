@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "id": "custom-api-http-approval-press",
+      "kind": "fix",
+      "area": "subscriptions",
+      "title": "Ticking the plain HTTP approval for a custom API works on the first click",
+      "body": "When you typed a custom API connection's address, or approved one from a connection file, the line saying where Infinitary sends appeared a moment later and pushed the plain HTTP approval down. A click made just then could miss and leave the box unticked. That line's place is now kept while Infinitary looks up the address, so nothing under it moves.",
+      "noPicture": "Once the line appears the form looks as it did before; the fix removes a jump a still picture cannot show.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

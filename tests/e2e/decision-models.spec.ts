@@ -960,9 +960,16 @@ test("OpenCode Go's decision model is chosen from its own row, named with its co
       models: [{ provider: OPENCODE_GO_PROVIDER_ID, id: "gpt-6-luna", label: "GPT-6 Luna" }],
     },
   );
+  // Go's chat models answer on the mock too, so a fallback never leaves this computer.
+  const modelsJson = (port: number) => {
+    const config = JSON.parse(mockModelsJson(port));
+    config.providers[OPENCODE_GO_PROVIDER_ID] = { baseUrl: `http://127.0.0.1:${port}/v1` };
+    return JSON.stringify(config);
+  };
   const launched = await launchApp({
     userDataDir,
     withMockProvider: true,
+    modelsJson,
     env: {
       INFINITARY_QUOTA_FIXTURE_DIR: fixtureDir,
       INFINITARY_OPENCODE_GO_DECISIONS_BASE_URL: local.url.replace(/\/systemone$/, ""),
@@ -1022,6 +1029,25 @@ test("OpenCode Go's decision model is chosen from its own row, named with its co
     expect(readUsage(userDataDir)).toContainEqual({
       provider: OPENCODE_GO_PROVIDER_ID,
       model: "jev-1.14.0",
+    });
+    // A Go call that fails leaves the work to the person's own models, with the reason recorded.
+    local.status = 402;
+    const failedTitle = "OpenCode Go decision that fails";
+    await say(page, `${SPAWN_PROMPT_MARKER} ${failedTitle}`);
+    await expect(startedLine(page, await taskKey(page, failedTitle))).toBeVisible({
+      timeout: 30_000,
+    });
+    const failed = readTasks(userDataDir).find((row) => row.title === failedTitle) as TaskRow;
+    expect(shapeOf(failed).kind_detail).toContain("decision model opencode-go failed: no-credit");
+    expect(String(shapeOf(failed).kind_source)).not.toMatch(/^classifier:opencode-go\/jev/);
+    // Signing out of Go hides its choice and keeps the stored pick.
+    await page.evaluate((id) => window.infinitary.accounts.remove(id), accountId);
+    const signedOut = await page.evaluate(() => window.infinitary.models.decisions());
+    expect(signedOut.providers).toEqual([]);
+    expect(signedOut.settings.answerer).toEqual({
+      kind: "provider",
+      provider: OPENCODE_GO_PROVIDER_ID,
+      model: "jev-1.14",
     });
   } finally {
     await launched.close();

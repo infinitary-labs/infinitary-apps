@@ -9,6 +9,7 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { type LaunchedApp, launchApp } from "./launch";
 import { seedProtectedProfile } from "./savedDataFixtures";
 import { launchSecrets, type SecretsJourneyGlobal } from "./secretsHarness";
+import { pressKeyEndingApp } from "./windowKeys";
 
 /**
  * Reset Infinitary from the screens shown when Infinitary cannot open
@@ -124,12 +125,9 @@ test("Infinitary could not start offers Try again and Reset Infinitary", async (
   try {
     await test.step("Try again forgets the earlier starts and quits to start again", async () => {
       const launched = await stuck();
-      const exited = new Promise<void>((done) => launched.app.process().once("exit", () => done()));
-      await expect(
-        launched.page.getByRole("button", { name: m.resetHeldTryAgain() }),
-      ).toBeFocused();
-      await launched.page.keyboard.press("Enter");
-      await exited;
+      const tryAgain = launched.page.getByRole("button", { name: m.resetHeldTryAgain() });
+      await expect(tryAgain).toBeFocused();
+      await pressKeyEndingApp(launched.app, tryAgain, "Enter");
       expect(existsSync(count)).toBe(false);
       await launched.close();
     });

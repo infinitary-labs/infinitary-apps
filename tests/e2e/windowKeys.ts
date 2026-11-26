@@ -500,6 +500,28 @@ export async function pressKeyTakingFrame(target: Locator, key: string): Promise
 }
 
 /**
+ * `pressKey` for a key whose command ends the app, as Try again on the
+ * screen shown when Infinitary could not start does, and returns once the
+ * app's process ended. The command runs as the key goes down, so the app can
+ * quit before Playwright's release reaches the window, and the press then
+ * fails with the window it closed: only a press that failed for another
+ * reason fails the journey.
+ */
+export async function pressKeyEndingApp(
+  app: ElectronApplication,
+  target: Locator,
+  key: string,
+): Promise<void> {
+  const ended = new Promise<void>((resolve) => app.process().once("exit", () => resolve()));
+  const failed = new Promise<never>((_resolve, reject) => {
+    pressKey(target, key).catch((error: Error) => {
+      if (!error.message.includes("has been closed")) reject(error);
+    });
+  });
+  await Promise.race([ended, failed]);
+}
+
+/**
  * Types `text` with Playwright's keyboard once `field` holds the window's
  * focus. The keyboard types wherever focus is, so a journey that types
  * where a step of its own put focus checks first that it landed there; one

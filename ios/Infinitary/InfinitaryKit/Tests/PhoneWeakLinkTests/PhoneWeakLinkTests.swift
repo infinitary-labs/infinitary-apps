@@ -231,8 +231,9 @@ import XCTest
     /// started over. It now writes in pieces, each followed by a ping a phone still receiving answers, and lets only a
     /// few seconds' worth go ahead of the answers, so the phone's own pings are answered during the catch-up too. Away
     /// from a computer whose card list grows by about 80 KB, the phone misses four card lists and the task board pushed
-    /// with each, both as large as the home's record has grown. A replay sends only the newest card list and board
-    /// whole (INF-3750's option C), so the link carries what the replay sends in about 85 s, at 1 KB/s or faster: a
+    /// with each, both as large as the home's record has grown. The home sends the lighter of a replay, which sends
+    /// only the newest card list and board whole (INF-3750's option C), and the phone's own re-read, whose board
+    /// leaves out the closed rows (INF-6832), so the link carries the lighter in about 85 s, at 1 KB/s or faster: a
     /// slower link outlasts the phone's dial before the welcome. The newest list alone outlasts the phone's answer
     /// wait and still arrives, in parts (INF-2832).
     func testALargeCatchUpOnASlowLinkArrivesOnOneConnection() async throws {
@@ -250,24 +251,27 @@ import XCTest
         let first = Watch(session)
         try await inReach(session, first, within: 30)
         // In reach comes before the board's first read (INF-3750); once it is read too, every first read has answered,
-        // so the next welcome replays rather than reading again.
+        // so the phone can take a replay at the next welcome, and the home weighs one against a re-read.
         try await first.until(30, "the first board") { session.board != nil }
         session.stop()
         let away = try await home("heavy-away")
         let cards = try XCTUnwrap(away["cards"] as? [String])
         let replay = try XCTUnwrap(away["replayBytes"] as? Int)
-        try await shape(bytesPerSec: max(1_000, replay / 85), delayMs: 300)
+        let reload = try XCTUnwrap(away["reloadBytes"] as? Int)
+        try await shape(bytesPerSec: max(1_000, min(replay, reload) / 85), delayMs: 300)
         let before = try await readings().dials.count
         let watch = Watch(session)
         session.start()
-        // A replaying welcome is in reach at once; the cards show once the whole replay is read.
-        try await watch.until(180, "the cards from while away") { cards.allSatisfy(Set(session.cards.map(\.id)).contains) }
+        // A replaying welcome is in reach at once and shows the cards once the whole replay is read. A re-read shows
+        // them first, from its card list, and is in reach once the other first reads behind it answer.
+        try await watch.until(180, "the cards from while away, in reach") {
+            session.contact == "in-reach" && cards.allSatisfy(Set(session.cards.map(\.id)).contains)
+        }
         let took = watch.now
         let dials = try await readings().dials
         XCTAssertEqual(dials.count, before + 1, "One connection carried the whole catch-up")
         let down = try XCTUnwrap(dials.last?["down"] as? Int)
         XCTAssertGreaterThan(took, 60, "The catch-up outlasted two of the computer's pings: \(down) bytes in \(Int(took)) s")
-        XCTAssertEqual(session.contact, "in-reach")
         XCTAssertEqual(watch.said("lost"), 0, "Out of reach never shows while the catch-up arrives")
         _ = try await home("away-cleanup")
         try await finish(session)

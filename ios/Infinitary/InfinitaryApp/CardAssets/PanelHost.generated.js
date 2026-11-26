@@ -43152,87 +43152,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `A new Google sign-in, kept in Secrets and the app's memory`;
   }
-  function integrationsGoogleReadyDetail() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `عميل Google الخاص بك محفوظ. سجّل الدخول به لتنتقل عن عميل Infinitary المشترك.`;
-      case "de":
-        return `Dein eigener Google-Client ist aufbewahrt. Melde dich damit an, um vom gemeinsamen Client von Infinitary zu wechseln.`;
-      case "es":
-        return `Tu propio cliente de Google está guardado. Inicia sesión con él para dejar el cliente compartido de Infinitary.`;
-      case "fr":
-        return `Votre propre client Google est gardé. Connectez-vous avec lui pour quitter le client partagé d’Infinitary.`;
-      case "ja":
-        return `自分の Google クライアントを保管しました。それでサインインすると、Infinitary の共有クライアントから移行できます。`;
-      case "ko":
-        return `내 Google 클라이언트가 보관되어 있습니다. 그것으로 로그인해 Infinitary의 공유 클라이언트에서 옮기세요.`;
-      case "pt-BR":
-        return `Seu próprio cliente do Google está guardado. Faça login com ele para deixar o cliente compartilhado do Infinitary.`;
-      case "zh-Hans":
-        return `你自己的 Google 客户端已保存。用它登录，即可不再使用 Infinitary 的共享客户端。`;
-      case "zh-Hant":
-        return `你自己的 Google 用戶端已保存。用它登入，即可不再使用 Infinitary 的共用用戶端。`;
-      case "en-XA":
-        return `[Ýöûŕ öŵñ Ĝööĝļé çļîéñţ îš ķéþţ. Šîĝñ îñ ŵîţĥ îţ ţö ɱöṽé öƒƒ Îñƒîñîţáŕý'š šĥáŕéð çļîéñţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮Your own Google client is kept. Sign in with it to move off Infinitary's shared client.‬`;
-    }
-    return `Your own Google client is kept. Sign in with it to move off Infinitary's shared client.`;
-  }
-  function integrationsGoogleRetiring() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `أعدّ اتصالك الخاص`;
-      case "de":
-        return `Eigene Verbindung einrichten`;
-      case "es":
-        return `Configura tu propia conexión`;
-      case "fr":
-        return `Configurez votre propre connexion`;
-      case "ja":
-        return `自分の接続を設定してください`;
-      case "ko":
-        return `내 연결을 설정하세요`;
-      case "pt-BR":
-        return `Configure sua própria conexão`;
-      case "zh-Hans":
-        return `请设置你自己的连接`;
-      case "zh-Hant":
-        return `請設定你自己的連線`;
-      case "en-XA":
-        return `[Šéţ ûþ ýöûŕ öŵñ çöññéçţîöñ ~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮Set up your own connection‬`;
-    }
-    return `Set up your own connection`;
-  }
-  function integrationsGoogleRetiringDetail() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `Google متصل عبر عميل Infinitary المشترك، وهو في طريقه إلى التوقف. يظل يعمل حتى ذلك الحين؛ أعدّ عميلك الخاص لتبقى متصلًا.`;
-      case "de":
-        return `Google ist über den gemeinsamen Client von Infinitary verbunden, der eingestellt wird. Bis dahin funktioniert er weiter; richte deinen eigenen Client ein, um verbunden zu bleiben.`;
-      case "es":
-        return `Google está conectado mediante el cliente compartido de Infinitary, que se retirará. Seguirá funcionando hasta entonces; configura tu propio cliente para seguir conectado.`;
-      case "fr":
-        return `Google est connecté par le client partagé d’Infinitary, qui va être retiré. Il fonctionne jusque-là ; configurez votre propre client pour rester connecté.`;
-      case "ja":
-        return `Google は Infinitary の共有クライアントで接続されていますが、このクライアントは廃止されます。それまでは使えます。接続を保つには自分のクライアントを設定してください。`;
-      case "ko":
-        return `Google은 곧 종료되는 Infinitary의 공유 클라이언트로 연결되어 있습니다. 그때까지는 작동하니, 연결을 유지하려면 내 클라이언트를 설정하세요.`;
-      case "pt-BR":
-        return `O Google está conectado pelo cliente compartilhado do Infinitary, que vai ser desativado. Ele continua funcionando até lá; configure seu próprio cliente para continuar conectado.`;
-      case "zh-Hans":
-        return `Google 目前通过 Infinitary 的共享客户端连接，该客户端即将停用。在那之前它仍可使用；请设置你自己的客户端以保持连接。`;
-      case "zh-Hant":
-        return `Google 目前透過 Infinitary 的共用用戶端連線，該用戶端即將停用。在那之前它仍可使用；請設定你自己的用戶端以保持連線。`;
-      case "en-XA":
-        return `[Ĝööĝļé îš çöññéçţéð ţĥŕöûĝĥ Îñƒîñîţáŕý'š šĥáŕéð çļîéñţ, ŵĥîçĥ îš ŕéţîŕîñĝ. Îţ ķééþš ŵöŕķîñĝ ûñţîļ ţĥéñ; šéţ ûþ ýöûŕ öŵñ çļîéñţ ţö šţáý çöññéçţéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮Google is connected through Infinitary's shared client, which is retiring. It keeps working until then; set up your own client to stay connected.‬`;
-    }
-    return `Google is connected through Infinitary's shared client, which is retiring. It keeps working until then; set up your own client to stay connected.`;
-  }
   function integrationsGoogleSetUp() {
     switch (currentLanguage()) {
       case "ar":
@@ -43638,33 +43557,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Set up your own Google connection‬`;
     }
     return `Set up your own Google connection`;
-  }
-  function integrationsGoogleSignIn() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `تسجيل الدخول`;
-      case "de":
-        return `Anmelden`;
-      case "es":
-        return `Iniciar sesión`;
-      case "fr":
-        return `Se connecter`;
-      case "ja":
-        return `サインイン`;
-      case "ko":
-        return `로그인`;
-      case "pt-BR":
-        return `Fazer login`;
-      case "zh-Hans":
-        return `登录`;
-      case "zh-Hant":
-        return `登入`;
-      case "en-XA":
-        return `[Šîĝñ îñ ~~~]`;
-      case "ar-XB":
-        return `‮Sign in‬`;
-    }
-    return `Sign in`;
   }
   function integrationsGoogleSignInHint() {
     switch (currentLanguage()) {
@@ -117010,9 +116902,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     integrationsGoogleExchangeOperation,
     integrationsGoogleExchangeReason,
     integrationsGoogleExchangeResult,
-    integrationsGoogleReadyDetail,
-    integrationsGoogleRetiring,
-    integrationsGoogleRetiringDetail,
     integrationsGoogleSetUp,
     integrationsGoogleSetUpAgain,
     integrationsGoogleSetUpFirst,
@@ -117028,7 +116917,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     integrationsGoogleSetupStepFile,
     integrationsGoogleSetupStepPage,
     integrationsGoogleSetupTitle,
-    integrationsGoogleSignIn,
     integrationsGoogleSignInHint,
     integrationsGoogleStopped,
     integrationsGoogleStoppedDetail,
@@ -120707,9 +120595,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "integrationsGoogleExchangeOperation": [],
     "integrationsGoogleExchangeReason": [],
     "integrationsGoogleExchangeResult": [],
-    "integrationsGoogleReadyDetail": [],
-    "integrationsGoogleRetiring": [],
-    "integrationsGoogleRetiringDetail": [],
     "integrationsGoogleSetUp": [],
     "integrationsGoogleSetUpAgain": [],
     "integrationsGoogleSetUpFirst": [],
@@ -120725,7 +120610,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "integrationsGoogleSetupStepFile": [],
     "integrationsGoogleSetupStepPage": [],
     "integrationsGoogleSetupTitle": [],
-    "integrationsGoogleSignIn": [],
     "integrationsGoogleSignInHint": [],
     "integrationsGoogleStopped": [],
     "integrationsGoogleStoppedDetail": [],

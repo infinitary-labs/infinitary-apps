@@ -1244,9 +1244,6 @@
 "integrationsGoogleExchangeOperation" = "用你自己的 Google 用戶端完成 Google 登入";
 "integrationsGoogleExchangeReason" = "Infinitary 會用你自己的 Google 用戶端完成你的 Google 登入。";
 "integrationsGoogleExchangeResult" = "新的 Google 登入，保存在機密和 App 的記憶體中";
-"integrationsGoogleReadyDetail" = "你自己的 Google 用戶端已保存。用它登入，即可不再使用 Infinitary 的共用用戶端。";
-"integrationsGoogleRetiring" = "請設定你自己的連線";
-"integrationsGoogleRetiringDetail" = "Google 目前透過 Infinitary 的共用用戶端連線，該用戶端即將停用。在那之前它仍可使用；請設定你自己的用戶端以保持連線。";
 "integrationsGoogleSetUp" = "設定";
 "integrationsGoogleSetUpAgain" = "重新設定";
 "integrationsGoogleSetUpFirst" = "請先設定你自己的 Google 用戶端：設定 → 整合 → Google。";
@@ -1262,7 +1259,6 @@
 "integrationsGoogleSetupStepFile" = "用 Download JSON 下載 Google 顯示的用戶端檔案，然後拖到這裡、選擇它，或貼上它的內容。";
 "integrationsGoogleSetupStepPage" = "開啟 Google 的頁面，用你要連接的 Google 帳戶登入。為專案命名，接受 Google 的政策，然後按 Continue。";
 "integrationsGoogleSetupTitle" = "設定你自己的 Google 連線";
-"integrationsGoogleSignIn" = "登入";
 "integrationsGoogleSignInHint" = "請用建立用戶端的 Google 帳戶登入：它只為該帳戶服務。";
 "integrationsGoogleStopped" = "你的 Google 用戶端已停用";
 "integrationsGoogleStoppedDetail" = "Google 不再接受你的用戶端，可能是它已在 Google Cloud 中被刪除。重新設定即可重新連接 Google。";

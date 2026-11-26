@@ -21,15 +21,11 @@ import Testing
         #expect(PhoneGoogleClientState.of(nil, health: "ok") == nil)
     }
 
-    @Test func aSignInOnInfinitarysClientAsksToSetUpAnOwnOneThenToSignInWithIt() throws {
+    @Test func aRetiringFactFromAComputerOnAnEarlierVersionIsReadAsNoState() throws {
+        // A computer from before Infinitary's own client retired still sends it, and the phone ignores it.
         let (retiring, health) = try row(health: "ok", client: #"{"kept":false,"retiring":true}"#)
-        let state = try #require(PhoneGoogleClientState.of(retiring, health: health))
-        #expect(state.words == "Set up your own connection")
-        #expect(state.nextWords == "Set up")
-        let (kept, _) = try row(health: "ok", client: #"{"kept":true,"retiring":true}"#)
-        let ready = try #require(PhoneGoogleClientState.of(kept, health: health))
-        #expect(ready.detail == "Your own Google client is kept. Sign in with it to move off Infinitary's shared client.")
-        #expect(ready.next == .signIn)
+        #expect(retiring == PhoneIntegrations.Client(kept: false))
+        #expect(PhoneGoogleClientState.of(retiring, health: health) == nil)
     }
 
     @Test func aClientOutsidePersonalModeSaysWhenItStops() throws {
@@ -38,7 +34,7 @@ import Testing
         let state = try #require(PhoneGoogleClientState.of(client, health: health))
         #expect(state.words.hasPrefix("Stops "))
         #expect(state.words.count > "Stops ".count)
-        #expect(state.next == .setUpAgain)
+        #expect(state.nextWords == "Set up again")
     }
 
     @Test func aRefusedClientOutranksSignInAgainAndARefusedSignInShowsItsHealth() throws {

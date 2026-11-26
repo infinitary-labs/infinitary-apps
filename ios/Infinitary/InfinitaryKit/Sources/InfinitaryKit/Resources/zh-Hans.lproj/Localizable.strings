@@ -1244,9 +1244,6 @@
 "integrationsGoogleExchangeOperation" = "用你自己的 Google 客户端完成 Google 登录";
 "integrationsGoogleExchangeReason" = "Infinitary 会用你自己的 Google 客户端完成你的 Google 登录。";
 "integrationsGoogleExchangeResult" = "新的 Google 登录，保存在机密和应用的内存中";
-"integrationsGoogleReadyDetail" = "你自己的 Google 客户端已保存。用它登录，即可不再使用 Infinitary 的共享客户端。";
-"integrationsGoogleRetiring" = "请设置你自己的连接";
-"integrationsGoogleRetiringDetail" = "Google 目前通过 Infinitary 的共享客户端连接，该客户端即将停用。在那之前它仍可使用；请设置你自己的客户端以保持连接。";
 "integrationsGoogleSetUp" = "设置";
 "integrationsGoogleSetUpAgain" = "重新设置";
 "integrationsGoogleSetUpFirst" = "请先设置你自己的 Google 客户端：设置 → 集成 → Google。";
@@ -1262,7 +1259,6 @@
 "integrationsGoogleSetupStepFile" = "用 Download JSON 下载 Google 显示的客户端文件，然后拖到这里、选择它，或粘贴它的内容。";
 "integrationsGoogleSetupStepPage" = "打开 Google 的页面，用你要连接的 Google 账号登录。为项目命名，接受 Google 的政策，然后按 Continue。";
 "integrationsGoogleSetupTitle" = "设置你自己的 Google 连接";
-"integrationsGoogleSignIn" = "登录";
 "integrationsGoogleSignInHint" = "请用创建客户端的 Google 账号登录：它只为该账号服务。";
 "integrationsGoogleStopped" = "你的 Google 客户端已停用";
 "integrationsGoogleStoppedDetail" = "Google 不再接受你的客户端，可能是它已在 Google Cloud 中被删除。重新设置即可重新连接 Google。";

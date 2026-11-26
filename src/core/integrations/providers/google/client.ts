@@ -55,26 +55,23 @@ const GOOGLE_ENDPOINTS: GoogleEndpoints = {
  * An unpackaged run may name a stand-in Google
  * (`INFINITARY_GOOGLE_URL`, every address under it) and a client
  * (`INFINITARY_GOOGLE_CLIENT_ID`, `INFINITARY_GOOGLE_CLIENT_SECRET`), which
- * then also takes new sign-ins (`signsIn`); a packaged build reaches only
- * Google and names no client, so a sign-in made with Infinitary's retired
- * client cannot renew.
+ * then takes new sign-ins; a packaged build reaches only Google and names
+ * no client, so a sign-in made with Infinitary's retired client cannot
+ * renew.
  */
 export function googleSetup(options: { packaged: boolean; env?: NodeJS.ProcessEnv }): {
   client?: GoogleClient;
-  signsIn: boolean;
   endpoints: GoogleEndpoints;
 } {
   const env = options.env ?? process.env;
   const named = options.packaged ? undefined : settingFrom(env, "GOOGLE_CLIENT_ID")?.trim();
   const secret = options.packaged ? undefined : settingFrom(env, "GOOGLE_CLIENT_SECRET")?.trim();
   const client = named ? { id: named, ...(secret ? { secret } : {}) } : undefined;
-  const signsIn = named !== undefined && named !== "";
   const base = options.packaged ? undefined : settingFrom(env, "GOOGLE_URL")?.trim();
-  if (!base) return { ...(client ? { client } : {}), signsIn, endpoints: GOOGLE_ENDPOINTS };
+  if (!base) return { ...(client ? { client } : {}), endpoints: GOOGLE_ENDPOINTS };
   const root = base.replace(/\/+$/, "");
   return {
     ...(client ? { client } : {}),
-    signsIn,
     endpoints: {
       auth: `${root}/o/oauth2/v2/auth`,
       token: `${root}/token`,

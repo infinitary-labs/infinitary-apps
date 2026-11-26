@@ -1244,9 +1244,6 @@
 "integrationsGoogleExchangeOperation" = "自分の Google クライアントで Google へのサインインを完了する";
 "integrationsGoogleExchangeReason" = "Infinitary が自分の Google クライアントで Google へのサインインを完了します。";
 "integrationsGoogleExchangeResult" = "Google への新しいサインイン。シークレットとアプリのメモリに保持します";
-"integrationsGoogleReadyDetail" = "自分の Google クライアントを保管しました。それでサインインすると、Infinitary の共有クライアントから移行できます。";
-"integrationsGoogleRetiring" = "自分の接続を設定してください";
-"integrationsGoogleRetiringDetail" = "Google は Infinitary の共有クライアントで接続されていますが、このクライアントは廃止されます。それまでは使えます。接続を保つには自分のクライアントを設定してください。";
 "integrationsGoogleSetUp" = "設定";
 "integrationsGoogleSetUpAgain" = "もう一度設定";
 "integrationsGoogleSetUpFirst" = "先に自分の Google クライアントを設定してください（設定 → 連携 → Google）。";
@@ -1262,7 +1259,6 @@
 "integrationsGoogleSetupStepFile" = "Google に表示されるクライアント ファイルを Download JSON でダウンロードし、ここにドロップするか、選択するか、中身を貼り付けてください。";
 "integrationsGoogleSetupStepPage" = "Google のページを開き、接続する Google アカウントでサインインします。プロジェクトに名前を付け、Google のポリシーに同意して Continue を押します。";
 "integrationsGoogleSetupTitle" = "自分の Google 接続を設定";
-"integrationsGoogleSignIn" = "サインイン";
 "integrationsGoogleSignInHint" = "クライアントを作成した Google アカウントでサインインしてください。そのアカウントでしか使えません。";
 "integrationsGoogleStopped" = "Google クライアントが停止しました";
 "integrationsGoogleStoppedDetail" = "Google がクライアントを受け付けなくなりました。Google Cloud で削除された可能性があります。もう一度設定すると Google に再接続できます。";

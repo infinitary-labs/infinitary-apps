@@ -9,7 +9,7 @@
       "picture": {
         "dark": "phone-your-computer-in-settings-dark.webp",
         "light": "phone-your-computer-in-settings-light.webp",
-        "alt": "The phone's Settings list with Your computer as its first row, reading Test Mac mini · Live, above General and Appearance"
+        "alt": "The phone's Settings list with Your computer as its first row, reading Test Mac mini · Live, above General"
       },
       "docsSite": ["iphone-and-ipad", "your-other-computers"],
       "provenance": { "origin": "change" }

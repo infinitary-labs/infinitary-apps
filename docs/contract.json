@@ -86425,6 +86425,10 @@
                         "danger": {
                           "type": "boolean"
                         },
+                        "declines": {
+                          "type": "boolean",
+                          "const": true
+                        },
                         "until": {
                           "oneOf": [
                             {

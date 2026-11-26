@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "own-decline-from-another-computer",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A crewmate on another computer offers one way to say no",
+      "body": "When a crewmate working on another of your computers offers its own way to say no on a decision card, such as Leave it here, the card now shows only that button, as it does for a crewmate on this computer. Before, the app added its own Decline beside it, so the card showed two ways to say no.",
+      "picture": {
+        "dark": "own-decline-from-another-computer-dark.webp",
+        "light": "own-decline-from-another-computer-light.webp",
+        "alt": "A decision card from a crewmate on another computer with two choices, Leave it here and Look deeper, and no Decline button"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -46,6 +46,7 @@ import type { CardStore } from "../storage/cardStore";
 import type { InboxStore } from "../storage/inboxStore";
 import type { TaskService } from "../tasks/taskService";
 import type { WebReadInput } from "../web/publicPage";
+import type { CommitName } from "../workspace/commitName";
 import type { RepoRegistry } from "../workspace/repoRegistry";
 import type { WorkspaceService } from "../workspace/workspaceService";
 import type { PrCiOverall } from "./changeChecks";
@@ -280,6 +281,8 @@ export type CrewSupervisorOptions = {
   bind: (accountId: string | undefined, providerId?: string) => Promise<SessionBinding>;
   /** The home's opt-in; a computer that runs work reads the home's set it keeps. */
   personalResourcesEnabled?: () => boolean;
+  /** Where long conversations summarize (Settings → Intelligence), read as each prompt goes. */
+  summaryPoint?: () => import("@shared/summaryPoint").SummaryPoint;
   /**
    * The version of the home's personal set a conversation on this Mac reads
    * (docs/personal-resources.md): its timeline names it, and the Info tab.
@@ -293,6 +296,12 @@ export type CrewSupervisorOptions = {
    * callbacks, so a recorded tool call plays straight into them.
    */
   sessionSpec?: (crewmate: CrewmateSpec, binding: SessionBinding) => SessionSpec;
+  /**
+   * The commit name a crewmate session's shell carries, resolved in its
+   * working copy when it opens here (`workspace/commitName.ts`). Absent, as
+   * in tests that open sessions with no real git, the shell carries none.
+   */
+  commitName?: (cwd: string) => Promise<CommitName>;
   workspace: WorkspaceService;
   repos: RepoRegistry;
   /** Resolve a project's contribution destination before starting code work, on either computer. */

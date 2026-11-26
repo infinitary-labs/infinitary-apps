@@ -1027,6 +1027,11 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 64
+                  },
+                  "replaces": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
                   }
                 }
               }
@@ -1047,6 +1052,93 @@
         },
         "required": [
           "ok"
+        ]
+      }
+    },
+    "inf:conversation:take-back": {
+      "effect": "change",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "object",
+            "properties": {
+              "askId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              }
+            },
+            "required": [
+              "askId"
+            ]
+          }
+        ],
+        "items": false,
+        "minItems": 1,
+        "maxItems": 1
+      },
+      "response": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "outcome": {
+                "type": "string",
+                "const": "withdrawn"
+              }
+            },
+            "required": [
+              "outcome"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "outcome": {
+                "type": "string",
+                "const": "stopping"
+              }
+            },
+            "required": [
+              "outcome"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "outcome": {
+                "type": "string",
+                "const": "undoing"
+              }
+            },
+            "required": [
+              "outcome"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "outcome": {
+                "type": "string",
+                "const": "refused"
+              },
+              "reason": {
+                "type": "string",
+                "enum": [
+                  "not-newest",
+                  "past-window",
+                  "taken-back",
+                  "unknown"
+                ]
+              }
+            },
+            "required": [
+              "outcome",
+              "reason"
+            ]
+          }
         ]
       }
     },
@@ -1104,6 +1196,10 @@
                           "queued"
                         ]
                       },
+                      "withdrawn": {
+                        "type": "boolean",
+                        "const": true
+                      },
                       "words": {
                         "type": "string"
                       }
@@ -1120,6 +1216,16 @@
               "through": {
                 "type": "string",
                 "const": "command"
+              },
+              "askId": {
+                "type": "string"
+              },
+              "sentAt": {
+                "type": "number"
+              },
+              "takenBack": {
+                "type": "boolean",
+                "const": true
               },
               "previous": {
                 "anyOf": [
@@ -1147,6 +1253,10 @@
                                   "queued"
                                 ]
                               },
+                              "withdrawn": {
+                                "type": "boolean",
+                                "const": true
+                              },
                               "words": {
                                 "type": "string"
                               }
@@ -1163,6 +1273,16 @@
                       "through": {
                         "type": "string",
                         "const": "command"
+                      },
+                      "askId": {
+                        "type": "string"
+                      },
+                      "sentAt": {
+                        "type": "number"
+                      },
+                      "takenBack": {
+                        "type": "boolean",
+                        "const": true
                       }
                     },
                     "required": [
@@ -1264,6 +1384,10 @@
                                 "queued"
                               ]
                             },
+                            "withdrawn": {
+                              "type": "boolean",
+                              "const": true
+                            },
                             "words": {
                               "type": "string"
                             }
@@ -1280,6 +1404,13 @@
                     "through": {
                       "type": "string",
                       "const": "command"
+                    },
+                    "takenBack": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "replaces": {
+                      "type": "string"
                     }
                   },
                   "required": [
@@ -1438,6 +1569,10 @@
                                 "completed",
                                 "queued"
                               ]
+                            },
+                            "withdrawn": {
+                              "type": "boolean",
+                              "const": true
                             },
                             "words": {
                               "type": "string"
@@ -3238,6 +3373,10 @@
               "exclusiveMinimum": 0,
               "maximum": 9007199254740991
             },
+            "contributorDisclosure": {
+              "type": "string",
+              "maxLength": 300
+            },
             "batchesOffered": {
               "type": "boolean"
             }
@@ -4297,6 +4436,10 @@
                 "exclusiveMinimum": 0,
                 "maximum": 9007199254740991
               },
+              "contributorDisclosure": {
+                "type": "string",
+                "maxLength": 300
+              },
               "batchesOffered": {
                 "type": "boolean"
               }
@@ -4745,6 +4888,17 @@
                     "type": "integer",
                     "exclusiveMinimum": 0,
                     "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "contributorDisclosure": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 300
                   },
                   {
                     "type": "null"
@@ -5689,6 +5843,10 @@
             "type": "integer",
             "exclusiveMinimum": 0,
             "maximum": 9007199254740991
+          },
+          "contributorDisclosure": {
+            "type": "string",
+            "maxLength": 300
           },
           "batchesOffered": {
             "type": "boolean"
@@ -12749,6 +12907,10 @@
             "type": "integer",
             "exclusiveMinimum": 0,
             "maximum": 9007199254740991
+          },
+          "contributorDisclosure": {
+            "type": "string",
+            "maxLength": 300
           },
           "batchesOffered": {
             "type": "boolean"
@@ -65792,7 +65954,7 @@
         "prefixItems": [
           {
             "minItems": 1,
-            "maxItems": 10,
+            "maxItems": 11,
             "type": "array",
             "items": {
               "type": "string",
@@ -65805,6 +65967,7 @@
                 "ambient-music",
                 "notifications",
                 "cost-limit",
+                "summary-point",
                 "personal-resources",
                 "panels-switch"
               ]
@@ -69776,6 +69939,175 @@
         }
       }
     },
+    "inf:settings:summary-point:get": {
+      "effect": "read",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "items": false,
+        "maxItems": 0
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "point": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "automatic"
+              },
+              {
+                "type": "string",
+                "const": "model"
+              },
+              {
+                "type": "number",
+                "const": 150000
+              },
+              {
+                "type": "number",
+                "const": 200000
+              },
+              {
+                "type": "number",
+                "const": 300000
+              },
+              {
+                "type": "number",
+                "const": 500000
+              }
+            ]
+          },
+          "steps": {
+            "maxItems": 256,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "tokens": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "name",
+                "tokens"
+              ]
+            }
+          }
+        },
+        "required": [
+          "point",
+          "steps"
+        ]
+      }
+    },
+    "inf:settings:summary-point:set": {
+      "effect": "change",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "automatic"
+              },
+              {
+                "type": "string",
+                "const": "model"
+              },
+              {
+                "type": "number",
+                "const": 150000
+              },
+              {
+                "type": "number",
+                "const": 200000
+              },
+              {
+                "type": "number",
+                "const": 300000
+              },
+              {
+                "type": "number",
+                "const": 500000
+              }
+            ]
+          }
+        ],
+        "items": false,
+        "minItems": 1,
+        "maxItems": 1
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "point": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "automatic"
+              },
+              {
+                "type": "string",
+                "const": "model"
+              },
+              {
+                "type": "number",
+                "const": 150000
+              },
+              {
+                "type": "number",
+                "const": 200000
+              },
+              {
+                "type": "number",
+                "const": 300000
+              },
+              {
+                "type": "number",
+                "const": 500000
+              }
+            ]
+          },
+          "steps": {
+            "maxItems": 256,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "tokens": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "name",
+                "tokens"
+              ]
+            }
+          }
+        },
+        "required": [
+          "point",
+          "steps"
+        ]
+      }
+    },
     "inf:settings:personal-resources:get": {
       "effect": "read",
       "reach": "views",
@@ -70017,6 +70349,9 @@
                     "name"
                   ]
                 }
+              },
+              "words": {
+                "type": "boolean"
               }
             },
             "required": [
@@ -70070,6 +70405,9 @@
                     "name"
                   ]
                 }
+              },
+              "words": {
+                "type": "boolean"
               }
             },
             "required": [
@@ -70120,6 +70458,9 @@
                             "name"
                           ]
                         }
+                      },
+                      "words": {
+                        "type": "boolean"
                       }
                     },
                     "required": [
@@ -70204,6 +70545,9 @@
                     "name"
                   ]
                 }
+              },
+              "words": {
+                "type": "boolean"
               }
             },
             "required": [
@@ -75373,6 +75717,10 @@
                         "since",
                         "reason"
                       ]
+                    },
+                    "brought": {
+                      "type": "string",
+                      "const": "heartbeat"
                     }
                   },
                   "required": [
@@ -75624,6 +75972,10 @@
                         "since",
                         "reason"
                       ]
+                    },
+                    "brought": {
+                      "type": "string",
+                      "const": "heartbeat"
                     }
                   },
                   "required": [
@@ -76390,6 +76742,10 @@
               "since",
               "reason"
             ]
+          },
+          "brought": {
+            "type": "string",
+            "const": "heartbeat"
           }
         },
         "required": [
@@ -76645,6 +77001,10 @@
               "since",
               "reason"
             ]
+          },
+          "brought": {
+            "type": "string",
+            "const": "heartbeat"
           }
         },
         "required": [
@@ -80433,6 +80793,7 @@
                       "custom-connection-file",
                       "project-batch-answer",
                       "cost-limit",
+                      "summary-point",
                       "notifications",
                       "runbook",
                       "runbook-copy",
@@ -81009,6 +81370,7 @@
                       "custom-connection-file",
                       "project-batch-answer",
                       "cost-limit",
+                      "summary-point",
                       "notifications",
                       "runbook",
                       "runbook-copy",
@@ -90911,6 +91273,829 @@
         ]
       }
     },
+    "inf:work:secret-bring": {
+      "effect": "change",
+      "reach": "work",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "object",
+            "properties": {
+              "task": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{1,64}$"
+              },
+              "callId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "input": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "op": {
+                        "type": "string",
+                        "const": "bring"
+                      },
+                      "id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "reason": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "from": {
+                        "type": "object",
+                        "properties": {
+                          "tool": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "reads": {
+                            "type": "string",
+                            "enum": [
+                              "value",
+                              "lines",
+                              "env0",
+                              "json"
+                            ]
+                          },
+                          "secrets": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "name": {
+                                  "type": "string"
+                                },
+                                "as": {
+                                  "type": "string"
+                                },
+                                "place": {
+                                  "type": "string"
+                                },
+                                "replace": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "name"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "trim": {
+                            "type": "string",
+                            "const": "newline"
+                          }
+                        },
+                        "required": [
+                          "tool",
+                          "reads"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "source": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "run"
+                              },
+                              "program": {
+                                "type": "object",
+                                "properties": {
+                                  "path": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "sha256": {
+                                    "type": "string",
+                                    "pattern": "^[0-9a-f]{64}$"
+                                  }
+                                },
+                                "required": [
+                                  "path",
+                                  "sha256"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "interpreter": {
+                                "type": "object",
+                                "properties": {
+                                  "path": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "sha256": {
+                                    "type": "string",
+                                    "pattern": "^[0-9a-f]{64}$"
+                                  },
+                                  "arg": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "path",
+                                  "sha256"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "argv": {
+                                "minItems": 1,
+                                "maxItems": 256,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "maxLength": 4096
+                                }
+                              },
+                              "folder": {
+                                "type": "string",
+                                "minLength": 1
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "program",
+                              "argv",
+                              "folder"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "file"
+                              },
+                              "file": {
+                                "type": "object",
+                                "properties": {
+                                  "path": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "sha256": {
+                                    "type": "string",
+                                    "pattern": "^[0-9a-f]{64}$"
+                                  }
+                                },
+                                "required": [
+                                  "path",
+                                  "sha256"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "file"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "op",
+                      "id",
+                      "reason",
+                      "from",
+                      "source"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "op": {
+                        "type": "string",
+                        "const": "status"
+                      },
+                      "id": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "op",
+                      "id"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "op": {
+                        "type": "string",
+                        "const": "cancel"
+                      },
+                      "id": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "op",
+                      "id"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "op": {
+                        "type": "string",
+                        "const": "next"
+                      },
+                      "id": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "op",
+                      "id"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "op": {
+                        "type": "string",
+                        "const": "deliver"
+                      },
+                      "id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "run": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "result": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "values": {
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string"
+                                },
+                                "additionalProperties": {
+                                  "anyOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "value": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "value"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "cannot": {
+                                          "type": "string",
+                                          "enum": [
+                                            "empty",
+                                            "too-large",
+                                            "not-text"
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "cannot"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  ]
+                                }
+                              }
+                            },
+                            "required": [
+                              "values"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "failed": {
+                                "type": "object",
+                                "properties": {
+                                  "exitCode": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "signal": {
+                                    "type": "string"
+                                  }
+                                },
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "failed"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "ended": {
+                                "type": "string",
+                                "enum": [
+                                  "changed",
+                                  "too-large",
+                                  "invalid-json"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "ended"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "op",
+                      "id",
+                      "run",
+                      "result"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            },
+            "required": [
+              "task",
+              "callId",
+              "input"
+            ]
+          }
+        ],
+        "items": false,
+        "minItems": 1,
+        "maxItems": 1
+      },
+      "response": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "bring": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "bring": {
+                        "type": "string"
+                      },
+                      "state": {
+                        "type": "string",
+                        "const": "waiting"
+                      }
+                    },
+                    "required": [
+                      "bring",
+                      "state"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "bring": {
+                        "type": "string"
+                      },
+                      "state": {
+                        "type": "string",
+                        "const": "unavailable"
+                      },
+                      "help": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "bring",
+                      "state",
+                      "help"
+                    ]
+                  }
+                ]
+              }
+            },
+            "required": [
+              "bring"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "bring": {
+                            "type": "string"
+                          },
+                          "state": {
+                            "type": "string",
+                            "const": "waiting"
+                          }
+                        },
+                        "required": [
+                          "bring",
+                          "state"
+                        ]
+                      },
+                      {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "bring": {
+                                "type": "string"
+                              },
+                              "state": {
+                                "type": "string",
+                                "const": "kept"
+                              },
+                              "secrets": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "name": {
+                                      "type": "string"
+                                    },
+                                    "place": {
+                                      "type": "string"
+                                    },
+                                    "outcome": {
+                                      "type": "string",
+                                      "enum": [
+                                        "kept",
+                                        "skipped",
+                                        "not-found",
+                                        "empty",
+                                        "too-large",
+                                        "not-text",
+                                        "changed"
+                                      ]
+                                    },
+                                    "ref": {
+                                      "type": "string"
+                                    },
+                                    "version": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "name",
+                                    "place",
+                                    "outcome"
+                                  ]
+                                }
+                              }
+                            },
+                            "required": [
+                              "bring",
+                              "state",
+                              "secrets"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "bring": {
+                                "type": "string"
+                              },
+                              "state": {
+                                "type": "string",
+                                "const": "not-brought"
+                              }
+                            },
+                            "required": [
+                              "bring",
+                              "state"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "bring": {
+                                "type": "string"
+                              },
+                              "state": {
+                                "type": "string",
+                                "const": "failed"
+                              },
+                              "exitCode": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "signal": {
+                                "type": "string"
+                              },
+                              "why": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "bring",
+                              "state",
+                              "why"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "bring": {
+                                "type": "string"
+                              },
+                              "state": {
+                                "type": "string",
+                                "const": "changed"
+                              }
+                            },
+                            "required": [
+                              "bring",
+                              "state"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "bring": {
+                                "type": "string"
+                              },
+                              "state": {
+                                "type": "string",
+                                "const": "expired"
+                              }
+                            },
+                            "required": [
+                              "bring",
+                              "state"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "bring": {
+                                "type": "string"
+                              },
+                              "state": {
+                                "type": "string",
+                                "const": "withdrawn"
+                              },
+                              "why": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "bring",
+                              "state",
+                              "why"
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "withdrawn": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "withdrawn"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "run": {
+                "type": "object",
+                "properties": {
+                  "run": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "source": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "run"
+                          },
+                          "program": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "sha256": {
+                                "type": "string",
+                                "pattern": "^[0-9a-f]{64}$"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "sha256"
+                            ]
+                          },
+                          "interpreter": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "sha256": {
+                                "type": "string",
+                                "pattern": "^[0-9a-f]{64}$"
+                              },
+                              "arg": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "sha256"
+                            ]
+                          },
+                          "argv": {
+                            "minItems": 1,
+                            "maxItems": 256,
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "maxLength": 4096
+                            }
+                          },
+                          "folder": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "program",
+                          "argv",
+                          "folder"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "file"
+                          },
+                          "file": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "sha256": {
+                                "type": "string",
+                                "pattern": "^[0-9a-f]{64}$"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "sha256"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "file"
+                        ]
+                      }
+                    ]
+                  },
+                  "reads": {
+                    "type": "string",
+                    "enum": [
+                      "value",
+                      "lines",
+                      "env0",
+                      "json"
+                    ]
+                  },
+                  "trim": {
+                    "type": "string",
+                    "const": "newline"
+                  },
+                  "names": {
+                    "anyOf": [
+                      {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "run",
+                  "source",
+                  "reads",
+                  "names"
+                ]
+              }
+            },
+            "required": [
+              "run"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "wait": {
+                "type": "boolean",
+                "const": true
+              }
+            },
+            "required": [
+              "wait"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "over": {
+                "type": "boolean",
+                "const": true
+              }
+            },
+            "required": [
+              "over"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "ok": {
+                "type": "boolean",
+                "const": true
+              }
+            },
+            "required": [
+              "ok"
+            ]
+          }
+        ]
+      }
+    },
     "inf:work:picture": {
       "effect": "change",
       "reach": "work",
@@ -93008,6 +94193,12 @@
                                 "through": {
                                   "type": "string",
                                   "const": "command"
+                                },
+                                "askId": {
+                                  "type": "string"
+                                },
+                                "sentAt": {
+                                  "type": "number"
                                 }
                               },
                               "required": [
@@ -93036,6 +94227,13 @@
                                   ]
                                 },
                                 "words": {
+                                  "type": "string"
+                                },
+                                "withdrawn": {
+                                  "type": "boolean",
+                                  "const": true
+                                },
+                                "askId": {
                                   "type": "string"
                                 }
                               },
@@ -97653,6 +98851,12 @@
               "through": {
                 "type": "string",
                 "const": "command"
+              },
+              "askId": {
+                "type": "string"
+              },
+              "sentAt": {
+                "type": "number"
               }
             },
             "required": [
@@ -97681,6 +98885,13 @@
                 ]
               },
               "words": {
+                "type": "string"
+              },
+              "withdrawn": {
+                "type": "boolean",
+                "const": true
+              },
+              "askId": {
                 "type": "string"
               }
             },
@@ -104471,6 +105682,7 @@
                       "custom-connection-file",
                       "project-batch-answer",
                       "cost-limit",
+                      "summary-point",
                       "notifications",
                       "runbook",
                       "runbook-copy",
@@ -105047,6 +106259,7 @@
                       "custom-connection-file",
                       "project-batch-answer",
                       "cost-limit",
+                      "summary-point",
                       "notifications",
                       "runbook",
                       "runbook-copy",
@@ -113679,6 +114892,20 @@
                       "minimum": 0,
                       "maximum": 16
                     },
+                    "compaction": {
+                      "type": "object",
+                      "properties": {
+                        "maxContextTokens": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 100000000
+                        },
+                        "belowPriceStep": {
+                          "type": "boolean",
+                          "const": true
+                        }
+                      }
+                    },
                     "browser": {
                       "type": "boolean"
                     },
@@ -113704,6 +114931,9 @@
                       "type": "boolean"
                     },
                     "secretAsks": {
+                      "type": "boolean"
+                    },
+                    "secretBrings": {
                       "type": "boolean"
                     },
                     "reattach": {
@@ -113960,6 +115190,20 @@
                       "mimeType",
                       "data"
                     ]
+                  }
+                },
+                "compaction": {
+                  "type": "object",
+                  "properties": {
+                    "maxContextTokens": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 100000000
+                    },
+                    "belowPriceStep": {
+                      "type": "boolean",
+                      "const": true
+                    }
                   }
                 }
               },

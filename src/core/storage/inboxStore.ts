@@ -432,6 +432,29 @@ export class InboxStore {
   }
 
   /**
+   * A captain's own act a lane hears once per fact (the taken-back wake,
+   * docs/task-capture.md "Taking back a message"): its once-name and its
+   * row, stamped with the captain's origin, in one transaction. Answers
+   * null when the name was spent already.
+   */
+  enqueueCaptainOnce(
+    recipient: string,
+    body: TypedWake & { once: string },
+    ref: string,
+  ): number | null {
+    return this.transaction(() => {
+      // i18n-exempt: SQL, never shown to a person
+      const fresh =
+        this.db
+          .prepare(
+            "INSERT INTO inbox_once (ref, once_key, at) VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
+          )
+          .run(ref, body.once, this.now()).changes > 0;
+      return fresh ? this.enqueue(recipient, body, ref, "captain") : null;
+    });
+  }
+
+  /**
    * Record a wake unless it repeats the lane's last one (WI-3): the same
    * content (`wakeIdentity`) as the newest row on this recipient with this
    * ref, or as the newest acked row there when that ack is newer and inside
@@ -478,6 +501,22 @@ export class InboxStore {
       if (repeats) return null;
       return this.enqueue(recipient, body, ref, origin);
     });
+  }
+
+  /**
+   * Record a once-name about `ref` with no wake of its own: a delivery that
+   * carries several facts marks each one told (the heartbeat's standing
+   * rows, docs/report-sort.md "The standing list"). False when it already was.
+   */
+  recordOnce(ref: string, once: string): boolean {
+    return (
+      this.db
+        .prepare(
+          // i18n-exempt: SQL, never shown to a person
+          "INSERT INTO inbox_once (ref, once_key, at) VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
+        )
+        .run(ref, once, this.now()).changes > 0
+    );
   }
 
   /**
@@ -1136,6 +1175,24 @@ export class InboxStore {
     return unread ? "unread" : undefined;
   }
 
+  /**
+   * The card line that carries a request's answer, when its crewmate wrote
+   * the answer in a card's thread (`submitResponse`'s `line`): the newest
+   * answered response's line, or undefined when it was answered only in a
+   * report or not yet.
+   */
+  answeredLine(requestId: string): number | undefined {
+    const row = this.db
+      .prepare(
+        // i18n-exempt: SQL, never shown to a person
+        `SELECT card_message_id FROM crew_responses
+         WHERE request_id = ? AND status = 'answered' AND card_message_id IS NOT NULL
+         ORDER BY at DESC, rowid DESC LIMIT 1`,
+      )
+      .get(requestId) as { card_message_id: number } | undefined;
+    return row?.card_message_id;
+  }
+
   /** Cancellation is a sender declaration, never inferred from closing work. */
   cancelResponse(id: string): void {
     const request = this.responseRequest(id);
@@ -1165,7 +1222,7 @@ export class InboxStore {
     input: CrewResponse,
     contributor: { task: string; session: string | null },
     text: string,
-    line?: { cardId: string; messageId: number },
+    line?: { cardId: string; messageId: number; clarification?: true },
   ): SavedCrewResponse {
     if (!text.trim()) throw new Error("A response needs its exact answer text.");
     return this.transaction(() => {
@@ -1200,6 +1257,10 @@ export class InboxStore {
             status: input.status,
             question: capWithOverflow(request.body, "response-question"),
             excerpt: capWithOverflow(text, "requested-response"),
+            // A closed card's clarification is not where the captain reads an answer.
+            ...(line && !line.clarification
+              ? { line: { cardId: line.cardId, messageId: line.messageId } }
+              : {}),
           },
         },
         undefined,

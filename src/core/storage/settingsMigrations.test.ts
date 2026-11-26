@@ -397,6 +397,8 @@ describe("migration 68 (the reply line beside each captain message, FI3-1089)", 
     expect(appliedVersions(upgraded)).toEqual(ALL_VERSIONS);
     const tasks = new TaskService({ db: upgraded, strict: true, now: () => 2 });
     expect(tasks.capture.lastTurn()).toEqual({
+      askId: "old1",
+      sentAt: 1,
       you: "before the line",
       reply: null,
       previous: null,
@@ -409,9 +411,11 @@ describe("migration 68 (the reply line beside each captain message, FI3-1089)", 
     // before it (INF-1771: the last two rounds above the input).
     const reopened = openDatabase(dir);
     expect(new TaskService({ db: reopened, strict: true }).capture.lastTurn()).toEqual({
+      askId: "new1",
+      sentAt: 2,
       you: "how is the alpha?",
       reply: { text: "The alpha is cut" },
-      previous: { you: "before the line", reply: null },
+      previous: { askId: "old1", sentAt: 1, you: "before the line", reply: null },
     });
     dropViews(reopened);
     reopened.exec(REVERSE_MIGRATION_68);

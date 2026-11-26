@@ -395,18 +395,37 @@ jobs:
           PLAYWRIGHT_JSON_OUTPUT_FILE: playwright-report/source-results.json
           INFINITARY_E2E_RUN_MINUTES: 75
           SCREEN: 2560x1600x24
+      # The window's frozen method list (INF-6748's velocity review, the
+      # captain's pick): its exact-keys check broke three batch rounds in two
+      # days when a change added a method and no branch check ran it. It runs
+      # here in its own lane, the application project, which --project=desktop
+      # above leaves out.
+      - name: Window methods journey
+        id: window-methods
+        if: ${{ github.event_name != 'workflow_dispatch' && steps.paths.outputs.build == 'true' }}
+        timeout-minutes: 30
+        run: scripts/on-screen.sh node scripts/journey-runs.ts --base "$CHANGE_BASE" --files tests/e2e/phase0-guardrails.spec.ts --alone-out playwright-report/alone-window-methods
+        env:
+          INFINITARY_SOURCE_EVIDENCE: ${{ runner.temp }}/source-desktop-evidence-window-methods
+          PLAYWRIGHT_JSON_OUTPUT_FILE: playwright-report/window-methods-results.json
+          INFINITARY_E2E_RUN_MINUTES: 25
+          SCREEN: 2560x1600x24
       # Linux runs every test it can (docs/testing.md, "Tests that need a
       # Mac"): a test that skipped here without MAC_ONLY_TAG fails the job.
       - name: Refuse a test that skipped on Linux without the Mac tag
         if: ${{ !cancelled() && (steps.critical-path.outcome == 'success' || steps.critical-path.outcome == 'failure') }}
         run: node scripts/untagged-skips.ts playwright-report/source-results.json
+      - name: Refuse a window methods test that skipped on Linux without the Mac tag
+        if: ${{ !cancelled() && (steps.window-methods.outcome == 'success' || steps.window-methods.outcome == 'failure') }}
+        run: node scripts/untagged-skips.ts playwright-report/window-methods-results.json
       - name: Keep the Linux window and the journey's results
-        if: ${{ always() && steps.critical-path.outcome == 'failure' }}
+        if: ${{ always() && (steps.critical-path.outcome == 'failure' || steps.window-methods.outcome == 'failure') }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: source-desktop-critical-path
           path: |
             ${{ runner.temp }}/source-desktop-evidence/
+            ${{ runner.temp }}/source-desktop-evidence-window-methods/
             playwright-report/
             test-results/
           if-no-files-found: ignore

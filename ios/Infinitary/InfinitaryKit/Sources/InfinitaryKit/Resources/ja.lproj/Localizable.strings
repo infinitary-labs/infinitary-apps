@@ -711,6 +711,8 @@
 "commandMessageDeleteWordBefore" = "カーソルの前の単語を削除";
 "commandMessagePutBackDeleted" = "最後に削除したものを元に戻す";
 "commandMessageRecall" = "最後に送ったメッセージを呼び戻す";
+"commandMessageTakeBack" = "最後のメッセージを取り消す";
+"commandMessageTakeBackWords" = "取り消し, 元に戻す, 送信取消, メッセージ";
 "commandMoveDown" = "下へ移動";
 "commandMoveDownWords" = "矢印, 下, 次";
 "commandMoveFirst" = "先頭へ移動";
@@ -819,6 +821,9 @@
 "composerFolderNotProject" = "そのフォルダをプロジェクトとして追加できませんでした。";
 "composerFolderProject" = "そのフォルダはすでにプロジェクトに入っています。";
 "composerHintFeedback" = "%1$@：Infinitary の開発者に問題やアイデアを伝えます";
+"composerHintReplaces" = "置き換え ·";
+"composerHintSendsAsNew" = "新しく送信";
+"composerReplacesLast" = "最後のメッセージを置き換えます";
 "composerTooLongShorten" = "長すぎて送信できません。先に短くしてください。";
 "composerWordsOnly" = "Infinitary が更新されるまで、送れるのは文字だけです。送るには画像とファイルを取り除いてください。";
 "crewAPart" = "パート";
@@ -1733,6 +1738,7 @@
 "panelChangeShowInDock" = "Dockに表示";
 "panelChangeShowWhatsNew" = "新機能を表示";
 "panelChangeStartAtLogin" = "ログイン時に起動";
+"panelChangeSummaryPoint" = "長い会話を要約するタイミング";
 "panelChangeTheme" = "テーマ";
 "panelChangeUpdateChannel" = "受け取るアップデート";
 "panelChangeUpdateCheck" = "アップデートを確認";
@@ -2526,6 +2532,7 @@
 "refuseNoCardIsShown" = "カードが表示されていません";
 "refuseNoCardIsShownOrPutAside" = "表示中のカードも脇に置いたカードもありません";
 "refuseNoCardThreadIsReadAboveIts" = "最新メッセージより上を読んでいるカードのスレッドはありません";
+"refuseNoMessageToRevert" = "取り消せるメッセージがありません。送信から 1 分を過ぎたか、すでに取り消しています";
 "refuseNoOtherCardIsNew" = "ほかに新着カードはありません";
 "refuseNoPageToPointAt" = "指し示せるページが表示されていません";
 "refuseNoPictureIsOpen" = "まずカードの画像を開いてください";
@@ -2758,6 +2765,7 @@
 "settingsAppearanceWashDescription" = "ぼかした背景をテーマの色がどれだけ覆うかを設定します。標準は0%%です。";
 "settingsAppearanceWashValue" = "不透明度%1$@%%";
 "settingsAutomationBack" = "戻る";
+"settingsAutomationBroughtNote" = "ランブック「Heartbeat」に付属しています。変更や削除をするには、設定のランブックでこのランブックをオフにしてください。";
 "settingsAutomationCancelCleared" = "一等航海士がこれを読む前に、会話が消去されました。";
 "settingsAutomationCancelEdited" = "自動化が変更されたため、一等航海士が読む前に取り消されました。";
 "settingsAutomationCancelPaused" = "自動化が一時停止されたため、一等航海士が読む前に取り消されました。";
@@ -3568,6 +3576,10 @@
 "settingsProjectsDeliveryNoBatch" = "プロジェクトの保管先でプルリクエストとして出すか、プルリクエストなしでローカルマージします。";
 "settingsProjectsDeliveryTitle" = "変更の届け方";
 "settingsProjectsDetailsLabel" = "詳細";
+"settingsProjectsDisclosure" = "AI の支援を明示する";
+"settingsProjectsDisclosureLine" = "明示する行";
+"settingsProjectsDisclosureOff" = "ほかの人がこのプロジェクトで開いたプルリクエストを乗組員がレビューしても、そのコメントには AI が書くのを手伝ったことを示しません。";
+"settingsProjectsDisclosureOn" = "ほかの人がこのプロジェクトで開いたプルリクエストを乗組員がレビューすると、そのコメントはこの行から始まります。";
 "settingsProjectsEmpty" = "プロジェクトはまだありません。下で追加するか、どのプロジェクトで作業するかを一等航海士に伝えてください。";
 "settingsProjectsFolder" = "フォルダ";
 "settingsProjectsFolderCancel" = "キャンセル";
@@ -3906,6 +3918,17 @@
 "settingsSubscriptionsSignedOutHoldLabel" = "保留中";
 "settingsSubscriptionsSignedOutHoldText" = "もう一度サインインするまで作業は一時停止します。";
 "settingsSubscriptionsStale" = "古い情報";
+"settingsSummaryPointAutomatic" = "自動";
+"settingsSummaryPointDescriptionAutomatic" = "一等航海士と乗組員は会話が %1$@ トークンに達すると要約します。それより手前で料金が上がるモデルでは、その前に要約します。";
+"settingsSummaryPointDescriptionModelLimit" = "一等航海士と乗組員は各モデルの上限の近くでだけ会話を要約します。上限は 100 万トークンになることもあります。";
+"settingsSummaryPointDescriptionTokens" = "一等航海士と乗組員は会話が %1$@ トークンに達すると要約します。モデルの上限のほうが小さい場合は、その上限で要約します。";
+"settingsSummaryPointDescriptionUnread" = "一等航海士と乗組員は長い会話を要約し、費用を抑えてモデルに収めます。";
+"settingsSummaryPointModelLimit" = "各モデルの上限";
+"settingsSummaryPointSaveFailed" = "長い会話を要約する位置を保存できませんでした。もう一度お試しください。";
+"settingsSummaryPointStep" = "%1$@ で %2$@ を超えたとき";
+"settingsSummaryPointSteps" = "次の場合、リクエストごとの料金が上がります：%1$@。";
+"settingsSummaryPointTitle" = "長い会話を要約する位置";
+"settingsSummaryPointTokens" = "%1$@ トークン";
 "settingsTakeOverAfter" = "%1$@ が戻ってきたら、そちらは止まり、代わりにコピーを置きます。";
 "settingsTakeOverAsk" = "一等航海士のコンピューターとして引き継ぎますか？Touch ID またはパスワードのあと、一等航海士はこのコピーからここで始まります。";
 "settingsTakeOverAskWindows" = "一等航海士のコンピューターとして引き継ぎますか？Windows Hello または Windows のパスワードのあと、一等航海士はこのコピーからここで始まります。";
@@ -3935,6 +3958,7 @@
 "settingsUsageConnectionAddressHint" = "ツールの HTTP 経由の OpenTelemetry アドレスです。記録の種類ごとに、その下のそれぞれのパスへ送ります。";
 "settingsUsageConnectionCancel" = "キャンセル";
 "settingsUsageConnectionClaudeCode" = "乗組員の使用量を Claude Code の形式で %1$@ に送ります。モデル、トークン、推定コストだけで、プロンプトや返答は送りません。";
+"settingsUsageConnectionClaudeCodeWords" = "乗組員の使用量を Claude Code の形式で %1$@ に送ります。モデル、トークン、推定コストに加え、プロンプトと返答も送ります。";
 "settingsUsageConnectionEdit" = "編集";
 "settingsUsageConnectionEmailLine" = "このコンピュータに Claude Code のサインインがあれば、各記録にそのメールアドレスが含まれ、人ごとの表示であなたの作業が数えられます。";
 "settingsUsageConnectionFailed" = "接続を保存できませんでした。もう一度お試しください。";
@@ -3967,10 +3991,13 @@
 "settingsUsageConnectionSaveLine" = "保存すると、乗組員の使用量をこのアドレスに送り始めます。";
 "settingsUsageConnectionSecretLabel" = "使用状況のレポート: %1$@";
 "settingsUsageConnectionStandard" = "乗組員の使用量を OpenTelemetry の標準形式で %1$@ に送ります。時間、モデル、トークン、推定コストだけで、プロンプトや返答は送りません。";
+"settingsUsageConnectionStandardWords" = "乗組員の使用量を OpenTelemetry の標準形式で %1$@ に送ります。時間、モデル、トークン、推定コストに加え、プロンプトと返答も送ります。";
 "settingsUsageConnectionTitle" = "使用量の報告";
 "settingsUsageConnectionUseOperation" = "クルーの使用状況を %1$@ に送信";
 "settingsUsageConnectionUseReason" = "レポート接続の設定に従い、Infinitary はクルーの使用状況を %1$@ に送信します。";
 "settingsUsageConnectionUseResult" = "各バッチに対するツールの応答";
+"settingsUsageConnectionWords" = "プロンプトと返答も送る";
+"settingsUsageConnectionWordsHint" = "乗組員が受け取るプロンプト、その返答、ツールに渡す内容を加えます。Infinitary が見つけたキーやパスワードは先に伏せます。";
 "settingsUsageCostAllKinds" = "すべての種類";
 "settingsUsageCostAllProjects" = "すべてのプロジェクト";
 "settingsUsageCostChange" = "変化";
@@ -4181,6 +4208,7 @@
 "shellConversationCards" = "カード";
 "shellConversationChose" = "「%1$@」を選択";
 "shellConversationCrewmate" = "乗組員";
+"shellConversationEdited" = "編集済み";
 "shellConversationEmpty" = "まだ何もありません。あなたのメッセージと回答したカードがここに表示されます。";
 "shellConversationEverything" = "すべて";
 "shellConversationHeading" = "会話";
@@ -4227,6 +4255,9 @@
 "shellKeyReminderNotTyping" = "入力中以外";
 "shellLastTurnFromCommand" = "%1$@ から";
 "shellLastTurnPictureOnly" = "画像";
+"shellLastTurnRevert" = "最後のメッセージを取り消す";
+"shellLastTurnReverted" = "取り消し済み";
+"shellLastTurnRevertedUnread" = "一等航海士が読む前に取り消しました";
 "shellLastTurnWorking" = "作業中…";
 "shellMainMessageConnectFirst" = "先にサブスクリプションを接続してください";
 "shellMainMessagePickingKey" = "設定が音声入力のキーを待っています";

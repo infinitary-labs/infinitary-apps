@@ -217,7 +217,7 @@ The check sees only the statements the tests prepare, and it reads no time: a wa
 ## The scale check
 
 The statement check reads plans; a read that seeks through an index can still read more rows every time the record grows, as the task board did before INF-703, the minute pass before INF-1348 and a read every two seconds before INF-1956.
-`tests/scale-check.test.ts` counts that work for the reads the app repeats on its main thread: a first mate turn's context build, the answer-delivery sweep, one minute pass (the crew's watchdog checks and the work presentation refresh, registered as `services.ts` registers them), a task board update (INF-2061, built as INF-2069), the first launch's crew facts, read on a first-run record that lacks them as each such launch reads them (INF-2338), a running task's close with the passes over closed tasks' files watching (INF-3032), a merged close whose change declared a required action, which files the captain's action task and must not read every task to match it (INF-4224), and a work computer's contact, whose roster is read against the record (INF-3040).
+`tests/scale-check.test.ts` counts that work for the reads the app repeats on its main thread: a first mate turn's context build, the answer-delivery sweep, one minute pass (the crew's watchdog checks and the work presentation refresh, registered as `services.ts` registers them), a task board update (INF-2061, built as INF-2069), the first launch's crew facts, read on a first-run record that lacks them as each such launch reads them (INF-2338), a running task's close with the passes over closed tasks' files watching (INF-3032), a merged close whose change declared a required action, which files the captain's action task and must not read every task to match it (INF-4224), a work computer's contact, whose roster is read against the record (INF-3040), and an outside reader's brief, which lists its project's tasks already linked to an issue as the reader starts.
 It seeds a record sized from the captain's readings: 3,400 closed tasks with about 47 events each (160,094 events in INF-2059's reading), their cards, threads and answered messages, beside running work with 33 open messages in 13 chains.
 It runs each read once, then counts each statement the read runs and the rows it returns, reads again to show the counts repeat, adds three times the closed history and counts again.
 A count ends only once the work its read set off in later event-loop turns has finished, each part awaited by its own promise (the minute pass's passes through the ticker's steps, the closed-task file passes, the presentation refresh and a contact's roster read), never by a number of turns.
@@ -1114,7 +1114,8 @@ Those sections are the gate at launch, a key signed in through the gate's own ch
 `ci.yml`'s `build` job runs it as its last step (INF-2915's plan, the captain's direction B), on the app that job just built from the pull request's merge commit, on the Linux desktop `.github/actions/linux-desktop` prepares, as `source-journeys.yml` prepares its own ("The Linux source desktop").
 A version that skips the build skips it too ("What a pull request runs").
 A pull request that edits the journey runs it three rounds and then alone, as any edited journey (`scripts/journey-runs.ts`); any other pull request runs it once.
-A failed run keeps the window and the journey's results as the `source-desktop-critical-path` artifact.
+The `build` job then runs `tests/e2e/phase0-guardrails.spec.ts`, the journey that pins the window's exact method list, as its own step on the same build (INF-6748's velocity review, the captain's pick), since a change that adds a method fails it in the swept batch and no branch check ran it before; it adds about 15 seconds.
+A failed run keeps the window and either journey's results as the `source-desktop-critical-path` artifact.
 The swept batch runs it again on the batch's version, in `batch-checks.yml`'s own `critical-path` job, and passes only when it passed ("The swept batch").
 Every other journey runs on request ("Journeys on request") and in main's desktop release check, never on a pull request of its own accord.
 A step that breaks fails the pull request, and is repaired at its owner; weakening or deleting the journey is ask-first ("This project's rulings on tests").
@@ -1202,7 +1203,8 @@ It asks for that list without each run's pull requests, which it never reads: wo
 It reads each passing run's artifact list and keeps paging past runs without a usable set, including installer-only verifications.
 If no passing run has usable timings, the chooser still schedules every explicitly selected file conservatively.
 Missing timing artifacts change placement, never selection or the need for a new full run; unreadable selections remain an error.
-An artifact-list error or a failed download still fails the chooser.
+It asks GitHub again after an error, three times over about fourteen seconds (github-script's `retries`), since GitHub sometimes answers a list with a server error and an empty body, which would otherwise stop the request before any journey runs.
+An artifact-list error that outlasts those, or a failed download, still fails the chooser.
 `scripts/journey-budget.ts` places every chosen file on Linux, and on the Mac mini (the `journeys` kind's queue or the `MAC_RUNNER` label) only the chosen files that hold a test tagged `MAC_ONLY_TAG`, whose `affected-journeys` job runs only those tests (`--grep @mac-only`), as "Tests that need a Mac" says.
 A file with a tagged test runs on both: its tagged tests on the Mac, and its other tests on Linux, where its tagged tests skip or run their shared steps.
 A tagged test still needs native proof; a Linux-only request does not claim to provide that proof.
@@ -1210,7 +1212,7 @@ A tagged test still needs native proof; a Linux-only request does not claim to p
 It is at most five jobs, one per Linux place on the PC (`LINUX_PLACES`, INF-1720's plan).
 For modest selections the existing grouping and job count stay unchanged.
 For five-job candidate estimates, the chooser additionally reads compact observations from the newest successful default-branch run of each of `journeys.yml` and `verify.yml`.
-Missing or expired reports retain the prior placement, and an artifact-list error still fails the chooser rather than hiding an access problem.
+Missing or expired reports retain the prior placement, and an artifact-list error that outlasts the same retries still fails the chooser rather than hiding an access problem.
 An archive the runner cannot download is left out: its download step stays failed on the run, and the chooser goes on with that report missing, since execution never reads these observations and the selection and executed placement stay the same (INF-3622).
 The timing reader checks schema, Linux X64, run/attempt/checkout identity, successful final job conclusion, complete selection, lane ownership and compatible configured/actual workers.
 It rejects ambiguous reusable-job identities rather than guessing between overlapping jobs.

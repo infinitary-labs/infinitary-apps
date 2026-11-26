@@ -174,13 +174,14 @@ describe("runbooks over existing prompt and skill doors", () => {
         .builtins()
         .filter((book) => book.startsOff)
         .map((book) => book.id),
-    ).toEqual(["batches", "pull-comments", "architecture"]);
+    ).toEqual(["batches", "pull-comments", "heartbeat", "architecture"]);
     const switches = () => Object.fromEntries(books.list().map((book) => [book.id, book.enabled]));
     const allOn = Object.fromEntries(BUILTIN_RUNBOOK_ORDER.map((id) => [id, true]));
     expect(switches()).toEqual({
       ...allOn,
       batches: false,
       "pull-comments": false,
+      heartbeat: false,
       architecture: false,
     });
     const off = { text: books.firstmate().text, crew: books.crew(code) };
@@ -196,6 +197,7 @@ describe("runbooks over existing prompt and skill doors", () => {
       sequences: false,
       batches: false,
       "pull-comments": false,
+      heartbeat: false,
       architecture: false,
     });
     const beforeOn = updated.firstmate().text;

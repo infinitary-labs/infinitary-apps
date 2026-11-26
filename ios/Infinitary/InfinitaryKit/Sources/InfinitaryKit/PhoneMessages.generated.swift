@@ -758,6 +758,8 @@ public enum PhoneMessages {
     public static func `commandMessageDeleteWordBefore`() -> String { PhoneWords.format("commandMessageDeleteWordBefore", []) }
     public static func `commandMessagePutBackDeleted`() -> String { PhoneWords.format("commandMessagePutBackDeleted", []) }
     public static func `commandMessageRecall`() -> String { PhoneWords.format("commandMessageRecall", []) }
+    public static func `commandMessageTakeBack`() -> String { PhoneWords.format("commandMessageTakeBack", []) }
+    public static func `commandMessageTakeBackWords`() -> String { PhoneWords.format("commandMessageTakeBackWords", []) }
     public static func `commandMoveDown`() -> String { PhoneWords.format("commandMoveDown", []) }
     public static func `commandMoveDownWords`() -> String { PhoneWords.format("commandMoveDownWords", []) }
     public static func `commandMoveFirst`() -> String { PhoneWords.format("commandMoveFirst", []) }
@@ -866,7 +868,10 @@ public enum PhoneMessages {
     public static func `composerFolderNotProject`() -> String { PhoneWords.format("composerFolderNotProject", []) }
     public static func `composerFolderProject`() -> String { PhoneWords.format("composerFolderProject", []) }
     public static func `composerHintFeedback`(`command`: String) -> String { PhoneWords.format("composerHintFeedback", [`command`]) }
+    public static func `composerHintReplaces`() -> String { PhoneWords.format("composerHintReplaces", []) }
+    public static func `composerHintSendsAsNew`() -> String { PhoneWords.format("composerHintSendsAsNew", []) }
     public static func `composerLines`(`count`: Int) -> String { PhoneWords.format("composerLines", [`count`]) }
+    public static func `composerReplacesLast`() -> String { PhoneWords.format("composerReplacesLast", []) }
     public static func `composerTooLongShorten`() -> String { PhoneWords.format("composerTooLongShorten", []) }
     public static func `composerWordsOnly`() -> String { PhoneWords.format("composerWordsOnly", []) }
     public static func `crewAPart`() -> String { PhoneWords.format("crewAPart", []) }
@@ -1819,6 +1824,7 @@ public enum PhoneMessages {
     public static func `panelChangeShowInDock`() -> String { PhoneWords.format("panelChangeShowInDock", []) }
     public static func `panelChangeShowWhatsNew`() -> String { PhoneWords.format("panelChangeShowWhatsNew", []) }
     public static func `panelChangeStartAtLogin`() -> String { PhoneWords.format("panelChangeStartAtLogin", []) }
+    public static func `panelChangeSummaryPoint`() -> String { PhoneWords.format("panelChangeSummaryPoint", []) }
     public static func `panelChangeTheme`() -> String { PhoneWords.format("panelChangeTheme", []) }
     public static func `panelChangeUpdateChannel`() -> String { PhoneWords.format("panelChangeUpdateChannel", []) }
     public static func `panelChangeUpdateCheck`() -> String { PhoneWords.format("panelChangeUpdateCheck", []) }
@@ -2647,6 +2653,7 @@ public enum PhoneMessages {
     public static func `refuseNoCardIsShown`() -> String { PhoneWords.format("refuseNoCardIsShown", []) }
     public static func `refuseNoCardIsShownOrPutAside`() -> String { PhoneWords.format("refuseNoCardIsShownOrPutAside", []) }
     public static func `refuseNoCardThreadIsReadAboveIts`() -> String { PhoneWords.format("refuseNoCardThreadIsReadAboveIts", []) }
+    public static func `refuseNoMessageToRevert`() -> String { PhoneWords.format("refuseNoMessageToRevert", []) }
     public static func `refuseNoOtherCardIsNew`() -> String { PhoneWords.format("refuseNoOtherCardIsNew", []) }
     public static func `refuseNoPageToPointAt`() -> String { PhoneWords.format("refuseNoPageToPointAt", []) }
     public static func `refuseNoPictureIsOpen`() -> String { PhoneWords.format("refuseNoPictureIsOpen", []) }
@@ -2887,6 +2894,7 @@ public enum PhoneMessages {
     public static func `settingsAppearanceWashDescription`() -> String { PhoneWords.format("settingsAppearanceWashDescription", []) }
     public static func `settingsAppearanceWashValue`(`percent`: String) -> String { PhoneWords.format("settingsAppearanceWashValue", [`percent`]) }
     public static func `settingsAutomationBack`() -> String { PhoneWords.format("settingsAutomationBack", []) }
+    public static func `settingsAutomationBroughtNote`() -> String { PhoneWords.format("settingsAutomationBroughtNote", []) }
     public static func `settingsAutomationCancelCleared`() -> String { PhoneWords.format("settingsAutomationCancelCleared", []) }
     public static func `settingsAutomationCancelEdited`() -> String { PhoneWords.format("settingsAutomationCancelEdited", []) }
     public static func `settingsAutomationCancelPaused`() -> String { PhoneWords.format("settingsAutomationCancelPaused", []) }
@@ -3719,6 +3727,10 @@ public enum PhoneMessages {
     public static func `settingsProjectsDeliveryNoBatch`() -> String { PhoneWords.format("settingsProjectsDeliveryNoBatch", []) }
     public static func `settingsProjectsDeliveryTitle`() -> String { PhoneWords.format("settingsProjectsDeliveryTitle", []) }
     public static func `settingsProjectsDetailsLabel`() -> String { PhoneWords.format("settingsProjectsDetailsLabel", []) }
+    public static func `settingsProjectsDisclosure`() -> String { PhoneWords.format("settingsProjectsDisclosure", []) }
+    public static func `settingsProjectsDisclosureLine`() -> String { PhoneWords.format("settingsProjectsDisclosureLine", []) }
+    public static func `settingsProjectsDisclosureOff`() -> String { PhoneWords.format("settingsProjectsDisclosureOff", []) }
+    public static func `settingsProjectsDisclosureOn`() -> String { PhoneWords.format("settingsProjectsDisclosureOn", []) }
     public static func `settingsProjectsEmpty`() -> String { PhoneWords.format("settingsProjectsEmpty", []) }
     public static func `settingsProjectsFolder`() -> String { PhoneWords.format("settingsProjectsFolder", []) }
     public static func `settingsProjectsFolderCancel`() -> String { PhoneWords.format("settingsProjectsFolderCancel", []) }
@@ -4064,6 +4076,17 @@ public enum PhoneMessages {
     public static func `settingsSubscriptionsSignedOutHoldLabel`() -> String { PhoneWords.format("settingsSubscriptionsSignedOutHoldLabel", []) }
     public static func `settingsSubscriptionsSignedOutHoldText`() -> String { PhoneWords.format("settingsSubscriptionsSignedOutHoldText", []) }
     public static func `settingsSubscriptionsStale`() -> String { PhoneWords.format("settingsSubscriptionsStale", []) }
+    public static func `settingsSummaryPointAutomatic`() -> String { PhoneWords.format("settingsSummaryPointAutomatic", []) }
+    public static func `settingsSummaryPointDescriptionAutomatic`(`tokens`: String) -> String { PhoneWords.format("settingsSummaryPointDescriptionAutomatic", [`tokens`]) }
+    public static func `settingsSummaryPointDescriptionModelLimit`() -> String { PhoneWords.format("settingsSummaryPointDescriptionModelLimit", []) }
+    public static func `settingsSummaryPointDescriptionTokens`(`tokens`: String) -> String { PhoneWords.format("settingsSummaryPointDescriptionTokens", [`tokens`]) }
+    public static func `settingsSummaryPointDescriptionUnread`() -> String { PhoneWords.format("settingsSummaryPointDescriptionUnread", []) }
+    public static func `settingsSummaryPointModelLimit`() -> String { PhoneWords.format("settingsSummaryPointModelLimit", []) }
+    public static func `settingsSummaryPointSaveFailed`() -> String { PhoneWords.format("settingsSummaryPointSaveFailed", []) }
+    public static func `settingsSummaryPointStep`(`name`: String, `tokens`: String) -> String { PhoneWords.format("settingsSummaryPointStep", [`name`, `tokens`]) }
+    public static func `settingsSummaryPointSteps`(`models`: String) -> String { PhoneWords.format("settingsSummaryPointSteps", [`models`]) }
+    public static func `settingsSummaryPointTitle`() -> String { PhoneWords.format("settingsSummaryPointTitle", []) }
+    public static func `settingsSummaryPointTokens`(`tokens`: String) -> String { PhoneWords.format("settingsSummaryPointTokens", [`tokens`]) }
     public static func `settingsTakeOverAfter`(`name`: String) -> String { PhoneWords.format("settingsTakeOverAfter", [`name`]) }
     public static func `settingsTakeOverAsk`() -> String { PhoneWords.format("settingsTakeOverAsk", []) }
     public static func `settingsTakeOverAskWindows`() -> String { PhoneWords.format("settingsTakeOverAskWindows", []) }
@@ -4093,6 +4116,7 @@ public enum PhoneMessages {
     public static func `settingsUsageConnectionAddressHint`() -> String { PhoneWords.format("settingsUsageConnectionAddressHint", []) }
     public static func `settingsUsageConnectionCancel`() -> String { PhoneWords.format("settingsUsageConnectionCancel", []) }
     public static func `settingsUsageConnectionClaudeCode`(`host`: String) -> String { PhoneWords.format("settingsUsageConnectionClaudeCode", [`host`]) }
+    public static func `settingsUsageConnectionClaudeCodeWords`(`host`: String) -> String { PhoneWords.format("settingsUsageConnectionClaudeCodeWords", [`host`]) }
     public static func `settingsUsageConnectionEdit`() -> String { PhoneWords.format("settingsUsageConnectionEdit", []) }
     public static func `settingsUsageConnectionEmailLine`() -> String { PhoneWords.format("settingsUsageConnectionEmailLine", []) }
     public static func `settingsUsageConnectionFailed`() -> String { PhoneWords.format("settingsUsageConnectionFailed", []) }
@@ -4125,10 +4149,13 @@ public enum PhoneMessages {
     public static func `settingsUsageConnectionSaveLine`() -> String { PhoneWords.format("settingsUsageConnectionSaveLine", []) }
     public static func `settingsUsageConnectionSecretLabel`(`name`: String) -> String { PhoneWords.format("settingsUsageConnectionSecretLabel", [`name`]) }
     public static func `settingsUsageConnectionStandard`(`host`: String) -> String { PhoneWords.format("settingsUsageConnectionStandard", [`host`]) }
+    public static func `settingsUsageConnectionStandardWords`(`host`: String) -> String { PhoneWords.format("settingsUsageConnectionStandardWords", [`host`]) }
     public static func `settingsUsageConnectionTitle`() -> String { PhoneWords.format("settingsUsageConnectionTitle", []) }
     public static func `settingsUsageConnectionUseOperation`(`host`: String) -> String { PhoneWords.format("settingsUsageConnectionUseOperation", [`host`]) }
     public static func `settingsUsageConnectionUseReason`(`host`: String) -> String { PhoneWords.format("settingsUsageConnectionUseReason", [`host`]) }
     public static func `settingsUsageConnectionUseResult`() -> String { PhoneWords.format("settingsUsageConnectionUseResult", []) }
+    public static func `settingsUsageConnectionWords`() -> String { PhoneWords.format("settingsUsageConnectionWords", []) }
+    public static func `settingsUsageConnectionWordsHint`() -> String { PhoneWords.format("settingsUsageConnectionWordsHint", []) }
     public static func `settingsUsageCostAllKinds`() -> String { PhoneWords.format("settingsUsageCostAllKinds", []) }
     public static func `settingsUsageCostAllProjects`() -> String { PhoneWords.format("settingsUsageCostAllProjects", []) }
     public static func `settingsUsageCostChange`() -> String { PhoneWords.format("settingsUsageCostChange", []) }
@@ -4345,6 +4372,7 @@ public enum PhoneMessages {
     public static func `shellConversationCards`() -> String { PhoneWords.format("shellConversationCards", []) }
     public static func `shellConversationChose`(`label`: String) -> String { PhoneWords.format("shellConversationChose", [`label`]) }
     public static func `shellConversationCrewmate`() -> String { PhoneWords.format("shellConversationCrewmate", []) }
+    public static func `shellConversationEdited`() -> String { PhoneWords.format("shellConversationEdited", []) }
     public static func `shellConversationEmpty`() -> String { PhoneWords.format("shellConversationEmpty", []) }
     public static func `shellConversationEverything`() -> String { PhoneWords.format("shellConversationEverything", []) }
     public static func `shellConversationHeading`() -> String { PhoneWords.format("shellConversationHeading", []) }
@@ -4392,6 +4420,9 @@ public enum PhoneMessages {
     public static func `shellKeyReminderNotTyping`() -> String { PhoneWords.format("shellKeyReminderNotTyping", []) }
     public static func `shellLastTurnFromCommand`(`command`: String) -> String { PhoneWords.format("shellLastTurnFromCommand", [`command`]) }
     public static func `shellLastTurnPictureOnly`() -> String { PhoneWords.format("shellLastTurnPictureOnly", []) }
+    public static func `shellLastTurnRevert`() -> String { PhoneWords.format("shellLastTurnRevert", []) }
+    public static func `shellLastTurnReverted`() -> String { PhoneWords.format("shellLastTurnReverted", []) }
+    public static func `shellLastTurnRevertedUnread`() -> String { PhoneWords.format("shellLastTurnRevertedUnread", []) }
     public static func `shellLastTurnWorking`() -> String { PhoneWords.format("shellLastTurnWorking", []) }
     public static func `shellMainMessageConnectFirst`() -> String { PhoneWords.format("shellMainMessageConnectFirst", []) }
     public static func `shellMainMessagePickingKey`() -> String { PhoneWords.format("shellMainMessagePickingKey", []) }
@@ -5456,6 +5487,8 @@ extension PhoneWords {
         "commandMessageDeleteWordBefore": [],
         "commandMessagePutBackDeleted": [],
         "commandMessageRecall": [],
+        "commandMessageTakeBack": [],
+        "commandMessageTakeBackWords": [],
         "commandMoveDown": [],
         "commandMoveDownWords": [],
         "commandMoveFirst": [],
@@ -5564,7 +5597,10 @@ extension PhoneWords {
         "composerFolderNotProject": [],
         "composerFolderProject": [],
         "composerHintFeedback": ["command"],
+        "composerHintReplaces": [],
+        "composerHintSendsAsNew": [],
         "composerLines": ["count"],
+        "composerReplacesLast": [],
         "composerTooLongShorten": [],
         "composerWordsOnly": [],
         "crewAPart": [],
@@ -6517,6 +6553,7 @@ extension PhoneWords {
         "panelChangeShowInDock": [],
         "panelChangeShowWhatsNew": [],
         "panelChangeStartAtLogin": [],
+        "panelChangeSummaryPoint": [],
         "panelChangeTheme": [],
         "panelChangeUpdateChannel": [],
         "panelChangeUpdateCheck": [],
@@ -7345,6 +7382,7 @@ extension PhoneWords {
         "refuseNoCardIsShown": [],
         "refuseNoCardIsShownOrPutAside": [],
         "refuseNoCardThreadIsReadAboveIts": [],
+        "refuseNoMessageToRevert": [],
         "refuseNoOtherCardIsNew": [],
         "refuseNoPageToPointAt": [],
         "refuseNoPictureIsOpen": [],
@@ -7585,6 +7623,7 @@ extension PhoneWords {
         "settingsAppearanceWashDescription": [],
         "settingsAppearanceWashValue": ["percent"],
         "settingsAutomationBack": [],
+        "settingsAutomationBroughtNote": [],
         "settingsAutomationCancelCleared": [],
         "settingsAutomationCancelEdited": [],
         "settingsAutomationCancelPaused": [],
@@ -8417,6 +8456,10 @@ extension PhoneWords {
         "settingsProjectsDeliveryNoBatch": [],
         "settingsProjectsDeliveryTitle": [],
         "settingsProjectsDetailsLabel": [],
+        "settingsProjectsDisclosure": [],
+        "settingsProjectsDisclosureLine": [],
+        "settingsProjectsDisclosureOff": [],
+        "settingsProjectsDisclosureOn": [],
         "settingsProjectsEmpty": [],
         "settingsProjectsFolder": [],
         "settingsProjectsFolderCancel": [],
@@ -8762,6 +8805,17 @@ extension PhoneWords {
         "settingsSubscriptionsSignedOutHoldLabel": [],
         "settingsSubscriptionsSignedOutHoldText": [],
         "settingsSubscriptionsStale": [],
+        "settingsSummaryPointAutomatic": [],
+        "settingsSummaryPointDescriptionAutomatic": ["tokens"],
+        "settingsSummaryPointDescriptionModelLimit": [],
+        "settingsSummaryPointDescriptionTokens": ["tokens"],
+        "settingsSummaryPointDescriptionUnread": [],
+        "settingsSummaryPointModelLimit": [],
+        "settingsSummaryPointSaveFailed": [],
+        "settingsSummaryPointStep": ["name", "tokens"],
+        "settingsSummaryPointSteps": ["models"],
+        "settingsSummaryPointTitle": [],
+        "settingsSummaryPointTokens": ["tokens"],
         "settingsTakeOverAfter": ["name"],
         "settingsTakeOverAsk": [],
         "settingsTakeOverAskWindows": [],
@@ -8791,6 +8845,7 @@ extension PhoneWords {
         "settingsUsageConnectionAddressHint": [],
         "settingsUsageConnectionCancel": [],
         "settingsUsageConnectionClaudeCode": ["host"],
+        "settingsUsageConnectionClaudeCodeWords": ["host"],
         "settingsUsageConnectionEdit": [],
         "settingsUsageConnectionEmailLine": [],
         "settingsUsageConnectionFailed": [],
@@ -8823,10 +8878,13 @@ extension PhoneWords {
         "settingsUsageConnectionSaveLine": [],
         "settingsUsageConnectionSecretLabel": ["name"],
         "settingsUsageConnectionStandard": ["host"],
+        "settingsUsageConnectionStandardWords": ["host"],
         "settingsUsageConnectionTitle": [],
         "settingsUsageConnectionUseOperation": ["host"],
         "settingsUsageConnectionUseReason": ["host"],
         "settingsUsageConnectionUseResult": [],
+        "settingsUsageConnectionWords": [],
+        "settingsUsageConnectionWordsHint": [],
         "settingsUsageCostAllKinds": [],
         "settingsUsageCostAllProjects": [],
         "settingsUsageCostChange": [],
@@ -9043,6 +9101,7 @@ extension PhoneWords {
         "shellConversationCards": [],
         "shellConversationChose": ["label"],
         "shellConversationCrewmate": [],
+        "shellConversationEdited": [],
         "shellConversationEmpty": [],
         "shellConversationEverything": [],
         "shellConversationHeading": [],
@@ -9090,6 +9149,9 @@ extension PhoneWords {
         "shellKeyReminderNotTyping": [],
         "shellLastTurnFromCommand": ["command"],
         "shellLastTurnPictureOnly": [],
+        "shellLastTurnRevert": [],
+        "shellLastTurnReverted": [],
+        "shellLastTurnRevertedUnread": [],
         "shellLastTurnWorking": [],
         "shellMainMessageConnectFirst": [],
         "shellMainMessagePickingKey": [],

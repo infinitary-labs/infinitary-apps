@@ -9,6 +9,7 @@
  * record.
  */
 
+import type { SummaryPoint } from "@shared/summaryPoint";
 import { describe, expect, it, vi } from "vitest";
 import {
   fakeCrewmate,
@@ -19,6 +20,7 @@ import {
   workComputer,
 } from "../../../tests/helpers/crewHarness";
 import { deferred } from "../../../tests/helpers/deferred";
+import { compactionNow } from "../session/compaction";
 import { seedTask } from "../tasks/seedTask";
 import type { TaskService } from "../tasks/taskService";
 
@@ -303,6 +305,28 @@ describe("a crewmate's session, as CrewSessions holds it", () => {
     expect(h.tasks.get(taskId)?.status).toBe("active");
   });
 
+  // INF-6779's approved plan, part 1: the host gives each crewmate session's
+  // shell the commit name resolved in its working copy.
+  it("opens a crewmate's session with its shell committing under the name its working copy resolves", async () => {
+    const crewmate = fakeCrewmate();
+    const commitName = vi.fn(async () => ({ name: "Ada Lovelace", email: "ada@example.com" }));
+    const h = setup(crewmate, { commitName });
+    await h.supervisor.intake.commission({
+      title: "Count presses",
+      intent: intentOf("make the meter count every press"),
+    });
+    await vi.waitFor(() => expect(h.sessionSpecs).toHaveLength(1));
+
+    const spec = h.sessionSpecs[0];
+    expect(commitName.mock.calls).toEqual([[spec?.cwd]]);
+    expect(spec?.shell?.env).toMatchObject({
+      GIT_AUTHOR_NAME: "Ada Lovelace",
+      GIT_AUTHOR_EMAIL: "ada@example.com",
+      GIT_COMMITTER_NAME: "Ada Lovelace",
+      GIT_COMMITTER_EMAIL: "ada@example.com",
+    });
+  });
+
   it("asks the computer a running turn is on whether it still runs after a stop", async () => {
     const crewmate = fakeCrewmate();
     const confirm = vi.fn(async () => false);
@@ -362,6 +386,25 @@ describe("a crewmate's session, as CrewSessions holds it", () => {
     enabled = false;
     await reopen();
     expect(reads()).toHaveLength(2);
+  });
+
+  // INF-6693's plan: each Settings choice reaches a crewmate's session spec,
+  // read again at each use, so a changed choice needs no new conversation.
+  it("gives a crewmate's conversation the home's summary point at each read", async () => {
+    const crewmate = fakeCrewmate();
+    let point: SummaryPoint = "automatic";
+    const h = setup(crewmate, { summaryPoint: () => point });
+    await h.supervisor.intake.commission({
+      title: "Count presses",
+      intent: intentOf("make the meter count every press"),
+    });
+    await tick();
+    const rule = () => compactionNow(h.sessionSpecs[0]?.compaction);
+    expect(rule()).toEqual({ maxContextTokens: 300_000, belowPriceStep: true });
+    point = 500_000;
+    expect(rule()).toEqual({ maxContextTokens: 500_000 });
+    point = "model";
+    expect(rule()).toEqual({});
   });
 
   it("stops every started task on a computer being removed, and leaves the rest", async () => {

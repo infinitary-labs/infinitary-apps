@@ -670,6 +670,11 @@ export class TaskService {
     return this.writer.store.listWithComputerMove();
   }
 
+  /** A project's tasks linked to an outside issue, oldest first, read without the rest. */
+  listIssueLinked(repoId: string): TaskRecord[] {
+    return this.writer.store.listIssueLinked(repoId);
+  }
+
   /** The rows holding a requirement from this source task or for one of these shared actions. */
   listWithRequirementFrom(source: string, sharedIds: readonly string[]): TaskRecord[] {
     return this.writer.store.listWithRequirementFrom(source, sharedIds);

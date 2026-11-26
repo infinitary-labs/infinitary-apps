@@ -1,5 +1,5 @@
 ---
-source: d1435fbb25dfd2af
+source: 37599270c99ffda1
 title: Aufgaben und Crewmitglieder
 description: Was eine Aufgabe ist, wie sie vom Backlog bis zu „Fertig“ wandert, wo du sie verfolgst und wie du das Crewmitglied lenkst, das sie bearbeitet.
 ---
@@ -110,6 +110,7 @@ An drei Stellen kannst du Aufgaben nach Tag finden:
   Drück auf ein Tag, um nur die Aufgaben aufzulisten, die es tragen, auf **Ohne Tag** für die Aufgaben, die keines tragen, oder auf **Alle Tags**, um wieder jede Aufgabe zu sehen.
 - **Aufgaben gruppieren**, gleich daneben, listet deine Aufgaben **Nach Tag** statt **Nach Status** auf.
   Jedes Tag ist eine Gruppe, eingeklappt, bis du sie öffnest.
+  Eine Aufgabe, die **Wartet auf dich**, steht in der Gruppe jedes ihrer Tags ganz oben und bleibt sichtbar, auch wenn die Gruppe eingeklappt ist.
 - Das Aufgabenboard hat eine eigene Reihe von Tags, und seine Ansicht **Nach Tag** zählt die Aufgaben jedes Tags danach, wo sie stehen.
 
 Tags werden immer nur für ein Projekt gezeigt: das Projekt im Fokus oder dein einziges Projekt mit Tags.

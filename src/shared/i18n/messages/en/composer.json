@@ -2,11 +2,14 @@
   "composerFolderNotProject": "That folder could not be added as a project.",
   "composerFolderProject": "That folder is already one of your projects.",
   "composerHintFeedback": "{command}: tell Infinitary's maker about a problem or an idea",
+  "composerHintReplaces": "replaces ·",
+  "composerHintSendsAsNew": "sends as new",
   "composerLines": {
     "plural": "count",
     "one": "{count} line",
     "other": "{count} lines"
   },
+  "composerReplacesLast": "Replaces your last message",
   "composerTooLongShorten": "Too long to send. Shorten it first.",
   "composerWordsOnly": "Only words can go until Infinitary is updated. Remove the pictures and files to send this."
 }

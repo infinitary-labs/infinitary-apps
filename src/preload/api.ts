@@ -178,6 +178,7 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
       send: (text) => invoke("inf:converse", text),
       lastTurn: () => invoke("inf:conversation:last-turn"),
       thread: (request) => invoke("inf:conversation:thread", request),
+      takeBack: (askId) => invoke("inf:conversation:take-back", { askId }),
     },
     task: {
       abort: (taskId) => invoke("inf:task:abort", taskId),
@@ -549,6 +550,8 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
         readableRequest("inf:settings:personal-resources:set", () =>
           invoke("inf:settings:personal-resources:set", enabled),
         ),
+      getSummaryPoint: () => invoke("inf:settings:summary-point:get"),
+      setSummaryPoint: (point) => invoke("inf:settings:summary-point:set", point),
       getCostLimit: () => invoke("inf:settings:cost-limit:get"),
       setCostLimit: (limit) =>
         readableRequest("inf:settings:cost-limit:set", () =>

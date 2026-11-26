@@ -711,6 +711,8 @@
 "commandMessageDeleteWordBefore" = "حذف الكلمة التي قبل المؤشر";
 "commandMessagePutBackDeleted" = "إرجاع آخر ما حُذف";
 "commandMessageRecall" = "استعادة آخر رسالة مُرسلة";
+"commandMessageTakeBack" = "التراجع عن آخر رسالة لك";
+"commandMessageTakeBackWords" = "تراجع, إلغاء, سحب, رسالة";
 "commandMoveDown" = "التحرك لأسفل";
 "commandMoveDownWords" = "سهم, أسفل, التالي";
 "commandMoveFirst" = "الانتقال إلى البداية";
@@ -819,6 +821,9 @@
 "composerFolderNotProject" = "تعذّرت إضافة هذا المجلد كمشروع.";
 "composerFolderProject" = "هذا المجلد من مشاريعك بالفعل.";
 "composerHintFeedback" = "%1$@: أخبر صانع Infinitary بمشكلة أو فكرة";
+"composerHintReplaces" = "يستبدل ·";
+"composerHintSendsAsNew" = "يرسل كرسالة جديدة";
+"composerReplacesLast" = "تحل محل آخر رسالة لك";
 "composerTooLongShorten" = "النص أطول من أن يُرسل. اختصره أولًا.";
 "composerWordsOnly" = "يمكن إرسال الكلمات فقط حتى يتم تحديث Infinitary. أزل الصور والملفات لإرسال هذه الرسالة.";
 "crewAPart" = "جزء";
@@ -1733,6 +1738,7 @@
 "panelChangeShowInDock" = "العرض في Dock";
 "panelChangeShowWhatsNew" = "عرض الجديد";
 "panelChangeStartAtLogin" = "التشغيل عند تسجيل الدخول";
+"panelChangeSummaryPoint" = "متى تُلخَّص المحادثات الطويلة";
 "panelChangeTheme" = "السمة";
 "panelChangeUpdateChannel" = "التحديثات التي تصلك";
 "panelChangeUpdateCheck" = "التحقق من التحديثات";
@@ -2526,6 +2532,7 @@
 "refuseNoCardIsShown" = "لا توجد بطاقة معروضة";
 "refuseNoCardIsShownOrPutAside" = "لا توجد بطاقة معروضة أو موضوعة جانبًا";
 "refuseNoCardThreadIsReadAboveIts" = "لا توجد سلسلة بطاقة مقروءة حتى ما قبل أحدث رسائلها";
+"refuseNoMessageToRevert" = "لا توجد رسالة للتراجع عنها: مرّت عليها أكثر من دقيقة أو تم التراجع عنها";
 "refuseNoOtherCardIsNew" = "لا توجد بطاقة جديدة أخرى";
 "refuseNoPageToPointAt" = "لا توجد صفحة معروضة للإشارة إليها";
 "refuseNoPictureIsOpen" = "افتح صورة في بطاقة أولًا";
@@ -2758,6 +2765,7 @@
 "settingsAppearanceWashDescription" = "مقدار ما يغطيه لون السمة من الخلفية المموّهة. القيمة الافتراضية 0%%.";
 "settingsAppearanceWashValue" = "عتامة %1$@%%";
 "settingsAutomationBack" = "رجوع";
+"settingsAutomationBroughtNote" = "يأتي مع دليل التشغيل Heartbeat. لتغييره أو إزالته، أوقف دليل التشغيل من الإعدادات، أدلة التشغيل.";
 "settingsAutomationCancelCleared" = "مُسحت محادثة نائب القبطان قبل أن يقرأ هذه.";
 "settingsAutomationCancelEdited" = "سُحبت قبل أن يقرأها نائب القبطان، لأن الأتمتة تغيّرت.";
 "settingsAutomationCancelPaused" = "سُحبت قبل أن يقرأها نائب القبطان، لأن الأتمتة أُوقفت مؤقتًا.";
@@ -3568,6 +3576,10 @@
 "settingsProjectsDeliveryNoBatch" = "يُقدَّم كطلب سحب حيث يُستضاف المشروع، أو يُدمج محليًا دون طلب سحب.";
 "settingsProjectsDeliveryTitle" = "إلى أين تذهب التغييرات";
 "settingsProjectsDetailsLabel" = "التفاصيل";
+"settingsProjectsDisclosure" = "الإفصاح عن مساعدة الذكاء الاصطناعي";
+"settingsProjectsDisclosureLine" = "سطر الإفصاح";
+"settingsProjectsDisclosureOff" = "عندما يراجع فرد من الطاقم طلب سحب فتحه شخص آخر في هذا المشروع، لا يذكر تعليقه أن الذكاء الاصطناعي ساعد في كتابته.";
+"settingsProjectsDisclosureOn" = "عندما يراجع فرد من الطاقم طلب سحب فتحه شخص آخر في هذا المشروع، يبدأ تعليقه بهذا السطر.";
 "settingsProjectsEmpty" = "لا مشاريع بعد. أضف واحدًا أدناه، أو أخبر نائب القبطان بالمشروع الذي يعمل عليه.";
 "settingsProjectsFolder" = "المجلد";
 "settingsProjectsFolderCancel" = "إلغاء";
@@ -3906,6 +3918,17 @@
 "settingsSubscriptionsSignedOutHoldLabel" = "معلّق";
 "settingsSubscriptionsSignedOutHoldText" = "العمل متوقف مؤقتًا حتى تسجّل الدخول مجددًا.";
 "settingsSubscriptionsStale" = "قديم";
+"settingsSummaryPointAutomatic" = "تلقائي";
+"settingsSummaryPointDescriptionAutomatic" = "يلخّص نائب القبطان والطاقم المحادثة عند %1$@ من الرموز، أو قبل ذلك حين يرفع النموذج سعره بعد نقطة أدنى.";
+"settingsSummaryPointDescriptionModelLimit" = "يلخّص نائب القبطان والطاقم المحادثة فقط قرب حدّ كل نموذج، وقد يبلغ مليون رمز.";
+"settingsSummaryPointDescriptionTokens" = "يلخّص نائب القبطان والطاقم المحادثة عند %1$@ من الرموز، أو عند حدّ النموذج نفسه إن كان أصغر.";
+"settingsSummaryPointDescriptionUnread" = "يلخّص نائب القبطان والطاقم المحادثات الطويلة لتقلّ كلفتها وتتسع في النموذج.";
+"settingsSummaryPointModelLimit" = "حدّ كل نموذج";
+"settingsSummaryPointSaveFailed" = "تعذّر حفظ موضع تلخيص المحادثات الطويلة. أعِد المحاولة.";
+"settingsSummaryPointStep" = "%1$@ بعد %2$@";
+"settingsSummaryPointSteps" = "تكلّف الطلبات أكثر على %1$@.";
+"settingsSummaryPointTitle" = "تلخيص المحادثات الطويلة عند";
+"settingsSummaryPointTokens" = "%1$@ من الرموز";
 "settingsTakeOverAfter" = "إذا عاد %1$@ فإنه يتوقف ويحتفظ بنسخة بدلًا من ذلك.";
 "settingsTakeOverAsk" = "هل تريد التولي ليصبح هذا حاسوب نائب القبطان؟ يبدأ نائب القبطان هنا من هذه النسخة بعد Touch ID أو كلمة المرور.";
 "settingsTakeOverAskWindows" = "هل تريد التولي ليصبح هذا حاسوب نائب القبطان؟ يبدأ نائب القبطان هنا من هذه النسخة بعد Windows Hello أو كلمة مرور Windows.";
@@ -3935,6 +3958,7 @@
 "settingsUsageConnectionAddressHint" = "عنوان OpenTelemetry الخاص بالأداة عبر HTTP. يذهب كل نوع من السجلات إلى مساره الخاص تحته.";
 "settingsUsageConnectionCancel" = "إلغاء";
 "settingsUsageConnectionClaudeCode" = "يرسل استخدام طاقمك إلى %1$@ بتنسيق Claude Code: النماذج والرموز والتكلفة التقديرية، ولا يرسل المطالبات أو الردود أبدًا.";
+"settingsUsageConnectionClaudeCodeWords" = "يرسل استخدام طاقمك إلى %1$@ بتنسيق Claude Code: النماذج والرموز والتكلفة التقديرية، مع المطالبات والردود.";
 "settingsUsageConnectionEdit" = "تعديل";
 "settingsUsageConnectionEmailLine" = "يحمل كل سجل بريد تسجيل دخولك إلى Claude Code، إن كان على هذا الكمبيوتر تسجيل دخول، كي يحسب عرضٌ لكل شخص عملك.";
 "settingsUsageConnectionFailed" = "تعذّر حفظ الاتصال. حاول مرة أخرى.";
@@ -3967,10 +3991,13 @@
 "settingsUsageConnectionSaveLine" = "عند الحفظ يبدأ Infinitary بإرسال استخدام طاقمك إلى هذا العنوان.";
 "settingsUsageConnectionSecretLabel" = "تقارير الاستخدام: %1$@";
 "settingsUsageConnectionStandard" = "يرسل استخدام طاقمك إلى %1$@ بتنسيق OpenTelemetry القياسي: الأوقات والنماذج والرموز والتكلفة التقديرية، ولا يرسل المطالبات أو الردود أبدًا.";
+"settingsUsageConnectionStandardWords" = "يرسل استخدام طاقمك إلى %1$@ بتنسيق OpenTelemetry القياسي: الأوقات والنماذج والرموز والتكلفة التقديرية، مع المطالبات والردود.";
 "settingsUsageConnectionTitle" = "تقارير الاستخدام";
 "settingsUsageConnectionUseOperation" = "إرسال استخدام الطاقم إلى %1$@";
 "settingsUsageConnectionUseReason" = "يرسل Infinitary استخدام طاقمك إلى %1$@، كما يطلب اتصال التقارير لديك.";
 "settingsUsageConnectionUseResult" = "رد الأداة على كل دفعة";
+"settingsUsageConnectionWords" = "إرسال المطالبات والردود أيضًا";
+"settingsUsageConnectionWordsHint" = "يضيف المطالبات التي يتلقاها طاقمك وردوده وما يعطيه لأدواته. تُخفى أولًا المفاتيح وكلمات المرور التي يتعرّف عليها Infinitary فيها.";
 "settingsUsageCostAllKinds" = "كل الأنواع";
 "settingsUsageCostAllProjects" = "كل المشاريع";
 "settingsUsageCostChange" = "التغيّر";
@@ -4181,6 +4208,7 @@
 "shellConversationCards" = "البطاقات";
 "shellConversationChose" = "اخترت «%1$@»";
 "shellConversationCrewmate" = "فرد الطاقم";
+"shellConversationEdited" = "معدّلة";
 "shellConversationEmpty" = "لا شيء هنا بعد. تظهر هنا رسائلك والبطاقات التي تجيب عنها.";
 "shellConversationEverything" = "الكل";
 "shellConversationHeading" = "المحادثة";
@@ -4227,6 +4255,9 @@
 "shellKeyReminderNotTyping" = "في غير أثناء الكتابة";
 "shellLastTurnFromCommand" = "من %1$@";
 "shellLastTurnPictureOnly" = "صورة";
+"shellLastTurnRevert" = "التراجع عن آخر رسالة لك";
+"shellLastTurnReverted" = "تم التراجع";
+"shellLastTurnRevertedUnread" = "تم التراجع قبل أن يقرأها نائب القبطان";
 "shellLastTurnWorking" = "جارٍ العمل…";
 "shellMainMessageConnectFirst" = "اربط اشتراكًا أولًا";
 "shellMainMessagePickingKey" = "الإعدادات بانتظار مفتاح الإملاء";

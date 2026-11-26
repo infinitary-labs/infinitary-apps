@@ -19,7 +19,7 @@ Task attribution and its limitations are owned by `docs/helper.md`, "Running tas
 
 ## A crewmate's shell
 
-A crewmate's coding session hands its client the task's shell: the task channel's variables, and the app's command folder first on the search path (`withTaskShell`; `docs/axi-commands.md`, "The channel").
+A crewmate's coding session hands its client the task's shell: the task channel's variables, its commit name in `GIT_AUTHOR_*` and `GIT_COMMITTER_*`, and the app's command folder first on the search path (`withTaskShell`; `docs/axi-commands.md`, "The channel").
 It also sets `CLAUDE_CODE_SHELL_PREFIX` to that folder's `infinitary-crew-shell`, and `CLAUDE_CODE_SHELL` to the shell the client picks first anyway (`withCrewShell` in `src/core/claude/claudeCrewShell.ts`): its own setting when that names a bash or zsh that runs, then the person's login shell when it is one, then the system's zsh or bash, in the client's order.
 The client starts each command's shell leading a process group of its own and, with a prefix, runs `'<prefix>' '<command>'` in it.
 The program tells the task channel its process number with the task's key, then runs the command in `CLAUDE_CODE_SHELL`, so the door refuses a program the command left running with `&` or nohup until its task closes (`docs/axi-commands.md`, "Never the crew's").
@@ -79,6 +79,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
   Since contract v4.59 no app tool describes a nested parameter at all: `emit_card`'s nested words were a restatement for Pi, and the test names where each nested field's rule is served instead - `CARD_MECHANICS` or its top-level parameter's description, such as `actions` or `asks_again`.
   A fixed choice is one string with an `enum` (`stringEnum`), which `zodOf` reads as the same closed set.
   A two-member union with null carries that same typed value as nullable, preserving its validation on both runtimes.
+  A union of plain values of different types, such as one id or a list of ids (`emit_card`'s `ask_id`), carries each member with its own validation; a union of objects carries only as one discriminated by `kind`.
   The 2,048-character cap is on a TOOL description only: a top-level parameter description arrives whole (`spawn_crewmate`'s `shape` group, 2,545 characters, is served byte for byte, and the capture holds it), so a group's rules are never trimmed to fit a cap that does not apply to them.
   The crewmate's fixed instructions, for each runtime and kind of work, are measured in `tests/crewmate-fixed-context.test.ts`, which names each tool's headroom when a description would meet the cap.
   Two more things that binary taught us the expensive way (captain dogfood, packaged build, 2026-09-01):
@@ -308,7 +309,8 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 ## App-owned automatic compaction
 
 Every Claude session enables auto-compaction through the app's flag settings, including one reopened from a saved conversation.
-`CLAUDE_COMPACTION_SETTINGS` sets `autoCompactEnabled: true` and `autoCompactWindow: 321192`: the app's 300,000-token summary point (`SESSION_COMPACTION_TOKENS`) plus the first mate's 8,192-token answer allowance and the client's 13,000-token compaction buffer.
+`claudeCompactionSettings` sets `autoCompactEnabled: true` and `autoCompactWindow`: the summary point plus the first mate's 8,192-token answer allowance and the client's 13,000-token compaction buffer, 321,192 at the app's own 300,000-token point (`SESSION_COMPACTION_TOKENS`).
+A rolling session reads the point the person chose in Settings → Intelligence when it attaches (`docs/firstmate-runaway-hardening.md`, "Conversation length"); "Each model's limit" sets no window, so the client's own applies, and price steps are Pi's alone to read.
 The client clamps that window to the model's own context window, so a smaller model compacts earlier without a second catalog in the app.
 The session environment removes `DISABLE_AUTO_COMPACT`, `DISABLE_COMPACT`, `CLAUDE_CODE_AUTO_COMPACT_WINDOW`, `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` and `CLAUDE_CODE_BLOCKING_LIMIT_OVERRIDE`, so a person's shell cannot disable or enlarge this app-owned budget.
 The person's Claude configuration stays untouched.

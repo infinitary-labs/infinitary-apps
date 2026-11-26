@@ -204,6 +204,35 @@ describe("a review question's tradeoff table", () => {
     ]);
   });
 
+  it("marks each option of a checkbox question with a box, and of a radio question with a round ring", () => {
+    // INF-6766's approved plan: the captain read a question that let them pick
+    // several fixes as a single pick, because the chart drew its options with
+    // the radio's round ring. The question is the real one from the velocity
+    // review card of November 25, 2026, its labels cut to their bold lead.
+    const body = `<fieldset>
+<legend>Which fixes should the fleet build? They are ranked by the merge time they would have saved today. (required)</legend>
+<label><input type="checkbox" name="fixes" value="run-reached-journeys" required data-inf-recommended> <strong>1. Have a crewmate run the journeys its change plainly reaches, once on GitHub&rsquo;s Linux machines, before its last push.</strong></label>
+<label><input type="checkbox" name="fixes" value="window-methods-on-branch" data-inf-recommended> <strong>2. Run the journey that checks the exact list of the app window&rsquo;s methods in every branch&rsquo;s checks.</strong></label>
+<label><input type="checkbox" name="fixes" value="fewer-linux-jobs"> <strong>3. Join the batch&rsquo;s short Linux jobs into fewer, longer ones, so a round wants about 21 GitHub machines instead of 28.</strong></label>
+<label><input type="checkbox" name="fixes" value="start-inf-6744"> <strong>4. Start INF-6744 now, the task that keeps Mac journey checks running when GitHub lacks a Mac.</strong></label>
+<label><input type="checkbox" name="fixes" value="other" data-inf-write-in> Something else</label>
+<table data-inf-tradeoff>
+<tr><td></td><th>Merge speed</th><th>Save crew time</th><th>Save cost</th></tr>
+<tr data-inf-option="run-reached-journeys"><th>1. Run reached journeys</th><td data-inf-level="high">2 or 3 of 3 today</td><td data-inf-level="medium">a search and a request</td><td data-inf-level="medium">8 min of a machine each</td></tr>
+<tr data-inf-option="window-methods-on-branch"><th>2. Window methods on every branch</th><td data-inf-level="medium">1 of 3 today</td><td data-inf-level="high">no repair crewmate</td><td data-inf-level="high">15 seconds a check</td></tr>
+<tr data-inf-option="fewer-linux-jobs"><th>3. Fewer Linux jobs</th><td data-inf-level="low">no merge held</td><td data-inf-level="high">shorter waits</td><td data-inf-level="high">no new cost</td></tr>
+<tr data-inf-option="start-inf-6744"><th>4. Start INF-6744 now</th><td data-inf-level="high">about 90 min on Nov 24</td><td data-inf-level="high">no runs again by hand</td><td data-inf-level="medium">not planned yet</td></tr>
+</table>
+<p>My pick is fixes 1 and 2: they cut batch holds, and give up about 8 minutes of a GitHub machine per reached change.</p>
+</fieldset>`;
+    const rings = (html: string) =>
+      [...html.matchAll(/<i (data-inf-tradeoff-ring[^>]*)>/g)].map((m) => m[1]);
+    expect(rings(withTradeoffCharts(body))).toEqual(Array(4).fill('data-inf-tradeoff-ring="box"'));
+    expect(rings(withTradeoffCharts(question(THREE)))).toEqual(
+      Array(3).fill("data-inf-tradeoff-ring"),
+    );
+  });
+
   it("is refused with no row for what the code does now, and left undrawn", () => {
     const body = question(THREE.replace(/<tr data-inf-option="as-built">.*?<\/tr>\n/s, ""));
     expect(tradeoffProblem(body)).toContain("has no row for what the code does now");

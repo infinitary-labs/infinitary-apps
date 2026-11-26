@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-keyboard-split",
+      "reason": "Moves the phone keyboard test's Photos picker tests into their own file, unchanged. Nothing a person sees changes."
+    }
+  ]
+}

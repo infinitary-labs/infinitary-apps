@@ -1,5 +1,5 @@
 ---
-source: d1435fbb25dfd2af
+source: 37599270c99ffda1
 title: Tarefas e tripulantes
 description: O que é uma tarefa, como ela vai do backlog até concluída, onde acompanhá-la e como orientar o tripulante que a faz.
 ---
@@ -110,6 +110,7 @@ Você pode encontrar tarefas por etiqueta em três lugares:
   Pressione uma etiqueta para listar só as tarefas que a levam, **Sem etiqueta** para as tarefas que não levam nenhuma ou **Todas as etiquetas** para ver todas as tarefas de novo.
 - **Agrupar tarefas**, logo ao lado, lista suas tarefas **Por etiqueta** em vez de **Por status**.
   Cada etiqueta é um grupo, que fica recolhido até você abri-lo.
+  Uma tarefa **Aguardando você** aparece primeiro no grupo de cada etiqueta que ela tem, e continua visível mesmo com esse grupo recolhido.
 - O quadro de tarefas tem a própria fileira de etiquetas, e a visualização **Por etiqueta** dele conta as tarefas de cada etiqueta conforme onde cada uma está.
 
 As etiquetas aparecem para um projeto de cada vez: o projeto em foco ou seu único projeto com etiquetas.

@@ -710,7 +710,7 @@ An unsafe data reader (`docs/agents-reach.md`, "An unsafe data reader") keeps ev
 `github_write` keeps it as a `WriteAsk` naming its card (`ForgeWriteAsk.card`), and the host lists it there (`IntegrationAsks.askForge`): it joins the task's waiting card, revised in place, or raises `write-ask-<id>`; the reader's kept integration calls join the same card (`docs/integrations.md`, "A reader's integrations").
 The card draws one ticked row per call: a write's method and path and the JSON body it sends, or an integration call's place, action, exact input and the reader's reason, with the tally and legend of the integrations' card (`readerApprovalCard`), and offers Only this time and Not now.
 A card of writes to one place names it in its title; one that also holds integration calls asks to allow these calls.
-The click takes every row it showed before the first is sent: an unticked row and Not now send nothing, and Only this time sends the others once each, oldest first, through `GithubGatewayService.sendTaken`, with the same guards as any kept write.
+The click takes every row it showed before the first is sent: an unticked row and Not now send nothing, Don't file on a Build row holds back that click's writes to the row's issue (`addressesRowIssue`), and Only this time sends the others once each, oldest first, through `GithubGatewayService.sendTaken`, with the same guards as any kept write.
 One `write-answered` steer names every outcome, each sent write's answer fenced under its host's label like the reader's reads; the cap and dropped asks work as they do for an integration's asks.
 A write outside the project, a release file and a validation effect are refused, and `emit_card` refuses a card naming a reader's ask.
 A web page the reader waits to open (`WebReadAsk`, `docs/agents-reach.md`, "Web pages") joins the same card as a row showing `GET` and its whole address, and the card adds a lead about pages, its title naming pages alone, writes on one place and pages, or calls and pages; its click opens the page once through `ReaderWebService.sendTaken`, and the steer carries the page's first part fenced under `web-data`.
@@ -894,7 +894,8 @@ The crewmate reads contributor code before running it, and declares `asks_first`
 To publish its story, the crewmate checks out the reviewed commit without changing it, calls `prepare_change`, then `open_change` with the presentation revision while that fork is selected.
 The saved-story publisher writes and reads back a comment (GitHub issue comment or GitLab merge-request note), with its existing attachment barrier and uncertain-write recovery.
 It never changes the contributor's description or title, pushes to their fork, or opens a replacement request.
-The story comment opens with the crew's title, separate from the contributor's request title.
+The story comment's own section opens with the project's line saying a crewmate wrote it ("Disclosing AI assistance" below), then the crew's title, separate from the contributor's request title.
+Both sit inside the story's markers, so the squash summary never carries them.
 The active naming runbook owns its wording; fork merging adds no conventional-title requirement.
 A merge card's click, for the task's own change or a reviewed pull request, reads the merges the project allows where it lives right before anything is sent (`wayToSend`, `src/core/forge/mergeWays.ts`), and picks one as a batch of one does (`mergeWayFor`): a squash where allowed, otherwise a rebase merge, then a merge commit.
 A project that allows none of them holds the merge with nothing sent, and the click's answer names the project's settings to change.
@@ -919,6 +920,15 @@ For a selected contributor review, `show_merge_card` stops before setup, commit 
 For task-authored changes, those tools and `show_merge_card` act on the branch the working copy has checked out, and the task's own branch only when none is (INF-3717).
 `open_change` makes the change it opened or answered current only once it succeeds, so a refused call leaves the current change as it was; the merge card makes the change whose story it shows current, since its merge acts on the current change.
 A crewmate on a computer that runs work does the same with a branch it checked out there: the home reads its checkout for the story and brings that branch home to read it (`docs/helper.md`, "Reading its branch here").
+
+### Disclosing AI assistance
+
+What the crew posts to an outside contributor opens with a line saying a crewmate wrote it: today, a fork review's story comment.
+The default line is "_Written by an Infinitary crewmate, an AI agent working for this project's maintainer._"
+(`DEFAULT_CONTRIBUTOR_DISCLOSURE`, `src/shared/contributorDisclosure.ts`).
+Each project keeps its own choice (`RepoView.contributorDisclosure`), set in Settings → Projects' Disclose AI assistance, on any project whose changes go through pull or merge requests, or by the first mate's `project-settings`.
+Its switch turns the line off, saved as an empty string, or back on with the default line; its field replaces the line with the project's own, at most 300 characters.
+Every publication of the story comment, the first and each republication (a new story revision, the story shown at a newer version, or a merge that finds the pull request past its published story), writes the project's line as it stands then, so a posted comment's line changes when the crew republishes that story.
 
 ### A change in another project
 
@@ -1104,6 +1114,8 @@ A change reaches the line only once its merge run has read its branch where the 
 So with no batch open, a change approved a few seconds after another can reach the line first, form a batch alone and merge ahead of it, and where the two clash the earlier-approved one is then the one left out.
 The combine fetches the default branch and each change's pushed branch into the project's folder and writes one commit per change on top with git's plumbing alone (`merge-tree --write-tree`, `commit-tree`), so no file and no branch of the folder moves.
 Each commit carries the change's checked title as its subject and, as its body, its story's What changed with the footers the active naming runbook has a commit carry (`presentationCommitMessage`), under the name the change's own last commit carries.
+That is the person's own name wherever the computer that ran the task has one saved, and Infinitary otherwise, since each crewmate session's shell carries that name in `GIT_AUTHOR_*` and `GIT_COMMITTER_*`, which outrank a name a command passes with `-c` or saves; only a command's own `--author` or its own variables outrank it (`src/core/workspace/commitName.ts`).
+The scratch commits the combine writes only to compute a change's own difference, which never reach the batch branch, carry the app's own identity (`APP_GIT_IDENTITY`, docs/infinitary-rename.md).
 A change built on another task's approved version that has not merged (docs/task-graph.md, "A part that starts at approval") names that task as `after` and its branch as `base` when its approval puts it in line (`ChangeMerge.mergeInBatch`).
 It waits in line, with no left-out note, until that task's change is carried ahead of it, then goes right behind it in the same batch or in a later one, whatever order the approvals came in (`carried`, `inTurn`).
 Once that task has merged, which spends its approval, it goes as a change of its own, checked against the approved version that merged; when that task leaves the open batch or is left out of a combine, it goes back in line with it (`withdraw`, `Combined.waiting`).

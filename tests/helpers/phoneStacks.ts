@@ -252,6 +252,12 @@ export function capturePhoneKeyboardTimeout({
  * keyboard's own two. */
 const IDLE_PEERS = new Set(["SpringBoard", "backboardd", "InputUI", "kbd"]);
 
+/** XCTest's runner line when the app's main run loop never went idle (INF-2767), and the app's own line when a query
+ * found its main thread busy for 30 seconds, as when the merge card part's app froze for minutes right after its three
+ * cards were replaced and the runner reported only a UI query timeout 90 seconds into the freeze (INF-6750). */
+const STUCK_APP =
+  /\bApp event loop idle notification not received\b|\bprocess main thread busy for \d/;
+
 /** INF-2767: XCTest waited a minute for the app's main run loop to go idle and it never did, as when the app stopped
  * right after a turn with the keyboard up. Sample the stuck app and the simulator processes a turn waits on while they
  * are still stuck, so the next stop leaves its stacks. Once per part, from host process metadata only: a simulator
@@ -281,8 +287,7 @@ export function capturePhoneIdleTimeout({
   };
   return {
     receive(line: string) {
-      if (closed || capture || !/\bApp event loop idle notification not received\b/.test(line))
-        return;
+      if (closed || capture || !STUCK_APP.test(line)) return;
       note(`Observed: ${line.trim()}`);
       capture = (async () => {
         const launched = (await children()).filter((p) => p.parent === owner.launcher.pid);

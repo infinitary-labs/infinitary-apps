@@ -8,7 +8,8 @@ Each destination gets one format, and nothing is ever sent in two formats.
 | The destination shape and the sender | `UsageReportDestination`, `UsageReporter` (`src/core/usageReport/usageReporter.ts`) |
 | The company's Claude Code setup as a destination | `companyDestination`, `companyUsageDestinations` (`src/core/usageReport/companyDestination.ts`) |
 | The person's reporting connection, and both destinations together | `usageConnection`, `usageReportRoutes` (`src/core/usageReport/usageConnection.ts`); its row, `UsageConnectionRow` (`src/renderer/src/settings/UsageConnectionRow.tsx`) |
-| The two formats, from ledger rows and heard turns | `claudeCodeBodies`, `standardBodies`, `callSpan` (`src/core/usageReport/usageReportFormats.ts`) |
+| The two formats, from ledger rows and heard turns | `claudeCodeBodies`, `standardBodies`, `callSpan`, `wordsAttributes` (`src/core/usageReport/usageReportFormats.ts`) |
+| A turn's prompts and replies, from its session records | `SessionWords`, `appSessionWords` (`src/core/usageReport/sessionWords.ts`), over `sessionOffsetAfter` and `sessionEntriesBetween` (`src/core/storage/sessionReader.ts`) |
 | The rows it reads | what `UsageStore.record` answers it wrote (`docs/usage.md`, "What the ledger records") |
 | Where it is built and hears turns | `homeUsage` (`src/core/storage/homeUsage.ts`), `EventSeam.attachUsageReport` (`src/core/eventSeam.ts`) |
 | Its place on the outbound list | `docs/architecture.md` §1, "Usage report destinations" |
@@ -33,9 +34,9 @@ A person adds one reporting connection beside the cost limit in Settings → Int
 Save is the consent to send there, so reporting starts once saved and nothing asks again; Remove stops it, drops what waits and forgets the headers.
 The address is reached the way an MCP server's is (`docs/integrations.md`): its network class is read from every DNS answer on Save (`classifyCustomApiAddresses`) and held on every send (`guardedMcpFetch`), plain http only reaches a tool on this computer, an https address is checked against the computer's trusted list as a company setup's collector is (`computerRoots`; `docs/usage.md`, "Certificates"), so a collector on a company's own certificate authority that this computer trusts takes the connection too, and a signal's own address, such as `…/v1/traces`, saves as the base it sits under.
 Header names and values follow a custom API's rules (`assertCustomHeaders`).
-Each header value is a hidden Secrets entry marked as the connection's (`consumer` `usage-report`; `docs/secrets.md`, "App sign-ins"), and `userData/usage-connection.json` keeps only the address, its network class, the format and each header's name and reference.
+Each header value is a hidden Secrets entry marked as the connection's (`consumer` `usage-report`; `docs/secrets.md`, "App sign-ins"), and `userData/usage-connection.json` keeps only the address, its network class, the format, each header's name and reference, and `words` while prompts and replies are on.
 An edit at the same address keeps a header whose value is left blank; a new address takes every value again.
-A save that changes the address or the format drops what waits, which was built for the old one; an edit of the headers alone keeps it, and it leaves with the new headers.
+A save that changes the address or the format drops what waits, which was built for the old one, and so does one that turns prompts and replies off, so words already gathered are never sent; an edit of the headers alone keeps it, and it leaves with the new headers.
 A computer without Secrets saves a connection only without headers.
 
 The connection batches for ten minutes rather than five seconds, merging the reporter's batches into one request per signal, because every send with headers is one brokered use, and each use writes a line to Secrets' history, which is kept until the person deletes it; at quit the app waits for the last sends, the reporter's and then the connection's, for at most five seconds in all (`QUIT_SEND_MS`), so a collector that answers gets what waited and one that never answers holds quit no longer.
@@ -43,7 +44,7 @@ Its broker (`usage-report`) declares `signIn`, binds the saved address and each 
 A connection without headers sends through the same guarded fetch with no use.
 A connection in Claude Code's format also carries Claude's own work, from the ledger rather than Claude's records (`claudeFromLedger`), since nothing passes Claude's records on to it; those rows have no line or commit counts.
 Each record carries the person's Claude Code sign-in email as `user.email`, in either format, when this computer has one, so a tool's per-person view counts their work; the email is read again every minute.
-Prompts and outputs are not sent.
+Prompts and replies go only when the person turns on the connection's switch ("Prompts and replies").
 
 When the company setup (`companyDestination`) already sends to the same host, the connection leaves out what that setup carries, so a tool never counts it twice: nothing at all when the setup is the company's HTTP destination for every row, and Claude's work (`withoutClaude`) when the host is the one Claude's own reports go to.
 Hosts are compared by name without the port, since one collector often listens on two.
@@ -66,13 +67,31 @@ Both are written from the same ledger rows, so every number equals Settings → 
   Traces hold one `invoke_agent` span per first mate or crewmate turn, a `chat {model}` span per ledger row, a child of its turn or a trace of its own for a call outside any turn, such as a reply check, and an `execute_tool {name}` child span per tool run; context shortening and provider retries are not tool runs.
 
 Every metric, event, model call span and turn span is grouped by `infinitary.role` (`firstmate`, `crewmate` or `other`) and the task's saved kind of work (`infinitary.work_kind`); a tool run's span carries the tool's name and call id.
-Nothing carries a task title, project name, prompt or output.
+Nothing carries a task title or project name, and only a connection with prompts and replies on carries words.
 `service.name` is `infinitary` unless the destination's own attributes name another.
 Metrics are delta sums: each batch says only what it adds.
 
 A session ends a step per model call, so a turn is not one session step: it opens at the session's first words or tool run and ends where its owner settles it, when the first mate is no longer busy or a crewmate's task is no longer running; a crewmate step that failed marks its turn failed, while the first mate's failed steps are not broadcast, so its turn is never marked failed.
 The ledger keeps no call timing, so a model call's span runs from the previous call in its turn, or the turn's start, to the moment the call was recorded.
 A turn that never ends, such as a session that crashed, is forgotten after six hours; a task that finishes ends its open turn.
+
+## Prompts and replies
+
+The person's connection has a switch, off by default, that adds each turn's prompts and replies; a company setup never gets them, whatever the switch says.
+With it on (`words` on the destination), each first mate or crewmate turn carries what its task's session records wrote after its previous turn ended, read through the one session reader, so every provider's turn reads alike: Pi's session file, the app's copy of Claude's transcript, or Claude's own file while it holds more than that copy (`crewSessionFiles` for a crewmate, `seatSessionFiles` for the first mate), since Claude's client writes a turn's tail after the app copied it and a first turn can end before any copy exists.
+The words are the prompts and steers the session was sent, and its replies' text and tool calls with their arguments; never its thinking, its instructions or a tool's result, and never Claude's own queued notices or interrupt lines.
+A turn with no task (`other`) carries none.
+Nothing written before the switch was seen on is read: a task's first turn after that starts there.
+Keys and passwords the observer's redaction recognizes (`redactObserveText`, `redactDeep`) are hidden before any cut; then each text part longer than 8,000 characters keeps its first and last 4,000 or so, since a served prompt puts the app's context first and the words a person typed last, and each call's arguments are cut at 2,000 as JSON, a longer one going as its cut JSON text, so ten minutes of turns stay within what a collector takes in one request.
+
+- **The standard format**: the turn's `invoke_agent` span carries `gen_ai.input.messages`, the prompts, and `gen_ai.output.messages`, the replies with their `tool_call` parts and a finish reason, each a JSON string as the conventions allow on a span.
+  Each is at most 32,000 characters: the prompts keep their first messages and the replies their last.
+- **Claude Code's format**: `claude_code.user_prompt` with `prompt` and `prompt_length`, `claude_code.assistant_response` with `response`, and a `claude_code.tool_result` per call with `tool_name`, `tool_use_id`, `tool_input` and, when the turn heard the call run, `success` and `duration_ms`, as Claude Code names them.
+  A turn read from Claude's transcript goes there only where Claude's own work does (`claudeFromLedger`), so nothing repeats what Claude's own client reports.
+
+A turn's words are read five seconds after it ends, since its session writes its last lines, and the app's copy of Claude's transcript catches up, at the turn's end; a destination with words gets that turn's span a batch after the others get it plain, and the app reads every ended turn's words as it stops.
+Each session file keeps where the last turn's read stopped, so a long session is read back from its end once, then only by what each turn appended.
+A saved switch is ignored by a build without it, which sends no words.
 
 ## Sending
 

@@ -1,0 +1,10 @@
+{
+  "id": "heartbeat",
+  "name": "Heartbeat",
+  "description": "When work starts waiting with nothing to bring it up, or after 55 quiet minutes, your first mate looks it over, moves it on or asks you once.",
+  "firstmate": "guide.md",
+  "wakes": [
+    "heartbeat"
+  ],
+  "startsOff": true
+}

@@ -1571,6 +1571,25 @@ export const MIGRATIONS: readonly Migration[] = [
   ) WITHOUT ROWID;
   CREATE INDEX IF NOT EXISTS task_tags_tag ON task_tags (tag_id, state);
   `,
+  // The project's line saying a crewmate wrote what the crew posts to an
+  // outside contributor (docs/forge.md, "Disclosing AI assistance"): null
+  // on every existing project, which posts the default line; an empty
+  // string posts none. `RepoRegistry` is the only writer; no published view
+  // reads it. Dropping the column reverses it.
+  (db) => addColumn(db, "repos", "contributor_disclosure", "TEXT"),
+  // Taking back a message (docs/task-capture.md, "Taking back a message"):
+  // when the captain took a message back, and the message a replacement
+  // took back, found by its partial index. Null on every existing row.
+  // `TaskService` is the only writer; no published view reads them.
+  // Dropping the index and the two columns reverses it.
+  (db) => {
+    addColumn(db, "captain_asks", "taken_back_at", "INTEGER");
+    addColumn(db, "captain_asks", "correction_of", "TEXT");
+    // i18n-exempt: SQL, never shown to a person
+    db.exec(
+      "CREATE INDEX IF NOT EXISTS captain_asks_correction_of ON captain_asks (correction_of) WHERE correction_of IS NOT NULL",
+    );
+  },
 ];
 
 /**

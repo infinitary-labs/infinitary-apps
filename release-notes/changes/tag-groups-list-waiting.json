@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "tag-groups-list-waiting",
+      "kind": "improvement",
+      "title": "Grouped by tag, tasks waiting on you list in their tags",
+      "body": "With Tasks grouped by tag, a task waiting on you now lists first in the group of each tag it carries, instead of in a Waiting on you group of its own. A folded tag group still shows those tasks under its bar, where they are blue, so no decision hides behind a fold.",
+      "area": "tasks",
+      "docsSite": ["tasks-and-crewmates"],
+      "picture": {
+        "dark": "tag-groups-list-waiting-dark.webp",
+        "light": "tag-groups-list-waiting-light.webp",
+        "alt": "Tasks grouped by tag: the folded bug and No tag groups each list their task waiting on you under a bar with a blue segment"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

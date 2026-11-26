@@ -57,6 +57,8 @@ export type OpenAskInput = {
   retryOf?: string;
   /** The card the message was typed under and its line there (INF-6115 piece 3). */
   typedUnder?: AskTypedUnder;
+  /** The message this one replaces: taken back in the same write that saves this one. */
+  correctionOf?: string;
 };
 
 /**
@@ -572,9 +574,42 @@ export class TaskCapture {
       // A message the captain's own command sent says so (INF-3898 piece 2).
       ...(throughNow() ? { through: THROUGH_THE_COMMAND } : {}),
       ...(input.typedUnder ? { typedUnder: input.typedUnder } : {}),
+      ...(input.correctionOf ? { correctionOf: input.correctionOf } : {}),
     };
-    this.writer.asks.insert(record, input.captainText);
+    const correctionOf = input.correctionOf;
+    if (correctionOf === undefined) {
+      this.writer.asks.insert(record, input.captainText);
+      return record;
+    }
+    this.writer.write(() => {
+      this.takeBackIn(correctionOf, record.at);
+      this.writer.asks.insert(record, input.captainText);
+    })();
     return record;
+  }
+
+  /** The newest message sent to replace this one, if any. */
+  replacementOf(askId: string): AskRecord | undefined {
+    return this.writer.asks.replacementOf(askId);
+  }
+
+  /**
+   * The captain took a message back (docs/task-capture.md, "Taking back a
+   * message"): set once, and the message counts as covered from then on,
+   * so answer delivery never retries it or raises its notice. Answers
+   * whether this call took it back.
+   */
+  takeBack(askId: string): boolean {
+    const at = this.writer.now();
+    return this.writer.write(() => this.takeBackIn(askId, at))();
+  }
+
+  private takeBackIn(askId: string, at: number): boolean {
+    if (!this.writer.asks.setTakenBack(askId, at)) return false;
+    const ask = this.writer.asks.get(askId);
+    if (ask && ask.delivery !== "legacy") this.writer.asks.setDelivery(askId, "covered");
+    if (ask?.taskId) this.writer.touch(ask.taskId);
+    return true;
   }
 
   /**
@@ -666,7 +701,8 @@ export class TaskCapture {
     const run = this.writer.write(() => {
       for (const id of askIds) {
         const ask = this.writer.asks.get(id);
-        if (!ask || !JUDGEABLE_DELIVERY.includes(ask.delivery)) continue;
+        // A taken-back message is covered but keeps its list: its undo names what took effect.
+        if (!ask || (!JUDGEABLE_DELIVERY.includes(ask.delivery) && !ask.takenBackAt)) continue;
         this.writer.asks.setDelivery(id, ask.delivery, {
           ...ask.deliveryFacts,
           entries: [...ask.deliveryFacts.entries, entry],

@@ -7,6 +7,7 @@ import {
   ruleNotesTooLong,
 } from "@shared/automation";
 import type { FmEvent } from "@shared/events";
+import { HEARTBEAT_RULE_ID } from "@shared/heartbeat";
 import { formatDateTime } from "@shared/i18n/format";
 import type { DecisionRecord } from "@shared/provenance";
 import { cutText } from "@shared/textCut";
@@ -23,6 +24,7 @@ import {
   type ScheduleStore,
 } from "../storage/scheduleStore";
 import { isTimeZone, localTimeZone, nextZonedFire } from "./calendar";
+import { HEARTBEAT_LINE, HEARTBEAT_MINUTES, type HeartbeatBeat } from "./heartbeat";
 import type { Ticker } from "./ticker";
 import type { TypedWake, WakeFacts } from "./wakes";
 
@@ -70,6 +72,14 @@ export type ListenedEvent = {
   /** Why a filter's value could never match, refused when the rule is saved; undefined when it can. */
   checkFilter?: (filter: Record<string, string> | undefined) => string | undefined;
 };
+
+/**
+ * Why an edit or delete of a brought rule is refused: the runbook that
+ * brought it owns it (docs/automation.md, "The heartbeat").
+ */
+// i18n-exempt: served to the first mate's schedule tools; Settings offers no edit or delete for this rule
+export const BROUGHT_RULE_REFUSAL =
+  "This automation comes with the Heartbeat runbook, so it cannot be edited or deleted. Pause it, or turn the runbook off in Settings, Runbooks.";
 
 /** One look's answer: where to look from next and what arrived. */
 export type EventLook = { cursor: string; items: AutomationEventItem[]; resynced?: boolean };
@@ -174,6 +184,12 @@ export type SchedulerOptions = {
    * (docs/automation.md, "Deliveries"). Absent, no task has one.
    */
   startedBy?: (taskId: string) => { ruleId: string; at: number } | undefined;
+  /**
+   * The beat due now for the rule the heartbeat wake brings
+   * (docs/automation.md, "The heartbeat"), or undefined when none is.
+   * Absent, that rule never runs.
+   */
+  heartbeat?: (now: number) => HeartbeatBeat | undefined;
 };
 
 const TICK_MS = 60 * 1000;
@@ -437,6 +453,10 @@ export class Scheduler {
         continue;
       }
       if (record.state !== "enabled" || record.nextFire > now) continue;
+      if (record.brought) {
+        this.beat(record, now, options.catchUp === true);
+        continue;
+      }
       const missed = missedOccurrences(record.spec, record.nextFire, now);
       const next =
         record.spec.kind === "once" || record.card || record.task
@@ -468,6 +488,73 @@ export class Scheduler {
             wakeOf(record, { prompt, catchUp, missed, run }, project),
           ),
       );
+    }
+  }
+
+  /**
+   * The brought heartbeat rule's turn on a tick, once its interval passed:
+   * a beat due while the app was closed is dropped, never caught up; no beat
+   * goes while one is still waiting; otherwise it runs only when the
+   * heartbeat says a beat is due, and marks the beat's new rows told.
+   */
+  private beat(record: ScheduleRecord, now: number, catchUp: boolean): void {
+    if (catchUp) {
+      this.options.store.setNextFire(record.id, computeNextFire(record.spec, now));
+      return;
+    }
+    if (this.options.store.waiting(record.id).length > 0) return;
+    const beat = this.options.heartbeat?.(now);
+    if (!beat) return;
+    const fired = this.options.store.recordFire(
+      {
+        scheduleId: record.id,
+        revision: record.revision,
+        plannedAt: now,
+        firedAt: now,
+        catchUp: false,
+        missed: 0,
+        prompt: beat.prompt,
+      },
+      { nextFire: computeNextFire(record.spec, now), state: "enabled" },
+      now,
+      (run) =>
+        this.deliver(record, run, now, () =>
+          wakeOf(record, { prompt: beat.prompt, catchUp: false, missed: 0, run }, undefined),
+        ),
+    );
+    if (fired) beat.seen();
+  }
+
+  /**
+   * Keep the rule the heartbeat wake brings (docs/automation.md, "The
+   * heartbeat"): while `on`, one rule every 55 minutes, turned on and stamped
+   * as the captain's, since turning the runbook on is their click; once
+   * off, the rule goes and its runs stay under the 30-day rule. A rule
+   * already there keeps its state, so a paused one stays paused.
+   */
+  keepBrought(on: boolean): void {
+    const now = this.now();
+    this.options.store.trimRuns(HEARTBEAT_RULE_ID, now);
+    const record = this.options.store.get(HEARTBEAT_RULE_ID);
+    if (on && !record) {
+      const spec: ScheduleSpec = { kind: "every", minutes: HEARTBEAT_MINUTES };
+      this.options.store.insert({
+        id: HEARTBEAT_RULE_ID,
+        spec,
+        prompt: HEARTBEAT_LINE,
+        nextFire: computeNextFire(spec, now),
+        createdAt: now,
+        captainRequested: true,
+        // i18n-exempt: the runbook's name, as its manifest gives it
+        name: "Heartbeat",
+        state: "enabled",
+        revision: 1,
+      });
+      this.announce(automationWords.created(false, spec, HEARTBEAT_LINE), {});
+    } else if (!on && record) {
+      this.recall(record.id, "edited");
+      this.options.store.removeKeepingRuns(record.id);
+      this.announce(automationWords.cancelled(record.prompt), {});
     }
   }
 
@@ -1079,6 +1166,7 @@ export class Scheduler {
     options: { enable?: boolean } & SaysChange = {},
   ): ScheduleRecord {
     const record = this.require(id);
+    if (record.brought) throw new Error(BROUGHT_RULE_REFUSAL);
     const now = this.now();
     const checked = changes.spec ? this.checkEvent(normalized(changes.spec)) : undefined;
     const spec = checked?.spec ?? record.spec;
@@ -1253,6 +1341,7 @@ export class Scheduler {
   cancel(id: string, options: SaysChange = {}): boolean {
     const record = this.options.store.get(id);
     if (!record) return false;
+    if (record.brought) throw new Error(BROUGHT_RULE_REFUSAL);
     const inbox = this.options.inbox;
     if (inbox) {
       inbox.withdraw(

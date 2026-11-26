@@ -1,5 +1,5 @@
 ---
-source: c71bc8e7d8a6ffd4
+source: 1ce217aea874fab1
 title: 集成
 description: 连接 GitHub、GitLab、Bitbucket、Google 和 MCP 服务器，让你的大副和船员能够访问它们，并选择每一项可以不经询问就做什么。
 ---
@@ -129,7 +129,7 @@ Infinitary 会把密钥移到[机密](/zh-hans/secrets/)中，这一行只保留
 你在浏览器中完成登录后，新的一行会打开，显示服务器的操作。
 如果你取消，Infinitary 既不保留这一行，也不保留任何密钥。
 
-“**MCP 服务器**”旁边的“**Notion**”和“**Linear**”，点击一下即可连接这两项服务。
+“**MCP 服务器**”旁边的“**Notion**”、“**Linear**”和“**Atlassian**”，点击一下即可连接这三项服务。
 
 Infinitary 把这个登录保存在[机密](/zh-hans/secrets/)中，并自行为它续期。
 当服务结束这个登录时，这一行会显示“**需要重新登录**”，行上和它的菜单中都有“**重新登录**”。

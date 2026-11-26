@@ -21,6 +21,7 @@ import { type ReadName, readCatalog } from "@shared/reads";
 import { DEFAULT_USAGE_QUERY, USAGE_TASK_PAGE } from "@shared/usage";
 import { z } from "zod";
 import type { CoreDispatch } from "../dispatcher";
+import type { Runbooks } from "../runbooks/runbooks";
 
 /**
  * The first mate's named reads (INF-5326's piece 3): what Settings shows that
@@ -47,6 +48,8 @@ export type ReadHost = {
   platform?: string;
   /** The window's installed keys (`HostCapabilities.installedKeys`); null or absent with no window open. */
   installedKeys?: () => KeymapSnapshot | null;
+  /** The runbooks, which `runbooks.crew` reads; absent with none connected. */
+  runbooks?: Pick<Runbooks, "crewPart">;
 };
 
 function fromCatalog(name: ReadName, defaults?: Record<string, unknown>): AppRead {
@@ -78,6 +81,7 @@ function overChannel<C extends CoreInvokeChannel>(
 
 const deviceArgs = z.strictObject({ id: z.string().min(1).max(64) });
 const ownStyleArgs = z.strictObject({ name: z.string().min(1).max(40) });
+const runbookArgs = z.strictObject({ runbook: z.string().min(1).max(80) });
 
 /**
  * The keys each command has now, as Keyboard settings lists them. With a
@@ -141,6 +145,17 @@ export const APP_READS = {
       const style = findOwnStyle(saved, name);
       if (!style) throw new Error(noOwnStyle(name, saved));
       return style;
+    },
+  },
+  "runbooks.crew": {
+    // i18n-exempt: served to the first mate, a model, never shown
+    about:
+      "A runbook's crew part, by its id or name, on or off: each crew section with the selector that serves it, and its skills' names. Your runbook text is only its first-mate part; read this before saying what a runbook has crewmates do.",
+    args: runbookArgs,
+    run: async (_dispatch, args, host) => {
+      const { runbook } = runbookArgs.parse(args);
+      if (!host.runbooks) throw new Error("Runbooks are not connected.");
+      return host.runbooks.crewPart(runbook);
     },
   },
   "keyboard.keys": {

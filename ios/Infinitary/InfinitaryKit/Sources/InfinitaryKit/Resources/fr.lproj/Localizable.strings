@@ -711,6 +711,8 @@
 "commandMessageDeleteWordBefore" = "Supprimer le mot avant le curseur";
 "commandMessagePutBackDeleted" = "Rétablir le dernier texte supprimé";
 "commandMessageRecall" = "Rappeler le dernier message envoyé";
+"commandMessageTakeBack" = "Annuler votre dernier message";
+"commandMessageTakeBackWords" = "annuler, défaire, retirer, message";
 "commandMoveDown" = "Descendre";
 "commandMoveDownWords" = "flèche, bas, suivant";
 "commandMoveFirst" = "Aller au début";
@@ -819,6 +821,9 @@
 "composerFolderNotProject" = "Impossible d’ajouter ce dossier comme projet.";
 "composerFolderProject" = "Ce dossier fait déjà partie de vos projets.";
 "composerHintFeedback" = "%1$@ : signalez un problème ou une idée au créateur d’Infinitary";
+"composerHintReplaces" = "remplace ·";
+"composerHintSendsAsNew" = "envoie comme nouveau";
+"composerReplacesLast" = "Remplace votre dernier message";
 "composerTooLongShorten" = "Trop long pour être envoyé. Raccourcissez-le d’abord.";
 "composerWordsOnly" = "Seuls des mots peuvent partir tant qu’Infinitary n’est pas mis à jour. Retirez les images et les fichiers pour envoyer ceci.";
 "crewAPart" = "Une partie";
@@ -1733,6 +1738,7 @@
 "panelChangeShowInDock" = "Afficher dans le Dock";
 "panelChangeShowWhatsNew" = "Afficher les nouveautés";
 "panelChangeStartAtLogin" = "Ouvrir à la connexion";
+"panelChangeSummaryPoint" = "Quand les longues conversations sont résumées";
 "panelChangeTheme" = "Thème";
 "panelChangeUpdateChannel" = "Les mises à jour que vous recevez";
 "panelChangeUpdateCheck" = "Rechercher des mises à jour";
@@ -2526,6 +2532,7 @@
 "refuseNoCardIsShown" = "Aucune carte n’est affichée";
 "refuseNoCardIsShownOrPutAside" = "Aucune carte n’est affichée ni mise de côté";
 "refuseNoCardThreadIsReadAboveIts" = "Aucun fil de carte n’est lu au-dessus de son dernier message";
+"refuseNoMessageToRevert" = "Aucun message à annuler : il date de plus d’une minute ou a déjà été annulé";
 "refuseNoOtherCardIsNew" = "Aucune autre carte n’est nouvelle";
 "refuseNoPageToPointAt" = "Aucune page n’est affichée à désigner";
 "refuseNoPictureIsOpen" = "Ouvre d’abord une image d’une carte";
@@ -2758,6 +2765,7 @@
 "settingsAppearanceWashDescription" = "La part de la couleur du thème qui couvre l’arrière-plan flou. 0 %% est la valeur par défaut.";
 "settingsAppearanceWashValue" = "%1$@ %% d’opacité";
 "settingsAutomationBack" = "Retour";
+"settingsAutomationBroughtNote" = "Fournie par la procédure Heartbeat. Pour la modifier ou la retirer, désactivez la procédure dans Réglages, Procédures.";
 "settingsAutomationCancelCleared" = "La conversation de votre second a été effacée avant qu’il ne lise ceci.";
 "settingsAutomationCancelEdited" = "Retirée avant que votre second ne la lise, car l’automatisation a été modifiée.";
 "settingsAutomationCancelPaused" = "Retirée avant que votre second ne la lise, car l’automatisation a été mise en pause.";
@@ -3568,6 +3576,10 @@
 "settingsProjectsDeliveryNoBatch" = "Proposé en demande de tirage là où le projet est hébergé, ou fusionné localement sans demande de tirage.";
 "settingsProjectsDeliveryTitle" = "Où vont les modifications";
 "settingsProjectsDetailsLabel" = "Détails";
+"settingsProjectsDisclosure" = "Signaler l’aide de l’IA";
+"settingsProjectsDisclosureLine" = "Ligne de mention";
+"settingsProjectsDisclosureOff" = "Quand un équipier relit une demande de tirage qu’une autre personne a ouverte sur ce projet, son commentaire ne dit pas que l’IA a aidé à l’écrire.";
+"settingsProjectsDisclosureOn" = "Quand un équipier relit une demande de tirage qu’une autre personne a ouverte sur ce projet, son commentaire commence par cette ligne.";
 "settingsProjectsEmpty" = "Aucun projet pour l’instant. Ajoutez-en un ci-dessous, ou dites à votre second sur quel projet travailler.";
 "settingsProjectsFolder" = "Dossier";
 "settingsProjectsFolderCancel" = "Annuler";
@@ -3906,6 +3918,17 @@
 "settingsSubscriptionsSignedOutHoldLabel" = "en suspens";
 "settingsSubscriptionsSignedOutHoldText" = "Le travail est en pause jusqu’à ce que vous vous reconnectiez.";
 "settingsSubscriptionsStale" = "pas à jour";
+"settingsSummaryPointAutomatic" = "Automatique";
+"settingsSummaryPointDescriptionAutomatic" = "Votre second et l’équipage résument une conversation à %1$@ jetons, ou plus tôt quand un modèle facture davantage au-delà d’un seuil plus bas.";
+"settingsSummaryPointDescriptionModelLimit" = "Votre second et l’équipage ne résument une conversation que près de la limite propre de chaque modèle, qui peut atteindre un million de jetons.";
+"settingsSummaryPointDescriptionTokens" = "Votre second et l’équipage résument une conversation à %1$@ jetons, ou à la limite propre du modèle si elle est plus petite.";
+"settingsSummaryPointDescriptionUnread" = "Votre second et l’équipage résument les longues conversations pour qu’elles coûtent moins et tiennent dans le modèle.";
+"settingsSummaryPointModelLimit" = "La limite de chaque modèle";
+"settingsSummaryPointSaveFailed" = "L’endroit où les longues conversations sont résumées n’a pas pu être enregistré. Réessayez.";
+"settingsSummaryPointStep" = "%1$@ au-delà de %2$@";
+"settingsSummaryPointSteps" = "Les requêtes coûtent plus cher sur %1$@.";
+"settingsSummaryPointTitle" = "Résumer les longues conversations à";
+"settingsSummaryPointTokens" = "%1$@ jetons";
 "settingsTakeOverAfter" = "Si %1$@ revient, il s’arrête et garde une copie à la place.";
 "settingsTakeOverAsk" = "Devenir l’ordinateur de votre second ? Votre second démarre ici à partir de cette copie, après Touch ID ou votre mot de passe.";
 "settingsTakeOverAskWindows" = "Devenir l’ordinateur de votre second ? Votre second démarre ici à partir de cette copie, après Windows Hello ou votre mot de passe Windows.";
@@ -3935,6 +3958,7 @@
 "settingsUsageConnectionAddressHint" = "L’adresse OpenTelemetry de l’outil en HTTP. Chaque type d’entrée va vers son propre chemin sous cette adresse.";
 "settingsUsageConnectionCancel" = "Annuler";
 "settingsUsageConnectionClaudeCode" = "Envoie l’utilisation de votre équipage à %1$@ au format de Claude Code : modèles, tokens et coût estimé, jamais de prompts ni de réponses.";
+"settingsUsageConnectionClaudeCodeWords" = "Envoie l’utilisation de votre équipage à %1$@ au format de Claude Code : modèles, tokens et coût estimé, avec les prompts et les réponses.";
 "settingsUsageConnectionEdit" = "Modifier";
 "settingsUsageConnectionEmailLine" = "Chaque enregistrement porte l’adresse e-mail de votre connexion à Claude Code, si cet ordinateur en a une, pour qu’une vue par personne compte votre travail.";
 "settingsUsageConnectionFailed" = "Impossible d’enregistrer la connexion. Veuillez réessayer.";
@@ -3967,10 +3991,13 @@
 "settingsUsageConnectionSaveLine" = "Enregistrer lance l’envoi de l’utilisation de votre équipage à cette adresse.";
 "settingsUsageConnectionSecretLabel" = "Rapports d’utilisation : %1$@";
 "settingsUsageConnectionStandard" = "Envoie l’utilisation de votre équipage à %1$@ au format standard d’OpenTelemetry : durées, modèles, tokens et coût estimé, jamais de prompts ni de réponses.";
+"settingsUsageConnectionStandardWords" = "Envoie l’utilisation de votre équipage à %1$@ au format standard d’OpenTelemetry : durées, modèles, tokens et coût estimé, avec les prompts et les réponses.";
 "settingsUsageConnectionTitle" = "Rapports d’utilisation";
 "settingsUsageConnectionUseOperation" = "Envoyer l’utilisation de l’équipage à %1$@";
 "settingsUsageConnectionUseReason" = "Infinitary envoie l’utilisation de votre équipage à %1$@, comme le demande votre connexion de rapports.";
 "settingsUsageConnectionUseResult" = "La réponse de l’outil à chaque lot";
+"settingsUsageConnectionWords" = "Envoyer aussi les prompts et les réponses";
+"settingsUsageConnectionWordsHint" = "Ajoute les prompts que reçoit votre équipage, ses réponses et ce qu’il donne à ses outils. Les clés et mots de passe qu’Infinitary y reconnaît sont d’abord masqués.";
 "settingsUsageCostAllKinds" = "Tous les types";
 "settingsUsageCostAllProjects" = "Tous les projets";
 "settingsUsageCostChange" = "Évolution";
@@ -4181,6 +4208,7 @@
 "shellConversationCards" = "Cartes";
 "shellConversationChose" = "Choix : « %1$@ »";
 "shellConversationCrewmate" = "Équipier";
+"shellConversationEdited" = "Modifié";
 "shellConversationEmpty" = "Rien pour l’instant. Vos messages et les cartes auxquelles vous répondez s’affichent ici.";
 "shellConversationEverything" = "Tout";
 "shellConversationHeading" = "Conversation";
@@ -4227,6 +4255,9 @@
 "shellKeyReminderNotTyping" = "hors saisie";
 "shellLastTurnFromCommand" = "Depuis %1$@";
 "shellLastTurnPictureOnly" = "Une image";
+"shellLastTurnRevert" = "Annuler votre dernier message";
+"shellLastTurnReverted" = "Annulé";
+"shellLastTurnRevertedUnread" = "Annulé avant que votre second ne le lise";
 "shellLastTurnWorking" = "En cours…";
 "shellMainMessageConnectFirst" = "Connectez d’abord un abonnement";
 "shellMainMessagePickingKey" = "Les Réglages attendent une touche de dictée";

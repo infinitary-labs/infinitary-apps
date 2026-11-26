@@ -3,14 +3,17 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
 import { DEFAULT_COST_LIMIT } from "@shared/costLimit";
+import type { FmEvent } from "@shared/events";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { integrationKeys } from "../../../tests/helpers/integrationKeys";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { companyReportingFrom } from "../claude/claudeReporting";
 import { openInMemoryDatabase } from "../storage/db";
 import { homeUsage } from "../storage/homeUsage";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
-import type { CompanyHosts } from "./companyDestination";
+import { type CompanyHosts, companyDestination } from "./companyDestination";
+import { SessionWords } from "./sessionWords";
 import {
   QUIT_SEND_MS,
   USAGE_CONNECTION_FILE,
@@ -292,6 +295,161 @@ describe("usageConnection", () => {
     });
     await connection.stop();
     expect(received).toEqual([]);
+  });
+
+  // INF-6587's approved plan, piece 3: "If the content choice is offered: off by default."
+  it("keeps prompts and replies off unless the person turns them on, and drops what waits when they turn them off", async () => {
+    const { url, received } = await collector();
+    const { file, connection, usage } = setup();
+    expect(await save(connection, url, { headers: [] })).toEqual({
+      saved: true,
+      view: { endpoint: url, format: "standard", headers: [] },
+    });
+    expect(connection.destinations()[0]?.words).toBeUndefined();
+    const reopen = () => usageConnection({ file, keys: integrationKeys().keys });
+    // A file saved without the switch, as every build before it saves one, reads as off.
+    expect(reopen().view()).toEqual({ endpoint: url, format: "standard", headers: [] });
+
+    expect(await save(connection, url, { headers: [], words: true })).toEqual({
+      saved: true,
+      view: { endpoint: url, format: "standard", headers: [], words: true },
+    });
+    expect(connection.destinations()[0]?.words).toBe(true);
+    expect(reopen().view()).toEqual({
+      endpoint: url,
+      format: "standard",
+      headers: [],
+      words: true,
+    });
+
+    usage.recordUsage(CODEX_CALL);
+    await usage.usageReporter.flush();
+    await save(connection, url, { headers: [], words: false });
+    expect(connection.view()).toEqual({ endpoint: url, format: "standard", headers: [] });
+    await connection.stop();
+    expect(received).toEqual([]);
+  });
+
+  // INF-6587's approved plan, piece 3: "the person's content switch reaches only the person's connection."
+  it("sends prompts and replies to the person's connection and never to the company's setup beside it", async () => {
+    const company = await collector();
+    const mine = await collector();
+    const source = companyDestination({
+      env: () => ({}),
+      managed: async () => undefined,
+      costReportingAllowed: async () => true,
+      read: async () =>
+        companyReportingFrom({
+          CLAUDE_CODE_ENABLE_TELEMETRY: "1",
+          OTEL_METRICS_EXPORTER: "otlp",
+          OTEL_LOGS_EXPORTER: "otlp",
+          OTEL_EXPORTER_OTLP_PROTOCOL: "http/json",
+          OTEL_EXPORTER_OTLP_ENDPOINT: company.url,
+        }),
+      email: async () => undefined,
+    });
+    await source.refresh();
+    // The person's tool by its own name: a host the company setup does not reach.
+    const port = new URL(mine.url).port;
+    const connection = usageConnection({
+      file: join(scratchDir("usage-connection-"), USAGE_CONNECTION_FILE),
+      keys: integrationKeys().keys,
+      resolve: async () => ["127.0.0.1"],
+    });
+    await connection.save({
+      endpoint: `http://usage-tool.test:${port}`,
+      format: "claude-code",
+      headers: [],
+      words: true,
+    });
+
+    let start = Date.now();
+    const session = join(scratchDir("usage-connection-words-"), "2026-11-20_pi.jsonl");
+    const line = (offset: number, id: string, message: Record<string, unknown>) =>
+      JSON.stringify({
+        type: "message",
+        id,
+        timestamp: new Date(start + offset).toISOString(),
+        message,
+      });
+    const db = openInMemoryDatabase();
+    const tasks = new TaskService({ db });
+    seedTask(tasks, {
+      id: "task-1",
+      title: "Fix the login timeout",
+      status: "queued",
+      startPolicy: "on-request",
+      shape: { kind: "fix" },
+    });
+    let hear: (event: FmEvent) => void = () => {};
+    const words = new SessionWords(() => [session]);
+    const usage = homeUsage(db, {
+      appLimit: () => DEFAULT_COST_LIMIT,
+      projectLimit: () => null,
+      isTask: (taskId) => tasks.get(taskId) !== undefined,
+      hearEvents: (listener) => {
+        hear = listener;
+      },
+      reportDestinations: () => [
+        ...source.destinations(),
+        ...connection.destinations(source.hosts()),
+      ],
+      turnWords: (taskId, since, until) => words.between(taskId, since, until),
+    });
+    const changed = (activity: "running" | "idle", seq: number): FmEvent => ({
+      type: "task_changed",
+      taskId: "task-1",
+      key: "INF-1",
+      kind: "work",
+      status: "active",
+      from: "active",
+      activity,
+      closedReason: null,
+      seq,
+    });
+    hear(changed("running", 1));
+    // The session writes the turn's lines once it has begun.
+    start = Date.now();
+    writeFileSync(
+      session,
+      `${[
+        JSON.stringify({
+          type: "session",
+          id: "pi-1",
+          timestamp: new Date(start - 60_000).toISOString(),
+        }),
+        line(100, "u1", {
+          role: "user",
+          content: [{ type: "text", text: "Fix the login timeout" }],
+        }),
+        line(200, "a1", {
+          role: "assistant",
+          content: [{ type: "text", text: "Raised the timeout to five seconds." }],
+          stopReason: "stop",
+        }),
+      ].join("\n")}\n`,
+    );
+    hear({ type: "assistant_delta", taskId: "task-1", text: "Raised the timeout" });
+    usage.recordUsage(CODEX_CALL);
+    await new Promise((done) => setTimeout(done, 250));
+    hear(changed("idle", 2));
+    await usage.usageReporter.stop();
+    await connection.stop();
+
+    const prompts = (received: Received[]) =>
+      received
+        .filter((entry) => entry.path === "/v1/logs")
+        .flatMap((entry) => entry.body.resourceLogs[0].scopeLogs[0].logRecords)
+        .map((record: any) => record.body.stringValue);
+    expect(prompts(mine.received).sort()).toEqual([
+      "claude_code.api_request",
+      "claude_code.assistant_response",
+      "claude_code.user_prompt",
+    ]);
+    expect(JSON.stringify(mine.received)).toContain("Raised the timeout to five seconds.");
+    expect(prompts(company.received)).toEqual(["claude_code.api_request"]);
+    expect(JSON.stringify(company.received)).not.toContain("Fix the login timeout");
+    expect(JSON.stringify(company.received)).not.toContain("Raised the timeout");
   });
 
   it("forgets the kept headers and what waits when removed", async () => {

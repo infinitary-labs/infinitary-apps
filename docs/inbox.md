@@ -240,6 +240,7 @@ Multiple references in one report commit together or not at all.
 `not-yet-answered` notifies the first mate and leaves the request pending; a final answer clears only its explicitly named request.
 Retries reuse the response identity and return its saved record; a correction uses a new identity and appends rather than replacing the earlier answer.
 A crewmate's `reply` may carry the same correlated response: the card line is then its exact answer, saved with the line's message id (`crew_responses.card_message_id`), so a report naming that response identity afterwards is the same response, kept once with one notification (`docs/card-threads.md`, "Shared cards").
+When the line is on an open card, that notification names the line, which is the captain's answer to the message the request was asked for, so the first mate does not write it again and the message ends on that card (`docs/task-capture.md`, "Waiting for an answer").
 An authenticated contributor may answer a named request for another task; that alone executes no effect, and its words on the card follow the shared-card rules (`docs/card-threads.md`, "Shared cards").
 Long answers stay exact in the database and use the existing overflow owner in served wakes.
 The wake has no task ref, so the originating worker's close cannot purge it.
@@ -271,7 +272,8 @@ A sender may take back or rewrite a message no turn was handed yet, and never on
 - `InboxStore.get(id)` reads one row, in flight or not, so its sender can tell where it stands.
 
 Automation uses them (`docs/automation.md`, "Deliveries"): a pause, an edit or a delete takes back a scheduled prompt the first mate has not read, and a later occurrence folds into the one still waiting.
-The first mate's close as done is the other (`docs/task-record.md`, "One close as done"): its `drop_waiting` takes back guidance an idle crewmate no longer needs, first letting go a row a turn was handed and never finished with, since no turn runs to acknowledge it.
+The first mate's close as done is another (`docs/task-record.md`, "One close as done"): its `drop_waiting` takes back guidance an idle crewmate no longer needs, first letting go a row a turn was handed and never finished with, since no turn runs to acknowledge it.
+The captain's own take back of their newest message is a third (`docs/task-capture.md`, "Taking back a message"): its words leave the first mate's lane while no turn was handed them, and its undo wake rides `InboxStore.enqueueCaptainOnce`, with the captain's origin and a once-name.
 
 ## The wake envelope
 
@@ -316,6 +318,7 @@ The inbox row is the envelope `{v, origin, ref, facts, ways?, text?}`: `origin` 
   The captain's own turn, live or parked on the first mate's lane, is framed the same way (`captain-turn`: the captain's words under `[user]`, and the pictures' copies it names in `attachments`; a parked copy carries its message's id, `askId`, so the turn that serves it judges that message).
   The answer-delivery retry (`answer-missing`, `docs/task-capture.md` "Answer delivery") quotes the captain's words once for the message nothing took effect after.
   It goes out once per message (once-name `answer-repair:<askId>`), skips the coalescing window, and is served alone: never batched with another row and never carried on a captain's turn.
+  A message the captain took back (`taken-back`, `docs/task-capture.md` "Taking back a message") is told at stage `held` as a steer into the turn that holds it, and at stage `ended` as one row of the captain's origin per message (once-name `taken-back:<askId>`) listing what to undo.
   A crewmate's answer to a request the first mate asked for a captain's message that still waits on it (`requested-response`, `AnswerDeliveryCheck.waitingOn`) is served alone the same way, so the turn that reads it reads only that message (`docs/task-capture.md` "Waiting for an answer").
   A captain's message sent while such a turn runs is parked for a turn of its own, as during the retry, and parked captain words are served ahead of such an answer, with the answers left out of their batch.
   Each cap carries the cap it reached, so a queued row words the cap it was about.

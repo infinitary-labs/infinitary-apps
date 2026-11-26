@@ -2,10 +2,13 @@
   "composerFolderNotProject": "無法將該資料夾加入為專案。",
   "composerFolderProject": "該資料夾已經是你的專案了。",
   "composerHintFeedback": "{command}：向 Infinitary 的開發者回報問題或提出想法",
+  "composerHintReplaces": "取代 ·",
+  "composerHintSendsAsNew": "作為新訊息送出",
   "composerLines": {
     "plural": "count",
     "other": "{count} 行"
   },
+  "composerReplacesLast": "取代你的上一則訊息",
   "composerTooLongShorten": "太長了，無法傳送。請先縮短。",
   "composerWordsOnly": "在 Infinitary 更新之前只能傳送文字。請移除圖片和檔案後再傳送。"
 }

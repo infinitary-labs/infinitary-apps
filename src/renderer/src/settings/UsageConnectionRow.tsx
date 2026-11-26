@@ -5,7 +5,7 @@ import type {
   UsageConnectionView,
 } from "@shared/usageConnection";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { Button, Input, SecretField } from "../design";
+import { Button, Input, SecretField, Switch } from "../design";
 import { focusWithRing } from "../design/focus";
 import { SettingError, SettingRow } from "./settingRows";
 import "./usageConnection.css";
@@ -50,8 +50,9 @@ function useFocusAfter(within: () => ParentNode | null | undefined, deps: readon
  * The reporting connection a person adds (docs/usage-report.md, "The
  * person's reporting connection"): one row in Settings → Intelligence
  * beside the cost limit, saying where the crew's usage goes, with a form
- * to add, edit or remove it. Save is the consent to send there; a kept
- * header's value never comes back to the window.
+ * to add, edit or remove it. Save is the consent to send there, and to
+ * send prompts and replies too only when its switch is on; a kept header's
+ * value never comes back to the window.
  */
 export function UsageConnectionRow() {
   const [view, setView] = useState<UsageConnectionView | undefined>();
@@ -77,8 +78,12 @@ export function UsageConnectionRow() {
       description={
         view && host
           ? view.format === "claude-code"
-            ? m.settingsUsageConnectionClaudeCode({ host })
-            : m.settingsUsageConnectionStandard({ host })
+            ? view.words
+              ? m.settingsUsageConnectionClaudeCodeWords({ host })
+              : m.settingsUsageConnectionClaudeCode({ host })
+            : view.words
+              ? m.settingsUsageConnectionStandardWords({ host })
+              : m.settingsUsageConnectionStandard({ host })
           : m.settingsUsageConnectionNone()
       }
       detail={
@@ -180,6 +185,7 @@ function UsageConnectionForm({
   const id = useId();
   const [endpoint, setEndpoint] = useState(original?.endpoint ?? "");
   const [format, setFormat] = useState<UsageConnectionFormat>(original?.format ?? "standard");
+  const [words, setWords] = useState(original?.words === true);
   const [headers, setHeaders] = useState<HeaderDraft[]>(
     (original?.headers ?? []).map((header, key) => ({
       key,
@@ -202,6 +208,7 @@ function UsageConnectionForm({
       .saveUsageConnection({
         endpoint: endpoint.trim(),
         format,
+        words,
         headers: headers.map((header) => ({
           name: header.name.trim(),
           ...(header.value ? { value: header.value } : {}),
@@ -247,6 +254,10 @@ function UsageConnectionForm({
           <option value="standard">{m.settingsUsageConnectionReadsStandard()}</option>
           <option value="claude-code">{m.settingsUsageConnectionReadsClaudeCode()}</option>
         </select>
+      </div>
+      <div className="fm-usage-conn-field fm-usage-conn-words" data-usage-connection-words="">
+        <Switch checked={words} onChange={setWords} label={m.settingsUsageConnectionWords()} />
+        <span className="fm-usage-conn-hint">{m.settingsUsageConnectionWordsHint()}</span>
       </div>
       <fieldset className="fm-usage-conn-headers">
         <legend>{m.settingsUsageConnectionHeaders()}</legend>

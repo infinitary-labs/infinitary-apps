@@ -244,7 +244,8 @@
   text-overflow: ellipsis;
   line-height: var(--leading-body);
 }
-[data-now-group="waiting"] .title {
+/* A row waiting on you, in Waiting on you or in a tag group, reads brighter. */
+[data-now-row-group="waiting"] .title {
   color: var(--fg-1);
 }
 .title-key {

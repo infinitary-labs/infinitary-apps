@@ -1,5 +1,5 @@
 ---
-source: b09b575fa5a6a2c1
+source: 9c71f435cc6524a0
 title: Assinaturas e franquia
 description: Como adicionar suas assinaturas de IA, ver quanto ainda resta da franquia do seu plano e o que sua tripulação faz quando ela acaba.
 ---
@@ -149,3 +149,16 @@ Uma linha que sobe indica que as tarefas estão exigindo mais trabalho do que an
 
 Em **Inteligência**, **Perguntar antes que uma tarefa gaste mais de** define um valor.
 Uma tarefa que passa dele para em um ponto seguro e pergunta a você em um cartão antes de gastar mais.
+
+## Conversas longas {#long-conversations}
+
+Quando uma conversa fica longa, seu imediato e sua tripulação a resumem e continuam a partir do resumo, para que cada mensagem custe menos e ainda caiba no modelo.
+Em **Inteligência**, **Resumir conversas longas em** define onde isso acontece.
+
+- **Automático** resume em 300.000 tokens, ou antes quando um modelo cobra mais a partir de um ponto mais baixo.
+- **150.000 tokens**, **200.000 tokens**, **300.000 tokens** ou **500.000 tokens** resume nesse número, ou no limite do próprio modelo quando ele é menor.
+- **O limite de cada modelo** só resume perto do limite de cada modelo, que pode chegar a um milhão de tokens.
+
+Um número menor custa menos; um maior mantém mais da conversa inteira.
+Quando o número que você escolhe deixa um modelo passar de um ponto em que as solicitações dele custam mais, a linha nomeia esse modelo e esse ponto.
+Uma conversa já aberta segue uma mudança na próxima mensagem, também nos seus outros computadores; uma conversa com o Claude segue quando começa de novo.

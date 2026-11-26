@@ -42,7 +42,7 @@ Product vision and interaction model: `.claude/skills/infinitary-design/readme.m
 
 1. UI follows the `infinitary-design` skill: consume its tokens, and extend the skill before inventing a rule.
 2. Every word a person reads follows the vocabulary and goes in the catalog with all nine translations in the same change (`docs/i18n.md`, "Translating"). Text served to a model stays English.
-3. A change a person notices adds a note under `release-notes/changes/`; internal work adds an exclusion with a reason (`docs/release-notes.md`).
+3. A change a person notices adds a note under `release-notes/changes/`, and a feature, improvement or removal names the docs site page it updated or says why none needs to; internal work adds an exclusion with a reason (`docs/release-notes.md`).
 4. Regenerate a generated file with its script; never hand-edit one (`*.generated.ts`, the phone's message files, `docs/contract.json`, `CHANGELOG.md`).
 5. Run `pnpm check:changed` after the final file change and before every push; any later change makes that proof stale.
 6. An edited test file needs three passing runs with no retries: unit files locally, journeys and phone parts through the requests in `docs/testing.md`, "What a task branch requests", made once at the final version.

@@ -77,6 +77,7 @@ import {
 import type { SharingView } from "./sharing";
 import { showLines } from "./showActions";
 import { type DeviceSignIns, signInPlace } from "./signIns";
+import { summaryPointLines } from "./summaryPointActions";
 import { tagLines } from "./tagActions";
 import type { ProjectView } from "./tasks";
 import { signInsUnansweredInEnglish, workSetupWordsInEnglish } from "./workSetupWords";
@@ -416,7 +417,7 @@ const actionLines = {
       repoId: z.string().min(1),
       changes: repoPolicyPatchSchema,
     }),
-    line: "Change costLimit (estimated dollars as {usd}, {none:true} for no limit, null to follow the app), scope (what work belongs here; null clears it), delivery, autonomy, rigor, requireChecks (false records that the project runs no pull request checks; true ends that record), batchGap (a batched project's least minutes from one batch's start to the next; null starts one as soon as a change is approved; a held batch's repair never waits), declared computer requirements (placementRequirements: systems, chips, tools, profile; null restores defaults), name, path (an already moved folder, with no planned or working tasks), or origin (the folder’s current git address, never a git configuration write). Exact captain words apply; otherwise the app asks on its exact-change card. Origin always asks. Personal workspace settings stay fixed; keys and history stay.",
+    line: "Change costLimit (estimated dollars as {usd}, {none:true} for no limit, null to follow the app), scope (what work belongs here; null clears it), delivery, autonomy, rigor, requireChecks (false records that the project runs no pull request checks; true ends that record), batchGap (a batched project's least minutes from one batch's start to the next; null starts one as soon as a change is approved; a held batch's repair never waits), contributorDisclosure (the line opening what the crew posts to an outside contributor; an empty string posts none; null restores the default), declared computer requirements (placementRequirements: systems, chips, tools, profile; null restores defaults), name, path (an already moved folder, with no planned or working tasks), or origin (the folder’s current git address, never a git configuration write). Exact captain words apply; otherwise the app asks on its exact-change card. Origin always asks. Personal workspace settings stay fixed; keys and history stay.",
     toRequest: (v) => [v.repoId, v.changes],
     readValue: (c) => ({
       projects: (c as RepoView[]).map(
@@ -435,6 +436,7 @@ const actionLines = {
           placementRequirements,
           noChecks,
           batchGap,
+          contributorDisclosure,
         }) => ({
           id,
           name,
@@ -450,6 +452,7 @@ const actionLines = {
           placementRequirements,
           requireChecks: !noChecks,
           batchGap: batchGap ?? null,
+          contributorDisclosure: contributorDisclosure ?? null,
         }),
       ),
     }),
@@ -1708,6 +1711,7 @@ const actionLines = {
   ...ambientLines,
   ...handoverLines,
   ...showLines,
+  ...summaryPointLines,
   ...settingsActs,
 } as const satisfies Record<string, ActionLine>;
 export type ActionName = keyof typeof actionLines;

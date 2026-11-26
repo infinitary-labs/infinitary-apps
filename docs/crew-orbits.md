@@ -423,6 +423,7 @@ Once the record's read answers, the whole projection is that read's, the same on
 | BLOCKED BY | each standing blocker's key; its recorded and end times are the record's | `tasks.board` `waits` (`dependency`), else `blockedBy` |
 | TASK | the task's title, wrapping in full | `tasks.board`, then `tasks.detail` |
 | PROJECT | the project's display name, wrapping, under Task; absent when the board has no name for it | the Tasks row's own lookup, `projectNameOf`: `tasks.board` `projects` by `projectId`, else empty |
+| TAGS | the tags the task carries, by name, wrapping, under Project; absent when it carries none (`docs/task-tags.md`) | `tasks.board` `tags` |
 | NOW | the crewmate's own newest doing - its own row, its newest action or its last sentence - and that doing's short age (`docs/task-record.md`, "The Now line") | `tasks.detail` `activityLog` and `said`, read only while that crewmate is pointed at, live while open |
 | MODEL (strip) | the full model display name, ending in an ellipsis before the row would wrap; absent before assignment | the one model-name lookup (`modelNames`, `src/shared/modelDisplayName.ts`) the labels, the record and the core's `ModelSlots.nameOf` use |
 | DIFFICULTY (strip) | how hard the task is, the level its routing asked for, as the `SlotBadge` Settings → Models draws it (Premium, Hard, Normal, Simple); the served level when the record cannot say; absent before routing | the routing decision's `asked` (`modelReason`), else `tasks.board` `tier`, the level the crewmate's solid shows |
@@ -430,7 +431,7 @@ Once the record's read answers, the whole projection is that read's, the same on
 | Reasoning, footnote, check counts, watch schedules (record only) | the reasoning its session opened at, why it is lower than its level asks, every check state's count, a refusal's reason and each watch's next read; the summary never shows them (INF-2528) | `tasks.detail` `reasoning` (`docs/routing.md` "Reasoning effort"), `delivery`, `waits` |
 | Why this model (record only) | a disclosure under the strip: why that model was chosen, how the allowance decided and the ranked models; the summary never shows it (INF-1714) | `tasks.detail` `modelReason` and `modelChoice` (`docs/routing.md` "Why this model on the task record") |
 
-The status, the task title and the project wrap in full.
+The status, the task title, the project and the tags wrap in full.
 The other facts stay one line, the panel is as wide as its longest line up to 360 px, and a longer note ends in an ellipsis while the note's age stays whole at the panel's right edge.
 360 px leaves every state the app can show whole beside its key (`crew-hover.spec.ts` checks that the shown state reads whole).
 The strip's row never wraps: a value the record cannot say leaves no gap, and a long model name gives way first, down to its label's width, then a long branch name, each ending in an ellipsis inside its cell.

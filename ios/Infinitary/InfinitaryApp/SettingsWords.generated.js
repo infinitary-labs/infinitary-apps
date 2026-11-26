@@ -6403,7 +6403,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
      * was, and what the newest answered, in the integration's own words. It
      * keeps looking, and this goes once a look answers.
      */
-    failing: strictObject({ since: number(), reason: string() }).optional()
+    failing: strictObject({ since: number(), reason: string() }).optional(),
+    /**
+     * The runbook wake that brought the rule (docs/automation.md, "The
+     * heartbeat"): it comes and goes with that runbook's switch, and nobody
+     * edits or deletes it; Pause and Resume still work.
+     */
+    brought: literal("heartbeat").optional()
   });
   discriminatedUnion("state", [
     strictObject({ state: literal("ready"), rules: array(automationRuleSchema) }),
@@ -10200,6 +10206,114 @@ ${events}` : prompt;
         return `‮Where changes go‬`;
     }
     return `Where changes go`;
+  }
+  function settingsProjectsDisclosure() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الإفصاح عن مساعدة الذكاء الاصطناعي`;
+      case "de":
+        return `KI-Unterstützung offenlegen`;
+      case "es":
+        return `Indicar la ayuda de IA`;
+      case "fr":
+        return `Signaler l’aide de l’IA`;
+      case "ja":
+        return `AI の支援を明示する`;
+      case "ko":
+        return `AI 도움 밝히기`;
+      case "pt-BR":
+        return `Informar a ajuda de IA`;
+      case "zh-Hans":
+        return `说明 AI 协助`;
+      case "zh-Hant":
+        return `說明 AI 協助`;
+      case "en-XA":
+        return `[Ðîšçļöšé ÅÎ áššîšţáñçé ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Disclose AI assistance‬`;
+    }
+    return `Disclose AI assistance`;
+  }
+  function settingsProjectsDisclosureLine() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `سطر الإفصاح`;
+      case "de":
+        return `Offenlegungszeile`;
+      case "es":
+        return `Línea de aviso`;
+      case "fr":
+        return `Ligne de mention`;
+      case "ja":
+        return `明示する行`;
+      case "ko":
+        return `밝히는 줄`;
+      case "pt-BR":
+        return `Linha de aviso`;
+      case "zh-Hans":
+        return `说明行`;
+      case "zh-Hant":
+        return `說明行`;
+      case "en-XA":
+        return `[Ðîšçļöšûŕé ļîñé ~~~~~]`;
+      case "ar-XB":
+        return `‮Disclosure line‬`;
+    }
+    return `Disclosure line`;
+  }
+  function settingsProjectsDisclosureOff() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `عندما يراجع فرد من الطاقم طلب سحب فتحه شخص آخر في هذا المشروع، لا يذكر تعليقه أن الذكاء الاصطناعي ساعد في كتابته.`;
+      case "de":
+        return `Wenn ein Crewmitglied einen Pull Request prüft, den eine andere Person in diesem Projekt geöffnet hat, sagt sein Kommentar nicht, dass KI beim Schreiben geholfen hat.`;
+      case "es":
+        return `Cuando un tripulante revisa una solicitud de incorporación de cambios que otra persona abrió en este proyecto, su comentario no dice que la IA ayudó a escribirlo.`;
+      case "fr":
+        return `Quand un équipier relit une demande de tirage qu’une autre personne a ouverte sur ce projet, son commentaire ne dit pas que l’IA a aidé à l’écrire.`;
+      case "ja":
+        return `ほかの人がこのプロジェクトで開いたプルリクエストを乗組員がレビューしても、そのコメントには AI が書くのを手伝ったことを示しません。`;
+      case "ko":
+        return `다른 사람이 이 프로젝트에 연 끌어오기 요청을 선원이 검토해도, 남기는 댓글에 AI가 작성을 도왔다는 말이 없어요.`;
+      case "pt-BR":
+        return `Quando um tripulante revisa uma solicitação de pull que outra pessoa abriu neste projeto, o comentário dele não diz que a IA ajudou a escrever.`;
+      case "zh-Hans":
+        return `船员审阅他人在此项目中打开的拉取请求时，所发评论不会说明有 AI 协助撰写。`;
+      case "zh-Hant":
+        return `船員審閱他人在此專案中開啟的 pull request 時，所發留言不會說明有 AI 協助撰寫。`;
+      case "en-XA":
+        return `[Ŵĥéñ á çŕéŵɱáţé ŕéṽîéŵš á þûļļ ŕéǫûéšţ šöɱéöñé éļšé öþéñéð öñ ţĥîš þŕöĵéçţ, îţš çöɱɱéñţ ðöéš ñöţ šáý ÅÎ ĥéļþéð ŵŕîţé îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮When a crewmate reviews a pull request someone else opened on this project, its comment does not say AI helped write it.‬`;
+    }
+    return `When a crewmate reviews a pull request someone else opened on this project, its comment does not say AI helped write it.`;
+  }
+  function settingsProjectsDisclosureOn() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `عندما يراجع فرد من الطاقم طلب سحب فتحه شخص آخر في هذا المشروع، يبدأ تعليقه بهذا السطر.`;
+      case "de":
+        return `Wenn ein Crewmitglied einen Pull Request prüft, den eine andere Person in diesem Projekt geöffnet hat, beginnt sein Kommentar mit dieser Zeile.`;
+      case "es":
+        return `Cuando un tripulante revisa una solicitud de incorporación de cambios que otra persona abrió en este proyecto, su comentario empieza con esta línea.`;
+      case "fr":
+        return `Quand un équipier relit une demande de tirage qu’une autre personne a ouverte sur ce projet, son commentaire commence par cette ligne.`;
+      case "ja":
+        return `ほかの人がこのプロジェクトで開いたプルリクエストを乗組員がレビューすると、そのコメントはこの行から始まります。`;
+      case "ko":
+        return `다른 사람이 이 프로젝트에 연 끌어오기 요청을 선원이 검토하면, 남기는 댓글이 이 줄로 시작해요.`;
+      case "pt-BR":
+        return `Quando um tripulante revisa uma solicitação de pull que outra pessoa abriu neste projeto, o comentário dele começa com esta linha.`;
+      case "zh-Hans":
+        return `船员审阅他人在此项目中打开的拉取请求时，所发评论以这一行开头。`;
+      case "zh-Hant":
+        return `船員審閱他人在此專案中開啟的 pull request 時，所發留言以這一行開頭。`;
+      case "en-XA":
+        return `[Ŵĥéñ á çŕéŵɱáţé ŕéṽîéŵš á þûļļ ŕéǫûéšţ šöɱéöñé éļšé öþéñéð öñ ţĥîš þŕöĵéçţ, îţš çöɱɱéñţ öþéñš ŵîţĥ ţĥîš ļîñé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮When a crewmate reviews a pull request someone else opened on this project, its comment opens with this line.‬`;
+    }
+    return `When a crewmate reviews a pull request someone else opened on this project, its comment opens with this line.`;
   }
   function settingsProjectsLocalCareful() {
     switch (currentLanguage()) {
@@ -14777,6 +14891,7 @@ ${events}` : prompt;
     state: _enum(["open", "merged", "closed"]),
     updatedAt: string().optional()
   });
+  const contributorDisclosureSchema = string().trim().max(300);
   const appFollowStepSchema = _enum(["getting", "waiting", "restarting", "cannot", "failed"]);
   const appFollowReasonSchema = _enum([
     "package-manager",
@@ -17062,9 +17177,16 @@ ${events}` : prompt;
      * (docs/forge.md, "The batch gap"): the least time in minutes from one
      * batch's start to the next, or null to start one as soon as a change is approved.
      */
-    batchGap: batchGapSchema.nullable().optional()
+    batchGap: batchGapSchema.nullable().optional(),
+    /**
+     * Settings → Projects' Disclose AI assistance (docs/forge.md, "Disclosing AI
+     * assistance"): the line that opens what the crew posts to an
+     * outside contributor, an empty string to post none, or null for the
+     * default line.
+     */
+    contributorDisclosure: contributorDisclosureSchema.nullable().optional()
   }).strict().refine((patch) => Object.values(patch).some((value) => value !== void 0), {
-    message: "pass delivery, autonomy, rigor, costLimit, scope, name, path, origin, requireChecks, batchGap, or several"
+    message: "pass delivery, autonomy, rigor, costLimit, scope, name, path, origin, requireChecks, batchGap, contributorDisclosure, or several"
   });
   const noChecksRecordSchema = object({
     at: number(),
@@ -17129,6 +17251,12 @@ ${events}` : prompt;
      * soon as a change is approved. A held batch's repair never waits for it.
      */
     batchGap: batchGapSchema.optional(),
+    /**
+     * The project's own line opening what the crew posts to an outside
+     * contributor, or an empty string for none (docs/forge.md, "Disclosing AI
+     * assistance"); absent, the default line.
+     */
+    contributorDisclosure: contributorDisclosureSchema.optional(),
     /**
      * Whether a runbook that is on at the home offers batched pull requests,
      * so the project may newly choose them (`deliveryChoices`); absent from an
@@ -17200,6 +17328,14 @@ ${events}` : prompt;
     /** Typed, never inferred from the words. Absent is unknown, and the line stays. */
     eligibility: lastTurnEligibilitySchema.optional(),
     /**
+     * The captain took the message back before any turn read it, so nothing
+     * answered it (docs/task-capture.md, "Taking back a message"). The window
+     * words the line from this in its own language when it shows it; `text`
+     * keeps the same catalog words in English for a reader that words nothing
+     * itself (docs/i18n.md, "Saved facts").
+     */
+    withdrawn: literal(true).optional(),
+    /**
      * The Firstmate's closing words as it wrote them, line breaks kept, when
      * they differ from the one-line `text`: the conversation shows them
      * (docs/composer.md "The conversation"). Absent, it shows `text`.
@@ -17212,7 +17348,16 @@ ${events}` : prompt;
     /** The Firstmate's reply line, or null while none has been given. */
     reply: lastTurnReplySchema.nullable(),
     /** The message came from the captain's own command, `infinitary-axi`, not the window. */
-    through: throughSchema.optional()
+    through: throughSchema.optional(),
+    /** The message's id, which a take back names; absent from an older core. */
+    askId: string().optional(),
+    /**
+     * When the core accepted the message, in ms since the epoch: the take-back
+     * window runs from it (`TAKE_BACK_WINDOW_MS`). Absent from an older core.
+     */
+    sentAt: number().optional(),
+    /** The captain took the message back (docs/task-capture.md, "Taking back a message"). */
+    takenBack: literal(true).optional()
   });
   lastRoundSchema.extend({
     previous: lastRoundSchema.nullable().optional()
@@ -17866,7 +18011,11 @@ ${events}` : prompt;
       type: literal("user_turn"),
       text: string(),
       /** Sent from the captain's own command, `infinitary-axi`, not the window. */
-      through: throughSchema.optional()
+      through: throughSchema.optional(),
+      /** The message's id, which a take back names (src/shared/lastTurn.ts). Absent from an older core. */
+      askId: string().optional(),
+      /** When the core accepted the message, in ms since the epoch. Absent from an older core. */
+      sentAt: number().optional()
     }),
     /**
      * The Firstmate's reply line to the captain's last message, sent as the
@@ -17881,7 +18030,15 @@ ${events}` : prompt;
       /** Typed completion: absent is unknown, and the line stays. */
       eligibility: lastTurnEligibilitySchema.optional(),
       /** The closing words as written, when they differ from `text` (src/shared/lastTurn.ts). */
-      words: string().optional()
+      words: string().optional(),
+      /** Taken back before any turn read it (src/shared/lastTurn.ts). */
+      withdrawn: literal(true).optional(),
+      /**
+       * The message the line stands beside: the newest, or one the captain
+       * took back, whose undo the turn did or no turn read (docs/task-capture.md,
+       * "Taking back a message"). Absent from an older core, and the line is the newest's.
+       */
+      askId: string().optional()
     }),
     /**
      * A task record changed (task-system P3): per-task invalidation for
@@ -18938,6 +19095,16 @@ ${events}` : prompt;
     /** Under Require pull request checks while it is off, before when and by whom. */
     get checksOff() {
       return settingsProjectsRequireChecksOff();
+    },
+    /** The Disclose AI assistance row's name and its switch's (docs/forge.md, "Disclosing AI assistance"). */
+    get disclosureTitle() {
+      return settingsProjectsDisclosure();
+    },
+    /** What the Disclose AI assistance row says under its name, on or off. */
+    disclosure: (on) => on ? settingsProjectsDisclosureOn() : settingsProjectsDisclosureOff(),
+    /** The name of the field holding the project's line. */
+    get disclosureLine() {
+      return settingsProjectsDisclosureLine();
     },
     /** Under the rows of a project that merges locally and asks for Careful. */
     get carefulLocal() {

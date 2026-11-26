@@ -19,6 +19,7 @@ import {
   type RunbookFacts,
   type RunbookManifest,
   type RunbookOffer,
+  type RunbookSection,
   type RunbookSkillFiles,
   type RunbookView,
   runbookManifestSchema,
@@ -50,6 +51,7 @@ export const BUILTIN_RUNBOOK_ORDER = [
   "lessons",
   "batches",
   "pull-comments",
+  "heartbeat",
   "computer-cleanup",
   "bring-secrets",
   "feedback",
@@ -73,6 +75,20 @@ export type RunbookPanel = {
   slice: string;
   dir: string;
   runbook: { id: string; name: string; source: "installed" | "personal" };
+};
+
+/**
+ * What `crewPart` answers: each crew section with the selector that serves
+ * it (an absent one serves every crewmate in the runbook's reach), and the
+ * names of the skills its crewmates may open.
+ */
+export type RunbookCrewPart = {
+  id: string;
+  name: string;
+  enabled: boolean;
+  projects?: string[];
+  sections: { when?: RunbookSection["when"]; text: string }[];
+  skills: string[];
 };
 
 /** Bundled, installed and personal folders supply procedure. SettingsStore alone owns their switches. */
@@ -386,6 +402,38 @@ export class Runbooks {
       skills,
       sha: createHash("sha256").update(JSON.stringify({ text, skills })).digest("hex"),
       wakes: [...new Set(wakes)],
+    };
+  }
+  /**
+   * A runbook's crew part, whole, for the first mate to read on request
+   * (docs/runbooks.md, "Reading a runbook's crew part"): its served
+   * first-mate section is only half of what the runbook says. Read by id or
+   * name whether it is on or off, since a question may be about turning it on.
+   */
+  crewPart(name: string): RunbookCrewPart {
+    const entries = this.entries;
+    const wanted = name.trim().toLowerCase();
+    const entry =
+      entries.find(({ manifest }) => manifest.id === name.trim()) ??
+      entries.find(({ manifest }) => manifest.name.toLowerCase() === wanted);
+    if (!entry)
+      throw new Error(
+        `No runbook "${name}". Runbooks: ${entries.map(({ manifest }) => `${manifest.name} (${manifest.id})`).join(", ")}.`,
+      );
+    const { manifest } = entry;
+    const states = this.settings.getRunbookStates();
+    return {
+      id: manifest.id,
+      name: manifest.name,
+      enabled: states[manifest.id] ?? !manifest.startsOff,
+      ...(manifest.projects ? { projects: manifest.projects } : {}),
+      sections: crewSectionsOf(manifest).map((section) => ({
+        ...(section.when ? { when: section.when } : {}),
+        text: this.read(entry, section.file),
+      })),
+      skills: manifest.skills
+        ? skillFolders([this.path(entry, manifest.skills)]).map(({ name }) => name)
+        : [],
     };
   }
   /**

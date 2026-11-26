@@ -27,6 +27,14 @@ export const lastTurnReplySchema = z.object({
   /** Typed, never inferred from the words. Absent is unknown, and the line stays. */
   eligibility: lastTurnEligibilitySchema.optional(),
   /**
+   * The captain took the message back before any turn read it, so nothing
+   * answered it (docs/task-capture.md, "Taking back a message"). The window
+   * words the line from this in its own language when it shows it; `text`
+   * keeps the same catalog words in English for a reader that words nothing
+   * itself (docs/i18n.md, "Saved facts").
+   */
+  withdrawn: z.literal(true).optional(),
+  /**
    * The Firstmate's closing words as it wrote them, line breaks kept, when
    * they differ from the one-line `text`: the conversation shows them
    * (docs/composer.md "The conversation"). Absent, it shows `text`.
@@ -43,6 +51,15 @@ export const lastRoundSchema = z.object({
   reply: lastTurnReplySchema.nullable(),
   /** The message came from the captain's own command, `infinitary-axi`, not the window. */
   through: throughSchema.optional(),
+  /** The message's id, which a take back names; absent from an older core. */
+  askId: z.string().optional(),
+  /**
+   * When the core accepted the message, in ms since the epoch: the take-back
+   * window runs from it (`TAKE_BACK_WINDOW_MS`). Absent from an older core.
+   */
+  sentAt: z.number().optional(),
+  /** The captain took the message back (docs/task-capture.md, "Taking back a message"). */
+  takenBack: z.literal(true).optional(),
 });
 export type LastRound = z.infer<typeof lastRoundSchema>;
 

@@ -1,5 +1,5 @@
 ---
-source: 36f0e08a37cc757f
+source: c78bd352e2745a60
 title: Der erste Offizier
 description: Wer dein erster Offizier ist, was er tut und was nicht, wie du mit ihm sprichst und wie du das Modell wählst, mit dem er antwortet.
 ---
@@ -38,6 +38,15 @@ Ein paar Dinge helfen:
   Drück ↑ in einem leeren Nachrichtenfeld.
 - **Viel Text einfügen.**
   Ein langer eingefügter Text wird im Feld zu einem Datei-Chip und geht vollständig mit deiner Nachricht mit.
+
+### Eine Nachricht zurücknehmen {#take-back-a-message}
+
+Eine Minute lang, nachdem du eine Nachricht gesendet hast, steht über dem Nachrichtenfeld ein Rückgängig-Symbol neben ihr.
+Drück darauf oder nutze **Deine letzte Nachricht zurücknehmen** in der Befehlssuche.
+Dein erster Offizier stoppt, was die Nachricht begonnen hat, macht rückgängig, was er schon getan hat, und schreibt neben die Nachricht, was er rückgängig gemacht hat.
+Um die Nachricht stattdessen zu ändern, drück ↑ in einem leeren Nachrichtenfeld.
+Im Feld steht dann „Ersetzt deine letzte Nachricht“: Enter sendet deine Änderung an ihrer Stelle, und Esc sendet sie als neue Nachricht.
+In [der ganzen Unterhaltung](#the-whole-conversation) ist eine zurückgenommene Nachricht durchgestrichen, und eine bearbeitete behält ihren früheren Wortlaut.
 
 ### Bilder und Dateien hinzufügen {#add-pictures-and-files}
 

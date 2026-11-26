@@ -1,5 +1,7 @@
 {
   "lastTurn": {
+    "askId": "ask-2",
+    "sentAt": 1795453920000,
     "you": "also remind me to check usage on friday",
     "reply": {
       "text": "All set. I'll remind you Friday at 9:00 AM.",
@@ -7,6 +9,8 @@
       "words": "All set.\nI'll remind you Friday at 9:00 AM."
     },
     "previous": {
+      "askId": "under-card",
+      "sentAt": 1795453620000,
       "you": "move it to Monday",
       "reply": {
         "text": "Moved to Monday.",

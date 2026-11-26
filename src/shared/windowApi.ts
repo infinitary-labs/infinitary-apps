@@ -162,8 +162,10 @@ import type {
 import type { SharingAskAnswer, SharingChannel, SharingPreview, SharingView } from "./sharing";
 import type { DeviceSignInEvent, DeviceSignIns } from "./signIns";
 import type { StandbyReady, StandbyViews } from "./standby";
+import type { SummaryPoint, SummaryPointView } from "./summaryPoint";
 import type { TagCheckChange, TagCheckRead, TagCheckView } from "./tagCheck";
 import type { ProjectTagChange, ProjectTagChangeResult } from "./tags";
+import type { TakeBackResult } from "./takeBack";
 import type {
   SavedSignInsView,
   TaskBrowserAskAnswer,
@@ -288,12 +290,15 @@ export type FirstmateApi = {
             taskId?: string;
             pastCardId?: string;
             focusedProjectId?: string;
+            replaces?: string;
           },
     ) => Promise<{ ok: true }>;
     /** The captain's newest message and the Firstmate's reply line beside it, or null before the first. */
     lastTurn: () => Promise<LastTurn | null>;
     /** One page of the conversation, newest first (docs/composer.md "The conversation"). */
     thread: (request?: ConversationPageRequest) => Promise<ConversationPage>;
+    /** Take back the newest message within the window (docs/task-capture.md, "Taking back a message"). */
+    takeBack: (askId: string) => Promise<TakeBackResult>;
   };
   task: {
     abort: (taskId: string) => Promise<{ ok: true }>;
@@ -882,6 +887,9 @@ export type FirstmateApi = {
     getUsageConnection: () => Promise<UsageConnectionView>;
     saveUsageConnection: (input: UsageConnectionSave) => Promise<UsageConnectionSaved>;
     removeUsageConnection: () => Promise<UsageConnectionView>;
+    /** Where long conversations summarize (Settings → Intelligence; INF-6693). */
+    getSummaryPoint: () => Promise<SummaryPointView>;
+    setSummaryPoint: (point: SummaryPoint) => Promise<SummaryPointView>;
     getNotifications: () => Promise<boolean>;
     setNotifications: (enabled: boolean) => Promise<boolean>;
     getAppearance: () => Promise<Appearance>;

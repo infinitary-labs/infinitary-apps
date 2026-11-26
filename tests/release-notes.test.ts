@@ -80,6 +80,7 @@ const note = (id: string, title = `Title of ${id}`, extra: Record<string, unknow
       title,
       area: "cards",
       noPicture: "Nothing on screen changes.",
+      noDocsSite: "No docs site page covers it.",
       provenance: { origin: "change" },
       ...extra,
     },
@@ -416,6 +417,116 @@ describe("the pull request's notes step", () => {
     const source = f.git("rev-parse", "HEAD");
     expect(f.git("merge-base", base, source)).toBe(base);
     expect(f.cli("check", "--source", source, "--reviewed", source)).toContain("all covered");
+  });
+});
+
+/**
+ * The captain's INF-6704 plan: a feature, improvement or removal note names
+ * the docs site pages its change edited, or says why none needs to, and the
+ * notes step of every change and every batch holds it to that.
+ */
+describe("the docs site declaration", () => {
+  const PAGE = "docs-site/src/content/docs/settings.md";
+  /** A released fixture whose docs site has a hand-written Settings page and the generated Keyboard page. */
+  function withSite(): Fixture {
+    const { f } = released();
+    f.commit("docs: start the site", {
+      [PAGE]: "# Settings\n",
+      "docs-site/src/content/docs/keyboard.mdx": "# Keyboard\n",
+      "release-notes/changes/site.json": { exclusions: [{ id: "site", reason: "Docs only." }] },
+    });
+    return f;
+  }
+  const declaring = (id: string, extra: Record<string, unknown>) => {
+    const { noDocsSite: _reason, ...entry } = note(id).entries[0] as Record<string, unknown>;
+    return { entries: [{ ...entry, ...extra }] };
+  };
+
+  it("refuses a change whose feature note declares nothing or names a page it did not edit, and passes an edited page or a reason", () => {
+    const f = withSite();
+    f.git("checkout", "-q", "-b", "change");
+    f.commit("feat: undeclared", {
+      "src.txt": "1",
+      "release-notes/changes/new.json": declaring("new-feature", {}),
+    });
+    expect(() => f.cli("change", "--base", "main")).toThrow(
+      'release-notes/changes/new.json: "new-feature" is a feature: name the docs site pages this change edited in "docsSite", or say in one sentence in "noDocsSite" why no page needs to change\nThe docs site\'s hand-written pages: settings (',
+    );
+    f.commit("feat: name the page", {
+      "release-notes/changes/new.json": declaring("new-feature", { docsSite: ["settings"] }),
+    });
+    expect(() => f.cli("change", "--base", "main")).toThrow(
+      `"new-feature" names "settings", but this change does not edit ${PAGE}`,
+    );
+    f.commit("docs: name a generated page", {
+      "release-notes/changes/new.json": declaring("new-feature", { docsSite: ["keyboard"] }),
+    });
+    expect(() => f.cli("change", "--base", "main")).toThrow(/"keyboard" is written by a script/);
+    f.commit("docs: update the page", {
+      [PAGE]: "# Settings\n\nThe new row.\n",
+      "release-notes/changes/new.json": declaring("new-feature", { docsSite: ["settings"] }),
+    });
+    expect(f.cli("change", "--base", "main")).toContain("release-notes/changes/new.json");
+    f.git("reset", "-q", "--hard", "main");
+    f.commit("feat: with a reason", {
+      "src.txt": "1",
+      "release-notes/changes/new.json": note("new-feature"),
+    });
+    expect(f.cli("change", "--base", "main")).toContain("ledger is consistent");
+    // A fix declares nothing, and neither does an exclusion.
+    f.git("reset", "-q", "--hard", "main");
+    f.commit("fix: a fix", {
+      "src.txt": "1",
+      "release-notes/changes/new.json": declaring("new-fix", { kind: "fix" }),
+      "release-notes/changes/tool.json": { exclusions: [{ id: "tool", reason: "Tooling." }] },
+    });
+    expect(f.cli("change", "--base", "main")).toContain("ledger is consistent");
+  });
+
+  it("holds each change of a batch to the pages its own commit edits", () => {
+    const f = withSite();
+    f.git("checkout", "-q", "-b", "infinitary-batch/1");
+    f.commit("feat: names the page", {
+      "src.txt": "1",
+      "release-notes/changes/named.json": declaring("named", { docsSite: ["settings"] }),
+    });
+    f.commit("docs: another change edits the page", {
+      [PAGE]: "# Settings\n\nEdited elsewhere.\n",
+      "release-notes/changes/other.json": { exclusions: [{ id: "other", reason: "Docs only." }] },
+    });
+    expect(() => f.cli("batch", "--base", "main")).toThrow(
+      `release-notes/changes/named.json: "named" names "settings", but this change does not edit ${PAGE}`,
+    );
+    f.git("reset", "-q", "--hard", "main");
+    f.commit("feat: names and edits the page", {
+      [PAGE]: "# Settings\n\nThe new row.\n",
+      "release-notes/changes/named.json": declaring("named", { docsSite: ["settings"] }),
+    });
+    f.commit("feat: says why no page changes", {
+      "src.txt": "1",
+      "release-notes/changes/reason.json": note("reason"),
+    });
+    expect(f.cli("batch", "--base", "main")).toContain("each of this batch's 2 change(s)");
+  });
+
+  it("leaves the declaration out of the packaged catalog", () => {
+    const f = withSite();
+    const source = f.commit("feat: shipped", {
+      [PAGE]: "# Settings\n\nThe new row.\n",
+      "release-notes/changes/shipped.json": declaring("shipped-change", { docsSite: ["settings"] }),
+    });
+    const out = join(scratchDir("infinitary-release-notes-out-"), "catalog.json");
+    f.cli("generate", "--version", "1.0.1-alpha.7", "--source", source, "--out", out);
+    const catalog = JSON.parse(readFileSync(out, "utf8")) as { entries: Record<string, unknown>[] };
+    const shipped = catalog.entries.find((entry) => entry.id === "shipped-change");
+    expect(shipped?.title).toBe("Title of shipped-change");
+    expect(shipped).not.toHaveProperty("docsSite");
+    expect(catalog.entries.find((entry) => entry.id === "first-feature")).not.toHaveProperty(
+      "noDocsSite",
+    );
+    expect(
+      f.cli("verify-package", "--catalog", out, "--version", "1.0.1-alpha.7", "--source", source),
+    ).toContain("1.0.1-alpha.7");
   });
 });
 

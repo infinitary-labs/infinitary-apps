@@ -111,6 +111,7 @@ One with no project runs in an empty folder of its own, `crewmates/<taskId>/read
 - Every `github_write` it makes to its own project is kept, run starts included, and the host puts it on one approval card with a ticked row each, beside its kept integration calls ("A reader's writes" in `docs/forge.md`); a write anywhere else, a release file and a validation effect are refused and nothing is kept.
 - `web_read` reads one public web page as text (`ReaderWebService`, `src/core/orchestrator/readerWeb.ts`), under "Web pages" below.
 - It writes no file, so its instructions name no evidence, temporary or card body folder: its card bodies go inline.
+  It can never open an email's attachment or any other file an integration saves, and the first mate's `unsafe_data_reader` parameter says so, so a request that needs one starts an ordinary task.
 - Each of its cards carries one line, drawn by the app from its task's shape, saying it reads words anyone can write, so a link or request there may come from a stranger (`Card.unsafeData`).
 - It runs only on this computer: another computer's host rebuilds a session with the whole coding set, so the placement keeps it home (`runsOnlyHere`) and a placed session refuses a fenced spec.
 
@@ -158,11 +159,14 @@ The host keeps it as a Build row on the reader's approval card instead of filing
 - A row is a `WriteAsk` of kind `build` (`src/shared/writeAsk.ts`): it joins the task's waiting card of writes, counts toward the same cap, and is drawn with its title, the issue as a link, Reproduce first or Plan first, its goal and why whole, and one choice that arrives on Keep for later (`forgeApprovalCard`).
 - On Only this time, Start now files the task and asks for its start as the captain's Start does, so the first mate's directions apply; Keep for later files it on request; Don't file files nothing; Not now files none of them (`BuildRows.answer`).
   The reader hears which in its `write-answered` steer, which marks the ask as a Build row so a row not filed is asked again with `file_followup`, never as a write.
+- Don't file also holds back every write of the same click that addresses the row's issue in its project, such as a reply under it, so the issue never gets a reply that promises work the captain chose not to file (`addressesRowIssue`, `CardWriteAsks.answerIntegrationCard`).
+  The reader hears in the same steer that the write was held back and why, and may write a new reply that fits the choice, which waits on a new card.
 - The filed task's brief is the row's goal and why as the captain read them, one line on where they come from, and how it starts (`buildRowBrief`); it carries no issue number or link, and the record keeps the reader's goal and why marked as every reader follow-up's.
-- A bug files as a read-only internal reproduce step whose report fits a typed result: whether it reproduced, the version tried, and a question for the reporter when one is needed (`REPRODUCE_RESULT_SCHEMA`).
+- A bug files as a read-only internal reproduce step whose report fits a typed result: whether it reproduced, the version tried, a question for the reporter when one is needed, and `next` once the captain chose on a step that did not reproduce: `ask` the reporter, `close` the issue or `keep` it for later (`REPRODUCE_RESULT_SCHEMA`).
+  On no, the step's one card declares `continues`, so the captain's choice comes back to the step, which reports the typed result again with `next`.
   An idea files as a read-only plan step that designs for the underlying problem, not the literal ask.
 - The record keeps the issue as a typed link on the task's shape (`WorkShape.issue`), drawn on its record's Info tab.
   A task built on a linked step carries it: a fix built on its reproduce step closes the issue, and each piece built on its plan is part of it, the first mate marking the last piece with `closes_issue`.
   Where the change is published, its description says Closes #N or Part of #N ("A change that answers an issue" in `docs/forge.md`).
   Start again on a dropped linked task keeps its issue link, and on a Build row's step its kind and typed result too.
-- Every reader's brief lists the tasks of its project linked to an issue, newest first, with each one's key, kind, state and typed result and nothing else (`linkedIssuesSection`), so it proposes no row an open task already answers.
+- Every reader's brief lists the issues of its project linked to a task, each with its tasks newest first and each task's key, kind, state, closing reason, first release (`delivery.firstRelease`) and typed result, and nothing else (`linkedIssuesSection`), so it proposes no row an open task already answers and knows how each one ended.

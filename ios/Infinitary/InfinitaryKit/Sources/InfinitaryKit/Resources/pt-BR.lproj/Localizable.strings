@@ -711,6 +711,8 @@
 "commandMessageDeleteWordBefore" = "Apagar a palavra antes do cursor";
 "commandMessagePutBackDeleted" = "Restaurar o que foi apagado por último";
 "commandMessageRecall" = "Recuperar a última mensagem enviada";
+"commandMessageTakeBack" = "Reverter sua última mensagem";
+"commandMessageTakeBackWords" = "reverter, desfazer, retirar, mensagem";
 "commandMoveDown" = "Mover para baixo";
 "commandMoveDownWords" = "seta, baixo, próximo";
 "commandMoveFirst" = "Mover para o início";
@@ -819,6 +821,9 @@
 "composerFolderNotProject" = "Não foi possível adicionar essa pasta como projeto.";
 "composerFolderProject" = "Essa pasta já é um dos seus projetos.";
 "composerHintFeedback" = "%1$@: conte ao criador do Infinitary um problema ou uma ideia";
+"composerHintReplaces" = "substitui ·";
+"composerHintSendsAsNew" = "envia como nova";
+"composerReplacesLast" = "Substitui sua última mensagem";
 "composerTooLongShorten" = "Longo demais para enviar. Encurte primeiro.";
 "composerWordsOnly" = "Só palavras podem ir até o Infinitary ser atualizado. Remova as imagens e os arquivos para enviar isto.";
 "crewAPart" = "Uma parte";
@@ -1733,6 +1738,7 @@
 "panelChangeShowInDock" = "Mostrar no Dock";
 "panelChangeShowWhatsNew" = "Mostrar as novidades";
 "panelChangeStartAtLogin" = "Abrir ao iniciar a sessão";
+"panelChangeSummaryPoint" = "Quando conversas longas são resumidas";
 "panelChangeTheme" = "Tema";
 "panelChangeUpdateChannel" = "Quais atualizações você recebe";
 "panelChangeUpdateCheck" = "Verificar atualizações";
@@ -2526,6 +2532,7 @@
 "refuseNoCardIsShown" = "Nenhum cartão está sendo mostrado";
 "refuseNoCardIsShownOrPutAside" = "Nenhum cartão está sendo mostrado nem foi deixado de lado";
 "refuseNoCardThreadIsReadAboveIts" = "Nenhuma conversa de cartão está sendo lida acima da última mensagem";
+"refuseNoMessageToRevert" = "Nenhuma mensagem para reverter: já passou de um minuto ou já foi revertida";
 "refuseNoOtherCardIsNew" = "Nenhum outro cartão é novo";
 "refuseNoPageToPointAt" = "Nenhuma página está sendo mostrada para apontar";
 "refuseNoPictureIsOpen" = "Abra primeiro uma imagem de um cartão";
@@ -2758,6 +2765,7 @@
 "settingsAppearanceWashDescription" = "Quanto da cor do tema cobre o fundo desfocado. 0%% é o padrão.";
 "settingsAppearanceWashValue" = "%1$@%% de opacidade";
 "settingsAutomationBack" = "Voltar";
+"settingsAutomationBroughtNote" = "Vem com o manual Heartbeat. Para alterá-la ou removê-la, desative o manual em Ajustes, Manuais.";
 "settingsAutomationCancelCleared" = "A conversa do seu imediato foi apagada antes que ele lesse isto.";
 "settingsAutomationCancelEdited" = "Retirada antes que seu imediato a lesse, porque a automação foi alterada.";
 "settingsAutomationCancelPaused" = "Retirada antes que seu imediato a lesse, porque a automação foi pausada.";
@@ -3568,6 +3576,10 @@
 "settingsProjectsDeliveryNoBatch" = "Oferecido como solicitação de pull onde o projeto fica, ou mesclado localmente sem solicitação de pull.";
 "settingsProjectsDeliveryTitle" = "Para onde vão as alterações";
 "settingsProjectsDetailsLabel" = "Detalhes";
+"settingsProjectsDisclosure" = "Informar a ajuda de IA";
+"settingsProjectsDisclosureLine" = "Linha de aviso";
+"settingsProjectsDisclosureOff" = "Quando um tripulante revisa uma solicitação de pull que outra pessoa abriu neste projeto, o comentário dele não diz que a IA ajudou a escrever.";
+"settingsProjectsDisclosureOn" = "Quando um tripulante revisa uma solicitação de pull que outra pessoa abriu neste projeto, o comentário dele começa com esta linha.";
 "settingsProjectsEmpty" = "Nenhum projeto ainda. Adicione um abaixo ou diga ao seu imediato em qual projeto trabalhar.";
 "settingsProjectsFolder" = "Pasta";
 "settingsProjectsFolderCancel" = "Cancelar";
@@ -3906,6 +3918,17 @@
 "settingsSubscriptionsSignedOutHoldLabel" = "em espera";
 "settingsSubscriptionsSignedOutHoldText" = "O trabalho está pausado até você fazer login de novo.";
 "settingsSubscriptionsStale" = "desatualizada";
+"settingsSummaryPointAutomatic" = "Automático";
+"settingsSummaryPointDescriptionAutomatic" = "Seu imediato e a tripulação resumem uma conversa em %1$@ tokens, ou antes quando um modelo cobra mais a partir de um ponto mais baixo.";
+"settingsSummaryPointDescriptionModelLimit" = "Seu imediato e a tripulação só resumem uma conversa perto do limite de cada modelo, que pode chegar a um milhão de tokens.";
+"settingsSummaryPointDescriptionTokens" = "Seu imediato e a tripulação resumem uma conversa em %1$@ tokens, ou no limite do próprio modelo quando ele é menor.";
+"settingsSummaryPointDescriptionUnread" = "Seu imediato e a tripulação resumem conversas longas para que custem menos e caibam no modelo.";
+"settingsSummaryPointModelLimit" = "O limite de cada modelo";
+"settingsSummaryPointSaveFailed" = "Não foi possível salvar onde as conversas longas são resumidas. Tente de novo.";
+"settingsSummaryPointStep" = "%1$@ acima de %2$@";
+"settingsSummaryPointSteps" = "As solicitações custam mais em %1$@.";
+"settingsSummaryPointTitle" = "Resumir conversas longas em";
+"settingsSummaryPointTokens" = "%1$@ tokens";
 "settingsTakeOverAfter" = "Se %1$@ voltar, ele para e passa a manter uma cópia.";
 "settingsTakeOverAsk" = "Assumir como o computador do seu imediato? Seu imediato começa aqui a partir desta cópia, depois do Touch ID ou da sua senha.";
 "settingsTakeOverAskWindows" = "Assumir como o computador do seu imediato? Seu imediato começa aqui a partir desta cópia, depois do Windows Hello ou da sua senha do Windows.";
@@ -3935,6 +3958,7 @@
 "settingsUsageConnectionAddressHint" = "O endereço OpenTelemetry da ferramenta por HTTP. Cada tipo de registro vai para um caminho próprio abaixo dele.";
 "settingsUsageConnectionCancel" = "Cancelar";
 "settingsUsageConnectionClaudeCode" = "Envia o uso da sua tripulação para %1$@ no formato do Claude Code: modelos, tokens e custo estimado, nunca prompts ou respostas.";
+"settingsUsageConnectionClaudeCodeWords" = "Envia o uso da sua tripulação para %1$@ no formato do Claude Code: modelos, tokens e custo estimado, com prompts e respostas.";
 "settingsUsageConnectionEdit" = "Editar";
 "settingsUsageConnectionEmailLine" = "Cada registro leva o e-mail do seu login no Claude Code, quando este computador tem um, para que uma visão por pessoa conte o seu trabalho.";
 "settingsUsageConnectionFailed" = "Não foi possível salvar a conexão. Tente de novo.";
@@ -3967,10 +3991,13 @@
 "settingsUsageConnectionSaveLine" = "Ao salvar, o Infinitary começa a enviar o uso da sua tripulação para este endereço.";
 "settingsUsageConnectionSecretLabel" = "Relatórios de uso: %1$@";
 "settingsUsageConnectionStandard" = "Envia o uso da sua tripulação para %1$@ no formato padrão do OpenTelemetry: tempos, modelos, tokens e custo estimado, nunca prompts ou respostas.";
+"settingsUsageConnectionStandardWords" = "Envia o uso da sua tripulação para %1$@ no formato padrão do OpenTelemetry: tempos, modelos, tokens e custo estimado, com prompts e respostas.";
 "settingsUsageConnectionTitle" = "Relatórios de uso";
 "settingsUsageConnectionUseOperation" = "Enviar o uso da tripulação para %1$@";
 "settingsUsageConnectionUseReason" = "O Infinitary envia o uso da sua tripulação para %1$@, como pede sua conexão de relatórios.";
 "settingsUsageConnectionUseResult" = "A resposta da ferramenta a cada lote";
+"settingsUsageConnectionWords" = "Enviar também prompts e respostas";
+"settingsUsageConnectionWordsHint" = "Acrescenta os prompts que sua tripulação recebe, as respostas dela e o que ela passa às ferramentas. Chaves e senhas que o Infinitary reconhece neles são ocultadas antes.";
 "settingsUsageCostAllKinds" = "Todos os tipos";
 "settingsUsageCostAllProjects" = "Todos os projetos";
 "settingsUsageCostChange" = "Variação";
@@ -4181,6 +4208,7 @@
 "shellConversationCards" = "Cartões";
 "shellConversationChose" = "Escolheu “%1$@”";
 "shellConversationCrewmate" = "Tripulante";
+"shellConversationEdited" = "Editada";
 "shellConversationEmpty" = "Nada aqui ainda. Suas mensagens e os cartões que você responde aparecem aqui.";
 "shellConversationEverything" = "Tudo";
 "shellConversationHeading" = "Conversa";
@@ -4227,6 +4255,9 @@
 "shellKeyReminderNotTyping" = "quando não estiver digitando";
 "shellLastTurnFromCommand" = "De %1$@";
 "shellLastTurnPictureOnly" = "Uma imagem";
+"shellLastTurnRevert" = "Reverter sua última mensagem";
+"shellLastTurnReverted" = "Revertida";
+"shellLastTurnRevertedUnread" = "Revertida antes que seu imediato a lesse";
 "shellLastTurnWorking" = "Trabalhando…";
 "shellMainMessageConnectFirst" = "Conecte uma assinatura primeiro";
 "shellMainMessagePickingKey" = "Ajustes está aguardando uma tecla de ditado";

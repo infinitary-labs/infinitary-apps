@@ -6,6 +6,7 @@ import { isProgressTool } from "@shared/events";
 import type { UsageWorkKind } from "@shared/usage";
 import { type CertificateFiles, collectorAgent, postOtlpHttp } from "../claude/claudeReporting";
 import type { UsageRow } from "../storage/usageStore";
+import type { TurnWords } from "./sessionWords";
 import {
   callSpan,
   claudeCodeBodies,
@@ -15,11 +16,13 @@ import {
   type OtlpSignal,
   type ReportedRow,
   type ReportedSpan,
+  type ReportedWords,
   standardBodies,
   type UsageReportFormat,
   type UsageRole,
   withoutClaudeCalls,
   withoutClaudeClient,
+  wordsAttributes,
 } from "./usageReportFormats";
 
 /**
@@ -62,6 +65,13 @@ export type UsageReportDestination = {
    */
   withoutClaude?: true;
   /**
+   * The person turned on prompts and replies for this destination (a
+   * connection the person adds; never a company setup): each turn it
+   * receives carries the words its session records hold
+   * (docs/usage-report.md, "Prompts and replies").
+   */
+  words?: true;
+  /**
    * Sends one signal's body in place of a plain post with `headers`, for a
    * destination whose headers stay in Secrets; answers the HTTP status.
    */
@@ -75,6 +85,11 @@ export type UsageReporterOptions = {
   /** Whether a task id is a task on the record (otherwise its work is `other`). */
   isTask(taskId: string): boolean;
   firstmateTaskId: string;
+  /**
+   * What a task's session records wrote after `since` and at or before
+   * `until`, read only for a destination whose switch is on.
+   */
+  words?(taskId: string, since: number, until: number): TurnWords | null;
 };
 
 /** A batch goes this long after its first row or span, as Claude's client batches its own reports. */
@@ -84,6 +99,24 @@ const BATCH_MS = 5_000;
 const TURN_FORGET_MS = 6 * 60 * 60 * 1000;
 
 const POST_TIMEOUT_MS = 10_000;
+
+/**
+ * A turn's words are read this long after it ended: a session writes its
+ * last lines, and the app's copy of Claude's transcript catches up, at the
+ * turn's end, not before the owner hears it end.
+ */
+const WORDS_SETTLE_MS = 5_000;
+
+/** An ended turn whose words wait to be read, and what its span is grouped by. */
+type HeldTurn = {
+  taskId: string;
+  span: ReportedSpan;
+  /** Where its words begin: the task's previous turn's end, or the moment the switch was seen on. */
+  since: number;
+  role: UsageRole;
+  workKind: UsageWorkKind | null;
+  runs: ReadonlyMap<string, { failed: boolean; ms: number }>;
+};
 
 type Turn = {
   traceId: string;
@@ -95,6 +128,8 @@ type Turn = {
   /** A step of it ended in a provider error. */
   failed: boolean;
   tools: Map<string, { name: string; start: number }>;
+  /** Each tool run that ended, by call id, for a tool_result event's outcome. */
+  runs: Map<string, { failed: boolean; ms: number }>;
 };
 
 /**
@@ -117,14 +152,22 @@ export class UsageReporter {
    * rather than per batch.
    */
   private readonly connections = new Map<string, { made: string; agent: Agent }>();
+  /**
+   * Since when a destination has had prompts and replies on, unbroken:
+   * nothing written before it is ever read for words.
+   */
+  private wordsSince: number | undefined;
+  /** Each task's last turn's end while words are on, where its next turn's words begin. */
+  private readonly lastEnd = new Map<string, number>();
+  private held: HeldTurn[] = [];
 
   constructor(private readonly options: UsageReporterOptions) {
     this.batchSince = Date.now();
   }
 
-  /** Sends what is waiting, once, as the app stops. */
+  /** Sends what is waiting, once, as the app stops, every ended turn's words with it. */
   async stop(): Promise<void> {
-    await this.flush();
+    await this.flush(true);
   }
 
   /** A batch goes a while after its first row or span; nothing waits while nothing is queued. */
@@ -135,11 +178,22 @@ export class UsageReporter {
   }
 
   private active(): boolean {
-    if (this.options.destinations().length > 0) return true;
+    const destinations = this.options.destinations();
+    // A line stamped in the very millisecond the switch is first seen, such as a prompt
+    // written as its turn begins, comes after it.
+    if (destinations.some((destination) => destination.words)) this.wordsSince ??= Date.now() - 1;
+    else this.wordsOff();
+    if (destinations.length > 0) return true;
     this.rows = [];
     this.spans = [];
     this.turns.clear();
     return false;
+  }
+
+  private wordsOff(): void {
+    this.wordsSince = undefined;
+    this.lastEnd.clear();
+    this.held = [];
   }
 
   /** The rows `UsageStore.record` just wrote. */
@@ -196,6 +250,7 @@ export class UsageReporter {
     if (event.type === "task_finished") {
       this.settle(event.taskId, at, event.status !== "completed");
       this.turns.delete(event.taskId);
+      this.lastEnd.delete(event.taskId);
       return;
     }
     if (event.type === "turn_failed") {
@@ -210,6 +265,7 @@ export class UsageReporter {
       const tool = turn.tools.get(event.callId);
       if (tool) {
         turn.tools.delete(event.callId);
+        turn.runs.set(event.callId, { failed: event.isError, ms: at - tool.start });
         this.spans.push({
           traceId: turn.traceId,
           spanId: newSpanId(),
@@ -258,6 +314,7 @@ export class UsageReporter {
       open: true,
       failed: false,
       tools: new Map(),
+      runs: new Map(),
     };
     this.turns.set(taskId, turn);
     return turn;
@@ -267,7 +324,7 @@ export class UsageReporter {
     turn.open = false;
     const role = this.roleOf(taskId);
     const workKind = this.options.workKind(taskId);
-    this.spans.push({
+    const span: ReportedSpan = {
       traceId: turn.traceId,
       spanId: turn.spanId,
       name: `invoke_agent ${role}`,
@@ -281,24 +338,74 @@ export class UsageReporter {
         "infinitary.role": role,
         ...(workKind ? { "infinitary.work_kind": workKind } : {}),
       },
+    };
+    this.spans.push(span);
+    if (this.wordsSince === undefined || role === "other") return;
+    this.held.push({
+      taskId,
+      span,
+      since: this.lastEnd.get(taskId) ?? this.wordsSince,
+      role,
+      workKind,
+      runs: turn.runs,
     });
+    this.lastEnd.set(taskId, at);
   }
 
-  /** Sends what is waiting to every destination, each in its own format. */
-  async flush(): Promise<void> {
+  /** The turn's words, or none when they cannot be read: reporting never costs a turn. */
+  private wordsOf(turn: HeldTurn): TurnWords | null {
+    try {
+      return this.options.words?.(turn.taskId, turn.since, turn.span.end) ?? null;
+    } catch (caught) {
+      const reason = caught instanceof Error ? caught.name : "error";
+      console.warn(`[usage report] a turn's words could not be read (${reason}); sent without`);
+      return null;
+    }
+  }
+
+  /**
+   * Sends what is waiting to every destination, each in its own format. A
+   * destination with words on gets each ended turn's span once its words
+   * are read, a batch or two after the others get it plain; `all` reads
+   * every ended turn's now, as the app stops.
+   */
+  async flush(all = false): Promise<void> {
     if (this.timer) clearTimeout(this.timer);
     this.timer = undefined;
     const rows = this.rows;
     const spans = this.spans;
     const since = this.batchSince;
+    const settled = Date.now() - WORDS_SETTLE_MS;
+    const ready = this.held.filter((turn) => all || turn.span.end <= settled);
+    const held = new Set(this.held.map((turn) => turn.span.spanId));
+    this.held = this.held.filter((turn) => !ready.includes(turn));
     this.rows = [];
     this.spans = [];
     this.batchSince = Date.now();
-    if (rows.length === 0 && spans.length === 0) return;
+    if (this.held.length > 0) this.schedule();
+    const destinations = this.options.destinations();
+    const withWords = destinations.some((destination) => destination.words);
+    if (rows.length === 0 && spans.length === 0 && (ready.length === 0 || !withWords)) return;
+    const words: ReportedWords[] = [];
+    const turnSpans: ReportedSpan[] = [];
+    for (const turn of withWords ? ready : []) {
+      const found = this.wordsOf(turn);
+      if (!found) {
+        turnSpans.push(turn.span);
+        continue;
+      }
+      words.push({ words: found, role: turn.role, workKind: turn.workKind, runs: turn.runs });
+      turnSpans.push({
+        ...turn.span,
+        attributes: { ...turn.span.attributes, ...wordsAttributes(found) },
+      });
+    }
+    const wordsSpans = [...spans.filter((span) => !held.has(span.spanId)), ...turnSpans];
     await Promise.all(
-      this.options.destinations().map(async (destination) => {
+      destinations.map(async (destination) => {
         const sent = destination.withoutClaude ? withoutClaudeClient(rows) : rows;
-        const sentSpans = destination.withoutClaude ? withoutClaudeCalls(spans) : spans;
+        const allSpans = destination.words ? wordsSpans : spans;
+        const sentSpans = destination.withoutClaude ? withoutClaudeCalls(allSpans) : allSpans;
         const bodies: OtlpBodies =
           destination.format === "claude-code"
             ? claudeCodeBodies(
@@ -307,6 +414,7 @@ export class UsageReporter {
                 since,
                 destination.person,
                 destination.claudeFromLedger,
+                destination.words ? words : [],
               )
             : standardBodies(sent, sentSpans, destination.resource, since, destination.person);
         await Promise.all(

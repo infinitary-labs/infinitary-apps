@@ -25,7 +25,7 @@ An answer given while the first mate handles a crewmate's report saves that repo
    The host checks only typed facts (`AskEnding.nameRefusal`): a message still waiting for its own step is refused as unread, and one that has ended - answered, or its notice closed - is refused with a reason saying it ended.
    Omission uses the latest read message for ordinary direct-request calls.
    A turn itself runs outside every action's selection (`AskCapture.outsideActions`), so a turn woken by work an earlier action started attaches only the messages it reads.
-   The host pins that selection for the action's whole asynchronous execution (`withAskAttribution` and `AskCapture.withAsk`), including pictures and complete text files carried in a brief, and attaches only that selected ask with `attached_via = tool:<name>`:
+   The host pins that selection for the action's whole asynchronous execution (`withAskAttribution` and `AskCapture.withAsk`), including pictures and complete text files carried in a brief, and attaches only that selected ask, or with `emit_card` every message its `ask_id` list names, with `attached_via = tool:<name>`:
    - `spawn_crewmate` -> the new task; `steer_crewmate`, `interrupt_crewmate`, `settle_task`, `update_task` (including `start_now`) -> the named task.
    - `emit_card` with `task_id` -> that task: a decision a `card_raised` event whose resolution `act()`/`close()` record as `card_resolved`, and a review relay (with `review_task_id`) an `answered` event carrying the body.
      A note with `task_id` and no `review_task_id` is refused (`NOTE_NAMES_TASK_REFUSAL` in `src/core/pi/cardLint.ts`).
@@ -72,7 +72,7 @@ A captain message the first mate read and then did nothing visible about is a hi
 Each message saved from INF-1610 piece 2 on is followed until a card the captain accepts answers it ("How a message ends" below); a message saved before it keeps the older rule, which only checked that at least one action took effect after the first mate read it.
 The host never judges whether an answer is right (`src/core/orchestrator/answerDelivery.ts`, the pure rule and the served words; `askEnding.ts`, how a message stands; `answerDeliveryCheck.ts`, the stateful check; `FirstmateAgent` records the facts).
 
-What the first mate did is recorded where the call succeeds (a typed result, never the words) for every message the running turn had read when it took effect, or, when the call named a message with `ask_id`, for that message alone (`AskCapture.namedAsk`):
+What the first mate did is recorded where the call succeeds (a typed result, never the words) for every message the running turn had read when it took effect, or, when the call named a message with `ask_id`, for that message alone (`AskCapture.namedAsks`); `emit_card`'s `ask_id` may name a list instead, such as a question and the correction sent after it, and the call is then recorded for each message it names:
 
 - a card shown or revised (`emit_card`, the Settings hand-over card, the app's approval card for a held `use_integration` call), with the card's id;
 - the closing words written into the card's replies, for a reply under a first mate card or a done task's kept note (`CardService.recordFirstmateThreadAnswer` returns whether it wrote), with the card's id;
@@ -156,6 +156,8 @@ One module owns the walk (`src/core/tasks/askThreads.ts`, `AskThreads`): the thr
   A captain's message sent while that turn runs waits on the lane for a turn of its own, as during the retry (`AnswerDeliveryCheck.servedAlone`), and parked captain words are served before a waiting answer.
   The turn that reads the answer (a `requested-response` wake) reads the message too (`AnswerDeliveryCheck.adopt`): a follow-up asked or work started in it stays the message's, a card shown in it is shown for the message, and the message is judged when that turn ends, so an answer written only as closing words gets the one retry below.
   Several messages asked of one long task each wait on their own requests and end on their own answers.
+  A crewmate that answers with `reply`'s `response` writes its answer as a line in an open card's thread, where the captain reads it: the message is then accepted on that card (`AskEnding` reads `InboxStore.answeredLine`), and the `requested-response` wake names the line and tells the first mate not to write it again; a closed card's dated clarification does neither, as the first mate's own clarification ends nothing, so the message keeps its relay sentence and the one retry.
+  The steer that asks for the response tells the crewmate so, and that an interim line is neither its response nor the captain's answer.
 - **A task's own origin.**
   A task's origin is the message that filed or started it, an automation run, the card whose choice filed it, or the task whose report passed the captain's words on (`threadOrigin`).
   A message or an automation starts a thread of its own: a thread that reaches such a task only through a part, a plan or a merge stops there, so work another message started on top of this one's never ends this message.
@@ -229,6 +231,28 @@ A card speaks only for its own task: the close line or merge line is written onl
 Open-thread reads list every followed, unended message in one query (`TaskService.capture.openThreadAsks`), each message decoded once; each call reads current storage, with no retained thread cache.
 The first mate's turn facts list the open messages (`open_asks`), one per row: each one's id, when it was sent, how it stands and the work that still runs for it, newest first and bounded like the task list, with a notice still up counted as unanswered; `open_work` lists every one, one per row, with its words.
 They never repeat the captain's words, which are in its conversation.
+
+## Taking back a message
+
+The captain may take back their newest message to the first mate within one minute of sending it (`TAKE_BACK_WINDOW_MS`, `src/shared/takeBack.ts`, one constant and not a setting).
+A view asks with `inf:conversation:take-back`, or sends a replacement with `replaces` on `inf:converse`, which takes back the newest message and opens the new one as its correction in one write; a replacement keeps no window, since the view marked the draft while the message could still be taken back.
+`captain_asks.taken_back_at` holds when it was taken back and `correction_of` the message a replacement took back; `TaskService.capture` is their only writer (`takeBack`, `openAsk`).
+The answer names how far the message had got, and the first mate's agent runs each step (`TakeBacks`, `src/core/orchestrator/takeBack.ts`):
+
+- **Not read yet** (`withdrawn`): its words leave the lane (`InboxStore.withdraw`, `docs/inbox.md`) and the message closes on the capture floor; no wake follows.
+  Its reply line becomes the typed `withdrawn` line, sent with its `askId`, since no turn will write one.
+- **Being read** (`stopping`): the running turn is told at once, and from then on every work-changing tool credited to the message is refused, beside the answer-only gate in `firstmateTools.ts`: a call whose `ask_id` names it, or a call naming no message in a turn that read it.
+  A call naming another message, or `ask_id` "", goes through.
+  The steer into the turn is best effort; the refusal holds without it.
+- **Already acted on** (`undoing`): once no turn holds the message, one wake of origin captain, `taken-back`, asks the first mate to undo what the message caused, listed from its delivery record by tool, and each task by the id its tools take and its key, and to close with one line saying what it undid and what it cannot undo.
+  Its once-name, `taken-back:<askId>`, keeps it to one wake per message, across a restart too.
+  A replacement's words ride the wake, and the first mate keeps what they still ask for.
+
+A taken-back message has ended: it is no open thread, gets no answer retry and no notice, and its delivery is covered.
+Outside a turn that read it, naming it in `ask_id` is refused on every tool (`AskEnding.nameRefusal`); inside that turn, only the work-changing tools above refuse it.
+Each round of the last turn above the input carries the message's `askId`, `sentAt` (when the core accepted it, which the minute runs from) and `takenBack`, so a view draws the control and words the mark itself; a conversation round carries `takenBack`, and a replacement `replaces`, the words of the message it took back (`docs/composer.md`, "Taking back").
+The undo wake's turn reads no message, so its closing line would stand nowhere: the core keeps it as the reply line of the message taken back and sends it with that message's `askId` (`TakeBacks.replyTargets`, served from the `ended` wakes the turn was handed).
+A turn that read the newest message keeps its line there, even when the undo wake rode the same turn, as a replacement's does.
 
 ## Where a reply was typed
 

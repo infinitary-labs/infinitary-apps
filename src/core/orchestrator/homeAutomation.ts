@@ -1,4 +1,5 @@
 import type { FmEvent } from "@shared/events";
+import { HEARTBEAT_WAKE } from "@shared/heartbeat";
 import { INBOX_WORDS } from "@shared/integrations";
 import type { DecisionModels } from "../decisions/decisionModel";
 import { EventScreenOffer } from "../decisions/eventScreenOffer";
@@ -6,11 +7,14 @@ import { eventScreen } from "../decisions/homeDecisions";
 import { INBOX_EVENT, INBOX_ID } from "../integrations";
 import type { Inbox } from "../integrations/providers/inbox";
 import type { IntegrationsService } from "../integrations/service";
+import type { Runbooks } from "../runbooks/runbooks";
 import type { AppDatabase } from "../storage/db";
 import type { InboxStore } from "../storage/inboxStore";
 import { ScheduleStore } from "../storage/scheduleStore";
+import { UsageStore } from "../storage/usageStore";
 import type { TaskService } from "../tasks/taskService";
 import type { CrewSupervisor } from "./crewSupervisor";
+import { heartbeatBeat } from "./heartbeat";
 import { waitThroughAutomation } from "./putOffs";
 import { Scheduler, type SchedulerOptions } from "./scheduler";
 import { integrationEvents, withTaskEvents } from "./taskEvents";
@@ -32,6 +36,7 @@ export function startHomeAutomation({
   tasks,
   integrations,
   integrationInbox,
+  runbooks,
 }: {
   db: AppDatabase;
   decisions: DecisionModels;
@@ -44,8 +49,12 @@ export function startHomeAutomation({
   tasks: TaskService;
   integrations: IntegrationsService;
   integrationInbox: Inbox;
+  /** Whose wakes bring the heartbeat's rule (docs/automation.md, "The heartbeat"). */
+  runbooks: Pick<Runbooks, "wakes" | "subscribe">;
 }) {
   const scheduleStore = new ScheduleStore(db);
+  // A reader over the usage ledger, whose one writer is `homeUsage`'s store.
+  const usage = new UsageStore(db);
   // A rule with an Only if condition saved while the screen is off offers it (docs/automation.md, "Offering the screen").
   const eventScreenOffer = new EventScreenOffer({
     decisions,
@@ -64,6 +73,7 @@ export function startHomeAutomation({
     // A hold's event rule ends its task's hold (docs/automation.md, "A rule that ends a hold").
     endHold: (taskId, ruleId, events) => supervisor.holdRules.ran(taskId, ruleId, events),
     screen: eventScreen(decisions),
+    heartbeat: (at) => heartbeatBeat({ schedules: scheduleStore, usage, tasks, inbox }, at),
     enabled: (record) => void eventScreenOffer.offer(record),
     // A turn that handled several runs links each to its own rule's tasks (docs/automation.md, "Deliveries").
     startedBy: (taskId) => tasks.capture.automationStart(taskId),
@@ -104,5 +114,9 @@ export function startHomeAutomation({
         });
     },
   });
+  // The Heartbeat runbook's rule follows its wake: kept at start and on each switch.
+  const keepHeartbeat = () => scheduler.keepBrought(runbooks.wakes().has(HEARTBEAT_WAKE));
+  keepHeartbeat();
+  runbooks.subscribe(keepHeartbeat);
   return { scheduleStore, eventScreenOffer, scheduler };
 }

@@ -22,7 +22,7 @@ import {
   type ServedSegmentInput,
   type ServedWakeOrigin,
 } from "@shared/servedFrame";
-import { THROUGH_THE_COMMAND, throughNow } from "../askedFromTheCommand";
+import type { TakeBackResult } from "@shared/takeBack";
 import { AttachmentUnavailableError, keepImages, loadImages } from "../attachments";
 import type { CoreDispatch } from "../dispatcher";
 import { classifyInboxBatch, type KnowledgeOrigin } from "../knowledge/origin";
@@ -38,10 +38,10 @@ import {
 import type { DeliveryNote } from "./answerDelivery";
 import { AnswerDeliveryCheck, cardLookups } from "./answerDeliveryCheck";
 import { AskCapture, type TurnOrigin } from "./askCapture";
-import { QUIET_CARD_MS, QUIET_FEED_MS } from "./crewWatch";
 import { DecisionCapture, type ServedInput } from "./decisionCapture";
 import { FirstmateContext } from "./firstmateContext";
 import { premiumCanServe } from "./firstmateModelPick";
+import { FirstmateQuiet } from "./firstmateQuiet";
 import { FirstmateSeat, formatFlagshipError } from "./firstmateSeat";
 import { buildFirstmateTools, type FirstmateToolHost } from "./firstmateTools";
 import { FIRSTMATE_FAILURE_CARD_ID } from "./hostCards";
@@ -53,7 +53,8 @@ import {
   type FirstmateThinkingLevel,
   keptMessageWords,
 } from "./seat";
-import { appendDigest, digestEntry, digestFor } from "./seatDigest";
+import { digestEntry, digestFor, keepDigest } from "./seatDigest";
+import { receiptOf, TakeBacks } from "./takeBack";
 import { turnOriginOf } from "./turnOrigins";
 import {
   aboutCardIdFromRef,
@@ -230,6 +231,8 @@ type TurnPayload =
       pastCardId?: string;
       /** The message this one sends again: Ask again on the answer-delivery notice. */
       retryOf?: string;
+      /** The newest message, which this one replaces and takes back (docs/task-capture.md). */
+      replaces?: string;
       /**
        * The project the captain's window is focused on (the top bar's
        * project pill, docs/project-focus.md): a hint below a shown record.
@@ -273,18 +276,11 @@ export class FirstmateAgent {
   private coalesceTimer: ReturnType<typeof setTimeout> | undefined;
   private readonly coalesceMs: number;
   private readonly now: () => number;
-  /**
-   * Watchdog signals over the orchestrator's own turn (P4 extension,
-   * captain call with the empty-turn rewording): the crewmate thresholds,
-   * driven by the supervisor's shared tick through the hooks. Escalation
-   * only - the Firstmate is steer-only, so the card informs, never offers
-   * an interrupt.
-   */
-  private lastEventAt = 0;
-  private quietLevel: 0 | 1 | 2 = 0;
+  /** The watchdog over the orchestrator's own turn (`firstmateQuiet.ts`). */
+  private readonly quiet: FirstmateQuiet;
   /** One fresh-conversation recovery until a turn succeeds; never an automatic reset loop. */
   private contextRecoveryAttempted = false;
-  /** The exact recovery steers sent into a running turn: never a captain's words to redeliver. */
+  /** The app's own steers into a running turn (a fold's recovery, a take back): never a captain's words to redeliver. */
   private recoverySteers = new Set<string>();
   private appDispatch?: CoreDispatch;
   /** Which account and model answer, and how the seat pauses, moves and comes back. */
@@ -354,12 +350,12 @@ export class FirstmateAgent {
 
   /**
    * Save one action that took effect (or one refused card) for the messages
-   * the turn has read, or for the one message the action named with
-   * `ask_id` (INF-6115): a card shown for one message is shown for it alone.
+   * the turn has read, or for the messages the action named with `ask_id`
+   * (INF-6115, INF-6769): a card shown for one message is shown for it alone.
    */
   private noteDelivery(entry: DeliveryNote): void {
-    const named = this.asks.namedAsk();
-    this.delivery.note(entry, named ? [named] : [...this.turn.read]);
+    const named = this.asks.namedAsks();
+    this.delivery.note(entry, named.length ? named : [...this.turn.read]);
     // The same typed facts choose the reply line (./replyLine).
     if (!this.running || entry.outcome !== "action") return;
     this.turn.replyFacts.acted = true;
@@ -390,6 +386,8 @@ export class FirstmateAgent {
 
   /** The answer-delivery check: what took effect after each message the turn read. */
   private readonly delivery: AnswerDeliveryCheck;
+  /** Taking back the captain's newest message (docs/task-capture.md, "Taking back a message"). */
+  private readonly takeBacks: TakeBacks;
   /** Messages steered into the running turn that the session refused: a later turn reads them. */
   private unreadAsks = new Set<string>();
   /** Prospective provenance: one decision per served turn (R2). */
@@ -409,6 +407,7 @@ export class FirstmateAgent {
       drain: () => this.drainInbox(),
     });
     this.decisions = new DecisionCapture(options.tasks);
+    this.quiet = new FirstmateQuiet(options.supervisor.cards.hostCards, options.broadcastEvent);
     this.asks = new AskCapture(
       options.tasks,
       (taskId, tool) => {
@@ -440,6 +439,20 @@ export class FirstmateAgent {
     const stranded = options.tasks.capture.listOpenAsks().map((ask) => ask.id);
     this.asks.reconcileStranded(this.delivery.waitingOnLane());
     this.delivery.reconcile(stranded);
+    this.takeBacks = new TakeBacks({
+      ...options,
+      asks: this.asks,
+      now: () => this.now(),
+      holds: (id) =>
+        this.running &&
+        (this.turn.read.has(id) ||
+          this.turn.liveCaptain?.askId === id ||
+          this.acceptedSteers.some((steer) => steer.askId === id)),
+      steer: (input) => this.appSteer(input),
+      forget: (id) => this.unreadAsks.delete(id),
+      drain: () => void this.drainInbox(),
+    });
+    this.takeBacks.ended(stranded);
     options.supervisor.setFirstmateHooks({
       notifyOp: (wake, origin, ref) => this.notifyOp(wake, origin, ref),
       // Mid-turn, the turn's own end reads every message (`endTurn`).
@@ -481,6 +494,10 @@ export class FirstmateAgent {
     });
   }
 
+  takeBack(askId: string): TakeBackResult {
+    return this.takeBacks.takeBack(askId);
+  }
+
   /** One user turn. Resolves once the turn is accepted, not completed. */
   async converse(turn: TurnPayload): Promise<void> {
     const text = typeof turn === "string" ? turn : (turn.text ?? "");
@@ -502,16 +519,10 @@ export class FirstmateAgent {
     // An accepted turn owns copies of its pictures before anything records
     // or acknowledges it, so a parked or retried turn still has its bytes.
     const kept = images ? keepImages(randomUUID(), images) : undefined;
-    // The feed line is the receipt: fire before session work so submit
-    // is visible even when Firstmate is already mid-turn (steer path).
-    this.options.broadcastEvent({
-      type: "user_turn",
-      text: typeof turn === "string" ? trimmed : (turn.receipt ?? trimmed),
-      ...(throughNow() ? { through: THROUGH_THE_COMMAND } : {}),
-    });
     // The ask row exists before anything runs (capture, P1): the open card
     // or the record card is the hint the fallback prefers.
     const hintTaskId = this.resolveHint(turn, visibleCardId, pastCardId);
+    const correctionOf = this.takeBacks.replaces(turn);
     const ask = this.asks.open({
       text: trimmed,
       ...(typeof turn !== "string" && turn.receipt !== undefined ? { receipt: turn.receipt } : {}),
@@ -522,8 +533,16 @@ export class FirstmateAgent {
       hintTaskId,
       ...(typeof turn !== "string" && turn.retryOf ? { retryOf: turn.retryOf } : {}),
       ...(typedUnder ? { typedUnder } : {}),
+      ...(correctionOf ? { correctionOf } : {}),
     });
+    // The feed line is the receipt: fire before session work so submit
+    // is visible even when Firstmate is already mid-turn (steer path).
+    this.options.broadcastEvent(
+      receiptOf(typeof turn === "string" ? trimmed : (turn.receipt ?? trimmed), ask),
+    );
     this.asks.select([...this.turn.read].at(-1));
+    this.takeBacks.handing(ask.id);
+    if (correctionOf) this.takeBacks.replaced(correctionOf, trimmed);
     try {
       this.options.onCaptainTurnAccepted?.();
     } catch (error) {
@@ -546,8 +565,9 @@ export class FirstmateAgent {
     const sourceFacts = this.options.selfSourceFactsAsync
       ? await this.options.selfSourceFactsAsync()
       : undefined;
-    if (this.disposed) return;
+    if (this.disposed || this.takeBacks.dropped(ask.id)) return;
     const session = await this.seat.ensureSession();
+    if (this.takeBacks.dropped(ask.id)) return;
     if (!session && this.seat.pausedAtAttach) {
       // Paused at the attach: the words wait on the inbox like admission's.
       this.park({ words: trimmed, attachments: kept, aboutCardId, askId: ask.id });
@@ -605,6 +625,7 @@ export class FirstmateAgent {
     // The pre-turn admission check: the flagship binding is re-decided only
     // here, at the idle boundary - never mid-turn.
     const admitted = await this.seat.admitTurn(session);
+    if (this.takeBacks.dropped(ask.id)) return;
     if (!admitted) {
       this.park({ words: trimmed, attachments: kept, aboutCardId, askId: ask.id });
       this.keptReceipt(ask.id);
@@ -794,6 +815,7 @@ export class FirstmateAgent {
   ): Promise<void> {
     const id = this.park({ words, attachments: kept, aboutCardId, askId });
     this.expectRead(input.framed.text, askId ? [askId] : []);
+    if (askId) this.takeBacks.handing(askId, true);
     try {
       await session.steer(input.framed.text, images);
       this.options.inbox.ack([id]);
@@ -804,7 +826,9 @@ export class FirstmateAgent {
     } catch {
       // The row stays pending; the next drain delivers it as a turn, and that
       // turn reads the message, so this one does not judge it.
-      if (askId) this.unreadAsks.add(askId);
+      if (!askId) return;
+      this.unreadAsks.add(askId);
+      this.takeBacks.handing(askId);
     }
   }
 
@@ -1091,8 +1115,7 @@ export class FirstmateAgent {
     beginTurn(this.turn, asked, typed);
     // A parent whose last part this turn closes waits for the turn's end (INF-4509).
     this.options.supervisor.intake.firstmateTurnBegan();
-    this.lastEventAt = Date.now();
-    this.quietLevel = 0;
+    this.quiet.began();
     if (!inboxRows) this.servedOrigins.clear();
     this.expectRead(
       input.framed.text,
@@ -1244,6 +1267,7 @@ export class FirstmateAgent {
         "recovered",
       );
     }
+    this.takeBacks.beforeFloor();
     // The capture floor (P1): whatever no tool attached lands now - on
     // the hinted task, else as its own question task. A failed turn files
     // too, apart from a message whose words now wait on the lane for a
@@ -1319,7 +1343,7 @@ export class FirstmateAgent {
     this.running = false;
     const tookIn = this.redeliverUndeliveredSteers(session);
     if (recoverContext) this.seat.detach();
-    this.clearQuiet();
+    this.quiet.clear();
     // The closing words are the line under every card reply this turn read -
     // its own about card, and one the captain sent while it ran - unless it
     // already wrote there. They name no captain message, so they answer
@@ -1371,6 +1395,7 @@ export class FirstmateAgent {
     const unread = [...this.unreadAsks];
     this.unreadAsks.clear();
     this.delivery.endTurn({ asks: readAsks, held: failed || pausing, unread });
+    this.takeBacks.ended(readAsks);
     this.turn.pendingReads = [];
     this.turn.read.clear();
     // A cut-off pauses the seat now, not when the next row falls due.
@@ -1401,10 +1426,10 @@ export class FirstmateAgent {
 
   private keepReplyLine(read: readonly string[], reply: LastTurnReply): void {
     try {
-      const latest = this.options.tasks.capture.latestAskId();
-      if (!latest || !read.includes(latest)) return;
-      this.options.tasks.capture.setAskReply(latest, reply);
-      this.options.broadcastEvent({ type: "firstmate_reply", ...reply });
+      for (const askId of this.takeBacks.replyTargets(read)) {
+        this.options.tasks.capture.setAskReply(askId, reply);
+        this.options.broadcastEvent({ type: "firstmate_reply", ...reply, askId });
+      }
     } catch (caught) {
       console.warn("[firstmate] the reply line could not be kept:", caught);
     }
@@ -1418,27 +1443,20 @@ export class FirstmateAgent {
   private recordDigest(trigger: TurnTrigger, failed: boolean): void {
     const seat = this.seat.boundSeat;
     if (!seat) return;
-    try {
-      const settings = this.options.settings;
-      settings.setFirstmateSeatDigest(
-        appendDigest(
-          settings.getFirstmateSeatDigest(),
-          digestEntry({
-            seat: seat.identity,
-            at: this.now(),
-            // A turn that served the captain's words answered the captain,
-            // whatever else its batch carried.
-            trigger: this.turn.asked.length > 0 ? "captain" : trigger,
-            asked: this.turn.asked,
-            tools: this.turn.tools,
-            ...(this.turn.closingText ? { said: this.turn.closingText } : {}),
-            failed,
-          }),
-        ),
-      );
-    } catch (caught) {
-      console.warn("[firstmate] seat digest failed at turn end:", caught);
-    }
+    keepDigest(
+      this.options.settings,
+      digestEntry({
+        seat: seat.identity,
+        at: this.now(),
+        // A turn that served the captain's words answered the captain,
+        // whatever else its batch carried.
+        trigger: this.turn.asked.length > 0 ? "captain" : trigger,
+        asked: this.turn.asked,
+        tools: this.turn.tools,
+        ...(this.turn.closingText ? { said: this.turn.closingText } : {}),
+        failed,
+      }),
+    );
   }
 
   private async admitAfterCutOff(): Promise<void> {
@@ -1453,32 +1471,7 @@ export class FirstmateAgent {
    * shared tick: the 10-minute feed line and 20-minute card a crewmate gets.
    */
   checkQuiet(now: number): void {
-    if (!this.isBusy()) return;
-    const quietFor = now - this.lastEventAt;
-    const minutes = Math.round(quietFor / 60_000);
-    if (quietFor >= QUIET_CARD_MS && this.quietLevel < 2) {
-      this.quietLevel = 2;
-      this.options.supervisor.cards.hostCards.addFirstmateQuietCard(
-        `Your first mate has said nothing for ${minutes} minutes while working. It may be stuck; it recovers on its own when it finishes.`,
-      );
-    } else if (quietFor >= QUIET_FEED_MS && this.quietLevel < 1) {
-      this.quietLevel = 1;
-      this.options.broadcastEvent({
-        type: "firstmate_note",
-        text: `Your first mate has been quiet for ${minutes} minutes while working.`,
-      });
-    }
-  }
-
-  /** Any session event is proof of life; a stale quiet card retires. */
-  private noteActivity(): void {
-    this.lastEventAt = Date.now();
-    if (this.quietLevel > 0) this.clearQuiet();
-  }
-
-  private clearQuiet(): void {
-    this.quietLevel = 0;
-    this.options.supervisor.cards.hostCards.clearFirstmateQuietCard();
+    this.quiet.check(now, this.isBusy());
   }
 
   /**
@@ -1639,6 +1632,7 @@ export class FirstmateAgent {
       }),
     );
     this.delivery.adopt(batch);
+    this.takeBacks.serving(batch);
     this.turn.aboutCardId = aboutCardId;
     void this.runTurn(
       admitted,
@@ -1689,18 +1683,21 @@ export class FirstmateAgent {
     // rides the next input. An unread input, a retried request or a fold
     // before the next response goes on.
     if (turn === undefined && this.turn.pendingReads.length === 0) return;
-    const input = this.servedTurn(this.context.forTurn(), []);
+    // Ahead of any captain words still queued, so the next request reads it.
+    this.appSteer(this.servedTurn(this.context.forTurn(), []), true);
+  }
+
+  /** The app's own steer. Not queued, a fold's recovery stays set and a take back's gate holds alone. */
+  private appSteer(input: ServedInput, first = false): void {
+    const session = this.seat.session;
+    if (!session) return;
     this.recoverySteers.add(input.framed.text);
     this.expectRead(input.framed.text, []);
-    // Ahead of any captain words still queued, so the next request reads it.
-    const steer = session.steerFirst
-      ? session.steerFirst(input.framed.text)
-      : session.steer(input.framed.text);
+    const text = input.framed.text;
+    const steer = first && session.steerFirst ? session.steerFirst(text) : session.steer(text);
     steer.then(
       () => this.decisions.noteSteer(input),
-      () => {
-        // Not queued: the recovery stays set for the next input.
-      },
+      () => {},
     );
   }
 
@@ -1738,7 +1735,7 @@ export class FirstmateAgent {
     ) {
       return;
     }
-    this.noteActivity();
+    this.quiet.activity();
     this.decisions.noteSessionEvent(event);
     if (event.type === "turn_closed") {
       if (event.text) this.turn.closingText = event.text;

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "firstmate-reads-runbook-crew-part",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "Your first mate answers questions about a runbook from all of it",
+      "body": "When you ask what a runbook does, your first mate can now read what that runbook tells crewmates, not only the part written for itself. Before, it could say a runbook does not do something its crewmates are in fact told to do, such as keeping a project's map up to date.",
+      "noPicture": "This changes what your first mate can read before it answers, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

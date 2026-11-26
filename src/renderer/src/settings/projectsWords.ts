@@ -66,6 +66,17 @@ export const PROJECT_POLICY_WORDS = {
   get checksOff() {
     return m.settingsProjectsRequireChecksOff();
   },
+  /** The Disclose AI assistance row's name and its switch's (docs/forge.md, "Disclosing AI assistance"). */
+  get disclosureTitle() {
+    return m.settingsProjectsDisclosure();
+  },
+  /** What the Disclose AI assistance row says under its name, on or off. */
+  disclosure: (on: boolean) =>
+    on ? m.settingsProjectsDisclosureOn() : m.settingsProjectsDisclosureOff(),
+  /** The name of the field holding the project's line. */
+  get disclosureLine() {
+    return m.settingsProjectsDisclosureLine();
+  },
   /** Under the rows of a project that merges locally and asks for Careful. */
   get carefulLocal() {
     return m.settingsProjectsLocalCareful();

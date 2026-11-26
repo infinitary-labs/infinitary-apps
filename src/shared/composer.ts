@@ -125,8 +125,12 @@ export const COMPOSER_HINTS = {
   "too-long": [{ words: COMPOSER_NOTICE_WORDS["too-long"] }],
 } satisfies Record<string, ComposerHintPart[]>;
 
-/** The foot row's hint: one of the key hints, or `command` while a slash command is being typed. */
-export type ComposerHint = keyof typeof COMPOSER_HINTS | "command";
+/**
+ * The foot row's hint: one of the key hints, `command` while a slash command
+ * is being typed, or `replace` while the draft replaces the newest message
+ * (docs/composer.md "Recall and a failed send").
+ */
+export type ComposerHint = keyof typeof COMPOSER_HINTS | "command" | "replace";
 
 /**
  * Whether the field holds the start of a slash command (docs/composer.md,
@@ -147,7 +151,16 @@ const CTRL_HINT_KEYS: Readonly<Record<string, string>> = {
 
 export function composerHint(hint: ComposerHint, system: KeySystem = "mac"): ComposerHintPart[] {
   if (hint === "command") return [{ words: m.composerHintFeedback({ command: FEEDBACK_WORD }) }];
-  const parts: ComposerHintPart[] = COMPOSER_HINTS[hint];
+  const parts: ComposerHintPart[] =
+    hint === "replace"
+      ? [
+          { key: "⏎" },
+          { words: m.composerHintReplaces() },
+          // i18n-exempt: key names stay as the keyboard writes them (docs/i18n.md, "What stays English")
+          { key: "Esc" },
+          { words: m.composerHintSendsAsNew() },
+        ]
+      : COMPOSER_HINTS[hint];
   return system === "mac"
     ? parts
     : parts.map((part) => ("key" in part ? { key: CTRL_HINT_KEYS[part.key] ?? part.key } : part));

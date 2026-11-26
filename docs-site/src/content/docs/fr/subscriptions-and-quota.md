@@ -1,5 +1,5 @@
 ---
-source: b09b575fa5a6a2c1
+source: 9c71f435cc6524a0
 title: Abonnements et allocation
 description: Comment ajouter vos abonnements d’IA, voir ce qui reste de l’allocation de votre forfait, et ce que fait votre équipage quand elle est épuisée.
 ---
@@ -149,3 +149,16 @@ Une ligne qui monte signifie que les tâches demandent plus de travail qu’avan
 
 Sous **Intelligence**, **Demander avant qu’une tâche dépense plus de** fixe un montant.
 Une tâche qui le dépasse s’arrête à un point sûr et vous demande sur une carte avant de dépenser davantage.
+
+## Longues conversations {#long-conversations}
+
+Quand une conversation s’allonge, votre second et votre équipage la résument et continuent à partir du résumé, pour que chaque message coûte moins et tienne encore dans le modèle.
+Sous **Intelligence**, **Résumer les longues conversations à** fixe le moment où cela se produit.
+
+- **Automatique** résume à 300 000 jetons, ou plus tôt quand un modèle facture davantage au-delà d’un seuil plus bas.
+- **150 000 jetons**, **200 000 jetons**, **300 000 jetons** ou **500 000 jetons** résume à ce nombre, ou à la limite propre du modèle si elle est plus petite.
+- **La limite de chaque modèle** ne résume que près de la limite propre de chaque modèle, qui peut atteindre un million de jetons.
+
+Un nombre plus bas coûte moins ; un nombre plus haut garde une plus grande part de la conversation en entier.
+Quand le nombre choisi laisse un modèle dépasser un seuil où ses requêtes coûtent plus cher, la ligne nomme ce modèle et ce seuil.
+Une conversation déjà ouverte suit un changement à son message suivant, sur vos autres ordinateurs aussi ; une conversation avec Claude le suit à son prochain démarrage.

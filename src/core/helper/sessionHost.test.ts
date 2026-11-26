@@ -23,7 +23,7 @@ import {
 } from "../../../tests/helpers/sessionHostWorld";
 import { CONTRACT_CHANGES } from "../connection/contractChanges";
 import { answersDir, savedAnswerText } from "../session/answerFiles";
-import { SESSION_COMPACTION } from "../session/compaction";
+import { compactionNow, SESSION_COMPACTION } from "../session/compaction";
 import type { SessionSpec } from "../session/session";
 import { PlacedTasks } from "./placedTasks";
 import { PLACED_REQUEST_WAIT_MS } from "./toolWait";
@@ -62,6 +62,23 @@ describe("a conversation held on a computer that runs work", () => {
           fact: expect.objectContaining({ kind: "completed", toolName: "tasks", failed: false }),
         }),
       );
+  });
+
+  // INF-6779's approved plan, part 1: a conversation on a computer that runs
+  // work commits under the name resolved in its working copy there.
+  it("opens a conversation with its shell committing under the name its working copy here resolves", async () => {
+    const commitName = vi.fn(async () => ({ name: "Ada Lovelace", email: "ada@example.com" }));
+    const at = await placed({ commitName });
+    await at.open();
+
+    const opened = at.opened[0];
+    expect(commitName.mock.calls).toEqual([[opened?.cwd]]);
+    expect(opened?.shell?.env).toMatchObject({
+      GIT_AUTHOR_NAME: "Ada Lovelace",
+      GIT_AUTHOR_EMAIL: "ada@example.com",
+      GIT_COMMITTER_NAME: "Ada Lovelace",
+      GIT_COMMITTER_EMAIL: "ada@example.com",
+    });
   });
 
   it("INF-2214 preserves response correlation through the home", async () => {
@@ -1128,7 +1145,40 @@ describe("a conversation held on a computer that runs work", () => {
     ).options.factories.pi;
     const open = vi.spyOn(factory, "open");
     await at.open();
-    expect(open.mock.calls.map(([spec]) => spec.compaction)).toEqual([SESSION_COMPACTION]);
+    expect(open.mock.calls.map(([spec]) => compactionNow(spec.compaction))).toEqual([
+      SESSION_COMPACTION,
+    ]);
+  });
+
+  // INF-6693's plan: the home's summary point travels with the open; the
+  // captain's answer on its review: a point a later message carries applies
+  // from that message, and one that carries none keeps the last.
+  it("opens a crewmate's conversation with the summary point the home sends, and takes a message's newer one", async () => {
+    const at = await placed();
+    const factory = (
+      at.host() as unknown as {
+        options: { factories: { pi: { open: (spec: SessionSpec) => Promise<unknown> } } };
+      }
+    ).options.factories.pi;
+    const open = vi.spyOn(factory, "open");
+    await at.order("inf:session:open", [
+      {
+        orderId: `open:${TASK}:1`,
+        task: TASK,
+        spec: { ...at.spec, compaction: { maxContextTokens: 500_000 } },
+      },
+    ]);
+    const rule = () => compactionNow(open.mock.calls[0]?.[0].compaction);
+    expect(rule()).toEqual({ maxContextTokens: 500_000 });
+    model([{ text: "Hello." }, { text: "Again." }]);
+    await at.order("inf:session:prompt", [
+      { orderId: "rows:1", task: TASK, text: "Hi.", compaction: { maxContextTokens: 150_000 } },
+    ]);
+    expect(rule()).toEqual({ maxContextTokens: 150_000 });
+    await at.ended(1);
+    await at.order("inf:session:prompt", [{ orderId: "rows:2", task: TASK, text: "Again." }]);
+    expect(rule()).toEqual({ maxContextTokens: 150_000 });
+    await at.ended(2);
   });
 
   it("refuses an order it does not know, a malformed one, and one for a task it never opened", async () => {

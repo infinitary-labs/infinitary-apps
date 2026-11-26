@@ -27038,6 +27038,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Bring back the last message sent`;
   }
+  function commandMessageTakeBack() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `التراجع عن آخر رسالة لك`;
+      case "de":
+        return `Deine letzte Nachricht zurücknehmen`;
+      case "es":
+        return `Revertir tu último mensaje`;
+      case "fr":
+        return `Annuler votre dernier message`;
+      case "ja":
+        return `最後のメッセージを取り消す`;
+      case "ko":
+        return `마지막 메시지 되돌리기`;
+      case "pt-BR":
+        return `Reverter sua última mensagem`;
+      case "zh-Hans":
+        return `撤回你的上一条消息`;
+      case "zh-Hant":
+        return `撤回你的上一則訊息`;
+      case "en-XA":
+        return `[Ŕéṽéŕţ ýöûŕ ļášţ ɱéššáĝé ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Revert your last message‬`;
+    }
+    return `Revert your last message`;
+  }
+  function commandMessageTakeBackWords() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تراجع, إلغاء, سحب, رسالة`;
+      case "de":
+        return `zurücknehmen, rückgängig, widerrufen, Nachricht`;
+      case "es":
+        return `revertir, deshacer, retirar, mensaje`;
+      case "fr":
+        return `annuler, défaire, retirer, message`;
+      case "ja":
+        return `取り消し, 元に戻す, 送信取消, メッセージ`;
+      case "ko":
+        return `되돌리기, 취소, 보내기 취소, 메시지`;
+      case "pt-BR":
+        return `reverter, desfazer, retirar, mensagem`;
+      case "zh-Hans":
+        return `撤回, 撤销, 取消发送, 消息`;
+      case "zh-Hant":
+        return `撤回, 復原, 取消傳送, 訊息`;
+      case "en-XA":
+        return `[ŕéṽéŕţ, ûñðö, ţáķé ƀáçķ, ûñšéñð, ŕéţŕáçţ, ɱéššáĝé ~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮revert, undo, take back, unsend, retract, message‬`;
+    }
+    return `revert, undo, take back, unsend, retract, message`;
+  }
   function commandMoveDown() {
     switch (currentLanguage()) {
       case "ar":
@@ -29955,6 +30009,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `${command}: tell Infinitary's maker about a problem or an idea`;
   }
+  function composerHintReplaces() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يستبدل ·`;
+      case "de":
+        return `ersetzt ·`;
+      case "es":
+        return `reemplaza ·`;
+      case "fr":
+        return `remplace ·`;
+      case "ja":
+        return `置き換え ·`;
+      case "ko":
+        return `대신 보내기 ·`;
+      case "pt-BR":
+        return `substitui ·`;
+      case "zh-Hans":
+        return `替换 ·`;
+      case "zh-Hant":
+        return `取代 ·`;
+      case "en-XA":
+        return `[ŕéþļáçéš · ~~~~]`;
+      case "ar-XB":
+        return `‮replaces ·‬`;
+    }
+    return `replaces ·`;
+  }
+  function composerHintSendsAsNew() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يرسل كرسالة جديدة`;
+      case "de":
+        return `sendet als neue`;
+      case "es":
+        return `envía como nuevo`;
+      case "fr":
+        return `envoie comme nouveau`;
+      case "ja":
+        return `新しく送信`;
+      case "ko":
+        return `새로 보내기`;
+      case "pt-BR":
+        return `envia como nova`;
+      case "zh-Hans":
+        return `作为新消息发送`;
+      case "zh-Hant":
+        return `作為新訊息送出`;
+      case "en-XA":
+        return `[šéñðš áš ñéŵ ~~~~]`;
+      case "ar-XB":
+        return `‮sends as new‬`;
+    }
+    return `sends as new`;
+  }
   function composerLines(input2) {
     const count = formatNumber(input2.count);
     switch (currentLanguage()) {
@@ -30048,6 +30156,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       default:
         return `${count} lines`;
     }
+  }
+  function composerReplacesLast() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تحل محل آخر رسالة لك`;
+      case "de":
+        return `Ersetzt deine letzte Nachricht`;
+      case "es":
+        return `Reemplaza tu último mensaje`;
+      case "fr":
+        return `Remplace votre dernier message`;
+      case "ja":
+        return `最後のメッセージを置き換えます`;
+      case "ko":
+        return `마지막 메시지를 대신해요`;
+      case "pt-BR":
+        return `Substitui sua última mensagem`;
+      case "zh-Hans":
+        return `替换你的上一条消息`;
+      case "zh-Hant":
+        return `取代你的上一則訊息`;
+      case "en-XA":
+        return `[Ŕéþļáçéš ýöûŕ ļášţ ɱéššáĝé ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Replaces your last message‬`;
+    }
+    return `Replaces your last message`;
   }
   function composerTooLongShorten() {
     switch (currentLanguage()) {
@@ -46871,6 +47006,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Start at login`;
   }
+  function panelChangeSummaryPoint() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `متى تُلخَّص المحادثات الطويلة`;
+      case "de":
+        return `Wann lange Unterhaltungen zusammengefasst werden`;
+      case "es":
+        return `Cuándo se resumen las conversaciones largas`;
+      case "fr":
+        return `Quand les longues conversations sont résumées`;
+      case "ja":
+        return `長い会話を要約するタイミング`;
+      case "ko":
+        return `긴 대화를 요약하는 시점`;
+      case "pt-BR":
+        return `Quando conversas longas são resumidas`;
+      case "zh-Hans":
+        return `长对话何时总结`;
+      case "zh-Hant":
+        return `長對話何時摘要`;
+      case "en-XA":
+        return `[Ŵĥéñ ļöñĝ çöñṽéŕšáţîöñš áŕé šûɱɱáŕîžéð ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮When long conversations are summarized‬`;
+    }
+    return `When long conversations are summarized`;
+  }
   function panelChangeTheme() {
     switch (currentLanguage()) {
       case "ar":
@@ -52843,6 +53005,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮No card thread is read above its latest message‬`;
     }
     return `No card thread is read above its latest message`;
+  }
+  function refuseNoMessageToRevert() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا توجد رسالة للتراجع عنها: مرّت عليها أكثر من دقيقة أو تم التراجع عنها`;
+      case "de":
+        return `Keine Nachricht zum Zurücknehmen: Sie ist älter als eine Minute oder schon zurückgenommen`;
+      case "es":
+        return `No hay mensaje que revertir: tiene más de un minuto o ya se revirtió`;
+      case "fr":
+        return `Aucun message à annuler : il date de plus d’une minute ou a déjà été annulé`;
+      case "ja":
+        return `取り消せるメッセージがありません。送信から 1 分を過ぎたか、すでに取り消しています`;
+      case "ko":
+        return `되돌릴 메시지가 없어요. 1분이 지났거나 이미 되돌렸어요`;
+      case "pt-BR":
+        return `Nenhuma mensagem para reverter: já passou de um minuto ou já foi revertida`;
+      case "zh-Hans":
+        return `没有可撤回的消息：已超过一分钟或已经撤回`;
+      case "zh-Hant":
+        return `沒有可撤回的訊息：已超過一分鐘或已經撤回`;
+      case "en-XA":
+        return `[Ñö ɱéššáĝé ţö ŕéṽéŕţ: îţ îš þášţ á ɱîñûţé öļð öŕ áļŕéáðý ŕéṽéŕţéð ~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮No message to revert: it is past a minute old or already reverted‬`;
+    }
+    return `No message to revert: it is past a minute old or already reverted`;
   }
   function refuseNoOtherCardIsNew() {
     switch (currentLanguage()) {
@@ -59912,6 +60101,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Back‬`;
     }
     return `Back`;
+  }
+  function settingsAutomationBroughtNote() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يأتي مع دليل التشغيل Heartbeat. لتغييره أو إزالته، أوقف دليل التشغيل من الإعدادات، أدلة التشغيل.`;
+      case "de":
+        return `Gehört zum Leitfaden Heartbeat. Um sie zu ändern oder zu entfernen, schalte den Leitfaden unter Einstellungen, Leitfäden aus.`;
+      case "es":
+        return `Viene con el manual Heartbeat. Para cambiarla o quitarla, desactiva el manual en Configuración, Manuales.`;
+      case "fr":
+        return `Fournie par la procédure Heartbeat. Pour la modifier ou la retirer, désactivez la procédure dans Réglages, Procédures.`;
+      case "ja":
+        return `ランブック「Heartbeat」に付属しています。変更や削除をするには、設定のランブックでこのランブックをオフにしてください。`;
+      case "ko":
+        return `Heartbeat 런북과 함께 제공됩니다. 바꾸거나 없애려면 설정의 런북에서 이 런북을 끄세요.`;
+      case "pt-BR":
+        return `Vem com o manual Heartbeat. Para alterá-la ou removê-la, desative o manual em Ajustes, Manuais.`;
+      case "zh-Hans":
+        return `随 Heartbeat 操作手册提供。要更改或移除它，请在设置的操作手册中关闭该手册。`;
+      case "zh-Hant":
+        return `隨 Heartbeat 作業手冊提供。若要變更或移除，請在設定的作業手冊中關閉該手冊。`;
+      case "en-XA":
+        return `[Çöɱéš ŵîţĥ ţĥé Ĥéáŕţƀéáţ ŕûñƀööķ. Ţö çĥáñĝé öŕ ŕéɱöṽé îţ, ţûŕñ ţĥé ŕûñƀööķ öƒƒ îñ Šéţţîñĝš, Ŕûñƀööķš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Comes with the Heartbeat runbook. To change or remove it, turn the runbook off in Settings, Runbooks.‬`;
+    }
+    return `Comes with the Heartbeat runbook. To change or remove it, turn the runbook off in Settings, Runbooks.`;
   }
   function settingsAutomationCancelCleared() {
     switch (currentLanguage()) {
@@ -84151,6 +84367,114 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Details`;
   }
+  function settingsProjectsDisclosure() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الإفصاح عن مساعدة الذكاء الاصطناعي`;
+      case "de":
+        return `KI-Unterstützung offenlegen`;
+      case "es":
+        return `Indicar la ayuda de IA`;
+      case "fr":
+        return `Signaler l’aide de l’IA`;
+      case "ja":
+        return `AI の支援を明示する`;
+      case "ko":
+        return `AI 도움 밝히기`;
+      case "pt-BR":
+        return `Informar a ajuda de IA`;
+      case "zh-Hans":
+        return `说明 AI 协助`;
+      case "zh-Hant":
+        return `說明 AI 協助`;
+      case "en-XA":
+        return `[Ðîšçļöšé ÅÎ áššîšţáñçé ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Disclose AI assistance‬`;
+    }
+    return `Disclose AI assistance`;
+  }
+  function settingsProjectsDisclosureLine() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `سطر الإفصاح`;
+      case "de":
+        return `Offenlegungszeile`;
+      case "es":
+        return `Línea de aviso`;
+      case "fr":
+        return `Ligne de mention`;
+      case "ja":
+        return `明示する行`;
+      case "ko":
+        return `밝히는 줄`;
+      case "pt-BR":
+        return `Linha de aviso`;
+      case "zh-Hans":
+        return `说明行`;
+      case "zh-Hant":
+        return `說明行`;
+      case "en-XA":
+        return `[Ðîšçļöšûŕé ļîñé ~~~~~]`;
+      case "ar-XB":
+        return `‮Disclosure line‬`;
+    }
+    return `Disclosure line`;
+  }
+  function settingsProjectsDisclosureOff() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `عندما يراجع فرد من الطاقم طلب سحب فتحه شخص آخر في هذا المشروع، لا يذكر تعليقه أن الذكاء الاصطناعي ساعد في كتابته.`;
+      case "de":
+        return `Wenn ein Crewmitglied einen Pull Request prüft, den eine andere Person in diesem Projekt geöffnet hat, sagt sein Kommentar nicht, dass KI beim Schreiben geholfen hat.`;
+      case "es":
+        return `Cuando un tripulante revisa una solicitud de incorporación de cambios que otra persona abrió en este proyecto, su comentario no dice que la IA ayudó a escribirlo.`;
+      case "fr":
+        return `Quand un équipier relit une demande de tirage qu’une autre personne a ouverte sur ce projet, son commentaire ne dit pas que l’IA a aidé à l’écrire.`;
+      case "ja":
+        return `ほかの人がこのプロジェクトで開いたプルリクエストを乗組員がレビューしても、そのコメントには AI が書くのを手伝ったことを示しません。`;
+      case "ko":
+        return `다른 사람이 이 프로젝트에 연 끌어오기 요청을 선원이 검토해도, 남기는 댓글에 AI가 작성을 도왔다는 말이 없어요.`;
+      case "pt-BR":
+        return `Quando um tripulante revisa uma solicitação de pull que outra pessoa abriu neste projeto, o comentário dele não diz que a IA ajudou a escrever.`;
+      case "zh-Hans":
+        return `船员审阅他人在此项目中打开的拉取请求时，所发评论不会说明有 AI 协助撰写。`;
+      case "zh-Hant":
+        return `船員審閱他人在此專案中開啟的 pull request 時，所發留言不會說明有 AI 協助撰寫。`;
+      case "en-XA":
+        return `[Ŵĥéñ á çŕéŵɱáţé ŕéṽîéŵš á þûļļ ŕéǫûéšţ šöɱéöñé éļšé öþéñéð öñ ţĥîš þŕöĵéçţ, îţš çöɱɱéñţ ðöéš ñöţ šáý ÅÎ ĥéļþéð ŵŕîţé îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮When a crewmate reviews a pull request someone else opened on this project, its comment does not say AI helped write it.‬`;
+    }
+    return `When a crewmate reviews a pull request someone else opened on this project, its comment does not say AI helped write it.`;
+  }
+  function settingsProjectsDisclosureOn() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `عندما يراجع فرد من الطاقم طلب سحب فتحه شخص آخر في هذا المشروع، يبدأ تعليقه بهذا السطر.`;
+      case "de":
+        return `Wenn ein Crewmitglied einen Pull Request prüft, den eine andere Person in diesem Projekt geöffnet hat, beginnt sein Kommentar mit dieser Zeile.`;
+      case "es":
+        return `Cuando un tripulante revisa una solicitud de incorporación de cambios que otra persona abrió en este proyecto, su comentario empieza con esta línea.`;
+      case "fr":
+        return `Quand un équipier relit une demande de tirage qu’une autre personne a ouverte sur ce projet, son commentaire commence par cette ligne.`;
+      case "ja":
+        return `ほかの人がこのプロジェクトで開いたプルリクエストを乗組員がレビューすると、そのコメントはこの行から始まります。`;
+      case "ko":
+        return `다른 사람이 이 프로젝트에 연 끌어오기 요청을 선원이 검토하면, 남기는 댓글이 이 줄로 시작해요.`;
+      case "pt-BR":
+        return `Quando um tripulante revisa uma solicitação de pull que outra pessoa abriu neste projeto, o comentário dele começa com esta linha.`;
+      case "zh-Hans":
+        return `船员审阅他人在此项目中打开的拉取请求时，所发评论以这一行开头。`;
+      case "zh-Hant":
+        return `船員審閱他人在此專案中開啟的 pull request 時，所發留言以這一行開頭。`;
+      case "en-XA":
+        return `[Ŵĥéñ á çŕéŵɱáţé ŕéṽîéŵš á þûļļ ŕéǫûéšţ šöɱéöñé éļšé öþéñéð öñ ţĥîš þŕöĵéçţ, îţš çöɱɱéñţ öþéñš ŵîţĥ ţĥîš ļîñé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮When a crewmate reviews a pull request someone else opened on this project, its comment opens with this line.‬`;
+    }
+    return `When a crewmate reviews a pull request someone else opened on this project, its comment opens with this line.`;
+  }
   function settingsProjectsEmpty() {
     switch (currentLanguage()) {
       case "ar":
@@ -94014,6 +94338,309 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `stale`;
   }
+  function settingsSummaryPointAutomatic() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تلقائي`;
+      case "de":
+        return `Automatisch`;
+      case "es":
+        return `Automático`;
+      case "fr":
+        return `Automatique`;
+      case "ja":
+        return `自動`;
+      case "ko":
+        return `자동`;
+      case "pt-BR":
+        return `Automático`;
+      case "zh-Hans":
+        return `自动`;
+      case "zh-Hant":
+        return `自動`;
+      case "en-XA":
+        return `[Åûţöɱáţîç ~~~]`;
+      case "ar-XB":
+        return `‮Automatic‬`;
+    }
+    return `Automatic`;
+  }
+  function settingsSummaryPointDescriptionAutomatic(input2) {
+    const tokens = input2.tokens;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يلخّص نائب القبطان والطاقم المحادثة عند ${tokens} من الرموز، أو قبل ذلك حين يرفع النموذج سعره بعد نقطة أدنى.`;
+      case "de":
+        return `Dein erster Offizier und die Crew fassen eine Unterhaltung bei ${tokens} Tokens zusammen, oder früher, wo ein Modell schon ab einem niedrigeren Punkt mehr berechnet.`;
+      case "es":
+        return `Tu primer oficial y la tripulación resumen una conversación a los ${tokens} tokens, o antes si un modelo cobra más a partir de un punto más bajo.`;
+      case "fr":
+        return `Votre second et l’équipage résument une conversation à ${tokens} jetons, ou plus tôt quand un modèle facture davantage au-delà d’un seuil plus bas.`;
+      case "ja":
+        return `一等航海士と乗組員は会話が ${tokens} トークンに達すると要約します。それより手前で料金が上がるモデルでは、その前に要約します。`;
+      case "ko":
+        return `일등항해사와 선원들은 대화가 ${tokens}토큰에 이르면 요약해요. 더 낮은 지점부터 요금이 오르는 모델에서는 그 전에 요약해요.`;
+      case "pt-BR":
+        return `Seu imediato e a tripulação resumem uma conversa em ${tokens} tokens, ou antes quando um modelo cobra mais a partir de um ponto mais baixo.`;
+      case "zh-Hans":
+        return `你的大副和船员在对话达到 ${tokens} 个 token 时总结；若模型在更低的位置开始加价，则提前总结。`;
+      case "zh-Hant":
+        return `你的大副和船員會在對話達到 ${tokens} 個 token 時摘要；若模型在更低的位置開始加價，就提早摘要。`;
+      case "en-XA":
+        return `[Ýöûŕ ƒîŕšţ ɱáţé áñð çŕéŵ šûɱɱáŕîžé á çöñṽéŕšáţîöñ áţ ${tokens} ţöķéñš, öŕ šööñéŕ ŵĥéŕé á ɱöðéļ çĥáŕĝéš ɱöŕé þášţ á ļöŵéŕ þöîñţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your first mate and crew summarize a conversation at ‬${tokens}‮ tokens, or sooner where a model charges more past a lower point.‬`;
+    }
+    return `Your first mate and crew summarize a conversation at ${tokens} tokens, or sooner where a model charges more past a lower point.`;
+  }
+  function settingsSummaryPointDescriptionModelLimit() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يلخّص نائب القبطان والطاقم المحادثة فقط قرب حدّ كل نموذج، وقد يبلغ مليون رمز.`;
+      case "de":
+        return `Dein erster Offizier und die Crew fassen eine Unterhaltung erst nahe der eigenen Grenze des jeweiligen Modells zusammen, die bei einer Million Tokens liegen kann.`;
+      case "es":
+        return `Tu primer oficial y la tripulación resumen una conversación solo cerca del límite propio de cada modelo, que puede ser un millón de tokens.`;
+      case "fr":
+        return `Votre second et l’équipage ne résument une conversation que près de la limite propre de chaque modèle, qui peut atteindre un million de jetons.`;
+      case "ja":
+        return `一等航海士と乗組員は各モデルの上限の近くでだけ会話を要約します。上限は 100 万トークンになることもあります。`;
+      case "ko":
+        return `일등항해사와 선원들은 각 모델 자체 한도 가까이에서만 대화를 요약해요. 한도는 100만 토큰에 이를 수 있어요.`;
+      case "pt-BR":
+        return `Seu imediato e a tripulação só resumem uma conversa perto do limite de cada modelo, que pode chegar a um milhão de tokens.`;
+      case "zh-Hans":
+        return `你的大副和船员只在接近各模型自身的上限时才总结对话，这可能多达一百万个 token。`;
+      case "zh-Hant":
+        return `你的大副和船員只在接近各模型本身的上限時才摘要對話，可能多達一百萬個 token。`;
+      case "en-XA":
+        return `[Ýöûŕ ƒîŕšţ ɱáţé áñð çŕéŵ šûɱɱáŕîžé á çöñṽéŕšáţîöñ öñļý ñéáŕ éáçĥ ɱöðéļ'š öŵñ ļîɱîţ, ŵĥîçĥ çáñ ƀé á ɱîļļîöñ ţöķéñš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your first mate and crew summarize a conversation only near each model's own limit, which can be a million tokens.‬`;
+    }
+    return `Your first mate and crew summarize a conversation only near each model's own limit, which can be a million tokens.`;
+  }
+  function settingsSummaryPointDescriptionTokens(input2) {
+    const tokens = input2.tokens;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يلخّص نائب القبطان والطاقم المحادثة عند ${tokens} من الرموز، أو عند حدّ النموذج نفسه إن كان أصغر.`;
+      case "de":
+        return `Dein erster Offizier und die Crew fassen eine Unterhaltung bei ${tokens} Tokens zusammen, oder an der eigenen Grenze des Modells, wenn sie kleiner ist.`;
+      case "es":
+        return `Tu primer oficial y la tripulación resumen una conversación a los ${tokens} tokens, o en el límite propio del modelo si es menor.`;
+      case "fr":
+        return `Votre second et l’équipage résument une conversation à ${tokens} jetons, ou à la limite propre du modèle si elle est plus petite.`;
+      case "ja":
+        return `一等航海士と乗組員は会話が ${tokens} トークンに達すると要約します。モデルの上限のほうが小さい場合は、その上限で要約します。`;
+      case "ko":
+        return `일등항해사와 선원들은 대화가 ${tokens}토큰에 이르면 요약해요. 모델 자체 한도가 더 작으면 그 한도에서 요약해요.`;
+      case "pt-BR":
+        return `Seu imediato e a tripulação resumem uma conversa em ${tokens} tokens, ou no limite do próprio modelo quando ele é menor.`;
+      case "zh-Hans":
+        return `你的大副和船员在对话达到 ${tokens} 个 token 时总结；若模型自身的上限更小，则在其上限处总结。`;
+      case "zh-Hant":
+        return `你的大副和船員會在對話達到 ${tokens} 個 token 時摘要；若模型本身的上限更小，就在其上限處摘要。`;
+      case "en-XA":
+        return `[Ýöûŕ ƒîŕšţ ɱáţé áñð çŕéŵ šûɱɱáŕîžé á çöñṽéŕšáţîöñ áţ ${tokens} ţöķéñš, öŕ áţ á ɱöðéļ'š öŵñ ļîɱîţ ŵĥéñ îţ îš šɱáļļéŕ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your first mate and crew summarize a conversation at ‬${tokens}‮ tokens, or at a model's own limit when it is smaller.‬`;
+    }
+    return `Your first mate and crew summarize a conversation at ${tokens} tokens, or at a model's own limit when it is smaller.`;
+  }
+  function settingsSummaryPointDescriptionUnread() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يلخّص نائب القبطان والطاقم المحادثات الطويلة لتقلّ كلفتها وتتسع في النموذج.`;
+      case "de":
+        return `Dein erster Offizier und die Crew fassen lange Unterhaltungen zusammen, damit sie weniger kosten und ins Modell passen.`;
+      case "es":
+        return `Tu primer oficial y la tripulación resumen las conversaciones largas para que cuesten menos y quepan en el modelo.`;
+      case "fr":
+        return `Votre second et l’équipage résument les longues conversations pour qu’elles coûtent moins et tiennent dans le modèle.`;
+      case "ja":
+        return `一等航海士と乗組員は長い会話を要約し、費用を抑えてモデルに収めます。`;
+      case "ko":
+        return `일등항해사와 선원들은 긴 대화를 요약해 비용을 줄이고 모델에 맞춰요.`;
+      case "pt-BR":
+        return `Seu imediato e a tripulação resumem conversas longas para que custem menos e caibam no modelo.`;
+      case "zh-Hans":
+        return `你的大副和船员会总结长对话，让花费更少、并能放进模型。`;
+      case "zh-Hant":
+        return `你的大副和船員會摘要長對話，讓花費更少、也放得進模型。`;
+      case "en-XA":
+        return `[Ýöûŕ ƒîŕšţ ɱáţé áñð çŕéŵ šûɱɱáŕîžé ļöñĝ çöñṽéŕšáţîöñš šö ţĥéý çöšţ ļéšš áñð ƒîţ ţĥé ɱöðéļ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your first mate and crew summarize long conversations so they cost less and fit the model.‬`;
+    }
+    return `Your first mate and crew summarize long conversations so they cost less and fit the model.`;
+  }
+  function settingsSummaryPointModelLimit() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `حدّ كل نموذج`;
+      case "de":
+        return `Grenze des jeweiligen Modells`;
+      case "es":
+        return `El límite de cada modelo`;
+      case "fr":
+        return `La limite de chaque modèle`;
+      case "ja":
+        return `各モデルの上限`;
+      case "ko":
+        return `각 모델의 한도`;
+      case "pt-BR":
+        return `O limite de cada modelo`;
+      case "zh-Hans":
+        return `各模型自身的上限`;
+      case "zh-Hant":
+        return `各模型本身的上限`;
+      case "en-XA":
+        return `[Éáçĥ ɱöðéļ'š ļîɱîţ ~~~~~~]`;
+      case "ar-XB":
+        return `‮Each model's limit‬`;
+    }
+    return `Each model's limit`;
+  }
+  function settingsSummaryPointSaveFailed() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر حفظ موضع تلخيص المحادثات الطويلة. أعِد المحاولة.`;
+      case "de":
+        return `Wo lange Unterhaltungen zusammengefasst werden, konnte nicht gespeichert werden. Versuch es noch einmal.`;
+      case "es":
+        return `No se pudo guardar dónde se resumen las conversaciones largas. Inténtalo de nuevo.`;
+      case "fr":
+        return `L’endroit où les longues conversations sont résumées n’a pas pu être enregistré. Réessayez.`;
+      case "ja":
+        return `長い会話を要約する位置を保存できませんでした。もう一度お試しください。`;
+      case "ko":
+        return `긴 대화를 요약하는 지점을 저장할 수 없었어요. 다시 시도하세요.`;
+      case "pt-BR":
+        return `Não foi possível salvar onde as conversas longas são resumidas. Tente de novo.`;
+      case "zh-Hans":
+        return `无法保存长对话的总结位置。请重试。`;
+      case "zh-Hant":
+        return `無法儲存長對話的摘要位置。請再試一次。`;
+      case "en-XA":
+        return `[Ŵĥéŕé ļöñĝ çöñṽéŕšáţîöñš šûɱɱáŕîžé çöûļð ñöţ ƀé šáṽéð. Ţŕý áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Where long conversations summarize could not be saved. Try again.‬`;
+    }
+    return `Where long conversations summarize could not be saved. Try again.`;
+  }
+  function settingsSummaryPointStep(input2) {
+    const name = input2.name;
+    const tokens = input2.tokens;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${name} بعد ${tokens}`;
+      case "de":
+        return `${name} ab ${tokens}`;
+      case "es":
+        return `${name} pasados ${tokens}`;
+      case "fr":
+        return `${name} au-delà de ${tokens}`;
+      case "ja":
+        return `${name} で ${tokens} を超えたとき`;
+      case "ko":
+        return `${name}에서 ${tokens} 초과`;
+      case "pt-BR":
+        return `${name} acima de ${tokens}`;
+      case "zh-Hans":
+        return `${name} 超过 ${tokens}`;
+      case "zh-Hant":
+        return `${name} 超過 ${tokens}`;
+      case "en-XA":
+        return `[${name} þášţ ${tokens} ~~]`;
+      case "ar-XB":
+        return `${name}‮ past ‬${tokens}`;
+    }
+    return `${name} past ${tokens}`;
+  }
+  function settingsSummaryPointSteps(input2) {
+    const models = input2.models;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تكلّف الطلبات أكثر على ${models}.`;
+      case "de":
+        return `Anfragen kosten mehr bei ${models}.`;
+      case "es":
+        return `Las solicitudes cuestan más en ${models}.`;
+      case "fr":
+        return `Les requêtes coûtent plus cher sur ${models}.`;
+      case "ja":
+        return `次の場合、リクエストごとの料金が上がります：${models}。`;
+      case "ko":
+        return `다음 경우 요청마다 요금이 더 들어요: ${models}.`;
+      case "pt-BR":
+        return `As solicitações custam mais em ${models}.`;
+      case "zh-Hans":
+        return `以下情况每次请求更贵：${models}。`;
+      case "zh-Hant":
+        return `以下情況每次請求更貴：${models}。`;
+      case "en-XA":
+        return `[Ŕéǫûéšţš çöšţ ɱöŕé öñ ${models}. ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Requests cost more on ‬${models}‮.‬`;
+    }
+    return `Requests cost more on ${models}.`;
+  }
+  function settingsSummaryPointTitle() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تلخيص المحادثات الطويلة عند`;
+      case "de":
+        return `Lange Unterhaltungen zusammenfassen bei`;
+      case "es":
+        return `Resumir conversaciones largas a los`;
+      case "fr":
+        return `Résumer les longues conversations à`;
+      case "ja":
+        return `長い会話を要約する位置`;
+      case "ko":
+        return `긴 대화를 요약하는 지점`;
+      case "pt-BR":
+        return `Resumir conversas longas em`;
+      case "zh-Hans":
+        return `长对话在此处总结`;
+      case "zh-Hant":
+        return `長對話在此處摘要`;
+      case "en-XA":
+        return `[Šûɱɱáŕîžé ļöñĝ çöñṽéŕšáţîöñš áţ ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Summarize long conversations at‬`;
+    }
+    return `Summarize long conversations at`;
+  }
+  function settingsSummaryPointTokens(input2) {
+    const tokens = input2.tokens;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${tokens} من الرموز`;
+      case "de":
+        return `${tokens} Tokens`;
+      case "es":
+        return `${tokens} tokens`;
+      case "fr":
+        return `${tokens} jetons`;
+      case "ja":
+        return `${tokens} トークン`;
+      case "ko":
+        return `${tokens}토큰`;
+      case "pt-BR":
+        return `${tokens} tokens`;
+      case "zh-Hans":
+        return `${tokens} 个 token`;
+      case "zh-Hant":
+        return `${tokens} 個 token`;
+      case "en-XA":
+        return `[${tokens} ţöķéñš ~~~]`;
+      case "ar-XB":
+        return `${tokens}‮ tokens‬`;
+    }
+    return `${tokens} tokens`;
+  }
   function settingsTakeOverAfter(input2) {
     const name = input2.name;
     switch (currentLanguage()) {
@@ -94810,6 +95437,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Sends your crew’s usage to ‬${host}‮ in Claude Code’s format: models, tokens and estimated cost, never prompts or replies.‬`;
     }
     return `Sends your crew’s usage to ${host} in Claude Code’s format: models, tokens and estimated cost, never prompts or replies.`;
+  }
+  function settingsUsageConnectionClaudeCodeWords(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يرسل استخدام طاقمك إلى ${host} بتنسيق Claude Code: النماذج والرموز والتكلفة التقديرية، مع المطالبات والردود.`;
+      case "de":
+        return `Sendet die Nutzung deiner Crew an ${host} im Format von Claude Code: Modelle, Tokens und geschätzte Kosten, mit Prompts und Antworten.`;
+      case "es":
+        return `Envía el uso de tu tripulación a ${host} en el formato de Claude Code: modelos, tokens y costo estimado, con prompts y respuestas.`;
+      case "fr":
+        return `Envoie l’utilisation de votre équipage à ${host} au format de Claude Code : modèles, tokens et coût estimé, avec les prompts et les réponses.`;
+      case "ja":
+        return `乗組員の使用量を Claude Code の形式で ${host} に送ります。モデル、トークン、推定コストに加え、プロンプトと返答も送ります。`;
+      case "ko":
+        return `선원들의 사용량을 Claude Code 형식으로 ${host}에 보냅니다. 모델, 토큰, 예상 비용과 함께 프롬프트와 답변도 보냅니다.`;
+      case "pt-BR":
+        return `Envia o uso da sua tripulação para ${host} no formato do Claude Code: modelos, tokens e custo estimado, com prompts e respostas.`;
+      case "zh-Hans":
+        return `以 Claude Code 的格式把船员的用量发送到 ${host}：模型、token 和预估费用，并包含提示和回复。`;
+      case "zh-Hant":
+        return `以 Claude Code 的格式把船員的用量傳送到 ${host}：模型、token 和預估費用，並包含提示和回覆。`;
+      case "en-XA":
+        return `[Šéñðš ýöûŕ çŕéŵ’š ûšáĝé ţö ${host} îñ Çļáûðé Çöðé’š ƒöŕɱáţ: ɱöðéļš, ţöķéñš áñð éšţîɱáţéð çöšţ, ŵîţĥ þŕöɱþţš áñð ŕéþļîéš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Sends your crew’s usage to ‬${host}‮ in Claude Code’s format: models, tokens and estimated cost, with prompts and replies.‬`;
+    }
+    return `Sends your crew’s usage to ${host} in Claude Code’s format: models, tokens and estimated cost, with prompts and replies.`;
   }
   function settingsUsageConnectionEdit() {
     switch (currentLanguage()) {
@@ -95680,6 +96335,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Sends your crew’s usage to ${host} in the standard OpenTelemetry format: timing, models, tokens and estimated cost, never prompts or replies.`;
   }
+  function settingsUsageConnectionStandardWords(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يرسل استخدام طاقمك إلى ${host} بتنسيق OpenTelemetry القياسي: الأوقات والنماذج والرموز والتكلفة التقديرية، مع المطالبات والردود.`;
+      case "de":
+        return `Sendet die Nutzung deiner Crew an ${host} im Standardformat von OpenTelemetry: Zeiten, Modelle, Tokens und geschätzte Kosten, mit Prompts und Antworten.`;
+      case "es":
+        return `Envía el uso de tu tripulación a ${host} en el formato estándar de OpenTelemetry: tiempos, modelos, tokens y costo estimado, con prompts y respuestas.`;
+      case "fr":
+        return `Envoie l’utilisation de votre équipage à ${host} au format standard d’OpenTelemetry : durées, modèles, tokens et coût estimé, avec les prompts et les réponses.`;
+      case "ja":
+        return `乗組員の使用量を OpenTelemetry の標準形式で ${host} に送ります。時間、モデル、トークン、推定コストに加え、プロンプトと返答も送ります。`;
+      case "ko":
+        return `선원들의 사용량을 OpenTelemetry 표준 형식으로 ${host}에 보냅니다. 시간, 모델, 토큰, 예상 비용과 함께 프롬프트와 답변도 보냅니다.`;
+      case "pt-BR":
+        return `Envia o uso da sua tripulação para ${host} no formato padrão do OpenTelemetry: tempos, modelos, tokens e custo estimado, com prompts e respostas.`;
+      case "zh-Hans":
+        return `以 OpenTelemetry 标准格式把船员的用量发送到 ${host}：时间、模型、token 和预估费用，并包含提示和回复。`;
+      case "zh-Hant":
+        return `以 OpenTelemetry 標準格式把船員的用量傳送到 ${host}：時間、模型、token 和預估費用，並包含提示和回覆。`;
+      case "en-XA":
+        return `[Šéñðš ýöûŕ çŕéŵ’š ûšáĝé ţö ${host} îñ ţĥé šţáñðáŕð ÖþéñŢéļéɱéţŕý ƒöŕɱáţ: ţîɱîñĝ, ɱöðéļš, ţöķéñš áñð éšţîɱáţéð çöšţ, ŵîţĥ þŕöɱþţš áñð ŕéþļîéš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Sends your crew’s usage to ‬${host}‮ in the standard OpenTelemetry format: timing, models, tokens and estimated cost, with prompts and replies.‬`;
+    }
+    return `Sends your crew’s usage to ${host} in the standard OpenTelemetry format: timing, models, tokens and estimated cost, with prompts and replies.`;
+  }
   function settingsUsageConnectionTitle() {
     switch (currentLanguage()) {
       case "ar":
@@ -95789,6 +96472,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮The tool’s answer to each batch‬`;
     }
     return `The tool’s answer to each batch`;
+  }
+  function settingsUsageConnectionWords() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إرسال المطالبات والردود أيضًا`;
+      case "de":
+        return `Auch Prompts und Antworten senden`;
+      case "es":
+        return `Enviar también prompts y respuestas`;
+      case "fr":
+        return `Envoyer aussi les prompts et les réponses`;
+      case "ja":
+        return `プロンプトと返答も送る`;
+      case "ko":
+        return `프롬프트와 답변도 보내기`;
+      case "pt-BR":
+        return `Enviar também prompts e respostas`;
+      case "zh-Hans":
+        return `同时发送提示和回复`;
+      case "zh-Hant":
+        return `同時傳送提示和回覆`;
+      case "en-XA":
+        return `[Šéñð þŕöɱþţš áñð ŕéþļîéš ţöö ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Send prompts and replies too‬`;
+    }
+    return `Send prompts and replies too`;
+  }
+  function settingsUsageConnectionWordsHint() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يضيف المطالبات التي يتلقاها طاقمك وردوده وما يعطيه لأدواته. تُخفى أولًا المفاتيح وكلمات المرور التي يتعرّف عليها Infinitary فيها.`;
+      case "de":
+        return `Fügt die Prompts deiner Crew, ihre Antworten und das, was sie ihren Werkzeugen gibt, hinzu. Schlüssel und Passwörter, die Infinitary darin erkennt, werden vorher verborgen.`;
+      case "es":
+        return `Añade los prompts que recibe tu tripulación, sus respuestas y lo que da a sus herramientas. Antes se ocultan las claves y contraseñas que Infinitary reconoce en ellos.`;
+      case "fr":
+        return `Ajoute les prompts que reçoit votre équipage, ses réponses et ce qu’il donne à ses outils. Les clés et mots de passe qu’Infinitary y reconnaît sont d’abord masqués.`;
+      case "ja":
+        return `乗組員が受け取るプロンプト、その返答、ツールに渡す内容を加えます。Infinitary が見つけたキーやパスワードは先に伏せます。`;
+      case "ko":
+        return `선원들이 받는 프롬프트, 그 답변, 도구에 건네는 내용을 더합니다. Infinitary가 그 안에서 알아본 키와 비밀번호는 먼저 가립니다.`;
+      case "pt-BR":
+        return `Acrescenta os prompts que sua tripulação recebe, as respostas dela e o que ela passa às ferramentas. Chaves e senhas que o Infinitary reconhece neles são ocultadas antes.`;
+      case "zh-Hans":
+        return `加上船员收到的提示、它的回复以及交给工具的内容。Infinitary 识别出的密钥和密码会先被隐去。`;
+      case "zh-Hant":
+        return `加上船員收到的提示、它的回覆以及交給工具的內容。Infinitary 辨識出的金鑰和密碼會先被隱藏。`;
+      case "en-XA":
+        return `[Åððš ţĥé þŕöɱþţš ýöûŕ çŕéŵ ĝéţš, îţš ŕéþļîéš áñð ŵĥáţ îţ ĝîṽéš îţš ţööļš. Ķéýš áñð þáššŵöŕðš Îñƒîñîţáŕý ŕéçöĝñîžéš îñ ţĥéɱ áŕé ĥîððéñ ƒîŕšţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Adds the prompts your crew gets, its replies and what it gives its tools. Keys and passwords Infinitary recognizes in them are hidden first.‬`;
+    }
+    return `Adds the prompts your crew gets, its replies and what it gives its tools. Keys and passwords Infinitary recognizes in them are hidden first.`;
   }
   function settingsUsageCostAllKinds() {
     switch (currentLanguage()) {
@@ -102096,6 +102833,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Crewmate`;
   }
+  function shellConversationEdited() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `معدّلة`;
+      case "de":
+        return `Bearbeitet`;
+      case "es":
+        return `Editado`;
+      case "fr":
+        return `Modifié`;
+      case "ja":
+        return `編集済み`;
+      case "ko":
+        return `수정됨`;
+      case "pt-BR":
+        return `Editada`;
+      case "zh-Hans":
+        return `已编辑`;
+      case "zh-Hant":
+        return `已編輯`;
+      case "en-XA":
+        return `[Éðîţéð ~~]`;
+      case "ar-XB":
+        return `‮Edited‬`;
+    }
+    return `Edited`;
+  }
   function shellConversationEmpty() {
     switch (currentLanguage()) {
       case "ar":
@@ -103439,6 +104203,87 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮A picture‬`;
     }
     return `A picture`;
+  }
+  function shellLastTurnRevert() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `التراجع عن آخر رسالة لك`;
+      case "de":
+        return `Deine letzte Nachricht zurücknehmen`;
+      case "es":
+        return `Revertir tu último mensaje`;
+      case "fr":
+        return `Annuler votre dernier message`;
+      case "ja":
+        return `最後のメッセージを取り消す`;
+      case "ko":
+        return `마지막 메시지 되돌리기`;
+      case "pt-BR":
+        return `Reverter sua última mensagem`;
+      case "zh-Hans":
+        return `撤回你的上一条消息`;
+      case "zh-Hant":
+        return `撤回你的上一則訊息`;
+      case "en-XA":
+        return `[Ŕéṽéŕţ ýöûŕ ļášţ ɱéššáĝé ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Revert your last message‬`;
+    }
+    return `Revert your last message`;
+  }
+  function shellLastTurnReverted() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تم التراجع`;
+      case "de":
+        return `Zurückgenommen`;
+      case "es":
+        return `Revertido`;
+      case "fr":
+        return `Annulé`;
+      case "ja":
+        return `取り消し済み`;
+      case "ko":
+        return `되돌림`;
+      case "pt-BR":
+        return `Revertida`;
+      case "zh-Hans":
+        return `已撤回`;
+      case "zh-Hant":
+        return `已撤回`;
+      case "en-XA":
+        return `[Ŕéṽéŕţéð ~~~]`;
+      case "ar-XB":
+        return `‮Reverted‬`;
+    }
+    return `Reverted`;
+  }
+  function shellLastTurnRevertedUnread() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تم التراجع قبل أن يقرأها نائب القبطان`;
+      case "de":
+        return `Zurückgenommen, bevor dein erster Offizier sie gelesen hat`;
+      case "es":
+        return `Revertido antes de que tu primer oficial lo leyera`;
+      case "fr":
+        return `Annulé avant que votre second ne le lise`;
+      case "ja":
+        return `一等航海士が読む前に取り消しました`;
+      case "ko":
+        return `일등항해사가 읽기 전에 되돌렸어요`;
+      case "pt-BR":
+        return `Revertida antes que seu imediato a lesse`;
+      case "zh-Hans":
+        return `在你的大副读到之前已撤回`;
+      case "zh-Hant":
+        return `在你的大副讀到之前已撤回`;
+      case "en-XA":
+        return `[Ŕéṽéŕţéð ƀéƒöŕé ýöûŕ ƒîŕšţ ɱáţé ŕéáð îţ ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Reverted before your first mate read it‬`;
+    }
+    return `Reverted before your first mate read it`;
   }
   function shellLastTurnWorking() {
     switch (currentLanguage()) {
@@ -113003,6 +113848,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     commandMessageDeleteWordBefore,
     commandMessagePutBackDeleted,
     commandMessageRecall,
+    commandMessageTakeBack,
+    commandMessageTakeBackWords,
     commandMoveDown,
     commandMoveDownWords,
     commandMoveFirst,
@@ -113111,7 +113958,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     composerFolderNotProject,
     composerFolderProject,
     composerHintFeedback,
+    composerHintReplaces,
+    composerHintSendsAsNew,
     composerLines,
+    composerReplacesLast,
     composerTooLongShorten,
     composerWordsOnly,
     crewAPart,
@@ -113693,6 +114543,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     panelChangeShowInDock,
     panelChangeShowWhatsNew,
     panelChangeStartAtLogin,
+    panelChangeSummaryPoint,
     panelChangeTheme,
     panelChangeUpdateChannel,
     panelChangeUpdateCheck,
@@ -113880,6 +114731,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     refuseNoCardIsShown,
     refuseNoCardIsShownOrPutAside,
     refuseNoCardThreadIsReadAboveIts,
+    refuseNoMessageToRevert,
     refuseNoOtherCardIsNew,
     refuseNoPageToPointAt,
     refuseNoPictureIsOpen,
@@ -114120,6 +114972,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsAppearanceWashDescription,
     settingsAppearanceWashValue,
     settingsAutomationBack,
+    settingsAutomationBroughtNote,
     settingsAutomationCancelCleared,
     settingsAutomationCancelEdited,
     settingsAutomationCancelPaused,
@@ -114952,6 +115805,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsProjectsDeliveryNoBatch,
     settingsProjectsDeliveryTitle,
     settingsProjectsDetailsLabel,
+    settingsProjectsDisclosure,
+    settingsProjectsDisclosureLine,
+    settingsProjectsDisclosureOff,
+    settingsProjectsDisclosureOn,
     settingsProjectsEmpty,
     settingsProjectsFolder,
     settingsProjectsFolderCancel,
@@ -115297,6 +116154,17 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsSubscriptionsSignedOutHoldLabel,
     settingsSubscriptionsSignedOutHoldText,
     settingsSubscriptionsStale,
+    settingsSummaryPointAutomatic,
+    settingsSummaryPointDescriptionAutomatic,
+    settingsSummaryPointDescriptionModelLimit,
+    settingsSummaryPointDescriptionTokens,
+    settingsSummaryPointDescriptionUnread,
+    settingsSummaryPointModelLimit,
+    settingsSummaryPointSaveFailed,
+    settingsSummaryPointStep,
+    settingsSummaryPointSteps,
+    settingsSummaryPointTitle,
+    settingsSummaryPointTokens,
     settingsTakeOverAfter,
     settingsTakeOverAsk,
     settingsTakeOverAskWindows,
@@ -115326,6 +116194,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsUsageConnectionAddressHint,
     settingsUsageConnectionCancel,
     settingsUsageConnectionClaudeCode,
+    settingsUsageConnectionClaudeCodeWords,
     settingsUsageConnectionEdit,
     settingsUsageConnectionEmailLine,
     settingsUsageConnectionFailed,
@@ -115358,10 +116227,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsUsageConnectionSaveLine,
     settingsUsageConnectionSecretLabel,
     settingsUsageConnectionStandard,
+    settingsUsageConnectionStandardWords,
     settingsUsageConnectionTitle,
     settingsUsageConnectionUseOperation,
     settingsUsageConnectionUseReason,
     settingsUsageConnectionUseResult,
+    settingsUsageConnectionWords,
+    settingsUsageConnectionWordsHint,
     settingsUsageCostAllKinds,
     settingsUsageCostAllProjects,
     settingsUsageCostChange,
@@ -115578,6 +116450,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     shellConversationCards,
     shellConversationChose,
     shellConversationCrewmate,
+    shellConversationEdited,
     shellConversationEmpty,
     shellConversationEverything,
     shellConversationHeading,
@@ -115625,6 +116498,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     shellKeyReminderNotTyping,
     shellLastTurnFromCommand,
     shellLastTurnPictureOnly,
+    shellLastTurnRevert,
+    shellLastTurnReverted,
+    shellLastTurnRevertedUnread,
     shellLastTurnWorking,
     shellMainMessageConnectFirst,
     shellMainMessagePickingKey,
@@ -116608,6 +117484,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "commandMessageDeleteWordBefore": [],
     "commandMessagePutBackDeleted": [],
     "commandMessageRecall": [],
+    "commandMessageTakeBack": [],
+    "commandMessageTakeBackWords": [],
     "commandMoveDown": [],
     "commandMoveDownWords": [],
     "commandMoveFirst": [],
@@ -116716,7 +117594,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "composerFolderNotProject": [],
     "composerFolderProject": [],
     "composerHintFeedback": ["command"],
+    "composerHintReplaces": [],
+    "composerHintSendsAsNew": [],
     "composerLines": ["count"],
+    "composerReplacesLast": [],
     "composerTooLongShorten": [],
     "composerWordsOnly": [],
     "crewAPart": [],
@@ -117298,6 +118179,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "panelChangeShowInDock": [],
     "panelChangeShowWhatsNew": [],
     "panelChangeStartAtLogin": [],
+    "panelChangeSummaryPoint": [],
     "panelChangeTheme": [],
     "panelChangeUpdateChannel": [],
     "panelChangeUpdateCheck": [],
@@ -117485,6 +118367,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "refuseNoCardIsShown": [],
     "refuseNoCardIsShownOrPutAside": [],
     "refuseNoCardThreadIsReadAboveIts": [],
+    "refuseNoMessageToRevert": [],
     "refuseNoOtherCardIsNew": [],
     "refuseNoPageToPointAt": [],
     "refuseNoPictureIsOpen": [],
@@ -117725,6 +118608,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsAppearanceWashDescription": [],
     "settingsAppearanceWashValue": ["percent"],
     "settingsAutomationBack": [],
+    "settingsAutomationBroughtNote": [],
     "settingsAutomationCancelCleared": [],
     "settingsAutomationCancelEdited": [],
     "settingsAutomationCancelPaused": [],
@@ -118557,6 +119441,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsProjectsDeliveryNoBatch": [],
     "settingsProjectsDeliveryTitle": [],
     "settingsProjectsDetailsLabel": [],
+    "settingsProjectsDisclosure": [],
+    "settingsProjectsDisclosureLine": [],
+    "settingsProjectsDisclosureOff": [],
+    "settingsProjectsDisclosureOn": [],
     "settingsProjectsEmpty": [],
     "settingsProjectsFolder": [],
     "settingsProjectsFolderCancel": [],
@@ -118902,6 +119790,17 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsSubscriptionsSignedOutHoldLabel": [],
     "settingsSubscriptionsSignedOutHoldText": [],
     "settingsSubscriptionsStale": [],
+    "settingsSummaryPointAutomatic": [],
+    "settingsSummaryPointDescriptionAutomatic": ["tokens"],
+    "settingsSummaryPointDescriptionModelLimit": [],
+    "settingsSummaryPointDescriptionTokens": ["tokens"],
+    "settingsSummaryPointDescriptionUnread": [],
+    "settingsSummaryPointModelLimit": [],
+    "settingsSummaryPointSaveFailed": [],
+    "settingsSummaryPointStep": ["name", "tokens"],
+    "settingsSummaryPointSteps": ["models"],
+    "settingsSummaryPointTitle": [],
+    "settingsSummaryPointTokens": ["tokens"],
     "settingsTakeOverAfter": ["name"],
     "settingsTakeOverAsk": [],
     "settingsTakeOverAskWindows": [],
@@ -118931,6 +119830,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsUsageConnectionAddressHint": [],
     "settingsUsageConnectionCancel": [],
     "settingsUsageConnectionClaudeCode": ["host"],
+    "settingsUsageConnectionClaudeCodeWords": ["host"],
     "settingsUsageConnectionEdit": [],
     "settingsUsageConnectionEmailLine": [],
     "settingsUsageConnectionFailed": [],
@@ -118963,10 +119863,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsUsageConnectionSaveLine": [],
     "settingsUsageConnectionSecretLabel": ["name"],
     "settingsUsageConnectionStandard": ["host"],
+    "settingsUsageConnectionStandardWords": ["host"],
     "settingsUsageConnectionTitle": [],
     "settingsUsageConnectionUseOperation": ["host"],
     "settingsUsageConnectionUseReason": ["host"],
     "settingsUsageConnectionUseResult": [],
+    "settingsUsageConnectionWords": [],
+    "settingsUsageConnectionWordsHint": [],
     "settingsUsageCostAllKinds": [],
     "settingsUsageCostAllProjects": [],
     "settingsUsageCostChange": [],
@@ -119183,6 +120086,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "shellConversationCards": [],
     "shellConversationChose": ["label"],
     "shellConversationCrewmate": [],
+    "shellConversationEdited": [],
     "shellConversationEmpty": [],
     "shellConversationEverything": [],
     "shellConversationHeading": [],
@@ -119230,6 +120134,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "shellKeyReminderNotTyping": [],
     "shellLastTurnFromCommand": ["command"],
     "shellLastTurnPictureOnly": [],
+    "shellLastTurnRevert": [],
+    "shellLastTurnReverted": [],
+    "shellLastTurnRevertedUnread": [],
     "shellLastTurnWorking": [],
     "shellMainMessageConnectFirst": [],
     "shellMainMessagePickingKey": [],
@@ -124550,6 +125457,7 @@ ${FRAME_KEYBOARD_SCRIPT}
     "custom-connection-file": true,
     "project-batch-answer": true,
     "cost-limit": true,
+    "summary-point": true,
     notifications: true,
     runbook: true,
     "runbook-copy": true,
@@ -125650,6 +126558,21 @@ ${FRAME_KEYBOARD_SCRIPT}
       keys: [],
       get searchWords() {
         return searchWords(commandFirstmateReplyWords());
+      }
+    },
+    // Taking back the newest message within a minute of sending it
+    // (docs/composer.md "The last turn"): chosen by name, with no default key.
+    "message.take-back": {
+      get label() {
+        return commandMessageTakeBack();
+      },
+      scope: "window",
+      runs: "shell",
+      repeat: false,
+      risk: "close",
+      keys: [],
+      get searchWords() {
+        return searchWords(commandMessageTakeBackWords());
       }
     },
     "settings.runbooks": {
@@ -129374,6 +130297,7 @@ ${FRAME_KEYBOARD_SCRIPT}
         levels,
         current: hasHook(choice.attribs, "current"),
         recommended: hasHook(choice.attribs, "recommended"),
+        multiple: (choice.attribs?.type ?? "").toLowerCase() === "checkbox",
         ...label && written ? {
           placed: {
             label: label.startIndex ?? 0,
@@ -129440,7 +130364,7 @@ ${FRAME_KEYBOARD_SCRIPT}
   }
   function optionWords(row, own2) {
     const shown = own2 && row.placed ? row.placed.words : escapeHtml$1(row.words);
-    return `<i data-inf-tradeoff-ring></i><span data-inf-tradeoff-words>${shown}</span>`;
+    return `<i data-inf-tradeoff-ring${row.multiple ? '="box"' : ""}></i><span data-inf-tradeoff-words>${shown}</span>`;
   }
   const RADAR_RADIUS = 46;
   const LABEL_GAP = 8;
@@ -130238,6 +131162,12 @@ a:hover {
     border: 1.5px solid var(--line-2); border-radius: 50%; vertical-align: -1px;
   }
   [data-inf-tradeoff-picked] [data-inf-tradeoff-ring] { border: 3.5px solid var(--accent); }
+  [data-inf-tradeoff-ring="box"] { position: relative; border-radius: 3px; }
+  [data-inf-tradeoff-picked] [data-inf-tradeoff-ring="box"] { border: 1.5px solid var(--accent); background: var(--accent); }
+  [data-inf-tradeoff-picked] [data-inf-tradeoff-ring="box"]::after {
+    content: ""; position: absolute; inset-inline-start: 2.5px; inset-block-start: 0.5px; width: 3px; height: 5.5px;
+    border: solid var(--bg-0); border-width: 0 1.5px 1.5px 0; transform: rotate(45deg);
+  }
   [data-inf-tradeoff-current] [data-inf-tradeoff-words]::before {
     content: "${AS_BUILT_WORDS}"; display: inline-block; margin-inline-end: var(--space-1); white-space: nowrap;
     color: var(--fg-2); border: 1px solid var(--line-2); border-radius: var(--radius-pill);
@@ -131813,6 +132743,14 @@ ${startersHtml()}`;
     /** Typed, never inferred from the words. Absent is unknown, and the line stays. */
     eligibility: lastTurnEligibilitySchema.optional(),
     /**
+     * The captain took the message back before any turn read it, so nothing
+     * answered it (docs/task-capture.md, "Taking back a message"). The window
+     * words the line from this in its own language when it shows it; `text`
+     * keeps the same catalog words in English for a reader that words nothing
+     * itself (docs/i18n.md, "Saved facts").
+     */
+    withdrawn: literal(true).optional(),
+    /**
      * The Firstmate's closing words as it wrote them, line breaks kept, when
      * they differ from the one-line `text`: the conversation shows them
      * (docs/composer.md "The conversation"). Absent, it shows `text`.
@@ -131825,7 +132763,16 @@ ${startersHtml()}`;
     /** The Firstmate's reply line, or null while none has been given. */
     reply: lastTurnReplySchema.nullable(),
     /** The message came from the captain's own command, `infinitary-axi`, not the window. */
-    through: throughSchema.optional()
+    through: throughSchema.optional(),
+    /** The message's id, which a take back names; absent from an older core. */
+    askId: string().optional(),
+    /**
+     * When the core accepted the message, in ms since the epoch: the take-back
+     * window runs from it (`TAKE_BACK_WINDOW_MS`). Absent from an older core.
+     */
+    sentAt: number().optional(),
+    /** The captain took the message back (docs/task-capture.md, "Taking back a message"). */
+    takenBack: literal(true).optional()
   });
   lastRoundSchema.extend({
     previous: lastRoundSchema.nullable().optional()
@@ -132446,6 +133393,7 @@ ${startersHtml()}`;
     state: _enum(["open", "merged", "closed"]),
     updatedAt: string().optional()
   });
+  const contributorDisclosureSchema = string().trim().max(300);
   const costLimitSchema = union([
     strictObject({ usd: number().positive().finite() }),
     strictObject({ none: literal(true) })
@@ -134055,9 +135003,16 @@ ${startersHtml()}`;
      * (docs/forge.md, "The batch gap"): the least time in minutes from one
      * batch's start to the next, or null to start one as soon as a change is approved.
      */
-    batchGap: batchGapSchema.nullable().optional()
+    batchGap: batchGapSchema.nullable().optional(),
+    /**
+     * Settings → Projects' Disclose AI assistance (docs/forge.md, "Disclosing AI
+     * assistance"): the line that opens what the crew posts to an
+     * outside contributor, an empty string to post none, or null for the
+     * default line.
+     */
+    contributorDisclosure: contributorDisclosureSchema.nullable().optional()
   }).strict().refine((patch) => Object.values(patch).some((value) => value !== void 0), {
-    message: "pass delivery, autonomy, rigor, costLimit, scope, name, path, origin, requireChecks, batchGap, or several"
+    message: "pass delivery, autonomy, rigor, costLimit, scope, name, path, origin, requireChecks, batchGap, contributorDisclosure, or several"
   });
   const noChecksRecordSchema = object({
     at: number(),
@@ -134122,6 +135077,12 @@ ${startersHtml()}`;
      * soon as a change is approved. A held batch's repair never waits for it.
      */
     batchGap: batchGapSchema.optional(),
+    /**
+     * The project's own line opening what the crew posts to an outside
+     * contributor, or an empty string for none (docs/forge.md, "Disclosing AI
+     * assistance"); absent, the default line.
+     */
+    contributorDisclosure: contributorDisclosureSchema.optional(),
     /**
      * Whether a runbook that is on at the home offers batched pull requests,
      * so the project may newly choose them (`deliveryChoices`); absent from an
@@ -134648,7 +135609,11 @@ ${startersHtml()}`;
       type: literal("user_turn"),
       text: string(),
       /** Sent from the captain's own command, `infinitary-axi`, not the window. */
-      through: throughSchema.optional()
+      through: throughSchema.optional(),
+      /** The message's id, which a take back names (src/shared/lastTurn.ts). Absent from an older core. */
+      askId: string().optional(),
+      /** When the core accepted the message, in ms since the epoch. Absent from an older core. */
+      sentAt: number().optional()
     }),
     /**
      * The Firstmate's reply line to the captain's last message, sent as the
@@ -134663,7 +135628,15 @@ ${startersHtml()}`;
       /** Typed completion: absent is unknown, and the line stays. */
       eligibility: lastTurnEligibilitySchema.optional(),
       /** The closing words as written, when they differ from `text` (src/shared/lastTurn.ts). */
-      words: string().optional()
+      words: string().optional(),
+      /** Taken back before any turn read it (src/shared/lastTurn.ts). */
+      withdrawn: literal(true).optional(),
+      /**
+       * The message the line stands beside: the newest, or one the captain
+       * took back, whose undo the turn did or no turn read (docs/task-capture.md,
+       * "Taking back a message"). Absent from an older core, and the line is the newest's.
+       */
+      askId: string().optional()
     }),
     /**
      * A task record changed (task-system P3): per-task invalidation for
@@ -138000,6 +138973,7 @@ ${startersHtml()}`;
     "ambient-music",
     "notifications",
     "cost-limit",
+    "summary-point",
     "personal-resources",
     "panels-switch"
   ];

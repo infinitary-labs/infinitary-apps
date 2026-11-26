@@ -60,6 +60,7 @@ import { type FirstmateTaskToolsHost, firstmateTaskTools } from "./firstmateTask
 import { readOpenWork } from "./openWork";
 import { startedReply } from "./replyLine";
 import { writeStartedLine } from "./startedFromCard";
+import { creditedAsks, takenBackOf, takenBackRefusalText } from "./takeBack";
 
 /**
  * The first mate's tools (docs/orchestrator-contract.md): cards, crew,
@@ -736,6 +737,7 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
     ...createAppTools({
       ...(host.options.platform ? { platform: host.options.platform } : {}),
       ...(host.options.installedKeys ? { installedKeys: host.options.installedKeys } : {}),
+      ...(host.options.runbooks ? { runbooks: host.options.runbooks } : {}),
       dispatch: (channel, args, actor) => {
         const appDispatch = host.appDispatch();
         if (!appDispatch) throw new Error("App actions are not connected.");
@@ -866,8 +868,9 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
         )
       : []),
   ];
-  // The one retry only shows an answer: every work-changing tool answers
-  // with a refusal as text, the way a graph refusal does.
+  // The one retry only shows an answer, and nothing more is done for a
+  // message the captain took back: every work-changing tool answers with a
+  // refusal as text, the way a graph refusal does.
   return tools.map((tool) => {
     const attributed = withAskAttribution(
       tool,
@@ -877,10 +880,14 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
     );
     return {
       ...attributed,
-      run: (params: Parameters<typeof tool.run>[0], signal?: AbortSignal) =>
-        ANSWER_ONLY_REFUSED_TOOLS.has(tool.name) && host.delivery.outputOnly
-          ? Promise.resolve({ text: ANSWER_ONLY_REFUSAL })
-          : attributed.run(params, signal),
+      run: (params: Parameters<typeof tool.run>[0], signal?: AbortSignal) => {
+        if (!ANSWER_ONLY_REFUSED_TOOLS.has(tool.name)) return attributed.run(params, signal);
+        if (host.delivery.outputOnly) return Promise.resolve({ text: ANSWER_ONLY_REFUSAL });
+        const takenBack = takenBackOf(host.options.tasks, creditedAsks(params, host.turn.read));
+        return takenBack
+          ? Promise.resolve({ text: takenBackRefusalText(takenBack) })
+          : attributed.run(params, signal);
+      },
     };
   });
 }

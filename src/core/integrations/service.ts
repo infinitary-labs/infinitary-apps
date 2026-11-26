@@ -6,7 +6,6 @@ import {
   type IntegrationApprovalChoice,
   type IntegrationEventView,
   type IntegrationKind,
-  type IntegrationRule,
   type IntegrationSettingsPatch,
   type IntegrationSignInConsent,
   type IntegrationsView,
@@ -50,6 +49,7 @@ import {
   READER_INTEGRATION_FENCE,
   READER_REFUSED_KINDS,
   READER_WORDS,
+  type ReaderRule,
 } from "./readerReach";
 import { WHOLE_ACTION } from "./scopes";
 import type { IntegrationSettings, IntegrationSettingsStore } from "./store";
@@ -1077,10 +1077,10 @@ Do not repeat this call; read ${name} to check what happened first.`
   }
 
   /** An action's rule as it holds for an unsafe data reader (`runsForReader`). */
-  private readerRule(row: Row, spec: IntegrationActionSpec): IntegrationRule {
-    // A file-saving action is refused for a reader (`fileRefusal`), so it is off.
-    if (row.settings.off?.includes(spec.name) || spec.delivers === "file")
-      return integrationRule(false, false);
+  private readerRule(row: Row, spec: IntegrationActionSpec): ReaderRule {
+    // A file-saving action is refused for a reader (`fileRefusal`) whatever the captain set.
+    if (spec.delivers === "file") return "closed";
+    if (row.settings.off?.includes(spec.name)) return integrationRule(false, false);
     return integrationRule(this.runsForReader(row, spec), true);
   }
 

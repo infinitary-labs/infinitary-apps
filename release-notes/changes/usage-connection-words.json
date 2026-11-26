@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "usage-connection-words",
+      "kind": "feature",
+      "area": "subscriptions",
+      "docsSite": ["what-leaves-your-computer"],
+      "title": "Send prompts and replies to your own monitoring tool",
+      "body": "The Usage reporting connection in Settings → Intelligence has a new Send prompts and replies too switch, off unless you turn it on. When it is on, each turn your crew takes also carries the prompts it got, its replies and what it gave its tools, whichever subscription served it, with keys and passwords Infinitary recognizes hidden first. Only your own connection gets them, never a company's reporting setup.",
+      "picture": {
+        "dark": "usage-connection-words-dark.webp",
+        "light": "usage-connection-words-light.webp",
+        "alt": "The Usage reporting form in Settings → Intelligence with its address, format and the Send prompts and replies too switch turned on"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

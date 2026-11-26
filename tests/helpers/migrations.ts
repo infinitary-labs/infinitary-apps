@@ -18,6 +18,8 @@ export const ALL_VERSIONS = Array.from({ length: DATABASE_VERSION }, (_, index) 
  * optional query indexes over its columns (INF-2061's statement check).
  */
 export const REVERSE_MIGRATION_102 =
+  // Taking back a message (docs/task-capture.md) is newer than both historical schemas.
+  "DROP INDEX IF EXISTS captain_asks_correction_of; ALTER TABLE captain_asks DROP COLUMN correction_of; ALTER TABLE captain_asks DROP COLUMN taken_back_at; " +
   // Neither historical schema has the later reply attribution columns.
   "DROP INDEX IF EXISTS captain_asks_typed; ALTER TABLE captain_asks DROP COLUMN typed_line; ALTER TABLE captain_asks DROP COLUMN typed_card_id; " +
   // INF-3898 piece 2's command mark is newer than every captain_asks shape these tests compare.
@@ -173,8 +175,11 @@ export const REVERSE_MIGRATION_66 = `
 `;
 /** Migration 65's live attachment, undone: the `cards` column. */
 export const REVERSE_MIGRATION_65 = "ALTER TABLE cards DROP COLUMN attachment_json;\n";
-/** A batched project's batch gap (docs/forge.md, "The batch gap"), the newest project column, undone first. */
-export const REVERSE_PROJECT_BATCH_GAP = "ALTER TABLE repos DROP COLUMN batch_gap_minutes;\n";
+/** A project's line saying a crewmate wrote it (docs/forge.md, "Disclosing AI assistance"), the newest project column, undone first. */
+export const REVERSE_PROJECT_CONTRIBUTOR_DISCLOSURE =
+  "ALTER TABLE repos DROP COLUMN contributor_disclosure;\n";
+/** A batched project's batch gap (docs/forge.md, "The batch gap"), undone after the later disclosure line. */
+export const REVERSE_PROJECT_BATCH_GAP = `${REVERSE_PROJECT_CONTRIBUTOR_DISCLOSURE}ALTER TABLE repos DROP COLUMN batch_gap_minutes;\n`;
 /** The no-checks record, undone after the later batch gap. */
 export const REVERSE_PROJECT_NO_CHECKS = `${REVERSE_PROJECT_BATCH_GAP}ALTER TABLE repos DROP COLUMN no_checks_json;\n`;
 /** Which project each repository belongs to (INF-4220), undone after the later no-checks column and before any older project column. */

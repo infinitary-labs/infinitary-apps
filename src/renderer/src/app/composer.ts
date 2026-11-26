@@ -14,6 +14,7 @@ import { insertVoiceTranscript } from "../voice/voiceInput";
 import { heldProjectFocus } from "./projectFocus";
 import { isHeldEntry, shownEntry } from "./stack";
 import type { ShellGet, ShellSet, ShellState } from "./store";
+import { markedTakenBack, revertible } from "./takeBack";
 
 /**
  * The voice notice when a recording cannot be turned into words, worded as
@@ -50,7 +51,20 @@ export type ComposerSlice = {
    * while a newer draft is in the composer stays here rather than overwrite
    * that draft.
    */
-  lastSent: { text: string; pastes: PastedText[]; attachments: ImageAttachment[] } | null;
+  lastSent: {
+    text: string;
+    pastes: PastedText[];
+    attachments: ImageAttachment[];
+    /** The message's id once the core accepted it; absent for a send it refused. */
+    askId?: string;
+  } | null;
+  /**
+   * The message the draft replaces (docs/composer.md "Recall and a failed
+   * send"): set when Up brings back the newest message inside the take-back
+   * minute, kept while the draft is edited even past the minute, and dropped
+   * by Esc, a send or an emptied box. Its send takes that message back.
+   */
+  replacing: string | null;
   /** Monotonic counter; keystrokes kick the listening spin. */
   kick: number;
   /** Monotonic counter; each sent turn plays the character's intake. */
@@ -92,6 +106,13 @@ export type ComposerSlice = {
   setInputCaret: (caret: number) => void;
   /** Up in an empty composer: the last turn sent comes back, words and chips. */
   recallLastSent: () => void;
+  /** Esc on a replacing draft: the mark goes and the words stay. Answers whether there was one. */
+  dropReplacing: () => boolean;
+  /**
+   * Takes back the newest message while it may be (`revertible`): the core
+   * withdraws, stops or undoes it, and the round draws taken back.
+   */
+  takeBackLast: () => Promise<void>;
   /**
    * Puts words at the head of the Firstmate input and focuses it right after
    * them, for the captain to finish; what was already typed stays after them,
@@ -179,6 +200,7 @@ export function composerSlice(set: ShellSet, get: ShellGet): ComposerSlice {
     draftLead: null,
     composerNotice: null,
     lastSent: null,
+    replacing: null,
     kick: 0,
     submitted: 0,
     focusRequest: 0,
@@ -194,7 +216,14 @@ export function composerSlice(set: ShellSet, get: ShellGet): ComposerSlice {
               focusYields: options?.yields ? s.focusRequest + 1 : null,
             },
       ),
-    setInputText: (inputText) => set({ inputText }),
+    setInputText: (inputText) =>
+      set((s) => ({
+        inputText,
+        // An emptied box replaces nothing: the next words are a new message.
+        ...(s.replacing && !inputText && s.attachments.length === 0 && s.pastes.length === 0
+          ? { replacing: null }
+          : {}),
+      })),
     attachImages: (items: ImageAttachment[]) =>
       set((s) => {
         // The core refuses a turn over the cap whole, words included, so a
@@ -232,8 +261,13 @@ export function composerSlice(set: ShellSet, get: ShellGet): ComposerSlice {
           s.attachments.length === 0 &&
           !recordingIntoMain(s);
         if (!empty || !s.lastSent) return {};
-        const { text, pastes, attachments } = s.lastSent;
+        const { text, pastes, attachments, askId } = s.lastSent;
+        // Only the newest message inside the minute is replaced; a send the
+        // core refused has no id, and its recall is a new message.
+        const newest = revertible(s.lastTurn, Date.now());
+        const replacing = askId && newest?.askId === askId && !changesOff(s.thisMac) ? askId : null;
         return {
+          replacing,
           inputText: text,
           pastes,
           attachments,
@@ -242,6 +276,23 @@ export function composerSlice(set: ShellSet, get: ShellGet): ComposerSlice {
           focusCaret: { request: s.focusRequest + 1, at: text.length },
         };
       }),
+    dropReplacing: () => {
+      if (!get().replacing) return false;
+      set({ replacing: null });
+      return true;
+    },
+    takeBackLast: async () => {
+      const s = get();
+      const newest = revertible(s.lastTurn, Date.now());
+      if (!newest || changesOff(s.thisMac)) return;
+      const result = await window.infinitary.conversation.takeBack(newest.askId).catch(() => null);
+      // A refusal for a message already taken back still draws it so.
+      if (!result || (result.outcome === "refused" && result.reason !== "taken-back")) return;
+      set((now) => ({
+        lastTurn: markedTakenBack(now.lastTurn, newest.askId),
+        ...(now.replacing === newest.askId ? { replacing: null } : {}),
+      }));
+    },
     beginDraft: (text) =>
       set((s) => {
         const typed =
@@ -314,13 +365,18 @@ export function composerSlice(set: ShellSet, get: ShellGet): ComposerSlice {
         const pastCardId = entry?.pastCardId;
         // The project the window is focused on: the first mate's hint (docs/project-focus.md).
         const focusedProjectId = heldProjectFocus() ?? undefined;
+        // A plain-words send to a first mate two versions apart replaces nothing.
+        const replaces = wordsOnly ? undefined : (get().replacing ?? undefined);
+        const sent = { text: draft, pastes, attachments };
+        const roundsBefore = get().lastTurnSeq;
         set((s) => ({
           inputText: "",
           attachments: [],
           pastes: [],
           inputCaret: null,
           composerNotice: null,
-          lastSent: { text: draft, pastes, attachments },
+          lastSent: sent,
+          replacing: null,
           submitted: s.submitted + 1,
           focusRequest: s.focusRequest + 1,
         }));
@@ -329,7 +385,13 @@ export function composerSlice(set: ShellSet, get: ShellGet): ComposerSlice {
         // optional on-screen card id or task id (and any pasted images).
         const turn =
           !wordsOnly &&
-          (imgs || pastes.length || visibleCardId || taskId || pastCardId || focusedProjectId)
+          (imgs ||
+            pastes.length ||
+            visibleCardId ||
+            taskId ||
+            pastCardId ||
+            focusedProjectId ||
+            replaces)
             ? {
                 text: text || undefined,
                 ...(pastes.length
@@ -340,10 +402,19 @@ export function composerSlice(set: ShellSet, get: ShellGet): ComposerSlice {
                 taskId,
                 pastCardId,
                 focusedProjectId,
+                ...(replaces ? { replaces } : {}),
               }
             : text;
         return window.infinitary.conversation.send(turn).then(
-          () => undefined,
+          async () => {
+            // The core answers once the message is saved, and its receipt
+            // (`user_turn`) brought the message's id for Up. The last turn is
+            // read again for a receipt not seen yet, and for a replacement,
+            // whose older round only the core's answer marks taken back.
+            if (replaces || get().lastTurnSeq === roundsBefore) await get().loadLastTurn();
+            const askId = get().lastTurn?.askId;
+            if (get().lastSent === sent && askId) set({ lastSent: { ...sent, askId } });
+          },
           () => {
             // A turn the core never took. An empty composer gets it back; a
             // newer draft is never overwritten, and the turn waits in the

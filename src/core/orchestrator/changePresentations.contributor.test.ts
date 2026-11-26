@@ -1,16 +1,17 @@
+import { DEFAULT_CONTRIBUTOR_DISCLOSURE } from "@shared/contributorDisclosure";
 import type { MergeReview } from "@shared/mergeReview";
 import { describe, expect, it } from "vitest";
 import { arrange, BRANCH, HEAD, TASK } from "../../../tests/helpers/changePresentationsHarness";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { type ForgeApi, type ForgePull, forkStoryForge, parseApiRequest } from "../forge";
-import { presentationMarkdownText } from "../forge/presentation";
+import { presentationMarkdownText, presentationRegionMarkers } from "../forge/presentation";
 
 // Accepted contributor plan, piece A: preserve the contributor's words and
 // reuse the publication owner's confirmed and uncertain-write lifecycle.
 // The fixture uses the existing inspected app photographs and host comment
 // readings; the network itself is a stand-in, not a real external account.
 describe("contributor review stories", () => {
-  async function contributor(kind: "github" | "gitlab") {
+  async function contributor(kind: "github" | "gitlab", disclosure?: string) {
     const at = await arrange();
     const review: MergeReview = {
       id: "mrcontributor",
@@ -77,7 +78,7 @@ describe("contributor review stories", () => {
       },
     });
     seedDelivery(at.tasks, TASK, { checkTarget: review, mergeReviews: [review] });
-    const forge = forkStoryForge(underlying, review, TASK);
+    const forge = forkStoryForge(underlying, review, TASK, disclosure);
     await at.prepare();
     return {
       at,
@@ -97,7 +98,7 @@ describe("contributor review stories", () => {
   it.each(["github", "gitlab"] as const)(
     "publishes and reads back a %s comment, keeping the description and squash summary",
     async (kind) => {
-      const c = await contributor(kind);
+      const c = await contributor(kind, DEFAULT_CONTRIBUTOR_DISCLOSURE);
       const published = await c.publish();
       expect(c.writes).toHaveLength(1);
       expect(c.writes[0]?.method).toBe("POST");
@@ -109,12 +110,19 @@ describe("contributor review stories", () => {
       expect(c.comments[0]?.body).toContain(
         presentationMarkdownText(c.at.draft.whatChanged[0] ?? ""),
       );
-      expect(c.comments[0]?.body).toContain(`# ${presentationMarkdownText(c.at.draft.title)}`);
+      // The captain's ask: a reply to an outside contributor always says an
+      // Infinitary crewmate made it. The line opens the crew's story, above its title.
+      const { start } = presentationRegionMarkers(TASK);
+      expect(c.comments[0]?.body).toContain(
+        `${start}\n\n_Written by an Infinitary crewmate, an AI agent working for this project's maintainer._\n\n` +
+          `# ${presentationMarkdownText(c.at.draft.title)}`,
+      );
       expect(c.at.change).toEqual(c.original);
       expect(c.at.update).not.toHaveBeenCalled();
       expect(c.at.open).not.toHaveBeenCalled();
       const verified = await c.at.service.assertPublished(TASK, published, c.forge);
       expect(verified.squashMessage).toContain(c.at.draft.whatChanged[0]);
+      expect(verified.squashMessage).not.toContain("Infinitary crewmate");
       expect(verified.title).toBe(c.at.draft.title);
       // Re-publication is a read, never a duplicate comment.
       await c.publish();
@@ -129,6 +137,26 @@ describe("contributor review stories", () => {
       const afterSelection = await c.at.service.assertPublished(TASK, published, c.forge);
       expect(afterSelection.squashMessage).toBe(verified.squashMessage);
       expect(afterSelection.title).toBe(c.at.draft.title);
+    },
+  );
+  // The captain's follow-up: a project can turn the line off or write its own.
+  it.each([
+    {
+      disclosure: "_Drafted by our project's AI crew._",
+      shown: "_Drafted by our project's AI crew._",
+    },
+    { disclosure: undefined, shown: undefined },
+  ])(
+    "opens the comment with the project's own line or none: $disclosure",
+    async ({ disclosure, shown }) => {
+      const c = await contributor("github", disclosure);
+      await c.publish();
+      const { start } = presentationRegionMarkers(TASK);
+      const title = `# ${presentationMarkdownText(c.at.draft.title)}`;
+      expect(c.comments[0]?.body).toContain(
+        shown ? `${start}\n\n${shown}\n\n${title}` : `${start}\n\n${title}`,
+      );
+      expect(c.comments[0]?.body).not.toContain("Infinitary crewmate");
     },
   );
   it.each(["github", "gitlab"] as const)(

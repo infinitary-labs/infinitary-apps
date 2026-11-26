@@ -1,5 +1,5 @@
 ---
-source: d1435fbb25dfd2af
+source: 37599270c99ffda1
 title: Tareas y tripulantes
 description: Qué es una tarea, cómo pasa de pendiente a terminada, dónde seguirla y cómo orientar al tripulante que la hace.
 ---
@@ -110,6 +110,7 @@ Puedes encontrar tareas por etiqueta en tres lugares:
   Presiona una etiqueta para ver solo las tareas que la llevan, **Sin etiqueta** para las tareas que no llevan ninguna, o **Todas las etiquetas** para volver a ver todas las tareas.
 - **Agrupar tareas**, a su lado, enumera tus tareas **Por etiqueta** en lugar de **Por estado**.
   Cada etiqueta es un grupo, contraído hasta que lo abres.
+  Una tarea **Esperándote** aparece primero en el grupo de cada etiqueta que lleva, y sigue a la vista aunque ese grupo esté contraído.
 - El tablero de tareas tiene su propia fila de etiquetas, y su vista **Por etiqueta** cuenta las tareas de cada etiqueta según en qué punto están.
 
 Las etiquetas se muestran para un proyecto a la vez: el proyecto que está en el centro, o tu único proyecto con etiquetas.

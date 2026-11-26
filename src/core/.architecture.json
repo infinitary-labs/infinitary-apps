@@ -1005,7 +1005,7 @@
     {
       "from": "pi",
       "to": "runbooks",
-      "why": "serves care guidance and runbook skills"
+      "why": "serves care guidance and runbook skills, and reads a runbook's crew part for the first mate"
     },
     {
       "from": "pi",
@@ -1890,7 +1890,17 @@
     {
       "from": "usageReport",
       "to": "storage",
-      "why": "reads the ledger row's shape"
+      "why": "reads the ledger row's shape and a turn's words from its sessions"
+    },
+    {
+      "from": "usageReport",
+      "to": "observe",
+      "why": "hides keys and tokens in a turn's words"
+    },
+    {
+      "from": "usageReport",
+      "to": "tasks",
+      "why": "finds a crewmate's session files as its Crewmate tab does"
     },
     {
       "from": "usageReport",
@@ -1920,7 +1930,7 @@
     {
       "from": "usageReport",
       "to": "usage collectors",
-      "why": "sends usage in each one's format"
+      "why": "sends usage in each one's format, and the person's words to their own when they turn them on"
     }
   ],
   "machines": [

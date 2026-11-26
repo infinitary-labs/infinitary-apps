@@ -42,6 +42,12 @@ export type TradeoffRow = {
   current: boolean;
   recommended: boolean;
   /**
+   * The option's input is a checkbox, so the captain may pick several: its
+   * mark on the chart draws as a box, as the checkbox itself would, never the
+   * round ring a single pick shows.
+   */
+  multiple: boolean;
+  /**
    * Where the option's own label and control stand, and the label's words as
    * the author wrote them: the chart shows each option once, in those words,
    * and the label leaves view while its control stays the keyboard's way in.
@@ -208,6 +214,7 @@ function readTable(table: Node, root: Node, html: string): Read {
       levels,
       current: hasHook(choice.attribs, "current"),
       recommended: hasHook(choice.attribs, "recommended"),
+      multiple: (choice.attribs?.type ?? "").toLowerCase() === "checkbox",
       ...(label && written
         ? {
             placed: {
@@ -305,7 +312,7 @@ function pickAttributes(row: TradeoffRow): string {
 
 function optionWords(row: TradeoffRow, own: boolean): string {
   const shown = own && row.placed ? row.placed.words : escapeHtml(row.words);
-  return `<i data-inf-tradeoff-ring></i><span data-inf-tradeoff-words>${shown}</span>`;
+  return `<i data-inf-tradeoff-ring${row.multiple ? '="box"' : ""}></i><span data-inf-tradeoff-words>${shown}</span>`;
 }
 
 /** The radar's outer ring, in drawing units. */

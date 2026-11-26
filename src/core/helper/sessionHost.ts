@@ -22,6 +22,7 @@ import {
 } from "@shared/work";
 import {
   placedSecretAskAnswerSchema,
+  placedSecretBringAnswerSchema,
   placedSecretTakeAnswerSchema,
   placedSecretUseAnswerSchema,
 } from "@shared/workSecrets";
@@ -60,6 +61,7 @@ import {
   type ModelSession,
   type SessionBackend,
   type SessionBinding,
+  type SessionCompaction,
   type SessionEvent,
   type SessionFactories,
   type SessionRenewal,
@@ -70,6 +72,7 @@ import {
 import { bindTools, type CrewmateTool, OutcomeUnknownError } from "../session/tools";
 import { changeRecoveryCheck, sameNames } from "../session/workRecovery";
 import { HANDOVER_IN_DIR_NAME } from "../tasks/handoverFiles";
+import { type CommitName, withCommitName } from "../workspace/commitName";
 import { keepOrdered, type PersonalCopy } from "./personalCopy";
 import type { PlacedJob, PlacedTaskState, PlacedTasks } from "./placedTasks";
 import { SecretUsesThere } from "./secretUses";
@@ -183,6 +186,12 @@ export type SessionHostOptions = {
    */
   copies?: WorkingCopies;
   /**
+   * The commit name a conversation's shell carries, resolved in its working
+   * copy here as it opens (`workspace/commitName.ts`). Absent, as in tests
+   * with no real git, the shell carries none.
+   */
+  commitName?: (cwd: string) => Promise<CommitName>;
+  /**
    * This computer's task channel and its task browsers (docs/task-browser.md,
    * "On another computer"): a conversation whose task the home says has a
    * browser is given it, through `infinitary-browser-axi` in its shell, and
@@ -267,6 +276,12 @@ type Held = {
   session: ModelSession | null;
   /** Reopening the home’s side can enable the policy without interrupting this conversation. */
   speed: boolean;
+  /**
+   * The home's summary rule: its open's, then the newest a prompt carried,
+   * read at each prompt so a changed Settings choice applies at the next
+   * message (`summary-point.md`); unset keeps the app's own rule.
+   */
+  compaction?: SessionCompaction | undefined;
   backend: SessionBackend | null;
   /** The version of the home's personal set the open conversation read, when it read one. */
   personal?: PersonalVersion | undefined;
@@ -652,6 +667,7 @@ export class SessionHost {
       }
       case "inf:session:prompt": {
         const [prompt] = request as WorkOrderRequest<"inf:session:prompt">;
+        if (prompt.compaction) held.compaction = prompt.compaction;
         answer = this.prompt(held, prompt.orderId, prompt.text, prompt.images);
         break;
       }
@@ -788,6 +804,7 @@ export class SessionHost {
     const sourceFacts = sourceContext(await this.options.source?.(), spec.homeSource);
     if (this.stopped) throw new Error("This computer is stopping.");
     held.speed = spec.speed === true;
+    held.compaction = spec.compaction;
     if (held.opening) await held.opening;
     if (held.session) {
       // An idle conversation whose named tools, instructions or model
@@ -907,7 +924,11 @@ export class SessionHost {
         ...(personal ? { personalRoot: personal.root } : {}),
         builtins: "coding",
         tools,
-        ...(granted ? { shell: granted.shell } : {}),
+        ...(this.options.commitName
+          ? { shell: withCommitName(granted?.shell, await this.options.commitName(folders.work)) }
+          : granted
+            ? { shell: granted.shell }
+            : {}),
         shape: {
           turns: "rolling",
           record: {
@@ -918,7 +939,7 @@ export class SessionHost {
           },
         },
         bounds: { request: { retries: spec.retries ?? RETRIES } },
-        compaction: SESSION_COMPACTION,
+        compaction: () => held.compaction ?? SESSION_COMPACTION,
       };
       const session = await factory.open(sessionSpec);
       // An open that fails once its conversation began lets it go, and says
@@ -1331,6 +1352,15 @@ export class SessionHost {
             )
         : undefined,
       listsChange(this.options.homeChanges?.() ?? null, SECRET_ASK_HOW),
+    );
+    // Its brings from another tool here, kept by the home's Secrets, while the home takes them.
+    uses.offerBrings(
+      spec.secretBrings
+        ? async (input) =>
+            placedSecretBringAnswerSchema.parse(
+              await this.call(held, "inf:work:secret-bring", { callId: randomUUID(), input }),
+            )
+        : undefined,
     );
     return uses;
   }

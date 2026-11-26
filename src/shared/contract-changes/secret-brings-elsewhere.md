@@ -1,0 +1,3 @@
+A computer that runs work may bring secrets from another tool there into the home's Secrets for its task, through one new work request, `inf:work:secret-bring`.
+It sends the source it bound there, names and a reason, and the home raises its own bring card naming that computer; on the captain's press the computer runs or reads the source once and sends only the values the captain ticked, once.
+A placed task's spec gains the optional `secretBrings`, which the home sends only to a computer that lists this change; without it, that computer's command answers a bring as not offered there, as before.

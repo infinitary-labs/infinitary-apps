@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "attachment-reads-ordinary-task",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "Reading an email's attachment starts a task that can open it",
+      "body": "When you ask your first mate to read files attached to an email, it now starts a task that can open them, instead of one that reads only the email's text. If such a task still meets an attachment, it says the file needs another task, not that a setting is off.",
+      "noPicture": "This changes which task the first mate starts and what a crewmate says, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

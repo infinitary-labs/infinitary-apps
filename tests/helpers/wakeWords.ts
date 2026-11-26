@@ -86,7 +86,8 @@ export type FirstmateWakeKind =
   | "captain-turn"
   | "answer-missing"
   | "model-unasked"
-  | "seat-moved";
+  | "seat-moved"
+  | "taken-back";
 
 /**
  * The first mate's kinds each wake family words, read from the family's own

@@ -5,6 +5,7 @@ import { TaskService } from "../tasks/taskService";
 import { actionTookEffect, noticeAskId } from "./answerDelivery";
 import { answerTaskChoice } from "./answerTaskResponse";
 import { hasMergeLine } from "./settleWords";
+import { TAKEN_BACK_NAMED } from "./takeBack";
 
 /**
  * How a captain's message ends (INF-1610 piece 2, docs/task-capture.md "How
@@ -38,6 +39,11 @@ export type AskEndingHost = {
    * mate (`InboxStore.requestOpen`). Absent, none waits.
    */
   requestOpen?: (requestId: string) => "pending" | "unread" | undefined;
+  /**
+   * The card whose thread holds a request's answer, when its crewmate wrote
+   * the answer there as a response (`InboxStore.answeredLine`). Absent, none.
+   */
+  answeredOn?: (requestId: string) => string | undefined;
 };
 
 /** One message's thread: the message and the work it caused. */
@@ -124,6 +130,7 @@ export function askEndingOf(
     seenCards(taskId: string): readonly { cardId: string; at: number }[];
   },
   requestOpen?: (requestId: string) => "pending" | "unread" | undefined,
+  answeredOn?: (requestId: string) => string | undefined,
 ): AskEnding {
   return new AskEnding({
     tasks,
@@ -132,6 +139,7 @@ export function askEndingOf(
     shownAt: (card) => cards.shownAt(card),
     seenCards: (taskId) => cards.seenCards(taskId),
     ...(requestOpen ? { requestOpen } : {}),
+    ...(answeredOn ? { answeredOn } : {}),
   });
 }
 
@@ -167,6 +175,7 @@ export class AskEnding {
   nameRefusal(askId: string): string | undefined {
     const ask = this.host.tasks.capture.getAsk(askId);
     if (!ask) return "ask_id must name an open message (open_asks id), or be empty.";
+    if (ask.takenBackAt !== undefined) return TAKEN_BACK_NAMED;
     if (ask.turnState === "open") {
       return "ask_id must name a message a step has read; this one waits for its own step.";
     }
@@ -357,6 +366,10 @@ export class AskEnding {
     if (waiting) return { kind: "waiting", cardId: waiting.id };
     const seen = this.seenAnswer(thread);
     if (seen) return { kind: "accepted", cardId: seen.id };
+    // A crewmate's answer to a question passed on for the message, written
+    // in a card's thread where the captain reads it (INF-6769).
+    const relayed = this.answeredOn(thread);
+    if (relayed) return { kind: "accepted", cardId: relayed };
     const entries = ask.deliveryFacts.entries;
     // The first mate's answer in a card's thread: its closing words under the
     // card the message replied under, or its line alone on someone else's card.
@@ -373,6 +386,17 @@ export class AskEnding {
     );
     if (reacted) return { kind: "accepted", cardId: null };
     return { kind: "missing" };
+  }
+
+  /** The card whose thread holds the newest answer to a request asked for the message. */
+  private answeredOn(thread: AskThread): string | undefined {
+    const answeredOn = this.host.answeredOn;
+    if (!answeredOn) return undefined;
+    for (const { requestId } of [...(thread.requests ?? [])].reverse()) {
+      const cardId = answeredOn(requestId);
+      if (cardId) return cardId;
+    }
+    return undefined;
   }
 
   /**

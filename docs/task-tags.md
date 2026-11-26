@@ -83,9 +83,9 @@ With no project in focus, other projects' tasks count and list under No tag.
   The tag row is one Tab stop: ← and → move along it, and Enter or Space presses.
 - **Group tasks.**
   Tasks' third header button, drawn while the panel is open, opens a menu of By status (the default) and By tag; the choice is kept in the panel's store across restarts.
-  By tag lists Pinned, Waiting on you, one group per tag that has tasks, No tag, then Done · 7d (`tagGroupsOf`).
-  Tag groups start folded and keep each fold; inside one, rows run working, queued, then backlog and read as in their own groups, and a task with two tags lists under both.
-  A folded tag group draws a bar of one segment per task, working ones in ember, that rests and presses as a folded parent task's bar does (`tagGroupBarOf`).
+  By tag lists Pinned, one group per tag that has tasks, No tag, then Done · 7d (`byTagGroupsOf`, `tagGroupsOf`); it has no Waiting on you group.
+  Tag groups start folded and keep each fold; inside one, rows run waiting on you, working, queued, then backlog and read as in their own groups, and a task with two tags lists under both.
+  A folded tag group draws a bar of one segment per task, waiting on you in blue and working in ember, that rests and presses as a folded parent task's bar does (`tagGroupBarOf`), and still lists its rows waiting on you under the bar (`foldedTagRowsOf`).
   While a tag is pressed only its group shows, open; where no tags apply, By tag is dim with a line saying why and the list stays by status.
 - **The task board.**
   Its own tag row and By tag view (`docs/task-board.md`).

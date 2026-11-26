@@ -95,7 +95,7 @@ export const SECRET_BRING_WORDS = {
     "Infinitary's own card asks the captain to bring them. End the turn: what was kept, by name and reference, reaches this task once through its inbox. You never receive a value.",
   notOffered:
     "Secrets is not offered on this computer, so nothing was asked. Say so in your report.",
-  /** A task on a computer that runs work: its command has no bring yet. */
+  /** A task on a computer that runs work whose app or home cannot carry a bring (no `secret-brings-elsewhere`). */
   notHere:
     "Bringing secrets is offered only to a task on the computer that keeps them, so nothing was asked. Name the tool and the secrets in your report so the first mate can start a task there.",
   cannotRead:
@@ -120,6 +120,17 @@ export const SECRET_BRING_WORDS = {
   unlockFailed:
     "The unlock run did not finish, so nothing was kept. The program output was not kept.",
   tooLarge: "The tool printed more than 8 MB, so it was stopped and nothing was kept.",
+  /** A bring from a computer that runs work asks nothing that hands kept keys to a program there. */
+  // i18n-exempt: served to the asking agent, which reads English
+  usesNotThere:
+    "Unlock keys (uses) are handed only to a program on the computer that keeps Secrets, so nothing was asked. Bring without uses, or name the tool and the secrets in your report so the first mate can start a task there.",
+  /** The computer that runs work did not run the source and send what it read within the bring's lifetime. */
+  // i18n-exempt: served to the asking agent, which reads English
+  unreached:
+    "The computer that runs this task did not send what it read in time, so nothing was kept.",
   cancelled: "The asker withdrew it.",
   closed: "The task that asked has closed.",
+  /** Its conversation on that computer closed or restarted before the press. */
+  // i18n-exempt: served to the asking agent, which reads English
+  gone: "This task's conversation on its computer ended, so nothing was kept.",
 } as const;

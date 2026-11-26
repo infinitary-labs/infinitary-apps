@@ -711,6 +711,8 @@
 "commandMessageDeleteWordBefore" = "刪除游標前的字詞";
 "commandMessagePutBackDeleted" = "復原上次刪除的內容";
 "commandMessageRecall" = "叫回上一則送出的訊息";
+"commandMessageTakeBack" = "撤回你的上一則訊息";
+"commandMessageTakeBackWords" = "撤回, 復原, 取消傳送, 訊息";
 "commandMoveDown" = "向下移動";
 "commandMoveDownWords" = "方向鍵, 下, 下一個";
 "commandMoveFirst" = "移到開頭";
@@ -819,6 +821,9 @@
 "composerFolderNotProject" = "無法將該資料夾加入為專案。";
 "composerFolderProject" = "該資料夾已經是你的專案了。";
 "composerHintFeedback" = "%1$@：向 Infinitary 的開發者回報問題或提出想法";
+"composerHintReplaces" = "取代 ·";
+"composerHintSendsAsNew" = "作為新訊息送出";
+"composerReplacesLast" = "取代你的上一則訊息";
 "composerTooLongShorten" = "太長了，無法傳送。請先縮短。";
 "composerWordsOnly" = "在 Infinitary 更新之前只能傳送文字。請移除圖片和檔案後再傳送。";
 "crewAPart" = "一個部分";
@@ -1733,6 +1738,7 @@
 "panelChangeShowInDock" = "在 Dock 中顯示";
 "panelChangeShowWhatsNew" = "顯示新功能";
 "panelChangeStartAtLogin" = "登入時啟動";
+"panelChangeSummaryPoint" = "長對話何時摘要";
 "panelChangeTheme" = "主題";
 "panelChangeUpdateChannel" = "接收哪些更新";
 "panelChangeUpdateCheck" = "檢查更新";
@@ -2526,6 +2532,7 @@
 "refuseNoCardIsShown" = "目前沒有顯示卡片";
 "refuseNoCardIsShownOrPutAside" = "目前沒有顯示或放到一旁的卡片";
 "refuseNoCardThreadIsReadAboveIts" = "沒有卡片討論串停在最新訊息之前";
+"refuseNoMessageToRevert" = "沒有可撤回的訊息：已超過一分鐘或已經撤回";
 "refuseNoOtherCardIsNew" = "沒有其他新卡片";
 "refuseNoPageToPointAt" = "沒有可指向的頁面";
 "refuseNoPictureIsOpen" = "請先開啟卡片中的圖片";
@@ -2758,6 +2765,7 @@
 "settingsAppearanceWashDescription" = "主題顏色覆蓋模糊背景的程度。預設為 0%%。";
 "settingsAppearanceWashValue" = "%1$@%% 不透明度";
 "settingsAutomationBack" = "返回";
+"settingsAutomationBroughtNote" = "隨 Heartbeat 作業手冊提供。若要變更或移除，請在設定的作業手冊中關閉該手冊。";
 "settingsAutomationCancelCleared" = "你的大副讀到這則之前，它的對話已被清除。";
 "settingsAutomationCancelEdited" = "在你的大副讀到之前已收回，因為這項自動化已變更。";
 "settingsAutomationCancelPaused" = "在你的大副讀到之前已收回，因為這項自動化已暫停。";
@@ -3568,6 +3576,10 @@
 "settingsProjectsDeliveryNoBatch" = "在專案所在處以 pull request 提出，或不經 pull request 本機合併。";
 "settingsProjectsDeliveryTitle" = "變更去向";
 "settingsProjectsDetailsLabel" = "詳細資料";
+"settingsProjectsDisclosure" = "說明 AI 協助";
+"settingsProjectsDisclosureLine" = "說明行";
+"settingsProjectsDisclosureOff" = "船員審閱他人在此專案中開啟的 pull request 時，所發留言不會說明有 AI 協助撰寫。";
+"settingsProjectsDisclosureOn" = "船員審閱他人在此專案中開啟的 pull request 時，所發留言以這一行開頭。";
 "settingsProjectsEmpty" = "還沒有專案。在下方加入一個，或告訴你的大副要處理哪個專案。";
 "settingsProjectsFolder" = "資料夾";
 "settingsProjectsFolderCancel" = "取消";
@@ -3906,6 +3918,17 @@
 "settingsSubscriptionsSignedOutHoldLabel" = "已暫停";
 "settingsSubscriptionsSignedOutHoldText" = "工作已暫停，直到你重新登入。";
 "settingsSubscriptionsStale" = "已過時";
+"settingsSummaryPointAutomatic" = "自動";
+"settingsSummaryPointDescriptionAutomatic" = "你的大副和船員會在對話達到 %1$@ 個 token 時摘要；若模型在更低的位置開始加價，就提早摘要。";
+"settingsSummaryPointDescriptionModelLimit" = "你的大副和船員只在接近各模型本身的上限時才摘要對話，可能多達一百萬個 token。";
+"settingsSummaryPointDescriptionTokens" = "你的大副和船員會在對話達到 %1$@ 個 token 時摘要；若模型本身的上限更小，就在其上限處摘要。";
+"settingsSummaryPointDescriptionUnread" = "你的大副和船員會摘要長對話，讓花費更少、也放得進模型。";
+"settingsSummaryPointModelLimit" = "各模型本身的上限";
+"settingsSummaryPointSaveFailed" = "無法儲存長對話的摘要位置。請再試一次。";
+"settingsSummaryPointStep" = "%1$@ 超過 %2$@";
+"settingsSummaryPointSteps" = "以下情況每次請求更貴：%1$@。";
+"settingsSummaryPointTitle" = "長對話在此處摘要";
+"settingsSummaryPointTokens" = "%1$@ 個 token";
 "settingsTakeOverAfter" = "如果 %1$@ 回來，它會停下，改為保留一份副本。";
 "settingsTakeOverAsk" = "要作為大副的電腦接手嗎？通過 Touch ID 或密碼後，大副會在這裡從這份副本開始。";
 "settingsTakeOverAskWindows" = "要作為大副的電腦接手嗎？通過 Windows Hello 或 Windows 密碼後，大副會在這裡從這份副本開始。";
@@ -3935,6 +3958,7 @@
 "settingsUsageConnectionAddressHint" = "該工具透過 HTTP 接收 OpenTelemetry 的位址。每種記錄會送往它底下各自的路徑。";
 "settingsUsageConnectionCancel" = "取消";
 "settingsUsageConnectionClaudeCode" = "以 Claude Code 的格式把船員的用量傳送到 %1$@：模型、token 和預估費用，絕不包含提示或回覆。";
+"settingsUsageConnectionClaudeCodeWords" = "以 Claude Code 的格式把船員的用量傳送到 %1$@：模型、token 和預估費用，並包含提示和回覆。";
 "settingsUsageConnectionEdit" = "編輯";
 "settingsUsageConnectionEmailLine" = "如果這台電腦登入了 Claude Code，每筆記錄都會帶上該登入的電子郵件，讓依人檢視的畫面計入你的工作。";
 "settingsUsageConnectionFailed" = "無法儲存連線。請再試一次。";
@@ -3967,10 +3991,13 @@
 "settingsUsageConnectionSaveLine" = "儲存後，船員的用量會開始傳送到這個位址。";
 "settingsUsageConnectionSecretLabel" = "用量報告：%1$@";
 "settingsUsageConnectionStandard" = "以 OpenTelemetry 標準格式把船員的用量傳送到 %1$@：時間、模型、token 和預估費用，絕不包含提示或回覆。";
+"settingsUsageConnectionStandardWords" = "以 OpenTelemetry 標準格式把船員的用量傳送到 %1$@：時間、模型、token 和預估費用，並包含提示和回覆。";
 "settingsUsageConnectionTitle" = "用量回報";
 "settingsUsageConnectionUseOperation" = "將船員的用量傳送到 %1$@";
 "settingsUsageConnectionUseReason" = "Infinitary 依你的報告連線，將船員的用量傳送到 %1$@。";
 "settingsUsageConnectionUseResult" = "工具對每批資料的回應";
+"settingsUsageConnectionWords" = "同時傳送提示和回覆";
+"settingsUsageConnectionWordsHint" = "加上船員收到的提示、它的回覆以及交給工具的內容。Infinitary 辨識出的金鑰和密碼會先被隱藏。";
 "settingsUsageCostAllKinds" = "所有類型";
 "settingsUsageCostAllProjects" = "所有專案";
 "settingsUsageCostChange" = "變化";
@@ -4181,6 +4208,7 @@
 "shellConversationCards" = "卡片";
 "shellConversationChose" = "選擇了「%1$@」";
 "shellConversationCrewmate" = "船員";
+"shellConversationEdited" = "已編輯";
 "shellConversationEmpty" = "這裡還沒有內容。你傳的訊息和回答過的卡片會顯示在這裡。";
 "shellConversationEverything" = "全部";
 "shellConversationHeading" = "對話";
@@ -4227,6 +4255,9 @@
 "shellKeyReminderNotTyping" = "沒在打字時";
 "shellLastTurnFromCommand" = "來自 %1$@";
 "shellLastTurnPictureOnly" = "一張圖片";
+"shellLastTurnRevert" = "撤回你的上一則訊息";
+"shellLastTurnReverted" = "已撤回";
+"shellLastTurnRevertedUnread" = "在你的大副讀到之前已撤回";
 "shellLastTurnWorking" = "處理中…";
 "shellMainMessageConnectFirst" = "請先連結一個訂閱方案";
 "shellMainMessagePickingKey" = "設定正在等待聽寫按鍵";

@@ -91,14 +91,14 @@ The wall clock (`DECIDE_TIMEOUT_MS`, 15 s) bounds the WHOLE call - creating the 
 
 **The native model** (`JevDecisionModel`) serves the typed question as its API.
 TypeSafe's Jev is the direct-key catalog row.
-Both direct TypeSafe and OpenRouter choice models delegate serialization, reply parsing and cost multiplication to Pi through `src/core/pi/decisionModels.ts`.
+Both direct TypeSafe and provider choice models delegate serialization, reply parsing and cost multiplication to Pi through `src/core/pi/decisionModels.ts`.
 The direct path supplies its private key only to the existing bounded transport; Pi receives an availability marker and no ambient environment.
 TypeSafe requires Pi's complete choice replies (type, choice, probabilities and confidence); one malformed answer rejects the whole batch and uses the existing fallback.
 Unsupported categorical-score questions fail explicitly rather than translating to Pi's numeric-score contract.
 The approved TypeSafe input rate remains $0.042 per million as model configuration because Pi's bundled entry lists zero.
 A shared bounded metadata observer retains served-model attribution and reported cost/count presence without parsing answers itself.
 Missing usage remains missing, not measured zero.
-OpenRouter choice models are offered separately through Pi (below).
+Choice models from a signed-in provider are offered separately through Pi ("Decision models from a provider").
 Four rules the client keeps:
 
 - one bounded request (15 s, the caller's own cancel, a 64 KB body cap checked before anything is parsed, transport failures named in our own vocabulary - the quota sensor's proven posture, reused verbatim).
@@ -123,7 +123,7 @@ Six rules, from design section 6.
    Infinitary does read it to place it in a header, which is the quota sensor's existing posture for API keys, and this document says so rather than pretending otherwise.
    The D-13 purge does not touch it; "Remove Jev" does.
 4. **Consent says what leaves.**
-   `decisionConsent()` and `openRouterDecisionConsent()` in `src/shared/decisions.ts` write the three rows of the approval screen: Shared, Your choice and Cost.
+   `decisionConsent()` and `providerDecisionConsent()` in `src/shared/decisions.ts` write the three rows of the approval screen: Shared, Your choice and Cost.
    A decision model is treated like the person's other models: Shared says the listed uses send it what they need, which can include their words and code, and makes no promise to leave code, transcripts or files out.
    The egress entry's `consentedVersion` records which approval screen the person saw: `DECISION_FIRST_APPROVAL_VERSION` (1) for the first screen, which described task classification's facts alone, and `DECISION_APPROVAL_VERSION` (2) for this one, which covers every listed use.
    A use whose `approval` is newer than the recorded one stays off until the person allows it once in the consent dialog, which raises the record to the current screen; model selection, a re-pick or a native failure never raises it.
@@ -139,7 +139,7 @@ Six rules, from design section 6.
 
 What this does NOT do: no proxy, no Infinitary-held key, no decision catalog fetch from the vendor (the alias is pinned in code and the response's own `model` field is what gets recorded), and no telemetry about decisions.
 Every approval is asked in the one consent dialog (`ConsentDialog`, design skill `components/core/ConsentDialog.prompt.md`), with every row visible before the act.
-Choosing an OpenRouter model the person has not approved opens the dialog over the list; Not now or Escape returns to the list without approving anything.
+Choosing a provider's model the person has not approved opens the dialog over the list; Not now or Escape returns to the list without approving anything.
 
 `INFINITARY_JEV_URL` redirects the endpoint in dev/e2e only, exactly like `INFINITARY_CLAUDE_USAGE_URL`; a packaged build ignores it.
 
@@ -159,7 +159,7 @@ Task classification shows on and locked, with the note "Always on: Infinitary ne
 A use the answering model's older approval predates shows off with the hint "Turning it on asks your OK for Jev once."; turning it on opens the consent dialog, and Allow approves the current screen and turns it on.
 An older home sends no `uses`, so the list is not drawn and only the row shows.
 
-The board's header line grows one token: `· decisions auto` or `· decisions Jev` (or the selected OpenRouter decision model, or the pinned model's name).
+The board's header line grows one token: `· decisions auto` or `· decisions Jev` (or the selected provider decision model, or the pinned model's name).
 A pick that cannot answer reads `· decisions auto` while the walk answers for it, and `· decisions unanswered` while nothing does.
 
 Five IPC channels, all `surface: "core"`, and the split between them is the point - the ROW travels on the first pair and carries no secret, the KEY has its own write-only call, and no call returns one:
@@ -180,7 +180,7 @@ Each entry has a kind:
 - `needs-ok`: off until the person agrees to its own disclosure in the consent dialog, once (the event screen and the reader check, below).
 
 The person's switches are their own settings row, `decision-uses`, holding only the uses they switched.
-`DecisionModels.decide` refuses a use that is off, or that the answering Jev or OpenRouter approval predates, with the question's abstention and the reason `use-off`; the person's own models never answer in that model's place.
+`DecisionModels.decide` refuses a use that is off, or that the answering Jev or provider approval predates, with the question's abstention and the reason `use-off`; the person's own models never answer in that model's place.
 Eight uses are listed:
 
 - `kind`, task classification ("The first consumer").
@@ -211,6 +211,9 @@ Adding a second consumer is adding a question.
 
 `pnpm score:kinds --decision-model jev --models <models.json> --provider <p> --model <m>` scores the native model over the same 31 hand labels as the adapter, with `--provider`/`--model` as the fallback the service uses when it cannot answer.
 The key is read from `TYPESAFE_API_KEY` for that offline run only and is never written anywhere; the app itself reads only the user's own stored key.
+`pnpm score:kinds --cases <cases.jsonl> --decision-model <provider>:<model> --decision-key-env <NAME>` scores a provider's decision model the same way, through the code Decisions uses, with the provider's key read from that variable into the runtime's memory only.
+Without `--provider` and `--model` no fallback answers, so a row the model cannot answer reads as failed and nothing else is spent; the report's `answered_by_decision_model` counts the rows the model answered itself.
+`INFINITARY_DECISIONS_BASE_URL` points that run at a stand-in.
 The scorer sits behind Observe's development gate like the other offline tools.
 
 `pnpm score:computers --cases <cases.jsonl> --decision-model jev --models <models.json> --provider <p> --model <m>` scores the computer question the same way, over labeled cases of a task, its standing directions and its computers' facts, and reports accuracy overall, by scenario, by what the task delivers and by expected answer; `--split dev` or `--split test` keeps wording work on one split and measures it on the other.
@@ -325,32 +328,29 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
   `tests/e2e/decision-models.spec.ts` is the binding test and `pnpm score:kinds --decision-model jev` scores it.
   S7c asked whether a decision model should pre-sort supervision; the captain answered no (C7 A) - it shipped as the whose-turn rule, with no `decide()` in the report path at all.
 
-## OpenRouter decision models (FI3-505)
+## Decision models from a provider
 
-Settings → Intelligence → Models → Decisions offers **Use an OpenRouter decision model** only while an enabled OpenRouter account is signed in (by browser sign-in or API key).
-The picker lists choice-capable models from Pi's classifier catalog with maker and dollars per million input tokens; output is free.
+Settings → Intelligence → Models → Decisions offers **Use a decision model from** a provider for each enabled, signed-in account of that provider whose Pi catalog lists a choice-capable decision model.
+Today that is OpenRouter (FI3-505) and OpenCode Go.
+The picker lists the provider's choice-capable models from Pi's classifier catalog with maker and dollars per million input tokens; output is free.
 These classifiers never appear in the chat model board or "Use a specific model".
 TypeSafe Jev and its separate key form remain.
 
-The accepted direction A uses `ModelRuntime.classify()` behind `src/core/pi/decisionModels.ts`, with the account selected by the same `AccountSelector` as work.
+The accepted direction A uses `ModelRuntime.classify()` behind `src/core/pi/decisionModels.ts` (`classifyWithProvider`), with the account selected by the same `AccountSelector` as work.
 Pi owns and resolves that account's credential; the app neither reads it nor adds a second transport.
-The address is `https://openrouter.ai/api/v1/systemone`, OpenRouter's System One equivalent of its alpha Decisions API.
-GPT-6 Luna Decisions arrives with Pi 1.1.0, so the Pi packages are pinned to 1.1.0.
-
-The current Pi 1.1.0 catalog offers seven decision models: Jev 1.13, Jev latest, Kev 4B, Solar Decide, Mercury Decide (free), Tev1 4B Experimental and OpenAI's GPT-6 Luna Decisions.
-GPT-6 Luna Decisions uses the same setup, consent, account, usage and fallback as the others, with no key field.
+The catalog's classifier type alone does not say which question types a model accepts, so `CHOICE_MODELS` keeps the established choice-capable IDs per provider, with each model's maker, intersected with Pi's catalog.
+A model joins `CHOICE_MODELS` only after `pnpm score:kinds` shows it answers the six-way kind-of-work choice itself ("Scoring it").
 Span's three yes/no-only models and unknown choice capabilities are excluded.
-The catalog's classifier type alone does not say which question types a model accepts, so the seam keeps the established choice-capable IDs, intersected with Pi's catalog.
-Liquid D1 is not currently in that catalog.
 
-The first selection opens the consent dialog naming OpenRouter and the maker, the same bounded facts, the paying account and fail-soft fallback.
-**Turn on** persists `{ kind: "openrouter", model }` and the current approval screen.
-Later model changes keep the existing approval; choosing a model never raises an older approval.
+The first selection opens the consent dialog naming the model, its maker, the provider and the cost (`providerDecisionConsent()`): a subscription's call counts against its allowance at the model's list price, and an account with an API key pays that price.
+**Turn on** persists `{ kind: "provider", provider, model }` and the current approval screen in the provider's own egress entry, so each provider has its own approval.
+A saved `{ kind: "openrouter", model }`, which earlier versions wrote, is read as provider `openrouter`, and the next write saves it in the new shape (`currentDecisions()`).
+Later model changes within a provider keep its approval; choosing a model never raises an older approval.
 Returning to auto preserves consent and the pick may be restored without a second note.
-Signing out hides the choice and uses the adapter; signing in restores it.
+Signing out hides the provider's choice and uses the adapter; signing in restores it.
 A fresh installation has neither pick nor consent and sends no decision call.
 
-`OpenRouterDecisionModel` withholds the abstention and requires a recognized choice plus a finite confidence in [0, 1].
+`ProviderDecisionModel` withholds the abstention and requires a recognized choice plus a finite confidence in [0, 1].
 Below 0.6 it returns the consumer's abstention; missing confidence, malformed answers, errors, no credit and rate limits use the existing adapter fallback, with the reason in the task record, never a card.
 Runtime construction and the request together are bounded to 15 seconds and honor caller cancellation.
 A reply past 64 KB, an answer or a refusal, is `oversized` and the adapter answers, as for Jev.
@@ -360,18 +360,32 @@ Retries are disabled.
 Only a 401 asks the vault's existing credential owner to renew; 402/403/429 do not.
 The account's normal health surface remains the sign-in authority.
 
-Usage is recorded against the selected account and task under `openrouter`, with Pi's input and output counts, named by the model the reply says answered (`model_source = 'served'`) and priced at the cost the reply states (`cost_source = 'reported'`).
+Usage is recorded against the selected account and task under the provider, with Pi's input and output counts, named by the model the reply says answered (`model_source = 'served'`) and priced at the cost the reply states (`cost_source = 'reported'`).
 An alias answers as a dated model: `~typesafe/jev-latest` is recorded as, for example, `typesafe/jev-1.13-20260917`.
-Pi's classify result keeps the requested model ID and prices the tokens from its catalog, so `classifyOpenRouter` reads the reply's `model` and `usage.cost` from the same bounded bytes its request callback hands Pi.
+Pi's classify result keeps the requested model ID and prices the tokens from its catalog, so `classifyWithProvider` reads the reply's `model` and `usage.cost` from the same bounded bytes its request callback hands Pi.
 It never reads the request or its credential and sends nothing more: no second transport and no Pi change.
 A reply that names no model is recorded under the pick (`requested`), and one that states no cost at Pi's catalog estimate (`listed-prices`).
 The answer's source on the task names the served model as well (`classifier:openrouter/typesafe/jev-1.13-20260917`), while the row's last answer stays with the pick.
 Certainty remains free prose, not a new field on `DecisionAnswer`.
-The kind-of-work question is not the only consumer: every listed use reaches OpenRouter the same way ("The uses").
+The kind-of-work question is not the only consumer: every listed use reaches the provider the same way ("The uses").
 
+A view from before the `decision-providers` contract change reads the Decisions view strictly, so the home answers it in the shape it knows (`decisionsViewBeforeProviders`): OpenRouter's row and pick as `openrouter`, and another provider's pick as auto.
+Hermetic tests use a stand-in System One server and fake account credentials, never a real provider sign-in.
+
+### OpenRouter
+
+The address is `https://openrouter.ai/api/v1/systemone`, OpenRouter's System One equivalent of its alpha Decisions API.
+The Pi 1.5.0 catalog offers seven decision models there: Jev 1.13, Jev latest, Kev 4B, Solar Decide, Mercury Decide (free), Tev1 4B Experimental and OpenAI's GPT-6 Luna Decisions.
+Liquid D1 is not currently in that catalog.
 `INFINITARY_OPENROUTER_DECISIONS_BASE_URL` redirects only this classifier's request address inside Pi's request callback in unpackaged dev/e2e runs; packaged builds ignore it.
-Hermetic tests use a stand-in System One server and fake account credentials, never a real OpenRouter login.
-Live paid-model accuracy and optional-confidence compatibility remain unscored.
+
+### OpenCode Go
+
+OpenCode Go serves decision models at `https://opencode.ai/inference/go/systemone/v1` under the same Go key as its chat models, and each call counts against the Go allowance at list price.
+Pi 1.5.0 lists none for its opencode-go provider, so `src/core/pi/openCodeGoDecisions.ts` wraps that provider the way Amazon Bedrock's is wrapped: it adds Jev 1.14 ($0.042 per million input tokens), GPT-6 Luna Decision and Gemini Decision 1 (each $0.10), as OpenCode's own model list names and prices them, and the System One call.
+The wrap steps aside as soon as Pi's own provider lists a classifier, and is deleted with the Pi update that lists them.
+Of those three, Decisions offers only the ones `CHOICE_MODELS` admits.
+`INFINITARY_OPENCODE_GO_DECISIONS_BASE_URL` redirects Go's decision address in unpackaged dev/e2e runs, and the e2e launcher points it at a closed port so no journey reaches OpenCode.
 
 ### Learned charge facts
 

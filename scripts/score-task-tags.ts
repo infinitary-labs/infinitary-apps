@@ -21,7 +21,7 @@
  *   pnpm score:tags --models <models.json> --provider <p> --model <m> --api-key-env <NAME> --out a.json
  *   pnpm score:tags --claude claude-haiku-5-5 --out claude.json
  *   pnpm score:tags --decision-model jev --out jev.json            # TYPESAFE_API_KEY
- *   pnpm score:tags --decision-model openrouter:<id> --api-key-env <NAME> --out or.json
+ *   pnpm score:tags --decision-model <provider>:<id> --api-key-env <NAME> --out p.json
  */
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -53,7 +53,8 @@ const USAGE = `Usage: score-task-tags [options]
                       is set on the runtime in memory and never touches disk or argv
   --decision-model <id>
                       score a native decision model instead of a chat model:
-                      jev (key from TYPESAFE_API_KEY) or openrouter:<model id>
+                      jev (key from TYPESAFE_API_KEY) or <provider>:<model id>,
+                      such as openrouter:typesafe/jev-1.13 or opencode-go:jev-1.14
                       (key from --api-key-env)
   --limit <n>         score only the first n rows
   --concurrency <n>   tasks asked at once (default 4)
@@ -411,8 +412,11 @@ async function main(): Promise<number> {
     }
 
     const nativeId = args.decisionModel;
-    const openRouterPick = nativeId?.startsWith("openrouter:") ? nativeId.slice("openrouter:".length) : undefined;
-    if (nativeId && nativeId !== "jev" && !openRouterPick) throw new Error(`Unknown decision model ${nativeId}`);
+    const providerPick =
+      nativeId && nativeId !== "jev" && nativeId.includes(":")
+        ? { provider: nativeId.slice(0, nativeId.indexOf(":")), model: nativeId.slice(nativeId.indexOf(":") + 1) }
+        : undefined;
+    if (nativeId && nativeId !== "jev" && !providerPick) throw new Error(`Unknown decision model ${nativeId}`);
     if (!nativeId && !args.claude && (!args.provider || !args.model || !args.models)) {
       process.stderr.write("A chat model's scored run needs --claude, or --models, --provider and --model.\n");
       return 2;
@@ -432,7 +436,7 @@ async function main(): Promise<number> {
     const { DECISION_MODEL_CATALOG } = await runner.import<typeof import("../src/shared/decisions.ts")>(
       "/src/shared/decisions.ts",
     );
-    const { classifyTypeSafe, classifyOpenRouter } = await runner.import<
+    const { classifyTypeSafe, classifyWithProvider } = await runner.import<
       typeof import("../src/core/pi/decisionModels.ts")
     >("/src/core/pi/decisionModels.ts");
     const { createQuotaHttp } = await runner.import<typeof import("../src/core/quota/http.ts")>(
@@ -497,28 +501,29 @@ async function main(): Promise<number> {
             http,
           }),
         );
-    } else if (openRouterPick) {
-      if (!args.apiKeyEnv) throw new Error("--decision-model openrouter:<id> needs --api-key-env.");
+    } else if (providerPick) {
+      if (!args.apiKeyEnv) throw new Error("--decision-model <provider>:<id> needs --api-key-env.");
       const runtime = await createModelRuntime({
         authPath: join(home, "auth.json"),
         modelsPath: args.models ?? join(home, "models.json"),
       });
-      await runtime.setRuntimeApiKey("openrouter", keyFrom(args.apiKeyEnv));
-      const { OpenRouterDecisionModel } = await runner.import<
-        typeof import("../src/core/decisions/openRouterDecisionModel.ts")
-      >("/src/core/decisions/openRouterDecisionModel.ts");
-      const openRouter = new OpenRouterDecisionModel({
-        model: openRouterPick,
+      await runtime.setRuntimeApiKey(providerPick.provider, keyFrom(args.apiKeyEnv));
+      const { ProviderDecisionModel } = await runner.import<
+        typeof import("../src/core/decisions/providerDecisionModel.ts")
+      >("/src/core/decisions/providerDecisionModel.ts");
+      const pick = new ProviderDecisionModel({
+        ...providerPick,
         selectAccount: () => "scorer",
         runtimeFor: async () => runtime,
       });
-      label = `openrouter/${openRouterPick}`;
-      decide = (state, set) => openRouter.decide({ purpose: "tags" }, state, set, new AbortController().signal);
+      label = `${providerPick.provider}/${providerPick.model}`;
+      decide = (state, set) => pick.decide({ purpose: "tags" }, state, set, new AbortController().signal);
       probabilitiesOf = async (state) =>
         readProbabilities(
-          await classifyOpenRouter(
+          await classifyWithProvider(
             runtime,
-            openRouterPick,
+            providerPick.provider,
+            providerPick.model,
             contextOf(state),
             AbortSignal.timeout(DECIDE_TIMEOUT_MS),
             DECIDE_TIMEOUT_MS,

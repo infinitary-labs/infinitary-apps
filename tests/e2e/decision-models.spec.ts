@@ -8,14 +8,15 @@ import { KIND_CLASSIFIER_OPENING } from "../../src/core/pi/piResources";
 import { MODELS_WORDS } from "../../src/renderer/src/settings/modelsWords";
 import {
   DECISION_MODEL_CATALOG,
+  type DecisionOffering,
   decisionConsent,
   decisionKeyRejectedNote,
   decisionModelRow,
-  type OpenRouterDecisionOffering,
-  openRouterDecisionConsent,
-  openRouterDecisionLine,
+  providerDecisionConsent,
+  providerDecisionLine,
 } from "../../src/shared/decisions";
 import { DECISION_APPROVAL_VERSION } from "../../src/shared/decisionUses";
+import { OPENCODE_GO_PROVIDER_ID } from "../../src/shared/providers";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedAccountAuth, seedAccountRegistry, seedAccountStore } from "./accountFixtures";
 import { CLAUDE_SEAT_ACCOUNT, launchClaudeSeat, say } from "./claudeSeat";
@@ -764,11 +765,12 @@ test("OpenRouter selection uses its account, records what served it, remembers c
   };
   try {
     let group = await open();
-    const offered = (await launched.page.evaluate(() => window.infinitary.models.decisions()))
-      .openrouter?.models;
+    const offered = (
+      await launched.page.evaluate(() => window.infinitary.models.decisions())
+    ).providers?.find((entry) => entry.provider === "openrouter")?.models;
     expect(offered).toBeDefined();
     expect(offered?.length).toBeGreaterThan(0);
-    const offering = (id: string): OpenRouterDecisionOffering => {
+    const offering = (id: string): DecisionOffering => {
       const model = offered?.find((entry) => entry.id === id);
       if (!model) throw new Error(`OpenRouter offers no ${id}`);
       return model;
@@ -778,7 +780,7 @@ test("OpenRouter selection uses its account, records what served it, remembers c
     expect(local.seen).toHaveLength(0);
     await group.getByRole("button", { name: "Decision model actions" }).click();
     await launched.page
-      .getByRole("menuitem", { name: MODELS_WORDS.useOpenRouterDecisionModel })
+      .getByRole("menuitem", { name: MODELS_WORDS.decisionModelFrom("OpenRouter") })
       .click();
     const picker = group.getByRole("group", { name: "OpenRouter decision models" });
     await expect(picker.getByRole("button")).toHaveCount(offered?.length ?? 0);
@@ -787,13 +789,13 @@ test("OpenRouter selection uses its account, records what served it, remembers c
     const dialog = launched.page.getByRole("dialog", {
       name: "Turn on Jev 1.13 through OpenRouter",
     });
-    for (const sentence of openRouterDecisionConsent(jev))
+    for (const sentence of providerDecisionConsent(jev, "openrouter"))
       await expect(dialog).toContainText(sentence);
     await expect(dialog.locator("input")).toHaveCount(0);
     await dialog.screenshot({ path: test.info().outputPath("openrouter-consent.png") });
     await dialog.getByRole("button", { name: "Turn on", exact: true }).click();
     await expect(dialog).toHaveCount(0);
-    await expect(group).toContainText(openRouterDecisionLine(jev));
+    await expect(group).toContainText(providerDecisionLine(jev, "openrouter"));
     await group.screenshot({ path: test.info().outputPath("openrouter-on.png") });
     await launched.page.keyboard.press("Escape");
     const task = await spawn("OpenRouter decision work");
@@ -838,7 +840,9 @@ test("OpenRouter selection uses its account, records what served it, remembers c
     });
     // The row's last answer belongs to the pick, whichever model served it.
     expect(
-      (await launched.page.evaluate(() => window.infinitary.models.decisions())).openrouter?.last,
+      (await launched.page.evaluate(() => window.infinitary.models.decisions())).providers?.find(
+        (entry) => entry.provider === "openrouter",
+      )?.last,
     ).toMatchObject({ value: "chore", tokens: 412 });
     await launched.close();
     launched = await launchApp({ userDataDir, withMockProvider: true, modelsJson, env });
@@ -846,13 +850,13 @@ test("OpenRouter selection uses its account, records what served it, remembers c
       window.infinitary.settings.setFirstmateModel({ provider: "fm-mock", id: "mock-1" }),
     );
     group = await open();
-    await expect(group).toContainText(openRouterDecisionLine(jev));
+    await expect(group).toContainText(providerDecisionLine(jev, "openrouter"));
     await group.getByRole("button", { name: "Decision model actions" }).click();
     await launched.page
-      .getByRole("menuitem", { name: MODELS_WORDS.useOpenRouterDecisionModel })
+      .getByRole("menuitem", { name: MODELS_WORDS.decisionModelFrom("OpenRouter") })
       .click();
     await group.getByRole("button", { name: /^Kev 4B/ }).click();
-    await expect(group).toContainText(openRouterDecisionLine(kev));
+    await expect(group).toContainText(providerDecisionLine(kev, "openrouter"));
     await expect(launched.page.getByRole("dialog")).toHaveCount(0);
     await launched.page.keyboard.press("Escape");
     local.status = 402;
@@ -876,19 +880,143 @@ test("OpenRouter selection uses its account, records what served it, remembers c
     // Signing out removes the choice without removing the stored pick.
     await launched.page.evaluate((id) => window.infinitary.accounts.remove(id), accountId);
     const signedOut = await launched.page.evaluate(() => window.infinitary.models.decisions());
-    expect(signedOut.openrouter?.models).toEqual([]);
+    expect(signedOut.providers).toEqual([]);
     expect(signedOut.settings.answerer).toEqual({
-      kind: "openrouter",
+      kind: "provider",
+      provider: "openrouter",
       model: "jaredpalmer/kev-4b",
     });
     await launched.page.getByRole("button", { name: "Settings", exact: true }).click();
     await launched.page.getByRole("tab", { name: "Intelligence" }).click();
     await expect(
       launched.page.getByRole("menuitem", {
-        name: MODELS_WORDS.useOpenRouterDecisionModel,
+        name: MODELS_WORDS.decisionModelFrom("OpenRouter"),
         exact: true,
       }),
     ).toHaveCount(0);
+  } finally {
+    await launched.close();
+    local.server.closeAllConnections();
+    await new Promise<void>((resolve) => local.server.close(() => resolve()));
+  }
+});
+
+test("OpenCode Go's decision model is chosen from its own row, named with its cost, and answers on the Go account", async () => {
+  // Intent: the approved plan for OpenCode Go's decision models - each
+  // enabled, signed-in account whose catalog lists one offers "Use a
+  // decision model from", the approval screen names the provider, the maker
+  // and the cost, and the calls go to Go's decision address under the Go key.
+  test.setTimeout(180_000);
+  const local = await startStubJev();
+  local.served = "jev-1.14.0";
+  const userDataDir = scratchDir("infinitary-e2e-opencode-go-decisions-");
+  const accountId = "acct_opencode_go_decisions";
+  const goKey = "fake-opencode-go-decisions";
+  seedAccountStore(userDataDir, OPENCODE_GO_PROVIDER_ID, accountId, {
+    recursive: true,
+    mode: 0o700,
+  });
+  seedAccountAuth(
+    userDataDir,
+    OPENCODE_GO_PROVIDER_ID,
+    accountId,
+    { [OPENCODE_GO_PROVIDER_ID]: { type: "api_key", key: goKey } },
+    { mode: 0o600 },
+  );
+  seedAccountRegistry(
+    userDataDir,
+    [
+      {
+        id: accountId,
+        providerId: OPENCODE_GO_PROVIDER_ID,
+        label: "Go",
+        kind: "api_key",
+        createdAt: Date.now(),
+        enabled: true,
+      },
+    ],
+    {},
+    { mode: 0o600 },
+  );
+  const fixtureDir = seedQuotaFixture(
+    scratchDir("infinitary-opencode-go-decisions-quota-"),
+    {
+      generatedAt: new Date().toISOString(),
+      fetchedAt: Date.now(),
+      providers: [
+        {
+          provider: OPENCODE_GO_PROVIDER_ID,
+          label: "OpenCode Go",
+          accountId,
+          accountLabel: "Go",
+          status: "ok",
+          stale: false,
+          windows: [],
+        },
+      ],
+    },
+    {
+      generatedAt: new Date().toISOString(),
+      models: [{ provider: OPENCODE_GO_PROVIDER_ID, id: "gpt-6-luna", label: "GPT-6 Luna" }],
+    },
+  );
+  const launched = await launchApp({
+    userDataDir,
+    withMockProvider: true,
+    env: {
+      INFINITARY_QUOTA_FIXTURE_DIR: fixtureDir,
+      INFINITARY_OPENCODE_GO_DECISIONS_BASE_URL: local.url.replace(/\/systemone$/, ""),
+    },
+  });
+  try {
+    const { page } = launched;
+    await page.evaluate(() =>
+      window.infinitary.settings.setFirstmateModel({ provider: "fm-mock", id: "mock-1" }),
+    );
+    const offered = (
+      await page.evaluate(() => window.infinitary.models.decisions())
+    ).providers?.find((entry) => entry.provider === OPENCODE_GO_PROVIDER_ID)?.models;
+    const jev = offered?.find((model) => model.id === "jev-1.14");
+    expect(jev).toEqual({
+      id: "jev-1.14",
+      name: "Jev 1.14",
+      vendor: "TypeSafe",
+      inputPrice: 0.042,
+    });
+    if (!jev) return;
+    await page.getByRole("button", { name: "Settings", exact: true }).click();
+    await page.getByRole("tab", { name: "Intelligence" }).click();
+    const head = modelsSection(page).getByRole("button", { name: /^Models/ });
+    if ((await head.getAttribute("aria-expanded")) !== "true") await head.click();
+    const group = page.locator('[data-slot-group="decisions"]');
+    await group.getByRole("button", { name: "Decision model actions" }).click();
+    await page
+      .getByRole("menuitem", { name: MODELS_WORDS.decisionModelFrom("OpenCode Go") })
+      .click();
+    const picker = group.getByRole("group", { name: "OpenCode Go decision models" });
+    await expect(picker.getByRole("button")).toHaveCount(offered?.length ?? 0);
+    await picker.getByRole("button", { name: /^Jev 1.14 · TypeSafe · \$0.042/ }).click();
+    const dialog = page.getByRole("dialog", { name: "Turn on Jev 1.14 through OpenCode Go" });
+    for (const sentence of providerDecisionConsent(jev, OPENCODE_GO_PROVIDER_ID))
+      await expect(dialog).toContainText(sentence);
+    expect(local.seen).toHaveLength(0);
+    await dialog.getByRole("button", { name: "Turn on", exact: true }).click();
+    await expect(group).toContainText(providerDecisionLine(jev, OPENCODE_GO_PROVIDER_ID));
+    await page.keyboard.press("Escape");
+    const title = "OpenCode Go decision work";
+    await say(page, `${SPAWN_PROMPT_MARKER} ${title}`);
+    await expect(startedLine(page, await taskKey(page, title))).toBeVisible({ timeout: 30_000 });
+    const task = readTasks(userDataDir).find((row) => row.title === title) as TaskRow;
+    await expect.poll(() => local.seen.length).toBeGreaterThan(0);
+    expect(new Set(local.seen.map((call) => call.bearer))).toEqual(new Set([goKey]));
+    expect(shapeOf(task)).toMatchObject({
+      kind: "chore",
+      kind_source: "classifier:opencode-go/jev-1.14.0",
+    });
+    expect(readUsage(userDataDir)).toContainEqual({
+      provider: OPENCODE_GO_PROVIDER_ID,
+      model: "jev-1.14.0",
+    });
   } finally {
     await launched.close();
     local.server.closeAllConnections();

@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "opencode-go-decision-models",
+      "kind": "feature",
+      "area": "subscriptions",
+      "title": "Answer decisions with OpenCode Go's decision models",
+      "body": "With an OpenCode Go subscription signed in, Decisions offers Use a decision model from OpenCode Go, starting with Jev 1.14 from TypeSafe. The approval screen names the model, its maker and its price, and each call counts against your Go allowance at list price. OpenRouter's decision models now sit under Use a decision model from OpenRouter, and a model you chose there before stays chosen.",
+      "picture": {
+        "dark": "opencode-go-decision-models-dark.webp",
+        "light": "opencode-go-decision-models-light.webp",
+        "alt": "The Decisions row listing OpenCode Go's decision models with their maker and price per million input tokens."
+      },
+      "noDocsSite": "No docs site page covers the Decisions settings.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

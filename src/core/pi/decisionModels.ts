@@ -1,8 +1,9 @@
 import type { ClassifierContext } from "@earendil-works/pi-ai";
 import { classify } from "@earendil-works/pi-ai/api/typesafe-system-one";
 import { getBuiltinClassifierModel } from "@earendil-works/pi-ai/providers/all";
-import type { OpenRouterDecisionOffering } from "@shared/decisions";
+import type { DecisionOffering } from "@shared/decisions";
 import type { FmUsage } from "@shared/events";
+import { OPENCODE_GO_PROVIDER_ID } from "@shared/providers";
 import {
   BODY_LIMIT_BYTES,
   type QuotaHttp,
@@ -11,22 +12,47 @@ import {
 } from "../quota/http";
 import type { ModelRuntime } from "./types";
 
-// Pi's classifier catalog has no question-capability field. These models
-// support the app's six-way choice; Span answers only yes/no. Unknown models
-// stay out until their choice contract is established.
-const makers: Record<string, string> = {
-  "typesafe/jev-1.13": "TypeSafe",
-  "~typesafe/jev-latest": "TypeSafe",
-  "jaredpalmer/kev-4b": "Jared Palmer",
-  "upstage/solar-decide": "Upstage",
-  "inception/mercury-decide:free": "Inception",
-  "togethercomputer/tev1-4b-experimental": "Together",
-  "openai/gpt-6-luna-decisions": "OpenAI",
-};
+/**
+ * The decision models that answer the app's six-way choice, one row per
+ * model with the id each provider serves it under. Pi's classifier catalog
+ * has no question-capability field, and Span answers only yes/no, so a model
+ * stays out until its choice answers are established: Go's were admitted on
+ * a `pnpm score:kinds` run through OpenCode Go (`docs/decision-models.md`).
+ */
+// i18n-exempt: company names
+const CHOICE_MODELS: ReadonlyArray<{
+  maker: string;
+  served: Readonly<Record<string, readonly string[]>>;
+}> = [
+  { maker: "TypeSafe", served: { openrouter: ["typesafe/jev-1.13", "~typesafe/jev-latest"] } },
+  { maker: "TypeSafe", served: { [OPENCODE_GO_PROVIDER_ID]: ["jev-1.14"] } },
+  { maker: "Jared Palmer", served: { openrouter: ["jaredpalmer/kev-4b"] } },
+  { maker: "Upstage", served: { openrouter: ["upstage/solar-decide"] } },
+  { maker: "Inception", served: { openrouter: ["inception/mercury-decide:free"] } },
+  { maker: "Together", served: { openrouter: ["togethercomputer/tev1-4b-experimental"] } },
+  {
+    maker: "OpenAI",
+    served: {
+      openrouter: ["openai/gpt-6-luna-decisions"],
+      [OPENCODE_GO_PROVIDER_ID]: ["gpt-6-luna-decision"],
+    },
+  },
+  { maker: "Google", served: { [OPENCODE_GO_PROVIDER_ID]: ["gemini-decision-1"] } },
+];
 
-export function openRouterDecisionModels(runtime: ModelRuntime): OpenRouterDecisionOffering[] {
-  return runtime.getModelsOfType("classifier", "openrouter").flatMap((model) => {
-    const vendor = makers[model.id];
+/** The providers that serve any choice-capable decision model. */
+export const DECISION_PROVIDERS: readonly string[] = [
+  ...new Set(CHOICE_MODELS.flatMap((row) => Object.keys(row.served))),
+];
+
+function makerOf(provider: string, id: string): string | undefined {
+  return CHOICE_MODELS.find((row) => row.served[provider]?.includes(id))?.maker;
+}
+
+/** The choice-capable decision models `provider` lists in this runtime's Pi catalog. */
+export function decisionModelsOf(runtime: ModelRuntime, provider: string): DecisionOffering[] {
+  return runtime.getModelsOfType("classifier", provider).flatMap((model) => {
+    const vendor = makerOf(provider, model.id);
     return vendor && model.api === "typesafe-system-one"
       ? [
           {
@@ -100,18 +126,22 @@ function usageOf(
     : counts;
 }
 
-export async function classifyOpenRouter(
+/**
+ * One System One call on `provider`'s decision model `id` through this
+ * account's runtime, which owns the credential. `baseUrl` is a dev/e2e
+ * stand-in for the provider's decision address.
+ */
+export async function classifyWithProvider(
   runtime: ModelRuntime,
+  provider: string,
   id: string,
   context: Parameters<ModelRuntime["classify"]>[1],
   signal: AbortSignal,
   timeoutMs: number,
   baseUrl?: string,
 ) {
-  const model = runtime
-    .getModelsOfType("classifier", "openrouter")
-    .find((entry) => entry.id === id);
-  if (!model || !openRouterDecisionModels(runtime).some((entry) => entry.id === id))
+  const model = runtime.getModelsOfType("classifier", provider).find((entry) => entry.id === id);
+  if (!model || !decisionModelsOf(runtime, provider).some((entry) => entry.id === id))
     return undefined;
   const observer = classifierObserver(
     fetch,

@@ -1,5 +1,11 @@
 import { z } from "zod";
-import { type DecisionUseId, decisionUseViewSchema } from "./decisionUses";
+import {
+  DECISION_FIRST_APPROVAL_VERSION,
+  type DecisionUseId,
+  decisionUseViewSchema,
+} from "./decisionUses";
+import * as m from "./i18n/messages.generated.ts";
+import { catalogEntry } from "./providers";
 
 /**
  * Decision models (S7, captain-approved design `fm3000-decision-models-s7-
@@ -204,7 +210,12 @@ export function decisionKeyRejectedNote(name: string): string {
  * subscription models - reached through that account's provider exactly as
  * a crewmate turn is, so it adds no outbound destination - with `auto`
  * meaning the S3 walk (cheapest slotted first). `native` is a catalog row,
- * usable only while its egress is on and its key is stored.
+ * usable only while its egress is on and its key is stored. `provider` is a
+ * decision model a signed-in account's Pi catalog lists, such as
+ * OpenRouter's or OpenCode Go's, usable only while that provider's egress is
+ * on. `openrouter` is how a home before `decision-providers` saved an
+ * OpenRouter pick: it is still read, as provider `openrouter`
+ * (`decisionProviderPick`), and this home never writes it.
  */
 export const decisionAnswererSchema = z.discriminatedUnion("kind", [
   z.strictObject({
@@ -213,10 +224,53 @@ export const decisionAnswererSchema = z.discriminatedUnion("kind", [
   }),
   z.strictObject({ kind: z.literal("native"), id: decisionModelIdSchema }),
   z.strictObject({ kind: z.literal("openrouter"), model: z.string().min(1) }),
+  z.strictObject({
+    kind: z.literal("provider"),
+    provider: z.string().min(1),
+    model: z.string().min(1),
+  }),
 ]);
 export type DecisionAnswerer = z.infer<typeof decisionAnswererSchema>;
 
-/** Per Jev or OpenRouter: whether it may answer, and which approval screen the person saw. */
+/** The provider and model a provider pick names, an older OpenRouter pick included. */
+export function decisionProviderPick(
+  answerer: DecisionAnswerer,
+): { provider: string; model: string } | undefined {
+  if (answerer.kind === "provider") return { provider: answerer.provider, model: answerer.model };
+  if (answerer.kind === "openrouter") return { provider: "openrouter", model: answerer.model };
+  return undefined;
+}
+
+/** The first mate's settings action's done line for a chosen answerer. */
+export function decisionModelDone(value: unknown): string {
+  const answerer = decisionAnswererSchema.parse(value);
+  const pick = decisionProviderPick(answerer);
+  const name =
+    answerer.kind === "native"
+      ? answerer.id
+      : pick
+        ? `${decisionProviderName(pick.provider)} · ${pick.model}`
+        : answerer.kind === "adapted" && answerer.offering !== "auto"
+          ? answerer.offering
+          : undefined;
+  // i18n-exempt: served to the first mate, which reads English
+  return `decision model ${name ?? "Auto"}`;
+}
+
+/** The egress entry the answerer's approval lives in: a native model's id or a provider's. */
+export function decisionEgressKey(answerer: DecisionAnswerer): string | undefined {
+  return answerer.kind === "native" ? answerer.id : decisionProviderPick(answerer)?.provider;
+}
+
+/** The row with an older OpenRouter pick written as the provider pick it is read as. */
+export function currentDecisions(settings: DecisionsSettings): DecisionsSettings {
+  const { answerer } = settings;
+  return answerer.kind === "openrouter"
+    ? { ...settings, answerer: { kind: "provider", provider: "openrouter", model: answerer.model } }
+    : settings;
+}
+
+/** Per native model or provider: whether it may answer, and which approval screen the person saw. */
 export const decisionEgressSchema = z.strictObject({
   enabled: z.boolean(),
   /** The approval screen accepted (`DECISION_APPROVAL_VERSION`); absent means never. */
@@ -234,7 +288,10 @@ export type DecisionEgress = z.infer<typeof decisionEgressSchema>;
 export const decisionsSettingsSchema = z.strictObject({
   version: z.literal(1),
   answerer: decisionAnswererSchema,
-  /** Keyed by `DecisionModelId` or `openrouter`; an absent entry is off and unapproved. */
+  /**
+   * Keyed by `DecisionModelId` or a provider id such as `openrouter`; an
+   * absent entry is off and unapproved. Each provider has its own approval.
+   */
   egress: z.record(z.string().min(1), decisionEgressSchema),
 });
 export type DecisionsSettings = z.infer<typeof decisionsSettingsSchema>;
@@ -279,28 +336,75 @@ export type DecisionRowState = z.infer<typeof decisionRowStateSchema>;
 export const decisionPinStateSchema = z.enum(["ready", "fallback", "held"]);
 export type DecisionPinState = z.infer<typeof decisionPinStateSchema>;
 
-/** A choice-capable classifier in the signed-in OpenRouter account's Pi catalog. */
-export const openRouterDecisionOfferingSchema = z.strictObject({
+/** A choice-capable classifier in a signed-in account's Pi catalog. */
+export const decisionOfferingSchema = z.strictObject({
   id: z.string(),
   name: z.string(),
   vendor: z.string(),
   inputPrice: z.number(),
 });
-export type OpenRouterDecisionOffering = z.infer<typeof openRouterDecisionOfferingSchema>;
+export type DecisionOffering = z.infer<typeof decisionOfferingSchema>;
 
-/** The same approval screen for a model reached through the person's OpenRouter account. */
-export function openRouterDecisionConsent(model: OpenRouterDecisionOffering): DecisionConsentText {
+/** A provider's name as the provider catalog writes it. */
+export function decisionProviderName(provider: string): string {
+  return catalogEntry(provider)?.name ?? provider;
+}
+
+/**
+ * The approval screen for a decision model reached through the person's own
+ * account. It names the provider, the maker and what a call costs: a
+ * subscription draws on its allowance at the model's list price, and an
+ * account with an API key pays that price itself.
+ */
+/** Dollars per million input tokens, never fewer than two places: 0.1 reads 0.10, 0.042 stays. */
+export function decisionPrice(dollars: number): string {
+  return dollars.toFixed(Math.max(2, (String(dollars).split(".")[1] ?? "").length));
+}
+
+export function providerDecisionConsent(
+  model: DecisionOffering,
+  provider: string,
+): DecisionConsentText {
+  const words = {
+    model: model.name,
+    vendor: model.vendor,
+    provider: decisionProviderName(provider),
+    price: decisionPrice(model.inputPrice),
+  };
   return [
-    `${model.name} (${model.vendor}) answers Infinitary's decision questions through OpenRouter, like your other models. Questions can include task details, your replies, nearby conversation and code.`,
-    "Turn off any use in the Decisions list, or choose another decision model.",
-    `Your OpenRouter account pays per input token; output is free. If ${model.name} cannot answer, your own models answer instead.`,
+    m.settingsDecisionsProviderShared(words),
+    m.settingsDecisionsProviderChoice(),
+    catalogEntry(provider)?.tier === "subscription"
+      ? m.settingsDecisionsProviderCostAllowance(words)
+      : m.settingsDecisionsProviderCostAccount(words),
   ];
 }
 
-/** The Decisions row's line while an OpenRouter pick answers. */
-export function openRouterDecisionLine(model: Pick<OpenRouterDecisionOffering, "name">): string {
-  return `${model.name} · OpenRouter · on`;
+/** The Decisions row's line while a provider's decision model answers. */
+export function providerDecisionLine(
+  model: Pick<DecisionOffering, "name">,
+  provider: string,
+): string {
+  return m.settingsDecisionsLineNative({
+    model: model.name,
+    vendor: decisionProviderName(provider),
+  });
 }
+
+const lastAnswerSchema = z
+  .strictObject({ value: z.string(), tokens: z.number().int(), at: z.number() })
+  .nullable();
+
+/** One enabled, signed-in provider whose catalog lists choice-capable decision models. */
+export const decisionProviderViewSchema = z.strictObject({
+  provider: z.string(),
+  models: z.array(decisionOfferingSchema),
+  state: z.enum(["off", "ready"]),
+  consented: z.boolean(),
+  /** The last answer while this provider's pick answers. */
+  last: lastAnswerSchema,
+});
+export type DecisionProviderView = z.infer<typeof decisionProviderViewSchema>;
 
 /** The Decisions group's derived availability and last answer, never credentials. */
 export const decisionsViewSchema = z.strictObject({
@@ -320,16 +424,21 @@ export const decisionsViewSchema = z.strictObject({
    * it only while it is. Absent unless a specific model is pinned.
    */
   pinned: decisionPinStateSchema.optional(),
+  /**
+   * OpenRouter alone, as a home before `decision-providers` sent it. This
+   * home sends it only to a view whose hello does not list that change
+   * (`decisionsViewFor`), and `providers` to every other.
+   */
   openrouter: z
     .strictObject({
-      models: z.array(openRouterDecisionOfferingSchema),
+      models: z.array(decisionOfferingSchema),
       state: z.enum(["off", "ready", "signed-out"]),
       consented: z.boolean(),
-      last: z
-        .strictObject({ value: z.string(), tokens: z.number().int(), at: z.number() })
-        .nullable(),
+      last: lastAnswerSchema,
     })
     .optional(),
+  /** Each enabled, signed-in provider whose catalog lists decision models; absent on an older home. */
+  providers: z.array(decisionProviderViewSchema).optional(),
   natives: z.array(
     z.strictObject({
       id: decisionModelIdSchema,
@@ -351,6 +460,36 @@ export const decisionsViewSchema = z.strictObject({
 export type DecisionsView = z.infer<typeof decisionsViewSchema>;
 
 /**
+ * The view as a home before `decision-providers` drew it, for a view that
+ * reads the answerer and this view strictly: an OpenRouter pick is kind
+ * `openrouter`, another provider's pick reads as auto, which that view can
+ * name, and OpenRouter's row goes in `openrouter` instead of `providers`.
+ */
+export function decisionsViewBeforeProviders(view: DecisionsView): DecisionsView {
+  const { providers, ...rest } = view;
+  const pick = decisionProviderPick(view.settings.answerer);
+  const answerer: DecisionAnswerer = !pick
+    ? view.settings.answerer
+    : pick.provider === "openrouter"
+      ? { kind: "openrouter", model: pick.model }
+      : { kind: "adapted", offering: "auto" };
+  const row = providers?.find((entry) => entry.provider === "openrouter");
+  const seen = view.settings.egress.openrouter?.consentedVersion ?? -1;
+  return {
+    ...rest,
+    settings: { ...view.settings, answerer },
+    openrouter: row
+      ? { models: row.models, state: row.state, consented: row.consented, last: row.last }
+      : {
+          models: [],
+          state: "signed-out",
+          consented: seen >= DECISION_FIRST_APPROVAL_VERSION,
+          last: null,
+        },
+  };
+}
+
+/**
  * The offering key an adapted pin names: the same `provider/id` shape the
  * model-slot record uses, so the Decisions group and the slot groups speak
  * one vocabulary.
@@ -366,4 +505,36 @@ export function parseDecisionOffering(
   const slash = offering.indexOf("/");
   if (slash <= 0 || slash === offering.length - 1) return undefined;
   return { provider: offering.slice(0, slash), id: offering.slice(slash + 1) };
+}
+
+/**
+ * The provider rows a view draws. A home from before `decision-providers`
+ * sends OpenRouter's row alone, in `openrouter`, and reads only the
+ * `openrouter` answerer (`decisionAnswererFor`).
+ */
+export function decisionProvidersOf(view: DecisionsView): DecisionProviderView[] {
+  if (view.providers) return view.providers;
+  const row = view.openrouter;
+  return row && row.state !== "signed-out"
+    ? [
+        {
+          provider: "openrouter",
+          models: row.models,
+          state: row.state,
+          consented: row.consented,
+          last: row.last,
+        },
+      ]
+    : [];
+}
+
+/** The answerer a view writes for a provider's pick, in the shape its home reads. */
+export function decisionAnswererFor(
+  view: Pick<DecisionsView, "providers">,
+  provider: string,
+  model: string,
+): DecisionAnswerer {
+  return view.providers || provider !== "openrouter"
+    ? { kind: "provider", provider, model }
+    : { kind: "openrouter", model };
 }

@@ -7,9 +7,9 @@ import { DECISION_APPROVAL_VERSION } from "@shared/decisionUses";
 import { expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { type DecisionModel, DecisionModels, type DecisionUsage } from "../decisions/decisionModel";
-import { OpenRouterDecisionModel } from "../decisions/openRouterDecisionModel";
+import { ProviderDecisionModel } from "../decisions/providerDecisionModel";
 import { BODY_LIMIT_BYTES } from "../quota/http";
-import { openRouterDecisionModels } from "./decisionModels";
+import { decisionModelsOf } from "./decisionModels";
 import { catalogRefreshesSettled, createModelRuntime } from "./modelRuntime";
 
 it("uses the selected account's Pi sign-in, bounds choices, records the served model and reported cost, and falls back without new egress", async () => {
@@ -79,7 +79,7 @@ it("uses the selected account's Pi sign-in, bounds choices, records the served m
     modelsPath: join(dir, "models.json"),
     catalogBaseUrl: `http://127.0.0.1:${(server.address() as AddressInfo).port}`,
   });
-  const models = openRouterDecisionModels(runtime);
+  const models = decisionModelsOf(runtime, "openrouter");
   expect(models.map((model) => model.id)).toEqual(
     expect.arrayContaining([
       "typesafe/jev-1.13",
@@ -117,11 +117,11 @@ it("uses the selected account's Pi sign-in, bounds choices, records the served m
       setDecisionUses: () => {},
     },
     adapted: adapter,
-    openrouter: {
-      signedIn: () => signedIn,
-      models: () => models,
-      create: (model) =>
-        new OpenRouterDecisionModel({
+    providers: {
+      signedIn: () => (signedIn ? [{ provider: "openrouter", models }] : []),
+      create: (provider, model) =>
+        new ProviderDecisionModel({
+          provider,
           model,
           selectAccount: (task) => {
             picks.push(task);
@@ -195,7 +195,7 @@ it("uses the selected account's Pi sign-in, bounds choices, records the served m
       usage: { ...reported, models: [{ ...reported, model: "typesafe/jev-1.13-20260917" }] },
     });
     // The row's last answer stays with the pick, whichever model served it.
-    expect(service.view().openrouter?.last).toMatchObject({ value: "fix", tokens: 100 });
+    expect(service.view().providers?.[0]?.last).toMatchObject({ value: "fix", tokens: 100 });
     // A reply that names no model and states no cost: the pick, at Pi's catalog price.
     reply = {};
     expect((await ask()).kind?.source).toBe("openrouter/typesafe/jev-1.13");
@@ -229,7 +229,7 @@ it("uses the selected account's Pi sign-in, bounds choices, records the served m
     expect(renewals).toEqual(["acct-selected", "acct-selected"]);
     const count = seen.length;
     signedIn = false;
-    expect(service.view().openrouter?.models).toEqual([]);
+    expect(service.view().providers).toEqual([]);
     await ask();
     expect(seen).toHaveLength(count);
   } finally {
@@ -331,11 +331,11 @@ it("refuses a reply past 64 KB before Pi parses it, and the person's own model a
         usage: [],
       }),
     },
-    openrouter: {
-      signedIn: () => true,
-      models: () => openRouterDecisionModels(runtime),
-      create: (model) =>
-        new OpenRouterDecisionModel({
+    providers: {
+      signedIn: () => [{ provider: "openrouter", models: decisionModelsOf(runtime, "openrouter") }],
+      create: (provider, model) =>
+        new ProviderDecisionModel({
+          provider,
           model,
           selectAccount: () => "acct-selected",
           runtimeFor: async () => runtime,

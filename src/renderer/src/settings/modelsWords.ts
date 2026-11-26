@@ -11,9 +11,9 @@ export const MODELS_WORDS = {
   get notInUse() {
     return m.settingsModelsNotInUse();
   },
-  /** The Decisions row's menu item that opens the OpenRouter picker, offered while OpenRouter has models. */
-  get useOpenRouterDecisionModel() {
-    return m.settingsDecisionsUseOpenRouter();
+  /** The Decisions row's menu item that opens a provider's picker, offered while its catalog lists decision models. */
+  decisionModelFrom(provider: string) {
+    return m.settingsDecisionsUseProvider({ provider });
   },
   /** The consent dialog's rows for a decision model's approval, in the order `DecisionConsentText` holds them. */
   get decisionDisclosureLabels(): readonly [string, string, string] {

@@ -3155,18 +3155,22 @@ public enum PhoneMessages {
     public static func `settingsDecisionsKeysFrom`(`url`: String) -> String { PhoneWords.format("settingsDecisionsKeysFrom", [`url`]) }
     public static func `settingsDecisionsLastAnswer`(`tokens`: String, `value`: String) -> String { PhoneWords.format("settingsDecisionsLastAnswer", [`tokens`, `value`]) }
     public static func `settingsDecisionsLineNative`(`model`: String, `vendor`: String) -> String { PhoneWords.format("settingsDecisionsLineNative", [`model`, `vendor`]) }
-    public static func `settingsDecisionsOpenRouterModels`() -> String { PhoneWords.format("settingsDecisionsOpenRouterModels", []) }
-    public static func `settingsDecisionsOpenRouterPrice`(`model`: String, `price`: String, `vendor`: String) -> String { PhoneWords.format("settingsDecisionsOpenRouterPrice", [`model`, `price`, `vendor`]) }
-    public static func `settingsDecisionsOpenRouterUnavailable`() -> String { PhoneWords.format("settingsDecisionsOpenRouterUnavailable", []) }
+    public static func `settingsDecisionsModelPrice`(`model`: String, `price`: String, `vendor`: String) -> String { PhoneWords.format("settingsDecisionsModelPrice", [`model`, `price`, `vendor`]) }
     public static func `settingsDecisionsPicker`() -> String { PhoneWords.format("settingsDecisionsPicker", []) }
+    public static func `settingsDecisionsProviderChoice`() -> String { PhoneWords.format("settingsDecisionsProviderChoice", []) }
+    public static func `settingsDecisionsProviderCostAccount`(`model`: String, `price`: String, `provider`: String) -> String { PhoneWords.format("settingsDecisionsProviderCostAccount", [`model`, `price`, `provider`]) }
+    public static func `settingsDecisionsProviderCostAllowance`(`model`: String, `price`: String, `provider`: String) -> String { PhoneWords.format("settingsDecisionsProviderCostAllowance", [`model`, `price`, `provider`]) }
+    public static func `settingsDecisionsProviderModels`(`provider`: String) -> String { PhoneWords.format("settingsDecisionsProviderModels", [`provider`]) }
+    public static func `settingsDecisionsProviderShared`(`model`: String, `provider`: String, `vendor`: String) -> String { PhoneWords.format("settingsDecisionsProviderShared", [`model`, `provider`, `vendor`]) }
+    public static func `settingsDecisionsProviderUnavailable`(`provider`: String) -> String { PhoneWords.format("settingsDecisionsProviderUnavailable", [`provider`]) }
     public static func `settingsDecisionsRemove`(`model`: String) -> String { PhoneWords.format("settingsDecisionsRemove", [`model`]) }
     public static func `settingsDecisionsReplaceKey`(`model`: String) -> String { PhoneWords.format("settingsDecisionsReplaceKey", [`model`]) }
     public static func `settingsDecisionsSubtitle`() -> String { PhoneWords.format("settingsDecisionsSubtitle", []) }
     public static func `settingsDecisionsTurnOff`(`model`: String) -> String { PhoneWords.format("settingsDecisionsTurnOff", [`model`]) }
-    public static func `settingsDecisionsTurnOnOpenRouter`(`model`: String) -> String { PhoneWords.format("settingsDecisionsTurnOnOpenRouter", [`model`]) }
+    public static func `settingsDecisionsTurnOnThrough`(`model`: String, `provider`: String) -> String { PhoneWords.format("settingsDecisionsTurnOnThrough", [`model`, `provider`]) }
     public static func `settingsDecisionsUseAuto`() -> String { PhoneWords.format("settingsDecisionsUseAuto", []) }
     public static func `settingsDecisionsUseNative`(`model`: String, `vendor`: String) -> String { PhoneWords.format("settingsDecisionsUseNative", [`model`, `vendor`]) }
-    public static func `settingsDecisionsUseOpenRouter`() -> String { PhoneWords.format("settingsDecisionsUseOpenRouter", []) }
+    public static func `settingsDecisionsUseProvider`(`provider`: String) -> String { PhoneWords.format("settingsDecisionsUseProvider", [`provider`]) }
     public static func `settingsDecisionsUseSpecific`() -> String { PhoneWords.format("settingsDecisionsUseSpecific", []) }
     public static func `settingsDecisionsUses`() -> String { PhoneWords.format("settingsDecisionsUses", []) }
     public static func `settingsDecisionsUsesAllow`() -> String { PhoneWords.format("settingsDecisionsUsesAllow", []) }
@@ -7961,18 +7965,22 @@ extension PhoneWords {
         "settingsDecisionsKeysFrom": ["url"],
         "settingsDecisionsLastAnswer": ["tokens", "value"],
         "settingsDecisionsLineNative": ["model", "vendor"],
-        "settingsDecisionsOpenRouterModels": [],
-        "settingsDecisionsOpenRouterPrice": ["model", "price", "vendor"],
-        "settingsDecisionsOpenRouterUnavailable": [],
+        "settingsDecisionsModelPrice": ["model", "price", "vendor"],
         "settingsDecisionsPicker": [],
+        "settingsDecisionsProviderChoice": [],
+        "settingsDecisionsProviderCostAccount": ["model", "price", "provider"],
+        "settingsDecisionsProviderCostAllowance": ["model", "price", "provider"],
+        "settingsDecisionsProviderModels": ["provider"],
+        "settingsDecisionsProviderShared": ["model", "provider", "vendor"],
+        "settingsDecisionsProviderUnavailable": ["provider"],
         "settingsDecisionsRemove": ["model"],
         "settingsDecisionsReplaceKey": ["model"],
         "settingsDecisionsSubtitle": [],
         "settingsDecisionsTurnOff": ["model"],
-        "settingsDecisionsTurnOnOpenRouter": ["model"],
+        "settingsDecisionsTurnOnThrough": ["model", "provider"],
         "settingsDecisionsUseAuto": [],
         "settingsDecisionsUseNative": ["model", "vendor"],
-        "settingsDecisionsUseOpenRouter": [],
+        "settingsDecisionsUseProvider": ["provider"],
         "settingsDecisionsUseSpecific": [],
         "settingsDecisionsUses": [],
         "settingsDecisionsUsesAllow": [],

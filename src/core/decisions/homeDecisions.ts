@@ -1,7 +1,8 @@
 import { mkdir } from "node:fs/promises";
+import { OPENCODE_GO_PROVIDER_ID } from "@shared/providers";
 import type { AppPaths } from "../paths";
 import type { AccountVault } from "../pi/accountVault";
-import { openRouterDecisionModels } from "../pi/decisionModels";
+import { DECISION_PROVIDERS, decisionModelsOf } from "../pi/decisionModels";
 import type { ModelRuntime } from "../pi/types";
 import type { StandIns } from "../standIns";
 import type { SettingsStore } from "../storage/settingsStore";
@@ -17,7 +18,7 @@ import {
 // one place the Pi and Claude seams are assembled.
 import { JevDecisionModel } from "./jev/jevClient";
 import { DecisionKeyStore } from "./jev/jevKeyStore";
-import { OpenRouterDecisionModel } from "./openRouterDecisionModel";
+import { ProviderDecisionModel } from "./providerDecisionModel";
 
 /**
  * The home's decision models (S7): one core-wide service any module may ask
@@ -28,7 +29,7 @@ import { OpenRouterDecisionModel } from "./openRouterDecisionModel";
  */
 export function startHomeDecisions(options: {
   paths: Pick<AppPaths, "firstmateHomeDir" | "userData">;
-  standIns: Pick<StandIns, "jevUrl" | "openRouterDecisionsBaseUrl">;
+  standIns: Pick<StandIns, "jevUrl" | "openRouterDecisionsBaseUrl" | "openCodeGoDecisionsBaseUrl">;
   settings: Pick<
     SettingsStore,
     "getFirstmateAccount" | "getDecisions" | "setDecisions" | "getDecisionUses" | "setDecisionUses"
@@ -69,33 +70,45 @@ export function startHomeDecisions(options: {
   // 0700 directory - never from an environment variable, never from any
   // ambient config, the same rule that keeps the app out of ~/.pi.
   const decisionKeys = new DecisionKeyStore(paths.userData);
+  // Dev/e2e stand-ins for each provider's decision address; a packaged app sets none.
+  const decisionsBaseUrls: Record<string, string | undefined> = {
+    openrouter: standIns.openRouterDecisionsBaseUrl,
+    [OPENCODE_GO_PROVIDER_ID]: standIns.openCodeGoDecisionsBaseUrl,
+  };
   return new DecisionModels({
     settings,
     keys: decisionKeys,
     adapted: adaptedDecisionModel,
     pinState: (offering) => adaptedDecisionModel.pinState(offering),
-    openrouter: {
+    providers: {
+      // A provider is offered only while one of its accounts is enabled and
+      // signed in, and only with the models its Pi catalog lists.
       signedIn: () =>
-        vault
-          .list("openrouter")
-          .some((account) => account.enabled && vault.connectedSync(account.id) === true),
-      models: () => [
-        ...new Map(
-          [baseRuntime, ...vault.piModelRuntimes()]
-            .flatMap((runtime) => openRouterDecisionModels(runtime))
-            .map((model) => [model.id, model]),
-        ).values(),
-      ],
-      create: (model) =>
-        new OpenRouterDecisionModel({
+        DECISION_PROVIDERS.flatMap((provider) => {
+          const signedIn = vault
+            .list(provider)
+            .some((account) => account.enabled && vault.connectedSync(account.id) === true);
+          if (!signedIn) return [];
+          const models = [
+            ...new Map(
+              [baseRuntime, ...vault.piModelRuntimes()]
+                .flatMap((runtime) => decisionModelsOf(runtime, provider))
+                .map((model) => [model.id, model]),
+            ).values(),
+          ];
+          return models.length ? [{ provider, models }] : [];
+        }),
+      create: (provider, model) => {
+        const baseUrl = decisionsBaseUrls[provider];
+        return new ProviderDecisionModel({
+          provider,
           model,
-          selectAccount: (taskId) => selectAccount(taskId, "openrouter"),
+          selectAccount: (taskId) => selectAccount(taskId, provider),
           runtimeFor: (accountId) => vault.runtimeFor(accountId),
           onUnauthorized: (accountId) => vault.renew(accountId, "vendor_rejected"),
-          ...(standIns.openRouterDecisionsBaseUrl
-            ? { baseUrl: standIns.openRouterDecisionsBaseUrl }
-            : {}),
-        }),
+          ...(baseUrl ? { baseUrl } : {}),
+        });
+      },
     },
     createNative: (row, key) =>
       new JevDecisionModel({

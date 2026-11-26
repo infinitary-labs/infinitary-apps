@@ -20,6 +20,7 @@
  *   pnpm score:kinds --dry
  *   pnpm score:kinds --models <models.json> --provider <p> --model <m> --out report.json
  *   pnpm score:kinds --provider anthropic-claude --model <m> --out report.json
+ *   pnpm score:kinds --cases <file> --decision-model opencode-go:jev-1.14 --decision-key-env <N>
  *
  * The last form scores the classifier on Claude (W1 S10): the session runs
  * the machine's own Claude client on its default login, exactly as the app
@@ -63,6 +64,13 @@ const USAGE = `Usage: score-kind-classifier [options]
                      score a NATIVE decision model instead of the adapter
                      (S7b: \`jev\`). --models/--provider/--model are then the
                      fallback the service uses when it cannot answer.
+                     <provider>:<model id>, such as opencode-go:jev-1.14, scores
+                     a decision model that provider's Pi catalog lists; without
+                     --provider and --model no fallback answers, so a row it
+                     cannot answer reads as failed and nothing else is spent
+  --decision-key-env <N>
+                     the decision model provider's key, read from this
+                     environment variable into the runtime's memory only
   --out <file>       write the scored report as JSON
   --dry              print the corpus and its keys; call no model
   --help`;
@@ -294,6 +302,8 @@ type Args = {
   help: boolean;
   /** A native decision model to score instead of the adapter (S7b). */
   decisionModel?: string;
+  /** The environment variable holding a provider decision model's key. */
+  decisionKeyEnv?: string;
 };
 
 function parseArgs(argv: string[]): Args {
@@ -315,10 +325,12 @@ function parseArgs(argv: string[]): Args {
       case "--model":
       case "--api-key-env":
       case "--decision-model":
+      case "--decision-key-env":
       case "--out": {
         if (!value) throw new Error(`${flag} needs a value`);
         if (flag === "--provider") args.provider = value;
         else if (flag === "--decision-model") args.decisionModel = value;
+        else if (flag === "--decision-key-env") args.decisionKeyEnv = value;
         else if (flag === "--model") args.model = value;
         else if (flag === "--api-key-env") args.apiKeyEnv = value;
         else if (flag === "--cases") args.cases = resolve(value);
@@ -382,10 +394,16 @@ async function main(): Promise<number> {
     return 0;
   }
   const claude = args.provider === CLAUDE_PROVIDER_ID;
-  if (!args.provider || !args.model || (!claude && !args.models)) {
+  const providerPick = providerPickOf(args.decisionModel);
+  const fallback = Boolean(args.provider || args.model || !providerPick);
+  if (fallback && (!args.provider || !args.model || (!claude && !args.models))) {
     process.stderr.write(
       `A scored run needs --provider and --model, and --models unless the provider is ${CLAUDE_PROVIDER_ID}.\n`,
     );
+    return 2;
+  }
+  if (providerPick && !args.decisionKeyEnv) {
+    process.stderr.write("--decision-model <provider>:<id> needs --decision-key-env.\n");
     return 2;
   }
 
@@ -399,10 +417,10 @@ async function main(): Promise<number> {
     instruction = KIND_QUESTIONS;
     const { workKindSchema } = await runner.import<typeof import("../src/shared/routingPolicy.ts")>("/src/shared/routingPolicy.ts");
     for (const label of labels.values()) workKindSchema.parse(label.kind);
-    const { AdaptedDecisionModel, DecisionModels } = await runner.import<
+    const { AdaptedDecisionModel, DecisionModels, failedAnswer } = await runner.import<
       typeof import("../src/core/decisions/decisionModel.ts")
     >("/src/core/decisions/decisionModel.ts");
-    const { DEFAULT_DECISIONS } = await runner.import<
+    const { DEFAULT_DECISIONS, decisionAnswererSchema } = await runner.import<
       typeof import("../src/shared/decisions.ts")
     >("/src/shared/decisions.ts");
     const { DECISION_APPROVAL_VERSION } = await runner.import<
@@ -421,7 +439,7 @@ async function main(): Promise<number> {
     // startup and could exhaust the boxed integration's measured budget.
     let baseRuntime: import("../src/core/pi/types.ts").ModelRuntime | undefined;
     let pi: import("../src/core/session/session.ts").SessionFactory | undefined;
-    if (!claude) {
+    if (fallback && !claude) {
       const { createModelRuntime } = await runner.import<
         typeof import("../src/core/pi/modelRuntime.ts")
       >("/src/core/pi/modelRuntime.ts");
@@ -440,14 +458,14 @@ async function main(): Promise<number> {
         await baseRuntime.setRuntimeApiKey(args.provider as string, key);
       }
     }
-    const model = { provider: args.provider, id: args.model };
+    const model = { provider: args.provider ?? "", id: args.model ?? "" };
     const { createClaudeSessionFactory } = await runner.import<
       typeof import("../src/core/claude/session.ts")
     >("/src/core/claude/session.ts");
     const { defaultClaudeConfigDir } = await runner.import<
       typeof import("../src/core/claude/claudeQuota.ts")
     >("/src/core/claude/claudeQuota.ts");
-    const adapted = new AdaptedDecisionModel({
+    const adapter = new AdaptedDecisionModel({
       homeDir: home,
       availableModels: () => [{ ...model, slot: "low" as const }],
       quotaModels: () => undefined,
@@ -469,11 +487,28 @@ async function main(): Promise<number> {
         }),
       },
     });
+    // With no fallback named, a provider decision model is scored alone: a
+    // row it cannot answer fails here instead of spending another model.
+    const adapted: import("../src/core/decisions/decisionModel.ts").DecisionModel = fallback
+      ? adapter
+      : {
+          id: "adapted",
+          native: false,
+          decide: async (_caller, _state, questions) => ({
+            answers: Object.fromEntries(
+              Object.entries(questions).map(([id, question]) => [
+                id,
+                failedAnswer(question, "no-fallback", question.version),
+              ]),
+            ),
+            usage: [],
+          }),
+        };
     // Scoring a native decision model (S7b) is the same corpus, the same
     // labels and the same tier table - only the answerer moves. Its key is
     // read from the environment for this offline run and never written
     // anywhere; the app itself reads only the user's own stored key.
-    const native = args.decisionModel;
+    const native = providerPick ? undefined : args.decisionModel;
     if (native && native !== "jev") {
       throw new Error(`Unknown decision model ${native}`);
     }
@@ -484,13 +519,24 @@ async function main(): Promise<number> {
     const { JevDecisionModel } = await runner.import<
       typeof import("../src/core/decisions/jev/jevClient.ts")
     >("/src/core/decisions/jev/jevClient.ts");
-    const settings: DecisionsSettings = native
+    const settings: DecisionsSettings = providerPick
       ? {
           version: 1,
-          answerer: { kind: "native", id: "jev" },
-          egress: { jev: { enabled: true, consentedVersion: DECISION_APPROVAL_VERSION } },
+          answerer: decisionAnswererSchema.parse({ kind: "provider", ...providerPick }),
+          egress: {
+            [providerPick.provider]: { enabled: true, consentedVersion: DECISION_APPROVAL_VERSION },
+          },
         }
-      : DEFAULT_DECISIONS;
+      : native
+        ? {
+            version: 1,
+            answerer: { kind: "native", id: "jev" },
+            egress: { jev: { enabled: true, consentedVersion: DECISION_APPROVAL_VERSION } },
+          }
+        : DEFAULT_DECISIONS;
+    const providers = providerPick
+      ? await providerDecisions(runner, home, providerPick, args.decisionKeyEnv as string)
+      : undefined;
     const classifier = new DecisionKindClassifier(
       new DecisionModels({
         settings: {
@@ -500,6 +546,7 @@ async function main(): Promise<number> {
           setDecisionUses: () => {},
         },
         adapted,
+        ...(providers ? { providers } : {}),
         ...(native && nativeKey
           ? {
               keys: {
@@ -565,11 +612,22 @@ async function main(): Promise<number> {
   const report = {
     at: new Date().toISOString(),
     model: args.decisionModel
-      ? `${args.decisionModel} (fallback ${args.provider}/${args.model})`
+      ? `${args.decisionModel} (${fallback ? `fallback ${args.provider}/${args.model}` : "no fallback"})`
       : `${args.provider}/${args.model}`,
     fixtures: args.cases ?? args.fixtures,
     instruction,
-    scores: score(rows),
+    scores: {
+      ...score(rows),
+      // A provider decision model's own answers against the rows that fell
+      // through to the fallback or failed: admission reads this split.
+      ...(providerPick
+        ? {
+            answered_by_decision_model: rows.filter((row) =>
+              row.source.startsWith(`classifier:${providerPick.provider}/`),
+            ).length,
+          }
+        : {}),
+    },
     rows,
   };
   process.stdout.write(`${JSON.stringify(report.scores, null, 2)}\n`);
@@ -579,6 +637,56 @@ async function main(): Promise<number> {
     process.stderr.write(`wrote ${args.out}\n`);
   }
   return 0;
+}
+
+/** `<provider>:<model id>` from `--decision-model`; `jev` names the native model. */
+function providerPickOf(id: string | undefined): { provider: string; model: string } | undefined {
+  const at = id?.indexOf(":") ?? -1;
+  return id && at > 0 ? { provider: id.slice(0, at), model: id.slice(at + 1) } : undefined;
+}
+
+/**
+ * The service's provider option for one decision model, through a runtime
+ * whose key is set in memory from the environment. `DECISIONS_BASE_URL`
+ * points it at a stand-in, as the app's own dev override does.
+ */
+async function providerDecisions(
+  runner: Awaited<ReturnType<typeof openModuleRunner>>,
+  home: string,
+  pick: { provider: string; model: string },
+  keyEnv: string,
+) {
+  const key = process.env[keyEnv];
+  if (!key) throw new Error(`${keyEnv} is not set in the environment.`);
+  const { createModelRuntime } = await runner.import<
+    typeof import("../src/core/pi/modelRuntime.ts")
+  >("/src/core/pi/modelRuntime.ts");
+  const { decisionModelsOf } = await runner.import<
+    typeof import("../src/core/pi/decisionModels.ts")
+  >("/src/core/pi/decisionModels.ts");
+  const { ProviderDecisionModel } = await runner.import<
+    typeof import("../src/core/decisions/providerDecisionModel.ts")
+  >("/src/core/decisions/providerDecisionModel.ts");
+  const runtime = await createModelRuntime({
+    authPath: join(home, "decision-auth.json"),
+    modelsPath: join(home, "decision-models.json"),
+  });
+  await runtime.setRuntimeApiKey(pick.provider, key);
+  const models = decisionModelsOf(runtime, pick.provider);
+  if (!models.some((model) => model.id === pick.model))
+    throw new Error(`${pick.provider} lists no choice-capable decision model ${pick.model}.`);
+  const baseUrl = settingFrom(process.env, "DECISIONS_BASE_URL")?.trim();
+  return {
+    signedIn: () => [{ provider: pick.provider, models }],
+    create: (provider: string, model: string) =>
+      new ProviderDecisionModel({
+        provider,
+        model,
+        selectAccount: () => "scorer",
+        runtimeFor: async () => runtime,
+        ...(baseUrl ? { baseUrl } : {}),
+      }),
+  };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {

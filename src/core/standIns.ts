@@ -72,6 +72,8 @@ export type StandIns = {
   /** The native decision model's endpoint. */
   jevUrl?: string;
   openRouterDecisionsBaseUrl?: string;
+  /** OpenCode Go's decision address (docs/decision-models.md). */
+  openCodeGoDecisionsBaseUrl?: string;
   releaseNotesDir?: string;
   /** Where card pushes to a phone are posted instead of Infinitary's relay (docs/phone-push.md). */
   pushRelayUrl?: string;
@@ -134,6 +136,7 @@ export function readStandIns(
     inboxLinkDir: text(env, "INBOX_LINK_DIR"),
     jevUrl: text(env, "JEV_URL"),
     openRouterDecisionsBaseUrl: text(env, "OPENROUTER_DECISIONS_BASE_URL"),
+    openCodeGoDecisionsBaseUrl: text(env, "OPENCODE_GO_DECISIONS_BASE_URL"),
     releaseNotesDir: text(env, "RELEASE_NOTES_DIR"),
     pushRelayUrl: text(env, "PUSH_RELAY_URL"),
   };

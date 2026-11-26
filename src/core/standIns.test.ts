@@ -37,6 +37,7 @@ const NAMED = {
   INFINITARY_INBOX_LINK_DIR: "/stand-ins/bin",
   INFINITARY_JEV_URL: "http://127.0.0.1:9/jev",
   INFINITARY_OPENROUTER_DECISIONS_BASE_URL: "http://127.0.0.1:9/openrouter",
+  INFINITARY_OPENCODE_GO_DECISIONS_BASE_URL: "http://127.0.0.1:9/opencode-go-decisions",
   INFINITARY_RELEASE_NOTES_DIR: "/stand-ins/notes",
 };
 
@@ -74,6 +75,7 @@ describe("readStandIns", () => {
       inboxLinkDir: "/stand-ins/bin",
       jevUrl: "http://127.0.0.1:9/jev",
       openRouterDecisionsBaseUrl: "http://127.0.0.1:9/openrouter",
+      openCodeGoDecisionsBaseUrl: "http://127.0.0.1:9/opencode-go-decisions",
       releaseNotesDir: "/stand-ins/notes",
     });
   });

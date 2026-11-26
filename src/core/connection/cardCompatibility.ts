@@ -3,6 +3,7 @@ import { CARD_DRAFTS } from "@shared/cardDrafts";
 import { type CardNote, markNumbers, noteText, noteTexts } from "@shared/cardNotes";
 import { CHOICE_ATTACHMENTS } from "@shared/choiceCarried";
 import type { Spelling } from "@shared/codeNames";
+import { type DecisionsView, decisionsViewBeforeProviders } from "@shared/decisions";
 import { secretKeepFields } from "@shared/secrets";
 import { contractChange, listsChange } from "./contractChanges";
 import { type JournalEntry, pushFrameIn } from "./journal";
@@ -306,4 +307,25 @@ function lookPushFor(entry: JournalEntry, spelling: Spelling, unread: readonly s
   if (unread.length === 0 || !looks) return spelled;
   const frame = JSON.parse(spelled);
   return JSON.stringify({ ...frame, payload: lookFor(entry.channel, frame.payload, unread) });
+}
+
+/** Decision models from any signed-in provider (`decision-providers.md`). */
+export const DECISION_PROVIDERS = contractChange("decision-providers");
+/** The answers that carry the Decisions view, which an older view reads strictly. */
+const DECISIONS_CHANNELS = new Set([
+  "inf:settings:decisions",
+  "inf:settings:decisions:set",
+  "inf:decisions:key:set",
+  "inf:decisions:key:remove",
+  "inf:decisions:use:set",
+]);
+
+/** The Decisions view as a view from before `decision-providers` reads it. */
+export function decisionsFor(
+  channel: string,
+  value: unknown,
+  changes: readonly string[] | null | undefined,
+): unknown {
+  if (listsChange(changes, DECISION_PROVIDERS) || !DECISIONS_CHANNELS.has(channel)) return value;
+  return decisionsViewBeforeProviders(value as DecisionsView);
 }

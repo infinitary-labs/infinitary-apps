@@ -461,7 +461,7 @@ Back goes one page back, from a page under a section to that section and from a 
 The list starts focused on General; arrow keys move among the rows and Return or Space opens the focused section, with native keyboard focus on its controls.
 The row a key moves to scrolls into view where the list is longer than the sheet.
 Sections with nothing to show stay off the list, so Integrations shows once the computer answers its connections and the five computer pages show together once the computer has answered them; the computer's sheet keeps the computer's name, reach, address and Leave or Forget.
-Theme is this device's own (`PhoneLook`, `PhoneAppearance`): Apple's segmented control worded Device, Dark and Light, like the computer's Dark and Light pills, under a line saying it is set on this iPhone only (this iPad on an iPad) and the computer keeps its own.
+Theme is this device's own (`PhoneLook`, `PhoneAppearance`): Apple's segmented control worded Device, Dark and Light, like the computer's Dark and Light tiles, under a line saying it is set on this iPhone only (this iPad on an iPad) and the computer keeps its own.
 It starts on Device, which follows iOS's own setting and its Automatic switching; Dark or Light sets the window's interface style, so every screen, sheet, the keyboard, the crew, card bodies and the picture viewer follow it at once.
 The choice is saved in the app's own defaults, never in the connection file, so it survives a relaunch, an update, Leave, Forget, Removed and joining another computer; a reinstall resets it.
 It never reaches the computer, and the computer's Theme never reaches the phone; asking the first mate to switch the theme still switches the computer's.

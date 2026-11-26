@@ -66,6 +66,9 @@
     "src/preload/api.ts",
     "src/preload/pushHub.ts",
     "src/preload/readableRequest.ts",
-    "src/main/keyboard.ts"
+    "src/main/keyboard.ts",
+    // The panel picture document, which the browser layer draws to read the
+    // colors each picture takes (tests/browser/panel-capture-colors.test.ts).
+    "src/main/host/panelCaptureDocument.ts"
   ]
 }

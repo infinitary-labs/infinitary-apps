@@ -5,6 +5,8 @@
  * the captain's whole UI light (or blank) while `capture_panel` runs.
  */
 
+import { frameThemeRule } from "@shared/colorThemes";
+
 export type CaptureTheme = "dark" | "light";
 
 /** Window backing color, matching `--bg-0` in `design/tokens/colors.css`. */
@@ -24,7 +26,18 @@ function escapeAttribute(text: string): string {
   return text.replaceAll("&", "&amp;").replaceAll('"', "&quot;");
 }
 
-export function buildFrameCaptureHtml(frame: CaptureFrame, theme: CaptureTheme): string {
+/**
+ * Each document ends its copied CSS with its own base's colors: the window's
+ * color theme sheet and a frame's birth rule pin the tokens of the look on
+ * screen on every `data-theme` scope, so without it a Light picture of a Dark
+ * window reads Dark. The chosen color theme shows only on its own base
+ * (docs/themes.md).
+ */
+export function buildFrameCaptureHtml(
+  frame: CaptureFrame,
+  theme: CaptureTheme,
+  colorTheme?: string | null,
+): string {
   const css = frame.css.replaceAll("</style", "<\\/style");
   return `<!doctype html>
 <html data-theme="${theme}">
@@ -33,6 +46,7 @@ export function buildFrameCaptureHtml(frame: CaptureFrame, theme: CaptureTheme):
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; font-src data:; img-src data:;">
 <style>
 ${css}
+${frameThemeRule(theme, colorTheme)}
 </style>
 </head>
 <body data-theme="${theme}">
@@ -47,6 +61,8 @@ export function buildCaptureHtml(input: {
   panelHtml: string;
   frames?: CaptureFrame[];
   theme: CaptureTheme;
+  /** The window's color theme as its body names it, or null for plain Dark or Light. */
+  colorTheme?: string | null;
   width: number;
   height: number;
 }): string {
@@ -63,7 +79,7 @@ export function buildCaptureHtml(input: {
       if (!frame) return "";
       const frameWidth = Math.max(1, Math.round(frame.width));
       const frameHeight = Math.max(1, Math.round(frame.height));
-      return `<iframe srcdoc="${escapeAttribute(buildFrameCaptureHtml(frame, theme))}" style="border:0;display:block;width:${frameWidth}px;height:${frameHeight}px"></iframe>`;
+      return `<iframe srcdoc="${escapeAttribute(buildFrameCaptureHtml(frame, theme, input.colorTheme))}" style="border:0;display:block;width:${frameWidth}px;height:${frameHeight}px"></iframe>`;
     },
   );
   return `<!doctype html>
@@ -73,6 +89,7 @@ export function buildCaptureHtml(input: {
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; font-src data:; img-src data:;">
 <style>
 ${css}
+${frameThemeRule(theme, input.colorTheme)}
 html, body {
   margin: 0;
   width: ${width}px;

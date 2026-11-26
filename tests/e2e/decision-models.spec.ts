@@ -1049,6 +1049,19 @@ test("OpenCode Go's decision model is chosen from its own row, named with its co
       provider: OPENCODE_GO_PROVIDER_ID,
       model: "jev-1.14",
     });
+    // With Go signed out, the next decision asks Go nothing and the person's own models answer.
+    const askedOfGo = local.seen.length;
+    const afterTitle = `After Go ${CLASSIFY_CHORE_MARKER}`;
+    await say(page, `${SPAWN_PROMPT_MARKER} ${afterTitle}`);
+    await expect(startedLine(page, await taskKey(page, afterTitle))).toBeVisible({
+      timeout: 30_000,
+    });
+    const after = shapeOf(
+      readTasks(userDataDir).find((row) => row.title === afterTitle) as TaskRow,
+    );
+    expect(local.seen).toHaveLength(askedOfGo);
+    // fm-mock/mock-1 is the person's own model this test set at its start.
+    expect(after).toMatchObject({ kind: "chore", kind_source: "classifier:fm-mock/mock-1" });
   } finally {
     await launched.close();
     local.server.closeAllConnections();

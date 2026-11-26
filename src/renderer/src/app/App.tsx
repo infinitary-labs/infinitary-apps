@@ -25,6 +25,7 @@ import { KeyReminder } from "./KeyReminder";
 import { NextKeysHint } from "./NextKeysHint";
 import { escapeToMaximizedCard, followNotTypingKeys, leaveMessageField } from "./notTypingKeys";
 import { applyTheme } from "./preferences";
+import { projectFocus } from "./projectFocus";
 import { followShellCommands } from "./shellCommands";
 import { isHeldEntry, shownEntry } from "./stack";
 import { useShellStore } from "./store";
@@ -74,6 +75,20 @@ export function App() {
       const store = useShellStore.getState();
       if (store.pickingDictationKey) return;
       if (event.key === "Escape") {
+        // The top bar's open project row folds before anything else: it is
+        // drawn over the rest, and a press anywhere outside it already folds
+        // it. A row the pointer opened leaves focus where it was, such as the
+        // message box, so the row's own Escape never hears this key
+        // (docs/project-focus.md, "Opening and closing the row").
+        if (
+          store.view === "home" &&
+          projectFocus.state().open &&
+          !event.defaultPrevented &&
+          !event.isComposing
+        ) {
+          projectFocus.setOpen(false);
+          return;
+        }
         // An Escape nothing in the card used restores a maximized card
         // before anything else it would do (design skill ResponseCard,
         // "Maximize"); its own controls, the picture viewer and command

@@ -4126,6 +4126,9 @@ public enum PhoneMessages {
     public static func `settingsUsageConnectionHeaders`() -> String { PhoneWords.format("settingsUsageConnectionHeaders", []) }
     public static func `settingsUsageConnectionHeadersHint`() -> String { PhoneWords.format("settingsUsageConnectionHeadersHint", []) }
     public static func `settingsUsageConnectionKeep`() -> String { PhoneWords.format("settingsUsageConnectionKeep", []) }
+    public static func `settingsUsageConnectionLineRefused`(`host`: String) -> String { PhoneWords.format("settingsUsageConnectionLineRefused", [`host`]) }
+    public static func `settingsUsageConnectionLineSecure`(`host`: String) -> String { PhoneWords.format("settingsUsageConnectionLineSecure", [`host`]) }
+    public static func `settingsUsageConnectionLineUnreachable`(`host`: String) -> String { PhoneWords.format("settingsUsageConnectionLineUnreachable", [`host`]) }
     public static func `settingsUsageConnectionNone`() -> String { PhoneWords.format("settingsUsageConnectionNone", []) }
     public static func `settingsUsageConnectionProblemAddress`() -> String { PhoneWords.format("settingsUsageConnectionProblemAddress", []) }
     public static func `settingsUsageConnectionProblemDestination`() -> String { PhoneWords.format("settingsUsageConnectionProblemDestination", []) }
@@ -8852,6 +8855,9 @@ extension PhoneWords {
         "settingsUsageConnectionHeaders": [],
         "settingsUsageConnectionHeadersHint": [],
         "settingsUsageConnectionKeep": [],
+        "settingsUsageConnectionLineRefused": ["host"],
+        "settingsUsageConnectionLineSecure": ["host"],
+        "settingsUsageConnectionLineUnreachable": ["host"],
         "settingsUsageConnectionNone": [],
         "settingsUsageConnectionProblemAddress": [],
         "settingsUsageConnectionProblemDestination": [],

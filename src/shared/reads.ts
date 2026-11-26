@@ -332,7 +332,7 @@ export const readCatalog = {
     invalidate: { pollMs: 60_000 },
     // i18n-exempt: served only to the first mate, as the read's description (src/core/pi/appReads.ts).
     description:
-      "The host the usage report sends every model's work to, from a company's Claude Code reporting setup; claudeOnly when only Claude's own records go there, such as a setup over gRPC; null when no host is known, which includes Claude's own client reporting straight to a company setup this app cannot read; connection is the host of the reporting connection the person added in Settings → Intelligence, which gets the same work too.",
+      "The host the usage report sends every model's work to, from a company's Claude Code reporting setup; claudeOnly when only Claude's own records go there, such as a setup over gRPC; null when no host is known, which includes Claude's own client reporting straight to a company setup this app cannot read; connection is the host of the reporting connection the person added in Settings → Intelligence, which gets the same work too; connectionRefusal is why that connection's last send did not get through (unreachable, secure-connection or refused), until a send does or the person saves it again.",
   }),
   "usage.tasks": entry({
     channel: "inf:usage:tasks",

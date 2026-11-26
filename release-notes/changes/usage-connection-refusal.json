@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "usage-connection-refusal",
+      "kind": "fix",
+      "area": "subscriptions",
+      "title": "Your usage reporting connection reaches a tool your computer trusts, and says when it cannot",
+      "body": "A usage reporting connection you add in Settings → Intelligence now reaches a monitoring tool on your company's own network whenever your computer trusts it, as the reporting your company sets up already does. When a send does not get through, Settings → Usage says so right away and why: the tool could not be reached, it turned the send away, or Infinitary could not connect to it securely.",
+      "picture": {
+        "dark": "usage-connection-refusal-dark.webp",
+        "light": "usage-connection-refusal-light.webp",
+        "alt": "Settings → Usage warning that the crew's usage is not reaching the reporting connection, because Infinitary could not connect to it securely"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

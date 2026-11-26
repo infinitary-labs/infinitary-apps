@@ -1,7 +1,8 @@
 {
   "src/core/axi/captainCommands.test.ts": 50.9,
   "src/core/axi/channel.test.ts": 82.8,
-  "src/core/batches/combine.test.ts": 28.8,
+  "src/core/batches/combine.held.test.ts": 9.3,
+  "src/core/batches/combine.test.ts": 19.5,
   "src/core/browser/pageStarts.integration.test.ts": 6.4,
   "src/core/claude/claudeAccess.integration.test.ts": 1.5,
   "src/core/claude/claudeAttribution.integration.test.ts": 1.7,

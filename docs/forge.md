@@ -86,7 +86,7 @@ The provider tests, `projectContributions.test.ts`, and the `fork-contribution.s
 
 ## The kinds
 
-- `github`: `providers/github/githubForge.ts`, GitHub's REST API with the app's own GitHub sign-in as a bearer token (git integration PR 1.2; below), on github.com and on each GitHub Enterprise host at that host's own API (`githubApiBaseFor`).
+- `github`: `providers/github/githubForge.ts` (its signed workflow downloads in `downloads.ts`, release-file uploads in `releaseUploads.ts`, failure reading in `failures.ts`), GitHub's REST API with the app's own GitHub sign-in as a bearer token (git integration PR 1.2; below), on github.com and on each GitHub Enterprise host at that host's own API (`githubApiBaseFor`).
   `INFINITARY_GITHUB_API_URL` (github.com) and `INFINITARY_GITHUB_ENTERPRISE_API_URL` (every enterprise host) are honoured only in an unpackaged app.
   The home's forge wiring (`src/core/forge/homeForges.ts`) binds every GitHub project to it; no other program's GitHub sign-in is ever read, and the app no longer runs any GitHub tool of the Mac's.
 - `gitlab`: `providers/gitlab/gitlabForge.ts`, GitLab's REST API (`/api/v4`) with the app’s own sign-in, on gitlab.com and on each self-hosted server ("GitLab merge requests" below).

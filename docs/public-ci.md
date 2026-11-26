@@ -54,6 +54,7 @@ So the fresh Windows 11 check, the phone check, the signed installer checks, sig
 4. **GitHub's machines run them.**
    The checks in the list above run on the pull request's own version, merged with the current `main`.
    If any check fails, the failed-check note sends the pull request back to its author ("The failed-check note"), and the author's next push brings it back to the round.
+   When every failed check also fails on `main`, the note tells the author so and the pull request waits on `main` instead: the first round after `main` passes offers the captain a rerun of its failed jobs ("Once main passes" in `docs/outside-intake.md`).
 5. **The crew reviews it once every check passes.**
    The next round files its review, and the first mate starts it at once under the intake rules' standing yes ("The review" in `docs/outside-intake.md`).
    A crewmate reads its code and GitHub's runs, never runs the change, and shows the merge card with `asks_first`.
@@ -86,11 +87,14 @@ It starts when `ci`, `contributors` or `docs-site` finishes a run for a pull req
 - It leaves out a job whose check also failed in main's newest finished run of `main.yml`, matching the check by the innermost level of the job's name without its trigger (`scripts/ci-job-names.mjs`), so the contributor's `Integration tests (Linux; group 1/2)` and main's are one check.
   Only the jobs `contributors` runs through `verify.yml` and `linux-startup.yml` have a counterpart on main; main runs none of the jobs `ci` and `docs-site` run on a pull request, so those are never left out.
   Whenever main's newest run has any failed job, the comment adds a line saying main is failing too, so a check it names may not be the contributor's to fix.
-- It writes one comment per version, saying it was posted automatically and naming each failed job with a link to its log and then, without links, any failed job it left out because main fails it too, and edits that comment when a later workflow of the same version finishes; a version whose every failed check also fails on main gets none.
-- The version's first comment labels the pull request `waiting on author`, and its hidden mark records whether the note put the label on; the author's next push takes the label off once both required checks pass ("Intake").
-- A passing run of the same version, such as a maintainer's rerun, reads the version again; once nothing the comment names is left for the pull request to fix, it edits the comment to say so, and when the note put the label on and both required checks pass, it takes the label off and adds `needs triage`, as the author's push does.
+- It writes one comment per version, saying it was posted automatically and naming each failed job with a link to its log and then, without links, any failed job it left out because main fails it too, and edits that comment when a later workflow of the same version finishes.
+- A version whose every failed check also fails on main gets a comment naming those checks without links, saying they need nothing from the author and that a maintainer can run them again once `main` passes, and no label; the intake round offers that rerun ("Once main passes" in `docs/outside-intake.md`).
+- The version's first comment that names a check labels the pull request `waiting on author`; the author's next push takes the label off once both required checks pass ("Intake").
+- The comment's hidden first line, `<!-- failed-checks sha=<version> labeled=yes|no waits=author|main|none -->`, records whether the note put the label on and whom the version waits on: its author while the comment names a check, `main` while every failed check also fails on main, and nobody once none fails.
+- A run of the same version, such as a maintainer's rerun, reads the version again; once nothing the comment names is left for the pull request to fix, it edits the comment to say so, and when the note put the label on and both required checks pass, it takes the label off and adds `needs triage`, as the author's push does.
   The note's label comes off this way even after a maintainer's reply asking for changes; only a label already on before the note's first comment stays.
-  A later failure at that version names the checks again and puts the label back.
+  A later failure at that version names the checks again and puts the label back, as it puts it on after a comment that named none.
+- A rerun checks the same merge with `main` as the run's first attempt, since GitHub reruns a run at its first commit: it settles a failure main shared by chance, such as a flaky test or a machine fault, but a check that main's own code fix made pass fails again, and the note names it, so the author's next push checks the version against the fixed `main`.
 - A run of an older version, once a newer push replaced it, or of a closed pull request writes nothing.
 
 Started by hand with a pull request number, it is a dry run on any pull request of the project: it writes what it would say to the job summary and nothing on the pull request.
@@ -129,7 +133,7 @@ GitHub sorts each new outside issue and pull request with no model, and a mainta
 - **Waiting on the author.**
   After each required check writes its status, it labels an outside pull request `waiting on author` while either required check fails; once both pass on the author's own event (a push, an edit, a reopening or an acceptance), the label comes off and `needs triage` goes on (`scripts/intake-labels.mjs`).
   A maintainer's event never takes the label off here, so a reply asking for changes holds although both checks pass.
-  A failed run of `ci`, `contributors` or `docs-site` also adds the label through the failed-check note, and a passing rerun of that version takes the note's label off again, even after such a reply ("The failed-check note").
+  A failed run of `ci`, `contributors` or `docs-site` also adds the label through the failed-check note, unless every failed check also fails on `main`, and a passing rerun of that version takes the note's label off again, even after such a reply ("The failed-check note").
 - **The triage mark.**
   `triage-mark.yml` reads each new comment (`scripts/triage-mark.mjs`).
   A comment from an account that can write to the project, judged by GitHub's collaborator permission API and never by the comment's author relation, may end with `<!-- infinitary-triage v1 disposition=NAME -->`.

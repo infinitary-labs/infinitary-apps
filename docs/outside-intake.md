@@ -46,7 +46,8 @@ An item is listed when one of these holds:
 - after the clock, its author or another account that cannot write commented, answered on the change or pushed a new version;
 - it is an issue whose linked task finished with a result the crew's last reply does not yet answer ("What a round knows of its builds");
 - it is an open issue the crew promised work on, labeled `accepted` or answered with a bug's first reply, that has neither a waiting task nor a linked task ("When the work ends");
-- it is an outside pull request labeled `accepted` whose newest version has runs waiting for approval, or on which every check passed and the crew's review has not yet published its story comment there ("The review").
+- it is an outside pull request labeled `accepted` whose newest version has runs waiting for approval, or on which every check passed and the crew's review has not yet published its story comment there ("The review");
+- it is an outside pull request labeled `accepted` and not `edits checks` whose newest version waits on `main`, once `main` passes ("Once main passes").
 
 Comments from the crew and from GitHub's bot account never move the clock: the check-file flag, the agreement and Careful review checks and the timer's reminder all leave it where it was.
 A bug's first reply carries the crewmate line, so the bug stays off the list while its reproduce step runs, and comes back when that step finishes.
@@ -62,7 +63,7 @@ Whether an account can write is GitHub's collaborator permission (`/repos/{owner
 
 A round handles at most 8 places, since the app keeps at most 8 waiting writes for one task (`WRITE_ASK_CAP`, `src/shared/writeAsk.ts`):
 
-1. The run rows of the one pull request offered for runs take their places first ("Check starts"); an outside pull request starts up to four runs that wait for approval.
+1. The run or rerun rows of the one pull request offered check starts take their places first ("Check starts"); an outside pull request starts up to four runs that wait for approval, or reruns up to three.
 2. Replies split the rest evenly between pull requests and issues, and one kind fills the other's empty places, so neither crowds out the other.
 3. Within each kind, a pull request that closes an open `accepted` issue goes first; otherwise the item waiting longest since its author last acted goes first.
 
@@ -80,6 +81,7 @@ Everything comes through `github_read` on this project's own paths, fenced as da
   Once both pass it reads the description, the file list and the changes (`/pulls/{number}/files`), up to the size limit ("Which pull requests reach the tick"); a larger one is asked to split, or to settle the change in an issue first.
   A file whose changes GitHub does not show in full counts as unread, so the round asks for a split.
   It also reads the runs and check results on the newest version, to know whether runs wait for approval, any check failed, or every check passed.
+  When a check failed, it reads the failed-check note's comment on that version, whose hidden first line `<!-- failed-checks sha=<version> labeled=… waits=main -->` says every failed check also fails on `main` (`docs/public-ci.md`, "The failed-check note"), and then `main`'s newest finished run of `main.yml` (`/repos/{owner}/{repo}/actions/workflows/main.yml/runs?branch=main&status=completed&per_page=1`).
 - **The project's own code and docs**, in the round's working copy, to check a report against what the code does now and to find whether a fix already shipped.
 - **Earlier answers**: open and closed issues listed by label (`duplicate`, `idea`, `accepted`) to find a duplicate or an idea already declined.
   GitHub's search reaches past this project's paths, so the round lists instead.
@@ -100,7 +102,7 @@ An issue with a linked task gets a reply only when that task's result gives it s
 
 ## What a round answers
 
-Each listed item gets one reply, sent as one write: `POST /repos/{owner}/{repo}/issues/{number}/comments`; the one exception is an issue whose Build row is drafted again, which gets the row and no reply ("When the work ends").
+Each listed item gets one reply, sent as one write: `POST /repos/{owner}/{repo}/issues/{number}/comments`; the exceptions are an issue whose Build row is drafted again, which gets the row and no reply ("When the work ends"), and a pull request offered reruns, which gets the rerun rows and no reply ("Once main passes").
 A reply opens with the crewmate line in italics, `Written by an Infinitary crewmate, an AI agent working for this project's maintainer, and approved by the maintainer.`, so every reader knows who wrote it before reading on.
 It thanks the author, says what was found in plain words, says what happens next and who acts, and ends with the triage mark that sets the labels (`<!-- infinitary-triage v1 disposition=NAME -->`).
 The mark does the labeling and closing, so a round sends no label or close request of its own.
@@ -181,6 +183,17 @@ Each waiting run is its own row, `POST /repos/{owner}/{repo}/actions/runs/{run_i
 Every outside run uses GitHub's machines with a read-only token and no secret; a round never asks for a check of an outside version by hand, which the by-hand guard refuses anyway ("A check requested by hand").
 
 A check that fails on the newest version sends the pull request back to its author: the round drafts nothing more for it and files no review, and the author's next push lists it again.
+The exception is a version whose every failed check also fails on `main`: the failed-check note's comment tells its author so, puts no label on, and marks the version `waits=main`, so it waits on `main`, not its author (`docs/public-ci.md`, "The failed-check note").
+
+### Once main passes
+
+A pull request waiting on `main` comes back once `main`'s newest finished run of `main.yml` concluded `success` and every run of its newest version finished.
+The round then drafts one rerun row for each of that version's newest runs of `ci`, `contributors` and `docs-site` with a failed job, `POST /repos/{owner}/{repo}/actions/runs/{run_id}/rerun-failed-jobs`, and no reply, since the note's comment already told the author.
+Rerun rows follow the run rows' rules: all five criteria, one pull request a round, and the maintainer's tick as the yes for each; an unticked row starts nothing, and the pull request comes back next round.
+One labeled `edits checks` gets no rerun rows and is not listed for them, as it gets no run rows: the maintainer reruns its checks on GitHub after reading its check files.
+What the rerun finds reaches the note again: a pass clears its comment and the next round files the review ("The review"), a failure the change must fix sends it back to its author, and a failure `main` shares again waits on `main` again.
+GitHub reruns a run on the same merge with `main` as its first attempt, so a rerun settles a failure `main` shared by chance, such as a flaky test or a machine fault.
+When `main` passes because its own code was fixed, the rerun fails that check again and the note names it; the author's next push merges the version with the fixed `main`.
 
 ## After the click
 
@@ -230,7 +243,7 @@ A round handles one ending itself:
 
 ## What a round never does
 
-- Check out, build or run code from a pull request, or ask for a check of an outside version.
+- Check out, build or run code from a pull request, or ask for a check of an outside version by hand; its run and rerun rows wait on the maintainer's tick ("Check starts").
 - Open a link an item gives, read another project, or read GitHub's search.
 - Send a write outside the app's approval card, or put a card of its own beside it; only the `declined` reply drafted after Don't file on an issue's Build row waits on a second approval card.
 - Merge, approve a pull request's review, or close an item except through the triage mark.

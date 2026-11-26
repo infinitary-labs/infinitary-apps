@@ -50,6 +50,8 @@ import {
   type EscalationPlan,
   handOffShape,
   resolveEscalation,
+  UNSAFE_DATA_READER_ANSWERS,
+  UNSAFE_DATA_READER_ANSWERS_RULE,
   UNSAFE_DATA_READER_PROJECT,
   withBasisVerdict,
   withDeliverable,
@@ -727,17 +729,27 @@ export class TaskIntake {
       // i18n-exempt: served to the first mate's tool, never shown to a person
       throw new TaskGraphRefusal(`Nothing was filed. ${SIDE_EFFECT_START_AT_APPROVAL}`);
     const needsMerge = this.needsMerge(input.shape?.needs_merge, placement.blockedBy, startAt);
-    const shape = withDeliverable(
-      {
-        ...workShape(this.options.tasks, input.shape),
-        ...handOff,
-        ...(startAt ? { start_at_approval: startAt } : {}),
-        ...(needsMerge.length ? { needs_merge: needsMerge } : {}),
-        ...(sideEffect ? { side_effect: true } : {}),
-        ...(program ? { program } : {}),
-      },
-      input.intent,
-    );
+    // The same two reader refusals a spawn answers, in create_task's words.
+    if (input.shape?.unsafe_data_reader && placement.personal)
+      // i18n-exempt: served to the first mate's tool, never shown to a person
+      throw new TaskGraphRefusal(`Nothing was filed. ${UNSAFE_DATA_READER_PROJECT}`);
+    const planned = {
+      ...workShape(this.options.tasks, input.shape),
+      ...handOff,
+      ...(startAt ? { start_at_approval: startAt } : {}),
+      ...(needsMerge.length ? { needs_merge: needsMerge } : {}),
+      ...(sideEffect ? { side_effect: true } : {}),
+      ...(program ? { program } : {}),
+    };
+    let shape: WorkShape;
+    try {
+      shape = withDeliverable(planned, input.intent);
+    } catch (caught) {
+      if (caught instanceof Error && caught.message === UNSAFE_DATA_READER_ANSWERS)
+        // i18n-exempt: served to the first mate's tool, never shown to a person
+        throw new TaskGraphRefusal(`Nothing was filed. ${UNSAFE_DATA_READER_ANSWERS_RULE}`);
+      throw caught;
+    }
     const file = (): TaskRecord => {
       const filed = this.options.tasks.create({
         id: taskId,

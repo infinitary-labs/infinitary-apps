@@ -94,8 +94,8 @@ Every refusal an agent was served names its hold: a soft hold with its way out, 
 ## An unsafe data reader
 
 A task that reads words strangers can write, such as its project's issues and pull requests, starts as an unsafe data reader: a read-only answer task whose shape says `unsafe_data_reader` (`src/shared/routingPolicy.ts`).
-Only the first mate sets it, on `spawn_crewmate`; the fence is the host's, so it holds whatever those words say, and the crewmate cannot set or clear it.
-`spawn_crewmate` refuses one on the personal workspace, whose files are the captain's own, or that is not an answer (`UNSAFE_DATA_READER_PROJECT`, `UNSAFE_DATA_READER_ANSWERS` in `src/core/orchestrator/workShape.ts`); a takeover or a stronger model's retry keeps it.
+Only the first mate sets it, on `spawn_crewmate` or `create_task`; the fence is the host's, so it holds whatever those words say, and the crewmate cannot set or clear it.
+Both refuse one on the personal workspace, whose files are the captain's own, or that is not an answer (`UNSAFE_DATA_READER_PROJECT`, `UNSAFE_DATA_READER_ANSWERS` and, for a task that is filed, `UNSAFE_DATA_READER_ANSWERS_RULE` in `src/core/orchestrator/workShape.ts`); a takeover or a stronger model's retry keeps it.
 One with no project runs in an empty folder of its own, `crewmates/<taskId>/reader/` (`crewmateReaderDir`), never a copy of the default workspace, whose files other tasks' work leaves there; its record names no working copy, so its close removes none, and the folder goes with the task's other leftover files.
 
 - Its session is fenced (`SessionSpec.fenced`): no shell, no file change and no browser, on both kinds of model session; its one way onto the web is `web_read` (below).

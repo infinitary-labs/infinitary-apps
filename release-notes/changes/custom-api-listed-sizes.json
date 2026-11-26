@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "custom-api-listed-sizes",
+      "kind": "fix",
+      "area": "subscriptions",
+      "title": "Fetch from server fills in OpenCode Go's model sizes",
+      "body": "A custom API connection now reads the context and output sizes OpenCode's model list states, so a model picked from the list no longer needs its sizes typed by hand. Models the server says take no chat turn, such as decision and embedding models, show Not a chat model and can't be picked, since they could never pass the check Save runs.",
+      "picture": {
+        "dark": "custom-api-listed-sizes-dark.webp",
+        "light": "custom-api-listed-sizes-light.webp",
+        "alt": "A custom API connection's model list: two picked models with their context and output sizes filled in, and decision and embedding models marked Not a chat model."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

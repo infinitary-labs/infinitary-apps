@@ -172,6 +172,7 @@ public enum PhoneMessages {
     public static func `accountsCustomApiNameNeeded`() -> String { PhoneWords.format("accountsCustomApiNameNeeded", []) }
     public static func `accountsCustomApiNoList`() -> String { PhoneWords.format("accountsCustomApiNoList", []) }
     public static func `accountsCustomApiNoModels`() -> String { PhoneWords.format("accountsCustomApiNoModels", []) }
+    public static func `accountsCustomApiNotChat`() -> String { PhoneWords.format("accountsCustomApiNotChat", []) }
     public static func `accountsCustomApiNotOffered`(`model`: String) -> String { PhoneWords.format("accountsCustomApiNotOffered", [`model`]) }
     public static func `accountsCustomApiNotReached`() -> String { PhoneWords.format("accountsCustomApiNotReached", []) }
     public static func `accountsCustomApiNotSaved`() -> String { PhoneWords.format("accountsCustomApiNotSaved", []) }
@@ -4926,6 +4927,7 @@ extension PhoneWords {
         "accountsCustomApiNameNeeded": [],
         "accountsCustomApiNoList": [],
         "accountsCustomApiNoModels": [],
+        "accountsCustomApiNotChat": [],
         "accountsCustomApiNotOffered": ["model"],
         "accountsCustomApiNotReached": [],
         "accountsCustomApiNotSaved": [],

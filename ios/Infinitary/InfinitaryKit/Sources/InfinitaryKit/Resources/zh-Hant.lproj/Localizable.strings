@@ -165,6 +165,7 @@
 "accountsCustomApiNameNeeded" = "請為這個連線命名。";
 "accountsCustomApiNoList" = "這台伺服器不提供模型清單。請手動加入。";
 "accountsCustomApiNoModels" = "還沒有模型。從伺服器取得，或手動加入一個。";
+"accountsCustomApiNotChat" = "不是聊天模型";
 "accountsCustomApiNotOffered" = "這台伺服器沒有提供 %1$@。";
 "accountsCustomApiNotReached" = "連不上這台伺服器。";
 "accountsCustomApiNotSaved" = "未儲存。";

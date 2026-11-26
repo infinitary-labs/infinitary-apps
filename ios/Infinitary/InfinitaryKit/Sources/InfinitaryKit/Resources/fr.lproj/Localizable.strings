@@ -165,6 +165,7 @@
 "accountsCustomApiNameNeeded" = "Donnez un nom à cette connexion.";
 "accountsCustomApiNoList" = "Ce serveur ne liste pas ses modèles. Ajoutez-les à la main.";
 "accountsCustomApiNoModels" = "Aucun modèle pour l’instant. Récupérez-les depuis le serveur, ou ajoutez-en un à la main.";
+"accountsCustomApiNotChat" = "Pas un modèle de chat";
 "accountsCustomApiNotOffered" = "Ce serveur ne propose pas %1$@.";
 "accountsCustomApiNotReached" = "Ce serveur n’a pas pu être joint.";
 "accountsCustomApiNotSaved" = "Non enregistré.";

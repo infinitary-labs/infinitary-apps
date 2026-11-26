@@ -1319,7 +1319,7 @@ export function CustomApiForm({
                       className="fm-custom-pick"
                       data-custom-listed={entry.id}
                       aria-pressed={added}
-                      disabled={added || busy !== "" || locked}
+                      disabled={added || entry.notChat || busy !== "" || locked}
                       onClick={() => {
                         edited("models");
                         setModels((current) => [
@@ -1337,8 +1337,14 @@ export function CustomApiForm({
                         ]);
                       }}
                     >
-                      {added ? "✓ " : "+ "}
+                      {entry.notChat ? "" : added ? "✓ " : "+ "}
                       {entry.id}
+                      {entry.notChat && (
+                        <span className="fm-custom-pick-note">
+                          {" · "}
+                          {m.accountsCustomApiNotChat()}
+                        </span>
+                      )}
                     </button>
                   );
                 })}

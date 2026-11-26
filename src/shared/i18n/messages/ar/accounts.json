@@ -183,6 +183,7 @@
   "accountsCustomApiNameNeeded": "سمِّ هذا الاتصال.",
   "accountsCustomApiNoList": "لا يعرض هذا الخادم قائمة بنماذجه. أضفها يدويًا.",
   "accountsCustomApiNoModels": "لا نماذج بعد. اجلبها من الخادم، أو أضف واحدًا يدويًا.",
+  "accountsCustomApiNotChat": "ليس نموذج محادثة",
   "accountsCustomApiNotOffered": "لا يوفّر هذا الخادم {model}.",
   "accountsCustomApiNotReached": "تعذّر الوصول إلى هذا الخادم.",
   "accountsCustomApiNotSaved": "لم يُحفظ.",

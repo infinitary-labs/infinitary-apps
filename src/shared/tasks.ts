@@ -786,6 +786,12 @@ export type TaskCardRow = z.infer<typeof taskCardRowSchema>;
 /** One record in full: the view plus what the board leaves out. */
 export const taskDetailSchema = taskViewSchema.extend({
   cost: taskCostViewSchema.optional(),
+  /**
+   * Its parts, each as its Tasks row reads it, in the order they were filed
+   * (INF-6805's plan, item 1). Absent on a task with none, and from an
+   * older home.
+   */
+  parts: z.array(taskViewSchema).optional(),
   liveValidation: liveValidationSummarySchema.optional(),
   /** Current policies, separate from dispatch and published delivery history. */
   policies: effectiveTaskPoliciesSchema.nullable().optional(),

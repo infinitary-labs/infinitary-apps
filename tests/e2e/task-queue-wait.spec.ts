@@ -79,7 +79,9 @@ test("a queued task names its prerequisite and time on every task surface", asyn
       const tile = boardTile(page, task.key);
       const wait = tile.locator("[data-board-wait]");
       await expect(wait.getByText(` · ${summary.names}`, { exact: true })).toBeVisible();
-      await expect(wait.getByText(summary.event, { exact: true })).toBeVisible();
+      // INF-6805: a wait with no recorded event shows no time, never "time unknown".
+      expect(summary.event).toBeNull();
+      await expect(wait.locator("[data-board-wait-event]")).toHaveCount(0);
       expect(await overflows(tile.locator("[data-board-status]"))).toBe(0);
     }
     await focusOn(boardTile(page, build.key));

@@ -1,5 +1,5 @@
 ---
-source: 47dc716341146fd8
+source: 7a56385e256eae30
 title: Aufgaben und Crewmitglieder
 description: Was eine Aufgabe ist, wie sie vom Backlog bis zu „Fertig“ wandert, wo du sie verfolgst und wie du das Crewmitglied lenkst, das sie bearbeitet.
 ---
@@ -93,6 +93,16 @@ Unter ihrem Titel steht eine Reihe von Tabs:
   Siehe [Der Browser der Crew](/de/the-crews-browser/).
 
 Ein Tab erscheint erst, wenn die Aufgabe dort etwas zu zeigen hat.
+
+## Eine Aufgabe in Teilen {#a-task-split-into-parts}
+
+Auf dem Tab **Info** einer Aufgabe in Teilen zählt die Zeile **Teile** die geschlossenen Teile und listet jeden Teil mit seinem Status auf, in der Reihenfolge, in der sie angelegt wurden.
+Drücke auf die Anzahl, um die Liste einzuklappen, und noch einmal, um sie zu öffnen.
+Ab neun Teilen klappen die geschlossenen hinter eine Zeile, die du öffnen kannst.
+Um die Karte eines Teils zu öffnen, klicke auf den Teil oder gehe mit der Tastatur zu ihm und drücke Enter; dort startest oder beantwortest du ihn.
+
+Eine Aufgabe in deinem Backlog, deren Teile die Arbeit erledigen, wartet nie auf ihr eigenes **Starten**.
+Oben auf ihrem Tab **Info** steht stattdessen, worauf ihre Teile warten, etwa „Ihr letzter Teil wartet auf dein Starten“, und die Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.
 
 ## Tags {#tags}
 

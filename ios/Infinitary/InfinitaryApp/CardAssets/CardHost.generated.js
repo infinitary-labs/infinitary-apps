@@ -52325,6 +52325,1158 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Open kept evidence`;
   }
+  function recordPartsClosedFold(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${count} جزء مغلق`;
+          case "one":
+            return `${count} جزء مغلق`;
+          case "two":
+            return `${count} جزآن مغلقان`;
+          case "few":
+            return `${count} أجزاء مغلقة`;
+          case "many":
+            return `${count} جزءًا مغلقًا`;
+          default:
+            return `${count} جزء مغلق`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} geschlossener Teil`;
+          default:
+            return `${count} geschlossene Teile`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} parte cerrada`;
+          case "many":
+            return `${count} de partes cerradas`;
+          default:
+            return `${count} partes cerradas`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} partie close`;
+          case "many":
+            return `${count} parties closes`;
+          default:
+            return `${count} parties closes`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `終了したパート${count}件`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `닫힌 부분 ${count}개`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} parte encerrada`;
+          case "many":
+            return `${count} partes encerradas`;
+          default:
+            return `${count} partes encerradas`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 个已关闭的部分`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 個已關閉的部分`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} çļöšéð þáŕţ ~~~~]`;
+          default:
+            return `[${count} çļöšéð þáŕţš ~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ closed part‬`;
+          default:
+            return `${count}‮ closed parts‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} closed part`;
+      default:
+        return `${count} closed parts`;
+    }
+  }
+  function recordPartsCountBacklog(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${count} في المهام المؤجلة لديك`;
+          case "one":
+            return `${count} في المهام المؤجلة لديك`;
+          case "two":
+            return `${count} في المهام المؤجلة لديك`;
+          case "few":
+            return `${count} في المهام المؤجلة لديك`;
+          case "many":
+            return `${count} في المهام المؤجلة لديك`;
+          default:
+            return `${count} في المهام المؤجلة لديك`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} in deinem Backlog`;
+          default:
+            return `${count} in deinem Backlog`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} en tus pendientes`;
+          case "many":
+            return `${count} en tus pendientes`;
+          default:
+            return `${count} en tus pendientes`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} dans votre réserve`;
+          case "many":
+            return `${count} dans votre réserve`;
+          default:
+            return `${count} dans votre réserve`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `バックログ${count}件`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `백로그 ${count}개`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} no seu backlog`;
+          case "many":
+            return `${count} no seu backlog`;
+          default:
+            return `${count} no seu backlog`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 个在你的待办列表中`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 個在你的待辦清單中`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} îñ ýöûŕ ƀáçķļöĝ ~~~~~~]`;
+          default:
+            return `[${count} îñ ýöûŕ ƀáçķļöĝ ~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ in your backlog‬`;
+          default:
+            return `${count}‮ in your backlog‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} in your backlog`;
+      default:
+        return `${count} in your backlog`;
+    }
+  }
+  function recordPartsCountIdle(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${count} خامل`;
+          case "one":
+            return `${count} خامل`;
+          case "two":
+            return `${count} خامل`;
+          case "few":
+            return `${count} خامل`;
+          case "many":
+            return `${count} خامل`;
+          default:
+            return `${count} خامل`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} untätig`;
+          default:
+            return `${count} untätig`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} inactiva`;
+          case "many":
+            return `${count} inactivas`;
+          default:
+            return `${count} inactivas`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} inactive`;
+          case "many":
+            return `${count} inactives`;
+          default:
+            return `${count} inactives`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `待機中${count}件`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `대기 중 ${count}개`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} ociosa`;
+          case "many":
+            return `${count} ociosas`;
+          default:
+            return `${count} ociosas`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 个空闲`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 個閒置`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} îðļé ~~]`;
+          default:
+            return `[${count} îðļé ~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ idle‬`;
+          default:
+            return `${count}‮ idle‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} idle`;
+      default:
+        return `${count} idle`;
+    }
+  }
+  function recordPartsCountInterrupted(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${count} متوقف`;
+          case "one":
+            return `${count} متوقف`;
+          case "two":
+            return `${count} متوقف`;
+          case "few":
+            return `${count} متوقف`;
+          case "many":
+            return `${count} متوقف`;
+          default:
+            return `${count} متوقف`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} unterbrochen`;
+          default:
+            return `${count} unterbrochen`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} interrumpida`;
+          case "many":
+            return `${count} interrumpidas`;
+          default:
+            return `${count} interrumpidas`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} interrompue`;
+          case "many":
+            return `${count} interrompues`;
+          default:
+            return `${count} interrompues`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `中断${count}件`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `중단됨 ${count}개`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} interrompida`;
+          case "many":
+            return `${count} interrompidas`;
+          default:
+            return `${count} interrompidas`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 个已中断`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 個已中斷`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} îñţéŕŕûþţéð ~~~~]`;
+          default:
+            return `[${count} îñţéŕŕûþţéð ~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ interrupted‬`;
+          default:
+            return `${count}‮ interrupted‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} interrupted`;
+      default:
+        return `${count} interrupted`;
+    }
+  }
+  function recordPartsCountQueued(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${count} في قائمة الانتظار`;
+          case "one":
+            return `${count} في قائمة الانتظار`;
+          case "two":
+            return `${count} في قائمة الانتظار`;
+          case "few":
+            return `${count} في قائمة الانتظار`;
+          case "many":
+            return `${count} في قائمة الانتظار`;
+          default:
+            return `${count} في قائمة الانتظار`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} in der Warteschlange`;
+          default:
+            return `${count} in der Warteschlange`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} en cola`;
+          case "many":
+            return `${count} en cola`;
+          default:
+            return `${count} en cola`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} en file d’attente`;
+          case "many":
+            return `${count} en file d’attente`;
+          default:
+            return `${count} en file d’attente`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `キュー${count}件`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `대기열 ${count}개`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} na fila`;
+          case "many":
+            return `${count} na fila`;
+          default:
+            return `${count} na fila`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 个排队中`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 個排隊中`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} ǫûéûéð ~~~]`;
+          default:
+            return `[${count} ǫûéûéð ~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ queued‬`;
+          default:
+            return `${count}‮ queued‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} queued`;
+      default:
+        return `${count} queued`;
+    }
+  }
+  function recordPartsCountStarting(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${count} قيد البدء`;
+          case "one":
+            return `${count} قيد البدء`;
+          case "two":
+            return `${count} قيد البدء`;
+          case "few":
+            return `${count} قيد البدء`;
+          case "many":
+            return `${count} قيد البدء`;
+          default:
+            return `${count} قيد البدء`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} startet`;
+          default:
+            return `${count} starten`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} iniciándose`;
+          case "many":
+            return `${count} iniciándose`;
+          default:
+            return `${count} iniciándose`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} en démarrage`;
+          case "many":
+            return `${count} en démarrage`;
+          default:
+            return `${count} en démarrage`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `開始中${count}件`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `시작 중 ${count}개`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} iniciando`;
+          case "many":
+            return `${count} iniciando`;
+          default:
+            return `${count} iniciando`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 个正在启动`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 個正在啟動`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} šţáŕţîñĝ ~~~]`;
+          default:
+            return `[${count} šţáŕţîñĝ ~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ starting‬`;
+          default:
+            return `${count}‮ starting‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} starting`;
+      default:
+        return `${count} starting`;
+    }
+  }
+  function recordPartsCountWaiting(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${count} ينتظرك`;
+          case "one":
+            return `${count} ينتظرك`;
+          case "two":
+            return `${count} ينتظرك`;
+          case "few":
+            return `${count} ينتظرك`;
+          case "many":
+            return `${count} ينتظرك`;
+          default:
+            return `${count} ينتظرك`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} wartet auf dich`;
+          default:
+            return `${count} warten auf dich`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} te espera`;
+          case "many":
+            return `${count} te esperan`;
+          default:
+            return `${count} te esperan`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} vous attend`;
+          case "many":
+            return `${count} vous attendent`;
+          default:
+            return `${count} vous attendent`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `あなたを待っているもの${count}件`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `나를 기다리는 부분 ${count}개`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} aguardando você`;
+          case "many":
+            return `${count} aguardando você`;
+          default:
+            return `${count} aguardando você`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 个在等你`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 個在等你`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} ŵáîţîñĝ öñ ýöû ~~~~~]`;
+          default:
+            return `[${count} ŵáîţîñĝ öñ ýöû ~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ waiting on you‬`;
+          default:
+            return `${count}‮ waiting on you‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} waiting on you`;
+      default:
+        return `${count} waiting on you`;
+    }
+  }
+  function recordPartsCountWorking(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${count} قيد العمل`;
+          case "one":
+            return `${count} قيد العمل`;
+          case "two":
+            return `${count} قيد العمل`;
+          case "few":
+            return `${count} قيد العمل`;
+          case "many":
+            return `${count} قيد العمل`;
+          default:
+            return `${count} قيد العمل`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} arbeitet`;
+          default:
+            return `${count} arbeiten`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} trabajando`;
+          case "many":
+            return `${count} trabajando`;
+          default:
+            return `${count} trabajando`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} en cours`;
+          case "many":
+            return `${count} en cours`;
+          default:
+            return `${count} en cours`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `作業中${count}件`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `작업 중 ${count}개`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} trabalhando`;
+          case "many":
+            return `${count} trabalhando`;
+          default:
+            return `${count} trabalhando`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 个正在工作`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 個正在工作`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} ŵöŕķîñĝ ~~~]`;
+          default:
+            return `[${count} ŵöŕķîñĝ ~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ working‬`;
+          default:
+            return `${count}‮ working‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} working`;
+      default:
+        return `${count} working`;
+    }
+  }
+  function recordPartsLast() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `بانتظار جزئها الأخير`;
+      case "de":
+        return `Wartet auf ihren letzten Teil`;
+      case "es":
+        return `Esperando su última parte`;
+      case "fr":
+        return `En attente de sa dernière partie`;
+      case "ja":
+        return `最後のパートを待っています`;
+      case "ko":
+        return `마지막 부분을 기다리는 중`;
+      case "pt-BR":
+        return `Aguardando a última parte dela`;
+      case "zh-Hans":
+        return `正在等待它的最后一个部分`;
+      case "zh-Hant":
+        return `正在等待它的最後一個部分`;
+      case "en-XA":
+        return `[Ŵáîţîñĝ ƒöŕ îţš ļášţ þáŕţ ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Waiting for its last part‬`;
+    }
+    return `Waiting for its last part`;
+  }
+  function recordPartsLastBacklog() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `جزؤها الأخير ينتظر أن تضغط «بدء»`;
+      case "de":
+        return `Ihr letzter Teil wartet auf dein Starten`;
+      case "es":
+        return `Su última parte espera que presiones Iniciar`;
+      case "fr":
+        return `Sa dernière partie attend que vous appuyiez sur Démarrer`;
+      case "ja":
+        return `最後のパートがあなたの「開始」を待っています`;
+      case "ko":
+        return `마지막 부분이 시작을 기다려요`;
+      case "pt-BR":
+        return `A última parte dela aguarda você tocar em Iniciar`;
+      case "zh-Hans":
+        return `它的最后一个部分在等你点击“开始”`;
+      case "zh-Hant":
+        return `它的最後一個部分在等你按下「開始」`;
+      case "en-XA":
+        return `[Îţš ļášţ þáŕţ ŵáîţš ƒöŕ ýöûŕ Šţáŕţ ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Its last part waits for your Start‬`;
+    }
+    return `Its last part waits for your Start`;
+  }
+  function recordPartsLastBacklogGuidance(input2) {
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${key} في المهام المؤجلة لديك. تُغلق هذه المهمة من تلقاء نفسها عند إغلاق أجزائها.`;
+      case "de":
+        return `${key} liegt in deinem Backlog. Diese Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.`;
+      case "es":
+        return `${key} está en tus pendientes. Esta tarea se cierra sola cuando se cierran sus partes.`;
+      case "fr":
+        return `${key} est dans votre réserve. Cette tâche se ferme d’elle-même une fois ses parties closes.`;
+      case "ja":
+        return `${key} はバックログにあります。パートがすべて終了すると、このタスクは自動で終了します。`;
+      case "ko":
+        return `${key}이(가) 백로그에 있어요. 부분이 모두 닫히면 이 작업은 저절로 닫혀요.`;
+      case "pt-BR":
+        return `${key} está no seu backlog. Esta tarefa se encerra sozinha quando as partes dela se encerrarem.`;
+      case "zh-Hans":
+        return `${key} 在你的待办列表中。它的部分全部关闭后，此任务会自动关闭。`;
+      case "zh-Hant":
+        return `${key} 在你的待辦清單中。它的部分全部關閉後，此任務會自動關閉。`;
+      case "en-XA":
+        return `[${key} îš îñ ýöûŕ ƀáçķļöĝ. Ţĥîš ţášķ çļöšéš ƀý îţšéļƒ öñçé îţš þáŕţš çļöšé. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${key}‮ is in your backlog. This task closes by itself once its parts close.‬`;
+    }
+    return `${key} is in your backlog. This task closes by itself once its parts close.`;
+  }
+  function recordPartsLastIdle(input2) {
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${key} خامل. تُغلق هذه المهمة من تلقاء نفسها عند إغلاق أجزائها.`;
+      case "de":
+        return `${key} ist untätig. Diese Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.`;
+      case "es":
+        return `${key} está inactiva. Esta tarea se cierra sola cuando se cierran sus partes.`;
+      case "fr":
+        return `${key} est inactive. Cette tâche se ferme d’elle-même une fois ses parties closes.`;
+      case "ja":
+        return `${key} は待機中です。パートがすべて終了すると、このタスクは自動で終了します。`;
+      case "ko":
+        return `${key}이(가) 대기 중이에요. 부분이 모두 닫히면 이 작업은 저절로 닫혀요.`;
+      case "pt-BR":
+        return `${key} está ociosa. Esta tarefa se encerra sozinha quando as partes dela se encerrarem.`;
+      case "zh-Hans":
+        return `${key} 处于空闲。它的部分全部关闭后，此任务会自动关闭。`;
+      case "zh-Hant":
+        return `${key} 處於閒置。它的部分全部關閉後，此任務會自動關閉。`;
+      case "en-XA":
+        return `[${key} îš îðļé. Ţĥîš ţášķ çļöšéš ƀý îţšéļƒ öñçé îţš þáŕţš çļöšé. ~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${key}‮ is idle. This task closes by itself once its parts close.‬`;
+    }
+    return `${key} is idle. This task closes by itself once its parts close.`;
+  }
+  function recordPartsLastInterrupted(input2) {
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `توقف ${key}. تُغلق هذه المهمة من تلقاء نفسها عند إغلاق أجزائها.`;
+      case "de":
+        return `${key} wurde unterbrochen. Diese Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.`;
+      case "es":
+        return `${key} se interrumpió. Esta tarea se cierra sola cuando se cierran sus partes.`;
+      case "fr":
+        return `${key} a été interrompue. Cette tâche se ferme d’elle-même une fois ses parties closes.`;
+      case "ja":
+        return `${key} は中断されました。パートがすべて終了すると、このタスクは自動で終了します。`;
+      case "ko":
+        return `${key}이(가) 중단됐어요. 부분이 모두 닫히면 이 작업은 저절로 닫혀요.`;
+      case "pt-BR":
+        return `${key} foi interrompida. Esta tarefa se encerra sozinha quando as partes dela se encerrarem.`;
+      case "zh-Hans":
+        return `${key} 已中断。它的部分全部关闭后，此任务会自动关闭。`;
+      case "zh-Hant":
+        return `${key} 已中斷。它的部分全部關閉後，此任務會自動關閉。`;
+      case "en-XA":
+        return `[${key} ŵáš îñţéŕŕûþţéð. Ţĥîš ţášķ çļöšéš ƀý îţšéļƒ öñçé îţš þáŕţš çļöšé. ~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${key}‮ was interrupted. This task closes by itself once its parts close.‬`;
+    }
+    return `${key} was interrupted. This task closes by itself once its parts close.`;
+  }
+  function recordPartsLastQueued(input2) {
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${key} في قائمة الانتظار. تُغلق هذه المهمة من تلقاء نفسها عند إغلاق أجزائها.`;
+      case "de":
+        return `${key} steht in der Warteschlange. Diese Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.`;
+      case "es":
+        return `${key} está en cola. Esta tarea se cierra sola cuando se cierran sus partes.`;
+      case "fr":
+        return `${key} est en file d’attente. Cette tâche se ferme d’elle-même une fois ses parties closes.`;
+      case "ja":
+        return `${key} はキューにあります。パートがすべて終了すると、このタスクは自動で終了します。`;
+      case "ko":
+        return `${key}이(가) 대기열에 있어요. 부분이 모두 닫히면 이 작업은 저절로 닫혀요.`;
+      case "pt-BR":
+        return `${key} está na fila. Esta tarefa se encerra sozinha quando as partes dela se encerrarem.`;
+      case "zh-Hans":
+        return `${key} 正在排队。它的部分全部关闭后，此任务会自动关闭。`;
+      case "zh-Hant":
+        return `${key} 正在排隊。它的部分全部關閉後，此任務會自動關閉。`;
+      case "en-XA":
+        return `[${key} îš ǫûéûéð. Ţĥîš ţášķ çļöšéš ƀý îţšéļƒ öñçé îţš þáŕţš çļöšé. ~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${key}‮ is queued. This task closes by itself once its parts close.‬`;
+    }
+    return `${key} is queued. This task closes by itself once its parts close.`;
+  }
+  function recordPartsLastStarting(input2) {
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${key} قيد البدء. تُغلق هذه المهمة من تلقاء نفسها عند إغلاق أجزائها.`;
+      case "de":
+        return `${key} startet gerade. Diese Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.`;
+      case "es":
+        return `${key} se está iniciando. Esta tarea se cierra sola cuando se cierran sus partes.`;
+      case "fr":
+        return `${key} est en train de démarrer. Cette tâche se ferme d’elle-même une fois ses parties closes.`;
+      case "ja":
+        return `${key} は開始中です。パートがすべて終了すると、このタスクは自動で終了します。`;
+      case "ko":
+        return `${key}이(가) 시작하는 중이에요. 부분이 모두 닫히면 이 작업은 저절로 닫혀요.`;
+      case "pt-BR":
+        return `${key} está iniciando. Esta tarefa se encerra sozinha quando as partes dela se encerrarem.`;
+      case "zh-Hans":
+        return `${key} 正在启动。它的部分全部关闭后，此任务会自动关闭。`;
+      case "zh-Hant":
+        return `${key} 正在啟動。它的部分全部關閉後，此任務會自動關閉。`;
+      case "en-XA":
+        return `[${key} îš šţáŕţîñĝ. Ţĥîš ţášķ çļöšéš ƀý îţšéļƒ öñçé îţš þáŕţš çļöšé. ~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${key}‮ is starting. This task closes by itself once its parts close.‬`;
+    }
+    return `${key} is starting. This task closes by itself once its parts close.`;
+  }
+  function recordPartsLastWaiting() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `جزؤها الأخير ينتظرك`;
+      case "de":
+        return `Ihr letzter Teil wartet auf dich`;
+      case "es":
+        return `Su última parte te está esperando`;
+      case "fr":
+        return `Sa dernière partie vous attend`;
+      case "ja":
+        return `最後のパートがあなたを待っています`;
+      case "ko":
+        return `마지막 부분이 나를 기다려요`;
+      case "pt-BR":
+        return `A última parte dela está aguardando você`;
+      case "zh-Hans":
+        return `它的最后一个部分在等你`;
+      case "zh-Hant":
+        return `它的最後一個部分在等你`;
+      case "en-XA":
+        return `[Îţš ļášţ þáŕţ îš ŵáîţîñĝ öñ ýöû ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Its last part is waiting on you‬`;
+    }
+    return `Its last part is waiting on you`;
+  }
+  function recordPartsLastWaitingGuidance(input2) {
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لدى ${key} بطاقة لك. تُغلق هذه المهمة من تلقاء نفسها عند إغلاق أجزائها.`;
+      case "de":
+        return `${key} hat eine Karte für dich. Diese Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.`;
+      case "es":
+        return `${key} tiene una tarjeta para ti. Esta tarea se cierra sola cuando se cierran sus partes.`;
+      case "fr":
+        return `${key} a une carte pour vous. Cette tâche se ferme d’elle-même une fois ses parties closes.`;
+      case "ja":
+        return `${key} にあなた宛てのカードがあります。パートがすべて終了すると、このタスクは自動で終了します。`;
+      case "ko":
+        return `${key}에 나를 위한 카드가 있어요. 부분이 모두 닫히면 이 작업은 저절로 닫혀요.`;
+      case "pt-BR":
+        return `${key} tem um cartão para você. Esta tarefa se encerra sozinha quando as partes dela se encerrarem.`;
+      case "zh-Hans":
+        return `${key} 有一张给你的卡片。它的部分全部关闭后，此任务会自动关闭。`;
+      case "zh-Hant":
+        return `${key} 有一張給你的卡片。它的部分全部關閉後，此任務會自動關閉。`;
+      case "en-XA":
+        return `[${key} ĥáš á çáŕð ƒöŕ ýöû. Ţĥîš ţášķ çļöšéš ƀý îţšéļƒ öñçé îţš þáŕţš çļöšé. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${key}‮ has a card for you. This task closes by itself once its parts close.‬`;
+    }
+    return `${key} has a card for you. This task closes by itself once its parts close.`;
+  }
+  function recordPartsLastWorking(input2) {
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${key} قيد العمل. تُغلق هذه المهمة من تلقاء نفسها عند إغلاق أجزائها.`;
+      case "de":
+        return `${key} arbeitet. Diese Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.`;
+      case "es":
+        return `${key} está trabajando. Esta tarea se cierra sola cuando se cierran sus partes.`;
+      case "fr":
+        return `${key} est en cours. Cette tâche se ferme d’elle-même une fois ses parties closes.`;
+      case "ja":
+        return `${key} は作業中です。パートがすべて終了すると、このタスクは自動で終了します。`;
+      case "ko":
+        return `${key}이(가) 작업 중이에요. 부분이 모두 닫히면 이 작업은 저절로 닫혀요.`;
+      case "pt-BR":
+        return `${key} está trabalhando. Esta tarefa se encerra sozinha quando as partes dela se encerrarem.`;
+      case "zh-Hans":
+        return `${key} 正在工作。它的部分全部关闭后，此任务会自动关闭。`;
+      case "zh-Hant":
+        return `${key} 正在工作。它的部分全部關閉後，此任務會自動關閉。`;
+      case "en-XA":
+        return `[${key} îš ŵöŕķîñĝ. Ţĥîš ţášķ çļöšéš ƀý îţšéļƒ öñçé îţš þáŕţš çļöšé. ~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${key}‮ is working. This task closes by itself once its parts close.‬`;
+    }
+    return `${key} is working. This task closes by itself once its parts close.`;
+  }
+  function recordPartsOpen(input2) {
+    const open2 = input2.open;
+    const total = formatNumber(input2.total);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.total)) {
+          case "zero":
+            return `بانتظار ${open2} من أجزائها الـ ${total}`;
+          case "one":
+            return `بانتظار ${open2} من جزئها الواحد`;
+          case "two":
+            return `بانتظار ${open2} من جزأيها الاثنين`;
+          case "few":
+            return `بانتظار ${open2} من أجزائها الـ ${total}`;
+          case "many":
+            return `بانتظار ${open2} من أجزائها الـ ${total}`;
+          default:
+            return `بانتظار ${open2} من أجزائها الـ ${total}`;
+        }
+      case "de":
+        switch (pluralCategory(input2.total)) {
+          case "one":
+            return `Wartet auf ${open2} von ihrem ${total} Teil`;
+          default:
+            return `Wartet auf ${open2} von ihren ${total} Teilen`;
+        }
+      case "es":
+        switch (pluralCategory(input2.total)) {
+          case "one":
+            return `Esperando ${open2} de su ${total} parte`;
+          case "many":
+            return `Esperando ${open2} de sus ${total} de partes`;
+          default:
+            return `Esperando ${open2} de sus ${total} partes`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.total)) {
+          case "one":
+            return `En attente de ${open2} sur sa ${total} partie`;
+          case "many":
+            return `En attente de ${open2} sur ses ${total} parties`;
+          default:
+            return `En attente de ${open2} sur ses ${total} parties`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.total)) {
+          default:
+            return `${total}件のパートのうち${open2}件を待っています`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.total)) {
+          default:
+            return `부분 ${total}개 중 ${open2}개를 기다리는 중`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.total)) {
+          case "one":
+            return `Aguardando ${open2} da ${total} parte dela`;
+          case "many":
+            return `Aguardando ${open2} das ${total} partes dela`;
+          default:
+            return `Aguardando ${open2} das ${total} partes dela`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.total)) {
+          default:
+            return `正在等待它 ${total} 个部分中的 ${open2} 个`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.total)) {
+          default:
+            return `正在等待它 ${total} 個部分中的 ${open2} 個`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.total, "en")) {
+          case "one":
+            return `[Ŵáîţîñĝ ƒöŕ ${open2} öƒ îţš ${total} þáŕţ ~~~~~~~~~]`;
+          default:
+            return `[Ŵáîţîñĝ ƒöŕ ${open2} öƒ îţš ${total} þáŕţš ~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.total, "en")) {
+          case "one":
+            return `‮Waiting for ‬${open2}‮ of its ‬${total}‮ part‬`;
+          default:
+            return `‮Waiting for ‬${open2}‮ of its ‬${total}‮ parts‬`;
+        }
+    }
+    switch (pluralCategory(input2.total)) {
+      case "one":
+        return `Waiting for ${open2} of its ${total} part`;
+      default:
+        return `Waiting for ${open2} of its ${total} parts`;
+    }
+  }
+  function recordPartsOpenGuidance(input2) {
+    const counts = input2.counts;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${counts}. تُغلق هذه المهمة من تلقاء نفسها عند إغلاق أجزائها.`;
+      case "de":
+        return `${counts}. Diese Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.`;
+      case "es":
+        return `${counts}. Esta tarea se cierra sola cuando se cierran sus partes.`;
+      case "fr":
+        return `${counts}. Cette tâche se ferme d’elle-même une fois ses parties closes.`;
+      case "ja":
+        return `${counts}。パートがすべて終了すると、このタスクは自動で終了します。`;
+      case "ko":
+        return `${counts}. 부분이 모두 닫히면 이 작업은 저절로 닫혀요.`;
+      case "pt-BR":
+        return `${counts}. Esta tarefa se encerra sozinha quando as partes dela se encerrarem.`;
+      case "zh-Hans":
+        return `${counts}。它的部分全部关闭后，此任务会自动关闭。`;
+      case "zh-Hant":
+        return `${counts}。它的部分全部關閉後，此任務會自動關閉。`;
+      case "en-XA":
+        return `[${counts}. Ţĥîš ţášķ çļöšéš ƀý îţšéļƒ öñçé îţš þáŕţš çļöšé. ~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${counts}‮. This task closes by itself once its parts close.‬`;
+    }
+    return `${counts}. This task closes by itself once its parts close.`;
+  }
   function recordPersonalNone(input2) {
     const computer = input2.computer;
     switch (currentLanguage()) {
@@ -115581,6 +116733,26 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     recordMoreKnowledge,
     recordMoreValidation,
     recordOpenKeptEvidence,
+    recordPartsClosedFold,
+    recordPartsCountBacklog,
+    recordPartsCountIdle,
+    recordPartsCountInterrupted,
+    recordPartsCountQueued,
+    recordPartsCountStarting,
+    recordPartsCountWaiting,
+    recordPartsCountWorking,
+    recordPartsLast,
+    recordPartsLastBacklog,
+    recordPartsLastBacklogGuidance,
+    recordPartsLastIdle,
+    recordPartsLastInterrupted,
+    recordPartsLastQueued,
+    recordPartsLastStarting,
+    recordPartsLastWaiting,
+    recordPartsLastWaitingGuidance,
+    recordPartsLastWorking,
+    recordPartsOpen,
+    recordPartsOpenGuidance,
     recordPersonalNone,
     recordPersonalVersion,
     recordPolicyParentTask,
@@ -119244,6 +120416,26 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "recordMoreKnowledge": ["count"],
     "recordMoreValidation": [],
     "recordOpenKeptEvidence": [],
+    "recordPartsClosedFold": ["count"],
+    "recordPartsCountBacklog": ["count"],
+    "recordPartsCountIdle": ["count"],
+    "recordPartsCountInterrupted": ["count"],
+    "recordPartsCountQueued": ["count"],
+    "recordPartsCountStarting": ["count"],
+    "recordPartsCountWaiting": ["count"],
+    "recordPartsCountWorking": ["count"],
+    "recordPartsLast": [],
+    "recordPartsLastBacklog": [],
+    "recordPartsLastBacklogGuidance": ["key"],
+    "recordPartsLastIdle": ["key"],
+    "recordPartsLastInterrupted": ["key"],
+    "recordPartsLastQueued": ["key"],
+    "recordPartsLastStarting": ["key"],
+    "recordPartsLastWaiting": [],
+    "recordPartsLastWaitingGuidance": ["key"],
+    "recordPartsLastWorking": ["key"],
+    "recordPartsOpen": ["open", "total"],
+    "recordPartsOpenGuidance": ["counts"],
     "recordPersonalNone": ["computer"],
     "recordPersonalVersion": ["computer", "version", "when"],
     "recordPolicyParentTask": [],
@@ -138705,7 +139897,10 @@ ${startersHtml()}`;
     label: string(),
     taskKeys: array(string()).optional(),
     since: number().optional(),
-    next: object({ kind: _enum(["next-read", "check-back", "reset", "start"]), at: number() }).optional()
+    next: object({
+      kind: _enum(["next-read", "check-back", "reset", "start"]),
+      at: number()
+    }).optional()
   });
   const TIMELINE_SCHEMA_VERSION = 1;
   const TIMELINE_ACTORS = [
@@ -139382,6 +140577,12 @@ ${startersHtml()}`;
   });
   taskViewSchema.extend({
     cost: taskCostViewSchema.optional(),
+    /**
+     * Its parts, each as its Tasks row reads it, in the order they were filed
+     * (INF-6805's plan, item 1). Absent on a task with none, and from an
+     * older home.
+     */
+    parts: array(taskViewSchema).optional(),
     liveValidation: liveValidationSummarySchema.optional(),
     /** Current policies, separate from dispatch and published delivery history. */
     policies: effectiveTaskPoliciesSchema.nullable().optional(),

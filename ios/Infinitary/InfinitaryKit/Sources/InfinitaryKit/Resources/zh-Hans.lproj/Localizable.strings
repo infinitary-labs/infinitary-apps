@@ -2160,6 +2160,7 @@
 "phoneRecordWaitDueRead" = "下次读取原定于 %1$@";
 "phoneRecordWaitDueReset" = "重置原定于 %1$@";
 "phoneRecordWaitDueStart" = "开始时间原定于 %1$@";
+"phoneRecordWaitLabelRecorded" = "%1$@ · 等待记录于 %2$@";
 "phoneRecordWaitLine" = "%2$@ · %1$@";
 "phoneRecordWaitLineRecorded" = "%2$@ · %1$@ · 等待记录于 %3$@";
 "phoneRecordWaitNextCheckBack" = "回头查看 %1$@";
@@ -2167,7 +2168,6 @@
 "phoneRecordWaitNextRead" = "下次读取 %1$@";
 "phoneRecordWaitNextReset" = "重置 %1$@";
 "phoneRecordWaitNextStart" = "开始时间 %1$@";
-"phoneRecordWaitTimeUnknown" = "时间未知";
 "phoneRecordWaitsOn" = "等待";
 "phoneRecordWhy" = "原因";
 "phoneRecordWhyFiled" = "放入待办的原因";
@@ -2507,6 +2507,17 @@
 "recordMoreDelivery" = "交付方式";
 "recordMoreValidation" = "实测验证";
 "recordOpenKeptEvidence" = "打开保存的证据";
+"recordPartsLast" = "正在等待它的最后一个部分";
+"recordPartsLastBacklog" = "它的最后一个部分在等你点击“开始”";
+"recordPartsLastBacklogGuidance" = "%1$@ 在你的待办列表中。它的部分全部关闭后，此任务会自动关闭。";
+"recordPartsLastIdle" = "%1$@ 处于空闲。它的部分全部关闭后，此任务会自动关闭。";
+"recordPartsLastInterrupted" = "%1$@ 已中断。它的部分全部关闭后，此任务会自动关闭。";
+"recordPartsLastQueued" = "%1$@ 正在排队。它的部分全部关闭后，此任务会自动关闭。";
+"recordPartsLastStarting" = "%1$@ 正在启动。它的部分全部关闭后，此任务会自动关闭。";
+"recordPartsLastWaiting" = "它的最后一个部分在等你";
+"recordPartsLastWaitingGuidance" = "%1$@ 有一张给你的卡片。它的部分全部关闭后，此任务会自动关闭。";
+"recordPartsLastWorking" = "%1$@ 正在工作。它的部分全部关闭后，此任务会自动关闭。";
+"recordPartsOpenGuidance" = "%1$@。它的部分全部关闭后，此任务会自动关闭。";
 "recordPersonalNone" = "无，%1$@";
 "recordPersonalVersion" = "%3$@ 的版本 %2$@，%1$@";
 "recordPolicyParentTask" = "上级任务";

@@ -1859,6 +1859,150 @@
       <string>Wissen %1$ld</string>
     </dict>
   </dict>
+  <key>recordPartsClosedFold</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld geschlossener Teil</string>
+      <key>other</key>
+      <string>%1$ld geschlossene Teile</string>
+    </dict>
+  </dict>
+  <key>recordPartsCountBacklog</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld in deinem Backlog</string>
+      <key>other</key>
+      <string>%1$ld in deinem Backlog</string>
+    </dict>
+  </dict>
+  <key>recordPartsCountIdle</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld untätig</string>
+      <key>other</key>
+      <string>%1$ld untätig</string>
+    </dict>
+  </dict>
+  <key>recordPartsCountInterrupted</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld unterbrochen</string>
+      <key>other</key>
+      <string>%1$ld unterbrochen</string>
+    </dict>
+  </dict>
+  <key>recordPartsCountQueued</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld in der Warteschlange</string>
+      <key>other</key>
+      <string>%1$ld in der Warteschlange</string>
+    </dict>
+  </dict>
+  <key>recordPartsCountStarting</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld startet</string>
+      <key>other</key>
+      <string>%1$ld starten</string>
+    </dict>
+  </dict>
+  <key>recordPartsCountWaiting</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld wartet auf dich</string>
+      <key>other</key>
+      <string>%1$ld warten auf dich</string>
+    </dict>
+  </dict>
+  <key>recordPartsCountWorking</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld arbeitet</string>
+      <key>other</key>
+      <string>%1$ld arbeiten</string>
+    </dict>
+  </dict>
+  <key>recordPartsOpen</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@total@</string>
+    <key>total</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Wartet auf %1$@ von ihrem %2$ld Teil</string>
+      <key>other</key>
+      <string>Wartet auf %1$@ von ihren %2$ld Teilen</string>
+    </dict>
+  </dict>
   <key>recordShowEarlier</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

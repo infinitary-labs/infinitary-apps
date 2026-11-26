@@ -1,5 +1,5 @@
 ---
-source: 47dc716341146fd8
+source: 7a56385e256eae30
 title: Tâches et équipiers
 description: Ce qu’est une tâche, comment elle passe de la réserve à terminée, où la suivre et comment orienter l’équipier qui s’en charge.
 ---
@@ -93,6 +93,16 @@ Sous son titre se trouve une rangée d’onglets :
   Voir [Le navigateur de l’équipage](/fr/the-crews-browser/).
 
 Un onglet n’apparaît qu’une fois que la tâche a quelque chose à y montrer.
+
+## Une tâche découpée en parties {#a-task-split-into-parts}
+
+Dans l’onglet **Infos** d’une tâche découpée en parties, la ligne **Parties** compte les parties closes et liste chaque partie avec son statut, dans l’ordre où elles ont été créées.
+Appuyez sur le décompte pour replier la liste, et appuyez de nouveau pour l’ouvrir.
+Au-delà de huit parties, les parties closes se replient derrière une ligne que vous pouvez ouvrir.
+Pour ouvrir la carte d’une partie, cliquez dessus, ou atteignez-la au clavier et appuyez sur Entrée ; démarrez-la ou répondez-y là.
+
+Une tâche de votre réserve dont les parties font le travail ne vous demande jamais son propre **Démarrer**.
+Le haut de son onglet **Infos** dit plutôt ce qu’attendent ses parties, par exemple « Sa dernière partie attend que vous appuyiez sur Démarrer », et la tâche se ferme d’elle-même une fois ses parties closes.
 
 ## Étiquettes {#tags}
 

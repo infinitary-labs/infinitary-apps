@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "batch-reporting-docs-declaration",
+      "reason": "This change links the reporting release note to its existing guide for the release check; it changes neither the app nor the guide."
+    }
+  ]
+}

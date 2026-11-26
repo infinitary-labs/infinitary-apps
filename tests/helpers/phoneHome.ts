@@ -93,6 +93,7 @@ import {
   seedPhoneSettings,
 } from "./phoneSettings";
 import { phoneTakeOverControls } from "./phoneTakeOver";
+import { phoneTalkControls, TALK_WRITES } from "./phoneTalk";
 import { raiseConversationCard, seedReplyReading } from "./replyReading";
 import { startScriptedClient } from "./scriptedClient";
 import { bundleSqlProcess } from "./sqlProcessBundle";
@@ -312,6 +313,7 @@ export async function startPhoneHome(
       }, 30_000);
     });
   };
+  const talk = phoneTalkControls(core, writes, until, (seen) => observations.push(seen));
   const within = async (promise: Promise<void>, failure: string) => {
     let timer: DeadlineTimer | undefined;
     try {
@@ -622,9 +624,7 @@ export async function startPhoneHome(
           cardRequests.push({ channel, args });
         if (channel === "inf:cards:draft")
           draftChanges.push(structuredClone((args as unknown[])[1]));
-        if (
-          ["inf:converse", "inf:task:run", "inf:task:steer", "inf:task:interrupt"].includes(channel)
-        ) {
+        if (TALK_WRITES.includes(channel)) {
           const safe = (Array.isArray(args) ? args : []).map((arg: unknown) =>
             typeof arg === "object" && arg !== null && "images" in arg
               ? {
@@ -3429,17 +3429,10 @@ export async function startPhoneHome(
           };
           break;
         case "POST talk-sent":
-          await until(() =>
-            core.services.tasks.capture
-              .listAsks()
-              .some((ask) => ask.text.includes(ANSWER_PROMPT_MARKER) && ask.turnState !== "open"),
-          );
-          result = {
-            writes,
-            lastTurn: await core.dispatch("inf:conversation:last-turn", []),
-            asks: core.services.tasks.capture.listAsks(),
-          };
-          observations.push({ check: "captain-turn-from-phone", result });
+          result = await talk.sent();
+          break;
+        case "POST talk-ask":
+          result = await talk.ask(await controlBody(request));
           break;
         case "POST talk-started":
           await until(() =>

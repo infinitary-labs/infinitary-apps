@@ -1,5 +1,5 @@
 ---
-source: 8556e6631058959f
+source: 1cfc8b1c01326a70
 title: Le second
 description: Qui est votre second, ce qu’il fait et ne fait pas, comment lui parler et comment choisir le modèle avec lequel il répond.
 ---
@@ -47,6 +47,8 @@ Votre second arrête ce que le message a lancé, défait ce qu’il a déjà fai
 Pour modifier le message à la place, appuyez sur ↑ dans une zone de message vide.
 La zone indique « Remplace votre dernier message » : Entrée envoie votre modification à sa place, et Échap l’envoie comme un nouveau message.
 Dans [toute la conversation](#the-whole-conversation), un message annulé est barré, et un message modifié garde ses mots d’avant.
+Sur un iPhone ou un iPad, la même icône se trouve à côté du message.
+Maintenez le doigt sur le message pour **Annuler votre dernier message** ou **Modifier votre dernier message**, qui remet ses mots dans le champ pour les envoyer à sa place.
 
 ### Ajouter des images et des fichiers {#add-pictures-and-files}
 

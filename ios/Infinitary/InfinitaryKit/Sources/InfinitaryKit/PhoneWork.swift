@@ -5,6 +5,13 @@ public struct PhoneLastTurn: Decodable, Sendable {
     public let reply: Reply?
     /// INF-1771: the round before the newest, absent from an older Mac and null before a second message.
     public let previous: PhoneLastRound?
+    /// The message's id, which a take back names (docs/task-capture.md, "Taking back a message"); absent from an older
+    /// computer.
+    public internal(set) var askId: String? = nil
+    /// When the computer accepted the message, in ms since the epoch: the take-back minute runs from it.
+    public internal(set) var sentAt: Double? = nil
+    /// The captain took the message back.
+    public internal(set) var takenBack: Bool? = nil
     public struct Reply: Decodable, Sendable {
         public let text: String
         public let problem: Bool?
@@ -12,6 +19,16 @@ public struct PhoneLastTurn: Decodable, Sendable {
         public let eligibility: String?
         /// The closing words as written, line breaks kept, when they differ from `text`.
         public let words: String?
+        /// The captain took the message back before any turn read it: the phone words the line itself
+        /// (`shellLastTurnRevertedUnread`); `text` keeps the same words in English for a reader that words nothing.
+        public var withdrawn: Bool? = nil
+        /// The line as the phone shows it: its own words for a message withdrawn unread.
+        public var shown: String { withdrawn == true ? PhoneMessages.shellLastTurnRevertedUnread() : text }
+    }
+
+    /// This newest round as the older one, once a newer message is sent.
+    public var round: PhoneLastRound {
+        PhoneLastRound(you: you, reply: reply, askId: askId, sentAt: sentAt, takenBack: takenBack)
     }
 }
 
@@ -19,7 +36,12 @@ public struct PhoneLastTurn: Decodable, Sendable {
 public struct PhoneLastRound: Decodable, Sendable {
     public let you: String
     public let reply: PhoneLastTurn.Reply?
-    public init(you: String, reply: PhoneLastTurn.Reply?) { self.you = you; self.reply = reply }
+    public internal(set) var askId: String? = nil
+    public internal(set) var sentAt: Double? = nil
+    public internal(set) var takenBack: Bool? = nil
+    public init(you: String, reply: PhoneLastTurn.Reply?, askId: String? = nil, sentAt: Double? = nil, takenBack: Bool? = nil) {
+        self.you = you; self.reply = reply; self.askId = askId; self.sentAt = sentAt; self.takenBack = takenBack
+    }
 }
 
 public struct PhoneMove: Decodable, Sendable {

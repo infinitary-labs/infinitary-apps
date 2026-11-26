@@ -1921,11 +1921,13 @@
 "phoneCommonTryAgain" = "もう一度試す";
 "phoneComposerAddingPhotos" = "写真を追加中…";
 "phoneComposerConversationHint" = "会話を開きます";
+"phoneComposerEditLast" = "最後のメッセージを編集";
 "phoneComposerPhotoFailed" = "この写真を追加できませんでした。別の写真を選んでください。";
 "phoneComposerPhotoTooLarge" = "この写真は大きすぎます。もっと小さい写真を選んでください。";
 "phoneComposerPhotos" = "写真";
 "phoneComposerPictureOnly" = "画像";
 "phoneComposerPlaceholder" = "一等航海士にタスクを依頼";
+"phoneComposerSendAsNew" = "新しく送信";
 "phoneComposerTooLong" = "このメッセージは長すぎます。短くしてから送信してください。";
 "phoneComposerWorking" = "作業中…";
 "phoneComputerAddLine" = "このコンピューターはそのままで、もう1台に接続します。";

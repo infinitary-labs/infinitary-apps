@@ -9,6 +9,7 @@ import {
   automationSpecSchema,
   scheduleDetailsWords,
 } from "./automation";
+import { automationValue } from "./automationActionValue";
 import { type BatchAnswer, batchAnswerSchema } from "./batches";
 import { shortCommit } from "./buildIdentity";
 import { type AppCostLimitView, costLimitSchema, formatUsd } from "./costLimit";
@@ -276,28 +277,6 @@ function automationRule(current: unknown, id: unknown): AutomationRule {
   const rule = list.rules.find((entry) => entry.id === id);
   if (!rule) throw new Error(`No automation ${id}. Its id is in this action's current value.`);
   return rule;
-}
-/** Every rule as an edit reads it, or, `brief`, by id, label and state alone. */
-function automationValue(current: unknown, brief = false): Record<string, unknown> {
-  const list = current as AutomationList;
-  return {
-    rules: list.rules.map((rule) =>
-      brief
-        ? { id: rule.id, label: rule.name ?? cutText(rule.prompt, 80), state: rule.state }
-        : {
-            id: rule.id,
-            name: rule.name,
-            state: rule.state,
-            spec: rule.spec,
-            prompt: rule.prompt,
-            projectId: rule.projectId,
-            nextFire: rule.nextFire,
-            captainRequested: rule.captainRequested,
-            ...(rule.stopped ? { stopped: rule.stopped } : {}),
-          },
-    ),
-    ...(list.state === "unavailable" ? { unavailable: list.reason } : {}),
-  };
 }
 const automationIdSchema = z.string().trim().min(1).max(64);
 function presence(field: "startAtLogin" | "showInDock", label: string): ActionLine {
@@ -1606,7 +1585,7 @@ const actionLines = {
       enable: z.boolean().optional(),
       reconnect: z.literal(true).optional(),
     }),
-    line: `Edit one automation by id when asked: its name, spec, prompt or projectId (null takes it off); what you leave out stays. enable true turns a draft or a paused one on. reconnect true has an event rule that waits (stopped) listen to what its integration's id is connected to now. ${scheduleDetailsWords()}`,
+    line: `Edit one automation by id when asked: its name, spec, prompt or projectId (null takes it off); what you leave out stays. enable true turns a draft or a paused one on. reconnect true has an event rule that waits (stopped) listen to what its integration's id is connected to now. ${scheduleDetailsWords()} Its current value is the app's record of each rule: lastFired is when it last ran (null if never), and failing says since when an event rule's every look has failed; app_state read automation.history with its id lists its recent runs.`,
     toRequest: (v, current) => {
       const rule = automationRule(current, v.id);
       const projectId =

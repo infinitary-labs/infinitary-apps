@@ -907,6 +907,7 @@ describe("the core, driven with no Electron in the process", () => {
         name: "Morning review",
         spec: { kind: "daily", hour: 8, minute: 30, timeZone: "America/Los_Angeles" },
         prompt: "Review what waits on me.",
+        enable: true,
       },
     ]);
     const savedKeys = await core.dispatch("inf:settings:keys:get", []);
@@ -925,6 +926,23 @@ describe("the core, driven with no Electron in the process", () => {
       expect((await read("automation.history", { id: rule.id })).value).toEqual(
         await core.dispatch("inf:automation:history", [rule.id]),
       );
+      // INF-6925 finding 1: asked whether a rule had run, the first mate
+      // said none had, because its list carried no last run. It now reads
+      // the run Settings shows, from the same record.
+      const due = await core.dispatch("inf:automation:list", []);
+      const dueAt = due.rules.find((entry) => entry.id === rule.id)?.nextFire;
+      if (typeof dueAt !== "number") throw new Error("The rule has no next run");
+      core.services.scheduler.tick(dueAt);
+      const [ran] = await core.dispatch("inf:automation:history", [rule.id]);
+      expect(ran?.firedAt).toBe(dueAt);
+      const automationLines = JSON.parse((await state.run({ area: "automation" })).text);
+      const editLine = automationLines.find(
+        (line: { action: string }) => line.action === "automation-edit",
+      );
+      expect(
+        editLine.current.rules.find((entry: { id: string }) => entry.id === rule.id),
+      ).toMatchObject({ lastFired: dueAt });
+      expect(editLine.line).toContain("app_state read automation.history");
       const kept = (await read("automation.kept")).value;
       expect(kept).toEqual(await core.dispatch("inf:automation:kept", []));
       expect(kept.jobs.map((job: { label: string }) => job.label)).toContain("Daily notes backup");

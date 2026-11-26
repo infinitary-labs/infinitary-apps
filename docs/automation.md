@@ -18,6 +18,7 @@ Each tick, and each round of looks an arrival starts at once (`Scheduler.lookNow
 Settings and the first mate change a rule through one path: each change channel is a line of the app action catalog (`src/shared/actions.ts`, `docs/orchestrator-contract.md` "App action catalog"), run by the dispatcher.
 `automation-edit` is Save in Setup and its Turn on, `automation-state` is Pause and Resume, `automation-pause-all` is Pause all and `automation-delete` is Delete.
 The first mate runs them with `app_change`, and its `cancel_schedule` is `automation-delete`.
+What it reads of each rule in `app_state` is `automation.list`'s record, as Settings shows it: its last run (`lastFired`) and an event rule's failing mark (`failing`) among the rest, and `automation-edit`'s line names the `automation.history` read for a rule's runs.
 Pausing, resuming, pausing all and deleting are its own judgment at any turn, as making a schedule is (captain decision Q4); it edits a rule, or turns one on, when the captain asks.
 
 ## Who changed it

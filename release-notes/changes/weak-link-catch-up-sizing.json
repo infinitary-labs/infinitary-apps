@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "weak-link-catch-up-sizing",
+      "reason": "The phone's slow-link catch-up check now sizes its link by the catch-up the computer sends, a replay or the phone's own re-read, and waits for both the cards and In reach, so it passes again after the computer began choosing a re-read; nothing in the app changes."
+    }
+  ]
+}

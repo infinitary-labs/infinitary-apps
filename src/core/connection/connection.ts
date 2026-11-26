@@ -305,7 +305,7 @@ const CORE_CHANNELS = new Set<string>(CORE_INVOKE_CHANNELS);
  * the card list, Activity, the whole board, the last reply, the conversation's
  * state and the computers in reach. A computer's window reads more besides.
  */
-const RELOAD_READS = [
+export const RELOAD_READS = [
   "inf:cards:list",
   "inf:feed:recent",
   "inf:tasks:board",

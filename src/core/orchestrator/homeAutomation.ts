@@ -40,7 +40,7 @@ export function startHomeAutomation({
 }: {
   db: AppDatabase;
   decisions: DecisionModels;
-  supervisor: Pick<CrewSupervisor, "cards" | "hostOps" | "bindRuleNotes" | "holdRules">;
+  supervisor: Pick<CrewSupervisor, "cards" | "hostOps" | "bindRuleNotes" | "holdRules" | "waits">;
   broadcastEvent: (event: FmEvent) => void;
   /** Late-bound: the first mate is built after Automation. */
   notifyFirstmate: SchedulerOptions["notify"];
@@ -73,7 +73,8 @@ export function startHomeAutomation({
     // A hold's event rule ends its task's hold (docs/automation.md, "A rule that ends a hold").
     endHold: (taskId, ruleId, events) => supervisor.holdRules.ran(taskId, ruleId, events),
     screen: eventScreen(decisions),
-    heartbeat: (at) => heartbeatBeat({ schedules: scheduleStore, usage, tasks, inbox }, at),
+    heartbeat: (at) =>
+      heartbeatBeat({ schedules: scheduleStore, usage, tasks, inbox, waits: supervisor.waits }, at),
     enabled: (record) => void eventScreenOffer.offer(record),
     // A turn that handled several runs links each to its own rule's tasks (docs/automation.md, "Deliveries").
     startedBy: (taskId) => tasks.capture.automationStart(taskId),

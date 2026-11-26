@@ -21,12 +21,13 @@ In order; the order IS the rule.
 |---|---|---|---|---|
 | 0 | An open card currently waits for its author's answer (`cards.awaiting = answer`) | the crewmate's | no wake | `rule:thread-unanswered` |
 | 0a | The report declared `needs_firstmate`: a captain decision only the first mate can carry out (FI3-710) | the first mate's | wake, with what it must do | `rule:needs-firstmate` |
-| 0s | The task has started and went back to the backlog (INF-2062, `docs/task-board.md` "A started task in the backlog"), and the report declares neither finished work nor follow-ups it filed | nobody's: it waits for a Start | no wake | `rule:in-backlog` |
+| 0s | The task has started and went back to the backlog (INF-2062, `docs/task-board.md` "A started task in the backlog"), and the report declares neither finished work, follow-ups it filed, an owed captain card, recovery findings nor an internal step's answer | nobody's: it waits for a Start | no wake | `rule:in-backlog` |
 | 0b | Started work waits on this task through a `blocks` link from it, whoever recorded it (INF-735, INF-3167), unless the report is a turn's closing text while a row 3 witness moves (INF-4667) | the first mate's, which passes on what that work waits for | wake, naming that work | `rule:waited-on` |
 | 0c | The task's open review last returned findings or blocked, and this report made no host handoff, unless it declared a wait on the captain while a card about the task is up (INF-5004) | the first mate reads it for a blocker or decision, not to repeat a handoff | wake, naming the review and what it read | `rule:review-reread` |
 | 0d | The task's latest live validation run waits for an independent reader at the version it last recorded validation for (`proofAwaitingReader`: acceptance names the reviewer as what is missing), and no review of the task is open to read it (INF-6536 finding 3) | the first mate's, which starts that review | wake, naming the run and its version (`proofUnreadText`) | `rule:proof-unread` |
 | 1 | An open **decision** card for the task, a wait on the captain its crewmate declared in its report while a card of the task is on the captain's screen (FI3-435), or work its crewmate declared finished while a card of its own is still on the captain's screen (INF-731) | the captain's | no wake | `rule:captain-card` |
 | 1p | The captain put off a card of the task with a Not until choice, and the report declares neither finished work nor follow-ups it filed (INF-3846, `docs/card-authoring.md` "Not until") | the captain's: the host raises the same card again when its awaited task closes, at its time, when its event arrives or on the captain's word; a close put-off whose awaited task nobody started falls through to row 2a | no wake | `rule:put-off` |
+| 1q | Every task its waits reach that only a start begins is work the captain stopped (`waitsOnStopped`, INF-6853), and the report declares neither finished work, follow-ups it filed, an owed captain card, recovery findings nor an internal step's answer | the captain's: starting that work is theirs, and the Heartbeat's standing list names the wait | no wake | `rule:waits-stopped` |
 | 1a | The report declared its work finished: the captain has read its outcome and nothing is left (FI3-435) | the first mate's, which closes the task | wake | `rule:finished` |
 | 2 | The report filed follow-ups this turn | the first mate's | wake | `rule:filed-followups` |
 | 2a | The task waits on work nobody has started: a task its standing baseline wait names, or a blocker holding its close, that only a start begins (FI3-671) | the first mate's, which starts it, folds the fix in or asks | wake, naming that work | `rule:waits-unstarted` |
@@ -137,6 +138,13 @@ The wake names each such task (`waits` on the report's facts, `IdleLadder.unstar
 Host delivery machinery (a review) never counts.
 The row sits after the filings, which wake anyway, and before row 3: a crewmate still moving does not start the work it waits on.
 The idle ladder's turn ignores this witness.
+
+**A wait on work the captain stopped is the captain's turn** (INF-6853, the captain's no-hold choice).
+When every task the wait chain reaches that only a start begins is work the captain stopped (`TaskStarts.stoppedByCaptain`), starting it is theirs, so the task waits on them as for a put-off (`waitsOnStopped`, never also `waitsOnUnstarted`).
+A report sorts `waits-stopped` with no wake, unless it finished, filed follow-ups, owes the captain a card, left recovery findings or answered an internal step, and the ladder neither nudges, wakes nor raises its card unless that card is owed; its posture stays `dependency`, so its row still reads as waiting on that work.
+So a `blocks` link alone models a wait on work that waits for the captain's word, and the first mate needs no hold beside it: a hold is only for a time, an outside event or an app update.
+The Heartbeat's standing list names the wait instead ("The standing list" below), and the work's close resumes the task as for any wait.
+A wait on stopped work beside other unstarted work is still `waitsOnUnstarted`: the rest is the first mate's to start.
 
 **A wait on work underway moves on its own** (FI3-250).
 When every task those typed waits name is live and not something only a start begins - underway, queued to start by itself, or a wait chain that ends in such work - the task waits on that work, not on anyone (`waitsOnUnderway`, `IdleLadder.underwayWaits`).
@@ -265,6 +273,7 @@ The order is the rule's own:
    Such a task gets no nudge, no wake and no timer however long it stays (FI3-81 "Leave as is").
    So does a wait its crewmate declared while any card of the task, a note included, is up (FI3-435), and work its crewmate declared finished while a card of its own is up (INF-731), or with none once the first mate acted on it (INF-1428): a nudge would ask a crewmate with nothing left to do.
    So does a task with a card the captain put off until a task closes, a time, an Automation event or their word (`putOff`, INF-3846): an Automation rule raises the card again then, so the task is stopped by the captain and nothing nudges or wakes for it, unless the task a close put-off awaits is one nobody has started, which counts as a wait on unstarted work (`waitsOnUnstarted`).
+   So does a task whose waits end only in work the captain stopped (`waitsOnStopped`, INF-6853), unless the first mate owes the captain a card for it (`captainGateOwed`).
    So does a task whose own browser is in the captain's hands - paused for the captain's help, being taken, or the captain's (`browserWithCaptain`, counted in `decisionCardOpen`; `docs/task-browser.md`, "Taking control"): the captain's Return control is the crewmate's one wake, so the card behind it may already be answered.
 5. Moving, nothing: guidance that will still be delivered (including a row waiting out its backoff, `InboxStore.hasDeliverable`), a background job inside its bound, a captured settle, a timed wait on its gate (a due one is the sweep's, on the same tick).
    So is every standing merge approval on the task waiting in a line at its current version - this person's batch line (`queue`) or the merge queue where the project lives (`host-queue`), read by `waitingInLine` (`mergeInLine`, INF-4497 finding 2): the batch or the host merges it from there, and a send-back, a failed batch of one or a removal from the queue wakes its crewmate with its own words.
@@ -317,6 +326,7 @@ A park the captain did not ask for is still begun work with no next move, which 
 
 **Holding a started task until a time** (INF-5145): a task that only waits on something no message speeds, such as a long run on another computer, is held rather than parked, so it stays started and no reminder or stall card counts against it.
 The first mate's `update_task` `hold` takes the latest time it ends and one line of what it waits for, and writes the task's `at-time` gate (`TaskService.turns.hold`); the stall wake offers it as a way beside the park way, and `hold` null lifts it.
+Its reply names each task a `blocks` link already holds the task on (`TaskGraph.waitingOn`), so the first mate sees a hold that would repeat a link; the host judges nothing about the hold's words.
 The hold owns the task's next move, as a park does: it replaces any check-back the crewmate set, so its end is never read as an unowned timer, and it starts the ladder's rungs over, so a task held after a stall wake no longer reads as stalled.
 It is refused, with nothing written, for a task not started, a task in the backlog (nothing reaches it there, so the hold could never end), a task whose turn is running, a task whose gate waits on the captain or an allowance, and a time already past.
 While it stands the gate is a timed wait (row 3), so the ladder neither nudges, wakes nor raises its card, except for an unanswered captain reply, as the next sentence says; if it still stands at its time, the sweep clears it into one `timed-wait-over` steer, as a check-back's end is.
@@ -455,19 +465,25 @@ A part left last behind other stopped parts is not its parent's only open part, 
 ## The standing list
 
 INF-6664 piece 1: the waiting work that no wake reports to the first mate, read from typed facts the record already holds.
+INF-6853 adds every hold and every wait on work nobody has started, so the first mate can judge whether to check with the captain: a hold's reason is words no code reads, and a wait on work the captain stopped wakes no one ("A wait on work the captain stopped is the captain's turn" above).
 The next-move check wakes no one about a part the captain stopped and asks the captain only once it is its parent's last open part ("The last part the captain stopped" above), and the first mate's context counts unstarted work per project without listing it, so a part parked half way through begun work stood with nobody reading it again.
 `standingWork(host, now)` (`src/core/orchestrator/standingWork.ts`) only reads; the heartbeat serves it (`docs/automation.md`, "The heartbeat").
 
-It has two kinds of row:
+It has four kinds of row, one per task, read in this order for a started task:
 
 - **A parked part** (`parked-part`): live work the captain stopped (`TaskStarts.stoppedByCaptain`) whose parent is begun: live, not a task that delivers an answer, and it or another part started building work, as the next-move check reads it (a part that delivers an answer, a dropped part and a part the captain stopped do not count).
   Its fields are its key and title, its parent's key, since when it stood (its newest line that stopped or started it, `TaskStarts.latestStopAt`), its parent's other open parts, and whether every task it waits on has closed (`TaskGraph.waitingOn`).
   Work the captain stopped under a task that delivers an answer is an idea for later and never a row, as in the next-move check.
+- **A held task** (`held`): a started task out of the backlog whose gate is the first mate's `at-time` hold, set more than a day before its time (`TaskTurns.holdSetAt` reads the newest status line that wrote a gate, which must be the first mate's with the gate's time), so a check-back or a short hold is no row.
+  Its fields are its key and title, when the hold was set as its since, the hold's time, its reason between reader-data marks, and whether an Automation event or an app update ends it sooner.
+- **A linked wait** (`linked-wait`): a started, idle task out of the backlog with no gate whose waits end only in work nobody has started (`IdleLadder.unstartedWaits`), work the captain stopped included, read through `CrewSupervisor.waits`.
+  A wait on work underway beside them makes it no row: that work's close wakes the task.
+  Its fields are its key and title, its newest live `blocks` link's time as its since (or when it went idle, for a wait no link names), and each waited task's key, title and whether the captain stopped it (`TaskStarts.stoppedByCaptain`).
 - **An open-ended wait** (`open-ended-wait`): a started, idle task out of the backlog with no gate, whose newest report declared a work wait with no `end` ("Self-resolving work waits" above), once the idle ladder has reached rung 3.
   Until then the ladder's own nudge, wakes and stall card report it; the stall card's captain gate keeps it off the list while the card is up, so a row is the wait left standing after that card closes with no new turn.
   Its fields are its key and title, the report's time and the wait's observation as its reason.
   A turn that failed after that report ends the wait, as the idle ladder reads a declared wait.
-  A gate is a typed end: a hold has its time and may also end on an event or an app update, an allowance has its reset and a captain gate has its card, so a gated task is never a row.
+  A gate is a typed end: a hold has its time and may also end on an event or an app update, an allowance has its reset and a captain gate has its card, so a gated task is never this row; a long hold is a held row instead.
 
 Rows marked new go first and the rest oldest first, at most 12 (`STANDING_ROW_CAP`), then the count of the rest, so a row the cap would cut still reaches the reader at each milestone.
 Everything else that waits is counted, never listed: open work on request that is no row, by how long since it was filed (under 3 days, 3 to 14, over 14), and saved plans not built (open work on request whose basis is a closed task that delivers an answer), with the oldest one's filing time.
@@ -475,6 +491,7 @@ A saved plan is not also counted as filed for later.
 
 A row is new when it joins the list and again when its stay passes 1, 3 and 7 days, then every 7 days.
 The mark rides the inbox's once-names (`docs/inbox.md`, "Once per fact"): each row carries the name `standing:<since>:<days>` for its current milestone, about its task, and reads new until a delivery records that name; a heartbeat records each new row's name once its beat goes out (`InboxStore.recordOnce`).
+A parked part that had prerequisites, once every one has closed, carries `standing:<since>:<days>:prerequisites-closed`, so that close reads new again inside the same milestone.
 A new stay (a new `since`) starts over, and a task's close purges its names with its rows, so the list adds no store.
 
 `standingWorkText` renders the list in the first mate's context format (TOON), each title as the context serves it and each wait's reason between reader-data marks, with the one reminder after them.

@@ -771,3 +771,36 @@ describe("idleTurn: the same witnesses, read the same way, for an idle crewmate"
     }
   });
 });
+
+// INF-6853's no-hold choice: a wait whose unstarted work is all work the
+// captain stopped waits on the captain, so a link needs no hold beside it.
+describe("a wait only on work the captain stopped", () => {
+  it("wakes no one on a report and fires nothing while idle", () => {
+    const waiting = facts({ waitsOnStopped: true, workObservable: true });
+    expect(sortReport(waiting)).toMatchObject({
+      rule: "waits-stopped",
+      verdict: "routine",
+      wake: false,
+    });
+    expect(idleTurn(waiting)).toBe("captain");
+  });
+
+  it("still wakes the first mate for a finish or a filing", () => {
+    expect(sortReport(facts({ waitsOnStopped: true, finished: true })).rule).toBe("finished");
+    expect(sortReport(facts({ waitsOnStopped: true, filedFollowups: true })).rule).toBe(
+      "filed-followups",
+    );
+  });
+
+  // The review of INF-6878: only the wake asking the first mate to start the
+  // stopped work goes quiet; what else the first mate owes still reaches it.
+  it("still wakes the first mate for an owed card, recovery findings or a step's answer", () => {
+    const owed = facts({ waitsOnStopped: true, captainGateOwed: true });
+    expect(sortReport(owed)).toMatchObject({ rule: "captain-gate", wake: true });
+    expect(idleTurn(owed)).toBe("owed");
+    expect(sortReport(facts({ waitsOnStopped: true, recovery: true })).rule).toBe("recovery");
+    expect(sortReport(facts({ waitsOnStopped: true, internalStep: true })).rule).toBe(
+      "step-answered",
+    );
+  });
+});

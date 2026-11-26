@@ -914,6 +914,31 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       await at(minutes(10));
       expect(crewmate.promptCalls.at(-1)).toBe(IDLE_NUDGE_TEXT);
     });
+
+    // INF-6853's no-hold choice: a link alone models a wait on work the
+    // captain stopped, with no hold beside it to keep the ladder quiet.
+    it("a wait only on work the captain stopped is theirs: no nudge, wake or card past every rung, and the task still reads as waiting on that work", async () => {
+      const { supervisor, crewmate, ops, cards, tasks, taskId, at } = await stopped();
+      const release = seedTask(tasks, {
+        id: "stable-release",
+        title: "Promote a stable that lists Windows",
+        status: "queued",
+        startPolicy: "on-request",
+      });
+      expect(tasks.starts.declareCaptainStop(release.id, "firstmate").ok).toBe(true);
+      tasks.graph.link(release.id, taskId, "blocks", "firstmate");
+      const prompts = crewmate.promptCalls.length;
+      for (const at_ of [10, 20, 50, 80, 600]) await at(minutes(at_));
+      expect(crewmate.promptCalls).toHaveLength(prompts);
+      expect(idleWakes(ops)).toEqual([]);
+      expect(cards().filter((card) => card.taskId === taskId)).toEqual([]);
+      expect(supervisor.facts.crewStatus(taskId)[0]?.stalled).toBeUndefined();
+      const record = tasks.get(taskId);
+      expect(record && supervisor.postures.workPosture(record)).toEqual({
+        state: "idle",
+        reason: "dependency",
+      });
+    });
   });
 
   // The primitives review's reproduced gap (report section 5): the host's

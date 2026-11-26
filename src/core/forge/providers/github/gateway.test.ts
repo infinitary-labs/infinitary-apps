@@ -1035,6 +1035,37 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
     expect(seen).toHaveLength(2);
   });
 
+  // INF-6845's approved plan, piece 1: "Nothing reaches the tracker without your click,
+  // unless you set that action to Always allow", whatever constraint the waiting task carries.
+  it("keeps a side-effect task's reply and close on its own project for the captain, and sends its run start", async () => {
+    const { writeAs, seen } = await fixture();
+    const tell = writeAs("task-side-effect");
+    for (const ask of [
+      {
+        method: "POST" as const,
+        path: "/repos/octo/meter/issues/1/comments",
+        body: '{"body":"Fixed in 1.4.0."}',
+      },
+      { method: "PATCH" as const, path: "/repos/octo/meter/issues/1", body: '{"state":"closed"}' },
+    ])
+      expect((await tell.run(ask)).text).toContain(
+        "Not sent: this task does an outside action, so every write it makes but a run start or rerun on its own project asks the captain",
+      );
+    expect(seen).toEqual([]);
+    expect(
+      (
+        await tell.run({
+          method: "POST",
+          path: "/repos/octo/meter/actions/workflows/verify.yml/dispatches",
+          body: '{"ref":"main","return_run_details":true}',
+        })
+      ).text,
+    ).toContain('"status": 200');
+    expect(seen.map(({ method, path }) => `${method} ${path}`)).toEqual([
+      "POST /repos/octo/meter/actions/workflows/verify.yml/dispatches",
+    ]);
+  });
+
   it("stops a task at its call budget", async () => {
     const { read, seen } = await fixture();
     for (let call = 0; call < 200; call++) await read.run({ path: "/repos/octo/meter/pulls" });

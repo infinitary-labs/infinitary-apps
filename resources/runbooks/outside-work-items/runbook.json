@@ -1,0 +1,12 @@
+{
+  "id": "outside-work-items",
+  "name": "Outside work items",
+  "description": "When work answers an issue, ticket or request kept outside the app, a task of its own tells that item how the work ended, after your click.",
+  "firstmate": "guide.md",
+  "crew": {
+    "file": "crew.md",
+    "when": {
+      "sideEffect": [true]
+    }
+  }
+}

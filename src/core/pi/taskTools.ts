@@ -263,6 +263,9 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
             "True when its only job is an outside action that waits on work, such as closing a work item: each blocked_by, added later too, holds until merged, never at approval, and its brief says how each closed.",
         }),
       ),
+      unsafe_data_reader: Type.Optional(
+        Type.Boolean({ description: "As spawn_crewmate's shape.unsafe_data_reader." }),
+      ),
       branch: Type.Optional(Type.String({ description: "As spawn_crewmate's branch." })),
       tags: Type.Optional(TAGS_PARAM),
     }),
@@ -289,6 +292,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
           : {}),
         ...(params.needs_merge?.length ? { needs_merge: params.needs_merge } : {}),
         ...(params.side_effect ? { side_effect: true } : {}),
+        ...(params.unsafe_data_reader ? { unsafe_data_reader: true } : {}),
         ...(params.branch?.trim() ? { branch: params.branch.trim() } : {}),
       };
       const intent = parseSpawnIntent({

@@ -52,7 +52,7 @@ For example, a Backlog task on that computer shows <svg class="task-mark task-ma
 
 A task split into parts lists its parts under it.
 Once one of its parts starts, the task lists under Working, with its open parts under it.
-The task keeps its own mark there, so a task whose parts do the work can show the Backlog or Queued mark under Working.
+A queued task keeps its Queued mark there, while a task in your backlog whose parts do the work takes the mark of its most pressing open part, such as Waiting on you while a part's card waits.
 
 To read a task's status and its reason in words, rest the pointer on its row, or move to the row with the keyboard.
 

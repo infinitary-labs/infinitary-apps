@@ -998,6 +998,39 @@ describe("a task that runs on a computer that runs work", () => {
     console.info("Completion strip:", home.cards().find((card) => card.taskId === "t-lines")?.body);
   });
 
+  // INF-4576: a crewmate there marked its own way to say no, the mark was lost
+  // on the way home, and the home added its Decline beside it: two ways to say no.
+  it("keeps a crewmate's own way to say no from there, so the home adds no Decline beside it", async () => {
+    const at = await world();
+    const home = at.home();
+    model([
+      {
+        tools: [
+          {
+            name: "emit_card",
+            args: {
+              id: "batch-result",
+              title: "The batch did not pass",
+              body: "<p>One test group failed, and the batch repair owns the fix.</p>",
+              actions: [
+                { id: "look-deeper", label: "Look deeper", default: true },
+                { id: "leave-it", label: "Leave it here", declines: true },
+              ],
+            },
+          },
+        ],
+      },
+      { text: "The card is up." },
+    ]);
+    await at.start("t-declines", "Say whether the batch passed.");
+    await expect
+      .poll(() => home.cards().find((card) => card.taskId === "t-declines")?.actions)
+      .toEqual([
+        expect.objectContaining({ id: "leave-it", label: "Leave it here", declines: true }),
+        expect.objectContaining({ id: "look-deeper", label: "Look deeper", default: true }),
+      ]);
+  });
+
   // Intent: guardrail before the placedSessions.ts split (INF-2625's plan): a
   // file a computer hands this Mac comes in pieces and is kept only when it
   // arrives whole and unchanged; otherwise nothing of it is left here.

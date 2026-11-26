@@ -33,7 +33,7 @@ What a card *is* follows from what it carries, and the host derives the chrome f
 One general rule decides between the first two (contract v4.1): a card whose answer implies any potential next step for the captain, even an optional one, is a decision with the step the emitter would take marked `default`; only a pure fact with no next step is a note.
 A decision offers 2-3 declared options and marks exactly one `default`, and the shape lint refuses any other count.
 The app adds one more action, Decline, to every decision by the first mate or a crewmate whose author declared no way to say no (INF-3108, `appDeclineOf` in `src/shared/cardDecline.ts`).
-An author marks its own way to say no, such as Not now or Abandon, with `declines: true`, and then the card carries exactly what its author declared.
+An author marks its own way to say no, such as Not now or Abandon, with `declines: true`, and then the card carries exactly what its author declared, from a crewmate on a computer that runs work too (`placedCardSchema` in `src/shared/work.ts` carries the mark home).
 A merge card and the app's own cards never take Decline.
 The core adds Decline to the card it shows and the saved card never holds it, so the window, the phone and the change marks all read one card.
 Decline is drawn quiet, first in the footer to the left of the choices, is reached with Tab, and `cards.decline` presses it from command search.

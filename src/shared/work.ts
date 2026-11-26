@@ -436,6 +436,8 @@ export const placedCardSchema = z.object({
       default: z.boolean().optional(),
       effect: cardEffectSchema.optional(),
       danger: z.boolean().optional(),
+      /** Its author's own way to say no, so the home adds no Decline beside it (`card-action-declines.md`); an older home drops it. */
+      declines: z.literal(true).optional(),
       until: putOffUntilSchema.optional(), // a put-off choice the home keeps and raises again
     }),
   ),

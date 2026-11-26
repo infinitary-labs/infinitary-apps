@@ -518,6 +518,12 @@
 "cardPastMeta" = "過去のカード";
 "cardPastSentLead" = "選択と一緒に送信：";
 "cardPastUnreadable" = "このカードを読み取れませんでした";
+"cardPicturesUnreadMove" = "%1$@ に移動";
+"cardPicturesUnreadNoReader" = "一等航海士として答えられるモデルの中に、画像を読めるものがありません。設定の「インテリジェンス」で、画像を読めるモデルのあるサブスクリプションを追加してください。";
+"cardPicturesUnreadReader" = "%1$@ に移動すると、一等航海士は画像を読めるモデルに切り替わり、そこでメッセージに答えます。";
+"cardPicturesUnreadSettings" = "設定を開く";
+"cardPicturesUnreadTitle" = "一等航海士のモデルは画像を読めません";
+"cardPicturesUnreadWaits" = "画像付きのメッセージは保存され、待機しています。一等航海士は %1$@ で答えていますが、このモデルは文字しか読めません。画像のないメッセージは引き続き届きます。";
 "cardQuickAnswer" = "クイック回答";
 "cardReaderAsksTitle" = "%1$@ への書き込みと Web ページを許可しますか？";
 "cardReaderCallChanges" = "プロジェクトの外にあるものを変更します。";

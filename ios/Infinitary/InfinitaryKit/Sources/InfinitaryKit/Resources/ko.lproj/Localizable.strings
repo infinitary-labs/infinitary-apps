@@ -518,6 +518,12 @@
 "cardPastMeta" = "지난 카드";
 "cardPastSentLead" = "선택과 함께 보냄:";
 "cardPastUnreadable" = "이 카드를 읽을 수 없었어요";
+"cardPicturesUnreadMove" = "%1$@(으)로 옮기기";
+"cardPicturesUnreadNoReader" = "일등항해사로 답할 수 있는 모델 중에 사진을 읽는 모델이 없어요. 설정의 지능에서 그런 모델이 있는 구독을 추가하세요.";
+"cardPicturesUnreadReader" = "%1$@(으)로 옮기기를 누르면 일등항해사가 사진을 읽는 모델로 바뀌고, 거기서 메시지에 답해요.";
+"cardPicturesUnreadSettings" = "설정 열기";
+"cardPicturesUnreadTitle" = "일등항해사의 모델이 사진을 읽을 수 없어요";
+"cardPicturesUnreadWaits" = "사진이 있는 메시지는 저장되어 기다리고 있어요. 일등항해사가 쓰는 모델 %1$@은(는) 글자만 읽어요. 사진이 없는 메시지는 계속 전달돼요.";
 "cardQuickAnswer" = "빠른 답변";
 "cardReaderAsksTitle" = "%1$@에 쓰기와 웹 페이지를 허용할까요?";
 "cardReaderCallChanges" = "프로젝트 밖의 무언가를 바꿉니다.";

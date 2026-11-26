@@ -518,6 +518,12 @@
 "cardPastMeta" = "tarjeta anterior";
 "cardPastSentLead" = "Enviado con tu elección:";
 "cardPastUnreadable" = "No se pudo leer esta tarjeta";
+"cardPicturesUnreadMove" = "Pasar a %1$@";
+"cardPicturesUnreadNoReader" = "Ninguno de tus modelos que pueden responder como tu primer oficial lee imágenes. Agrega una suscripción con uno en Configuración, en Inteligencia.";
+"cardPicturesUnreadReader" = "Pasar a %1$@ pone a tu primer oficial en un modelo que lee imágenes, y ahí responde a tu mensaje.";
+"cardPicturesUnreadSettings" = "Abrir Configuración";
+"cardPicturesUnreadTitle" = "El modelo de tu primer oficial no puede leer imágenes";
+"cardPicturesUnreadWaits" = "Tu mensaje con una imagen está guardado y espera, porque tu primer oficial responde con %1$@, que solo lee palabras. Los mensajes sin imágenes le siguen llegando.";
 "cardQuickAnswer" = "Respuesta rápida";
 "cardReaderAsksTitle" = "¿Permitir escrituras en %1$@ y páginas web?";
 "cardReaderCallChanges" = "Cambia algo fuera de tu proyecto.";

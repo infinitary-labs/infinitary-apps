@@ -518,6 +518,12 @@
 "cardPastMeta" = "past card";
 "cardPastSentLead" = "Sent with your choice:";
 "cardPastUnreadable" = "This card could not be read";
+"cardPicturesUnreadMove" = "Move to %1$@";
+"cardPicturesUnreadNoReader" = "None of your models that can answer your first mate reads pictures. Add a subscription with one in Settings, under Intelligence.";
+"cardPicturesUnreadReader" = "Move to %1$@ puts your first mate on a model that reads pictures, and it answers your message there.";
+"cardPicturesUnreadSettings" = "Open settings";
+"cardPicturesUnreadTitle" = "Your first mate's model cannot read pictures";
+"cardPicturesUnreadWaits" = "Your message with a picture is saved and waits, because your first mate answers on %1$@, which reads words only. Messages without pictures still reach it.";
 "cardQuickAnswer" = "Quick answer";
 "cardReaderAsksTitle" = "Allow writes on %1$@ and web pages?";
 "cardReaderCallChanges" = "Changes something outside your project.";

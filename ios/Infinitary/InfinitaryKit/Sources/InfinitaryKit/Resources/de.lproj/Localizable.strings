@@ -518,6 +518,12 @@
 "cardPastMeta" = "frühere Karte";
 "cardPastSentLead" = "Mit deiner Wahl gesendet:";
 "cardPastUnreadable" = "Diese Karte konnte nicht gelesen werden";
+"cardPicturesUnreadMove" = "Zu %1$@ wechseln";
+"cardPicturesUnreadNoReader" = "Keines deiner Modelle, die deinem ersten Offizier antworten können, liest Bilder. Füg in den Einstellungen unter Intelligenz ein Abo mit einem solchen Modell hinzu.";
+"cardPicturesUnreadReader" = "Zu %1$@ wechseln setzt deinen ersten Offizier auf ein Modell, das Bilder liest, und er beantwortet deine Nachricht dort.";
+"cardPicturesUnreadSettings" = "Einstellungen öffnen";
+"cardPicturesUnreadTitle" = "Das Modell deines ersten Offiziers kann keine Bilder lesen";
+"cardPicturesUnreadWaits" = "Deine Nachricht mit einem Bild ist gespeichert und wartet, denn dein erster Offizier antwortet mit %1$@, das nur Wörter liest. Nachrichten ohne Bilder erreichen ihn weiterhin.";
 "cardQuickAnswer" = "Schnelle Antwort";
 "cardReaderAsksTitle" = "Schreibzugriffe auf %1$@ und Webseiten erlauben?";
 "cardReaderCallChanges" = "Ändert etwas außerhalb deines Projekts.";

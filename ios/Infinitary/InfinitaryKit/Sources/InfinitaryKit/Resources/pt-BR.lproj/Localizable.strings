@@ -518,6 +518,12 @@
 "cardPastMeta" = "cartão anterior";
 "cardPastSentLead" = "Enviado com a sua escolha:";
 "cardPastUnreadable" = "Não foi possível ler este cartão";
+"cardPicturesUnreadMove" = "Mudar para %1$@";
+"cardPicturesUnreadNoReader" = "Nenhum dos seus modelos que podem responder como seu imediato lê imagens. Adicione uma assinatura com um deles em Ajustes, na seção Inteligência.";
+"cardPicturesUnreadReader" = "Mudar para %1$@ coloca seu imediato em um modelo que lê imagens, e ele responde à sua mensagem lá.";
+"cardPicturesUnreadSettings" = "Abrir Ajustes";
+"cardPicturesUnreadTitle" = "O modelo do seu imediato não consegue ler imagens";
+"cardPicturesUnreadWaits" = "Sua mensagem com uma imagem está salva e esperando, porque seu imediato responde com %1$@, que só lê palavras. Mensagens sem imagens continuam chegando a ele.";
 "cardQuickAnswer" = "Resposta rápida";
 "cardReaderAsksTitle" = "Permitir escritas em %1$@ e páginas da web?";
 "cardReaderCallChanges" = "Muda algo fora do seu projeto.";

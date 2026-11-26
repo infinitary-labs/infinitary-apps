@@ -21331,6 +21331,171 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `This card could not be read`;
   }
+  function cardPicturesUnreadMove(input2) {
+    const model = input2.model;
+    switch (currentLanguage()) {
+      case "ar":
+        return `الانتقال إلى ${model}`;
+      case "de":
+        return `Zu ${model} wechseln`;
+      case "es":
+        return `Pasar a ${model}`;
+      case "fr":
+        return `Passer à ${model}`;
+      case "ja":
+        return `${model} に移動`;
+      case "ko":
+        return `${model}(으)로 옮기기`;
+      case "pt-BR":
+        return `Mudar para ${model}`;
+      case "zh-Hans":
+        return `改用 ${model}`;
+      case "zh-Hant":
+        return `改用 ${model}`;
+      case "en-XA":
+        return `[Ṁöṽé ţö ${model} ~~~]`;
+      case "ar-XB":
+        return `‮Move to ‬${model}`;
+    }
+    return `Move to ${model}`;
+  }
+  function cardPicturesUnreadNoReader() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يقرأ الصور أيٌّ من نماذجك التي تستطيع العمل نائبًا للقبطان. أضف اشتراكًا فيه نموذج كهذا في الإعدادات، ضمن «الذكاء».`;
+      case "de":
+        return `Keines deiner Modelle, die deinem ersten Offizier antworten können, liest Bilder. Füg in den Einstellungen unter Intelligenz ein Abo mit einem solchen Modell hinzu.`;
+      case "es":
+        return `Ninguno de tus modelos que pueden responder como tu primer oficial lee imágenes. Agrega una suscripción con uno en Configuración, en Inteligencia.`;
+      case "fr":
+        return `Aucun de vos modèles capables de répondre comme votre second ne lit les images. Ajoutez un abonnement qui en propose un dans les Réglages, sous Intelligence.`;
+      case "ja":
+        return `一等航海士として答えられるモデルの中に、画像を読めるものがありません。設定の「インテリジェンス」で、画像を読めるモデルのあるサブスクリプションを追加してください。`;
+      case "ko":
+        return `일등항해사로 답할 수 있는 모델 중에 사진을 읽는 모델이 없어요. 설정의 지능에서 그런 모델이 있는 구독을 추가하세요.`;
+      case "pt-BR":
+        return `Nenhum dos seus modelos que podem responder como seu imediato lê imagens. Adicione uma assinatura com um deles em Ajustes, na seção Inteligência.`;
+      case "zh-Hans":
+        return `你能用作大副的模型中，没有能读取图片的。请在“设置”的“智能”下添加一个包含此类模型的订阅。`;
+      case "zh-Hant":
+        return `你能用作大副的模型中，沒有能讀取圖片的。請在「設定」的「智慧等級」中加入含有這類模型的訂閱方案。`;
+      case "en-XA":
+        return `[Ñöñé öƒ ýöûŕ ɱöðéļš ţĥáţ çáñ áñšŵéŕ ýöûŕ ƒîŕšţ ɱáţé ŕéáðš þîçţûŕéš. Åðð á šûƀšçŕîþţîöñ ŵîţĥ öñé îñ Šéţţîñĝš, ûñðéŕ Îñţéļļîĝéñçé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮None of your models that can answer your first mate reads pictures. Add a subscription with one in Settings, under Intelligence.‬`;
+    }
+    return `None of your models that can answer your first mate reads pictures. Add a subscription with one in Settings, under Intelligence.`;
+  }
+  function cardPicturesUnreadReader(input2) {
+    const model = input2.model;
+    switch (currentLanguage()) {
+      case "ar":
+        return `الانتقال إلى ${model} يضع نائب القبطان على نموذج يقرأ الصور، فيجيب عن رسالتك هناك.`;
+      case "de":
+        return `Zu ${model} wechseln setzt deinen ersten Offizier auf ein Modell, das Bilder liest, und er beantwortet deine Nachricht dort.`;
+      case "es":
+        return `Pasar a ${model} pone a tu primer oficial en un modelo que lee imágenes, y ahí responde a tu mensaje.`;
+      case "fr":
+        return `Passer à ${model} place votre second sur un modèle qui lit les images, et il y répond à votre message.`;
+      case "ja":
+        return `${model} に移動すると、一等航海士は画像を読めるモデルに切り替わり、そこでメッセージに答えます。`;
+      case "ko":
+        return `${model}(으)로 옮기기를 누르면 일등항해사가 사진을 읽는 모델로 바뀌고, 거기서 메시지에 답해요.`;
+      case "pt-BR":
+        return `Mudar para ${model} coloca seu imediato em um modelo que lê imagens, e ele responde à sua mensagem lá.`;
+      case "zh-Hans":
+        return `改用 ${model} 会让你的大副换到一个能读取图片的模型，并在那里回答你的消息。`;
+      case "zh-Hant":
+        return `改用 ${model} 會讓你的大副換到能讀取圖片的模型，並在那裡回覆你的訊息。`;
+      case "en-XA":
+        return `[Ṁöṽé ţö ${model} þûţš ýöûŕ ƒîŕšţ ɱáţé öñ á ɱöðéļ ţĥáţ ŕéáðš þîçţûŕéš, áñð îţ áñšŵéŕš ýöûŕ ɱéššáĝé ţĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Move to ‬${model}‮ puts your first mate on a model that reads pictures, and it answers your message there.‬`;
+    }
+    return `Move to ${model} puts your first mate on a model that reads pictures, and it answers your message there.`;
+  }
+  function cardPicturesUnreadSettings() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `فتح الإعدادات`;
+      case "de":
+        return `Einstellungen öffnen`;
+      case "es":
+        return `Abrir Configuración`;
+      case "fr":
+        return `Ouvrir les Réglages`;
+      case "ja":
+        return `設定を開く`;
+      case "ko":
+        return `설정 열기`;
+      case "pt-BR":
+        return `Abrir Ajustes`;
+      case "zh-Hans":
+        return `打开设置`;
+      case "zh-Hant":
+        return `開啟設定`;
+      case "en-XA":
+        return `[Öþéñ šéţţîñĝš ~~~~~]`;
+      case "ar-XB":
+        return `‮Open settings‬`;
+    }
+    return `Open settings`;
+  }
+  function cardPicturesUnreadTitle() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `نموذج نائب القبطان لا يستطيع قراءة الصور`;
+      case "de":
+        return `Das Modell deines ersten Offiziers kann keine Bilder lesen`;
+      case "es":
+        return `El modelo de tu primer oficial no puede leer imágenes`;
+      case "fr":
+        return `Le modèle de votre second ne peut pas lire les images`;
+      case "ja":
+        return `一等航海士のモデルは画像を読めません`;
+      case "ko":
+        return `일등항해사의 모델이 사진을 읽을 수 없어요`;
+      case "pt-BR":
+        return `O modelo do seu imediato não consegue ler imagens`;
+      case "zh-Hans":
+        return `你的大副所用的模型无法读取图片`;
+      case "zh-Hant":
+        return `你的大副所用的模型無法讀取圖片`;
+      case "en-XA":
+        return `[Ýöûŕ ƒîŕšţ ɱáţé'š ɱöðéļ çáññöţ ŕéáð þîçţûŕéš ~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your first mate's model cannot read pictures‬`;
+    }
+    return `Your first mate's model cannot read pictures`;
+  }
+  function cardPicturesUnreadWaits(input2) {
+    const model = input2.model;
+    switch (currentLanguage()) {
+      case "ar":
+        return `رسالتك التي فيها صورة محفوظة وتنتظر، لأن نائب القبطان يجيب بالنموذج ${model} الذي يقرأ الكلمات فقط. الرسائل التي بلا صور ما زالت تصله.`;
+      case "de":
+        return `Deine Nachricht mit einem Bild ist gespeichert und wartet, denn dein erster Offizier antwortet mit ${model}, das nur Wörter liest. Nachrichten ohne Bilder erreichen ihn weiterhin.`;
+      case "es":
+        return `Tu mensaje con una imagen está guardado y espera, porque tu primer oficial responde con ${model}, que solo lee palabras. Los mensajes sin imágenes le siguen llegando.`;
+      case "fr":
+        return `Votre message avec une image est enregistré et attend, car votre second répond avec ${model}, qui ne lit que les mots. Les messages sans image lui parviennent toujours.`;
+      case "ja":
+        return `画像付きのメッセージは保存され、待機しています。一等航海士は ${model} で答えていますが、このモデルは文字しか読めません。画像のないメッセージは引き続き届きます。`;
+      case "ko":
+        return `사진이 있는 메시지는 저장되어 기다리고 있어요. 일등항해사가 쓰는 모델 ${model}은(는) 글자만 읽어요. 사진이 없는 메시지는 계속 전달돼요.`;
+      case "pt-BR":
+        return `Sua mensagem com uma imagem está salva e esperando, porque seu imediato responde com ${model}, que só lê palavras. Mensagens sem imagens continuam chegando a ele.`;
+      case "zh-Hans":
+        return `你带图片的消息已保存，正在等待，因为你的大副用 ${model} 回答，而它只能读取文字。不带图片的消息仍会送达大副。`;
+      case "zh-Hant":
+        return `你附有圖片的訊息已儲存，正在等待，因為你的大副用 ${model} 回覆，而它只能讀取文字。沒有圖片的訊息仍會送達大副。`;
+      case "en-XA":
+        return `[Ýöûŕ ɱéššáĝé ŵîţĥ á þîçţûŕé îš šáṽéð áñð ŵáîţš, ƀéçáûšé ýöûŕ ƒîŕšţ ɱáţé áñšŵéŕš öñ ${model}, ŵĥîçĥ ŕéáðš ŵöŕðš öñļý. Ṁéššáĝéš ŵîţĥöûţ þîçţûŕéš šţîļļ ŕéáçĥ îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your message with a picture is saved and waits, because your first mate answers on ‬${model}‮, which reads words only. Messages without pictures still reach it.‬`;
+    }
+    return `Your message with a picture is saved and waits, because your first mate answers on ${model}, which reads words only. Messages without pictures still reach it.`;
+  }
   function cardQuickAnswer() {
     switch (currentLanguage()) {
       case "ar":
@@ -114725,6 +114890,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardPastPictures,
     cardPastSentLead,
     cardPastUnreadable,
+    cardPicturesUnreadMove,
+    cardPicturesUnreadNoReader,
+    cardPicturesUnreadReader,
+    cardPicturesUnreadSettings,
+    cardPicturesUnreadTitle,
+    cardPicturesUnreadWaits,
     cardQuickAnswer,
     cardReaderAsksTitle,
     cardReaderCallChanges,
@@ -118388,6 +118559,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardPastPictures": ["count", "names"],
     "cardPastSentLead": [],
     "cardPastUnreadable": [],
+    "cardPicturesUnreadMove": ["model"],
+    "cardPicturesUnreadNoReader": [],
+    "cardPicturesUnreadReader": ["model"],
+    "cardPicturesUnreadSettings": [],
+    "cardPicturesUnreadTitle": [],
+    "cardPicturesUnreadWaits": ["model"],
     "cardQuickAnswer": [],
     "cardReaderAsksTitle": ["place"],
     "cardReaderCallChanges": [],

@@ -558,6 +558,12 @@ public enum PhoneMessages {
     public static func `cardPastPictures`(`count`: Int, `names`: String) -> String { PhoneWords.format("cardPastPictures", [`count`, `names`]) }
     public static func `cardPastSentLead`() -> String { PhoneWords.format("cardPastSentLead", []) }
     public static func `cardPastUnreadable`() -> String { PhoneWords.format("cardPastUnreadable", []) }
+    public static func `cardPicturesUnreadMove`(`model`: String) -> String { PhoneWords.format("cardPicturesUnreadMove", [`model`]) }
+    public static func `cardPicturesUnreadNoReader`() -> String { PhoneWords.format("cardPicturesUnreadNoReader", []) }
+    public static func `cardPicturesUnreadReader`(`model`: String) -> String { PhoneWords.format("cardPicturesUnreadReader", [`model`]) }
+    public static func `cardPicturesUnreadSettings`() -> String { PhoneWords.format("cardPicturesUnreadSettings", []) }
+    public static func `cardPicturesUnreadTitle`() -> String { PhoneWords.format("cardPicturesUnreadTitle", []) }
+    public static func `cardPicturesUnreadWaits`(`model`: String) -> String { PhoneWords.format("cardPicturesUnreadWaits", [`model`]) }
     public static func `cardQuickAnswer`() -> String { PhoneWords.format("cardQuickAnswer", []) }
     public static func `cardReaderAsksTitle`(`place`: String) -> String { PhoneWords.format("cardReaderAsksTitle", [`place`]) }
     public static func `cardReaderCallChanges`() -> String { PhoneWords.format("cardReaderCallChanges", []) }
@@ -5314,6 +5320,12 @@ extension PhoneWords {
         "cardPastPictures": ["count", "names"],
         "cardPastSentLead": [],
         "cardPastUnreadable": [],
+        "cardPicturesUnreadMove": ["model"],
+        "cardPicturesUnreadNoReader": [],
+        "cardPicturesUnreadReader": ["model"],
+        "cardPicturesUnreadSettings": [],
+        "cardPicturesUnreadTitle": [],
+        "cardPicturesUnreadWaits": ["model"],
         "cardQuickAnswer": [],
         "cardReaderAsksTitle": ["place"],
         "cardReaderCallChanges": [],

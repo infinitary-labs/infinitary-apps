@@ -131,8 +131,11 @@ export type FirstmateHooks = {
     /** The number of the line the reply was saved as in the card's thread. */
     line?: number,
   ) => void;
-  /** Apply the rung-2 ladder move: rebind Firstmate to another provider. */
-  moveFlagship?: (providerId: string) => void;
+  /**
+   * Rebind Firstmate to another provider (the rung-2 ladder move), or to
+   * one model of it given as `provider/model` (the pictures card).
+   */
+  moveFlagship?: (target: string) => void;
   /**
    * A pause card's "Try again": a refusal clears and the lane drains once;
    * on a spent allowance it rechecks, or attempts once when its argument

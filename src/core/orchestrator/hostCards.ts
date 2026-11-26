@@ -47,6 +47,8 @@ export const FIRSTMATE_QUIET_CARD_ID = "card-fm-quiet";
 /** The Firstmate failure card (the agent-down set): Retry, until a turn ends clean. */
 export const FIRSTMATE_FAILURE_CARD_ID = "card-fm-turn-failure";
 export const FIRSTMATE_FAILURE_TITLE = "Your first mate hit a problem";
+/** A message with pictures waits because the first mate's model reads words only. */
+export const FIRSTMATE_PICTURES_CARD_ID = "card-fm-pictures-unread";
 
 export type FirstmatePauseCard = {
   pause: SeatPauseClass;
@@ -646,6 +648,65 @@ export function firstmateFailureCard(body: string): HostCard {
         variant: "primary",
         default: true,
         effect: { kind: "host", op: "retry-firstmate" },
+      },
+    ],
+  });
+}
+
+/**
+ * The card for a message with pictures the first mate's model reads words
+ * only for (docs/inbox.md, "Pictures ride the row by reference"): the
+ * message waits on the lane with its pictures, and the card offers the move
+ * to `reader`, a model that reads them and can answer the first mate, or
+ * Settings when there is none. A move is a model change, so it always asks.
+ */
+export function firstmatePicturesCard(input: {
+  /** The first mate's model, by the name a person reads. */
+  model: string;
+  reader?: { provider: string; id: string; name: string };
+}): HostCard {
+  const { reader } = input;
+  const title = said("cardPicturesUnreadTitle");
+  const move = reader ? said("cardPicturesUnreadMove", { model: reader.name }) : undefined;
+  const settings = said("cardPicturesUnreadSettings");
+  const way = reader
+    ? said("cardPicturesUnreadReader", { model: reader.name })
+    : said("cardPicturesUnreadNoReader");
+  return hostCard({
+    id: FIRSTMATE_PICTURES_CARD_ID,
+    title: englishOf(title),
+    meta: FIRSTMATE_CARD_META,
+    body: [
+      `<p>${saidMark(said("cardPicturesUnreadWaits", { model: input.model }))}</p>`,
+      `<p>${saidMark(way)}</p>`,
+      cardWordsMark([title, ...(move ? [move] : []), settings]),
+    ].join(""),
+    // The first mate still reads words, so it answers a reply here.
+    answeredBy: "firstmate",
+    actions: [
+      ...(reader && move
+        ? [
+            {
+              id: "move-flagship",
+              label: englishOf(move),
+              variant: "primary" as const,
+              default: true,
+              // The model rides the provider so the move lands on this
+              // reader, not the provider's own automatic pick.
+              effect: {
+                kind: "host" as const,
+                op: "move-flagship" as const,
+                arg: `${reader.provider}/${reader.id}`,
+              },
+            },
+          ]
+        : []),
+      {
+        id: "open-settings",
+        label: englishOf(settings),
+        variant: reader ? "secondary" : "primary",
+        ...(reader ? {} : { default: true }),
+        effect: { kind: "open", target: "settings" },
       },
     ],
   });

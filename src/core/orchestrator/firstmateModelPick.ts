@@ -11,7 +11,13 @@ import type { LocalOrchestratorSeat } from "./localOrchestrator";
  */
 type ModelPickOptions = Pick<
   FirstmateAgentOptions,
-  "availableModels" | "listedModels" | "slotsOf" | "quotaModels" | "settings" | "flagship"
+  | "availableModels"
+  | "listedModels"
+  | "slotsOf"
+  | "quotaModels"
+  | "settings"
+  | "flagship"
+  | "readsPictures"
 >;
 
 type ModelRef = { provider: string; id: string };
@@ -84,6 +90,34 @@ export function resolveModel(
   if (chosen && chosen.provider !== "anthropic" && !isRetiredProvider(chosen.provider)) {
     return chosen;
   }
+  const available = firstmateCandidates(options);
+  if (available.length === 0) return undefined;
+  // A fresh Auto pick considers every serving backend in the same pool.
+  // A later cross-provider move still asks the captain.
+  const derived = deriveFrom(options, available);
+  if (derived) options.settings.setFirstmateModel(derived);
+  return derived;
+}
+
+/**
+ * The model a move would put the first mate on so it reads pictures: the
+ * automatic pick among the models that read them, never `current`. Nothing
+ * is persisted; the captain's move does that.
+ */
+export function pictureReaderFor(
+  options: ModelPickOptions,
+  current: ModelRef,
+): ModelRef | undefined {
+  const readers = firstmateCandidates(options).filter(
+    (model) =>
+      options.readsPictures?.(model) !== false &&
+      !(model.provider === current.provider && model.id === current.id),
+  );
+  return deriveFrom(options, readers);
+}
+
+/** Models that can answer the first mate: its provider's role, and an account the seat can stand on. */
+function firstmateCandidates(options: ModelPickOptions): ModelRef[] {
   const serves = new Map<string, boolean>();
   const servesFirstmate = (providerId: string): boolean => {
     let known = serves.get(providerId);
@@ -95,7 +129,7 @@ export function resolveModel(
     }
     return known;
   };
-  const available = options
+  return options
     .availableModels()
     .filter(
       (model) =>
@@ -103,17 +137,13 @@ export function resolveModel(
         !isRetiredProvider(model.provider) &&
         servesFirstmate(model.provider),
     );
-  if (available.length === 0) return undefined;
-  // A fresh Auto pick considers every serving backend in the same pool.
-  // A later cross-provider move still asks the captain.
-  const derived = deriveFrom(options, available);
-  if (derived) options.settings.setFirstmateModel(derived);
-  return derived;
 }
 
 /**
  * The Firstmate's automatic pick: high, medium, premium, low; catalog
- * allowance order within each slot, across serving backends alike.
+ * allowance order within each slot, across serving backends alike. Within
+ * a slot a model that reads pictures goes first, so a pasted picture
+ * reaches a first mate that can read it; the slot still outranks pictures.
  */
 function deriveFrom(
   options: ModelPickOptions,
@@ -126,17 +156,22 @@ function deriveFrom(
     const reading = catalog.find((entry) => servedModelKey(entry) === servedModelKey(model));
     return !(reading && allowanceSpent(reading));
   });
+  // Unknown counts as reading pictures, the rule routing uses for a model
+  // whose description is not loaded.
+  const reads = (model: ModelRef) => options.readsPictures?.(model) !== false;
   for (const bucket of ["high", "medium", "premium", "low"] as const) {
+    const inSlot: ModelRef[] = [];
     for (const model of catalog) {
       const provider = servedProviderOf(model.provider);
       if (!availableKeys.has(servedModelKey(model))) continue;
       if (allowanceSpent(model)) continue;
       if (slotsOf(options, { provider, id: model.id }).includes(bucket)) {
-        return { provider, id: model.id };
+        inSlot.push({ provider, id: model.id });
       }
     }
-    const model = pool.find((entry) => slotsOf(options, entry).includes(bucket));
+    inSlot.push(...pool.filter((entry) => slotsOf(options, entry).includes(bucket)));
+    const model = inSlot.find(reads) ?? inSlot[0];
     if (model) return model;
   }
-  return pool[0];
+  return pool.find(reads) ?? pool[0];
 }

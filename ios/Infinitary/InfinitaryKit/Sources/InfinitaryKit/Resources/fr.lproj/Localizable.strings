@@ -518,6 +518,12 @@
 "cardPastMeta" = "carte passée";
 "cardPastSentLead" = "Envoyé avec votre choix :";
 "cardPastUnreadable" = "Cette carte n’a pas pu être lue";
+"cardPicturesUnreadMove" = "Passer à %1$@";
+"cardPicturesUnreadNoReader" = "Aucun de vos modèles capables de répondre comme votre second ne lit les images. Ajoutez un abonnement qui en propose un dans les Réglages, sous Intelligence.";
+"cardPicturesUnreadReader" = "Passer à %1$@ place votre second sur un modèle qui lit les images, et il y répond à votre message.";
+"cardPicturesUnreadSettings" = "Ouvrir les Réglages";
+"cardPicturesUnreadTitle" = "Le modèle de votre second ne peut pas lire les images";
+"cardPicturesUnreadWaits" = "Votre message avec une image est enregistré et attend, car votre second répond avec %1$@, qui ne lit que les mots. Les messages sans image lui parviennent toujours.";
 "cardQuickAnswer" = "Réponse rapide";
 "cardReaderAsksTitle" = "Autoriser les écritures sur %1$@ et des pages web ?";
 "cardReaderCallChanges" = "Change quelque chose en dehors de votre projet.";

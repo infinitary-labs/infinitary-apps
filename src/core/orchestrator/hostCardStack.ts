@@ -8,12 +8,14 @@ import {
   FIRSTMATE_FAILURE_CARD_ID,
   FIRSTMATE_MOVE_BACK_CARD_ID,
   FIRSTMATE_PAUSE_CARD_IDS,
+  FIRSTMATE_PICTURES_CARD_ID,
   FIRSTMATE_QUIET_CARD_ID,
   type FirstmatePauseCard,
   firstmateFailureCard,
   firstmateMoveBackCard,
   firstmatePauseCard,
   firstmatePauseCardId,
+  firstmatePicturesCard,
   firstmateQuietCard,
   forgeSignInCard,
   hostCard,
@@ -209,6 +211,18 @@ export class HostCardStack {
     const existing = this.cards.get(FIRSTMATE_FAILURE_CARD_ID);
     this.put(
       { ...firstmateFailureCard(body), createdAt: existing?.createdAt ?? this.host.now() },
+      { revise: existing !== undefined },
+    );
+  }
+
+  /**
+   * The pictures card (`firstmatePicturesCard`): one card under a stable
+   * id, revised in place when another message with pictures waits.
+   */
+  addFirstmatePicturesCard(input: Parameters<typeof firstmatePicturesCard>[0]): void {
+    const existing = this.cards.get(FIRSTMATE_PICTURES_CARD_ID);
+    this.put(
+      { ...firstmatePicturesCard(input), createdAt: existing?.createdAt ?? this.host.now() },
       { revise: existing !== undefined },
     );
   }

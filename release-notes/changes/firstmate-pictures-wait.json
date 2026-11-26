@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "firstmate-pictures-wait",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "A picture you paste waits for a model that can read it",
+      "body": "When your first mate picks its own model, it now prefers one that reads pictures among models of the same level. If it answers on a model that reads words only, a message with a picture waits with its words and picture, and one card offers to move your first mate to a model that reads pictures, which then answers it. Before, the message ended in Your first mate hit a problem.",
+      "picture": {
+        "dark": "firstmate-pictures-wait-dark.webp",
+        "light": "firstmate-pictures-wait-light.webp",
+        "alt": "A card says your first mate's model cannot read pictures, the message waits, and a button moves it to a model that reads them"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

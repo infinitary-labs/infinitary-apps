@@ -518,6 +518,12 @@
 "cardPastMeta" = "بطاقة سابقة";
 "cardPastSentLead" = "أُرسل مع اختيارك:";
 "cardPastUnreadable" = "تعذّرت قراءة هذه البطاقة";
+"cardPicturesUnreadMove" = "الانتقال إلى %1$@";
+"cardPicturesUnreadNoReader" = "لا يقرأ الصور أيٌّ من نماذجك التي تستطيع العمل نائبًا للقبطان. أضف اشتراكًا فيه نموذج كهذا في الإعدادات، ضمن «الذكاء».";
+"cardPicturesUnreadReader" = "الانتقال إلى %1$@ يضع نائب القبطان على نموذج يقرأ الصور، فيجيب عن رسالتك هناك.";
+"cardPicturesUnreadSettings" = "فتح الإعدادات";
+"cardPicturesUnreadTitle" = "نموذج نائب القبطان لا يستطيع قراءة الصور";
+"cardPicturesUnreadWaits" = "رسالتك التي فيها صورة محفوظة وتنتظر، لأن نائب القبطان يجيب بالنموذج %1$@ الذي يقرأ الكلمات فقط. الرسائل التي بلا صور ما زالت تصله.";
 "cardQuickAnswer" = "إجابة سريعة";
 "cardReaderAsksTitle" = "هل تسمح بالكتابة على %1$@ وبصفحات الويب؟";
 "cardReaderCallChanges" = "يغيّر شيئًا خارج مشروعك.";

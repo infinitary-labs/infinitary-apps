@@ -518,6 +518,12 @@
 "cardPastMeta" = "過去的卡片";
 "cardPastSentLead" = "隨你的選擇送出：";
 "cardPastUnreadable" = "無法讀取這張卡片";
+"cardPicturesUnreadMove" = "改用 %1$@";
+"cardPicturesUnreadNoReader" = "你能用作大副的模型中，沒有能讀取圖片的。請在「設定」的「智慧等級」中加入含有這類模型的訂閱方案。";
+"cardPicturesUnreadReader" = "改用 %1$@ 會讓你的大副換到能讀取圖片的模型，並在那裡回覆你的訊息。";
+"cardPicturesUnreadSettings" = "開啟設定";
+"cardPicturesUnreadTitle" = "你的大副所用的模型無法讀取圖片";
+"cardPicturesUnreadWaits" = "你附有圖片的訊息已儲存，正在等待，因為你的大副用 %1$@ 回覆，而它只能讀取文字。沒有圖片的訊息仍會送達大副。";
 "cardQuickAnswer" = "快速回答";
 "cardReaderAsksTitle" = "允許在 %1$@ 上寫入並開啟網頁嗎？";
 "cardReaderCallChanges" = "變更你專案之外的內容。";

@@ -630,7 +630,8 @@ A Claude subscription is reachable only through Claude's own client - its OAuth 
 - **Eligibility, asserted at every binding path.**
   `Flagship.isEligible` checks three things no single edit can widen - the catalog role lists `firstmate`, the provider's backend has a seat (`SEAT_BINDINGS`), and the vault binding is the one that seat stands on (`pi-runtime` for Pi, `default-login` for Claude) - plus the one serveability predicate (a cut-off or a missing client withholds the account).
   `deriveForProvider`, a persisted pin, both exhaustion-ladder rungs, and both IPC setters (`firstmate-account`, and `firstmate-model` through `Flagship.servesFirstmate`) go through it, refusing with a user-facing reason.
-  `resolveModel` (`firstmateModelPick.ts`) derives only a model that can answer the first mate (its role, and an account the seat can stand on), and ranks high → medium → premium → low across Pi and Claude without provider preference; an Auto derivation may choose Claude, while a later cross-provider move still asks the captain.
+  `resolveModel` (`firstmateModelPick.ts`) derives only a model that can answer the first mate (its role, and an account the seat can stand on), and ranks high → medium → premium → low across Pi and Claude without provider preference; within a level a model whose description says it reads pictures goes first, so a pasted picture reaches a first mate that can read it, while the level still outranks pictures.
+  An Auto derivation may choose Claude, while a later cross-provider move still asks the captain.
   The first-run gate counts the same models, and stays down while an account the seat could stand on is only paused by a typed cut-off (`Flagship.standsOnCutOff`): the pause card speaks for it.
   Before rev-9 the same gate made Claude crewmate-only.
   Asserted in `flagship.test.ts` and e2e.

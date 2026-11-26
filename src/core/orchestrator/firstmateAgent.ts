@@ -10,7 +10,6 @@ import { createHash, randomUUID } from "node:crypto";
 import type { ActionName } from "@shared/actions";
 import type { AttachmentRef } from "@shared/attachments";
 import { type CutOff, isAuthFailureMessage } from "@shared/authFailure";
-import type { TurnImage } from "@shared/cards";
 import type { TurnFailureReason, TurnTrigger } from "@shared/diagnostics";
 import { AUTOMATIC_EMOTE_WORDS, type HostReplyEmote } from "@shared/emotes";
 import { PROGRESS_TOOL_NAMES } from "@shared/events";
@@ -41,6 +40,7 @@ import { AskCapture, type TurnOrigin } from "./askCapture";
 import { DecisionCapture, type ServedInput } from "./decisionCapture";
 import { FirstmateContext } from "./firstmateContext";
 import { premiumCanServe } from "./firstmateModelPick";
+import { FirstmatePictures } from "./firstmatePictures";
 import { FirstmateQuiet } from "./firstmateQuiet";
 import { FirstmateSeat, formatFlagshipError } from "./firstmateSeat";
 import { buildFirstmateTools, type FirstmateToolHost } from "./firstmateTools";
@@ -63,7 +63,6 @@ import {
   captainTurnRef,
   drainWakes,
   renderWake,
-  rowAttachments,
   type TypedWake,
 } from "./wakes";
 
@@ -480,8 +479,8 @@ export class FirstmateAgent {
           ...(line !== undefined ? { aboutLine: line } : {}),
         });
       },
-      moveFlagship: (providerId) => {
-        void this.seat.moveFlagship(providerId);
+      moveFlagship: (target) => {
+        void this.seat.moveFlagship(target);
       },
       tryAgain: (arg) => this.seat.tryAgain(arg),
       keepGoingOnCredits: (accountId) => this.seat.keepGoingOnCredits(accountId),
@@ -618,6 +617,7 @@ export class FirstmateAgent {
       // redelivered from the inbox instead of silently vanishing. The
       // captain is now waiting, so the rest of the turn runs at the captain
       // level even when it began as a low operational drain (WI-13).
+      if (images && this.pictures.holds(session, () => this.park(accepted))) return;
       session.setThinkingLevel(FIRSTMATE_CAPTAIN_THINKING_LEVEL);
       await this.steerRecorded(session, captainOnly(contextNow()), accepted, images);
       return;
@@ -637,8 +637,14 @@ export class FirstmateAgent {
       return;
     }
     if (admitted.isStreaming() || this.running) {
+      if (images && this.pictures.holds(admitted, () => this.park(accepted))) return;
       admitted.setThinkingLevel(FIRSTMATE_CAPTAIN_THINKING_LEVEL);
       await this.steerRecorded(admitted, captainOnly(contextNow()), accepted, images);
+      return;
+    }
+    if (images && this.pictures.holds(admitted, () => this.park(accepted))) {
+      // The operational rows waiting with it are served without it.
+      void this.drainInbox();
       return;
     }
     this.seat.serveInstructionsAt(admitted);
@@ -654,13 +660,14 @@ export class FirstmateAgent {
     this.clearCoalesceTimer();
     // The one retry, and an answer a captain's message waits on, are served
     // alone (drainInbox), never carried on a captain turn.
-    const served = this.withPictures(
+    const served = this.pictures.serve(
       this.options.inbox
         .pending(FIRSTMATE_RECIPIENT, this.now(), { limit: 20 })
         .filter(
           (row) =>
             row.facts?.kind !== "answer-missing" && this.delivery.waitingOn(row).length === 0,
         ),
+      admitted,
     );
     const pending = served.rows;
     const turnImages = [...(images ?? []), ...(served.images ?? [])];
@@ -712,42 +719,22 @@ export class FirstmateAgent {
     return { framed: frameServedInput(segments), rows: sources };
   }
 
-  /** The lane rows whose pictures were already said to be unavailable. */
-  private blockedPictureRows = new Set<number>();
-
-  /**
-   * The rows this turn can serve, with the pictures their messages keep
-   * copies of. A row whose copy is missing or changed stays pending - never
-   * served as words alone - and the feed says so once.
-   */
-  private withPictures(rows: InboxRow[]): { rows: InboxRow[]; images?: TurnImage[] } {
-    const servable: InboxRow[] = [];
-    const images: TurnImage[] = [];
-    for (const row of rows) {
-      const refs = rowAttachments([row]);
-      if (refs.length === 0) {
-        servable.push(row);
-        continue;
-      }
-      try {
-        images.push(...loadImages(refs));
-        servable.push(row);
-      } catch (caught) {
-        if (!this.blockedPictureRows.has(row.id)) {
-          this.blockedPictureRows.add(row.id);
-          const why =
-            caught instanceof AttachmentUnavailableError
-              ? caught.message
-              : "a picture could not be read.";
-          this.options.broadcastEvent({
-            type: "firstmate_note",
-            text: `A message of yours is waiting: ${why} Send it again with the picture.`,
-          });
-        }
-      }
-    }
-    return { rows: servable, ...(images.length > 0 ? { images } : {}) };
-  }
+  /** The pictures a turn serves, and the messages with pictures it holds. */
+  private readonly pictures = new FirstmatePictures({
+    readsPictures: (ref) => this.options.readsPictures?.(ref),
+    unavailable: (caught) => {
+      const why =
+        caught instanceof AttachmentUnavailableError
+          ? caught.message
+          : "a picture could not be read.";
+      this.options.broadcastEvent({
+        type: "firstmate_note",
+        text: `A message of yours is waiting: ${why} Send it again with the picture.`,
+      });
+    },
+    raiseCard: (model) => this.seat.raisePicturesCard(model),
+    withdrawCard: () => this.seat.withdrawPicturesCard("served"),
+  });
 
   /**
    * The task a turn points at without saying so: an explicit record-card
@@ -1520,8 +1507,9 @@ export class FirstmateAgent {
     this.seat.serveInstructionsAt(admitted);
     // Admission or the instructions served may have queued the moved seat's
     // wake: the batch is read after it.
-    const served = this.withPictures(
+    const served = this.pictures.serve(
       this.options.inbox.pending(FIRSTMATE_RECIPIENT, this.now(), { limit: 20 }),
+      admitted,
     );
     const pending = served.rows;
     // A card click has its own turn: no operational report can borrow its
@@ -1550,7 +1538,7 @@ export class FirstmateAgent {
           : pending.filter((row) => this.delivery.waitingOn(row).length === 0);
     if (batch.length === 0) return;
     // A choice's turn carries only that choice's own pictures (`choice-attachments.md`).
-    const batchImages = choice ? this.withPictures([choice]).images : served.images;
+    const batchImages = choice ? this.pictures.serve([choice]).images : served.images;
     const classified = classifyInboxBatch(batch);
     this.beginOriginTurn(classified.origin, classified.canCreate);
     this.turn.appWake =

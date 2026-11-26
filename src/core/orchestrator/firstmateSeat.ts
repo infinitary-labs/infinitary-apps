@@ -22,12 +22,18 @@ import { FIRSTMATE_RECIPIENT } from "../storage/inboxStore";
 import type { FirstmatePaused } from "../storage/settingsStore";
 import { QUIT_SETTLE_MS } from "./crewRuntime";
 import type { FirstmateAgentOptions } from "./firstmateAgent";
-import { deriveModelForProvider, preflightModel, resolveModel } from "./firstmateModelPick";
+import {
+  deriveModelForProvider,
+  pictureReaderFor,
+  preflightModel,
+  resolveModel,
+} from "./firstmateModelPick";
 import type { buildFirstmateTools } from "./firstmateTools";
 import {
   creditsOfferSentence,
   FIRSTMATE_MOVE_BACK_CARD_ID,
   FIRSTMATE_NO_PROVIDER_SIGN_IN_WORDS,
+  FIRSTMATE_PICTURES_CARD_ID,
   type FirstmatePauseCard,
   savedResetsWords,
   spentAttemptOf,
@@ -1078,15 +1084,27 @@ export class FirstmateSeat {
   }
 
   /**
-   * The move, on the captain's click (rung 2, or the way back): pick the
-   * target provider's best model and account, persist both, and rebind at
-   * an idle boundary - any provider, either backend. A move off a paused
-   * account remembers where the seat was, so the way back can ask; a move
-   * back forgets it. The attachment that carries it out tells its first
-   * turn (`announceMove`).
+   * The move, on the captain's click (rung 2, the way back, or the pictures
+   * card): pick the target provider's best model and account, persist both,
+   * and rebind at an idle boundary - any provider, either backend. `target`
+   * is a provider, or `provider/model` for one model of it while that model
+   * is still offered. A move off a paused account remembers where the seat
+   * was, so the way back can ask; a move back forgets it. The attachment
+   * that carries it out tells its first turn (`announceMove`).
    */
-  async moveFlagship(providerId: string): Promise<void> {
-    const model = deriveModelForProvider(this.options, providerId);
+  async moveFlagship(target: string): Promise<void> {
+    // Provider ids hold no slash; model ids may (`deepseek/deepseek-v4-pro`).
+    const slash = target.indexOf("/");
+    const providerId = slash < 0 ? target : target.slice(0, slash);
+    const modelId = slash < 0 ? undefined : target.slice(slash + 1);
+    const named = modelId
+      ? this.options
+          .availableModels()
+          .find((model) => model.provider === providerId && model.id === modelId)
+      : undefined;
+    const model = named
+      ? { provider: named.provider, id: named.id }
+      : deriveModelForProvider(this.options, providerId);
     if (!model) {
       this.raiseTurnFailureCard(`No signed-in model is available on that subscription.`);
       return;
@@ -1124,6 +1142,7 @@ export class FirstmateSeat {
     this.paused = undefined;
     this.options.supervisor.cards.hostCards.withdrawFirstmatePauseCards("moved");
     this.options.supervisor.cards.hostCards.withdrawHostCard(FIRSTMATE_MOVE_BACK_CARD_ID, "moved");
+    this.withdrawPicturesCard("moved");
     this.options.settings.setFirstmateBinding(model, accountId ?? null);
     // Rows held for the account the seat leaves (a spent allowance's reset)
     // are due on the seat it goes to.
@@ -1215,6 +1234,25 @@ export class FirstmateSeat {
     return name
       ? `Your first mate could not reach ${name}, which needs you to sign in again.`
       : FIRSTMATE_NO_PROVIDER_SIGN_IN_WORDS;
+  }
+
+  /**
+   * The pictures card for `model`, the first mate's, which reads words only
+   * (`firstmatePicturesCard`): it offers the move to the model that reads
+   * pictures the automatic pick would choose, or Settings when none can
+   * answer the first mate. The local seat is changed in Settings only.
+   */
+  raisePicturesCard(model: { provider: string; id: string }): void {
+    const reader = this.boundLocal ? undefined : pictureReaderFor(this.options, model);
+    const name = (ref: { provider: string; id: string }) => this.options.modelName?.(ref) ?? ref.id;
+    this.options.supervisor.cards.hostCards.addFirstmatePicturesCard({
+      model: name(model),
+      ...(reader ? { reader: { ...reader, name: name(reader) } } : {}),
+    });
+  }
+
+  withdrawPicturesCard(reason: string): void {
+    this.options.supervisor.cards.hostCards.withdrawHostCard(FIRSTMATE_PICTURES_CARD_ID, reason);
   }
 
   raiseTurnFailureCard(message: string): void {

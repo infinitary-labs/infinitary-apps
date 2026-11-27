@@ -14718,6 +14718,554 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `your batches of approved changes`;
   }
+  function bedrockAddressInvalid() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يمكن استخدام هذا العنوان: اكتبه كاملًا مبتدئًا بـ https://، دون بيانات دخول أو استعلام أو #.`;
+      case "de":
+        return `Diese Adresse lässt sich nicht verwenden: Schreib sie vollständig, beginnend mit https://, ohne Anmeldung, Abfrage oder #.`;
+      case "es":
+        return `Esa dirección no se puede usar: escríbela completa, empezando por https://, sin inicio de sesión, consulta ni #.`;
+      case "fr":
+        return `Cette adresse ne peut pas être utilisée : écrivez-la en entier, en commençant par https://, sans identifiant, requête ni #.`;
+      case "ja":
+        return `このアドレスは使えません。https:// から始めて全体を書き、サインイン情報、クエリ、# を含めないでください。`;
+      case "ko":
+        return `이 주소는 사용할 수 없습니다. https://로 시작하는 전체 주소를 쓰고 로그인 정보, 쿼리, #은 넣지 마세요.`;
+      case "pt-BR":
+        return `Esse endereço não pode ser usado: escreva-o inteiro, começando com https://, sem login, consulta ou #.`;
+      case "zh-Hans":
+        return `这个地址无法使用：请写出完整地址，以 https:// 开头，不要包含登录信息、查询或 #。`;
+      case "zh-Hant":
+        return `這個位址無法使用：請寫出完整位址，以 https:// 開頭，不要包含登入資訊、查詢或 #。`;
+      case "en-XA":
+        return `[Ţĥáţ áððŕéšš çáññöţ ƀé ûšéð: ŵŕîţé îţ ŵĥöļé, šţáŕţîñĝ ŵîţĥ ĥţţþš://, ŵîţĥ ñö šîĝñ-îñ, ǫûéŕý öŕ # îñ îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮That address cannot be used: write it whole, starting with https://, with no sign-in, query or # in it.‬`;
+    }
+    return `That address cannot be used: write it whole, starting with https://, with no sign-in, query or # in it.`;
+  }
+  function bedrockAddressMoved(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يشير ${host} الآن إلى مكان غير الذي وافقت عليه. سجّل الدخول إلى Amazon Bedrock مجددًا للموافقة عليه.`;
+      case "de":
+        return `${host} zeigt jetzt an einen anderen Ort als bei deiner Freigabe. Melde dich erneut bei Amazon Bedrock an, um sie freizugeben.`;
+      case "es":
+        return `${host} ahora apunta a un lugar distinto del que aprobaste. Vuelve a iniciar sesión en Amazon Bedrock para aprobarlo.`;
+      case "fr":
+        return `${host} mène maintenant ailleurs qu’au moment où vous l’avez approuvée. Reconnectez-vous à Amazon Bedrock pour l’approuver.`;
+      case "ja":
+        return `${host} は承認したときとは別の場所を指しています。承認し直すには Amazon Bedrock にもう一度サインインしてください。`;
+      case "ko":
+        return `${host}이(가) 승인할 때와 다른 곳을 가리킵니다. 다시 승인하려면 Amazon Bedrock에 다시 로그인하세요.`;
+      case "pt-BR":
+        return `${host} agora aponta para um lugar diferente de quando você o aprovou. Faça login no Amazon Bedrock de novo para aprová-lo.`;
+      case "zh-Hans":
+        return `${host} 现在指向的地方与你批准时不同。请重新登录 Amazon Bedrock 来批准它。`;
+      case "zh-Hant":
+        return `${host} 現在指向的地方與你核准時不同。請重新登入 Amazon Bedrock 來核准它。`;
+      case "en-XA":
+        return `[${host} ñöŵ þöîñţš šöɱéŵĥéŕé öţĥéŕ ţĥáñ ŵĥéñ ýöû áþþŕöṽéð îţ. Šîĝñ îñ ţö Åɱážöñ Ɓéðŕöçķ áĝáîñ ţö áþþŕöṽé îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${host}‮ now points somewhere other than when you approved it. Sign in to Amazon Bedrock again to approve it.‬`;
+    }
+    return `${host} now points somewhere other than when you approved it. Sign in to Amazon Bedrock again to approve it.`;
+  }
+  function bedrockAddressNotFound(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر العثور على ${host}.`;
+      case "de":
+        return `${host} wurde nicht gefunden.`;
+      case "es":
+        return `No se encontró ${host}.`;
+      case "fr":
+        return `${host} est introuvable.`;
+      case "ja":
+        return `${host} が見つかりませんでした。`;
+      case "ko":
+        return `${host}을(를) 찾을 수 없습니다.`;
+      case "pt-BR":
+        return `${host} não foi encontrado.`;
+      case "zh-Hans":
+        return `找不到 ${host}。`;
+      case "zh-Hant":
+        return `找不到 ${host}。`;
+      case "en-XA":
+        return `[${host} çöûļð ñöţ ƀé ƒöûñð. ~~~~~~~]`;
+      case "ar-XB":
+        return `${host}‮ could not be found.‬`;
+    }
+    return `${host} could not be found.`;
+  }
+  function bedrockAddressPlainHttp() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `http العادي مخصّص لعنوان على هذا الحاسوب فقط: استخدم عنوان https الخاص بمؤسستك.`;
+      case "de":
+        return `Einfaches http gibt es nur für eine Adresse auf diesem Computer: Verwende die https-Adresse deiner Organisation.`;
+      case "es":
+        return `El http simple es solo para una dirección en esta computadora: usa la dirección https de tu organización.`;
+      case "fr":
+        return `Le http simple est réservé à une adresse sur cet ordinateur : utilisez l’adresse https de votre organisation.`;
+      case "ja":
+        return `通常の http はこのコンピューター上のアドレスにだけ使えます。組織の https アドレスを使ってください。`;
+      case "ko":
+        return `일반 http는 이 컴퓨터의 주소에만 쓸 수 있습니다. 조직의 https 주소를 쓰세요.`;
+      case "pt-BR":
+        return `O http simples é só para um endereço neste computador: use o endereço https da sua organização.`;
+      case "zh-Hans":
+        return `普通 http 只能用于这台电脑上的地址：请使用你所在组织的 https 地址。`;
+      case "zh-Hant":
+        return `一般 http 只能用於這台電腦上的位址：請使用你所屬組織的 https 位址。`;
+      case "en-XA":
+        return `[Þļáîñ ĥţţþ îš öñļý ƒöŕ áñ áððŕéšš öñ ţĥîš çöɱþûţéŕ: ûšé ýöûŕ öŕĝáñîžáţîöñ'š ĥţţþš áððŕéšš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Plain http is only for an address on this computer: use your organization's https address.‬`;
+    }
+    return `Plain http is only for an address on this computer: use your organization's https address.`;
+  }
+  function bedrockAddressRefused(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يشير ${host} إلى مكان لا يتصل به Infinitary.`;
+      case "de":
+        return `${host} zeigt an einen Ort, mit dem sich Infinitary nicht verbindet.`;
+      case "es":
+        return `${host} apunta a un lugar al que Infinitary no se conecta.`;
+      case "fr":
+        return `${host} mène à un endroit auquel Infinitary ne se connecte pas.`;
+      case "ja":
+        return `${host} は Infinitary が接続しない場所を指しています。`;
+      case "ko":
+        return `${host}은(는) Infinitary가 연결하지 않는 곳을 가리킵니다.`;
+      case "pt-BR":
+        return `${host} aponta para um lugar ao qual o Infinitary não se conecta.`;
+      case "zh-Hans":
+        return `${host} 指向 Infinitary 不会连接的地方。`;
+      case "zh-Hant":
+        return `${host} 指向 Infinitary 不會連線的地方。`;
+      case "en-XA":
+        return `[${host} þöîñţš šöɱéŵĥéŕé Îñƒîñîţáŕý ðöéš ñöţ çöññéçţ ţö. ~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${host}‮ points somewhere Infinitary does not connect to.‬`;
+    }
+    return `${host} points somewhere Infinitary does not connect to.`;
+  }
+  function bedrockSecureConnectionFailed(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر تأمين الاتصال بـ ${host}. تأكد من أن هذا الحاسوب يثق بشهادته.`;
+      case "de":
+        return `Die Verbindung zu ${host} ließ sich nicht sichern. Prüfe, ob dieser Computer seinem Zertifikat vertraut.`;
+      case "es":
+        return `La conexión con ${host} no se pudo hacer segura. Comprueba que esta computadora confíe en su certificado.`;
+      case "fr":
+        return `La connexion à ${host} n’a pas pu être sécurisée. Vérifiez que cet ordinateur fait confiance à son certificat.`;
+      case "ja":
+        return `${host} との接続を安全にできませんでした。このコンピューターがその証明書を信頼しているか確認してください。`;
+      case "ko":
+        return `${host}과(와) 안전하게 연결할 수 없습니다. 이 컴퓨터가 해당 인증서를 신뢰하는지 확인하세요.`;
+      case "pt-BR":
+        return `Não foi possível proteger a conexão com ${host}. Confira se este computador confia no certificado dele.`;
+      case "zh-Hans":
+        return `无法与 ${host} 建立安全连接。请确认这台电脑信任它的证书。`;
+      case "zh-Hant":
+        return `無法與 ${host} 建立安全連線。請確認這台電腦信任它的憑證。`;
+      case "en-XA":
+        return `[Ţĥé çöññéçţîöñ ţö ${host} çöûļð ñöţ ƀé ɱáðé šéçûŕé. Çĥéçķ ţĥáţ ţĥîš çöɱþûţéŕ ţŕûšţš îţš çéŕţîƒîçáţé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The connection to ‬${host}‮ could not be made secure. Check that this computer trusts its certificate.‬`;
+    }
+    return `The connection to ${host} could not be made secure. Check that this computer trusts its certificate.`;
+  }
+  function bedrockSignInAddress() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أدخل عنوان Amazon Bedrock الخاص بمؤسستك.`;
+      case "de":
+        return `Gib die Amazon-Bedrock-Adresse deiner Organisation ein.`;
+      case "es":
+        return `Escribe la dirección de Amazon Bedrock de tu organización.`;
+      case "fr":
+        return `Saisissez l’adresse Amazon Bedrock de votre organisation.`;
+      case "ja":
+        return `組織の Amazon Bedrock アドレスを入力してください。`;
+      case "ko":
+        return `조직의 Amazon Bedrock 주소를 입력하세요.`;
+      case "pt-BR":
+        return `Digite o endereço do Amazon Bedrock da sua organização.`;
+      case "zh-Hans":
+        return `输入你所在组织的 Amazon Bedrock 地址。`;
+      case "zh-Hant":
+        return `輸入你所屬組織的 Amazon Bedrock 位址。`;
+      case "en-XA":
+        return `[Éñţéŕ ýöûŕ öŕĝáñîžáţîöñ'š Åɱážöñ Ɓéðŕöçķ áððŕéšš. ~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Enter your organization's Amazon Bedrock address.‬`;
+    }
+    return `Enter your organization's Amazon Bedrock address.`;
+  }
+  function bedrockSignInApproveLocal(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `ستذهب الطلبات إلى ${host}، على هذا الحاسوب.`;
+      case "de":
+        return `Anfragen gehen an ${host}, auf diesem Computer.`;
+      case "es":
+        return `Las solicitudes irán a ${host}, en esta computadora.`;
+      case "fr":
+        return `Les requêtes iront à ${host}, sur cet ordinateur.`;
+      case "ja":
+        return `リクエストはこのコンピューター上の ${host} に送られます。`;
+      case "ko":
+        return `요청은 이 컴퓨터의 ${host}(으)로 갑니다.`;
+      case "pt-BR":
+        return `As solicitações irão para ${host}, neste computador.`;
+      case "zh-Hans":
+        return `请求将发送到 ${host}，位于这台电脑上。`;
+      case "zh-Hant":
+        return `要求將傳送到 ${host}，位於這台電腦上。`;
+      case "en-XA":
+        return `[Ŕéǫûéšţš ŵîļļ ĝö ţö ${host}, öñ ţĥîš çöɱþûţéŕ. ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Requests will go to ‬${host}‮, on this computer.‬`;
+    }
+    return `Requests will go to ${host}, on this computer.`;
+  }
+  function bedrockSignInApprovePrivate(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `ستذهب الطلبات إلى ${host}، على شبكة مؤسستك.`;
+      case "de":
+        return `Anfragen gehen an ${host}, im Netzwerk deiner Organisation.`;
+      case "es":
+        return `Las solicitudes irán a ${host}, en la red de tu organización.`;
+      case "fr":
+        return `Les requêtes iront à ${host}, sur le réseau de votre organisation.`;
+      case "ja":
+        return `リクエストは組織のネットワーク上の ${host} に送られます。`;
+      case "ko":
+        return `요청은 조직 네트워크의 ${host}(으)로 갑니다.`;
+      case "pt-BR":
+        return `As solicitações irão para ${host}, na rede da sua organização.`;
+      case "zh-Hans":
+        return `请求将发送到 ${host}，位于你所在组织的网络中。`;
+      case "zh-Hant":
+        return `要求將傳送到 ${host}，位於你所屬組織的網路中。`;
+      case "en-XA":
+        return `[Ŕéǫûéšţš ŵîļļ ĝö ţö ${host}, öñ ýöûŕ öŕĝáñîžáţîöñ'š ñéţŵöŕķ. ~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Requests will go to ‬${host}‮, on your organization's network.‬`;
+    }
+    return `Requests will go to ${host}, on your organization's network.`;
+  }
+  function bedrockSignInApprovePublic(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `ستذهب الطلبات إلى ${host}، على الإنترنت العام.`;
+      case "de":
+        return `Anfragen gehen an ${host}, im öffentlichen Internet.`;
+      case "es":
+        return `Las solicitudes irán a ${host}, en internet público.`;
+      case "fr":
+        return `Les requêtes iront à ${host}, sur l’internet public.`;
+      case "ja":
+        return `リクエストは公開インターネット上の ${host} に送られます。`;
+      case "ko":
+        return `요청은 공용 인터넷의 ${host}(으)로 갑니다.`;
+      case "pt-BR":
+        return `As solicitações irão para ${host}, na internet pública.`;
+      case "zh-Hans":
+        return `请求将发送到 ${host}，位于公共互联网上。`;
+      case "zh-Hant":
+        return `要求將傳送到 ${host}，位於公用網際網路上。`;
+      case "en-XA":
+        return `[Ŕéǫûéšţš ŵîļļ ĝö ţö ${host}, öñ ţĥé þûƀļîç îñţéŕñéţ. ~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Requests will go to ‬${host}‮, on the public internet.‬`;
+    }
+    return `Requests will go to ${host}, on the public internet.`;
+  }
+  function bedrockSignInChooseWhere() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `اختر وجهة طلبات Amazon Bedrock.`;
+      case "de":
+        return `Wähle, wohin Amazon-Bedrock-Anfragen gehen.`;
+      case "es":
+        return `Elige adónde van las solicitudes de Amazon Bedrock.`;
+      case "fr":
+        return `Choisissez où vont les requêtes Amazon Bedrock.`;
+      case "ja":
+        return `Amazon Bedrock のリクエストの送り先を選んでください。`;
+      case "ko":
+        return `Amazon Bedrock 요청을 보낼 곳을 고르세요.`;
+      case "pt-BR":
+        return `Escolha para onde vão as solicitações do Amazon Bedrock.`;
+      case "zh-Hans":
+        return `请选择 Amazon Bedrock 请求的发送位置。`;
+      case "zh-Hant":
+        return `請選擇 Amazon Bedrock 要求的傳送位置。`;
+      case "en-XA":
+        return `[Çĥööšé ŵĥéŕé Åɱážöñ Ɓéðŕöçķ ŕéǫûéšţš ĝö. ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Choose where Amazon Bedrock requests go.‬`;
+    }
+    return `Choose where Amazon Bedrock requests go.`;
+  }
+  function bedrockSignInFromClaudeSettings() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `مُلئ من إعدادات Claude Code الخاصة بك.`;
+      case "de":
+        return `Aus deinen Claude-Code-Einstellungen ausgefüllt.`;
+      case "es":
+        return `Completado con tu configuración de Claude Code.`;
+      case "fr":
+        return `Rempli à partir de vos réglages Claude Code.`;
+      case "ja":
+        return `Claude Code の設定から入力しました。`;
+      case "ko":
+        return `Claude Code 설정에서 채웠습니다.`;
+      case "pt-BR":
+        return `Preenchido com as suas configurações do Claude Code.`;
+      case "zh-Hans":
+        return `已根据你的 Claude Code 设置填写。`;
+      case "zh-Hant":
+        return `已依你的 Claude Code 設定填入。`;
+      case "en-XA":
+        return `[Ƒîļļéð îñ ƒŕöɱ ýöûŕ Çļáûðé Çöðé šéţţîñĝš. ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Filled in from your Claude Code settings.‬`;
+    }
+    return `Filled in from your Claude Code settings.`;
+  }
+  function bedrockSignInFromOrganization() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `مُلئ من إعدادات Claude Code الخاصة بمؤسستك.`;
+      case "de":
+        return `Aus den Claude-Code-Einstellungen deiner Organisation ausgefüllt.`;
+      case "es":
+        return `Completado con la configuración de Claude Code de tu organización.`;
+      case "fr":
+        return `Rempli à partir des réglages Claude Code de votre organisation.`;
+      case "ja":
+        return `組織の Claude Code の設定から入力しました。`;
+      case "ko":
+        return `조직의 Claude Code 설정에서 채웠습니다.`;
+      case "pt-BR":
+        return `Preenchido com as configurações do Claude Code da sua organização.`;
+      case "zh-Hans":
+        return `已根据你所在组织的 Claude Code 设置填写。`;
+      case "zh-Hant":
+        return `已依你所屬組織的 Claude Code 設定填入。`;
+      case "en-XA":
+        return `[Ƒîļļéð îñ ƒŕöɱ ýöûŕ öŕĝáñîžáţîöñ'š Çļáûðé Çöðé šéţţîñĝš. ~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Filled in from your organization's Claude Code settings.‬`;
+    }
+    return `Filled in from your organization's Claude Code settings.`;
+  }
+  function bedrockSignInNoKey() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `دون مفتاح: عنوان مؤسستي يوقّع الطلبات`;
+      case "de":
+        return `Ohne Schlüssel: Die Adresse meiner Organisation signiert Anfragen`;
+      case "es":
+        return `Sin clave: la dirección de mi organización firma las solicitudes`;
+      case "fr":
+        return `Sans clé : l’adresse de mon organisation signe les requêtes`;
+      case "ja":
+        return `キーなし：組織のアドレスがリクエストに署名する`;
+      case "ko":
+        return `키 없음: 조직의 주소가 요청에 서명합니다`;
+      case "pt-BR":
+        return `Sem chave: o endereço da minha organização assina as solicitações`;
+      case "zh-Hans":
+        return `不用密钥：由我所在组织的地址为请求签名`;
+      case "zh-Hant":
+        return `不用金鑰：由我所屬組織的位址為要求簽署`;
+      case "en-XA":
+        return `[Ñö ķéý: ɱý öŕĝáñîžáţîöñ'š áððŕéšš šîĝñš ŕéǫûéšţš ~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮No key: my organization's address signs requests‬`;
+    }
+    return `No key: my organization's address signs requests`;
+  }
+  function bedrockSignInOrganization() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `عنوان مؤسستي`;
+      case "de":
+        return `Die Adresse meiner Organisation`;
+      case "es":
+        return `La dirección de mi organización`;
+      case "fr":
+        return `L’adresse de mon organisation`;
+      case "ja":
+        return `組織のアドレス`;
+      case "ko":
+        return `조직의 주소`;
+      case "pt-BR":
+        return `O endereço da minha organização`;
+      case "zh-Hans":
+        return `我所在组织的地址`;
+      case "zh-Hant":
+        return `我所屬組織的位址`;
+      case "en-XA":
+        return `[Ṁý öŕĝáñîžáţîöñ'š áððŕéšš ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮My organization's address‬`;
+    }
+    return `My organization's address`;
+  }
+  function bedrockSignInSend() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أرسل الطلبات إلى هناك`;
+      case "de":
+        return `Anfragen dorthin senden`;
+      case "es":
+        return `Enviar solicitudes allí`;
+      case "fr":
+        return `Envoyer les requêtes là-bas`;
+      case "ja":
+        return `そこにリクエストを送る`;
+      case "ko":
+        return `그곳으로 요청 보내기`;
+      case "pt-BR":
+        return `Enviar solicitações para lá`;
+      case "zh-Hans":
+        return `将请求发送到那里`;
+      case "zh-Hant":
+        return `將要求傳送到那裡`;
+      case "en-XA":
+        return `[Šéñð ŕéǫûéšţš ţĥéŕé ~~~~~~~]`;
+      case "ar-XB":
+        return `‮Send requests there‬`;
+    }
+    return `Send requests there`;
+  }
+  function bedrockSignInSettingsNoKey() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ترسل إعدادات Claude Code هذه طلبات Amazon Bedrock دون مفتاح.`;
+      case "de":
+        return `Diese Claude-Code-Einstellungen senden Amazon-Bedrock-Anfragen ohne Schlüssel.`;
+      case "es":
+        return `Esta configuración de Claude Code envía solicitudes a Amazon Bedrock sin clave.`;
+      case "fr":
+        return `Ces réglages Claude Code envoient les requêtes Amazon Bedrock sans clé.`;
+      case "ja":
+        return `この Claude Code の設定は、キーなしで Amazon Bedrock にリクエストを送ります。`;
+      case "ko":
+        return `이 Claude Code 설정은 키 없이 Amazon Bedrock 요청을 보냅니다.`;
+      case "pt-BR":
+        return `Essas configurações do Claude Code enviam solicitações ao Amazon Bedrock sem chave.`;
+      case "zh-Hans":
+        return `这些 Claude Code 设置会在不带密钥的情况下发送 Amazon Bedrock 请求。`;
+      case "zh-Hant":
+        return `這些 Claude Code 設定會在不帶金鑰的情況下傳送 Amazon Bedrock 要求。`;
+      case "en-XA":
+        return `[Ţĥéšé Çļáûðé Çöðé šéţţîñĝš šéñð Åɱážöñ Ɓéðŕöçķ ŕéǫûéšţš ŵîţĥöûţ á ķéý. ~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮These Claude Code settings send Amazon Bedrock requests without a key.‬`;
+    }
+    return `These Claude Code settings send Amazon Bedrock requests without a key.`;
+  }
+  function bedrockSignInStraightToAws() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `مباشرة إلى AWS`;
+      case "de":
+        return `Direkt an AWS`;
+      case "es":
+        return `Directo a AWS`;
+      case "fr":
+        return `Directement à AWS`;
+      case "ja":
+        return `AWS に直接`;
+      case "ko":
+        return `AWS로 바로`;
+      case "pt-BR":
+        return `Direto para a AWS`;
+      case "zh-Hans":
+        return `直接发送到 AWS`;
+      case "zh-Hant":
+        return `直接傳送到 AWS`;
+      case "en-XA":
+        return `[Šţŕáîĝĥţ ţö ÅŴŠ ~~~~~]`;
+      case "ar-XB":
+        return `‮Straight to AWS‬`;
+    }
+    return `Straight to AWS`;
+  }
+  function bedrockSignInWhere() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إلى أين يجب أن تذهب طلبات Amazon Bedrock؟`;
+      case "de":
+        return `Wohin sollen Amazon-Bedrock-Anfragen gehen?`;
+      case "es":
+        return `¿Adónde deben ir las solicitudes de Amazon Bedrock?`;
+      case "fr":
+        return `Où envoyer les requêtes Amazon Bedrock ?`;
+      case "ja":
+        return `Amazon Bedrock のリクエストをどこに送りますか？`;
+      case "ko":
+        return `Amazon Bedrock 요청을 어디로 보낼까요?`;
+      case "pt-BR":
+        return `Para onde as solicitações do Amazon Bedrock devem ir?`;
+      case "zh-Hans":
+        return `Amazon Bedrock 请求应发送到哪里？`;
+      case "zh-Hant":
+        return `Amazon Bedrock 要求應傳送到哪裡？`;
+      case "en-XA":
+        return `[Ŵĥéŕé šĥöûļð Åɱážöñ Ɓéðŕöçķ ŕéǫûéšţš ĝö? ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Where should Amazon Bedrock requests go?‬`;
+    }
+    return `Where should Amazon Bedrock requests go?`;
+  }
+  function bedrockUnreachable(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر الوصول إلى ${host}. تحقّق من شبكتك ومن العنوان.`;
+      case "de":
+        return `${host} ist nicht erreichbar. Prüfe dein Netzwerk und die Adresse.`;
+      case "es":
+        return `No se pudo llegar a ${host}. Comprueba tu red y la dirección.`;
+      case "fr":
+        return `${host} est injoignable. Vérifiez votre réseau et l’adresse.`;
+      case "ja":
+        return `${host} に接続できませんでした。ネットワークとアドレスを確認してください。`;
+      case "ko":
+        return `${host}에 연결할 수 없습니다. 네트워크와 주소를 확인하세요.`;
+      case "pt-BR":
+        return `Não foi possível alcançar ${host}. Confira sua rede e o endereço.`;
+      case "zh-Hans":
+        return `无法连接到 ${host}。请检查你的网络和地址。`;
+      case "zh-Hant":
+        return `無法連線到 ${host}。請檢查你的網路和位址。`;
+      case "en-XA":
+        return `[${host} çöûļð ñöţ ƀé ŕéáçĥéð. Çĥéçķ ýöûŕ ñéţŵöŕķ áñð ţĥé áððŕéšš. ~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${host}‮ could not be reached. Check your network and the address.‬`;
+    }
+    return `${host} could not be reached. Check your network and the address.`;
+  }
   function cardAfterMergeDoerCrewmate() {
     switch (currentLanguage()) {
       case "ar":
@@ -41730,6 +42278,98 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Updated: ${text}`;
   }
+  function feedWriteNotSentOnWords(input2) {
+    const call = input2.call;
+    const place = input2.place;
+    const why = input2.why;
+    const words2 = input2.words;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يُرسل ${call} إلى ${place} بناءً على كلماتك «${words2}»: ${why}`;
+      case "de":
+        return `${call} wurde auf deine Worte „${words2}“ hin nicht an ${place} gesendet: ${why}`;
+      case "es":
+        return `No se envió ${call} a ${place} según tus palabras «${words2}»: ${why}`;
+      case "fr":
+        return `Requête ${call} non envoyée à ${place} sur vos mots « ${words2} » : ${why}`;
+      case "ja":
+        return `あなたの言葉「${words2}」に基づく ${call} は ${place} に送信しませんでした：${why}`;
+      case "ko":
+        return `말씀하신 “${words2}”에 따른 ${call} 요청을 ${place}에 보내지 않았어요: ${why}`;
+      case "pt-BR":
+        return `${call} não foi enviado para ${place} com base nas suas palavras “${words2}”: ${why}`;
+      case "zh-Hans":
+        return `根据你的话“${words2}”，未将 ${call} 发送到 ${place}：${why}`;
+      case "zh-Hant":
+        return `依照你的話「${words2}」，未將 ${call} 傳送到 ${place}：${why}`;
+      case "en-XA":
+        return `[Ðîð ñöţ šéñð ${call} ţö ${place} öñ ýöûŕ ŵöŕðš “${words2}”: ${why} ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Did not send ‬${call}‮ to ‬${place}‮ on your words “‬${words2}‮”: ‬${why}`;
+    }
+    return `Did not send ${call} to ${place} on your words “${words2}”: ${why}`;
+  }
+  function feedWriteSentOnWords(input2) {
+    const call = input2.call;
+    const place = input2.place;
+    const status = input2.status;
+    const words2 = input2.words;
+    switch (currentLanguage()) {
+      case "ar":
+        return `أُرسل ${call} إلى ${place} مرة واحدة دون بطاقة، بناءً على كلماتك «${words2}»: جاء الرد ${status}.`;
+      case "de":
+        return `${call} einmal ohne Karte an ${place} gesendet, auf deine Worte „${words2}“ hin: Die Antwort war ${status}.`;
+      case "es":
+        return `Se envió ${call} a ${place} una vez, sin tarjeta, según tus palabras «${words2}»: respondió ${status}.`;
+      case "fr":
+        return `Requête ${call} envoyée une fois à ${place} sans carte, sur vos mots « ${words2} » : réponse ${status}.`;
+      case "ja":
+        return `あなたの言葉「${words2}」に基づき、カードなしで ${call} を ${place} に1回送信しました。応答は ${status} です。`;
+      case "ko":
+        return `말씀하신 “${words2}”에 따라 카드 없이 ${call} 요청을 ${place}에 한 번 보냈어요. 응답: ${status}`;
+      case "pt-BR":
+        return `${call} enviado uma vez para ${place} sem cartão, com base nas suas palavras “${words2}”: a resposta foi ${status}.`;
+      case "zh-Hans":
+        return `根据你的话“${words2}”，已不经卡片将 ${call} 发送到 ${place} 一次：返回 ${status}。`;
+      case "zh-Hant":
+        return `依照你的話「${words2}」，已不經卡片將 ${call} 傳送到 ${place} 一次：回應 ${status}。`;
+      case "en-XA":
+        return `[Šéñţ ${call} ţö ${place} öñçé ŵîţĥöûţ á çáŕð, öñ ýöûŕ ŵöŕðš “${words2}”: îţ áñšŵéŕéð ${status}. ~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Sent ‬${call}‮ to ‬${place}‮ once without a card, on your words “‬${words2}‮”: it answered ‬${status}‮.‬`;
+    }
+    return `Sent ${call} to ${place} once without a card, on your words “${words2}”: it answered ${status}.`;
+  }
+  function feedWriteUnknownOnWords(input2) {
+    const call = input2.call;
+    const place = input2.place;
+    const words2 = input2.words;
+    switch (currentLanguage()) {
+      case "ar":
+        return `أُرسل ${call} إلى ${place} مرة واحدة دون بطاقة، بناءً على كلماتك «${words2}»؛ نتيجته غير معروفة، ولن يُرسل مرة أخرى.`;
+      case "de":
+        return `${call} einmal ohne Karte an ${place} gesendet, auf deine Worte „${words2}“ hin – was daraus wurde, ist unbekannt, und es wird nie erneut gesendet.`;
+      case "es":
+        return `Se envió ${call} a ${place} una vez, sin tarjeta, según tus palabras «${words2}»; no se sabe qué pasó, y nunca se vuelve a enviar.`;
+      case "fr":
+        return `Requête ${call} envoyée une fois à ${place} sans carte, sur vos mots « ${words2} » ; on ne sait pas ce qu’il en est, et elle ne sera jamais renvoyée.`;
+      case "ja":
+        return `あなたの言葉「${words2}」に基づき、カードなしで ${call} を ${place} に1回送信しました。結果は不明で、再送信されることはありません。`;
+      case "ko":
+        return `말씀하신 “${words2}”에 따라 카드 없이 ${call} 요청을 ${place}에 한 번 보냈어요. 결과는 알 수 없고, 다시 보내지 않아요.`;
+      case "pt-BR":
+        return `${call} enviado uma vez para ${place} sem cartão, com base nas suas palavras “${words2}”; não se sabe o resultado, e ele nunca é enviado de novo.`;
+      case "zh-Hans":
+        return `根据你的话“${words2}”，已不经卡片将 ${call} 发送到 ${place} 一次；结果未知，且不会再次发送。`;
+      case "zh-Hant":
+        return `依照你的話「${words2}」，已不經卡片將 ${call} 傳送到 ${place} 一次；結果不明，且不會再次傳送。`;
+      case "en-XA":
+        return `[Šéñţ ${call} ţö ${place} öñçé ŵîţĥöûţ á çáŕð, öñ ýöûŕ ŵöŕðš “${words2}”; ŵĥáţ çáɱé öƒ îţ îš ûñķñöŵñ, áñð îţ îš ñéṽéŕ šéñţ áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Sent ‬${call}‮ to ‬${place}‮ once without a card, on your words “‬${words2}‮”; what came of it is unknown, and it is never sent again.‬`;
+    }
+    return `Sent ${call} to ${place} once without a card, on your words “${words2}”; what came of it is unknown, and it is never sent again.`;
+  }
   function feedYouChose(input2) {
     const choice = input2.choice;
     switch (currentLanguage()) {
@@ -43183,6 +43823,260 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `${name} takes no client file in this version of Infinitary.`;
   }
+  function integrationsConfirmChoice(input2) {
+    const place = input2.place;
+    switch (currentLanguage()) {
+      case "ar":
+        return `ردّك على ${place}`;
+      case "de":
+        return `Deine Antwort an ${place}`;
+      case "es":
+        return `Tu respuesta a ${place}`;
+      case "fr":
+        return `Votre réponse à ${place}`;
+      case "ja":
+        return `${place} への回答`;
+      case "ko":
+        return `${place}에 보낼 답`;
+      case "pt-BR":
+        return `Sua resposta ao ${place}`;
+      case "zh-Hans":
+        return `你给 ${place} 的回答`;
+      case "zh-Hant":
+        return `你給 ${place} 的回答`;
+      case "en-XA":
+        return `[Ýöûŕ áñšŵéŕ ţö ${place} ~~~~~]`;
+      case "ar-XB":
+        return `‮Your answer to ‬${place}`;
+    }
+    return `Your answer to ${place}`;
+  }
+  function integrationsConfirmLeadFirstmate(input2) {
+    const place = input2.place;
+    switch (currentLanguage()) {
+      case "ar":
+        return `طلب نائب القبطان تشغيل هذا، وسمح له Infinitary بالمتابعة. أوقف ${place} الاستدعاء ليسألك أولًا، لذا لم يُشغَّل شيء بعد.`;
+      case "de":
+        return `Dein erster Offizier hat gebeten, dies auszuführen, und Infinitary hat es zugelassen. ${place} hat den Aufruf gestoppt, um zuerst dich zu fragen, daher ist noch nichts gelaufen.`;
+      case "es":
+        return `Tu primer oficial pidió ejecutar esto, e Infinitary lo dejó seguir. ${place} detuvo la llamada para preguntarte primero, así que todavía no se ha ejecutado nada.`;
+      case "fr":
+        return `Votre second a demandé à exécuter ceci, et Infinitary l’a laissé faire. ${place} a arrêté l’appel pour vous consulter d’abord, donc rien n’a encore été exécuté.`;
+      case "ja":
+        return `一等航海士がこの実行を求め、Infinitary は実行を許可しました。${place} が先にあなたに確認するためにこの呼び出しを停止したので、まだ何も実行されていません。`;
+      case "ko":
+        return `일등항해사가 이 실행을 요청했고, Infinitary가 진행을 허락했어요. ${place}에서 먼저 확인을 받으려고 호출을 중지했기 때문에 아직 아무것도 실행되지 않았어요.`;
+      case "pt-BR":
+        return `Seu imediato pediu para executar isto, e o Infinitary deixou que ele seguisse. O ${place} parou a chamada para perguntar a você primeiro, então nada foi executado ainda.`;
+      case "zh-Hans":
+        return `你的大副请求运行此操作，Infinitary 已允许它继续。${place} 停止了这次调用，要先征求你的意见，所以还没有运行任何内容。`;
+      case "zh-Hant":
+        return `你的大副要求執行這項操作，Infinitary 已允許它繼續。${place} 停止了這次呼叫，要先徵求你的意見，所以還沒有執行任何操作。`;
+      case "en-XA":
+        return `[Ýöûŕ ƒîŕšţ ɱáţé ášķéð ţö ŕûñ ţĥîš, áñð Îñƒîñîţáŕý ļéţ îţ ĝö áĥéáð. ${place} šţöþþéð ţĥé çáļļ ţö ášķ ýöû ƒîŕšţ, šö ñöţĥîñĝ ĥáš ŕûñ ýéţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your first mate asked to run this, and Infinitary let it go ahead. ‬${place}‮ stopped the call to ask you first, so nothing has run yet.‬`;
+    }
+    return `Your first mate asked to run this, and Infinitary let it go ahead. ${place} stopped the call to ask you first, so nothing has run yet.`;
+  }
+  function integrationsConfirmLeadPanel(input2) {
+    const panel = input2.panel;
+    const place = input2.place;
+    switch (currentLanguage()) {
+      case "ar":
+        return `طلبت لوحتك «${panel}» تشغيل هذا، وسمح لها Infinitary بالمتابعة. أوقف ${place} الاستدعاء ليسألك أولًا، لذا لم يُشغَّل شيء بعد.`;
+      case "de":
+        return `Dein Panel „${panel}“ hat gebeten, dies auszuführen, und Infinitary hat es zugelassen. ${place} hat den Aufruf gestoppt, um zuerst dich zu fragen, daher ist noch nichts gelaufen.`;
+      case "es":
+        return `Tu panel «${panel}» pidió ejecutar esto, e Infinitary lo dejó seguir. ${place} detuvo la llamada para preguntarte primero, así que todavía no se ha ejecutado nada.`;
+      case "fr":
+        return `Votre panneau « ${panel} » a demandé à exécuter ceci, et Infinitary l’a laissé faire. ${place} a arrêté l’appel pour vous consulter d’abord, donc rien n’a encore été exécuté.`;
+      case "ja":
+        return `パネル「${panel}」がこの実行を求め、Infinitary は実行を許可しました。${place} が先にあなたに確認するためにこの呼び出しを停止したので、まだ何も実行されていません。`;
+      case "ko":
+        return `“${panel}” 패널이 이 실행을 요청했고, Infinitary가 진행을 허락했어요. ${place}에서 먼저 확인을 받으려고 호출을 중지했기 때문에 아직 아무것도 실행되지 않았어요.`;
+      case "pt-BR":
+        return `Seu painel “${panel}” pediu para executar isto, e o Infinitary deixou que ele seguisse. O ${place} parou a chamada para perguntar a você primeiro, então nada foi executado ainda.`;
+      case "zh-Hans":
+        return `你的面板“${panel}”请求运行此操作，Infinitary 已允许它继续。${place} 停止了这次调用，要先征求你的意见，所以还没有运行任何内容。`;
+      case "zh-Hant":
+        return `你的面板「${panel}」要求執行這項操作，Infinitary 已允許它繼續。${place} 停止了這次呼叫，要先徵求你的意見，所以還沒有執行任何操作。`;
+      case "en-XA":
+        return `[Ýöûŕ þáñéļ “${panel}” ášķéð ţö ŕûñ ţĥîš, áñð Îñƒîñîţáŕý ļéţ îţ ĝö áĥéáð. ${place} šţöþþéð ţĥé çáļļ ţö ášķ ýöû ƒîŕšţ, šö ñöţĥîñĝ ĥáš ŕûñ ýéţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your panel “‬${panel}‮” asked to run this, and Infinitary let it go ahead. ‬${place}‮ stopped the call to ask you first, so nothing has run yet.‬`;
+    }
+    return `Your panel “${panel}” asked to run this, and Infinitary let it go ahead. ${place} stopped the call to ask you first, so nothing has run yet.`;
+  }
+  function integrationsConfirmLeadTask(input2) {
+    const place = input2.place;
+    const task = input2.task;
+    switch (currentLanguage()) {
+      case "ar":
+        return `طلب فرد الطاقم في «${task}» تشغيل هذا، وسمح له Infinitary بالمتابعة. أوقف ${place} الاستدعاء ليسألك أولًا، لذا لم يُشغَّل شيء بعد.`;
+      case "de":
+        return `Das Crewmitglied von „${task}“ hat gebeten, dies auszuführen, und Infinitary hat es zugelassen. ${place} hat den Aufruf gestoppt, um zuerst dich zu fragen, daher ist noch nichts gelaufen.`;
+      case "es":
+        return `El tripulante de «${task}» pidió ejecutar esto, e Infinitary lo dejó seguir. ${place} detuvo la llamada para preguntarte primero, así que todavía no se ha ejecutado nada.`;
+      case "fr":
+        return `L’équipier de « ${task} » a demandé à exécuter ceci, et Infinitary l’a laissé faire. ${place} a arrêté l’appel pour vous consulter d’abord, donc rien n’a encore été exécuté.`;
+      case "ja":
+        return `「${task}」の担当の乗組員がこの実行を求め、Infinitary は実行を許可しました。${place} が先にあなたに確認するためにこの呼び出しを停止したので、まだ何も実行されていません。`;
+      case "ko":
+        return `“${task}”의 선원이 이 실행을 요청했고, Infinitary가 진행을 허락했어요. ${place}에서 먼저 확인을 받으려고 호출을 중지했기 때문에 아직 아무것도 실행되지 않았어요.`;
+      case "pt-BR":
+        return `O tripulante de “${task}” pediu para executar isto, e o Infinitary deixou que ele seguisse. O ${place} parou a chamada para perguntar a você primeiro, então nada foi executado ainda.`;
+      case "zh-Hans":
+        return `“${task}”上的船员请求运行此操作，Infinitary 已允许它继续。${place} 停止了这次调用，要先征求你的意见，所以还没有运行任何内容。`;
+      case "zh-Hant":
+        return `「${task}」上的船員要求執行這項操作，Infinitary 已允許它繼續。${place} 停止了這次呼叫，要先徵求你的意見，所以還沒有執行任何操作。`;
+      case "en-XA":
+        return `[Ţĥé çŕéŵɱáţé öñ “${task}” ášķéð ţö ŕûñ ţĥîš, áñð Îñƒîñîţáŕý ļéţ îţ ĝö áĥéáð. ${place} šţöþþéð ţĥé çáļļ ţö ášķ ýöû ƒîŕšţ, šö ñöţĥîñĝ ĥáš ŕûñ ýéţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The crewmate on “‬${task}‮” asked to run this, and Infinitary let it go ahead. ‬${place}‮ stopped the call to ask you first, so nothing has run yet.‬`;
+    }
+    return `The crewmate on “${task}” asked to run this, and Infinitary let it go ahead. ${place} stopped the call to ask you first, so nothing has run yet.`;
+  }
+  function integrationsConfirmNotNow() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ليس الآن`;
+      case "de":
+        return `Nicht jetzt`;
+      case "es":
+        return `Ahora no`;
+      case "fr":
+        return `Pas maintenant`;
+      case "ja":
+        return `今はしない`;
+      case "ko":
+        return `나중에`;
+      case "pt-BR":
+        return `Agora não`;
+      case "zh-Hans":
+        return `暂不`;
+      case "zh-Hant":
+        return `暫時不要`;
+      case "en-XA":
+        return `[Ñöţ ñöŵ ~~~]`;
+      case "ar-XB":
+        return `‮Not now‬`;
+    }
+    return `Not now`;
+  }
+  function integrationsConfirmSend(input2) {
+    const place = input2.place;
+    switch (currentLanguage()) {
+      case "ar":
+        return `إرسال إلى ${place}`;
+      case "de":
+        return `An ${place} senden`;
+      case "es":
+        return `Enviar a ${place}`;
+      case "fr":
+        return `Envoyer à ${place}`;
+      case "ja":
+        return `${place} に送信`;
+      case "ko":
+        return `${place}에 보내기`;
+      case "pt-BR":
+        return `Enviar ao ${place}`;
+      case "zh-Hans":
+        return `发送给 ${place}`;
+      case "zh-Hant":
+        return `傳送給 ${place}`;
+      case "en-XA":
+        return `[Šéñð ţö ${place} ~~~]`;
+      case "ar-XB":
+        return `‮Send to ‬${place}`;
+    }
+    return `Send to ${place}`;
+  }
+  function integrationsConfirmTitle(input2) {
+    const action = input2.action;
+    const place = input2.place;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يطلب منك ${place} تأكيد «${action}»`;
+      case "de":
+        return `${place} bittet dich, „${action}“ zu bestätigen`;
+      case "es":
+        return `${place} te pide que confirmes «${action}»`;
+      case "fr":
+        return `${place} vous demande de confirmer « ${action} »`;
+      case "ja":
+        return `${place} が「${action}」の確認を求めています`;
+      case "ko":
+        return `${place}에서 “${action}” 확인을 요청해요`;
+      case "pt-BR":
+        return `${place} pede que você confirme “${action}”`;
+      case "zh-Hans":
+        return `${place} 请你确认“${action}”`;
+      case "zh-Hant":
+        return `${place} 請你確認「${action}」`;
+      case "en-XA":
+        return `[${place} ášķš ýöû ţö çöñƒîŕɱ “${action}” ~~~~~~~~]`;
+      case "ar-XB":
+        return `${place}‮ asks you to confirm “‬${action}‮”‬`;
+    }
+    return `${place} asks you to confirm “${action}”`;
+  }
+  function integrationsConfirmWays(input2) {
+    const place = input2.place;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يرسل «إرسال إلى ${place}» الردّ الذي اخترته مرة واحدة، ثم يشغّل ${place} الاستدعاء أو يوقفه حسب اختيارك. ولا يرسل «ليس الآن» شيئًا، ولا يُشغَّل الاستدعاء.`;
+      case "de":
+        return `„An ${place} senden“ sendet deine gewählte Antwort einmal, und ${place} führt den Aufruf aus oder stoppt ihn, wie du es entschieden hast. „Nicht jetzt“ sendet nichts, und der Aufruf läuft nicht.`;
+      case "es":
+        return `«Enviar a ${place}» envía una sola vez la respuesta que elegiste, y ${place} ejecuta o detiene la llamada según tu elección. «Ahora no» no envía nada, y la llamada no se ejecuta.`;
+      case "fr":
+        return `« Envoyer à ${place} » envoie une seule fois la réponse choisie, et ${place} exécute ou arrête l’appel selon votre choix. « Pas maintenant » n’envoie rien, et l’appel ne s’exécute pas.`;
+      case "ja":
+        return `「${place} に送信」を押すと、選んだ回答が 1 回だけ送られ、${place} は選んだとおりに呼び出しを実行または停止します。「今はしない」を押すと何も送られず、呼び出しは実行されません。`;
+      case "ko":
+        return `“${place}에 보내기”는 고른 답을 한 번 보내고, ${place}에서는 선택한 대로 호출을 실행하거나 중지해요. “나중에”는 아무것도 보내지 않으며, 호출도 실행되지 않아요.`;
+      case "pt-BR":
+        return `“Enviar ao ${place}” envia uma única vez a resposta que você escolheu, e o ${place} executa ou para a chamada conforme a sua escolha. “Agora não” não envia nada, e a chamada não é executada.`;
+      case "zh-Hans":
+        return `“发送给 ${place}”会把你选的回答发送一次，${place} 会按你的选择运行或停止这次调用。“暂不”不发送任何内容，这次调用也不会运行。`;
+      case "zh-Hant":
+        return `「傳送給 ${place}」會把你選的回答傳送一次，${place} 會依你的選擇執行或停止這次呼叫。「暫時不要」不會傳送任何內容，這次呼叫也不會執行。`;
+      case "en-XA":
+        return `[Šéñð ţö ${place} šéñðš ţĥé áñšŵéŕ ýöû þîçķéð öñçé, áñð ${place} ŕûñš öŕ šţöþš ţĥé çáļļ áš ýöû çĥöšé. Ñöţ ñöŵ šéñðš ñöţĥîñĝ, áñð ţĥé çáļļ ðöéšñ'ţ ŕûñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Send to ‬${place}‮ sends the answer you picked once, and ‬${place}‮ runs or stops the call as you chose. Not now sends nothing, and the call doesn't run.‬`;
+    }
+    return `Send to ${place} sends the answer you picked once, and ${place} runs or stops the call as you chose. Not now sends nothing, and the call doesn't run.`;
+  }
+  function integrationsConfirmWords(input2) {
+    const place = input2.place;
+    switch (currentLanguage()) {
+      case "ar":
+        return `بكلمات ${place}`;
+      case "de":
+        return `In den Worten von ${place}`;
+      case "es":
+        return `En palabras de ${place}`;
+      case "fr":
+        return `Dans les mots de ${place}`;
+      case "ja":
+        return `${place} の言葉`;
+      case "ko":
+        return `${place}의 말`;
+      case "pt-BR":
+        return `Nas palavras do ${place}`;
+      case "zh-Hans":
+        return `${place} 的原话`;
+      case "zh-Hant":
+        return `${place} 的原話`;
+      case "en-XA":
+        return `[Îñ ${place}'š ŵöŕðš ~~~~]`;
+      case "ar-XB":
+        return `‮In ‬${place}‮'s words‬`;
+    }
+    return `In ${place}'s words`;
+  }
   function integrationsConnectOfferBody(input2) {
     const name = input2.name;
     switch (currentLanguage()) {
@@ -43320,6 +44214,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Connect ‬${name}`;
     }
     return `Connect ${name}`;
+  }
+  function integrationsGoogleAgentRefused() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ميّز عميلك للوكلاء`;
+      case "de":
+        return `Client für Agenten kennzeichnen`;
+      case "es":
+        return `Marca tu cliente para agentes`;
+      case "fr":
+        return `Marquez votre client pour les agents`;
+      case "ja":
+        return `クライアントをエージェント用に設定してください`;
+      case "ko":
+        return `클라이언트를 에이전트용으로 표시하세요`;
+      case "pt-BR":
+        return `Marque seu cliente para agentes`;
+      case "zh-Hans":
+        return `请把你的客户端标记为供智能体使用`;
+      case "zh-Hant":
+        return `請把你的用戶端標示為供代理程式使用`;
+      case "en-XA":
+        return `[Ṁáŕķ ýöûŕ çļîéñţ ƒöŕ áĝéñţš ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Mark your client for agents‬`;
+    }
+    return `Mark your client for agents`;
+  }
+  function integrationsGoogleAgentRefusedDetail() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا تقبل خوادم Gmail والتقويم من Google إلا عميلًا مميّزًا لوكيل مدعوم بالذكاء الاصطناعي. افتح عميلك في Google Cloud، وحدّد «Use this client for an AI-powered agent» واحفظ، ثم اختر «التحقق الآن» من قائمة هذا الصف.`;
+      case "de":
+        return `Die Gmail- und Kalender-Server von Google nehmen nur einen Client an, der für einen KI-gestützten Agenten gekennzeichnet ist. Öffne deinen Client in Google Cloud, setz das Häkchen bei „Use this client for an AI-powered agent“ und speichere. Wähl dann „Jetzt prüfen“ im Menü dieser Zeile.`;
+      case "es":
+        return `Los servidores de Gmail y Calendar de Google solo aceptan un cliente marcado para un agente con IA. Abre tu cliente en Google Cloud, marca «Use this client for an AI-powered agent» y guarda; luego elige Comprobar ahora en el menú de esta fila.`;
+      case "fr":
+        return `Les serveurs Gmail et Agenda de Google n’acceptent qu’un client marqué pour un agent basé sur l’IA. Ouvrez votre client dans Google Cloud, cochez « Use this client for an AI-powered agent » et enregistrez, puis choisissez Vérifier maintenant dans le menu de cette ligne.`;
+      case "ja":
+        return `Google の Gmail とカレンダーのサーバーは、AI エージェント用に設定されたクライアントしか受け付けません。Google Cloud でクライアントを開き、「Use this client for an AI-powered agent」にチェックを入れて保存してから、この行のメニューで「今すぐ確認」を選んでください。`;
+      case "ko":
+        return `Google의 Gmail 및 캘린더 서버는 AI 기반 에이전트용으로 표시된 클라이언트만 받아요. Google Cloud에서 클라이언트를 열고 “Use this client for an AI-powered agent”에 체크한 뒤 저장하고, 이 행의 메뉴에서 지금 확인을 고르세요.`;
+      case "pt-BR":
+        return `Os servidores do Gmail e da Agenda do Google só aceitam um cliente marcado para um agente com IA. Abra seu cliente no Google Cloud, marque “Use this client for an AI-powered agent” e salve; depois escolha Verificar agora no menu desta linha.`;
+      case "zh-Hans":
+        return `Google 的 Gmail 和日历服务器只接受标记为供 AI 智能体使用的客户端。在 Google Cloud 中打开你的客户端，勾选“Use this client for an AI-powered agent”并保存，然后在这一行的菜单中选择“立即检查”。`;
+      case "zh-Hant":
+        return `Google 的 Gmail 和日曆伺服器只接受標示為供 AI 代理程式使用的用戶端。在 Google Cloud 中開啟你的用戶端，勾選「Use this client for an AI-powered agent」並儲存，然後在這一列的選單中選擇「立即檢查」。`;
+      case "en-XA":
+        return `[Ĝööĝļé'š Ĝɱáîļ áñð Çáļéñðáŕ šéŕṽéŕš öñļý ţáķé á çļîéñţ ɱáŕķéð ƒöŕ áñ ÅÎ-þöŵéŕéð áĝéñţ. Öþéñ ýöûŕ çļîéñţ îñ Ĝööĝļé Çļöûð, ţîçķ “Ûšé ţĥîš çļîéñţ ƒöŕ áñ ÅÎ-þöŵéŕéð áĝéñţ” áñð šáṽé, ţĥéñ çĥööšé Çĥéçķ ñöŵ ƒŕöɱ ţĥîš ŕöŵ'š ɱéñû. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Google's Gmail and Calendar servers only take a client marked for an AI-powered agent. Open your client in Google Cloud, tick “Use this client for an AI-powered agent” and save, then choose Check now from this row's menu.‬`;
+    }
+    return `Google's Gmail and Calendar servers only take a client marked for an AI-powered agent. Open your client in Google Cloud, tick “Use this client for an AI-powered agent” and save, then choose Check now from this row's menu.`;
   }
   function integrationsGoogleClientFileIncomplete() {
     switch (currentLanguage()) {
@@ -43482,6 +44430,209 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮A new Google sign-in, kept in Secrets and the app's memory‬`;
     }
     return `A new Google sign-in, kept in Secrets and the app's memory`;
+  }
+  function integrationsGoogleOpenCloud() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `فتح Google Cloud`;
+      case "de":
+        return `Google Cloud öffnen`;
+      case "es":
+        return `Abrir Google Cloud`;
+      case "fr":
+        return `Ouvrir Google Cloud`;
+      case "ja":
+        return `Google Cloud を開く`;
+      case "ko":
+        return `Google Cloud 열기`;
+      case "pt-BR":
+        return `Abrir o Google Cloud`;
+      case "zh-Hans":
+        return `打开 Google Cloud`;
+      case "zh-Hant":
+        return `開啟 Google Cloud`;
+      case "en-XA":
+        return `[Öþéñ Ĝööĝļé Çļöûð ~~~~~~]`;
+      case "ar-XB":
+        return `‮Open Google Cloud‬`;
+    }
+    return `Open Google Cloud`;
+  }
+  function integrationsGoogleServiceCalendar() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `التقويم`;
+      case "de":
+        return `Kalender`;
+      case "es":
+        return `Calendar`;
+      case "fr":
+        return `Agenda`;
+      case "ja":
+        return `カレンダー`;
+      case "ko":
+        return `캘린더`;
+      case "pt-BR":
+        return `Agenda`;
+      case "zh-Hans":
+        return `日历`;
+      case "zh-Hant":
+        return `日曆`;
+      case "en-XA":
+        return `[Çáļéñðáŕ ~~~]`;
+      case "ar-XB":
+        return `‮Calendar‬`;
+    }
+    return `Calendar`;
+  }
+  function integrationsGoogleServiceGmail() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `Gmail`;
+      case "de":
+        return `Gmail`;
+      case "es":
+        return `Gmail`;
+      case "fr":
+        return `Gmail`;
+      case "ja":
+        return `Gmail`;
+      case "ko":
+        return `Gmail`;
+      case "pt-BR":
+        return `Gmail`;
+      case "zh-Hans":
+        return `Gmail`;
+      case "zh-Hant":
+        return `Gmail`;
+      case "en-XA":
+        return `[Ĝɱáîļ ~~]`;
+      case "ar-XB":
+        return `‮Gmail‬`;
+    }
+    return `Gmail`;
+  }
+  function integrationsGoogleServiceOff() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إحدى خدمات Google معطّلة`;
+      case "de":
+        return `Ein Google-Dienst ist ausgeschaltet`;
+      case "es":
+        return `Un servicio de Google está desactivado`;
+      case "fr":
+        return `Un service Google est désactivé`;
+      case "ja":
+        return `Google のサービスがオフです`;
+      case "ko":
+        return `Google 서비스가 꺼져 있어요`;
+      case "pt-BR":
+        return `Um serviço do Google está desativado`;
+      case "zh-Hans":
+        return `有一项 Google 服务已关闭`;
+      case "zh-Hant":
+        return `有一項 Google 服務已關閉`;
+      case "en-XA":
+        return `[Å Ĝööĝļé šéŕṽîçé îš öƒƒ ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮A Google service is off‬`;
+    }
+    return `A Google service is off`;
+  }
+  function integrationsGoogleServiceOffDetail(input2) {
+    formatNumber(input2.count);
+    const services = input2.services;
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `خدمات MCP الخاصة بـ ${services} معطّلة في مشروعك على Google Cloud، لذا لا يستطيع Infinitary الوصول إليها. فعّلها في Google Cloud، ثم اختر «التحقق الآن» من قائمة هذا الصف.`;
+          case "one":
+            return `خدمة MCP الخاصة بـ ${services} معطّلة في مشروعك على Google Cloud، لذا لا يستطيع Infinitary الوصول إليها. فعّلها في Google Cloud، ثم اختر «التحقق الآن» من قائمة هذا الصف.`;
+          case "two":
+            return `خدمتا MCP الخاصتان بـ ${services} معطّلتان في مشروعك على Google Cloud، لذا لا يستطيع Infinitary الوصول إليهما. فعّلهما في Google Cloud، ثم اختر «التحقق الآن» من قائمة هذا الصف.`;
+          case "few":
+            return `خدمات MCP الخاصة بـ ${services} معطّلة في مشروعك على Google Cloud، لذا لا يستطيع Infinitary الوصول إليها. فعّلها في Google Cloud، ثم اختر «التحقق الآن» من قائمة هذا الصف.`;
+          case "many":
+            return `خدمات MCP الخاصة بـ ${services} معطّلة في مشروعك على Google Cloud، لذا لا يستطيع Infinitary الوصول إليها. فعّلها في Google Cloud، ثم اختر «التحقق الآن» من قائمة هذا الصف.`;
+          default:
+            return `خدمات MCP الخاصة بـ ${services} معطّلة في مشروعك على Google Cloud، لذا لا يستطيع Infinitary الوصول إليها. فعّلها في Google Cloud، ثم اختر «التحقق الآن» من قائمة هذا الصف.`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Der MCP-Dienst für ${services} ist in deinem Google-Cloud-Projekt ausgeschaltet, daher erreicht Infinitary ihn nicht. Schalt ihn in Google Cloud ein und wähl dann „Jetzt prüfen“ im Menü dieser Zeile.`;
+          default:
+            return `Die MCP-Dienste für ${services} sind in deinem Google-Cloud-Projekt ausgeschaltet, daher erreicht Infinitary sie nicht. Schalt sie in Google Cloud ein und wähl dann „Jetzt prüfen“ im Menü dieser Zeile.`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `El servicio MCP de ${services} está desactivado en tu proyecto de Google Cloud, así que Infinitary no puede acceder a él. Actívalo en Google Cloud y luego elige Comprobar ahora en el menú de esta fila.`;
+          case "many":
+            return `Los servicios MCP de ${services} están desactivados en tu proyecto de Google Cloud, así que Infinitary no puede acceder a ellos. Actívalos en Google Cloud y luego elige Comprobar ahora en el menú de esta fila.`;
+          default:
+            return `Los servicios MCP de ${services} están desactivados en tu proyecto de Google Cloud, así que Infinitary no puede acceder a ellos. Actívalos en Google Cloud y luego elige Comprobar ahora en el menú de esta fila.`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Le service MCP pour ${services} est désactivé dans votre projet Google Cloud, donc Infinitary ne peut pas l’atteindre. Activez-le dans Google Cloud, puis choisissez Vérifier maintenant dans le menu de cette ligne.`;
+          case "many":
+            return `Les services MCP pour ${services} sont désactivés dans votre projet Google Cloud, donc Infinitary ne peut pas les atteindre. Activez-les dans Google Cloud, puis choisissez Vérifier maintenant dans le menu de cette ligne.`;
+          default:
+            return `Les services MCP pour ${services} sont désactivés dans votre projet Google Cloud, donc Infinitary ne peut pas les atteindre. Activez-les dans Google Cloud, puis choisissez Vérifier maintenant dans le menu de cette ligne.`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `Google Cloud プロジェクトで ${services} の MCP サービスがオフになっているため、Infinitary からアクセスできません。Google Cloud でオンにしてから、この行のメニューで「今すぐ確認」を選んでください。`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `Google Cloud 프로젝트에서 ${services} MCP 서비스가 꺼져 있어서 Infinitary가 닿을 수 없어요. Google Cloud에서 켠 다음, 이 행의 메뉴에서 지금 확인을 고르세요.`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `O serviço MCP de ${services} está desativado no seu projeto do Google Cloud, então o Infinitary não consegue acessá-lo. Ative-o no Google Cloud e depois escolha Verificar agora no menu desta linha.`;
+          case "many":
+            return `Os serviços MCP de ${services} estão desativados no seu projeto do Google Cloud, então o Infinitary não consegue acessá-los. Ative-os no Google Cloud e depois escolha Verificar agora no menu desta linha.`;
+          default:
+            return `Os serviços MCP de ${services} estão desativados no seu projeto do Google Cloud, então o Infinitary não consegue acessá-los. Ative-os no Google Cloud e depois escolha Verificar agora no menu desta linha.`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `你的 Google Cloud 项目中 ${services} 的 MCP 服务已关闭，所以 Infinitary 无法访问。请在 Google Cloud 中开启，然后在这一行的菜单中选择“立即检查”。`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `你的 Google Cloud 專案中 ${services} 的 MCP 服務已關閉，所以 Infinitary 無法存取。請在 Google Cloud 中開啟，然後在這一列的選單中選擇「立即檢查」。`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[Ţĥé ${services} ṀÇÞ šéŕṽîçé îš öƒƒ îñ ýöûŕ Ĝööĝļé Çļöûð þŕöĵéçţ, šö Îñƒîñîţáŕý çáñ'ţ ŕéáçĥ îţ. Ţûŕñ îţ öñ îñ Ĝööĝļé Çļöûð, ţĥéñ çĥööšé Çĥéçķ ñöŵ ƒŕöɱ ţĥîš ŕöŵ'š ɱéñû. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+          default:
+            return `[Ţĥé ${services} ṀÇÞ šéŕṽîçéš áŕé öƒƒ îñ ýöûŕ Ĝööĝļé Çļöûð þŕöĵéçţ, šö Îñƒîñîţáŕý çáñ'ţ ŕéáçĥ ţĥéɱ. Ţûŕñ ţĥéɱ öñ îñ Ĝööĝļé Çļöûð, ţĥéñ çĥööšé Çĥéçķ ñöŵ ƒŕöɱ ţĥîš ŕöŵ'š ɱéñû. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `‮The ‬${services}‮ MCP service is off in your Google Cloud project, so Infinitary can't reach it. Turn it on in Google Cloud, then choose Check now from this row's menu.‬`;
+          default:
+            return `‮The ‬${services}‮ MCP services are off in your Google Cloud project, so Infinitary can't reach them. Turn them on in Google Cloud, then choose Check now from this row's menu.‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `The ${services} MCP service is off in your Google Cloud project, so Infinitary can't reach it. Turn it on in Google Cloud, then choose Check now from this row's menu.`;
+      default:
+        return `The ${services} MCP services are off in your Google Cloud project, so Infinitary can't reach them. Turn them on in Google Cloud, then choose Check now from this row's menu.`;
+    }
   }
   function integrationsGoogleSetUp() {
     switch (currentLanguage()) {
@@ -43838,29 +44989,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function integrationsGoogleSetupStepPage() {
     switch (currentLanguage()) {
       case "ar":
-        return `افتح صفحة Google وسجّل الدخول بحساب Google الذي ستربطه. سمِّ المشروع واترك مربع «Use this client for an AI-powered agent» دون تحديد، فهو مخصص فقط للعملاء الذين يستخدمون أدوات MCP من Google. ثم اقبل سياسة Google واضغط Continue.`;
+        return `افتح صفحة Google وسجّل الدخول بحساب Google الذي ستربطه. سمِّ المشروع، وحدّد «Use this client for an AI-powered agent»، وفعّل خدمات MCP الخاصة بـ Gmail والتقويم وDrive والمستندات وجداول البيانات. ثم اقبل سياسة Google، واضغط Continue.`;
       case "de":
-        return `Öffne Googles Seite und melde dich mit dem Google-Konto an, das du verbinden willst. Gib dem Projekt einen Namen und lass das Kästchen „Use this client for an AI-powered agent“ ohne Haken, denn es ist nur für Clients gedacht, die Googles MCP-Tools nutzen. Akzeptiere dann Googles Richtlinie und drücke Continue.`;
+        return `Öffne Googles Seite und melde dich mit dem Google-Konto an, das du verbinden willst. Gib dem Projekt einen Namen, setz das Häkchen bei „Use this client for an AI-powered agent“ und schalt die MCP-Dienste für Gmail, Kalender, Drive, Docs und Tabellen ein. Akzeptiere dann Googles Richtlinie und drücke Continue.`;
       case "es":
-        return `Abre la página de Google e inicia sesión con la cuenta de Google que vas a conectar. Ponle nombre al proyecto y deja sin marcar la casilla «Use this client for an AI-powered agent», porque solo es para clientes que usan las herramientas MCP de Google. Luego acepta la política de Google y pulsa Continue.`;
+        return `Abre la página de Google e inicia sesión con la cuenta de Google que vas a conectar. Ponle nombre al proyecto, marca «Use this client for an AI-powered agent» y activa los servicios MCP de Gmail, Calendar, Drive, Documentos y Hojas de cálculo. Luego acepta la política de Google y pulsa Continue.`;
       case "fr":
-        return `Ouvrez la page de Google et connectez-vous avec le compte Google que vous allez relier. Nommez le projet et laissez la case « Use this client for an AI-powered agent » décochée, car elle ne sert qu’aux clients qui utilisent les outils MCP de Google. Acceptez ensuite la règle de Google et appuyez sur Continue.`;
+        return `Ouvrez la page de Google et connectez-vous avec le compte Google que vous allez relier. Nommez le projet, cochez « Use this client for an AI-powered agent » et activez les services MCP de Gmail, Agenda, Drive, Docs et Sheets. Acceptez ensuite la règle de Google et appuyez sur Continue.`;
       case "ja":
-        return `Google のページを開き、接続する Google アカウントでサインインします。プロジェクトに名前を付け、「Use this client for an AI-powered agent」はチェックを入れないままにします。このチェックボックスは Google の MCP ツールを使うクライアント専用です。そのあと Google のポリシーに同意して Continue を押します。`;
+        return `Google のページを開き、接続する Google アカウントでサインインします。プロジェクトに名前を付け、「Use this client for an AI-powered agent」にチェックを入れて、Gmail、カレンダー、ドライブ、ドキュメント、スプレッドシートの MCP サービスをオンにします。そのあと、Google のポリシーに同意して Continue を押します。`;
       case "ko":
-        return `Google 페이지를 열고 연결할 Google 계정으로 로그인하세요. 프로젝트 이름을 정하고 “Use this client for an AI-powered agent”는 체크하지 않은 채로 두세요. 이 체크박스는 Google의 MCP 도구를 쓰는 클라이언트 전용이에요. 그런 다음 Google의 정책에 동의하고 Continue를 누르세요.`;
+        return `Google 페이지를 열고 연결할 Google 계정으로 로그인하세요. 프로젝트 이름을 정하고, “Use this client for an AI-powered agent”에 체크하고, Gmail, 캘린더, 드라이브, 문서, 스프레드시트 MCP 서비스를 켜세요. 그런 다음 Google의 정책에 동의하고 Continue를 누르세요.`;
       case "pt-BR":
-        return `Abra a página do Google e faça login com a conta do Google que você vai conectar. Dê um nome ao projeto e deixe desmarcada a caixa “Use this client for an AI-powered agent”, porque ela só serve para clientes que usam as ferramentas MCP do Google. Depois aceite a política do Google e pressione Continue.`;
+        return `Abra a página do Google e faça login com a conta do Google que você vai conectar. Dê um nome ao projeto, marque “Use this client for an AI-powered agent” e ative os serviços MCP de Gmail, Agenda, Drive, Documentos e Planilhas. Depois aceite a política do Google e pressione Continue.`;
       case "zh-Hans":
-        return `打开 Google 的页面，用你要连接的 Google 账号登录。为项目命名，并让“Use this client for an AI-powered agent”保持未勾选，因为这个复选框只用于使用 Google MCP 工具的客户端。然后接受 Google 的政策，按 Continue。`;
+        return `打开 Google 的页面，用你要连接的 Google 账户登录。为项目命名，勾选“Use this client for an AI-powered agent”，并开启 Gmail、日历、云端硬盘、文档和表格的 MCP 服务。然后接受 Google 的政策，按 Continue。`;
       case "zh-Hant":
-        return `開啟 Google 的頁面，用你要連接的 Google 帳戶登入。為專案命名，並讓「Use this client for an AI-powered agent」保持未勾選，因為這個核取方塊只用於使用 Google MCP 工具的用戶端。然後接受 Google 的政策，按 Continue。`;
+        return `開啟 Google 的頁面，用你要連接的 Google 帳號登入。為專案命名，勾選「Use this client for an AI-powered agent」，並開啟 Gmail、日曆、雲端硬碟、文件和試算表的 MCP 服務。然後接受 Google 的政策，按 Continue。`;
       case "en-XA":
-        return `[Öþéñ Ĝööĝļé'š þáĝé áñð šîĝñ îñ ŵîţĥ ţĥé Ĝööĝļé áççöûñţ ýöû'ļļ çöññéçţ. Ñáɱé ţĥé þŕöĵéçţ áñð ļéáṽé “Ûšé ţĥîš çļîéñţ ƒöŕ áñ ÅÎ-þöŵéŕéð áĝéñţ” ûñţîçķéð, šîñçé ţĥáţ ƀöẋ îš öñļý ƒöŕ çļîéñţš ţĥáţ ûšé Ĝööĝļé'š ṀÇÞ ţööļš. Ţĥéñ áççéþţ Ĝööĝļé'š þöļîçý áñð þŕéšš Çöñţîñûé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Öþéñ Ĝööĝļé'š þáĝé áñð šîĝñ îñ ŵîţĥ ţĥé Ĝööĝļé áççöûñţ ýöû'ļļ çöññéçţ. Ñáɱé ţĥé þŕöĵéçţ, ţîçķ “Ûšé ţĥîš çļîéñţ ƒöŕ áñ ÅÎ-þöŵéŕéð áĝéñţ” áñð ţûŕñ öñ ţĥé Ĝɱáîļ, Çáļéñðáŕ, Ðŕîṽé, Ðöçš áñð Šĥééţš ṀÇÞ šéŕṽîçéš. Ţĥéñ áççéþţ Ĝööĝļé'š þöļîçý áñð þŕéšš Çöñţîñûé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Open Google's page and sign in with the Google account you'll connect. Name the project and leave “Use this client for an AI-powered agent” unticked, since that box is only for clients that use Google's MCP tools. Then accept Google's policy and press Continue.‬`;
+        return `‮Open Google's page and sign in with the Google account you'll connect. Name the project, tick “Use this client for an AI-powered agent” and turn on the Gmail, Calendar, Drive, Docs and Sheets MCP services. Then accept Google's policy and press Continue.‬`;
     }
-    return `Open Google's page and sign in with the Google account you'll connect. Name the project and leave “Use this client for an AI-powered agent” unticked, since that box is only for clients that use Google's MCP tools. Then accept Google's policy and press Continue.`;
+    return `Open Google's page and sign in with the Google account you'll connect. Name the project, tick “Use this client for an AI-powered agent” and turn on the Gmail, Calendar, Drive, Docs and Sheets MCP services. Then accept Google's policy and press Continue.`;
   }
   function integrationsGoogleSetupTitle() {
     switch (currentLanguage()) {
@@ -98093,6 +99244,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `${count} saved resets · use one on ${site}`;
     }
   }
+  function settingsSubscriptionsSentThrough(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `مُرسَل عبر ${host}`;
+      case "de":
+        return `gesendet über ${host}`;
+      case "es":
+        return `enviado a través de ${host}`;
+      case "fr":
+        return `envoyé via ${host}`;
+      case "ja":
+        return `${host} 経由で送信`;
+      case "ko":
+        return `${host}을(를) 거쳐 전송`;
+      case "pt-BR":
+        return `enviado por ${host}`;
+      case "zh-Hans":
+        return `经由 ${host} 发送`;
+      case "zh-Hant":
+        return `經由 ${host} 傳送`;
+      case "en-XA":
+        return `[šéñţ ţĥŕöûĝĥ ${host} ~~~~~]`;
+      case "ar-XB":
+        return `‮sent through ‬${host}`;
+    }
+    return `sent through ${host}`;
+  }
   function settingsSubscriptionsSignIn() {
     switch (currentLanguage()) {
       case "ar":
@@ -110438,6 +111617,276 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `working`;
   }
+  function taskHoldAsksFirst() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `السؤال أولًا`;
+      case "de":
+        return `das Fragen vorher`;
+      case "es":
+        return `la consulta previa`;
+      case "fr":
+        return `la demande préalable`;
+      case "ja":
+        return `先に確認`;
+      case "ko":
+        return `먼저 묻기`;
+      case "pt-BR":
+        return `a consulta prévia`;
+      case "zh-Hans":
+        return `先询问`;
+      case "zh-Hant":
+        return `先問過你`;
+      case "en-XA":
+        return `[ášķîñĝ ƒîŕšţ ~~~~]`;
+      case "ar-XB":
+        return `‮asking first‬`;
+    }
+    return `asking first`;
+  }
+  function taskHoldChecks() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الفحوصات`;
+      case "de":
+        return `die Überprüfungen`;
+      case "es":
+        return `las comprobaciones`;
+      case "fr":
+        return `les vérifications`;
+      case "ja":
+        return `チェック`;
+      case "ko":
+        return `검사`;
+      case "pt-BR":
+        return `as verificações`;
+      case "zh-Hans":
+        return `检查`;
+      case "zh-Hant":
+        return `檢查`;
+      case "en-XA":
+        return `[ţĥé çĥéçķš ~~~~]`;
+      case "ar-XB":
+        return `‮the checks‬`;
+    }
+    return `the checks`;
+  }
+  function taskHoldCostLimit() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `حد التكلفة`;
+      case "de":
+        return `die Kostengrenze`;
+      case "es":
+        return `el límite de costo`;
+      case "fr":
+        return `le plafond de coût`;
+      case "ja":
+        return `コスト上限`;
+      case "ko":
+        return `비용 한도`;
+      case "pt-BR":
+        return `o limite de custo`;
+      case "zh-Hans":
+        return `费用上限`;
+      case "zh-Hant":
+        return `費用上限`;
+      case "en-XA":
+        return `[ţĥé çöšţ ļîɱîţ ~~~~~]`;
+      case "ar-XB":
+        return `‮the cost limit‬`;
+    }
+    return `the cost limit`;
+  }
+  function taskHoldDecisions() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `القرارات المفتوحة`;
+      case "de":
+        return `die offenen Entscheidungen`;
+      case "es":
+        return `las decisiones abiertas`;
+      case "fr":
+        return `les décisions ouvertes`;
+      case "ja":
+        return `未決の判断`;
+      case "ko":
+        return `열린 결정`;
+      case "pt-BR":
+        return `as decisões em aberto`;
+      case "zh-Hans":
+        return `未决的决定`;
+      case "zh-Hant":
+        return `未決的決定`;
+      case "en-XA":
+        return `[ţĥé öþéñ ðéçîšîöñš ~~~~~~]`;
+      case "ar-XB":
+        return `‮the open decisions‬`;
+    }
+    return `the open decisions`;
+  }
+  function taskHoldLoadLine() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `طابور التشغيلات الثقيلة`;
+      case "de":
+        return `die Warteschlange für aufwendige Läufe`;
+      case "es":
+        return `la cola de ejecuciones pesadas`;
+      case "fr":
+        return `la file des exécutions lourdes`;
+      case "ja":
+        return `重い実行の順番待ち`;
+      case "ko":
+        return `무거운 실행 대기열`;
+      case "pt-BR":
+        return `a fila de execuções pesadas`;
+      case "zh-Hans":
+        return `繁重运行的排队`;
+      case "zh-Hant":
+        return `繁重執行的排隊`;
+      case "en-XA":
+        return `[ţĥé ĥéáṽý-ŕûñ ļîñé ~~~~~~]`;
+      case "ar-XB":
+        return `‮the heavy-run line‬`;
+    }
+    return `the heavy-run line`;
+  }
+  function taskHoldParts() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الأجزاء المفتوحة`;
+      case "de":
+        return `die offenen Teile`;
+      case "es":
+        return `las partes abiertas`;
+      case "fr":
+        return `les parties ouvertes`;
+      case "ja":
+        return `未完了のパート`;
+      case "ko":
+        return `열린 부분`;
+      case "pt-BR":
+        return `as partes em aberto`;
+      case "zh-Hans":
+        return `未完成的部分`;
+      case "zh-Hant":
+        return `未完成的部分`;
+      case "en-XA":
+        return `[ţĥé öþéñ þáŕţš ~~~~~]`;
+      case "ar-XB":
+        return `‮the open parts‬`;
+    }
+    return `the open parts`;
+  }
+  function taskHoldProof() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إثبات التسليم`;
+      case "de":
+        return `der Nachweis der Auslieferung`;
+      case "es":
+        return `la prueba de entrega`;
+      case "fr":
+        return `la preuve de livraison`;
+      case "ja":
+        return `完了の証明`;
+      case "ko":
+        return `전달 증명`;
+      case "pt-BR":
+        return `a prova de entrega`;
+      case "zh-Hans":
+        return `交付证明`;
+      case "zh-Hant":
+        return `交付證明`;
+      case "en-XA":
+        return `[ţĥé ðéļîṽéŕý þŕööƒ ~~~~~~]`;
+      case "ar-XB":
+        return `‮the delivery proof‬`;
+    }
+    return `the delivery proof`;
+  }
+  function taskHoldRetired() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعليق لم يعد موجودًا`;
+      case "de":
+        return `ein Halt, den es nicht mehr gibt`;
+      case "es":
+        return `una retención que ya no existe`;
+      case "fr":
+        return `une retenue qui n’existe plus`;
+      case "ja":
+        return `廃止された項目`;
+      case "ko":
+        return `더 이상 없는 보류`;
+      case "pt-BR":
+        return `uma retenção que não existe mais`;
+      case "zh-Hans":
+        return `已停用的项目`;
+      case "zh-Hant":
+        return `已停用的項目`;
+      case "en-XA":
+        return `[á ŕéţîŕéð ĥöļð ~~~~~]`;
+      case "ar-XB":
+        return `‮a retired hold‬`;
+    }
+    return `a retired hold`;
+  }
+  function taskHoldStory() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `القصة المحفوظة`;
+      case "de":
+        return `die gespeicherte Geschichte`;
+      case "es":
+        return `la historia guardada`;
+      case "fr":
+        return `le récit enregistré`;
+      case "ja":
+        return `保存したストーリー`;
+      case "ko":
+        return `저장된 스토리`;
+      case "pt-BR":
+        return `a história salva`;
+      case "zh-Hans":
+        return `已保存的改动说明`;
+      case "zh-Hant":
+        return `已儲存的變更說明`;
+      case "en-XA":
+        return `[ţĥé šáṽéð šţöŕý ~~~~~]`;
+      case "ar-XB":
+        return `‮the saved story‬`;
+    }
+    return `the saved story`;
+  }
+  function taskHoldWaits() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `انتظار العمل الآخر`;
+      case "de":
+        return `das Warten auf andere Arbeit`;
+      case "es":
+        return `las esperas`;
+      case "fr":
+        return `les attentes`;
+      case "ja":
+        return `ほかの作業の待ち`;
+      case "ko":
+        return `다른 작업 대기`;
+      case "pt-BR":
+        return `as esperas`;
+      case "zh-Hans":
+        return `对其他工作的等待`;
+      case "zh-Hant":
+        return `對其他工作的等待`;
+      case "en-XA":
+        return `[ţĥé ŵáîţš ~~~]`;
+      case "ar-XB":
+        return `‮the waits‬`;
+    }
+    return `the waits`;
+  }
   function taskNoteReworkHeld(input2) {
     const title = input2.title;
     switch (currentLanguage()) {
@@ -110465,6 +111914,124 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Kept the merge card “‬${title}‮” from you until its new version's checks end.‬`;
     }
     return `Kept the merge card “${title}” from you until its new version's checks end.`;
+  }
+  function taskOverrideDirectionGone(input2) {
+    const direction = input2.direction;
+    const holds = input2.holds;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يعد توجيهك d:${direction} قائمًا، فتوقّف عن تجاوز ${holds} في هذه المهمة.`;
+      case "de":
+        return `Deine Vorgabe d:${direction} gilt nicht mehr, daher halten diese Punkte die Aufgabe wieder zurück: ${holds}.`;
+      case "es":
+        return `Tu directriz d:${direction} ya no está vigente, así que deja de superar ${holds} en esta tarea.`;
+      case "fr":
+        return `Votre consigne d:${direction} n’est plus en vigueur : elle ne lève plus ${holds} sur cette tâche.`;
+      case "ja":
+        return `あなたの方針 d:${direction} は有効でなくなったため、このタスクで${holds}の保留を越えられなくなりました。`;
+      case "ko":
+        return `지침 d:${direction}의 효력이 끝나, 이 작업에서 다음 보류가 다시 적용돼요: ${holds}.`;
+      case "pt-BR":
+        return `Sua diretriz d:${direction} não vale mais, então deixa de liberar ${holds} nesta tarefa.`;
+      case "zh-Hans":
+        return `你的指引 d:${direction} 已不再有效，它在这个任务上不再越过${holds}的暂缓。`;
+      case "zh-Hant":
+        return `你的指引 d:${direction} 已不再有效，它在這項任務上不再越過${holds}的暫緩。`;
+      case "en-XA":
+        return `[Ýöûŕ ðîŕéçţîöñ ð:${direction} ñö ļöñĝéŕ šţáñðš, šö îţ šţöþš þáššîñĝ ${holds} öñ ţĥîš ţášķ. ~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your direction d:‬${direction}‮ no longer stands, so it stops passing ‬${holds}‮ on this task.‬`;
+    }
+    return `Your direction d:${direction} no longer stands, so it stops passing ${holds} on this task.`;
+  }
+  function taskOverrideDirectionRevised(input2) {
+    const direction = input2.direction;
+    const holds = input2.holds;
+    switch (currentLanguage()) {
+      case "ar":
+        return `صار لتوجيهك d:${direction} تعديل جديد، فتوقّف عن تجاوز ${holds} في هذه المهمة.`;
+      case "de":
+        return `Deine Vorgabe d:${direction} hat eine neue Revision, daher halten diese Punkte die Aufgabe wieder zurück: ${holds}.`;
+      case "es":
+        return `Tu directriz d:${direction} tiene una nueva versión, así que deja de superar ${holds} en esta tarea.`;
+      case "fr":
+        return `Votre consigne d:${direction} a une nouvelle révision : elle ne lève plus ${holds} sur cette tâche.`;
+      case "ja":
+        return `あなたの方針 d:${direction} が改訂されたため、このタスクで${holds}の保留を越えられなくなりました。`;
+      case "ko":
+        return `지침 d:${direction}에 새 수정본이 생겨, 이 작업에서 다음 보류가 다시 적용돼요: ${holds}.`;
+      case "pt-BR":
+        return `Sua diretriz d:${direction} tem uma nova versão, então deixa de liberar ${holds} nesta tarefa.`;
+      case "zh-Hans":
+        return `你的指引 d:${direction} 有了新的修订，它在这个任务上不再越过${holds}的暂缓。`;
+      case "zh-Hant":
+        return `你的指引 d:${direction} 有了新的修訂，它在這項任務上不再越過${holds}的暫緩。`;
+      case "en-XA":
+        return `[Ýöûŕ ðîŕéçţîöñ ð:${direction} ĥáš á ñéŵ ŕéṽîšîöñ, šö îţ šţöþš þáššîñĝ ${holds} öñ ţĥîš ţášķ. ~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your direction d:‬${direction}‮ has a new revision, so it stops passing ‬${holds}‮ on this task.‬`;
+    }
+    return `Your direction d:${direction} has a new revision, so it stops passing ${holds} on this task.`;
+  }
+  function taskOverrideDirectionTask(input2) {
+    const direction = input2.direction;
+    const holds = input2.holds;
+    const words2 = input2.words;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يتجاوز توجيهك d:${direction} ${holds} طوال ما تبقّى من هذه المهمة، إلى أن يُعدَّل أو يُستبعَد: «${words2}»`;
+      case "de":
+        return `Wegen deiner Vorgabe d:${direction} halten diese Punkte die Aufgabe für den Rest ihrer Laufzeit nicht mehr zurück: ${holds}. Das gilt, bis die Vorgabe eine neue Revision bekommt oder zurückgezogen wird: „${words2}“`;
+      case "es":
+        return `Tu directriz d:${direction} supera ${holds} durante el resto de esta tarea, hasta que tenga una nueva versión o se retire: «${words2}»`;
+      case "fr":
+        return `Votre consigne d:${direction} lève ${holds} pour le reste de cette tâche, jusqu’à ce qu’elle soit révisée ou retirée : « ${words2} »`;
+      case "ja":
+        return `あなたの方針 d:${direction} により、このタスクは残りの期間、${holds}の保留を越えて進めます。改訂または廃止されるまで有効です：「${words2}」`;
+      case "ko":
+        return `지침 d:${direction} 덕분에 이 작업은 남은 기간 동안 다음 보류를 넘어가요: ${holds}. 지침이 수정되거나 폐기될 때까지 유효해요: “${words2}”`;
+      case "pt-BR":
+        return `Sua diretriz d:${direction} libera ${holds} pelo resto desta tarefa, até ganhar uma nova versão ou ser desativada: “${words2}”`;
+      case "zh-Hans":
+        return `你的指引 d:${direction} 让这个任务在余下的时间里越过${holds}的暂缓，直到它被修订或停用：“${words2}”`;
+      case "zh-Hant":
+        return `你的指引 d:${direction} 讓這項任務在餘下的時間裡越過${holds}的暫緩，直到它被修訂或停用：「${words2}」`;
+      case "en-XA":
+        return `[Ýöûŕ ðîŕéçţîöñ ð:${direction} þáššéš ${holds} ƒöŕ ţĥé ŕéšţ öƒ ţĥîš ţášķ, ûñţîļ îţ îš ŕéṽîšéð öŕ ŕéţîŕéð: “${words2}” ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your direction d:‬${direction}‮ passes ‬${holds}‮ for the rest of this task, until it is revised or retired: “‬${words2}‮”‬`;
+    }
+    return `Your direction d:${direction} passes ${holds} for the rest of this task, until it is revised or retired: “${words2}”`;
+  }
+  function taskOverrideDirectionVersion(input2) {
+    const direction = input2.direction;
+    const holds = input2.holds;
+    const words2 = input2.words;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يتجاوز توجيهك d:${direction} ${holds} في هذه النسخة، إلى أن يُعدَّل أو يُستبعَد: «${words2}»`;
+      case "de":
+        return `Wegen deiner Vorgabe d:${direction} halten diese Punkte diese Version nicht mehr zurück: ${holds}. Das gilt, bis die Vorgabe eine neue Revision bekommt oder zurückgezogen wird: „${words2}“`;
+      case "es":
+        return `Tu directriz d:${direction} supera ${holds} para el cambio tal como está ahora, hasta que tenga una nueva versión o se retire: «${words2}»`;
+      case "fr":
+        return `Votre consigne d:${direction} lève ${holds} pour cette version, jusqu’à ce qu’elle soit révisée ou retirée : « ${words2} »`;
+      case "ja":
+        return `あなたの方針 d:${direction} により、このバージョンは${holds}の保留を越えて進めます。改訂または廃止されるまで有効です：「${words2}」`;
+      case "ko":
+        return `지침 d:${direction} 덕분에 이 버전은 다음 보류를 넘어가요: ${holds}. 지침이 수정되거나 폐기될 때까지 유효해요: “${words2}”`;
+      case "pt-BR":
+        return `Sua diretriz d:${direction} libera ${holds} para a mudança como está agora, até ganhar uma nova versão ou ser desativada: “${words2}”`;
+      case "zh-Hans":
+        return `你的指引 d:${direction} 让这个版本越过${holds}的暂缓，直到它被修订或停用：“${words2}”`;
+      case "zh-Hant":
+        return `你的指引 d:${direction} 讓這個版本越過${holds}的暫緩，直到它被修訂或停用：「${words2}」`;
+      case "en-XA":
+        return `[Ýöûŕ ðîŕéçţîöñ ð:${direction} þáššéš ${holds} ƒöŕ ţĥîš ṽéŕšîöñ, ûñţîļ îţ îš ŕéṽîšéð öŕ ŕéţîŕéð: “${words2}” ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your direction d:‬${direction}‮ passes ‬${holds}‮ for this version, until it is revised or retired: “‬${words2}‮”‬`;
+    }
+    return `Your direction d:${direction} passes ${holds} for this version, until it is revised or retired: “${words2}”`;
   }
   function taskPinPin() {
     switch (currentLanguage()) {
@@ -117377,6 +118944,26 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     automationWaitsForNote,
     automationWaitsForPlaceholder,
     batchesReadWords,
+    bedrockAddressInvalid,
+    bedrockAddressMoved,
+    bedrockAddressNotFound,
+    bedrockAddressPlainHttp,
+    bedrockAddressRefused,
+    bedrockSecureConnectionFailed,
+    bedrockSignInAddress,
+    bedrockSignInApproveLocal,
+    bedrockSignInApprovePrivate,
+    bedrockSignInApprovePublic,
+    bedrockSignInChooseWhere,
+    bedrockSignInFromClaudeSettings,
+    bedrockSignInFromOrganization,
+    bedrockSignInNoKey,
+    bedrockSignInOrganization,
+    bedrockSignInSend,
+    bedrockSignInSettingsNoKey,
+    bedrockSignInStraightToAws,
+    bedrockSignInWhere,
+    bedrockUnreachable,
     cardAfterMergeDoerCrewmate,
     cardAfterMergeDoerFirstmate,
     cardAfterMergeLead,
@@ -118269,6 +119856,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     feedUndelivered,
     feedUnsafeDataReaderReported,
     feedUpdated,
+    feedWriteNotSentOnWords,
+    feedWriteSentOnWords,
+    feedWriteUnknownOnWords,
     feedYouChose,
     feedbackStripAccount,
     feedbackStripBug,
@@ -118319,17 +119909,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     handoverWontStopText,
     handoverWontStopTitle,
     integrationsClientFileNotTaken,
+    integrationsConfirmChoice,
+    integrationsConfirmLeadFirstmate,
+    integrationsConfirmLeadPanel,
+    integrationsConfirmLeadTask,
+    integrationsConfirmNotNow,
+    integrationsConfirmSend,
+    integrationsConfirmTitle,
+    integrationsConfirmWays,
+    integrationsConfirmWords,
     integrationsConnectOfferBody,
     integrationsConnectOfferButton,
     integrationsConnectOfferNotNow,
     integrationsConnectOfferOpen,
     integrationsConnectOfferTitle,
+    integrationsGoogleAgentRefused,
+    integrationsGoogleAgentRefusedDetail,
     integrationsGoogleClientFileIncomplete,
     integrationsGoogleClientFileNotJson,
     integrationsGoogleClientFileWeb,
     integrationsGoogleExchangeOperation,
     integrationsGoogleExchangeReason,
     integrationsGoogleExchangeResult,
+    integrationsGoogleOpenCloud,
+    integrationsGoogleServiceCalendar,
+    integrationsGoogleServiceGmail,
+    integrationsGoogleServiceOff,
+    integrationsGoogleServiceOffDetail,
     integrationsGoogleSetUp,
     integrationsGoogleSetUpAgain,
     integrationsGoogleSetUpFirst,
@@ -120180,6 +121786,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsSubscriptionsRetrying,
     settingsSubscriptionsRowActions,
     settingsSubscriptionsSavedResets,
+    settingsSubscriptionsSentThrough,
     settingsSubscriptionsSignIn,
     settingsSubscriptionsSignInAgainState,
     settingsSubscriptionsSignedIn,
@@ -120613,7 +122220,21 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     taskGroupQueued,
     taskGroupWaiting,
     taskGroupWorking,
+    taskHoldAsksFirst,
+    taskHoldChecks,
+    taskHoldCostLimit,
+    taskHoldDecisions,
+    taskHoldLoadLine,
+    taskHoldParts,
+    taskHoldProof,
+    taskHoldRetired,
+    taskHoldStory,
+    taskHoldWaits,
     taskNoteReworkHeld,
+    taskOverrideDirectionGone,
+    taskOverrideDirectionRevised,
+    taskOverrideDirectionTask,
+    taskOverrideDirectionVersion,
     taskPinPin,
     taskPinUnpin,
     taskStatusComputerUpdating,
@@ -121128,6 +122749,26 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "automationWaitsForNote": [],
     "automationWaitsForPlaceholder": [],
     "batchesReadWords": [],
+    "bedrockAddressInvalid": [],
+    "bedrockAddressMoved": ["host"],
+    "bedrockAddressNotFound": ["host"],
+    "bedrockAddressPlainHttp": [],
+    "bedrockAddressRefused": ["host"],
+    "bedrockSecureConnectionFailed": ["host"],
+    "bedrockSignInAddress": [],
+    "bedrockSignInApproveLocal": ["host"],
+    "bedrockSignInApprovePrivate": ["host"],
+    "bedrockSignInApprovePublic": ["host"],
+    "bedrockSignInChooseWhere": [],
+    "bedrockSignInFromClaudeSettings": [],
+    "bedrockSignInFromOrganization": [],
+    "bedrockSignInNoKey": [],
+    "bedrockSignInOrganization": [],
+    "bedrockSignInSend": [],
+    "bedrockSignInSettingsNoKey": [],
+    "bedrockSignInStraightToAws": [],
+    "bedrockSignInWhere": [],
+    "bedrockUnreachable": ["host"],
     "cardAfterMergeDoerCrewmate": [],
     "cardAfterMergeDoerFirstmate": [],
     "cardAfterMergeLead": [],
@@ -122020,6 +123661,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "feedUndelivered": ["why"],
     "feedUnsafeDataReaderReported": [],
     "feedUpdated": ["text"],
+    "feedWriteNotSentOnWords": ["call", "place", "why", "words"],
+    "feedWriteSentOnWords": ["call", "place", "status", "words"],
+    "feedWriteUnknownOnWords": ["call", "place", "words"],
     "feedYouChose": ["choice"],
     "feedbackStripAccount": ["login"],
     "feedbackStripBug": [],
@@ -122070,17 +123714,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "handoverWontStopText": ["to"],
     "handoverWontStopTitle": ["from"],
     "integrationsClientFileNotTaken": ["name"],
+    "integrationsConfirmChoice": ["place"],
+    "integrationsConfirmLeadFirstmate": ["place"],
+    "integrationsConfirmLeadPanel": ["panel", "place"],
+    "integrationsConfirmLeadTask": ["place", "task"],
+    "integrationsConfirmNotNow": [],
+    "integrationsConfirmSend": ["place"],
+    "integrationsConfirmTitle": ["action", "place"],
+    "integrationsConfirmWays": ["place"],
+    "integrationsConfirmWords": ["place"],
     "integrationsConnectOfferBody": ["name"],
     "integrationsConnectOfferButton": [],
     "integrationsConnectOfferNotNow": [],
     "integrationsConnectOfferOpen": ["name"],
     "integrationsConnectOfferTitle": ["name"],
+    "integrationsGoogleAgentRefused": [],
+    "integrationsGoogleAgentRefusedDetail": [],
     "integrationsGoogleClientFileIncomplete": [],
     "integrationsGoogleClientFileNotJson": [],
     "integrationsGoogleClientFileWeb": [],
     "integrationsGoogleExchangeOperation": [],
     "integrationsGoogleExchangeReason": [],
     "integrationsGoogleExchangeResult": [],
+    "integrationsGoogleOpenCloud": [],
+    "integrationsGoogleServiceCalendar": [],
+    "integrationsGoogleServiceGmail": [],
+    "integrationsGoogleServiceOff": [],
+    "integrationsGoogleServiceOffDetail": ["count", "services"],
     "integrationsGoogleSetUp": [],
     "integrationsGoogleSetUpAgain": [],
     "integrationsGoogleSetUpFirst": [],
@@ -123931,6 +125591,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsSubscriptionsRetrying": [],
     "settingsSubscriptionsRowActions": ["account"],
     "settingsSubscriptionsSavedResets": ["count", "site"],
+    "settingsSubscriptionsSentThrough": ["host"],
     "settingsSubscriptionsSignIn": [],
     "settingsSubscriptionsSignInAgainState": [],
     "settingsSubscriptionsSignedIn": [],
@@ -124364,7 +126025,21 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "taskGroupQueued": [],
     "taskGroupWaiting": [],
     "taskGroupWorking": [],
+    "taskHoldAsksFirst": [],
+    "taskHoldChecks": [],
+    "taskHoldCostLimit": [],
+    "taskHoldDecisions": [],
+    "taskHoldLoadLine": [],
+    "taskHoldParts": [],
+    "taskHoldProof": [],
+    "taskHoldRetired": [],
+    "taskHoldStory": [],
+    "taskHoldWaits": [],
     "taskNoteReworkHeld": ["title"],
+    "taskOverrideDirectionGone": ["direction", "holds"],
+    "taskOverrideDirectionRevised": ["direction", "holds"],
+    "taskOverrideDirectionTask": ["direction", "holds", "words"],
+    "taskOverrideDirectionVersion": ["direction", "holds", "words"],
     "taskPinPin": [],
     "taskPinUnpin": [],
     "taskStatusComputerUpdating": ["computer"],

@@ -42,6 +42,7 @@ A card that arrives while one is shown waits behind it as in the window; it neve
 `startCardOverlay` makes one `type: "panel"` window on each press and destroys it on each leave, so no overlay page, timer or poll runs while it is hidden.
 It is frameless, clear, shadowless and floating above full-screen apps on every Space, at the trailing edge of the display the pointer is on (a game holds the pointer on its own display): one 560-point card 24 points from the edge, centred in the display's height and no taller than it (`overlayBounds`).
 In a right-to-left language it sits at the left edge.
+A card made large takes the display's whole work area while it stays large, and the panel returns to its place when it shrinks: the page tells the main process (`inf:overlay:wide`), which resizes the panel, and the clear area around the large card still lets the pointer through.
 There is no glass, dimmer, sound or badge; the card moves in once from the edge, and under Reduce Motion it is there at once.
 
 The page is marked as the overlay's by a preload argument (`--inf-card-overlay`), which sets `html[data-card-overlay]` before its first paint.
@@ -49,8 +50,10 @@ It starts only the stack's reads (`startOverlayStore`): the cards, their threads
 It draws `CardLayer` itself, so every card's peeks, pager, replies, fields, thread and host choices work as in the window, and so does card admission: a choice runs once through the same action path, and a refusal stays on the card.
 
 A choice that opens Infinitary's window - Settings, a browser, a sign-in - is refused on the card with the words that it opens the window, so it is made there and never runs out of sight.
+The system's file and folder pickers are refused the same way (`pickFiles`, `pickProjectFolder`): a picker would take the keys and send the panel away under it.
+Files dropped on the thread still attach.
 
-The page tells the main process it is ready once the shown card is drawn and live, or after 1.5 seconds; only then does the panel show, with the keys when there is a card (`show()`) and without them when none waits (`showInactive()`).
+The page tells the main process it is ready once the shown card is drawn and live, or at the stack's own hold limit (`HOLD_LIMIT_MS`), past which the stack shows the card as it is; only then does the panel show, with the keys when there is a card (`show()`) and without them when none waits (`showInactive()`).
 As a nonactivating panel it takes the keys while the game stays the front app.
 
 ## Keys and pointer

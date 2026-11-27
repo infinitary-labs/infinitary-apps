@@ -5,7 +5,7 @@ import { guardHeldPresses } from "../app/heldKeys";
 import { followNotTypingKeys } from "../app/notTypingKeys";
 import { followShellCommands } from "../app/shellCommands";
 import { shownEntry, stackOf } from "../app/stack";
-import { CardLayer } from "../app/stage/CardLayer";
+import { CardLayer, HOLD_LIMIT_MS } from "../app/stage/CardLayer";
 import { useShellStore } from "../app/store";
 import { closeCardFind, useCardFind } from "../cards/cardFind";
 import { focusWithRing } from "../design/focus";
@@ -14,12 +14,6 @@ import { guardFrameFocus } from "../plugins/frames/frameFocus";
 import { settleOverlayDrafts, startOverlayStore } from "./overlayStart";
 import { overlayTarget } from "./overlayTarget";
 import "./overlay.css";
-
-/**
- * How long the shown card may take to be ready before the panel shows it
- * as it is: the stack's own hold limit (`HOLD_LIMIT_MS` in CardLayer).
- */
-const READY_LIMIT_MS = 1_500;
 
 /** The panel's own clear area, where a click belongs to the app behind it. */
 const CLEAR = "html, body, #root, [data-card-overlay-root], [data-stage]";
@@ -90,7 +84,8 @@ export function CardOverlay() {
     };
     const observer = new MutationObserver(check);
     observer.observe(document.body, { subtree: true, childList: true, attributes: true });
-    const limit = setTimeout(tell, READY_LIMIT_MS);
+    // The stack's own hold limit: past it the stack shows the entry as it is, so the panel does too.
+    const limit = setTimeout(tell, HOLD_LIMIT_MS);
     check();
     return () => {
       done = true;
@@ -139,6 +134,23 @@ export function CardOverlay() {
     window.addEventListener("keydown", down);
     return () => window.removeEventListener("keydown", down);
   }, [leave]);
+
+  // A card made large takes the display's width, the plan's deliberate expansion of wide content;
+  // the stack marks it on the page's root (CardLayer).
+  useEffect(() => {
+    const root = document.documentElement;
+    let wide = false;
+    const follow = () => {
+      const now = root.hasAttribute("data-card-maximized");
+      if (now === wide) return;
+      wide = now;
+      void window.infinitary.cardOverlay.wide(now);
+    };
+    const observer = new MutationObserver(follow);
+    observer.observe(root, { attributes: true, attributeFilter: ["data-card-maximized"] });
+    follow();
+    return () => observer.disconnect();
+  }, []);
 
   // Off the card, the panel's clear area lets the pointer through to the app behind.
   useEffect(() => {

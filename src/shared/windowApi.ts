@@ -451,6 +451,8 @@ export type FirstmateApi = {
     hide: () => Promise<{ ok: true }>;
     /** Whether the pointer is over the card; elsewhere the panel's clicks reach the app behind it. */
     pointer: (over: boolean) => Promise<{ ok: true }>;
+    /** A card made large: the panel takes the display's whole width while it is. */
+    wide: (wide: boolean) => Promise<{ ok: true }>;
     /** The panel is going: settle unsent words, then `hide`. */
     onLeave: (listener: () => void) => () => void;
   };

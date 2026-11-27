@@ -313,6 +313,7 @@ describe("ipc contract", () => {
       "inf:overlay:settings",
       "inf:overlay:settings:set",
       "inf:overlay:start",
+      "inf:overlay:wide",
       // The save sheet for Secrets history, metadata only, on the window the
       // captain chose it in (docs/secrets.md).
       "inf:secrets:export",

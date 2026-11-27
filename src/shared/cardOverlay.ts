@@ -88,9 +88,12 @@ export type Rect = { x: number; y: number; width: number; height: number };
  * Where the panel goes on a display: the full height of its work area, at
  * its trailing edge, so the card's own right edge sits `OVERLAY_EDGE` from
  * it. The stage's air is half on each side of the card. A display narrower
- * than the panel gets the whole width.
+ * than the panel gets the whole width, and so does a card made large
+ * (`wide`), the plan's deliberate expansion of wide content.
  */
-export function overlayBounds(workArea: Rect, rightToLeft = false): Rect {
+export function overlayBounds(workArea: Rect, rightToLeft = false, wide = false): Rect {
+  // A card made large takes the whole work area; its clear air still lets clicks through.
+  if (wide) return { ...workArea };
   const width = Math.min(OVERLAY_WIDTH, workArea.width);
   const inset = Math.max(0, Math.min(OVERLAY_EDGE - STAGE_AIR, workArea.width - width));
   const x = rightToLeft ? workArea.x + inset : workArea.x + workArea.width - width - inset;

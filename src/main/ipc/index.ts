@@ -221,6 +221,10 @@ export function registerIpc(options: IpcOptions): void {
     if (panel) cardOverlay.controller.hideAsked(panel);
     return { ok: true as const };
   });
+  handleInvoke("inf:overlay:wide", rendererSource, (event, wide) => {
+    cardOverlay.wide(event.sender, wide);
+    return { ok: true as const };
+  });
   handleInvoke("inf:overlay:pointer", rendererSource, (event, over) => {
     cardOverlay.pointer(event.sender, over);
     return { ok: true as const };

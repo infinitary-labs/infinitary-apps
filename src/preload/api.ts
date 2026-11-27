@@ -280,6 +280,7 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
       ready: (cards) => invoke("inf:overlay:ready", { cards }),
       hide: () => invoke("inf:overlay:hide"),
       pointer: (over) => invoke("inf:overlay:pointer", over),
+      wide: (wide) => invoke("inf:overlay:wide", wide),
       onLeave: (listener) => subscribe("inf:overlay:leave", () => listener()),
     },
     devices: {

@@ -195,6 +195,13 @@ export const shellChannels = {
     request: z.tuple([]),
     response: okSchema,
   },
+  // A card made large in the overlay: the panel takes the display's whole width while it is, and its own width after.
+  "inf:overlay:wide": {
+    effect: "change",
+    surface: "host",
+    request: z.tuple([z.boolean()]),
+    response: okSchema,
+  },
   // Whether the pointer is over the card: elsewhere the panel's clicks go through to the app behind it.
   "inf:overlay:pointer": {
     effect: "change",

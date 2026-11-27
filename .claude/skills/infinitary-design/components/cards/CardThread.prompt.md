@@ -49,7 +49,7 @@ When that card would fall under 400px the docked panels **fold** - the rails giv
 Collapsed panel headers stay visible but reserve no card clearance, except one the input would stand on, which steps aside while a card is up (`../voice/VoiceInput.prompt.md`, "Short windows").
 The create-your-own-panel slot reserves it as an expanded panel does, so a wide card never covers it.
 A maximized card (`ResponseCard.prompt.md`, "Maximize") keeps its open thread as the right column at the same width rule, on a stage that is the whole window, and the card takes the rest; there are no edge tabs while it is maximized.
-Only if the pair still does not fit does the thread go **in place** - a segmented control in the card's head (`card` · `thread · N`) swaps the body for the message list - which needs a stage under 720px and is out of reach at the app's 960px window minimum.
+Only if the pair still does not fit does the thread go **in place** - a segmented control in the card's head (`card` · `thread · N`) swaps the body for the message list - which needs a stage under 720px: out of reach at the window's 960px minimum, and always the case in the card overlay's narrow panel.
 
 The thread column, top to bottom: a mono micro-label head (`THREAD` alone, `--text-xs`, `.08em` tracking, uppercase, level with the card's head), the message list, the reply row, and the card's choices at its foot.
 The head never repeats the card's author, model or corner: the card beside it already carries them (the captain: "this thread panel should not repeat the task title and model name and the close button, because the attached card already has all of that"), and the card's own minus puts the card and its thread away.

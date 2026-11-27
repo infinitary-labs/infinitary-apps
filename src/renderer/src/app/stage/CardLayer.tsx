@@ -126,7 +126,7 @@ const maximizedHeight = (pager: boolean) =>
  * budget. Past it the entry appears as it is - an expiry is never counted
  * as readiness.
  */
-const HOLD_LIMIT_MS = FRAME_WATCHDOG_INTERVAL_MS * FRAME_WATCHDOG_MISSES;
+export const HOLD_LIMIT_MS = FRAME_WATCHDOG_INTERVAL_MS * FRAME_WATCHDOG_MISSES;
 
 /** The shown entry's laid-out width, whatever its arrival's scale. */
 function shownBox(shell: HTMLElement | null): number | undefined {

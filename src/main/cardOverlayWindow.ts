@@ -11,6 +11,7 @@ import {
   BrowserWindow,
   globalShortcut,
   powerMonitor,
+  type Rectangle,
   screen,
   type WebContents,
 } from "electron";
@@ -61,13 +62,15 @@ export type CardOverlayHost = {
   panelOf(sender: WebContents): OverlayPanel | null;
   /** The pointer moved onto the card or off it: elsewhere, clicks go to the app behind. */
   pointer(sender: WebContents, over: boolean): void;
+  /** The card was made large or restored: the panel spans the display's width while it is large. */
+  wide(sender: WebContents, wide: boolean): void;
 };
 
 /** The Mac menu's keys the overlay holds back: ⌘Q and ⌘W send it away, and none quits, hides or opens the app. */
 const MENU_KEYS = new Set(["q", "w", "h", "m", ","]);
 
 export function startCardOverlay(options: CardOverlayWindowOptions): CardOverlayHost {
-  let shown: { win: BrowserWindow; panel: OverlayPanel } | null = null;
+  let shown: { win: BrowserWindow; panel: OverlayPanel; workArea: Rectangle } | null = null;
 
   const openPanel = (gone: () => void): OverlayPanel => {
     // The game's display is the pointer's: a game holds the pointer on its own display.
@@ -118,7 +121,7 @@ export function startCardOverlay(options: CardOverlayWindowOptions): CardOverlay
           win.webContents.send("inf:overlay:leave", {});
       },
     };
-    shown = { win, panel };
+    shown = { win, panel, workArea: display.workArea };
     win.on("closed", () => {
       if (shown?.win === win) shown = null;
       gone();
@@ -169,6 +172,10 @@ export function startCardOverlay(options: CardOverlayWindowOptions): CardOverlay
     controller,
     panelOf: (sender) =>
       shown && !shown.win.isDestroyed() && shown.win.webContents === sender ? shown.panel : null,
+    wide: (sender, wide) => {
+      if (!shown || shown.win.isDestroyed() || shown.win.webContents !== sender) return;
+      shown.win.setBounds(overlayBounds(shown.workArea, options.rightToLeft(), wide));
+    },
     pointer: (sender, over) => {
       if (!shown || shown.win.isDestroyed() || shown.win.webContents !== sender) return;
       shown.win.setIgnoreMouseEvents(!over, { forward: true });

@@ -1,3 +1,4 @@
+import { followPresence } from "../ambient/presence";
 import { startCardDrafts } from "../app/cardDrafts";
 import type { DraftSync } from "../app/draftSync";
 import { projectFocus } from "../app/projectFocus";
@@ -16,6 +17,8 @@ let drafts: DraftSync | null = null;
 export function startOverlayStore(): Promise<void> {
   const { getState: get, setState: set, subscribe } = useShellStore;
   set({ initialized: true });
+  // A card counts as seen only while someone is at this computer, as in the window (../cards/useSeenReport.ts).
+  followPresence();
   window.infinitary.devices.onThisMac((thisMac) => get().applyThisMac(thisMac));
   void window.infinitary.devices
     .thisMac()

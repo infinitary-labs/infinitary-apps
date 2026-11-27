@@ -625,6 +625,10 @@ export const HOST_ACTION_EXCEPTIONS: Partial<Record<HostInvokeChannel, ActionExc
   ],
   "inf:overlay:ready": ["window", "The card overlay's page drew its card, so its panel shows"],
   "inf:overlay:hide": ["window", "The card overlay's page let go, so its panel goes"],
+  "inf:overlay:wide": [
+    "window",
+    "The card overlay's panel widening to the display while its card is made large, and back",
+  ],
   "inf:overlay:pointer": [
     "window",
     "Whether the pointer is over the overlay's card, so clicks elsewhere reach the app behind it",

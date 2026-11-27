@@ -1393,9 +1393,9 @@ function SettingsRowView({ row }: { row: SettingsRow }) {
 }
 
 /**
- * The in-place rung's head control (`card` · `thread · N`). It exists
- * because the ladder must end somewhere: it needs a stage under 720px,
- * which the app's own 960px window minimum puts out of reach.
+ * The in-place rung's head control (`card` · `thread · N`): it needs a stage
+ * under 720px, which the window's 960px minimum never gives and the card
+ * overlay's narrow panel always does (docs/card-overlay.md).
  */
 export function ThreadSegments({
   showing,

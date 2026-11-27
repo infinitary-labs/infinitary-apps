@@ -9,7 +9,7 @@ html[data-card-overlay] {
   --card-max-height: calc(100vh - 2 * var(--space-6));
 }
 /* No composer lifts the stack: the card is centred in the panel's height. */
-html[data-card-overlay] [data-card-layer]:not([data-card-maximized]),
+html[data-card-overlay]:not([data-card-maximized]) [data-card-layer],
 html[data-card-overlay] [data-card-layer-leaving] {
   /* biome-ignore lint/complexity/noImportantStyles: the stack sets its top inline (STAGE_TOP), which only !important outranks */
   top: 50% !important;

@@ -124,14 +124,24 @@ export function KeyboardTab() {
     prefixRecordingNow.current = next;
     setPrefixRecordingState(next);
   };
+  // The card overlay's key being recorded (docs/card-overlay.md): one recording at a time, as every row's.
+  const [overlayRecording, setOverlayRecordingState] = useState(false);
+  const overlayRecordingNow = useRef(false);
+  const setOverlayRecording = (next: boolean) => {
+    overlayRecordingNow.current = next;
+    setOverlayRecordingState(next);
+  };
+  /** The overlay row's answer to a recorded press, which it saves or refuses. */
+  const overlayPress = useRef<((chord: KeyChord) => void) | null>(null);
   const [error, setError] = useState<{
     at: AnyCommandId | "all" | "prefix";
     text: string;
   } | null>(null);
   const [saving, setSaving] = useState(false);
   const [resetArmed, setResetArmed] = useState(false);
-  const recordingId = recording?.id ?? (prefixRecording ? "prefix" : null);
-  const anyRecording = recording !== null || prefixRecording !== null;
+  const recordingId =
+    recording?.id ?? (prefixRecording ? "prefix" : overlayRecording ? "card-overlay" : null);
+  const anyRecording = recording !== null || prefixRecording !== null || overlayRecording;
 
   /** Saves a change whole; a refusal stays beside the row it came from. */
   const write = (next: SavedKeymap, at: AnyCommandId | "all" | "prefix") => {
@@ -158,8 +168,8 @@ export function KeyboardTab() {
       .finally(() => setSaving(false));
   };
 
-  const latest = useRef({ snapshot, write, setRecording, setPrefixRecording });
-  latest.current = { snapshot, write, setRecording, setPrefixRecording };
+  const latest = useRef({ snapshot, write, setRecording, setPrefixRecording, setOverlayRecording });
+  latest.current = { snapshot, write, setRecording, setPrefixRecording, setOverlayRecording };
 
   // While a row records, the window's keys pass to it alone (docs/keyboard.md),
   // marked on the document once the main process has started or stopped.
@@ -176,6 +186,7 @@ export function KeyboardTab() {
     const stop = () => {
       latest.current.setRecording(null);
       latest.current.setPrefixRecording(null);
+      latest.current.setOverlayRecording(false);
     };
     window.addEventListener("blur", stop);
     return () => {
@@ -193,6 +204,15 @@ export function KeyboardTab() {
     () =>
       window.infinitary.keyboard.onRecorded((key) => {
         const { snapshot: installed, write: save, setRecording: record } = latest.current;
+        if (overlayRecordingNow.current) {
+          const action = recorderKey(key);
+          if (action.kind === "cancel") latest.current.setOverlayRecording(false);
+          else if (action.kind === "press")
+            overlayPress.current?.(
+              chordOfPress({ ...action.key, composing: false, repeat: false }),
+            );
+          return;
+        }
         const prefixNow = prefixRecordingNow.current;
         if (prefixNow) {
           const action = recorderKey(key);
@@ -295,7 +315,17 @@ export function KeyboardTab() {
       <div style={{ marginBottom: ROW_GAP }}>
         <KeyReminderRow />
       </div>
-      <CardOverlayRow busy={anyRecording} />
+      <CardOverlayRow
+        recording={overlayRecording}
+        pressTo={overlayPress}
+        onRecord={() => {
+          setError(null);
+          setRecording(null);
+          setPrefixRecording(null);
+          setOverlayRecording(true);
+        }}
+        onStop={() => setOverlayRecording(false)}
+      />
       {prefix && (
         <div style={{ marginBottom: ROW_GAP }}>
           <PrefixRow
@@ -306,6 +336,7 @@ export function KeyboardTab() {
             onRecord={() => {
               setError(null);
               setRecording(null);
+              setOverlayRecording(false);
               setPrefixRecording({ chord: null });
             }}
             onCancel={() => setPrefixRecording(null)}
@@ -376,6 +407,7 @@ export function KeyboardTab() {
             onRecord={() => {
               setError(null);
               setPrefixRecording(null);
+              setOverlayRecording(false);
               setRecording({ id, keys: null });
             }}
             onCancel={() => setRecording(null)}
@@ -941,15 +973,23 @@ function overlayError(
  * included. A key another program holds is refused and the one before it
  * keeps working; recording saves the first press that may summon.
  */
-function CardOverlayRow({ busy }: { busy: boolean }) {
+function CardOverlayRow({
+  recording,
+  pressTo,
+  onRecord,
+  onStop,
+}: {
+  recording: boolean;
+  /** Filled with this row's answer to a press the Keyboard tab recorded for it. */
+  pressTo: React.MutableRefObject<((chord: KeyChord) => void) | null>;
+  onRecord: () => void;
+  onStop: () => void;
+}) {
   const [overlay, setOverlay] = useState<CardOverlay | null>(null);
   const [refused, setRefused] = useState<{ reason: CardOverlayRefusal; key: KeyChord } | null>(
     null,
   );
-  const [recording, setRecording] = useState(false);
   const [saving, setSaving] = useState(false);
-  const latest = useRef(overlay);
-  latest.current = overlay;
 
   useEffect(() => {
     let current = true;
@@ -973,50 +1013,15 @@ function CardOverlayRow({ busy }: { busy: boolean }) {
       .then(({ overlay: next, refused: reason }) => {
         setOverlay(next);
         setRefused(reason ? { reason, key } : null);
-        if (reason !== "not-allowed") setRecording(false);
+        if (reason !== "not-allowed") onStop();
       })
       .catch(() => {})
       .finally(() => setSaving(false));
   };
-  const saveNow = useRef(save);
-  saveNow.current = save;
-
-  // While recording, the window's keys come here alone, as for any key row (docs/keyboard.md).
-  useEffect(() => {
-    if (!recording) return;
-    let current = true;
-    useShellStore.setState({ recordingKeys: true });
-    void window.infinitary.keyboard
-      .record(true)
-      .then(() => {
-        if (current) markWindowKeys("recording");
-      })
-      .catch(() => {});
-    const stopRecorded = window.infinitary.keyboard.onRecorded((key) => {
-      const action = recorderKey(key);
-      if (action.kind === "cancel") {
-        setRecording(false);
-        return;
-      }
-      if (action.kind !== "press") return;
-      const chord = chordOfPress({ ...action.key, composing: false, repeat: false });
-      const now = latest.current;
-      if (!overlayKeyAllowed(chord)) setRefused({ reason: "not-allowed", key: chord });
-      else if (now) saveNow.current(now.on, chord);
-    });
-    const blur = () => setRecording(false);
-    window.addEventListener("blur", blur);
-    return () => {
-      current = false;
-      stopRecorded();
-      window.removeEventListener("blur", blur);
-      useShellStore.setState({ recordingKeys: false });
-      void window.infinitary.keyboard
-        .record(false)
-        .then(() => markWindowKeys("commands"))
-        .catch(() => {});
-    };
-  }, [recording]);
+  pressTo.current = (chord) => {
+    if (!overlayKeyAllowed(chord)) setRefused({ reason: "not-allowed", key: chord });
+    else if (overlay) save(overlay.on, chord);
+  };
 
   if (!overlay || overlay.problem === "unsupported") return null;
   const system = thisDesktop().keys;
@@ -1037,10 +1042,11 @@ function CardOverlayRow({ busy }: { busy: boolean }) {
               size="sm"
               aria-label={m.settingsKeyboardCardOverlayChangeLabel()}
               aria-pressed={recording}
-              disabled={saving || (busy && !recording)}
+              disabled={saving}
               onClick={() => {
                 setRefused(null);
-                setRecording(!recording);
+                if (recording) onStop();
+                else onRecord();
               }}
             >
               {m.settingsKeyboardCardOverlayChange()}
@@ -1077,7 +1083,7 @@ function CardOverlayRow({ busy }: { busy: boolean }) {
                 {m.settingsKeyboardCardOverlayPress()}
               </div>
               <div>
-                <Button variant="ghost" size="sm" onClick={() => setRecording(false)}>
+                <Button variant="ghost" size="sm" onClick={onStop}>
                   {m.settingsKeyboardPrefixCancel()}
                 </Button>
               </div>

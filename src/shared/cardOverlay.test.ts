@@ -52,6 +52,12 @@ describe("overlayBounds", () => {
     expect(OVERLAY_WIDTH).toBeGreaterThan(500);
     expect(OVERLAY_EDGE).toBe(24);
   });
+
+  it("takes the display's whole work area for a card made large", () => {
+    // The plan's deliberate expansion: wide content gets the display, not the 560-point panel.
+    expect(overlayBounds(display, false, true)).toEqual({ x: 0, y: 25, width: 1512, height: 920 });
+    expect(overlayBounds(display, true, true)).toEqual({ x: 0, y: 25, width: 1512, height: 920 });
+  });
 });
 
 describe("overlayRunsCommand", () => {

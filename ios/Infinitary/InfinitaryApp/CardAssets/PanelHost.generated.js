@@ -50108,6 +50108,195 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Background work stopped`;
   }
+  function panelMountFailed() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر فتح هذه اللوحة.`;
+      case "de":
+        return `Dieses Panel konnte nicht geöffnet werden.`;
+      case "es":
+        return `No se pudo abrir este panel.`;
+      case "fr":
+        return `Ce panneau n’a pas pu être ouvert.`;
+      case "ja":
+        return `このパネルを開けませんでした。`;
+      case "ko":
+        return `이 패널을 열 수 없었어요.`;
+      case "pt-BR":
+        return `Não foi possível abrir este painel.`;
+      case "zh-Hans":
+        return `无法打开这个面板。`;
+      case "zh-Hant":
+        return `無法開啟這個面板。`;
+      case "en-XA":
+        return `[Ţĥîš þáñéļ çöûļð ñöţ ƀé öþéñéð. ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This panel could not be opened.‬`;
+    }
+    return `This panel could not be opened.`;
+  }
+  function panelMountNoEntry() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر استخدام شيفرة هذه اللوحة: ليس فيها ملف تبدأ منه.`;
+      case "de":
+        return `Der Code dieses Panels ist nicht nutzbar: Ihm fehlt die Datei, mit der er startet.`;
+      case "es":
+        return `No se pudo usar el código de este panel: no tiene un archivo desde el que empezar.`;
+      case "fr":
+        return `Le code de ce panneau n’a pas pu être utilisé : il n’a pas de fichier par lequel démarrer.`;
+      case "ja":
+        return `このパネルのコードを使えませんでした。開始するファイルがありません。`;
+      case "ko":
+        return `이 패널의 코드를 쓸 수 없었어요. 시작할 파일이 없어요.`;
+      case "pt-BR":
+        return `Não foi possível usar o código deste painel: ele não tem um arquivo para começar.`;
+      case "zh-Hans":
+        return `无法使用这个面板的代码：它没有可以启动的文件。`;
+      case "zh-Hant":
+        return `無法使用這個面板的程式碼：它沒有可以啟動的檔案。`;
+      case "en-XA":
+        return `[Ţĥîš þáñéļ'š çöðé çöûļð ñöţ ƀé ûšéð: îţ ĥáš ñö ƒîļé ţö šţáŕţ ƒŕöɱ. ~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This panel's code could not be used: it has no file to start from.‬`;
+    }
+    return `This panel's code could not be used: it has no file to start from.`;
+  }
+  function panelMountNotServed() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الحاسوب الذي يقيم عليه نائب القبطان لا يقدّم هذه اللوحة الآن.`;
+      case "de":
+        return `Der Computer, auf dem dein erster Offizier lebt, stellt dieses Panel gerade nicht bereit.`;
+      case "es":
+        return `La computadora donde vive tu primer oficial no está ofreciendo este panel ahora.`;
+      case "fr":
+        return `L’ordinateur où vit votre second ne fournit pas ce panneau pour le moment.`;
+      case "ja":
+        return `一等航海士がいるコンピューターは、今このパネルを提供していません。`;
+      case "ko":
+        return `일등항해사가 있는 컴퓨터가 지금 이 패널을 제공하지 않아요.`;
+      case "pt-BR":
+        return `O computador onde seu imediato mora não está oferecendo este painel agora.`;
+      case "zh-Hans":
+        return `你的大副所在的电脑现在没有提供这个面板。`;
+      case "zh-Hant":
+        return `你的大副所在的電腦現在沒有提供這個面板。`;
+      case "en-XA":
+        return `[Ţĥé çöɱþûţéŕ ŵĥéŕé ýöûŕ ƒîŕšţ ɱáţé ļîṽéš îš ñöţ šéŕṽîñĝ ţĥîš þáñéļ ñöŵ. ~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The computer where your first mate lives is not serving this panel now.‬`;
+    }
+    return `The computer where your first mate lives is not serving this panel now.`;
+  }
+  function panelMountOtherVersion() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تُفتح هذه اللوحة حين يصبح Infinitary هنا وعلى الحاسوب الذي يقيم عليه نائب القبطان على النسخة نفسها.`;
+      case "de":
+        return `Dieses Panel öffnet sich, sobald Infinitary hier und auf dem Computer, auf dem dein erster Offizier lebt, dieselbe Version hat.`;
+      case "es":
+        return `Este panel se abre cuando Infinitary aquí y en la computadora donde vive tu primer oficial tengan la misma versión.`;
+      case "fr":
+        return `Ce panneau s’ouvre dès qu’Infinitary ici et sur l’ordinateur où vit votre second ont la même version.`;
+      case "ja":
+        return `このパネルは、ここと一等航海士がいるコンピューターの Infinitary が同じバージョンになると開きます。`;
+      case "ko":
+        return `이 패널은 이곳과 일등항해사가 있는 컴퓨터의 Infinitary 버전이 같아지면 열려요.`;
+      case "pt-BR":
+        return `Este painel abre quando o Infinitary aqui e no computador onde seu imediato mora estiverem na mesma versão.`;
+      case "zh-Hans":
+        return `等这里和你的大副所在的电脑上的 Infinitary 版本相同后，这个面板就会打开。`;
+      case "zh-Hant":
+        return `等這裡和你的大副所在的電腦上的 Infinitary 版本相同後，這個面板就會開啟。`;
+      case "en-XA":
+        return `[Ţĥîš þáñéļ öþéñš öñçé Îñƒîñîţáŕý ĥéŕé áñð öñ ţĥé çöɱþûţéŕ ŵĥéŕé ýöûŕ ƒîŕšţ ɱáţé ļîṽéš áŕé öñ ţĥé šáɱé ṽéŕšîöñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This panel opens once Infinitary here and on the computer where your first mate lives are on the same version.‬`;
+    }
+    return `This panel opens once Infinitary here and on the computer where your first mate lives are on the same version.`;
+  }
+  function panelMountOutOfReach() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تُفتح هذه اللوحة حين يصل هذا الحاسوب إلى الحاسوب الذي يقيم عليه نائب القبطان.`;
+      case "de":
+        return `Dieses Panel öffnet sich, sobald dieser Computer den Computer erreicht, auf dem dein erster Offizier lebt.`;
+      case "es":
+        return `Este panel se abre cuando esta computadora llegue a la computadora donde vive tu primer oficial.`;
+      case "fr":
+        return `Ce panneau s’ouvre dès que cet ordinateur joint l’ordinateur où vit votre second.`;
+      case "ja":
+        return `このパネルは、このコンピューターが一等航海士がいるコンピューターにつながると開きます。`;
+      case "ko":
+        return `이 패널은 이 컴퓨터가 일등항해사가 있는 컴퓨터에 연결되면 열려요.`;
+      case "pt-BR":
+        return `Este painel abre quando este computador alcançar o computador onde seu imediato mora.`;
+      case "zh-Hans":
+        return `等这台电脑连上你的大副所在的电脑后，这个面板就会打开。`;
+      case "zh-Hant":
+        return `等這台電腦連上你的大副所在的電腦後，這個面板就會開啟。`;
+      case "en-XA":
+        return `[Ţĥîš þáñéļ öþéñš öñçé ţĥîš çöɱþûţéŕ ŕéáçĥéš ţĥé çöɱþûţéŕ ŵĥéŕé ýöûŕ ƒîŕšţ ɱáţé ļîṽéš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This panel opens once this computer reaches the computer where your first mate lives.‬`;
+    }
+    return `This panel opens once this computer reaches the computer where your first mate lives.`;
+  }
+  function panelMountTooLarge() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر استخدام شيفرة هذه اللوحة: إنها كبيرة جدًا.`;
+      case "de":
+        return `Der Code dieses Panels ist nicht nutzbar: Er ist zu groß.`;
+      case "es":
+        return `No se pudo usar el código de este panel: es demasiado grande.`;
+      case "fr":
+        return `Le code de ce panneau n’a pas pu être utilisé : il est trop volumineux.`;
+      case "ja":
+        return `このパネルのコードを使えませんでした。大きすぎます。`;
+      case "ko":
+        return `이 패널의 코드를 쓸 수 없었어요. 너무 커요.`;
+      case "pt-BR":
+        return `Não foi possível usar o código deste painel: ele é grande demais.`;
+      case "zh-Hans":
+        return `无法使用这个面板的代码：它太大了。`;
+      case "zh-Hant":
+        return `無法使用這個面板的程式碼：它太大了。`;
+      case "en-XA":
+        return `[Ţĥîš þáñéļ'š çöðé çöûļð ñöţ ƀé ûšéð: îţ îš ţöö ļáŕĝé. ~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This panel's code could not be used: it is too large.‬`;
+    }
+    return `This panel's code could not be used: it is too large.`;
+  }
+  function panelMountTooMany() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `اللوحات المفتوحة كثيرة جدًا. أغلق واحدة لتفتح هذه.`;
+      case "de":
+        return `Es sind zu viele Panels offen. Schließ eines, um dieses zu öffnen.`;
+      case "es":
+        return `Hay demasiados paneles abiertos. Cierra uno para abrir este.`;
+      case "fr":
+        return `Trop de panneaux sont ouverts. Fermez-en un pour ouvrir celui-ci.`;
+      case "ja":
+        return `開いているパネルが多すぎます。このパネルを開くには、どれか1つを閉じてください。`;
+      case "ko":
+        return `열린 패널이 너무 많아요. 이 패널을 열려면 하나를 닫아 주세요.`;
+      case "pt-BR":
+        return `Há painéis demais abertos. Feche um para abrir este.`;
+      case "zh-Hans":
+        return `打开的面板太多了。关闭一个，才能打开这个面板。`;
+      case "zh-Hant":
+        return `開啟的面板太多了。關閉一個，才能開啟這個面板。`;
+      case "en-XA":
+        return `[Ţöö ɱáñý þáñéļš áŕé öþéñ. Çļöšé öñé ţö öþéñ ţĥîš öñé. ~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Too many panels are open. Close one to open this one.‬`;
+    }
+    return `Too many panels are open. Close one to open this one.`;
+  }
   function panelMoveNotAsked() {
     switch (currentLanguage()) {
       case "ar":
@@ -119790,6 +119979,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     panelMarkFailing,
     panelMarkPaused,
     panelMarkStopped,
+    panelMountFailed,
+    panelMountNoEntry,
+    panelMountNotServed,
+    panelMountOtherVersion,
+    panelMountOutOfReach,
+    panelMountTooLarge,
+    panelMountTooMany,
     panelMoveNotAsked,
     panelRailFolded,
     panelRailMore,
@@ -123575,6 +123771,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "panelMarkFailing": ["time"],
     "panelMarkPaused": [],
     "panelMarkStopped": [],
+    "panelMountFailed": [],
+    "panelMountNoEntry": [],
+    "panelMountNotServed": [],
+    "panelMountOtherVersion": [],
+    "panelMountOutOfReach": [],
+    "panelMountTooLarge": [],
+    "panelMountTooMany": [],
     "panelMoveNotAsked": [],
     "panelRailFolded": [],
     "panelRailMore": ["count"],
@@ -132768,11 +132971,22 @@ ${FRAME_KEYBOARD_SCRIPT}
     panelFrameMountRequestSchema,
     pluginFrameMountRequestSchema
   ]);
-  object({
+  const frameMountSchema = object({
     mountId: string().min(1).max(64),
     /** Where the iframe loads the document from. */
     url: string().startsWith(`${APP_FRAME_SCHEME}://`)
   });
+  const PANEL_MOUNT_REFUSALS = [
+    "other-version",
+    "first-mate-out-of-reach",
+    "not-served-now",
+    "too-large",
+    "no-entry",
+    "too-many-open"
+  ];
+  const panelMountRefusalSchema = _enum(PANEL_MOUNT_REFUSALS);
+  const frameMountRefusedSchema = strictObject({ refused: panelMountRefusalSchema });
+  union([frameMountSchema, frameMountRefusedSchema]);
   const PANEL_MOUNT_HOST_PREFIX = "panel-";
   function panelMountHost(mountId) {
     return `${PANEL_MOUNT_HOST_PREFIX}${mountId}`;

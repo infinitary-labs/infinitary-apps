@@ -209,6 +209,34 @@ export const frameMountSchema = z.object({
 });
 export type FrameMount = z.infer<typeof frameMountSchema>;
 
+/**
+ * Why the host would not draw a panel, from a closed set the window words
+ * from its catalog: the host's own English never reaches the panel's place.
+ * - `other-version`: the panel's files were built for another version's panel library.
+ * - `first-mate-out-of-reach`: asking the first mate for the panel's files failed.
+ * - `not-served-now`: the first mate serves no such panel at that version.
+ * - `too-large`: the panel's files pass the bounds a panel's code keeps.
+ * - `no-entry`: the panel's files lack the module the mount starts from.
+ * - `too-many-open`: the window already holds its cap of panel mounts.
+ */
+export const PANEL_MOUNT_REFUSALS = [
+  "other-version",
+  "first-mate-out-of-reach",
+  "not-served-now",
+  "too-large",
+  "no-entry",
+  "too-many-open",
+] as const;
+export const panelMountRefusalSchema = z.enum(PANEL_MOUNT_REFUSALS);
+export type PanelMountRefusal = z.infer<typeof panelMountRefusalSchema>;
+
+export const frameMountRefusedSchema = z.strictObject({ refused: panelMountRefusalSchema });
+export type FrameMountRefused = z.infer<typeof frameMountRefusedSchema>;
+
+/** A mount, or a panel mount refused for a reason the window words. */
+export const frameMountAnswerSchema = z.union([frameMountSchema, frameMountRefusedSchema]);
+export type FrameMountAnswer = z.infer<typeof frameMountAnswerSchema>;
+
 export function frameMountUrl(mountId: string): string {
   return `${APP_FRAME_SCHEME}://mount/${mountId}`;
 }

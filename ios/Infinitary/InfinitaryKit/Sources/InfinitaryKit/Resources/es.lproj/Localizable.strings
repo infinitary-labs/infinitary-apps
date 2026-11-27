@@ -1840,6 +1840,13 @@
 "panelMarkFailing" = "Las lecturas en segundo plano fallan desde las %1$@";
 "panelMarkPaused" = "Trabajo en segundo plano en pausa";
 "panelMarkStopped" = "Trabajo en segundo plano detenido";
+"panelMountFailed" = "No se pudo abrir este panel.";
+"panelMountNoEntry" = "No se pudo usar el código de este panel: no tiene un archivo desde el que empezar.";
+"panelMountNotServed" = "La computadora donde vive tu primer oficial no está ofreciendo este panel ahora.";
+"panelMountOtherVersion" = "Este panel se abre cuando Infinitary aquí y en la computadora donde vive tu primer oficial tengan la misma versión.";
+"panelMountOutOfReach" = "Este panel se abre cuando esta computadora llegue a la computadora donde vive tu primer oficial.";
+"panelMountTooLarge" = "No se pudo usar el código de este panel: es demasiado grande.";
+"panelMountTooMany" = "Hay demasiados paneles abiertos. Cierra uno para abrir este.";
 "panelMoveNotAsked" = "Solo tu propio clic o tecla en este panel mueve una tarea. No se escribió nada.";
 "panelRailFolded" = "Paneles plegados por falta de espacio";
 "panelRailMore" = "%1$@ más";

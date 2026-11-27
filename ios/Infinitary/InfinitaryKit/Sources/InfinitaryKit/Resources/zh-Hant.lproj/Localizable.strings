@@ -1840,6 +1840,13 @@
 "panelMarkFailing" = "背景讀取自 %1$@ 起一直失敗";
 "panelMarkPaused" = "背景工作已暫停";
 "panelMarkStopped" = "背景工作已停止";
+"panelMountFailed" = "無法開啟這個面板。";
+"panelMountNoEntry" = "無法使用這個面板的程式碼：它沒有可以啟動的檔案。";
+"panelMountNotServed" = "你的大副所在的電腦現在沒有提供這個面板。";
+"panelMountOtherVersion" = "等這裡和你的大副所在的電腦上的 Infinitary 版本相同後，這個面板就會開啟。";
+"panelMountOutOfReach" = "等這台電腦連上你的大副所在的電腦後，這個面板就會開啟。";
+"panelMountTooLarge" = "無法使用這個面板的程式碼：它太大了。";
+"panelMountTooMany" = "開啟的面板太多了。關閉一個，才能開啟這個面板。";
 "panelMoveNotAsked" = "只有你自己在這個面板裡的點按或按鍵才會移動任務。沒有寫入任何內容。";
 "panelRailFolded" = "面板已收合以騰出空間";
 "panelRailMore" = "還有 %1$@ 個";

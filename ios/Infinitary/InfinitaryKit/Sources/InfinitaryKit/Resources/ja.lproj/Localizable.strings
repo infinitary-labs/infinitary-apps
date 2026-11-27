@@ -1840,6 +1840,13 @@
 "panelMarkFailing" = "%1$@ からバックグラウンドの読み込みが失敗しています";
 "panelMarkPaused" = "バックグラウンド処理が一時停止しています";
 "panelMarkStopped" = "バックグラウンド処理が停止しています";
+"panelMountFailed" = "このパネルを開けませんでした。";
+"panelMountNoEntry" = "このパネルのコードを使えませんでした。開始するファイルがありません。";
+"panelMountNotServed" = "一等航海士がいるコンピューターは、今このパネルを提供していません。";
+"panelMountOtherVersion" = "このパネルは、ここと一等航海士がいるコンピューターの Infinitary が同じバージョンになると開きます。";
+"panelMountOutOfReach" = "このパネルは、このコンピューターが一等航海士がいるコンピューターにつながると開きます。";
+"panelMountTooLarge" = "このパネルのコードを使えませんでした。大きすぎます。";
+"panelMountTooMany" = "開いているパネルが多すぎます。このパネルを開くには、どれか1つを閉じてください。";
 "panelMoveNotAsked" = "タスクを動かせるのは、このパネルでのあなた自身のクリックかキー操作だけです。何も書き込まれていません。";
 "panelRailFolded" = "スペースが足りないためパネルを折りたたみました";
 "panelRailMore" = "ほか%1$@件";

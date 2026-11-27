@@ -1840,6 +1840,13 @@
 "panelMarkFailing" = "As leituras em segundo plano falham desde %1$@";
 "panelMarkPaused" = "Trabalho em segundo plano pausado";
 "panelMarkStopped" = "Trabalho em segundo plano parado";
+"panelMountFailed" = "Não foi possível abrir este painel.";
+"panelMountNoEntry" = "Não foi possível usar o código deste painel: ele não tem um arquivo para começar.";
+"panelMountNotServed" = "O computador onde seu imediato mora não está oferecendo este painel agora.";
+"panelMountOtherVersion" = "Este painel abre quando o Infinitary aqui e no computador onde seu imediato mora estiverem na mesma versão.";
+"panelMountOutOfReach" = "Este painel abre quando este computador alcançar o computador onde seu imediato mora.";
+"panelMountTooLarge" = "Não foi possível usar o código deste painel: ele é grande demais.";
+"panelMountTooMany" = "Há painéis demais abertos. Feche um para abrir este.";
 "panelMoveNotAsked" = "Só o seu próprio clique ou tecla neste painel move uma tarefa. Nada foi gravado.";
 "panelRailFolded" = "Painéis recolhidos por falta de espaço";
 "panelRailMore" = "mais %1$@";

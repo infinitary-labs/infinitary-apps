@@ -1079,6 +1079,11 @@ function ScriptedCardBody(props: SrcdocProps) {
         template,
       })
       .then((mount) => {
+        // Only a panel mount answers a refusal; a card's cap rejects below.
+        if ("refused" in mount) {
+          if (current) failed("failed");
+          return;
+        }
         mountId = mount.mountId;
         if (current) {
           mountIdRef.current = mount.mountId;

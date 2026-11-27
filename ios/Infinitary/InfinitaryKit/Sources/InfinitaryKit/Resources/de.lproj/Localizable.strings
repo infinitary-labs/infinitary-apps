@@ -1840,6 +1840,13 @@
 "panelMarkFailing" = "Lesen im Hintergrund schlägt seit %1$@ fehl";
 "panelMarkPaused" = "Hintergrundarbeit pausiert";
 "panelMarkStopped" = "Hintergrundarbeit gestoppt";
+"panelMountFailed" = "Dieses Panel konnte nicht geöffnet werden.";
+"panelMountNoEntry" = "Der Code dieses Panels ist nicht nutzbar: Ihm fehlt die Datei, mit der er startet.";
+"panelMountNotServed" = "Der Computer, auf dem dein erster Offizier lebt, stellt dieses Panel gerade nicht bereit.";
+"panelMountOtherVersion" = "Dieses Panel öffnet sich, sobald Infinitary hier und auf dem Computer, auf dem dein erster Offizier lebt, dieselbe Version hat.";
+"panelMountOutOfReach" = "Dieses Panel öffnet sich, sobald dieser Computer den Computer erreicht, auf dem dein erster Offizier lebt.";
+"panelMountTooLarge" = "Der Code dieses Panels ist nicht nutzbar: Er ist zu groß.";
+"panelMountTooMany" = "Es sind zu viele Panels offen. Schließ eines, um dieses zu öffnen.";
 "panelMoveNotAsked" = "Nur dein eigener Klick oder Tastendruck in diesem Panel verschiebt eine Aufgabe. Es wurde nichts geschrieben.";
 "panelRailFolded" = "Panels aus Platzgründen eingeklappt";
 "panelRailMore" = "%1$@ weitere";

@@ -1,10 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
-import { PANEL_BYTES_CAP, PANEL_FILE_CAP, PanelGraphTooLarge } from "@core/personal/panelGraph";
-import {
-  PANEL_FILES_WORDS,
-  type PanelFiles,
-  type PanelFilesRequest,
-} from "@shared/personal/panelFiles";
+import { PANEL_BYTES_CAP, PANEL_FILE_CAP } from "@core/personal/panelGraph";
+import type { PanelFiles, PanelFilesRequest } from "@shared/personal/panelFiles";
 import { frameCsp, panelFrameCsp } from "@shared/plugins/containment";
 import {
   buildFrameDocument,
@@ -12,6 +8,7 @@ import {
   cardMountUrl,
   type DocumentMountRequest,
   type FrameMount,
+  type FrameMountRefused,
   frameMountUrl,
   type PanelMountRequest,
   panelMountHost,
@@ -80,7 +77,10 @@ export class FrameMountCapError extends Error {
   }
 }
 
-/** A panel mount the host could not assemble; the message says why. */
+/**
+ * A panel mount this build cannot assemble at all, such as one missing its
+ * panel library; a refusal the window words is `FrameMountRefused` instead.
+ */
 export class PanelMountError extends Error {
   constructor(message: string) {
     super(message);
@@ -122,17 +122,15 @@ type HeldDocument = ServedFrameDocument & {
 /**
  * A panel's built files as the first mate answered them, by path: the
  * same bounds its own read keeps, held again here, since the window serves
- * whatever it holds.
+ * whatever it holds. Null past those bounds.
  */
-function heldPanelFiles(answer: NonNullable<PanelFiles>): Map<string, Uint8Array> {
+function heldPanelFiles(answer: NonNullable<PanelFiles>): Map<string, Uint8Array> | null {
   const files = new Map<string, Uint8Array>();
   let total = 0;
   for (const file of answer.files) {
     const bytes = new Uint8Array(Buffer.from(file.data, "base64"));
     total += bytes.byteLength;
-    if (files.size + 1 > PANEL_FILE_CAP || total > PANEL_BYTES_CAP) {
-      throw new PanelMountError(new PanelGraphTooLarge().message);
-    }
+    if (files.size + 1 > PANEL_FILE_CAP || total > PANEL_BYTES_CAP) return null;
     files.set(file.path, bytes);
   }
   return files;
@@ -189,11 +187,14 @@ export class FrameMountRegistry {
     return this.options.cap ?? FRAME_MOUNT_CAP;
   }
 
-  private admit(kind: Kind): void {
-    const cap = this.capOf(kind);
+  private full(kind: Kind): boolean {
     let held = 0;
     for (const document of this.documents.values()) if (document.kind === kind) held += 1;
-    if (held >= cap) throw new FrameMountCapError(cap, kind);
+    return held >= this.capOf(kind);
+  }
+
+  private admit(kind: Kind): void {
+    if (this.full(kind)) throw new FrameMountCapError(this.capOf(kind), kind);
   }
 
   /** A template or a card body; a panel mount reads files and is `mountPanel`. */
@@ -241,8 +242,8 @@ export class FrameMountRegistry {
    * compiled files by the hashes of the bytes read here, which are the
    * only bytes the mount will ever serve.
    */
-  async mountPanel(request: PanelMountRequest): Promise<FrameMount> {
-    this.admit("panel");
+  async mountPanel(request: PanelMountRequest): Promise<FrameMount | FrameMountRefused> {
+    if (this.full("panel")) return { refused: "too-many-open" };
     const sources = this.options.panels;
     if (!sources) throw new PanelMountError("this build draws no panels in frames");
     const boot = sources.libPins[FRAME_LIB_BOOT];
@@ -267,27 +268,28 @@ export class FrameMountRegistry {
           ...(draft ? { draft } : {}),
         });
       } catch (error) {
-        throw new PanelMountError(error instanceof Error ? error.message : String(error));
-      }
-      if (!answer) {
-        throw new PanelMountError(
-          `"${request.panel.id}" is not ${own ? (draft ? "a panel being built" : "a panel of the captain's") : "an added panel"} at version ${request.panel.version}`,
+        // The window words the reason; the detail is for whoever reads the log.
+        console.warn(
+          `panel "${request.panel.id}": asking the first mate for its files failed:`,
+          error,
         );
+        return { refused: "first-mate-out-of-reach" };
       }
+      if (!answer) return { refused: "not-served-now" };
       // Built for the first mate's panel library: only a window on its version serves that one.
-      if (answer.builtFor !== sources.version) {
-        throw new PanelMountError(PANEL_FILES_WORDS.otherVersion);
-      }
-      files = heldPanelFiles(answer);
+      if (answer.builtFor !== sources.version) return { refused: "other-version" };
+      const held = heldPanelFiles(answer);
+      if (!held) return { refused: "too-large" };
+      files = held;
       // A card view is an entry of the same pinned graph (docs/ui-plugins.md,
       // "A panel's cards"): its own module, beside the panel's.
       const entry =
         request.panel.view === undefined ? "panel.mjs" : panelCardViewModule(request.panel.view);
-      if (!files.has(entry)) throw new PanelMountError(`this panel's code has no entry: ${entry}`);
+      if (!files.has(entry)) return { refused: "no-entry" };
       module = `${panelMountUrl(mountId)}${entry}`;
     }
     // The cap again: the read above awaited, and a sibling may have landed.
-    this.admit("panel");
+    if (this.full("panel")) return { refused: "too-many-open" };
     const integrity: Record<string, string> = {};
     for (const [file, pin] of Object.entries(sources.libPins)) integrity[frameLibUrl(file)] = pin;
     for (const [path, bytes] of files ?? []) {

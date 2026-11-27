@@ -1,7 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { readPanelGraph } from "@core/personal/panelGraph";
-import { PANEL_FILES_WORDS } from "@shared/personal/panelFiles";
 import {
   PANEL_CONFIG_ID,
   PANEL_ROOT_ID,
@@ -10,14 +9,7 @@ import {
 import { FRAME_BRIDGE_SCRIPT, FRAME_BRIDGE_SHA256 } from "@shared/plugins/frameScript";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
-import {
-  bytesHash,
-  FrameMountCapError,
-  FrameMountRegistry,
-  PanelMountError,
-  type PanelSources,
-  scriptHash,
-} from "./frameMounts";
+import { bytesHash, FrameMountRegistry, type PanelSources, scriptHash } from "./frameMounts";
 import { answerFrameRequest } from "./frameProtocol";
 
 /**
@@ -209,7 +201,7 @@ describe("a panel mount", () => {
           view: "other",
         },
       }),
-    ).rejects.toThrow("no entry: cards/other.mjs");
+    ).resolves.toEqual({ refused: "no-entry" });
   });
 
   it("draws one of the app's own panels from the lib, with no files of its own", async () => {
@@ -255,47 +247,44 @@ describe("a panel mount", () => {
       server: true,
       module: "app-frame://panel-y1/panel.mjs",
     });
-    await expect(mounts.mountPanel(personal({ version: "fedcba9876543210" }))).rejects.toThrow(
-      "is not a panel of the captain's at version fedcba9876543210",
-    );
+    await expect(mounts.mountPanel(personal({ version: "fedcba9876543210" }))).resolves.toEqual({
+      refused: "not-served-now",
+    });
     await expect(
       mounts.mountPanel({
         ...request,
         panel: { source: "installed", id: "notes", version: "0123456789abcdef" },
       }),
-    ).rejects.toThrow("is not an added panel");
+    ).resolves.toEqual({ refused: "not-served-now" });
   });
 
-  it("refuses a panel the core does not serve at that version, a build without the lib, and one past the cap", async () => {
+  // INF-7113's approved plan, Part 1: inf:frames:mount answers a refusal
+  // with one reason from a closed set, which the window words from its
+  // catalog; the main process's own English never reaches the panel's place.
+  it("refuses a panel it cannot draw with a typed reason, and holds nothing for it", async () => {
     const mounts = new FrameMountRegistry({ panels: sources() });
-    await expect(mounts.mountPanel(installedRequest("fedcba9876543210"))).rejects.toThrow(
-      PanelMountError,
-    );
-    await expect(new FrameMountRegistry().mountPanel(installedRequest())).rejects.toThrow(
-      "this build draws no panels in frames",
-    );
-    const noBoot = { ...libPins };
-    delete noBoot["boot.mjs"];
-    await expect(
-      new FrameMountRegistry({ panels: sources({}, noBoot) }).mountPanel(builtinRequest),
-    ).rejects.toThrow("panel library is missing");
+    await expect(mounts.mountPanel(installedRequest("fedcba9876543210"))).resolves.toEqual({
+      refused: "not-served-now",
+    });
     const noEntry = graph({ "other.mjs": "export {};" });
     await expect(
       new FrameMountRegistry({
         panels: sources({ "token-meter@0123456789abcdef": noEntry }),
       }).mountPanel(installedRequest()),
-    ).rejects.toThrow("no entry");
+    ).resolves.toEqual({ refused: "no-entry" });
 
-    // INF-3660's plan, "Your panels, in every window": "A window on a
-    // different version from the first mate says so in plain words instead
-    // of drawing a panel."
+    // A window on a different version from the first mate draws none of its
+    // panels' files: they import the panel library of the version they were built for.
     const built = graph({ "panel.mjs": "export default () => null;" });
-    await expect(
-      new FrameMountRegistry({
-        panels: sources({ "token-meter@0123456789abcdef": built }, libPins, "0.6.9"),
-      }).mountPanel(installedRequest()),
-    ).rejects.toThrow(PANEL_FILES_WORDS.otherVersion);
-    // The first mate's refusal reaches the panel in its own words.
+    const otherVersion = new FrameMountRegistry({
+      panels: sources({ "token-meter@0123456789abcdef": built }, libPins, "0.6.9"),
+    });
+    await expect(otherVersion.mountPanel(installedRequest())).resolves.toEqual({
+      refused: "other-version",
+    });
+    expect(otherVersion.size).toBe(0);
+
+    // A first mate that does not answer is out of reach, whatever its words.
     await expect(
       new FrameMountRegistry({
         panels: {
@@ -305,13 +294,35 @@ describe("a panel mount", () => {
           },
         },
       }).mountPanel(installedRequest()),
-    ).rejects.toThrow("is not a request this home answers");
+    ).resolves.toEqual({ refused: "first-mate-out-of-reach" });
+
+    // One file past the cap a panel's code keeps (PANEL_FILE_CAP, 256).
+    const tooMany = Array.from({ length: 257 }, (_, i) => ({
+      path: `chunk-${i}.mjs`,
+      data: Buffer.from("export {};").toString("base64"),
+    }));
+    await expect(
+      new FrameMountRegistry({
+        panels: { ...sources(), panelFiles: async () => ({ builtFor: VERSION, files: tooMany }) },
+      }).mountPanel(installedRequest()),
+    ).resolves.toEqual({ refused: "too-large" });
 
     const capped = new FrameMountRegistry({ panelCap: 1, panels: sources() });
     await capped.mountPanel(builtinRequest);
-    await expect(capped.mountPanel(builtinRequest)).rejects.toThrow(FrameMountCapError);
+    await expect(capped.mountPanel(builtinRequest)).resolves.toEqual({ refused: "too-many-open" });
     // Panels have a cap of their own: templates still mount.
     expect(() => capped.mount({ ...base, template: { html: "<p>x</p>" } })).not.toThrow();
+  });
+
+  it("rejects a mount this build cannot assemble at all", async () => {
+    await expect(new FrameMountRegistry().mountPanel(installedRequest())).rejects.toThrow(
+      "this build draws no panels in frames",
+    );
+    const noBoot = { ...libPins };
+    delete noBoot["boot.mjs"];
+    await expect(
+      new FrameMountRegistry({ panels: sources({}, noBoot) }).mountPanel(builtinRequest),
+    ).rejects.toThrow("panel library is missing");
   });
 });
 

@@ -59,6 +59,7 @@ Settings → Appearance → **Theme** on your iPhone or iPad is its own.
 Choose **Device**, **Dark**, **Light** or one of your computer's thirteen themes under their makers' names, such as **Dracula** or **Catppuccin Latte**.
 A pick recolors the whole app at once, cards included, and stays after Infinitary closes.
 Your computer and your other devices keep their own theme.
+Themes you made with your first mate on your computer show under **Yours**, and change there when you change them on your computer.
 
 ## Read a card on an open foldable iPhone
 

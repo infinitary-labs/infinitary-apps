@@ -1,5 +1,5 @@
 ---
-source: 4689a21f9d4af463
+source: 7a4132bd57802c1f
 title: iPhone und iPad
 description: Fordere eine private TestFlight-Einladung für Infinitary auf iPhone und iPad an und verbinde dich dann mit deinem Computer, um Karten zu lesen und Nachrichten zu senden.
 ---
@@ -60,6 +60,7 @@ Einstellungen → Erscheinungsbild → **Darstellung** gilt nur für dein iPhone
 Wähle **Gerät**, **Dunkel**, **Hell** oder eines der dreizehn Designs deines Computers unter den Namen ihrer Macher, etwa **Dracula** oder **Catppuccin Latte**.
 Eine Wahl färbt sofort die ganze App um, Karten eingeschlossen, und bleibt auch, nachdem Infinitary geschlossen wurde.
 Dein Computer und deine anderen Geräte behalten ihr eigenes Design.
+Designs, die du auf deinem Computer mit deinem ersten Offizier gemacht hast, stehen unter **Deine** und ändern sich dort, wenn du sie auf deinem Computer änderst.
 
 ## Eine Karte auf einem aufgeklappten faltbaren iPhone lesen {#read-a-card-on-an-open-foldable-iphone}
 

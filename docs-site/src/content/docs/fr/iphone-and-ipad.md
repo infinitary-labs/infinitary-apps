@@ -1,5 +1,5 @@
 ---
-source: 4689a21f9d4af463
+source: 7a4132bd57802c1f
 title: iPhone et iPad
 description: Demandez une invitation TestFlight privée pour Infinitary sur iPhone et iPad, puis rejoignez votre ordinateur pour lire les cartes et envoyer des messages.
 ---
@@ -60,6 +60,7 @@ Réglages → Apparence → **Thème** sur votre iPhone ou iPad lui est propre.
 Choisissez **Appareil**, **Sombre**, **Clair** ou l’un des treize thèmes de votre ordinateur sous le nom que leur a donné leur auteur, comme **Dracula** ou **Catppuccin Latte**.
 Un choix recolore toute l’app aussitôt, cartes comprises, et reste après la fermeture d’Infinitary.
 Votre ordinateur et vos autres appareils gardent leur propre thème.
+Les thèmes que vous avez faits avec votre second sur votre ordinateur apparaissent sous **Les vôtres**, et changent là quand vous les changez sur votre ordinateur.
 
 ## Lire une carte sur un iPhone pliable ouvert {#read-a-card-on-an-open-foldable-iphone}
 

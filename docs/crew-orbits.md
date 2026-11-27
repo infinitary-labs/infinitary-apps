@@ -443,7 +443,13 @@ The status may wrap, to two lines at most, as may the task title and the project
 A cut-short line is not expanded in place; the record has the full text.
 The panel sits beside the crewmate on the side away from the character, level with it; where that has no room, under or over it; and only then on the character's side.
 It keeps inside the window between the top bar and the input, never under a rail's panel, and clear of the crewmate's own name.
-It lives outside the fitted formation, so its type is never scaled, and it follows the painted crewmate with compare-before-write, so a paused stage touches no DOM.
+If none of its preferred positions fits, it searches the remaining space along the panels' edges, keeping the same size and a hairline back to the crewmate.
+When rail content leaves no clear place, the same summary, brackets and hairline use the window-wide layer above the rails, so sidebar rows never obscure the summary.
+Only that no-room case may cover sidebar content; as soon as a clear place exists it returns to the ordinary layer.
+Placement measures visible panels, the create-panel slot and the More row, and its coordinates stay physical in either text direction.
+While a summary is open, its room source observes rail, control, top-bar and prompt geometry, including panel moves and newly mounted controls, independently of the animation clock.
+Late panel resizing or folding repositions the same mounted summary under reduced motion without another pointer move.
+It lives outside the fitted formation, so its type is never scaled, and it follows the painted crewmate with compare-before-write, so a paused stage with unchanged room touches no DOM.
 It is read-only - no buttons - and never takes the pointer.
 Under reduced motion the summary works against the still frame.
 

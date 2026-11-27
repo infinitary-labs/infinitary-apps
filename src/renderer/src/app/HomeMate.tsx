@@ -8,6 +8,7 @@ import { requestStageClearedFidget } from "../character/emoteSignal";
 import { Firstmate } from "../character/Firstmate";
 import { setCharacterPaintHidden } from "../character/paintHidden";
 import { motionToken } from "../design/motion";
+import { RAIL_CONTENTS_SELECTOR } from "../plugins/railRoom";
 import { useCardUp } from "./LastTurn";
 import { useProjectFocus } from "./projectFocus";
 import { STAGE_LIFT_EASE, STAGE_TOP } from "./stage/entryView";
@@ -28,10 +29,56 @@ function crewSummaryRoom(): SummaryRoom {
       top: box("[data-topbar]")?.bottom ?? 0,
       bottom: box("[data-prompt-dock]")?.top ?? window.innerHeight,
     },
-    avoid: [...document.querySelectorAll("[data-side-panel]")].map((panel) => {
+    avoid: [...document.querySelectorAll(RAIL_CONTENTS_SELECTOR)].map((panel) => {
       const { left, top, right, bottom } = panel.getBoundingClientRect();
       return { left, top, right, bottom };
     }),
+  };
+}
+
+/** Reduced motion supplies no later frame after rail folds or an intrinsic
+ * panel resize, so the room follows its layout independently of stage time. */
+function observeCrewSummaryRoom(changed: () => void): () => void {
+  let watched = new Set<Element>();
+  const sizes = new ResizeObserver(changed);
+  const changes = new MutationObserver(() => {
+    watch();
+    changed();
+  });
+  const watch = () => {
+    const next = new Set(
+      document.querySelectorAll(
+        `${RAIL_CONTENTS_SELECTOR}, [data-rail], [data-topbar], [data-prompt-dock]`,
+      ),
+    );
+    for (const element of watched) if (!next.has(element)) sizes.unobserve(element);
+    for (const element of next) if (!watched.has(element)) sizes.observe(element);
+    watched = next;
+    changes.disconnect();
+    for (const region of document.querySelectorAll(
+      "[data-rail], [data-topbar], [data-prompt-dock]",
+    )) {
+      changes.observe(region, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: [
+          "style",
+          "class",
+          "hidden",
+          "data-side-panel-collapsed",
+          "data-side-panel-folded",
+          "data-side-panel-placement-y",
+        ],
+      });
+    }
+    // Root attributes carry folding, text direction and prompt-lift variables.
+    changes.observe(document.documentElement, { attributes: true });
+  };
+  watch();
+  return () => {
+    sizes.disconnect();
+    changes.disconnect();
   };
 }
 
@@ -155,6 +202,7 @@ export const HomeMate = memo(function HomeMate() {
           facts={facts}
           onOpen={openRecord}
           summaryRoom={crewSummaryRoom}
+          observeSummaryRoom={observeCrewSummaryRoom}
           interactive={!showCards}
           theme={theme}
           teach={teach}

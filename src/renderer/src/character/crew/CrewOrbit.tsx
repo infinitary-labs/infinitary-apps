@@ -13,6 +13,7 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
+import { createPortal } from "react-dom";
 import { useThemeColorsDrawn } from "../../app/colorTheme";
 import { useCommandKeys } from "../../app/keyHints";
 import { motionToken } from "../../design/motion";
@@ -113,6 +114,8 @@ export type CrewOrbitProps = {
   onOpen?: (taskId: string) => void;
   /** Where a summary may sit, in window coordinates; anywhere in the window when absent. */
   summaryRoom?: () => SummaryRoom;
+  /** Room changes need placement even when neither the summary nor window resizes. */
+  observeSummaryRoom?: (changed: () => void) => () => void;
   /** Background crew under a card do not take focus or the pointer. */
   interactive?: boolean;
   theme?: Theme;
@@ -333,6 +336,7 @@ export function CrewOrbit({
   facts,
   onOpen,
   summaryRoom,
+  observeSummaryRoom,
   interactive = true,
   theme,
   teach = null,
@@ -394,6 +398,18 @@ export function CrewOrbit({
   const { shown, leaving } = useSummaryPresence(inspecting);
   const summary = shown !== null ? (facts?.[shown] ?? null) : null;
   const layerRef = useRef<HTMLDivElement>(null);
+  const summaryStageRef = useRef<HTMLDivElement>(null);
+  // React keeps one portal target, so moving its owned container never
+  // remounts CrewSummary or drops its record, project or relationship facts.
+  const [summaryHost] = useState(() => {
+    if (typeof document === "undefined") return null;
+    const host = document.createElement("div");
+    host.style.display = "contents";
+    return host;
+  });
+  useLayoutEffect(() => () => summaryHost?.remove(), [summaryHost]);
+  const [aboveRails, setAboveRails] = useState(false);
+  const aboveRailsRef = useRef(false);
   const targetRef = useRef<HTMLDivElement>(null);
   const lineRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -515,7 +531,7 @@ export function CrewOrbit({
   const pictureRef = useRef(false);
 
   // The summary, its brackets and its hairline follow the painted crewmate.
-  // Every write compares first, so a paused stage touches no DOM.
+  // Every write compares first, so unchanged geometry touches no DOM.
   const placeSummary = useCallback(() => {
     const view = viewRef.current;
     const wrap = wrapRef.current;
@@ -556,26 +572,47 @@ export function CrewOrbit({
       clear.right = Math.max(clear.right, label.right);
       clear.bottom = Math.max(clear.bottom, label.bottom);
     }
-    const at = placeCrewSummary(
-      anchor,
-      reach,
-      clear,
-      { width: panel.offsetWidth, height: panel.offsetHeight },
-      {
-        within: local(room.within, -SUMMARY_MARGIN_PX),
-        avoid: room.avoid.map((box) => local(box, SUMMARY_MARGIN_PX)),
-      },
-    );
+    const size = { width: panel.offsetWidth, height: panel.offsetHeight };
+    const localRoom = {
+      within: local(room.within, -SUMMARY_MARGIN_PX),
+      avoid: room.avoid.map((box) => local(box, SUMMARY_MARGIN_PX)),
+    };
+    const clearPlace = placeCrewSummary(anchor, reach, clear, size, localRoom);
+    const over = clearPlace === null;
+    // Only the no-clear-place case moves to the window-wide summary layer.
+    // Hide the old holder until the container moves, never painting one frame
+    // at window coordinates inside the formation (or the reverse).
+    if (over !== aboveRailsRef.current) {
+      layer.removeAttribute("data-placed");
+      setAboveRails(over);
+      return;
+    }
+    const at =
+      clearPlace ??
+      placeCrewSummary(anchor, reach, clear, size, {
+        ...localRoom,
+        avoid: [],
+      });
+    if (!at) return;
+    const origin = over ? { x: cx, y: cy } : { x: 0, y: 0 };
     const px = (value: number) => `${Math.round(value * 10) / 10}px`;
     writeStyle(target, "width", px(reach * 2));
     writeStyle(target, "height", px(reach * 2));
-    writeStyle(target, "transform", `translate(${px(anchor.x - reach)}, ${px(anchor.y - reach)})`);
-    writeStyle(panel, "transform", `translate(${Math.round(at.x)}px, ${Math.round(at.y)}px)`);
+    writeStyle(
+      target,
+      "transform",
+      `translate(${px(anchor.x - reach + origin.x)}, ${px(anchor.y - reach + origin.y)})`,
+    );
+    writeStyle(
+      panel,
+      "transform",
+      `translate(${Math.round(at.x + origin.x)}px, ${Math.round(at.y + origin.y)}px)`,
+    );
     writeStyle(line, "width", px(at.line.length));
     writeStyle(
       line,
       "transform",
-      `translate(${px(at.line.x)}, ${px(at.line.y)}) rotate(${Math.round(at.line.angle * 1000) / 1000}rad)`,
+      `translate(${px(at.line.x + origin.x)}, ${px(at.line.y + origin.y)}) rotate(${Math.round(at.line.angle * 1000) / 1000}rad)`,
     );
     angleRef.current = at.line.angle;
     if (!layer.hasAttribute("data-placed")) layer.setAttribute("data-placed", "");
@@ -624,6 +661,11 @@ export function CrewOrbit({
   // size or the window changes; under reduced motion no frame would do it.
   // A first placement slides it in; a new crewmate moves it from where it stood.
   useLayoutEffect(() => {
+    const parent = aboveRails
+      ? document.querySelector("[data-summary-overlay-root]")
+      : summaryStageRef.current;
+    if (summaryHost && parent && summaryHost.parentNode !== parent) parent.appendChild(summaryHost);
+    aboveRailsRef.current = aboveRails;
     const panel = panelRef.current;
     const line = lineRef.current;
     if (!summary || !panel || !line || !shown) return;
@@ -635,12 +677,14 @@ export function CrewOrbit({
     placedFor.current = { panel, target: shown };
     const observer = new ResizeObserver(placeSummary);
     observer.observe(panel);
+    const stopObservingRoom = observeSummaryRoom?.(placeSummary);
     window.addEventListener("resize", placeSummary);
     return () => {
       observer.disconnect();
+      stopObservingRoom?.();
       window.removeEventListener("resize", placeSummary);
     };
-  }, [summary, shown, placeSummary]);
+  }, [summary, shown, placeSummary, aboveRails, summaryHost, observeSummaryRoom]);
   useSummaryFade(layerRef, leaving);
 
   useEffect(() => {
@@ -652,7 +696,7 @@ export function CrewOrbit({
         interactiveRef.current &&
         wrap !== null &&
         target instanceof Element &&
-        (wrap.contains(target) || target.contains(wrap))
+        (wrap.contains(target) || layerRef.current?.contains(target) || target.contains(wrap))
       );
     };
     // The formation's box is re-measured on layout changes and at most every
@@ -1099,6 +1143,29 @@ export function CrewOrbit({
     pointerEvents: "none",
   };
   const namedClusters = new Set(named.split(",").filter(Boolean));
+  // One mounted summary, brackets and hairline move with their container.
+  // Only a no-clear-placement summary uses the root beside PeekSummary.
+  const summaryLayer =
+    summary && shown ? (
+      <div
+        ref={layerRef}
+        className={aboveRails ? "fm-row-summary-layer" : "fm-crew-summary-layer"}
+        aria-hidden={leaving || undefined}
+        inert={!interactive || leaving}
+        style={{ "--crew-summary-max": `${CREW_HOVER.maxWidthPx}px` } as React.CSSProperties}
+      >
+        <div ref={targetRef} className="fm-crew-target" data-crew-target={shown} aria-hidden="true">
+          <i />
+          <i />
+          <i />
+          <i />
+        </div>
+        <div ref={lineRef} className="fm-crew-summary-line" aria-hidden="true" />
+        <div ref={panelRef}>
+          <CrewSummary taskId={shown} facts={summary} />
+        </div>
+      </div>
+    ) : null;
   return (
     <div
       ref={wrapRef}
@@ -1311,31 +1378,10 @@ export function CrewOrbit({
           </div>
         </div>
       )}
-      {/* Outside the fitted formation, so the summary's type is never scaled. */}
-      {summary && shown && (
-        <div
-          ref={layerRef}
-          className="fm-crew-summary-layer"
-          aria-hidden={leaving || undefined}
-          style={{ "--crew-summary-max": `${CREW_HOVER.maxWidthPx}px` } as React.CSSProperties}
-        >
-          <div
-            ref={targetRef}
-            className="fm-crew-target"
-            data-crew-target={shown}
-            aria-hidden="true"
-          >
-            <i />
-            <i />
-            <i />
-            <i />
-          </div>
-          <div ref={lineRef} className="fm-crew-summary-line" aria-hidden="true" />
-          <div ref={panelRef}>
-            <CrewSummary taskId={shown} facts={summary} />
-          </div>
-        </div>
-      )}
+      {/* A permanent last slot keeps the summary above later-mounted stage
+          controls, outside the fitted formation so its type is never scaled. */}
+      <div ref={summaryStageRef} style={{ display: "contents" }} />
+      {summaryLayer && summaryHost ? createPortal(summaryLayer, summaryHost) : null}
     </div>
   );
 }

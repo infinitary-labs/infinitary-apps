@@ -189,10 +189,14 @@ export async function createServices(
   // a crewmate's shell finds it first, before anything below runs git.
   adoptBundledGit(host.app);
   const auth = await PiAuthService.create(paths);
+  // Settled reads move the lists and the news; wired once the feed exists.
+  let onCatalogSettled: () => void = () => {};
   // The registered account backends (broker phase 7). Pi serves everything
   // it can reach; a subscription it cannot reach gets its own first-party
   // client, and the vault owns the store matrix over both.
-  const piBackend = appPiAccountBackend(paths.modelsPath, standIns);
+  // A pi.dev overlay that lands after a sign-in, or after the account-list
+  // read it races, moves what an account serves just as a settled read does.
+  const piBackend = appPiAccountBackend(paths.modelsPath, standIns, () => onCatalogSettled());
   // Learn where the machine's Claude Code is before anything asks (F14),
   // on the person's own search path once it is known, so the Claude chip
   // and the first health read never wait on it.
@@ -201,8 +205,6 @@ export async function createServices(
   // A sign-in or sign-out first holds the Firstmate's seat off the account
   // it rewrites (W1 S9); late-bound because the agent is built below.
   let holdSeat: ((accountId: string) => Promise<() => void>) | undefined;
-  // Settled reads move the lists and the news; wired once the feed exists.
-  let onCatalogSettled: () => void = () => {};
   // The store and the runtime catalog reads (docs/model-lists.md), built as
   // every computer that runs work builds its own. The rail protects the
   // slot record's starter and kept ids, read once a read lands, long after

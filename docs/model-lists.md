@@ -241,6 +241,8 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 - Every `ModelRuntime` is created by `src/core/pi/modelRuntime.ts`, never `ModelRuntime.create` directly: it owns the live pi.dev catalog policy and its proven static fallback (`docs/architecture.md` §16.3).
   It creates the runtime OFFLINE (bundled catalog plus the store's last overlay) and runs the pi.dev refresh in the background, so start-up never waits on pi.dev (lean model lists, `docs/model-lists.md`).
+  Pi fetches a provider's overlay only while it holds a credential for it, and its own post-sign-in refresh is offline, so `PiAccountBackend.login` runs the same unscoped background refresh again once a sign-in lands; the account's runtime was created, and ran its first refresh, before that credential existed (`codexConnectCatalog.test.ts`).
+  A refresh that lands calls the backend's `onCatalogRefreshed`, which the app routes to the same path as a settled account-list read.
   The trap it still guards: an aborted refresh cuts the availability pass riding the same signal, which would leave the model picker EMPTY - the factory rebuilds availability offline, and `modelRuntime.test.ts` fails if either the non-blocking create or that rebuild goes away.
   E2E is kept off `pi.dev` by `PI_OFFLINE=1` in `tests/e2e/launch.ts`.
   The factory also serves getModel through `withHonestReasoning`: a live def claiming `reasoning: true` whose thinkingLevelMap pins no effort token comes out non-reasoning, because Pi's openai-responses driver (no `supportsReasoningEffort` gate, unlike openai-completions) otherwise passes the session's thinking level through and the provider 400s every turn (grok-build-0.1, captain dogfood 2026-09-01).

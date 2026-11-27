@@ -58,6 +58,13 @@ import { storedKeyOnly } from "./storedKeyOnly";
  */
 export const MODEL_REFRESH_TIMEOUT_MS = 30_000;
 
+/**
+ * Pi's own freshness window for a pi.dev overlay: a refresh inside it sends
+ * no request. It is Pi's `REMOTE_CATALOG_REFRESH_INTERVAL_MS`, which its
+ * package does not export; review the two together on a Pi upgrade.
+ */
+export const PI_CATALOG_WINDOW_MS = 4 * 60 * 60 * 1000;
+
 export type ModelRuntimeOptions = {
   authPath: string;
   modelsPath: string;

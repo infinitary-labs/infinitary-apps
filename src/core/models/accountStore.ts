@@ -3,6 +3,7 @@ import { backendForProvider, CLAUDE_PROVIDER_ID } from "@shared/providers";
 import { claudeAvailableModels } from "../claude/claudeModels";
 import type { AppPaths } from "../paths";
 import { AccountVault, type AccountVaultOptions } from "../pi/accountVault";
+import { PI_CATALOG_WINDOW_MS } from "../pi/modelRuntime";
 import type { QuotaHttp } from "../quota/http";
 import { claudeListReader } from "./clientLists";
 import { codexListReader, grokListReader, railVerdict } from "./piAccountLists";
@@ -46,7 +47,27 @@ export type AccountStoreOptions = Omit<
   info?: (line: string) => void;
 };
 
-export type AccountStore = { vault: AccountVault; served: ServedModels };
+/**
+ * How often the catalog pass (`AccountStore.refreshCatalogs`) runs while the
+ * app stays open. Pi skips a pi.dev request while the overlay it holds is
+ * inside its window, counted from when the last answer arrived - up to
+ * `MODEL_REFRESH_TIMEOUT_MS` after that pass began - so the pass runs a few
+ * minutes past the window and finds every overlay due.
+ */
+export const CATALOG_REFRESH_EVERY_MS = PI_CATALOG_WINDOW_MS + 5 * 60 * 1000;
+
+export type AccountStore = {
+  vault: AccountVault;
+  served: ServedModels;
+  /**
+   * The catalog pass: a model a connected account's provider published
+   * while the app stays open reaches its lists, with no restart. It asks
+   * pi.dev again for every Pi account, then reads again each account's own
+   * list that narrows Pi's catalog (Codex, Grok). Resolves once both have
+   * settled; never rejects.
+   */
+  refreshCatalogs: () => Promise<void>;
+};
 
 export function createAccountStore(
   paths: Pick<AppPaths, "accountsDir">,
@@ -134,5 +155,21 @@ export function createAccountStore(
     ...(info ? { info } : {}),
     ...(vaultOptions.now ? { now: vaultOptions.now } : {}),
   });
-  return { vault, served };
+  const ownLists = served;
+  // Each account's own list is read after Pi's catalog lands, so the rail
+  // judges it against the catalog it will narrow: a starter or kept model
+  // that only just arrived is never filtered out by a list that omits it.
+  const refreshCatalogs = async (): Promise<void> => {
+    await vault.refreshPiCatalogs();
+    await Promise.all(
+      vault
+        .list()
+        .filter(
+          (account) =>
+            backendForProvider(account.providerId) === "pi" && ownLists.reads(account.providerId),
+        )
+        .map((account) => ownLists.refresh(account.id)),
+    );
+  };
+  return { vault, served, refreshCatalogs };
 }

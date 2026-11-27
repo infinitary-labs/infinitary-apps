@@ -690,6 +690,7 @@ Pi serves models from the static catalog bundled inside `pi-ai`, plus an overlay
   The runtime is created offline (the bundled catalog plus the overlay the store last fetched) and returned at once.
   The pi.dev refresh then runs in the background, bounded by `MODEL_REFRESH_TIMEOUT_MS`; when an abort empties the availability snapshot (pi's availability pass rides the refresh signal), it is rebuilt offline.
   The list may grow when the overlay lands, never shrink because it did not.
+  While the app stays open, the catalog pass runs the same refresh again just past Pi's window (`CATALOG_REFRESH_EVERY_MS`, `docs/model-lists.md`), so a connected account picks up a model published since; Pi's window still bounds the requests.
   `modelRuntime.test.ts` proves both properties against a stand-in pi.dev.
 - **The overlay lands per account**, because pi only fetches a provider's catalog when it can resolve that provider's credential, and credentials live in the vault.
   Since the first launch (2026-09-19) every account runtime reads the app-scoped `models.json` - custom providers and per-provider overrides serve an account as they serve the base runtime - and keeps its own overlay store beside its auth file (`ModelRuntimeOptions.modelsStorePath`).

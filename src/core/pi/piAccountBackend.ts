@@ -445,6 +445,22 @@ export class PiAccountBackend implements AccountBackend {
   }
 
   /**
+   * Asks pi.dev again for an account's catalog, through the same refresh its
+   * runtime ran when it was created, and resolves once it settles, landed or
+   * not. Pi skips the request while the overlay it holds is inside its own
+   * 4-hour window. A runtime still being created is skipped: creating it runs
+   * this refresh. Bedrock and custom connections take no pi.dev catalog.
+   */
+  refreshCatalog(account: Pick<AccountRef, "accountId" | "providerId">): Promise<void> {
+    if (account.providerId === BEDROCK_PROVIDER_ID || isCustomApiProvider(account.providerId))
+      return Promise.resolve();
+    const runtime = this.ready.get(account.accountId);
+    return runtime
+      ? refreshCatalogInBackground(runtime, this.onCatalogRefreshed)
+      : Promise.resolve();
+  }
+
+  /**
    * A runtime that has finished creating. Selection reads availability
    * synchronously; a runtime still in flight simply contributes nothing.
    */

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "new-models-after-sign-in",
+      "kind": "fix",
+      "area": "subscriptions",
+      "title": "A subscription you connect lists its newest models without a restart",
+      "body": "When you connected a subscription such as Codex while Infinitary was open, models published after this version of Infinitary, such as GPT-6.2 Sol and Astra, stayed missing until you quit and reopened the app. Infinitary now checks for them as soon as the sign-in finishes.",
+      "noPicture": "The model lists look the same; the newest models now appear in them right after a sign-in instead of after a restart.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

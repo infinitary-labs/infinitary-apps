@@ -199,7 +199,7 @@ export async function createModelRuntime(options: ModelRuntimeOptions): Promise<
       : undefined;
   };
   if (!options.connectionProvider && !options.bedrockAccount)
-    void tracked(refreshInBackground(runtime, options.onCatalogRefreshed));
+    void refreshCatalogInBackground(runtime, options.onCatalogRefreshed);
   return runtime;
 }
 
@@ -327,6 +327,21 @@ function tracked<T>(work: Promise<T>): Promise<T> {
  */
 export async function catalogRefreshesSettled(): Promise<void> {
   while (refreshing.size > 0) await Promise.allSettled([...refreshing]);
+}
+
+/**
+ * Starts an account runtime's unscoped pi.dev refresh, tracked for
+ * `catalogRefreshesSettled`. Pi fetches a provider's catalog only while it
+ * holds a credential for it, and its own post-sign-in refresh is offline, so
+ * a sign-in that lands after the runtime was created runs this again or the
+ * provider's pi.dev-only models never load until a restart. Unscoped, so
+ * Pi's availability pass narrows Copilot and key providers again.
+ */
+export function refreshCatalogInBackground(
+  runtime: ModelRuntime,
+  onRefreshed?: () => void,
+): Promise<void> {
+  return tracked(refreshInBackground(runtime, onRefreshed));
 }
 
 /**

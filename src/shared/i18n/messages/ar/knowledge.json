@@ -198,6 +198,12 @@
     "many": "المخطط · {count} مفهومًا",
     "other": "المخطط · {count} مفهوم"
   },
+  "knowledgePanelHeardCard": "سُمع منك على البطاقة «{title}»",
+  "knowledgePanelHeardStanding": "سُمع منك في ردك القائم على {task}",
+  "knowledgePanelHeardTab": "سُمع منك في تبويب «فرد الطاقم» في {task}",
+  "knowledgePanelHeardTitle": "أين قلته",
+  "knowledgePanelHeardTurn": "سُمع منك في كلماتك إلى نائب القبطان",
+  "knowledgePanelHeardWindow": "غيّرته بنفسك في المعرفة",
   "knowledgePanelHops": {
     "plural": "count",
     "zero": "{count} خطوة",
@@ -242,6 +248,7 @@
   "knowledgePanelNoSources": "لم يُحفظ معها أي مصدر.",
   "knowledgePanelNoUses": "لم يُعلن أي عمل بعد أنه استخدم هذا.",
   "knowledgePanelNone": "لا شيء",
+  "knowledgePanelNotHeard": "لم يُسمع منك، لذا لا يوافق على شيء بمفرده",
   "knowledgePanelNothingRecorded": "لم يُسجّل شيء بعد",
   "knowledgePanelObservedBy": "ملاحَظة · بواسطة {author}",
   "knowledgePanelOpLink": "رُبط",

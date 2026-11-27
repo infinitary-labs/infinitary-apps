@@ -60,7 +60,9 @@ Directions are instructions to weigh with the work, not data to search: they nev
 ## Authority
 
 - Authority is not permission: captain-origin directions are instructions, other origins are labeled advice, and neither grants permission to act beyond the task.
-  A captain-origin direction that a step needs no consent is that consent (`renderDirections`, `src/core/knowledge/directions.ts`).
+  A captain-origin direction that a step needs no consent is that consent while its current revision was heard from the captain (`renderDirections`, `src/core/knowledge/directions.ts`).
+- Each revision records whether the captain's own words for it were heard, and from where: the first mate cites this turn, a card, or a task's Crewmate tab or standing reply with the line's `from`, and the host checks it; the captain's own change in the window is heard from the window (`../docs/knowledge.md`, "Heard from the captain").
+  A change with no citation still saves, as an instruction that is no yes; a later revision is heard only from what its own change cited.
 - The first mate alone adds, revises and retires directions, on its own judgment of what the captain wants, whatever began the turn (INF-638; `../docs/knowledge.md`, "Directions are the first mate's to keep").
   It does so through `app_change` with the `direction` line, whose `judgment` tier lets it act at any wake; each write is stamped `captain-turn`.
 - `record_knowledge` refuses a direction and points at `app_change`.
@@ -76,7 +78,7 @@ Directions are instructions to weigh with the work, not data to search: they nev
 - Reaches a task on another computer through its served turns ([`../docs/helper.md`](../docs/helper.md)), which carry the set as on this Mac once that computer reports its conversation's folds; nothing of the collection is kept there.
 - A [decision-questions.md](decision-questions.md) answer or a [cards-and-consent.md](cards-and-consent.md) choice may become a direction only when the first mate judges it an ongoing instruction and writes it.
 
-- A validation request can name a captain-origin project direction by its `d:` id for consent to the check's resources or to the exact independently cleared effect.
+- A validation request can name a captain-origin project direction heard from the captain by its `d:` id for consent to the check's resources or to the exact independently cleared effect.
   The action gate only uses the wording current when the request was recorded; a revision or retirement ends its reach.
 
 ## Failure and recovery

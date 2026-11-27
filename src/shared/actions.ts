@@ -46,7 +46,11 @@ import {
 } from "./integrations";
 import { type CoreInvokeChannel, invokeContract } from "./ipc";
 import type { KeptJobsView } from "./keptJobs";
-import { type KnowledgeDirections, knowledgeDirectionChangeSchema } from "./knowledge";
+import {
+  type KnowledgeDirectionHeard,
+  type KnowledgeDirections,
+  knowledgeDirectionChangeSchema,
+} from "./knowledge";
 import { reasoningChoiceSchema, slotSchema } from "./modelSlots";
 import { panelLines } from "./panelActions";
 import { AUTOMATIC_COMPUTER } from "./placement";
@@ -332,13 +336,24 @@ function guidance(
     done: () => auditText,
   };
 }
-/** A direction change as app_change takes it: its evidence is the reason kept. */
+/**
+ * A direction change as app_change takes it: its evidence is the reason
+ * kept, and `from` cites where the captain's own words for it were heard
+ * (`task` names the task for `crewmate-tab` or `standing`). The host checks
+ * the citation and records the heard mark; the request carries neither.
+ */
 const [addDirection, reviseDirection, retireDirection] = knowledgeDirectionChangeSchema.options;
+const directionCitation = {
+  from: z.string().trim().min(1).max(200).optional(),
+  task: z.string().trim().min(1).max(64).optional(),
+};
 const directionValueSchema = z.discriminatedUnion("op", [
-  addDirection.omit({ reason: true }),
-  reviseDirection.omit({ reason: true }),
-  retireDirection.omit({ reason: true }),
+  addDirection.omit({ reason: true, heard: true }).extend(directionCitation),
+  reviseDirection.omit({ reason: true, heard: true }).extend(directionCitation),
+  retireDirection.omit({ reason: true, heard: true }).extend(directionCitation),
 ]);
+/** Where a direction change cites the captain's words, as its value names them. */
+export type DirectionCitation = { from?: string; task?: string };
 const DIRECTION_DONE = { add: "saved", revise: "revised", retire: "retired" } as const;
 /**
  * The line a project's Runs on change leaves (`project-runs-on`), as a saved
@@ -1035,8 +1050,11 @@ const actionLines = {
     change: "inf:knowledge:direction:set",
     current: "inf:knowledge:directions",
     value: directionValueSchema,
-    line: "Add, revise or retire one of the captain's standing directions on your own judgment of what they want, whatever began the turn: their words, their choice on any card, a click. evidence is the reason its history keeps. add takes text and scope (captain: no crewmate reads it; or a project id); revise takes id and text; retire takes id; expectedRevision is optional.",
-    toRequest: (v, _current, _expandHome, evidence) => [{ ...v, reason: evidence }],
+    line: "Add, revise or retire one of the captain's standing directions on your own judgment of what they want, whatever began the turn: their words, their choice on any card, a click. evidence is the reason its history keeps. add takes text and scope (captain: no crewmate reads it; or a project id); revise takes id and text; retire takes id; expectedRevision is optional. from cites where the captain's own words for this change were heard: turn for words they typed this turn, a card's id for their reply or click there, or crewmate-tab or standing with task naming the task; the host checks them and marks the revision heard there, and refuses a citation it cannot find, saving nothing. Leave from out to save on your judgment alone: the revision is not heard, even when an earlier one was, guides work as an instruction, and is no yes.",
+    toRequest: (v, _current, _expandHome, evidence) => {
+      const { from: _from, task: _task, ...change } = v as Record<string, unknown>;
+      return [{ ...change, reason: evidence }];
+    },
     readValue: (current) => {
       const read = current as KnowledgeDirections;
       return read.state === "ready"
@@ -1046,6 +1064,7 @@ const actionLines = {
               scope: row.scope,
               project: row.scopeName,
               revision: row.revision,
+              heard: row.heard ?? false,
               text: row.text,
             })),
             total: read.total,
@@ -1714,6 +1733,12 @@ export type ActionActor =
        */
       /** A window's own setting: that computer's window, and its value as the first mate read it. */
       window?: { deviceId: string; name: string; read?: unknown; sets?: string[] };
+      /**
+       * Where the captain's words a `direction` change cites were heard, as
+       * the host checked them (`heardDirection`); absent on the first mate's
+       * own judgment.
+       */
+      heard?: KnowledgeDirectionHeard;
     };
 /** Settings and Firstmate share this project-change path. */
 export function isProjectChange(action: ActionName): boolean {

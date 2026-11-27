@@ -153,6 +153,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | sign-in / sign in | 登录 | Used instead of token, OAuth or credential. |
 | Signed-in sites (Settings → Secrets) | 已登录的网站 | The sites the crew's browser stays signed in to. |
 | standing direction | 长期指引 | 指引 with 长期 for standing. |
+| standing reply (your words kept on a task, which pass its holds) | 有效回复 | |
 | start | 开始 | |
 | starter | 开头语 | The tappable opening phrases on the welcome card. |
 | Steer (button) | 引导 |  |

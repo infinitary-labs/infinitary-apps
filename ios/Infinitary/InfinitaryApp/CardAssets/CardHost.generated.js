@@ -124993,6 +124993,14 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }),
     unavailableSchema
   ]);
+  const knowledgeDirectionHeardSchema = strictObject({
+    from: _enum(["turn", "card", "crewmate-tab", "standing", "window"]),
+    /** The card's id and its title when it was heard, for `card`. */
+    card: string().min(1).max(200).optional(),
+    title: string().max(400).optional(),
+    /** The task's key, for `crewmate-tab` and `standing`. */
+    task: string().min(1).max(64).optional()
+  });
   const knowledgeDirectionRowSchema = object({
     id: string(),
     kind: literal("direction"),
@@ -125002,7 +125010,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     origin: string(),
     authority: _enum(["instruction", "advice"]),
     revision: number().int().positive(),
-    updatedAt: number()
+    updatedAt: number(),
+    /** Where the captain's words for the current revision were heard; absent when they were not. */
+    heard: knowledgeDirectionHeardSchema.optional()
   });
   const knowledgeDirectionsArgsSchema = knowledgeConceptsArgsSchema;
   discriminatedUnion("state", [
@@ -125030,7 +125040,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         origin: string(),
         scope: scopeSchema,
         evidence: string(),
-        at: number()
+        at: number(),
+        heard: knowledgeDirectionHeardSchema.optional()
       })
     ),
     page: number().int().nonnegative(),
@@ -125053,20 +125064,23 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       text: directionChangeTextSchema,
       /** `captain` for everywhere, read by the first mate alone; or one project's id, read by its crewmates too. */
       scope: scopeSchema.optional(),
-      reason: directionChangeReasonSchema
+      reason: directionChangeReasonSchema,
+      heard: knowledgeDirectionHeardSchema.optional()
     }),
     strictObject({
       op: literal("revise"),
       id: directionChangeIdSchema,
       text: directionChangeTextSchema,
       expectedRevision: directionChangeRevisionSchema,
-      reason: directionChangeReasonSchema
+      reason: directionChangeReasonSchema,
+      heard: knowledgeDirectionHeardSchema.optional()
     }),
     strictObject({
       op: literal("retire"),
       id: directionChangeIdSchema,
       expectedRevision: directionChangeRevisionSchema,
-      reason: directionChangeReasonSchema
+      reason: directionChangeReasonSchema,
+      heard: knowledgeDirectionHeardSchema.optional()
     })
   ]);
   object({

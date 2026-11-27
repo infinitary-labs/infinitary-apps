@@ -123,9 +123,9 @@ export const WALKS: Record<string, { walks: string[]; reason: string }> = {
     walks: ["SCAN jobs", "USE TEMP B-TREE FOR ORDER BY"],
     reason: "the jobs a previous process left, read and deleted once at start",
   },
-  "SELECT id, scope, text, origin, revision, retired, created_at AS createdAt, updated_at AS updatedAt FROM directions ORDER BY created_at, id":
+  "SELECT d.id, d.scope, d.text, d.origin, d.revision, d.retired, d.created_at AS createdAt, d.updated_at AS updatedAt, h.revision AS marked, h.heard AS heard FROM directions d LEFT JOIN direction_heard h ON h.id = d.id AND h.revision = d.revision ORDER BY d.created_at, d.id":
     {
-      walks: ["SCAN directions", "USE TEMP B-TREE FOR ORDER BY"],
+      walks: ["SCAN d USING INDEX sqlite_autoindex_directions_1", "USE TEMP B-TREE FOR ORDER BY"],
       reason: "one row per standing direction the captain keeps",
     },
   "SELECT * FROM projects ORDER BY created_at, id": {

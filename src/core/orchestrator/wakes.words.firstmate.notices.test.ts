@@ -3,7 +3,8 @@
  * byte (INF-2625's plan, the wakes row; `tests/helpers/wakeWords.ts` says
  * why): the app's own notices: memory pressure, a blocked line, a recorded
  * freeze, a panel to update, the team queue's leftover files, a schedule
- * firing, the welcome, and a model seat that moved or was not asked.
+ * firing, the welcome, a model seat that moved or was not asked, and the
+ * directions saved before heard marks, to confirm once.
  */
 import {
   type FirstmateNoticeWakeKind,
@@ -587,6 +588,16 @@ const CASES: WordsCases<FirstmateNoticeWakeKind> = {
       },
       words:
         '[fm-op] Your instructions changed, so you now answer in a new conversation on Claude (claude-opus-5-5). Your conversation before the change does not carry over to this one: the context block is the host\'s truth about the crew, tasks and cards. Your last 2 turns before the change, as the host recorded them, oldest first:\n- the captain spoke; you used no tool\n- operational updates; you used tasks, steer_crewmate; you said "Steered INF-2696."; the turn failed',
+    },
+  ],
+  "directions-to-confirm": [
+    {
+      name: "the directions saved before heard marks (INF-6987's pick: confirm them once, on one card)",
+      wake: {
+        facts: { kind: "directions-to-confirm", directions: ["d:release-review", "d:quiet-hours"] },
+      },
+      words:
+        "[fm-op] These standing directions were saved before Infinitary recorded where it heard the captain's own words for each: d:release-review, d:quiet-hours. Until the captain is heard, each stays an instruction, and no check approval or visible validation effect rests on it. Raise one card now listing each with its exact wording and project as a checkbox whose value is its d: id, none ticked, asking which are the captain's own. When they answer, revise each ticked direction with its exact current text and expectedRevision, citing from that card's id; leave the rest as they are. This is asked once: if they decline or put the card away, do not ask again.",
     },
   ],
 };

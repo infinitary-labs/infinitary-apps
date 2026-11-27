@@ -167,6 +167,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | Settings | الإعدادات | |
 | sign-in / sign in | تسجيل الدخول / سجّل الدخول | The usual Arabic interface words. |
 | standing direction | توجيه دائم | Plural "توجيهات دائمة". |
+| standing reply (your words kept on a task, which pass its holds) | الرد القائم | |
 | start | بدء | "بدأت" in the feed. |
 | starter | عبارة بدء | The ready sentence the person presses to begin. |
 | Steer (button) | إرشاد | توجيه is a knowledge direction. |

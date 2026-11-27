@@ -159,6 +159,12 @@
     "many": "Grafo · {count} de conceptos",
     "other": "Grafo · {count} conceptos"
   },
+  "knowledgePanelHeardCard": "Lo dijiste tú, en la tarjeta «{title}»",
+  "knowledgePanelHeardStanding": "Lo dijiste tú, en tu respuesta vigente sobre {task}",
+  "knowledgePanelHeardTab": "Lo dijiste tú, en la pestaña Tripulante de {task}",
+  "knowledgePanelHeardTitle": "Dónde lo dijiste",
+  "knowledgePanelHeardTurn": "Lo dijiste tú, en tus palabras a tu primer oficial",
+  "knowledgePanelHeardWindow": "La cambiaste tú en Conocimiento",
   "knowledgePanelHops": {
     "plural": "count",
     "one": "{count} salto",
@@ -197,6 +203,7 @@
   "knowledgePanelNoSources": "No se guardó ninguna fuente con esto.",
   "knowledgePanelNoUses": "Ningún trabajo ha declarado todavía que lo usó.",
   "knowledgePanelNone": "Ninguno",
+  "knowledgePanelNotHeard": "No consta que lo dijeras tú, así que no aprueba nada por sí sola",
   "knowledgePanelNothingRecorded": "Todavía no hay nada registrado",
   "knowledgePanelObservedBy": "Observado · por {author}",
   "knowledgePanelOpLink": "Vinculado",

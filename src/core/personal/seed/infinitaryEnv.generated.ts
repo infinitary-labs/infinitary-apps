@@ -865,6 +865,18 @@ declare module "@infinitary/contracts" {
     | { state: "missing" }
     | PanelKnowledgeUnavailable;
 
+  /**
+   * Where the captain's own words for a revision of a direction were heard: their words to the first
+   * mate, their reply or click on a card (by id and title), a line they typed in a task's Crewmate tab,
+   * their standing reply on a task (by key), or their own change in the window.
+   */
+  export type PanelKnowledgeDirectionHeard = {
+    from: "turn" | "card" | "crewmate-tab" | "standing" | "window";
+    card?: string;
+    title?: string;
+    task?: string;
+  };
+
   /** Standing instructions or advice, distinct from findings. Reads never grant permission. */
   export type PanelKnowledgeDirectionRow = {
     id: string;
@@ -876,6 +888,8 @@ declare module "@infinitary/contracts" {
     authority: "instruction" | "advice";
     revision: number;
     updatedAt: number;
+    /** Where the current revision was heard from the captain; absent when it was not. */
+    heard?: PanelKnowledgeDirectionHeard;
   };
 
   export type PanelKnowledgeDirections =
@@ -900,6 +914,7 @@ declare module "@infinitary/contracts" {
       scope: string;
       evidence: string;
       at: number;
+      heard?: PanelKnowledgeDirectionHeard;
     }[];
     page: number;
     total: number;

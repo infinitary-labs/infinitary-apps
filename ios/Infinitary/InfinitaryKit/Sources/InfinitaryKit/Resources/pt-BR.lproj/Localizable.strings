@@ -1395,6 +1395,12 @@
 "knowledgePanelFocusNearby" = "Focar na vizinhança";
 "knowledgePanelGraphLabel" = "Conceitos em três dimensões";
 "knowledgePanelGraphLegend" = "Seta contínua: afirmação registrada · Linha tracejada: ler juntos · A profundidade é só layout";
+"knowledgePanelHeardCard" = "Ouvida de você, no cartão “%1$@”";
+"knowledgePanelHeardStanding" = "Ouvida de você, na sua resposta permanente em %1$@";
+"knowledgePanelHeardTab" = "Ouvida de você, na aba Tripulante de %1$@";
+"knowledgePanelHeardTitle" = "Onde você disse";
+"knowledgePanelHeardTurn" = "Ouvida de você, nas suas palavras ao seu imediato";
+"knowledgePanelHeardWindow" = "Alterada por você no Conhecimento";
 "knowledgePanelInspector" = "Inspetor";
 "knowledgePanelInspectorSections" = "Seções do inspetor";
 "knowledgePanelInstruction" = "Instrução";
@@ -1421,6 +1427,7 @@
 "knowledgePanelNoSources" = "Nenhuma fonte foi guardada com ela.";
 "knowledgePanelNoUses" = "Nenhum trabalho declarou ainda que usou isto.";
 "knowledgePanelNone" = "Nenhum";
+"knowledgePanelNotHeard" = "Não ouvida de você, por isso não aprova nada sozinha";
 "knowledgePanelNothingRecorded" = "Nada registrado ainda";
 "knowledgePanelObservedBy" = "Observada · por %1$@";
 "knowledgePanelOpLink" = "Vinculado";

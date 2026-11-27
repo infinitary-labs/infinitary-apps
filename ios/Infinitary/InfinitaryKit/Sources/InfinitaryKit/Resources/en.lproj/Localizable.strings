@@ -1395,6 +1395,12 @@
 "knowledgePanelFocusNearby" = "Focus nearby";
 "knowledgePanelGraphLabel" = "Concepts in three dimensions";
 "knowledgePanelGraphLegend" = "Solid arrow: recorded claim · Dashed line: read together · Depth is layout only";
+"knowledgePanelHeardCard" = "Heard from you on the card “%1$@”";
+"knowledgePanelHeardStanding" = "Heard from you in your standing reply on %1$@";
+"knowledgePanelHeardTab" = "Heard from you in the Crewmate tab of %1$@";
+"knowledgePanelHeardTitle" = "Where you said it";
+"knowledgePanelHeardTurn" = "Heard from you in your words to your first mate";
+"knowledgePanelHeardWindow" = "Changed by you in Knowledge";
 "knowledgePanelInspector" = "Inspector";
 "knowledgePanelInspectorSections" = "Inspector sections";
 "knowledgePanelInstruction" = "Instruction";
@@ -1421,6 +1427,7 @@
 "knowledgePanelNoSources" = "No source was kept with it.";
 "knowledgePanelNoUses" = "No work has declared it used this yet.";
 "knowledgePanelNone" = "None";
+"knowledgePanelNotHeard" = "Not heard from you, so it approves nothing on its own";
 "knowledgePanelNothingRecorded" = "Nothing is recorded yet";
 "knowledgePanelObservedBy" = "Observed · by %1$@";
 "knowledgePanelOpLink" = "Linked";

@@ -147,6 +147,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | Settings | Réglages | As macOS French says it; macOS's own "System Settings" is "Réglages Système". |
 | sign in / sign in again | se connecter / se reconnecter | |
 | sign-in | connexion | "votre connexion GitHub", "la connexion {place} de l’app". |
+| standing reply (your words kept on a task, which pass its holds) | réponse permanente | Feminine. |
 | start | démarrer | "Démarrée", "Démarrer un nouveau projet". |
 | starter | amorce | A sentence start the person finishes ("appuyez sur une amorce"). |
 | Steer (button) | Orienter |  |

@@ -75,10 +75,11 @@ jobs:
     if: needs.resolve.outputs.mode == 'release'
     # The reusable workflow and its checkout use this dispatch's resolved source.
     # No release environment or signing secrets cross into the disposable guest.
-    # INF-4241 piece 8: one call that names no device, so phone.yml's one job checks every device
-    # PHONE_PARTS in scripts/phone-test-plan.ts names from one build on one phone Mac
-    # (tests/phone-ci.test.ts holds this): every part on the iPhone, and on the iPad and the iPhone
-    # Duo only the parts about each, the Duo's in the hinge its row names.
+    # One call that names no device checks every device PHONE_PARTS in scripts/phone-test-plan.ts
+    # names: every part on the iPhone, and on the iPad and the iPhone Duo only the parts about each,
+    # the Duo's in the hinge its row names. INF-7079's fix 5: phone.yml deals those passes into jobs
+    # of about 20 recorded minutes, each on its own phone Mac side by side, as a request of every part
+    # is dealt, and the upload waits for all of them (tests/phone-ci.test.ts holds this).
     name: Requested TestFlight · Phone checks
     uses: ./.github/workflows/phone.yml
     # GitHub starts no job of a called workflow that asks for more than this

@@ -381,8 +381,8 @@ describe("the native gate on an affected request", () => {
   });
   // INF-4241 piece 6: PHONE_PARTS is the one list of devices; the device the phone check accepts, the devices its
   // job of every device runs and the phone release's call follow it, so a device the table adds or drops is checked
-  // or refused everywhere. INF-4241 piece 8 (the brief's "a phone release runs all three passes from one build"): a
-  // call naming no device is one job whose one gate runs every device the table names.
+  // or refused everywhere. INF-4241 piece 8: a job dealt nothing is one job whose one gate runs every device the table
+  // names; the phone release's call names no device and is dealt (INF-7079's fix 5, "the phone release's call" below).
   it("checks the devices PHONE_PARTS names, in the request, its matrix and the phone release", () => {
     const devices = [...PHONE_DEVICES].sort();
     const native = workflow.jobs[NATIVE_JOB];
@@ -430,7 +430,7 @@ describe("the native gate on an affected request", () => {
   // INF-6234's approved plan raised them with the job size from 14 recorded minutes to 20); a call, which runs no further pass, keeps its gate's 90 and its job's limit.
   // INF-6039's plan, part 1, and the captain's answer on its review ("Give the first job 12 more minutes, the build
   // step's own limit"): job 1 of a check of several jobs builds and uploads before its gate, so its job keeps 46.
-  it("caps a call's gate at ninety minutes and a dealt job's gate at 30, each within its job's limit", () => {
+  it("caps an undealt job's gate at ninety minutes and a dealt job's gate at 30, each within its job's limit", () => {
     const limits = (matrix: Plain, strategy: Plain = { "job-total": 1 }) => {
       const contexts = { matrix, strategy };
       return [
@@ -714,7 +714,7 @@ describe("a failing phone check", () => {
       );
       expect(workflowValue(String(native.strategy["fail-fast"]), contexts)).toBe(stops);
     }
-    // A call chooses nothing, so it never stops early.
+    // A check that hands on no stop_early, as the phone release's call and a job dealt nothing do, never stops early.
     expect(workflowString(gate.env!.INFINITARY_PHONE_STOP_EARLY!, { needs: {} })).toBe("0");
     expect(workflowValue(String(native.strategy["fail-fast"]), { needs: {} })).toBe(false);
   });
@@ -825,7 +825,7 @@ describe("the phone check on request", () => {
         expect(
           names(stepsThatRun(virtualMac, false, {}, BRANCH_REQUEST, {}, matrix).filter(isGate)),
         ).toEqual([BOTH]);
-    // A call, or a wait-clock or tool request, runs the job of the device it names, or of every device.
+    // A call naming a device, or a wait-clock or tool request, runs the job of the device it names, or of every device.
     expect(
       ["", "ipad", "duo", "iphone"].map((device) =>
         workflowValue(workflow.jobs[NATIVE_JOB].strategy.matrix.include, {
@@ -835,9 +835,8 @@ describe("the phone check on request", () => {
       ),
     ).toEqual(["every", "ipad", "duo", "iphone"].map((device) => [{ device, key: device }]));
   });
-  // INF-6039's plan, part 1: only a dealt request's jobs share a build, the first job's, within their own run attempt; the
-  // gate then decides whether it may use it (tests/phone-build.test.ts). A call, the phone release's among them, builds
-  // in its gate as before.
+  // INF-6039's plan, part 1: only a dealt check's jobs share a build, the first job's, within their own run attempt; the
+  // gate then decides whether it may use it (tests/phone-build.test.ts). A job dealt nothing builds in its gate.
   it("shares the first job's build with the other jobs of its own run attempt, and only in a dealt request", () => {
     const steps = workflow.jobs[NATIVE_JOB].steps as (Step & { with?: Plain })[];
     const ran = (matrix: Plain, jobs: number) =>
@@ -905,7 +904,7 @@ describe("a request that names one device", () => {
       expect(chosen(device).devices).toEqual([device]);
       expect(devicesOf(requestJobs(chosen(device), TIMES))).toEqual([device]);
     }
-    // A call, and a wait-clock or tool request, run the job of the device it names, or of every device.
+    // A call naming a device, and a wait-clock or tool request, run the job of the device it names, or of every device.
     for (const device of ["", ...PHONE_DEVICES])
       expect(
         workflowValue(native.strategy.matrix.include, { inputs: { device }, needs: {} }),
@@ -1080,18 +1079,38 @@ it("uses the dealt jobs and skips native work when Linux selects none", () => {
   expect(holds(native.if, { inputs: {}, needs: { request: { outputs: { jobs: "[]" } } } })).toBe(
     false,
   );
-  // A release call has no manual selection and runs every device in one job (INF-4241 piece 8).
+  // A wait-clock or tool request deals nothing and runs every device in one job (INF-4241 piece 8).
   expect(workflowValue(native.strategy.matrix.include, { inputs: {}, needs: {} })).toEqual([
     { device: "every", key: "every" },
   ]);
 });
 
-// Release calls inherit their caller's dispatch event, but must never run manual preselection.
-it("leaves the release's resolved-source call out of manual selection and its artifact upload", () => {
-  const contexts = {
+// Release calls inherit their caller's dispatch event, but must never run manual preselection. INF-7079's fix 5 (the
+// captain's "Split TestFlight's every-device phone check into jobs of about 20 minutes that run side by side, as branch
+// phone checks already are"): the call's own steps deal every part on every device into jobs instead
+// (tests/phone-release-dealing.test.ts runs them).
+describe("the phone release's call", () => {
+  const release = {
     github: BRANCH_REQUEST,
-    inputs: { source_commit: "6073f484509752eb55ee1b1c85c38b82b4909cc3" },
+    inputs: { source_commit: "6073f484509752eb55ee1b1c85c38b82b4909cc3", device: "" },
   };
-  for (const step of (workflow.jobs.request.steps as Step[]).slice(1))
-    expect(holds(condition(step), contexts), step.name ?? step.uses).toBe(false);
+  const steps = workflow.jobs.request.steps as Step[];
+  const RELEASE_SELECT = "release-select";
+  const label = (step: Step) => step.id ?? step.uses?.split("@")[0] ?? step.name;
+  it("runs its own dealing steps and no manual selection or placement upload", () => {
+    expect(
+      steps
+        .slice(1)
+        .filter((step) => holds(condition(step), release))
+        .map(label),
+    ).toEqual(["actions/checkout", "actions/setup-node", RELEASE_SELECT]);
+    const deal = steps.find((step) => step.id === RELEASE_SELECT)!;
+    // A manual request, and a call naming one device, deal nothing here.
+    expect(holds(condition(deal), { github: BRANCH_REQUEST, inputs: { evidence_run: "" } })).toBe(
+      false,
+    );
+    expect(
+      holds(condition(deal), { ...release, inputs: { ...release.inputs, device: "ipad" } }),
+    ).toBe(false);
+  });
 });

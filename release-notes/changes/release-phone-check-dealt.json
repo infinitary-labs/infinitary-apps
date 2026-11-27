@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "release-phone-check-dealt",
+      "reason": "Internal: the phone release's phone check runs as side-by-side jobs on the project's own test machines; nothing in the app changes."
+    }
+  ]
+}

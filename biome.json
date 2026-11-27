@@ -569,6 +569,7 @@
         "!tests/phone-settings-pages.test.ts",
         "!tests/virtual-mac-phone.test.ts",
         "!tests/phone-release-process.test.ts",
+        "!tests/phone-release-dealing.test.ts",
         "!tests/phone-certificates.test.ts",
         "!tests/helpers/phoneCertificateFixture.ts",
         "!tests/mockClaudeClient.test.ts",

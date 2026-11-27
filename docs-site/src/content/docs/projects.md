@@ -136,6 +136,10 @@ While a project is in focus:
 - Your first mate hears the focus with each message you send.
   Unless you name another project, it puts new work in that project, and its answers and its actions on many tasks cover only that project and say what they left out.
 
+To see where one project's work runs without focusing, point at a crewmate in the middle of the window, or tap it on your phone.
+While its summary is open, every crewmate of another project dims to a quarter of its light, on every computer, and nobody moves.
+Close the summary and the light goes back.
+
 Press the **×** beside the pill (**Show all projects**), or pick **All projects** in the row, to see everything again.
 Infinitary remembers your focus when you restart it.
 

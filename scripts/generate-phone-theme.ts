@@ -38,6 +38,7 @@ if (!pageMs || !fadeMs) throw new Error("Missing --dur-page or --dur-fade");
 const motion = [
   `    static let surfaceMove = Animation.timingCurve(${glide.join(", ")}, duration: ${Number(surfaceMs) / 1000})`,
   `    static let glide: (Double, Double, Double, Double) = (${glide.join(", ")})`,
+  `    static let surfaceSeconds: Double = ${Number(surfaceMs) / 1000}`,
   `    static let pageSeconds: Double = ${Number(pageMs) / 1000}`,
   `    static let fadeSeconds: Double = ${Number(fadeMs) / 1000}`,
 ].join("\n");

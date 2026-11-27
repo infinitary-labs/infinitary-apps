@@ -43,6 +43,7 @@ try {
   const { CAPTAIN_LIGHT, GEM_WIRES, TIER_SOLIDS, WAIT_LIGHT } = await runner.import<typeof import("../src/renderer/src/character/crew/crewmate.ts")>(join(character, "crew/crewmate.ts"));
   const { CROWDED_PLANES, GROWING_RING, outerPlaneRadius, planeRadius } = await runner.import<typeof import("../src/renderer/src/character/crew/orbitalPlanes.ts")>(join(character, "crew/orbitalPlanes.ts"));
   const { CLUSTER_LAYOUT } = await runner.import<typeof import("../src/renderer/src/character/crew/computers.ts")>(join(character, "crew/computers.ts"));
+  const { OUT_OF_FOCUS_LIGHT, lightFrame, restedLight } = await runner.import<typeof import("../src/renderer/src/character/crew/focusLight.ts")>(join(character, "crew/focusLight.ts"));
   const { ORION, BIG_DIPPER } = await runner.import<typeof import("../src/renderer/src/character/constellations.ts")>(join(character, "constellations.ts"));
   const { SATURN } = await runner.import<typeof import("../src/renderer/src/character/saturn.ts")>(join(character, "saturn.ts"));
   const { GALAXY } = await runner.import<typeof import("../src/renderer/src/character/galaxy.ts")>(join(character, "galaxy.ts"));
@@ -110,11 +111,13 @@ try {
       captain: { ...CAPTAIN_LIGHT, breathMs: CAPTAIN_BREATH_MS },
       wait: { ...WAIT_LIGHT, arcRate: WAIT_ARC_RATE },
       batch: BATCH_GATE,
+      focus: { outOfFocusLight: OUT_OF_FOCUS_LIGHT },
       fixedStars: { ...FIXED_STARS, corners: CORNERS, rho: RHO, jitter: JITTER, stepDeg: STEP_DEG, narrowStepDeg: NARROW_STEP_DEG, roomPx: ROOM_PX, reachDeg: REACH_DEG },
     },
     "ios/Infinitary/InfinitaryTests/PhoneSceneTraces.generated.json": REPLY_EMOTES.flatMap((emote) =>
       [0, 0.05, 0.15, 0.25, 0.4, 0.55, 0.7, 0.85, 1].map((progress) => ({ emote, progress, frame: replyFrame(emote, progress) }))),
     "ios/Infinitary/InfinitaryTests/PhoneCinchTraces.generated.json": cinchTraces(),
+    "ios/Infinitary/InfinitaryTests/PhoneFocusLight.generated.json": focusLightTraces(),
     "ios/Infinitary/InfinitaryTests/PhoneSupernovaTraces.generated.json": supernovaTraces(),
     "ios/Infinitary/InfinitaryTests/PhoneOrbitSeats.generated.json": orbitSeats(),
     "ios/Infinitary/InfinitaryTests/PhoneFixedStars.generated.json": fixedStarReadings(),
@@ -174,6 +177,29 @@ try {
       const at = departureIndex(ids.map((id) => ({ id })), unread, "depart", neighboursOf(previous, left));
       return { name, previous, left, ids, unread, comesUp: ids[at] ?? null };
     });
+  }
+  /** INF-6951: the desktop's light for one board, two computers and two projects, as summaries open and close, for the phone's to replay. */
+  function focusLightTraces() {
+    const projects: Record<string, string> = { "web-home": "website", "shop-home": "shop", "web-studio": "website", "shop-studio": "shop" };
+    const projectOf = (id: string) => projects[id];
+    const crew = [...Object.keys(projects), "unnamed-home"].map((id) => ({ id, alpha: 1 }));
+    const frame = { crew } as unknown as Parameters<typeof lightFrame>[0];
+    const durationMs = 360;
+    const steps: Array<{ held: string | null; rested: string | null; elapsedMs: number }> = [
+      { held: null, rested: null, elapsedMs: 0 },
+      { held: null, rested: "web-home", elapsedMs: 120 },
+      { held: null, rested: "web-home", elapsedMs: 300 },
+      { held: null, rested: "shop-studio", elapsedMs: 180 },
+      { held: null, rested: "unnamed-home", elapsedMs: 400 },
+      { held: "website", rested: "shop-home", elapsedMs: 400 },
+      { held: "website", rested: null, elapsedMs: 90 },
+      { held: null, rested: null, elapsedMs: 400 },
+    ];
+    const state = new Map<string, number>();
+    return { projects, durationMs, steps: steps.map((step) => {
+      const lit = lightFrame(frame, restedLight({ project: step.held, projectOf }, step.rested), state, step.elapsedMs, durationMs);
+      return { ...step, light: Object.fromEntries(lit.crew.map((c) => [c.id, Math.round(c.alpha * 1e9) / 1e9])) };
+    }) };
   }
   /** INF-3011: the desktop cinch's frames and motes through a shortening that runs and one only heard ending, for the phone's to replay. */
   function cinchTraces() {

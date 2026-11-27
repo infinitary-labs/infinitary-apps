@@ -169,6 +169,14 @@ struct PhoneSceneRoster {
         guard board?.tasks.contains(where: { $0.pinnedAt != nil }) == true else { return [] }
         return PhoneTaskList(board: board, cards: []).parts.first { $0.section == .pinned }?.rows.map(\.task.id) ?? []
     }
+    /// The task crew browsing selected, by its touch identity: a crewmate's task id, or a program mark's computer and task.
+    func task(selected id: String) -> PhoneTask? {
+        if let task = allTasks.first(where: { $0.id == id }) { return task }
+        for computer in computers {
+            if let program = computer.programs.first(where: { computer.id + ":" + $0.task.id == id }) { return program.task }
+        }
+        return nil
+    }
     static func computerID(_ task: PhoneTask) -> String {
         if let id = task.executionDeviceId { return id }
         // An older home's named remote place is not this computer and its reach is unknown.
@@ -283,7 +291,7 @@ final class PhoneSceneMotion: @unchecked Sendable {
         var id: String { computerID + ":" + task.id }
     }
     struct Frame {
-        let glyphs: [Glyph]; let marks: [Mark]; let packets: [(CGPoint, Double)]; let links: [(CGPoint, CGPoint, Bool)]
+        var glyphs: [Glyph]; let marks: [Mark]; let packets: [(CGPoint, Double)]; let links: [(CGPoint, CGPoint, Bool)]
         /// The hairline joining neighbouring fixed stars within one corner of the sky, by task id, drawn under the crew.
         var starJoins: [(from: String, to: String)] = []
     }

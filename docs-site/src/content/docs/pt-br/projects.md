@@ -1,5 +1,5 @@
 ---
-source: d2c121d3a9fe9728
+source: c51b6ca36743cf77
 title: Projetos
 description: Como adicionar um projeto ao Infinitary, reunir vários repositórios em um só, criar etiquetas para ele, focar a janela em um deles, escolher como as mudanças dele são mescladas e removê-lo.
 ---
@@ -136,6 +136,10 @@ Enquanto um projeto está em foco:
 - Uma linha curta ao lado da pílula diz quantas tarefas aguardam você em outros projetos, como “2 aguardando em outros projetos”.
 - Seu imediato fica sabendo do foco a cada mensagem que você envia.
   A não ser que você cite outro projeto, ele põe o trabalho novo nesse projeto, e suas respostas e ações sobre muitas tarefas cobrem só esse projeto e dizem o que deixaram de fora.
+
+Para ver onde o trabalho de um projeto está rodando sem focar nele, aponte para um tripulante no centro da janela, ou toque nele no seu celular.
+Enquanto o resumo dele está aberto, cada tripulante de outro projeto fica com um quarto da luz, em cada computador, e ninguém se move.
+Feche o resumo e a luz volta.
 
 Pressione o **×** ao lado da pílula (**Mostrar todos os projetos**), ou escolha **Todos os projetos** na fileira, para ver tudo de novo.
 O Infinitary lembra do seu foco quando você o reinicia.

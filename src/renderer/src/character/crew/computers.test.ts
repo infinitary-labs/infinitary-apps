@@ -7,6 +7,7 @@ import {
 import type { DeviceView } from "@shared/devices";
 import { describe, expect, it } from "vitest";
 import { CLUSTER_LAYOUT, ComputerOrbits, HOME_COMPUTER } from "./computers";
+import { lightFrame, OUT_OF_FOCUS_LIGHT, restedLight } from "./focusLight";
 import { crewHit } from "./hover";
 import { markOf, programMarks, stageMarks } from "./marks";
 import { CrewOrbit, DEFAULT_ORBIT, remoteTripMs } from "./orbit";
@@ -452,6 +453,34 @@ describe("computer constellations", () => {
         { fromId: "review", toId: "builder", kind: "review" },
       ]);
     });
+  });
+});
+
+// INF-6951, the captain's approved plan: an open summary lights its
+// crewmate's project on every computer, and no crewmate moves for it.
+describe("a crewmate's summary across computers", () => {
+  it("lights the same project on another computer, keeping every seat", () => {
+    const model = new ComputerOrbits(0);
+    model.configure([device("studio")]);
+    seed(model, "web-home", null);
+    seed(model, "shop-home", null);
+    seed(model, "web-studio", "studio");
+    seed(model, "shop-studio", "studio");
+    model.settleBootRoster(0);
+    const frame = model.update(0, true);
+    const projectOf = (id: string) => (id.startsWith("web") ? "website" : "shop");
+    const lit = lightFrame(
+      frame,
+      restedLight({ project: null, projectOf }, "web-home"),
+      new Map(),
+      0,
+      0,
+    );
+    const alpha = (f: typeof frame, id: string) => required(f.crew.find((c) => c.id === id)).alpha;
+    expect(alpha(lit, "web-studio")).toBe(alpha(frame, "web-studio"));
+    expect(alpha(lit, "shop-studio")).toBeCloseTo(alpha(frame, "shop-studio") * OUT_OF_FOCUS_LIGHT);
+    expect(alpha(lit, "shop-home")).toBeCloseTo(alpha(frame, "shop-home") * OUT_OF_FOCUS_LIGHT);
+    expect(lit.crew.map((c) => [c.id, c.x, c.y])).toEqual(frame.crew.map((c) => [c.id, c.x, c.y]));
   });
 });
 

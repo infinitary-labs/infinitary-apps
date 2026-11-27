@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "task-moves-split",
+      "reason": "Internal: computer move eligibility moves into its own module without changing behavior."
+    }
+  ]
+}

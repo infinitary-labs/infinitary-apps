@@ -1237,16 +1237,16 @@ It moves only when the captain asks: the record's Move to a computer, the `task.
 Nothing moves work on its own, to balance load or to fail over.
 
 - **What may move.**
-  Started work with a working copy of its own moves; the personal workspace, work in a project's own folder and an independent review do not (`TaskMoves.moveRefusal`).
+  Started work with a working copy of its own moves; the personal workspace, work in a project's own folder and an independent review do not (`ComputerMoveEligibility.moveBlocker`).
   A computer that runs work takes a move only when it takes work on the home's contract major (`PlacedSessions.takesMoves`); an older one is named with "Update it first."
-  A destination must be in reach and must serve the task's own model through a signed-in account of its own (`destinationRefusal`); the task changes model on the way only when its model left every level, as the conversation it opens there routes again (`docs/routing.md`, "A model that left every level").
+  A destination must be in reach and must serve the task's own model through a signed-in account of its own (`ComputerMoveEligibility.destinationRefusal`); the task changes model on the way only when its model left every level, as the conversation it opens there routes again (`docs/routing.md`, "A model that left every level").
   It must also be able to run the task, read as a start reads it: the system and chip the project or task names, the programs it needs, and, for a project that lives on a forge, its own sign-in there, read from the sign-ins it lists rather than from whether it can reach the project, which a public project answers without one (`AutomaticPlacement.moveRefusal`); a move back to this computer reads this computer's own list the same way, so a sign-in that needs renewing counts as none, and a list that cannot be read, or a sign-in in unknown health because its file is unreadable or its health is not read yet, is named as unread.
   A refusal says which, such as "Mac mini is not signed in to github.com, where meter lives."
   A project kept on this computer only, or cloned from a folder of this computer, moves too: it has no address the destination can clone, so its commits cross in a bundle of the whole branch into an empty project there (`local`, `WorkingCopies.localProject`), which then starts on this computer's branch at the commit the task's branch left it at (`base`), so the copy there is read and removed as a clone's is.
   The record offers Move to a computer only while the task may move and another computer is on the list (`TaskView.movable`), and its picker lists every other computer, with why one cannot take the task now (`inf:task:move-options`).
 - **A safe pause.**
   The ask is kept on the record as `WorkShape.computer_move` (`ComputerMove`) in phase `waiting`, so a quit finds it.
-  The task moves once its crewmate's turn ends, the commands it started finish, its merge is settled, its independent review finishes, its browser is closed and both computers are in reach (`pauseBlockers`; a move off a computer out of reach waits for less, below); no turn is cut short, and no live page, or one in the captain's hands, moves or closes.
+  The task moves once its crewmate's turn ends, the commands it started finish, its merge is settled, its independent review finishes, its browser is closed and both computers are in reach (`ComputerMoveEligibility.pauseBlockers`; a move off a computer out of reach waits for less, below); no turn is cut short, and no live page, or one in the captain's hands, moves or closes.
   No new turn starts meanwhile: the lane is held (`laneHeld`), and steers and job results wait on it.
   The record's footer says what the move still waits for (`TaskView.computerMove`, `computerMoveLine`), and Cancel move, or `move_task` with `cancel`, ends the ask until the work starts crossing.
 - **The work crossing** (`TaskMoves.runComputerMove`, phase `moving`).

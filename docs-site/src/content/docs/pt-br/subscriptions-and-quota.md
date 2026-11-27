@@ -1,5 +1,5 @@
 ---
-source: 4cdc56f97509d3e4
+source: f152dcd8b0d392d5
 title: Assinaturas e franquia
 description: Como adicionar suas assinaturas de IA, ver quanto ainda resta da franquia do seu plano e o que sua tripulação faz quando ela acaba.
 ---
@@ -54,6 +54,7 @@ Quando você adiciona o Amazon Bedrock, o Infinitary pergunta para onde as solic
 Digite o endereço da sua organização, e o Infinitary mostra o host e a rede em que ele está: este computador, a rede da sua organização ou a internet pública.
 Pressione **Enviar solicitações para lá** para aprová-lo.
 As solicitações então vão só para esse endereço, só enquanto o nome dele ainda apontar para essa rede, e só quando o seu computador confia no certificado dele.
+As solicitações do Amazon Bedrock, incluindo as enviadas direto para a AWS, não passam mais por um proxy definido no ambiente do seu computador.
 Se o endereço da sua organização assina as solicitações sozinho, escolha **Sem chave: o endereço da minha organização assina as solicitações** em vez de um perfil ou uma chave.
 Quando o Claude Code no seu computador já usa o Amazon Bedrock, o login começa com o endereço, a região e o perfil dele preenchidos, e diz de onde vieram.
 A linha da conta então diz por qual endereço as solicitações são **enviadas**.

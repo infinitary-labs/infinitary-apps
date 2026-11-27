@@ -158,7 +158,7 @@ Nothing around the app moves a request: proxy variables, AWS endpoint variables 
 Every Bedrock connection, to AWS's own address too, checks certificates against this computer's trusted list (`src/core/trustedRoots.ts`, the one Claude's usage reporting uses), and a sign-in says a certificate this computer does not trust apart from an address it cannot reach.
 A third sign-in method, No key: my organization's address signs requests, skips the where step and sends with no credentials at all, so the computer's own AWS credentials never sign a request; without an organization address a key or profile stays required.
 When Claude Code's settings turn Bedrock on (`CLAUDE_CODE_USE_BEDROCK`), from the organization's managed tier or the person's own settings file, the region, address and profile prompts start filled from `AWS_REGION`, `ANTHROPIC_BEDROCK_BASE_URL` and `AWS_PROFILE` and say where the values came from, and `CLAUDE_CODE_SKIP_BEDROCK_AUTH` is named beside the method question (`readClaudeBedrockSetup`); no key is ever read, and the approval step still shows.
-Signing in again answers every step from what was saved but the key, and refuses an address whose name now reads as another network class.
+Signing in again answers every step from what was saved but the key; when the address's name now reads as another network class, the approval step shows the new class for the person to approve.
 The account's row says sent through and the address's host.
 Connect separately on each computer that runs work.
 The account is billed by use and shows this month's estimate from Infinitary's own usage record, not an allowance meter or an AWS bill.

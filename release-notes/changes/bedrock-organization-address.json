@@ -4,7 +4,7 @@
       "id": "bedrock-organization-address",
       "kind": "feature",
       "title": "Send Amazon Bedrock requests through your organization's address",
-      "body": "When you add an Amazon Bedrock account, you can now send its requests straight to AWS or through your organization's own address. Infinitary shows the address and the network it is on before anything is sent, keeps every request on that network, and checks certificates against the ones your computer trusts. If your organization's address signs requests itself, you can connect with no key. When Claude Code on your computer already uses Bedrock, the sign-in starts with its address, region and profile filled in. The account's row says which address it sends through.",
+      "body": "An Amazon Bedrock account can now send its requests straight to AWS or through your organization's own address. Infinitary shows the address and its network before anything is sent, keeps every request on that network, and checks certificates against the ones your computer trusts. Bedrock requests no longer use a proxy set in your computer's environment. If your organization's address signs requests itself, you can connect with no key. When Claude Code already uses Bedrock, the sign-in starts with its address, region and profile filled in. The account's row names the address it sends through.",
       "area": "subscriptions",
       "picture": {
         "dark": "bedrock-organization-address-dark.webp",

@@ -1,5 +1,5 @@
 ---
-source: 4cdc56f97509d3e4
+source: f152dcd8b0d392d5
 title: Suscripciones y asignación
 description: Cómo agregar tus suscripciones de IA, leer cuánto queda de la asignación de tu plan y qué hace tu tripulación cuando se agota.
 ---
@@ -54,6 +54,7 @@ Cuando agregas Amazon Bedrock, Infinitary pregunta adónde deben ir sus solicitu
 Escribe la dirección de tu organización, e Infinitary muestra su host y la red en la que está: esta computadora, la red de tu organización o el internet público.
 Pulsa **Enviar solicitudes allí** para aprobarla.
 Las solicitudes van entonces solo a esa dirección, solo mientras su nombre siga apuntando a esa red, y solo cuando tu computadora confía en su certificado.
+Las solicitudes de Amazon Bedrock, incluidas las que van directo a AWS, ya no pasan por un proxy configurado en el entorno de tu computadora.
 Si la dirección de tu organización firma las solicitudes por sí misma, elige **Sin clave: la dirección de mi organización firma las solicitudes** en lugar de un perfil o una clave.
 Cuando Claude Code en tu computadora ya usa Amazon Bedrock, el inicio de sesión empieza con su dirección, región y perfil ya escritos, y dice de dónde salieron.
 La fila de la cuenta dice entonces a través de qué dirección se **envían** sus solicitudes.

@@ -1,5 +1,5 @@
 ---
-source: 4cdc56f97509d3e4
+source: f152dcd8b0d392d5
 title: Abos und Kontingent
 description: Wie du deine KI-Abos hinzufügst, das Kontingent deines Tarifs ablesen kannst und was deine Crew tut, wenn es aufgebraucht ist.
 ---
@@ -54,6 +54,7 @@ Wenn du Amazon Bedrock hinzufügst, fragt Infinitary, wohin seine Anfragen gehen
 Gib die Adresse deiner Organisation ein, und Infinitary zeigt ihren Host und das Netzwerk, in dem sie liegt: dieser Computer, das Netzwerk deiner Organisation oder das öffentliche Internet.
 Drück **Anfragen dorthin senden**, um sie freizugeben.
 Anfragen gehen dann nur an diese Adresse, nur solange ihr Name noch auf dieses Netzwerk zeigt, und nur, wenn dein Computer ihrem Zertifikat vertraut.
+Amazon-Bedrock-Anfragen, auch die direkt an AWS, laufen nicht mehr über einen Proxy, der in der Umgebung deines Computers eingestellt ist.
 Wenn die Adresse deiner Organisation Anfragen selbst signiert, wähl **Ohne Schlüssel: Die Adresse meiner Organisation signiert Anfragen** statt eines Profils oder Schlüssels.
 Wenn Claude Code auf deinem Computer schon Amazon Bedrock nutzt, beginnt die Anmeldung mit dessen Adresse, Region und Profil und sagt, woher sie stammen.
 Die Zeile des Kontos sagt dann, über welche Adresse seine Anfragen **gesendet** werden.

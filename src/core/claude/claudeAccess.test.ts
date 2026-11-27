@@ -192,7 +192,7 @@ describe("Claude Code's Amazon Bedrock settings", () => {
     });
   });
 
-  it("names the organization, whose values win over the person's own", async () => {
+  it("lets the organization's values win, naming it only when every filled value is its own", async () => {
     personalSettings(OWN_BEDROCK);
     const setup = await readClaudeBedrockSetup(
       withOrganization({
@@ -203,13 +203,22 @@ describe("Claude Code's Amazon Bedrock settings", () => {
         },
       }),
     );
+    // The region and profile came from the person's own file, so the organization is not credited.
     expect(setup).toEqual({
-      source: "organization",
+      source: "claude-settings",
       address: "https://llm.corp.example",
       region: "us-east-1",
       profile: "work",
       skipAuth: true,
     });
+    personalSettings({});
+    expect(
+      await readClaudeBedrockSetup(
+        withOrganization({
+          env: { CLAUDE_CODE_USE_BEDROCK: "1", AWS_REGION: "eu-west-1" },
+        }),
+      ),
+    ).toEqual({ source: "organization", region: "eu-west-1" });
   });
 
   it("reads nothing when no tier turns Bedrock on, or the settings cannot be read", async () => {

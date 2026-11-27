@@ -5,6 +5,7 @@ import { KEYCHAIN_VALUE_FAILURE_THERE, type QuotaSnapshotView } from "@shared/qu
 import type { AccountBackend } from "../accounts/accountBackend";
 import { CredentialHealthService } from "../accounts/credentialHealthService";
 import { buildProviderViews } from "../accounts/providerViews";
+import { readClaudeBedrockSetup } from "../claude/claudeAccess";
 import { ClaudeAuthBackend } from "../claude/claudeAuth";
 import {
   claudeCredentialStamp,
@@ -137,6 +138,7 @@ export async function startComputerAccounts(
   const pi = new PiAccountBackend({
     modelsPath: join(baseDir, "models.json"),
     ...(options.onModels ? { onCatalogRefreshed: options.onModels } : {}),
+    bedrockClaudeSetup: () => readClaudeBedrockSetup(),
   });
   // The model lists are built as the home builds its own (docs/model-lists.md),
   // so the home's Automatic start routes among what each account here serves

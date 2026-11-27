@@ -1,5 +1,5 @@
 ---
-source: 4cdc56f97509d3e4
+source: f152dcd8b0d392d5
 title: Abonnements et allocation
 description: Comment ajouter vos abonnements d’IA, voir ce qui reste de l’allocation de votre forfait, et ce que fait votre équipage quand elle est épuisée.
 ---
@@ -54,6 +54,7 @@ Quand vous ajoutez Amazon Bedrock, Infinitary demande où ses requêtes doivent 
 Saisissez l’adresse de votre organisation, et Infinitary affiche son hôte et le réseau où elle se trouve : cet ordinateur, le réseau de votre organisation ou l’internet public.
 Appuyez sur **Envoyer les requêtes là-bas** pour l’approuver.
 Les requêtes vont alors uniquement à cette adresse, seulement tant que son nom pointe vers ce réseau, et seulement si votre ordinateur fait confiance à son certificat.
+Les requêtes Amazon Bedrock, y compris celles envoyées directement à AWS, ne passent plus par un proxy défini dans l'environnement de votre ordinateur.
 Si l’adresse de votre organisation signe elle-même les requêtes, choisissez **Sans clé : l’adresse de mon organisation signe les requêtes** au lieu d’un profil ou d’une clé.
 Quand Claude Code utilise déjà Amazon Bedrock sur votre ordinateur, la connexion commence avec son adresse, sa région et son profil déjà remplis, et indique d’où ils viennent.
 La ligne du compte indique alors par quelle adresse ses requêtes sont **envoyées**.

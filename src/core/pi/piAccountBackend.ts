@@ -212,7 +212,8 @@ export class PiAccountBackend implements AccountBackend {
           : undefined;
       const profile = existing?.env?.AWS_PROFILE;
       // Signing in again answers every step but the key from what was saved; an
-      // address whose name now reads as another network kind is not approved.
+      // address whose name now reads as another network kind is approved again
+      // by the person.
       const recheck = async (
         target: AccountRef,
         current: ModelRuntime,
@@ -246,7 +247,14 @@ export class PiAccountBackend implements AccountBackend {
                       : prompt.type === "text"
                         ? texts.shift()
                         : undefined;
-                  return answer === undefined ? auth.prompt(prompt) : Promise.resolve(answer);
+                  // A saved choice the step no longer offers, such as approval of an
+                  // address's earlier network, goes to the person to choose afresh.
+                  const offered =
+                    prompt.type !== "select" ||
+                    prompt.options.some((option) => option.id === answer);
+                  return answer === undefined || !offered
+                    ? auth.prompt(prompt)
+                    : Promise.resolve(answer);
                 },
               }
             : auth,

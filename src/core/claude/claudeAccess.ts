@@ -263,8 +263,12 @@ export async function readClaudeBedrockSetup(
   }
   const merged = { ...own, ...organization };
   if (!merged.enabled) return;
+  // Named the organization's only when no value it fills came from the person's own file.
+  const ownValue = (["address", "region", "profile", "skipAuth"] as const).some(
+    (key) => merged[key] !== undefined && organization[key] === undefined,
+  );
   return {
-    source: organization.enabled ? "organization" : "claude-settings",
+    source: organization.enabled && !ownValue ? "organization" : "claude-settings",
     ...(merged.address ? { address: merged.address } : {}),
     ...(merged.region ? { region: merged.region } : {}),
     ...(merged.profile ? { profile: merged.profile } : {}),

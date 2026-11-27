@@ -1,5 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { createServer as createHttpServer } from "node:http";
+import { createSecureServer } from "node:http2";
 import { createServer, type Server } from "node:https";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
@@ -7,8 +8,9 @@ import { normalizeContext } from "@earendil-works/pi-ai";
 import * as m from "@shared/i18n/messages.generated";
 import { STARTER_SLOTS } from "@shared/modelSlots";
 import { type AuthPromptView, BEDROCK_PROVIDER_ID, BEDROCK_SIGN_IN } from "@shared/providers";
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { bedrockEvent } from "../../../tests/helpers/bedrockEventStream";
+import { collectorTlsFixture } from "../../../tests/helpers/collectorTlsFixture";
 import { customApiCaFixture } from "../../../tests/helpers/customApiCaFixture";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import type { BedrockClaudeSetup } from "../claude/claudeAccess";
@@ -17,7 +19,7 @@ import { useSystemRootsForTests } from "../trustedRoots";
 import { AccountVault } from "./accountVault";
 import { BEDROCK_ADDRESS_ENV, BEDROCK_NETWORK_ENV } from "./bedrock";
 import { bedrockConnection, bedrockConnectionFailure } from "./bedrockConnection";
-import { catalogRefreshesSettled } from "./modelRuntime";
+import { catalogRefreshesSettled, createModelRuntime } from "./modelRuntime";
 import { PiAccountBackend } from "./piAccountBackend";
 import type { AuthInteractionBridge } from "./piAuth";
 
@@ -99,6 +101,19 @@ afterEach(async () => {
   );
 });
 
+/** A one-word Bedrock answer in AWS's event-stream format. */
+const answer = () =>
+  Buffer.concat([
+    bedrockEvent("messageStart", { role: "assistant" }),
+    bedrockEvent("contentBlockDelta", { contentBlockIndex: 0, delta: { text: "Hi" } }),
+    bedrockEvent("contentBlockStop", { contentBlockIndex: 0 }),
+    bedrockEvent("messageStop", { stopReason: "end_turn" }),
+    bedrockEvent("metadata", {
+      usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
+      metrics: { latencyMs: 1 },
+    }),
+  ]);
+
 type Seen = { model: string; httpVersion: string; authorization?: string; signed: boolean };
 
 /** The organization's address: answers the one model, refuses the rest. */
@@ -122,18 +137,7 @@ async function organization() {
       return;
     }
     response.writeHead(200, { "content-type": "application/vnd.amazon.eventstream" });
-    response.end(
-      Buffer.concat([
-        bedrockEvent("messageStart", { role: "assistant" }),
-        bedrockEvent("contentBlockDelta", { contentBlockIndex: 0, delta: { text: "Hi" } }),
-        bedrockEvent("contentBlockStop", { contentBlockIndex: 0 }),
-        bedrockEvent("messageStop", { stopReason: "end_turn" }),
-        bedrockEvent("metadata", {
-          usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
-          metrics: { latencyMs: 1 },
-        }),
-      ]),
-    );
+    response.end(answer());
   });
   servers.push(server);
   await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
@@ -250,7 +254,8 @@ describe("an Amazon Bedrock account sent through an organization's address", () 
       person(keyAnswers(gateway.address)).bridge,
     );
     const before = gateway.seen.length;
-    answers = ["10.20.30.40"];
+    // A documentation address no network routes, so a build that skipped the check reaches nothing.
+    answers = ["192.0.2.1"];
     const result = await ask(vault, account.id);
     expect(result.stopReason).toBe("error");
     expect(bedrockConnectionFailure(result)).toBe("destination");
@@ -326,7 +331,7 @@ describe("an Amazon Bedrock account sent through an organization's address", () 
     );
   }, 30_000);
 
-  it("signs in again to the address it kept, and refuses it once its name reads as another network", async () => {
+  it("signs in again to the address it kept, and puts a new network to the person to approve", async () => {
     const gateway = await organization();
     const vault = vaultWith();
     const account = await vault.add(
@@ -341,23 +346,69 @@ describe("an Amazon Bedrock account sent through an organization's address", () 
       gateway.host,
     );
 
+    // The person turns the new network down, so no request is made to it.
     answers = ["10.20.30.40"];
-    await expect(vault.signIn(account.id, person([type(KEY)]).bridge)).rejects.toThrow(
-      m.bedrockAddressMoved({ host: gateway.host }),
-    );
+    const moved = person([
+      () => {
+        throw new Error("Not approved");
+      },
+    ]);
+    await expect(vault.signIn(account.id, moved.bridge)).rejects.toThrow("Not approved");
+    expect(moved.prompts.map((prompt) => prompt.message)).toEqual([
+      m.bedrockSignInApprovePrivate({ host: gateway.host }),
+    ]);
   }, 30_000);
 });
 
 describe("every Amazon Bedrock connection", () => {
-  it("trusts this computer's certificate list at AWS's own address too", () => {
-    const connection = bedrockConnection(
-      "https://bedrock-runtime.us-west-2.amazonaws.com",
-      undefined,
+  it("trusts this computer's certificate list at AWS's own address too", async () => {
+    // AWS's address over HTTP/2, as the stock stream reaches it, here a local
+    // stand-in on 127.0.0.1 whose authority only the stand-in trusted list holds.
+    const aws = collectorTlsFixture(scratchDir("infinitary-bedrock-aws-tls-"));
+    let streams = 0;
+    const server = createSecureServer(
+      { cert: aws.serverCert, key: aws.serverKey },
+      (_, response) => {
+        streams += 1;
+        response.writeHead(200, { "content-type": "application/vnd.amazon.eventstream" });
+        response.end(answer());
+      },
     );
-    expect("http2ConnectOptions" in connection && connection.http2ConnectOptions.ca).toContain(
-      tls.ca,
-    );
-  });
+    await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
+    onTestFinished(() => new Promise<void>((done) => server.close(() => done())));
+    const baseUrl = `https://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    const runtime = await createModelRuntime({
+      authPath: join(scratchDir("infinitary-bedrock-aws-"), "auth.json"),
+      modelsPath: join(scratchDir("infinitary-bedrock-aws-models-"), "models.json"),
+    });
+    const stock = runtime.getProvider(BEDROCK_PROVIDER_ID);
+    const model = stock?.getModels().find(({ id }) => id === MODEL);
+    if (!stock || !model) throw new Error("Missing Pi's own Bedrock provider");
+    const send = () =>
+      stock
+        .streamSimple(
+          { ...model, baseUrl },
+          normalizeContext({ messages: [{ role: "user", content: "Hi", timestamp: 0 }] }),
+          {
+            apiKey: KEY,
+            env: { AWS_BEDROCK_SCOPED_AUTH: "1", AWS_REGION: "us-west-2" },
+            maxTokens: 1,
+            ...bedrockConnection(baseUrl, undefined),
+          } as Parameters<typeof stock.streamSimple>[2],
+        )
+        .result();
+
+    useSystemRootsForTests(() => [aws.ca]);
+    const trusted = await send();
+    expect(trusted.stopReason).toBe("stop");
+    expect(streams).toBe(1);
+
+    // HTTP/2 reports a refused certificate as a cancelled stream, so the
+    // proof is that no request reached the stand-in.
+    useSystemRootsForTests(() => []);
+    expect((await send()).stopReason).toBe("error");
+    expect(streams).toBe(1);
+  }, 30_000);
 
   it("keeps the address and network it saved beside the region", async () => {
     const gateway = await organization();

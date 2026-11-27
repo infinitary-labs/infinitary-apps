@@ -272,7 +272,7 @@ export function bedrockAccountProvider(
               ? "organization"
               : await interaction.prompt({
                   type: "select",
-                  message: filled(m.bedrockSignInWhere(), setup?.address),
+                  message: m.bedrockSignInWhere(),
                   options: [
                     { id: "aws", label: m.bedrockSignInStraightToAws() },
                     { id: "organization", label: m.bedrockSignInOrganization() },
@@ -290,7 +290,8 @@ export function bedrockAccountProvider(
               ),
             );
             address = await readBedrockAddress(typed.trim(), resolve);
-            // The option names the kind it approves, so a re-sign-in only approves the kind saved before.
+            // The option names the kind it approves: a re-sign-in's saved answer approves only the
+            // kind saved before, and another kind is put to the person.
             const approved = await interaction.prompt({
               type: "select",
               message: approval(address),

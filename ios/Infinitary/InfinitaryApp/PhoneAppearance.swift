@@ -6,6 +6,8 @@ import UIKit
 /// A change is saved at once, so it survives a relaunch and an update, and it is never sent to the computer.
 @MainActor @Observable final class PhoneAppearance {
     var look: PhoneLook { didSet { look.save() } }
+    /// The person's own themes as the computer last sent them (`PhoneOwnThemes`), listed under Yours.
+    private(set) var ownThemes: [PhoneOwnTheme]
     /// The captain's Split at the fold (`PhoneFoldSplit`): off, an open iPhone Duo lays out as an iPad does.
     var splitAtFold: Bool { didSet { PhoneFoldSplit.save(splitAtFold) } }
     /// The captain's Maximize card (`PhoneCardMaximized`): Home's card takes the window wherever a side panel shares it.
@@ -22,6 +24,9 @@ import UIKit
 
     init() {
         look = PhoneLook.saved()
+        let kept = PhoneOwnThemes.saved()
+        PhoneOwnPalettes.keep(kept)
+        ownThemes = kept
         splitAtFold = PhoneFoldSplit.saved()
         cardMaximized = PhoneCardMaximized.saved()
         foldSeen = PhoneFoldSplit.foldSeen()
@@ -44,10 +49,23 @@ import UIKit
         PhonePencilTop.savePencilSeen()
     }
 
+    /// The computer sent its own themes again. A pick it no longer lists goes back to its base, as the computer's own
+    /// window does when the theme it wears is removed.
+    func heard(_ themes: [PhoneOwnTheme]) {
+        guard themes != ownThemes else { return }
+        let base = look.style
+        PhoneOwnPalettes.keep(themes)
+        ownThemes = themes
+        if case .own(let id) = look, !themes.contains(where: { $0.id == id }) { look = base == .light ? .light : base == .dark ? .dark : .device }
+    }
+
+    /// Every choice in the order Settings lists them: Device, Dark, Light, the built-in themes, then Yours.
+    var looks: [PhoneLook] { PhoneLook.allCases + ownThemes.map { .own($0.id) } }
+
     /// The next choice to the left (-1) or right (1) of the current one, kept at the ends, as a segmented control's
     /// arrows move.
     func step(by offset: Int) {
-        let looks = PhoneLook.allCases
+        let looks = looks
         guard let at = looks.firstIndex(of: look), looks.indices.contains(at + offset) else { return }
         look = looks[at + offset]
     }
@@ -62,6 +80,16 @@ extension PhoneLook {
         case .dark: .dark
         case .light: .light
         case .theme(let theme): theme.style
+        case .own(let id): PhoneOwnPalettes.entry(id: id).map { $0.theme.isDark ? .dark : .light } ?? .unspecified
+        }
+    }
+
+    /// What the window's theme trait carries: a built-in theme's id, an own theme's key, or nothing.
+    var traitValue: String? {
+        switch self {
+        case .device, .dark, .light: nil
+        case .theme(let theme): theme.rawValue
+        case .own(let id): PhoneOwnPalettes.entry(id: id)?.key
         }
     }
 }
@@ -72,6 +100,8 @@ extension PhoneLook {
 /// through the trait's bridged environment value (`PhoneColorThemeTrait`).
 struct PhoneWindowLook: UIViewRepresentable {
     let look: PhoneLook
+    /// The own themes kept, so a theme saved again under its name reaches the window as its new key.
+    let ownThemes: [PhoneOwnTheme]
 
     func makeUIView(context: Context) -> Marker {
         let view = Marker()
@@ -80,17 +110,18 @@ struct PhoneWindowLook: UIViewRepresentable {
         return view
     }
 
-    func updateUIView(_ view: Marker, context: Context) { view.look = look }
+    func updateUIView(_ view: Marker, context: Context) { view.drawn = Marker.Drawn(style: look.style, theme: look.traitValue) }
 
     final class Marker: UIView {
-        var look: PhoneLook = .device { didSet { apply() } }
+        struct Drawn: Equatable { var style: UIUserInterfaceStyle = .unspecified, theme: String? }
+        var drawn = Drawn() { didSet { if drawn != oldValue { apply() } } }
         override func didMoveToWindow() { super.didMoveToWindow(); apply() }
         private func apply() {
             guard let window else { return }
-            if window.overrideUserInterfaceStyle != look.style { window.overrideUserInterfaceStyle = look.style }
+            if window.overrideUserInterfaceStyle != drawn.style { window.overrideUserInterfaceStyle = drawn.style }
             // UIKit raises on reading an override that was never set, so ask whether it is there first.
             let overrides = window.traitOverrides, set = overrides.contains(PhoneColorThemeTrait.self)
-            if let theme = look.colorTheme?.rawValue {
+            if let theme = drawn.theme {
                 if !set || overrides[PhoneColorThemeTrait.self] != theme { window.traitOverrides[PhoneColorThemeTrait.self] = theme }
             } else if set {
                 window.traitOverrides.remove(PhoneColorThemeTrait.self)

@@ -30,6 +30,7 @@ public enum PhoneContract {
     public static let homeUpdate = "home-update"
     public static let homeUpdateFolded = 17
     public static let takeBackMessage = "take-back-message"
+    public static let ownThemesWorked = "own-themes-worked"
     public static let crewGrouping = "crew-grouping"
     public static let takeBackWindowMs: Double = 60000
     public static let cards = "inf:cards:list"
@@ -140,6 +141,7 @@ public enum PhoneRequest: String, Sendable {
     case takeBack = "inf:conversation:take-back"
     case crewGrouping = "inf:settings:crew-grouping:get"
     case crewGroupingSet = "inf:settings:crew-grouping:set"
+    case ownThemes = "inf:settings:own-themes:get"
     public var changes: Bool {
         switch self { case .converse, .run, .pin, .steer, .interrupt, .secretEnroll, .secretDecide, .secretKeep, .signIn, .signInReturn, .signInCancel, .integrationRemove, .keepClient, .automationState, .automationPauseAll, .automationSave, .projectConfigure, .runbookSet, .homeUpdateInstall, .homeUpdateLater, .devicesPush, .takeBack, .crewGroupingSet: true; default: false }
     }

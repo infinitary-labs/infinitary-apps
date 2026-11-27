@@ -391,8 +391,8 @@ enum CharacterPainter {
     /// Resolved once per theme on the main thread, so a render thread draws with plain values.
     struct Palette: Sendable {
         let scheme: ColorScheme
-        /// The built-in color theme it was resolved in, so a pick between two themes on one base resolves it again.
-        let theme: PhoneColorTheme?
+        /// The color theme it was resolved in, so a pick between two themes on one base resolves it again.
+        let theme: PhoneDrawnTheme?
         let acc, dim, hot, bg: RGB
         let boost, haloBoost: Double
         /// The scene's selection outline and the open summary's corner brackets.

@@ -49,6 +49,9 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/InfinitaryApp/PhoneColorTheme.swift",
     "ios/Infinitary/InfinitaryApp/PhoneThemeTiles.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneColorThemes.generated.swift",
+    // The person's own themes the computer sends, kept for Yours, and the rule cards and panels draw them with.
+    "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneOwnThemes.swift",
+    "ios/Infinitary/CardRuntime/themeRule.ts",
     "ios/Infinitary/InfinitaryApp/PhoneCardBodies.swift",
     "ios/Infinitary/InfinitaryApp/PhoneCardRow.swift",
     // The Maximize card control in every card head beside a side panel (PhoneCards.swift).

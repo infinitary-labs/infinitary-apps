@@ -71,4 +71,38 @@ import XCTest
         let tokyo = cache.palette(environment(.tokyoNight))
         assertClose((tokyo.bg.r, tokyo.bg.g, tokyo.bg.b), Self.tokyoNightBackground, "The same cache redraws on Tokyo Night's background")
     }
+
+    /// INF-7024: the old green terminal of INF-6888's own-theme fixtures, as the computer's `workedOwnThemes` sends it.
+    private static let oldTerminal = try! JSONDecoder().decode(PhoneOwnTheme.self, from: Data(##"{"id":"own-old-terminal","name":"Old terminal","base":"dark","tokens":{"--bg-0":"#020a03","--material-tint":"rgba(2, 10, 3, 1)","--bg-1":"#031305","--bg-2":"#001c05","--bg-3":"#04250c","--line-1":"rgba(131, 202, 141, 0.2)","--line-2":"rgba(131, 202, 141, 0.24)","--fg-1":"#3ddc5a","--fg-2":"#209a39","--fg-3":"#1c7a2d","--accent":"#8dff9c","--accent-strong":"#00d37a","--accent-dim":"rgba(141, 255, 156, 0.14)","--accent-glow":"rgba(141, 255, 156, 0.35)","--ok":"#8dff9c","--ok-dim":"rgba(141, 255, 156, 0.14)","--hot":"#ffd23d","--hot-dim":"rgba(255, 210, 61, 0.14)","--hot-glow":"rgba(255, 210, 61, 0.35)","--warn":"#ffd23d","--warn-dim":"rgba(255, 210, 61, 0.14)","--danger":"#ff5a4d","--danger-dim":"rgba(255, 90, 77, 0.12)","--captain":"#5b9bff","--captain-dim":"rgba(91, 155, 255, 0.14)","--idle":"#596f5c","--slot-premium":"#ff5a4d","--slot-high":"#ffd23d","--slot-medium":"#8dff9c","--slot-low":"#869988","--wire-accent":"#8dff9c","--wire-hot":"#ffd23d","--wire-dim":"#1a7730","--on-accent":"#020a03"}}"##.utf8))
+
+    /// An own theme the computer sent draws its own background and accent through the window's trait, and the same
+    /// theme saved again with another accent is a new trait value, so every view resolves its colors again.
+    func testAnOwnThemeDrawsTheComputersColorsAndRedrawsWhenSavedAgain() {
+        PhoneOwnPalettes.keep([Self.oldTerminal])
+        defer { PhoneOwnPalettes.keep([]) }
+        let first = PhoneLook.own("own-old-terminal")
+        XCTAssertEqual(first.style, .dark, "The old terminal sits on Dark")
+        let shown = UITraitCollection { $0.userInterfaceStyle = .dark; $0[PhoneColorThemeTrait.self] = first.traitValue }
+        assertClose(rgb(UIColor(PhoneTheme.background), shown), (2, 10, 3), "The old terminal's background")
+        assertClose(rgb(UIColor(PhoneTheme.accent), shown), (141, 255, 156), "The old terminal's accent")
+
+        var blue = Self.oldTerminal.tokens
+        blue["--accent"] = "#7fd6ff"
+        PhoneOwnPalettes.keep([PhoneOwnTheme(id: "own-old-terminal", name: "Old terminal", base: "dark", tokens: blue)])
+        let again = PhoneLook.own("own-old-terminal").traitValue
+        XCTAssertNotEqual(again, first.traitValue, "A theme saved again under its name is a new trait value")
+        let redrawn = UITraitCollection { $0.userInterfaceStyle = .dark; $0[PhoneColorThemeTrait.self] = again }
+        assertClose(rgb(UIColor(PhoneTheme.accent), redrawn), (127, 214, 255), "The new accent")
+    }
+
+    /// A pick the computer no longer lists goes back to its base, as the computer's own window keeps its base.
+    func testARemovedOwnPickGoesBackToItsBase() {
+        let appearance = PhoneAppearance(), was = appearance.look
+        defer { appearance.look = was; appearance.heard([]) }
+        appearance.heard([Self.oldTerminal])
+        appearance.look = .own("own-old-terminal")
+        XCTAssertEqual(appearance.looks.last, .own("own-old-terminal"), "Yours follows the built-in themes")
+        appearance.heard([])
+        XCTAssertEqual(appearance.look, .dark)
+    }
 }

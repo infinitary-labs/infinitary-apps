@@ -4,10 +4,12 @@ import Foundation
 /// device, apart from the computer's, and offers to match the device, Dark, Light or a built-in color theme (INF-6888's
 /// part 3, the captain's "each client can choose its own theme"). The choice is saved in this app's own defaults, never
 /// in the connection file, so Leave, Forget, Removed and joining another computer keep it, and it never reaches the
-/// computer. Nothing saved, or a value this version does not know, reads as matching the device.
+/// computer. Nothing saved, or a value this version does not know, reads as matching the device. One of the person's own
+/// themes, from the list the computer last sent (`PhoneOwnThemes`), is saved by its `own-` id too.
 public enum PhoneLook: Hashable, Sendable, CaseIterable, RawRepresentable {
     case device, dark, light
     case theme(PhoneColorTheme)
+    case own(String)
 
     /// Device, Dark and Light first, then the built-in themes in the computer's order.
     public static var allCases: [PhoneLook] { [.device, .dark, .light] + PhoneColorTheme.allCases.map(PhoneLook.theme) }
@@ -19,6 +21,7 @@ public enum PhoneLook: Hashable, Sendable, CaseIterable, RawRepresentable {
         case .dark: "dark"
         case .light: "light"
         case .theme(let theme): theme.rawValue
+        case .own(let id): id
         }
     }
 
@@ -27,6 +30,7 @@ public enum PhoneLook: Hashable, Sendable, CaseIterable, RawRepresentable {
         case "device": self = .device
         case "dark": self = .dark
         case "light": self = .light
+        case let id where id.hasPrefix("own-"): self = .own(id)
         default:
             guard let theme = PhoneColorTheme(rawValue: rawValue) else { return nil }
             self = .theme(theme)
@@ -34,13 +38,14 @@ public enum PhoneLook: Hashable, Sendable, CaseIterable, RawRepresentable {
     }
 
     /// The words on the choice: Device, Dark and Light as short as the computer's, a built-in theme under its maker's
-    /// name in every language.
+    /// name in every language, one of the person's own under the name they gave it.
     public var words: String {
         switch self {
         case .device: PhoneMessages.phoneLookDevice()
         case .dark: PhoneMessages.phoneLookDark()
         case .light: PhoneMessages.phoneLookLight()
         case .theme(let theme): theme.name
+        case .own(let id): PhoneOwnThemes.saved().first { $0.id == id }?.name ?? id
         }
     }
 

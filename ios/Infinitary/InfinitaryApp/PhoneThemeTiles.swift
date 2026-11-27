@@ -2,19 +2,34 @@ import InfinitaryKit
 import SwiftUI
 
 /// Settings → Appearance → Theme as one group of tiles, as on the computer (INF-6888's part 3): Device, Dark, Light and
-/// each built-in color theme under its maker's name, each a small window in its own colors, drawn whatever the phone
-/// wears. A tap applies the pick at once; the arrow keys move it from the group (`PhoneSettingsSheet`).
+/// each built-in color theme under its maker's name, then the person's own under Yours, each a small window in its own
+/// colors, drawn whatever the phone wears. A tap applies the pick at once; the arrow keys move it from the group (`PhoneSettingsSheet`).
 struct PhoneThemeTiles: View {
     @Binding var look: PhoneLook
+    /// The person's own themes as the computer last sent them, under Yours as on the computer; none shows no Yours.
+    var ownThemes: [PhoneOwnTheme] = []
 
     var body: some View {
+        VStack(alignment: .leading, spacing: PhoneTheme.space3) {
+            grid(PhoneLook.allCases)
+            if !ownThemes.isEmpty {
+                Text(PhoneMessages.settingsAppearanceThemeYours()).font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
+                    .accessibilityAddTraits(.isHeader).accessibilityIdentifier("phone-theme-yours")
+                grid(ownThemes.map { .own($0.id) })
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("phone-theme")
+    }
+
+    private func grid(_ choices: [PhoneLook]) -> some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 96), spacing: PhoneTheme.space2)], spacing: PhoneTheme.space2) {
-            ForEach(PhoneLook.allCases, id: \.self) { choice in
+            ForEach(choices, id: \.self) { choice in
                 let chosen = choice == look
                 Button { look = choice } label: {
                     VStack(alignment: .leading, spacing: PhoneTheme.space2) {
                         swatch(choice)
-                        Text(choice.words).font(PhoneFont.caption).lineLimit(2).multilineTextAlignment(.leading)
+                        Text(words(choice)).font(PhoneFont.caption).lineLimit(2).multilineTextAlignment(.leading)
                             .foregroundStyle(chosen ? PhoneTheme.text : PhoneTheme.secondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
@@ -26,13 +41,17 @@ struct PhoneThemeTiles: View {
                     .contentShape(.rect(cornerRadius: PhoneTheme.controlRadius))
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(choice.words)
+                .accessibilityLabel(words(choice))
                 .accessibilityAddTraits(chosen ? .isSelected : [])
                 .accessibilityIdentifier("phone-theme-\(choice.rawValue)")
             }
         }
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("phone-theme")
+    }
+
+    /// An own theme under the name the person gave it, as this list carries it.
+    private func words(_ choice: PhoneLook) -> String {
+        if case .own(let id) = choice, let theme = ownThemes.first(where: { $0.id == id }) { return theme.name }
+        return choice.words
     }
 
     /// Device shows Dark and Light side by side, since it follows whichever the device shows.
@@ -45,6 +64,7 @@ struct PhoneThemeTiles: View {
         case .dark: window(.dark).clipShape(.rect(cornerRadius: 6))
         case .light: window(.light).clipShape(.rect(cornerRadius: 6))
         case .theme(let theme): window(theme.palette).clipShape(.rect(cornerRadius: 6))
+        case .own(let id): window(PhoneOwnPalettes.entry(id: id)?.palette ?? .dark).clipShape(.rect(cornerRadius: 6))
         }
     }
 

@@ -57,4 +57,22 @@ struct PhoneLookTests {
         defaults.set("tokyo-night", forKey: PhoneLook.key)
         #expect(PhoneLook.saved(in: defaults) == .theme(.tokyoNight))
     }
+
+    /// Yours on the phone (INF-6888's part 3): a pick of the person's own theme is kept by the computer's `own-` id, and
+    /// the last list the computer sent survives the next launch whole. Fixture: the plan trial's old green terminal, as
+    /// the computer's own-themes read answers it, cut to three of its tokens.
+    @Test func keepsAnOwnThemePickAndTheLastListAcrossLaunches() {
+        let (defaults, name) = scratch()
+        defer { defaults.removePersistentDomain(forName: name) }
+        PhoneLook.own("own-old-terminal").save(in: defaults)
+        #expect(defaults.string(forKey: PhoneLook.key) == "own-old-terminal")
+        #expect(PhoneLook.saved(in: UserDefaults(suiteName: name)!) == .own("own-old-terminal"))
+        #expect(PhoneOwnThemes.saved(in: defaults).isEmpty)
+        let answer = Data(##"{"themes":[{"id":"own-old-terminal","name":"Old terminal","base":"dark","tokens":{"--bg-0":"#020a03","--accent":"#8dff9c","--line-1":"rgba(131, 202, 141, 0.2)"}}]}"##.utf8)
+        let themes = (try? JSONDecoder().decode(PhoneOwnThemes.Answer.self, from: answer).themes) ?? []
+        PhoneOwnThemes.save(themes, in: defaults)
+        #expect(PhoneOwnThemes.saved(in: UserDefaults(suiteName: name)!) == [PhoneOwnTheme(
+            id: "own-old-terminal", name: "Old terminal", base: "dark",
+            tokens: ["--bg-0": "#020a03", "--accent": "#8dff9c", "--line-1": "rgba(131, 202, 141, 0.2)"])])
+    }
 }

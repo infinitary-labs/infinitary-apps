@@ -1,5 +1,5 @@
-import { clamp01, easeInOut, TAU } from "./face";
-import { mixRgb, rgba, type SkyColors, type SkyDots, type SkyPt, twinkle, WHITE } from "./sky";
+import { clamp01, easeInOut, noise1, TAU } from "./face";
+import { mixRgb, rgba, type SkyColors, type SkyDots, type SkyPt, WHITE } from "./sky";
 
 // A spiral galaxy seen almost face on: the vertices swirl out along two
 // logarithmic arms while the eyes keep the bulge, the whole disc turns
@@ -103,7 +103,7 @@ export function placeGalaxyVertices(
     p[1] = sy + (tmp[1] - sy) * bi;
     p[3] += (0.6 - p[3]) * bi;
     dots.scale[i] = (dots.scale[i] as number) * (1 + 0.25 * bi * (1 - u));
-    dots.fade[i] = (dots.fade[i] as number) * (1 + 0.15 * twinkle(tSec * 4 + i) * bi);
+    dots.fade[i] = (dots.fade[i] as number) * (1 + 0.15 * noise1(tSec * 4 + i) * bi);
   }
 }
 
@@ -159,11 +159,11 @@ export function drawGalaxyUnder(env: GalaxyEnv): void {
     const dotR = Math.max(0.7, env.size * 0.0032);
     for (let d = 0; d < 26; d++) {
       galaxyArmPoint(arm, d * 0.14 + 0.1, spin, c, R, tmp);
-      const jx = twinkle(d * 2.1 + arm * 9) * R * 0.07;
-      const jy = twinkle(d * 3.3 + arm * 5) * R * 0.06;
+      const jx = noise1(d * 2.1 + arm * 9) * R * 0.07;
+      const jy = noise1(d * 3.3 + arm * 5) * R * 0.06;
       ctx.fillStyle = rgba(
         mixRgb(colors.acc, WHITE, 0.4),
-        (0.25 + 0.2 * twinkle(tSec * 3 + d)) * e * colors.boost,
+        (0.25 + 0.2 * noise1(tSec * 3 + d)) * e * colors.boost,
       );
       ctx.beginPath();
       ctx.arc(tmp[0] + jx, tmp[1] + jy, dotR, 0, TAU);

@@ -1,5 +1,5 @@
 ---
-source: e40976e5ca452a82
+source: 0a2abffa6cee2faa
 title: Ajustes
 description: O que cada seção dos Ajustes contém, com Geral e Aparência explicadas aqui e um link para as demais.
 ---
@@ -64,10 +64,13 @@ No computador em que seu imediato vive, eles ficam em **Sites com login** em **S
 - **Tamanho padrão dos cartões** escolhe como os cartões se abrem: **Normal**, **Largo**, **Completo** ou **Maximizado**.
   Você ainda pode redimensionar cada cartão.
 - **Manter os cartões maximizados** mantém todos os cartões maximizados depois que você maximiza um, até você restaurar um.
-- **Tema** é **Escuro** ou **Claro**.
+- **Nomes dos modelos da tripulação** mostra os nomes dos modelos enquanto seus tripulantes usam só uma órbita.
 - **Véu da janela**, no Mac, define quanto da cor do tema cobre o fundo desfocado.
   0% é o padrão.
-- **Nomes dos modelos da tripulação** mostra os nomes dos modelos enquanto seus tripulantes usam só uma órbita.
+- **Tema** é **Escuro**, **Claro** ou um de treze temas com o nome que o autor deu, como **Dracula**, **Catppuccin Mocha** ou **Rosé Pine Dawn**.
+  A escolha muda na hora as cores da janela, dos cartões e dos painéis, e as setas do teclado passam de uma opção para outra.
+  Para ter um tema seu, descreva-o ao seu imediato, como "um terminal verde antigo": ele salva o tema em **Seus** e o aplica na hora, e o Infinitary mantém todas as cores fáceis de ler.
+  **Descrever o seu** começa essa mensagem, e **Remover** apaga o tema seu que está em uso.
 
 ### Fontes {#fonts}
 

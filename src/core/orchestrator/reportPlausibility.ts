@@ -58,8 +58,15 @@ const SCRIPTS: Array<{ name: string; pattern: RegExp }> = [
 
 const SHARED_WORD_SCRIPTS = new Set(["latin+cjk", "cjk+latin", "latin+greek", "greek+latin"]);
 
+/**
+ * A letter Unicode files under no script of its own (Script=Common) - the
+ * katakana long-vowel mark ー, the halfwidth ｰ and ﾟ, the Arabic tatweel,
+ * the modifier apostrophe ʼ, the micro sign µ - belongs to whatever writing
+ * system surrounds it, so it never counts as one. Counted as "other", it
+ * would refuse nearly every katakana word, such as コンピューター.
+ */
 function scriptOf(char: string): string | undefined {
-  if (!/\p{L}/u.test(char)) return undefined;
+  if (!/\p{L}/u.test(char) || /\p{Script=Common}/u.test(char)) return undefined;
   return SCRIPTS.find((script) => script.pattern.test(char))?.name ?? "other";
 }
 

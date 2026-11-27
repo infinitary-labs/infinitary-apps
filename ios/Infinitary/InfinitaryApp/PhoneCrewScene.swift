@@ -47,7 +47,8 @@ struct PhoneCrewScene: View {
                 PhoneSceneBackdrop(stage: stage, renderer: renderer, roster: roster, state: session.firstmateBusy ? .working : .idle,
                                    fold: CharacterFold(folding: session.firstmateFolding, starts: session.firstmateFoldStarts), still: still,
                                    running: !still && preview == nil, offset: viewport.offset, selection: selectedCrew,
-                                   bracketed: preview.map { ($0.id, previewComputer ?? PhoneSceneRoster.computerID($0)) })
+                                   bracketed: preview.map { ($0.id, previewComputer ?? PhoneSceneRoster.computerID($0)) },
+                                   lit: PhoneFocusLight.project(held: nil, rested: (preview ?? selectedCrew.flatMap { roster.task(selected: $0) })?.projectId))
             }
             .overlay {
                 RoundedRectangle(cornerRadius: PhoneTheme.controlRadius)

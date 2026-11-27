@@ -74,9 +74,11 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | header (an extra request header) | 標頭 | Microsoft Taiwan's word. |
 | held (a batch that stopped) | 暫緩 | 暫停 stays for what a person pauses. |
 | hold (on a task) | 暫緩 | 暫緩結束 for a hold ending. |
+| holds an override passes (named on a task's Activity) | asking first: 先問過你; the open decisions: 未決的決定; the waits: 對其他工作的等待; the open parts: 未完成的部分; the checks: 檢查; the delivery proof: 交付證明; the saved story: 已儲存的變更說明; the heavy-run line: 繁重執行的排隊; the cost limit: 費用上限; a retired hold: 已停用的項目 | Joined as one list in the reader's language on the line. |
 | How to get it (an ask for a secret) | 取得方法 | The heading over the steps a crewmate lays out for making or finding a secret. |
 | Infinitary | Infinitary | Never translated. |
 | inspector | 檢閱器 | The Knowledge pane that reads one entry, as Apple's Taiwan apps say. |
+| intake round (a docs site guide) | 受理輪次 | A scheduled task that reads new issues and pull requests and drafts replies; 受理 as an office takes in what arrives. |
 | Integrations | 整合 | Standard. |
 | Intelligence (Settings tab) | 智慧等級 | 智慧 is Taiwan's word for intelligence; 等級 says it is a level, not reasoning. |
 | issue (where the project lives) | 議題 | |
@@ -160,6 +162,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | sign in again | 重新登入 | Standard. |
 | sign-in / sign in | 登入 | Taiwan's word; 登錄 is mainland. |
 | standing direction | 長期指引 | A direction meant to last; 指引 alone where the context is clear. |
+| standing reply (your words kept on a task, which pass its holds) | 有效回覆 | |
 | start | 開始 | Standard. |
 | starter | 開場句 | A sentence the person finishes. |
 | Steer (button) | 引導 | 指引 is a standing direction. |
@@ -186,6 +189,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | unsafe data reader | 不安全資料讀取者 | A crewmate that reads words anyone can write. |
 | Usage | 用量 | Standard. |
 | usage record (on the Usage page) | 紀錄 | Counter 筆, as in 12 筆紀錄. |
+| user (another user account on this computer) | 使用者 | "as {user}" is 以 {user} 身分, as in 以另一位使用者身分執行. |
 | where the project lives | 專案所在處 | Used for the host in general; a named host follows 在, as in 在 GitHub 合併. |
 | working copy | 工作副本 | Not 工作樹 (worktree). |
 | workspace (the personal workspace) | 工作區 | Taiwan's software word; 工作空間 is avoided. |

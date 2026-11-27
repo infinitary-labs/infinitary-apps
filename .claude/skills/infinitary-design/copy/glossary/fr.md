@@ -72,8 +72,10 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | header (a request's) | en-tête | Masculine: "un en-tête". |
 | held (a batch that stopped) | retenu | "Lot retenu", "Retenu depuis {since}"; the same verb as "la retient" on a merge a rule holds. |
 | hold (on a task) | retenue | "elle est retenue", "à la fin de sa retenue"; as in "la retient" for a merge. |
+| holds an override passes (named on a task's Activity) | asking first: la demande préalable; the open decisions: les décisions ouvertes; the waits: les attentes; the open parts: les parties ouvertes; the checks: les vérifications; the delivery proof: la preuve de livraison; the saved story: le récit enregistré; the heavy-run line: la file des exécutions lourdes; the cost limit: le plafond de coût; a retired hold: une retenue qui n’existe plus | Joined as one list in the reader's language on the line. |
 | How to get it (an ask for a secret) | Comment l’obtenir | The heading over the steps a crewmate lays out for making or finding a secret. |
 | Infinitary | Infinitary | Never translated; "d’Infinitary" with elision. |
+| intake round (a docs site guide) | tournée de réception | A scheduled task that reads new issues and pull requests and drafts replies; "tournée" reads as a regular pass, feminine. |
 | Intelligence | Intelligence | |
 | issue (where the project lives) | ticket | |
 | join (the phone joins a computer) | rejoindre | "Rejoindre votre ordinateur"; "In reach" is "À portée". |
@@ -147,6 +149,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | Settings | Réglages | As macOS French says it; macOS's own "System Settings" is "Réglages Système". |
 | sign in / sign in again | se connecter / se reconnecter | |
 | sign-in | connexion | "votre connexion GitHub", "la connexion {place} de l’app". |
+| standing reply (your words kept on a task, which pass its holds) | réponse permanente | Feminine. |
 | start | démarrer | "Démarrée", "Démarrer un nouveau projet". |
 | starter | amorce | A sentence start the person finishes ("appuyez sur une amorce"). |
 | Steer (button) | Orienter |  |
@@ -169,6 +172,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | unsafe data reader | lecteur de données non sûres | A crewmate that reads words anyone can write. |
 | Usage (Settings section) | Utilisation | The section's name, as in "Ouvrir Utilisation". |
 | usage record | entrée | One recorded model response in Usage ("entrées avec prix"); "fiche" stays for a task's record and "enregistrement" for a recording. |
+| user (another user account on this computer) | utilisateur | "as {user}" is "sous l’utilisateur {user}", as in "Sous un autre utilisateur". |
 | where the project lives | là où le projet est hébergé | |
 | window wash | voile de la fenêtre | The theme color laid over the blurred background. |
 | working copy | copie de travail | |

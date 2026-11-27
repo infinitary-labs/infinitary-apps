@@ -93,6 +93,12 @@
       "launches": 1
     }
   },
+  "cards-revised-scroll": {
+    "iphone": {
+      "reads": 700,
+      "launches": 1
+    }
+  },
   "cards-secret": {
     "iphone": {
       "reads": 155,
@@ -135,12 +141,12 @@
   },
   "join-read": {
     "iphone": {
-      "reads": 445,
-      "launches": 5
+      "reads": 1019,
+      "launches": 6
     },
     "ipad": {
-      "reads": 529,
-      "launches": 5
+      "reads": 1078,
+      "launches": 6
     }
   },
   "keyboard-pinned": {
@@ -177,11 +183,11 @@
   },
   "panels": {
     "iphone": {
-      "reads": 311,
+      "reads": 484,
       "launches": 3
     },
     "ipad": {
-      "reads": 324,
+      "reads": 547,
       "launches": 3
     }
   },

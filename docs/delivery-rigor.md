@@ -488,6 +488,7 @@ The captain's merge click on a merge card is an approval of that change, and a r
   Frames and agents cannot mint one - a settle effect runs only from the chrome.
   One other route mints it in the captain's name: on a project that merges in batches of the person's own, the first mate's merge while the captain's words recorded as an override pass `asks-first` at the task's current version, and the crewmate's merge card is up with its offer at that version (`SettleService.mergeOnCaptainWords`, INF-6091's audit, finding 2).
   The `decisions` hold still applies to it, as to every first mate merge: an open question, a recorded wait on the captain or a gate on the task refuses it unless the override passes `decisions` too (`SettleService.decisionsHold`).
+  The approval it keeps records that it came from the captain's words (`fromWords`), so each later run of it reads that hold again at the last look before its change goes in line; only the captain's own click passes the hold (`clickedByCaptain`).
   It mints from that card's offer outside any card resolution, and the app takes the card down unanswered (`CardService.takeDown`), so it reads as taken down by the app, not as a click.
 - **A card behind its change (INF-4031).**
   One reading, `MergeCardActions.mergeBehind`, says whether an open merge card shows less than its change: a newer version pushed past its offer, another pull request now the task's current change, an offer an earlier version of the app saved without recording where its change lives, or only a newer story revision at the same version.
@@ -558,7 +559,9 @@ The captain's merge click on a merge card is an approval of that change, and a r
   The refusal names the actual hold, and a last-look refusal while the same approval and generation still stand records the existing refused wait, with one timeline line and first mate wake per head and a backed-off retry.
   An ended or replaced approval leaves no new wait.
 - **Batches of your own (INF-3759).**
-  On a batched project, the attempt that passed every gate above and the last look below puts the approved version in line for the person's next batch instead of merging, and waits on `queue`; it reads merged from its batch's receipt, and a change sent back from a batch keeps its approval, waiting on `checks` for its declared repair as a failed batch of one does ([the forge seam](forge.md), "A change sent back").
+  On a batched project, the attempt that passed every gate above and the last look below puts the approved version in line for the person's next batch instead of merging, and waits on `queue`.
+  That last look is the guard's and then the settle's own (`SettleService.mergeBoundary`, as a mark that records nothing sent), as before a merge request, so an open question, a recorded wait on the captain or a gate on the task holds an approval the app took under autonomy, or one kept from the captain's words, before its change goes in line; the captain's own click passes them.
+  It reads merged from its batch's receipt, and a change sent back from a batch keeps its approval, waiting on `checks` for its declared repair as a failed batch of one does ([the forge seam](forge.md), "A change sent back").
 - **The host's merge queue (INF-3759 piece 5).**
   On a GitHub branch with a merge queue of its own, GitHub takes the merge the attempt sent into that queue instead of merging it, and the approval waits on `host-queue` with no card and no wake.
   The host reads the queue again at most five minutes apart, before any gate above, and sends nothing meanwhile; GitHub's merge spends the approval, and a version GitHub removed waits on `host-removed` until a declared repair, the crewmate's answer to the removal or the captain's click sends one again ([the forge seam](forge.md), "The host's merge queue").
@@ -637,15 +640,17 @@ Which level a hold takes is a judgment by the four questions above, made by its 
 | `load-line` | soft | record | a declared heavy run waiting for its computer's capacity or pressure reading | the override |
 | `cost-limit` | soft | consent | a task, and everything under it, past its cost limit (docs/usage.md, "The cost limit") | the captain's click on its card, or the override |
 | `model-levels` | soft | record | a task's next conversation while the model it routed to left every level and no model where it runs can take it (docs/routing.md, "A model that left every level") | the captain places a model that can take it on a level, names one for the task, or adds a sign-in that serves one where it runs |
+| `kept-write` | soft | consent | a write where a project lives that a task keeps for the captain's click: an answer or side-effect task's write on its own project, or any write through the github.com sign-in (docs/forge.md, "A write that asks") | the captain's click on its card, or a yes that still stands named as `github_write`'s allowance |
 | `host-rules` | fixed | outside fact | a merge the rules or readiness where the project lives hold | no one |
 | `nothing-to-merge` | fixed | physical limit | a merge or merge policy for work that has no merge | no one |
 | `sign-in` | fixed | outside fact | work where the app is not signed in | no one |
 | `sent-once` | fixed | outside fact | a write or merge sent a second time | no one |
 | `recorded-path` | fixed | physical limit | a merge outside the merge card, and a wait that closes a cycle | no one |
 
+The list leaves out what is no hold of the app's on work: an unsafe data reader's fence ("An unsafe data reader" in `docs/agents-reach.md`), which keeps its writes for the captain's click whatever yes they name, a feedback report, which only the captain's click publishes, and the limits ledger, which counts limits and holds nothing.
 Every refusal ends with its hold's sentence.
 `softHoldWords(kind, audience)` names the override: to the first mate as the way the captain declares it, and to a crewmate as words only the captain gives, through the first mate.
-A soft hold with its own way (`escalation`, `program-bound`, `start-waits`, `card-question`, `model-levels`) names that way instead.
+A soft hold with its own way (`escalation`, `program-bound`, `start-waits`, `card-question`, `model-levels`, `kept-write`) names that way instead.
 `fixedHoldWords(kind)` says no one's word passes it.
 
 **The override.**
@@ -662,7 +667,14 @@ Separately spoken task-long permission and explicit proof-gap acceptance keep th
 Merge anyway passes the checks itself, and a merge past the branch rules names each failed check it skips, so neither is such a click.
 `standing` lets the first mate name more holds with the one sentence the captain already gave, so a second sentence is never asked for the same go-ahead.
 The host reads a cited reply from the card's thread, a click from the card's recorded ending and a Crewmate tab line from the steer that carried it (`CaptainOverrides.citedCaptainWords`), so it checks only closed facts: the words are the captain's, they are on this task, and the turn is not a scheduled check that carries none of the captain's words.
-A cited card on another task, a card with none of the captain's words on the record, `standing` with no override standing, and any citation in a scheduled check that carries none of the captain's words are refused in words, with nothing recorded; a scheduled check still sees the override standing.
+A cited card on another task, a card with none of the captain's words on the record, `standing` with no override standing, and a card, `crewmate-tab` or `standing` cited in a scheduled check that carries none of the captain's words are refused in words, with nothing recorded; a scheduled check still sees the override standing, and its refusal on `update_task` names the `d:` citation below, which `settle_task` done's never does.
+`from` may instead name a standing direction of the task's project by its `d:` id, on any turn, a scheduled check included, since the direction's words are already recorded (INF-6987's plan, piece A2).
+The host checks only closed facts (`CaptainOverrides.citedDirection`): the direction is current, it belongs to the task's own project rather than to every project or another one, and its current revision was heard from the captain (`docs/knowledge.md`, "Heard from the captain"); anything else is refused in words, with nothing recorded.
+The override keeps the direction's text as its words and the direction's id and revision (`HoldOverride.direction`), and its row names the direction and each hold it passes, worded in the reader's language (`HOLD_SAID` in `src/core/orchestrator/captainOverrides.ts`), while the crew is still served `HOLDS`' English names.
+It stands only while that revision does: when the direction is revised or retired, the host ends each override citing it on a live task, or on a closed task a live part of it reads, with a row and a `task-override-changed` notice saying why (`CaptainOverrides.directionsChanged`).
+That runs on the knowledge store's change hook (`KnowledgeService.onChange`), and once when the crew starts, for a change made while the app was closed.
+The captain's own words stand over it: words of theirs recorded on the task replace an override citing a direction, and citing a direction while their own words stand is refused, naming `standing` for more holds.
+`standing` on an override citing a direction carries the direction with it, so the new override ends with that direction too, and is refused once that revision is no longer current; the `direction` line of `app_change` refuses `from: standing` there, and so does `settle_task` done's `captain_words`, since those words are not the captain's on the task.
 The crewmate judges first whether the captain's reply, click or Crewmate tab line passes a hold or tells it to go on without asking: if it does, the crewmate reports those words with `needs_firstmate`, naming the card or the Crewmate tab, and the first mate records the override in the turn that report starts, with no second card to the captain.
 A crewmate never records one itself: its refusal tells it to report the captain's words.
 The first mate judges which holds the words pass and may record them before any refusal names a hold, when the captain's words grant ahead, such as "keep going and don't ask me again on this task".
@@ -675,7 +687,7 @@ The captain's merge click reads the same record, since the settle boundary is on
 The merge card's fact strip shows an Override state naming the holds the captain's words pass.
 The first mate's task line in its context and `crew_status` show the standing override: what it passes, for how long, and, in `crew_status`, the captain's words.
 Every crewmate turn on the task is served the standing words: the brief carries them when the work starts with one standing, and each new override, or its withdrawal, is a `task-override-changed` notice on the task's lane that rides the next turn, on this computer or another, and starts none of its own.
-The crewmate reads them as its consent for what they reach among its own consent asks (`RIGOR_SAFETY`), such as the captain's plan's allowance, and judges which those are; keychain or signing access, writes outside the project and browser handoffs still ask.
+The crewmate reads them as its consent for what they reach among its own consent asks (`RIGOR_SAFETY`), such as the captain's plan's allowance or a write the task would keep, which it sends by naming `standing` as `github_write`'s allowance, and judges which those are; keychain or signing access, writes outside the project and browser handoffs still ask.
 The reviewer's brief carries them on every review turn (`reviewerOverrideWords`), so access or a step they cover is not a finding.
 Both arrive as the first entry of the Already allowed list ("What the captain already allowed" below).
 When they pass the checks, its merge reads Merge the pull request, or Merge in the next batch, on failed or running checks, since the click merges at once ("Its words" above).
@@ -702,7 +714,7 @@ The brief carries it when the work starts.
 Each new yes, one taken back, or a `replaced-by` link that brings earlier work's yeses to a task (noticed just after the change, since a change listener writes nothing) is a `task-allowed-changed` notice carrying the whole list, on the lane of every started task whose work includes the changed one, the task itself, a stronger-model retry or a takeover of it; the notice rides the next turn and starts none of its own.
 The reviewer's brief carries the builder's list, so access or a step it covers is not a finding.
 `RIGOR_SAFETY` points at the list: a yes on it is that consent, and the crewmate judges whether an ask falls inside it.
-A write kept for the captain's click, a browser handoff and anything no entry names still ask; the app adds no stop, refuses nothing new and reads none of the words.
+For a write the task would keep, the crewmate names the entry's card as `github_write`'s allowance, and the write goes once with no card (`kept-write` in "The holds"); a browser handoff and anything no entry names still ask, and the app reads none of the words.
 Each entry names the card its yes was given on, so a check request can take its approval from that yes ("Check approval" below).
 The captain's yes on a check's own approval card is kept in the same record, covering what the check declares it uses and the cost of one run (`checkYesCovers`), so it is served, carried and taken back like any other yes (INF-4446); its timeline row is the validation answer's.
 
@@ -828,8 +840,8 @@ The builder records a `request` of kind `check` naming the check and binds it to
 The host appends a Check approval panel naming the check, what it uses and the cost of one run, and saying the approval covers every later run while each run stays inside those.
 A card that already asks the captain which account, model or option to use carries the check request on its default action, so the captain's pick or written-in answer with that click approves it, with no separate approval card.
 A check approval rests on the captain's consent, either through its own card or through a named current source.
-A yes the captain already gave on the work approves a check with no card at all: when the crewmate judges a yes on its Already allowed list covers everything the check declares it uses and the cost of one run, the check request names that yes's card as its `allowance`, or `standing` for the captain's standing override ("The holds" above), whose words are on the same list, or a current captain-origin project direction by its `d:` id.
-The host counts an approval only while the very yes it rests on stays on the task's Already allowed list, or remains current as a project direction, so taking that yes back, replacing the standing override, or revising or retiring the direction ends it, and refuses an `allowance` that names no kept yes, `standing` when no override stands, or a yes the captain declined the same check after.
+A yes the captain already gave on the work approves a check with no card at all: when the crewmate judges a yes on its Already allowed list covers everything the check declares it uses and the cost of one run, the check request names that yes's card as its `allowance`, or `standing` for the captain's standing override ("The holds" above), whose words are on the same list, or a current captain-origin project direction heard from the captain by its `d:` id (`docs/knowledge.md`, "Heard from the captain").
+The host counts an approval only while the very yes it rests on stays on the task's Already allowed list, or remains current as a project direction whose current revision was heard, so taking that yes back, replacing the standing override, or revising or retiring the direction ends it, and refuses an `allowance` that names no kept yes, `standing` when no override stands, or a yes the captain declined the same check after.
 An approval an earlier build kept rests on no yes and counts as before.
 The reviewer judges whether a named yes's words cover what the check declares; one that does not is a finding.
 `TaskService` keeps the approval on the check by its id for every later run and version of the task, including script fixes and reruns, with no limit on runs.
@@ -898,7 +910,7 @@ Further actions need their own review, request and consent.
 A pre-change reproduction still asks; the host checks that the branch has no changed files before accepting that declaration.
 The builder binds an ordinary decision using `emit_card.validation_request`, naming the request and its approval action.
 Without covering consent, only the captain's exact shown chrome action grants consent; a frame action, revised offer, reviewer verdict or task approval cannot substitute.
-If a current captain-origin project direction, a task's standing override or a task-long card yes covers the exact effect, the builder may name its `d:` id, `standing` or the card id in the request's `allowance`.
+If a current captain-origin project direction heard from the captain, a task's standing override or a task-long card yes covers the exact effect, the builder may name its `d:` id, `standing` or the card id in the request's `allowance`.
 The reviewer clears that effect only if the named words cover it and the exact code and action pass review.
 At the action gate the app rechecks that the same consent still stands, then records its source and consumes the request once, without a card.
 The reviewer leaves an effect that falls outside its named consent out of its clearance, with a reason; the builder submits a new request without an allowance for review and a card.

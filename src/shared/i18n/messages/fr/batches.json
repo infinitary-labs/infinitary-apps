@@ -7,6 +7,7 @@
     "other": "Lot #{number} · {count} modifications"
   },
   "batchesPanelChecking": "vérification depuis {duration}",
+  "batchesPanelCheckingFix": "les vérifications tournent avec le correctif {key} avant son approbation",
   "batchesPanelChecksFull": "Vérifications : {passed} réussies, {failed} échouées, {running} en cours, lues à {time}",
   "batchesPanelChecksPassed": "{passed} vérifications réussies sur {total}",
   "batchesPanelChecksUnread": "vérifications pas encore lues",

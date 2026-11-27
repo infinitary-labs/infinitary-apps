@@ -14,7 +14,8 @@ How the pill looks and moves is the design skill's `components/core/ProjectFocus
 | The stage's light | `src/renderer/src/character/crew/focusLight.ts` (`lightFrame`), `docs/crew-orbits.md` "The project focus" |
 | Activity's lines | `src/panels/activity/feedRows.ts` (`linesInFocus`), read by the Activity panel from `view.focusedProjectId` |
 | The cards held back | `src/shared/projectFocus.ts` (`holdsBack`), read through `focusHoldsBack` by the window's stack in `src/renderer/src/app/stack.ts` (`reconcileStack`, `stackOf`, `shownEntry`) and `src/renderer/src/app/stackActions.ts` (`applyHold`) |
-| The first mate's hint | the turn's `focusedProjectId` (`inf:converse`), read by `buildContextBlock` as `focused_project` |
+| The filter a message says | `messageProjectFilter` (`src/renderer/src/app/projectFocus.ts`) fills `focusedProjectId` or `allProjects` on `inf:converse` and `inf:cards:reply`; `projectFilterOf` (`src/core/orchestrator/projectFilter.ts`) reads them, and `CaptainPlaces.fromPhone` says a phone sent it |
+| The first mate's line | `project_filter`, written by `projectFilterLine` in `src/core/orchestrator/firstmateContext.ts` |
 | The keys | `project-focus.open` and `project-focus.clear` (`docs/keyboard.md`) |
 
 ## Which projects get a pill
@@ -34,8 +35,8 @@ A project with nothing waiting and nothing working reads dimmer.
   Closing the search lets go of its words and keeps the focus.
 - The task board opens on the focused project, and Hide keeps it.
 - On the stage every crewmate of another project keeps a quarter of its light; nothing hides or moves.
-- The first mate gets a hint on every turn the captain sends, below the record the window shows: new work they ask for belongs to the focused project unless they name another.
-  It is a hint, never a limit.
+  While a crewmate's summary is open, on the desktop or the phone, the stage lights that crewmate's project in the same way instead, and closing the summary puts the focus's light back (`docs/crew-orbits.md`, "The project focus").
+- The first mate hears the filter with every message the captain sends (below).
 - Activity lists only the lines about the focused project's tasks and the lines about no task: the captain's own turns, the first mate's and the app's (the captain's answer to INF-1091's question 3, "Hide them while focus is on").
   A line's task key says its project, because a task's key starts with its project's key and a project's key never changes, so a line about a task the board no longer lists follows the same rule (`linesInFocus`).
   Collapsed, its header shows the newest line it keeps.
@@ -44,6 +45,17 @@ A project with nothing waiting and nothing working reads dimmer.
 
 Focused, the pill names the project, wears the accent border and has a × beside it, Show all projects.
 A quiet mono tail after it says how many tasks wait on the captain in other projects ("2 waiting elsewhere"), and a press on it opens the row.
+
+## The first mate
+
+Every message from a window says the window's filter to the first mate, as the `project_filter` line on each input: the focused project, or All projects while the pill shows.
+A window with one project has nothing to pick, so its message says no filter.
+A reply under a first mate card says it too; a crewmate's card ignores it.
+A message from the phone says it came from the phone, which has no filter and shows every project (the captain's answer to INF-6860's question 2).
+Ask again, a Crewmate tab line and a button's press say nothing of their own, so the filter from the captain's last message holds, and so does it for every crew report and wake until the next message.
+The line tells the first mate what decides a message's project, strongest first: a project, repository or task the captain's words name, the card they replied under, the shown record or card, then the filter.
+Where nothing stronger names a project, the filter scopes new work, answers and actions on many tasks, and the first mate names what it left out (the captain's answer to INF-6860's question 1).
+The first mate says so in a few words when the filter decided something the captain did not say, and it never changes the filter.
 
 ## The card stack
 
@@ -71,6 +83,7 @@ The row is centred on the bar, the same line as the folded pill, and each pill g
 A row wider than the bar's room is held 12px inside it.
 The row ends in the same arrow turned back, Close the project row, which folds it again.
 Esc, a press outside the row, the window changing size or losing focus, and a pick fold it too, playing the glide back into the pill.
+Esc folds it wherever focus is: a row the pointer opened leaves focus where it was, such as the message box, so the window's Escape folds the open row before anything else it closes (`App.tsx`, INF-1294).
 A row too wide for the bar's room ends in a +N pill that lists the rest in a menu; the focused project always keeps its pill in the row.
 A pointer or the keyboard resting on a pill lights that project's crew on the stage before anything is picked.
 The pointer lights a pill only once it moves onto it: the row opens under the pointer that pressed the folded pill, and a pill that lands under a still pointer lights nothing, so a click alone never dims the crew (INF-1292).
@@ -85,5 +98,6 @@ Before the board is read at launch the saved focus holds, so a restart never sho
 
 ## Tests
 
-- Unit: `src/shared/projectFocus.test.ts` (pills, Scratch, archived, the held focus, the tail and which cards are held back), `src/renderer/src/app/stackActions.test.ts` (the stack holding, bringing back and letting a pointed-at card through), `src/renderer/src/character/crew/focusLight.test.ts` (the light on the orbit's own frames), `src/panels/now/rows.test.ts` (the narrowed summary), `src/panels/activity/feedRows.test.ts` (Activity's lines under focus), `src/renderer/src/plugins/panelPoint.test.ts` (`focusProject` only from the captain's click or key) and `src/core/orchestrator/firstmateAgent.turns.test.ts` (the hint).
-- Journey: `tests/e2e/project-focus.spec.ts` drives the pill by keys, the Tasks list, the stage's light, a restart and Show all projects, and the held cards and hidden Activity lines coming back; `tests/browser/project-focus-still-click.test.tsx` holds a still click on the pill to the row opening with no crew dimmed, and moving onto a pill lighting its project (INF-1292); `tasks-search.spec.ts` and `task-board.spec.ts` cover the chips as the one focus.
+- Unit: `src/shared/projectFocus.test.ts` (pills, Scratch, archived, the held focus, the tail and which cards are held back), `src/renderer/src/app/stackActions.test.ts` (the stack holding, bringing back and letting a pointed-at card through), `src/renderer/src/character/crew/focusLight.test.ts` (the light on the orbit's own frames, and an open summary's project giving way over the focus) and `computers.test.ts` (that light on another computer), `src/panels/now/rows.test.ts` (the narrowed summary), `src/panels/activity/feedRows.test.ts` (Activity's lines under focus), `src/renderer/src/plugins/panelPoint.test.ts` (`focusProject` only from the captain's click or key) and `src/renderer/src/app/composer.test.ts` and `cardActions.test.ts` (the filter a message and a reply carry), `src/core/orchestrator/projectFilter.test.ts` (the filter a window or the phone says) and `src/core/orchestrator/firstmateAgent.projectFilter.test.ts` (the line, and which messages keep it).
+- Phone: `PhoneFocusLightTests` replays the desktop's light for one board of two computers and two projects.
+- Journey: `tests/e2e/computer-clusters.spec.ts` reads a crewmate's summary lighting its project's crew on another computer, and its light going when the summary closes; `tests/e2e/project-focus.spec.ts` drives the pill by keys, the Tasks list, the stage's light, a restart and Show all projects, the held cards and hidden Activity lines coming back, and the project filter line the first mate hears from the main box, a card reply, a Crewmate tab /feedback line and a paired phone; `tests/browser/project-focus-still-click.test.tsx` holds a still click on the pill to the row opening with no crew dimmed, moving onto a pill lighting its project (INF-1292), and Esc from the message box folding the row that click opened (INF-1294); `tasks-search.spec.ts` and `task-board.spec.ts` cover the chips as the one focus.

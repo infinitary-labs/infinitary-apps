@@ -1,5 +1,5 @@
 ---
-source: 43a70acb2cfae9b1
+source: 0fee6cc7d6812497
 title: Wissen
 description: Die Vorgaben, die dein erster Offizier festhält, was du ihm über dich erzählst und die Quellen, die deine Crew speichern soll – und wie du sie liest, änderst oder löschst.
 ---
@@ -36,6 +36,10 @@ Dein erster Offizier lässt ein Crewmitglied sie in die eigenen Dokumente des Pr
 Eine Vorgabe in deinen eigenen Worten trägt die Markierung **Anweisung**, und deine Crew befolgt sie als deine Anweisung.
 Eine Vorgabe, die aus einer anderen Quelle festgehalten wurde, trägt die Markierung **Rat**, und deine Crew wägt sie ab.
 Keine Vorgabe erlaubt mehr, als ihre eigenen Worte sagen.
+Eine Vorgabe erlaubt etwas, etwa einen Schritt ohne Nachfrage, nur solange ihr aktueller Wortlaut von dir gehört wurde: in deinen Worten an deinen ersten Offizier, auf einer Karte oder im Tab **Crewmitglied** einer Aufgabe.
+Eine Vorgabe, die dein erster Offizier ohne deine Worte festgehalten oder umformuliert hat, leitet deine Crew, erlaubt aber für sich allein nichts.
+Dein erster Offizier kann eine Aufgabe auch ohne Nachfrage weiterlaufen lassen, so weit eine Vorgabe reicht, die du für ihr Projekt gesagt hast; sobald du diese Vorgabe änderst oder zurückziehst, fragt die Aufgabe dich wieder.
+Nach einem Update von einer Version, die das noch nicht festhielt, fragt dich dein erster Offizier einmal auf einer Karte, welche deiner Vorgaben du gesagt hast, und die du ankreuzt, gelten als gehört.
 
 ## Eine Vorgabe ansehen, ändern oder zurückziehen {#see-change-or-retire-a-direction}
 
@@ -110,6 +114,7 @@ Wissen öffnet sich auf einer eigenen Karte mit vier Tabs:
 **Suchen** durchsucht den Tab, auf dem du bist.
 Wähl etwas aus, um es neben der Liste zu lesen, unter **Überblick**, **Belege**, **Verlauf** und **Verwendet in**.
 Eine Vorgabe zeigt **Überblick** und **Verlauf**, der jeden früheren Wortlaut aufbewahrt.
+Unter **Wo du es gesagt hast** steht bei einer Vorgabe, ob ihr aktueller Wortlaut von dir gehört wurde und wo, und **Verlauf** sagt dasselbe für jeden früheren Wortlaut.
 
 **Danach fragen**, unter jedem Abschnitt, beginnt deine nächste Nachricht an deinen ersten Offizier mit einer Frage zu dem, was du gerade liest.
 Nichts wird gesendet, bevor du es abschickst.

@@ -1,0 +1,823 @@
+{
+  "run": {
+    "conclusion": "cancelled",
+    "event": "pull_request",
+    "head_branch": "infinitary-batch/5afd2463",
+    "head_repository": {
+      "full_name": "infinitary-labs/infinitary-apps"
+    },
+    "head_sha": "db5672a2033a677f28ab02d703079db8ba00d370",
+    "id": 45727530725,
+    "name": "batch",
+    "path": ".github/workflows/batch-pull-request.yml",
+    "repository": {
+      "full_name": "infinitary-labs/infinitary-apps"
+    },
+    "run_attempt": 1,
+    "run_number": 117,
+    "status": "completed"
+  },
+  "jobs": [
+    {
+      "conclusion": "success",
+      "id": 139601032869,
+      "name": "Merge batch · Batch checks / Merge batch · Regenerate the phone files",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": 1000044338,
+      "runner_name": "GitHub Actions 1000044338",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139601452875,
+      "name": "Merge batch · Batch checks / Merge batch · Read the batch",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": 1000044339,
+      "runner_name": "GitHub Actions 1000044339",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "skipped",
+      "id": 139601454701,
+      "name": "Merge batch · Batch checks / ${{ inputs.trigger }} · Push the regenerated phone files",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": null,
+      "runner_name": null,
+      "status": "completed",
+      "steps": []
+    },
+    {
+      "conclusion": "success",
+      "id": 139601514390,
+      "name": "Merge batch · Batch checks / Merge batch · Read the Windows-relevant files",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": 1000044340,
+      "runner_name": "GitHub Actions 1000044340",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "cancelled",
+      "id": 139601514442,
+      "name": "Merge batch · Batch checks / Merge batch · Watch for a stop",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": 1000044342,
+      "runner_name": "GitHub Actions 1000044342",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "failure",
+      "id": 139601514489,
+      "name": "Merge batch · Batch checks / Merge batch · Release notes and phone contract flag",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": 1000044341,
+      "runner_name": "GitHub Actions 1000044341",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139601514631,
+      "name": "Merge batch · Batch checks / Merge batch · Linux startup / Merge batch · Automatic startup checks (Linux)",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": 1000044343,
+      "runner_name": "GitHub Actions 1000044343",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139601514928,
+      "name": "Merge batch · Batch checks / Merge batch · Critical-path journey / Merge batch · Selected app journeys (Linux; serial)",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": 1000044344,
+      "runner_name": "GitHub Actions 1000044344",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139601515140,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Check verification request",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": 1000044345,
+      "runner_name": "GitHub Actions 1000044345",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139601553788,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Browser tests (Linux)",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": 1000044347,
+      "runner_name": "GitHub Actions 1000044347",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139601553798,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Unit tests (Linux; group 2/3)",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": 1000044348,
+      "runner_name": "GitHub Actions 1000044348",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139601553826,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Integration tests (Linux; group 1/2)",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": 1000044350,
+      "runner_name": "GitHub Actions 1000044350",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139601553864,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Environment checks (Linux; group 1/2)",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": 1000044346,
+      "runner_name": "GitHub Actions 1000044346",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139601553905,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Unit tests (Linux; group 1/3)",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": 1000044351,
+      "runner_name": "GitHub Actions 1000044351",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139601553981,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Unit tests (Linux; group 3/3)",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": 1000044359,
+      "runner_name": "GitHub Actions 1000044359",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "cancelled",
+      "id": 139601553983,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Parallel journeys (Mac; group 2/4)",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": 1000044386,
+      "runner_name": "GitHub Actions 1000044386",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139601553985,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Environment checks (Linux; group 2/2)",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": 1000044349,
+      "runner_name": "GitHub Actions 1000044349",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "cancelled",
+      "id": 139601554008,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Parallel journeys (Mac; group 4/4)",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": 0,
+      "runner_name": "",
+      "status": "completed",
+      "steps": []
+    },
+    {
+      "conclusion": "success",
+      "id": 139601554027,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Code checks and build (Linux)",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": 1000044353,
+      "runner_name": "GitHub Actions 1000044353",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "cancelled",
+      "id": 139601554049,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Desktop journeys (Mac; group 1/2)",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": 3180,
+      "runner_name": "runner-up-mac-m6-16gb-0-vm-1795652258",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "cancelled",
+      "id": 139601554058,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Native tests, replay and package (Mac)",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": 0,
+      "runner_name": "",
+      "status": "completed",
+      "steps": []
+    },
+    {
+      "conclusion": "cancelled",
+      "id": 139601554082,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Parallel journeys (Mac; group 1/4)",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": 1000044377,
+      "runner_name": "GitHub Actions 1000044377",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "cancelled",
+      "id": 139601554095,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Desktop journeys (Mac; group 2/2)",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": 3179,
+      "runner_name": "runner-up-mac-1-vm-1795652257",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "cancelled",
+      "id": 139601554098,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Parallel journeys (Mac; group 3/4)",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": 0,
+      "runner_name": "",
+      "status": "completed",
+      "steps": []
+    },
+    {
+      "conclusion": "success",
+      "id": 139601554227,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Integration tests (Linux; group 2/2)",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": 1000044363,
+      "runner_name": "GitHub Actions 1000044363",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139601554328,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Linux journeys / Merge batch · App journeys (Linux; parallel group 1/6)",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": 1000044364,
+      "runner_name": "GitHub Actions 1000044364",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139601554336,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Linux journeys / Merge batch · App journeys (Linux; parallel group 2/6)",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": 1000044358,
+      "runner_name": "GitHub Actions 1000044358",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139601554347,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Linux journeys / Merge batch · App journeys (Linux; parallel group 3/6)",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": 1000044354,
+      "runner_name": "GitHub Actions 1000044354",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139601554381,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Linux journeys / Merge batch · App journeys (Linux; parallel group 5/6)",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": 1000044361,
+      "runner_name": "GitHub Actions 1000044361",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "cancelled",
+      "id": 139601554409,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Linux journeys / Merge batch · App journeys (Linux; serial group 1/3)",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": 1000044352,
+      "runner_name": "GitHub Actions 1000044352",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "cancelled",
+      "id": 139601554417,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Linux journeys / Merge batch · App journeys (Linux; parallel group 4/6)",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": 1000044368,
+      "runner_name": "GitHub Actions 1000044368",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "cancelled",
+      "id": 139601554439,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Linux journeys / Merge batch · App journeys (Linux; serial group 3/3)",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": 1000044360,
+      "runner_name": "GitHub Actions 1000044360",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "cancelled",
+      "id": 139601554455,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Linux journeys / Merge batch · App journeys (Linux; serial group 2/3)",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": 1000044370,
+      "runner_name": "GitHub Actions 1000044370",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "skipped",
+      "id": 139601554483,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Linux startup",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": null,
+      "runner_name": null,
+      "status": "completed",
+      "steps": []
+    },
+    {
+      "conclusion": "cancelled",
+      "id": 139601554511,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Linux journeys / Merge batch · App journeys (Linux; parallel group 6/6)",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": 1000044371,
+      "runner_name": "GitHub Actions 1000044371",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "skipped",
+      "id": 139601554968,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Signed installer checks",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": null,
+      "runner_name": null,
+      "status": "completed",
+      "steps": []
+    },
+    {
+      "conclusion": "success",
+      "id": 139601700774,
+      "name": "Merge batch · Batch checks / Merge batch · Windows installer / Merge batch · Build the Windows installer",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": 1000044355,
+      "runner_name": "GitHub Actions 1000044355",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "cancelled",
+      "id": 139604971941,
+      "name": "Merge batch · Batch checks / Merge batch · Windows installer / Merge batch · Install and run the Windows app (fresh Windows 11)",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": 3181,
+      "runner_name": "runner-up-pc-win11-1-1795652762",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "skipped",
+      "id": 139604974019,
+      "name": "Merge batch · Batch checks / Merge batch · Windows installer / ${{ ((inputs.trigger || 'Manual request')) }} · Update the Windows app on ${{ matrix.channel }} (fresh Windows 11${{ ((((strategy.job-total > 2) && format('; round {0}', matrix.round)) || '')) }})",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": null,
+      "runner_name": null,
+      "status": "completed",
+      "steps": []
+    },
+    {
+      "conclusion": "skipped",
+      "id": 139607296261,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / ${{ (inputs.trigger || 'Manual request') }} · Confirm failed ${{ matrix.group }}",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": null,
+      "runner_name": null,
+      "status": "completed",
+      "steps": []
+    },
+    {
+      "conclusion": "cancelled",
+      "id": 139607317589,
+      "name": "Merge batch · Batch checks / ${{ inputs.trigger }} · Stop after ${{ (((needs.watch.outputs.stop == 'confirm') && 'a failed confirm') || 'failed code checks') }} (${{ matrix.job }})",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": null,
+      "runner_name": null,
+      "status": "completed",
+      "steps": []
+    },
+    {
+      "conclusion": "cancelled",
+      "id": 139607319418,
+      "name": "Merge batch · Batch checks / ${{ inputs.trigger }} · Batch stopped because ${{ (((needs.watch.outputs.stop == 'confirm') && 'a confirm failed again') || 'the code checks failed') }}",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": null,
+      "runner_name": null,
+      "status": "completed",
+      "steps": []
+    },
+    {
+      "conclusion": "cancelled",
+      "id": 139607509038,
+      "name": "Merge batch · Batch checks / ${{ inputs.trigger }} · Confirm failed tests (${{ (((matrix.platform == 'mac') && 'Mac') || 'Linux') }}, later failures)",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": null,
+      "runner_name": null,
+      "status": "completed",
+      "steps": []
+    },
+    {
+      "conclusion": "cancelled",
+      "id": 139607509597,
+      "name": "Merge batch · Batch checks / ${{ inputs.trigger }} · Read the failures",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": null,
+      "runner_name": null,
+      "status": "completed",
+      "steps": []
+    },
+    {
+      "conclusion": "cancelled",
+      "id": 139607510117,
+      "name": "Merge batch · Batch checks / ${{ inputs.trigger }} · Batch passed (tree ${{ needs.batch.outputs.tree }}; base ${{ needs.batch.outputs.base }})",
+      "run_attempt": 1,
+      "run_id": 45727530725,
+      "runner_id": null,
+      "runner_name": null,
+      "status": "completed",
+      "steps": []
+    }
+  ],
+  "annotations": {
+    "139601514442": [
+      "Canceling since a higher priority waiting request for batch-refs/pull/105/merge exists",
+      "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@11d5960a326750d5838078e36cf38b85af677262, actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/",
+      "The operation was canceled."
+    ],
+    "139601514489": [
+      "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@11d5960a326750d5838078e36cf38b85af677262, actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/",
+      "Process completed with exit code 1.",
+      "The docs site's hand-written pages: a-computer-with-no-screen, automation, cards-and-decisions, first-launch, get-help, glossary, index, install, integrations, iphone-and-ipad, knowledge, panels, projects, runbooks, secrets, settings, subscriptions-and-quota, tasks-and-crewmates, the-crews-browser, the-first-mate, troubleshooting, update-and-remove, what-leaves-your-computer, what-you-can-ask-for, your-first-task, your-other-computers (docs/release-notes.md, \"The docs site declaration\").",
+      "release-notes/changes/usage-connection-words.json: \"usage-connection-words\" is a feature: name the docs site pages this change edited in \"docsSite\", or say in one sentence in \"noDocsSite\" why no page needs to change",
+      "release-notes/changes/side-effect-tasks.json: \"side-effect-tasks\" is a improvement: name the docs site pages this change edited in \"docsSite\", or say in one sentence in \"noDocsSite\" why no page needs to change",
+      "release-notes/changes/panel-status-mark.json: \"panel-status-mark\" is a improvement: name the docs site pages this change edited in \"docsSite\", or say in one sentence in \"noDocsSite\" why no page needs to change"
+    ],
+    "139601553983": [
+      "Canceling since a higher priority waiting request for batch-refs/pull/105/merge exists",
+      "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830, actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830, actions/checkout@11d5960a326750d5838078e36cf38b85af677262, actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/",
+      "The operation was canceled.",
+      "Due to capacity constraints, jobs targeting macOS arm64 runners may experience longer queue times."
+    ],
+    "139601554008": [
+      "Canceling since a higher priority waiting request for batch-refs/pull/105/merge exists"
+    ],
+    "139601554049": [
+      "Canceling since a higher priority waiting request for batch-refs/pull/105/merge exists",
+      "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830, actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830, actions/checkout@11d5960a326750d5838078e36cf38b85af677262, actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020, actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/",
+      "The operation was canceled."
+    ],
+    "139601554058": [
+      "Canceling since a higher priority waiting request for batch-refs/pull/105/merge exists"
+    ],
+    "139601554082": [
+      "Canceling since a higher priority waiting request for batch-refs/pull/105/merge exists",
+      "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830, actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830, actions/checkout@11d5960a326750d5838078e36cf38b85af677262, actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020, actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/",
+      "The operation was canceled.",
+      "Due to capacity constraints, jobs targeting macOS arm64 runners may experience longer queue times."
+    ],
+    "139601554095": [
+      "Canceling since a higher priority waiting request for batch-refs/pull/105/merge exists",
+      "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830, actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830, actions/checkout@11d5960a326750d5838078e36cf38b85af677262, actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020, actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/",
+      "The operation was canceled."
+    ],
+    "139601554098": [
+      "Canceling since a higher priority waiting request for batch-refs/pull/105/merge exists"
+    ],
+    "139601554409": [
+      "Canceling since a higher priority waiting request for batch-refs/pull/105/merge exists",
+      "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830, actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830, actions/checkout@11d5960a326750d5838078e36cf38b85af677262, actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020, actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/",
+      "The operation was canceled."
+    ],
+    "139601554417": [
+      "Canceling since a higher priority waiting request for batch-refs/pull/105/merge exists",
+      "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830, actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830, actions/checkout@11d5960a326750d5838078e36cf38b85af677262, actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020, actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/",
+      "The operation was canceled.",
+      "  1) [application] › tests/e2e/sequences.spec.ts:687:1 › a Build row's bug that reproduces: the fix starts built on the reproduction and carries the issue \n    Error: expect(received).toEqual(expected) // deep equality\n\n    - Expected  - 1\n    + Received  + 0\n\n      Object {\n    -   \"closes\": true,\n        \"number\": 14,\n        \"url\": \"https://github.com/octo/meterlab/issues/14\",\n      }\n\n      713 |   expect(brief).toContain(`grounded in ${reproduce.key}`);\n      714 |   expect(brief).toContain(SEQ_ROW_REPRODUCED_YES);\n    > 715 |   expect(readSavedData(userDataDir, (db) => new TaskStore(db).get(fix.id)?.shape?.issue)).toEqual({\n          |                                                                                           ^\n      716 |     ...SEQ_ROW_ISSUE,\n      717 |     closes: true,\n      718 |   });\n        at /home/runner/work/infinitary-apps/infinitary-apps/Application Support/firstmate/tests/e2e/sequences.spec.ts:715:91"
+    ],
+    "139601554439": [
+      "Canceling since a higher priority waiting request for batch-refs/pull/105/merge exists",
+      "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830, actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830, actions/checkout@11d5960a326750d5838078e36cf38b85af677262, actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020, actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/",
+      "The operation was canceled."
+    ],
+    "139601554455": [
+      "Canceling since a higher priority waiting request for batch-refs/pull/105/merge exists",
+      "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830, actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830, actions/checkout@11d5960a326750d5838078e36cf38b85af677262, actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020, actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/",
+      "The operation was canceled."
+    ],
+    "139601554511": [
+      "Canceling since a higher priority waiting request for batch-refs/pull/105/merge exists",
+      "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830, actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830, actions/checkout@11d5960a326750d5838078e36cf38b85af677262, actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020, actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/",
+      "The operation was canceled."
+    ],
+    "139604971941": [
+      "Canceling since a higher priority waiting request for batch-refs/pull/105/merge exists",
+      "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830, actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830, actions/checkout@11d5960a326750d5838078e36cf38b85af677262, actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093, actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020, actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/",
+      "The operation was canceled."
+    ],
+    "139607317589": [],
+    "139607319418": [],
+    "139607509038": [],
+    "139607509597": [],
+    "139607510117": []
+  }
+}

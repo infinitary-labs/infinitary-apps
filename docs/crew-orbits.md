@@ -270,6 +270,10 @@ While the window is focused on one project, or a pointer or the keyboard rests o
 A crewmate keeps its slot, plane, speed, colour and solid: nothing hides and nothing moves for the focus.
 The light eases over `--dur-med` each way and is a cut under reduced motion, where the stage repaints once for the change.
 A crewmate whose project the board does not name stays lit.
+While a crewmate's summary is open, from a pointer rest or its focused name, the stage lights that crewmate's project on every computer the same way, in place of the window's own light (INF-6951, `restedLight`); a program mark's summary lights its program's project.
+The light follows the summary, not the pointer, so it changes after the summary's beat and a sweep across the crew does not flicker; leaving, Esc or a press puts back the held focus, a pill's rest or no light.
+A crewmate whose project the board does not name leaves the window's light as it is, and a Tasks row or an Activity line lighting a crewmate (its brackets) lights no project.
+The phone's crew scene draws the same light from the same value (`docs/ios.md`).
 The light is the last thing the orbit's frame passes through before it is painted (`lightFrame`, `src/renderer/src/character/crew/focusLight.ts`), so every painter and label reads the same alpha.
 
 ## Verification
@@ -439,7 +443,13 @@ The status may wrap, to two lines at most, as may the task title and the project
 A cut-short line is not expanded in place; the record has the full text.
 The panel sits beside the crewmate on the side away from the character, level with it; where that has no room, under or over it; and only then on the character's side.
 It keeps inside the window between the top bar and the input, never under a rail's panel, and clear of the crewmate's own name.
-It lives outside the fitted formation, so its type is never scaled, and it follows the painted crewmate with compare-before-write, so a paused stage touches no DOM.
+If none of its preferred positions fits, it searches the remaining space along the panels' edges, keeping the same size and a hairline back to the crewmate.
+When rail content leaves no clear place, the same summary, brackets and hairline use the window-wide layer above the rails, so sidebar rows never obscure the summary.
+Only that no-room case may cover sidebar content; as soon as a clear place exists it returns to the ordinary layer.
+Placement measures visible panels, the create-panel slot and the More row, and its coordinates stay physical in either text direction.
+While a summary is open, its room source observes rail, control, top-bar and prompt geometry, including panel moves and newly mounted controls, independently of the animation clock.
+Late panel resizing or folding repositions the same mounted summary under reduced motion without another pointer move.
+It lives outside the fitted formation, so its type is never scaled, and it follows the painted crewmate with compare-before-write, so a paused stage with unchanged room touches no DOM.
 It is read-only - no buttons - and never takes the pointer.
 Under reduced motion the summary works against the still frame.
 

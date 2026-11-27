@@ -1,5 +1,5 @@
 ---
-source: 43a70acb2cfae9b1
+source: 0fee6cc7d6812497
 title: Connaissances
 description: Les consignes permanentes que garde votre second, ce que vous lui dites de vous et les sources que vous demandez à votre équipage d’enregistrer, et comment les lire, les changer ou les effacer.
 ---
@@ -36,6 +36,10 @@ Votre second demande à un équipier de l’écrire dans les documents du projet
 Une consigne dans vos propres mots porte la mention **Instruction**, et votre équipage la suit comme votre instruction.
 Une consigne gardée à partir de toute autre source porte la mention **Conseil**, que votre équipage prend en compte.
 Aucune consigne n’autorise plus que ce que disent ses propres mots.
+Une consigne n’autorise quelque chose, comme une étape qui n’a pas besoin de vous demander, que tant que sa formulation actuelle a été entendue de vous : dans vos mots à votre second, sur une carte, ou dans l’onglet **Équipier** d’une tâche.
+Une consigne que votre second a gardée ou reformulée sans vos mots guide votre équipage, mais n’autorise rien à elle seule.
+Votre second peut aussi laisser une tâche avancer sans vous demander, aussi loin que porte une consigne que vous avez dite pour son projet ; dès que vous changez ou retirez cette consigne, la tâche vous demande à nouveau.
+Après une mise à jour depuis une version qui ne le notait pas, votre second vous demande une seule fois, sur une carte, lesquelles de vos consignes vous avez dites, et celles que vous cochez comptent comme entendues.
 
 ## Voir, changer ou retirer une consigne {#see-change-or-retire-a-direction}
 
@@ -110,6 +114,7 @@ Connaissances s’ouvre sur sa propre carte, avec quatre onglets :
 **Rechercher** cherche dans l’onglet où vous êtes.
 Choisissez n’importe quel élément pour le lire à côté de la liste, sous **Aperçu**, **Éléments**, **Historique** et **Utilisé dans**.
 Une consigne affiche **Aperçu** et **Historique**, qui garde chaque formulation antérieure.
+Sous **Où vous l’avez dit**, une consigne indique si sa formulation actuelle a été entendue de vous, et où, et **Historique** indique la même chose pour chaque formulation antérieure.
 
 **Poser une question à ce sujet**, sous chaque section, commence votre prochain message à votre second par une question sur ce que vous lisez.
 Rien n’est envoyé tant que vous ne l’envoyez pas.

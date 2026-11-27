@@ -1,5 +1,5 @@
 ---
-source: a8120adef7569dc8
+source: 4689a21f9d4af463
 title: iPhone y iPad
 description: Pide una invitación privada de TestFlight para Infinitary en iPhone y iPad, y luego únete a tu computadora para leer tarjetas y enviar mensajes.
 ---
@@ -34,11 +34,11 @@ Tu teléfono y tu computadora necesitan compartir una red: la misma Wi-Fi, o la 
 ## Más de una computadora {#more-than-one-computer}
 
 Tu teléfono puede conservar más de una computadora, como una en casa y otra en el trabajo, y muestra una a la vez.
-Para agregar otra, toca el botón de la computadora a la derecha de la barra superior del teléfono y elige **Agregar otra computadora**, luego escanea su código, pega su enlace o únete por su dirección.
+Para agregar otra, abre Configuración en el teléfono, toca **Tu computadora** y elige **Agregar otra computadora**, luego escanea su código, pega su enlace o únete por su dirección.
 La computadora que estabas mostrando se conserva.
 
-Con más de una conservada, el botón de la computadora nombra la computadora que se muestra.
-Su hoja enumera tus otras computadoras y marca cada una que responde desde donde estás ahora, como cuando tu teléfono está en la red o la red privada de esa computadora.
+Con más de una conservada, el botón de la computadora a la derecha de la barra superior del teléfono nombra la computadora que se muestra.
+**Tu computadora**, la primera fila de Configuración en el teléfono, también la nombra, enumera tus otras computadoras y marca cada una que responde desde donde estás ahora, como cuando tu teléfono está en la red o la red privada de esa computadora.
 Toca una, o presiona Return sobre ella con un teclado, para mostrarla.
 El teléfono nunca cambia por sí solo: se queda en tu elección hasta que eliges otra.
 
@@ -53,6 +53,13 @@ La barra superior tiene **Inicio**, **Tareas** y **Actividad**.
 - **Actividad** muestra lo que pasó, lo más reciente abajo.
 
 Cuando tus paneles están activados, una cuarta pestaña, **Paneles**, los muestra uno debajo de otro.
+
+## El tema propio de tu teléfono {#your-phones-own-theme}
+
+Configuración → Apariencia → **Tema** en tu iPhone o iPad es solo suyo.
+Elige **Dispositivo**, **Oscuro**, **Claro** o uno de los trece temas de tu computadora con el nombre que les dio su autor, como **Dracula** o **Catppuccin Latte**.
+Al elegir uno, toda la app cambia de color al instante, tarjetas incluidas, y se mantiene después de cerrar Infinitary.
+Tu computadora y tus otros dispositivos conservan su propio tema.
 
 ## Leer una tarjeta en un iPhone plegable abierto {#read-a-card-on-an-open-foldable-iphone}
 
@@ -86,12 +93,13 @@ El teléfono necesita tu computadora despierta, con Infinitary abierto.
 Si no puede alcanzarla, dice «Tu computadora está fuera de alcance. Comprueba que Infinitary esté abierto y que ambos dispositivos compartan una red».
 
 Con las notificaciones activadas, tu teléfono muestra una notificación por cada tarjeta nueva, incluso mientras Infinitary está cerrado ahí.
+Mientras estás en un computador que muestra a tu primer oficial, tu teléfono se queda en silencio; las tarjetas que llegaron entretanto le llegan en cuanto te vas, tras cinco minutos sin teclado ni ratón o en cuanto se bloquea la pantalla, y una tarjeta que ya viste ahí nunca le llega.
 Con más de una computadora conservada, cada una envía las suyas, y la notificación nombra la computadora de la que viene; al tocarla, se muestra esa computadora y se abre la tarjeta.
 Cada computadora sigue enviándolas mientras muestras otra: tu teléfono le deja una nota sellada a través del relé de Infinitary cada vez que se renueva su permiso de notificaciones, y solo esa computadora puede leerla.
 
 ## Salir o quitar {#leave-or-remove}
 
-Para dejar de mostrar tu computadora, toca el botón de la computadora a la derecha de la barra superior del teléfono y elige **Salir** con el nombre de tu computadora.
+Para dejar de mostrar tu computadora, abre Configuración en el teléfono, toca **Tu computadora** y elige **Salir** con el nombre de tu computadora.
 El teléfono olvida esa computadora y sus notificaciones, y le deja una nota sellada para que deje de enviarlas en un día, incluso mientras está fuera de alcance.
 Cuando está fuera de alcance, **Olvidar** hace lo mismo solo en el teléfono.
 Tus otras computadoras conservadas se quedan: la que mostraste más recientemente se muestra después, y si no queda ninguna, el teléfono te da la bienvenida como al principio.

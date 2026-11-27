@@ -36,6 +36,7 @@ import type { ProjectChanges } from "../workspace/projectChanges";
 import type { ProjectSetups } from "../workspace/projectSetups";
 import type { RepoRegistry } from "../workspace/repoRegistry";
 import type { CrewSupervisor } from "./crewSupervisor";
+import { askToConfirmDirections } from "./directionsToConfirm";
 import {
   FirstmateAgent,
   type FirstmateAgentOptions,
@@ -79,7 +80,7 @@ export function startHomeFirstmate({
   broadcastEvent,
   sessionFactories,
   localSeat,
-  availableModels,
+  routing,
   slots,
   homeQuota,
   repos,
@@ -134,8 +135,8 @@ export function startHomeFirstmate({
   broadcastEvent: (event: FmEvent) => void;
   sessionFactories: SessionFactories;
   localSeat: FirstmateAgentOptions["localOrchestrator"];
-  availableModels: HomeRouting["availableModels"];
-  slots: Pick<ModelSlots, "listedOf" | "slotsOf">;
+  routing: Pick<HomeRouting, "availableModels" | "capabilityFor">;
+  slots: Pick<ModelSlots, "listedOf" | "slotsOf" | "nameOf">;
   homeQuota: Pick<HomeQuota, "contextLine">;
   repos: RepoRegistry;
   supervisor: CrewSupervisor;
@@ -249,9 +250,11 @@ export function startHomeFirstmate({
     // per backend.
     seats: sessionFactories,
     ...(localSeat ? { localOrchestrator: localSeat } : {}),
-    availableModels,
-    listedModels: () => slots.listedOf(availableModels()),
+    availableModels: routing.availableModels,
+    listedModels: () => slots.listedOf(routing.availableModels()),
     slotsOf: (ref) => slots.slotsOf(ref),
+    readsPictures: (ref) => routing.capabilityFor(ref)?.input.includes("image"),
+    modelName: (ref) => slots.nameOf(ref),
     quotaModels: () => quota.latestModels(),
     quotaLine: homeQuota.contextLine,
     repos,
@@ -297,5 +300,6 @@ export function startHomeFirstmate({
     proposeProject: (value) => projectSetups.propose(value),
     changeProject: (action, value, actor) => projectChanges.request(action, value, actor),
   });
+  askToConfirmDirections({ knowledge, inbox, notify: (wake) => firstmate.notifyOp(wake, "agent") });
   return firstmate;
 }

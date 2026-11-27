@@ -47,6 +47,7 @@ import {
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { settingFrom } from "../src/shared/envSettings.ts";
+import type { HoldKind } from "../src/shared/holds.ts";
 import {
   type DevObserveGateInput,
   isDevObserveEnabled,
@@ -647,6 +648,12 @@ export type RigorRollup = {
   overrides_by_hold: Record<string, number>;
   /** The same overrides one by one, oldest first, so the audit can read each (docs/agents-reach.md). */
   overrides: OverrideEntry[];
+  /**
+   * How many writes went with no card on a yes of the captain's the crewmate
+   * named, per hold kind each passed (docs/agents-reach.md): the weekly
+   * audit reads them beside the overrides.
+   */
+  named_yes_sends_by_hold: Record<string, number>;
   /** The phase-4 numbers, scored by the one home so the replay agrees with this. */
   metrics: Record<string, number | null>;
 };
@@ -660,6 +667,8 @@ export type OverrideEntry = {
   until: "version" | "task" | null;
   head: string | null;
   route: OverrideRoute | null;
+  /** The direction a `direction` route cites, as `d:<id>`; null otherwise. */
+  direction: string | null;
   merge_click: boolean;
   replaces: { at: string; holds: string[] } | null;
 };
@@ -669,11 +678,15 @@ export type OverrideEntry = {
  * stamps its own actor on the row: the captain's Merge anyway click
  * (`passChecksFromCard`) writes as the captain, and update_task override
  * (`declareOverride`), the first mate relaying the captain's words, writes
- * as the first mate. Any other actor is no known route, so it reads null.
+ * as the first mate. An override whose words are a heard direction of the
+ * task's project (INF-7021) records that direction, whoever wrote it, so
+ * the audit reads it apart from words the captain gave on the task. Any
+ * other actor is no known route, so it reads null.
  */
-export type OverrideRoute = "merge-anyway" | "relayed-words";
+export type OverrideRoute = "merge-anyway" | "relayed-words" | "direction";
 
-function overrideRoute(actor: string): OverrideRoute | null {
+function overrideRoute(actor: string, direction: string | null): OverrideRoute | null {
+  if (direction) return "direction";
   if (actor === "captain") return "merge-anyway";
   if (actor === "firstmate") return "relayed-words";
   return null;
@@ -694,12 +707,34 @@ function overrideEntries(tables: FleetTables, taskIds: readonly string[]): Overr
       holds: override.holds,
       until: override.until,
       head: override.head,
-      route: overrideRoute(override.actor),
+      route: overrideRoute(override.actor, override.direction),
+      direction: override.direction,
       merge_click: override.mergeClick,
       replaces: override.replaces
         ? { at: iso(override.replaces.at), holds: override.replaces.holds }
         : null,
     }));
+}
+
+/**
+ * Each kept write sent on a named yes, under the hold it passed
+ * (`kept-write`, docs/forge.md "A write that asks"): saved taken with the
+ * yes it named. Every task counts, since the answer and side-effect tasks
+ * that send most of them ship nothing; one the host refused before sending
+ * is no send.
+ */
+function namedYesSendsByHold(tables: FleetTables): Record<string, number> {
+  const passed: HoldKind[] = [];
+  for (const task of tables.tasks.values()) {
+    const asks = parseShape(task.delivery_json)?.writeAsks;
+    if (!Array.isArray(asks)) continue;
+    for (const ask of asks as Record<string, unknown>[]) {
+      const outcome = ask?.outcome as { kind?: unknown } | undefined;
+      if (typeof ask?.yes !== "string" || ask.sentAt === undefined) continue;
+      if (outcome?.kind !== "refused") passed.push("kept-write");
+    }
+  }
+  return tally(passed);
 }
 
 export function rigorRollup(tables: FleetTables): RigorRollup {
@@ -717,6 +752,7 @@ export function rigorRollup(tables: FleetTables): RigorRollup {
     cap_hits: dispatches.reduce((sum, dispatch) => sum + dispatch.capHits, 0),
     overrides_by_hold: overridesByHold(dispatches),
     overrides: overrideEntries(tables, dispatches.map((dispatch) => dispatch.taskId)),
+    named_yes_sends_by_hold: namedYesSendsByHold(tables),
     metrics: Object.fromEntries(
       Object.entries(scores).map(([id, value]) => [id, (value as MetricValue).value]),
     ),

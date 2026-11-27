@@ -151,6 +151,11 @@ public struct PhoneNotice: Equatable, Sendable {
     /// (docs/ios.md, "Unsent picks on the phone"); a computer without it leaves them on this phone, in memory, as before.
     @ObservationIgnored public private(set) var cardDrafts: PhoneCardDrafts!
     @ObservationIgnored private var homeKeepsDrafts = false
+    /// INF-6763's plan, part 3: the computer takes back the captain's newest message (`take-back-message`), so the strip
+    /// offers the revert icon and Edit while changes are on.
+    public private(set) var homeTakesBack = false
+    /// Whether the revert icon and Edit may stand beside the newest message now.
+    public var canTakeBack: Bool { homeTakesBack && canChange }
     /// The Mac's stage rule: a new card waits for its author's close-out, but a replied-under card stays.
     /// A minimized card leaves the phone's stack and count too (INF-944 item 3).
     public var stack: [PhoneCard] { cards.filter { ($0.awaiting == nil || $0.sentBackAt != nil) && !$0.minimized } }
@@ -674,6 +679,37 @@ public struct PhoneNotice: Equatable, Sendable {
         let crew: PhoneCrew = try await request(.crew, args: [id])
         saw(.crew(crew))
         return crew
+    }
+
+    /// Takes back the newest message (INF-6763's plan, part 3): the strip reads it Reverted at the tap, and settles on
+    /// the last turn the computer sends next. A refusal takes the mark back with the phone's words for it.
+    public func takeBack(ask: String) async {
+        guard canTakeBack else { return }
+        let id = begin(.takeBack(ask: ask), nil)
+        do {
+            let result: PhoneTakeBackResult = try await request(.takeBack, args: [["askId": ask]])
+            guard result.holds else { refuse(id, PhoneMessages.refuseNoMessageToRevert()); return }
+            accept(id)
+            readTurn()
+        } catch { settle(id, after: error) }
+    }
+
+    /// A message that replaces the newest one (`replaces` on `inf:converse`): the computer takes that one back as it
+    /// keeps this one, so the strip shows both at the tap, and a refusal takes both back.
+    public func replace(_ ask: String, with send: PhoneIntent.Kind, args: [Any],
+                        restore: (@MainActor () -> Void)? = nil) async throws {
+        let mark = begin(.takeBack(ask: ask), nil)
+        do {
+            try await change(send, .converse, args: args, restore: restore)
+            accept(mark)
+        } catch {
+            if ledger.intent(mark)?.state == .sent {
+                if case PhoneError.unconfirmed = error { ledger.lose(mark, welcome: welcomes) }
+                else if error is CancellationError { ledger.lose(mark, welcome: welcomes) }
+                else { ledger.drop(mark); refold() }
+            }
+            throw error
+        }
     }
 
     /// A record's task or transcript as the screens show it, with the pending intents drawn over it.
@@ -1281,6 +1317,7 @@ public struct PhoneNotice: Equatable, Sendable {
             homeKeepsDrafts = (frame["changes"] as? [String] ?? []).contains(PhoneContract.cardDrafts)
             homeTakesChoiceAttachments = (frame["changes"] as? [String] ?? []).contains(PhoneContract.choiceAttachments)
             homeHearsShown = (frame["changes"] as? [String] ?? []).contains(PhoneContract.catchUpShown)
+            homeTakesBack = (frame["changes"] as? [String] ?? []).contains(PhoneContract.takeBackMessage)
             homeTakesPushes = (frame["changes"] as? [String] ?? []).contains(PhoneContract.phonePush)
             homeTakesWithdrawals = (frame["changes"] as? [String] ?? []).contains(PhoneContract.phonePushWithdraw)
             servesPanels = folded || (frame["changes"] as? [String] ?? []).contains(PhonePanelRequest.change)
@@ -1568,6 +1605,12 @@ public struct PhoneNotice: Equatable, Sendable {
         let lesser = channel == PhoneRequest.board.rawValue && homeLeavesClosed && !closedRowsWanted
         let args: [Any] = lesser ? [["closed": false]] : []
         try await send(["t": "invoke", "id": nextID, "channel": channel, "args": args], on: socket)
+    }
+
+    /// Reads the last turn again: a take back sends no push of its own, and its mark settles on the next last turn.
+    private func readTurn() {
+        guard let socket else { return }
+        Task { try? await self.refresh(PhoneRequest.lastTurn.rawValue, on: socket) }
     }
 
     /// INF-3764: Tasks shows Done or a search, so the closed rows the first board read left out are read now, and every

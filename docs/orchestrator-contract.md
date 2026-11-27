@@ -44,7 +44,7 @@ Model changes still require the captain.
 ## App action catalog (4.54, pieces 1–4)
 
 `app_state` reads the shared catalog in `src/shared/actions.ts`: area, strict value schema, current value, tier, and consistent static `captainAllowed` / `firstmateAllowed` flags, plus `allowedNow` for the current code-stamped wake.
-`app_state` with `area: "reads"` lists the named reads with their args, and with `read` it answers one of them on demand (`APP_READS` in `src/core/pi/appReads.ts`): what Settings shows beyond the lines' current values - usage, an automation's runs and next dates, kept jobs, the update, the computers' readings, one of the person's own ambient styles whole, the keyboard keys, copies and moves, and a runbook's crew part (`docs/runbooks.md`, "Reading a runbook's crew part").
+`app_state` with `area: "reads"` lists the named reads with their args, and with `read` it answers one of them on demand (`APP_READS` in `src/core/pi/appReads.ts`): what Settings shows beyond the lines' current values - usage, an automation's runs and next dates, kept jobs, the update, the computers' readings, one of the person's own ambient styles or color themes whole, the keyboard keys, copies and moves, and a runbook's crew part (`docs/runbooks.md`, "Reading a runbook's crew part").
 A read the window's read catalog names runs through that entry's own args and request; nothing a read answers joins the context a turn builds.
 `app_change` takes a top-level action enum, value, and evidence.
 The dispatcher enforces actor permissions independently.
@@ -128,6 +128,10 @@ A window's own setting (its look, layout, update and key reminder, `window: true
 
 `window-size` (FI3-524, `asked`) claims the appearance row's size: 100, 110, 125 or 150 percent.
 The Size picker, the size keys, the View menu and command search make the same change as the captain, so a run of them leaves one attributed feed line and operation, and the first mate makes it when asked.
+
+`own-theme` (`asked`) saves, changes and removes the person's own color themes, as `ambient-own-style` does for ambient styles (docs/themes.md, "Your own themes").
+A save is a name, an optional built-in theme to start from and the colors that differ; the line tells each color's job, the app keeps colors readable, and its answer names each color the app moved.
+A theme with a fault is refused in words and nothing changes; the `theme` line wears a saved one by its `own-` id.
 
 ### Settled runs
 
@@ -247,7 +251,7 @@ Each input the first mate is served opens with one context, and a context carrie
   `directions` is one section: when any direction changes, every current direction goes again whole under its authority line, so the model never holds part of the set.
   `saved_knowledge` says only how much the captain's collection holds, never a saved entry; the first mate searches it when a message needs it (`docs/knowledge.md`, "Knowledge as needed").
 - **The facts of one input.**
-  `as_of`, `captain_resolutions`, `thread_activity`, `visible_card_hint`, `about`, `focused_project` and `recovery` belong to the input they ride and are sent whenever they apply.
+  `as_of`, `captain_resolutions`, `thread_activity`, `visible_card_hint`, `about`, `project_filter` and `recovery` belong to the input they ride and are sent whenever they apply.
 - **The crew lists started work.**
   `crew` lists every active task: running, idle, paused, held, and work on a computer that cannot be reached.
   Unstarted work is the `backlog` section's count per project; the `tasks` query reads it, a page at a time: a list that stops short names the `next` that alone reads its later pages from the one cut its first page took, under that page's filters, and a `next` whose cut is no longer kept, or was taken by an earlier session's tool, is refused.
@@ -281,6 +285,7 @@ When the captain's or a task's words make an outside action wait on work finishi
 The host keeps only typed facts: the mark, its waits, that each needs the merge, and how each closed.
 Its crewmate's rule rides that task's own brief, so no other crewmate reads it.
 The app writes no closing words of its own where a change is published (`docs/forge.md`, "A change that answers an issue").
+When that action is telling an issue, ticket or request kept outside the app how the work ended, the Outside work items runbook's guide says how to file it, a fenced reader where strangers write to the item, and when the item hears the ending; that task names the item in its own words (`docs/runbooks.md`, "Built-ins").
 
 ## An answer's closing receipt
 

@@ -445,6 +445,15 @@ export const taskViewSchema = z.object({
     closed: z.number(),
     closedIds: z.array(z.string()).optional(),
   }),
+  /**
+   * The most pressing status among its open parts, on a backlog parent that
+   * runs no program and nothing blocks (INF-6805's plan, piece 2): its parts
+   * do its work, so its status word follows them. Absent on every other
+   * task, on a row read without its parts, and from an older home.
+   */
+  partsStatus: z
+    .enum(["waiting", "interrupted", "working", "starting", "idle", "queued", "backlog"])
+    .optional(),
   assignee: z.string().nullable(),
   model: z.string().nullable(),
   /**
@@ -786,6 +795,12 @@ export type TaskCardRow = z.infer<typeof taskCardRowSchema>;
 /** One record in full: the view plus what the board leaves out. */
 export const taskDetailSchema = taskViewSchema.extend({
   cost: taskCostViewSchema.optional(),
+  /**
+   * Its parts, each as its Tasks row reads it, in the order they were filed
+   * (INF-6805's plan, item 1). Absent on a task with none, and from an
+   * older home.
+   */
+  parts: z.array(taskViewSchema).optional(),
   liveValidation: liveValidationSummarySchema.optional(),
   /** Current policies, separate from dispatch and published delivery history. */
   policies: effectiveTaskPoliciesSchema.nullable().optional(),

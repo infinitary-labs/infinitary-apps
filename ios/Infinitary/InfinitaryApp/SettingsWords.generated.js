@@ -6897,6 +6897,144 @@ ${events}` : prompt;
     }
     return `updating`;
   }
+  function placeAs(input) {
+    const user = input.user;
+    switch (currentLanguage()) {
+      case "ar":
+        return `باسم ${user}`;
+      case "de":
+        return `als ${user}`;
+      case "es":
+        return `como ${user}`;
+      case "fr":
+        return `sous l’utilisateur ${user}`;
+      case "ja":
+        return ` ${user} として`;
+      case "ko":
+        return `${user}(으)로`;
+      case "pt-BR":
+        return `como ${user}`;
+      case "zh-Hans":
+        return `以 ${user} 身份`;
+      case "zh-Hant":
+        return `以 ${user} 身分`;
+      case "en-XA":
+        return `[áš ${user} ~]`;
+      case "ar-XB":
+        return `‮as ‬${user}`;
+    }
+    return `as ${user}`;
+  }
+  function placeOn(input) {
+    const computer = input.computer;
+    switch (currentLanguage()) {
+      case "ar":
+        return `على ${computer}`;
+      case "de":
+        return `auf ${computer}`;
+      case "es":
+        return `en ${computer}`;
+      case "fr":
+        return `sur ${computer}`;
+      case "ja":
+        return ` ${computer} で`;
+      case "ko":
+        return `${computer}에서`;
+      case "pt-BR":
+        return `em ${computer}`;
+      case "zh-Hans":
+        return `在 ${computer} 上`;
+      case "zh-Hant":
+        return `在 ${computer} 上`;
+      case "en-XA":
+        return `[öñ ${computer} ~]`;
+      case "ar-XB":
+        return `‮on ‬${computer}`;
+    }
+    return `on ${computer}`;
+  }
+  function placeOnOther() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `على الحاسوب الآخر`;
+      case "de":
+        return `auf dem anderen Computer`;
+      case "es":
+        return `en la otra computadora`;
+      case "fr":
+        return `sur l’autre ordinateur`;
+      case "ja":
+        return `別のコンピューターで`;
+      case "ko":
+        return `다른 컴퓨터에서`;
+      case "pt-BR":
+        return `no outro computador`;
+      case "zh-Hans":
+        return `在另一台电脑上`;
+      case "zh-Hant":
+        return `在另一台電腦上`;
+      case "en-XA":
+        return `[öñ ţĥé öţĥéŕ çöɱþûţéŕ ~~~~~~~]`;
+      case "ar-XB":
+        return `‮on the other computer‬`;
+    }
+    return `on the other computer`;
+  }
+  function placeOther() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الحاسوب الآخر`;
+      case "de":
+        return `Der andere Computer`;
+      case "es":
+        return `La otra computadora`;
+      case "fr":
+        return `L’autre ordinateur`;
+      case "ja":
+        return `別のコンピューター`;
+      case "ko":
+        return `다른 컴퓨터`;
+      case "pt-BR":
+        return `O outro computador`;
+      case "zh-Hans":
+        return `另一台电脑`;
+      case "zh-Hant":
+        return `另一台電腦`;
+      case "en-XA":
+        return `[Ţĥé öţĥéŕ çöɱþûţéŕ ~~~~~~]`;
+      case "ar-XB":
+        return `‮The other computer‬`;
+    }
+    return `The other computer`;
+  }
+  function placeRunningAs(input) {
+    const user = input.user;
+    switch (currentLanguage()) {
+      case "ar":
+        return `التشغيل باسم ${user}`;
+      case "de":
+        return `Läuft als ${user}`;
+      case "es":
+        return `Se ejecuta como ${user}`;
+      case "fr":
+        return `Sous l’utilisateur ${user}`;
+      case "ja":
+        return `${user} として実行`;
+      case "ko":
+        return `${user}(으)로 실행`;
+      case "pt-BR":
+        return `Rodando como ${user}`;
+      case "zh-Hans":
+        return `以 ${user} 身份运行`;
+      case "zh-Hant":
+        return `以 ${user} 身分執行`;
+      case "en-XA":
+        return `[Ŕûññîñĝ áš ${user} ~~~~]`;
+      case "ar-XB":
+        return `‮Running as ‬${user}`;
+    }
+    return `Running as ${user}`;
+  }
   function settingsAccountsCount(input) {
     const count = formatNumber(input.count);
     switch (currentLanguage()) {
@@ -9046,15 +9184,15 @@ ${events}` : prompt;
       case "fr":
         return `Ses propres connexions. Une tâche qui s’exécute ${where} n’utilise que celles-ci.`;
       case "ja":
-        return `専用のサインインです。${where} 実行するタスクはこれだけを使います。`;
+        return `専用のサインインです。タスクを${where}実行するときは、これだけを使います。`;
       case "ko":
-        return `이 컴퓨터만의 로그인이에요. ${where} 실행되는 작업은 이 로그인만 써요.`;
+        return `전용 로그인이에요. ${where} 실행되는 작업은 이 로그인만 써요.`;
       case "pt-BR":
         return `Os logins próprios dele. Uma tarefa que roda ${where} usa só estes.`;
       case "zh-Hans":
-        return `它自己的登录。${where} 运行的任务只使用这些登录。`;
+        return `它自己的登录。${where}运行的任务只使用这些登录。`;
       case "zh-Hant":
-        return `它自己的登入。${where} 執行的任務只會使用這些登入。`;
+        return `它自己的登入。${where}執行的任務只會使用這些登入。`;
       case "en-XA":
         return `[Îţš öŵñ šîĝñ-îñš. Å ţášķ ţĥáţ ŕûñš ${where} ûšéš öñļý ţĥéšé. ~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
@@ -9560,9 +9698,9 @@ ${events}` : prompt;
       case "pt-BR":
         return `${action} ${where}.`;
       case "zh-Hans":
-        return `${where} ${action}。`;
+        return `${where}${action}。`;
       case "zh-Hant":
-        return `${where} ${action}。`;
+        return `${where}${action}。`;
       case "en-XA":
         return `[${action} ${where}. ~]`;
       case "ar-XB":
@@ -10749,15 +10887,15 @@ ${events}` : prompt;
       case "fr":
         return `s’exécute ${where}`;
       case "ja":
-        return `${where} 実行`;
+        return `実行は${where}`;
       case "ko":
-        return `실행 위치: ${where}`;
+        return `${where} 실행`;
       case "pt-BR":
         return `roda ${where}`;
       case "zh-Hans":
-        return `${where} 运行`;
+        return `${where}运行`;
       case "zh-Hant":
-        return `${where} 執行`;
+        return `${where}執行`;
       case "en-XA":
         return `[ŕûñš ${where} ~~]`;
       case "ar-XB":
@@ -12306,6 +12444,34 @@ ${events}` : prompt;
       default:
         return `${count} saved resets · use one on ${site}`;
     }
+  }
+  function settingsSubscriptionsSentThrough(input) {
+    const host = input.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `مُرسَل عبر ${host}`;
+      case "de":
+        return `gesendet über ${host}`;
+      case "es":
+        return `enviado a través de ${host}`;
+      case "fr":
+        return `envoyé via ${host}`;
+      case "ja":
+        return `${host} 経由で送信`;
+      case "ko":
+        return `${host}을(를) 거쳐 전송`;
+      case "pt-BR":
+        return `enviado por ${host}`;
+      case "zh-Hans":
+        return `经由 ${host} 发送`;
+      case "zh-Hant":
+        return `經由 ${host} 傳送`;
+      case "en-XA":
+        return `[šéñţ ţĥŕöûĝĥ ${host} ~~~~~]`;
+      case "ar-XB":
+        return `‮sent through ‬${host}`;
+    }
+    return `sent through ${host}`;
   }
   function settingsSubscriptionsSignInAgainState() {
     switch (currentLanguage()) {
@@ -14193,7 +14359,9 @@ ${events}` : prompt;
   const customListedModelSchema = object({
     id: string().min(1).max(256),
     context: number().int().positive().optional(),
-    output: number().int().positive().optional()
+    output: number().int().positive().optional(),
+    /** The server says this model takes no chat turn; the form shows it unpickable. */
+    notChat: literal(true).optional()
   });
   const customCertificateViewSchema = object({
     subject: string(),
@@ -14315,6 +14483,11 @@ ${events}` : prompt;
     kind: _enum(["text", "secret", "select", "manual_code"]),
     message: string(),
     placeholder: string().optional(),
+    /**
+     * What a text prompt's field starts with, such as a value read from the
+     * person's own settings. Absent, the field starts empty.
+     */
+    value: string().optional(),
     options: array(object({ id: string(), label: string(), description: string().optional() })).optional()
   });
   const authNoticeSchema = object({
@@ -14335,6 +14508,7 @@ ${events}` : prompt;
   _enum(["pi", "claude"]);
   const CLAUDE_PROVIDER_ID = "anthropic-claude";
   const BEDROCK_PROVIDER_ID = "amazon-bedrock";
+  const OPENCODE_GO_PROVIDER_ID = "opencode-go";
   const BEDROCK_PROFILE_UNAVAILABLE = "bedrock_profile_unavailable";
   const PROVIDER_CATALOG = [
     {
@@ -14381,6 +14555,17 @@ ${events}` : prompt;
       backend: "pi",
       roles: ["firstmate", "crewmate"],
       codeSignIn: { site: "GitHub", enterprise: true }
+    },
+    {
+      // Pi's own provider: a pasted OpenCode key, the only way in (INF-6873).
+      id: OPENCODE_GO_PROVIDER_ID,
+      name: "OpenCode Go",
+      // i18n-exempt: a product's own name
+      tier: "subscription",
+      backend: "pi",
+      roles: ["firstmate", "crewmate"],
+      keySignIn: { site: "OpenCode Console" }
+      // i18n-exempt: a product's own page name
     },
     {
       id: "openrouter",
@@ -14430,9 +14615,10 @@ ${events}` : prompt;
     /** Declared the held batch's fix: it joins that batch and ends the hold. */
     fix: literal(true).optional(),
     /**
-     * The held batch version a fix was built on, once a combine verified it:
-     * the fix is carried as its own difference from it from then on, and is
-     * left out, never carried whole, when its branch no longer builds on it.
+     * The held batch version a fix was built on, once its approval or a combine
+     * verified it: the fix is carried as its own difference from it from then
+     * on, and is left out, never carried whole, when its branch no longer builds
+     * on it.
      */
     heldBase: string().optional(),
     /**
@@ -14531,7 +14717,35 @@ ${events}` : prompt;
      * wrote it again under its own push (docs/forge.md, "A generated commit"):
      * then `head`. Taken once per combine; the next combine starts without it.
      */
-    generated: string().optional()
+    generated: string().optional(),
+    /**
+     * The batch's own checks run early on a held batch's declared fix
+     * (docs/forge.md, "A held batch"): once the fix's story is confirmed on
+     * its own branch at `version`, built on the newest held version, the held
+     * members plus the fix's own difference are combined at `head` and pushed
+     * to the batch's branch and pull request, while `head` and `members` above
+     * stay the held version. The fix is no member until approved; approved at
+     * `version` with the checks at `head` passed, the batch merges `head` as it
+     * is. `failed` names the checks that failed there.
+     */
+    trial: object({
+      /** The fix's task, whose story was confirmed. */
+      task: string(),
+      /** The fix's confirmed version on its own branch. */
+      version: string(),
+      head: string(),
+      base: string(),
+      /** The held members, then the fix, each with its commit at `head`. */
+      members: array(batchMemberSchema),
+      at: number(),
+      /** The checks that failed at `head` as last read; gone once they read otherwise. */
+      failed: array(string()).optional(),
+      /**
+       * The commit of generated files the project's checks added on the run, written again
+       * on it and pushed: `head` then names it (docs/forge.md, "A generated commit").
+       */
+      generated: string().optional()
+    }).optional()
   });
   const batchReceiptSchema = object({
     taskId: string(),
@@ -14634,6 +14848,12 @@ ${events}` : prompt;
      * the fix is carried from it, or left out when it no longer builds on it.
      */
     fixBases: record(string(), string()).optional(),
+    /**
+     * The exact commit each declared fix's task had committed as it declared
+     * it, by task, kept as long as the declaration: another task's change
+     * approved at that commit, and no other, carries the same declaration.
+     */
+    fixHeads: record(string(), string()).optional(),
     /**
      * When the project's last batch formed from the line (epoch ms): a
      * project's batch gap counts from it (`batchGap` on the project). A held
@@ -14744,7 +14964,9 @@ ${events}` : prompt;
           /** It waits for its repair's fix after changes were sent back (`OpenBatch.awaits`). */
           awaitsFix: boolean(),
           /** Its repair declared that a rerun passed the failed checks at its version. */
-          passed: boolean()
+          passed: boolean(),
+          /** The declared fix its checks run with before approval (`OpenBatch.trial`), until they fail. */
+          checkingFix: batchTaskSchema.nullable()
         }).nullable(),
         leftOut: array(
           batchTaskSchema.extend({
@@ -15990,6 +16212,11 @@ ${events}` : prompt;
      */
     gateway: _enum(CLAUDE_ACCESS_SOURCES).optional(),
     /**
+     * The host an Amazon Bedrock account's requests are sent through, when its
+     * sign-in saved an organization address. Absent when they go to AWS.
+     */
+    sentThrough: string().optional(),
+    /**
      * Why this account cannot serve right now although its credential is
      * fine, in the backend's own sentence: a Claude account whose machine has
      * no Claude Code, or one too old (`src/shared/claudeClient.ts`). Rendered
@@ -16218,12 +16445,12 @@ ${events}` : prompt;
     changes: array(forgeChangeRowSchema)
   }).strict();
   const reasoningSchema = object({
-    level: _enum(["off", "minimal", "low", "medium", "high", "xhigh", "default"]),
+    level: _enum(["off", "minimal", "low", "medium", "high", "xhigh", "max", "default"]),
     lower: _enum(["quick", "capped"]).optional()
   });
   const slotSchema = _enum(["premium", "high", "medium", "low"]);
   const slotMembershipSchema = union([slotSchema, array(slotSchema)]).transform((value) => Array.isArray(value) ? value : [value]);
-  const reasoningChoiceSchema = _enum(["low", "medium", "high", "xhigh"]);
+  const reasoningChoiceSchema = _enum(["low", "medium", "high", "xhigh", "max"]);
   const reasoningCapabilitiesSchema = object({
     levels: array(reasoningChoiceSchema),
     fixed: _enum(["off", "default"]).optional()
@@ -16476,7 +16703,9 @@ ${events}` : prompt;
     grok: "xai",
     claude: "anthropic-claude",
     kimi: "kimi-coding",
-    copilot: "github-copilot"
+    copilot: "github-copilot",
+    // Its own name in both worlds: "opencode" is Pi's id for OpenCode Zen.
+    "opencode-go": "opencode-go"
   };
   function allowanceProviderOf(provider) {
     return Object.keys(QUOTA_TO_PI_PROVIDER).find((id) => QUOTA_TO_PI_PROVIDER[id] === provider);
@@ -16920,20 +17149,52 @@ ${events}` : prompt;
   function signInPlace(device) {
     const user = device.onThisMac && device.user ? userDisplayName(device.user) : void 0;
     return {
-      /** The group's label: "Mac mini", "Running as Builder". */
       label: deviceLabel(device),
-      /** After a verb: "Sign in to Codex on Mac mini", "... as Builder". */
       where: user ? `as ${user}` : `on ${device.name}`,
-      /** As a subject or an object: "Send to Mac mini", "Builder is signed in to Codex." */
-      who: user ?? device.name
+      who: user ?? device.name,
+      said: {
+        label: user ? { m: "placeRunningAs", a: { user } } : device.name,
+        where: user ? { m: "placeAs", a: { user } } : { m: "placeOn", a: { computer: device.name } },
+        who: user ?? device.name
+      }
+    };
+  }
+  function wordedPlace(place) {
+    const word = (fill) => {
+      if (typeof fill === "string") return fill;
+      switch (fill.m) {
+        case "placeOn":
+          return placeOn(fill.a);
+        case "placeAs":
+          return placeAs(fill.a);
+        case "placeRunningAs":
+          return placeRunningAs(fill.a);
+        case "placeOnOther":
+          return placeOnOther();
+        case "placeOther":
+          return placeOther();
+      }
+    };
+    return {
+      label: word(place.said.label),
+      where: word(place.said.where),
+      who: word(place.said.who)
     };
   }
   function devicePlace(devices, deviceId) {
     const device = devices.find((entry) => entry.id === deviceId);
-    return device ? signInPlace({ name: device.name, user: device.user, onThisMac: device.onThisMac ?? false }) : {
+    if (device)
+      return signInPlace({
+        name: device.name,
+        user: device.user,
+        onThisMac: device.onThisMac ?? false
+      });
+    const other = { m: "placeOther" };
+    return {
       label: `The other ${COMPUTER.one}`,
       where: `on the other ${COMPUTER.one}`,
-      who: `The other ${COMPUTER.one}`
+      who: `The other ${COMPUTER.one}`,
+      said: { label: other, where: { m: "placeOnOther" }, who: other }
     };
   }
   const placementSystemSchema = _enum(["macos", "linux"]);
@@ -17273,7 +17534,13 @@ ${events}` : prompt;
     repo: repoViewSchema,
     created: boolean(),
     initializedGit: boolean().optional(),
-    createdInitialCommit: boolean().optional()
+    createdInitialCommit: boolean().optional(),
+    /**
+     * The folder a removed project left in the projects folder, linked where it
+     * is instead of cloning a second copy (docs/fleet.md, "Adding a removed
+     * project back").
+     */
+    leftFolder: string().optional()
   });
   discriminatedUnion("kind", [
     object({ kind: literal("card"), cardId: string().min(1) }),
@@ -18706,7 +18973,8 @@ ${events}` : prompt;
     const sub = account.access ? CLAUDE_ACCESS_LABEL[account.access] : [
       plan ?? kindCopy(account.kind),
       identity,
-      account.gateway ? CLAUDE_GATEWAY_LABEL[account.gateway] : void 0
+      account.gateway ? CLAUDE_GATEWAY_LABEL[account.gateway] : void 0,
+      account.sentThrough ? settingsSubscriptionsSentThrough({ host: account.sentThrough }) : void 0
     ].filter(Boolean).join(" · ");
     const signedIn = account.kind === "api_key" ? settingsSubscriptionsApiKeySet({ apiKey: API_KEY_LABEL }) : settingsSubscriptionsSignedIn();
     const claudeFirstRun = kind === "disconnected" && account.providerId === CLAUDE_PROVIDER_ID;
@@ -19163,9 +19431,11 @@ ${events}` : prompt;
   function runsOnWhere(repo, computers) {
     if (!repo.runsOn) return null;
     if (repo.runsOn === AUTOMATIC_COMPUTER) return settingsRunsOnAutomatically();
-    return devicePlace(
-      computers.map((computer) => ({ ...computer, id: computer.deviceId })),
-      repo.runsOn
+    return wordedPlace(
+      devicePlace(
+        computers.map((computer) => ({ ...computer, id: computer.deviceId })),
+        repo.runsOn
+      )
     ).where;
   }
   const USAGE_WORDS = {
@@ -19443,7 +19713,7 @@ ${events}` : prompt;
         account,
         snapshot,
         nameIn(providers),
-        { who: home, where: `on ${home}` },
+        { who: home, where: placeOn({ computer: home }) },
         input.firstmateAccount === account.id,
         now
       )
@@ -19456,7 +19726,7 @@ ${events}` : prompt;
         rows: homeRows
       },
       ...devices.map((device) => {
-        const place = signInPlace(device);
+        const place = wordedPlace(signInPlace(device));
         const note = awayNote(device);
         const rows = (device.signIns?.accounts ?? []).map(
           (account) => accountRow(

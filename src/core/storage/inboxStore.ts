@@ -525,8 +525,10 @@ export class InboxStore {
    */
   woken(ref: string, once: string): boolean {
     return (
-      this.db.prepare("SELECT 1 FROM inbox_once WHERE ref = ? AND once_key = ?").get(ref, once) !==
-      undefined
+      prepared(this.db, "SELECT 1 FROM inbox_once WHERE ref = ? AND once_key = ?").get(
+        ref,
+        once,
+      ) !== undefined
     );
   }
 

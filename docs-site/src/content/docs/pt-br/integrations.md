@@ -1,5 +1,5 @@
 ---
-source: 1ce217aea874fab1
+source: e71da6c9134d6753
 title: Integrações
 description: Conecte GitHub, GitLab, Bitbucket, Google e servidores MCP para que seu imediato e sua tripulação possam alcançá-los, e escolha o que cada um pode fazer sem perguntar a você.
 ---
@@ -60,7 +60,8 @@ O Google não o revisa, não mostra nenhum alerta e não encerra o login dele de
 
 1. Aperte **Google**, que abre **Configure sua própria conexão com o Google**.
 2. Aperte **Abrir a página do Google** e faça login lá com a conta do Google que você vai conectar.
-   Dê um nome ao projeto, aceite a política do Google e aperte Continue.
+   Dê um nome ao projeto e deixe desmarcada a caixa “Use this client for an AI-powered agent”, porque ela só serve para clientes que usam as ferramentas MCP do Google.
+   Depois aceite a política do Google e aperte Continue.
 3. Baixe o arquivo de cliente que o Google mostra, com Download JSON.
 4. Solte esse arquivo em **Solte o arquivo de cliente aqui**, escolha-o com **Escolher arquivo** ou cole o conteúdo dele em **Arquivo de cliente**.
 5. Aperte **Guardar e fazer login**.
@@ -76,8 +77,8 @@ Toda vez que você faz login no Google, o aviso aparece primeiro.
 
 A linha do Google diz quando a conexão precisa de você:
 
-- **Configure sua própria conexão**: este login ainda passa por um cliente que o Infinitary compartilha com todos, e que vai ser desativado.
-  Ele continua funcionando até lá; aperte **Configurar** para continuar conectado.
+- **Fazer login de novo**: uma conexão feita antes pelo cliente que o Infinitary compartilhava com todos não funciona mais, porque esse cliente deixou de existir.
+  Aperte **Fazer login de novo**, que abre **Configure sua própria conexão com o Google**, para criar seu próprio cliente e conectar de novo.
 - **Para em**, com uma data: seu cliente não está no modo pessoal, então o Google encerra o login dele nessa data.
   Aperte **Configurar de novo** e crie um cliente no modo pessoal.
 - **Seu cliente do Google parou**: o Google não aceita mais seu cliente, talvez porque ele foi excluído no Google Cloud.

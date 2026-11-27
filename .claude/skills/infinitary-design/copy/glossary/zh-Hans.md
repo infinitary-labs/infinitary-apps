@@ -75,9 +75,11 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | header (an extra request header) | 请求头 | Short form of 请求标头, as Chinese developer docs say it. |
 | held (a batch that stopped) | 暂缓 | The same word as a merge a rule holds (暂缓了它); 暂停 stays for what a person pauses. |
 | hold (on a task) | 暂缓 | 暂缓结束 for a hold ending. |
+| holds an override passes (named on a task's Activity) | asking first: 先询问; the open decisions: 未决的决定; the waits: 对其他工作的等待; the open parts: 未完成的部分; the checks: 检查; the delivery proof: 交付证明; the saved story: 已保存的改动说明; the heavy-run line: 繁重运行的排队; the cost limit: 费用上限; a retired hold: 已停用的项目 | Joined as one list in the reader's language on the line. |
 | How to get it (an ask for a secret) | 获取方法 | The heading over the steps a crewmate lays out for making or finding a secret. |
 | Infinitary | Infinitary | Never translated. |
 | inspector | 检查器 | The Knowledge pane that reads one entry, as Apple's apps say. |
+| intake round (a docs site guide) | 受理轮次 | A scheduled task that reads new issues and pull requests and drafts replies; 受理 as an office takes in what arrives. |
 | Integrations / integration | 集成 | |
 | Intelligence | 智能 | |
 | issue (where the project lives) | 议题 | |
@@ -153,6 +155,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | sign-in / sign in | 登录 | Used instead of token, OAuth or credential. |
 | Signed-in sites (Settings → Secrets) | 已登录的网站 | The sites the crew's browser stays signed in to. |
 | standing direction | 长期指引 | 指引 with 长期 for standing. |
+| standing reply (your words kept on a task, which pass its holds) | 有效回复 | |
 | start | 开始 | |
 | starter | 开头语 | The tappable opening phrases on the welcome card. |
 | Steer (button) | 引导 |  |
@@ -176,6 +179,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | token (on the Usage page) | token | Billable tokens stay as token, as in the first-run check line. |
 | unsafe data reader | 不安全数据读取者 | A crewmate that reads words anyone can write. |
 | Usage (the Settings section) | 用量 | |
+| user (another user account on this computer) | 用户 | "as {user}" is 以 {user} 身份, as in 以另一个用户身份运行. |
 | version | 版本 | Used instead of SHA, hash or head. |
 | where the project lives | 项目托管处 | Used instead of remote, origin or upstream. |
 | working copy | 工作副本 | Used instead of worktree. |

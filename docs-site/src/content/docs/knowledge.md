@@ -35,6 +35,10 @@ Your first mate has a crewmate write it into the project's own documents, so it 
 A direction in your own words is marked **Instruction**, and your crew follows it as your instruction.
 One kept from anywhere else is marked **Advice**, which your crew weighs.
 No direction allows more than its own words say.
+A direction allows something, such as a step that needs no asking, only while its current wording was heard from you: in your words to your first mate, on a card, or in a task's **Crewmate** tab.
+One your first mate kept or reworded without your words guides your crew, but allows nothing on its own.
+Your first mate can also let a task go on without asking you, as far as a direction you said for its project reaches; once you change or retire that direction, the task asks you again.
+After an update from a version that did not note this, your first mate asks you once, on one card, which of your directions you said, and the ones you tick count as heard.
 
 ## See, change or retire a direction
 
@@ -109,6 +113,7 @@ Knowledge opens on its own card, with four tabs:
 **Find** searches the tab you are on.
 Pick anything to read it beside the list, under **Overview**, **Evidence**, **History** and **Used in**.
 A direction shows **Overview** and **History**, which keeps each earlier wording.
+Under **Where you said it**, a direction says whether its current wording was heard from you, and where, and **History** says the same of each earlier wording.
 
 **Ask about this**, under each section, starts your next message to your first mate with a question about what you are reading.
 Nothing is sent until you send it.

@@ -5,6 +5,7 @@
     "other": "일괄 끌어오기 요청 #{number} · 변경 {count}개"
   },
   "batchesPanelChecking": "검사 중 {duration}",
+  "batchesPanelCheckingFix": "승인 전에 수정 {key}을 포함해 검사 중",
   "batchesPanelChecksFull": "검사: 통과 {passed}, 실패 {failed}, 실행 중 {running}, {time} 기준",
   "batchesPanelChecksPassed": "검사 {total}개 중 {passed}개 통과",
   "batchesPanelChecksUnread": "검사를 아직 읽지 않음",

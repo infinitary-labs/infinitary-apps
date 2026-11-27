@@ -22,6 +22,8 @@ What a view keeps is `JoinedHome`'s (`src/core/devices/joinedHome.ts`), the one 
 | `home.json` | The grant (`docs/devices.md`, "Joining"), with this Mac's own key, the other Mac's name once it has said it, and when it joined |
 | `home-addresses.json` | The other Mac's other addresses, refreshed from each welcome, kept beside the grant so a version that knows only the grant still reads `home.json` (`docs/devices.md`, "Finding the home again") |
 | `appearance.json` | This Mac's own look while it controls the other: size, theme, wash, crew model names, default card size and how its panels sit, and the keys a person changed here (`docs/keyboard.md`) |
+| `color-theme.json` | The color theme of that look and the base it was chosen on, beside it so an older version still reads `appearance.json` (`docs/themes.md`) |
+| `own-color-themes.json` | The person's own color themes that look can wear, beside it for the same reason (`docs/themes.md`, "Your own themes") |
 | `left.json` | The Mac it last stopped controlling, and whether it left or was removed |
 
 It keeps no record of the other Mac's work: a view never opens the app's database, and its cards, tasks, feed and threads live only in the window's memory and the shell's.
@@ -42,6 +44,7 @@ A link joins only by being pasted there and confirmed: nothing on either Mac ans
 3. `inf:devices:join` uses the link once as the link's kind - `mac`, or an older home's `view` - under this Mac's own name (`computerName`, `src/core/devices/computerName.ts`: the name macOS shows in System Settings, or the network name without `.local`), saying it joins with its window and, for a Mac, the macOS user its work runs as, and saves the grant.
    Paired as a Mac, it also sets its work up (below, "A Mac that runs work").
 4. The shell stops this Mac's own core and its connection, becomes a view, and every window starts over as the other Mac's.
+   Until a window's new page commits it hears no push (`startWindowsOver`, `src/main/windows.ts`): the page it leaves hears none of the other Mac's pushes, so the other Mac's "in reach" line appears only on the new page.
 
 A refusal changes nothing here and says what happened: not a link, a link for another user on that Mac, used, expired, no longer open, nothing answering at the address, or something answering there that is not the Mac that made the link.
 A Windows PC joins a Mac's, a Linux computer's or a Windows PC's first mate the same way, saying its security identifier in place of a user number (`docs/devices.md`, "Joining").
@@ -197,7 +200,7 @@ It reads the door's address, pin and key from the door's folder at each dial, as
   What a person types here is the captain's own words there, so the first mate there may make an own-words change on it, such as removing a project (`docs/devices.md`).
 - `inf:shell:preferences` and the appearance and layout reads and writes are this Mac's own (`ViewLook`, `src/main/view/viewLook.ts`), starting from the other Mac's look the first time it is in reach (the captain's pick on FI3-681).
   The panels switch is the exception: it is the other Mac's, read at each welcome and followed when it changes ("Panels in every window" below), while how the panels sit is this Mac's own layout.
-  The window's project focus rides that layout, so a Mac that controls another keeps its own focus, and its turns carry it to the first mate there as a hint (`docs/project-focus.md`).
+  The window's project focus rides that layout, so a Mac that controls another keeps its own focus, and its messages carry it to the first mate there as the project filter (`docs/project-focus.md`, "The first mate").
 - The window's keys are this Mac's own too, and never a core channel: the main process's installed map reads and writes them through `ViewLook`, starting on a new profile's keyboard preset, or Legacy for a look kept from before presets, and the other Mac never hears of them (`docs/keyboard.md`, "Changing keys").
 - `inf:update:status`, `inf:update:check` and `inf:update:open-release` are this Mac's own: the app installed here, read by the same update checker the Mac where the first mate lives makes for itself (`createInstalledUpdateChecker`, `src/core/update/updateChecker.ts`; `docs/alpha.md`, "Update channels").
   The top bar shows the same update notice, with this Mac's version, channel and upgrade command, and the version in its line opens that version's release page here.
@@ -416,7 +419,8 @@ A view posts the other Mac's card-worthy moments to this Mac's Notification Cent
 - A replay is news: a card that became ready while a dropped connection was being mended posts when its push arrives.
 
 A paired phone hears the same moments through a second `CardNotifier` on the first mate's computer, sealed through Infinitary's relay (`docs/phone-push.md`).
-While this Mac's window is in front it says so to the first mate there (`inf:window:front`), and again at each welcome, so that computer pushes no card to a phone while the captain works here (`docs/phone-push.md`, "When the computer sends").
+This Mac says to the first mate there whether its window is in front (`inf:window:front`) and whether someone is at this Mac (`inf:window:someone-here`), at each change and again at each welcome, so that computer holds a card's push to a phone while the captain works here and sends it once they leave (`docs/phone-push.md`, "When the computer sends").
+It asks the second only of a first mate that lists the `someone-here` change, and hears `inf:window:captain-on-phone` when the captain acted on a phone.
 
 A click on a notification, a view's or the first mate's own computer's, brings the window forward with that card at the front (INF-4243's plan, piece 5: "Notifications appear and open their card").
 The click notes the card in the main process (`noteNotifiedCard`, `src/main/notifiedCard.ts`) and tells the window with `inf:cards:notified`; the window takes it with `inf:cards:take-notified`, which clears it, and reads the cards again first when it does not hold that card yet (`openNotifiedCard`, `src/renderer/src/app/stackActions.ts`).

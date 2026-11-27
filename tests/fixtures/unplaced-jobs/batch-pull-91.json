@@ -1,0 +1,763 @@
+{
+  "run": {
+    "conclusion": "failure",
+    "event": "pull_request",
+    "head_branch": "infinitary-batch/423da1bf",
+    "head_repository": {
+      "full_name": "infinitary-labs/infinitary-apps"
+    },
+    "head_sha": "ab9c38216b380df0047607d6116802ad3680fb60",
+    "id": 45583608556,
+    "name": "batch",
+    "path": ".github/workflows/batch-pull-request.yml",
+    "repository": {
+      "full_name": "infinitary-labs/infinitary-apps"
+    },
+    "run_attempt": 1,
+    "run_number": 104,
+    "status": "completed"
+  },
+  "jobs": [
+    {
+      "conclusion": "success",
+      "id": 139099507557,
+      "name": "Merge batch · Batch checks / Merge batch · Regenerate the phone files",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": 1000043259,
+      "runner_name": "GitHub Actions 1000043259",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139100055792,
+      "name": "Merge batch · Batch checks / Merge batch · Read the batch",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": 1000043264,
+      "runner_name": "GitHub Actions 1000043264",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "skipped",
+      "id": 139100058714,
+      "name": "Merge batch · Batch checks / ${{ inputs.trigger }} · Push the regenerated phone files",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": null,
+      "runner_name": null,
+      "status": "completed",
+      "steps": []
+    },
+    {
+      "conclusion": "success",
+      "id": 139100101324,
+      "name": "Merge batch · Batch checks / Merge batch · Watch for a stop",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": 1000043265,
+      "runner_name": "GitHub Actions 1000043265",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139100101325,
+      "name": "Merge batch · Batch checks / Merge batch · Read the Windows-relevant files",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": 1000043267,
+      "runner_name": "GitHub Actions 1000043267",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139100101377,
+      "name": "Merge batch · Batch checks / Merge batch · Release notes and phone contract flag",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": 1000043266,
+      "runner_name": "GitHub Actions 1000043266",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139100101930,
+      "name": "Merge batch · Batch checks / Merge batch · Linux startup / Merge batch · Automatic startup checks (Linux)",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": 1000043269,
+      "runner_name": "GitHub Actions 1000043269",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139100102240,
+      "name": "Merge batch · Batch checks / Merge batch · Critical-path journey / Merge batch · Selected app journeys (Linux; serial)",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": 1000043268,
+      "runner_name": "GitHub Actions 1000043268",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139100102728,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Check verification request",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": 1000043270,
+      "runner_name": "GitHub Actions 1000043270",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139100150744,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Integration tests (Linux; group 1/2)",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": 1000043273,
+      "runner_name": "GitHub Actions 1000043273",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139100150825,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Unit tests (Linux; group 3/3)",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": 1000043276,
+      "runner_name": "GitHub Actions 1000043276",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139100150936,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Unit tests (Linux; group 2/3)",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": 1000043297,
+      "runner_name": "GitHub Actions 1000043297",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139100151005,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Environment checks (Linux; group 2/2)",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": 1000043298,
+      "runner_name": "GitHub Actions 1000043298",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139100151088,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Integration tests (Linux; group 2/2)",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": 1000043275,
+      "runner_name": "GitHub Actions 1000043275",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139100151106,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Desktop journeys (Mac; group 2/2)",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": 3086,
+      "runner_name": "runner-up-mac-m6-16gb-1-vm-1795598177",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139100151147,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Browser tests (Linux)",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": 1000043281,
+      "runner_name": "GitHub Actions 1000043281",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139100151219,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Environment checks (Linux; group 1/2)",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": 1000043277,
+      "runner_name": "GitHub Actions 1000043277",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139100151225,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Code checks and build (Linux)",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": 1000043274,
+      "runner_name": "GitHub Actions 1000043274",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139100151315,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Parallel journeys (Mac; group 1/4)",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": 1000043280,
+      "runner_name": "GitHub Actions 1000043280",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139100151342,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Parallel journeys (Mac; group 3/4)",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": 1000043279,
+      "runner_name": "GitHub Actions 1000043279",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "cancelled",
+      "id": 139100151348,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Parallel journeys (Mac; group 4/4)",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": 0,
+      "runner_name": "",
+      "status": "completed",
+      "steps": []
+    },
+    {
+      "conclusion": "success",
+      "id": 139100151403,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Desktop journeys (Mac; group 1/2)",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": 3087,
+      "runner_name": "runner-up-mac-m6-16gb-2-vm-1795598179",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139100151419,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Unit tests (Linux; group 1/3)",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": 1000043285,
+      "runner_name": "GitHub Actions 1000043285",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139100151478,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Native tests, replay and package (Mac)",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": 1000043286,
+      "runner_name": "GitHub Actions 1000043286",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139100151528,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Parallel journeys (Mac; group 2/4)",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": 1000043308,
+      "runner_name": "GitHub Actions 1000043308",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139100151652,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Linux journeys / Merge batch · App journeys (Linux; parallel group 3/6)",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": 1000043282,
+      "runner_name": "GitHub Actions 1000043282",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139100151716,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Linux journeys / Merge batch · App journeys (Linux; serial group 1/3)",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": 1000043288,
+      "runner_name": "GitHub Actions 1000043288",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139100151754,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Linux journeys / Merge batch · App journeys (Linux; parallel group 2/6)",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": 1000043292,
+      "runner_name": "GitHub Actions 1000043292",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139100151791,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Linux journeys / Merge batch · App journeys (Linux; parallel group 6/6)",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": 1000043296,
+      "runner_name": "GitHub Actions 1000043296",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139100151839,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Linux journeys / Merge batch · App journeys (Linux; parallel group 5/6)",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": 1000043301,
+      "runner_name": "GitHub Actions 1000043301",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139100151900,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Linux journeys / Merge batch · App journeys (Linux; serial group 3/3)",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": 1000043310,
+      "runner_name": "GitHub Actions 1000043310",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139100151911,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Linux journeys / Merge batch · App journeys (Linux; parallel group 4/6)",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": 1000043290,
+      "runner_name": "GitHub Actions 1000043290",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139100152004,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Linux journeys / Merge batch · App journeys (Linux; parallel group 1/6)",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": 1000043311,
+      "runner_name": "GitHub Actions 1000043311",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139100152162,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Linux journeys / Merge batch · App journeys (Linux; serial group 2/3)",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": 1000043313,
+      "runner_name": "GitHub Actions 1000043313",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "skipped",
+      "id": 139100152799,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Linux startup",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": null,
+      "runner_name": null,
+      "status": "completed",
+      "steps": []
+    },
+    {
+      "conclusion": "skipped",
+      "id": 139100152919,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Signed installer checks",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": null,
+      "runner_name": null,
+      "status": "completed",
+      "steps": []
+    },
+    {
+      "conclusion": "success",
+      "id": 139100430297,
+      "name": "Merge batch · Batch checks / Merge batch · Windows installer / Merge batch · Build the Windows installer",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": 1000043283,
+      "runner_name": "GitHub Actions 1000043283",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 139103903361,
+      "name": "Merge batch · Batch checks / Merge batch · Windows installer / Merge batch · Install and run the Windows app (fresh Windows 11)",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": 3089,
+      "runner_name": "runner-up-pc-win11-1-1795598597",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "skipped",
+      "id": 139103904638,
+      "name": "Merge batch · Batch checks / Merge batch · Windows installer / ${{ ((inputs.trigger || 'Manual request')) }} · Update the Windows app on ${{ matrix.channel }} (fresh Windows 11${{ ((((strategy.job-total > 2) && format('; round {0}', matrix.round)) || '')) }})",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": null,
+      "runner_name": null,
+      "status": "completed",
+      "steps": []
+    },
+    {
+      "conclusion": "skipped",
+      "id": 139106890400,
+      "name": "Merge batch · Batch checks / Merge batch · Desktop checks / ${{ (inputs.trigger || 'Manual request') }} · Confirm failed ${{ matrix.group }}",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": null,
+      "runner_name": null,
+      "status": "completed",
+      "steps": []
+    },
+    {
+      "conclusion": "skipped",
+      "id": 139119445899,
+      "name": "Merge batch · Batch checks / ${{ inputs.trigger }} · Read the failures",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": null,
+      "runner_name": null,
+      "status": "completed",
+      "steps": []
+    },
+    {
+      "conclusion": "skipped",
+      "id": 139119447661,
+      "name": "Merge batch · Batch checks / ${{ inputs.trigger }} · Confirm failed tests (${{ (((matrix.platform == 'mac') && 'Mac') || 'Linux') }}, later failures)",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": null,
+      "runner_name": null,
+      "status": "completed",
+      "steps": []
+    },
+    {
+      "conclusion": "skipped",
+      "id": 139119448035,
+      "name": "Merge batch · Batch checks / ${{ inputs.trigger }} · Batch passed (tree ${{ needs.batch.outputs.tree }}; base ${{ needs.batch.outputs.base }})",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": null,
+      "runner_name": null,
+      "status": "completed",
+      "steps": []
+    },
+    {
+      "conclusion": "skipped",
+      "id": 139119731896,
+      "name": "Merge batch · Batch checks / ${{ inputs.trigger }} · Batch stopped because ${{ (((needs.watch.outputs.stop == 'confirm') && 'a confirm failed again') || 'the code checks failed') }}",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": null,
+      "runner_name": null,
+      "status": "completed",
+      "steps": []
+    },
+    {
+      "conclusion": "skipped",
+      "id": 139119732482,
+      "name": "Merge batch · Batch checks / ${{ inputs.trigger }} · Stop after ${{ (((needs.watch.outputs.stop == 'confirm') && 'a failed confirm') || 'failed code checks') }} (${{ matrix.job }})",
+      "run_attempt": 1,
+      "run_id": 45583608556,
+      "runner_id": null,
+      "runner_name": null,
+      "status": "completed",
+      "steps": []
+    }
+  ],
+  "annotations": {
+    "139100151348": [
+      "The job was not acquired by Runner of type hosted even after multiple attempts",
+      "Due to capacity constraints, jobs targeting macOS arm64 runners may experience longer queue times.",
+      "Due to capacity constraints, jobs targeting macOS arm64 runners may experience longer queue times.",
+      "Due to capacity constraints, jobs targeting macOS arm64 runners may experience longer queue times."
+    ]
+  }
+}

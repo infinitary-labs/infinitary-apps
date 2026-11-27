@@ -1,5 +1,5 @@
 ---
-source: 43a70acb2cfae9b1
+source: 0fee6cc7d6812497
 title: Conocimiento
 description: Las directrices permanentes que guarda tu primer oficial, lo que le cuentas sobre ti y las fuentes que pides a tu tripulación que guarde, y cómo leerlas, cambiarlas o borrarlas.
 ---
@@ -36,6 +36,10 @@ Tu primer oficial pide a un tripulante que la escriba en los documentos propios 
 Una directriz con tus propias palabras se marca como **Instrucción**, y tu tripulación la sigue como una instrucción tuya.
 Una guardada desde cualquier otro lugar se marca como **Consejo**, que tu tripulación sopesa.
 Ninguna directriz permite más de lo que dicen sus propias palabras.
+Una directriz permite algo, como un paso que no necesita preguntarte, solo mientras su redacción actual se te haya oído a ti: en tus palabras a tu primer oficial, en una tarjeta o en la pestaña **Tripulante** de una tarea.
+Una que tu primer oficial guardó o reformuló sin tus palabras guía a tu tripulación, pero por sí sola no permite nada.
+Tu primer oficial también puede dejar que una tarea siga sin preguntarte, hasta donde llegue una directriz que dijiste para su proyecto; en cuanto cambies o retires esa directriz, la tarea vuelve a preguntarte.
+Tras actualizar desde una versión que no anotaba esto, tu primer oficial te pregunta una sola vez, en una tarjeta, cuáles de tus directrices dijiste tú, y las que marques cuentan como oídas.
 
 ## Ver, cambiar o retirar una directriz {#see-change-or-retire-a-direction}
 
@@ -110,6 +114,7 @@ Conocimiento se abre en su propia tarjeta, con cuatro pestañas:
 **Buscar** busca en la pestaña en la que estás.
 Elige cualquier cosa para leerla junto a la lista, en **Resumen**, **Evidencias**, **Historial** y **Usado en**.
 Una directriz muestra **Resumen** e **Historial**, que guarda cada redacción anterior.
+En **Dónde lo dijiste**, una directriz dice si su redacción actual se te oyó a ti y dónde, e **Historial** dice lo mismo de cada redacción anterior.
 
 **Preguntar sobre esto**, debajo de cada sección, empieza tu próximo mensaje a tu primer oficial con una pregunta sobre lo que estás leyendo.
 No se envía nada hasta que lo envíes.

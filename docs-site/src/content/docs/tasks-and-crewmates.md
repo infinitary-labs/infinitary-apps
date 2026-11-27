@@ -52,7 +52,7 @@ For example, a Backlog task on that computer shows <svg class="task-mark task-ma
 
 A task split into parts lists its parts under it.
 Once one of its parts starts, the task lists under Working, with its open parts under it.
-The task keeps its own mark there, so a task whose parts do the work can show the Backlog or Queued mark under Working.
+A queued task keeps its Queued mark there, while a task in your backlog whose parts do the work takes the mark of its most pressing open part, such as Waiting on you while a part's card waits.
 
 To read a task's status and its reason in words, rest the pointer on its row, or move to the row with the keyboard.
 
@@ -92,6 +92,16 @@ Under its title is a row of tabs:
   See [The crew's browser](/the-crews-browser/).
 
 A tab appears only once the task has something to show there.
+
+## A task split into parts
+
+On the **Info** tab of a task split into parts, the **Parts** row counts the closed parts and lists every part with its status, in the order they were filed.
+Press the count to fold the list away, and press it again to open it.
+Past eight parts, the closed ones fold behind one line you can open.
+To open a part's card, click the part, or move to it with the keyboard and press Enter; start it or answer it there.
+
+A task in your backlog whose parts do the work never asks for its own **Start**.
+The top of its **Info** tab says what its parts wait on instead, such as "Its last part waits for your Start", and the task closes by itself once its parts close.
 
 ## Tags
 

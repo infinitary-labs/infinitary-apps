@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "firstmate-turns-fixture-shutdown",
+      "reason": "Internal: the first mate turn tests stop pending supervisor work before closing their test databases."
+    }
+  ]
+}

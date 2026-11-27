@@ -1,5 +1,7 @@
 import type { SavedOwnStyle } from "@shared/ambientOwn";
+import { themeOf } from "@shared/colorThemes";
 import type { FontChoices, FontSlot } from "@shared/fonts";
+import type { SavedOwnTheme } from "@shared/ownColorThemes";
 import {
   type Appearance,
   DEFAULT_AMBIENT_STYLE,
@@ -22,7 +24,19 @@ export type AppearanceChoice = keyof Appearance;
  * and they are only mirrored here so the tree can read them synchronously.
  */
 export type AppearanceSlice = {
+  /** Dark or Light; with a color theme chosen, that theme's base. */
   theme: Theme;
+  /**
+   * The color theme over the base, as saved, or null for plain Dark or Light
+   * (docs/themes.md). A name this build lacks stays saved and shows the base.
+   */
+  colorTheme: string | null;
+  /** Picks a built-in or own color theme with its base; Dark and Light go through `setTheme`. */
+  setColorTheme: (id: string) => void;
+  /** The person's own color themes, which the first mate makes (docs/themes.md, "Your own themes"). */
+  ownColorThemes: SavedOwnTheme[];
+  /** Removes one of the person's own themes; a window wearing it keeps its base. */
+  removeOwnColorTheme: (id: string) => void;
   defaultCardSize: DefaultCardSize;
   setDefaultCardSize: (size: DefaultCardSize) => void;
   /** Keep cards maximized: a maximize or restore carries to every card (docs/renderer.md). */
@@ -89,6 +103,8 @@ export type AppearanceSlice = {
 function lookOf(s: ShellState, appearance: Appearance): Partial<ShellState> {
   const look = {
     theme: appearance.theme,
+    colorTheme: appearance.colorTheme ?? null,
+    ownColorThemes: appearance.ownColorThemes ?? NO_OWN_THEMES,
     defaultCardSize: appearance.defaultCardSize ?? "usual",
     keepCardsMaximized: appearance.keepCardsMaximized ?? false,
     cardsMaximized: appearance.cardsMaximized ?? false,
@@ -106,7 +122,7 @@ function lookOf(s: ShellState, appearance: Appearance): Partial<ShellState> {
   } satisfies Partial<ShellState>;
   return Object.fromEntries(
     Object.entries(look).filter(([key, value]) =>
-      key === "fonts" || key === "ambientOwnStyles"
+      key === "fonts" || key === "ambientOwnStyles" || key === "ownColorThemes"
         ? JSON.stringify(s[key]) !== JSON.stringify(value)
         : s[key as keyof typeof look] !== value,
     ),
@@ -116,6 +132,8 @@ function lookOf(s: ShellState, appearance: Appearance): Partial<ShellState> {
 const NO_FONTS: FontChoices = {};
 /** No own style saved. */
 const NO_OWN_STYLES: SavedOwnStyle[] = [];
+/** No own color theme saved. */
+const NO_OWN_THEMES: SavedOwnTheme[] = [];
 
 export function appearanceSlice(set: ShellSet, get: ShellGet): AppearanceSlice {
   /** The choice whose write is running, so a refusal is told beside its own control. */
@@ -160,6 +178,8 @@ export function appearanceSlice(set: ShellSet, get: ShellGet): AppearanceSlice {
       const s = get();
       const saved = appearanceSave.state.value ?? {
         theme: s.theme,
+        ...(s.colorTheme ? { colorTheme: s.colorTheme } : {}),
+        ownColorThemes: s.ownColorThemes,
         defaultCardSize: s.defaultCardSize,
         keepCardsMaximized: s.keepCardsMaximized,
         cardsMaximized: s.cardsMaximized,
@@ -183,6 +203,8 @@ export function appearanceSlice(set: ShellSet, get: ShellGet): AppearanceSlice {
     // Replaced before the first render by the core's own value
     // (./preferences); the default is only what an unread core would say.
     theme: DEFAULT_APPEARANCE.theme,
+    colorTheme: null,
+    ownColorThemes: NO_OWN_THEMES,
     defaultCardSize: "usual",
     keepCardsMaximized: false,
     cardsMaximized: false,
@@ -221,9 +243,24 @@ export function appearanceSlice(set: ShellSet, get: ShellGet): AppearanceSlice {
       set({ cardsMaximized });
       saveAppearance("cardsMaximized", { cardsMaximized });
     },
+    // Dark or Light is a look with no color theme: the core removes the saved one.
     setTheme: (theme) => {
-      set({ theme });
-      saveAppearance("theme", { theme });
+      set({ theme, colorTheme: null });
+      saveAppearance("theme", { theme, colorTheme: undefined });
+    },
+    setColorTheme: (colorTheme) => {
+      const theme = themeOf(colorTheme, get().ownColorThemes)?.base;
+      if (!theme) return;
+      set({ theme, colorTheme });
+      saveAppearance("theme", { theme, colorTheme });
+    },
+    removeOwnColorTheme: (id) => {
+      const s = get();
+      const ownColorThemes = s.ownColorThemes.filter((theme) => theme.id !== id);
+      const colorTheme = s.colorTheme === id ? null : s.colorTheme;
+      set({ ownColorThemes, colorTheme });
+      // The Theme row holds Remove, so a refusal is told there.
+      saveAppearance("theme", { ownColorThemes, colorTheme: colorTheme ?? undefined });
     },
     setWashStrength: (washStrength) => {
       set({ washStrength });

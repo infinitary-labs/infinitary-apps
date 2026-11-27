@@ -45,7 +45,7 @@ See [iPhone and iPad](/iphone-and-ipad/) for how to join your computer.
 - **A computer.**
   A Mac with macOS 12 or later, a Linux computer with an x64 processor, or a Windows 11 PC with an x64 processor (experimental).
 - **An AI subscription.**
-  Your first mate needs at least one subscription that can answer: Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter with an API key, or Amazon Bedrock with your AWS sign-in.
+  Your first mate needs at least one subscription that can answer: Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter with an API key, or Amazon Bedrock with your AWS sign-in.
 - **Claude Code, for Claude.**
   If you use a Claude subscription, install Claude Code on that computer first.
   Infinitary uses the Claude Code you installed.

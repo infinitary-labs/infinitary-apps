@@ -1,5 +1,5 @@
 ---
-source: 2633a75241365106
+source: a8386567e2fc7990
 title: 설치
 description: Mac, Linux 또는 Windows용 Infinitary 안정 버전을 내려받거나, iPhone과 iPad용 비공개 TestFlight 초대를 요청하세요.
 ---
@@ -46,7 +46,7 @@ iPhone과 iPad용 Infinitary는 비공개 TestFlight로 제공돼요.
 - **컴퓨터.**
   macOS 12 이상의 Mac, x64 프로세서를 쓰는 Linux 컴퓨터, 또는 x64 프로세서를 쓰는 Windows 11 PC(실험 버전)예요.
 - **AI 구독.**
-  일등항해사에게는 답할 수 있는 구독이 하나 이상 필요해요: Codex, Grok, Claude, Kimi Code, Copilot, API 키를 쓰는 OpenRouter, 또는 AWS 로그인을 쓰는 Amazon Bedrock이에요.
+  일등항해사에게는 답할 수 있는 구독이 하나 이상 필요해요: Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, API 키를 쓰는 OpenRouter, 또는 AWS 로그인을 쓰는 Amazon Bedrock이에요.
 - **Claude를 쓴다면 Claude Code.**
   Claude 구독을 쓴다면, 먼저 그 컴퓨터에 Claude Code를 설치하세요.
   Infinitary는 설치된 Claude Code를 사용해요.

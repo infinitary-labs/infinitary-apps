@@ -145,6 +145,12 @@ export class MergeReviews {
         ? [
             "This change comes from a contributor's fork. Read its code before running it. Check out the reviewed commit unchanged, then prepare_change and open_change with presentation to publish the crew's story in a comment and the merged commit, keeping the contributor's description.",
             "Offer this contributor change with asks_first on its merge effect: the captain's click authorizes merging this version. A later push needs a new review and a new click.",
+            ...(pull.maintainerCanModify
+              ? [
+                  // i18n-exempt: served to the reviewing crewmate, never shown to a person
+                  `The contributor allows maintainer edits, so the crew may push to their branch, ${branch} in ${pull.headRepo}. Bring it up to date there only with an update that leaves the reviewed behavior unchanged, follow the project's own method for outside pull requests, and review the update's difference again with check_change pull before its merge card. After the captain's click, declare such an update with conflictRepair. Anything else goes back to the contributor.`,
+                ]
+              : []),
           ]
         : []),
       "This request grants no approval and does not itself merge anything. With autonomy off, only the captain's merge button authorizes execution.",
@@ -735,6 +741,12 @@ export class MergeReviews {
     return { ok: true, forge, pull };
   }
 
+  /** Whether a repair the host accepted carried the kept approval of `review` to `head`. */
+  private carriedTo(taskId: string, review: MergeReview, head: string): boolean {
+    const kept = standingAuthorization(this.options.tasks.get(taskId)?.delivery);
+    return kept?.review?.id === review.id && kept.lineage.some((step) => step.toHead === head);
+  }
+
   /**
    * The captain's click on a merge card that names a review: the pull request it
    * names, read again by its number, sent once at the reviewed version (or
@@ -748,7 +760,16 @@ export class MergeReviews {
     guard?: MergeGuard,
     settle = false,
   ): Promise<MergeAttempt> {
-    if (isForkReview(review) && guard && guard.head !== review.headSha)
+    // A contributor's own later push needs a new review and click. The one
+    // later version a fork's approval reaches is the crew's update on the
+    // contributor's branch, once a repair declaration the host checked
+    // carried this review's approval to it (docs/forge.md, "A requested merge").
+    if (
+      isForkReview(review) &&
+      guard &&
+      guard.head !== review.headSha &&
+      !this.carriedTo(taskId, review, guard.head)
+    )
       return {
         ok: false,
         stop: "moved",
@@ -815,7 +836,10 @@ export class MergeReviews {
         ok: false,
         text:
           guard && fresh.stop === "moved"
-            ? `Cannot merge: the pull request moved past the approved version. Declare its repair with check_change conflictRepair; the captain's approval is kept.`
+            ? isForkReview(review)
+              ? // i18n-exempt: served to the crewmate as check_change's answer
+                `Cannot merge: the pull request moved past the approved version. If the crew brought it up to date on the contributor's branch, declare that update with check_change conflictRepair; the captain's approval is kept. A contributor's own later version needs a new review and a new click.`
+              : `Cannot merge: the pull request moved past the approved version. Declare its repair with check_change conflictRepair; the captain's approval is kept.`
             : `Cannot merge: ${fresh.text}`,
         ...(fresh.stop ? { stop: fresh.stop } : {}),
         ...(fresh.stop === "checks" ? { notGreen: true } : {}),

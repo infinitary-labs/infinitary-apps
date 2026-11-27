@@ -469,7 +469,7 @@ export class ModelSlots {
                     : capabilities.fixed
                       ? { level: capabilities.fixed }
                       : (openingReasoning(
-                          ["low", "medium", "high", "xhigh"],
+                          ["low", "medium", "high", "xhigh", "max"],
                           capabilities.levels,
                           requested,
                           false,

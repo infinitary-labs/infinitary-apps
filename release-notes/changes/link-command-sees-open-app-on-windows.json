@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "link-command-sees-open-app-on-windows",
+      "kind": "fix",
+      "area": "devices",
+      "title": "On a Windows PC, infinitary link knows Infinitary is open",
+      "body": "When you run infinitary link or infinitary link --phone on a Windows PC while Infinitary is open but cannot make a link yet, as while it is still starting, it now says Infinitary is open here but did not answer. Before, it said Infinitary was not running.",
+      "noPicture": "The command answers in a terminal; nothing in the app's window changes.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

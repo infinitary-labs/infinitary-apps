@@ -1,5 +1,5 @@
 ---
-source: 9c71f435cc6524a0
+source: f152dcd8b0d392d5
 title: 구독과 사용 한도
 description: AI 구독을 추가하는 방법, 요금제의 사용 한도가 얼마나 남았는지 읽는 방법, 그리고 다 썼을 때 선원들이 하는 일이에요.
 ---
@@ -10,7 +10,7 @@ description: AI 구독을 추가하는 방법, 요금제의 사용 한도가 얼
 ## 구독 추가하기 {#add-a-subscription}
 
 1. 설정을 열고 **지능**을 고르세요.
-2. **AI 구독** 아래쪽의 **계정 추가**에서 제공자를 고르세요: Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter, Amazon Bedrock이에요.
+2. **AI 구독** 아래쪽의 **계정 추가**에서 제공자를 고르세요: Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter, Amazon Bedrock이에요.
 3. 제공자가 요청하는 방식으로 로그인하세요.
    브라우저를 여는 제공자도 있고, 사이트에 입력할 코드를 보여 주는 제공자도 있고, 붙여 넣는 키를 받는 제공자도 있어요.
 4. 로그인이 끝나면 새 계정이 목록에 나타나요.
@@ -47,6 +47,17 @@ Claude 계정은 달라요.
 목록 맨 위의 **새로 고침**은 모든 사용 한도를 다시 읽어요.
 Infinitary는 OpenRouter나 사용자 지정 API의 사용 한도를 읽지 않고, 그 줄에 그렇다고 표시해요.
 Amazon Bedrock은 AWS 계정에 사용한 만큼 청구되며, 그 줄에는 Infinitary가 기록한 작업으로 계산한 이번 달 추정치가 보여요.
+
+## 조직을 거치는 Amazon Bedrock {#amazon-bedrock-through-your-organization}
+
+Amazon Bedrock을 추가하면 Infinitary가 요청을 어디로 보낼지 물어요: **AWS로 바로** 또는 **조직의 주소**예요.
+조직의 주소를 입력하면 Infinitary가 그 호스트와, 주소가 있는 네트워크(이 컴퓨터, 조직의 네트워크, 공용 인터넷)를 보여 줘요.
+**그곳으로 요청 보내기**를 눌러 승인하세요.
+그러면 요청은 그 주소로만, 그 이름이 같은 네트워크를 가리키는 동안에만, 그리고 컴퓨터가 그 인증서를 신뢰할 때만 가요.
+Amazon Bedrock 요청은 AWS로 바로 보내는 요청을 포함해, 이제 컴퓨터 환경에 설정된 프록시를 거치지 않아요.
+조직의 주소가 직접 요청에 서명한다면 프로필이나 키 대신 **키 없음: 조직의 주소가 요청에 서명합니다**를 고르세요.
+이 컴퓨터의 Claude Code가 이미 Amazon Bedrock을 쓰고 있다면, 로그인은 그 주소, 리전, 프로필이 채워진 채로 시작하고 어디서 왔는지 알려 줘요.
+그러면 계정 줄에 요청이 어느 주소를 **거쳐 전송**되는지 보여요.
 
 ## 어떤 계정이 무엇을 할지 고르기 {#choose-which-account-does-what}
 

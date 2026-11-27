@@ -82,7 +82,7 @@ A question that needs a structured answer uses the questions in the body ([decis
 - Required actions on a merge card are display-only: they grant no execution permission, and a confirmation runs nothing (`docs/required-actions.md`).
 - A Careful validation question binds its approval to one ordinary action with `emit_card.validation_request` (`docs/delivery-rigor.md`, "Careful live validation").
   A check approval is kept on the check by id while it declares the same resources and cost per run.
-  It rests on its own card or on the current consent named in `allowance`: a captain-origin project direction by `d:` id, `standing` for the task's recorded reply, or a kept yes's card.
+  It rests on its own card or on the current consent named in `allowance`: a captain-origin project direction heard from the captain by `d:` id, `standing` for the task's recorded reply, or a kept yes's card.
   An effect others can see starts only once; a named allowance replaces the card only while its consent is current and independent review has cleared that exact effect.
   Prerequisite draft publication still uses its own exact-action card.
   A version's gaps share one host-drawn checklist whose ticked rows the click accepts, on a card with no script or field of its own.

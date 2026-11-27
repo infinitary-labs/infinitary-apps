@@ -139,6 +139,39 @@ export function moveIntoProject(
 }
 
 /**
+ * A part lives in its parent's project, so an update that moved a task into
+ * another project and leaves it under a parent there is refused, and the
+ * whole update with it (INF-70). Clearing the parent instead would end the
+ * parent's wait on its part without a word, so the first mate chooses:
+ * move the parent, whose parts go with it, or clear or replace the parent
+ * in the same update. `before` is the task as the update found it, whose
+ * key the refusal names because the move rolls back.
+ */
+export function refuseApartFromParent(
+  writer: Pick<TaskWriter, "mustGet" | "projects">,
+  record: TaskRecord,
+  before: TaskRecord,
+): void {
+  if (!record.parentId) return;
+  const parent = writer.mustGet(record.parentId);
+  if (parent.projectId === record.projectId) return;
+  const part = keyOrId(before);
+  const above = keyOrId(parent);
+  const where = writer.projects.get(parent.projectId)?.name ?? parent.projectId;
+  const movable = parent.status === "open" && !parent.worktreeDir && !parent.placement;
+  // i18n-exempt: a tool answer served to the first mate, not shown to a person
+  const clear = `${part}'s parent in the same update_task (parent "") to move it on its own`;
+  // i18n-exempt: a tool answer served to the first mate, not shown to a person
+  throw new TaskGraphRefusal(
+    `Refused: ${part} is a part of ${above}, which stays in ${where}, and a part lives in its parent's project. ${
+      movable
+        ? `Move ${above} instead, and its parts go with it, or clear ${clear}`
+        : `Clear ${clear}`
+    }${live(parent) ? `; ${above} then no longer waits for it.` : "."}`,
+  );
+}
+
+/**
  * As a plan is refused a direct-pr ask with no remote to open it on
  * (CrewSupervisor.resolveSpawnDelivery), a move is refused before anything
  * is written when a row it takes asks to ship as a pull request and the

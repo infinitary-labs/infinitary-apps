@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "panel-quota-read-identity",
+      "reason": "A panel or a card reading quota.snapshot is now handed only the fields its documented contract names, without each account's internal id, the identity the provider reported, credits, saved resets or the sensor's machine reasons; panels draw the same allowance, so nothing a person sees changes."
+    }
+  ]
+}

@@ -81,6 +81,7 @@ import { phonePanelControls } from "./phonePanels";
 import { startPhonePushRelay } from "./phonePushRelay";
 import { CARD_RECORDINGS } from "./phoneRecordings";
 import { removeEveryDevice } from "./phoneRemove";
+import { raiseRevisedCard, reviseRevisedCard } from "./phoneRevisedCard";
 import { seedRowMoves, seedTalkTags, seedTalkWork } from "./phoneRowMoves";
 import { phoneSceneFixture } from "./phoneScene";
 import { phoneSecondHome } from "./phoneSecondHome";
@@ -93,6 +94,7 @@ import {
   seedPhoneSettings,
 } from "./phoneSettings";
 import { phoneTakeOverControls } from "./phoneTakeOver";
+import { phoneTalkControls, TALK_WRITES } from "./phoneTalk";
 import { raiseConversationCard, seedReplyReading } from "./replyReading";
 import { startScriptedClient } from "./scriptedClient";
 import { bundleSqlProcess } from "./sqlProcessBundle";
@@ -312,6 +314,7 @@ export async function startPhoneHome(
       }, 30_000);
     });
   };
+  const talk = phoneTalkControls(core, writes, until, (seen) => observations.push(seen));
   const within = async (promise: Promise<void>, failure: string) => {
     let timer: DeadlineTimer | undefined;
     try {
@@ -622,9 +625,7 @@ export async function startPhoneHome(
           cardRequests.push({ channel, args });
         if (channel === "inf:cards:draft")
           draftChanges.push(structuredClone((args as unknown[])[1]));
-        if (
-          ["inf:converse", "inf:task:run", "inf:task:steer", "inf:task:interrupt"].includes(channel)
-        ) {
+        if (TALK_WRITES.includes(channel)) {
           const safe = (Array.isArray(args) ? args : []).map((arg: unknown) =>
             typeof arg === "object" && arg !== null && "images" in arg
               ? {
@@ -1864,6 +1865,13 @@ export async function startPhoneHome(
         case "POST reader-card":
           result = await raiseReaderCard(core);
           break;
+        // INF-6865: a long decision, card 2 of 3, which the crewmate revises in place while the captain reads it.
+        case "POST revised-scroll-card":
+          result = await raiseRevisedCard(core);
+          break;
+        case "POST revised-scroll-card-revise":
+          result = reviseRevisedCard(core, await controlBody(request));
+          break;
         // INF-6136: a crewmate's decision with the tallest head a card draws (its task's key, place and model, a
         // four-line title and a revised line), a body several screens long with a required question, three choices
         // and a thread; beside it a short first mate card, its neighbour in the row.
@@ -1958,13 +1966,7 @@ export async function startPhoneHome(
         }
         // INF-3124: a first mate card whose thread is longer than the card's back, read from its start.
         case "POST place-card": {
-          for (const card of await core.dispatch("inf:cards:list", []))
-            await core.dispatch(
-              card.noteDone && !card.noteDone.closesTask
-                ? "inf:cards:note-done"
-                : "inf:cards:close",
-              [card.id],
-            );
+          await clearPhoneCards(core);
           const title = "The release window moves to Thursday";
           cardIDs.place = core.services.supervisor.addFirstmateCard({
             id: "phone-place",
@@ -2010,13 +2012,7 @@ export async function startPhoneHome(
         // INF-4838: a card with a short line beside a long paragraph, the text iOS enlarged in a wide card unless the
         // card's page sets `text-size-adjust`; the short line fits on one line in the narrow card and the wide one.
         case "POST long-text-card": {
-          for (const card of await core.dispatch("inf:cards:list", []))
-            await core.dispatch(
-              card.noteDone && !card.noteDone.closesTask
-                ? "inf:cards:note-done"
-                : "inf:cards:close",
-              [card.id],
-            );
+          await clearPhoneCards(core);
           const title = "The harbour survey route";
           const line = "Four builds wait.";
           const route =
@@ -3429,17 +3425,10 @@ export async function startPhoneHome(
           };
           break;
         case "POST talk-sent":
-          await until(() =>
-            core.services.tasks.capture
-              .listAsks()
-              .some((ask) => ask.text.includes(ANSWER_PROMPT_MARKER) && ask.turnState !== "open"),
-          );
-          result = {
-            writes,
-            lastTurn: await core.dispatch("inf:conversation:last-turn", []),
-            asks: core.services.tasks.capture.listAsks(),
-          };
-          observations.push({ check: "captain-turn-from-phone", result });
+          result = await talk.sent();
+          break;
+        case "POST talk-ask":
+          result = await talk.ask(await controlBody(request));
           break;
         case "POST talk-started":
           await until(() =>

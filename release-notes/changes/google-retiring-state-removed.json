@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "google-retiring-state-removed",
+      "reason": "Removes the Google row's state for a sign-in on Infinitary's own client, and the run switch that kept that client from taking new sign-ins. No build since the client retired draws that state or uses that switch, so nothing a person sees on this version changes."
+    }
+  ]
+}

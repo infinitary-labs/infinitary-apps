@@ -1,5 +1,5 @@
 ---
-source: c16d193883332656
+source: 75bebd4c6bb16a9e
 title: Primer inicio
 description: Lo que Infinitary muestra la primera vez que lo abres, cómo elegir dónde vive tu primer oficial, cómo conectar una suscripción y cómo agregar tu primer proyecto.
 ---
@@ -40,13 +40,14 @@ Nada más funciona hasta que una suscripción pueda responder a tu primer oficia
 ## Conectar una suscripción {#connect-a-subscription}
 
 Elige **Esta computadora** para que tu primer oficial se quede aquí.
-Aparece un botón para cada proveedor que tu primer oficial puede usar: Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter, Amazon Bedrock y API personalizada.
+Aparece un botón para cada proveedor que tu primer oficial puede usar: Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter, Amazon Bedrock y API personalizada.
 
 1. Elige el botón de tu proveedor.
 2. Inicia sesión como te lo pida ese proveedor.
    Algunos abren la página de inicio de sesión en tu navegador.
    Copilot y Kimi Code muestran un código: presiona **Copiar código** y luego escríbelo en el sitio del proveedor.
    OpenRouter recibe una clave de API que pegas.
+   OpenCode Go recibe la clave que pegas desde la OpenCode Console.
    Con Amazon Bedrock, elige una región y usa un perfil de AWS de esta computadora o pega una clave de API de Bedrock.
    Un proveedor que ofrece ambas opciones pregunta si quieres **Iniciar sesión con tu navegador** o pegar una **Clave de API**.
 3. Espera mientras la ventana dice que se está conectando.
@@ -166,8 +167,8 @@ Presiona **Entendido** para guardarla cuando quieras.
 
 La primera vez que tu primer oficial le pasa una petición a un tripulante, aparece una tarjeta titulada **Un tripulante se encarga**.
 
-<img class="picture-dark" src="/pictures/first-launch-crewmate-dark.webp" alt="La tarjeta Un tripulante se encarga: el primer oficial enviando a un tripulante, un recuadro Ahora que dice que un tripulante trabaja y que no hace falta vigilarlo, un recuadro Después que dice que vuelve aquí una tarjeta con una respuesta o una elección, y Entendido." width="1070" height="602" />
-<img class="picture-light" src="/pictures/first-launch-crewmate-light.webp" alt="La tarjeta Un tripulante se encarga: el primer oficial enviando a un tripulante, un recuadro Ahora que dice que un tripulante trabaja y que no hace falta vigilarlo, un recuadro Después que dice que vuelve aquí una tarjeta con una respuesta o una elección, y Entendido." width="1070" height="602" />
+<img class="picture-dark" src="/pictures/first-launch-crewmate-dark.webp" alt="La tarjeta Un tripulante se encarga: el primer oficial enviando a un tripulante, un recuadro Ahora que dice que un tripulante trabaja y que no hace falta vigilarlo, un recuadro Después que dice que vuelve aquí una tarjeta con una respuesta o una elección, y Entendido." width="1163" height="654" />
+<img class="picture-light" src="/pictures/first-launch-crewmate-light.webp" alt="La tarjeta Un tripulante se encarga: el primer oficial enviando a un tripulante, un recuadro Ahora que dice que un tripulante trabaja y que no hace falta vigilarlo, un recuadro Después que dice que vuelve aquí una tarjeta con una respuesta o una elección, y Entendido." width="1163" height="654" />
 
 Dice que el tripulante trabaja en segundo plano, lo que puede llevar un rato, y que no hace falta que lo vigiles.
 Cuando el tripulante tiene una respuesta, o necesita que elijas, vuelve como una tarjeta.

@@ -78,6 +78,62 @@
   },
   "recordMoreValidation": "Live-Prüfung",
   "recordOpenKeptEvidence": "Aufbewahrten Nachweis öffnen",
+  "recordPartsClosedFold": {
+    "plural": "count",
+    "one": "{count} geschlossener Teil",
+    "other": "{count} geschlossene Teile"
+  },
+  "recordPartsCountBacklog": {
+    "plural": "count",
+    "one": "{count} in deinem Backlog",
+    "other": "{count} in deinem Backlog"
+  },
+  "recordPartsCountIdle": {
+    "plural": "count",
+    "one": "{count} untätig",
+    "other": "{count} untätig"
+  },
+  "recordPartsCountInterrupted": {
+    "plural": "count",
+    "one": "{count} unterbrochen",
+    "other": "{count} unterbrochen"
+  },
+  "recordPartsCountQueued": {
+    "plural": "count",
+    "one": "{count} in der Warteschlange",
+    "other": "{count} in der Warteschlange"
+  },
+  "recordPartsCountStarting": {
+    "plural": "count",
+    "one": "{count} startet",
+    "other": "{count} starten"
+  },
+  "recordPartsCountWaiting": {
+    "plural": "count",
+    "one": "{count} wartet auf dich",
+    "other": "{count} warten auf dich"
+  },
+  "recordPartsCountWorking": {
+    "plural": "count",
+    "one": "{count} arbeitet",
+    "other": "{count} arbeiten"
+  },
+  "recordPartsLast": "Wartet auf ihren letzten Teil",
+  "recordPartsLastBacklog": "Ihr letzter Teil wartet auf dein Starten",
+  "recordPartsLastBacklogGuidance": "{key} liegt in deinem Backlog. Diese Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.",
+  "recordPartsLastIdle": "{key} ist untätig. Diese Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.",
+  "recordPartsLastInterrupted": "{key} wurde unterbrochen. Diese Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.",
+  "recordPartsLastQueued": "{key} steht in der Warteschlange. Diese Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.",
+  "recordPartsLastStarting": "{key} startet gerade. Diese Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.",
+  "recordPartsLastWaiting": "Ihr letzter Teil wartet auf dich",
+  "recordPartsLastWaitingGuidance": "{key} hat eine Karte für dich. Diese Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.",
+  "recordPartsLastWorking": "{key} arbeitet. Diese Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.",
+  "recordPartsOpen": {
+    "plural": "total",
+    "one": "Wartet auf {open} von ihrem {total} Teil",
+    "other": "Wartet auf {open} von ihren {total} Teilen"
+  },
+  "recordPartsOpenGuidance": "{counts}. Diese Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.",
   "recordPersonalNone": "Keine, auf {computer}",
   "recordPersonalVersion": "Version {version} vom {when}, auf {computer}",
   "recordPolicyParentTask": "Übergeordnete Aufgabe",

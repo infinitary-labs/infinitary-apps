@@ -1,5 +1,6 @@
 import { cpSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
+import { KnowledgeService } from "@core/knowledge/knowledgeService";
 import { CaptainOverrides, type CaptainOverridesHost } from "@core/orchestrator/captainOverrides";
 import { FIRSTMATE_CONTRACT_VERSION } from "@core/pi/piResources";
 import { openDatabase } from "@core/storage/db";
@@ -8,6 +9,7 @@ import { seedTask } from "@core/tasks/seedTask";
 import { TaskService } from "@core/tasks/taskService";
 import { choiceWords, type HoldOverride, overrideWords } from "@shared/holds";
 import { MERGE_ANYWAY_WORDS } from "@shared/vocabulary";
+import type { ForgeWriteAsk, WriteAskOutcome } from "@shared/writeAsk";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { main, type OverrideEntry } from "../scripts/export-corpus.ts";
 import { main as extractDispatchMain } from "../scripts/extract-dispatch-corpus.ts";
@@ -83,6 +85,7 @@ describe("corpus export - the R1 corrections", { timeout: 30_000 }, () => {
       cap_hits: number;
       overrides_by_hold: Record<string, number>;
       overrides: OverrideEntry[];
+      named_yes_sends_by_hold: Record<string, number>;
       metrics: Record<string, number | null>;
     };
     exporter_contract_version: string;
@@ -1071,6 +1074,8 @@ describe("corpus export - the R1 corrections", { timeout: 30_000 }, () => {
     // widened them on the same version, the captain clicked Merge anyway on
     // a later version, the first mate took that back, and a merge click was
     // then recorded as an override, as the app did before it refused them.
+    // Last, the first mate cited a heard direction of the project (INF-7021),
+    // a third route the audit reads apart from words given on the task.
     let clock = Date.parse("2026-11-02T17:00:00.000Z");
     const db = openDatabase(dir);
     const tasks = new TaskService({ db, strict: true, now: () => clock });
@@ -1091,8 +1096,23 @@ describe("corpus export - the R1 corrections", { timeout: 30_000 }, () => {
     seedDelivery(tasks, "t-ship", { mode: "direct-pr", prNumber: 12, prUrl, headSha: first });
     // The first mate's own writer, so its rows and its take-back carry the
     // actor and the shape the app writes.
+    // The project's own direction, heard from the captain, that the last
+    // override cites; the collection lives in memory beside the record.
+    const nimbus = { id: "repo-nimbus", name: "nimbus-api", path: dir };
+    const knowledge = new KnowledgeService({
+      projects: { get: (id) => (id === nimbus.id ? nimbus : undefined), list: () => [nimbus] },
+    });
+    const rule = "Release checks on Nimbus may run and merge without asking me.";
+    knowledge.directions.change({
+      op: "add",
+      id: "release-checks",
+      scope: nimbus.id,
+      text: rule,
+      reason: "The captain said so.",
+      heard: { from: "turn" },
+    });
     const overrides = new CaptainOverrides(
-      { tasks, inbox: new InboxStore(db, { now: () => clock }) },
+      { tasks, inbox: new InboxStore(db, { now: () => clock }), knowledge },
       {
         now: () => clock,
         settling: { kept: { runMergeAuthorization: async () => undefined } },
@@ -1158,6 +1178,19 @@ describe("corpus export - the R1 corrections", { timeout: 30_000 }, () => {
         data: { news: true },
       },
     );
+    clock += 60_000;
+    const cited = clock;
+    const direction = overrides.citedDirection("t-ship", "d:release-checks");
+    if (!direction.ok) throw new Error(direction.text);
+    expect(
+      overrides.declareOverride("t-ship", {
+        words: direction.words,
+        holds: ["checks"],
+        until: "task",
+        direction: direction.direction,
+      }).ok,
+    ).toBe(true);
+    knowledge.close();
     db.close();
 
     const caseOut = join(dir, "corpus-overrides");
@@ -1168,7 +1201,7 @@ describe("corpus export - the R1 corrections", { timeout: 30_000 }, () => {
       JSON.parse(readFileSync(join(caseOut, "manifest.json"), "utf8")) as typeof manifest
     ).rigor;
     const iso = (at: number) => new Date(at).toISOString();
-    const entry = { task: key, task_id: "t-ship", merge_click: false };
+    const entry = { task: key, task_id: "t-ship", merge_click: false, direction: null };
     expect(rigor.overrides.filter((listed) => listed.task_id === "t-ship")).toEqual([
       {
         ...entry,
@@ -1207,6 +1240,16 @@ describe("corpus export - the R1 corrections", { timeout: 30_000 }, () => {
         merge_click: true,
         replaces: null,
       },
+      {
+        ...entry,
+        at: iso(cited),
+        holds: ["checks"],
+        until: "task",
+        head: null,
+        route: "direction",
+        direction: "d:release-checks",
+        replaces: { at: iso(clicked.at), holds: ["waits"] },
+      },
     ]);
     // The fixture's own change: two overrides with a take-back between, so
     // the second replaced nothing.
@@ -1225,6 +1268,79 @@ describe("corpus export - the R1 corrections", { timeout: 30_000 }, () => {
     for (const listed of rigor.overrides)
       for (const hold of listed.holds) perHold[hold] = (perHold[hold] ?? 0) + 1;
     expect(perHold).toEqual(rigor.overrides_by_hold);
+  });
+
+  // INF-6987's approved plan: the export counts sends on a named yes for each
+  // hold, so the weekly audit sees them beside the overrides.
+  it("counts each kept write sent on a named yes under the hold it passed", () => {
+    expect(manifest.rigor.named_yes_sends_by_hold).toEqual({});
+    let clock = Date.parse("2026-11-20T16:00:00.000Z");
+    const db = openDatabase(dir);
+    const tasks = new TaskService({ db, strict: true, now: () => clock });
+    const reply = (task: string, ask: string, yes?: string): ForgeWriteAsk => ({
+      id: ask,
+      kind: "github",
+      host: "github.com",
+      place: "GitHub",
+      via: "project",
+      method: "POST",
+      path: "/repos/acme/nimbus-api/issues/41/comments",
+      body: JSON.stringify({ body: `Thanks for the report on ${task}: the fix shipped in 2.3.0.` }),
+      ...(yes === undefined ? {} : { yes }),
+      at: clock,
+    });
+    // How each ask ended: sent on a heard direction and answered, sent on a
+    // card yes with no answer heard, refused on a standing yes before it was
+    // sent, and sent on the captain's click with no yes named.
+    const sends: { task: string; yes?: string; outcome: WriteAskOutcome }[] = [
+      {
+        task: "t-reply-direction",
+        yes: "d:intake-replies",
+        outcome: { kind: "answered", status: 201, requestId: "C0DE:41" },
+      },
+      {
+        task: "t-reply-card",
+        yes: "card-reply-ok",
+        outcome: { kind: "unknown", why: "the connection closed before GitHub answered" },
+      },
+      {
+        task: "t-reply-moved",
+        yes: "standing",
+        outcome: {
+          kind: "refused",
+          why: "where it goes changed since it was asked (now GitLab), so it was not sent",
+        },
+      },
+      {
+        task: "t-reply-click",
+        outcome: { kind: "answered", status: 201, requestId: "C0DE:42" },
+      },
+    ];
+    for (const [index, send] of sends.entries()) {
+      seedTask(tasks, {
+        id: send.task,
+        title: "Post the drafted reply on the gauge issue",
+        prompt: "brief",
+        repoId: "repo-nimbus",
+        status: "idle",
+      });
+      const ask = `wa00000000000${index + 1}`;
+      tasks.delivery.keepWriteAsk(send.task, reply(send.task, ask, send.yes));
+      clock += 1_000;
+      expect(tasks.delivery.takeWriteAsk(send.task, ask)).toHaveProperty("ask");
+      tasks.delivery.recordWriteAskOutcome(send.task, ask, send.outcome);
+      clock += 60_000;
+    }
+    db.close();
+
+    const caseOut = join(dir, "corpus-named-yes");
+    expect(quietly(() => main(["--out", caseOut, "--user-data", dir], { isPackaged: false }))).toBe(
+      0,
+    );
+    const rigor = (
+      JSON.parse(readFileSync(join(caseOut, "manifest.json"), "utf8")) as typeof manifest
+    ).rigor;
+    expect(rigor.named_yes_sends_by_hold).toEqual({ "kept-write": 2 });
   });
 
   it("redacts database joins in the standalone dispatch export", () => {

@@ -264,6 +264,7 @@ On a busy Mac the runner, the app and its helpers can all stop for a minute at a
 The clock ticks every 25 ms and counts each gap between ticks up to two ticks, so a stopped process's clock stops with it, and it counts only the share of processors left when the one-minute load per processor is above 1.
 Every wait deadline reads it through `patches/playwright@1.62.1.patch` and `patches/playwright-core@1.62.1.patch`: the test, hook and fixture slots, `test.step`'s timeout, `expect` and `expect.poll` and `toPass`, every action's and locator's timeout, explicit per-call ones included, and `waitForEvent`.
 Each wait also ends by its wall cap, 20 times its budget and at most 10 minutes (`waitCap`), so a wait whose work never comes still fails, by its own message, long before the whole check's limit.
+The cap only lengthens a wait: a budget longer than 10 minutes, such as a phone part's deadline, ends at its own length on the wall clock, never at 10 minutes.
 A journey's own failure timer in the test process goes through `budgetTimer`, as the app's quit grace in `launch.ts` and the microphone probe do; a poll interval, a deliberate pause or a product deadline stays a plain timer.
 A graded run (`INFINITARY_PERF_BUDGETS=1`) starts no clock, and every wait keeps its budget on the wall clock; so do the runner's own process and its whole-run limit.
 Test durations, traces and reports keep the wall clock either way.
@@ -384,6 +385,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
   `INFINITARY_MEMORY_PRESSURE=normal` stands in macOS's memory pressure level, so a loaded Mac running the suite never wakes a journey's first mate about its own memory, which with no signed-in model puts up a sign-in card the journey never asked for (INF-2108); a spec names another level in `env`.
   Quota fixtures ride `INFINITARY_QUOTA_FIXTURE_DIR`.
   A seeded Grok API key's allowance read goes to a local port nothing listens on (`INFINITARY_GROK_KEY_URL`), never to xAI; a spec that serves that read names its own stub in `env` (`quota-live-sensor.spec.ts`, `docs/quota.md`).
+  An OpenCode Go key's allowance read goes to that same unused port (`INFINITARY_OPENCODE_GO_USAGE_URL`), never to OpenCode; `opencode-go.spec.ts` names its own stub.
   Each home's connection stays on loopback at a port kept per userData (`INFINITARY_CONNECTION_LOOPBACK_PORT`, `docs/devices.md`), so a relaunched home is where its devices left it, and no test listens on the Mac's own network or on the port a real app holds.
   The port comes from `claimedPort` (`tests/helpers/claimedPort.ts`): it lies below every ephemeral range, so the system never hands it to a listener that asks for port 0, and the worker holds a claim on it until it exits, so no other worker or run on the computer hands it out.
   A launched home never takes a port that a port-0 listener found and closed again: that port can go to any other port-0 listener in the run, and a probe would then read that listener as the home.

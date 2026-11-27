@@ -53,8 +53,9 @@ function allowanceLine(entry: ServedAllowance): string {
  * (INF-3170 piece 2): the captain's standing override and each yes the app
  * recorded from their click. A yes on it is that consent, so a later ask it
  * covers is not asked again; the reader judges what falls inside it. A
- * write kept for the captain's click, a browser handoff and anything no
- * entry names still ask. Empty when nothing is recorded.
+ * write `github_write` would keep for the captain's click goes on the yes
+ * it names as its allowance (`kept-write`); a browser handoff and anything
+ * no entry names still ask. Empty when nothing is recorded.
  */
 export function alreadyAllowedWords(allowed: AlreadyAllowed, reader: AllowedReader): string {
   const lines = [
@@ -69,7 +70,7 @@ export function alreadyAllowedWords(allowed: AlreadyAllowed, reader: AllowedRead
   const close =
     reader === "reviewer"
       ? "Access or a step an entry covers is not a finding; access or a step none covers still needs the captain's consent on a card."
-      : "Where an ask of yours falls inside an entry, it is that consent: do not ask again. A write kept for their click, a browser handoff and anything no entry names still ask. Only the captain's words take an entry back.";
+      : "Where an ask of yours falls inside an entry, it is that consent: do not ask again; for a write github_write would keep, name the entry's card as its allowance. A browser handoff and anything no entry names still ask. Only the captain's words take an entry back.";
   return [
     `${ALREADY_ALLOWED_HEADING}, as the app recorded it from the captain's own words and clicks${reader === "reviewer" ? " on this change" : " on this task"}:`,
     ...lines,

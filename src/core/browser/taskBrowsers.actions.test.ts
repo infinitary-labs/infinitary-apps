@@ -3,12 +3,13 @@ import {
   mkdirSync,
   readFileSync,
   realpathSync,
+  rmSync,
   statSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import {
   type FakePage,
@@ -390,6 +391,39 @@ describe('a page downloads a file (docs/task-browser.md, "A download")', () => {
       '"../../.ssh/authorized_keys" from localhost:5173 did not finish downloading (interrupted); nothing was kept.',
     );
     expect(after.text).toContain('Still downloading: "".');
+  });
+
+  it("says where an unfinished download's partial file is still kept when it could not be removed", async () => {
+    const { browsers, pages } = harness();
+    const browser = browsers.forTask("t1");
+    await browser.navigate({ url: "http://localhost:5173/" });
+    const page = pages[0] as FakePage;
+    const target = page.opened.onDownload({
+      url: "http://localhost:5173/export.csv",
+      name: "export.csv",
+      bytes: 0,
+    });
+    if (!target) throw new Error("the core refused the download");
+    // A folder at the file's path stops the removal on every system and for
+    // every account, where a read-only folder stops neither Windows nor root.
+    rmSync(target.path);
+    mkdirSync(target.path);
+    writeFileSync(join(target.path, "part"), "date,total\n");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      target.done({ state: "interrupted", bytes: 11 });
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining("[task-browser] could not remove an unfinished download"),
+      );
+    } finally {
+      warn.mockRestore();
+    }
+    expect(existsSync(join(target.path, "part"))).toBe(true);
+    const after = await browser.inspect({});
+    expect(after.text).toContain(
+      `"export.csv" from localhost:5173 did not finish downloading (interrupted); its partial file could not be removed and is still at ${target.path}.`,
+    );
+    expect(after.text).not.toContain("nothing was kept");
   });
 
   it("tells the crewmate of a file the captain downloaded while holding the page", async () => {

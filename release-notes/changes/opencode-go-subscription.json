@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "opencode-go-subscription",
+      "kind": "feature",
+      "area": "subscriptions",
+      "title": "OpenCode Go joins your subscriptions",
+      "body": "You can now add an OpenCode Go subscription: paste the key from the OpenCode Console and your first mate and crew can work on its models. Kimi K3, Grok 4.7, GPT-6 Luna and Claude Haiku 5.5 start in your levels, and the account's row shows how much of its 5-hour, weekly and monthly allowance is left. A key set on your computer for other tools never signs an account in on its own.",
+      "picture": {
+        "dark": "opencode-go-subscription-dark.webp",
+        "light": "opencode-go-subscription-light.webp",
+        "alt": "An OpenCode Go account row in AI subscriptions, with its session, weekly and monthly meters."
+      },
+      "docsSite": ["subscriptions-and-quota"],
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

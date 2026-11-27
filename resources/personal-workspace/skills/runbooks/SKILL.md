@@ -40,7 +40,7 @@ The description tells a crewmate when to open the skill.
 A skills folder is available on demand to every crewmate in the runbook's reach, independently of the crew section's selectors.
 Project skills win a shared skill name, then opted-in personal skills, then runbook skills; choose a distinct name when needed.
 
-An optional `crew.when` narrows the crew section using arrays of known facts: `kind`, `place` (`project` or `personal`), `delivery`, `care`, `backend`, or `project` (project ids).
+An optional `crew.when` narrows the crew section using arrays of known facts: `kind`, `place` (`project` or `personal`), `delivery`, `care`, `backend`, `project` (project ids), or `sideEffect` (`[true]` for a task whose only job is an outside action that waits on work).
 Each provided selector must match; omit selectors for unrestricted reach.
 An empty array matches nothing.
 An optional top-level `projects` array restricts the whole runbook, including skills, to those project ids.

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "unfinished-download-left-behind",
+      "reason": "When the task browser cannot remove an unfinished download's partial file, the crewmate's answer now says the file is still at its path and the warning log says why, instead of saying nothing was kept; this changes only what a crewmate is told in that rare failure, with no result a person sees."
+    }
+  ]
+}

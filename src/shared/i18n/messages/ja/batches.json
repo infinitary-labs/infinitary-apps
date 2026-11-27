@@ -5,6 +5,7 @@
     "other": "一括プルリクエスト #{number} · 変更{count}件"
   },
   "batchesPanelChecking": "チェック中 {duration}",
+  "batchesPanelCheckingFix": "承認前の修正 {key} を含めてチェック中",
   "batchesPanelChecksFull": "チェック：合格 {passed}、失敗 {failed}、実行中 {running}（{time} 時点）",
   "batchesPanelChecksPassed": "{total}件中{passed}件のチェックに合格",
   "batchesPanelChecksUnread": "チェックをまだ読み取っていません",

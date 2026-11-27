@@ -56,11 +56,11 @@ export const BATCH_DECLARATION_WORDS = {
     `Batch declaration refused: ${task} has no reason. Its crewmate reads the reason, so say what its change broke.`,
   notMember: (task: string, members: readonly string[]) =>
     `Batch declaration refused: ${task} is not in the held batch. It carries ${members.join(", ")}.`,
-  fix: "Recorded: this task's change is the held batch's fix. Push it, confirm its story with open_change and show its merge card as usual: once approved, it joins the held batch behind the changes already there, with every change approved meanwhile behind it, the batch is combined again and its checks run again.",
+  fix: "Recorded: this task's change is the held batch's fix. Push it, confirm its story with open_change and show its merge card as usual. Once its story is confirmed, the batch runs its checks at its held version plus the fix, and you hear if they fail. Approved at that version once they passed, the batch merges as it is, and changes approved meanwhile wait for the next batch. Otherwise, once approved, it joins the held batch behind the changes already there, with every change approved meanwhile behind it, the batch is combined again and its checks run again.",
   fixApproved:
     "Recorded: this task's change is the held batch's fix, and its approved version already waits in line, so it joins the held batch now behind the changes already there, with every change approved meanwhile behind it. The batch is combined again and its checks run again; show no new merge card for this version.",
   fixAndSentBack: (count: number) =>
-    `Sent back ${count === 1 ? "one change" : `${count} changes`}: each lost its approval and its crewmate was told the reason. Recorded: this task's change is the held batch's fix, and the batch stays held at its version, combining nothing, until it is approved. Push it, confirm its story with open_change and show its merge card as usual, unless its approved version already waits in line: then it joins at once. The batch is combined again with the fix and every change waiting in line, without the changes sent back, and its checks run again.`,
+    `Sent back ${count === 1 ? "one change" : `${count} changes`}: each lost its approval and its crewmate was told the reason. Recorded: this task's change is the held batch's fix, and the batch stays held at its version, combining nothing, until it is approved. Push it, confirm its story with open_change and show its merge card as usual, unless its approved version already waits in line: then it joins at once. Once its story is confirmed, the batch runs its checks at its held version plus the fix, without the changes sent back; approved at that version once they passed, the batch merges as it is. Otherwise the batch is combined again with the fix and every change waiting in line, without the changes sent back, and its checks run again.`,
   sentBack: (count: number) =>
     `Sent back ${count === 1 ? "one change" : `${count} changes`}: each one's crewmate was told the reason, with its earlier send-backs and the batch's checks that never ran on it, and a kept approval waits for its repair. The rest of the batch is being combined again with the changes that waited in line, and its checks run again.`,
 } as const;
@@ -399,6 +399,9 @@ export class CheckChangeTool {
     const back = batch.sendBack ?? [];
     const passed = batch.passed?.trim();
     if (batch.fix !== true && back.length === 0 && !passed) return BATCH_DECLARATION_WORDS.one;
+    // A declared fix is bound to the exact commit its task has committed now, so another task
+    // that delivers that commit carries the declaration; one that cannot be read binds none.
+    const at = batch.fix === true ? await this.context.ownCommit(record) : undefined;
     if (passed) {
       if (back.length) return BATCH_DECLARATION_WORDS.passedSentBack;
       const refused = await batches.declarePassed(
@@ -406,12 +409,13 @@ export class CheckChangeTool {
         passed,
         batch.fix === true ? record.id : undefined,
         record.id,
+        at,
       );
       if (refused) return BATCH_DECLARATION_WORDS.passed[refused];
       return BATCH_DECLARATION_WORDS.passedRecorded(batch.fix === true);
     }
     if (batch.fix === true && back.length === 0) {
-      const refused = await batches.declareFix(repoId, record.id);
+      const refused = await batches.declareFix(repoId, record.id, at, open.hold.head);
       if (refused) return `Batch declaration refused: ${refused}`;
       this.options.tasks.note(
         record.id,
@@ -441,6 +445,7 @@ export class CheckChangeTool {
       { action: "send-back", head: open.hold.head, changes },
       batch.fix === true ? record.id : undefined,
       record.id,
+      at,
     );
     if (refused) return `Batch declaration refused: ${refused}`;
     const sent = changes.length === 1 ? "one change" : `${changes.length} changes`;

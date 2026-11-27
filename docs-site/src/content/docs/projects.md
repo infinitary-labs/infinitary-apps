@@ -133,7 +133,12 @@ While a project is in focus:
 - Cards about other projects wait until the focus changes.
   Nothing is closed, and every project still sends notifications.
 - A short line beside the pill says how many tasks wait on you elsewhere, such as "2 waiting elsewhere".
-- Your first mate puts new work you ask for in that project, unless you name another.
+- Your first mate hears the focus with each message you send.
+  Unless you name another project, it puts new work in that project, and its answers and its actions on many tasks cover only that project and say what they left out.
+
+To see where one project's work runs without focusing, point at a crewmate in the middle of the window, or tap it on your phone.
+While its summary is open, every crewmate of another project dims to a quarter of its light, on every computer, and nobody moves.
+Close the summary and the light goes back.
 
 Press the **×** beside the pill (**Show all projects**), or pick **All projects** in the row, to see everything again.
 Infinitary remembers your focus when you restart it.
@@ -171,6 +176,7 @@ Change the line and press **Save**, or turn the switch off to leave it out.
 
 Removing takes the project off the list.
 Its folder and its finished tasks stay.
+Adding it again uses the folder it left in your projects folder instead of cloning a second copy, and the project starts over with default settings.
 If the project still has tasks, Infinitary names them, and you finish or drop them first.
 
 In a project of several repositories, **Remove** takes away the repository whose tab is chosen, and the project keeps the others.

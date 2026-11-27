@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "github-forge-split",
+      "reason": "Internal: GitHub's signed downloads, release-file uploads and failure reading move out of the forge's file into their own modules; nothing a person sees changes."
+    }
+  ]
+}

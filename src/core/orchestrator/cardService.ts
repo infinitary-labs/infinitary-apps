@@ -53,6 +53,7 @@ import {
 } from "./cardThreads";
 import { ENDED_STAYS, EndedCards } from "./endedCards";
 import { HostCardStack } from "./hostCardStack";
+import { withHostAnswerer } from "./hostCards";
 import { PutOffs } from "./putOffs";
 import type { WakeCard } from "./reportWakes";
 import { requiredActionCard, requiredActionProvenance } from "./requiredActionCard";
@@ -127,6 +128,7 @@ export class CardService {
   /** The reading each merge card behind its change was last handed on at (`mergeFellBehind`). */
   private readonly toldBehind = new Map<string, string>();
   private broadcastTimer: ReturnType<typeof setTimeout> | undefined;
+  private presentationCheck: ReturnType<typeof setImmediate> | undefined;
   private readonly unsubscribeTasks: () => void;
 
   constructor(private readonly host: CardServiceHost) {
@@ -175,9 +177,10 @@ export class CardService {
     // Unresolved cards survive restarts (D-9). Migration 73 has retired
     // their keep-open actions and streaming state. A card with a lifecycle
     // resumes it; one written before the capture is seeded as a snapshot
-    // whose start is unknown, never given a history it did not have.
+    // whose start is unknown, never given a history it did not have. A host
+    // card saved with no answerer comes back with the one it now goes up with.
     for (const card of host.cardStore.listOpen()) {
-      const ready = card;
+      const ready = withHostAnswerer(card);
       if (ready.lifecycleId && ready.offerId) {
         this.cards.set(ready.id, ready);
         continue;
@@ -240,6 +243,8 @@ export class CardService {
     this.unsubscribeTasks();
     if (this.broadcastTimer) clearTimeout(this.broadcastTimer);
     this.broadcastTimer = undefined;
+    if (this.presentationCheck) clearImmediate(this.presentationCheck);
+    this.presentationCheck = undefined;
   }
 
   /**
@@ -1334,10 +1339,21 @@ export class CardService {
    * Put a card the host authors on the stack: a new one, or a revision under
    * its id. A card raised again under an id it once had reopens its row, so
    * the stack and the row agree and it survives a restart like any other.
+   * A host card that names no answerer gets the first mate here, the one door
+   * every such card goes through (`withHostAnswerer`).
    */
   put(next: Card, options: { revise?: boolean } = {}): void {
+    // A revision keeps the open card's wait for an answer, as an author's
+    // revision does (`CardEmit`): the store writes the row whole, and a hold
+    // lost here would let a card shown while the first mate was down come
+    // down before it answered the captain's reply (`HostCardStack`).
+    const open = this.cards.get(next.id);
     const stamped = this.evidence.stamp({
-      ...next,
+      ...withHostAnswerer(next),
+      ...(open?.awaiting && next.awaiting === undefined ? { awaiting: open.awaiting } : {}),
+      ...(open?.sentBackAt !== undefined && next.sentBackAt === undefined
+        ? { sentBackAt: open.sentBackAt }
+        : {}),
       width: decidedCardWidth({
         body: next.body,
         pictures: next.pictures,
@@ -1620,13 +1636,29 @@ export class CardService {
   }
 
   scheduleBroadcast(): void {
-    const presentation = JSON.stringify(this.snapshot());
-    if (presentation !== this.presentation) {
-      this.presentation = presentation;
-      this.host.presentationChanged?.();
-    }
+    this.comparePresentation();
     if (this.broadcastTimer) return;
     this.broadcastTimer = setTimeout(() => this.flushBroadcast(), 60);
+  }
+
+  /**
+   * Whether the stack's presentation moved, read once the current turn's
+   * changes are in rather than once per change. Node drains every
+   * microtask after one I/O callback, so a check watch pass whose readings
+   * landed in one turn rebuilt every open card once per reading: 27
+   * readings on a record with 34 open cards held the main thread about a
+   * quarter of a second (INF-6958). An immediate runs before the board's
+   * coalescing timer, so the board push still sees this turn's mark.
+   */
+  private comparePresentation(): void {
+    if (this.presentationCheck) return;
+    this.presentationCheck = setImmediate(() => {
+      this.presentationCheck = undefined;
+      const presentation = JSON.stringify(this.snapshot());
+      if (presentation === this.presentation) return;
+      this.presentation = presentation;
+      this.host.presentationChanged?.();
+    });
   }
 }
 

@@ -65,13 +65,18 @@ export function taskContributesUpstream(
  * Whether a task's change joins this person's own batches (docs/forge.md,
  * "Batches of your own"): a task of a project on the batched delivery. A
  * pull request the task names by number is never batched, and neither is
- * a contribution through a fork.
+ * a contribution through a fork. `change` "own" asks about the task's own
+ * branch, which a pull request selected by number leaves batched: a held
+ * batch's repair selects the batch's pull request to read its checks, and
+ * its own branch still joins that batch as its fix (INF-6910).
  */
 export function mergesInOwnBatch(
   record: TaskRecord | undefined,
   repo: RepoView | undefined,
+  change: "current" | "own" = "current",
 ): boolean {
-  if (!record?.repoId || record.delivery?.checkTarget || !repo) return false;
+  if (!record?.repoId || !repo) return false;
+  if (change === "current" && record.delivery?.checkTarget) return false;
   if (taskContributesUpstream(record, repo)) return false;
   return ownsBatches(deliveryForRecord(record, repo.delivery), repo);
 }
@@ -426,9 +431,11 @@ export const UNSAFE_DATA_READER_PROJECT =
   "An unsafe data reader never runs in the personal workspace, whose files are the captain's own: name another project as repo_id, or none for an empty folder of its own.";
 
 /** Why an unsafe data reader that would deliver anything but an answer is refused before it starts. */
-export const UNSAFE_DATA_READER_ANSWERS =
+export const UNSAFE_DATA_READER_ANSWERS_RULE =
   // i18n-exempt: a refusal served to the first mate
-  "An unsafe data reader only answers in words: give it the read-only constraint, and neither operation, in_folder nor result_schema. Nothing was started.";
+  "An unsafe data reader only answers in words: give it the read-only constraint, and neither operation, in_folder nor result_schema.";
+// i18n-exempt: a refusal served to the first mate
+export const UNSAFE_DATA_READER_ANSWERS = `${UNSAFE_DATA_READER_ANSWERS_RULE} Nothing was started.`;
 
 /** What a record's shape says it delivers; a pre-axis row shipped a change. */
 export function deliverableOf(record: TaskRecord | undefined): Deliverable {

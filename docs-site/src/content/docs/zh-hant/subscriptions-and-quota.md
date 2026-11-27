@@ -1,5 +1,5 @@
 ---
-source: 9c71f435cc6524a0
+source: f152dcd8b0d392d5
 title: 訂閱方案與額度
 description: 如何加入你的 AI 訂閱方案、查看方案額度還剩多少，以及額度用完時船員會怎麼做。
 ---
@@ -10,7 +10,7 @@ description: 如何加入你的 AI 訂閱方案、查看方案額度還剩多少
 ## 加入訂閱方案 {#add-a-subscription}
 
 1. 打開設定，選擇 **智慧等級**。
-2. 在 **AI 訂閱方案** 底部的 **新增帳號** 底下，選擇你的供應商：Codex、Grok、Claude、Kimi Code、Copilot、OpenRouter 或 Amazon Bedrock。
+2. 在 **AI 訂閱方案** 底部的 **新增帳號** 底下，選擇你的供應商：Codex、Grok、Claude、Kimi Code、Copilot、OpenCode Go、OpenRouter 或 Amazon Bedrock。
 3. 依照供應商的要求登入。
    有些會打開你的瀏覽器，有些會顯示一組要在它們網站上輸入的代碼，有些則要你貼上一組金鑰。
 4. 登入完成後，新的帳號會出現在清單裡。
@@ -47,6 +47,17 @@ Claude 帳號不太一樣。
 清單頂端的 **重新整理** 會重新讀取每一項額度。
 Infinitary 不會讀取 OpenRouter 或自訂 API 的額度，那一列也會說明這件事。
 Amazon Bedrock 依用量向你的 AWS 帳號計費；它那一列會根據 Infinitary 記錄的工作，顯示本月的估計金額。
+
+## 透過你所屬組織使用 Amazon Bedrock {#amazon-bedrock-through-your-organization}
+
+新增 Amazon Bedrock 時，Infinitary 會問它的要求應傳送到哪裡：**直接傳送到 AWS** 或 **我所屬組織的位址**。
+輸入你所屬組織的位址後，Infinitary 會顯示它的主機以及它所在的網路：這台電腦、你所屬組織的網路或公共網際網路。
+按 **將要求傳送到那裡** 即可核准。
+之後要求只會傳送到這個位址，只在它的名稱仍指向這個網路時傳送，而且只在你的電腦信任它的憑證時傳送。
+Amazon Bedrock 要求（包括直接傳送到 AWS 的要求）不再經過你電腦環境中設定的代理伺服器。
+如果你所屬組織的位址自己為要求簽署，請選擇 **不用金鑰：由我所屬組織的位址為要求簽署**，而不是設定檔或金鑰。
+如果這台電腦上的 Claude Code 已在使用 Amazon Bedrock，登入開始時會填好它的位址、區域和設定檔，並說明它們來自哪裡。
+之後帳號那一列會顯示它的要求 **經由** 哪個位址 **傳送**。
 
 ## 選擇哪個帳號做什麼 {#choose-which-account-does-what}
 

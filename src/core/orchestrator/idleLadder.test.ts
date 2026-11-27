@@ -859,6 +859,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       undefined,
       undefined,
       expect.any(Number),
+      undefined,
     );
     expect(crewmate.promptCalls.some((call) => call.includes(question))).toBe(false);
     expect(

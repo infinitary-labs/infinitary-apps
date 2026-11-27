@@ -43,6 +43,7 @@ try {
   const { CAPTAIN_LIGHT, GEM_WIRES, TIER_SOLIDS, WAIT_LIGHT } = await runner.import<typeof import("../src/renderer/src/character/crew/crewmate.ts")>(join(character, "crew/crewmate.ts"));
   const { CROWDED_PLANES, GROWING_RING, outerPlaneRadius, planeRadius } = await runner.import<typeof import("../src/renderer/src/character/crew/orbitalPlanes.ts")>(join(character, "crew/orbitalPlanes.ts"));
   const { CLUSTER_LAYOUT } = await runner.import<typeof import("../src/renderer/src/character/crew/computers.ts")>(join(character, "crew/computers.ts"));
+  const { OUT_OF_FOCUS_LIGHT, lightFrame, restedLight } = await runner.import<typeof import("../src/renderer/src/character/crew/focusLight.ts")>(join(character, "crew/focusLight.ts"));
   const { ORION, BIG_DIPPER } = await runner.import<typeof import("../src/renderer/src/character/constellations.ts")>(join(character, "constellations.ts"));
   const { SATURN } = await runner.import<typeof import("../src/renderer/src/character/saturn.ts")>(join(character, "saturn.ts"));
   const { GALAXY } = await runner.import<typeof import("../src/renderer/src/character/galaxy.ts")>(join(character, "galaxy.ts"));
@@ -68,7 +69,8 @@ try {
   const { earlierRowsOf, failedStartCount, newFilingCount, NOW_GROUPS, OPEN_BY_DEFAULT, rowsOf, rowTrailing, tagChipsOf, wordOf } = await runner.import<NowRows>(join(REPO_ROOT, "src/panels/now/rows.ts"));
   const { failedCountWords, newCountWords } = await runner.import<typeof import("../src/panels/now/words.ts")>(join(REPO_ROOT, "src/panels/now/words.ts"));
   const { recordBarOf } = await runner.import<typeof import("../src/shared/recordBar.ts")>(join(REPO_ROOT, "src/shared/recordBar.ts"));
-  const { recordAttentionOf, recordClosedLineOf } = await runner.import<typeof import("../src/shared/recordAttention.ts")>(join(REPO_ROOT, "src/shared/recordAttention.ts"));
+  const { partsSentenceSpeaks, partsStatusOf, recordAttentionOf, recordClosedLineOf } = await runner.import<typeof import("../src/shared/recordAttention.ts")>(join(REPO_ROOT, "src/shared/recordAttention.ts"));
+  const { recordStartOf } = await runner.import<typeof import("../src/shared/recordStart.ts")>(join(REPO_ROOT, "src/shared/recordStart.ts"));
   const { taskWaitStatus } = await runner.import<typeof import("../src/shared/taskWaits.ts")>(join(REPO_ROOT, "src/shared/taskWaits.ts"));
   const { boardMenuOf, boardMoveOf, dropAskOf, moveContextOf } = await runner.import<BoardMoves>(join(REPO_ROOT, "src/panels/now/boardMoves.ts"));
   const { boardLaneOf } = await runner.import<BoardTiles>(join(REPO_ROOT, "src/panels/now/boardTiles.ts"));
@@ -77,7 +79,7 @@ try {
     rowStartOf: (task: PanelTaskRow) => { label: string; reason: string | null } | null;
     rowControlsOf: (task: PanelTaskRow, group: string, home?: string | null) => unknown;
   }>(join(REPO_ROOT, "src/panels/now/rows.ts"));
-  const { DROP_REVIEW_STALE, dropConfirmLead, dropPartsLine, dropUnderwayLine, dropWaitingLine } = await runner.import<typeof import("../src/shared/recordDrop.ts")>(join(REPO_ROOT, "src/shared/recordDrop.ts"));
+  const { dropQuestionOf, dropRefusalOf } = await runner.import<typeof import("../src/shared/recordDrop.ts")>(join(REPO_ROOT, "src/shared/recordDrop.ts"));
   const { recordPillToneOf } = await runner.import<typeof import("../src/renderer/src/cards/recordFooter.ts")>(join(REPO_ROOT, "src/renderer/src/cards/recordFooter.ts"));
   // The record's tabs and head are renderer modules the scripts' project does not compile (a store behind the tabs,
   // JSX in the head), so these name only the shapes this reading takes from them.
@@ -109,11 +111,13 @@ try {
       captain: { ...CAPTAIN_LIGHT, breathMs: CAPTAIN_BREATH_MS },
       wait: { ...WAIT_LIGHT, arcRate: WAIT_ARC_RATE },
       batch: BATCH_GATE,
+      focus: { outOfFocusLight: OUT_OF_FOCUS_LIGHT },
       fixedStars: { ...FIXED_STARS, corners: CORNERS, rho: RHO, jitter: JITTER, stepDeg: STEP_DEG, narrowStepDeg: NARROW_STEP_DEG, roomPx: ROOM_PX, reachDeg: REACH_DEG },
     },
     "ios/Infinitary/InfinitaryTests/PhoneSceneTraces.generated.json": REPLY_EMOTES.flatMap((emote) =>
       [0, 0.05, 0.15, 0.25, 0.4, 0.55, 0.7, 0.85, 1].map((progress) => ({ emote, progress, frame: replyFrame(emote, progress) }))),
     "ios/Infinitary/InfinitaryTests/PhoneCinchTraces.generated.json": cinchTraces(),
+    "ios/Infinitary/InfinitaryTests/PhoneFocusLight.generated.json": focusLightTraces(),
     "ios/Infinitary/InfinitaryTests/PhoneSupernovaTraces.generated.json": supernovaTraces(),
     "ios/Infinitary/InfinitaryTests/PhoneOrbitSeats.generated.json": orbitSeats(),
     "ios/Infinitary/InfinitaryTests/PhoneFixedStars.generated.json": fixedStarReadings(),
@@ -173,6 +177,29 @@ try {
       const at = departureIndex(ids.map((id) => ({ id })), unread, "depart", neighboursOf(previous, left));
       return { name, previous, left, ids, unread, comesUp: ids[at] ?? null };
     });
+  }
+  /** INF-6951: the desktop's light for one board, two computers and two projects, as summaries open and close, for the phone's to replay. */
+  function focusLightTraces() {
+    const projects: Record<string, string> = { "web-home": "website", "shop-home": "shop", "web-studio": "website", "shop-studio": "shop" };
+    const projectOf = (id: string) => projects[id];
+    const crew = [...Object.keys(projects), "unnamed-home"].map((id) => ({ id, alpha: 1 }));
+    const frame = { crew } as unknown as Parameters<typeof lightFrame>[0];
+    const durationMs = 360;
+    const steps: Array<{ held: string | null; rested: string | null; elapsedMs: number }> = [
+      { held: null, rested: null, elapsedMs: 0 },
+      { held: null, rested: "web-home", elapsedMs: 120 },
+      { held: null, rested: "web-home", elapsedMs: 300 },
+      { held: null, rested: "shop-studio", elapsedMs: 180 },
+      { held: null, rested: "unnamed-home", elapsedMs: 400 },
+      { held: "website", rested: "shop-home", elapsedMs: 400 },
+      { held: "website", rested: null, elapsedMs: 90 },
+      { held: null, rested: null, elapsedMs: 400 },
+    ];
+    const state = new Map<string, number>();
+    return { projects, durationMs, steps: steps.map((step) => {
+      const lit = lightFrame(frame, restedLight({ project: step.held, projectOf }, step.rested), state, step.elapsedMs, durationMs);
+      return { ...step, light: Object.fromEntries(lit.crew.map((c) => [c.id, Math.round(c.alpha * 1e9) / 1e9])) };
+    }) };
   }
   /** INF-3011: the desktop cinch's frames and motes through a shortening that runs and one only heard ending, for the phone's to replay. */
   function cinchTraces() {
@@ -276,6 +303,10 @@ try {
       ["backlog, blocked", { status: "open", activity: null, workPosture: undefined, startPolicy: "on-request", flags: { blocked: true, held: false, needsYou: false, ready: false } }],
       ["queued, held", { status: "open", activity: null, workPosture: undefined, flags: { blocked: false, held: true, needsYou: false, ready: false } }],
       ["a program waiting on its parts", { status: "open", activity: null, workPosture: undefined, program: true, children: { total: 3, closed: 1 } }],
+      ["a backlog parent whose part works", { status: "open", activity: null, workPosture: undefined, startPolicy: "on-request", children: { total: 3, closed: 1 },
+        partsStatus: "working" }],
+      ["a backlog parent whose part waits on you", { status: "open", activity: null, workPosture: undefined, startPolicy: "on-request", children: { total: 3, closed: 1 },
+        partsStatus: "waiting" }],
       ["a program waiting on its one part", { status: "open", activity: null, workPosture: undefined, program: true, children: { total: 1, closed: 0 } }],
       ["backlog on a computer out of reach", { status: "open", activity: null, workPosture: undefined, startPolicy: "on-request",
         executionDeviceId: "dev-mini", place: { name: "Mac mini", where: "on Mac mini", reach: "out-of-reach" } }],
@@ -487,9 +518,9 @@ try {
   }
   /**
    * INF-2935 (INF-2928 piece 2): the desktop task record's own reading of one task in each state it draws - its bar, its
-   * pill's tone and reason, its tabs, the attention sentence, the closed line, the fold under the goal, Drop task's
-   * question and the Crewmate tab's state - for the phone's record to replay. A wait carries no time here: the clock's
-   * words are each platform's own formatter.
+   * pill's tone and reason, why a start could not begin, its tabs, the attention sentence, the closed line, the fold under
+   * the goal, Drop task's question and the Crewmate tab's state - for the phone's record to replay. A wait carries no
+   * time here: the clock's words are each platform's own formatter.
    */
   function taskRecordReadings() {
     const now = Date.UTC(2026, 10, 6, 18, 0);
@@ -515,6 +546,13 @@ try {
     const log = [{ id: 1, at: now - 80 * min, kind: "dispatched", text: "The crewmate started." }];
     const effects = (parts: { key: string; title: string; started: boolean }[], waiting: string[], underway: string[]) => ({ parts,
       waiting: waiting.map((key) => ({ key, title: `Wait for ${key}` })), underway: underway.map((key) => ({ key, title: `Work on ${key}` })) });
+    // A parent's parts as its record sends them (INF-6805): each as its Tasks row reads it.
+    const part = (seq: number, title: string, patch: Record<string, unknown>) => ({ ...base, id: `t-${seq}`, key: `INF-${seq}`,
+      parentId: base.id, title, goal: null, intent: null, ...unstarted, startPolicy: "on-request", ...patch });
+    const closedPart = (seq: number, title: string, closedReason: string) =>
+      part(seq, title, { status: "done", closedReason, closedAt: now - (seq - 3040) * 60 * min });
+    const closedParts = [closedPart(3041, "Survey the channel", "answered"), closedPart(3042, "Buoy the shoal", "merged")];
+    const openPart = (seq: number, patch: Record<string, unknown>) => part(seq, "Mark the reef", patch);
     const cases: Array<[string, Record<string, unknown>, { since: number } | null]> = [
       ["working with its cards and activity", { cards, activityLog: log }, null],
       ["working between turns, its live words still coming", { activity: "idle", workPosture: { state: "idle", reason: "inactive" } }, { since: now - 2 * min }],
@@ -532,6 +570,24 @@ try {
         dropEffects: effects([{ key: "INF-3012", title: "Sound the channel", started: true }, { key: "INF-3013", title: "Mark the reef", started: false }], [], []) }, null],
       ["a parent with two open parts", { ...unstarted, children: { total: 2, closed: 0 },
         dropEffects: effects([{ key: "INF-3012", title: "Sound the channel", started: false }, { key: "INF-3013", title: "Mark the reef", started: false }], [], []) }, null],
+      ["a parent whose last part waits in the backlog", { ...unstarted, startPolicy: "on-request", children: { total: 3, closed: 2 },
+        parts: [...closedParts, openPart(3043, {})] }, null],
+      ["a parent whose last part works", { ...unstarted, startPolicy: "on-request", children: { total: 3, closed: 2 },
+        parts: [...closedParts, openPart(3043, { status: "active", activity: "running", workPosture: { state: "active", reason: "turn" }, startedAt: now - 9 * min })] }, null],
+      ["a parent whose last part waits on you", { ...unstarted, startPolicy: "on-request", children: { total: 3, closed: 2 },
+        parts: [...closedParts, openPart(3043, { status: "active", activity: "idle", workPosture: { state: "idle", reason: "captain" }, waitingCardId: "card-3043",
+          startedAt: now - 9 * min })] }, null],
+      ["a parent whose last part was interrupted", { ...unstarted, startPolicy: "on-request", children: { total: 3, closed: 2 },
+        parts: [...closedParts, openPart(3043, { status: "active", activity: "interrupted", workPosture: undefined, startedAt: now - 9 * min })] }, null],
+      ["a parent with three open parts", { ...unstarted, startPolicy: "on-request", children: { total: 4, closed: 1 },
+        parts: [closedParts[0], openPart(3043, { status: "active", activity: "running", workPosture: { state: "active", reason: "turn" }, startedAt: now - 9 * min }),
+          openPart(3044, {}), openPart(3045, {})] }, null],
+      ["a running program with an open part", { ...unstarted, startPolicy: "on-request", program: true, children: { total: 3, closed: 2 },
+        parts: [...closedParts, openPart(3043, {})] }, null],
+      ["a parent that starts by itself when nothing holds it", { ...unstarted, startPolicy: "when-ready", children: { total: 3, closed: 2 },
+        parts: [...closedParts, openPart(3043, {})] }, null],
+      ["waiting on a task, no time recorded", { activity: "idle", workPosture: { state: "idle", reason: "dependency" }, blockedBy: ["INF-3010"],
+        waits: [wait("w-6", "dependency", "INF-3010")] }, null],
       ["interrupted", { activity: "interrupted", workPosture: undefined, problem: "The model stopped answering.", activityLog: log }, null],
       ["interrupted with no problem said", { activity: "interrupted", workPosture: undefined }, null],
       ["waiting on its decision", { activity: "idle", workPosture: { state: "idle", reason: "captain" }, waitingCardId: "card-3001-b", cards }, null],
@@ -570,23 +626,21 @@ try {
       ["a first mate's own operation", { kind: "operation", intent: null }, null],
     ];
     return { now, cases: cases.map(([name, patch, live]) => {
-      const row = { ...base, ...patch } as unknown as TaskDetail;
+      const given = { ...base, ...patch } as unknown as TaskDetail;
+      // The host's own fact on a parent: its open parts' most pressing word (`settlePartsStatus`).
+      const partsStatus = given.parts ? partsStatusOf(given, given.parts) : undefined;
+      const row = partsStatus ? { ...given, partsStatus } : given;
       const read = taskWaitStatus(row, taskStatusOf(row, now), now);
-      const since = row.startAttempt?.since ?? (row.activity === "starting" ? row.startedAt : null);
-      const reason = row.startAttempt?.phase === "checking" ? "Checking whether it started"
-        : since != null && now - since >= 15_000 && (row.startAttempt?.phase === "preparing" || row.activity === "starting")
-          ? "Still starting. You can keep working."
-          : row.startNotice ? `Could not start. ${row.startNotice.reason}` : read.reason;
+      const start = recordStartOf(row, now);
+      const reason = start.reason ?? (partsSentenceSpeaks(row) ? "" : read.reason);
       const bar = recordBarOf(row);
       const closed = recordClosedLineOf(row);
       const end = bar?.end === "drop-task" || bar?.end === "stop-task" ? bar.end : null;
       const effects = row.dropEffects ?? null;
-      const refusal = end === "drop-task" ? (!effects ? DROP_REVIEW_STALE : null) : null;
-      const question = end && !refusal ? [dropConfirmLead(row.key, end === "stop-task"), end === "drop-task" && effects ? dropPartsLine(effects.parts) : null,
-        end === "drop-task" && effects ? dropWaitingLine(effects.waiting) : null,
-        end === "drop-task" && effects ? dropUnderwayLine(effects.underway) : null].filter(Boolean).join(" ") : null;
+      const refusal = end ? dropRefusalOf(end, effects) : null;
+      const question = end && !refusal ? dropQuestionOf(row.key, end, effects) : null;
       return { name, row, live: live ? { text: "", since: live.since } : null, bar, pillTone: recordPillToneOf(row),
-        status: { mark: read.mark, word: read.word, reason },
+        status: { mark: read.mark, word: read.word, reason }, notice: start.notice,
         tabs: taskTabsOf(null, taskTabFactsOf(row)).map((tab) => ({ kind: tab.kind, label: tab.label, count: tab.count })),
         crew: crewStateOf(row, live ? { taskId: row.id, text: "", since: live.since } : null),
         attention: recordAttentionOf(row, now),

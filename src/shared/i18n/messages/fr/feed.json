@@ -34,6 +34,9 @@
   "feedBatchQueuedHost": "{project} : l’hébergeur du projet a placé {label} dans la file de fusion de la branche principale. Il y sera fusionné une fois les vérifications de la file réussies.",
   "feedBatchRetried": "{project} : {label} a été regroupé de nouveau et ses vérifications s’exécutent de nouveau.",
   "feedBatchSentBack": "{project} : « {title} » a été renvoyée de son lot : {reason}",
+  "feedBatchTrial": "{project} : {label} exécute ses vérifications avec son correctif déclaré, avant l’approbation du correctif. Une fois le correctif approuvé à cette version et ces vérifications réussies, le lot est fusionné tel quel.",
+  "feedBatchTrialFailed": "{project} : {label} reste retenu, car ces vérifications ont échoué avec son correctif déclaré : {checks}. L’équipier du correctif le répare dans une nouvelle version.",
+  "feedBatchTrialFailedUnnamed": "{project} : {label} reste retenu, car ses vérifications ont échoué avec son correctif déclaré. L’équipier du correctif le répare dans une nouvelle version.",
   "feedBranchPushed": "Branche poussée",
   "feedBuildRowKept": "« {title} » classée comme {task} pour plus tard.",
   "feedBuildRowNotFiled": "« {title} » n’a pas été classée.",
@@ -134,5 +137,8 @@
   "feedUndelivered": "Message non remis : {why}",
   "feedUnsafeDataReaderReported": "Le lecteur de données non sûres a fait son rapport ; ses mots sont sur sa fiche.",
   "feedUpdated": "Mise à jour : {text}",
+  "feedWriteNotSentOnWords": "Requête {call} non envoyée à {place} sur vos mots « {words} » : {why}",
+  "feedWriteSentOnWords": "Requête {call} envoyée une fois à {place} sans carte, sur vos mots « {words} » : réponse {status}.",
+  "feedWriteUnknownOnWords": "Requête {call} envoyée une fois à {place} sans carte, sur vos mots « {words} » ; on ne sait pas ce qu’il en est, et elle ne sera jamais renvoyée.",
   "feedYouChose": "Vous avez choisi « {choice} »"
 }

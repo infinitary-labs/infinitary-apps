@@ -23,7 +23,7 @@ const boxOf = (element: Element) => {
  * Resting on a key the window draws, or focusing it, opens the task's
  * summary beside the surface the key is on; letting go closes it.
  */
-function useKeyRest(taskId: string): (anchor: HTMLElement | null) => void {
+export function useKeyRest(taskId: string): (anchor: HTMLElement | null) => void {
   const held = useRef<HTMLElement | null>(null);
   return (anchor) => {
     if (!anchor) {

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "services-split",
+      "reason": "Internal: the change-delivery wiring and the card notifiers move out of the composition root into their own home modules; nothing a person sees changes."
+    }
+  ]
+}

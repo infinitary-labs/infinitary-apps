@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "batch-trial-early",
+      "kind": "improvement",
+      "area": "projects",
+      "title": "A held batch checks its fix before you approve it",
+      "body": "When a batch of approved changes fails its checks and your crew fixes it, the batch now runs its checks with that fix as soon as the fix is ready, before you approve it, and the Batches panel and Settings say so. If they pass and you approve that same version, the batch merges at once with no second run. Changes approved meanwhile go up in the next batch, after your project's wait between batches.",
+      "picture": {
+        "dark": "batch-trial-early-dark.webp",
+        "light": "batch-trial-early-light.webp",
+        "alt": "The Batches panel shows a held batch saying its checks run with the fix before its approval"
+      },
+      "noDocsSite": "No docs site page covers how a held batch is repaired.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

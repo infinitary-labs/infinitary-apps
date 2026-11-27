@@ -1,5 +1,5 @@
 ---
-source: a8120adef7569dc8
+source: 4689a21f9d4af463
 title: iPhone e iPad
 description: Peça um convite privado do TestFlight para o Infinitary no iPhone e no iPad e depois conecte-se ao seu computador para ler cartões e enviar mensagens.
 ---
@@ -34,11 +34,11 @@ Conecte-se só ao seu próprio computador.
 ## Mais de um computador {#more-than-one-computer}
 
 Seu celular pode manter mais de um computador, como um em casa e outro no trabalho, e mostra um de cada vez.
-Para adicionar outro, toque no botão do computador à direita da barra superior do celular e escolha **Adicionar outro computador**, depois leia o código dele, cole o link dele ou conecte-se pelo endereço dele.
+Para adicionar outro, abra Ajustes no celular, toque em **Seu computador** e escolha **Adicionar outro computador**, depois leia o código dele, cole o link dele ou conecte-se pelo endereço dele.
 O computador que você estava mostrando continua mantido.
 
-Com mais de um mantido, o botão do computador diz o nome do computador mostrado.
-A folha dele lista seus outros computadores e marca cada um que responde de onde você está agora, como quando seu celular está na rede ou na rede privada daquele computador.
+Com mais de um mantido, o botão do computador à direita da barra superior do celular diz o nome do computador mostrado.
+**Seu computador**, a primeira linha de Ajustes no celular, também diz o nome dele, lista seus outros computadores e marca cada um que responde de onde você está agora, como quando seu celular está na rede ou na rede privada daquele computador.
 Toque em um, ou pressione Return nele com um teclado, para mostrá-lo.
 O celular nunca troca sozinho: ele fica na sua escolha até você escolher outro.
 
@@ -53,6 +53,13 @@ A barra superior tem **Início**, **Tarefas** e **Atividade**.
 - **Atividade** mostra o que aconteceu, com o mais recente embaixo.
 
 Quando seus painéis estão ativados, uma quarta aba, **Painéis**, mostra todos eles, um embaixo do outro.
+
+## O tema próprio do seu celular {#your-phones-own-theme}
+
+Ajustes → Aparência → **Tema** no seu iPhone ou iPad é só dele.
+Escolha **Dispositivo**, **Escuro**, **Claro** ou um dos treze temas do seu computador com o nome que o autor deu, como **Dracula** ou **Catppuccin Latte**.
+A escolha muda as cores do app inteiro na hora, cartões incluídos, e continua depois que o Infinitary fecha.
+Seu computador e seus outros dispositivos mantêm o próprio tema.
 
 ## Ler um cartão em um iPhone dobrável aberto {#read-a-card-on-an-open-foldable-iphone}
 
@@ -86,12 +93,13 @@ O celular precisa do seu computador acordado, com o Infinitary aberto.
 Se não conseguir alcançá-lo, ele diz “Seu computador está fora de alcance. Verifique se o Infinitary está aberto e se os dois dispositivos estão na mesma rede.”
 
 Com as notificações ativadas, seu celular mostra uma notificação para cada novo cartão, mesmo com o Infinitary fechado nele.
+Enquanto você está em um computador que mostra seu imediato, seu celular fica em silêncio; os cartões que chegaram nesse meio-tempo chegam a ele assim que você sai, depois de cinco minutos sem teclado ou mouse ou assim que a tela bloqueia, e um cartão que você já viu lá nunca chega.
 Com mais de um computador mantido, cada um envia as próprias notificações, e a notificação diz o nome do computador de onde veio; tocar nela mostra esse computador e abre o cartão.
 Cada computador continua enviando as notificações enquanto você mostra outro: seu celular deixa para ele um bilhete lacrado pelo retransmissor do Infinitary sempre que a permissão de notificações dele é renovada, e só esse computador consegue ler.
 
 ## Sair ou remover {#leave-or-remove}
 
-Para parar de mostrar seu computador, toque no botão do computador à direita da barra superior do celular e escolha **Sair de** seguido do nome do seu computador.
+Para parar de mostrar seu computador, abra Ajustes no celular, toque em **Seu computador** e escolha **Sair de** seguido do nome do seu computador.
 O celular esquece esse computador e as notificações dele, e deixa para ele um bilhete lacrado para que ele pare de enviá-las em até um dia, mesmo fora de alcance.
 Quando ele está fora de alcance, **Esquecer** faz o mesmo só no celular.
 Seus outros computadores mantidos continuam: o que você mostrou mais recentemente aparece em seguida e, se não sobrar nenhum, o celular dá as boas-vindas como no início.

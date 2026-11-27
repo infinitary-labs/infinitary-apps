@@ -608,6 +608,78 @@ describe("reviewed contributor changes", () => {
     expect(at.forge.calls.some((call) => call.startsWith("putIn"))).toBe(false);
   });
 
+  // INF-7061 builds INF-7050's approved plan (the captain: "i'd like to make
+  // it my crew's responsibility to carry an all-good-to-go PR across the
+  // finish line", with the pick "The author's own branch, so their pull
+  // request merges as theirs"): the crew's update on the contributor's
+  // branch, once a repair declaration the host accepted carried the
+  // captain's kept approval to it, merges with no new click.
+  it("carries a contributor approval to the crew's update a repair declaration carried it to", async () => {
+    const at = await onGitHub();
+    at.host.pull = openPull({ headRepo: "contributor/y", maintainerCanModify: true });
+    const review = await at.prepare();
+    seedDelivery(at.tasks, at.task.id, {
+      mergeAuthorization: {
+        version: 1,
+        id: "approval-fork",
+        generation: 1,
+        issuer: "captain",
+        at: 1,
+        card: { id: "merge-fork", offerId: "offer-1", actionId: "merge" },
+        target: {
+          repoId: at.task.repoId ?? "",
+          host: "github.com",
+          owner: "x",
+          name: "y",
+          prNumber: review.number,
+          branch: review.branch,
+          delivery: "direct-pr",
+          method: "squash",
+        },
+        approvedHead: HEAD,
+        review,
+        proceedWithOpen: false,
+        status: "standing",
+        lineage: [
+          {
+            fromHead: HEAD,
+            toHead: MERGED,
+            newBase: "9aee67a6300bf6bef94376f3a94b02b690d9b097",
+            impact: "none",
+            changedPaths: [],
+            evidence: "kept both imports at the top of one file",
+            validation: "the merge's checks",
+            generation: 1,
+            at: 2,
+          },
+        ],
+      },
+    });
+    at.host.pull.headSha = MERGED;
+    const outcome = await at.service.reviews.mergeReview(at.task.id, review.id, {
+      head: MERGED,
+      prNumber: review.number,
+      unattended: true,
+      held: () => undefined,
+      beforeDispatch: () => undefined,
+    });
+    expect(outcome, outcome.text).toMatchObject({ ok: true });
+    expect(at.forge.calls).toContain(`putIn ${review.branch} ${MERGED}`);
+  });
+
+  it("tells a review of a contributor who allows maintainer edits that the crew may push to their branch", async () => {
+    const at = await onGitHub();
+    at.host.pull = openPull({ headRepo: "contributor/y", maintainerCanModify: true });
+    const answer = await at.service.checkTool.checkForCrew(at.task.id, { pull: 23 });
+    expect(answer).toContain(
+      `the crew may push to their branch, ${at.host.pull.branch} in contributor/y.`,
+    );
+    at.host.pull = openPull({ headRepo: "contributor/y" });
+    expect(await at.service.checkTool.checkForCrew(at.task.id, { pull: 23 })).not.toContain(
+      "the crew may push to their branch",
+    );
+  });
+
   it("records a reviewed fork's merge on the fork's own change, never on the task's", async () => {
     const at = await onGitHub({ delivery_ask: "queue-pr" });
     at.host.pull = openPull({ headRepo: "contributor/y" });

@@ -9,7 +9,7 @@ import type { IntegrationsService } from "../integrations/service";
 import type { TaskRecord } from "../storage/taskRecords";
 import { closedIn } from "../tasks/taskCloses";
 import { TaskService } from "../tasks/taskService";
-import type { EventFinder, EventLook, ListenedEvent, SchedulerEvents } from "./scheduler";
+import type { EventLook, EventReading, ListenedEvent, SchedulerEvents } from "./scheduler";
 
 /**
  * The app's own task events an Automation rule can listen for beside the
@@ -106,39 +106,45 @@ function isTaskEvents(integration: string): boolean {
  * about many rules at once.
  */
 export function integrationEvents(
-  integrations: Pick<IntegrationsService, "listenable" | "listenables" | "look">,
+  integrations: Pick<IntegrationsService, "listenable" | "reading" | "look">,
 ): SchedulerEvents {
-  return {
-    find: (integration, event) => integrations.listenable(integration, event),
-    snapshot: () => ({ find: integrations.listenables() }),
-    // A hold's rule hands what arrived to its task, whose conversation then holds the words.
-    look: (integration, event, cursor, filter, connection, task) =>
-      integrations.look(
+  // A hold's rule hands what arrived to its task, whose conversation then holds the words.
+  const lookThrough =
+    (look: IntegrationsService["look"]): SchedulerEvents["look"] =>
+    (integration, event, cursor, filter, connection, task) =>
+      look(
         integration,
         event,
         cursor,
         filter,
         connection,
         task ? { kind: "task", taskId: task } : undefined,
-      ),
+      );
+  return {
+    find: (integration, event) => integrations.listenable(integration, event),
+    snapshot: () => {
+      const reading = integrations.reading();
+      return {
+        find: (integration, event) => reading.listenable(integration, event),
+        look: lookThrough(reading.look),
+      };
+    },
+    look: lookThrough((...args) => integrations.look(...args)),
   };
 }
 
 export function withTaskEvents(tasks: TaskReader, others?: SchedulerEvents): SchedulerEvents {
   const own = taskEvents(tasks);
-  const across = (theirs: EventFinder | undefined): EventFinder => ({
+  const across = (theirs: EventReading | undefined): EventReading => ({
     find: (integration, event) => own.find(integration, event) ?? theirs?.find(integration, event),
-  });
-  return {
-    ...across(others),
-    snapshot: () => across(others?.snapshot?.() ?? others),
     look: (integration, event, cursor, filter, connection, task) =>
       isTaskEvents(integration)
         ? own.look(integration, event, cursor, filter, connection)
-        : others
-          ? others.look(integration, event, cursor, filter, connection, task)
+        : theirs
+          ? theirs.look(integration, event, cursor, filter, connection, task)
           : Promise.reject(new Error(`Nothing connected tells "${event}" from "${integration}".`)),
-  };
+  });
+  return { ...across(others), snapshot: () => across(others?.snapshot?.() ?? others) };
 }
 
 /**

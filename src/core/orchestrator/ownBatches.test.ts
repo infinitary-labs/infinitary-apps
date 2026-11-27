@@ -469,6 +469,70 @@ describe("the batches of a person's own, wired to the task record", () => {
     expect(at.batches().sentBack(REPO, PARSER.id)).toHaveLength(1);
   });
 
+  // Intent: the captain's approved plan for a held batch's declared fix: a red early run with the
+  // fix "keeps the hold and the repair hears it before any approval", as does the fix's crewmate.
+  it("tells the fix's crewmate and the batch's repair once when the batch's early run with the fix fails", async () => {
+    const forge = { at: new BatchHostForge() };
+    const plain = standInGit(forge.at);
+    const git: ReturnType<typeof standInGit> = {
+      ...plain,
+      push: async (input) => {
+        forge.at.batchHead = input.head;
+      },
+      // As git reads it (combine.held.test.ts): the fix's branch builds on the held version.
+      combine: (input: CombineInput) =>
+        plain.combine({
+          ...input,
+          changes: input.changes.map((change) =>
+            change.fix ? { ...change, heldBase: input.held?.at(-1) as string } : change,
+          ),
+        }),
+    };
+    const at = home(git);
+    forge.at = at.forge;
+    at.approve(PARSER);
+    at.approve(EXPORT);
+    await at.pass();
+    at.forge.report([{ name: "unit-tests", state: "failure" }]);
+    await at.pass();
+    const held = at.forge.batchHead;
+    insertTask(at.tasks, { id: "repair04", repoId: REPO, branch: "fm/task-repair04" });
+    insertTask(at.tasks, { id: LEGEND.id, repoId: REPO, branch: branchOf(LEGEND) });
+    expect(await at.batches().declareFix(REPO, LEGEND.id, LEGEND.head)).toBeUndefined();
+    // The first mate started another task as the hold's repair.
+    expect(await at.batches().markRepair(REPO, "repair04")).toBeUndefined();
+    const steered = at.heard.steered.length;
+
+    await at.batches().revise(REPO, {
+      taskId: LEGEND.id,
+      branch: branchOf(LEGEND),
+      head: LEGEND.head,
+      title: LEGEND.title,
+      body: "",
+    });
+    await at.pass();
+    const trial = at.forge.batchHead;
+    expect(trial).not.toBe(held);
+    at.forge.report([{ name: "unit-tests", state: "failure" }]);
+    await at.pass();
+    await at.pass();
+
+    const facts = {
+      kind: "batch-trial-failed",
+      head: LEGEND.head,
+      held,
+      trial,
+      change: "#31",
+      url: expect.any(String),
+      checks: ["unit-tests"],
+    };
+    expect(at.heard.steered.slice(steered)).toEqual([
+      { taskId: LEGEND.id, wake: { facts } },
+      { taskId: "repair04", wake: { facts: { ...facts, fix: at.tasks.get(LEGEND.id)?.key } } },
+    ]);
+    expect(at.record().open).toMatchObject({ head: held, hold: { head: held } });
+  });
+
   it("reads its open batch from the host on the first pass after a start", async () => {
     const at = home();
     at.approve(PARSER);

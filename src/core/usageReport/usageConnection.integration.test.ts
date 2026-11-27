@@ -6,9 +6,9 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { type CollectorTls, collectorTlsFixture } from "../../../tests/helpers/collectorTlsFixture";
 import { integrationKeys } from "../../../tests/helpers/integrationKeys";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
-import { useSystemRootsForTests } from "../claude/claudeReporting";
 import { openInMemoryDatabase } from "../storage/db";
 import { homeUsage } from "../storage/homeUsage";
+import { useSystemRootsForTests } from "../trustedRoots";
 import { USAGE_CONNECTION_FILE, usageConnection } from "./usageConnection";
 
 /**

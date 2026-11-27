@@ -1,5 +1,5 @@
 ---
-source: c16d193883332656
+source: 75bebd4c6bb16a9e
 title: 初回起動
 description: Infinitary を初めて開いたときに表示されるもの、一等航海士が住む場所の選び方、サブスクリプションの接続方法、最初のプロジェクトの追加方法を説明します。
 ---
@@ -40,13 +40,14 @@ Infinitary を初めて開くと、ウインドウの中央で一等航海士が
 ## サブスクリプションを接続する {#connect-a-subscription}
 
 一等航海士をこのコンピューターに置くには、**このコンピューター** を選びます。
-一等航海士が使える各プロバイダーのボタンが表示されます：Codex、Grok、Claude、Kimi Code、Copilot、OpenRouter、Amazon Bedrock、カスタム API です。
+一等航海士が使える各プロバイダーのボタンが表示されます：Codex、Grok、Claude、Kimi Code、Copilot、OpenCode Go、OpenRouter、Amazon Bedrock、カスタム API です。
 
 1. プロバイダーのボタンを選びます。
 2. そのプロバイダーの求める方法でサインインします。
    ブラウザでサインインページを開くものもあります。
    Copilot と Kimi Code ではコードが表示されるので、**コードをコピー** を押してから、プロバイダーのサイトで入力します。
    OpenRouter では、API キーを貼り付けます。
+   OpenCode Go では、OpenCode Console のキーを貼り付けます。
    Amazon Bedrock では、リージョンを選び、このコンピューターの AWS プロファイルを使うか、Bedrock の API キーを貼り付けます。
    両方の方法があるプロバイダーでは、**ブラウザでサインイン** するか **API キー** を貼り付けるかを尋ねられます。
 3. ウインドウに接続中と表示されている間、待ちます。
@@ -166,8 +167,8 @@ Windows PC と Arm の Linux コンピューターには、**リンクを貼り�
 
 一等航海士が初めて依頼を乗組員に渡すと、**乗組員が取りかかりました** という題のカードが表示されます。
 
-<img class="picture-dark" src="/pictures/first-launch-crewmate-dark.webp" alt="「乗組員が取りかかりました」カード。乗組員を送り出す一等航海士、乗組員が作業中で見守る必要はないと示す「いま」のパネル、回答か選択肢を持ってカードがここに戻ると示す「あとで」のパネル、「了解」があります。" width="1070" height="602" />
-<img class="picture-light" src="/pictures/first-launch-crewmate-light.webp" alt="「乗組員が取りかかりました」カード。乗組員を送り出す一等航海士、乗組員が作業中で見守る必要はないと示す「いま」のパネル、回答か選択肢を持ってカードがここに戻ると示す「あとで」のパネル、「了解」があります。" width="1070" height="602" />
+<img class="picture-dark" src="/pictures/first-launch-crewmate-dark.webp" alt="「乗組員が取りかかりました」カード。乗組員を送り出す一等航海士、乗組員が作業中で見守る必要はないと示す「いま」のパネル、回答か選択肢を持ってカードがここに戻ると示す「あとで」のパネル、「了解」があります。" width="1163" height="654" />
+<img class="picture-light" src="/pictures/first-launch-crewmate-light.webp" alt="「乗組員が取りかかりました」カード。乗組員を送り出す一等航海士、乗組員が作業中で見守る必要はないと示す「いま」のパネル、回答か選択肢を持ってカードがここに戻ると示す「あとで」のパネル、「了解」があります。" width="1163" height="654" />
 
 カードには、乗組員がバックグラウンドで作業するので少し時間がかかることがあり、見守る必要はないと書かれています。
 乗組員に回答が出たときや、選んでもらう必要があるときは、カードになって戻ってきます。

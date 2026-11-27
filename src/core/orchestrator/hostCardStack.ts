@@ -5,15 +5,18 @@ import type { CardServiceHost } from "./cardStackTypes";
 import {
   authDecisionCard,
   deviceForgeSignInCard,
+  FIRSTMATE_DOWN_CARD_IDS,
   FIRSTMATE_FAILURE_CARD_ID,
   FIRSTMATE_MOVE_BACK_CARD_ID,
   FIRSTMATE_PAUSE_CARD_IDS,
+  FIRSTMATE_PICTURES_CARD_ID,
   FIRSTMATE_QUIET_CARD_ID,
   type FirstmatePauseCard,
   firstmateFailureCard,
   firstmateMoveBackCard,
   firstmatePauseCard,
   firstmatePauseCardId,
+  firstmatePicturesCard,
   firstmateQuietCard,
   forgeSignInCard,
   hostCard,
@@ -75,9 +78,32 @@ export class HostCardStack {
     this.put({ ...firstmateMoveBackCard(input), createdAt: this.host.now() });
   }
 
-  /** The seat serves again, or moved: every pause card's question is gone. */
+  /**
+   * The seat serves again, or moved: every pause card's question is gone,
+   * though one the captain replied under stays until that answer lands
+   * (`withdraw`).
+   */
   withdrawFirstmatePauseCards(reason: string): void {
-    for (const id of FIRSTMATE_PAUSE_CARD_IDS) this.takeDown(id, reason);
+    for (const id of FIRSTMATE_PAUSE_CARD_IDS) this.withdraw(id, reason);
+  }
+
+  /**
+   * Takes a host card down, except a card shown while the first mate was
+   * down whose captain reply still waits: the paused seat kept that reply on
+   * its inbox, and the first mate's answer can land only in the card's
+   * thread, so the card stays until that answer signs it off (INF-6994's
+   * plan, piece 2; docs/card-threads.md "A reply while the first mate is
+   * down").
+   */
+  private withdraw(id: string, reason: string): void {
+    if (
+      FIRSTMATE_DOWN_CARD_IDS.includes(id) &&
+      this.cards.has(id) &&
+      this.host.cardStore.awaitingAuthor(id)
+    ) {
+      return;
+    }
+    this.takeDown(id, reason);
   }
 
   /**
@@ -149,10 +175,11 @@ export class HostCardStack {
 
   /**
    * Drop a recovered needs_reauth card without waking the Firstmate. The
-   * credential came back; the question is gone.
+   * credential came back; the question is gone. The first mate's own
+   * sign-in card stays while a reply under it waits (`withdraw`).
    */
   clearAuthDecisionCard(id: string): void {
-    this.takeDown(id, "recovered");
+    this.withdraw(id, "recovered");
   }
 
   /**
@@ -162,26 +189,23 @@ export class HostCardStack {
    * priority; the caller's actions carry host effects only the captain's
    * click can run. A note (no choice to make) sits below every decision,
    * so a question it accompanies - signing in again - stays in front.
-   * The first mate answers a reply under it unless the caller names
-   * another answerer or none (docs/card-threads.md, "A host card's reply
-   * row"); the agent-down set and the welcome never come through here.
    */
   raiseHostCard(
-    card: Omit<Card, "author" | "priority" | "status" | "createdAt">,
+    card: Omit<Card, "author" | "priority" | "status" | "createdAt" | "replies">,
     options: { note?: boolean } = {},
   ): void {
     const previous = this.cards.get(card.id);
-    const answered =
-      card.answeredBy === undefined && card.replies !== false
-        ? { ...card, answeredBy: "firstmate" as const }
-        : card;
-    this.put({ ...hostCard(answered, options), createdAt: previous?.createdAt ?? this.host.now() });
+    this.put({ ...hostCard(card, options), createdAt: previous?.createdAt ?? this.host.now() });
   }
 
-  /** Takes a host card down without an answer: the question it asked is gone. */
+  /**
+   * Takes a host card down without an answer: the question it asked is gone.
+   * A card shown while the first mate was down stays while a reply under it
+   * waits (`withdraw`).
+   */
   withdrawHostCard(id: string, reason: string): void {
     if (this.cards.get(id)?.author !== "host") return;
-    this.takeDown(id, reason);
+    this.withdraw(id, reason);
   }
 
   /**
@@ -200,8 +224,7 @@ export class HostCardStack {
 
   /**
    * The Firstmate failure card (the agent-down set, ruling D6): the turn
-   * failed and no agent can answer, so the host offers the one way out -
-   * Retry, a host effect. One card under a stable id: a repeated failure
+   * failed, so the host offers the one way out - Retry, a host effect. One card under a stable id: a repeated failure
    * (a provider outage across several turns) revises it in place rather
    * than stacking copies.
    */
@@ -209,6 +232,18 @@ export class HostCardStack {
     const existing = this.cards.get(FIRSTMATE_FAILURE_CARD_ID);
     this.put(
       { ...firstmateFailureCard(body), createdAt: existing?.createdAt ?? this.host.now() },
+      { revise: existing !== undefined },
+    );
+  }
+
+  /**
+   * The pictures card (`firstmatePicturesCard`): one card under a stable
+   * id, revised in place when another message with pictures waits.
+   */
+  addFirstmatePicturesCard(input: Parameters<typeof firstmatePicturesCard>[0]): void {
+    const existing = this.cards.get(FIRSTMATE_PICTURES_CARD_ID);
+    this.put(
+      { ...firstmatePicturesCard(input), createdAt: existing?.createdAt ?? this.host.now() },
       { revise: existing !== undefined },
     );
   }

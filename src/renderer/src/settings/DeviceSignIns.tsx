@@ -8,7 +8,9 @@ import {
   type DeviceSignIns,
   REMOTE_SIGN_IN_UPDATE_NOTE,
   returnsToLoopback,
+  type SignInPlace,
   signInPlace,
+  wordedPlace,
 } from "@shared/signIns";
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
@@ -215,7 +217,7 @@ export function DeviceSignInGroups({
   return (
     <>
       {groups.map((device) => {
-        const place = signInPlace(device);
+        const place = wordedPlace(signInPlace(device));
         // A saved reset's use runs beside a sign-in there, each under its own account's row.
         const flows = device.flows?.filter((entry) => entry.target === "account") ?? [];
         const flowOf = (anchor: string | undefined) =>
@@ -483,7 +485,8 @@ export function DeviceSignInAside({
 }: {
   flow: Flow;
   providerName: string;
-  place: ReturnType<typeof signInPlace>;
+  /** Where the sign-in runs, in the window's language (`wordedPlace`). */
+  place: Pick<SignInPlace, "where" | "who">;
   /**
    * Another user on this Mac, whose sign-in a browser coming back to this
    * Mac reaches (`returnsToLoopback`); another Mac's never does.
@@ -495,8 +498,8 @@ export function DeviceSignInAside({
   const home = useFirstMatePlace();
   // Callers key this aside by the sign-in and prompt. Leaving the box,
   // ending the flow or answering it destroys its draft, never publishing it.
-  const [typed, setTyped] = useState("");
   const { prompt, notice, ended, link } = flow;
+  const [typed, setTyped] = useState(prompt?.kind === "text" ? (prompt.value ?? "") : "");
   const openLink = link
     ? () => void window.infinitary.app.openExternal(link).catch(() => {})
     : undefined;

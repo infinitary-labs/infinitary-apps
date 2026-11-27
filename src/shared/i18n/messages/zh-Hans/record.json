@@ -73,6 +73,53 @@
   },
   "recordMoreValidation": "实测验证",
   "recordOpenKeptEvidence": "打开保存的证据",
+  "recordPartsClosedFold": {
+    "plural": "count",
+    "other": "{count} 个已关闭的部分"
+  },
+  "recordPartsCountBacklog": {
+    "plural": "count",
+    "other": "{count} 个在你的待办列表中"
+  },
+  "recordPartsCountIdle": {
+    "plural": "count",
+    "other": "{count} 个空闲"
+  },
+  "recordPartsCountInterrupted": {
+    "plural": "count",
+    "other": "{count} 个已中断"
+  },
+  "recordPartsCountQueued": {
+    "plural": "count",
+    "other": "{count} 个排队中"
+  },
+  "recordPartsCountStarting": {
+    "plural": "count",
+    "other": "{count} 个正在启动"
+  },
+  "recordPartsCountWaiting": {
+    "plural": "count",
+    "other": "{count} 个在等你"
+  },
+  "recordPartsCountWorking": {
+    "plural": "count",
+    "other": "{count} 个正在工作"
+  },
+  "recordPartsLast": "正在等待它的最后一个部分",
+  "recordPartsLastBacklog": "它的最后一个部分在等你点击“开始”",
+  "recordPartsLastBacklogGuidance": "{key} 在你的待办列表中。它的部分全部关闭后，此任务会自动关闭。",
+  "recordPartsLastIdle": "{key} 处于空闲。它的部分全部关闭后，此任务会自动关闭。",
+  "recordPartsLastInterrupted": "{key} 已中断。它的部分全部关闭后，此任务会自动关闭。",
+  "recordPartsLastQueued": "{key} 正在排队。它的部分全部关闭后，此任务会自动关闭。",
+  "recordPartsLastStarting": "{key} 正在启动。它的部分全部关闭后，此任务会自动关闭。",
+  "recordPartsLastWaiting": "它的最后一个部分在等你",
+  "recordPartsLastWaitingGuidance": "{key} 有一张给你的卡片。它的部分全部关闭后，此任务会自动关闭。",
+  "recordPartsLastWorking": "{key} 正在工作。它的部分全部关闭后，此任务会自动关闭。",
+  "recordPartsOpen": {
+    "plural": "total",
+    "other": "正在等待它 {total} 个部分中的 {open} 个"
+  },
+  "recordPartsOpenGuidance": "{counts}。它的部分全部关闭后，此任务会自动关闭。",
   "recordPersonalNone": "无，{computer}",
   "recordPersonalVersion": "{when} 的版本 {version}，{computer}",
   "recordPolicyParentTask": "上级任务",

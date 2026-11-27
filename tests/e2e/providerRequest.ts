@@ -192,7 +192,7 @@ const TURN_ONLY = [
   "thread_activity",
   "visible_card_hint",
   "about",
-  "focused_project",
+  "project_filter",
   "recovery",
 ];
 

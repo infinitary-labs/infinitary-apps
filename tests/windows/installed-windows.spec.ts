@@ -46,6 +46,7 @@ import { readWindowsTable, resumeWindowsRun } from "../../src/core/placed/window
 import { onlyOwnerReaches, readAccessList } from "../../src/core/storage/ownerOnly";
 import { GIT_FOR_WINDOWS } from "../../src/core/windowsGit";
 import { START_HERE_ARG } from "../../src/main/besideRun";
+import { LINK_WORDS } from "../../src/main/linkCommand";
 import { PERSON_WORD_ARG, WORD_TEMP_DIR } from "../../src/main/personWordArg";
 import { commandPipe, commandPipeHeld, RUN_LAST_STOP, RUN_MARKER } from "../../src/main/runCommand";
 import { BOOT_WORDS } from "../../src/main/startAtBoot";
@@ -321,6 +322,22 @@ test("the Windows installer installs for this person, offers Git, starts the com
     expect(top.map((process) => process.parent.toLowerCase())).toEqual(["explorer.exe"]);
   });
 
+  await test.step("while the Git offer holds the data folder with no door open yet, the link command says Infinitary is open here but did not answer", async () => {
+    // The window takes the folder's lock, a file Chromium holds open that names no process, before
+    // it offers Git, and opens the door the command asks at only once the offer is answered.
+    let said = "";
+    const ask = () => {
+      const run = spawnSync(executable, ["link", "--phone"], { encoding: "utf8", timeout: 60_000 });
+      said = `exit ${run.status}\n${run.stdout ?? ""}${run.stderr ?? ""}`;
+      keep("link-during-git-offer.txt", said);
+      return said;
+    };
+    await expect
+      .poll(ask, { timeout: 90_000, intervals: [1_000] })
+      .toContain(LINK_WORDS.noAnswer.join("\n"));
+    expect(said.startsWith("exit 1\n")).toBe(true);
+  });
+
   const gitRoot = join(localAppData, "Programs", "Git");
   await test.step("with no Git on the PC, it offers Git for Windows and installs it on the person's yes", async () => {
     const [opened] = topAppProcesses();
@@ -358,7 +375,9 @@ test("the Windows installer installs for this person, offers Git, starts the com
       .poll(gitVersion, { timeout: 10 * 60_000, intervals: [2_000] })
       .toBe(`git version ${GIT_FOR_WINDOWS.version}.windows.1`);
     keep("git-version.txt", gitVersion());
-    // The app goes on to open its window once Git is in place.
+    // The app goes on to open its window once Git is in place: its saved data appears as its core
+    // starts, and the window, made after that, shows only at its first paint, which on this fresh
+    // PC can come many seconds after the saved data.
     await expect
       .poll(
         () =>
@@ -368,6 +387,7 @@ test("the Windows installer installs for this person, offers Git, starts the com
         { timeout: 120_000 },
       )
       .toBe(true);
+    await expect.poll(() => showsWindow(opened.pid), { timeout: 120_000 }).toBe(true);
     if (evidence) screenshot(join(evidence, "first-window.png"));
   });
 
@@ -396,10 +416,16 @@ test("the Windows installer installs for this person, offers Git, starts the com
       await expect.poll(() => runTask(label)?.state, { timeout: 60_000 }).toBe("Ready");
     };
 
+    // The app's program runs before its window shows: a launch it answers in between, which it
+    // does once the window is made (`answerLaunch`), would find no window shown yet.
     const windowOpened = async (): Promise<number> => {
-      await expect.poll(() => topAppProcesses().length, { timeout: 60_000 }).toBeGreaterThan(0);
-      const [window] = topAppProcesses().filter((process) => process.parent === "explorer.exe");
-      if (!window) throw new Error("the window is not running");
+      const shown = () =>
+        topAppProcesses().filter(
+          (process) => process.parent === "explorer.exe" && showsWindow(process.pid),
+        );
+      await expect.poll(() => shown().length, { timeout: 60_000 }).toBeGreaterThan(0);
+      const [window] = shown();
+      if (!window) throw new Error("the window is not shown");
       return window.pid;
     };
     // taskkill fails the whole tree when one of its programs ended on its own

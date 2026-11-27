@@ -267,7 +267,7 @@ function MenuSwitch({ on, dim }: { on: boolean; dim: boolean }) {
           width: 10,
           height: 10,
           borderRadius: "50%",
-          background: on ? "#05070d" : "var(--fg-2)",
+          background: on ? "var(--on-accent)" : "var(--fg-2)",
           transition:
             "inset-inline-start var(--dur-med) var(--ease-out),background var(--dur-med) var(--ease-out)",
         }}

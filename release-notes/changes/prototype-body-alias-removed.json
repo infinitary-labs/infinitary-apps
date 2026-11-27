@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "prototype-body-alias-removed",
+      "reason": "Internal cleanup: removes an unused second export name for the card body component; nothing a person sees changes."
+    }
+  ]
+}

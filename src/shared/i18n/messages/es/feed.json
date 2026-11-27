@@ -34,6 +34,9 @@
   "feedBatchQueuedHost": "{project}: el sitio que aloja el proyecto puso {label} en la cola de fusión de la rama principal. Se fusiona allí cuando se superen las comprobaciones de la cola.",
   "feedBatchRetried": "{project}: {label} se combinó de nuevo y sus comprobaciones se ejecutan otra vez.",
   "feedBatchSentBack": "{project}: «{title}» se devolvió de su lote: {reason}",
+  "feedBatchTrial": "{project}: {label} ejecuta sus comprobaciones con su corrección declarada antes de que se apruebe la corrección. Cuando la corrección se apruebe en esta versión y estas comprobaciones pasen, el lote se fusiona tal como está.",
+  "feedBatchTrialFailed": "{project}: {label} sigue retenido porque fallaron estas comprobaciones con su corrección declarada: {checks}. El tripulante de la corrección la repara en una nueva versión.",
+  "feedBatchTrialFailedUnnamed": "{project}: {label} sigue retenido porque fallaron sus comprobaciones con su corrección declarada. El tripulante de la corrección la repara en una nueva versión.",
   "feedBranchPushed": "Insertó la rama",
   "feedBuildRowKept": "«{title}» anotada como {task} para después.",
   "feedBuildRowNotFiled": "«{title}» no se anotó.",
@@ -134,5 +137,8 @@
   "feedUndelivered": "Mensaje no entregado: {why}",
   "feedUnsafeDataReaderReported": "El lector de datos no seguros informó; sus palabras están en su registro.",
   "feedUpdated": "Actualización: {text}",
+  "feedWriteNotSentOnWords": "No se envió {call} a {place} según tus palabras «{words}»: {why}",
+  "feedWriteSentOnWords": "Se envió {call} a {place} una vez, sin tarjeta, según tus palabras «{words}»: respondió {status}.",
+  "feedWriteUnknownOnWords": "Se envió {call} a {place} una vez, sin tarjeta, según tus palabras «{words}»; no se sabe qué pasó, y nunca se vuelve a enviar.",
   "feedYouChose": "Elegiste «{choice}»"
 }

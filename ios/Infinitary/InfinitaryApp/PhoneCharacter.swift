@@ -384,27 +384,31 @@ enum CharacterPainter {
         fileprivate var sky = [CharacterSky.Placed](repeating: .init(point: .zero), count: 16)
         fileprivate var colors: Palette?
         func palette(_ environment: EnvironmentValues) -> Palette {
-            if colors?.scheme != environment.colorScheme { colors = Palette(environment) }
+            if colors?.scheme != environment.colorScheme || colors?.theme != environment.shownColorTheme { colors = Palette(environment) }
             return colors!
         }
     }
     /// Resolved once per theme on the main thread, so a render thread draws with plain values.
     struct Palette: Sendable {
         let scheme: ColorScheme
+        /// The built-in color theme it was resolved in, so a pick between two themes on one base resolves it again.
+        let theme: PhoneColorTheme?
         let acc, dim, hot, bg: RGB
         let boost, haloBoost: Double
         /// The scene's selection outline and the open summary's corner brackets.
         let accent, muted: PenColor
         init(_ environment: EnvironmentValues) {
             scheme = environment.colorScheme
+            theme = environment.shownColorTheme
             acc = RGB(PhoneTheme.wire, in: environment); dim = RGB(PhoneTheme.wireDim, in: environment)
             hot = RGB(PhoneTheme.wireHot, in: environment); bg = RGB(PhoneTheme.background, in: environment)
             boost = PhoneTheme.wireBoost(scheme); haloBoost = PhoneTheme.haloBoost(scheme)
             accent = PenColor(PhoneTheme.accent, in: environment); muted = PenColor(PhoneTheme.muted, in: environment)
         }
-        init(_ scheme: ColorScheme) {
+        init(_ scheme: ColorScheme, theme: PhoneColorTheme? = nil) {
             var environment = EnvironmentValues()
             environment.colorScheme = scheme
+            environment.phoneColorTheme = theme?.rawValue
             self.init(environment)
         }
     }

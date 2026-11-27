@@ -132,7 +132,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
   });
 
   it.each([false, true])(
-    "exact shared effect requires a captain click or current project direction (direction: %s)",
+    "exact shared effect requires a captain click or a current project direction heard from the captain (direction: %s)",
     async (direction) => {
       const repo = gitRepo();
       try {
@@ -153,11 +153,15 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
           path: repo.dir,
           name: repo.name,
         });
+        const sharedProof =
+          "Create one disposable staging record to verify the shared service without asking.";
+        // Saved on the first mate's own judgment, with no words of the
+        // captain's cited, so it is no yes yet (INF-6987 piece P).
         knowledge?.directions.change({
           op: "add",
           id: "shared-proof",
           scope: view.id,
-          text: "Create one disposable staging record to verify the shared service without asking.",
+          text: sharedProof,
           reason: "Captain's standing consent",
         });
         repos.configure(view.id, { delivery: "direct-pr" });
@@ -269,6 +273,24 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         );
         await supervisor.steer.steerCrewmate(taskId, "Record the exact effect request.");
         await tick();
+        if (direction) {
+          // INF-6987 piece P: only a direction whose current revision was
+          // heard from the captain is a yes for a visible effect.
+          await expect(
+            report("The direction covers this write.", undefined, {
+              validation: { kind: "request", request },
+            }),
+          ).rejects.toThrow("heard from the captain");
+          expect(tasks.get(taskId)?.delivery?.liveValidation?.permissions).toHaveLength(0);
+          knowledge?.directions.change({
+            op: "revise",
+            id: "d:shared-proof",
+            expectedRevision: 1,
+            text: sharedProof,
+            reason: "The captain said it in their own words.",
+            heard: { from: "turn" },
+          });
+        }
         await report(
           "The proposed write needs code review and the captain's approval.",
           undefined,

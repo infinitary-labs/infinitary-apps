@@ -3,13 +3,14 @@ import type {
   KnowledgeDirectionArgs,
   KnowledgeDirectionChange,
   KnowledgeDirectionChanged,
+  KnowledgeDirectionHeard,
   KnowledgeDirectionRead,
   KnowledgeDirectionRow,
   KnowledgeDirections,
   KnowledgeDirectionsArgs,
 } from "@shared/knowledge";
 import type { AppDatabase } from "../storage/db";
-import type { DirectionRow } from "../storage/knowledgeStore";
+import type { DirectionMark, DirectionRow } from "../storage/knowledgeStore";
 import {
   canonical,
   clean,
@@ -67,10 +68,13 @@ export class StandingDirections {
                 "A standing direction conflicts with Knowledge. No original direction was removed.",
               );
           } else {
+            // Carried from before heard marks were kept, so it reads that way.
             store.saveDirection(
               next,
               "publish",
               "Carried from the active direction at notes retirement.",
+              null,
+              { unmarked: true },
             );
           }
         }
@@ -142,7 +146,10 @@ export class StandingDirections {
           ...this.row(row),
           retired: row.retired,
           createdAt: row.createdAt,
-          history: rows,
+          history: rows.map(({ heard, ...revision }) => ({
+            ...revision,
+            ...(heard ? { heard } : {}),
+          })),
           page,
           total: history.length,
         },
@@ -158,7 +165,10 @@ export class StandingDirections {
    * just give first mate a tool to freely read and write standing
    * directions, and then rely on the agent's judgment on when/how to do
    * it?"). Every direction is his instruction, and its history keeps the
-   * reason. A refusal throws, as every catalog change's does.
+   * reason and where the captain's words for the revision were heard, when
+   * they were: a revision is heard only from what the change itself
+   * carries, never from an earlier revision. A refusal throws, as every
+   * catalog change's does.
    */
   change(change: KnowledgeDirectionChange): KnowledgeDirectionChanged {
     const store = this.handle.open();
@@ -183,6 +193,7 @@ export class StandingDirections {
         ? (previous?.text ?? "")
         : clean(change.text, "text", MAX.explanation, true);
     const reason = clean(change.reason, "reason", MAX.reason, true);
+    const heard = change.heard ?? null;
     const at = this.handle.now();
     const next: DirectionRow = {
       id,
@@ -198,10 +209,10 @@ export class StandingDirections {
       const current = store.directions().find((row) => row.id === id);
       if (current?.revision !== previous?.revision)
         refuse("The direction changed. Read it again before writing.");
-      store.saveDirection(next, change.op === "add" ? "publish" : change.op, reason);
+      store.saveDirection(next, change.op === "add" ? "publish" : change.op, reason, heard);
     });
-    this.handle.deps.changed?.();
-    return { op: change.op, direction: this.row(next) };
+    this.handle.changed();
+    return { op: change.op, direction: this.row({ ...next, heard }) };
   }
 
   private visible(actor: KnowledgeActor, row: DirectionRow): boolean {
@@ -227,7 +238,42 @@ export class StandingDirections {
     return scope;
   }
 
-  private row(row: DirectionRow): KnowledgeDirectionRow {
+  /**
+   * The current directions whose current revision was saved before heard
+   * marks were kept: the ones the captain is asked to confirm once
+   * (`directionsToConfirm.ts`). A direction revised since carries its mark.
+   * A collection nothing has recorded in has none, and reading it creates no
+   * file, as a browser read does not.
+   */
+  unmarked(): KnowledgeDirectionRow[] | { state: "unavailable"; reason: string } {
+    return this.handle.browsing((store) =>
+      (store?.directions() ?? [])
+        .filter((row) => !row.retired && row.heard === undefined && this.known(row.scope))
+        .map((row) => this.row(row)),
+    );
+  }
+
+  /**
+   * Each direction's current revision and whether it is retired, read as a
+   * browser read is (`unmarked`): what an override citing a direction checks
+   * it still rests on (`CaptainOverrides.directionsChanged`). A collection
+   * nothing has recorded in holds none, and one of a removed project's
+   * directions is left out, as every other read leaves it out.
+   */
+  revisions():
+    | Map<string, { revision: number; retired: boolean }>
+    | { state: "unavailable"; reason: string } {
+    return this.handle.browsing(
+      (store) =>
+        new Map(
+          (store?.directions() ?? [])
+            .filter((row) => this.known(row.scope))
+            .map((row) => [row.id, { revision: row.revision, retired: row.retired }] as const),
+        ),
+    );
+  }
+
+  private row(row: DirectionRow & { heard?: DirectionMark }): KnowledgeDirectionRow {
     return {
       id: row.id,
       kind: "direction",
@@ -241,6 +287,7 @@ export class StandingDirections {
       authority: row.origin === "captain-turn" ? "instruction" : "advice",
       revision: row.revision,
       updatedAt: row.updatedAt,
+      ...(row.heard ? { heard: row.heard } : {}),
     };
   }
 }
@@ -248,7 +295,7 @@ export class StandingDirections {
 /** Standing directions travel whole, independently of a topical lookup. */
 export function renderDirections(rows: readonly KnowledgeDirectionRow[]): string | undefined {
   return [
-    "Standing directions. Captain-origin records are instructions; other origins are advice. No record grants permission beyond its task, and a captain-origin direction that a step needs no consent is that consent. These are the current directions; they supersede earlier copies in this conversation.",
+    "Standing directions. Captain-origin records are instructions; other origins are advice. No record grants permission beyond its task, and a captain-origin direction that a step needs no consent is that consent. That holds only for one whose heard names where the captain's own words for its current revision were heard; one with heard false is an instruction to weigh, never a yes, and passes no hold. These are the current directions; they supersede earlier copies in this conversation.",
     ...(rows.length ? [] : ["No current standing directions."]),
     ...rows.map((row) =>
       JSON.stringify({
@@ -258,10 +305,16 @@ export function renderDirections(rows: readonly KnowledgeDirectionRow[]): string
         origin: row.origin,
         authority: row.authority,
         revision: row.revision,
+        heard: row.heard ? servedHeard(row.heard) : false,
         text: row.text,
       }),
     ),
   ].join("\n");
+}
+
+/** Where a served direction was heard, without the card's title, which the card's id names. */
+function servedHeard({ title: _title, ...heard }: KnowledgeDirectionHeard) {
+  return heard;
 }
 
 /** A deliberate tool read, including the direction's own history. */

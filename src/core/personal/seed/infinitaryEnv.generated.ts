@@ -266,6 +266,8 @@ declare module "@infinitary/contracts" {
      * kept. Absent otherwise, and on an older home.
      */
     backlogSince?: number;
+    /** On a backlog parent that runs no program and nothing blocks: its open parts' status. */
+    partsStatus?: "waiting" | "interrupted" | "working" | "starting" | "idle" | "queued" | "backlog";
     /** Its project's tags it carries, alphabetical, with who set each; absent while none. */
     tags?: { id: string; name: string; by: "decision" | "captain" | "firstmate" }[];
     /**
@@ -376,10 +378,9 @@ declare module "@infinitary/contracts" {
   export type PanelDropEffect = { key: string; title: string };
 
   /**
-   * \`tasks.detail\` (\`reads.subscribe("tasks.detail", { id }, listener)\`): one
-   * task in full - its board row, the brief its crewmate ran from, its latest
-   * report, and while Drop task applies the tasks it would name. A task that
-   * is not there is a read that fails: the listener is not called.
+   * \`tasks.detail\` (\`reads.subscribe("tasks.detail", { id }, listener)\`): one task in full - its
+   * board row, the brief its crewmate ran from, its latest report, and while Drop task applies the
+   * tasks it would name. A task that is not there is a read that fails: the listener is not called.
    */
   export type PanelTaskDetail = PanelTaskRow & {
     /** The rendered brief its crewmate ran from. */
@@ -563,15 +564,15 @@ declare module "@infinitary/contracts" {
       fixKeys: string[];
       checks: PanelBatchChecks | null;
       /**
-       * The task repairing its hold: the one recorded as its repair, or a held
-       * batch of one's own change (\`own\`); \`fixing\` when it declared its change
-       * the hold's fix. Null with neither, or while it is not held.
+       * The task repairing its hold: the one recorded as its repair, or a held batch of one's own
+       * change (\`own\`); \`fixing\` when it declared it the hold's fix. Null with neither, or unheld.
        */
       repair: (PanelBatchTask & { own: boolean; fixing: boolean }) | null;
       /** It waits for its repair's fix after changes were sent back. */
       awaitsFix: boolean;
       /** Its repair declared that a rerun passed the failed checks at its version. */
       passed: boolean;
+      checkingFix: PanelBatchTask | null; // the declared fix its checks run with before approval
     } | null;
     leftOut: (PanelBatchTask & { reason: string; aheadKey: string | null })[];
     /** The batches that ended in the last day, oldest first. */
@@ -591,11 +592,10 @@ declare module "@infinitary/contracts" {
   export type PanelBatches = { repos: PanelBatchRepo[] };
 
   /**
-   * \`tasks.search\` (\`reads.subscribe("tasks.search", { query }, listener)\`):
-   * closed work the board no longer lists - done before its seven days, or
-   * dropped - whose key or title holds the words, newest first, at most 50:
-   * an answer of 50 may have been cut, so ask for narrower words. Nothing is
-   * read for empty words.
+   * \`tasks.search\` (\`reads.subscribe("tasks.search", { query }, listener)\`): closed work the board no
+   * longer lists - done before its seven days, or dropped - whose key or title holds the words,
+   * newest first, at most 50: an answer of 50 may have been cut, so ask for narrower words. Nothing
+   * is read for empty words.
    */
   export type PanelTaskSearch = PanelTaskRow[];
 
@@ -865,6 +865,18 @@ declare module "@infinitary/contracts" {
     | { state: "missing" }
     | PanelKnowledgeUnavailable;
 
+  /**
+   * Where the captain's own words for a revision of a direction were heard: their words to the first
+   * mate, their reply or click on a card (by id and title), a line they typed in a task's Crewmate tab,
+   * their standing reply on a task (by key), or their own change in the window.
+   */
+  export type PanelKnowledgeDirectionHeard = {
+    from: "turn" | "card" | "crewmate-tab" | "standing" | "window";
+    card?: string;
+    title?: string;
+    task?: string;
+  };
+
   /** Standing instructions or advice, distinct from findings. Reads never grant permission. */
   export type PanelKnowledgeDirectionRow = {
     id: string;
@@ -876,6 +888,8 @@ declare module "@infinitary/contracts" {
     authority: "instruction" | "advice";
     revision: number;
     updatedAt: number;
+    /** Where the current revision was heard from the captain; absent when it was not. */
+    heard?: PanelKnowledgeDirectionHeard;
   };
 
   export type PanelKnowledgeDirections =
@@ -900,6 +914,7 @@ declare module "@infinitary/contracts" {
       scope: string;
       evidence: string;
       at: number;
+      heard?: PanelKnowledgeDirectionHeard;
     }[];
     page: number;
     total: number;

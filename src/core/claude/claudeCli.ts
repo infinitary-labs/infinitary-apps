@@ -44,6 +44,14 @@ export const SHELL_LOOKUP_TIMEOUT_MS = 3_000;
 export const SHELL_LOOKUP_RETRY_MS = 5 * 60 * 1000;
 
 const CLIENT_FILE = hostPlatform() === "win32" ? "claude.exe" : "claude";
+/**
+ * Where `npm install -g @anthropic-ai/claude-code` keeps the client, under
+ * the npm folder it puts on PATH. On Windows that folder holds only the
+ * launchers `claude`, `claude.cmd` and `claude.ps1`, which a spawn without
+ * a shell cannot start (EINVAL), so the client is found here instead. The
+ * package names its binary claude.exe on every system.
+ */
+const NPM_CLIENT = join("node_modules", "@anthropic-ai", "claude-code", "bin", "claude.exe");
 
 let cachedExecutable: string | undefined;
 let shellFound: string | undefined;
@@ -81,6 +89,8 @@ export function knownClaudeHomes(env: NodeJS.ProcessEnv = process.env): string[]
     join(home, ".volta", "bin"),
     join(home, ".npm-global", "bin"),
   ];
+  // npm's global folder on Windows, for an app started before PATH named it.
+  if (env.APPDATA?.trim()) homes.push(join(env.APPDATA.trim(), "npm"));
   for (const version of nodeVersionDirs(join(home, ".nvm", "versions", "node"))) {
     homes.push(join(version, "bin"));
   }
@@ -132,7 +142,7 @@ export function resolveClaudeExecutable(
   }
   const homes = options.homes ?? knownClaudeHomes(env);
   const found =
-    homes.map((dir) => join(dir, CLIENT_FILE)).find(isExecutable) ??
+    homes.flatMap(clientsIn).find(isExecutable) ??
     findOnPath(env) ??
     (shellFound !== undefined && isExecutable(shellFound) ? shellFound : undefined);
   if (options.homes === undefined && found !== undefined) cachedExecutable = found;
@@ -142,10 +152,15 @@ export function resolveClaudeExecutable(
 function findOnPath(env: NodeJS.ProcessEnv): string | undefined {
   for (const entry of (env.PATH ?? "").split(delimiter)) {
     if (!entry) continue;
-    const candidate = join(entry, CLIENT_FILE);
-    if (isExecutable(candidate)) return candidate;
+    const found = clientsIn(entry).find(isExecutable);
+    if (found !== undefined) return found;
   }
   return undefined;
+}
+
+/** The client's own file in a folder, then the one an npm global install keeps under it. */
+function clientsIn(dir: string): string[] {
+  return [join(dir, CLIENT_FILE), join(dir, NPM_CLIENT)];
 }
 
 function isExecutable(path: string): boolean {

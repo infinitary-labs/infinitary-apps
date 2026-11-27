@@ -44,6 +44,12 @@ vi.mock("../utilityQos", async (importOriginal) =>
 
 fakeClockEachTest();
 
+async function closeFixture({ agent, supervisor, db }: ReturnType<typeof setup>): Promise<void> {
+  // Card presentation can still read tasks after the first mate's own turn ends.
+  await Promise.all([agent.dispose(), supervisor.disposeAll()]);
+  db.close();
+}
+
 describe("FirstmateAgent", () => {
   it.each([true, false])(
     "keeps the no-answer guard on the served seat when local=%s changes mid-turn",
@@ -64,8 +70,7 @@ describe("FirstmateAgent", () => {
       f.session.resolveNextPrompt();
       await vi.waitFor(() => expect(f.agent.isBusy()).toBe(false));
       expect(Boolean(new CardStore(f.db).get("card-fm-turn-failure"))).toBe(local);
-      f.agent.dispose();
-      f.db.close();
+      await closeFixture(f);
     },
   );
 
@@ -98,8 +103,7 @@ describe("FirstmateAgent", () => {
     expect(f.session.prompts).toHaveLength(1);
     f.session.resolveNextPrompt();
     await vi.waitFor(() => expect(f.agent.isBusy()).toBe(false));
-    f.agent.dispose();
-    f.db.close();
+    await closeFixture(f);
   });
 
   it("reads running computer versions and a crewmate’s persisted first-release report without another worker (INF-1607)", async () => {
@@ -171,9 +175,7 @@ describe("FirstmateAgent", () => {
       );
     f.session.resolveNextPrompt();
     await vi.waitFor(() => expect(f.agent.isBusy()).toBe(false));
-    f.agent.dispose();
-    await f.supervisor.disposeAll();
-    f.db.close();
+    await closeFixture(f);
   });
 
   it("prefixes every user turn with the context block and does not scrape final text into the feed", async () => {
@@ -257,9 +259,7 @@ describe("FirstmateAgent", () => {
       expect(summary).toHaveBeenCalledTimes(3);
     } finally {
       summary.mockRestore();
-      f.agent.dispose();
-      await f.supervisor.disposeAll();
-      f.db.close();
+      await closeFixture(f);
     }
   });
 
@@ -352,9 +352,7 @@ describe("FirstmateAgent", () => {
       threadStats.mockRestore();
       threadBatch.mockRestore();
       children.mockRestore();
-      f.agent.dispose();
-      await f.supervisor.disposeAll();
-      f.db.close();
+      await closeFixture(f);
     }
   });
 
@@ -392,9 +390,7 @@ describe("FirstmateAgent", () => {
       expect(words).toHaveBeenCalledTimes(1);
     } finally {
       words.mockRestore();
-      f.agent.dispose();
-      await f.supervisor.disposeAll();
-      f.db.close();
+      await closeFixture(f);
     }
   });
 
@@ -433,9 +429,7 @@ describe("FirstmateAgent", () => {
       expect(placed).toEqual(["started"]);
     } finally {
       place.mockRestore();
-      f.agent.dispose();
-      await f.supervisor.disposeAll();
-      f.db.close();
+      await closeFixture(f);
     }
   });
 
@@ -499,9 +493,7 @@ describe("FirstmateAgent", () => {
     } finally {
       release(facts);
       await settled;
-      f.agent.dispose();
-      await f.supervisor.disposeAll();
-      f.db.close();
+      await closeFixture(f);
     }
   });
 
@@ -538,9 +530,7 @@ describe("FirstmateAgent", () => {
     } finally {
       release(facts);
       await draining;
-      f.agent.dispose();
-      await f.supervisor.disposeAll();
-      f.db.close();
+      await closeFixture(f);
     }
   });
 
@@ -813,8 +803,7 @@ describe("FirstmateAgent", () => {
     f.session.emitTurnEnd("Ready.");
     f.session.resolveNextPrompt();
     await vi.waitFor(() => expect(f.agent.isBusy()).toBe(false));
-    f.agent.dispose();
-    f.db.close();
+    await closeFixture(f);
   });
 
   it("preflights the initial Auto model without opening a session and preserves a missing explicit pin", async () => {
@@ -827,8 +816,7 @@ describe("FirstmateAgent", () => {
     expect(f.specs).toEqual([]);
     // Await the supervisor's boot microtask before retiring its database.
     await Promise.resolve();
-    f.agent.dispose();
-    f.db.close();
+    await closeFixture(f);
   });
 
   it("accepts main input and recorded Firstmate-note replies before session work, serving the note's identity/content", async () => {
@@ -871,8 +859,7 @@ describe("FirstmateAgent", () => {
     await vi.waitFor(() =>
       expect(f.supervisor.cards.thread(id).messages.at(-1)?.text).toBe("Choose a project."),
     );
-    f.agent.dispose();
-    f.db.close();
+    await closeFixture(f);
   });
 
   it("refuses a reply to a recorded note that takes none, the welcome, before any turn", async () => {
@@ -893,18 +880,7 @@ describe("FirstmateAgent", () => {
     expect(f.specs).toEqual([]);
     // Await the supervisor's boot microtask before retiring its database.
     await Promise.resolve();
-    f.agent.dispose();
-    f.db.close();
-  });
-
-  it("tells the turn which project the captain's window is focused on, as a hint (INF-1091)", async () => {
-    const { agent, session, tasks } = setup();
-    const scratch = tasks.projects.scratch();
-    void agent.converse({ text: "fix the typo on the pricing page", focusedProjectId: scratch.id });
-    await drained(session, 1);
-    expect(decodeContext(session.prompts[0] as string).focused_project).toBe(
-      `${scratch.key} "${scratch.name}" - the captain's window is focused on this project, so new work they ask for belongs to it unless they name another; a hint, never a limit`,
-    );
+    await closeFixture(f);
   });
 
   it("INF-1137 serves required-action repair guidance only on that card's reply turn", async () => {
@@ -939,8 +915,7 @@ describe("FirstmateAgent", () => {
     expect(about).toContain("Answer with emit_card using this same id, task_id and reply");
     expect(decodeContext(f.agent.buildContextBlock()).about).toBeUndefined();
     await Promise.resolve();
-    f.agent.dispose();
-    f.db.close();
+    await closeFixture(f);
   });
 
   it("treats a reply on its own card as a captain turn about that card", async () => {

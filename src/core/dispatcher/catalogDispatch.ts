@@ -19,6 +19,7 @@ import {
   parseInvokeRequest,
   type WorkInvokeChannel,
 } from "@shared/ipc";
+import type { KnowledgeDirectionChange, KnowledgeDirectionHeard } from "@shared/knowledge";
 import { PANEL_LINE_WORDS } from "@shared/panelActions";
 import {
   arrangePanels,
@@ -55,6 +56,24 @@ export type CoreHandlers = {
     ...args: InvokeRequest<C>
   ) => Promise<InvokeResponse<C>> | InvokeResponse<C>;
 };
+
+/**
+ * Where the captain's words for a direction change were heard is who asked,
+ * never what the request says (docs/knowledge.md, "Heard from the
+ * captain"): the captain's own window, or the words the first mate cited,
+ * which `heardDirection` checked before the actor carried them.
+ */
+export function heardFromActor<A extends readonly unknown[]>(
+  channel: string,
+  args: A,
+  actor: ActionActor,
+): A {
+  if (channel !== "inf:knowledge:direction:set") return args;
+  const { heard: _claimed, ...change } = args[0] as KnowledgeDirectionChange;
+  const heard: KnowledgeDirectionHeard | undefined =
+    actor.kind === "captain" ? { from: "window" } : actor.heard;
+  return [heard ? { ...change, heard } : change, ...args.slice(1)] as unknown as A;
+}
 
 /**
  * One catalog change, run (primitives/app-actions.md, "Operations and
@@ -121,7 +140,7 @@ export function createCatalogDispatch({
           : Promise.resolve(
               (handlers[asked as keyof CoreHandlers] as (...a: unknown[]) => unknown)(...callArgs),
             );
-    const args = parseInvokeRequest(channel, rawArgs);
+    const args = heardFromActor(channel, parseInvokeRequest(channel, rawArgs), actor);
     const names = ACTION_NAMES.filter(
       (name) =>
         ACTIONS[name].change === channel ||
@@ -367,7 +386,7 @@ export function createCatalogDispatch({
           repo.runsOn === AUTOMATIC_COMPUTER
             ? "automatically"
             : repo.runsOn
-              ? devicePlace(services.devices.list(), repo.runsOn).where
+              ? devicePlace(services.devices.list(), repo.runsOn).said.where
               : null;
         trail(name, { repo, fromHere: !was?.runsOn, where }, actor);
       } else if (name === "panel") {

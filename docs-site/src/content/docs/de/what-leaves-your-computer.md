@@ -1,5 +1,5 @@
 ---
-source: 2bc19810a789f3f6
+source: b36cddf31c037a39
 title: Was deinen Computer verlässt
 description: Was Infinitary sendet, wohin es geht und der eine Schalter, der überhaupt etwas an uns sendet.
 ---
@@ -14,6 +14,7 @@ Dein erster Offizier und deine Crew denken über die KI-Abos, bei denen du dich 
 Deine Nachrichten und das, was ein Crewmitglied von deinem Projekt liest, um seine Aufgabe zu erledigen, gehen über dein Abo an diesen Anbieter.
 Bei Claude nutzt Infinitary das Claude Code, das du installiert hast, angemeldet bei deinem eigenen Konto.
 Bei einem eigenen Anbieter geht es an die Adresse, die du eingegeben hast.
+Bei Amazon Bedrock über die Adresse deiner Organisation geht es an diese Adresse statt an AWS.
 
 Deine Anmeldungen bleiben auf deinem Computer.
 

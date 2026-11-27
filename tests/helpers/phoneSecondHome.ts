@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { budgetTimer } from "./budgets";
 import { scratchDir } from "./scratchDirs";
 
-/** The second computer's name, which the phone's bar and computer sheet show beside the test home's. */
+/** The second computer's name, which the phone's bar and Settings' Your computer page show beside the test home's. */
 export const SECOND_HOME_NAME = "Test MacBook Pro";
 
 /**

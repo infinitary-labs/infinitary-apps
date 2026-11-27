@@ -50,7 +50,7 @@ import {
 import type { AnswerDeliveryCheck } from "./answerDeliveryCheck";
 import { withAskAttribution } from "./askAttribution";
 import type { AskCapture } from "./askCapture";
-import { captainWordsIn, OVERRIDE_REFUSED } from "./captainOverrides";
+import { captainWordsIn, heardDirection, OVERRIDE_REFUSED } from "./captainOverrides";
 import { FIRSTMATE_CARD_PREFIX, type OwnCardWrite } from "./cardEmit";
 import { ownCardLineWords } from "./cardMutationText";
 import { escapeCardText } from "./cardText";
@@ -301,6 +301,13 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
         if (said.mergeClick)
           return {
             text: "Not closed: the words cited are the captain's click on a merge, which approves that merge and asks no close. Cite their words that ask the close, or close without captain_words.",
+          };
+        // A direction's words pass only the holds its override names, never
+        // every hold a close's own words pass (INF-7021).
+        if (said.direction)
+          return {
+            // i18n-exempt: a refusal served to the first mate, never shown to a person
+            text: `Not closed: the standing words are the captain's direction d:${said.direction.id}, which passes only the holds its override names and asks no close. Cite their own words that ask the close, or close without captain_words.`,
           };
         captainWords = said.words;
       }
@@ -743,6 +750,7 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
         if (!appDispatch) throw new Error("App actions are not connected.");
         return appDispatch(channel, args, actor);
       },
+      heard: (change) => heardDirection(host.turn, change, supervisor.overrides),
       // The host builds the card from the line's offer, never the
       // Firstmate, so its button does what its words say (docs/devices.md,
       // "Asking the first mate").

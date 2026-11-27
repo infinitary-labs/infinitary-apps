@@ -68,8 +68,10 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | header (a request's) | encabezado | |
 | held (a batch that stopped) | retenido | "Lote retenido", "Retenido desde las {since}"; the same verb as "lo retiene" on a merge a rule holds. |
 | hold (on a task) | retención | "está retenida", "cuando termine su retención"; as in "lo retiene" for a merge. |
+| holds an override passes (named on a task's Activity) | asking first: la consulta previa; the open decisions: las decisiones abiertas; the waits: las esperas; the open parts: las partes abiertas; the checks: las comprobaciones; the delivery proof: la prueba de entrega; the saved story: la historia guardada; the heavy-run line: la cola de ejecuciones pesadas; the cost limit: el límite de costo; a retired hold: una retención que ya no existe | Joined as one list in the reader's language on the line. |
 | How to get it (an ask for a secret) | Cómo conseguirlo | The heading over the steps a crewmate lays out for making or finding a secret. |
 | Infinitary | Infinitary | Never translated. |
+| intake round (a docs site guide) | ronda de recepción | A scheduled task that reads new issues and pull requests and drafts replies. |
 | Integrations, an integration | Integraciones, una integración | A Settings tab and each connection in it. |
 | Intelligence | Inteligencia | |
 | iOS Settings (the phone's own app) | Ajustes | Apple's name; the app's own Settings stays "Configuración". |
@@ -146,6 +148,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | session, transcript (never said) | conversación, notas | |
 | Settings | Configuración | The app's settings window and menu item; a project's own settings are "los ajustes de este proyecto". |
 | sign-in / sign in | inicio de sesión / iniciar sesión | "tu inicio de sesión", "vuelve a iniciar sesión". |
+| standing reply (your words kept on a task, which pass its holds) | respuesta vigente | Feminine. |
 | start | iniciar, empezar | "Iniciada" for a task; "empezar" for the person beginning something. |
 | starter | sugerencia | The welcome's buttons that begin a sentence: "presiona una sugerencia de abajo". |
 | Steer (button) | Orientar |  |
@@ -167,6 +170,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | unmerged work | trabajo sin fusionar | What another computer still holds when it is removed: "Su trabajo sin fusionar viene primero a esta computadora". |
 | unsafe data reader | lector de datos no seguros | A crewmate that reads words anyone can write. |
 | Usage | Uso | |
+| user (another user account on this computer) | usuario | "as {user}" is "como {user}"; "Se ejecuta como {user}" for running as that user. |
 | where the project lives | donde se aloja el proyecto | |
 | window wash | velo de la ventana | The theme color laid over the blurred background. |
 | working copy | copia de trabajo | |

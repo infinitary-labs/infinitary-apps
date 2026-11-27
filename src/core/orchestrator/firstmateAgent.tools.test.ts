@@ -590,6 +590,44 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
     expect(tasks.get(id)).toEqual(before);
   });
 
+  // INF-70: a part moved on its own stayed under its parent in the project it left.
+  it("refuses update_task's project on a part whose parent stays behind, and moves it with its parent cleared in the same call", async () => {
+    const { agent, specs, tasks, repos } = setup();
+    const notes = await repos.setup({ kind: "init", name: "notes", key: "NOTE" });
+    await repos.setup({ kind: "init", name: "website", key: "WEB" });
+    await agent.converse("plan the launch, and write its checklist");
+    const tools = piToolsOf(specs[0]?.tools ?? []) as unknown as GraphTool[];
+    const text = async (name: string, params: Record<string, unknown>) => {
+      const tool = tools.find((entry) => entry.name === name);
+      if (!tool) throw new Error(`missing ${name}`);
+      return (await tool.execute("c", params, undefined, undefined, {})).content[0]?.text ?? "";
+    };
+    await text("create_task", {
+      title: "Plan the launch",
+      goal: "The launch is planned",
+      user_words: "plan the launch",
+      repo_id: notes.repo.id,
+    });
+    await text("create_task", {
+      title: "Write the launch checklist",
+      goal: "The launch checklist is written",
+      user_words: "write its checklist",
+      parent: "NOTE-1",
+    });
+    const id = tasks.byKey("NOTE-2")?.id as string;
+    const before = tasks.get(id);
+
+    expect(await text("update_task", { task: "NOTE-2", project: "WEB" })).toBe(
+      `Refused: NOTE-2 is a part of NOTE-1, which stays in notes, and a part lives in its parent's project. Move NOTE-1 instead, and its parts go with it, or clear NOTE-2's parent in the same update_task (parent "") to move it on its own; NOTE-1 then no longer waits for it.`,
+    );
+    expect(tasks.get(id)).toEqual(before);
+
+    expect(await text("update_task", { task: "NOTE-2", project: "WEB", parent: "" })).toBe(
+      "Updated WEB-1: moved to website as WEB-1, parent cleared.",
+    );
+    expect(tasks.get(id)).toMatchObject({ key: "WEB-1", parentId: null });
+  });
+
   it("plans, edits, links and queries records, attaching the turn's ask to each task it acts on", async () => {
     const { agent, specs, tasks, supervisor, db } = setup();
     await agent.converse("plan the ADR, then the implementation behind it");
@@ -968,6 +1006,53 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
       `Updated ${close.key}: side-effect task.`,
     );
     expect(await read()).toMatchObject({ side_effect: true });
+  });
+
+  // INF-6845's piece 1: the first mate files, in one call, a waiting task that starts as a fenced
+  // reader, and create_task refuses the mark on anything but an answer, as spawn_crewmate does.
+  it("files a waiting task that starts as a reader in one call, refusing the mark on work that is not an answer", async () => {
+    const { agent, specs, tasks, repos } = setup();
+    await agent.converse("fix the issue a stranger opened and tell it once the fix ships");
+    const tools = piToolsOf(specs[0]?.tools ?? []) as unknown as GraphTool[];
+    const text = async (name: string, params: Record<string, unknown>) =>
+      (
+        await tools
+          .find((tool) => tool.name === name)!
+          .execute("c", params, undefined, undefined, {})
+      ).content[0]?.text ?? "";
+    await text("create_task", { title: "Fix", goal: "Fix", user_words: "fix it" });
+    const fix = tasks.byKey("SCR-1")!;
+    const waiting = {
+      title: "Tell the issue how the fix ended",
+      goal: "Reply on https://github.com/example/nimbus-api/issues/7 and close it once the fix ships",
+      user_words: "fix the issue a stranger opened and tell it once the fix ships",
+      blocked_by: [fix.key],
+      side_effect: true,
+      unsafe_data_reader: true,
+    };
+    const refusal =
+      "Nothing was filed. An unsafe data reader only answers in words: give it the read-only constraint, and neither operation, in_folder nor result_schema.";
+    expect(await text("create_task", waiting)).toBe(refusal);
+    const personal = repos.ensurePersonal(scratchDir("infinitary-personal-"));
+    expect(
+      await text("create_task", {
+        ...waiting,
+        constraints: [{ kind: "read-only" }],
+        repo_id: personal.id,
+      }),
+    ).toBe(
+      "Nothing was filed. An unsafe data reader never runs in the personal workspace, whose files are the captain's own: name another project as repo_id, or none for an empty folder of its own.",
+    );
+    expect(tasks.list().map((record) => record.title)).toEqual(["Fix"]);
+
+    await text("create_task", { ...waiting, constraints: [{ kind: "read-only" }] });
+    const filed = tasks.byKey("SCR-2")!;
+    expect(filed.shape).toMatchObject({
+      side_effect: true,
+      unsafe_data_reader: true,
+      deliverable: "answer",
+    });
+    expect(tasks.graph.blockers(filed.id).map((record) => record.key)).toEqual([fix.key]);
   });
 
   // The review's finding: adding an already approved wait the task needs merged, with its

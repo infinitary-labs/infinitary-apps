@@ -6487,6 +6487,14 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return rules.select(count);
   }
+  function formatList(items, join = "and") {
+    if (currentLanguage() !== SOURCE_LANGUAGE) {
+      const type = join === "and" ? "conjunction" : "disjunction";
+      return new Intl.ListFormat(languageLocale(), { style: "long", type }).format(items);
+    }
+    if (items.length <= 1) return items.join("");
+    return `${items.slice(0, -1).join(", ")} ${join} ${items.at(-1)}`;
+  }
   function accountsClaudeLoginUnreadable(input2) {
     const here = input2.here;
     switch (currentLanguage()) {
@@ -6844,6 +6852,35 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `install Claude Code there first`;
   }
+  function accountsConnectKeyWhere(input2) {
+    const provider = input2.provider;
+    const site = input2.site;
+    switch (currentLanguage()) {
+      case "ar":
+        return `انسخ مفتاحك من ${site} بعد اشتراكك في ${provider}.`;
+      case "de":
+        return `Kopiere deinen Schlüssel aus der ${site}, nachdem du ${provider} abonniert hast.`;
+      case "es":
+        return `Copia tu clave desde ${site} después de suscribirte a ${provider}.`;
+      case "fr":
+        return `Copiez votre clé depuis ${site} après vous être abonné à ${provider}.`;
+      case "ja":
+        return `${provider} を購読したあと、${site} からキーをコピーしてください。`;
+      case "ko":
+        return `${provider}을(를) 구독한 뒤 ${site}에서 키를 복사하세요.`;
+      case "pt-BR":
+        return `Copie sua chave no ${site} depois de assinar o ${provider}.`;
+      case "zh-Hans":
+        return `订阅 ${provider} 后，从 ${site} 复制你的密钥。`;
+      case "zh-Hant":
+        return `訂閱 ${provider} 後，從 ${site} 複製你的金鑰。`;
+      case "en-XA":
+        return `[Çöþý ýöûŕ ķéý ƒŕöɱ ţĥé ${site} áƒţéŕ ýöû šûƀšçŕîƀé ţö ${provider}. ~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Copy your key from the ‬${site}‮ after you subscribe to ‬${provider}‮.‬`;
+    }
+    return `Copy your key from the ${site} after you subscribe to ${provider}.`;
+  }
   function accountsConnectNotSignedIn() {
     switch (currentLanguage()) {
       case "ar":
@@ -7177,21 +7214,21 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       case "ar":
         return `إضافة API مخصصة ${on}`;
       case "de":
-        return `Eigene API hinzufügen ${on}`;
+        return `Eigene API ${on} hinzufügen`;
       case "es":
         return `Agregar una API personalizada ${on}`;
       case "fr":
         return `Ajouter une API personnalisée ${on}`;
       case "ja":
-        return `カスタム API を追加（${on}）`;
+        return `カスタム API を${on}追加`;
       case "ko":
-        return `사용자 지정 API 추가 ${on}`;
+        return `${on} 사용자 지정 API 추가`;
       case "pt-BR":
         return `Adicionar uma API personalizada ${on}`;
       case "zh-Hans":
-        return `添加自定义 API（${on}）`;
+        return `${on}添加自定义 API`;
       case "zh-Hant":
-        return `加入自訂 API（${on}）`;
+        return `${on}加入自訂 API`;
       case "en-XA":
         return `[Åðð á çûšţöɱ ÅÞÎ ${on} ~~~~~~]`;
       case "ar-XB":
@@ -9227,7 +9264,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function accountsCustomApiFileHint() {
     switch (currentLanguage()) {
       case "ar":
-        return `يستطيع Infinitary قراءة الاتصالات المخصصة من ملف بتنسيق models.json الخاص بـ Pi، ولا يغيّره أبدًا. تعتمد كل اتصال هنا بمفتاح هذا الكمبيوتر نفسه.`;
+        return `يستطيع Infinitary قراءة الاتصالات المخصصة من ملف بتنسيق models.json الخاص بـ Pi، ولا يغيّره أبدًا. تعتمد كل اتصال هنا بمفتاح هذا الحاسوب نفسه.`;
       case "de":
         return `Infinitary kann eigene Verbindungen aus einer Datei im models.json-Format von Pi lesen und ändert sie nie. Du gibst jede Verbindung hier mit dem eigenen Schlüssel dieses Computers frei.`;
       case "es":
@@ -9308,7 +9345,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function accountsCustomApiFileKey() {
     switch (currentLanguage()) {
       case "ar":
-        return `لا يستخدم Infinitary أي مفتاح من الملف. اكتب مفتاح هذا الكمبيوتر نفسه عند الاعتماد.`;
+        return `لا يستخدم Infinitary أي مفتاح من الملف. اكتب مفتاح هذا الحاسوب نفسه عند الاعتماد.`;
       case "de":
         return `Infinitary verwendet nie einen Schlüssel aus der Datei. Gib beim Freigeben den eigenen Schlüssel dieses Computers ein.`;
       case "es":
@@ -11217,6 +11254,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮No models yet. Fetch them from the server, or add one by hand.‬`;
     }
     return `No models yet. Fetch them from the server, or add one by hand.`;
+  }
+  function accountsCustomApiNotChat() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ليس نموذج محادثة`;
+      case "de":
+        return `Kein Chatmodell`;
+      case "es":
+        return `No es un modelo de chat`;
+      case "fr":
+        return `Pas un modèle de chat`;
+      case "ja":
+        return `チャットモデルではありません`;
+      case "ko":
+        return `채팅 모델이 아니에요`;
+      case "pt-BR":
+        return `Não é um modelo de chat`;
+      case "zh-Hans":
+        return `不是聊天模型`;
+      case "zh-Hant":
+        return `不是聊天模型`;
+      case "en-XA":
+        return `[Ñöţ á çĥáţ ɱöðéļ ~~~~~~]`;
+      case "ar-XB":
+        return `‮Not a chat model‬`;
+    }
+    return `Not a chat model`;
   }
   function accountsCustomApiNotOffered(input2) {
     const model = input2.model;
@@ -13411,15 +13475,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       case "fr":
         return `Utiliser ${on}`;
       case "ja":
-        return `使う（${on}）`;
+        return `これを${on}使う`;
       case "ko":
-        return `사용 ${on}`;
+        return `${on} 사용`;
       case "pt-BR":
         return `Usar ${on}`;
       case "zh-Hans":
-        return `使用（${on}）`;
+        return `${on}使用`;
       case "zh-Hant":
-        return `使用（${on}）`;
+        return `${on}使用`;
       case "en-XA":
         return `[Ûšé ${on} ~~]`;
       case "ar-XB":
@@ -13434,27 +13498,54 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       case "ar":
         return `استخدام ${name} ${on}`;
       case "de":
-        return `${name} verwenden ${on}`;
+        return `${name} ${on} verwenden`;
       case "es":
         return `Usar ${name} ${on}`;
       case "fr":
         return `Utiliser ${name} ${on}`;
       case "ja":
-        return `${name} を使う（${on}）`;
+        return `${name} を${on}使う`;
       case "ko":
-        return `${name} 사용 ${on}`;
+        return `${on} ${name} 사용`;
       case "pt-BR":
         return `Usar ${name} ${on}`;
       case "zh-Hans":
-        return `使用 ${name}（${on}）`;
+        return `${on}使用 ${name}`;
       case "zh-Hant":
-        return `使用 ${name}（${on}）`;
+        return `${on}使用 ${name}`;
       case "en-XA":
         return `[Ûšé ${name} ${on} ~~]`;
       case "ar-XB":
         return `‮Use ‬${name}‮ ‬${on}`;
     }
     return `Use ${name} ${on}`;
+  }
+  function accountsQuotaOpenCodeGoNoPlan() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يجد OpenCode Go خطة Go نشطة لهذا المفتاح.`;
+      case "de":
+        return `OpenCode Go hat für diesen Schlüssel kein aktives Go-Abo gefunden.`;
+      case "es":
+        return `OpenCode Go no encontró un plan Go activo para esta clave.`;
+      case "fr":
+        return `OpenCode Go n’a trouvé aucun forfait Go actif pour cette clé.`;
+      case "ja":
+        return `OpenCode Go で、このキーに有効な Go プランが見つかりませんでした。`;
+      case "ko":
+        return `OpenCode Go에서 이 키에 활성 Go 요금제를 찾지 못했어요.`;
+      case "pt-BR":
+        return `O OpenCode Go não encontrou um plano Go ativo para esta chave.`;
+      case "zh-Hans":
+        return `OpenCode Go 没有找到这个密钥的有效 Go 套餐。`;
+      case "zh-Hant":
+        return `OpenCode Go 找不到這個金鑰的有效 Go 方案。`;
+      case "en-XA":
+        return `[ÖþéñÇöðé Ĝö ƒöûñð ñö áçţîṽé Ĝö þļáñ ƒöŕ ţĥîš ķéý. ~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮OpenCode Go found no active Go plan for this key.‬`;
+    }
+    return `OpenCode Go found no active Go plan for this key.`;
   }
   function accountsSavedResetBusy(input2) {
     const account = input2.account;
@@ -14626,6 +14717,554 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮your batches of approved changes‬`;
     }
     return `your batches of approved changes`;
+  }
+  function bedrockAddressInvalid() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يمكن استخدام هذا العنوان: اكتبه كاملًا مبتدئًا بـ https://، دون بيانات دخول أو استعلام أو #.`;
+      case "de":
+        return `Diese Adresse lässt sich nicht verwenden: Schreib sie vollständig, beginnend mit https://, ohne Anmeldung, Abfrage oder #.`;
+      case "es":
+        return `Esa dirección no se puede usar: escríbela completa, empezando por https://, sin inicio de sesión, consulta ni #.`;
+      case "fr":
+        return `Cette adresse ne peut pas être utilisée : écrivez-la en entier, en commençant par https://, sans identifiant, requête ni #.`;
+      case "ja":
+        return `このアドレスは使えません。https:// から始めて全体を書き、サインイン情報、クエリ、# を含めないでください。`;
+      case "ko":
+        return `이 주소는 사용할 수 없습니다. https://로 시작하는 전체 주소를 쓰고 로그인 정보, 쿼리, #은 넣지 마세요.`;
+      case "pt-BR":
+        return `Esse endereço não pode ser usado: escreva-o inteiro, começando com https://, sem login, consulta ou #.`;
+      case "zh-Hans":
+        return `这个地址无法使用：请写出完整地址，以 https:// 开头，不要包含登录信息、查询或 #。`;
+      case "zh-Hant":
+        return `這個位址無法使用：請寫出完整位址，以 https:// 開頭，不要包含登入資訊、查詢或 #。`;
+      case "en-XA":
+        return `[Ţĥáţ áððŕéšš çáññöţ ƀé ûšéð: ŵŕîţé îţ ŵĥöļé, šţáŕţîñĝ ŵîţĥ ĥţţþš://, ŵîţĥ ñö šîĝñ-îñ, ǫûéŕý öŕ # îñ îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮That address cannot be used: write it whole, starting with https://, with no sign-in, query or # in it.‬`;
+    }
+    return `That address cannot be used: write it whole, starting with https://, with no sign-in, query or # in it.`;
+  }
+  function bedrockAddressMoved(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يشير ${host} الآن إلى مكان غير الذي وافقت عليه. سجّل الدخول إلى Amazon Bedrock مجددًا للموافقة عليه.`;
+      case "de":
+        return `${host} zeigt jetzt an einen anderen Ort als bei deiner Freigabe. Melde dich erneut bei Amazon Bedrock an, um sie freizugeben.`;
+      case "es":
+        return `${host} ahora apunta a un lugar distinto del que aprobaste. Vuelve a iniciar sesión en Amazon Bedrock para aprobarlo.`;
+      case "fr":
+        return `${host} mène maintenant ailleurs qu’au moment où vous l’avez approuvée. Reconnectez-vous à Amazon Bedrock pour l’approuver.`;
+      case "ja":
+        return `${host} は承認したときとは別の場所を指しています。承認し直すには Amazon Bedrock にもう一度サインインしてください。`;
+      case "ko":
+        return `${host}이(가) 승인할 때와 다른 곳을 가리킵니다. 다시 승인하려면 Amazon Bedrock에 다시 로그인하세요.`;
+      case "pt-BR":
+        return `${host} agora aponta para um lugar diferente de quando você o aprovou. Faça login no Amazon Bedrock de novo para aprová-lo.`;
+      case "zh-Hans":
+        return `${host} 现在指向的地方与你批准时不同。请重新登录 Amazon Bedrock 来批准它。`;
+      case "zh-Hant":
+        return `${host} 現在指向的地方與你核准時不同。請重新登入 Amazon Bedrock 來核准它。`;
+      case "en-XA":
+        return `[${host} ñöŵ þöîñţš šöɱéŵĥéŕé öţĥéŕ ţĥáñ ŵĥéñ ýöû áþþŕöṽéð îţ. Šîĝñ îñ ţö Åɱážöñ Ɓéðŕöçķ áĝáîñ ţö áþþŕöṽé îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${host}‮ now points somewhere other than when you approved it. Sign in to Amazon Bedrock again to approve it.‬`;
+    }
+    return `${host} now points somewhere other than when you approved it. Sign in to Amazon Bedrock again to approve it.`;
+  }
+  function bedrockAddressNotFound(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر العثور على ${host}.`;
+      case "de":
+        return `${host} wurde nicht gefunden.`;
+      case "es":
+        return `No se encontró ${host}.`;
+      case "fr":
+        return `${host} est introuvable.`;
+      case "ja":
+        return `${host} が見つかりませんでした。`;
+      case "ko":
+        return `${host}을(를) 찾을 수 없습니다.`;
+      case "pt-BR":
+        return `${host} não foi encontrado.`;
+      case "zh-Hans":
+        return `找不到 ${host}。`;
+      case "zh-Hant":
+        return `找不到 ${host}。`;
+      case "en-XA":
+        return `[${host} çöûļð ñöţ ƀé ƒöûñð. ~~~~~~~]`;
+      case "ar-XB":
+        return `${host}‮ could not be found.‬`;
+    }
+    return `${host} could not be found.`;
+  }
+  function bedrockAddressPlainHttp() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `http العادي مخصّص لعنوان على هذا الحاسوب فقط: استخدم عنوان https الخاص بمؤسستك.`;
+      case "de":
+        return `Einfaches http gibt es nur für eine Adresse auf diesem Computer: Verwende die https-Adresse deiner Organisation.`;
+      case "es":
+        return `El http simple es solo para una dirección en esta computadora: usa la dirección https de tu organización.`;
+      case "fr":
+        return `Le http simple est réservé à une adresse sur cet ordinateur : utilisez l’adresse https de votre organisation.`;
+      case "ja":
+        return `通常の http はこのコンピューター上のアドレスにだけ使えます。組織の https アドレスを使ってください。`;
+      case "ko":
+        return `일반 http는 이 컴퓨터의 주소에만 쓸 수 있습니다. 조직의 https 주소를 쓰세요.`;
+      case "pt-BR":
+        return `O http simples é só para um endereço neste computador: use o endereço https da sua organização.`;
+      case "zh-Hans":
+        return `普通 http 只能用于这台电脑上的地址：请使用你所在组织的 https 地址。`;
+      case "zh-Hant":
+        return `一般 http 只能用於這台電腦上的位址：請使用你所屬組織的 https 位址。`;
+      case "en-XA":
+        return `[Þļáîñ ĥţţþ îš öñļý ƒöŕ áñ áððŕéšš öñ ţĥîš çöɱþûţéŕ: ûšé ýöûŕ öŕĝáñîžáţîöñ'š ĥţţþš áððŕéšš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Plain http is only for an address on this computer: use your organization's https address.‬`;
+    }
+    return `Plain http is only for an address on this computer: use your organization's https address.`;
+  }
+  function bedrockAddressRefused(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يشير ${host} إلى مكان لا يتصل به Infinitary.`;
+      case "de":
+        return `${host} zeigt an einen Ort, mit dem sich Infinitary nicht verbindet.`;
+      case "es":
+        return `${host} apunta a un lugar al que Infinitary no se conecta.`;
+      case "fr":
+        return `${host} mène à un endroit auquel Infinitary ne se connecte pas.`;
+      case "ja":
+        return `${host} は Infinitary が接続しない場所を指しています。`;
+      case "ko":
+        return `${host}은(는) Infinitary가 연결하지 않는 곳을 가리킵니다.`;
+      case "pt-BR":
+        return `${host} aponta para um lugar ao qual o Infinitary não se conecta.`;
+      case "zh-Hans":
+        return `${host} 指向 Infinitary 不会连接的地方。`;
+      case "zh-Hant":
+        return `${host} 指向 Infinitary 不會連線的地方。`;
+      case "en-XA":
+        return `[${host} þöîñţš šöɱéŵĥéŕé Îñƒîñîţáŕý ðöéš ñöţ çöññéçţ ţö. ~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${host}‮ points somewhere Infinitary does not connect to.‬`;
+    }
+    return `${host} points somewhere Infinitary does not connect to.`;
+  }
+  function bedrockSecureConnectionFailed(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر تأمين الاتصال بـ ${host}. تأكد من أن هذا الحاسوب يثق بشهادته.`;
+      case "de":
+        return `Die Verbindung zu ${host} ließ sich nicht sichern. Prüfe, ob dieser Computer seinem Zertifikat vertraut.`;
+      case "es":
+        return `La conexión con ${host} no se pudo hacer segura. Comprueba que esta computadora confíe en su certificado.`;
+      case "fr":
+        return `La connexion à ${host} n’a pas pu être sécurisée. Vérifiez que cet ordinateur fait confiance à son certificat.`;
+      case "ja":
+        return `${host} との接続を安全にできませんでした。このコンピューターがその証明書を信頼しているか確認してください。`;
+      case "ko":
+        return `${host}과(와) 안전하게 연결할 수 없습니다. 이 컴퓨터가 해당 인증서를 신뢰하는지 확인하세요.`;
+      case "pt-BR":
+        return `Não foi possível proteger a conexão com ${host}. Confira se este computador confia no certificado dele.`;
+      case "zh-Hans":
+        return `无法与 ${host} 建立安全连接。请确认这台电脑信任它的证书。`;
+      case "zh-Hant":
+        return `無法與 ${host} 建立安全連線。請確認這台電腦信任它的憑證。`;
+      case "en-XA":
+        return `[Ţĥé çöññéçţîöñ ţö ${host} çöûļð ñöţ ƀé ɱáðé šéçûŕé. Çĥéçķ ţĥáţ ţĥîš çöɱþûţéŕ ţŕûšţš îţš çéŕţîƒîçáţé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The connection to ‬${host}‮ could not be made secure. Check that this computer trusts its certificate.‬`;
+    }
+    return `The connection to ${host} could not be made secure. Check that this computer trusts its certificate.`;
+  }
+  function bedrockSignInAddress() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أدخل عنوان Amazon Bedrock الخاص بمؤسستك.`;
+      case "de":
+        return `Gib die Amazon-Bedrock-Adresse deiner Organisation ein.`;
+      case "es":
+        return `Escribe la dirección de Amazon Bedrock de tu organización.`;
+      case "fr":
+        return `Saisissez l’adresse Amazon Bedrock de votre organisation.`;
+      case "ja":
+        return `組織の Amazon Bedrock アドレスを入力してください。`;
+      case "ko":
+        return `조직의 Amazon Bedrock 주소를 입력하세요.`;
+      case "pt-BR":
+        return `Digite o endereço do Amazon Bedrock da sua organização.`;
+      case "zh-Hans":
+        return `输入你所在组织的 Amazon Bedrock 地址。`;
+      case "zh-Hant":
+        return `輸入你所屬組織的 Amazon Bedrock 位址。`;
+      case "en-XA":
+        return `[Éñţéŕ ýöûŕ öŕĝáñîžáţîöñ'š Åɱážöñ Ɓéðŕöçķ áððŕéšš. ~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Enter your organization's Amazon Bedrock address.‬`;
+    }
+    return `Enter your organization's Amazon Bedrock address.`;
+  }
+  function bedrockSignInApproveLocal(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `ستذهب الطلبات إلى ${host}، على هذا الحاسوب.`;
+      case "de":
+        return `Anfragen gehen an ${host}, auf diesem Computer.`;
+      case "es":
+        return `Las solicitudes irán a ${host}, en esta computadora.`;
+      case "fr":
+        return `Les requêtes iront à ${host}, sur cet ordinateur.`;
+      case "ja":
+        return `リクエストはこのコンピューター上の ${host} に送られます。`;
+      case "ko":
+        return `요청은 이 컴퓨터의 ${host}(으)로 갑니다.`;
+      case "pt-BR":
+        return `As solicitações irão para ${host}, neste computador.`;
+      case "zh-Hans":
+        return `请求将发送到 ${host}，位于这台电脑上。`;
+      case "zh-Hant":
+        return `要求將傳送到 ${host}，位於這台電腦上。`;
+      case "en-XA":
+        return `[Ŕéǫûéšţš ŵîļļ ĝö ţö ${host}, öñ ţĥîš çöɱþûţéŕ. ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Requests will go to ‬${host}‮, on this computer.‬`;
+    }
+    return `Requests will go to ${host}, on this computer.`;
+  }
+  function bedrockSignInApprovePrivate(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `ستذهب الطلبات إلى ${host}، على شبكة مؤسستك.`;
+      case "de":
+        return `Anfragen gehen an ${host}, im Netzwerk deiner Organisation.`;
+      case "es":
+        return `Las solicitudes irán a ${host}, en la red de tu organización.`;
+      case "fr":
+        return `Les requêtes iront à ${host}, sur le réseau de votre organisation.`;
+      case "ja":
+        return `リクエストは組織のネットワーク上の ${host} に送られます。`;
+      case "ko":
+        return `요청은 조직 네트워크의 ${host}(으)로 갑니다.`;
+      case "pt-BR":
+        return `As solicitações irão para ${host}, na rede da sua organização.`;
+      case "zh-Hans":
+        return `请求将发送到 ${host}，位于你所在组织的网络中。`;
+      case "zh-Hant":
+        return `要求將傳送到 ${host}，位於你所屬組織的網路中。`;
+      case "en-XA":
+        return `[Ŕéǫûéšţš ŵîļļ ĝö ţö ${host}, öñ ýöûŕ öŕĝáñîžáţîöñ'š ñéţŵöŕķ. ~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Requests will go to ‬${host}‮, on your organization's network.‬`;
+    }
+    return `Requests will go to ${host}, on your organization's network.`;
+  }
+  function bedrockSignInApprovePublic(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `ستذهب الطلبات إلى ${host}، على الإنترنت العام.`;
+      case "de":
+        return `Anfragen gehen an ${host}, im öffentlichen Internet.`;
+      case "es":
+        return `Las solicitudes irán a ${host}, en internet público.`;
+      case "fr":
+        return `Les requêtes iront à ${host}, sur l’internet public.`;
+      case "ja":
+        return `リクエストは公開インターネット上の ${host} に送られます。`;
+      case "ko":
+        return `요청은 공용 인터넷의 ${host}(으)로 갑니다.`;
+      case "pt-BR":
+        return `As solicitações irão para ${host}, na internet pública.`;
+      case "zh-Hans":
+        return `请求将发送到 ${host}，位于公共互联网上。`;
+      case "zh-Hant":
+        return `要求將傳送到 ${host}，位於公用網際網路上。`;
+      case "en-XA":
+        return `[Ŕéǫûéšţš ŵîļļ ĝö ţö ${host}, öñ ţĥé þûƀļîç îñţéŕñéţ. ~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Requests will go to ‬${host}‮, on the public internet.‬`;
+    }
+    return `Requests will go to ${host}, on the public internet.`;
+  }
+  function bedrockSignInChooseWhere() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `اختر وجهة طلبات Amazon Bedrock.`;
+      case "de":
+        return `Wähle, wohin Amazon-Bedrock-Anfragen gehen.`;
+      case "es":
+        return `Elige adónde van las solicitudes de Amazon Bedrock.`;
+      case "fr":
+        return `Choisissez où vont les requêtes Amazon Bedrock.`;
+      case "ja":
+        return `Amazon Bedrock のリクエストの送り先を選んでください。`;
+      case "ko":
+        return `Amazon Bedrock 요청을 보낼 곳을 고르세요.`;
+      case "pt-BR":
+        return `Escolha para onde vão as solicitações do Amazon Bedrock.`;
+      case "zh-Hans":
+        return `请选择 Amazon Bedrock 请求的发送位置。`;
+      case "zh-Hant":
+        return `請選擇 Amazon Bedrock 要求的傳送位置。`;
+      case "en-XA":
+        return `[Çĥööšé ŵĥéŕé Åɱážöñ Ɓéðŕöçķ ŕéǫûéšţš ĝö. ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Choose where Amazon Bedrock requests go.‬`;
+    }
+    return `Choose where Amazon Bedrock requests go.`;
+  }
+  function bedrockSignInFromClaudeSettings() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `مُلئ من إعدادات Claude Code الخاصة بك.`;
+      case "de":
+        return `Aus deinen Claude-Code-Einstellungen ausgefüllt.`;
+      case "es":
+        return `Completado con tu configuración de Claude Code.`;
+      case "fr":
+        return `Rempli à partir de vos réglages Claude Code.`;
+      case "ja":
+        return `Claude Code の設定から入力しました。`;
+      case "ko":
+        return `Claude Code 설정에서 채웠습니다.`;
+      case "pt-BR":
+        return `Preenchido com as suas configurações do Claude Code.`;
+      case "zh-Hans":
+        return `已根据你的 Claude Code 设置填写。`;
+      case "zh-Hant":
+        return `已依你的 Claude Code 設定填入。`;
+      case "en-XA":
+        return `[Ƒîļļéð îñ ƒŕöɱ ýöûŕ Çļáûðé Çöðé šéţţîñĝš. ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Filled in from your Claude Code settings.‬`;
+    }
+    return `Filled in from your Claude Code settings.`;
+  }
+  function bedrockSignInFromOrganization() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `مُلئ من إعدادات Claude Code الخاصة بمؤسستك.`;
+      case "de":
+        return `Aus den Claude-Code-Einstellungen deiner Organisation ausgefüllt.`;
+      case "es":
+        return `Completado con la configuración de Claude Code de tu organización.`;
+      case "fr":
+        return `Rempli à partir des réglages Claude Code de votre organisation.`;
+      case "ja":
+        return `組織の Claude Code の設定から入力しました。`;
+      case "ko":
+        return `조직의 Claude Code 설정에서 채웠습니다.`;
+      case "pt-BR":
+        return `Preenchido com as configurações do Claude Code da sua organização.`;
+      case "zh-Hans":
+        return `已根据你所在组织的 Claude Code 设置填写。`;
+      case "zh-Hant":
+        return `已依你所屬組織的 Claude Code 設定填入。`;
+      case "en-XA":
+        return `[Ƒîļļéð îñ ƒŕöɱ ýöûŕ öŕĝáñîžáţîöñ'š Çļáûðé Çöðé šéţţîñĝš. ~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Filled in from your organization's Claude Code settings.‬`;
+    }
+    return `Filled in from your organization's Claude Code settings.`;
+  }
+  function bedrockSignInNoKey() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `دون مفتاح: عنوان مؤسستي يوقّع الطلبات`;
+      case "de":
+        return `Ohne Schlüssel: Die Adresse meiner Organisation signiert Anfragen`;
+      case "es":
+        return `Sin clave: la dirección de mi organización firma las solicitudes`;
+      case "fr":
+        return `Sans clé : l’adresse de mon organisation signe les requêtes`;
+      case "ja":
+        return `キーなし：組織のアドレスがリクエストに署名する`;
+      case "ko":
+        return `키 없음: 조직의 주소가 요청에 서명합니다`;
+      case "pt-BR":
+        return `Sem chave: o endereço da minha organização assina as solicitações`;
+      case "zh-Hans":
+        return `不用密钥：由我所在组织的地址为请求签名`;
+      case "zh-Hant":
+        return `不用金鑰：由我所屬組織的位址為要求簽署`;
+      case "en-XA":
+        return `[Ñö ķéý: ɱý öŕĝáñîžáţîöñ'š áððŕéšš šîĝñš ŕéǫûéšţš ~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮No key: my organization's address signs requests‬`;
+    }
+    return `No key: my organization's address signs requests`;
+  }
+  function bedrockSignInOrganization() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `عنوان مؤسستي`;
+      case "de":
+        return `Die Adresse meiner Organisation`;
+      case "es":
+        return `La dirección de mi organización`;
+      case "fr":
+        return `L’adresse de mon organisation`;
+      case "ja":
+        return `組織のアドレス`;
+      case "ko":
+        return `조직의 주소`;
+      case "pt-BR":
+        return `O endereço da minha organização`;
+      case "zh-Hans":
+        return `我所在组织的地址`;
+      case "zh-Hant":
+        return `我所屬組織的位址`;
+      case "en-XA":
+        return `[Ṁý öŕĝáñîžáţîöñ'š áððŕéšš ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮My organization's address‬`;
+    }
+    return `My organization's address`;
+  }
+  function bedrockSignInSend() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أرسل الطلبات إلى هناك`;
+      case "de":
+        return `Anfragen dorthin senden`;
+      case "es":
+        return `Enviar solicitudes allí`;
+      case "fr":
+        return `Envoyer les requêtes là-bas`;
+      case "ja":
+        return `そこにリクエストを送る`;
+      case "ko":
+        return `그곳으로 요청 보내기`;
+      case "pt-BR":
+        return `Enviar solicitações para lá`;
+      case "zh-Hans":
+        return `将请求发送到那里`;
+      case "zh-Hant":
+        return `將要求傳送到那裡`;
+      case "en-XA":
+        return `[Šéñð ŕéǫûéšţš ţĥéŕé ~~~~~~~]`;
+      case "ar-XB":
+        return `‮Send requests there‬`;
+    }
+    return `Send requests there`;
+  }
+  function bedrockSignInSettingsNoKey() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ترسل إعدادات Claude Code هذه طلبات Amazon Bedrock دون مفتاح.`;
+      case "de":
+        return `Diese Claude-Code-Einstellungen senden Amazon-Bedrock-Anfragen ohne Schlüssel.`;
+      case "es":
+        return `Esta configuración de Claude Code envía solicitudes a Amazon Bedrock sin clave.`;
+      case "fr":
+        return `Ces réglages Claude Code envoient les requêtes Amazon Bedrock sans clé.`;
+      case "ja":
+        return `この Claude Code の設定は、キーなしで Amazon Bedrock にリクエストを送ります。`;
+      case "ko":
+        return `이 Claude Code 설정은 키 없이 Amazon Bedrock 요청을 보냅니다.`;
+      case "pt-BR":
+        return `Essas configurações do Claude Code enviam solicitações ao Amazon Bedrock sem chave.`;
+      case "zh-Hans":
+        return `这些 Claude Code 设置会在不带密钥的情况下发送 Amazon Bedrock 请求。`;
+      case "zh-Hant":
+        return `這些 Claude Code 設定會在不帶金鑰的情況下傳送 Amazon Bedrock 要求。`;
+      case "en-XA":
+        return `[Ţĥéšé Çļáûðé Çöðé šéţţîñĝš šéñð Åɱážöñ Ɓéðŕöçķ ŕéǫûéšţš ŵîţĥöûţ á ķéý. ~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮These Claude Code settings send Amazon Bedrock requests without a key.‬`;
+    }
+    return `These Claude Code settings send Amazon Bedrock requests without a key.`;
+  }
+  function bedrockSignInStraightToAws() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `مباشرة إلى AWS`;
+      case "de":
+        return `Direkt an AWS`;
+      case "es":
+        return `Directo a AWS`;
+      case "fr":
+        return `Directement à AWS`;
+      case "ja":
+        return `AWS に直接`;
+      case "ko":
+        return `AWS로 바로`;
+      case "pt-BR":
+        return `Direto para a AWS`;
+      case "zh-Hans":
+        return `直接发送到 AWS`;
+      case "zh-Hant":
+        return `直接傳送到 AWS`;
+      case "en-XA":
+        return `[Šţŕáîĝĥţ ţö ÅŴŠ ~~~~~]`;
+      case "ar-XB":
+        return `‮Straight to AWS‬`;
+    }
+    return `Straight to AWS`;
+  }
+  function bedrockSignInWhere() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إلى أين يجب أن تذهب طلبات Amazon Bedrock؟`;
+      case "de":
+        return `Wohin sollen Amazon-Bedrock-Anfragen gehen?`;
+      case "es":
+        return `¿Adónde deben ir las solicitudes de Amazon Bedrock?`;
+      case "fr":
+        return `Où envoyer les requêtes Amazon Bedrock ?`;
+      case "ja":
+        return `Amazon Bedrock のリクエストをどこに送りますか？`;
+      case "ko":
+        return `Amazon Bedrock 요청을 어디로 보낼까요?`;
+      case "pt-BR":
+        return `Para onde as solicitações do Amazon Bedrock devem ir?`;
+      case "zh-Hans":
+        return `Amazon Bedrock 请求应发送到哪里？`;
+      case "zh-Hant":
+        return `Amazon Bedrock 要求應傳送到哪裡？`;
+      case "en-XA":
+        return `[Ŵĥéŕé šĥöûļð Åɱážöñ Ɓéðŕöçķ ŕéǫûéšţš ĝö? ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Where should Amazon Bedrock requests go?‬`;
+    }
+    return `Where should Amazon Bedrock requests go?`;
+  }
+  function bedrockUnreachable(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر الوصول إلى ${host}. تحقّق من شبكتك ومن العنوان.`;
+      case "de":
+        return `${host} ist nicht erreichbar. Prüfe dein Netzwerk und die Adresse.`;
+      case "es":
+        return `No se pudo llegar a ${host}. Comprueba tu red y la dirección.`;
+      case "fr":
+        return `${host} est injoignable. Vérifiez votre réseau et l’adresse.`;
+      case "ja":
+        return `${host} に接続できませんでした。ネットワークとアドレスを確認してください。`;
+      case "ko":
+        return `${host}에 연결할 수 없습니다. 네트워크와 주소를 확인하세요.`;
+      case "pt-BR":
+        return `Não foi possível alcançar ${host}. Confira sua rede e o endereço.`;
+      case "zh-Hans":
+        return `无法连接到 ${host}。请检查你的网络和地址。`;
+      case "zh-Hant":
+        return `無法連線到 ${host}。請檢查你的網路和位址。`;
+      case "en-XA":
+        return `[${host} çöûļð ñöţ ƀé ŕéáçĥéð. Çĥéçķ ýöûŕ ñéţŵöŕķ áñð ţĥé áððŕéšš. ~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${host}‮ could not be reached. Check your network and the address.‬`;
+    }
+    return `${host} could not be reached. Check your network and the address.`;
   }
   function cardAfterMergeDoerCrewmate() {
     switch (currentLanguage()) {
@@ -21129,6 +21768,171 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `This card could not be read`;
   }
+  function cardPicturesUnreadMove(input2) {
+    const model = input2.model;
+    switch (currentLanguage()) {
+      case "ar":
+        return `الانتقال إلى ${model}`;
+      case "de":
+        return `Zu ${model} wechseln`;
+      case "es":
+        return `Pasar a ${model}`;
+      case "fr":
+        return `Passer à ${model}`;
+      case "ja":
+        return `${model} に移動`;
+      case "ko":
+        return `${model}(으)로 옮기기`;
+      case "pt-BR":
+        return `Mudar para ${model}`;
+      case "zh-Hans":
+        return `改用 ${model}`;
+      case "zh-Hant":
+        return `改用 ${model}`;
+      case "en-XA":
+        return `[Ṁöṽé ţö ${model} ~~~]`;
+      case "ar-XB":
+        return `‮Move to ‬${model}`;
+    }
+    return `Move to ${model}`;
+  }
+  function cardPicturesUnreadNoReader() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يقرأ الصور أيٌّ من نماذجك التي تستطيع العمل نائبًا للقبطان. أضف اشتراكًا فيه نموذج كهذا في الإعدادات، ضمن «الذكاء».`;
+      case "de":
+        return `Keines deiner Modelle, die deinem ersten Offizier antworten können, liest Bilder. Füg in den Einstellungen unter Intelligenz ein Abo mit einem solchen Modell hinzu.`;
+      case "es":
+        return `Ninguno de tus modelos que pueden responder como tu primer oficial lee imágenes. Agrega una suscripción con uno en Configuración, en Inteligencia.`;
+      case "fr":
+        return `Aucun de vos modèles capables de répondre comme votre second ne lit les images. Ajoutez un abonnement qui en propose un dans les Réglages, sous Intelligence.`;
+      case "ja":
+        return `一等航海士として答えられるモデルの中に、画像を読めるものがありません。設定の「インテリジェンス」で、画像を読めるモデルのあるサブスクリプションを追加してください。`;
+      case "ko":
+        return `일등항해사로 답할 수 있는 모델 중에 사진을 읽는 모델이 없어요. 설정의 지능에서 그런 모델이 있는 구독을 추가하세요.`;
+      case "pt-BR":
+        return `Nenhum dos seus modelos que podem responder como seu imediato lê imagens. Adicione uma assinatura com um deles em Ajustes, na seção Inteligência.`;
+      case "zh-Hans":
+        return `你能用作大副的模型中，没有能读取图片的。请在“设置”的“智能”下添加一个包含此类模型的订阅。`;
+      case "zh-Hant":
+        return `你能用作大副的模型中，沒有能讀取圖片的。請在「設定」的「智慧等級」中加入含有這類模型的訂閱方案。`;
+      case "en-XA":
+        return `[Ñöñé öƒ ýöûŕ ɱöðéļš ţĥáţ çáñ áñšŵéŕ ýöûŕ ƒîŕšţ ɱáţé ŕéáðš þîçţûŕéš. Åðð á šûƀšçŕîþţîöñ ŵîţĥ öñé îñ Šéţţîñĝš, ûñðéŕ Îñţéļļîĝéñçé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮None of your models that can answer your first mate reads pictures. Add a subscription with one in Settings, under Intelligence.‬`;
+    }
+    return `None of your models that can answer your first mate reads pictures. Add a subscription with one in Settings, under Intelligence.`;
+  }
+  function cardPicturesUnreadReader(input2) {
+    const model = input2.model;
+    switch (currentLanguage()) {
+      case "ar":
+        return `الانتقال إلى ${model} يضع نائب القبطان على نموذج يقرأ الصور، فيجيب عن رسالتك هناك.`;
+      case "de":
+        return `Zu ${model} wechseln setzt deinen ersten Offizier auf ein Modell, das Bilder liest, und er beantwortet deine Nachricht dort.`;
+      case "es":
+        return `Pasar a ${model} pone a tu primer oficial en un modelo que lee imágenes, y ahí responde a tu mensaje.`;
+      case "fr":
+        return `Passer à ${model} place votre second sur un modèle qui lit les images, et il y répond à votre message.`;
+      case "ja":
+        return `${model} に移動すると、一等航海士は画像を読めるモデルに切り替わり、そこでメッセージに答えます。`;
+      case "ko":
+        return `${model}(으)로 옮기기를 누르면 일등항해사가 사진을 읽는 모델로 바뀌고, 거기서 메시지에 답해요.`;
+      case "pt-BR":
+        return `Mudar para ${model} coloca seu imediato em um modelo que lê imagens, e ele responde à sua mensagem lá.`;
+      case "zh-Hans":
+        return `改用 ${model} 会让你的大副换到一个能读取图片的模型，并在那里回答你的消息。`;
+      case "zh-Hant":
+        return `改用 ${model} 會讓你的大副換到能讀取圖片的模型，並在那裡回覆你的訊息。`;
+      case "en-XA":
+        return `[Ṁöṽé ţö ${model} þûţš ýöûŕ ƒîŕšţ ɱáţé öñ á ɱöðéļ ţĥáţ ŕéáðš þîçţûŕéš, áñð îţ áñšŵéŕš ýöûŕ ɱéššáĝé ţĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Move to ‬${model}‮ puts your first mate on a model that reads pictures, and it answers your message there.‬`;
+    }
+    return `Move to ${model} puts your first mate on a model that reads pictures, and it answers your message there.`;
+  }
+  function cardPicturesUnreadSettings() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `فتح الإعدادات`;
+      case "de":
+        return `Einstellungen öffnen`;
+      case "es":
+        return `Abrir Configuración`;
+      case "fr":
+        return `Ouvrir les Réglages`;
+      case "ja":
+        return `設定を開く`;
+      case "ko":
+        return `설정 열기`;
+      case "pt-BR":
+        return `Abrir Ajustes`;
+      case "zh-Hans":
+        return `打开设置`;
+      case "zh-Hant":
+        return `開啟設定`;
+      case "en-XA":
+        return `[Öþéñ šéţţîñĝš ~~~~~]`;
+      case "ar-XB":
+        return `‮Open settings‬`;
+    }
+    return `Open settings`;
+  }
+  function cardPicturesUnreadTitle() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `نموذج نائب القبطان لا يستطيع قراءة الصور`;
+      case "de":
+        return `Das Modell deines ersten Offiziers kann keine Bilder lesen`;
+      case "es":
+        return `El modelo de tu primer oficial no puede leer imágenes`;
+      case "fr":
+        return `Le modèle de votre second ne peut pas lire les images`;
+      case "ja":
+        return `一等航海士のモデルは画像を読めません`;
+      case "ko":
+        return `일등항해사의 모델이 사진을 읽을 수 없어요`;
+      case "pt-BR":
+        return `O modelo do seu imediato não consegue ler imagens`;
+      case "zh-Hans":
+        return `你的大副所用的模型无法读取图片`;
+      case "zh-Hant":
+        return `你的大副所用的模型無法讀取圖片`;
+      case "en-XA":
+        return `[Ýöûŕ ƒîŕšţ ɱáţé'š ɱöðéļ çáññöţ ŕéáð þîçţûŕéš ~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your first mate's model cannot read pictures‬`;
+    }
+    return `Your first mate's model cannot read pictures`;
+  }
+  function cardPicturesUnreadWaits(input2) {
+    const model = input2.model;
+    switch (currentLanguage()) {
+      case "ar":
+        return `رسالتك التي فيها صورة محفوظة وتنتظر، لأن نائب القبطان يجيب بالنموذج ${model} الذي يقرأ الكلمات فقط. الرسائل التي بلا صور ما زالت تصله.`;
+      case "de":
+        return `Deine Nachricht mit einem Bild ist gespeichert und wartet, denn dein erster Offizier antwortet mit ${model}, das nur Wörter liest. Nachrichten ohne Bilder erreichen ihn weiterhin.`;
+      case "es":
+        return `Tu mensaje con una imagen está guardado y espera, porque tu primer oficial responde con ${model}, que solo lee palabras. Los mensajes sin imágenes le siguen llegando.`;
+      case "fr":
+        return `Votre message avec une image est enregistré et attend, car votre second répond avec ${model}, qui ne lit que les mots. Les messages sans image lui parviennent toujours.`;
+      case "ja":
+        return `画像付きのメッセージは保存され、待機しています。一等航海士は ${model} で答えていますが、このモデルは文字しか読めません。画像のないメッセージは引き続き届きます。`;
+      case "ko":
+        return `사진이 있는 메시지는 저장되어 기다리고 있어요. 일등항해사가 쓰는 모델 ${model}은(는) 글자만 읽어요. 사진이 없는 메시지는 계속 전달돼요.`;
+      case "pt-BR":
+        return `Sua mensagem com uma imagem está salva e esperando, porque seu imediato responde com ${model}, que só lê palavras. Mensagens sem imagens continuam chegando a ele.`;
+      case "zh-Hans":
+        return `你带图片的消息已保存，正在等待，因为你的大副用 ${model} 回答，而它只能读取文字。不带图片的消息仍会送达大副。`;
+      case "zh-Hant":
+        return `你附有圖片的訊息已儲存，正在等待，因為你的大副用 ${model} 回覆，而它只能讀取文字。沒有圖片的訊息仍會送達大副。`;
+      case "en-XA":
+        return `[Ýöûŕ ɱéššáĝé ŵîţĥ á þîçţûŕé îš šáṽéð áñð ŵáîţš, ƀéçáûšé ýöûŕ ƒîŕšţ ɱáţé áñšŵéŕš öñ ${model}, ŵĥîçĥ ŕéáðš ŵöŕðš öñļý. Ṁéššáĝéš ŵîţĥöûţ þîçţûŕéš šţîļļ ŕéáçĥ îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your message with a picture is saved and waits, because your first mate answers on ‬${model}‮, which reads words only. Messages without pictures still reach it.‬`;
+    }
+    return `Your message with a picture is saved and waits, because your first mate answers on ${model}, which reads words only. Messages without pictures still reach it.`;
+  }
   function cardQuickAnswer() {
     switch (currentLanguage()) {
       case "ar":
@@ -21705,6 +22509,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `${closed}‮ of ‬${total}‮ closed‬`;
     }
     return `${closed} of ${total} closed`;
+  }
+  function cardRecordCouldNotStart(input2) {
+    const reason = input2.reason;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر البدء. ${reason}`;
+      case "de":
+        return `Konnte nicht starten. ${reason}`;
+      case "es":
+        return `No se pudo iniciar. ${reason}`;
+      case "fr":
+        return `Démarrage impossible. ${reason}`;
+      case "ja":
+        return `開始できませんでした。${reason}`;
+      case "ko":
+        return `시작하지 못했어요. ${reason}`;
+      case "pt-BR":
+        return `Não foi possível iniciar. ${reason}`;
+      case "zh-Hans":
+        return `无法开始。${reason}`;
+      case "zh-Hant":
+        return `無法開始。${reason}`;
+      case "en-XA":
+        return `[Çöûļð ñöţ šţáŕţ. ${reason} ~~~~~~]`;
+      case "ar-XB":
+        return `‮Could not start. ‬${reason}`;
+    }
+    return `Could not start. ${reason}`;
   }
   function cardRecordDelivery() {
     switch (currentLanguage()) {
@@ -22979,15 +23811,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       case "fr":
         return `Le travail de l’équipage ${where} passe à un modèle moins puissant ou attend que son allocation se réinitialise, sauf si vous utilisez une réinitialisation enregistrée.`;
       case "ja":
-        return `保存済みのリセットを使わない限り、${where}の乗組員の作業は弱いモデルに切り替わるか、利用枠がリセットされるまで待ちます。`;
+        return `保存済みのリセットを使わない限り、乗組員が${where}行う作業は弱いモデルに切り替わるか、利用枠がリセットされるまで待ちます。`;
       case "ko":
-        return `저장된 재설정을 사용하지 않으면 ${where} 선원들의 작업은 더 약한 모델로 바뀌거나 사용량이 재설정될 때까지 기다려요.`;
+        return `저장된 재설정을 사용하지 않으면 선원들이 ${where} 하는 작업은 더 약한 모델로 바뀌거나 사용량이 재설정될 때까지 기다려요.`;
       case "pt-BR":
         return `O trabalho da tripulação ${where} passa para um modelo mais fraco ou espera até a franquia renovar, a menos que você use uma redefinição salva.`;
       case "zh-Hans":
-        return `除非你使用一次已保存的重置，否则${where}的船员工作会改用较弱的模型，或等到额度重置。`;
+        return `除非你使用一次已保存的重置，否则船员${where}进行的工作会改用较弱的模型，或等到额度重置。`;
       case "zh-Hant":
-        return `除非你使用一次已儲存的重設，否則${where}的船員工作會改用較弱的模型，或等到額度重設。`;
+        return `除非你使用一次已儲存的重設，否則船員${where}進行的工作會改用較弱的模型，或等到額度重設。`;
       case "en-XA":
         return `[Çŕéŵ ŵöŕķ ${where} ðŕöþš ţö á ŵéáķéŕ ɱöðéļ öŕ ŵáîţš ûñţîļ îţš áļļöŵáñçé ŕéšéţš, ûñļéšš ýöû ûšé á šáṽéð ŕéšéţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
@@ -36427,7 +37259,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `يبني ${device} شيفرة هذا الكمبيوتر.`;
+        return `يبني ${device} شيفرة هذا الحاسوب.`;
       case "de":
         return `${device} baut den Code dieses Computers.`;
       case "es":
@@ -36484,7 +37316,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `يشغّل هذا الكمبيوتر Infinitary من شيفرته عند الالتزام ${commit}، ويشغّل ${device} بناءً آخر. تجعل «مطابقة» ${device} يجلب تلك الشيفرة الملتزَمة ويبنيها ويبدأ منها. تبقى التغييرات غير الملتزَمة على هذا الكمبيوتر.`;
+        return `يشغّل هذا الحاسوب Infinitary من شيفرته عند الإيداع ${commit}، ويشغّل ${device} بناءً آخر. تجعل «مطابقة» ${device} يجلب تلك الشيفرة المودَعة ويبنيها ويبدأ منها. تبقى التغييرات غير المودَعة على هذا الحاسوب.`;
       case "de":
         return `Dieser Computer führt Infinitary aus seinem Code beim Commit ${commit} aus, und ${device} führt einen anderen Build aus. Angleichen lässt ${device} diesen committeten Code holen, bauen und damit starten. Nicht committete Änderungen bleiben auf diesem Computer.`;
       case "es":
@@ -36594,7 +37426,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `يُطرح عليك هذا السؤال مرة واحدة بشأن ${device}. بعدها يطابق هذا الكمبيوتر تلقائيًا كلما شغّل هذا الكمبيوتر شيفرة أخرى.`;
+        return `يُطرح عليك هذا السؤال مرة واحدة بشأن ${device}. بعدها يطابق هذا الحاسوب تلقائيًا كلما شغّل هذا الحاسوب شيفرة أخرى.`;
       case "de":
         return `Du wirst für ${device} nur einmal gefragt. Danach gleicht er sich von selbst an, sobald dieser Computer anderen Code ausführt.`;
       case "es":
@@ -36650,7 +37482,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `هل تريد تشغيل شيفرة هذا الكمبيوتر على ${device}؟`;
+        return `هل تريد تشغيل شيفرة هذا الحاسوب على ${device}؟`;
       case "de":
         return `Den Code dieses Computers auf ${device} ausführen?`;
       case "es":
@@ -36678,7 +37510,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `تعذّر على ${device} بناء شيفرة هذا الكمبيوتر.`;
+        return `تعذّر على ${device} بناء شيفرة هذا الحاسوب.`;
       case "de":
         return `${device} konnte den Code dieses Computers nicht bauen.`;
       case "es":
@@ -36706,7 +37538,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `تعذّر على ${device} جلب شيفرة هذا الكمبيوتر.`;
+        return `تعذّر على ${device} جلب شيفرة هذا الحاسوب.`;
       case "de":
         return `${device} konnte den Code dieses Computers nicht holen.`;
       case "es":
@@ -36734,7 +37566,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `لم يتمكن ${device} من تشغيل بنائه لشيفرة هذا الكمبيوتر، لذا لا يبنيها «مطابقة» هناك مرة أخرى حتى يشغّل هذا الكمبيوتر شيفرة أخرى.`;
+        return `لم يتمكن ${device} من تشغيل بنائه لشيفرة هذا الحاسوب، لذا لا يبنيها «مطابقة» هناك مرة أخرى حتى يشغّل هذا الحاسوب شيفرة أخرى.`;
       case "de":
         return `${device} konnte seinen Build des Codes dieses Computers nicht starten. Angleichen baut ihn dort erst wieder, wenn dieser Computer anderen Code ausführt.`;
       case "es":
@@ -36762,7 +37594,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `تعذّر على ${device} تثبيت ما تحتاجه شيفرة هذا الكمبيوتر.`;
+        return `تعذّر على ${device} تثبيت ما تحتاجه شيفرة هذا الحاسوب.`;
       case "de":
         return `${device} konnte nicht installieren, was der Code dieses Computers braucht.`;
       case "es":
@@ -36790,7 +37622,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `بنى ${device} شيفرة هذا الكمبيوتر لكنه لم يتمكن من التشغيل منها.`;
+        return `بنى ${device} شيفرة هذا الحاسوب لكنه لم يتمكن من التشغيل منها.`;
       case "de":
         return `${device} hat den Code dieses Computers gebaut, konnte aber nicht damit starten.`;
       case "es":
@@ -36818,7 +37650,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `يحتاج ${device} إلى Node وpnpm لبناء شيفرة هذا الكمبيوتر.`;
+        return `يحتاج ${device} إلى Node وpnpm لبناء شيفرة هذا الحاسوب.`;
       case "de":
         return `${device} braucht Node und pnpm, um den Code dieses Computers zu bauen.`;
       case "es":
@@ -36846,7 +37678,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `يجلب ${device} شيفرة هذا الكمبيوتر.`;
+        return `يجلب ${device} شيفرة هذا الحاسوب.`;
       case "de":
         return `${device} holt den Code dieses Computers.`;
       case "es":
@@ -36874,7 +37706,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `يثبّت ${device} ما تحتاجه شيفرة هذا الكمبيوتر.`;
+        return `يثبّت ${device} ما تحتاجه شيفرة هذا الحاسوب.`;
       case "de":
         return `${device} installiert, was der Code dieses Computers braucht.`;
       case "es":
@@ -36956,7 +37788,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `لا يبني Infinitary من الشيفرة إلا جهاز Mac، و${device} ليس جهاز Mac.`;
+        return `لا يبني Infinitary من الشيفرة إلا حاسوب Mac، و${device} ليس حاسوب Mac.`;
       case "de":
         return `Nur ein Mac baut Infinitary aus Code, und ${device} ist kein Mac.`;
       case "es":
@@ -36984,7 +37816,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const commit = input2.commit;
     switch (currentLanguage()) {
       case "ar":
-        return `يشغّل بناءً غير بناء هذا الكمبيوتر، الذي يشغّل شيفرته عند الالتزام ${commit}.`;
+        return `يشغّل بناءً غير بناء هذا الحاسوب، الذي يشغّل شيفرته عند الإيداع ${commit}.`;
       case "de":
         return `Führt einen anderen Build aus als dieser Computer, der seinen Code beim Commit ${commit} ausführt.`;
       case "es":
@@ -37012,7 +37844,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `يشغّل ${device} بناءً غير شيفرة هذا الكمبيوتر.`;
+        return `يشغّل ${device} بناءً غير شيفرة هذا الحاسوب.`;
       case "de":
         return `${device} führt einen anderen Build aus als den Code dieses Computers.`;
       case "es":
@@ -37040,7 +37872,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `إصدار Infinitary على ${device} أقدم من أن يبني شيفرة هذا الكمبيوتر.`;
+        return `إصدار Infinitary على ${device} أقدم من أن يبني شيفرة هذا الحاسوب.`;
       case "de":
         return `${device} hat ein zu altes Infinitary, um den Code dieses Computers zu bauen.`;
       case "es":
@@ -37095,7 +37927,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `عاد ${device} إلى النسخة التي كان يشغّلها من قبل، لأن بناءه لشيفرة هذا الكمبيوتر لم يصل إلى هذا الكمبيوتر في الوقت المحدد.`;
+        return `عاد ${device} إلى النسخة التي كان يشغّلها من قبل، لأن بناءه لشيفرة هذا الحاسوب لم يصل إلى هذا الحاسوب في الوقت المحدد.`;
       case "de":
         return `${device} ist zur vorherigen Kopie zurückgekehrt, weil sein Build des Codes dieses Computers diesen Computer nicht rechtzeitig erreicht hat.`;
       case "es":
@@ -38555,6 +39387,94 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `${project}‮: "‬${title}‮" was sent back from its batch: ‬${reason}`;
     }
     return `${project}: "${title}" was sent back from its batch: ${reason}`;
+  }
+  function feedBatchTrial(input2) {
+    const label = input2.label;
+    const project = input2.project;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${project}: تشغّل الدفعة ${label} فحوصاتها مع التصحيح المعلَن قبل الموافقة على التصحيح. حين يُوافق على التصحيح بهذا الإصدار وتنجح هذه الفحوصات، تُدمج الدفعة كما هي.`;
+      case "de":
+        return `${project}: ${label} führt seine Überprüfungen mit der angekündigten Korrektur aus, bevor die Korrektur bestätigt ist. Wird die Korrektur in dieser Version bestätigt und bestehen diese Überprüfungen, wird der Stapel so zusammengeführt, wie er ist.`;
+      case "es":
+        return `${project}: ${label} ejecuta sus comprobaciones con su corrección declarada antes de que se apruebe la corrección. Cuando la corrección se apruebe en esta versión y estas comprobaciones pasen, el lote se fusiona tal como está.`;
+      case "fr":
+        return `${project} : ${label} exécute ses vérifications avec son correctif déclaré, avant l’approbation du correctif. Une fois le correctif approuvé à cette version et ces vérifications réussies, le lot est fusionné tel quel.`;
+      case "ja":
+        return `${project}：${label} は、宣言された修正が承認される前に、その修正を含めてチェックを実行しています。修正がこのバージョンで承認され、これらのチェックが通れば、バッチはそのままマージされます。`;
+      case "ko":
+        return `${project}: ${label}은(는) 선언된 수정이 승인되기 전에 그 수정을 포함해 검사를 실행해요. 수정이 이 버전으로 승인되고 이 검사가 통과하면 묶음은 그대로 병합돼요.`;
+      case "pt-BR":
+        return `${project}: ${label} roda as verificações com a correção declarada antes de a correção ser aprovada. Quando a correção for aprovada nesta versão e estas verificações passarem, o lote é mesclado como está.`;
+      case "zh-Hans":
+        return `${project}：${label} 在声明的修正获批前，就带着这个修正运行检查。修正在这个版本获批且这些检查通过后，这批改动会原样合并。`;
+      case "zh-Hant":
+        return `${project}：${label} 在宣告的修正核准前，就帶著這個修正執行檢查。修正在這個版本核准且這些檢查通過後，這批變更會原樣合併。`;
+      case "en-XA":
+        return `[${project}: ${label} ŕûñš îţš çĥéçķš ŵîţĥ îţš ðéçļáŕéð ƒîẋ ƀéƒöŕé ţĥé ƒîẋ îš áþþŕöṽéð. Öñçé ţĥé ƒîẋ îš áþþŕöṽéð áţ ţĥîš ṽéŕšîöñ áñð ţĥéšé çĥéçķš þášš, ţĥé ƀáţçĥ ɱéŕĝéš áš îţ îš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${project}‮: ‬${label}‮ runs its checks with its declared fix before the fix is approved. Once the fix is approved at this version and these checks pass, the batch merges as it is.‬`;
+    }
+    return `${project}: ${label} runs its checks with its declared fix before the fix is approved. Once the fix is approved at this version and these checks pass, the batch merges as it is.`;
+  }
+  function feedBatchTrialFailed(input2) {
+    const checks = input2.checks;
+    const label = input2.label;
+    const project = input2.project;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${project}: تبقى الدفعة ${label} معلّقة لأن هذه الفحوصات فشلت مع التصحيح المعلَن: ${checks}. يصلحه فرد طاقم التصحيح في إصدار جديد.`;
+      case "de":
+        return `${project}: ${label} bleibt angehalten, weil diese Überprüfungen mit der angekündigten Korrektur fehlgeschlagen sind: ${checks}. Das Crewmitglied der Korrektur repariert sie in einer neuen Version.`;
+      case "es":
+        return `${project}: ${label} sigue retenido porque fallaron estas comprobaciones con su corrección declarada: ${checks}. El tripulante de la corrección la repara en una nueva versión.`;
+      case "fr":
+        return `${project} : ${label} reste retenu, car ces vérifications ont échoué avec son correctif déclaré : ${checks}. L’équipier du correctif le répare dans une nouvelle version.`;
+      case "ja":
+        return `${project}：宣言された修正を含めて次のチェックが失敗したため、${label} は保留のままです：${checks}。修正の乗組員が新しいバージョンで直します。`;
+      case "ko":
+        return `${project}: 선언된 수정을 포함해 다음 검사가 실패해서 ${label}은(는) 계속 보류돼요: ${checks}. 수정의 선원이 새 버전으로 고쳐요.`;
+      case "pt-BR":
+        return `${project}: ${label} continua retido porque estas verificações falharam com a correção declarada: ${checks}. O tripulante da correção a repara em uma nova versão.`;
+      case "zh-Hans":
+        return `${project}：带着声明的修正，以下检查失败，所以 ${label} 仍暂缓：${checks}。修正的船员会用新版本修好它。`;
+      case "zh-Hant":
+        return `${project}：帶著宣告的修正，以下檢查失敗，所以 ${label} 仍暫緩：${checks}。修正的船員會用新版本修好它。`;
+      case "en-XA":
+        return `[${project}: ${label} šţáýš ĥéļð ƀéçáûšé ${checks} ƒáîļéð ŵîţĥ îţš ðéçļáŕéð ƒîẋ. Ţĥé ƒîẋ'š çŕéŵɱáţé ŕéþáîŕš îţ îñ á ñéŵ ṽéŕšîöñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${project}‮: ‬${label}‮ stays held because ‬${checks}‮ failed with its declared fix. The fix's crewmate repairs it in a new version.‬`;
+    }
+    return `${project}: ${label} stays held because ${checks} failed with its declared fix. The fix's crewmate repairs it in a new version.`;
+  }
+  function feedBatchTrialFailedUnnamed(input2) {
+    const label = input2.label;
+    const project = input2.project;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${project}: تبقى الدفعة ${label} معلّقة لأن فحوصاتها فشلت مع التصحيح المعلَن. يصلحه فرد طاقم التصحيح في إصدار جديد.`;
+      case "de":
+        return `${project}: ${label} bleibt angehalten, weil seine Überprüfungen mit der angekündigten Korrektur fehlgeschlagen sind. Das Crewmitglied der Korrektur repariert sie in einer neuen Version.`;
+      case "es":
+        return `${project}: ${label} sigue retenido porque fallaron sus comprobaciones con su corrección declarada. El tripulante de la corrección la repara en una nueva versión.`;
+      case "fr":
+        return `${project} : ${label} reste retenu, car ses vérifications ont échoué avec son correctif déclaré. L’équipier du correctif le répare dans une nouvelle version.`;
+      case "ja":
+        return `${project}：宣言された修正を含めてチェックが失敗したため、${label} は保留のままです。修正の乗組員が新しいバージョンで直します。`;
+      case "ko":
+        return `${project}: 선언된 수정을 포함해 검사가 실패해서 ${label}은(는) 계속 보류돼요. 수정의 선원이 새 버전으로 고쳐요.`;
+      case "pt-BR":
+        return `${project}: ${label} continua retido porque as verificações falharam com a correção declarada. O tripulante da correção a repara em uma nova versão.`;
+      case "zh-Hans":
+        return `${project}：带着声明的修正，检查失败，所以 ${label} 仍暂缓。修正的船员会用新版本修好它。`;
+      case "zh-Hant":
+        return `${project}：帶著宣告的修正，檢查失敗，所以 ${label} 仍暫緩。修正的船員會用新版本修好它。`;
+      case "en-XA":
+        return `[${project}: ${label} šţáýš ĥéļð ƀéçáûšé îţš çĥéçķš ƒáîļéð ŵîţĥ îţš ðéçļáŕéð ƒîẋ. Ţĥé ƒîẋ'š çŕéŵɱáţé ŕéþáîŕš îţ îñ á ñéŵ ṽéŕšîöñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${project}‮: ‬${label}‮ stays held because its checks failed with its declared fix. The fix's crewmate repairs it in a new version.‬`;
+    }
+    return `${project}: ${label} stays held because its checks failed with its declared fix. The fix's crewmate repairs it in a new version.`;
   }
   function feedBranchPushed() {
     switch (currentLanguage()) {
@@ -40739,15 +41659,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       case "fr":
         return `${name} s’exécute désormais ${where}. Sa prochaine tâche y démarre ; celle en cours ${here} se termine ${here}.`;
       case "ja":
-        return `${name} は今後 ${where} で実行されます。次のタスクはそちらで開始し、現在${here}実行中のタスクは${here}完了します。`;
+        return `${name} は今後${where}実行されます。次のタスクはそちらで開始し、現在${here}実行中のタスクは${here}完了します。`;
       case "ko":
         return `${name}은(는) 이제 ${where} 실행돼요. 다음 작업은 그곳에서 시작하고, ${here} 실행 중인 작업은 ${here} 끝나요.`;
       case "pt-BR":
         return `${name} agora roda ${where}. A próxima tarefa começa lá; a que está rodando ${here} termina ${here}.`;
       case "zh-Hans":
-        return `${name} 现在运行于 ${where}。它的下一个任务会在那里开始；${here}运行中的任务会${here}完成。`;
+        return `${name} 现在改为${where}运行。它的下一个任务会在那里开始；${here}运行中的任务会${here}完成。`;
       case "zh-Hant":
-        return `${name} 現在改為 ${where} 執行。它的下一項任務會在那裡開始；${here}執行中的任務會${here}完成。`;
+        return `${name} 現在改為${where}執行。它的下一項任務會在那裡開始；${here}執行中的任務會${here}完成。`;
       case "en-XA":
         return `[${name} ŕûñš ${where} ñöŵ. Îţš ñéẋţ ţášķ šţáŕţš ţĥéŕé; ţĥé öñé ŕûññîñĝ ${here} ƒîñîšĥéš ${here}. ~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
@@ -40798,15 +41718,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       case "fr":
         return `${name} s’exécute désormais ${where}. Sa prochaine tâche y démarre ; une tâche déjà en cours se termine là où elle a commencé.`;
       case "ja":
-        return `${name} は今後 ${where} で実行されます。次のタスクはそちらで開始し、実行中のタスクは開始した場所で完了します。`;
+        return `${name} は今後${where}実行されます。次のタスクはそちらで開始し、実行中のタスクは開始した場所で完了します。`;
       case "ko":
         return `${name}은(는) 이제 ${where} 실행돼요. 다음 작업은 그곳에서 시작하고, 이미 실행 중인 작업은 시작한 곳에서 끝나요.`;
       case "pt-BR":
         return `${name} agora roda ${where}. A próxima tarefa começa lá; uma que já esteja rodando termina onde começou.`;
       case "zh-Hans":
-        return `${name} 现在运行于 ${where}。它的下一个任务会在那里开始；已在运行的任务会在开始的地方完成。`;
+        return `${name} 现在改为${where}运行。它的下一个任务会在那里开始；已在运行的任务会在开始的地方完成。`;
       case "zh-Hant":
-        return `${name} 現在改為 ${where} 執行。它的下一項任務會在那裡開始；已在執行的任務會在開始的地方完成。`;
+        return `${name} 現在改為${where}執行。它的下一項任務會在那裡開始；已在執行的任務會在開始的地方完成。`;
       case "en-XA":
         return `[${name} ŕûñš ${where} ñöŵ. Îţš ñéẋţ ţášķ šţáŕţš ţĥéŕé; öñé áļŕéáðý ŕûññîñĝ ƒîñîšĥéš ŵĥéŕé îţ šţáŕţéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
@@ -41141,6 +42061,98 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Updated: ‬${text}`;
     }
     return `Updated: ${text}`;
+  }
+  function feedWriteNotSentOnWords(input2) {
+    const call = input2.call;
+    const place = input2.place;
+    const why = input2.why;
+    const words2 = input2.words;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يُرسل ${call} إلى ${place} بناءً على كلماتك «${words2}»: ${why}`;
+      case "de":
+        return `${call} wurde auf deine Worte „${words2}“ hin nicht an ${place} gesendet: ${why}`;
+      case "es":
+        return `No se envió ${call} a ${place} según tus palabras «${words2}»: ${why}`;
+      case "fr":
+        return `Requête ${call} non envoyée à ${place} sur vos mots « ${words2} » : ${why}`;
+      case "ja":
+        return `あなたの言葉「${words2}」に基づく ${call} は ${place} に送信しませんでした：${why}`;
+      case "ko":
+        return `말씀하신 “${words2}”에 따른 ${call} 요청을 ${place}에 보내지 않았어요: ${why}`;
+      case "pt-BR":
+        return `${call} não foi enviado para ${place} com base nas suas palavras “${words2}”: ${why}`;
+      case "zh-Hans":
+        return `根据你的话“${words2}”，未将 ${call} 发送到 ${place}：${why}`;
+      case "zh-Hant":
+        return `依照你的話「${words2}」，未將 ${call} 傳送到 ${place}：${why}`;
+      case "en-XA":
+        return `[Ðîð ñöţ šéñð ${call} ţö ${place} öñ ýöûŕ ŵöŕðš “${words2}”: ${why} ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Did not send ‬${call}‮ to ‬${place}‮ on your words “‬${words2}‮”: ‬${why}`;
+    }
+    return `Did not send ${call} to ${place} on your words “${words2}”: ${why}`;
+  }
+  function feedWriteSentOnWords(input2) {
+    const call = input2.call;
+    const place = input2.place;
+    const status = input2.status;
+    const words2 = input2.words;
+    switch (currentLanguage()) {
+      case "ar":
+        return `أُرسل ${call} إلى ${place} مرة واحدة دون بطاقة، بناءً على كلماتك «${words2}»: جاء الرد ${status}.`;
+      case "de":
+        return `${call} einmal ohne Karte an ${place} gesendet, auf deine Worte „${words2}“ hin: Die Antwort war ${status}.`;
+      case "es":
+        return `Se envió ${call} a ${place} una vez, sin tarjeta, según tus palabras «${words2}»: respondió ${status}.`;
+      case "fr":
+        return `Requête ${call} envoyée une fois à ${place} sans carte, sur vos mots « ${words2} » : réponse ${status}.`;
+      case "ja":
+        return `あなたの言葉「${words2}」に基づき、カードなしで ${call} を ${place} に1回送信しました。応答は ${status} です。`;
+      case "ko":
+        return `말씀하신 “${words2}”에 따라 카드 없이 ${call} 요청을 ${place}에 한 번 보냈어요. 응답: ${status}`;
+      case "pt-BR":
+        return `${call} enviado uma vez para ${place} sem cartão, com base nas suas palavras “${words2}”: a resposta foi ${status}.`;
+      case "zh-Hans":
+        return `根据你的话“${words2}”，已不经卡片将 ${call} 发送到 ${place} 一次：返回 ${status}。`;
+      case "zh-Hant":
+        return `依照你的話「${words2}」，已不經卡片將 ${call} 傳送到 ${place} 一次：回應 ${status}。`;
+      case "en-XA":
+        return `[Šéñţ ${call} ţö ${place} öñçé ŵîţĥöûţ á çáŕð, öñ ýöûŕ ŵöŕðš “${words2}”: îţ áñšŵéŕéð ${status}. ~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Sent ‬${call}‮ to ‬${place}‮ once without a card, on your words “‬${words2}‮”: it answered ‬${status}‮.‬`;
+    }
+    return `Sent ${call} to ${place} once without a card, on your words “${words2}”: it answered ${status}.`;
+  }
+  function feedWriteUnknownOnWords(input2) {
+    const call = input2.call;
+    const place = input2.place;
+    const words2 = input2.words;
+    switch (currentLanguage()) {
+      case "ar":
+        return `أُرسل ${call} إلى ${place} مرة واحدة دون بطاقة، بناءً على كلماتك «${words2}»؛ نتيجته غير معروفة، ولن يُرسل مرة أخرى.`;
+      case "de":
+        return `${call} einmal ohne Karte an ${place} gesendet, auf deine Worte „${words2}“ hin – was daraus wurde, ist unbekannt, und es wird nie erneut gesendet.`;
+      case "es":
+        return `Se envió ${call} a ${place} una vez, sin tarjeta, según tus palabras «${words2}»; no se sabe qué pasó, y nunca se vuelve a enviar.`;
+      case "fr":
+        return `Requête ${call} envoyée une fois à ${place} sans carte, sur vos mots « ${words2} » ; on ne sait pas ce qu’il en est, et elle ne sera jamais renvoyée.`;
+      case "ja":
+        return `あなたの言葉「${words2}」に基づき、カードなしで ${call} を ${place} に1回送信しました。結果は不明で、再送信されることはありません。`;
+      case "ko":
+        return `말씀하신 “${words2}”에 따라 카드 없이 ${call} 요청을 ${place}에 한 번 보냈어요. 결과는 알 수 없고, 다시 보내지 않아요.`;
+      case "pt-BR":
+        return `${call} enviado uma vez para ${place} sem cartão, com base nas suas palavras “${words2}”; não se sabe o resultado, e ele nunca é enviado de novo.`;
+      case "zh-Hans":
+        return `根据你的话“${words2}”，已不经卡片将 ${call} 发送到 ${place} 一次；结果未知，且不会再次发送。`;
+      case "zh-Hant":
+        return `依照你的話「${words2}」，已不經卡片將 ${call} 傳送到 ${place} 一次；結果不明，且不會再次傳送。`;
+      case "en-XA":
+        return `[Šéñţ ${call} ţö ${place} öñçé ŵîţĥöûţ á çáŕð, öñ ýöûŕ ŵöŕðš “${words2}”; ŵĥáţ çáɱé öƒ îţ îš ûñķñöŵñ, áñð îţ îš ñéṽéŕ šéñţ áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Sent ‬${call}‮ to ‬${place}‮ once without a card, on your words “‬${words2}‮”; what came of it is unknown, and it is never sent again.‬`;
+    }
+    return `Sent ${call} to ${place} once without a card, on your words “${words2}”; what came of it is unknown, and it is never sent again.`;
   }
   function feedYouChose(input2) {
     const choice = input2.choice;
@@ -42595,6 +43607,144 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `${name} takes no client file in this version of Infinitary.`;
   }
+  function integrationsConnectOfferBody(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `بعدها يستطيع نائب القبطان والطاقم الوصول إلى ${name} بتسجيل دخولك. كل إجراء من إجراءاته، بما في ذلك إجراءات القراءة، يسألك في بطاقة حتى تختار «مسموح دائمًا».`;
+      case "de":
+        return `Dein erster Offizier und deine Crew erreichen ${name} dann mit deiner Anmeldung. Jede seiner Aktionen, auch Leseaktionen, fragt dich auf einer Karte, bis du „Immer erlaubt“ wählst.`;
+      case "es":
+        return `Después, tu primer oficial y tu tripulación pueden acceder a ${name} con tu sesión. Cada una de sus acciones, incluidas las lecturas, te pregunta en una tarjeta hasta que eliges «Siempre permitida».`;
+      case "fr":
+        return `Votre second et votre équipage pourront alors accéder à ${name} avec votre connexion. Chacune de ses actions, y compris les lectures, vous demande sur une carte, jusqu’à ce que vous choisissiez « Toujours autorisée ».`;
+      case "ja":
+        return `その後、一等航海士と乗組員はあなたのサインインで ${name} を利用できます。読み取りも含め、どの操作も「常に許可」を選ぶまでカードで確認します。`;
+      case "ko":
+        return `그 뒤 일등항해사와 선원들이 내 로그인으로 ${name}에 접근할 수 있어요. 읽기를 포함해 모든 동작은 “항상 허용”을 고를 때까지 카드로 물어봐요.`;
+      case "pt-BR":
+        return `Depois, seu imediato e sua tripulação podem acessar ${name} com o seu login. Cada ação, inclusive as leituras, pergunta a você em um cartão até você escolher “Sempre permitida”.`;
+      case "zh-Hans":
+        return `之后，你的大副和船员可以用你的登录访问 ${name}。它的每个操作，包括读取，都会在卡片上询问你，直到你选择“始终允许”。`;
+      case "zh-Hant":
+        return `之後，你的大副和船員可以用你的登入存取 ${name}。它的每個動作，包括讀取，都會在卡片上詢問你，直到你選擇「一律允許」。`;
+      case "en-XA":
+        return `[Ýöûŕ ƒîŕšţ ɱáţé áñð ýöûŕ çŕéŵ çáñ ţĥéñ ŕéáçĥ ${name} ŵîţĥ ýöûŕ šîĝñ-îñ. Éáçĥ öƒ îţš áçţîöñš, ŕéáðš îñçļûðéð, ášķš ýöû öñ á çáŕð ûñţîļ ýöû çĥööšé Åļŵáýš áļļöŵ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your first mate and your crew can then reach ‬${name}‮ with your sign-in. Each of its actions, reads included, asks you on a card until you choose Always allow.‬`;
+    }
+    return `Your first mate and your crew can then reach ${name} with your sign-in. Each of its actions, reads included, asks you on a card until you choose Always allow.`;
+  }
+  function integrationsConnectOfferButton() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `فتح التكاملات`;
+      case "de":
+        return `Integrationen öffnen`;
+      case "es":
+        return `Abrir Integraciones`;
+      case "fr":
+        return `Ouvrir Intégrations`;
+      case "ja":
+        return `連携を開く`;
+      case "ko":
+        return `연동 열기`;
+      case "pt-BR":
+        return `Abrir Integrações`;
+      case "zh-Hans":
+        return `打开集成`;
+      case "zh-Hant":
+        return `開啟整合`;
+      case "en-XA":
+        return `[Öþéñ Îñţéĝŕáţîöñš ~~~~~~]`;
+      case "ar-XB":
+        return `‮Open Integrations‬`;
+    }
+    return `Open Integrations`;
+  }
+  function integrationsConnectOfferNotNow() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ليس الآن`;
+      case "de":
+        return `Nicht jetzt`;
+      case "es":
+        return `Ahora no`;
+      case "fr":
+        return `Pas maintenant`;
+      case "ja":
+        return `今はしない`;
+      case "ko":
+        return `나중에`;
+      case "pt-BR":
+        return `Agora não`;
+      case "zh-Hans":
+        return `暂不`;
+      case "zh-Hant":
+        return `暫時不要`;
+      case "en-XA":
+        return `[Ñöţ ñöŵ ~~~]`;
+      case "ar-XB":
+        return `‮Not now‬`;
+    }
+    return `Not now`;
+  }
+  function integrationsConnectOfferOpen(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `افتح التكاملات لتسجيل الدخول إلى ${name}.`;
+      case "de":
+        return `Öffne Integrationen, um dich bei ${name} anzumelden.`;
+      case "es":
+        return `Abre Integraciones para iniciar sesión en ${name}.`;
+      case "fr":
+        return `Ouvrez Intégrations pour vous connecter à ${name}.`;
+      case "ja":
+        return `連携を開いて ${name} にサインインしてください。`;
+      case "ko":
+        return `연동을 열어 ${name}에 로그인하세요.`;
+      case "pt-BR":
+        return `Abra Integrações para fazer login em ${name}.`;
+      case "zh-Hans":
+        return `打开“集成”登录 ${name}。`;
+      case "zh-Hant":
+        return `開啟「整合」登入 ${name}。`;
+      case "en-XA":
+        return `[Öþéñ Îñţéĝŕáţîöñš ţö šîĝñ îñ ţö ${name}. ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Open Integrations to sign in to ‬${name}‮.‬`;
+    }
+    return `Open Integrations to sign in to ${name}.`;
+  }
+  function integrationsConnectOfferTitle(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `ربط ${name}`;
+      case "de":
+        return `${name} verbinden`;
+      case "es":
+        return `Conectar ${name}`;
+      case "fr":
+        return `Connecter ${name}`;
+      case "ja":
+        return `${name} に接続`;
+      case "ko":
+        return `${name} 연결`;
+      case "pt-BR":
+        return `Conectar ${name}`;
+      case "zh-Hans":
+        return `连接 ${name}`;
+      case "zh-Hant":
+        return `連結 ${name}`;
+      case "en-XA":
+        return `[Çöññéçţ ${name} ~~~]`;
+      case "ar-XB":
+        return `‮Connect ‬${name}`;
+    }
+    return `Connect ${name}`;
+  }
   function integrationsGoogleClientFileIncomplete() {
     switch (currentLanguage()) {
       case "ar":
@@ -42756,87 +43906,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮A new Google sign-in, kept in Secrets and the app's memory‬`;
     }
     return `A new Google sign-in, kept in Secrets and the app's memory`;
-  }
-  function integrationsGoogleReadyDetail() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `عميل Google الخاص بك محفوظ. سجّل الدخول به لتنتقل عن عميل Infinitary المشترك.`;
-      case "de":
-        return `Dein eigener Google-Client ist aufbewahrt. Melde dich damit an, um vom gemeinsamen Client von Infinitary zu wechseln.`;
-      case "es":
-        return `Tu propio cliente de Google está guardado. Inicia sesión con él para dejar el cliente compartido de Infinitary.`;
-      case "fr":
-        return `Votre propre client Google est gardé. Connectez-vous avec lui pour quitter le client partagé d’Infinitary.`;
-      case "ja":
-        return `自分の Google クライアントを保管しました。それでサインインすると、Infinitary の共有クライアントから移行できます。`;
-      case "ko":
-        return `내 Google 클라이언트가 보관되어 있습니다. 그것으로 로그인해 Infinitary의 공유 클라이언트에서 옮기세요.`;
-      case "pt-BR":
-        return `Seu próprio cliente do Google está guardado. Faça login com ele para deixar o cliente compartilhado do Infinitary.`;
-      case "zh-Hans":
-        return `你自己的 Google 客户端已保存。用它登录，即可不再使用 Infinitary 的共享客户端。`;
-      case "zh-Hant":
-        return `你自己的 Google 用戶端已保存。用它登入，即可不再使用 Infinitary 的共用用戶端。`;
-      case "en-XA":
-        return `[Ýöûŕ öŵñ Ĝööĝļé çļîéñţ îš ķéþţ. Šîĝñ îñ ŵîţĥ îţ ţö ɱöṽé öƒƒ Îñƒîñîţáŕý'š šĥáŕéð çļîéñţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮Your own Google client is kept. Sign in with it to move off Infinitary's shared client.‬`;
-    }
-    return `Your own Google client is kept. Sign in with it to move off Infinitary's shared client.`;
-  }
-  function integrationsGoogleRetiring() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `أعدّ اتصالك الخاص`;
-      case "de":
-        return `Eigene Verbindung einrichten`;
-      case "es":
-        return `Configura tu propia conexión`;
-      case "fr":
-        return `Configurez votre propre connexion`;
-      case "ja":
-        return `自分の接続を設定してください`;
-      case "ko":
-        return `내 연결을 설정하세요`;
-      case "pt-BR":
-        return `Configure sua própria conexão`;
-      case "zh-Hans":
-        return `请设置你自己的连接`;
-      case "zh-Hant":
-        return `請設定你自己的連線`;
-      case "en-XA":
-        return `[Šéţ ûþ ýöûŕ öŵñ çöññéçţîöñ ~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮Set up your own connection‬`;
-    }
-    return `Set up your own connection`;
-  }
-  function integrationsGoogleRetiringDetail() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `Google متصل عبر عميل Infinitary المشترك، وهو في طريقه إلى التوقف. يظل يعمل حتى ذلك الحين؛ أعدّ عميلك الخاص لتبقى متصلًا.`;
-      case "de":
-        return `Google ist über den gemeinsamen Client von Infinitary verbunden, der eingestellt wird. Bis dahin funktioniert er weiter; richte deinen eigenen Client ein, um verbunden zu bleiben.`;
-      case "es":
-        return `Google está conectado mediante el cliente compartido de Infinitary, que se retirará. Seguirá funcionando hasta entonces; configura tu propio cliente para seguir conectado.`;
-      case "fr":
-        return `Google est connecté par le client partagé d’Infinitary, qui va être retiré. Il fonctionne jusque-là ; configurez votre propre client pour rester connecté.`;
-      case "ja":
-        return `Google は Infinitary の共有クライアントで接続されていますが、このクライアントは廃止されます。それまでは使えます。接続を保つには自分のクライアントを設定してください。`;
-      case "ko":
-        return `Google은 곧 종료되는 Infinitary의 공유 클라이언트로 연결되어 있습니다. 그때까지는 작동하니, 연결을 유지하려면 내 클라이언트를 설정하세요.`;
-      case "pt-BR":
-        return `O Google está conectado pelo cliente compartilhado do Infinitary, que vai ser desativado. Ele continua funcionando até lá; configure seu próprio cliente para continuar conectado.`;
-      case "zh-Hans":
-        return `Google 目前通过 Infinitary 的共享客户端连接，该客户端即将停用。在那之前它仍可使用；请设置你自己的客户端以保持连接。`;
-      case "zh-Hant":
-        return `Google 目前透過 Infinitary 的共用用戶端連線，該用戶端即將停用。在那之前它仍可使用；請設定你自己的用戶端以保持連線。`;
-      case "en-XA":
-        return `[Ĝööĝļé îš çöññéçţéð ţĥŕöûĝĥ Îñƒîñîţáŕý'š šĥáŕéð çļîéñţ, ŵĥîçĥ îš ŕéţîŕîñĝ. Îţ ķééþš ŵöŕķîñĝ ûñţîļ ţĥéñ; šéţ ûþ ýöûŕ öŵñ çļîéñţ ţö šţáý çöññéçţéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮Google is connected through Infinitary's shared client, which is retiring. It keeps working until then; set up your own client to stay connected.‬`;
-    }
-    return `Google is connected through Infinitary's shared client, which is retiring. It keeps working until then; set up your own client to stay connected.`;
   }
   function integrationsGoogleSetUp() {
     switch (currentLanguage()) {
@@ -43139,7 +44208,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function integrationsGoogleSetupStays() {
     switch (currentLanguage()) {
       case "ar":
-        return `يحفظ Infinitary سرّ العميل في الأسرار على هذا الكمبيوتر. لا يراه نائب القبطان ولا الطاقم أبدًا.`;
+        return `يحفظ Infinitary سرّ العميل في الأسرار على هذا الحاسوب. لا يراه نائب القبطان ولا الطاقم أبدًا.`;
       case "de":
         return `Infinitary bewahrt das Geheimnis des Clients in Geheimnisse auf diesem Computer auf. Dein erster Offizier und deine Crew sehen es nie.`;
       case "es":
@@ -43193,29 +44262,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function integrationsGoogleSetupStepPage() {
     switch (currentLanguage()) {
       case "ar":
-        return `افتح صفحة Google وسجّل الدخول بحساب Google الذي ستربطه. سمِّ المشروع، واقبل سياسة Google، واضغط Continue.`;
+        return `افتح صفحة Google وسجّل الدخول بحساب Google الذي ستربطه. سمِّ المشروع واترك مربع «Use this client for an AI-powered agent» دون تحديد، فهو مخصص فقط للعملاء الذين يستخدمون أدوات MCP من Google. ثم اقبل سياسة Google واضغط Continue.`;
       case "de":
-        return `Öffne Googles Seite und melde dich mit dem Google-Konto an, das du verbinden willst. Gib dem Projekt einen Namen, akzeptiere Googles Richtlinie und drücke Continue.`;
+        return `Öffne Googles Seite und melde dich mit dem Google-Konto an, das du verbinden willst. Gib dem Projekt einen Namen und lass das Kästchen „Use this client for an AI-powered agent“ ohne Haken, denn es ist nur für Clients gedacht, die Googles MCP-Tools nutzen. Akzeptiere dann Googles Richtlinie und drücke Continue.`;
       case "es":
-        return `Abre la página de Google e inicia sesión con la cuenta de Google que vas a conectar. Ponle nombre al proyecto, acepta la política de Google y pulsa Continue.`;
+        return `Abre la página de Google e inicia sesión con la cuenta de Google que vas a conectar. Ponle nombre al proyecto y deja sin marcar la casilla «Use this client for an AI-powered agent», porque solo es para clientes que usan las herramientas MCP de Google. Luego acepta la política de Google y pulsa Continue.`;
       case "fr":
-        return `Ouvrez la page de Google et connectez-vous avec le compte Google que vous allez relier. Nommez le projet, acceptez la règle de Google et appuyez sur Continue.`;
+        return `Ouvrez la page de Google et connectez-vous avec le compte Google que vous allez relier. Nommez le projet et laissez la case « Use this client for an AI-powered agent » décochée, car elle ne sert qu’aux clients qui utilisent les outils MCP de Google. Acceptez ensuite la règle de Google et appuyez sur Continue.`;
       case "ja":
-        return `Google のページを開き、接続する Google アカウントでサインインします。プロジェクトに名前を付け、Google のポリシーに同意して Continue を押します。`;
+        return `Google のページを開き、接続する Google アカウントでサインインします。プロジェクトに名前を付け、「Use this client for an AI-powered agent」はチェックを入れないままにします。このチェックボックスは Google の MCP ツールを使うクライアント専用です。そのあと Google のポリシーに同意して Continue を押します。`;
       case "ko":
-        return `Google 페이지를 열고 연결할 Google 계정으로 로그인하세요. 프로젝트 이름을 정하고 Google의 정책에 동의한 뒤 Continue를 누르세요.`;
+        return `Google 페이지를 열고 연결할 Google 계정으로 로그인하세요. 프로젝트 이름을 정하고 “Use this client for an AI-powered agent”는 체크하지 않은 채로 두세요. 이 체크박스는 Google의 MCP 도구를 쓰는 클라이언트 전용이에요. 그런 다음 Google의 정책에 동의하고 Continue를 누르세요.`;
       case "pt-BR":
-        return `Abra a página do Google e faça login com a conta do Google que você vai conectar. Dê um nome ao projeto, aceite a política do Google e pressione Continue.`;
+        return `Abra a página do Google e faça login com a conta do Google que você vai conectar. Dê um nome ao projeto e deixe desmarcada a caixa “Use this client for an AI-powered agent”, porque ela só serve para clientes que usam as ferramentas MCP do Google. Depois aceite a política do Google e pressione Continue.`;
       case "zh-Hans":
-        return `打开 Google 的页面，用你要连接的 Google 账号登录。为项目命名，接受 Google 的政策，然后按 Continue。`;
+        return `打开 Google 的页面，用你要连接的 Google 账号登录。为项目命名，并让“Use this client for an AI-powered agent”保持未勾选，因为这个复选框只用于使用 Google MCP 工具的客户端。然后接受 Google 的政策，按 Continue。`;
       case "zh-Hant":
-        return `開啟 Google 的頁面，用你要連接的 Google 帳戶登入。為專案命名，接受 Google 的政策，然後按 Continue。`;
+        return `開啟 Google 的頁面，用你要連接的 Google 帳戶登入。為專案命名，並讓「Use this client for an AI-powered agent」保持未勾選，因為這個核取方塊只用於使用 Google MCP 工具的用戶端。然後接受 Google 的政策，按 Continue。`;
       case "en-XA":
-        return `[Öþéñ Ĝööĝļé'š þáĝé áñð šîĝñ îñ ŵîţĥ ţĥé Ĝööĝļé áççöûñţ ýöû'ļļ çöññéçţ. Ñáɱé ţĥé þŕöĵéçţ, áççéþţ Ĝööĝļé'š þöļîçý áñð þŕéšš Çöñţîñûé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Öþéñ Ĝööĝļé'š þáĝé áñð šîĝñ îñ ŵîţĥ ţĥé Ĝööĝļé áççöûñţ ýöû'ļļ çöññéçţ. Ñáɱé ţĥé þŕöĵéçţ áñð ļéáṽé “Ûšé ţĥîš çļîéñţ ƒöŕ áñ ÅÎ-þöŵéŕéð áĝéñţ” ûñţîçķéð, šîñçé ţĥáţ ƀöẋ îš öñļý ƒöŕ çļîéñţš ţĥáţ ûšé Ĝööĝļé'š ṀÇÞ ţööļš. Ţĥéñ áççéþţ Ĝööĝļé'š þöļîçý áñð þŕéšš Çöñţîñûé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Open Google's page and sign in with the Google account you'll connect. Name the project, accept Google's policy and press Continue.‬`;
+        return `‮Open Google's page and sign in with the Google account you'll connect. Name the project and leave “Use this client for an AI-powered agent” unticked, since that box is only for clients that use Google's MCP tools. Then accept Google's policy and press Continue.‬`;
     }
-    return `Open Google's page and sign in with the Google account you'll connect. Name the project, accept Google's policy and press Continue.`;
+    return `Open Google's page and sign in with the Google account you'll connect. Name the project and leave “Use this client for an AI-powered agent” unticked, since that box is only for clients that use Google's MCP tools. Then accept Google's policy and press Continue.`;
   }
   function integrationsGoogleSetupTitle() {
     switch (currentLanguage()) {
@@ -43243,33 +44312,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Set up your own Google connection‬`;
     }
     return `Set up your own Google connection`;
-  }
-  function integrationsGoogleSignIn() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `تسجيل الدخول`;
-      case "de":
-        return `Anmelden`;
-      case "es":
-        return `Iniciar sesión`;
-      case "fr":
-        return `Se connecter`;
-      case "ja":
-        return `サインイン`;
-      case "ko":
-        return `로그인`;
-      case "pt-BR":
-        return `Fazer login`;
-      case "zh-Hans":
-        return `登录`;
-      case "zh-Hant":
-        return `登入`;
-      case "en-XA":
-        return `[Šîĝñ îñ ~~~]`;
-      case "ar-XB":
-        return `‮Sign in‬`;
-    }
-    return `Sign in`;
   }
   function integrationsGoogleSignInHint() {
     switch (currentLanguage()) {
@@ -49166,6 +50208,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Remove ${name}`;
   }
+  function placeAs(input2) {
+    const user = input2.user;
+    switch (currentLanguage()) {
+      case "ar":
+        return `باسم ${user}`;
+      case "de":
+        return `als ${user}`;
+      case "es":
+        return `como ${user}`;
+      case "fr":
+        return `sous l’utilisateur ${user}`;
+      case "ja":
+        return ` ${user} として`;
+      case "ko":
+        return `${user}(으)로`;
+      case "pt-BR":
+        return `como ${user}`;
+      case "zh-Hans":
+        return `以 ${user} 身份`;
+      case "zh-Hant":
+        return `以 ${user} 身分`;
+      case "en-XA":
+        return `[áš ${user} ~]`;
+      case "ar-XB":
+        return `‮as ‬${user}`;
+    }
+    return `as ${user}`;
+  }
   function placeHere() {
     switch (currentLanguage()) {
       case "ar":
@@ -49220,6 +50290,88 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮on ‬${computer}`;
     }
     return `on ${computer}`;
+  }
+  function placeOnOther() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `على الحاسوب الآخر`;
+      case "de":
+        return `auf dem anderen Computer`;
+      case "es":
+        return `en la otra computadora`;
+      case "fr":
+        return `sur l’autre ordinateur`;
+      case "ja":
+        return `別のコンピューターで`;
+      case "ko":
+        return `다른 컴퓨터에서`;
+      case "pt-BR":
+        return `no outro computador`;
+      case "zh-Hans":
+        return `在另一台电脑上`;
+      case "zh-Hant":
+        return `在另一台電腦上`;
+      case "en-XA":
+        return `[öñ ţĥé öţĥéŕ çöɱþûţéŕ ~~~~~~~]`;
+      case "ar-XB":
+        return `‮on the other computer‬`;
+    }
+    return `on the other computer`;
+  }
+  function placeOther() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الحاسوب الآخر`;
+      case "de":
+        return `Der andere Computer`;
+      case "es":
+        return `La otra computadora`;
+      case "fr":
+        return `L’autre ordinateur`;
+      case "ja":
+        return `別のコンピューター`;
+      case "ko":
+        return `다른 컴퓨터`;
+      case "pt-BR":
+        return `O outro computador`;
+      case "zh-Hans":
+        return `另一台电脑`;
+      case "zh-Hant":
+        return `另一台電腦`;
+      case "en-XA":
+        return `[Ţĥé öţĥéŕ çöɱþûţéŕ ~~~~~~]`;
+      case "ar-XB":
+        return `‮The other computer‬`;
+    }
+    return `The other computer`;
+  }
+  function placeRunningAs(input2) {
+    const user = input2.user;
+    switch (currentLanguage()) {
+      case "ar":
+        return `التشغيل باسم ${user}`;
+      case "de":
+        return `Läuft als ${user}`;
+      case "es":
+        return `Se ejecuta como ${user}`;
+      case "fr":
+        return `Sous l’utilisateur ${user}`;
+      case "ja":
+        return `${user} として実行`;
+      case "ko":
+        return `${user}(으)로 실행`;
+      case "pt-BR":
+        return `Rodando como ${user}`;
+      case "zh-Hans":
+        return `以 ${user} 身份运行`;
+      case "zh-Hant":
+        return `以 ${user} 身分執行`;
+      case "en-XA":
+        return `[Ŕûññîñĝ áš ${user} ~~~~]`;
+      case "ar-XB":
+        return `‮Running as ‬${user}`;
+    }
+    return `Running as ${user}`;
   }
   function placeThisComputer() {
     switch (currentLanguage()) {
@@ -50389,6 +51541,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Move ‬${repositories}‮ into a project of its own?‬`;
     }
     return `Move ${repositories} into a project of its own?`;
+  }
+  function projectsSetupLeftFolder() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `مجلده لا يزال في مجلد مشاريعك، لذا تربط إضافتُه ذلك المجلد بدل استنساخ المشروع مرة أخرى.`;
+      case "de":
+        return `Sein Ordner liegt noch in deinem Projektordner, daher verknüpft das Hinzufügen diesen Ordner, statt das Projekt ein zweites Mal zu klonen.`;
+      case "es":
+        return `Su carpeta sigue en tu carpeta de proyectos, así que al agregarlo se vincula esa carpeta en lugar de clonar el proyecto otra vez.`;
+      case "fr":
+        return `Son dossier est encore dans votre dossier de projets, donc l’ajouter lie ce dossier au lieu de cloner le projet une deuxième fois.`;
+      case "ja":
+        return `フォルダがまだプロジェクトのフォルダに残っているので、追加するともう一度クローンせずにそのフォルダをリンクします。`;
+      case "ko":
+        return `폴더가 아직 프로젝트 폴더에 남아 있어서, 추가하면 다시 복제하지 않고 그 폴더를 연결해요.`;
+      case "pt-BR":
+        return `A pasta dele ainda está na sua pasta de projetos, então adicioná-lo vincula essa pasta em vez de clonar o projeto de novo.`;
+      case "zh-Hans":
+        return `它的文件夹还在你的项目文件夹中，所以添加时会关联这个文件夹，而不是再克隆一份。`;
+      case "zh-Hant":
+        return `它的資料夾還在你的專案資料夾中，所以加入時會連結這個資料夾，而不是再複製一份。`;
+      case "en-XA":
+        return `[Îţš ƒöļðéŕ îš šţîļļ îñ ýöûŕ þŕöĵéçţš ƒöļðéŕ, šö áððîñĝ îţ ļîñķš ţĥáţ ƒöļðéŕ îñšţéáð öƒ çļöñîñĝ á šéçöñð çöþý. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Its folder is still in your projects folder, so adding it links that folder instead of cloning a second copy.‬`;
+    }
+    return `Its folder is still in your projects folder, so adding it links that folder instead of cloning a second copy.`;
   }
   function recordAgeDays(input2) {
     const count = formatNumber(input2.count);
@@ -52325,6 +53504,1158 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Open kept evidence`;
   }
+  function recordPartsClosedFold(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${count} جزء مغلق`;
+          case "one":
+            return `${count} جزء مغلق`;
+          case "two":
+            return `${count} جزآن مغلقان`;
+          case "few":
+            return `${count} أجزاء مغلقة`;
+          case "many":
+            return `${count} جزءًا مغلقًا`;
+          default:
+            return `${count} جزء مغلق`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} geschlossener Teil`;
+          default:
+            return `${count} geschlossene Teile`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} parte cerrada`;
+          case "many":
+            return `${count} de partes cerradas`;
+          default:
+            return `${count} partes cerradas`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} partie close`;
+          case "many":
+            return `${count} parties closes`;
+          default:
+            return `${count} parties closes`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `終了したパート${count}件`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `닫힌 부분 ${count}개`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} parte encerrada`;
+          case "many":
+            return `${count} partes encerradas`;
+          default:
+            return `${count} partes encerradas`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 个已关闭的部分`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 個已關閉的部分`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} çļöšéð þáŕţ ~~~~]`;
+          default:
+            return `[${count} çļöšéð þáŕţš ~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ closed part‬`;
+          default:
+            return `${count}‮ closed parts‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} closed part`;
+      default:
+        return `${count} closed parts`;
+    }
+  }
+  function recordPartsCountBacklog(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${count} في المهام المؤجلة لديك`;
+          case "one":
+            return `${count} في المهام المؤجلة لديك`;
+          case "two":
+            return `${count} في المهام المؤجلة لديك`;
+          case "few":
+            return `${count} في المهام المؤجلة لديك`;
+          case "many":
+            return `${count} في المهام المؤجلة لديك`;
+          default:
+            return `${count} في المهام المؤجلة لديك`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} in deinem Backlog`;
+          default:
+            return `${count} in deinem Backlog`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} en tus pendientes`;
+          case "many":
+            return `${count} en tus pendientes`;
+          default:
+            return `${count} en tus pendientes`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} dans votre réserve`;
+          case "many":
+            return `${count} dans votre réserve`;
+          default:
+            return `${count} dans votre réserve`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `バックログ${count}件`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `백로그 ${count}개`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} no seu backlog`;
+          case "many":
+            return `${count} no seu backlog`;
+          default:
+            return `${count} no seu backlog`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 个在你的待办列表中`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 個在你的待辦清單中`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} îñ ýöûŕ ƀáçķļöĝ ~~~~~~]`;
+          default:
+            return `[${count} îñ ýöûŕ ƀáçķļöĝ ~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ in your backlog‬`;
+          default:
+            return `${count}‮ in your backlog‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} in your backlog`;
+      default:
+        return `${count} in your backlog`;
+    }
+  }
+  function recordPartsCountIdle(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${count} خامل`;
+          case "one":
+            return `${count} خامل`;
+          case "two":
+            return `${count} خامل`;
+          case "few":
+            return `${count} خامل`;
+          case "many":
+            return `${count} خامل`;
+          default:
+            return `${count} خامل`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} untätig`;
+          default:
+            return `${count} untätig`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} inactiva`;
+          case "many":
+            return `${count} inactivas`;
+          default:
+            return `${count} inactivas`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} inactive`;
+          case "many":
+            return `${count} inactives`;
+          default:
+            return `${count} inactives`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `待機中${count}件`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `대기 중 ${count}개`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} ociosa`;
+          case "many":
+            return `${count} ociosas`;
+          default:
+            return `${count} ociosas`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 个空闲`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 個閒置`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} îðļé ~~]`;
+          default:
+            return `[${count} îðļé ~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ idle‬`;
+          default:
+            return `${count}‮ idle‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} idle`;
+      default:
+        return `${count} idle`;
+    }
+  }
+  function recordPartsCountInterrupted(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${count} متوقف`;
+          case "one":
+            return `${count} متوقف`;
+          case "two":
+            return `${count} متوقف`;
+          case "few":
+            return `${count} متوقف`;
+          case "many":
+            return `${count} متوقف`;
+          default:
+            return `${count} متوقف`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} unterbrochen`;
+          default:
+            return `${count} unterbrochen`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} interrumpida`;
+          case "many":
+            return `${count} interrumpidas`;
+          default:
+            return `${count} interrumpidas`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} interrompue`;
+          case "many":
+            return `${count} interrompues`;
+          default:
+            return `${count} interrompues`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `中断${count}件`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `중단됨 ${count}개`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} interrompida`;
+          case "many":
+            return `${count} interrompidas`;
+          default:
+            return `${count} interrompidas`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 个已中断`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 個已中斷`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} îñţéŕŕûþţéð ~~~~]`;
+          default:
+            return `[${count} îñţéŕŕûþţéð ~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ interrupted‬`;
+          default:
+            return `${count}‮ interrupted‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} interrupted`;
+      default:
+        return `${count} interrupted`;
+    }
+  }
+  function recordPartsCountQueued(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${count} في قائمة الانتظار`;
+          case "one":
+            return `${count} في قائمة الانتظار`;
+          case "two":
+            return `${count} في قائمة الانتظار`;
+          case "few":
+            return `${count} في قائمة الانتظار`;
+          case "many":
+            return `${count} في قائمة الانتظار`;
+          default:
+            return `${count} في قائمة الانتظار`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} in der Warteschlange`;
+          default:
+            return `${count} in der Warteschlange`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} en cola`;
+          case "many":
+            return `${count} en cola`;
+          default:
+            return `${count} en cola`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} en file d’attente`;
+          case "many":
+            return `${count} en file d’attente`;
+          default:
+            return `${count} en file d’attente`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `キュー${count}件`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `대기열 ${count}개`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} na fila`;
+          case "many":
+            return `${count} na fila`;
+          default:
+            return `${count} na fila`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 个排队中`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 個排隊中`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} ǫûéûéð ~~~]`;
+          default:
+            return `[${count} ǫûéûéð ~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ queued‬`;
+          default:
+            return `${count}‮ queued‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} queued`;
+      default:
+        return `${count} queued`;
+    }
+  }
+  function recordPartsCountStarting(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${count} قيد البدء`;
+          case "one":
+            return `${count} قيد البدء`;
+          case "two":
+            return `${count} قيد البدء`;
+          case "few":
+            return `${count} قيد البدء`;
+          case "many":
+            return `${count} قيد البدء`;
+          default:
+            return `${count} قيد البدء`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} startet`;
+          default:
+            return `${count} starten`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} iniciándose`;
+          case "many":
+            return `${count} iniciándose`;
+          default:
+            return `${count} iniciándose`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} en démarrage`;
+          case "many":
+            return `${count} en démarrage`;
+          default:
+            return `${count} en démarrage`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `開始中${count}件`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `시작 중 ${count}개`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} iniciando`;
+          case "many":
+            return `${count} iniciando`;
+          default:
+            return `${count} iniciando`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 个正在启动`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 個正在啟動`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} šţáŕţîñĝ ~~~]`;
+          default:
+            return `[${count} šţáŕţîñĝ ~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ starting‬`;
+          default:
+            return `${count}‮ starting‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} starting`;
+      default:
+        return `${count} starting`;
+    }
+  }
+  function recordPartsCountWaiting(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${count} ينتظرك`;
+          case "one":
+            return `${count} ينتظرك`;
+          case "two":
+            return `${count} ينتظرك`;
+          case "few":
+            return `${count} ينتظرك`;
+          case "many":
+            return `${count} ينتظرك`;
+          default:
+            return `${count} ينتظرك`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} wartet auf dich`;
+          default:
+            return `${count} warten auf dich`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} te espera`;
+          case "many":
+            return `${count} te esperan`;
+          default:
+            return `${count} te esperan`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} vous attend`;
+          case "many":
+            return `${count} vous attendent`;
+          default:
+            return `${count} vous attendent`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `あなたを待っているもの${count}件`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `나를 기다리는 부분 ${count}개`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} aguardando você`;
+          case "many":
+            return `${count} aguardando você`;
+          default:
+            return `${count} aguardando você`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 个在等你`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 個在等你`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} ŵáîţîñĝ öñ ýöû ~~~~~]`;
+          default:
+            return `[${count} ŵáîţîñĝ öñ ýöû ~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ waiting on you‬`;
+          default:
+            return `${count}‮ waiting on you‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} waiting on you`;
+      default:
+        return `${count} waiting on you`;
+    }
+  }
+  function recordPartsCountWorking(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${count} قيد العمل`;
+          case "one":
+            return `${count} قيد العمل`;
+          case "two":
+            return `${count} قيد العمل`;
+          case "few":
+            return `${count} قيد العمل`;
+          case "many":
+            return `${count} قيد العمل`;
+          default:
+            return `${count} قيد العمل`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} arbeitet`;
+          default:
+            return `${count} arbeiten`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} trabajando`;
+          case "many":
+            return `${count} trabajando`;
+          default:
+            return `${count} trabajando`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} en cours`;
+          case "many":
+            return `${count} en cours`;
+          default:
+            return `${count} en cours`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `作業中${count}件`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `작업 중 ${count}개`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} trabalhando`;
+          case "many":
+            return `${count} trabalhando`;
+          default:
+            return `${count} trabalhando`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 个正在工作`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 個正在工作`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} ŵöŕķîñĝ ~~~]`;
+          default:
+            return `[${count} ŵöŕķîñĝ ~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ working‬`;
+          default:
+            return `${count}‮ working‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} working`;
+      default:
+        return `${count} working`;
+    }
+  }
+  function recordPartsLast() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `بانتظار جزئها الأخير`;
+      case "de":
+        return `Wartet auf ihren letzten Teil`;
+      case "es":
+        return `Esperando su última parte`;
+      case "fr":
+        return `En attente de sa dernière partie`;
+      case "ja":
+        return `最後のパートを待っています`;
+      case "ko":
+        return `마지막 부분을 기다리는 중`;
+      case "pt-BR":
+        return `Aguardando a última parte dela`;
+      case "zh-Hans":
+        return `正在等待它的最后一个部分`;
+      case "zh-Hant":
+        return `正在等待它的最後一個部分`;
+      case "en-XA":
+        return `[Ŵáîţîñĝ ƒöŕ îţš ļášţ þáŕţ ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Waiting for its last part‬`;
+    }
+    return `Waiting for its last part`;
+  }
+  function recordPartsLastBacklog() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `جزؤها الأخير ينتظر أن تضغط «بدء»`;
+      case "de":
+        return `Ihr letzter Teil wartet auf dein Starten`;
+      case "es":
+        return `Su última parte espera que presiones Iniciar`;
+      case "fr":
+        return `Sa dernière partie attend que vous appuyiez sur Démarrer`;
+      case "ja":
+        return `最後のパートがあなたの「開始」を待っています`;
+      case "ko":
+        return `마지막 부분이 시작을 기다려요`;
+      case "pt-BR":
+        return `A última parte dela aguarda você tocar em Iniciar`;
+      case "zh-Hans":
+        return `它的最后一个部分在等你点击“开始”`;
+      case "zh-Hant":
+        return `它的最後一個部分在等你按下「開始」`;
+      case "en-XA":
+        return `[Îţš ļášţ þáŕţ ŵáîţš ƒöŕ ýöûŕ Šţáŕţ ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Its last part waits for your Start‬`;
+    }
+    return `Its last part waits for your Start`;
+  }
+  function recordPartsLastBacklogGuidance(input2) {
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${key} في المهام المؤجلة لديك. تُغلق هذه المهمة من تلقاء نفسها عند إغلاق أجزائها.`;
+      case "de":
+        return `${key} liegt in deinem Backlog. Diese Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.`;
+      case "es":
+        return `${key} está en tus pendientes. Esta tarea se cierra sola cuando se cierran sus partes.`;
+      case "fr":
+        return `${key} est dans votre réserve. Cette tâche se ferme d’elle-même une fois ses parties closes.`;
+      case "ja":
+        return `${key} はバックログにあります。パートがすべて終了すると、このタスクは自動で終了します。`;
+      case "ko":
+        return `${key}이(가) 백로그에 있어요. 부분이 모두 닫히면 이 작업은 저절로 닫혀요.`;
+      case "pt-BR":
+        return `${key} está no seu backlog. Esta tarefa se encerra sozinha quando as partes dela se encerrarem.`;
+      case "zh-Hans":
+        return `${key} 在你的待办列表中。它的部分全部关闭后，此任务会自动关闭。`;
+      case "zh-Hant":
+        return `${key} 在你的待辦清單中。它的部分全部關閉後，此任務會自動關閉。`;
+      case "en-XA":
+        return `[${key} îš îñ ýöûŕ ƀáçķļöĝ. Ţĥîš ţášķ çļöšéš ƀý îţšéļƒ öñçé îţš þáŕţš çļöšé. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${key}‮ is in your backlog. This task closes by itself once its parts close.‬`;
+    }
+    return `${key} is in your backlog. This task closes by itself once its parts close.`;
+  }
+  function recordPartsLastIdle(input2) {
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${key} خامل. تُغلق هذه المهمة من تلقاء نفسها عند إغلاق أجزائها.`;
+      case "de":
+        return `${key} ist untätig. Diese Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.`;
+      case "es":
+        return `${key} está inactiva. Esta tarea se cierra sola cuando se cierran sus partes.`;
+      case "fr":
+        return `${key} est inactive. Cette tâche se ferme d’elle-même une fois ses parties closes.`;
+      case "ja":
+        return `${key} は待機中です。パートがすべて終了すると、このタスクは自動で終了します。`;
+      case "ko":
+        return `${key}이(가) 대기 중이에요. 부분이 모두 닫히면 이 작업은 저절로 닫혀요.`;
+      case "pt-BR":
+        return `${key} está ociosa. Esta tarefa se encerra sozinha quando as partes dela se encerrarem.`;
+      case "zh-Hans":
+        return `${key} 处于空闲。它的部分全部关闭后，此任务会自动关闭。`;
+      case "zh-Hant":
+        return `${key} 處於閒置。它的部分全部關閉後，此任務會自動關閉。`;
+      case "en-XA":
+        return `[${key} îš îðļé. Ţĥîš ţášķ çļöšéš ƀý îţšéļƒ öñçé îţš þáŕţš çļöšé. ~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${key}‮ is idle. This task closes by itself once its parts close.‬`;
+    }
+    return `${key} is idle. This task closes by itself once its parts close.`;
+  }
+  function recordPartsLastInterrupted(input2) {
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `توقف ${key}. تُغلق هذه المهمة من تلقاء نفسها عند إغلاق أجزائها.`;
+      case "de":
+        return `${key} wurde unterbrochen. Diese Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.`;
+      case "es":
+        return `${key} se interrumpió. Esta tarea se cierra sola cuando se cierran sus partes.`;
+      case "fr":
+        return `${key} a été interrompue. Cette tâche se ferme d’elle-même une fois ses parties closes.`;
+      case "ja":
+        return `${key} は中断されました。パートがすべて終了すると、このタスクは自動で終了します。`;
+      case "ko":
+        return `${key}이(가) 중단됐어요. 부분이 모두 닫히면 이 작업은 저절로 닫혀요.`;
+      case "pt-BR":
+        return `${key} foi interrompida. Esta tarefa se encerra sozinha quando as partes dela se encerrarem.`;
+      case "zh-Hans":
+        return `${key} 已中断。它的部分全部关闭后，此任务会自动关闭。`;
+      case "zh-Hant":
+        return `${key} 已中斷。它的部分全部關閉後，此任務會自動關閉。`;
+      case "en-XA":
+        return `[${key} ŵáš îñţéŕŕûþţéð. Ţĥîš ţášķ çļöšéš ƀý îţšéļƒ öñçé îţš þáŕţš çļöšé. ~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${key}‮ was interrupted. This task closes by itself once its parts close.‬`;
+    }
+    return `${key} was interrupted. This task closes by itself once its parts close.`;
+  }
+  function recordPartsLastQueued(input2) {
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${key} في قائمة الانتظار. تُغلق هذه المهمة من تلقاء نفسها عند إغلاق أجزائها.`;
+      case "de":
+        return `${key} steht in der Warteschlange. Diese Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.`;
+      case "es":
+        return `${key} está en cola. Esta tarea se cierra sola cuando se cierran sus partes.`;
+      case "fr":
+        return `${key} est en file d’attente. Cette tâche se ferme d’elle-même une fois ses parties closes.`;
+      case "ja":
+        return `${key} はキューにあります。パートがすべて終了すると、このタスクは自動で終了します。`;
+      case "ko":
+        return `${key}이(가) 대기열에 있어요. 부분이 모두 닫히면 이 작업은 저절로 닫혀요.`;
+      case "pt-BR":
+        return `${key} está na fila. Esta tarefa se encerra sozinha quando as partes dela se encerrarem.`;
+      case "zh-Hans":
+        return `${key} 正在排队。它的部分全部关闭后，此任务会自动关闭。`;
+      case "zh-Hant":
+        return `${key} 正在排隊。它的部分全部關閉後，此任務會自動關閉。`;
+      case "en-XA":
+        return `[${key} îš ǫûéûéð. Ţĥîš ţášķ çļöšéš ƀý îţšéļƒ öñçé îţš þáŕţš çļöšé. ~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${key}‮ is queued. This task closes by itself once its parts close.‬`;
+    }
+    return `${key} is queued. This task closes by itself once its parts close.`;
+  }
+  function recordPartsLastStarting(input2) {
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${key} قيد البدء. تُغلق هذه المهمة من تلقاء نفسها عند إغلاق أجزائها.`;
+      case "de":
+        return `${key} startet gerade. Diese Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.`;
+      case "es":
+        return `${key} se está iniciando. Esta tarea se cierra sola cuando se cierran sus partes.`;
+      case "fr":
+        return `${key} est en train de démarrer. Cette tâche se ferme d’elle-même une fois ses parties closes.`;
+      case "ja":
+        return `${key} は開始中です。パートがすべて終了すると、このタスクは自動で終了します。`;
+      case "ko":
+        return `${key}이(가) 시작하는 중이에요. 부분이 모두 닫히면 이 작업은 저절로 닫혀요.`;
+      case "pt-BR":
+        return `${key} está iniciando. Esta tarefa se encerra sozinha quando as partes dela se encerrarem.`;
+      case "zh-Hans":
+        return `${key} 正在启动。它的部分全部关闭后，此任务会自动关闭。`;
+      case "zh-Hant":
+        return `${key} 正在啟動。它的部分全部關閉後，此任務會自動關閉。`;
+      case "en-XA":
+        return `[${key} îš šţáŕţîñĝ. Ţĥîš ţášķ çļöšéš ƀý îţšéļƒ öñçé îţš þáŕţš çļöšé. ~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${key}‮ is starting. This task closes by itself once its parts close.‬`;
+    }
+    return `${key} is starting. This task closes by itself once its parts close.`;
+  }
+  function recordPartsLastWaiting() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `جزؤها الأخير ينتظرك`;
+      case "de":
+        return `Ihr letzter Teil wartet auf dich`;
+      case "es":
+        return `Su última parte te está esperando`;
+      case "fr":
+        return `Sa dernière partie vous attend`;
+      case "ja":
+        return `最後のパートがあなたを待っています`;
+      case "ko":
+        return `마지막 부분이 나를 기다려요`;
+      case "pt-BR":
+        return `A última parte dela está aguardando você`;
+      case "zh-Hans":
+        return `它的最后一个部分在等你`;
+      case "zh-Hant":
+        return `它的最後一個部分在等你`;
+      case "en-XA":
+        return `[Îţš ļášţ þáŕţ îš ŵáîţîñĝ öñ ýöû ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Its last part is waiting on you‬`;
+    }
+    return `Its last part is waiting on you`;
+  }
+  function recordPartsLastWaitingGuidance(input2) {
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لدى ${key} بطاقة لك. تُغلق هذه المهمة من تلقاء نفسها عند إغلاق أجزائها.`;
+      case "de":
+        return `${key} hat eine Karte für dich. Diese Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.`;
+      case "es":
+        return `${key} tiene una tarjeta para ti. Esta tarea se cierra sola cuando se cierran sus partes.`;
+      case "fr":
+        return `${key} a une carte pour vous. Cette tâche se ferme d’elle-même une fois ses parties closes.`;
+      case "ja":
+        return `${key} にあなた宛てのカードがあります。パートがすべて終了すると、このタスクは自動で終了します。`;
+      case "ko":
+        return `${key}에 나를 위한 카드가 있어요. 부분이 모두 닫히면 이 작업은 저절로 닫혀요.`;
+      case "pt-BR":
+        return `${key} tem um cartão para você. Esta tarefa se encerra sozinha quando as partes dela se encerrarem.`;
+      case "zh-Hans":
+        return `${key} 有一张给你的卡片。它的部分全部关闭后，此任务会自动关闭。`;
+      case "zh-Hant":
+        return `${key} 有一張給你的卡片。它的部分全部關閉後，此任務會自動關閉。`;
+      case "en-XA":
+        return `[${key} ĥáš á çáŕð ƒöŕ ýöû. Ţĥîš ţášķ çļöšéš ƀý îţšéļƒ öñçé îţš þáŕţš çļöšé. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${key}‮ has a card for you. This task closes by itself once its parts close.‬`;
+    }
+    return `${key} has a card for you. This task closes by itself once its parts close.`;
+  }
+  function recordPartsLastWorking(input2) {
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${key} قيد العمل. تُغلق هذه المهمة من تلقاء نفسها عند إغلاق أجزائها.`;
+      case "de":
+        return `${key} arbeitet. Diese Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.`;
+      case "es":
+        return `${key} está trabajando. Esta tarea se cierra sola cuando se cierran sus partes.`;
+      case "fr":
+        return `${key} est en cours. Cette tâche se ferme d’elle-même une fois ses parties closes.`;
+      case "ja":
+        return `${key} は作業中です。パートがすべて終了すると、このタスクは自動で終了します。`;
+      case "ko":
+        return `${key}이(가) 작업 중이에요. 부분이 모두 닫히면 이 작업은 저절로 닫혀요.`;
+      case "pt-BR":
+        return `${key} está trabalhando. Esta tarefa se encerra sozinha quando as partes dela se encerrarem.`;
+      case "zh-Hans":
+        return `${key} 正在工作。它的部分全部关闭后，此任务会自动关闭。`;
+      case "zh-Hant":
+        return `${key} 正在工作。它的部分全部關閉後，此任務會自動關閉。`;
+      case "en-XA":
+        return `[${key} îš ŵöŕķîñĝ. Ţĥîš ţášķ çļöšéš ƀý îţšéļƒ öñçé îţš þáŕţš çļöšé. ~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${key}‮ is working. This task closes by itself once its parts close.‬`;
+    }
+    return `${key} is working. This task closes by itself once its parts close.`;
+  }
+  function recordPartsOpen(input2) {
+    const open2 = input2.open;
+    const total = formatNumber(input2.total);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.total)) {
+          case "zero":
+            return `بانتظار ${open2} من أجزائها الـ ${total}`;
+          case "one":
+            return `بانتظار ${open2} من جزئها الواحد`;
+          case "two":
+            return `بانتظار ${open2} من جزأيها الاثنين`;
+          case "few":
+            return `بانتظار ${open2} من أجزائها الـ ${total}`;
+          case "many":
+            return `بانتظار ${open2} من أجزائها الـ ${total}`;
+          default:
+            return `بانتظار ${open2} من أجزائها الـ ${total}`;
+        }
+      case "de":
+        switch (pluralCategory(input2.total)) {
+          case "one":
+            return `Wartet auf ${open2} von ihrem ${total} Teil`;
+          default:
+            return `Wartet auf ${open2} von ihren ${total} Teilen`;
+        }
+      case "es":
+        switch (pluralCategory(input2.total)) {
+          case "one":
+            return `Esperando ${open2} de su ${total} parte`;
+          case "many":
+            return `Esperando ${open2} de sus ${total} de partes`;
+          default:
+            return `Esperando ${open2} de sus ${total} partes`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.total)) {
+          case "one":
+            return `En attente de ${open2} sur sa ${total} partie`;
+          case "many":
+            return `En attente de ${open2} sur ses ${total} parties`;
+          default:
+            return `En attente de ${open2} sur ses ${total} parties`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.total)) {
+          default:
+            return `${total}件のパートのうち${open2}件を待っています`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.total)) {
+          default:
+            return `부분 ${total}개 중 ${open2}개를 기다리는 중`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.total)) {
+          case "one":
+            return `Aguardando ${open2} da ${total} parte dela`;
+          case "many":
+            return `Aguardando ${open2} das ${total} partes dela`;
+          default:
+            return `Aguardando ${open2} das ${total} partes dela`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.total)) {
+          default:
+            return `正在等待它 ${total} 个部分中的 ${open2} 个`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.total)) {
+          default:
+            return `正在等待它 ${total} 個部分中的 ${open2} 個`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.total, "en")) {
+          case "one":
+            return `[Ŵáîţîñĝ ƒöŕ ${open2} öƒ îţš ${total} þáŕţ ~~~~~~~~~]`;
+          default:
+            return `[Ŵáîţîñĝ ƒöŕ ${open2} öƒ îţš ${total} þáŕţš ~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.total, "en")) {
+          case "one":
+            return `‮Waiting for ‬${open2}‮ of its ‬${total}‮ part‬`;
+          default:
+            return `‮Waiting for ‬${open2}‮ of its ‬${total}‮ parts‬`;
+        }
+    }
+    switch (pluralCategory(input2.total)) {
+      case "one":
+        return `Waiting for ${open2} of its ${total} part`;
+      default:
+        return `Waiting for ${open2} of its ${total} parts`;
+    }
+  }
+  function recordPartsOpenGuidance(input2) {
+    const counts = input2.counts;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${counts}. تُغلق هذه المهمة من تلقاء نفسها عند إغلاق أجزائها.`;
+      case "de":
+        return `${counts}. Diese Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.`;
+      case "es":
+        return `${counts}. Esta tarea se cierra sola cuando se cierran sus partes.`;
+      case "fr":
+        return `${counts}. Cette tâche se ferme d’elle-même une fois ses parties closes.`;
+      case "ja":
+        return `${counts}。パートがすべて終了すると、このタスクは自動で終了します。`;
+      case "ko":
+        return `${counts}. 부분이 모두 닫히면 이 작업은 저절로 닫혀요.`;
+      case "pt-BR":
+        return `${counts}. Esta tarefa se encerra sozinha quando as partes dela se encerrarem.`;
+      case "zh-Hans":
+        return `${counts}。它的部分全部关闭后，此任务会自动关闭。`;
+      case "zh-Hant":
+        return `${counts}。它的部分全部關閉後，此任務會自動關閉。`;
+      case "en-XA":
+        return `[${counts}. Ţĥîš ţášķ çļöšéš ƀý îţšéļƒ öñçé îţš þáŕţš çļöšé. ~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${counts}‮. This task closes by itself once its parts close.‬`;
+    }
+    return `${counts}. This task closes by itself once its parts close.`;
+  }
   function recordPersonalNone(input2) {
     const computer = input2.computer;
     switch (currentLanguage()) {
@@ -52496,7 +54827,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const key = input2.key;
     switch (currentLanguage()) {
       case "ar":
-        return `تحمل هذه المهمة المراجعة التي اجتازتها ${key} عند ${head2}: الالتزام نفسه.`;
+        return `تحمل هذه المهمة المراجعة التي اجتازتها ${key} عند ${head2}: الإيداع نفسه.`;
       case "de":
         return `Diese Aufgabe übernimmt das Review, das ${key} bei ${head2} bestanden hat: derselbe Commit.`;
       case "es":
@@ -52525,7 +54856,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const key = input2.key;
     switch (currentLanguage()) {
       case "ar":
-        return `تحمل هذه المهمة المراجعة التي اجتازتها ${key} عند ${head2}، والإثبات المقبول هناك: الالتزام نفسه.`;
+        return `تحمل هذه المهمة المراجعة التي اجتازتها ${key} عند ${head2}، والإثبات المقبول هناك: الإيداع نفسه.`;
       case "de":
         return `Diese Aufgabe übernimmt das Review, das ${key} bei ${head2} bestanden hat, und den dort akzeptierten Nachweis: derselbe Commit.`;
       case "es":
@@ -54829,7 +57160,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function resetCommandNoConfirmation() {
     switch (currentLanguage()) {
       case "ar":
-        return `لا يستطيع هذا الكمبيوتر التأكد هنا من أنك أنت، لذا لم يُعَد تعيين أي شيء. استخدم إعادة تعيين Infinitary في الإعدادات ← عام، أو على الشاشة التي يعرضها Infinitary عندما يتعذّر فتحه.`;
+        return `لا يستطيع هذا الحاسوب التأكد هنا من أنك أنت، لذا لم يُعَد تعيين أي شيء. استخدم إعادة تعيين Infinitary في الإعدادات ← عام، أو على الشاشة التي يعرضها Infinitary عندما يتعذّر فتحه.`;
       case "de":
         return `Dieser Computer kann hier nicht bestätigen, dass du es bist, also wurde nichts zurückgesetzt. Nutze Infinitary zurücksetzen unter Einstellungen → Allgemein oder auf dem Bildschirm, den Infinitary zeigt, wenn es sich nicht öffnen kann.`;
       case "es":
@@ -54856,7 +57187,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function resetCommandRunning() {
     switch (currentLanguage()) {
       case "ar":
-        return `Infinitary مفتوح على هذا الكمبيوتر، لذا لم يُعَد تعيين أي شيء. استخدم إعادة تعيين Infinitary في الإعدادات ← عام، أو أغلق Infinitary وشغّل هذا الأمر مرة أخرى.`;
+        return `Infinitary مفتوح على هذا الحاسوب، لذا لم يُعَد تعيين أي شيء. استخدم إعادة تعيين Infinitary في الإعدادات ← عام، أو أغلق Infinitary وشغّل هذا الأمر مرة أخرى.`;
       case "de":
         return `Infinitary ist auf diesem Computer geöffnet, also wurde nichts zurückgesetzt. Nutze Infinitary zurücksetzen unter Einstellungen → Allgemein, oder beende Infinitary und führe dies erneut aus.`;
       case "es":
@@ -54883,7 +57214,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function resetConfirmReason() {
     switch (currentLanguage()) {
       case "ar":
-        return `إعادة تعيين Infinitary على هذا الكمبيوتر.`;
+        return `إعادة تعيين Infinitary على هذا الحاسوب.`;
       case "de":
         return `Infinitary auf diesem Computer zurücksetzen.`;
       case "es":
@@ -54911,7 +57242,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const home = input2.home;
     switch (currentLanguage()) {
       case "ar":
-        return `إعادة تعيين Infinitary على ${home} وعلى هذا الكمبيوتر.`;
+        return `إعادة تعيين Infinitary على ${home} وعلى هذا الحاسوب.`;
       case "de":
         return `Infinitary auf ${home} und diesem Computer zurücksetzen.`;
       case "es":
@@ -54939,7 +57270,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const home = input2.home;
     switch (currentLanguage()) {
       case "ar":
-        return `إعادة تعيين Infinitary على ${home} وعلى هذا الكمبيوتر`;
+        return `إعادة تعيين Infinitary على ${home} وعلى هذا الحاسوب`;
       case "de":
         return `Infinitary auf ${home} und diesem Computer zurückzusetzen`;
       case "es":
@@ -54966,7 +57297,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function resetConfirmReasonMac() {
     switch (currentLanguage()) {
       case "ar":
-        return `إعادة تعيين Infinitary على هذا الكمبيوتر`;
+        return `إعادة تعيين Infinitary على هذا الحاسوب`;
       case "de":
         return `Infinitary auf diesem Computer zurückzusetzen`;
       case "es":
@@ -55292,7 +57623,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function resetScreenKeeps() {
     switch (currentLanguage()) {
       case "ar":
-        return `تحتفظ المشاريع الموجودة في مجلداتك بكل ملفاتها والتزاماتها.`;
+        return `تحتفظ المشاريع الموجودة في مجلداتك بكل ملفاتها وإيداعاتها.`;
       case "de":
         return `Projekte in deinen eigenen Ordnern behalten jede Datei und jeden Commit.`;
       case "es":
@@ -59140,6 +61471,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Added ${name}. Started git in this folder with an empty first commit.`;
   }
+  function settingsAddProjectAddedLeftFolder(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `أُضيف ${name}. كان مجلده لا يزال في مجلد مشاريعك، لذا رُبط ذلك المجلد بدل استنساخ المشروع من جديد.`;
+      case "de":
+        return `${name} hinzugefügt. Sein Ordner lag noch in deinem Projektordner, also wurde dieser Ordner verknüpft, statt das Projekt neu zu klonen.`;
+      case "es":
+        return `Se agregó ${name}. Su carpeta seguía en tu carpeta de proyectos, así que se vinculó esa carpeta en lugar de clonar el proyecto otra vez.`;
+      case "fr":
+        return `${name} ajouté. Son dossier était encore dans votre dossier de projets, donc ce dossier est lié au lieu de cloner à nouveau le projet.`;
+      case "ja":
+        return `${name} を追加しました。フォルダがプロジェクトのフォルダに残っていたので、もう一度クローンせずにそのフォルダをリンクしました。`;
+      case "ko":
+        return `${name}을(를) 추가했어요. 폴더가 프로젝트 폴더에 남아 있어서 다시 복제하지 않고 그 폴더를 연결했어요.`;
+      case "pt-BR":
+        return `${name} adicionado. A pasta dele ainda estava na sua pasta de projetos, então essa pasta foi vinculada em vez de clonar o projeto de novo.`;
+      case "zh-Hans":
+        return `已添加 ${name}。它的文件夹还在你的项目文件夹中，所以直接关联了它，没有重新克隆。`;
+      case "zh-Hant":
+        return `已加入 ${name}。它的資料夾還在你的專案資料夾中，所以直接連結了它，沒有重新複製。`;
+      case "en-XA":
+        return `[Åððéð ${name}. Îţš ƒöļðéŕ ŵáš šţîļļ îñ ýöûŕ þŕöĵéçţš ƒöļðéŕ, šö ţĥáţ ƒöļðéŕ îš ļîñķéð îñšţéáð öƒ çļöñéð áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Added ‬${name}‮. Its folder was still in your projects folder, so that folder is linked instead of cloned again.‬`;
+    }
+    return `Added ${name}. Its folder was still in your projects folder, so that folder is linked instead of cloned again.`;
+  }
   function settingsAddProjectAddedMark() {
     switch (currentLanguage()) {
       case "ar":
@@ -60544,29 +62903,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function settingsAppearanceThemeDescription() {
     switch (currentLanguage()) {
       case "ar":
-        return `داكنة كالفضاء العميق، أو فاتحة كضوء النهار.`;
+        return `داكنة أو فاتحة أو سمة باسم صانعيها. تتبعها كل ألوان النافذة.`;
       case "de":
-        return `Dunkel wie der tiefe Weltraum oder hell wie das Tageslicht.`;
+        return `Dunkel, Hell oder ein Design unter dem Namen seiner Macher. Jede Farbe im Fenster folgt.`;
       case "es":
-        return `Oscuro como el espacio profundo o claro como la luz del día.`;
+        return `Oscuro, Claro o un tema con el nombre que le dio su autor. Todos los colores de la ventana lo siguen.`;
       case "fr":
-        return `Sombre comme l’espace lointain, ou clair comme le jour.`;
+        return `Sombre, Clair ou un thème sous le nom donné par ses auteurs. Toutes les couleurs de la fenêtre suivent.`;
       case "ja":
-        return `深宇宙のダーク、または日中のライト。`;
+        return `ダーク、ライト、または作者が名付けたテーマ。ウィンドウのすべての色が切り替わります。`;
       case "ko":
-        return `깊은 우주 같은 다크, 또는 한낮 같은 라이트.`;
+        return `다크, 라이트, 또는 제작자가 이름 붙인 테마. 창의 모든 색이 따라 바뀝니다.`;
       case "pt-BR":
-        return `Escuro como o espaço profundo ou claro como a luz do dia.`;
+        return `Escuro, Claro ou um tema com o nome dado por quem o criou. Todas as cores da janela acompanham.`;
       case "zh-Hans":
-        return `深空般的深色，或日光般的浅色。`;
+        return `深色、浅色，或由作者命名的主题。窗口中的所有颜色都会随之改变。`;
       case "zh-Hant":
-        return `深空般的深色，或日光般的淺色。`;
+        return `深色、淺色，或由作者命名的主題。視窗中的所有顏色都會隨之改變。`;
       case "en-XA":
-        return `[Ðééþ-šþáçé ðáŕķ, öŕ ðáýļîĝĥţ ļîĝĥţ. ~~~~~~~~~~~~]`;
+        return `[Ðáŕķ, Ļîĝĥţ, öŕ á ţĥéɱé îţš ɱáķéŕ ñáɱéð. Éṽéŕý çöļöŕ îñ ţĥé ŵîñðöŵ ƒöļļöŵš. ~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Deep-space dark, or daylight light.‬`;
+        return `‮Dark, Light, or a theme its maker named. Every color in the window follows.‬`;
     }
-    return `Deep-space dark, or daylight light.`;
+    return `Dark, Light, or a theme its maker named. Every color in the window follows.`;
   }
   function settingsAppearanceThemeLight() {
     switch (currentLanguage()) {
@@ -60594,6 +62953,142 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Light‬`;
     }
     return `Light`;
+  }
+  function settingsAppearanceThemeOwnDescribe() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `صف سمتك`;
+      case "de":
+        return `Eigenes beschreiben`;
+      case "es":
+        return `Describe el tuyo`;
+      case "fr":
+        return `Décrire le vôtre`;
+      case "ja":
+        return `自分で説明する`;
+      case "ko":
+        return `직접 설명하기`;
+      case "pt-BR":
+        return `Descrever o seu`;
+      case "zh-Hans":
+        return `描述你自己的`;
+      case "zh-Hant":
+        return `描述你自己的`;
+      case "en-XA":
+        return `[Ðéšçŕîƀé ýöûŕ öŵñ ~~~~~~]`;
+      case "ar-XB":
+        return `‮Describe your own‬`;
+    }
+    return `Describe your own`;
+  }
+  function settingsAppearanceThemeOwnDraft() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `اصنع سمة ألوان خاصة بي: `;
+      case "de":
+        return `Mach mir ein eigenes Farbdesign: `;
+      case "es":
+        return `Haz mi propio tema de colores: `;
+      case "fr":
+        return `Crée mon propre thème de couleurs : `;
+      case "ja":
+        return `自分だけのカラーテーマを作ってください：`;
+      case "ko":
+        return `나만의 색상 테마를 만들어 주세요: `;
+      case "pt-BR":
+        return `Crie meu próprio tema de cores: `;
+      case "zh-Hans":
+        return `为我做一个自己的颜色主题：`;
+      case "zh-Hant":
+        return `為我做一個自己的顏色主題：`;
+      case "en-XA":
+        return `[Ṁáķé ɱý öŵñ çöļöŕ ţĥéɱé:  ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Make my own color theme: ‬`;
+    }
+    return `Make my own color theme: `;
+  }
+  function settingsAppearanceThemeOwnRemove() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إزالة`;
+      case "de":
+        return `Entfernen`;
+      case "es":
+        return `Quitar`;
+      case "fr":
+        return `Supprimer`;
+      case "ja":
+        return `削除`;
+      case "ko":
+        return `삭제`;
+      case "pt-BR":
+        return `Remover`;
+      case "zh-Hans":
+        return `移除`;
+      case "zh-Hant":
+        return `移除`;
+      case "en-XA":
+        return `[Ŕéɱöṽé ~~]`;
+      case "ar-XB":
+        return `‮Remove‬`;
+    }
+    return `Remove`;
+  }
+  function settingsAppearanceThemeOwnRemoveNamed(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `إزالة ${name}`;
+      case "de":
+        return `${name} entfernen`;
+      case "es":
+        return `Quitar ${name}`;
+      case "fr":
+        return `Supprimer ${name}`;
+      case "ja":
+        return `${name} を削除`;
+      case "ko":
+        return `${name} 삭제`;
+      case "pt-BR":
+        return `Remover ${name}`;
+      case "zh-Hans":
+        return `移除 ${name}`;
+      case "zh-Hant":
+        return `移除 ${name}`;
+      case "en-XA":
+        return `[Ŕéɱöṽé ${name} ~~~]`;
+      case "ar-XB":
+        return `‮Remove ‬${name}`;
+    }
+    return `Remove ${name}`;
+  }
+  function settingsAppearanceThemeYours() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `سماتك`;
+      case "de":
+        return `Deine`;
+      case "es":
+        return `Tuyos`;
+      case "fr":
+        return `Les vôtres`;
+      case "ja":
+        return `あなたのテーマ`;
+      case "ko":
+        return `내 테마`;
+      case "pt-BR":
+        return `Seus`;
+      case "zh-Hans":
+        return `你的`;
+      case "zh-Hant":
+        return `你的`;
+      case "en-XA":
+        return `[Ýöûŕš ~~]`;
+      case "ar-XB":
+        return `‮Yours‬`;
+    }
+    return `Yours`;
   }
   function settingsAppearanceWash() {
     switch (currentLanguage()) {
@@ -66286,34 +68781,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `${model} · ${vendor} · on`;
   }
-  function settingsDecisionsOpenRouterModels() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `نماذج القرارات من OpenRouter`;
-      case "de":
-        return `Entscheidungsmodelle von OpenRouter`;
-      case "es":
-        return `Modelos de decisiones de OpenRouter`;
-      case "fr":
-        return `Modèles de décision OpenRouter`;
-      case "ja":
-        return `OpenRouter の判断用モデル`;
-      case "ko":
-        return `OpenRouter 결정 모델`;
-      case "pt-BR":
-        return `Modelos de decisão do OpenRouter`;
-      case "zh-Hans":
-        return `OpenRouter 决定模型`;
-      case "zh-Hant":
-        return `OpenRouter 決定模型`;
-      case "en-XA":
-        return `[ÖþéñŔöûţéŕ ðéçîšîöñ ɱöðéļš ~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮OpenRouter decision models‬`;
-    }
-    return `OpenRouter decision models`;
-  }
-  function settingsDecisionsOpenRouterPrice(input2) {
+  function settingsDecisionsModelPrice(input2) {
     const model = input2.model;
     const price = input2.price;
     const vendor = input2.vendor;
@@ -66343,33 +68811,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `${model} · ${vendor} · $${price} / million input tokens`;
   }
-  function settingsDecisionsOpenRouterUnavailable() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `OpenRouter غير متاح · يُستخدم أحد نماذجك`;
-      case "de":
-        return `OpenRouter nicht verfügbar · eines deiner eigenen Modelle wird verwendet`;
-      case "es":
-        return `OpenRouter no disponible · se usa uno de tus propios modelos`;
-      case "fr":
-        return `OpenRouter indisponible · un de vos propres modèles est utilisé`;
-      case "ja":
-        return `OpenRouter を利用できません · 自分のモデルの1つを使用中`;
-      case "ko":
-        return `OpenRouter 사용 불가 · 선장님의 모델 중 하나 사용 중`;
-      case "pt-BR":
-        return `OpenRouter indisponível · usando um dos seus próprios modelos`;
-      case "zh-Hans":
-        return `OpenRouter 不可用 · 正在使用你自己的一个模型`;
-      case "zh-Hant":
-        return `無法使用 OpenRouter · 正在使用你自己的一個模型`;
-      case "en-XA":
-        return `[ÖþéñŔöûţéŕ ûñáṽáîļáƀļé · ûšîñĝ öñé öƒ ýöûŕ öŵñ ɱöðéļš ~~~~~~~~~~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮OpenRouter unavailable · using one of your own models‬`;
-    }
-    return `OpenRouter unavailable · using one of your own models`;
-  }
   function settingsDecisionsPicker() {
     switch (currentLanguage()) {
       case "ar":
@@ -66396,6 +68837,179 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Choose the model that answers decisions‬`;
     }
     return `Choose the model that answers decisions`;
+  }
+  function settingsDecisionsProviderChoice() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أوقف أي استخدام في قائمة القرارات، أو اختر نموذج قرارات آخر.`;
+      case "de":
+        return `Schalte jede Verwendung in der Liste unter Entscheidungen aus oder wähle ein anderes Entscheidungsmodell.`;
+      case "es":
+        return `Desactiva cualquier uso en la lista de Decisiones o elige otro modelo de decisiones.`;
+      case "fr":
+        return `Désactivez n’importe quel usage dans la liste Décisions, ou choisissez un autre modèle de décision.`;
+      case "ja":
+        return `判断の一覧で用途をオフにするか、別の判断用モデルを選んでください。`;
+      case "ko":
+        return `결정 목록에서 원하는 용도를 끄거나 다른 결정 모델을 고르세요.`;
+      case "pt-BR":
+        return `Desative qualquer uso na lista de Decisões ou escolha outro modelo de decisão.`;
+      case "zh-Hans":
+        return `在决定列表中关闭任一用途，或选择另一个决定模型。`;
+      case "zh-Hant":
+        return `在決定清單中關閉任一用途，或選擇另一個決定模型。`;
+      case "en-XA":
+        return `[Ţûŕñ öƒƒ áñý ûšé îñ ţĥé Ðéçîšîöñš ļîšţ, öŕ çĥööšé áñöţĥéŕ ðéçîšîöñ ɱöðéļ. ~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Turn off any use in the Decisions list, or choose another decision model.‬`;
+    }
+    return `Turn off any use in the Decisions list, or choose another decision model.`;
+  }
+  function settingsDecisionsProviderCostAccount(input2) {
+    const model = input2.model;
+    const price = input2.price;
+    const provider = input2.provider;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يدفع حسابك في ${provider} $${price} لكل مليون رمز إدخال؛ والإخراج مجاني. إذا لم يستطع ${model} الإجابة، تجيب نماذجك بدلًا منه.`;
+      case "de":
+        return `Dein ${provider}-Konto zahlt $${price} pro Million Eingabe-Tokens; die Ausgabe ist kostenlos. Wenn ${model} nicht antworten kann, antworten stattdessen deine eigenen Modelle.`;
+      case "es":
+        return `Tu cuenta de ${provider} paga $${price} por millón de tokens de entrada; la salida es gratis. Si ${model} no puede responder, responden tus propios modelos.`;
+      case "fr":
+        return `Votre compte ${provider} paie $${price} par million de jetons en entrée ; la sortie est gratuite. Si ${model} ne peut pas répondre, vos propres modèles répondent à sa place.`;
+      case "ja":
+        return `${provider} のアカウントが入力100万トークンあたり $${price} を支払います。出力は無料です。${model} が答えられないときは、自分のモデルが代わりに答えます。`;
+      case "ko":
+        return `${provider} 계정이 입력 토큰 100만 개당 $${price}를 내요. 출력은 무료예요. ${model}이 답하지 못하면 선장님의 모델이 대신 답해요.`;
+      case "pt-BR":
+        return `Sua conta do ${provider} paga $${price} por milhão de tokens de entrada; a saída é gratuita. Se ${model} não puder responder, seus próprios modelos respondem no lugar.`;
+      case "zh-Hans":
+        return `你的 ${provider} 账户按每百万输入 token $${price} 付费；输出免费。如果 ${model} 无法回答，由你自己的模型回答。`;
+      case "zh-Hant":
+        return `你的 ${provider} 帳號按每百萬輸入 token $${price} 付費；輸出免費。如果 ${model} 無法回答，由你自己的模型回答。`;
+      case "en-XA":
+        return `[Ýöûŕ ${provider} áççöûñţ þáýš $${price} þéŕ ɱîļļîöñ îñþûţ ţöķéñš; öûţþûţ îš ƒŕéé. Îƒ ${model} çáññöţ áñšŵéŕ, ýöûŕ öŵñ ɱöðéļš áñšŵéŕ îñšţéáð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your ‬${provider}‮ account pays $‬${price}‮ per million input tokens; output is free. If ‬${model}‮ cannot answer, your own models answer instead.‬`;
+    }
+    return `Your ${provider} account pays $${price} per million input tokens; output is free. If ${model} cannot answer, your own models answer instead.`;
+  }
+  function settingsDecisionsProviderCostAllowance(input2) {
+    const model = input2.model;
+    const price = input2.price;
+    const provider = input2.provider;
+    switch (currentLanguage()) {
+      case "ar":
+        return `كل استدعاء يُحتسب من رصيدك في ${provider} بسعر القائمة، $${price} لكل مليون رمز إدخال؛ والإخراج مجاني. إذا لم يستطع ${model} الإجابة، تجيب نماذجك بدلًا منه.`;
+      case "de":
+        return `Jeder Aufruf zählt zum Listenpreis gegen dein ${provider}-Kontingent, $${price} pro Million Eingabe-Tokens; die Ausgabe ist kostenlos. Wenn ${model} nicht antworten kann, antworten stattdessen deine eigenen Modelle.`;
+      case "es":
+        return `Cada llamada cuenta contra tu asignación de ${provider} a precio de lista, $${price} por millón de tokens de entrada; la salida es gratis. Si ${model} no puede responder, responden tus propios modelos.`;
+      case "fr":
+        return `Chaque appel est décompté de votre allocation ${provider} au prix catalogue, $${price} par million de jetons en entrée ; la sortie est gratuite. Si ${model} ne peut pas répondre, vos propres modèles répondent à sa place.`;
+      case "ja":
+        return `呼び出しごとに ${provider} の利用枠を定価で使います。入力100万トークンあたり $${price}、出力は無料です。${model} が答えられないときは、自分のモデルが代わりに答えます。`;
+      case "ko":
+        return `호출할 때마다 ${provider} 사용 한도에서 정가로 차감돼요. 입력 토큰 100만 개당 $${price}이고 출력은 무료예요. ${model}이 답하지 못하면 선장님의 모델이 대신 답해요.`;
+      case "pt-BR":
+        return `Cada chamada conta na sua franquia do ${provider} pelo preço de tabela, $${price} por milhão de tokens de entrada; a saída é gratuita. Se ${model} não puder responder, seus próprios modelos respondem no lugar.`;
+      case "zh-Hans":
+        return `每次调用按标价计入你的 ${provider} 额度，每百万输入 token $${price}；输出免费。如果 ${model} 无法回答，由你自己的模型回答。`;
+      case "zh-Hant":
+        return `每次呼叫按定價計入你的 ${provider} 額度，每百萬輸入 token $${price}；輸出免費。如果 ${model} 無法回答，由你自己的模型回答。`;
+      case "en-XA":
+        return `[Éáçĥ çáļļ çöûñţš áĝáîñšţ ýöûŕ ${provider} áļļöŵáñçé áţ ļîšţ þŕîçé, $${price} þéŕ ɱîļļîöñ îñþûţ ţöķéñš; öûţþûţ îš ƒŕéé. Îƒ ${model} çáññöţ áñšŵéŕ, ýöûŕ öŵñ ɱöðéļš áñšŵéŕ îñšţéáð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Each call counts against your ‬${provider}‮ allowance at list price, $‬${price}‮ per million input tokens; output is free. If ‬${model}‮ cannot answer, your own models answer instead.‬`;
+    }
+    return `Each call counts against your ${provider} allowance at list price, $${price} per million input tokens; output is free. If ${model} cannot answer, your own models answer instead.`;
+  }
+  function settingsDecisionsProviderModels(input2) {
+    const provider = input2.provider;
+    switch (currentLanguage()) {
+      case "ar":
+        return `نماذج القرارات من ${provider}`;
+      case "de":
+        return `Entscheidungsmodelle von ${provider}`;
+      case "es":
+        return `Modelos de decisiones de ${provider}`;
+      case "fr":
+        return `Modèles de décision ${provider}`;
+      case "ja":
+        return `${provider} の判断用モデル`;
+      case "ko":
+        return `${provider} 결정 모델`;
+      case "pt-BR":
+        return `Modelos de decisão do ${provider}`;
+      case "zh-Hans":
+        return `${provider} 决定模型`;
+      case "zh-Hant":
+        return `${provider} 決定模型`;
+      case "en-XA":
+        return `[${provider} ðéçîšîöñ ɱöðéļš ~~~~~~]`;
+      case "ar-XB":
+        return `${provider}‮ decision models‬`;
+    }
+    return `${provider} decision models`;
+  }
+  function settingsDecisionsProviderShared(input2) {
+    const model = input2.model;
+    const provider = input2.provider;
+    const vendor = input2.vendor;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يجيب ${model} (${vendor}) عن أسئلة القرارات في Infinitary عبر ${provider}، مثل نماذجك الأخرى. قد تتضمن الأسئلة تفاصيل المهام وردودك والمحادثة المجاورة والشيفرة.`;
+      case "de":
+        return `${model} (${vendor}) beantwortet die Entscheidungsfragen von Infinitary über ${provider}, wie deine anderen Modelle. Fragen können Aufgabendetails, deine Antworten, das Gespräch drumherum und Code enthalten.`;
+      case "es":
+        return `${model} (${vendor}) responde las preguntas de decisión de Infinitary a través de ${provider}, como tus otros modelos. Las preguntas pueden incluir detalles de tareas, tus respuestas, la conversación cercana y código.`;
+      case "fr":
+        return `${model} (${vendor}) répond aux questions de décision d’Infinitary via ${provider}, comme vos autres modèles. Les questions peuvent inclure les détails des tâches, vos réponses, la conversation autour et du code.`;
+      case "ja":
+        return `${model}（${vendor}）は、ほかのモデルと同じように ${provider} 経由で Infinitary の判断の質問に答えます。質問にはタスクの詳細、あなたの返信、周辺の会話、コードが含まれることがあります。`;
+      case "ko":
+        return `${model}(${vendor})은 다른 모델처럼 ${provider}를 통해 Infinitary의 결정 질문에 답해요. 질문에는 작업 세부 사항, 선장님의 답장, 주변 대화와 코드가 들어갈 수 있어요.`;
+      case "pt-BR":
+        return `${model} (${vendor}) responde às perguntas de decisão do Infinitary pelo ${provider}, como seus outros modelos. As perguntas podem incluir detalhes de tarefas, suas respostas, a conversa ao redor e código.`;
+      case "zh-Hans":
+        return `${model}（${vendor}）像你的其他模型一样，通过 ${provider} 回答 Infinitary 的决定问题。问题可能包含任务详情、你的回复、附近的对话和代码。`;
+      case "zh-Hant":
+        return `${model}（${vendor}）像你的其他模型一樣，透過 ${provider} 回答 Infinitary 的決定問題。問題可能包含任務詳情、你的回覆、附近的對話和程式碼。`;
+      case "en-XA":
+        return `[${model} (${vendor}) áñšŵéŕš Îñƒîñîţáŕý'š ðéçîšîöñ ǫûéšţîöñš ţĥŕöûĝĥ ${provider}, ļîķé ýöûŕ öţĥéŕ ɱöðéļš. Ǫûéšţîöñš çáñ îñçļûðé ţášķ ðéţáîļš, ýöûŕ ŕéþļîéš, ñéáŕƀý çöñṽéŕšáţîöñ áñð çöðé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${model}‮ (‬${vendor}‮) answers Infinitary's decision questions through ‬${provider}‮, like your other models. Questions can include task details, your replies, nearby conversation and code.‬`;
+    }
+    return `${model} (${vendor}) answers Infinitary's decision questions through ${provider}, like your other models. Questions can include task details, your replies, nearby conversation and code.`;
+  }
+  function settingsDecisionsProviderUnavailable(input2) {
+    const provider = input2.provider;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${provider} غير متاح · يُستخدم أحد نماذجك`;
+      case "de":
+        return `${provider} nicht verfügbar · eines deiner eigenen Modelle wird verwendet`;
+      case "es":
+        return `${provider} no disponible · se usa uno de tus propios modelos`;
+      case "fr":
+        return `${provider} indisponible · un de vos propres modèles est utilisé`;
+      case "ja":
+        return `${provider} を利用できません · 自分のモデルの1つを使用中`;
+      case "ko":
+        return `${provider} 사용 불가 · 선장님의 모델 중 하나 사용 중`;
+      case "pt-BR":
+        return `${provider} indisponível · usando um dos seus próprios modelos`;
+      case "zh-Hans":
+        return `${provider} 不可用 · 正在使用你自己的一个模型`;
+      case "zh-Hant":
+        return `無法使用 ${provider} · 正在使用你自己的一個模型`;
+      case "en-XA":
+        return `[${provider} ûñáṽáîļáƀļé · ûšîñĝ öñé öƒ ýöûŕ öŵñ ɱöðéļš ~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${provider}‮ unavailable · using one of your own models‬`;
+    }
+    return `${provider} unavailable · using one of your own models`;
   }
   function settingsDecisionsRemove(input2) {
     const model = input2.model;
@@ -66508,33 +69122,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Turn off ${model}`;
   }
-  function settingsDecisionsTurnOnOpenRouter(input2) {
+  function settingsDecisionsTurnOnThrough(input2) {
     const model = input2.model;
+    const provider = input2.provider;
     switch (currentLanguage()) {
       case "ar":
-        return `تفعيل ${model} عبر OpenRouter`;
+        return `تفعيل ${model} عبر ${provider}`;
       case "de":
-        return `${model} über OpenRouter einschalten`;
+        return `${model} über ${provider} einschalten`;
       case "es":
-        return `Activar ${model} a través de OpenRouter`;
+        return `Activar ${model} a través de ${provider}`;
       case "fr":
-        return `Activer ${model} via OpenRouter`;
+        return `Activer ${model} via ${provider}`;
       case "ja":
-        return `OpenRouter 経由で ${model} をオンにする`;
+        return `${provider} 経由で ${model} をオンにする`;
       case "ko":
-        return `OpenRouter로 ${model} 켜기`;
+        return `${provider}로 ${model} 켜기`;
       case "pt-BR":
-        return `Ativar ${model} pelo OpenRouter`;
+        return `Ativar ${model} pelo ${provider}`;
       case "zh-Hans":
-        return `通过 OpenRouter 打开 ${model}`;
+        return `通过 ${provider} 打开 ${model}`;
       case "zh-Hant":
-        return `透過 OpenRouter 開啟 ${model}`;
+        return `透過 ${provider} 開啟 ${model}`;
       case "en-XA":
-        return `[Ţûŕñ öñ ${model} ţĥŕöûĝĥ ÖþéñŔöûţéŕ ~~~~~~~~~]`;
+        return `[Ţûŕñ öñ ${model} ţĥŕöûĝĥ ${provider} ~~~~~~]`;
       case "ar-XB":
-        return `‮Turn on ‬${model}‮ through OpenRouter‬`;
+        return `‮Turn on ‬${model}‮ through ‬${provider}`;
     }
-    return `Turn on ${model} through OpenRouter`;
+    return `Turn on ${model} through ${provider}`;
   }
   function settingsDecisionsUseAuto() {
     switch (currentLanguage()) {
@@ -66592,32 +69207,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Use ${model} (${vendor})`;
   }
-  function settingsDecisionsUseOpenRouter() {
+  function settingsDecisionsUseProvider(input2) {
+    const provider = input2.provider;
     switch (currentLanguage()) {
       case "ar":
-        return `استخدام نموذج قرارات من OpenRouter`;
+        return `استخدام نموذج قرارات من ${provider}`;
       case "de":
-        return `Ein Entscheidungsmodell von OpenRouter verwenden`;
+        return `Ein Entscheidungsmodell von ${provider} verwenden`;
       case "es":
-        return `Usar un modelo de decisiones de OpenRouter`;
+        return `Usar un modelo de decisiones de ${provider}`;
       case "fr":
-        return `Utiliser un modèle de décision OpenRouter`;
+        return `Utiliser un modèle de décision ${provider}`;
       case "ja":
-        return `OpenRouter の判断用モデルを使う`;
+        return `${provider} の判断用モデルを使う`;
       case "ko":
-        return `OpenRouter 결정 모델 사용`;
+        return `${provider} 결정 모델 사용`;
       case "pt-BR":
-        return `Usar um modelo de decisão do OpenRouter`;
+        return `Usar um modelo de decisão do ${provider}`;
       case "zh-Hans":
-        return `使用 OpenRouter 决定模型`;
+        return `使用 ${provider} 决定模型`;
       case "zh-Hant":
-        return `使用 OpenRouter 決定模型`;
+        return `使用 ${provider} 決定模型`;
       case "en-XA":
-        return `[Ûšé áñ ÖþéñŔöûţéŕ ðéçîšîöñ ɱöðéļ ~~~~~~~~~~~]`;
+        return `[Ûšé á ðéçîšîöñ ɱöðéļ ƒŕöɱ ${provider} ~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Use an OpenRouter decision model‬`;
+        return `‮Use a decision model from ‬${provider}`;
     }
-    return `Use an OpenRouter decision model`;
+    return `Use a decision model from ${provider}`;
   }
   function settingsDecisionsUseSpecific() {
     switch (currentLanguage()) {
@@ -68616,23 +71232,23 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `إعداد العمل على ${device} من جديد`;
+        return `إعداد العمل من جديد: ${device}`;
       case "de":
-        return `Die Arbeit auf ${device} neu einrichten`;
+        return `Die Arbeit neu einrichten: ${device}`;
       case "es":
-        return `Volver a preparar el trabajo en ${device}`;
+        return `Volver a preparar el trabajo: ${device}`;
       case "fr":
-        return `Remettre en place le travail sur ${device}`;
+        return `Remettre en place le travail : ${device}`;
       case "ja":
-        return `${device} の作業をもう一度設定`;
+        return `作業をもう一度設定：${device}`;
       case "ko":
-        return `${device}의 작업 다시 설정`;
+        return `작업 다시 설정: ${device}`;
       case "pt-BR":
-        return `Preparar de novo o trabalho em ${device}`;
+        return `Preparar de novo o trabalho: ${device}`;
       case "zh-Hans":
-        return `重新设置 ${device} 上的工作`;
+        return `重新设置工作：${device}`;
       case "zh-Hant":
-        return `重新設定 ${device} 上的工作`;
+        return `重新設定工作：${device}`;
       case "en-XA":
         return `[Šéţ ûþ ţĥé ŵöŕķ öñ ${device} áĝáîñ ~~~~~~~~~]`;
       case "ar-XB":
@@ -69681,7 +72297,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `مطابقة ${device} مع هذا الكمبيوتر`;
+        return `مطابقة ${device} مع هذا الحاسوب`;
       case "de":
         return `${device} an diesen Computer angleichen`;
       case "es":
@@ -71425,15 +74041,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       case "fr":
         return `Retrait de ce qu’Infinitary a installé ${where}…`;
       case "ja":
-        return `Infinitary が ${where} 準備したものを削除しています…`;
+        return `Infinitary が${where}準備したものを削除しています…`;
       case "ko":
         return `Infinitary가 ${where} 설정한 것을 제거하는 중…`;
       case "pt-BR":
         return `Removendo o que o Infinitary configurou ${where}…`;
       case "zh-Hans":
-        return `正在移除 Infinitary ${where} 设置的内容…`;
+        return `正在移除 Infinitary ${where}设置的内容…`;
       case "zh-Hant":
-        return `正在移除 Infinitary ${where} 設定的內容…`;
+        return `正在移除 Infinitary ${where}設定的內容…`;
       case "en-XA":
         return `[Ŕéɱöṽîñĝ ŵĥáţ Îñƒîñîţáŕý šéţ ûþ ${where}… ~~~~~~~~~~~]`;
       case "ar-XB":
@@ -71838,15 +74454,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       case "fr":
         return `Claude Code se connecte lui-même ${where}. Connectez-vous-y une fois là-bas, et Infinitary utilise cette connexion.`;
       case "ja":
-        return `Claude Code は ${where} 自分でサインインします。そちらで一度ログインすれば、Infinitary はそのログインを使います。`;
+        return `Claude Code は${where}自分でサインインします。そちらで一度ログインすれば、Infinitary はそのログインを使います。`;
       case "ko":
         return `Claude Code는 ${where} 직접 로그인해요. 그곳에서 한 번 로그인하면 Infinitary가 그 로그인을 써요.`;
       case "pt-BR":
         return `O Claude Code faz o próprio login ${where}. Faça login nele lá uma vez, e o Infinitary usa esse login.`;
       case "zh-Hans":
-        return `Claude Code 会 ${where} 自行登录。在那里登录一次，Infinitary 就会使用该登录。`;
+        return `Claude Code 会${where}自行登录。在那里登录一次，Infinitary 就会使用该登录。`;
       case "zh-Hant":
-        return `Claude Code 會 ${where} 自行登入。在那裡登入一次，Infinitary 就會使用那個登入。`;
+        return `Claude Code 會${where}自行登入。在那裡登入一次，Infinitary 就會使用那個登入。`;
       case "en-XA":
         return `[Çļáûðé Çöðé šîĝñš îñ ${where} îţšéļƒ. Ļöĝ îñ ţö îţ ţĥéŕé öñçé, áñð Îñƒîñîţáŕý ûšéš ţĥáţ ļöĝîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
@@ -71894,15 +74510,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       case "fr":
         return `Ajouter une API personnalisée ${where}`;
       case "ja":
-        return `${where} カスタム API を追加`;
+        return `カスタム API を${where}追加`;
       case "ko":
         return `${where} 사용자 지정 API 추가`;
       case "pt-BR":
         return `Adicionar uma API personalizada ${where}`;
       case "zh-Hans":
-        return `${where} 添加自定义 API`;
+        return `${where}添加自定义 API`;
       case "zh-Hant":
-        return `${where} 加入自訂 API`;
+        return `${where}加入自訂 API`;
       case "en-XA":
         return `[Åðð á çûšţöɱ ÅÞÎ ${where} ~~~~~~]`;
       case "ar-XB":
@@ -72144,15 +74760,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       case "fr":
         return `Ses propres connexions. Une tâche qui s’exécute ${where} n’utilise que celles-ci.`;
       case "ja":
-        return `専用のサインインです。${where} 実行するタスクはこれだけを使います。`;
+        return `専用のサインインです。タスクを${where}実行するときは、これだけを使います。`;
       case "ko":
-        return `이 컴퓨터만의 로그인이에요. ${where} 실행되는 작업은 이 로그인만 써요.`;
+        return `전용 로그인이에요. ${where} 실행되는 작업은 이 로그인만 써요.`;
       case "pt-BR":
         return `Os logins próprios dele. Uma tarefa que roda ${where} usa só estes.`;
       case "zh-Hans":
-        return `它自己的登录。${where} 运行的任务只使用这些登录。`;
+        return `它自己的登录。${where}运行的任务只使用这些登录。`;
       case "zh-Hant":
-        return `它自己的登入。${where} 執行的任務只會使用這些登入。`;
+        return `它自己的登入。${where}執行的任務只會使用這些登入。`;
       case "en-XA":
         return `[Îţš öŵñ šîĝñ-îñš. Å ţášķ ţĥáţ ŕûñš ${where} ûšéš öñļý ţĥéšé. ~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
@@ -72451,15 +75067,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       case "fr":
         return `Se connecter à ${provider} ${where}`;
       case "ja":
-        return `${where} ${provider} にサインイン`;
+        return `${provider} に${where}サインイン`;
       case "ko":
         return `${where} ${provider}에 로그인`;
       case "pt-BR":
         return `Fazer login no ${provider} ${where}`;
       case "zh-Hans":
-        return `${where} 登录 ${provider}`;
+        return `${where}登录 ${provider}`;
       case "zh-Hant":
-        return `${where} 登入 ${provider}`;
+        return `${where}登入 ${provider}`;
       case "en-XA":
         return `[Šîĝñ îñ ţö ${provider} ${where} ~~~~]`;
       case "ar-XB":
@@ -75464,21 +78080,50 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       case "fr":
         return `Actions ${host} ${where}`;
       case "ja":
-        return `${where} の ${host} の操作`;
+        return `${host} に${where}行う操作`;
       case "ko":
-        return `${host} ${where} 작업`;
+        return `${where} ${host} 작업`;
       case "pt-BR":
         return `Ações de ${host} ${where}`;
       case "zh-Hans":
-        return `${where} 的 ${host} 操作`;
+        return `${host} 操作（${where}）`;
       case "zh-Hant":
-        return `${where} 的 ${host} 動作`;
+        return `${host} 動作（${where}）`;
       case "en-XA":
         return `[${host} ${where} áçţîöñš ~~~]`;
       case "ar-XB":
         return `${host}‮ ‬${where}‮ actions‬`;
     }
     return `${host} ${where} actions`;
+  }
+  function settingsForgeServerOn(input2) {
+    const name = input2.name;
+    const where = input2.where;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${name} ${where}`;
+      case "de":
+        return `${name} ${where}`;
+      case "es":
+        return `${name} ${where}`;
+      case "fr":
+        return `${name} ${where}`;
+      case "ja":
+        return `${name} は${where}`;
+      case "ko":
+        return `${where} ${name}`;
+      case "pt-BR":
+        return `${name} ${where}`;
+      case "zh-Hans":
+        return `${name}（${where}）`;
+      case "zh-Hant":
+        return `${name}（${where}）`;
+      case "en-XA":
+        return `[${name} ${where} ~]`;
+      case "ar-XB":
+        return `${name}‮ ‬${where}`;
+    }
+    return `${name} ${where}`;
   }
   function settingsForgeSignIn() {
     switch (currentLanguage()) {
@@ -76544,7 +79189,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function settingsGeneralResetDeletesBoth() {
     switch (currentLanguage()) {
       case "ar":
-        return `يحذف Infinitary كل ما يحتفظ به على الجهازين، ومن ذلك المهام وتسجيلات الدخول والأسرار والإعدادات والأجهزة المقترنة، ثم يفتح كل منهما كأنه ثُبّت للتو.`;
+        return `يحذف Infinitary كل ما يحتفظ به على الحاسوبين، ومن ذلك المهام وتسجيلات الدخول والأسرار والإعدادات والأجهزة المقترنة، ثم يفتح كل منهما كأنه ثُبّت للتو.`;
       case "de":
         return `Infinitary löscht alles, was es auf beiden aufbewahrt, darunter Aufgaben, Anmeldungen, Geheimnisse, Einstellungen und gekoppelte Geräte, und beide öffnen sich dann wie frisch installiert.`;
       case "es":
@@ -76653,7 +79298,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function settingsGeneralResetKeeps() {
     switch (currentLanguage()) {
       case "ar":
-        return `تحتفظ المشاريع الموجودة في مجلداتك بكل ملفاتها والتزاماتها. لمحو المهام فقط، استخدم محو بيانات المهام.`;
+        return `تحتفظ المشاريع الموجودة في مجلداتك بكل ملفاتها وإيداعاتها. لمحو المهام فقط، استخدم محو بيانات المهام.`;
       case "de":
         return `Projekte in deinen eigenen Ordnern behalten jede Datei und jeden Commit. Um nur Aufgaben zu löschen, nutze Aufgabendaten endgültig löschen.`;
       case "es":
@@ -82646,9 +85291,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       case "pt-BR":
         return `${action} ${where}.`;
       case "zh-Hans":
-        return `${where} ${action}。`;
+        return `${where}${action}。`;
       case "zh-Hant":
-        return `${where} ${action}。`;
+        return `${where}${action}。`;
       case "en-XA":
         return `[${action} ${where}. ~]`;
       case "ar-XB":
@@ -82955,6 +85600,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Changes to send back‬`;
     }
     return `Changes to send back`;
+  }
+  function settingsProjectsBatchCheckingFix(input2) {
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعمل فحوصاتها الآن مع التصحيح من ${key}، قبل أن توافق على ذلك التصحيح. إذا نجحت، فإن الموافقة عليه تدمج الدفعة كما هي.`;
+      case "de":
+        return `Die Überprüfungen laufen jetzt mit der Korrektur aus ${key}, bevor du sie freigibst. Sind sie erfolgreich, wird das Bündel mit deiner Freigabe so zusammengeführt, wie es ist.`;
+      case "es":
+        return `Sus comprobaciones se están ejecutando ahora con la corrección de ${key}, antes de que la apruebes. Si se superan, al aprobarla el lote se fusiona tal como está.`;
+      case "fr":
+        return `Ses vérifications tournent maintenant avec le correctif de ${key}, avant que vous l’approuviez. Si elles réussissent, l’approuver fusionne le lot tel quel.`;
+      case "ja":
+        return `${key} の修正を承認する前に、その修正を含めてチェックを実行しています。合格すれば、修正を承認するとこの一括プルリクエストがそのままマージされます。`;
+      case "ko":
+        return `${key}의 수정을 승인하기 전에, 그 수정을 포함해 검사를 실행하고 있어요. 통과하면 수정을 승인할 때 이 일괄 끌어오기 요청이 그대로 병합돼요.`;
+      case "pt-BR":
+        return `As verificações estão rodando agora com a correção de ${key}, antes de você aprová-la. Se passarem, aprovar a correção mescla o lote como está.`;
+      case "zh-Hans":
+        return `在你批准 ${key} 的修正之前，检查正在带上这个修正运行。若检查通过，批准该修正即会按原样合并这批改动。`;
+      case "zh-Hant":
+        return `在你核准 ${key} 的修正之前，檢查正帶上這個修正執行。若檢查通過，核准該修正就會照原樣合併這個批次。`;
+      case "en-XA":
+        return `[Îţš çĥéçķš áŕé ŕûññîñĝ ñöŵ ŵîţĥ ţĥé ƒîẋ ƒŕöɱ ${key}, ƀéƒöŕé ýöû áþþŕöṽé ţĥáţ ƒîẋ. Îƒ ţĥéý þášš, áþþŕöṽîñĝ îţ ɱéŕĝéš ţĥé ƀáţçĥ áš îţ îš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Its checks are running now with the fix from ‬${key}‮, before you approve that fix. If they pass, approving it merges the batch as it is.‬`;
+    }
+    return `Its checks are running now with the fix from ${key}, before you approve that fix. If they pass, approving it merges the batch as it is.`;
   }
   function settingsProjectsBatchGap() {
     switch (currentLanguage()) {
@@ -86708,15 +89381,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       case "fr":
         return `s’exécute ${where}`;
       case "ja":
-        return `${where} 実行`;
+        return `実行は${where}`;
       case "ko":
-        return `실행 위치: ${where}`;
+        return `${where} 실행`;
       case "pt-BR":
         return `roda ${where}`;
       case "zh-Hans":
-        return `${where} 运行`;
+        return `${where}运行`;
       case "zh-Hant":
-        return `${where} 執行`;
+        return `${where}執行`;
       case "en-XA":
         return `[ŕûñš ${where} ~~]`;
       case "ar-XB":
@@ -88452,6 +91125,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `${provider} ${model} reasoning for ${slot}`;
   }
+  function settingsReasoningMax() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أقصى`;
+      case "de":
+        return `Max.`;
+      case "es":
+        return `Máximo`;
+      case "fr":
+        return `Max.`;
+      case "ja":
+        return `最大`;
+      case "ko":
+        return `최대`;
+      case "pt-BR":
+        return `Máximo`;
+      case "zh-Hans":
+        return `最大`;
+      case "zh-Hant":
+        return `最大`;
+      case "en-XA":
+        return `[Ṁáẋ ~]`;
+      case "ar-XB":
+        return `‮Max‬`;
+    }
+    return `Max`;
+  }
   function settingsReasoningSaveFailed() {
     switch (currentLanguage()) {
       case "ar":
@@ -89491,7 +92191,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function settingsSecretsCopyCannotConfirm() {
     switch (currentLanguage()) {
       case "ar":
-        return `لا يستطيع هذا الكمبيوتر التأكد من أنك أنت الآن، لذا لا يمكنه نسخ قيمة.`;
+        return `لا يستطيع هذا الحاسوب التأكد من أنك أنت الآن، لذا لا يمكنه نسخ قيمة.`;
       case "de":
         return `Dieser Computer kann gerade nicht bestätigen, dass du es bist, und daher keinen Wert kopieren.`;
       case "es":
@@ -89573,7 +92273,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const name = input2.name;
     switch (currentLanguage()) {
       case "ar":
-        return `نسخ ${name} إلى حافظة هذا الكمبيوتر.`;
+        return `نسخ ${name} إلى حافظة هذا الحاسوب.`;
       case "de":
         return `${name} in die Zwischenablage dieses Computers kopieren.`;
       case "es":
@@ -89708,7 +92408,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function settingsSecretsCustodyMac() {
     switch (currentLanguage()) {
       case "ar":
-        return `محفوظة على هذا الكمبيوتر. يستخدمها طاقمك لكنه لا يراها أبدًا، إلا إذا نسخت واحدًا منها.`;
+        return `محفوظة على هذا الحاسوب. يستخدمها طاقمك لكنه لا يراها أبدًا، إلا إذا نسخت واحدًا منها.`;
       case "de":
         return `Auf diesem Computer aufbewahrt. Deine Crew nutzt sie, sieht sie aber nie, außer du kopierst eines.`;
       case "es":
@@ -90495,7 +93195,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const seconds = input2.seconds;
     switch (currentLanguage()) {
       case "ar":
-        return `«نسخ القيمة» في صفه يضع القيمة في حافظة هذا الكمبيوتر بعد أن يتأكد كمبيوترك من أنك أنت، ويمسحها بعد ${seconds} ثانية. ما تفعله هناك يبقى قرارك.`;
+        return `«نسخ القيمة» في صفه يضع القيمة في حافظة هذا الحاسوب بعد أن يتأكد حاسوبك من أنك أنت، ويمسحها بعد ${seconds} ثانية. ما تفعله هناك يبقى قرارك.`;
       case "de":
         return `„Wert kopieren“ in seiner Zeile legt den Wert in die Zwischenablage dieses Computers, sobald dein Computer bestätigt, dass du es bist, und entfernt ihn ${seconds} Sekunden später. Was du dort tust, bleibt deine Sache.`;
       case "es":
@@ -95051,6 +97751,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `${count} saved resets · use one on ${site}`;
     }
   }
+  function settingsSubscriptionsSentThrough(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `مُرسَل عبر ${host}`;
+      case "de":
+        return `gesendet über ${host}`;
+      case "es":
+        return `enviado a través de ${host}`;
+      case "fr":
+        return `envoyé via ${host}`;
+      case "ja":
+        return `${host} 経由で送信`;
+      case "ko":
+        return `${host}을(를) 거쳐 전송`;
+      case "pt-BR":
+        return `enviado por ${host}`;
+      case "zh-Hans":
+        return `经由 ${host} 发送`;
+      case "zh-Hant":
+        return `經由 ${host} 傳送`;
+      case "en-XA":
+        return `[šéñţ ţĥŕöûĝĥ ${host} ~~~~~]`;
+      case "ar-XB":
+        return `‮sent through ‬${host}`;
+    }
+    return `sent through ${host}`;
+  }
   function settingsSubscriptionsSignIn() {
     switch (currentLanguage()) {
       case "ar":
@@ -96371,7 +99099,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function settingsUsageConnectionEmailLine() {
     switch (currentLanguage()) {
       case "ar":
-        return `يحمل كل سجل بريد تسجيل دخولك إلى Claude Code، إن كان على هذا الكمبيوتر تسجيل دخول، كي يحسب عرضٌ لكل شخص عملك.`;
+        return `يحمل كل سجل بريد تسجيل دخولك إلى Claude Code، إن كان على هذا الحاسوب تسجيل دخول، كي يحسب عرضٌ لكل شخص عملك.`;
       case "de":
         return `Jeder Eintrag trägt die E-Mail-Adresse deiner Claude-Code-Anmeldung, wenn dieser Computer eine hat, damit eine Ansicht pro Person deine Arbeit zählt.`;
       case "es":
@@ -104443,7 +107171,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const path = input2.path;
     switch (currentLanguage()) {
       case "ar":
-        return `على جهاز Mac، اكتب ${path} بدلًا من infinitary.`;
+        return `على حاسوب Mac، اكتب ${path} بدلًا من infinitary.`;
       case "de":
         return `Auf einem Mac tippst du ${path} statt infinitary.`;
       case "es":
@@ -104892,29 +107620,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function shellGateStillNeeds() {
     switch (currentLanguage()) {
       case "ar":
-        return `لا يزال نائب القبطان يحتاج إلى حساب يستجيب: Codex أو Grok أو Claude أو Kimi Code أو Copilot أو OpenRouter بمفتاح API أو Amazon Bedrock بتسجيل دخول AWS.`;
+        return `لا يزال نائب القبطان يحتاج إلى حساب يستجيب: Codex أو Grok أو Claude أو Kimi Code أو Copilot أو OpenCode Go أو OpenRouter بمفتاح API أو Amazon Bedrock بتسجيل دخول AWS.`;
       case "de":
-        return `Dein erster Offizier braucht noch ein Konto, das antwortet: Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter mit einem API-Schlüssel oder Amazon Bedrock mit deiner AWS-Anmeldung.`;
+        return `Dein erster Offizier braucht noch ein Konto, das antwortet: Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter mit einem API-Schlüssel oder Amazon Bedrock mit deiner AWS-Anmeldung.`;
       case "es":
-        return `Tu primer oficial todavía necesita una cuenta que responda: Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter con una clave de API o Amazon Bedrock con tu inicio de sesión de AWS.`;
+        return `Tu primer oficial todavía necesita una cuenta que responda: Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter con una clave de API o Amazon Bedrock con tu inicio de sesión de AWS.`;
       case "fr":
-        return `Votre second a encore besoin d’un compte qui répond : Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter avec une clé API, ou Amazon Bedrock avec votre connexion AWS.`;
+        return `Votre second a encore besoin d’un compte qui répond : Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter avec une clé API, ou Amazon Bedrock avec votre connexion AWS.`;
       case "ja":
-        return `一等航海士には、応答するアカウントがまだ必要です。Codex、Grok、Claude、Kimi Code、Copilot、API キーを使う OpenRouter、または AWS でサインインする Amazon Bedrock を接続してください。`;
+        return `一等航海士には、応答するアカウントがまだ必要です。Codex、Grok、Claude、Kimi Code、Copilot、OpenCode Go、API キーを使う OpenRouter、または AWS でサインインする Amazon Bedrock を接続してください。`;
       case "ko":
-        return `일등항해사에게 아직 응답하는 계정이 필요해요. Codex, Grok, Claude, Kimi Code, Copilot, API 키를 사용하는 OpenRouter 또는 AWS로 로그인하는 Amazon Bedrock을 연결하세요.`;
+        return `일등항해사에게 아직 응답하는 계정이 필요해요. Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, API 키를 사용하는 OpenRouter 또는 AWS로 로그인하는 Amazon Bedrock을 연결하세요.`;
       case "pt-BR":
-        return `Seu imediato ainda precisa de uma conta que responda: Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter com uma chave de API ou Amazon Bedrock com seu login da AWS.`;
+        return `Seu imediato ainda precisa de uma conta que responda: Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter com uma chave de API ou Amazon Bedrock com seu login da AWS.`;
       case "zh-Hans":
-        return `你的大副还需要一个能应答的账号：Codex、Grok、Claude、Kimi Code、Copilot、使用 API 密钥的 OpenRouter，或使用 AWS 登录的 Amazon Bedrock。`;
+        return `你的大副还需要一个能应答的账号：Codex、Grok、Claude、Kimi Code、Copilot、OpenCode Go、使用 API 密钥的 OpenRouter，或使用 AWS 登录的 Amazon Bedrock。`;
       case "zh-Hant":
-        return `你的大副還需要一個能回應的帳號：Codex、Grok、Claude、Kimi Code、Copilot、使用 API 金鑰的 OpenRouter，或使用 AWS 登入的 Amazon Bedrock。`;
+        return `你的大副還需要一個能回應的帳號：Codex、Grok、Claude、Kimi Code、Copilot、OpenCode Go、使用 API 金鑰的 OpenRouter，或使用 AWS 登入的 Amazon Bedrock。`;
       case "en-XA":
-        return `[Ýöûŕ ƒîŕšţ ɱáţé šţîļļ ñééðš áñ áççöûñţ ţĥáţ áñšŵéŕš: Çöðéẋ, Ĝŕöķ, Çļáûðé, Ķîɱî Çöðé, Çöþîļöţ, ÖþéñŔöûţéŕ ŵîţĥ áñ ÅÞÎ ķéý, öŕ Åɱážöñ Ɓéðŕöçķ ŵîţĥ ýöûŕ ÅŴŠ šîĝñ-îñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Ýöûŕ ƒîŕšţ ɱáţé šţîļļ ñééðš áñ áççöûñţ ţĥáţ áñšŵéŕš: Çöðéẋ, Ĝŕöķ, Çļáûðé, Ķîɱî Çöðé, Çöþîļöţ, ÖþéñÇöðé Ĝö, ÖþéñŔöûţéŕ ŵîţĥ áñ ÅÞÎ ķéý, öŕ Åɱážöñ Ɓéðŕöçķ ŵîţĥ ýöûŕ ÅŴŠ šîĝñ-îñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Your first mate still needs an account that answers: Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter with an API key, or Amazon Bedrock with your AWS sign-in.‬`;
+        return `‮Your first mate still needs an account that answers: Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter with an API key, or Amazon Bedrock with your AWS sign-in.‬`;
     }
-    return `Your first mate still needs an account that answers: Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter with an API key, or Amazon Bedrock with your AWS sign-in.`;
+    return `Your first mate still needs an account that answers: Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter with an API key, or Amazon Bedrock with your AWS sign-in.`;
   }
   function shellGateTitle() {
     switch (currentLanguage()) {
@@ -107396,6 +110124,276 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `working`;
   }
+  function taskHoldAsksFirst() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `السؤال أولًا`;
+      case "de":
+        return `das Fragen vorher`;
+      case "es":
+        return `la consulta previa`;
+      case "fr":
+        return `la demande préalable`;
+      case "ja":
+        return `先に確認`;
+      case "ko":
+        return `먼저 묻기`;
+      case "pt-BR":
+        return `a consulta prévia`;
+      case "zh-Hans":
+        return `先询问`;
+      case "zh-Hant":
+        return `先問過你`;
+      case "en-XA":
+        return `[ášķîñĝ ƒîŕšţ ~~~~]`;
+      case "ar-XB":
+        return `‮asking first‬`;
+    }
+    return `asking first`;
+  }
+  function taskHoldChecks() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الفحوصات`;
+      case "de":
+        return `die Überprüfungen`;
+      case "es":
+        return `las comprobaciones`;
+      case "fr":
+        return `les vérifications`;
+      case "ja":
+        return `チェック`;
+      case "ko":
+        return `검사`;
+      case "pt-BR":
+        return `as verificações`;
+      case "zh-Hans":
+        return `检查`;
+      case "zh-Hant":
+        return `檢查`;
+      case "en-XA":
+        return `[ţĥé çĥéçķš ~~~~]`;
+      case "ar-XB":
+        return `‮the checks‬`;
+    }
+    return `the checks`;
+  }
+  function taskHoldCostLimit() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `حد التكلفة`;
+      case "de":
+        return `die Kostengrenze`;
+      case "es":
+        return `el límite de costo`;
+      case "fr":
+        return `le plafond de coût`;
+      case "ja":
+        return `コスト上限`;
+      case "ko":
+        return `비용 한도`;
+      case "pt-BR":
+        return `o limite de custo`;
+      case "zh-Hans":
+        return `费用上限`;
+      case "zh-Hant":
+        return `費用上限`;
+      case "en-XA":
+        return `[ţĥé çöšţ ļîɱîţ ~~~~~]`;
+      case "ar-XB":
+        return `‮the cost limit‬`;
+    }
+    return `the cost limit`;
+  }
+  function taskHoldDecisions() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `القرارات المفتوحة`;
+      case "de":
+        return `die offenen Entscheidungen`;
+      case "es":
+        return `las decisiones abiertas`;
+      case "fr":
+        return `les décisions ouvertes`;
+      case "ja":
+        return `未決の判断`;
+      case "ko":
+        return `열린 결정`;
+      case "pt-BR":
+        return `as decisões em aberto`;
+      case "zh-Hans":
+        return `未决的决定`;
+      case "zh-Hant":
+        return `未決的決定`;
+      case "en-XA":
+        return `[ţĥé öþéñ ðéçîšîöñš ~~~~~~]`;
+      case "ar-XB":
+        return `‮the open decisions‬`;
+    }
+    return `the open decisions`;
+  }
+  function taskHoldLoadLine() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `طابور التشغيلات الثقيلة`;
+      case "de":
+        return `die Warteschlange für aufwendige Läufe`;
+      case "es":
+        return `la cola de ejecuciones pesadas`;
+      case "fr":
+        return `la file des exécutions lourdes`;
+      case "ja":
+        return `重い実行の順番待ち`;
+      case "ko":
+        return `무거운 실행 대기열`;
+      case "pt-BR":
+        return `a fila de execuções pesadas`;
+      case "zh-Hans":
+        return `繁重运行的排队`;
+      case "zh-Hant":
+        return `繁重執行的排隊`;
+      case "en-XA":
+        return `[ţĥé ĥéáṽý-ŕûñ ļîñé ~~~~~~]`;
+      case "ar-XB":
+        return `‮the heavy-run line‬`;
+    }
+    return `the heavy-run line`;
+  }
+  function taskHoldParts() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الأجزاء المفتوحة`;
+      case "de":
+        return `die offenen Teile`;
+      case "es":
+        return `las partes abiertas`;
+      case "fr":
+        return `les parties ouvertes`;
+      case "ja":
+        return `未完了のパート`;
+      case "ko":
+        return `열린 부분`;
+      case "pt-BR":
+        return `as partes em aberto`;
+      case "zh-Hans":
+        return `未完成的部分`;
+      case "zh-Hant":
+        return `未完成的部分`;
+      case "en-XA":
+        return `[ţĥé öþéñ þáŕţš ~~~~~]`;
+      case "ar-XB":
+        return `‮the open parts‬`;
+    }
+    return `the open parts`;
+  }
+  function taskHoldProof() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إثبات التسليم`;
+      case "de":
+        return `der Nachweis der Auslieferung`;
+      case "es":
+        return `la prueba de entrega`;
+      case "fr":
+        return `la preuve de livraison`;
+      case "ja":
+        return `完了の証明`;
+      case "ko":
+        return `전달 증명`;
+      case "pt-BR":
+        return `a prova de entrega`;
+      case "zh-Hans":
+        return `交付证明`;
+      case "zh-Hant":
+        return `交付證明`;
+      case "en-XA":
+        return `[ţĥé ðéļîṽéŕý þŕööƒ ~~~~~~]`;
+      case "ar-XB":
+        return `‮the delivery proof‬`;
+    }
+    return `the delivery proof`;
+  }
+  function taskHoldRetired() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعليق لم يعد موجودًا`;
+      case "de":
+        return `ein Halt, den es nicht mehr gibt`;
+      case "es":
+        return `una retención que ya no existe`;
+      case "fr":
+        return `une retenue qui n’existe plus`;
+      case "ja":
+        return `廃止された項目`;
+      case "ko":
+        return `더 이상 없는 보류`;
+      case "pt-BR":
+        return `uma retenção que não existe mais`;
+      case "zh-Hans":
+        return `已停用的项目`;
+      case "zh-Hant":
+        return `已停用的項目`;
+      case "en-XA":
+        return `[á ŕéţîŕéð ĥöļð ~~~~~]`;
+      case "ar-XB":
+        return `‮a retired hold‬`;
+    }
+    return `a retired hold`;
+  }
+  function taskHoldStory() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `القصة المحفوظة`;
+      case "de":
+        return `die gespeicherte Geschichte`;
+      case "es":
+        return `la historia guardada`;
+      case "fr":
+        return `le récit enregistré`;
+      case "ja":
+        return `保存したストーリー`;
+      case "ko":
+        return `저장된 스토리`;
+      case "pt-BR":
+        return `a história salva`;
+      case "zh-Hans":
+        return `已保存的改动说明`;
+      case "zh-Hant":
+        return `已儲存的變更說明`;
+      case "en-XA":
+        return `[ţĥé šáṽéð šţöŕý ~~~~~]`;
+      case "ar-XB":
+        return `‮the saved story‬`;
+    }
+    return `the saved story`;
+  }
+  function taskHoldWaits() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `انتظار العمل الآخر`;
+      case "de":
+        return `das Warten auf andere Arbeit`;
+      case "es":
+        return `las esperas`;
+      case "fr":
+        return `les attentes`;
+      case "ja":
+        return `ほかの作業の待ち`;
+      case "ko":
+        return `다른 작업 대기`;
+      case "pt-BR":
+        return `as esperas`;
+      case "zh-Hans":
+        return `对其他工作的等待`;
+      case "zh-Hant":
+        return `對其他工作的等待`;
+      case "en-XA":
+        return `[ţĥé ŵáîţš ~~~]`;
+      case "ar-XB":
+        return `‮the waits‬`;
+    }
+    return `the waits`;
+  }
   function taskNoteReworkHeld(input2) {
     const title = input2.title;
     switch (currentLanguage()) {
@@ -107423,6 +110421,124 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Kept the merge card “‬${title}‮” from you until its new version's checks end.‬`;
     }
     return `Kept the merge card “${title}” from you until its new version's checks end.`;
+  }
+  function taskOverrideDirectionGone(input2) {
+    const direction = input2.direction;
+    const holds = input2.holds;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يعد توجيهك d:${direction} قائمًا، فتوقّف عن تجاوز ${holds} في هذه المهمة.`;
+      case "de":
+        return `Deine Vorgabe d:${direction} gilt nicht mehr, daher halten diese Punkte die Aufgabe wieder zurück: ${holds}.`;
+      case "es":
+        return `Tu directriz d:${direction} ya no está vigente, así que deja de superar ${holds} en esta tarea.`;
+      case "fr":
+        return `Votre consigne d:${direction} n’est plus en vigueur : elle ne lève plus ${holds} sur cette tâche.`;
+      case "ja":
+        return `あなたの方針 d:${direction} は有効でなくなったため、このタスクで${holds}の保留を越えられなくなりました。`;
+      case "ko":
+        return `지침 d:${direction}의 효력이 끝나, 이 작업에서 다음 보류가 다시 적용돼요: ${holds}.`;
+      case "pt-BR":
+        return `Sua diretriz d:${direction} não vale mais, então deixa de liberar ${holds} nesta tarefa.`;
+      case "zh-Hans":
+        return `你的指引 d:${direction} 已不再有效，它在这个任务上不再越过${holds}的暂缓。`;
+      case "zh-Hant":
+        return `你的指引 d:${direction} 已不再有效，它在這項任務上不再越過${holds}的暫緩。`;
+      case "en-XA":
+        return `[Ýöûŕ ðîŕéçţîöñ ð:${direction} ñö ļöñĝéŕ šţáñðš, šö îţ šţöþš þáššîñĝ ${holds} öñ ţĥîš ţášķ. ~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your direction d:‬${direction}‮ no longer stands, so it stops passing ‬${holds}‮ on this task.‬`;
+    }
+    return `Your direction d:${direction} no longer stands, so it stops passing ${holds} on this task.`;
+  }
+  function taskOverrideDirectionRevised(input2) {
+    const direction = input2.direction;
+    const holds = input2.holds;
+    switch (currentLanguage()) {
+      case "ar":
+        return `صار لتوجيهك d:${direction} تعديل جديد، فتوقّف عن تجاوز ${holds} في هذه المهمة.`;
+      case "de":
+        return `Deine Vorgabe d:${direction} hat eine neue Revision, daher halten diese Punkte die Aufgabe wieder zurück: ${holds}.`;
+      case "es":
+        return `Tu directriz d:${direction} tiene una nueva versión, así que deja de superar ${holds} en esta tarea.`;
+      case "fr":
+        return `Votre consigne d:${direction} a une nouvelle révision : elle ne lève plus ${holds} sur cette tâche.`;
+      case "ja":
+        return `あなたの方針 d:${direction} が改訂されたため、このタスクで${holds}の保留を越えられなくなりました。`;
+      case "ko":
+        return `지침 d:${direction}에 새 수정본이 생겨, 이 작업에서 다음 보류가 다시 적용돼요: ${holds}.`;
+      case "pt-BR":
+        return `Sua diretriz d:${direction} tem uma nova versão, então deixa de liberar ${holds} nesta tarefa.`;
+      case "zh-Hans":
+        return `你的指引 d:${direction} 有了新的修订，它在这个任务上不再越过${holds}的暂缓。`;
+      case "zh-Hant":
+        return `你的指引 d:${direction} 有了新的修訂，它在這項任務上不再越過${holds}的暫緩。`;
+      case "en-XA":
+        return `[Ýöûŕ ðîŕéçţîöñ ð:${direction} ĥáš á ñéŵ ŕéṽîšîöñ, šö îţ šţöþš þáššîñĝ ${holds} öñ ţĥîš ţášķ. ~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your direction d:‬${direction}‮ has a new revision, so it stops passing ‬${holds}‮ on this task.‬`;
+    }
+    return `Your direction d:${direction} has a new revision, so it stops passing ${holds} on this task.`;
+  }
+  function taskOverrideDirectionTask(input2) {
+    const direction = input2.direction;
+    const holds = input2.holds;
+    const words2 = input2.words;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يتجاوز توجيهك d:${direction} ${holds} طوال ما تبقّى من هذه المهمة، إلى أن يُعدَّل أو يُستبعَد: «${words2}»`;
+      case "de":
+        return `Wegen deiner Vorgabe d:${direction} halten diese Punkte die Aufgabe für den Rest ihrer Laufzeit nicht mehr zurück: ${holds}. Das gilt, bis die Vorgabe eine neue Revision bekommt oder zurückgezogen wird: „${words2}“`;
+      case "es":
+        return `Tu directriz d:${direction} supera ${holds} durante el resto de esta tarea, hasta que tenga una nueva versión o se retire: «${words2}»`;
+      case "fr":
+        return `Votre consigne d:${direction} lève ${holds} pour le reste de cette tâche, jusqu’à ce qu’elle soit révisée ou retirée : « ${words2} »`;
+      case "ja":
+        return `あなたの方針 d:${direction} により、このタスクは残りの期間、${holds}の保留を越えて進めます。改訂または廃止されるまで有効です：「${words2}」`;
+      case "ko":
+        return `지침 d:${direction} 덕분에 이 작업은 남은 기간 동안 다음 보류를 넘어가요: ${holds}. 지침이 수정되거나 폐기될 때까지 유효해요: “${words2}”`;
+      case "pt-BR":
+        return `Sua diretriz d:${direction} libera ${holds} pelo resto desta tarefa, até ganhar uma nova versão ou ser desativada: “${words2}”`;
+      case "zh-Hans":
+        return `你的指引 d:${direction} 让这个任务在余下的时间里越过${holds}的暂缓，直到它被修订或停用：“${words2}”`;
+      case "zh-Hant":
+        return `你的指引 d:${direction} 讓這項任務在餘下的時間裡越過${holds}的暫緩，直到它被修訂或停用：「${words2}」`;
+      case "en-XA":
+        return `[Ýöûŕ ðîŕéçţîöñ ð:${direction} þáššéš ${holds} ƒöŕ ţĥé ŕéšţ öƒ ţĥîš ţášķ, ûñţîļ îţ îš ŕéṽîšéð öŕ ŕéţîŕéð: “${words2}” ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your direction d:‬${direction}‮ passes ‬${holds}‮ for the rest of this task, until it is revised or retired: “‬${words2}‮”‬`;
+    }
+    return `Your direction d:${direction} passes ${holds} for the rest of this task, until it is revised or retired: “${words2}”`;
+  }
+  function taskOverrideDirectionVersion(input2) {
+    const direction = input2.direction;
+    const holds = input2.holds;
+    const words2 = input2.words;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يتجاوز توجيهك d:${direction} ${holds} في هذه النسخة، إلى أن يُعدَّل أو يُستبعَد: «${words2}»`;
+      case "de":
+        return `Wegen deiner Vorgabe d:${direction} halten diese Punkte diese Version nicht mehr zurück: ${holds}. Das gilt, bis die Vorgabe eine neue Revision bekommt oder zurückgezogen wird: „${words2}“`;
+      case "es":
+        return `Tu directriz d:${direction} supera ${holds} para el cambio tal como está ahora, hasta que tenga una nueva versión o se retire: «${words2}»`;
+      case "fr":
+        return `Votre consigne d:${direction} lève ${holds} pour cette version, jusqu’à ce qu’elle soit révisée ou retirée : « ${words2} »`;
+      case "ja":
+        return `あなたの方針 d:${direction} により、このバージョンは${holds}の保留を越えて進めます。改訂または廃止されるまで有効です：「${words2}」`;
+      case "ko":
+        return `지침 d:${direction} 덕분에 이 버전은 다음 보류를 넘어가요: ${holds}. 지침이 수정되거나 폐기될 때까지 유효해요: “${words2}”`;
+      case "pt-BR":
+        return `Sua diretriz d:${direction} libera ${holds} para a mudança como está agora, até ganhar uma nova versão ou ser desativada: “${words2}”`;
+      case "zh-Hans":
+        return `你的指引 d:${direction} 让这个版本越过${holds}的暂缓，直到它被修订或停用：“${words2}”`;
+      case "zh-Hant":
+        return `你的指引 d:${direction} 讓這個版本越過${holds}的暫緩，直到它被修訂或停用：「${words2}」`;
+      case "en-XA":
+        return `[Ýöûŕ ðîŕéçţîöñ ð:${direction} þáššéš ${holds} ƒöŕ ţĥîš ṽéŕšîöñ, ûñţîļ îţ îš ŕéṽîšéð öŕ ŕéţîŕéð: “${words2}” ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your direction d:‬${direction}‮ passes ‬${holds}‮ for this version, until it is revised or retired: “‬${words2}‮”‬`;
+    }
+    return `Your direction d:${direction} passes ${holds} for this version, until it is revised or retired: “${words2}”`;
   }
   function taskPinPin() {
     switch (currentLanguage()) {
@@ -114060,6 +117176,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     accountsConnectCustomApi,
     accountsConnectHow,
     accountsConnectInstallClaudeThere,
+    accountsConnectKeyWhere,
     accountsConnectNotSignedIn,
     accountsConnectNotSignedInYet,
     accountsConnectOpenSignIn,
@@ -114215,6 +117332,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     accountsCustomApiNameNeeded,
     accountsCustomApiNoList,
     accountsCustomApiNoModels,
+    accountsCustomApiNotChat,
     accountsCustomApiNotOffered,
     accountsCustomApiNotReached,
     accountsCustomApiNotSaved,
@@ -114297,6 +117415,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     accountsCustomApiUseModel,
     accountsCustomApiUseOn,
     accountsCustomApiUseTitle,
+    accountsQuotaOpenCodeGoNoPlan,
     accountsSavedResetBusy,
     accountsSavedResetCodexStopped,
     accountsSavedResetNoCodex,
@@ -114332,6 +117451,26 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     automationWaitsForNote,
     automationWaitsForPlaceholder,
     batchesReadWords,
+    bedrockAddressInvalid,
+    bedrockAddressMoved,
+    bedrockAddressNotFound,
+    bedrockAddressPlainHttp,
+    bedrockAddressRefused,
+    bedrockSecureConnectionFailed,
+    bedrockSignInAddress,
+    bedrockSignInApproveLocal,
+    bedrockSignInApprovePrivate,
+    bedrockSignInApprovePublic,
+    bedrockSignInChooseWhere,
+    bedrockSignInFromClaudeSettings,
+    bedrockSignInFromOrganization,
+    bedrockSignInNoKey,
+    bedrockSignInOrganization,
+    bedrockSignInSend,
+    bedrockSignInSettingsNoKey,
+    bedrockSignInStraightToAws,
+    bedrockSignInWhere,
+    bedrockUnreachable,
     cardAfterMergeDoerCrewmate,
     cardAfterMergeDoerFirstmate,
     cardAfterMergeLead,
@@ -114523,6 +117662,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardPastPictures,
     cardPastSentLead,
     cardPastUnreadable,
+    cardPicturesUnreadMove,
+    cardPicturesUnreadNoReader,
+    cardPicturesUnreadReader,
+    cardPicturesUnreadSettings,
+    cardPicturesUnreadTitle,
+    cardPicturesUnreadWaits,
     cardQuickAnswer,
     cardReaderAsksTitle,
     cardReaderCallChanges,
@@ -114544,6 +117689,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardRecordCare,
     cardRecordChecking,
     cardRecordChildrenClosed,
+    cardRecordCouldNotStart,
     cardRecordDelivery,
     cardRecordDeliveryDirectPr,
     cardRecordDeliveryInPlace,
@@ -115121,6 +118267,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     feedBatchQueuedHost,
     feedBatchRetried,
     feedBatchSentBack,
+    feedBatchTrial,
+    feedBatchTrialFailed,
+    feedBatchTrialFailedUnnamed,
     feedBranchPushed,
     feedBuildRowKept,
     feedBuildRowNotFiled,
@@ -115206,6 +118355,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     feedUndelivered,
     feedUnsafeDataReaderReported,
     feedUpdated,
+    feedWriteNotSentOnWords,
+    feedWriteSentOnWords,
+    feedWriteUnknownOnWords,
     feedYouChose,
     feedbackStripAccount,
     feedbackStripBug,
@@ -115256,15 +118408,17 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     handoverWontStopText,
     handoverWontStopTitle,
     integrationsClientFileNotTaken,
+    integrationsConnectOfferBody,
+    integrationsConnectOfferButton,
+    integrationsConnectOfferNotNow,
+    integrationsConnectOfferOpen,
+    integrationsConnectOfferTitle,
     integrationsGoogleClientFileIncomplete,
     integrationsGoogleClientFileNotJson,
     integrationsGoogleClientFileWeb,
     integrationsGoogleExchangeOperation,
     integrationsGoogleExchangeReason,
     integrationsGoogleExchangeResult,
-    integrationsGoogleReadyDetail,
-    integrationsGoogleRetiring,
-    integrationsGoogleRetiringDetail,
     integrationsGoogleSetUp,
     integrationsGoogleSetUpAgain,
     integrationsGoogleSetUpFirst,
@@ -115280,7 +118434,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     integrationsGoogleSetupStepFile,
     integrationsGoogleSetupStepPage,
     integrationsGoogleSetupTitle,
-    integrationsGoogleSignIn,
     integrationsGoogleSignInHint,
     integrationsGoogleStopped,
     integrationsGoogleStoppedDetail,
@@ -115492,8 +118645,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     pastedFileMeta,
     pastedFileRemove,
     pastedFileRemoveNamed,
+    placeAs,
     placeHere,
     placeOn,
+    placeOnOther,
+    placeOther,
+    placeRunningAs,
     placeThisComputer,
     policyAsksFirst,
     policyCareBound,
@@ -115522,6 +118679,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     projectsMoveOpenTasks,
     projectsMoveTitleInto,
     projectsMoveTitleOwn,
+    projectsSetupLeftFolder,
     recordAgeDays,
     recordAgeHours,
     recordAgeJustNow,
@@ -115581,6 +118739,26 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     recordMoreKnowledge,
     recordMoreValidation,
     recordOpenKeptEvidence,
+    recordPartsClosedFold,
+    recordPartsCountBacklog,
+    recordPartsCountIdle,
+    recordPartsCountInterrupted,
+    recordPartsCountQueued,
+    recordPartsCountStarting,
+    recordPartsCountWaiting,
+    recordPartsCountWorking,
+    recordPartsLast,
+    recordPartsLastBacklog,
+    recordPartsLastBacklogGuidance,
+    recordPartsLastIdle,
+    recordPartsLastInterrupted,
+    recordPartsLastQueued,
+    recordPartsLastStarting,
+    recordPartsLastWaiting,
+    recordPartsLastWaitingGuidance,
+    recordPartsLastWorking,
+    recordPartsOpen,
+    recordPartsOpenGuidance,
     recordPersonalNone,
     recordPersonalVersion,
     recordPolicyParentTask,
@@ -115807,6 +118985,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsAddProjectAddFolder,
     settingsAddProjectAdded,
     settingsAddProjectAddedGit,
+    settingsAddProjectAddedLeftFolder,
     settingsAddProjectAddedMark,
     settingsAddProjectAdding,
     settingsAddProjectAlreadyAdded,
@@ -115860,6 +119039,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsAppearanceThemeDark,
     settingsAppearanceThemeDescription,
     settingsAppearanceThemeLight,
+    settingsAppearanceThemeOwnDescribe,
+    settingsAppearanceThemeOwnDraft,
+    settingsAppearanceThemeOwnRemove,
+    settingsAppearanceThemeOwnRemoveNamed,
+    settingsAppearanceThemeYours,
     settingsAppearanceWash,
     settingsAppearanceWashDescription,
     settingsAppearanceWashValue,
@@ -116061,18 +119245,22 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsDecisionsKeysFrom,
     settingsDecisionsLastAnswer,
     settingsDecisionsLineNative,
-    settingsDecisionsOpenRouterModels,
-    settingsDecisionsOpenRouterPrice,
-    settingsDecisionsOpenRouterUnavailable,
+    settingsDecisionsModelPrice,
     settingsDecisionsPicker,
+    settingsDecisionsProviderChoice,
+    settingsDecisionsProviderCostAccount,
+    settingsDecisionsProviderCostAllowance,
+    settingsDecisionsProviderModels,
+    settingsDecisionsProviderShared,
+    settingsDecisionsProviderUnavailable,
     settingsDecisionsRemove,
     settingsDecisionsReplaceKey,
     settingsDecisionsSubtitle,
     settingsDecisionsTurnOff,
-    settingsDecisionsTurnOnOpenRouter,
+    settingsDecisionsTurnOnThrough,
     settingsDecisionsUseAuto,
     settingsDecisionsUseNative,
-    settingsDecisionsUseOpenRouter,
+    settingsDecisionsUseProvider,
     settingsDecisionsUseSpecific,
     settingsDecisionsUses,
     settingsDecisionsUsesAllow,
@@ -116374,6 +119562,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsForgeNotSignedIn,
     settingsForgeOpenHost,
     settingsForgeRowActions,
+    settingsForgeServerOn,
     settingsForgeSignIn,
     settingsForgeSignInAgain,
     settingsForgeSignInAgainSay,
@@ -116638,6 +119827,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsProjectsBatchAnswerRuleNote,
     settingsProjectsBatchAnswerYourself,
     settingsProjectsBatchChanges,
+    settingsProjectsBatchCheckingFix,
     settingsProjectsBatchGap,
     settingsProjectsBatchGapDescription,
     settingsProjectsBatchGapHours,
@@ -116810,6 +120000,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsProjectsWorkspaceDescription,
     settingsReasoningAuto,
     settingsReasoningLabel,
+    settingsReasoningMax,
     settingsReasoningSaveFailed,
     settingsReasoningSavedUnavailable,
     settingsReasoningUnavailable,
@@ -117050,6 +120241,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsSubscriptionsRetrying,
     settingsSubscriptionsRowActions,
     settingsSubscriptionsSavedResets,
+    settingsSubscriptionsSentThrough,
     settingsSubscriptionsSignIn,
     settingsSubscriptionsSignInAgainState,
     settingsSubscriptionsSignedIn,
@@ -117483,7 +120675,21 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     taskGroupQueued,
     taskGroupWaiting,
     taskGroupWorking,
+    taskHoldAsksFirst,
+    taskHoldChecks,
+    taskHoldCostLimit,
+    taskHoldDecisions,
+    taskHoldLoadLine,
+    taskHoldParts,
+    taskHoldProof,
+    taskHoldRetired,
+    taskHoldStory,
+    taskHoldWaits,
     taskNoteReworkHeld,
+    taskOverrideDirectionGone,
+    taskOverrideDirectionRevised,
+    taskOverrideDirectionTask,
+    taskOverrideDirectionVersion,
     taskPinPin,
     taskPinUnpin,
     taskStatusComputerUpdating,
@@ -117723,6 +120929,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "accountsConnectCustomApi": [],
     "accountsConnectHow": ["provider"],
     "accountsConnectInstallClaudeThere": [],
+    "accountsConnectKeyWhere": ["provider", "site"],
     "accountsConnectNotSignedIn": [],
     "accountsConnectNotSignedInYet": ["here", "provider"],
     "accountsConnectOpenSignIn": [],
@@ -117878,6 +121085,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "accountsCustomApiNameNeeded": [],
     "accountsCustomApiNoList": [],
     "accountsCustomApiNoModels": [],
+    "accountsCustomApiNotChat": [],
     "accountsCustomApiNotOffered": ["model"],
     "accountsCustomApiNotReached": [],
     "accountsCustomApiNotSaved": [],
@@ -117960,6 +121168,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "accountsCustomApiUseModel": ["model"],
     "accountsCustomApiUseOn": ["on"],
     "accountsCustomApiUseTitle": ["name", "on"],
+    "accountsQuotaOpenCodeGoNoPlan": [],
     "accountsSavedResetBusy": ["account"],
     "accountsSavedResetCodexStopped": [],
     "accountsSavedResetNoCodex": ["floor", "site"],
@@ -117995,6 +121204,26 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "automationWaitsForNote": [],
     "automationWaitsForPlaceholder": [],
     "batchesReadWords": [],
+    "bedrockAddressInvalid": [],
+    "bedrockAddressMoved": ["host"],
+    "bedrockAddressNotFound": ["host"],
+    "bedrockAddressPlainHttp": [],
+    "bedrockAddressRefused": ["host"],
+    "bedrockSecureConnectionFailed": ["host"],
+    "bedrockSignInAddress": [],
+    "bedrockSignInApproveLocal": ["host"],
+    "bedrockSignInApprovePrivate": ["host"],
+    "bedrockSignInApprovePublic": ["host"],
+    "bedrockSignInChooseWhere": [],
+    "bedrockSignInFromClaudeSettings": [],
+    "bedrockSignInFromOrganization": [],
+    "bedrockSignInNoKey": [],
+    "bedrockSignInOrganization": [],
+    "bedrockSignInSend": [],
+    "bedrockSignInSettingsNoKey": [],
+    "bedrockSignInStraightToAws": [],
+    "bedrockSignInWhere": [],
+    "bedrockUnreachable": ["host"],
     "cardAfterMergeDoerCrewmate": [],
     "cardAfterMergeDoerFirstmate": [],
     "cardAfterMergeLead": [],
@@ -118186,6 +121415,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardPastPictures": ["count", "names"],
     "cardPastSentLead": [],
     "cardPastUnreadable": [],
+    "cardPicturesUnreadMove": ["model"],
+    "cardPicturesUnreadNoReader": [],
+    "cardPicturesUnreadReader": ["model"],
+    "cardPicturesUnreadSettings": [],
+    "cardPicturesUnreadTitle": [],
+    "cardPicturesUnreadWaits": ["model"],
     "cardQuickAnswer": [],
     "cardReaderAsksTitle": ["place"],
     "cardReaderCallChanges": [],
@@ -118207,6 +121442,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardRecordCare": ["care"],
     "cardRecordChecking": [],
     "cardRecordChildrenClosed": ["closed", "total"],
+    "cardRecordCouldNotStart": ["reason"],
     "cardRecordDelivery": [],
     "cardRecordDeliveryDirectPr": [],
     "cardRecordDeliveryInPlace": [],
@@ -118784,6 +122020,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "feedBatchQueuedHost": ["label", "project"],
     "feedBatchRetried": ["label", "project"],
     "feedBatchSentBack": ["project", "reason", "title"],
+    "feedBatchTrial": ["label", "project"],
+    "feedBatchTrialFailed": ["checks", "label", "project"],
+    "feedBatchTrialFailedUnnamed": ["label", "project"],
     "feedBranchPushed": [],
     "feedBuildRowKept": ["task", "title"],
     "feedBuildRowNotFiled": ["title"],
@@ -118869,6 +122108,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "feedUndelivered": ["why"],
     "feedUnsafeDataReaderReported": [],
     "feedUpdated": ["text"],
+    "feedWriteNotSentOnWords": ["call", "place", "why", "words"],
+    "feedWriteSentOnWords": ["call", "place", "status", "words"],
+    "feedWriteUnknownOnWords": ["call", "place", "words"],
     "feedYouChose": ["choice"],
     "feedbackStripAccount": ["login"],
     "feedbackStripBug": [],
@@ -118919,15 +122161,17 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "handoverWontStopText": ["to"],
     "handoverWontStopTitle": ["from"],
     "integrationsClientFileNotTaken": ["name"],
+    "integrationsConnectOfferBody": ["name"],
+    "integrationsConnectOfferButton": [],
+    "integrationsConnectOfferNotNow": [],
+    "integrationsConnectOfferOpen": ["name"],
+    "integrationsConnectOfferTitle": ["name"],
     "integrationsGoogleClientFileIncomplete": [],
     "integrationsGoogleClientFileNotJson": [],
     "integrationsGoogleClientFileWeb": [],
     "integrationsGoogleExchangeOperation": [],
     "integrationsGoogleExchangeReason": [],
     "integrationsGoogleExchangeResult": [],
-    "integrationsGoogleReadyDetail": [],
-    "integrationsGoogleRetiring": [],
-    "integrationsGoogleRetiringDetail": [],
     "integrationsGoogleSetUp": [],
     "integrationsGoogleSetUpAgain": [],
     "integrationsGoogleSetUpFirst": [],
@@ -118943,7 +122187,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "integrationsGoogleSetupStepFile": [],
     "integrationsGoogleSetupStepPage": [],
     "integrationsGoogleSetupTitle": [],
-    "integrationsGoogleSignIn": [],
     "integrationsGoogleSignInHint": [],
     "integrationsGoogleStopped": [],
     "integrationsGoogleStoppedDetail": [],
@@ -119155,8 +122398,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "pastedFileMeta": ["kilobytes", "lines"],
     "pastedFileRemove": ["lines"],
     "pastedFileRemoveNamed": ["name"],
+    "placeAs": ["user"],
     "placeHere": [],
     "placeOn": ["computer"],
+    "placeOnOther": [],
+    "placeOther": [],
+    "placeRunningAs": ["user"],
     "placeThisComputer": [],
     "policyAsksFirst": [],
     "policyCareBound": [],
@@ -119185,6 +122432,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "projectsMoveOpenTasks": ["count", "project"],
     "projectsMoveTitleInto": ["project", "repositories"],
     "projectsMoveTitleOwn": ["repositories"],
+    "projectsSetupLeftFolder": [],
     "recordAgeDays": ["count"],
     "recordAgeHours": ["count"],
     "recordAgeJustNow": [],
@@ -119244,6 +122492,26 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "recordMoreKnowledge": ["count"],
     "recordMoreValidation": [],
     "recordOpenKeptEvidence": [],
+    "recordPartsClosedFold": ["count"],
+    "recordPartsCountBacklog": ["count"],
+    "recordPartsCountIdle": ["count"],
+    "recordPartsCountInterrupted": ["count"],
+    "recordPartsCountQueued": ["count"],
+    "recordPartsCountStarting": ["count"],
+    "recordPartsCountWaiting": ["count"],
+    "recordPartsCountWorking": ["count"],
+    "recordPartsLast": [],
+    "recordPartsLastBacklog": [],
+    "recordPartsLastBacklogGuidance": ["key"],
+    "recordPartsLastIdle": ["key"],
+    "recordPartsLastInterrupted": ["key"],
+    "recordPartsLastQueued": ["key"],
+    "recordPartsLastStarting": ["key"],
+    "recordPartsLastWaiting": [],
+    "recordPartsLastWaitingGuidance": ["key"],
+    "recordPartsLastWorking": ["key"],
+    "recordPartsOpen": ["open", "total"],
+    "recordPartsOpenGuidance": ["counts"],
     "recordPersonalNone": ["computer"],
     "recordPersonalVersion": ["computer", "version", "when"],
     "recordPolicyParentTask": [],
@@ -119470,6 +122738,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsAddProjectAddFolder": [],
     "settingsAddProjectAdded": ["name"],
     "settingsAddProjectAddedGit": ["name"],
+    "settingsAddProjectAddedLeftFolder": ["name"],
     "settingsAddProjectAddedMark": [],
     "settingsAddProjectAdding": [],
     "settingsAddProjectAlreadyAdded": ["name"],
@@ -119523,6 +122792,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsAppearanceThemeDark": [],
     "settingsAppearanceThemeDescription": [],
     "settingsAppearanceThemeLight": [],
+    "settingsAppearanceThemeOwnDescribe": [],
+    "settingsAppearanceThemeOwnDraft": [],
+    "settingsAppearanceThemeOwnRemove": [],
+    "settingsAppearanceThemeOwnRemoveNamed": ["name"],
+    "settingsAppearanceThemeYours": [],
     "settingsAppearanceWash": [],
     "settingsAppearanceWashDescription": [],
     "settingsAppearanceWashValue": ["percent"],
@@ -119724,18 +122998,22 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsDecisionsKeysFrom": ["url"],
     "settingsDecisionsLastAnswer": ["tokens", "value"],
     "settingsDecisionsLineNative": ["model", "vendor"],
-    "settingsDecisionsOpenRouterModels": [],
-    "settingsDecisionsOpenRouterPrice": ["model", "price", "vendor"],
-    "settingsDecisionsOpenRouterUnavailable": [],
+    "settingsDecisionsModelPrice": ["model", "price", "vendor"],
     "settingsDecisionsPicker": [],
+    "settingsDecisionsProviderChoice": [],
+    "settingsDecisionsProviderCostAccount": ["model", "price", "provider"],
+    "settingsDecisionsProviderCostAllowance": ["model", "price", "provider"],
+    "settingsDecisionsProviderModels": ["provider"],
+    "settingsDecisionsProviderShared": ["model", "provider", "vendor"],
+    "settingsDecisionsProviderUnavailable": ["provider"],
     "settingsDecisionsRemove": ["model"],
     "settingsDecisionsReplaceKey": ["model"],
     "settingsDecisionsSubtitle": [],
     "settingsDecisionsTurnOff": ["model"],
-    "settingsDecisionsTurnOnOpenRouter": ["model"],
+    "settingsDecisionsTurnOnThrough": ["model", "provider"],
     "settingsDecisionsUseAuto": [],
     "settingsDecisionsUseNative": ["model", "vendor"],
-    "settingsDecisionsUseOpenRouter": [],
+    "settingsDecisionsUseProvider": ["provider"],
     "settingsDecisionsUseSpecific": [],
     "settingsDecisionsUses": [],
     "settingsDecisionsUsesAllow": [],
@@ -120037,6 +123315,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsForgeNotSignedIn": ["host"],
     "settingsForgeOpenHost": ["host"],
     "settingsForgeRowActions": ["host", "where"],
+    "settingsForgeServerOn": ["name", "where"],
     "settingsForgeSignIn": [],
     "settingsForgeSignInAgain": [],
     "settingsForgeSignInAgainSay": [],
@@ -120301,6 +123580,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsProjectsBatchAnswerRuleNote": [],
     "settingsProjectsBatchAnswerYourself": [],
     "settingsProjectsBatchChanges": [],
+    "settingsProjectsBatchCheckingFix": ["key"],
     "settingsProjectsBatchGap": [],
     "settingsProjectsBatchGapDescription": [],
     "settingsProjectsBatchGapHours": ["count"],
@@ -120473,6 +123753,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsProjectsWorkspaceDescription": [],
     "settingsReasoningAuto": [],
     "settingsReasoningLabel": ["model", "provider", "slot"],
+    "settingsReasoningMax": [],
     "settingsReasoningSaveFailed": [],
     "settingsReasoningSavedUnavailable": ["reasoning"],
     "settingsReasoningUnavailable": [],
@@ -120713,6 +123994,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsSubscriptionsRetrying": [],
     "settingsSubscriptionsRowActions": ["account"],
     "settingsSubscriptionsSavedResets": ["count", "site"],
+    "settingsSubscriptionsSentThrough": ["host"],
     "settingsSubscriptionsSignIn": [],
     "settingsSubscriptionsSignInAgainState": [],
     "settingsSubscriptionsSignedIn": [],
@@ -121146,7 +124428,21 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "taskGroupQueued": [],
     "taskGroupWaiting": [],
     "taskGroupWorking": [],
+    "taskHoldAsksFirst": [],
+    "taskHoldChecks": [],
+    "taskHoldCostLimit": [],
+    "taskHoldDecisions": [],
+    "taskHoldLoadLine": [],
+    "taskHoldParts": [],
+    "taskHoldProof": [],
+    "taskHoldRetired": [],
+    "taskHoldStory": [],
+    "taskHoldWaits": [],
     "taskNoteReworkHeld": ["title"],
+    "taskOverrideDirectionGone": ["direction", "holds"],
+    "taskOverrideDirectionRevised": ["direction", "holds"],
+    "taskOverrideDirectionTask": ["direction", "holds", "words"],
+    "taskOverrideDirectionVersion": ["direction", "holds", "words"],
     "taskPinPin": [],
     "taskPinUnpin": [],
     "taskStatusComputerUpdating": ["computer"],
@@ -122219,25 +125515,23 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
      */
     risk: riskAssessmentSchema.optional(),
     /**
-     * False on a card that takes no reply, whoever its author is
-     * (docs/card-threads.md "A card with no reply row"): the chrome draws no
-     * reply row and the core refuses one (`cardTakesReplies`). The host sets
-     * it on the welcome alone (`cards.replies`); absent on every other card,
-     * which takes replies as its author allows.
+     * False on a card that takes no reply (docs/card-threads.md "Who answers
+     * a card"): the chrome draws no reply row and the core refuses one
+     * (`cardTakesReplies`). The host sets it on the welcome, the first mate's
+     * own note (`cards.replies`); no host card carries it, and one saved with
+     * it by an earlier version loses it on restore (`withHostAnswerer`).
      */
     replies: literal(false).optional(),
     /**
      * Who answers a reply under a card whose author cannot (`cards.answered_by`,
-     * read through `cardAnswerer`): "firstmate" on the host's stuck alert
-     * (`card-stall-<task>`, INF-1670), its next-move card
-     * (`card-next-move-<task>`), its decision on a stopped part left last
-     * (`card-last-part-<task>`) and on every card it raises through
-     * `raiseHostCard` unless the caller names another, so the first mate
-     * answers in the thread, never the task's crewmate; "crewmate" on the
-     * app's own card for a crewmate's ask (a secret to keep or use, secrets to
-     * move in, an integration call), so the crewmate that asked answers in the
-     * thread while its ask stays open. Absent on every other card, which takes
-     * replies as its author allows.
+     * read through `cardAnswerer`): "crewmate" on the app's own card for a
+     * crewmate's ask (a secret to keep or use, secrets to move in, an
+     * integration call, an unsafe data reader's held calls), so the crewmate
+     * that asked answers in the thread while its ask stays open; "firstmate"
+     * on every other host card, named by its builder or filled in as the
+     * card goes up and as it is restored (`withHostAnswerer`), so the first
+     * mate answers in the thread, never the task's crewmate. Absent on a
+     * crewmate's or the first mate's own card, which its author answers.
      */
     answeredBy: _enum(["firstmate", "crewmate"]).optional(),
     /** Declared by the author: replies stay shown; each arrival comes forward. Choices still close. */
@@ -122836,6 +126130,14 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }),
     unavailableSchema
   ]);
+  const knowledgeDirectionHeardSchema = strictObject({
+    from: _enum(["turn", "card", "crewmate-tab", "standing", "window"]),
+    /** The card's id and its title when it was heard, for `card`. */
+    card: string().min(1).max(200).optional(),
+    title: string().max(400).optional(),
+    /** The task's key, for `crewmate-tab` and `standing`. */
+    task: string().min(1).max(64).optional()
+  });
   const knowledgeDirectionRowSchema = object({
     id: string(),
     kind: literal("direction"),
@@ -122845,7 +126147,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     origin: string(),
     authority: _enum(["instruction", "advice"]),
     revision: number().int().positive(),
-    updatedAt: number()
+    updatedAt: number(),
+    /** Where the captain's words for the current revision were heard; absent when they were not. */
+    heard: knowledgeDirectionHeardSchema.optional()
   });
   const knowledgeDirectionsArgsSchema = knowledgeConceptsArgsSchema;
   discriminatedUnion("state", [
@@ -122873,7 +126177,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         origin: string(),
         scope: scopeSchema,
         evidence: string(),
-        at: number()
+        at: number(),
+        heard: knowledgeDirectionHeardSchema.optional()
       })
     ),
     page: number().int().nonnegative(),
@@ -122896,20 +126201,23 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       text: directionChangeTextSchema,
       /** `captain` for everywhere, read by the first mate alone; or one project's id, read by its crewmates too. */
       scope: scopeSchema.optional(),
-      reason: directionChangeReasonSchema
+      reason: directionChangeReasonSchema,
+      heard: knowledgeDirectionHeardSchema.optional()
     }),
     strictObject({
       op: literal("revise"),
       id: directionChangeIdSchema,
       text: directionChangeTextSchema,
       expectedRevision: directionChangeRevisionSchema,
-      reason: directionChangeReasonSchema
+      reason: directionChangeReasonSchema,
+      heard: knowledgeDirectionHeardSchema.optional()
     }),
     strictObject({
       op: literal("retire"),
       id: directionChangeIdSchema,
       expectedRevision: directionChangeRevisionSchema,
-      reason: directionChangeReasonSchema
+      reason: directionChangeReasonSchema,
+      heard: knowledgeDirectionHeardSchema.optional()
     })
   ]);
   object({
@@ -123103,6 +126411,73 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }),
     unavailableSchema
   ]);
+  const URL_IN_TEXT = "https?:\\/\\/[^\\s<>\"'`\\u3000-\\u303f\\uff01-\\uff0f\\uff1a-\\uff20\\uff3b-\\uff40\\uff5b-\\uff65]+";
+  const URL_RE = new RegExp(URL_IN_TEXT, "gi");
+  const URL_TRAILING_PUNCTUATION = ".,;:!?'";
+  const URL_CLOSERS = { ")": "(", "]": "[", "}": "{" };
+  const LOOPBACK_HOSTS = ["localhost", "127.0.0.1", "::1", "[::1]"];
+  const LOCALHOST_SUFFIX = ".localhost";
+  function unmatchedCloser(value, open2, close) {
+    let depth = 0;
+    for (const char of value) {
+      if (char === open2) depth += 1;
+      else if (char === close) depth -= 1;
+    }
+    return depth < 0;
+  }
+  function trimTrailingUrlPunctuation(raw) {
+    let url = raw;
+    let trailing = "";
+    while (url.length > 0) {
+      const last = url[url.length - 1];
+      if (!last) break;
+      const opener = URL_CLOSERS[last];
+      const strip = URL_TRAILING_PUNCTUATION.includes(last) || opener !== void 0 && unmatchedCloser(url, opener, last);
+      if (!strip) break;
+      url = url.slice(0, -1);
+      trailing = last + trailing;
+    }
+    return { url, trailing };
+  }
+  function isHttpUrl(value) {
+    try {
+      const parsed = new URL(value);
+      return parsed.protocol === "http:" || parsed.protocol === "https:";
+    } catch {
+      return false;
+    }
+  }
+  function isSafeCardHref(value) {
+    try {
+      const url = new URL(value);
+      if (url.protocol === "https:") return true;
+      if (url.protocol === "http:") {
+        const host = url.hostname.toLowerCase();
+        return LOOPBACK_HOSTS.includes(host) || host.endsWith(LOCALHOST_SUFFIX);
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }
+  function splitCardBodyUrls(body) {
+    const parts = [];
+    let cursor = 0;
+    for (const match of body.matchAll(URL_RE)) {
+      const start = match.index ?? 0;
+      const { url } = trimTrailingUrlPunctuation(match[0]);
+      if (!url || !isHttpUrl(url)) continue;
+      if (start > cursor) {
+        parts.push({ type: "text", value: body.slice(cursor, start) });
+      }
+      parts.push({ type: "url", value: url });
+      cursor = start + url.length;
+    }
+    if (cursor < body.length) {
+      parts.push({ type: "text", value: body.slice(cursor) });
+    }
+    return parts;
+  }
   const TASK_KEY_IN_TEXT = "(?<![A-Za-z0-9_-])[A-Z0-9]{2,4}-[0-9]{1,9}(?![A-Za-z0-9_-])";
   const TASK_KEY_EXACT = /^[A-Z0-9]{2,4}-[0-9]{1,9}$/;
   const TASK_KEYS_MAX = 64;
@@ -123528,9 +126903,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   var annotation = { enabled: false, mode: false, index: -1, current: null, queued: [], offered: false };
   var annotationControl = 'a,button,input,select,textarea,summary,label,[role=button],[contenteditable],[data-inf-action],[data-inf-draft]';
   function annotationParts() { return Array.from(document.querySelectorAll('[data-inf-target]')).filter(function(el) { return el.getClientRects().length && !el.matches(annotationControl); }); }
-  function annotationPart(node) {
+  // Words selected in an option's label belong to its question; a press there still ticks the option.
+  var annotationWordsControl = annotationControl.replace(',label,', ',');
+  function annotationPart(node, words) {
     var el = node && (node.nodeType === 1 ? node : node.parentElement);
-    if (!el || el.closest(annotationControl)) return null;
+    if (!el || el.closest(words ? annotationWordsControl : annotationControl)) return null;
     return el.closest('[data-inf-target]');
   }
   function annotationBoundary(el, offset) {
@@ -123610,8 +126987,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     if (!annotation.enabled) return false;
     var selection = window.getSelection();
     if (!selection || selection.isCollapsed || !selection.rangeCount) return false;
-    var range = selection.getRangeAt(0), el = annotationPart(range.startContainer);
-    var last = annotationPart(range.endContainer);
+    var range = selection.getRangeAt(0), el = annotationPart(range.startContainer, true);
+    var last = annotationPart(range.endContainer, true);
     if (!el || !last) return false;
     var prefix = document.createRange(); prefix.selectNodeContents(el); prefix.setEnd(range.startContainer,range.startOffset);
     var start = prefix.toString().length;
@@ -124918,6 +128295,60 @@ ${FRAME_TAG_SCRIPT}
   function entryLink(target) {
     return target && target.closest ? target.closest("a[data-inf-entry]") : null;
   }
+  // The address the words start with, its trailing punctuation and any
+  // closing bracket it did not open left out (linkify's trimTrailingUrlPunctuation).
+  function addressIn(raw) {
+    var address = raw;
+    while (address.length > 0) {
+      var last = address.charAt(address.length - 1);
+      var opener = Object.prototype.hasOwnProperty.call(ADDRESS_CLOSERS, last) ? ADDRESS_CLOSERS[last] : null;
+      if (ADDRESS_TRAILING.indexOf(last) < 0 && !(opener && unmatched(address, opener, last))) break;
+      address = address.slice(0, -1);
+    }
+    return address;
+  }
+  function unmatched(value, open, close) {
+    var depth = 0;
+    for (var i = 0; i < value.length; i++) {
+      if (value.charAt(i) === open) depth += 1;
+      else if (value.charAt(i) === close) depth -= 1;
+    }
+    return depth < 0;
+  }
+  // The safe opener's rule (linkify's isSafeCardHref): an address it would refuse stays words.
+  function opens(address) {
+    var url;
+    try { url = new URL(address); } catch (e) { return false; }
+    if (url.protocol === "https:") return true;
+    if (url.protocol !== "http:") return false;
+    var host = url.hostname.toLowerCase();
+    return LOOPBACK_HOSTS.indexOf(host) >= 0 || host.slice(-LOCALHOST_SUFFIX.length) === LOCALHOST_SUFFIX;
+  }
+  // Links the addresses in a text node; answers the text nodes left around them.
+  function linkAddresses(node) {
+    var text = node.nodeValue;
+    var parts = null;
+    var rest = [];
+    var at = 0;
+    var match;
+    ADDRESS_IN_TEXT.lastIndex = 0;
+    while ((match = ADDRESS_IN_TEXT.exec(text))) {
+      var address = addressIn(match[0]);
+      if (!address || !opens(address)) continue;
+      parts = parts || document.createDocumentFragment();
+      if (match.index > at) rest.push(parts.appendChild(document.createTextNode(text.slice(at, match.index))));
+      var link = document.createElement("a");
+      link.setAttribute("href", address);
+      link.setAttribute("data-inf-address", "");
+      link.textContent = address;
+      parts.appendChild(link);
+      at = match.index + address.length;
+    }
+    if (!parts) return [node];
+    if (at < text.length) rest.push(parts.appendChild(document.createTextNode(text.slice(at))));
+    node.parentNode.replaceChild(parts, node);
+    return rest;
+  }
   function linkText(node) {
     var text = node.nodeValue;
     var parts = null;
@@ -124982,17 +128413,23 @@ ${FRAME_TAG_SCRIPT}
     // A mark is not the body changing.
     sizeWatch.takeRecords();
   }
-  function linkKeys() {
-    if ((!keys.known && !entries.known) || !document.body) return;
+  function linkWords() {
+    var named = keys.known || entries.known;
+    if ((!named && !addresses.on) || !document.body) return;
     var found = [];
     var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     for (var node = walker.nextNode(); node; node = walker.nextNode()) {
-      if (node.nodeValue.indexOf("-") < 0 || !node.parentElement) continue;
-      if (node.parentElement.closest(UNLINKED)) continue;
+      var words = node.nodeValue;
+      if (!(named && words.indexOf("-") >= 0) && !(addresses.on && words.indexOf("://") >= 0)) continue;
+      if (!node.parentElement || node.parentElement.closest(UNLINKED)) continue;
       found.push(node);
     }
     var linked = false;
-    found.forEach(function (text) { if (linkText(text)) linked = true; });
+    found.forEach(function (text) {
+      var rest = addresses.on ? linkAddresses(text) : [text];
+      if (rest[0] !== text) linked = true;
+      if (named) rest.forEach(function (part) { if (linkText(part)) linked = true; });
+    });
     if (!linked) return;
     markLit();
     // The same words in the same place: linking is not the body changing.
@@ -125001,7 +128438,7 @@ ${FRAME_TAG_SCRIPT}
     resize();
   }
   var keyWatch = new MutationObserver(function () {
-    if (keys.known || entries.known) linkKeys();
+    if (keys.known || entries.known || addresses.on) linkWords();
     tagPictures();
     if (decorateDemos()) {
       // A demo the body's own script added: its button is part of that change.
@@ -125539,8 +128976,14 @@ ${FRAME_TAG_SCRIPT}
   var form = { on: false, locked: false, preview: false, fill: null, filling: false, applying: false, staged: {}, appliers: {}, waiting: {}, touched: {}, first: new WeakMap(), last: "", fields: new WeakMap(), current: null };
   var KEY_IN_TEXT = new RegExp(${JSON.stringify(`${TASK_KEY_IN_TEXT}|${KNOWLEDGE_ID_IN_TEXT}`)}, "g");
   var UNLINKED = "a, button, summary, input, select, option, textarea, script, style, svg, [role=button], [data-inf-action], [data-inf-draft], [contenteditable]";
+  var ADDRESS_IN_TEXT = new RegExp(${JSON.stringify(URL_IN_TEXT)}, "gi");
+  var ADDRESS_TRAILING = ${JSON.stringify(URL_TRAILING_PUNCTUATION)};
+  var ADDRESS_CLOSERS = ${JSON.stringify(URL_CLOSERS)};
+  var LOOPBACK_HOSTS = ${JSON.stringify(LOOPBACK_HOSTS)};
+  var LOCALHOST_SUFFIX = ${JSON.stringify(LOCALHOST_SUFFIX)};
   var keys = { known: null, rested: null, quiet: null, lit: null };
   var entries = { known: null };
+  var addresses = { on: false };
   var caps = { pictures: false, escape: false, expand: false, sound: false };
   var held = { element: null, start: null, end: null, direction: null };
   var listen = EventTarget.prototype.addEventListener;
@@ -125792,8 +129235,8 @@ ${FRAME_EXPAND_SCRIPT}${FRAME_SOUND_SCRIPT}
         if (typeof key === "string") { known[key] = true; any = true; }
       });
       keys.known = any ? known : null;
-      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", linkKeys, { once: true });
-      else linkKeys();
+      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", linkWords, { once: true });
+      else linkWords();
     } else if (data.type === "lit") {
       keys.lit = typeof data.key === "string" ? data.key : null;
       markLit();
@@ -125807,18 +129250,24 @@ ${FRAME_EXPAND_SCRIPT}${FRAME_SOUND_SCRIPT}
         }
       });
       entries.known = some ? named : null;
-      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", linkKeys, { once: true });
+      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", linkWords, { once: true });
       else {
         refreshEntries();
-        linkKeys();
+        linkWords();
       }
     } else if (data.type === "keys") {
       caps.pictures = data.pictures === true;
       caps.escape = data.escape === true;
       caps.expand = data.expand === true;
       caps.sound = data.sound === true;
-      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", tagPictures, { once: true });
-      else tagPictures();
+      addresses.on = data.addresses === true;
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", tagPictures, { once: true });
+        if (addresses.on) document.addEventListener("DOMContentLoaded", linkWords, { once: true });
+      } else {
+        tagPictures();
+        if (addresses.on) linkWords();
+      }
     } else if (data.type === "expanded") {
       var back = expandable()[data.index];
       var detail;
@@ -125907,6 +129356,16 @@ ${FRAME_EXPAND_SCRIPT}${FRAME_SOUND_SCRIPT}
       theme = data.theme;
       document.documentElement.setAttribute("data-theme", theme);
       if (document.body) document.body.setAttribute("data-theme", theme);
+      // The window's color theme (docs/themes.md): one sheet, last in the head, over the birth rule.
+      if (typeof data.colors === "string") {
+        var sheet = document.getElementById("inf-color-theme");
+        if (!sheet) {
+          sheet = document.createElement("style");
+          sheet.id = "inf-color-theme";
+        }
+        if (sheet.textContent !== data.colors) sheet.textContent = data.colors;
+        if (document.head && sheet.parentNode !== document.head) document.head.appendChild(sheet);
+      }
       themeListeners.slice().forEach(function (listener) { listener(theme); });
     }
   });
@@ -126150,7 +129609,7 @@ ${FRAME_KEYBOARD_SCRIPT}
   }, true);
   post({ type: "ready", reuseReads: true });
 })();`;
-  const FRAME_BRIDGE_SHA256 = "sha256-3s+lc8EyIu8oPbb32Wz/fP+y7kyabpwqLGrvK1Xj+so=";
+  const FRAME_BRIDGE_SHA256 = "sha256-5v7hzdTC8z16Wk4TaQGyuznSbwtGOsY8WXZfh0yNf/w=";
   const APP_FRAME_SCHEME = "app-frame";
   const CARD_PICTURE_HOST = "images";
   const CARD_MEDIA_HOST = "media";
@@ -126397,6 +129856,10 @@ ${FRAME_KEYBOARD_SCRIPT}
     "ambient-music": true,
     // Saves only: panelChange.ts refuses a panel's `remove`, since a panel never deletes.
     "ambient-own-style": true,
+    "own-theme": [
+      "destructive",
+      "Saving under a saved theme's name replaces its colors for good, and remove deletes one"
+    ],
     "ambient-away": true,
     "card-size": true,
     language: true,
@@ -128567,66 +132030,446 @@ ${FRAME_KEYBOARD_SCRIPT}
       "</html>"
     ].join("\n");
   }
-  const URL_RE = /https?:\/\/[^\s<>"'`]+/gi;
-  function unmatchedCloser(value, open2, close) {
-    let depth = 0;
-    for (const char of value) {
-      if (char === open2) depth += 1;
-      else if (char === close) depth -= 1;
-    }
-    return depth < 0;
-  }
-  function trimTrailingUrlPunctuation(raw) {
-    let url = raw;
-    let trailing = "";
-    while (url.length > 0) {
-      const last = url[url.length - 1];
-      if (!last) break;
-      const strip = /[.,;:!?']/.test(last) || last === ")" && unmatchedCloser(url, "(", ")") || last === "]" && unmatchedCloser(url, "[", "]") || last === "}" && unmatchedCloser(url, "{", "}");
-      if (!strip) break;
-      url = url.slice(0, -1);
-      trailing = last + trailing;
-    }
-    return { url, trailing };
-  }
-  function isHttpUrl(value) {
-    try {
-      const parsed = new URL(value);
-      return parsed.protocol === "http:" || parsed.protocol === "https:";
-    } catch {
-      return false;
-    }
-  }
-  function isSafeCardHref(value) {
-    try {
-      const url = new URL(value);
-      if (url.protocol === "https:") return true;
-      if (url.protocol === "http:") {
-        const host = url.hostname.toLowerCase();
-        return host === "localhost" || host.endsWith(".localhost") || host === "127.0.0.1" || host === "::1" || host === "[::1]";
+  const COLOR_TOKENS = [
+    { name: "--bg-0", dark: "#05070d", light: "#eef1f7" },
+    { name: "--material-tint", dark: "rgba(5, 7, 13, 1)", light: "rgba(238, 241, 247, 1)" },
+    { name: "--bg-1", dark: "#0a0e18", light: "#f7f9fc" },
+    { name: "--bg-2", dark: "#0f1424", light: "#ffffff" },
+    { name: "--bg-3", dark: "#161c30", light: "#e7ecf5" },
+    { name: "--line-1", dark: "rgba(150, 180, 255, 0.2)", light: "rgba(30, 50, 90, 0.18)" },
+    { name: "--line-2", dark: "rgba(150, 180, 255, 0.24)", light: "rgba(30, 50, 90, 0.26)" },
+    { name: "--fg-1", dark: "#e9eef8", light: "#151b2b" },
+    { name: "--fg-2", dark: "#98a4bd", light: "#4d5a75" },
+    { name: "--fg-3", dark: "#7a86a0", light: "#6c7891" },
+    { name: "--accent", dark: "#7fdcff", light: "#0e8fd0" },
+    { name: "--accent-strong", dark: "#38aae6", light: "#0a72a8" },
+    { name: "--accent-dim", dark: "rgba(127, 220, 255, 0.14)", light: "rgba(14, 143, 208, 0.1)" },
+    { name: "--accent-glow", dark: "rgba(127, 220, 255, 0.35)", light: "rgba(14, 143, 208, 0.25)" },
+    { name: "--on-accent", dark: "#05070d", light: "#05070d" },
+    { name: "--ok", dark: "#7fdcff", light: "#0e8fd0" },
+    { name: "--ok-dim", dark: "rgba(127, 220, 255, 0.14)", light: "rgba(14, 143, 208, 0.1)" },
+    { name: "--hot", dark: "#ffa257", light: "#d97a1f" },
+    { name: "--hot-dim", dark: "rgba(255, 162, 87, 0.14)", light: "rgba(217, 122, 31, 0.12)" },
+    { name: "--hot-glow", dark: "rgba(255, 148, 66, 0.35)", light: "rgba(217, 122, 31, 0.28)" },
+    { name: "--warn", dark: "#ffa257", light: "#d97a1f" },
+    { name: "--warn-dim", dark: "rgba(255, 162, 87, 0.14)", light: "rgba(217, 122, 31, 0.12)" },
+    { name: "--danger", dark: "#ff6b52", light: "#cf4a2e" },
+    { name: "--danger-dim", dark: "rgba(255, 107, 82, 0.12)", light: "rgba(207, 74, 46, 0.1)" },
+    { name: "--captain", dark: "#b99aff", light: "#7254c9" },
+    { name: "--captain-dim", dark: "rgba(185, 154, 255, 0.14)", light: "rgba(114, 84, 201, 0.12)" },
+    { name: "--idle", dark: "#5d6884", light: "#8b96ad" },
+    { name: "--slot-premium", dark: "#ff6b52", light: "#cf4a2e" },
+    { name: "--slot-high", dark: "#ffa257", light: "#d97a1f" },
+    { name: "--slot-medium", dark: "#7fdcff", light: "#0e8fd0" },
+    { name: "--slot-low", dark: "#8a93a8", light: "#8b96ad" },
+    { name: "--wire-accent", dark: "#7fdcff", light: "#0a72a8" },
+    { name: "--wire-hot", dark: "#ffa257", light: "#e8760a" },
+    { name: "--wire-dim", dark: "#2e6a8c", light: "#82b4cf" }
+  ];
+  const BUILT_IN_THEMES = {
+    "rose-pine": {
+      name: "Rosé Pine",
+      source: "Rosé Pine",
+      seed: {
+        background: "#191724",
+        text: "#e0def4",
+        accent: "#9ccfd8",
+        hot: "#f6c177",
+        danger: "#eb6f92",
+        captain: "#c4a7e7"
       }
-      return false;
-    } catch {
-      return false;
-    }
-  }
-  function splitCardBodyUrls(body) {
-    const parts = [];
-    let cursor = 0;
-    for (const match of body.matchAll(URL_RE)) {
-      const start = match.index ?? 0;
-      const { url } = trimTrailingUrlPunctuation(match[0]);
-      if (!url || !isHttpUrl(url)) continue;
-      if (start > cursor) {
-        parts.push({ type: "text", value: body.slice(cursor, start) });
+    },
+    "rose-pine-moon": {
+      name: "Rosé Pine Moon",
+      source: "Rosé Pine",
+      seed: {
+        background: "#232136",
+        text: "#e0def4",
+        accent: "#9ccfd8",
+        hot: "#f6c177",
+        danger: "#eb6f92",
+        captain: "#c4a7e7"
       }
-      parts.push({ type: "url", value: url });
-      cursor = start + url.length;
+    },
+    "rose-pine-dawn": {
+      name: "Rosé Pine Dawn",
+      source: "Rosé Pine",
+      seed: {
+        background: "#faf4ed",
+        text: "#575279",
+        accent: "#56949f",
+        hot: "#ea9d34",
+        danger: "#b4637a",
+        captain: "#907aa9"
+      }
+    },
+    "catppuccin-latte": {
+      name: "Catppuccin Latte",
+      source: "Catppuccin for VSCode",
+      seed: {
+        background: "#eff1f5",
+        text: "#4c4f69",
+        accent: "#8839ef",
+        hot: "#fe640b",
+        danger: "#d20f39",
+        captain: "#1e66f5"
+      }
+    },
+    "catppuccin-frappe": {
+      name: "Catppuccin Frappé",
+      source: "Catppuccin for VSCode",
+      seed: {
+        background: "#303446",
+        text: "#c6d0f5",
+        accent: "#ca9ee6",
+        hot: "#ef9f76",
+        danger: "#e78284",
+        captain: "#8caaee"
+      }
+    },
+    "catppuccin-macchiato": {
+      name: "Catppuccin Macchiato",
+      source: "Catppuccin for VSCode",
+      seed: {
+        background: "#24273a",
+        text: "#cad3f5",
+        accent: "#c6a0f6",
+        hot: "#f5a97f",
+        danger: "#ed8796",
+        captain: "#8aadf4"
+      }
+    },
+    "catppuccin-mocha": {
+      name: "Catppuccin Mocha",
+      source: "Catppuccin for VSCode",
+      seed: {
+        background: "#1e1e2e",
+        text: "#cdd6f4",
+        accent: "#cba6f7",
+        hot: "#fab387",
+        danger: "#f38ba8",
+        captain: "#89b4fa"
+      }
+    },
+    "one-dark": {
+      name: "One Dark",
+      source: "One Dark Pro",
+      seed: {
+        background: "#282c34",
+        text: "#abb2bf",
+        accent: "#61afef",
+        hot: "#d19a66",
+        danger: "#e06c75",
+        captain: "#c678dd"
+      }
+    },
+    "one-light": {
+      name: "One Light",
+      source: "Atom One Light Theme",
+      seed: {
+        background: "#eaeaeb",
+        text: "#383a42",
+        accent: "#4078f2",
+        hot: "#c18401",
+        danger: "#e45649",
+        captain: "#a626a4"
+      }
+    },
+    dracula: {
+      name: "Dracula",
+      source: "Dracula Theme Official",
+      seed: {
+        background: "#282a36",
+        text: "#f8f8f2",
+        accent: "#bd93f9",
+        hot: "#ffb86c",
+        danger: "#ff5555",
+        captain: "#ff79c6"
+      }
+    },
+    "night-owl": {
+      name: "Night Owl",
+      source: "Night Owl",
+      seed: {
+        background: "#011627",
+        text: "#d6deeb",
+        accent: "#82aaff",
+        hot: "#ffcb8b",
+        danger: "#ef5350",
+        captain: "#c792ea"
+      }
+    },
+    "night-owl-light": {
+      name: "Night Owl Light",
+      source: "Night Owl",
+      seed: {
+        background: "#f0f0f0",
+        text: "#403f53",
+        accent: "#2aa298",
+        hot: "#daaa01",
+        danger: "#de3d3b",
+        captain: "#994cc3"
+      }
+    },
+    "tokyo-night": {
+      name: "Tokyo Night",
+      source: "Tokyo Night",
+      seed: {
+        background: "#1a1b26",
+        text: "#c0caf5",
+        accent: "#7aa2f7",
+        hot: "#e0af68",
+        danger: "#f7768e",
+        captain: "#bb9af7"
+      }
     }
-    if (cursor < body.length) {
-      parts.push({ type: "text", value: body.slice(cursor) });
+  };
+  function isBuiltInTheme(id2) {
+    return typeof id2 === "string" && Object.hasOwn(BUILT_IN_THEMES, id2);
+  }
+  string().min(1).max(40).regex(/^[a-z0-9-]+$/);
+  const FLOORS = {
+    text: 7,
+    quietText: 4.5,
+    faintText: 3,
+    /** Accent, hot, danger and captain, on the card surface. */
+    state: 3,
+    onAccent: 4.5
+  };
+  const APART = { accentHot: 0.12, accentDanger: 0.12, hotDanger: 0.06 };
+  const SHIPPED_ON_ACCENT = "#05070d";
+  const hexToRgb = (hex) => {
+    const h = hex.replace("#", "");
+    return [0, 2, 4].map((i) => Number.parseInt(h.slice(i, i + 2), 16) / 255);
+  };
+  const rgbToHex = (rgb) => `#${rgb.map(
+    (v) => Math.round(Math.min(1, Math.max(0, v)) * 255).toString(16).padStart(2, "0")
+  ).join("")}`;
+  const linear = (v) => v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  const gamma = (v) => v <= 31308e-7 ? 12.92 * v : 1.055 * v ** (1 / 2.4) - 0.055;
+  function rgbToOklab([r0, g0, b0]) {
+    const r = linear(r0);
+    const g = linear(g0);
+    const b = linear(b0);
+    const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+    const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+    const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+    return [
+      0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+      1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+      0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s
+    ];
+  }
+  function oklabToRgb([L, a, b]) {
+    const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3;
+    const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3;
+    const s = (L - 0.0894841775 * a - 1.291485548 * b) ** 3;
+    return [
+      gamma(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s),
+      gamma(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
+      gamma(-0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s)
+    ];
+  }
+  function toLch(hex) {
+    const [L, a, b] = rgbToOklab(hexToRgb(hex));
+    return { L, C: Math.hypot(a, b), H: (Math.atan2(b, a) * 180 / Math.PI + 360) % 360 };
+  }
+  const inGamut = (rgb) => rgb.every((v) => v >= -5e-4 && v <= 1.0005);
+  function fromLch({ L: given, C, H }) {
+    const L = Math.min(1, Math.max(0, given));
+    const at = (c) => oklabToRgb([L, c * Math.cos(H * Math.PI / 180), c * Math.sin(H * Math.PI / 180)]);
+    if (inGamut(at(C))) return rgbToHex(at(C));
+    let lo = 0;
+    let hi = C;
+    for (let i = 0; i < 24; i++) {
+      const mid = (lo + hi) / 2;
+      if (inGamut(at(mid))) lo = mid;
+      else hi = mid;
     }
-    return parts;
+    return rgbToHex(at(lo));
+  }
+  function luminance(hex) {
+    const [r, g, b] = hexToRgb(hex).map(linear);
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  }
+  function contrast(a, b) {
+    const [x, y] = [luminance(a), luminance(b)].sort((p, q) => q - p);
+    return (x + 0.05) / (y + 0.05);
+  }
+  function colorDistance(a, b) {
+    const p = rgbToOklab(hexToRgb(a));
+    const q = rgbToOklab(hexToRgb(b));
+    return Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
+  }
+  const rgba = (hex, alpha) => {
+    const [r, g, b] = hexToRgb(hex).map((v) => Math.round(v * 255));
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  };
+  function lift(color, ground, floor, dark) {
+    if (contrast(color, ground) >= floor) return { color, moved: 0 };
+    const c = toLch(color);
+    let lo = c.L;
+    let hi = dark ? 1 : 0;
+    let out = color;
+    for (let i = 0; i < 24; i++) {
+      const mid = (lo + hi) / 2;
+      const tried = fromLch({ ...c, L: mid });
+      if (contrast(tried, ground) >= floor) {
+        hi = mid;
+        out = tried;
+      } else lo = mid;
+    }
+    return { color: out, moved: Math.abs(toLch(out).L - c.L) };
+  }
+  function workOutTheme(seed) {
+    const moved = [];
+    const faults = [];
+    const bg = toLch(seed.background);
+    const dark = bg.L < 0.6;
+    const hue = bg.C < 4e-3 ? toLch(seed.accent).H : bg.H;
+    const step = dark ? [0, 0.036, 0.066, 0.102] : [0, 0.023, 0.042, -0.016];
+    const chroma = dark ? [1, 1.45, 2.1, 2.6] : [1, 0.6, 0.15, 1.4];
+    const least = dark ? [0, 0.125, 0.16, 0.195] : [0, 0, 0, 0];
+    const cap = Math.max(0.06, bg.C);
+    const [bg0, bg1, bg2, bg3] = step.map(
+      (d, i) => i === 0 ? seed.background.toLowerCase() : fromLch({
+        L: Math.min(1, Math.max(bg.L + d, least[i])),
+        C: Math.min(cap, bg.C * chroma[i]),
+        H: hue
+      })
+    );
+    const worst = dark ? bg3 : bg0;
+    const text = toLch(seed.text);
+    const textHue = text.C < 4e-3 ? hue : text.H;
+    const hold = (name, color, floor, ground = worst) => {
+      const r = lift(color, ground, floor, dark);
+      if (r.moved > 4e-3) moved.push(`${name} ${color} → ${r.color} to reach ${floor}:1`);
+      return r.color;
+    };
+    const fg1 = hold("text", seed.text, FLOORS.text);
+    const fg2 = hold(
+      // i18n-exempt: a theme author's report, never in the window
+      "quiet text",
+      fromLch({
+        L: dark ? text.L - 0.23 : text.L + 0.243,
+        C: Math.max(text.C, 0.035),
+        H: textHue
+      }),
+      FLOORS.quietText
+    );
+    const fg3 = hold(
+      // i18n-exempt: a theme author's report, never in the window
+      "faint text",
+      fromLch({
+        L: dark ? text.L - 0.328 : text.L + 0.348,
+        C: Math.max(text.C, 0.035),
+        H: textHue
+      }),
+      FLOORS.faintText
+    );
+    const accent = hold("accent", seed.accent, FLOORS.state, bg2);
+    const hot = hold("hot", seed.hot, FLOORS.state, bg2);
+    const danger = hold("danger", seed.danger, FLOORS.state, bg2);
+    const captain = hold("captain", seed.captain, FLOORS.state, bg2);
+    const a = toLch(accent);
+    const accentStrong = fromLch({
+      L: a.L - (dark ? 0.148 : 0.093),
+      C: a.C * (dark ? 1.3 : 0.86),
+      H: a.H + (dark ? 8 : 0)
+    });
+    const onAccent = dark && contrast(bg0, accent) >= contrast("#ffffff", accent) ? bg0 : contrast("#ffffff", accent) >= contrast(SHIPPED_ON_ACCENT, accent) ? "#ffffff" : SHIPPED_ON_ACCENT;
+    if (contrast(onAccent, accent) < FLOORS.onAccent)
+      moved.push(`button words on accent reach only ${contrast(onAccent, accent).toFixed(1)}:1`);
+    const line2 = fromLch(dark ? { L: 0.777, C: 0.113, H: hue } : { L: 0.323, C: 0.076, H: hue });
+    const idle = fromLch({ L: dark ? 0.519 : 0.672, C: 0.04, H: hue });
+    const slotLow = fromLch({ L: dark ? 0.663 : 0.672, C: 0.034, H: hue });
+    const wireDim = fromLch({ L: dark ? 0.5 : 0.744, C: a.C * (dark ? 0.8 : 0.5), H: a.H });
+    if (colorDistance(accent, hot) < APART.accentHot)
+      faults.push(
+        `hot ${hot} is too close to accent ${accent}: a working crewmate would look like an idle one. Give hot a hue well away from accent.`
+      );
+    if (colorDistance(accent, danger) < APART.accentDanger)
+      faults.push(
+        `danger ${danger} is too close to accent ${accent}: an error would look like a link. Give danger a hue well away from accent.`
+      );
+    if (colorDistance(hot, danger) < APART.hotDanger)
+      faults.push(
+        `danger ${danger} is too close to hot ${hot}: an error would look like work in progress.`
+      );
+    if (contrast(fg1, bg0) < FLOORS.text)
+      faults.push(
+        `text cannot reach ${FLOORS.text}:1 on background ${seed.background}: make the background darker or lighter.`
+      );
+    const dim = dark ? 0.14 : 0.1;
+    const tokens = {
+      "--bg-0": bg0,
+      "--material-tint": rgba(bg0, 1),
+      "--bg-1": bg1,
+      "--bg-2": bg2,
+      "--bg-3": bg3,
+      "--line-1": rgba(line2, dark ? 0.2 : 0.18),
+      "--line-2": rgba(line2, dark ? 0.24 : 0.26),
+      "--fg-1": fg1,
+      "--fg-2": fg2,
+      "--fg-3": fg3,
+      "--accent": accent,
+      "--accent-strong": accentStrong,
+      "--accent-dim": rgba(accent, dim),
+      "--accent-glow": rgba(accent, dark ? 0.35 : 0.25),
+      "--ok": accent,
+      "--ok-dim": rgba(accent, dim),
+      "--hot": hot,
+      "--hot-dim": rgba(hot, dark ? 0.14 : 0.12),
+      "--hot-glow": rgba(hot, dark ? 0.35 : 0.28),
+      "--warn": hot,
+      "--warn-dim": rgba(hot, dark ? 0.14 : 0.12),
+      "--danger": danger,
+      "--danger-dim": rgba(danger, dark ? 0.12 : 0.1),
+      "--captain": captain,
+      "--captain-dim": rgba(captain, dark ? 0.14 : 0.12),
+      "--idle": idle,
+      "--slot-premium": danger,
+      "--slot-high": hot,
+      "--slot-medium": accent,
+      "--slot-low": slotLow,
+      "--wire-accent": dark ? accent : accentStrong,
+      "--wire-hot": hot,
+      "--wire-dim": wireDim,
+      "--on-accent": onAccent
+    };
+    return { base: dark ? "dark" : "light", tokens, moved, faults };
+  }
+  const worked = /* @__PURE__ */ new Map();
+  function builtInTheme(id2) {
+    let theme = worked.get(id2);
+    if (!theme) {
+      theme = workOutTheme(BUILT_IN_THEMES[id2].seed);
+      worked.set(id2, theme);
+    }
+    return theme;
+  }
+  const ownWorked = /* @__PURE__ */ new WeakMap();
+  function themeOf(saved, own2 = []) {
+    if (isBuiltInTheme(saved)) return builtInTheme(saved);
+    const mine = own2.find((theme2) => theme2.id === saved);
+    if (!mine) return null;
+    let theme = ownWorked.get(mine.colors);
+    if (!theme) {
+      theme = workOutTheme(mine.colors);
+      ownWorked.set(mine.colors, theme);
+    }
+    return theme;
+  }
+  function shippedTokens(base) {
+    return Object.fromEntries(COLOR_TOKENS.map((token) => [token.name, token[base]]));
+  }
+  function themeRule(tokens) {
+    const declarations = Object.entries(tokens).map(([name, value]) => `${name}: ${value};`).join(" ");
+    return `:root, [data-theme="light"], [data-theme="dark"] { ${declarations} }`;
+  }
+  function frameThemeRule(base, saved, own2 = []) {
+    const theme = themeOf(saved, own2);
+    return themeRule(theme?.base === base ? theme.tokens : shippedTokens(base));
   }
   const map = /* @__PURE__ */ JSON.parse('{"style":".mz{border:1px solid var(--line-1);border-radius:var(--radius-m);background:var(--bg-1);overflow:hidden;margin:var(--space-3) 0;position:relative;font-size:var(--text-sm);[hidden]{display:none!important}>svg{display:block;width:100%;height:440px;outline:none;touch-action:none;cursor:grab;font-family:var(--font-mono);user-select:none}>svg:focus-visible{box-shadow:var(--focus-ring-inset)}.n>rect{pointer-events:all}.n rect{fill:var(--bg-2);stroke:var(--line-2);stroke-width:1.2}.n .lbl{fill:var(--fg-1);font-size:12px}.sub,.flabel{fill:var(--fg-3);font-size:10.5px}.n.open rect{stroke:var(--fg-3)}.n.k-ext rect{fill:none;stroke-dasharray:4 3}.n.k-ext .lbl{fill:var(--fg-2)}.n.k-mach rect{stroke:var(--fg-2);stroke-dasharray:1 3;stroke-width:1.6;stroke-linecap:round}.n.first rect{stroke:var(--fg-1)}.n.end rect{fill:none}.n.end rect.in{fill:var(--bg-2)}.chev{fill:none;stroke:var(--fg-3);stroke-width:1.4}.frame{fill:none;stroke:var(--line-2);stroke-dasharray:6 4}.e{fill:none;stroke:var(--fg-3);stroke-opacity:.45}.e.back{stroke-dasharray:4 4}.e.thin{display:none}.e.thin.lit{display:inline}.n rect.stack{fill:var(--bg-1);stroke:var(--line-1)}.el rect{fill:var(--bg-1);stroke:var(--line-1)}.el text{fill:var(--fg-2);font-size:10px}.el{display:none}.el.show{display:inline}.dim{opacity:.22}.e.lit{stroke:var(--accent);stroke-opacity:1}.n.sel rect{stroke:var(--accent);stroke-width:2}.s0{color:var(--ok)}.s1{color:var(--danger)}.s2{color:var(--warn)}.n.s0>rect:not(.stack){stroke:var(--ok);fill:var(--ok-dim)}.n.s1>rect{stroke:var(--danger);stroke-dasharray:4 3;fill:none}.n.s1 .lbl{text-decoration:line-through}.n.s2>rect:not(.stack){stroke:var(--warn)}.same{opacity:.35}.e.add{stroke:var(--ok);stroke-opacity:1}.e.rem{stroke:var(--danger);stroke-opacity:1;stroke-dasharray:4 3}.e.chg{stroke:var(--warn);stroke-opacity:1}.el.s2 text{fill:var(--warn)}.el.s0 text{fill:var(--ok)}.el.s1 text{fill:var(--danger)}.mp.s0 rect{stroke:var(--ok)}.mp.s0 circle{fill:var(--ok)}.mp.s1 rect{stroke:var(--danger);stroke-dasharray:4 3}.mp.s1 circle{fill:var(--danger)}.mp.s1 text{text-decoration:line-through}.mp.s2 rect{stroke:var(--warn)}.mp.s2 circle{fill:var(--warn)}.tag rect{fill:var(--bg-1);stroke:currentColor}.tag text{fill:currentColor;font-size:10px}.mp rect{fill:var(--bg-1);stroke:var(--line-2)}.mp circle{fill:var(--fg-3)}.mp text{fill:var(--fg-2);font-size:10px}.mp.go{cursor:pointer}.mp.go:hover rect{stroke:var(--fg-2)}.bar,.st,.step{display:flex;align-items:center}.bar{gap:6px;padding:6px 10px 0;border-block-start:1px solid var(--line-1)}button{font:inherit;line-height:1.5;color:var(--fg-2);background:none;border:1px solid var(--line-2);border-radius:var(--radius-s);padding:1px 8px;cursor:pointer;min-height:0}button:hover{background:var(--bg-3)}button:focus-visible{box-shadow:var(--focus-ring);outline:none}[aria-pressed=true],[aria-expanded=true]{color:var(--fg-1);background:var(--accent-dim);border-color:var(--accent)}button[aria-label]{inline-size:26px;padding:0;flex:none;font-size:15px;line-height:1.3}.crumbs{flex:1;min-width:0;direction:rtl;text-align:end;font:11px var(--font-mono);color:var(--fg-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.crumbs>span{direction:ltr;unicode-bidi:isolate}.crumbs button{border:0;padding:0 2px}.crumbs [aria-current]{color:var(--fg-1)}.cmp{display:flex;gap:4px;min-width:0}.cmp button,.chg button,.live{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cmp button{max-width:16em}.zoom{display:flex;gap:2px;flex:none}.st{gap:8px;padding:4px 10px 6px;min-height:30px}.live{flex:1}.step{gap:4px;flex:none}[data-pos]{font:11px var(--font-mono);b{font-weight:500}}.more,.bad{padding:0 10px 8px}.mcmp,.chg p,.chg>div{margin:0 0 6px}.chg p{color:var(--fg-1)}.chg>div{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.chg h4{margin:0 0 4px;font-size:1em;font-weight:500}.chg button{display:block;margin:0 0 3px;font:11px var(--font-mono);border-color:currentColor;max-width:100%}.keys{color:var(--fg-3);margin:0}.bad{color:var(--warn)}.bad ul{margin:2px 0 0;padding-inline-start:18px}&.touch:after{content:\\"Tap to open\\";position:absolute;inset-inline-end:8px;inset-block-start:8px;padding:2px 7px;border-radius:var(--radius-s);background:var(--bg-3);color:var(--fg-2);font:var(--text-xs) / 1.4 var(--font-mono);pointer-events:none}}.mz.narrow{.live{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.chg>div{grid-template-columns:1fr}}.mz.touch{>svg{touch-action:auto;cursor:zoom-in}.zoom{display:none}}.mz.full{display:flex;flex-direction:column;>svg{flex:1;min-height:0;height:auto}[data-fs]{display:none}.more{max-height:40vh;overflow:auto}}.mz.full.touch{.zoom{display:flex}&:after{content:none}}","script":"(async()=>{const K=document.getElementById(\\"map\\"),j=t=>K.querySelector(t),O=j(\\"svg\\");O.tabIndex=0;const Gt=j(\\"[data-live]\\"),Jt=j(\\"[data-crumbs]\\"),gt=j(\\"[data-chg]\\"),Bt=j(\\"[data-bad]\\"),It=j(\\"[data-morebox]\\"),xe=j(\\"[data-more]\\"),ve=j(\\"[data-step]\\"),at=j(\\"[data-pos]\\"),Me=j(\\"[data-open]\\"),Oe=j(\\"[data-fs]\\"),tt=matchMedia(\\"(hover: none) and (pointer: coarse)\\").matches;K.classList.toggle(\\"touch\\",tt);const Tt=window.inf?.expanded?.(K)||null,z=!!Tt&&typeof Tt==\\"object\\";K.classList.toggle(\\"full\\",z);const Ee=matchMedia(\\"(prefers-reduced-motion: reduce)\\").matches,Ce=\\"http://www.w3.org/2000/svg\\",C=t=>t.toLocaleString(\\"en-US\\"),lt=[\\"added\\",\\"removed\\",\\"changed\\"],Zt=[],W=t=>Zt.push(t);let it={};try{const t=j(\\"script[data-map]\\"),n=t.getAttribute(\\"src\\");let o=t.textContent;if(n){if(!window.inf?.data)throw new Error(\\"only a card can read its data file\\");o=await window.inf.data(n)}else if(t.hasAttribute(\\"data-packed\\")){const l=Uint8Array.from(atob(o.trim()),i=>i.charCodeAt(0));o=await new Response(new Blob([l]).stream().pipeThrough(new DecompressionStream(\\"deflate-raw\\"))).text()}it=JSON.parse(o)}catch(t){W(`The map data could not be read: ${t.message}`)}const et=it.maps||{},Ae=it.counts||{},X=it.compare||[],ct=[],rt=[],J={},ft={},Se=(t,n)=>!n||t===n||t.startsWith(`${n}/`);function Nt(t,n,o){const l={},i={};for(const r of t.groups)i[r.name]=r;const u=(r,a)=>!r||typeof r.name!=\\"string\\"||!r.name?W(`A ${a} in ${t.where} has no name.`):(l[r.name]&&!o&&W(`${t.where} names ${r.name} twice.`),r.name),e=[];for(const r of n.parts||[]){if(!u(r,\\"part\\"))continue;(typeof r.path!=\\"string\\"||!Se(r.path,t.folder)||r.path===t.folder)&&W(`${r.name} in ${t.where} needs a folder inside ${t.folder||\\"the project\\"}.`);const a={kind:\\"part\\",name:r.name,about:r.about||\\"\\",path:r.path||\\"\\",lvl:t,g:null,sub:null,mach:[],gone:o};r.group&&(a.g=i[r.group]||null,!a.g&&!o&&W(`${r.name} in ${t.where} names a group, ${r.group}, the file does not list.`)),l[a.name]=a,e.push(a)}const m=[];for(const r of n.outside||[]){if(!u(r,\\"outside box\\"))continue;const a={kind:\\"out\\",name:r.name,about:r.about||\\"\\",path:r.path||\\"\\",lvl:t};l[a.name]=a,m.push(a)}const s=[];for(const r of n.links||[]){const a=l[r.from],c=l[r.to];if(!a||!c){o||W(`A link in ${t.where} names ${a?r.to:r.from}, which is not a part or outside box there.`);continue}s.push({a,b:c,why:r.why||\\"\\"})}return{names:l,ps:e,os:m,ls:s}}function zt(t,n,o,l){const i=Array.isArray(t.states)?t.states:[],u={kind:\\"mach\\",name:t.name,about:t.about||\\"\\",states:i,opens:t.opens||{},lvl:n,holder:o[t.in],tr:[]};!l&&(!u.holder||u.holder.kind!==\\"part\\")&&W(`The machine ${t.name} in ${n.where} needs \\"in\\" to name one of its parts.`);for(const e of t.moves||[]){if(!i.includes(e.from)||!i.includes(e.to)){l||W(`A move of ${t.name} goes from ${e.from} to ${e.to}, and both must be its states.`);continue}e.by&&!o[e.by]&&!l&&W(`A move of ${t.name} names ${e.by} as its maker, which is not a part or outside box in ${n.where}.`),u.tr.push([e.from,e.to,e.why||\\"\\",e.by||\\"\\"])}return u}function Pt(t,n,o,l){const i={kind:\\"lvl\\",folder:t,file:n,part:o,name:o?o.name:n.name||\\"Map\\",about:n.about||o?.about||\\"\\",place:n.place||null,where:t?`${t}/.architecture.json`:\\".architecture.json\\"};i.groups=(n.groups||[]).filter(a=>a&&a.name).map(a=>({kind:\\"grp\\",name:a.name,why:a.why||\\"\\",lvl:i}));const{names:u,ps:e,os:m,ls:s}=Nt(i,n,!1),r={};for(const[a,c]of Object.entries(i.place||{}))r[c]&&W(`${i.where} places ${a} and ${r[c]} in one spot.`),r[c]=a;Object.assign(i,{names:u,parts:e,outs:m,links:s,machs:[]});for(const a of n.machines||[]){if(!a||!a.name)continue;const c=zt(a,i,u,!1);ft[c.name]&&W(`Two machines are named ${c.name}.`),ft[c.name]=c,i.machs.push(c),rt.push(c),c.holder&&c.holder.kind===\\"part\\"&&c.holder.mach.push(c)}for(const a of e)ct.push(a),J[a.path]=a,et[a.path]&&!l.has(a.path)&&(a.sub=Pt(a.path,et[a.path],a,new Set([...l,a.path])));return i}const ht=\\"\\"in et?\\"\\":Object.keys(et).sort((t,n)=>t.length-n.length)[0];ht===void 0&&W(\\"No map files were given.\\");const Q=Pt(ht||\\"\\",et[ht]||{name:\\"Map\\",parts:[]},null,new Set([ht]));for(const t of Object.keys(et))t!==ht&&!J[t]&&W(`The map file in ${t} is not a part\'s folder on the map above it.`);for(const t of rt)for(const n of Object.values(t.opens))ft[n]||W(`${t.name} opens ${n}, which is not a machine on the map.`);const Vt=t=>t.sub?t.sub.parts:[];function te(t){const n=Ae[t.path],o=Vt(t).map(te).filter(Boolean);return t.files=n?n.files:o.length?o.reduce((l,i)=>l+i.files,0):void 0,t.lines=n?n.lines:o.length?o.reduce((l,i)=>l+i.lines,0):void 0,t.files===void 0?null:t}for(const t of Q.parts)te(t);const ee=t=>{const n=t.filter(o=>o.files!==void 0);return n.length?{files:n.reduce((o,l)=>o+l.files,0),lines:n.reduce((o,l)=>o+(l.lines||0),0)}:null},bt=t=>y<0||!t.gm?t.mach:[...t.mach,...t.gm],Wt=t=>[...bt(t),...Vt(t).flatMap(Wt)],nt=t=>yt(t.lvl).filter(n=>n.g===t);let y=-1;const je=t=>{let n=null;for(const o of ct)t.startsWith(`${o.path}/`)&&(!n||o.path.length>n.path.length)&&(n=o);return n},Kt=t=>t.lvl.part?[t,...Kt(t.lvl.part)]:[t],ne=(t,n)=>t.names[n]||(t.gp||[]).find(o=>o.name===n)||(t.go||[]).find(o=>o.name===n);function $t(t){y=t;const n=X[t]||{},o=[],l=e=>{o.push(e);for(const m of e.parts)m.sub&&l(m.sub)};l(Q);for(const e of ct)Object.assign(e,{st:\\"\\",ch:[0,0,0],fl:[],gm:[]});for(const e of o){Object.assign(e,{gp:[],go:[],gl:[],gm:[],wk:void 0});for(const m of e.outs)m.st=\\"\\";for(const m of e.links)delete m.st,delete m.old}if(t<0){for(const e of rt)Object.assign(e,{st:\\"\\",known:!1,sst:{},tst:[],goneSt:[],goneTr:[],o:m=>m});return}const i=n.was||{},u=new Set(n.untraced||[]);for(const e of o){const m=e.folder in i?i[e.folder]:e.file;if(e.wk=m,!m)continue;const s=Nt(e,m,!0);for(const a of s.ps)(!e.names[a.name]||e.names[a.name].kind!==\\"part\\")&&(Object.assign(a,{st:\\"-\\",ch:[0,0,0],fl:[],gm:[]}),a.g&&(a.g=e.groups.find(c=>c.name===a.g.name)||null),e.gp.push(a));for(const a of e.parts)s.names[a.name]||(a.st=\\"+\\");for(const a of s.os)(!e.names[a.name]||e.names[a.name].kind!==\\"out\\")&&e.go.push(Object.assign(a,{st:\\"-\\",gone:!0}));for(const a of e.outs)s.names[a.name]||(a.st=\\"+\\");const r=a=>ne(e,a.name);for(const a of e.links){const c=s.ls.find(d=>d.a.name===a.a.name&&d.b.name===a.b.name);a.st=c?c.why!==a.why?\\"~\\":\\"=\\":\\"+\\",a.old=c&&c.why}for(const a of s.ls){if(e.links.some(p=>p.a.name===a.a.name&&p.b.name===a.b.name))continue;const c=r(a.a),d=r(a.b);c&&d&&e.gl.push({a:c,b:d,why:a.why,st:\\"-\\"})}for(const a of m.machines||[]){if(!a||!a.name||u.has(a.name)||e.machs.some(p=>p.name===a.name))continue;const c=zt(a,e,s.names,!0),d=c.holder&&r(c.holder);!d||d.kind!==\\"part\\"||(Object.assign(c,{holder:d,gone:!0,st:\\"-\\",known:!0,opens:{},sst:Object.fromEntries(c.states.map(p=>[p,\\"-\\"])),tst:c.tr.map(()=>[\\"-\\"]),goneSt:[],goneTr:[],o:p=>p,cs:[[0,c.states.length,0],[0,c.tr.length,0]]}),c.ch=[0,c.states.length+c.tr.length,0],d.gm.push(c),e.gm.push(c))}}for(const[e,m,s,r]of n.files||[]){let a=je(e);for(const c of o.flatMap(d=>d.gp))e.startsWith(`${c.path}/`)&&(!a||c.path.length>a.path.length)&&(a=c);if(!(!a||!\\"+-~\\".includes(m))){a.fl.push({kind:\\"file\\",name:e.slice(a.path.length+1),st:m,add:s||0,del:r||0});for(const c of a.gone?[a,...a.lvl.part?Kt(a.lvl.part):[]]:Kt(a))c.ch[\\"+-~\\".indexOf(m)]++}}for(const e of ct)!e.st&&e.ch.some(Boolean)&&(e.st=e.files&&e.ch[0]===e.files?\\"+\\":\\"~\\");for(const e of rt){const m=e.lvl.wk,s=!!m&&!u.has(e.name);if(Object.assign(e,{st:\\"\\",known:s,sst:{},tst:e.tr.map(()=>[\\"\\"]),goneSt:[],goneTr:[],o:f=>f}),!s)continue;const r=(m.machines||[]).find(f=>f&&f.name===e.name),a=r?zt(r,e.lvl,Nt(e.lvl,m,!0).names,!0):{states:[],tr:[]},c=(n.names||{})[e.name]||{};e.o=f=>c[f]||f;const d=e.o;for(const f of e.states)e.sst[f]=a.states.includes(d(f))?d(f)!==f?\\"~\\":\\"\\":\\"+\\";e.goneSt=a.states.filter(f=>!e.states.some(k=>d(k)===f)),e.tst=e.tr.map(([f,k,M])=>{const h=a.tr.find(g=>g[0]===d(f)&&g[1]===d(k));return h?h[2]!==M?[\\"~\\",h[2]]:[\\"\\"]:[\\"+\\"]}),e.goneTr=a.tr.filter(f=>!e.tr.some(([k,M])=>d(k)===f[0]&&d(M)===f[1]));const p=(f,k)=>[0,k,0].map((M,h)=>M+f.filter(g=>g===\\"+-~\\"[h]).length);e.cs=[p(Object.values(e.sst),e.goneSt.length),p(e.tst.map(f=>f[0]),e.goneTr.length)],e.ch=[0,1,2].map(f=>e.cs[0][f]+e.cs[1][f]),r?e.ch.some(Boolean)&&(e.st=\\"~\\"):e.st=\\"+\\"}}$t(-1);const yt=t=>[...t.parts,...y<0?[]:t.gp],se=t=>[...t.links,...y<0?[]:t.gl],oe=t=>{const n=nt(t);return y<0||!n.length?\\"\\":n.every(o=>o.st===\\"+\\")?\\"+\\":n.every(o=>o.st===\\"-\\")?\\"-\\":n.some(o=>o.st)?\\"~\\":\\"\\"},ae=t=>nt(t).reduce((n,o)=>n.map((l,i)=>l+o.ch[i]),[0,0,0]),dt=(t,n)=>y<0||!t.st?n:t.kind===\\"file\\"?t.st===\\"~\\"?`+${C(t.add)} −${C(t.del)} lines`:`${C(t.st===\\"+\\"?t.add:t.del)} lines`:t.kind===\\"mach\\"?t.st===\\"~\\"?le(t.ch):n:le(t.ch)||n,le=t=>(t||[]).map((n,o)=>n&&`${C(n)} ${lt[o]}`).filter(Boolean).join(\\" · \\"),_=(t,n,o,l,i,u)=>Object.assign({ref:t,key:n,label:o,sub:l,kind:i,pull:0},u),Be=t=>t&&t.files!==void 0?`${C(t.files)} files`:\\"\\",ie=(t,n,o,l,i,u)=>{wt(t,n,o,0,u?`moves ${l.name}`:null);const e=t.get(`${n.key}>${o.key}`);u&&(e.label=`moves ${l.name}`),e.mv=e.mv||[],e.mv.push([l,i])},wt=(t,n,o,l,i,u,e)=>{const m=`${n.key}>${o.key}`;let s=t.get(m);s||(s={a:n,b:o,n:0,w:0,why:i,old:e,c:[0,0,0,0],unk:!1},t.set(m,s)),s.n+=l,s.w+=u===\\"-\\"?0:l,u?s.c[\\"+-~=\\".indexOf(u)]++:l&&y>=0&&(s.unk=!0)},Ie=t=>{if(y<0||t.unk||!t.n)return\\"\\";const[n,o,l]=t.c;return n&&!o&&!l&&!t.c[3]?\\"+\\":o&&!n&&!l&&!t.c[3]?\\"-\\":n||o||l?\\"~\\":\\"=\\"},ce=t=>_(t,t.name,t.name,dt(t,Be(t)),\\"part\\",{mach:Wt(t)}),Te=t=>{const n=nt(t);return _(t,`g:${t.name}`,t.name,dt({st:oe(t),ch:ae(t)},n.length===1?\\"1 part\\":`${n.length} parts`),\\"grp\\",{mach:n.flatMap(Wt)})};function Ne(t){const n=new Map,o=new Map,l=e=>n.has(e.key)?n.get(e.key):(n.set(e.key,e),e);let i=null;if(t.kind===\\"lvl\\"||t.kind===\\"grp\\"){const e=t.kind===\\"lvl\\"?t:t.lvl,m=t.kind===\\"lvl\\"&&e.groups.length>0,s=a=>a.kind===\\"part\\"&&(t.kind===\\"lvl\\"||a.g===t);if(t.kind===\\"lvl\\"&&e.part)for(const a of bt(e.part))l(_(a,`#${a.name}`,a.name,dt(a,`${a.states.length} states`),\\"mach\\"));if(m){for(const a of e.groups)nt(a).length&&l(Te(a));for(const a of yt(e))a.g||l(ce(a))}else for(const a of yt(e))s(a)&&l(ce(a));const r=a=>a.kind===\\"out\\"?l(_(a,`o:${a.name}`,a.name,a.about||\\"outside\\",\\"ext\\")):s(a)?n.get(m&&a.g?`g:${a.g.name}`:a.name):a.g?l(_(a.g,`@g:${a.g.name}`,a.g.name,\\"another group\\",\\"ext\\")):l(_(a,`@${a.name}`,a.name,\\"outside this group\\",\\"ext\\"));for(const a of se(e)){if(!s(a.a)&&!s(a.b))continue;const c=r(a.a),d=r(a.b);c&&d&&c!==d&&wt(o,c,d,1,a.why,a.st,a.old)}for(const a of e.machs){if(!a.holder||!s(a.holder))continue;const c={};for(const[d,p]of a.tr.entries())p[3]&&(c[p[3]]=c[p[3]]||[],c[p[3]].push(d));for(const[d,p]of Object.entries(c)){const f=e.names[d];if(!f)continue;const k=r(f),M=r(a.holder);k&&M&&k!==M&&ie(o,k,M,a,p,!0)}}}else if(t.kind===\\"part\\"){i={label:t.path};for(const s of bt(t))l(_(s,`#${s.name}`,s.name,dt(s,`${s.states.length} states`),\\"mach\\"));if(y>=0){const s={\\"+\\":0,\\"~\\":1,\\"-\\":2};for(const a of[...t.fl].sort((c,d)=>s[c.st]-s[d.st]||d.add+d.del-c.add-c.del))l(_(a,`f:${a.name}`,a.name,dt(a,\\"\\"),\\"file\\",{inFrame:!0}));const r=t.files===void 0?0:t.files-t.fl.filter(a=>a.st!==\\"-\\").length;r>0&&l(_(null,\\"=\\",r===1?\\"1 unchanged file\\":`${C(r)} unchanged files`,\\"\\",\\"file\\",{inFrame:!0,same:!0}))}const e=new Map,m=new Map;for(const s of se(t.lvl)){const r=y<0||s.st===void 0||s.st===\\"=\\"?\\"\\":s.st,a=(c,d,p)=>p.has(c.name)||p.set(c.name,[l(_(c,`${d}${c.name}`,c.name,d===\\"<\\"?\\"uses this part\\":\\"used by this part\\",\\"ext\\",{side:d})),r,y>=0&&s.st===\\"=\\"]);s.b===t&&s.a!==t&&a(s.a,\\"<\\",e),s.a===t&&s.b!==t&&a(s.b,\\">\\",m)}Object.assign(i,{ins:[...e.values()],outs:[...m.values()],more:[0,0]})}else if(t.kind===\\"mach\\"){const e=new Set(t.states.filter(r=>!t.tr.some(a=>a[0]===r)));t.states.forEach((r,a)=>{const c=ft[t.opens[r]],d=t.sst[r];l(_(c||null,r,r,d===\\"~\\"?`was ${t.o(r)}`:c?`opens ${c.name}`:a===0?\\"first state\\":e.has(r)?\\"final state\\":\\"\\",\\"state\\",{first:a===0,end:e.has(r),openable:!!c,st:d}))});for(const r of t.goneSt)l(_(null,`-${r}`,r,\\"\\",\\"state\\",{st:\\"-\\"}));t.tr.forEach(([r,a,c],d)=>{const[p,f]=t.tst[d]||[];n.has(r)&&n.has(a)&&wt(o,n.get(r),n.get(a),0,p===\\"~\\"?`${c} · was ${f}`:c,y<0||!t.known?null:p||\\"=\\")});const m=r=>n.get(t.states.find(a=>t.o(a)===r))||n.get(`-${r}`);for(const[r,a,c]of t.goneTr)m(r)&&m(a)&&wt(o,m(r),m(a),0,c,\\"-\\");const s={};for(const[r,a]of t.tr.entries())a[3]&&(s[a[3]]=s[a[3]]||[],s[a[3]].push(r));for(const[r,a]of Object.entries(s)){const c=ne(t.lvl,r);if(!c)continue;const d=l(_(c,`@by:${r}`,r,\\"makes moves\\",\\"ext\\"));for(const p of a)ie(o,d,n.get(t.tr[p][1]),t,[p])}}const u=[...o.values()];for(const e of u)e.st=t.kind===\\"mach\\"?y<0||!t.known||e.mv?\\"\\":e.c[1]?\\"-\\":e.c[0]?\\"+\\":e.c[2]?\\"~\\":\\"\\":e.mv?\\"\\":Ie(e),e.st===\\"=\\"&&(e.st=\\"\\"),e.same=y>=0&&!e.st&&!e.unk&&!e.mv&&(t.kind!==\\"mach\\"||t.known),e.label||(e.label=e.n>1?e.st===\\"~\\"?`${e.c[0]?`+${C(e.c[0])} `:\\"\\"}${e.c[1]?`−${C(e.c[1])} `:\\"\\"}${e.c[2]?`~${C(e.c[2])} `:\\"\\"}links`:`${C(e.n)} links`:e.st===\\"~\\"&&e.old!==void 0&&e.old!==e.why?`${e.why} · was ${e.old}`:e.why||\\"\\");for(const e of u)e.a!==e.b&&(e.b.pull+=e.w||1);return{ref:t,nodes:[...n.values()],edges:u,frame:i}}const ze=7.2,re=t=>t.length*6.2+26;function We(t){const n=Math.max(1,...t.nodes.map(o=>o.pull));for(const o of t.nodes){const l=Math.sqrt(o.pull/n),i=Math.max(o.label.length*1.08,(o.sub||\\"\\").length*.86),u=o.mach||[],e=y<0?0:u.filter(s=>s.st).length;o.mp=u.length>3?[`${u.length} state machines${e?`, ${e} changed`:\\"\\"}`]:u.map(s=>s.name),o.mc=o.mp.length===u.length?u.map(s=>y>=0&&s.st||\\"\\"):[e>0?\\"~\\":\\"\\"],o.mm=o.mp.length===u.length?u:null;const m=Math.max(0,...o.mp.map(re));o.w=Math.round(Math.max(84+56*l,i*ze+26,m+16)),o.hb=Math.round(40+16*l+(o.sub?8:0)),o.h=o.hb+(o.mp.length?o.mp.length*19+4:0)}}function Ke(t,n,o=0){const l=new Map(t.map((h,g)=>[h,g])),i=t.map(()=>[]),u=t.map(()=>[]);for(const h of n)h.a!==h.b&&(i[l.get(h.a)].push(h),u[l.get(h.b)].push(h));const e=new Set(t.keys()),m=[],s=[];t.forEach((h,g)=>{h.first&&(m.push(g),e.delete(g))});const r=(h,g)=>g[h].reduce((x,w)=>x+(e.has(l.get(g===i?w.b:w.a))?1+Math.log1p(w.w):0),0);for(;e.size;){let h=!0;for(;h;){h=!1;for(const w of[...e])r(w,i)?r(w,u)||(m.push(w),e.delete(w),h=!0):(s.unshift(w),e.delete(w),h=!0)}if(!e.size)break;let g=-1,x=-1/0;for(const w of e){const E=r(w,i)-r(w,u)-t[w].pull*1e-6;E>x&&(x=E,g=w)}m.push(g),e.delete(g)}const a=new Map([...m,...s].map((h,g)=>[h,g])),c=t.map(()=>0);for(const h of[...m,...s])for(const g of i[h]){const x=l.get(g.b);g.back=a.get(x)<a.get(h),g.back||(c[x]=Math.max(c[x],c[h]+1))}for(let h=0;h<t.length;h++){const g=i[h].filter(x=>!x.back).map(x=>c[l.get(x.b)]-1);g.length&&!u[h].some(x=>!x.back)&&(c[h]=Math.min(...g))}const d=Math.max(2,Math.min(6,Math.round(Math.sqrt(t.length*1.6)))-o);Math.max(...c)+1>d&&t.map((g,x)=>x).sort((g,x)=>c[g]-c[x]||a.get(g)-a.get(x)).forEach((g,x)=>{c[g]=Math.floor(x*d/t.length)});const p=[];for(const[h,g]of t.entries())p[c[h]]=p[c[h]]||[],p[c[h]].push(g);const f=[];for(const h of p.filter(Boolean))if(h.length>9){const g=Math.ceil(h.length/2);f.push(h.slice(0,g),h.slice(g))}else f.push(h);f.forEach((h,g)=>{for(const x of h)x.c=g});const k=h=>n.filter(g=>(g.a===h||g.b===h)&&g.a!==g.b).map(g=>g.a===h?g.b:g.a);for(let h=0;h<8;h++)for(const g of h%2?[...f].reverse():f){for(const w of g){const E=k(w).filter(T=>T.c!==w.c&&T.y!==void 0);w.bary=E.length?E.reduce((T,R)=>T+R.y,0)/E.length:w.y??0}g.sort((w,E)=>w.bary-E.bary||E.pull-w.pull);let x=0;for(const w of g)w.y=x+w.h/2,x+=w.h+22;for(const w of g)w.y-=x/2}let M=0;f.forEach((h,g)=>{const x=Math.max(...h.map(E=>E.w));for(const E of h)E.x=M+x/2;const w=n.filter(E=>!E.back&&E.a.c===g&&E.b.c===g+1&&E.label).map(E=>E.label.length*6+10);M+=x+Math.max(64,36+Math.max(0,...w))})}function _e(t){const n=t.nodes.filter(h=>h.kind!==\\"ext\\"),o=t.nodes.filter(h=>h.kind===\\"ext\\"),l=new Set(n),i=t.ref,u=i===Q||i.kind===\\"mach\\"?0:new Set(o.map(h=>t.edges.some(g=>g.a===h)?\\"L\\":\\"R\\")).size,e=i.kind===\\"lvl\\"&&i.place;e?Fe(n,t.edges,e):Ke(n,t.edges.filter(h=>l.has(h.a)&&l.has(h.b)),u);let m=1/0,s=1/0,r=-1/0,a=-1/0;for(const h of n)m=Math.min(m,h.x-h.w/2),s=Math.min(s,h.y-h.h/2),r=Math.max(r,h.x+h.w/2),a=Math.max(a,h.y+h.h/2);n.length||([m,s,r,a]=[0,0,160,40]);const c=i.kind===\\"grp\\"?`${Et(i.lvl)} › ${i.name}`:i.kind===\\"mach\\"?`${i.holder?i.holder.path:\\"\\"} › ${i.name}`:Et(i);t.frame={label:c,x:m-22,y:s-44,w:r-m+44,h:a-s+66,ins:[],outs:[],more:[0,0]};const d=t.frame,p=[],f=[];for(const h of o){let g=0,x=0,w=0,E=0;for(const T of t.edges)T.a===h&&l.has(T.b)&&(g+=T.w||1,w+=T.b.y,E++),T.b===h&&l.has(T.a)&&(x+=T.w||1,w+=T.a.y,E++);h.bary=E?w/E:0,(g>=x?p:f).push(h)}const k=(h,g,x)=>{h.sort((R,jt)=>R.bary-jt.bary||jt.pull-R.pull);const w=y<0?16:24,E=h.reduce((R,jt)=>R+jt.h+w,-w);let T=d.y+d.h/2-E/2;for(const R of h)R.x=x?g+R.w/2:g-R.w/2,R.y=T+R.h/2,T+=R.h+w},M=h=>Math.max(48,...t.edges.filter(g=>g.label&&h.includes(g.a)!==h.includes(g.b)&&!(l.has(g.a)&&l.has(g.b))).map(g=>g.label.length*6-8));k(p,d.x-M(p),!1),k(f,d.x+d.w+M(f),!0);for(const h of t.edges)(!l.has(h.a)||!l.has(h.b))&&(h.back=h.a.x>h.b.x)}function Fe(t,n,o){const l=[],i=[];let u=0;const e=f=>Array.isArray(f)&&Number.isInteger(f[0])&&Number.isInteger(f[1])&&f[0]>=0&&f[1]>=0,m=Math.max(0,...Object.values(o).filter(e).map(f=>f[1]+1)),s=new Set;for(const f of t){const k=o[f.label],M=e(k)&&!s.has(`${k}`),[h,g]=M?k:[0,m+u++];s.add(`${[h,g]}`),f.c=h,f.r=g,l[h]=Math.max(l[h]||0,f.w),i[g]=Math.max(i[g]||0,f.h)}const r=[],a=[];let c=0;for(let f=0;f<l.length;f++){r[f]=c+(l[f]||0)/2;const k=n.filter(M=>M.label&&M.a.c===f&&M.b.c===f+1&&M.a.r===M.b.r).map(M=>M.label.length*6+10);c+=(l[f]||0)+Math.max(64,36+Math.max(0,...k))}let d=0;for(let f=0;f<i.length;f++)a[f]=d+(i[f]||0)/2,d+=(i[f]||0)+(i[f]?44:0);for(const f of t)f.x=r[f.c],f.y=a[f.r];const p=new Set(t);for(const f of n){if(!p.has(f.a)||!p.has(f.b))continue;f.back=!1;const k=f.a.c===f.b.c&&t.some(M=>M.c===f.a.c&&(M.r-f.a.r)*(M.r-f.b.r)<0);f.down=!k&&f.a.r!==f.b.r&&(f.a.c===f.b.c||f.b.x<f.a.x)}}function De(t){const n=t.nodes.filter(c=>c.inFrame||c.kind===\\"mach\\"),o=Math.max(120,...n.map(c=>c.w))+14,l=Math.max(40,...n.map(c=>c.h))+20,i=2*(Math.max(0,...[...t.frame.ins,...t.frame.outs].map(([c])=>c.w))+56);let u=1,e=0;for(let c=1;c<=Math.max(1,n.length);c++){const d=Math.min(U()/(c*o+32+i),Z()/(Math.ceil(n.length/c)*l+70));d>e&&(e=d,u=c)}let m=0;for(let c=0;c*u<n.length;c++){const d=n.slice(c*u,c*u+u),p=Math.max(...d.map(f=>f.h));d.forEach((f,k)=>{f.x=k*o+o/2,f.y=m+p/2}),m+=p+20}const s=t.frame;Object.assign(s,{x:-16,y:-44,w:Math.max(1,Math.min(n.length,u))*o+32,h:Math.max(m,40)+46});const r=y<0?10:24,a=(c,d)=>{let p=s.y+s.h/2-c.reduce((f,[k])=>f+k.h+r,-r)/2;for(const[f]of c)f.x=d,f.y=p+f.h/2,p+=f.h+r};a(s.ins,s.x-56-Math.max(0,...s.ins.map(([c])=>c.w/2))),a(s.outs,s.x+s.w+56+Math.max(0,...s.outs.map(([c])=>c.w/2)))}const A=(t,n,o)=>{const l=document.createElementNS(Ce,t);for(const i in n)l.setAttribute(i,n[i]);return o&&o.appendChild(l),l},L=A(\\"g\\",{class:\\"scene\\"},O);let b=null,F=[],$=null;const v={x:0,y:0,k:1},U=()=>O.clientWidth||700,Z=()=>O.clientHeight||440,ut=()=>O.setAttribute(\\"viewBox\\",`${v.x} ${v.y} ${U()/v.k} ${Z()/v.k}`),_t=t=>t.kind===\\"state\\"?t.st:t.ref&&t.ref.kind===\\"grp\\"?oe(t.ref):t.ref&&t.ref.st,He=t=>t.kind===\\"mach\\"?t.ref.known:b.ref.kind===\\"mach\\"?b.ref.known:!(t.ref&&t.ref.kind===\\"out\\"&&!t.ref.lvl.wk),kt=t=>{if(y<0||!He(t))return\\"\\";const n=_t(t);return n?` s${\\"+-~\\".indexOf(n)}`:\\" same\\"},xt=t=>t.kind===\\"part\\"?t.sub||t:t.kind===\\"out\\"?J[t.path]&&xt(J[t.path]):t,Ft=t=>!t.gone&&(t.sub||bt(t).length||y>=0&&t.fl.length);function st(t){if(t.kind===\\"state\\")return!!t.openable;if(t.kind===\\"file\\"||!t.ref)return!1;if(t.kind===\\"grp\\"||t.kind===\\"mach\\")return!0;const n=t.ref;return n.kind===\\"grp\\"?!0:n.kind===\\"out\\"?!!(J[n.path]&&Ft(J[n.path])):n.kind===\\"part\\"&&!!Ft(n)}const mt=t=>Math.abs(t.a.x-t.b.x)<1,vt=(t,n)=>b.nodes.some(o=>o!==t&&Math.abs(o.x-t.x)<(o.w+t.w)/2&&(o.y-t.y)*n>0),Mt=t=>{const{a:n,b:o}=t,l=26+Math.abs(n.x-o.x)/12;return t.up?Math.min(n.y-n.h/2,o.y-o.h/2)-l:Math.max(n.y+n.h/2,o.y+o.h/2)+l};function Re(t){const n=t.a,o=t.b;if(t.down){const e=o.y>n.y?1:-1,m=n.y+e*n.h/2,s=o.y-e*o.h/2;return`M${n.x} ${m}C${n.x} ${(m+s)/2} ${o.x} ${(m+s)/2} ${o.x} ${s}`}if(mt(t)){const e=Math.max(n.x+n.w/2,o.x+o.w/2);return`M${n.x+n.w/2} ${n.y}C${e+46} ${n.y} ${e+46} ${o.y} ${o.x+o.w/2} ${o.y}`}if(t.back){const e=t.up?-1:1,m=Mt(t);return`M${n.x} ${n.y+e*n.h/2}C${n.x} ${m} ${o.x} ${m} ${o.x} ${o.y+e*o.h/2}`}const l=n.x+n.w/2,i=o.x-o.w/2;if(t.lane!==void 0){const e=Math.min(40,(i-l)/4);return`M${l} ${n.y}C${l+e} ${n.y} ${l+e} ${t.lane} ${l+2*e} ${t.lane}L${i-2*e} ${t.lane}C${i-e} ${t.lane} ${i-e} ${o.y} ${i} ${o.y}`}const u=Math.max(30,(i-l)/2);return`M${l} ${n.y}C${l+u} ${n.y} ${i-u} ${o.y} ${i} ${o.y}`}function Le(){for(const t of b.edges){if(delete t.lane,t.back||t.down||t.a===t.b||mt(t))continue;const n=t.a,o=t.b,l=n.x+n.w/2,i=o.x-o.w/2;if(i<=l)continue;const u=Math.max(30,(i-l)/2),e=[];for(let d=1;d<12;d++){const p=d/12,f=1-p;e.push([f*f*f*l+3*f*f*p*(l+u)+3*f*p*p*(i-u)+p*p*p*i,f*f*f*n.y+3*f*f*p*n.y+3*f*p*p*o.y+p*p*p*o.y])}const m=b.nodes.filter(d=>d!==n&&d!==o&&d.x+d.w/2>l&&d.x-d.w/2<i);if(!m.some(d=>e.some(([p,f])=>Math.abs(p-d.x)<d.w/2+4&&Math.abs(f-d.y)<d.h/2+4)))continue;const r=Math.min(...m.map(d=>d.y-d.h/2))-14,a=Math.max(...m.map(d=>d.y+d.h/2))+14,c=(n.y+o.y)/2;t.lane=Math.abs(r-c)<=Math.abs(a-c)?r:a}}const fe=(t,n)=>t?` ${{\\"+\\":\\"add\\",\\"-\\":\\"rem\\",\\"~\\":\\"chg\\"}[t]}`:n?\\" same\\":\\"\\";function Ye(){L.textContent=\\"\\";const t=b.frame;if(t){A(\\"rect\\",{class:\\"frame\\",x:t.x,y:t.y,width:t.w,height:t.h,rx:10},L),A(\\"text\\",{class:\\"flabel\\",x:t.x+12,y:t.y+20},L).textContent=t.label;const s=A(\\"g\\",{class:\\"edges\\"},L),r=(a,c,d,p)=>{const f=p?t.x+t.w:a.x+a.w/2,k=p?a.x-a.w/2:t.x,M=p?t.y+t.h/2:a.y,h=p?a.y:t.y+t.h/2,g=A(\\"path\\",{class:`e${fe(c,d)}`,d:`M${f} ${M}C${(f+k)/2} ${M} ${(f+k)/2} ${h} ${k} ${h}`,\\"stroke-width\\":1.2,\\"marker-end\\":\\"url(#mza)\\"},s);g._n=a};for(const[a,c,d]of t.ins||[])r(a,c,d,!1);for(const[a,c,d]of t.outs||[])r(a,c,d,!0)}const n=b.edges.length>2.5*b.nodes.length,o=new Set;if(n)for(const s of b.nodes){const r=c=>{let d=null;for(const p of b.edges)p[c]===s&&p.a!==p.b&&!p.back&&(!d||p.w>d.w)&&(d=p);return d},a=r(\\"a\\")||r(\\"b\\");a&&o.add(a)}for(const s of b.edges)(s.mv||s.st===\\"+\\"||s.st===\\"-\\")&&o.add(s);for(const s of b.edges)s.thin=n&&!o.has(s);b.busy=n,Le();for(const s of b.edges)s.up=!!s.back&&(vt(s.a,1)||vt(s.b,1))&&!vt(s.a,-1)&&!vt(s.b,-1);const l=A(\\"g\\",{class:\\"edges\\"},L);for(const s of b.edges)s.a!==s.b&&(s.el=A(\\"path\\",{class:`e${s.back?\\" back\\":\\"\\"}${s.thin?\\" thin\\":\\"\\"}${fe(s.st,s.same)}`,d:Re(s),\\"stroke-width\\":1+Math.log10(1+(s.w||1)),\\"marker-end\\":\\"url(#mza)\\",\\"data-from\\":s.a.label,\\"data-to\\":s.b.label},l));const i=A(\\"g\\",{class:\\"elabels\\"},L),u=b.nodes.map(s=>[s.x-s.w/2,s.y-s.h/2-(/ s\\\\d/.test(kt(s))?18:0),s.x+s.w/2,s.y+s.h/2]);t&&u.push([t.x,t.y,t.x+t.label.length*6.4+24,t.y+28]);const e=s=>u.some(r=>s[0]<r[2]+2&&s[2]>r[0]-2&&s[1]<r[3]+2&&s[3]>r[1]-2);for(const s of[...b.edges].sort((r,a)=>!!a.label-!!r.label)){if(s.a===s.b||!s.label)continue;const r=s.label,a=r.length*6+10;let c=s.back?(s.a.x+s.b.x)/2:(s.a.x+s.a.w/2+s.b.x-s.b.w/2)/2,d=s.back?Mt(s)+(s.up?6:-6):(s.a.y+s.b.y)/2;mt(s)&&(c=Math.max(s.a.x+s.a.w/2,s.b.x+s.b.w/2)+36+a/2,d=(s.a.y+s.b.y)/2),s.lane!==void 0&&(d=s.lane),s.down&&(c=(s.a.x+s.b.x)/2,d=(s.a.y+s.b.y)/2);let p=!1;if(!s.thin){for(const k of[0,14,-14,26,-26])if(!e([c-a/2,d+k-8,c+a/2,d+k+8])){d+=k,p=!0;break}p&&u.push([c-a/2,d-8,c+a/2,d+8])}s.lx=[c-a/2,d-8,c+a/2,d+8];const f=A(\\"g\\",{class:`el${p?\\" named\\":\\"\\"}${s.st?` s${\\"+-~\\".indexOf(s.st)}`:\\"\\"}`},i);A(\\"rect\\",{x:c-a/2,y:d-8,width:a,height:16,rx:4},f),A(\\"text\\",{x:c,y:d+4,\\"text-anchor\\":\\"middle\\"},f).textContent=r,s.lab=f}const m=A(\\"g\\",{class:\\"nodes\\"},L);for(const s of b.nodes){const r=A(\\"g\\",{class:`n k-${s.kind}${st(s)?\\" open\\":\\"\\"}${s.end?\\" end\\":\\"\\"}${s.first?\\" first\\":\\"\\"}${kt(s)}`,transform:`translate(${s.x-s.w/2} ${s.y-s.h/2})`,\\"data-box\\":s.label},m);(s.kind===\\"grp\\"||s.kind===\\"part\\"&&s.ref.sub)&&A(\\"rect\\",{class:\\"stack\\",x:4,y:4,width:s.w,height:s.h,rx:7},r),A(\\"rect\\",{width:s.w,height:s.h,rx:s.kind===\\"state\\"?s.h/2:7},r),s.end&&A(\\"rect\\",{class:\\"in\\",x:3,y:3,width:s.w-6,height:s.h-6,rx:(s.h-6)/2},r),A(\\"text\\",{class:\\"lbl\\",x:s.w/2,y:s.sub?s.hb/2-2:s.hb/2+4,\\"text-anchor\\":\\"middle\\"},r).textContent=s.label,s.sub&&(A(\\"text\\",{class:\\"sub\\",x:s.w/2,y:s.hb/2+13,\\"text-anchor\\":\\"middle\\"},r).textContent=s.sub),st(s)&&A(\\"path\\",{class:\\"chev\\",d:`M${s.w-13} ${s.hb/2-4}l4 4l-4 4`},r),s.mp.forEach((c,d)=>{const p=re(c),f=A(\\"g\\",{class:`mp${s.mm?\\" go\\":\\"\\"}${s.mc[d]?` s${\\"+-~\\".indexOf(s.mc[d])}`:\\"\\"}`,transform:`translate(${(s.w-p)/2} ${s.hb-4+d*19})`,\\"data-pill\\":c},r);A(\\"rect\\",{width:p,height:15,rx:7.5},f),A(\\"circle\\",{cx:9,cy:7.5,r:2.5},f),A(\\"text\\",{x:p/2+4,y:11,\\"text-anchor\\":\\"middle\\"},f).textContent=c,s.mm&&(f._m=s.mm[d])});const a=y>=0&&/ s\\\\d/.test(kt(s))&&_t(s);if(a){const c=lt[\\"+-~\\".indexOf(a)],d=A(\\"g\\",{class:\\"tag\\",transform:\\"translate(0 -16)\\"},r);A(\\"rect\\",{width:c.length*6.2+12,height:13,rx:3},d),A(\\"text\\",{x:6,y:10},d).textContent=c}s.el=r,r._n=s}P()}function P(){$&&(S=null);const t=new Set,n=!!$||!!S;if($){t.add($);for(const l of b.edges)(l.a===$||l.b===$)&&t.add(l.a).add(l.b)}S&&t.add(S.a).add(S.b);for(const l of b.nodes)l.el.classList.toggle(\\"dim\\",n&&!t.has(l)&&!($&&b.frame&&l.inFrame&&$.kind===\\"ext\\"));for(const l of b.nodes)l.el.classList.toggle(\\"sel\\",l===$);for(const l of b.edges){if(!l.el)continue;const i=S?l===S:$&&(l.a===$||l.b===$);l.el.classList.toggle(\\"lit\\",!!i),l.el.classList.toggle(\\"dim\\",n&&!i),l.lab&&l.lab.classList.toggle(\\"show\\",!!i||!n&&l.lab.classList.contains(\\"named\\"))}for(const l of L.querySelectorAll(\\".edges path\\"))l._n&&l.classList.toggle(\\"lit\\",l._n===$);const o=S?`${S.a.label} → ${S.b.label}${S.label?`: ${S.label}`:\\"\\"} · ${lt[\\"+-~\\".indexOf(S.st)]}`:Xe($);Gt.textContent=o,Me.hidden=!($&&st($)),$&&(B<0||H[B].n!==$)&&(B=H.findIndex(l=>l.n===$&&!l.e)),n||(B=-1),de(),z&&window.inf?.expand?.(K,we())}const Dt=t=>`${C(t)} file${t===1?\\"\\":\\"s\\"}`,Ot=t=>t&&t.files!==void 0?` · ${Dt(t.files)}${t.lines!==void 0?` · ${C(t.lines)} lines`:\\"\\"}`:\\"\\",he=t=>y>=0&&t&&t[0]+t[1]+t[2]?` · ${Dt(t[0])} added, ${C(t[1])} removed, ${C(t[2])} changed`:\\"\\",Qe=t=>{if(y<0||!t.known||!t.cs)return\\"\\";const n=(l,i,u)=>lt.map((e,m)=>l[m]&&`${C(l[m])} ${l[m]===1?i:u} ${e}`).filter(Boolean),o=[...n(t.cs[0],\\"state\\",\\"states\\"),...n(t.cs[1],\\"move\\",\\"moves\\")];return` · ${o.length?o.join(\\", \\"):\\"unchanged\\"}`};function Xe(t){const n=b.busy?\\" · strongest links shown, click a box for all of them\\":\\"\\";if(!t){const e=b.ref;if(e.kind===\\"mach\\"){const s=[...new Set(e.tr.map(r=>r[3]).filter(Boolean))];return`${e.states.length} states, ${e.tr.length} moves${e.about?` · ${e.about}`:\\"\\"}${s.length?` · moved by ${s.join(\\", \\")}`:\\"\\"}`}if(e.kind===\\"grp\\"){const s=nt(e);return`${e.why?`${e.why} · `:\\"\\"}${s.length===1?\\"1 part\\":`${s.length} parts`}${Ot(ee(s))}${n}`}if(e.kind===\\"part\\")return`${e.path}${e.about?`: ${e.about}`:\\"\\"}${Ot(e)}`;const m=e.parts;return`${m.length===1?\\"1 part\\":`${m.length} parts`}${e.groups.length?` in ${e.groups.length} groups`:\\"\\"}${Ot(e.part||ee(m))}${n}`}const o=b.edges.filter(e=>e.a===t&&e.b!==t),l=b.edges.filter(e=>e.b===t&&e.a!==t),i=t.ref;let u=t.label;t.kind===\\"file\\"&&i?u+=`: ${i.st===\\"~\\"?`${C(i.add)} lines added and ${C(i.del)} removed`:i.st===\\"+\\"?`added, ${C(i.add)} lines`:`removed, ${C(i.del)} lines`}`:t.kind===\\"file\\"?u+=\\": not changed\\":t.kind===\\"state\\"?u+=`: ${o.length===1?\\"1 way out\\":`${o.length} ways out`}, ${l.length===1?\\"1 way in\\":`${l.length} ways in`}`:t.kind===\\"mach\\"?u+=`: ${i.states.join(\\", \\")}${Qe(i)}`:i&&i.kind===\\"grp\\"?u+=`: ${i.why?`${i.why} · `:\\"\\"}${nt(i).map(e=>e.name).join(\\", \\")}${he(ae(i))}`:i&&(i.kind===\\"part\\"||i.kind===\\"out\\")&&(u+=`${i.about?`: ${i.about}`:\\"\\"}${i.kind===\\"part\\"?`${Ot(i)}${i.gone?\\" · removed\\":he(i.ch)}`:i.st===\\"+\\"?\\" · added\\":i.st===\\"-\\"?\\" · removed\\":\\"\\"}`),t.mach&&t.mach.length&&(u+=` · holds ${t.mach.map(e=>e.name).join(\\", \\")}`);for(const e of b.edges)if(e.mv&&(e.a===t||e.b===t))for(const[m,s]of e.mv)u+=` · ${e.a.label} moves ${m.name}: ${s.map(r=>m.tr[r][2]).join(\\", \\")}`;if(t.kind!==\\"state\\"&&t.kind!==\\"file\\"){const e=[...o.map(m=>m.n===1&&m.why&&`uses ${m.b.label} for ${m.why}`),...l.map(m=>m.n===1&&m.why&&`${m.a.label} uses it for ${m.why}`)].filter(Boolean);(o.length||l.length)&&(u+=` · uses ${o.length}, used by ${l.length} here${e.length?` (${e.slice(0,4).join(\\"; \\")})`:\\"\\"}`)}return st(t)&&(u+=\\" · Enter to go in\\"),u}const Et=t=>t.kind===\\"lvl\\"&&t.part?t.part.name:t.name;function Ue(){Jt.textContent=\\"\\";const t=D(\\"span\\",\\"\\",Jt);F.forEach((n,o)=>{o&&t.append(\\" › \\");const l=D(\\"button\\",Et(n),t);o===F.length-1&&l.setAttribute(\\"aria-current\\",\\"true\\"),l.onclick=()=>q(F.slice(0,o+1))})}const D=(t,n,o)=>{const l=document.createElement(t);return n&&(l.textContent=n),o.append(l),l};let H=[],B=-1,S=null;function qe(){if(gt.textContent=\\"\\",gt.hidden=y<0,H=[],B=-1,S=null,y<0)return;const t=[0,0,0];let n=0,o=0;for(const[,s,r,a]of X[y].files||[])\\"+-~\\".includes(s)&&(t[\\"+-~\\".indexOf(s)]++,n+=r||0,o+=a||0);D(\\"p\\",`${X[y].label}: ${Dt(t[0])} added, ${C(t[1])} removed, ${C(t[2])} changed · ${C(n)} lines added, ${C(o)} removed`,gt);const l=D(\\"div\\",\\"\\",gt),i=b.frame,u=i&&b.ref.kind===\\"part\\"?b.ref.name:\\"\\",e=[...b.edges.filter(s=>s.st&&!s.mv),...u?[...i.ins.map(([s,r])=>({a:s,b:{label:u},st:r})),...i.outs.map(([s,r])=>({a:{label:u},b:s,st:r}))]:[]],m=s=>b.ref.kind!==\\"mach\\"||s.kind===\\"state\\";[\\"Added\\",\\"Removed\\",\\"Changed\\"].forEach((s,r)=>{const a=b.nodes.filter(h=>m(h)&&/ s\\\\d/.test(kt(h))&&_t(h)===\\"+-~\\"[r]).map(h=>({label:h.label,n:h,s:r})),c=e.filter(h=>h.st===\\"+-~\\"[r]).map(h=>({label:`${h.a.label} → ${h.b.label}`,n:h.a.x===void 0?h.b:h.a,e:h.el?h:null,s:r})),d=D(\\"div\\",\\"\\",l);d.className=`s${r}`;const[p,f,k,M]=b.ref.kind===\\"mach\\"?[\\"state\\",\\"states\\",\\"move\\",\\"moves\\"]:[\\"box\\",\\"boxes\\",\\"link\\",\\"links\\"];D(\\"h4\\",`${s} here: ${a.length||c.length?[a.length&&`${C(a.length)} ${a.length===1?p:f}`,c.length&&`${C(c.length)} ${c.length===1?k:M}`].filter(Boolean).join(\\", \\"):\\"none\\"}`,d);for(const h of[...a,...c]){const g=H.push(h)-1,x=D(\\"button\\",h.label,d);x.onclick=()=>ot(g)}})}function de(){if(ve.hidden=y<0,y<0)return;if(at.textContent=\\"\\",B>=0||!H.length){at.textContent=H.length?`${B+1} of ${H.length}`:\\"no changes here\\";return}const t=[0,0,0];for(const n of H)t[n.s]++;t.forEach((n,o)=>{n&&(at.childNodes.length&&at.append(\\" · \\"),D(\\"b\\",`${C(n)} ${lt[o]}`,at).className=`s${o}`)})}function ot(t){if(!H.length)return;B=(t+H.length)%H.length;const n=H[B];S=n.e,$=S?null:n.n,P(),Rt(S?S.el:$&&$.el)}function ue(){let t=1/0,n=1/0,o=-1/0,l=-1/0;const i=(e,m,s,r)=>{t=Math.min(t,e),n=Math.min(n,m),o=Math.max(o,s),l=Math.max(l,r)};for(const e of b.nodes)i(e.x-e.w/2,e.y-e.h/2-18,e.x+e.w/2,e.y+e.h/2);b.frame&&i(b.frame.x,b.frame.y,b.frame.x+b.frame.w,b.frame.y+b.frame.h);const u=e=>!(b.busy&&e.el&&e.el.classList.contains(\\"thin\\"));for(const e of b.edges)e.lx&&e.lab&&e.lab.classList.contains(\\"named\\")&&i(...e.lx);for(const e of b.edges)e.lane!==void 0&&u(e)&&i(e.a.x,e.lane-4,e.b.x,e.lane+4);for(const e of b.edges)mt(e)&&!e.down&&u(e)&&i(e.a.x,Math.min(e.a.y,e.b.y),Math.max(e.a.x+e.a.w/2,e.b.x+e.b.w/2)+40,Math.max(e.a.y,e.b.y));for(const e of b.edges)e.back&&!mt(e)&&u(e)&&i(Math.min(e.a.x,e.b.x),Mt(e)-8,Math.max(e.a.x,e.b.x),Mt(e)+8);return[t,n,o,l]}function Ct(){const[t,n,o,l]=ue();if(tt&&!z){const u=Math.min(1.25,(U()-32)/(o-t));O.style.height=`${Math.max(150,Math.min(290,(l-n)*u+64))}px`}const i=Math.min(1.25,(U()-40)/(o-t),(Z()-40)/(l-n));v.k=i,v.x=(t+o)/2-U()/i/2,v.y=(n+l)/2-Z()/i/2,ut()}function pt(t,n,o){const l=Math.max(.15,Math.min(4,v.k*t)),i=v.x+(n??U()/2)/v.k,u=v.y+(o??Z()/2)/v.k;v.k=l,v.x=i-(n??U()/2)/l,v.y=u-(o??Z()/2)/l,ut()}function Ge(t){b=Ne(t),We(b),b.frame?De(b):_e(b),$=null,Ye(),Ct(),Ue(),qe(),de()}function q(t,n){if(F=t,L.style.transition=\\"\\",Ge(t[t.length-1]),n){const o=b.nodes.find(l=>l.ref===n||l.ref&&l.ref.sub===n);o&&($=o,P())}Ee||(L.style.opacity=0,requestAnimationFrame(()=>{L.style.transition=\\"opacity var(--dur-med, 180ms)\\",L.style.opacity=1}))}const me=t=>t.g&&t.lvl.groups.length?[...I(t.lvl),t.g]:I(t.lvl);function I(t){return t.kind===\\"lvl\\"?t.part?[...me(t.part),t]:[t]:t.kind===\\"grp\\"?[...I(t.lvl),t]:t.kind===\\"part\\"?[...me(t),t]:t.kind===\\"mach\\"?t.holder?[...I(t.holder.sub||t.holder),t]:[...I(t.lvl),t]:[Q]}function At(t){if(!t||!st(t))return;const n=t.ref;if(t.kind===\\"ext\\"||t.kind===\\"state\\"){q(I(n.kind===\\"grp\\"?n:xt(n)));return}q([...F,xt(n)])}function pe(){F.length>1&&q(F.slice(0,-1),F[F.length-1])}const ge=t=>{for(let n=t.target;n&&n!==O;n=n.parentNode)if(n._n)return n._n;return null},Je=t=>{for(let n=t.target;n&&n!==O;n=n.parentNode)if(n._m)return n._m;return null};let N=null,Ht=null,St=!1;O.addEventListener(\\"pointerdown\\",t=>{if(t.button)return;if(N?.finger&&t.pointerType===\\"touch\\"){N=null;return}Ht=ge(t);const n=t.pointerType===\\"touch\\";n||O.focus({preventScroll:!0}),N={x:t.clientX,y:t.clientY,cx:v.x,cy:v.y,moved:!1,finger:n,n:Ht,m:Je(t)},n||O.setPointerCapture(t.pointerId)}),O.addEventListener(\\"pointermove\\",t=>{if(!N)return;const n=t.clientX-N.x,o=t.clientY-N.y;Math.abs(n)+Math.abs(o)>(N.finger?8:3)&&(N.moved=!0),!(!N.moved||N.finger&&!z)&&(v.x=N.cx-n/v.k,v.y=N.cy-o/v.k,ut())}),O.addEventListener(\\"pointercancel\\",()=>{N=null}),O.addEventListener(\\"pointerup\\",()=>{const t=N;N=null,!(!t||t.moved)&&(St=t.finger&&!z,!St&&(t.m?q(I(t.m)):t.finger&&t.n&&t.n===$&&st(t.n)?At(t.n):($=t.n,P())))}),O.addEventListener(\\"click\\",t=>{t.preventDefault(),St&&!z&&Lt(),St=!1}),O.addEventListener(\\"dblclick\\",t=>{tt||At(ge(t)||Ht)}),O.addEventListener(\\"wheel\\",t=>{if(!t.ctrlKey&&!t.metaKey&&!z)return;if(t.preventDefault(),!t.ctrlKey&&!t.metaKey)return v.x+=t.deltaX/v.k,v.y+=t.deltaY/v.k,ut();const n=O.getBoundingClientRect();pt(Math.exp(-t.deltaY*(t.ctrlKey?.01:.002)),t.clientX-n.left,t.clientY-n.top)},{passive:!1});function Rt(t){if(!t||tt&&!z)return;const n=t._n,o=n?{x:n.x-n.w/2,y:n.y-n.h/2,width:n.w,height:n.h}:t.getBBox(),l=()=>U()/v.k,i=()=>Z()/v.k,u=o.x+o.width,e=o.y+o.height;v.k>=.6&&o.x>=v.x&&u<=v.x+l()&&o.y>=v.y&&e<=v.y+i()||(v.k<.6&&(v.k=Math.min(1,(U()-40)/o.width,(Z()-40)/o.height)),v.x=o.x+o.width/2-l()/2,v.y=o.y+o.height/2-i()/2,ut())}const Ze=(t,n)=>{const o=b.nodes;if(!$){$=[...o].sort((u,e)=>u.x-e.x||u.y-e.y)[0]||null;return}let l=null,i=1/0;for(const u of o){if(u===$)continue;const e=u.x-$.x,m=u.y-$.y,s=e*t+m*n;if(s<=1)continue;const r=s+2.5*Math.abs(e*n-m*t);r<i&&(i=r,l=u)}l&&($=l)};function Pe(){const[t,n,o,l]=ue(),i=[O.getAttribute(\\"viewBox\\"),O.getAttribute(\\"aria-label\\")];O.setAttribute(\\"viewBox\\",`${t-24} ${n-24} ${o-t+48} ${l-n+48}`),O.setAttribute(\\"aria-label\\",`${F.map(Et).join(\\" › \\")}${y>=0?`, with ${X[y].label}`:\\"\\"}: ${Gt.textContent}`),window.inf?.picture?.(O),O.setAttribute(\\"viewBox\\",i[0]),O.setAttribute(\\"aria-label\\",i[1])}function Lt(){z||(tt||Oe.focus({preventScroll:!0}),window.inf?.expand?.(K,we())||Pe())}O.addEventListener(\\"keydown\\",t=>{const n=t.key;if(t.metaKey||t.ctrlKey||t.altKey||z&&n===\\"Escape\\")return;const o={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]};if(o[n])Ze(...o[n]),P(),$&&Rt($.el);else if(n===\\"Enter\\")At($);else if(n===\\"Escape\\"||n===\\"Backspace\\"){if(!$&&!S&&F.length<2)return;$||S?($=null,S=null,P()):pe()}else if(n===\\"+\\"||n===\\"=\\")pt(1.25);else if(n===\\"-\\")pt(.8);else if(n===\\"0\\")Ct();else if((n===\\"f\\"||n===\\"F\\")&&!z)Lt();else if(n===\\"]\\"&&y>=0)ot(B+1);else if(n===\\"[\\"&&y>=0)ot(B<0?-1:B-1);else return;t.preventDefault()});const G=(t,n)=>{j(t).onclick=n};G(\\"[data-up]\\",pe),G(\\"[data-fit]\\",Ct),G(\\"[data-zo]\\",()=>pt(.8)),G(\\"[data-zi]\\",()=>pt(1.25)),G(\\"[data-fs]\\",Lt),G(\\"[data-open]\\",()=>At($)),G(\\"[data-next]\\",()=>ot(B+1)),G(\\"[data-prev]\\",()=>ot(B<0?-1:B-1)),G(\\"[data-more]\\",()=>{It.hidden=!It.hidden,xe.setAttribute(\\"aria-expanded\\",String(!It.hidden))}),j(\\"[data-keys]\\").textContent=tt?\\"\\":`Click or arrows choose · Enter goes in · ${z?\\"Backspace up · [ ] step through changes · scroll moves · ⌘-scroll zooms · Esc closes\\":\\"Esc back · [ ] step through changes · ⌘-scroll zooms · F full screen\\"}`;const Yt=()=>{let t=null;const n=i=>{if(!t)t=i;else{let u=0;for(;u<t.length&&t[u]===i[u];)u++;t=t.slice(0,u)}},o=[],l=i=>{o.push(i);for(const u of i.parts)u.sub&&l(u.sub)};l(Q);for(const i of ct)i.fl.length&&n(I(i.sub||i));for(const i of o){for(const u of i.gp)n(u.g?I(u.g):I(i));for(const u of[...i.links.filter(e=>e.st&&e.st!==\\"=\\"),...i.gl])n(u.a.g&&u.a.g===u.b.g?I(u.a.g):I(i));for(const u of i.gm)n(I(u))}for(const i of rt)i.st&&n(I(i));return t&&t.length?t:[Q]},Qt=j(\\"[data-cmps]\\"),Ve=[...X.keys()].map(t=>{const n=X[t].label||`Comparison ${t+1}`,o=D(\\"button\\",n,Qt);return o.setAttribute(\\"aria-pressed\\",\\"false\\"),o.onclick=()=>tn(y===t?-1:t),o}),Xt=()=>{for(const[t,n]of Ve.entries())n.setAttribute(\\"aria-pressed\\",String(t===y))};Qt.hidden=!X.length;function tn(t){if($t(t),Xt(),y>=0)return q(Yt());const n=l=>l.gone||l.kind===\\"part\\"&&!Ft(l);let o=F;for(;o.length>1&&n(o[o.length-1]);)o=o.slice(0,-1);q(o)}let Ut=0,be=0;new ResizeObserver(()=>{if(K.clientWidth===Ut&&(!z||K.clientHeight===be))return;Ut=K.clientWidth,be=K.clientHeight;const t=Ut<560;K.classList.toggle(\\"narrow\\",t),j(t?\\"[data-mcmp]\\":\\".bar\\").insertBefore(Qt,t?null:j(\\".zoom\\")),b&&Ct()}).observe(K);const Y=it.open||{},V=[...Zt];Number.isInteger(Y.changes)&&X[Y.changes]&&($t(Y.changes),Xt());function $e(t){const n=t.gm.find(l=>l.name===Y.at);if(n)return n;const o=t.gp.find(l=>l.path===Y.at);if(o)return o.g||t;for(const l of t.parts){const i=l.sub&&$e(l.sub);if(i)return i}return null}const qt=Y.at===void 0?null:Y.at===\\"\\"?Q:J[Y.at]?xt(J[Y.at]):ft[Y.at]||y>=0&&$e(Q)||null;if(Y.at!==void 0&&!qt&&V.push(`\\"open\\" names ${Y.at}, which is not a part\'s folder or a machine on the map.`),V.length){Bt.hidden=!1,D(\\"p\\",V.length===1?\\"This map has a problem to fix in its map files:\\":`This map has ${V.length} problems to fix in its map files:`,Bt);const t=D(\\"ul\\",\\"\\",Bt);for(const n of V.slice(0,8))D(\\"li\\",n,t);V.length>8&&D(\\"li\\",`and ${V.length-8} more`,t)}function ye(t){return t.kind===\\"lvl\\"?`L:${t.folder}`:t.kind===\\"grp\\"?`G:${t.lvl.folder}/${t.name}`:t.kind===\\"part\\"?`P:${t.path}`:`M:${t.name}`}function en(t){const n=o=>[o,...o.groups,...yt(o),...o.machs,...y<0?[]:o.gm].find(l=>ye(l)===t)||o.parts.reduce((l,i)=>l||i.sub&&n(i.sub),null);return typeof t==\\"string\\"?n(Q):null}function we(){return{place:F.map(ye),changes:y,chosen:$?$.key:null,step:B}}function ke(t){if(!t||typeof t!=\\"object\\")return;const n=Number.isInteger(t.changes)&&X[t.changes]?t.changes:-1;n!==y&&($t(n),Xt());const o=Array.isArray(t.place)?t.place.map(en):[],l=o.filter(Boolean).pop();q(o.length&&o.every(Boolean)?o:l?I(l):y>=0?Yt():[Q]),Number.isInteger(t.step)&&t.step>=0&&H[t.step]?ot(t.step):($=b.nodes.find(i=>i.key===t.chosen)||null,P(),$&&Rt($.el))}if(K.addEventListener(\\"inf-expanded\\",t=>ke(t.detail)),z){ke(Tt);const t=()=>document.activeElement===document.body&&O.focus({preventScroll:!0});t(),window.addEventListener(\\"focus\\",t)}else q(qt?I(qt):y>=0?Yt():[Q])})();"}');
   const stage = /* @__PURE__ */ JSON.parse('{"style":"[data-inf-stage]{position:relative;pointer-events:none}[data-inf-stage] canvas{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:block}","script":"(function(){\\"use strict\\";const ae={ring:.8,arcDeg:110,line:1.2,alpha:.6,turnRadPerS:.5},v=Math.PI*2,I=t=>Math.max(0,Math.min(1,t)),K=t=>t*t*(3-2*t),Ds=t=>1-(1-t)*(1-t);function pt(t,e,n){const s=(t-e)/n;return s<=0||s>=1?0:Math.sin(s*Math.PI)}function xt(t,e,n,s,o){return I((t-e)/n)*(1-I((t-s)/o))}function Kt(t){return Math.sin(t*1.7)*.5+Math.sin(t*2.9+1.3)*.3+Math.sin(t*4.7+4.1)*.2}class kt{constructor(e=0,n=3,s=.8){this.freq=n,this.zeta=s,this.x=e}freq;zeta;x;v=0;step(e,n){const s=v*this.freq,o=Math.max(1,Math.ceil(n*s/.5)),a=n/o;for(let i=0;i<o;i++)this.v+=(-2*this.zeta*s*this.v-s*s*(this.x-e))*a,this.x+=this.v*a;return this.x}}class js{next=1.5+Math.random()*3;t=-1;again=!1;update(e,n){if(this.t<0)return n||(this.next-=e,this.next<=0&&(this.t=0,this.again=Math.random()<.22)),0;this.t+=e;const s=.16;return this.t>=s?this.again?(this.again=!1,this.t=0,0):(this.t=-1,this.next=2.4+Math.random()*4.2,0):Math.sin(this.t/s*Math.PI)}}const ye=2.2;class Ws{sx=new kt(0,ye,.9);sy=new kt(0,ye,.9);tx=0;ty=0;next=1+Math.random()*2;hold=null;pull=null;update(e){let n,s;if(this.hold)n=this.hold.x,s=this.hold.y;else{if(this.next-=e,this.next<=0){this.next=1.2+Math.random()*2.6;const o=Math.random()*v,a=Math.random()*.7;this.tx=Math.cos(o)*a,this.ty=Math.sin(o)*a*.6,Math.random()<.3&&(this.tx=0,this.ty=0)}n=this.tx,s=this.ty}return this.pull&&(n+=(this.pull.x-n)*this.pull.w,s+=(this.pull.y-s)*this.pull.w),this.sx.step(n,e),this.sy.step(s,e),{x:this.sx.x,y:this.sy.x}}look(e,n){this.hold={x:e,y:n}}free(){this.hold=null}attract(e,n,s){const o=I(s);this.pull=o>0?{x:e,y:n,w:o}:null}setResponse(e){this.sx.freq=e,this.sy.freq=e}}const Pn={reach:1,gain:1.2,yScale:.85,holdSeconds:2.5,releaseSeconds:1.2,captureSeconds:.25,trackHz:3.2};class Ls{px=0;py=0;present=!1;sinceMove=Number.POSITIVE_INFINITY;w=0;tx=0;ty=0;opts;constructor(e={}){this.opts={...Pn,...e}}configure(e){this.opts={...this.opts,...e}}move(e,n){this.px=e,this.py=n,this.present=!0,this.sinceMove=0}leave(){this.present=!1}update(e){this.sinceMove+=e;const n=this.opts,s=this.present&&this.sinceMove<n.holdSeconds,o=(s?n.captureSeconds:n.releaseSeconds)/3;this.w+=((s?1:0)-this.w)*(1-Math.exp(-e/Math.max(o,.001))),this.w<.001&&(this.w=0);const a=Math.hypot(this.px,this.py);if(a>1e-6){const i=a/Math.max(n.reach,.001),c=i/Math.sqrt(1+i*i)*n.gain;this.tx=this.px/a*c,this.ty=this.py/a*c*n.yScale}else this.tx=0,this.ty=0;return{x:this.tx,y:this.ty,weight:this.w,phase:s?\\"engaged\\":this.present?\\"resting\\":\\"absent\\"}}}const Oe={tokenMin:100,tokenMax:5e5,minBoost:.1,maxBoost:1.4,durationMs:2e3,pulses:4,depth:1,glowSpill:.12};function Be(t,e=Oe){if(!(t>=0))return 0;const n=t/Math.max(1,e.durationMs);if(n>=1)return 0;const s=n<.07?n/.07*(n/.07)*(3-2*n/.07):1,o=(1-n)**1.7,a=1+e.depth*Math.sin(n*e.pulses*Math.PI*2)*(1-n);return s*o*a}function Ge(t,e){return .62+.34*Math.sin(e/103+t*2.17)+.12*Math.sin(e/41+t*4.91)}function Vs(t,e,n,s){return Math.max(n,Be(s-t)*e)}const rt={ringPx:40,tiltDeg:40,speedDegS:26,secondRingPastParts:10,partArcPx:30,ringStepPx:26,secondTiltDropDeg:18,firstNodeRad:-.3,secondNodeRad:1.1,collapse:\\"fold\\",crewGapPx:25,gemSpinRadS:.5};function $s(t){return t.filter(e=>e.state===\\"live\\")}function Hs(t){if(t.state===\\"done\\")return 1;if(t.share!==void 0)return t.share;const e=t.parts.filter(n=>n.state===\\"done\\").length;return t.parts.length?e/t.parts.length:0}const An=Math.PI*2,Rn=Math.PI/180;function Ks(t,e=rt.crewGapPx){if(t<=0)return[];const n=e/rt.crewGapPx,s=t>rt.secondRingPastParts?[Math.ceil(t/2),Math.floor(t/2)]:[t],o=[];let a=0;for(const[i,c]of s.entries()){const r=Math.max(rt.ringPx,c*rt.partArcPx/An,i>0?a+rt.ringStepPx:0);a=r,o.push({radius:r*n,tilt:Math.max(0,rt.tiltDeg-i*rt.secondTiltDropDeg)*Rn,node:i===0?rt.firstNodeRad:rt.secondNodeRad,count:c})}return o}function vn(t,e){const n=t.radius*Math.cos(e),s=t.radius*Math.sin(e),o=s*Math.cos(t.tilt),a=Math.cos(t.node),i=Math.sin(t.node);return{x:n*a-o*i,y:n*i+o*a,z:s*Math.sin(t.tilt)}}function Ys(t,e,n=rt.crewGapPx,s=0){const o=Ks(t.length,n),a=new Map,i=s*rt.speedDegS*Rn;let c=0;for(const[r,u]of o.entries())for(let l=0;l<u.count;l++){const p=t[c++];if(!p)continue;const d=An*l/u.count+(r===0?i:.5-i),m=vn(u,d);a.set(p.id,{x:e.x+m.x,y:e.y+m.y,z:m.z,ring:r})}return{places:a,rings:o}}const ct={startRadiusPx:150,capRadiusPx:256,orbitStepPx:46,seatsPerOrbit:24,firstTiltDeg:42,tiltStepDeg:23,firstNode:-.42,nodeStepDeg:46,speedDegPerSec:8,innerFasterShare:.75,phaseStep:.53},De=Math.PI/180;function In(t){return{radius:ct.capRadiusPx-t*ct.orbitStepPx,capacity:ct.seatsPerOrbit,inclination:8+((ct.firstTiltDeg-8+t*ct.tiltStepDeg)%74+74)%74,node:ct.firstNode+t*ct.nodeStepDeg*De,speedDegPerSec:ct.speedDegPerSec*(t%2===1?-1:1)*(1+ct.innerFasterShare*t),phase:t*ct.phaseStep}}const X=[In(0),In(1)];function we(t,e){const n=X[t];if(!n)throw new Error(\\"Unknown orbital plane\\");let s=0;if(e.forEach((i,c)=>{i>0&&(s=c)}),t<s)return n.radius;const o=e[t]??0;if(o<=1)return ct.startRadiusPx;const a=ct.startRadiusPx+(n.radius-ct.startRadiusPx)*(o-1)/(n.capacity-1);return Math.min(n.radius,a)}function En(t,e){const n=X[t];if(!n)throw new Error(\\"Unknown orbital plane\\");return-(e/1e3)*De*n.speedDegPerSec}function Tn(t,e,n,s=0){const o=X[t];if(!o)throw new Error(\\"Unknown orbital plane\\");const a=n??o.radius,i=o.inclination*De*(1-s),c=a*Math.cos(e),r=a*Math.sin(e)*Math.cos(i);return{x:c*Math.cos(o.node)-r*Math.sin(o.node),y:c*Math.sin(o.node)+r*Math.cos(o.node),z:a*Math.sin(e)*Math.sin(i)}}const ie=Math.PI/180,nt={clearOfOrbitPx:50,edgePx:240,rays:1.4,sideRay:.62,rayWidth:1.15,glow:.22,light:.82,twinkle:.5,twinkleLight:.18,twinkleLength:.12,twinkleRate:1.3,lift:.25,depth:.62,placeRate:6,blendRate:4.5},Cn=[-135,45,-45,135],qs=[.4,.82,.3,.74,.46,.88,.28,.7,.42,.84,.34,.78,.4],Us=[0,1.5,-2,1,-1.5,2,-1,.5,-2,1.5,0,-1,2],Xs=12,Qs=11,Nn=16,je=41;function Zs(t,e,n){const s=X[t];if(!s)return 0;const o=e-s.node,a=n*Math.cos(s.inclination*ie);return n*a/Math.hypot(a*Math.cos(o),n*Math.sin(o))}function Js(t,e){if(t<=0)return{points:[],joins:[]};const n=d=>e.reduce((m,g)=>Math.max(m,Zs(g.plane,d,g.radius)),0)+nt.clearOfOrbitPx,s=d=>nt.edgePx/Math.max(Math.abs(Math.cos(d)),Math.abs(Math.sin(d))),o=d=>s(d*ie)-n(d*ie),a=(d,m)=>{let g=d;const f=Math.round((g-45)/90)*90+45;let M=g*ie,w=n(M),b=s(M);for(let x=0;x<14&&(M=g*ie,w=n(M),b=s(M),!(b-w>=10));x++)g+=(f-g)*.25;const S=w+m*Math.max(0,b-w);return{x:Math.cos(M)*S,y:Math.sin(M)*S}},i=(d,m,g)=>{let f=d,M=d;for(;f-2>=m&&o(f-2)>=Nn;)f-=2;for(;M+2<=g&&o(M+2)>=Nn;)M+=2;return[f,M]},c=[],r=[];let u=t;for(const d of Cn){const m=c[0],g=d===-45&&m?Math.min(d,Math.max(d-je,m[1]+14)):d-je,f=d===-135?-44:d+je,M=i(d,g,f);c.push(M);const w=Math.min(u,Math.floor((M[1]-M[0])/Qs)+1);r.push(w),u-=w}for(let d=0;u>0;d++,u--)r[d%2]=(r[d%2]??0)+1;const l=[],p=[];return Cn.forEach((d,m)=>{const[g,f]=c[m]??[d,d],M=r[m]??0;if(M===0)return;const w=Math.min(Xs,(f-g)/Math.max(1,M-1)),b=[];let S=0,x=0;for(let P=0;P<M;P++){const z=d+(x+1)*w<=f+.01,J=d-(S+1)*w>=g-.01;P===0?b.push(0):P%2===1&&z||!J?b.push(++x):b.push(-++S)}const E=Math.min(Math.max(d,g-Math.min(...b)*w),f-Math.max(...b)*w),k=l.length;for(const P of b){const z=((P<0?P-1:P)%13+13)%13;l.push(a(E+P*w+(Us[z]??0)*Math.min(1,w/8),qs[z]??.5))}const R=b.map((P,z)=>z).sort((P,z)=>(b[P]??0)-(b[z]??0));for(let P=1;P<R.length;P++)p.push([k+(R[P-1]??0),k+(R[P]??0)])}),{points:l,joins:p}}function to(t,e,n){return n?0:nt.twinkle*Math.sin(e/1e3*nt.twinkleRate+t*11)}const gt=1/Math.sqrt(3),eo=[[gt,gt,gt],[gt,-gt,-gt],[-gt,gt,-gt],[-gt,-gt,gt]],no=[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],_n=(t,e)=>Math.hypot(t[0]-e[0],t[1]-e[1],t[2]-e[2]),Fn=([t,e,n])=>{const s=Math.hypot(t,e,n);return[t/s,e/s,n/s]};function zn(t){let e=Number.POSITIVE_INFINITY;for(let s=0;s<t.length;s++)for(let o=s+1;o<t.length;o++)e=Math.min(e,_n(t[s],t[o]));const n=[];for(let s=0;s<t.length;s++)for(let o=s+1;o<t.length;o++)_n(t[s],t[o])<e*1.01&&n.push([s,o]);return n}const On=[[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]],We=(1+Math.sqrt(5))/2,be=[-1,1].flatMap(t=>[-1,1].flatMap(e=>[[0,t,e*We],[t,e*We,0],[e*We,0,t]].map(Fn))),Le=zn(be);(()=>{const t=[...Le],e=[],n=(s,o)=>e.some(([a,i])=>a===s&&i===o||a===o&&i===s);for(;t.length>0;){let s=0,o=-1;for(const[a,[i,c]]of t.entries()){let r=0;for(let u=0;u<be.length;u++)n(i,u)&&n(c,u)&&(r+=3);e.some(([u,l])=>u===i||l===i||u===c||l===c)&&r++,r>o&&(o=r,s=a)}e.push(...t.splice(s,1))}return e})();function so(){const t=[...be],e=new Map,n=(c,r)=>{const u=`${Math.min(c,r)}:${Math.max(c,r)}`,l=e.get(u);if(l!==void 0)return l;const p=t[c],d=t[r];return t.push(Fn([p[0]+d[0],p[1]+d[1],p[2]+d[2]])),e.set(u,t.length-1),t.length-1},s=new Set(Le.map(([c,r])=>`${c}:${r}`)),o=(c,r)=>s.has(`${Math.min(c,r)}:${Math.max(c,r)}`),a=new Map,i=(c,r)=>a.set(`${Math.min(c,r)}:${Math.max(c,r)}`,[c,r]);for(let c=0;c<12;c++)for(let r=c+1;r<12;r++)for(let u=r+1;u<12;u++){if(!o(c,r)||!o(r,u)||!o(c,u))continue;const l=n(c,r),p=n(r,u),d=n(u,c);for(const[m,g]of[[c,l],[l,r],[r,p],[p,u],[u,d],[d,c],[l,p],[p,d],[d,l]])i(m,g)}return{v:t,e:[...a.values()],ink:[.62,.62,.66*.8],nodes:12}}const Bn={v:eo,e:no,ink:[1,1,1]},oo={low:Bn,medium:{v:On,e:zn(On),ink:[.92,.95,.9]},high:{v:be,e:Le,ink:[.8,.82,.66]},premium:so()};function ao(t){return t?oo[t]:Bn}const Ft=[255,244,224],io=900,Gn=.3;function It(t,e,n){return[t[0]+(e[0]-t[0])*n,t[1]+(e[1]-t[1])*n,t[2]+(e[2]-t[2])*n]}function D(t,e){return`rgba(${Math.round(t[0])},${Math.round(t[1])},${Math.round(t[2])},${Math.max(0,Math.min(1,e))})`}function Ve(t,e,n=0,s=0,o=0){const a=Math.max(0,Math.min(1,e)),i=Math.max(0,Math.min(1,n)),c=Math.max(0,Math.min(1,s)),r=Math.max(0,Math.min(1,o)),u=.55+.45*a,l=u+(Yt.strength-u)*i;return{color:It(t.accent,t.hot,Math.max(a,i*r)),strength:l+(Et.wire-l)*c}}const Yt={strength:.6,ring:.8,arc:1.1,dashes:12,dashShare:.55},Et={ring:.9,lo:.25,hi:.85,swell:.06,halo:.12,haloReach:1.3,wire:.55,line:1.2};function ro(t,e,n,s,o){const a=(e.captain??0)*e.alpha*e.unfold;if(a<=.01)return;const i=e.captainBreath??.5,c=e.size*Et.haloReach,r=Et.halo*(.4+.6*i)*a;if(r>.005){const l=t.createRadialGradient(n,s,0,n,s,c);l.addColorStop(0,D(o.accent,r)),l.addColorStop(1,D(o.accent,0)),t.fillStyle=l,t.beginPath(),t.arc(n,s,c,0,v),t.fill()}const u=e.size*Et.ring*(1+Et.swell*(i-.5));t.globalAlpha=1,t.lineCap=\\"round\\",t.strokeStyle=D(o.accent,(Et.lo+(Et.hi-Et.lo)*i)*a*o.boost),t.lineWidth=Et.line,t.beginPath(),t.arc(n,s,u,0,v),t.stroke()}function co(t,e,n,s,o){const a=(e.wait??0)*e.alpha*e.unfold;if(a<=.01)return;if(e.batch){const r=ae.arcDeg*Math.PI/360,u=e.batchTurn??0;t.globalAlpha=1,t.lineCap=\\"round\\",t.lineWidth=ae.line,t.strokeStyle=D(o.accent,ae.alpha*a*o.boost);for(const l of[0,Math.PI])t.beginPath(),t.arc(n,s,e.size*ae.ring,l-r+u,l+r+u),t.stroke();return}const i=e.size*Yt.ring,c=v*i/Yt.dashes;t.lineCap=\\"butt\\",t.globalAlpha=1,t.strokeStyle=D(o.accent,(e.waitArc===void 0?.6:.3)*a*o.boost),t.lineWidth=1,t.setLineDash([c*Yt.dashShare,c*(1-Yt.dashShare)]),t.beginPath(),t.arc(n,s,i,0,v),t.stroke(),t.setLineDash([]),e.waitArc!==void 0&&(t.lineCap=\\"round\\",t.strokeStyle=D(It(o.accent,Ft,.2),.9*a),t.lineWidth=1.4,t.beginPath(),t.arc(n,s,i,e.waitArc,e.waitArc+Yt.arc),t.stroke())}function lo(t,e){return It(Ve(e,t.work,t.wait,t.captain,t.job).color,Ft,nt.lift)}function ho(t,e,n,s,o){const a=(e.star??0)*e.alpha*e.unfold;if(a<=.01)return;const i=e.twinkle??0,c=lo(e,o),r=a*(nt.light+nt.twinkleLight*i)*o.boost,u=e.size,l=nt.rays*u*(1+nt.twinkleLength*i);t.globalAlpha=1;const p=t.createRadialGradient(n,s,0,n,s,u);p.addColorStop(0,D(c,nt.glow*r)),p.addColorStop(1,D(c,0)),t.fillStyle=p,t.beginPath(),t.arc(n,s,u,0,v),t.fill();const d=nt.rayWidth;for(const[m,g,f]of[[0,-1,1],[0,1,1],[-1,0,nt.sideRay],[1,0,nt.sideRay]]){const M=n+m*l*f,w=s+g*l*f,b=t.createLinearGradient(n,s,M,w);b.addColorStop(0,D(c,r)),b.addColorStop(.4,D(c,r*.5)),b.addColorStop(1,D(c,0)),t.fillStyle=b,t.beginPath(),t.moveTo(n-g*d,s+m*d),t.lineTo(M,w),t.lineTo(n+g*d,s-m*d),t.closePath(),t.fill()}}function uo(t){return It(t.accent,Ft,.4)}function fo(t,e,n,s,o,a){const i=It(Ve(a,n.work,n.wait,n.captain,n.job).color,Ft,.25),c=e.length-1;t.lineCap=\\"round\\";for(let r=0;r<c;r++){const u=e[r],l=e[r+1];if(!u||!l)continue;const p=1-r/c;t.strokeStyle=D(i,.42*p*p*n.alpha*n.unfold*a.boost),t.lineWidth=Math.max(.6,n.size*.2*p),t.beginPath(),t.moveTo(s+u.x,o+u.y),t.lineTo(s+l.x,o+l.y),t.stroke()}}function Dn(t,e,n,s,o,a){const i=e.nudge>.001?e.nudge*3:0,c=n+e.x+(i?Kt(a/1e3*14+e.seed)*i:0),r=s+e.y+(i?Kt(a/1e3*13+e.seed*1.7)*i:0),u=e.size,l=u*.4,p=uo(o);if(e.streak&&e.unfold>.01&&fo(t,e.streak,e,n,s,o),e.spark>.01){for(let A=0;A<e.trail.length;A++){const F=e.trail[A];F&&(t.fillStyle=D(p,(.55-A*.15)*e.spark*e.alpha),t.beginPath(),t.arc(n+F.x,s+F.y,(2.2-A*.4)*(u/30),0,v),t.fill())}const C=2.8*e.spark*(u/30)+.6,h=t.createRadialGradient(c,r,0,c,r,C*4);h.addColorStop(0,D(o.accent,.35*e.spark*e.alpha)),h.addColorStop(1,D(o.accent,0)),t.fillStyle=h,t.beginPath(),t.arc(c,r,C*4,0,v),t.fill(),t.fillStyle=D(p,.95*e.spark*e.alpha),t.beginPath(),t.arc(c,r,C,0,v),t.fill()}if(e.unfold<=.01)return;ho(t,e,c,r,o),ro(t,e,c,r,o),co(t,e,c,r,o);const d=e.work,m=e.flicker,g=Ve(o,d,e.wait,e.captain,e.job),f=m*Oe.glowSpill,M=(.14*d+.5*f)*e.alpha*e.unfold,w=u*(.95+.2*f);if(M>.005){const C=t.createRadialGradient(c,r,0,c,r,w);C.addColorStop(0,D(g.color,M)),C.addColorStop(1,D(g.color,0)),t.fillStyle=C,t.beginPath(),t.arc(c,r,w,0,v),t.fill()}const b=It(g.color,Ft,Math.min(1,e.flash*.5+f*.4)),S=Math.cos(e.spin),x=Math.sin(e.spin),E=Math.cos(e.spin*.6),k=Math.sin(e.spin*.6),R=e.unfold,P=ao(e.tier),[z,J,st]=P.ink,O=P.v.map(([C,h,A])=>{const F=C*S-A*x,T=C*x+A*S,L=h*E-T*k,ht=3/(3-(h*k+T*E));return[c+F*ht*l*R,r+L*ht*l*R,ht]}),B=g.strength*e.alpha*o.boost,ot=Math.max(1,Math.min(1.6,1.4*(u/30)))*J;t.lineWidth=ot,t.lineCap=\\"round\\",t.strokeStyle=D(b,1);const Q=Math.floor(e.seed*8);for(let C=0;C<P.e.length;C++){const[h,A]=P.e[C],F=O[h],T=O[A];if(!F||!T)continue;let L=Math.max(.35,Math.min(.9,.4+((F[2]+T[2])/2-.85)*.9))*B*z;if(m>0){const Mt=m*Ge(C+Q,a);t.strokeStyle=D(It(b,Ft,Math.min(1,Mt*.7)),1),L*=1+.9*Mt}t.globalAlpha=Math.min(1,L),t.beginPath(),t.moveTo(F[0],F[1]),t.lineTo(T[0],T[1]),t.stroke()}if(d>.05&&R>.9){const C=a/io+e.seed,h=C-Math.floor(C);if(h<Gn){const A=Math.sin(h/Gn*Math.PI)*d*e.alpha,F=P.e[Math.floor(C)%P.e.length],T=F?O[F[0]]:void 0,L=F?O[F[1]]:void 0;T&&L&&(t.globalAlpha=A,t.strokeStyle=D(It(g.color,Ft,.75),1),t.lineWidth=ot*.6,t.beginPath(),t.moveTo(T[0],T[1]),t.lineTo(L[0],L[1]),t.stroke(),t.lineWidth=ot)}}t.fillStyle=D(b,1);const tt=P.nodes??O.length;for(let C=0;C<tt;C++){const h=O[C];if(!h)continue;let A=1+.5*d*Math.max(0,Math.sin(a/300+C*1.3+e.seed)),F=Math.max(.5,Math.min(1,.5+(h[2]-.85)*.8))*B*z;if(m>0){const T=m*Ge(C+Q+20,a);t.fillStyle=D(It(b,Ft,Math.min(1,T*.6)),1),A+=.15*m,F*=1+.45*T}t.globalAlpha=Math.min(1,F),t.beginPath(),t.arc(h[0],h[1],1.2*(u/28)*A*(.4+.6*R)*st,0,v),t.fill()}t.globalAlpha=1}const $e={durationMs:6e3,warpSpeed:1},jt={inAt:.03,inFor:.17,outAt:.8,outFor:.16,jumpAt:.14,exitAt:.78},po={tunnel:9,sphere:5,corkscrew:4},go=t=>xt(t,jt.inAt,jt.inFor,jt.outAt,jt.outFor);function Mo(t){const e=K(I((t-jt.inAt)/.11))*.16,n=K(I((t-jt.jumpAt)/.07));return(e+.84*n)*(1-K(I((t-jt.exitAt)/.09)))}const jn=1.15,xe=600;(()=>{const t=new Float64Array(xe+1),e=$e.durationMs/1e3;let n=0;for(let s=1;s<=xe;s++)n+=Mo((s-.5)/xe)*jn*$e.warpSpeed*e/xe,t[s]=n;return t})();const mo=(t,e)=>1+po[t]*jn*$e.warpSpeed*e;function yo(t,e){const n=go(t);return e*1.12*K(I(n*1.4))*(1+.22*pt(t,.45,.13))}const wo=(t,e)=>Math.sqrt((e*1.3)**2+.72*t*t),bo=.3;function xo(t,e,n){const o=-(64+Math.min(35,253/Math.max(e,1))*t),a=wo(o,n.coreR)*.62,i=n.tv*2.2+n.t*.8-t*Math.min(.78,9/Math.max(e,1));return{x:o+bo*a*Math.sin(i),y:-a*Math.cos(i),z:Math.sin(i)}}const So=(t,e)=>[Kt(t*14+e*3.1),Kt(t*13+e*5.7)],He={radiusPx:64,degPerSec:24,maxCompanions:3};function ko(t,e){const n=X[t];if(!n)throw new Error(\\"Unknown orbital plane\\");const s=n.inclination*Math.PI/180,o=Math.cos(n.node),a=Math.sin(n.node),i=[o*Math.cos(e)-a*Math.cos(s)*Math.sin(e),a*Math.cos(e)+o*Math.cos(s)*Math.sin(e),Math.sin(s)*Math.sin(e)],c=[a*Math.sin(s),-o*Math.sin(s),Math.cos(s)];return{radial:i,normal:c}}function Po(t,e,n,s=He.radiusPx){const{radial:o,normal:a}=ko(t,e);return[s*(o[0]*Math.cos(n)+a[0]*Math.sin(n)),s*(o[1]*Math.cos(n)+a[1]*Math.sin(n)),s*(o[2]*Math.cos(n)+a[2]*Math.sin(n))]}function Ao(t,e,n,s){const o=s?0:n/1e3*(Math.PI/180)*He.degPerSec;return 1.2+t/Math.max(1,e)*Math.PI*2+o}function Ro(t,e,n){const s=new Map(t);for(const[a,i]of e){const c=s.get(i);if(c?.blockerId!==a&&!c?.arrows.includes(a))continue;const r=c.arrows.filter(u=>u!==a);c.mode===\\"tether\\"&&r.length>0?s.set(i,{...c,arrows:r}):s.delete(i)}const o=new Map;for(const[a,i]of e){if(s.has(a)||a===i||!n(a)||!n(i))continue;const c=o.get(i)??[];c.push(a),o.set(i,c)}for(const[a,i]of o){i.sort();const c=[...s.values()].filter(p=>p.mode===\\"satellite\\"&&p.blockerId===a).sort((p,d)=>p.index-d.index),r=c.length+i.length,l=!(s.get(a)?.mode===\\"satellite\\")&&r<=He.maxCompanions;if(l)for(const[p,d]of c.entries())s.set(d.waiterId,{...d,index:p,count:r});i.forEach((p,d)=>{s.set(p,{waiterId:p,mode:l?\\"satellite\\":\\"tether\\",blockerId:a,index:c.length+d,count:l?r:1,arrows:[a]})})}return s}function vo(t,e){for(const[n,s]of t)e.has(n)?s.arrows.length>0?t.set(n,{...s,mode:\\"tether\\",index:0,count:1}):t.delete(n):s.mode===\\"satellite\\"&&e.has(s.blockerId)&&t.set(n,{...s,mode:\\"tether\\",index:0,count:1})}function Io(t){const{cues:e,seats:n,scenes:s,crew:o,now:a,settled:i}=t,c=new Map,r=new Map,u=new Set(n.keys()),l=new Map,p=[];for(const[d,m]of e){if(m.mode!==\\"satellite\\"||t.blending){c.set(d,{x:0,y:0,z:0,arrows:m.arrows});continue}const g=r.get(m.blockerId)??[];g.push(d),r.set(m.blockerId,g)}for(const[d,m]of r){const g=o.get(d),f=g?s.get(d):void 0;if(g?.phase!==\\"orbiting\\"||!f){for(const b of m)c.set(b,{x:0,y:0,z:0,arrows:[d]});continue}const M=m.flatMap(b=>{const S=e.get(b),x=o.get(b);if(!S||!x||x.phase!==\\"orbiting\\")return[];const E=Po(g.plane,g.angle.x,Ao(S.index,S.count,a,i));return[{id:b,x:f.x+E[0],y:f.y+E[1],z:E[2]}]}),w=!m.some(b=>t.fallback.has(b))&&M.length===m.length;if(!w)p.push(...m);else for(const b of m)u.add(b),l.set(b,{blocker:d,origin:{x:f.x,y:f.y,z:f.z}});for(const b of m){const S=M.find(E=>E.id===b),x=s.get(b);c.set(b,w&&S&&x?{x:S.x-x.x,y:S.y-x.y,z:S.z-(x.z??0),arrows:[d]}:{x:0,y:0,z:0,arrows:[d]})}}for(const[d,m]of n){const g=s.get(d);g&&c.set(d,{x:m.x-g.x,y:m.y-g.y,z:m.z-g.z,arrows:e.get(d)?.arrows??[]})}return{wanted:c,offMain:u,circleBases:l,failed:p}}const Wt=t=>t*t,Ke=t=>1-(1-t)**3;function Ye(t,e,n){const s=e.x-t.x,o=e.y-t.y,a=Math.hypot(s,o)||1,i=s/a,c=o/a,r=-c,u=i,l=n*.8;return{from:t,c1:{x:t.x+(i*Math.cos(l)+r*Math.sin(l))*a*.38,y:t.y+(c*Math.cos(l)+u*Math.sin(l))*a*.38},c2:{x:e.x-i*a*.22+r*n*a*.1,y:e.y-c*a*.22+u*n*a*.1},to:e}}function qe(t,e){const n=1-e,s=n*n*n,o=3*n*n*e,a=3*n*e*e,i=e*e*e;return{x:s*t.from.x+o*t.c1.x+a*t.c2.x+i*t.to.x,y:s*t.from.y+o*t.c1.y+a*t.c2.y+i*t.to.y}}function Ue(t){const e=Math.hypot(t.x,t.y);return e>0?{x:t.x/e,y:t.y/e}:{x:1,y:0}}function Eo(t,e,n){const s=e.x*e.x+n.x*n.x,o=e.y*e.y+n.y*n.y,a=e.x*e.y+n.x*n.y,i=(s+o)/2,c=Math.hypot((s-o)/2,a);return{x:t.x,y:t.y,major:Math.sqrt(i+c),minor:Math.sqrt(Math.max(0,i-c)),angle:Math.atan2(2*a,s-o)/2}}const Wn=360;function To(t,e,n){const s=o=>o.map(a=>a.id).join();return s(t.parts)===s(e)&&t.share===n?!1:(t.parts=e,t.share=n,!0)}function Ln(t,e,n){t.leaving=e,t.leaveAt=n,t.packets=[]}function Co(t,e){for(const n of t)if(!n.leaving&&n.parts.some(s=>s.id===e))return n}function No(t,e,n,s,o,a,i){const c=n+(we(0,o)-n)*s,r=i({x:0,y:0,depth:.5},c),u=i({x:1,y:0,depth:.5},c),l=Math.hypot(u.x-r.x,u.y-r.y)||1;return[...t].map(p=>{const d=p.rootAngle.x+En(0,e),m={...a(0,d,c),radius:c},g=e/1e3,{places:f,rings:M}=Ys(p.parts,m,rt.crewGapPx/l,g);return{program:p,root:m,places:f,rings:M,seconds:g}})}function _o(t){const e=new Map;for(const n of t)if(!n.program.leaving)for(const s of n.program.parts){const o=n.places.get(s.id);s.state===\\"live\\"&&o&&e.set(s.id,{x:o.x,y:o.y,z:n.root.z+o.z})}return e}const Vn=48;function Fo(t,e,n,s,o,a,i,c){const r=[],u=new Map(e.filter(d=>d.phase!==\\"leaving\\").map(d=>[d.id,d])),l=new Map(e.map(d=>[d.id,d])),p=[];for(const{program:d,root:m,places:g,rings:f,seconds:M}of t){const w=d.leaving?s?1:(n-d.leaveAt)/(d.leaving===\\"home\\"?o.homeMs+o.packetMs:o.awayMs):0;if(w>=1){p.push(d.id);continue}const b=d.leaving===\\"home\\",S=o.homeMs/(o.homeMs+o.packetMs),x=b&&rt.collapse===\\"fold\\"?K(I(w/S)):0,E=d.leaving?b?1:1-Wt(I(w)):1,k=a(m,m.radius),R=[];for(const O of d.leaving?[]:d.parts){const B=g.has(O.id)?u.get(O.id):void 0;B&&R.push({id:O.id,x:B.x,y:B.y})}const P=b?Wt(I((w-S)/(1-S))):0,z={x:k.x*(1-P),y:k.y*(1-P)},J=[];for(const O of d.packets){const B=[];for(const L of O.route){const Mt=L===d.id?z:l.get(L);Mt&&B.push({x:Mt.x,y:Mt.y})}O.home&&B.push({x:0,y:0});const ot=Math.max(1,B.length-1),Q=o.packetMs*(.6+.4*ot),tt=s?1:I((n-O.at)/Q);if(tt>=1||B.length<2){O.home?c():d.litAt=n;continue}J.push(O);const C=K(tt)*ot,h=Math.min(ot-1,Math.floor(C)),A=B[h],F=B[h+1],T=C-h;i.push({direction:\\"report\\",x:A.x+(F.x-A.x)*T,y:A.y+(F.y-A.y)*T,t:tt,alpha:Math.sin(tt*Math.PI)**.5})}d.packets=J;const st=[];if(x<1)for(const O of f){const B={...O,radius:O.radius*(1-x)},ot=[];for(let Q=0;Q<=Vn;Q++){const tt=vn(B,Q/Vn*Math.PI*2),C=a({x:m.x+tt.x,y:m.y+tt.y,depth:m.depth},m.radius);ot.push({x:C.x*(1-P),y:C.y*(1-P),near:tt.z>0})}st.push(ot)}b&&w>0&&P>0&&i.push({direction:\\"report\\",x:z.x,y:z.y,t:P,alpha:1-P}),r.push({id:d.id,x:z.x,y:z.y,depth:k.depth,alpha:E*(1-P),lit:s?0:I(1-(n-d.litAt)/Wn),gem:b?1:d.share,spin:M*rt.gemSpinRadS,nodes:x>=1?[]:R,rings:st})}return{frames:r,ended:p}}function zo(t,e,n,s,o,a,i){{i.fill(0);return}}function Oo(t,e,n,s,o,a){return{x:n[0],y:n[1],depthMul:1}}const Se={peak:36,spinShare:.25,streakSeconds:.06,streakMaxRad:1.5},Bo=.02;function Go(t,e){const n=Math.min(Se.streakMaxRad,Math.abs(t)*Se.streakSeconds)*e;return n<Bo?0:n}const Pt={durationMs:6e3,flash:1,sparks:80,crewKickPx:40,reachPx:264,rays:44,shards:32,kickMs:750},ke={bounceAt:.22,flashFor:.11,frontFor:.3},Do=t=>t-Math.floor(t),Y=(t,e)=>Do(Math.sin(t*127.1+e*311.7)*43758.5453),Xe=2.399963,jo=t=>ke.bounceAt+ke.frontFor*(1-(1-I(t))**(1/4));function Wo(t){const e=(t-ke.bounceAt)/ke.flashFor;return e<0||e>=1?0:(1-e)**2*Pt.flash}Array.from({length:Pt.sparks},(t,e)=>{const n=1-2*Y(e,8),s=.5+.5*n,o=Y(e,10)>.7;return{a:e*Xe+Y(e,7)*1.3,f:(.68+.32*Math.sqrt(Y(e,13)))*Math.sqrt(1-n*n),near:s,size:(.65+1.2*Y(e,10))*(.8+.4*s),alpha:(.4+.6*Y(e,9))*(.6+.4*s),big:o,glint:o&&Y(e,12)<.5}}),Array.from({length:Pt.rays+4},(t,e)=>{const n=e<4;return{a:n?e/4*v+.12:e*Xe+Y(e,30)*.6,len:n?e%2?.84:1:.34+.6*Y(e,31),alpha:n?1:.4+.5*Y(e,32),width:n?2:.7+1.1*Y(e,33)}}),Array.from({length:Pt.shards},(t,e)=>({a:e*Xe+Y(e,40)*1.1,r:.2+.42*Y(e,41),spin:(Y(e,42)-.5)*9,turn:Y(e,43)*v,half:.6+.6*Y(e,44),alpha:.5+.4*Y(e,45)})),Array.from({length:16},(t,e)=>({far:.9+.6*Y(e,11),delay:.006*Y(e,1)}));const Qe=6;function Lo(t,e,n,s){const{k:o,sp:a,et:i}=s;if(o<=.001)return;if(s.variant===\\"tunnel\\"){const[x,E]=So(s.t*.5,t.seed);t.x+=x*2.9*a,t.y+=E*2.9*a,o>.5&&(t.depth=.5+Math.abs(t.depth-.5));const k=Math.hypot(t.x,t.y)||1;$n(t,t.x/k,t.y/k,21*a);return}if(s.variant===\\"corkscrew\\"){const x=K(I(o*1.7-e/Math.max(n,1)*.7));if(x<=0)return;const E=xo(e,n,s);t.x+=(E.x-t.x)*x,t.y+=(E.y-t.y)*x,t.depth+=((E.z+1)/2-t.depth)*x,t.size*=1+.25*E.z*x,t.alpha*=1-.4*x*I(-E.z),$n(t,-1,0,19*a*x);return}const c=Math.max(1,n-1),r=.11,u=.17+.22*e/c,l=.56+.2*e/c;if(i<u)return;const p=Math.hypot(t.x,t.y),d=Math.atan2(t.y,t.x),m=Math.max(yo(i,s.coreR),1),g=i<l,f=I((i-(g?u:l))/r);if(g&&f>=1){t.alpha=0;return}if(!g&&f>=1)return;const M=1.8,w=x=>{const E=p*(g?1-x:x),k=d+M*(g?x:x-1);return{x:Math.cos(k)*E,y:Math.sin(k)*E,r:E}},b=w(K(f)),S=I(1-b.r/m);t.x=b.x,t.y=b.y,t.depth=1,t.size*=1-.8*S,t.alpha*=!g&&f<=0?0:1-S*.85,t.streak=[{x:b.x,y:b.y}];for(let x=1;x<Qe;x++){const E=w(K(I(f-x*.035)));t.streak.push({x:E.x,y:E.y})}}function $n(t,e,n,s){if(!(s<1)){t.streak=[];for(let o=0;o<Qe;o++){const a=o/(Qe-1)*s;t.streak.push({x:t.x+e*a,y:t.y+n*a})}}}const Vo=.394;function $o(t,e){const n=Pt.reachPx;if(t>=n||Pt.crewKickPx<=0)return 0;const s=(e.et-jo(t/n))*Pt.durationMs/Pt.kickMs;if(s<=0||s>=2)return 0;const o=Math.sin(Math.PI*s)*Math.exp(-2.4*s)/Vo;return Pt.crewKickPx*o*(1-.5*t/n)*e.release}function Ho(t,e){const n=Math.hypot(t.x,t.y);let s=Wo(e.et)*.7*e.release;const o=$o(n,e);o!==0&&n>0&&(t.x+=t.x/n*o,t.y+=t.y/n*o,s=Math.max(s,o/Pt.crewKickPx)),s>t.flash&&(t.flash=Math.min(1,s))}const Ze={radius:190,tilt:.58,glyph:30,ringPeriodMs:64e3,spawnMs:720,swirl:1.1,staggerMs:150,idleOffset:.06,homeMs:620,awayMs:720,packetMs:520},Hn=25,Ko=240,Pe={homeDistancePx:147,acrossPx:320,acrossMs:1e3};function Je(t,e){const n=(Pe.acrossMs-Ze.spawnMs)*(e-Pe.homeDistancePx)/(Pe.acrossPx-Pe.homeDistancePx);return t+Math.max(0,n)}const Yo=.09,Kn=5,qo=600,Yn=12,qn=t=>({get slot(){return t.planeSlot},set slot(e){t.planeSlot=e}}),Un=t=>({get slot(){return t.rootSlot},set slot(e){t.rootSlot=e}});function Uo(t,e){const n=t.length+e.length,s=[];let o=0,a=0;for(let i=0;i<n;i++)(a<e.length&&i>=Math.floor((a+.5)*n/e.length)||o>=t.length)&&a<e.length?s.push(e[a++]):s.push(t[o++]);return s}const Xo=1.6,Qo=3200;function Xn(t,e){const n=Math.max(0,t-Kn);return e.radius*Math.min(1.25,1+n*.035)}function Zo(t){const e=Math.max(0,t-Kn);return Math.max(.6,1-e*.05)}function qt(t,e){t.x=e,t.v=0}function Ut(t,e,n,s){s?qt(t,e):t.step(e,n)}const Ae=[\\"x\\",\\"y\\",\\"z\\"],tn=t=>Math.hypot(t.companion.x.x,t.companion.y.x,t.companion.z.x);class Jo{constructor(e,n={...Ze},s=Math.random,o=\\"ring\\",a){this.tuning=n,this.random=s,this.formation=o,this.projection=a,this.last=e}tuning;random;formation;projection;crew=new Map;reviews=new Map;dependencies=new Map;programs=new Map;offMain=new Set;captainWaits=new Set;pinned=[];stars=new Set;seatsChanged=!1;frameFallback=new Set;nextOrder=0;lastSpawnAt=Number.NEGATIVE_INFINITY;cues=[];last;crowded=!1;planeBlend=new kt(0,.8,1);lead=0;warpFlat=0;warpShrink=1;listeners=new Set;version=0;subscribe=e=>(this.listeners.add(e),()=>{this.listeners.delete(e)});bump(){this.version+=1;for(const e of this.listeners)e()}present(){return this.roster().map(e=>e.id)}has(e){return this.crew.has(e)}statusOf(e){return this.crew.get(e)?.status}phaseOf(e){return this.crew.get(e)?.phase}discard(e){const n=this.crew.get(e);n&&(this.crew.delete(e),n.phase!==\\"leaving\\"&&(this.fillPlaneVacancies(),this.respacePlanes()),this.bump())}setDependencies(e){const n=new Map(e.map(s=>[s.waiterId,s]));if(n.size===this.dependencies.size){let s=!0;for(const[o,a]of n){const i=this.dependencies.get(o);if(!i||i.mode!==a.mode||i.blockerId!==a.blockerId||i.index!==a.index||i.count!==a.count||i.arrows.join()!==a.arrows.join()){s=!1;break}}if(s)return}this.dependencies=n,this.bump()}setReview(e,n){this.reviews.get(e)===n||!n&&!this.reviews.has(e)||(n?this.reviews.set(e,n):this.reviews.delete(e),this.bump())}setPrograms(e,n){let s=!1,o=!1;const a=new Set;for(const i of e){a.add(i.id);const c=this.programs.get(i.id),r=$s(i.parts),u=Hs(i);if(!c){if(i.state!==\\"live\\"||r.length===0)continue;const l=this.openPlaneSlot(0);this.programs.set(i.id,{id:i.id,parts:r,share:u,rootSlot:l,rootAngle:new kt(l,.7,1),leaving:null,leaveAt:0,litAt:Number.NEGATIVE_INFINITY,packets:[]}),s=!0,o=!0;continue}c.leaving||(i.state===\\"live\\"&&To(c,r,u)&&(s=!0),i.state!==\\"live\\"&&(Ln(c,i.state===\\"done\\"?\\"home\\":\\"away\\",n),s=!0,o=!0))}for(const i of this.programs.values())a.has(i.id)||i.leaving||(Ln(i,\\"away\\",n),s=!0,o=!0);o&&this.respacePlanes(),s&&this.bump()}spawn(e,n,s,o=!1,a,i=null){const c=this.crew.get(e);if(c&&c.phase!==\\"leaving\\"){c.leaveAfter&&(delete c.leaveAfter,this.bump());return}c&&this.crew.delete(e);const r=o?s:Math.max(s,this.lastSpawnAt+this.tuning.staggerMs);o||(this.lastSpawnAt=r);const u=this.roster().length+1,l=Xn(u,this.tuning),p=X.map((w,b)=>this.roster().filter(S=>S.plane===b).length),d=p.findIndex((w,b)=>w<(X[b]?.capacity??0)),m=d<0?p.indexOf(Math.min(...p)):d,g=n===\\"working\\"&&i!==null,f=n===\\"working\\"&&!g,M={id:e,status:n,phase:o?\\"orbiting\\":\\"spawning\\",leaveMode:null,spawnAt:r,sendoffCued:o,leaveAt:0,leaveFromR:l,angle:new kt(0,.7,1),radius:new kt(l*(f?1:1+this.tuning.idleOffset),.8,1),work:f?1:0,wait:i,waitBlend:g?1:0,jobBlend:g&&i===\\"job\\"?1:0,captainBlend:this.captainWaits.has(e)?1:0,captainSince:s,seed:this.random()*1e3,spin:this.random()*v,spinVel:f?1.5:.35,nudgeAt:Number.NEGATIVE_INFINITY,flashAt:Number.NEGATIVE_INFINITY,flickerAt:Number.NEGATIVE_INFINITY,flickerBoost:0,packets:[],order:this.nextOrder++,plane:m,planePosition:new kt(m,.8,1),planeSlot:this.openPlaneSlot(m),companion:{x:new kt(0,.8,1),y:new kt(0,.8,1),z:new kt(0,.8,1)},star:0,starX:Number.NaN,starY:Number.NaN,...a?{tier:a}:{}};this.crew.set(e,M),this.respacePlanes(),this.layout(),qt(M.angle,this.slotAngle(M,s+this.lead)),this.bump()}setStatus(e,n){const s=this.crew.get(e);!s||s.status===n||(s.status=n,this.bump())}setWait(e,n){const s=this.crew.get(e);!s||s.wait===n||(s.wait=n,this.bump())}setCaptainWaits(e){const n=new Set(e);n.size===this.captainWaits.size&&[...n].every(s=>this.captainWaits.has(s))||(this.captainWaits=n,this.bump())}setPinned(e){const n=[...new Set(e)];if(n.length===this.pinned.length&&n.every((o,a)=>this.pinned[a]===o))return;const s=new Set(n);for(const o of this.roster())!this.stars.has(o.id)||s.has(o.id)||(o.planeSlot=this.openPlaneSlot(o.plane),this.stars.delete(o.id));this.pinned=n,this.stars=s,this.respacePlanes(),this.bump()}setTier(e,n){const s=this.crew.get(e);!s||s.tier===n||(n?s.tier=n:delete s.tier,this.bump())}signal(e,n,s){const o=this.crew.get(e);if(n===\\"report\\"){const a=o&&o.phase!==\\"leaving\\"?Co(this.programs.values(),e):void 0,i=this.programs.get(e);if(a?a.packets.push({route:[e,a.id],at:s,home:!1}):!o&&i&&!i.leaving&&i.packets.push({route:[e],at:s,home:!0}),a||!o&&i){this.bump();return}}if(!(!o||o.phase===\\"leaving\\")){if(o.packets.push({direction:n,at:s}),n===\\"steer\\"){const a=o.angle.x,i=tn(o)>.5,c=this.planeBlend.x===0&&!this.projection?{x:Math.cos(a),y:Math.sin(a)}:this.position(o,a,this.projection?o.radius.x:1),r=i&&o.drawn?Ue(o.drawn):this.projection?Ue(c):c;this.cues.push({kind:\\"sendoff\\",dx:r.x,dy:r.y,strength:.5})}this.bump()}}nudge(e,n){const s=this.crew.get(e);s&&(s.nudgeAt=n,this.bump())}flicker(e,n,s){const o=this.crew.get(e);!o||o.phase===\\"leaving\\"||(o.flickerBoost=Vs(o.flickerAt,o.flickerBoost,n,s),o.flickerAt=s)}leave(e,n,s){const o=this.crew.get(e);if(!(!o||o.phase===\\"leaving\\")){if(o.packets.some(a=>a.direction===\\"steer\\")){o.leaveAfter=n,this.bump();return}this.depart(o,n,s)}}depart(e,n,s){if(delete e.leaveAfter,e.phase=\\"leaving\\",e.leaveMode=n,e.leaveAt=s,e.leaveFromR=e.radius.x,e.packets=[],delete e.drawn,delete e.path,delete e.tripMs,this.projection&&n===\\"home\\"){const o=this.position(e,e.angle.x,e.radius.x);e.path=Ye({x:o.x,y:o.y},{x:0,y:0},-1),e.tripMs=Je(this.tuning.homeMs,Math.hypot(o.x,o.y))}this.fillPlaneVacancies(),this.respacePlanes(),this.bump()}leaveMs(e){return e.tripMs??(e.leaveMode===\\"home\\"?this.tuning.homeMs:this.tuning.awayMs)}takeCues(){const e=this.cues;return this.cues=[],e}roster(){return[...this.crew.values()].filter(e=>e.phase!==\\"leaving\\").sort((e,n)=>e.order-n.order)}ringPhase(e){return-(e/this.tuning.ringPeriodMs)*v}slotRate(e){return this.crowded?-(Math.PI/180)*(X[e.plane]?.speedDegPerSec??0)/1e3:-v/this.tuning.ringPeriodMs}slotAngle(e,n){if(this.crowded){const c=e.planeSlot+En(e.plane,n);return c+Math.round((e.angle.x-c)/v)*v}const s=this.roster(),o=Math.max(1,s.length),a=Math.max(0,s.indexOf(e)),i=this.ringPhase(n)+a/o*v;return i+Math.round((e.angle.x-i)/v)*v}seatedRoots(){return this.formation!==\\"adaptive\\"?[]:[...this.programs.values()].filter(e=>!e.leaving).sort((e,n)=>e.id.localeCompare(n.id))}planeSeats(e,n){const s=n.filter(o=>o.plane===e&&!this.offMain.has(o.id)&&!this.stars.has(o.id)).map(qn);return e===0?[...s,...this.seatedRoots().map(Un)]:s}fillPlaneVacancies(){const e=this.roster();for(let n=0;n<X.length-1;n++){let s=e.filter(o=>o.plane===n).length;for(;s<(X[n]?.capacity??0);){let o;for(let a=n+1;a<X.length&&!o;a++)o=e.find(i=>i.plane===a);if(!o)break;o.planeSlot=this.openPlaneSlot(n),o.plane=n,s++}}}respacePlanes(){const e=this.roster();for(let n=0;n<X.length;n++){const s=this.planeSeats(n,e).sort((r,u)=>(r.slot%v+v)%v-(u.slot%v+v)%v),o=s.length;if(o===0)continue;let a=0,i=0;s.forEach((r,u)=>{const l=r.slot-u/o*v;a+=Math.sin(l),i+=Math.cos(l)});const c=Math.atan2(a,i);s.forEach((r,u)=>{const l=c+u/o*v;r.slot=l+Math.round((r.slot-l)/v)*v})}}seatVisible(e){for(const n of this.roster())this.offMain.has(n.id)&&!e.has(n.id)&&(n.planeSlot=this.openPlaneSlot(n.plane),this.offMain.delete(n.id));this.offMain=e}openPlaneSlot(e){const n=this.planeSeats(e,this.roster()).map(a=>(a.slot%v+v)%v).sort((a,i)=>a-i);let s=X[e]?.phase??0,o=0;for(let a=0;a<n.length;a++){const i=n[a]??0,c=(n[(a+1)%n.length]??0)+(a===n.length-1?v:0);c-i>o&&(o=c-i,s=(i+c)/2)}return s}scenePoint(e,n,s){const o=this.planeBlend.x,a=s*this.warpShrink,i=this.warpFlat,c={x:Math.cos(n)*a,y:Math.sin(n)*a*(this.tuning.tilt+(1-this.tuning.tilt)*i),z:0,depth:.5+.5*Math.sin(n)};if(o===0)return c;const r=Math.max(0,Math.min(X.length-1,Math.floor(e))),u=Math.min(X.length-1,r+1),l=I(e-r),p=Tn(r,n,a,i),d=l===0?p:Tn(u,n,a,i),m={x:p.x+(d.x-p.x)*l,y:p.y+(d.y-p.y)*l,z:p.z+(d.z-p.z)*l};return{x:c.x+(m.x-c.x)*o,y:c.y+(m.y-c.y)*o,z:m.z*o,depth:c.depth+(.5+m.z/512-c.depth)*o}}projectScene(e,n){return this.projection?this.projection(e,n):e}position(e,n,s){return this.projectScene(this.scenePoint(e.planePosition.x,n,s),s)}orbitPaths(e,n,s,o){const a=n*(1+this.tuning.idleOffset);return(s===0?[...e].slice(0,1):[...e]).map(c=>{const r=a+(we(c,o)-a)*s,u=this.projectScene({x:0,y:0,depth:.5},r),l=p=>{const d=this.projectScene(this.scenePoint(c,p,r),r);return{x:d.x-u.x,y:d.y-u.y}};return Eo(u,l(0),l(Math.PI/2))})}planeCounts(){const e=X.map(()=>0);for(const n of this.roster())e[n.plane]=(e[n.plane]??0)+1;return e}layout(){const e=this.roster(),n=e.length,s=this.formation===\\"adaptive\\"&&(n>0||this.programs.size>0);return s&&!this.crowded&&this.spacePlaneSlots(e),this.crowded=s,{ringR:Xn(n,this.tuning),glyphK:Zo(n),n}}spacePlaneSlots(e){for(let n=0;n<X.length;n++){const s=e.filter(i=>i.plane===n&&!this.offMain.has(i.id)&&!this.stars.has(i.id)).map(qn),o=n===0?this.seatedRoots().map(Un):[],a=Uo(s,o);a.forEach((i,c)=>{i.slot=c/a.length*v+(X[n]?.phase??0)})}}settleBootRoster(e){this.layout(),this.crowded&&(this.spacePlaneSlots(this.roster()),this.update(e,!0),this.bump())}update(e,n=!1,s=0,o=null,a=null){this.frameFallback.clear();const i=new Map(this.roster().map(l=>[l.id,l.planeSlot])),c=new Map([...this.programs].map(([l,p])=>[l,p.rootSlot])),r=new Set(this.offMain);let u;do if(this.seatsChanged=!1,u=this.updateFrame(e,n,s,o,n||this.projection?null:a),this.seatsChanged){const l=this.offMain;for(const p of this.roster())p.planeSlot=i.get(p.id)??p.planeSlot;for(const[p,d]of this.programs)d.rootSlot=c.get(p)??d.rootSlot;this.offMain=new Set(r),this.seatVisible(l),this.respacePlanes()}while(this.seatsChanged);return u}updateFrame(e,n,s,o,a){const i=Math.min(Math.max(0,e-this.last)/1e3,.05);this.last=e;for(const h of this.crew.values())h.leaveAfter&&(n||!h.packets.some(A=>A.direction===\\"steer\\"))&&this.depart(h,h.leaveAfter,e);const c=this.tuning,{ringR:r,glyphK:u}=this.layout(),l=n?0:I(s),p=n||this.projection?null:o;this.warpFlat=p?.variant===\\"tunnel\\"?p.k:0,this.warpShrink=p?1-(p.variant===\\"tunnel\\"?.12:p.variant===\\"sphere\\"?.05:0)*p.k:1;const d=1+(Se.peak-1)*l+(p?mo(p.variant,p.sp)-1:0),m=(d-1)*i*1e3;this.lead+=m;const g=this.crowded?1:0;Ut(this.planeBlend,g,i,n),Math.abs(this.planeBlend.x-g)<1e-5&&qt(this.planeBlend,g);const f=this.planeBlend.x,M=this.planeCounts(),w=n&&this.crowded?0:e+this.lead,b=r*Yo,S=[],x=new Map,E=[],k=new Map,R=[],P=new Set;let z=0,J=0;for(const h of this.crew.values()){Ut(h.planePosition,h.plane,i,n),h.phase!==\\"leaving\\"&&(h.status===\\"working\\"?z+=1:J+=1),m>0&&(h.angle.x+=this.slotRate(h)*m);const A=h.status===\\"working\\"&&h.wait!==null,F=h.status===\\"working\\"&&!A?1:0,T=A?1:0,L=n?1:Math.min(i*4,1);h.work+=(F-h.work)*L,h.waitBlend+=(T-h.waitBlend)*L,A&&(h.jobBlend+=((h.wait===\\"job\\"?1:0)-h.jobBlend)*L);const Mt=this.captainWaits.has(h.id)?1:0;Mt&&h.captainBlend<.001&&(h.captainSince=e),h.captainBlend+=(Mt-h.captainBlend)*L;const ht=.35+1.15*h.work;h.spinVel+=(ht-h.spinVel)*Math.min(i*3,1),h.spin+=h.spinVel*i*(1+(d-1)*Se.spinShare);const Ce=1+c.idleOffset*(1-h.work),zt=r*Ce,mt=zt+(we(h.plane,M)-zt)*f;let yt,at,At=1,Rt=1,Ot=0;const Vt=[];let Bt=null;if(h.phase===\\"spawning\\"){const H=this.slotAngle(h,w);if(!h.sendoffCued&&e>=h.spawnAt-Ko){h.sendoffCued=!0;const lt=this.position(h,H,this.projection?mt:1),St=this.projection?Ue(lt):lt;this.cues.push({kind:\\"sendoff\\",dx:St.x,dy:St.y,strength:1})}if(this.projection){const lt=this.position(h,H,mt),St={x:lt.x,y:lt.y};h.path?h.path=Ye(h.path.from,St,1):(h.path=Ye({x:0,y:0},St,1),h.tripMs=Je(c.spawnMs,Math.hypot(St.x,St.y)))}const Z=h.tripMs??c.spawnMs,_t=n?1:I((e-h.spawnAt)/Z);if(e<h.spawnAt&&!n){h.angle.x=H,h.radius.x=mt;continue}_t>=1&&(h.phase=\\"orbiting\\",qt(h.angle,H),qt(h.radius,mt),delete h.path,delete h.tripMs),h.angle.x=H,h.radius.x=mt;const Dt=Ke(_t);if(At=I(_t/.15),Rt=K(I((_t-.35)/.65)),Ot=1-Rt,h.path){if(yt=H,at=mt,Bt=qe(h.path,Dt),Ot>.01)for(let lt=1;lt<=3;lt++)Vt.push(qe(h.path,Ke(I(_t-lt*.035))))}else if(at=b+(mt-b)*Dt,yt=H+c.swirl*(1-Dt),Ot>.01)for(let lt=1;lt<=3;lt++){const St=I(_t-lt*.035),oe=Ke(St),vs=b+(mt-b)*oe,Ne=H+c.swirl*(1-oe),Me=this.position(h,Ne,vs);Vt.push({x:Me.x,y:Me.y})}}else if(h.phase===\\"leaving\\"){const H=h.leaveMode??\\"away\\",Z=n?1:I((e-h.leaveAt)/this.leaveMs(h));if(h.angle.step(h.angle.x,i),yt=h.angle.x,H===\\"home\\"?(at=h.leaveFromR+(b-h.leaveFromR)*Wt(Z),h.path&&(at=h.leaveFromR,Bt=qe(h.path,Wt(Z))),Rt=1-K(I(Z/.66)),At=1-Wt(I((Z-.75)/.25)),Ot=I((Z-.4)/.4)*(1-Wt(I((Z-.85)/.15)))):(at=h.leaveFromR+40*Ds(Z),Rt=1-K(Z),At=1-Wt(Z)),Z>=1){R.push(h.id),H===\\"home\\"&&this.cues.push({kind:\\"receive\\"});continue}}else{const H=this.slotAngle(h,w);Ut(h.angle,H,i,n),Ut(h.radius,mt,i,n),yt=h.angle.x,at=h.radius.x}const $t=this.scenePoint(h.planePosition.x,yt,at);x.set(h.id,{x:$t.x,y:$t.y,z:$t.z,depth:$t.depth,radius:at});const fe=this.projectScene($t,at),te=Bt?{x:Bt.x,y:Bt.y,depth:fe.depth}:fe,q=te.depth,Gt=(1-h.work)*Math.sin(e/1e3*1.1+h.seed)*3*Rt*(1-f);let ee;const Ht=this.slotRate(h),ne=h.phase===\\"orbiting\\"?Go(Ht*1e3*d,l):0;if(ne>0){ee=[];for(let H=0;H<=Yn;H++){const Z=this.position(h,yt-Math.sign(Ht)*ne*(H/Yn),at);ee.push({x:Z.x,y:Z.y+Gt})}}const se=n?0:I(1-(e-h.nudgeAt)/qo),pe=n?0:I(1-(e-h.flashAt)/Wn),ge=n?0:Be(e-h.flickerAt)*h.flickerBoost;h.phase!==\\"leaving\\"&&P.add(h.plane),S.push({id:h.id,status:h.status,phase:h.phase,leaveMode:h.leaveMode,...this.formation===\\"adaptive\\"?{plane:h.plane}:{},x:te.x,y:te.y+Gt,depth:q,size:(c.glyph*u+(Hn-c.glyph*u)*f)*(.84+.32*q),alpha:At*(.78+.22*q+(-.1+.1*q)*f),unfold:Rt,spark:Ot,trail:Vt,...ee?{streak:ee}:{},work:h.work,...h.waitBlend>.001?{wait:h.waitBlend,...h.jobBlend>.001?{job:h.jobBlend}:{},...h.wait===\\"batch\\"||h.wait===\\"batch-running\\"?{batch:!0,batchTurn:!n&&h.wait===\\"batch-running\\"?e/1e3*ae.turnRadPerS+h.seed:0}:n?{}:{waitArc:e/1e3*Xo+h.seed}}:{},...h.captainBlend>.001?{captain:h.captainBlend,...n?{}:{captainBreath:.5-.5*Math.cos(v*(e-h.captainSince)/Qo)}}:{},spin:h.spin,nudge:se*Math.sin(se*Math.PI),flash:pe,flicker:ge,...h.tier?{tier:h.tier}:{},seed:h.seed}),k.set(h.id,{c:h,wobble:Gt})}for(const h of R)this.crew.delete(h);R.length>0&&this.bump();for(const h of this.programs.values())Ut(h.rootAngle,h.rootSlot,i,n);const st=(h,A)=>this.projectScene(h,A),O=this.formation!==\\"adaptive\\"||f<.999?[]:No(this.programs.values(),w,r,f,M,(h,A,F)=>this.scenePoint(h,A,F),st),B=_o(O),ot=this.applyCompanions(S,x,e,n,i,B),Q=this.applyStars(S,M,e,n,i,B),{frames:tt,ended:C}=Fo(O,S,e,n,c,st,E,()=>this.cues.push({kind:\\"receive\\"}));for(const h of C){const A=this.programs.get(h);this.programs.delete(h),A?.leaving===\\"home\\"&&!n&&this.cues.push({kind:\\"receive\\"})}if(C.length>0&&this.bump(),p||a){const h=S.filter(A=>A.phase===\\"orbiting\\"&&!B.has(A.id)&&(A.star??0)<.5);for(const[A,F]of h.entries())p&&Lo(F,A,h.length,p),a&&Ho(F,a)}for(const h of S){const A=k.get(h.id);A&&(A.c.drawn={x:h.x,y:h.y-A.wobble},this.ridePackets(A.c,A.c.drawn,e,n,E))}return{crew:f>0?S.sort((h,A)=>h.depth-A.depth):S,orbits:this.orbitPaths(P,r,f,M),packets:E,links:ot,programs:tt,...Q.length>0?{starJoins:Q}:{},formation:this.crowded?\\"planes\\":\\"ring\\",planeBlend:f,travel:d,ringRadius:r,ringTilt:c.tilt,count:z+J,working:z,idle:J}}applyStars(e,n,s,o,a,i){if(this.formation!==\\"adaptive\\")return[];const c=this.pinned.filter(g=>{const f=this.crew.get(g);return f!==void 0&&f.phase!==\\"leaving\\"&&!i.has(g)}),r=n.flatMap((g,f)=>g>0?[{plane:f,radius:we(f,n)*(1+this.tuning.idleOffset)}]:[]),u=Js(c.length,r),l=new Map(c.map((g,f)=>[g,u.points[f]])),p=o?1:Math.min(a*nt.blendRate,1),d=o?1:Math.min(a*nt.placeRate,1),m=new Set;for(const g of e){const f=this.crew.get(g.id);if(!f)continue;const M=l.get(f.id);if(f.phase!==\\"leaving\\"){const k=M&&f.phase===\\"orbiting\\"?1:0;f.star+=(k-f.star)*p,k===0&&f.star<.001&&(f.star=0),M&&(f.star<.02||Number.isNaN(f.starX)?(f.starX=M.x,f.starY=M.y):(f.starX+=(M.x-f.starX)*d,f.starY+=(M.y-f.starY)*d))}if(f.star<=0||Number.isNaN(f.starX))continue;const w=f.phase===\\"leaving\\"&&!o?1-I((s-f.leaveAt)/this.leaveMs(f)):1,S=f.star*f.star*(3-2*f.star)*w,x=this.projectScene({x:f.starX,y:f.starY,depth:nt.depth},0),E=g.depth+(x.depth-g.depth)*S;g.x+=(x.x-g.x)*S,g.y+=(x.y-g.y)*S,g.size*=(.84+.32*E)/(.84+.32*g.depth),g.depth=E,S>.5&&delete g.streak,g.star=S,o||(g.twinkle=to(f.seed,s,o)),S>.01&&m.add(f.id)}return u.joins.flatMap(([g,f])=>{const M=c[g],w=c[f];return M&&w&&m.has(M)&&m.has(w)?[{fromId:M,toId:w}]:[]})}ridePackets(e,n,s,o,a){const i=[],c=this.projection?Je(this.tuning.packetMs,Math.hypot(n.x,n.y)):this.tuning.packetMs;for(const r of e.packets){const u=o?1:I((s-r.at)/c);if(u>=1){r.direction===\\"report\\"?this.cues.push({kind:\\"receive\\"}):e.flashAt=s;continue}i.push(r);const l=n.x,p=n.y,d=r.direction===\\"report\\"?{x:l,y:p}:{x:0,y:0},m=r.direction===\\"report\\"?{x:0,y:0}:{x:l,y:p},g=m.x-d.x,f=m.y-d.y,M=(d.x+m.x)/2-f*.12,w=(d.y+m.y)/2+g*.12,b=K(u),S=(1-b)*(1-b),x=2*(1-b)*b,E=b*b;a.push({direction:r.direction,x:S*d.x+x*M+E*m.x,y:S*d.y+x*w+E*m.y,t:u,alpha:Math.sin(u*Math.PI)**.5})}e.packets=i}applyCompanions(e,n,s,o,a,i=new Map){const c=[],r=Ro(this.dependencies,this.reviews,f=>this.crew.get(f)?.phase===\\"orbiting\\");if(vo(r,i),r.size===0&&i.size===0&&this.offMain.size===0&&![...this.crew.values()].some(f=>Ae.some(M=>f.companion[M].x)))return c;const u=new Map(e.map(f=>[f.id,f])),l=new Set(this.frameFallback);for(const[f,M]of r)(this.stars.has(f)||M.mode===\\"satellite\\"&&this.stars.has(M.blockerId))&&l.add(f);const{wanted:p,offMain:d,circleBases:m,failed:g}=Io({cues:r,seats:i,scenes:n,crew:this.crew,blending:this.planeBlend.x<.999,fallback:l,now:s,settled:o});for(const f of g)this.frameFallback.add(f);(d.size!==this.offMain.size||[...d].some(f=>!this.offMain.has(f)))&&(this.seatVisible(d),this.seatsChanged=!0);for(const f of e){const M=this.crew.get(f.id),w=n.get(f.id);if(!M||!w)continue;const b=M.phase===\\"leaving\\"?{x:0,y:0,z:0,arrows:[]}:p.get(f.id)??{x:0,y:0,z:0,arrows:[]},S=m.get(f.id),x=M.companionBase;if(!o&&S&&x?.blocker===S.blocker&&M.phase===\\"orbiting\\")for(const k of Ae)M.companion[k].x+=S.origin[k]-x.origin[k]-(w[k]-x.slot[k]);if(M.companionBase=S?{...S,slot:{x:w.x,y:w.y,z:w.z}}:void 0,M.phase!==\\"spawning\\"){for(const k of Ae)Ut(M.companion[k],b[k],a,o);if(!o&&!b.x&&!b.y&&!b.z&&tn(M)<.05)for(const k of Ae)qt(M.companion[k],0)}if(tn(M)>.5&&f.phase!==\\"spawning\\"){const k=this.projectScene(w,w.radius),R=this.projectScene({x:w.x+M.companion.x.x,y:w.y+M.companion.y.x,depth:w.depth+M.companion.z.x/512},w.radius),P=M.phase===\\"leaving\\"&&!o?1-I((s-M.leaveAt)/this.leaveMs(M)):1;f.x+=(R.x-k.x)*P,f.y+=(R.y-k.y)*P,f.size*=(.84+.32*R.depth)/(.84+.32*f.depth),f.depth=R.depth,delete f.streak}if(M.phase===\\"orbiting\\")for(const k of b.arrows){if(!u.has(k))continue;const R=this.reviews.get(f.id)===k?\\"review\\":\\"wait\\";c.push({fromId:f.id,toId:k,kind:R})}}return c}}const N={tightness:.45,inMs:900,outMs:1100,rhythmS:2.4,release:.7,pump:.1,spinKeep:.55,lid:.45,outerDim:.35,ringFrom:1.5,ringTight:.95,ringGrow:.7,throwShare:.45,moteInMs:110,moteHoldMs:625,moteLifeMs:750,moteLifeSpread:300,arrivalMs:400},ta=t=>1+(1.70158+1)*(t-1)**3+1.70158*(t-1)**2;function Qn(t){return .5-.5*Math.cos(v*t/N.rhythmS)}function ea(t,e){if(t<0)return null;const n=e===null?Number.POSITIVE_INFINITY:Math.max(e,N.inMs);if(t<N.inMs)return{phase:\\"in\\",k:K(t/N.inMs),t,holdS:0,u:0,vis:I(t/(N.inMs*.3)),lift:0,holdEnd:n};if(t<n){const i=(t-N.inMs)/1e3;return{phase:\\"hold\\",k:1-N.pump*Qn(i),t,holdS:i,u:0,vis:1,lift:0,holdEnd:n}}const s=(t-n)/N.outMs;if(s>=1)return null;const o=(n-N.inMs)/1e3;return{phase:\\"out\\",k:(1-N.pump*Qn(o))*(1-ta(s)),t,holdS:o,u:s,vis:1-K(s),lift:Math.sin(Math.PI*s)*N.release,holdEnd:n}}function na(t){return null}class sa{seen;at=Number.NEGATIVE_INFINITY;endedAt=0;constructor(e){this.seen=e}update(e,n,s){const o=this.endedAt===null;(s!==this.seen||n&&!o)&&(this.seen=s,this.at=e,this.endedAt=null),!n&&this.endedAt===null&&(this.endedAt=e-this.at)}frame(e){return ea(e-this.at,this.endedAt)}}function en(t){const e=Math.sin(t*12.9898+78.233)*43758.5453;return e-Math.floor(e)}function oa(t){return N.moteLifeMs+N.moteLifeSpread*en(t+.5)}function aa(t){const e=[];let n=0;const s=Math.min(t.t,t.holdEnd),o=(c,r)=>{const u=t.t-r,l=oa(c);u<0||(u<l?e.push({slot:c,u:u/l}):n=Math.max(n,Math.exp(-(u-l)/N.arrivalMs)))},a=N.moteLifeMs+N.moteLifeSpread+N.arrivalMs*3,i=Math.ceil(N.inMs/N.moteInMs);for(let c=0;c<i;c++){const r=c*N.moteInMs;if(r>s)break;t.t-r<a&&o(c,r)}if(s>N.inMs){const c=Math.max(0,Math.floor((t.t-a-N.inMs)/N.moteHoldMs));for(let r=c;;r++){const u=N.inMs+r*N.moteHoldMs;if(u>s)break;o(1e3+r,u)}}return{motes:e,arrival:n}}function nn(t){const e=I(t);return{scale:1-(1-N.tightness)*t,spin:1-(1-N.spinKeep)*e,lid:N.lid*e,outer:1-N.outerDim*e,look:[.12*(1-e),.4-.3*e]}}const sn=[255,246,230];function ia(t,e){const{ctx:n,frame:s,c:o,R0:a,colors:i}=t,c=I(t.k),r=t.gate,u=s.vis*r;if(u<=.01&&c<=.01)return;const l=a*nn(t.k).scale;if(n.save(),c>.01){const f=t.still?.6:.35+.65*e,M=o-.04*l,w=n.createRadialGradient(o,M,0,o,M,l*.5);w.addColorStop(0,Lt(Re(i.bright,sn,.3),.26*c*f)),w.addColorStop(1,Lt(i.bright,0)),n.fillStyle=w,n.beginPath(),n.arc(o,M,l*.5,0,v),n.fill()}const p=s.phase===\\"out\\"?K(s.u)*a*N.ringGrow:0,d=a*(N.ringFrom*(1-c)+N.ringTight*N.tightness*c)+p,m=s.phase===\\"in\\"?I(s.t/(N.inMs*N.throwShare))*v:v,g=t.size/280;if(n.lineCap=\\"round\\",n.strokeStyle=Lt(Re(i.dim,i.bright,.6),Math.min(1,.5*u*i.boost)),n.lineWidth=1.3*g,n.beginPath(),n.arc(o,o,d,-Math.PI/2,-Math.PI/2+m),n.stroke(),s.phase===\\"hold\\"&&!t.still){const f=-Math.PI/2+v*s.holdS/N.rhythmS,M=Re(i.bright,sn,.5);n.strokeStyle=Lt(M,Math.min(1,.12*i.boost*r)),n.lineWidth=6*g,n.beginPath(),n.arc(o,o,d,f-.35,f+.35),n.stroke(),n.strokeStyle=Lt(M,Math.min(1,.95*i.boost*r)),n.lineWidth=2*g,n.beginPath(),n.arc(o,o,d,f-.3,f+.3),n.stroke()}n.restore()}function ra(t,e){if(t.still||e.length===0)return;const{ctx:n,c:s,pts:o,colors:a}=t,i=t.gate,c=t.R0*nn(t.k).scale,r=s,u=s-.04*c,l=Re(a.bright,sn,.3),p=t.size/280;n.save(),n.lineCap=\\"round\\",n.lineWidth=1*p;for(const d of e){const m=ca(o,d.slot),g=m[0]-s,f=m[1]-s,M=Math.hypot(g,f)||1,w=(M+t.R0*.35)*(1+.4*en(d.slot+.25)),b=s+g/M*w,S=s+f/M*w,x=d.u**1.6,E=Math.max(0,d.u-.1)**1.6,k=i*t.frame.vis*(1-x*.6),R=b+(r-b)*x,P=S+(u-S)*x;n.strokeStyle=Lt(l,.45*k),n.beginPath(),n.moveTo(b+(r-b)*E,S+(u-S)*E),n.lineTo(R,P),n.stroke(),n.fillStyle=Lt(l,.9*k),n.beginPath(),n.arc(R,P,1.8*p*(1-.5*x),0,v),n.fill()}n.restore()}function ca(t,e){const n=t.filter(o=>o[3]>0),s=n.length>0?n:t;return s[Math.floor(en(e)*s.length)%s.length]}function Re(t,e,n){return[t[0]+(e[0]-t[0])*n,t[1]+(e[1]-t[1])*n,t[2]+(e[2]-t[2])*n]}function Lt(t,e){return`rgba(${Math.round(t[0])},${Math.round(t[1])},${Math.round(t[2])},${Math.max(0,e)})`}const G=(t,e,n,s={})=>({x:t,y:e,mag:n,...s});G(-6.8,-7.4,.5),G(.7,-6.3,1.6),G(-3.2,1.9,1.8),G(-2.05,1.2,1.7),G(-1,.3,2.2),G(-4.9,9.7,2.1),G(3.4,8.2,.1,{white:!0}),G(-1.8,-9.9,3.4),G(-1.9,5.9,2.8),G(-1.8,5.4,4,{nebula:!0}),G(-1.8,4.8,4.6),G(9.5,-7,3.2),G(9.2,-5.6,3.7),G(8.4,-2.4,3.7),G(9.3,-8.9,4.4),G(-8.6,-9.6,4.1),G(11.2,-5.75,1.8),G(11.5,-.4,2.4),G(4.2,2.3,2.4),G(1.2,-1,3.3),G(-4.2,0,1.8),G(-8.4,1.1,2.2),G(-9.1,.3,4),G(-11.7,6.7,1.9);const Zn=900,Jn=600,la={look:0,glow:0,exhale:0};function ha(t,e=1){if(!(t>=0)||t>=Zn)return la;const n=t/Zn,s=I(e);return{look:xt(n,0,.12,.55,.3)*s,glow:xt(n,.04,.16,.5,.4)*s,exhale:pt(n,.2,.32)*s}}const da={glow:0};function ua(t){if(!(t>=0)||t>=Jn)return da;const e=t/Jn,n=.2;return{glow:e<n?e/n:(1-(e-n)/(1-n))**2}}const W={turn:.45,innerCounter:.6,tilt:.34,apex:1.18,equator:.98,inner:.5,bandPeriod:3,bandWidth:.28,bandGain:1.1,apexGlow:1},ts=1100,fa=.5,es=3.4;function pa(t){const e=[];for(const n of[t.equator,t.inner])n.forEach((s,o)=>{e.push([s,n[(o+1)%n.length]])});for(const n of t.equator)e.push([n,t.apexes[0]]),e.push([n,t.apexes[1]]);return e}function ga(t,e){const n=new Map,s=e*W.turn,o=Math.cos(W.tilt),a=Math.sin(W.tilt),i=(u,l,p,d)=>{n.set(u,[l,p*o+d*a,-p*a+d*o])},c=t.equator.length;t.equator.forEach((u,l)=>{const p=s+l/c*Math.PI*2;i(u,Math.cos(p)*W.equator,0,Math.sin(p)*W.equator)});const r=t.inner.length;t.inner.forEach((u,l)=>{const p=-s*W.innerCounter+(l+.5)/r*Math.PI*2;i(u,Math.cos(p)*W.inner,0,Math.sin(p)*W.inner)}),i(t.apexes[0],0,-1.18,0),i(t.apexes[1],0,W.apex,0);for(const u of t.sinks)n.set(u,[0,0,0]);return n}function Ma(t,e,n){const s=es/(es-t[2]);return{x:e+t[0]*n*s,y:e+t[1]*n*s,scale:s}}function ma(t,e,n,s,o,a,i){if(t<=.001)return;const c=K(I(t));for(const[r,u]of ga(e,a)){const l=n[r],p=Ma(u,s,o);l[0]+=(p.x-l[0])*c,l[1]+=(p.y-l[1])*c,l[2]+=(p.scale-l[2])*c,l[3]+=(u[2]*.6-l[3])*c,i[r]=I(.5+u[2]/(2*W.apex))}}function ya(t){const e=n=>[t[0]+(255-t[0])*n,t[1]+(255-t[1])*n,t[2]+(255-t[2])*n];return{cool:e(.55),coolCore:e(.85)}}function wa(t,e){return{wire:t*(1-e),core:t*(1-e*(1-fa))}}function ba(t){const e=(t%W.bandPeriod+W.bandPeriod)%W.bandPeriod/W.bandPeriod,n=W.bandWidth/(2*W.apex);return-n*2+e*(1+n*4)}function xa(t){if(t<0||t>=ts)return null;const e=W.bandWidth/(2*W.apex);return 1+e*2-t/ts*(1+e*4)}function ns(t,e){const n=(t-e)*2*W.apex/W.bandWidth;return Math.exp(-n*n)}const on=8;function Sa(t){const{ctx:e,k:n,pts:s,depth:o,colors:a}=t;if(n<=.01)return;const i=K(I(n)),c=ba(t.ageSec),r=xa(t.sinceAnswerMs),u=s[t.layout.apexes[0]],l=s[t.layout.apexes[1]],p=l[1]-u[1]||1;e.save(),e.lineCap=\\"round\\";for(const[d,m]of t.edges){const g=s[d],f=s[m],M=((o[d]??.5)+(o[m]??.5))/2,w=(.24+.56*M)*i*a.boost,b=.2+.6*M;e.strokeStyle=an(ka(a.dim,a.cool,b),Math.min(1,w)),e.lineWidth=1.4,e.beginPath(),e.moveTo(g[0],g[1]),e.lineTo(f[0],f[1]),e.stroke();for(let S=0;S<on;S++){const x=S/on,E=(S+1)/on,k=g[1]+(f[1]-g[1])*((x+E)/2),R=I((l[1]-k)/p),z=(r===null?ns(R,c):ns(R,r))*W.bandGain*i*(.55+.45*M);if(z<.02)continue;const J=g[0]+(f[0]-g[0])*x,st=g[1]+(f[1]-g[1])*x,O=g[0]+(f[0]-g[0])*E,B=g[1]+(f[1]-g[1])*E;e.lineWidth=3,e.strokeStyle=an(a.cool,Math.min(1,z*.35)),e.beginPath(),e.moveTo(J,st),e.lineTo(O,B),e.stroke(),e.lineWidth=1.3,e.strokeStyle=an(a.coolCore,Math.min(1,z)),e.beginPath(),e.moveTo(J,st),e.lineTo(O,B),e.stroke()}}e.restore()}function ka(t,e,n){return[t[0]+(e[0]-t[0])*n,t[1]+(e[1]-t[1])*n,t[2]+(e[2]-t[2])*n]}function an(t,e){return`rgba(${Math.round(t[0])},${Math.round(t[1])},${Math.round(t[2])},${e})`}const rn=4;function ss(t,e,n){return 14*t*(e/280)*n}function os(t,e,n){if(t&&t.mask.width===e&&t.mask.height===n)return t;const s=document.createElement(\\"canvas\\");s.width=e,s.height=n;const o=document.createElement(\\"canvas\\");return o.width=e*2,o.height=n,{mask:s,blur:o}}function Pa(t,e,n,s){as(t,e,{dpr:n,blurPx:s,tint:\\"rgb(255,236,200)\\",alpha:1},o=>{o.globalAlpha=1/rn,o.beginPath(),o.arc(4,4,2,0,Math.PI*2),o.fill()})}function as(t,e,n,s){const{mask:o,blur:a}=e,i=o.getContext(\\"2d\\"),c=a.getContext(\\"2d\\");if(!i||!c)return;const r=o.width,u=o.height;i.setTransform(1,0,0,1,0,0),i.globalCompositeOperation=\\"source-over\\",i.globalAlpha=1,i.clearRect(0,0,r,u),i.setTransform(n.dpr,0,0,n.dpr,0,0),i.globalCompositeOperation=\\"lighter\\",i.strokeStyle=n.tint,i.fillStyle=n.tint,s(i),i.globalCompositeOperation=\\"source-over\\",i.globalAlpha=1,c.setTransform(1,0,0,1,0,0),c.globalCompositeOperation=\\"source-over\\",c.globalAlpha=1,c.clearRect(0,0,a.width,a.height),c.shadowColor=n.tint,c.shadowBlur=n.blurPx,c.shadowOffsetX=r,c.drawImage(o,0,0),c.shadowBlur=0,c.shadowOffsetX=0,c.shadowColor=\\"rgba(0,0,0,0)\\",t.setTransform(1,0,0,1,0,0),t.globalAlpha=Math.min(1,n.alpha);for(let l=0;l<rn;l++)t.drawImage(a,r,0,r,u,0,0,r,u);t.setTransform(n.dpr,0,0,n.dpr,0,0),t.globalAlpha=1}const is=1400,Aa={strength:0,spread:0};function Ra(t){if(!(t>=0)||t>=is)return Aa;const e=t/is,n=.18,s=e<n?e/n:(1-(e-n)/(1-n))**2,o=1-(1-e)**3;return{strength:s,spread:o}}function va(){return typeof window>\\"u\\"||typeof window.matchMedia!=\\"function\\"?null:window.matchMedia(\\"(prefers-reduced-motion: reduce)\\")}function Xt(){return va()?.matches??!1}const Ia=[\\"nod\\",\\"salute\\",\\"tick\\",\\"tuck\\",\\"aww\\"],rs=t=>Ia.includes(t),re={pitch:0,spin:0,rot:0,tx:0,ty:0,sx:1,sy:1,gaze:null,pointer:!0,lid:0,happy:0,suppressBlink:!1,glow:0};function Ea(t){return pt(t,.05,.3)+pt(t,.36,.24)*.6}function Ta(t){const n=I(t)-1;return 1+(1.9+1)*n*n*n+1.9*n*n}function Ca(t){return Ta((t-.2)/.24)}function Na(t){return pt(t,0,.26)}const cs={x:1.12,y:.74},ls=.44,_a=[{x:-.5,y:-.02},{x:-.14,y:.36},{x:.6,y:-.52}],cn={from:.17,to:.43};function ln(t){const e=_a[t];return{x:cs.x+e.x*ls,y:cs.y+e.y*ls}}const Fa=(()=>{const t=ln(0),e=ln(1),n=ln(2),s=Math.hypot(e.x-t.x,e.y-t.y),o=Math.hypot(n.x-e.x,n.y-e.y);return{a:t,b:e,c:n,l1:s,l2:o,total:s+o}})();function za(t){return K(I((t-cn.from)/(cn.to-cn.from)))}function Oa(t){const{a:e,b:n,c:s,l1:o,total:a}=Fa,i=t*a;if(i<=o){const r=i/o;return{x:e.x+(n.x-e.x)*r,y:e.y+(n.y-e.y)*r}}const c=(i-o)/(a-o);return{x:n.x+(s.x-n.x)*c,y:n.y+(s.y-n.y)*c}}function Ba(t){return null}function Ga(t){return null}function hn(t){return{x:Math.max(-1,Math.min(1,t.x*.85)),y:Math.max(-1,Math.min(1,t.y*.8))}}function Da(t,e){switch(t){case\\"nod\\":{const n=Ea(e);return{...re,pitch:-.5*n,ty:.045*n,sx:1+.02*n,sy:1-.04*n,gaze:{x:0,y:.25+.55*n},happy:xt(e,.1,.08,.68,.1),glow:pt(e,.05,.3)*.8}}case\\"salute\\":{const n=Na(e),s=pt(e,.2,.36);return{...re,spin:-.2*n+Math.PI/2*Ca(e),pitch:.16*s,ty:.012*n-.03*s,sx:1+.045*n-.02*s,sy:1-.06*n+.05*s,gaze:{x:0,y:.1-.3*s},pointer:!1,lid:.5*xt(e,.02,.08,.36,.1),suppressBlink:!0,glow:s}}case\\"tick\\":{const n=Ba(),s=za(e),o=xt(e,.08,.14,.62,.2),a=Oa(.55),i=n!==null?hn(n):s>0?hn(a):{x:0,y:.15};return{...re,rot:.06*o,ty:.018*pt(e,.4,.2),gaze:i,pointer:!1,happy:xt(e,.47,.06,.84,.1),glow:pt(e,.41,.2)*.9}}case\\"tuck\\":{const n=Ga(),s=pt(e,.53,.22);return{...re,sx:1-.05*s,sy:1-.05*s,pitch:.18*xt(e,.06,.14,.36,.18),gaze:n?{x:hn(n).x,y:Math.max(-1,n.y*1.1)}:{x:0,y:.1},pointer:!1,lid:pt(e,.6,.26),suppressBlink:!0,glow:s}}case\\"aww\\":{const n=xt(e,.05,.15,.8,.18),s=Math.sin((e-.12)*v*2.1)*.035*xt(e,.12,.12,.74,.16);return{...re,rot:-.07*n+s,ty:.012*n,sx:1-.045*n,sy:1-.045*n,gaze:{x:-.55,y:.55},pointer:!1,happy:xt(e,.06,.1,.84,.12),glow:n*.6}}}}function ja(t){const{ctx:e}=t;e.save(),e.lineCap=\\"round\\",e.lineJoin=\\"round\\",e.restore()}const dn={dropSeconds:.11,riseSeconds:.23,settle:.01};class Wa{rate=1;target=1;stage=0;lag=0;last=null;advance(e){if(this.last===null)return this.last=e,this.stage=e-this.lag,this.stage;const n=e-this.last;if(n<=0)return this.stage;if(this.last=e,this.rate===1&&this.target===1)return this.stage=e-this.lag,this.stage;const s=(this.target<this.rate?dn.dropSeconds:dn.riseSeconds)*1e3,o=this.rate-this.target,a=Math.exp(-n/s);return this.stage+=this.target*n+o*s*(1-a),this.rate=this.target+o*a,Math.abs(this.rate-this.target)<dn.settle&&(this.rate=this.target),this.lag=e-this.stage,this.stage}settle(){this.rate=1,this.target=1}read(e){return this.last===null||this.rate===1&&this.target===1?e-this.lag:this.stage+Math.max(0,e-this.last)*this.rate}}const La=new Wa;function Va(){return La.read(performance.now())}const un={idle:{sa:.05,sb:.03,pulse:.05,glow:.35,shimmer:0,breath:0,flat:0,scale:1,lidBase:0,eyeScale:1,jitter:0},listening:{sa:.015,sb:.01,pulse:.5,glow:1,shimmer:0,breath:.09,flat:1,scale:1,lidBase:0,eyeScale:1.22,jitter:0},working:{sa:1.15,sb:.78,pulse:.9,glow:1,shimmer:.5,breath:0,flat:0,scale:1,lidBase:.32,eyeScale:.95,jitter:0},greet:{sa:.05,sb:.04,pulse:.1,glow:.8,shimmer:0,breath:0,flat:0,scale:1.06,lidBase:0,eyeScale:1.1,jitter:0},celebrate:{sa:.9,sb:.6,pulse:.8,glow:1,shimmer:0,breath:0,flat:0,scale:1.1,lidBase:0,eyeScale:1.1,jitter:0},ponder:{sa:.05,sb:.16,pulse:.1,glow:.5,shimmer:0,breath:0,flat:0,scale:1,lidBase:.28,eyeScale:1,jitter:0},confused:{sa:0,sb:0,pulse:.2,glow:.6,shimmer:0,breath:0,flat:0,scale:1,lidBase:.1,eyeScale:1,jitter:1},fidget:{sa:.09,sb:.06,pulse:.1,glow:.5,shimmer:0,breath:0,flat:0,scale:1,lidBase:0,eyeScale:1,jitter:0},salute:{sa:.04,sb:.03,pulse:.25,glow:.7,shimmer:0,breath:0,flat:0,scale:1.02,lidBase:0,eyeScale:1.14,jitter:0},nod:{sa:.04,sb:.03,pulse:.1,glow:.6,shimmer:0,breath:0,flat:0,scale:1.02,lidBase:0,eyeScale:1.06,jitter:0},tick:{sa:.05,sb:.04,pulse:.1,glow:.6,shimmer:0,breath:0,flat:0,scale:1,lidBase:0,eyeScale:1.06,jitter:0},tuck:{sa:.05,sb:.04,pulse:.15,glow:.55,shimmer:0,breath:0,flat:0,scale:1,lidBase:0,eyeScale:1.1,jitter:0},aww:{sa:.03,sb:.02,pulse:.05,glow:.75,shimmer:0,breath:0,flat:0,scale:.98,lidBase:0,eyeScale:1.05,jitter:0}};function $a(t){return{enabled:!1,priority:\\"natural\\",pupilShift:0,options:{}}}function Ha(t,e,n,s){return n===\\"always\\"?!0:s?s.pointer:!0}const Ka={sa:.02,sb:.02,pulse:.15,shimmer:0,lidBase:.12,eyeScale:1.05};function hs(t,e){const n=t.trim();if(n[0]===\\"#\\"){const s=Number.parseInt(n.slice(1),16);return`rgba(${s>>16&255},${s>>8&255},${s&255},${e})`}return n.indexOf(\\"rgb(\\")===0?n.replace(\\"rgb(\\",\\"rgba(\\").replace(\\")\\",`,${e})`):n}function ve(t){const e=t.trim();if(e[0]===\\"#\\"){const s=Number.parseInt(e.slice(1),16);return[s>>16&255,s>>8&255,s&255]}const n=e.match(/[\\\\d.]+/g);return n?[Number(n[0]),Number(n[1]),Number(n[2])]:[127,220,255]}function Qt(t,e,n){return`rgb(${Math.round(t[0]+(e[0]-t[0])*n)},${Math.round(t[1]+(e[1]-t[1])*n)},${Math.round(t[2]+(e[2]-t[2])*n)})`}function dt(t,e,n){return[t[0]+(e[0]-t[0])*n,t[1]+(e[1]-t[1])*n,t[2]+(e[2]-t[2])*n]}function Tt(t,e){return`rgba(${Math.round(t[0])},${Math.round(t[1])},${Math.round(t[2])},${e})`}function Ya(){const t=[];for(let n=0;n<16;n++)t.push([n&1?1:-1,n&2?1:-1,n&4?1:-1,n&8?1:-1]);const e=[];for(let n=0;n<16;n++)for(let s=n+1;s<16;s++){let o=0;for(let a=0;a<4;a++)t[n]?.[a]!==t[s]?.[a]&&o++;o===1&&e.push([n,s])}return{v:t,e}}const{v:Ct,e:ut}=Ya(),Nt=[[0,1,5,4,12,8],[9,11,10,14,15,13],[2,3,7,6]],ce=new Array(16);Nt.forEach((t,e)=>{t.forEach((n,s)=>{ce[n]={ri:e,k:s,n:t.length}})});const ds=[1,.62],qa=[1,-1],Ua=ut.map(([t,e])=>{const n=ce[t],s=ce[e];return n.ri===s.ri&&n.ri<2&&((n.k+1)%n.n===s.k||(s.k+1)%s.n===n.k)}),le=new Array(16);Nt[2]?.forEach((t,e)=>{le[t]=e}),Nt[1]?.forEach((t,e)=>{le[t]=4+e}),Nt[0]?.forEach((t,e)=>{le[t]=10+e});const Xa={order:[...Array(16).keys()].sort((t,e)=>(le[t]??0)-(le[e]??0))},he={equator:Nt[0],inner:Nt[1],apexes:[Nt[2]?.[0],Nt[2]?.[1]],sinks:Nt[2].slice(2)},Qa=pa(he),Ie=new Uint8Array(ut.length),us=new Float64Array(ut.length),fs=new Float64Array(ut.length),ps=new Uint8Array(ut.length),gs=new Float64Array(ut.length),fn=new Float64Array(Ct.length),Ms=new Float64Array(Ct.length),ms=new Float64Array(Ct.length),pn=new Uint8Array(Ct.length),de=new Float64Array(Ct.length),gn=new Float64Array(16),Zt={scale:new Float64Array(16),fade:new Float64Array(16),white:new Float64Array(16)},ys=new Float64Array(ut.length),ws=new Float64Array(ut.length),bs=new Float64Array(Ct.length),xs=new Float64Array(Ct.length),Ss=new Float64Array(ut.length),Mn=new Float64Array(Ct.length),ks=new Float64Array(16);function Za(t,e,n,s){const o=window.devicePixelRatio||1;return e.width=t*o,e.height=t*o,{size:t,accent:\\"\\",dim:\\"\\",hot:\\"\\",bg:\\"\\",accRgb:[127,220,255],dimRgb:[93,104,132],hotRgb:[255,162,87],bgRgb:[5,7,13],boost:1,haloBoost:1,lastRead:0,a:.4,b:.9,hs:0,vel:.5,lastKick:n,last:Va(),lastReal:performance.now(),cur:{...un.idle},heat:0,blink:new js,gaze:new Ws,lid:0,wink:0,happy:0,eye:{x:0,y:0},pointer:new Ls,glow:null,noticeAt:Number.NEGATIVE_INFINITY,sendoffAt:Number.NEGATIVE_INFINITY,sendoffDir:{dx:1,dy:0},sendoffStrength:1,receiveAt:Number.NEGATIVE_INFINITY,crystal:0,crystalRaw:!1,crystalAt:Number.NEGATIVE_INFINITY,answerAt:Number.NEGATIVE_INFINITY,flickerAt:Number.NEGATIVE_INFINITY,flickerBoost:0,cinch:new sa(s),cinchGate:0}}function Ps(t,e,n,s){const o=n===null;t.lineWidth=1.4;for(let a=0;a<ut.length;a++){if(Ie[a])continue;const[i,c]=ut[a],r=e[i],u=e[c],l=ys[a];n&&(t.strokeStyle=Qt(dt(n.dim,n.bright,fs[a]),n.cool,l));const p=o?ws[a]:1;if(!(p<=.01)&&(t.globalAlpha=us[a]*s*p,t.beginPath(),t.moveTo(r[0],r[1]),t.lineTo(u[0],u[1]),t.stroke(),ps[a])){const d=o?Ss[a]:1;t.globalAlpha=gs[a]*s*d,n&&(t.strokeStyle=Qt(dt(n.bright,[255,244,224],.75),n.coolCore,l)),t.lineWidth=.7,t.beginPath(),t.moveTo(r[0],r[1]),t.lineTo(u[0],u[1]),t.stroke(),t.lineWidth=1.4}}for(let a=0;a<e.length;a++){const i=e[a],c=ms[a],r=o?xs[a]:1;if(fn[a]*r<=.01)continue;const u=bs[a];if(t.globalAlpha=fn[a]*s*r,n&&(t.fillStyle=Qt(dt(n.dim,n.bright,Math.max(Ms[a],.35)),n.cool,u)),t.beginPath(),t.arc(i[0],i[1],c,0,Math.PI*2),t.fill(),pn[a]){const l=o?r*Mn[a]:1;t.globalAlpha=de[a]*s*l,n&&(t.fillStyle=Qt(dt(n.bright,[255,248,235],.8),n.coolCore,u)),t.beginPath(),t.arc(i[0],i[1],c*.45,0,Math.PI*2),t.fill()}}}function Ja(t,e,n,s,o,a,i,c){const r=e.getContext(\\"2d\\");if(!r)return;const u=window.devicePixelRatio||1,l=t.size;if(t.glow||(t.glow=os(null,e.width,e.height),Pa(r,t.glow,u,ss(1,l,u))),t.lastRead===0||s-t.lastRead>400){const y=getComputedStyle(e);t.accent=(y.getPropertyValue(\\"--wire-accent\\")||y.getPropertyValue(\\"--accent\\")||t.accent).trim(),t.dim=(y.getPropertyValue(\\"--wire-dim\\")||y.getPropertyValue(\\"--fg-3\\")||t.dim).trim(),t.hot=(y.getPropertyValue(\\"--wire-hot\\")||t.hot).trim(),t.bg=(y.getPropertyValue(\\"--bg-0\\")||t.bg).trim(),t.boost=Number.parseFloat(y.getPropertyValue(\\"--wire-boost\\"))||1,t.haloBoost=Number.parseFloat(y.getPropertyValue(\\"--halo-boost\\"))||1,t.accRgb=ve(t.accent),t.dimRgb=ve(t.dim),t.hotRgb=ve(t.hot),t.bgRgb=ve(t.bg||\\"#05070d\\"),t.lastRead=s}const p=Math.min((n-t.last)/1e3,.05);t.last=n;const d=Math.min(Math.max(0,s-t.lastReal)/1e3,.05);t.lastReal=s;const m=n/1e3,g=o.state,f=o.emoteT,M=null,w=rs(g)?Da(g,f):null,b=1,S=un[g]??un.idle,x=Xt(),E=o.crystalActive&&g===\\"working\\"?1:0;t.crystal=x?E:t.crystal+(E-t.crystal)*Math.min(p*3,1),o.crystalActive!==t.crystalRaw&&(t.crystalRaw=o.crystalActive,o.crystalActive?t.crystalAt=n:t.answerAt=n);const k=t.crystal,R=t.cur;for(const y of Object.keys(R)){const V=S[y]+((Ka[y]??S[y])-S[y])*k;R[y]+=(V-R[y])*Math.min(p*4,1)}t.heat+=(0-t.heat)*Math.min(p*3,1);const P=x?na():t.cinch.frame(n),z=0;t.cinchGate=x?z:t.cinchGate+(z-t.cinchGate)*Math.min(p*3,1);const J=P?P.k*t.cinchGate:0,st=nn(J),O=I(J),B=P?P.lift*t.cinchGate:0,ot=P&&!x?aa(P):{motes:[],arrival:0},Q=x?0:t.flickerBoost*Be(n-t.flickerAt),tt=Q*Oe.glowSpill;i!==t.lastKick&&(t.vel=Math.min(t.vel+(i-t.lastKick)*1.4,30),t.lastKick=i),t.vel+=(.5+0-t.vel)*Math.min(p*1.5,1),t.a+=(R.sa*st.spin+0+0)*p,t.b+=(R.sb*st.spin+0)*p,t.hs+=p*t.vel*R.flat,w?.gaze?t.gaze.look(w.gaze.x,w.gaze.y):t.gaze.free(),t.pointer.configure(c.options);const C=t.pointer.update(d),h=c.enabled&&Ha(g,M,c.priority,w)?C.weight:0,A=ha(n-t.sendoffAt,t.sendoffStrength);A.look>h?t.gaze.attract(t.sendoffDir.dx*.9,t.sendoffDir.dy*.8,A.look):t.gaze.attract(C.x,C.y,h);const F=c.options.trackHz??Pn.trackHz;t.gaze.setResponse(ye+(F-ye)*Math.max(h,A.look)),t.eye=t.gaze.update(d),t.lid=Math.max(R.lidBase,t.blink.update(d,w?.suppressBlink??!1)),w&&(t.lid=Math.max(t.lid,w.lid)),t.lid=Math.max(t.lid,st.lid),P?.phase===\\"out\\"&&(t.lid=Math.max(t.lid,pt(P.u,.1,.65)*t.cinchGate)),t.wink=0,t.happy=w?.happy??0;const T=l/2,{accRgb:L,dimRgb:Mt,hotRgb:ht,bgRgb:Ce,boost:zt}=t,mt=t.heat,{wire:yt,core:at}=wa(mt,k),{cool:At,coolCore:Rt}=ya(L),Ot=dt(L,ht,yt),Vt=dt(Mt,[ht[0]*.55,ht[1]*.5,ht[2]*.45],yt),Bt=Qt(dt(L,ht,yt),At,k),$t=dt(dt(L,ht,yt),At,k),fe=(1+R.breath*Math.sin(n/650)+0*R.breath*1.6)*(1+.035*A.exhale),te=l*.27*fe*R.scale*1,q=te*st.scale,Gt=0,ee=0;let Ht=0,ne=0,se=0,pe=1,ge=1;w&&(Ht=w.rot,ne=w.tx*l,se=w.ty*l,pe=w.sx,ge=w.sy);const H=Math.cos(Ht),Z=Math.sin(Ht),_t=(y,V)=>{const j=(y-T)*pe,_=(V-T)*ge;return[T+ne+j*H-_*Z,T+se+j*Z+_*H]};r.setTransform(u,0,0,u,0,0),r.clearRect(0,0,l,l);const Dt=Ra(n-t.noticeAt),lt=ua(n-t.receiveAt),St=b*1*(t.haloBoost*R.glow*1*(.1+mt*.16+R.breath*.6*(.5+.5*Math.sin(n/650)))+Dt.strength*.3+A.glow*.22+lt.glow*.2+(w?.glow??0)*.18+O*.08*(.4+.6*ot.arrival)+B*.3+tt*.5),oe=r.createRadialGradient(T,T,0,T,T,l/2);oe.addColorStop(0,hs(Bt,St)),oe.addColorStop(1,hs(Bt,0)),r.fillStyle=oe,r.fillRect(0,0,l,l);const Ne=ee+0+(w?.spin??0),Me=Math.cos(t.a+Ne),Is=Math.sin(t.a+Ne),Es=Math.cos(t.b+(w?.pitch??0)),Ts=Math.sin(t.b+(w?.pitch??0)),wn=R.jitter*Math.sin(f*Math.PI)*.09,wt=Ct.map(([y=0,V=0,j=0,_=0],et)=>{const it=y*Me-_*Is,vt=y*Is+_*Me,$=V*Es-j*Ts,ft=V*Ts+j*Es,U=2.6/(2.6-vt*.55),Fe=it*U,ze=$*U,kn=3.4/(3.4-ft*U*.5);let Bs=T+Fe*kn*q*.5,Gs=T+ze*kn*q*.5;return wn>.001&&(Bs+=Kt(m*14+et*3.1)*wn*q,Gs+=Kt(m*13+et*5.7)*wn*q),[Bs,Gs,(U+kn)/2,vt]}),bt=R.flat*R.flat*(3-2*R.flat);if(bt>.001){const y=l*.4*fe;for(let V=0;V<16;V++){const j=ce[V],_=wt[V];if(j.ri===2){_[0]+=(T-_[0])*bt,_[1]+=(T-_[1])*bt;continue}const et=qa[j.ri]*t.hs+j.k/j.n*Math.PI*2-Math.PI/2;_[0]+=(T+Math.cos(et)*ds[j.ri]*y-_[0])*bt,_[1]+=(T+Math.sin(et)*ds[j.ri]*y-_[1])*bt}}zo(Gt,Xa,wt,T,q,m,gn),Zt.scale.fill(1),Zt.fade.fill(1),Zt.white.fill(0);const Cs=0;if(ma(k,he,wt,T,q,m,ks),Ht!==0||ne!==0||se!==0||pe!==1||ge!==1)for(const y of wt){const[V,j]=_t(y[0],y[1]);y[0]=V,y[1]=j}const me=yt,ci=1-I(k*1.6);for(let y=0;y<ut.length;y++){const[V,j]=ut[y],_=wt[V],et=wt[j],it=(_[2]+et[2])/2-.9,vt=(1-Math.min(gn[V]??0,gn[j]??0)*.97)*b;let $=Math.max(.3,Math.min(.9,.35+it*.5))*zt;if(R.shimmer>0&&($*=1-R.shimmer*.3*(.5+.5*Math.sin(n/240+y*2.7))),Ua[y])$+=(Math.min(1,.85*zt)-$)*bt;else if($*=1-bt,$*vt<.02){Ie[y]=1;continue}if($*=ci,_[3]>0&&et[3]>0&&($*=st.outer),$*=(1+.5*B)*(1+.5*Cs),$<.02){Ie[y]=1;continue}Ie[y]=0;const ft=Math.max(Math.max(0,Math.min(1,.5+(_[3]+et[3])*.35)),bt*.9),U=Q>0?Q*Ge(y,n):0;fs[y]=Math.max(ft,Math.min(1,U*.8),Cs),us[y]=Math.min(1,$*(.85+.15*ft)*(1+.85*U))*vt,ps[y]=(me>.02||U>.08)&&ft>.5?1:0,gs[y]=Math.min(1,$)*Math.max(me,U*1.1)*.85*vt,ys[y]=k,ws[y]=1/(1+.85*U),Ss[y]=U>0?me/Math.max(me,U*1.1):1}for(let y=0;y<wt.length;y++){const V=wt[y],j=ce[y],_=y===he.apexes[0]||y===he.apexes[1],et=!_&&j.ri===2,it=(j.ri===2?1-bt:1)*(et?1-k:1),vt=1+R.pulse*.6*Math.max(0,Math.sin(n/300+y*.8)),$=Math.max(Math.max(0,Math.min(1,.5+V[3]*.6)),bt);Ms[y]=$,ms[y]=(2.1+.7*$)*vt*(l/280)*Zt.scale[y],fn[y]=Math.min(1,Math.max(.65,Math.min(1,.6+(V[2]-.9)*.5))*zt)*it*Zt.fade[y]*b*(1+.4*B);const ft=(at>.02||Q>.2)&&$>.4&&it>.5,U=_?k:0;pn[y]=ft||U>.02?1:0,de[y]=Math.max(ft?Math.max(at,Q*.5)*it:0,U*it);const Fe=de[y];if(Q>0&&Fe>0){const Os=at>.02&&$>.4&&it>.5?at*it:0;Mn[y]=Math.min(1,Math.max(Os,U*it)/Fe)}else Mn[y]=1;const ze=Zt.white[y];ze>.02&&(pn[y]=1,de[y]=Math.max(de[y],ze*it*b)),bs[y]=k,xs[y]=_?1-k+k*W.apexGlow:1-k}Sa({ctx:r,k,layout:he,edges:Qa,pts:wt,depth:ks,ageSec:x?3:(n-t.crystalAt)/1e3,sinceAnswerMs:o.crystalActive?Number.POSITIVE_INFINITY:n-t.answerAt,colors:{dim:Vt,cool:At,coolCore:Rt,boost:zt}});const _e=P?{ctx:r,frame:P,k:J,gate:t.cinchGate,c:T,R0:te,size:l,pts:wt,still:x,colors:{dim:Vt,bright:Ot,boost:zt}}:null;_e&&ia(_e,ot.arrival);const bn=Math.min(1.6,(Math.max(me,k*.55)+tt)*t.haloBoost);bn>.02&&(t.glow=os(t.glow,e.width,e.height),as(r,t.glow,{dpr:u,blurPx:ss(bn,l,u),tint:Qt(dt(ht,[255,236,200],.3),Rt,k*.7),alpha:Math.min(1,.9*bn)},y=>Ps(y,wt,null,1/rn))),Ps(r,wt,{dim:Vt,bright:Ot,cool:At,coolCore:Rt},1),r.globalAlpha=1,_e&&ra(_e,ot.motes),Dt.strength>.005&&(r.strokeStyle=Tt($t,.6*Dt.strength),r.lineWidth=1.4*(l/280),r.beginPath(),r.arc(T,T,Math.min(l*.48,q*(1.1+.65*Dt.spread)),0,v),r.stroke());const xn=dt(dt(L,ht,at),At,.4*k),Sn=dt(xn,[255,246,230],Math.min(.95,.45+tt*.3)),Ns=1,li=(1-Gt*.18)*R.eyeScale*1,_s=t.eye.x*q*.1,Fs=t.eye.y*q*.08,hi=Math.sin(t.a)*q*.05*(1-bt),di=Math.sin(t.b*.8)*q*.04*(1-bt),zs=[];for(const y of[-1,1]){const V=_t(T+(y*q*.34+_s+hi)*Ns,T+(-q*.1+Fs+di)*Ns);zs.push({side:y,...Oo(Gt,y,V),alpha:1,z:0})}const ui=y=>{const j=(1-Math.max(t.lid,y.side===1?t.wink:0))*R.eyeScale,_=q*.085*li*y.depthMul,et=y.alpha*b,it=r.createRadialGradient(y.x,y.y,0,y.x,y.y,_*3.2);if(it.addColorStop(0,Tt(Ce,.75)),it.addColorStop(1,Tt(Ce,0)),r.fillStyle=it,r.beginPath(),r.arc(y.x,y.y,_*3.2,0,v),r.fill(),r.lineCap=\\"round\\",t.happy>.5)r.strokeStyle=Tt(Sn,.95*et),r.lineWidth=Math.max(1.4,_*.5),r.beginPath(),r.arc(y.x,y.y+_*.7,_*1.15,Math.PI*1.15,Math.PI*1.85),r.stroke();else if(j<.12)r.strokeStyle=Tt(Sn,.8*et),r.lineWidth=Math.max(1.2,_*.4),r.beginPath(),r.moveTo(y.x-_,y.y),r.lineTo(y.x+_,y.y),r.stroke();else{const vt=_*1.35*Math.max(.1,j),$=_*(2.1+tt*.5),ft=r.createRadialGradient(y.x,y.y,0,y.x,y.y,$);ft.addColorStop(0,Tt(Sn,.95*et)),ft.addColorStop(.45,Tt(xn,.5*et)),ft.addColorStop(1,Tt(xn,0)),r.fillStyle=ft,r.beginPath(),r.arc(y.x,y.y,$,0,v),r.fill();const U=c.pupilShift*(1-Gt);r.fillStyle=Tt([255,248,235],.95*et),r.beginPath(),r.ellipse(y.x+_s*U,y.y+Fs*U,_*.62,vt*.62,0,0,v),r.fill()}};for(const y of zs)ui(y);r.globalAlpha=1,w&&rs(g)&&ja({ctx:r})}function As(t,e){const n=Math.round(e*(window.devicePixelRatio||1));return t.width===n&&t.height===n?!1:(t.width=n,t.height=n,!0)}const Jt={sendoffFirstmate:.56,sendoffOrbit:.37,sendoffGlyph:.11,crewmateGlyph:.8,sendoffDelayMs:500,workingSpin:1.5},ti=$a();function ei(t){return{state:\\"idle\\",busy:!1,phase:t,emoteT:0,variant:null,clip:\\"none\\",blendT:1,crystalActive:!1,folding:!1}}function mn(t,e){const n=t.trim();if(n[0]===\\"#\\"&&n.length>=7){const o=Number.parseInt(n.slice(1,7),16);return[o>>16&255,o>>8&255,o&255]}const s=n.match(/[\\\\d.]+/g);return s&&s.length>=3?[Number(s[0]),Number(s[1]),Number(s[2])]:e}function Ee(t,e){const n=getComputedStyle(t);return{accent:mn(n.getPropertyValue(\\"--wire-accent\\")||n.getPropertyValue(\\"--accent\\"),e?.accent??[127,220,255]),hot:mn(n.getPropertyValue(\\"--wire-hot\\")||n.getPropertyValue(\\"--hot\\"),e?.hot??[255,162,87]),quiet:mn(n.getPropertyValue(\\"--fg-3\\"),e?.quiet??[148,156,168]),boost:Number.parseFloat(n.getPropertyValue(\\"--wire-boost\\"))||1}}function ue(t,e){const n=document.createElement(\\"canvas\\");return n.setAttribute(\\"aria-hidden\\",\\"true\\"),n.style.zIndex=String(e),n.style.width=\\"0px\\",n.style.height=\\"0px\\",t.append(n),n}function Te(t,e){const n=`${e}px`;return t.style.width!==n&&(t.style.width=n,t.style.height=n),As(t,e)}function yn(t,e){const n=t.getContext(\\"2d\\");if(!n)return null;const s=window.devicePixelRatio||1;return n.setTransform(s,0,0,s,0,0),n.clearRect(0,0,e,e),n}class Rs{constructor(e){this.canvas=e}canvas;sim=null;since=performance.now();restyle(){this.sim&&(this.sim.lastRead=0)}sendoff(e,n,s,o){if(!this.sim)return;const a=Math.hypot(n,s)||1;this.sim.sendoffAt=e,this.sim.sendoffDir={dx:n/a,dy:s/a},this.sim.sendoffStrength=o}draw(e,n){const s=Te(this.canvas,e);if(!this.sim||this.sim.size!==e||s){const o=this.sim;this.sim=Za(e,this.canvas,0,0),As(this.canvas,e),o&&(this.sim.sendoffAt=o.sendoffAt,this.sim.sendoffDir=o.sendoffDir,this.sim.sendoffStrength=o.sendoffStrength)}Ja(this.sim,this.canvas,n,n,ei(n-this.since),0,0,ti)}}function ni(t){const e=new Rs(ue(t,0));return{host:t,draw:n=>e.draw(t.clientWidth,n),restyle:()=>e.restyle()}}function si(t){const e=ue(t,0),n=Math.random()*1e3;let s=Math.random()*Math.PI*2,o=Number.NaN,a=null;return{host:t,draw(i,c){const r=t.clientWidth,u=r*Jt.crewmateGlyph,l=Math.ceil(r*2);Te(e,l);const p=yn(e,l);p&&(a??=Ee(t),!c&&Number.isFinite(o)&&(s+=Jt.workingSpin*Math.min((i-o)/1e3,.05)),o=i,Dn(p,oi(0,0,u,s,n),l/2,l/2,a,i))},restyle(){a=Ee(t,a??void 0)}}}function oi(t,e,n,s,o){return{id:\\"crewmate\\",status:\\"working\\",phase:\\"orbiting\\",leaveMode:null,x:t,y:e,depth:1,size:n,alpha:1,unfold:1,spark:0,trail:[],work:1,spin:s,nudge:0,flash:0,flicker:0,seed:o}}function ai(t,e){const n=ue(t,0),s=new Rs(ue(t,1)),o=ue(t,2),a=performance.now(),i=new Jo(a,{...Ze,radius:ct.startRadiusPx},Math.random,\\"adaptive\\");i.spawn(\\"crewmate\\",\\"working\\",e?a:a+Jt.sendoffDelayMs,e);let c=null;return{host:t,draw(r,u){const l=t.clientWidth,p=i.update(r,u);for(const M of i.takeCues())M.kind===\\"sendoff\\"&&s.sendoff(r,M.dx,M.dy,M.strength);s.draw(Math.round(l*Jt.sendoffFirstmate),r),Te(n,l),Te(o,l);const d=yn(n,l),m=yn(o,l);if(!d||!m)return;c??=Ee(t);const g=l*Jt.sendoffOrbit/ct.startRadiusPx,f=l*Jt.sendoffGlyph/Hn;for(const M of p.crew){const w=M.depth>=.5||M.spark>.7?m:d,{streak:b,...S}=M;Dn(w,{...S,x:M.x*g,y:M.y*g,size:M.size*f,trail:M.trail.map(x=>({x:x.x*g,y:x.y*g}))},l/2,l/2,c,r)}},restyle(){s.restyle(),c=Ee(t,c??void 0)}}}function ii(t){return t.offsetParent!==null&&getComputedStyle(t).visibility!==\\"hidden\\"}function ri(t=document){const e=[...t.querySelectorAll(\\"[data-inf-stage]\\")];if(!e.length)return;for(const l of t.querySelectorAll(\\"[data-inf-stage-still]\\"))l.style.display=\\"none\\";const n=Xt(),s=[];for(const l of e){l.hidden=!1;const p=l.dataset.infStage;p===\\"firstmate\\"?s.push(ni(l)):p===\\"crewmate\\"?s.push(si(l)):p===\\"sendoff\\"&&s.push(ai(l,n))}const o=new Set(s.map(l=>l.host));let a=0;const i=()=>{if(a=0,Xt())return;const l=performance.now();for(const p of s)o.has(p.host)&&ii(p.host)&&p.draw(l,!1);o.size&&(a=requestAnimationFrame(i))},c=()=>{if(Xt()){cancelAnimationFrame(a),a=0;const l=performance.now();for(const p of s)p.draw(l,!0)}else!a&&o.size&&(a=requestAnimationFrame(i))};if(typeof IntersectionObserver==\\"function\\"){const l=new IntersectionObserver(p=>{for(const d of p){const m=d.target;d.isIntersecting?o.add(m):o.delete(m)}c()});for(const p of s)l.observe(p.host)}typeof ResizeObserver==\\"function\\"&&new ResizeObserver(()=>{Xt()&&c()}).observe(t.body);const r=()=>{for(const l of s)l.restyle();Xt()&&c()};window.inf?.onTheme?.(r),window.matchMedia?.(\\"(prefers-reduced-motion: reduce)\\").addEventListener?.(\\"change\\",c),c()}ri()})();"}');
@@ -131531,6 +135374,7 @@ details[open]::details-content {
   --accent-strong: #38aae6;
   --accent-dim: rgba(127, 220, 255, 0.14);
   --accent-glow: rgba(127, 220, 255, 0.35);
+  --on-accent: #05070d; /* words and marks on an accent-filled control */
   /* semantic — two chromatic families only: ice cyan (calm) and ember (hot) */
   --ok: #7fdcff; /* calm cyan — done, pace ahead (same family as accent) */
   --ok-dim: rgba(127, 220, 255, 0.14);
@@ -131578,6 +135422,7 @@ details[open]::details-content {
   --accent-strong: #0a72a8;
   --accent-dim: rgba(14, 143, 208, 0.1);
   --accent-glow: rgba(14, 143, 208, 0.25);
+  --on-accent: #05070d;
   --ok: #0e8fd0;
   --ok-dim: rgba(14, 143, 208, 0.1);
   --hot: #d97a1f;
@@ -131874,6 +135719,9 @@ a:hover {
      and so does a rest on the same task elsewhere in the window (data-inf-lit, INF-237). */
   a[data-inf-task] { cursor: pointer; border-radius: var(--radius-s); white-space: nowrap; }
   a[data-inf-task]:hover, a[data-inf-task][data-inf-lit] { background: var(--bg-3); }
+  /* An address the bridge linked from the words (INF-7045) breaks anywhere,
+     so a long one wraps inside the narrowest phone's card instead of widening it. */
+  a[data-inf-address] { overflow-wrap: anywhere; }
   /* A knowledge reference the bridge linked (docs/knowledge.md, "References in an
      answer"): the entry's id as a link, led by a dot in its standing's state color -
      ok for checked with evidence, warn for one to recheck or with differing evidence. */
@@ -131987,12 +135835,15 @@ a:hover {
   .inf-asks { list-style: none; margin: var(--space-3) 0; padding: 0; counter-reset: inf-runs inf-out inf-all; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-2); }
   .inf-ask { counter-increment: inf-runs inf-all; margin: 0; padding: var(--space-2) var(--space-3); border: 1px solid var(--line-1); border-left: 3px solid var(--ok); border-radius: var(--radius-m); background: var(--bg-1); transition: opacity var(--dur-med) ease, border-color var(--dur-med) ease; }
   .inf-ask:has(input:not(:checked)) { counter-increment: inf-out inf-all; border-left-color: var(--line-2); background: transparent; }
-  .inf-ask-head { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+  /* A grid, not a one-line flex row: the joined tag and the Allow box cannot shrink, so beside them on one line
+     the request took the whole shortfall and drew one character per line on a phone. The tag sits under the
+     request, so a joined row's request is as wide as any other's. */
+  .inf-ask-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; column-gap: var(--space-2); row-gap: var(--space-1); min-width: 0; }
   .inf-ask-n { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--fg-3); min-width: 1.2em; }
   .inf-ask-name { font-weight: 500; color: var(--fg-1); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .inf-ask-call { white-space: normal; overflow-wrap: anywhere; }
-  .inf-ask-joined { font-size: var(--text-xs); color: var(--accent); background: var(--accent-dim); border-radius: var(--radius-s); padding: 0 var(--space-1); white-space: nowrap; }
-  .inf-ask-out { margin-left: auto; display: inline-flex; align-items: center; gap: var(--space-1); font-size: var(--text-sm); color: var(--fg-2); white-space: nowrap; cursor: pointer; }
+  .inf-ask-joined { font-size: var(--text-xs); color: var(--accent); background: var(--accent-dim); border-radius: var(--radius-s); padding: 0 var(--space-1); white-space: nowrap; grid-row: 2; grid-column: 2; justify-self: start; }
+  .inf-ask-out { grid-row: 1; grid-column: 3; display: inline-flex; align-items: center; gap: var(--space-1); font-size: var(--text-sm); color: var(--fg-2); white-space: nowrap; cursor: pointer; }
   .inf-ask-input { box-sizing: border-box; width: 100%; max-width: none; margin: var(--space-2) 0 0; padding: var(--space-1) var(--space-2); background: var(--bg-0); border-radius: var(--radius-s); font-family: var(--font-mono); font-size: var(--text-sm); color: var(--fg-1); white-space: pre-wrap; overflow-wrap: anywhere; }
   dl.inf-ask-input { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: var(--space-3); }
   .inf-ask-input dt { color: var(--fg-3); }
@@ -132366,6 +136217,18 @@ ${REVISION_HIGHLIGHT_STYLE}`;
     const [a] = args;
     return a && Object.keys(a).length ? { m, a } : { m };
   }
+  const SAID_LIST = "[list]";
+  function wordList(fills) {
+    const given = fills ?? {};
+    const items = [];
+    for (let at = 0; at < Object.keys(given).length; at++) {
+      const name = given[String(at)];
+      const item = typeof name === "string" ? wordSaid({ m: name }) : void 0;
+      if (item === void 0) return void 0;
+      items.push(item);
+    }
+    return items.length ? formatList(items) : void 0;
+  }
   function saidPart(m, ...args) {
     const [a] = args;
     return a && Object.keys(a).length ? { m, a } : { m };
@@ -132376,6 +136239,7 @@ ${REVISION_HIGHLIGHT_STYLE}`;
   function fillOf(value) {
     if (typeof value === "string" || typeof value === "number") return value;
     if ("time" in value) return formatTime(value.time, { hour: "numeric", minute: "2-digit" });
+    if (value.m === SAID_LIST) return wordList(value.a);
     return wordSaid(value);
   }
   function wordSaid(fact) {
@@ -132839,6 +136703,11 @@ ${startersHtml()}`;
     kind: _enum(["text", "secret", "select", "manual_code"]),
     message: string(),
     placeholder: string().optional(),
+    /**
+     * What a text prompt's field starts with, such as a value read from the
+     * person's own settings. Absent, the field starts empty.
+     */
+    value: string().optional(),
     options: array(object({ id: string(), label: string(), description: string().optional() })).optional()
   });
   const authNoticeSchema = object({
@@ -132931,6 +136800,11 @@ ${startersHtml()}`;
      * Code's settings name an address and no token command. Absent otherwise.
      */
     gateway: _enum(CLAUDE_ACCESS_SOURCES).optional(),
+    /**
+     * The host an Amazon Bedrock account's requests are sent through, when its
+     * sign-in saved an organization address. Absent when they go to AWS.
+     */
+    sentThrough: string().optional(),
     /**
      * Why this account cannot serve right now although its credential is
      * fine, in the backend's own sentence: a Claude account whose machine has
@@ -133751,12 +137625,12 @@ ${startersHtml()}`;
     reason: string().optional()
   });
   const reasoningSchema = object({
-    level: _enum(["off", "minimal", "low", "medium", "high", "xhigh", "default"]),
+    level: _enum(["off", "minimal", "low", "medium", "high", "xhigh", "max", "default"]),
     lower: _enum(["quick", "capped"]).optional()
   });
   const slotSchema = _enum(["premium", "high", "medium", "low"]);
   const slotMembershipSchema = union([slotSchema, array(slotSchema)]).transform((value) => Array.isArray(value) ? value : [value]);
-  const reasoningChoiceSchema = _enum(["low", "medium", "high", "xhigh"]);
+  const reasoningChoiceSchema = _enum(["low", "medium", "high", "xhigh", "max"]);
   const reasoningCapabilitiesSchema = object({
     levels: array(reasoningChoiceSchema),
     fixed: _enum(["off", "default"]).optional()
@@ -134007,9 +137881,10 @@ ${startersHtml()}`;
     /** Declared the held batch's fix: it joins that batch and ends the hold. */
     fix: literal(true).optional(),
     /**
-     * The held batch version a fix was built on, once a combine verified it:
-     * the fix is carried as its own difference from it from then on, and is
-     * left out, never carried whole, when its branch no longer builds on it.
+     * The held batch version a fix was built on, once its approval or a combine
+     * verified it: the fix is carried as its own difference from it from then
+     * on, and is left out, never carried whole, when its branch no longer builds
+     * on it.
      */
     heldBase: string().optional(),
     /**
@@ -134108,7 +137983,35 @@ ${startersHtml()}`;
      * wrote it again under its own push (docs/forge.md, "A generated commit"):
      * then `head`. Taken once per combine; the next combine starts without it.
      */
-    generated: string().optional()
+    generated: string().optional(),
+    /**
+     * The batch's own checks run early on a held batch's declared fix
+     * (docs/forge.md, "A held batch"): once the fix's story is confirmed on
+     * its own branch at `version`, built on the newest held version, the held
+     * members plus the fix's own difference are combined at `head` and pushed
+     * to the batch's branch and pull request, while `head` and `members` above
+     * stay the held version. The fix is no member until approved; approved at
+     * `version` with the checks at `head` passed, the batch merges `head` as it
+     * is. `failed` names the checks that failed there.
+     */
+    trial: object({
+      /** The fix's task, whose story was confirmed. */
+      task: string(),
+      /** The fix's confirmed version on its own branch. */
+      version: string(),
+      head: string(),
+      base: string(),
+      /** The held members, then the fix, each with its commit at `head`. */
+      members: array(batchMemberSchema),
+      at: number(),
+      /** The checks that failed at `head` as last read; gone once they read otherwise. */
+      failed: array(string()).optional(),
+      /**
+       * The commit of generated files the project's checks added on the run, written again
+       * on it and pushed: `head` then names it (docs/forge.md, "A generated commit").
+       */
+      generated: string().optional()
+    }).optional()
   });
   const batchReceiptSchema = object({
     taskId: string(),
@@ -134211,6 +138114,12 @@ ${startersHtml()}`;
      * the fix is carried from it, or left out when it no longer builds on it.
      */
     fixBases: record(string(), string()).optional(),
+    /**
+     * The exact commit each declared fix's task had committed as it declared
+     * it, by task, kept as long as the declaration: another task's change
+     * approved at that commit, and no other, carries the same declaration.
+     */
+    fixHeads: record(string(), string()).optional(),
     /**
      * When the project's last batch formed from the line (epoch ms): a
      * project's batch gap counts from it (`batchGap` on the project). A held
@@ -134321,7 +138230,9 @@ ${startersHtml()}`;
           /** It waits for its repair's fix after changes were sent back (`OpenBatch.awaits`). */
           awaitsFix: boolean(),
           /** Its repair declared that a rerun passed the failed checks at its version. */
-          passed: boolean()
+          passed: boolean(),
+          /** The declared fix its checks run with before approval (`OpenBatch.trial`), until they fail. */
+          checkingFix: batchTaskSchema.nullable()
         }).nullable(),
         leftOut: array(
           batchTaskSchema.extend({
@@ -134870,7 +138781,9 @@ ${startersHtml()}`;
   const customListedModelSchema = object({
     id: string().min(1).max(256),
     context: number().int().positive().optional(),
-    output: number().int().positive().optional()
+    output: number().int().positive().optional(),
+    /** The server says this model takes no chat turn; the form shows it unpickable. */
+    notChat: literal(true).optional()
   });
   const customCertificateViewSchema = object({
     subject: string(),
@@ -135268,6 +139181,34 @@ ${startersHtml()}`;
     fetchedAt: number(),
     providers: array(quotaProviderViewSchema)
   });
+  function panelQuotaSnapshot(view) {
+    if (!view) return null;
+    return { fetchedAt: view.fetchedAt, providers: view.providers.map(panelQuotaProvider) };
+  }
+  function panelQuotaProvider(row) {
+    return {
+      provider: row.provider,
+      label: row.label,
+      ...row.accountLabel === void 0 ? {} : { accountLabel: row.accountLabel },
+      ...row.plan === void 0 ? {} : { plan: row.plan },
+      status: row.status,
+      stale: row.stale,
+      ...row.measuredAt === void 0 ? {} : { measuredAt: row.measuredAt },
+      ...row.detail === void 0 ? {} : { detail: row.detail },
+      windows: row.windows.map(panelQuotaWindow)
+    };
+  }
+  function panelQuotaWindow(window2) {
+    return {
+      id: window2.id,
+      label: window2.label,
+      ...window2.percentRemaining === void 0 ? {} : { percentRemaining: window2.percentRemaining },
+      ...window2.pace === void 0 ? {} : { pace: window2.pace },
+      ...window2.resetText === void 0 ? {} : { resetText: window2.resetText },
+      ...window2.resetsAtMs === void 0 ? {} : { resetsAtMs: window2.resetsAtMs },
+      ...window2.windowSeconds === void 0 ? {} : { windowSeconds: window2.windowSeconds }
+    };
+  }
   const catalogModelViewSchema = object({
     /** Quota provider id. */
     provider: string(),
@@ -136064,7 +140005,13 @@ ${startersHtml()}`;
     repo: repoViewSchema,
     created: boolean(),
     initializedGit: boolean().optional(),
-    createdInitialCommit: boolean().optional()
+    createdInitialCommit: boolean().optional(),
+    /**
+     * The folder a removed project left in the projects folder, linked where it
+     * is instead of cloning a second copy (docs/fleet.md, "Adding a removed
+     * project back").
+     */
+    leftFolder: string().optional()
   });
   discriminatedUnion("kind", [
     object({ kind: literal("card"), cardId: string().min(1) }),
@@ -137097,6 +141044,13 @@ ${startersHtml()}`;
       restsOn: "record",
       name: "the model levels",
       way: "the captain places a model that can take it on a level in Settings, names one for the task, or adds a sign-in that serves one where it runs"
+    },
+    // i18n-exempt: hold words served to the agents in their soft-hold sentence, not shown to a person
+    "kept-write": {
+      level: "soft",
+      restsOn: "consent",
+      name: "the kept write",
+      way: "the captain clicks the button that sends it, or github_write names as its allowance a yes that still stands and covers it: a project direction heard from the captain by its d: id, a card on the task's Already allowed list, or standing for the captain's standing override"
     },
     "host-rules": {
       level: "fixed",
@@ -138658,7 +142612,7 @@ ${startersHtml()}`;
       return reading(mark, "Could not start");
     }
     if (task.status === "open") {
-      const mark = task.startPolicy === "on-request" ? "backlog" : "queued";
+      const mark = task.partsStatus ?? (task.startPolicy === "on-request" ? "backlog" : "queued");
       if (task.queueWait) return reading(mark, task.queueWait.line);
       const parts = task.children.total;
       const holds = task.flags.blocked ? "Blocked by another task" : task.flags.held ? "Held" : parts > 0 ? `Its ${parts} ${parts === 1 ? "part does" : "parts do"} the work` : null;
@@ -138709,7 +142663,10 @@ ${startersHtml()}`;
     label: string(),
     taskKeys: array(string()).optional(),
     since: number().optional(),
-    next: object({ kind: _enum(["next-read", "check-back", "reset", "start"]), at: number() }).optional()
+    next: object({
+      kind: _enum(["next-read", "check-back", "reset", "start"]),
+      at: number()
+    }).optional()
   });
   const TIMELINE_SCHEMA_VERSION = 1;
   const TIMELINE_ACTORS = [
@@ -139129,6 +143086,13 @@ ${startersHtml()}`;
       closed: number(),
       closedIds: array(string()).optional()
     }),
+    /**
+     * The most pressing status among its open parts, on a backlog parent that
+     * runs no program and nothing blocks (INF-6805's plan, piece 2): its parts
+     * do its work, so its status word follows them. Absent on every other
+     * task, on a row read without its parts, and from an older home.
+     */
+    partsStatus: _enum(["waiting", "interrupted", "working", "starting", "idle", "queued", "backlog"]).optional(),
     assignee: string().nullable(),
     model: string().nullable(),
     /**
@@ -139386,6 +143350,12 @@ ${startersHtml()}`;
   });
   taskViewSchema.extend({
     cost: taskCostViewSchema.optional(),
+    /**
+     * Its parts, each as its Tasks row reads it, in the order they were filed
+     * (INF-6805's plan, item 1). Absent on a task with none, and from an
+     * older home.
+     */
+    parts: array(taskViewSchema).optional(),
     liveValidation: liveValidationSummarySchema.optional(),
     /** Current policies, separate from dispatch and published delivery history. */
     policies: effectiveTaskPoliciesSchema.nullable().optional(),
@@ -139860,6 +143830,15 @@ ${startersHtml()}`;
     // that connection drops, and pushes no card to a phone while one says it
     // is in front.
     "inf:window:front": {
+      request: tuple([boolean()])
+    },
+    // A window in a program of its own says whether someone is at its
+    // computer (docs/phone-push.md, "When the computer sends"), from its own
+    // program's reading of the lock, the display, the screen saver, the
+    // keyboard and mouse, and the captain acting on a phone. The first mate
+    // keeps each connection's latest word until that connection drops, and
+    // holds a card's push to a phone while one says someone is there.
+    "inf:window:someone-here": {
       request: tuple([boolean()])
     },
     // The captain's own input to a task's page while he has control
@@ -140940,7 +144919,7 @@ ${startersHtml()}`;
     if (task.answerNoteId) return { end: "stop-task", next: "answer-done", blocked: false };
     const work = task.kind === "work";
     const end = !work ? task.kind === "decision" && task.waitingCardId ? "dismiss-question" : null : isUnstartedWork(task) ? "drop-task" : task.status === "active" ? "stop-task" : null;
-    const { mark } = taskStatusOf(task);
+    const { mark } = taskStatusOf(task.partsStatus ? { ...task, partsStatus: void 0 } : task);
     const parent = task.status === "open" && task.children.total > 0;
     const backlog = task.status === "active" && task.backlogSince !== void 0;
     const blocked = !backlog && (task.blockedBy.length > 0 || task.flags.blocked);
@@ -141156,6 +145135,7 @@ ${startersHtml()}`;
           return value.map(({ said: said2, ...line2 }) => said2 ? { ...line2, text: wordedLine({ text: line2.text, said: said2 }) } : line2);
         }
         if (name === "computers.resources") return panelComputerResources(value);
+        if (name === "quota.snapshot") return panelQuotaSnapshot(value);
         return value;
       },
       onPresentation: (listener) => {
@@ -141240,7 +145220,7 @@ svg { ${pinned} }
       void native({ type: "ready" }).catch(() => {
       });
       send({ type: "form", fill: cardAnswersSchema.parse(input.fill ?? []), readOnly: input.readOnly, ...isPlayableBody(input.body) ? { preview: true } : {} });
-      send({ type: "keys", pictures: true, escape: false, expand: true, ...input.readOnly || input.expanded ? {} : { sound: true } });
+      send({ type: "keys", pictures: true, escape: false, expand: true, addresses: true, ...input.readOnly || input.expanded ? {} : { sound: true } });
       send({ type: "width", width: input.width });
       send({ type: "text-scale", scale });
       if (linked.length > 0) send({ type: "tasks", keys: linked });
@@ -141436,7 +145416,7 @@ svg { ${pinned} }
       const document2 = buildFrameDocument({
         csp: `${frameCsp(hashes)}; base-uri 'none'; form-action 'none'`,
         theme: value.theme,
-        style: `${cardStylesheet()}${phoneTextRule(scale)}${phonePressRule()}`,
+        style: `${cardStylesheet()}${phoneTextRule(scale)}${phonePressRule()}${frameThemeRule(value.theme, value.colorTheme)}`,
         html: body
       });
       frame = window.document.createElement("iframe");
@@ -141444,6 +145424,7 @@ svg { ${pinned} }
       frame.setAttribute("sandbox", FRAME_SANDBOX);
       frame.style.cssText = value.expanded ? "display:block;width:100%;height:100%;border:0" : "display:block;width:100%;height:48px;border:0";
       if (value.expanded) window.document.documentElement.style.height = window.document.body.style.height = "100%";
+      else frame.setAttribute("scrolling", "no");
       frame.srcdoc = document2;
       window.document.body.replaceChildren(frame);
     },
@@ -141459,8 +145440,8 @@ svg { ${pinned} }
         send({ type: "collect", seq, focusUnpicked: true });
       });
     },
-    theme(value) {
-      send({ type: "theme", theme: value });
+    theme(value, colorTheme) {
+      send({ type: "theme", theme: value, colors: frameThemeRule(value, colorTheme) });
     },
     // The device's Text Size changed while the card shows: the body redraws at it in place, its answers and place kept.
     textScale(value) {

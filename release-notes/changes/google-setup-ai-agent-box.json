@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "google-setup-ai-agent-box",
+      "kind": "improvement",
+      "area": "settings",
+      "title": "Google's setup says to leave the AI-powered agent box unticked",
+      "body": "Before you open Google's page to make your own Google client, the first step of Set up your own Google connection now says to leave \"Use this client for an AI-powered agent\" unticked. That box is only for clients that use Google's MCP tools, and Infinitary's client doesn't. The same step on iPhone and iPad, and the Integrations page of the help, say so too.",
+      "picture": {
+        "dark": "google-setup-ai-agent-box-dark.webp",
+        "light": "google-setup-ai-agent-box-light.webp",
+        "alt": "Set up your own Google connection in Settings → Integrations, whose first step says to leave Use this client for an AI-powered agent unticked before the Open Google's page button"
+      },
+      "docsSite": ["integrations"],
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

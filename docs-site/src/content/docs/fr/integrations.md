@@ -1,5 +1,5 @@
 ---
-source: 1ce217aea874fab1
+source: e71da6c9134d6753
 title: Intégrations
 description: Connectez GitHub, GitLab, Bitbucket, Google et des serveurs MCP pour que votre second et votre équipage puissent les joindre, et choisissez ce que chacun peut faire sans vous demander.
 ---
@@ -60,7 +60,8 @@ Google ne l’examine pas, n’affiche aucun avertissement et ne met pas fin à 
 
 1. Appuyez sur **Google**, ce qui ouvre **Configurer votre propre connexion Google**.
 2. Appuyez sur **Ouvrir la page de Google**, et connectez-vous sur cette page avec le compte Google que vous allez relier.
-   Nommez le projet, acceptez la règle de Google et appuyez sur Continue.
+   Nommez le projet et laissez la case « Use this client for an AI-powered agent » décochée, car elle ne sert qu’aux clients qui utilisent les outils MCP de Google.
+   Acceptez ensuite la règle de Google et appuyez sur Continue.
 3. Téléchargez le fichier de client que Google affiche, avec Download JSON.
 4. Déposez ce fichier sur **Déposez le fichier de client ici**, choisissez-le avec **Choisir un fichier**, ou collez son contenu dans **Fichier de client**.
 5. Appuyez sur **Garder et se connecter**.
@@ -76,8 +77,8 @@ Chaque fois que vous vous connectez à Google, l’avis s’affiche d’abord.
 
 La ligne Google indique quand la connexion a besoin de vous :
 
-- **Configurez votre propre connexion** : cette connexion passe encore par un client qu’Infinitary partage avec tout le monde, et qui va être retiré.
-  Elle fonctionne jusque-là ; appuyez sur **Configurer** pour rester connecté.
+- **Se reconnecter** : une connexion faite auparavant avec le client qu’Infinitary partageait avec tout le monde ne fonctionne plus, car ce client n’existe plus.
+  Appuyez sur **Se reconnecter**, ce qui ouvre **Configurer votre propre connexion Google**, pour créer votre propre client et vous reconnecter.
 - **S’arrête le**, suivi d’une date : votre client n’est pas en mode personnel, donc Google met fin à sa connexion à cette date.
   Appuyez sur **Configurer de nouveau**, et créez un client en mode personnel.
 - **Votre client Google ne fonctionne plus** : Google n’accepte plus votre client, peut-être parce qu’il a été supprimé dans Google Cloud.

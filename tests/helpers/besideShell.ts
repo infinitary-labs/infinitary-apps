@@ -11,6 +11,7 @@ import { DEFAULT_SAVED_KEYMAP, type SavedKeymap } from "@shared/keymap";
 import { DEFAULT_SHELL_PREFERENCES, type ShellPreferences } from "@shared/preferences";
 import { type Mock, vi } from "vitest";
 import type { StartEntry } from "../../src/main/besideRun";
+import type { PresenceWatch } from "../../src/main/presenceWatch";
 import type { OwnedRun } from "../../src/main/runCommand";
 import type { RunStatus } from "../../src/main/runStatus";
 import { Shell } from "../../src/main/shell";
@@ -174,6 +175,8 @@ export function besideShell(
      * for one started by hand; asked each time. With a starter, the agent's run by default.
      */
     ownedRun?: (status: Records) => OwnedRun | null;
+    /** This computer's presence and idle time, as the main process watches them; it cannot tell by default. */
+    presence?: PresenceWatch;
   } = {},
 ) {
   const startCore: Mock<() => Promise<Core>> = vi.fn(async () => ownCore().core);
@@ -278,6 +281,7 @@ export function besideShell(
         }
       : {}),
     ...(options.workDir ? { work: { dataDir: options.workDir } } : {}),
+    ...(options.presence ? { presence: () => options.presence as PresenceWatch } : {}),
     broadcast: (channel, payload) => pushes.push({ channel, payload }),
     notifications: {
       supported: () => true,

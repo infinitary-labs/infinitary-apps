@@ -368,6 +368,11 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, ActionExceptio
     // i18n-exempt: a channel's coverage reason, read by the coverage check, never shown
     "A window in a program of its own saying whether it is in front, which holds a phone's pushes; nothing is set",
   ],
+  "inf:window:someone-here": [
+    "window",
+    // i18n-exempt: a channel's coverage reason, read by the coverage check, never shown
+    "A window in a program of its own saying whether someone is at its computer, which holds a phone's pushes; nothing is set",
+  ],
   "inf:own-window:focused": [
     "window",
     "This computer's window coming to the front, which reads a stale allowance again; nothing is set",

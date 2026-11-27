@@ -121,6 +121,10 @@ export const PANEL_CHANGES = {
   "ambient-music": true,
   // Saves only: panelChange.ts refuses a panel's `remove`, since a panel never deletes.
   "ambient-own-style": true,
+  "own-theme": [
+    "destructive",
+    "Saving under a saved theme's name replaces its colors for good, and remove deletes one",
+  ],
   "ambient-away": true,
   "card-size": true,
   language: true,

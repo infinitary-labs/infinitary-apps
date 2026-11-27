@@ -188,6 +188,19 @@ describe("FrameController", () => {
     expect(posted.at(-1)).toEqual({ fm: 2, type: "theme", theme: "dark" });
   });
 
+  // The approved plan for color themes (INF-6888, part 1): an open card or panel takes a
+  // newly picked theme without being built again, and still hears the theme it always did.
+  it("carries the window's color rule with the theme, on birth and on every change", () => {
+    const { controller, posted } = harness();
+    const dracula = ':root, [data-theme="light"], [data-theme="dark"] { --accent: #bd93f9; }';
+    controller.setTheme("dark", dracula);
+    controller.receive({ fm: 2, type: "ready" });
+    expect(posted).toEqual([{ fm: 2, type: "theme", theme: "dark", colors: dracula }]);
+    const light = ':root, [data-theme="light"], [data-theme="dark"] { --accent: #0e8fd0; }';
+    controller.setTheme("light", light);
+    expect(posted.at(-1)).toEqual({ fm: 2, type: "theme", theme: "light", colors: light });
+  });
+
   it("pushes view state on a document's birth, and every change after it", () => {
     // The now panel's selected row: host-owned state the frame paints.
     const { controller, posted } = harness({ state: { selectedTaskId: null } });
@@ -1117,6 +1130,27 @@ describe('a card body\'s keyboard (docs/keyboard.md, "Cards and frames")', () =>
     posted.length = 0;
     born(controller, "doc-2");
     expect(posted).toContainEqual({ fm: 2, type: "keys", pictures: true, escape: true });
+  });
+
+  // INF-7046's review: a recorded key inside an address the card links stays part of the address.
+  it("tells a card's document to link addresses before it names the task keys and references", () => {
+    const { controller, posted } = harness({
+      onImage: vi.fn(),
+      addresses: true,
+      taskKeys: ["INF-12"],
+      entryRefs: [{ id: "f-1", label: "A finding", tone: "ok" }],
+    });
+    born(controller);
+    const types = posted.map((message) => message.type);
+    expect(posted).toContainEqual({
+      fm: 2,
+      type: "keys",
+      pictures: true,
+      escape: false,
+      addresses: true,
+    });
+    expect(types.indexOf("keys")).toBeLessThan(types.indexOf("tasks"));
+    expect(types.indexOf("keys")).toBeLessThan(types.indexOf("entries"));
   });
 
   it("tells a mount that opens no pictures and hears no Escape nothing, so its pictures stay out of Tab", () => {

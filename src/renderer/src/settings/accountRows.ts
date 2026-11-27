@@ -223,13 +223,17 @@ export function rowView(
   // Claude access set up for Claude Code has no plan and no email: the row
   // says where it comes from instead, never a subscription's email an
   // earlier reading kept. A subscription whose requests go to an address in
-  // Claude Code's settings says so after its plan.
+  // Claude Code's settings says so after its plan, and a Bedrock account
+  // names the organization address it sends through.
   const sub = account.access
     ? CLAUDE_ACCESS_LABEL[account.access]
     : [
         plan ?? kindCopy(account.kind),
         identity,
         account.gateway ? CLAUDE_GATEWAY_LABEL[account.gateway] : undefined,
+        account.sentThrough
+          ? m.settingsSubscriptionsSentThrough({ host: account.sentThrough })
+          : undefined,
       ]
         .filter(Boolean)
         .join(" · ");

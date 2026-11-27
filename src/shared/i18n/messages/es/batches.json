@@ -7,6 +7,7 @@
     "other": "Lote #{number} · {count} cambios"
   },
   "batchesPanelChecking": "comprobando {duration}",
+  "batchesPanelCheckingFix": "las comprobaciones se ejecutan con la corrección {key} antes de su aprobación",
   "batchesPanelChecksFull": "Comprobaciones: {passed} superadas, {failed} fallidas, {running} en curso, leídas a las {time}",
   "batchesPanelChecksPassed": "{passed} de {total} comprobaciones superadas",
   "batchesPanelChecksUnread": "comprobaciones aún sin leer",

@@ -3,6 +3,7 @@ import { cardDataName, cardDataNames, demoSources, isReadableLogSource, logSourc
 import { ACTION_VALUE_MAX_BYTES, frameMessageSchema, frameRequestSchema, type FrameAnswers } from "../../../src/shared/plugins/bridge";
 import { FRAME_SANDBOX, frameCsp } from "../../../src/shared/plugins/containment";
 import { buildFrameDocument, type FrameTheme } from "../../../src/shared/plugins/frameDocument";
+import { frameThemeRule } from "../../../src/shared/colorThemes";
 import { isSafeCardHref } from "../../../src/shared/linkify";
 import { taskKeysIn } from "../../../src/shared/taskKeys";
 import { cardBodyHtml, cardBodyMarkup, cardStylesheet, expandedStamp } from "../../../src/renderer/src/cards/prototypeSrcdoc";
@@ -24,7 +25,7 @@ declare global {
   interface Window {
     webkit: { messageHandlers: { cardHost: NativeHost } };
     phoneCard: {
-      mount(input: Input): Promise<void>; collect(): Promise<FrameAnswers>; theme(value: FrameTheme): void; ping(seq: number): void;
+      mount(input: Input): Promise<void>; collect(): Promise<FrameAnswers>; theme(value: FrameTheme, colorTheme?: string | null): void; ping(seq: number): void;
       annotate(state: Annotation): void; annotateSelection(): void; reveal(note: unknown): Promise<Revealed>;
       question(ask: QuestionAsk): Promise<Questioned>; questionKey(key: string, shift: boolean): void;
       expanded(index: number, state: string): void; textScale(value: number): void; pressMoved(): void;
@@ -40,7 +41,10 @@ declare global {
 type Input = {
   /** The phone's language, which a body the app wrote and a body's saved facts are worded in, as on the Mac. */
   language?: string;
-  body: string; theme: FrameTheme; fill: unknown; readOnly: boolean; actions: string[]; width: "regular" | "wide" | "full";
+  body: string; theme: FrameTheme;
+  /** The phone's built-in color theme on that base, or none (docs/themes.md, "On the phone"). */
+  colorTheme?: string | null;
+  fill: unknown; readOnly: boolean; actions: string[]; width: "regular" | "wide" | "full";
   marks?: number[]; keys?: string[]; card?: Pick<Card, "actions" | "reviewTaskId" | "risk">;
   /**
    * INF-3881: this page is the full-screen cover of one of the body's parts (the map), drawn live. The same body is
@@ -129,7 +133,8 @@ window.addEventListener("message", (event: MessageEvent) => {
     // only tells the phone where the part now stands.
     // A card that may still be answered plays its sound clips in the strip under its body, so the bridge draws their
     // Listen buttons there; a past card and a part's cover draw the caption alone (docs/card-authoring.md "Sound clips").
-    send({ type: "keys", pictures: true, escape: false, expand: true, ...(input.readOnly || input.expanded ? {} : { sound: true }) });
+    // INF-7045: a card body's addresses written as words are links, as on the Mac.
+    send({ type: "keys", pictures: true, escape: false, expand: true, addresses: true, ...(input.readOnly || input.expanded ? {} : { sound: true }) });
     send({ type: "width", width: input.width });
     // A Text Size change while the body loaded reaches it before it draws.
     send({ type: "text-scale", scale });
@@ -288,12 +293,17 @@ window.phoneCard = {
     const scripts = Array.from(parsed.querySelectorAll("script:not([src])"), (script) => script.textContent ?? "");
     const hashes = await native({ type: "hash", scripts }) as string[];
     const document = buildFrameDocument({ csp: `${frameCsp(hashes)}; base-uri 'none'; form-action 'none'`,
-      theme: value.theme, style: `${cardStylesheet()}${phoneTextRule(scale)}${phonePressRule()}`, html: body });
+      theme: value.theme, style: `${cardStylesheet()}${phoneTextRule(scale)}${phonePressRule()}${frameThemeRule(value.theme, value.colorTheme)}`, html: body });
     frame = window.document.createElement("iframe");
     frame.title = "Card body";
     frame.setAttribute("sandbox", FRAME_SANDBOX);
     frame.style.cssText = value.expanded ? "display:block;width:100%;height:100%;border:0" : "display:block;width:100%;height:48px;border:0";
     if (value.expanded) window.document.documentElement.style.height = window.document.body.style.height = "100%";
+    // INF-6865: a face's frame grows to its body, so the card's own scroller is the only one. WebKit can keep a frame's
+    // inner scroller measured at a stale height after a revision in place (folded sections with marked parts, read at
+    // the card's end); that scroller then takes the swipe, slides the words up inside the frame and leaves the choices
+    // out of reach. The frame never scrolled sideways either: a line wider than the card is clipped, as on the Mac.
+    else frame.setAttribute("scrolling", "no");
     // INF-1263 / INF-1651: native code keeps the web view out of reach and out of accessibility until it holds the
     // drawn body's height. Hiding the frame here would stick on iOS 27.0, which never exposes the body again.
     frame.srcdoc = document;
@@ -308,7 +318,7 @@ window.phoneCard = {
       send({ type: "collect", seq, focusUnpicked: true });
     });
   },
-  theme(value) { send({ type: "theme", theme: value }); },
+  theme(value, colorTheme) { send({ type: "theme", theme: value, colors: frameThemeRule(value, colorTheme) }); },
   // The device's Text Size changed while the card shows: the body redraws at it in place, its answers and place kept.
   textScale(value) { scale = textScale(value); send({ type: "text-scale", scale }); },
   ping(seq) { send({ type: "ping", seq }); },

@@ -7,7 +7,7 @@
     "ios/Infinitary/InfinitaryApp/InfinitaryApp.swift",
     "ios/Infinitary/InfinitaryApp/MessageComposer.swift",
     "ios/Infinitary/InfinitaryApp/PhoneCards.swift",
-    "ios/Infinitary/InfinitaryApp/PhoneComputerSheet.swift",
+    "ios/Infinitary/InfinitaryApp/PhoneComputerPage.swift",
     "ios/Infinitary/InfinitaryApp/PhoneStyle.swift",
     "ios/Infinitary/InfinitaryApp/PhoneTasks.swift",
     "ios/Infinitary/InfinitaryApp/PhoneWorkspace.swift",

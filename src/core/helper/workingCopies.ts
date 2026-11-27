@@ -24,7 +24,7 @@ import type { BundledRef, ReadableRef } from "@shared/workCopies";
 import { writeArtifact } from "../workspace/artifacts";
 import { bundleRef, commitOf, sha256Of, takeBundle } from "../workspace/bundles";
 import { forgeAuthRequired } from "../workspace/forgeAuth";
-import { git, inheritWorktreeRemotes } from "../workspace/git";
+import { checkoutOf, git, inheritWorktreeRemotes } from "../workspace/git";
 import { branchOfTask, defaultTaskBranch } from "../workspace/taskBranches";
 import { type MovedFolders, packWork, readManifest, unpackWork } from "../workspace/workMove";
 import {
@@ -421,7 +421,10 @@ export class WorkingCopies {
 
   private async cloneOnce(origin: string, dir: string): Promise<{ dir: string; cloned: boolean }> {
     if (existsSync(dir)) {
-      const url = await git(dir, ["remote", "get-url", "origin"]).catch(() => "");
+      // The address the clone saved, not as this computer's git rewrites it
+      // (`url.<base>.insteadOf`): a rule that fetches SSH addresses over
+      // HTTPS would otherwise refuse every clone of an SSH project.
+      const url = await git(dir, ["config", "--get-all", "remote.origin.url"]).catch(() => "");
       if (url !== origin)
         throw new Error("This computer's clone of the project names another origin.");
       return { dir, cloned: false };
@@ -505,18 +508,20 @@ export class WorkingCopies {
     const workspace = await this.workspaceOf(task);
     if (!workspace) return { present: false, dirty: false, unlandedCommits: 0 };
     const held = await this.workspace.taskWorkStatus(workspace, { strict: true });
-    const origin = await git(workspace.repoDir, ["remote", "get-url", "origin"]).catch(() => "");
-    // The checkout itself, as the home's own working copy reads it for a
-    // story: the task's branch, or another the crewmate checked out (INF-2490).
-    const branch = await git(workspace.cwd, ["symbolic-ref", "--quiet", "--short", "HEAD"]).catch(
+    // As the clone saved it, which the home matches against its own
+    // project's saved address; each computer's git may rewrite it differently.
+    const origin = await git(workspace.repoDir, ["config", "--get", "remote.origin.url"]).catch(
       () => "",
     );
-    const head = await git(workspace.cwd, ["rev-parse", "HEAD^{commit}"]).catch(() => "");
+    // The checkout itself, as the home's own working copy reads it for a
+    // story: the task's branch, or another the crewmate checked out (INF-2490),
+    // with what is left to commit there, read in the same answer.
+    const checkedOut = await checkoutOf(workspace.cwd);
     return {
       present: true,
       ...held,
       origin: origin || null,
-      ...(head ? { checkedOut: { branch: branch || null, head } } : {}),
+      ...(checkedOut ? { checkedOut } : {}),
     };
   }
 

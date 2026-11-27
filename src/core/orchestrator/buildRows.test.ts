@@ -24,6 +24,8 @@ import { workShape } from "./workShape";
 // INF-6776's approved plan, part 2: that list groups the tasks by issue with
 // each one's closing reason and first release, and the reproduce step's
 // result gains next, the captain's choice after a step that did not reproduce.
+// INF-6845's approved plan, piece 2: a filed row's notice to the first mate
+// names the issue's address the app read open, and nothing else is saved.
 
 const cleanup: (() => void)[] = [];
 afterEach(() => {
@@ -63,7 +65,11 @@ function fixture() {
   );
   const present = vi.fn();
   const startNow = vi.fn(async (key: string) => `Started ${key}.`);
-  const rows = new BuildRows({ tasks, readerOpenIssue }, { present, startNow, now: () => 5000 });
+  const notifyOp = vi.fn();
+  const rows = new BuildRows(
+    { tasks, readerOpenIssue },
+    { present, startNow, notifyOp, now: () => 5000 },
+  );
   const keep = (input: Partial<Parameters<BuildRows["keep"]>[1]> = {}) =>
     rows.keep("reader", { ...ROW, issue: 7, startAs: "reproduce", ...input });
   const kept = () =>
@@ -71,7 +77,7 @@ function fixture() {
       (ask): ask is BuildRowAsk => ask.kind === "build",
     );
   const filed = () => tasks.list().filter((task) => task.id !== "reader" && task.id !== "builder");
-  return { tasks, rows, keep, kept, filed, present, startNow, readerOpenIssue };
+  return { tasks, rows, keep, kept, filed, present, startNow, notifyOp, readerOpenIssue };
 }
 
 describe("a reader's Build rows", () => {
@@ -134,6 +140,7 @@ describe("a reader's Build rows", () => {
     });
     expect(f.filed()).toEqual([]);
     expect(f.startNow).not.toHaveBeenCalled();
+    expect(f.notifyOp).not.toHaveBeenCalled();
     // The reader hears it was a Build row, so it asks again with a row, not a write.
     const heard = DELIVERY_WORDS["write-answered"](
       writeAnsweredFacts(second?.id ?? "", skipped),
@@ -148,11 +155,28 @@ describe("a reader's Build rows", () => {
   it("files a bug kept for later as a read-only reproduce step whose brief carries no issue", async () => {
     const f = fixture();
     await f.keep();
-    const sent = await f.rows.answer("reader", f.kept()[0] as BuildRowAsk, "once", "later");
+    const row = f.kept()[0] as BuildRowAsk;
+    const sent = await f.rows.answer("reader", row, "once", "later");
     const [task] = f.filed();
     expect(sent).toMatchObject({ ok: true, outcome: { kind: "filed", started: false } });
     expect(sent.outcome).toEqual({ kind: "filed", task: task?.key, started: false });
     expect(f.startNow).not.toHaveBeenCalled();
+    expect(f.notifyOp).toHaveBeenCalledTimes(1);
+    expect(f.notifyOp).toHaveBeenCalledWith(
+      {
+        facts: {
+          kind: "build-row-filed",
+          task: { id: task?.id, key: task?.key },
+          reader: { id: "reader", key: f.tasks.get("reader")?.key },
+          issue: 7,
+          url: ISSUE_URL,
+          start: false,
+        },
+        once: `build-row-filed:${row.id}`,
+      },
+      "agent",
+      task?.id,
+    );
     expect(task).toMatchObject({ title: ROW.title, startPolicy: "on-request" });
     expect(task?.shape).toMatchObject({
       kind: "reproduce",
@@ -181,6 +205,11 @@ describe("a reader's Build rows", () => {
     const sent = await f.rows.answer("reader", f.kept()[0] as BuildRowAsk, "once", "start");
     const [task] = f.filed();
     expect(f.startNow).toHaveBeenCalledWith(task?.key);
+    // The address reaches the first mate before the captain's Start does.
+    expect(f.notifyOp.mock.calls[0]?.[0].facts).toMatchObject({ url: ISSUE_URL, start: true });
+    expect(f.notifyOp.mock.invocationCallOrder[0]).toBeLessThan(
+      f.startNow.mock.invocationCallOrder[0] ?? 0,
+    );
     expect(sent.outcome).toEqual({
       kind: "filed",
       task: task?.key,

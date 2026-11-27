@@ -634,7 +634,11 @@ export type HostMessage =
   | (FrameResponse & { ok: false; error: FrameError })
   | ({ fm: typeof FRAME_BRIDGE_VERSION; type: "data"; sub: number } & ReadTransfer)
   | { fm: typeof FRAME_BRIDGE_VERSION; type: "data"; sub: number; error: FrameError }
-  | { fm: typeof FRAME_BRIDGE_VERSION; type: "theme"; theme: "dark" | "light" }
+  /**
+   * Dark or Light, and with it the rule that lays the window's color theme over the document's color sheet
+   * (docs/themes.md): the theme's tokens, or the base's own. A host that sends no rule leaves the sheet as it is.
+   */
+  | { fm: typeof FRAME_BRIDGE_VERSION; type: "theme"; theme: "dark" | "light"; colors?: string }
   /** The card is shown: a held page releases its scripts and animations. */
   | { fm: typeof FRAME_BRIDGE_VERSION; type: "activate" }
   | { fm: typeof FRAME_BRIDGE_VERSION; type: "width"; width: CardWidth }
@@ -689,6 +693,7 @@ export type HostMessage =
    * The keys the host hears from this document: its pictures, and an Escape that leaves it.
    * `expand`: the host opens a part full screen when the part asks (`inf.expand`).
    * `sound`: the host plays a sound clip in the card's strip, so the bridge draws its Listen button.
+   * `addresses`: the document is a card's body, whose addresses written as words the bridge links (INF-7045).
    */
   | {
       fm: typeof FRAME_BRIDGE_VERSION;
@@ -697,6 +702,7 @@ export type HostMessage =
       escape: boolean;
       expand?: true;
       sound?: true;
+      addresses?: true;
     }
   /** A part that opened full screen is back: its state as the full-screen copy left it, as JSON. */
   | { fm: typeof FRAME_BRIDGE_VERSION; type: "expanded"; index: number; state: string }

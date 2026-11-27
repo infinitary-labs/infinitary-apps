@@ -39,6 +39,7 @@ import {
   openModelsBoard,
   setLevelInPanel,
 } from "./modelsBoard";
+import { regionShot } from "./pictures";
 import { PASTE_PICTURE_PNG_BASE64, pastePictures, promptInput } from "./prompt";
 import { pressRow, recordFrame, showRecordTab } from "./rails";
 import { showCard } from "./stack";
@@ -510,6 +511,18 @@ test("the server's model list supplies model names and limits nobody typed", asy
       { id: "operator-model", context_length: 200000, max_completion_tokens: 4096 },
       { id: "typed-model", context_window: 131072, max_output_tokens: 8192 },
       { id: "unlisted-limits", owned_by: "operator" },
+      // OpenCode's list states sizes in a nested limit object and marks models
+      // that take no chat turn by type or by tools unsupported.
+      {
+        id: "nested-limits",
+        type: "chat",
+        capabilities: { tools: { supported: true } },
+        limit: { context: 1050000, input: 922000, output: 128000 },
+      },
+      { id: "input-only", type: "chat", limit: { input: 192000, output: 65536 } },
+      { id: "decision-model", type: "decision", limit: { context: 64000 } },
+      { id: "embedding-model", type: "embedding", limit: { context: 8192, output: 0 } },
+      { id: "no-tools", type: "chat", capabilities: { tools: { supported: false } } },
     ],
   });
   launched = await launchApp({
@@ -526,7 +539,28 @@ test("the server's model list supplies model names and limits nobody typed", asy
   for (const id of ["operator-model", "typed-model", "unlisted-limits"])
     await expect(f.listed(id)).toBeVisible();
   expect(api.requests.map(({ path }) => path)).toEqual([`${new URL(api.baseUrl).pathname}/models`]);
-  await page.screenshot({ path: test.info().outputPath("custom-listed-models.png") });
+  await regionShot(
+    f.form.locator("[data-custom-listed-models]"),
+    test.info().outputPath("custom-listed-models.png"),
+  );
+  for (const id of ["decision-model", "embedding-model", "no-tools"]) {
+    await expect(f.listed(id)).toBeDisabled();
+    await expect(f.listed(id)).toContainText(m.accountsCustomApiNotChat());
+  }
+  await f.listed("nested-limits").click();
+  await expect(f.row("nested-limits").getByLabel(/^Context tokens/)).toHaveValue("1050000");
+  await expect(f.row("nested-limits").getByLabel(/^Output tokens/)).toHaveValue("128000");
+  await f.listed("input-only").click();
+  await expect(f.row("input-only").getByLabel(/^Context tokens/)).toHaveValue("192000");
+  await expect(f.row("input-only").getByLabel(/^Output tokens/)).toHaveValue("65536");
+  await f
+    .row("nested-limits")
+    .getByRole("button", { name: /^Remove/ })
+    .click();
+  await f
+    .row("input-only")
+    .getByRole("button", { name: /^Remove/ })
+    .click();
   await f.listed("operator-model").click();
   await expect(f.listed("operator-model")).toBeDisabled();
   await expect(f.row("operator-model").getByLabel(/^Context tokens/)).toHaveValue("200000");

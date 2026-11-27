@@ -5228,6 +5228,9 @@
     "alpha": 0.6,
     "turnRadPerS": 0.5
   },
+  "focus": {
+    "outOfFocusLight": 0.25
+  },
   "fixedStars": {
     "clearOfOrbitPx": 50,
     "edgePx": 240,

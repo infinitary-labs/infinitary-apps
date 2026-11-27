@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "card-task-keys-rest-once-reachable",
+      "reason": "Test-only: the task-key journeys rest the pointer on a key only once a pointer there reaches the key, and the record step waits for the record's body before resting, so a slow record frame can no longer leave the pointer under a hidden key. The app is unchanged."
+    }
+  ]
+}

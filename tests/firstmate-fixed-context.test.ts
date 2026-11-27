@@ -198,6 +198,9 @@ const WAKES = {
     at: 0,
   },
   "ci cap": { kind: "ci-cap", task: BUILDER, rounds: 3, cap: 3, head: "0123456789ab" },
+  // INF-6987's approved plan, piece P: the one ask to confirm the directions
+  // saved before heard marks were kept.
+  "directions to confirm": { kind: "directions-to-confirm", directions: ["d:squash-merges"] },
 } satisfies Record<string, WakeFacts>;
 
 /**
@@ -777,6 +780,12 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
  * served words it names, waits for the captain's approval.
  */
 const PROTECTED: { intent: ProtectedIntent; rule: string; home: Home; says: string }[] = [
+  {
+    intent: "consent",
+    rule: "a direction saved before heard marks is no yes until the captain ticks it",
+    home: { wake: "directions to confirm" },
+    says: "Until the captain is heard, each stays an instruction, and no check approval or visible validation effect rests on it.",
+  },
   {
     intent: "what reaches the captain",
     rule: "a policy edit asks the captain only what is unclear",

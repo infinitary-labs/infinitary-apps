@@ -321,6 +321,8 @@ describe("ipc contract", () => {
       "inf:window:control",
       // The window's fence, pushed back behind every push sent before it.
       "inf:window:fence",
+      // How long this computer went untouched, for a card's seen report (src/main/presence.ts).
+      "inf:window:idle",
       // Whether someone is at this computer, for the ambient music (src/main/presence.ts).
       "inf:window:presence",
       "inf:window:state",
@@ -652,6 +654,7 @@ describe("ipc contract", () => {
       "inf:usage:tasks",
       "inf:view:answer",
       "inf:window:front",
+      "inf:window:someone-here",
     ]);
   });
 

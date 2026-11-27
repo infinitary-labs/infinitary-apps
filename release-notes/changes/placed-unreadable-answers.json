@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "placed-unreadable-answers",
+      "reason": "Internal recovery fix: when the answers the home keeps for a task on another computer cannot be read, each callback that needs them now fails with the read's error instead of reading them as none, so an answered call is never done again or refused over its kept answer, and the computer's other tasks still load; nothing a person sees changes."
+    }
+  ]
+}

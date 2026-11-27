@@ -13,8 +13,8 @@ The empty field shows Go to the card's reply (⇧⌘L) at its far end on the pla
 A picture pasted into the field rides with the send the same way the main input does; a chip above the pill previews it.
 A refused picture shows the composer's shared notice under the reply field.
 The row takes files like the main input (`components/voice/VoiceInput.prompt.md`, "Files"): an "Add files to this reply" icon button beside the field, the whole row (chips included, in the foot-of-card and thread-column layouts) as the drop target with an `--accent` inset border, named chips for supported files and an unsupported format as its path typed into the reply field.
-A card whose author cannot be reached has no field and no Chat at all: the host's own agent-down cards answer to nobody.
-Neither has the welcome, the one card the host marks as taking no reply (FI3-1164): its words send a new person to the message box under it, and a second box on the card was too much.
+Every card has the field and Chat except the welcome (FI3-1164), whose words send a new person to the message box under it, where a second box on the card was too much.
+A card shown while the first mate is down has both too: a reply there waits until the first mate is back, and the card stays until it answers in the thread.
 
 The reply field is the composer's own field (`components/voice/VoiceInput.prompt.md`) at `--text-sm`: one line is a pill `--reply-height` tall, and it grows upward one line at a time to 5 lines inside the card, then scrolls; its radius stays `--reply-radius` (half the pill) at every height.
 The clip sits beside it, centred on the field's last line.

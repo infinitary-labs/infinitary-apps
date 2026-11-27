@@ -1,5 +1,5 @@
 ---
-source: 28dbb83c4a64e09c
+source: 86bf487dacd685ea
 title: Cartões e decisões
 description: Como o seu imediato e a sua tripulação trazem respostas e decisões para você em cartões, e como respondê-los.
 ---
@@ -52,12 +52,14 @@ Clicar dentro do cartão nunca envia nada por conta própria.
 
 ## O campo de resposta e a conversa {#the-reply-field-and-the-thread}
 
-Todo cartão do seu imediato ou de um tripulante tem, embaixo do corpo, um campo que diz “algo a acrescentar?”.
+Todo cartão tem, embaixo do corpo, um campo que diz “algo a acrescentar?”, exceto o de boas-vindas.
+Uma resposta em um cartão que aparece enquanto seu imediato está parado espera até ele voltar, e o cartão continua ali até seu imediato responder nele.
 
 - Digite nele e pressione **Chat** para enviar uma resposta sem escolher.
 - Digite nele e pressione uma escolha para enviar suas palavras junto com essa escolha.
 
 Uma resposta vai para quem escreveu o cartão.
+Em um cartão que o próprio Infinitary mostra, a resposta vai para o tripulante que o pediu, ou então para o seu imediato.
 A primeira resposta abre uma conversa ao lado do cartão, e o autor responde ali.
 Quando o autor muda o cartão em resposta, o cartão é revisado no mesmo lugar, e a conversa avisa.
 Para recolher a conversa de volta para dentro do cartão, pressione ⌘\ (Ctrl+\ no Linux e no Windows).
@@ -119,6 +121,13 @@ Um contador como “2 de 7” diz em qual resultado você está.
 A busca percorre o cartão inteiro: o título, o corpo, as seções recolhidas e a conversa do cartão.
 Uma seção recolhida se abre quando o resultado está dentro dela.
 Funciona do mesmo jeito em um cartão anterior, na [conversa inteira](/pt-br/the-first-mate/#the-whole-conversation) e no cartão de uma tarefa, menos na aba Navegador.
+
+## Links em um cartão {#links-in-a-card}
+
+Um endereço da web em um cartão abre no seu navegador padrão quando você clica nele, toca nele ou pressiona Enter sobre ele.
+Isso inclui um endereço que um tripulante escreveu como texto comum, como um passo que diz para abrir uma página de login, no seu computador e no seu iPhone ou iPad.
+Vale para endereços que começam com https:// e para endereços http:// do seu próprio computador.
+Um endereço longo quebra a linha dentro do cartão.
 
 ## Cartões de mesclagem {#merge-cards}
 

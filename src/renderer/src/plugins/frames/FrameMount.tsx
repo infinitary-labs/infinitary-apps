@@ -9,6 +9,7 @@ import type {
   PanelModule,
 } from "@shared/plugins/frameDocument";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { themeFrameStyle, useThemeColorsDrawn } from "../../app/colorTheme";
 import { offerNotTypingKey } from "../../app/focusLanding";
 import { fontFrameStyle, useFontsDrawn } from "../../app/fonts";
 import { useShellStore } from "../../app/store";
@@ -233,9 +234,12 @@ export function useFrameController(
     });
   }, [dataKey]);
 
+  // A color theme changes the colors and keeps the base: it is pushed as the base is.
+  const colorsDrawn = useThemeColorsDrawn();
+  // biome-ignore lint/correctness/useExhaustiveDependencies: colorsDrawn moves with themeFrameStyle
   useEffect(() => {
-    controllerRef.current?.setTheme(theme);
-  }, [theme]);
+    controllerRef.current?.setTheme(theme, themeFrameStyle(theme));
+  }, [theme, colorsDrawn]);
 
   useEffect(() => {
     controllerRef.current?.setState(spec.state);
@@ -349,14 +353,14 @@ export function FrameMount({
           kind: "panel" as const,
           title,
           theme,
-          style: `${panelStylesheet(layout === "auto")}\n${fontFrameStyle()}`,
+          style: `${panelStylesheet(layout === "auto")}\n${fontFrameStyle()}\n${themeFrameStyle(theme)}`,
           panel: panelSource.module,
           config: panelSource.config,
         }
       : {
           title,
           theme,
-          style: `${frameStylesheet()}\n${fontFrameStyle()}`,
+          style: `${frameStylesheet()}\n${fontFrameStyle()}\n${themeFrameStyle(theme)}`,
           template: template as FrameTemplate,
         };
     void window.infinitary.plugins

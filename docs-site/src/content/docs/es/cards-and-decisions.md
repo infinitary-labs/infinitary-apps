@@ -1,5 +1,5 @@
 ---
-source: 28dbb83c4a64e09c
+source: 86bf487dacd685ea
 title: Tarjetas y decisiones
 description: Cómo tu primer oficial y tu tripulación te traen respuestas y decisiones como tarjetas, y cómo responderlas.
 ---
@@ -52,12 +52,14 @@ Hacer clic dentro de la tarjeta nunca envía nada por sí solo.
 
 ## El campo de respuesta y el hilo {#the-reply-field-and-the-thread}
 
-Cada tarjeta de tu primer oficial o de un tripulante tiene, debajo de su cuerpo, un campo que dice «¿algo que agregar?».
+Cada tarjeta tiene, debajo de su cuerpo, un campo que dice «¿algo que agregar?», salvo la de bienvenida.
+Una respuesta bajo una tarjeta que aparece mientras tu primer oficial está detenido espera a que vuelva, y la tarjeta sigue ahí hasta que tu primer oficial responde en ella.
 
 - Escribe en él y presiona **Conversar** para enviar una respuesta sin elegir.
 - Escribe en él y presiona una opción para enviar tus palabras con esa opción.
 
 Una respuesta le llega a quien escribió la tarjeta.
+En una tarjeta que muestra el propio Infinitary, la respuesta le llega al tripulante que la pidió, o si no, a tu primer oficial.
 La primera respuesta abre un hilo junto a la tarjeta, y el autor responde ahí.
 Cuando el autor cambia la tarjeta como respuesta, la tarjeta se revisa en su lugar, y el hilo lo dice.
 Para volver a plegar el hilo en la tarjeta, presiona ⌘\ (Ctrl+\ en Linux y Windows).
@@ -119,6 +121,13 @@ Un contador como «2 de 7» dice en qué coincidencia estás.
 Busca en toda la tarjeta: su título, su cuerpo, sus secciones plegadas y su hilo.
 Una sección plegada se abre cuando la coincidencia está dentro.
 Funciona igual en una tarjeta anterior, en [toda la conversación](/es/the-first-mate/#the-whole-conversation) y en la tarjeta de una tarea, salvo en su pestaña Navegador.
+
+## Enlaces en una tarjeta {#links-in-a-card}
+
+Una dirección web en una tarjeta se abre en tu navegador predeterminado cuando haces clic en ella, la tocas o pulsas Intro sobre ella.
+Eso incluye una dirección que un tripulante escribió como texto normal, como un paso que dice que abras una página de inicio de sesión, en tu computadora y en tu iPhone o iPad.
+Se aplica a las direcciones que empiezan por https:// y a las direcciones http:// de tu propia computadora.
+Una dirección larga se ajusta dentro de la tarjeta.
 
 ## Tarjetas de fusión {#merge-cards}
 

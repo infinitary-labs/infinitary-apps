@@ -3,6 +3,7 @@ import type { FmEvent } from "../../../src/shared/events";
 import type { FeedLine } from "../../../src/shared/feed";
 import { wordedLine } from "../../../src/shared/i18n/said";
 import type { CorePushChannel } from "../../../src/shared/ipc";
+import { panelQuotaSnapshot, type QuotaSnapshotView } from "../../../src/shared/quota";
 import { type ReadName, readCatalog } from "../../../src/shared/reads";
 import { type ComputerResourcesView, panelComputerResources } from "../../../src/shared/resources";
 import type { ProjectView, TaskBoard, TaskDetail } from "../../../src/shared/tasks";
@@ -90,6 +91,7 @@ export function phoneReads(ask: PhoneAsk): PhoneReads {
         return (value as FeedLine[]).map(({ said, ...line }) => (said ? { ...line, text: wordedLine({ text: line.text, said }) } : line));
       }
       if (name === "computers.resources") return panelComputerResources(value as ComputerResourcesView);
+      if (name === "quota.snapshot") return panelQuotaSnapshot(value as QuotaSnapshotView | null);
       return value;
     },
     onPresentation: (listener) => { presentations.add(listener); return () => { presentations.delete(listener); }; },

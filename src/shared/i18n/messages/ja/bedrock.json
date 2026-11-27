@@ -1,0 +1,22 @@
+{
+  "bedrockAddressInvalid": "このアドレスは使えません。https:// から始めて全体を書き、サインイン情報、クエリ、# を含めないでください。",
+  "bedrockAddressMoved": "{host} は承認したときとは別の場所を指しています。承認し直すには Amazon Bedrock にもう一度サインインしてください。",
+  "bedrockAddressNotFound": "{host} が見つかりませんでした。",
+  "bedrockAddressPlainHttp": "通常の http はこのコンピューター上のアドレスにだけ使えます。組織の https アドレスを使ってください。",
+  "bedrockAddressRefused": "{host} は Infinitary が接続しない場所を指しています。",
+  "bedrockSecureConnectionFailed": "{host} との接続を安全にできませんでした。このコンピューターがその証明書を信頼しているか確認してください。",
+  "bedrockSignInAddress": "組織の Amazon Bedrock アドレスを入力してください。",
+  "bedrockSignInApproveLocal": "リクエストはこのコンピューター上の {host} に送られます。",
+  "bedrockSignInApprovePrivate": "リクエストは組織のネットワーク上の {host} に送られます。",
+  "bedrockSignInApprovePublic": "リクエストは公開インターネット上の {host} に送られます。",
+  "bedrockSignInChooseWhere": "Amazon Bedrock のリクエストの送り先を選んでください。",
+  "bedrockSignInFromClaudeSettings": "Claude Code の設定から入力しました。",
+  "bedrockSignInFromOrganization": "組織の Claude Code の設定から入力しました。",
+  "bedrockSignInNoKey": "キーなし：組織のアドレスがリクエストに署名する",
+  "bedrockSignInOrganization": "組織のアドレス",
+  "bedrockSignInSend": "そこにリクエストを送る",
+  "bedrockSignInSettingsNoKey": "この Claude Code の設定は、キーなしで Amazon Bedrock にリクエストを送ります。",
+  "bedrockSignInStraightToAws": "AWS に直接",
+  "bedrockSignInWhere": "Amazon Bedrock のリクエストをどこに送りますか？",
+  "bedrockUnreachable": "{host} に接続できませんでした。ネットワークとアドレスを確認してください。"
+}

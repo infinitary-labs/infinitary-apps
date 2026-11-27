@@ -3,6 +3,8 @@ export const ANNOTATION_TITLE = "Show a queue send-back as a Batch check";
 export const ANNOTATION_BODY =
   '<p>A change the queue sent back showed as a plain failed check.</p>\n<p>The card now names the batch and the check that failed.</p>\n<fieldset><legend>Which checks should the row name?</legend><label><input type="checkbox" name="checks" value="failed">The check that failed only</label></fieldset>';
 export const ANNOTATION_RANGE = "plain failed check";
+/** Words inside the example question's one option label. */
+export const ANNOTATION_OPTION_WORDS = "check that failed";
 export const ANNOTATION_COMMENT = "Name the batch here too";
 export const ANNOTATION_WORDS = "Keep both notes together";
 

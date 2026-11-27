@@ -1,5 +1,5 @@
 ---
-source: e40976e5ca452a82
+source: 0a2abffa6cee2faa
 title: Einstellungen
 description: Was jeder Bereich der Einstellungen enthält – Allgemein und Erscheinungsbild hier erklärt, für den Rest ein Link.
 ---
@@ -64,10 +64,13 @@ Auf dem Computer, auf dem dein erster Offizier lebt, stehen sie unter **Angemeld
 - **Standardgröße der Karten** legt fest, wie Karten sich öffnen: **Normal**, **Breit**, **Voll** oder **Maximiert**.
   Du kannst jede Karte trotzdem in der Größe ändern.
 - **Karten maximiert lassen** hält jede Karte maximiert, nachdem du eine maximiert hast, bis du eine wiederherstellst.
-- **Design** ist **Dunkel** oder **Hell**.
+- **Modellnamen der Crew** zeigt Modellnamen, während deine Crewmitglieder nur eine Umlaufbahn nutzen.
 - **Fenstertönung** legt auf einem Mac fest, wie viel von der Farbe des Designs den unscharfen Hintergrund bedeckt.
   0 % ist die Standardeinstellung.
-- **Modellnamen der Crew** zeigt Modellnamen, während deine Crewmitglieder nur eine Umlaufbahn nutzen.
+- **Design** ist **Dunkel**, **Hell** oder eines von dreizehn Designs unter den Namen ihrer Macher, etwa **Dracula**, **Catppuccin Mocha** oder **Rosé Pine Dawn**.
+  Deine Wahl färbt das Fenster, seine Karten und seine Panels sofort um, und die Pfeiltasten wechseln zwischen den Möglichkeiten.
+  Für ein eigenes Design beschreibst du es deinem ersten Offizier, etwa „ein altes grünes Terminal“: Er speichert es unter **Deine** und wendet es sofort an, und Infinitary hält jede Farbe gut lesbar.
+  **Eigenes beschreiben** beginnt diese Nachricht, und **Entfernen** löscht das eigene Design, das du gerade trägst.
 
 ### Schriften {#fonts}
 

@@ -1,5 +1,5 @@
 ---
-source: 28dbb83c4a64e09c
+source: 86bf487dacd685ea
 title: Cartes et décisions
 description: Comment votre second et votre équipage vous apportent réponses et décisions sous forme de cartes, et comment y répondre.
 ---
@@ -52,12 +52,14 @@ Cliquer dans la carte n’envoie jamais rien à lui seul.
 
 ## Le champ de réponse et le fil {#the-reply-field-and-the-thread}
 
-Chaque carte de votre second ou d’un équipier a, sous son corps, un champ qui indique « quelque chose à ajouter ? ».
+Chaque carte a, sous son corps, un champ qui indique « quelque chose à ajouter ? », sauf la carte de bienvenue.
+Une réponse sous une carte affichée pendant que votre second est arrêté attend son retour, et la carte reste affichée jusqu’à ce que votre second y réponde.
 
 - Tapez-y et appuyez sur **Discuter** pour envoyer une réponse sans choisir.
 - Tapez-y et appuyez sur un choix pour envoyer vos mots avec ce choix.
 
 Une réponse va à celui qui a écrit la carte.
+Sur une carte qu’Infinitary affiche lui-même, une réponse va à l’équipier qui l’a demandée, sinon à votre second.
 La première réponse ouvre un fil à côté de la carte, et l’auteur y répond.
 Quand l’auteur modifie la carte en réponse, la carte est révisée sur place, et le fil le signale.
 Pour replier le fil dans la carte, appuyez sur ⌘\ (Ctrl+\ sous Linux et Windows).
@@ -119,6 +121,13 @@ Un compteur comme « 2 sur 7 » dit sur quel résultat vous êtes.
 La recherche parcourt toute la carte : son titre, son corps, ses sections repliées et son fil.
 Une section repliée s’ouvre quand le résultat s’y trouve.
 Elle marche de la même façon dans une carte passée, dans [toute la conversation](/fr/the-first-mate/#the-whole-conversation) et sur la carte d’une tâche, sauf sur son onglet Navigateur.
+
+## Liens dans une carte {#links-in-a-card}
+
+Une adresse web dans une carte s’ouvre dans votre navigateur par défaut quand vous cliquez dessus, la touchez ou appuyez sur Entrée.
+Cela vaut aussi pour une adresse qu’un membre d’équipage a écrite en texte simple, comme une étape qui dit d’ouvrir une page de connexion, sur votre ordinateur et sur votre iPhone ou iPad.
+Cela concerne les adresses qui commencent par https://, et les adresses http:// de votre propre ordinateur.
+Une longue adresse passe à la ligne dans la carte.
 
 ## Cartes de fusion {#merge-cards}
 

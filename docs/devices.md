@@ -603,7 +603,7 @@ Its answers carry both versions and the step in their action ids (`not-now@app:<
 ### Each copy's version
 
 Every copy tells the home the version of Infinitary it runs in its hello (`appVersion`, `docs/connection.md`): a computer's work, the app open on another computer, and the phone, which says its own version and build as its Settings shows them (`PhoneAppVersion`).
-Settings -> Devices' list reads the apps open now from the connection's `runningVersions` and says each on its entry as `appVersion`: the version it said, `older` or `newer` as `than` when both read as versions, and `same` when it is this computer's.
+Settings -> Devices' list reads the apps open now from the connection's `runningVersions` and says each on its entry as `appVersion`: the version it said, `older` or `newer` as `than` when both read as versions, and `same` when it is this computer's (`src/core/devices/computerVersions.ts`).
 Two apps of one device read as the older, and an app from before apps said their version reads with no `app`, as one too old to say it.
 A phone's versions are its own, so its `appVersion` is never measured against this computer's.
 A computer whose work runs this computer's version carries that version as `workVersion`; one on another version says it in `otherVersion` (above).
@@ -1050,7 +1050,7 @@ A phone can ask a computer that keeps a copy to take over, the same takeover its
 Each welcome a phone hears lists every computer that keeps a copy and has said where it listens (`standbys`): its id, its name, the pin of its own key and where it listens for the other copies, and `inf:home:routes` sends the list again when it changes.
 A computer that never said where it listens is nowhere a phone could reach, so it is left out.
 The phone keeps the list beside the home's addresses and number in its paired record; it keeps no record of the home and is never a copy itself.
-While the home is out of reach, the computer's sheet on the phone shows Take over with each computer that keeps a copy (`PhoneTakeOverSection`; design skill `components/devices/PhoneView`, "Taking over").
+While the home is out of reach, Your computer in the phone's Settings shows Take over with each computer that keeps a copy (`PhoneTakeOverSection`; design skill `components/devices/PhoneView`, "Taking over").
 The phone reaches each one on its own link for phones, `/phone` beside the copies' `/copies`, pinned to that computer's own key (`StandbyPeers`, `src/core/standby/peers.ts`).
 That computer admits only a phone its copy of the record lists, by the phone's key and the system the phone said it runs (`devices/devices.json`, `devices/systems.json`).
 On that link the phone asks `inf:standby:offer` and shows what it answers in the words its own window uses: when its copy is from, whether it reaches the home, whether the home said it went to sleep or quit, each other copy and whether it may be newer, and whether the home told it what taking over needs (`phoneOffer`, `src/core/standby/takeOver.ts`).
@@ -1535,7 +1535,8 @@ A crewmate hears it in three places, and only while another computer or phone is
 - emit_card's answer names where the captain's latest click or words came from, and how long ago.
 - The paragraph naming the captain's computers (`crewmateComputersNote`, `src/core/pi/piResources.ts`), there once a computer that runs work is listed, tells it what to do with them: a card that needs the captain at one of these computers names it, the one they are using now and how to reach it from there, and a choice from another one than the next step needs is said on a card before anything starts that waits on them there.
 
-The host names the places and decides nothing from them: whether a card needs the captain somewhere, and whether a wait can start, are the crewmate's (`docs/principles.md`, "Build the agent's reach, never its verdicts").
+The host names the places and decides one thing from them: input from a paired phone or iPad counts as the captain having left their computers, so the first mate tells each window's program (`inf:window:captain-on-phone`) and the phone hears the cards that come meanwhile (`docs/phone-push.md`, "When the computer sends").
+Whether a card needs the captain somewhere, and whether a wait can start, are the crewmate's (`docs/principles.md`, "Build the agent's reach, never its verdicts").
 A click from a script in a card's frame names no window.
 
 ## Settings -> Devices

@@ -2,12 +2,16 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  FACE_ID_FAILURE_LOG,
+  FACE_ID_LOG,
   PHONE_BOOT_BUDGET_MS,
+  PHONE_FACE_ID_BUDGET_MS,
   PHONE_IOS_BUILDS,
   PHONE_PIN,
   PHONE_PREWARM_BUDGET_MS,
   PREWARM_FAILURE_LOG,
   PREWARM_LOG,
+  phoneFaceIdStarted,
   phonePrewarmFinished,
   phoneSharedCacheFolder,
   phoneSimulator,
@@ -425,5 +429,212 @@ describe("the gate's wait for a simulator's wallpaper prewarm", () => {
     expect(stops.map((stop) => stop.aborted)).toEqual([true]);
     // SpringBoard's wallpaper lines and the scheduler's about its task, since boot, are kept with the command logs.
     expect(calls.at(-1)).toEqual(since(PREWARM_FAILURE_LOG, "--info"));
+  });
+});
+
+// INF-7013: a part's first Face ID request on a simulator started iOS's Face ID interface inside the five seconds the
+// prompt has, and on a busy phone Mac that start alone took up to 10 seconds, so the request failed with
+// LocalAuthentication's -1000. Real readings from a new iPad simulator of the pinned iOS on a Mac mini: `launchctl
+// list` around the interface's row before it ever ran and once it ran, and the `log stream` of its lines while the
+// Face ID helper's request started it, 1.6 seconds after the helper asked.
+const FACE_ID_NEW = readFileSync(
+  "tests/fixtures/phone-simulator/face-id-launchctl-new-ipad.txt",
+  "utf8",
+);
+const FACE_ID_RUNNING = readFileSync(
+  "tests/fixtures/phone-simulator/face-id-launchctl-running-ipad.txt",
+  "utf8",
+);
+const FACE_ID_STREAM = readFileSync("tests/fixtures/phone-simulator/face-id-start-ipad.txt", "utf8")
+  .trimEnd()
+  .split("\n");
+const FACE_ID_STARTED_AT = FACE_ID_STREAM.findIndex((line) =>
+  line.includes("didFinishLaunchingWithOptions"),
+);
+const FACE_ID_SIMULATOR = "A1F71FE4-62F9-479E-A2D4-8A4EEF5A7CA9";
+const FACE_ID_HELPER = "phone-gate/phone-face-id";
+// What the helper printed when the wait stopped it there, and what it prints for the failed part's own refusal: that
+// run's LocalAuthentication error, its domain, code and debug description.
+const FACE_ID_CANCELLED = "answered: com.apple.LocalAuthentication -9, Invalidated by client.";
+const FACE_ID_REFUSED =
+  "answered: com.apple.LocalAuthentication -1000, UI activation timed out after 5 seconds";
+
+describe("the gate's start of a simulator's Face ID interface", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  // A stand-in for the gate's `run` of `xcrun`: `launchctl list` answers `jobs`; the log stream prints the lines it
+  // printed before the interface's and ends only once the wait stops it, `say` printing each later line; the helper's
+  // request lasts until the wait stops it, which it answers by cancelling, or until `answer` prints its own answer.
+  const simctl = (jobs: string) => {
+    const calls: string[][] = [];
+    const stops: Record<string, AbortSignal> = {};
+    let streamHeard: ((line: string) => void) | undefined;
+    let answered: ((line: string) => void) | undefined;
+    const run = async (args: string[], heard?: (line: string) => void, stop?: AbortSignal) => {
+      calls.push(args);
+      if (args.includes("launchctl")) return jobs;
+      if (!heard || !stop) return "";
+      if (args.includes("stream")) {
+        stops.stream = stop;
+        streamHeard = heard;
+        for (const line of FACE_ID_STREAM.slice(0, 2)) heard(line);
+        return new Promise<string>((_resolve, reject) => {
+          stop.addEventListener("abort", () => reject(new Error("xcrun failed (143)")), {
+            once: true,
+          });
+        });
+      }
+      stops.helper = stop;
+      return new Promise<string>((resolve) => {
+        const answer = (line: string) => {
+          heard(line);
+          resolve(`${line}\n`);
+        };
+        answered = answer;
+        stop.addEventListener("abort", () => answer(FACE_ID_CANCELLED), { once: true });
+      });
+    };
+    return {
+      run,
+      calls,
+      stops,
+      say: (line: string) => streamHeard?.(line),
+      answer: (line: string) => answered?.(line),
+    };
+  };
+  const listed = ["simctl", "spawn", FACE_ID_SIMULATOR, "launchctl", "list"];
+  const streamed = [
+    "simctl",
+    "spawn",
+    FACE_ID_SIMULATOR,
+    "log",
+    "stream",
+    "--style",
+    "compact",
+    "--predicate",
+    FACE_ID_LOG,
+  ];
+  const asked = ["simctl", "spawn", FACE_ID_SIMULATOR, FACE_ID_HELPER];
+
+  it("asks for Face ID once its stream listens, and once the interface has started stops the stream and cancels the request", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    const said = vi.spyOn(console, "log").mockImplementation(() => {});
+    const { run, calls, stops, say } = simctl(FACE_ID_NEW);
+    let ended = false;
+    const waiting = phoneFaceIdStarted({
+      device: "ipad",
+      simulator: FACE_ID_SIMULATOR,
+      helper: FACE_ID_HELPER,
+      run,
+    }).finally(() => {
+      ended = true;
+    });
+    await vi.advanceTimersByTimeAsync(1_600);
+    for (const line of FACE_ID_STREAM.slice(2, FACE_ID_STARTED_AT)) say(line);
+    await vi.advanceTimersByTimeAsync(0);
+    // The interface's connection and request came before its own launch line; the wait keeps the request open.
+    expect(ended).toBe(false);
+    expect(stops.helper?.aborted).toBe(false);
+    say(FACE_ID_STREAM[FACE_ID_STARTED_AT]!);
+    await waiting;
+    expect(calls).toEqual([listed, streamed, asked]);
+    expect([stops.stream?.aborted, stops.helper?.aborted]).toEqual([true, true]);
+    expect(said.mock.calls).toEqual([
+      [
+        `ipad: simulator ${FACE_ID_SIMULATOR}'s Face ID interface started 1.6 seconds after the gate asked for Face ID`,
+      ],
+    ]);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("asks nothing of a simulator whose interface already runs", async () => {
+    const said = vi.spyOn(console, "log").mockImplementation(() => {});
+    const { run, calls } = simctl(FACE_ID_RUNNING);
+    await phoneFaceIdStarted({
+      device: "ipad",
+      simulator: FACE_ID_SIMULATOR,
+      helper: FACE_ID_HELPER,
+      run,
+    });
+    expect(calls).toEqual([listed]);
+    expect(said).not.toHaveBeenCalled();
+  });
+
+  it("keeps waiting when its own request runs out of its five seconds before the interface has started", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    const said = vi.spyOn(console, "log").mockImplementation(() => {});
+    const { run, stops, say, answer } = simctl(FACE_ID_NEW);
+    let ended = false;
+    const waiting = phoneFaceIdStarted({
+      device: "ipad",
+      simulator: FACE_ID_SIMULATOR,
+      helper: FACE_ID_HELPER,
+      run,
+    }).finally(() => {
+      ended = true;
+    });
+    await vi.advanceTimersByTimeAsync(5_000);
+    answer(FACE_ID_REFUSED);
+    // INF-2092's slowest start of the interface on a phone Mac, 9.7 seconds after the request.
+    await vi.advanceTimersByTimeAsync(4_700);
+    expect(ended).toBe(false);
+    for (const line of FACE_ID_STREAM.slice(2, FACE_ID_STARTED_AT + 1)) say(line);
+    await waiting;
+    expect(stops.stream?.aborted).toBe(true);
+    expect(said.mock.calls).toEqual([
+      [
+        `ipad: simulator ${FACE_ID_SIMULATOR}'s Face ID interface started 9.7 seconds after the gate asked for Face ID;` +
+          " the Face ID helper ended first: its request was answered: com.apple.LocalAuthentication -1000," +
+          " UI activation timed out after 5 seconds",
+      ],
+    ]);
+  });
+
+  it("fails an interface not started within its budget, naming the simulator and keeping its log since the wait began", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const began = new Date();
+    const { run, calls, stops } = simctl(FACE_ID_NEW);
+    let ended = false;
+    const waiting = phoneFaceIdStarted({
+      device: "ipad",
+      simulator: FACE_ID_SIMULATOR,
+      helper: FACE_ID_HELPER,
+      run,
+    }).finally(() => {
+      ended = true;
+    });
+    waiting.catch(() => {});
+    await vi.advanceTimersByTimeAsync(PHONE_FACE_ID_BUDGET_MS - 1);
+    expect(ended).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    const failure = await waiting.then(
+      () => undefined,
+      (error: Error) => error.message,
+    );
+    expect(failure).toBe(
+      `ipad: simulator ${FACE_ID_SIMULATOR}'s Face ID interface had not started ${(PHONE_FACE_ID_BUDGET_MS / 60_000).toFixed(1)}` +
+        " minutes after the gate began starting it, so the gate stopped waiting rather than let a Face ID prompt miss" +
+        " its five seconds",
+    );
+    expect([stops.stream?.aborted, stops.helper?.aborted]).toEqual([true, true]);
+    // The interface's own lines, and SpringBoard's and RunningBoard's about it, since the wait began, are kept.
+    expect(calls.at(-1)).toEqual([
+      "simctl",
+      "spawn",
+      FACE_ID_SIMULATOR,
+      "log",
+      "show",
+      "--style",
+      "compact",
+      "--info",
+      "--start",
+      logTime(began),
+      "--predicate",
+      FACE_ID_FAILURE_LOG,
+    ]);
   });
 });

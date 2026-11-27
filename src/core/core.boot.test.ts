@@ -11,6 +11,7 @@ import { DEFAULT_APPEARANCE } from "@shared/preferences";
 import { remoteLoginRefusedAnswerSchema, remoteLoginWords } from "@shared/remoteLogin";
 import { BATCHES_OFF_REFUSAL } from "@shared/repos";
 import { BATCHED_PULL_REQUESTS_OFFER } from "@shared/runbooks";
+import Database from "better-sqlite3";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MOCK_PROVIDER_ID, mockModelsJson } from "../../tests/e2e/mockModels";
 import { fakeHost, listening, quotaFixture, waitFor } from "../../tests/helpers/bootedCore";
@@ -20,6 +21,7 @@ import { createKeyIdentity } from "./devices/identity";
 import { RemoteLoginRefusedError } from "./devices/remoteLogin";
 import { absentKeychain, type HostCapabilities, type HostTaskBrowser } from "./host";
 import { type Core, startCore } from "./index";
+import { KnowledgeService } from "./knowledge/knowledgeService";
 import { appPathsFor, PERSONAL_WORKSPACE_NAME } from "./paths";
 import { createAppTools } from "./pi/appTools";
 import { EMIT_CARD_TOOL } from "./pi/cardTool";
@@ -828,6 +830,83 @@ describe("the knowledge browser's reads, gated at the protocol", () => {
     await expect(
       booted.dispatch("inf:knowledge:graph", [{ scope: "repo-elsewhere" }]),
     ).rejects.toThrow("No collection repo-elsewhere");
+  }, 60_000);
+});
+
+/**
+ * Directions saved before Infinitary recorded where it heard the captain
+ * (INF-6987's approved plan, piece P, and the captain's pick to confirm
+ * them once on one card): the first start that finds them asks the first
+ * mate once, through the real boot, and a later start does not ask again.
+ */
+describe("directions saved before heard marks", () => {
+  let core: Core | undefined;
+  let userDataDir: string;
+  let quotaDir: string;
+
+  afterEach(async () => {
+    await core?.dispose();
+    core = undefined;
+    await catalogRefreshesSettled();
+    rmSync(userDataDir, { recursive: true, force: true });
+    rmSync(quotaDir, { recursive: true, force: true });
+    delete process.env.INFINITARY_QUOTA_FIXTURE_DIR;
+  });
+
+  it("ask the first mate to confirm them at the first start, and not after a restart", async () => {
+    userDataDir = scratchDir("infinitary-core-heard-");
+    quotaDir = quotaFixture("infinitary-core-heard-quota-");
+    process.env.PI_OFFLINE = "1";
+    const dir = join(userDataDir, "knowledge");
+    mkdirSync(dir, { recursive: true });
+    const projects = { get: () => undefined, list: () => [] };
+    const earlier = new KnowledgeService({ dir, projects });
+    for (const [id, text] of [
+      ["squash", "Squash-merge every pull request."],
+      ["quiet", "Never post to the team channel."],
+    ] as const)
+      earlier.directions.change({ op: "add", id, scope: "captain", text, reason: "Kept." });
+    earlier.close();
+    // The collection as a build before heard marks left it.
+    const older = new Database(join(dir, "knowledge.db"));
+    older.exec("DROP TABLE direction_heard; DELETE FROM schema_migrations WHERE version = 5;");
+    older.close();
+    const asks = (booted: Core) =>
+      (
+        booted.services.recordDatabase
+          .prepare("SELECT id, payload FROM inbox ORDER BY id")
+          .all() as {
+          id: number;
+          payload: string;
+        }[]
+      )
+        .filter((row) => JSON.parse(row.payload).facts?.kind === "directions-to-confirm")
+        .map((row) => ({
+          id: row.id,
+          directions: JSON.parse(row.payload).facts.directions.sort(),
+        }));
+
+    const first = await startCore(fakeHost(userDataDir, true).host);
+    core = first;
+    const asked = asks(first);
+    expect(asked).toEqual([{ id: expect.any(Number), directions: ["d:quiet", "d:squash"] }]);
+    await first.dispose();
+    // The captain ticked one on the confirm card; the other stays unmarked,
+    // and the next start still asks nothing.
+    const answered = new KnowledgeService({ dir, projects });
+    answered.directions.change({
+      op: "revise",
+      id: "d:squash",
+      expectedRevision: 1,
+      text: "Squash-merge every pull request.",
+      reason: "The captain ticked it.",
+      heard: { from: "card", card: "card-confirm-directions" },
+    });
+    answered.close();
+
+    const next = await startCore(fakeHost(userDataDir, true).host);
+    core = next;
+    expect(asks(next)).toEqual(asked);
   }, 60_000);
 });
 

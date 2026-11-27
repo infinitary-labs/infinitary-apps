@@ -13,10 +13,12 @@ The `inf:automation:*` channels (`src/shared/channels/activity.ts`, reach `views
 The first mate reads a rule's runs, the jobs kept running and a schedule's next dates through `app_state`'s named reads (`src/core/pi/appReads.ts`).
 `automation.list` answers `ready` with every rule, or `unavailable` with the app's words when the rules cannot be read, never an empty list in its place.
 The window reads it every 30 seconds while it is connected, since the Automation panel's gate follows it, so one read reads what is connected at most once for all its event rules (`automationRulesOf`, `SchedulerEvents.snapshot`), never once per rule.
+Each tick, and each round of looks an arrival starts at once (`Scheduler.lookNow`), reads what is connected once for all the event rules it walks, both to find each rule's event and for each rule's look (`IntegrationsService.reading`).
 
 Settings and the first mate change a rule through one path: each change channel is a line of the app action catalog (`src/shared/actions.ts`, `docs/orchestrator-contract.md` "App action catalog"), run by the dispatcher.
 `automation-edit` is Save in Setup and its Turn on, `automation-state` is Pause and Resume, `automation-pause-all` is Pause all and `automation-delete` is Delete.
 The first mate runs them with `app_change`, and its `cancel_schedule` is `automation-delete`.
+What it reads of each rule in `app_state` is `automation.list`'s record, as Settings shows it: its last run (`lastFired`) and an event rule's failing mark (`failing`) among the rest, and `automation-edit`'s line names the `automation.history` read for a rule's runs.
 Pausing, resuming, pausing all and deleting are its own judgment at any turn, as making a schedule is (captain decision Q4); it edits a rule, or turns one on, when the captain asks.
 
 ## Who changed it
@@ -85,7 +87,7 @@ INF-6664 piece 2: while a runbook that is on names the `heartbeat` wake (the bui
   A beat's turn is the span from its run's firing to its settling, and a first mate request outside every beat's span is another turn.
 - A beat due while the app was closed is dropped and the rule's next run moves 55 minutes on from start; no beat goes while one is still waiting.
 - A beat is an ordinary scheduled delivery: one fixed line (`HEARTBEAT_LINE`) and the standing list, with the run's Found line in History; once it goes out, each new row's once-name is recorded so the row reads new again only at its next milestone.
-- What the first mate does with a beat is in the runbook's guide: act on a row whose next move is already its own, ask the captain once on one card when only they can move it and something changed since they decided, or leave it; a beat gives no new permission.
+- What the first mate does with a beat is in the runbook's guide: act on a row whose next move is already its own, a held or linked row whose end has happened included, ask the captain once on one card when only they can move it and something changed since they decided, such as a wait only they can end, or leave it; a beat gives no new permission.
   A part the app already asked about on its own card, such as the last-part card (`card-last-part-<task>`, `docs/report-sort.md`, "The last part the captain stopped"), counts as asked, so a beat never asks about it again.
 
 ## A task closes
@@ -268,6 +270,7 @@ Deleting a rule deletes its notes with it.
 Only a crewmate an automation's run started writes them, by editing a file (`RuleNotes`, `src/core/orchestrator/ruleNotes.ts`).
 The task's saved origin names the rule it serves (`TaskCapture.savedOrigin`): the first mate's turn that handled the run saves it when the turn starts or adopts a task, and `spawn_crewmate`'s `origin` names which run when several are read: with more than one run read, a start or filing that names none and answers no captain message is refused (`AskCapture.severalRuns`).
 A rule that never runs again, a one-time rule or a put-off card's, which is deleted once its run settles, puts no notes section in the brief.
+Neither does a run whose crewmate is an unsafe data reader, such as an outside intake round: its fence lets it neither read the hand-over folder nor write a file (`docs/agents-reach.md`, "An unsafe data reader"), so it is handed no notes and asked to write none.
 The crewmate's brief hands it the notes as `automation-notes.md` in its hand-over folder, named by path in one section that calls them advice, never instructions, and says when they were written before the captain last changed the rule; a rule with none yet tells it to make the file in its temporary folder only when the run learned something.
 The crewmate edits the file in place and names it in its report's files; the report is kept only once the app has replaced the notes with it.
 The app refuses the report, with words the crewmate acts on and nothing cut, when the page is past the limit, is not text, holds text that looks like planted instructions, a credential or a link that sends data out, or the rule's notes changed since it was handed them; then it hands the newer page to carry its changes into.

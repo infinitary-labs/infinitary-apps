@@ -4,7 +4,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setup } from "../../../tests/helpers/cardServiceHarness";
 import { seedTask } from "../tasks/seedTask";
 import type { CardService } from "./cardService";
-import { FIRSTMATE_FAILURE_CARD_ID } from "./hostCards";
 
 /**
  * Guardrails for card threads (INF-2625's plan, cardService's row: "Card
@@ -166,16 +165,12 @@ describe("card threads", () => {
     const { cardStore, make } = fixture();
     const cards = make();
     const id = crewCard(cards);
-    // An agent-down card has nobody to answer it (docs/card-threads.md).
-    cards.hostCards.addFirstmateFailureCard("<p>The turn failed.</p>");
-    cards.hostCards.raiseHostCard({
-      id: "card-host-quiet",
-      title: "Nothing to say",
-      meta: "",
-      body: "<p>Read only.</p>",
-      actions: [],
-      replies: false,
-    });
+    // The welcome takes no reply (docs/card-threads.md, "Who answers a card").
+    const quiet = cards.addRecordedFirstmateNote(
+      { title: "Welcome aboard", body: "<p>Read only.</p>" },
+      () => {},
+      { replies: false },
+    );
     const refusal = (mutation: ReturnType<CardService["replyAs"]>) =>
       mutation.effect === "refused" ? mutation.refusal : mutation.effect;
     expect(refusal(cards.replyAs(crewmate, { cardId: " ", text: "Hi." }))).toBe(
@@ -184,12 +179,9 @@ describe("card threads", () => {
     expect(refusal(cards.replyAs(crewmate, { cardId: "card-nowhere", text: "Hi." }))).toBe(
       "that id names no card on the record.",
     );
-    expect(refusal(cards.replyAs(crewmate, { cardId: "card-host-quiet", text: "Hi." }))).toBe(
+    expect(refusal(cards.replyAs(crewmate, { cardId: quiet, text: "Hi." }))).toBe(
       "this card takes no reply.",
     );
-    expect(
-      refusal(cards.replyAs(crewmate, { cardId: FIRSTMATE_FAILURE_CARD_ID, text: "Hi." })),
-    ).toBe("this card has no thread.");
     expect(refusal(cards.replyAs(crewmate, { cardId: id, text: "   " }))).toBe(
       "a reply needs some words.",
     );

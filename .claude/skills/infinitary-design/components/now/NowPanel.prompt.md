@@ -186,7 +186,9 @@ The words are Backlog, Queued, Starting, Working, Idle, Interrupted, Waiting on 
 Starting is the still open cyan ring, used only while a start is being prepared, and it is not Working.
 A confirmed start that did not begin, whether you started it or the queue did, reads Backlog · Could not start, and the Tasks row adds the dim word could not start.
 Open work reads by its start policy, as the panel groups it: Backlog waits for Start, Queued starts by itself.
-A blocker, a hold or a parent's parts is the reason beside the word, never another word: `Queued · Blocked by another task`, `Queued · Held`, `Backlog · Its 2 parts do the work`.
+A blocker or a hold is the reason beside the word, never another word: `Queued · Blocked by another task`, `Queued · Held`; so are a queued parent's or a program's parts, `Queued · Its 2 parts do the work`.
+A backlog parent that runs no program and nothing blocks never runs itself, so its word follows its open parts: the most pressing among them, in the order Waiting on you, Interrupted, Working, Starting, Idle, Queued, Backlog, with its own reason beside it, as `Working · Waiting for its parts · since Nov 17, 4:44 PM` (INF-6805, the captain's "Working while a part works, Waiting on you while a part's card waits").
+Its Tasks group and its board column still follow its own state, and its record's buttons stay its own: a part's card is shown and a part continued from that part's record.
 Open, working or idle work whose computer is out of reach keeps its mark's shape in `--warn` and reads `Idle · Mac mini is out of reach`; while its connection is being made it keeps its mark as it was and reads `Idle · Mac mini is connecting`, with no warn mark; while Infinitary there is updated it keeps its mark as it was and reads `Idle · Mac mini is updating`; while it is connected and catching up it keeps its mark as it was and reads `Idle · Catching up with Mac mini since 12:57 PM`; in each case, unless a blocker, a hold or its parts give the reason (`../devices/RunsOn.prompt.md`); Interrupted, Starting and Waiting on you keep their own.
 Keep rows otherwise minimal.
 
@@ -197,7 +199,7 @@ When it waits on one task, the reason also says where that wait stops (INF-5578)
 A review that has answered, whose change is still open, waits on that change the same way, `Idle · Waiting on INF-12`, rather than reading as no continuing work; one that has not answered yet keeps its own reason.
 The Tasks row, which shows no reason, adds the dim word `waiting`; its margin arrow points at what it waits on, and its summary names each one.
 A kanban tile uses grouped wait names and the earliest recorded event in its existing status area, with no separate recorded-since line; when its one wait's line goes further or ends in a hold, it names where that line stops instead of the event, wrapping in the column; list rows and older homes keep their previous presentation.
-The summary's Blocked by row lists every standing blocker by its key alone (INF-2528); the task card names its unknown end time and its recorded-since date where known, in the viewing computer's zone.
+The summary's Blocked by row lists every standing blocker by its key alone (INF-2528); the task card names its recorded-since date where known, in the viewing computer's zone.
 The time is when the wait was recorded - the edge's own time or a dated declaration, the earliest when several name one task - never when work stopped; an unknown time is left out, never guessed.
 A ready decision that settles with a merge reads `Waiting on you · Waiting for your merge`, from the typed merge fact alone; other ready decisions keep `A decision card is ready`.
 Paused for access, Background work is unknown and No continuing work keep their own reasons.
@@ -333,7 +335,7 @@ Only desktop task cards enrich their existing fields with the optional structure
 Checks owns every named watch schedule; Blocked by or the existing hold explanation owns dependencies and their recorded dates.
 Remaining check-backs and holds replace the existing header reason; no generic Wait section or extra badge repeats them.
 Suppress a generic reason only when its typed source has another owner in that view; keep failure, interruption and access guidance.
-Unknown end times remain unknown, and a past event says was due rather than resumed.
+A wait with no recorded event shows no time, never a guessed or unknown one, and a past event says was due rather than resumed.
 The Tasks list and board list rows retain their existing status, words, density and behavior.
 
 ## Batch gate

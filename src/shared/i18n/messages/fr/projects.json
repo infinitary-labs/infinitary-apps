@@ -49,5 +49,6 @@
     "other": "{count} tâches ouvertes rejoignent {project}, clés conservées :"
   },
   "projectsMoveTitleInto": "Déplacer {repositories} dans {project} ?",
-  "projectsMoveTitleOwn": "Déplacer {repositories} dans un projet à part ?"
+  "projectsMoveTitleOwn": "Déplacer {repositories} dans un projet à part ?",
+  "projectsSetupLeftFolder": "Son dossier est encore dans votre dossier de projets, donc l’ajouter lie ce dossier au lieu de cloner le projet une deuxième fois."
 }

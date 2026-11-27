@@ -80,8 +80,10 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | header (a request header) | Header | Masculine, plural "Header"; only in the custom API form and the usage reporting form. |
 | held (a batch that stopped) | angehalten | "Bündel angehalten", "Seit {since} angehalten"; "pausiert" stays for what a person pauses. |
 | hold (on a task) | zurückhalten | "sobald sie nicht mehr zurückgehalten wird" instead of a noun |
+| holds an override passes (named on a task's Activity) | asking first: das Fragen vorher; the open decisions: die offenen Entscheidungen; the waits: das Warten auf andere Arbeit; the open parts: die offenen Teile; the checks: die Überprüfungen; the delivery proof: der Nachweis der Auslieferung; the saved story: die gespeicherte Geschichte; the heavy-run line: die Warteschlange für aufwendige Läufe; the cost limit: die Kostengrenze; a retired hold: ein Halt, den es nicht mehr gibt | Joined as one list in the reader's language on the line. |
 | How to get it (an ask for a secret) | So bekommst du es | The heading over the steps a crewmate lays out for making or finding a secret. |
 | Infinitary | Infinitary | Never translated. |
+| intake round (a docs site guide) | Eingangsrunde | A scheduled task that reads new issues and pull requests and drafts replies; "Eingang" as in an inbox of what arrived. |
 | Integrations | Integrationen | The Settings section; one of them is "eine Integration". |
 | Intelligence | Intelligenz | |
 | issue (where the project lives) | Issue | As GitHub's German pages keep it. |
@@ -151,6 +153,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | send back (a change out of a batch) | zurückschicken | "Mit Begründung zurückschicken"; the change "geht zurück" to its crewmate. |
 | Settings | Einstellungen | Plural, so "Die Einstellungen sind offen". |
 | sign-in / sign in | Anmeldung / anmelden | "sich erneut anmelden". |
+| standing reply (your words kept on a task, which pass its holds) | stehende Antwort | |
 | start | starten | |
 | starter | Einstieg | A button that begins a sentence in the message box. |
 | Steer (button) | Lenken |  |
@@ -174,6 +177,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | token (a sign-in token a command prints) | Token | Neuter ("das Token"); only in the custom API form, plural "Tokens" for counted model tokens. |
 | unsafe data reader | Leser unsicherer Daten | A crewmate that reads words anyone can write. |
 | Usage | Nutzung | |
+| user (another user account on this computer) | Benutzer | "as {user}" is "als {user}"; "Läuft als {user}" for running as that user. |
 | version (replaces SHA, hash) | Version | |
 | Waiting on you (board lane) | Wartet auf dich | |
 | where the project lives | wo das Projekt liegt | "dort, wo das Projekt liegt". |

@@ -489,6 +489,24 @@ export class TaskTurns {
     return run();
   }
 
+  /**
+   * When the first mate set the task's current hold: the newest status line
+   * that wrote a gate, when it is the first mate's `at-time` hold with the
+   * gate's time. Undefined for a task not held that way, such as one whose
+   * timed wait is its crewmate's check-back.
+   */
+  holdSetAt(record: TaskRecord): number | undefined {
+    const gate = record.gate;
+    if (gate?.kind !== "at-time" || gate.until === undefined) return undefined;
+    const line = this.writer.events.latestWithObject(record.id, "status", "gate");
+    const written = line?.data?.gate as { kind?: unknown; until?: unknown } | undefined;
+    return line?.actor === "firstmate" &&
+      written?.kind === "at-time" &&
+      written.until === gate.until
+      ? line.at
+      : undefined;
+  }
+
   /** Why a hold of the task would be refused now, or undefined when it would be written. */
   holdRefusal(id: string, hold: { until: number; reason: string }): string | undefined {
     const record = this.writer.store.get(id);

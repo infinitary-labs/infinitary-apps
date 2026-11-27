@@ -74,9 +74,11 @@ Particles after a filled value are avoided by word order, or written in the pair
 | header (a request header) | 헤더 | Only in the custom API form and the usage reporting form, where the person types header names |
 | held (a batch that stopped) | 보류 | 보류됨, 보류 중; 일시 정지 stays for what a person pauses |
 | hold (on a task) | 보류 | "once its hold ends" is 보류가 풀리면 |
+| holds an override passes (named on a task's Activity) | asking first: 먼저 묻기; the open decisions: 열린 결정; the waits: 다른 작업 대기; the open parts: 열린 부분; the checks: 검사; the delivery proof: 전달 증명; the saved story: 저장된 스토리; the heavy-run line: 무거운 실행 대기열; the cost limit: 비용 한도; a retired hold: 더 이상 없는 보류 | Joined as one list in the reader's language on the line. |
 | How to get it (an ask for a secret) | 받는 방법 | The heading over the steps a crewmate lays out for making or finding a secret. |
 | Infinitary | Infinitary | Never translated |
 | inspector | 상세 보기 | Avoids 검사, which is the checks |
+| intake round (a docs site guide) | 접수 라운드 | A scheduled task that reads new issues and pull requests and drafts replies; 접수 as a desk takes in what arrives |
 | Integrations | 연동 | |
 | Intelligence | 지능 | |
 | issue (where the project lives) | 이슈 | |
@@ -157,6 +159,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | session, transcript | (not used) | 대화 instead |
 | Settings | 설정 | |
 | sign-in / sign in | 로그인 / 로그인하다 | Korean software uses 로그인 for both the noun and the verb |
+| standing reply (your words kept on a task, which pass its holds) | 유효한 답장 | |
 | start | 시작 | |
 | starter | 시작 문구 | |
 | Steer (button) | 지시 보내기 |  |
@@ -177,6 +180,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | token, OAuth, credential | (not used) | 로그인 or 키 instead; "billable tokens" stays 토큰 where English names them |
 | unsafe data reader | 안전하지 않은 데이터 읽기 작업 | A crewmate that reads words anyone can write. |
 | Usage | 사용량 | |
+| user (another user account on this computer) | 사용자 | "as {user}" is "{user}(으)로", as in "다른 사용자로 실행" |
 | version | 버전 | Replaces SHA and hash |
 | Waiting on you (board lane) | 선장님을 기다림 | |
 | where the project lives | 프로젝트가 있는 곳 | "the project's host" is 프로젝트 호스트 |

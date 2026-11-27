@@ -2,13 +2,21 @@ import InfinitaryKit
 import SwiftUI
 
 /// The accepted phone Settings plan: the desktop's section names and order, each opening in this same sheet.
-/// Leave and Forget stay with the computer in its sheet; Theme and approvals keep their existing owners.
+/// INF-2820 piece 1: Your computer leads the list, the computer's own page with Leave and Forget (`PhoneComputerPage`);
+/// Theme and approvals keep their existing owners.
 /// INF-3563: Projects, Intelligence, Runbooks, Usage and Automation are the computer's own pages in the computer's
 /// words (docs/ios.md, "Settings pages in the computer's words"); signing in stays on the computer.
 struct PhoneSettingsSheet: View {
     let session: ReadOnlySession
     /// Where a panel's `point.openSettings` opens the sheet, read once as it opens; nil opens the list.
     var opening: PhoneSettingsPlace?
+    /// Opens the sheet at Your computer instead, as Command-I, the computer button and the reach line do.
+    var openingComputer = false
+    let model: PhoneModel
+    /// What Your computer's choices do once Settings has closed (`PhoneComputerPage`).
+    let leave: (ReadOnlySession) -> Void
+    let forget: (String) -> Void
+    let add: (PhoneAddWay) -> Void
     @Environment(\.dismiss) private var dismiss
     @Environment(PhoneSecrets.self) private var secrets: PhoneSecrets?
     @Environment(PhoneAppearance.self) private var appearance: PhoneAppearance?
@@ -23,19 +31,20 @@ struct PhoneSettingsSheet: View {
     @State private var section: Section?
     /// The pages opened inside a section, outermost first: an automation, its review, a project.
     @State private var path: [Detail] = []
-    @State private var lastSection: Section = .general
+    @State private var lastSection: Section = .computer
     @State private var browsing = false
     /// The page last read for, so a page reads at once as it opens and a burst of changes reads once.
     @State private var followed: Place?
 
     private enum Section: String, CaseIterable {
-        case general, appearance, projects, intelligence, runbooks, usage, automation, integrations, devices
+        case computer, general, appearance, projects, intelligence, runbooks, usage, automation, integrations, devices
         var id: String { rawValue }
 
-        /// The section's name: the phone's own word for its four sections, and for each of the computer's pages the
+        /// The section's name: the phone's own word for its five sections, and for each of the computer's pages the
         /// computer's own name for that Settings tab.
         var title: String {
             switch self {
+            case .computer: PhoneMessages.phoneComputerTitle()
             case .general: PhoneMessages.phoneSettingsGeneral()
             case .appearance: PhoneMessages.phoneSettingsAppearance()
             case .projects: PhoneMessages.panelSettingsProjects()
@@ -56,7 +65,7 @@ struct PhoneSettingsSheet: View {
             case .runbooks: .runbooks
             case .usage: .usage
             case .automation: .automation
-            case .general, .appearance, .integrations, .devices: nil
+            case .computer, .general, .appearance, .integrations, .devices: nil
             }
         }
 
@@ -121,7 +130,7 @@ struct PhoneSettingsSheet: View {
         }
         .onAppear(perform: arrive)
         .font(PhoneFont.body).foregroundStyle(PhoneTheme.text).tint(PhoneTheme.accent)
-        // Nine sections do not fit half a screen: Settings opens at full height, with no half stop on the way down.
+        // Ten sections do not fit half a screen: Settings opens at full height, with no half stop on the way down.
         .presentationDragIndicator(.visible).phoneSheetSurface()
     }
 
@@ -146,6 +155,8 @@ struct PhoneSettingsSheet: View {
     /// The sections this phone draws itself.
     @ViewBuilder private func own(_ section: Section) -> some View {
         switch section {
+        case .computer:
+            PhoneComputerPage(session: session, model: model, leave: leave, forget: forget, add: add)
         case .general:
             VStack(alignment: .leading, spacing: PhoneTheme.space2) {
                 Text("Infinitary").font(PhoneFont.headline)
@@ -195,7 +206,7 @@ struct PhoneSettingsSheet: View {
             } else if let page = settings.automation {
                 PhoneAutomationView(page: page, settings: settings, open: { open(.rule($0)) }, review: { open(.review($0)) }, back: back)
             }
-        case .general, .appearance, .integrations, .devices:
+        case .computer, .general, .appearance, .integrations, .devices:
             EmptyView()
         }
     }
@@ -360,13 +371,14 @@ struct PhoneSettingsSheet: View {
             case .runbooks: settings?.read == true && settings?.runbooks != nil
             case .usage: settings?.read == true && settings?.usage != nil
             case .automation: settings?.read == true && settings?.automation != nil
-            case .general, .appearance, .devices: true
+            case .computer, .general, .appearance, .devices: true
             }
         }
     }
 
     private func summary(_ section: Section) -> String {
         switch section {
+        case .computer: PhoneMessages.phoneSettingsComputerSummary(computer: session.mac.name, reach: session.reachWords)
         case .general: PhoneMessages.phoneSettingsVersion(version: Self.version)
         case .appearance: PhoneMessages.phoneSettingsThemeSummary(theme: appearance?.look.words ?? PhoneLook.device.words)
         case .projects: settings?.projects?.summary ?? ""
@@ -392,8 +404,9 @@ struct PhoneSettingsSheet: View {
         section.live != nil ? settings?.read != true : section == .integrations && google?.read != true
     }
 
-    /// Opens the section and page a panel named (`opening`), as the captain's own taps there would.
+    /// Opens Your computer, or the section and page a panel named (`opening`), as the captain's own taps there would.
     private func arrive() {
+        if openingComputer { open(.computer); return }
         guard let opening, let place = Section(rawValue: opening.section.rawValue) else { return }
         open(place)
         switch opening.detail {
@@ -416,20 +429,17 @@ struct PhoneSettingsSheet: View {
         }
     }
 
-    /// The captain's Approve and build: this device's own Theme, in Apple's segmented control like the computer's Dark
-    /// and Light pills, worded Device, Dark and Light. The computer's Theme is never read or changed.
+    /// The captain's Approve and build: this device's own Theme, as tiles like the computer's, offering Device, Dark,
+    /// Light and each built-in color theme (INF-6888's part 3). The computer's Theme is never read or changed.
     private func theme(_ appearance: PhoneAppearance) -> some View {
         @Bindable var appearance = appearance
         return VStack(alignment: .leading, spacing: PhoneTheme.space2) {
             Text(PhoneMessages.phoneSettingsTheme()).font(PhoneFont.headline)
             Text(PhoneMessages.phoneSettingsThemeScope(computer: session.mac.name, device: label))
                 .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary).accessibilityIdentifier("phone-theme-scope")
-            Picker(PhoneMessages.phoneSettingsTheme(), selection: $appearance.look) {
-                ForEach(PhoneLook.allCases, id: \.self) { look in Text(look.words).tag(look) }
-            }
-            .pickerStyle(.segmented).labelsHidden().accessibilityIdentifier("phone-theme")
-            // A segmented control takes no keys of its own, and an unseen shortcut under a sheet never hears an unmodified
-            // arrow. So the control holds focus while Appearance is open and its arrows move the choice, with no command.
+            PhoneThemeTiles(look: $appearance.look)
+            // The tiles take no keys of their own, and an unseen shortcut under a sheet never hears an unmodified arrow.
+            // So the group holds focus while Appearance is open and its arrows move the choice, with no command.
             .focusable().focused($themeFocused)
             .onKeyPress(.leftArrow) { appearance.step(by: -1); return .handled }
             .onKeyPress(.rightArrow) { appearance.step(by: 1); return .handled }

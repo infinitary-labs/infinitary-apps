@@ -113,7 +113,9 @@ That journey checks, in order:
 
 1. The install is for this person alone, under `%LOCALAPPDATA%\Programs`, and the Start menu entry carries the release's identity.
 2. The app opened after install with Explorer as its parent, as the Start menu opens it.
-3. The Git for Windows offer is up; the journey presses its install button through Windows' accessibility tree, and the pinned Git installs for this person and the app's saved data appears.
+3. The Git for Windows offer is up.
+   While it is, the window holds the data folder and has opened no door yet, so `Infinitary.exe link --phone` says Infinitary is open here but did not answer (`docs/run.md`, "A link by command").
+   The journey then presses its install button through Windows' accessibility tree, and the pinned Git installs for this person, the app's saved data appears and its window shows.
    That first window started no command, since a run could not have found Git then.
    Opened again from the Start menu, the window starts the command with no window through this person's Task Scheduler (`docs/run.md`, "On Windows"): the run's task runs `Infinitary.exe run --agent <label>` as this person in their session, its sign-in trigger off, and closing the window leaves that run going until a stop asked through the data folder ends it.
    `Infinitary.exe start-at-boot` then turns the task's sign-in trigger on and starts it, and `start-at-boot --off` takes the task away; Task Scheduler's own answer for that task, which a refused removal reads, is there before and not found after.
@@ -159,6 +161,7 @@ A rehearsal checks and lists the installer and writes it into its rehearsed buil
 A stable promotion builds its own installer at the stable version from the alpha's commit; when it hands its version to alpha, alpha's entry names that installer too.
 The alpha's release notes call it an unsigned early build; the stable's call it an experimental build, not yet signed with a certificate Microsoft verifies; both say Windows warns before it runs, and a PC with Smart App Control on blocks it until the signed build.
 This gives the downloads page the entry it reads; the page lists a channel's installer once its own change is deployed.
+The builds file that lists Windows is the one download storage serves at `feeds/infinitary-builds.json` (`docs/alpha.md`, "Download storage"); the Homebrew tap keeps its own copy of `infinitary-builds.json`, which lists macOS and Linux and never Windows, so a check for a release's Windows build reads the download storage copy.
 
 ## The update check
 

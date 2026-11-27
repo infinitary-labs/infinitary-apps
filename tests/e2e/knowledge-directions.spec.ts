@@ -6,6 +6,7 @@ import Database from "better-sqlite3";
 import { KnowledgeService } from "../../src/core/knowledge/knowledgeService";
 import { captainTurn, renderWake } from "../../src/core/orchestrator/wakes";
 import { openDatabase } from "../../src/core/storage/db";
+import * as panelWords from "../../src/panels/knowledge/messages.generated";
 import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
 import {
@@ -50,7 +51,9 @@ const DIRECTION = {
   first: "Ask me before publishing a Harbor release.",
   text: "Do not publish a Harbor release until I approve its release card.",
   evidence: "The captain clarified the release approval boundary.",
-};
+  /** The card the captain's words for its first revision were heard on. */
+  heardOn: { from: "card", card: "card-release-review", title: "Ask before each release?" },
+} as const;
 const PERSONAL = {
   title: "Weekend walks",
   text: "I walk by the harbor on Sunday mornings.",
@@ -77,6 +80,7 @@ test("directions stay distinct from personal facts in the browser and in Firstma
       scope: HARBOR.id,
       text: DIRECTION.first,
       reason: DIRECTION.first,
+      heard: DIRECTION.heardOn,
     });
     // Forty short directions exceed the former budget once labels are rendered.
     for (let i = 0; i < 39; i += 1) {
@@ -149,6 +153,13 @@ test("directions stay distinct from personal facts in the browser and in Firstma
       await pressKey(row(app.page, DIRECTION.id), "Enter");
       await expect.poll(() => focusInBrowser(app.page)).toBe("section:overview");
       await expect(inspector(app.page)).toContainText(DIRECTION.text);
+      // INF-6987's approved plan, piece P: the inspector says of each revision
+      // whether the captain's own words for it were heard, and where.
+      const heard = (revision: string) =>
+        inspector(app.page).locator(`${revision} [data-knowledge-direction-heard]`);
+      await expect(heard("[data-knowledge-section-body]")).toHaveText(
+        panelWords.knowledgePanelNotHeard(),
+      );
       const direction = await app.page.evaluate(
         (id) => window.infinitary.plugins.read("knowledge.direction", { id }),
         DIRECTION.id,
@@ -167,6 +178,12 @@ test("directions stay distinct from personal facts in the browser and in Firstma
       await pressKey(section(app.page, "history"), "Enter");
       await expect(inspector(app.page)).toContainText(DIRECTION.first);
       await expect(inspector(app.page)).toContainText(DIRECTION.evidence);
+      await expect(heard('[data-knowledge-direction-revision="1"]')).toHaveText(
+        panelWords.knowledgePanelHeardCard({ title: DIRECTION.heardOn.title }),
+      );
+      await expect(heard('[data-knowledge-direction-revision="2"]')).toHaveText(
+        panelWords.knowledgePanelNotHeard(),
+      );
       await app.page.keyboard.press("Escape");
       await app.page.keyboard.press("Escape");
     });

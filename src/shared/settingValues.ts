@@ -1,3 +1,4 @@
+import { themeOf } from "./colorThemes";
 import type { CostLimit } from "./costLimit";
 import {
   type Appearance,
@@ -19,7 +20,32 @@ const look = (current: unknown) => current as Appearance;
 const DEFAULT_WASH = DEFAULT_APPEARANCE.washStrength as number;
 const DEFAULT_SIZE = DEFAULT_APPEARANCE.size as UiSize;
 
+/** Dark or Light, the base a color theme sits on: what a panel reads, as a frame is told. */
 export const themeValue = (c: unknown) => ({ theme: look(c).theme });
+/**
+ * The window's theme as the first mate names it: a color theme's id, else Dark or Light, with
+ * the name a person gave their own theme, which Activity shows as they said it.
+ */
+export const themeChoiceValue = (c: unknown) => {
+  const theme = look(c).colorTheme ?? look(c).theme;
+  const own = look(c).ownColorThemes?.find((saved) => saved.id === theme);
+  return { theme, ...(own ? { name: own.name } : {}) };
+};
+/**
+ * A person's own color themes by id and name, and the one this window wears
+ * with the colors the app moved in it, so the answer to a save names them.
+ * Each theme is read whole only on demand (the `theme.own-theme` read).
+ */
+export const ownColorThemesValue = (c: unknown) => {
+  const own = look(c).ownColorThemes ?? [];
+  const chosen = own.find((theme) => theme.id === look(c).colorTheme);
+  const worked = chosen ? themeOf(chosen.id, own) : null;
+  return {
+    saved: own.map(({ id, name }) => ({ id, name })),
+    chosen: worked?.base === look(c).theme ? (chosen?.id ?? null) : null,
+    ...(worked?.base === look(c).theme ? { moved: worked.moved } : {}),
+  };
+};
 export const fontsValue = (c: unknown) => ({ fonts: look(c).fonts ?? {} });
 export const washValue = (c: unknown) => ({ strength: look(c).washStrength ?? DEFAULT_WASH });
 export const sizeValue = (c: unknown) => ({ size: look(c).size ?? DEFAULT_SIZE });

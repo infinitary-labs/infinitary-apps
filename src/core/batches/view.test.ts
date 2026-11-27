@@ -212,6 +212,37 @@ describe("batches.list", () => {
     expect(one({ ...RECORD, open: { ...checking, repair: "t-repair" } })?.repair).toBeNull();
   });
 
+  // The plan's words for the early run (docs/forge.md, "A held batch"): the panel says the fix is checked before approval.
+  it("names the declared fix a held batch's checks run with before approval, until that run fails", () => {
+    const open = RECORD.open as NonNullable<BatchRecord["open"]>;
+    const fix = {
+      taskId: "t-repair",
+      branch: "inf/repair",
+      head: HEAD,
+      title: "Repair",
+      body: "",
+      at: NOW,
+      commit: HEAD,
+    };
+    const trial = {
+      task: "t-repair",
+      version: HEAD,
+      head: HEAD,
+      base: HEAD,
+      members: [fix],
+      at: NOW,
+    };
+    const one = (record: BatchRecord) =>
+      batchesView(sources([{ ...METER, batch: record }])).repos[0]?.open?.checkingFix;
+    expect(one({ ...RECORD, open: { ...open, trial } })).toEqual({
+      taskId: "t-repair",
+      key: "MTR-19",
+      title: "Repair",
+    });
+    expect(one({ ...RECORD, open: { ...open, trial: { ...trial, failed: ["lint"] } } })).toBeNull();
+    expect(one(RECORD)).toBeNull();
+  });
+
   it("lists a batched project with nothing yet, leaves out one delivered otherwise, and keeps one whose record still holds a batch", () => {
     const direct = { ...METER, id: "repo-site", name: "site", delivery: "direct-pr" as const };
     const ended = { ...direct, id: "repo-docs", name: "docs", batch: RECORD };

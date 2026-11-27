@@ -82,6 +82,14 @@ From the keyboard, Tab from the model's dropdown reaches the account's, which dr
 It is a setting chosen now and then rather than an action a person repeats, so it adds no command, as First mate model adds none.
 `SubscriptionsTab.test.ts` and `intelligenceBoard.test.tsx` own the choices and the picker's words; `tests/e2e/subscriptions-instruments.spec.ts` owns the journey, driven by keys, and `tests/e2e/phase5-quota.spec.ts` the crew pin's.
 
+## A key sign-in
+
+OpenCode Go signs in only with a pasted key (`keySignIn` in `src/shared/providers.ts`; INF-6873).
+Pi offers it no browser sign-in, so its chip asks no browser-or-key question and goes straight to Pi's key prompt, a secret field.
+Under the prompt a line says the key is on the OpenCode Console (`accountsConnectKeyWhere`, naming `keySignIn.site`).
+The key comes only from the account's own store: an `OPENCODE_API_KEY` in the computer's environment signs nothing in.
+The same holds for every key sign-in, Grok's, OpenRouter's, Kimi Code's and Copilot's included: with `XAI_API_KEY`, `OPENROUTER_API_KEY`, `KIMI_API_KEY` or `COPILOT_GITHUB_TOKEN` set, an account with no stored sign-in reads signed out with its Sign in button, reads no allowance, and no account lists that provider's models (`docs/architecture.md` §5, "Provider set"; `tests/e2e/computer-keys.spec.ts`).
+
 ## A code sign-in
 
 Copilot and Kimi Code sign in with a code the person enters on the provider's site (`codeSignIn` in `src/shared/providers.ts`; INF-842, the captain's answers on INF-838).
@@ -142,5 +150,15 @@ See `custom-api.md`.
 Add Amazon Bedrock under Add account with a named AWS profile already on this computer or a long-term Bedrock API key and an AWS region.
 Infinitary checks which Claude models that sign-in can use in the chosen region; AWS may bill those small requests.
 The first mate and crew run them through the built-in agent, not through Claude Code.
+After the region the sign-in asks where requests go: straight to AWS, or the organization's own address.
+The person types the address; Infinitary reads the network class from every DNS answer of its name (this computer, a private network or the public internet, as a custom API's address is read) and shows the host and class with one button, Send requests there.
+The address and its class are saved beside the region (`INFINITARY_BEDROCK_ADDRESS`, `INFINITARY_BEDROCK_NETWORK`); a saved address without its class is no sign-in.
+Each new connection resolves the name again and connects only to answers in the approved class, over HTTP/1.1, with no redirect and no proxy; plain http is only for an address on this computer.
+Nothing around the app moves a request: proxy variables, AWS endpoint variables and a profile's `endpoint_url` are never read.
+Every Bedrock connection, to AWS's own address too, checks certificates against this computer's trusted list (`src/core/trustedRoots.ts`, the one Claude's usage reporting uses), and a sign-in says a certificate this computer does not trust apart from an address it cannot reach.
+A third sign-in method, No key: my organization's address signs requests, skips the where step and sends with no credentials at all, so the computer's own AWS credentials never sign a request; without an organization address a key or profile stays required.
+When Claude Code's settings turn Bedrock on (`CLAUDE_CODE_USE_BEDROCK`), from the organization's managed tier or the person's own settings file, the region, address and profile prompts start filled from `AWS_REGION`, `ANTHROPIC_BEDROCK_BASE_URL` and `AWS_PROFILE` and say where the values came from, and `CLAUDE_CODE_SKIP_BEDROCK_AUTH` is named beside the method question (`readClaudeBedrockSetup`); no key is ever read, and the approval step still shows.
+Signing in again answers every step from what was saved but the key; when the address's name now reads as another network class, the approval step shows the new class for the person to approve.
+The account's row says sent through and the address's host.
 Connect separately on each computer that runs work.
 The account is billed by use and shows this month's estimate from Infinitary's own usage record, not an allowance meter or an AWS bill.

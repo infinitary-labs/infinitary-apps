@@ -8,12 +8,7 @@ import {
   type RecordBar,
 } from "@shared/recordBar";
 import { CLOSE_DONE_LABEL, closeDoneConfirm } from "@shared/recordCloseDone";
-import {
-  dropConfirmLead,
-  dropPartsLine,
-  dropUnderwayLine,
-  dropWaitingLine,
-} from "@shared/recordDrop";
+import { dropQuestionOf, dropRefusalOf } from "@shared/recordDrop";
 import type { TaskStatusReading } from "@shared/taskPresentation";
 import type { ComputerMoveView, DropEffects, MoveDestination, MoveOptions } from "@shared/tasks";
 import type React from "react";
@@ -324,11 +319,10 @@ export function RecordPaneFooter({
   };
   const busy = pending !== null || closingDone;
   const beginDrop = () => {
-    if (end === "drop-task") {
-      if (!effects) {
-        setError(m.recordDropReviewStale());
-        return;
-      }
+    const refusal = end ? dropRefusalOf(end, effects) : null;
+    if (refusal) {
+      setError(refusal);
+      return;
     }
     setError(null);
     setConfirming("drop");
@@ -409,15 +403,7 @@ export function RecordPaneFooter({
   const choosing = !asking && !askingDone && picking !== null;
   let confirmLine = "";
   if (askingDone) confirmLine = closeDoneConfirm(taskKey);
-  else if (asking) {
-    const unstarted = end === "drop-task" && effects;
-    const parts = unstarted ? dropPartsLine(effects.parts) : null;
-    const waiting = unstarted ? dropWaitingLine(effects.waiting) : null;
-    const underway = unstarted ? dropUnderwayLine(effects.underway) : null;
-    confirmLine = [dropConfirmLead(taskKey, end === "stop-task"), parts, waiting, underway]
-      .filter(Boolean)
-      .join(" ");
-  }
+  else if (asking) confirmLine = dropQuestionOf(taskKey, end, effects);
 
   let endButton: React.ReactNode = null;
   let nextButton: React.ReactNode = null;

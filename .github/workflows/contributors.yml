@@ -16,7 +16,10 @@ name: contributors
 # the project's own Windows PC, so it waits for the next alpha's release
 # check; the phone check, the signed installer checks, signing and TestFlight
 # run only from main. The owner merges the pull request itself once its
-# checks pass; it joins no batch.
+# checks pass; it joins no batch. That merge starts no main check or alpha of
+# its own: main's check leaves it to the owner's next batch, which checks it
+# on top of main and whose alpha ships it (docs/testing.md, "Main's desktop
+# release check").
 # A pull request of this project itself starts this file and skips every job.
 # A pull request runs the check files it carries, so the owner's approval of
 # each outside run, not this routing, keeps a contributor off the project's

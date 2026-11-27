@@ -2,7 +2,7 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { dirname, join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import {
   catalogRefreshesSettled,
@@ -241,6 +241,243 @@ describe("createModelRuntime", () => {
     expect(defOf("xai", "grok-build-0.1")?.reasoning).toBe(false);
     expect(defOf("xai", "no-such-model")).toBeUndefined();
     expect(listings).toEqual(["xai", "openrouter"]);
+  });
+});
+
+/**
+ * INF-6873: an OpenCode Go account comes only from the person's own pasted
+ * key. Pi's OpenCode Go key auth falls back to OPENCODE_API_KEY when nothing
+ * is stored, so a variable set on the computer must sign nothing in.
+ */
+describe("OpenCode Go's key", () => {
+  const VARIABLE = "OPENCODE_API_KEY";
+  let saved: string | undefined;
+
+  function storeWith(entries: Record<string, unknown>) {
+    const dir = scratchDir("infinitary-model-runtime-opencode-");
+    mkdirSync(dir, { recursive: true });
+    const authPath = join(dir, "auth.json");
+    writeFileSync(authPath, JSON.stringify(entries), { mode: 0o600 });
+    return { authPath, modelsPath: join(dir, "models.json") };
+  }
+
+  function servesOpenCodeGo(runtime: Awaited<ReturnType<typeof createModelRuntime>>): boolean {
+    return runtime.getAvailableSnapshot().some((model) => model.provider === "opencode-go");
+  }
+
+  afterEach(() => {
+    if (saved === undefined) delete process.env[VARIABLE];
+    else process.env[VARIABLE] = saved;
+  });
+
+  it("signs in no account, and lends no other account its models, from a key in the environment", async () => {
+    saved = process.env[VARIABLE];
+    process.env[VARIABLE] = "sk-from-the-environment";
+    const catalogBaseUrl = await startCatalog(({ status }) => status(500, "offline"));
+
+    const signedOut = await createModelRuntime({ ...storeWith({}), catalogBaseUrl });
+    expect(signedOut.hasConfiguredAuth("opencode-go")).toBe(false);
+    expect(await signedOut.getAuth("opencode-go")).toBeUndefined();
+    expect(servesOpenCodeGo(signedOut)).toBe(false);
+
+    const grok = await createModelRuntime({ ...signedInStore(), catalogBaseUrl });
+    expect(grok.getAvailableSnapshot().some((model) => model.provider === "xai")).toBe(true);
+    expect(servesOpenCodeGo(grok)).toBe(false);
+  });
+
+  it("answers with the account's own stored key, the environment's set or not", async () => {
+    saved = process.env[VARIABLE];
+    process.env[VARIABLE] = "sk-from-the-environment";
+    const catalogBaseUrl = await startCatalog(({ status }) => status(500, "offline"));
+    const runtime = await createModelRuntime({
+      ...storeWith({ "opencode-go": { type: "api_key", key: "sk-pasted-by-the-person" } }),
+      catalogBaseUrl,
+    });
+    expect(runtime.hasConfiguredAuth("opencode-go")).toBe(true);
+    expect((await runtime.getAuth("opencode-go"))?.auth.apiKey).toBe("sk-pasted-by-the-person");
+    expect(runtime.getModel("opencode-go", "kimi-k3")).toBeDefined();
+    expect(servesOpenCodeGo(runtime)).toBe(true);
+  });
+
+  it("still takes pi.dev's OpenCode Go list over the bundled one", async () => {
+    const catalogBaseUrl = await startCatalog(({ status }) =>
+      status(200, JSON.stringify([{ id: "kimi-k9", name: "Kimi K9", api: "openai-completions" }]), {
+        "last-modified": new Date(Date.now() + 60_000).toUTCString(),
+      }),
+    );
+    const { runtime, refreshed } = await createWithRefresh({
+      ...storeWith({ "opencode-go": { type: "api_key", key: "sk-pasted-by-the-person" } }),
+      catalogBaseUrl,
+    });
+    await refreshed;
+    const ids = runtime.getModels("opencode-go").map((model) => model.id);
+    expect(ids).toContain("kimi-k9");
+    expect(ids).toContain("kimi-k3");
+  });
+});
+
+describe("GitHub Copilot's own list", () => {
+  // Pi narrows Copilot to the model ids it stored at sign-in
+  // (docs/model-lists.md); registering OpenCode Go in the same runtime must
+  // not widen it again before the background refresh lands.
+  it("lists only the account's own Copilot models as soon as the runtime is created", async () => {
+    const dir = scratchDir("infinitary-model-runtime-copilot-");
+    mkdirSync(dir, { recursive: true });
+    const authPath = join(dir, "auth.json");
+    writeFileSync(
+      authPath,
+      JSON.stringify({
+        "github-copilot": {
+          type: "oauth",
+          refresh: "ghu-stored-at-sign-in",
+          access: "tid-stored-at-sign-in",
+          expires: Date.now() + 3_600_000,
+          availableModelIds: ["claude-sonnet-5.5"],
+        },
+      }),
+      { mode: 0o600 },
+    );
+    const catalogBaseUrl = await startCatalog(({ hang }) => hang());
+    const runtime = await createModelRuntime({
+      authPath,
+      modelsPath: join(dir, "models.json"),
+      catalogBaseUrl,
+    });
+    expect(
+      runtime
+        .getAvailableSnapshot()
+        .filter((model) => model.provider === "github-copilot")
+        .map((model) => model.id),
+    ).toEqual(["claude-sonnet-5.5"]);
+  });
+});
+
+/**
+ * Every offered provider's account comes only from the person's own sign-in
+ * in its store. Pi's key auth for these providers falls back to a variable
+ * on the computer when nothing is stored, and a Windows app, or one started
+ * from a terminal, keeps that variable (hostEnv.ts).
+ */
+describe("keys set on the computer", () => {
+  const VARIABLES = {
+    xai: "XAI_API_KEY",
+    openrouter: "OPENROUTER_API_KEY",
+    "kimi-coding": "KIMI_API_KEY",
+    "github-copilot": "COPILOT_GITHUB_TOKEN",
+  } as const;
+  type Guarded = keyof typeof VARIABLES;
+  const GUARDED = Object.keys(VARIABLES) as Guarded[];
+  // PI_OFFLINE keeps OpenRouter's key-personalized list from asking
+  // openrouter.ai with a test key; the stand-in pi.dev answers the rest.
+  const SET = ["PI_OFFLINE", ...Object.values(VARIABLES)];
+  const saved = new Map<string, string | undefined>();
+
+  beforeEach(() => {
+    for (const name of SET) saved.set(name, process.env[name]);
+    process.env.PI_OFFLINE = "1";
+    for (const provider of GUARDED) process.env[VARIABLES[provider]] = `${provider}-computer-key`;
+  });
+
+  afterEach(() => {
+    for (const [name, value] of saved) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+    saved.clear();
+  });
+
+  function storeHolding(entries: Record<string, unknown>) {
+    const dir = scratchDir("infinitary-model-runtime-computer-keys-");
+    mkdirSync(dir, { recursive: true });
+    const authPath = join(dir, "auth.json");
+    writeFileSync(authPath, JSON.stringify(entries), { mode: 0o600 });
+    return { authPath, modelsPath: join(dir, "models.json") };
+  }
+
+  function served(runtime: Awaited<ReturnType<typeof createModelRuntime>>, provider: string) {
+    return runtime.getAvailableSnapshot().filter((model) => model.provider === provider);
+  }
+
+  it.each(GUARDED)("leaves a %s account with an empty store signed out", async (provider) => {
+    const catalogBaseUrl = await startCatalog(({ status }) => status(500, "offline"));
+    const runtime = await createModelRuntime({ ...storeHolding({}), catalogBaseUrl });
+    expect(runtime.hasConfiguredAuth(provider)).toBe(false);
+    expect(runtime.getProviderAuthStatus(provider)).toEqual({ configured: false });
+    expect(await runtime.getAuth(provider)).toBeUndefined();
+    expect(served(runtime, provider)).toEqual([]);
+  });
+
+  it("lends another provider's account none of their models or keys", async () => {
+    const catalogBaseUrl = await startCatalog(({ status }) => status(500, "offline"));
+    const codex = await createModelRuntime({
+      ...storeHolding({
+        "openai-codex": {
+          type: "oauth",
+          access: "codex-access",
+          refresh: "codex-refresh",
+          expires: Date.now() + 3_600_000,
+          accountId: "codex-account",
+        },
+      }),
+      catalogBaseUrl,
+    });
+    expect(served(codex, "openai-codex").length).toBeGreaterThan(0);
+    for (const provider of GUARDED) {
+      expect(served(codex, provider)).toEqual([]);
+      const model = codex.getModels(provider)[0];
+      expect(model).toBeDefined();
+      expect(await codex.getAuth(model as NonNullable<typeof model>)).toBeUndefined();
+    }
+  });
+
+  it.each(GUARDED)("answers a %s account with its own stored key", async (provider) => {
+    const catalogBaseUrl = await startCatalog(({ status }) => status(500, "offline"));
+    const runtime = await createModelRuntime({
+      ...storeHolding({ [provider]: { type: "api_key", key: `${provider}-stored-key` } }),
+      catalogBaseUrl,
+    });
+    expect(runtime.hasConfiguredAuth(provider)).toBe(true);
+    expect((await runtime.getAuth(provider))?.auth.apiKey).toBe(`${provider}-stored-key`);
+    expect(served(runtime, provider).length).toBeGreaterThan(0);
+    for (const other of GUARDED.filter((each) => each !== provider))
+      expect(served(runtime, other)).toEqual([]);
+  });
+
+  it("answers a Kimi Code sign-in with its own token", async () => {
+    const catalogBaseUrl = await startCatalog(({ status }) => status(500, "offline"));
+    const runtime = await createModelRuntime({
+      ...storeHolding({
+        "kimi-coding": {
+          type: "oauth",
+          access: "kimi-signed-in-access",
+          refresh: "kimi-signed-in-refresh",
+          expires: Date.now() + 3_600_000,
+        },
+      }),
+      catalogBaseUrl,
+    });
+    expect(runtime.isUsingOAuth("kimi-coding")).toBe(true);
+    expect((await runtime.getAuth("kimi-coding"))?.auth.headers).toEqual({
+      Authorization: "Bearer kimi-signed-in-access",
+    });
+  });
+
+  it("answers a Copilot sign-in with its own token", async () => {
+    const catalogBaseUrl = await startCatalog(({ status }) => status(500, "offline"));
+    const runtime = await createModelRuntime({
+      ...storeHolding({
+        "github-copilot": {
+          type: "oauth",
+          access: "copilot-signed-in-access",
+          refresh: "copilot-signed-in-refresh",
+          expires: Date.now() + 3_600_000,
+        },
+      }),
+      catalogBaseUrl,
+    });
+    expect(runtime.isUsingOAuth("github-copilot")).toBe(true);
+    expect((await runtime.getAuth("github-copilot"))?.auth.apiKey).toBe("copilot-signed-in-access");
+    expect(served(runtime, "github-copilot").length).toBeGreaterThan(0);
   });
 });
 

@@ -45,10 +45,14 @@ The corpus export's manifest counts them per hold kind in `rigor.overrides_by_ho
 - `at`: when its row was written, in ISO 8601 UTC.
 - `holds`: the soft holds it named.
 - `until` and `head`: `version` with the version it covers, or `task` with no version.
-- `route`: `merge-anyway` for the captain's Merge anyway click, recorded in the captain's name, or `relayed-words` for update_task override, recorded by the first mate relaying the captain's words; a row anyone else wrote reads null.
+- `route`: `merge-anyway` for the captain's Merge anyway click, recorded in the captain's name, `relayed-words` for update_task override, recorded by the first mate relaying the captain's words, or `direction` for update_task override citing a heard direction of the task's project; a row anyone else wrote reads null.
+- `direction`: the `d:` id of the direction a `direction` override cites, null for every other.
 - `merge_click`: the words were the captain's click on a merge, an override the app no longer records and that never stands.
 - `replaces`: the time and holds of the override the task's record held when it was written, null when none stood or a take-back came between.
   One override stands on a task at a time, so a widened one counts again under each hold it repeats; `replaces` shows the repeat.
+
+A kept write passes its soft hold a second way, on a yes of the captain's that its crewmate named and that still stands (`docs/forge.md`, "A write that asks").
+The export counts those sends in `rigor.named_yes_sends_by_hold`, under `kept-write`: each kept write saved as sent with the yes it named, on any task, its outcome answered or unknown; one the host refused before sending is no send.
 
 A hold the captain's words pass often is the signal that it rests on a verdict: it should drop a level, or its judgment should go to the agent.
 
@@ -76,7 +80,7 @@ It runs five steps.
    For a limit or hold that stays, it checks that the agent can read it, that its refusal names the fact it rests on, and that a way out is typed beside it.
 4. **The counts.**
    It runs `node scripts/limits.ts --counts` for the baseline's size and names each baseline entry the window added with its pull request's reason.
-   It runs `pnpm export:corpus --out` into its own temporary folder, reads `manifest.json`'s `rigor.overrides_by_hold`, `rigor.overrides` and `rigor.metrics.hold_overrides`, and deletes the export.
+   It runs `pnpm export:corpus --out` into its own temporary folder, reads `manifest.json`'s `rigor.overrides_by_hold`, `rigor.overrides`, `rigor.named_yes_sends_by_hold` and `rigor.metrics.hold_overrides`, and deletes the export.
    It compares each count with the last audit's report, and reads the window's entries in `rigor.overrides` for which tasks passed each hold, by which route, and which overrides replaced one that named the same hold.
 5. **The answer.**
    Its card leads with the verdicts it found in code, each with its file, its line and the move it suggests, then the holds the captain's words passed most with the level each suggests, then the counts beside last week's, and what it could not read.
@@ -94,8 +98,8 @@ Every refusal an agent was served names its hold: a soft hold with its way out, 
 ## An unsafe data reader
 
 A task that reads words strangers can write, such as its project's issues and pull requests, starts as an unsafe data reader: a read-only answer task whose shape says `unsafe_data_reader` (`src/shared/routingPolicy.ts`).
-Only the first mate sets it, on `spawn_crewmate`; the fence is the host's, so it holds whatever those words say, and the crewmate cannot set or clear it.
-`spawn_crewmate` refuses one on the personal workspace, whose files are the captain's own, or that is not an answer (`UNSAFE_DATA_READER_PROJECT`, `UNSAFE_DATA_READER_ANSWERS` in `src/core/orchestrator/workShape.ts`); a takeover or a stronger model's retry keeps it.
+Only the first mate sets it, on `spawn_crewmate` or `create_task`; the fence is the host's, so it holds whatever those words say, and the crewmate cannot set or clear it.
+Both refuse one on the personal workspace, whose files are the captain's own, or that is not an answer (`UNSAFE_DATA_READER_PROJECT`, `UNSAFE_DATA_READER_ANSWERS` and, for a task that is filed, `UNSAFE_DATA_READER_ANSWERS_RULE` in `src/core/orchestrator/workShape.ts`); a takeover or a stronger model's retry keeps it.
 One with no project runs in an empty folder of its own, `crewmates/<taskId>/reader/` (`crewmateReaderDir`), never a copy of the default workspace, whose files other tasks' work leaves there; its record names no working copy, so its close removes none, and the folder goes with the task's other leftover files.
 
 - Its session is fenced (`SessionSpec.fenced`): no shell, no file change and no browser, on both kinds of model session; its one way onto the web is `web_read` (below).
@@ -108,7 +112,7 @@ One with no project runs in an empty folder of its own, `crewmates/<taskId>/read
 - `github_read` reaches only its own project, through the project's own sign-in, and a reader with no project is refused every read and write there before any sign-in is chosen, never falling back to the github.com sign-in an ordinary task with no project uses; and every answer comes fenced whole under its host's label, `github-data`, `gitlab-data` or `bitbucket-data` (`readerFenceLabel`), the way Google's words are (`docs/integrations.md`, "Data from outside"), with a fresh fence each read.
   Fencing the whole answer, not only the words of authors who cannot write to the project, keeps the host from judging who is trusted.
   Its answer must reach the model whole, since its fence refuses the temporary folder a long answer is saved to: a listing past that length is read again at the largest page that fits (`smallerPage`), and an answer no page fits is refused with words on asking for less.
-- Every `github_write` it makes to its own project is kept, run starts included, and the host puts it on one approval card with a ticked row each, beside its kept integration calls ("A reader's writes" in `docs/forge.md`); a write anywhere else, a release file and a validation effect are refused and nothing is kept.
+- Every `github_write` it makes to its own project is kept, run starts included, whatever yes it names as its allowance (route A, the captain's pick on INF-6987), and the host puts it on one approval card with a ticked row each, beside its kept integration calls ("A reader's writes" in `docs/forge.md`); a write anywhere else, a release file and a validation effect are refused and nothing is kept.
 - `web_read` reads one public web page as text (`ReaderWebService`, `src/core/orchestrator/readerWeb.ts`), under "Web pages" below.
 - It writes no file, so its instructions name no evidence, temporary or card body folder: its card bodies go inline.
   It can never open an email's attachment or any other file an integration saves, and the first mate's `unsafe_data_reader` parameter says so, so a request that needs one starts an ordinary task.
@@ -159,6 +163,7 @@ The host keeps it as a Build row on the reader's approval card instead of filing
 - A row is a `WriteAsk` of kind `build` (`src/shared/writeAsk.ts`): it joins the task's waiting card of writes, counts toward the same cap, and is drawn with its title, the issue as a link, Reproduce first or Plan first, its goal and why whole, and one choice that arrives on Keep for later (`forgeApprovalCard`).
 - On Only this time, Start now files the task and asks for its start as the captain's Start does, so the first mate's directions apply; Keep for later files it on request; Don't file files nothing; Not now files none of them (`BuildRows.answer`).
   The reader hears which in its `write-answered` steer, which marks the ask as a Build row so a row not filed is asked again with `file_followup`, never as a write.
+  The first mate hears each filed row once, before a Start now's own wake: the filed task and the reader by key, the captain's pick, and the issue's number and the address the host read open (`build-row-filed`), so a waiting task's words can name that address without taking it from the reader (`docs/task-graph.md`, "A side-effect task").
 - Don't file also holds back every write of the same click that addresses the row's issue in its project, such as a reply under it, so the issue never gets a reply that promises work the captain chose not to file (`addressesRowIssue`, `CardWriteAsks.answerIntegrationCard`).
   The reader hears in the same steer that the write was held back and why, and may write a new reply that fits the choice, which waits on a new card.
 - The filed task's brief is the row's goal and why as the captain read them, one line on where they come from, and how it starts (`buildRowBrief`); it carries no issue number or link, and the record keeps the reader's goal and why marked as every reader follow-up's.

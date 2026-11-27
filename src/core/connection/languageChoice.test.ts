@@ -349,3 +349,84 @@ it("leaves the panels that read settings out of the panel list a view without se
   await older.close();
   await current.close();
 });
+
+// The approved plan for color themes (INF-6888, part 1, `color-theme`): a view whose hello does
+// not list the change is never pushed or answered the chosen theme, which its stricter reading
+// of the look would refuse; it still reads the theme's base. One naming it reads the whole look.
+it("leaves the color theme out of the look a view without color-theme is pushed or answered", async () => {
+  const look = {
+    ...DEFAULT_SHELL_PREFERENCES,
+    appearance: {
+      ...DEFAULT_SHELL_PREFERENCES.appearance,
+      theme: "dark" as const,
+      colorTheme: "dracula",
+    },
+  };
+  const at = await home({
+    dispatch: (async (channel) => {
+      if (channel === "inf:shell:preferences") return look;
+      if (channel === "inf:settings:appearance:get") return look.appearance;
+      throw new Error("Unexpected request");
+    }) as CoreDispatch,
+  });
+  const grant = await at.join();
+  const older = await connectClient(grant, { changes: ["ambient-music"] });
+  const current = await connectClient(grant, { changes: ["ambient-music", "color-theme"] });
+  const { colorTheme: _theme, ...withoutTheme } = look.appearance;
+  expect(await older.invoke("inf:settings:appearance:get", [])).toEqual(withoutTheme);
+  expect(appearanceSchema.omit({ colorTheme: true }).strict().safeParse(withoutTheme).success).toBe(
+    true,
+  );
+  expect(await current.invoke("inf:settings:appearance:get", [])).toEqual(look.appearance);
+  at.events.emit("inf:shell:preferences", look);
+  expect((await older.push((push) => push.channel === "inf:shell:preferences")).payload).toEqual({
+    ...look,
+    appearance: withoutTheme,
+  });
+  expect((await current.push((push) => push.channel === "inf:shell:preferences")).payload).toEqual(
+    look,
+  );
+  await older.close();
+  await current.close();
+});
+
+// Part 2 of the same plan (`own-color-themes`): a view whose hello does not list the change is
+// never sent the person's own themes, which its strict reading of the look would refuse; it
+// still reads the chosen theme's id, which it draws as the base.
+it("leaves own color themes out of the look a view without own-color-themes is answered", async () => {
+  const appearance = {
+    ...DEFAULT_SHELL_PREFERENCES.appearance,
+    theme: "dark" as const,
+    colorTheme: "own-old-terminal",
+    ownColorThemes: [
+      {
+        id: "own-old-terminal",
+        name: "Old terminal",
+        colors: {
+          background: "#020a03",
+          text: "#3ddc5a",
+          accent: "#8dff9c",
+          hot: "#ffd23d",
+          danger: "#ff5a4d",
+          captain: "#b99aff",
+        },
+      },
+    ],
+  };
+  const at = await home({
+    dispatch: (async (channel) => {
+      if (channel === "inf:settings:appearance:get") return appearance;
+      throw new Error("Unexpected request");
+    }) as CoreDispatch,
+  });
+  const grant = await at.join();
+  const older = await connectClient(grant, { changes: ["ambient-music", "color-theme"] });
+  const current = await connectClient(grant, {
+    changes: ["ambient-music", "color-theme", "own-color-themes"],
+  });
+  const { ownColorThemes: _own, ...withoutOwn } = appearance;
+  expect(await older.invoke("inf:settings:appearance:get", [])).toEqual(withoutOwn);
+  expect(await current.invoke("inf:settings:appearance:get", [])).toEqual(appearance);
+  await older.close();
+  await current.close();
+});

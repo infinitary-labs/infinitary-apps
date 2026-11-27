@@ -40,6 +40,9 @@
   "feedBatchQueuedHost": "{project}: أدخل مستضيف المشروع الدفعة {label} في قائمة انتظار الدمج للفرع الرئيسي. تُدمج هناك بعد نجاح فحوصات القائمة.",
   "feedBatchRetried": "{project}: أُعيد جمع الدفعة {label} وتُشغَّل فحوصاتها مرة أخرى.",
   "feedBatchSentBack": "{project}: أُرجع «{title}» من دفعته: {reason}",
+  "feedBatchTrial": "{project}: تشغّل الدفعة {label} فحوصاتها مع التصحيح المعلَن قبل الموافقة على التصحيح. حين يُوافق على التصحيح بهذا الإصدار وتنجح هذه الفحوصات، تُدمج الدفعة كما هي.",
+  "feedBatchTrialFailed": "{project}: تبقى الدفعة {label} معلّقة لأن هذه الفحوصات فشلت مع التصحيح المعلَن: {checks}. يصلحه فرد طاقم التصحيح في إصدار جديد.",
+  "feedBatchTrialFailedUnnamed": "{project}: تبقى الدفعة {label} معلّقة لأن فحوصاتها فشلت مع التصحيح المعلَن. يصلحه فرد طاقم التصحيح في إصدار جديد.",
   "feedBranchPushed": "دُفع الفرع",
   "feedBuildRowKept": "أُدرجت «{title}» باسم {task} لوقت لاحق.",
   "feedBuildRowNotFiled": "لم تُدرج «{title}».",
@@ -149,5 +152,8 @@
   "feedUndelivered": "لم تُسلَّم الرسالة: {why}",
   "feedUnsafeDataReaderReported": "أرسل قارئ البيانات غير الآمنة تقريره؛ كلامه في سجله.",
   "feedUpdated": "تحديث: {text}",
+  "feedWriteNotSentOnWords": "لم يُرسل {call} إلى {place} بناءً على كلماتك «{words}»: {why}",
+  "feedWriteSentOnWords": "أُرسل {call} إلى {place} مرة واحدة دون بطاقة، بناءً على كلماتك «{words}»: جاء الرد {status}.",
+  "feedWriteUnknownOnWords": "أُرسل {call} إلى {place} مرة واحدة دون بطاقة، بناءً على كلماتك «{words}»؛ نتيجته غير معروفة، ولن يُرسل مرة أخرى.",
   "feedYouChose": "اخترت «{choice}»"
 }

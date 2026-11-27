@@ -4,6 +4,7 @@ import { wordedLine } from "@shared/i18n/said";
 import { wordedActivity } from "@shared/i18n/wordedActivity";
 import type { CorePushChannel } from "@shared/ipc";
 import type { PanelFeedLine } from "@shared/personal/contracts";
+import { panelQuotaSnapshot, type QuotaSnapshotView } from "@shared/quota";
 import { type ComputerResourcesView, panelComputerResources } from "@shared/resources";
 import type { ProjectView, TaskBoard, TaskBoardDelta, TaskDetail, TaskView } from "@shared/tasks";
 import { presentBoard, presentProjects, presentTask } from "@shared/taskWaiting";
@@ -76,6 +77,9 @@ const PUSHES: Record<Exclude<CorePushChannel, "inf:event">, ReadApi["onPush"]> =
   // applies them (docs/run.md, "The window opened beside it"); no page hears.
   "inf:own-window:ask": () => () => {},
   "inf:presence:dock": () => () => {},
+  // The captain acted on a phone: the window's main process reads whether
+  // this computer was touched just before (src/main/attendance.ts); no page hears.
+  "inf:window:captain-on-phone": () => () => {},
   // A paired view started this computer's update: the update notice subscribes directly.
   "inf:update:asked": (_channel, listener) => window.infinitary.update.onAsked(listener),
   "inf:auth:prompt": (_channel, listener) => window.infinitary.auth.onPrompt(listener),
@@ -227,6 +231,7 @@ export function firstmateReadApi(): ReadApi {
       // stops a panel from computing its own RAM used.
       if (name === "computers.resources")
         return panelComputerResources(value as ComputerResourcesView);
+      if (name === "quota.snapshot") return panelQuotaSnapshot(value as QuotaSnapshotView | null);
       return value;
     },
     onPresentation: (listener) =>

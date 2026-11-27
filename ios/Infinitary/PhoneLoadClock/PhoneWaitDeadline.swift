@@ -8,7 +8,8 @@ let gradesBudgets = ProcessInfo.processInfo.environment["INFINITARY_PERF_BUDGETS
 
 /// Mirrors tests/helpers/budgets.ts: the load clock samples every 25 ms, counts at most
 /// two ticks across a stall, and slows when the one-minute load exceeds the processor count.
-/// Each observation still ends at min(20 × budget, 10 minutes) on the monotonic wall clock.
+/// Each observation still ends at min(20 × budget, 10 minutes) on the monotonic wall clock,
+/// and a budget longer than 10 minutes at its own length (`phoneRequestBudget`).
 struct PhoneWaitDeadline {
     private let budget: TimeInterval
     private let graded: Bool
@@ -42,7 +43,8 @@ private func phoneLoad() -> Double {
     return getloadavg(&reading, 1) == 1 ? reading : 0
 }
 
+/// `waitCap` in tests/helpers/loadClock.ts, which only ever lengthens a wait.
 /// The transport is an outer safety boundary only; the request's failure timer uses the clock.
 func phoneRequestBudget(_ seconds: TimeInterval) -> TimeInterval {
-    min(20 * seconds, 600)
+    max(seconds, min(20 * seconds, 600))
 }

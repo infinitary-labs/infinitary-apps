@@ -47,6 +47,28 @@ export function mountKindOf(source: PluginSource): PanelMountKind {
   return source === "installed" ? "installed" : "personal";
 }
 
+/**
+ * Why nothing on the window's rails is on screen right now, whatever the
+ * panel's own state says (docs/personal-panels.md, "Placed on the rail"):
+ *
+ * - `folded`: the rails are folded away, at no width, for a card that needs
+ *   their room, a maximized card or the main message; their panels keep
+ *   their size and run, and a docked panel can still be photographed;
+ * - `settings`: Settings is open, and the window draws no rails at all.
+ */
+export const RAILS_AWAY = ["folded", "settings"] as const;
+export type RailsAway = (typeof RAILS_AWAY)[number];
+
+/** The states that put something of a panel on its rail, which `away` qualifies. */
+export const ON_RAIL_STATES: ReadonlySet<PanelMountState> = new Set([
+  "drawn",
+  "collapsed",
+  "folded",
+  "gathered",
+  "loading",
+  "stopped",
+]);
+
 /** The longest reason the window sends; a longer one is cut at the window. */
 export const PANEL_MOUNT_WHY_MAX = 500;
 
@@ -66,6 +88,12 @@ export const panelMountSchema = z.object({
    * as, a panel with the same id. Absent on every other row.
    */
   runbook: z.string().min(1).max(100).optional(),
+  /**
+   * Why its rail is out of sight right now (`RAILS_AWAY`), on a row in an
+   * on-rail state (`ON_RAIL_STATES`) only; absent while the rails are on
+   * screen, and from a window built before the field.
+   */
+  away: z.enum(RAILS_AWAY).optional(),
 });
 export type PanelMount = z.infer<typeof panelMountSchema>;
 

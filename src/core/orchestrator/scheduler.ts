@@ -86,6 +86,9 @@ export type EventLook = { cursor: string; items: AutomationEventItem[]; resynced
 
 export type EventFinder = Pick<SchedulerEvents, "find">;
 
+/** One reading of what is connected that finds and looks as the integrations do. */
+export type EventReading = Pick<SchedulerEvents, "find" | "look">;
+
 /**
  * The integrations as an event rule reaches them (docs/automation.md,
  * "Events"): find the event a rule names, and look at it from a cursor.
@@ -93,11 +96,11 @@ export type EventFinder = Pick<SchedulerEvents, "find">;
 export type SchedulerEvents = {
   find(integration: string, event: string): ListenedEvent | undefined;
   /**
-   * One reading of what is connected that finds as `find` does, for a
-   * caller asking about many rules at once (the Automation list); without
-   * it, each lookup reads again.
+   * One reading of what is connected that finds and looks as `find` and
+   * `look` do, for a caller asking about many rules at once (the Automation
+   * list, the tick); without it, each lookup and each look reads again.
    */
-  snapshot?(): EventFinder;
+  snapshot?(): EventReading;
   /**
    * Look from a cursor, only while the id stands for `connection`; throws
    * when it cannot look now (paused, gone, replaced), and the rule waits.
@@ -447,9 +450,13 @@ export class Scheduler {
     this.ticks += 1;
     for (const id of this.failedLooks.keys())
       if (!this.options.store.get(id)) this.failedLooks.delete(id);
+    // One reading of what is connected for every rule's find and look:
+    // reading it per rule, and again per look, stalled the main process on
+    // each tick (INF-6885).
+    const reading = this.reading();
     for (const record of this.options.store.list()) {
       if (record.spec.kind === "event") {
-        this.listen(record);
+        this.listen(record, false, reading);
         continue;
       }
       if (record.state !== "enabled" || record.nextFire > now) continue;
@@ -634,7 +641,7 @@ export class Scheduler {
    * still looking looks again once that look ends, so nothing dropped
    * meanwhile waits for the next minute.
    */
-  private listen(record: ScheduleRecord, now = false): void {
+  private listen(record: ScheduleRecord, now = false, reading?: EventReading): void {
     const events = this.options.events;
     if (!events || record.state !== "enabled" || record.spec.kind !== "event") {
       this.failedLooks.delete(record.id);
@@ -644,7 +651,7 @@ export class Scheduler {
       if (now) this.again.add(record.id);
       return;
     }
-    const found = events.find(record.spec.integration, record.spec.event);
+    const found = (reading ?? events).find(record.spec.integration, record.spec.event);
     // A rule that does not look now has no row of failed looks to carry on.
     if (!found || found.connection !== record.connection || found.paused) {
       this.failedLooks.delete(record.id);
@@ -653,7 +660,7 @@ export class Scheduler {
     const last = this.looked.get(record.id);
     if (!now && last !== undefined && this.ticks - last < found.every) return;
     this.looked.set(record.id, this.ticks);
-    const look = this.look(record, found)
+    const look = this.look(record, found, reading)
       .catch((error: unknown) =>
         console.warn(
           `[automation] ${record.id} could not look at ${found.name}: ${error instanceof Error ? error.message : String(error)}`,
@@ -674,9 +681,10 @@ export class Scheduler {
    * listening to it looks now rather than at the next minute.
    */
   lookNow(integration: string): void {
+    const reading = this.reading();
     for (const record of this.options.store.list())
       if (record.spec.kind === "event" && record.spec.integration === integration)
-        this.listen(record, true);
+        this.listen(record, true, reading);
   }
 
   /**
@@ -788,12 +796,16 @@ export class Scheduler {
    * its delivery, or folded into the rule's delivery still waiting unsent.
    * A rule changed, paused or deleted meanwhile drops the answer.
    */
-  private async look(record: ScheduleRecord, found: ListenedEvent): Promise<void> {
+  private async look(
+    record: ScheduleRecord,
+    found: ListenedEvent,
+    reading?: EventReading,
+  ): Promise<void> {
     const events = this.options.events;
     if (!events || record.spec.kind !== "event") return;
     let answer: EventLook;
     try {
-      answer = await events.look(
+      answer = await (reading ?? events).look(
         found.integration,
         found.event,
         record.cursor ?? null,
@@ -1415,6 +1427,11 @@ export class Scheduler {
    * about many rules at once.
    */
   eventsNow(): EventFinder | undefined {
+    return this.reading();
+  }
+
+  /** One reading of what is connected, for finding and looking for many rules at once. */
+  private reading(): EventReading | undefined {
     const events = this.options.events;
     return events?.snapshot?.() ?? events;
   }

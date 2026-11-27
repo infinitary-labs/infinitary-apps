@@ -1,6 +1,7 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { followAmbientMusic } from "./ambient/ambient";
+import { followColorTheme } from "./app/colorTheme";
 import { followFonts } from "./app/fonts";
 import { LanguageRoot } from "./app/LanguageRoot";
 import { documentLanguage, followLanguage } from "./app/language";
@@ -63,6 +64,23 @@ void Promise.all([hydratePreferences(), documentLanguage()]).then(([, computer])
     (listener) =>
       useShellStore.subscribe((state, previous) => {
         if (state.fonts !== previous.fonts) listener();
+      }),
+  );
+  // The chosen color theme over the base, laid on before the first paint
+  // and followed after (docs/themes.md).
+  followColorTheme(
+    () => {
+      const { theme, colorTheme, ownColorThemes } = useShellStore.getState();
+      return { theme, colorTheme, own: ownColorThemes };
+    },
+    (listener) =>
+      useShellStore.subscribe((state, previous) => {
+        if (
+          state.theme !== previous.theme ||
+          state.colorTheme !== previous.colorTheme ||
+          state.ownColorThemes !== previous.ownColorThemes
+        )
+          listener();
       }),
   );
   // The ambient music, while its switch is on (docs/ambient-music.md).

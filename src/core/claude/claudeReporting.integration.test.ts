@@ -34,6 +34,7 @@ import { crewmateSessionSpec } from "../orchestrator/crewSession";
 import { appPathsFor } from "../paths";
 import { LOCAL_MACHINE_ID } from "../session/session";
 import { SessionRecordStore } from "../storage/sessionRecordStore";
+import { useSystemRootsForTests } from "../trustedRoots";
 import {
   accessFlagSettings,
   readClaudeAccess,
@@ -56,7 +57,6 @@ import {
   readClaudeCompanyReporting,
   resetHeadersHelperForTests,
   resetRefusalsForTests,
-  useSystemRootsForTests,
 } from "./claudeReporting";
 import { resetStoreLeasesForTest } from "./claudeStoreLease";
 import { createClaudeSessionFactory } from "./session";

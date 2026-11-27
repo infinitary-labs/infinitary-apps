@@ -151,4 +151,36 @@ describe("a merge card's facts", () => {
     expect(cards.openCardsFor("t1").map((card) => card.id)).toEqual([fm, "card-host-t1"]);
     cards.dispose();
   });
+
+  // INF-6958: a check watch pass whose readings landed in one turn rebuilt
+  // the whole stack once per reading, to see whether the board's view of
+  // the cards moved; on a record with 34 open cards, 27 readings held the
+  // main thread about a quarter of a second.
+  it("compares the stack once for the readings one turn records, and tells the board it moved", () => {
+    const { tasks, make } = setup();
+    const moved = vi.fn();
+    const facts = (taskId: string) =>
+      `${SETTLE_FACTS_OPEN}<span>read ${tasks.get(taskId)?.delivery?.ciAt}</span></div>`;
+    const cards = make(facts, undefined, { presentationChanged: moved });
+    const watched = ["meter", "footer", "header"];
+    for (const id of watched) {
+      seedTask(tasks, { id, title: `Fix the ${id}`, status: "idle" });
+      seedDelivery(tasks, id, { ci: "pending", ciAt: 1000 });
+      cards.emitCrewmateCard(id, { ...completion, id: `${id}-fix` }, `Fix the ${id}`, "model");
+      cards.closeOut({ kind: "crewmate", taskId: id }, "report");
+    }
+    vi.runAllTimers();
+    moved.mockClear();
+    const rebuilt = vi.spyOn(cards, "snapshot");
+    for (const id of watched)
+      tasks.delivery.recordChangeEvidence(id, { ci: "pending", ciAt: 61_000 });
+    expect(rebuilt).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(0);
+    expect(rebuilt).toHaveBeenCalledTimes(1);
+    expect(moved).toHaveBeenCalledTimes(1);
+    expect(rebuilt.mock.results[0]?.value.map((card: { body: string }) => card.body)).toEqual(
+      watched.map(() => expect.stringContaining("read 61000")),
+    );
+    cards.dispose();
+  });
 });

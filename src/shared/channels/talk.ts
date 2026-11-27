@@ -67,9 +67,16 @@ export const talkChannels = {
           pastCardId: z.string().min(1).max(128).optional(),
           /**
            * The project the window is focused on (the top bar's project
-           * pill, docs/project-focus.md): a hint below a shown record.
+           * pill, docs/project-focus.md): the project filter the first mate
+           * hears with the message.
            */
           focusedProjectId: z.string().min(1).max(64).optional(),
+          /**
+           * All projects is picked while the window shows the project pill
+           * (`project-filter-on-every-message.md`): the first mate hears
+           * it, so no filter field never stands for All projects.
+           */
+          allProjects: z.literal(true).optional(),
           /**
            * The captain's newest message, which this one replaces: it is
            * taken back as this one is saved (docs/task-capture.md,

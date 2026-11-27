@@ -1,11 +1,15 @@
 import { DELIVERY_BASIS_WORDS, DELIVERY_FACTS_LABEL } from "@shared/deliveryFacts";
 import { formatList, formatNumber } from "@shared/i18n/format";
 import * as m from "@shared/i18n/messages.generated";
-import { recordAttentionOf, recordClosedLineOf } from "@shared/recordAttention";
-import type { TaskDetail } from "@shared/tasks";
-import type { ReactNode } from "react";
+import { nowGroupOf } from "@shared/nowPanel";
+import { partWordOf, recordAttentionOf, recordClosedLineOf } from "@shared/recordAttention";
+import { taskStatusOf } from "@shared/taskPresentation";
+import type { TaskDetail, TaskView } from "@shared/tasks";
+import { type ReactNode, useRef, useState } from "react";
 import { Age, useMinute } from "../design/core/TaskFacts";
-import { KeyedText } from "./TaskKey";
+import { TaskStatusMark } from "../design/core/TaskStatusMark";
+import { openTaskFromKey } from "../plugins/point/openTask";
+import { KeyedText, useKeyRest } from "./TaskKey";
 import "./recordHead.css";
 
 /**
@@ -135,11 +139,16 @@ export function RecordRelations({
   detail,
   parentKey,
   onOpenLink,
+  partsOpen = true,
+  onPartsToggle,
 }: {
   detail: TaskDetail;
   parentKey: string | undefined;
   /** Where a click on the outside issue's link goes; without it the issue is plain text. */
   onOpenLink?: (url: string) => void;
+  /** Whether the parts list is unfolded; it starts unfolded. */
+  partsOpen?: boolean;
+  onPartsToggle?: (open: boolean) => void;
 }) {
   const issue = detail.issue;
   const keys = (list: readonly string[]) => <KeyedText text={list.join("  ")} own={detail.id} />;
@@ -187,16 +196,149 @@ export function RecordRelations({
         </Row>
       )}
       {detail.children.total > 0 && (
-        <Row label={m.cardRecordParts()}>
-          <div data-record-fact="children">
-            {m.cardRecordChildrenClosed({
-              closed: formatNumber(detail.children.closed),
-              total: formatNumber(detail.children.total),
-            })}
-          </div>
+        <Row label={m.cardRecordParts()} hook="parts">
+          <RecordParts detail={detail} open={partsOpen} onToggle={onPartsToggle} />
         </Row>
       )}
     </>
+  );
+}
+
+/** Past this many parts, the closed ones fold behind one line and the open ones always show. */
+const FOLD_CLOSED_OVER = 8;
+
+const isClosed = (part: TaskView) => part.status === "done" || part.status === "dropped";
+
+/**
+ * A part's segment on the bar, read as the Tasks panel's bar reads a part
+ * (`partsBarOf`): closed, then its Tasks group - waiting on you, working, or
+ * the rest.
+ */
+function barState(part: TaskView): "done" | "waiting" | "working" | "rest" {
+  if (isClosed(part)) return "done";
+  const group = nowGroupOf(part);
+  return group === "waiting" ? "waiting" : group === "working" ? "working" : "rest";
+}
+
+/**
+ * A parent's parts (INF-6805's plan, item 1; the captain: "the parts list
+ * should be foldable"): how many closed with a bar of each part's state,
+ * folding a row per part in filing order. A row opens that part's record,
+ * where its own Start or card is; it carries no button of its own (the
+ * captain's answer row_step: open). An older home sends no parts, and the
+ * row keeps its count alone.
+ */
+function RecordParts({
+  detail,
+  open,
+  onToggle,
+}: {
+  detail: TaskDetail;
+  open: boolean;
+  onToggle: ((open: boolean) => void) | undefined;
+}) {
+  const [closedShown, setClosedShown] = useState(false);
+  const count = m.cardRecordChildrenClosed({
+    closed: formatNumber(detail.children.closed),
+    total: formatNumber(detail.children.total),
+  });
+  const parts = detail.parts ?? [];
+  if (parts.length === 0) return <div data-record-fact="children">{count}</div>;
+  const closedParts = parts.filter(isClosed);
+  const segments = [...closedParts, ...parts.filter((part) => !isClosed(part))];
+  const folds = parts.length > FOLD_CLOSED_OVER && closedParts.length > 0;
+  const shown = folds && !closedShown ? parts.filter((part) => !isClosed(part)) : parts;
+  return (
+    <details
+      className="fm-record-fold fm-record-parts"
+      data-record-parts=""
+      open={open}
+      onToggle={(event) => {
+        const next = event.currentTarget.open;
+        if (next !== open) onToggle?.(next);
+      }}
+    >
+      <summary>
+        <span data-record-fact="children">{count}</span>
+        <span className="bar" aria-hidden="true">
+          {segments.map((part) => (
+            <i key={part.id} data-part={barState(part)} />
+          ))}
+        </span>
+      </summary>
+      <div className="parts-body">
+        {folds && (
+          <button
+            type="button"
+            className="closed-fold"
+            data-record-parts-closed=""
+            aria-expanded={closedShown}
+            onClick={() => setClosedShown(!closedShown)}
+          >
+            {m.recordPartsClosedFold({ count: closedParts.length })}
+          </button>
+        )}
+        <ul className="parts">
+          {shown.map((part) => (
+            <PartRow key={part.id} part={part} />
+          ))}
+        </ul>
+      </div>
+    </details>
+  );
+}
+
+/**
+ * One part: its status mark, title, key and word. Resting on it or
+ * focusing it opens its summary as a key does; a click or Enter - only the
+ * captain's own - opens its record.
+ */
+function PartRow({ part }: { part: TaskView }) {
+  const rest = useKeyRest(part.id);
+  const rested = useRef(false);
+  const restOn = (anchor: HTMLElement | null) => {
+    rested.current = anchor !== null;
+    rest(anchor);
+  };
+  const key = part.key || part.id;
+  return (
+    <li>
+      <button
+        type="button"
+        className="part"
+        data-record-part={key}
+        data-closed={isClosed(part) ? "" : undefined}
+        onPointerEnter={(event) => restOn(event.currentTarget)}
+        onPointerLeave={() => restOn(null)}
+        onPointerDown={() => restOn(null)}
+        onFocus={(event) => {
+          const row = event.currentTarget;
+          if (!row.matches(":focus-visible")) return;
+          // Once the window has brought the row into view, where its summary goes.
+          requestAnimationFrame(() =>
+            requestAnimationFrame(() => {
+              if (row.ownerDocument.activeElement === row) restOn(row);
+            }),
+          );
+        }}
+        onBlur={() => restOn(null)}
+        onKeyDown={(event) => {
+          if (event.key !== "Escape" || !rested.current) return;
+          event.stopPropagation();
+          restOn(null);
+        }}
+        onClick={(event) => {
+          if (!event.nativeEvent.isTrusted) return;
+          restOn(null);
+          void openTaskFromKey(part).catch(() => {});
+        }}
+      >
+        <TaskStatusMark reading={taskStatusOf(part)} nativeTitle={false} />
+        <span className="title">{part.title}</span>
+        <span className="key">{key}</span>
+        <span className="word">{partWordOf(part)}</span>
+      </button>
+    </li>
   );
 }
 

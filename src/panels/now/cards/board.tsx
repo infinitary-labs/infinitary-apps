@@ -1682,9 +1682,15 @@ function KanbanWait({ task, word }: { task: PanelTaskRow; word: string }) {
         </span>
         <span className="fm-board-wait-names">{` · ${wait.names}`}</span>
       </span>
-      <span className="fm-board-wait-event" data-board-wait-chain={chain ? "" : undefined}>
-        {chain ?? wait.event}
-      </span>
+      {(chain ?? wait.event) && (
+        <span
+          className="fm-board-wait-event"
+          data-board-wait-event=""
+          data-board-wait-chain={chain ? "" : undefined}
+        >
+          {chain ?? wait.event}
+        </span>
+      )}
     </span>
   );
 }

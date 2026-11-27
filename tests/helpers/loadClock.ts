@@ -13,9 +13,16 @@
  * budget, at most 10 minutes"). Twenty times covers the load controller's
  * 65-second freeze on a 5-second wait; ten minutes ends an impossible one well
  * before the whole check's own limit.
+ *
+ * A budget longer than 10 minutes keeps its own length: the cap only ever
+ * lengthens a wait, so a longer budget is never ended sooner. Load time never
+ * runs ahead of the wall clock, so a cap below the budget would end every such
+ * wait at 10 minutes while its failure named the longer budget, as a phone
+ * part's 24-minute deadline did after 10.0 minutes (run 45934897666).
  */
 export function waitCap(budget: number): number {
-  return Math.min(20 * Math.max(0, budget), 600_000);
+  const time = Math.max(0, budget);
+  return Math.max(time, Math.min(20 * time, 600_000));
 }
 
 /** A deadline timer's handle: `cancel` stops it, `unref` lets the process exit first. */

@@ -246,6 +246,8 @@ export const customListedModelSchema = z.object({
   id: z.string().min(1).max(256),
   context: z.number().int().positive().optional(),
   output: z.number().int().positive().optional(),
+  /** The server says this model takes no chat turn; the form shows it unpickable. */
+  notChat: z.literal(true).optional(),
 });
 export type CustomListedModel = z.infer<typeof customListedModelSchema>;
 type CustomModelLimits = Pick<z.infer<typeof customModelInputSchema>, "id" | "context" | "output">;

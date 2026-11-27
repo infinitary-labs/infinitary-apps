@@ -1,5 +1,5 @@
 ---
-source: e0f16d58d735b925
+source: c51b6ca36743cf77
 title: Projekte
 description: Wie du ein Projekt zu Infinitary hinzufügst, mehrere Repositorys in einem zusammenfasst, ihm Tags gibst, das Fenster auf eines konzentrierst, wählst, wie seine Änderungen zusammengeführt werden, und es entfernst.
 ---
@@ -134,7 +134,12 @@ Solange ein Projekt im Fokus ist:
 - Karten zu anderen Projekten warten, bis der Fokus wechselt.
   Nichts wird geschlossen, und jedes Projekt sendet weiterhin Mitteilungen.
 - Eine kurze Zeile neben der Auswahl sagt, wie viele Aufgaben anderswo auf dich warten, etwa „2 warten woanders“.
-- Dein erster Offizier legt neue Arbeit, um die du bittest, in diesem Projekt an, es sei denn, du nennst ein anderes.
+- Dein erster Offizier erfährt die Auswahl mit jeder Nachricht, die du sendest.
+  Solange du kein anderes Projekt nennst, legt er neue Arbeit in diesem Projekt an, und seine Antworten und Aktionen über viele Aufgaben betreffen nur dieses Projekt und sagen, was sie ausgelassen haben.
+
+Um zu sehen, wo die Arbeit eines Projekts läuft, ohne die Ansicht darauf zu beschränken, zeig auf ein Crewmitglied in der Mitte des Fensters oder tipp es auf deinem Telefon an.
+Solange seine Übersicht offen ist, leuchtet jedes Crewmitglied eines anderen Projekts nur noch mit einem Viertel seines Lichts, auf jedem Computer, und niemand bewegt sich.
+Schließ die Übersicht, und das Licht kehrt zurück.
 
 Drück auf das **×** neben der Auswahl (**Alle Projekte anzeigen**) oder wähl **Alle Projekte** in der Reihe, um wieder alles zu sehen.
 Infinitary merkt sich deinen Fokus, wenn du es neu startest.
@@ -172,6 +177,7 @@ Wenn ein Crewmitglied den Pull Request einer anderen Person prüft, beginnt sein
 
 Beim Entfernen verschwindet das Projekt aus der Liste.
 Sein Ordner und seine fertigen Aufgaben bleiben.
+Fügst du es wieder hinzu, nutzt Infinitary den Ordner, den es in deinem Projektordner gelassen hat, statt eine zweite Kopie zu klonen, und das Projekt beginnt neu mit den Standardeinstellungen.
 Hat das Projekt noch Aufgaben, nennt Infinitary sie, und du schließt sie zuerst ab oder gibst sie auf.
 
 Bei einem Projekt mit mehreren Repositorys nimmt **Entfernen** das Repository weg, dessen Tab gewählt ist, und das Projekt behält die anderen.

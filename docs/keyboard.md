@@ -161,7 +161,7 @@ These keys are not commands and keep their own owners:
 - Tab and Shift+Tab, which move focus the platform's way;
 - the Mac's own editing keys (Cmd+C, Option+Delete, Ctrl+A, ...);
 - the dictation key, a lone right-hand modifier with its own tap-or-hold rules, which leave a shortcut held with right ⌘ or right ⌃ to that shortcut (`dictationKey.ts`; `docs/composer.md`, "Voice"; Settings → General → Dictation);
-- Escape, which closes the one topmost thing that is open (`App.tsx`; a part full screen before the card under it; the find field in the shown card's head before the card, "Finding in the shown card"; on the task board, in its own page, a move that asks before its Find's words, and its Find's words before the board; in the Tasks search, its words before the search; in the top bar's open project row, its menu before the row; a maximized card restores before a record or a panel's card hides, "Cards and frames"), and the keys a menu, the picture viewer (a demo's play control and seek slider included), a slider or a card's own controls use inside themselves; in a card's body, an Escape nothing there used leaves the body for its card ("Cards and frames");
+- Escape, which closes the one topmost thing that is open (`App.tsx`; a part full screen before the card under it; the find field in the shown card's head before the card, "Finding in the shown card"; on the task board, in its own page, a move that asks before its Find's words, and its Find's words before the board; in the Tasks search, its words before the search; the top bar's open project row before anything else, wherever focus is, and inside the row its menu before the row; a maximized card restores before a record or a panel's card hides, "Cards and frames"), and the keys a menu, the picture viewer (a demo's play control and seek slider included), a slider or a card's own controls use inside themselves; in a card's body, an Escape nothing there used leaves the body for its card ("Cards and frames");
 - the arrows, Home and End in a list or Settings' tabs ("Lists and Settings"), which belong to the list that has focus.
 
 ## A panel's commands
@@ -294,7 +294,7 @@ The main process's own commands, the size keys, are never refused by the page.
   In the Browser tab it focuses a docked card's reply field or, with no card docked, opens the Crewmate column and focuses its message box.
   `browser.page`, Go to the browser page, takes focus back to the page while you hold control; a request card's open-browser click puts focus there by itself once the page is yours (`docs/task-browser.md`, "Asking for help").
   Command search also finds it by "anything to add" and "comment".
-  It refuses when no card is shown, when the shown entry takes no reply (a host card, a task record, a past card) and while a recording runs.
+  It refuses when no card is shown, when the shown entry takes no reply (a card marked as taking none, such as the welcome, a task record, a past card) and while a recording runs.
   It focuses the reply of the card that was shown when it ran, never another one shown since.
 - `focus.card-body`, Go to the card's body, puts focus in the shown entry's body, a card's, a task's record or a past card, ringed inside its edge: the reading keys scroll it, and Tab goes on to its first control ("Cards and frames").
   The body takes focus only from this command, never from a click, so a click on a card's words never takes focus from the main message.

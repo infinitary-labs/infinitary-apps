@@ -51,12 +51,14 @@ Clicking inside the card never sends anything on its own.
 
 ## The reply field and the thread
 
-Every card from your first mate or a crewmate has a field under its body that reads "anything to add?".
+Every card has a field under its body that reads "anything to add?", except the welcome.
+A reply under a card shown while your first mate is down waits until it is back, and the card stays up until your first mate answers there.
 
 - Type in it and press **Chat** to send a reply without choosing.
 - Type in it and press a choice to send your words with that choice.
 
 A reply goes to whoever wrote the card.
+On a card Infinitary puts up itself, a reply goes to the crewmate that asked for it, or otherwise to your first mate.
 The first reply opens a thread beside the card, and the author answers there.
 When the author changes the card in answer, the card is revised in place, and the thread says so.
 To fold the thread back into the card, press ⌘\ (Ctrl+\ on Linux and Windows).
@@ -118,6 +120,13 @@ A count such as "2 of 7" says which match you are on.
 It looks through the whole card: its title, its body, its folded sections and its thread.
 A folded section opens when the match is inside it.
 It works the same in a past card, in [the whole conversation](/the-first-mate/#the-whole-conversation) and on a task's card, except on its Browser tab.
+
+## Links in a card
+
+A web address in a card opens in your default browser when you click it, tap it or press Enter on it.
+That includes an address a crewmate wrote as plain words, such as a step that says to open a sign-in page, on your computer and on your iPhone or iPad.
+It takes addresses that start with https://, and http:// addresses on your own computer.
+A long address wraps inside the card.
 
 ## Merge cards
 

@@ -70,6 +70,11 @@ export const accountViewSchema = z.object({
    */
   gateway: z.enum(CLAUDE_ACCESS_SOURCES).optional(),
   /**
+   * The host an Amazon Bedrock account's requests are sent through, when its
+   * sign-in saved an organization address. Absent when they go to AWS.
+   */
+  sentThrough: z.string().optional(),
+  /**
    * Why this account cannot serve right now although its credential is
    * fine, in the backend's own sentence: a Claude account whose machine has
    * no Claude Code, or one too old (`src/shared/claudeClient.ts`). Rendered

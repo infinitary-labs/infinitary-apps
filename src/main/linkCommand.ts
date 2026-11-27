@@ -77,12 +77,14 @@ export type LinkAnswer =
  * door that answers, it reads why: an app that controls another computer
  * runs no first mate here (`joined/home.json`, `JoinedHome`), an app that
  * holds the folder's lock and has no such door is older or did not open it,
- * and no holder is no app at all.
+ * and no holder is no app at all. A held lock that names no process, as
+ * Chromium's lock file on Windows, is an app holding the folder too.
  */
 export async function askForLink(
   dataDir: string,
   asked: LinkCommandFor,
   alive: (pid: number) => boolean = processAlive,
+  platform: string = hostPlatform(),
 ): Promise<LinkAnswer> {
   const door = readDoor(join(dataDir, PHONE_DOOR_FOLDER));
   if (door) {
@@ -90,8 +92,8 @@ export async function askForLink(
     if (answered) return answered;
   }
   if (existsSync(join(dataDir, "joined", "home.json"))) return { kind: "controls" };
-  const holder = lockHolder(dataDir);
-  return typeof holder === "number" && alive(holder)
+  const holder = lockHolder(dataDir, platform);
+  return holder === undefined || (holder !== null && alive(holder))
     ? { kind: "no-answer" }
     : { kind: "not-running" };
 }

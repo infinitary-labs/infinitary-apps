@@ -106,7 +106,7 @@ A budget holds only on a run that grades budgets, `INFINITARY_PERF_BUDGETS=1` on
 On every other run a busy Mac can freeze a test's processes for seconds at a time, so a test's and a hook's limit and an `expect.poll` or `vi.waitFor` window run on the load clock, as a journey's waits do (INF-1083, the captain's choice for unit tests: "Yes, as a third piece after these two: today a stuck unit test waits with no clock until GitHub's six-hour limit").
 `tests/helpers/waitWindow.ts`, a setup file of every project whose tests run in Node, starts the clock in each worker with `startUnitLoadClock` (`tests/helpers/budgets.ts`, its core in `tests/helpers/loadClock.ts`), before any test can fake the timers, and our patches to `@vitest/runner` and `vitest` read it at each limit and window.
 The runner reads it as each limit starts, not when its test or hook registers, so a hook that a setup file listed before `waitWindow.ts` registers, such as `statementCheck.ts`'s and `scratchDirCleanup.ts`'s, runs on the clock too.
-A frozen worker's limits stop with it, and each ends by its wall cap, 20 times its budget and at most 10 minutes, so a stuck test fails by its own message; each test step in `ci.yml` ends at 30 minutes, and each `pnpm test` step in `verify.yml` at 60, which each Linux test group finishes well inside on GitHub's hosted two-processor machine.
+A frozen worker's limits stop with it, and each ends by its wall cap, 20 times its budget and at most 10 minutes or its own budget where that is longer, so a stuck test fails by its own message; each test step in `ci.yml` ends at 30 minutes, and each `pnpm test` step in `verify.yml` at 60, which each Linux test group finishes well inside on GitHub's hosted two-processor machine.
 A worker waiting on a disk sync is not frozen: Node runs the sync on its own threads, so the worker's timer keeps its beat and the one-minute load stays low while a starved disk holds the test.
 So on Linux a worker's clock also counts only the share of time in which no work on the computer waited on its disk, which `startUnitLoadClock` reads from the kernel's I/O pressure counter (`/proc/pressure/io`, `linuxDiskWaits` in `tests/helpers/budgets.ts`).
 A job machine whose disk other work starves then holds a test's limit instead of failing it, and the limit still ends by its wall cap; where the kernel keeps no such counter, as on a Mac, the clock counts as before, and no other load clock, a journey's or the browser project's, reads it.
@@ -147,6 +147,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/core/placed/loadLine.integration.test.ts` | real native wrappers, command processes, process groups and two-second admission/lifetime cadence | 35 s |
 | `src/core/workspace/worktreePool.test.ts` | real git, real pnpm, at the run's own priority | 15 s for the file; the real-pnpm measurement test is 600 s |
 | `src/core/orchestrator/changeChecks.test.ts` | real git at the run's own priority | 5 s default (Mac slowest case 0.59 s) |
+| `src/core/orchestrator/changeChecks.watch.test.ts` | real git at the run's own priority | 5 s default (Mac slowest case 0.36 s) |
 | `src/core/orchestrator/changeCutover.test.ts` | real Git project setup and isolated forge | 5 s default |
 | `src/core/orchestrator/changeMerge.test.ts` | real git at the run's own priority, the put-in's 300 + 900 ms backoff | 10 s (Mac slowest case 1.3 s, the retried put-in) |
 | `src/core/orchestrator/changePublication.test.ts` | real git at the run's own priority | 5 s default (Mac slowest case 0.66 s) |
@@ -237,10 +238,12 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/core/orchestrator/idleLadder.waits.test.ts` | real git for one wait case, at the run's own priority | 5 s default (Mac slowest case 0.7 s) |
 | `src/core/orchestrator/idleLadder.mergeLine.test.ts` | real git in the kept merge fixture's project folder, at the run's own priority | 5 s default (Mac slowest case 1.0 s) |
 | `src/core/orchestrator/ownBatchChange.test.ts` | real git in one case's project folder, for a repair declared after a send-back, at the run's own priority | 5 s default (Mac slowest case 0.3 s) |
+| `src/core/orchestrator/ownBatchChange.held.test.ts` | real git in one case's project folder, for a fix declared after its approval, at the run's own priority | 5 s default (Mac slowest case 0.3 s) |
 | `src/core/orchestrator/inPlaceWork.folders.test.ts` | real git in a project's folder, at the run's own priority | 60 s on each real-git describe, kept above the rule's 10 s (Mac slowest case 1.2 s) |
 | `src/core/orchestrator/intake.git.test.ts` | real git for settle facts, delivery overrides, typed results and branch_from, at the run's own priority | 5 s default; 60 s on branch_from, kept (Mac slowest case 0.6 s) |
 | `src/core/orchestrator/repositoryMoves.git.test.ts` | real git for a started task moving to another repository of its project, at the run's own priority | 5 s default (Mac slowest case 0.9 s) |
 | `src/core/orchestrator/reviews.tier.test.ts` | real git in scratch projects for the reviewed tier, at the run's own priority | 5 s default (Mac slowest case 0.6 s) |
+| `src/core/orchestrator/settleOwners.autonomy.test.ts` | real git in the kept merge fixture's project folder, at the run's own priority | 5 s default (Mac slowest case 0.4 s) |
 | `src/core/orchestrator/settleOwners.keptMerge.test.ts` | real git in the kept merge fixture's project folder, at the run's own priority | 5 s default (Mac slowest case 0.6 s) |
 | `src/core/orchestrator/settleOwners.keptMergeRepairs.test.ts` | real git in the kept merge fixture's project folder, at the run's own priority | 5 s default (Mac slowest case 0.8 s) |
 | `src/core/orchestrator/settleOwners.keptMergeUnknown.test.ts` | real git in the kept merge fixture's project folder, at the run's own priority | 5 s default |
@@ -292,6 +295,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/core/core.capture.test.ts` | the whole core, real git, the e2e mock provider's Firstmate and crewmate sessions | 120 s on its boot and on each captain turn |
 | `src/core/core.boot.test.ts` | the whole core, booted once per case, real git | 60 s default per boot |
 | `src/core/core.connection.test.ts` | the whole core and its connection on loopback, the e2e mock provider | 60 to 120 s on its boots |
+| `src/core/core.connection.phonePush.test.ts` | the whole core and its connection on loopback, a stand-in relay and a stand-in usage endpoint | 60 to 120 s on its boots |
 | `src/core/dispatcher.media.test.ts` | the whole core and a recording read through dispatch | 20 s (Mac slowest 3.594 s) |
 | `src/core/dispatcher.placement.test.ts` | the whole core, real git and a project placement change | 30 s (Mac slowest 3.683 s) |
 | `src/core/core.contract.test.ts` | the whole core, its connection on loopback, the scripted client as its own process | 60 s on its boot |
@@ -299,6 +303,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/core/core.feedback.test.ts` | the whole core and its connection on loopback, the e2e mock provider, a paired phone | 120 s on its boot and on each first mate turn |
 | `tests/replay-gate-catches-lint.test.ts` | the replay CLI, git | 60 s |
 | `src/core/batches/combine.test.ts` | real git against a bare host, at the run's own priority | 10 s (Mac slowest 1.1 s) |
+| `src/core/batches/combine.held.test.ts` | real git against a bare host, at the run's own priority | 10 s (Mac slowest 1.64 s) |
 | `src/core/orchestrator/baseFollow.test.ts` | real git in a scratch repository, at the run's own priority | 12 s (Mac slowest 2.4 s) |
 | `src/core/forge/providers/plainGit.test.ts` | real git, at the run's own priority | 5 s default (five times its slowest is 2.5 s) |
 | `tests/bench-patch-pool.test.ts` | real git, python3's tomllib (benchmark tooling, `scripts/bench/`) | 5 s default |

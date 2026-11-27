@@ -14,7 +14,8 @@ import { appReadExecutor } from "../plugins/reads/appExecutor";
 /**
  * The window's project focus (docs/project-focus.md), as every surface
  * reads it: the top bar's pill, the Tasks panel and the board through
- * `PanelProps.view`, the stage's dimming, and the turn's hint. The saved
+ * `PanelProps.view`, the stage's dimming, and the project filter each
+ * message to the first mate carries. The saved
  * choice is the layout's (`railStore.focusProject`); what holds is that
  * choice while its project still has a pill (`heldFocus`).
  *
@@ -130,9 +131,19 @@ export function useProjectFocus(): ProjectFocusState {
   return useSyncExternalStore(projectFocus.subscribe, projectFocus.state, projectFocus.state);
 }
 
-/** The focus that holds now, outside React: the turn's hint, the panels' view. */
+/** The focus that holds now, outside React: the stack's hold, the panels' view. */
 export function heldProjectFocus(): string | null {
   return snapshot.focus;
+}
+
+/**
+ * The project filter a message to the first mate carries
+ * (docs/project-focus.md, "The first mate"): the focused project, or All
+ * projects while the pill shows; nothing while there is no choice to make.
+ */
+export function messageProjectFilter(): { focusedProjectId?: string; allProjects?: true } {
+  if (snapshot.focus !== null) return { focusedProjectId: snapshot.focus };
+  return snapshot.shown ? { allProjects: true } : {};
 }
 
 /**

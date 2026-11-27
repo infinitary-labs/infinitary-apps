@@ -370,4 +370,66 @@ describe("Automation on an integration's event", () => {
     expect(one.rules[0]?.when).toBeTruthy();
     expect(four.rules.map((rule) => rule.when)).toEqual(four.rules.map(() => one.rules[0]?.when));
   });
+
+  it("reads what is connected once on each tick, however many rules listen and look", async () => {
+    // Intent: INF-6885's diagnosis and the captain's choice on INF-6886's
+    // review. Alpha 0.8.11-alpha.55's minute pass read every connection once
+    // to find each event rule's event and again for each rule's look, on
+    // the main thread, and the startup catch-up tick ran the same reads.
+    const root = scratchDir("fm-automation-tick-");
+    const standIn = standInIntegration({ dir: root });
+    let reads = 0;
+    let looks = 0;
+    const integrations = new IntegrationsService({
+      bindings: [
+        {
+          ...standIn,
+          connections: () => {
+            reads++;
+            return standIn.connections();
+          },
+          look: (...args) => {
+            looks++;
+            return (
+              standIn.look?.(...args) ?? Promise.reject(new Error("The stand-in has no look."))
+            );
+          },
+        },
+      ],
+      store: new IntegrationSettingsStore(join(root, "integrations")),
+    });
+    let now = Date.UTC(2026, 10, 25, 16, 0);
+    // The events the core wires (src/core/services.ts).
+    const scheduler = new Scheduler({
+      store: new ScheduleStore(openInMemoryDatabase()),
+      notify: () => null,
+      broadcastEvent: () => {},
+      now: () => now,
+      events: withTaskEvents({ resolve: () => undefined }, integrationEvents(integrations)),
+    });
+    for (let rule = 1; rule <= 8; rule++)
+      scheduler.create(
+        { kind: "event", integration: "Stand-in", event: "item_arrived" },
+        "Triage these: {{events}}",
+        true,
+        `Rule ${rule}`,
+      );
+    now += 60_000;
+    scheduler.tick(now);
+    await scheduler.settled();
+
+    // The stand-in's event is looked at on every tick, so all eight rules look.
+    reads = 0;
+    looks = 0;
+    now += 60_000;
+    scheduler.tick(now);
+    await scheduler.settled();
+    expect({ reads, looks }).toEqual({ reads: 1, looks: 8 });
+
+    reads = 0;
+    looks = 0;
+    scheduler.lookNow("stand-in");
+    await scheduler.settled();
+    expect({ reads, looks }).toEqual({ reads: 1, looks: 8 });
+  });
 });

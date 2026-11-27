@@ -3,13 +3,10 @@ import { emptyTranscript } from "@shared/crewTranscript";
 import { deviceRunsWork } from "@shared/devices";
 import { settingFrom } from "@shared/envSettings";
 import type { KnownForgeHost } from "@shared/forge";
-import { englishOf, saidLine } from "@shared/i18n/said";
+import { saidLine } from "@shared/i18n/said";
 import { speakChoice } from "@shared/i18n/start";
 import { parseOfferingKey } from "@shared/modelSlots";
-import { PHONE_PUSH_RELAY } from "@shared/phonePush";
 import { desktopConventions } from "@shared/platform";
-import { PULL_REQUEST_COMMENTS_WAKE } from "@shared/pullComments";
-import { noChecksSaid, repoConfiguredEvent } from "@shared/repos";
 import { BATCHED_PULL_REQUESTS_OFFER } from "@shared/runbooks";
 import { runsForAnotherFirstmate } from "@shared/sshConnection";
 import type { TaskBrowserFact } from "@shared/taskBrowser";
@@ -25,7 +22,6 @@ import type { AccountBackend } from "./accounts/accountBackend";
 import { CredentialHealthService } from "./accounts/credentialHealthService";
 import { buildProviderViews } from "./accounts/providerViews";
 import { initAttachmentsDir } from "./attachments";
-import { pushBatch } from "./batches/combine";
 import { recoverAtBoot } from "./bootRecovery";
 import { openTaskChannel, startTaskBrowsers } from "./browser/homeTaskBrowsers";
 import { accessFlagSettings, readClaudeAccess } from "./claude/claudeAccess";
@@ -60,6 +56,7 @@ import { startFirstLaunch } from "./firstLaunch";
 import { startHomeForges } from "./forge/homeForges";
 import { startHomeFreezeRecorder } from "./freeze/homeRecorder";
 import { PassSteps } from "./freeze/passSteps";
+import { startHomeNotifier } from "./homeNotifier";
 import { startHomeProjects } from "./homeProjects";
 import type { HostCapabilities } from "./host";
 import { captureLoginPath } from "./hostEnv";
@@ -68,41 +65,29 @@ import { startHomeIntegrations } from "./integrations/homeIntegrations";
 import { type JobExit, JobManager, jobExitWake } from "./jobs/jobManager";
 import { startHomeKnowledge } from "./knowledge/homeKnowledge";
 import { createAccountStore } from "./models/accountStore";
-import { authorAnswer } from "./notifications";
 import { isObserveEnabled } from "./observe/gate";
 import { ObserveService } from "./observe/observeService";
 import { createCrewmateTranscriptResolver } from "./observe/transcriptSource";
 import { CardDrafts } from "./orchestrator/cardDrafts";
-import { type ChangeDelivery, createChangeDelivery } from "./orchestrator/changeDelivery";
-import { ChangePresentations } from "./orchestrator/changePresentations";
 import type { CrewSupervisor } from "./orchestrator/crewSupervisor";
 import type { FirstmateAgent } from "./orchestrator/firstmateAgent";
 import { Flagship } from "./orchestrator/flagship";
-import { GithubGatewayService } from "./orchestrator/githubGateway";
 import { startHomeAutomation } from "./orchestrator/homeAutomation";
+import { startHomeChangeDelivery } from "./orchestrator/homeChangeDelivery";
 import { startHomeCrew } from "./orchestrator/homeCrew";
 import { startHomeFirstmate } from "./orchestrator/homeFirstmate";
 import { creditsOfferCardId } from "./orchestrator/hostCards";
 import { LocalOrchestratorService } from "./orchestrator/localOrchestrator";
-import { createOwnBatches } from "./orchestrator/ownBatches";
 import { TICK_PERIOD_MS, Ticker, tickPeriodFor } from "./orchestrator/ticker";
 import type { TypedWake } from "./orchestrator/wakes";
-import { WorkflowEvidenceService } from "./orchestrator/workflowEvidence";
 import { initOverflowDir } from "./overflow";
-import {
-  appPathsFor,
-  crewmateCardPicturesDir,
-  crewmateEvidenceDir,
-  crewmateSessionsDir,
-  crewmateTempDir,
-} from "./paths";
+import { appPathsFor, crewmateCardPicturesDir, crewmateSessionsDir } from "./paths";
 import { startHomePersonal } from "./personal/homePersonal";
 import { PanelOutsideData } from "./personal/panelOutsideData";
 import { PersonalStore } from "./personal/personalStore";
 import { LaunchWatch } from "./personal/safeMode";
-import { cardNotifiers } from "./phonePush";
+import { appPiAccountBackend } from "./pi/appPiAccountBackend";
 import { CREWMATE_TOOLS } from "./pi/crewmateTaskTools";
-import { PiAccountBackend } from "./pi/piAccountBackend";
 import { PiAuthService } from "./pi/piAuth";
 import { createPiSessionFactory } from "./pi/sessionFactory";
 import { readKeptValidationEvidence } from "./pi/validationEvidence";
@@ -161,7 +146,6 @@ import { createAppTelemetry } from "./telemetry";
 import { DEV_STARTER_SETTING, readStarterSession } from "./update/devStarter";
 import { createInstalledUpdateChecker } from "./update/updateChecker";
 import { usageReportRoutes } from "./usageReport/usageConnection";
-import { WindowsInFront } from "./windowsInFront";
 import { adoptBundledGit } from "./workspace/bundledGit";
 import { ProjectContributions } from "./workspace/projectContributions";
 import { RepoRegistry } from "./workspace/repoRegistry";
@@ -208,13 +192,7 @@ export async function createServices(
   // The registered account backends (broker phase 7). Pi serves everything
   // it can reach; a subscription it cannot reach gets its own first-party
   // client, and the vault owns the store matrix over both.
-  // Every account runtime reads the app's one models.json (custom providers
-  // and per-provider overrides), keeping its own pi.dev overlay store.
-  const piBackend = new PiAccountBackend({
-    modelsPath: paths.modelsPath,
-    bedrockUrl: standIns.bedrockUrl,
-    awsCli: standIns.awsCli,
-  });
+  const piBackend = appPiAccountBackend(paths.modelsPath, standIns);
   // Learn where the machine's Claude Code is before anything asks (F14),
   // on the person's own search path once it is known, so the Claude chip
   // and the first health read never wait on it.
@@ -758,31 +736,14 @@ export async function createServices(
     ...usageRoutes.facts,
   });
   taskCostOf = usage.taskCostOf;
-  // Card-worthy moments reach Notification Center, and each paired phone
-  // that asked through Infinitary's relay (docs/phone-push.md), while the
-  // window is not front (P2); the card/feed split is the noise filter, so
-  // feed lines never notify. E2E windows stay hidden and unfocused.
-  // A window in a program of its own says when it is in front (docs/phone-push.md).
-  const windowsInFront = new WindowsInFront();
-  const notifier = cardNotifiers({
-    notifications: host.notifications,
-    windowsInFront: () => windowsInFront.any(),
-    switchedOn: () => settings.getNotificationsEnabled(),
-    phones: devices,
-    relay: standIns.pushRelayUrl ?? PHONE_PUSH_RELAY,
-    // The words' typed facts (INF-5030's plan): the task's project, its title
-    // when the card shows its saved change story, and an author's answer.
-    facts: (card, kind) => {
-      const task = card.taskId ? tasks.get(card.taskId) : undefined;
-      const story = task?.delivery?.presentation?.revisions.some(
-        (revision) => revision.title === card.title,
-      );
-      return {
-        project: task?.repoId ? repos.get(task.repoId)?.name : undefined,
-        storyName: story ? task?.title : undefined,
-        answer: kind === "reply" ? authorAnswer(cardStore.messages(card.id)) : undefined,
-      };
-    },
+  const { notifier, someoneHere } = startHomeNotifier({
+    host,
+    settings,
+    devices,
+    relayUrl: standIns.pushRelayUrl,
+    tasks,
+    repos,
+    cardStore,
   });
   const sourceComputer = await ownComputerName({ packaged: host.app.packaged, env: process.env });
   const sourceLocation = {
@@ -799,100 +760,27 @@ export async function createServices(
     resourcesPath: host.app.resourcesDir,
     appPath: host.app.appDir,
   });
-  const workflowEvidence = new WorkflowEvidenceService({
-    tasks,
-    repos,
-    forgeFor,
-    writeElsewhere: (taskId, deviceId, artifact) =>
-      placed.copies.writeArtifact(taskId, deviceId, artifact),
-    partsElsewhere: (deviceId) => placed.copies.writesArtifactParts(deviceId),
-    evidenceDir: (taskId) => crewmateEvidenceDir(paths, taskId),
-    tempDir: (taskId) => crewmateTempDir(paths, taskId),
-    filesElsewhere: (deviceId) => placed.copies.writesEvidenceFiles(deviceId),
-    fileElsewhere: (taskId, deviceId, name, file) =>
-      placed.copies.writeEvidenceFile(taskId, deviceId, name, file),
-  });
-  const presentations: ChangePresentations = new ChangePresentations({
-    namingRule,
-    tasks,
-    mediaDir: (taskId) => crewmateCardPicturesDir(paths, taskId),
-    head: (taskId) => changeDelivery.publication.presentationHead(taskId),
-    branch: (taskId) => changeDelivery.publication.presentationBranch(taskId),
-    mapPart: () => runbooks.mapPart(),
-  });
-  const prepareContribution = (taskId: string) => projectContributions.prepareTask(taskId, tasks);
-  const batches = createOwnBatches({
-    repos,
-    forgeFor,
-    ticker,
-    tasks,
-    presentations,
-    inbox,
-    late: () => ({
-      checks: changeDelivery.checks,
-      comments: changeDelivery.comments,
-      settling: supervisor.settling,
-    }),
-    firstmate: () => firstmateForSeat,
-    note: (fact) => broadcastEvent({ type: "firstmate_note", ...saidLine(fact) }),
-    // The Batches panel reads the project again (docs/forge.md, "The Batches panel").
-    checksRead: (repoId) => broadcastEvent({ type: "batch_checks", repoId }),
-    namingRule,
-    git: {
-      push: async (input) => {
-        await beforeAct();
-        return pushBatch(input);
-      },
-    },
-  });
-  const changeDelivery: ChangeDelivery = createChangeDelivery({
-    namingRule,
-    tasks,
-    repos,
-    presentations,
-    prepareContribution,
-    // The forge seam (git integration PR 1.1): GitHub is the REST forge with
-    // the app's own GitHub sign-in (PR 1.2), read at each request. A 401
-    // asks the sign-in service to look again; its health read is the proof.
-    forgeFor,
-    batches: () => batches,
-    onNote: (text, taskId) => broadcastEvent({ type: "firstmate_note", text, taskId }),
-    steer: (taskId, wake) => {
-      if (wake.once === undefined) inbox.enqueue(taskId, wake);
-      else if (!inbox.woken(taskId, wake.once))
-        inbox.enqueueSteerOnce(taskId, { ...wake, once: wake.once });
-    },
-    commentsWatched: () => runbooks.wakes().has(PULL_REQUEST_COMMENTS_WAKE),
-    bringBranchHome: (taskId, strict, branch) => placed.bringBranchHome(taskId, strict, branch),
-    checkedOut: (taskId) => placed.checkedOut(taskId),
-    verifyValidationEvidence: (taskId) => supervisor.reportIntake.verifyValidationEvidence(taskId),
-    proofDir: (taskId) => crewmateCardPicturesDir(paths, taskId),
-    now: ticker.now,
-  });
-  // A project's batch changed (docs/forge.md, "Batches of your own"): Settings reads it again.
-  repos.onBatch((repo) => broadcastEvent({ type: "repo_batch", repoId: repo.id }));
-  // Which runbooks are on may have changed: a window reads them again for the
-  // panels a built-in runbook shows (docs/runbooks.md, "Panels").
-  runbooks.subscribe(() => broadcastEvent({ type: "runbooks_changed" }));
-  // The app started or ended a project's no-checks record (docs/forge.md, "A
-  // project with no checks"): one Activity line, and Settings reads it again.
-  repos.onNoChecks((repo, change) => {
-    const line = noChecksSaid(repo.name, change);
-    broadcastEvent({ ...repoConfiguredEvent(repo), description: englishOf(line), said: line });
-  });
-  const githubGateway = new GithubGatewayService({
+  const { workflowEvidence, batches, changeDelivery, githubGateway } = startHomeChangeDelivery({
     tasks,
     repos,
     forgeFor,
     accountForge: forges.accountForge,
-    readChecks: (taskId) => changeDelivery.checkTool.checkForCrew(taskId),
-    beforeValidationWrite: (taskId, request, write): Promise<void> =>
-      supervisor.reportIntake.consumeValidationEffect(taskId, request, write),
-    watchRun: (taskId, runId) => workflowEvidence.watchStarted(taskId, runId),
-    now: ticker.now,
+    directions: knowledge.directions,
+    placed,
+    paths,
+    namingRule,
+    runbooks,
+    ticker,
+    inbox,
+    broadcastEvent,
+    beforeAct,
+    later: {
+      supervisor: () => supervisor,
+      firstmate: () => firstmateForSeat,
+      projectContributions: () => projectContributions,
+    },
   });
-  // The panels' own saved data (one plugin vehicle, Phase A), and how long
-  // each panel holds words from outside.
+  // The panels' own saved data (one plugin vehicle, Phase A) and how long each holds outside words.
   const personalStore = new PersonalStore(db);
   const panelOutside = new PanelOutsideData(paths.integrationsDir, personalStore);
   // The app's own task commands, the inbox's among them (docs/axi-commands.md).
@@ -1069,6 +957,7 @@ export async function createServices(
     devices: () => devices.list(),
     homeName: sourceComputer,
     now: ticker.now,
+    onPhone: () => emit("inf:window:captain-on-phone", {}),
   });
   // What a /feedback report's command reads and keeps (docs/feedback.md).
   const feedbackHost = startHomeFeedback({
@@ -1387,7 +1276,7 @@ export async function createServices(
     broadcastEvent,
     sessionFactories,
     localSeat,
-    availableModels,
+    routing: homeRouting,
     slots,
     homeQuota,
     repos,
@@ -1729,7 +1618,7 @@ export async function createServices(
   });
   return {
     paths,
-    windowsInFront,
+    someoneHere,
     recordDatabase: db,
     cardFiles: homeCardFileReads((cardId) => cardStore.get(cardId), paths, files),
     cardDrafts: new CardDrafts(db, (draft) => emit("inf:cards:draft", draft)),

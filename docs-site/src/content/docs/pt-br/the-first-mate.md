@@ -1,5 +1,5 @@
 ---
-source: 8556e6631058959f
+source: 1cfc8b1c01326a70
 title: O imediato
 description: Quem é o seu imediato, o que ele faz e o que não faz, como falar com ele e como escolher o modelo com que ele responde.
 ---
@@ -47,6 +47,8 @@ Seu imediato interrompe o que a mensagem começou, desfaz o que já fez e diz ao
 Para mudar a mensagem em vez disso, pressione ↑ com a caixa de mensagem vazia.
 A caixa mostra "Substitui sua última mensagem": Enter envia sua edição no lugar dela, e Esc a envia como uma nova mensagem.
 Na [conversa inteira](#the-whole-conversation), uma mensagem revertida aparece riscada, e uma editada guarda suas palavras anteriores.
+Em um iPhone ou iPad, o mesmo ícone fica ao lado da mensagem.
+Toque e segure a mensagem para **Reverter sua última mensagem** ou **Editar sua última mensagem**, que devolve as palavras ao campo para enviar no lugar dela.
 
 ### Adicionar imagens e arquivos {#add-pictures-and-files}
 

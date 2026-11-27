@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "keychain-classifier-old-tool-shapes",
+      "reason": "The Claude sign-in's Keychain failure classifier stops reading the exit statuses and printed words of Apple's security tool, which no Keychain reader in the app reports any more; every failure the app's readers do report keeps its verdict, so nothing a person sees changes."
+    }
+  ]
+}

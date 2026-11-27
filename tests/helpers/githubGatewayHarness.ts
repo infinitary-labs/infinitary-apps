@@ -12,6 +12,7 @@ import type { ValidationForgeWrite } from "@shared/liveValidation";
 import type { ForgeWriteAsk, WriteAsk } from "@shared/writeAsk";
 import { vi } from "vitest";
 import { GitHubForge } from "../../src/core/forge/providers/github/githubForge";
+import type { StandingDirections } from "../../src/core/knowledge/directions";
 import { GithubGatewayService } from "../../src/core/orchestrator/githubGateway";
 import { GITHUB_READ_TOOL, GITHUB_WRITE_TOOL } from "../../src/core/pi/forgeTools";
 import { bindTool } from "../../src/core/session/tools";
@@ -319,6 +320,8 @@ export async function fixture(
     /** Someone else dispatches the same workflow on the same ref with each dispatch. */
     raceDispatch?: boolean;
     watchRun?: (taskId: string, runId: number) => string;
+    /** The project directions a named yes is checked against (`keptYeses`). */
+    directions?: Pick<StandingDirections, "standing">;
     beforeValidationWrite?: (
       taskId: string,
       request: string,
@@ -402,6 +405,9 @@ export async function fixture(
       json({ id: 7 }, 201);
     } else if (url.pathname === "/repos/octo/meter/issues/2/comments") {
       json({ message: "Validation Failed" }, 422);
+    } else if (url.pathname === "/repos/octo/meter/issues/3/comments" && req.method === "POST") {
+      // The connection drops after the request arrived: the comment may exist, and no answer says so.
+      req.socket.destroy();
     } else if (
       /^\/repos\/octo\/meter\/actions\/workflows\/(?:verify\.yml|42)\/dispatches$/.test(
         url.pathname,
@@ -539,6 +545,16 @@ export async function fixture(
     status: "idle",
     shape: { kind: "research", deliverable: "answer", unsafe_data_reader: true },
   });
+  // A side-effect task filed without the read-only constraint (docs/task-graph.md, "A side-effect task").
+  seedTask(tasks, {
+    id: "task-side-effect",
+    title: "Tell the issue how the fix ended",
+    status: "idle",
+    repoId: "repo-1",
+    worktreeDir: dir,
+    branch: "fm/task-side-effect",
+    shape: { kind: "unclear", side_effect: true },
+  });
   seedTask(tasks, {
     id: "task-operation",
     title: "Cancel the superseded check",
@@ -574,6 +590,7 @@ export async function fixture(
     readChecks,
     beforeValidationWrite: options.beforeValidationWrite,
     ...(options.watchRun ? { watchRun: options.watchRun } : {}),
+    ...(options.directions ? { directions: options.directions } : {}),
     now: () => 1234,
     sleep: async () => {},
   });

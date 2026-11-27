@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSyn
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { MIN_BACKGROUND_INTERVAL_MS, type PersonalSnapshot } from "@shared/personal/manifest";
-import type { PanelMountState } from "@shared/personal/mounts";
+import type { PanelMountState, RailsAway } from "@shared/personal/mounts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { BUNDLED_NAMING } from "../../../tests/helpers/namingRunbook";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
@@ -970,7 +970,7 @@ describe("PersonalExtensions builds apart from the rails", () => {
  * and each panel of the captain's with the state the test gives.
  */
 describe("PersonalExtensions places a build on the rail", () => {
-  type WindowWord = { state: PanelMountState; why: string | null };
+  type WindowWord = { state: PanelMountState; why: string | null; away?: RailsAway };
   const APP_ACTIVITY = {
     id: "activity",
     kind: "app",
@@ -1191,6 +1191,60 @@ describe("PersonalExtensions places a build on the rail", () => {
       expect(capture).toMatchObject({ ok: false, id: "fresh" });
       expect(capture.ok ? "" : capture.reason).toContain(
         '"fresh" is not on screen: in the More row at the foot of the left rail',
+      );
+    } finally {
+      service.dispose();
+    }
+  });
+
+  it("says when the rails are folded away or Settings is open, beside a drawn panel's photo or its refusal", async () => {
+    // INF-6925's finding 2: a placed panel's photos were refused in words
+    // that also said it was drawn. With Settings open the window has no
+    // rails and no box to photograph; folded away for a card, the panel
+    // keeps its box and is photographed.
+    const h = await harness();
+    seedTask(h.tasks, { id: "t-away", title: "Build a clock", status: "running" });
+    let word: WindowWord = { state: "drawn", why: null, away: "folded" };
+    const window = windowFor(() => word);
+    const service = await PersonalExtensions.start({
+      ...h,
+      watch: false,
+      mounts: window.mounts,
+      emit: (channel, payload) => {
+        h.emit(channel, payload);
+        if (channel === "inf:plugins:personal") window.answer(payload as PersonalSnapshot);
+      },
+      capture: {
+        capturePanel: async () =>
+          word.away === "settings"
+            ? null
+            : { png: Buffer.from("89504e47", "hex"), width: 300, height: 120 },
+      },
+    });
+    try {
+      service.beginLiveTask("t-away");
+      h.write("fresh/panel.tsx", PANEL);
+      const folded = renderPlaceText(await service.place("t-away"));
+      expect(folded).toContain(
+        "The window says it is drawn on the left rail; the window has its rails folded away right now",
+      );
+      const photo = await service.capture("fresh", "t-away");
+      expect(photo).toMatchObject({
+        ok: true,
+        photographed: "docked",
+        window: { state: "drawn", away: "folded" },
+      });
+      expect(renderCaptureText(photo)).toContain(
+        "The window says it is drawn on the left rail; the window has its rails folded away right now",
+      );
+
+      word = { state: "drawn", why: null, away: "settings" };
+      h.write("fresh/panel.tsx", `${PANEL}\n// smaller rows`);
+      await service.place("t-away");
+      const refused = await service.capture("fresh", "t-away");
+      expect(refused).toMatchObject({ ok: false, id: "fresh" });
+      expect(refused.ok ? "" : refused.reason).toBe(
+        '"fresh" is not on screen: drawn on the left rail; the captain has Settings open, where the window draws no rails, so nothing of it is on screen to photograph until they go back',
       );
     } finally {
       service.dispose();

@@ -1,12 +1,16 @@
-import { existsSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { existsSync, readdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { feedLineFrom } from "../../src/shared/feed";
+import * as m from "../../src/shared/i18n/messages.generated";
 import { REPO_REMOVAL_LINE, repoRemovalQuestion, repoRemovalRefusal } from "../../src/shared/repos";
 import { scratchDir } from "../helpers/scratchDirs";
+import { seedGitHubSignIn, startGitHubStub } from "./githubStub";
+import { redirectGitClone } from "./homeFixtures";
 import { launchApp } from "./launch";
 import { openProject, projectLine } from "./projects";
 
@@ -122,5 +126,75 @@ test("names the tasks still on a project up front and writes nothing", async () 
     expect(feed.some((entry) => entry.text.includes("removed"))).toBe(false);
   } finally {
     await launched.close();
+  }
+});
+
+test("adds a removed project back from its address by linking the folder it left, files and all", async () => {
+  const home = scratchDir("infinitary-add-back-home-");
+  const userDataDir = scratchDir("infinitary-add-back-data-");
+  const source = realpathSync(scratchDir("infinitary-add-back-source-"));
+  const git = (...args: string[]) =>
+    execFileSync("git", ["-C", source, ...args], { encoding: "utf8" });
+  git("init", "-q", "-b", "main");
+  git(
+    "-c",
+    "user.name=Test",
+    "-c",
+    "user.email=test@localhost",
+    "commit",
+    "--allow-empty",
+    "-m",
+    "test: start",
+  );
+  // Git's real URL mapping targets a local disposable source, never github.com.
+  redirectGitClone(home, "https://github.com/octo/field-notes.git", source);
+  seedGitHubSignIn(userDataDir);
+  const github = await startGitHubStub();
+  github.setProjects([{ fullName: "octo/field-notes" }]);
+  const launched = await launchApp({
+    homeDir: home,
+    userDataDir,
+    withMockProvider: true,
+    env: { ...github.env, GIT_CONFIG_GLOBAL: join(home, ".gitconfig"), GIT_CONFIG_NOSYSTEM: "1" },
+  });
+  try {
+    const { page } = launched;
+    const notice = page.locator("[data-repository-notice]");
+    const addFromGitHub = async () => {
+      const add = page.locator("[data-add-project]");
+      await add.getByRole("button", { name: "GitHub repo", exact: true }).click();
+      await expect(add.getByText("octo/field-notes", { exact: true })).toBeVisible();
+      await add.getByRole("button", { name: "Add", exact: true }).first().click();
+    };
+    const projects = async () =>
+      (await page.evaluate(() => window.infinitary.repos.list())).filter(
+        (repo) => repo.kind !== "personal",
+      );
+    await openProjects(page);
+    await addFromGitHub();
+    await expect(notice).toHaveText(m.settingsAddProjectAdded({ name: "field-notes" }));
+    const [first] = await projects();
+    if (!first) throw new Error("field-notes was not added");
+    writeFileSync(join(first.path, "draft.md"), "not committed yet\n");
+
+    const line = page.locator("[data-remove-project]");
+    await line.getByRole("button", { name: `Remove ${first.name}` }).click();
+    await line.getByRole("button", { name: "Remove", exact: true }).click();
+    await expect(projectLine(page, first.id)).toHaveCount(0);
+    expect(existsSync(join(first.path, "draft.md"))).toBe(true);
+
+    await addFromGitHub();
+    await expect(notice).toHaveText(m.settingsAddProjectAddedLeftFolder({ name: "field-notes" }));
+    const [again] = await projects();
+    expect(again).toMatchObject({ name: "field-notes", path: first.path, setupKind: "clone" });
+    expect(again?.id).not.toBe(first.id);
+    expect(readFileSync(join(first.path, "draft.md"), "utf8")).toBe("not committed yet\n");
+    expect(readdirSync(join(userDataDir, "fleet")).filter((name) => name !== "personal")).toEqual([
+      "field-notes",
+    ]);
+    if (evidence) await page.screenshot({ path: join(evidence, "add-back-notice.png") });
+  } finally {
+    await launched.close();
+    await github.close();
   }
 });

@@ -44,19 +44,28 @@ extension PhoneJourney {
         verifyPhoneComposerBounds(app: app)
         picture("cards")
         try await appearances("cards", showing: app.staticTexts["Your phone is reading your Mac"])
-        // INF-1062: the computer's name leaves the bar for its sheet, and Leave stays behind that sheet (INF-209).
+        // INF-1062: the computer's name leaves the bar for its page, and Leave stays behind that page (INF-209).
         XCTAssertFalse(app.staticTexts["home-name"].exists, "The bar no longer carries the computer's name")
         XCTAssertFalse(app.buttons["leave"].exists)
-        // INF-355: details must also work as the first hardware chord after relaunch.
+        // INF-355: details must also work as the first hardware chord after relaunch. INF-2820 piece 1: Command-I opens
+        // Settings at Your computer.
         app.terminate(); try await launchPhoneApp(app)
         reach("Live", timeout: 20)
         try await pressPhoneKey("i", modifiers: .command, in: app)
-        XCTAssertTrue(app.buttons["close-computer-details"].waitForPresence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["home-name"].waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertEqual(app.staticTexts["home-name"].label, "Test Mac mini")
-        XCTAssertTrue(app.staticTexts["Live"].exists, "The computer's sheet says its reach")
-        XCTAssertTrue(app.staticTexts["reached-address"].label.hasPrefix("127.0.0.1:"), "The sheet names the route reached, not the saved preference")
+        XCTAssertTrue(app.staticTexts["Live"].exists, "Your computer says its reach")
+        XCTAssertTrue(app.staticTexts["reached-address"].label.hasPrefix("127.0.0.1:"), "Your computer names the route reached, not the saved preference")
         XCTAssertTrue(app.buttons["leave"].exists)
-        tapOnPhone(app.buttons["close-computer-details"])
+        XCTAssertTrue(app.buttons["add-computer"].exists)
+        // Back from Your computer lands on Settings' list, where it is the first row and names the computer and its reach.
+        try await settingsBack()
+        let computerRow = app.buttons["phone-settings-computer"]
+        XCTAssertTrue(computerRow.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.staticTexts["Test Mac mini · Live"].exists, "The row names the computer shown and its reach: \(app.debugDescription)")
+        XCTAssertLessThan(computerRow.frame.maxY, app.buttons["phone-settings-general"].frame.minY, "Your computer is the list's first row")
+        try await appearances("phone-settings-list", showing: computerRow)
+        closeComputerDetails()
         // INF-1062, the captain's pick: Settings at the bar's left is this phone's own sheet, with no Leave in it.
         try await pressPhoneKey(",", modifiers: .command, in: app)
         XCTAssertTrue(app.buttons["close-phone-settings"].waitForPresence(timeout: 10), app.debugDescription)
@@ -75,11 +84,16 @@ extension PhoneJourney {
         let computerSections = ["projects", "intelligence", "runbooks", "usage", "automation"].map { app.buttons["phone-settings-\($0)"] }
         for row in computerSections { XCTAssertTrue(row.waitForPresence(timeout: 20), app.debugDescription) }
         XCTAssertFalse(app.staticTexts["app-version"].exists, "Version content lives on General, not the list")
-        XCTAssertFalse(app.segmentedControls["phone-theme"].exists)
-        XCTAssertFalse(app.buttons["leave"].exists)
-        // The list starts on General. As PhoneKeys owns, Xcode emits the physical Return for LF, not CR.
-        // Unmodified keys have no BackBoard registration; send each physical key once and prove its result.
+        XCTAssertFalse(phoneThemeTiles.exists)
+        XCTAssertFalse(app.buttons["leave"].exists, "Leave stays on Your computer's page, not the list")
+        // The list starts on its first row, Your computer. As PhoneKeys owns, Xcode emits the physical Return for LF,
+        // not CR. Unmodified keys have no BackBoard registration; send each physical key once and prove its result.
+        waitForSteadyTarget(app.buttons["phone-settings-computer"])
+        app.typeKey("\n", modifierFlags: [])
+        XCTAssertTrue(app.buttons["add-computer"].waitForPresence(timeout: 10), app.debugDescription)
+        try await settingsBack()
         waitForSteadyTarget(general)
+        app.typeKey(XCUIKeyboardKey.downArrow.rawValue, modifierFlags: [])
         app.typeKey("\n", modifierFlags: [])
         XCTAssertTrue(app.staticTexts["app-version"].waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertTrue(app.staticTexts["app-version"].label.hasPrefix("Version "), app.staticTexts["app-version"].label)
@@ -104,7 +118,7 @@ extension PhoneJourney {
         let device = UIDevice.current.userInterfaceIdiom == .pad ? "This iPad" : "This phone"
         XCTAssertTrue(app.staticTexts[device].waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertTrue(app.staticTexts["Conversation stays on your computer."].exists)
-        XCTAssertFalse(app.segmentedControls["phone-theme"].exists)
+        XCTAssertFalse(phoneThemeTiles.exists)
         tapOnPhone(app.buttons["close-phone-settings"])
         XCTAssertTrue(app.buttons["close-phone-settings"].waitForAbsence(timeout: 10))
         let settings = app.buttons["phone-settings"]
@@ -114,6 +128,11 @@ extension PhoneJourney {
         // INF-1328: the segmented control draws its tabs edge to edge, in order and never overlapping.
         XCTAssertLessThanOrEqual(strip[0].frame.maxX, strip[1].frame.minX); XCTAssertLessThanOrEqual(strip[1].frame.maxX, strip[2].frame.minX)
         XCTAssertLessThan(strip[2].frame.maxX, app.buttons["computer-details"].frame.minX, "The computer sits right of the strip")
+        // INF-2820 piece 1: until piece 2 puts Filter in its place, the computer button opens Settings at Your computer.
+        tapOnPhone(app.buttons["computer-details"])
+        XCTAssertTrue(app.staticTexts["home-name"].waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.buttons["phone-settings-back"].exists, "The button opens Your computer inside Settings")
+        closeComputerDetails()
         XCTAssertTrue(strip[0].isSelected, "Home is the lit tab")
         // INF-1541 piece 1: the card's heading redraws at the largest type before the strip is read against it.
         let heading = app.staticTexts["Your phone is reading your Mac"]
@@ -137,7 +156,7 @@ extension PhoneJourney {
         computerDetails()
         XCTAssertTrue(waitForPhonePress(app.buttons["leave"]))
         picture("computer-details-largest-standard-type")
-        tapOnPhone(app.buttons["close-computer-details"])
+        closeComputerDetails()
         _ = try await home("display-light", budget: displayBudget)
         _ = waitForRedraw(heading, from: largest)
         if phoneTurnedLayout(app) == .wide {
@@ -222,7 +241,7 @@ extension PhoneJourney {
     /// keyboard (the left arrow) follows the simulator's light again. Leaves Settings open, drawing light.
     /// Data: the join part's test home and its one card. Resources: this part's own simulator; no account or signing.
     func phoneTheme() async throws {
-        let theme = app.segmentedControls["phone-theme"]
+        let theme = phoneThemeTiles
         XCTAssertTrue(theme.waitForPresence(timeout: 10), app.debugDescription)
         try await appearances("phone-settings-appearance", showing: theme)
         let device = UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone"
@@ -230,7 +249,9 @@ extension PhoneJourney {
         // INF-4713: under Theme, one line names where the size of Infinitary's words is set, with no control of its own.
         XCTAssertEqual(app.staticTexts["phone-text-size"].label,
                        "Infinitary follows this \(device)'s Text Size. For Infinitary alone, use Text Size in Control Center.")
-        XCTAssertEqual(theme.buttons.allElementsBoundByIndex.map(\.label), ["Device", "Dark", "Light"])
+        // INF-6888's part 3: the built-in color themes follow Device, Dark and Light under their makers' names.
+        XCTAssertEqual(theme.buttons.allElementsBoundByIndex.map(\.label),
+                       ["Device", "Dark", "Light"] + Self.builtInThemes.map(\.name))
         XCTAssertTrue(theme.buttons["Device"].isSelected, "A new install matches the device")
         tapOnPhone(theme.buttons["Dark"])
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "selected == true"), object: theme.buttons["Dark"], timeout: 10), .completed)
@@ -253,6 +274,95 @@ extension PhoneJourney {
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "selected == true"), object: theme.buttons["Device"], timeout: 10),
                        .completed, "In Settings the left arrow moves the theme from Dark to Device")
         try drawn("phone-theme-device", dark: false)
+        try await phoneColorThemes()
+    }
+
+    /// INF-6888's part 3, the computer's built-in themes in the computer's order: each one's base, and its background
+    /// (--bg-0, `PhoneTheme.background`) and quiet words (--fg-2, `PhoneTheme.secondary`) as the computer's
+    /// workOutTheme in src/shared/colorThemes.ts works them out for the captain's chosen themes.
+    private static let builtInThemes: [(name: String, dark: Bool, background: UInt32, quiet: UInt32)] = [
+        ("Rosé Pine", true, 0x191724, 0x9796ae), ("Rosé Pine Moon", true, 0x232136, 0xa5a4bc),
+        ("Rosé Pine Dawn", false, 0xfaf4ed, 0x716b95), ("Catppuccin Latte", false, 0xeff1f5, 0x696c88),
+        ("Catppuccin Frappé", true, 0x303446, 0xb5bfe3), ("Catppuccin Macchiato", true, 0x24273a, 0xa3accc),
+        ("Catppuccin Mocha", true, 0x1e1e2e, 0x97a1bc), ("One Dark", true, 0x282c34, 0xa7b4c9),
+        ("One Light", false, 0xeaeaeb, 0x64697f), ("Dracula", true, 0x282a36, 0xb2b399),
+        ("Night Owl", true, 0x011627, 0x8896ab), ("Night Owl Light", false, 0xf0f0f0, 0x6d6b83),
+        ("Tokyo Night", true, 0x1a1b26, 0x919ac3),
+    ]
+
+    /// The order the themes are picked in: every one once, with a switch between two themes on one base (Rosé Pine to
+    /// Rosé Pine Moon, Dracula to Tokyo Night) and from a dark theme to a light one (Tokyo Night to Catppuccin Latte).
+    private static let themeVisits = ["Rosé Pine", "Rosé Pine Moon", "Rosé Pine Dawn", "Catppuccin Frappé", "Catppuccin Macchiato",
+        "Catppuccin Mocha", "One Dark", "One Light", "Night Owl", "Night Owl Light", "Dracula", "Tokyo Night", "Catppuccin Latte"]
+
+    /// INF-6888's part 3: each built-in theme, tapped in turn on a light simulator, draws the whole screen on its own
+    /// base and Settings' quiet words in its own colors; with Settings closed, the home behind it draws on the theme's
+    /// background and its card's body in the theme's quiet words, without a relaunch. Dracula is then picked again and
+    /// survives a relaunch; Device is chosen again. Leaves Settings open, drawing light.
+    private func phoneColorThemes() async throws {
+        let theme = phoneThemeTiles, scope = app.staticTexts["phone-theme-scope"]
+        var shown = waitForRedraw(scope, from: nil)
+        let visits = Self.themeVisits + ["Dracula"]
+        for (visit, name) in visits.enumerated() {
+            let look = try XCTUnwrap(Self.builtInThemes.first { $0.name == name })
+            let again = visits[..<visit].contains(name) ? "-again" : ""
+            let slug = "phone-theme-" + name.lowercased().replacingOccurrences(of: " ", with: "-") + again
+            tapOnPhone(theme.buttons[name])
+            XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "selected == true"), object: theme.buttons[name], timeout: 10),
+                           .completed, "\(name) is chosen")
+            shown = waitForRedraw(scope, from: shown)
+            waitForInks(name, [(look.quiet, scope, 300, "Settings' quiet words")])
+            try drawn(slug, dark: look.dark)
+            let close = app.buttons["close-phone-settings"]
+            tapOnPhone(close)
+            XCTAssertTrue(close.waitForAbsence(timeout: 10), app.debugDescription)
+            try homeDrawn(in: look, slug + "-home")
+            if visit == visits.count - 1 { break }
+            try reopenAppearance()
+            shown = waitForRedraw(scope, from: nil)
+        }
+        app.terminate(); try await launchPhoneApp(app)
+        reach("Live", timeout: 20)
+        let dracula = try XCTUnwrap(Self.builtInThemes.first { $0.name == "Dracula" })
+        try homeDrawn(in: dracula, "phone-theme-dracula-relaunched")
+        try reopenAppearance()
+        XCTAssertTrue(theme.buttons["Dracula"].isSelected, "A built-in theme survives a relaunch")
+        tapOnPhone(theme.buttons["Device"])
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "selected == true"), object: theme.buttons["Device"], timeout: 10), .completed)
+        try drawn("phone-theme-device-again", dark: false)
+    }
+
+    /// The home with its card, drawn in `look`: the page on its background and the card's body in its quiet words.
+    private func homeDrawn(in look: (name: String, dark: Bool, background: UInt32, quiet: UInt32), _ name: String) throws {
+        XCTAssertTrue(app.staticTexts["Your phone is reading your Mac"].waitForPresence(timeout: 10), app.debugDescription)
+        let body = app.webViews.matching(identifier: "card-body").firstMatch
+        XCTAssertTrue(body.waitForPresence(timeout: 10), app.debugDescription)
+        waitForInks(look.name, [(look.background, nil, 100_000, "the home's background"), (look.quiet, body, 300, "the card body's quiet words")])
+        try drawn(name, dark: look.dark)
+    }
+
+    private func reopenAppearance() throws {
+        tapOnPhone(app.buttons["phone-settings"])
+        let appearance = app.buttons["phone-settings-appearance"]
+        XCTAssertTrue(appearance.waitForPresence(timeout: 10), app.debugDescription)
+        tapOnPhone(appearance)
+        XCTAssertTrue(phoneThemeTiles.waitForPresence(timeout: 10), app.debugDescription)
+    }
+
+    /// INF-6888's part 3: waits until one screenshot draws each ink, an sRGB color, on at least `least` pixels inside its
+    /// element's frame, or the whole screen for nil. A view left on the previous theme's colors draws none of them: the
+    /// built-in themes share no background or quiet words.
+    private func waitForInks(_ theme: String, _ inks: [(color: UInt32, element: XCUIElement?, least: Int, what: String)]) {
+        var counts = [Int](repeating: 0, count: inks.count)
+        _ = waitForPhonePredicate(NSPredicate { _, _ in
+            guard let image = XCUIScreen.main.screenshot().image.cgImage, let raster = SRGBRaster(image) else { return false }
+            let scale = CGFloat(image.width) / self.app.frame.width
+            counts = inks.map { raster.count($0.color, in: $0.element.map { $0.frame.applying(CGAffineTransform(scaleX: scale, y: scale)) }) }
+            return zip(counts, inks).allSatisfy { $0 >= $1.least }
+        }, object: nil, timeout: 10)
+        for (count, ink) in zip(counts, inks) {
+            XCTAssertGreaterThanOrEqual(count, ink.least, "\(ink.what) draw \(theme)'s \(String(ink.color, radix: 16))")
+        }
     }
 
     /// The captain's Split at the fold switch by keys, on a simulator told at launch that it has seen a fold, as an open
@@ -268,7 +378,7 @@ extension PhoneJourney {
         let split = app.switches["phone-fold-split"]
         XCTAssertTrue(split.waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertEqual(split.value as? String, "1", "Split at the fold starts on")
-        waitForSteadyTarget(app.segmentedControls["phone-theme"])
+        waitForSteadyTarget(phoneThemeTiles)
         // As phoneTheme's arrow, each unmodified key is one actual input with visible-result proof, no wait or retry.
         app.typeKey(XCUIKeyboardKey.downArrow.rawValue, modifierFlags: [])
         app.typeKey(XCUIKeyboardKey.downArrow.rawValue, modifierFlags: [])
@@ -294,6 +404,45 @@ extension PhoneJourney {
         let appearance = app.buttons["phone-settings-appearance"]
         XCTAssertTrue(appearance.waitForPresence(timeout: 10), app.debugDescription)
         tapOnPhone(appearance)
-        XCTAssertTrue(app.segmentedControls["phone-theme"].waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(phoneThemeTiles.waitForPresence(timeout: 10), app.debugDescription)
+    }
+}
+
+/// A screenshot's pixels in sRGB, the space the themes' colors are written in.
+private struct SRGBRaster {
+    let width: Int, height: Int, bytes: [UInt8]
+
+    init?(_ image: CGImage) {
+        let (width, height) = (image.width, image.height)
+        var bytes = [UInt8](repeating: 0, count: width * height * 4)
+        let drawn = bytes.withUnsafeMutableBytes { buffer -> Bool in
+            guard let space = CGColorSpace(name: CGColorSpace.sRGB),
+                  let context = CGContext(data: buffer.baseAddress, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4,
+                                          space: space, bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue) else { return false }
+            context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+            return true
+        }
+        guard drawn else { return nil }
+        (self.width, self.height, self.bytes) = (width, height, bytes)
+    }
+
+    /// Pixels inside `frame` (in pixels, the whole picture for nil) within one step per channel of `color`, the rounding a
+    /// simulator's screenshot leaves on an sRGB color. The whole picture is read at every third pixel each way and scaled.
+    func count(_ color: UInt32, in frame: CGRect?) -> Int {
+        let all = CGRect(x: 0, y: 0, width: width, height: height)
+        let area = (frame ?? all).integral.intersection(all)
+        guard !area.isNull, !area.isEmpty else { return 0 }
+        let step = frame == nil ? 3 : 1
+        let (r, g, b) = (Int(color >> 16 & 0xff), Int(color >> 8 & 0xff), Int(color & 0xff))
+        var matching = 0
+        bytes.withUnsafeBufferPointer { pixels in
+            for y in stride(from: Int(area.minY), to: Int(area.maxY), by: step) {
+                for x in stride(from: Int(area.minX), to: Int(area.maxX), by: step) {
+                    let at = (y * width + x) * 4
+                    if abs(Int(pixels[at]) - r) <= 1, abs(Int(pixels[at + 1]) - g) <= 1, abs(Int(pixels[at + 2]) - b) <= 1 { matching += 1 }
+                }
+            }
+        }
+        return matching * step * step
     }
 }

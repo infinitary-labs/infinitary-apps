@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "fewer-pauses-reading-checks",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Fewer short pauses each minute while your changes' checks run",
+      "body": "While checks ran on your changes, the app read them about once a minute and updated each change's card. Every reading rebuilt all your open cards, so when many readings came back together the window could pause for a few tenths of a second. The app now rebuilds the cards once for all the readings that come back together, and it finds where each card's work came from with fewer reads.",
+      "noPicture": "Nothing on screen changes; the window pauses less, which a still picture cannot show.",
+      "noDocsSite": "No docs site page describes how long rebuilding the cards takes.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

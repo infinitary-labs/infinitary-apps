@@ -81,10 +81,12 @@ A number placeholder sits directly against its counter with no space (「{count}
 | header (an extra request header) | ヘッダー | Long-vowel mark. |
 | held (a batch that stopped) | 保留中 | The same word as a merge a rule holds (保留しています); 一時停止 stays for what a person pauses. |
 | hold (on a task) | 保留 | 「保留が解ける」 for a hold ending. |
+| holds an override passes (named on a task's Activity) | asking first: 先に確認; the open decisions: 未決の判断; the waits: ほかの作業の待ち; the open parts: 未完了のパート; the checks: チェック; the delivery proof: 完了の証明; the saved story: 保存したストーリー; the heavy-run line: 重い実行の順番待ち; the cost limit: コスト上限; a retired hold: 廃止された項目 | Joined as one list in the reader's language on the line. |
 | How to get it (an ask for a secret) | 入手方法 | The heading over the steps a crewmate lays out for making or finding a secret. |
 | Idle (a task's state) | アイドル | 待機中 is Queued; both appear in one list. |
 | Infinitary | Infinitary | Never translated or written in katakana. |
 | inspector | インスペクター | The Knowledge pane that reads one entry. |
+| intake round (a docs site guide) | 受付ラウンド | A scheduled task that reads new issues and pull requests and drafts replies; 受付 as a front desk takes in what arrives. |
 | Integrations | 連携 | Settings section name. |
 | Intelligence | インテリジェンス | Settings section name. |
 | issue (where the project lives) | Issue | As GitHub's Japanese pages keep it. |
@@ -157,6 +159,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | server (a custom API's) | サーバー | Long-vowel mark, as for コンピューター. |
 | Settings | 設定 | macOS Japanese. |
 | sign-in / sign in | サインイン / サインインする | Apple and GitHub Japanese use サインイン; never トークン or 認証情報. |
+| standing reply (your words kept on a task, which pass its holds) | 有効な返信 | |
 | start | 開始 | Standard. |
 | starter | 書き出し | The welcome's sentence starters. |
 | Steer (button) | 伝える | 指示 is the Instruction kind. |
@@ -181,6 +184,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | token (what Usage counts) | トークン | The same unit as the model sizes in the custom API row above; a sign-in or a key is never a トークン. |
 | unsafe data reader | 安全でないデータの読み手 | A crewmate that reads words anyone can write. |
 | Usage | 使用量 | Settings section name. |
+| user (another user account on this computer) | ユーザー | "as {user}" is 「{user} として」, as in 「別のユーザーとして実行」. |
 | version (for a SHA) | バージョン | Never ハッシュ or SHA in a sentence. |
 | Where changes go | 変更の届け先 | Row title in Settings → Projects; pairs with 届け方 for Delivery. |
 | where the project lives | プロジェクトの保管先 | Plain phrase for the remote; never リモート or オリジン. |

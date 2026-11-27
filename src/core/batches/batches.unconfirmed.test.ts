@@ -28,6 +28,14 @@ const EXPORT: BatchChange = {
   body: "- A report exports as CSV.",
   at: 2_000,
 };
+const LEGEND: BatchChange = {
+  taskId: "t-legend",
+  branch: "inf/chart-legend",
+  head: "0f9e8d7c6b5a49382716f5e4d3c2b1a009182736",
+  title: "fix(chart): keep the legend inside the chart",
+  body: "- The legend no longer overlaps the bars.",
+  at: 3_000,
+};
 
 /** Two approved changes whose batch #31 passed its checks, its merge sent with no confirmed outcome. */
 async function unconfirmedBatch(task?: string) {
@@ -222,6 +230,147 @@ describe("a batch merge whose outcome the host did not confirm", () => {
     expect(home.open().unconfirmed).toBeUndefined();
     expect(home.heard.notes.at(-1)).toEqual(BATCH_WORDS.queued("meter", "#31", "GitHub"));
     await home.pass();
+    expect(home.host.merges).toHaveLength(1);
+  });
+});
+
+/** Batch #31 of two changes, whose merge the host took and still reads as running. */
+async function waitingBatch() {
+  const home = await unconfirmedBatch("31/merge-1");
+  await home.pass();
+  expect(mergeWait(home.open())).toBeDefined();
+  return home;
+}
+
+// Intent: INF-5595, found on the review of INF-5566, whose captain's pick for Try
+// again was "closes the old pull request and opens a fresh one". A host whose
+// merge names no version merges whatever the branch holds when its merge runs,
+// so while that merge may still finish, no automatic pass puts a new version on
+// the pull request: a change withdrawn or reworded meanwhile, or every change
+// leaving, moves the batch to a new pull request the way Try again does, or the
+// batch keeps waiting.
+describe("a batch whose changes leave or change while the host still runs its merge", () => {
+  it("closes the waiting pull request when a change is withdrawn, and combines the rest on a new one", async () => {
+    const home = await waitingBatch();
+    const { head, branch } = home.open();
+    const told = home.heard.notes.length;
+    home.approvals.delete(EXPORT.taskId);
+    await home.batches.withdraw(REPO, EXPORT.taskId);
+    await home.pass();
+    // Nothing new went onto the waiting branch: its pull request is closed unmerged, the branch gone.
+    expect(home.heard.pushes.filter((push) => push.branch === branch)).toHaveLength(1);
+    expect(home.host.pulls.get(31)).toMatchObject({ state: "closed", merged: false, head });
+    expect(home.host.branches.has(branch)).toBe(false);
+    expect(home.open()).toMatchObject({ number: 32 });
+    expect(home.open().branch).not.toBe(branch);
+    expect(home.members()).toEqual([PARSER.taskId]);
+    expect(mergeWait(home.open())).toBeUndefined();
+    expect(home.heard.notes.slice(told)).toEqual([BATCH_WORDS.formed("meter", "#32", 1)]);
+    expect(home.record().finished).toMatchObject([{ number: 31, outcome: "closed" }]);
+
+    // The new pull request merges once its own checks pass; the first merge is never sent again.
+    home.host.report([passed("build")]);
+    home.host.ready("clean");
+    await home.pass();
+    expect(home.host.merges.map((merge) => merge.number)).toEqual([31, 32]);
+    expect(home.place(PARSER)).toMatchObject({ state: "merged", receipt: { number: 32 } });
+    expect(home.place(EXPORT)).toBeUndefined();
+  });
+
+  it("moves the batch to a new pull request when a change's commit words change, carrying them there", async () => {
+    const home = await waitingBatch();
+    const { branch } = home.open();
+    const retitled = { ...PARSER, title: "fix(parser): read a date's time zone as written" };
+    await home.batches.revise(REPO, retitled);
+    await home.pass();
+    expect(home.heard.pushes.filter((push) => push.branch === branch)).toHaveLength(1);
+    expect(home.host.pulls.get(31)).toMatchObject({ state: "closed", merged: false });
+    expect(home.open()).toMatchObject({ number: 32 });
+    expect(home.members()).toEqual([PARSER.taskId, EXPORT.taskId]);
+    expect(home.host.carried.get(home.open().head)?.map((commit) => commit.title)).toEqual([
+      retitled.title,
+      EXPORT.title,
+    ]);
+    expect(home.host.merges).toHaveLength(1);
+  });
+
+  it("puts the changes waiting in line on a new pull request when every change left, never on the waiting one", async () => {
+    const home = await waitingBatch();
+    const { branch } = home.open();
+    await home.approve(LEGEND);
+    // Both approvals end before the next pass reads them.
+    home.approvals.delete(PARSER.taskId);
+    home.approvals.delete(EXPORT.taskId);
+    await home.pass();
+    expect(home.record().finished).toMatchObject([{ number: 31, outcome: "closed" }]);
+    expect(home.heard.pushes.filter((push) => push.branch === branch)).toHaveLength(1);
+    expect(home.host.pulls.get(31)).toMatchObject({ state: "closed", merged: false });
+    expect(home.open()).toMatchObject({ number: 32 });
+    expect(home.members()).toEqual([LEGEND.taskId]);
+    expect(home.host.merges).toHaveLength(1);
+  });
+
+  it("closes the waiting pull request and keeps it as closed when every change left and none waits", async () => {
+    const home = await waitingBatch();
+    const { branch } = home.open();
+    home.approvals.delete(PARSER.taskId);
+    home.approvals.delete(EXPORT.taskId);
+    await home.pass();
+    expect(home.record().open).toBeUndefined();
+    expect(home.host.pulls.get(31)).toMatchObject({ state: "closed", merged: false });
+    expect(home.host.branches.has(branch)).toBe(false);
+    expect(home.heard.pushes).toHaveLength(1);
+    expect(home.record().finished).toMatchObject([{ number: 31, outcome: "closed" }]);
+  });
+
+  it("moves at the first reading of a merge still running, without first saying it waits", async () => {
+    const home = await unconfirmedBatch("31/merge-1");
+    const told = home.heard.notes.length;
+    home.approvals.delete(EXPORT.taskId);
+    await home.batches.withdraw(REPO, EXPORT.taskId);
+    await home.pass();
+    expect(home.host.pulls.get(31)).toMatchObject({ state: "closed", merged: false });
+    expect(home.open()).toMatchObject({ number: 32 });
+    expect(home.heard.notes.slice(told)).toEqual([BATCH_WORDS.formed("meter", "#32", 1)]);
+  });
+
+  it("keeps waiting, with nothing new sent, while the host will not close the pull request, and follows the merge however it ends", async () => {
+    const home = await waitingBatch();
+    const { head, branch } = home.open();
+    const wait = mergeWait(home.open());
+    const told = home.heard.notes.length;
+    home.host.closeRefusal = "GitHub cannot close a pull request while it merges it.";
+    home.approvals.delete(EXPORT.taskId);
+    await home.batches.withdraw(REPO, EXPORT.taskId);
+    await home.pass();
+    await home.pass();
+    expect(mergeWait(home.open())).toEqual(wait);
+    expect(home.open()).toMatchObject({ number: 31, branch, head });
+    expect(home.host.pulls.get(31)).toMatchObject({ state: "open", head });
+    expect(home.heard.pushes).toHaveLength(1);
+    expect(home.heard.notes).toHaveLength(told);
+
+    // The host's merge fails after all: the batch holds, and only then combines again without
+    // the withdrawn change, on the same pull request, whose merge can no longer finish.
+    home.host.refusedTasks.add("31/merge-1");
+    await home.pass();
+    expect(home.open().hold).toMatchObject({ reason: "merge-way", head });
+    await home.pass();
+    expect(home.open()).toMatchObject({ number: 31, branch });
+    expect(home.open().head).not.toBe(head);
+    expect(home.members()).toEqual([PARSER.taskId]);
+    expect(home.host.merges).toHaveLength(1);
+  });
+
+  it("records the batch merged when the host finishes the merge as it is asked to close the pull request", async () => {
+    const home = await waitingBatch();
+    home.host.duringClose = () => home.host.land(31, "rebase");
+    home.approvals.delete(EXPORT.taskId);
+    await home.batches.withdraw(REPO, EXPORT.taskId);
+    await home.pass();
+    expect(home.record().open).toBeUndefined();
+    expect(home.place(PARSER)).toMatchObject({ state: "merged", receipt: { number: 31 } });
+    expect(home.heard.pushes).toHaveLength(1);
     expect(home.host.merges).toHaveLength(1);
   });
 });

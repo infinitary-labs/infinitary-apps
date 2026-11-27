@@ -65,13 +65,9 @@ export function integrationApprovalCard(
     priority: HOST_CARD_PRIORITY,
     title: integrationApprovalTitle(ask.label ?? ask.action, ask.place),
     // Whoever asked answers a reply under the card, and a crewmate's heads
-    // with its task; a panel cannot answer one.
+    // with its task; a panel cannot answer one, so the first mate does.
     meta: task ? task.title : APPROVAL_CARD_META,
-    ...(task
-      ? { answeredBy: "crewmate" as const }
-      : panel
-        ? {}
-        : { answeredBy: "firstmate" as const }),
+    answeredBy: task ? "crewmate" : "firstmate",
     body: [
       `<p>${asker} wants to use this action. ${effect}</p>`,
       `<p>${text(ask.description ?? "")}</p>`,

@@ -6,7 +6,7 @@ import { costLimitSchema } from "./costLimit";
 import { HERE, PLACE_SAID } from "./deviceNames";
 import { type ForgeKind, hasChangeRequests } from "./forge";
 import { changeRequestHost, serverFactsAt } from "./forgeKinds";
-import { englishOf, type Said, said } from "./i18n/said";
+import { englishOf, type Said, type SaidPart, said } from "./i18n/said";
 import { placementRequirementsSchema } from "./placement";
 import { rigorSchema } from "./rigor";
 
@@ -484,12 +484,13 @@ export const RUNS_ON_THIS_MAC = "this-mac";
 /**
  * The feed line when a project's Runs on changes (design skill
  * `components/devices/RunsOn`). `where` places the computer after a verb,
- * as `signInPlace` does ("on Mac mini", "as Builder"); null is this Mac.
- * `fromHere` says the project ran on this Mac before.
+ * as `signInPlace` does ("on Mac mini", "as Builder"), as words or as the
+ * fact `SignInPlace.said` holds; null is this Mac. `fromHere` says the
+ * project ran on this Mac before.
  */
 export function runsOnLine(
   name: string,
-  where: string | null,
+  where: string | SaidPart | null,
   fromHere: boolean,
   automatic = false,
 ): string {
@@ -503,7 +504,7 @@ export function runsOnLine(
  */
 export function runsOnSaid(
   name: string,
-  where: string | null,
+  where: string | SaidPart | null,
   fromHere: boolean,
   automatic = false,
 ): Said {
@@ -520,6 +521,12 @@ export const repoSetupResultSchema = z.object({
   created: z.boolean(),
   initializedGit: z.boolean().optional(),
   createdInitialCommit: z.boolean().optional(),
+  /**
+   * The folder a removed project left in the projects folder, linked where it
+   * is instead of cloning a second copy (docs/fleet.md, "Adding a removed
+   * project back").
+   */
+  leftFolder: z.string().optional(),
 });
 export type RepoSetupResult = z.infer<typeof repoSetupResultSchema>;
 
@@ -549,6 +556,8 @@ export type RepoSetupCheck =
       key?: string;
       /** The existing project it would join, when the spec names one. */
       project?: { key: string; name: string };
+      /** The folder a removed project left, which the setup links where it is. */
+      leftFolder?: string;
     };
 
 /**

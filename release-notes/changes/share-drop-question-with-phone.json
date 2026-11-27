@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "share-drop-question-with-phone",
+      "reason": "Drop task's refusal and question on a task's record now come from one shared rule that the desktop record and the phone's generated record both read, instead of a second copy in the phone's generator; the words people see on either app do not change."
+    }
+  ]
+}

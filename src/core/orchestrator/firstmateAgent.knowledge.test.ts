@@ -369,14 +369,14 @@ describe("the captain's override, cited from his message on the task", () => {
     );
     expect(f.tasks.get("ab12")?.delivery?.override?.words).toBe(tabLine);
     await finish();
-    // A scheduled check sees it on the task line and cannot set one.
+    // A scheduled check sees it on the task line and cites none of the captain's words.
     f.agent.notifyOp(
       { facts: { kind: "scheduled", prompt: "check the meter retry", catchUp: false } },
       "scheduled",
     );
     await tick();
     expect(JSON.stringify(await declare("card-ab12"))).toContain(
-      "A scheduled check records no override",
+      "A scheduled check cites no card, Crewmate tab line or standing words",
     );
     expect(f.tasks.get("ab12")?.delivery?.override?.words).toBe(tabLine);
     // The model holds the line from the input that last changed it.

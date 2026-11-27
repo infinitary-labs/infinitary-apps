@@ -1,6 +1,11 @@
 import type { CrewSpeed } from "@shared/crewSpeed";
 import type { DecisionModelId, DecisionsSettings, DecisionsView } from "@shared/decisions";
-import { DECISION_MODEL_CATALOG } from "@shared/decisions";
+import {
+  DECISION_MODEL_CATALOG,
+  decisionProviderName,
+  decisionProviderPick,
+  decisionProvidersOf,
+} from "@shared/decisions";
 import type { DecisionUseRequest } from "@shared/decisionUses";
 import * as m from "@shared/i18n/messages.generated";
 import { levelWord } from "@shared/levelWords";
@@ -312,13 +317,16 @@ function decisionsSummary(
     const row = DECISION_MODEL_CATALOG.find((entry) => entry.id === answerer.id);
     return m.settingsModelsSummaryDecisions({ model: row?.name ?? answerer.id });
   }
-  if (answerer.kind === "openrouter")
+  const pick = decisionProviderPick(answerer);
+  if (pick)
     return m.settingsModelsSummaryDecisions({
       model:
-        decisions.openrouter?.models.find((model) => model.id === answerer.model)?.name ??
-        // i18n-exempt: a product name
-        "OpenRouter",
+        decisionProvidersOf(decisions)
+          .find((entry) => entry.provider === pick.provider)
+          ?.models.find((model) => model.id === pick.model)?.name ??
+        decisionProviderName(pick.provider),
     });
+  if (answerer.kind !== "adapted") return m.settingsModelsSummaryDecisionsAuto();
   if (answerer.offering === "auto" || decisions.pinned === "fallback")
     return m.settingsModelsSummaryDecisionsAuto();
   if (decisions.pinned === "held") return m.settingsModelsSummaryDecisionsUnanswered();

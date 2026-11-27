@@ -31,6 +31,8 @@ When the first mate named waiting work, the next one: "Once it is added, your fi
 A fact strip follows (`.inf-facts`): "From" with the clone's address in mono and "On this computer" saying "Cloned into your projects folder"; for a new project "From: A new project" and "Started in your projects folder"; for a folder, "Folder" with its path in mono, "From" with its remote when it has one, and "Linked where it is" when there is nothing to choose.
 When the first mate named the project's task key, the strip ends with "Task key" and the key in mono, such as `INF`; with none it says nothing of keys, and the app derives one from the name.
 A plain folder adds one sentence: "It has no git yet, so adding it starts git in that folder with an empty first commit."
+A project whose folder a removal left in the projects folder reads as that folder, linked where it is, whether its address or its folder was asked for, and adds one sentence: "Its folder is still in your projects folder, so adding it links that folder instead of cloning a second copy."
+It offers no fresh clone, since a clone would link that same folder.
 
 **Its rows.**
 The settings read as a project's settings in Settings → Projects read (`ProjectPage`): a hairline above each row, the question on the left in `--fg-1`, the control on the right.

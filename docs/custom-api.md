@@ -126,11 +126,14 @@ This is a transport lifetime, not the account Pause policy.
    It is bounded and keeps each listed ID with the context and output limits the server states (FI3-412, captain: "most expose all model info via /v1/models including limits and names").
    The limit fields read are `context_length`, `context_window`, `max_context_length`, `max_model_len` and `max_input_tokens` for context, and `max_completion_tokens` and `max_output_tokens` for output.
    They are read on the entry itself or under its `top_provider` or `metadata` object.
+   When none of them states a size, the entry's nested `limit` object (OpenCode's list) gives it: `context`, or `input` when no `context` is stated, and `output`.
    A `{ data: [...] }` reply and a bare list are both accepted.
    A limit that is not a positive whole number is unknown, and so is an output limit that is not below the stated context.
    A bare `max_tokens` is not read; beside `max_input_tokens` (Anthropic's list) it is the output limit.
    A model typed without limits takes the listed ones; a typed number always stands.
-   Listing never imports endpoints, headers, executable configuration, prices or capability claims.
+   An entry typed `decision` or `embedding`, or whose `capabilities.tools.supported` is `false`, is listed as not a chat model: it shows **Not a chat model** and cannot be picked, since every first mate and crew turn calls tools and its check could never pass.
+   Typing its ID by hand still adds it, and Save's check decides.
+   Listing never imports endpoints, headers, executable configuration, prices or any other capability claim.
    It never checks or activates a model, and saving still needs at least one model.
    Startup and Settings never wait for discovery.
 5. A model's check uses fixed synthetic instructions and the in-memory `firstmate_echo` tool only: two text requests per offered reasoning level (once with reasoning Off) followed by an optional tool-picture request, 60 seconds total, at most 128 output tokens per request (or the smaller documented output cap).

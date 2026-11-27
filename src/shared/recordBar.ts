@@ -94,7 +94,10 @@ export function recordBarOf(task: RecordBarInput): RecordBar | null {
       : task.status === "active"
         ? "stop-task"
         : null;
-  const { mark } = taskStatusOf(task);
+  // The bar acts on this task, never on its parts: a parent's word may follow
+  // a part's card or interruption (INF-6805 piece 2), which that part's own
+  // record answers, so the bar reads the parent's own status.
+  const { mark } = taskStatusOf(task.partsStatus ? { ...task, partsStatus: undefined } : task);
   const parent = task.status === "open" && task.children.total > 0;
   // Start picks started work up from the backlog whatever it waits on: its crewmate goes on waiting.
   const backlog = task.status === "active" && task.backlogSince !== undefined;

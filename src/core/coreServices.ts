@@ -78,6 +78,7 @@ import type { Runbooks } from "./runbooks/runbooks";
 import type { SecretBrings } from "./secrets/bring";
 import type { SecretsSettings } from "./secrets/settings";
 import type { SharingService } from "./sharing/sharingService";
+import type { SomeoneHere } from "./someoneHere";
 import type { SqlService } from "./sql/sqlService";
 import type { SettledBeforeAct } from "./standby/settled";
 import type { ActivityStore } from "./storage/activityStore";
@@ -90,7 +91,6 @@ import type { TaskProtocol } from "./tasks/taskProtocol";
 import type { TaskService } from "./tasks/taskService";
 import type { TaskTimeline } from "./tasks/taskTimeline";
 import type { UpdateChecker } from "./update/updateChecker";
-import type { WindowsInFront } from "./windowsInFront";
 import type { ProjectChanges } from "./workspace/projectChanges";
 import type { ProjectContributions } from "./workspace/projectContributions";
 import type { ProjectSetups } from "./workspace/projectSetups";
@@ -117,8 +117,8 @@ export type CoreServices = {
   cardDrafts: CardDrafts;
   /** Where the captain's input comes from: the computer or phone whose window sent it (docs/devices.md). */
   captainPlaces: CaptainPlaces;
-  /** The windows in programs of their own that say they are in front, which hold a phone's pushes (docs/phone-push.md). */
-  windowsInFront: WindowsInFront;
+  /** Whether someone is at a computer that shows this first mate, which holds a phone's pushes (docs/phone-push.md). */
+  someoneHere: SomeoneHere;
   auth: PiAuthService;
   vault: AccountVault;
   flagship: Flagship;

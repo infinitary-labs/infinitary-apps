@@ -47,6 +47,8 @@ export type AccountStatus = {
   access?: ClaudeAccessSource;
   /** Who set the address a Claude subscription's requests go to (CredentialHealth). */
   gateway?: ClaudeAccessSource;
+  /** The organization address's host a Bedrock account sends through (CredentialHealth). */
+  sentThrough?: string;
   /**
    * Why connectedness could not be confirmed by the client's own status
    * read. Present only when this is not a positive client determination.
@@ -164,6 +166,7 @@ export function statusFromHealth(health: CredentialHealth): AccountStatus {
     ...(health.identity ? { identity: health.identity } : {}),
     ...(health.access ? { access: health.access } : {}),
     ...(health.gateway ? { gateway: health.gateway } : {}),
+    ...(health.sentThrough ? { sentThrough: health.sentThrough } : {}),
     ...(health.reason ? { reason: health.reason } : {}),
     ...(health.detail ? { detail: health.detail } : {}),
   };

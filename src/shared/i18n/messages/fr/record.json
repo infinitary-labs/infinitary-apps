@@ -83,6 +83,71 @@
   },
   "recordMoreValidation": "validation en direct",
   "recordOpenKeptEvidence": "Ouvrir la preuve conservée",
+  "recordPartsClosedFold": {
+    "plural": "count",
+    "one": "{count} partie close",
+    "many": "{count} parties closes",
+    "other": "{count} parties closes"
+  },
+  "recordPartsCountBacklog": {
+    "plural": "count",
+    "one": "{count} dans votre réserve",
+    "many": "{count} dans votre réserve",
+    "other": "{count} dans votre réserve"
+  },
+  "recordPartsCountIdle": {
+    "plural": "count",
+    "one": "{count} inactive",
+    "many": "{count} inactives",
+    "other": "{count} inactives"
+  },
+  "recordPartsCountInterrupted": {
+    "plural": "count",
+    "one": "{count} interrompue",
+    "many": "{count} interrompues",
+    "other": "{count} interrompues"
+  },
+  "recordPartsCountQueued": {
+    "plural": "count",
+    "one": "{count} en file d’attente",
+    "many": "{count} en file d’attente",
+    "other": "{count} en file d’attente"
+  },
+  "recordPartsCountStarting": {
+    "plural": "count",
+    "one": "{count} en démarrage",
+    "many": "{count} en démarrage",
+    "other": "{count} en démarrage"
+  },
+  "recordPartsCountWaiting": {
+    "plural": "count",
+    "one": "{count} vous attend",
+    "many": "{count} vous attendent",
+    "other": "{count} vous attendent"
+  },
+  "recordPartsCountWorking": {
+    "plural": "count",
+    "one": "{count} en cours",
+    "many": "{count} en cours",
+    "other": "{count} en cours"
+  },
+  "recordPartsLast": "En attente de sa dernière partie",
+  "recordPartsLastBacklog": "Sa dernière partie attend que vous appuyiez sur Démarrer",
+  "recordPartsLastBacklogGuidance": "{key} est dans votre réserve. Cette tâche se ferme d’elle-même une fois ses parties closes.",
+  "recordPartsLastIdle": "{key} est inactive. Cette tâche se ferme d’elle-même une fois ses parties closes.",
+  "recordPartsLastInterrupted": "{key} a été interrompue. Cette tâche se ferme d’elle-même une fois ses parties closes.",
+  "recordPartsLastQueued": "{key} est en file d’attente. Cette tâche se ferme d’elle-même une fois ses parties closes.",
+  "recordPartsLastStarting": "{key} est en train de démarrer. Cette tâche se ferme d’elle-même une fois ses parties closes.",
+  "recordPartsLastWaiting": "Sa dernière partie vous attend",
+  "recordPartsLastWaitingGuidance": "{key} a une carte pour vous. Cette tâche se ferme d’elle-même une fois ses parties closes.",
+  "recordPartsLastWorking": "{key} est en cours. Cette tâche se ferme d’elle-même une fois ses parties closes.",
+  "recordPartsOpen": {
+    "plural": "total",
+    "one": "En attente de {open} sur sa {total} partie",
+    "many": "En attente de {open} sur ses {total} parties",
+    "other": "En attente de {open} sur ses {total} parties"
+  },
+  "recordPartsOpenGuidance": "{counts}. Cette tâche se ferme d’elle-même une fois ses parties closes.",
   "recordPersonalNone": "Aucune, sur {computer}",
   "recordPersonalVersion": "Version {version} du {when}, sur {computer}",
   "recordPolicyParentTask": "Tâche parente",

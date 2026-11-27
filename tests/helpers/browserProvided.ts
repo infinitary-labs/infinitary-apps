@@ -1,5 +1,6 @@
 import type { PushPayload } from "@shared/ipc";
 import type { TaskBoard } from "@shared/tasks";
+import type { WriteAsk } from "@shared/writeAsk";
 
 /**
  * What the browser project's Node side gives its pages (docs/testing.md,
@@ -74,6 +75,8 @@ declare module "vitest/browser" {
       argument?: unknown,
     ): Promise<unknown>;
     holdTouchInFrame(frame: string, selector: string, holdMs: number): Promise<void>;
+    dragAcrossWordsInFrame(title: string, selector: string, words: string): Promise<void>;
+    clickWordsInFrame(title: string, selector: string, words: string): Promise<void>;
     clearCookies(): Promise<void>;
     collectGarbage(): Promise<void>;
     seededHome(input?: unknown): Promise<FreshHomeAnswers>;
@@ -82,5 +85,6 @@ declare module "vitest/browser" {
     loadReading(): Promise<LoadReading>;
     holdCommandProcess(milliseconds: number): Promise<void>;
     holdBootLine(milliseconds: number): Promise<void>;
+    readerApprovalCardBody(asks: WriteAsk[], joined: string[]): Promise<string>;
   }
 }

@@ -1,5 +1,5 @@
 ---
-source: c16d193883332656
+source: 75bebd4c6bb16a9e
 title: Premier lancement
 description: Ce qu’Infinitary affiche la première fois que vous l’ouvrez, comment choisir où vit votre second, comment connecter un abonnement et comment ajouter votre premier projet.
 ---
@@ -40,13 +40,14 @@ Rien d’autre ne fonctionne tant qu’aucun abonnement ne peut répondre à vot
 ## Connecter un abonnement {#connect-a-subscription}
 
 Choisissez **Cet ordinateur** pour garder votre second ici.
-Un bouton apparaît pour chaque fournisseur que votre second peut utiliser : Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter, Amazon Bedrock et API personnalisée.
+Un bouton apparaît pour chaque fournisseur que votre second peut utiliser : Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter, Amazon Bedrock et API personnalisée.
 
 1. Choisissez le bouton de votre fournisseur.
 2. Connectez-vous de la façon que demande ce fournisseur.
    Certains ouvrent la page de connexion dans votre navigateur.
    Copilot et Kimi Code affichent un code : appuyez sur **Copier le code**, puis saisissez-le sur le site du fournisseur.
    OpenRouter demande une clé API que vous collez.
+   OpenCode Go demande la clé que vous collez depuis la OpenCode Console.
    Avec Amazon Bedrock, choisissez une région et utilisez un profil AWS de cet ordinateur, ou collez une clé API Bedrock.
    Un fournisseur qui propose les deux vous demande s’il faut **Se connecter avec votre navigateur** ou coller une **Clé API**.
 3. Patientez pendant que la fenêtre indique la connexion en cours.
@@ -166,8 +167,8 @@ Appuyez sur **Compris** pour la ranger quand vous voulez.
 
 La première fois que votre second confie une demande à un équipier, une carte intitulée **Un équipier s'en occupe** apparaît.
 
-<img class="picture-dark" src="/pictures/first-launch-crewmate-dark.webp" alt="La carte Un équipier s'en occupe : le second qui envoie un équipier au travail, un panneau Maintenant indiquant qu’un équipier travaille et qu’il est inutile de le surveiller, un panneau Plus tard indiquant qu’une carte revient ici avec une réponse ou un choix, et Compris." width="1070" height="602" />
-<img class="picture-light" src="/pictures/first-launch-crewmate-light.webp" alt="La carte Un équipier s'en occupe : le second qui envoie un équipier au travail, un panneau Maintenant indiquant qu’un équipier travaille et qu’il est inutile de le surveiller, un panneau Plus tard indiquant qu’une carte revient ici avec une réponse ou un choix, et Compris." width="1070" height="602" />
+<img class="picture-dark" src="/pictures/first-launch-crewmate-dark.webp" alt="La carte Un équipier s'en occupe : le second qui envoie un équipier au travail, un panneau Maintenant indiquant qu’un équipier travaille et qu’il est inutile de le surveiller, un panneau Plus tard indiquant qu’une carte revient ici avec une réponse ou un choix, et Compris." width="1163" height="654" />
+<img class="picture-light" src="/pictures/first-launch-crewmate-light.webp" alt="La carte Un équipier s'en occupe : le second qui envoie un équipier au travail, un panneau Maintenant indiquant qu’un équipier travaille et qu’il est inutile de le surveiller, un panneau Plus tard indiquant qu’une carte revient ici avec une réponse ou un choix, et Compris." width="1163" height="654" />
 
 Elle indique que l’équipier travaille en arrière-plan, ce qui peut prendre un moment, et que vous n’avez pas besoin de le surveiller.
 Quand l’équipier a une réponse, ou a besoin que vous choisissiez, cela vous revient sous forme de carte.

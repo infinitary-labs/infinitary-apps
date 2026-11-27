@@ -1,5 +1,5 @@
 ---
-source: e0f16d58d735b925
+source: c51b6ca36743cf77
 title: Projetos
 description: Como adicionar um projeto ao Infinitary, reunir vários repositórios em um só, criar etiquetas para ele, focar a janela em um deles, escolher como as mudanças dele são mescladas e removê-lo.
 ---
@@ -134,7 +134,12 @@ Enquanto um projeto está em foco:
 - Os cartões sobre outros projetos esperam até o foco mudar.
   Nada é fechado, e todos os projetos continuam mandando avisos.
 - Uma linha curta ao lado da pílula diz quantas tarefas aguardam você em outros projetos, como “2 aguardando em outros projetos”.
-- Seu imediato põe nesse projeto o trabalho novo que você pede, a não ser que você cite outro.
+- Seu imediato fica sabendo do foco a cada mensagem que você envia.
+  A não ser que você cite outro projeto, ele põe o trabalho novo nesse projeto, e suas respostas e ações sobre muitas tarefas cobrem só esse projeto e dizem o que deixaram de fora.
+
+Para ver onde o trabalho de um projeto está rodando sem focar nele, aponte para um tripulante no centro da janela, ou toque nele no seu celular.
+Enquanto o resumo dele está aberto, cada tripulante de outro projeto fica com um quarto da luz, em cada computador, e ninguém se move.
+Feche o resumo e a luz volta.
 
 Pressione o **×** ao lado da pílula (**Mostrar todos os projetos**), ou escolha **Todos os projetos** na fileira, para ver tudo de novo.
 O Infinitary lembra do seu foco quando você o reinicia.
@@ -172,6 +177,7 @@ Mude a linha e pressione **Salvar**, ou desligue a chave para deixá-la de fora.
 
 Remover tira o projeto da lista.
 A pasta dele e as tarefas terminadas ficam.
+Se você adicioná-lo de novo, o Infinitary usa a pasta que ele deixou na sua pasta de projetos em vez de clonar uma segunda cópia, e o projeto recomeça com os ajustes padrão.
 Se o projeto ainda tiver tarefas, o Infinitary diz quais são, e você as termina ou abandona antes.
 
 Em um projeto com vários repositórios, **Remover** tira o repositório cuja aba está escolhida, e o projeto fica com os outros.

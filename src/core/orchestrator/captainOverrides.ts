@@ -1,3 +1,4 @@
+import type { DirectionCitation } from "@shared/actions";
 import type { CaptainAllowance } from "@shared/captainAllowances";
 import { anythingElseOf, type Card, mergeEffectOf } from "@shared/cards";
 import {
@@ -11,7 +12,10 @@ import {
   STANDING_WORDS_FROM,
   standingOverride,
 } from "@shared/holds";
+import { type SaidPart, said, saidLine, saidList } from "@shared/i18n/said";
+import type { KnowledgeDirectionHeard } from "@shared/knowledge";
 import { CREWMATE_TAB_VIA } from "@shared/provenance";
+import type { TaskRecord } from "../storage/taskRecords";
 import { alreadyAllowed, inheritedOverride, sameWorkLineage } from "../tasks/alreadyAllowed";
 import { TaskService } from "../tasks/taskService";
 import type { CardService } from "./cardService";
@@ -27,18 +31,21 @@ export const OVERRIDE_REFUSED = "Override refused: nothing was recorded.";
  * (`from` omitted or `turn`), every message of his it carries, however it
  * began; or the words on the task `cite` reads from a card, the Crewmate
  * tab or the standing override. A scheduled check carries none of his
- * words, so it cites none. The host checks only that the words are his.
+ * words, so it cites none; `scheduledElse` says what such a check may cite
+ * instead, where the tool takes one. The host checks only that the words
+ * are his.
  */
 export function captainWordsIn(
   turn: { canCreate: boolean; asked: readonly string[] },
   from: string | undefined,
   cite: (from: string) => ReturnType<CaptainOverrides["citedCaptainWords"]>,
+  scheduledElse?: string,
 ): ReturnType<CaptainOverrides["citedCaptainWords"]> {
   if (from && from !== "turn") {
-    if (!turn.canCreate && turn.asked.length === 0)
+    if (!citesKeptWords(turn))
       return {
         ok: false,
-        text: `${OVERRIDE_REFUSED} A scheduled check records no override, since no words of the captain's arrived with it; the one standing still applies.`,
+        text: `${OVERRIDE_REFUSED} A scheduled check cites no card, Crewmate tab line or standing words, since none of the captain's words arrived with it; the one standing still applies.${scheduledElse ? ` ${scheduledElse}` : ""}`,
       };
     return cite(from);
   }
@@ -49,6 +56,137 @@ export function captainWordsIn(
         ok: false,
         text: `${OVERRIDE_REFUSED} Only the captain's own words declare one: this turn's, or their reply or click on a card of the task or line in its Crewmate tab, cited with from.`,
       };
+}
+
+/** A direction an override cites, at the revision cited (`HoldOverride.direction`). */
+type CitedDirection = NonNullable<HoldOverride["direction"]>;
+
+/**
+ * Each hold an override can pass, as the captain reads it on the task's
+ * record in their own language (INF-7021); `HOLDS`' names stay the words the
+ * crew is served. A kind a later version retired, still on a saved
+ * override, reads as a retired hold.
+ */
+const HOLD_SAID = {
+  "asks-first": "taskHoldAsksFirst",
+  decisions: "taskHoldDecisions",
+  waits: "taskHoldWaits",
+  parts: "taskHoldParts",
+  checks: "taskHoldChecks",
+  proof: "taskHoldProof",
+  story: "taskHoldStory",
+  "load-line": "taskHoldLoadLine",
+  "cost-limit": "taskHoldCostLimit",
+} as const satisfies Record<OverridableHold, string>;
+const RETIRED_HOLD_SAID = "taskHoldRetired";
+
+/** The holds an override passes, as one list the record words where it is shown. */
+function holdsSaid(holds: readonly string[]): SaidPart {
+  const named = holds.map((kind) =>
+    Object.hasOwn(HOLD_SAID, kind) ? HOLD_SAID[kind as OverridableHold] : RETIRED_HOLD_SAID,
+  );
+  const [first = RETIRED_HOLD_SAID, ...rest] = [...new Set(named)];
+  return saidList([first, ...rest]);
+}
+
+/** Why an override citing a direction is refused, after `OVERRIDE_REFUSED`. */
+// i18n-exempt: refusals served to the first mate, never shown to a person
+const CITED_DIRECTION_WHY = {
+  noKnowledge:
+    "The standing directions cannot be read here, so no direction can be cited; cite the captain's own words.",
+  unreadable: (reason: string) =>
+    `The standing directions cannot be read now (${reason}); cite the captain's own words.`,
+  noProject: (handle: string) =>
+    `${handle} belongs to no project, so no project direction reaches it; cite the captain's own words.`,
+  notProject: (id: string, handle: string) =>
+    `d:${id} is not a direction of ${handle}'s project: one that applies everywhere, or to another project, passes no hold here. Cite a current direction of its project, or the captain's own words.`,
+  missing: (id: string) =>
+    `There is no current direction d:${id}: it is unknown or retired. Read your standing directions again, or cite the captain's own words.`,
+  unheard: (id: string) =>
+    `d:${id}'s current revision was not heard from the captain, so it is no yes and passes no hold. Cite the captain's own words; a revision saved from their words is heard.`,
+  captainStands: (handle: string, words: string) =>
+    `The captain's own words already stand on ${handle} ("${words}"), and an override citing a direction never replaces them. To name more holds with their words, cite from standing.`,
+  changed: (id: string, revision: number) =>
+    `d:${id} is no longer at revision ${revision}, the one these words are: it was revised or retired since. Cite it again by its d: id, or the captain's own words.`,
+};
+
+/** What else a scheduled check may cite for an override, after its refusal of the captain's words. */
+// i18n-exempt: served to the first mate, never shown to a person
+export const SCHEDULED_CITES_DIRECTION =
+  "A heard direction of the task's project, cited by its d: id, may still record one.";
+
+/** How a direction change refused on its cited words begins. */
+// i18n-exempt: a refusal served to the first mate, never shown to a person
+export const DIRECTION_REFUSED = "Direction refused: nothing was saved.";
+// i18n-exempt: a refusal served to the first mate, never shown to a person
+const DIRECTION_CITES = `Cite turn for words the captain typed this turn, a card's id for the captain's reply or click there, or ${CREWMATE_TAB_VIA} or ${STANDING_WORDS_FROM} with task naming the task; or leave from out to save it on your own judgment, not heard.`;
+
+/** Why a direction change's citation is refused, after `DIRECTION_REFUSED`. */
+// i18n-exempt: refusals served to the first mate, never shown to a person
+const DIRECTION_WHY = {
+  taskAlone: `task names a task only beside from. ${DIRECTION_CITES}`,
+  noTurnWords: `This turn carries no words of the captain's. ${DIRECTION_CITES}`,
+  choiceOnly:
+    "This turn carries the captain's choice on a card, not words they typed: cite that card's id as from, so its check reads what they picked.",
+  scheduled:
+    "A scheduled wake carries no words of the captain's, so it cites none; leave from out to save it on your own judgment, not heard.",
+  mergeClick:
+    "The captain's click on a merge is consent to that merge, never words about a direction.",
+  taskNeeded: (cited: string) => `${cited} names a task's words: give task as its key.`,
+  noTask: (ref: string) => `There is no task "${ref}".`,
+  noTabWords: (handle: string) =>
+    `The record holds no words the captain typed in ${handle}'s Crewmate tab.`,
+  noStanding: (handle: string) => `No standing reply of the captain's stands on ${handle}.`,
+  standingDirection: (handle: string, id: string) =>
+    `The override standing on ${handle} cites direction d:${id}, not words the captain gave on that task; cite where their own words were heard.`,
+  noCard: (cited: string) =>
+    `There is no card "${cited}"; pass from as the id of the card the captain replied under or clicked.`,
+  silentCard: (title: string) =>
+    `The record holds no words of the captain's on card "${title}": no reply in its thread and no click on its buttons.`,
+  unticked: (title: string, named: string[], id: string | undefined) =>
+    named.length > 0
+      ? `The captain's click on card "${title}" named ${named.join(", ")}${id ? `, not d:${id}` : ""}; it heard only those.`
+      : `The captain's click on card "${title}" ticked no direction, so it heard none.`,
+};
+
+/** A card control whose value is a direction's `d:` id: an offer to tick it. */
+const OFFERED_DIRECTION = /\bvalue\s*=\s*["']d:[a-z0-9][a-z0-9-]{0,63}["']/i;
+
+function directionRefused(why: string): { ok: false; text: string } {
+  return { ok: false, text: `${DIRECTION_REFUSED} ${why}` };
+}
+
+/**
+ * Where the captain's own words a direction change cites were heard
+ * (docs/knowledge.md, "Heard from the captain"), by the rule an override's
+ * citation keeps (`captainWordsIn`): words the captain typed this turn, or
+ * words the record keeps, which a scheduled wake with none of its own cites
+ * none of. A turn that carries only a card choice cites that card, never
+ * `turn`: its words are the button's label, and the card's check is what
+ * hears only the directions a click ticked. With no citation the change is
+ * the first mate's own judgment and saves unheard; a citation the record
+ * does not hold is refused, so nothing is saved under a mark it lacks.
+ */
+export function heardDirection(
+  turn: { canCreate: boolean; asked: readonly string[]; typed: boolean },
+  change: DirectionCitation & { id?: string },
+  overrides: Pick<CaptainOverrides, "directionWords">,
+): { ok: true; heard?: KnowledgeDirectionHeard } | { ok: false; text: string } {
+  const from = change.from?.trim();
+  if (!from) return change.task ? directionRefused(DIRECTION_WHY.taskAlone) : { ok: true };
+  if (from === "turn") {
+    if (turn.typed && turn.asked.join("\n").trim()) return { ok: true, heard: { from: "turn" } };
+    return directionRefused(
+      turn.asked.length > 0 ? DIRECTION_WHY.choiceOnly : DIRECTION_WHY.noTurnWords,
+    );
+  }
+  if (!citesKeptWords(turn)) return directionRefused(DIRECTION_WHY.scheduled);
+  return overrides.directionWords(from, change.task, change.id);
+}
+
+/** A scheduled wake with no words of the captain's own cites none the record keeps. */
+function citesKeptWords(turn: { canCreate: boolean; asked: readonly string[] }): boolean {
+  return turn.canCreate || turn.asked.length > 0;
 }
 
 /** What the captain's overrides reach of the supervisor beyond its options. */
@@ -73,7 +211,7 @@ export type CaptainOverridesHost = {
  */
 export class CaptainOverrides {
   constructor(
-    private readonly options: Pick<CrewSupervisorOptions, "inbox" | "tasks">,
+    private readonly options: Pick<CrewSupervisorOptions, "inbox" | "tasks" | "knowledge">,
     private readonly host: CaptainOverridesHost,
   ) {}
 
@@ -89,6 +227,9 @@ export class CaptainOverrides {
    * `citedCaptainWords`) are his approval of it, kept until the checks pass,
    * so they never create a general override. The scoped merge approval
    * and its repair carry remain the only permission that click gives.
+   * Words that are a direction's (`direction`, from `citedDirection`)
+   * stand only while it does (`directionsChanged`), and never replace an
+   * override from the captain's own words, which replaces theirs (INF-7021).
    */
   declareOverride(
     taskId: string,
@@ -97,6 +238,7 @@ export class CaptainOverrides {
       holds: OverridableHold[];
       until: "version" | "task";
       mergeClick?: true;
+      direction?: CitedDirection;
     },
   ): { ok: boolean; text: string } {
     const record = this.options.tasks.get(taskId);
@@ -109,6 +251,19 @@ export class CaptainOverrides {
       return { ok: false, text: "Name at least one soft hold the captain's words pass." };
     if (input.mergeClick) return { ok: false, text: mergeClickRefusal(input.words) };
     const head = record.delivery?.headSha;
+    const standing = standingOverride(record.delivery, head);
+    if (input.direction && standing && !standing.direction)
+      return {
+        ok: false,
+        text: `${OVERRIDE_REFUSED} ${CITED_DIRECTION_WHY.captainStands(handle, standing.words)}`,
+      };
+    // Words carried through `standing` may rest on a revision that changed
+    // since, such as a closed parent's, which the change hook never reached.
+    if (input.direction && !this.directionStands(input.direction))
+      return {
+        ok: false,
+        text: `${OVERRIDE_REFUSED} ${CITED_DIRECTION_WHY.changed(input.direction.id, input.direction.revision)}`,
+      };
     if (input.until === "version" && !head)
       return {
         ok: false,
@@ -124,8 +279,19 @@ export class CaptainOverrides {
       ...(input.until === "version" && head
         ? { head, ...(prNumber !== undefined ? { prNumber, prUrl: record.delivery?.prUrl } : {}) }
         : {}),
+      ...(input.direction ? { direction: input.direction } : {}),
       at: this.host.now(),
     };
+    const line = input.direction
+      ? saidLine(
+          said(
+            override.until === "task"
+              ? "taskOverrideDirectionTask"
+              : "taskOverrideDirectionVersion",
+            { direction: input.direction.id, holds: holdsSaid(holds), words: override.words },
+          ),
+        )
+      : undefined;
     this.options.tasks.delivery.recordPermissionRecords(
       taskId,
       { override },
@@ -133,8 +299,8 @@ export class CaptainOverrides {
         kind: "note",
         actor: "firstmate",
         feed: true,
-        text: overrideWords(override),
-        data: { news: true },
+        text: line?.text ?? overrideWords(override),
+        data: { news: true, ...(line ? { said: line.said, feedLine: true } : {}) },
       },
     );
     this.overrideNoticed(taskId, override);
@@ -143,10 +309,116 @@ export class CaptainOverrides {
     void this.host.settling.kept.runMergeAuthorization(taskId).catch((caught: unknown) => {
       console.warn("[crew] kept merge could not run:", caught);
     });
+    if (input.direction)
+      return {
+        ok: true,
+        // i18n-exempt: an answer served to the first mate, never shown to a person
+        text: `Recorded an override on ${handle} from the captain's direction d:${input.direction.id} (revision ${input.direction.revision}): it passes ${holdNames(holds)} ${overrideSpan(override)} while that revision stands; the host ends it when the direction is revised or retired. The captain's own words stand over it: words of theirs you record replace it, and it never replaces theirs. Every soft hold named reads it; go on as the direction asks. override with empty holds takes it back.`,
+      };
     return {
       ok: true,
       text: `Recorded the captain's override on ${handle}: their words pass ${holdNames(holds)} ${overrideSpan(override)}. Every soft hold named reads it, their merge click included; go on as their words asked. override with empty holds takes it back.`,
     };
+  }
+
+  /**
+   * The captain's standing direction an override cites by its `d:` id
+   * (INF-7021): a current direction of the task's project whose current
+   * revision is the captain's own, heard from their words - the yes
+   * `keptYeses` counts. Its words are the direction's text, kept with its
+   * id and revision so the override ends when it changes
+   * (`directionsChanged`). Any turn may cite one, a scheduled check
+   * included, since the record keeps the words as it keeps a card's.
+   */
+  citedDirection(
+    taskId: string,
+    from: string,
+  ): { ok: true; words: string; direction: CitedDirection } | { ok: false; text: string } {
+    const record = this.options.tasks.get(taskId);
+    if (!record) throw new Error(`Unknown task "${taskId}".`);
+    const handle = record.key || record.id;
+    const id = from.trim().replace(/^d:/, "");
+    const refused = (why: string) => ({ ok: false as const, text: `${OVERRIDE_REFUSED} ${why}` });
+    const directions = this.options.knowledge?.directions;
+    if (!directions) return refused(CITED_DIRECTION_WHY.noKnowledge);
+    if (!record.repoId) return refused(CITED_DIRECTION_WHY.noProject(handle));
+    const all = directions.revisions();
+    if (!(all instanceof Map)) return refused(CITED_DIRECTION_WHY.unreadable(all.reason));
+    const known = all.get(id);
+    if (!known || known.retired) return refused(CITED_DIRECTION_WHY.missing(id));
+    // The directions this task's crew is served are the ones it may cite.
+    const row = directions
+      .standing({ kind: "crewmate", taskId, repoId: record.repoId })
+      .find((entry) => entry.id === id);
+    if (!row) return refused(CITED_DIRECTION_WHY.notProject(id, handle));
+    if (row.origin !== "captain-turn" || !row.heard)
+      return refused(CITED_DIRECTION_WHY.unheard(id));
+    return { ok: true, words: row.text, direction: { id: row.id, revision: row.revision } };
+  }
+
+  /**
+   * End each standing override that cites a direction no longer at the
+   * revision it cited (INF-7021): the direction was revised, retired or
+   * removed. It runs on the knowledge collection's change hook, and once
+   * at start for a change made while the app was closed. A collection that
+   * cannot be read ends nothing, since it cannot say the direction changed.
+   */
+  directionsChanged(): void {
+    const directions = this.options.knowledge?.directions;
+    if (!directions) return;
+    // A live part reads the override of a task it is part of, even a closed
+    // one (`inheritedOverride`), so those are ended too.
+    const reached = new Map<string, TaskRecord>();
+    for (const live of this.options.tasks.listLive())
+      for (
+        let record: TaskRecord | undefined = live;
+        record && !reached.has(record.id);
+        record = record.parentId ? this.options.tasks.get(record.parentId) : undefined
+      )
+        reached.set(record.id, record);
+    const resting = [...reached.values()].flatMap((record) => {
+      const override = standingOverride(record.delivery, record.delivery?.headSha);
+      return override?.direction ? [{ record, override, cited: override.direction }] : [];
+    });
+    if (resting.length === 0) return;
+    const current = directions.revisions();
+    if (!(current instanceof Map)) return;
+    for (const { record, override, cited } of resting) {
+      const now = current.get(cited.id);
+      if (now && !now.retired && now.revision === cited.revision) continue;
+      const line = saidLine(
+        said(now && !now.retired ? "taskOverrideDirectionRevised" : "taskOverrideDirectionGone", {
+          direction: cited.id,
+          holds: holdsSaid(override.holds),
+        }),
+      );
+      this.options.tasks.delivery.recordPermissionRecords(
+        record.id,
+        { override: undefined },
+        {
+          kind: "note",
+          actor: "host",
+          feed: true,
+          text: line.text,
+          data: {
+            news: true,
+            said: line.said,
+            feedLine: true,
+            overrideWithdrawn: override,
+            directionChanged: cited.id,
+          },
+        },
+      );
+      this.overrideNoticed(record.id, override, "direction-changed");
+      this.host.syncCaptainGate(record.id, this.host.now());
+    }
+  }
+
+  /** Whether the direction an override cites is still current at the revision it cites. */
+  private directionStands(cited: CitedDirection): boolean {
+    const current = this.options.knowledge?.directions.revisions();
+    const now = current instanceof Map ? current.get(cited.id) : undefined;
+    return now !== undefined && !now.retired && now.revision === cited.revision;
   }
 
   /** update_task override with empty holds: the captain takes his override back; a second row says so. */
@@ -167,7 +439,7 @@ export class CaptainOverrides {
         data: { news: true, overrideWithdrawn: override },
       },
     );
-    this.overrideNoticed(taskId, override, true);
+    this.overrideNoticed(taskId, override, "taken-back");
     this.host.syncCaptainGate(taskId, this.host.now());
     return {
       ok: true,
@@ -182,17 +454,27 @@ export class CaptainOverrides {
    * notice alone starts no turn (`deliverableRows`); a running turn hears
    * it now. Its reviewer reads the override in every review turn's brief.
    */
-  overrideNoticed(taskId: string, override: HoldOverride, withdrawn = false): void {
+  overrideNoticed(
+    taskId: string,
+    override: HoldOverride,
+    ended?: "taken-back" | "direction-changed",
+  ): void {
     const record = this.options.tasks.get(taskId);
     if (!record) return;
     this.options.inbox.enqueueSteerOnce(taskId, {
       facts: {
         kind: "task-override-changed",
         task: { id: taskId, key: record.key, title: record.title },
-        override: { words: override.words, holds: override.holds, until: override.until },
-        ...(withdrawn ? { withdrawn: true as const } : {}),
+        override: {
+          words: override.words,
+          holds: override.holds,
+          until: override.until,
+          ...(override.direction ? { direction: override.direction } : {}),
+        },
+        ...(ended ? { withdrawn: true as const } : {}),
+        ...(ended === "direction-changed" ? { directionChanged: true as const } : {}),
       },
-      once: `task-override:${withdrawn ? "withdrawn" : "standing"}:${override.at}`,
+      once: `task-override:${ended ? "withdrawn" : "standing"}:${override.at}`,
     });
     if (this.host.runtime(taskId)?.turn.running)
       void this.host.sweepTaskLane(taskId, this.host.now());
@@ -279,18 +561,23 @@ export class CaptainOverrides {
     taskId: string,
     from: string,
     reach: { partOf?: boolean } = {},
-  ): { ok: true; words: string; mergeClick?: true } | { ok: false; text: string } {
+  ):
+    | { ok: true; words: string; mergeClick?: true; direction?: CitedDirection }
+    | { ok: false; text: string } {
     const record = this.options.tasks.get(taskId);
     if (!record) throw new Error(`Unknown task "${taskId}".`);
     const handle = record.key || record.id;
     const cited = from.trim();
     if (cited === STANDING_WORDS_FROM) {
       const standing = standingOverride(record.delivery, record.delivery?.headSha);
+      // Words a direction's override stands on keep citing it, so the new
+      // override ends with that direction too (INF-7021).
       if (standing)
         return {
           ok: true,
           words: standing.words,
           ...(standing.mergeClick ? { mergeClick: true as const } : {}),
+          ...(standing.direction ? { direction: standing.direction } : {}),
         };
       // A part may carry the override on a task it is part of where the
       // captain's words cover it (INF-1939 friction 5): the first mate
@@ -301,6 +588,7 @@ export class CaptainOverrides {
             ok: true,
             words: inherited.override.words,
             ...(inherited.override.mergeClick ? { mergeClick: true as const } : {}),
+            ...(inherited.override.direction ? { direction: inherited.override.direction } : {}),
           }
         : {
             ok: false,
@@ -343,6 +631,59 @@ export class CaptainOverrides {
           text: `Override refused: nothing was recorded. The record holds no words of the captain's on card "${found.card}": no reply in its thread and no click on its buttons.`,
         };
     }
+  }
+
+  /**
+   * Where the captain's words a direction change cites are kept
+   * (`heardDirection`): the captain's newest words on any card, the newest
+   * line typed in a task's Crewmate tab, or a task's standing reply. A click
+   * on a merge is consent to that merge, never words about a direction. A
+   * click on a card that offers directions as controls valued by `d:` id,
+   * or whose answers name them so, heard only the ones its answers name, so
+   * a direction left unticked is refused, and every one when none is ticked
+   * (INF-6987: each one the captain ticks is confirmed). The host reads
+   * none of the words.
+   */
+  directionWords(
+    cited: string,
+    taskRef: string | undefined,
+    id: string | undefined,
+  ): { ok: true; heard: KnowledgeDirectionHeard } | { ok: false; text: string } {
+    if (cited === CREWMATE_TAB_VIA || cited === STANDING_WORDS_FROM) {
+      if (!taskRef) return directionRefused(DIRECTION_WHY.taskNeeded(cited));
+      const record = this.options.tasks.resolve(taskRef);
+      if (!record) return directionRefused(DIRECTION_WHY.noTask(taskRef));
+      const handle = record.key || record.id;
+      if (cited === CREWMATE_TAB_VIA)
+        return this.typedWords(record.id, CREWMATE_TAB_VIA).ok
+          ? { ok: true, heard: { from: "crewmate-tab", task: handle } }
+          : directionRefused(DIRECTION_WHY.noTabWords(handle));
+      const standing = standingOverride(record.delivery, record.delivery?.headSha);
+      if (!standing) return directionRefused(DIRECTION_WHY.noStanding(handle));
+      if (standing.mergeClick) return directionRefused(DIRECTION_WHY.mergeClick);
+      // A direction's own words never hear a direction change, or a
+      // direction could confirm itself.
+      if (standing.direction)
+        return directionRefused(DIRECTION_WHY.standingDirection(handle, standing.direction.id));
+      return { ok: true, heard: { from: "standing", task: handle } };
+    }
+    const card = this.host.cards.get(cited) ?? this.host.cards.stored(cited);
+    if (!card) return directionRefused(DIRECTION_WHY.noCard(cited));
+    const words = this.captainWordsOnCard(card);
+    if (!words) return directionRefused(DIRECTION_WHY.silentCard(card.title));
+    if (words.mergeClick) return directionRefused(DIRECTION_WHY.mergeClick);
+    if (words.line === undefined) {
+      const named = (this.host.cards.past(card.id)?.answers ?? [])
+        .filter((answer) => !answer.skipped)
+        .flatMap((answer) => answer.values)
+        .filter((value) => value.startsWith("d:"));
+      const bare = id?.replace(/^d:/, "");
+      const asked = named.length > 0 || OFFERED_DIRECTION.test(card.body ?? "");
+      if (asked && !(bare && named.includes(`d:${bare}`)))
+        return directionRefused(DIRECTION_WHY.unticked(card.title, named, bare));
+    }
+    // The mark keeps at most 400 characters of the title, as its schema reads it back.
+    return { ok: true, heard: { from: "card", card: card.id, title: card.title.slice(0, 400) } };
   }
 
   /**

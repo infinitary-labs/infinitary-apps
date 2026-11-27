@@ -105,7 +105,7 @@ function standingText(): string {
 
 const SIGNED_IN_RULE = "the captain signs in, never you";
 
-type Home = "prompt" | { tool: string };
+type Home = "prompt" | { tool: string; parameter?: string };
 
 /**
  * The ledger (docs/orchestrator-contract.md, "The fixed-context budget"): a
@@ -160,9 +160,14 @@ function textOf(
   runtime: CrewmateBackend | undefined,
   kind: CrewmateProcedureFacts | undefined,
 ): string {
-  return home === "prompt"
-    ? promptFor(runtime, kind)
-    : (CREWMATE_TOOLS.find((tool) => tool.name === home.tool)?.description ?? "");
+  if (home === "prompt") return promptFor(runtime, kind);
+  if (home.parameter)
+    return (
+      parameterDescriptions().find(
+        (item) => item.tool === home.tool && item.parameter === home.parameter,
+      )?.description ?? ""
+    );
+  return CREWMATE_TOOLS.find((tool) => tool.name === home.tool)?.description ?? "";
 }
 
 /**
@@ -195,6 +200,12 @@ const PROTECTED: { intent: ProtectedIntent; rule: string; home: Home; says: stri
     rule: "the captain signs in, and a crewmate looks for no other way in",
     home: "prompt",
     says: "if a tool or a push answers that the app is not signed in, report that as a blocker and stop - the captain signs in, never you, and never look for another way in.",
+  },
+  {
+    intent: "consent",
+    rule: "a kept write goes without the captain's click only on a yes still standing whose words cover it",
+    home: { tool: "github_write", parameter: "allowance" },
+    says: "Only for a write your task would keep, on your own project or through the github.com sign-in: a yes still standing whose words cover it - a heard project direction's d: id, an Already allowed card, or standing.",
   },
   {
     intent: "what reaches the captain",

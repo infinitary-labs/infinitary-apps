@@ -324,19 +324,44 @@ async function keyIntoView(key: Locator): Promise<void> {
 }
 
 /**
+ * Waits until a pointer at the middle of a task key reaches the key itself.
+ * The stage keeps an entry it selected but has not revealed out of the
+ * pointer's reach (`pointerEvents: none` in `CardLayer.tsx`), as it keeps a
+ * record until the record's body frame draws, which on a loaded runner comes
+ * well after the record's own keys. A pointer that lands meanwhile reaches
+ * what lies under the entry, and when the entry is revealed under the still
+ * pointer the key hears no arrival, so its summary never opens.
+ */
+async function keyReachable(key: Locator): Promise<void> {
+  await expect
+    .poll(
+      () =>
+        key.evaluate((node) => {
+          const { left, top, width, height } = node.getBoundingClientRect();
+          const hit = node.ownerDocument.elementFromPoint(left + width / 2, top + height / 2);
+          return hit !== null && node.contains(hit);
+        }),
+      { message: "a pointer at the task key's middle reaches the key" },
+    )
+    .toBe(true);
+}
+
+/**
  * Rests the pointer on a task key link the window or a panel drew
- * (FI3-1271) once it is in view and still: a scroll that carries a key lets
- * its summary go, so the key is brought into view before the pointer lands,
- * never by the landing. The pointer only moves there, and it is Chromium's
- * routed pointer (`slidePointer`, `launchApp({ gpuBenchmarking: true })`),
- * which moves no focus, as a real mouse moves none. Playwright's mouse takes
- * the window's focus out of a frame onto the window's own page; the app
- * gives it back to that frame (docs/keyboard.md, "Cards and frames"), the
- * window losing focus to the frame lets the summary go, and a Tasks row the
- * keyboard rests on opens its own.
+ * (FI3-1271) once it is in view, within the pointer's reach and still: a
+ * scroll that carries a key lets its summary go, so the key is brought into
+ * view before the pointer lands, never by the landing. The pointer only
+ * moves there, and it is Chromium's routed pointer (`slidePointer`,
+ * `launchApp({ gpuBenchmarking: true })`), which moves no focus, as a real
+ * mouse moves none. Playwright's mouse takes the window's focus out of a
+ * frame onto the window's own page; the app gives it back to that frame
+ * (docs/keyboard.md, "Cards and frames"), the window losing focus to the
+ * frame lets the summary go, and a Tasks row the keyboard rests on opens its
+ * own.
  */
 export async function restOnTaskKey(page: Page, key: Locator): Promise<void> {
   await keyIntoView(key);
+  await keyReachable(key);
   await atRest(page, key);
   const box = await key.boundingBox();
   if (!box) throw new Error("The task key is not on screen");
@@ -449,10 +474,11 @@ export const RECORD_CARD_SELECTOR = `${SHOWN_ENTRY} [data-task-record]`;
 export function recordCard(page: Page): Locator {
   return page.locator(RECORD_CARD_SELECTOR);
 }
-export const RECORD_FRAME_SELECTOR = `${SHOWN_ENTRY} iframe[title="Task record body"]`;
+// The record owns this body container; its frame's accessible title is translated.
+const RECORD_BODY_FRAME = "[data-record-body] iframe";
+export const RECORD_FRAME_SELECTOR = `${SHOWN_ENTRY} ${RECORD_BODY_FRAME}`;
 /** The same frame once the stage has revealed its record: ready, or at its hold's end. */
-const REVEALED_RECORD_FRAME_SELECTOR =
-  '[data-card-layer] [data-card-presentation][data-card-revealed] > [data-stage-entry="shown"] iframe[title="Task record body"]';
+const REVEALED_RECORD_FRAME_SELECTOR = `[data-card-layer] [data-card-presentation][data-card-revealed] > [data-stage-entry="shown"] ${RECORD_BODY_FRAME}`;
 
 export function recordFrame(page: Page): FrameLocator {
   return drawnFrame(page, RECORD_FRAME_SELECTOR);

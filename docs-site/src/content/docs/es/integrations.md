@@ -1,5 +1,5 @@
 ---
-source: 1ce217aea874fab1
+source: e71da6c9134d6753
 title: Integraciones
 description: Conecta GitHub, GitLab, Bitbucket, Google y servidores MCP para que tu primer oficial y tu tripulación puedan alcanzarlos, y elige lo que cada uno puede hacer sin preguntarte.
 ---
@@ -60,7 +60,8 @@ Google no lo revisa, no muestra ninguna advertencia y no cierra su sesión a los
 
 1. Presiona **Google**, que abre **Configura tu propia conexión con Google**.
 2. Presiona **Abrir la página de Google**, e inicia sesión ahí con la cuenta de Google que vas a conectar.
-   Ponle nombre al proyecto, acepta la política de Google y presiona Continue.
+   Ponle nombre al proyecto y deja sin marcar la casilla «Use this client for an AI-powered agent», porque solo es para clientes que usan las herramientas MCP de Google.
+   Luego acepta la política de Google y presiona Continue.
 3. Descarga el archivo de cliente que muestra Google, con Download JSON.
 4. Suelta ese archivo en **Suelta aquí el archivo de cliente**, elígelo con **Elegir archivo**, o pega su contenido en **Archivo de cliente**.
 5. Presiona **Guardar e iniciar sesión**.
@@ -76,8 +77,8 @@ Cada vez que inicias sesión en Google, el aviso aparece primero.
 
 La fila de Google dice cuándo la conexión te necesita:
 
-- **Configura tu propia conexión**: este inicio de sesión todavía pasa por un cliente que Infinitary comparte con todos, y que se retirará.
-  Sigue funcionando hasta entonces; presiona **Configurar** para seguir conectado.
+- **Volver a iniciar sesión**: una conexión hecha antes con el cliente que Infinitary compartía con todos ya no funciona, porque ese cliente ya no existe.
+  Presiona **Volver a iniciar sesión**, que abre **Configura tu propia conexión con Google**, para crear tu propio cliente y conectarte otra vez.
 - **Deja de funcionar**, con una fecha: tu cliente no está en modo personal, así que Google cerrará su sesión en esa fecha.
   Presiona **Volver a configurar**, y crea un cliente en modo personal.
 - **Tu cliente de Google dejó de funcionar**: Google ya no acepta tu cliente, quizá porque se eliminó en Google Cloud.

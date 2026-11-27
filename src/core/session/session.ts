@@ -80,7 +80,7 @@ export type SessionBinding =
 /** An image riding a prompt or steer (base64, no data: prefix). */
 export type SessionImage = { mimeType: string; data: string };
 
-export type ThinkingLevel = "low" | "medium" | "high" | "xhigh";
+export type ThinkingLevel = "low" | "medium" | "high" | "xhigh" | "max";
 
 /** One offered rung below the level the model would actually serve, never below its floor. */
 export function quickThinkingLevel<T extends string>(served: T, offered: readonly T[]): T {

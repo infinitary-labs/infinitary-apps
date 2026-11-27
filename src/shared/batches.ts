@@ -41,9 +41,10 @@ export const batchChangeSchema = z.object({
   /** Declared the held batch's fix: it joins that batch and ends the hold. */
   fix: z.literal(true).optional(),
   /**
-   * The held batch version a fix was built on, once a combine verified it:
-   * the fix is carried as its own difference from it from then on, and is
-   * left out, never carried whole, when its branch no longer builds on it.
+   * The held batch version a fix was built on, once its approval or a combine
+   * verified it: the fix is carried as its own difference from it from then
+   * on, and is left out, never carried whole, when its branch no longer builds
+   * on it.
    */
   heldBase: z.string().optional(),
   /**
@@ -161,8 +162,40 @@ export const openBatchSchema = z.object({
    * then `head`. Taken once per combine; the next combine starts without it.
    */
   generated: z.string().optional(),
+  /**
+   * The batch's own checks run early on a held batch's declared fix
+   * (docs/forge.md, "A held batch"): once the fix's story is confirmed on
+   * its own branch at `version`, built on the newest held version, the held
+   * members plus the fix's own difference are combined at `head` and pushed
+   * to the batch's branch and pull request, while `head` and `members` above
+   * stay the held version. The fix is no member until approved; approved at
+   * `version` with the checks at `head` passed, the batch merges `head` as it
+   * is. `failed` names the checks that failed there.
+   */
+  trial: z
+    .object({
+      /** The fix's task, whose story was confirmed. */
+      task: z.string(),
+      /** The fix's confirmed version on its own branch. */
+      version: z.string(),
+      head: z.string(),
+      base: z.string(),
+      /** The held members, then the fix, each with its commit at `head`. */
+      members: z.array(batchMemberSchema),
+      at: z.number(),
+      /** The checks that failed at `head` as last read; gone once they read otherwise. */
+      failed: z.array(z.string()).optional(),
+      /**
+       * The commit of generated files the project's checks added on the run, written again
+       * on it and pushed: `head` then names it (docs/forge.md, "A generated commit").
+       */
+      generated: z.string().optional(),
+    })
+    .optional(),
 });
 export type OpenBatch = z.infer<typeof openBatchSchema>;
+/** A held batch's early run with its declared fix (`OpenBatch.trial`). */
+export type BatchTrial = NonNullable<OpenBatch["trial"]>;
 
 /**
  * The merge an open batch waits on while its host still reads it as running
@@ -319,6 +352,12 @@ export const batchRecordSchema = z.object({
    * the fix is carried from it, or left out when it no longer builds on it.
    */
   fixBases: z.record(z.string(), z.string()).optional(),
+  /**
+   * The exact commit each declared fix's task had committed as it declared
+   * it, by task, kept as long as the declaration: another task's change
+   * approved at that commit, and no other, carries the same declaration.
+   */
+  fixHeads: z.record(z.string(), z.string()).optional(),
   /**
    * When the project's last batch formed from the line (epoch ms): a
    * project's batch gap counts from it (`batchGap` on the project). A held
@@ -591,6 +630,8 @@ export const batchesViewSchema = z.object({
           awaitsFix: z.boolean(),
           /** Its repair declared that a rerun passed the failed checks at its version. */
           passed: z.boolean(),
+          /** The declared fix its checks run with before approval (`OpenBatch.trial`), until they fail. */
+          checkingFix: batchTaskSchema.nullable(),
         })
         .nullable(),
       leftOut: z.array(

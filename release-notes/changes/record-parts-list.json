@@ -1,0 +1,22 @@
+{
+  "entries": [
+    {
+      "id": "record-parts-list",
+      "kind": "improvement",
+      "title": "A task split into parts lists its parts and says what they wait on",
+      "body": "The record of a task split into parts now lists each part with its status in a list you can fold away, and pressing a part opens it. Its top sentence says what its parts wait on, such as its last part waiting for your Start, instead of a Start the task itself never takes. A wait with no time to show no longer says \"time unknown\", on every task.",
+      "area": "tasks",
+      "picture": {
+        "dark": "record-parts-list-dark.webp",
+        "light": "record-parts-list-light.webp",
+        "alt": "A task's record showing its sentence about its last part, and its parts list with one open part and four closed ones."
+      },
+      "docsSite": [
+        "tasks-and-crewmates"
+      ],
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 ---
-source: 28dbb83c4a64e09c
+source: 86bf487dacd685ea
 title: Karten und Entscheidungen
 description: Wie dein erster Offizier und deine Crew dir Antworten und Entscheidungen als Karten bringen und wie du sie beantwortest.
 ---
@@ -52,12 +52,14 @@ Ein Klick in die Karte sendet nie von selbst etwas.
 
 ## Das Antwortfeld und der Verlauf {#the-reply-field-and-the-thread}
 
-Jede Karte von deinem ersten Offizier oder einem Crewmitglied hat unter ihrem Text ein Feld mit dem Hinweis „noch etwas hinzuzufügen?“.
+Jede Karte hat unter ihrem Text ein Feld mit dem Hinweis „noch etwas hinzuzufügen?“, außer der Begrüßungskarte.
+Eine Antwort unter einer Karte, die erscheint, während dein erster Offizier ausfällt, wartet, bis er zurück ist, und die Karte bleibt, bis dein erster Offizier dort antwortet.
 
 - Schreib hinein und drück auf **Chat**, um eine Antwort zu senden, ohne zu wählen.
 - Schreib hinein und drück auf eine Möglichkeit, um deine Worte mit dieser Wahl zu senden.
 
 Eine Antwort geht an den, der die Karte geschrieben hat.
+Auf einer Karte, die Infinitary selbst zeigt, geht eine Antwort an das Crewmitglied, das sie angefragt hat, sonst an deinen ersten Offizier.
 Die erste Antwort öffnet neben der Karte einen Verlauf, und der Verfasser antwortet dort.
 Ändert der Verfasser die Karte als Antwort, wird die Karte an Ort und Stelle überarbeitet, und der Verlauf sagt das.
 Um den Verlauf wieder in die Karte einzuklappen, drück ⌘\ (Ctrl+\ unter Linux und Windows).
@@ -119,6 +121,13 @@ Ein Zähler wie „2 von 7“ sagt, bei welchem Treffer du bist.
 Die Suche geht durch die ganze Karte: ihren Titel, ihren Text, ihre eingeklappten Abschnitte und ihren Verlauf.
 Ein eingeklappter Abschnitt öffnet sich, wenn der Treffer darin liegt.
 Sie funktioniert genauso in einer früheren Karte, in [der ganzen Unterhaltung](/de/the-first-mate/#the-whole-conversation) und auf der Karte einer Aufgabe, außer auf ihrem Tab „Browser“.
+
+## Links in einer Karte {#links-in-a-card}
+
+Eine Webadresse in einer Karte öffnet sich in deinem Standardbrowser, wenn du sie anklickst, antippst oder auf ihr Enter drückst.
+Das gilt auch für eine Adresse, die ein Crewmitglied als einfachen Text geschrieben hat, etwa in einem Schritt, der eine Anmeldeseite nennt, auf deinem Computer und auf deinem iPhone oder iPad.
+Das betrifft Adressen, die mit https:// beginnen, und http://-Adressen auf deinem eigenen Computer.
+Eine lange Adresse bricht innerhalb der Karte um.
 
 ## Karten zum Zusammenführen {#merge-cards}
 

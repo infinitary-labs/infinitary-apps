@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "change-checks-watch-split",
+      "reason": "Internal: the check watch's tests move to their own file without changing app behavior."
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "bedrockAddressInvalid": "這個位址無法使用：請寫出完整位址，以 https:// 開頭，不要包含登入資訊、查詢或 #。",
+  "bedrockAddressMoved": "{host} 現在指向的地方與你核准時不同。請重新登入 Amazon Bedrock 來核准它。",
+  "bedrockAddressNotFound": "找不到 {host}。",
+  "bedrockAddressPlainHttp": "一般 http 只能用於這台電腦上的位址：請使用你所屬組織的 https 位址。",
+  "bedrockAddressRefused": "{host} 指向 Infinitary 不會連線的地方。",
+  "bedrockSecureConnectionFailed": "無法與 {host} 建立安全連線。請確認這台電腦信任它的憑證。",
+  "bedrockSignInAddress": "輸入你所屬組織的 Amazon Bedrock 位址。",
+  "bedrockSignInApproveLocal": "要求將傳送到 {host}，位於這台電腦上。",
+  "bedrockSignInApprovePrivate": "要求將傳送到 {host}，位於你所屬組織的網路中。",
+  "bedrockSignInApprovePublic": "要求將傳送到 {host}，位於公用網際網路上。",
+  "bedrockSignInChooseWhere": "請選擇 Amazon Bedrock 要求的傳送位置。",
+  "bedrockSignInFromClaudeSettings": "已依你的 Claude Code 設定填入。",
+  "bedrockSignInFromOrganization": "已依你所屬組織的 Claude Code 設定填入。",
+  "bedrockSignInNoKey": "不用金鑰：由我所屬組織的位址為要求簽署",
+  "bedrockSignInOrganization": "我所屬組織的位址",
+  "bedrockSignInSend": "將要求傳送到那裡",
+  "bedrockSignInSettingsNoKey": "這些 Claude Code 設定會在不帶金鑰的情況下傳送 Amazon Bedrock 要求。",
+  "bedrockSignInStraightToAws": "直接傳送到 AWS",
+  "bedrockSignInWhere": "Amazon Bedrock 要求應傳送到哪裡？",
+  "bedrockUnreachable": "無法連線到 {host}。請檢查你的網路和位址。"
+}

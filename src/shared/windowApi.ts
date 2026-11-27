@@ -29,7 +29,7 @@ import type {
   TaskMoveFrom,
   TurnImage,
 } from "./cards";
-import type { Presence, WindowControl, WindowState } from "./channels/shell";
+import type { Idle, Presence, WindowControl, WindowState } from "./channels/shell";
 import type { ConversationPage, ConversationPageRequest } from "./conversation";
 import type { AppCostLimitView, CostLimit } from "./costLimit";
 import type { CrewSpeed } from "./crewSpeed";
@@ -268,6 +268,8 @@ export type FirstmateApi = {
     /** Whether someone is at this computer (docs/ambient-music.md), and each change to it. */
     presence: () => Promise<Presence>;
     onPresence: (listener: (presence: Presence) => void) => () => void;
+    /** Seconds since this computer was last touched, for a card's seen report. */
+    idle: () => Promise<Idle>;
     /**
      * Resolves once every push sent to this window before it has arrived.
      * Chromium can hand the window an answer ahead of a push sent before it;
@@ -291,6 +293,7 @@ export type FirstmateApi = {
             taskId?: string;
             pastCardId?: string;
             focusedProjectId?: string;
+            allProjects?: true;
             replaces?: string;
           },
     ) => Promise<{ ok: true }>;
@@ -740,6 +743,8 @@ export type FirstmateApi = {
               mimeType: "image/png" | "image/jpeg" | "image/gif" | "image/webp";
               data: string;
             }>;
+            focusedProjectId?: string;
+            allProjects?: true;
           },
       submission?: CardSubmission,
     ) => Promise<CardThread>;

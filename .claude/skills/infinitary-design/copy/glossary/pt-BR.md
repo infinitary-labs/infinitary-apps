@@ -72,8 +72,10 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | header (a request's) | cabeçalho | |
 | held (a batch that stopped) | retido | "Lote retido", "Retido desde as {since}"; the same verb as "a retém" on a merge a rule holds. |
 | hold (on a task) | retenção | "está retida", "quando a retenção acabar"; as in "a retém" for a merge. |
+| holds an override passes (named on a task's Activity) | asking first: a consulta prévia; the open decisions: as decisões em aberto; the waits: as esperas; the open parts: as partes em aberto; the checks: as verificações; the delivery proof: a prova de entrega; the saved story: a história salva; the heavy-run line: a fila de execuções pesadas; the cost limit: o limite de custo; a retired hold: uma retenção que não existe mais | Joined as one list in the reader's language on the line. |
 | How to get it (an ask for a secret) | Como obter | The heading over the steps a crewmate lays out for making or finding a secret. |
 | Infinitary | Infinitary | Never translated; masculine article: "o Infinitary". |
+| intake round (a docs site guide) | rodada de recepção | A scheduled task that reads new issues and pull requests and drafts replies; feminine: "a rodada". |
 | Intelligence | Inteligência | |
 | issue (where the project lives) | issue | As GitHub's Portuguese docs keep it; feminine: "Abrir a issue". |
 | join (the phone joins a computer) | conectar-se a |  |
@@ -147,6 +149,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | session (avoided in sentences) | conversa | "sessão" survives only as the crewmate's log name and a search word. |
 | Settings | Ajustes | Follows Apple's Brazilian Portuguese; macOS's own is "Ajustes do Sistema". |
 | sign-in / sign in | login, fazer login | "seu login do GitHub", "faça login de novo". |
+| standing reply (your words kept on a task, which pass its holds) | resposta permanente | Feminine. |
 | start | iniciar, começar | |
 | starter | ponto de partida | |
 | Steer (button) | Orientar |  |
@@ -170,6 +173,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | unmerged work | trabalho não mesclado | What another computer still holds when it is removed: "O trabalho não mesclado dele vem primeiro para este computador". |
 | unsafe data reader | leitor de dados não seguros | A crewmate that reads words anyone can write. |
 | Usage (Settings section) | Uso | The section's name only; never for the allowance. |
+| user (another user account on this computer) | usuário | "as {user}" is "como {user}", as in "Rodando como outro usuário". |
 | where the project lives | onde o projeto fica | "o host do projeto" where the English says the project's host. |
 | window wash | véu da janela | The theme color laid over the blurred background. |
 | working copy | cópia de trabalho | |

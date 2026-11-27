@@ -161,6 +161,20 @@ describe("asking the app running here", () => {
     expect(await askForLink(data, "computer")).toEqual({ kind: "no-answer" });
   });
 
+  // On Windows Chromium's lock is a file it holds open, which names no process to ask after.
+  it("reads a Windows lock file an app holds as an app that did not answer, and one nobody holds as none", async () => {
+    const free = scratchDir("infinitary-link-command-");
+    expect(await askForLink(free, "phone", () => true, "win32")).toEqual({ kind: "not-running" });
+    // An app that ended leaves its lock file behind, which any program may open for writing.
+    writeFileSync(join(free, "lockfile"), "");
+    expect(await askForLink(free, "phone", () => true, "win32")).toEqual({ kind: "not-running" });
+    // A file this test may not write stands in for one Chromium holds open.
+    const held = scratchDir("infinitary-link-command-");
+    writeFileSync(join(held, "lockfile"), "", { mode: 0o444 });
+    expect(await askForLink(held, "phone", () => false, "win32")).toEqual({ kind: "no-answer" });
+    expect(await askForLink(held, "computer", () => false, "win32")).toEqual({ kind: "no-answer" });
+  });
+
   it("reads an app that controls a first mate on another computer", async () => {
     const data = scratchDir("infinitary-link-command-");
     mkdirSync(join(data, "joined"));

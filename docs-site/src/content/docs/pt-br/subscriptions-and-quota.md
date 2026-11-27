@@ -1,5 +1,5 @@
 ---
-source: 9c71f435cc6524a0
+source: f152dcd8b0d392d5
 title: Assinaturas e franquia
 description: Como adicionar suas assinaturas de IA, ver quanto ainda resta da franquia do seu plano e o que sua tripulação faz quando ela acaba.
 ---
@@ -10,7 +10,7 @@ Você as gerencia nos Ajustes, em **Inteligência**, na lista **Assinaturas de I
 ## Adicionar uma assinatura {#add-a-subscription}
 
 1. Abra os Ajustes e escolha **Inteligência**.
-2. No pé de **Assinaturas de IA**, em **Adicionar conta**, escolha seu provedor: Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter ou Amazon Bedrock.
+2. No pé de **Assinaturas de IA**, em **Adicionar conta**, escolha seu provedor: Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter ou Amazon Bedrock.
 3. Faça login do jeito que o provedor pedir.
    Alguns abrem seu navegador, alguns mostram um código para digitar no site deles, e alguns pedem uma chave que você cola.
 4. Quando o login terminar, a nova conta aparece na lista.
@@ -47,6 +47,17 @@ Deixe o ponteiro sobre um medidor para ver quando ele renova.
 **Atualizar**, no topo da lista, lê todas as franquias de novo.
 O Infinitary não lê a franquia do OpenRouter nem de uma API personalizada, e a linha avisa isso.
 O Amazon Bedrock é cobrado pelo uso na sua conta da AWS; a linha dele mostra a estimativa deste mês a partir do trabalho que o Infinitary registrou.
+
+## Amazon Bedrock pela sua organização {#amazon-bedrock-through-your-organization}
+
+Quando você adiciona o Amazon Bedrock, o Infinitary pergunta para onde as solicitações devem ir: **Direto para a AWS** ou **O endereço da minha organização**.
+Digite o endereço da sua organização, e o Infinitary mostra o host e a rede em que ele está: este computador, a rede da sua organização ou a internet pública.
+Pressione **Enviar solicitações para lá** para aprová-lo.
+As solicitações então vão só para esse endereço, só enquanto o nome dele ainda apontar para essa rede, e só quando o seu computador confia no certificado dele.
+As solicitações do Amazon Bedrock, incluindo as enviadas direto para a AWS, não passam mais por um proxy definido no ambiente do seu computador.
+Se o endereço da sua organização assina as solicitações sozinho, escolha **Sem chave: o endereço da minha organização assina as solicitações** em vez de um perfil ou uma chave.
+Quando o Claude Code no seu computador já usa o Amazon Bedrock, o login começa com o endereço, a região e o perfil dele preenchidos, e diz de onde vieram.
+A linha da conta então diz por qual endereço as solicitações são **enviadas**.
 
 ## Escolher qual conta faz o quê {#choose-which-account-does-what}
 

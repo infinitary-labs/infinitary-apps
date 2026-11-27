@@ -1177,6 +1177,126 @@
       }
     },
     {
+      "name": "a backlog parent whose part works",
+      "row": {
+        "id": "t-1887",
+        "key": "INF-1887",
+        "projectId": "p-inf",
+        "parentId": null,
+        "kind": "work",
+        "title": "Show the crewmate's checks on the phone",
+        "goal": "Show the crewmate's checks on the phone",
+        "priority": 0,
+        "status": "open",
+        "activity": null,
+        "closedReason": null,
+        "startPolicy": "on-request",
+        "flags": {
+          "blocked": false,
+          "held": false,
+          "needsYou": false,
+          "ready": false
+        },
+        "blockedBy": [],
+        "blocks": [],
+        "children": {
+          "total": 3,
+          "closed": 1
+        },
+        "assignee": "crewmate",
+        "model": "openai-codex/gpt-6.1-terra",
+        "tier": "high",
+        "repo": {
+          "name": "infinitary",
+          "branch": "fm/task-1887"
+        },
+        "delivery": null,
+        "outcomeSummary": null,
+        "waitingCardId": null,
+        "createdAt": 1793287800000,
+        "updatedAt": 1793293080000,
+        "startedAt": 1793288400000,
+        "closedAt": null,
+        "partsStatus": "working"
+      },
+      "facts": {
+        "key": "INF-1887",
+        "status": {
+          "mark": "working",
+          "word": "Working",
+          "reason": "Its 3 parts do the work"
+        },
+        "title": "Show the crewmate's checks on the phone",
+        "model": "GPT-6.1 Terra",
+        "tier": "high",
+        "reasoning": null,
+        "reason": null,
+        "delivery": null,
+        "browser": null,
+        "label": "Working · Its 3 parts do the work"
+      }
+    },
+    {
+      "name": "a backlog parent whose part waits on you",
+      "row": {
+        "id": "t-1887",
+        "key": "INF-1887",
+        "projectId": "p-inf",
+        "parentId": null,
+        "kind": "work",
+        "title": "Show the crewmate's checks on the phone",
+        "goal": "Show the crewmate's checks on the phone",
+        "priority": 0,
+        "status": "open",
+        "activity": null,
+        "closedReason": null,
+        "startPolicy": "on-request",
+        "flags": {
+          "blocked": false,
+          "held": false,
+          "needsYou": false,
+          "ready": false
+        },
+        "blockedBy": [],
+        "blocks": [],
+        "children": {
+          "total": 3,
+          "closed": 1
+        },
+        "assignee": "crewmate",
+        "model": "openai-codex/gpt-6.1-terra",
+        "tier": "high",
+        "repo": {
+          "name": "infinitary",
+          "branch": "fm/task-1887"
+        },
+        "delivery": null,
+        "outcomeSummary": null,
+        "waitingCardId": null,
+        "createdAt": 1793287800000,
+        "updatedAt": 1793293080000,
+        "startedAt": 1793288400000,
+        "closedAt": null,
+        "partsStatus": "waiting"
+      },
+      "facts": {
+        "key": "INF-1887",
+        "status": {
+          "mark": "waiting",
+          "word": "Waiting on you",
+          "reason": "Its 3 parts do the work"
+        },
+        "title": "Show the crewmate's checks on the phone",
+        "model": "GPT-6.1 Terra",
+        "tier": "high",
+        "reasoning": null,
+        "reason": null,
+        "delivery": null,
+        "browser": null,
+        "label": "Waiting on you · Its 3 parts do the work"
+      }
+    },
+    {
       "name": "a program waiting on its one part",
       "row": {
         "id": "t-1887",

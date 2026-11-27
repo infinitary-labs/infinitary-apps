@@ -1,4 +1,4 @@
-import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { inflateSync } from "node:zlib";
 import { expect, type Page, test } from "@playwright/test";
@@ -10,6 +10,9 @@ import {
 import { personalPanelRemovedLine } from "../../src/core/personal/panelLines";
 import { mountLine } from "../../src/core/personal/panelMounts";
 import { MANAGED_FILES } from "../../src/core/personal/workspace";
+import { CardStore } from "../../src/core/storage/cardStore";
+import { openDatabase } from "../../src/core/storage/db";
+import { MAXIMIZE_LABEL, RESTORE_LABEL } from "../../src/renderer/src/design/cards/cardSizeWords";
 import { PANEL_STOPPED_LINE } from "../../src/renderer/src/personal/panelBoundaryWords";
 import { PROJECT_ROW_WORDS } from "../../src/renderer/src/settings/projectsWords";
 import { DEFAULT_PERSONAL_PLACEMENT } from "../../src/shared/personal/manifest";
@@ -40,7 +43,7 @@ import {
   PERSONAL_REMOVE_PROMPT_MARKER,
   personalPanels,
 } from "./scenarios/personalPanels";
-import { clickInBody } from "./stack";
+import { clickInBody, showCard, shownEntry } from "./stack";
 import { setThemeViaSettings } from "./theme";
 
 /**
@@ -378,6 +381,10 @@ async function panelState(page: Page, chrome: string): Promise<string> {
   return `rows=${rows}${running ? " running" : ""}`;
 }
 
+/** The note the follow-up build maximizes while its panel is placed and photographed. */
+const WIDE_CARD_ID = "card-wide-plans";
+const WIDE_CARD_TITLE = "Compare the two launch plans";
+
 async function watchBuild(page: Page, id: string): Promise<void> {
   await builds.get(page)?.stop();
   const states: string[] = [];
@@ -489,9 +496,14 @@ test.describe("the build loop: an ask becomes a panel (Step 4)", () => {
    * what the rail had: the draft stays until the place, so the journey reads
    * it as an order and never samples past it.
    */
-  const placeOnceDrafted = async (page: Page, drafted: string) => {
+  const placeOnceDrafted = async (
+    page: Page,
+    drafted: string,
+    beforePlace?: () => Promise<void>,
+  ) => {
     await expect.poll(() => mockProvider.heldThreadAnswers(), { timeout: 45_000 }).toBe(1);
     await expect.poll(() => seenStates(page), { timeout: 30_000 }).toContain(drafted);
+    await beforePlace?.();
     mockProvider.releaseThreadAnswer();
   };
 
@@ -670,6 +682,24 @@ test.describe("the build loop: an ask becomes a panel (Step 4)", () => {
 
     await test.step("the panel persists across a relaunch, with no running dot", async () => {
       await live.close();
+      // A note the follow-up maximizes, folding the rails away while its
+      // crewmate places and photographs the panel (INF-6925's finding 2).
+      const db = openDatabase(userDataDir);
+      try {
+        new CardStore(db).upsert({
+          id: WIDE_CARD_ID,
+          author: "firstmate",
+          meta: "firstmate",
+          priority: 30,
+          title: WIDE_CARD_TITLE,
+          body: "<p>The second plan keeps billing and login in one release.</p>",
+          status: "ready",
+          createdAt: Date.now(),
+          actions: [],
+        });
+      } finally {
+        db.close();
+      }
       live = await launchApp({ userDataDir, reuseMockProvider: mockProvider });
       await expect(panel()).toBeVisible({ timeout: 45_000 });
       await expect(panel().locator("[data-side-panel-running]")).toHaveCount(0);
@@ -707,7 +737,43 @@ test.describe("the build loop: an ask becomes a panel (Step 4)", () => {
       await watchBuild(page, MOCK_PANEL_ID);
       await ask(`${PERSONAL_CHANGE_PROMPT_MARKER}${MOCK_PANEL_ID}: make the rows smaller`);
       const key = await taskKey(page, `Change the ${MOCK_PANEL_ID} panel`);
-      await placeOnceDrafted(page, "rail rows=regular running | draft rows=small");
+      // The place and the photo of the placed panel happen with a card
+      // maximized, which folds the rails away to no width: the panel keeps
+      // its size there, so it is photographed, and the window's word says
+      // the rails are folded away (INF-6925's finding 2).
+      const revisingId = () => readTasks(userDataDir).find((task) => task.key === key)?.id ?? "";
+      const captureFile = () =>
+        join(userDataDir, "crewmates", revisingId(), "captures", `${MOCK_PANEL_ID}-dark.png`);
+      const photoAt = () => (existsSync(captureFile()) ? statSync(captureFile()).mtimeMs : 0);
+      let draftPhotoAt = 0;
+      await placeOnceDrafted(page, "rail rows=regular running | draft rows=small", async () => {
+        // The draft's photo, before the place (crewScripts.ts), may have
+        // been taken or refused while the draft still loaded.
+        draftPhotoAt = photoAt();
+        await showCard(page, WIDE_CARD_TITLE);
+        await shownEntry(page).getByRole("button", { name: MAXIMIZE_LABEL, exact: true }).click();
+        await expect(panel()).toBeHidden();
+      });
+      const foldedAway = mountLine({
+        id: MOCK_PANEL_ID,
+        kind: "personal",
+        version: null,
+        state: "drawn",
+        rail: DEFAULT_PERSONAL_PLACEMENT.x,
+        why: null,
+        away: "folded",
+      });
+      await expect
+        .poll(() => mockProvider.requestBodies().some((body) => body.includes(foldedAway)), {
+          timeout: 45_000,
+        })
+        .toBe(true);
+      // The photo of the placed panel, taken while the rails stay folded,
+      // writes its files, after any of the draft's.
+      await expect.poll(photoAt, { timeout: 45_000 }).toBeGreaterThan(draftPhotoAt);
+      await shownEntry(page).getByRole("button", { name: RESTORE_LABEL, exact: true }).click();
+      await expect(panel()).toBeVisible();
+      await page.evaluate((id) => window.infinitary.cards.noteDone(id), WIDE_CARD_ID);
       await expect(
         reportLine(page, key).filter({ hasText: reportSummary(MOCK_PANEL_REVISED_REPORT) }),
       ).toBeVisible({ timeout: 45_000 });

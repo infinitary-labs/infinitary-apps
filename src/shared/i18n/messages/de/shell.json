@@ -63,7 +63,7 @@
   "shellGateRecoveryTitle": "Richte deinen ersten Offizier auf diesem Computer ein",
   "shellGateRunLine": "Verbinde eins für deinen ersten Offizier auf {computer}. Die Anmeldung läuft von hier aus.",
   "shellGateStaysOn": "Wähl einen Computer, der eingeschaltet bleibt. Andere Computer brauchen ihn wach.",
-  "shellGateStillNeeds": "Dein erster Offizier braucht noch ein Konto, das antwortet: Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter mit einem API-Schlüssel oder Amazon Bedrock mit deiner AWS-Anmeldung.",
+  "shellGateStillNeeds": "Dein erster Offizier braucht noch ein Konto, das antwortet: Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter mit einem API-Schlüssel oder Amazon Bedrock mit deiner AWS-Anmeldung.",
   "shellGateTitle": "Verbinde ein Abo, um anzufangen",
   "shellGateWhere": "Wo soll ich wohnen? Wähl einen Computer, der möglichst immer eingeschaltet bleibt.",
   "shellKeyReminderHint": "einmal drücken, dann endet dieser Hinweis",

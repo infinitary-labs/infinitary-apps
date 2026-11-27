@@ -26,6 +26,9 @@ export const BATCH_DESCRIPTION_WORDS = {
     stories === 1
       ? "The story of one of these changes did not fit in this description, so it follows in a comment below."
       : `The stories of ${stories} of these changes did not fit in this description, so they follow in order in comments below.`,
+  // i18n-exempt: written where the project lives, in the project's own language like the stories beside it
+  trial: (title: string) =>
+    `The last of them, "${title}", is a fix for checks that failed on the others, and it is not approved yet: these checks run with it first. Approved at this version once they pass, the batch merges as it is.`,
   part: (part: number, parts: number) =>
     parts === 1
       ? "Stories of this batch's changes that did not fit in its description."
@@ -52,8 +55,14 @@ const SEPARATOR = "\n\n";
 export function batchDescription(
   entries: readonly BatchEntry[],
   limits: BatchLimits,
+  /** The title of a held batch's fix its early run carries last, not approved yet (`OpenBatch.trial`). */
+  fix?: string,
 ): BatchDescription {
-  const head = [BATCH_DESCRIPTION_WORDS.opening(entries.length), batchList(entries)];
+  const head = [
+    BATCH_DESCRIPTION_WORDS.opening(entries.length),
+    batchList(entries),
+    ...(fix === undefined ? [] : [BATCH_DESCRIPTION_WORDS.trial(fix)]),
+  ];
   const stories = entries.flatMap((entry, index) =>
     entry.region === undefined
       ? []

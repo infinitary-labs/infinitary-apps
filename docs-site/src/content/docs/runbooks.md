@@ -55,6 +55,9 @@ Four start off until you turn them on: **Batched pull requests**, **Pull request
   See [Projects](/projects/#how-changes-reach-your-project).
 - **Pull request comments**: a crewmate answers comments on its pull request until it merges.
   It makes clear fixes by itself, and brings unclear ones to you as a choice.
+- **Outside work items**: when work answers an issue, ticket or request kept outside Infinitary, a task of its own replies to that item and closes it once the work ships.
+  Each reply or close waits for your click unless you allowed it.
+  See [A step that waits on work](/tasks-and-crewmates/#a-step-that-waits-on-work).
 - **Heartbeat**: when work starts waiting with nothing to bring it up, or after a long quiet spell, your first mate looks over the waiting work, moves it on or asks you once.
   It brings an automation you can pause in Settings → **Automation**, and turning the runbook off removes it.
 - **Computer cleanup**: a look that only reads, after you agree, and a card to choose which leftovers to stop.

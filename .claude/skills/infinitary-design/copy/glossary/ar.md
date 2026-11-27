@@ -41,8 +41,8 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | clone | استنساخ | "استُنسخ" for "cloned", never "نُسخ" (copied). |
 | collection | مجموعة | |
 | command search | البحث في الأوامر | |
-| commit | إيداع | The usual Arabic Git term. |
-| computer | حاسوب | Plural "حواسيب"; used for every computer, never "جهاز ماك" or "خادم". |
+| commit | إيداع | The usual Arabic Git term; "مودَعة" for committed and "غير مودَعة" for changes not committed, never a form of "التزام". |
+| computer | حاسوب | Plural "حواسيب"; used for every computer, a Mac included ("حاسوب Mac"), never "كمبيوتر", "جهاز Mac" or "خادم". A quote of the system's own words keeps them, such as Windows' "حماية Windows لجهاز الكمبيوتر الخاص بك". |
 | concept / finding | مفهوم / نتيجة | As the card references already say; "نتيجة" is feminine. |
 | connection file | ملف الاتصالات | The file in Pi's models.json format that Settings → Intelligence reads custom connections from. |
 | conversation | المحادثة | Also said for a crewmate's session ("محادثة فرد الطاقم"), never "جلسة". |
@@ -81,9 +81,11 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | header (a request header) | ترويسة | Plural "ترويسات"; only in the custom API form and the usage reporting form. |
 | held (a batch that stopped) | معلّقة | "إيقاف مؤقت" stays for what a person pauses. |
 | hold (on a task) | تعليق | "بعد رفع تعليقها" for once its hold ends. |
+| holds an override passes (named on a task's Activity) | asking first: السؤال أولًا; the open decisions: القرارات المفتوحة; the waits: انتظار العمل الآخر; the open parts: الأجزاء المفتوحة; the checks: الفحوصات; the delivery proof: إثبات التسليم; the saved story: القصة المحفوظة; the heavy-run line: طابور التشغيلات الثقيلة; the cost limit: حد التكلفة; a retired hold: تعليق لم يعد موجودًا | Joined as one list in the reader's language on the line. |
 | How to get it (an ask for a secret) | كيف تحصل عليه | The heading over the steps a crewmate lays out for making or finding a secret. |
 | Infinitary | Infinitary | Never translated, written in Latin letters inside the Arabic sentence. |
 | inspector | التفاصيل | The side pane that shows one entry. |
+| intake round (a docs site guide) | جولة الاستقبال | A scheduled task that reads new issues and pull requests and drafts replies; الاستقبال as a desk receives what arrives. |
 | Integrations | التكاملات | |
 | Intelligence | الذكاء | |
 | issue (where the project lives) | بلاغ | |
@@ -167,6 +169,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | Settings | الإعدادات | |
 | sign-in / sign in | تسجيل الدخول / سجّل الدخول | The usual Arabic interface words. |
 | standing direction | توجيه دائم | Plural "توجيهات دائمة". |
+| standing reply (your words kept on a task, which pass its holds) | الرد القائم | |
 | start | بدء | "بدأت" in the feed. |
 | starter | عبارة بدء | The ready sentence the person presses to begin. |
 | Steer (button) | إرشاد | توجيه is a knowledge direction. |
@@ -187,6 +190,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | token, credential (never said) | تسجيل الدخول | "رموز" appears only for counted model tokens in Usage. |
 | unsafe data reader | قارئ البيانات غير الآمنة | A crewmate that reads words anyone can write. |
 | Usage | الاستخدام | |
+| user (another user account on this computer) | مستخدم | "as {user}" is "باسم {user}", as in "التشغيل باسم مستخدم آخر". |
 | version | نسخة | Said in place of SHA or head. |
 | Waiting on you (board lane) | بانتظارك | |
 | where the project lives | حيث يُستضاف المشروع | "مستضيف المشروع" for "the project's host". |

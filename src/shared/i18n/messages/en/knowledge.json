@@ -146,6 +146,12 @@
     "one": "Graph · {count} concept",
     "other": "Graph · {count} concepts"
   },
+  "knowledgePanelHeardCard": "Heard from you on the card “{title}”",
+  "knowledgePanelHeardStanding": "Heard from you in your standing reply on {task}",
+  "knowledgePanelHeardTab": "Heard from you in the Crewmate tab of {task}",
+  "knowledgePanelHeardTitle": "Where you said it",
+  "knowledgePanelHeardTurn": "Heard from you in your words to your first mate",
+  "knowledgePanelHeardWindow": "Changed by you in Knowledge",
   "knowledgePanelHops": {
     "plural": "count",
     "one": "{count} hop",
@@ -182,6 +188,7 @@
   "knowledgePanelNoSources": "No source was kept with it.",
   "knowledgePanelNoUses": "No work has declared it used this yet.",
   "knowledgePanelNone": "None",
+  "knowledgePanelNotHeard": "Not heard from you, so it approves nothing on its own",
   "knowledgePanelNothingRecorded": "Nothing is recorded yet",
   "knowledgePanelObservedBy": "Observed · by {author}",
   "knowledgePanelOpLink": "Linked",

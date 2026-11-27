@@ -59,7 +59,8 @@ Google does not review it, shows no warning, and does not end its sign-in after 
 
 1. Press **Google**, which opens **Set up your own Google connection**.
 2. Press **Open Google's page**, and sign in there with the Google account you will connect.
-   Name the project, accept Google's policy and press Continue.
+   Name the project and leave "Use this client for an AI-powered agent" unticked, since that box is only for clients that use Google's MCP tools.
+   Then accept Google's policy and press Continue.
 3. Download the client file Google shows, with Download JSON.
 4. Drop that file on **Drop the client file here**, pick it with **Choose file**, or paste what it holds into **Client file**.
 5. Press **Keep and sign in**.
@@ -75,8 +76,8 @@ Each time you sign in to Google, the notice shows first.
 
 The Google row says when the connection needs you:
 
-- **Set up your own connection**: this sign-in still runs through a client Infinitary shares with everyone, which is going away.
-  It keeps working until then; press **Set up** to stay connected.
+- **Sign in again**: a connection made earlier through the client Infinitary used to share with everyone no longer works, because that client is gone.
+  Press **Sign in again**, which opens **Set up your own Google connection**, to make your own client and connect again.
 - **Stops**, with a date: your client is not in Personal mode, so Google ends its sign-in on that date.
   Press **Set up again**, and make a client in Personal mode.
 - **Your Google client stopped**: Google no longer accepts your client, perhaps because it was deleted in Google Cloud.

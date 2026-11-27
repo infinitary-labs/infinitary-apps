@@ -32,6 +32,9 @@
   "feedBatchQueuedHost": "{project}: Der Host des Projekts hat {label} in die Merge-Warteschlange des Hauptbranchs aufgenommen. Er wird dort zusammengeführt, sobald die Überprüfungen der Warteschlange erfolgreich sind.",
   "feedBatchRetried": "{project}: {label} wurde neu zusammengestellt, und seine Überprüfungen laufen erneut.",
   "feedBatchSentBack": "{project}: „{title}“ wurde aus seinem Bündel zurückgeschickt: {reason}",
+  "feedBatchTrial": "{project}: {label} führt seine Überprüfungen mit der angekündigten Korrektur aus, bevor die Korrektur bestätigt ist. Wird die Korrektur in dieser Version bestätigt und bestehen diese Überprüfungen, wird der Stapel so zusammengeführt, wie er ist.",
+  "feedBatchTrialFailed": "{project}: {label} bleibt angehalten, weil diese Überprüfungen mit der angekündigten Korrektur fehlgeschlagen sind: {checks}. Das Crewmitglied der Korrektur repariert sie in einer neuen Version.",
+  "feedBatchTrialFailedUnnamed": "{project}: {label} bleibt angehalten, weil seine Überprüfungen mit der angekündigten Korrektur fehlgeschlagen sind. Das Crewmitglied der Korrektur repariert sie in einer neuen Version.",
   "feedBranchPushed": "Den Branch gepusht",
   "feedBuildRowKept": "„{title}“ als {task} für später abgelegt.",
   "feedBuildRowNotFiled": "„{title}“ nicht abgelegt.",
@@ -129,5 +132,8 @@
   "feedUndelivered": "Nachricht nicht zugestellt: {why}",
   "feedUnsafeDataReaderReported": "Der Leser unsicherer Daten hat berichtet; seine Worte stehen in seinem Protokoll.",
   "feedUpdated": "Aktualisiert: {text}",
+  "feedWriteNotSentOnWords": "{call} wurde auf deine Worte „{words}“ hin nicht an {place} gesendet: {why}",
+  "feedWriteSentOnWords": "{call} einmal ohne Karte an {place} gesendet, auf deine Worte „{words}“ hin: Die Antwort war {status}.",
+  "feedWriteUnknownOnWords": "{call} einmal ohne Karte an {place} gesendet, auf deine Worte „{words}“ hin – was daraus wurde, ist unbekannt, und es wird nie erneut gesendet.",
   "feedYouChose": "Du hast „{choice}“ gewählt"
 }

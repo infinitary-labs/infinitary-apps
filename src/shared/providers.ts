@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 /**
- * The offered provider catalog: Codex, xAI, Claude, Kimi Code and GitHub
- * Copilot are subscriptions; OpenRouter connects with an API key. API-key
+ * The offered provider catalog: Codex, xAI, Claude, Kimi Code, GitHub
+ * Copilot and OpenCode Go are subscriptions; OpenRouter connects with an API key. API-key
  * providers are allowed (D-6) with UI emphasis on subscriptions. A supported
  * subscription is one that runs through Pi; Claude is the sole exception
  * (captain, 2026-09-24). Cursor and Antigravity were removed; stored
@@ -54,6 +54,11 @@ export const authPromptSchema = z.object({
   kind: z.enum(["text", "secret", "select", "manual_code"]),
   message: z.string(),
   placeholder: z.string().optional(),
+  /**
+   * What a text prompt's field starts with, such as a value read from the
+   * person's own settings. Absent, the field starts empty.
+   */
+  value: z.string().optional(),
   options: z
     .array(z.object({ id: z.string(), label: z.string(), description: z.string().optional() }))
     .optional(),
@@ -100,11 +105,17 @@ export type ProviderCatalogEntry = {
    * words; `enterprise` offers the Use GitHub Enterprise row.
    */
   codeSignIn?: { site: string; enterprise?: true };
+  /**
+   * The provider signs in only with a pasted key: the key step adds a line
+   * saying the key is on `site` once the person subscribes.
+   */
+  keySignIn?: { site: string };
 };
 
 /** Claude Max: a subscription Pi cannot reach, hence its own backend. */
 export const CLAUDE_PROVIDER_ID = "anthropic-claude";
 export const BEDROCK_PROVIDER_ID = "amazon-bedrock";
+export const OPENCODE_GO_PROVIDER_ID = "opencode-go";
 export const BEDROCK_PROFILE_UNAVAILABLE = "bedrock_profile_unavailable";
 export const BEDROCK_SIGN_IN = {
   unavailable: "Could not use your AWS sign-in.",
@@ -162,6 +173,15 @@ export const PROVIDER_CATALOG: ReadonlyArray<ProviderCatalogEntry> = [
     backend: "pi",
     roles: ["firstmate", "crewmate"],
     codeSignIn: { site: "GitHub", enterprise: true },
+  },
+  {
+    // Pi's own provider: a pasted OpenCode key, the only way in (INF-6873).
+    id: OPENCODE_GO_PROVIDER_ID,
+    name: "OpenCode Go", // i18n-exempt: a product's own name
+    tier: "subscription",
+    backend: "pi",
+    roles: ["firstmate", "crewmate"],
+    keySignIn: { site: "OpenCode Console" }, // i18n-exempt: a product's own page name
   },
   {
     id: "openrouter",

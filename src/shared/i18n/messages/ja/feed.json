@@ -30,6 +30,9 @@
   "feedBatchQueuedHost": "{project}：プロジェクトのホストが {label} をメインブランチのマージキューに入れました。キューのチェックに合格すると、そこでマージされます。",
   "feedBatchRetried": "{project}：{label} をまとめ直し、チェックを再び実行しています。",
   "feedBatchSentBack": "{project}：「{title}」が一括プルリクエストから差し戻されました：{reason}",
+  "feedBatchTrial": "{project}：{label} は、宣言された修正が承認される前に、その修正を含めてチェックを実行しています。修正がこのバージョンで承認され、これらのチェックが通れば、バッチはそのままマージされます。",
+  "feedBatchTrialFailed": "{project}：宣言された修正を含めて次のチェックが失敗したため、{label} は保留のままです：{checks}。修正の乗組員が新しいバージョンで直します。",
+  "feedBatchTrialFailedUnnamed": "{project}：宣言された修正を含めてチェックが失敗したため、{label} は保留のままです。修正の乗組員が新しいバージョンで直します。",
   "feedBranchPushed": "ブランチをプッシュしました",
   "feedBuildRowKept": "「{title}」を {task} として後で行うために登録しました。",
   "feedBuildRowNotFiled": "「{title}」は登録しませんでした。",
@@ -108,9 +111,9 @@
   "feedRunProjectHereInstead": "代わりに{here}実行するには、{project} の実行先を {computer} に設定してください。",
   "feedRunTaskHereInstead": "代わりに{here}実行するには、一等航海士に {task} を {computer} で実行するよう頼んでください。",
   "feedRunsOnAutomatic": "Infinitary が {name} の新しいタスクごとにコンピューターを選びます。開始済みのタスクは開始した場所に残ります。",
-  "feedRunsOnFromHere": "{name} は今後 {where} で実行されます。次のタスクはそちらで開始し、現在{here}実行中のタスクは{here}完了します。",
+  "feedRunsOnFromHere": "{name} は今後{where}実行されます。次のタスクはそちらで開始し、現在{here}実行中のタスクは{here}完了します。",
   "feedRunsOnHere": "{name} は今後 {computer} で実行されます。次のタスクは{here}開始します。",
-  "feedRunsOnThere": "{name} は今後 {where} で実行されます。次のタスクはそちらで開始し、実行中のタスクは開始した場所で完了します。",
+  "feedRunsOnThere": "{name} は今後{where}実行されます。次のタスクはそちらで開始し、実行中のタスクは開始した場所で完了します。",
   "feedStarted": "開始",
   "feedStopped": "停止",
   "feedTagCheckFinished": {
@@ -124,5 +127,8 @@
   "feedUndelivered": "メッセージ未送達：{why}",
   "feedUnsafeDataReaderReported": "安全でないデータの読み手が報告しました。その内容は記録にあります。",
   "feedUpdated": "更新：{text}",
+  "feedWriteNotSentOnWords": "あなたの言葉「{words}」に基づく {call} は {place} に送信しませんでした：{why}",
+  "feedWriteSentOnWords": "あなたの言葉「{words}」に基づき、カードなしで {call} を {place} に1回送信しました。応答は {status} です。",
+  "feedWriteUnknownOnWords": "あなたの言葉「{words}」に基づき、カードなしで {call} を {place} に1回送信しました。結果は不明で、再送信されることはありません。",
   "feedYouChose": "「{choice}」を選びました"
 }

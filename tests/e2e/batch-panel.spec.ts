@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import batchesManifest from "../../resources/runbooks/batches/panel/manifest.json" with {
   type: "json",
@@ -17,6 +18,7 @@ import { seedGitHubSignIn, seedRepo, startGitHubStub } from "./githubStub";
 import { leaveSettings } from "./handoverCards";
 import { launchApp, SHORT_TICK } from "./launch";
 import { shownPanelCardBody } from "./panelCards";
+import { heroShot, regionShot } from "./pictures";
 import { seedHostedOrigins, seedProject } from "./projectSeed";
 import { recordCard } from "./rails";
 import { settingsSection } from "./settings";
@@ -70,6 +72,11 @@ const HEADS: Record<Change, string> = {
   axis: "4444444444444444444444444444444444444444",
 };
 
+/** The held batch's fix and the commit its checks run at before approval. */
+const FIX_HEAD = "5555555555555555555555555555555555555555";
+const TRIAL_HEAD = "6666666666666666666666666666666666666666";
+const RUNNING = [{ name: "unit-tests", status: "in_progress", conclusion: null }];
+
 /** The latest report line of the held batch's repair, as the board keeps it. */
 const REPAIR_REPORT = "The parser change breaks the date tests; a fix is on its branch.";
 
@@ -83,14 +90,22 @@ function batchesPanel(page: Page) {
  * a failed check, a change in line, a change left out and a batch that merged
  * two hours ago, each change's task seeded, and with `repair` a task recorded
  * as the hold's repair; launched against a disposable GitHub serving the
- * batch's pull request and its failed check.
+ * batch's pull request and its failed check. With `trial`, that repair
+ * declared its change the hold's fix and the batch's checks run with it
+ * before approval (`OpenBatch.trial`): the pull request sits at that run's
+ * commit, its checks still running.
  */
-async function launchHeld({ repair }: { repair: boolean }) {
+async function launchHeld({ repair, trial = false }: { repair: boolean; trial?: boolean }) {
   const userDataDir = scratchDir("infinitary-batch-panel-");
   const { repoDir } = seedRepo(userDataDir);
   const github = await startGitHubStub();
-  github.serveNumbered({ number: 31, branch: BRANCH, title: "Batch of 2 changes", headSha: HEAD });
-  github.setChecks(FAILED);
+  github.serveNumbered({
+    number: 31,
+    branch: BRANCH,
+    title: "Batch of 2 changes",
+    headSha: trial ? TRIAL_HEAD : HEAD,
+  });
+  github.setChecks(trial ? RUNNING : FAILED);
   seedGitHubSignIn(userDataDir);
 
   const db = openDatabase(userDataDir);
@@ -180,7 +195,34 @@ async function launchHeld({ repair }: { repair: boolean }) {
       hold: { reason: "checks", head: HEAD, checks: ["unit-tests"], at: now - 4 * 60_000 },
       holds: 1,
       ...(repair ? { repair: "t-repair" } : {}),
+      ...(trial
+        ? {
+            trial: {
+              task: "t-repair",
+              version: FIX_HEAD,
+              head: TRIAL_HEAD,
+              base: "0000000000000000000000000000000000000000",
+              members: [
+                { ...change("parser"), commit: "a".repeat(40) },
+                { ...change("export"), commit: HEAD },
+                {
+                  taskId: "t-repair",
+                  branch: "inf/repair",
+                  head: FIX_HEAD,
+                  title: "Repair the held batch",
+                  body: "",
+                  at: now - 2 * 60_000,
+                  fix: true,
+                  heldBase: HEAD,
+                  commit: TRIAL_HEAD,
+                },
+              ],
+              at: now - 2 * 60_000,
+            },
+          }
+        : {}),
     },
+    ...(trial ? { fixes: ["t-repair"] } : {}),
     held: [HEAD],
     receipts: [],
     leftOut: [
@@ -365,6 +407,55 @@ test("a held batch whose repair is working names it and asks nothing of the capt
       await expect(held.getByRole("button", { name: BATCH_HOLD_WORDS.tryAgain })).toBeHidden();
       await pressKey(answers.locator("summary"), "Enter");
       await expect(held.getByRole("button", { name: BATCH_HOLD_WORDS.tryAgain })).toBeVisible();
+      await leaveSettings(page);
+    });
+  } finally {
+    await launched.close();
+    await github.close();
+  }
+});
+
+// The captain's approved plan for a held batch's fix (docs/forge.md, "A held batch"): the
+// Batches panel and Settings say the fix is being checked before approval.
+test("a held batch whose checks run with its fix before approval says so in the panel and Settings", async () => {
+  test.setTimeout(3 * 60_000);
+  const evidence =
+    test.info().repeatEachIndex === 0 ? process.env.INFINITARY_TASK_EVIDENCE_DIR : undefined;
+  const { launched, github, keys } = await launchHeld({ repair: true, trial: true });
+  const { page } = launched;
+  try {
+    const panel = batchesPanel(page);
+    await expect(panel).toBeAttached({ timeout: 30_000 });
+    const body = panelBody(page, PANEL);
+    if ((await panel.getAttribute("data-side-panel-collapsed")) !== null)
+      await panel.getByRole("button", { name: `Expand ${batchesManifest.title}` }).click();
+    const repairKey = keys.repair as string;
+    const said = words.batchesPanelCheckingFix({ key: repairKey });
+
+    await test.step("the panel names the fix the checks run with", async () => {
+      await expect(body.locator("[data-batches-trial]")).toHaveText(said);
+      await expect(body.locator('[data-batches-who="fixing"]')).toHaveText(
+        words.batchesPanelWhoFixing({ key: repairKey }),
+      );
+      if (evidence) {
+        await regionShot(panel, join(evidence, "batches-panel-trial-after.png"));
+        await heroShot(launched.app, page, { region: panel, name: "batch-trial-early" });
+      }
+    });
+
+    await test.step("Settings' held batch says the same", async () => {
+      await runFromSearch(launched.app, page, panelCommandId(PANEL, "open"));
+      const card = shownPanelCardBody(page, PANEL, "details");
+      await pressKeyTakingFrame(
+        card.getByRole("button", { name: words.batchesPanelOpenSettings() }),
+        "Enter",
+      );
+      const held = settingsSection(page, "projects").locator(`[data-batch-hold="${REPO}"]`);
+      await expect(held).toBeVisible();
+      await expect(held.locator("[data-batch-hold-trial]")).toHaveText(
+        BATCH_HOLD_WORDS.checkingFix(repairKey),
+      );
+      if (evidence) await regionShot(held, join(evidence, "settings-batch-trial-after.png"));
       await leaveSettings(page);
     });
   } finally {

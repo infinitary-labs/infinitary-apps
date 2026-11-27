@@ -183,10 +183,11 @@ With no link it exits 1 and says why on its error output:
 | What it read | What it says |
 | --- | --- |
 | No door answers and no app holds the data folder | "Infinitary is not running here, as this user." and "Start it with infinitary run, or open it, then run this again." |
-| An app holds the folder but no door answers, as an older app | "Infinitary is open here, but it did not answer this command." and "Quit it and start it again, then run this again." |
+| An app holds the folder but no door answers, as an older app or one that has not opened its door yet | "Infinitary is open here, but it did not answer this command." and "Quit it and start it again, then run this again." |
 | This account's Infinitary controls a first mate on another computer (`docs/view.md`) | "Infinitary here controls your first mate on another computer." and "Make the link on that computer instead." |
 | Pairing made no link, as when the saved device list is unreadable | "Infinitary here could not make a link: " and pairing's reason |
 
+An app holds the folder when Chromium's lock there is held: on a Mac or Linux the lock names its process, which must be alive, and on Windows it is a file that names none, read as held while the app keeps it open (`lockHolder`, `src/main/runCommand.ts`).
 The link reaches this command's output alone: the door writes it to no log, and the command is this account's, as the door's key is.
 `src/main/linkCommand.ts` owns the command and its words.
 
@@ -290,8 +291,8 @@ The first mate stores each setting once and tells the window, the window applies
 - **What only a window can do** (extras=same-piece).
   A page of a task's browser that asks for a file gets this window's file picker, and with no window open it gets no file, as when the captain chooses none.
   The window tells the first mate when it comes to the front, which refreshes a stale reading of the plan's allowance (`inf:own-window:focused`), and when dictation's first-use microphone step is done (`inf:voice:primed`).
-  It also says when it comes to the front and when it leaves it (`inf:window:front`), and again at each welcome while in front: the first mate's program has no window of its own, so this is how its phone sender knows the captain is at the window and pushes no card meanwhile (`docs/phone-push.md`, "When the computer sends").
-  The first mate forgets it when the window's connection drops.
+  It also says when it comes to the front and when it leaves it (`inf:window:front`), and whether someone is at this computer (`inf:window:someone-here`), at each change and again at each welcome: the first mate's program has no window of its own, so this is how its phone sender knows the captain is here and holds a card's push until they leave (`docs/phone-push.md`, "When the computer sends").
+  The first mate forgets both when the window's connection drops, and tells the window when the captain acted on a phone (`inf:window:captain-on-phone`).
   A runbook's folder opens here: the window asks the first mate which folder (`inf:runbooks:folder`) and opens it itself.
   The first mate makes a built-in's read-only copy in its own program's temporary folder (`HostCapabilities.temporaryDir`).
 - **Who may ask.**
@@ -519,7 +520,7 @@ Its last test starts a crewmate whose step stays open, quits the window and open
 `src/main/besideRun.test.ts` holds how a command ended, which start entry starts it again, the notice for each ending and wait, and the note Start it here leaves.
 `src/main/shell.beside.test.ts` holds the window beside a command against a stand-in door and presence: it asks over the door with no core, follows the first mate's look and keys from its own copy, applies its Dock choice, answers Start at login and a file picker from its own program, posts its cards' notifications, reads everything once a late door opens, shows the notice and never starts a first mate by itself; and, beside a command it started, waits for it with no notice, answers Start at login from the command's starter, stops it on Stop, starts it again on Start it here, and joins another computer by stopping it, by its address too, asking the command's first mate for the link.
 `src/main/shell.beside.restart.test.ts` holds the rest of that window's cases: a command that welcomes it and never answers, Restart it and Start it here against such a run, and the joins that wait on them.
-`src/core/ownWindow.test.ts` and `src/core/core.connection.test.ts` hold the first mate's side: what it asks of this computer's window and says with none open, the requests it takes only from that window, that a command's own program posts no notification and changes no login item, and that it pushes no card to a phone while its window says it is in front.
+`src/core/ownWindow.test.ts` and `src/core/core.connection.test.ts` hold the first mate's side: what it asks of this computer's window and says with none open, the requests it takes only from that window, that a command's own program posts no notification and changes no login item, and that it holds a card's push to a phone while its window says someone is there.
 `src/core/update/updateHold.test.ts` holds the save a window's update waits for: a running turn, Update later, a window that leaves mid-save, and the replaced program.
 `src/main/runSettings.test.ts` holds the settings file's reading and each reason it refuses one; `src/core/hostEnv.test.ts` holds the search path a child gets from it with no shell asked, and `src/core/claude/claudeCli.test.ts` the locator's login-shell rung it skips.
 `tests/e2e/status-command.spec.ts` starts the built commands in the same isolated environment and reads status before, during and after a run, a second start, a signal, an update, a forced end and a saved-data refusal, plus invalid arguments and a corrupt record.

@@ -12,11 +12,12 @@
 }
 .fm-crew-state-word-anchor {
   position: absolute;
-  inset-inline-start: 0;
+  left: 0; /* physical: the painter writes left-based orbit coordinates */
   top: 0;
 }
 .fm-crew-state-word {
   position: absolute;
+  left: 0; /* physical: translate(-50%) centres the box on its painted anchor */
   transform-origin: 50% 0;
   transform: translate(-50%, calc(var(--crew-state-word-gap) / var(--crew-fit-scale)))
     scale(calc(1 / var(--crew-fit-scale)));

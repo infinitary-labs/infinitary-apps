@@ -18,6 +18,7 @@ import { seedTask } from "../tasks/seedTask";
 import {
   FIRSTMATE_FAILURE_CARD_ID,
   FIRSTMATE_FAILURE_TITLE,
+  FIRSTMATE_SIGN_IN_CARD_ID,
   HOST_CARD_PRIORITY,
   moveLabel,
   PROVIDER_SIGN_IN_TITLE,
@@ -411,39 +412,150 @@ describe("host cards", () => {
     cards.dispose();
   });
 
-  it("lets the first mate answer a reply under a card the app raises, but not under the welcome or an agent-down card", () => {
-    // INF-6265's plan, piece 2: the app's own offers take replies the first
-    // mate answers; the welcome and the agent-down set stay without a field.
-    const { db, make } = setup();
+  it("gives every host card the first mate, the first mate's down cards included, but not the welcome", () => {
+    // Intent: INF-6994's approved plan, pieces 1 and 2: every app card takes
+    // a typed reply, the cards shown while the first mate is down included
+    // (the captain's pick: "Yes, every card but the welcome"). A host card
+    // whose builder names nobody gets the first mate, as do the down cards;
+    // a card saved before the rule - with no answerer, or with replies off
+    // as the down cards were - reads with the first mate after a restart;
+    // the welcome, the first mate's own note, stays without a field.
+    const { db, cardStore, make } = setup();
     const cards = make();
-    const offer = {
-      id: "card-consent",
-      title: "Add the plugin?",
-      meta: "firstmate",
-      body: "<p>It asks to read your tasks.</p>",
-      actions: [{ id: "add", label: "Add it", variant: "primary" as const }],
+    const unnamed: Card = {
+      id: "card-unnamed",
+      author: "host",
+      priority: HOST_CARD_PRIORITY,
+      title: "Allow writes on GitHub?",
+      meta: "Integration approval",
+      body: "<p>A builder that names nobody.</p>",
+      actions: [{ id: "once", label: "Only this time", variant: "primary" }],
+      status: "ready",
+      createdAt: 1000,
     };
-    cards.hostCards.raiseHostCard(offer);
-    cards.hostCards.raiseHostCard({ ...offer, id: "card-quiet", replies: false });
+    cards.put(unnamed);
+    const welcome = cards.addRecordedFirstmateNote(
+      { title: "Welcome aboard", body: "<p>Type below.</p>" },
+      () => {},
+      { replies: false },
+    );
     cards.hostCards.addFirstmateFailureCard("<p>The turn failed.</p>");
+    cards.hostCards.addFirstmatePauseCard({
+      pause: "refused",
+      body: "Claude is not answering your first mate right now.",
+      accountId: "claude",
+      providerName: "Claude",
+    });
+    cards.hostCards.addAuthDecisionCard(FIRSTMATE_SIGN_IN_CARD_ID, "firstmate", "Sign in.");
+    // Rows an older version saved: one with no answerer, one with replies off.
+    cardStore.upsert({ ...unnamed, id: "card-saved-before" });
+    cardStore.upsert({ ...unnamed, id: "card-fm-no-headroom", replies: false });
     const takes = (service: typeof cards, id: string) => {
       const card = service.get(id);
       return card && { takesReplies: cardTakesReplies(card), answeredBy: card.answeredBy };
     };
-    expect(takes(cards, "card-consent")).toEqual({ takesReplies: true, answeredBy: "firstmate" });
-    expect(takes(cards, "card-quiet")).toEqual({ takesReplies: false, answeredBy: undefined });
-    expect(takes(cards, FIRSTMATE_FAILURE_CARD_ID)).toEqual({
-      takesReplies: false,
-      answeredBy: undefined,
-    });
+    const firstmate = { takesReplies: true, answeredBy: "firstmate" };
+    for (const id of [
+      "card-unnamed",
+      FIRSTMATE_FAILURE_CARD_ID,
+      "card-fm-refused",
+      FIRSTMATE_SIGN_IN_CARD_ID,
+    ]) {
+      expect(takes(cards, id)).toEqual(firstmate);
+    }
+    expect(takes(cards, welcome)).toEqual({ takesReplies: false, answeredBy: undefined });
     cards.dispose();
-    // The answerer is saved with the card, so a restart keeps the field.
     const restarted = setup(db).make();
-    expect(takes(restarted, "card-consent")).toEqual({
-      takesReplies: true,
-      answeredBy: "firstmate",
-    });
+    for (const id of ["card-unnamed", "card-saved-before", "card-fm-no-headroom"]) {
+      expect(takes(restarted, id)).toEqual(firstmate);
+    }
+    expect(takes(restarted, welcome)).toEqual({ takesReplies: false, answeredBy: undefined });
     restarted.dispose();
+  });
+
+  it("keeps a down card up while the captain's reply under it waits, and signs it off with the first mate's answer", () => {
+    // Intent: INF-6994's approved plan, piece 2: a card shown while the first
+    // mate is down "stays up until the first mate answers in its thread".
+    const { make } = setup();
+    const cards = make();
+    cards.hostCards.addFirstmatePauseCard({
+      pause: "refused",
+      body: "Claude is not answering your first mate right now.",
+      accountId: "claude",
+      providerName: "Claude",
+    });
+    cards.hostCards.addFirstmateFailureCard("<p>The turn failed.</p>");
+    cards.hostCards.addAuthDecisionCard(FIRSTMATE_SIGN_IN_CARD_ID, "firstmate", "Sign in.");
+    const down = ["card-fm-refused", FIRSTMATE_FAILURE_CARD_ID, FIRSTMATE_SIGN_IN_CARD_ID];
+    const asked = new Map(down.map((id) => [id, cards.addMessage(id, "captain", "what now?").id]));
+
+    // The seat serves again and its turn ends clean: every takedown waits.
+    cards.hostCards.withdrawFirstmatePauseCards("serves again");
+    cards.hostCards.withdrawHostCard(FIRSTMATE_FAILURE_CARD_ID, "recovered");
+    cards.hostCards.clearAuthDecisionCard(FIRSTMATE_SIGN_IN_CARD_ID);
+    for (const id of down) expect(cards.has(id)).toBe(true);
+
+    // A line that answers nothing leaves the card up; the answer signs it off.
+    cards.replyAs({ actor: "firstmate" }, { cardId: "card-fm-refused", text: "Looking." });
+    expect(cards.has("card-fm-refused")).toBe(true);
+    for (const id of down) {
+      const mutation = cards.replyAs(
+        { actor: "firstmate" },
+        { cardId: id, text: "I am back; nothing was lost.", answersMessage: asked.get(id) },
+      );
+      expect(mutation).toMatchObject({ effect: "reply-only", answered: asked.get(id) });
+      expect(cards.has(id)).toBe(false);
+      expect(cards.thread(id).messages.at(-1)?.text).toBe("I am back; nothing was lost.");
+    }
+
+    // With no reply waiting, a takedown goes at once, as before.
+    cards.hostCards.addFirstmateFailureCard("<p>The turn failed again.</p>");
+    cards.hostCards.withdrawHostCard(FIRSTMATE_FAILURE_CARD_ID, "recovered");
+    expect(cards.has(FIRSTMATE_FAILURE_CARD_ID)).toBe(false);
+    cards.dispose();
+  });
+
+  it("keeps a held down card's wait through the host's revision, and waits for the answer to its newest reply", () => {
+    // Intent: INF-6994's approved plan, piece 2: a card shown while the first
+    // mate is down "stays up until the first mate answers in its thread",
+    // also when the host revises it (a recheck's new time, a repeated failure).
+    const { cardStore, make } = setup();
+    const cards = make();
+    const pause = {
+      pause: "refused" as const,
+      body: "Claude is not answering your first mate right now.",
+      accountId: "claude",
+      providerName: "Claude",
+    };
+    cards.hostCards.addFirstmatePauseCard(pause);
+    cards.hostCards.addFirstmateFailureCard("<p>The turn failed.</p>");
+    const first = cards.addMessage("card-fm-refused", "captain", "what now?").id;
+    cards.addMessage(FIRSTMATE_FAILURE_CARD_ID, "captain", "try later");
+
+    cards.hostCards.addFirstmatePauseCard({ ...pause, body: "Claude still is not answering." });
+    cards.hostCards.addFirstmateFailureCard("<p>The turn failed again.</p>");
+    expect(cards.get("card-fm-refused")?.body).toContain("Claude still is not answering.");
+    expect(cards.get(FIRSTMATE_FAILURE_CARD_ID)?.body).toBe("<p>The turn failed again.</p>");
+    expect(cardStore.awaitingAuthor("card-fm-refused")).toBe(true);
+    expect(cardStore.awaitingAuthor(FIRSTMATE_FAILURE_CARD_ID)).toBe(true);
+    cards.hostCards.withdrawFirstmatePauseCards("serves again");
+    cards.hostCards.withdrawHostCard(FIRSTMATE_FAILURE_CARD_ID, "recovered");
+    expect(cards.has("card-fm-refused")).toBe(true);
+    expect(cards.has(FIRSTMATE_FAILURE_CARD_ID)).toBe(true);
+
+    // Two kept replies: the answer to the first leaves the card up for the second.
+    const second = cards.addMessage("card-fm-refused", "captain", "and the backup?").id;
+    cards.replyAs(
+      { actor: "firstmate" },
+      { cardId: "card-fm-refused", text: "Nothing was lost.", answersMessage: first },
+    );
+    expect(cards.has("card-fm-refused")).toBe(true);
+    cards.replyAs(
+      { actor: "firstmate" },
+      { cardId: "card-fm-refused", text: "The backup ran.", answersMessage: second },
+    );
+    expect(cards.has("card-fm-refused")).toBe(false);
+    cards.dispose();
   });
 
   it("files the row a restored task-less host decision lacks, and none for a note", () => {

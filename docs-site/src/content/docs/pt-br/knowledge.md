@@ -1,5 +1,5 @@
 ---
-source: 43a70acb2cfae9b1
+source: 0fee6cc7d6812497
 title: Conhecimento
 description: As diretrizes permanentes que seu imediato guarda, o que você conta a ele sobre você e as fontes que você pede para sua tripulação salvar, e como lê-las, mudá-las ou apagá-las.
 ---
@@ -36,6 +36,10 @@ Seu imediato pede a um tripulante que a escreva nos documentos do próprio proje
 Uma diretriz com as suas próprias palavras é marcada como **Instrução**, e sua tripulação a segue como uma instrução sua.
 Uma guardada a partir de qualquer outra origem é marcada como **Conselho**, que sua tripulação leva em conta.
 Nenhuma diretriz permite mais do que as próprias palavras dizem.
+Uma diretriz permite algo, como um passo que não precisa perguntar, só enquanto as palavras atuais dela foram ouvidas de você: no que você disse ao seu imediato, em um cartão ou na aba **Tripulante** de uma tarefa.
+Uma que seu imediato guardou ou reescreveu sem as suas palavras orienta sua tripulação, mas sozinha não permite nada.
+Seu imediato também pode deixar uma tarefa seguir sem perguntar a você, até onde alcança uma diretriz que você disse para o projeto dela; assim que você muda ou desativa essa diretriz, a tarefa volta a perguntar a você.
+Depois de atualizar de uma versão que não anotava isso, seu imediato pergunta uma única vez, em um cartão, quais das suas diretrizes foram ditas por você, e as que você marcar contam como ouvidas.
 
 ## Ver, mudar ou desativar uma diretriz {#see-change-or-retire-a-direction}
 
@@ -110,6 +114,7 @@ O Conhecimento se abre no próprio cartão, com quatro abas:
 **Buscar** procura na aba em que você está.
 Escolha qualquer item para lê-lo ao lado da lista, em **Visão geral**, **Evidências**, **Histórico** e **Usado em**.
 Uma diretriz mostra **Visão geral** e **Histórico**, que guarda cada versão anterior das palavras dela.
+Em **Onde você disse**, uma diretriz diz se as palavras atuais dela foram ouvidas de você e onde, e **Histórico** diz o mesmo de cada versão anterior.
 
 **Perguntar sobre isto**, embaixo de cada seção, começa sua próxima mensagem ao seu imediato com uma pergunta sobre o que você está lendo.
 Nada é enviado até você enviar.

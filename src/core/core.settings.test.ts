@@ -7,6 +7,7 @@ import { feedLineFrom } from "@shared/feed";
 import { englishOf, said } from "@shared/i18n/said";
 import { type KeymapSnapshot, keymapSnapshot } from "@shared/keymap";
 import { PANEL_SETTING_NAMES } from "@shared/panelSettingNames";
+import { signInPlace } from "@shared/signIns";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { fakeHost, quotaFixture } from "../../tests/helpers/bootedCore";
 import { scratchDir } from "../../tests/helpers/scratchDirs";
@@ -621,6 +622,26 @@ describe("the core, driven with no Electron in the process", () => {
         history: [{ evidence: "The captain chose Save the direction on the crewmate's card." }],
       },
     });
+    // INF-6987's approved plan, piece P: a change citing no words of the
+    // captain's saves unheard, and the captain's own change in the window is
+    // heard from the window, whatever mark the request claims.
+    const unheard = await core.dispatch("inf:knowledge:direction", [{ id: "fix-merge" }]);
+    expect(unheard.state === "ready" && unheard.direction.heard).toBeUndefined();
+    await core.dispatch("inf:knowledge:direction:set", [
+      {
+        op: "add",
+        id: "window-rule",
+        text: "Ask before each release.",
+        reason: "Typed in Knowledge.",
+        heard: { from: "card", card: "card-claimed", title: "Claimed" },
+      },
+    ]);
+    expect(await core.dispatch("inf:knowledge:direction", [{ id: "window-rule" }])).toMatchObject({
+      direction: { heard: { from: "window" }, history: [{ heard: { from: "window" } }] },
+    });
+    await core.dispatch("inf:knowledge:direction:set", [
+      { op: "retire", id: "d:window-rule", expectedRevision: 1, reason: "Done with it." },
+    ]);
     const listed = JSON.parse((await state.run({ area: "general" })).text).find(
       (line: { action: string }) => line.action === "direction",
     );
@@ -906,6 +927,7 @@ describe("the core, driven with no Electron in the process", () => {
         name: "Morning review",
         spec: { kind: "daily", hour: 8, minute: 30, timeZone: "America/Los_Angeles" },
         prompt: "Review what waits on me.",
+        enable: true,
       },
     ]);
     const savedKeys = await core.dispatch("inf:settings:keys:get", []);
@@ -924,6 +946,23 @@ describe("the core, driven with no Electron in the process", () => {
       expect((await read("automation.history", { id: rule.id })).value).toEqual(
         await core.dispatch("inf:automation:history", [rule.id]),
       );
+      // INF-6925 finding 1: asked whether a rule had run, the first mate
+      // said none had, because its list carried no last run. It now reads
+      // the run Settings shows, from the same record.
+      const due = await core.dispatch("inf:automation:list", []);
+      const dueAt = due.rules.find((entry) => entry.id === rule.id)?.nextFire;
+      if (typeof dueAt !== "number") throw new Error("The rule has no next run");
+      core.services.scheduler.tick(dueAt);
+      const [ran] = await core.dispatch("inf:automation:history", [rule.id]);
+      expect(ran?.firedAt).toBe(dueAt);
+      const automationLines = JSON.parse((await state.run({ area: "automation" })).text);
+      const editLine = automationLines.find(
+        (line: { action: string }) => line.action === "automation-edit",
+      );
+      expect(
+        editLine.current.rules.find((entry: { id: string }) => entry.id === rule.id),
+      ).toMatchObject({ lastFired: dueAt });
+      expect(editLine.line).toContain("app_state read automation.history");
       const kept = (await read("automation.kept")).value;
       expect(kept).toEqual(await core.dispatch("inf:automation:kept", []));
       expect(kept.jobs.map((job: { label: string }) => job.label)).toContain("Daily notes backup");
@@ -1247,7 +1286,7 @@ describe("the core, driven with no Electron in the process", () => {
     const placeOf = vi
       .spyOn(computer, "placeOf")
       .mockImplementation((id) =>
-        id === "mini" ? { label: "Mac mini", who: "Mac mini", where: "on Mac mini" } : undefined,
+        id === "mini" ? signInPlace({ name: "Mac mini", onThisMac: false }) : undefined,
       );
     const setAccount = vi.spyOn(computer, "setAccount").mockImplementation(async (_id, order) => {
       if (order.kind === "set-enabled")

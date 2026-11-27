@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "batched-merge-waits-on-open-questions",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A batched change waits for your answer before it goes in line",
+      "body": "On a project that merges your approved changes in batches, a change the app approves because its task merges on its own, or one you approved by telling your first mate to merge it, now waits while its crewmate's question to you is open, while the crewmate waits on you, or while the task is paused for you, a set time or your plan's allowance. Before, it went in line for the next batch anyway. Your own click on Merge in the next batch is not held by them.",
+      "noPicture": "This changes when a change joins its batch, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

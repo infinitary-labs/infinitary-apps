@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "annotate-option-words",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Annotate words in a card's choices",
+      "body": "Selecting words in one of a question's choices on a card now offers Annotate, as it does for the rest of the card. Dragging across the words leaves the choice as it was, while a click on them, a double-click included, still picks it.",
+      "picture": {
+        "dark": "annotate-option-words-dark.webp",
+        "light": "annotate-option-words-light.webp",
+        "alt": "A card's question with the words check that failed selected in its one choice and an Annotate button under them, the choice's box still empty"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

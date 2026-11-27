@@ -510,6 +510,7 @@ The dispatched release uses the checked source, not main's newer head, waits for
 A source the swept batch checked with every journey runs no part: the batch already ran them on its files (the captain on INF-2508: "Keep every journey in the batch, and let an alpha reuse them").
 Main runs no phone check ("An alpha does not wait on the phone check", below).
 A failed, cancelled or incomplete main run cuts nothing; main's waiting-version coalescing and fix-forward process stay unchanged.
+A push that merged an outside contributor's pull request cuts no alpha of its own: its main run leaves it to the next batch and ends cancelled, and the next batch's alpha ships it (`docs/testing.md`, "Main's desktop release check").
 
 1. **Validate the completed run.**
    The resolver reads the completed successful trusted main run, started by a push or, before this project merged in batches of the person's own, by its team queue's after-merge signal, and every latest per-job execution from GitHub.

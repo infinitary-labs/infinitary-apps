@@ -41,7 +41,7 @@ The held input keeps full strength and its usual hint, so a launch that is ready
 A first read that fails still settles it, and the input opens as it did before any read rather than waiting for a read that may not come.
 An answer that would open the input applies only after the window's fence (`docs/architecture.md` section 17), so every push the core sent before answering, the welcome's card among them, reaches the window before the input opens.
 A newer read wins over an older one still waiting at the fence.
-An account connected while the gate is up - one that cannot answer yet - shows in place of its chip, with a hollow dot and why when the app knows ("install Claude Code first" when the Mac has no Claude Code, "not signed in" for a login not signed in yet), and the caption restates the one remaining need: "Your first mate still needs a subscription that answers - Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter with an API key, or Amazon Bedrock with your AWS sign-in."
+An account connected while the gate is up - one that cannot answer yet - shows in place of its chip, with a hollow dot and why when the app knows ("install Claude Code first" when the Mac has no Claude Code, "not signed in" for a login not signed in yet), and the caption restates the one remaining need: "Your first mate still needs a subscription that answers - Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter with an API key, or Amazon Bedrock with your AWS sign-in."
 
 When the gate is up only because the custom connection the first mate was chosen on needs one fresh check, the caption asks for that check instead of a subscription.
 That happens after an upgrade whose check profile is new, which makes every saved check an earlier version's (`docs/custom-api.md`, "Protocol and storage profile").
@@ -56,7 +56,7 @@ A person with only Claude on this Mac completes the first launch on it: the Clau
 `tests/e2e/first-launch.spec.ts` runs it against the mock provider through the SDK's own client, as a user the Keychain holds no Claude login for, so the sign-in never reaches the person's own (`tests/e2e/claudeSeat.ts`).
 
 The gate is **derived, never flagged**: `FirstRunService` (`src/core/ firstRun.ts`) reads it as "no routable model can answer the first mate" - its provider's role and an account the seat can stand on (`Flagship.servesFirstmate`), the exact pre-flight `resolveModel` (`firstmateModelPick.ts`) performs before a session can be built.
-It is true on a fresh install, false the moment an account that can serve the first mate signs in - Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter with an API key, or Amazon Bedrock with your AWS sign-in (or a custom provider in the app's `models.json` exists, which is how dev and every other e2e run, or the dev-only local seat of `docs/local-orchestrator.md` is set) - and true again if the last such account is ever removed or cannot run (a Claude login with no Claude Code, which the stage names).
+It is true on a fresh install, false the moment an account that can serve the first mate signs in - Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter with an API key, or Amazon Bedrock with your AWS sign-in (or a custom provider in the app's `models.json` exists, which is how dev and every other e2e run, or the dev-only local seat of `docs/local-orchestrator.md` is set) - and true again if the last such account is ever removed or cannot run (a Claude login with no Claude Code, which the stage names).
 A provider outside the catalog counts only when the app's `models.json` defines it or the app's auth file saves its key (`PiAuthService.customProviderModels`): Pi also serves a built-in provider whose key it finds in the process environment, such as `OPENAI_API_KEY`, and a Windows app keeps its whole environment (`hostEnv.ts`), so such a key, which outlives an uninstall and a data wipe, never closes the gate on its own.
 A seat that is only paused - its account refused, signed out or out of allowance by a typed cut-off the vault holds (`Flagship.standsOnCutOff`) - keeps the gate down: the pause card speaks for it, the input stays open, and the captain's words wait on the inbox (`docs/architecture.md` §16.8).
 The renderer reads it over `inf:app:first-run` (a core channel on the frozen `app` namespace; `window.infinitary.app.firstRun`), at boot, on every quota push (one follows each account change), on every model change, and after the gate's own sign-in or fresh check; `FirstRunGate` (`src/renderer/src/app/FirstRunGate.tsx`) draws it and dissolves over `--dur-slow` when it closes.
@@ -153,7 +153,7 @@ A press sends nothing and leaves the welcome up, and while the box is held - a r
 A starter is a `data-inf-draft` button, the frame bridge's own message for a body that starts the captain's message, which the window takes only from the card on screen whose frame holds its focus, as a link opens only then (`docs/card-authoring.md` "Style").
 A press of a starter, Next or Back is not the first turn.
 
-The note has an ordinary close, normal priority, no footer buttons, no provider personalization, and no reply row: the captain asked for none on this card, since the message box under it is where to type (`docs/card-threads.md` "A card with no reply row").
+The note has an ordinary close, normal priority, no footer buttons, no provider personalization, and no reply row: the captain asked for none on this card, since the message box under it is where to type (`docs/card-threads.md` "Who answers a card").
 It is a regular card, the width its picture was drawn for, which the host sets when it presents the note.
 It teaches default positions, never opens panels or overrides the captain's choices.
 Sending a message does not close it; if that message starts the first crewmate, the welcome steps aside for the first crewmate's note (“The first crewmate's note” below).
@@ -246,7 +246,8 @@ Both are the app's own stage part (`docs/card-authoring.md`, "The app's own stag
 Every run of words is a saved fact (`saidMark`) and the title's fact rides `cardWordsMark` (docs/i18n.md, "Saved facts"), so the window and the phone word the note in their own language when they draw it.
 Its record keeps the note's sentences in English as its answer, without the panels.
 
-It is a first-mate note like the welcome: committed with its completed answer through `CardService.addRecordedFirstmateNote`, no reply row, the regular width, and one button, Got it, on Command-1.
+It is a first-mate note like the welcome: committed with its completed answer through `CardService.addRecordedFirstmateNote`, the regular width, and one button, Got it, on Command-1.
+Unlike the welcome it takes a reply, which the first mate answers (docs/card-threads.md, "Who answers a card").
 It promises no system notification, and follows the standing notification rule like any note.
 
 - **When.**
@@ -312,7 +313,7 @@ The captain's calls of 2026-10-06 (FI3-1124, on a reviewed plan) and 2026-10-12:
 
 - The auth card ("A provider needs sign in") opens the Intelligence tab (effect target `subscriptions`), not General one click short of it.
   Its body names the provider the first mate could not reach and says to sign in again, or names a custom connection and says to press Edit and then Save in Settings → Intelligence to check it again (`FirstmateSeat.signInCardBody`).
-  With no provider to name, it lists the ones that can serve the first mate: Codex, Grok, Claude, Kimi Code or Copilot, OpenRouter with an API key, or Amazon Bedrock with your AWS sign-in.
+  With no provider to name, it lists the ones that can serve the first mate: Codex, Grok, Claude, Kimi Code, Copilot or OpenCode Go, OpenRouter with an API key, or Amazon Bedrock with your AWS sign-in.
   It never quotes the failure: Pi's own text names its terminal sign-in and paths into the app's files, so the raw text stays on the turn's records.
 - A failed session create (no model, a broken store) ends the ask the turn opened, as a failed question task, instead of stranding it until the next boot files it.
 - The Intelligence tab's "as of · Refresh" header meta renders only once a quota snapshot has providers; an empty tab says nothing about when.

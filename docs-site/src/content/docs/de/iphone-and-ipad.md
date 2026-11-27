@@ -1,5 +1,5 @@
 ---
-source: a8120adef7569dc8
+source: 4689a21f9d4af463
 title: iPhone und iPad
 description: Fordere eine private TestFlight-Einladung für Infinitary auf iPhone und iPad an und verbinde dich dann mit deinem Computer, um Karten zu lesen und Nachrichten zu senden.
 ---
@@ -34,11 +34,11 @@ Verbinde dich nur mit deinem eigenen Computer.
 ## Mehr als ein Computer {#more-than-one-computer}
 
 Dein Telefon kann mehr als einen Computer behalten, etwa einen zu Hause und einen bei der Arbeit, und zeigt jeweils einen.
-Um einen weiteren hinzuzufügen, tipp rechts in der oberen Leiste des Telefons auf die Computer-Taste und wähl **Weiteren Computer hinzufügen**, dann scann seinen Code, füg seinen Link ein oder verbinde dich über seine Adresse.
+Um einen weiteren hinzuzufügen, öffne die Einstellungen des Telefons, tipp auf **Dein Computer** und wähl **Weiteren Computer hinzufügen**, dann scann seinen Code, füg seinen Link ein oder verbinde dich über seine Adresse.
 Der Computer, den du gerade angezeigt hast, bleibt behalten.
 
-Wenn du mehr als einen behältst, nennt die Computer-Taste den angezeigten Computer.
-Ihr Blatt listet deine anderen Computer auf und markiert jeden, der von deinem jetzigen Ort aus antwortet, etwa wenn dein Telefon im Netzwerk oder im privaten Netzwerk dieses Computers ist.
+Wenn du mehr als einen behältst, nennt die Computer-Taste rechts in der oberen Leiste des Telefons den angezeigten Computer.
+**Dein Computer**, die erste Zeile in den Einstellungen des Telefons, nennt ihn ebenfalls, listet deine anderen Computer auf und markiert jeden, der von deinem jetzigen Ort aus antwortet, etwa wenn dein Telefon im Netzwerk oder im privaten Netzwerk dieses Computers ist.
 Tipp auf einen oder drück mit einer Tastatur Return darauf, um ihn anzuzeigen.
 Das Telefon wechselt nie von selbst: Es bleibt bei deiner Wahl, bis du einen anderen wählst.
 
@@ -53,6 +53,13 @@ Die obere Leiste hat **Übersicht**, **Aufgaben** und **Aktivität**.
 - **Aktivität** zeigt, was passiert ist, das Neueste unten.
 
 Wenn deine Panels eingeschaltet sind, zeigt ein vierter Tab, **Panels**, sie untereinander.
+
+## Die eigene Darstellung deines Telefons {#your-phones-own-theme}
+
+Einstellungen → Erscheinungsbild → **Darstellung** gilt nur für dein iPhone oder iPad.
+Wähle **Gerät**, **Dunkel**, **Hell** oder eines der dreizehn Designs deines Computers unter den Namen ihrer Macher, etwa **Dracula** oder **Catppuccin Latte**.
+Eine Wahl färbt sofort die ganze App um, Karten eingeschlossen, und bleibt auch, nachdem Infinitary geschlossen wurde.
+Dein Computer und deine anderen Geräte behalten ihr eigenes Design.
 
 ## Eine Karte auf einem aufgeklappten faltbaren iPhone lesen {#read-a-card-on-an-open-foldable-iphone}
 
@@ -86,12 +93,13 @@ Das Telefon braucht deinen Computer wach und mit geöffnetem Infinitary.
 Wenn es ihn nicht erreicht, sagt es: „Dein Computer ist außer Reichweite. Prüfe, ob Infinitary geöffnet ist und beide Geräte im selben Netzwerk sind.“
 
 Mit eingeschalteten Mitteilungen zeigt dein Telefon für jede neue Karte eine Mitteilung, auch wenn Infinitary dort geschlossen ist.
+Während du an einem Computer bist, der deinen ersten Offizier zeigt, bleibt dein Telefon still; die Karten, die inzwischen kamen, erreichen es, sobald du gehst, nach fünf Minuten ohne Tastatur oder Maus oder sobald sich der Bildschirm sperrt, und eine Karte, die du dort schon gesehen hast, nie.
 Wenn du mehr als einen Computer behältst, sendet jeder seine eigenen, und die Mitteilung nennt den Computer, von dem sie kommt; tippst du darauf, zeigt das Telefon diesen Computer und öffnet die Karte.
 Jeder Computer sendet sie weiter, während du einen anderen anzeigst: Dein Telefon hinterlässt ihm über das Relay von Infinitary eine versiegelte Nachricht, sobald seine Mitteilungsberechtigung erneuert wird, und nur dieser Computer kann sie lesen.
 
 ## Verlassen oder entfernen {#leave-or-remove}
 
-Um deinen Computer nicht mehr anzuzeigen, tipp rechts in der oberen Leiste des Telefons auf die Computer-Taste und wähl **Verlassen** mit dem Namen deines Computers.
+Um deinen Computer nicht mehr anzuzeigen, öffne die Einstellungen des Telefons, tipp auf **Dein Computer** und wähl **Verlassen** mit dem Namen deines Computers.
 Das Telefon vergisst diesen Computer und seine Mitteilungen und hinterlässt ihm eine versiegelte Nachricht, damit er innerhalb eines Tages aufhört, sie zu senden, auch wenn er außer Reichweite ist.
 Wenn er außer Reichweite ist, macht **Vergessen** dasselbe nur auf dem Telefon.
 Deine anderen behaltenen Computer bleiben: Der zuletzt angezeigte erscheint als Nächstes, und wenn keiner übrig ist, begrüßt dich das Telefon wie beim ersten Mal.

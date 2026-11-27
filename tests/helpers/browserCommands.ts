@@ -1,5 +1,6 @@
 import { availableParallelism, loadavg } from "node:os";
 import { basename, join } from "node:path";
+import type { Frame, Page } from "@playwright/test";
 import type { BrowserCommand, TestProject } from "vitest/node";
 import type { HomeRead, HomeSeed, holdLine, readHome } from "./browserFreshHome";
 import type { LoadReading, ReducedMotion } from "./browserProvided";
@@ -22,11 +23,8 @@ const emulateReducedMotion: BrowserCommand<[ReducedMotion]> = async (context, re
 };
 
 /**
- * Runs a function, given as its source, in a frame of the test's page - the
- * one named `frame`, or the one whose element carries `frame.title`, as a
- * card body's frame carries its card's - and answers what it returns. A card
- * body draws in a sandboxed frame of its own origin, which the page that
- * holds it cannot script; the browser can, as the journeys' frame locators did.
+ * Finds a frame of the test's page: the one named `frame`, or the one whose
+ * element carries `frame.title`, as a card body's frame carries its card's.
  *
  * The test asks once its page shows the frame drawn, and that word reaches
  * this process over the runner's own connection, while the browser's word
@@ -36,9 +34,7 @@ const emulateReducedMotion: BrowserCommand<[ReducedMotion]> = async (context, re
  * answered only after every word the browser sent before it, so the list is
  * read once one has been answered.
  */
-const evaluateInFrame: BrowserCommand<
-  [frame: string | { title: string }, source: string, argument?: unknown]
-> = async ({ page }, frame, source, argument) => {
+async function frameOf(page: Page, frame: string | { title: string }): Promise<Frame> {
   await page.mainFrame().evaluate("0");
   let found = typeof frame === "string" ? page.frame({ name: frame }) : null;
   if (typeof frame !== "string") {
@@ -55,6 +51,19 @@ const evaluateInFrame: BrowserCommand<
     }
   }
   if (!found) throw new Error(`The page has no frame ${JSON.stringify(frame)}`);
+  return found;
+}
+
+/**
+ * Runs a function, given as its source, in the frame `frameOf` finds and
+ * answers what it returns. A card body draws in a sandboxed frame of its own
+ * origin, which the page that holds it cannot script; the browser can, as the
+ * journeys' frame locators did.
+ */
+const evaluateInFrame: BrowserCommand<
+  [frame: string | { title: string }, source: string, argument?: unknown]
+> = async ({ page }, frame, source, argument) => {
+  const found = await frameOf(page, frame);
   // The function arrives as its source, so the frame evaluates a call of it.
   return found.evaluate(`(${source})(${JSON.stringify(argument ?? null)})`);
 };
@@ -128,6 +137,74 @@ const holdTouchInFrame: BrowserCommand<[frame: string, selector: string, holdMs:
   } finally {
     await session.detach();
   }
+};
+
+/**
+ * Where the first and last letters of `words` inside the element `selector`
+ * finds, in the frame whose element carries `title`, sit on the test's page.
+ * The runner draws the test's page scaled to fit, so a point read in the frame
+ * is carried to the page through the element's drawn box.
+ */
+async function wordsOnPage(page: Page, title: string, selector: string, words: string) {
+  const target = (await frameOf(page, { title })).locator(selector).first();
+  await target.scrollIntoViewIfNeeded();
+  const inner = await target.evaluate((element, words) => {
+    const walk = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    for (let node = walk.nextNode(); node; node = walk.nextNode()) {
+      const at = (node.textContent ?? "").indexOf(words);
+      if (at < 0) continue;
+      const letter = (offset: number) => {
+        const range = document.createRange();
+        range.setStart(node, offset);
+        range.setEnd(node, offset + 1);
+        return range.getBoundingClientRect();
+      };
+      const first = letter(at);
+      const last = letter(at + words.length - 1);
+      const box = element.getBoundingClientRect();
+      return {
+        start: { x: first.left + 1 - box.x, y: first.top + first.height / 2 - box.y },
+        end: { x: last.right - 1 - box.x, y: last.top + last.height / 2 - box.y },
+        width: box.width,
+        height: box.height,
+      };
+    }
+    return null;
+  }, words);
+  if (!inner) throw new Error(`${selector} in ${title} holds no ${JSON.stringify(words)}`);
+  const box = await target.boundingBox();
+  if (!box) throw new Error(`${selector} in ${title} is not drawn`);
+  const onPage = ({ x, y }: { x: number; y: number }) => ({
+    x: box.x + x * (box.width / inner.width),
+    y: box.y + y * (box.height / inner.height),
+  });
+  return { start: onPage(inner.start), end: onPage(inner.end) };
+}
+
+/**
+ * The browser's own mouse pressed on the first letter of `words` in a frame
+ * (`wordsOnPage`), dragged to their last letter and released, as a person
+ * selects words.
+ */
+const dragAcrossWordsInFrame: BrowserCommand<
+  [title: string, selector: string, words: string]
+> = async ({ page }, title, selector, words) => {
+  const { start, end } = await wordsOnPage(page, title, selector, words);
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.move(end.x, end.y, { steps: 8 });
+  await page.mouse.up();
+};
+
+/** The browser's own mouse clicked once on the first letter of `words` in a frame (`wordsOnPage`). */
+const clickWordsInFrame: BrowserCommand<[title: string, selector: string, words: string]> = async (
+  { page },
+  title,
+  selector,
+  words,
+) => {
+  const { start } = await wordsOnPage(page, title, selector, words);
+  await page.mouse.click(start.x, start.y);
 };
 
 /**
@@ -233,6 +310,8 @@ export const browserCommands = {
   emulateReducedMotion,
   evaluateInFrame,
   holdTouchInFrame,
+  dragAcrossWordsInFrame,
+  clickWordsInFrame,
   clearCookies,
   collectGarbage,
   seededHome,

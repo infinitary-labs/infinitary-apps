@@ -821,7 +821,7 @@ The owner's verdict: git is bundled with the app, the GitHub Desktop model, beca
 
 `check_change` reads the newest change through the forge and returns a `facts` JSON object: the change's id and base, the version, whether it moved since the recorded reading, mergeability as the host reports it, and each check's name, state, run, workflow and event where available.
 It takes the change's id (`change`) and refuses another task's; a task reads only its own change (INF-1868 piece 2, INF-1873).
-A pull request's checks are the runs the host started for it (INF-1891, the captain: "for merge we only care about the PR checks"): on GitHub a check whose run carries an event stays only when that event is `pull_request` or `pull_request_target`, so a run a person or a tool started on the branch by hand, such as a dispatched heavy check, is read through `read_workflow` and never holds or passes the merge (`ownChecksOf` in `src/core/forge/forge.ts`); a check with no event, such as a commit status, stays as read, and a branch's own checks, read with no number, keep every run at their version.
+A pull request's checks are the runs the host started for it (INF-1891, the captain: "for merge we only care about the PR checks"): on GitHub a numbered request's reading keeps only the Actions runs whose event is `pull_request` or `pull_request_target`, so a run a person or a tool started on the branch by hand, such as a dispatched heavy check, is read through `read_workflow` and never holds or passes the merge (`GitHubChecks.scopeWorkflows` in `src/core/forge/providers/github/checkReads.ts`); a commit status or a check another app posts stays as read, and a branch's own checks, read with no number, keep every run at their version.
 For a numbered GitHub request, the provider scopes Actions runs by the request’s source (including contributor forks) before associating their jobs or applying supersession.
 When GitHub links several requests to a run, its source repository and branch must identify exactly one of them.
 Even a single link does not count when the run names a different source repository or branch.
@@ -1184,7 +1184,7 @@ A story that cannot be written into the description or a comment, such as one wh
 The host's own reading decides what happens next, on each pass of the tick and after each change of the line (`Batches.follow`).
 A project's record has one writer at a time: a pass keeps the record it read through its work where the project lives, so an approval, a withdrawal and a declared fix each take their turn behind the pass at work, and none is saved over (`Batches.write`).
 Checks all passed or skipped, with the host reading the pull request as mergeable, merge it; a reading where no check ran, none at all or only skipped ones, counts as passed only where every member's version was declared to run none.
-On GitHub the batch's checks are the runs its pull request and the push of its own branch started, so a project can check a batch by either, telling it by the branch's `infinitary-batch/` prefix (`ownChecksOf`).
+On GitHub the batch's checks are the runs its pull request and the push of its own branch started, so a project can check a batch by either, telling it by the branch's `infinitary-batch/` prefix (`GitHubChecks.scopeWorkflows`).
 A pull request the host reads as behind or conflicting is combined again onto the default branch as it is now.
 The merge keeps one commit per change (`mergeWayFor`, `src/shared/batches.ts`).
 A batch of one merges as that change's pull request does, by squash, where the project allows it.

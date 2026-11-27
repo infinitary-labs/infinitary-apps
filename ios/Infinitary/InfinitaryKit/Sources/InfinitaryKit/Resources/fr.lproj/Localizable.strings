@@ -4451,7 +4451,6 @@
 "taskBrowserStoppedIdle" = "arrêté après 30 min sans usage";
 "taskBrowserStoppedQuit" = "arrêté quand Infinitary a quitté";
 "taskBrowserStoppedTaskClosed" = "arrêté à la clôture de la tâche";
-"taskChecksUnattributed" = "%1$@ n’a pas indiqué à quelle pull request certains workflows étaient associés.";
 "taskGroupBacklog" = "réserve";
 "taskGroupLanded" = "terminées · 7 j";
 "taskGroupQueued" = "en attente";

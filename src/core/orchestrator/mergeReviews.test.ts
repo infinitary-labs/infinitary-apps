@@ -660,7 +660,6 @@ describe("reviewed contributor changes", () => {
       const gate = await at.service.reviews.reviewGate(at.task.id, review.id);
       const click = await at.service.reviews.mergeReview(at.task.id, review.id);
       const mergeCalls = at.forge.calls.filter((call) => call.startsWith("putIn"));
-      console.log("Fork check gate", { configured, previousHead, gate, click, mergeCalls });
       expect(gate).toContain(`Card refused: ${reason}`);
       expect(click).toMatchObject({
         ok: false,

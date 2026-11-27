@@ -110500,34 +110500,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `stopped when the task closed`;
   }
-  function taskChecksUnattributed(input2) {
-    const host = input2.host;
-    switch (currentLanguage()) {
-      case "ar":
-        return `لم يحدّد ${host} طلب السحب المرتبط ببعض عمليات تشغيل سير العمل.`;
-      case "de":
-        return `${host} hat bei einigen Workflow-Ausführungen den Pull Request nicht angegeben.`;
-      case "es":
-        return `${host} no identificó la solicitud de cambios de algunas ejecuciones de flujos de trabajo.`;
-      case "fr":
-        return `${host} n’a pas indiqué à quelle pull request certains workflows étaient associés.`;
-      case "ja":
-        return `${host} は一部のワークフロー実行に対応するプルリクエストを特定できませんでした。`;
-      case "ko":
-        return `${host}에서 일부 워크플로 실행이 속한 풀 리퀘스트를 확인할 수 없습니다.`;
-      case "pt-BR":
-        return `O ${host} não indicou a solicitação de pull de algumas execuções de fluxo de trabalho.`;
-      case "zh-Hans":
-        return `${host} 未指明部分工作流运行所属的拉取请求。`;
-      case "zh-Hant":
-        return `${host} 未指出部分工作流程執行所屬的提取要求。`;
-      case "en-XA":
-        return `[${host} ðîð ñöţ îðéñţîƒý ţĥé þûļļ ŕéǫûéšţ ƒöŕ šöɱé ŵöŕķƒļöŵ ŕûñš. ~~~~~~~~~~~~~~~~~~~~]`;
-      case "ar-XB":
-        return `${host}‮ did not identify the pull request for some workflow runs.‬`;
-    }
-    return `${host} did not identify the pull request for some workflow runs.`;
-  }
   function taskGroupBacklog() {
     switch (currentLanguage()) {
       case "ar":
@@ -121225,7 +121197,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     taskBrowserStoppedIdle,
     taskBrowserStoppedQuit,
     taskBrowserStoppedTaskClosed,
-    taskChecksUnattributed,
     taskGroupBacklog,
     taskGroupLanded,
     taskGroupQueued,
@@ -124995,7 +124966,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "taskBrowserStoppedIdle": [],
     "taskBrowserStoppedQuit": [],
     "taskBrowserStoppedTaskClosed": [],
-    "taskChecksUnattributed": ["host"],
     "taskGroupBacklog": [],
     "taskGroupLanded": [],
     "taskGroupQueued": [],

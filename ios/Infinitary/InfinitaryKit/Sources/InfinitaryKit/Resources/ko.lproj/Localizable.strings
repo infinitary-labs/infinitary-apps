@@ -4453,7 +4453,6 @@
 "taskBrowserStoppedIdle" = "30분간 쓰지 않아 중지됨";
 "taskBrowserStoppedQuit" = "Infinitary가 종료될 때 중지됨";
 "taskBrowserStoppedTaskClosed" = "작업이 닫히면서 중지됨";
-"taskChecksUnattributed" = "%1$@에서 일부 워크플로 실행이 속한 풀 리퀘스트를 확인할 수 없습니다.";
 "taskGroupBacklog" = "백로그";
 "taskGroupLanded" = "완료 · 7일";
 "taskGroupQueued" = "대기열";

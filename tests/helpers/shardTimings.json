@@ -100,6 +100,7 @@
   "src/core/helper/sessionHostDeadlines.test.ts": 1.9,
   "src/core/helper/sessionHostJobs.test.ts": 2.4,
   "src/core/helper/sessionHostRestarts.test.ts": 2.1,
+  "src/core/helper/signIns.forges.test.ts": 7.6,
   "src/core/helper/signIns.test.ts": 22.5,
   "src/core/helper/words.test.ts": 0.1,
   "src/core/integrations/panelAsks.test.ts": 0.1,

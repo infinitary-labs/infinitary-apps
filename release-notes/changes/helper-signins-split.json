@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "helper-signins-split",
+      "reason": "Internal: computer sign-in tests are split by owner without changing app behavior."
+    }
+  ]
+}

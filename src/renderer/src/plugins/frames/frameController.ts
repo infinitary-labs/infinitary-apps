@@ -160,6 +160,11 @@ export type FrameMountSpec = {
    */
   taskKeys?: readonly string[];
   /**
+   * A card body's mount: the bridge links the addresses its words write
+   * (INF-7045), where a panel's words stay as written.
+   */
+  addresses?: true;
+  /**
    * The one of those keys a rest elsewhere in the window lights (INF-237),
    * or null: pushed with the keys and again to every new document.
    */
@@ -655,7 +660,13 @@ export class FrameController {
         }
         // The keys the host hears from this document: a picture's, for a
         // mount that opens pictures, and an Escape that leaves it.
-        if (this.spec.onImage || this.spec.onEscape || this.spec.onExpand || this.spec.onSound) {
+        if (
+          this.spec.onImage ||
+          this.spec.onEscape ||
+          this.spec.onExpand ||
+          this.spec.onSound ||
+          this.spec.addresses
+        ) {
           this.port.post({
             fm: V,
             type: "keys",
@@ -663,6 +674,7 @@ export class FrameController {
             escape: this.spec.onEscape !== undefined,
             ...(this.spec.onExpand ? { expand: true as const } : {}),
             ...(this.spec.onSound ? { sound: true as const } : {}),
+            ...(this.spec.addresses ? { addresses: true as const } : {}),
           });
         }
         if (message.document)

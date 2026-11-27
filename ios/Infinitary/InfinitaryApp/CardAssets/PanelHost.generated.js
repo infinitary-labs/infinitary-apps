@@ -127339,6 +127339,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }),
     unavailableSchema
   ]);
+  const URL_IN_TEXT = "https?:\\/\\/[^\\s<>\"'`]+";
+  const URL_TRAILING_PUNCTUATION = ".,;:!?'";
+  const URL_CLOSERS = { ")": "(", "]": "[", "}": "{" };
+  const LOOPBACK_HOSTS = ["localhost", "127.0.0.1", "::1", "[::1]"];
+  const LOCALHOST_SUFFIX = ".localhost";
   const TASK_KEY_IN_TEXT = "(?<![A-Za-z0-9_-])[A-Z0-9]{2,4}-[0-9]{1,9}(?![A-Za-z0-9_-])";
   const TASK_KEY_EXACT = /^[A-Z0-9]{2,4}-[0-9]{1,9}$/;
   const NET_METHODS = ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"];
@@ -129147,6 +129152,60 @@ ${FRAME_TAG_SCRIPT}
   function entryLink(target) {
     return target && target.closest ? target.closest("a[data-inf-entry]") : null;
   }
+  // The address the words start with, its trailing punctuation and any
+  // closing bracket it did not open left out (linkify's trimTrailingUrlPunctuation).
+  function addressIn(raw) {
+    var address = raw;
+    while (address.length > 0) {
+      var last = address.charAt(address.length - 1);
+      var opener = Object.prototype.hasOwnProperty.call(ADDRESS_CLOSERS, last) ? ADDRESS_CLOSERS[last] : null;
+      if (ADDRESS_TRAILING.indexOf(last) < 0 && !(opener && unmatched(address, opener, last))) break;
+      address = address.slice(0, -1);
+    }
+    return address;
+  }
+  function unmatched(value, open, close) {
+    var depth = 0;
+    for (var i = 0; i < value.length; i++) {
+      if (value.charAt(i) === open) depth += 1;
+      else if (value.charAt(i) === close) depth -= 1;
+    }
+    return depth < 0;
+  }
+  // The safe opener's rule (linkify's isSafeCardHref): an address it would refuse stays words.
+  function opens(address) {
+    var url;
+    try { url = new URL(address); } catch (e) { return false; }
+    if (url.protocol === "https:") return true;
+    if (url.protocol !== "http:") return false;
+    var host = url.hostname.toLowerCase();
+    return LOOPBACK_HOSTS.indexOf(host) >= 0 || host.slice(-LOCALHOST_SUFFIX.length) === LOCALHOST_SUFFIX;
+  }
+  // Links the addresses in a text node; answers the text nodes left around them.
+  function linkAddresses(node) {
+    var text = node.nodeValue;
+    var parts = null;
+    var rest = [];
+    var at = 0;
+    var match;
+    ADDRESS_IN_TEXT.lastIndex = 0;
+    while ((match = ADDRESS_IN_TEXT.exec(text))) {
+      var address = addressIn(match[0]);
+      if (!address || !opens(address)) continue;
+      parts = parts || document.createDocumentFragment();
+      if (match.index > at) rest.push(parts.appendChild(document.createTextNode(text.slice(at, match.index))));
+      var link = document.createElement("a");
+      link.setAttribute("href", address);
+      link.setAttribute("data-inf-address", "");
+      link.textContent = address;
+      parts.appendChild(link);
+      at = match.index + address.length;
+    }
+    if (!parts) return [node];
+    if (at < text.length) rest.push(parts.appendChild(document.createTextNode(text.slice(at))));
+    node.parentNode.replaceChild(parts, node);
+    return rest;
+  }
   function linkText(node) {
     var text = node.nodeValue;
     var parts = null;
@@ -129211,17 +129270,23 @@ ${FRAME_TAG_SCRIPT}
     // A mark is not the body changing.
     sizeWatch.takeRecords();
   }
-  function linkKeys() {
-    if ((!keys.known && !entries.known) || !document.body) return;
+  function linkWords() {
+    var named = keys.known || entries.known;
+    if ((!named && !addresses.on) || !document.body) return;
     var found = [];
     var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     for (var node = walker.nextNode(); node; node = walker.nextNode()) {
-      if (node.nodeValue.indexOf("-") < 0 || !node.parentElement) continue;
-      if (node.parentElement.closest(UNLINKED)) continue;
+      var words = node.nodeValue;
+      if (!(named && words.indexOf("-") >= 0) && !(addresses.on && words.indexOf("://") >= 0)) continue;
+      if (!node.parentElement || node.parentElement.closest(UNLINKED)) continue;
       found.push(node);
     }
     var linked = false;
-    found.forEach(function (text) { if (linkText(text)) linked = true; });
+    found.forEach(function (text) {
+      var rest = addresses.on ? linkAddresses(text) : [text];
+      if (rest[0] !== text) linked = true;
+      if (named) rest.forEach(function (part) { if (linkText(part)) linked = true; });
+    });
     if (!linked) return;
     markLit();
     // The same words in the same place: linking is not the body changing.
@@ -129230,7 +129295,7 @@ ${FRAME_TAG_SCRIPT}
     resize();
   }
   var keyWatch = new MutationObserver(function () {
-    if (keys.known || entries.known) linkKeys();
+    if (keys.known || entries.known || addresses.on) linkWords();
     tagPictures();
     if (decorateDemos()) {
       // A demo the body's own script added: its button is part of that change.
@@ -129768,8 +129833,14 @@ ${FRAME_TAG_SCRIPT}
   var form = { on: false, locked: false, preview: false, fill: null, filling: false, applying: false, staged: {}, appliers: {}, waiting: {}, touched: {}, first: new WeakMap(), last: "", fields: new WeakMap(), current: null };
   var KEY_IN_TEXT = new RegExp(${JSON.stringify(`${TASK_KEY_IN_TEXT}|${KNOWLEDGE_ID_IN_TEXT}`)}, "g");
   var UNLINKED = "a, button, summary, input, select, option, textarea, script, style, svg, [role=button], [data-inf-action], [data-inf-draft], [contenteditable]";
+  var ADDRESS_IN_TEXT = new RegExp(${JSON.stringify(URL_IN_TEXT)}, "gi");
+  var ADDRESS_TRAILING = ${JSON.stringify(URL_TRAILING_PUNCTUATION)};
+  var ADDRESS_CLOSERS = ${JSON.stringify(URL_CLOSERS)};
+  var LOOPBACK_HOSTS = ${JSON.stringify(LOOPBACK_HOSTS)};
+  var LOCALHOST_SUFFIX = ${JSON.stringify(LOCALHOST_SUFFIX)};
   var keys = { known: null, rested: null, quiet: null, lit: null };
   var entries = { known: null };
+  var addresses = { on: false };
   var caps = { pictures: false, escape: false, expand: false, sound: false };
   var held = { element: null, start: null, end: null, direction: null };
   var listen = EventTarget.prototype.addEventListener;
@@ -130021,8 +130092,8 @@ ${FRAME_EXPAND_SCRIPT}${FRAME_SOUND_SCRIPT}
         if (typeof key === "string") { known[key] = true; any = true; }
       });
       keys.known = any ? known : null;
-      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", linkKeys, { once: true });
-      else linkKeys();
+      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", linkWords, { once: true });
+      else linkWords();
     } else if (data.type === "lit") {
       keys.lit = typeof data.key === "string" ? data.key : null;
       markLit();
@@ -130036,18 +130107,24 @@ ${FRAME_EXPAND_SCRIPT}${FRAME_SOUND_SCRIPT}
         }
       });
       entries.known = some ? named : null;
-      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", linkKeys, { once: true });
+      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", linkWords, { once: true });
       else {
         refreshEntries();
-        linkKeys();
+        linkWords();
       }
     } else if (data.type === "keys") {
       caps.pictures = data.pictures === true;
       caps.escape = data.escape === true;
       caps.expand = data.expand === true;
       caps.sound = data.sound === true;
-      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", tagPictures, { once: true });
-      else tagPictures();
+      addresses.on = data.addresses === true;
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", tagPictures, { once: true });
+        if (addresses.on) document.addEventListener("DOMContentLoaded", linkWords, { once: true });
+      } else {
+        tagPictures();
+        if (addresses.on) linkWords();
+      }
     } else if (data.type === "expanded") {
       var back = expandable()[data.index];
       var detail;
@@ -130389,7 +130466,7 @@ ${FRAME_KEYBOARD_SCRIPT}
   }, true);
   post({ type: "ready", reuseReads: true });
 })();`;
-  const FRAME_BRIDGE_SHA256 = "sha256-KUm1m7a4lexZfIfVb82KSJJFO2C3IA0WnuBK1IJOavo=";
+  const FRAME_BRIDGE_SHA256 = "sha256-KKV3e3SrjYz/VggofpbBn8DyZPEv6nz2OU6RmolqX8M=";
   const APP_FRAME_SCHEME = "app-frame";
   const FRAME_SANDBOX_TOKENS = ["allow-scripts"];
   const FRAME_SANDBOX = FRAME_SANDBOX_TOKENS.join(" ");
@@ -139715,14 +139792,15 @@ ${FRAME_KEYBOARD_SCRIPT}
           if (this.spec.entryRefs) {
             this.port.post({ fm: V, type: "entries", entries: [...this.spec.entryRefs] });
           }
-          if (this.spec.onImage || this.spec.onEscape || this.spec.onExpand || this.spec.onSound) {
+          if (this.spec.onImage || this.spec.onEscape || this.spec.onExpand || this.spec.onSound || this.spec.addresses) {
             this.port.post({
               fm: V,
               type: "keys",
               pictures: this.spec.onImage !== void 0,
               escape: this.spec.onEscape !== void 0,
               ...this.spec.onExpand ? { expand: true } : {},
-              ...this.spec.onSound ? { sound: true } : {}
+              ...this.spec.onSound ? { sound: true } : {},
+              ...this.spec.addresses ? { addresses: true } : {}
             });
           }
           if (message.document)

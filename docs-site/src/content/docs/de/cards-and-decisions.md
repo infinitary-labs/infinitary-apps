@@ -1,5 +1,5 @@
 ---
-source: 6359195aeec7c814
+source: df632c26677efc84
 title: Karten und Entscheidungen
 description: Wie dein erster Offizier und deine Crew dir Antworten und Entscheidungen als Karten bringen und wie du sie beantwortest.
 ---
@@ -120,6 +120,13 @@ Ein Zähler wie „2 von 7“ sagt, bei welchem Treffer du bist.
 Die Suche geht durch die ganze Karte: ihren Titel, ihren Text, ihre eingeklappten Abschnitte und ihren Verlauf.
 Ein eingeklappter Abschnitt öffnet sich, wenn der Treffer darin liegt.
 Sie funktioniert genauso in einer früheren Karte, in [der ganzen Unterhaltung](/de/the-first-mate/#the-whole-conversation) und auf der Karte einer Aufgabe, außer auf ihrem Tab „Browser“.
+
+## Links in einer Karte {#links-in-a-card}
+
+Eine Webadresse in einer Karte öffnet sich in deinem Standardbrowser, wenn du sie anklickst, antippst oder auf ihr Enter drückst.
+Das gilt auch für eine Adresse, die ein Crewmitglied als einfachen Text geschrieben hat, etwa in einem Schritt, der eine Anmeldeseite nennt, auf deinem Computer und auf deinem iPhone oder iPad.
+Das betrifft Adressen, die mit https:// beginnen, und http://-Adressen auf deinem eigenen Computer.
+Eine lange Adresse bricht innerhalb der Karte um.
 
 ## Karten zum Zusammenführen {#merge-cards}
 

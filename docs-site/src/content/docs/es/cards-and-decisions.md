@@ -1,5 +1,5 @@
 ---
-source: 6359195aeec7c814
+source: df632c26677efc84
 title: Tarjetas y decisiones
 description: Cómo tu primer oficial y tu tripulación te traen respuestas y decisiones como tarjetas, y cómo responderlas.
 ---
@@ -120,6 +120,13 @@ Un contador como «2 de 7» dice en qué coincidencia estás.
 Busca en toda la tarjeta: su título, su cuerpo, sus secciones plegadas y su hilo.
 Una sección plegada se abre cuando la coincidencia está dentro.
 Funciona igual en una tarjeta anterior, en [toda la conversación](/es/the-first-mate/#the-whole-conversation) y en la tarjeta de una tarea, salvo en su pestaña Navegador.
+
+## Enlaces en una tarjeta {#links-in-a-card}
+
+Una dirección web en una tarjeta se abre en tu navegador predeterminado cuando haces clic en ella, la tocas o pulsas Intro sobre ella.
+Eso incluye una dirección que un tripulante escribió como texto normal, como un paso que dice que abras una página de inicio de sesión, en tu computadora y en tu iPhone o iPad.
+Se aplica a las direcciones que empiezan por https:// y a las direcciones http:// de tu propia computadora.
+Una dirección larga se ajusta dentro de la tarjeta.
 
 ## Tarjetas de fusión {#merge-cards}
 

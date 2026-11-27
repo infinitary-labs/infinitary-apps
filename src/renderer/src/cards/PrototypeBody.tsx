@@ -566,6 +566,7 @@ function cardFrameSpec(
         : Promise.reject(new Error("This card is not the one on screen.")),
     onInteraction: interaction,
     onLiveChange: interaction,
+    addresses: true,
     onResize: (reported) => setHeight(cardBodyHeight(reported, props.floor)),
     // A drawing counts at the frame's own width, once the frame is back at
     // it (./drawnAtWidth).

@@ -131983,15 +131983,19 @@ ${FRAME_TAG_SCRIPT}
   // picture of the body a press opens, in reading order (INF-7148), so a
   // story's Before and After, each alone in its cell, are neighbours. A
   // picture inside a control and a demo's poster are never in it: a press
-  // there does something else. Past the most one message carries, the set is
-  // the window around the pressed picture.
+  // there does something else. Nor is the other theme's copy of a picture,
+  // which the frame stylesheet hides (data-inf-theme). Past the most one
+  // message carries, the set is the window around the pressed picture.
   var MAX_PICTURES = ${FRAME_MAX_PICTURES};
   function bodyPictures() {
     var found = document.querySelectorAll("img");
+    var shownTheme = document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark";
     var pictures = [];
     for (var i = 0; i < found.length; i++) {
       var picture = found[i];
       if (picture.closest(PICTURE_CONTROL)) continue;
+      var themed = picture.closest("[data-inf-theme]");
+      if (themed && themed.getAttribute("data-inf-theme") !== shownTheme) continue;
       var demo = demoOf(picture.closest("figure[data-inf-demo]"));
       if (demo && demo.poster === picture) continue;
       pictures.push(picture);
@@ -133102,7 +133106,7 @@ ${FRAME_KEYBOARD_SCRIPT}
   }, true);
   post({ type: "ready", reuseReads: true });
 })();`;
-  const FRAME_BRIDGE_SHA256 = "sha256-glcaqaeiXYk6frMgcPsEwjFL2Ozp5tnvOLaA/DRwvaM=";
+  const FRAME_BRIDGE_SHA256 = "sha256-+mDEnM1Yjg8Z6LQ4+E0QuBXWrN6UkHJN4FsaVIZHCEI=";
   const APP_FRAME_SCHEME = "app-frame";
   const FRAME_SANDBOX_TOKENS = ["allow-scripts"];
   const FRAME_SANDBOX = FRAME_SANDBOX_TOKENS.join(" ");

@@ -360,6 +360,10 @@ test("the lead highlight shows its picture in your theme, opens it whole, and ke
         "src",
         (await picture.getAttribute("src")) ?? "",
       );
+      // INF-7148: the viewer pages a card's pictures, never the other theme's hidden copy, so
+      // the lead's pair opens as one picture with no thumbnails.
+      await expect(viewer.locator("[data-picture-thumbs] button")).toHaveCount(0);
+      await expect(viewer.getByRole("button", { name: "Next picture" })).toHaveCount(0);
       await page.keyboard.press("Escape");
       await expect(viewer).toHaveCount(0);
       await page.screenshot({ path: test.info().outputPath("release-note-picture-dark.png") });

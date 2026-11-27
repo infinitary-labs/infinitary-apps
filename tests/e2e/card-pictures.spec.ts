@@ -41,8 +41,7 @@ import { focusOn, pressWindowKey } from "./windowKeys";
  * test. A crewmate names real files from its working copy in its card bodies
  * - the real card path - and a click on any picture in the body's frame
  * reaches the host over the bridge's `image` message and opens the viewer on
- * every picture of that card, in reading order (INF-7148's approved plan,
- * which re-typed this journey's sets from a picture's group to the card's).
+ * every picture of that card, in reading order (INF-7148's approved plan).
  * Each set is read back off the viewer itself - its count, caption and
  * thumbnails - and the keys, 1:1 with pan, the three ways out, reduced motion
  * and both themes are driven for real.

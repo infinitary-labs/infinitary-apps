@@ -98,16 +98,17 @@ import { READ_VALUE_DECODER } from "./readTransfer";
  * Firstmate 3000's `data-fm-action` and `window.fmAction`) stay for the
  * agent-authored card bodies that already use them. `image` is their
  * sibling (card pictures, phase 3 of the locked plan): a click on ANY
- * `<img>` posts the clicked index and the pictures of its group - the
- * `figure.inf-pictures` it is a direct child of, else the picture alone -
- * each with its src, alt and natural size, so the host can open the picture
- * viewer with no code in the body. A click on a diagram - the outermost
+ * `<img>` posts the clicked index and every picture of the body a press
+ * opens, in reading order (INF-7148) - never one in a control, a demo's
+ * poster or the other theme's hidden copy - each with its src, alt, natural
+ * size and the column or heading that names its place, so the host can open
+ * the picture viewer with no code in the body. A click on a diagram - the outermost
  * inline drawing in a figure, or one drawn the width of what holds it - or
  * Enter or Space on one, posts the same message with one picture: the
  * drawing as it stands, its look written on each element, as an SVG picture
  * the host shows like any other (INF-3107). A click on a group's "+N" tile (the
  * figure's `::after`, laid out by the frame stylesheet beside the last
- * thumbnail or on the line under it) opens the group at the first picture
+ * thumbnail or on the line under it) opens that set at the first picture
  * the strip does not show. A picture inside a control - a link, a button, a
  * summary, a label, a `data-inf-action` element - is that control's, and a
  * body script that already handled the click (`preventDefault`) keeps it.
@@ -860,4 +861,4 @@ ${FRAME_KEYBOARD_SCRIPT}
  * to the script moves it: re-pin it in the same change, or
  * frameBridgeHash.test.ts fails and every frame's CSP blocks the script.
  */
-export const FRAME_BRIDGE_SHA256 = "sha256-glcaqaeiXYk6frMgcPsEwjFL2Ozp5tnvOLaA/DRwvaM=";
+export const FRAME_BRIDGE_SHA256 = "sha256-+mDEnM1Yjg8Z6LQ4+E0QuBXWrN6UkHJN4FsaVIZHCEI=";

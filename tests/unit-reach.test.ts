@@ -320,6 +320,21 @@ describe("local direct unit reach", () => {
     },
   );
 
+  it("keeps the task-move readers selected when eligibility moves to its owner", () => {
+    const readers = [
+      "src/core/orchestrator/taskMoves.computer.test.ts",
+      "src/core/orchestrator/taskMoves.test.ts",
+    ];
+    for (const owner of [
+      "src/core/orchestrator/taskMoves.ts",
+      "src/core/orchestrator/computerMoveEligibility.ts",
+    ]) {
+      expect(directUnitReach([owner], readers, root)).toEqual(readers);
+      expect(selectLinuxReach([owner], root).run).toEqual(expect.arrayContaining(readers));
+    }
+    expect(directUnitReach(["src/shared/voice.ts"], readers, root)).toEqual([]);
+  });
+
   it("does not broaden inventory coverage to unrelated files or the whole shared folder", () => {
     const inventory = "src/shared/actions.test.ts";
     expect(directUnitReach(["src/shared/voice.ts"], [inventory], root)).toEqual([]);

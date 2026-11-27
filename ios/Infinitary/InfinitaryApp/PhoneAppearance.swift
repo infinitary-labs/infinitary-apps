@@ -68,8 +68,8 @@ extension PhoneLook {
 
 /// Sets the style and the color theme of the window it sits in. Sheets, the keyboard, card web views and the crew all
 /// read their appearance from that window, so one setting changes every screen at once. Each window of an iPad's several
-/// windows carries its own copy, so a new window starts in the chosen theme too. SwiftUI's own views also need the theme
-/// as an environment value (`PhoneColorThemeTrait`), which the app's root sets beside this.
+/// windows carries its own copy, so a new window starts in the chosen theme too. SwiftUI's own views read the theme
+/// through the trait's bridged environment value (`PhoneColorThemeTrait`).
 struct PhoneWindowLook: UIViewRepresentable {
     let look: PhoneLook
 

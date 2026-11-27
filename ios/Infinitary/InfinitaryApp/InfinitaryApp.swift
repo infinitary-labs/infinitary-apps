@@ -41,8 +41,6 @@ import SwiftUI
                     else if phase == .background { model.active(false) }
                 }
                 .onOpenURL { model.propose($0.absoluteString) }
-                // Outermost, so the root's tint and text color resolve in the chosen color theme too.
-                .environment(\.phoneColorTheme, appearance.look.colorTheme?.rawValue)
         }
         .commands {
             CommandGroup(after: .textEditing) {

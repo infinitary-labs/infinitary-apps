@@ -99,7 +99,7 @@ Canvas drawings that read colors once, the first mate and the crew ring, read th
 The iPhone and iPad app offers the built-in themes in its own Theme, beside Device, Dark and Light, and each device keeps its own pick (`docs/ios.md`, "Settings").
 `scripts/generate-phone-theme.ts` runs `workOutTheme` on each built-in theme and writes its palette into `PhoneTheme.generated.swift`, with each theme's name and base in InfinitaryKit's `PhoneColorThemes.generated.swift`; its `--check` refuses a stale file.
 Every `PhoneTheme` color resolves from the window's traits: the chosen theme's palette when its base matches the window's style, else Dark's or Light's, as `shownTheme` does.
-The window carries the pick twice, as its interface style (the base) and as a trait of its own (`PhoneColorThemeTrait`), and the app's root sets the same id as a SwiftUI environment value, since a trait alone leaves SwiftUI's own shapes on the old colors when the pick moves between two themes on one base.
+The window carries the pick twice, as its interface style (the base) and as a trait of its own (`PhoneColorThemeTrait`), which is bridged into SwiftUI's environment, so SwiftUI's own views redraw when the pick moves between two themes on one base.
 Words on an accent-filled control use the theme's `onAccent`, at least 4.5:1.
 Cards and panels are still told dark or light, the theme's base, and get `frameThemeRule` at birth and on every change, as on the computer (`cardHost.ts`, `panelHost.ts`).
 The crew's palette cache, the media viewer's page background and the scene's colors follow the pick.

@@ -2,10 +2,9 @@ import InfinitaryKit
 import SwiftUI
 import UIKit
 
-/// The built-in color theme a window draws (docs/themes.md, "On the phone"), carried two ways at once: as a UIKit trait
-/// on the window, which UIKit views, lists, sheets and the keyboard read, and as the bridged SwiftUI environment value,
-/// which makes SwiftUI resolve its colors again. A trait alone leaves SwiftUI's own shapes on the old colors when the
-/// pick moves between two themes on the same base, since nothing SwiftUI tracks changed.
+/// The built-in color theme a window draws (docs/themes.md, "On the phone"): a UIKit trait on the window, which UIKit
+/// views, lists, sheets and the keyboard read, bridged into SwiftUI's environment, so SwiftUI's own views resolve their
+/// colors again when the pick moves between two themes on the same base.
 struct PhoneColorThemeTrait: UITraitDefinition {
     static let defaultValue: String? = nil
     static let affectsColorAppearance = true

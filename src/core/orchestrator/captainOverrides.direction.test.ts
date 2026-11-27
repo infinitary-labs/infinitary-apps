@@ -8,6 +8,8 @@
  * update_task over the real knowledge collection and task record.
  */
 
+import { rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import type { WorkspaceService } from "@core/workspace/workspaceService";
 import { overridePasses } from "@shared/holds";
 import { describe, expect, it, vi } from "vitest";
@@ -19,7 +21,9 @@ import {
   tick,
   toolsOf,
 } from "../../../tests/helpers/firstmateHarness";
+import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { KnowledgeService } from "../knowledge/knowledgeService";
+import { InboxStore } from "../storage/inboxStore";
 import { seedTask } from "../tasks/seedTask";
 import type { TaskService } from "../tasks/taskService";
 import type { RepoRegistry } from "../workspace/repoRegistry";
@@ -31,6 +35,7 @@ type Harness = ReturnType<typeof setup>;
 
 const RULE = "Release checks on Harbor may run and merge without asking me.";
 const DEPLOY = "Deploy checks on Harbor may run without asking me.";
+const DOCS = "Docs checks on Harbor may run without asking me.";
 
 /** The first mate's update_task override, answering its text. */
 async function override(
@@ -136,6 +141,16 @@ describe("an override citing a heard direction", () => {
       expect(answer).toContain(why);
       expect(h.tasks.get("t-release")?.delivery?.override).toBeUndefined();
     }
+    // A task with no project has no project direction to cite.
+    seedTask(h.tasks, { id: "t-loose", title: "Tidy the release notes", status: "idle" });
+    const loose = await override(h, "t-loose", {
+      holds: ["checks"],
+      until: "task",
+      from: "d:lighthouse",
+    });
+    expect(loose).toContain(OVERRIDE_REFUSED);
+    expect(loose).toContain("belongs to no project");
+    expect(h.tasks.get("t-loose")?.delivery?.override).toBeUndefined();
   });
 
   it("records one on a scheduled check, which cites none of the captain's own words", async () => {
@@ -174,10 +189,18 @@ describe("an override citing a heard direction", () => {
     const { h, knowledge, repo } = await harbor();
     heard(knowledge, "release-checks", repo, RULE);
     heard(knowledge, "deploy-checks", repo, DEPLOY);
-    await h.agent.converse("Use my Harbor rules for both builds' checks.");
+    heard(knowledge, "docs-checks", repo, DOCS);
+    seedTask(h.tasks, {
+      id: "t-docs",
+      title: "Publish the harbor docs",
+      status: "idle",
+      repoId: repo,
+    });
+    await h.agent.converse("Use my Harbor rules for each build's checks.");
     for (const [task, id] of [
       ["t-release", "release-checks"],
       ["t-deploy", "deploy-checks"],
+      ["t-docs", "docs-checks"],
     ] as const)
       expect(
         await override(h, task, { holds: ["checks"], until: "task", from: `d:${id}` }),
@@ -218,6 +241,24 @@ describe("an override citing a heard direction", () => {
         "Your direction d:deploy-checks no longer stands, so the holds it passed on this task hold again.",
       ),
     ).toMatchObject({ kind: "note", actor: "host" });
+    // Its crewmate hears that the override ended, on its next turn.
+    expect(
+      new InboxStore(h.db)
+        .allFor("t-release")
+        .map((row) => row.facts)
+        .filter((facts) => facts?.kind === "task-override-changed"),
+    ).toContainEqual(
+      expect.objectContaining({
+        withdrawn: true,
+        directionChanged: true,
+        override: expect.objectContaining({ direction: { id: "release-checks", revision: 1 } }),
+      }),
+    );
+    // An override citing a direction that did not change still stands.
+    expect(h.tasks.get("t-docs")?.delivery?.override).toMatchObject({
+      words: DOCS,
+      direction: { id: "docs-checks", revision: 1 },
+    });
   });
 
   it("keeps the captain's own words standing over a direction, and lets theirs replace one", async () => {
@@ -320,7 +361,7 @@ describe("an override citing a heard direction", () => {
     expect(h.tasks.get("t-notes")?.delivery?.override).toBeUndefined();
   });
 
-  it("carries the direction when the standing words name more holds", async () => {
+  it("carries the direction when the standing words name more holds, and closes nothing on them", async () => {
     const { h, knowledge, repo } = await harbor();
     heard(knowledge, "release-checks", repo, RULE);
     await h.agent.converse("Use my Harbor release rule for this release.");
@@ -337,6 +378,20 @@ describe("an override citing a heard direction", () => {
       holds: ["checks", "waits"],
       direction: { id: "release-checks", revision: 1 },
     });
+
+    // Nor are they the captain's words asking a close, which pass every hold.
+    const close = await toolsOf(h.specs).get("settle_task")?.execute("close-release", {
+      task_id: "t-release",
+      mode: "done",
+      why: "finished",
+      evidence: "The harbor build is out and its checks passed.",
+      captain_words: "standing",
+      closing_sentence: "The harbor release shipped.",
+    });
+    expect(close?.content[0]?.text).toContain(
+      "Not closed: the standing words are the captain's direction d:release-checks",
+    );
+    expect(h.tasks.get("t-release")?.status).not.toBe("done");
   });
 });
 
@@ -372,10 +427,12 @@ describe("a direction's own words", () => {
 });
 
 describe("a direction changed while the app was closed", () => {
-  it("ends the override that cited it when the app next starts", async () => {
+  /** A crew over a Harbor project whose two tasks' overrides cite two heard directions. */
+  async function closedCrew(dir?: string) {
     let knowledge: KnowledgeService | undefined;
     const opened = (repos: RepoRegistry) => {
       knowledge = new KnowledgeService({
+        dir,
         projects: { get: (id) => repos.get(id), list: () => repos.list() },
       });
       return knowledge;
@@ -384,35 +441,32 @@ describe("a direction changed while the app was closed", () => {
     const first = crewSetup(crewmate, { knowledge: opened });
     if (!knowledge) throw new Error("No knowledge.");
     const { repo } = await first.repos.setup({ kind: "init", name: "harbor" });
-    seedTask(first.tasks, {
-      id: "t-release",
-      title: "Release the harbor build",
-      status: "idle",
-      repoId: repo.id,
-    });
-    heard(knowledge, "release-checks", repo.id, RULE);
-    const cited = first.supervisor.overrides.citedDirection("t-release", "d:release-checks");
-    if (!cited.ok) throw new Error(cited.text);
-    expect(
-      first.supervisor.overrides.declareOverride("t-release", {
-        words: cited.words,
-        holds: ["checks"],
-        until: "task",
-        direction: cited.direction,
-      }).ok,
-    ).toBe(true);
+    for (const [task, title, id, words] of [
+      ["t-release", "Release the harbor build", "release-checks", RULE],
+      ["t-deploy", "Deploy the harbor build", "deploy-checks", DEPLOY],
+    ] as const) {
+      seedTask(first.tasks, { id: task, title, status: "idle", repoId: repo.id });
+      heard(knowledge, id, repo.id, words);
+      const cited = first.supervisor.overrides.citedDirection(task, `d:${id}`);
+      if (!cited.ok) throw new Error(cited.text);
+      expect(
+        first.supervisor.overrides.declareOverride(task, {
+          words: cited.words,
+          holds: ["checks"],
+          until: "task",
+          direction: cited.direction,
+        }).ok,
+      ).toBe(true);
+    }
     void first.supervisor.disposeAll();
+    return { first, crewmate, knowledge };
+  }
 
-    // The captain retires the rule in Knowledge while the crew is closed.
-    knowledge.directions.change({
-      op: "retire",
-      id: "d:release-checks",
-      reason: "The captain dropped it.",
-      heard: { from: "turn" },
-    });
-    await tick();
-    expect(first.tasks.get("t-release")?.delivery?.override).toMatchObject({ words: RULE });
-
+  /** The crew started again over the same record and the given knowledge. */
+  async function restart(
+    { first, crewmate }: Awaited<ReturnType<typeof closedCrew>>,
+    knowledge: KnowledgeService,
+  ) {
     const next = reboot(
       {
         paths: first.paths,
@@ -428,6 +482,24 @@ describe("a direction changed while the app was closed", () => {
       retryConverse: vi.fn(),
     });
     await tick();
+    return next;
+  }
+
+  it("ends the override that cited it when the app next starts", async () => {
+    const crew = await closedCrew();
+    const { first, knowledge } = crew;
+
+    // The captain retires one rule in Knowledge while the crew is closed.
+    knowledge.directions.change({
+      op: "retire",
+      id: "d:release-checks",
+      reason: "The captain dropped it.",
+      heard: { from: "turn" },
+    });
+    await tick();
+    expect(first.tasks.get("t-release")?.delivery?.override).toMatchObject({ words: RULE });
+
+    const next = await restart(crew, knowledge);
     expect(first.tasks.get("t-release")?.delivery?.override).toBeUndefined();
     expect(
       line(
@@ -436,6 +508,39 @@ describe("a direction changed while the app was closed", () => {
         "Your direction d:release-checks no longer stands, so the holds it passed on this task hold again.",
       ),
     ).toMatchObject({ kind: "note", actor: "host" });
+    // The rule left as it was still passes its task's holds.
+    expect(first.tasks.get("t-deploy")?.delivery?.override).toMatchObject({
+      words: DEPLOY,
+      direction: { id: "deploy-checks", revision: 1 },
+    });
     void next.disposeAll();
+  });
+
+  it("ends nothing when Knowledge cannot be read at the next start", async () => {
+    const dir = scratchDir("fm-override-direction-unreadable-");
+    const crew = await closedCrew(dir);
+    const { first } = crew;
+    crew.knowledge.close();
+    for (const file of ["knowledge.db-wal", "knowledge.db-shm"])
+      rmSync(join(dir, file), { force: true });
+    writeFileSync(join(dir, "knowledge.db"), "this is not a database");
+    const unreadable = new KnowledgeService({
+      dir,
+      projects: { get: (id) => first.repos.get(id), list: () => first.repos.list() },
+    });
+    expect(unreadable.directions.revisions()).not.toBeInstanceOf(Map);
+
+    const next = await restart(crew, unreadable);
+    for (const [task, words] of [
+      ["t-release", RULE],
+      ["t-deploy", DEPLOY],
+    ] as const) {
+      expect(first.tasks.get(task)?.delivery?.override).toMatchObject({ words });
+      expect(
+        first.tasks.timeline(task).some((event) => event.text.includes("no longer stands")),
+      ).toBe(false);
+    }
+    void next.disposeAll();
+    unreadable.close();
   });
 });

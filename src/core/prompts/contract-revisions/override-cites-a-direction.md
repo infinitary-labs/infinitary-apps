@@ -8,7 +8,7 @@ What the first mate is now told:
 - The `override` parameter's description names the new citation and says the override ends when the direction is revised or retired.
   The host checks only closed facts: the direction is current, belongs to the task's project, and its current revision was heard from the captain; anything else is refused in words, with nothing recorded.
 - The answer to a recorded one names the direction and its revision, says the host ends the override when that direction is revised or retired, and says the captain's own words stand over it: words of theirs the first mate records replace it, and citing a direction never replaces theirs, which is refused in words naming `standing`.
-- `standing` on an override that cites a direction carries the direction with it, and is refused in words once that revision is no longer current; the `direction` line of `app_change` refuses `standing` there, since those words are a direction's, not the captain's on the task.
+- `standing` on an override that cites a direction carries the direction with it, and is refused in words once that revision is no longer current; the `direction` line of `app_change` and `settle_task` done's `captain_words` refuse `standing` there, since those words are a direction's, not the captain's on the task: a close on them would pass every hold.
 
 Homes: the citation is the `override` parameter's; its refusals and the replacement rule are the refusal's and the answer's words.
 The crewmate side, outside the first mate's contract: the `task-override-changed` notice adds a sentence naming the direction and revision the standing words come from, and, when the host ends the override because the direction changed, says so in its own sentence.

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "core-connection-split",
+      "reason": "Internal: the phone push and phone usage event tests move into their own file; nothing a person sees changes."
+    }
+  ]
+}

@@ -80,17 +80,17 @@ import XCTest
     func testAnOwnThemeDrawsTheComputersColorsAndRedrawsWhenSavedAgain() {
         PhoneOwnPalettes.keep([Self.oldTerminal])
         defer { PhoneOwnPalettes.keep([]) }
-        let first = PhoneLook.own("own-old-terminal")
-        XCTAssertEqual(first.style, .dark, "The old terminal sits on Dark")
-        let shown = UITraitCollection { $0.userInterfaceStyle = .dark; $0[PhoneColorThemeTrait.self] = first.traitValue }
+        let look = PhoneLook.own("own-old-terminal"), first = look.traitValue
+        XCTAssertEqual(look.style, .dark, "The old terminal sits on Dark")
+        let shown = UITraitCollection { $0.userInterfaceStyle = .dark; $0[PhoneColorThemeTrait.self] = first }
         assertClose(rgb(UIColor(PhoneTheme.background), shown), (2, 10, 3), "The old terminal's background")
         assertClose(rgb(UIColor(PhoneTheme.accent), shown), (141, 255, 156), "The old terminal's accent")
 
         var blue = Self.oldTerminal.tokens
         blue["--accent"] = "#7fd6ff"
         PhoneOwnPalettes.keep([PhoneOwnTheme(id: "own-old-terminal", name: "Old terminal", base: "dark", tokens: blue)])
-        let again = PhoneLook.own("own-old-terminal").traitValue
-        XCTAssertNotEqual(again, first.traitValue, "A theme saved again under its name is a new trait value")
+        let again = look.traitValue
+        XCTAssertNotEqual(again, first, "A theme saved again under its name is a new trait value")
         let redrawn = UITraitCollection { $0.userInterfaceStyle = .dark; $0[PhoneColorThemeTrait.self] = again }
         assertClose(rgb(UIColor(PhoneTheme.accent), redrawn), (127, 214, 255), "The new accent")
     }

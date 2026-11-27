@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { cardDraftSchema } from "./cardDrafts";
+import { cardOverlaySchema } from "./cardOverlay";
 import { cardsSnapshotSchema, cardThreadSchema } from "./cards";
 import { activityChannels } from "./channels/activity";
 import { cardChannels } from "./channels/cards";
@@ -405,6 +406,10 @@ export const pushContract = {
   // The window took a two-key shortcut's first key and waits for the second:
   // each pair that may follow, for the next-keys hint, or null once it stopped.
   "inf:keyboard:next": { payload: nextKeysSchema, surface: "host" },
+  // The card overlay's switch and key changed (docs/card-overlay.md).
+  "inf:overlay:settings": { payload: cardOverlaySchema, surface: "host" },
+  // The overlay's panel is going: its page settles its unsent words, then asks to hide.
+  "inf:overlay:leave": { payload: z.object({}), surface: "host" },
   // The window filled the screen or stopped filling it.
   "inf:window:state": { payload: windowStateSchema, surface: "host" },
   // Someone came back to this computer or left it (src/main/presence.ts).

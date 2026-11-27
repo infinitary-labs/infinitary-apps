@@ -1,3 +1,5 @@
+import type { CardOverlay, CardOverlayRefusal } from "@shared/cardOverlay";
+import { overlayKeyAllowed } from "@shared/cardOverlay";
 import * as m from "@shared/i18n/messages.generated";
 import {
   type AnyCommandId,
@@ -293,6 +295,7 @@ export function KeyboardTab() {
       <div style={{ marginBottom: ROW_GAP }}>
         <KeyReminderRow />
       </div>
+      <CardOverlayRow busy={anyRecording} />
       {prefix && (
         <div style={{ marginBottom: ROW_GAP }}>
           <PrefixRow
@@ -911,5 +914,177 @@ function KeyReminderRow() {
         </span>
       }
     />
+  );
+}
+
+/** Why the overlay's key did not change or does not work, in the row's words. */
+function overlayError(
+  overlay: CardOverlay,
+  refused: { reason: CardOverlayRefusal; key: KeyChord } | null,
+): string | null {
+  const system = thisDesktop().keys;
+  const label = (chord: KeyChord) => chordLabel(chord, system);
+  if (refused?.reason === "not-allowed")
+    return m.settingsKeyboardCardOverlayNotAllowed({ key: label(refused.key) });
+  if (refused?.reason === "taken")
+    return overlay.on
+      ? m.settingsKeyboardCardOverlayKept({ key: label(refused.key), kept: label(overlay.key) })
+      : m.settingsKeyboardCardOverlayTaken({ key: label(refused.key) });
+  if (overlay.on && overlay.problem === "taken")
+    return m.settingsKeyboardCardOverlayTaken({ key: label(overlay.key) });
+  return null;
+}
+
+/**
+ * The card overlay's switch and key (docs/card-overlay.md), on a Mac alone:
+ * on, the key shows the card stack over any app, a full-screen game
+ * included. A key another program holds is refused and the one before it
+ * keeps working; recording saves the first press that may summon.
+ */
+function CardOverlayRow({ busy }: { busy: boolean }) {
+  const [overlay, setOverlay] = useState<CardOverlay | null>(null);
+  const [refused, setRefused] = useState<{ reason: CardOverlayRefusal; key: KeyChord } | null>(
+    null,
+  );
+  const [recording, setRecording] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const latest = useRef(overlay);
+  latest.current = overlay;
+
+  useEffect(() => {
+    let current = true;
+    void window.infinitary.cardOverlay
+      .settings()
+      .then((value) => {
+        if (current) setOverlay(value);
+      })
+      .catch(() => {});
+    const stop = window.infinitary.cardOverlay.onSettings(setOverlay);
+    return () => {
+      current = false;
+      stop();
+    };
+  }, []);
+
+  const save = (on: boolean, key: KeyChord) => {
+    setSaving(true);
+    void window.infinitary.cardOverlay
+      .set({ on, key })
+      .then(({ overlay: next, refused: reason }) => {
+        setOverlay(next);
+        setRefused(reason ? { reason, key } : null);
+        if (reason !== "not-allowed") setRecording(false);
+      })
+      .catch(() => {})
+      .finally(() => setSaving(false));
+  };
+  const saveNow = useRef(save);
+  saveNow.current = save;
+
+  // While recording, the window's keys come here alone, as for any key row (docs/keyboard.md).
+  useEffect(() => {
+    if (!recording) return;
+    let current = true;
+    useShellStore.setState({ recordingKeys: true });
+    void window.infinitary.keyboard
+      .record(true)
+      .then(() => {
+        if (current) markWindowKeys("recording");
+      })
+      .catch(() => {});
+    const stopRecorded = window.infinitary.keyboard.onRecorded((key) => {
+      const action = recorderKey(key);
+      if (action.kind === "cancel") {
+        setRecording(false);
+        return;
+      }
+      if (action.kind !== "press") return;
+      const chord = chordOfPress({ ...action.key, composing: false, repeat: false });
+      const now = latest.current;
+      if (!overlayKeyAllowed(chord)) setRefused({ reason: "not-allowed", key: chord });
+      else if (now) saveNow.current(now.on, chord);
+    });
+    const blur = () => setRecording(false);
+    window.addEventListener("blur", blur);
+    return () => {
+      current = false;
+      stopRecorded();
+      window.removeEventListener("blur", blur);
+      useShellStore.setState({ recordingKeys: false });
+      void window.infinitary.keyboard
+        .record(false)
+        .then(() => markWindowKeys("commands"))
+        .catch(() => {});
+    };
+  }, [recording]);
+
+  if (!overlay || overlay.problem === "unsupported") return null;
+  const system = thisDesktop().keys;
+  const keyLabel = chordLabel(overlay.key, system);
+  return (
+    <div style={{ marginBottom: ROW_GAP }}>
+      <SettingRow
+        id="keyboard-card-overlay"
+        title={m.settingsKeyboardCardOverlay()}
+        description={m.settingsKeyboardCardOverlayDescription({ key: keyLabel })}
+        control={
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+            <span data-keyboard-card-overlay-key={keyLabel}>
+              <KeyCap>{keyLabel}</KeyCap>
+            </span>
+            <Button
+              variant="secondary"
+              size="sm"
+              aria-label={m.settingsKeyboardCardOverlayChangeLabel()}
+              aria-pressed={recording}
+              disabled={saving || (busy && !recording)}
+              onClick={() => {
+                setRefused(null);
+                setRecording(!recording);
+              }}
+            >
+              {m.settingsKeyboardCardOverlayChange()}
+            </Button>
+            <span data-keyboard-card-overlay="">
+              <Switch
+                checked={overlay.on}
+                aria-label={m.settingsKeyboardCardOverlay()}
+                disabled={saving}
+                onChange={(next) => save(next, overlay.key)}
+              />
+            </span>
+          </div>
+        }
+        error={overlayError(overlay, refused)}
+        detail={
+          recording && (
+            <fieldset
+              data-keyboard-card-overlay-recorder=""
+              aria-label={m.settingsKeyboardCardOverlayRecording()}
+              style={{
+                margin: "var(--space-2) 0 0",
+                minWidth: 0,
+                display: "flex",
+                flexDirection: "column",
+                gap: "var(--space-2)",
+                padding: "var(--space-3)",
+                background: "var(--bg-2)",
+                border: "1px solid var(--accent)",
+                borderRadius: "var(--radius-m)",
+              }}
+            >
+              <div aria-live="polite" style={{ fontSize: "var(--text-sm)", color: "var(--fg-2)" }}>
+                {m.settingsKeyboardCardOverlayPress()}
+              </div>
+              <div>
+                <Button variant="ghost" size="sm" onClick={() => setRecording(false)}>
+                  {m.settingsKeyboardPrefixCancel()}
+                </Button>
+              </div>
+            </fieldset>
+          )
+        }
+      />
+    </div>
   );
 }

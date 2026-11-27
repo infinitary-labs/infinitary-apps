@@ -21009,6 +21009,87 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `This part cannot be shown in this view`;
   }
+  function cardOverlayHide() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إخفاء البطاقات`;
+      case "de":
+        return `Karten ausblenden`;
+      case "es":
+        return `Ocultar las tarjetas`;
+      case "fr":
+        return `Masquer les cartes`;
+      case "ja":
+        return `カードを隠す`;
+      case "ko":
+        return `카드 숨기기`;
+      case "pt-BR":
+        return `Ocultar os cartões`;
+      case "zh-Hans":
+        return `隐藏卡片`;
+      case "zh-Hant":
+        return `隱藏卡片`;
+      case "en-XA":
+        return `[Ĥîðé ţĥé çáŕðš ~~~~~]`;
+      case "ar-XB":
+        return `‮Hide the cards‬`;
+    }
+    return `Hide the cards`;
+  }
+  function cardOverlayNothing() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا بطاقات تنتظر`;
+      case "de":
+        return `Keine Karten warten`;
+      case "es":
+        return `No hay tarjetas esperando`;
+      case "fr":
+        return `Aucune carte en attente`;
+      case "ja":
+        return `待っているカードはありません`;
+      case "ko":
+        return `기다리는 카드가 없어요`;
+      case "pt-BR":
+        return `Nenhum cartão esperando`;
+      case "zh-Hans":
+        return `没有等待中的卡片`;
+      case "zh-Hant":
+        return `沒有等待中的卡片`;
+      case "en-XA":
+        return `[Ñö çáŕðš ŵáîţîñĝ ~~~~~~]`;
+      case "ar-XB":
+        return `‮No cards waiting‬`;
+    }
+    return `No cards waiting`;
+  }
+  function cardOverlayOpensWindow() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `هذا الخيار يفتح نافذة Infinitary، فاختره هناك.`;
+      case "de":
+        return `Diese Auswahl öffnet das Fenster von Infinitary, triff sie also dort.`;
+      case "es":
+        return `Esta opción abre la ventana de Infinitary, así que elígela allí.`;
+      case "fr":
+        return `Ce choix ouvre la fenêtre d’Infinitary : faites-le là-bas.`;
+      case "ja":
+        return `この選択は Infinitary のウインドウを開くので、そちらで選んでください。`;
+      case "ko":
+        return `이 선택은 Infinitary 창을 여니 거기서 골라 주세요.`;
+      case "pt-BR":
+        return `Esta escolha abre a janela do Infinitary, então faça-a lá.`;
+      case "zh-Hans":
+        return `这个选项会打开 Infinitary 的窗口，请在那里选择。`;
+      case "zh-Hant":
+        return `這個選項會打開 Infinitary 的視窗，請在那裡選擇。`;
+      case "en-XA":
+        return `[Ţĥîš çĥöîçé öþéñš Îñƒîñîţáŕý’š ŵîñðöŵ, šö ɱáķé îţ ţĥéŕé. ~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This choice opens Infinitary’s window, so make it there.‬`;
+    }
+    return `This choice opens Infinitary’s window, so make it there.`;
+  }
   function cardPastMark() {
     switch (currentLanguage()) {
       case "ar":
@@ -79909,6 +79990,254 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Cancel`;
   }
+  function settingsKeyboardCardOverlay() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إظهار البطاقات فوق التطبيقات الأخرى`;
+      case "de":
+        return `Karten über anderen Apps zeigen`;
+      case "es":
+        return `Mostrar tarjetas sobre otras apps`;
+      case "fr":
+        return `Afficher les cartes par-dessus les autres apps`;
+      case "ja":
+        return `ほかのアプリの上にカードを表示`;
+      case "ko":
+        return `다른 앱 위에 카드 보이기`;
+      case "pt-BR":
+        return `Mostrar cartões sobre outros apps`;
+      case "zh-Hans":
+        return `在其他应用上方显示卡片`;
+      case "zh-Hant":
+        return `在其他 App 上方顯示卡片`;
+      case "en-XA":
+        return `[Šĥöŵ çáŕðš öṽéŕ öţĥéŕ áþþš ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Show cards over other apps‬`;
+    }
+    return `Show cards over other apps`;
+  }
+  function settingsKeyboardCardOverlayChange() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تغيير المفتاح`;
+      case "de":
+        return `Taste ändern`;
+      case "es":
+        return `Cambiar tecla`;
+      case "fr":
+        return `Changer de raccourci`;
+      case "ja":
+        return `キーを変更`;
+      case "ko":
+        return `키 바꾸기`;
+      case "pt-BR":
+        return `Mudar tecla`;
+      case "zh-Hans":
+        return `更改按键`;
+      case "zh-Hant":
+        return `更改按鍵`;
+      case "en-XA":
+        return `[Çĥáñĝé ķéý ~~~~]`;
+      case "ar-XB":
+        return `‮Change key‬`;
+    }
+    return `Change key`;
+  }
+  function settingsKeyboardCardOverlayChangeLabel() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تغيير المفتاح الذي يُظهر البطاقات فوق التطبيقات الأخرى`;
+      case "de":
+        return `Taste ändern, die Karten über anderen Apps zeigt`;
+      case "es":
+        return `Cambiar la tecla que muestra tarjetas sobre otras apps`;
+      case "fr":
+        return `Changer le raccourci qui affiche les cartes par-dessus les autres apps`;
+      case "ja":
+        return `ほかのアプリの上にカードを表示するキーを変更`;
+      case "ko":
+        return `다른 앱 위에 카드를 보이는 키 바꾸기`;
+      case "pt-BR":
+        return `Mudar a tecla que mostra cartões sobre outros apps`;
+      case "zh-Hans":
+        return `更改在其他应用上方显示卡片的按键`;
+      case "zh-Hant":
+        return `更改在其他 App 上方顯示卡片的按鍵`;
+      case "en-XA":
+        return `[Çĥáñĝé ţĥé ķéý ţĥáţ šĥöŵš çáŕðš öṽéŕ öţĥéŕ áþþš ~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Change the key that shows cards over other apps‬`;
+    }
+    return `Change the key that shows cards over other apps`;
+  }
+  function settingsKeyboardCardOverlayDescription(input2) {
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `اضغط ${key} في أي تطبيق، حتى في لعبة بملء الشاشة، لتجيب عن البطاقة المنتظرة عند حافة الشاشة. اضغطه مرة أخرى أو Esc للعودة.`;
+      case "de":
+        return `Drück ${key} in einer beliebigen App, auch in einem Spiel im Vollbild, um die wartende Karte am Bildschirmrand zu beantworten. Drück die Taste noch einmal oder Esc, um zurückzukehren.`;
+      case "es":
+        return `Presiona ${key} en cualquier app, incluso en un juego a pantalla completa, para responder la tarjeta pendiente en el borde de la pantalla. Presiónala otra vez o Esc para volver.`;
+      case "fr":
+        return `Appuyez sur ${key} dans n’importe quelle app, même un jeu en plein écran, pour répondre à la carte en attente au bord de l’écran. Appuyez à nouveau ou sur Échap pour revenir.`;
+      case "ja":
+        return `どのアプリでも、フルスクリーンのゲーム中でも、${key} を押すと待っているカードが画面の端に表示され、その場で答えられます。もう一度押すか Esc で戻ります。`;
+      case "ko":
+        return `어떤 앱에서든, 전체 화면 게임 중에도 ${key}를 누르면 기다리는 카드가 화면 가장자리에 떠서 바로 답할 수 있어요. 다시 누르거나 Esc를 누르면 돌아가요.`;
+      case "pt-BR":
+        return `Pressione ${key} em qualquer app, até em um jogo em tela cheia, para responder ao cartão que espera na borda da tela. Pressione de novo ou Esc para voltar.`;
+      case "zh-Hans":
+        return `在任何应用中，即使是全屏游戏，按 ${key} 即可在屏幕边缘回答等待中的卡片。再按一次或按 Esc 返回。`;
+      case "zh-Hant":
+        return `在任何 App 中，即使是全螢幕遊戲，按下 ${key} 即可在螢幕邊緣回答等待中的卡片。再按一次或按 Esc 返回。`;
+      case "en-XA":
+        return `[Þŕéšš ${key} îñ áñý áþþ, éṽéñ á ƒûļļ-šçŕééñ ĝáɱé, ţö áñšŵéŕ ţĥé ŵáîţîñĝ çáŕð áţ ţĥé éðĝé öƒ ţĥé šçŕééñ. Þŕéšš îţ áĝáîñ öŕ Éšçáþé ţö ĝö ƀáçķ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Press ‬${key}‮ in any app, even a full-screen game, to answer the waiting card at the edge of the screen. Press it again or Escape to go back.‬`;
+    }
+    return `Press ${key} in any app, even a full-screen game, to answer the waiting card at the edge of the screen. Press it again or Escape to go back.`;
+  }
+  function settingsKeyboardCardOverlayKept(input2) {
+    const kept = input2.kept;
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يستخدم تطبيق آخر ${key}. تحتفظ البطاقات بـ ${kept}.`;
+      case "de":
+        return `Eine andere App nutzt ${key}. Die Karten behalten ${kept}.`;
+      case "es":
+        return `Otra app usa ${key}. Las tarjetas siguen con ${kept}.`;
+      case "fr":
+        return `Une autre app utilise ${key}. Les cartes gardent ${kept}.`;
+      case "ja":
+        return `ほかのアプリが ${key} を使っています。カードは ${kept} のままです。`;
+      case "ko":
+        return `다른 앱이 ${key}를 쓰고 있어요. 카드는 ${kept}를 그대로 써요.`;
+      case "pt-BR":
+        return `Outro app usa ${key}. Os cartões continuam com ${kept}.`;
+      case "zh-Hans":
+        return `另一个应用正在使用 ${key}。卡片仍使用 ${kept}。`;
+      case "zh-Hant":
+        return `另一個 App 正在使用 ${key}。卡片仍使用 ${kept}。`;
+      case "en-XA":
+        return `[Åñöţĥéŕ áþþ ûšéš ${key}. Ţĥé çáŕðš ķééþ ${kept}. ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Another app uses ‬${key}‮. The cards keep ‬${kept}‮.‬`;
+    }
+    return `Another app uses ${key}. The cards keep ${kept}.`;
+  }
+  function settingsKeyboardCardOverlayNotAllowed(input2) {
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يمكن لـ ${key} إظهار البطاقات: اختر مفتاحًا مع Control أو Option أو Command، غير Esc وTab وReturn والمسافة وDelete.`;
+      case "de":
+        return `${key} kann die Karten nicht zeigen: Wähl eine Taste mit Control, Option oder Command, außer Esc, Tab, Return, Leertaste oder Löschen.`;
+      case "es":
+        return `${key} no puede mostrar las tarjetas: elige una tecla con Control, Opción o Comando, que no sea Esc, Tab, Retorno, Espacio ni Borrar.`;
+      case "fr":
+        return `${key} ne peut pas afficher les cartes : choisissez une touche avec Contrôle, Option ou Commande, autre qu’Échap, Tab, Retour, Espace ou Supprimer.`;
+      case "ja":
+        return `${key} ではカードを表示できません。Control、Option、Command のいずれかを含み、Esc、Tab、Return、Space、Delete 以外のキーを選んでください。`;
+      case "ko":
+        return `${key}로는 카드를 보일 수 없어요. Control, Option, Command 중 하나가 들어가고 Esc, Tab, Return, Space, Delete가 아닌 키를 골라 주세요.`;
+      case "pt-BR":
+        return `${key} não pode mostrar os cartões: escolha uma tecla com Control, Option ou Command, exceto Esc, Tab, Return, Espaço ou Delete.`;
+      case "zh-Hans":
+        return `${key} 无法显示卡片：请选择带 Control、Option 或 Command 的按键，且不是 Esc、Tab、Return、空格或 Delete。`;
+      case "zh-Hant":
+        return `${key} 無法顯示卡片：請選擇帶 Control、Option 或 Command 的按鍵，且不是 Esc、Tab、Return、空白鍵或 Delete。`;
+      case "en-XA":
+        return `[${key} çáññöţ šĥöŵ ţĥé çáŕðš: çĥööšé á ķéý ŵîţĥ Çöñţŕöļ, Öþţîöñ öŕ Çöɱɱáñð, öţĥéŕ ţĥáñ Éšçáþé, Ţáƀ, Ŕéţûŕñ, Šþáçé öŕ Ðéļéţé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${key}‮ cannot show the cards: choose a key with Control, Option or Command, other than Escape, Tab, Return, Space or Delete.‬`;
+    }
+    return `${key} cannot show the cards: choose a key with Control, Option or Command, other than Escape, Tab, Return, Space or Delete.`;
+  }
+  function settingsKeyboardCardOverlayPress() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `اضغط مفتاحًا مع Control أو Option أو Command. يلغي Esc.`;
+      case "de":
+        return `Drück eine Taste mit Control, Option oder Command. Esc bricht ab.`;
+      case "es":
+        return `Presiona una tecla con Control, Opción o Comando. Esc cancela.`;
+      case "fr":
+        return `Appuyez sur une touche avec Contrôle, Option ou Commande. Échap annule.`;
+      case "ja":
+        return `Control、Option、Command のいずれかと一緒にキーを押してください。Esc でキャンセルします。`;
+      case "ko":
+        return `Control, Option, Command 중 하나와 함께 키를 눌러 주세요. Esc를 누르면 취소돼요.`;
+      case "pt-BR":
+        return `Pressione uma tecla com Control, Option ou Command. Esc cancela.`;
+      case "zh-Hans":
+        return `按下带 Control、Option 或 Command 的按键。按 Esc 取消。`;
+      case "zh-Hant":
+        return `按下帶 Control、Option 或 Command 的按鍵。按 Esc 取消。`;
+      case "en-XA":
+        return `[Þŕéšš á ķéý ŵîţĥ Çöñţŕöļ, Öþţîöñ öŕ Çöɱɱáñð. Éšçáþé çáñçéļš. ~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Press a key with Control, Option or Command. Escape cancels.‬`;
+    }
+    return `Press a key with Control, Option or Command. Escape cancels.`;
+  }
+  function settingsKeyboardCardOverlayRecording() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `جارٍ تسجيل مفتاح لإظهار البطاقات فوق التطبيقات الأخرى`;
+      case "de":
+        return `Taste für Karten über anderen Apps wird aufgenommen`;
+      case "es":
+        return `Grabando una tecla para las tarjetas sobre otras apps`;
+      case "fr":
+        return `Capture d’un raccourci pour les cartes par-dessus les autres apps`;
+      case "ja":
+        return `ほかのアプリの上にカードを表示するキーを記録中`;
+      case "ko":
+        return `다른 앱 위에 카드를 보이는 키를 기록 중`;
+      case "pt-BR":
+        return `Gravando uma tecla para os cartões sobre outros apps`;
+      case "zh-Hans":
+        return `正在录制在其他应用上方显示卡片的按键`;
+      case "zh-Hant":
+        return `正在錄製在其他 App 上方顯示卡片的按鍵`;
+      case "en-XA":
+        return `[Ŕéçöŕðîñĝ á ķéý ƒöŕ çáŕðš öṽéŕ öţĥéŕ áþþš ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Recording a key for cards over other apps‬`;
+    }
+    return `Recording a key for cards over other apps`;
+  }
+  function settingsKeyboardCardOverlayTaken(input2) {
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يستخدم تطبيق آخر ${key}، لذا لا يفعل شيئًا الآن. اختر مفتاحًا آخر.`;
+      case "de":
+        return `Eine andere App nutzt ${key}, daher tut die Taste gerade nichts. Wähl eine andere Taste.`;
+      case "es":
+        return `Otra app usa ${key}, así que ahora no hace nada. Elige otra tecla.`;
+      case "fr":
+        return `Une autre app utilise ${key}, il ne fait donc rien pour le moment. Choisissez un autre raccourci.`;
+      case "ja":
+        return `ほかのアプリが ${key} を使っているため、今は何も起きません。別のキーを選んでください。`;
+      case "ko":
+        return `다른 앱이 ${key}를 쓰고 있어서 지금은 아무 일도 하지 않아요. 다른 키를 골라 주세요.`;
+      case "pt-BR":
+        return `Outro app usa ${key}, então ela não faz nada agora. Escolha outra tecla.`;
+      case "zh-Hans":
+        return `另一个应用正在使用 ${key}，所以它现在不起作用。请选择其他按键。`;
+      case "zh-Hant":
+        return `另一個 App 正在使用 ${key}，所以它現在沒有作用。請選擇其他按鍵。`;
+      case "en-XA":
+        return `[Åñöţĥéŕ áþþ ûšéš ${key}, šö îţ ðöéš ñöţĥîñĝ ñöŵ. Çĥööšé áñöţĥéŕ ķéý. ~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Another app uses ‬${key}‮, so it does nothing now. Choose another key.‬`;
+    }
+    return `Another app uses ${key}, so it does nothing now. Choose another key.`;
+  }
   function settingsKeyboardChanged() {
     switch (currentLanguage()) {
       case "ar":
@@ -116573,6 +116902,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardNoteToolBox,
     cardNoteToolLine,
     cardNoteUnavailable,
+    cardOverlayHide,
+    cardOverlayNothing,
+    cardOverlayOpensWindow,
     cardPastMark,
     cardPastMeta,
     cardPastPictures,
@@ -118558,6 +118890,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsKeyboardAddBeside,
     settingsKeyboardAnywhere,
     settingsKeyboardCancel,
+    settingsKeyboardCardOverlay,
+    settingsKeyboardCardOverlayChange,
+    settingsKeyboardCardOverlayChangeLabel,
+    settingsKeyboardCardOverlayDescription,
+    settingsKeyboardCardOverlayKept,
+    settingsKeyboardCardOverlayNotAllowed,
+    settingsKeyboardCardOverlayPress,
+    settingsKeyboardCardOverlayRecording,
+    settingsKeyboardCardOverlayTaken,
     settingsKeyboardChanged,
     settingsKeyboardClashMovesKeeps,
     settingsKeyboardClashMovesNoKey,
@@ -120288,6 +120629,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardNoteToolBox": [],
     "cardNoteToolLine": [],
     "cardNoteUnavailable": [],
+    "cardOverlayHide": [],
+    "cardOverlayNothing": [],
+    "cardOverlayOpensWindow": [],
     "cardPastMark": [],
     "cardPastMeta": [],
     "cardPastPictures": ["count", "names"],
@@ -122273,6 +122617,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsKeyboardAddBeside": [],
     "settingsKeyboardAnywhere": [],
     "settingsKeyboardCancel": [],
+    "settingsKeyboardCardOverlay": [],
+    "settingsKeyboardCardOverlayChange": [],
+    "settingsKeyboardCardOverlayChangeLabel": [],
+    "settingsKeyboardCardOverlayDescription": ["key"],
+    "settingsKeyboardCardOverlayKept": ["kept", "key"],
+    "settingsKeyboardCardOverlayNotAllowed": ["key"],
+    "settingsKeyboardCardOverlayPress": [],
+    "settingsKeyboardCardOverlayRecording": [],
+    "settingsKeyboardCardOverlayTaken": ["key"],
     "settingsKeyboardChanged": [],
     "settingsKeyboardClashMovesKeeps": ["clash", "command"],
     "settingsKeyboardClashMovesNoKey": ["clash", "command"],

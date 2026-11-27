@@ -33,10 +33,11 @@ import {
   shell as systemShell,
   type WebContents,
 } from "electron";
+import type { CardOverlayHost } from "../cardOverlayWindow";
 import type { FrameMountRegistry } from "../frames/frameMounts";
 import { offerWindowKey, pressMoveKey, recordWindowKeys } from "../keyboard";
 import type { KeyReminderStore } from "../keyReminders";
-import { takeNotifiedCard } from "../notifiedCard";
+import { noticedCard, takeNotifiedCard } from "../notifiedCard";
 import { presenceWatch } from "../presence";
 import type { ResetAsk } from "../reset/inApp";
 import type { RendererSourceOptions } from "../security/rendererSource";
@@ -83,6 +84,8 @@ export type IpcOptions = {
   shell: Shell;
   /** The key reminder's switch and the keys pressed (docs/keyboard.md, "The key reminder"). */
   keyReminders: KeyReminderStore;
+  /** The card overlay's switch, key and panel (docs/card-overlay.md). */
+  cardOverlay: CardOverlayHost;
   host: HostCapabilities;
   frameMounts: FrameMountRegistry;
   /** Where this computer transcribes, asked once per run, and the voice helper that does it there. */
@@ -92,7 +95,17 @@ export type IpcOptions = {
 };
 
 export function registerIpc(options: IpcOptions): void {
-  const { rendererSource, dataDir, shell, keyReminders, host, frameMounts, voice, reset } = options;
+  const {
+    rendererSource,
+    dataDir,
+    shell,
+    keyReminders,
+    cardOverlay,
+    host,
+    frameMounts,
+    voice,
+    reset,
+  } = options;
 
   // The protocol proper: one adapter over the dispatcher, with no
   // per-channel knowledge beyond the program-only skip below. A channel
@@ -190,6 +203,28 @@ export function registerIpc(options: IpcOptions): void {
   handleInvoke("inf:keyboard:reminders:set", rendererSource, (_event, on) =>
     keyReminders.setOn(on),
   );
+  handleInvoke("inf:overlay:settings", rendererSource, () => cardOverlay.controller.current());
+  handleInvoke("inf:overlay:settings:set", rendererSource, (_event, next) =>
+    cardOverlay.controller.set(next),
+  );
+  // The rest are the overlay page's alone: any other page asking changes nothing.
+  handleInvoke("inf:overlay:start", rendererSource, (event) => ({
+    cardId: cardOverlay.panelOf(event.sender) ? noticedCard() : null,
+  }));
+  handleInvoke("inf:overlay:ready", rendererSource, (event, { cards }) => {
+    const panel = cardOverlay.panelOf(event.sender);
+    if (panel) cardOverlay.controller.ready(panel, cards);
+    return { ok: true as const };
+  });
+  handleInvoke("inf:overlay:hide", rendererSource, (event) => {
+    const panel = cardOverlay.panelOf(event.sender);
+    if (panel) cardOverlay.controller.hideAsked(panel);
+    return { ok: true as const };
+  });
+  handleInvoke("inf:overlay:pointer", rendererSource, (event, over) => {
+    cardOverlay.pointer(event.sender, over);
+    return { ok: true as const };
+  });
   // The panels' commands the page has now (docs/keyboard.md, "A panel's commands").
   handleInvoke("inf:keyboard:panels", rendererSource, (_event, panels) =>
     shell.keymap.setPanels(panels),
@@ -414,12 +449,31 @@ export function registerIpc(options: IpcOptions): void {
 
   // The frame vehicle (docs/ui-plugins.md, phase 1): the shell serves a
   // template document over its own scheme; the registry is the shell's.
-  handleInvoke("inf:frames:mount", rendererSource, (_event, request) =>
-    request.kind === "panel" ? frameMounts.mountPanel(request) : frameMounts.mount(request),
-  );
+  // A page that goes leaves no mount behind: the card overlay's goes after
+  // every summon, and the mounts it held would count against the window's cap.
+  const mountsOf = new WeakMap<WebContents, Set<string>>();
+  const heldBy = (sender: WebContents, mountId: string) => {
+    let held = mountsOf.get(sender);
+    if (!held) {
+      const mine = new Set<string>();
+      held = mine;
+      mountsOf.set(sender, mine);
+      sender.once("destroyed", () => {
+        for (const id of mine) frameMounts.unmount(id);
+      });
+    }
+    held.add(mountId);
+  };
+  handleInvoke("inf:frames:mount", rendererSource, async (event, request) => {
+    const mount =
+      request.kind === "panel" ? await frameMounts.mountPanel(request) : frameMounts.mount(request);
+    heldBy(event.sender, mount.mountId);
+    return mount;
+  });
 
-  handleInvoke("inf:frames:unmount", rendererSource, (_event, mountId) => {
+  handleInvoke("inf:frames:unmount", rendererSource, (event, mountId) => {
     frameMounts.unmount(mountId);
+    mountsOf.get(event.sender)?.delete(mountId);
     return { ok: true as const };
   });
 

@@ -18,3 +18,19 @@ export function takeNotifiedCard(): string | null {
   notified = null;
   return cardId;
 }
+
+/**
+ * The card the newest notification on this computer was about, kept apart
+ * from the click's: the card overlay reads it to know which card to show
+ * first (docs/card-overlay.md, "Which card it shows"). Reading it takes
+ * nothing, so a notification's own click still opens its card in the window.
+ */
+let noticed: string | null = null;
+
+export function noteNoticedCard(cardId: string): void {
+  noticed = cardId;
+}
+
+export function noticedCard(): string | null {
+  return noticed;
+}

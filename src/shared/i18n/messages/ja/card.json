@@ -239,6 +239,9 @@
   "cardNoteToolBox": "枠または一点",
   "cardNoteToolLine": "フリーハンドの線",
   "cardNoteUnavailable": "この部分はこのビューでは表示できません",
+  "cardOverlayHide": "カードを隠す",
+  "cardOverlayNothing": "待っているカードはありません",
+  "cardOverlayOpensWindow": "この選択は Infinitary のウインドウを開くので、そちらで選んでください。",
   "cardPastMark": "過去",
   "cardPastMeta": "過去のカード",
   "cardPastPictures": {

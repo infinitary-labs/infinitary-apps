@@ -69,6 +69,7 @@ Markdown in `docs/`, `primitives/` and the design skill is one sentence per line
 - `crew-orbits.md`: the crew's orbital formation around the first mate.
 - `composer.md`: the composer's keys, growth, paste and recall.
 - `keyboard.md`: keyboard commands, the catalog, scopes, the resolver, command search, key hints and a new feature's keys.
+- `card-overlay.md`: the card overlay, a Mac's system-wide key that shows the card stack over a full-screen app.
 - `first-launch.md`: the first launch.
 - `translucent-window.md`: the translucent window and what stays opaque.
 - `fonts.md`: the font choice and how it reaches every view and frame.

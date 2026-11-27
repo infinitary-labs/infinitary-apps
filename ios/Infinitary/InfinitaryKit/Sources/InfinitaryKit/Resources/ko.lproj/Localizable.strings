@@ -518,6 +518,9 @@
 "cardNoteToolBox" = "상자 또는 한 곳";
 "cardNoteToolLine" = "자유 곡선";
 "cardNoteUnavailable" = "이 보기에서는 이 부분을 보여 줄 수 없어요";
+"cardOverlayHide" = "카드 숨기기";
+"cardOverlayNothing" = "기다리는 카드가 없어요";
+"cardOverlayOpensWindow" = "이 선택은 Infinitary 창을 여니 거기서 골라 주세요.";
 "cardPastMark" = "지난 카드";
 "cardPastMeta" = "지난 카드";
 "cardPastSentLead" = "선택과 함께 보냄:";
@@ -3409,6 +3412,15 @@
 "settingsKeyboardAddBeside" = "다른 키 옆에 추가";
 "settingsKeyboardAnywhere" = "어디서나";
 "settingsKeyboardCancel" = "취소";
+"settingsKeyboardCardOverlay" = "다른 앱 위에 카드 보이기";
+"settingsKeyboardCardOverlayChange" = "키 바꾸기";
+"settingsKeyboardCardOverlayChangeLabel" = "다른 앱 위에 카드를 보이는 키 바꾸기";
+"settingsKeyboardCardOverlayDescription" = "어떤 앱에서든, 전체 화면 게임 중에도 %1$@를 누르면 기다리는 카드가 화면 가장자리에 떠서 바로 답할 수 있어요. 다시 누르거나 Esc를 누르면 돌아가요.";
+"settingsKeyboardCardOverlayKept" = "다른 앱이 %2$@를 쓰고 있어요. 카드는 %1$@를 그대로 써요.";
+"settingsKeyboardCardOverlayNotAllowed" = "%1$@로는 카드를 보일 수 없어요. Control, Option, Command 중 하나가 들어가고 Esc, Tab, Return, Space, Delete가 아닌 키를 골라 주세요.";
+"settingsKeyboardCardOverlayPress" = "Control, Option, Command 중 하나와 함께 키를 눌러 주세요. Esc를 누르면 취소돼요.";
+"settingsKeyboardCardOverlayRecording" = "다른 앱 위에 카드를 보이는 키를 기록 중";
+"settingsKeyboardCardOverlayTaken" = "다른 앱이 %1$@를 쓰고 있어서 지금은 아무 일도 하지 않아요. 다른 키를 골라 주세요.";
 "settingsKeyboardChanged" = "변경됨";
 "settingsKeyboardClashMovesKeeps" = "%1$@. 저장하면 이 키가 여기로 옮겨지고, “%2$@”의 다른 키는 그대로 남아요.";
 "settingsKeyboardClashMovesNoKey" = "%1$@. 저장하면 이 키가 여기로 옮겨지고, “%2$@”에는 키가 없게 돼요.";

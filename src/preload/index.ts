@@ -1,3 +1,4 @@
+import { CARD_OVERLAY_ATTRIBUTE, isCardOverlayArgv } from "@shared/cardOverlay";
 import { COMPUTER_LANGUAGES_ATTRIBUTE, computerLanguagesFromArgv } from "@shared/fonts";
 import {
   COMPUTER_LOCALE_ATTRIBUTE,
@@ -61,9 +62,12 @@ const computerLocale = localeFromArgv(process.argv);
 // Every language the computer prefers, for the order of the script faces
 // after the chosen font (docs/fonts.md, "Letters in other scripts").
 const computerLanguages = computerLanguagesFromArgv(process.argv);
+// The card overlay's page draws the stack alone (docs/card-overlay.md).
+const cardOverlay = isCardOverlayArgv(process.argv);
 const markWindowMaterial = () => {
   document.documentElement?.setAttribute(WINDOW_MATERIAL_ATTRIBUTE, windowMaterial);
   if (platform) document.documentElement?.setAttribute(PLATFORM_ATTRIBUTE, platform);
+  if (cardOverlay) document.documentElement?.setAttribute(CARD_OVERLAY_ATTRIBUTE, "");
   document.documentElement?.setAttribute("lang", language);
   document.documentElement?.setAttribute("dir", textDirection(language));
   if (computerLocale)

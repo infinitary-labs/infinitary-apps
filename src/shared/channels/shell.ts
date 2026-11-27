@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { CHOSEN_FILES_MAX, chosenFileSchema, droppedPathSchema } from "../attachments";
+import { cardOverlaySchema, cardOverlaySetSchema, savedCardOverlaySchema } from "../cardOverlay";
 import { crewWordSchema, firstRunViewSchema } from "../firstRun";
 import { MAIN_COMMAND_IDS, type MainCommandId } from "../keyboard";
 import { offeredKeySchema } from "../keyboardOffer";
@@ -158,6 +159,48 @@ export const shellChannels = {
     surface: "host",
     request: z.tuple([z.boolean()]),
     response: keyRemindersSchema,
+  },
+  // The card overlay's switch and key, this computer's own (docs/card-overlay.md).
+  "inf:overlay:settings": {
+    effect: "read",
+    surface: "host",
+    request: z.tuple([]),
+    response: cardOverlaySchema,
+  },
+  // A key another program holds, or one that may not summon, is refused whole.
+  "inf:overlay:settings:set": {
+    effect: "change",
+    surface: "host",
+    request: z.tuple([savedCardOverlaySchema]),
+    response: cardOverlaySetSchema,
+  },
+  // The overlay's page starts: the card the newest notification was about, never taken from the click.
+  "inf:overlay:start": {
+    effect: "read",
+    surface: "host",
+    request: z.tuple([]),
+    response: z.object({ cardId: z.string().min(1).max(256).nullable() }),
+  },
+  // The overlay's page drew its card, or found none waiting: the panel shows.
+  "inf:overlay:ready": {
+    effect: "change",
+    surface: "host",
+    request: z.tuple([z.strictObject({ cards: z.boolean() })]),
+    response: okSchema,
+  },
+  // The overlay's page let go (an answer, Escape, the hide corner, its words settled): the panel goes.
+  "inf:overlay:hide": {
+    effect: "change",
+    surface: "host",
+    request: z.tuple([]),
+    response: okSchema,
+  },
+  // Whether the pointer is over the card: elsewhere the panel's clicks go through to the app behind it.
+  "inf:overlay:pointer": {
+    effect: "change",
+    surface: "host",
+    request: z.tuple([z.boolean()]),
+    response: okSchema,
   },
   // The panels' commands the window has now (docs/keyboard.md, "A panel's
   // commands"): installed with the catalog's, each suggested key given only

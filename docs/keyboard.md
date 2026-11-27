@@ -249,7 +249,8 @@ A scope says where a command works, and the listener that hears a key says where
 - `message-field`: in the main message or a card's reply; `ComposerField` hears these, told by its host which field it is (`messageField`).
 - `main-message`: in the main message only.
 
-App-wide means the focused Infinitary window and nothing else: the app registers no system-wide shortcut and watches no keys while another app is active.
+App-wide means the focused Infinitary window and nothing else: the app watches no keys while another app is active.
+Its one system-wide shortcut is the card overlay's, on a Mac, registered with the system only while a person has turned it on in Settings → Keyboard (`docs/card-overlay.md`).
 
 ## Resolving a press
 
@@ -809,6 +810,11 @@ A command's own key, pressed once, stops its reminder: the main process hears th
 Pressing any of ⌘1 to ⌘4 stops all four, which teach one thing.
 Changing the command's keys, or picking another preset, lets its reminder show again, because its keys no longer match what was kept (`remindsOf`).
 Settings → Keyboard has one switch, "Show an action's key after I click it", on for a new profile; off, no reminder shows from the next click on.
+
+### The card overlay's key
+
+On a Mac, Settings → Keyboard has a row under the key reminder, "Show cards over other apps": a switch, off for a new profile, the key (Control+Shift+O until changed) and Change key, which records one press through the window's recording (`inf:keyboard:record`) and saves the first that may summon.
+It is the only key the app registers with the system; what it does, which keys it takes and how a refused key reads are in `docs/card-overlay.md`.
 The switch and the keys pressed belong to this computer, whichever first mate its window follows, in one file of the window's own profile that `KeyReminderStore` (`src/main/keyReminders.ts`) alone writes, on host channels (`inf:keyboard:reminders`, `inf:keyboard:reminders:set`) outside the published contract.
 The first mate switches it when asked through the catalog's `key-reminders` line, which asks the named computer's window, or this computer's (docs/view.md, "What the first mate asks of a window").
 

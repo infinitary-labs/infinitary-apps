@@ -5,9 +5,9 @@ import { type BuildFlavor, userDataFolderFor } from "@shared/userDataFolders";
 import { app, clipboard, dialog, Notification, shell } from "electron";
 import { hostDesktop, hostPlatform, hostPlatformProfile } from "../../core/platform";
 import { createMediaProbe, createTypefaceProbe } from "../mediaProbe";
-import { noteNotifiedCard } from "../notifiedCard";
+import { noteNoticedCard, noteNotifiedCard } from "../notifiedCard";
 import { packagedFlavor, readPackageJsonAt } from "../userDataDir";
-import { appWindows } from "../windows";
+import { appWindows, frontWindows } from "../windows";
 import { type AutostartEntry, readAutostart, writeAutostart } from "./autostartEntry";
 import { createAxiProcessSpawner } from "./axiProcess";
 import { createDarwinSecretClipboard } from "./darwinSecretClipboard";
@@ -244,6 +244,7 @@ export function createElectronHost(options: ElectronHostOptions = {}): HostCapab
       focused: () => appWindows().some((win) => win.isFocused()),
       show: ({ title, body, cardId }) => {
         const notification = new Notification({ title, body, silent: true });
+        if (cardId) noteNoticedCard(cardId);
         // Held until it goes, the newest for each card: a notification the
         // collector took hears no click (Windows' among them).
         const held = cardId ?? title;
@@ -256,7 +257,7 @@ export function createElectronHost(options: ElectronHostOptions = {}): HostCapab
           letGo();
           // The window takes the card when told, or when the click opened it.
           if (cardId) noteNotifiedCard(cardId);
-          const win = appWindows()[0];
+          const win = frontWindows()[0];
           if (win) {
             if (win.isMinimized()) win.restore();
             win.show();
@@ -299,7 +300,7 @@ export function createElectronHost(options: ElectronHostOptions = {}): HostCapab
     // picker, a sheet over the app's window, never one on the page's hidden
     // window (docs/task-browser.md, "A page that asks for a file").
     browser: createTaskBrowserHost(async ({ multiple }) => {
-      const owner = appWindows().find((win) => win.isFocused()) ?? appWindows()[0];
+      const owner = frontWindows().find((win) => win.isFocused()) ?? frontWindows()[0];
       if (!owner) return [];
       const picked = await dialog.showOpenDialog(owner, {
         properties: multiple ? ["openFile", "multiSelections"] : ["openFile"],

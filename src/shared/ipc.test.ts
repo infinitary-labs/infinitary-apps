@@ -305,6 +305,14 @@ describe("ipc contract", () => {
       "inf:keyboard:reminders:set",
       "inf:keyboard:run",
       "inf:keyboard:save",
+      // INF-7063's approved plan: the card overlay's switch and key, this computer's own,
+      // and its panel's page.
+      "inf:overlay:hide",
+      "inf:overlay:pointer",
+      "inf:overlay:ready",
+      "inf:overlay:settings",
+      "inf:overlay:settings:set",
+      "inf:overlay:start",
       // The save sheet for Secrets history, metadata only, on the window the
       // captain chose it in (docs/secrets.md).
       "inf:secrets:export",
@@ -342,6 +350,9 @@ describe("ipc contract", () => {
       "inf:keyboard:recorded",
       "inf:keyboard:reminders",
       "inf:keyboard:next",
+      // INF-7063's approved plan: the card overlay's switch, and its panel told to let go.
+      "inf:overlay:settings",
+      "inf:overlay:leave",
       "inf:window:state",
       "inf:window:presence",
       "inf:window:fence",

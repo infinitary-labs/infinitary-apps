@@ -12,6 +12,8 @@
   "keyboard.presets": "Infinitary trae conjuntos de teclas llamados preajustes: {presets}.\nUna instalación nueva empieza con {preset}.\nLegacy solo se ofrece si usabas Infinitary antes de que existieran los preajustes.\nElige un preajuste en **Configuración**, en **Teclado**.",
   "keyboard.change.heading": "Cambiar una tecla",
   "keyboard.change": "En **Configuración**, en **Teclado**, cada comando tiene **Grabar**, **Quitar** y **Restablecer**.\nPresiona **Grabar**, luego las teclas que quieras y luego Enter para guardarlas.\nSi otro comando ya usa esas teclas, Infinitary te dice cuál antes de que cambie nada.",
+  "keyboard.overlay.heading": "Tarjetas sobre un juego a pantalla completa",
+  "keyboard.overlay": "En un Mac, **Mostrar tarjetas sobre otras apps** en **Configuración**, en **Teclado**, te da una tecla que funciona en cualquier app, incluso en un juego a pantalla completa.\nEmpieza desactivada. Actívala y presiona <kbd>⌃⇧O</kbd>, o la tecla que elegiste, para responder la tarjeta pendiente en el borde de la pantalla sin salir del juego.\nPresiona la tecla otra vez o Esc para volver; una opción que elijas allí también te devuelve.\nSi otra app ya usa la tecla, Infinitary te lo dice y mantiene la tecla que funciona.",
   "keyboard.every.heading": "Cada comando y sus teclas",
   "keyboard.every": "Un guion significa que el comando todavía no tiene tecla: ejecútalo desde la búsqueda de comandos o asígnale una tecla propia.\nDos teclas con un espacio entre ellas se presionan una después de la otra.",
   "keyboard.column.command": "Comando",

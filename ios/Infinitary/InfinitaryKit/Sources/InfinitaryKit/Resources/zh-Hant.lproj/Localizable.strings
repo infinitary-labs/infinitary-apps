@@ -518,6 +518,9 @@
 "cardNoteToolBox" = "框或點";
 "cardNoteToolLine" = "手繪線";
 "cardNoteUnavailable" = "這個檢視無法顯示這個部分";
+"cardOverlayHide" = "隱藏卡片";
+"cardOverlayNothing" = "沒有等待中的卡片";
+"cardOverlayOpensWindow" = "這個選項會打開 Infinitary 的視窗，請在那裡選擇。";
 "cardPastMark" = "過去";
 "cardPastMeta" = "過去的卡片";
 "cardPastSentLead" = "隨你的選擇送出：";
@@ -3409,6 +3412,15 @@
 "settingsKeyboardAddBeside" = "加在其他按鍵旁";
 "settingsKeyboardAnywhere" = "任何地方";
 "settingsKeyboardCancel" = "取消";
+"settingsKeyboardCardOverlay" = "在其他 App 上方顯示卡片";
+"settingsKeyboardCardOverlayChange" = "更改按鍵";
+"settingsKeyboardCardOverlayChangeLabel" = "更改在其他 App 上方顯示卡片的按鍵";
+"settingsKeyboardCardOverlayDescription" = "在任何 App 中，即使是全螢幕遊戲，按下 %1$@ 即可在螢幕邊緣回答等待中的卡片。再按一次或按 Esc 返回。";
+"settingsKeyboardCardOverlayKept" = "另一個 App 正在使用 %2$@。卡片仍使用 %1$@。";
+"settingsKeyboardCardOverlayNotAllowed" = "%1$@ 無法顯示卡片：請選擇帶 Control、Option 或 Command 的按鍵，且不是 Esc、Tab、Return、空白鍵或 Delete。";
+"settingsKeyboardCardOverlayPress" = "按下帶 Control、Option 或 Command 的按鍵。按 Esc 取消。";
+"settingsKeyboardCardOverlayRecording" = "正在錄製在其他 App 上方顯示卡片的按鍵";
+"settingsKeyboardCardOverlayTaken" = "另一個 App 正在使用 %1$@，所以它現在沒有作用。請選擇其他按鍵。";
 "settingsKeyboardChanged" = "已變更";
 "settingsKeyboardClashMovesKeeps" = "%1$@。儲存後它會移到這裡，「%2$@」會保留它的其他按鍵。";
 "settingsKeyboardClashMovesNoKey" = "%1$@。儲存後它會移到這裡，「%2$@」將沒有按鍵。";

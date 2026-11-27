@@ -12,6 +12,8 @@
   "keyboard.presets": "Infinitary bringt Tastensätze mit, die Vorlagen heißen: {presets}.\nEine neue Installation beginnt mit {preset}.\nLegacy wird nur angeboten, wenn du Infinitary schon verwendet hast, bevor es Vorlagen gab.\nWähl eine Vorlage in den **Einstellungen** unter **Tastatur**.",
   "keyboard.change.heading": "Eine Taste ändern",
   "keyboard.change": "In den **Einstellungen** unter **Tastatur** hat jeder Befehl **Aufnehmen**, **Entfernen** und **Zurücksetzen**.\nDrück **Aufnehmen**, dann die gewünschten Tasten und dann Enter, um sie zu speichern.\nWenn ein anderer Befehl diese Tasten schon verwendet, sagt Infinitary dir, welcher, bevor sich etwas ändert.",
+  "keyboard.overlay.heading": "Karten über einem Spiel im Vollbild",
+  "keyboard.overlay": "Auf einem Mac gibt dir **Karten über anderen Apps zeigen** in den **Einstellungen** unter **Tastatur** eine Taste, die in jeder App funktioniert, auch in einem Spiel im Vollbild.\nSie ist zuerst aus. Schalte sie ein und drück dann <kbd>⌃⇧O</kbd> oder die Taste, die du gewählt hast, um die wartende Karte am Bildschirmrand zu beantworten, ohne das Spiel zu verlassen.\nDrück die Taste noch einmal oder Esc, um zurückzukehren; eine Auswahl, die du dort triffst, bringt dich ebenfalls zurück.\nWenn eine andere App die Taste schon nutzt, sagt Infinitary das und behält die Taste, die funktioniert.",
   "keyboard.every.heading": "Jeder Befehl und seine Tasten",
   "keyboard.every": "Ein Strich bedeutet, dass der Befehl noch keine Taste hat: Führ ihn über die Befehlssuche aus oder gib ihm eine eigene Taste.\nZwei Tasten mit einem Leerzeichen dazwischen werden nacheinander gedrückt.",
   "keyboard.column.command": "Befehl",

@@ -272,6 +272,16 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
       setReminders: (on) => invoke("inf:keyboard:reminders:set", on),
       onNext: (listener) => subscribe("inf:keyboard:next", ({ next }) => listener(next)),
     },
+    cardOverlay: {
+      settings: () => invoke("inf:overlay:settings"),
+      onSettings: (listener) => subscribe("inf:overlay:settings", listener),
+      set: (next) => invoke("inf:overlay:settings:set", next),
+      start: () => invoke("inf:overlay:start"),
+      ready: (cards) => invoke("inf:overlay:ready", { cards }),
+      hide: () => invoke("inf:overlay:hide"),
+      pointer: (over) => invoke("inf:overlay:pointer", over),
+      onLeave: (listener) => subscribe("inf:overlay:leave", () => listener()),
+    },
     devices: {
       shown: () => invoke("inf:devices:shown"),
       list: () => invoke("inf:devices:list"),

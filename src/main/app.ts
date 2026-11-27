@@ -39,6 +39,7 @@ import {
   localeArgument,
   readableLocale,
   SOURCE_LANGUAGE,
+  textDirection,
 } from "@shared/i18n/languages";
 import {
   chosenLanguage,
@@ -62,6 +63,7 @@ import {
   START_HERE_ARG,
   startedHere,
 } from "./besideRun";
+import { type CardOverlayHost, startCardOverlay } from "./cardOverlayWindow";
 import { disableChromiumFeatures } from "./chromiumFeatures";
 import { commandStarter } from "./commandStarter";
 import { frameFontFiles } from "./frames/fontFiles";
@@ -146,6 +148,8 @@ import { followWindowSize } from "./windowSize";
 import {
   appWindows,
   confirmationWindow,
+  frontWindows,
+  isOverlayWindow,
   mainWindowOpen,
   markMainWindow,
   openMainWindows,
@@ -224,6 +228,20 @@ let computerLanguages: readonly string[] = [];
 /** The key reminder's switch and the keys pressed, made once userData is decided (./keyReminders.ts). */
 let keyReminders: KeyReminderStore | null = null;
 
+/**
+ * What every app page learns from its preload's argv before its first paint:
+ * its desktop (src/shared/platform.ts), its language (docs/i18n.md) and the
+ * computer's languages (docs/fonts.md).
+ */
+function pageArguments(): string[] {
+  return [
+    platformArgument(hostPlatform()),
+    languageArgument(defaultLanguage(systemLanguage)),
+    ...(computerLocale ? [localeArgument(computerLocale)] : []),
+    computerLanguagesArgument(computerLanguages),
+  ];
+}
+
 function createMainWindow(
   mainDir: string,
   rendererSource: RendererSourceOptions,
@@ -257,16 +275,9 @@ function createMainWindow(
       // before any browser/OS request (frameActivation.ts). Enable it only
       // for the app window, never task browsers or the media probe.
       enableBlinkFeatures: "WebShare",
-      // The page learns the material and the desktop from its preload's
-      // argv, before its first paint (src/shared/windowMaterial.ts,
-      // src/shared/platform.ts), and its language the same way (docs/i18n.md).
-      additionalArguments: [
-        ...additionalArguments,
-        platformArgument(hostPlatform()),
-        languageArgument(defaultLanguage(systemLanguage)),
-        ...(computerLocale ? [localeArgument(computerLocale)] : []),
-        computerLanguagesArgument(computerLanguages),
-      ],
+      // The page learns the material from its preload's argv, before its
+      // first paint (src/shared/windowMaterial.ts), and the rest the same way.
+      additionalArguments: [...additionalArguments, ...pageArguments()],
       ...REQUIRED_WEB_PREFERENCES,
       devTools: !isRelease,
     },
@@ -1536,11 +1547,30 @@ export async function startApp(
       const reminders = new KeyReminderStore(join(app.getPath("userData"), "key-reminders.json"));
       keyReminders = reminders;
       reminders.subscribe((value) => broadcast("inf:keyboard:reminders", value));
+      // The card overlay (docs/card-overlay.md): a Mac's alone, and never a run's, which has no window.
+      const overlayMarks = settingFrom(process.env, "OVERLAY_MARKS");
+      const cardOverlay: CardOverlayHost = startCardOverlay({
+        mainDir,
+        rendererSource,
+        keymap: shell.keymap,
+        pageArguments,
+        rightToLeft: () =>
+          textDirection(
+            chosenLanguage(shell.preferences.get().appearance.language, systemLanguage),
+          ) === "rtl",
+        file: join(app.getPath("userData"), "card-overlay.json"),
+        supported: hostPlatform() === "darwin" && !windowless,
+        isDev,
+        devTools: !isRelease,
+        ...(overlayMarks ? { mark: (line: string) => console.info(`[card overlay] ${line}`) } : {}),
+      });
+      cardOverlay.controller.subscribe((value) => broadcast("inf:overlay:settings", value));
       registerIpc({
         rendererSource,
         dataDir,
         shell,
         keyReminders: reminders,
+        cardOverlay,
         host,
         frameMounts,
         voice: { place: voicePlace, helper: voiceHelper },
@@ -1597,7 +1627,12 @@ export async function startApp(
       // Every reader of the window's keys follows each install (docs/keyboard.md):
       // the page through its push, and the app menu, built again.
       shell.keymap.subscribe((snapshot) => broadcast("inf:keyboard:keymap", snapshot));
-      const focusedWindow = () => BrowserWindow.getFocusedWindow() ?? appWindows()[0];
+      // A menu command never reaches the card overlay, which floats over another app.
+      const focusedWindow = () => {
+        const focused = BrowserWindow.getFocusedWindow();
+        if (focused && isOverlayWindow(focused)) return undefined;
+        return focused ?? frontWindows()[0];
+      };
       const rebuildMenu =
         desktop.windowControls === "system"
           ? installAppMenu(

@@ -3,7 +3,7 @@ import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { COLOR_THEME_ATTRIBUTE, COLOR_THEME_SHEET } from "@shared/colorThemes";
 import { app, BrowserWindow, type WebContents } from "electron";
-import { appWindows } from "../windows";
+import { frontWindows } from "../windows";
 import { pngSize } from "./pageProtocol";
 import {
   buildCaptureHtml,
@@ -48,7 +48,7 @@ type Snapshot = {
 };
 
 function appWindow(): BrowserWindow | null {
-  for (const win of appWindows()) {
+  for (const win of frontWindows()) {
     if (!win.isDestroyed() && !captureWindows.has(win)) return win;
   }
   return null;

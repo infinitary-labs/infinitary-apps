@@ -257,6 +257,9 @@
   "cardNoteToolBox": "Rahmen oder Stelle",
   "cardNoteToolLine": "Freihandlinie",
   "cardNoteUnavailable": "Dieser Teil kann in dieser Ansicht nicht angezeigt werden",
+  "cardOverlayHide": "Karten ausblenden",
+  "cardOverlayNothing": "Keine Karten warten",
+  "cardOverlayOpensWindow": "Diese Auswahl öffnet das Fenster von Infinitary, triff sie also dort.",
   "cardPastMark": "Früher",
   "cardPastMeta": "frühere Karte",
   "cardPastPictures": {

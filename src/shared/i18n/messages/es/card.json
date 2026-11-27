@@ -275,6 +275,9 @@
   "cardNoteToolBox": "Recuadro o punto",
   "cardNoteToolLine": "Línea a mano alzada",
   "cardNoteUnavailable": "Esta parte no se puede mostrar en esta vista",
+  "cardOverlayHide": "Ocultar las tarjetas",
+  "cardOverlayNothing": "No hay tarjetas esperando",
+  "cardOverlayOpensWindow": "Esta opción abre la ventana de Infinitary, así que elígela allí.",
   "cardPastMark": "Anterior",
   "cardPastMeta": "tarjeta anterior",
   "cardPastPictures": {

@@ -518,6 +518,9 @@
 "cardNoteToolBox" = "Cadre ou point";
 "cardNoteToolLine" = "Trait à main levée";
 "cardNoteUnavailable" = "Cette partie ne peut pas être affichée dans cette vue";
+"cardOverlayHide" = "Masquer les cartes";
+"cardOverlayNothing" = "Aucune carte en attente";
+"cardOverlayOpensWindow" = "Ce choix ouvre la fenêtre d’Infinitary : faites-le là-bas.";
 "cardPastMark" = "Passée";
 "cardPastMeta" = "carte passée";
 "cardPastSentLead" = "Envoyé avec votre choix :";
@@ -3409,6 +3412,15 @@
 "settingsKeyboardAddBeside" = "Ajouter à côté des autres";
 "settingsKeyboardAnywhere" = "Partout";
 "settingsKeyboardCancel" = "Annuler";
+"settingsKeyboardCardOverlay" = "Afficher les cartes par-dessus les autres apps";
+"settingsKeyboardCardOverlayChange" = "Changer de raccourci";
+"settingsKeyboardCardOverlayChangeLabel" = "Changer le raccourci qui affiche les cartes par-dessus les autres apps";
+"settingsKeyboardCardOverlayDescription" = "Appuyez sur %1$@ dans n’importe quelle app, même un jeu en plein écran, pour répondre à la carte en attente au bord de l’écran. Appuyez à nouveau ou sur Échap pour revenir.";
+"settingsKeyboardCardOverlayKept" = "Une autre app utilise %2$@. Les cartes gardent %1$@.";
+"settingsKeyboardCardOverlayNotAllowed" = "%1$@ ne peut pas afficher les cartes : choisissez une touche avec Contrôle, Option ou Commande, autre qu’Échap, Tab, Retour, Espace ou Supprimer.";
+"settingsKeyboardCardOverlayPress" = "Appuyez sur une touche avec Contrôle, Option ou Commande. Échap annule.";
+"settingsKeyboardCardOverlayRecording" = "Capture d’un raccourci pour les cartes par-dessus les autres apps";
+"settingsKeyboardCardOverlayTaken" = "Une autre app utilise %1$@, il ne fait donc rien pour le moment. Choisissez un autre raccourci.";
 "settingsKeyboardChanged" = "Modifié";
 "settingsKeyboardClashMovesKeeps" = "%1$@. L’enregistrement le déplace ici, et « %2$@ » garde ses autres raccourcis.";
 "settingsKeyboardClashMovesNoKey" = "%1$@. L’enregistrement le déplace ici, et « %2$@ » n’aura plus de raccourci.";

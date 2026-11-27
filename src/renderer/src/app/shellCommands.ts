@@ -591,7 +591,11 @@ function windowFacts(): WindowFacts {
     updateAvailable: useUpdateState.getState().status?.updateAvailable ?? false,
     checksUpdates: checksUpdates(useUpdateState.getState().status),
     savingForUpdate: savingForUpdate(useUpdateState.getState().status),
-    computers: { page: crewOrbit().page, pages: crewOrbit().pages },
+    computers: {
+      page: crewOrbit().page,
+      pages: crewOrbit().pages,
+      byProject: crewOrbit().byProject,
+    },
     projectFocus: { shown: projectFocus.state().shown, focus: projectFocus.state().focus },
     panelCommand: (id, recording) => panelCommandRefusal(pluginHost, id, recording),
   };

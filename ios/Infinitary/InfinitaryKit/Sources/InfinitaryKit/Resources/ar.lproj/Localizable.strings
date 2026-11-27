@@ -2666,7 +2666,9 @@
 "refuseThereIsNoOtherTabToGo" = "لا توجد علامة تبويب أخرى للانتقال إليها";
 "refuseThereIsOnlyOneProject" = "يوجد مشروع واحد فقط";
 "refuseTheseAreTheFirstComputers" = "هذه الحواسيب الأولى";
+"refuseTheseAreTheFirstProjects" = "هذه المشاريع الأولى";
 "refuseTheseAreTheLastComputers" = "هذه الحواسيب الأخيرة";
+"refuseTheseAreTheLastProjects" = "هذه المشاريع الأخيرة";
 "refuseThisCardAsksNoQuestions" = "لا تطرح هذه البطاقة أسئلة";
 "refuseThisCardCannotBeFound" = "يُبحث عن الكلمات في بطاقة أو بطاقة سابقة أو سجل مهمة";
 "refuseThisCardHasNoButtons" = "ليس في هذه البطاقة أزرار";

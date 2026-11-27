@@ -2666,7 +2666,9 @@
 "refuseThereIsNoOtherTabToGo" = "移動できる他のタブがありません";
 "refuseThereIsOnlyOneProject" = "プロジェクトは1つだけです";
 "refuseTheseAreTheFirstComputers" = "最初のコンピューターを表示しています";
+"refuseTheseAreTheFirstProjects" = "最初のプロジェクトを表示しています";
 "refuseTheseAreTheLastComputers" = "最後のコンピューターを表示しています";
+"refuseTheseAreTheLastProjects" = "最後のプロジェクトを表示しています";
 "refuseThisCardAsksNoQuestions" = "このカードには質問がありません";
 "refuseThisCardCannotBeFound" = "言葉を検索できるのはカード、過去のカード、タスクの記録です";
 "refuseThisCardHasNoButtons" = "このカードにはボタンがありません";

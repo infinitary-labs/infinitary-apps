@@ -2800,7 +2800,9 @@ public enum PhoneMessages {
     public static func `refuseThereIsNoOtherTabToGo`() -> String { PhoneWords.format("refuseThereIsNoOtherTabToGo", []) }
     public static func `refuseThereIsOnlyOneProject`() -> String { PhoneWords.format("refuseThereIsOnlyOneProject", []) }
     public static func `refuseTheseAreTheFirstComputers`() -> String { PhoneWords.format("refuseTheseAreTheFirstComputers", []) }
+    public static func `refuseTheseAreTheFirstProjects`() -> String { PhoneWords.format("refuseTheseAreTheFirstProjects", []) }
     public static func `refuseTheseAreTheLastComputers`() -> String { PhoneWords.format("refuseTheseAreTheLastComputers", []) }
+    public static func `refuseTheseAreTheLastProjects`() -> String { PhoneWords.format("refuseTheseAreTheLastProjects", []) }
     public static func `refuseThisCardAsksNoQuestions`() -> String { PhoneWords.format("refuseThisCardAsksNoQuestions", []) }
     public static func `refuseThisCardCannotBeFound`() -> String { PhoneWords.format("refuseThisCardCannotBeFound", []) }
     public static func `refuseThisCardHasNoButtons`() -> String { PhoneWords.format("refuseThisCardHasNoButtons", []) }
@@ -7703,7 +7705,9 @@ extension PhoneWords {
         "refuseThereIsNoOtherTabToGo": [],
         "refuseThereIsOnlyOneProject": [],
         "refuseTheseAreTheFirstComputers": [],
+        "refuseTheseAreTheFirstProjects": [],
         "refuseTheseAreTheLastComputers": [],
+        "refuseTheseAreTheLastProjects": [],
         "refuseThisCardAsksNoQuestions": [],
         "refuseThisCardCannotBeFound": [],
         "refuseThisCardHasNoButtons": [],

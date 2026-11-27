@@ -57661,6 +57661,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `These are the first computers`;
   }
+  function refuseTheseAreTheFirstProjects() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `هذه المشاريع الأولى`;
+      case "de":
+        return `Das sind die ersten Projekte`;
+      case "es":
+        return `Estos son los primeros proyectos`;
+      case "fr":
+        return `Ce sont les premiers projets`;
+      case "ja":
+        return `最初のプロジェクトを表示しています`;
+      case "ko":
+        return `처음 프로젝트들이에요`;
+      case "pt-BR":
+        return `Estes são os primeiros projetos`;
+      case "zh-Hans":
+        return `这已是第一组项目`;
+      case "zh-Hant":
+        return `這已經是最前面的專案`;
+      case "en-XA":
+        return `[Ţĥéšé áŕé ţĥé ƒîŕšţ þŕöĵéçţš ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮These are the first projects‬`;
+    }
+    return `These are the first projects`;
+  }
   function refuseTheseAreTheLastComputers() {
     switch (currentLanguage()) {
       case "ar":
@@ -57687,6 +57714,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮These are the last computers‬`;
     }
     return `These are the last computers`;
+  }
+  function refuseTheseAreTheLastProjects() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `هذه المشاريع الأخيرة`;
+      case "de":
+        return `Das sind die letzten Projekte`;
+      case "es":
+        return `Estos son los últimos proyectos`;
+      case "fr":
+        return `Ce sont les derniers projets`;
+      case "ja":
+        return `最後のプロジェクトを表示しています`;
+      case "ko":
+        return `마지막 프로젝트들이에요`;
+      case "pt-BR":
+        return `Estes são os últimos projetos`;
+      case "zh-Hans":
+        return `这已是最后一组项目`;
+      case "zh-Hant":
+        return `這已經是最後面的專案`;
+      case "en-XA":
+        return `[Ţĥéšé áŕé ţĥé ļášţ þŕöĵéçţš ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮These are the last projects‬`;
+    }
+    return `These are the last projects`;
   }
   function refuseThisCardAsksNoQuestions() {
     switch (currentLanguage()) {
@@ -120284,7 +120338,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     refuseThereIsNoOtherTabToGo,
     refuseThereIsOnlyOneProject,
     refuseTheseAreTheFirstComputers,
+    refuseTheseAreTheFirstProjects,
     refuseTheseAreTheLastComputers,
+    refuseTheseAreTheLastProjects,
     refuseThisCardAsksNoQuestions,
     refuseThisCardCannotBeFound,
     refuseThisCardHasNoButtons,
@@ -124079,7 +124135,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "refuseThereIsNoOtherTabToGo": [],
     "refuseThereIsOnlyOneProject": [],
     "refuseTheseAreTheFirstComputers": [],
+    "refuseTheseAreTheFirstProjects": [],
     "refuseTheseAreTheLastComputers": [],
+    "refuseTheseAreTheLastProjects": [],
     "refuseThisCardAsksNoQuestions": [],
     "refuseThisCardCannotBeFound": [],
     "refuseThisCardHasNoButtons": [],

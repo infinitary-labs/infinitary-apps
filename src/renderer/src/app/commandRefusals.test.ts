@@ -230,6 +230,21 @@ describe("why a window command cannot run now", () => {
     expect(commandRefusal("cards.next", lone, CLEAR)).toBe(m.refuseThisIsTheOnlyCard());
   });
 
+  // INF-6955's approved plan: the crew's page commands say projects while
+  // the crew animation is grouped by project.
+  it("names projects, not computers, at either end of the crew's pages while grouped by project", () => {
+    const bare = { ...HOME, cards: [] };
+    const one = { ...CLEAR, computers: { page: 0, pages: 1 } };
+    expect(commandRefusal("computers.previous", bare, one)).toBe(
+      m.refuseTheseAreTheFirstComputers(),
+    );
+    const grouped = { ...CLEAR, computers: { page: 0, pages: 1, byProject: true } };
+    expect(commandRefusal("computers.previous", bare, grouped)).toBe(
+      m.refuseTheseAreTheFirstProjects(),
+    );
+    expect(commandRefusal("computers.next", bare, grouped)).toBe(m.refuseTheseAreTheLastProjects());
+  });
+
   it("shows the next new card only while one besides the shown card is new", () => {
     expect(commandRefusal("cards.next-new", HOME, CLEAR)).toBe(m.refuseNoOtherCardIsNew());
     expect(commandRefusal("cards.next-new", { ...HOME, unreadCardIds: ["a"] }, CLEAR)).toBe(

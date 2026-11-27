@@ -2666,7 +2666,9 @@
 "refuseThereIsNoOtherTabToGo" = "Não há outra aba para onde ir";
 "refuseThereIsOnlyOneProject" = "Há apenas um projeto";
 "refuseTheseAreTheFirstComputers" = "Estes são os primeiros computadores";
+"refuseTheseAreTheFirstProjects" = "Estes são os primeiros projetos";
 "refuseTheseAreTheLastComputers" = "Estes são os últimos computadores";
+"refuseTheseAreTheLastProjects" = "Estes são os últimos projetos";
 "refuseThisCardAsksNoQuestions" = "Este cartão não faz perguntas";
 "refuseThisCardCannotBeFound" = "As palavras são buscadas em um cartão, um cartão anterior ou o registro de uma tarefa";
 "refuseThisCardHasNoButtons" = "Este cartão não tem botões";

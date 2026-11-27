@@ -97,18 +97,21 @@ export function commandRows(
   panels: readonly PanelCommand[] = [],
   /** Whose words a key is drawn in (docs/keyboard.md, "Keys on each system"). */
   system: KeySystem = "mac",
+  /** A catalog command's label as the window stands, in place of its catalog label. */
+  labels: Partial<Record<WindowCommandId, string>> = {},
 ): CommandRow[] {
   const searched = new Set<string>(SEARCHED_COMMANDS);
   return allCommandIds(panels).flatMap((id): CommandRow[] => {
     if (isCatalogCommand(id)) {
       const command: KeyboardCommand = KEYBOARD_COMMANDS[id];
       if (!searched.has(id) || !commandOffered(id, sections)) return [];
-      if (!commandMatches(command.label, query, catalogSearchWords(command))) return [];
       const windowId = id as WindowCommandId;
+      const label = labels[windowId] ?? command.label;
+      if (!commandMatches(label, query, catalogSearchWords(command))) return [];
       return [
         {
           id: windowId,
-          label: command.label,
+          label,
           keys: keyHint(id, bindings, system),
           refusal: refusal(windowId),
         },

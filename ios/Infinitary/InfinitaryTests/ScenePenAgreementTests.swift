@@ -29,8 +29,9 @@ import XCTest
         + PhoneColorTheme.allCases.map { ($0.isDark ? .dark : .light, $0) }
 
     /// The first mate in each of its three states, every reaction and every fidget, warps included, and the busy
-    /// first mate whose halo is a blurred layer, in Dark and Light; each built-in color theme draws the states and
-    /// reactions, since a fidget's shapes take the same colors.
+    /// first mate whose halo is a blurred layer, in Dark and Light. Each built-in color theme draws the resting and the
+    /// busy first mate only: every other form takes its colors from the same palette, and drawing each form in each
+    /// theme added about a minute to the phone check's rest part, which a part's ten-minute wall cap ends.
     func testTheFirstMateDrawsTheSameThroughBothPens() throws {
         let modes = CharacterMachine.Mode.allCases.filter { $0 != .fidget }
         let forms: [(CharacterMachine.Mode, CharacterMachine.Fidget?)] = modes.map { ($0, nil) }
@@ -38,7 +39,7 @@ import XCTest
         for (scheme, colorTheme) in Self.themes {
             let theme = colorTheme?.rawValue ?? "\(scheme)"
             let palette = CharacterPainter.Palette(scheme, theme: colorTheme), cache = CharacterPainter.Cache()
-            for (mode, variant) in colorTheme == nil ? forms : modes.map({ ($0, nil) }) {
+            for (mode, variant) in colorTheme == nil ? forms : [(.idle, nil), (.working, nil)] {
                 var pose = CharacterPose(mode: mode, progress: 0.4, variant: variant, cur: .of(mode), heat: mode == .working ? 1 : 0, milliseconds: 2200)
                 pose.lid = pose.cur.lidBase
                 let reply = CharacterReply.frame(mode, pose.progress)

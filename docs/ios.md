@@ -568,7 +568,7 @@ A record is an exact disc, ellipse or ring (a `Path(ellipseIn:)` read back from 
 Coverage is a pixel's exact area under each edge and colours stay sRGB-encoded and premultiplied, as Core Graphics blends them, with plus lighter as additive blending.
 A blurred layer, the busy halo, is drawn into a texture of its own at the resolution the Core Graphics pen chooses, blurred with the same three box passes each way and laid over its rectangle.
 The shaders are Metal source (`ScenePenShaders`) compiled once per process on the render thread, so the build needs no Metal toolchain.
-`ScenePenAgreementTests` draws fixed frames through both pens, every state, reaction, fidget and warp, the supernova's blast, the busy halo and the crowded scene in Dark and Light, with each built-in color theme's states, reactions and resting crowd, and requires at least 99.5% of pixels to agree within 4/255.
+`ScenePenAgreementTests` draws fixed frames through both pens, every state, reaction, fidget and warp, the supernova's blast, the busy halo and the crowded scene in Dark and Light, with each built-in color theme's resting and busy first mate and its resting crowd, and requires at least 99.5% of pixels to agree within 4/255.
 The main thread only hands the renderer what it shows (the roster, the state, the palette, the pan and the marks) and never waits for a frame.
 That display link requests the permitted screen cadence up to 120 frames per second, with the iPhone ProMotion opt-in, and 30 while Low Power Mode is on (`PhoneSceneRate`, INF-3851).
 The render thread reads Low Power Mode at each frame and changes the link's range only when the rate changes; iOS still chooses the delivered cadence under power and thermal constraints.

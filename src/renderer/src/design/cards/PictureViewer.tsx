@@ -28,7 +28,7 @@ import {
  * plan). Host chrome over the whole window, at the size the window allows -
  * never inside the card, whose body is a sandboxed frame exactly the card's
  * size, and never only between the docked rails - opened from the frame
- * bridge's `image` message and paging within that picture's group. Every
+ * bridge's `image` message and paging every picture of that card. Every
  * rule here is the design skill's `components/cards/PictureViewer.prompt.md`.
  *
  * The viewer owns its own leaving: `onClose` is called once it is gone -
@@ -46,6 +46,8 @@ export type ViewerPicture = {
   part?: number | undefined;
   /** Which of that part's pictures it is, counted from 1; absent when the picture is the part. */
   of?: number | undefined;
+  /** What the card calls the picture's place, such as its column's header, when it names one. */
+  where?: string | undefined;
 };
 
 /**
@@ -391,11 +393,17 @@ export function PictureViewer({
     (next: number) => {
       const target = Math.min(Math.max(next, 0), pictures.length - 1);
       if (target === index) return;
+      // A picture the same size as this one keeps 1:1 and its place, so a
+      // flip between a Before and its After shows only what changed.
+      const coming = pictures[target] as ViewerPicture;
+      const comingSize = decoded[coming.src] ?? { width: coming.width, height: coming.height };
+      const sameSize =
+        size !== null && comingSize.width === size.width && comingSize.height === size.height;
       setIndex(target);
-      setZoomed(false);
+      if (!(atOne && sameSize)) setZoomed(false);
       setKeyBox(null);
     },
-    [index, pictures.length],
+    [index, pictures, decoded, size, atOne],
   );
 
   const toggle = useCallback(() => {
@@ -626,7 +634,7 @@ export function PictureViewer({
   const count = demo
     ? clock(length)
     : pictures.length > 1
-      ? `${index + 1} / ${pictures.length}`
+      ? `${index + 1} / ${pictures.length}${picture.where ? ` · ${picture.where}` : ""}`
       : dims;
 
   const pictureBox: React.CSSProperties =
@@ -1152,10 +1160,15 @@ export function PictureViewer({
                 // biome-ignore lint/suspicious/noArrayIndexKey: a group may name one picture twice
                 key={at}
                 type="button"
-                aria-label={m.uiPictureViewerThumb({
-                  number: formatNumber(at + 1),
-                  alt: thumb.alt,
-                })}
+                aria-label={
+                  thumb.where
+                    ? m.uiPictureViewerThumbWhere({
+                        number: formatNumber(at + 1),
+                        where: thumb.where,
+                        alt: thumb.alt,
+                      })
+                    : m.uiPictureViewerThumb({ number: formatNumber(at + 1), alt: thumb.alt })
+                }
                 aria-current={at === index}
                 onClick={() => go(at)}
                 style={{

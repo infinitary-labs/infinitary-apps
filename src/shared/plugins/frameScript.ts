@@ -759,7 +759,7 @@ ${FRAME_PRESS_SCRIPT}
     }
     if (target.classList.contains("inf-pictures")) {
       var more = moreTileIndex(target, event.clientX, event.clientY);
-      if (more >= 0) showPictures(groupPictures(target), more);
+      if (more >= 0) openPicture(groupPictures(target)[more]);
     }
   });
 ${FRAME_FORM_SCRIPT}
@@ -860,4 +860,4 @@ ${FRAME_KEYBOARD_SCRIPT}
  * to the script moves it: re-pin it in the same change, or
  * frameBridgeHash.test.ts fails and every frame's CSP blocks the script.
  */
-export const FRAME_BRIDGE_SHA256 = "sha256-5v7hzdTC8z16Wk4TaQGyuznSbwtGOsY8WXZfh0yNf/w=";
+export const FRAME_BRIDGE_SHA256 = "sha256-glcaqaeiXYk6frMgcPsEwjFL2Ozp5tnvOLaA/DRwvaM=";

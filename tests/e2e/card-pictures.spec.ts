@@ -28,6 +28,10 @@ import {
   CARD_PICTURES_PROMPT_MARKER,
   cardPictures,
   PICTURE_CARD_TITLES,
+  STORY_PICTURES,
+  STORY_PICTURES_PROMPT_MARKER,
+  STORY_PICTURES_TITLE,
+  storyPictures,
 } from "./scenarios/cardPictures";
 import { clickInBody, pager, showCard, shownCard } from "./stack";
 import { focusOn, pressWindowKey } from "./windowKeys";
@@ -37,11 +41,17 @@ import { focusOn, pressWindowKey } from "./windowKeys";
  * test. A crewmate names real files from its working copy in its card bodies
  * - the real card path - and a click on any picture in the body's frame
  * reaches the host over the bridge's `image` message and opens the viewer on
- * that picture's group: the `figure.inf-pictures` it sits in, else the
- * picture alone. Each set is read back off the viewer itself - its count,
- * caption and thumbnails - and the keys, 1:1 with pan, the three ways out,
- * reduced motion and both themes are driven for real.
+ * every picture of that card, in reading order (INF-7148's approved plan,
+ * which re-typed this journey's sets from a picture's group to the card's).
+ * Each set is read back off the viewer itself - its count, caption and
+ * thumbnails - and the keys, 1:1 with pan, the three ways out, reduced motion
+ * and both themes are driven for real.
  */
+
+/** The two-groups card's pictures in reading order: the first group's, then the second's. */
+const GROUPS_CARD = [...FIRST_GROUP, ...SECOND_GROUP];
+const thumbLabels = (pictures: readonly { alt: string }[]) =>
+  pictures.map((p, i) => `Picture ${i + 1}: ${p.alt}`);
 
 let launched: LaunchedApp;
 
@@ -96,30 +106,36 @@ async function closeWithEscape(page: Page) {
 }
 
 test.beforeAll(async () => {
-  launched = await launchApp({ withMockProvider: true, scenarios: [cardPictures] });
+  launched = await launchApp({
+    withMockProvider: true,
+    scenarios: [cardPictures, storyPictures],
+  });
   const { page } = launched;
   await encodeInBrowser(page, WORKING_COPY_PICTURES);
   const input = promptInput(page);
-  await input.click();
-  await input.fill(`${SPAWN_PROMPT_MARKER} ${CARD_PICTURES_PROMPT_MARKER}`);
-  await input.press("Enter");
-  await expect(pager(page, 4)).toBeVisible({ timeout: 30_000 });
+  for (const marker of [CARD_PICTURES_PROMPT_MARKER, STORY_PICTURES_PROMPT_MARKER]) {
+    await input.click();
+    await input.fill(`${SPAWN_PROMPT_MARKER} ${marker}`);
+    await input.press("Enter");
+  }
+  // The four picture cards and the story card.
+  await expect(pager(page, 5)).toBeVisible({ timeout: 30_000 });
 });
 
 test.afterAll(async () => {
   await launched.close();
 });
 
-test("a click in each of two groups opens the viewer on that group alone", async () => {
+test("a click in either of two groups opens every picture of the card, at the one pressed", async () => {
   const { page } = launched;
   const title = PICTURE_CARD_TITLES.groups;
 
   // The first group's second picture: a thumbnail, and a JPEG.
   await clickPicture(page, title, 1, 0);
   const first = await readViewer(page);
-  expect(first.count).toBe(`2 / ${FIRST_GROUP.length}`);
+  expect(first.count).toBe(`2 / ${GROUPS_CARD.length}`);
   expect(first.caption).toBe(FIRST_GROUP[1]?.alt);
-  expect(first.thumbnails).toEqual(FIRST_GROUP.map((p, i) => `Picture ${i + 1}: ${p.alt}`));
+  expect(first.thumbnails).toEqual(thumbLabels(GROUPS_CARD));
   expect(first.current).toBe(`Picture 2: ${FIRST_GROUP[1]?.alt}`);
   // The very copy the frame shows, served by the host.
   const frameSrc = await body(page, title)
@@ -131,16 +147,16 @@ test("a click in each of two groups opens the viewer on that group alone", async
   expect(first.src).toBe(frameSrc);
   await closeWithEscape(page);
 
-  // The second group's lead: the other set, and none of the first.
+  // The second group's lead: the same set, after the first group's pictures.
   await clickPicture(page, title, 0, 1);
   const second = await readViewer(page);
-  expect(second.count).toBe(`1 / ${SECOND_GROUP.length}`);
+  expect(second.count).toBe(`${FIRST_GROUP.length + 1} / ${GROUPS_CARD.length}`);
   expect(second.caption).toBe(WIDE_PICTURE.alt);
-  expect(second.thumbnails).toEqual(SECOND_GROUP.map((p, i) => `Picture ${i + 1}: ${p.alt}`));
+  expect(second.thumbnails).toEqual(thumbLabels(GROUPS_CARD));
   await closeWithEscape(page);
 });
 
-test("the +N tile opens its group at the first picture the strip does not show", async () => {
+test("the +N tile opens the card's pictures at the first one its strip does not show", async () => {
   const { page } = launched;
   const title = PICTURE_CARD_TITLES.groups;
   await showCard(page, title);
@@ -173,47 +189,130 @@ test("the +N tile opens its group at the first picture the strip does not show",
   );
   const opened = await readViewer(page);
   // The strip shows PICTURE_STRIP_SHOWN pictures; the tile opens the next one.
-  expect(opened.count).toBe(`${PICTURE_STRIP_SHOWN + 1} / ${SECOND_GROUP.length}`);
+  expect(opened.count).toBe(
+    `${FIRST_GROUP.length + PICTURE_STRIP_SHOWN + 1} / ${GROUPS_CARD.length}`,
+  );
   expect(opened.caption).toBe(SECOND_GROUP[PICTURE_STRIP_SHOWN]?.alt);
   await closeWithEscape(page);
 });
 
-test("a lone picture and a body's own data: picture each open alone", async () => {
+test("a card's lone picture opens alone, and a body's own data: picture pages with the rest", async () => {
   const { page } = launched;
-  const title = PICTURE_CARD_TITLES.mixed;
-  await clickPicture(page, title, 0);
-  const inline = await readViewer(page);
-  expect(inline.src?.startsWith("data:image/png;base64,")).toBe(true);
-  expect(inline.caption).toBe(INLINE_PICTURE.alt);
-  // A group of one counts nothing; its header says its size instead.
-  expect(inline.count).toBe(pictureSize(INLINE_PICTURE));
-  expect(inline.thumbnails).toEqual([]);
-  await expect(viewer(page).getByRole("button", { name: "Next picture" })).toHaveCount(0);
-  await closeWithEscape(page);
-  await clickPicture(page, title, 2);
+  // A card of one picture: a set of one counts nothing; its header says its size instead.
+  await clickPicture(page, PICTURE_CARD_TITLES.tall, 0);
   const tall = await readViewer(page);
   expect(tall.caption).toBe(TALL_PICTURE.alt);
   expect(tall.count).toBe(pictureSize(TALL_PICTURE));
+  expect(tall.thumbnails).toEqual([]);
+  await expect(viewer(page).getByRole("button", { name: "Next picture" })).toHaveCount(0);
+  await closeWithEscape(page);
+
+  // Pictures loose in a body page together; its diagram is never one of them.
+  const mixed = [INLINE_PICTURE, WIDE_PICTURE, TALL_PICTURE];
+  await clickPicture(page, PICTURE_CARD_TITLES.mixed, 0);
+  const inline = await readViewer(page);
+  expect(inline.src?.startsWith("data:image/png;base64,")).toBe(true);
+  expect(inline.caption).toBe(INLINE_PICTURE.alt);
+  expect(inline.count).toBe(`1 / ${mixed.length}`);
+  expect(inline.thumbnails).toEqual(thumbLabels(mixed));
+  await page.keyboard.press("End");
+  await expect(viewer(page).locator("[data-picture-caption]")).toHaveText(TALL_PICTURE.alt);
   await closeWithEscape(page);
 });
 
-test("keys move within the group and never page the stack", async () => {
+// INF-7148's approved plan: a merge card's saved story puts each Before and After in a cell of its
+// own, and a press pages the whole card in reading order, so a view's After is one key from its
+// Before; the header names the column the picture is in.
+test("on a story's table → from a view's Before shows its After, and the header names the column", async () => {
+  const { page } = launched;
+  // The first view's Before, after the What changed picture.
+  await clickPicture(page, STORY_PICTURES_TITLE, 1);
+  const opened = await readViewer(page);
+  const count = (at: number) =>
+    `${at + 1} / ${STORY_PICTURES.length} · ${STORY_PICTURES[at]?.where}`;
+  expect(opened.count).toBe(count(1));
+  expect(opened.caption).toBe(STORY_PICTURES[1]?.picture.alt);
+  expect(opened.thumbnails).toEqual(
+    STORY_PICTURES.map(({ picture, where }, i) => `Picture ${i + 1}, ${where}: ${picture.alt}`),
+  );
+  await page.keyboard.press("ArrowRight");
+  await expect(viewer(page).locator("[data-picture-count]")).toHaveText(count(2));
+  await expect(viewer(page).locator("[data-picture-caption]")).toHaveText(
+    STORY_PICTURES[2]?.picture.alt ?? "",
+  );
+  // A picture in no table is named by the heading before it.
+  await page.keyboard.press("Home");
+  await expect(viewer(page).locator("[data-picture-count]")).toHaveText(count(0));
+  // A new view's single column is named by its header too.
+  await page.keyboard.press("End");
+  await expect(viewer(page).locator("[data-picture-count]")).toHaveText(
+    count(STORY_PICTURES.length - 1),
+  );
+  await closeWithEscape(page);
+});
+
+// INF-7148's approved plan, part 3: at 1:1 a flip to a picture of the same size keeps 1:1 and its
+// place, so only what changed moves; a picture of another size opens fitted.
+test("at 1:1 a flip to a picture of the same size keeps 1:1 and its place", async () => {
+  const { page } = launched;
+  const [, , , before, after, next] = STORY_PICTURES;
+  if (!before || !after || !next) throw new Error("the story has six pictures");
+  expect({ width: after.picture.width, height: after.picture.height }).toEqual({
+    width: before.picture.width,
+    height: before.picture.height,
+  });
+  expect(next.picture.height).not.toBe(after.picture.height);
+  await clickPicture(page, STORY_PICTURES_TITLE, 3);
+  await readViewer(page);
+  const zoom = viewer(page).locator("[data-picture]");
+  await page.keyboard.press("z");
+  await expect(zoom).toHaveAttribute("aria-pressed", "true");
+  const one = await pictureGeometry(page);
+  const start = {
+    x: one.button.left + one.button.width / 2,
+    y: one.button.top + one.button.height / 2,
+  };
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.move(start.x - 120, start.y - 60, { steps: 5 });
+  await page.mouse.up();
+  const moved = await pictureGeometry(page);
+  expect(moved.offset).not.toEqual(one.offset);
+
+  await page.keyboard.press("ArrowRight");
+  await expect(viewer(page).locator("[data-picture-caption]")).toHaveText(after.picture.alt);
+  await expect(zoom).toHaveAttribute("aria-pressed", "true");
+  expect((await pictureGeometry(page)).offset).toEqual(moved.offset);
+
+  await page.keyboard.press("ArrowRight");
+  await expect(viewer(page).locator("[data-picture-caption]")).toHaveText(next.picture.alt);
+  await expect(zoom).toHaveAttribute("aria-pressed", "false");
+  await closeWithEscape(page);
+});
+
+test("keys move through the card's pictures and never page the stack", async () => {
   const { page } = launched;
   await clickPicture(page, PICTURE_CARD_TITLES.groups, 0, 1);
-  const stackPager = pager(page, 4);
+  const stackPager = pager(page, 5);
   const stackBefore = await stackPager.getAttribute("data-pager-position");
   const count = viewer(page).locator("[data-picture-count]");
-  const last = SECOND_GROUP.length;
+  const last = GROUPS_CARD.length;
+  const lead = FIRST_GROUP.length + 1;
   // The viewer takes focus once it has drawn; a key before that is the stack's.
   await expect
     .poll(() =>
       viewer(page).evaluate((dialog) => dialog.contains(dialog.ownerDocument.activeElement)),
     )
     .toBe(true);
+  // ← from the second group's lead reaches the first group's last picture.
   await page.keyboard.press("ArrowLeft");
-  await expect(count).toHaveText(`1 / ${last}`);
+  await expect(count).toHaveText(`${lead - 1} / ${last}`);
+  await expect(viewer(page).locator("[data-picture-caption]")).toHaveText(
+    FIRST_GROUP.at(-1)?.alt ?? "",
+  );
   await page.keyboard.press("ArrowRight");
-  await expect(count).toHaveText(`2 / ${last}`);
+  await page.keyboard.press("ArrowRight");
+  await expect(count).toHaveText(`${lead + 1} / ${last}`);
   await expect(viewer(page).locator("[data-picture-caption]")).toHaveText(
     SECOND_GROUP[1]?.alt ?? "",
   );
@@ -228,9 +327,9 @@ test("keys move within the group and never page the stack", async () => {
   await viewer(page).getByRole("button", { name: "Next picture" }).click();
   await expect(count).toHaveText(`2 / ${last}`);
   await viewer(page)
-    .getByRole("button", { name: `Picture 5: ${SECOND_GROUP[4]?.alt}` })
+    .getByRole("button", { name: `Picture ${lead + 4}: ${SECOND_GROUP[4]?.alt}` })
     .click();
-  await expect(count).toHaveText(`5 / ${last}`);
+  await expect(count).toHaveText(`${lead + 4} / ${last}`);
   await expect(stackPager).toHaveAttribute("data-pager-position", stackBefore ?? "");
   await closeWithEscape(page);
 });
@@ -298,7 +397,7 @@ test("a click, Z, Enter or Space toggles 1:1, and a drag or the wheel moves the 
   await expect(viewer(page).locator("[data-picture]")).toHaveAttribute("aria-pressed", "true");
   await closeWithEscape(page);
 
-  // Another picture always opens fitted.
+  // The viewer opened again opens fitted.
   await clickPicture(page, PICTURE_CARD_TITLES.wide, 0);
   await expect(viewer(page).locator("[data-picture]")).toHaveAttribute("aria-pressed", "false");
   await closeWithEscape(page);

@@ -4760,6 +4760,7 @@ public enum PhoneMessages {
     public static func `uiPictureViewerShownAtOwnSize`() -> String { PhoneWords.format("uiPictureViewerShownAtOwnSize", []) }
     public static func `uiPictureViewerStop`() -> String { PhoneWords.format("uiPictureViewerStop", []) }
     public static func `uiPictureViewerThumb`(`alt`: String, `number`: String) -> String { PhoneWords.format("uiPictureViewerThumb", [`alt`, `number`]) }
+    public static func `uiPictureViewerThumbWhere`(`alt`: String, `number`: String, `where`: String) -> String { PhoneWords.format("uiPictureViewerThumbWhere", [`alt`, `number`, `where`]) }
     public static func `uiPictureViewerUnplayable`() -> String { PhoneWords.format("uiPictureViewerUnplayable", []) }
     public static func `uiQuotaLow`() -> String { PhoneWords.format("uiQuotaLow", []) }
     public static func `uiQuotaMeterNameLeft`(`label`: String, `percent`: String) -> String { PhoneWords.format("uiQuotaMeterNameLeft", [`label`, `percent`]) }
@@ -9666,6 +9667,7 @@ extension PhoneWords {
         "uiPictureViewerShownAtOwnSize": [],
         "uiPictureViewerStop": [],
         "uiPictureViewerThumb": ["alt", "number"],
+        "uiPictureViewerThumbWhere": ["alt", "number", "where"],
         "uiPictureViewerUnplayable": [],
         "uiQuotaLow": [],
         "uiQuotaMeterNameLeft": ["label", "percent"],

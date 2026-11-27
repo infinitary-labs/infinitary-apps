@@ -138,6 +138,7 @@ It tells the change's story: why, what changed, and what was checked.
 Each screen the change touches shows how it looked before and how it looks after, side by side.
 A new screen shows only After.
 Click a picture to see it larger, and to [point at a place on it](#pointing-at-a-picture).
+In the larger view, the arrow keys or the arrows at its sides go through every picture on the card, so a screen's Before and After are one key apart.
 A demo recording has a play button.
 
 **The risk drawing.**

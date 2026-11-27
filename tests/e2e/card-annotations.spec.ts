@@ -530,6 +530,17 @@ test("the crewmate receives marks made by pointer and by keys, one marked pictur
       .click();
     await expect(viewer.locator("[data-picture-caption]")).toHaveText(CARD_DIAGRAM.caption);
     await expect(marks).toHaveAttribute("data-picture-marks", "3");
+    await page.keyboard.press("Escape");
+    await expect(viewer).toHaveCount(0);
+
+    // INF-7148's approved plan: a press on a note about a picture opens the card's pictures at
+    // the one its place names - the card's second of three - showing that note's mark.
+    await thread
+      .getByRole("button", { name: noteLabel(boxed as CardNote, 1), exact: true })
+      .click();
+    await expect(viewer.locator("[data-picture-caption]")).toHaveText(WIDE_PICTURE.alt);
+    await expect(viewer.locator("[data-picture-count]")).toHaveText("2 / 3");
+    await expect(marks).toHaveAttribute("data-picture-marks", "1");
   } finally {
     await a.close();
   }

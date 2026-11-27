@@ -1,5 +1,5 @@
 ---
-source: fddef151ac47ef10
+source: 8b70a675730a25eb
 title: Cartões e decisões
 description: Como o seu imediato e a sua tripulação trazem respostas e decisões para você em cartões, e como respondê-los.
 ---
@@ -139,6 +139,7 @@ Ele conta a história da mudança: por quê, o que mudou e o que foi verificado.
 Cada tela que a mudança toca mostra como era antes e como fica depois, lado a lado.
 Uma tela nova mostra só o Depois.
 Clique em uma imagem para vê-la maior e para [apontar para um lugar nela](#pointing-at-a-picture).
+Na visualização maior, as teclas de seta ou as setas nas laterais passam por todas as imagens do cartão, então o Antes e o Depois de uma tela ficam a uma tecla de distância.
 Uma gravação de demonstração tem um botão de reproduzir.
 
 **O desenho de risco.**

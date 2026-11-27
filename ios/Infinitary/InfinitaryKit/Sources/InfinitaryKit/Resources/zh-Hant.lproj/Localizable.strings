@@ -4580,6 +4580,7 @@
 "uiPictureViewerShownAtOwnSize" = "以原始大小顯示";
 "uiPictureViewerStop" = "停止";
 "uiPictureViewerThumb" = "圖片 %2$@：%1$@";
+"uiPictureViewerThumbWhere" = "圖片 %2$@，%3$@：%1$@";
 "uiPictureViewerUnplayable" = "無法播放這段錄製內容。";
 "uiQuotaLow" = "偏低";
 "uiQuotaMeterNameLeft" = "%1$@ 剩餘 %2$@%%";

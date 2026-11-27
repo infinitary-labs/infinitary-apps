@@ -55,6 +55,8 @@ struct CardMediaView: View {
                         HStack {
                             Button(PhoneMessages.phoneMediaPreviousPicture()) { index -= 1 }.disabled(index == 0)
                             Text(PhoneMessages.phoneMediaPicturePosition(count: pictures.count, position: String(index + 1)))
+                            // INF-7148: the card's own name for the picture's column or section, such as After.
+                            if let place = pictures[index]["where"].text { Text(place).font(PhoneFont.caption) }
                             Button(PhoneMessages.phoneMediaNextPicture()) { index += 1 }.disabled(index == pictures.count - 1)
                         }.padding()
                     }

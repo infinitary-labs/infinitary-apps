@@ -1,5 +1,5 @@
 ---
-source: fddef151ac47ef10
+source: 8b70a675730a25eb
 title: Karten und Entscheidungen
 description: Wie dein erster Offizier und deine Crew dir Antworten und Entscheidungen als Karten bringen und wie du sie beantwortest.
 ---
@@ -139,6 +139,7 @@ Sie erzählt die Geschichte der Änderung: warum, was sich geändert hat und was
 Jeder Bildschirm, den die Änderung berührt, zeigt nebeneinander, wie er vorher aussah und wie er nachher aussieht.
 Ein neuer Bildschirm zeigt nur Nachher.
 Klick auf ein Bild, um es größer zu sehen und um [auf eine Stelle darin zu zeigen](#pointing-at-a-picture).
+In der großen Ansicht gehen die Pfeiltasten oder die Pfeile an ihren Seiten durch alle Bilder der Karte, sodass Vorher und Nachher eines Bildschirms nur eine Taste auseinanderliegen.
 Eine Demo-Aufnahme hat eine Wiedergabetaste.
 
 **Die Risikozeichnung.**

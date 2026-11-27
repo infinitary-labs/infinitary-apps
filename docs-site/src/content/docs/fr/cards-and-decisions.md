@@ -1,5 +1,5 @@
 ---
-source: fddef151ac47ef10
+source: 8b70a675730a25eb
 title: Cartes et décisions
 description: Comment votre second et votre équipage vous apportent réponses et décisions sous forme de cartes, et comment y répondre.
 ---
@@ -139,6 +139,7 @@ Elle raconte le récit du changement : pourquoi, ce qui a changé et ce qui a �
 Chaque écran que touche le changement montre son aspect avant et son aspect après, côte à côte.
 Un nouvel écran ne montre que Après.
 Cliquez sur une image pour l’agrandir, et pour [désigner un endroit dessus](#pointing-at-a-picture).
+Dans la grande vue, les touches fléchées ou les flèches sur ses côtés parcourent toutes les images de la carte : l’Avant et l’Après d’un écran ne sont qu’à une touche l’un de l’autre.
 Un enregistrement de démo a un bouton de lecture.
 
 **Le dessin du risque.**

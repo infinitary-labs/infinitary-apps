@@ -59,6 +59,7 @@
   "uiPictureViewerShownAtOwnSize": "元のサイズで表示",
   "uiPictureViewerStop": "停止",
   "uiPictureViewerThumb": "画像 {number}：{alt}",
+  "uiPictureViewerThumbWhere": "画像 {number}、{where}：{alt}",
   "uiPictureViewerUnplayable": "この録画は再生できませんでした。",
   "uiQuotaLow": "残りわずか",
   "uiQuotaMeterNameLeft": "{label} 残り{percent}%",

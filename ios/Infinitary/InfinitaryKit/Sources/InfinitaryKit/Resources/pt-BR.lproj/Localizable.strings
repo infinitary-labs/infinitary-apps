@@ -4580,6 +4580,7 @@
 "uiPictureViewerShownAtOwnSize" = "Exibida no próprio tamanho";
 "uiPictureViewerStop" = "Parar";
 "uiPictureViewerThumb" = "Imagem %2$@: %1$@";
+"uiPictureViewerThumbWhere" = "Imagem %2$@, %3$@: %1$@";
 "uiPictureViewerUnplayable" = "Não foi possível reproduzir esta gravação.";
 "uiQuotaLow" = "baixa";
 "uiQuotaMeterNameLeft" = "%1$@ %2$@%% restante";

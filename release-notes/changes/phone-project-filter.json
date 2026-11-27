@@ -9,7 +9,7 @@
       "picture": {
         "dark": "phone-project-filter-dark.webp",
         "light": "phone-project-filter-light.webp",
-        "alt": "An iPad on its side focused on the infinitary project: the row under the top bar names infinitary and how many tasks wait elsewhere, and Tasks lists only that project's tasks"
+        "alt": "An iPad on its side focused on the north-pier project: the row under the top bar names north-pier and one task waiting elsewhere, and Tasks lists only north-pier's tasks"
       },
       "docsSite": ["projects", "iphone-and-ipad"],
       "provenance": { "origin": "change" }

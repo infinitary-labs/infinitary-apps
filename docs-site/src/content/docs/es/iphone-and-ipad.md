@@ -1,5 +1,5 @@
 ---
-source: 61843fc4e8da2e59
+source: 687152f8b55d6613
 title: iPhone y iPad
 description: Pide una invitación privada de TestFlight para Infinitary en iPhone y iPad, y luego únete a tu computadora para leer tarjetas y enviar mensajes.
 ---
@@ -44,6 +44,7 @@ El teléfono nunca cambia por sí solo: se queda en tu elección hasta que elige
 ## Lo que muestra {#what-it-shows}
 
 La barra superior tiene **Inicio**, **Tareas** y **Actividad**.
+Con dos proyectos o más, **Filtro** a la derecha de la barra superior centra el teléfono en un proyecto; consulta [Centrarse en un proyecto](/es/projects/#focus-on-one-project).
 
 - **Inicio** muestra tus tarjetas, una a la vez; desliza para pasar a la siguiente.
   Responde una tarjeta en el teléfono como lo harías en tu computadora.

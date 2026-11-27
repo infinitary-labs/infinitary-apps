@@ -159,12 +159,8 @@
   "phoneComputerShowHint": "显示这台电脑",
   "phoneComputerTitle": "你的电脑",
   "phoneCrewSummaryOpenTask": "打开任务",
-  "phoneFilterAllProjects": "所有项目",
   "phoneFilterCounts": "{waiting} 个等你处理 · {working} 个进行中",
-  "phoneFilterFocusCommand": "聚焦于一个项目",
-  "phoneFilterPill": "{name} · {waiting} 个等你处理 · {working} 个进行中",
   "phoneFilterProject": "项目",
-  "phoneFilterShowAll": "显示所有项目",
   "phoneFilterTitle": "筛选",
   "phoneFilterWaitingElsewhere": {
     "plural": "count",

@@ -164,12 +164,8 @@
   "phoneComputerShowHint": "Shows this computer",
   "phoneComputerTitle": "Your computer",
   "phoneCrewSummaryOpenTask": "Open task",
-  "phoneFilterAllProjects": "All projects",
   "phoneFilterCounts": "{waiting} waiting on you · {working} working",
-  "phoneFilterFocusCommand": "Focus on a project",
-  "phoneFilterPill": "{name} · {waiting} waiting on you · {working} working",
   "phoneFilterProject": "Project",
-  "phoneFilterShowAll": "Show all projects",
   "phoneFilterTitle": "Filter",
   "phoneFilterWaitingElsewhere": {
     "plural": "count",

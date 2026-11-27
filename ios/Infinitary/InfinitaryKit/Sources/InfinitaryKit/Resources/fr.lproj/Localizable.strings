@@ -2022,12 +2022,8 @@
 "phoneComputerShowHint" = "Affiche cet ordinateur";
 "phoneComputerTitle" = "Votre ordinateur";
 "phoneCrewSummaryOpenTask" = "Ouvrir la tâche";
-"phoneFilterAllProjects" = "Tous les projets";
 "phoneFilterCounts" = "%1$@ en attente de vous · %2$@ en cours";
-"phoneFilterFocusCommand" = "Se concentrer sur un projet";
-"phoneFilterPill" = "%1$@ · %2$@ en attente de vous · %3$@ en cours";
 "phoneFilterProject" = "Projet";
-"phoneFilterShowAll" = "Afficher tous les projets";
 "phoneFilterTitle" = "Filtre";
 "phoneFormatDays" = "%1$@ j";
 "phoneFormatDaysHours" = "%1$@ j %2$@ h";

@@ -184,12 +184,8 @@
   "phoneComputerShowHint": "يعرض هذا الحاسوب",
   "phoneComputerTitle": "حاسوبك",
   "phoneCrewSummaryOpenTask": "فتح المهمة",
-  "phoneFilterAllProjects": "كل المشاريع",
   "phoneFilterCounts": "{waiting} بانتظارك · {working} قيد العمل",
-  "phoneFilterFocusCommand": "التركيز على مشروع",
-  "phoneFilterPill": "{name} · {waiting} بانتظارك · {working} قيد العمل",
   "phoneFilterProject": "المشروع",
-  "phoneFilterShowAll": "عرض كل المشاريع",
   "phoneFilterTitle": "تصفية",
   "phoneFilterWaitingElsewhere": {
     "plural": "count",

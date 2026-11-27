@@ -21,7 +21,7 @@ struct PhoneFilterButton: View {
         }
         .accessibilityLabel(PhoneMessages.phoneFilterTitle())
         .accessibilityValue(focus.flatMap { id in session.projectPills.projects.first { $0.id == id }?.name }
-                            ?? PhoneMessages.phoneFilterAllProjects())
+                            ?? PhoneMessages.shellProjectAll())
         .accessibilityIdentifier("project-filter")
     }
 }
@@ -72,7 +72,7 @@ struct PhoneFilterSheet: View {
         return VStack(alignment: .leading, spacing: PhoneTheme.space2) {
             PhoneSectionLabel(PhoneMessages.phoneFilterProject())
             PhoneList {
-                row(Self.allRow, title: PhoneMessages.phoneFilterAllProjects(), waiting: pills.waiting, working: pills.working,
+                row(Self.allRow, title: PhoneMessages.shellProjectAll(), waiting: pills.waiting, working: pills.working,
                     order: order)
                 ForEach(pills.projects) { pill in
                     row(pill.id, title: pill.name, waiting: pill.waiting, working: pill.working, order: order)
@@ -139,14 +139,14 @@ struct PhoneFocusRow: View {
                         .overlay(Capsule().strokeBorder(PhoneTheme.accent))
                         .frame(minHeight: 44).contentShape(Rectangle())
                 }.buttonStyle(.plain)
-                    .accessibilityLabel(PhoneMessages.phoneFilterPill(name: pill.name, waiting: PhoneProjectFilterWords.count(pill.waiting),
+                    .accessibilityLabel(PhoneMessages.shellProjectPillWords(name: pill.name, waiting: PhoneProjectFilterWords.count(pill.waiting),
                                                                       working: PhoneProjectFilterWords.count(pill.working)))
-                    .accessibilityHint(PhoneMessages.phoneFilterFocusCommand())
+                    .accessibilityHint(PhoneMessages.commandProjectFocusOpen())
                     .accessibilityIdentifier("project-focus-pill")
                 Button { session.savedProjectFocus = nil } label: {
                     Image(systemName: "xmark").font(PhoneFont.callout).frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
                 }.buttonStyle(.plain).foregroundStyle(PhoneTheme.muted)
-                    .accessibilityLabel(PhoneMessages.phoneFilterShowAll()).accessibilityIdentifier("project-focus-clear")
+                    .accessibilityLabel(PhoneMessages.shellProjectShowAll()).accessibilityIdentifier("project-focus-clear")
                 if elsewhere > 0 {
                     Text(PhoneMessages.phoneFilterWaitingElsewhere(count: elsewhere)).font(PhoneFont.mono)
                         .foregroundStyle(PhoneTheme.muted).lineLimit(1).minimumScaleFactor(0.75)
@@ -200,9 +200,9 @@ struct PhoneFilterCommands: Commands {
 
     var body: some Commands {
         CommandGroup(after: .sidebar) {
-            Button(PhoneMessages.phoneFilterFocusCommand()) { filter?.open() }
+            Button(PhoneMessages.commandProjectFocusOpen()) { filter?.open() }
                 .keyboardShortcut("p", modifiers: [.command, .shift]).disabled(filter?.offered != true)
-            Button(PhoneMessages.phoneFilterShowAll()) { filter?.clear() }.disabled(filter?.focused != true)
+            Button(PhoneMessages.shellProjectShowAll()) { filter?.clear() }.disabled(filter?.focused != true)
         }
     }
 }

@@ -159,12 +159,8 @@
   "phoneComputerShowHint": "이 컴퓨터를 보여줘요",
   "phoneComputerTitle": "내 컴퓨터",
   "phoneCrewSummaryOpenTask": "작업 열기",
-  "phoneFilterAllProjects": "모든 프로젝트",
   "phoneFilterCounts": "내 응답 대기 {waiting} · 작업 중 {working}",
-  "phoneFilterFocusCommand": "프로젝트에 집중",
-  "phoneFilterPill": "{name} · 내 응답 대기 {waiting} · 작업 중 {working}",
   "phoneFilterProject": "프로젝트",
-  "phoneFilterShowAll": "모든 프로젝트 보기",
   "phoneFilterTitle": "필터",
   "phoneFilterWaitingElsewhere": {
     "plural": "count",

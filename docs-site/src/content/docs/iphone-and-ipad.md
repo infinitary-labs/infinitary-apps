@@ -43,6 +43,7 @@ The phone never switches by itself: it stays on your choice until you pick anoth
 ## What it shows
 
 The top bar has **Home**, **Tasks** and **Activity**.
+With two projects or more, **Filter** at the right of the top bar focuses the phone on one project; see [Focus on one project](/projects/#focus-on-one-project).
 
 - **Home** shows your cards, one at a time; swipe to the next.
   Answer a card on the phone as you would on your computer.

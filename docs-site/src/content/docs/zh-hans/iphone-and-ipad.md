@@ -1,5 +1,5 @@
 ---
-source: 61843fc4e8da2e59
+source: 687152f8b55d6613
 title: iPhone 和 iPad
 description: 申请 iPhone 和 iPad 版 Infinitary 的私有 TestFlight 邀请，然后连接你的电脑，阅读卡片并发送消息。
 ---
@@ -44,6 +44,7 @@ iPhone 和 iPad 版 Infinitary 目前处于私有 TestFlight 阶段。
 ## 它显示什么 {#what-it-shows}
 
 顶部栏有 **主页**、**任务** 和 **动态**。
+有两个或更多项目时，顶部栏右侧的 **筛选** 能让手机聚焦于一个项目；请参阅[聚焦于一个项目](/zh-hans/projects/#focus-on-one-project)。
 
 - **主页** 一次显示一张你的卡片；滑动即可看下一张。
   在手机上回答卡片的方式，和在电脑上一样。

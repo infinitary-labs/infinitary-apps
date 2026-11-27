@@ -1,5 +1,5 @@
 ---
-source: 61843fc4e8da2e59
+source: 687152f8b55d6613
 title: iPhone과 iPad
 description: iPhone과 iPad용 Infinitary의 비공개 TestFlight 초대를 요청하고, 컴퓨터에 연결해 카드를 읽고 메시지를 보내세요.
 ---
@@ -44,6 +44,7 @@ iPhone과 iPad용 Infinitary는 비공개 TestFlight로 제공돼요.
 ## 보이는 것 {#what-it-shows}
 
 위쪽 막대에는 **홈**, **작업**, **활동**이 있어요.
+프로젝트가 둘 이상이면 위쪽 막대 오른쪽의 **필터**로 휴대폰을 한 프로젝트에 집중할 수 있어요. [한 프로젝트에 집중하기](/ko/projects/#focus-on-one-project)를 보세요.
 
 - **홈**은 카드를 한 번에 하나씩 보여 줘요. 밀어서 다음 카드로 넘기세요.
   휴대폰에서도 컴퓨터에서처럼 카드에 답하세요.

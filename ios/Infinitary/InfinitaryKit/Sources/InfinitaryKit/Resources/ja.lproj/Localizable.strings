@@ -2022,12 +2022,8 @@
 "phoneComputerShowHint" = "このコンピューターを表示します";
 "phoneComputerTitle" = "コンピューター";
 "phoneCrewSummaryOpenTask" = "タスクを開く";
-"phoneFilterAllProjects" = "すべてのプロジェクト";
 "phoneFilterCounts" = "%1$@件があなた待ち · %2$@件が作業中";
-"phoneFilterFocusCommand" = "プロジェクトに絞り込む";
-"phoneFilterPill" = "%1$@ · %2$@件があなた待ち · %3$@件が作業中";
 "phoneFilterProject" = "プロジェクト";
-"phoneFilterShowAll" = "すべてのプロジェクトを表示";
 "phoneFilterTitle" = "フィルタ";
 "phoneFormatDays" = "%1$@日";
 "phoneFormatDaysHours" = "%1$@日%2$@時間";

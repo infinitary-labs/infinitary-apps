@@ -273,7 +273,7 @@ extension PhoneCardPane {
         onSeen()
     }
     /// A read the connection's end fails says nothing on the card: the card asks again once back in reach, and the
-    /// computer button already says whether it is (the captain: "everywhere else in the ios app said it's in reach").
+    /// reach line and Settings' value already say whether it is (the captain: "everywhere else in the ios app said it's in reach").
     func readThread() {
         guard !card.isPast, reachable else { return }
         Task {

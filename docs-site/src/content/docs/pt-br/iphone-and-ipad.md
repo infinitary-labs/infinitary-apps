@@ -1,5 +1,5 @@
 ---
-source: 61843fc4e8da2e59
+source: 687152f8b55d6613
 title: iPhone e iPad
 description: Peça um convite privado do TestFlight para o Infinitary no iPhone e no iPad e depois conecte-se ao seu computador para ler cartões e enviar mensagens.
 ---
@@ -44,6 +44,7 @@ O celular nunca troca sozinho: ele fica na sua escolha até você escolher outro
 ## O que ele mostra {#what-it-shows}
 
 A barra superior tem **Início**, **Tarefas** e **Atividade**.
+Com dois projetos ou mais, **Filtro** à direita da barra superior foca o celular em um projeto; veja [Focar em um projeto](/pt-br/projects/#focus-on-one-project).
 
 - **Início** mostra seus cartões, um de cada vez; deslize para ir ao próximo.
   Responda a um cartão no celular como faria no computador.

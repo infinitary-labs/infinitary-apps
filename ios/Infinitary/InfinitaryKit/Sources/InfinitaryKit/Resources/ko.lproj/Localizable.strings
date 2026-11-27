@@ -2022,12 +2022,8 @@
 "phoneComputerShowHint" = "이 컴퓨터를 보여줘요";
 "phoneComputerTitle" = "내 컴퓨터";
 "phoneCrewSummaryOpenTask" = "작업 열기";
-"phoneFilterAllProjects" = "모든 프로젝트";
 "phoneFilterCounts" = "내 응답 대기 %1$@ · 작업 중 %2$@";
-"phoneFilterFocusCommand" = "프로젝트에 집중";
-"phoneFilterPill" = "%1$@ · 내 응답 대기 %2$@ · 작업 중 %3$@";
 "phoneFilterProject" = "프로젝트";
-"phoneFilterShowAll" = "모든 프로젝트 보기";
 "phoneFilterTitle" = "필터";
 "phoneFormatDays" = "%1$@일";
 "phoneFormatDaysHours" = "%1$@일 %2$@시간";

@@ -226,7 +226,7 @@ public struct PhoneNotice: Equatable, Sendable {
     public var homeUpdatePolls: Bool {
         homeUpdates && contact == "in-reach" && (homeUpdate?.underWay == true || access != "full")
     }
-    /// INF-2668, the captain's answer "about 20 s": what the reach line and the computer button say. A connection
+    /// INF-2668, the captain's answer "about 20 s": what the reach line and Settings' value say. A connection
     /// that was in reach keeps saying In reach while it redials, until the computer has been quiet for `patience`;
     /// only then do the words follow `contact`, so a cell pause passes unnoticed and a dead path is named within
     /// half a minute.

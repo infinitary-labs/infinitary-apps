@@ -18,7 +18,7 @@ struct PhoneReach: View {
 }
 
 extension ReadOnlySession {
-    /// The reach, in the words the reach line and the computer button share. INF-2668: they follow the patient
+    /// The reach, in the words the reach line and Settings' value share. INF-2668: they follow the patient
     /// `reach`, so a redial the computer answers within the captain's 20 s says nothing. INF-4207 piece 2: Live once
     /// every change is shown, and a catch-up says whether it replays what was missed or reads everything again.
     var reachWords: String {
@@ -37,7 +37,7 @@ extension ReadOnlySession {
         return PhoneFormats.since(heardAt)
     }
 
-    /// INF-1062: the computer button in the top bar says the reach to VoiceOver, with its time while out of reach.
+    /// INF-1062: Settings' button in the top bar says the reach to VoiceOver, with its time while out of reach.
     var reachLine: String {
         guard let reachTime else { return reachWords }
         return PhoneMessages.phoneReachLineSince(reach: reachWords, time: reachTime)

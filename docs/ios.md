@@ -70,7 +70,7 @@ The phone never switches by itself (the captain's pick, "Stay on my choice"): on
 The page opens with its first row focused, so on a keyboard the up and down arrows move among the rows and Return or Space presses one; Command-I and, while the computer is not in reach, a press on the reach line open Settings at Your computer.
 The list's row names the computer shown and its reach, such as Test Mac mini · Live.
 A choice there closes Settings before it acts, and Add another computer opens its way in once Settings has closed.
-The top bar has no computer button: the Filter button took its place (INF-2820's piece 2), and VoiceOver hears the Settings button's value say what the Your computer row says, the computer shown and its reach.
+The top bar has no computer button: the Filter button took its place (INF-2820's piece 2), and VoiceOver hears the Settings button's value give the computer shown and the reach line's words, which add since when while the computer is out of reach.
 Leave and Forget act on the computer their confirmation named, even when a notification's tap showed another before the answer came; forgetting the shown one shows the kept computer shown most recently next, or the first screen when none is left.
 A change of network that leaves no usable path marks every other computer Not answering from here and stops the look under way, so a list open while a private network goes away does not keep an old mark.
 Each look tries every saved address of a computer at once, each through the pinned check with the pairing timeout, so an address that times out or answers with another key does not hide one that answers.
@@ -176,7 +176,6 @@ The session records that address in the same step that turns the connection In r
 Leave is available in reach and asks for confirmation, sends the connection's Leave frame, waits for removal and forgets the computer shown.
 Out of reach, **Forget this computer** asks for confirmation and clears that computer and its pin locally without claiming it removed the phone; either way another kept computer shows next ("Several computers").
 Both choices live on Settings' Your computer page, opened from Settings, Command-I or the reach line; neither is an always-visible destructive toolbar action.
-That button is the computer glyph, with a dot in the warning color at its corner only while the computer is out of reach, and VoiceOver reads the reach as its value; with one computer kept its name is on Your computer, not the bar, and with more than one the button names the computer shown.
 Out of reach, Your computer also offers Take over with each computer that keeps a copy of the record, as the welcome lists them, which asks one to take over after Face ID or the passcode (`PhoneTakeOverSection.swift`, `PhoneTakeOver.swift`; `docs/devices.md`, "Taking over from a phone").
 The phone then follows the home to the computer that took over by its higher number, and refuses the old home's lower number and a second home with the same number.
 A removal close, or the removal frame before it (`removal-notice`, `docs/connection.md` "Closing"), or repeated authenticated refusal clears cards and feed and forgets that computer; with no other computer kept it offers joining with a new link on a screen shaped like the first one, with one prominent Join again.

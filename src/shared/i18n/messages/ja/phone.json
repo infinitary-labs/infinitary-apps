@@ -159,12 +159,8 @@
   "phoneComputerShowHint": "このコンピューターを表示します",
   "phoneComputerTitle": "コンピューター",
   "phoneCrewSummaryOpenTask": "タスクを開く",
-  "phoneFilterAllProjects": "すべてのプロジェクト",
   "phoneFilterCounts": "{waiting}件があなた待ち · {working}件が作業中",
-  "phoneFilterFocusCommand": "プロジェクトに絞り込む",
-  "phoneFilterPill": "{name} · {waiting}件があなた待ち · {working}件が作業中",
   "phoneFilterProject": "プロジェクト",
-  "phoneFilterShowAll": "すべてのプロジェクトを表示",
   "phoneFilterTitle": "フィルタ",
   "phoneFilterWaitingElsewhere": {
     "plural": "count",

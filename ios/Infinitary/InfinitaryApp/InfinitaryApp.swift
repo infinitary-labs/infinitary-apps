@@ -108,8 +108,8 @@ struct PhoneView: View {
                     }
                 } else if model.connection != nil, !model.removed {
                     ToolbarItem(placement: .topBarLeading) {
-                        // INF-2820 piece 2: with the computer button gone, Settings says what its Your computer row says:
-                        // the computer shown and its reach.
+                        // INF-2820 piece 2: with the computer button gone, Settings' value gives the computer shown and
+                        // the reach line's words, which keep the time it went out of reach that the button gave VoiceOver.
                         Button { settings = PhoneSettingsOpening(place: nil) } label: { PhoneSymbol.settings.image }
                             .accessibilityLabel(PhoneMessages.phoneCommonSettings())
                             .accessibilityValue(model.connection.map { PhoneMessages.phoneSettingsComputerSummary(computer: $0.mac.name, reach: $0.reachLine) } ?? "")

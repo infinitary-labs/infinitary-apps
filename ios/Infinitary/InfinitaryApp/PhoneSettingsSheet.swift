@@ -10,7 +10,7 @@ struct PhoneSettingsSheet: View {
     let session: ReadOnlySession
     /// Where a panel's `point.openSettings` opens the sheet, read once as it opens; nil opens the list.
     var opening: PhoneSettingsPlace?
-    /// Opens the sheet at Your computer instead, as Command-I, the computer button and the reach line do.
+    /// Opens the sheet at Your computer instead, as Command-I and the reach line do.
     var openingComputer = false
     let model: PhoneModel
     /// What Your computer's choices do once Settings has closed (`PhoneComputerPage`).

@@ -640,9 +640,11 @@ describe("the next main check waits for the alpha cut", () => {
   it("holds every check of a main run behind the wait, and names a requested release plainly", () => {
     expect(main.jobs["alpha-wait"]?.uses).toBe("./.github/workflows/alpha-wait.yml");
     // The swept batch's sort (INF-2430's plan, piece 3) runs no check: it
-    // only decides whether the full check runs.
+    // only decides whether the full check runs. The outside merge's stop
+    // (INF-6982) runs none either: it cancels the run at once, so the run
+    // never holds main's queue behind an alpha cut.
     for (const [id, job] of Object.entries(main.jobs))
-      if (!["alpha-wait", "sort"].includes(id))
+      if (!["alpha-wait", "sort", "outside"].includes(id))
         expect([job.needs].flat(), id).toContain("alpha-wait");
     expect(alphaName(73)).toBe("Alpha from main run 73");
     expect(

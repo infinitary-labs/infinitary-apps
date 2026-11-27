@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "release-phone-queue",
+      "reason": "The phone release's own phone check asks for a release phone queue, which the build machines start before other phone checks; only how the project's own TestFlight phone check waits for a build machine changes, and nothing in the app changes."
+    }
+  ]
+}

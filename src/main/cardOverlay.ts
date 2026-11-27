@@ -64,7 +64,8 @@ type Phase =
   | { kind: "closed" }
   // Loaded, hidden, on a card's notification, so the key that follows opens it at once:
   // its page holds its card until the key (`pressed`).
-  | { kind: "warm"; panel: OverlayPanel; timer: unknown; waiting: (() => void)[] }
+  // A page whose first reads failed says so before the key; its word is kept for the key (`ready`).
+  | { kind: "warm"; panel: OverlayPanel; timer: unknown; waiting: (() => void)[]; early?: boolean }
   | { kind: "opening"; panel: OverlayPanel; since: number }
   | { kind: "answering"; panel: OverlayPanel }
   | { kind: "nothing"; panel: OverlayPanel; timer: unknown }
@@ -200,6 +201,7 @@ export class CardOverlayController {
       phase.panel.summoned();
       this.phase = { kind: "opening", panel: phase.panel, since };
       for (const resolve of phase.waiting) resolve();
+      if (phase.early !== undefined) this.ready(phase.panel, phase.early);
       return;
     }
     // A press while the page starts, or while it lets go, is spent on nothing.
@@ -213,6 +215,10 @@ export class CardOverlayController {
    */
   ready(panelAsking: OverlayPanel, cards: boolean): void {
     const phase = this.phase;
+    if (phase.kind === "warm" && phase.panel === panelAsking) {
+      this.phase = { ...phase, early: cards };
+      return;
+    }
     if (phase.kind !== "opening" || phase.panel !== panelAsking) return;
     // i18n-exempt: a timing line for a check, read by no person in the app
     this.deps.mark?.(`ready ${this.deps.now() - phase.since}ms cards=${cards}`);

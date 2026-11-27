@@ -294,6 +294,18 @@ describe("a panel loaded on a card's notification", () => {
     expect(first.did).toEqual(["show"]);
   });
 
+  it("keeps a page's word that its reads failed until the key, then says no card waits", () => {
+    const h = harness({ saved: ON });
+    h.controller.noticed();
+    const first = h.opened(0);
+    h.controller.ready(first.it, false);
+    expect(first.did).toEqual([]);
+    h.press();
+    expect(first.did).toEqual(["show-inactive"]);
+    h.advance(NOTHING_WAITS_MS);
+    expect(first.did).toEqual(["show-inactive", "hide", "ask-to-leave"]);
+  });
+
   it("goes unpressed after the wait, counted from the newest notification", () => {
     const h = harness({ saved: ON });
     h.controller.noticed();

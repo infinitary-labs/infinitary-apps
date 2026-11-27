@@ -1,5 +1,5 @@
 ---
-source: df632c26677efc84
+source: 86bf487dacd685ea
 title: Karten und Entscheidungen
 description: Wie dein erster Offizier und deine Crew dir Antworten und Entscheidungen als Karten bringen und wie du sie beantwortest.
 ---
@@ -52,7 +52,8 @@ Ein Klick in die Karte sendet nie von selbst etwas.
 
 ## Das Antwortfeld und der Verlauf {#the-reply-field-and-the-thread}
 
-Jede Karte hat unter ihrem Text ein Feld mit dem Hinweis „noch etwas hinzuzufügen?“, außer der Begrüßungskarte und den Karten, die erscheinen, während dein erster Offizier ausfällt.
+Jede Karte hat unter ihrem Text ein Feld mit dem Hinweis „noch etwas hinzuzufügen?“, außer der Begrüßungskarte.
+Eine Antwort unter einer Karte, die erscheint, während dein erster Offizier ausfällt, wartet, bis er zurück ist, und die Karte bleibt, bis dein erster Offizier dort antwortet.
 
 - Schreib hinein und drück auf **Chat**, um eine Antwort zu senden, ohne zu wählen.
 - Schreib hinein und drück auf eine Möglichkeit, um deine Worte mit dieser Wahl zu senden.

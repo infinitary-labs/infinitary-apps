@@ -32,6 +32,7 @@ import { cardMutationText } from "./cardMutationText";
 import { resolveRevisionTargets, revisionLinks } from "./cardNavigation";
 import { firstmateSignOffRefusal, SIGNED_OFF_ACTION_ID, signOffRefusal } from "./cardSignOff";
 import type { CardAuthorRef, CardServiceHost, CardStack } from "./cardStackTypes";
+import { FIRSTMATE_DOWN_CARD_IDS } from "./hostCards";
 import { waitingCardWords } from "./idleWakes";
 import {
   answersWithAuthorWordsMarked,
@@ -892,7 +893,7 @@ export class CardThreads {
     // own answerer while one waits; anyone else's is a comment.
     const interim = designated && input.interim === true && card.awaiting === "answer";
     const response = input.response;
-    return this.host.cardStore.transaction((): CardMutation => {
+    const written = this.host.cardStore.transaction((): CardMutation => {
       const line = this.stack.addMessage(
         id,
         caller.actor,
@@ -920,6 +921,20 @@ export class CardThreads {
       this.recordContribution(input, id, caller, result);
       return result;
     });
+    // A card shown while the first mate was down stays up while a reply
+    // under it waits (`HostCardStack`). The first mate answering it is no
+    // longer down, so its answer to the newest reply signs the card off; an
+    // answer to an earlier one leaves the card up for the reply after it.
+    if (
+      caller.actor === "firstmate" &&
+      written.answered !== undefined &&
+      written.answered === this.host.cardStore.newestCaptainMessage(id)?.id &&
+      card.author === "host" &&
+      FIRSTMATE_DOWN_CARD_IDS.includes(id)
+    ) {
+      this.signOff(id, "firstmate");
+    }
+    return written;
   }
 
   /**

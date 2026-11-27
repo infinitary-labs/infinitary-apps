@@ -34,6 +34,7 @@ import {
   FIRSTMATE_MOVE_BACK_CARD_ID,
   FIRSTMATE_NO_PROVIDER_SIGN_IN_WORDS,
   FIRSTMATE_PICTURES_CARD_ID,
+  FIRSTMATE_SIGN_IN_CARD_ID,
   type FirstmatePauseCard,
   savedResetsWords,
   spentAttemptOf,
@@ -51,8 +52,6 @@ import {
   seatSessionSpec,
 } from "./seat";
 import { digestFor, seatIdentity } from "./seatDigest";
-
-const AUTH_CARD_ID = "card-fm-auth";
 
 /**
  * Consecutive flagship runaways (max_time_limit / token-generation /
@@ -730,8 +729,9 @@ export class FirstmateSeat {
     }
     void this.session?.detach();
     // The pause card speaks for a lost sign-in: the generic sign-in card a
-    // failed turn raised before the proof came is not a second card for it.
-    this.options.supervisor.cards.hostCards.clearAuthDecisionCard(AUTH_CARD_ID);
+    // failed turn raised before the proof came is not a second card for it,
+    // unless a reply under it still waits for the first mate's answer.
+    this.options.supervisor.cards.hostCards.clearAuthDecisionCard(FIRSTMATE_SIGN_IN_CARD_ID);
     const card = this.pauseCard(accountId, pause);
     if (!fresh) {
       // The same pause: its card stands, revised in place if its words
@@ -881,7 +881,7 @@ export class FirstmateSeat {
     this.paused = undefined;
     const flagship = this.options.flagship;
     if (!flagship || paused.accountId !== this.seatAccount()) return;
-    this.options.supervisor.cards.hostCards.clearAuthDecisionCard(AUTH_CARD_ID);
+    this.options.supervisor.cards.hostCards.clearAuthDecisionCard(FIRSTMATE_SIGN_IN_CARD_ID);
     // What waited out the pause is due now, whatever its backoff said.
     this.options.inbox.endOutage(FIRSTMATE_RECIPIENT);
     const label = flagship.labelOf(paused.accountId) ?? "its account";
@@ -1181,10 +1181,10 @@ export class FirstmateSeat {
       const account = this.seatAccount();
       const access = account ? this.options.flagship?.accessOf(account) : undefined;
       this.options.supervisor.cards.hostCards.addAuthDecisionCard(
-        AUTH_CARD_ID,
+        FIRSTMATE_SIGN_IN_CARD_ID,
         "firstmate",
         this.signInCardBody(),
-        { ...(access ? { access } : {}), noReply: true },
+        access ? { access } : undefined,
       );
       return;
     }

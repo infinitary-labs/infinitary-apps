@@ -109,11 +109,12 @@ extension PhoneJourney {
         // From the keyboard: Shift-Command-P opens the sheet on the checked row, Escape closes it, and the arrows and
         // Return pick. Focus is read by what the keys do, as the Settings journeys read it: from All projects, the
         // checked row, one Down and Return pick north-pier, the first project. As PhoneKeys owns, Xcode emits the
-        // physical Return for LF, not CR.
+        // physical Return for LF, not CR; Escape goes through the test home, since XCTest's typist sends no event for it.
         let all = app.buttons["project-filter-all-projects"]
         app.typeKey("p", modifierFlags: [.command, .shift])
         XCTAssertTrue(all.waitForPresence(timeout: 10), "Shift-Command-P opens Filter\n\(app.debugDescription)")
-        app.typeKey(XCUIKeyboardKey.escape.rawValue, modifierFlags: [])
+        waitForSteadyTarget(all)
+        try await pressKeyThroughHome("escape")
         XCTAssertTrue(all.waitForAbsence(timeout: 10), "Escape closes Filter")
         XCTAssertEqual(filter.value as? String, "All projects", "Escape picks nothing")
         app.typeKey("p", modifierFlags: [.command, .shift])

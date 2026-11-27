@@ -2896,7 +2896,7 @@ export async function startPhoneHome(
         case "POST key-return":
         case "POST key-escape":
           if (!controls?.key)
-            throw new Error("Only a simulated iPhone Duo takes a key through its test home");
+            throw new Error("Only the Duo, or a part marked keys, takes a key through its test home");
           result = await controls.key(
             command === "key-tab" ? "tab" : command === "key-return" ? "return" : "escape",
           );

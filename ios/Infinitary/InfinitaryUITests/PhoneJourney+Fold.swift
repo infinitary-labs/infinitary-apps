@@ -133,14 +133,14 @@ extension PhoneJourney {
 
         // As in crew browsing, send one Tab and read the app's selection, not system focus.
         XCTAssertEqual(toggle.value as? String, "0", "Show panels starts without keyboard selection")
-        try await pressDuoKey("tab")
+        try await pressKeyThroughHome("tab")
         let selected = NSPredicate(format: "value == '1'")
         guard waitForPhonePredicate(selected, object: toggle, timeout: 10) == .completed else {
             XCTFail("Tab reaches Show panels and draws its focus ring")
             return
         }
         picture("duo-show-panels-keyboard-focus", activeWindow: true)
-        try await pressDuoKey("return")
+        try await pressKeyThroughHome("return")
         assertDuoPanelShown("Return shows the sidebar")
         let shownViewport = try steadyDuoViewport(card, whereHeight: { $0 < foldedViewport.height })
         XCTAssertLessThan(shownViewport.height, foldedViewport.height, "Showing the upper panel returns the card to its page")
@@ -223,15 +223,6 @@ extension PhoneJourney {
         XCTAssertEqual(waitForPhonePredicate(tall, object: app, timeout: 15), .completed)
     }
 
-    /// INF-5183: on the open Duo, typeKey gives its key a keyboard bound to one display and BackBoard finds that key no
-    /// destination, so the app never receives it. The test home presses `key` once instead, as an attached keyboard
-    /// does and naming no display (scripts/phone-hinge.ts), and answers where BackBoard sent it. The key must reach
-    /// Infinitary before the journey reads what the app did with it.
-    private func pressDuoKey(_ key: String) async throws {
-        let result = try await home("key-\(key)")
-        XCTAssertEqual(result["outcome"] as? String, "delivered", "The \(key) key must reach Infinitary: \(result)")
-    }
-
     private func checkTuckedReply(box: XCUIElement, reply: XCUIElement, card: XCUIElement) async throws {
         let fixture = try await home("talk-fixture")
         let words = try XCTUnwrap(fixture["text"] as? String)
@@ -248,7 +239,7 @@ extension PhoneJourney {
         let toggle = app.buttons["toggle-phone-panels"]
         XCTAssertTrue(toggle.waitForPresence(timeout: 10), "Show panels is back once the keyboard has left")
         XCTAssertEqual(toggle.value as? String, "0", "Show panels starts without keyboard selection")
-        try await pressDuoKey("tab")
+        try await pressKeyThroughHome("tab")
         let selected = NSPredicate(format: "value == '1'")
         guard waitForPhonePredicate(selected, object: toggle, timeout: 10) == .completed else {
             XCTFail("Tab selects Show panels before opening the Conversation")
@@ -257,12 +248,12 @@ extension PhoneJourney {
         tapOnPhone(reply)
         let close = app.buttons["close-conversation"]
         XCTAssertTrue(close.waitForPresence(timeout: 10), "The reply reader covers Home")
-        try await pressDuoKey("return")
+        try await pressKeyThroughHome("return")
         tapOnPhone(close)
         XCTAssertTrue(close.waitForAbsence(timeout: 10), "Done closes the Conversation")
         assertDuoPanelFolded("Return did not show panels behind the Conversation", book: true)
         XCTAssertEqual(toggle.value as? String, "1", "Show panels is still selected when the Conversation closes")
-        try await pressDuoKey("escape")
+        try await pressKeyThroughHome("escape")
         let unselected = NSPredicate(format: "value == '0'")
         XCTAssertEqual(waitForPhonePredicate(unselected, object: toggle, timeout: 10), .completed,
                        "Escape clears the selection after the Conversation closes, before Home receives another touch")

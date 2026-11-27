@@ -97,8 +97,7 @@ struct PhoneFilterSheet: View {
         .accessibilityAddTraits(checked ? .isSelected : [])
         .accessibilityIdentifier("project-filter-\(id)")
         .focusable().focused($focusedRow, equals: id)
-        // Set from the row itself, as the Settings sheet does: set from the sheet's own onAppear, before the rows are
-        // focusable, SwiftUI drops it and no key reaches the sheet.
+        // The opening focus is set from the focusable row itself, as the Settings sheet's Appearance page sets its own.
         .onAppear { if checked { focusedRow = id } }
         .onPlainKey(.return) { pick(id) }
         .onPlainKey(.space) { pick(id) }

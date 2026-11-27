@@ -22,6 +22,16 @@ import XCTest
         return try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
     }
 
+    /// INF-5183: the test home presses `key` once, as an attached keyboard does and naming no display
+    /// (scripts/phone-hinge.ts), and answers where BackBoard sent it; the key must reach Infinitary before the journey
+    /// reads what the app did with it. On the open Duo, typeKey's key reaches no app, and on any device XCTest's typist
+    /// sends no event at all for Escape. Only the Duo's parts and a part marked `keys` (scripts/phone-test-plan.ts)
+    /// have the route.
+    func pressKeyThroughHome(_ key: String) async throws {
+        let result = try await home("key-\(key)")
+        XCTAssertEqual(result["outcome"] as? String, "delivered", "The \(key) key must reach Infinitary: \(result)")
+    }
+
     func picture(_ name: String) { picture(name, activeWindow: false) }
 
     func picture(_ name: String, activeWindow: Bool) {

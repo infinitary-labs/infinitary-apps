@@ -61,6 +61,21 @@ describe("splitCardBodyUrls", () => {
     ]);
   });
 
+  // INF-7046's review: a Chinese or Japanese card writes its punctuation right after an address.
+  it("ends an address at full-width and CJK punctuation", () => {
+    expect(
+      splitCardBodyUrls(
+        "打开 https://openrouter.ai/settings/keys。然后登录（https://openrouter.ai/docs）",
+      ),
+    ).toEqual([
+      { type: "text", value: "打开 " },
+      { type: "url", value: "https://openrouter.ai/settings/keys" },
+      { type: "text", value: "。然后登录（" },
+      { type: "url", value: "https://openrouter.ai/docs" },
+      { type: "text", value: "）" },
+    ]);
+  });
+
   it("does not treat non-http schemes as urls", () => {
     const body = "js javascript:alert(1) file file:///etc/passwd ftp ftp://example.com";
     expect(splitCardBodyUrls(body)).toEqual([{ type: "text", value: body }]);

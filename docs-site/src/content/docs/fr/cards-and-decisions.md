@@ -1,5 +1,5 @@
 ---
-source: 6359195aeec7c814
+source: df632c26677efc84
 title: Cartes et décisions
 description: Comment votre second et votre équipage vous apportent réponses et décisions sous forme de cartes, et comment y répondre.
 ---
@@ -120,6 +120,13 @@ Un compteur comme « 2 sur 7 » dit sur quel résultat vous êtes.
 La recherche parcourt toute la carte : son titre, son corps, ses sections repliées et son fil.
 Une section repliée s’ouvre quand le résultat s’y trouve.
 Elle marche de la même façon dans une carte passée, dans [toute la conversation](/fr/the-first-mate/#the-whole-conversation) et sur la carte d’une tâche, sauf sur son onglet Navigateur.
+
+## Liens dans une carte {#links-in-a-card}
+
+Une adresse web dans une carte s’ouvre dans votre navigateur par défaut quand vous cliquez dessus, la touchez ou appuyez sur Entrée.
+Cela vaut aussi pour une adresse qu’un membre d’équipage a écrite en texte simple, comme une étape qui dit d’ouvrir une page de connexion, sur votre ordinateur et sur votre iPhone ou iPad.
+Cela concerne les adresses qui commencent par https://, et les adresses http:// de votre propre ordinateur.
+Une longue adresse passe à la ligne dans la carte.
 
 ## Cartes de fusion {#merge-cards}
 

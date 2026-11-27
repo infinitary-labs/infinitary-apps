@@ -1,5 +1,5 @@
 ---
-source: 6359195aeec7c814
+source: df632c26677efc84
 title: Cartões e decisões
 description: Como o seu imediato e a sua tripulação trazem respostas e decisões para você em cartões, e como respondê-los.
 ---
@@ -120,6 +120,13 @@ Um contador como “2 de 7” diz em qual resultado você está.
 A busca percorre o cartão inteiro: o título, o corpo, as seções recolhidas e a conversa do cartão.
 Uma seção recolhida se abre quando o resultado está dentro dela.
 Funciona do mesmo jeito em um cartão anterior, na [conversa inteira](/pt-br/the-first-mate/#the-whole-conversation) e no cartão de uma tarefa, menos na aba Navegador.
+
+## Links em um cartão {#links-in-a-card}
+
+Um endereço da web em um cartão abre no seu navegador padrão quando você clica nele, toca nele ou pressiona Enter sobre ele.
+Isso inclui um endereço que um tripulante escreveu como texto comum, como um passo que diz para abrir uma página de login, no seu computador e no seu iPhone ou iPad.
+Vale para endereços que começam com https:// e para endereços http:// do seu próprio computador.
+Um endereço longo quebra a linha dentro do cartão.
 
 ## Cartões de mesclagem {#merge-cards}
 

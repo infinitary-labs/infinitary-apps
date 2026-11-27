@@ -2,6 +2,13 @@ import { CARD_QUESTION_LABEL_MAX, CARD_QUESTIONS_MAX_BYTES, CARD_WRITTEN_MAX } f
 import { OWN_SPELLING, SPELLINGS } from "../codeNames";
 import { TYPING_CONTROL_SELECTOR } from "../keyboardOffer";
 import { KNOWLEDGE_ID_IN_TEXT } from "../knowledge";
+import {
+  LOCALHOST_SUFFIX,
+  LOOPBACK_HOSTS,
+  URL_CLOSERS,
+  URL_IN_TEXT,
+  URL_TRAILING_PUNCTUATION,
+} from "../linkify";
 import { TASK_KEY_IN_TEXT } from "../taskKeys";
 import { FRAME_BRIDGE_VERSION, FRAME_LOG_NAME_MAX } from "./bridge";
 import { FRAME_ANNOTATION_SCRIPT } from "./frameAnnotationScript";
@@ -131,7 +138,9 @@ import { READ_VALUE_DECODER } from "./readTransfer";
  *
  * A card body's TASK KEYS and KNOWLEDGE REFERENCES are the bridge's to link
  * once the host names them (`tasks`, `entries`): `FRAME_LINK_SCRIPT`
- * (./frameLinkScript.ts) posts the one-way `task` and `entry` messages.
+ * (./frameLinkScript.ts) posts the one-way `task` and `entry` messages. Its
+ * ADDRESSES written as words are linked once a card's host says so
+ * (`addresses` on `keys`), and open as any link does.
  *
  * A finger's PRESS held from 0.12 s up, and in Point at any press on a part,
  * acts on its own release: `FRAME_PRESS_SCRIPT` (./framePressScript.ts)
@@ -211,8 +220,14 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
   var form = { on: false, locked: false, preview: false, fill: null, filling: false, applying: false, staged: {}, appliers: {}, waiting: {}, touched: {}, first: new WeakMap(), last: "", fields: new WeakMap(), current: null };
   var KEY_IN_TEXT = new RegExp(${JSON.stringify(`${TASK_KEY_IN_TEXT}|${KNOWLEDGE_ID_IN_TEXT}`)}, "g");
   var UNLINKED = "a, button, summary, input, select, option, textarea, script, style, svg, [role=button], [data-inf-action], [data-inf-draft], [contenteditable]";
+  var ADDRESS_IN_TEXT = new RegExp(${JSON.stringify(URL_IN_TEXT)}, "gi");
+  var ADDRESS_TRAILING = ${JSON.stringify(URL_TRAILING_PUNCTUATION)};
+  var ADDRESS_CLOSERS = ${JSON.stringify(URL_CLOSERS)};
+  var LOOPBACK_HOSTS = ${JSON.stringify(LOOPBACK_HOSTS)};
+  var LOCALHOST_SUFFIX = ${JSON.stringify(LOCALHOST_SUFFIX)};
   var keys = { known: null, rested: null, quiet: null, lit: null };
   var entries = { known: null };
+  var addresses = { on: false };
   var caps = { pictures: false, escape: false, expand: false, sound: false };
   var held = { element: null, start: null, end: null, direction: null };
   var listen = EventTarget.prototype.addEventListener;
@@ -464,8 +479,8 @@ ${FRAME_EXPAND_SCRIPT}${FRAME_SOUND_SCRIPT}
         if (typeof key === "string") { known[key] = true; any = true; }
       });
       keys.known = any ? known : null;
-      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", linkKeys, { once: true });
-      else linkKeys();
+      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", linkWords, { once: true });
+      else linkWords();
     } else if (data.type === "lit") {
       keys.lit = typeof data.key === "string" ? data.key : null;
       markLit();
@@ -479,18 +494,24 @@ ${FRAME_EXPAND_SCRIPT}${FRAME_SOUND_SCRIPT}
         }
       });
       entries.known = some ? named : null;
-      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", linkKeys, { once: true });
+      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", linkWords, { once: true });
       else {
         refreshEntries();
-        linkKeys();
+        linkWords();
       }
     } else if (data.type === "keys") {
       caps.pictures = data.pictures === true;
       caps.escape = data.escape === true;
       caps.expand = data.expand === true;
       caps.sound = data.sound === true;
-      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", tagPictures, { once: true });
-      else tagPictures();
+      addresses.on = data.addresses === true;
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", tagPictures, { once: true });
+        if (addresses.on) document.addEventListener("DOMContentLoaded", linkWords, { once: true });
+      } else {
+        tagPictures();
+        if (addresses.on) linkWords();
+      }
     } else if (data.type === "expanded") {
       var back = expandable()[data.index];
       var detail;
@@ -839,4 +860,4 @@ ${FRAME_KEYBOARD_SCRIPT}
  * to the script moves it: re-pin it in the same change, or
  * frameBridgeHash.test.ts fails and every frame's CSP blocks the script.
  */
-export const FRAME_BRIDGE_SHA256 = "sha256-KUm1m7a4lexZfIfVb82KSJJFO2C3IA0WnuBK1IJOavo=";
+export const FRAME_BRIDGE_SHA256 = "sha256-5v7hzdTC8z16Wk4TaQGyuznSbwtGOsY8WXZfh0yNf/w=";

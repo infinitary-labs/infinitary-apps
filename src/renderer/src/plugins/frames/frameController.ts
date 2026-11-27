@@ -160,6 +160,11 @@ export type FrameMountSpec = {
    */
   taskKeys?: readonly string[];
   /**
+   * A card body's mount: the bridge links the addresses its words write
+   * (INF-7045), where a panel's words stay as written.
+   */
+  addresses?: true;
+  /**
    * The one of those keys a rest elsewhere in the window lights (INF-237),
    * or null: pushed with the keys and again to every new document.
    */
@@ -646,16 +651,17 @@ export class FrameController {
         if (this.spec.inset) this.port.post({ fm: V, type: "inset", ...this.spec.inset });
         if (this.spec.markup !== undefined)
           this.port.post({ fm: V, type: "markup", html: this.spec.markup });
-        if (this.spec.taskKeys) {
-          this.port.post({ fm: V, type: "tasks", keys: [...this.spec.taskKeys] });
-        }
-        if (this.spec.litKey) this.port.post({ fm: V, type: "lit", key: this.spec.litKey });
-        if (this.spec.entryRefs) {
-          this.port.post({ fm: V, type: "entries", entries: [...this.spec.entryRefs] });
-        }
         // The keys the host hears from this document: a picture's, for a
-        // mount that opens pictures, and an Escape that leaves it.
-        if (this.spec.onImage || this.spec.onEscape || this.spec.onExpand || this.spec.onSound) {
+        // mount that opens pictures, and an Escape that leaves it. Before the
+        // task keys and references: a card's addresses link first, so a key
+        // inside an address stays part of it (frameLinkScript.ts).
+        if (
+          this.spec.onImage ||
+          this.spec.onEscape ||
+          this.spec.onExpand ||
+          this.spec.onSound ||
+          this.spec.addresses
+        ) {
           this.port.post({
             fm: V,
             type: "keys",
@@ -663,7 +669,15 @@ export class FrameController {
             escape: this.spec.onEscape !== undefined,
             ...(this.spec.onExpand ? { expand: true as const } : {}),
             ...(this.spec.onSound ? { sound: true as const } : {}),
+            ...(this.spec.addresses ? { addresses: true as const } : {}),
           });
+        }
+        if (this.spec.taskKeys) {
+          this.port.post({ fm: V, type: "tasks", keys: [...this.spec.taskKeys] });
+        }
+        if (this.spec.litKey) this.port.post({ fm: V, type: "lit", key: this.spec.litKey });
+        if (this.spec.entryRefs) {
+          this.port.post({ fm: V, type: "entries", entries: [...this.spec.entryRefs] });
         }
         if (message.document)
           this.port.post({ fm: V, type: "initialize", document: message.document });

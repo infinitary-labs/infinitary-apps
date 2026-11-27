@@ -624,7 +624,11 @@ The vocabulary beyond plain text:
 
 Links open through the app's safe external opener: https anywhere, plus http to loopback (`localhost`, `127.0.0.1`, `[::1]`) and to genuine `.localhost` subdomains, single-level or nested (`http://app.localhost:1355`, `http://task-1.soapbox.localhost:1355`).
 Public http, lookalikes such as `localhost.example.com` or `evillocalhost`, other schemes and addresses without a scheme are ignored without feedback.
-Write a link as an explicit `<a href>`; bare URL text inside HTML is not auto-linked.
+An address written as words in a card's body is a link too (INF-7045): the card frame's bridge wraps each one the opener would take in `<a href data-inf-address>`, at load and whenever the body changes, on the computer and the phone alike (`src/shared/plugins/frameLinkScript.ts`).
+The data behind which words count as an address, the trailing punctuation and unmatched closing bracket it leaves outside, and which addresses the opener takes has one owner, `src/shared/linkify.ts`, which the bridge's text splices in; the bridge's own `addressIn`, `unmatched` and `opens` mirror its trimming and opener logic, so a change to that logic changes both.
+An address stays words inside a link, button, summary, form field, option, `data-inf-action` or `data-inf-draft` element, `role=button` element, editable area, script, style or drawing; inside a choice's label it links, and a press on it opens it and leaves the choice as it was.
+A panel's words are not a card's: its frame links no address.
+Write `<a href>` when the link's words should differ from its address.
 A link opens only from the captain's own click or Enter on it: a body's script that clicks its own link, or posts the bridge's `link` message, while focus is elsewhere opens nothing (`docs/keyboard.md`, "Cards and frames").
 
 A `<button data-inf-draft="words">` starts the captain's message for the captain: the captain's press puts its words, one line of at most 500 characters, at the start of the message box under the card, with the caret after them and focus in the box, and sends nothing (FI3-1164; the welcome's starters).

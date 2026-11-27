@@ -133,7 +133,8 @@ window.addEventListener("message", (event: MessageEvent) => {
     // only tells the phone where the part now stands.
     // A card that may still be answered plays its sound clips in the strip under its body, so the bridge draws their
     // Listen buttons there; a past card and a part's cover draw the caption alone (docs/card-authoring.md "Sound clips").
-    send({ type: "keys", pictures: true, escape: false, expand: true, ...(input.readOnly || input.expanded ? {} : { sound: true }) });
+    // INF-7045: a card body's addresses written as words are links, as on the Mac.
+    send({ type: "keys", pictures: true, escape: false, expand: true, addresses: true, ...(input.readOnly || input.expanded ? {} : { sound: true }) });
     send({ type: "width", width: input.width });
     // A Text Size change while the body loaded reaches it before it draws.
     send({ type: "text-scale", scale });

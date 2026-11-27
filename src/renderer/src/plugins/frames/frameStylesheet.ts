@@ -203,6 +203,9 @@ export const FRAME_BASE_STYLE = `
      and so does a rest on the same task elsewhere in the window (data-inf-lit, INF-237). */
   a[data-inf-task] { cursor: pointer; border-radius: var(--radius-s); white-space: nowrap; }
   a[data-inf-task]:hover, a[data-inf-task][data-inf-lit] { background: var(--bg-3); }
+  /* An address the bridge linked from the words (INF-7045) breaks anywhere,
+     so a long one wraps inside the narrowest phone's card instead of widening it. */
+  a[data-inf-address] { overflow-wrap: anywhere; }
   /* A knowledge reference the bridge linked (docs/knowledge.md, "References in an
      answer"): the entry's id as a link, led by a dot in its standing's state color -
      ok for checked with evidence, warn for one to recheck or with differing evidence. */

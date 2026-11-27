@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "card-addresses-link",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "Web addresses in cards open with a click or a tap",
+      "body": "A web address a crewmate writes as plain words in a card, such as the sign-in page in a step, is now a link on your computer and on your iPhone and iPad. Click it, tap it or press Enter on it to open it in your browser.",
+      "picture": {
+        "dark": "card-addresses-link-dark.webp",
+        "light": "card-addresses-link-light.webp",
+        "alt": "A card asking for an API key, whose first step's address is underlined as a link"
+      },
+      "docsSite": ["cards-and-decisions"],
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -352,7 +352,8 @@ extension PhoneJourney {
     /// INF-6763's plan, part 3, and the captain's words on it ("use a "revert" icon or something like that"): a long press
     /// on the newest message offers Edit, whose send replaces that message; the revert icon beside the replacement takes
     /// it back; the strip and the Conversation read both marks. The test home's real core takes each back.
-    /// Data: this part's test home, a new message after the card rounds above. Resources: this part's own simulator.
+    /// Data: this part's test home, a new message after the card rounds above and the notice the mock leaves it.
+    /// Resources: this part's own simulator.
     private func verifyTakeBack() async throws {
         let words = "Chart the buoys by colour", added = ", then by depth"
         let input = app.textFields["message-box"]
@@ -365,6 +366,16 @@ extension PhoneJourney {
         XCTAssertTrue(app.buttons["last-turn-revert"].waitForPresence(timeout: 15), "The revert icon stands beside the newest message: \(app.debugDescription)")
         XCTAssertEqual(app.buttons["last-turn-revert"].label, "Revert your last message", "The icon has no words; its label names it")
 
+        // INF-7085: the long press waits for this message's own answer to land. The mock first mate leaves it unanswered,
+        // so its notice card comes up, and a card body that finishes drawing while the menu is open rebuilds the menu: in
+        // phone run 45991454134 the iPad's Edit tap landed during that rebuild and was lost with the menu still open, as
+        // INF-1651's pager pick was. So the press waits until that card is up and its body revealed at its drawn height.
+        let answer = try await answerLanded(words)
+        let notice = try XCTUnwrap(answer["notice"] as? String, "The message's answer was judged with no notice card: \(answer)")
+        XCTAssertTrue(cardHeading(notice).waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.webViews.matching(identifier: "card-body").firstMatch.waitForPresence(timeout: 10), app.debugDescription)
+        waitForShownBodyRevealed()
+        waitForSteadyTarget(app.staticTexts["last-turn-you"])
         app.staticTexts["last-turn-you"].press(forDuration: 1.2)
         let edit = app.buttons["last-turn-menu-edit"]
         XCTAssertTrue(edit.waitForPresence(timeout: 10), "A long press offers Edit: \(app.debugDescription)")
@@ -412,6 +423,13 @@ extension PhoneJourney {
         picture("conversation-take-back")
         tapOnPhone(app.buttons["close-conversation"])
         XCTAssertTrue(app.buttons["close-conversation"].waitForAbsence(timeout: 10))
+    }
+
+    /// Waits on the test home until the message with these words, not taken back, has its answer judged and any notice it
+    /// got is up, whose title the reply names as `notice`.
+    private func answerLanded(_ text: String) async throws -> [String: Any] {
+        let body = try JSONSerialization.data(withJSONObject: ["text": text, "takenBack": false, "answered": true])
+        return try await home("talk-ask", body: String(decoding: body, as: UTF8.self))
     }
 
     /// Waits on the test home until the message with these words is saved, taken back or not.

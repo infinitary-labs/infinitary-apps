@@ -1432,6 +1432,8 @@ Any other such check waits on the load clock until XCTest finds the control's ta
 A typed field waits for keyboard focus after its tap (`focusForPhoneTyping`), so a dropped tap fails where it happened rather than at the typing.
 A steady reading says only that the target holds still now: a card shows before its body draws, and the body then grows from its 48-point placeholder and carries the reply row under it down.
 So a step that presses a card's reply row right after showing the card first waits for the shown body's reveal (`waitForShownBodyRevealed`), since a tap whose point XCTest read before that move lands where the field was and focuses nothing (INF-4820).
+The newest message's long-press menu is rebuilt while open as the stage's card body finishes drawing, and a tap that lands during that rebuild reaches no item and leaves the menu open.
+So the talk-compose part long-presses the newest message only once the test home reports that message's answer judged and the notice card the mock leaves it is up with its body revealed (INF-7085), as a card pager pick waits for the shown body's reveal (INF-1651).
 A long press that selects a card's words holds a fixed 1.2 seconds, and WebKit starts the selection only once the app's main thread is free.
 The first long press in a card body sets up UIKit's keyboard tracking and opens its keyboard connection, once per launch, on the main thread, which can take over half a second on a busy runner; a tap does neither.
 Paid inside the press a part checks, that setup starts the selection after the press has ended, and the selection's menu never shows.

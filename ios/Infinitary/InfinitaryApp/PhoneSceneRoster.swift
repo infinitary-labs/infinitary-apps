@@ -154,6 +154,10 @@ struct PhoneSceneRoster {
         let projectGroups = (plan?.plan.groups ?? []).map(\.id).filter { held.contains($0) }
         let ids = ["home"] + projectGroups + held.filter { $0 != "home" && !projectGroups.contains($0) }.sorted()
         let groupNames = Dictionary((plan?.plan.groups ?? []).map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
+        // Grouped by project, the first mate's ring holds crew from every computer, so it takes the name of the middle
+        // project sitting there, or none, as the desktop's (the captain's answer on the review of this build).
+        let middle = plan?.plan.middle.flatMap { id in (grouped["home"] ?? []).contains { $0.projectId == id } ? id : nil }
+        let homeLabel = plan == nil ? homeName : middle.flatMap { id in board?.projects.first { $0.id == id }?.name } ?? ""
         computers = ids.map { id in
             let members = grouped[id] ?? [], observed = presence.first { $0.id == id }
             let roots = programs.filter { program in members.contains { $0.parentId == program.id && $0.reviewOf == nil } || retainedPrograms[program.id]?.contains(id) == true }
@@ -171,7 +175,7 @@ struct PhoneSceneRoster {
             let pinned = pinnedOrder.filter { ids.contains($0) && !parts.contains($0) }
             let sky = PhoneFixedStars.places(pinned.count, orbits: PhoneFixedStars.orbits(counts: book.counts))
             let skyReach: Double = sky.points.map { Double(max(abs($0.x), abs($0.y))) * Self.ringScale * share }.max() ?? 0
-            return Computer(id: id, name: id == "home" ? homeName : groupNames[id] ?? observed?.name ?? all.first(where: { Self.computerID($0) == id })?.place?.name ?? PhoneMessages.phoneSceneComputerFallback(),
+            return Computer(id: id, name: id == "home" ? homeLabel : groupNames[id] ?? observed?.name ?? all.first(where: { Self.computerID($0) == id })?.place?.name ?? PhoneMessages.phoneSceneComputerFallback(),
                             reachable: inReach && (id == "home" || groupNames[id] != nil || observed?.inReach == true), tasks: members, programs: roots, ordinary: ordinary, programParts: parts,
                             pinned: pinned, sky: sky, skyReach: skyReach, book: book, share: share, radius: radius)
         }

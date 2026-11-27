@@ -152,6 +152,7 @@ The rule is `groupPlanOf` and `groupOf` in `character/crew/crewGroups.ts`, pure 
 - So does the middle project: the only project of the person's own with crew on the stage, else the window's focused project, else none (the captain's written-in answer).
 - A crewmate whose project the board does not name yet, as when its spawn arrives before its board row, keeps its computer's group until the row arrives; the others keep theirs.
 - Every other crewmate sits in its project's group, `project:` and the project's id, named for the project and seated in the board's order.
+- The first mate's ring, which now holds crew from every computer, is named for the middle project while that project's crew sit there, and has no name otherwise (the captain's answer on the review of this build; `ComputerOrbits.computers`, `labeled`).
 
 A group is a cluster as above: the same wings, seats, half-size formation, paging, names, sparks and falls home, and a program whose parts run on two computers draws once in its project's group.
 A spark still flies from the first mate; the page controls and their commands in command search read Previous projects and Next projects.

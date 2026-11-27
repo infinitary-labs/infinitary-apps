@@ -275,8 +275,18 @@ export class ComputerOrbits extends CrewOrbit {
       const groups = (this.grouping?.projects ?? [])
         .filter((project) => listed.has(PROJECT_GROUP + project.id))
         .map((project) => ({ id: PROJECT_GROUP + project.id, name: project.name }));
+      // The first mate's ring holds crew from every computer now, so it takes
+      // the name of the middle project sitting there, or none (the captain's
+      // answer on the review of INF-6955's build).
+      const projectOf = this.grouping?.projectOf;
+      const seated = this.present().some(
+        (id) => this.groupOf(id) === HOME_COMPUTER && projectOf?.(id) === this.plan?.middle,
+      );
+      const middle = seated
+        ? this.grouping?.projects.find((project) => project.id === this.plan?.middle)
+        : undefined;
       return [
-        { id: HOME_COMPUTER, name: this.homeName, reachable: true },
+        { id: HOME_COMPUTER, name: middle?.name ?? "", reachable: true },
         ...groups.map((group) => ({ ...group, reachable: true })),
         ...held,
       ];
@@ -407,11 +417,11 @@ export class ComputerOrbits extends CrewOrbit {
     }
     return out;
   }
-  /** The clusters that show their name: only those with crew on this page,
-   * and none while home's are the only crew. */
+  /** The clusters that show their name: only those with crew on this page
+   * and a name, and none while home's are the only crew. */
   labeled(): ComputerCluster[] {
     const crewed = new Set(this.present().map((id) => this.groupOf(id)));
-    const named = this.clusters().filter((cluster) => crewed.has(cluster.id));
+    const named = this.clusters().filter((cluster) => crewed.has(cluster.id) && cluster.name);
     return named.some((cluster) => cluster.id !== HOME_COMPUTER) ? named : [];
   }
   /**

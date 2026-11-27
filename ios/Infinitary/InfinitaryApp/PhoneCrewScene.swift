@@ -250,7 +250,8 @@ struct PhoneSceneControls: View {
                 .position(x: roster.homeX + offset.width, y: roster.height / 2 + offset.height)
                 .allowsHitTesting(false)
             if roster.computers.count > 1 {
-                ForEach(roster.computers) { computer in
+                // An unnamed group, the first mate's ring with no project of its own, shows no name to press.
+                ForEach(roster.computers.filter { !$0.name.isEmpty }) { computer in
                     VStack(spacing: 2) {
                         Button(computer.name) { preview = nil; computerPreview = computer.id }
                             .font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary).frame(minWidth: 44, minHeight: 44)

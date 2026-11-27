@@ -156,10 +156,31 @@ describe("the stage grouped by project", () => {
     expect(clusterOf(model, "web-studio")).toBe("project:website");
     expect(clusterOf(model, "shop-home")).toBe("project:shop");
     expect(model.clusters().map((c) => [c.id, c.name])).toEqual([
-      [HOME_COMPUTER, "This computer"],
+      [HOME_COMPUTER, ""],
       ["project:website", "website"],
       ["project:shop", "shop"],
     ]);
+  });
+
+  // The captain's answer on the review of this build: the first mate's ring is
+  // named for the project sitting there, else it has no name.
+  it("names the first mate's ring for the middle project sitting there, and leaves it unnamed with none", () => {
+    const labels = (model: ComputerOrbits) => {
+      model.update(0, true);
+      return model.labeled().map((c) => [c.id, c.name]);
+    };
+    const focused = stage(["web-home", "shop-studio", "scratch-studio"], "shop");
+    expect(labels(focused)).toEqual([
+      [HOME_COMPUTER, "shop"],
+      ["project:website", "website"],
+    ]);
+    const none = stage(["web-home", "shop-studio", "scratch-studio"]);
+    expect(labels(none)).toEqual([
+      ["project:website", "website"],
+      ["project:shop", "shop"],
+    ]);
+    const empty = stage(["web-home", "scratch-studio"], "shop");
+    expect(labels(empty)).toEqual([]);
   });
 
   it("keeps an away computer's frozen group beside the project groups", () => {

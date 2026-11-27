@@ -1,7 +1,7 @@
 import { withAppParts } from "./appParts";
 import { cardNavigationParts } from "./cardParts";
 import { REVISION_TARGETS_MAX } from "./cards";
-import { isSafeCardHref, splitCardBodyUrls } from "./linkify";
+import { splitCardBodyUrls } from "./linkify";
 import { withTradeoffCharts } from "./tradeoffChart";
 
 /**
@@ -33,9 +33,7 @@ function plainTextBody(text: string): string {
   const linked = splitCardBodyUrls(text)
     .map((part) => {
       const escaped = escapeHtml(part.value);
-      return part.type === "url" && isSafeCardHref(part.value)
-        ? `<a href="${escaped}">${escaped}</a>`
-        : escaped;
+      return part.type === "url" ? `<a href="${escaped}">${escaped}</a>` : escaped;
     })
     .join("");
   return linked

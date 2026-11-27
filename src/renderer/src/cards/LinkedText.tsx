@@ -1,4 +1,4 @@
-import { splitCardAddresses } from "@shared/linkify";
+import { splitCardBodyUrls } from "@shared/linkify";
 import { KeyedText } from "./TaskKey";
 
 /**
@@ -13,7 +13,7 @@ export function LinkedText({ text }: { text: string }) {
   let offset = 0;
   return (
     <>
-      {splitCardAddresses(text).map((part) => {
+      {splitCardBodyUrls(text).map((part) => {
         const at = offset;
         offset += part.value.length;
         if (part.type === "text") return <KeyedText key={at} text={part.value} />;

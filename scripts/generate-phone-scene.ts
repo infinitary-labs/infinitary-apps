@@ -99,7 +99,7 @@ try {
   }>(join(REPO_ROOT, "src/renderer/src/app/stack.ts"));
   const { satellitePhase } = await runner.import<typeof import("../src/renderer/src/character/crew/satellites.ts")>(join(character, "crew/satellites.ts"));
   const { arrangePanels, RAIL_SLOTS } = await runner.import<typeof import("../src/shared/panelArrangement.ts")>(join(REPO_ROOT, "src/shared/panelArrangement.ts"));
-  const { splitCardAddresses } = await runner.import<typeof import("../src/shared/linkify.ts")>(join(REPO_ROOT, "src/shared/linkify.ts"));
+  const { splitCardBodyUrls } = await runner.import<typeof import("../src/shared/linkify.ts")>(join(REPO_ROOT, "src/shared/linkify.ts"));
   const outputs = {
     "ios/Infinitary/InfinitaryApp/PhoneSceneData.generated.json": {
       orbit: DEFAULT_ORBIT, remoteTrip: REMOTE_TRIP, program: Object.fromEntries(Object.entries(CONSTELLATION).filter(([, value]) => typeof value === "number")),
@@ -147,7 +147,7 @@ try {
       "Two lines\nhttps://openrouter.ai/activity\nend",
       "HTTPS://OpenRouter.ai/Keys in capitals 🚢 then https://openrouter.ai/models?order=top&q=neon#list!",
       "Done, thanks.",
-    ].map((text) => ({ text, parts: splitCardAddresses(text) }));
+    ].map((text) => ({ text, parts: splitCardBodyUrls(text) }));
   }
   /** INF-3830 piece 2: the computer's rails read as one column, left top to right bottom, for the phone's panel order to replay. */
   function panelOrderReadings() {

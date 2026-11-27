@@ -2,7 +2,7 @@
 
 Task-system phase P5 (design record `fm-homes/mini-default/data/fm3000-task-system-design-s1/report.md`, sections 5, 9.1 and 12).
 The record is durable: a task row, its timeline and its session JSONL are never deleted by success (captain decision D2, amending D-13), and the D-13 purge in Settings is the one control that deletes the record.
-Words from outside are the one exception inside a kept session: a note takes their place after their days, or when the captain deletes them ("Words from outside").
+Words from outside are the one exception inside a kept session: a note takes their place after their days, or when the captain deletes them or removes Google ("Words from outside").
 This document is what keeps that durable record honest at scale: what is bounded, what leaves the box on request, which of a closed task's files go on their own, and what is measured but not pruned.
 
 ## What is bounded
@@ -176,6 +176,7 @@ What an integration hands an agent from a kind that fences its words, Gmail and 
 Google keeps 30, the same as the Claude client's own sweep (`GOOGLE_DATA_KEPT`, the captain's INF-952 answer).
 Once they pass, a note, `[Gmail and Calendar content deleted]`, takes the place of each passage, and the conversation stays (the captain's INF-952 answer: "Yes, replace the passage and keep the conversation").
 Delete Gmail and Calendar content, in Settings → Integrations' Data section, does the same at once for everything read so far (`inf:retention:delete-outside`), and the captain can ask the first mate for it (`delete-outside`).
+Removing Google from Settings → Integrations starts the same delete, since Google's user data policy keeps nothing a tool read once it is disconnected (`IntegrationsServiceOptions.deleteOutside`).
 Its answer says how many conversations changed, how many are cleaned once their work pauses, and how many on each computer that runs work follow once it is back in reach or Infinitary there is updated (`elsewhere`).
 
 A file from outside saved into a task's hand-over folder, such as a Gmail attachment (`save_attachment`, [Integrations](integrations.md#google)), goes on the same clock: `OutsideReads` keeps its kept name, kind and time per task, and the pass that replaces that task's words removes each due file, or the delete removes it at once.

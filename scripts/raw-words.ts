@@ -485,6 +485,7 @@ export const RAW_WORDS_LEDGER: Readonly<Record<string, number>> = {
   "src/core/hostEnv.ts": 3,
   "src/core/integrations/appEvents.ts": 3,
   "src/core/integrations/commandWords.ts": 1,
+  "src/core/integrations/keptAsks.ts": 10,
   "src/core/integrations/providers/github.ts": 6,
   "src/core/integrations/providers/githubRuns.ts": 18,
   "src/core/integrations/providers/google/calendar.ts": 27,

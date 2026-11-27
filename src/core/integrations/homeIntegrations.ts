@@ -67,6 +67,8 @@ export function startHomeIntegrations(options: {
   panelOutside: Pick<PanelOutsideData, "noted">;
   /** The crew, built after the integrations and read only once an ask comes. */
   crew: () => IntegrationsCrew;
+  /** The delete of words from outside, built after the integrations (`IntegrationsServiceOptions.deleteOutside`). */
+  deleteOutside: () => Promise<unknown>;
   now: () => number;
   emit: CoreEventSink;
 }): HomeIntegrations {
@@ -107,6 +109,7 @@ export function startHomeIntegrations(options: {
         },
         now,
         changed: () => integrationsChanged(),
+        version: host.app.version,
       })
     : undefined;
   const mcpBinding = mcpIntegration({
@@ -198,6 +201,7 @@ export function startHomeIntegrations(options: {
       is: (taskId) => tasks.get(taskId)?.shape?.unsafe_data_reader === true,
       holds: (taskId, what) => tasks.delivery.markReaderHolds(taskId, what),
     },
+    deleteOutside: () => options.deleteOutside(),
     now,
     push: (view) => options.emit("inf:integrations", view),
   });

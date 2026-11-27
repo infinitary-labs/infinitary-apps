@@ -1,4 +1,4 @@
-import { formatDate } from "@shared/i18n/format";
+import { formatDate, formatList } from "@shared/i18n/format";
 import * as m from "@shared/i18n/messages.generated";
 import {
   GOOGLE_CLIENT_SETUP_PAGE,
@@ -201,22 +201,26 @@ export function GoogleClientSetup({
   );
 }
 
-/**
- * What the Google row says of its client when that outranks its health; its
- * one next step is to set the client up again.
- */
+/** What the Google row says of its client, and its one next step, when that outranks its health. */
 export type GoogleClientState = {
   /** The row's short state words, in place of its health's. */
   words: string;
   tone: "danger" | "warn";
   /** The line under the row that says why and what to do. */
   detail: string;
+  /**
+   * The one next step: set the client up again, or open the Google Cloud
+   * page `link` names, which fixes what Google's MCP servers refused.
+   */
+  next: "set-up-again" | "open";
+  /** The Google Cloud page the `open` step opens. */
+  link?: string;
 };
 
 /**
  * The Google row's state from its client facts (INF-5549's plan): a refused
- * client first, then a refused sign-in as every row shows it, then one that
- * ends. Undefined, the row shows its health as any sign-in row does.
+ * client first, then a refused sign-in as every row shows it, then a client
+ * Google's MCP servers refused or a service turned off, then one that ends. Undefined, the row shows its health as any sign-in row does.
  */
 export function googleClientState(
   client: IntegrationClientView | undefined,
@@ -228,15 +232,48 @@ export function googleClientState(
       words: m.integrationsGoogleStopped(),
       tone: "danger",
       detail: m.integrationsGoogleStoppedDetail(),
+      next: "set-up-again",
     };
   if (health === "needs_reauth") return undefined;
+  // Google refused the sign-in's calls though the sign-in stands (docs/integrations.md, "Google").
+  if (client.mcp?.refused === "agent")
+    return {
+      words: m.integrationsGoogleAgentRefused(),
+      tone: "warn",
+      detail: m.integrationsGoogleAgentRefusedDetail(),
+      next: "open",
+      link: client.mcp.link,
+    };
+  if (client.mcp?.refused === "service") {
+    const names = (client.mcp.services ?? []).map((service) =>
+      service === "gmail"
+        ? m.integrationsGoogleServiceGmail()
+        : m.integrationsGoogleServiceCalendar(),
+    );
+    return {
+      words: m.integrationsGoogleServiceOff(),
+      tone: "warn",
+      detail: m.integrationsGoogleServiceOffDetail({
+        count: Math.max(names.length, 1),
+        services: formatList(names),
+      }),
+      next: "open",
+      link: client.mcp.link,
+    };
+  }
   if (client.endsAt !== undefined) {
     const date = formatDate(client.endsAt, { dateStyle: "medium" });
     return {
       words: m.integrationsGoogleStops({ date }),
       tone: "warn",
       detail: m.integrationsGoogleStopsDetail({ date }),
+      next: "set-up-again",
     };
   }
   return undefined;
+}
+
+/** The words of a state's next step. */
+export function googleNextWords(next: GoogleClientState["next"]): string {
+  return next === "open" ? m.integrationsGoogleOpenCloud() : m.integrationsGoogleSetUpAgain();
 }

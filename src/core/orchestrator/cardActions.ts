@@ -854,6 +854,7 @@ export class CardActions {
             firstmateAsk.ask,
             takenFirstmateAsk,
             firstmateAsk.choice,
+            answers,
           );
           return {};
         }

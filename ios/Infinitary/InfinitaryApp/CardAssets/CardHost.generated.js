@@ -43607,6 +43607,260 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `${name} takes no client file in this version of Infinitary.`;
   }
+  function integrationsConfirmChoice(input2) {
+    const place = input2.place;
+    switch (currentLanguage()) {
+      case "ar":
+        return `ردّك على ${place}`;
+      case "de":
+        return `Deine Antwort an ${place}`;
+      case "es":
+        return `Tu respuesta a ${place}`;
+      case "fr":
+        return `Votre réponse à ${place}`;
+      case "ja":
+        return `${place} への回答`;
+      case "ko":
+        return `${place}에 보낼 답`;
+      case "pt-BR":
+        return `Sua resposta ao ${place}`;
+      case "zh-Hans":
+        return `你给 ${place} 的回答`;
+      case "zh-Hant":
+        return `你給 ${place} 的回答`;
+      case "en-XA":
+        return `[Ýöûŕ áñšŵéŕ ţö ${place} ~~~~~]`;
+      case "ar-XB":
+        return `‮Your answer to ‬${place}`;
+    }
+    return `Your answer to ${place}`;
+  }
+  function integrationsConfirmLeadFirstmate(input2) {
+    const place = input2.place;
+    switch (currentLanguage()) {
+      case "ar":
+        return `طلب نائب القبطان تشغيل هذا، وسمح له Infinitary بالمتابعة. أوقف ${place} الاستدعاء ليسألك أولًا، لذا لم يُشغَّل شيء بعد.`;
+      case "de":
+        return `Dein erster Offizier hat gebeten, dies auszuführen, und Infinitary hat es zugelassen. ${place} hat den Aufruf gestoppt, um zuerst dich zu fragen, daher ist noch nichts gelaufen.`;
+      case "es":
+        return `Tu primer oficial pidió ejecutar esto, e Infinitary lo dejó seguir. ${place} detuvo la llamada para preguntarte primero, así que todavía no se ha ejecutado nada.`;
+      case "fr":
+        return `Votre second a demandé à exécuter ceci, et Infinitary l’a laissé faire. ${place} a arrêté l’appel pour vous consulter d’abord, donc rien n’a encore été exécuté.`;
+      case "ja":
+        return `一等航海士がこの実行を求め、Infinitary は実行を許可しました。${place} が先にあなたに確認するためにこの呼び出しを停止したので、まだ何も実行されていません。`;
+      case "ko":
+        return `일등항해사가 이 실행을 요청했고, Infinitary가 진행을 허락했어요. ${place}에서 먼저 확인을 받으려고 호출을 중지했기 때문에 아직 아무것도 실행되지 않았어요.`;
+      case "pt-BR":
+        return `Seu imediato pediu para executar isto, e o Infinitary deixou que ele seguisse. O ${place} parou a chamada para perguntar a você primeiro, então nada foi executado ainda.`;
+      case "zh-Hans":
+        return `你的大副请求运行此操作，Infinitary 已允许它继续。${place} 停止了这次调用，要先征求你的意见，所以还没有运行任何内容。`;
+      case "zh-Hant":
+        return `你的大副要求執行這項操作，Infinitary 已允許它繼續。${place} 停止了這次呼叫，要先徵求你的意見，所以還沒有執行任何操作。`;
+      case "en-XA":
+        return `[Ýöûŕ ƒîŕšţ ɱáţé ášķéð ţö ŕûñ ţĥîš, áñð Îñƒîñîţáŕý ļéţ îţ ĝö áĥéáð. ${place} šţöþþéð ţĥé çáļļ ţö ášķ ýöû ƒîŕšţ, šö ñöţĥîñĝ ĥáš ŕûñ ýéţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your first mate asked to run this, and Infinitary let it go ahead. ‬${place}‮ stopped the call to ask you first, so nothing has run yet.‬`;
+    }
+    return `Your first mate asked to run this, and Infinitary let it go ahead. ${place} stopped the call to ask you first, so nothing has run yet.`;
+  }
+  function integrationsConfirmLeadPanel(input2) {
+    const panel = input2.panel;
+    const place = input2.place;
+    switch (currentLanguage()) {
+      case "ar":
+        return `طلبت لوحتك «${panel}» تشغيل هذا، وسمح لها Infinitary بالمتابعة. أوقف ${place} الاستدعاء ليسألك أولًا، لذا لم يُشغَّل شيء بعد.`;
+      case "de":
+        return `Dein Panel „${panel}“ hat gebeten, dies auszuführen, und Infinitary hat es zugelassen. ${place} hat den Aufruf gestoppt, um zuerst dich zu fragen, daher ist noch nichts gelaufen.`;
+      case "es":
+        return `Tu panel «${panel}» pidió ejecutar esto, e Infinitary lo dejó seguir. ${place} detuvo la llamada para preguntarte primero, así que todavía no se ha ejecutado nada.`;
+      case "fr":
+        return `Votre panneau « ${panel} » a demandé à exécuter ceci, et Infinitary l’a laissé faire. ${place} a arrêté l’appel pour vous consulter d’abord, donc rien n’a encore été exécuté.`;
+      case "ja":
+        return `パネル「${panel}」がこの実行を求め、Infinitary は実行を許可しました。${place} が先にあなたに確認するためにこの呼び出しを停止したので、まだ何も実行されていません。`;
+      case "ko":
+        return `“${panel}” 패널이 이 실행을 요청했고, Infinitary가 진행을 허락했어요. ${place}에서 먼저 확인을 받으려고 호출을 중지했기 때문에 아직 아무것도 실행되지 않았어요.`;
+      case "pt-BR":
+        return `Seu painel “${panel}” pediu para executar isto, e o Infinitary deixou que ele seguisse. O ${place} parou a chamada para perguntar a você primeiro, então nada foi executado ainda.`;
+      case "zh-Hans":
+        return `你的面板“${panel}”请求运行此操作，Infinitary 已允许它继续。${place} 停止了这次调用，要先征求你的意见，所以还没有运行任何内容。`;
+      case "zh-Hant":
+        return `你的面板「${panel}」要求執行這項操作，Infinitary 已允許它繼續。${place} 停止了這次呼叫，要先徵求你的意見，所以還沒有執行任何操作。`;
+      case "en-XA":
+        return `[Ýöûŕ þáñéļ “${panel}” ášķéð ţö ŕûñ ţĥîš, áñð Îñƒîñîţáŕý ļéţ îţ ĝö áĥéáð. ${place} šţöþþéð ţĥé çáļļ ţö ášķ ýöû ƒîŕšţ, šö ñöţĥîñĝ ĥáš ŕûñ ýéţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your panel “‬${panel}‮” asked to run this, and Infinitary let it go ahead. ‬${place}‮ stopped the call to ask you first, so nothing has run yet.‬`;
+    }
+    return `Your panel “${panel}” asked to run this, and Infinitary let it go ahead. ${place} stopped the call to ask you first, so nothing has run yet.`;
+  }
+  function integrationsConfirmLeadTask(input2) {
+    const place = input2.place;
+    const task = input2.task;
+    switch (currentLanguage()) {
+      case "ar":
+        return `طلب فرد الطاقم في «${task}» تشغيل هذا، وسمح له Infinitary بالمتابعة. أوقف ${place} الاستدعاء ليسألك أولًا، لذا لم يُشغَّل شيء بعد.`;
+      case "de":
+        return `Das Crewmitglied von „${task}“ hat gebeten, dies auszuführen, und Infinitary hat es zugelassen. ${place} hat den Aufruf gestoppt, um zuerst dich zu fragen, daher ist noch nichts gelaufen.`;
+      case "es":
+        return `El tripulante de «${task}» pidió ejecutar esto, e Infinitary lo dejó seguir. ${place} detuvo la llamada para preguntarte primero, así que todavía no se ha ejecutado nada.`;
+      case "fr":
+        return `L’équipier de « ${task} » a demandé à exécuter ceci, et Infinitary l’a laissé faire. ${place} a arrêté l’appel pour vous consulter d’abord, donc rien n’a encore été exécuté.`;
+      case "ja":
+        return `「${task}」の担当の乗組員がこの実行を求め、Infinitary は実行を許可しました。${place} が先にあなたに確認するためにこの呼び出しを停止したので、まだ何も実行されていません。`;
+      case "ko":
+        return `“${task}”의 선원이 이 실행을 요청했고, Infinitary가 진행을 허락했어요. ${place}에서 먼저 확인을 받으려고 호출을 중지했기 때문에 아직 아무것도 실행되지 않았어요.`;
+      case "pt-BR":
+        return `O tripulante de “${task}” pediu para executar isto, e o Infinitary deixou que ele seguisse. O ${place} parou a chamada para perguntar a você primeiro, então nada foi executado ainda.`;
+      case "zh-Hans":
+        return `“${task}”上的船员请求运行此操作，Infinitary 已允许它继续。${place} 停止了这次调用，要先征求你的意见，所以还没有运行任何内容。`;
+      case "zh-Hant":
+        return `「${task}」上的船員要求執行這項操作，Infinitary 已允許它繼續。${place} 停止了這次呼叫，要先徵求你的意見，所以還沒有執行任何操作。`;
+      case "en-XA":
+        return `[Ţĥé çŕéŵɱáţé öñ “${task}” ášķéð ţö ŕûñ ţĥîš, áñð Îñƒîñîţáŕý ļéţ îţ ĝö áĥéáð. ${place} šţöþþéð ţĥé çáļļ ţö ášķ ýöû ƒîŕšţ, šö ñöţĥîñĝ ĥáš ŕûñ ýéţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The crewmate on “‬${task}‮” asked to run this, and Infinitary let it go ahead. ‬${place}‮ stopped the call to ask you first, so nothing has run yet.‬`;
+    }
+    return `The crewmate on “${task}” asked to run this, and Infinitary let it go ahead. ${place} stopped the call to ask you first, so nothing has run yet.`;
+  }
+  function integrationsConfirmNotNow() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ليس الآن`;
+      case "de":
+        return `Nicht jetzt`;
+      case "es":
+        return `Ahora no`;
+      case "fr":
+        return `Pas maintenant`;
+      case "ja":
+        return `今はしない`;
+      case "ko":
+        return `나중에`;
+      case "pt-BR":
+        return `Agora não`;
+      case "zh-Hans":
+        return `暂不`;
+      case "zh-Hant":
+        return `暫時不要`;
+      case "en-XA":
+        return `[Ñöţ ñöŵ ~~~]`;
+      case "ar-XB":
+        return `‮Not now‬`;
+    }
+    return `Not now`;
+  }
+  function integrationsConfirmSend(input2) {
+    const place = input2.place;
+    switch (currentLanguage()) {
+      case "ar":
+        return `إرسال إلى ${place}`;
+      case "de":
+        return `An ${place} senden`;
+      case "es":
+        return `Enviar a ${place}`;
+      case "fr":
+        return `Envoyer à ${place}`;
+      case "ja":
+        return `${place} に送信`;
+      case "ko":
+        return `${place}에 보내기`;
+      case "pt-BR":
+        return `Enviar ao ${place}`;
+      case "zh-Hans":
+        return `发送给 ${place}`;
+      case "zh-Hant":
+        return `傳送給 ${place}`;
+      case "en-XA":
+        return `[Šéñð ţö ${place} ~~~]`;
+      case "ar-XB":
+        return `‮Send to ‬${place}`;
+    }
+    return `Send to ${place}`;
+  }
+  function integrationsConfirmTitle(input2) {
+    const action = input2.action;
+    const place = input2.place;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يطلب منك ${place} تأكيد «${action}»`;
+      case "de":
+        return `${place} bittet dich, „${action}“ zu bestätigen`;
+      case "es":
+        return `${place} te pide que confirmes «${action}»`;
+      case "fr":
+        return `${place} vous demande de confirmer « ${action} »`;
+      case "ja":
+        return `${place} が「${action}」の確認を求めています`;
+      case "ko":
+        return `${place}에서 “${action}” 확인을 요청해요`;
+      case "pt-BR":
+        return `${place} pede que você confirme “${action}”`;
+      case "zh-Hans":
+        return `${place} 请你确认“${action}”`;
+      case "zh-Hant":
+        return `${place} 請你確認「${action}」`;
+      case "en-XA":
+        return `[${place} ášķš ýöû ţö çöñƒîŕɱ “${action}” ~~~~~~~~]`;
+      case "ar-XB":
+        return `${place}‮ asks you to confirm “‬${action}‮”‬`;
+    }
+    return `${place} asks you to confirm “${action}”`;
+  }
+  function integrationsConfirmWays(input2) {
+    const place = input2.place;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يرسل «إرسال إلى ${place}» الردّ الذي اخترته مرة واحدة، ثم يشغّل ${place} الاستدعاء أو يوقفه حسب اختيارك. ولا يرسل «ليس الآن» شيئًا، ولا يُشغَّل الاستدعاء.`;
+      case "de":
+        return `„An ${place} senden“ sendet deine gewählte Antwort einmal, und ${place} führt den Aufruf aus oder stoppt ihn, wie du es entschieden hast. „Nicht jetzt“ sendet nichts, und der Aufruf läuft nicht.`;
+      case "es":
+        return `«Enviar a ${place}» envía una sola vez la respuesta que elegiste, y ${place} ejecuta o detiene la llamada según tu elección. «Ahora no» no envía nada, y la llamada no se ejecuta.`;
+      case "fr":
+        return `« Envoyer à ${place} » envoie une seule fois la réponse choisie, et ${place} exécute ou arrête l’appel selon votre choix. « Pas maintenant » n’envoie rien, et l’appel ne s’exécute pas.`;
+      case "ja":
+        return `「${place} に送信」を押すと、選んだ回答が 1 回だけ送られ、${place} は選んだとおりに呼び出しを実行または停止します。「今はしない」を押すと何も送られず、呼び出しは実行されません。`;
+      case "ko":
+        return `“${place}에 보내기”는 고른 답을 한 번 보내고, ${place}에서는 선택한 대로 호출을 실행하거나 중지해요. “나중에”는 아무것도 보내지 않으며, 호출도 실행되지 않아요.`;
+      case "pt-BR":
+        return `“Enviar ao ${place}” envia uma única vez a resposta que você escolheu, e o ${place} executa ou para a chamada conforme a sua escolha. “Agora não” não envia nada, e a chamada não é executada.`;
+      case "zh-Hans":
+        return `“发送给 ${place}”会把你选的回答发送一次，${place} 会按你的选择运行或停止这次调用。“暂不”不发送任何内容，这次调用也不会运行。`;
+      case "zh-Hant":
+        return `「傳送給 ${place}」會把你選的回答傳送一次，${place} 會依你的選擇執行或停止這次呼叫。「暫時不要」不會傳送任何內容，這次呼叫也不會執行。`;
+      case "en-XA":
+        return `[Šéñð ţö ${place} šéñðš ţĥé áñšŵéŕ ýöû þîçķéð öñçé, áñð ${place} ŕûñš öŕ šţöþš ţĥé çáļļ áš ýöû çĥöšé. Ñöţ ñöŵ šéñðš ñöţĥîñĝ, áñð ţĥé çáļļ ðöéšñ'ţ ŕûñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Send to ‬${place}‮ sends the answer you picked once, and ‬${place}‮ runs or stops the call as you chose. Not now sends nothing, and the call doesn't run.‬`;
+    }
+    return `Send to ${place} sends the answer you picked once, and ${place} runs or stops the call as you chose. Not now sends nothing, and the call doesn't run.`;
+  }
+  function integrationsConfirmWords(input2) {
+    const place = input2.place;
+    switch (currentLanguage()) {
+      case "ar":
+        return `بكلمات ${place}`;
+      case "de":
+        return `In den Worten von ${place}`;
+      case "es":
+        return `En palabras de ${place}`;
+      case "fr":
+        return `Dans les mots de ${place}`;
+      case "ja":
+        return `${place} の言葉`;
+      case "ko":
+        return `${place}의 말`;
+      case "pt-BR":
+        return `Nas palavras do ${place}`;
+      case "zh-Hans":
+        return `${place} 的原话`;
+      case "zh-Hant":
+        return `${place} 的原話`;
+      case "en-XA":
+        return `[Îñ ${place}'š ŵöŕðš ~~~~]`;
+      case "ar-XB":
+        return `‮In ‬${place}‮'s words‬`;
+    }
+    return `In ${place}'s words`;
+  }
   function integrationsConnectOfferBody(input2) {
     const name = input2.name;
     switch (currentLanguage()) {
@@ -43744,6 +43998,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Connect ‬${name}`;
     }
     return `Connect ${name}`;
+  }
+  function integrationsGoogleAgentRefused() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ميّز عميلك للوكلاء`;
+      case "de":
+        return `Client für Agenten kennzeichnen`;
+      case "es":
+        return `Marca tu cliente para agentes`;
+      case "fr":
+        return `Marquez votre client pour les agents`;
+      case "ja":
+        return `クライアントをエージェント用に設定してください`;
+      case "ko":
+        return `클라이언트를 에이전트용으로 표시하세요`;
+      case "pt-BR":
+        return `Marque seu cliente para agentes`;
+      case "zh-Hans":
+        return `请把你的客户端标记为供智能体使用`;
+      case "zh-Hant":
+        return `請把你的用戶端標示為供代理程式使用`;
+      case "en-XA":
+        return `[Ṁáŕķ ýöûŕ çļîéñţ ƒöŕ áĝéñţš ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Mark your client for agents‬`;
+    }
+    return `Mark your client for agents`;
+  }
+  function integrationsGoogleAgentRefusedDetail() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا تقبل خوادم Gmail والتقويم من Google إلا عميلًا مميّزًا لوكيل مدعوم بالذكاء الاصطناعي. افتح عميلك في Google Cloud، وحدّد «Use this client for an AI-powered agent» واحفظ، ثم اختر «التحقق الآن» من قائمة هذا الصف.`;
+      case "de":
+        return `Die Gmail- und Kalender-Server von Google nehmen nur einen Client an, der für einen KI-gestützten Agenten gekennzeichnet ist. Öffne deinen Client in Google Cloud, setz das Häkchen bei „Use this client for an AI-powered agent“ und speichere. Wähl dann „Jetzt prüfen“ im Menü dieser Zeile.`;
+      case "es":
+        return `Los servidores de Gmail y Calendar de Google solo aceptan un cliente marcado para un agente con IA. Abre tu cliente en Google Cloud, marca «Use this client for an AI-powered agent» y guarda; luego elige Comprobar ahora en el menú de esta fila.`;
+      case "fr":
+        return `Les serveurs Gmail et Agenda de Google n’acceptent qu’un client marqué pour un agent basé sur l’IA. Ouvrez votre client dans Google Cloud, cochez « Use this client for an AI-powered agent » et enregistrez, puis choisissez Vérifier maintenant dans le menu de cette ligne.`;
+      case "ja":
+        return `Google の Gmail とカレンダーのサーバーは、AI エージェント用に設定されたクライアントしか受け付けません。Google Cloud でクライアントを開き、「Use this client for an AI-powered agent」にチェックを入れて保存してから、この行のメニューで「今すぐ確認」を選んでください。`;
+      case "ko":
+        return `Google의 Gmail 및 캘린더 서버는 AI 기반 에이전트용으로 표시된 클라이언트만 받아요. Google Cloud에서 클라이언트를 열고 “Use this client for an AI-powered agent”에 체크한 뒤 저장하고, 이 행의 메뉴에서 지금 확인을 고르세요.`;
+      case "pt-BR":
+        return `Os servidores do Gmail e da Agenda do Google só aceitam um cliente marcado para um agente com IA. Abra seu cliente no Google Cloud, marque “Use this client for an AI-powered agent” e salve; depois escolha Verificar agora no menu desta linha.`;
+      case "zh-Hans":
+        return `Google 的 Gmail 和日历服务器只接受标记为供 AI 智能体使用的客户端。在 Google Cloud 中打开你的客户端，勾选“Use this client for an AI-powered agent”并保存，然后在这一行的菜单中选择“立即检查”。`;
+      case "zh-Hant":
+        return `Google 的 Gmail 和日曆伺服器只接受標示為供 AI 代理程式使用的用戶端。在 Google Cloud 中開啟你的用戶端，勾選「Use this client for an AI-powered agent」並儲存，然後在這一列的選單中選擇「立即檢查」。`;
+      case "en-XA":
+        return `[Ĝööĝļé'š Ĝɱáîļ áñð Çáļéñðáŕ šéŕṽéŕš öñļý ţáķé á çļîéñţ ɱáŕķéð ƒöŕ áñ ÅÎ-þöŵéŕéð áĝéñţ. Öþéñ ýöûŕ çļîéñţ îñ Ĝööĝļé Çļöûð, ţîçķ “Ûšé ţĥîš çļîéñţ ƒöŕ áñ ÅÎ-þöŵéŕéð áĝéñţ” áñð šáṽé, ţĥéñ çĥööšé Çĥéçķ ñöŵ ƒŕöɱ ţĥîš ŕöŵ'š ɱéñû. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Google's Gmail and Calendar servers only take a client marked for an AI-powered agent. Open your client in Google Cloud, tick “Use this client for an AI-powered agent” and save, then choose Check now from this row's menu.‬`;
+    }
+    return `Google's Gmail and Calendar servers only take a client marked for an AI-powered agent. Open your client in Google Cloud, tick “Use this client for an AI-powered agent” and save, then choose Check now from this row's menu.`;
   }
   function integrationsGoogleClientFileIncomplete() {
     switch (currentLanguage()) {
@@ -43906,6 +44214,209 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮A new Google sign-in, kept in Secrets and the app's memory‬`;
     }
     return `A new Google sign-in, kept in Secrets and the app's memory`;
+  }
+  function integrationsGoogleOpenCloud() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `فتح Google Cloud`;
+      case "de":
+        return `Google Cloud öffnen`;
+      case "es":
+        return `Abrir Google Cloud`;
+      case "fr":
+        return `Ouvrir Google Cloud`;
+      case "ja":
+        return `Google Cloud を開く`;
+      case "ko":
+        return `Google Cloud 열기`;
+      case "pt-BR":
+        return `Abrir o Google Cloud`;
+      case "zh-Hans":
+        return `打开 Google Cloud`;
+      case "zh-Hant":
+        return `開啟 Google Cloud`;
+      case "en-XA":
+        return `[Öþéñ Ĝööĝļé Çļöûð ~~~~~~]`;
+      case "ar-XB":
+        return `‮Open Google Cloud‬`;
+    }
+    return `Open Google Cloud`;
+  }
+  function integrationsGoogleServiceCalendar() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `التقويم`;
+      case "de":
+        return `Kalender`;
+      case "es":
+        return `Calendar`;
+      case "fr":
+        return `Agenda`;
+      case "ja":
+        return `カレンダー`;
+      case "ko":
+        return `캘린더`;
+      case "pt-BR":
+        return `Agenda`;
+      case "zh-Hans":
+        return `日历`;
+      case "zh-Hant":
+        return `日曆`;
+      case "en-XA":
+        return `[Çáļéñðáŕ ~~~]`;
+      case "ar-XB":
+        return `‮Calendar‬`;
+    }
+    return `Calendar`;
+  }
+  function integrationsGoogleServiceGmail() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `Gmail`;
+      case "de":
+        return `Gmail`;
+      case "es":
+        return `Gmail`;
+      case "fr":
+        return `Gmail`;
+      case "ja":
+        return `Gmail`;
+      case "ko":
+        return `Gmail`;
+      case "pt-BR":
+        return `Gmail`;
+      case "zh-Hans":
+        return `Gmail`;
+      case "zh-Hant":
+        return `Gmail`;
+      case "en-XA":
+        return `[Ĝɱáîļ ~~]`;
+      case "ar-XB":
+        return `‮Gmail‬`;
+    }
+    return `Gmail`;
+  }
+  function integrationsGoogleServiceOff() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إحدى خدمات Google معطّلة`;
+      case "de":
+        return `Ein Google-Dienst ist ausgeschaltet`;
+      case "es":
+        return `Un servicio de Google está desactivado`;
+      case "fr":
+        return `Un service Google est désactivé`;
+      case "ja":
+        return `Google のサービスがオフです`;
+      case "ko":
+        return `Google 서비스가 꺼져 있어요`;
+      case "pt-BR":
+        return `Um serviço do Google está desativado`;
+      case "zh-Hans":
+        return `有一项 Google 服务已关闭`;
+      case "zh-Hant":
+        return `有一項 Google 服務已關閉`;
+      case "en-XA":
+        return `[Å Ĝööĝļé šéŕṽîçé îš öƒƒ ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮A Google service is off‬`;
+    }
+    return `A Google service is off`;
+  }
+  function integrationsGoogleServiceOffDetail(input2) {
+    formatNumber(input2.count);
+    const services = input2.services;
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `خدمات MCP الخاصة بـ ${services} معطّلة في مشروعك على Google Cloud، لذا لا يستطيع Infinitary الوصول إليها. فعّلها في Google Cloud، ثم اختر «التحقق الآن» من قائمة هذا الصف.`;
+          case "one":
+            return `خدمة MCP الخاصة بـ ${services} معطّلة في مشروعك على Google Cloud، لذا لا يستطيع Infinitary الوصول إليها. فعّلها في Google Cloud، ثم اختر «التحقق الآن» من قائمة هذا الصف.`;
+          case "two":
+            return `خدمتا MCP الخاصتان بـ ${services} معطّلتان في مشروعك على Google Cloud، لذا لا يستطيع Infinitary الوصول إليهما. فعّلهما في Google Cloud، ثم اختر «التحقق الآن» من قائمة هذا الصف.`;
+          case "few":
+            return `خدمات MCP الخاصة بـ ${services} معطّلة في مشروعك على Google Cloud، لذا لا يستطيع Infinitary الوصول إليها. فعّلها في Google Cloud، ثم اختر «التحقق الآن» من قائمة هذا الصف.`;
+          case "many":
+            return `خدمات MCP الخاصة بـ ${services} معطّلة في مشروعك على Google Cloud، لذا لا يستطيع Infinitary الوصول إليها. فعّلها في Google Cloud، ثم اختر «التحقق الآن» من قائمة هذا الصف.`;
+          default:
+            return `خدمات MCP الخاصة بـ ${services} معطّلة في مشروعك على Google Cloud، لذا لا يستطيع Infinitary الوصول إليها. فعّلها في Google Cloud، ثم اختر «التحقق الآن» من قائمة هذا الصف.`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Der MCP-Dienst für ${services} ist in deinem Google-Cloud-Projekt ausgeschaltet, daher erreicht Infinitary ihn nicht. Schalt ihn in Google Cloud ein und wähl dann „Jetzt prüfen“ im Menü dieser Zeile.`;
+          default:
+            return `Die MCP-Dienste für ${services} sind in deinem Google-Cloud-Projekt ausgeschaltet, daher erreicht Infinitary sie nicht. Schalt sie in Google Cloud ein und wähl dann „Jetzt prüfen“ im Menü dieser Zeile.`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `El servicio MCP de ${services} está desactivado en tu proyecto de Google Cloud, así que Infinitary no puede acceder a él. Actívalo en Google Cloud y luego elige Comprobar ahora en el menú de esta fila.`;
+          case "many":
+            return `Los servicios MCP de ${services} están desactivados en tu proyecto de Google Cloud, así que Infinitary no puede acceder a ellos. Actívalos en Google Cloud y luego elige Comprobar ahora en el menú de esta fila.`;
+          default:
+            return `Los servicios MCP de ${services} están desactivados en tu proyecto de Google Cloud, así que Infinitary no puede acceder a ellos. Actívalos en Google Cloud y luego elige Comprobar ahora en el menú de esta fila.`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Le service MCP pour ${services} est désactivé dans votre projet Google Cloud, donc Infinitary ne peut pas l’atteindre. Activez-le dans Google Cloud, puis choisissez Vérifier maintenant dans le menu de cette ligne.`;
+          case "many":
+            return `Les services MCP pour ${services} sont désactivés dans votre projet Google Cloud, donc Infinitary ne peut pas les atteindre. Activez-les dans Google Cloud, puis choisissez Vérifier maintenant dans le menu de cette ligne.`;
+          default:
+            return `Les services MCP pour ${services} sont désactivés dans votre projet Google Cloud, donc Infinitary ne peut pas les atteindre. Activez-les dans Google Cloud, puis choisissez Vérifier maintenant dans le menu de cette ligne.`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `Google Cloud プロジェクトで ${services} の MCP サービスがオフになっているため、Infinitary からアクセスできません。Google Cloud でオンにしてから、この行のメニューで「今すぐ確認」を選んでください。`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `Google Cloud 프로젝트에서 ${services} MCP 서비스가 꺼져 있어서 Infinitary가 닿을 수 없어요. Google Cloud에서 켠 다음, 이 행의 메뉴에서 지금 확인을 고르세요.`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `O serviço MCP de ${services} está desativado no seu projeto do Google Cloud, então o Infinitary não consegue acessá-lo. Ative-o no Google Cloud e depois escolha Verificar agora no menu desta linha.`;
+          case "many":
+            return `Os serviços MCP de ${services} estão desativados no seu projeto do Google Cloud, então o Infinitary não consegue acessá-los. Ative-os no Google Cloud e depois escolha Verificar agora no menu desta linha.`;
+          default:
+            return `Os serviços MCP de ${services} estão desativados no seu projeto do Google Cloud, então o Infinitary não consegue acessá-los. Ative-os no Google Cloud e depois escolha Verificar agora no menu desta linha.`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `你的 Google Cloud 项目中 ${services} 的 MCP 服务已关闭，所以 Infinitary 无法访问。请在 Google Cloud 中开启，然后在这一行的菜单中选择“立即检查”。`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `你的 Google Cloud 專案中 ${services} 的 MCP 服務已關閉，所以 Infinitary 無法存取。請在 Google Cloud 中開啟，然後在這一列的選單中選擇「立即檢查」。`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[Ţĥé ${services} ṀÇÞ šéŕṽîçé îš öƒƒ îñ ýöûŕ Ĝööĝļé Çļöûð þŕöĵéçţ, šö Îñƒîñîţáŕý çáñ'ţ ŕéáçĥ îţ. Ţûŕñ îţ öñ îñ Ĝööĝļé Çļöûð, ţĥéñ çĥööšé Çĥéçķ ñöŵ ƒŕöɱ ţĥîš ŕöŵ'š ɱéñû. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+          default:
+            return `[Ţĥé ${services} ṀÇÞ šéŕṽîçéš áŕé öƒƒ îñ ýöûŕ Ĝööĝļé Çļöûð þŕöĵéçţ, šö Îñƒîñîţáŕý çáñ'ţ ŕéáçĥ ţĥéɱ. Ţûŕñ ţĥéɱ öñ îñ Ĝööĝļé Çļöûð, ţĥéñ çĥööšé Çĥéçķ ñöŵ ƒŕöɱ ţĥîš ŕöŵ'š ɱéñû. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `‮The ‬${services}‮ MCP service is off in your Google Cloud project, so Infinitary can't reach it. Turn it on in Google Cloud, then choose Check now from this row's menu.‬`;
+          default:
+            return `‮The ‬${services}‮ MCP services are off in your Google Cloud project, so Infinitary can't reach them. Turn them on in Google Cloud, then choose Check now from this row's menu.‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `The ${services} MCP service is off in your Google Cloud project, so Infinitary can't reach it. Turn it on in Google Cloud, then choose Check now from this row's menu.`;
+      default:
+        return `The ${services} MCP services are off in your Google Cloud project, so Infinitary can't reach them. Turn them on in Google Cloud, then choose Check now from this row's menu.`;
+    }
   }
   function integrationsGoogleSetUp() {
     switch (currentLanguage()) {
@@ -44262,29 +44773,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function integrationsGoogleSetupStepPage() {
     switch (currentLanguage()) {
       case "ar":
-        return `افتح صفحة Google وسجّل الدخول بحساب Google الذي ستربطه. سمِّ المشروع واترك مربع «Use this client for an AI-powered agent» دون تحديد، فهو مخصص فقط للعملاء الذين يستخدمون أدوات MCP من Google. ثم اقبل سياسة Google واضغط Continue.`;
+        return `افتح صفحة Google وسجّل الدخول بحساب Google الذي ستربطه. سمِّ المشروع، وحدّد «Use this client for an AI-powered agent»، وفعّل خدمات MCP الخاصة بـ Gmail والتقويم وDrive والمستندات وجداول البيانات. ثم اقبل سياسة Google، واضغط Continue.`;
       case "de":
-        return `Öffne Googles Seite und melde dich mit dem Google-Konto an, das du verbinden willst. Gib dem Projekt einen Namen und lass das Kästchen „Use this client for an AI-powered agent“ ohne Haken, denn es ist nur für Clients gedacht, die Googles MCP-Tools nutzen. Akzeptiere dann Googles Richtlinie und drücke Continue.`;
+        return `Öffne Googles Seite und melde dich mit dem Google-Konto an, das du verbinden willst. Gib dem Projekt einen Namen, setz das Häkchen bei „Use this client for an AI-powered agent“ und schalt die MCP-Dienste für Gmail, Kalender, Drive, Docs und Tabellen ein. Akzeptiere dann Googles Richtlinie und drücke Continue.`;
       case "es":
-        return `Abre la página de Google e inicia sesión con la cuenta de Google que vas a conectar. Ponle nombre al proyecto y deja sin marcar la casilla «Use this client for an AI-powered agent», porque solo es para clientes que usan las herramientas MCP de Google. Luego acepta la política de Google y pulsa Continue.`;
+        return `Abre la página de Google e inicia sesión con la cuenta de Google que vas a conectar. Ponle nombre al proyecto, marca «Use this client for an AI-powered agent» y activa los servicios MCP de Gmail, Calendar, Drive, Documentos y Hojas de cálculo. Luego acepta la política de Google y pulsa Continue.`;
       case "fr":
-        return `Ouvrez la page de Google et connectez-vous avec le compte Google que vous allez relier. Nommez le projet et laissez la case « Use this client for an AI-powered agent » décochée, car elle ne sert qu’aux clients qui utilisent les outils MCP de Google. Acceptez ensuite la règle de Google et appuyez sur Continue.`;
+        return `Ouvrez la page de Google et connectez-vous avec le compte Google que vous allez relier. Nommez le projet, cochez « Use this client for an AI-powered agent » et activez les services MCP de Gmail, Agenda, Drive, Docs et Sheets. Acceptez ensuite la règle de Google et appuyez sur Continue.`;
       case "ja":
-        return `Google のページを開き、接続する Google アカウントでサインインします。プロジェクトに名前を付け、「Use this client for an AI-powered agent」はチェックを入れないままにします。このチェックボックスは Google の MCP ツールを使うクライアント専用です。そのあと Google のポリシーに同意して Continue を押します。`;
+        return `Google のページを開き、接続する Google アカウントでサインインします。プロジェクトに名前を付け、「Use this client for an AI-powered agent」にチェックを入れて、Gmail、カレンダー、ドライブ、ドキュメント、スプレッドシートの MCP サービスをオンにします。そのあと、Google のポリシーに同意して Continue を押します。`;
       case "ko":
-        return `Google 페이지를 열고 연결할 Google 계정으로 로그인하세요. 프로젝트 이름을 정하고 “Use this client for an AI-powered agent”는 체크하지 않은 채로 두세요. 이 체크박스는 Google의 MCP 도구를 쓰는 클라이언트 전용이에요. 그런 다음 Google의 정책에 동의하고 Continue를 누르세요.`;
+        return `Google 페이지를 열고 연결할 Google 계정으로 로그인하세요. 프로젝트 이름을 정하고, “Use this client for an AI-powered agent”에 체크하고, Gmail, 캘린더, 드라이브, 문서, 스프레드시트 MCP 서비스를 켜세요. 그런 다음 Google의 정책에 동의하고 Continue를 누르세요.`;
       case "pt-BR":
-        return `Abra a página do Google e faça login com a conta do Google que você vai conectar. Dê um nome ao projeto e deixe desmarcada a caixa “Use this client for an AI-powered agent”, porque ela só serve para clientes que usam as ferramentas MCP do Google. Depois aceite a política do Google e pressione Continue.`;
+        return `Abra a página do Google e faça login com a conta do Google que você vai conectar. Dê um nome ao projeto, marque “Use this client for an AI-powered agent” e ative os serviços MCP de Gmail, Agenda, Drive, Documentos e Planilhas. Depois aceite a política do Google e pressione Continue.`;
       case "zh-Hans":
-        return `打开 Google 的页面，用你要连接的 Google 账号登录。为项目命名，并让“Use this client for an AI-powered agent”保持未勾选，因为这个复选框只用于使用 Google MCP 工具的客户端。然后接受 Google 的政策，按 Continue。`;
+        return `打开 Google 的页面，用你要连接的 Google 账户登录。为项目命名，勾选“Use this client for an AI-powered agent”，并开启 Gmail、日历、云端硬盘、文档和表格的 MCP 服务。然后接受 Google 的政策，按 Continue。`;
       case "zh-Hant":
-        return `開啟 Google 的頁面，用你要連接的 Google 帳戶登入。為專案命名，並讓「Use this client for an AI-powered agent」保持未勾選，因為這個核取方塊只用於使用 Google MCP 工具的用戶端。然後接受 Google 的政策，按 Continue。`;
+        return `開啟 Google 的頁面，用你要連接的 Google 帳號登入。為專案命名，勾選「Use this client for an AI-powered agent」，並開啟 Gmail、日曆、雲端硬碟、文件和試算表的 MCP 服務。然後接受 Google 的政策，按 Continue。`;
       case "en-XA":
-        return `[Öþéñ Ĝööĝļé'š þáĝé áñð šîĝñ îñ ŵîţĥ ţĥé Ĝööĝļé áççöûñţ ýöû'ļļ çöññéçţ. Ñáɱé ţĥé þŕöĵéçţ áñð ļéáṽé “Ûšé ţĥîš çļîéñţ ƒöŕ áñ ÅÎ-þöŵéŕéð áĝéñţ” ûñţîçķéð, šîñçé ţĥáţ ƀöẋ îš öñļý ƒöŕ çļîéñţš ţĥáţ ûšé Ĝööĝļé'š ṀÇÞ ţööļš. Ţĥéñ áççéþţ Ĝööĝļé'š þöļîçý áñð þŕéšš Çöñţîñûé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Öþéñ Ĝööĝļé'š þáĝé áñð šîĝñ îñ ŵîţĥ ţĥé Ĝööĝļé áççöûñţ ýöû'ļļ çöññéçţ. Ñáɱé ţĥé þŕöĵéçţ, ţîçķ “Ûšé ţĥîš çļîéñţ ƒöŕ áñ ÅÎ-þöŵéŕéð áĝéñţ” áñð ţûŕñ öñ ţĥé Ĝɱáîļ, Çáļéñðáŕ, Ðŕîṽé, Ðöçš áñð Šĥééţš ṀÇÞ šéŕṽîçéš. Ţĥéñ áççéþţ Ĝööĝļé'š þöļîçý áñð þŕéšš Çöñţîñûé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Open Google's page and sign in with the Google account you'll connect. Name the project and leave “Use this client for an AI-powered agent” unticked, since that box is only for clients that use Google's MCP tools. Then accept Google's policy and press Continue.‬`;
+        return `‮Open Google's page and sign in with the Google account you'll connect. Name the project, tick “Use this client for an AI-powered agent” and turn on the Gmail, Calendar, Drive, Docs and Sheets MCP services. Then accept Google's policy and press Continue.‬`;
     }
-    return `Open Google's page and sign in with the Google account you'll connect. Name the project and leave “Use this client for an AI-powered agent” unticked, since that box is only for clients that use Google's MCP tools. Then accept Google's policy and press Continue.`;
+    return `Open Google's page and sign in with the Google account you'll connect. Name the project, tick “Use this client for an AI-powered agent” and turn on the Gmail, Calendar, Drive, Docs and Sheets MCP services. Then accept Google's policy and press Continue.`;
   }
   function integrationsGoogleSetupTitle() {
     switch (currentLanguage()) {
@@ -118408,17 +118919,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     handoverWontStopText,
     handoverWontStopTitle,
     integrationsClientFileNotTaken,
+    integrationsConfirmChoice,
+    integrationsConfirmLeadFirstmate,
+    integrationsConfirmLeadPanel,
+    integrationsConfirmLeadTask,
+    integrationsConfirmNotNow,
+    integrationsConfirmSend,
+    integrationsConfirmTitle,
+    integrationsConfirmWays,
+    integrationsConfirmWords,
     integrationsConnectOfferBody,
     integrationsConnectOfferButton,
     integrationsConnectOfferNotNow,
     integrationsConnectOfferOpen,
     integrationsConnectOfferTitle,
+    integrationsGoogleAgentRefused,
+    integrationsGoogleAgentRefusedDetail,
     integrationsGoogleClientFileIncomplete,
     integrationsGoogleClientFileNotJson,
     integrationsGoogleClientFileWeb,
     integrationsGoogleExchangeOperation,
     integrationsGoogleExchangeReason,
     integrationsGoogleExchangeResult,
+    integrationsGoogleOpenCloud,
+    integrationsGoogleServiceCalendar,
+    integrationsGoogleServiceGmail,
+    integrationsGoogleServiceOff,
+    integrationsGoogleServiceOffDetail,
     integrationsGoogleSetUp,
     integrationsGoogleSetUpAgain,
     integrationsGoogleSetUpFirst,
@@ -122161,17 +122688,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "handoverWontStopText": ["to"],
     "handoverWontStopTitle": ["from"],
     "integrationsClientFileNotTaken": ["name"],
+    "integrationsConfirmChoice": ["place"],
+    "integrationsConfirmLeadFirstmate": ["place"],
+    "integrationsConfirmLeadPanel": ["panel", "place"],
+    "integrationsConfirmLeadTask": ["place", "task"],
+    "integrationsConfirmNotNow": [],
+    "integrationsConfirmSend": ["place"],
+    "integrationsConfirmTitle": ["action", "place"],
+    "integrationsConfirmWays": ["place"],
+    "integrationsConfirmWords": ["place"],
     "integrationsConnectOfferBody": ["name"],
     "integrationsConnectOfferButton": [],
     "integrationsConnectOfferNotNow": [],
     "integrationsConnectOfferOpen": ["name"],
     "integrationsConnectOfferTitle": ["name"],
+    "integrationsGoogleAgentRefused": [],
+    "integrationsGoogleAgentRefusedDetail": [],
     "integrationsGoogleClientFileIncomplete": [],
     "integrationsGoogleClientFileNotJson": [],
     "integrationsGoogleClientFileWeb": [],
     "integrationsGoogleExchangeOperation": [],
     "integrationsGoogleExchangeReason": [],
     "integrationsGoogleExchangeResult": [],
+    "integrationsGoogleOpenCloud": [],
+    "integrationsGoogleServiceCalendar": [],
+    "integrationsGoogleServiceGmail": [],
+    "integrationsGoogleServiceOff": [],
+    "integrationsGoogleServiceOffDetail": ["count", "services"],
     "integrationsGoogleSetUp": [],
     "integrationsGoogleSetUpAgain": [],
     "integrationsGoogleSetUpFirst": [],

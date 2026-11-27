@@ -1,5 +1,5 @@
 ---
-source: e71da6c9134d6753
+source: 22ef5a500088606f
 title: 集成
 description: 连接 GitHub、GitLab、Bitbucket、Google 和 MCP 服务器，让你的大副和船员能够访问它们，并选择每一项可以不经询问就做什么。
 ---
@@ -55,13 +55,13 @@ Infinitary 如何用它克隆项目和提交改动，请参阅[项目](/zh-hans/
 ## Google：Gmail 和 Calendar {#google-gmail-and-calendar}
 
 Google 用一个登录同时连接 Gmail 和 Calendar。
-Infinitary 通过你自己的 Google 连接访问它们：这是你在自己的 Google Cloud 项目中以 Google 个人模式创建的一个客户端。
+Infinitary 通过 Google 自己面向 AI 智能体的 Gmail 和 Calendar 服务器，借助你自己的 Google 连接访问它们：这是你在自己的 Google Cloud 项目中以 Google 个人模式创建的一个客户端。
 Google 不会审核它，不显示警告，也不会在 7 天后结束它的登录。
 
 1. 点击“**Google**”，会打开“**设置你自己的 Google 连接**”。
 2. 点击“**打开 Google 的页面**”，在那里用你要连接的 Google 账户登录。
-   为项目命名，并让“Use this client for an AI-powered agent”保持未勾选，因为这个复选框只用于使用 Google MCP 工具的客户端。
-   然后接受 Google 的政策，再点击 Continue。
+   为项目命名，勾选“Use this client for an AI-powered agent”，并开启 Gmail、日历、云端硬盘、文档和表格的 MCP 服务。
+   然后接受 Google 的政策，点击 Continue。
 3. 用 Download JSON 下载 Google 显示的客户端文件。
 4. 把这个文件拖到“**把客户端文件拖到这里**”上，或用“**选择文件**”选中它，或把它的内容粘贴到“**客户端文件**”中。
 5. 点击“**保存并登录**”。
@@ -83,12 +83,23 @@ Infinitary 把客户端的密钥保存在这台电脑的[机密](/zh-hans/secret
   点击“**重新设置**”，并创建一个个人模式的客户端。
 - “**你的 Google 客户端已停用**”：Google 不再接受你的客户端，可能是它已在 Google Cloud 中被删除。
   点击“**重新设置**”。
+- “**请把你的客户端标记为供智能体使用**”：Google 的 Gmail 和 Calendar 服务器只接受标记为供 AI 智能体使用的客户端，而你的客户端没有这样标记。
+  点击“**打开 Google Cloud**”，在你的客户端上勾选“Use this client for an AI-powered agent”并保存，然后在这一行的菜单中选择“**立即检查**”。
+- “**有一项 Google 服务已关闭**”：你的 Google Cloud 项目中 Gmail 或 Calendar 的 MCP 服务已关闭。
+  点击“**打开 Google Cloud**”，开启它，然后在这一行的菜单中选择“**立即检查**”。
+
+在最后这两种情况下，你仍保持登录，不需要重新设置任何东西。
 
 在 iPhone 或 iPad 上，Google 这一行的设置方式相同：你选择客户端文件，或粘贴它的内容。
 
 连接 Google 后，大副和船员可以搜索和阅读你的邮件、把附件保存到任务的文件夹中、为邮件添加标签或将其归档、起草邮件以及发送邮件。
-在 Calendar 中，它们可以列出你的日历和日程、阅读某个日程、查看你的忙碌时间，以及创建或更新日程。
+在 Calendar 中，它们可以列出你的日历和日程、阅读某个日程、查找所有人都有空的时间，以及创建或更新日程。
 没有任何操作会删除日历日程。
+
+即使是你已允许的调用，Google 也可能先停止它，来征求你的意见。
+这时 Infinitary 会在一张卡片上显示 Google 的问题，附上 Google 自己给出的选项，且一个都没有预先选中。
+在你选择一个选项并点击“**发送给 Google**”之前，什么都不会运行；“**暂不**”不发送任何内容。
+你的选择只回答这一次调用。
 
 大副和船员读到的内容会在它们保存的对话中保留 30 天。
 之后由一条说明取而代之。
@@ -96,7 +107,7 @@ Infinitary 把客户端的密钥保存在这台电脑的[机密](/zh-hans/secret
 保存的附件会留在任务的文件夹中，直到任务结束或满 30 天。
 船员在保存的附件中读到的文字，在 30 天后仍会留在它的对话中。
 大副和船员自己写下的内容，包括卡片、笔记和文件，会一直保留，直到你删除该任务。
-移除 Google 不会删除它们已经读到的任何内容。
+移除 Google 也会删除它们已经读到的内容，就像“**删除 Gmail 和 Calendar 内容**”一样。
 
 任何人都可以给你发送意在操纵 AI 的文字。
 Infinitary 把你的邮件和日程交给大副和船员时，会标记为来自外部的信息，绝不作为指示。

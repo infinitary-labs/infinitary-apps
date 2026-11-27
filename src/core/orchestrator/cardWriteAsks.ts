@@ -1,5 +1,10 @@
 import { type IntegrationApprovalChoice, NOT_ALLOWED_WHY } from "@shared/integrations";
-import { allowanceCovers, buildRowChoiceOf, type IntegrationAllowance } from "@shared/writeAsk";
+import {
+  allowanceCovers,
+  buildRowChoiceOf,
+  confirmPickOf,
+  type IntegrationAllowance,
+} from "@shared/writeAsk";
 import type { IntegrationAskTaken } from "../integrations";
 import { TaskService } from "../tasks/taskService";
 import { addressesRowIssue, heldForDontFileWhy } from "./buildRows";
@@ -101,7 +106,7 @@ export class CardWriteAsks {
       }
       const sending = build
         ? this.core.buildRows.answer(taskId, build, as, buildRowChoiceOf(answers, id))
-        : send(taskId, took, as);
+        : send(taskId, took, as, confirmPickOf(answers, id));
       const sent: WriteAskSent = await sending.catch((caught: unknown) => {
         const why = caught instanceof Error ? caught.message : String(caught);
         const ask = "ask" in took ? took.ask : undefined;

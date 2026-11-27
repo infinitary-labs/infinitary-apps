@@ -773,6 +773,20 @@
       <string>已将 %1$ld 个文件路径添加为文本</string>
     </dict>
   </dict>
+  <key>integrationsGoogleServiceOffDetail</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>你的 Google Cloud 项目中 %2$@ 的 MCP 服务已关闭，所以 Infinitary 无法访问。请在 Google Cloud 中开启，然后在这一行的菜单中选择“立即检查”。</string>
+    </dict>
+  </dict>
   <key>knowledgePanelAllDirections</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>
@@ -1233,6 +1247,20 @@
       <string>ld</string>
       <key>other</key>
       <string>%1$ld 项%2$@</string>
+    </dict>
+  </dict>
+  <key>phoneGoogleServiceOffDetail</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>你的 Google Cloud 项目中 %3$@ 的 MCP 服务已关闭，所以 Infinitary 无法访问。请在 Google Cloud 中开启，然后在 %1$@ 上“设置”→“集成”中的 Google 一行选择“立即检查”。</string>
     </dict>
   </dict>
   <key>phoneMediaPicturePosition</key>

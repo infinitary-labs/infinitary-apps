@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "google-gmail-calendar-mcp",
+      "kind": "improvement",
+      "area": "settings",
+      "title": "Gmail and Calendar go through Google's own servers for AI agents",
+      "body": "Infinitary now reaches Gmail and Calendar through the servers Google makes for AI agents. When you set up your own Google client, the first step says to tick \"Use this client for an AI-powered agent\" and to turn on Google's Gmail, Calendar, Drive, Docs and Sheets MCP services. If you connected Google before, the Google row says when your client still needs that mark or a service is off, and Open Google Cloud takes you to the page that fixes it, on iPhone and iPad too. When Google asks you to confirm a call, a card shows Google's question with its own choices, and nothing runs until you pick one. Removing Google now also deletes what your first mate and crew read from it.",
+      "picture": {
+        "dark": "google-gmail-calendar-mcp-dark.webp",
+        "light": "google-gmail-calendar-mcp-light.webp",
+        "alt": "The Google row in Settings → Integrations saying Mark your client for agents, with an Open Google Cloud button"
+      },
+      "docsSite": ["integrations"],
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

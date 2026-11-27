@@ -25,7 +25,6 @@ import type {
   IntegrationAllowance,
   IntegrationAsk,
   IntegrationScope,
-  WriteAsk,
   WriteAskOutcome,
 } from "@shared/writeAsk";
 import type { LegacyCalls } from "../storage/outsideDataScrub";
@@ -36,6 +35,7 @@ import {
   type IntegrationAnswer,
   type IntegrationBinding,
   type IntegrationCaller,
+  type IntegrationConfirmed,
   type IntegrationConnection,
   type IntegrationEventFilter,
   type IntegrationEventSpec,
@@ -43,6 +43,7 @@ import {
   IntegrationOutcomeUnknown,
   type PanelCaller,
 } from "./binding";
+import { type AskedCall, confirmAgain, keepAsk, keepConfirm } from "./keptAsks";
 import { FIRSTMATE_READER } from "./outsideReads";
 import {
   READER_INTEGRATION_ANSWER_MAX,
@@ -110,6 +111,13 @@ export type IntegrationsServiceOptions = {
     is: (taskId: string) => boolean;
     holds: (taskId: string, what: string) => void;
   };
+  /**
+   * The captain's delete of words from outside (`SavedOutsideData.deleteNow`),
+   * which a removed connection whose kind keeps them for days starts: what
+   * agents read through it may not outlive the connection (docs/integrations.md,
+   * "Google"). It covers every kept kind, as the Settings delete does.
+   */
+  deleteOutside?: () => Promise<unknown>;
   now?: () => number;
   /** The whole view, after every change (`inf:integrations`). */
   push?: (view: IntegrationsView) => void;
@@ -465,15 +473,23 @@ export class IntegrationsService {
         : !this.allowed(row, spec) &&
           !(caller.kind === "task" && this.taskAllows(caller.taskId, row, spec, parsed.data))
     )
-      return this.keepAsk(
-        caller,
-        row,
-        view.name,
-        spec,
-        parsed.data,
-        caller.kind === "panel" ? this.panelUse(caller.panel, row)?.why : reason,
+      return keepAsk(
+        {
+          ...this.asked(caller, row, view.name, spec, parsed.data),
+          reason: caller.kind === "panel" ? this.panelUse(caller.panel, row)?.why : reason,
+        },
+        this.options.asks,
       );
     const { answer } = await this.run(row, view.name, spec.name, parsed.data, caller);
+    if (answer.confirm)
+      return keepConfirm(
+        {
+          ...this.asked(caller, row, view.name, spec, parsed.data),
+          reason: caller.kind === "panel" ? this.panelUse(caller.panel, row)?.why : reason,
+        },
+        answer.confirm,
+        this.options.asks,
+      );
     read(view.name, answer.refused ? answer.text : null);
     return caller.kind === "firstmate" && spec.effect !== "reads" && !answer.refused
       ? { ...answer, ran: spec.effect }
@@ -500,26 +516,32 @@ export class IntegrationsService {
    * The captain's click on a kept ask's card: take it once - marked taken
    * before it runs - and run exactly what was kept, if the integration and
    * its action still allow it. Its answer comes back with every kept key
-   * replaced, and it is never run again.
+   * replaced, and it is never run again. `picked` is the captain's answer
+   * to a place's question on a confirmation card (`IntegrationAsk.confirm`).
    */
   async sendAsk(
     taskId: string,
     askId: string,
     choice: IntegrationApprovalChoice = "once",
+    picked?: string,
   ): Promise<IntegrationAskSent> {
     const taken = this.options.asks?.take(taskId, askId) ?? { refused: "nothing keeps asks here." };
-    return this.sendTaken(taskId, taken, choice);
+    return this.sendTaken(taskId, taken, choice, picked);
   }
 
   /**
    * Run an ask its owner already took, once: the first mate's ask is taken
    * from its card's row in the same transaction that closes that row
-   * (INF-1108). It runs as whoever asked it.
+   * (INF-1108). It runs as whoever asked it. A confirmation's ask runs only
+   * with one of the place's own choices, which the call carries back to it;
+   * a place that asks again raises a new confirmation, and this ask ran
+   * nothing.
    */
   async sendTaken(
     taskId: string,
     taken: IntegrationAskTaken,
     choice: IntegrationApprovalChoice = "once",
+    picked?: string,
   ): Promise<IntegrationAskSent> {
     const asks = this.options.asks;
     if ("refused" in taken)
@@ -543,6 +565,18 @@ export class IntegrationsService {
     };
     if (choice === "deny")
       return done({ kind: "refused", why: "The captain chose Not now. Nothing ran." });
+    if (ask.confirm && choice !== "once")
+      return done({
+        kind: "refused",
+        // i18n-exempt: words served to the crew, which stay English
+        why: `${ask.place}'s question takes one answer, sent once. Nothing ran.`,
+      });
+    if (ask.confirm && !ask.confirm.options.some((option) => option.value === picked))
+      return done({
+        kind: "refused",
+        // i18n-exempt: words served to the crew, which stay English
+        why: `The captain picked none of ${ask.place}'s choices. Nothing ran.`,
+      });
     // A reader's call never earns a grant: its card offers only Only this time.
     if (ask.by === undefined && choice !== "once" && this.options.readers?.is(taskId))
       return done({
@@ -597,7 +631,24 @@ export class IntegrationsService {
       choice === "task" && caller.kind === "task"
         ? this.allowForTask(taskId, row, spec, ask)
         : undefined;
-    const { answer, unknown } = await this.run(row, view.name, spec.name, parsed.data, caller);
+    const confirmed: IntegrationConfirmed | undefined =
+      ask.confirm && picked !== undefined
+        ? { state: ask.confirm.state, choice: picked }
+        : undefined;
+    const { answer, unknown } = await this.run(
+      row,
+      view.name,
+      spec.name,
+      parsed.data,
+      caller,
+      confirmed,
+    );
+    if (answer.confirm) {
+      const now = (this.options.now ?? Date.now)();
+      const why = confirmAgain(this.options.asks, taskId, ask, answer.confirm, now);
+      const sent = done({ kind: "refused", why });
+      return allowance ? { ...sent, allowance } : sent;
+    }
     const sent = unknown
       ? done({ kind: "unknown", why: answer.text })
       : answer.refused
@@ -689,6 +740,7 @@ export class IntegrationsService {
     action: string,
     input: unknown,
     caller: IntegrationCaller,
+    confirmed?: IntegrationConfirmed,
   ): Promise<{ answer: IntegrationAnswer; unknown?: true }> {
     const redact = (text: string) => this.redact(text);
     // An unsafe data reader's answer is marked whole, its binding's refusals
@@ -709,7 +761,11 @@ export class IntegrationsService {
     // stand-in label are not.
     const noted = !row.connection.fence && row.binding.fence !== undefined;
     try {
-      const called = await row.binding.call(row.connection.id, action, input, caller);
+      const called = await (confirmed
+        ? row.binding.call(row.connection.id, action, input, caller, confirmed)
+        : row.binding.call(row.connection.id, action, input, caller));
+      // The place's question: nothing ran, and its words go to the captain alone.
+      if (called.confirm) return { answer: { text: "", confirm: called.confirm } };
       const { file: delivered, ...answer } = called;
       if (delivered && !answer.refused) answer.text = await this.saveFile(row, caller, delivered);
       const text = redact(answer.text);
@@ -786,101 +842,26 @@ Do not repeat this call; read ${name} to check what happened first.`
     });
   }
 
-  /**
-   * The host keeps the exact call and presents its own card (INF-950): on
-   * the caller's task, or for the first mate or a panel on the row the host
-   * files for that card (INF-1108). A panel's reason is its manifest's why.
-   */
-  private keepAsk(
+  /** The call a kept ask names (`AskedCall`), as this service resolved it. */
+  private asked(
     caller: IntegrationCaller,
     row: Row,
     name: string,
     spec: IntegrationActionSpec,
     input: unknown,
-    reason?: string,
-  ): IntegrationAnswer {
-    const asks = this.options.asks;
-    const firstmate = caller.kind === "firstmate";
-    if (
-      !asks ||
-      (firstmate && !asks.keepForFirstmate) ||
-      (caller.kind === "panel" && !asks.keepForPanel)
-    )
-      return {
-        text:
-          caller.kind === "panel"
-            ? `Not run: ${name}'s ${spec.name} asks the captain, and panels cannot ask here.`
-            : `Not run: ${name}'s ${spec.name} asks the captain. Start a crewmate whose brief names the call and its reason.`,
-        refused: "refused",
-      };
+  ): Omit<AskedCall, "reason"> {
     const reader = this.isReader(caller);
-    if (typeof reason !== "string" || !reason.trim())
-      return {
-        text: `Not run: ${name}'s ${spec.name} asks the captain. Call again with ${firstmate || reader ? "reason" : "--reason"} explaining why this action is needed.`,
-        refused: "invalid",
-      };
-    const ask: IntegrationAsk = {
-      id: `ia${randomUUID().replace(/-/g, "").slice(0, 12)}`,
-      kind: "integration",
-      ...(firstmate ? { by: "firstmate" as const } : {}),
-      ...(caller.kind === "panel"
-        ? {
-            by: "panel" as const,
-            panel: { key: caller.panel.key, title: caller.panel.title },
-          }
-        : {}),
+    return {
+      caller,
       integration: row.connection.id,
       connection: row.ref,
-      place: name,
-      action: spec.name,
-      label: spec.label,
-      description: spec.description,
-      effect: spec.effect,
+      name,
+      spec,
+      input,
+      reader,
       signature: this.signature(spec),
-      reason,
-      input: JSON.stringify(input),
-      // A reader's card offers no Allow for the rest of this task.
       ...(caller.kind === "task" && !reader ? { scope: this.scopeOf(spec, input) } : {}),
-      at: (this.options.now ?? Date.now)(),
-    };
-    let card: string | undefined;
-    let joined = false;
-    try {
-      if (caller.kind === "task") {
-        const dropped = asks.keep(caller.taskId, ask) ?? [];
-        joined = asks.present?.(caller.taskId, ask, dropped) === true;
-      } else if (caller.kind === "panel") {
-        const kept = asks.keepForPanel?.(ask);
-        if (kept && "held" in kept)
-          return {
-            text:
-              kept.held === "asking"
-                ? `Not run: ${name}'s ${spec.name} waits for the captain's answer on its approval card. Always allow lets the panel's later calls run.`
-                : `Not run: the captain chose Not now for ${name}'s ${spec.name}. The panel's line offers Ask again.`,
-            refused: "refused",
-          };
-        return {
-          text: `Not run: ${name}'s ${spec.name} asks the captain. The app raised its approval card for ask ${ask.id}: allowing it runs this call, and Always allow lets the panel's later calls run.`,
-          refused: "refused",
-        };
-      } else {
-        card = asks.keepForFirstmate?.(ask);
-      }
-    } catch (error) {
-      return {
-        text: `Not run: ${name}'s ${spec.name} asks the captain, and the app could not keep the call: ${error instanceof Error ? error.message : String(error)}`,
-        refused: "refused",
-      };
-    }
-    if (reader)
-      return {
-        text: READER_WORDS.kept(name, spec.name, ask.id, joined),
-        refused: "refused",
-      };
-    return {
-      text: `Not run: ${name}'s ${spec.name} asks the captain. ${joined ? `The app added ask ${ask.id} to the approval card already waiting for your asks to ${name}.` : `The app raised its approval card for ask ${ask.id}.`} Do not emit another card or repeat the call. You will hear the outcome once through write-answered.`,
-      refused: "refused",
-      ...(card ? { card } : {}),
+      now: this.options.now ?? Date.now,
     };
   }
 
@@ -1446,7 +1427,8 @@ Do not repeat this call; read ${name} to check what happened first.`
   }
 
   /**
-   * Forget the connection's sign-in and its settings. The binding first
+   * Forget the connection's sign-in and its settings, and for a kind that
+   * keeps words from outside, what agents read through it. The binding first
    * tells the place to forget it where it can (Google's revocation), and
    * the row goes whatever the place answered.
    */
@@ -1470,6 +1452,16 @@ Do not repeat this call; read ${name} to check what happened first.`
       delete refs[id];
       this.options.store.writeConnections(refs);
     }
+    // A conversation in a turn is replaced once it pauses, so the row goes
+    // without waiting for it.
+    if (row.binding.kept && this.options.deleteOutside)
+      this.options
+        .deleteOutside()
+        .catch((error: unknown) =>
+          console.warn(
+            `[integrations] what agents read through ${id} could not be deleted: ${error instanceof Error ? error.message : String(error)}`,
+          ),
+        );
     return this.changed();
   }
 

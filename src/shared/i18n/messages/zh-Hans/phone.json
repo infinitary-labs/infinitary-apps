@@ -166,7 +166,12 @@
   "phoneFormatMinutes": "{minutes} 分钟",
   "phoneFormatNow": "刚刚",
   "phoneFormatUnderMinute": "不到 1 分钟",
+  "phoneGoogleAgentRefusedDetail": "Google 的 Gmail 和日历服务器只接受标记为供 AI 智能体使用的客户端。在 Google Cloud 中打开你的客户端，勾选“Use this client for an AI-powered agent”并保存，然后在 {computer} 上“设置”→“集成”中的 Google 一行选择“立即检查”。",
   "phoneGoogleInvite": "让 {computer} 上的大副读取 Gmail 和日历。登录信息保留在 {computer} 上。",
+  "phoneGoogleServiceOffDetail": {
+    "plural": "count",
+    "other": "你的 Google Cloud 项目中 {services} 的 MCP 服务已关闭，所以 Infinitary 无法访问。请在 Google Cloud 中开启，然后在 {computer} 上“设置”→“集成”中的 Google 一行选择“立即检查”。"
+  },
   "phoneGoogleSetupStays": "Infinitary 把客户端的密钥保存在 {computer} 的机密中。你的大副和船员永远看不到它。",
   "phoneGoogleSetupStepFile": "用 Download JSON 下载 Google 显示的客户端文件，然后在这里选择它，或粘贴它的内容。",
   "phoneGoogleSignIn": "登录",

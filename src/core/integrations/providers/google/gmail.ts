@@ -7,12 +7,14 @@ import type {
   IntegrationLook,
 } from "../../binding";
 import { recipientsScope } from "../../scopes";
+import type { GoogleTool } from "./mcp";
 
 /**
  * Gmail on the Google row (docs/integrations.md, "Google"): its actions and
- * its one event, through Gmail's REST API as the person's own sign-in. The
- * binding hands every request through `GmailRequest`, which applies the
- * sign-in, renews it and reads Gmail's refusals, so nothing here sees a key.
+ * its one event, through Gmail's MCP server as the person's own sign-in.
+ * The binding hands every call through a `GoogleTool`, which applies the
+ * sign-in, renews it and reads Google's refusals, so nothing here sees a
+ * key.
  *
  * Each action declares what it does to the world: a search and a read
  * change nothing; a label and a draft change the mailbox; a send reaches
@@ -20,16 +22,6 @@ import { recipientsScope } from "../../scopes";
  * which the integrations service holds for every
  * kind.
  */
-
-/**
- * One request to Gmail's API under `users/me`, such as `/messages?q=...`:
- * its status and JSON answer when Gmail answered it or said it is not
- * there (404); any other refusal throws words.
- */
-export type GmailRequest = (
-  path: string,
-  init?: { method?: "GET" | "POST"; json?: unknown },
-) => Promise<{ status: number; body: Record<string, unknown> }>;
 
 export const GMAIL_MESSAGE_EVENT: IntegrationEventSpec = {
   name: "message_received",
@@ -68,7 +60,7 @@ export const GMAIL_ACTIONS: readonly IntegrationActionSpec[] = [
     label: "Search mail",
     effect: "reads",
     description:
-      "Search the captain's Gmail with Gmail's own search words, such as from:ada is:unread newer_than:2d, newest first. max is how many to list (Gmail allows up to 500); page continues from an answer's next_page. Each message comes with its id, thread, sender, recipients, subject, date, labels and Gmail's snippet; read_message reads one whole.",
+      "Search the captain's Gmail with Gmail's own search words, such as from:ada is:unread newer_than:2d, newest conversation first. max is how many conversations to list (Gmail lists up to 50 at a time); page continues from an answer's next_page. Each conversation comes with its thread id and up to five of its messages, each with its id, sender, recipients, subject, date, labels and Gmail's snippet; omitted counts what Gmail held back and why. read_message reads one whole.",
     input: z.strictObject({
       query: z.string().max(2048).optional(),
       max: z.number().int().min(1).max(500),
@@ -80,7 +72,7 @@ export const GMAIL_ACTIONS: readonly IntegrationActionSpec[] = [
     label: "Read a message",
     effect: "reads",
     description:
-      "Read one message by its id: its headers, labels, its text, and each attachment's name, type, size and part, which save_attachment takes.",
+      "Read one message by its id: its sender, recipients, subject, date, labels, its text, and each attachment's name, type and part, which save_attachment takes.",
     input: z.strictObject({ id: messageIdSchema }),
   },
   {
@@ -127,83 +119,91 @@ export const GMAIL_ACTIONS: readonly IntegrationActionSpec[] = [
     effect: "sends",
     scope: recipientsScope,
     description:
-      "Send a message from the captain's Gmail, with the same input as draft_message. Its approval state controls whether the host asks before sending.",
+      "Send a message from the captain's Gmail, with the same input as draft_message. Where Gmail's server offers no sending to the account, it writes the draft instead, sends nothing and says so. Its approval state controls whether the host asks before sending.",
     input: outgoingSchema,
   },
 ];
 
-type Header = { name?: string; value?: string };
-type Part = {
-  partId?: string;
-  mimeType?: string;
-  filename?: string;
-  headers?: Header[];
-  body?: { size?: number; data?: string; attachmentId?: string };
-  parts?: Part[];
-};
+/** One message as Gmail's MCP server answers it. */
 type Message = {
   id?: string;
   threadId?: string;
+  sender?: string;
+  toRecipients?: string[];
+  ccRecipients?: string[];
+  addressDisplayNames?: { displayName?: string; emailAddress?: string }[];
+  subject?: string;
+  /** RFC 3339, to the second. */
+  date?: string;
+  /** Milliseconds, as a decimal string. */
+  internalDate?: string;
   labelIds?: string[];
   snippet?: string;
-  payload?: Part;
+  plaintextBody?: string;
+  htmlBody?: string;
+  attachments?: { filename?: string; mimeType?: string; partId?: string }[];
+  raw?: string;
 };
+type Thread = { id?: string; messageCount?: number; messages?: Message[] };
+type Label = { id: string; name: string };
 
-function header(message: Message, name: string): string | undefined {
-  const wanted = name.toLowerCase();
-  return message.payload?.headers?.find((entry) => entry.name?.toLowerCase() === wanted)?.value;
-}
-
-async function labels(request: GmailRequest): Promise<{ id: string; name: string }[]> {
-  const { body } = await request("/labels");
-  return ((body.labels as { id?: string; name?: string }[] | undefined) ?? []).flatMap((label) =>
-    label.id && label.name ? [{ id: label.id, name: label.name }] : [],
+async function labels(gmail: GoogleTool): Promise<Label[]> {
+  const answer = await gmail("list_labels", {});
+  return ((answer.labels as { labelId?: string; name?: string }[] | undefined) ?? []).flatMap(
+    (label) => (label.labelId && label.name ? [{ id: label.labelId, name: label.name }] : []),
   );
 }
 
-function labelNames(ids: readonly string[] | undefined, known: { id: string; name: string }[]) {
+function labelNames(ids: readonly string[] | undefined, known: readonly Label[]) {
   return (ids ?? []).map((id) => known.find((label) => label.id === id)?.name ?? id);
 }
 
+/** An address with the name its header gave it: Ada Park <ada@example.com>. */
+function named(message: Message, address: string | undefined): string | undefined {
+  if (!address) return undefined;
+  const wanted = address.toLowerCase();
+  const name = message.addressDisplayNames?.find(
+    (entry) => entry.emailAddress?.toLowerCase() === wanted,
+  )?.displayName;
+  return name ? `${name} <${address}>` : address;
+}
+
+function namedList(message: Message, addresses: readonly string[] | undefined) {
+  const shown = (addresses ?? []).flatMap((address) => named(message, address) ?? []);
+  return shown.length > 0 ? shown.join(", ") : undefined;
+}
+
 /** One message's facts for a list: never its body. */
-function brief(message: Message, known: { id: string; name: string }[]) {
+function brief(message: Message, known: readonly Label[]) {
   return {
     id: message.id,
     thread: message.threadId,
-    from: header(message, "From"),
-    to: header(message, "To"),
-    subject: header(message, "Subject"),
-    date: header(message, "Date"),
+    from: named(message, message.sender),
+    to: namedList(message, message.toRecipients),
+    subject: message.subject,
+    date: message.date,
     labels: labelNames(message.labelIds, known),
     snippet: message.snippet,
   };
 }
 
-const METADATA = ["From", "To", "Subject", "Date"]
-  .map((name) => `metadataHeaders=${name}`)
-  .join("&");
-
-async function metadata(request: GmailRequest, id: string): Promise<Message | undefined> {
-  const answer = await request(`/messages/${id}?format=metadata&${METADATA}`);
-  return answer.status === 404 ? undefined : (answer.body as Message);
-}
-
-function decoded(data: string | undefined): string {
-  return data ? Buffer.from(data, "base64url").toString("utf8") : "";
-}
-
-function partsOf(part: Part | undefined): Part[] {
-  if (!part) return [];
-  return [part, ...(part.parts ?? []).flatMap(partsOf)];
+/** What Gmail held back from a search, and why, when it held anything back. */
+function omittedOf(body: Record<string, unknown>) {
+  const counts = (body.omittedContent as { omittedReasonCounts?: unknown } | undefined)
+    ?.omittedReasonCounts;
+  if (!Array.isArray(counts)) return undefined;
+  const omitted = counts.flatMap((entry: { reason?: unknown; omittedCount?: unknown }) =>
+    typeof entry.reason === "string" && typeof entry.omittedCount === "number"
+      ? [{ reason: entry.reason, count: entry.omittedCount }]
+      : [],
+  );
+  return omitted.length > 0 ? omitted : undefined;
 }
 
 function textOf(message: Message): string {
-  const parts = partsOf(message.payload).filter((part) => !part.filename);
-  const plain = parts.find((part) => part.mimeType === "text/plain" && part.body?.data);
-  if (plain) return decoded(plain.body?.data);
-  const html = parts.find((part) => part.mimeType === "text/html" && part.body?.data);
-  if (!html) return "";
-  return htmlText(decoded(html.body?.data))
+  if (message.plaintextBody) return message.plaintextBody;
+  if (!message.htmlBody) return "";
+  return htmlText(message.htmlBody)
     .replace(/&nbsp;/g, " ")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
@@ -273,136 +273,278 @@ function closingEnd(lower: string, name: string, from: number): number {
   return end === -1 ? -1 : lower.indexOf(">", end);
 }
 
-/** A header's words in ASCII, as RFC 2047 asks of anything else. */
-function encodedWords(value: string): string {
-  return /^[\x20-\x7e]*$/.test(value)
-    ? value
-    : `=?UTF-8?B?${Buffer.from(value, "utf8").toString("base64")}?=`;
+/**
+ * The raw message Gmail gives, one character per byte: base64 as Gmail's
+ * API encodes it, or the message's own text. A message's headers always
+ * hold a colon and a space, which base64 never does.
+ */
+function rawText(raw: string): string {
+  return /^[A-Za-z0-9+/_=\-\s]+$/.test(raw)
+    ? Buffer.from(raw.replace(/\s+/g, ""), "base64").toString("latin1")
+    : Buffer.from(raw, "utf8").toString("latin1");
 }
 
-/** The message as Gmail takes it: RFC 2822 text, base64url. */
-async function raw(
-  request: GmailRequest,
-  input: Outgoing,
-): Promise<{ raw: string; threadId?: string }> {
-  let subject = input.subject ?? "";
-  const threading: string[] = [];
-  let threadId: string | undefined;
-  if (input.reply_to) {
-    const answer = await request(
-      `/messages/${input.reply_to}?format=metadata&metadataHeaders=Subject&metadataHeaders=Message-ID&metadataHeaders=References`,
-    );
-    if (answer.status === 404) throw new Error(`No message ${input.reply_to} to reply to.`);
-    const original = answer.body as Message;
-    threadId = original.threadId;
-    const id = header(original, "Message-ID");
-    if (id) {
-      threading.push(`In-Reply-To: ${id}`);
-      threading.push(
-        `References: ${[header(original, "References"), id].filter(Boolean).join(" ")}`,
-      );
-    }
-    const theirs = header(original, "Subject") ?? "";
-    if (input.subject === undefined) subject = /^re:/i.test(theirs) ? theirs : `Re: ${theirs}`;
+/** One part of a raw message, numbered as Gmail numbers parts: "" the whole, "0" its first, "0.1" that one's second. */
+type MimePart = { id: string; headers: Map<string, string>; body: string; parts: MimePart[] };
+
+function mimeHeaders(head: string): Map<string, string> {
+  const headers = new Map<string, string>();
+  for (const line of head.replace(/\r?\n[ \t]+/g, " ").split(/\r?\n/)) {
+    const colon = line.indexOf(":");
+    if (colon <= 0) continue;
+    const name = line.slice(0, colon).trim().toLowerCase();
+    if (!headers.has(name)) headers.set(name, line.slice(colon + 1).trim());
   }
-  const text = [
-    `To: ${input.to.join(", ")}`,
-    ...(input.cc?.length ? [`Cc: ${input.cc.join(", ")}`] : []),
-    `Subject: ${encodedWords(subject)}`,
-    ...threading,
-    "MIME-Version: 1.0",
-    'Content-Type: text/plain; charset="UTF-8"',
-    "Content-Transfer-Encoding: base64",
-    "",
-    Buffer.from(input.body, "utf8").toString("base64").replace(/.{76}/g, "$&\r\n"),
-  ].join("\r\n");
+  return headers;
+}
+
+/** RFC 2047's encoded words in a header's text, in the charset each names. */
+function decodedWords(value: string): string {
+  return value
+    .replace(/(=\?[^?]+\?[BbQq]\?[^?]*\?=)\s+(?==\?)/g, "$1")
+    .replace(/=\?([^?]+)\?([BbQq])\?([^?]*)\?=/g, (_whole, charset: string, kind: string, text) => {
+      const bytes =
+        kind.toUpperCase() === "B"
+          ? Buffer.from(text, "base64")
+          : Buffer.from(
+              (text as string)
+                .replace(/_/g, " ")
+                .replace(/=([0-9A-Fa-f]{2})/g, (_hex, hex: string) =>
+                  String.fromCharCode(Number.parseInt(hex, 16)),
+                ),
+              "latin1",
+            );
+      return inCharset(bytes, charset);
+    });
+}
+
+function inCharset(bytes: Buffer, charset: string): string {
+  try {
+    return new TextDecoder(charset.split("*")[0]?.trim() || "utf-8").decode(bytes);
+  } catch {
+    return bytes.toString("utf8");
+  }
+}
+
+/**
+ * A header's parameters by lowercase name, such as a file's name: quoted or
+ * bare, RFC 2231's continued and charset-encoded forms joined and decoded.
+ */
+function mimeParameters(value: string): Map<string, string> {
+  const pieces = new Map<string, { index: number; extended: boolean; text: string }[]>();
+  for (const match of value.matchAll(/;\s*([^=\s;]+)\s*=\s*("(?:[^"\\]|\\.)*"|[^;]*)/g)) {
+    const key = /^([^*]+)(?:\*(\d+))?(\*)?$/.exec((match[1] ?? "").toLowerCase());
+    if (!key?.[1]) continue;
+    let text = (match[2] ?? "").trim();
+    if (text.startsWith('"')) text = text.slice(1, -1).replace(/\\(.)/g, "$1");
+    const list = pieces.get(key[1]) ?? [];
+    list.push({ index: Number(key[2] ?? 0), extended: key[3] === "*", text });
+    pieces.set(key[1], list);
+  }
+  const parameters = new Map<string, string>();
+  for (const [name, list] of pieces) {
+    list.sort((a, b) => a.index - b.index);
+    if (!list.some((piece) => piece.extended)) {
+      parameters.set(name, decodedWords(list.map((piece) => piece.text).join("")));
+      continue;
+    }
+    let charset = "utf-8";
+    let bytes = "";
+    for (const [at, piece] of list.entries()) {
+      let text = piece.text;
+      if (at === 0 && piece.extended) {
+        const [named, , rest] = text.split("'");
+        if (rest !== undefined) {
+          charset = named || charset;
+          text = rest;
+        }
+      }
+      bytes += piece.extended
+        ? text.replace(/%([0-9A-Fa-f]{2})/g, (_hex, hex: string) =>
+            String.fromCharCode(Number.parseInt(hex, 16)),
+          )
+        : text;
+    }
+    parameters.set(name, inCharset(Buffer.from(bytes, "latin1"), charset));
+  }
+  return parameters;
+}
+
+/** A multipart body's parts between its boundary lines; the line break before each boundary is the boundary's. */
+function sections(body: string, boundary: string): string[] {
+  const delimiter = `--${boundary}`;
+  const found: string[] = [];
+  let at = body.startsWith(delimiter) ? 0 : body.indexOf(`\n${delimiter}`) + 1;
+  if (at === 0 && !body.startsWith(delimiter)) return found;
+  while (body.slice(at + delimiter.length, at + delimiter.length + 2) !== "--") {
+    const lineEnd = body.indexOf("\n", at);
+    if (lineEnd === -1) break;
+    const start = lineEnd + 1;
+    if (body.startsWith(delimiter, start)) {
+      found.push("");
+      at = start;
+      continue;
+    }
+    const next = body.indexOf(`\n${delimiter}`, start);
+    if (next === -1) {
+      found.push(body.slice(start));
+      break;
+    }
+    found.push(body.slice(start, body[next - 1] === "\r" ? next - 1 : next));
+    at = next + 1;
+  }
+  return found;
+}
+
+function mimePart(text: string, id: string): MimePart {
+  const split = /\r?\n\r?\n/.exec(text);
+  const head = split ? text.slice(0, split.index) : text;
+  const body = split ? text.slice(split.index + split[0].length) : "";
+  const headers = mimeHeaders(head);
+  const type = headers.get("content-type") ?? "";
+  const boundary = /^multipart\//i.test(type) ? mimeParameters(type).get("boundary") : undefined;
   return {
-    raw: Buffer.from(text, "utf8").toString("base64url"),
-    ...(threadId ? { threadId } : {}),
+    id,
+    headers,
+    body,
+    parts: boundary
+      ? sections(body, boundary).map((section, index) =>
+          mimePart(section, id === "" ? String(index) : `${id}.${index}`),
+        )
+      : [],
+  };
+}
+
+function findPart(part: MimePart, id: string): MimePart | undefined {
+  if (part.id === id) return part;
+  for (const inner of part.parts) {
+    const found = findPart(inner, id);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+/** A part's bytes, as its transfer encoding wrote them. */
+function partBytes(part: MimePart): Buffer {
+  const encoding = (part.headers.get("content-transfer-encoding") ?? "").trim().toLowerCase();
+  if (encoding === "base64")
+    return Buffer.from(part.body.replace(/[^A-Za-z0-9+/=_-]/g, ""), "base64");
+  if (encoding === "quoted-printable")
+    return Buffer.from(
+      part.body
+        .replace(/=\r?\n/g, "")
+        .replace(/=([0-9A-Fa-f]{2})/g, (_hex, hex: string) =>
+          String.fromCharCode(Number.parseInt(hex, 16)),
+        ),
+      "latin1",
+    );
+  return Buffer.from(part.body, "latin1");
+}
+
+/** An address as Gmail's MCP server takes it: Ada Park <ada@example.com> is ada@example.com. */
+function plainAddress(address: string): string {
+  return (/<([^<>]*)>\s*$/.exec(address)?.[1] ?? address).trim();
+}
+
+/** A new message's fields as create_draft and send_message take them, with Re: and its subject for a reply. */
+async function outgoing(gmail: GoogleTool, input: Outgoing): Promise<Record<string, unknown>> {
+  let subject = input.subject;
+  if (input.reply_to && subject === undefined) {
+    const original = (await gmail("get_message", {
+      messageId: input.reply_to,
+      messageFormat: "MINIMAL",
+    })) as Message;
+    const theirs = original.subject ?? "";
+    subject = /^re:/i.test(theirs) ? theirs : `Re: ${theirs}`;
+  }
+  return {
+    to: input.to.map(plainAddress),
+    ...(input.cc?.length ? { cc: input.cc.map(plainAddress) } : {}),
+    ...(subject !== undefined ? { subject } : {}),
+    body: input.body,
+    ...(input.reply_to ? { replyToMessageId: input.reply_to } : {}),
   };
 }
 
 const answer = (value: unknown): IntegrationAnswer => ({ text: JSON.stringify(value) });
 
+/** Gmail lists at most this many conversations a page. */
+const THREADS_A_PAGE = 50;
+
 /** Run one Gmail action whose input already passed its schema. */
 export async function runGmailAction(
-  request: GmailRequest,
+  gmail: GoogleTool,
   action: string,
   input: unknown,
 ): Promise<IntegrationAnswer> {
   switch (action) {
     case "search_mail": {
       const { query, max, page } = input as { query?: string; max: number; page?: string };
-      const params = new URLSearchParams({ maxResults: String(max) });
-      if (query) params.set("q", query);
-      if (page) params.set("pageToken", page);
-      const { body } = await request(`/messages?${params}`);
-      const found = (body.messages as { id?: string }[] | undefined) ?? [];
-      const known = found.length > 0 ? await labels(request) : [];
-      const messages = [];
-      for (const entry of found) {
-        if (!entry.id) continue;
-        const message = await metadata(request, entry.id);
-        if (message) messages.push(brief(message, known));
-      }
+      const body = await gmail("search_threads", {
+        ...(query ? { query } : {}),
+        pageSize: Math.min(max, THREADS_A_PAGE),
+        ...(page ? { pageToken: page } : {}),
+      });
+      const threads = (body.threads as Thread[] | undefined) ?? [];
+      const known = threads.length > 0 ? await labels(gmail) : [];
+      const omitted = omittedOf(body);
       return answer({
-        messages,
+        threads: threads.map((thread) => ({
+          thread: thread.id,
+          count: thread.messageCount,
+          messages: (thread.messages ?? []).map((message) => brief(message, known)),
+        })),
         ...(typeof body.nextPageToken === "string" ? { next_page: body.nextPageToken } : {}),
+        ...(omitted ? { omitted } : {}),
       });
     }
     case "read_message": {
       const { id } = input as { id: string };
-      const found = await request(`/messages/${id}?format=full`);
-      if (found.status === 404) return { text: `No message ${id}.`, refused: "invalid" };
-      const message = found.body as Message;
+      const message = (await gmail("get_message", {
+        messageId: id,
+        messageFormat: "FULL_CONTENT",
+      })) as Message;
       return answer({
-        ...brief(message, await labels(request)),
-        cc: header(message, "Cc"),
+        ...brief(message, await labels(gmail)),
+        cc: namedList(message, message.ccRecipients),
         text: textOf(message),
-        attachments: partsOf(message.payload)
-          .filter((part) => part.filename)
-          .map((part) => ({
-            name: part.filename,
-            type: part.mimeType,
-            size: part.body?.size,
-            part: part.partId,
-          })),
+        attachments: (message.attachments ?? []).map((attachment) => ({
+          name: attachment.filename,
+          type: attachment.mimeType,
+          part: attachment.partId,
+        })),
       });
     }
     case "save_attachment": {
       const { id, part: partId } = input as { id: string; part: string };
-      const found = await request(`/messages/${id}?format=full`);
-      if (found.status === 404) return { text: `No message ${id}.`, refused: "invalid" };
-      const part = partsOf((found.body as Message).payload).find(
-        (entry) => entry.partId === partId,
-      );
+      const message = (await gmail("get_message", {
+        messageId: id,
+        messageFormat: "RAW",
+      })) as Message;
+      if (typeof message.raw !== "string" || !message.raw)
+        return { text: `Gmail gave no raw message for ${id}.`, refused: "invalid" };
+      const part = findPart(mimePart(rawText(message.raw), ""), partId);
       if (!part)
         return {
           text: `Message ${id} has no part ${partId}. read_message lists each attachment's part.`,
           refused: "invalid",
         };
-      let data = part.body?.data;
-      if (data === undefined && part.body?.attachmentId) {
-        // A larger attachment is fetched on its own, by Gmail's id for it.
-        const fetched = await request(`/messages/${id}/attachments/${part.body.attachmentId}`);
-        if (fetched.status === 404)
-          return { text: `Message ${id}'s part ${partId} is gone.`, refused: "invalid" };
-        data = typeof fetched.body.data === "string" ? fetched.body.data : undefined;
-      }
-      if (data === undefined)
-        return { text: `Message ${id}'s part ${partId} holds no file.`, refused: "invalid" };
+      const disposition = mimeParameters(part.headers.get("content-disposition") ?? "");
+      const type = part.headers.get("content-type") ?? "";
+      const name = disposition.get("filename") ?? mimeParameters(type).get("name");
+      const mime = type.split(";")[0]?.trim().toLowerCase();
       return {
         text: "",
         file: {
-          name: part.filename || `part-${partId}`,
-          ...(part.mimeType ? { type: part.mimeType } : {}),
-          bytes: Buffer.from(data, "base64url"),
+          name: name || `part-${partId}`,
+          ...(mime ? { type: mime } : {}),
+          bytes: partBytes(part),
         },
       };
     }
     case "label_message": {
       const { id, add, remove } = input as { id: string; add?: string[]; remove?: string[] };
-      const known = await labels(request);
+      const known = await labels(gmail);
       const idsOf = (names: readonly string[] = []) =>
         names.map((name) => {
           const wanted = name.toLowerCase();
@@ -415,88 +557,193 @@ export async function runGmailAction(
             );
           return label.id;
         });
-      const changed = await request(`/messages/${id}/modify`, {
-        method: "POST",
-        json: { addLabelIds: idsOf(add), removeLabelIds: idsOf(remove) },
+      const adding = idsOf(add);
+      const removing = idsOf(remove);
+      const changed = await gmail(
+        "update_message_labels",
+        {
+          messageId: id,
+          ...(adding.length > 0 ? { addLabelIds: adding } : {}),
+          ...(removing.length > 0 ? { removeLabelIds: removing } : {}),
+        },
+        true,
+      );
+      return answer({
+        id: typeof changed.messageId === "string" ? changed.messageId : id,
+        labels: labelNames(changed.labelIds as string[] | undefined, known),
       });
-      if (changed.status === 404) return { text: `No message ${id}.`, refused: "invalid" };
-      const message = changed.body as Message;
-      return answer({ id: message.id, labels: labelNames(message.labelIds, known) });
     }
     case "draft_message": {
-      const { raw: text, threadId } = await raw(request, input as Outgoing);
-      const { body } = await request("/drafts", {
-        method: "POST",
-        json: { message: { raw: text, ...(threadId ? { threadId } : {}) } },
-      });
-      const message = (body.message ?? {}) as Message;
-      return answer({ draft: body.id, id: message.id, thread: message.threadId });
+      const draft = await gmail("create_draft", await outgoing(gmail, input as Outgoing), true);
+      return answer({ draft: draft.id, id: draft.messageId, thread: draft.threadId });
     }
     case "send_message": {
-      const { raw: text, threadId } = await raw(request, input as Outgoing);
-      const { body } = await request("/messages/send", {
-        method: "POST",
-        json: { raw: text, ...(threadId ? { threadId } : {}) },
-      });
-      return answer({ sent: body.id, thread: body.threadId });
+      const fields = await outgoing(gmail, input as Outgoing);
+      // Gmail's server may offer no sending to this account: the message
+      // waits as a draft, which sends nothing, and the answer says so.
+      if (!(await gmail.lists("send_message"))) {
+        const draft = await gmail("create_draft", fields, true);
+        return answer({
+          sent: false,
+          draft: draft.id,
+          id: draft.messageId,
+          thread: draft.threadId,
+          // i18n-exempt: words served to the crew, which stay English
+          note: "Gmail's server offers no sending to this account, so the message is a draft in the captain's Gmail and nothing was sent. The captain sends it from Gmail.",
+        });
+      }
+      const sent = await gmail("send_message", fields, true);
+      return answer({ sent: sent.id, thread: sent.threadId });
     }
     default:
       return { text: `Gmail has no action ${action}.`, refused: "invalid" };
   }
 }
 
+/** When Gmail received a message, in milliseconds. */
+function receivedAt(message: Message): number | undefined {
+  const internal = Number(message.internalDate);
+  if (Number.isFinite(internal) && internal > 0) return internal;
+  const parsed = Date.parse(message.date ?? "");
+  return Number.isNaN(parsed) ? undefined : parsed;
+}
+
+/** A conversation's messages: the up to five a search gives, or the whole conversation when it holds more. */
+async function messagesOf(gmail: GoogleTool, thread: Thread): Promise<Message[]> {
+  const given = thread.messages ?? [];
+  if (!thread.id || (thread.messageCount ?? 0) <= given.length) return given;
+  const whole = await gmail("get_thread", { threadId: thread.id, messageFormat: "MINIMAL" });
+  return (whole.messages as Message[] | undefined) ?? given;
+}
+
 /**
- * Look for new mail from a cursor (`IntegrationBinding.look`): Gmail's
- * history of messages added to the inbox since the history id the cursor
- * holds. The cursor also names the mailbox, so a sign-in as someone else
- * starts again from now. Gmail forgets an old history id (it answers 404),
- * and then the look starts again from now too: what arrived in between is
- * not known.
+ * Where a look for new mail stands: messages Gmail received at or after
+ * `after` count, except the ones `seen` names, which already fired, each
+ * with when Gmail received it.
+ */
+type MailCursor = { account: string; after: number; seen: [string, number][] };
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+/** How many pages of conversations one look reads before it starts again from now. */
+const MAIL_PAGES = 10;
+/** How many fired messages a cursor remembers. */
+const SEEN_KEPT = 200;
+
+function mailCursor(text: string, account: string): MailCursor | undefined {
+  try {
+    const saved = JSON.parse(text) as Partial<MailCursor>;
+    if (
+      saved.account !== account ||
+      typeof saved.after !== "number" ||
+      !Number.isFinite(saved.after) ||
+      !Array.isArray(saved.seen)
+    )
+      return undefined;
+    return {
+      account,
+      after: saved.after,
+      seen: saved.seen.filter(
+        (entry): entry is [string, number] =>
+          Array.isArray(entry) && typeof entry[0] === "string" && typeof entry[1] === "number",
+      ),
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+/** Gmail's search words for mail received from a day before `at` on: `after:` counts whole days. */
+function receivedSince(at: number): string {
+  const day = new Date(at - 2 * DAY_MS);
+  const two = (value: number) => String(value).padStart(2, "0");
+  return `in:inbox after:${day.getUTCFullYear()}/${two(day.getUTCMonth() + 1)}/${two(day.getUTCDate())}`;
+}
+
+/**
+ * Look for new mail from a cursor (`IntegrationBinding.look`): the inbox's
+ * conversations newest first, down to the last message the cursor saw, and
+ * each message in the inbox Gmail received since. The cursor names the
+ * mailbox, so a sign-in as someone else starts again from now, as a cursor
+ * from before the move to Gmail's MCP server does. It never moves past the
+ * app's clock, so a message dated ahead of it fires once and no later one
+ * is skipped for it.
  */
 export async function lookForMail(
-  request: GmailRequest,
+  gmail: GoogleTool,
   account: string,
   cursor: string | null,
+  now: () => number,
 ): Promise<IntegrationLook> {
-  const now = async () => {
-    const { body } = await request("/profile");
-    return `${String(body.historyId)} ${account}`;
+  const start = async (): Promise<string> => {
+    const body = await gmail("search_threads", { query: "in:inbox", pageSize: 1 });
+    const thread = ((body.threads as Thread[] | undefined) ?? [])[0];
+    const messages = thread ? await messagesOf(gmail, thread) : [];
+    const times = messages.flatMap((message) => receivedAt(message) ?? []);
+    const after = Math.min(times.length > 0 ? Math.max(...times) : now(), now());
+    const seen = messages.flatMap((message): [string, number][] => {
+      const at = receivedAt(message);
+      return message.id && at !== undefined && at >= after ? [[message.id, at]] : [];
+    });
+    return JSON.stringify({ account, after, seen } satisfies MailCursor);
   };
-  if (cursor === null) return { cursor: await now(), items: [] };
-  const [from, mailbox] = cursor.split(" ", 2);
-  if (mailbox !== account || !from || !/^\d+$/.test(from))
-    return { cursor: await now(), items: [], resynced: true };
-  const ids: string[] = [];
-  let latest = from;
+  if (cursor === null) return { cursor: await start(), items: [] };
+  const saved = mailCursor(cursor, account);
+  if (!saved) return { cursor: await start(), items: [], resynced: true };
+  const seen = new Set(saved.seen.map(([id]) => id));
+  const fresh: { message: Message; at: number }[] = [];
   let page: string | undefined;
+  let pages = 0;
+  let reached = false;
   do {
-    const params = new URLSearchParams({
-      startHistoryId: from,
-      historyTypes: "messageAdded",
-      labelId: "INBOX",
-      maxResults: "500",
+    const body = await gmail("search_threads", {
+      query: receivedSince(saved.after),
+      pageSize: THREADS_A_PAGE,
+      ...(page ? { pageToken: page } : {}),
     });
-    if (page) params.set("pageToken", page);
-    const history = await request(`/history?${params}`);
-    if (history.status === 404) return { cursor: await now(), items: [], resynced: true };
-    const records =
-      (history.body.history as { messagesAdded?: { message?: { id?: string } }[] }[]) ?? [];
-    for (const record of records)
-      for (const added of record.messagesAdded ?? [])
-        if (added.message?.id && !ids.includes(added.message.id)) ids.push(added.message.id);
-    if (typeof history.body.historyId === "string") latest = history.body.historyId;
-    page = typeof history.body.nextPageToken === "string" ? history.body.nextPageToken : undefined;
-  } while (page);
-  const items: IntegrationEventItem[] = [];
-  for (const id of ids) {
-    const message = await metadata(request, id);
-    // Gone since, or no longer in the inbox: nothing arrived for a rule to hear.
-    if (!message?.labelIds?.includes("INBOX")) continue;
-    const subject = header(message, "Subject");
-    items.push({
-      id,
-      summary: `From ${header(message, "From") ?? "an unknown sender"}: ${subject || "(no subject)"}`,
-    });
-  }
-  return { cursor: `${latest} ${account}`, items };
+    for (const thread of (body.threads as Thread[] | undefined) ?? []) {
+      const messages = await messagesOf(gmail, thread);
+      const times = messages.flatMap((message) => receivedAt(message) ?? []);
+      // Conversations come newest first: one older than the cursor ends the look.
+      if (times.length > 0 && Math.max(...times) < saved.after) {
+        reached = true;
+        break;
+      }
+      for (const message of messages) {
+        const at = receivedAt(message);
+        if (
+          message.id &&
+          at !== undefined &&
+          at >= saved.after &&
+          !seen.has(message.id) &&
+          message.labelIds?.includes("INBOX")
+        ) {
+          seen.add(message.id);
+          fresh.push({ message, at });
+        }
+      }
+    }
+    page = typeof body.nextPageToken === "string" ? body.nextPageToken : undefined;
+    pages += 1;
+  } while (page && !reached && pages < MAIL_PAGES);
+  fresh.sort((a, b) => a.at - b.at);
+  const items: IntegrationEventItem[] = fresh.map(({ message }) => ({
+    id: message.id as string,
+    summary: `From ${named(message, message.sender) ?? "an unknown sender"}: ${message.subject || "(no subject)"}`,
+  }));
+  // More pages than one look reads: what lies past them is not known, so the next look starts from now.
+  const cut = page !== undefined && !reached;
+  const latest = Math.max(saved.after, ...fresh.map((entry) => entry.at));
+  const after = cut ? Math.max(saved.after, now()) : Math.max(saved.after, Math.min(latest, now()));
+  const kept = [
+    ...saved.seen,
+    ...fresh.map(({ message, at }): [string, number] => [message.id as string, at]),
+  ]
+    .filter(([, at]) => at >= after)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, SEEN_KEPT);
+  return {
+    cursor: JSON.stringify({ account, after, seen: kept } satisfies MailCursor),
+    items,
+    ...(cut ? { resynced: true } : {}),
+  };
 }

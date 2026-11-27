@@ -1,5 +1,5 @@
 ---
-source: e71da6c9134d6753
+source: 22ef5a500088606f
 title: Integraciones
 description: Conecta GitHub, GitLab, Bitbucket, Google y servidores MCP para que tu primer oficial y tu tripulación puedan alcanzarlos, y elige lo que cada uno puede hacer sin preguntarte.
 ---
@@ -55,12 +55,12 @@ Cerrar sesión en GitHub detiene los clones privados y las solicitudes de incorp
 ## Google: Gmail y Calendar {#google-gmail-and-calendar}
 
 Google es un solo inicio de sesión para Gmail y Calendar.
-Infinitary los alcanza mediante tu propia conexión con Google: un cliente que creas en tu propio proyecto de Google Cloud, en el modo personal de Google.
+Infinitary los alcanza mediante los propios servidores de Gmail y Calendar de Google para agentes de IA, con tu propia conexión con Google: un cliente que creas en tu propio proyecto de Google Cloud, en el modo personal de Google.
 Google no lo revisa, no muestra ninguna advertencia y no cierra su sesión a los 7 días.
 
 1. Presiona **Google**, que abre **Configura tu propia conexión con Google**.
 2. Presiona **Abrir la página de Google**, e inicia sesión ahí con la cuenta de Google que vas a conectar.
-   Ponle nombre al proyecto y deja sin marcar la casilla «Use this client for an AI-powered agent», porque solo es para clientes que usan las herramientas MCP de Google.
+   Ponle nombre al proyecto, marca «Use this client for an AI-powered agent» y activa los servicios MCP de Gmail, Calendar, Drive, Documentos y Hojas de cálculo.
    Luego acepta la política de Google y presiona Continue.
 3. Descarga el archivo de cliente que muestra Google, con Download JSON.
 4. Suelta ese archivo en **Suelta aquí el archivo de cliente**, elígelo con **Elegir archivo**, o pega su contenido en **Archivo de cliente**.
@@ -83,12 +83,23 @@ La fila de Google dice cuándo la conexión te necesita:
   Presiona **Volver a configurar**, y crea un cliente en modo personal.
 - **Tu cliente de Google dejó de funcionar**: Google ya no acepta tu cliente, quizá porque se eliminó en Google Cloud.
   Presiona **Volver a configurar**.
+- **Marca tu cliente para agentes**: los servidores de Gmail y Calendar de Google solo aceptan un cliente marcado para un agente con IA, y el tuyo no lo está.
+  Presiona **Abrir Google Cloud**, marca «Use this client for an AI-powered agent» en tu cliente y guarda; luego elige **Comprobar ahora** en el menú de la fila.
+- **Un servicio de Google está desactivado**: el servicio MCP de Gmail o de Calendar está desactivado en tu proyecto de Google Cloud.
+  Presiona **Abrir Google Cloud**, actívalo y luego elige **Comprobar ahora** en el menú de la fila.
+
+En esos dos últimos casos sigues con la sesión iniciada, y no hace falta volver a configurar nada.
 
 En tu iPhone o iPad, la fila de Google se configura de la misma forma: eliges el archivo de cliente, o pegas su contenido.
 
 Con Google conectado, tu primer oficial y tu tripulación pueden buscar y leer tu correo, guardar un adjunto en la carpeta de una tarea, etiquetar o archivar un mensaje, redactar un mensaje y enviar uno.
-En Calendar pueden enumerar tus calendarios y eventos, leer un evento, ver cuándo estás ocupado, y crear o actualizar un evento.
+En Calendar pueden enumerar tus calendarios y eventos, leer un evento, encontrar horarios en los que todos están libres, y crear o actualizar un evento.
 Ninguna acción elimina un evento del calendario.
+
+Google puede detener una llamada para preguntarte primero, incluso una que permitiste.
+Entonces Infinitary muestra la pregunta de Google en una tarjeta, con las propias opciones de Google y ninguna elegida.
+No se ejecuta nada hasta que eliges una y presionas **Enviar a Google**; **Ahora no** no envía nada.
+Lo que elijas responde solo a esa llamada.
 
 Lo que leen tu primer oficial y tu tripulación se queda en sus conversaciones guardadas durante 30 días.
 Luego una nota ocupa su lugar.
@@ -96,7 +107,7 @@ Para eliminarlo antes, presiona **Eliminar** en la fila **Eliminar el contenido 
 Un adjunto guardado se queda en la carpeta de su tarea hasta que la tarea se cierra o pasan 30 días.
 Las palabras que un tripulante leyó dentro de un adjunto guardado se quedan en su conversación después de los 30 días.
 Lo que tu primer oficial y tu tripulación escribieron ellos mismos, en tarjetas, notas y archivos, se queda hasta que eliminas la tarea.
-Quitar Google no elimina nada de lo que ya leyeron.
+Quitar Google también elimina lo que ya leyeron, como hace **Eliminar el contenido de Gmail y Calendar**.
 
 Cualquiera puede enviarte palabras escritas para manipular a una IA.
 Infinitary entrega tu correo y tus eventos a tu primer oficial y a tu tripulación marcados como información de fuera, nunca como instrucciones.

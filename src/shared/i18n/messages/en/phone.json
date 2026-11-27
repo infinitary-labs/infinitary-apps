@@ -171,7 +171,13 @@
   "phoneFormatMinutes": "{minutes}m",
   "phoneFormatNow": "now",
   "phoneFormatUnderMinute": "under 1m",
+  "phoneGoogleAgentRefusedDetail": "Google's Gmail and Calendar servers only take a client marked for an AI-powered agent. Open your client in Google Cloud, tick “Use this client for an AI-powered agent” and save, then choose Check now on the Google row in Settings → Integrations on {computer}.",
   "phoneGoogleInvite": "Let your first mate on {computer} read Gmail and Calendar. The sign-in stays on {computer}.",
+  "phoneGoogleServiceOffDetail": {
+    "plural": "count",
+    "one": "The {services} MCP service is off in your Google Cloud project, so Infinitary can't reach it. Turn it on in Google Cloud, then choose Check now on the Google row in Settings → Integrations on {computer}.",
+    "other": "The {services} MCP services are off in your Google Cloud project, so Infinitary can't reach them. Turn them on in Google Cloud, then choose Check now on the Google row in Settings → Integrations on {computer}."
+  },
   "phoneGoogleSetupStays": "Infinitary keeps the client's secret in Secrets on {computer}. Your first mate and your crew never see it.",
   "phoneGoogleSetupStepFile": "Download the client file Google shows with Download JSON, then choose it here or paste what it holds.",
   "phoneGoogleSignIn": "Sign in",

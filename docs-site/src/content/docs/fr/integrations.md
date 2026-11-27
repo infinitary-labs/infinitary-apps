@@ -1,5 +1,5 @@
 ---
-source: e71da6c9134d6753
+source: 22ef5a500088606f
 title: Intégrations
 description: Connectez GitHub, GitLab, Bitbucket, Google et des serveurs MCP pour que votre second et votre équipage puissent les joindre, et choisissez ce que chacun peut faire sans vous demander.
 ---
@@ -55,12 +55,12 @@ Se déconnecter de GitHub arrête les clonages privés et les demandes de tirage
 ## Google : Gmail et Agenda {#google-gmail-and-calendar}
 
 Google est une seule connexion pour Gmail et Agenda.
-Infinitary y accède par une connexion Google à vous : un client que vous créez dans votre propre projet Google Cloud, en mode personnel de Google.
+Infinitary y accède par les propres serveurs Gmail et Agenda de Google destinés aux agents d’IA, avec une connexion Google à vous : un client que vous créez dans votre propre projet Google Cloud, en mode personnel de Google.
 Google ne l’examine pas, n’affiche aucun avertissement et ne met pas fin à sa connexion au bout de 7 jours.
 
 1. Appuyez sur **Google**, ce qui ouvre **Configurer votre propre connexion Google**.
 2. Appuyez sur **Ouvrir la page de Google**, et connectez-vous sur cette page avec le compte Google que vous allez relier.
-   Nommez le projet et laissez la case « Use this client for an AI-powered agent » décochée, car elle ne sert qu’aux clients qui utilisent les outils MCP de Google.
+   Nommez le projet, cochez « Use this client for an AI-powered agent » et activez les services MCP de Gmail, Agenda, Drive, Docs et Sheets.
    Acceptez ensuite la règle de Google et appuyez sur Continue.
 3. Téléchargez le fichier de client que Google affiche, avec Download JSON.
 4. Déposez ce fichier sur **Déposez le fichier de client ici**, choisissez-le avec **Choisir un fichier**, ou collez son contenu dans **Fichier de client**.
@@ -83,12 +83,23 @@ La ligne Google indique quand la connexion a besoin de vous :
   Appuyez sur **Configurer de nouveau**, et créez un client en mode personnel.
 - **Votre client Google ne fonctionne plus** : Google n’accepte plus votre client, peut-être parce qu’il a été supprimé dans Google Cloud.
   Appuyez sur **Configurer de nouveau**.
+- **Marquez votre client pour les agents** : les serveurs Gmail et Agenda de Google n’acceptent qu’un client marqué pour un agent basé sur l’IA, et le vôtre ne l’est pas.
+  Appuyez sur **Ouvrir Google Cloud**, cochez « Use this client for an AI-powered agent » sur votre client et enregistrez, puis choisissez **Vérifier maintenant** dans le menu de la ligne.
+- **Un service Google est désactivé** : le service MCP de Gmail ou d’Agenda est désactivé dans votre projet Google Cloud.
+  Appuyez sur **Ouvrir Google Cloud**, activez-le, puis choisissez **Vérifier maintenant** dans le menu de la ligne.
+
+Dans ces deux derniers cas, vous restez connecté, et rien n’est à configurer de nouveau.
 
 Sur votre iPhone ou votre iPad, la ligne Google se configure de la même façon : vous choisissez le fichier de client, ou collez son contenu.
 
 Une fois Google connecté, votre second et votre équipage peuvent chercher dans votre courrier et le lire, enregistrer une pièce jointe dans le dossier d’une tâche, étiqueter ou archiver un message, rédiger un brouillon et envoyer un message.
-Dans Agenda, ils peuvent lister vos agendas et vos événements, lire un événement, voir quand vous êtes occupé, et créer ou mettre à jour un événement.
+Dans Agenda, ils peuvent lister vos agendas et vos événements, lire un événement, trouver des créneaux où tout le monde est libre, et créer ou mettre à jour un événement.
 Aucune action ne supprime un événement d’agenda.
+
+Google peut arrêter un appel pour vous consulter d’abord, même un appel que vous avez autorisé.
+Infinitary affiche alors la question de Google sur une carte, avec les choix proposés par Google, aucun n’étant sélectionné.
+Rien ne s’exécute tant que vous n’en avez pas choisi un et appuyé sur **Envoyer à Google** ; **Pas maintenant** n’envoie rien.
+Votre choix ne répond qu’à cet appel-là.
 
 Ce que lisent votre second et votre équipage reste 30 jours dans leurs conversations enregistrées.
 Une note prend ensuite sa place.
@@ -96,7 +107,7 @@ Pour l’effacer plus tôt, appuyez sur **Supprimer** sur la ligne **Supprimer l
 Une pièce jointe enregistrée reste dans le dossier de sa tâche jusqu’à la fermeture de la tâche ou pendant 30 jours.
 Les mots qu’un équipier a lus dans une pièce jointe enregistrée restent dans sa conversation après les 30 jours.
 Ce que votre second et votre équipage ont écrit eux-mêmes, dans des cartes, des notes et des fichiers, reste jusqu’à ce que vous supprimiez la tâche.
-Retirer Google ne supprime rien de ce qu’ils ont déjà lu.
+Retirer Google supprime aussi ce qu’ils ont déjà lu, comme le fait **Supprimer le contenu Gmail et Agenda**.
 
 N’importe qui peut vous envoyer des mots écrits pour orienter une IA.
 Infinitary remet votre courrier et vos événements à votre second et à votre équipage marqués comme des informations venues de l’extérieur, jamais comme des instructions.

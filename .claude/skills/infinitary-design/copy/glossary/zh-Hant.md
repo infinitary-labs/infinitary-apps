@@ -18,6 +18,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | address (a server's) | 位址 | Taiwan's word for a network address, as in 伺服器位址. |
 | address (of a computer) | 位址 | A computer's SSH address; a browser page's address is 網址. |
 | agent plugins | 代理程式外掛 | Only the plugins turned on in the person's coding agent; a panel stays 面板, never 外掛. |
+| AI-powered agent (what Google's Gmail and Calendar servers serve) | AI 代理程式 | The same 代理程式 as agent plugins. |
 | allowance left | 剩餘 {percent}% | The meter's own short form. |
 | Always use | 一律使用 | The setting that sends all crew work to one model; quoted as「一律使用」in sentences. |
 | Appearance | 外觀 | Standard. |
@@ -30,6 +31,8 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | branch | 分支 | Standard. |
 | bring up to date | 更新到最新 | Avoids 重定基底 (rebase) and does not lean on 衝突 alone; 衝突 appears only where English says "conflicts". |
 | built in place | 就地建置 | Taiwan writes 建置 for build, not 構建. |
+| Calendar, Drive, Docs, Sheets (Google's products) | 日曆、雲端硬碟、文件、試算表 | Google's own Taiwan names; Gmail stays Gmail. |
+| call (one request an integration action sends) | 呼叫 | 「停止了這次呼叫」. |
 | captain | 船長 | The usual title a crew uses for a ship's captain; also the welcome's form of address. |
 | card | 卡片 | Counter 張. |
 | certificate | 憑證 | Taiwan's word; 證書 reads as mainland in this sense. |
@@ -93,6 +96,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | local merge | 本機合併 | Taiwan writes 本機, not 本地. |
 | log (a check's kept output) | 日誌 | Distinct from the record, 紀錄. |
 | mark (a place marked on a picture or a page) | 標記 | 「標記 {mark}」, 「帶標記的圖片」. |
+| MCP service (one turned on in a Google Cloud project) | MCP 服務 | 「Gmail 的 MCP 服務」; on and off are 開啟 and 關閉. |
 | median (Usage, Cost per task) | 中位數 | The middle task of a week's finished tasks; never "average". |
 | merge | 合併 | GitHub-adjacent Taiwan docs and Microsoft Taiwan both say 合併. |
 | merge queue (the host's own) | 合併佇列 | |
@@ -189,6 +193,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | unsafe data reader | 不安全資料讀取者 | A crewmate that reads words anyone can write. |
 | Usage | 用量 | Standard. |
 | usage record (on the Usage page) | 紀錄 | Counter 筆, as in 12 筆紀錄. |
+| Use this client for an AI-powered agent (Google Cloud's checkbox) | 「Use this client for an AI-powered agent」 | Google's console shows its own translation, which the app cannot check, so the label stays English in quotes. |
 | user (another user account on this computer) | 使用者 | "as {user}" is 以 {user} 身分, as in 以另一位使用者身分執行. |
 | where the project lives | 專案所在處 | Used for the host in general; a named host follows 在, as in 在 GitHub 合併. |
 | working copy | 工作副本 | Not 工作樹 (worktree). |

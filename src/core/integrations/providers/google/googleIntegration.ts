@@ -1,26 +1,32 @@
 import { randomUUID } from "node:crypto";
 import type { ForgeSignInState } from "@shared/forges";
 import * as m from "@shared/i18n/messages.generated";
-import { GOOGLE_DATA_KEPT, INTEGRATION_KIND_NAMES } from "@shared/integrations";
+import {
+  GOOGLE_CLIENTS_PAGE,
+  GOOGLE_DATA_KEPT,
+  GOOGLE_MCP_ENABLE_PAGE,
+  INTEGRATION_KIND_NAMES,
+  type IntegrationClientView,
+} from "@shared/integrations";
 import { httpSecretBroker } from "../../../secrets/httpBroker";
-import { type IntegrationBinding, IntegrationOutcomeUnknown } from "../../binding";
+import type { IntegrationAnswer, IntegrationBinding } from "../../binding";
 import { type IntegrationKeys, REDACTED } from "../../secrets";
 import {
   CALENDAR_ACTIONS,
   CALENDAR_CHANGED_EVENT,
-  type CalendarRequest,
   lookForCalendar,
   runCalendarAction,
 } from "./calendar";
 import { GMAIL_SCOPE, GOOGLE_SCOPES, type GoogleClient, type GoogleEndpoints } from "./client";
 import { readGoogleClientFile } from "./clientFile";
+import { GMAIL_ACTIONS, GMAIL_MESSAGE_EVENT, lookForMail, runGmailAction } from "./gmail";
 import {
-  GMAIL_ACTIONS,
-  GMAIL_MESSAGE_EVENT,
-  type GmailRequest,
-  lookForMail,
-  runGmailAction,
-} from "./gmail";
+  GoogleAsksToConfirm,
+  type GoogleHeard,
+  type GoogleService,
+  GoogleToolRefused,
+  googleMcp,
+} from "./mcp";
 import { MovedGoogleKeys } from "./movedKeys";
 import {
   GOOGLE_REQUEST_TIMEOUT_MS,
@@ -46,18 +52,21 @@ import { type GoogleClientRecord, GoogleClientStore, GoogleSignInStore } from ".
  * lives in Secrets, as a hidden entry used only through the renewal broker
  * below (INF-785): each renewal is a brokered use, and the captain's one
  * saved decision on the first covers every later one. The access key a renewal gives lives only in the app's
- * memory and goes on each request to Gmail and Calendar, and on removal to
- * tell Google to forget the sign-in. A renewal the captain did not allow,
+ * memory and goes on each request to Gmail's and Calendar's MCP servers
+ * (`./mcp`), and on removal to tell Google to forget the sign-in. A renewal the captain did not allow,
  * or let run out, is not asked again until the captain checks the row, signs in
  * again or the app starts again. The row has no key fields, since nothing
  * about it is pasted.
  *
  * Health is the forge sign-in's words: `needs_reauth` only from proof - Google
- * refused the lasting key or the person's own client, a request was refused
- * again after a real renewal, or the sign-in was made with a client the
- * person no longer keeps - and `unavailable` when Google could not be
- * reached or failed.
- * When Gmail asks the app to slow down and says for how long (Retry-After),
+ * refused the lasting key or the person's own client, or the sign-in was
+ * made with a client the person no longer keeps - and `unavailable` when
+ * Google could not be reached or failed. A key refused again just after a
+ * real renewal is not the sign-in's fault: Google's MCP servers take only a
+ * client marked for an AI-powered agent, so the sign-in stays and the row
+ * says what to tick (`client().mcp`), as it does for a service whose MCP
+ * server is off.
+ * When Google asks the app to slow down and says for how long (Retry-After),
  * every request waits that long, and a rule's look tries again on its next
  * minute.
  */
@@ -86,7 +95,6 @@ const NO_SECRETS =
 const SECRETS_LOCKED =
   "Google waits for Secrets, which is locked or cannot open now. Unlock it in Settings -> Secrets.";
 const SIGN_IN_AGAIN = "Google is signed out. Sign in again in Settings -> Integrations.";
-const RATE_LIMITED = new Set(["rateLimitExceeded", "userRateLimitExceeded"]);
 
 export type GoogleIntegrationOptions = {
   /** The integrations folder, where `google.json` lives. */
@@ -108,6 +116,8 @@ export type GoogleIntegrationOptions = {
   changed: () => void;
   /** Every request to Google: the sign-in's, Gmail's, Calendar's and each renewal's inside Secrets. */
   fetch?: typeof fetch;
+  /** The app's version, which the MCP clients name to Google. */
+  version?: string;
 };
 
 type Answer = { status: number; body: Record<string, unknown> };
@@ -160,7 +170,6 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
   const moved = new MovedGoogleKeys(options.root);
   const fetchImpl = options.fetch ?? fetch;
   const gmailRoot = `${options.endpoints.gmail.replace(/\/+$/, "")}/gmail/v1/users/me`;
-  const calendarRoot = `${options.endpoints.calendar.replace(/\/+$/, "")}/calendar/v3`;
   const runClient = options.client
     ? {
         client_id: options.client.id,
@@ -179,8 +188,19 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
   const forgetting = new Map<string, RenewingClient>();
   /** Code exchanges of sign-ins in progress with the person's own client, by a one-use id. */
   const exchanges = new Map<string, { own: GoogleClientRecord; form: Record<string, string> }>();
-  /** Until when Gmail asked the app to wait, on the app's clock. */
+  /** Until when Google asked the app to wait, on the app's clock. */
   let waitUntil = 0;
+  /** What Google's MCP servers last refused, by service, in memory only: the next answer clears it. */
+  const refusals = new Map<
+    GoogleService,
+    Exclude<GoogleHeard, { kind: "answered" | "unavailable" }>
+  >();
+  /**
+   * The access key Google refused just after renewing it: renewing again
+   * cannot help until the captain marks the client, so a request with it
+   * stops there, until the key ends or the captain checks the row.
+   */
+  let agentRefused: string | undefined;
 
   const setHealth = (health: ForgeSignInState) => {
     const record = store.read();
@@ -398,80 +418,128 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
     return renewing;
   };
 
-  const send = async (
-    root: string,
-    label: string,
-    path: string,
-    init?: Parameters<CalendarRequest>[1],
-  ): Promise<Response> => {
-    const token = access?.token;
+  /** The access key in memory now, read after a renewal has set it. */
+  const accessToken = (): string | undefined => access?.token;
+
+  /** The access key for the next request, renewed first when it is about to end. */
+  const key = async (label: string): Promise<string> => {
+    const wait = Math.ceil((waitUntil - options.now()) / 1000);
+    if (wait > 0) throw new Error(`${label} asked the app to wait ${wait} more seconds.`);
+    if (!store.read()) throw new Error(SIGN_IN_AGAIN);
+    if (!access || access.expiresAt - options.now() < GOOGLE_REQUEST_TIMEOUT_MS) await renew();
+    const token = accessToken();
     if (!token) throw new Error(SIGN_IN_AGAIN);
-    try {
-      return await fetchImpl(`${root}${path}`, {
-        method: init?.method ?? "GET",
-        redirect: "error",
-        headers: {
-          accept: "application/json",
-          authorization: `Bearer ${token}`,
-          ...(init?.json !== undefined ? { "content-type": "application/json" } : {}),
-        },
-        ...(init?.json !== undefined ? { body: JSON.stringify(init.json) } : {}),
-        signal: timeout(),
-      });
-    } catch {
-      setHealth("unavailable");
-      // A change that left may have reached Google: what came of it is not known.
-      if (!init?.read && (init?.method ?? "GET") !== "GET")
-        throw new IntegrationOutcomeUnknown(`${label} did not answer.`);
-      throw new Error(`Could not reach ${label}.`);
-    }
+    return token;
   };
 
-  const api =
-    (root: string, label: string, allowsGone = false): CalendarRequest =>
-    async (path, init) => {
-      const wait = Math.ceil((waitUntil - options.now()) / 1000);
-      if (wait > 0) throw new Error(`${label} asked the app to wait ${wait} more seconds.`);
-      const record = store.read();
-      if (!record) throw new Error(SIGN_IN_AGAIN);
-      if (!access || access.expiresAt - options.now() < GOOGLE_REQUEST_TIMEOUT_MS) await renew();
-      let response = await send(root, label, path, init);
-      if (response.status === 401) {
-        access = undefined;
-        await renew();
-        response = await send(root, label, path, init);
-        if (response.status === 401) {
-          setHealth("needs_reauth");
-          throw new Error(SIGN_IN_AGAIN);
-        }
-      }
-      const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-      if (response.ok || response.status === 404 || (allowsGone && response.status === 410)) {
-        setHealth("ok");
-        return { status: response.status, body } satisfies Answer;
-      }
-      const error = errorOf(body);
-      if (response.status === 429 || error.reasons.some((reason) => RATE_LIMITED.has(reason))) {
-        const after = retryAfter(response.headers.get("retry-after"), options.now());
-        if (after !== undefined) waitUntil = options.now() + after;
-        throw new Error(
-          `${label} asked the app to slow down${after !== undefined ? ` for ${Math.ceil(after / 1000)} seconds` : ""}.`,
-        );
-      }
-      const said = `(status ${response.status})${error.message ? `: ${error.message}` : "."}`;
-      if (response.status < 500) {
-        setHealth("ok");
-        throw new Error(`${label} refused ${said}`);
-      }
-      setHealth("unavailable");
-      // Google failed while it held a change: whether the change happened is not known.
-      if (!init?.read && (init?.method ?? "GET") !== "GET")
-        throw new IntegrationOutcomeUnknown(`${label} failed ${said}`);
-      throw new Error(`${label} failed ${said}`);
-    };
+  /** A key Google refused: a newer one when there is one, renewed unless renewing cannot help. */
+  const renewed = async (refused: string): Promise<string | undefined> => {
+    if (access && access.token !== refused) return access.token;
+    if (agentRefused === refused) return undefined;
+    access = undefined;
+    await renew();
+    return accessToken();
+  };
 
-  const gmail: GmailRequest = api(gmailRoot, "Gmail");
-  const calendar = api(calendarRoot, "Google Calendar", true);
+  const heard = (service: GoogleService, said: GoogleHeard) => {
+    if (said.kind === "unavailable") {
+      setHealth("unavailable");
+      return;
+    }
+    const before = JSON.stringify(refusals.get(service) ?? null);
+    if (said.kind === "answered") {
+      refusals.delete(service);
+      agentRefused = undefined;
+    } else {
+      refusals.set(service, said);
+      if (said.kind === "agent") agentRefused = access?.token;
+    }
+    // A refusal says nothing against the sign-in itself, which Google just took or renewed.
+    setHealth("ok");
+    if (JSON.stringify(refusals.get(service) ?? null) !== before) options.changed();
+  };
+
+  const mcpOf = (service: GoogleService, url: string, label: string) =>
+    googleMcp({
+      service,
+      url,
+      label,
+      version: options.version ?? "0.0.0",
+      fetch: fetchImpl,
+      timeoutMs: GOOGLE_REQUEST_TIMEOUT_MS,
+      key: () => key(label),
+      renewed,
+      slowed: (header) => {
+        const after = retryAfter(header, options.now());
+        if (after !== undefined) waitUntil = options.now() + after;
+        return after;
+      },
+      heard,
+    });
+  const gmail = mcpOf("gmail", options.endpoints.gmailMcp, "Gmail");
+  const calendar = mcpOf("calendar", options.endpoints.calendarMcp, "Google Calendar");
+
+  /** Let go of both MCP connections and what they were refused: the sign-in they spoke for is gone. */
+  const letGo = async () => {
+    refusals.clear();
+    agentRefused = undefined;
+    await Promise.all([gmail.close(), calendar.close()]);
+  };
+
+  /**
+   * One harmless read from each MCP server, so the row says what Google
+   * refuses before the crew or a rule meets it.
+   */
+  const probe = async () => {
+    await Promise.allSettled([
+      gmail.tools()("list_labels", {}),
+      calendar.tools()("list_calendars", {}),
+    ]);
+  };
+
+  /** What the row says of Google's MCP refusals: the client's mark first, since it stops both services. */
+  const mcpFact = (): IntegrationClientView["mcp"] => {
+    if ([...refusals.values()].some((refusal) => refusal.kind === "agent")) {
+      // A client id starts with its project's number, which opens the client in its own project.
+      const own = clients.read()?.id;
+      const project = own ? /^(\d+)-/.exec(own)?.[1] : undefined;
+      return {
+        refused: "agent",
+        link:
+          own && project
+            ? `${GOOGLE_CLIENTS_PAGE}/${encodeURIComponent(own)}?project=${project}`
+            : GOOGLE_CLIENTS_PAGE,
+      };
+    }
+    const off = (["gmail", "calendar"] as const).flatMap((service) => {
+      const refusal = refusals.get(service);
+      return refusal?.kind === "service" ? [{ service, link: refusal.link }] : [];
+    });
+    const [first] = off;
+    if (!first) return undefined;
+    if (off.length === 1)
+      return { refused: "service", services: [first.service], link: first.link };
+    // Both off: one page turns both on, in the project Google named.
+    const project = new URL(first.link).searchParams.get("project");
+    return {
+      refused: "service",
+      services: off.map((entry) => entry.service),
+      link: project
+        ? `${GOOGLE_MCP_ENABLE_PAGE}&project=${encodeURIComponent(project)}`
+        : GOOGLE_MCP_ENABLE_PAGE,
+    };
+  };
+
+  /** Google's question or refusal, as an answer the service carries. */
+  const answered = async (run: () => Promise<IntegrationAnswer>): Promise<IntegrationAnswer> => {
+    try {
+      return await run();
+    } catch (error) {
+      if (error instanceof GoogleAsksToConfirm) return { text: "", confirm: error.confirm };
+      if (error instanceof GoogleToolRefused) return { text: error.message, refused: "refused" };
+      throw error;
+    }
+  };
 
   /** Tell Google to forget the sign-in, as far as it can be reached; an access key revokes its lasting key too. */
   const revoke = async (token: string | undefined) => {
@@ -507,6 +575,7 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
     if (withClient) clients.remove();
     access = undefined;
     waitUntil = 0;
+    void letGo();
     const earlier = moved.present() ? moved.lastingKey() : undefined;
     return (async () => {
       let bearer = token ?? earlier;
@@ -639,11 +708,13 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
     client: () => {
       const own = clients.read();
       const record = store.read();
+      const mcp = mcpFact();
       return {
         kept: own !== undefined,
         ...(own?.refused ? { refused: own.refused.error } : {}),
         ...(record?.endsAt !== undefined ? { endsAt: record.endsAt } : {}),
         ...(options.client ? { runClient: true as const } : {}),
+        ...(record && mcp ? { mcp } : {}),
       };
     },
     keepClientFile: async (text) => {
@@ -711,6 +782,7 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
           }. Try again.`,
         );
       waitUntil = 0;
+      await letGo();
       access = { token: issued.accessToken, expiresAt: issued.expiresAt };
       store.write({
         account,
@@ -735,15 +807,16 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
       } catch {
         // Nothing reads it again.
       }
+      // Its answers reach the row on their own (`heard`); the sign-in is kept either way.
+      void probe();
       return GOOGLE_ID;
     },
     check: async () => {
       if (!store.read()) return;
-      try {
-        await gmail("/profile");
-      } catch {
-        // The health it found is kept; the row shows it.
-      }
+      // The captain may have marked the client since: a refused key is renewed once more.
+      agentRefused = undefined;
+      // The health and refusals it finds are kept; the row shows them.
+      await probe();
     },
     remove: async () => {
       const token = access?.token;
@@ -754,16 +827,22 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
       else void forgotten;
     },
     redact: (text) => (access ? text.split(access.token).join(REDACTED) : text),
-    call: (_id, action, input) =>
-      CALENDAR_ACTIONS.some((spec) => spec.name === action)
-        ? runCalendarAction(calendar, action, input)
-        : runGmailAction(gmail, action, input),
+    call: async (_id, action, input, _caller, confirmed) => {
+      const record = store.read();
+      if (!record) throw new Error(SIGN_IN_AGAIN);
+      return answered(() =>
+        CALENDAR_ACTIONS.some((spec) => spec.name === action)
+          ? runCalendarAction(calendar.tools(confirmed), record.account, action, input)
+          : runGmailAction(gmail.tools(confirmed), action, input),
+      );
+    },
     look: async (_id, event, cursor, filter) => {
       const record = store.read();
       if (!record) throw new Error(SIGN_IN_AGAIN);
       return event === CALENDAR_CHANGED_EVENT.name
-        ? lookForCalendar(calendar, record.account, cursor, filter)
-        : lookForMail(gmail, record.account, cursor);
+        ? lookForCalendar(calendar.tools(), record.account, cursor, options.now, filter)
+        : lookForMail(gmail.tools(), record.account, cursor, options.now);
     },
+    close: letGo,
   };
 }

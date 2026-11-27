@@ -14,6 +14,7 @@ struct PhoneGoogleSection: View {
     @Bindable var google: PhoneGoogle
     @State private var address = ""
     @State private var confirmingSignOut = false
+    @Environment(\.openURL) private var openURL
 
     private var mac: String { session.mac.name }
     /// The setup and Google's notice share one sheet, so a kept file swaps one for the other.
@@ -70,9 +71,15 @@ struct PhoneGoogleSection: View {
             }
             PhoneChoiceRow {
                 if let state = google.clientState {
-                    Button(state.nextWords) { address = ""; google.beginSetup() }
+                    Button(state.nextWords) {
+                        address = ""
+                        switch state.next {
+                        case .open(let link): openURL(link)
+                        case .setUpAgain: google.beginSetup()
+                        }
+                    }
                     .buttonStyle(PhoneChoiceStyle(.primary))
-                    .disabled(google.busy || !session.canChange || !google.homeTakesReturn)
+                    .disabled(state.next.link == nil && (google.busy || !session.canChange || !google.homeTakesReturn))
                     .accessibilityIdentifier("google-client-next")
                 } else if row.health == "needs_reauth" { signIn(PhoneMessages.phoneGoogleSignInAgain()) }
                 Button(PhoneMessages.phoneGoogleSignOut()) { confirmingSignOut = true }

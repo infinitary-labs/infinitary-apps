@@ -5,6 +5,7 @@ import { eventsWords } from "@shared/automation";
 import { automationEventWords } from "@shared/automationWords";
 import {
   GOOGLE_CLIENT_SETUP_PAGE,
+  GOOGLE_CLIENTS_PAGE,
   GOOGLE_DATA_KEPT,
   INTEGRATION_KIND_NAMES,
   INTEGRATION_NOTICES,
@@ -24,7 +25,7 @@ import { NOTICE_WORDS } from "../../src/core/orchestrator/noticeWakes";
 import type { CustodySlot } from "../../src/core/secrets/custody";
 import * as m from "../../src/shared/i18n/messages.generated";
 import { SECRETS_WORDS } from "../../src/shared/secrets";
-import { SHOOT_EVENT, STUDIO_CALENDAR } from "../helpers/calendarStandIn";
+import { STUDIO_CALENDAR, shootEventAt } from "../helpers/calendarStandIn";
 import {
   type GoogleStandIn,
   OWN_CLIENT_ID,
@@ -32,6 +33,7 @@ import {
   STAND_IN_ACCOUNT,
   STAND_IN_CLIENT_ID,
   STAND_IN_CLIENT_SECRET,
+  STAND_IN_PROJECT,
   startGoogleStandIn,
 } from "../helpers/googleStandIn";
 import { scratchDir } from "../helpers/scratchDirs";
@@ -379,6 +381,42 @@ test("the Google row moves a sign-in to the person's own client by keys", async 
     await expect(next(m.integrationsGoogleSetUpAgain())).toBeVisible();
   });
 
+  // INF-7012's approved plan, piece 1: "a row line with a link appears when
+  // Google refuses an unmarked client or a service is off"; the row keeps its sign-in.
+  await test.step("Google's refusals of an unmarked client and a service turned off say so, and open Google Cloud by keys", async () => {
+    const opened = (await opening(app)).length;
+    stand.knobs.agentRefused = true;
+    await page.evaluate(() => window.infinitary.integrations.check("google"));
+    await expect(state).toHaveText(m.integrationsGoogleAgentRefused());
+    await expect(detail).toHaveText(m.integrationsGoogleAgentRefusedDetail());
+    await expect(row).toHaveAttribute("data-integration-state", "ok");
+    await pressKey(next(m.integrationsGoogleOpenCloud()), "Enter");
+    await expect
+      .poll(async () => (await opening(app)).slice(opened))
+      .toEqual([`${GOOGLE_CLIENTS_PAGE}/${OWN_CLIENT_ID}?project=${STAND_IN_PROJECT}`]);
+
+    stand.knobs.agentRefused = false;
+    stand.knobs.off.add("calendar");
+    await page.evaluate(() => window.infinitary.integrations.check("google"));
+    await expect(state).toHaveText(m.integrationsGoogleServiceOff());
+    await expect(detail).toHaveText(
+      m.integrationsGoogleServiceOffDetail({
+        count: 1,
+        services: m.integrationsGoogleServiceCalendar(),
+      }),
+    );
+    await pressKey(next(m.integrationsGoogleOpenCloud()), "Enter");
+    await expect
+      .poll(async () => (await opening(app)).slice(opened + 1))
+      .toEqual([
+        `https://console.developers.google.com/apis/api/calendarmcp.googleapis.com/overview?project=${STAND_IN_PROJECT}`,
+      ]);
+
+    stand.knobs.off.clear();
+    await page.evaluate(() => window.infinitary.integrations.check("google"));
+    await expect(next(m.integrationsGoogleSetUpAgain())).toBeVisible();
+  });
+
   await test.step("a client Google refused reads as stopped and sets up again by keys", async () => {
     stand.knobs.deleted.add(OWN_CLIENT_ID);
     stand.lapse();
@@ -646,9 +684,9 @@ test("one Google sign-in from Settings by keys, and a message arriving fires a r
 
 /**
  * INF-786 / accepted INF-775 piece 6: one Google row, Calendar actions and
- * selected-calendar changes fire Automation. The data is Calendar v3-shaped
- * stand-in responses, with one event present before listening and a later
- * revision of it. The completion signal is the persisted filter and cursor,
+ * selected-calendar changes fire Automation. The data is the stand-in
+ * Calendar MCP server's answers, with one event present before listening
+ * and a later revision of it. The completion signal is the persisted filter and cursor,
  * then the first mate's turn containing that revision, not a private event
  * in another calendar. No platform prerequisite or shared resource beyond
  * the hermetic launcher with disposable Secrets: isolated HOME, data, key
@@ -658,7 +696,8 @@ test("Calendar shares the Google row and a calendar selected by keys fires Autom
   const userDataDir = scratchDir("infinitary-calendar-");
   google = await startGoogleStandIn();
   const stand = google;
-  const existing = stand.calendar.change(STUDIO_CALENDAR, SHOOT_EVENT);
+  const shoot = shootEventAt(Date.now() + 3 * 24 * 60 * 60 * 1000);
+  const existing = stand.calendar.change(STUDIO_CALENDAR, shoot);
   const seen: AutomationEventsSeen = { turns: [] };
   // The sign-in's lasting key is kept in Secrets (INF-785), here on disposable custody.
   launched = await launchSecrets({
@@ -737,12 +776,12 @@ test("Calendar shares the Google row and a calendar selected by keys fires Autom
     )
     .not.toBeNull();
   expect(seen.turns).toEqual([]);
-  stand.calendar.change("primary", { ...SHOOT_EVENT, summary: "Private appointment" });
+  stand.calendar.change("primary", { ...shoot, summary: "Private appointment" });
   stand.calendar.change(STUDIO_CALENDAR, { id: existing.id, summary: "Shot list confirmed" });
   await expect.poll(() => seen.turns.length, { timeout: 30_000 }).toBe(1);
   expect(seen.turns[0]).toContain("Shot list confirmed");
-  expect(seen.turns[0]).toContain(SHOOT_EVENT.start.dateTime);
+  expect(seen.turns[0]).toContain(shoot.start.dateTime);
   expect(seen.turns[0]).not.toContain("Private appointment");
-  expect(seen.turns[0]).not.toContain(SHOOT_EVENT.description);
+  expect(seen.turns[0]).not.toContain(shoot.description);
   expect(seen.turns[0]).toContain(CALENDAR_CHANGED_EVENT.label);
 });

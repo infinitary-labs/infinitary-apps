@@ -7,12 +7,13 @@ import type {
   IntegrationLook,
 } from "../../binding";
 import { calendarScope } from "../../scopes";
+import type { GoogleTool } from "./mcp";
 
-/** INF-775 piece 6: Calendar on the same Google row and sign-in as Gmail. */
-export type CalendarRequest = (
-  path: string,
-  init?: { method?: "GET" | "POST" | "PATCH"; json?: unknown; read?: boolean },
-) => Promise<{ status: number; body: Record<string, unknown> }>;
+/**
+ * Calendar on the same Google row and sign-in as Gmail (INF-775 piece 6),
+ * through Google Calendar's MCP server: the binding hands every call
+ * through a `GoogleTool`, as Gmail's.
+ */
 
 const calendarId = z
   .string()
@@ -48,7 +49,7 @@ export const CALENDAR_ACTIONS: readonly IntegrationActionSpec[] = [
     label: "List calendars",
     effect: "reads",
     description:
-      "List the calendars this Google account can reach, with their ids, names, time zones and access roles. page continues next_page.",
+      "List the calendars this Google account can reach, with their ids, names, time zones and descriptions. page continues next_page.",
     input: z.strictObject({ page: z.string().min(1).optional() }),
   },
   {
@@ -83,12 +84,13 @@ export const CALENDAR_ACTIONS: readonly IntegrationActionSpec[] = [
     label: "Read calendar availability",
     effect: "reads",
     description:
-      "Read busy intervals for calendars between from and to (RFC 3339 instants with offsets). No events change and no invitation is sent. Google allows up to 50 calendars per request; omitted calendars means primary. Per-calendar errors remain in the answer.",
+      "Suggest free times between from and to (RFC 3339 instants with offsets) when everyone in people is free: email addresses, up to 50, the captain's own when omitted. Each free time lasts at least minutes (30 when omitted). No events change and no invitation is sent. The answer lists up to five free times, each with its start and end.",
     input: z
       .strictObject({
-        calendars: z.array(calendarId).min(1).max(50).optional(),
+        people: z.array(z.email()).min(1).max(50).optional(),
         from: instant,
         to: instant,
+        minutes: z.number().int().min(5).max(1440).optional(),
       })
       .refine((v) => Date.parse(v.to) > Date.parse(v.from), { message: "to must follow from" }),
   },
@@ -132,17 +134,51 @@ export const CALENDAR_CHANGED_EVENT: IntegrationEventSpec = {
   name: "event_changed",
   label: "A calendar event changes",
   description:
-    "An event is created, updated or cancelled in the selected calendar (primary by default). The summary carries its title and times, never its description. A lost sync token re-baselines without replaying old events.",
+    "An event is created or updated in the selected calendar (primary by default), for events from a day ago to a year ahead. A cancelled event does not fire. The summary carries its title and times, never its description.",
   every: 1,
   filters: [{ name: "calendar", label: "Calendar", defaultValue: "primary" }],
 };
 
-const encoded = encodeURIComponent;
-const eventPath = (calendar = "primary") => `/calendars/${encoded(calendar)}/events`;
+type Moment = z.infer<typeof moment>;
+type Details = {
+  summary?: string;
+  description?: string;
+  location?: string;
+  start?: Moment;
+  end?: Moment;
+  attendees?: { email: string }[];
+};
+const NOTIFICATIONS = { none: "NONE", all: "ALL", externalOnly: "EXTERNAL_ONLY" } as const;
+
+/** A moment as Calendar's MCP server takes it: a date as an all-day midnight, a time as given. */
+function timeOf(value: Moment): string {
+  return "date" in value ? `${value.date}T00:00:00` : value.dateTime;
+}
+
+/** The times, all-day mark and time zone of a start and end given together. */
+function timesOf(start: Moment, end: Moment): Record<string, unknown> {
+  const zone =
+    ("timeZone" in start ? start.timeZone : undefined) ??
+    ("timeZone" in end ? end.timeZone : undefined);
+  return {
+    startTime: timeOf(start),
+    endTime: timeOf(end),
+    allDay: "date" in start,
+    ...(zone ? { timeZone: zone } : {}),
+  };
+}
+
 const answer = (value: unknown): IntegrationAnswer => ({ text: JSON.stringify(value) });
+/** Google lists at most this many events a page. */
+const EVENTS_A_PAGE = 250;
+const momentOf = (value: unknown) => {
+  const given = value as { dateTime?: string; date?: string } | undefined;
+  return given?.dateTime ?? given?.date;
+};
 
 export async function runCalendarAction(
-  request: CalendarRequest,
+  calendar: GoogleTool,
+  account: string,
   action: string,
   input: unknown,
 ): Promise<IntegrationAnswer> {
@@ -154,70 +190,118 @@ export async function runCalendarAction(
     query?: string;
     from: string;
     to: string;
-    calendars?: string[];
-    event: unknown;
-    changes: unknown;
-    send_updates?: string;
+    people?: string[];
+    minutes?: number;
+    event: Details;
+    changes: Details;
+    send_updates?: keyof typeof NOTIFICATIONS;
   };
-  if (action === "list_calendars") {
-    const params = new URLSearchParams();
-    if (v.page) params.set("pageToken", v.page);
-    const { body } = await request(`/users/me/calendarList?${params}`);
-    return answer({
-      calendars: body.items ?? [],
-      ...(body.nextPageToken ? { next_page: body.nextPageToken } : {}),
-    });
-  }
-  if (action === "free_busy") {
-    const { body } = await request("/freeBusy", {
-      method: "POST",
-      read: true,
-      json: {
-        timeMin: v.from,
-        timeMax: v.to,
-        items: (v.calendars ?? ["primary"]).map((id) => ({ id })),
-      },
-    });
-    return answer(body);
-  }
-  const base = eventPath(v.calendar);
-  if (action === "list_events") {
-    const params = new URLSearchParams({
-      maxResults: String(v.max),
-      singleEvents: "true",
-      orderBy: "startTime",
-    });
-    for (const [key, value] of [
-      ["timeMin", v.from],
-      ["timeMax", v.to],
-      ["q", v.query],
-      ["pageToken", v.page],
-    ])
-      if (value) params.set(key as string, value);
-    const { body, status } = await request(`${base}?${params}`);
-    if (status === 404) return { text: "No such calendar.", refused: "invalid" };
-    return answer({
-      events: body.items ?? [],
-      time_zone: body.timeZone,
-      ...(body.nextPageToken ? { next_page: body.nextPageToken } : {}),
-    });
-  }
-  const path = action === "create_event" ? base : `${base}/${encoded(v.id)}`;
-  const response =
-    action === "read_event"
-      ? await request(path)
-      : await request(`${path}?sendUpdates=${v.send_updates ?? "none"}`, {
-          method: action === "create_event" ? "POST" : "PATCH",
-          json: action === "create_event" ? v.event : v.changes,
+  const where = v.calendar ? { calendarId: v.calendar } : {};
+  const notify = { notificationLevel: NOTIFICATIONS[v.send_updates ?? "none"] };
+  switch (action) {
+    case "list_calendars": {
+      const body = await calendar("list_calendars", v.page ? { pageToken: v.page } : {});
+      return answer({
+        calendars: body.calendars ?? [],
+        ...(body.nextPageToken ? { next_page: body.nextPageToken } : {}),
+      });
+    }
+    case "free_busy": {
+      const body = await calendar("suggest_time", {
+        attendeeEmails: v.people ?? [account],
+        startTime: v.from,
+        endTime: v.to,
+        ...(v.minutes ? { durationMinutes: v.minutes } : {}),
+      });
+      const slots = (body.timeSlots as { start?: unknown; end?: unknown }[] | undefined) ?? [];
+      return answer({
+        free: slots.map((slot) => ({ start: momentOf(slot.start), end: momentOf(slot.end) })),
+      });
+    }
+    case "list_events": {
+      const events: unknown[] = [];
+      let page = v.page;
+      let first: Record<string, unknown> | undefined;
+      do {
+        const body = await calendar("list_events", {
+          ...where,
+          ...(v.from ? { startTime: v.from } : {}),
+          ...(v.to ? { endTime: v.to } : {}),
+          ...(v.query ? { fullText: v.query } : {}),
+          orderBy: "startTime",
+          pageSize: Math.min(v.max - events.length, EVENTS_A_PAGE),
+          ...(page ? { pageToken: page } : {}),
         });
-  if (response.status === 404 || response.status === 410)
-    return { text: "No such calendar event.", refused: "invalid" };
-  return answer(response.body);
+        first ??= body;
+        events.push(...((body.events as unknown[] | undefined) ?? []));
+        page = typeof body.nextPageToken === "string" ? body.nextPageToken : undefined;
+      } while (page && events.length < v.max);
+      return answer({
+        events,
+        time_zone: first?.timeZone,
+        ...(page ? { next_page: page } : {}),
+      });
+    }
+    case "read_event":
+      return answer(await calendar("get_event", { ...where, eventId: v.id }));
+    case "create_event": {
+      const { start, end, attendees, ...words } = v.event;
+      return answer(
+        await calendar(
+          "create_event",
+          {
+            ...where,
+            ...words,
+            ...(start && end ? timesOf(start, end) : {}),
+            ...(attendees ? { attendees: attendees.map(({ email }) => ({ email })) } : {}),
+            ...notify,
+          },
+          true,
+        ),
+      );
+    }
+    case "update_event": {
+      const { start, end, attendees, ...words } = v.changes;
+      let guests: Record<string, unknown> = {};
+      if (attendees) {
+        // The new list replaces the old: Google takes it as who joins and who leaves.
+        const current = await calendar("get_event", { ...where, eventId: v.id });
+        const had = ((current.attendees as { email?: string }[] | undefined) ?? []).flatMap(
+          (guest) => (guest.email ? [guest.email] : []),
+        );
+        const lower = (list: readonly string[]) =>
+          new Set(list.map((email) => email.toLowerCase()));
+        const before = lower(had);
+        const after = lower(attendees.map((guest) => guest.email));
+        const added = attendees.filter((guest) => !before.has(guest.email.toLowerCase()));
+        const removed = had.filter((email) => !after.has(email.toLowerCase()));
+        guests = {
+          ...(added.length > 0 ? { addedAttendees: added.map(({ email }) => ({ email })) } : {}),
+          ...(removed.length > 0 ? { removedAttendeeEmails: removed } : {}),
+        };
+      }
+      return answer(
+        await calendar(
+          "update_event",
+          {
+            ...where,
+            eventId: v.id,
+            ...words,
+            ...(start && end ? timesOf(start, end) : {}),
+            ...guests,
+            ...notify,
+          },
+          true,
+        ),
+      );
+    }
+    default:
+      return { text: `Google Calendar has no action ${action}.`, refused: "invalid" };
+  }
 }
 
 type Event = {
   id?: string;
-  etag?: string;
   updated?: string;
   status?: string;
   summary?: string;
@@ -226,73 +310,142 @@ type Event = {
 };
 /** A revision id, not just the event id: later edits of the same event must fire again. */
 function item(calendar: string, event: Event) {
-  const revision = event.etag ?? event.updated ?? JSON.stringify(event);
   const id = createHash("sha256")
-    .update(JSON.stringify([calendar, event.id, revision]))
+    .update(JSON.stringify([calendar, event.id, event.updated ?? JSON.stringify(event)]))
     .digest("hex");
   const time = (value: Event["start"]) => value?.dateTime ?? value?.date ?? "unknown time";
   return {
     id,
-    summary: `${event.status === "cancelled" ? "Cancelled" : "Changed"}: ${event.summary ?? "(untitled event)"} [${event.id}] in ${calendar}${event.status === "cancelled" ? "" : `: ${time(event.start)} to ${time(event.end)}`}`,
+    summary: `Changed: ${event.summary ?? "(untitled event)"} [${event.id}] in ${calendar}: ${time(event.start)} to ${time(event.end)}`,
   };
 }
 
-/** Sync uses no time range or query: Google forbids those with syncToken. */
+/**
+ * Where a look for changed events stands: events changed after `since`
+ * count, except the revisions `seen` names, which already fired, each with
+ * when it changed.
+ */
+type CalendarCursor = {
+  account: string;
+  calendar: string;
+  since: number;
+  seen: [string, number][];
+};
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+/** The events a look reads: from a day ago to a year ahead. */
+const LOOK_BEHIND_MS = DAY_MS;
+const LOOK_AHEAD_MS = 366 * DAY_MS;
+/** How many pages of events one look reads at most. */
+const CALENDAR_PAGES = 20;
+const SEEN_KEPT = 200;
+
+/** An instant as Google takes it, with its offset written out. */
+function instantOf(at: number): string {
+  return new Date(at).toISOString().replace(/\.\d{3}Z$/, "+00:00");
+}
+
+function calendarCursor(
+  text: string,
+  account: string,
+  calendar: string,
+): CalendarCursor | undefined {
+  try {
+    const saved = JSON.parse(text) as Partial<CalendarCursor>;
+    if (
+      saved.account !== account ||
+      saved.calendar !== calendar ||
+      typeof saved.since !== "number" ||
+      !Number.isFinite(saved.since) ||
+      !Array.isArray(saved.seen)
+    )
+      return undefined;
+    return {
+      account,
+      calendar,
+      since: saved.since,
+      seen: saved.seen.filter(
+        (entry): entry is [string, number] =>
+          Array.isArray(entry) && typeof entry[0] === "string" && typeof entry[1] === "number",
+      ),
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Look for changed events from a cursor (`IntegrationBinding.look`): the
+ * selected calendar's events from a day ago to a year ahead, in the order
+ * they last changed, and each one changed since the cursor. A cancelled
+ * event does not fire, and an event outside those days is not read. The
+ * cursor names the account and calendar, so either changing, or a cursor
+ * from before the move to Calendar's MCP server, starts again from now.
+ */
 export async function lookForCalendar(
-  request: CalendarRequest,
+  request: GoogleTool,
   account: string,
   cursor: string | null,
+  now: () => number,
   filter?: Record<string, string>,
 ): Promise<IntegrationLook> {
   const calendar = calendarId.parse(filter?.calendar || "primary");
-  let token: string | undefined;
-  let resynced = false;
-  if (cursor !== null) {
-    try {
-      const saved = JSON.parse(cursor) as { account?: string; calendar?: string; token?: string };
-      if (
-        saved.account === account &&
-        saved.calendar === calendar &&
-        typeof saved.token === "string" &&
-        saved.token
-      )
-        token = saved.token;
-      else resynced = true;
-    } catch {
-      resynced = true;
-    }
+  const saved = cursor === null ? undefined : calendarCursor(cursor, account, calendar);
+  const at = now();
+  const events: Event[] = [];
+  let page: string | undefined;
+  let pages = 0;
+  do {
+    const body = await request("list_events", {
+      calendarId: calendar,
+      startTime: instantOf(at - LOOK_BEHIND_MS),
+      endTime: instantOf(at + LOOK_AHEAD_MS),
+      orderBy: "lastModified",
+      pageSize: EVENTS_A_PAGE,
+      ...(page ? { pageToken: page } : {}),
+    });
+    events.push(...((body.events as Event[] | undefined) ?? []));
+    page = typeof body.nextPageToken === "string" ? body.nextPageToken : undefined;
+    pages += 1;
+  } while (page && pages < CALENDAR_PAGES);
+  const changed = events.flatMap((event) => {
+    const when = Date.parse(event.updated ?? "");
+    return event.id && !Number.isNaN(when) ? [{ event, when, item: item(calendar, event) }] : [];
+  });
+  if (!saved) {
+    // A first look, or one that starts again: what is there now is where later changes count from.
+    const since =
+      changed.length > 0 ? Math.min(Math.max(...changed.map((entry) => entry.when)), at) : at;
+    return {
+      cursor: JSON.stringify({
+        account,
+        calendar,
+        since,
+        seen: changed
+          .filter((entry) => entry.when >= since)
+          .map((entry): [string, number] => [entry.item.id, entry.when])
+          .slice(-SEEN_KEPT),
+      } satisfies CalendarCursor),
+      items: [],
+      ...(cursor !== null ? { resynced: true } : {}),
+    };
   }
-  const read = async (from?: string) => {
-    const items: Event[] = [];
-    let page: string | undefined;
-    let next: string | undefined;
-    do {
-      const params = new URLSearchParams({ showDeleted: "true", maxResults: "2500" });
-      if (from) params.set("syncToken", from);
-      if (page) params.set("pageToken", page);
-      const response = await request(`${eventPath(calendar)}?${params}`);
-      if (response.status === 410) return undefined;
-      if (response.status === 404) throw new Error("The selected calendar was not found.");
-      items.push(...((response.body.items ?? []) as Event[]));
-      page =
-        typeof response.body.nextPageToken === "string" ? response.body.nextPageToken : undefined;
-      next =
-        typeof response.body.nextSyncToken === "string" ? response.body.nextSyncToken : undefined;
-    } while (page);
-    if (!next)
-      throw new Error("Google Calendar did not return a sync token; the cursor has not advanced.");
-    return { items, next };
-  };
-  let result = await read(token);
-  if (!result) {
-    token = undefined;
-    resynced = true;
-    result = await read();
-  }
-  if (!result) throw new Error("Google Calendar could not resync.");
+  const seen = new Set(saved.seen.map(([id]) => id));
+  const fresh = changed
+    .filter((entry) => entry.when >= saved.since && !seen.has(entry.item.id))
+    .sort((a, b) => a.when - b.when);
+  const latest = Math.max(saved.since, ...fresh.map((entry) => entry.when));
+  const since = Math.max(saved.since, Math.min(latest, at));
+  const kept = [
+    ...saved.seen,
+    ...fresh.map((entry): [string, number] => [entry.item.id, entry.when]),
+  ]
+    .filter(([, when]) => when >= since)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, SEEN_KEPT);
   return {
-    cursor: JSON.stringify({ account, calendar, token: result.next }),
-    items: token ? result.items.filter((e) => e.id).map((e) => item(calendar, e)) : [],
-    ...(resynced ? { resynced: true } : {}),
+    cursor: JSON.stringify({ account, calendar, since, seen: kept } satisfies CalendarCursor),
+    items: fresh.filter((entry) => entry.event.status !== "cancelled").map((entry) => entry.item),
+    ...(page ? { resynced: true } : {}),
   };
 }

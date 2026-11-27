@@ -693,6 +693,7 @@ export type HostMessage =
    * The keys the host hears from this document: its pictures, and an Escape that leaves it.
    * `expand`: the host opens a part full screen when the part asks (`inf.expand`).
    * `sound`: the host plays a sound clip in the card's strip, so the bridge draws its Listen button.
+   * `addresses`: the document is a card's body, whose addresses written as words the bridge links (INF-7045).
    */
   | {
       fm: typeof FRAME_BRIDGE_VERSION;
@@ -701,6 +702,7 @@ export type HostMessage =
       escape: boolean;
       expand?: true;
       sound?: true;
+      addresses?: true;
     }
   /** A part that opened full screen is back: its state as the full-screen copy left it, as JSON. */
   | { fm: typeof FRAME_BRIDGE_VERSION; type: "expanded"; index: number; state: string }

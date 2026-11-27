@@ -35,12 +35,77 @@
  * - and the bridge wraps each where text writes it in `<a data-inf-entry>`
  * (role link, in the tab order), and posts the one-way `entry` message on a
  * click or Enter. A reference only opens: it has no rest.
+ *
+ * Its ADDRESSES written as words are linked on a card's mount alone, once the
+ * host's `keys` message says `addresses` (INF-7045): each https address, and
+ * each http one to this computer, that src/shared/linkify.ts counts and the
+ * safe opener takes, becomes `<a href data-inf-address>` with the address as
+ * written for its words, its trailing punctuation left outside. Addresses
+ * link first, so a key inside an address stays part of it, and where keys do
+ * (the same skip list, a choice's label included), at load and again whenever
+ * the document changes. A press on one is any link's: the bridge's click
+ * handler posts `link`, and the host opens it only from the captain's own
+ * press.
  */
 export const FRAME_LINK_SCRIPT = `  function keyLink(target) {
     return target && target.closest ? target.closest("a[data-inf-task]") : null;
   }
   function entryLink(target) {
     return target && target.closest ? target.closest("a[data-inf-entry]") : null;
+  }
+  // The address the words start with, its trailing punctuation and any
+  // closing bracket it did not open left out (linkify's trimTrailingUrlPunctuation).
+  function addressIn(raw) {
+    var address = raw;
+    while (address.length > 0) {
+      var last = address.charAt(address.length - 1);
+      var opener = Object.prototype.hasOwnProperty.call(ADDRESS_CLOSERS, last) ? ADDRESS_CLOSERS[last] : null;
+      if (ADDRESS_TRAILING.indexOf(last) < 0 && !(opener && unmatched(address, opener, last))) break;
+      address = address.slice(0, -1);
+    }
+    return address;
+  }
+  function unmatched(value, open, close) {
+    var depth = 0;
+    for (var i = 0; i < value.length; i++) {
+      if (value.charAt(i) === open) depth += 1;
+      else if (value.charAt(i) === close) depth -= 1;
+    }
+    return depth < 0;
+  }
+  // The safe opener's rule (linkify's isSafeCardHref): an address it would refuse stays words.
+  function opens(address) {
+    var url;
+    try { url = new URL(address); } catch (e) { return false; }
+    if (url.protocol === "https:") return true;
+    if (url.protocol !== "http:") return false;
+    var host = url.hostname.toLowerCase();
+    return LOOPBACK_HOSTS.indexOf(host) >= 0 || host.slice(-LOCALHOST_SUFFIX.length) === LOCALHOST_SUFFIX;
+  }
+  // Links the addresses in a text node; answers the text nodes left around them.
+  function linkAddresses(node) {
+    var text = node.nodeValue;
+    var parts = null;
+    var rest = [];
+    var at = 0;
+    var match;
+    ADDRESS_IN_TEXT.lastIndex = 0;
+    while ((match = ADDRESS_IN_TEXT.exec(text))) {
+      var address = addressIn(match[0]);
+      if (!address || !opens(address)) continue;
+      parts = parts || document.createDocumentFragment();
+      if (match.index > at) rest.push(parts.appendChild(document.createTextNode(text.slice(at, match.index))));
+      var link = document.createElement("a");
+      link.setAttribute("href", address);
+      link.setAttribute("data-inf-address", "");
+      link.textContent = address;
+      parts.appendChild(link);
+      at = match.index + address.length;
+    }
+    if (!parts) return [node];
+    if (at < text.length) rest.push(parts.appendChild(document.createTextNode(text.slice(at))));
+    node.parentNode.replaceChild(parts, node);
+    return rest;
   }
   function linkText(node) {
     var text = node.nodeValue;
@@ -106,17 +171,23 @@ export const FRAME_LINK_SCRIPT = `  function keyLink(target) {
     // A mark is not the body changing.
     sizeWatch.takeRecords();
   }
-  function linkKeys() {
-    if ((!keys.known && !entries.known) || !document.body) return;
+  function linkWords() {
+    var named = keys.known || entries.known;
+    if ((!named && !addresses.on) || !document.body) return;
     var found = [];
     var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     for (var node = walker.nextNode(); node; node = walker.nextNode()) {
-      if (node.nodeValue.indexOf("-") < 0 || !node.parentElement) continue;
-      if (node.parentElement.closest(UNLINKED)) continue;
+      var words = node.nodeValue;
+      if (!(named && words.indexOf("-") >= 0) && !(addresses.on && words.indexOf("://") >= 0)) continue;
+      if (!node.parentElement || node.parentElement.closest(UNLINKED)) continue;
       found.push(node);
     }
     var linked = false;
-    found.forEach(function (text) { if (linkText(text)) linked = true; });
+    found.forEach(function (text) {
+      var rest = addresses.on ? linkAddresses(text) : [text];
+      if (rest[0] !== text) linked = true;
+      if (named) rest.forEach(function (part) { if (linkText(part)) linked = true; });
+    });
     if (!linked) return;
     markLit();
     // The same words in the same place: linking is not the body changing.
@@ -125,7 +196,7 @@ export const FRAME_LINK_SCRIPT = `  function keyLink(target) {
     resize();
   }
   var keyWatch = new MutationObserver(function () {
-    if (keys.known || entries.known) linkKeys();
+    if (keys.known || entries.known || addresses.on) linkWords();
     tagPictures();
     if (decorateDemos()) {
       // A demo the body's own script added: its button is part of that change.

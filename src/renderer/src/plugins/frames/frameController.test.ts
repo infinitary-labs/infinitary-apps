@@ -1132,6 +1132,27 @@ describe('a card body\'s keyboard (docs/keyboard.md, "Cards and frames")', () =>
     expect(posted).toContainEqual({ fm: 2, type: "keys", pictures: true, escape: true });
   });
 
+  // INF-7046's review: a recorded key inside an address the card links stays part of the address.
+  it("tells a card's document to link addresses before it names the task keys and references", () => {
+    const { controller, posted } = harness({
+      onImage: vi.fn(),
+      addresses: true,
+      taskKeys: ["INF-12"],
+      entryRefs: [{ id: "f-1", label: "A finding", tone: "ok" }],
+    });
+    born(controller);
+    const types = posted.map((message) => message.type);
+    expect(posted).toContainEqual({
+      fm: 2,
+      type: "keys",
+      pictures: true,
+      escape: false,
+      addresses: true,
+    });
+    expect(types.indexOf("keys")).toBeLessThan(types.indexOf("tasks"));
+    expect(types.indexOf("keys")).toBeLessThan(types.indexOf("entries"));
+  });
+
   it("tells a mount that opens no pictures and hears no Escape nothing, so its pictures stay out of Tab", () => {
     const { controller, posted } = harness();
     born(controller);

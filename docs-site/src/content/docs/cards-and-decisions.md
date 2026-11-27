@@ -120,6 +120,13 @@ It looks through the whole card: its title, its body, its folded sections and it
 A folded section opens when the match is inside it.
 It works the same in a past card, in [the whole conversation](/the-first-mate/#the-whole-conversation) and on a task's card, except on its Browser tab.
 
+## Links in a card
+
+A web address in a card opens in your default browser when you click it, tap it or press Enter on it.
+That includes an address a crewmate wrote as plain words, such as a step that says to open a sign-in page, on your computer and on your iPhone or iPad.
+It takes addresses that start with https://, and http:// addresses on your own computer.
+A long address wraps inside the card.
+
 ## Merge cards
 
 When a change is ready, its crewmate brings a merge card.

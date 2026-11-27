@@ -210,6 +210,35 @@ describe("Gmail through its MCP server", () => {
     });
   });
 
+  // INF-7017's live check: in seconds since 1970 Gmail's before: holds its own second, as after:
+  // does, so two looks that met at a second both told its mail.
+  it("tells mail from the second where two looks meet once, by the later look", async () => {
+    const { google, clock, integrations } = await signedIn();
+    const start = await integrations.look("google", "message_received", null);
+    clock.now += 120_000;
+    // The first look counts mail up to a minute before the clock; the next starts at that second.
+    const edge = Math.floor(clock.now / 1000) - 60;
+    const before = google.deliver({
+      from: "a@example.com",
+      subject: "Before",
+      text: "x",
+      at: edge * 1000 - 500,
+    });
+    const on = google.deliver({
+      from: "b@example.com",
+      subject: "On",
+      text: "y",
+      at: edge * 1000 + 500,
+    });
+    const first = await integrations.look("google", "message_received", start.cursor);
+    expect(told(first)).toEqual([
+      `New mail in Gmail conversation ${google.mail.get(before)?.threadId}`,
+    ]);
+    clock.now += 120_000;
+    const next = await integrations.look("google", "message_received", first.cursor);
+    expect(told(next)).toEqual([`New mail in Gmail conversation ${google.mail.get(on)?.threadId}`]);
+  });
+
   // The captain's pick B on INF-7017's plan-mismatch card builds each conversation with new
   // mail as one event, and a rule drops an item id it already carried, so a reply must come
   // under an id of its own to fire again.

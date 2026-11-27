@@ -11,8 +11,9 @@
  * message's addresses are plain, with display names beside them; Calendar
  * lists at most 250 events a page, from now to seven days ahead when no
  * time is given; search's `THREAD_VIEW_IDS_ONLY` gives each conversation's
- * id alone, and `after:` and `before:` take a day or seconds since 1970,
- * holding and leaving out that day or second; a message with a file is
+ * id alone, and `after:` and `before:` take a day or seconds since 1970:
+ * `after:` holds its day or second, `before:` leaves out its day but holds
+ * its second, as Gmail answered live; a message with a file is
  * refused `RAW`, as Gmail refused it live, and hands its file's bytes only
  * through Gmail's own API (`googleStandIn.ts`); a tool Google asks the
  * person about first answers
@@ -271,10 +272,10 @@ function matches(mail: StandInMail, query: string | undefined): boolean {
       if (!mail.from.toLowerCase().includes(value)) return false;
     } else if (field === "after" || field === "before") {
       const [year, month, day] = value.split("/").map(Number);
-      const at = /^\d+$/.test(value)
-        ? Number(value) * 1000
-        : Date.UTC(year ?? 0, (month ?? 1) - 1, day ?? 1);
-      if (field === "after" ? mail.internalDate < at : mail.internalDate >= at) return false;
+      const seconds = /^\d+$/.test(value);
+      const at = seconds ? Number(value) * 1000 : Date.UTC(year ?? 0, (month ?? 1) - 1, day ?? 1);
+      const end = seconds ? at + 1000 : at;
+      if (field === "after" ? mail.internalDate < at : mail.internalDate >= end) return false;
     } else {
       const words = `${mail.from} ${mail.to} ${mail.subject} ${mail.text ?? ""}`.toLowerCase();
       if (!words.includes(term)) return false;

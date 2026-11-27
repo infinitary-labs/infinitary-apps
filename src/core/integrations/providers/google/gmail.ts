@@ -540,11 +540,11 @@ function mailCursor(text: string, account: string): MailCursor | undefined {
  * asks Gmail for conversation ids alone (`THREAD_VIEW_IDS_ONLY`), which
  * Google answers without asking; the crewmate reads the conversation by its
  * id (read_message's thread). Consecutive looks search windows that meet and
- * never overlap: `after:` holds its second and `before:` does not, as both do
- * for a day, in seconds since 1970. A conversation that gets more mail later
- * is told again. The first look, a cursor from another mailbox and one from
- * before Gmail's MCP server start from now, so mail already there is never
- * told.
+ * never overlap: in seconds since 1970 Gmail's `before:` holds its own second
+ * as `after:` does, so a look searches up to the second before the next one
+ * starts. A conversation that gets more mail later is told again. The first
+ * look, a cursor from another mailbox and one from before Gmail's MCP server
+ * start from now, so mail already there is never told.
  */
 export async function lookForMail(
   gmail: GoogleTool,
@@ -564,7 +564,7 @@ export async function lookForMail(
   let pages = 0;
   do {
     const body = await gmail("search_threads", {
-      query: `in:inbox after:${saved.since} before:${until}`,
+      query: `in:inbox after:${saved.since} before:${until - 1}`,
       pageSize: THREADS_A_PAGE,
       view: "THREAD_VIEW_IDS_ONLY",
       ...(page ? { pageToken: page } : {}),

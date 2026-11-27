@@ -281,7 +281,7 @@
       }
     },
     {
-      "name": "a project the board does not name",
+      "name": "a project the board does not name yet",
       "grouping": "project",
       "focus": null,
       "crew": [
@@ -292,14 +292,36 @@
           "project": "website"
         },
         {
+          "id": "shop-home",
+          "computer": "home",
+          "away": false,
+          "project": "shop"
+        },
+        {
           "id": "shop-studio",
           "computer": "studio",
           "away": false,
           "project": "gone"
         }
       ],
-      "plan": null,
-      "groups": null
+      "plan": {
+        "middle": null,
+        "groups": [
+          {
+            "id": "project:website",
+            "name": "website"
+          },
+          {
+            "id": "project:shop",
+            "name": "shop"
+          }
+        ]
+      },
+      "groups": {
+        "web-home": "project:website",
+        "shop-home": "project:shop",
+        "shop-studio": "studio"
+      }
     }
   ]
 }

@@ -228,7 +228,7 @@ try {
       { name: "two projects, one focused", grouping: "project", focus: "shop", crew: ["web-home", "web-studio", "shop-home", "shop-studio"] },
       { name: "a built-in project focused", grouping: "project", focus: "scratch", crew: ["web-home", "shop-studio", "scratch-studio"] },
       { name: "an away computer's crew", grouping: "project", focus: null, crew: ["web-home", "shop-studio", "web-away", "shop-away"] },
-      { name: "a project the board does not name", grouping: "project", focus: null, crew: ["web-home", "shop-studio"], unknown: "shop-studio" },
+      { name: "a project the board does not name yet", grouping: "project", focus: null, crew: ["web-home", "shop-home", "shop-studio"], unknown: "shop-studio" },
     ];
     return { projects, rosters: rosters.map((roster) => {
       const projectOf = (id: string) => (id === roster.unknown ? "gone" : ofTask[id]);

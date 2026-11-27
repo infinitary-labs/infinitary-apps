@@ -9,6 +9,7 @@ import InfinitaryKit
 /// - So does the middle project: the only project of the person's own with crew, else the focused one, else none.
 ///   The phone has no project focus yet, so it passes none.
 /// - Every other crewmate sits in its project's group.
+/// - A crewmate whose project the board does not name yet keeps its computer's group.
 enum PhoneCrewGroups {
     static let home = "home"
     /// A project group's id is this, then the project's id: never a computer's id.
@@ -27,15 +28,13 @@ enum PhoneCrewGroups {
     /// Scratch (no repository) or the app's own workspace (a `personal` repository), as the desktop's `builtInProject`.
     static func builtIn(_ project: PhoneBoard.Project) -> Bool { project.repo == nil || project.repo?.kind == "personal" }
 
-    /// The plan for this roster, or nil for grouping by computer: the switch is off, or the board does not name the
-    /// project of every crewmate whose computer is in reach.
+    /// The plan for this roster, or nil for grouping by computer: the switch is off, or the board names no projects.
     static func plan(grouping: String, projects: [Project], projectOf: (String) -> String?, focus: String?, crew: [Crew]) -> Plan? {
-        guard grouping == "project" else { return nil }
+        guard grouping == "project", !projects.isEmpty else { return nil }
         let byID = Dictionary(projects.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         var own = Set<String>()
         for member in crew where !member.away {
-            guard let project = byID[projectOf(member.id) ?? ""] else { return nil }
-            if !project.builtIn { own.insert(project.id) }
+            if let project = byID[projectOf(member.id) ?? ""], !project.builtIn { own.insert(project.id) }
         }
         let focused = focus.flatMap { byID[$0] }
         let middle = own.count == 1 ? own.first : focused.flatMap { $0.builtIn ? nil : $0.id }

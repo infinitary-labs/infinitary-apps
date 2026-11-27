@@ -104,12 +104,25 @@ describe("the group rule", () => {
     expect(groups["web-away"]).toBe("away-mac");
   });
 
-  it("waits for the board to name every placed crewmate's project", () => {
-    const missing = {
+  // The review of this change (F1): a crewmate's spawn reaches the stage
+  // before its board row, so a start must not regroup everyone else.
+  it("keeps a crewmate whose project the board does not name yet in its computer's group, and the others in theirs", () => {
+    const starting = {
       ...input(),
-      projectOf: (id: string) => (id === "web-home" ? "gone" : PROJECT_OF[id]),
+      projectOf: (id: string) => (id === "shop-studio" ? undefined : PROJECT_OF[id]),
     };
-    expect(groupPlanOf(missing, [crewAt("web-home"), crewAt("shop-studio")])).toBeNull();
+    const crew = [crewAt("web-home"), crewAt("shop-home"), crewAt("shop-studio")];
+    const plan = groupPlanOf(starting, crew);
+    if (!plan) throw new Error("Expected a plan");
+    expect(crew.map((cm) => groupOf(plan, starting, cm))).toEqual([
+      "project:website",
+      "project:shop",
+      "studio",
+    ]);
+  });
+
+  it("groups by computer while the board names no projects", () => {
+    expect(groupPlanOf({ ...input(), projects: [] }, [crewAt("web-home")])).toBeNull();
   });
 });
 
@@ -121,7 +134,7 @@ const device = (id: string, patch: Partial<DeviceView> = {}): DeviceView => ({
   inReach: true,
   ...patch,
 });
-function stage(ids: string[], focus: string | null = null) {
+function stage(ids: string[], focus: string | null = null, grouping = input(focus)) {
   const model = new ComputerOrbits(0);
   model.configure([device("studio"), device("away-mac", { inReach: false })]);
   for (const id of ids) {
@@ -130,7 +143,7 @@ function stage(ids: string[], focus: string | null = null) {
     model.spawn(id, "working", 0, true, "high");
   }
   model.settleBootRoster(0);
-  model.setGrouping(input(focus));
+  model.setGrouping(grouping);
   return model;
 }
 const clusterOf = (model: ComputerOrbits, id: string) =>
@@ -156,6 +169,24 @@ describe("the stage grouped by project", () => {
     expect(clusterOf(model, "web-away")).toBe("away-mac");
   });
 
+  it("keeps a starting crewmate on its computer's group until the board names its project", () => {
+    const starting = {
+      ...input(),
+      projectOf: (id: string) => (id === "shop-studio" ? undefined : PROJECT_OF[id]),
+    };
+    const model = stage(["web-home", "shop-home", "shop-studio"], null, starting);
+    expect(clusterOf(model, "web-home")).toBe("project:website");
+    expect(clusterOf(model, "shop-studio")).toBe("studio");
+    expect(model.clusters().map((c) => c.id)).toEqual([
+      HOME_COMPUTER,
+      "project:website",
+      "project:shop",
+      "studio",
+    ]);
+    model.setGrouping(input());
+    expect(clusterOf(model, "shop-studio")).toBe("project:shop");
+  });
+
   it("draws one project's crew on the first mate's own ring alone, as a stage of one computer", () => {
     const model = stage(["web-home", "web-studio"]);
     expect(model.multiple).toBe(false);
@@ -170,6 +201,23 @@ describe("the stage grouped by project", () => {
     expect(model.update(0, true).programs.filter((p) => p.id === "program")).toHaveLength(1);
     model.setGrouping(null);
     expect(model.update(0, true).programs.filter((p) => p.id === "program")).toHaveLength(2);
+  });
+
+  // The review of this change (F2): the approved plan keeps the fall home's
+  // path and trip, so the cue must reach the first mate once it lands.
+  it("keeps a project group on the stage until its last crewmate's fall home lands", () => {
+    const model = stage(["web-home", "shop-home", "shop-studio"]);
+    model.update(0);
+    model.takeCues();
+    model.leave("web-home", "home", 16);
+    expect(model.clusters().some((c) => c.id === "project:website")).toBe(true);
+    const cues = [];
+    for (let now = 32; now < 2000; now += 16) {
+      model.update(now);
+      cues.push(...model.takeCues());
+    }
+    expect(model.has("web-home")).toBe(false);
+    expect(cues).toContainEqual({ kind: "receive" });
   });
 
   it("goes back to each computer's group when the switch turns off", () => {

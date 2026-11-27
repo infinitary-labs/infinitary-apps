@@ -13,6 +13,7 @@ import {
   groupOf,
   groupPlanOf,
   HOME_GROUP,
+  PROJECT_GROUP,
 } from "./crewGroups";
 import {
   CrewOrbit,
@@ -123,7 +124,7 @@ export class ComputerOrbits extends CrewOrbit {
   get multiple(): boolean {
     return this.computers().length > 1 && this.present().every((id) => this.placement.has(id));
   }
-  /** Whether the crew sit by project now: chosen, and the board names every project. */
+  /** Whether the crew sit by project now: chosen, and the board names its projects. */
   get byProject(): boolean {
     return this.plan !== null;
   }
@@ -260,14 +261,24 @@ export class ComputerOrbits extends CrewOrbit {
   /** The groups on the stage, the first mate's first: by computer, or by project (`groupOf`). */
   private computers(): Array<Pick<ComputerCluster, "id" | "name" | "reachable" | "away">> {
     if (this.plan) {
-      const away = this.machines().filter(
-        (computer) =>
-          !computer.reachable && this.present().some((id) => this.groupOf(id) === computer.id),
+      // A computer keeps its group while it holds crew: away ones, and ones
+      // whose project the board does not name yet.
+      const held = this.machines().filter((computer) =>
+        this.present().some((id) => this.groupOf(id) === computer.id),
       );
+      // A project group whose last crewmate is leaving stays listed, so its
+      // orbit keeps stepping until the fall home's cue reaches the first mate.
+      const listed = new Set(this.plan.groups.map((group) => group.id));
+      for (const [id, group] of this.owners)
+        if (group.startsWith(PROJECT_GROUP) && this.locals.get(group)?.model.has(id))
+          listed.add(group);
+      const groups = (this.grouping?.projects ?? [])
+        .filter((project) => listed.has(PROJECT_GROUP + project.id))
+        .map((project) => ({ id: PROJECT_GROUP + project.id, name: project.name }));
       return [
         { id: HOME_COMPUTER, name: this.homeName, reachable: true },
-        ...this.plan.groups.map((group) => ({ ...group, reachable: true })),
-        ...away,
+        ...groups.map((group) => ({ ...group, reachable: true })),
+        ...held,
       ];
     }
     return [{ id: HOME_COMPUTER, name: this.homeName, reachable: true }, ...this.machines()];
@@ -642,7 +653,6 @@ export class ComputerOrbits extends CrewOrbit {
   }
   override takeCues(): Cue[] {
     const legacy = super.takeCues();
-    if (!this.multiple) return legacy;
     const cues = [...legacy, ...this.clusterCues];
     this.clusterCues = [];
     return cues;
@@ -666,6 +676,10 @@ export class ComputerOrbits extends CrewOrbit {
     const frames: OrbitFrame[] = [
       { ...legacy, crew: legacy.crew.map((c) => ({ ...c, computerId: HOME_COMPUTER })) },
     ];
+    // Read before the orbits step: a project group's last fall home landing
+    // in this step takes the group off the stage, and its cue must still go.
+    const cueing = this.multiple;
+    const peers = new Set(this.pagePeers().map((peer) => peer.id));
     for (const computer of this.computers()) {
       if (computer.id === HOME_COMPUTER) continue;
       const local = this.local(computer.id);
@@ -708,11 +722,10 @@ export class ComputerOrbits extends CrewOrbit {
         };
       }
       const visible = clusters.some((c) => c.id === computer.id);
-      const onPage = this.pagePeers().some((peer) => peer.id === computer.id);
       // A cue reaches the Firstmate from any computer on the page, including
       // the last crewmate's fall home, which leaves its computer unseated.
       const cues = local.model.takeCues();
-      if (this.multiple && onPage && computer.reachable) this.clusterCues.push(...cues);
+      if (cueing && peers.has(computer.id) && computer.reachable) this.clusterCues.push(...cues);
       if (!this.multiple || !visible) continue;
       // Unknown activity is never guessed from old heat. Keep last-known
       // position and spin; no packets or review motion on an unreachable Mac.
@@ -748,7 +761,7 @@ export class ComputerOrbits extends CrewOrbit {
       frames.push(frame);
     }
     if (!this.multiple) {
-      this.clusterCues = [];
+      if (!cueing) this.clusterCues = [];
       return legacy;
     }
     return {

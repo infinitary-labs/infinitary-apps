@@ -14,6 +14,8 @@ import type { CrewGrouping } from "@shared/preferences";
  * - So does the middle project: the only project of the person's own with
  *   crew, else the focused one, else none.
  * - Every other crewmate sits in its project's group.
+ * - A crewmate whose project the board does not name yet keeps its
+ *   computer's group: its spawn reaches the stage before its board row does.
  */
 
 /** The first mate's own ring, as the stage names it. */
@@ -55,21 +57,20 @@ export function builtInProject(project: { repo: { kind?: string } | null }): boo
 
 /**
  * The plan for this roster, or null for grouping by computer: the switch is
- * off, or the board does not yet name the project of every crewmate whose
- * computer is in reach, as the stage waits for placement.
+ * off, or the board names no projects yet (an older home, or before the first
+ * board arrives).
  */
 export function groupPlanOf(
   input: CrewGroupingInput | null,
   crew: readonly GroupCrew[],
 ): GroupPlan | null {
-  if (input?.grouping !== "project") return null;
+  if (input?.grouping !== "project" || input.projects.length === 0) return null;
   const byId = new Map(input.projects.map((project) => [project.id, project]));
   const placed = crew.filter((cm) => !cm.away);
   const own = new Set<string>();
   for (const cm of placed) {
     const project = byId.get(input.projectOf(cm.id) ?? "");
-    if (!project) return null;
-    if (!project.builtIn) own.add(project.id);
+    if (project && !project.builtIn) own.add(project.id);
   }
   const focused = input.focus === null ? undefined : byId.get(input.focus);
   const middle =

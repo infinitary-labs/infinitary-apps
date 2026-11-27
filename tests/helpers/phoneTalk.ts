@@ -1,4 +1,6 @@
 import type { Core } from "@core/index";
+import { JUDGEABLE_DELIVERY } from "@core/orchestrator/answerDelivery";
+import type { AskRecord } from "@core/storage/askStore";
 import { ANSWER_PROMPT_MARKER } from "../e2e/mockProvider";
 
 /** The captain's requests the talk parts read back from the test home as its writes. */
@@ -33,15 +35,27 @@ export function phoneTalkControls(
       observe({ check: "captain-turn-from-phone", result });
       return result;
     },
-    /** INF-6763's plan, part 3: the message with these words is saved, and taken back or not. */
+    /**
+     * INF-6763's plan, part 3: the message with these words is saved, and taken back or not. With `answered`, its
+     * answer is also judged (docs/task-capture.md, "Answer delivery") and the notice it got, if any, is up as a card,
+     * whose title the answer names: INF-7085's take-back step presses the message only once its own answer has landed.
+     */
     async ask(body: string) {
-      const want = JSON.parse(body) as { text: string; takenBack: boolean };
-      await until(() =>
-        asks().some(
+      const want = JSON.parse(body) as { text: string; takenBack: boolean; answered?: boolean };
+      const saved = () =>
+        asks().find(
           (ask) => ask.text === want.text && (ask.takenBackAt !== undefined) === want.takenBack,
-        ),
-      );
-      return { writes, lastTurn: await lastTurn() };
+        );
+      const notice = (ask: AskRecord | undefined) =>
+        core.services.supervisor.cards.snapshot().find((card) => card.id === ask?.noticeCardId);
+      const landed = (ask: AskRecord) =>
+        !JUDGEABLE_DELIVERY.includes(ask.delivery) &&
+        (ask.noticeCardId === null || notice(ask) !== undefined);
+      await until(() => {
+        const ask = saved();
+        return ask !== undefined && (!want.answered || landed(ask));
+      });
+      return { writes, lastTurn: await lastTurn(), notice: notice(saved())?.title ?? null };
     },
   };
 }

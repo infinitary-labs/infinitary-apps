@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-take-back-press-waits",
+      "reason": "Internal: the phone journey's take-back step presses the newest message only once its notice card has drawn, without changing app behavior."
+    }
+  ]
+}

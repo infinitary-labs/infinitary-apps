@@ -7,9 +7,9 @@ extension PhoneJourney {
     /// Data: three projects (tests/helpers/phoneProjectFilter.ts), each with its tasks, a tag and an Activity line, and
     /// one task in south-pier waiting on the captain.
     /// Completion: a pick in the Filter sheet narrows Tasks, its tag row and Activity to north-pier and shows the focus
-    /// row on every tab, counting the one task waiting elsewhere; a message sent then carries the project; a relaunch
-    /// keeps the focus; Shift-Command-P opens the sheet on the checked row and the arrows and Return pick; Escape closes
-    /// it; the row's × shows every project again.
+    /// row on every tab, counting the one task waiting elsewhere, whose pill opens the sheet again; a message sent then
+    /// carries the project; a relaunch keeps the focus; Shift-Command-P opens the sheet on the checked row and the
+    /// arrows and Return pick; Escape closes it; the row's × shows every project again.
     func testProjectFilter() async throws {
         try await launchJoined()
         let fixture = try await home("project-filter-fixture")
@@ -43,6 +43,12 @@ extension PhoneJourney {
         for index in 1..<3 { XCTAssertFalse(app.staticTexts[try field(index, "line")].exists, "Another project's line leaves") }
         XCTAssertTrue(app.otherElements["project-focus-row"].exists, "The focus row shows on every tab")
         picture("5-activity-focused")
+        // The pill opens Filter on the focused project's checked row.
+        tapOnPhone(app.buttons["project-focus-pill"])
+        XCTAssertTrue(row.waitForPresence(timeout: 10), "The pill opens Filter\n\(app.debugDescription)")
+        XCTAssertTrue(row.isSelected, "The focused project is the checked row")
+        tapOnPhone(app.buttons["close-project-filter"])
+        XCTAssertTrue(row.waitForAbsence(timeout: 10), app.debugDescription)
 
         // A message written while focused carries the project.
         tab("Home")

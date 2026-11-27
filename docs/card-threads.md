@@ -313,7 +313,8 @@ The cards shown while the first mate is down - its pause cards, its failed-turn 
 The reply is a captain turn about the card, so a paused seat keeps it exactly as it keeps a message typed in the main input: the words wait on the first mate's inbox under the card's ref, and the seat writes its saved line beside the message and in the feed (`docs/architecture.md` §16, "A paused seat").
 A failed turn's card keeps it the same way: the words wait for Retry or the next turn.
 While that reply waits for its answer, the host's own takedowns of the card wait too (`HostCardStack.withdraw`): the seat serving again, a move, a recovered sign-in or a clean turn leaves it up, across a restart as well, since the wait is the card's saved `awaiting`.
-The first mate's line that answers the reply signs the card off (`CardThreads.replyAs`), since a first mate that answers is no longer down: the captain's question is answered where they asked it, and a card the captain had seen stays on screen marked ended until they close it.
+The first mate's line that answers the newest reply signs the card off (`CardThreads.replyAs`), since a first mate that answers is no longer down; an answer to an earlier reply leaves the card up for the one after it.
+Once signed off, the captain's question is answered where they asked it, and a card the captain had seen stays on screen marked ended until they close it.
 
 A reply on a host card the first mate answers is a captain turn about the card, the same as a reply on a first mate card, and the first mate answers it with an `emit_card` reply naming the message (`CardThreads.firstmateAnswers`, `cardThreads.ts`).
 Words left in such a card's field when the captain presses one of its buttons reach the first mate once with the choice, as an app-carried choice does (`CardActions.carriedOut`), so the press never drops them.

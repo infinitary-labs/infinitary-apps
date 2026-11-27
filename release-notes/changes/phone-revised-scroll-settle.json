@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-revised-scroll-settle",
+      "reason": "The iPhone check that scrolls a revised card to its choices now stops at the card's end only when that end shows, so a swipe the simulator never delivered no longer fails it; nothing in the app changes."
+    }
+  ]
+}

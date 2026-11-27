@@ -62,7 +62,7 @@ Changing the starting levels is a commit to that file in the tap; a development 
 | Claude | the installed client's `supportedModels()` (`readClaudeModelCatalog`), checked for known-incomplete older metadata and an answer of aliases only, a one-shot under `claudeStoreLease` that **defers** while a crewmate session holds the store | `CLAUDE_MODELS` |
 | Codex, Grok | Pi's catalog (bundled plus the pi.dev overlay), filtered by the account's **own list**: `chatgpt.com/backend-api/codex/models?client_version=…` and `api.x.ai/v1/models`, read with the account's auth the way quota reads it, through the same bounded transport with a wider 8 MiB reply limit (a meter's is 64 KB; a list describing every model may run past that) | Pi's catalog, unfiltered |
 | Kimi Code | Pi's catalog (Kimi serves no list of its own) | - |
-| Copilot | Pi's catalog, which Pi itself narrows at sign-in to the models the account may use (it stores their ids with the sign-in) | - |
+| Copilot | Pi's catalog, which Pi itself narrows at sign-in to the models the account may use (it stores their ids with the sign-in), and keeps narrowed while the catalog refreshes | - |
 | OpenCode Go | Pi's catalog; OpenCode publishes its own list at `opencode.ai/inference/go/v1/models`, which pi.dev's overlay follows and the app does not read itself | - |
 | OpenRouter | Pi's catalog | - |
 
@@ -291,6 +291,7 @@ A reasoning effort the captain names for one task (`spawn_crewmate.shape.overrid
 ## Amazon Bedrock
 
 The built-in agent lists Claude offerings only after the connected Bedrock account can use them in its chosen AWS region.
+The account's runtime lists and serves only those checked models from the moment it is created, including while the catalog refreshes.
 A profile is resolved by the AWS SDK; a pasted key belongs to its own Bedrock account.
 An account sent through an organization's address checks and serves its models there (`docs/subscriptions-tab.md`, "Amazon Bedrock"); the models listed are still the Claude offerings the account can use in its region.
 Inherited AWS variables never offer Bedrock models on another account or the account-less agent.

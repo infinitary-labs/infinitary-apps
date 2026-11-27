@@ -1,0 +1,47 @@
+diff --git a/dist/core/model-runtime.js b/dist/core/model-runtime.js
+index b54a221e7465da093891e35886798fcd6257f997..5f327b4aafff4d8ce5457d9ff1974d23601e74b8 100644
+--- a/dist/core/model-runtime.js
++++ b/dist/core/model-runtime.js	
+@@ -183,9 +183,24 @@ export class ModelRuntime {
+         this.snapshot = {
+             ...this.snapshot,
+             all,
+-            available: all.filter((model) => this.snapshot.configuredProviders.has(model.provider)),
++            available: this.listedUntilChecked(all, this.snapshot.configuredProviders),
+         };
+     }
++    /**
++     * What a configured provider lists until its next availability check. A provider that narrows
++     * its own list (its filterModels, such as GitHub Copilot's ids stored at sign-in) keeps what its
++     * last check allowed, less the models gone from the catalog; listing all of it would widen the
++     * list for as long as a refresh or credential change runs. Any other provider lists all of its
++     * models, as its check would, and so does a provider just configured, which no check has
++     * narrowed yet.
++     */
++    listedUntilChecked(all, configuredProviders, justConfigured) {
++        const kept = new Set(this.snapshot.available.map((model) => `${model.provider}\0${model.id}`));
++        return all.filter((model) => configuredProviders.has(model.provider) &&
++            (model.provider === justConfigured ||
++                !this.models.getProvider(model.provider)?.filterModels ||
++                kept.has(`${model.provider}\0${model.id}`)));
++    }
+     async runAvailabilityRefresh(seq, errorSeq, signal) {
+         const providers = this.models.getProviders();
+         const [available, checks, credentials] = await Promise.all([
+@@ -650,6 +665,7 @@ export class ModelRuntime {
+     markProvisionallyConfigured(providerId, configuredStatus, type) {
+         if (!this.snapshot.storedProviders.has(providerId) && !configuredStatus?.configured)
+             return;
++        const justConfigured = this.snapshot.configuredProviders.has(providerId) ? undefined : providerId;
+         const configuredProviders = new Set(this.snapshot.configuredProviders).add(providerId);
+         const auth = new Map(this.snapshot.auth);
+         // Never clobber a real check result.
+@@ -659,7 +675,7 @@ export class ModelRuntime {
+             ...this.snapshot,
+             auth,
+             configuredProviders,
+-            available: this.snapshot.all.filter((model) => configuredProviders.has(model.provider)),
++            available: this.listedUntilChecked(this.snapshot.all, configuredProviders, justConfigured),
+         };
+     }
+     registerProvider(providerId, config) {

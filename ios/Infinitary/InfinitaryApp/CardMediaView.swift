@@ -163,19 +163,22 @@ private struct PassiveCardMedia: UIViewRepresentable {
     func updateUIView(_ view: WKWebView, context: Context) {
         context.coordinator.zoom = zoom
         context.coordinator.close = close
-        guard context.coordinator.source != source else { return }
+        // The page draws its own background, so a color theme picked while it shows loads it again in the new colors.
+        let theme = context.environment.phoneColorTheme
+        guard context.coordinator.source != source || context.coordinator.theme != theme else { return }
         context.coordinator.source = source
+        context.coordinator.theme = theme
         let drawing = zoom?.drawing == true
         let assets = context.coordinator.assets
         context.coordinator.loading?.cancel()
         context.coordinator.loading = Task { @MainActor in
             let shown = drawing ? await CardDrawing.withFaces(source, assets: assets) : source
             guard !Task.isCancelled else { return }
-            view.loadHTMLString(Self.page(shown, zoom: zoom), baseURL: nil)
+            view.loadHTMLString(Self.page(shown, zoom: zoom, theme: theme), baseURL: nil)
         }
     }
     /// Fitted at first: a drawing fills the screen, a picture never grows past its own pixels. Pinch runs from fitted to 8x.
-    private static func page(_ source: String, zoom: CardMediaZoom?) -> String {
+    private static func page(_ source: String, zoom: CardMediaZoom?, theme: String?) -> String {
         let escaped = source.replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(of: "\"", with: "&quot;").replacingOccurrences(of: "<", with: "&lt;")
         let element = "<img alt=\"Card picture\" src=\"\(escaped)\"\(zoom?.drawing == true ? " class=\"drawing\"" : "")>"
         let viewport = zoom == nil ? "width=device-width,initial-scale=1"
@@ -183,15 +186,18 @@ private struct PassiveCardMedia: UIViewRepresentable {
         return """
         <!doctype html><html><head><meta name="viewport" content="\(viewport)">
         <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data: app-frame://images app-frame://media; media-src 'none'; style-src 'unsafe-inline'; base-uri 'none'">
-        <style>html,body{margin:0;height:100%;background:\(css(.light))}@media(prefers-color-scheme:dark){html,body{background:\(css(.dark))}}html{touch-action:manipulation}body{display:flex;align-items:center;justify-content:center}img,video{max-width:100%;max-height:100%;object-fit:contain}img.drawing{width:100%;height:100%}</style>
+        <style>html,body{margin:0;height:100%;background:\(css(.light, theme))}@media(prefers-color-scheme:dark){html,body{background:\(css(.dark, theme))}}html{touch-action:manipulation}body{display:flex;align-items:center;justify-content:center}img,video{max-width:100%;max-height:100%;object-fit:contain}img.drawing{width:100%;height:100%}</style>
         </head><body>\(element)</body></html>
         """
     }
     /// The viewer's own background, drawn by the page itself: while zoomed, WebKit keeps a copy of the whole page drawn
     /// at the fitted size under the zoomed tiles, and a page with no background lets that stretched copy show through as
     /// a blurred second edge on every line and word.
-    private static func css(_ style: UIUserInterfaceStyle) -> String {
-        let color = UIColor(PhoneTheme.background).resolvedColor(with: UITraitCollection(userInterfaceStyle: style))
+    private static func css(_ style: UIUserInterfaceStyle, _ theme: String?) -> String {
+        let color = UIColor(PhoneTheme.background).resolvedColor(with: UITraitCollection {
+            $0.userInterfaceStyle = style
+            $0[PhoneColorThemeTrait.self] = theme
+        })
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
         color.getRed(&r, green: &g, blue: &b, alpha: &a)
         return "rgb(\(Int((r * 255).rounded())),\(Int((g * 255).rounded())),\(Int((b * 255).rounded())))"
@@ -202,6 +208,7 @@ private struct PassiveCardMedia: UIViewRepresentable {
     @MainActor final class Coordinator: NSObject, WKNavigationDelegate, UIGestureRecognizerDelegate {
         let assets: CardAssets
         var source: String?
+        var theme: String?
         var zoom: CardMediaZoom?
         var close: (() -> Void)?
         var loading: Task<Void, Never>?

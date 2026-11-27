@@ -1,5 +1,5 @@
 ---
-source: b50d1979307a8fc4
+source: 343fc510d10a179f
 title: iPhone과 iPad
 description: iPhone과 iPad용 Infinitary의 비공개 TestFlight 초대를 요청하고, 컴퓨터에 연결해 카드를 읽고 메시지를 보내세요.
 ---
@@ -53,6 +53,13 @@ iPhone과 iPad용 Infinitary는 비공개 TestFlight로 제공돼요.
 - **활동**은 일어난 일을 보여 주고, 가장 새로운 것이 맨 아래에 있어요.
 
 패널이 켜져 있으면 네 번째 탭인 **패널**에서 패널을 하나씩 아래로 이어서 보여 줘요.
+
+## 휴대폰만의 테마 {#your-phones-own-theme}
+
+iPhone이나 iPad의 설정 → 모양 → **테마**는 그 기기만의 설정이에요.
+**기기 설정**, **다크**, **라이트** 또는 컴퓨터에 있는 열세 가지 테마 중 하나를 만든 이가 붙인 이름 그대로 고르세요. **Dracula**, **Catppuccin Latte** 같은 것이 있어요.
+고르면 카드를 포함한 앱 전체의 색이 바로 바뀌고, Infinitary를 닫은 뒤에도 유지돼요.
+컴퓨터와 다른 기기는 각자의 테마를 유지해요.
 
 ## 펼친 폴더블 iPhone에서 카드 읽기 {#read-a-card-on-an-open-foldable-iphone}
 

@@ -1,5 +1,5 @@
 ---
-source: b50d1979307a8fc4
+source: 343fc510d10a179f
 title: iPhone e iPad
 description: Peça um convite privado do TestFlight para o Infinitary no iPhone e no iPad e depois conecte-se ao seu computador para ler cartões e enviar mensagens.
 ---
@@ -53,6 +53,13 @@ A barra superior tem **Início**, **Tarefas** e **Atividade**.
 - **Atividade** mostra o que aconteceu, com o mais recente embaixo.
 
 Quando seus painéis estão ativados, uma quarta aba, **Painéis**, mostra todos eles, um embaixo do outro.
+
+## O tema próprio do seu celular {#your-phones-own-theme}
+
+Ajustes → Aparência → **Tema** no seu iPhone ou iPad é só dele.
+Escolha **Dispositivo**, **Escuro**, **Claro** ou um dos treze temas do seu computador com o nome que o autor deu, como **Dracula** ou **Catppuccin Latte**.
+A escolha muda as cores do app inteiro na hora, cartões incluídos, e continua depois que o Infinitary fecha.
+Seu computador e seus outros dispositivos mantêm o próprio tema.
 
 ## Ler um cartão em um iPhone dobrável aberto {#read-a-card-on-an-open-foldable-iphone}
 

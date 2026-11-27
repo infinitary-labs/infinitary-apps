@@ -110,7 +110,7 @@ extension PhoneJourney {
         // The row by keys, on the Appearance page the pseudo-language opened (INF-4241 dropped a relaunch in English
         // for it): Theme holds focus as Appearance opens, the down arrow moves to Language and Return opens it.
         // As PhoneKeys owns, Xcode emits the physical Return for LF, not CR.
-        waitForSteadyTarget(app.segmentedControls["phone-theme"])
+        waitForSteadyTarget(phoneThemeTiles)
         app.typeKey(XCUIKeyboardKey.downArrow.rawValue, modifierFlags: [])
         app.typeKey("\n", modifierFlags: [])
         let settings = XCUIApplication(bundleIdentifier: "com.apple.Preferences")

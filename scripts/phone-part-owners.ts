@@ -45,6 +45,10 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/InfinitaryApp/Notices/swift-crypto-LICENSE.txt",
     "ios/Infinitary/InfinitaryApp/Notices/swift-crypto-NOTICE.txt",
     "ios/Infinitary/InfinitaryApp/PhoneAppearance.swift",
+    // INF-6888's part 3: the chosen color theme every part's window carries, and the Theme tiles in Settings.
+    "ios/Infinitary/InfinitaryApp/PhoneColorTheme.swift",
+    "ios/Infinitary/InfinitaryApp/PhoneThemeTiles.swift",
+    "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneColorThemes.generated.swift",
     "ios/Infinitary/InfinitaryApp/PhoneCardBodies.swift",
     "ios/Infinitary/InfinitaryApp/PhoneCardRow.swift",
     // The Maximize card control in every card head beside a side panel (PhoneCards.swift).

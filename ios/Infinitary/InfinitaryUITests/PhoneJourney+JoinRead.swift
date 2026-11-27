@@ -84,7 +84,7 @@ extension PhoneJourney {
         let computerSections = ["projects", "intelligence", "runbooks", "usage", "automation"].map { app.buttons["phone-settings-\($0)"] }
         for row in computerSections { XCTAssertTrue(row.waitForPresence(timeout: 20), app.debugDescription) }
         XCTAssertFalse(app.staticTexts["app-version"].exists, "Version content lives on General, not the list")
-        XCTAssertFalse(app.segmentedControls["phone-theme"].exists)
+        XCTAssertFalse(phoneThemeTiles.exists)
         XCTAssertFalse(app.buttons["leave"].exists, "Leave stays on Your computer's page, not the list")
         // The list starts on its first row, Your computer. As PhoneKeys owns, Xcode emits the physical Return for LF,
         // not CR. Unmodified keys have no BackBoard registration; send each physical key once and prove its result.
@@ -118,7 +118,7 @@ extension PhoneJourney {
         let device = UIDevice.current.userInterfaceIdiom == .pad ? "This iPad" : "This phone"
         XCTAssertTrue(app.staticTexts[device].waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertTrue(app.staticTexts["Conversation stays on your computer."].exists)
-        XCTAssertFalse(app.segmentedControls["phone-theme"].exists)
+        XCTAssertFalse(phoneThemeTiles.exists)
         tapOnPhone(app.buttons["close-phone-settings"])
         XCTAssertTrue(app.buttons["close-phone-settings"].waitForAbsence(timeout: 10))
         let settings = app.buttons["phone-settings"]
@@ -241,7 +241,7 @@ extension PhoneJourney {
     /// keyboard (the left arrow) follows the simulator's light again. Leaves Settings open, drawing light.
     /// Data: the join part's test home and its one card. Resources: this part's own simulator; no account or signing.
     func phoneTheme() async throws {
-        let theme = app.segmentedControls["phone-theme"]
+        let theme = phoneThemeTiles
         XCTAssertTrue(theme.waitForPresence(timeout: 10), app.debugDescription)
         try await appearances("phone-settings-appearance", showing: theme)
         let device = UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone"
@@ -249,7 +249,9 @@ extension PhoneJourney {
         // INF-4713: under Theme, one line names where the size of Infinitary's words is set, with no control of its own.
         XCTAssertEqual(app.staticTexts["phone-text-size"].label,
                        "Infinitary follows this \(device)'s Text Size. For Infinitary alone, use Text Size in Control Center.")
-        XCTAssertEqual(theme.buttons.allElementsBoundByIndex.map(\.label), ["Device", "Dark", "Light"])
+        // INF-6888's part 3: the built-in color themes follow Device, Dark and Light under their makers' names.
+        XCTAssertEqual(theme.buttons.allElementsBoundByIndex.map(\.label),
+                       ["Device", "Dark", "Light"] + Self.builtInThemes.map(\.name))
         XCTAssertTrue(theme.buttons["Device"].isSelected, "A new install matches the device")
         tapOnPhone(theme.buttons["Dark"])
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "selected == true"), object: theme.buttons["Dark"], timeout: 10), .completed)
@@ -272,6 +274,45 @@ extension PhoneJourney {
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "selected == true"), object: theme.buttons["Device"], timeout: 10),
                        .completed, "In Settings the left arrow moves the theme from Dark to Device")
         try drawn("phone-theme-device", dark: false)
+        try phoneColorThemes()
+    }
+
+    /// INF-6888's part 3, the computer's built-in themes in the computer's order, each with its base.
+    private static let builtInThemes: [(name: String, dark: Bool)] = [
+        ("Rosé Pine", true), ("Rosé Pine Moon", true), ("Rosé Pine Dawn", false), ("Catppuccin Latte", false),
+        ("Catppuccin Frappé", true), ("Catppuccin Macchiato", true), ("Catppuccin Mocha", true), ("One Dark", true),
+        ("One Light", false), ("Dracula", true), ("Night Owl", true), ("Night Owl Light", false), ("Tokyo Night", true),
+    ]
+
+    /// INF-6888's part 3: each built-in theme, tapped in turn on a light simulator, draws the whole screen on its own
+    /// base and redraws Settings in its own colors, even after a theme on the same base (Rosé Pine to Rosé Pine Moon).
+    /// Dracula then draws the home and its card; Device is chosen again. Leaves Settings open, drawing light.
+    private func phoneColorThemes() throws {
+        let theme = phoneThemeTiles, scope = app.staticTexts["phone-theme-scope"]
+        var shown = waitForRedraw(scope, from: nil)
+        for (name, dark) in Self.builtInThemes {
+            tapOnPhone(theme.buttons[name])
+            XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "selected == true"), object: theme.buttons[name], timeout: 10),
+                           .completed, "\(name) is chosen")
+            shown = waitForRedraw(scope, from: shown)
+            XCTAssertNotNil(shown, "Settings redraws in \(name)'s colors")
+            try drawn("phone-theme-" + name.lowercased().replacingOccurrences(of: " ", with: "-"), dark: dark)
+        }
+        tapOnPhone(theme.buttons["Dracula"])
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "selected == true"), object: theme.buttons["Dracula"], timeout: 10), .completed)
+        let close = app.buttons["close-phone-settings"]
+        tapOnPhone(close)
+        XCTAssertTrue(close.waitForAbsence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.staticTexts["Your phone is reading your Mac"].waitForPresence(timeout: 10), app.debugDescription)
+        try drawn("phone-theme-dracula-home", dark: true)
+        tapOnPhone(app.buttons["phone-settings"])
+        let appearance = app.buttons["phone-settings-appearance"]
+        XCTAssertTrue(appearance.waitForPresence(timeout: 10), app.debugDescription)
+        tapOnPhone(appearance)
+        XCTAssertTrue(theme.waitForPresence(timeout: 10), app.debugDescription)
+        tapOnPhone(theme.buttons["Device"])
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "selected == true"), object: theme.buttons["Device"], timeout: 10), .completed)
+        try drawn("phone-theme-device-again", dark: false)
     }
 
     /// The captain's Split at the fold switch by keys, on a simulator told at launch that it has seen a fold, as an open
@@ -287,7 +328,7 @@ extension PhoneJourney {
         let split = app.switches["phone-fold-split"]
         XCTAssertTrue(split.waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertEqual(split.value as? String, "1", "Split at the fold starts on")
-        waitForSteadyTarget(app.segmentedControls["phone-theme"])
+        waitForSteadyTarget(phoneThemeTiles)
         // As phoneTheme's arrow, each unmodified key is one actual input with visible-result proof, no wait or retry.
         app.typeKey(XCUIKeyboardKey.downArrow.rawValue, modifierFlags: [])
         app.typeKey(XCUIKeyboardKey.downArrow.rawValue, modifierFlags: [])
@@ -313,6 +354,6 @@ extension PhoneJourney {
         let appearance = app.buttons["phone-settings-appearance"]
         XCTAssertTrue(appearance.waitForPresence(timeout: 10), app.debugDescription)
         tapOnPhone(appearance)
-        XCTAssertTrue(app.segmentedControls["phone-theme"].waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(phoneThemeTiles.waitForPresence(timeout: 10), app.debugDescription)
     }
 }

@@ -53,6 +53,13 @@ The top bar has **Home**, **Tasks** and **Activity**.
 
 When your panels are on, a fourth tab, **Panels**, shows them one under another.
 
+## Your phone's own theme
+
+Settings → Appearance → **Theme** on your iPhone or iPad is its own.
+Choose **Device**, **Dark**, **Light** or one of your computer's thirteen themes under their makers' names, such as **Dracula** or **Catppuccin Latte**.
+A pick recolors the whole app at once, cards included, and stays after Infinitary closes.
+Your computer and your other devices keep their own theme.
+
 ## Read a card on an open foldable iPhone
 
 With **Split at the fold** on under Settings → Appearance, Infinitary folds the side panel while you read a card, leaving more room for the card.

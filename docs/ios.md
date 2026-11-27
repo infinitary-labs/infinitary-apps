@@ -465,9 +465,11 @@ Back goes one page back, from a page under a section to that section and from a 
 The list starts focused on its first row, Your computer; arrow keys move among the rows and Return or Space opens the focused section, with native keyboard focus on its controls.
 The row a key moves to scrolls into view where the list is longer than the sheet.
 Sections with nothing to show stay off the list, so Integrations shows once the computer answers its connections and the five computer pages show together once the computer has answered them; Your computer, always the first row, keeps the computer's name, reach, address and Leave or Forget.
-Theme is this device's own (`PhoneLook`, `PhoneAppearance`): Apple's segmented control worded Device, Dark and Light, like the computer's Dark and Light tiles, under a line saying it is set on this iPhone only (this iPad on an iPad) and the computer keeps its own.
+Theme is this device's own (`PhoneLook`, `PhoneAppearance`): one group of tiles like the computer's (`PhoneThemeTiles`), Device, Dark, Light and the computer's built-in color themes under their makers' names, each a small window in its own colors, under a line saying it is set on this iPhone only (this iPad on an iPad) and the computer keeps its own.
 It starts on Device, which follows iOS's own setting and its Automatic switching; Dark or Light sets the window's interface style, so every screen, sheet, the keyboard, the crew, card bodies and the picture viewer follow it at once.
-The choice is saved in the app's own defaults, never in the connection file, so it survives a relaunch, an update, Leave, Forget, Removed and joining another computer; a reinstall resets it.
+A built-in color theme sets its base as the window's interface style and its id as the window's color theme, so all of those follow it too (`docs/themes.md`, "On the phone").
+A tap applies the pick, and the left and right arrows move it from the group.
+The choice is saved in the app's own defaults under the key it always had, a built-in theme by the computer's id for it and an id this build does not know read as Device, never in the connection file, so it survives a relaunch, an update, Leave, Forget, Removed and joining another computer; a reinstall resets it.
 It never reaches the computer, and the computer's Theme never reaches the phone; asking the first mate to switch the theme still switches the computer's.
 Under Theme, Text size is one line naming where the size of Infinitary's words is set: the device's own Text Size, or Text Size in Control Center for Infinitary alone ("Text size", below); it offers no size of its own.
 Under Text size, Language names the language the phone speaks, in that language, and opens Infinitary's page in iOS Settings, where iOS sets it; the line above it says the computer keeps its own language, which the crew writes in (`docs/i18n.md`, "On the phone").
@@ -566,7 +568,7 @@ A record is an exact disc, ellipse or ring (a `Path(ellipseIn:)` read back from 
 Coverage is a pixel's exact area under each edge and colours stay sRGB-encoded and premultiplied, as Core Graphics blends them, with plus lighter as additive blending.
 A blurred layer, the busy halo, is drawn into a texture of its own at the resolution the Core Graphics pen chooses, blurred with the same three box passes each way and laid over its rectangle.
 The shaders are Metal source (`ScenePenShaders`) compiled once per process on the render thread, so the build needs no Metal toolchain.
-`ScenePenAgreementTests` draws fixed frames through both pens, every state, reaction, fidget and warp, the supernova's blast, the busy halo and the crowded scene in both themes, and requires at least 99.5% of pixels to agree within 4/255.
+`ScenePenAgreementTests` draws fixed frames through both pens, every state, reaction, fidget and warp, the supernova's blast, the busy halo and the crowded scene in Dark and Light, with each built-in color theme's states, reactions and resting crowd, and requires at least 99.5% of pixels to agree within 4/255.
 The main thread only hands the renderer what it shows (the roster, the state, the palette, the pan and the marks) and never waits for a frame.
 That display link requests the permitted screen cadence up to 120 frames per second, with the iPhone ProMotion opt-in, and 30 while Low Power Mode is on (`PhoneSceneRate`, INF-3851).
 The render thread reads Low Power Mode at each frame and changes the link's range only when the rate changes; iOS still chooses the delivered cadence under power and thermal constraints.
@@ -1581,7 +1583,7 @@ The release-tool tests exercise version validation, Apple readiness and processi
 They run in the existing Linux PR cohorts; no secret or signing access is needed.
 Set `INFINITARY_PHONE_RELEASE_EVIDENCE` to a folder outside the project to retain their non-secret command transcripts; the stand-in uploader's success is never proof of a real Apple upload.
 
-`node scripts/generate-phone-theme.ts` copies light/dark values, spacing and radii from the design skill into adaptive native colors and lengths.
+`node scripts/generate-phone-theme.ts` copies light/dark values, spacing and radii from the design skill into adaptive native colors and lengths, and writes each built-in color theme's palette as the computer works it out (`workOutTheme`), so the phone keeps no second copy of that math.
 It also writes the void into the `LaunchBackground` color asset that `Info.plist`'s launch screen names, because the system draws that screen before any Swift runs.
 The native TTF fonts are format-only conversions of the skill's Latin Space Grotesk and JetBrains Mono WOFF2 assets, retaining their original names and outlines.
 To regenerate them with FontTools and Brotli installed in a disposable Python environment, load each WOFF2 with `fontTools.ttLib.TTFont`, set `flavor = None`, and save it to the matching file under `InfinitaryApp/Fonts/`.

@@ -634,6 +634,66 @@ describe("a Linux test group's own confirm", () => {
   });
 });
 
+// Batch #135 held on a Mac journey and the Windows installer check, and its
+// failures job read the Windows check's log too, which names its test file
+// as Windows prints it, so it found no file and the Mac journey's confirm
+// never ran (INF-7101). The failures job reads the jobs of the checks it
+// waits for, the sweep, the critical path and the startup fixtures
+// (docs/testing.md, "The swept batch"); the Windows installer check and the
+// release notes check pass on their own, which no confirm of test files
+// stands in for (INF-4243's pick).
+describe("the failures job beside the Windows installer check", () => {
+  const mac = `${BATCH_PULL_CHECKS}Merge batch · Desktop checks / Merge batch · Desktop journeys (Mac; group 1/2)`;
+  const installed = `${BATCH_PULL_CHECKS}Merge batch · Windows installer / Merge batch · Install and run the Windows app (fresh Windows 11)`;
+  const notes = `${BATCH_PULL_CHECKS}Merge batch · Release notes and phone contract flag`;
+  // Each failed job's closing lines in batch #135's run.
+  const logs = {
+    [mac]: [
+      "2026-11-27T18:40:37.7079070Z   1 failed",
+      "2026-11-27T18:40:37.7079470Z     [desktop] › tests/e2e/one-computer-one-row.spec.ts:38:1 › a Mac joined twice keeps one row, and a Mac on the list twice folds into the row that runs its work while its window stays ",
+      "2026-11-27T18:40:37.7079780Z   201 passed (17.4m)",
+    ].join("\n"),
+    [installed]: [
+      "2026-11-27T18:41:13.2200682Z   1 failed\r",
+      "2026-11-27T18:41:13.2201330Z     tests\\windows\\installed-windows.spec.ts:294:1 › the Windows installer installs for this person, offers Git, starts the command through Task Scheduler, runs a crew turn, runs a home's work and removes cleanly \r",
+      "2026-11-27T18:41:13.4202060Z ##[error]Process completed with exit code 1.\r",
+    ].join("\n"),
+    [notes]: "2026-11-27T18:13:02.0000000Z ##[error]Process completed with exit code 1.\n",
+  };
+  const batch135: Scenario = {
+    github: pullRequest(rehearsal.branch),
+    needs: {
+      ...confirmedRun.needs,
+      "linux-tests": { result: "success" },
+      "windows-paths": { result: "success", outputs: { windows: "true" } },
+      windows: { result: "failure" },
+      // windows.yml's build: one round of the installer check, as the batch asks.
+      build: { result: "success", outputs: { rounds: "[1]" } },
+    },
+  };
+
+  it("confirms the sweep's failed files and reads no log of a check no confirm answers", async () => {
+    const jobs = jobsOf(batch135, [mac, installed, notes]);
+    expect(jobs.map((job) => job.name)).toEqual(expect.arrayContaining([mac, installed, notes]));
+    const asked: string[] = [];
+    expect(
+      await outputsOf((core) =>
+        failures({
+          github: githubOf(jobs, logs, asked),
+          context: { repo, runId: rehearsal.run },
+          core,
+        }),
+      ),
+    ).toEqual({
+      left: "confirm",
+      jobs: "Merge batch · Desktop checks / Merge batch · Desktop journeys (Mac; group 1/2)",
+      files: "tests/e2e/one-computer-one-row.spec.ts",
+      grouped: "passed",
+    });
+    expect(asked).toEqual([mac]);
+  });
+});
+
 // The check files of this repository's own version, as main's sort reads
 // them from its checkout of the pushed version.
 const checkFiles = await readCheckFiles(".");

@@ -40,6 +40,7 @@ import type { FmEvent } from "@shared/events";
 import { type HomeUpdate, homeUpdateSchema } from "@shared/homeUpdate";
 import { englishOf } from "@shared/i18n/said";
 import { PROTOCOL_VERSION, VIEW_FLOOR } from "@shared/ipc";
+import { checkOwnTheme, type OwnThemeAsk } from "@shared/ownColorThemes";
 import { pastEndingWords } from "@shared/pastCard";
 import { RISK_WORDS } from "@shared/risk";
 import { SECRET_ASK_CARD_WORDS, SECRET_DEVICE_WORDS } from "@shared/secrets";
@@ -99,6 +100,18 @@ import { raiseConversationCard, seedReplyReading, THREAD_WORDS } from "./replyRe
 import { startScriptedClient } from "./scriptedClient";
 import { bundleSqlProcess } from "./sqlProcessBundle";
 import { type SshServer, startSshServer } from "./sshServer";
+
+/** INF-6888's own-theme fixture: the old green terminal, as the first mate's trial wrote it from one sentence. */
+const OLD_TERMINAL: OwnThemeAsk = {
+  name: "Old terminal",
+  colors: {
+    background: "#020a03",
+    text: "#3ddc5a",
+    accent: "#8dff9c",
+    hot: "#ffd23d",
+    danger: "#ff5a4d",
+  },
+};
 
 /** INF-3881: the map part as the Advanced architecture runbook ships it, which a card copies whole. */
 const MAP_PART = readFileSync(
@@ -1252,6 +1265,23 @@ export async function startPhoneHome(
         case "POST panel-write":
           result = await panels.write(41);
           break;
+        // INF-7024: a person's own theme saved at the computer and removed again, which the phone lists under Yours.
+        case "POST own-theme-save": {
+          const checked = checkOwnTheme(OLD_TERMINAL);
+          if ("refusal" in checked) throw new Error(checked.refusal);
+          const look = await core.dispatch("inf:settings:appearance:get", []);
+          result = await core.dispatch("inf:settings:appearance:set", [
+            { ...look, ownColorThemes: [checked.theme] },
+          ]);
+          break;
+        }
+        case "POST own-theme-remove": {
+          const look = await core.dispatch("inf:settings:appearance:get", []);
+          result = await core.dispatch("inf:settings:appearance:set", [
+            { ...look, ownColorThemes: [] },
+          ]);
+          break;
+        }
         // The music on at the computer, which a panel reading settings.current shows.
         case "POST panel-music-on": {
           const look = await core.dispatch("inf:settings:appearance:get", []);

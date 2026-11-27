@@ -275,6 +275,43 @@ extension PhoneJourney {
                        .completed, "In Settings the left arrow moves the theme from Dark to Device")
         try drawn("phone-theme-device", dark: false)
         try await phoneColorThemes()
+        try await phoneOwnTheme()
+    }
+
+    /// INF-7024: an own theme saved at the computer reaches Settings, open on the phone, under Yours after the built-in
+    /// themes; picked, it draws the whole screen on its base and Settings' quiet words in the computer's worked-out
+    /// colors; removed at the computer, it leaves Yours and the pick goes back to its base, Dark. Device is chosen again.
+    /// Data: the join part's test home and INF-6888's old green terminal. Leaves Settings open, drawing light.
+    private func phoneOwnTheme() async throws {
+        let theme = phoneThemeTiles, scope = app.staticTexts["phone-theme-scope"], yours = app.staticTexts["phone-theme-yours"]
+        XCTAssertFalse(yours.exists, "No own theme shows no Yours")
+        _ = try await home("own-theme-save")
+        let terminal = theme.buttons["phone-theme-own-old-terminal"]
+        XCTAssertTrue(terminal.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(yours.label, "Yours")
+        XCTAssertEqual(theme.buttons.allElementsBoundByIndex.map(\.label),
+                       ["Device", "Dark", "Light"] + Self.builtInThemes.map(\.name) + ["Old terminal"])
+        XCTAssertLessThan(theme.buttons["Tokyo Night"].frame.maxY, yours.frame.minY, "Yours follows the built-in themes")
+        XCTAssertLessThanOrEqual(yours.frame.maxY, terminal.frame.minY)
+        // On an iPhone the built-in themes can fill the sheet, so Yours is brought up into view for its picture.
+        for _ in 0..<3 where !terminal.isHittable { theme.swipeUp(velocity: .slow) }
+        XCTAssertTrue(terminal.isHittable, app.debugDescription)
+        picture("phone-theme-yours")
+        let shown = waitForRedraw(scope, from: nil)
+        tapOnPhone(terminal)
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "selected == true"), object: terminal, timeout: 10), .completed)
+        _ = waitForRedraw(scope, from: shown)
+        // The computer's workOutTheme gives the old terminal's quiet words (--fg-2) #209a39 from its text #3ddc5a.
+        waitForInks("Old terminal", [(0x209a39, scope, 300, "Settings' quiet words")])
+        try drawn("phone-theme-old-terminal", dark: true)
+        _ = try await home("own-theme-remove")
+        XCTAssertTrue(terminal.waitForAbsence(timeout: 10), app.debugDescription)
+        XCTAssertFalse(yours.exists, "The last own theme removed takes Yours away")
+        XCTAssertTrue(theme.buttons["Dark"].isSelected, "A removed pick goes back to its base")
+        try drawn("phone-theme-own-removed", dark: true)
+        tapOnPhone(theme.buttons["Device"])
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "selected == true"), object: theme.buttons["Device"], timeout: 10), .completed)
+        try drawn("phone-theme-device-after-own", dark: false)
     }
 
     /// INF-6888's part 3, the computer's built-in themes in the computer's order: each one's base, and its background

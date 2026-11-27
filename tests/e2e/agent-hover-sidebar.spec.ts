@@ -100,9 +100,15 @@ async function placeTasks(page: Page, side: "left" | "right") {
   const across = side === "right" ? "left" : "right";
   await movePanelTo(page, "activity", { x: across, y: "top" });
   await movePanelTo(page, "now", { x: side, y: "top" });
-  await expect(page.locator(`[data-rail="${side}"] > [data-side-panel="now"]`)).toBeVisible();
   await expect(
-    page.locator(`[data-rail="${across}"] > [data-side-panel="activity"]`),
+    page.locator(
+      `[data-rail="${side}"] > [data-side-panel="now"][data-side-panel-placement-y="top"]`,
+    ),
+  ).toBeVisible();
+  await expect(
+    page.locator(
+      `[data-rail="${across}"] > [data-side-panel="activity"][data-side-panel-placement-y="top"]`,
+    ),
   ).toBeVisible();
 }
 

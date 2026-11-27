@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "hover-sidebar-journey-wait",
+      "reason": "The hover summary journey also waits for a sidebar that moves along the same side; no app behavior changes."
+    }
+  ]
+}

@@ -36,7 +36,7 @@ describe("CrewFacts.servesTurn", () => {
 
   it("does not read a policy notice alone as the crewmate still moving", async () => {
     const { supervisor, tasks, inbox, crewmate, ops, sorts, taskId } = await idleTask();
-    tasks.updateFields(taskId, { policies: { rigor: "careful" } }, "firstmate");
+    tasks.updateFields(taskId, { policies: { rigor: "reviewed" } }, "firstmate");
     const record = tasks.get(taskId);
     const policies = tasks.policiesOf(record);
     if (!record || !policies) throw new Error("The commissioned task has no policies");

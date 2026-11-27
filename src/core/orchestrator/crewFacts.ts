@@ -17,13 +17,6 @@ import { capWithOverflow } from "../overflow";
 import type { CrewStatusEntry } from "../pi/crewTools";
 import { LOCAL_MACHINE_ID } from "../session/session";
 import { INBOX_ATTEMPT_MAX, type InboxRow } from "../storage/inboxStore";
-
-/**
- * How long a lane row still witnesses a crewmate moving after it fell due
- * or was last tried: the honest retry's longest backoff, so a row waiting
- * it out always counts, while one the sweep left that long does not.
- */
-export const SERVABLE_BOUND_MS = 15 * 60_000;
 import type { TaskRecord } from "../storage/taskRecords";
 import { alreadyAllowed } from "../tasks/alreadyAllowed";
 import { hasStartQueueWait, queueWaitOf } from "../tasks/queueWait";
@@ -41,6 +34,13 @@ import type { PersonalBriefFacts } from "./intentBrief";
 import { reviewCoversHead } from "./reviewCarry";
 import { rowAttachments } from "./wakes";
 import { deliverableOf } from "./workShape";
+
+/**
+ * How long a lane row still witnesses a crewmate moving after it fell due
+ * or was last tried: the honest retry's longest backoff, so a row waiting
+ * it out always counts, while one the sweep left that long does not.
+ */
+export const SERVABLE_BOUND_MS = 15 * 60_000;
 
 /**
  * The crew's facts (docs/report-sort.md, docs/inbox.md): each task's crew

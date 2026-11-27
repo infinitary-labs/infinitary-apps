@@ -339,8 +339,7 @@ export class IdleLadder {
       captainGateOwed:
         gate?.kind === "captain" && !cardUp && !gateCardUp && !captainWait && !answerReady,
       deliverable:
-        this.host.runtime(taskId)?.turn.stage !== "stopped" &&
-        this.host.servesTurn(taskId, now),
+        this.host.runtime(taskId)?.turn.stage !== "stopped" && this.host.servesTurn(taskId, now),
       jobsRunning: this.jobInBound(taskId, now),
       pendingSettle: Boolean(record?.pendingSettle),
       // A due one is the sweep's, on this same tick: counting it until then

@@ -252,6 +252,8 @@ describe("the native gate on an affected request", () => {
     // INF-3563: the script the phone's Settings pages are built by, and the test home's accounts, rules and usage.
     "scripts/generate-phone-settings.ts",
     "tests/helpers/phoneSettings.ts",
+    // The task-list fixture owner must select its native consumers even when it changes alone.
+    "tests/helpers/phoneTaskFixtures.ts",
   ])("runs the actual workflow condition when %s changes", (path) => {
     expect(eligible(phoneDecision([path]).run)).toBe("true");
   });

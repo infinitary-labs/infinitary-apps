@@ -90,9 +90,9 @@ describe("the phone check's built test plan", () => {
 
 // INF-662 piece 2 (the captain's "Both at once, journey in parts"): the journey's four parts run
 // side by side, each from its own simulator, and every check the single journey made stays.
-// Every test the build has: Xcode 27.1's -enumerate-tests of the phone check's own build of the
-// scheme (INF-2625, which retired testCards, testJoinAndRecover and testTalkAndTasks from it), less the weak link
-// checks, which INF-4326 moved out of the app's build into a test target of the phone's package.
+// The scheme's compiled test names, recorded with test-without-building -enumerate-tests; this inventory names tests,
+// not a toolchain pin. INF-2625 retired testCards, testJoinAndRecover and testTalkAndTasks; INF-4326 moved the weak-link
+// checks out of the app's build into a test target of the phone's package.
 const everyTest: string[] = JSON.parse(
   readFileSync("tests/fixtures/phone-test-plan/xcode-27.1-tests.json", "utf8"),
 );

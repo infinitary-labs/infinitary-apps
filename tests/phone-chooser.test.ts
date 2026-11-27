@@ -792,6 +792,17 @@ describe("the approved phone-check cuts", () => {
     expect(phoneRepeatPlan(parts, reach).repeatParts).toEqual([]);
   });
 
+  it("selects only task-update parts when their standalone fixture changes", () => {
+    const path = "tests/helpers/phoneTaskFixtures.ts";
+    const expected = PHONE_PARTS.filter(
+      (part) => "test" in part && part.test.startsWith("testTaskList"),
+    ).map(({ name }) => name);
+    expect(expected.length).toBeGreaterThan(0);
+    expect(phoneFileOwners(path)).toEqual(expected);
+    const reach = partReach([path], "", [], () => undefined);
+    expect(requestedParts([path], reach).map(({ part }) => part)).toEqual(expected);
+  });
+
   it("keeps the owners of shared production files and refuses missing ownership", () => {
     const shared = "ios/Infinitary/InfinitaryApp/PhoneStyle.swift";
     const file = readFileSync(shared, "utf8");

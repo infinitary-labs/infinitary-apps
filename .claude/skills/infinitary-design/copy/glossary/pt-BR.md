@@ -75,6 +75,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | holds an override passes (named on a task's Activity) | asking first: a consulta prévia; the open decisions: as decisões em aberto; the waits: as esperas; the open parts: as partes em aberto; the checks: as verificações; the delivery proof: a prova de entrega; the saved story: a história salva; the heavy-run line: a fila de execuções pesadas; the cost limit: o limite de custo; a retired hold: uma retenção que não existe mais | Joined as one list in the reader's language on the line. |
 | How to get it (an ask for a secret) | Como obter | The heading over the steps a crewmate lays out for making or finding a secret. |
 | Infinitary | Infinitary | Never translated; masculine article: "o Infinitary". |
+| intake round (a docs site guide) | rodada de recepção | A scheduled task that reads new issues and pull requests and drafts replies; feminine: "a rodada". |
 | Intelligence | Inteligência | |
 | issue (where the project lives) | issue | As GitHub's Portuguese docs keep it; feminine: "Abrir a issue". |
 | join (the phone joins a computer) | conectar-se a |  |

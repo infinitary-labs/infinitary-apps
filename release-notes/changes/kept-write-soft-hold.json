@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "kept-write-soft-hold",
+      "kind": "feature",
+      "area": "crewmates",
+      "docsSite": [
+        "an-intake-round"
+      ],
+      "title": "A crewmate can post a reply you already allowed, with no card",
+      "body": "When a task that replies on your project, such as a comment on an issue, would wait for your click, it now posts the reply once with no card if a yes of yours still covers it: a direction you gave for that project, a yes on one of the task's cards, or words you gave for the task. The task's Activity quotes the words it rested on. A crewmate that reads words anyone can write, a change to another project and an integration's actions still ask you. The new guide An intake round shows how to answer new issues this way on a schedule.",
+      "noPicture": "The change skips an approval card rather than adding a new screen; its one new line sits in a task's existing Activity.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

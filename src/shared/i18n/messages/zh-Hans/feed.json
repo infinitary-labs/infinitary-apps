@@ -127,5 +127,8 @@
   "feedUndelivered": "消息未送达：{why}",
   "feedUnsafeDataReaderReported": "不安全数据读取者已汇报；内容在它的记录里。",
   "feedUpdated": "已更新：{text}",
+  "feedWriteNotSentOnWords": "根据你的话“{words}”，未将 {call} 发送到 {place}：{why}",
+  "feedWriteSentOnWords": "根据你的话“{words}”，已不经卡片将 {call} 发送到 {place} 一次：返回 {status}。",
+  "feedWriteUnknownOnWords": "根据你的话“{words}”，已不经卡片将 {call} 发送到 {place} 一次；结果未知，且不会再次发送。",
   "feedYouChose": "你选择了“{choice}”"
 }

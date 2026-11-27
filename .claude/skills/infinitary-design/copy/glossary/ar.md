@@ -85,6 +85,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | How to get it (an ask for a secret) | كيف تحصل عليه | The heading over the steps a crewmate lays out for making or finding a secret. |
 | Infinitary | Infinitary | Never translated, written in Latin letters inside the Arabic sentence. |
 | inspector | التفاصيل | The side pane that shows one entry. |
+| intake round (a docs site guide) | جولة الاستقبال | A scheduled task that reads new issues and pull requests and drafts replies; الاستقبال as a desk receives what arrives. |
 | Integrations | التكاملات | |
 | Intelligence | الذكاء | |
 | issue (where the project lives) | بلاغ | |

@@ -285,6 +285,7 @@ The home sends `secrets` on the same terms as `integrations`, and its transport 
 A placed card carries the optional `riskDeclaration`, `browserHandoff.signIn`, an action's `declines`, `asking`, `designOnly`, `continues`, `answering` and `request_write` effects, and a placed `check_change` the optional `pull`, `absentChecks` and `skipRules` declarations of a merge review.
 `PlacedToolFieldCoverage` (`src/core/session/tools.ts`) fails the build when a crewmate-declared top-level field of a card, of one of its actions or of its `browserHandoff`, `check_change`, knowledge read or knowledge record has no place in its work request; host-resolved card fields (`attachment`, `risk`) and the first mate's `taskId` and `reviewTaskId` are left out.
 A placed crewmate's `inf:work:read-workflow` may leave out `jobId` for the run's short read, which saves the home's run watch (`docs/forge.md`, "The run watch").
+A placed crewmate's `inf:work:github-write` may name an `allowance`, the captain's yes the write rests on, which the home checks (`docs/forge.md`, "A write that asks"); an older home drops the field and keeps the write for the captain's click.
 
 The read-only `inf:working-copy:revision` order reads a task's committed revision.
 `inf:working-copy:prepare` takes an optional exact `base`, whose `headSha` its answer must acknowledge, so a computer that ignores the base never starts a review at another commit.

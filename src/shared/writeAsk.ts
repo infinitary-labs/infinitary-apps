@@ -4,8 +4,10 @@ import type { ChangeRequestKind } from "./forgeKinds";
  * A write a crewmate asked to send where a project lives, kept on its task
  * until the captain's click sends it (FI3-1571 piece 4, `docs/forge.md`,
  * "A write that asks"): one outside the task's own project, any write of a
- * task that only answers but a run start or rerun on its own project, and
- * any write through the github.com sign-in.
+ * task that only answers or does an outside action but a run start or rerun
+ * on its own project, and any write through the github.com sign-in. One
+ * that named a yes still standing (`yes`) is kept already taken, and sent
+ * once without a click.
  * The host stores the exact call; the card names it by `id` and never
  * carries the call itself, so only what was stored is ever sent.
  */
@@ -42,6 +44,13 @@ export type ForgeWriteAsk = {
    * write, which its crewmate asks for on a card of its own.
    */
   card?: string;
+  /**
+   * The captain's yes the crewmate named as its allowance, which still stood
+   * when it was sent without a click (`docs/forge.md`, "A write that asks"):
+   * a heard project direction's `d:` id, a card on Already allowed, or
+   * `standing`. Absent on a write the captain's click sent.
+   */
+  yes?: string;
   at: number;
   /** When the captain's click took it, set before it was sent: it is never sent again. */
   sentAt?: number;

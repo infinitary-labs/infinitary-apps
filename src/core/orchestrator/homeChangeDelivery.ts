@@ -3,6 +3,7 @@ import { englishOf, saidLine } from "@shared/i18n/said";
 import { PULL_REQUEST_COMMENTS_WAKE } from "@shared/pullComments";
 import { noChecksSaid, repoConfiguredEvent } from "@shared/repos";
 import { pushBatch } from "../batches/combine";
+import type { StandingDirections } from "../knowledge/directions";
 import {
   type AppPaths,
   crewmateCardPicturesDir,
@@ -34,6 +35,7 @@ export function startHomeChangeDelivery({
   repos,
   forgeFor,
   accountForge,
+  directions,
   placed,
   paths,
   namingRule,
@@ -48,6 +50,8 @@ export function startHomeChangeDelivery({
   repos: RepoRegistry;
   forgeFor: ConstructorParameters<typeof WorkflowEvidenceService>[0]["forgeFor"];
   accountForge: ConstructorParameters<typeof GithubGatewayService>[0]["accountForge"];
+  /** The standing directions, whose heard captain-origin rows a kept write may name as its yes. */
+  directions: Pick<StandingDirections, "standing">;
   placed: Pick<PlacedSessions, "copies" | "bringBranchHome" | "checkedOut">;
   paths: AppPaths;
   namingRule: () => ReturnType<Runbooks["naming"]>;
@@ -156,6 +160,7 @@ export function startHomeChangeDelivery({
       later.supervisor().reportIntake.consumeValidationEffect(taskId, request, write),
     watchRun: (taskId, runId) => workflowEvidence.watchStarted(taskId, runId),
     now: ticker.now,
+    directions,
   });
   return { workflowEvidence, batches, changeDelivery, githubGateway };
 }

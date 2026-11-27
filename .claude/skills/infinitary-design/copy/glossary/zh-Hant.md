@@ -78,6 +78,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | How to get it (an ask for a secret) | 取得方法 | The heading over the steps a crewmate lays out for making or finding a secret. |
 | Infinitary | Infinitary | Never translated. |
 | inspector | 檢閱器 | The Knowledge pane that reads one entry, as Apple's Taiwan apps say. |
+| intake round (a docs site guide) | 受理輪次 | A scheduled task that reads new issues and pull requests and drafts replies; 受理 as an office takes in what arrives. |
 | Integrations | 整合 | Standard. |
 | Intelligence (Settings tab) | 智慧等級 | 智慧 is Taiwan's word for intelligence; 等級 says it is a level, not reasoning. |
 | issue (where the project lives) | 議題 | |

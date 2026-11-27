@@ -529,7 +529,7 @@ const BITBUCKET_READ_SCOPE =
   "Bitbucket API after /2.0: /repositories/{workspace}/{repo_slug}/..., with page size pagelen. Bitbucket Data Center: the path after the server's address, /rest/api/latest/projects/{KEY}/repos/{slug}/..., and build statuses under /rest/build-status/latest/commits/{commit}.";
 
 const GITHUB_WRITE_SCOPE =
-  "Your project: /repos/{owner}/{repo}/... on GitHub, /projects/<url-encoded group/name>/... on GitLab or /repositories/{workspace}/{repo_slug}/... on Bitbucket (/rest/api/latest/projects/{KEY}/repos/{slug}/... on Bitbucket Data Center). A shipping task sends writes at once, including workflows, other branches, settings and permissions; an answer task sends only run starts and reruns. Merges and default-branch moves or deletion are refused: use check_change pull and your merge card. Other writes (another project, account, organization, or a task without a project API) are kept with an ask id. Explain why on an emit_card action with {kind: request_write, ask}, beside Not now; only the captain's click sends it once, then you hear the answer.";
+  "Your project: /repos/{owner}/{repo}/... on GitHub, /projects/<url-encoded group/name>/... on GitLab or /repositories/{workspace}/{repo_slug}/... on Bitbucket (/rest/api/latest/projects/{KEY}/repos/{slug}/... on Bitbucket Data Center). A shipping task sends writes at once, including workflows, other branches, settings and permissions; an answer task sends only run starts and reruns. Merges and default-branch moves or deletion are refused: use check_change pull and your merge card. Other writes (another project, account, organization, or a task without a project API) are kept with an ask id. Explain why on an emit_card action with {kind: request_write, ask}, beside Not now; the captain's click, or a yes named in allowance, sends it once, then you hear the answer.";
 
 export const GITHUB_READ_TOOL = crewmateTool({
   name: "github_read",
@@ -563,6 +563,12 @@ export const GITHUB_WRITE_TOOL = crewmateTool({
     method: stringEnum(["POST", "PATCH", "PUT", "DELETE"]),
     path: Type.String(),
     body: Type.Optional(Type.String({ description: "The request's JSON text" })),
+    allowance: Type.Optional(
+      Type.String({
+        description:
+          "Only for a write your task would keep, on your own project or through the github.com sign-in: a yes still standing whose words cover it - a heard project direction's d: id, an Already allowed card, or standing. It then goes once with no card; the app checks only that the yes stands. Never for an unsafe data reader, an integration or another project.",
+      }),
+    ),
     file: Type.Optional(
       Type.String({
         description:

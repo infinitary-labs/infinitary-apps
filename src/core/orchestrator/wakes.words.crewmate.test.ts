@@ -332,7 +332,7 @@ const CASES: WordsCases<CrewmateOtherWakeKind> = {
         },
       },
       words:
-        "The captain's standing override on this task, recorded by the first mate: their words pass asking first for the rest of this task: \"merge it once it is green\". Where their words reach a consent ask of your own, such as their plan's allowance, they are that consent and you do not ask again; for a check that declares what it uses or a validation effect these words cover, name standing as the request's allowance. An effect still needs exact independent clearance. Keychain or signing access, writes outside the project and browser handoffs still ask. Only their words take it back.",
+        "The captain's standing override on this task, recorded by the first mate: their words pass asking first for the rest of this task: \"merge it once it is green\". Where their words reach a consent ask of your own, such as their plan's allowance, they are that consent and you do not ask again; for a check that declares what it uses, a validation effect or a write github_write would keep that these words cover, name standing as its allowance. An effect still needs exact independent clearance. Keychain or signing access, writes outside the project and browser handoffs still ask. Only their words take it back.",
     },
     {
       name: "taken back",
@@ -410,9 +410,9 @@ const CASES: WordsCases<CrewmateOtherWakeKind> = {
       },
       words: [
         "Already allowed, as the app recorded it from the captain's own words and clicks on this task:",
-        "- The captain's standing override on this task, recorded by the first mate: their words pass asking first for the rest of this task: \"merge it once it is green\". Where their words reach a consent ask of your own, such as their plan's allowance, they are that consent and you do not ask again; for a check that declares what it uses or a validation effect these words cover, name standing as the request's allowance. An effect still needs exact independent clearance. Keychain or signing access, writes outside the project and browser handoffs still ask. Only their words take it back.",
+        "- The captain's standing override on this task, recorded by the first mate: their words pass asking first for the rest of this task: \"merge it once it is green\". Where their words reach a consent ask of your own, such as their plan's allowance, they are that consent and you do not ask again; for a check that declares what it uses, a validation effect or a write github_write would keep that these words cover, name standing as its allowance. An effect still needs exact independent clearance. Keychain or signing access, writes outside the project and browser handoffs still ask. Only their words take it back.",
         '- The captain\'s yes on INF-2695 "Fix the sign-in check", whose work this is (card-1): "Use my account, on the card "Run the sign-in check on your account"". What it covers, as its card said it: "Signing in with the captain\'s own account for the sign-in check".',
-        "Where an ask of yours falls inside an entry, it is that consent: do not ask again. A write kept for their click, a browser handoff and anything no entry names still ask. Only the captain's words take an entry back.",
+        "Where an ask of yours falls inside an entry, it is that consent: do not ask again; for a write github_write would keep, name the entry's card as its allowance. A browser handoff and anything no entry names still ask. Only the captain's words take an entry back.",
       ].join("\n"),
     },
     {

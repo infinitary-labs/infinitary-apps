@@ -42268,6 +42268,98 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Updated: ${text}`;
   }
+  function feedWriteNotSentOnWords(input2) {
+    const call = input2.call;
+    const place = input2.place;
+    const why = input2.why;
+    const words2 = input2.words;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يُرسل ${call} إلى ${place} بناءً على كلماتك «${words2}»: ${why}`;
+      case "de":
+        return `${call} wurde auf deine Worte „${words2}“ hin nicht an ${place} gesendet: ${why}`;
+      case "es":
+        return `No se envió ${call} a ${place} según tus palabras «${words2}»: ${why}`;
+      case "fr":
+        return `Requête ${call} non envoyée à ${place} sur vos mots « ${words2} » : ${why}`;
+      case "ja":
+        return `あなたの言葉「${words2}」に基づく ${call} は ${place} に送信しませんでした：${why}`;
+      case "ko":
+        return `말씀하신 “${words2}”에 따른 ${call} 요청을 ${place}에 보내지 않았어요: ${why}`;
+      case "pt-BR":
+        return `${call} não foi enviado para ${place} com base nas suas palavras “${words2}”: ${why}`;
+      case "zh-Hans":
+        return `根据你的话“${words2}”，未将 ${call} 发送到 ${place}：${why}`;
+      case "zh-Hant":
+        return `依照你的話「${words2}」，未將 ${call} 傳送到 ${place}：${why}`;
+      case "en-XA":
+        return `[Ðîð ñöţ šéñð ${call} ţö ${place} öñ ýöûŕ ŵöŕðš “${words2}”: ${why} ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Did not send ‬${call}‮ to ‬${place}‮ on your words “‬${words2}‮”: ‬${why}`;
+    }
+    return `Did not send ${call} to ${place} on your words “${words2}”: ${why}`;
+  }
+  function feedWriteSentOnWords(input2) {
+    const call = input2.call;
+    const place = input2.place;
+    const status = input2.status;
+    const words2 = input2.words;
+    switch (currentLanguage()) {
+      case "ar":
+        return `أُرسل ${call} إلى ${place} مرة واحدة دون بطاقة، بناءً على كلماتك «${words2}»: جاء الرد ${status}.`;
+      case "de":
+        return `${call} einmal ohne Karte an ${place} gesendet, auf deine Worte „${words2}“ hin: Die Antwort war ${status}.`;
+      case "es":
+        return `Se envió ${call} a ${place} una vez, sin tarjeta, según tus palabras «${words2}»: respondió ${status}.`;
+      case "fr":
+        return `Requête ${call} envoyée une fois à ${place} sans carte, sur vos mots « ${words2} » : réponse ${status}.`;
+      case "ja":
+        return `あなたの言葉「${words2}」に基づき、カードなしで ${call} を ${place} に1回送信しました。応答は ${status} です。`;
+      case "ko":
+        return `말씀하신 “${words2}”에 따라 카드 없이 ${call} 요청을 ${place}에 한 번 보냈어요. 응답: ${status}`;
+      case "pt-BR":
+        return `${call} enviado uma vez para ${place} sem cartão, com base nas suas palavras “${words2}”: a resposta foi ${status}.`;
+      case "zh-Hans":
+        return `根据你的话“${words2}”，已不经卡片将 ${call} 发送到 ${place} 一次：返回 ${status}。`;
+      case "zh-Hant":
+        return `依照你的話「${words2}」，已不經卡片將 ${call} 傳送到 ${place} 一次：回應 ${status}。`;
+      case "en-XA":
+        return `[Šéñţ ${call} ţö ${place} öñçé ŵîţĥöûţ á çáŕð, öñ ýöûŕ ŵöŕðš “${words2}”: îţ áñšŵéŕéð ${status}. ~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Sent ‬${call}‮ to ‬${place}‮ once without a card, on your words “‬${words2}‮”: it answered ‬${status}‮.‬`;
+    }
+    return `Sent ${call} to ${place} once without a card, on your words “${words2}”: it answered ${status}.`;
+  }
+  function feedWriteUnknownOnWords(input2) {
+    const call = input2.call;
+    const place = input2.place;
+    const words2 = input2.words;
+    switch (currentLanguage()) {
+      case "ar":
+        return `أُرسل ${call} إلى ${place} مرة واحدة دون بطاقة، بناءً على كلماتك «${words2}»؛ نتيجته غير معروفة، ولن يُرسل مرة أخرى.`;
+      case "de":
+        return `${call} einmal ohne Karte an ${place} gesendet, auf deine Worte „${words2}“ hin – was daraus wurde, ist unbekannt, und es wird nie erneut gesendet.`;
+      case "es":
+        return `Se envió ${call} a ${place} una vez, sin tarjeta, según tus palabras «${words2}»; no se sabe qué pasó, y nunca se vuelve a enviar.`;
+      case "fr":
+        return `Requête ${call} envoyée une fois à ${place} sans carte, sur vos mots « ${words2} » ; on ne sait pas ce qu’il en est, et elle ne sera jamais renvoyée.`;
+      case "ja":
+        return `あなたの言葉「${words2}」に基づき、カードなしで ${call} を ${place} に1回送信しました。結果は不明で、再送信されることはありません。`;
+      case "ko":
+        return `말씀하신 “${words2}”에 따라 카드 없이 ${call} 요청을 ${place}에 한 번 보냈어요. 결과는 알 수 없고, 다시 보내지 않아요.`;
+      case "pt-BR":
+        return `${call} enviado uma vez para ${place} sem cartão, com base nas suas palavras “${words2}”; não se sabe o resultado, e ele nunca é enviado de novo.`;
+      case "zh-Hans":
+        return `根据你的话“${words2}”，已不经卡片将 ${call} 发送到 ${place} 一次；结果未知，且不会再次发送。`;
+      case "zh-Hant":
+        return `依照你的話「${words2}」，已不經卡片將 ${call} 傳送到 ${place} 一次；結果不明，且不會再次傳送。`;
+      case "en-XA":
+        return `[Šéñţ ${call} ţö ${place} öñçé ŵîţĥöûţ á çáŕð, öñ ýöûŕ ŵöŕðš “${words2}”; ŵĥáţ çáɱé öƒ îţ îš ûñķñöŵñ, áñð îţ îš ñéṽéŕ šéñţ áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Sent ‬${call}‮ to ‬${place}‮ once without a card, on your words “‬${words2}‮”; what came of it is unknown, and it is never sent again.‬`;
+    }
+    return `Sent ${call} to ${place} once without a card, on your words “${words2}”; what came of it is unknown, and it is never sent again.`;
+  }
   function feedYouChose(input2) {
     const choice = input2.choice;
     switch (currentLanguage()) {
@@ -118469,6 +118561,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     feedUndelivered,
     feedUnsafeDataReaderReported,
     feedUpdated,
+    feedWriteNotSentOnWords,
+    feedWriteSentOnWords,
+    feedWriteUnknownOnWords,
     feedYouChose,
     feedbackStripAccount,
     feedbackStripBug,
@@ -122219,6 +122314,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "feedUndelivered": ["why"],
     "feedUnsafeDataReaderReported": [],
     "feedUpdated": ["text"],
+    "feedWriteNotSentOnWords": ["call", "place", "why", "words"],
+    "feedWriteSentOnWords": ["call", "place", "status", "words"],
+    "feedWriteUnknownOnWords": ["call", "place", "words"],
     "feedYouChose": ["choice"],
     "feedbackStripAccount": ["login"],
     "feedbackStripBug": [],
@@ -136771,6 +136869,13 @@ ${FRAME_KEYBOARD_SCRIPT}
       restsOn: "record",
       name: "the model levels",
       way: "the captain places a model that can take it on a level in Settings, names one for the task, or adds a sign-in that serves one where it runs"
+    },
+    // i18n-exempt: hold words served to the agents in their soft-hold sentence, not shown to a person
+    "kept-write": {
+      level: "soft",
+      restsOn: "consent",
+      name: "the kept write",
+      way: "the captain clicks the button that sends it, or github_write names as its allowance a yes that still stands and covers it: a project direction heard from the captain by its d: id, a card on the task's Already allowed list, or standing for the captain's standing override"
     },
     "host-rules": {
       level: "fixed",

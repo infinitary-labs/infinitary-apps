@@ -1216,6 +1216,9 @@
 "feedUndelivered" = "메시지 전달 안 됨: %1$@";
 "feedUnsafeDataReaderReported" = "안전하지 않은 데이터 읽기 작업이 보고했습니다. 그 내용은 기록에 있습니다.";
 "feedUpdated" = "업데이트: %1$@";
+"feedWriteNotSentOnWords" = "말씀하신 “%4$@”에 따른 %1$@ 요청을 %2$@에 보내지 않았어요: %3$@";
+"feedWriteSentOnWords" = "말씀하신 “%4$@”에 따라 카드 없이 %1$@ 요청을 %2$@에 한 번 보냈어요. 응답: %3$@";
+"feedWriteUnknownOnWords" = "말씀하신 “%3$@”에 따라 카드 없이 %1$@ 요청을 %2$@에 한 번 보냈어요. 결과는 알 수 없고, 다시 보내지 않아요.";
 "feedYouChose" = "\"%1$@\" 선택함";
 "feedbackStripAccount" = "클릭하기 전에는 아무것도 보내지 않습니다. GitHub 계정 %1$@(으)로 게시됩니다.";
 "feedbackStripBug" = "새 문제 신고";

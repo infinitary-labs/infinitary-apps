@@ -70,6 +70,12 @@ export type GithubWriteInput = {
   validationEffect?: string;
   /** A regular file in the task's working copy, relative to it. Never a link. */
   file?: string;
+  /**
+   * The captain's yes the crewmate names for a write its task would keep for
+   * the captain's click (`docs/forge.md`, "A write that asks"): a heard
+   * project direction's `d:` id, a card on Already allowed, or `standing`.
+   */
+  allowance?: string;
 };
 
 /** A release file the gateway streams. The caller owns the stream until `upload` reads it. */

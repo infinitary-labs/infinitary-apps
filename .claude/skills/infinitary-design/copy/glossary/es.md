@@ -71,6 +71,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | holds an override passes (named on a task's Activity) | asking first: la consulta previa; the open decisions: las decisiones abiertas; the waits: las esperas; the open parts: las partes abiertas; the checks: las comprobaciones; the delivery proof: la prueba de entrega; the saved story: la historia guardada; the heavy-run line: la cola de ejecuciones pesadas; the cost limit: el límite de costo; a retired hold: una retención que ya no existe | Joined as one list in the reader's language on the line. |
 | How to get it (an ask for a secret) | Cómo conseguirlo | The heading over the steps a crewmate lays out for making or finding a secret. |
 | Infinitary | Infinitary | Never translated. |
+| intake round (a docs site guide) | ronda de recepción | A scheduled task that reads new issues and pull requests and drafts replies. |
 | Integrations, an integration | Integraciones, una integración | A Settings tab and each connection in it. |
 | Intelligence | Inteligencia | |
 | iOS Settings (the phone's own app) | Ajustes | Apple's name; the app's own Settings stays "Configuración". |

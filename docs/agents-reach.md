@@ -51,6 +51,9 @@ The corpus export's manifest counts them per hold kind in `rigor.overrides_by_ho
 - `replaces`: the time and holds of the override the task's record held when it was written, null when none stood or a take-back came between.
   One override stands on a task at a time, so a widened one counts again under each hold it repeats; `replaces` shows the repeat.
 
+A kept write passes its soft hold a second way, on a yes of the captain's that its crewmate named and that still stands (`docs/forge.md`, "A write that asks").
+The export counts those sends in `rigor.named_yes_sends_by_hold`, under `kept-write`: each kept write saved as sent with the yes it named, on any task, its outcome answered or unknown; one the host refused before sending is no send.
+
 A hold the captain's words pass often is the signal that it rests on a verdict: it should drop a level, or its judgment should go to the agent.
 
 ## The weekly audit
@@ -77,7 +80,7 @@ It runs five steps.
    For a limit or hold that stays, it checks that the agent can read it, that its refusal names the fact it rests on, and that a way out is typed beside it.
 4. **The counts.**
    It runs `node scripts/limits.ts --counts` for the baseline's size and names each baseline entry the window added with its pull request's reason.
-   It runs `pnpm export:corpus --out` into its own temporary folder, reads `manifest.json`'s `rigor.overrides_by_hold`, `rigor.overrides` and `rigor.metrics.hold_overrides`, and deletes the export.
+   It runs `pnpm export:corpus --out` into its own temporary folder, reads `manifest.json`'s `rigor.overrides_by_hold`, `rigor.overrides`, `rigor.named_yes_sends_by_hold` and `rigor.metrics.hold_overrides`, and deletes the export.
    It compares each count with the last audit's report, and reads the window's entries in `rigor.overrides` for which tasks passed each hold, by which route, and which overrides replaced one that named the same hold.
 5. **The answer.**
    Its card leads with the verdicts it found in code, each with its file, its line and the move it suggests, then the holds the captain's words passed most with the level each suggests, then the counts beside last week's, and what it could not read.
@@ -109,7 +112,7 @@ One with no project runs in an empty folder of its own, `crewmates/<taskId>/read
 - `github_read` reaches only its own project, through the project's own sign-in, and a reader with no project is refused every read and write there before any sign-in is chosen, never falling back to the github.com sign-in an ordinary task with no project uses; and every answer comes fenced whole under its host's label, `github-data`, `gitlab-data` or `bitbucket-data` (`readerFenceLabel`), the way Google's words are (`docs/integrations.md`, "Data from outside"), with a fresh fence each read.
   Fencing the whole answer, not only the words of authors who cannot write to the project, keeps the host from judging who is trusted.
   Its answer must reach the model whole, since its fence refuses the temporary folder a long answer is saved to: a listing past that length is read again at the largest page that fits (`smallerPage`), and an answer no page fits is refused with words on asking for less.
-- Every `github_write` it makes to its own project is kept, run starts included, and the host puts it on one approval card with a ticked row each, beside its kept integration calls ("A reader's writes" in `docs/forge.md`); a write anywhere else, a release file and a validation effect are refused and nothing is kept.
+- Every `github_write` it makes to its own project is kept, run starts included, whatever yes it names as its allowance (route A, the captain's pick on INF-6987), and the host puts it on one approval card with a ticked row each, beside its kept integration calls ("A reader's writes" in `docs/forge.md`); a write anywhere else, a release file and a validation effect are refused and nothing is kept.
 - `web_read` reads one public web page as text (`ReaderWebService`, `src/core/orchestrator/readerWeb.ts`), under "Web pages" below.
 - It writes no file, so its instructions name no evidence, temporary or card body folder: its card bodies go inline.
   It can never open an email's attachment or any other file an integration saves, and the first mate's `unsafe_data_reader` parameter says so, so a request that needs one starts an ordinary task.

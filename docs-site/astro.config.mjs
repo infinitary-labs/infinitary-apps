@@ -231,6 +231,7 @@ export default defineConfig({
             { slug: "subscriptions-and-quota" },
             { slug: "keyboard" },
             { slug: "automation" },
+            { slug: "an-intake-round" },
             { slug: "panels" },
             { slug: "your-other-computers" },
             { slug: "a-computer-with-no-screen" },

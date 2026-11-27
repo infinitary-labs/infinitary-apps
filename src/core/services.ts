@@ -765,6 +765,7 @@ export async function createServices(
     repos,
     forgeFor,
     accountForge: forges.accountForge,
+    directions: knowledge.directions,
     placed,
     paths,
     namingRule,
@@ -779,8 +780,7 @@ export async function createServices(
       projectContributions: () => projectContributions,
     },
   });
-  // The panels' own saved data (one plugin vehicle, Phase A), and how long
-  // each panel holds words from outside.
+  // The panels' own saved data (one plugin vehicle, Phase A) and how long each holds outside words.
   const personalStore = new PersonalStore(db);
   const panelOutside = new PanelOutsideData(paths.integrationsDir, personalStore);
   // The app's own task commands, the inbox's among them (docs/axi-commands.md).

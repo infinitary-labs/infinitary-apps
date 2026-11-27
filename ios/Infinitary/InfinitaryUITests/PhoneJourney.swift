@@ -173,10 +173,18 @@ import XCTest
 
     func reach(_ words: String, timeout: TimeInterval = 20) {
         let button = settingsButton
-        // Reading an absent button's value fails at once, so a join still under way is waited for first.
-        XCTAssertTrue(button.waitForPresence(timeout: timeout), app.debugDescription)
+        // Reading an absent button's value fails at once, so a join still under way is waited for first. While the
+        // keyboard is open Done stands in Settings' place, so the reach is read from the line under the bar alone.
+        let bar = app.buttons.matching(NSPredicate(format: "identifier IN %@", ["phone-settings", "dismiss-phone-keyboard"])).firstMatch
+        XCTAssertTrue(bar.waitForPresence(timeout: timeout), app.debugDescription)
+        let line = app.otherElements["reach-line"]
+        if !button.exists {
+            XCTAssertEqual(words, "Live", "With the keyboard open only Live, the line gone, can be read")
+            XCTAssertTrue(line.waitForAbsence(timeout: timeout), "Live, the line under the bar goes: \(app.debugDescription)")
+            return
+        }
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value ENDSWITH %@", " · " + words), object: button, timeout: timeout), .completed, app.debugDescription)
-        if words == "Live" { XCTAssertFalse(app.otherElements["reach-line"].exists, "Live, no line under the bar repeats it") }
+        if words == "Live" { XCTAssertFalse(line.exists, "Live, no line under the bar repeats it") }
     }
 
     /// Away past the app's background time (`INFINITARY_TEST_BACKGROUND_TIME`): the app closes its connection when it ends.

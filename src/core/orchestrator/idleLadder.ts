@@ -13,7 +13,7 @@ import { standingDependencyWaits } from "../tasks/dependencyWaits";
 import { builtOnRows } from "../tasks/taskQuery";
 import { TaskService } from "../tasks/taskService";
 import { cardEmitter } from "./cardEmit";
-import { type CarefulReviewOwed, carefulReviewOwed } from "./carefulReview";
+import { type CarefulReviewOwed, type CommittedVersion, carefulReviewOwed } from "./carefulReview";
 import type { CrewTurn } from "./crewTurn";
 import { crewHoldWays, idleStallWays } from "./holds";
 import { DependencySteers, type TaskWait } from "./idleDependencySteers";
@@ -190,7 +190,7 @@ export type IdleLadderHost = {
         crewmate: string;
         answeredAt?: number;
         failedAt?: number;
-        committedHead?: string;
+        committed?: CommittedVersion;
       }
     | undefined;
   hasRunningJobs?: (taskId: string) => boolean;
@@ -412,8 +412,15 @@ export class IdleLadder {
     return carefulReviewOwed({
       rigor: this.host.tasks.policiesOf(record)?.rigor.value,
       kind: record.shape?.kind,
-      committedHead: this.host.runtime(record.id)?.committedHead,
+      committed: this.host.runtime(record.id)?.committed,
       reviewOpen: this.reviewReading(record),
+      reviewStartedAt: this.host.tasks.graph
+        .children(record.id)
+        .filter((child) => child.shape?.kind === "review")
+        .reduce<number | undefined>(
+          (latest, child) => Math.max(latest ?? 0, child.createdAt),
+          undefined,
+        ),
       delivery: record.delivery,
     });
   }

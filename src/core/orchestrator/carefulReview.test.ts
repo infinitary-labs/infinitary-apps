@@ -79,6 +79,8 @@ describe("Careful work committed with no review open", () => {
 
   it("says nothing of it before the branch holds a commit of its own", async () => {
     const b = await builder();
+    // A branch with no commits of its own still names a version: the base it started on.
+    vi.mocked(b.h.workspace.branchHead).mockResolvedValue(HEAD);
     await b.report();
     expect(b.lastSort()?.rule).not.toBe("careful-unreviewed");
     expect(b.review()).toBeUndefined();
@@ -106,6 +108,33 @@ describe("Careful work committed with no review open", () => {
     await b.report();
     expect(b.lastSort()?.rule).not.toBe("careful-unreviewed");
     expect(b.review()).toBe(`review passed at ${head.slice(0, 7)}`);
+  });
+
+  it("says nothing of the version its last report read once a later version's review passed", async () => {
+    const b = await builder();
+    b.commit();
+    await b.report();
+    // Fix rounds that end in closing text read no version; the review passed at their last one.
+    seedDelivery(b.h.tasks, b.taskId, {
+      reviewVerdict: "pass",
+      reviewSha: "5d1f0e2c3b4a69788796a5b4c3d2e1f0a9b8c7d6",
+      reviewedAt: Date.now(),
+    });
+    expect(b.review()).toBe("review passed at 5d1f0e2");
+  });
+
+  it("says nothing of the version its last report read once a review of the task started since", async () => {
+    const b = await builder();
+    b.commit();
+    await b.report();
+    seedTask(b.h.tasks, {
+      id: "review-of-meter",
+      parentId: b.taskId,
+      title: "Review: Fix the meter test",
+      status: "cancelled",
+      shape: { kind: "review", kind_source: "host:review" },
+    });
+    expect(b.review()).toBeUndefined();
   });
 
   it("says nothing of it once the captain lowers the task to Default care", async () => {

@@ -6,6 +6,7 @@ import type { BackgroundJobName, ModelSession } from "../session/session";
 import type { TaskRecord } from "../storage/taskRecords";
 import type { ReportDeclaration } from "../tasks/taskTurns";
 import type { TaskWorkspace } from "../workspace/workspaceService";
+import type { CommittedVersion } from "./carefulReview";
 import type { HeldDirections } from "./crewDirections";
 import type { CrewmateSpec } from "./crewSession";
 import type { CrewTurn } from "./crewTurn";
@@ -191,11 +192,12 @@ export type TaskRuntime = {
   keptReportTold?: number;
   /**
    * The version a Careful builder's branch held commits of its own at when
-   * it last reported (`committedVersion`, INF-7116 fix 3): read by the
-   * report call once the report counts, so the sort at the turn's end stays synchronous. Kept in
-   * memory only; a restart forgets it until the next report.
+   * it last reported, and when (`ReportIntake.noteCommittedVersion`,
+   * INF-7116 fix 3): read by the report call once the report counts, so the
+   * sort at the turn's end stays synchronous. Kept in memory only; a
+   * restart forgets it until the next report.
    */
-  committedHead?: string;
+  committed?: CommittedVersion;
   /** The typed review this turn's report recorded (INF-1875): a reviewer's verdict, read at the turn's end. */
   turnReview?: Extract<KeptValidationInput, { kind: "review" }>;
   /** The phase owner carries input from preparation through its one exit. */

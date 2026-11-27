@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { connect, createServer as createTlsServer } from "node:tls";
 import { cardMessageSchema, cardSchema, cardThreadSchema, pastCardSchema } from "@shared/cards";
 import { ownChannel } from "@shared/codeNames";
-import { CONNECTION_CLOSE, REPLACED_PUSH_CHANNEL } from "@shared/connection";
+import { CONNECTION_CLOSE, REMOVAL_NOTICE, REPLACED_PUSH_CHANNEL } from "@shared/connection";
 import { SHARED_CARDS_SINCE } from "@shared/contractFeatures";
 import { parsePairingLink } from "@shared/devices";
 import { ENDED_CLOSE, ENDED_CORNER, endedLineWords } from "@shared/endedCard";
@@ -389,6 +389,34 @@ describe("the home's connection", () => {
     expect(a.pushes).toEqual([]);
     expect(at.asked).toEqual([]);
     await expect(connectClient(gone)).rejects.toThrow("refused: 401");
+  });
+
+  // INF-7084: a phone's socket loses the `unpaired` close when its own read is still being sent as the close arrives.
+  it("tells a removed device that lists removal-notice in a frame, and waits for it to close itself", async () => {
+    const at = await home({ removalGraceMs: 60_000 });
+    const gone = await at.join("view", "Phone");
+    const phone = await connectClient(gone, { changes: [REMOVAL_NOTICE] });
+    const kept = await connectClient(await at.join("view", "Mac"));
+
+    at.pairing.remove(gone.deviceId);
+    await phone.unpaired;
+    // A push made after Remove returns reaches only the device that stays.
+    changed(at.events);
+    await kept.push((push) => push.channel === "inf:models:changed");
+    expect(phone.pushes).toEqual([]);
+    // Its own close, which the home echoes, ends the connection; the home closed nothing first.
+    expect(await phone.close()).toBe(1005);
+    await expect(connectClient(gone)).rejects.toThrow("refused: 401");
+  });
+
+  it("closes a removed device that heard removal-notice as unpaired once it stays open past the grace", async () => {
+    const at = await home({ removalGraceMs: 50 });
+    const gone = await at.join("view", "Phone");
+    const phone = await connectClient(gone, { changes: [REMOVAL_NOTICE] });
+
+    at.pairing.remove(gone.deviceId);
+    await phone.unpaired;
+    expect(await phone.closed).toBe(CONNECTION_CLOSE.unpaired);
   });
 
   it("refuses a device removed while its connection was being admitted", async () => {

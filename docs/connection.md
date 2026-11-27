@@ -225,6 +225,11 @@ A device whose hello does not list the change is sent none; the phone lists it (
 | 4408 | `behind` | More than 32 MiB waits to be sent to it; it comes back with its cursor |
 | 1001 | `closing` | The home is quitting |
 
+A device whose hello lists `removal-notice` (`REMOVAL_NOTICE`, `src/shared/connection.ts`) hears `unpaired` as a frame, `{"t":"unpaired"}`, before any close.
+The outbox writes it right after the frame it is writing, which still ends whole, drops every frame not yet begun, and writes nothing after it.
+The device closes the connection itself on reading it; the home closes it as `unpaired` once the device answered for the frame and one second more passed (`removalGraceMs`), if it has not.
+A phone's socket loses a close that arrives while one of its own sends is still going, such as a read answering the frame before the removal, and reads that as a lost connection; a frame ahead of the close it always reads.
+
 Stopping a listening run stops accepting connections and forwarding pushes at once, then waits for every device socket to close before resolving.
 The close handshakes run concurrently, with one two-second grace for the whole run; any sockets still open at its end are terminated.
 This lets a connected view hear `closing` before the app exits or its SSH connections stop, rather than mistaking a quit for lost contact.

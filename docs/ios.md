@@ -180,7 +180,7 @@ Both choices live on Settings' Your computer page, opened from Settings, the top
 That button is the computer glyph, with a dot in the warning color at its corner only while the computer is out of reach, and VoiceOver reads the reach as its value; with one computer kept its name is on Your computer, not the bar, and with more than one the button names the computer shown.
 Out of reach, Your computer also offers Take over with each computer that keeps a copy of the record, as the welcome lists them, which asks one to take over after Face ID or the passcode (`PhoneTakeOverSection.swift`, `PhoneTakeOver.swift`; `docs/devices.md`, "Taking over from a phone").
 The phone then follows the home to the computer that took over by its higher number, and refuses the old home's lower number and a second home with the same number.
-A removal close or repeated authenticated refusal clears cards and feed and forgets that computer; with no other computer kept it offers joining with a new link on a screen shaped like the first one, with one prominent Join again.
+A removal close, or the removal frame before it (`removal-notice`, `docs/connection.md` "Closing"), or repeated authenticated refusal clears cards and feed and forgets that computer; with no other computer kept it offers joining with a new link on a screen shaped like the first one, with one prominent Join again.
 A failed address with no HTTP response does not erase an earlier authenticated refusal; a welcome or a different HTTP response does.
 Neither reconnection nor discovery queues or retries a mutation.
 

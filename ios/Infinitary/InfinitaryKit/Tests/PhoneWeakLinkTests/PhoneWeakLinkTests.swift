@@ -94,6 +94,8 @@ import XCTest
     }
 
     /// A phone joined to a fresh home whose welcome names no address of its own, so every dial goes through the relay.
+    /// INF-2975, INF-7084: a wait that fails throws before `finish`, and a session left running dials again under the
+    /// same phone key once the next check pairs it, into that check's dial count, so it stops even when its check fails.
     private func joined() async throws -> ReadOnlySession {
         _ = try await home("remove")
         _ = try await home("routing-reset")
@@ -106,8 +108,10 @@ import XCTest
         let transport = PinnedTransport(pin: link.pin, phone: phone, purpose: .pairing)
         defer { transport.close() }
         let mac = try await transport.pair(link, name: "Weak link test phone")
-        return ReadOnlySession(mac: JoinedMac(addresses: [through], pin: mac.pin, deviceID: mac.deviceID, name: mac.name),
-                               phone: phone)
+        let session = ReadOnlySession(mac: JoinedMac(addresses: [through], pin: mac.pin, deviceID: mac.deviceID, name: mac.name),
+                                      phone: phone)
+        addTeardownBlock { await session.stop() }
+        return session
     }
 
     private func finish(_ session: ReadOnlySession) async throws {
@@ -201,9 +205,6 @@ import XCTest
     /// that outlasts the phone's wait for a message is `testALongAnswerOnASlowLinkArrivesOnOneConnection`.
     func testASlowLinkReachesInReachAndStays() async throws {
         let measuring = try await joined()
-        // INF-2975: a wait that fails throws before `finish`, and a session left running redials into the next check's
-        // dial count, so each connection this check opens stops even when it fails.
-        addTeardownBlock { await measuring.stop() }
         let sizing = Watch(measuring)
         measuring.start()
         try await inReach(measuring, sizing, within: 30)
@@ -213,6 +214,7 @@ import XCTest
         _ = try await home("relay-thaw")
         // A phone with nothing read yet, so its catch-up is the whole record again.
         let session = ReadOnlySession(mac: measuring.mac, phone: try WeakLinkPhone.identity())
+        // This connection is not `joined`'s, so it stops on its own when the check fails.
         addTeardownBlock { await session.stop() }
         try await shape(bytesPerSec: max(1_000, size / 40), delayMs: 300)
         let watch = Watch(session)
@@ -524,7 +526,9 @@ import XCTest
 
     /// INF-6476: join-away's phone stayed Out of reach after its removal. The close arrived while the phone was still
     /// answering an earlier frame with a read, and that read's send, after the close, lost it. A computer stops
-    /// listening once its last phone is removed, so that close is the only way the phone hears it.
+    /// listening once its last phone is removed, so the phone hears it on this connection or not at all. INF-7084: a
+    /// read still being sent as the close arrived lost it too, even with a read waiting, so the computer says
+    /// `unpaired` in a frame first and the phone closes the connection itself.
     func testARemovalRightBehindAFrameThePhoneAnswersIsHeard() async throws {
         let session = try await joined()
         let watch = Watch(session)

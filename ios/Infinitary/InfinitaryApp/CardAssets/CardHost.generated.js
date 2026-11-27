@@ -142151,6 +142151,13 @@ ${startersHtml()}`;
       t: literal("parts"),
       bytes: number().int().positive().max(CONNECTION_MAX_FRAME_BYTES)
     }),
+    /**
+     * To a device whose hello listed `removal-notice`, once its pairing went:
+     * the last frame it is sent, in place of any not yet begun. It closes the
+     * connection itself; the home closes it as `unpaired` a second after the
+     * device answered for this frame, if it has not.
+     */
+    object({ t: literal("unpaired") }),
     ...resultFrameSchemas,
     invokeFrameSchema
   ]);

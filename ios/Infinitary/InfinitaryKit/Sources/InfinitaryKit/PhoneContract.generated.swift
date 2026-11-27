@@ -21,6 +21,7 @@ public enum PhoneContract {
     public static let cardDrafts = "card-drafts"
     public static let choiceAttachments = "choice-attachments"
     public static let catchUpShown = "catch-up-shown"
+    public static let removalNotice = "removal-notice"
     public static let draftQuietMs = 400
     public static let phonePush = "phone-push"
     public static let phonePushWithdraw = "phone-push-withdraw"

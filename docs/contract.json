@@ -563,6 +563,18 @@
           "properties": {
             "t": {
               "type": "string",
+              "const": "unpaired"
+            }
+          },
+          "required": [
+            "t"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "t": {
+              "type": "string",
               "const": "result"
             },
             "id": {

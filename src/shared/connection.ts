@@ -302,6 +302,15 @@ export const REPLACED_PUSH_CHANNEL = "inf:replaced";
  */
 export const CATCH_UP_SHOWN = "catch-up-shown";
 
+/**
+ * The contract change by which a device hears its removal as a frame
+ * (docs/devices.md, "Remove"): a device that lists it is sent `unpaired`
+ * when its pairing goes and closes the connection itself, since a phone's
+ * socket can lose the `unpaired` close when its own send is still going as
+ * the close arrives. A device that lists nothing hears only the close.
+ */
+export const REMOVAL_NOTICE = "removal-notice";
+
 /** A place in the numbered pushes: the journal's run and the last push seen. */
 export const connectionCursorSchema = z.strictObject({
   epoch: z.string().min(1).max(64),
@@ -549,6 +558,13 @@ export const homeFrameSchema = z.union([
     t: z.literal("parts"),
     bytes: z.number().int().positive().max(CONNECTION_MAX_FRAME_BYTES),
   }),
+  /**
+   * To a device whose hello listed `removal-notice`, once its pairing went:
+   * the last frame it is sent, in place of any not yet begun. It closes the
+   * connection itself; the home closes it as `unpaired` a second after the
+   * device answered for this frame, if it has not.
+   */
+  z.object({ t: z.literal("unpaired") }),
   ...resultFrameSchemas,
   invokeFrameSchema,
 ]);

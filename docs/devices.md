@@ -1467,6 +1467,7 @@ A device out of reach cannot tell the home, which lists it until the captain rem
 
 `inf:devices:remove` deletes the entry and writes the list, and forgets where a phone's cards are pushed (`docs/phone-push.md`).
 Before it returns, the connection has closed that device's every connection with `unpaired` (4401), and it drops any frame it reads afterwards from a device it no longer holds.
+A device whose hello lists `removal-notice`, as the phone's does, is told in a frame instead, and the close waits for it (`docs/connection.md`, "Closing").
 The device needs a new link, and a new key, to come back.
 When the last device goes and no link is open, the connection stops listening.
 

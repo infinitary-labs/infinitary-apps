@@ -80,6 +80,9 @@ Each way out sends the panel away without answering, keeping what was typed:
 
 The panel hides at once, the page sends its unsent drafts (`DraftSync.settle`), and the window is destroyed once it has, or after one second.
 Nothing ever brings the game or the main window forward: the game is still the front app, and a game that quit meanwhile stays gone.
+A click on the card can still make Infinitary the active app, although the panel is nonactivating (seen on macOS 26), and the game would then get no keys once the panel went.
+So when the card was clicked and the panel still has the keys as it goes, the panel hides Infinitary (`app.hide()`), which gives the activation back to the app behind it; an Infinitary window open on another desktop hides with it until Infinitary is opened again.
+A panel that lost the keys first went because the person moved to another app, Infinitary's own window included, and that app keeps them.
 
 A press while the page is still starting, or while it is letting go, does nothing.
 

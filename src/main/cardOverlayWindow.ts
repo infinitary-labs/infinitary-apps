@@ -103,6 +103,12 @@ export function startCardOverlay(options: CardOverlayWindowOptions): CardOverlay
     win.setAlwaysOnTop(true, "floating");
     // Until the pointer is over the card, the panel's clear area is the game's.
     win.setIgnoreMouseEvents(true, { forward: true });
+    // A press on the card can make Infinitary the active app although the panel is nonactivating
+    // (seen on macOS 26), and the game then has no keys once the panel goes.
+    let pressed = false;
+    win.webContents.on("before-mouse-event", (_event, mouse) => {
+      if (mouse.type === "mouseDown") pressed = true;
+    });
     const panel: OverlayPanel = {
       showWithKeys: () => {
         if (!win.isDestroyed()) win.show();
@@ -111,7 +117,13 @@ export function startCardOverlay(options: CardOverlayWindowOptions): CardOverlay
         if (!win.isDestroyed()) win.showInactive();
       },
       hide: () => {
-        if (!win.isDestroyed()) win.hide();
+        if (win.isDestroyed()) return;
+        const hadKeys = win.isFocused();
+        win.hide();
+        // Hiding the app gives the activation back to the app behind it, the game. A panel that
+        // lost the keys first went because the person moved to another app, Infinitary's own
+        // window included, which keeps it.
+        if (pressed && hadKeys) app.hide();
       },
       destroy: () => {
         if (!win.isDestroyed()) win.destroy();

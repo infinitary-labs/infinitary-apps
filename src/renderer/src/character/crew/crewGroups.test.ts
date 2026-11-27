@@ -162,8 +162,8 @@ describe("the stage grouped by project", () => {
     ]);
   });
 
-  // The captain's answer on the review of this build: the first mate's ring is
-  // named for the project sitting there, else it has no name.
+  // The captain's answer on the review of INF-6955's build: the first mate's
+  // ring is named for the project sitting there, else it has no name.
   it("names the first mate's ring for the middle project sitting there, and leaves it unnamed with none", () => {
     const labels = (model: ComputerOrbits) => {
       model.update(0, true);
@@ -181,6 +181,17 @@ describe("the stage grouped by project", () => {
     ]);
     const empty = stage(["web-home", "scratch-studio"], "shop");
     expect(labels(empty)).toEqual([]);
+    // The focused project is the middle one while two others have crew, but
+    // none of its own crew are on the stage, so nothing of it sits in the ring.
+    const docs = { id: "docs", name: "docs", builtIn: false };
+    const unseated = stage(["web-home", "shop-studio", "scratch-studio"], null, {
+      ...input("docs"),
+      projects: [...PROJECTS, docs],
+    });
+    expect(labels(unseated)).toEqual([
+      ["project:website", "website"],
+      ["project:shop", "shop"],
+    ]);
   });
 
   it("keeps an away computer's frozen group beside the project groups", () => {

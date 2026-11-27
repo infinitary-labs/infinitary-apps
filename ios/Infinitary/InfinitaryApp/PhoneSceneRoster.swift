@@ -155,7 +155,7 @@ struct PhoneSceneRoster {
         let ids = ["home"] + projectGroups + held.filter { $0 != "home" && !projectGroups.contains($0) }.sorted()
         let groupNames = Dictionary((plan?.plan.groups ?? []).map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
         // Grouped by project, the first mate's ring holds crew from every computer, so it takes the name of the middle
-        // project sitting there, or none, as the desktop's (the captain's answer on the review of this build).
+        // project sitting there, or none, as the desktop's (the captain's answer on the review of INF-6955's build).
         let middle = plan?.plan.middle.flatMap { id in (grouped["home"] ?? []).contains { $0.projectId == id } ? id : nil }
         let homeLabel = plan == nil ? homeName : middle.flatMap { id in board?.projects.first { $0.id == id }?.name } ?? ""
         computers = ids.map { id in

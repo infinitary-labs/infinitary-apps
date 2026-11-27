@@ -26,12 +26,16 @@ extension PhoneJourney {
         XCTAssertEqual(filter.value as? String, "All projects")
         XCTAssertFalse(app.otherElements["project-focus-row"].exists, "All projects: no focus row")
         // Home draws its crew scene only on an empty stage, so the home's note and south-pier's decision are put aside;
-        // the decision still waits on the captain, and its crewmate shows the light the focus sets.
+        // the decision still waits on the captain, and its crewmate shows the light the focus sets. The decision is put
+        // aside only once the stage has shown it and marked it seen, which also clears its new-card notice, so the order
+        // never depends on which comes first.
         let aside = app.buttons["put-aside-card"]
-        for _ in 0..<2 {
-            XCTAssertTrue(aside.waitForPresence(timeout: 10), app.debugDescription)
-            tapOnPhone(aside)
-        }
+        XCTAssertTrue(aside.waitForPresence(timeout: 10), app.debugDescription)
+        tapOnPhone(aside)
+        let decision = app.staticTexts.matching(NSPredicate(format: "identifier == 'card-title' AND label CONTAINS 'south pier'")).firstMatch
+        XCTAssertTrue(decision.waitForPresence(timeout: 10), "South-pier's decision takes the stage\n\(app.debugDescription)")
+        XCTAssertTrue(app.buttons["card-new"].waitForAbsence(timeout: 10), "The stage marks the decision seen\n\(app.debugDescription)")
+        tapOnPhone(aside)
         XCTAssertTrue(aside.waitForAbsence(timeout: 10), "Both cards are put aside\n\(app.debugDescription)")
         let crewmate = app.buttons["crew-task-project-filter-spr-0"]
         XCTAssertTrue(crewmate.waitForPresence(timeout: 20), "South-pier's waiting crewmate shows on Home\n\(app.debugDescription)")
@@ -48,7 +52,7 @@ extension PhoneJourney {
         XCTAssertTrue(row.waitForAbsence(timeout: 10), "A pick closes the sheet")
         focused(on: northName, elsewhere: 1)
         XCTAssertEqual(filter.value as? String, northName)
-        XCTAssertTrue(crewmate.exists, "Focused on north-pier, south-pier's crewmate stays on Home, in a quarter of its light")
+        XCTAssertTrue(crewmate.exists, "Focused on north-pier, south-pier's crewmate stays on Home")
         picture("3-home-focused")
 
         narrowed()
@@ -171,12 +175,6 @@ extension PhoneJourney {
         let list = app.scrollViews["tasks-list"]
         XCTAssertTrue(list.waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertFalse(app.buttons["task-project-filter-spr-0"].exists, "The task waiting in south-pier leaves")
-        // south-pier's waiting card raised a new-card notice, which floats over the top of Tasks until it is read or
-        // swiped (INF-589 item 6); left there, it takes the tap meant for the search field.
-        let notice = app.buttons["phone-notice"]
-        XCTAssertTrue(notice.waitForPresence(timeout: 10), app.debugDescription)
-        notice.swipeUp()
-        XCTAssertTrue(notice.waitForAbsence(timeout: 10), "A swipe puts the notice away\n\(app.debugDescription)")
         pullDownOnPhone(list)
         let search = app.textFields["task-search"]
         XCTAssertTrue(search.waitForPresence(timeout: 10), app.debugDescription)

@@ -5,8 +5,8 @@
       "kind": "fix",
       "area": "subscriptions",
       "title": "A connected subscription picks up newly published models while Infinitary stays open",
-      "body": "When a provider such as Codex published a new model after you connected its subscription, the model stayed missing until you quit and reopened Infinitary. Infinitary now checks for new models about every four hours while it stays open, on this Mac and on your other computers.",
-      "noPicture": "The model lists look the same; a newly published model now appears in them within about four hours instead of after a restart.",
+      "body": "When a provider such as Codex published a new model after you connected its subscription, the model stayed missing until you quit and reopened Infinitary. Infinitary now checks for new models about every four hours while it stays open, on this computer and on your other computers.",
+      "noPicture": "The model lists look the same; a newly published model now appears in them within hours instead of after a restart.",
       "provenance": { "origin": "change" }
     }
   ]

@@ -52,7 +52,11 @@ export type AccountStoreOptions = Omit<
  * app stays open. Pi skips a pi.dev request while the overlay it holds is
  * inside its window, counted from when the last answer arrived - up to
  * `MODEL_REFRESH_TIMEOUT_MS` after that pass began - so the pass runs a few
- * minutes past the window and finds every overlay due.
+ * minutes past the window and finds due every overlay the previous pass or
+ * the startup refresh checked. An overlay checked between passes, as a
+ * sign-in's refresh does, is still inside its window at the next pass and
+ * waits for the one after, so a model can take up to two periods to land.
+ * OpenRouter's catalog has no window: every pass asks for it.
  */
 export const CATALOG_REFRESH_EVERY_MS = PI_CATALOG_WINDOW_MS + 5 * 60 * 1000;
 

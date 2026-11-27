@@ -448,8 +448,11 @@ export class PiAccountBackend implements AccountBackend {
    * Asks pi.dev again for an account's catalog, through the same refresh its
    * runtime ran when it was created, and resolves once it settles, landed or
    * not. Pi skips the request while the overlay it holds is inside its own
-   * 4-hour window. A runtime still being created is skipped: creating it runs
-   * this refresh. Bedrock and custom connections take no pi.dev catalog.
+   * 4-hour window, except OpenRouter's: Pi narrows that catalog to the
+   * account's key and has no window for it, so every call asks pi.dev and
+   * OpenRouter's own model list again. A runtime still being created is
+   * skipped: creating it runs this refresh. Bedrock and custom connections
+   * take no pi.dev catalog.
    */
   refreshCatalog(account: Pick<AccountRef, "accountId" | "providerId">): Promise<void> {
     if (account.providerId === BEDROCK_PROVIDER_ID || isCustomApiProvider(account.providerId))

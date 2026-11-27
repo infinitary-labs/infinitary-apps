@@ -1,5 +1,5 @@
 ---
-source: 22ef5a500088606f
+source: b1df1c08a3c3c75f
 title: Integraciones
 description: Conecta GitHub, GitLab, Bitbucket, Google y servidores MCP para que tu primer oficial y tu tripulación puedan alcanzarlos, y elige lo que cada uno puede hacer sin preguntarte.
 ---
@@ -93,6 +93,7 @@ En esos dos últimos casos sigues con la sesión iniciada, y no hace falta volve
 En tu iPhone o iPad, la fila de Google se configura de la misma forma: eliges el archivo de cliente, o pegas su contenido.
 
 Con Google conectado, tu primer oficial y tu tripulación pueden buscar y leer tu correo, guardar un adjunto en la carpeta de una tarea, etiquetar o archivar un mensaje, redactar un mensaje y enviar uno.
+A partir del 1 de febrero de 2027, Google no deja que ningún agente de IA obtenga un archivo adjunto a un mensaje, así que desde entonces lo guardas tú desde Gmail.
 En Calendar pueden enumerar tus calendarios y eventos, leer un evento, encontrar horarios en los que todos están libres, y crear o actualizar un evento.
 Ninguna acción elimina un evento del calendario.
 
@@ -211,6 +212,8 @@ Una fila abierta los enumera marcados como **avisa**.
 - Gmail: **Llega un mensaje**.
 - Calendar: **Cambia un evento del calendario**.
 - Un servidor MCP que lo ofrezca: **Cambió un recurso**.
+
+Una automatización de Gmail sabe qué conversación recibió correo nuevo uno o dos minutos después de que llegue; leer el correo es un paso aparte, sobre el que Google puede preguntarte antes.
 
 Elige uno en **Cuando pasa algo**, en Automatización.
 Consulta [Automatización](/es/automation/#when-it-runs).

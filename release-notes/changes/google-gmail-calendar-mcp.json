@@ -5,7 +5,7 @@
       "kind": "improvement",
       "area": "settings",
       "title": "Gmail and Calendar go through Google's own servers for AI agents",
-      "body": "Infinitary now reaches Gmail and Calendar through Google's servers for AI agents. If you set up your Google client before this version, turn on Google's Gmail and Calendar services for agents: when the Google row says A Google service is off, press Open Google Cloud, turn them on, then choose Check now. New setups ask you to tick \"Use this client for an AI-powered agent\" and turn on Google's services for agents. When Google asks you to confirm a call, a card shows its question. Calendar automations check every 5 minutes, and removing Google deletes what your first mate and crew read from it.",
+      "body": "Infinitary now reaches Gmail and Calendar through Google's servers for AI agents. If you set up your Google client before this version, turn on Google's Gmail and Calendar services for agents: when the Google row says A Google service is off, press Open Google Cloud, turn them on, then choose Check now. When Google asks you to confirm a call, a card shows its question. A Gmail automation hears which conversation got new mail. Saving an attached file works until February 1, 2027. Calendar automations check every 5 minutes. Removing Google deletes what your first mate and crew read from it.",
       "picture": {
         "dark": "google-gmail-calendar-mcp-dark.webp",
         "light": "google-gmail-calendar-mcp-light.webp",

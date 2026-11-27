@@ -2,7 +2,8 @@
  * A stand-in Google for the Google integration's tests (INF-784): Google's
  * sign-in for an installed app (the consent page, the token endpoint with
  * PKCE, renewal and revocation), Gmail's profile, which the sign-in reads
- * the account from, and Google's Gmail and Calendar MCP servers
+ * the account from, an attached file's bytes from Gmail's own API, and
+ * Google's Gmail and Calendar MCP servers
  * (`googleMcpStandIn.ts`), on this computer, answering in the shapes Google
  * documents (the OAuth 2.0 guide for installed apps, Gmail's API reference,
  * and the MCP servers' own tool lists) and Google's error shape
@@ -24,6 +25,7 @@ import { createMcpHandler } from "@modelcontextprotocol/server";
 
 import { calendarStandIn } from "./calendarStandIn";
 import {
+  attachmentIdOf,
   calendarMcpServer,
   type GoogleMcpService,
   type GoogleMcpWorld,
@@ -332,6 +334,35 @@ export async function startGoogleStandIn() {
         messagesTotal: mail.size,
         threadsTotal: new Set([...mail.values()].map((entry) => entry.threadId)).size,
         historyId: "4812331",
+      });
+    }
+    const attachment = /^\/gmail\/v1\/users\/me\/messages\/([^/]+)\/attachments\/([^/]+)$/.exec(
+      url.pathname,
+    );
+    if (attachment) {
+      seen.push({
+        method: request.method ?? "",
+        path: url.pathname.replace("/gmail/v1/users/me", ""),
+        ...(request.headers.authorization ? { authorization: request.headers.authorization } : {}),
+        body,
+      });
+      const bearer = request.headers.authorization?.replace(/^Bearer /, "") ?? "";
+      if (!live.has(bearer)) return json(response, 401, UNAUTHENTICATED);
+      const wait = knobs.limited.shift();
+      if (wait !== undefined)
+        return json(
+          response,
+          429,
+          googleError(429, "Quota exceeded.", "rateLimitExceeded", "RESOURCE_EXHAUSTED"),
+          { "retry-after": wait },
+        );
+      const [, messageId, attachmentId] = attachment;
+      const file = mail.get(messageId ?? "")?.attachment;
+      if (!file || attachmentId !== attachmentIdOf(messageId ?? ""))
+        return json(response, 404, NOT_FOUND);
+      return json(response, 200, {
+        size: file.bytes.length,
+        data: file.bytes.toString("base64url"),
       });
     }
     if (request.method === "GET" && url.pathname === "/o/oauth2/v2/auth") {

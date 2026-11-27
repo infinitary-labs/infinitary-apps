@@ -10,6 +10,7 @@ import {
 import { fencedListReminder, fencedSpans, fenceReminder } from "@shared/outsideData";
 import { afterEach, describe, expect, it } from "vitest";
 import { SHOOT_EVENT, STUDIO_CALENDAR } from "../../../../../tests/helpers/calendarStandIn";
+import { attachmentIdOf } from "../../../../../tests/helpers/googleMcpStandIn";
 import {
   type GoogleStandIn,
   STAND_IN_ACCOUNT,
@@ -483,7 +484,7 @@ describe("Google as an integration", () => {
   // INF-2466, the captain's approved plan: "a Google integration action that
   // saves a Gmail attachment into the task's hand-over folder", with the
   // card-name answer "avoid rigid logic. let agents decide what's appropriate".
-  it("saves an attachment the captain approved into the task's folder byte for byte, from the whole message Gmail gives, answering only its name, type, size and path", async () => {
+  it("saves an attachment the captain approved into the task's folder byte for byte, from Gmail's own API by the id Gmail's MCP server names, answering only its name, type, size and path", async () => {
     const { google, tasks, integrations, reads } = await signedIn();
     const pdf = randomBytes(48_211);
     const fetched = google.deliver({
@@ -535,17 +536,16 @@ describe("Google as an integration", () => {
 
     const sent = await integrations.sendAsk("task-1", ask?.id ?? "");
     expect(sent.outcome).toEqual({ kind: "ran" });
-    // Gmail's MCP server gives an attachment only inside the whole message, as RFC 2822.
-    expect(
-      google
-        .calls("gmail")
-        .some(
-          (call) =>
-            call.tool === "get_message" &&
-            call.args.messageId === fetched &&
-            call.args.messageFormat === "RAW",
-        ),
-    ).toBe(true);
+    // Gmail's MCP server names the file and refuses a whole message that has one, so its
+    // bytes come from Gmail's own API, as the captain picked on INF-7017's plan-mismatch card:
+    // "Keep saving files through Gmail's own interface until February 1, 2027, then stop".
+    const asked_ = google.seen.slice(before);
+    expect(asked_.flatMap((entry) => (entry.tool ? [[entry.tool, entry.args]] : []))).toEqual([
+      ["get_message", { messageId: fetched, messageFormat: "FULL_CONTENT" }],
+    ]);
+    expect(asked_.flatMap((entry) => (entry.service ? [] : [entry.path]))).toEqual([
+      `/messages/${fetched}/attachments/${attachmentIdOf(fetched)}`,
+    ]);
     const saved = parsed(sent.answer ?? "");
     expect(saved).toEqual({
       name: "invoice-2214.pdf",
@@ -705,17 +705,19 @@ describe("Google as an integration", () => {
     }
     expect(new Set(fences).size).toBe(2);
 
-    // Its sender and subject reach a rule's first mate turn fenced too, with one line after the list.
+    // A rule's first mate turn hears only which conversation got mail, never the sender's
+    // words (the captain's pick B on INF-7017's plan-mismatch card), still fenced as Google's.
+    clock.now += 61_000;
     const { items } = await integrations.look("google", "message_received", start.cursor);
-    expect(items.map((item) => item.id)).toEqual([id]);
+    expect(items.map((item) => item.id)).toEqual([google.mail.get(id)?.threadId]);
     const [summary] = fencedSpans(items[0]?.summary ?? "");
     expect(summary).toMatchObject({
       label: GOOGLE_DATA_FENCE,
       closed: true,
-      words: `From ${steering.from}: ${broken(steering.subject)}`,
+      words: "New mail in a Gmail conversation",
     });
     expect(eventsWords(items).split("\n")).toEqual([
-      `- ${items[0]?.summary} (id ${id})`,
+      `- ${items[0]?.summary} (id ${items[0]?.id})`,
       fencedListReminder(GOOGLE_DATA_FENCE),
     ]);
 
@@ -790,88 +792,11 @@ describe("Google as an integration", () => {
     expect(answer.refused).toBe("invalid");
   });
 
-  it("tells each message that arrives in the inbox once, and starts again from now for another mailbox or a cursor from before Gmail's MCP server", async () => {
-    // INF-7012's approved plan: message_received reads Gmail's MCP server by polling search_threads.
-    const { google, clock, integrations } = await signedIn();
-    google.deliver({ from: "a@example.com", subject: "Already there", text: "x" });
-    const start = await integrations.look("google", "message_received", null);
-    expect(start.items).toEqual([]);
-
-    const first = google.deliver(ARRIVING);
-    const second = google.deliver({
-      from: "United Airlines <unitedairlines@news.united.com>",
-      subject: "",
-      text: "Your trip to Lisbon is coming up.",
-      labels: ["Label_7"],
-    });
-    const found = await integrations.look("google", "message_received", start.cursor);
-    expect(found.items.map((item) => ({ id: item.id, summary: outside(item.summary) }))).toEqual([
-      { id: first, summary: `From ${ARRIVING.from}: ${ARRIVING.subject}` },
-      {
-        id: second,
-        summary: "From United Airlines <unitedairlines@news.united.com>: (no subject)",
-      },
-    ]);
-    expect(found.resynced).toBeUndefined();
-    const again = await integrations.look("google", "message_received", found.cursor);
-    expect(again.items).toEqual([]);
-
-    // A reply joins its conversation, and still arrives once.
-    const reply = google.deliver({
-      from: ARRIVING.from,
-      subject: `Re: ${ARRIVING.subject}`,
-      text: "One more thing.",
-      threadId: first,
-    });
-    const replied = await integrations.look("google", "message_received", again.cursor);
-    expect(replied.items.map((item) => item.id)).toEqual([reply]);
-
-    // A message Gmail dates ahead of the app's clock arrives once, and one dated
-    // between the clock and it is not skipped for it.
-    const ahead = google.deliver({
-      from: "c@example.com",
-      subject: "Ahead",
-      text: "z",
-      at: clock.now + 60_000,
-    });
-    const early = await integrations.look("google", "message_received", replied.cursor);
-    expect(early.items.map((item) => item.id)).toEqual([ahead]);
-    const between = google.deliver({
-      from: "d@example.com",
-      subject: "Between",
-      text: "w",
-      at: clock.now + 1_000,
-    });
-    const late = await integrations.look("google", "message_received", early.cursor);
-    expect(late.items.map((item) => item.id)).toEqual([between]);
-
-    // A cursor an earlier version kept, a Gmail history id, starts again from now.
-    clock.now += 120_000;
-    const older = await integrations.look(
-      "google",
-      "message_received",
-      `4812331 ${STAND_IN_ACCOUNT}`,
-    );
-    expect(older).toMatchObject({ items: [], resynced: true });
-    const after = google.deliver({ from: "b@example.com", subject: "After", text: "y" });
-    expect(
-      (await integrations.look("google", "message_received", older.cursor)).items.map(
-        (item) => item.id,
-      ),
-    ).toEqual([after]);
-
-    // A cursor from another mailbox starts again from now.
-    const other = again.cursor.replace(STAND_IN_ACCOUNT, "someone.else@gmail.com");
-    expect(await integrations.look("google", "message_received", other)).toMatchObject({
-      items: [],
-      resynced: true,
-    });
-  });
-
   it("waits as long as Gmail asks when it answers 429, and looks again after", async () => {
     const { google, clock, integrations } = await signedIn();
     const start = await integrations.look("google", "message_received", null);
     const id = google.deliver(ARRIVING);
+    clock.now += 61_000;
     google.knobs.limited.push("30");
 
     await expect(integrations.look("google", "message_received", start.cursor)).rejects.toThrow(
@@ -887,7 +812,7 @@ describe("Google as an integration", () => {
 
     clock.now += 20_000;
     const found = await integrations.look("google", "message_received", start.cursor);
-    expect(found.items.map((item) => item.id)).toEqual([id]);
+    expect(found.items.map((item) => item.id)).toEqual([google.mail.get(id)?.threadId]);
   });
 
   it("renews the access before it runs out and after Google refuses it, and asks for a new sign-in only when Google refuses the lasting key", async () => {

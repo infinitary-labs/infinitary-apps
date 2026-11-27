@@ -37,9 +37,13 @@ export type GoogleEndpoints = {
   auth: string;
   token: string;
   revoke: string;
-  /** Gmail's API, before `/gmail/v1/`: only its profile, which names the account signed in. */
+  /**
+   * Gmail's API, before `/gmail/v1/`: its profile, which names the account
+   * signed in, and an attached file's bytes, which Gmail's MCP server never
+   * hands (`GMAIL_FILES_END`).
+   */
   gmail: string;
-  /** Gmail's MCP server, where every Gmail action and look goes. */
+  /** Gmail's MCP server, where every other Gmail action and the look go. */
   gmailMcp: string;
   /** Google Calendar's MCP server, where every Calendar action and look goes. */
   calendarMcp: string;

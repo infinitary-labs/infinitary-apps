@@ -19,7 +19,13 @@ import {
 } from "./calendar";
 import { GMAIL_SCOPE, GOOGLE_SCOPES, type GoogleClient, type GoogleEndpoints } from "./client";
 import { readGoogleClientFile } from "./clientFile";
-import { GMAIL_ACTIONS, GMAIL_MESSAGE_EVENT, lookForMail, runGmailAction } from "./gmail";
+import {
+  GMAIL_ACTIONS,
+  GMAIL_MESSAGE_EVENT,
+  type GmailFiles,
+  lookForMail,
+  runGmailAction,
+} from "./gmail";
 import {
   GoogleAsksToConfirm,
   type GoogleHeard,
@@ -53,7 +59,8 @@ import { type GoogleClientRecord, GoogleClientStore, GoogleSignInStore } from ".
  * below (INF-785): each renewal is a brokered use, and the captain's one
  * saved decision on the first covers every later one. The access key a renewal gives lives only in the app's
  * memory and goes on each request to Gmail's and Calendar's MCP servers
- * (`./mcp`), and on removal to tell Google to forget the sign-in. A renewal the captain did not allow,
+ * (`./mcp`), to Gmail's own API for an attached file (`GmailFiles`), and
+ * on removal to tell Google to forget the sign-in. A renewal the captain did not allow,
  * or let run out, is not asked again until the captain checks the row, signs in
  * again or the app starts again. The row has no key fields, since nothing
  * about it is pasted.
@@ -479,6 +486,53 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
   const gmail = mcpOf("gmail", options.endpoints.gmailMcp, "Gmail");
   const calendar = mcpOf("calendar", options.endpoints.calendarMcp, "Google Calendar");
 
+  /**
+   * One attached file from Gmail's own API, the one place that hands its
+   * bytes (`GmailFiles`), with the same access key; a key Gmail refuses is
+   * renewed once. Its refusal or failure is the call's alone: the row's
+   * health follows Gmail's MCP server, which every other call reaches.
+   */
+  const gmailFiles: GmailFiles = {
+    now: options.now,
+    attachment: async (message, attachment) => {
+      const fetchWith = async (token: string) => {
+        try {
+          return await fetchImpl(
+            `${gmailRoot}/messages/${encodeURIComponent(message)}/attachments/${encodeURIComponent(attachment)}`,
+            {
+              redirect: "error",
+              headers: { accept: "application/json", authorization: `Bearer ${token}` },
+              signal: timeout(),
+            },
+          );
+        } catch {
+          throw new Error("Could not reach Gmail.");
+        }
+      };
+      const token = await key("Gmail");
+      let response = await fetchWith(token);
+      if (response.status === 401) {
+        const fresh = await renewed(token);
+        if (fresh) response = await fetchWith(fresh);
+      }
+      const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+      if (response.ok && typeof body.data === "string") return Buffer.from(body.data, "base64url");
+      if (response.status === 429) {
+        const after = retryAfter(response.headers.get("retry-after"), options.now());
+        if (after !== undefined) waitUntil = options.now() + after;
+        throw new Error(
+          `Gmail asked the app to slow down${after !== undefined ? ` for ${Math.ceil(after / 1000)} seconds` : ""}.`,
+        );
+      }
+      // i18n-exempt: words served to the crew, which stay English
+      const said = errorOf(body).message ?? `status ${response.status}`;
+      // i18n-exempt: words served to the crew, which stay English
+      if (response.ok || response.status < 500)
+        throw new GoogleToolRefused(`Gmail refused the file: ${said}`);
+      throw new Error(`Gmail failed (${said}).`);
+    },
+  };
+
   /** Let go of both MCP connections and what they were refused: the sign-in they spoke for is gone. */
   const letGo = async () => {
     refusals.clear();
@@ -833,7 +887,7 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
       return answered(() =>
         CALENDAR_ACTIONS.some((spec) => spec.name === action)
           ? runCalendarAction(calendar.tools(confirmed), record.account, action, input)
-          : runGmailAction(gmail.tools(confirmed), action, input),
+          : runGmailAction(gmail.tools(confirmed), action, input, gmailFiles),
       );
     },
     look: async (_id, event, cursor, filter) => {

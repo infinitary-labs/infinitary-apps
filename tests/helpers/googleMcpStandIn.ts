@@ -10,8 +10,14 @@
  * up to 50 conversations a page, each with up to five of its messages; a
  * message's addresses are plain, with display names beside them; Calendar
  * lists at most 250 events a page, from now to seven days ahead when no
- * time is given; a tool Google asks the person about first answers
- * `input_required` with Google's own `approval_choice` form, and
+ * time is given; search's `THREAD_VIEW_IDS_ONLY` gives each conversation's
+ * id alone, and `after:` and `before:` take a day or seconds since 1970,
+ * holding and leaving out that day or second; a message with a file is
+ * refused `RAW`, as Gmail refused it live, and hands its file's bytes only
+ * through Gmail's own API (`googleStandIn.ts`); a tool Google asks the
+ * person about first answers
+ * `input_required` with Google's own `approval_choice` form, except a search
+ * for ids alone, which Google answered live without asking, and
  * `DENY_ONCE`, a decline or a cancel answers `UserDeniedAction` as an
  * error. What `MINIMAL` holds is not documented: the stand-in gives every
  * field but the bodies.
@@ -200,6 +206,9 @@ export function rawOf(mail: StandInMail): string {
   return Buffer.from(lines.join("\r\n"), "utf8").toString("base64url");
 }
 
+/** Gmail's id for a message's file, which Gmail's own API takes to hand its bytes. */
+export const attachmentIdOf = (messageId: string) => `ANGjdJ_${messageId}`;
+
 type Format = "MINIMAL" | "PLAIN_TEXT" | "FULL_CONTENT" | "METADATA_ONLY" | "RAW";
 
 /** One message in Gmail's MCP shape, by its format. */
@@ -241,7 +250,7 @@ function messageOf(mail: StandInMail, format: Format = "PLAIN_TEXT") {
               filename: mail.attachment.name,
               mimeType: mail.attachment.type,
               partId: "1",
-              id: `ANGjdJ_${mail.id}`,
+              id: attachmentIdOf(mail.id),
             },
           ],
         }
@@ -262,7 +271,9 @@ function matches(mail: StandInMail, query: string | undefined): boolean {
       if (!mail.from.toLowerCase().includes(value)) return false;
     } else if (field === "after" || field === "before") {
       const [year, month, day] = value.split("/").map(Number);
-      const at = Date.UTC(year ?? 0, (month ?? 1) - 1, day ?? 1);
+      const at = /^\d+$/.test(value)
+        ? Number(value) * 1000
+        : Date.UTC(year ?? 0, (month ?? 1) - 1, day ?? 1);
       if (field === "after" ? mail.internalDate < at : mail.internalDate >= at) return false;
     } else {
       const words = `${mail.from} ${mail.to} ${mail.subject} ${mail.text ?? ""}`.toLowerCase();
@@ -374,10 +385,24 @@ export function gmailMcpServer(world: GoogleMcpWorld): McpServer {
         pageSize: z.number().int().min(1).max(THREADS_A_PAGE).optional(),
         pageToken: z.string().optional(),
         includeTrash: z.boolean().optional(),
+        view: z
+          .enum([
+            "THREAD_VIEW_UNSPECIFIED",
+            "THREAD_VIEW_MINIMAL",
+            "THREAD_VIEW_METADATA_ONLY",
+            "THREAD_VIEW_SUMMARY",
+            "THREAD_VIEW_IDS_ONLY",
+          ])
+          .optional(),
       }),
       annotations: { readOnlyHint: true },
     },
-    async ({ query, pageSize, pageToken }) => {
+    async ({ query, pageSize, pageToken, view }, context) => {
+      const idsOnly = view === "THREAD_VIEW_IDS_ONLY";
+      if (!idsOnly) {
+        const stop = approval(world, "search_threads", context, "Read these conversations?");
+        if (stop) return stop;
+      }
       const threads = new Map<string, StandInMail[]>();
       for (const mail of [...world.mail.values()].sort((a, b) => a.internalDate - b.internalDate))
         threads.set(mail.threadId, [...(threads.get(mail.threadId) ?? []), mail]);
@@ -394,11 +419,15 @@ export function gmailMcpServer(world: GoogleMcpWorld): McpServer {
       return text({
         ...(page.length
           ? {
-              threads: page.map(([id, messages]) => ({
-                id,
-                messageCount: messages.length,
-                messages: messages.slice(0, 5).map((mail) => messageOf(mail, "MINIMAL")),
-              })),
+              threads: page.map(([id, messages]) =>
+                idsOnly
+                  ? { id }
+                  : {
+                      id,
+                      messageCount: messages.length,
+                      messages: messages.slice(0, 5).map((mail) => messageOf(mail, "MINIMAL")),
+                    },
+              ),
             }
           : {}),
         ...(from + size < found.length ? { nextPageToken: String(from + size) } : {}),
@@ -425,9 +454,15 @@ export function gmailMcpServer(world: GoogleMcpWorld): McpServer {
       }),
       annotations: { readOnlyHint: true },
     },
-    async ({ messageId, messageFormat }) => {
+    async ({ messageId, messageFormat }, context) => {
       const mail = find(messageId);
       if (!mail) return refused("Requested entity was not found.");
+      if (messageFormat === "RAW" && mail.attachment)
+        return refused(
+          "RAW format is not supported for messages with attachments or non-body parts.",
+        );
+      const stop = approval(world, "get_message", context, "Read this message?");
+      if (stop) return stop;
       return text(messageOf(mail, (messageFormat ?? "PLAIN_TEXT") as Format));
     },
   );
@@ -438,11 +473,13 @@ export function gmailMcpServer(world: GoogleMcpWorld): McpServer {
       inputSchema: z.strictObject({ threadId: z.string(), messageFormat: format }),
       annotations: { readOnlyHint: true },
     },
-    async ({ threadId, messageFormat }) => {
+    async ({ threadId, messageFormat }, context) => {
       const messages = [...world.mail.values()]
         .filter((mail) => mail.threadId === threadId)
         .sort((a, b) => a.internalDate - b.internalDate);
       if (messages.length === 0) return refused("Requested entity was not found.");
+      const stop = approval(world, "get_thread", context, "Read this conversation?");
+      if (stop) return stop;
       return text({
         id: threadId,
         messageCount: messages.length,

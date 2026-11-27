@@ -446,11 +446,15 @@ describe("words from outside in saved conversations", () => {
     };
     await tick();
     w.google.deliver(LENA);
+    // A look counts mail a minute old, which Gmail's search holds.
+    await tick();
     await tick();
     const [saved] = w.store.list();
     if (!saved) throw new Error("No saved rule");
     const [run] = w.scheduler.history(saved.id);
-    expect(run?.events?.[0]?.summary).toContain(LENA.subject);
+    // The rule hears which conversation got mail, in words fenced as Google's.
+    const told = "New mail in a Gmail conversation";
+    expect(run?.events?.[0]?.summary).toContain(told);
     // A run the first mate handled keeps its closing words, which may quote the event.
     const [earlier] = w.store.waiting(saved.id);
     if (!earlier) throw new Error("No waiting run");
@@ -462,7 +466,7 @@ describe("words from outside in saved conversations", () => {
       found: `New mail: ${run?.events?.[0]?.summary}`,
     });
     const [delivered] = w.inbox.allFor(FIRSTMATE_RECIPIENT);
-    expect(delivered && renderWake(delivered)).toContain(LENA.subject);
+    expect(delivered && renderWake(delivered)).toContain(told);
 
     const seat = (await w.service.call({ kind: "firstmate" }, "Google", "read_message", { id }))
       .text;
@@ -483,14 +487,14 @@ describe("words from outside in saved conversations", () => {
     const [after] = w.scheduler.history(saved.id);
     expect(after?.events?.[0]).toMatchObject({ id: run?.events?.[0]?.id });
     expect(after?.events?.[0]?.summary).toBe(NOTE);
-    expect(after?.prompt).not.toContain(LENA.subject);
+    expect(after?.prompt).not.toContain(told);
     expect(after?.found).toBe(`New mail: ${NOTE}`);
     expect(w.store.carried(saved.id)).toEqual(new Set([run?.events?.[0]?.id]));
     // Its message, still waiting for the first mate's next turn, carries the note too.
     const [waiting] = w.inbox.allFor(FIRSTMATE_RECIPIENT);
     if (!waiting) throw new Error("The rule's delivery is not waiting");
     expect(renderWake(waiting)).toContain(NOTE);
-    expect(renderWake(waiting)).not.toContain(LENA.subject);
+    expect(renderWake(waiting)).not.toContain(told);
     expect(w.reads.due(w.clock.now)).toEqual([]);
   });
 

@@ -1,5 +1,5 @@
 ---
-source: 22ef5a500088606f
+source: b1df1c08a3c3c75f
 title: Integrações
 description: Conecte GitHub, GitLab, Bitbucket, Google e servidores MCP para que seu imediato e sua tripulação possam alcançá-los, e escolha o que cada um pode fazer sem perguntar a você.
 ---
@@ -93,6 +93,7 @@ Nesses dois últimos casos, você continua com o login feito, e nada precisa ser
 No seu iPhone ou iPad, a configuração pela linha do Google é feita do mesmo jeito: você escolhe o arquivo de cliente ou cola o conteúdo dele.
 
 Com o Google conectado, seu imediato e sua tripulação podem buscar e ler seus e-mails, salvar um anexo na pasta de uma tarefa, marcar ou arquivar uma mensagem, escrever um rascunho e enviar uma mensagem.
+A partir de 1º de fevereiro de 2027, o Google não deixa nenhum agente de IA buscar um arquivo anexado a uma mensagem; a partir daí, você mesmo o salva pelo Gmail.
 Na Agenda, eles podem listar suas agendas e eventos, ler um evento, encontrar horários em que todos estão livres e criar ou atualizar um evento.
 Nenhuma ação exclui um evento da agenda.
 
@@ -211,6 +212,8 @@ Uma linha aberta lista esses avisos marcados com **avisa**.
 - Gmail: **Chega uma mensagem**.
 - Agenda: **Um evento da agenda muda**.
 - Um servidor MCP que ofereça isso: **Um recurso mudou**.
+
+Uma automação do Gmail fica sabendo qual conversa recebeu e-mail novo um ou dois minutos depois que ele chega; ler o e-mail é uma etapa à parte, sobre a qual o Google pode perguntar a você antes.
 
 Escolha um em **Quando algo acontece**, em Automação.
 Veja [Automação](/pt-br/automation/#when-it-runs).

@@ -92,6 +92,7 @@ In those last two, you stay signed in, and nothing needs to be set up again.
 On your iPhone or iPad, the Google row sets up the same way: you choose the client file, or paste what it holds.
 
 With Google connected, your first mate and crew can search and read your mail, save an attachment into a task's folder, label or archive a message, draft a message and send one.
+From February 1, 2027, Google lets no AI agent fetch a file attached to a message, so from then on you save one from Gmail yourself.
 In Calendar they can list your calendars and events, read an event, find times when everyone is free, and create or update an event.
 No action deletes a calendar event.
 
@@ -210,6 +211,8 @@ An open row lists these marked **tells**.
 - Gmail: **A message arrives**.
 - Calendar: **A calendar event changes**.
 - An MCP server that offers it: **A resource changed**.
+
+A Gmail automation hears which conversation got new mail, a minute or two after it arrives; reading the mail is a step of its own, which Google may ask you about first.
 
 Choose one under **When something happens** in Automation.
 See [Automation](/automation/#when-it-runs).

@@ -1,5 +1,5 @@
 ---
-source: 22ef5a500088606f
+source: b1df1c08a3c3c75f
 title: Integrationen
 description: Verbinde GitHub, GitLab, Bitbucket, Google und MCP-Server, damit dein erster Offizier und deine Crew sie erreichen, und lege fest, was jede Integration ohne Rückfrage tun darf.
 ---
@@ -93,6 +93,7 @@ In diesen beiden letzten Fällen bleibst du angemeldet, und nichts muss neu eing
 Auf deinem iPhone oder iPad richtest du die Verbindung in der Google-Zeile genauso ein: Du wählst die Client-Datei aus oder fügst ihren Inhalt ein.
 
 Mit verbundenem Google können dein erster Offizier und deine Crew deine Mails durchsuchen und lesen, einen Anhang im Ordner einer Aufgabe speichern, eine Nachricht beschriften oder archivieren, eine Nachricht entwerfen und eine senden.
+Ab dem 1. Februar 2027 lässt Google keinen KI-Agenten mehr eine an eine Nachricht angehängte Datei abrufen; von da an speicherst du sie selbst aus Gmail.
 Im Kalender können sie deine Kalender und Termine auflisten, einen Termin lesen, Zeiten finden, zu denen alle frei sind, und einen Termin anlegen oder ändern.
 Keine Aktion löscht einen Kalendertermin.
 
@@ -211,6 +212,8 @@ Eine geöffnete Zeile listet diese mit der Markierung **meldet**.
 - Gmail: **Eine Nachricht kommt an**.
 - Kalender: **Ein Kalendertermin ändert sich**.
 - Ein MCP-Server, der es anbietet: **Eine Ressource hat sich geändert**.
+
+Eine Gmail-Automatisierung erfährt ein bis zwei Minuten nach dem Eingang, welche Unterhaltung neue Mail bekommen hat; die Mail selbst zu lesen ist ein eigener Schritt, zu dem Google dich vorher fragen kann.
 
 Wähl eines unter **Wenn etwas passiert** in der Automatisierung.
 Siehe [Automatisierung](/de/automation/#when-it-runs).

@@ -19,6 +19,7 @@ import {
   CALENDAR_ACTIONS,
   CALENDAR_CHANGED_EVENT,
   GMAIL_MESSAGE_EVENT,
+  GMAIL_NEW_MAIL,
   GOOGLE_DATA_FENCE,
 } from "../../src/core/integrations";
 import { NOTICE_WORDS } from "../../src/core/orchestrator/noticeWakes";
@@ -60,12 +61,12 @@ import { focusOn, pressKey, runFromSearch, typeInto } from "./windowKeys";
  *   opens Google's consent page in the browser and says to finish there; once the browser
  *   comes back the Google row shows who it is signed in as, with its Gmail
  *   all actions asking; a rule listening for "A message
- *   arrives" then reaches the first mate with the message that arrived;
+ *   arrives" then reaches the first mate naming the conversation that got it;
  *   the delete in Settings → Integrations' Data section, by keys (the
  *   captain: "maybe all data deletion stuff gets put into another "Data"
  *   section at the bottom of the integrations tab"), then puts a note where
- *   its sender and subject were in the first mate's saved conversation and
- *   the rule's run, and the conversation stays (INF-952: "A person can
+ *   Gmail's words were in the first mate's saved conversation and the
+ *   rule's run, and the conversation stays (INF-952: "A person can
  *   delete the Gmail and Calendar content Infinitary saved without purging
  *   every task").
  * - Data: the stand-in Google (`tests/helpers/googleStandIn.ts`), answering
@@ -589,18 +590,19 @@ test("one Google sign-in from Settings by keys, and a message arriving fires a r
       )
       .not.toBeNull();
 
-    const from = "Lena Ortiz <lena@ortiz-studio.com>";
-    const subject = "Invoice 2214 for the October shoot";
-    const id = stand.deliver({
-      from,
-      subject,
+    const message = stand.deliver({
+      from: "Lena Ortiz <lena@ortiz-studio.com>",
+      subject: "Invoice 2214 for the October shoot",
       text: "Hi Ada, the invoice for the October shoot is attached.",
     });
-    await expect.poll(() => seen.turns.length, { timeout: 30_000 }).toBe(1);
-    // INF-951: the sender and subject anyone can write arrive fenced as data from outside.
+    const id = stand.mail.get(message)?.threadId ?? "";
+    // A look counts mail a minute old, which Gmail's search holds, so the turn comes a minute on.
+    await expect.poll(() => seen.turns.length, { timeout: 120_000 }).toBe(1);
+    // The rule hears which conversation got mail, never the sender's words (the captain's
+    // pick on INF-7017's plan-mismatch card), fenced as data from outside (INF-951).
     const [span] = fencedSpans(seen.turns[0] ?? "");
     expect(span).toMatchObject({ label: GOOGLE_DATA_FENCE, closed: true });
-    const summary = fenced(`From ${from}: ${subject}`, {
+    const summary = fenced(GMAIL_NEW_MAIL, {
       label: GOOGLE_DATA_FENCE,
       value: span?.value ?? "",
       at: span?.at ?? 0,
@@ -625,7 +627,6 @@ test("one Google sign-in from Settings by keys, and a message arriving fires a r
   });
 
   await test.step("Integrations' Data section deletes what the first mate read, by keys, and keeps its conversation", async () => {
-    const subject = "Invoice 2214 for the October shoot";
     const sessions = join(userDataDir, "firstmate", "sessions");
     const saved = () =>
       readdirSync(sessions, { recursive: true, encoding: "utf8" })
@@ -638,7 +639,7 @@ test("one Google sign-in from Settings by keys, and a message arriving fires a r
           (run) => run.prompt,
         ),
       );
-    // The turn that read the subject has ended: its conversation is saved, and free to rewrite.
+    // The turn that heard of the mail has ended: its conversation is saved, and free to rewrite.
     // The first mate is drawn outside Settings.
     await pressKey(page.getByRole("tab", { selected: true }), "Escape");
     await expect(page.locator("[data-screen-label]")).not.toHaveAttribute(
@@ -646,8 +647,8 @@ test("one Google sign-in from Settings by keys, and a message arriving fires a r
       "Settings",
     );
     await waitForFirstmateIdle(page);
-    expect(saved()).toContain(subject);
-    expect((await runs()).join("\n")).toContain(subject);
+    expect(saved()).toContain(GMAIL_NEW_MAIL);
+    expect((await runs()).join("\n")).toContain(GMAIL_NEW_MAIL);
 
     await runFromSearch(app, page, "settings.integrations");
     const data = settingsSection(page, "integrations").locator("[data-integrations-data]");
@@ -671,13 +672,13 @@ test("one Google sign-in from Settings by keys, and a message arriving fires a r
 
     const note = outsideDataDeletedNote(GOOGLE_DATA_KEPT.what);
     const after = saved();
-    expect(after).not.toContain(subject);
+    expect(after).not.toContain(GMAIL_NEW_MAIL);
     expect(after).toContain(note);
     // The rest of the conversation stays: the rule's own words and the first mate's answer.
     expect(after).toContain("Sort these by urgency:");
     expect(after).toContain(AUTOMATION_EVENTS_ANSWER);
     const [prompt = ""] = await runs();
-    expect(prompt).not.toContain(subject);
+    expect(prompt).not.toContain(GMAIL_NEW_MAIL);
     expect(prompt).toContain(note);
   });
 });

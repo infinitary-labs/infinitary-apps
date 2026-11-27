@@ -189,6 +189,36 @@ describe("Google's MCP servers", () => {
     expect(google.answers).toEqual([]);
   });
 
+  // The captain's pick B on INF-7017's plan-mismatch card: "Look reads only which conversations
+  // got mail; Google asks once, at the read".
+  it("puts Google's question about reading a conversation a rule named to the captain, and reads it once allowed", async () => {
+    const world = await signedIn();
+    const { google, integrations } = world;
+    const id = google.deliver(ARRIVING);
+    const thread = google.mail.get(id)?.threadId ?? "";
+    google.knobs.confirm.add("get_thread");
+
+    const call = await integrations
+      .forTask("task-1")
+      .call("Google", "read_message", { thread }, undefined, "Read the mail the rule named.");
+    expect(call.refused).toBe("refused");
+    expect(call.text).toContain("Not run yet: Google asks the captain to confirm read_message");
+    const [ask] = asksOf(world);
+    expect(ask).toMatchObject({
+      action: "read_message",
+      input: JSON.stringify({ thread }),
+      confirm: { message: "Read this conversation?" },
+    });
+    expect(google.answers).toEqual([]);
+
+    const allowed = await integrations.sendAsk("task-1", ask?.id ?? "", "once", "ALLOW_ONCE");
+    expect(allowed.outcome).toEqual({ kind: "ran" });
+    expect(parsed(allowed.answer ?? "")).toMatchObject({ id, subject: ARRIVING.subject });
+    expect(google.answers.map((answer) => [answer.tool, answer.choice])).toEqual([
+      ["get_thread", "ALLOW_ONCE"],
+    ]);
+  });
+
   it("says on the row when Google refuses a client not marked for agents, keeps the sign-in, and renews no more until the captain checks again", async () => {
     const world = await fixture();
     const { google, integrations } = world;

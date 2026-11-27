@@ -1,5 +1,5 @@
 ---
-source: 22ef5a500088606f
+source: b1df1c08a3c3c75f
 title: Intégrations
 description: Connectez GitHub, GitLab, Bitbucket, Google et des serveurs MCP pour que votre second et votre équipage puissent les joindre, et choisissez ce que chacun peut faire sans vous demander.
 ---
@@ -93,6 +93,7 @@ Dans ces deux derniers cas, vous restez connecté, et rien n’est à configurer
 Sur votre iPhone ou votre iPad, la ligne Google se configure de la même façon : vous choisissez le fichier de client, ou collez son contenu.
 
 Une fois Google connecté, votre second et votre équipage peuvent chercher dans votre courrier et le lire, enregistrer une pièce jointe dans le dossier d’une tâche, étiqueter ou archiver un message, rédiger un brouillon et envoyer un message.
+À partir du 1er février 2027, Google ne laisse plus aucun agent d’IA récupérer un fichier joint à un message ; vous l’enregistrez alors vous-même depuis Gmail.
 Dans Agenda, ils peuvent lister vos agendas et vos événements, lire un événement, trouver des créneaux où tout le monde est libre, et créer ou mettre à jour un événement.
 Aucune action ne supprime un événement d’agenda.
 
@@ -211,6 +212,8 @@ Une ligne ouverte les liste avec la mention **signale**.
 - Gmail : **Un message arrive**.
 - Agenda : **Un événement d’agenda change**.
 - Un serveur MCP qui le propose : **Une ressource a changé**.
+
+Une automatisation Gmail apprend quelle conversation a reçu du nouveau courrier une ou deux minutes après son arrivée ; lire le courrier est une étape à part, sur laquelle Google peut d’abord vous interroger.
 
 Choisissez-en un sous **Quand quelque chose se produit** dans Automatisation.
 Voir [Automatisation](/fr/automation/#when-it-runs).

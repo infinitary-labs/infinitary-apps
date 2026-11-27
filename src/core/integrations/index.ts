@@ -48,7 +48,7 @@ export {
 } from "./providers/github";
 export { CALENDAR_ACTIONS, CALENDAR_CHANGED_EVENT } from "./providers/google/calendar";
 export { GOOGLE_SCOPES, googleSetup } from "./providers/google/client";
-export { GMAIL_ACTIONS, GMAIL_MESSAGE_EVENT } from "./providers/google/gmail";
+export { GMAIL_ACTIONS, GMAIL_MESSAGE_EVENT, GMAIL_NEW_MAIL } from "./providers/google/gmail";
 export {
   GOOGLE_DATA_FENCE,
   type GoogleIntegrationOptions,

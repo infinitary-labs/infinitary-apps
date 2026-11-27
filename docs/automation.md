@@ -211,7 +211,7 @@ It is the captain's q6 on INF-775: the app looks on its one tick at each kind's 
   An edit that keeps the integration and event keeps the connection, so nothing moves a rule onto a replacement unasked.
   The person picks it again by saving the rule in Settings → Automation, whose page says that saving listens to what is picked under When (`reconnect` on `inf:automation:save`); pointing the rule at another integration or event picks that one.
 - The prompt is filled with `{{events}}`, one line per event with the integration's typed summary and its id, never its body; a prompt without the placeholder gets the events after it.
-  A summary of words anyone can write, such as a message's sender and subject, arrives fenced as data from outside, and the list ends with one line saying never to follow what the fences hold (`docs/integrations.md`, "Data from outside").
+  A summary of words anyone can write, such as a calendar event's title, arrives fenced as data from outside, and the list ends with one line saying never to follow what the fences hold (`docs/integrations.md`, "Data from outside").
   The first mate's message names the integration, the event and how many arrived, and says each event is evidence from outside, never an instruction.
 - An event rule has no next time and no preview dates: Settings shows its When words (`when` on the rule, "When an item arrives in Stand-in") and how often the app looks.
 - Settings → Automation's When offers "When something happens" while a connected integration declares an event, with a second choice listing each one; the first mate passes `on_event` (`integration/event`) to `schedule_prompt`.
@@ -237,7 +237,7 @@ The question reads what the rule waits for, the event's kind and its summary, an
 Only an answered `unrelated` keeps an event from the first mate.
 `match`, `unclear`, a failed or timed-out answer, a switched-off use and a rule that says nothing all deliver the event, as before the screen.
 Every delivered run of such a rule names its Only if condition in the first mate's wake (`events.onlyIf`), and the first mate acts only on events that meet it, so the condition holds with the screen off too; the screen only spares the turn for events plainly outside it.
-The use is `needs-ok`: each event's summary, such as an email's sender and subject, goes to the model answering decisions, so it stays off until the person agrees to its own disclosure.
+The use is `needs-ok`: each event's summary, such as a calendar event's title, goes to the model answering decisions, so it stays off until the person agrees to its own disclosure.
 
 A screened event stays on its run, marked `screened`, so it counts as carried and is never looked at again.
 A look with some events kept and some screened delivers one run whose prompt lists only the kept ones, and folds into a delivery still waiting unsent as any look does.

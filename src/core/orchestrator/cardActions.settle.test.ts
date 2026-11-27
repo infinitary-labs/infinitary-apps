@@ -40,7 +40,6 @@ import { FIRSTMATE_RECIPIENT, InboxStore } from "../storage/inboxStore";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
 import { THREAD_STEER_PREAMBLE } from "./captainWakes";
-import { FIRSTMATE_FAILURE_CARD_ID } from "./hostCards";
 import { cannotMergeText, discardedText } from "./settleWords";
 import { renderWake, type WakeFacts } from "./wakes";
 
@@ -1178,17 +1177,21 @@ describe("CrewSupervisor: the card thread", () => {
     expect(harness.cardStore.chosenAction(card.id)).toBeUndefined();
   });
 
-  it("refuses a reply to a card with no author to reach, and to a closed one", async () => {
+  it("refuses a reply to a card that takes none, and to a closed one", async () => {
     const crewmate = fakeCrewmate();
     const harness = setup(crewmate);
     const { card, taskId } = await withCard(harness);
 
-    // The host's own agent-down cards answer to nobody.
-    harness.supervisor.cards.hostCards.addFirstmateFailureCard("<p>The turn failed.</p>");
+    // The welcome takes no reply (docs/card-threads.md, "Who answers a card").
+    const welcome = harness.supervisor.cards.addRecordedFirstmateNote(
+      { title: "Welcome aboard", body: "<p>Type below.</p>" },
+      () => {},
+      { replies: false },
+    );
     await tick();
-    expect(() =>
-      harness.supervisor.cardActions.replyToCard(FIRSTMATE_FAILURE_CARD_ID, "hello"),
-    ).toThrow(/takes no reply/);
+    expect(() => harness.supervisor.cardActions.replyToCard(welcome, "hello")).toThrow(
+      /takes no reply/,
+    );
     expect(() => harness.supervisor.cardActions.replyToCard("ghost", "hello")).toThrow(
       /Unknown card/,
     );

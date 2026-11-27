@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "down-cards-take-reply",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "Reply on a card while your first mate is down",
+      "body": "The cards shown while your first mate is down, such as needs you to sign in again or is not answering right now, had no reply field. Now you can type under them too: your reply waits until your first mate is back, and the card stays up until it answers you there.",
+      "picture": {
+        "dark": "down-cards-take-reply-dark.webp",
+        "light": "down-cards-take-reply-light.webp",
+        "alt": "The Claude is not answering your first mate right now card with a reply in its thread and the reply field below"
+      },
+      "docsSite": ["cards-and-decisions"],
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

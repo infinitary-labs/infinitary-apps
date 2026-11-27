@@ -1,5 +1,5 @@
 ---
-source: df632c26677efc84
+source: 86bf487dacd685ea
 title: Tarjetas y decisiones
 description: Cómo tu primer oficial y tu tripulación te traen respuestas y decisiones como tarjetas, y cómo responderlas.
 ---
@@ -52,7 +52,8 @@ Hacer clic dentro de la tarjeta nunca envía nada por sí solo.
 
 ## El campo de respuesta y el hilo {#the-reply-field-and-the-thread}
 
-Cada tarjeta tiene, debajo de su cuerpo, un campo que dice «¿algo que agregar?», salvo la de bienvenida y las que aparecen mientras tu primer oficial está detenido.
+Cada tarjeta tiene, debajo de su cuerpo, un campo que dice «¿algo que agregar?», salvo la de bienvenida.
+Una respuesta bajo una tarjeta que aparece mientras tu primer oficial está detenido espera a que vuelva, y la tarjeta sigue ahí hasta que tu primer oficial responde en ella.
 
 - Escribe en él y presiona **Conversar** para enviar una respuesta sin elegir.
 - Escribe en él y presiona una opción para enviar tus palabras con esa opción.

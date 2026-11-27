@@ -36,7 +36,8 @@ import {
   startMockProvider,
 } from "./mockProvider";
 import { failureLines, feedLine } from "./rails";
-import { closeOpenCards, shownCard } from "./stack";
+import { DOWN_CARD_ANSWER, DOWN_CARD_REPLY, downCardReply } from "./scenarios/downCardReply";
+import { cardReply, closeOpenCards, shownCard } from "./stack";
 import { starterFor } from "./starters";
 import { pressWindowKey, runFromSearch } from "./windowKeys";
 
@@ -261,6 +262,66 @@ test("a lost sign-in pauses the seat, and signing in again on this Mac answers t
     .toContain(MOCK_ANSWER_TITLE);
   expect(tried(mock, words)).toBe(2);
   expect(await cardTitles(launched.page)).not.toContain(title);
+});
+
+test("a reply under the paused seat's card is kept, and the card stays until the first mate answers it there", async () => {
+  // Intent: INF-6994's approved plan, piece 2, and the captain's pick: "Yes,
+  // every card but the welcome; a reply waits until your first mate is back."
+  const title = firstmatePauseTitle("signed_out", "Claude");
+  const mock = await startMockProvider({ scenarios: [downCardReply(title)] });
+  mockProvider = mock;
+  const homeDir = scratchDir("infinitary-home-");
+  launched = await launchClaudeSeat({ mockProvider: mock, homeDir });
+  const { page, userDataDir } = launched;
+  mock.cutClaudeSeat({ class: "signed_out" });
+  await say(page, "count the fenders");
+  await expect(shownCard(page, title)).toBeVisible({ timeout: 45_000 });
+
+  // The pause card takes a reply, and the paused seat keeps it: the saved
+  // line says so, and the words are never tried into the lost sign-in.
+  await cardReply(page).field.fill(DOWN_CARD_REPLY);
+  await cardReply(page).send.click();
+  const card = await pauseCard(page, title);
+  const cardId = card?.id ?? "";
+  await expect
+    .poll(async () =>
+      (await page.evaluate((id) => window.infinitary.cards.thread(id), cardId)).messages.map(
+        (message) => [message.who, message.text],
+      ),
+    )
+    .toEqual([["captain", DOWN_CARD_REPLY]]);
+  const saved = keptMessageWords(signedOutSentence(CLAUDE_SEAT_LABEL), "signed_out", "Claude");
+  await expect(feedLine(page, saved)).toBeVisible({ timeout: 30_000 });
+  expect(tried(mock, DOWN_CARD_REPLY)).toBe(0);
+  await launched.close();
+  launched = undefined;
+
+  // Signed in again on this Mac: the seat serves, and the card stays up
+  // while the first mate's answer to the kept reply is still owed.
+  mock.cutClaudeSeat(null);
+  launched = await launchClaudeSeat({
+    mockProvider: mock,
+    userDataDir,
+    homeDir,
+    prepareHome: rewrittenClaudeHome,
+  });
+  const back = launched.page;
+  await expect.poll(() => mock.heldThreadAnswers(), { timeout: 45_000 }).toBe(1);
+  expect(tried(mock, DOWN_CARD_REPLY)).toBe(1);
+  expect(await pauseCard(back, title)).toMatchObject({ status: "ready" });
+  expect(await pauseCard(back, title)).not.toHaveProperty("ended");
+
+  // The answer lands in the card's thread and signs the card off: the
+  // captain saw it, so it stays on screen marked ended until they close it.
+  mock.releaseThreadAnswer();
+  await expect
+    .poll(async () => (await pauseCard(back, title))?.ended?.by, { timeout: 30_000 })
+    .toBe("firstmate");
+  const thread = await back.evaluate((id) => window.infinitary.cards.thread(id), cardId);
+  expect(thread.messages.map((message) => [message.who, message.text])).toEqual([
+    ["captain", DOWN_CARD_REPLY],
+    ["firstmate", DOWN_CARD_ANSWER],
+  ]);
 });
 
 test("a spent allowance pauses with its reset, asks to move to Codex, and tries nothing more", async () => {

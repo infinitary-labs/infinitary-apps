@@ -127485,13 +127485,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
      */
     risk: riskAssessmentSchema.optional(),
     /**
-     * False on a card that takes no reply, whoever its author is
-     * (docs/card-threads.md "Who answers a card"): the chrome draws no
-     * reply row and the core refuses one (`cardTakesReplies`). The host sets
-     * it on the welcome and on the cards shown while the first mate is down,
-     * which nobody could answer: its pause cards, its failed-turn card and its
-     * own sign-in card (`cards.replies`); absent on every other card, which
-     * takes replies as its author allows.
+     * False on a card that takes no reply (docs/card-threads.md "Who answers
+     * a card"): the chrome draws no reply row and the core refuses one
+     * (`cardTakesReplies`). The host sets it on the welcome, the first mate's
+     * own note (`cards.replies`); no host card carries it, and one saved with
+     * it by an earlier version loses it on restore (`withHostAnswerer`).
      */
     replies: literal(false).optional(),
     /**
@@ -127500,11 +127498,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
      * crewmate's ask (a secret to keep or use, secrets to move in, an
      * integration call, an unsafe data reader's held calls), so the crewmate
      * that asked answers in the thread while its ask stays open; "firstmate"
-     * on every other host card that does not turn replies off, named by its
-     * builder or filled in as the card goes up and as it is restored
-     * (`withHostAnswerer`), so the first mate answers in the thread, never the
-     * task's crewmate. Absent on a crewmate's or the first mate's own card,
-     * which its author answers.
+     * on every other host card, named by its builder or filled in as the
+     * card goes up and as it is restored (`withHostAnswerer`), so the first
+     * mate answers in the thread, never the task's crewmate. Absent on a
+     * crewmate's or the first mate's own card, which its author answers.
      */
     answeredBy: _enum(["firstmate", "crewmate"]).optional(),
     /** Declared by the author: replies stay shown; each arrival comes forward. Choices still close. */

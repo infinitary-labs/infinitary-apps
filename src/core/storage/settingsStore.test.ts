@@ -370,6 +370,55 @@ describe("SettingsStore preferences", () => {
     expect(db.prepare("SELECT 1 FROM settings WHERE key = ?").get("color-theme")).toBeUndefined();
   });
 
+  // The approved plan for color themes (INF-6888, part 2): the person's own themes are a row
+  // of their own, a look without them keeps them, an empty list removes the row, and an
+  // older build still reads the appearance row.
+  it("keeps the person's own color themes in their own row", () => {
+    const db = openInMemoryDatabase();
+    const settings = new SettingsStore(db);
+    const terminal = {
+      id: "own-old-terminal",
+      name: "Old terminal",
+      colors: {
+        background: "#020a03",
+        text: "#3ddc5a",
+        accent: "#8dff9c",
+        hot: "#ffd23d",
+        danger: "#ff5a4d",
+        captain: "#b99aff",
+      },
+    };
+    settings.setAppearance({
+      theme: "dark",
+      colorTheme: "own-old-terminal",
+      ownColorThemes: [terminal],
+    });
+    const readRow = (key: string) =>
+      JSON.parse(
+        (db.prepare("SELECT value FROM settings WHERE key = ?").get(key) as { value: string })
+          .value,
+      );
+    expect(readRow("own-color-themes")).toEqual({ themes: [terminal] });
+    expect(
+      appearanceSchema
+        .omit({ colorTheme: true, ownColorThemes: true })
+        .safeParse(readRow("appearance")).success,
+    ).toBe(true);
+    expect(readRow("appearance").ownColorThemes).toBeUndefined();
+
+    // A look sent without them, as a view that does not read them sends it, keeps them.
+    settings.setAppearance({ theme: "light" });
+    expect(new SettingsStore(db).getAppearance()).toMatchObject({
+      theme: "light",
+      ownColorThemes: [terminal],
+    });
+    settings.setAppearance({ theme: "light", ownColorThemes: [] });
+    expect(new SettingsStore(db).getAppearance().ownColorThemes).toBeUndefined();
+    expect(
+      db.prepare("SELECT 1 FROM settings WHERE key = ?").get("own-color-themes"),
+    ).toBeUndefined();
+  });
+
   // The approved plan (INF-3982, direction B): any installed font for the
   // app, reading and code, kept across a restart, while an older build,
   // which reads the appearance row strictly, still reads the rest of the look.

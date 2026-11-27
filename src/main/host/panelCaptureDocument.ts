@@ -26,17 +26,33 @@ function escapeAttribute(text: string): string {
   return text.replaceAll("&", "&amp;").replaceAll('"', "&quot;");
 }
 
+/** The window's color theme rule as its sheet holds it, and the base it was laid on. */
+export type CaptureColorSheet = { rule: string; base: string | null };
+
 /**
  * Each document ends its copied CSS with its own base's colors: the window's
  * color theme sheet and a frame's birth rule pin the tokens of the look on
  * screen on every `data-theme` scope, so without it a Light picture of a Dark
  * window reads Dark. The chosen color theme shows only on its own base
- * (docs/themes.md).
+ * (docs/themes.md): the window's own sheet rule when it was laid on this
+ * base, which carries a person's own theme as well as a built-in one, else
+ * the built-in theme's rule or the base's own.
  */
+function captureColorRule(
+  theme: CaptureTheme,
+  colorTheme?: string | null,
+  colorSheet?: CaptureColorSheet | null,
+): string {
+  return colorSheet && colorSheet.base === theme
+    ? colorSheet.rule
+    : frameThemeRule(theme, colorTheme);
+}
+
 export function buildFrameCaptureHtml(
   frame: CaptureFrame,
   theme: CaptureTheme,
   colorTheme?: string | null,
+  colorSheet?: CaptureColorSheet | null,
 ): string {
   const css = frame.css.replaceAll("</style", "<\\/style");
   return `<!doctype html>
@@ -46,7 +62,7 @@ export function buildFrameCaptureHtml(
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; font-src data:; img-src data:;">
 <style>
 ${css}
-${frameThemeRule(theme, colorTheme)}
+${captureColorRule(theme, colorTheme, colorSheet).replaceAll("</style", "<\\/style")}
 </style>
 </head>
 <body data-theme="${theme}">
@@ -63,6 +79,8 @@ export function buildCaptureHtml(input: {
   theme: CaptureTheme;
   /** The window's color theme as its body names it, or null for plain Dark or Light. */
   colorTheme?: string | null;
+  /** The window's color theme sheet, as the window laid it. */
+  colorSheet?: CaptureColorSheet | null;
   width: number;
   height: number;
 }): string {
@@ -79,7 +97,7 @@ export function buildCaptureHtml(input: {
       if (!frame) return "";
       const frameWidth = Math.max(1, Math.round(frame.width));
       const frameHeight = Math.max(1, Math.round(frame.height));
-      return `<iframe srcdoc="${escapeAttribute(buildFrameCaptureHtml(frame, theme, input.colorTheme))}" style="border:0;display:block;width:${frameWidth}px;height:${frameHeight}px"></iframe>`;
+      return `<iframe srcdoc="${escapeAttribute(buildFrameCaptureHtml(frame, theme, input.colorTheme, input.colorSheet))}" style="border:0;display:block;width:${frameWidth}px;height:${frameHeight}px"></iframe>`;
     },
   );
   return `<!doctype html>
@@ -89,7 +107,7 @@ export function buildCaptureHtml(input: {
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; font-src data:; img-src data:;">
 <style>
 ${css}
-${frameThemeRule(theme, input.colorTheme)}
+${captureColorRule(theme, input.colorTheme, input.colorSheet).replaceAll("</style", "<\\/style")}
 html, body {
   margin: 0;
   width: ${width}px;

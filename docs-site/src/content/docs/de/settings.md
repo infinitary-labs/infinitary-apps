@@ -1,5 +1,5 @@
 ---
-source: b740a04367a85517
+source: 0a2abffa6cee2faa
 title: Einstellungen
 description: Was jeder Bereich der Einstellungen enthält – Allgemein und Erscheinungsbild hier erklärt, für den Rest ein Link.
 ---
@@ -69,6 +69,8 @@ Auf dem Computer, auf dem dein erster Offizier lebt, stehen sie unter **Angemeld
   0 % ist die Standardeinstellung.
 - **Design** ist **Dunkel**, **Hell** oder eines von dreizehn Designs unter den Namen ihrer Macher, etwa **Dracula**, **Catppuccin Mocha** oder **Rosé Pine Dawn**.
   Deine Wahl färbt das Fenster, seine Karten und seine Panels sofort um, und die Pfeiltasten wechseln zwischen den Möglichkeiten.
+  Für ein eigenes Design beschreibst du es deinem ersten Offizier, etwa „ein altes grünes Terminal“: Er speichert es unter **Deine** und wendet es sofort an, und Infinitary hält jede Farbe gut lesbar.
+  **Eigenes beschreiben** beginnt diese Nachricht, und **Entfernen** löscht das eigene Design, das du gerade trägst.
 
 ### Schriften {#fonts}
 

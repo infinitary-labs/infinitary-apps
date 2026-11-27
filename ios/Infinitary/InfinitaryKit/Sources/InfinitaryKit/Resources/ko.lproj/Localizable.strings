@@ -2811,6 +2811,11 @@
 "settingsAppearanceThemeDark" = "다크";
 "settingsAppearanceThemeDescription" = "다크, 라이트, 또는 제작자가 이름 붙인 테마. 창의 모든 색이 따라 바뀝니다.";
 "settingsAppearanceThemeLight" = "라이트";
+"settingsAppearanceThemeOwnDescribe" = "직접 설명하기";
+"settingsAppearanceThemeOwnDraft" = "나만의 색상 테마를 만들어 주세요: ";
+"settingsAppearanceThemeOwnRemove" = "삭제";
+"settingsAppearanceThemeOwnRemoveNamed" = "%1$@ 삭제";
+"settingsAppearanceThemeYours" = "내 테마";
 "settingsAppearanceWash" = "창 색조";
 "settingsAppearanceWashDescription" = "흐린 배경 위에 테마 색을 얼마나 덮을지 정해요. 기본값은 0%%예요.";
 "settingsAppearanceWashValue" = "불투명도 %1$@%%";

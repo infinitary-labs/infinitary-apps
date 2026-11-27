@@ -23,6 +23,7 @@ What a view keeps is `JoinedHome`'s (`src/core/devices/joinedHome.ts`), the one 
 | `home-addresses.json` | The other Mac's other addresses, refreshed from each welcome, kept beside the grant so a version that knows only the grant still reads `home.json` (`docs/devices.md`, "Finding the home again") |
 | `appearance.json` | This Mac's own look while it controls the other: size, theme, wash, crew model names, default card size and how its panels sit, and the keys a person changed here (`docs/keyboard.md`) |
 | `color-theme.json` | The color theme of that look and the base it was chosen on, beside it so an older version still reads `appearance.json` (`docs/themes.md`) |
+| `own-color-themes.json` | The person's own color themes that look can wear, beside it for the same reason (`docs/themes.md`, "Your own themes") |
 | `left.json` | The Mac it last stopped controlling, and whether it left or was removed |
 
 It keeps no record of the other Mac's work: a view never opens the app's database, and its cards, tasks, feed and threads live only in the window's memory and the shell's.

@@ -1,5 +1,5 @@
 ---
-source: b740a04367a85517
+source: 0a2abffa6cee2faa
 title: Réglages
 description: Ce que contient chaque section des Réglages, avec Général et Apparence expliqués ici et un lien pour le reste.
 ---
@@ -69,6 +69,8 @@ Sur l’ordinateur où vit votre second, ils se trouvent sous **Sites connectés
   0 % est la valeur par défaut.
 - **Thème** est **Sombre**, **Clair** ou l’un de treize thèmes sous le nom que leur a donné leur auteur, comme **Dracula**, **Catppuccin Mocha** ou **Rosé Pine Dawn**.
   Votre choix recolore aussitôt la fenêtre, ses cartes et ses panneaux, et les touches fléchées passent d’un choix à l’autre.
+  Pour avoir votre propre thème, décrivez-le à votre second, par exemple « un vieux terminal vert » : il l’enregistre sous **Les vôtres** et l’applique aussitôt, et Infinitary garde chaque couleur facile à lire.
+  **Décrire le vôtre** commence ce message, et **Supprimer** retire le thème à vous que vous portez.
 
 ### Polices {#fonts}
 

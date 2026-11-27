@@ -44,7 +44,7 @@ export type CardOverlay = z.infer<typeof cardOverlaySchema>;
  * A person's change answered: the switch and key as they are now, and why
  * the change was not made, if it was not - the system would not register
  * the key (`taken`), it is one of macOS's own shortcuts (`system`,
- * `isSystemHotKey`), or it may not summon (`not-allowed`, `overlayKeyAllowed`).
+ * `isMacOwnKey`), or it may not summon (`not-allowed`, `overlayKeyAllowed`).
  */
 export const cardOverlaySetSchema = z.object({
   overlay: cardOverlaySchema,

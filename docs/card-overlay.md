@@ -6,7 +6,7 @@ It is this computer's own, off until a person turns it on in Settings → Keyboa
 | Part | Where |
 | --- | --- |
 | The switch and key, their rules, the panel's place | `src/shared/cardOverlay.ts` |
-| macOS's own shortcuts and whether a key is one | `src/shared/macSystemShortcuts.ts` (`systemHotKeys`, `isSystemHotKey`) |
+| macOS's own shortcuts and whether a key is one | `src/shared/macSystemShortcuts.ts` (`systemHotKeys`, `isSystemHotKey`, `isMacOwnKey`) |
 | The shortcut, the phases, the saved file and the carried-key rule | `src/main/cardOverlay.ts` (`CardOverlayController`, `cardOverlayFile`, `carriedKeys`) |
 | The panel window, its keys and the system events that send it away | `src/main/cardOverlayWindow.ts` (`startCardOverlay`) |
 | The page: its reads, the card it shows, Escape, the pointer | `src/renderer/src/overlay/` |
@@ -26,6 +26,7 @@ On a Mac the system does not refuse a key another program holds: both programs r
 The shortcuts macOS keeps for itself in System Settings → Keyboard → Keyboard Shortcuts (screenshots, Mission Control, Spotlight and the rest) take their key first, so the app refuses one of those itself, the same way, and the row says that macOS uses the key.
 Each change of the key reads that list again (`AppleSymbolicHotKeys` in the `com.apple.symbolichotkeys` defaults, through `defaults` and `plutil`); the system writes only the entries a person changed, so a new Mac's defaults stand for the rest, and a shortcut a person turned off is not refused.
 The list names keys by their place on the keyboard, so the app finds a chord's key by its place on an ANSI keyboard; a character it does not place, such as one Option types, matches nothing.
+The keys every Mac app answers, which Keyboard settings never records for a command either (`reservedKeys`: ⌘C, ⌘Q, ⌃⌘F, a text field's ⌃A and the rest), are refused the same way, since held system-wide they would stop working in every app.
 The dictation key is not a system-wide shortcut and stays as it is.
 
 Every desktop but a Mac's reports `unsupported`, and the row does not show there.

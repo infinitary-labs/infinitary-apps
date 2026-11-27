@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isSystemHotKey, systemHotKeys } from "./macSystemShortcuts";
+import { isMacOwnKey, isSystemHotKey, systemHotKeys } from "./macSystemShortcuts";
 
 // Intent: the captain's answer to the review of the card overlay's key - "Also refuse the Mac's
 // own shortcuts, like the screenshot key" - since a Mac registers a key macOS itself uses
@@ -48,5 +48,12 @@ describe("macOS's own shortcuts", () => {
 
   it("falls back to the shortcuts a new Mac has when the list cannot be read", () => {
     expect(isSystemHotKey({ key: "3", meta: true, shift: true }, systemHotKeys(null))).toBe(true);
+  });
+
+  it("counts the keys every Mac app answers as the Mac's own, and not the overlay's key", () => {
+    expect(isMacOwnKey({ key: "c", meta: true }, onThisMac)).toBe(true);
+    expect(isMacOwnKey({ key: "f", ctrl: true, meta: true }, onThisMac)).toBe(true);
+    expect(isMacOwnKey({ key: "a", ctrl: true }, onThisMac)).toBe(true);
+    expect(isMacOwnKey({ key: "o", ctrl: true, shift: true }, onThisMac)).toBe(false);
   });
 });

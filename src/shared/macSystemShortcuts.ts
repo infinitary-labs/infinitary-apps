@@ -1,4 +1,5 @@
 import type { KeyChord } from "./keyboardCommands";
+import { chordsOverlap, reservedKeys } from "./keymap";
 
 /**
  * macOS's own keyboard shortcuts (System Settings → Keyboard → Keyboard
@@ -195,5 +196,18 @@ export function isSystemHotKey(chord: KeyChord, hotKeys: readonly SymbolicHotKey
     ({ parameters }) =>
       parameters[1] === code &&
       ((parameters[2] ?? 0) & (SHIFT | CONTROL | OPTION | COMMAND)) === flags,
+  );
+}
+
+/**
+ * Whether `chord` is one of the Mac's own keys: a shortcut in `hotKeys`, or
+ * a key every Mac app answers (⌘C, ⌘Q, ⌃⌘F, a text field's ⌃A) that
+ * Keyboard settings never records for a command either (`reservedKeys`).
+ * Held system-wide, any of them would stop working in every app.
+ */
+export function isMacOwnKey(chord: KeyChord, hotKeys: readonly SymbolicHotKey[]): boolean {
+  return (
+    isSystemHotKey(chord, hotKeys) ||
+    reservedKeys("mac").some(({ chord: own }) => chordsOverlap(chord, own))
   );
 }

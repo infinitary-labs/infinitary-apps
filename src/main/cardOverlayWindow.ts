@@ -13,7 +13,7 @@ import {
   SHELL_COMMAND_IDS,
   type WindowCommandId,
 } from "@shared/keyboard";
-import { isSystemHotKey, type SymbolicHotKey, systemHotKeys } from "@shared/macSystemShortcuts";
+import { isMacOwnKey, type SymbolicHotKey, systemHotKeys } from "@shared/macSystemShortcuts";
 import {
   app,
   BrowserWindow,
@@ -183,7 +183,7 @@ export function startCardOverlay(options: CardOverlayWindowOptions): CardOverlay
         }
       },
       unregister: (accelerator) => globalShortcut.unregister(accelerator),
-      systemShortcut: (chord) => isSystemHotKey(chord, hotKeys),
+      systemShortcut: (chord) => isMacOwnKey(chord, hotKeys),
       openPanel,
       later: (run, ms) => setTimeout(run, ms),
       cancel: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),

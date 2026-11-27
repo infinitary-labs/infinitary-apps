@@ -38,7 +38,7 @@ export type CardOverlayDeps = {
   supported: boolean;
   /** Registers a system-wide shortcut; false when the system will not take it (a key another program holds is not refused on a Mac). */
   register(accelerator: string, run: () => void): boolean;
-  /** Whether the chord is one of macOS's own shortcuts, which would take the key first. */
+  /** Whether the chord is one of the Mac's own keys, which would take it first or stop working everywhere. */
   systemShortcut(chord: KeyChord): boolean;
   unregister(accelerator: string): void;
   /** Makes the panel, hidden, and starts its page; `gone` hears it close, however it closes. */

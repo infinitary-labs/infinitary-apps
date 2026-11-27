@@ -74,7 +74,11 @@ extension PhoneJourney {
         // The iPad on its side keeps the release note's hero pair: Tasks narrowed under the focus row.
         if phoneTurnedLayout(app) == .wide {
             turnForProbe(.landscapeLeft)
-            // The wide layout lists Tasks in its sidebar, with no tab strip.
+            // The wide layout lists Tasks in its sidebar, with no tab strip. north-pier's tasks wait in Backlog, which
+            // opens folded after the relaunch, so it is opened for the rows and the picture.
+            let backlog = phoneSidebar(app).buttons["group-backlog"]
+            XCTAssertTrue(backlog.waitForPresence(timeout: 10), app.debugDescription)
+            tapOnPhone(backlog)
             XCTAssertTrue(app.buttons["task-project-filter-npr-0"].waitForPresence(timeout: 10), app.debugDescription)
             try await appearances("6-tasks-on-its-side", showing: app.buttons["project-focus-pill"])
             turnForProbe(.portrait)

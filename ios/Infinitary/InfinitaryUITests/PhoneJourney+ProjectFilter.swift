@@ -123,6 +123,15 @@ extension PhoneJourney {
         app.typeKey("\n", modifierFlags: [])
         XCTAssertTrue(all.waitForAbsence(timeout: 10), "Return picks and closes Filter")
         focused(on: northName, elsewhere: 1)
+        // All projects is also the first row, so the same keys with north-pier checked tell the checked row from the
+        // first: Down from north-pier picks south-pier, the next project.
+        app.typeKey("p", modifierFlags: [.command, .shift])
+        XCTAssertTrue(row.waitForPresence(timeout: 10), app.debugDescription)
+        waitForSteadyTarget(row)
+        app.typeKey(XCUIKeyboardKey.downArrow.rawValue, modifierFlags: [])
+        app.typeKey("\n", modifierFlags: [])
+        XCTAssertTrue(row.waitForAbsence(timeout: 10), "Return picks and closes Filter")
+        XCTAssertEqual(filter.value as? String, try field(1, "name"), "The sheet opens on the checked row, north-pier")
         tapOnPhone(app.buttons["project-focus-clear"])
         XCTAssertTrue(app.otherElements["project-focus-row"].waitForAbsence(timeout: 10), app.debugDescription)
     }

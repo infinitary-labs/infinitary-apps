@@ -5,7 +5,8 @@
  * turn, a scheduled check's included; the override ends when that direction
  * is revised or retired, at once or at the next start; and the captain's own
  * words stand over it, both ways. Each case drives the first mate's own
- * update_task over the real knowledge collection and task record.
+ * tools, or the crew's CaptainOverrides, over the real knowledge collection
+ * and task record.
  */
 
 import { rmSync, writeFileSync } from "node:fs";
@@ -156,6 +157,20 @@ describe("an override citing a heard direction", () => {
   it("records one on a scheduled check, which cites none of the captain's own words", async () => {
     const { h, knowledge, repo } = await harbor();
     heard(knowledge, "release-checks", repo, RULE);
+    const replied = h.supervisor.cards.addFirstmateCard({
+      id: "fm-harbor-release",
+      taskId: "t-release",
+      title: "Run the harbor release's checks?",
+      body: "<p>The release waits on its checks.</p>",
+      actions: [
+        { id: "run", label: "Run them", default: true },
+        { id: "wait", label: "Wait" },
+      ],
+    });
+    h.supervisor.cardActions.replyToCard(replied, "Run them and merge if they pass.");
+    // The reply's own turn starts first: a reply folded into the scheduled
+    // turn arrives with it, and citing it there is allowed.
+    await tick();
     h.agent.notifyOp(
       { facts: { kind: "scheduled", prompt: "check the harbor release", catchUp: false } },
       "scheduled",
@@ -169,9 +184,13 @@ describe("an override citing a heard direction", () => {
       await tick();
     }
 
+    // The captain's reply reached an earlier turn, never this one.
+    expect(h.session.prompts.slice(0, -1).join("\n")).toContain("Run them and merge if they pass.");
+    expect(h.session.prompts.at(-1)).not.toContain("Run them and merge if they pass.");
     expect(
-      await override(h, "t-release", { holds: ["checks"], until: "task", from: "standing" }),
+      await override(h, "t-release", { holds: ["checks"], until: "task", from: replied }),
     ).toContain("A scheduled check records no override");
+    expect(h.tasks.get("t-release")?.delivery?.override).toBeUndefined();
     expect(
       await override(h, "t-release", {
         holds: ["checks"],
@@ -187,6 +206,7 @@ describe("an override citing a heard direction", () => {
 
   it("ends the override when its direction is revised or retired", async () => {
     const { h, knowledge, repo } = await harbor();
+    bindDirections(h.agent, knowledge);
     heard(knowledge, "release-checks", repo, RULE);
     heard(knowledge, "deploy-checks", repo, DEPLOY);
     heard(knowledge, "docs-checks", repo, DOCS);
@@ -206,19 +226,27 @@ describe("an override citing a heard direction", () => {
         await override(h, task, { holds: ["checks"], until: "task", from: `d:${id}` }),
       ).toContain("Recorded an override on");
 
-    knowledge.directions.change({
-      op: "revise",
-      id: "d:release-checks",
-      expectedRevision: 1,
-      text: "Release checks on Harbor may run without asking me; ask before merging on red.",
-      reason: "The captain narrowed it.",
-      heard: { from: "turn" },
-    });
+    // The first mate revises one through the direction line on the captain's
+    // words; the captain retires the other in Knowledge.
+    const revised = await toolsOf(h.specs)
+      .get("app_change")
+      ?.execute("direction-narrow", {
+        action: "direction",
+        value: {
+          op: "revise",
+          id: "d:release-checks",
+          expectedRevision: 1,
+          text: "Release checks on Harbor may run without asking me; ask before merging on red.",
+          from: "turn",
+        },
+        evidence: "The captain narrowed the release rule this turn.",
+      });
+    expect(revised?.content[0]?.text).not.toContain(DIRECTION_REFUSED);
     knowledge.directions.change({
       op: "retire",
       id: "d:deploy-checks",
       reason: "The captain dropped it.",
-      heard: { from: "turn" },
+      heard: { from: "window" },
     });
     await tick();
 

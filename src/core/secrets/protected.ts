@@ -42,6 +42,7 @@ import { type StagedRecovery, stageRecovery } from "./recoveryStage";
 import {
   type ElsewhereCheck,
   type ElsewhereUse,
+  type EndedUseReceipt,
   type Injection,
   inputDigest,
   type PreparedUse,
@@ -252,6 +253,11 @@ export class ProtectedSecrets implements SecretsBackend {
 
   restored(): { intent: string; inputDigest: string; receipt: UseReceipt }[] {
     return this.ready?.journal.restored() ?? [];
+  }
+
+  /** The uses this opening ended because Infinitary stopped while they waited or ran (`UseJournal.cutOff`). */
+  cutOff(): { intent: string; receipt: EndedUseReceipt }[] {
+    return this.ready?.journal.cutOff() ?? [];
   }
 
   /** Live owner facts, rechecked synchronously at delivery after all awaited validation. */

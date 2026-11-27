@@ -19,7 +19,8 @@ type SecretsSupervisor = {
     };
   };
   steer: {
-    secretsUseEnded(task: string, receipt: EndedUseReceipt): void;
+    secretsUseStarted(task: string, request: string): void;
+    secretsUseEnded(task: string, receipt: EndedUseReceipt, restarted?: boolean): void;
     secretsAskEnded(task: string | null, ended: SecretAskEnded): void;
     secretsBringEnded(task: string, ended: SecretBringEnded): void;
   };
@@ -29,8 +30,8 @@ type SecretsSupervisor = {
 /**
  * Secrets and the brings beside it (docs/secrets.md), opened over the data
  * folder where the host offers native Secrets and absent elsewhere. Both
- * owners share one card decision; an ask or a bring that waited through a
- * restart is picked up here.
+ * owners share one card decision; an ask, a bring or a use that waited
+ * through a restart is picked up here.
  */
 export function startSecrets(options: {
   host: HostCapabilities["secrets"];
@@ -66,7 +67,9 @@ export function startSecrets(options: {
     raise: (card) => hostCards.raiseHostCard(card),
     openCard: (id) => supervisor.cards.get(id),
     withdraw: (id, reason) => hostCards.withdrawHostCard(id, reason),
-    settled: (task, receipt) => supervisor.steer.secretsUseEnded(task, receipt),
+    started: (task, request) => supervisor.steer.secretsUseStarted(task, request),
+    settled: (task, receipt, restarted) =>
+      supervisor.steer.secretsUseEnded(task, receipt, restarted),
     ...(host ? { asksFile: join(userData, "secret-asks.json") } : {}),
     asked: (task, ended) => supervisor.steer.secretsAskEnded(task, ended),
     taskOpen,
@@ -89,6 +92,7 @@ export function startSecrets(options: {
     secretBrings.owns(offer) ? secretBrings.decide(offer) : secrets.decide(offer),
   );
   secrets.resumeAsks(); // An ask that waited through a restart comes back with a new pass.
+  secrets.resumeUses(); // A use a restart ended is told to its requester now.
   secretBrings.resume(); // A bring that waited through a restart ends, and its asker hears so.
   return { secrets, secretBrings };
 }

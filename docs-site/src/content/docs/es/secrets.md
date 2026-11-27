@@ -1,5 +1,5 @@
 ---
-source: 91a924b8c4a1a2d6
+source: fae1b8cd31c6767c
 title: Secretos
 description: Guarda las contraseñas y claves que necesita tu tripulación, permite cada uso en una tarjeta y mira qué las usó.
 ---
@@ -90,7 +90,8 @@ Luego elige:
 Cada permiso te pide confirmar primero: en una Mac con Touch ID o tu contraseña, en Linux con tu contraseña, y en Windows con Windows Hello o tu contraseña de Windows.
 Lo que recibe un secreto puede guardarlo.
 Permitir nunca aprueba una acción aparte, como desplegar o enviar algo.
-El tripulante solo se entera de si la ejecución terminó, no de lo que imprimió.
+El tripulante se entera de cuándo empieza su programa, para seguir trabajando, y de si la ejecución terminó, nunca de lo que imprimió.
+Si Infinitary se cierra mientras una petición espera o su programa se ejecuta, el tripulante se entera de cómo terminó cuando Infinitary vuelve a abrirse.
 
 Mientras una petición espera, Configuración → Secretos la muestra arriba, con **Revisar la petición** para abrir su tarjeta.
 

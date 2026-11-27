@@ -67,14 +67,32 @@ export class CrewSteer {
     return task.turn.rows.some((id) => this.captainRows.has(id));
   }
 
+  /**
+   * The captain's approval started a use its crewmate was told waits on the captain
+   * (docs/secrets.md, "Trusted controller"): it hears once, through the same durable
+   * lane as the use's end, which it is always recorded before.
+   */
+  secretsUseStarted(taskId: string, request: string): void {
+    const once = `secrets-use-started:${request}`;
+    if (this.core.options.inbox.woken(taskId, once)) return;
+    this.core.options.tasks.turns.endIdle(taskId);
+    void this.steerInternal(
+      taskId,
+      { facts: { kind: "secrets-use-started", request }, once },
+      { actor: "supervisor", via: "supervision", decision: null, cardId: null },
+    ).catch(() => {
+      console.warn("[crew] Secrets start's steer not delivered.");
+    });
+  }
+
   /** Metadata-only completion, delivered once through the task's existing durable lane. */
-  secretsUseEnded(taskId: string, receipt: EndedUseReceipt): void {
+  secretsUseEnded(taskId: string, receipt: EndedUseReceipt, restarted = false): void {
     const once = `secrets-use-ended:${receipt.request}`;
     if (this.core.options.inbox.woken(taskId, once)) return;
     this.core.options.tasks.turns.endIdle(taskId);
     void this.steerInternal(
       taskId,
-      { facts: { kind: "secrets-use-ended", receipt }, once },
+      { facts: { kind: "secrets-use-ended", receipt, ...(restarted ? { restarted } : {}) }, once },
       { actor: "supervisor", via: "supervision", decision: null, cardId: null },
     ).catch(() => {
       // The durable receipt remains readable; the existing ladder handles an absent conversation.

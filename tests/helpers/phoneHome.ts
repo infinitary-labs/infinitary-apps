@@ -166,8 +166,8 @@ export async function startPhoneHome(
     turn?(
       to: "book" | "side-left" | "side-right",
     ): Promise<{ turn: "book" | "side-left" | "side-right" }>;
-    // INF-5183: one key pressed on the open Duo as an attached keyboard presses it, and where the simulator sent it
-    // (scripts/phone-hinge.ts); absent with no hinge.
+    // INF-5183: one key pressed as an attached keyboard presses it, and where the simulator sent it
+    // (scripts/phone-hinge.ts): on the open Duo, and on any device for a part marked `keys`; absent otherwise.
     key?(
       key: "tab" | "return" | "escape",
     ): Promise<PhoneKeyOutcome & { key: "tab" | "return" | "escape" }>;

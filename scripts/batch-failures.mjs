@@ -7,10 +7,11 @@
  * its own group's failed job's log for the test files it names as failed,
  * and runs those files three rounds on the same version
  * (scripts/batch-confirm.ts) while the other checks run on. Once every
- * check ended, batch-checks.yml's failures job reads the other failed jobs,
- * and its later confirm runs their files. A failed job whose log names no
- * test file failed for something no rerun of a test answers, so nothing
- * runs again and the batch's check stays failed.
+ * check ended, batch-checks.yml's failures job reads the other failed jobs
+ * of the checks it waits for, the sweep, the critical path and the startup
+ * fixtures, and its later confirm runs their files. A failed job whose log
+ * names no test file failed for something no rerun of a test answers, so
+ * nothing runs again and the batch's check stays failed.
  */
 import { BATCH_PULL_CHECKS, BATCH_PULL_GROUP_CONFIRM, isConfirmJob } from "./batch-pull.mjs";
 
@@ -100,6 +101,21 @@ export async function readFailedJobs(github, repo, run, only = () => true) {
   return failed;
 }
 
+// The checks whose failed jobs the failures job reads, by what their jobs'
+// names start with: the ones batch-checks.yml's failures job waits for. The
+// Windows installer check and the release notes check must pass on their
+// own, which no confirm of test files stands in for, so a failed one holds
+// the batch and leaves the confirm to the other failures. Read with them,
+// the Windows check's log names its test file with backslashes, which names
+// no file here, so no confirm ran at all (batch #135).
+const CONFIRMED_CHECKS = [
+  "Merge batch · Desktop checks / ",
+  "Merge batch · Critical-path journey / ",
+  "Merge batch · Linux startup / ",
+].map((check) => `${BATCH_PULL_CHECKS}${check}`);
+
+const isConfirmedCheckJob = (job) => CONFIRMED_CHECKS.some((check) => job.name.startsWith(check));
+
 /**
  * What is left to confirm once every check ended, from the run's failed
  * jobs and the jobs a test group's confirm already took (`confirmed`, names
@@ -174,13 +190,14 @@ export async function groupFailure({ github, context, core, group }) {
 
 /**
  * The failures job, once every check ended: the output `left` (laterPlan's
- * for the failed jobs no test group's confirm took), with `jobs` (the
- * failed jobs' names, one a line) and `files` (the failed test files,
- * separated by spaces) for the later confirm, both empty when nothing more
- * runs, and `grouped` (groupConfirms').
+ * for the failed jobs of the sweep, the critical path and the startup
+ * fixtures no test group's confirm took), with `jobs` (the failed jobs'
+ * names, one a line) and `files` (the failed test files, separated by
+ * spaces) for the later confirm, both empty when nothing more runs, and
+ * `grouped` (groupConfirms').
  */
 export async function failures({ github, context, core }) {
-  const failed = await readFailedJobs(github, context.repo, context.runId);
+  const failed = await readFailedJobs(github, context.repo, context.runId, isConfirmedCheckJob);
   const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
     ...context.repo,
     run_id: context.runId,

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "batch-failures-standalone-checks",
+      "reason": "The merge batch's failure reader now reads only the failed jobs of the checks a confirm answers, so a failed Windows installer or release notes check no longer stops the other failed tests from being run again; this changes only how the project's own checks run."
+    }
+  ]
+}

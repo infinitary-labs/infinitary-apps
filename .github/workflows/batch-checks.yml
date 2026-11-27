@@ -12,9 +12,10 @@ name: Batch checks
 # failed job's log for the test files it names (scripts/batch-failures.mjs)
 # and runs those files three rounds on the same version once the test groups
 # ended, while the other checks run on (verify.yml's linux-tests-confirm;
-# INF-4382). Once every check ended, the failures job reads every other
-# failed job, and the later confirm runs their files on the platform whose
-# job failed (the captain's pick on INF-3012, "A only: the confirm step").
+# INF-4382). Once the sweep, the critical path and the startup fixtures
+# ended, the failures job reads their other failed jobs, and the later
+# confirm runs their files on the platform whose job failed (the captain's
+# pick on INF-3012, "A only: the confirm step").
 # The last job passes once every check passed, or once every failed job's
 # files passed their confirm, and names the tree of the batch's version and
 # the main version the batch left main at, which main's check and the
@@ -400,11 +401,13 @@ jobs:
           fi
           exit 1
 
-  # Once every check ended: the failed jobs no test group's own confirm
-  # took, which the later confirm runs again. Its output `left` is
-  # `nothing` when the test groups' confirms took every failed job,
-  # `confirm` with the other jobs and files, or `unanswerable` when one of
-  # those jobs' logs named no test file; its output `grouped` is `passed`
+  # Once every check ended: the failed jobs of the sweep, the critical path
+  # and the startup fixtures that no test group's own confirm took, which
+  # the later confirm runs again; the Windows installer check and the
+  # release notes check pass on their own, so it reads neither. Its output
+  # `left` is `nothing` when the test groups' confirms took every failed
+  # job, `confirm` with the other jobs and files, or `unanswerable` when one
+  # of those jobs' logs named no test file; its output `grouped` is `passed`
   # when every test group's confirm that ran passed, and `failed` otherwise.
   failures:
     needs: [sweep, critical-path, startup]

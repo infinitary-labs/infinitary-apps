@@ -9,7 +9,7 @@
       "picture": {
         "dark": "panels-across-versions-dark.png",
         "light": "panels-across-versions-light.png",
-        "alt": "The Knowledge panel drawn on a computer whose Infinitary version differs from the first mate's, showing its own words"
+        "alt": "An added panel built for an older Infinitary version, drawn on a newer one with its badge reading 0 open, its line not sampled yet and its Clear button"
       },
       "provenance": { "origin": "change" }
     }

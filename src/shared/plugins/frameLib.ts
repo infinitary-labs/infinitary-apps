@@ -11,13 +11,16 @@ import { panelCardViewModule } from "./panelCards";
  * the JSX runtime, the design library (`@infinitary/ui`), and a runtime that
  * turns the bridge into `PanelProps`.
  *
- * The shell serves those as ES modules from ONE host, `app-frame://lib/`,
- * built with the app (electron.vite.config.ts builds `out/frame-lib/` and
- * bakes every file's SHA-256 into the main bundle). The host answers only a
- * file whose bytes still match its baked pin, and every panel document
- * carries the same pins as its import map's `integrity`, so a lib module is
- * pinned twice: by the server that will not serve anything else, and by the
- * frame that will not run anything else.
+ * The shell serves this build's lib as ES modules from ONE host,
+ * `app-frame://lib/`, built with the app (electron.vite.config.ts builds
+ * `out/frame-lib/` and bakes every file's SHA-256 into the main bundle). The
+ * host answers only a file whose bytes still match its baked pin, and every
+ * panel document drawing from it carries the same pins as its import map's
+ * `integrity`, so a lib module is pinned twice: by the server that will not
+ * serve anything else, and by the frame that will not run anything else. A
+ * panel built for another version draws from the first mate's library at
+ * that version's own host instead (`FRAME_LIB_VERSION_HOST_PREFIX`), pinned
+ * the same two ways by the pins the first mate's answer names.
  *
  * The file names are the contract between the build, the compiler (which
  * rewrites an added panel's host imports to these URLs) and the shell.

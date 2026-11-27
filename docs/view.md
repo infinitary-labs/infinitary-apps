@@ -317,7 +317,7 @@ It answers a phone a panel's files whatever the phone's own version, since a pho
 Infinitary on iPhone and iPad draws them on its Panels tab (`docs/ios.md`, "Panels").
 
 - **The library.**
-  A panel's files import the frame realm's library of the version they were built for (`PanelFiles.builtFor`), which only a window on that version serves, so the first mate also answers that library by its version (`inf:plugins:library`, `src/shared/personal/panelFiles.ts`), for a device that keeps one copy per version.
+  A panel's files import the frame realm's library of the version they were built for (`PanelFiles.builtFor`), which a window on that version serves from its own build, so the first mate also answers that library by its version (`inf:plugins:library`, `src/shared/personal/panelFiles.ts`), for a device that keeps one copy per version and for a window on another version ("Versions" above).
   It answers every file of the library its own build made, each with its pin, but the app's own panels under `builtin/` (`readPanelLibrary`, `src/core/personal/panelLibrary.ts`), which it answers one panel at a time ("The app's own panels on the phone" below).
   It answers nothing for another version, and refuses a file whose bytes no longer match its pin, as the shell never serves one to its own frames.
   It reads the library once a run, from where the host says this build put it (`HostCapabilities.frameLib`).

@@ -1,5 +1,5 @@
 ---
-source: 0304225f18fea486
+source: 88839f4f7e511529
 title: Integrações
 description: Conecte GitHub, GitLab, Bitbucket, Google e servidores MCP para que seu imediato e sua tripulação possam alcançá-los, e escolha o que cada um pode fazer sem perguntar a você.
 ---
@@ -52,10 +52,10 @@ Veja [Seus outros computadores](/pt-br/your-other-computers/).
 
 Sair do GitHub interrompe clones privados e solicitações de pull até você fazer login de novo.
 
-## Google: Gmail e Agenda {#google-gmail-and-calendar}
+## Google: Gmail, Agenda e Drive {#google-gmail-calendar-and-drive}
 
-O Google é um único login para o Gmail e para a Agenda.
-O Infinitary os alcança pelos próprios servidores do Gmail e da Agenda do Google para agentes de IA, com uma conexão com o Google que é sua: um cliente que você cria no seu próprio projeto do Google Cloud, no modo pessoal do Google.
+O Google é um único login para o Gmail, a Agenda e o Drive.
+O Infinitary os alcança pelos próprios servidores do Gmail, da Agenda e do Drive do Google para agentes de IA, com uma conexão com o Google que é sua: um cliente que você cria no seu próprio projeto do Google Cloud, no modo pessoal do Google.
 O Google não o revisa, não mostra nenhum alerta e não encerra o login dele depois de 7 dias.
 
 1. Aperte **Google**, que abre **Configure sua própria conexão com o Google**.
@@ -68,11 +68,14 @@ O Google não o revisa, não mostra nenhum alerta e não encerra o login dele de
 6. Leia **Antes de conectar o Google**: o que o Infinitary usa da sua conta, para onde vai e por quanto tempo fica.
 7. Aperte **Aceitar e continuar para o Google**, ou **Cancelar** para não pedir nada ao Google.
 8. Termine o login na página do Google no seu navegador, com a conta do Google que criou seu cliente, e permita todas as permissões que ela listar.
+   A permissão do Drive cobre todo o seu Drive, incluindo as pastas.
 
 O Infinitary guarda a chave secreta do cliente em [Segredos](/pt-br/secrets/) neste computador, e seu imediato e sua tripulação nunca a veem.
 Seu cliente só atende a conta do Google que o criou.
 Você o configura uma única vez: depois disso, fazer login no Google começa pelo aviso.
-Se você deixar uma permissão desmarcada, o Infinitary não guarda nada e você pode fazer login de novo.
+Se você deixar desmarcada uma permissão do Gmail ou da Agenda, o Infinitary não guarda nada e você pode fazer login de novo.
+Se você deixar só o Drive desmarcado, o Gmail e a Agenda se conectam mesmo assim, e a linha do Google diz **Drive, Documentos e Planilhas não adicionados**.
+Aperte **Fazer login de novo** na linha e deixe o Drive marcado na página do Google para adicioná-lo.
 Toda vez que você faz login no Google, o aviso aparece primeiro.
 
 A linha do Google diz quando a conexão precisa de você:
@@ -83,9 +86,9 @@ A linha do Google diz quando a conexão precisa de você:
   Aperte **Configurar de novo** e crie um cliente no modo pessoal.
 - **Seu cliente do Google parou**: o Google não aceita mais seu cliente, talvez porque ele foi excluído no Google Cloud.
   Aperte **Configurar de novo**.
-- **Marque seu cliente para agentes**: os servidores do Gmail e da Agenda do Google só aceitam um cliente marcado para um agente com IA, e o seu não está.
+- **Marque seu cliente para agentes**: os servidores do Google para agentes de IA só aceitam um cliente marcado para um agente com IA, e o seu não está.
   Aperte **Abrir o Google Cloud**, marque “Use this client for an AI-powered agent” no seu cliente e salve; depois escolha **Verificar agora** no menu da linha.
-- **Um serviço do Google está desativado**: o serviço MCP do Gmail ou da Agenda está desativado no seu projeto do Google Cloud.
+- **Um serviço do Google está desativado**: o serviço MCP do Gmail, da Agenda ou do Drive está desativado no seu projeto do Google Cloud.
   Aperte **Abrir o Google Cloud**, ative-o e depois escolha **Verificar agora** no menu da linha.
 
 Nesses dois últimos casos, você continua com o login feito, e nada precisa ser configurado de novo.
@@ -96,23 +99,25 @@ Com o Google conectado, seu imediato e sua tripulação podem buscar e ler seus 
 A partir de 1º de fevereiro de 2027, o Google não deixa nenhum agente de IA buscar um arquivo anexado a uma mensagem; a partir daí, você mesmo o salva pelo Gmail.
 Na Agenda, eles podem listar suas agendas e eventos, ler um evento, encontrar horários em que todos estão livres e criar ou atualizar um evento.
 Nenhuma ação exclui um evento da agenda.
+No Drive, eles podem buscar seus arquivos, ler um arquivo como texto e salvar um arquivo na pasta de uma tarefa, com um documento, uma planilha ou uma apresentação do Google exportados como PDF ou como arquivo do Office.
+Nenhuma ação exclui, move ou compartilha um arquivo, e nenhuma altera um.
 
 O Google pode parar uma chamada para perguntar a você primeiro, mesmo uma que você permitiu.
-Então o Infinitary mostra a pergunta em um cartão que diz que é o Gmail ou a Agenda que pergunta, com cada opção do Google como um botão próprio, nas palavras do Google.
+Então o Infinitary mostra a pergunta em um cartão que diz que é o Gmail, a Agenda ou o Drive que pergunta, com cada opção do Google como um botão próprio, nas palavras do Google.
 Nada é executado até você apertar um deles, e sua escolha responde só a essa chamada.
 Uma escolha de sempre permitir fica guardada pelo Google, não pelo Infinitary.
 
 O que seu imediato e sua tripulação leem fica nas conversas salvas deles por 30 dias.
 Depois, uma nota toma o lugar disso.
-Para excluir antes, aperte **Excluir** na linha **Excluir conteúdo do Gmail e da Agenda**, em **Dados**, no fim da aba.
-Um anexo salvo fica na pasta da tarefa até a tarefa ser encerrada ou até passarem 30 dias.
-As palavras que um tripulante leu dentro de um anexo salvo ficam na conversa dele depois dos 30 dias.
+Para excluir antes, aperte **Excluir** na linha **Excluir conteúdo do Google**, em **Dados**, no fim da aba.
+Um anexo ou arquivo salvo fica na pasta da tarefa até a tarefa ser encerrada ou até passarem 30 dias.
+As palavras que um tripulante leu dentro de um anexo ou arquivo salvo ficam na conversa dele depois dos 30 dias.
 O que seu imediato e sua tripulação escreveram eles mesmos, em cartões, notas e arquivos, fica até você excluir a tarefa.
-Remover o Google também exclui o que eles já leram, como faz **Excluir conteúdo do Gmail e da Agenda**.
+Remover o Google também exclui o que eles já leram, como faz **Excluir conteúdo do Google**.
 
 Qualquer pessoa pode enviar a você palavras escritas para manipular uma IA.
-O Infinitary entrega seus e-mails e eventos ao seu imediato e à sua tripulação marcados como informação de fora, nunca como instruções.
-Mesmo assim, uma mensagem pode enganar um modelo de IA.
+O Infinitary entrega seus e-mails, eventos e arquivos ao seu imediato e à sua tripulação marcados como informação de fora, nunca como instruções.
+Mesmo assim, uma mensagem ou um arquivo pode enganar um modelo de IA.
 Um tripulante pode acessar a internet sem perguntar a você, então um tripulante enganado poderia enviar para outro lugar o que leu.
 
 ## Servidores MCP {#mcp-servers}

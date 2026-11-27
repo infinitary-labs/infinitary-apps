@@ -3,8 +3,8 @@
  * sign-in for an installed app (the consent page, the token endpoint with
  * PKCE, renewal and revocation), Gmail's profile, which the sign-in reads
  * the account from, an attached file's bytes from Gmail's own API, and
- * Google's Gmail and Calendar MCP servers
- * (`googleMcpStandIn.ts`), on this computer, answering in the shapes Google
+ * Google's Gmail, Calendar and Drive MCP servers
+ * (`googleMcpStandIn.ts`, `driveMcpStandIn.ts`), on this computer, answering in the shapes Google
  * documents (the OAuth 2.0 guide for installed apps, Gmail's API reference,
  * and the MCP servers' own tool lists) and Google's error shape
  * `{ error: { code, message, errors: [{ reason }], status } }`.
@@ -24,6 +24,7 @@ import { Readable } from "node:stream";
 import { createMcpHandler } from "@modelcontextprotocol/server";
 
 import { calendarStandIn } from "./calendarStandIn";
+import { driveMcpServer, type StandInDriveFile } from "./driveMcpStandIn";
 import {
   attachmentIdOf,
   calendarMcpServer,
@@ -34,6 +35,7 @@ import {
   type StandInMail,
 } from "./googleMcpStandIn";
 
+export type { StandInDriveFile } from "./driveMcpStandIn";
 export type { Outgoing, StandInMail } from "./googleMcpStandIn";
 
 export const STAND_IN_CLIENT_ID = "1084716423951-k2v7o3lq.apps.googleusercontent.com";
@@ -67,11 +69,22 @@ const SCOPES = [
   "https://www.googleapis.com/auth/calendar.events",
   "https://www.googleapis.com/auth/calendar.calendarlist.readonly",
   "https://www.googleapis.com/auth/calendar.events.freebusy",
+  "https://www.googleapis.com/auth/drive",
 ];
 
-const MCP_PATHS: Record<string, GoogleMcpService> = {
+/** The Google services the stand-in serves an MCP server for. */
+type StandInService = GoogleMcpService | "drive";
+
+const MCP_PATHS: Record<string, StandInService> = {
   "/gmailmcp/mcp/v1": "gmail",
   "/calendarmcp/mcp/v1": "calendar",
+  "/drivemcp/mcp/v1": "drive",
+};
+
+const SERVICE_NAMES: Record<StandInService, string> = {
+  gmail: "Gmail",
+  calendar: "Calendar",
+  drive: "Drive",
 };
 
 function googleError(code: number, message: string, reason: string, status: string) {
@@ -91,7 +104,7 @@ const NOT_FOUND = googleError(404, "Requested entity was not found.", "notFound"
  * not turned on, as Google's Calendar server gave it live: status 403 with a
  * finished tool result whose only words name the page that turns it on.
  */
-function serviceDisabled(service: GoogleMcpService, id: unknown) {
+function serviceDisabled(service: StandInService, id: unknown) {
   const name = `${service}mcp.googleapis.com`;
   const activationUrl = `https://console.developers.google.com/apis/api/${name}/overview?project=${STAND_IN_PROJECT}`;
   return {
@@ -100,7 +113,7 @@ function serviceDisabled(service: GoogleMcpService, id: unknown) {
     result: {
       content: [
         {
-          text: `${service === "gmail" ? "Gmail" : "Calendar"} MCP API has not been used in project ${STAND_IN_PROJECT} before or it is disabled. Enable it by visiting ${activationUrl} then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.`,
+          text: `${SERVICE_NAMES[service]} MCP API has not been used in project ${STAND_IN_PROJECT} before or it is disabled. Enable it by visiting ${activationUrl} then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.`,
           type: "text",
         },
       ],
@@ -133,7 +146,7 @@ export type Seen = {
   path: string;
   authorization?: string;
   body: string;
-  service?: GoogleMcpService;
+  service?: StandInService;
   /** The JSON-RPC method of an MCP request. */
   rpc?: string;
   tool?: string;
@@ -190,7 +203,7 @@ export async function startGoogleStandIn() {
      */
     agentRefused: false,
     /** MCP services the person's Google Cloud project has not turned on. */
-    off: new Set<GoogleMcpService>(),
+    off: new Set<StandInService>(),
     /** Tools Google asks the person about before it runs them, by name. */
     confirm: new Set<string>(),
     /** Gmail's list offers no `send_message`. */
@@ -203,6 +216,8 @@ export async function startGoogleStandIn() {
     now: () => Date.now(),
   };
   const calendar = calendarStandIn(() => knobs.now());
+  /** The person's Drive, by file id. */
+  const files = new Map<string, StandInDriveFile>();
   const answers: GoogleMcpWorld["answers"] = [];
 
   const issue = (refresh: string) => {
@@ -233,10 +248,14 @@ export async function startGoogleStandIn() {
       (context) => calendarMcpServer(world(context.authInfo?.scopes ?? [])),
       { legacy: "reject" },
     ),
+    drive: createMcpHandler(
+      (context) => driveMcpServer({ files, granted: () => context.authInfo?.scopes ?? [] }),
+      { legacy: "reject" },
+    ),
   };
 
   const mcp = async (
-    service: GoogleMcpService,
+    service: StandInService,
     request: IncomingMessage,
     response: ServerResponse,
     url: URL,
@@ -477,7 +496,7 @@ export async function startGoogleStandIn() {
     calendar,
     seen,
     /** The tool calls Google's MCP servers received, by service. */
-    calls: (service?: GoogleMcpService) =>
+    calls: (service?: StandInService) =>
       seen.filter(
         (entry): entry is Seen & { tool: string; args: Record<string, unknown> } =>
           entry.tool !== undefined && (service === undefined || entry.service === service),
@@ -487,6 +506,8 @@ export async function startGoogleStandIn() {
     drafts,
     sent,
     mail,
+    /** The person's Drive: a test puts files in it by id. */
+    files,
     /** Each answer the person gave Google's question, by tool. */
     answers,
     knobs,
@@ -540,7 +561,11 @@ export async function startGoogleStandIn() {
     },
     close: () =>
       new Promise<void>((resolve) => {
-        void Promise.all([handlers.gmail.close(), handlers.calendar.close()]).finally(() => {
+        void Promise.all([
+          handlers.gmail.close(),
+          handlers.calendar.close(),
+          handlers.drive.close(),
+        ]).finally(() => {
           server.close(() => resolve());
           server.closeAllConnections();
         });

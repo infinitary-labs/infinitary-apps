@@ -205,14 +205,16 @@ export function GoogleClientSetup({
 export type GoogleClientState = {
   /** The row's short state words, in place of its health's. */
   words: string;
-  tone: "danger" | "warn";
+  /** quiet: the sign-in works, and the row keeps its own dot and badge beside the line. */
+  tone: "danger" | "warn" | "quiet";
   /** The line under the row that says why and what to do. */
   detail: string;
   /**
-   * The one next step: set the client up again, or open the Google Cloud
-   * page `link` names, which fixes what Google's MCP servers refused.
+   * The one next step: set the client up again, open the Google Cloud
+   * page `link` names, which fixes what Google's MCP servers refused, or
+   * sign in again to grant what the sign-in left out.
    */
-  next: "set-up-again" | "open";
+  next: "set-up-again" | "open" | "sign-in-again";
   /** The Google Cloud page the `open` step opens. */
   link?: string;
 };
@@ -220,7 +222,9 @@ export type GoogleClientState = {
 /**
  * The Google row's state from its client facts (INF-5549's plan): a refused
  * client first, then a refused sign-in as every row shows it, then a client
- * Google's MCP servers refused or a service turned off, then one that ends. Undefined, the row shows its health as any sign-in row does.
+ * Google's MCP servers refused or a service turned off, then one that ends,
+ * then a sign-in that left Drive out. Undefined, the row shows its health as
+ * any sign-in row does.
  */
 export function googleClientState(
   client: IntegrationClientView | undefined,
@@ -245,10 +249,17 @@ export function googleClientState(
       link: client.mcp.link,
     };
   if (client.mcp?.refused === "service") {
-    const names = (client.mcp.services ?? []).map((service) =>
+    // A view from before Drive names its services in `services` alone.
+    const names = (client.mcp.off ?? client.mcp.services ?? []).map((service) =>
       service === "gmail"
         ? m.integrationsGoogleServiceGmail()
-        : m.integrationsGoogleServiceCalendar(),
+        : service === "calendar"
+          ? m.integrationsGoogleServiceCalendar()
+          : service === "drive"
+            ? m.integrationsGoogleServiceDrive()
+            : service === "docs"
+              ? m.integrationsGoogleServiceDocs()
+              : m.integrationsGoogleServiceSheets(),
     );
     return {
       words: m.integrationsGoogleServiceOff(),
@@ -270,10 +281,21 @@ export function googleClientState(
       next: "set-up-again",
     };
   }
+  if (client.withoutDrive)
+    return {
+      words: m.integrationsGoogleWithoutDrive(),
+      tone: "quiet",
+      detail: m.integrationsGoogleWithoutDriveDetail(),
+      next: "sign-in-again",
+    };
   return undefined;
 }
 
 /** The words of a state's next step. */
 export function googleNextWords(next: GoogleClientState["next"]): string {
-  return next === "open" ? m.integrationsGoogleOpenCloud() : m.integrationsGoogleSetUpAgain();
+  return next === "open"
+    ? m.integrationsGoogleOpenCloud()
+    : next === "sign-in-again"
+      ? m.settingsIntegrationsSignInAgain()
+      : m.integrationsGoogleSetUpAgain();
 }

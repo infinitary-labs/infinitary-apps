@@ -8,7 +8,7 @@ import {
   NOTICE_ACCEPTED,
 } from "@shared/integrations";
 import { fencedListReminder, fencedSpans, fenceReminder } from "@shared/outsideData";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { SHOOT_EVENT, STUDIO_CALENDAR } from "../../../../../tests/helpers/calendarStandIn";
 import { attachmentIdOf } from "../../../../../tests/helpers/googleMcpStandIn";
 import {
@@ -103,6 +103,12 @@ function earlierKeys(dir: string, keys: { access: string; refresh: string }) {
 async function signedIn(): Promise<Fixture> {
   const world = await fixture();
   await world.integrations.signIn("google", NOTICE_ACCEPTED);
+  // The sign-in's probe reads each service on its own; a knob set before it arrives would answer the probe.
+  await vi.waitFor(() =>
+    expect(world.google.calls().map((call) => call.tool)).toEqual(
+      expect.arrayContaining(["list_labels", "list_calendars", "search_files"]),
+    ),
+  );
   allowIntegrationReads(world.integrations);
   return world;
 }
@@ -169,6 +175,10 @@ describe("Google as an integration", () => {
           expect.objectContaining({ name: "free_busy", effect: "reads", rule: "ask" }),
           expect.objectContaining({ name: "create_event", effect: "changes", rule: "ask" }),
           expect.objectContaining({ name: "update_event", effect: "changes", rule: "ask" }),
+          // INF-7009: Drive's actions start at Asks you too.
+          expect.objectContaining({ name: "search_files", effect: "reads", rule: "ask" }),
+          expect.objectContaining({ name: "read_file", effect: "reads", rule: "ask" }),
+          expect.objectContaining({ name: "save_file", effect: "reads", rule: "ask" }),
         ],
         events: [
           expect.objectContaining({ name: "message_received", label: "A message arrives" }),
@@ -958,6 +968,7 @@ describe("Google as an integration", () => {
       gmail: "https://gmail.googleapis.com",
       gmailMcp: "https://gmailmcp.googleapis.com/mcp/v1",
       calendarMcp: "https://calendarmcp.googleapis.com/mcp/v1",
+      driveMcp: "https://drivemcp.googleapis.com/mcp/v1",
     });
   });
 

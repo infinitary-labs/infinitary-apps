@@ -92,7 +92,7 @@ import "./forges.css";
  * and pushes, with its Sign in, its code and its Sign out
  * (`DeviceForgeRows.tsx`); Settings -> Projects holds no sign-in. Google signs in in the
  * person's browser (`integrations.signIn`), after its notice: what
- * Infinitary uses from Gmail and Calendar and where it goes, which the
+ * Infinitary uses from Google and where it goes, which the
  * person accepts before anything is asked of Google (INF-949). While the
  * app waits for the browser to come back, an aside says so, opens the page
  * again or cancels, and the new row opens once it is back. The Infinitary
@@ -105,7 +105,7 @@ import "./forges.css";
  * captain's word on INF-1214). The switch is the inbox's pause, and its
  * delete is in the Data section (INF-1567, the captain's direction C). The
  * Data section at the foot holds the deletes of what the first mate and
- * crew read, Delete Gmail and Calendar content whether or not Google is
+ * crew read, Delete Google content whether or not Google is
  * connected, and the inbox's notes while it is kept (the captain:
  * "maybe all data deletion stuff gets put into another "Data" section at
  * the bottom of the integrations tab"). Every change here goes through the
@@ -503,7 +503,9 @@ export function IntegrationsTab() {
                 onClient={
                   client?.next === "open" && client.link
                     ? () => void window.infinitary.app.openExternal(client.link ?? "")
-                    : openSetup
+                    : client?.next === "sign-in-again"
+                      ? () => beginSignIn(integration.kind)
+                      : openSetup
                 }
                 way={
                   integration.kind === "github" || integration.host
@@ -954,9 +956,22 @@ function IntegrationRow({
     >
       <span className="fm-forges-dot">
         <StatusDot
-          tone={integration.paused ? "idle" : (client?.tone ?? row.tone)}
-          label={integration.paused ? m.settingsIntegrationsPaused() : (client?.words ?? row.label)}
-          nativeTitle={!client && row.label !== row.badge && !row.reauth && row.problem === null}
+          tone={
+            integration.paused ? "idle" : client && client.tone !== "quiet" ? client.tone : row.tone
+          }
+          label={
+            integration.paused
+              ? m.settingsIntegrationsPaused()
+              : client && client.tone !== "quiet"
+                ? client.words
+                : row.label
+          }
+          nativeTitle={
+            (!client || client.tone === "quiet") &&
+            row.label !== row.badge &&
+            !row.reauth &&
+            row.problem === null
+          }
           focusable
         />
       </span>
@@ -1007,7 +1022,8 @@ function IntegrationRow({
       <span className="fm-forges-action">
         {client && (
           <Button
-            variant="primary"
+            // A sign-in that left Drive out still works, so its step waits quietly.
+            variant={client.tone === "quiet" ? "secondary" : "primary"}
             size="sm"
             pending={busy}
             pendingLabel={m.settingsIntegrationsStarting()}

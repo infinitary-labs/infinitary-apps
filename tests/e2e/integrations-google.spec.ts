@@ -691,6 +691,93 @@ test("one Google sign-in from Settings by keys, and a message arriving fires a r
 });
 
 /**
+ * INF-7012's approved plan, piece 2, with the captain's answer 2a on
+ * INF-6447: "Keep Gmail and Calendar; Drive waits for a new sign-in".
+ *
+ * - Promised result: a sign-in with Drive's box unticked on Google's page is
+ *   kept; the row says quietly that Drive, Docs and Sheets were not added,
+ *   with Sign in again, and lists Drive's actions at Asks you; Sign in
+ *   again by keys shows Google's notice, and a sign-in with every box
+ *   ticked clears the line.
+ * - Data: the stand-in Google, whose consent page grants what the test ticks.
+ * - Completion signal: the row's line, then the second consent page's
+ *   address, then the row without the line.
+ * - Platform prerequisites: none beyond the hermetic launcher with
+ *   disposable Secrets; the system browser is a recorder.
+ * - Shared resources: none; its own userData, HOME and stand-in Google.
+ */
+test("a sign-in that leaves Drive out keeps the row, says so quietly, and Sign in again adds Drive by keys", async () => {
+  const userDataDir = scratchDir("infinitary-google-drive-");
+  google = await startGoogleStandIn();
+  const stand = google;
+  stand.knobs.lasts = undefined;
+  const everything = [...stand.knobs.consent.grant];
+  stand.knobs.consent.grant = everything.filter(
+    (scope) => scope !== "https://www.googleapis.com/auth/drive",
+  );
+  launched = await launchSecrets({
+    userDataDir,
+    withMockProvider: true,
+    env: {
+      ...SHORT_TICK,
+      INFINITARY_GOOGLE_CLIENT_ID: STAND_IN_CLIENT_ID,
+      INFINITARY_GOOGLE_CLIENT_SECRET: STAND_IN_CLIENT_SECRET,
+      INFINITARY_GOOGLE_URL: stand.base,
+    },
+  });
+  const { app, page } = launched;
+  await app.evaluate(({ shell }) => {
+    (globalThis as { googleOpened?: string[] }).googleOpened = [];
+    shell.openExternal = async (url) => {
+      (globalThis as { googleOpened?: string[] }).googleOpened?.push(url);
+    };
+  });
+  const opening = () =>
+    app.evaluate(() => (globalThis as { googleOpened?: string[] }).googleOpened ?? []);
+  await runFromSearch(app, page, "settings.integrations");
+  const tab = settingsSection(page, "integrations");
+  const row = tab.locator('[data-integration-row="google"]');
+  const state = row.locator("[data-integration-client]");
+  const detail = tab.locator('[data-integration-client-detail="google"]');
+  const signInAgain = row.getByRole("button", {
+    name: m.settingsIntegrationsSignInAgain(),
+    exact: true,
+  });
+
+  await test.step("a sign-in without Drive is kept, and the row says so quietly with Sign in again", async () => {
+    await pressKey(tab.locator('[data-integration-add="google"] button'), "Enter");
+    await acceptGoogleNotice(tab);
+    await expect.poll(async () => (await opening()).length).toBe(1);
+    await fetch((await opening())[0] ?? "");
+    await expect(row).toContainText(STAND_IN_ACCOUNT);
+    await expect(row).toHaveAttribute("data-integration-state", "ok");
+    await expect(state).toHaveText(m.integrationsGoogleWithoutDrive());
+    await expect(state).toHaveAttribute("data-tone", "quiet");
+    await expect(detail).toHaveText(m.integrationsGoogleWithoutDriveDetail());
+    const actions = tab.locator('[data-integration-actions="google"]');
+    for (const name of ["search_files", "read_file", "save_file"])
+      await expect(
+        actions.locator(`[data-integration-action="${name}"] [data-integration-rule]`),
+      ).toHaveText(INTEGRATION_RULE_WORDS.ask);
+  });
+
+  await test.step("Sign in again by keys shows Google's notice, and every box ticked clears the line", async () => {
+    stand.knobs.consent.grant = everything;
+    await pressKey(signInAgain, "Enter");
+    await acceptGoogleNotice(tab);
+    await expect.poll(async () => (await opening()).length).toBe(2);
+    const consent = new URL((await opening())[1] ?? "");
+    expect(consent.searchParams.get("scope")?.split(" ")).toContain(
+      "https://www.googleapis.com/auth/drive",
+    );
+    await fetch(consent);
+    await expect(state).toHaveCount(0);
+    await expect(detail).toHaveCount(0);
+    await expect(row).toContainText(STAND_IN_ACCOUNT);
+  });
+});
+
+/**
  * INF-786 / accepted INF-775 piece 6: one Google row, Calendar actions and
  * selected-calendar changes fire Automation. The data is the stand-in
  * Calendar MCP server's answers, with one event present before listening

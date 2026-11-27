@@ -12,7 +12,7 @@ import { SettingRow } from "./settingRows";
  * The delete for the words from outside, in Settings → Integrations' Data
  * section (INF-952, INF-1094; docs/task-retention.md, "Words from outside"):
  * every saved conversation, on this computer and on the computers that run
- * its work, keeps a note where the Gmail and Calendar content was, and every
+ * its work, keeps a note where the Google content was, and every
  * other word stays. Armed on the first press and run on the second, as Purge
  * is. Absent where this build keeps none.
  */

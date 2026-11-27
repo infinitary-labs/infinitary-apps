@@ -1,5 +1,5 @@
 ---
-source: 0304225f18fea486
+source: 88839f4f7e511529
 title: Integrationen
 description: Verbinde GitHub, GitLab, Bitbucket, Google und MCP-Server, damit dein erster Offizier und deine Crew sie erreichen, und lege fest, was jede Integration ohne Rückfrage tun darf.
 ---
@@ -52,10 +52,10 @@ Siehe [Deine anderen Computer](/de/your-other-computers/).
 
 Wenn du dich bei GitHub abmeldest, funktionieren private Klone und Pull Requests erst wieder, wenn du dich erneut anmeldest.
 
-## Google: Gmail und Kalender {#google-gmail-and-calendar}
+## Google: Gmail, Kalender und Drive {#google-gmail-calendar-and-drive}
 
-Google ist eine Anmeldung für Gmail und Kalender zusammen.
-Infinitary erreicht beide über Googles eigene Gmail- und Kalender-Server für KI-Agenten, mit deiner eigenen Google-Verbindung: einem Client, den du in deinem eigenen Google-Cloud-Projekt im persönlichen Modus von Google erstellst.
+Google ist eine Anmeldung für Gmail, Kalender und Drive.
+Infinitary erreicht sie über Googles eigene Gmail-, Kalender- und Drive-Server für KI-Agenten, mit deiner eigenen Google-Verbindung: einem Client, den du in deinem eigenen Google-Cloud-Projekt im persönlichen Modus von Google erstellst.
 Google prüft ihn nicht, zeigt keine Warnung und beendet seine Anmeldung nicht nach 7 Tagen.
 
 1. Drück **Google**, dann öffnet sich **Deine eigene Google-Verbindung einrichten**.
@@ -68,11 +68,14 @@ Google prüft ihn nicht, zeigt keine Warnung und beendet seine Anmeldung nicht n
 6. Lies **Bevor du Google verbindest**: was Infinitary aus deinem Konto verwendet, wohin es geht und wie lange es bleibt.
 7. Drück **Akzeptieren und weiter zu Google**, oder **Abbrechen**, wenn Google nichts erfahren soll.
 8. Schließ die Anmeldung auf der Seite von Google in deinem Browser mit dem Google-Konto ab, das deinen Client erstellt hat, und erlaube jede Berechtigung, die dort aufgeführt ist.
+   Die Berechtigung für Drive umfasst dein ganzes Drive, Ordner eingeschlossen.
 
 Infinitary bewahrt das Geheimnis des Clients in [Geheimnisse](/de/secrets/) auf diesem Computer auf, und dein erster Offizier und deine Crew sehen es nie.
 Dein Client dient nur dem Google-Konto, das ihn erstellt hat.
 Du richtest ihn einmal ein: Danach beginnt die Anmeldung bei Google mit dem Hinweis.
-Wenn du eine Berechtigung nicht ankreuzt, behält Infinitary nichts, und du kannst dich erneut anmelden.
+Wenn du eine Berechtigung für Gmail oder Kalender nicht ankreuzt, behält Infinitary nichts, und du kannst dich erneut anmelden.
+Wenn du nur Drive nicht ankreuzt, werden Gmail und Kalender trotzdem verbunden, und die Google-Zeile zeigt **Drive, Docs und Tabellen nicht hinzugefügt**.
+Drück **Erneut anmelden** in der Zeile und lass Drive auf der Seite von Google angekreuzt, um es hinzuzufügen.
 Bei jeder Anmeldung bei Google erscheint zuerst der Hinweis.
 
 Die Google-Zeile sagt es, wenn die Verbindung dich braucht:
@@ -83,9 +86,9 @@ Die Google-Zeile sagt es, wenn die Verbindung dich braucht:
   Drück **Erneut einrichten** und erstelle einen Client im persönlichen Modus.
 - **Dein Google-Client funktioniert nicht mehr**: Google akzeptiert deinen Client nicht mehr, vielleicht weil er in Google Cloud gelöscht wurde.
   Drück **Erneut einrichten**.
-- **Client für Agenten kennzeichnen**: Die Gmail- und Kalender-Server von Google nehmen nur einen Client an, der für einen KI-gestützten Agenten gekennzeichnet ist, und deiner ist es nicht.
+- **Client für Agenten kennzeichnen**: Die Server von Google für KI-Agenten nehmen nur einen Client an, der für einen KI-gestützten Agenten gekennzeichnet ist, und deiner ist es nicht.
   Drück **Google Cloud öffnen**, setz bei deinem Client das Häkchen bei „Use this client for an AI-powered agent“ und speichere, und wähl dann **Jetzt prüfen** im Menü der Zeile.
-- **Ein Google-Dienst ist ausgeschaltet**: Der MCP-Dienst für Gmail oder Kalender ist in deinem Google-Cloud-Projekt ausgeschaltet.
+- **Ein Google-Dienst ist ausgeschaltet**: Der MCP-Dienst für Gmail, Kalender oder Drive ist in deinem Google-Cloud-Projekt ausgeschaltet.
   Drück **Google Cloud öffnen**, schalt ihn ein und wähl dann **Jetzt prüfen** im Menü der Zeile.
 
 In diesen beiden letzten Fällen bleibst du angemeldet, und nichts muss neu eingerichtet werden.
@@ -96,23 +99,25 @@ Mit verbundenem Google können dein erster Offizier und deine Crew deine Mails d
 Ab dem 1. Februar 2027 lässt Google keinen KI-Agenten mehr eine an eine Nachricht angehängte Datei abrufen; von da an speicherst du sie selbst aus Gmail.
 Im Kalender können sie deine Kalender und Termine auflisten, einen Termin lesen, Zeiten finden, zu denen alle frei sind, und einen Termin anlegen oder ändern.
 Keine Aktion löscht einen Kalendertermin.
+In Drive können sie deine Dateien durchsuchen, eine Datei als Text lesen und eine Datei im Ordner einer Aufgabe speichern, ein Google-Dokument, eine Tabelle oder eine Präsentation als PDF oder als Office-Datei exportiert.
+Keine Aktion löscht, verschiebt oder teilt eine Datei, und keine ändert eine.
 
 Google kann einen Aufruf stoppen, um zuerst dich zu fragen, auch einen, den du erlaubt hast.
-Infinitary zeigt die Frage dann auf einer Karte, die Gmail oder Kalender als Fragenden nennt, mit jeder von Googles Antwortmöglichkeiten als eigener Schaltfläche, in Googles Worten.
+Infinitary zeigt die Frage dann auf einer Karte, die Gmail, Kalender oder Drive als Fragenden nennt, mit jeder von Googles Antwortmöglichkeiten als eigener Schaltfläche, in Googles Worten.
 Nichts läuft, bis du eine drückst, und deine Auswahl beantwortet nur diesen einen Aufruf.
 Eine Auswahl, immer zu erlauben, speichert Google, nicht Infinitary.
 
 Was dein erster Offizier und deine Crew lesen, bleibt 30 Tage in ihren gespeicherten Unterhaltungen.
 Danach tritt ein Vermerk an die Stelle.
-Um es früher zu löschen, drück **Löschen** in der Zeile **Gmail- und Kalenderinhalte löschen** unter **Daten** am Ende des Tabs.
-Ein gespeicherter Anhang bleibt im Ordner seiner Aufgabe, bis die Aufgabe geschlossen wird oder 30 Tage vergehen.
-Worte, die ein Crewmitglied in einem gespeicherten Anhang gelesen hat, bleiben auch nach den 30 Tagen in seiner Unterhaltung.
+Um es früher zu löschen, drück **Löschen** in der Zeile **Google-Inhalte löschen** unter **Daten** am Ende des Tabs.
+Ein gespeicherter Anhang oder eine gespeicherte Datei bleibt im Ordner der Aufgabe, bis die Aufgabe geschlossen wird oder 30 Tage vergehen.
+Worte, die ein Crewmitglied in einem gespeicherten Anhang oder einer gespeicherten Datei gelesen hat, bleiben auch nach den 30 Tagen in seiner Unterhaltung.
 Was dein erster Offizier und deine Crew selbst geschrieben haben, in Karten, Notizen und Dateien, bleibt, bis du die Aufgabe löschst.
-Wenn du Google entfernst, wird auch gelöscht, was sie schon gelesen haben, so wie bei **Gmail- und Kalenderinhalte löschen**.
+Wenn du Google entfernst, wird auch gelöscht, was sie schon gelesen haben, so wie bei **Google-Inhalte löschen**.
 
 Jeder kann dir Worte schicken, die geschrieben sind, um eine KI zu lenken.
-Infinitary übergibt deine Mails und Termine an deinen ersten Offizier und deine Crew als Informationen von außen gekennzeichnet, nie als Anweisungen.
-Eine Nachricht kann ein KI-Modell trotzdem in die Irre führen.
+Infinitary übergibt deine Mails, Termine und Dateien an deinen ersten Offizier und deine Crew als Informationen von außen gekennzeichnet, nie als Anweisungen.
+Eine Nachricht oder eine Datei kann ein KI-Modell trotzdem in die Irre führen.
 Ein Crewmitglied kann ohne Rückfrage ins Internet, deshalb könnte ein in die Irre geführtes Crewmitglied weitergeben, was es gelesen hat.
 
 ## MCP-Server {#mcp-servers}

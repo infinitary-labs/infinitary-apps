@@ -173,8 +173,8 @@
   "phoneFormatMinutes": "{minutes}分",
   "phoneFormatNow": "今",
   "phoneFormatUnderMinute": "1分未満",
-  "phoneGoogleAgentRefusedDetail": "Google の Gmail とカレンダーのサーバーは、AI エージェント用に設定されたクライアントしか受け付けません。Google Cloud でクライアントを開き、「Use this client for an AI-powered agent」にチェックを入れて保存してから、{computer} の「設定」→「連携」にある Google の行で「今すぐ確認」を選んでください。",
-  "phoneGoogleInvite": "{computer} の一等航海士が Gmail とカレンダーを読めるようにします。サインイン情報は {computer} にとどまります。",
+  "phoneGoogleAgentRefusedDetail": "Google の Gmail、カレンダー、ドライブのサーバーは、AI エージェント用に設定されたクライアントしか受け付けません。Google Cloud でクライアントを開き、「Use this client for an AI-powered agent」にチェックを入れて保存してから、{computer} の「設定」→「連携」にある Google の行で「今すぐ確認」を選んでください。",
+  "phoneGoogleInvite": "{computer} の一等航海士が Gmail、カレンダー、ドライブを読めるようにします。サインイン情報は {computer} にとどまります。",
   "phoneGoogleServiceOffDetail": {
     "plural": "count",
     "other": "Google Cloud プロジェクトで {services} の MCP サービスがオフになっているため、Infinitary からアクセスできません。Google Cloud でオンにしてから、{computer} の「設定」→「連携」にある Google の行で「今すぐ確認」を選んでください。"
@@ -186,9 +186,10 @@
   "phoneGoogleSignInAgainNeeded": "Google から再度のサインインを求められています。",
   "phoneGoogleSignOut": "サインアウト",
   "phoneGoogleSignOutAsk": "{computer} で Google からサインアウトしますか？",
-  "phoneGoogleSignOutWarning": "一等航海士と乗組員は Gmail とカレンダーを使えなくなります。",
+  "phoneGoogleSignOutWarning": "一等航海士と乗組員は Gmail、カレンダー、ドライブを使えなくなります。",
   "phoneGoogleSignedIn": "{computer} でサインインしています。",
   "phoneGoogleSignedInAs": "{computer} で {account} としてサインインしています。",
+  "phoneGoogleWithoutDriveDetail": "{computer} の Google のサインインにドライブ、ドキュメント、スプレッドシートが含まれていません。Gmail とカレンダーはそのまま使えます。追加するには、もう一度サインインし、Google のページでドライブにチェックを入れたままにしてください。",
   "phoneHideKeyboard": "キーボードを隠す",
   "phoneIdentityNotKept": "このスマートフォンの識別情報を読み込むか保存することができませんでした。スマートフォンのロックを解除して、もう一度お試しください。",
   "phoneIdentityUnreadable": "このスマートフォンの識別情報を読み込めませんでした。",

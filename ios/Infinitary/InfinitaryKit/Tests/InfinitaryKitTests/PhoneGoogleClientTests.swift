@@ -79,4 +79,25 @@ import Testing
         let (client, health) = try row(health: "ok", client: #"{"kept":true,"mcp":{"refused":"agent","link":"http://console.cloud.google.com/auth/clients"}}"#)
         #expect(PhoneGoogleClientState.of(client, health: health, computer: "Studio Mac") == nil)
     }
+
+    /// The captain's answer 2a on INF-6447: "Keep Gmail and Calendar; Drive waits for a new sign-in". The row says so
+    /// quietly, with Sign in again, below every warning.
+    @Test func aSignInWithoutDriveSaysSoQuietlyWithSignInAgain() throws {
+        let (client, health) = try row(health: "ok", client: #"{"kept":true,"withoutDrive":true}"#)
+        let state = try #require(PhoneGoogleClientState.of(client, health: health, computer: "Studio Mac"))
+        #expect(state.words == "Drive, Docs and Sheets not added")
+        #expect(state.detail.hasPrefix("Your Google sign-in on Studio Mac leaves out Drive, Docs and Sheets."))
+        #expect(state.tone == .quiet)
+        #expect(state.next == .signInAgain)
+        #expect(state.nextWords == "Sign in again")
+        let (ending, _) = try row(health: "ok", client: #"{"kept":true,"endsAt":1792771200000,"withoutDrive":true}"#)
+        #expect(PhoneGoogleClientState.of(ending, health: health, computer: "Studio Mac")?.tone == .warning)
+    }
+
+    @Test func driveOffIsNamedFromTheOffList() throws {
+        let link = "https://console.developers.google.com/apis/api/drivemcp.googleapis.com/overview?project=582093176224"
+        let (client, health) = try row(health: "ok", client: #"{"kept":true,"mcp":{"refused":"service","off":["drive"],"link":"\#(link)"}}"#)
+        let state = try #require(PhoneGoogleClientState.of(client, health: health, computer: "Studio Mac"))
+        #expect(state.detail.hasPrefix("The Drive MCP service is off in your Google Cloud project"))
+    }
 }

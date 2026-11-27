@@ -51,10 +51,10 @@ See [Your other computers](/your-other-computers/).
 
 Signing out of GitHub stops private clones and pull requests until you sign in again.
 
-## Google: Gmail and Calendar
+## Google: Gmail, Calendar and Drive
 
-Google is one sign-in for both Gmail and Calendar.
-Infinitary reaches them through Google's own Gmail and Calendar servers for AI agents, with a Google connection of your own: a client you make in your own Google Cloud project, in Google's Personal mode.
+Google is one sign-in for Gmail, Calendar and Drive.
+Infinitary reaches them through Google's own Gmail, Calendar and Drive servers for AI agents, with a Google connection of your own: a client you make in your own Google Cloud project, in Google's Personal mode.
 Google does not review it, shows no warning, and does not end its sign-in after 7 days.
 
 1. Press **Google**, which opens **Set up your own Google connection**.
@@ -67,11 +67,14 @@ Google does not review it, shows no warning, and does not end its sign-in after 
 6. Read **Before you connect Google**: what Infinitary uses from your account, where it goes and how long it stays.
 7. Press **Accept and continue to Google**, or **Cancel** to ask nothing of Google.
 8. Finish signing in on Google's page in your browser, with the Google account that made your client, and allow every permission it lists.
+   Drive's permission covers all of your Drive, folders included.
 
 Infinitary keeps the client's secret in [Secrets](/secrets/) on this computer, and your first mate and your crew never see it.
 Your client serves only the Google account that made it.
 You set it up once: after that, signing in to Google starts at the notice.
-If you leave a permission unchecked, Infinitary keeps nothing and you can sign in again.
+If you leave a Gmail or Calendar permission unchecked, Infinitary keeps nothing and you can sign in again.
+If you leave only Drive unchecked, Gmail and Calendar still connect, and the Google row says **Drive, Docs and Sheets not added**.
+Press **Sign in again** on the row, and leave Drive ticked on Google's page, to add it.
 Each time you sign in to Google, the notice shows first.
 
 The Google row says when the connection needs you:
@@ -82,9 +85,9 @@ The Google row says when the connection needs you:
   Press **Set up again**, and make a client in Personal mode.
 - **Your Google client stopped**: Google no longer accepts your client, perhaps because it was deleted in Google Cloud.
   Press **Set up again**.
-- **Mark your client for agents**: Google's Gmail and Calendar servers take only a client marked for an AI-powered agent, and yours is not.
+- **Mark your client for agents**: Google's servers for AI agents take only a client marked for an AI-powered agent, and yours is not.
   Press **Open Google Cloud**, tick "Use this client for an AI-powered agent" on your client and save, then choose **Check now** from the row's menu.
-- **A Google service is off**: the Gmail or Calendar MCP service is off in your Google Cloud project.
+- **A Google service is off**: the Gmail, Calendar or Drive MCP service is off in your Google Cloud project.
   Press **Open Google Cloud**, turn it on, then choose **Check now** from the row's menu.
 
 In those last two, you stay signed in, and nothing needs to be set up again.
@@ -95,23 +98,25 @@ With Google connected, your first mate and crew can search and read your mail, s
 From February 1, 2027, Google lets no AI agent fetch a file attached to a message, so from then on you save one from Gmail yourself.
 In Calendar they can list your calendars and events, read an event, find times when everyone is free, and create or update an event.
 No action deletes a calendar event.
+In Drive they can search your files, read a file as text, and save a file into a task's folder, a Google Doc, Sheet or Slides deck exported as PDF or as an Office file.
+No action deletes, moves or shares a file, and none changes one.
 
 Google can stop a call to ask you first, even one you allowed.
-Infinitary then shows the question on a card that names Gmail or Calendar as asking, with each of Google's choices as its own button, in Google's words.
+Infinitary then shows the question on a card that names Gmail, Calendar or Drive as asking, with each of Google's choices as its own button, in Google's words.
 Nothing runs until you press one, and your choice answers that one call.
 Google, not Infinitary, keeps a choice to always allow.
 
 What your first mate and crew read stays in their saved conversations for 30 days.
 Then a note takes its place.
-To delete it sooner, press **Delete** on the **Delete Gmail and Calendar content** row under **Data**, at the foot of the tab.
-A saved attachment stays in its task's folder until the task closes or 30 days pass.
-Words a crewmate read inside a saved attachment stay in its conversation after the 30 days.
+To delete it sooner, press **Delete** on the **Delete Google content** row under **Data**, at the foot of the tab.
+A saved attachment or file stays in its task's folder until the task closes or 30 days pass.
+Words a crewmate read inside a saved attachment or file stay in its conversation after the 30 days.
 What your first mate and crew wrote themselves, in cards, notes and files, stays until you delete the task.
-Removing Google also deletes what they already read, as **Delete Gmail and Calendar content** does.
+Removing Google also deletes what they already read, as **Delete Google content** does.
 
 Anyone can send you words written to steer an AI.
-Infinitary hands your mail and events to your first mate and crew marked as information from outside, never as instructions.
-A message can still mislead an AI model.
+Infinitary hands your mail, events and files to your first mate and crew marked as information from outside, never as instructions.
+A message or a file can still mislead an AI model.
 A crewmate can reach the internet without asking you, so a misled crewmate could send what it read elsewhere.
 
 ## MCP servers

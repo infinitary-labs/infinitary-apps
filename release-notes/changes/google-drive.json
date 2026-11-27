@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "google-drive",
+      "kind": "feature",
+      "area": "settings",
+      "title": "Your first mate and crew can search, read and save your Google Drive files",
+      "body": "The Google row now adds Drive. Your first mate and crew can search your Drive, read a file as text, and save a file into a task's folder, with a Google Doc, Sheet or Slides deck saved as PDF or as an Office file. Each Drive action starts out asking you first, and none deletes, moves, shares or changes a file. If you signed in to Google before this version, Gmail and Calendar keep working, and the row says Drive, Docs and Sheets not added: press Sign in again and leave Drive ticked on Google's page.",
+      "picture": {
+        "dark": "google-drive-dark.webp",
+        "light": "google-drive-light.webp",
+        "alt": "The Google row in Settings → Integrations saying Drive, Docs and Sheets not added, explaining that Gmail and Calendar keep working, with a Sign in again button"
+      },
+      "docsSite": ["integrations"],
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

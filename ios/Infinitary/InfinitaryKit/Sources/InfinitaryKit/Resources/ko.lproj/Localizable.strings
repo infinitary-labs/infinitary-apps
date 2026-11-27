@@ -1285,7 +1285,7 @@
 "integrationsConnectOfferOpen" = "연동을 열어 %1$@에 로그인하세요.";
 "integrationsConnectOfferTitle" = "%1$@ 연결";
 "integrationsGoogleAgentRefused" = "클라이언트를 에이전트용으로 표시하세요";
-"integrationsGoogleAgentRefusedDetail" = "Google의 Gmail 및 캘린더 서버는 AI 기반 에이전트용으로 표시된 클라이언트만 받아요. Google Cloud에서 클라이언트를 열고 “Use this client for an AI-powered agent”에 체크한 뒤 저장하고, 이 행의 메뉴에서 지금 확인을 고르세요.";
+"integrationsGoogleAgentRefusedDetail" = "Google의 Gmail, 캘린더 및 드라이브 서버는 AI 기반 에이전트용으로 표시된 클라이언트만 받아요. Google Cloud에서 클라이언트를 열고 “Use this client for an AI-powered agent”에 체크한 뒤 저장하고, 이 행의 메뉴에서 지금 확인을 고르세요.";
 "integrationsGoogleClientFileIncomplete" = "이 클라이언트 파일에 클라이언트 ID나 보안 비밀이 없습니다. Google 페이지에서 다시 내려받으세요.";
 "integrationsGoogleClientFileNotJson" = "Google 클라이언트 파일이 아닙니다. Google 페이지에서 Download JSON으로 클라이언트 파일을 내려받은 뒤 여기에 놓으세요.";
 "integrationsGoogleClientFileWeb" = "웹 애플리케이션 클라이언트의 파일입니다. Google 페이지에서 데스크톱 앱 클라이언트를 만든 뒤 그 파일을 여기에 놓으세요.";
@@ -1294,8 +1294,11 @@
 "integrationsGoogleExchangeResult" = "새 Google 로그인, 비밀 정보와 앱 메모리에 보관";
 "integrationsGoogleOpenCloud" = "Google Cloud 열기";
 "integrationsGoogleServiceCalendar" = "캘린더";
+"integrationsGoogleServiceDocs" = "문서";
+"integrationsGoogleServiceDrive" = "드라이브";
 "integrationsGoogleServiceGmail" = "Gmail";
 "integrationsGoogleServiceOff" = "Google 서비스가 꺼져 있어요";
+"integrationsGoogleServiceSheets" = "스프레드시트";
 "integrationsGoogleSetUp" = "설정";
 "integrationsGoogleSetUpAgain" = "다시 설정";
 "integrationsGoogleSetUpFirst" = "먼저 내 Google 클라이언트를 설정하세요. 설정 → 연동 → Google에서 할 수 있습니다.";
@@ -1305,7 +1308,7 @@
 "integrationsGoogleSetupField" = "클라이언트 파일";
 "integrationsGoogleSetupKeep" = "보관하고 로그인";
 "integrationsGoogleSetupKeeping" = "보관하는 중…";
-"integrationsGoogleSetupLead" = "Infinitary는 내 Google Cloud 프로젝트에서 Google의 개인 모드로 만든 클라이언트를 통해 Gmail과 캘린더에 접근합니다. Google의 검토나 경고가 없고, 로그인이 7일 후에 끝나지도 않습니다.";
+"integrationsGoogleSetupLead" = "Infinitary는 내 Google Cloud 프로젝트에서 Google의 개인 모드로 만든 클라이언트를 통해 Gmail, 캘린더, 드라이브에 접근합니다. Google의 검토나 경고가 없고, 로그인이 7일 후에 끝나지도 않습니다.";
 "integrationsGoogleSetupOpenPage" = "Google 페이지 열기";
 "integrationsGoogleSetupStays" = "Infinitary는 클라이언트의 보안 비밀을 이 컴퓨터의 비밀 정보에 보관합니다. 일등항해사와 선원들은 그것을 볼 수 없습니다.";
 "integrationsGoogleSetupStepFile" = "Google에 표시되는 클라이언트 파일을 Download JSON으로 내려받은 뒤 여기에 놓거나, 선택하거나, 내용을 붙여넣으세요.";
@@ -1316,6 +1319,8 @@
 "integrationsGoogleStoppedDetail" = "Google이 더 이상 클라이언트를 받지 않습니다. Google Cloud에서 삭제되었을 수 있습니다. 다시 설정하면 Google에 다시 연결됩니다.";
 "integrationsGoogleStops" = "%1$@에 멈춤";
 "integrationsGoogleStopsDetail" = "이 클라이언트는 개인 모드가 아니어서 Google이 %1$@에 로그인을 끝냅니다. Google 연결을 유지하려면 개인 모드 클라이언트를 설정하세요.";
+"integrationsGoogleWithoutDrive" = "드라이브, 문서, 스프레드시트 추가 안 됨";
+"integrationsGoogleWithoutDriveDetail" = "Google 로그인에 드라이브, 문서, 스프레드시트가 빠져 있어요. Gmail과 캘린더는 계속 작동해요. 추가하려면 다시 로그인하고 Google 페이지에서 드라이브를 체크한 채로 두세요.";
 "integrationsMcpAdd" = "%1$@ 추가";
 "integrationsMcpNameTooLong" = "이름은 최대 %1$@자까지 입력할 수 있습니다.";
 "integrationsMcpNeedsSignIn" = "다시 로그인해야 함";
@@ -2032,8 +2037,8 @@
 "phoneFormatMinutes" = "%1$@분";
 "phoneFormatNow" = "지금";
 "phoneFormatUnderMinute" = "1분 미만";
-"phoneGoogleAgentRefusedDetail" = "Google의 Gmail 및 캘린더 서버는 AI 기반 에이전트용으로 표시된 클라이언트만 받아요. Google Cloud에서 클라이언트를 열고 “Use this client for an AI-powered agent”에 체크한 뒤 저장하고, %1$@의 설정 → 연동에 있는 Google 행에서 지금 확인을 고르세요.";
-"phoneGoogleInvite" = "%1$@의 일등항해사가 Gmail과 Calendar를 읽을 수 있게 하세요. 로그인 정보는 %1$@에 머물러요.";
+"phoneGoogleAgentRefusedDetail" = "Google의 Gmail, 캘린더 및 드라이브 서버는 AI 기반 에이전트용으로 표시된 클라이언트만 받아요. Google Cloud에서 클라이언트를 열고 “Use this client for an AI-powered agent”에 체크한 뒤 저장하고, %1$@의 설정 → 연동에 있는 Google 행에서 지금 확인을 고르세요.";
+"phoneGoogleInvite" = "%1$@의 일등항해사가 Gmail, Calendar, Drive를 읽을 수 있게 하세요. 로그인 정보는 %1$@에 머물러요.";
 "phoneGoogleSetupStays" = "Infinitary는 클라이언트의 보안 비밀을 %1$@의 비밀 정보에 보관합니다. 일등항해사와 선원들은 그것을 볼 수 없습니다.";
 "phoneGoogleSetupStepFile" = "Google에 표시되는 클라이언트 파일을 Download JSON으로 내려받은 뒤 여기에서 선택하거나 내용을 붙여 넣으세요.";
 "phoneGoogleSignIn" = "로그인";
@@ -2041,9 +2046,10 @@
 "phoneGoogleSignInAgainNeeded" = "Google에서 다시 로그인하라고 요청해요.";
 "phoneGoogleSignOut" = "로그아웃";
 "phoneGoogleSignOutAsk" = "%1$@에서 Google 로그아웃할까요?";
-"phoneGoogleSignOutWarning" = "일등항해사와 선원들이 더 이상 Gmail과 Calendar에 접근하지 못해요.";
+"phoneGoogleSignOutWarning" = "일등항해사와 선원들이 더 이상 Gmail, Calendar, Drive에 접근하지 못해요.";
 "phoneGoogleSignedIn" = "%1$@에서 로그인했어요.";
 "phoneGoogleSignedInAs" = "%2$@에서 %1$@(으)로 로그인했어요.";
+"phoneGoogleWithoutDriveDetail" = "%1$@의 Google 로그인에 드라이브, 문서, 스프레드시트가 빠져 있어요. Gmail과 캘린더는 계속 작동해요. 추가하려면 다시 로그인하고 Google 페이지에서 드라이브를 체크한 채로 두세요.";
 "phoneHideKeyboard" = "키보드 숨기기";
 "phoneIdentityNotKept" = "이 휴대폰의 신원 정보를 읽거나 보관할 수 없어요. 휴대폰 잠금을 해제하고 다시 시도하세요.";
 "phoneIdentityUnreadable" = "이 휴대폰의 신원 정보를 읽을 수 없어요.";

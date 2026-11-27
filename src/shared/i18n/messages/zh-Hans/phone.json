@@ -173,8 +173,8 @@
   "phoneFormatMinutes": "{minutes} 分钟",
   "phoneFormatNow": "刚刚",
   "phoneFormatUnderMinute": "不到 1 分钟",
-  "phoneGoogleAgentRefusedDetail": "Google 的 Gmail 和日历服务器只接受标记为供 AI 智能体使用的客户端。在 Google Cloud 中打开你的客户端，勾选“Use this client for an AI-powered agent”并保存，然后在 {computer} 上“设置”→“集成”中的 Google 一行选择“立即检查”。",
-  "phoneGoogleInvite": "让 {computer} 上的大副读取 Gmail 和日历。登录信息保留在 {computer} 上。",
+  "phoneGoogleAgentRefusedDetail": "Google 的 Gmail、日历和云端硬盘服务器只接受标记为供 AI 智能体使用的客户端。在 Google Cloud 中打开你的客户端，勾选“Use this client for an AI-powered agent”并保存，然后在 {computer} 上“设置”→“集成”中的 Google 一行选择“立即检查”。",
+  "phoneGoogleInvite": "让 {computer} 上的大副读取 Gmail、日历和云端硬盘。登录信息保留在 {computer} 上。",
   "phoneGoogleServiceOffDetail": {
     "plural": "count",
     "other": "你的 Google Cloud 项目中 {services} 的 MCP 服务已关闭，所以 Infinitary 无法访问。请在 Google Cloud 中开启，然后在 {computer} 上“设置”→“集成”中的 Google 一行选择“立即检查”。"
@@ -186,9 +186,10 @@
   "phoneGoogleSignInAgainNeeded": "Google 要求你重新登录。",
   "phoneGoogleSignOut": "退出登录",
   "phoneGoogleSignOutAsk": "要在 {computer} 上退出 Google 吗？",
-  "phoneGoogleSignOutWarning": "你的大副和船员们将无法再访问 Gmail 和日历。",
+  "phoneGoogleSignOutWarning": "你的大副和船员们将无法再访问 Gmail、日历和云端硬盘。",
   "phoneGoogleSignedIn": "已在 {computer} 上登录。",
   "phoneGoogleSignedInAs": "已在 {computer} 上以 {account} 登录。",
+  "phoneGoogleWithoutDriveDetail": "你在 {computer} 上的 Google 登录未包含云端硬盘、文档和表格。Gmail 和日历照常可用。要添加它们，请重新登录，并在 Google 的页面上保持勾选云端硬盘。",
   "phoneHideKeyboard": "隐藏键盘",
   "phoneIdentityNotKept": "无法读取或保存这台手机的身份信息。请解锁手机后再试一次。",
   "phoneIdentityUnreadable": "无法读取这台手机的身份信息。",

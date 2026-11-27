@@ -16,21 +16,37 @@ export type GoogleClient = { id: string; secret?: string };
 export const GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.modify";
 
 /**
- * Every permission the one Google row asks, up front (the captain's q8:
- * "One Google row that signs in once for both, asking every permission up
- * front"): Gmail's, and Calendar's for its events, its calendar list and
- * availability, since an installed app cannot add a permission later.
- * The calendar list and availability take the narrowest scope Google
- * accepts for `calendarList.list` and `freeBusy.query` (INF-953), in place
- * of `calendar.readonly`; a sign-in that granted `calendar.readonly` keeps
- * working, since Google accepts it for both calls.
+ * All of Drive: read, search, download and place files in any folder (the
+ * captain's answer C on INF-6447, "All of Drive, including folders"). The
+ * one permission that also reaches Docs and Sheets.
  */
-export const GOOGLE_SCOPES: readonly string[] = [
+export const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive";
+
+/**
+ * The permissions a sign-in must grant to be kept: Gmail's and Calendar's.
+ * Drive is asked in the same sign-in but may be left unticked (the
+ * captain's answer 2a on INF-6447): the sign-in keeps Gmail and Calendar,
+ * and Drive waits for a new sign-in.
+ */
+export const GOOGLE_REQUIRED_SCOPES: readonly string[] = [
   GMAIL_SCOPE,
   "https://www.googleapis.com/auth/calendar.events",
   "https://www.googleapis.com/auth/calendar.calendarlist.readonly",
   "https://www.googleapis.com/auth/calendar.events.freebusy",
 ];
+
+/**
+ * Every permission the one Google row asks, up front (the captain's q8:
+ * "One Google row that signs in once for both, asking every permission up
+ * front"): Gmail's, Calendar's for its events, its calendar list and
+ * availability, and Drive's, since an installed app cannot add a permission
+ * later.
+ * The calendar list and availability take the narrowest scope Google
+ * accepts for `calendarList.list` and `freeBusy.query` (INF-953), in place
+ * of `calendar.readonly`; a sign-in that granted `calendar.readonly` keeps
+ * working, since Google accepts it for both calls.
+ */
+export const GOOGLE_SCOPES: readonly string[] = [...GOOGLE_REQUIRED_SCOPES, DRIVE_SCOPE];
 
 export type GoogleEndpoints = {
   /** The consent page the person's browser opens. */
@@ -47,6 +63,8 @@ export type GoogleEndpoints = {
   gmailMcp: string;
   /** Google Calendar's MCP server, where every Calendar action and look goes. */
   calendarMcp: string;
+  /** Google Drive's MCP server, where every Drive action goes. */
+  driveMcp: string;
 };
 
 const GOOGLE_ENDPOINTS: GoogleEndpoints = {
@@ -56,6 +74,7 @@ const GOOGLE_ENDPOINTS: GoogleEndpoints = {
   gmail: "https://gmail.googleapis.com",
   gmailMcp: "https://gmailmcp.googleapis.com/mcp/v1",
   calendarMcp: "https://calendarmcp.googleapis.com/mcp/v1",
+  driveMcp: "https://drivemcp.googleapis.com/mcp/v1",
 };
 
 /**
@@ -87,6 +106,7 @@ export function googleSetup(options: { packaged: boolean; env?: NodeJS.ProcessEn
       gmail: root,
       gmailMcp: `${root}/gmailmcp/mcp/v1`,
       calendarMcp: `${root}/calendarmcp/mcp/v1`,
+      driveMcp: `${root}/drivemcp/mcp/v1`,
     },
   };
 }

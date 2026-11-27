@@ -1031,7 +1031,7 @@ export type FirstmateApi = {
      * for a while, which `deleteOutside` deletes on their own.
      */
     scope: () => Promise<{ knowledge: boolean; kept?: KeptOutsideData[] }>;
-    /** Replace the Gmail and Calendar content every saved conversation holds with a note (INF-952). */
+    /** Replace the Google content every saved conversation holds with a note (INF-952). */
     deleteOutside: () => Promise<OutsideDataDeleted>;
   };
   knowledge: {

@@ -1,5 +1,6 @@
 import { cpSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
+import { KnowledgeService } from "@core/knowledge/knowledgeService";
 import { CaptainOverrides, type CaptainOverridesHost } from "@core/orchestrator/captainOverrides";
 import { FIRSTMATE_CONTRACT_VERSION } from "@core/pi/piResources";
 import { openDatabase } from "@core/storage/db";
@@ -1071,6 +1072,8 @@ describe("corpus export - the R1 corrections", { timeout: 30_000 }, () => {
     // widened them on the same version, the captain clicked Merge anyway on
     // a later version, the first mate took that back, and a merge click was
     // then recorded as an override, as the app did before it refused them.
+    // Last, the first mate cited a heard direction of the project (INF-7021),
+    // a third route the audit reads apart from words given on the task.
     let clock = Date.parse("2026-11-02T17:00:00.000Z");
     const db = openDatabase(dir);
     const tasks = new TaskService({ db, strict: true, now: () => clock });
@@ -1091,8 +1094,23 @@ describe("corpus export - the R1 corrections", { timeout: 30_000 }, () => {
     seedDelivery(tasks, "t-ship", { mode: "direct-pr", prNumber: 12, prUrl, headSha: first });
     // The first mate's own writer, so its rows and its take-back carry the
     // actor and the shape the app writes.
+    // The project's own direction, heard from the captain, that the last
+    // override cites; the collection lives in memory beside the record.
+    const nimbus = { id: "repo-nimbus", name: "nimbus-api", path: dir };
+    const knowledge = new KnowledgeService({
+      projects: { get: (id) => (id === nimbus.id ? nimbus : undefined), list: () => [nimbus] },
+    });
+    const rule = "Release checks on Nimbus may run and merge without asking me.";
+    knowledge.directions.change({
+      op: "add",
+      id: "release-checks",
+      scope: nimbus.id,
+      text: rule,
+      reason: "The captain said so.",
+      heard: { from: "turn" },
+    });
     const overrides = new CaptainOverrides(
-      { tasks, inbox: new InboxStore(db, { now: () => clock }) },
+      { tasks, inbox: new InboxStore(db, { now: () => clock }), knowledge },
       {
         now: () => clock,
         settling: { kept: { runMergeAuthorization: async () => undefined } },
@@ -1158,6 +1176,19 @@ describe("corpus export - the R1 corrections", { timeout: 30_000 }, () => {
         data: { news: true },
       },
     );
+    clock += 60_000;
+    const cited = clock;
+    const direction = overrides.citedDirection("t-ship", "d:release-checks");
+    if (!direction.ok) throw new Error(direction.text);
+    expect(
+      overrides.declareOverride("t-ship", {
+        words: direction.words,
+        holds: ["checks"],
+        until: "task",
+        direction: direction.direction,
+      }).ok,
+    ).toBe(true);
+    knowledge.close();
     db.close();
 
     const caseOut = join(dir, "corpus-overrides");
@@ -1168,7 +1199,7 @@ describe("corpus export - the R1 corrections", { timeout: 30_000 }, () => {
       JSON.parse(readFileSync(join(caseOut, "manifest.json"), "utf8")) as typeof manifest
     ).rigor;
     const iso = (at: number) => new Date(at).toISOString();
-    const entry = { task: key, task_id: "t-ship", merge_click: false };
+    const entry = { task: key, task_id: "t-ship", merge_click: false, direction: null };
     expect(rigor.overrides.filter((listed) => listed.task_id === "t-ship")).toEqual([
       {
         ...entry,
@@ -1206,6 +1237,16 @@ describe("corpus export - the R1 corrections", { timeout: 30_000 }, () => {
         route: "relayed-words",
         merge_click: true,
         replaces: null,
+      },
+      {
+        ...entry,
+        at: iso(cited),
+        holds: ["checks"],
+        until: "task",
+        head: null,
+        route: "direction",
+        direction: "d:release-checks",
+        replaces: { at: iso(clicked.at), holds: ["waits"] },
       },
     ]);
     // The fixture's own change: two overrides with a take-back between, so

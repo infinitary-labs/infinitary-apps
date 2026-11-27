@@ -80,6 +80,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | header (a request header) | Header | Masculine, plural "Header"; only in the custom API form and the usage reporting form. |
 | held (a batch that stopped) | angehalten | "Bündel angehalten", "Seit {since} angehalten"; "pausiert" stays for what a person pauses. |
 | hold (on a task) | zurückhalten | "sobald sie nicht mehr zurückgehalten wird" instead of a noun |
+| holds an override passes (named on a task's Activity) | asking first: das Fragen vorher; the open decisions: die offenen Entscheidungen; the waits: das Warten auf andere Arbeit; the open parts: die offenen Teile; the checks: die Überprüfungen; the delivery proof: der Nachweis der Auslieferung; the saved story: die gespeicherte Geschichte; the heavy-run line: die Warteschlange für aufwendige Läufe; the cost limit: die Kostengrenze; a retired hold: ein Halt, den es nicht mehr gibt | Joined as one list in the reader's language on the line. |
 | How to get it (an ask for a secret) | So bekommst du es | The heading over the steps a crewmate lays out for making or finding a secret. |
 | Infinitary | Infinitary | Never translated. |
 | Integrations | Integrationen | The Settings section; one of them is "eine Integration". |

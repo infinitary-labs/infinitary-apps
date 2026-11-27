@@ -842,14 +842,15 @@ function writeCompiled(root: string, compiled: { output: string; panels: Record<
   }
 }
 
-/** A saved fact, as `src/shared/i18n/said.ts` shapes it. */
-type Fact = { m: string; a?: Record<string, string | number | Fact> };
+/** A saved fact, as `src/shared/i18n/said.ts` shapes it, with a list fill named by its messages until `saidList` shapes it. */
+type Fact = { m: string; a?: Record<string, string | number | Fact | { list: [string, ...string[]] }> };
 
 /**
  * The saved facts the phone's parity test words (docs/i18n.md, "On the
  * phone"): every message with a distinct fill in each blank, each plural one
  * at counts that pick different forms and group digits, one message filling
- * a blank with another, and two facts no catalog can word.
+ * a blank with another and with lists of two and three others (`saidList`),
+ * and two facts no catalog can word.
  */
 function phoneWordsFacts(english: Catalog): Fact[] {
   const facts: Fact[] = [];
@@ -862,10 +863,16 @@ function phoneWordsFacts(english: Catalog): Fact[] {
     }
   }
   const lone = [...english].find(([, message]) => message.kind === "text" && placeholdersOf(message).length === 1);
-  const bare = [...english].find(([, message]) => placeholdersOf(message).length === 0);
-  if (lone && bare) {
+  const bare = [...english].filter(([, message]) => placeholdersOf(message).length === 0).slice(0, 3);
+  if (lone && bare.length === 3) {
     const [blank] = placeholdersOf(lone[1]);
-    facts.push({ m: lone[0], a: { [blank as string]: { m: bare[0] } } }, { m: lone[0] });
+    const [one, two, three] = bare.map(([id]) => id) as [string, string, string];
+    facts.push(
+      { m: lone[0], a: { [blank as string]: { m: one } } },
+      { m: lone[0], a: { [blank as string]: { list: [one, two] } } },
+      { m: lone[0], a: { [blank as string]: { list: [one, two, three] } } },
+      { m: lone[0] },
+    );
   }
   facts.push({ m: "notInTheCatalog" });
   return facts;
@@ -876,8 +883,16 @@ async function phoneWordsFixture(facts: Fact[]): Promise<string> {
   // A computed path, so the build's and the tests' configurations, which bundle this module to call
   // `writeCompiledMessages`, never bundle said.ts and the compiled module it reads before it is written.
   const said = new URL("../src/shared/i18n/said.ts", import.meta.url).href;
-  const { wordSaid } = (await import(/* @vite-ignore */ said)) as typeof import("../src/shared/i18n/said.ts");
-  const cases = facts.map((said) => ({ said, words: wordSaid(said as Parameters<typeof wordSaid>[0]) ?? null }));
+  const { saidList, wordSaid } = (await import(/* @vite-ignore */ said)) as typeof import("../src/shared/i18n/said.ts");
+  const shaped = facts.map(({ m, a }) => {
+    if (!a) return { m };
+    const fills = Object.entries(a).map(([blank, fill]) => {
+      if (typeof fill !== "object" || !("list" in fill)) return [blank, fill];
+      return [blank, saidList(fill.list as Parameters<typeof saidList>[0])];
+    });
+    return { m, a: Object.fromEntries(fills) };
+  });
+  const cases = shaped.map((said) => ({ said, words: wordSaid(said as Parameters<typeof wordSaid>[0]) ?? null }));
   return `[\n${cases.map((entry) => `  ${JSON.stringify(entry)}`).join(",\n")}\n]\n`;
 }
 

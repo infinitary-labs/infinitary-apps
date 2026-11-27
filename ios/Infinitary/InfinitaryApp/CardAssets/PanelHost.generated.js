@@ -6693,6 +6693,14 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return rules.select(count);
   }
+  function formatList(items, join = "and") {
+    if (currentLanguage() !== SOURCE_LANGUAGE) {
+      const type = join === "and" ? "conjunction" : "disjunction";
+      return new Intl.ListFormat(languageLocale(), { style: "long", type }).format(items);
+    }
+    if (items.length <= 1) return items.join("");
+    return `${items.slice(0, -1).join(", ")} ${join} ${items.at(-1)}`;
+  }
   function accountsClaudeLoginUnreadable(input2) {
     const here = input2.here;
     switch (currentLanguage()) {
@@ -109654,6 +109662,276 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `working`;
   }
+  function taskHoldAsksFirst() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `السؤال أولًا`;
+      case "de":
+        return `das Fragen vorher`;
+      case "es":
+        return `la consulta previa`;
+      case "fr":
+        return `la demande préalable`;
+      case "ja":
+        return `先に確認`;
+      case "ko":
+        return `먼저 묻기`;
+      case "pt-BR":
+        return `a consulta prévia`;
+      case "zh-Hans":
+        return `先询问`;
+      case "zh-Hant":
+        return `先問過你`;
+      case "en-XA":
+        return `[ášķîñĝ ƒîŕšţ ~~~~]`;
+      case "ar-XB":
+        return `‮asking first‬`;
+    }
+    return `asking first`;
+  }
+  function taskHoldChecks() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الفحوصات`;
+      case "de":
+        return `die Überprüfungen`;
+      case "es":
+        return `las comprobaciones`;
+      case "fr":
+        return `les vérifications`;
+      case "ja":
+        return `チェック`;
+      case "ko":
+        return `검사`;
+      case "pt-BR":
+        return `as verificações`;
+      case "zh-Hans":
+        return `检查`;
+      case "zh-Hant":
+        return `檢查`;
+      case "en-XA":
+        return `[ţĥé çĥéçķš ~~~~]`;
+      case "ar-XB":
+        return `‮the checks‬`;
+    }
+    return `the checks`;
+  }
+  function taskHoldCostLimit() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `حد التكلفة`;
+      case "de":
+        return `die Kostengrenze`;
+      case "es":
+        return `el límite de costo`;
+      case "fr":
+        return `le plafond de coût`;
+      case "ja":
+        return `コスト上限`;
+      case "ko":
+        return `비용 한도`;
+      case "pt-BR":
+        return `o limite de custo`;
+      case "zh-Hans":
+        return `费用上限`;
+      case "zh-Hant":
+        return `費用上限`;
+      case "en-XA":
+        return `[ţĥé çöšţ ļîɱîţ ~~~~~]`;
+      case "ar-XB":
+        return `‮the cost limit‬`;
+    }
+    return `the cost limit`;
+  }
+  function taskHoldDecisions() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `القرارات المفتوحة`;
+      case "de":
+        return `die offenen Entscheidungen`;
+      case "es":
+        return `las decisiones abiertas`;
+      case "fr":
+        return `les décisions ouvertes`;
+      case "ja":
+        return `未決の判断`;
+      case "ko":
+        return `열린 결정`;
+      case "pt-BR":
+        return `as decisões em aberto`;
+      case "zh-Hans":
+        return `未决的决定`;
+      case "zh-Hant":
+        return `未決的決定`;
+      case "en-XA":
+        return `[ţĥé öþéñ ðéçîšîöñš ~~~~~~]`;
+      case "ar-XB":
+        return `‮the open decisions‬`;
+    }
+    return `the open decisions`;
+  }
+  function taskHoldLoadLine() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `طابور التشغيلات الثقيلة`;
+      case "de":
+        return `die Warteschlange für aufwendige Läufe`;
+      case "es":
+        return `la cola de ejecuciones pesadas`;
+      case "fr":
+        return `la file des exécutions lourdes`;
+      case "ja":
+        return `重い実行の順番待ち`;
+      case "ko":
+        return `무거운 실행 대기열`;
+      case "pt-BR":
+        return `a fila de execuções pesadas`;
+      case "zh-Hans":
+        return `繁重运行的排队`;
+      case "zh-Hant":
+        return `繁重執行的排隊`;
+      case "en-XA":
+        return `[ţĥé ĥéáṽý-ŕûñ ļîñé ~~~~~~]`;
+      case "ar-XB":
+        return `‮the heavy-run line‬`;
+    }
+    return `the heavy-run line`;
+  }
+  function taskHoldParts() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الأجزاء المفتوحة`;
+      case "de":
+        return `die offenen Teile`;
+      case "es":
+        return `las partes abiertas`;
+      case "fr":
+        return `les parties ouvertes`;
+      case "ja":
+        return `未完了のパート`;
+      case "ko":
+        return `열린 부분`;
+      case "pt-BR":
+        return `as partes em aberto`;
+      case "zh-Hans":
+        return `未完成的部分`;
+      case "zh-Hant":
+        return `未完成的部分`;
+      case "en-XA":
+        return `[ţĥé öþéñ þáŕţš ~~~~~]`;
+      case "ar-XB":
+        return `‮the open parts‬`;
+    }
+    return `the open parts`;
+  }
+  function taskHoldProof() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إثبات التسليم`;
+      case "de":
+        return `der Nachweis der Auslieferung`;
+      case "es":
+        return `la prueba de entrega`;
+      case "fr":
+        return `la preuve de livraison`;
+      case "ja":
+        return `完了の証明`;
+      case "ko":
+        return `전달 증명`;
+      case "pt-BR":
+        return `a prova de entrega`;
+      case "zh-Hans":
+        return `交付证明`;
+      case "zh-Hant":
+        return `交付證明`;
+      case "en-XA":
+        return `[ţĥé ðéļîṽéŕý þŕööƒ ~~~~~~]`;
+      case "ar-XB":
+        return `‮the delivery proof‬`;
+    }
+    return `the delivery proof`;
+  }
+  function taskHoldRetired() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعليق لم يعد موجودًا`;
+      case "de":
+        return `ein Halt, den es nicht mehr gibt`;
+      case "es":
+        return `una retención que ya no existe`;
+      case "fr":
+        return `une retenue qui n’existe plus`;
+      case "ja":
+        return `廃止された項目`;
+      case "ko":
+        return `더 이상 없는 보류`;
+      case "pt-BR":
+        return `uma retenção que não existe mais`;
+      case "zh-Hans":
+        return `已停用的项目`;
+      case "zh-Hant":
+        return `已停用的項目`;
+      case "en-XA":
+        return `[á ŕéţîŕéð ĥöļð ~~~~~]`;
+      case "ar-XB":
+        return `‮a retired hold‬`;
+    }
+    return `a retired hold`;
+  }
+  function taskHoldStory() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `القصة المحفوظة`;
+      case "de":
+        return `die gespeicherte Geschichte`;
+      case "es":
+        return `la historia guardada`;
+      case "fr":
+        return `le récit enregistré`;
+      case "ja":
+        return `保存したストーリー`;
+      case "ko":
+        return `저장된 스토리`;
+      case "pt-BR":
+        return `a história salva`;
+      case "zh-Hans":
+        return `已保存的改动说明`;
+      case "zh-Hant":
+        return `已儲存的變更說明`;
+      case "en-XA":
+        return `[ţĥé šáṽéð šţöŕý ~~~~~]`;
+      case "ar-XB":
+        return `‮the saved story‬`;
+    }
+    return `the saved story`;
+  }
+  function taskHoldWaits() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `انتظار العمل الآخر`;
+      case "de":
+        return `das Warten auf andere Arbeit`;
+      case "es":
+        return `las esperas`;
+      case "fr":
+        return `les attentes`;
+      case "ja":
+        return `ほかの作業の待ち`;
+      case "ko":
+        return `다른 작업 대기`;
+      case "pt-BR":
+        return `as esperas`;
+      case "zh-Hans":
+        return `对其他工作的等待`;
+      case "zh-Hant":
+        return `對其他工作的等待`;
+      case "en-XA":
+        return `[ţĥé ŵáîţš ~~~]`;
+      case "ar-XB":
+        return `‮the waits‬`;
+    }
+    return `the waits`;
+  }
   function taskNoteReworkHeld(input2) {
     const title = input2.title;
     switch (currentLanguage()) {
@@ -109681,6 +109959,124 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Kept the merge card “‬${title}‮” from you until its new version's checks end.‬`;
     }
     return `Kept the merge card “${title}” from you until its new version's checks end.`;
+  }
+  function taskOverrideDirectionGone(input2) {
+    const direction = input2.direction;
+    const holds = input2.holds;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يعد توجيهك d:${direction} قائمًا، فتوقّف عن تجاوز ${holds} في هذه المهمة.`;
+      case "de":
+        return `Deine Vorgabe d:${direction} gilt nicht mehr, daher halten diese Punkte die Aufgabe wieder zurück: ${holds}.`;
+      case "es":
+        return `Tu directriz d:${direction} ya no está vigente, así que deja de superar ${holds} en esta tarea.`;
+      case "fr":
+        return `Votre consigne d:${direction} n’est plus en vigueur : elle ne lève plus ${holds} sur cette tâche.`;
+      case "ja":
+        return `あなたの方針 d:${direction} は有効でなくなったため、このタスクで${holds}の保留を越えられなくなりました。`;
+      case "ko":
+        return `지침 d:${direction}의 효력이 끝나, 이 작업에서 다음 보류가 다시 적용돼요: ${holds}.`;
+      case "pt-BR":
+        return `Sua diretriz d:${direction} não vale mais, então deixa de liberar ${holds} nesta tarefa.`;
+      case "zh-Hans":
+        return `你的指引 d:${direction} 已不再有效，它在这个任务上不再越过${holds}的暂缓。`;
+      case "zh-Hant":
+        return `你的指引 d:${direction} 已不再有效，它在這項任務上不再越過${holds}的暫緩。`;
+      case "en-XA":
+        return `[Ýöûŕ ðîŕéçţîöñ ð:${direction} ñö ļöñĝéŕ šţáñðš, šö îţ šţöþš þáššîñĝ ${holds} öñ ţĥîš ţášķ. ~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your direction d:‬${direction}‮ no longer stands, so it stops passing ‬${holds}‮ on this task.‬`;
+    }
+    return `Your direction d:${direction} no longer stands, so it stops passing ${holds} on this task.`;
+  }
+  function taskOverrideDirectionRevised(input2) {
+    const direction = input2.direction;
+    const holds = input2.holds;
+    switch (currentLanguage()) {
+      case "ar":
+        return `صار لتوجيهك d:${direction} تعديل جديد، فتوقّف عن تجاوز ${holds} في هذه المهمة.`;
+      case "de":
+        return `Deine Vorgabe d:${direction} hat eine neue Revision, daher halten diese Punkte die Aufgabe wieder zurück: ${holds}.`;
+      case "es":
+        return `Tu directriz d:${direction} tiene una nueva versión, así que deja de superar ${holds} en esta tarea.`;
+      case "fr":
+        return `Votre consigne d:${direction} a une nouvelle révision : elle ne lève plus ${holds} sur cette tâche.`;
+      case "ja":
+        return `あなたの方針 d:${direction} が改訂されたため、このタスクで${holds}の保留を越えられなくなりました。`;
+      case "ko":
+        return `지침 d:${direction}에 새 수정본이 생겨, 이 작업에서 다음 보류가 다시 적용돼요: ${holds}.`;
+      case "pt-BR":
+        return `Sua diretriz d:${direction} tem uma nova versão, então deixa de liberar ${holds} nesta tarefa.`;
+      case "zh-Hans":
+        return `你的指引 d:${direction} 有了新的修订，它在这个任务上不再越过${holds}的暂缓。`;
+      case "zh-Hant":
+        return `你的指引 d:${direction} 有了新的修訂，它在這項任務上不再越過${holds}的暫緩。`;
+      case "en-XA":
+        return `[Ýöûŕ ðîŕéçţîöñ ð:${direction} ĥáš á ñéŵ ŕéṽîšîöñ, šö îţ šţöþš þáššîñĝ ${holds} öñ ţĥîš ţášķ. ~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your direction d:‬${direction}‮ has a new revision, so it stops passing ‬${holds}‮ on this task.‬`;
+    }
+    return `Your direction d:${direction} has a new revision, so it stops passing ${holds} on this task.`;
+  }
+  function taskOverrideDirectionTask(input2) {
+    const direction = input2.direction;
+    const holds = input2.holds;
+    const words2 = input2.words;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يتجاوز توجيهك d:${direction} ${holds} طوال ما تبقّى من هذه المهمة، إلى أن يُعدَّل أو يُستبعَد: «${words2}»`;
+      case "de":
+        return `Wegen deiner Vorgabe d:${direction} halten diese Punkte die Aufgabe für den Rest ihrer Laufzeit nicht mehr zurück: ${holds}. Das gilt, bis die Vorgabe eine neue Revision bekommt oder zurückgezogen wird: „${words2}“`;
+      case "es":
+        return `Tu directriz d:${direction} supera ${holds} durante el resto de esta tarea, hasta que tenga una nueva versión o se retire: «${words2}»`;
+      case "fr":
+        return `Votre consigne d:${direction} lève ${holds} pour le reste de cette tâche, jusqu’à ce qu’elle soit révisée ou retirée : « ${words2} »`;
+      case "ja":
+        return `あなたの方針 d:${direction} により、このタスクは残りの期間、${holds}の保留を越えて進めます。改訂または廃止されるまで有効です：「${words2}」`;
+      case "ko":
+        return `지침 d:${direction} 덕분에 이 작업은 남은 기간 동안 다음 보류를 넘어가요: ${holds}. 지침이 수정되거나 폐기될 때까지 유효해요: “${words2}”`;
+      case "pt-BR":
+        return `Sua diretriz d:${direction} libera ${holds} pelo resto desta tarefa, até ganhar uma nova versão ou ser desativada: “${words2}”`;
+      case "zh-Hans":
+        return `你的指引 d:${direction} 让这个任务在余下的时间里越过${holds}的暂缓，直到它被修订或停用：“${words2}”`;
+      case "zh-Hant":
+        return `你的指引 d:${direction} 讓這項任務在餘下的時間裡越過${holds}的暫緩，直到它被修訂或停用：「${words2}」`;
+      case "en-XA":
+        return `[Ýöûŕ ðîŕéçţîöñ ð:${direction} þáššéš ${holds} ƒöŕ ţĥé ŕéšţ öƒ ţĥîš ţášķ, ûñţîļ îţ îš ŕéṽîšéð öŕ ŕéţîŕéð: “${words2}” ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your direction d:‬${direction}‮ passes ‬${holds}‮ for the rest of this task, until it is revised or retired: “‬${words2}‮”‬`;
+    }
+    return `Your direction d:${direction} passes ${holds} for the rest of this task, until it is revised or retired: “${words2}”`;
+  }
+  function taskOverrideDirectionVersion(input2) {
+    const direction = input2.direction;
+    const holds = input2.holds;
+    const words2 = input2.words;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يتجاوز توجيهك d:${direction} ${holds} في هذه النسخة، إلى أن يُعدَّل أو يُستبعَد: «${words2}»`;
+      case "de":
+        return `Wegen deiner Vorgabe d:${direction} halten diese Punkte diese Version nicht mehr zurück: ${holds}. Das gilt, bis die Vorgabe eine neue Revision bekommt oder zurückgezogen wird: „${words2}“`;
+      case "es":
+        return `Tu directriz d:${direction} supera ${holds} para el cambio tal como está ahora, hasta que tenga una nueva versión o se retire: «${words2}»`;
+      case "fr":
+        return `Votre consigne d:${direction} lève ${holds} pour cette version, jusqu’à ce qu’elle soit révisée ou retirée : « ${words2} »`;
+      case "ja":
+        return `あなたの方針 d:${direction} により、このバージョンは${holds}の保留を越えて進めます。改訂または廃止されるまで有効です：「${words2}」`;
+      case "ko":
+        return `지침 d:${direction} 덕분에 이 버전은 다음 보류를 넘어가요: ${holds}. 지침이 수정되거나 폐기될 때까지 유효해요: “${words2}”`;
+      case "pt-BR":
+        return `Sua diretriz d:${direction} libera ${holds} para a mudança como está agora, até ganhar uma nova versão ou ser desativada: “${words2}”`;
+      case "zh-Hans":
+        return `你的指引 d:${direction} 让这个版本越过${holds}的暂缓，直到它被修订或停用：“${words2}”`;
+      case "zh-Hant":
+        return `你的指引 d:${direction} 讓這個版本越過${holds}的暫緩，直到它被修訂或停用：「${words2}」`;
+      case "en-XA":
+        return `[Ýöûŕ ðîŕéçţîöñ ð:${direction} þáššéš ${holds} ƒöŕ ţĥîš ṽéŕšîöñ, ûñţîļ îţ îš ŕéṽîšéð öŕ ŕéţîŕéð: “${words2}” ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your direction d:‬${direction}‮ passes ‬${holds}‮ for this version, until it is revised or retired: “‬${words2}‮”‬`;
+    }
+    return `Your direction d:${direction} passes ${holds} for this version, until it is revised or retired: “${words2}”`;
   }
   function taskPinPin() {
     switch (currentLanguage()) {
@@ -119793,7 +120189,21 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     taskGroupQueued,
     taskGroupWaiting,
     taskGroupWorking,
+    taskHoldAsksFirst,
+    taskHoldChecks,
+    taskHoldCostLimit,
+    taskHoldDecisions,
+    taskHoldLoadLine,
+    taskHoldParts,
+    taskHoldProof,
+    taskHoldRetired,
+    taskHoldStory,
+    taskHoldWaits,
     taskNoteReworkHeld,
+    taskOverrideDirectionGone,
+    taskOverrideDirectionRevised,
+    taskOverrideDirectionTask,
+    taskOverrideDirectionVersion,
     taskPinPin,
     taskPinUnpin,
     taskStatusComputerUpdating,
@@ -123508,7 +123918,21 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "taskGroupQueued": [],
     "taskGroupWaiting": [],
     "taskGroupWorking": [],
+    "taskHoldAsksFirst": [],
+    "taskHoldChecks": [],
+    "taskHoldCostLimit": [],
+    "taskHoldDecisions": [],
+    "taskHoldLoadLine": [],
+    "taskHoldParts": [],
+    "taskHoldProof": [],
+    "taskHoldRetired": [],
+    "taskHoldStory": [],
+    "taskHoldWaits": [],
     "taskNoteReworkHeld": ["title"],
+    "taskOverrideDirectionGone": ["direction", "holds"],
+    "taskOverrideDirectionRevised": ["direction", "holds"],
+    "taskOverrideDirectionTask": ["direction", "holds", "words"],
+    "taskOverrideDirectionVersion": ["direction", "holds", "words"],
     "taskPinPin": [],
     "taskPinUnpin": [],
     "taskStatusComputerUpdating": ["computer"],
@@ -131512,6 +131936,18 @@ ${FRAME_KEYBOARD_SCRIPT}
     const [a] = args;
     return a && Object.keys(a).length ? { m, a } : { m };
   }
+  const SAID_LIST = "[list]";
+  function wordList(fills) {
+    const given = fills ?? {};
+    const items = [];
+    for (let at = 0; at < Object.keys(given).length; at++) {
+      const name = given[String(at)];
+      const item = typeof name === "string" ? wordSaid({ m: name }) : void 0;
+      if (item === void 0) return void 0;
+      items.push(item);
+    }
+    return items.length ? formatList(items) : void 0;
+  }
   function saidPart(m, ...args) {
     const [a] = args;
     return a && Object.keys(a).length ? { m, a } : { m };
@@ -131522,6 +131958,7 @@ ${FRAME_KEYBOARD_SCRIPT}
   function fillOf(value) {
     if (typeof value === "string" || typeof value === "number") return value;
     if ("time" in value) return formatTime(value.time, { hour: "numeric", minute: "2-digit" });
+    if (value.m === SAID_LIST) return wordList(value.a);
     return wordSaid(value);
   }
   function wordSaid(fact) {

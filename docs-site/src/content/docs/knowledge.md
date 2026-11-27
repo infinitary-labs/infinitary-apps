@@ -37,6 +37,7 @@ One kept from anywhere else is marked **Advice**, which your crew weighs.
 No direction allows more than its own words say.
 A direction allows something, such as a step that needs no asking, only while its current wording was heard from you: in your words to your first mate, on a card, or in a task's **Crewmate** tab.
 One your first mate kept or reworded without your words guides your crew, but allows nothing on its own.
+Your first mate can also let a task go on without asking you, as far as a direction you said for its project reaches; once you change or retire that direction, the task asks you again.
 After an update from a version that did not note this, your first mate asks you once, on one card, which of your directions you said, and the ones you tick count as heard.
 
 ## See, change or retire a direction

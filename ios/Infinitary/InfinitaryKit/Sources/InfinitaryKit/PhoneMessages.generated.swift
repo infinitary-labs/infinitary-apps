@@ -4593,7 +4593,21 @@ public enum PhoneMessages {
     public static func `taskGroupQueued`() -> String { PhoneWords.format("taskGroupQueued", []) }
     public static func `taskGroupWaiting`() -> String { PhoneWords.format("taskGroupWaiting", []) }
     public static func `taskGroupWorking`() -> String { PhoneWords.format("taskGroupWorking", []) }
+    public static func `taskHoldAsksFirst`() -> String { PhoneWords.format("taskHoldAsksFirst", []) }
+    public static func `taskHoldChecks`() -> String { PhoneWords.format("taskHoldChecks", []) }
+    public static func `taskHoldCostLimit`() -> String { PhoneWords.format("taskHoldCostLimit", []) }
+    public static func `taskHoldDecisions`() -> String { PhoneWords.format("taskHoldDecisions", []) }
+    public static func `taskHoldLoadLine`() -> String { PhoneWords.format("taskHoldLoadLine", []) }
+    public static func `taskHoldParts`() -> String { PhoneWords.format("taskHoldParts", []) }
+    public static func `taskHoldProof`() -> String { PhoneWords.format("taskHoldProof", []) }
+    public static func `taskHoldRetired`() -> String { PhoneWords.format("taskHoldRetired", []) }
+    public static func `taskHoldStory`() -> String { PhoneWords.format("taskHoldStory", []) }
+    public static func `taskHoldWaits`() -> String { PhoneWords.format("taskHoldWaits", []) }
     public static func `taskNoteReworkHeld`(`title`: String) -> String { PhoneWords.format("taskNoteReworkHeld", [`title`]) }
+    public static func `taskOverrideDirectionGone`(`direction`: String, `holds`: String) -> String { PhoneWords.format("taskOverrideDirectionGone", [`direction`, `holds`]) }
+    public static func `taskOverrideDirectionRevised`(`direction`: String, `holds`: String) -> String { PhoneWords.format("taskOverrideDirectionRevised", [`direction`, `holds`]) }
+    public static func `taskOverrideDirectionTask`(`direction`: String, `holds`: String, `words`: String) -> String { PhoneWords.format("taskOverrideDirectionTask", [`direction`, `holds`, `words`]) }
+    public static func `taskOverrideDirectionVersion`(`direction`: String, `holds`: String, `words`: String) -> String { PhoneWords.format("taskOverrideDirectionVersion", [`direction`, `holds`, `words`]) }
     public static func `taskPinPin`() -> String { PhoneWords.format("taskPinPin", []) }
     public static func `taskPinUnpin`() -> String { PhoneWords.format("taskPinUnpin", []) }
     public static func `taskStatusComputerUpdating`(`computer`: String) -> String { PhoneWords.format("taskStatusComputerUpdating", [`computer`]) }
@@ -9412,7 +9426,21 @@ extension PhoneWords {
         "taskGroupQueued": [],
         "taskGroupWaiting": [],
         "taskGroupWorking": [],
+        "taskHoldAsksFirst": [],
+        "taskHoldChecks": [],
+        "taskHoldCostLimit": [],
+        "taskHoldDecisions": [],
+        "taskHoldLoadLine": [],
+        "taskHoldParts": [],
+        "taskHoldProof": [],
+        "taskHoldRetired": [],
+        "taskHoldStory": [],
+        "taskHoldWaits": [],
         "taskNoteReworkHeld": ["title"],
+        "taskOverrideDirectionGone": ["direction", "holds"],
+        "taskOverrideDirectionRevised": ["direction", "holds"],
+        "taskOverrideDirectionTask": ["direction", "holds", "words"],
+        "taskOverrideDirectionVersion": ["direction", "holds", "words"],
         "taskPinPin": [],
         "taskPinUnpin": [],
         "taskStatusComputerUpdating": ["computer"],

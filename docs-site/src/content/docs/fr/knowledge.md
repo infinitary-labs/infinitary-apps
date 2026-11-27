@@ -1,5 +1,5 @@
 ---
-source: a12b644ccfb84c74
+source: 0fee6cc7d6812497
 title: Connaissances
 description: Les consignes permanentes que garde votre second, ce que vous lui dites de vous et les sources que vous demandez à votre équipage d’enregistrer, et comment les lire, les changer ou les effacer.
 ---
@@ -38,6 +38,7 @@ Une consigne gardée à partir de toute autre source porte la mention **Conseil*
 Aucune consigne n’autorise plus que ce que disent ses propres mots.
 Une consigne n’autorise quelque chose, comme une étape qui n’a pas besoin de vous demander, que tant que sa formulation actuelle a été entendue de vous : dans vos mots à votre second, sur une carte, ou dans l’onglet **Équipier** d’une tâche.
 Une consigne que votre second a gardée ou reformulée sans vos mots guide votre équipage, mais n’autorise rien à elle seule.
+Votre second peut aussi laisser une tâche avancer sans vous demander, aussi loin que porte une consigne que vous avez dite pour son projet ; dès que vous changez ou retirez cette consigne, la tâche vous demande à nouveau.
 Après une mise à jour depuis une version qui ne le notait pas, votre second vous demande une seule fois, sur une carte, lesquelles de vos consignes vous avez dites, et celles que vous cochez comptent comme entendues.
 
 ## Voir, changer ou retirer une consigne {#see-change-or-retire-a-direction}

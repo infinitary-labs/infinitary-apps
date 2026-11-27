@@ -69,12 +69,28 @@ public enum PhoneWords {
             // A number in a blank that is not a count shows as the Mac's template writes it.
             case .count(let number): filled.append(Int(exactly: number).map(String.init) ?? String(number))
             case .time(let at): filled.append(PhoneFormats.time(Date(timeIntervalSince1970: at / 1000), locale: locale))
+            case .part(let part) where part.m == PhoneContract.saidList:
+                guard let words = list(part, locale: locale) else { return nil }
+                filled.append(words)
             case .part(let part):
                 guard let words = word(part, locale: locale) else { return nil }
                 filled.append(words)
             }
         }
         return format(said.m, filled, locale: locale)
+    }
+
+    /// A list fill in the phone's language, as the Mac's `saidList` shapes it and `formatList` words it: the listed
+    /// messages under "0", "1" and on, each with no blanks of its own, or nil when any is not one this catalog words.
+    private static func list(_ part: PhoneSaid, locale: Locale) -> String? {
+        let given = part.a ?? [:]
+        var items: [String] = []
+        for at in 0..<given.count {
+            guard case .words(let name)? = given[String(at)], let item = word(PhoneSaid(m: name, a: nil), locale: locale)
+            else { return nil }
+            items.append(item)
+        }
+        return items.isEmpty ? nil : PhoneFormats.list(items, locale: locale)
     }
 }
 

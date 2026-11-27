@@ -45,7 +45,8 @@ The corpus export's manifest counts them per hold kind in `rigor.overrides_by_ho
 - `at`: when its row was written, in ISO 8601 UTC.
 - `holds`: the soft holds it named.
 - `until` and `head`: `version` with the version it covers, or `task` with no version.
-- `route`: `merge-anyway` for the captain's Merge anyway click, recorded in the captain's name, or `relayed-words` for update_task override, recorded by the first mate relaying the captain's words; a row anyone else wrote reads null.
+- `route`: `merge-anyway` for the captain's Merge anyway click, recorded in the captain's name, `relayed-words` for update_task override, recorded by the first mate relaying the captain's words, or `direction` for update_task override citing a heard direction of the task's project; a row anyone else wrote reads null.
+- `direction`: the `d:` id of the direction a `direction` override cites, null for every other.
 - `merge_click`: the words were the captain's click on a merge, an override the app no longer records and that never stands.
 - `replaces`: the time and holds of the override the task's record held when it was written, null when none stood or a take-back came between.
   One override stands on a task at a time, so a widened one counts again under each hold it repeats; `replaces` shows the repeat.

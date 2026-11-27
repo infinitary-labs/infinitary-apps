@@ -347,6 +347,44 @@ const CASES: WordsCases<CrewmateOtherWakeKind> = {
       words:
         "The captain took back their standing override on this task: asking first hold again, and their earlier words no longer stand in for your consent asks.",
     },
+    {
+      // INF-7021: the words are a heard direction's, so the override lasts
+      // only while that revision does.
+      name: "standing from a direction",
+      wake: {
+        facts: {
+          kind: "task-override-changed",
+          task: { id: TASK.id, key: "INF-2696", title: TASK.title },
+          override: {
+            words: "Release checks may run and merge without asking me.",
+            holds: ["checks"],
+            until: "task",
+            direction: { id: "release-checks", revision: 2 },
+          },
+        },
+      },
+      words:
+        "The captain's standing override on this task, recorded by the first mate: their words pass the checks for the rest of this task: \"Release checks may run and merge without asking me.\". Where their words reach a consent ask of your own, such as their plan's allowance, they are that consent and you do not ask again; for a check that declares what it uses or a validation effect these words cover, name standing as the request's allowance. An effect still needs exact independent clearance. Keychain or signing access, writes outside the project and browser handoffs still ask. Only their words take it back. These words are the captain's direction d:release-checks, revision 2: the override ends when that direction is revised or retired.",
+    },
+    {
+      name: "ended by its direction",
+      wake: {
+        facts: {
+          kind: "task-override-changed",
+          task: { id: TASK.id, key: "INF-2696", title: TASK.title },
+          override: {
+            words: "Release checks may run and merge without asking me.",
+            holds: ["checks"],
+            until: "task",
+            direction: { id: "release-checks", revision: 2 },
+          },
+          withdrawn: true,
+          directionChanged: true,
+        },
+      },
+      words:
+        "The captain's direction d:release-checks was revised or retired, so the standing override on this task that cited it ended: the checks hold again, and its words no longer stand in for your consent asks.",
+    },
   ],
   // INF-3170 piece 2: the captain's yes on a crewmate's card, served as one list.
   "task-allowed-changed": [

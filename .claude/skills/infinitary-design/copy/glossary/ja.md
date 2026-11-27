@@ -81,6 +81,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | header (an extra request header) | ヘッダー | Long-vowel mark. |
 | held (a batch that stopped) | 保留中 | The same word as a merge a rule holds (保留しています); 一時停止 stays for what a person pauses. |
 | hold (on a task) | 保留 | 「保留が解ける」 for a hold ending. |
+| holds an override passes (named on a task's Activity) | asking first: 先に確認; the open decisions: 未決の判断; the waits: ほかの作業の待ち; the open parts: 未完了のパート; the checks: チェック; the delivery proof: 完了の証明; the saved story: 保存したストーリー; the heavy-run line: 重い実行の順番待ち; the cost limit: コスト上限; a retired hold: 廃止された項目 | Joined as one list in the reader's language on the line. |
 | How to get it (an ask for a secret) | 入手方法 | The heading over the steps a crewmate lays out for making or finding a secret. |
 | Idle (a task's state) | アイドル | 待機中 is Queued; both appear in one list. |
 | Infinitary | Infinitary | Never translated or written in katakana. |

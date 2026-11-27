@@ -274,45 +274,95 @@ extension PhoneJourney {
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "selected == true"), object: theme.buttons["Device"], timeout: 10),
                        .completed, "In Settings the left arrow moves the theme from Dark to Device")
         try drawn("phone-theme-device", dark: false)
-        try phoneColorThemes()
+        try await phoneColorThemes()
     }
 
-    /// INF-6888's part 3, the computer's built-in themes in the computer's order, each with its base.
-    private static let builtInThemes: [(name: String, dark: Bool)] = [
-        ("Rosé Pine", true), ("Rosé Pine Moon", true), ("Rosé Pine Dawn", false), ("Catppuccin Latte", false),
-        ("Catppuccin Frappé", true), ("Catppuccin Macchiato", true), ("Catppuccin Mocha", true), ("One Dark", true),
-        ("One Light", false), ("Dracula", true), ("Night Owl", true), ("Night Owl Light", false), ("Tokyo Night", true),
+    /// INF-6888's part 3, the computer's built-in themes in the computer's order: each one's base, and its background
+    /// (--bg-0, `PhoneTheme.background`) and quiet words (--fg-2, `PhoneTheme.secondary`) as the computer's
+    /// workOutTheme in src/shared/colorThemes.ts works them out for the captain's chosen themes.
+    private static let builtInThemes: [(name: String, dark: Bool, background: UInt32, quiet: UInt32)] = [
+        ("Rosé Pine", true, 0x191724, 0x9796ae), ("Rosé Pine Moon", true, 0x232136, 0xa5a4bc),
+        ("Rosé Pine Dawn", false, 0xfaf4ed, 0x716b95), ("Catppuccin Latte", false, 0xeff1f5, 0x696c88),
+        ("Catppuccin Frappé", true, 0x303446, 0xb5bfe3), ("Catppuccin Macchiato", true, 0x24273a, 0xa3accc),
+        ("Catppuccin Mocha", true, 0x1e1e2e, 0x97a1bc), ("One Dark", true, 0x282c34, 0xa7b4c9),
+        ("One Light", false, 0xeaeaeb, 0x64697f), ("Dracula", true, 0x282a36, 0xb2b399),
+        ("Night Owl", true, 0x011627, 0x8896ab), ("Night Owl Light", false, 0xf0f0f0, 0x6d6b83),
+        ("Tokyo Night", true, 0x1a1b26, 0x919ac3),
     ]
 
+    /// The order the themes are picked in: every one once, with a switch between two themes on one base (Rosé Pine to
+    /// Rosé Pine Moon, Dracula to Tokyo Night) and from a dark theme to a light one (Tokyo Night to Catppuccin Latte).
+    private static let themeVisits = ["Rosé Pine", "Rosé Pine Moon", "Rosé Pine Dawn", "Catppuccin Frappé", "Catppuccin Macchiato",
+        "Catppuccin Mocha", "One Dark", "One Light", "Night Owl", "Night Owl Light", "Dracula", "Tokyo Night", "Catppuccin Latte"]
+
     /// INF-6888's part 3: each built-in theme, tapped in turn on a light simulator, draws the whole screen on its own
-    /// base and redraws Settings in its own colors, even after a theme on the same base (Rosé Pine to Rosé Pine Moon).
-    /// Dracula then draws the home and its card; Device is chosen again. Leaves Settings open, drawing light.
-    private func phoneColorThemes() throws {
+    /// base and Settings' quiet words in its own colors; with Settings closed, the home behind it draws on the theme's
+    /// background and its card's body in the theme's quiet words, without a relaunch. Dracula is then picked again and
+    /// survives a relaunch; Device is chosen again. Leaves Settings open, drawing light.
+    private func phoneColorThemes() async throws {
         let theme = phoneThemeTiles, scope = app.staticTexts["phone-theme-scope"]
         var shown = waitForRedraw(scope, from: nil)
-        for (name, dark) in Self.builtInThemes {
+        let visits = Self.themeVisits + ["Dracula"]
+        for (visit, name) in visits.enumerated() {
+            let look = try XCTUnwrap(Self.builtInThemes.first { $0.name == name })
+            let again = visits[..<visit].contains(name) ? "-again" : ""
+            let slug = "phone-theme-" + name.lowercased().replacingOccurrences(of: " ", with: "-") + again
             tapOnPhone(theme.buttons[name])
             XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "selected == true"), object: theme.buttons[name], timeout: 10),
                            .completed, "\(name) is chosen")
             shown = waitForRedraw(scope, from: shown)
-            XCTAssertNotNil(shown, "Settings redraws in \(name)'s colors")
-            try drawn("phone-theme-" + name.lowercased().replacingOccurrences(of: " ", with: "-"), dark: dark)
+            waitForInks(name, [(look.quiet, scope, 300, "Settings' quiet words")])
+            try drawn(slug, dark: look.dark)
+            let close = app.buttons["close-phone-settings"]
+            tapOnPhone(close)
+            XCTAssertTrue(close.waitForAbsence(timeout: 10), app.debugDescription)
+            try homeDrawn(in: look, slug + "-home")
+            if visit == visits.count - 1 { break }
+            try reopenAppearance()
+            shown = waitForRedraw(scope, from: nil)
         }
-        tapOnPhone(theme.buttons["Dracula"])
-        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "selected == true"), object: theme.buttons["Dracula"], timeout: 10), .completed)
-        let close = app.buttons["close-phone-settings"]
-        tapOnPhone(close)
-        XCTAssertTrue(close.waitForAbsence(timeout: 10), app.debugDescription)
+        app.terminate(); try await launchPhoneApp(app)
+        reach("Live", timeout: 20)
+        let dracula = try XCTUnwrap(Self.builtInThemes.first { $0.name == "Dracula" })
+        try homeDrawn(in: dracula, "phone-theme-dracula-relaunched")
+        try reopenAppearance()
+        XCTAssertTrue(theme.buttons["Dracula"].isSelected, "A built-in theme survives a relaunch")
+        tapOnPhone(theme.buttons["Device"])
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "selected == true"), object: theme.buttons["Device"], timeout: 10), .completed)
+        try drawn("phone-theme-device-again", dark: false)
+    }
+
+    /// The home with its card, drawn in `look`: the page on its background and the card's body in its quiet words.
+    private func homeDrawn(in look: (name: String, dark: Bool, background: UInt32, quiet: UInt32), _ name: String) throws {
         XCTAssertTrue(app.staticTexts["Your phone is reading your Mac"].waitForPresence(timeout: 10), app.debugDescription)
-        try drawn("phone-theme-dracula-home", dark: true)
+        let body = app.webViews.matching(identifier: "card-body").firstMatch
+        XCTAssertTrue(body.waitForPresence(timeout: 10), app.debugDescription)
+        waitForInks(look.name, [(look.background, nil, 100_000, "the home's background"), (look.quiet, body, 300, "the card body's quiet words")])
+        try drawn(name, dark: look.dark)
+    }
+
+    private func reopenAppearance() throws {
         tapOnPhone(app.buttons["phone-settings"])
         let appearance = app.buttons["phone-settings-appearance"]
         XCTAssertTrue(appearance.waitForPresence(timeout: 10), app.debugDescription)
         tapOnPhone(appearance)
-        XCTAssertTrue(theme.waitForPresence(timeout: 10), app.debugDescription)
-        tapOnPhone(theme.buttons["Device"])
-        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "selected == true"), object: theme.buttons["Device"], timeout: 10), .completed)
-        try drawn("phone-theme-device-again", dark: false)
+        XCTAssertTrue(phoneThemeTiles.waitForPresence(timeout: 10), app.debugDescription)
+    }
+
+    /// INF-6888's part 3: waits until one screenshot draws each ink, an sRGB color, on at least `least` pixels inside its
+    /// element's frame, or the whole screen for nil. A view left on the previous theme's colors draws none of them: the
+    /// built-in themes share no background or quiet words.
+    private func waitForInks(_ theme: String, _ inks: [(color: UInt32, element: XCUIElement?, least: Int, what: String)]) {
+        var counts = [Int](repeating: 0, count: inks.count)
+        _ = waitForPhonePredicate(NSPredicate { _, _ in
+            guard let image = XCUIScreen.main.screenshot().image.cgImage, let raster = SRGBRaster(image) else { return false }
+            let scale = CGFloat(image.width) / self.app.frame.width
+            counts = inks.map { raster.count($0.color, in: $0.element.map { $0.frame.applying(CGAffineTransform(scaleX: scale, y: scale)) }) }
+            return zip(counts, inks).allSatisfy { $0 >= $1.least }
+        }, object: nil, timeout: 10)
+        for (count, ink) in zip(counts, inks) {
+            XCTAssertGreaterThanOrEqual(count, ink.least, "\(ink.what) draw \(theme)'s \(String(ink.color, radix: 16))")
+        }
     }
 
     /// The captain's Split at the fold switch by keys, on a simulator told at launch that it has seen a fold, as an open
@@ -355,5 +405,44 @@ extension PhoneJourney {
         XCTAssertTrue(appearance.waitForPresence(timeout: 10), app.debugDescription)
         tapOnPhone(appearance)
         XCTAssertTrue(phoneThemeTiles.waitForPresence(timeout: 10), app.debugDescription)
+    }
+}
+
+/// A screenshot's pixels in sRGB, the space the themes' colors are written in.
+private struct SRGBRaster {
+    let width: Int, height: Int, bytes: [UInt8]
+
+    init?(_ image: CGImage) {
+        let (width, height) = (image.width, image.height)
+        var bytes = [UInt8](repeating: 0, count: width * height * 4)
+        let drawn = bytes.withUnsafeMutableBytes { buffer -> Bool in
+            guard let space = CGColorSpace(name: CGColorSpace.sRGB),
+                  let context = CGContext(data: buffer.baseAddress, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4,
+                                          space: space, bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue) else { return false }
+            context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+            return true
+        }
+        guard drawn else { return nil }
+        (self.width, self.height, self.bytes) = (width, height, bytes)
+    }
+
+    /// Pixels inside `frame` (in pixels, the whole picture for nil) within one step per channel of `color`, the rounding a
+    /// simulator's screenshot leaves on an sRGB color. The whole picture is read at every third pixel each way and scaled.
+    func count(_ color: UInt32, in frame: CGRect?) -> Int {
+        let all = CGRect(x: 0, y: 0, width: width, height: height)
+        let area = (frame ?? all).integral.intersection(all)
+        guard !area.isNull, !area.isEmpty else { return 0 }
+        let step = frame == nil ? 3 : 1
+        let (r, g, b) = (Int(color >> 16 & 0xff), Int(color >> 8 & 0xff), Int(color & 0xff))
+        var matching = 0
+        bytes.withUnsafeBufferPointer { pixels in
+            for y in stride(from: Int(area.minY), to: Int(area.maxY), by: step) {
+                for x in stride(from: Int(area.minX), to: Int(area.maxX), by: step) {
+                    let at = (y * width + x) * 4
+                    if abs(Int(pixels[at]) - r) <= 1, abs(Int(pixels[at + 1]) - g) <= 1, abs(Int(pixels[at + 2]) - b) <= 1 { matching += 1 }
+                }
+            }
+        }
+        return matching * step * step
     }
 }

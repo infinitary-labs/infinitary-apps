@@ -9,6 +9,8 @@ import XCTest
 @MainActor final class PhoneColorThemeTests: XCTestCase {
     /// Dracula's own background and accent, as its makers publish them.
     private static let draculaBackground = (40.0, 42.0, 54.0), draculaAccent = (189.0, 147.0, 249.0)
+    /// Tokyo Night's own background, as its makers publish it: another dark theme, on Dracula's base.
+    private static let tokyoNightBackground = (26.0, 27.0, 38.0)
 
     private func traits(_ style: UIUserInterfaceStyle, _ theme: PhoneColorTheme?) -> UITraitCollection {
         UITraitCollection { $0.userInterfaceStyle = style; $0[PhoneColorThemeTrait.self] = theme?.rawValue }
@@ -54,12 +56,19 @@ import XCTest
         }
     }
 
-    /// The crew animation's colors follow the pick, including between two themes on one base.
+    /// The crew animation's colors follow the pick through the cache the scene draws with, including between two
+    /// themes on one base, where the base alone would keep the first theme's colors (the spec's cache keyed on the theme).
     func testTheCrewPaletteFollowsThePick() {
-        let dracula = CharacterPainter.Palette(.dark, theme: .dracula)
-        XCTAssertEqual(dracula.theme, .dracula)
+        func environment(_ theme: PhoneColorTheme) -> EnvironmentValues {
+            var values = EnvironmentValues()
+            values.colorScheme = .dark
+            values.phoneColorTheme = theme.rawValue
+            return values
+        }
+        let cache = CharacterPainter.Cache()
+        let dracula = cache.palette(environment(.dracula))
         assertClose((dracula.bg.r, dracula.bg.g, dracula.bg.b), Self.draculaBackground, "The crew draws on Dracula's background")
-        let tokyo = CharacterPainter.Palette(.dark, theme: .tokyoNight)
-        XCTAssertNotEqual(tokyo.bg.r, dracula.bg.r, "Tokyo Night on the same base resolves its own background")
+        let tokyo = cache.palette(environment(.tokyoNight))
+        assertClose((tokyo.bg.r, tokyo.bg.g, tokyo.bg.b), Self.tokyoNightBackground, "The same cache redraws on Tokyo Night's background")
     }
 }

@@ -71,6 +71,9 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     // The Apple Pencil watch and placement under every part's Home and message box (PhoneWorkspace.swift).
     "ios/Infinitary/InfinitaryApp/PhonePencilWatch.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhonePencil.swift",
+    // INF-2820 piece 2: Filter in every part's top bar, and the focus every tab and the crew read.
+    "ios/Infinitary/InfinitaryApp/PhoneProjectFilter.swift",
+    "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneProjectFocus.swift",
     "ios/Infinitary/InfinitaryApp/PhoneQuestionBubble.swift",
     "ios/Infinitary/InfinitaryApp/PhoneSettingsSheet.swift",
     "ios/Infinitary/InfinitaryApp/PhoneStyle.swift",

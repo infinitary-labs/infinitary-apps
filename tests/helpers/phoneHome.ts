@@ -3495,7 +3495,7 @@ export async function startPhoneHome(
           break;
         default:
           result = await phoneAppearanceCommand(core, `${request.method} ${command}`, takeOver);
-          result ??= await projectFilterCommand(core, writes, until, command);
+          result ??= await projectFilterCommand(core, writes, until, command ?? "");
           if (result === undefined) {
             response.writeHead(404).end();
             return;

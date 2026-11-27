@@ -160,7 +160,7 @@ export class CrewTurn {
     const found = new Set<CarriedSteer>();
     let unmatched = 0;
     for (const text of unheard) {
-      // Of two steers with the same words the newer is taken, as before.
+      // A session delivers oldest first, so of two with the same words the newer is left over.
       const steer = steers.findLast((carried) => !found.has(carried) && carried.text === text);
       if (steer) found.add(steer);
       else unmatched += 1;

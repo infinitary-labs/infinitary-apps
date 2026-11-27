@@ -1184,7 +1184,7 @@ export class FirstmateSeat {
         AUTH_CARD_ID,
         "firstmate",
         this.signInCardBody(),
-        access ? { access } : undefined,
+        { ...(access ? { access } : {}), noReply: true },
       );
       return;
     }

@@ -292,23 +292,24 @@ A write that adds a line and leaves the card as it was counts as that line, a re
 The `emit_card` receipt for a write that adds a line keeps "Card shown: title (id)" and says what the line did, in the words a shared card's receipt uses (`cardMutationText.ts`): it answers the captain's message, or it is a comment because someone already answered that message, or the captain's message is still open because the line named none.
 Contract v4.2 is unchanged; the wire bump is protocol 1.19.0 for images on `inf:cards:reply`.
 
-### A card with no reply row
+### Who answers a card
 
-One first mate card takes no reply: the welcome (FI3-1164, the captain's word: "for this particular card, let's disable "reply to this card" input box at the bottom. otherwise it's overwhelming"), so it draws neither the field nor Chat.
-The host marks it when it presents the note (`Card.replies` false, the `cards.replies` column; `addRecordedFirstmateNote(..., { replies: false })`), and `cardTakesReplies` reads it as no, whoever the author is.
-The window draws no field on it and refuses the Reply commands with "This card takes no reply"; `CardActions.replyToCard` refuses one with "takes no reply".
-Its words send the captain to the message box under the card, so the first-run hint ends on a message sent from there (`docs/first-launch.md` "The welcome").
-Every other card keeps its row as its author allows.
+Every card takes a reply that someone answers, except the few the host marks as taking none.
+A first mate card is the first mate's to answer and a crewmate card its crewmate's; the host's own cards name their answerer (`Card.answeredBy`, the `cards.answered_by` column), and `cardTakesReplies`, `cardAnswerer`, the phone's `takesReplies` and `CardActions.replyToCard` read that field and `Card.replies`, never the id.
 
-### A host card's reply row
+- The app's own card for an agent's ask names the agent that asked: the crewmate on its task's ask ("The reply row on the app's card for a crewmate's ask", below), the first mate on its own.
+- Every other host card is answered by the first mate.
+  `CardService.put`, the one door every host card goes up through, fills that in for a host card that names no answerer and does not turn replies off, and its restore after a restart does the same for a card saved before its builder named one (`withHostAnswerer`, `hostCards.ts`), so a builder that forgets to name one still draws the field (INF-6994).
+  That covers the idle ladder's stuck alert (`card-stall-<task>`, INF-1670, the captain's word: "i would remove the "drop task" option and leave nuanced operations to the reply"), the next-move check's card (`card-next-move-<task>`, `docs/report-sort.md` "The next-move check"), the decision on a stopped part left last under its parent (`card-last-part-<task>`, `docs/report-sort.md` "The last part the captain stopped"), the cost limit card (`card-cost-<task>`, `docs/usage.md`), the app's own offers a core service raises through `HostCardStack.raiseHostCard`, the sign-in cards for a crewmate, an account or where projects live, the cards after the first mate moves, the quiet card, and a panel's integration call, since a panel cannot answer one.
+- A card marked as taking no reply (`Card.replies` false, the `cards.replies` column) draws neither the field nor Chat, whoever its author is.
+  The welcome is one (FI3-1164, the captain's word: "for this particular card, let's disable "reply to this card" input box at the bottom. otherwise it's overwhelming"): the host marks it when it presents the note (`addRecordedFirstmateNote(..., { replies: false })`), and its words send the captain to the message box under the card, so the first-run hint ends on a message sent from there (`docs/first-launch.md` "The welcome").
+  The cards shown while the first mate is down are the rest, since nobody could answer them: its pause cards, its failed-turn card and its own sign-in card.
+  The window refuses the Reply commands on such a card with "This card takes no reply"; `CardActions.replyToCard` refuses one with "takes no reply".
 
-Host cards that name the first mate as their answerer take a reply: the idle ladder's stuck alert (`card-stall-<task>`, INF-1670, the captain's word: "i would remove the "drop task" option and leave nuanced operations to the reply"), the next-move check's card (`card-next-move-<task>`, `docs/report-sort.md` "The next-move check"), the decision on a stopped part left last under its parent (`card-last-part-<task>`, `docs/report-sort.md` "The last part the captain stopped"), the cost limit card (`card-cost-<task>`, `docs/usage.md`), every card a core service raises through `HostCardStack.raiseHostCard` - the app's own offers, such as adding to the app, project setup, automation, devices and credits (INF-6265's plan, piece 2) - and the app's card for the first mate's own ask: a secret to keep and an integration call ("The reply row on the app's card for a crewmate's ask", below).
-`raiseHostCard` names the first mate unless its caller names an answerer or marks the card as taking no reply; the agent-down set and the welcome never go through it, so they stay without a field.
+A reply on a host card the first mate answers is a captain turn about the card, the same as a reply on a first mate card, and the first mate answers it with an `emit_card` reply naming the message (`CardThreads.firstmateAnswers`, `cardThreads.ts`).
 Words left in such a card's field when the captain presses one of its buttons reach the first mate once with the choice, as an app-carried choice does (`CardActions.carriedOut`), so the press never drops them.
-The host names its answerer when it raises the card (`Card.answeredBy` "firstmate", the `cards.answered_by` column), and `cardTakesReplies`, the phone's `takesReplies` and `CardActions.replyToCard` read that field, never the id.
-A reply there is a captain turn about the card, the same as a reply on a first mate card, and the first mate answers it with an `emit_card` reply naming the message (`CardThreads.firstmateAnswers`, `cardThreads.ts`).
 It is never a thread the task's crewmate owes (`CardService.threadsAwaitingAuthor` leaves it out), so no nudge or reminder names it.
-While the answer is owed the alert stays up even if the task moves (`IdleLadder.withdrawStallCard`); once it lands, the next move takes the alert down as before.
+While the answer is owed the stuck alert stays up even if the task moves (`IdleLadder.withdrawStallCard`); once it lands, the next move takes the alert down as before.
 
 ### The reply row on the app's card for a crewmate's ask
 
@@ -316,8 +317,8 @@ The app's own card for a crewmate's ask takes a reply that reaches the crewmate 
 The host names that answerer when it raises the card (`Card.answeredBy` "crewmate", read through `cardAnswerer`), and its header names the asking task as a crewmate's card does.
 The crewmate answers in the thread with `reply` naming the message, as on its own card, but it cannot revise or close the app's card: its steer opens with its own preamble (`THREAD_APP_CARD_PREAMBLE`), which tells it to withdraw the ask where its command offers that when the work no longer needs it, and never to ask for a value in the thread.
 Words left in the field when the captain presses one of the card's buttons reach the same crewmate with the choice, told that the app carries the button out and its outcome reaches it on its own (`CARRIED_OUT_ASKER_WORDS`); the first mate is not told.
-The app's card for the first mate's own ask - a secret to keep, or an integration call, which name no task - names the first mate as its answerer, which answers in the thread as on the stuck alert.
-A panel's integration call still takes no reply, since a panel cannot answer one.
+The app's card for the first mate's own ask - a secret to keep, or an integration call, which name no task - names the first mate as its answerer, which answers in the thread as on the stuck alert, and so does a panel's integration call.
+An unsafe data reader's approval card names the reader that asked (`readerApprovalCard`), whose thread lines reach the first mate fenced as the reader's other words do (`CardThreads.fromReader`).
 A view whose hello does not list `card-answered-by-crewmate`, a phone included, is sent the card without a crewmate answerer, and a card with a secret's masked fields without any answerer, and draws it with no reply row.
 
 ## Images on steers (phase 2)
@@ -389,7 +390,7 @@ It is branch 0, above the open-card branch, deliberately - the captain has spoke
 The design skill owns every visual rule (`.claude/skills/infinitary-design/components/cards/CardThread.prompt.md`); `src/renderer/src/cards/CardThread.tsx` implements it and `threadGeometry.ts` holds the ladder's arithmetic.
 
 While a card has no thread open beside it, its one field, reading "anything to add?", sits above the button row under one hairline, and Chat sits at the right edge of that row (INF-924; `docs/card-authoring.md`, "The card's one field").
-A card with no author to reach - the host's own agent-down set - has no field and no Chat at all, and neither has the welcome ("A card with no reply row", above); a host card the first mate answers has both ("A host card's reply row", above).
+A card marked as taking no reply - the welcome and the cards shown while the first mate is down - has no field and no Chat at all; every other card has both ("Who answers a card", above).
 A card whose own field is masked - a secret's field - draws no reply field under it, so a reply is never typed beside a secret: Chat (or its key) opens the thread beside the card at once, even with no message yet, and the thread's field takes the caret (`EntryView.chatFirst`, the captain's choice on INF-6265).
 On the phone, such a card's face draws no reply field either: Chat at the leading edge of its choices turns the card to its thread, even with no message yet, with the caret in the thread's field, and the thread's foot leaves Save secret off, so it stays with its fields on the face.
 

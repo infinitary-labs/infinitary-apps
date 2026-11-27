@@ -18,7 +18,7 @@ import {
   FIRST_CREWMATE_CARD_TITLE,
   firstCrewmateCard,
 } from "./scenarios/firstCrewmateCard";
-import { expectNoCard, shownCard, stageAtRest } from "./stack";
+import { cardReply, expectNoCard, shownCard, stageAtRest } from "./stack";
 import { pressWindowKey } from "./windowKeys";
 
 /**
@@ -127,12 +127,10 @@ test("a new person's first crewmate shows its note once, in place of the welcome
       await expectNoCard(page, WELCOME_TITLE);
       expect(await openTitles(page)).toEqual([FIRST_CREWMATE_TITLE]);
       const cards = await page.evaluate(() => window.infinitary.cards.list());
-      expect(cards[0]).toMatchObject({
-        author: "firstmate",
-        actions: [],
-        replies: false,
-        width: "regular",
-      });
+      expect(cards[0]).toMatchObject({ author: "firstmate", actions: [], width: "regular" });
+      // The captain's choice on INF-7001's review: the note takes a reply the first mate answers.
+      expect(cards[0]).not.toHaveProperty("replies");
+      await expect(cardReply(page).field).toBeVisible();
       noteId = cards[0]?.id ?? "";
       const record = await page.evaluate(() => window.infinitary.app.firstRun());
       expect(record.firstCrewmateNoteId).toBe(noteId);

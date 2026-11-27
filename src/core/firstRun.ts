@@ -101,9 +101,10 @@ export function crewFacts(
  * How the first crewmate's note goes up (docs/first-launch.md "The first
  * crewmate's note"). The welcome steps aside for it (INF-5532, the
  * captain's "replace"): one card at a time, so the crewmate's first card
- * arrives on an open stage rather than behind the welcome. Like the
- * welcome, the note takes no reply and is the regular card its picture was
- * drawn for.
+ * arrives on an open stage rather than behind the welcome. Unlike the
+ * welcome, the note takes a reply, which the first mate answers (the
+ * captain's choice on INF-7001's review); it is the regular card its picture
+ * was drawn for.
  */
 export function presentFirstCrewmateNote(
   cards: Pick<CardService, "addRecordedFirstmateNote" | "has" | "takeDown">,
@@ -112,10 +113,7 @@ export function presentFirstCrewmateNote(
     if (welcomeCardId && cards.has(welcomeCardId)) {
       cards.takeDown(welcomeCardId, "first-crewmate-started");
     }
-    cards.addRecordedFirstmateNote(FIRST_CREWMATE_NOTE, record, {
-      replies: false,
-      width: "regular",
-    });
+    cards.addRecordedFirstmateNote(FIRST_CREWMATE_NOTE, record, { width: "regular" });
   };
 }
 

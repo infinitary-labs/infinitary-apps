@@ -168,8 +168,8 @@ export class CardThreads {
 
   /**
    * Whether the Firstmate is the one that answers a card's thread: its own
-   * card, a card the host named it the answerer of (the stuck alert and
-   * the app's own offers, `Card.answeredBy`), or a crewmate's card - or the
+   * card, a host card it answers (every one but a crewmate's ask and one
+   * taking no reply, `withHostAnswerer`), or a crewmate's card - or the
    * app's card for its ask - whose task has closed, so its crewmate is gone.
    */
   firstmateAnswers(card: Card): boolean {

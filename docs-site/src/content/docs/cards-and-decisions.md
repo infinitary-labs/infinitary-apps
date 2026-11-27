@@ -51,12 +51,13 @@ Clicking inside the card never sends anything on its own.
 
 ## The reply field and the thread
 
-Every card from your first mate or a crewmate has a field under its body that reads "anything to add?".
+Every card has a field under its body that reads "anything to add?", except the welcome and the cards shown while your first mate is down.
 
 - Type in it and press **Chat** to send a reply without choosing.
 - Type in it and press a choice to send your words with that choice.
 
 A reply goes to whoever wrote the card.
+On a card Infinitary puts up itself, a reply goes to the crewmate that asked for it, or otherwise to your first mate.
 The first reply opens a thread beside the card, and the author answers there.
 When the author changes the card in answer, the card is revised in place, and the thread says so.
 To fold the thread back into the card, press ⌘\ (Ctrl+\ on Linux and Windows).

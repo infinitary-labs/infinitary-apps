@@ -1,5 +1,5 @@
 ---
-source: 28dbb83c4a64e09c
+source: 6359195aeec7c814
 title: Tarjetas y decisiones
 description: Cómo tu primer oficial y tu tripulación te traen respuestas y decisiones como tarjetas, y cómo responderlas.
 ---
@@ -52,12 +52,13 @@ Hacer clic dentro de la tarjeta nunca envía nada por sí solo.
 
 ## El campo de respuesta y el hilo {#the-reply-field-and-the-thread}
 
-Cada tarjeta de tu primer oficial o de un tripulante tiene, debajo de su cuerpo, un campo que dice «¿algo que agregar?».
+Cada tarjeta tiene, debajo de su cuerpo, un campo que dice «¿algo que agregar?», salvo la de bienvenida y las que aparecen mientras tu primer oficial está detenido.
 
 - Escribe en él y presiona **Conversar** para enviar una respuesta sin elegir.
 - Escribe en él y presiona una opción para enviar tus palabras con esa opción.
 
 Una respuesta le llega a quien escribió la tarjeta.
+En una tarjeta que muestra el propio Infinitary, la respuesta le llega al tripulante que la pidió, o si no, a tu primer oficial.
 La primera respuesta abre un hilo junto a la tarjeta, y el autor responde ahí.
 Cuando el autor cambia la tarjeta como respuesta, la tarjeta se revisa en su lugar, y el hilo lo dice.
 Para volver a plegar el hilo en la tarjeta, presiona ⌘\ (Ctrl+\ en Linux y Windows).

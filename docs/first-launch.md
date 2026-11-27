@@ -153,7 +153,7 @@ A press sends nothing and leaves the welcome up, and while the box is held - a r
 A starter is a `data-inf-draft` button, the frame bridge's own message for a body that starts the captain's message, which the window takes only from the card on screen whose frame holds its focus, as a link opens only then (`docs/card-authoring.md` "Style").
 A press of a starter, Next or Back is not the first turn.
 
-The note has an ordinary close, normal priority, no footer buttons, no provider personalization, and no reply row: the captain asked for none on this card, since the message box under it is where to type (`docs/card-threads.md` "A card with no reply row").
+The note has an ordinary close, normal priority, no footer buttons, no provider personalization, and no reply row: the captain asked for none on this card, since the message box under it is where to type (`docs/card-threads.md` "Who answers a card").
 It is a regular card, the width its picture was drawn for, which the host sets when it presents the note.
 It teaches default positions, never opens panels or overrides the captain's choices.
 Sending a message does not close it; if that message starts the first crewmate, the welcome steps aside for the first crewmate's note (“The first crewmate's note” below).
@@ -246,7 +246,8 @@ Both are the app's own stage part (`docs/card-authoring.md`, "The app's own stag
 Every run of words is a saved fact (`saidMark`) and the title's fact rides `cardWordsMark` (docs/i18n.md, "Saved facts"), so the window and the phone word the note in their own language when they draw it.
 Its record keeps the note's sentences in English as its answer, without the panels.
 
-It is a first-mate note like the welcome: committed with its completed answer through `CardService.addRecordedFirstmateNote`, no reply row, the regular width, and one button, Got it, on Command-1.
+It is a first-mate note like the welcome: committed with its completed answer through `CardService.addRecordedFirstmateNote`, the regular width, and one button, Got it, on Command-1.
+Unlike the welcome it takes a reply, which the first mate answers (docs/card-threads.md, "Who answers a card").
 It promises no system notification, and follows the standing notification rule like any note.
 
 - **When.**

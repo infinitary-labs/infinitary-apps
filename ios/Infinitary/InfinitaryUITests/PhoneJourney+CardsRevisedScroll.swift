@@ -90,7 +90,7 @@ extension PhoneJourney {
         return problems
     }
 
-    /// Swipes the card's scroller to one end, until the body holds still between swipes.
+    /// Swipes the card's scroller to one end, until the body holds still between swipes with that end in view.
     private func settleRevisedScroll(up: Bool) {
         let scroll = app.scrollViews["card-scroll"].firstMatch
         let body = app.webViews.matching(identifier: "card-body").firstMatch
@@ -98,7 +98,24 @@ extension PhoneJourney {
             let before = body.exists ? body.frame.minY : scroll.frame.minY
             up ? scroll.swipeUp() : scroll.swipeDown()
             waitForSteadyTarget(scroll)
-            if abs((body.exists ? body.frame.minY : scroll.frame.minY) - before) < 1 { return }
+            // INF-7071: a still body alone is not the end. The simulator's system gesture check once held a swipe's touches
+            // until after the lift, so the card's scroller never began that swipe; the body held still a third of the way
+            // down and the choices were read 3,200 pt below the card's foot.
+            if abs((body.exists ? body.frame.minY : scroll.frame.minY) - before) < 1 && revisedEndShows(up: up) { return }
         }
+    }
+
+    /// Whether the card's scroller shows its content's end: going up, the body's foot and the choices the scroller holds
+    /// under it; going down, the title above the body and the body's top.
+    private func revisedEndShows(up: Bool) -> Bool {
+        let scroll = app.scrollViews["card-scroll"].firstMatch
+        let body = app.webViews.matching(identifier: "card-body").firstMatch
+        let view = scroll.frame
+        if up {
+            let choices = scroll.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'card-action-'")).allElementsBoundByIndex
+            return (!body.exists || body.frame.maxY <= view.maxY + 0.5) && choices.allSatisfy { $0.frame.maxY <= view.maxY + 0.5 }
+        }
+        let title = scroll.staticTexts["card-title"]
+        return (!body.exists || body.frame.minY >= view.minY - 0.5) && (!title.exists || title.frame.minY >= view.minY - 0.5)
     }
 }

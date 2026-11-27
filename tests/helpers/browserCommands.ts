@@ -140,15 +140,12 @@ const holdTouchInFrame: BrowserCommand<[frame: string, selector: string, holdMs:
 };
 
 /**
- * The browser's own mouse pressed on the first letter of `words` inside the
- * element `selector` finds in the frame whose element carries `title`,
- * dragged to their last letter and released, as a person selects words. The
- * runner draws the test's page scaled to fit, so a point read in the frame is
- * carried to the page through the element's drawn box.
+ * Where the first and last letters of `words` inside the element `selector`
+ * finds, in the frame whose element carries `title`, sit on the test's page.
+ * The runner draws the test's page scaled to fit, so a point read in the frame
+ * is carried to the page through the element's drawn box.
  */
-const dragAcrossWordsInFrame: BrowserCommand<
-  [title: string, selector: string, words: string]
-> = async ({ page }, title, selector, words) => {
+async function wordsOnPage(page: Page, title: string, selector: string, words: string) {
   const target = (await frameOf(page, { title })).locator(selector).first();
   await target.scrollIntoViewIfNeeded();
   const inner = await target.evaluate((element, words) => {
@@ -181,12 +178,33 @@ const dragAcrossWordsInFrame: BrowserCommand<
     x: box.x + x * (box.width / inner.width),
     y: box.y + y * (box.height / inner.height),
   });
-  const start = onPage(inner.start);
-  const end = onPage(inner.end);
+  return { start: onPage(inner.start), end: onPage(inner.end) };
+}
+
+/**
+ * The browser's own mouse pressed on the first letter of `words` in a frame
+ * (`wordsOnPage`), dragged to their last letter and released, as a person
+ * selects words.
+ */
+const dragAcrossWordsInFrame: BrowserCommand<
+  [title: string, selector: string, words: string]
+> = async ({ page }, title, selector, words) => {
+  const { start, end } = await wordsOnPage(page, title, selector, words);
   await page.mouse.move(start.x, start.y);
   await page.mouse.down();
   await page.mouse.move(end.x, end.y, { steps: 8 });
   await page.mouse.up();
+};
+
+/** The browser's own mouse clicked once on the first letter of `words` in a frame (`wordsOnPage`). */
+const clickWordsInFrame: BrowserCommand<[title: string, selector: string, words: string]> = async (
+  { page },
+  title,
+  selector,
+  words,
+) => {
+  const { start } = await wordsOnPage(page, title, selector, words);
+  await page.mouse.click(start.x, start.y);
 };
 
 /**
@@ -293,6 +311,7 @@ export const browserCommands = {
   evaluateInFrame,
   holdTouchInFrame,
   dragAcrossWordsInFrame,
+  clickWordsInFrame,
   clearCookies,
   collectGarbage,
   seededHome,

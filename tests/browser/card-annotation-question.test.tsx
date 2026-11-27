@@ -50,4 +50,13 @@ test("words dragged across in an option offer Annotate and leave the option unti
     excerpt: ANNOTATION_OPTION_WORDS,
   });
   expect(await ticked()).toBe(false);
+  await userEvent.keyboard("{Escape}");
+  await expect.element(comment).not.toBeInTheDocument();
+
+  // A click on the choice's words, even with Point at on, still ticks it and opens no note.
+  await userEvent.click(page.getByRole("button", { name: new RegExp(`^${POINT_AT}`) }));
+  await commands.clickWordsInFrame(`${ANNOTATION_TITLE} body`, "label", ANNOTATION_OPTION_WORDS);
+  await expect.poll(ticked).toBe(true);
+  expect(comment.query()).toBeNull();
+  expect(useShellStore.getState().annotationPick).toBeNull();
 });

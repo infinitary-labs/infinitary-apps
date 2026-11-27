@@ -2116,6 +2116,14 @@ public enum PhoneMessages {
     public static func `phoneComputerShowHint`() -> String { PhoneWords.format("phoneComputerShowHint", []) }
     public static func `phoneComputerTitle`() -> String { PhoneWords.format("phoneComputerTitle", []) }
     public static func `phoneCrewSummaryOpenTask`() -> String { PhoneWords.format("phoneCrewSummaryOpenTask", []) }
+    public static func `phoneFilterAllProjects`() -> String { PhoneWords.format("phoneFilterAllProjects", []) }
+    public static func `phoneFilterCounts`(`waiting`: String, `working`: String) -> String { PhoneWords.format("phoneFilterCounts", [`waiting`, `working`]) }
+    public static func `phoneFilterFocusCommand`() -> String { PhoneWords.format("phoneFilterFocusCommand", []) }
+    public static func `phoneFilterPill`(`name`: String, `waiting`: String, `working`: String) -> String { PhoneWords.format("phoneFilterPill", [`name`, `waiting`, `working`]) }
+    public static func `phoneFilterProject`() -> String { PhoneWords.format("phoneFilterProject", []) }
+    public static func `phoneFilterShowAll`() -> String { PhoneWords.format("phoneFilterShowAll", []) }
+    public static func `phoneFilterTitle`() -> String { PhoneWords.format("phoneFilterTitle", []) }
+    public static func `phoneFilterWaitingElsewhere`(`count`: Int) -> String { PhoneWords.format("phoneFilterWaitingElsewhere", [`count`]) }
     public static func `phoneFormatDays`(`days`: String) -> String { PhoneWords.format("phoneFormatDays", [`days`]) }
     public static func `phoneFormatDaysHours`(`days`: String, `hours`: String) -> String { PhoneWords.format("phoneFormatDaysHours", [`days`, `hours`]) }
     public static func `phoneFormatHours`(`hours`: String) -> String { PhoneWords.format("phoneFormatHours", [`hours`]) }
@@ -7022,6 +7030,14 @@ extension PhoneWords {
         "phoneComputerShowHint": [],
         "phoneComputerTitle": [],
         "phoneCrewSummaryOpenTask": [],
+        "phoneFilterAllProjects": [],
+        "phoneFilterCounts": ["waiting", "working"],
+        "phoneFilterFocusCommand": [],
+        "phoneFilterPill": ["name", "waiting", "working"],
+        "phoneFilterProject": [],
+        "phoneFilterShowAll": [],
+        "phoneFilterTitle": [],
+        "phoneFilterWaitingElsewhere": ["count"],
         "phoneFormatDays": ["days"],
         "phoneFormatDaysHours": ["days", "hours"],
         "phoneFormatHours": ["hours"],
@@ -9904,6 +9920,7 @@ extension PhoneWords {
         "phoneCardFiles": "count",
         "phoneCardsReplyTooLong": "count",
         "phoneChecksCounted": "count",
+        "phoneFilterWaitingElsewhere": "count",
         "phoneGoogleServiceOffDetail": "count",
         "phoneMediaPicturePosition": "count",
         "phoneRecordCrewEarlier": "count",

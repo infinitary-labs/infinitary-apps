@@ -339,7 +339,7 @@ extension PhoneJourney {
         XCUIDevice.shared.orientation = orientation
         app.activate()
         XCTAssertEqual(XCUIDevice.shared.orientation, orientation, "The closed Duo reports the turn")
-        waitForSteadyTarget(app.buttons["computer-details"])
+        waitForSteadyTarget(settingsButton)
     }
 
     /// Waits for the app to show `layout`, which a turn or a hinge move changes a moment after it is asked for.
@@ -353,7 +353,7 @@ extension PhoneJourney {
         }
         XCTAssertEqual(waitForPhonePredicate(shown, object: app, timeout: 15), .completed,
                        "\(size): the app shows \(layout), not \(phoneShownLayout(app)), in \(app.windows.firstMatch.frame)")
-        XCTAssertTrue(app.buttons["computer-details"].waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(settingsButton.waitForPresence(timeout: 10), app.debugDescription)
         if layout == .wide {
             if sidebar {
                 XCTAssertTrue(phoneSidebar(app).waitForPresence(timeout: 10), "\(size): the sidebar shows: \(app.debugDescription)")

@@ -1,0 +1,909 @@
+{
+  "board": {
+    "seq": 1,
+    "tasks": [
+      {
+        "id": "t-1",
+        "key": "INF-1",
+        "projectId": "p-inf",
+        "parentId": null,
+        "kind": "work",
+        "title": "Answer the harbour master",
+        "goal": "Answer the harbour master",
+        "priority": 2,
+        "status": "active",
+        "activity": "idle",
+        "closedReason": null,
+        "startPolicy": "when-ready",
+        "flags": {
+          "blocked": false,
+          "held": false,
+          "needsYou": false,
+          "ready": false
+        },
+        "blockedBy": [],
+        "blocks": [],
+        "children": {
+          "total": 0,
+          "closed": 0
+        },
+        "assignee": "crewmate",
+        "model": null,
+        "tier": null,
+        "repo": null,
+        "delivery": null,
+        "outcomeSummary": null,
+        "waitingCardId": "card-1",
+        "createdAt": 1793804460000,
+        "updatedAt": 1793984340000,
+        "startedAt": 1793981400000,
+        "closedAt": null,
+        "workPosture": {
+          "state": "inactive",
+          "reason": "captain"
+        }
+      },
+      {
+        "id": "t-2",
+        "key": "INF-2",
+        "projectId": "p-inf",
+        "parentId": null,
+        "kind": "work",
+        "title": "Port the row's word",
+        "goal": "Port the row's word",
+        "priority": 2,
+        "status": "active",
+        "activity": "running",
+        "closedReason": null,
+        "startPolicy": "when-ready",
+        "flags": {
+          "blocked": false,
+          "held": false,
+          "needsYou": false,
+          "ready": false
+        },
+        "blockedBy": [],
+        "blocks": [],
+        "children": {
+          "total": 0,
+          "closed": 0
+        },
+        "assignee": "crewmate",
+        "model": null,
+        "tier": null,
+        "repo": null,
+        "delivery": null,
+        "outcomeSummary": null,
+        "waitingCardId": null,
+        "createdAt": 1793804520000,
+        "updatedAt": 1793984340000,
+        "startedAt": 1793982000000,
+        "closedAt": null,
+        "workPosture": {
+          "state": "active",
+          "reason": "turn"
+        }
+      },
+      {
+        "id": "t-3",
+        "key": "INF-3",
+        "projectId": "p-inf",
+        "parentId": null,
+        "kind": "work",
+        "title": "Rebuild the pier",
+        "goal": "Rebuild the pier",
+        "priority": 2,
+        "status": "active",
+        "activity": "idle",
+        "closedReason": null,
+        "startPolicy": "when-ready",
+        "flags": {
+          "blocked": false,
+          "held": false,
+          "needsYou": false,
+          "ready": false
+        },
+        "blockedBy": [],
+        "blocks": [],
+        "children": {
+          "total": 0,
+          "closed": 0
+        },
+        "assignee": "crewmate",
+        "model": null,
+        "tier": null,
+        "repo": null,
+        "delivery": null,
+        "outcomeSummary": null,
+        "waitingCardId": null,
+        "createdAt": 1793804580000,
+        "updatedAt": 1793984340000,
+        "startedAt": 1793981700000,
+        "closedAt": null,
+        "workPosture": {
+          "state": "inactive",
+          "reason": "inactive"
+        }
+      },
+      {
+        "id": "t-4",
+        "key": "INF-4",
+        "projectId": "p-inf",
+        "parentId": "t-3",
+        "kind": "work",
+        "title": "Sink the piles",
+        "goal": "Sink the piles",
+        "priority": 2,
+        "status": "active",
+        "activity": "running",
+        "closedReason": null,
+        "startPolicy": "when-ready",
+        "flags": {
+          "blocked": false,
+          "held": false,
+          "needsYou": false,
+          "ready": false
+        },
+        "blockedBy": [],
+        "blocks": [],
+        "children": {
+          "total": 0,
+          "closed": 0
+        },
+        "assignee": "crewmate",
+        "model": null,
+        "tier": null,
+        "repo": null,
+        "delivery": null,
+        "outcomeSummary": null,
+        "waitingCardId": null,
+        "createdAt": 1793804640000,
+        "updatedAt": 1793984340000,
+        "startedAt": 1793982900000,
+        "closedAt": null,
+        "workPosture": {
+          "state": "active",
+          "reason": "turn"
+        }
+      },
+      {
+        "id": "t-5",
+        "key": "HAR-5",
+        "projectId": "p-har",
+        "parentId": null,
+        "kind": "work",
+        "title": "Relight the lamp",
+        "goal": "Relight the lamp",
+        "priority": 2,
+        "status": "active",
+        "activity": "idle",
+        "closedReason": null,
+        "startPolicy": "when-ready",
+        "flags": {
+          "blocked": false,
+          "held": false,
+          "needsYou": false,
+          "ready": false
+        },
+        "blockedBy": [],
+        "blocks": [],
+        "children": {
+          "total": 0,
+          "closed": 0
+        },
+        "assignee": "crewmate",
+        "model": null,
+        "tier": null,
+        "repo": null,
+        "delivery": null,
+        "outcomeSummary": null,
+        "waitingCardId": "card-5",
+        "createdAt": 1793804700000,
+        "updatedAt": 1793984340000,
+        "startedAt": 1793982600000,
+        "closedAt": null,
+        "workPosture": {
+          "state": "inactive",
+          "reason": "captain"
+        }
+      },
+      {
+        "id": "t-6",
+        "key": "HAR-6",
+        "projectId": "p-har",
+        "parentId": null,
+        "kind": "work",
+        "title": "Ring the bell",
+        "goal": "Ring the bell",
+        "priority": 2,
+        "status": "active",
+        "activity": "idle",
+        "closedReason": null,
+        "startPolicy": "when-ready",
+        "flags": {
+          "blocked": false,
+          "held": false,
+          "needsYou": false,
+          "ready": false
+        },
+        "blockedBy": [],
+        "blocks": [],
+        "children": {
+          "total": 0,
+          "closed": 0
+        },
+        "assignee": "crewmate",
+        "model": null,
+        "tier": null,
+        "repo": null,
+        "delivery": null,
+        "outcomeSummary": null,
+        "waitingCardId": "card-6",
+        "createdAt": 1793804760000,
+        "updatedAt": 1793984340000,
+        "startedAt": 1793983200000,
+        "closedAt": null,
+        "workPosture": {
+          "state": "inactive",
+          "reason": "captain"
+        }
+      },
+      {
+        "id": "t-7",
+        "key": "WEB-7",
+        "projectId": "p-web",
+        "parentId": null,
+        "kind": "work",
+        "title": "Compress the hero images",
+        "goal": "Compress the hero images",
+        "priority": 2,
+        "status": "active",
+        "activity": "running",
+        "closedReason": null,
+        "startPolicy": "when-ready",
+        "flags": {
+          "blocked": false,
+          "held": false,
+          "needsYou": false,
+          "ready": false
+        },
+        "blockedBy": [],
+        "blocks": [],
+        "children": {
+          "total": 0,
+          "closed": 0
+        },
+        "assignee": "crewmate",
+        "model": null,
+        "tier": null,
+        "repo": null,
+        "delivery": null,
+        "outcomeSummary": null,
+        "waitingCardId": null,
+        "createdAt": 1793804820000,
+        "updatedAt": 1793984340000,
+        "startedAt": 1793983800000,
+        "closedAt": null,
+        "workPosture": {
+          "state": "active",
+          "reason": "turn"
+        }
+      },
+      {
+        "id": "t-8",
+        "key": "OLD-8",
+        "projectId": "p-old",
+        "parentId": null,
+        "kind": "work",
+        "title": "Retire the old site",
+        "goal": "Retire the old site",
+        "priority": 2,
+        "status": "active",
+        "activity": "idle",
+        "closedReason": null,
+        "startPolicy": "when-ready",
+        "flags": {
+          "blocked": false,
+          "held": false,
+          "needsYou": false,
+          "ready": false
+        },
+        "blockedBy": [],
+        "blocks": [],
+        "children": {
+          "total": 0,
+          "closed": 0
+        },
+        "assignee": "crewmate",
+        "model": null,
+        "tier": null,
+        "repo": null,
+        "delivery": null,
+        "outcomeSummary": null,
+        "waitingCardId": "card-8",
+        "createdAt": 1793804880000,
+        "updatedAt": 1793984340000,
+        "startedAt": 1793983800000,
+        "closedAt": null,
+        "workPosture": {
+          "state": "inactive",
+          "reason": "captain"
+        }
+      },
+      {
+        "id": "t-9",
+        "key": "WS-9",
+        "projectId": "p-ws",
+        "parentId": null,
+        "kind": "work",
+        "title": "Tidy the workspace notes",
+        "goal": "Tidy the workspace notes",
+        "priority": 2,
+        "status": "done",
+        "activity": null,
+        "closedReason": "landed",
+        "startPolicy": "when-ready",
+        "flags": {
+          "blocked": false,
+          "held": false,
+          "needsYou": false,
+          "ready": false
+        },
+        "blockedBy": [],
+        "blocks": [],
+        "children": {
+          "total": 0,
+          "closed": 0
+        },
+        "assignee": null,
+        "model": null,
+        "tier": null,
+        "repo": null,
+        "delivery": null,
+        "outcomeSummary": null,
+        "waitingCardId": null,
+        "createdAt": 1793804940000,
+        "updatedAt": 1793984340000,
+        "startedAt": 1793980800000,
+        "closedAt": 1793982600000
+      },
+      {
+        "id": "t-10",
+        "key": "INF-10",
+        "projectId": "p-inf",
+        "parentId": null,
+        "kind": "work",
+        "title": "Mark the old wreck",
+        "goal": "Mark the old wreck",
+        "priority": 2,
+        "status": "dropped",
+        "activity": null,
+        "closedReason": "dropped",
+        "startPolicy": "when-ready",
+        "flags": {
+          "blocked": false,
+          "held": false,
+          "needsYou": false,
+          "ready": false
+        },
+        "blockedBy": [],
+        "blocks": [],
+        "children": {
+          "total": 0,
+          "closed": 0
+        },
+        "assignee": null,
+        "model": null,
+        "tier": null,
+        "repo": null,
+        "delivery": null,
+        "outcomeSummary": null,
+        "waitingCardId": null,
+        "createdAt": 1793805000000,
+        "updatedAt": 1793984340000,
+        "startedAt": null,
+        "closedAt": 1793984100000
+      }
+    ],
+    "projects": [
+      {
+        "id": "p-inf",
+        "key": "INF",
+        "name": "Infinitary",
+        "archived": false,
+        "repo": {
+          "name": "infinitary",
+          "delivery": "direct-pr",
+          "autonomy": false
+        },
+        "counts": {
+          "needsYou": 0,
+          "waitingOnYou": 0,
+          "open": 0,
+          "active": 0,
+          "doneRecent": 0
+        }
+      },
+      {
+        "id": "p-har",
+        "key": "HAR",
+        "name": "Harbour",
+        "archived": false,
+        "repo": {
+          "name": "harbour",
+          "delivery": "direct-pr",
+          "autonomy": false
+        },
+        "counts": {
+          "needsYou": 0,
+          "waitingOnYou": 0,
+          "open": 0,
+          "active": 0,
+          "doneRecent": 0
+        }
+      },
+      {
+        "id": "p-web",
+        "key": "WEB",
+        "name": "Website",
+        "archived": false,
+        "repo": {
+          "name": "website",
+          "delivery": "direct-pr",
+          "autonomy": false
+        },
+        "counts": {
+          "needsYou": 0,
+          "waitingOnYou": 0,
+          "open": 0,
+          "active": 0,
+          "doneRecent": 0
+        }
+      },
+      {
+        "id": "p-old",
+        "key": "OLD",
+        "name": "Old site",
+        "archived": true,
+        "repo": {
+          "name": "old-site",
+          "delivery": "direct-pr",
+          "autonomy": false
+        },
+        "counts": {
+          "needsYou": 0,
+          "waitingOnYou": 0,
+          "open": 0,
+          "active": 0,
+          "doneRecent": 0
+        }
+      },
+      {
+        "id": "p-scr",
+        "key": "SCR",
+        "name": "Scratch",
+        "archived": false,
+        "repo": null,
+        "counts": {
+          "needsYou": 0,
+          "waitingOnYou": 0,
+          "open": 0,
+          "active": 0,
+          "doneRecent": 0
+        }
+      },
+      {
+        "id": "p-ws",
+        "key": "WS",
+        "name": "Workspace",
+        "archived": false,
+        "repo": {
+          "name": "workspace",
+          "delivery": "direct-pr",
+          "autonomy": false,
+          "kind": "personal"
+        },
+        "counts": {
+          "needsYou": 0,
+          "waitingOnYou": 0,
+          "open": 0,
+          "active": 0,
+          "doneRecent": 0
+        }
+      },
+      {
+        "id": "p-own",
+        "key": "OWN",
+        "name": "Your notes",
+        "archived": false,
+        "repo": {
+          "name": "notes",
+          "delivery": "direct-pr",
+          "autonomy": false,
+          "kind": "personal"
+        },
+        "counts": {
+          "needsYou": 0,
+          "waitingOnYou": 0,
+          "open": 0,
+          "active": 0,
+          "doneRecent": 0
+        }
+      }
+    ],
+    "closedLeftOut": {
+      "done": {
+        "p-scr": [
+          "t-99"
+        ]
+      }
+    }
+  },
+  "one": {
+    "seq": 1,
+    "tasks": [
+      {
+        "id": "t-1",
+        "key": "INF-1",
+        "projectId": "p-inf",
+        "parentId": null,
+        "kind": "work",
+        "title": "Answer the harbour master",
+        "goal": "Answer the harbour master",
+        "priority": 2,
+        "status": "active",
+        "activity": "idle",
+        "closedReason": null,
+        "startPolicy": "when-ready",
+        "flags": {
+          "blocked": false,
+          "held": false,
+          "needsYou": false,
+          "ready": false
+        },
+        "blockedBy": [],
+        "blocks": [],
+        "children": {
+          "total": 0,
+          "closed": 0
+        },
+        "assignee": "crewmate",
+        "model": null,
+        "tier": null,
+        "repo": null,
+        "delivery": null,
+        "outcomeSummary": null,
+        "waitingCardId": "card-1",
+        "createdAt": 1793804460000,
+        "updatedAt": 1793984340000,
+        "startedAt": 1793981400000,
+        "closedAt": null,
+        "workPosture": {
+          "state": "inactive",
+          "reason": "captain"
+        }
+      },
+      {
+        "id": "t-2",
+        "key": "INF-2",
+        "projectId": "p-inf",
+        "parentId": null,
+        "kind": "work",
+        "title": "Port the row's word",
+        "goal": "Port the row's word",
+        "priority": 2,
+        "status": "active",
+        "activity": "running",
+        "closedReason": null,
+        "startPolicy": "when-ready",
+        "flags": {
+          "blocked": false,
+          "held": false,
+          "needsYou": false,
+          "ready": false
+        },
+        "blockedBy": [],
+        "blocks": [],
+        "children": {
+          "total": 0,
+          "closed": 0
+        },
+        "assignee": "crewmate",
+        "model": null,
+        "tier": null,
+        "repo": null,
+        "delivery": null,
+        "outcomeSummary": null,
+        "waitingCardId": null,
+        "createdAt": 1793804520000,
+        "updatedAt": 1793984340000,
+        "startedAt": 1793982000000,
+        "closedAt": null,
+        "workPosture": {
+          "state": "active",
+          "reason": "turn"
+        }
+      },
+      {
+        "id": "t-3",
+        "key": "INF-3",
+        "projectId": "p-inf",
+        "parentId": null,
+        "kind": "work",
+        "title": "Rebuild the pier",
+        "goal": "Rebuild the pier",
+        "priority": 2,
+        "status": "active",
+        "activity": "idle",
+        "closedReason": null,
+        "startPolicy": "when-ready",
+        "flags": {
+          "blocked": false,
+          "held": false,
+          "needsYou": false,
+          "ready": false
+        },
+        "blockedBy": [],
+        "blocks": [],
+        "children": {
+          "total": 0,
+          "closed": 0
+        },
+        "assignee": "crewmate",
+        "model": null,
+        "tier": null,
+        "repo": null,
+        "delivery": null,
+        "outcomeSummary": null,
+        "waitingCardId": null,
+        "createdAt": 1793804580000,
+        "updatedAt": 1793984340000,
+        "startedAt": 1793981700000,
+        "closedAt": null,
+        "workPosture": {
+          "state": "inactive",
+          "reason": "inactive"
+        }
+      },
+      {
+        "id": "t-4",
+        "key": "INF-4",
+        "projectId": "p-inf",
+        "parentId": "t-3",
+        "kind": "work",
+        "title": "Sink the piles",
+        "goal": "Sink the piles",
+        "priority": 2,
+        "status": "active",
+        "activity": "running",
+        "closedReason": null,
+        "startPolicy": "when-ready",
+        "flags": {
+          "blocked": false,
+          "held": false,
+          "needsYou": false,
+          "ready": false
+        },
+        "blockedBy": [],
+        "blocks": [],
+        "children": {
+          "total": 0,
+          "closed": 0
+        },
+        "assignee": "crewmate",
+        "model": null,
+        "tier": null,
+        "repo": null,
+        "delivery": null,
+        "outcomeSummary": null,
+        "waitingCardId": null,
+        "createdAt": 1793804640000,
+        "updatedAt": 1793984340000,
+        "startedAt": 1793982900000,
+        "closedAt": null,
+        "workPosture": {
+          "state": "active",
+          "reason": "turn"
+        }
+      },
+      {
+        "id": "t-10",
+        "key": "INF-10",
+        "projectId": "p-inf",
+        "parentId": null,
+        "kind": "work",
+        "title": "Mark the old wreck",
+        "goal": "Mark the old wreck",
+        "priority": 2,
+        "status": "dropped",
+        "activity": null,
+        "closedReason": "dropped",
+        "startPolicy": "when-ready",
+        "flags": {
+          "blocked": false,
+          "held": false,
+          "needsYou": false,
+          "ready": false
+        },
+        "blockedBy": [],
+        "blocks": [],
+        "children": {
+          "total": 0,
+          "closed": 0
+        },
+        "assignee": null,
+        "model": null,
+        "tier": null,
+        "repo": null,
+        "delivery": null,
+        "outcomeSummary": null,
+        "waitingCardId": null,
+        "createdAt": 1793805000000,
+        "updatedAt": 1793984340000,
+        "startedAt": null,
+        "closedAt": 1793984100000
+      }
+    ],
+    "projects": [
+      {
+        "id": "p-inf",
+        "key": "INF",
+        "name": "Infinitary",
+        "archived": false,
+        "repo": {
+          "name": "infinitary",
+          "delivery": "direct-pr",
+          "autonomy": false
+        },
+        "counts": {
+          "needsYou": 0,
+          "waitingOnYou": 0,
+          "open": 0,
+          "active": 0,
+          "doneRecent": 0
+        }
+      }
+    ]
+  },
+  "lines": [
+    {
+      "kind": "spawn",
+      "taskKey": "INF-2",
+      "text": "Started: Port the row's word",
+      "at": 1793983860000
+    },
+    {
+      "kind": "info",
+      "text": "First mate answered you",
+      "at": 1793983920000
+    },
+    {
+      "kind": "report",
+      "taskKey": "HAR-5",
+      "text": "Reported: Relight the lamp",
+      "at": 1793983980000
+    },
+    {
+      "kind": "spawn",
+      "taskKey": "INFRA-3",
+      "text": "Started: a key that only begins with INF",
+      "at": 1793984040000
+    },
+    {
+      "kind": "done",
+      "taskKey": "INF-77",
+      "text": "Merged: a task the board no longer lists",
+      "at": 1793984100000
+    }
+  ],
+  "pills": {
+    "projects": [
+      {
+        "id": "p-inf",
+        "key": "INF",
+        "name": "Infinitary",
+        "waiting": 1,
+        "working": 3
+      },
+      {
+        "id": "p-har",
+        "key": "HAR",
+        "name": "Harbour",
+        "waiting": 2,
+        "working": 0
+      },
+      {
+        "id": "p-web",
+        "key": "WEB",
+        "name": "Website",
+        "waiting": 0,
+        "working": 1
+      },
+      {
+        "id": "p-scr",
+        "key": "SCR",
+        "name": "Scratch",
+        "waiting": 0,
+        "working": 0
+      },
+      {
+        "id": "p-ws",
+        "key": "WS",
+        "name": "Workspace",
+        "waiting": 0,
+        "working": 0
+      }
+    ],
+    "waiting": 4,
+    "working": 4
+  },
+  "shown": true,
+  "oneShown": false,
+  "held": [
+    {
+      "saved": "p-inf",
+      "held": "p-inf",
+      "oneHeld": null
+    },
+    {
+      "saved": "p-old",
+      "held": null,
+      "oneHeld": null
+    },
+    {
+      "saved": "p-gone",
+      "held": null,
+      "oneHeld": null
+    },
+    {
+      "saved": null,
+      "held": null,
+      "oneHeld": null
+    }
+  ],
+  "elsewhere": [
+    {
+      "focus": null,
+      "waiting": 0
+    },
+    {
+      "focus": "p-inf",
+      "waiting": 3
+    },
+    {
+      "focus": "p-har",
+      "waiting": 2
+    },
+    {
+      "focus": "p-web",
+      "waiting": 4
+    }
+  ],
+  "kept": [
+    {
+      "focus": null,
+      "lines": [
+        "Started: Port the row's word",
+        "First mate answered you",
+        "Reported: Relight the lamp",
+        "Started: a key that only begins with INF",
+        "Merged: a task the board no longer lists"
+      ]
+    },
+    {
+      "focus": "p-inf",
+      "lines": [
+        "Started: Port the row's word",
+        "First mate answered you",
+        "Merged: a task the board no longer lists"
+      ]
+    },
+    {
+      "focus": "p-har",
+      "lines": [
+        "First mate answered you",
+        "Reported: Relight the lamp"
+      ]
+    }
+  ]
+}

@@ -67,11 +67,10 @@ Your computer is the first row of Settings (INF-2820's plan, piece 1), and its p
 Leave, or Forget, sits on the computer shown's own row, so it is the page's first control and in view as the page opens at every Text Size, which the join-read part checks at the largest standard size.
 A tap on a computer shows it: the phone stops the shown computer's connection, saves the new order and connects to the one tapped.
 The phone never switches by itself (the captain's pick, "Stay on my choice"): on each open, each settled network change and each time the page opens, it sends each other kept computer the pinned, non-mutating `GET /connection` a join sends first, which opens no session, and marks the ones that answer 426 as Answers now and the rest as Not answering from here.
-The page opens with its first row focused, so on a keyboard the up and down arrows move among the rows and Return or Space presses one; Command-I, the top bar's computer button and, while the computer is not in reach, a press on the reach line open Settings at Your computer.
+The page opens with its first row focused, so on a keyboard the up and down arrows move among the rows and Return or Space presses one; Command-I and, while the computer is not in reach, a press on the reach line open Settings at Your computer.
 The list's row names the computer shown and its reach, such as Test Mac mini · Live.
 A choice there closes Settings before it acts, and Add another computer opens its way in once Settings has closed.
-The computer button stays in the bar until the phone's Filter button takes its place (INF-2820's piece 2).
-With more than one computer kept, the top bar's computer button names the computer shown beside its glyph, and VoiceOver reads that name in place of Your computer.
+The top bar has no computer button: the Filter button took its place (INF-2820's piece 2), and VoiceOver hears the Settings button's value say what the Your computer row says, the computer shown and its reach.
 Leave and Forget act on the computer their confirmation named, even when a notification's tap showed another before the answer came; forgetting the shown one shows the kept computer shown most recently next, or the first screen when none is left.
 A change of network that leaves no usable path marks every other computer Not answering from here and stops the look under way, so a list open while a private network goes away does not keep an old mark.
 Each look tries every saved address of a computer at once, each through the pinned check with the pairing timeout, so an address that times out or answers with another key does not hide one that answers.
@@ -114,7 +113,7 @@ The native contract constants are generated from `docs/contract.json` with `node
 `pnpm generate:contract` updates them together, and `pnpm check` refuses stale native constants, theme values or bundled card code and fonts.
 Generation also verifies the required native fields in cards, Activity, task boards, records, search, last turns and crewmate transcripts, including the pushed card and task snapshots.
 The shown card reads its thread once and follows numbered `inf:cards:thread` pushes; a newer push supersedes an older thread read.
-It reads its thread again each time the computer comes back in reach, so a thread read a dropped connection fails puts no line on the card; only the computer button says whether the computer is in reach.
+It reads its thread again each time the computer comes back in reach, so a thread read a dropped connection fails puts no line on the card; only the reach line and the Settings button's value say whether the computer is in reach.
 Its card requests are a closed enum generated from the published contract, not a channel an HTML body chooses.
 
 A return consumes numbered replay pushes, or reads fresh snapshots after a reload welcome.
@@ -149,9 +148,9 @@ The first attempt whose WebSocket opens (`PinnedTransport.opened`, after the pin
 A round fails once every attempt failed or none opened within `ReadOnlySession.dialLimit`, which cancels the transport too, so a stalled TLS handshake does not inherit the socket's longer lifetime.
 Failed rounds wait 2, 4 and 8 s and so on, each up to a quarter longer at random, never past `ReadOnlySession.longestWait`, so a computer that comes back is found within 15 s.
 A welcome that replays brings every push the phone missed, so once the phone has read everything since its last reload, the board included, it says In reach at once and sends only the scene's two small reads and any read a cut left unanswered; a reload, or a change whose result was lost, reads everything first.
-`contact` is where the connection is and gates reads and changes; `reach` is what the reach line and the computer button say.
+`contact` is where the connection is and gates reads and changes; `reach` is what the reach line and the Settings button's value say.
 `reach` follows `contact`, except that after the computer was in reach it keeps saying In reach while the phone redials, until the computer has been quiet for `patience`, so a cell pause passes unnoticed and a dead path is named within half a minute.
-In reach reads "Live" on the reach line and the computer button.
+In reach reads "Live" on the reach line and in the Settings button's value.
 Once the words have left In reach, a welcome after the phone was in reach before names its catch-up in `catchingUp` until what was missed is read: `replay` while the missed pushes arrive, said only when some were missed, and `reload` while it reads everything again.
 `reach` says `catching-up` meanwhile, worded "Catching up on what was missed" or "Catching up, reading everything again", and turns In reach only once the replay's last push is shown and every first read has answered; changes are on as soon as `contact` is in reach.
 A deliberate stop, such as the close when iOS ends the app's background time, has nothing to be patient about, so the words follow `contact` at once and a reopen reads Reaching until its dial is in reach.
@@ -176,7 +175,7 @@ The session records that address in the same step that turns the connection In r
 
 Leave is available in reach and asks for confirmation, sends the connection's Leave frame, waits for removal and forgets the computer shown.
 Out of reach, **Forget this computer** asks for confirmation and clears that computer and its pin locally without claiming it removed the phone; either way another kept computer shows next ("Several computers").
-Both choices live on Settings' Your computer page, opened from Settings, the top bar's right-hand computer button, Command-I or the reach line; neither is an always-visible destructive toolbar action.
+Both choices live on Settings' Your computer page, opened from Settings, Command-I or the reach line; neither is an always-visible destructive toolbar action.
 That button is the computer glyph, with a dot in the warning color at its corner only while the computer is out of reach, and VoiceOver reads the reach as its value; with one computer kept its name is on Your computer, not the bar, and with more than one the button names the computer shown.
 Out of reach, Your computer also offers Take over with each computer that keeps a copy of the record, as the welcome lists them, which asks one to take over after Face ID or the passcode (`PhoneTakeOverSection.swift`, `PhoneTakeOver.swift`; `docs/devices.md`, "Taking over from a phone").
 The phone then follows the home to the computer that took over by its higher number, and refuses the old home's lower number and a second home with the same number.
@@ -249,7 +248,7 @@ The session consumes initial state before reporting again on reconnect and never
 A home without that named change retains the legacy two-argument request and session-local offer marks, with existing card actions unchanged.
 Older native readers ignore the optional fields; older desktop readers receive a capability-projected snapshot that their strict card decoder accepts.
 Full shared marks require updated owner and views; offline views keep last-known state until delivery resumes.
-Project filters stay local to each desktop window, with no new phone filter.
+The phone's own project focus ("The project filter" below) holds no card back: the stack shows every project's cards.
 Ordinary arrivals keep the shown card in place; a new `holdsPlace` card comes forward, unless a text box in the shown card holds the keyboard, when it waits as new as on the Mac, and a departure chooses an unread card first, else the card after the one that left, else the one before it, by the Mac's rule (`PhoneCardDeparture`, which `PhoneCardDepartureTests` holds to the Mac's recorded choices).
 On Home, unread cards besides the shown one are counted beside the pager in the Mac's badge look ("1 NEW": accent mono capitals on the accent's dim fill, still 44 points tall to press), and a press shows the first of them in the pager's order, so each later press shows the next, passing over the cards earlier presses left or showed while one they have not shown waits, as the Mac's does; the new-card pill shows only on the other tabs, while a reply's pill shows on every tab.
 A card's picks, the words in its field and its queued notes are its draft, which survives paging and follows the captain to every other screen through a computer that keeps drafts ("Unsent picks on the phone" below); with a computer that does not, it lives only in the phone's memory.
@@ -434,13 +433,13 @@ The field displays up to two lines there, the controls retain 44-point targets, 
 The native journey requires a completely visible card heading and scrolls real body text and an action into full view, not merely a retained draft under the card.
 Card and task owners keep their selected records and replies.
 `PhoneMessageContext` carries only the shown current or past card, Home's visibility and the open task record into the composer; hidden cards and dismissed records supply no hint.
-The top bar is the one-row bar the captain chose (INF-1062): a Settings button at its left, the strip of Home, Tasks, Activity and, while the computer has panels to draw, Panels in its middle and the computer button at its right; there is no bottom tab bar.
+The top bar is the one-row bar the captain chose (INF-1062): a Settings button at its left, the strip of Home, Tasks, Activity and, while the computer has panels to draw, Panels in its middle and, while the computer has two projects or more to pick from, the Filter button at its right ("The project filter" below); there is no bottom tab bar.
 The strip, `PhoneTabStrip`, is Apple's segmented control, which iOS 26 draws on glass (INF-1328): a house for Home, a checklist for Tasks, a pulse line for Activity (INF-1334) and three stacked panes for Panels, read by VoiceOver as a tab bar of the tabs' names.
 It carries no unread dot; the notice under the bar and the next chevron's dot mark an unread card.
 The strip keeps the bar's own size at every type setting, as the system's bars do, so the bar's buttons never move around it.
 Where the bar has room, the strip is as wide as makes the lit tab a 40-point circle, 144 points for three tabs and 189 for four (INF-1517, the captain's Round); where it has not, a `ViewThatFits` gives it the control's own fitted width.
-Settings and the computer are the system's 44-point circles for a one-icon button, with no wider frame of the app's.
-Command-1 to Command-4 switch tabs in the strip's order, Command-Comma opens Settings and Command-I opens it at Your computer.
+Settings and Filter are the system's 44-point circles for a one-icon button, with no wider frame of the app's.
+Command-1 to Command-4 switch tabs in the strip's order, Command-Comma opens Settings, Command-I opens it at Your computer and Shift-Command-P opens the Filter.
 `PhoneWorkspace` holds the tabs in the system tab controller with its own bar hidden, so each tab keeps its draft, scroll position and search while another is shown, and a tab that is away leaves the view hierarchy: nothing in it is drawn, pressable or read, and a keyboard typing into the message box closes with the tab it leaves.
 Home is one column: the stage, then the last turn and the message box under it, in the layout rather than floating over it; Tasks, Activity and Panels run to the foot with nothing over them, so the last row is whole and pressable after scrolling to the end.
 No bar height is measured or guessed, and nothing recedes on scroll.
@@ -624,7 +623,7 @@ The crew summary shows a filled pin beside a pinned task's key.
 Its native Browse crew command, Shift-Command-C, enters app-owned browsing with an accent viewport outline; arrow keys pan it, Tab selects a real crewmate and Space opens that crewmate's preview.
 While a crewmate's summary sheet is open, or browsing selects a crewmate, the scene lights that crewmate's project on every computer: every other project's crewmate keeps a quarter of its light, as on the desktop's stage, and nothing moves (INF-6951, `PhoneFocusLight`, a port of the desktop's `focusLight.ts`).
 The quarter comes from the desktop's `OUT_OF_FOCUS_LIGHT` through `scripts/generate-phone-scene.ts`, the light eases over the surface move (`PhoneTheme.surfaceSeconds`, `--dur-med`) on the display's clock even while the open summary holds the scene's clock, and it is a cut under Reduce Motion; `PhoneFocusLightTests` replays the desktop's own light for one board.
-The phone has no project focus of its own, so closing the summary lights every crewmate again.
+Otherwise the scene lights the project the phone is focused on ("The project filter" below), and every crewmate at All projects.
 While browsing, a scene-owned responder holds first-responder status and offers those unmodified keys as priority key commands, because SwiftUI shortcuts for them lose to the system's focus and text handling.
 Each crewmate and program answers touch across its 44-point square, not only the drawn circle.
 One UIKit view under the scene (`PhoneSceneTouches`) answers touch and accessibility from the frame the render thread last drew, read only when a touch or an accessibility query arrives, rather than a SwiftUI button laid out for each crewmate on every frame.
@@ -655,7 +654,7 @@ The details sheet names the connected view's ability to answer cards, send messa
 
 ## Panels
 
-The captain's panels show on the phone on a fourth tab, Panels (INF-3830's plan, the captain's answers entry=tab, computer=stay and layout=column): the computer button keeps its place in the bar.
+The captain's panels show on the phone on a fourth tab, Panels (INF-3830's plan, the captain's answers entry=tab, computer=stay and layout=column).
 The tab shows while the computer serves panels to a phone, which major 16 or later implies and an older welcome says with `panels-on-the-phone`, and has one its rails would draw; with no panel or with an older computer the bar is as it was, and a tab that loses its last panel gives way to Home.
 With panels switched off on the computer the captain's own panels leave, while the app's own it shows stay, as on its rails.
 It draws every panel a rail on the computer would draw - present, built and not hidden - one under another in one scrolling column at the reading column's width, in the order the computer's rails hold them read left top, left bottom, right top, right bottom.
@@ -741,7 +740,7 @@ A row with none of these opens the task's record.
 While the phone cannot make changes, it brings nothing back and shows again no step put off, so a row shows only a card already on the stack.
 A first mate question is the one exception: its card shows no task key and the phone's cards have no Info tab, so its row opens its record, where Decline is.
 A search keeps the groups, opens every one, matches the title or the key as the Mac's does, and adds Earlier with the Mac's older closed matches, newest closed first.
-Under the field sits the Mac's tag row while the only project with tags that is not archived has them, since the phone keeps no project focus (`docs/task-tags.md`): All tags, each of its tags with how many open tasks pressing it would list, then No tag (`PhoneTaskList.tagChips`, the Mac's `tagChipsOf`).
+Under the field sits the Mac's tag row: the focused project's tags, or with no focus those of the only project with tags that is not archived (`docs/task-tags.md`): All tags, each of its tags with how many open tasks pressing it would list, then No tag (`PhoneTaskList.tagChips`, the Mac's `tagChipsOf`).
 One chip is pressed at a time; it narrows every group, Pinned and Earlier included, opens the folded ones as words do, and keeps the search shown; closing the search, or the project losing that tag, lets go of it.
 `PhoneTaskListTests` replays the Mac panel's own readings of the tag row and of a pressed tag.
 The search waits above the list until the list is pulled down from its top, as the Mac's waits behind its icon.
@@ -794,6 +793,19 @@ Buttons come back once Infinitary on your computer is updated."
 Card buttons, replies and task controls stay off.
 Every request has one connection-bound response and a bounded wait; a disconnect, timeout or unreadable mutation response leaves its outcome unconfirmed.
 The phone never queues or retries a mutation after reconnecting.
+
+### The project filter
+
+The phone keeps a project focus of its own (INF-2820's plan, piece 2, the captain's answers "Filter button", "messages: focus" and "Its own, saved on the phone for each computer"), the Mac's rules ported to `PhoneProjectFocus` and replayed against the desktop's own readings by `PhoneProjectFocusTests` (`docs/project-focus.md`, "On the phone").
+The Filter button sits at the top bar's right while the Filter has two projects or more to offer: the system's filter symbol, filled in the accent while a project is focused; otherwise the slot stays empty.
+It opens the Filter sheet, just tall enough for its rows and never past half height, whose Project section lists All projects, then each project with its waiting and working counts and a check on the focused one; a pick applies at once and closes the sheet.
+Shift-Command-P, Focus on a project, opens the sheet with keyboard focus on the checked row: the arrows move, Return or Space picks and Escape closes.
+Show all projects is a View menu command with no key, as on the Mac; holding Command on an iPad lists both.
+While a project is focused, a row under the top bar shows on every tab, under the reach line and across the sidebar and the stage: the project's pill with its counts, which opens the sheet; a 44-point ×, Show all projects; then "N waiting elsewhere" while tasks in other projects wait on the captain.
+The focus is saved on the phone for each kept computer, by its pin, and nothing is written to the computer; it holds before the board is read, so a relaunch opens on it, and lets go once its project gets no pill.
+Focused, Tasks lists only the project's tasks in every group, Pinned and Earlier included, the tag row reads that project's tags, Activity keeps only the lines about its tasks and the lines about no task, the crew scene lights it, and a panel that reads the board hears it as `view.focusedProjectId`.
+The message box and a card's reply carry `focusedProjectId` while a project is focused and nothing at All projects; a reading-only phone sends its words alone.
+Notifications, the badge, the Mac's own focus and the computer groups are unchanged.
 
 ### Updating the computer
 

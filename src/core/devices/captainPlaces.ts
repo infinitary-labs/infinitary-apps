@@ -84,8 +84,8 @@ export class CaptainPlaces implements CaptainPlaceReads {
   }
 
   /**
-   * Whether the request running now came from a paired phone or iPad, which
-   * has no project filter (docs/project-focus.md, "The first mate").
+   * Whether the request running now came from a paired phone or iPad, whose
+   * project filter is its own (docs/project-focus.md, "The first mate").
    */
   fromPhone(): boolean {
     const view = askingView();

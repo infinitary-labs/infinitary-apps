@@ -68,6 +68,11 @@ public struct PhoneNotice: Equatable, Sendable {
     public var showCardID: String?
     @ObservationIgnored private var threadRevisions: [String: Int] = [:]
     public private(set) var board: PhoneBoard?
+    /// INF-2820 piece 2, the captain's "Its own, saved on the phone for each computer": the project last picked in the
+    /// Filter sheet for this computer, kept on the phone by its pin; `projectFocus` is the one that holds.
+    public var savedProjectFocus: String? {
+        didSet { PhoneProjectFocus.save(savedProjectFocus, computer: mac.pin) }
+    }
     public private(set) var lastTurn: PhoneLastTurn?
     /// INF-6366: the conversation's newest rounds for the strip, nil before the first read and while the computer
     /// cannot answer it; the strip then shows the last turn alone (`stripRounds`).
@@ -853,6 +858,7 @@ public struct PhoneNotice: Equatable, Sendable {
     public init(mac: JoinedMac, phone: PhoneIdentity) {
         self.mac = mac; self.phone = phone
         ownThemes = PhoneOwnThemes.saved()[mac.pin] ?? []
+        savedProjectFocus = PhoneProjectFocus.saved(computer: mac.pin)
         cardDrafts = PhoneCardDrafts(
             send: { [weak self] cardID, change in
                 guard let self else { throw PhoneError.unavailable }

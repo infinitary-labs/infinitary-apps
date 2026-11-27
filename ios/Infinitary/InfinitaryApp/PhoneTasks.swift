@@ -54,7 +54,8 @@ struct PhoneTasks: View {
     private func reading() -> PhoneTasksKept.Reading {
         if !shown, let last = kept.last { return last }
         let reading = PhoneTasksKept.Reading(
-            list: PhoneTaskList(board: session.board, cards: session.cards, query: query, tag: tag, earlier: earlier),
+            list: PhoneTaskList(board: session.board, cards: session.cards, query: query, tag: tag, earlier: earlier,
+                                project: session.projectFocus),
             asideLine: asideLine)
         kept.last = reading
         PhoneTasksKept.built(shown: shown, seq: reading.list.board?.seq)

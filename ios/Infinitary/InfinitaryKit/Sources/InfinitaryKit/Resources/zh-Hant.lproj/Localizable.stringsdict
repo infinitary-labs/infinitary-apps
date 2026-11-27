@@ -1249,6 +1249,20 @@
       <string>%1$ld 項%2$@</string>
     </dict>
   </dict>
+  <key>phoneFilterWaitingElsewhere</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>其他專案有 %1$ld 項等你處理</string>
+    </dict>
+  </dict>
   <key>phoneGoogleServiceOffDetail</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

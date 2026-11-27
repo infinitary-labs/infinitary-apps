@@ -1,5 +1,5 @@
 ---
-source: b6b6aafda3cee48d
+source: 61843fc4e8da2e59
 title: iPhone y iPad
 description: Pide una invitación privada de TestFlight para Infinitary en iPhone y iPad, y luego únete a tu computadora para leer tarjetas y enviar mensajes.
 ---
@@ -37,8 +37,7 @@ Tu teléfono puede conservar más de una computadora, como una en casa y otra en
 Para agregar otra, abre Configuración en el teléfono, toca **Tu computadora** y elige **Agregar otra computadora**, luego escanea su código, pega su enlace o únete por su dirección.
 La computadora que estabas mostrando se conserva.
 
-Con más de una conservada, el botón de la computadora a la derecha de la barra superior del teléfono nombra la computadora que se muestra.
-**Tu computadora**, la primera fila de Configuración en el teléfono, también la nombra, enumera tus otras computadoras y marca cada una que responde desde donde estás ahora, como cuando tu teléfono está en la red o la red privada de esa computadora.
+**Tu computadora**, la primera fila de Configuración en el teléfono, nombra la computadora que se muestra, enumera tus otras computadoras y marca cada una que responde desde donde estás ahora, como cuando tu teléfono está en la red o la red privada de esa computadora.
 Toca una, o presiona Return sobre ella con un teclado, para mostrarla.
 El teléfono nunca cambia por sí solo: se queda en tu elección hasta que eliges otra.
 

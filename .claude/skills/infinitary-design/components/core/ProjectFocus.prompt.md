@@ -30,3 +30,8 @@ Focus on a project (⇧⌘P) opens the row with focus on the checked pill, and f
 **Light.**
 A pointer or the keyboard resting on a pill in the row lights that project's crew on the stage before anything is picked: every other project's crewmates keep a quarter of their light (`components/mate/Crewmate`).
 The pointer lights a pill only once it moves onto it; a pill the row opens under a still pointer lights nothing, so the press that opens the row never dims the crew.
+
+**On the iPhone and iPad.**
+The phone keeps a focus of its own, chosen from the top bar's Filter button rather than a pill in the bar (`components/devices/PhoneView`).
+Its Filter sheet lists the same choices, All projects then one row per project with its counts, and checks the focused one; ⇧⌘P opens it with focus on the checked row.
+While focused, the row under the top bar carries the pill in the focused pill's accent hairline, the ×, Show all projects, and the "N waiting elsewhere" tail.

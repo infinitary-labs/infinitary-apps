@@ -133,7 +133,7 @@ extension PhoneJourney {
         app.launchArguments = kept
         app.launchArguments += arguments
         try await launchPhoneApp(app)
-        XCTAssertTrue(app.buttons["computer-details"].waitForPresence(timeout: 20), app.debugDescription)
+        XCTAssertTrue(settingsButton.waitForPresence(timeout: 20), app.debugDescription)
     }
 
     private func reachSettings() {

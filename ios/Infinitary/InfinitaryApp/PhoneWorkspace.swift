@@ -69,14 +69,19 @@ extension EnvironmentValues {
         guard let lastTouch else { return false }
         return lastTouch.pencil && Date().timeIntervalSince(lastTouch.at) < 1
     }
+    /// INF-2820 piece 2: the project the phone is focused on, which every message and card reply says to the first
+    /// mate as a window's focus does; nil at All projects, which says nothing.
+    var projectFocus: String?
     var fields: [String: String] {
-        if let taskID { return ["taskId": taskID] }
-        guard cardsVisible else { return [:] }
+        var fields: [String: String] = projectFocus.map { ["focusedProjectId": $0] } ?? [:]
+        if let taskID { fields["taskId"] = taskID; return fields }
+        guard cardsVisible else { return fields }
         switch card {
-        case .current(let id): return ["visibleCardId": id]
-        case .past(let id): return ["pastCardId": id]
-        case nil: return [:]
+        case .current(let id): fields["visibleCardId"] = id
+        case .past(let id): fields["pastCardId"] = id
+        case nil: break
         }
+        return fields
     }
 }
 
@@ -323,6 +328,7 @@ struct PhoneWorkspace<Tasks: View, Composer: View>: View {
         // The first reading is the layout the workspace opens in, so the bar starts there.
         .onChange(of: paged, initial: true) { old, paged in if old == paged { wideBar = paged } else { settle(paged) } }
         .onChange(of: shown == .home, initial: true) { _, visible in messageContext.cardsVisible = visible }
+        .onChange(of: session.projectFocus, initial: true) { _, focus in messageContext.projectFocus = focus; panels.focus = focus }
         // The message box is Home's alone, so a keyboard typing into it closes with the tab it leaves.
         .onChange(of: shown) { _, tab in if tab != .home { dismissPhoneKeyboard() } }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { note in
@@ -424,7 +430,13 @@ struct PhoneWorkspace<Tasks: View, Composer: View>: View {
     /// drawn, pressable or read. The reach line sits under the bar on every tab.
     private func tab(_ tab: PhoneTab, @ViewBuilder content: () -> some View) -> some View {
         content()
-            .safeAreaInset(edge: .top, spacing: 0) { reachLine(tab) }
+            .safeAreaInset(edge: .top, spacing: 0) {
+                VStack(spacing: 0) {
+                    reachLine(tab)
+                    // INF-2820 piece 2: the focused project's row, under the reach line, across the sidebar and the stage.
+                    PhoneFocusRow(session: session).background(tab == .home ? .clear : PhoneTheme.background)
+                }
+            }
             // INF-1208's direction C: the tab controller asks the shown tab about the bar, so each tab asks for one row.
             .phoneOneRowBar()
             .toolbar(.hidden, for: .tabBar)
@@ -536,7 +548,8 @@ struct PhoneWorkspace<Tasks: View, Composer: View>: View {
     }
 
     private var activity: some View {
-        PhoneActivity(lines: session.activity, board: session.board,
+        PhoneActivity(lines: PhoneProjectFocus.lines(session.activity, key: PhoneProjectFocus.key(session.projectFocus, board: session.board)),
+                      board: session.board,
                       openTask: tasks == nil ? nil : { messageContext.openTask = $0 })
     }
 

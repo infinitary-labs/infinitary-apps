@@ -51,6 +51,7 @@ import SwiftUI
             CommandGroup(after: .textEditing) {
                 Button(PhoneMessages.phoneAppHideKeyboard(), action: dismissPhoneKeyboard).keyboardShortcut("k", modifiers: [.command, .shift])
             }
+            PhoneFilterCommands()
         }
     }
 }
@@ -68,8 +69,9 @@ struct PhoneView: View {
     /// INF-5265: the way in Your computer's Add another computer picked, opened once Settings has closed.
     @State private var addWay: PhoneAddWay?
     /// Settings while it shows, and where it opened: a panel's `point.openSettings` names a place, Settings' own button
-    /// none, and Command-I, the computer button and the reach line Your computer, so each showing carries its own place.
+    /// none, and Command-I and the reach line Your computer, so each showing carries its own place.
     @State private var settings: PhoneSettingsOpening?
+    @State private var filtering = false
     @State private var keyboardVisible = false
 
     var body: some View {
@@ -95,7 +97,7 @@ struct PhoneView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 // INF-1062, the captain's one-row bar: Settings at the left, the strip in the middle (PhoneWorkspace),
-                // the computer at the right. While the keyboard is open, Done takes Settings' place.
+                // Filter at the right (INF-2820 piece 2). While the keyboard is open, Done takes Settings' place.
                 // INF-1517: the one-icon buttons take the system's own 44-point circle, with no wider frame of ours.
                 if keyboardVisible {
                     ToolbarItem(placement: .topBarLeading) {
@@ -106,40 +108,39 @@ struct PhoneView: View {
                     }
                 } else if model.connection != nil, !model.removed {
                     ToolbarItem(placement: .topBarLeading) {
+                        // INF-2820 piece 2: with the computer button gone, Settings says what its Your computer row says:
+                        // the computer shown and its reach.
                         Button { settings = PhoneSettingsOpening(place: nil) } label: { PhoneSymbol.settings.image }
-                            .accessibilityLabel(PhoneMessages.phoneCommonSettings()).accessibilityIdentifier("phone-settings")
+                            .accessibilityLabel(PhoneMessages.phoneCommonSettings())
+                            .accessibilityValue(model.connection.map { PhoneMessages.phoneSettingsComputerSummary(computer: $0.mac.name, reach: $0.reachLine) } ?? "")
+                            .accessibilityIdentifier("phone-settings")
                             .keyboardShortcut(",", modifiers: .command)
                     }
                 }
                 if model.connection == nil || model.removed {
                     ToolbarItem(placement: .principal) { Text("Infinitary").font(PhoneFont.headline).accessibilityAddTraits(.isHeader) }
                 }
-                if let session = model.connection, !model.removed {
+                // INF-2820 piece 2, the captain's "Filter button": Filter takes the computer button's place, which Your
+                // computer in Settings replaced (piece 1); with one project or none to pick the slot stays empty.
+                if let session = model.connection, !model.removed, session.projectPills.shown {
                     ToolbarItem(placement: .topBarTrailing) {
-                        // The computer's name lives on Settings' Your computer page, and VoiceOver hears the reach as words.
-                        // INF-1328: a dot asks for attention, so it shows only while the computer is out of reach.
-                        // INF-5265: with more than one computer kept, the button names the one shown.
-                        // INF-2820 piece 1: it opens Settings at Your computer, and piece 2 puts Filter in its place.
-                        Button { settings = PhoneSettingsOpening(place: nil, computer: true) } label: {
-                            HStack(spacing: PhoneTheme.space2) {
-                                PhoneSymbol.computer.image
-                                    .overlay(alignment: .topTrailing) {
-                                        if session.reach == "lost" {
-                                            Circle().fill(PhoneTheme.warning).frame(width: 7, height: 7).offset(x: 3, y: -3)
-                                        }
-                                    }
-                                if model.kept.others.count > 0 {
-                                    Text(session.mac.name).font(PhoneFont.callout).lineLimit(1).truncationMode(.tail)
-                                        .frame(maxWidth: 120)
-                                }
-                            }
-                        }
-                            .accessibilityLabel(model.kept.others.isEmpty ? PhoneMessages.phoneAppYourComputer() : session.mac.name)
-                            .accessibilityValue(session.reachLine)
-                            .accessibilityIdentifier("computer-details")
-                            .keyboardShortcut("i", modifiers: .command)
+                        PhoneFilterButton(session: session) { filtering = true }
                     }
                 }
+            }
+            .background {
+                // Command-I still opens Settings at Your computer, with no button of its own in the bar.
+                if let session = model.connection, !model.removed {
+                    Button(PhoneMessages.phoneAppYourComputer()) { settings = PhoneSettingsOpening(place: nil, computer: true) }
+                        .keyboardShortcut("i", modifiers: .command).hidden()
+                }
+            }
+            .focusedSceneValue(\.phoneProjectFilter, model.connection.flatMap { session in
+                model.removed ? nil : PhoneProjectFilterActions(offered: session.projectPills.shown, focused: session.projectFocus != nil,
+                                                               open: { filtering = true }, clear: { session.savedProjectFocus = nil })
+            })
+            .sheet(isPresented: $filtering) {
+                if let session = model.connection { PhoneFilterSheet(session: session) }
             }
             .sheet(item: $settings, onDismiss: openAddWay) { opening in
                 if let session = model.connection {
@@ -294,6 +295,7 @@ struct PhoneView: View {
             .environment(model.secrets)
             .environment(\.phoneOpenSettings) { place in settings = PhoneSettingsOpening(place: place) }
             .environment(\.phoneOpenComputer) { settings = PhoneSettingsOpening(place: nil, computer: true) }
+            .environment(\.phoneOpenFilter) { filtering = true }
             .id(session.mac.deviceID)
             // INF-589 item 12: a soft tap when the computer comes back after it was lost.
             .sensoryFeedback(.phone, trigger: session.returns)

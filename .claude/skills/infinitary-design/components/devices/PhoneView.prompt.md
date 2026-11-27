@@ -42,15 +42,16 @@ An alert names the computer address reached through the link, with Cancel beside
 The scanner's title is Scan the code, the words of the button that opens it.
 A permission refusal says how to allow the camera or local network, without replacing a refused camera with an automatic clipboard read.
 
-Once joined, the top bar is one row: a Settings button at the left, the Home, Tasks, Activity and, while the computer has panels to draw, Panels strip in the middle and the computer button at the right; with one computer kept its name is on Settings' Your computer page, not the bar.
+Once joined, the top bar is one row: a Settings button at the left, the Home, Tasks, Activity and, while the computer has panels to draw, Panels strip in the middle and, while the computer has two projects or more, the Filter button at the right; the computer's name and reach are on Settings' Your computer page, not the bar.
 The strip is Apple's segmented control of three or four icons, a house for Home, a checklist for Tasks, a pulse line for Activity and three stacked panes for Panels, with VoiceOver reading each tab's name; on iOS 26 the system draws it on glass, and it carries no unread dot.
-The computer button is the Lucide computer glyph; a dot in the warning color sits at its corner only while the computer is out of reach, because a dot asks for attention, and VoiceOver hears the reach as its value.
-With more than one computer kept, the button names the computer shown after its glyph, in the callout size on one line cut with an ellipsis at 120 points, so the person always knows which computer they read; VoiceOver hears that name in place of Your computer.
-In reach the bar says nothing more, and VoiceOver hears "Live".
+The Filter button is the system's filter symbol, line.3.horizontal.decrease.circle, in the text color, and filled in the accent while a project is focused; with one project or none the slot stays empty.
+It opens the Filter sheet: titled Filter, just tall enough for its rows and never past half height, with a Project section label over one list in the shared list shape, All projects first, then each project with "N waiting on you · N working" under its name and an accent check at the trailing edge of the focused one; a pick applies at once and closes the sheet, and further sections such as Tags stack under it.
+While a project is focused, one row sits under the top bar on every tab, under the reach line, across the sidebar and the stage on the wide layout: the project's pill, its name and counts in mono inside an accent hairline capsule 32 points tall in a 44-point touch area, which opens the sheet; a muted 44-point × for Show all projects; then "N waiting elsewhere" in muted mono while tasks in other projects wait.
+In reach the bar says nothing more, and VoiceOver hears the Settings button's value, the computer shown and "Live".
 Coming back after the words said out of reach, the line under the bar says "Catching up on what was missed" or "Catching up, reading everything again" until what was missed is shown, then goes.
 Out of reach is said once, by one line under the bar on every tab with its dot, state and "since" the last-heard time, with its day when that was not today; no strip above the content or line on a card repeats it, and only the current in-memory view remains.
 The message capsule and a card's reply row dim, and one line under the message box says only “Changes are off until <computer> is back.”, as the Mac says it.
-The computer button, Command-I and, while the computer is not in reach, a press on the line under the bar open Settings at its first page, Your computer, whose body is one list in the shared list shape; the button stays until a Filter button takes its place.
+Command-I and, while the computer is not in reach, a press on the line under the bar open Settings at its first page, Your computer, whose body is one list in the shared list shape.
 Its first row is the computer shown, in the shape the Mac gives a device: the computer glyph at the name's height, the name in the headline face, "Current connection" in the caption size, and under them one micro mono line with the reach dot and words, then the address reached in the muted color, which wraps under the reach when both do not fit.
 A small Leave in the hairline outline, Forget while out of reach, sits at that row's trailing edge beside the name, and drops under the row's lines when the name does not fit beside it; the red is kept for its alert.
 Each other kept computer follows as a row, the computer glyph, its name and one line, Answers now with an accent dot before the glyph, Not answering from here, or Looking… while the phone checks; a tap shows it, and the phone never switches by itself.
@@ -106,7 +107,7 @@ A choice the project's setup fixes shows as its words in the muted color in plac
 
 Runbooks lists the built-in runbooks and the person's own under their labels, each as its name over one caption line with Apple's switch tinted with the accent; a runbook the computer could not read says why in the warning color.
 Theme is one group of tiles like the computer's, Device, Dark, Light and the built-in color themes under their makers' names, then the person's own under a Yours heading when the computer has any, each a small window in its own colors, under one secondary line saying it is set on this iPhone only and the computer keeps its own; it starts on Device and never changes the computer's Theme.
-Command-1 to Command-4 switch tabs in the strip's order, Command-Comma opens Settings and Command-I opens it at Your computer.
+Command-1 to Command-4 switch tabs in the strip's order, Command-Comma opens Settings, Command-I opens it at Your computer and Shift-Command-P opens the Filter.
 The sheet shows a joining time only if the saved connection supplies one; it never invents one for an older record.
 Leave on the computer's row asks in an alert that keeps Keep it beside a red Leave and explains that a new link is needed to return; VoiceOver hears the button as Leave <computer>.
 **Taking over** (INF-4207 piece 9).

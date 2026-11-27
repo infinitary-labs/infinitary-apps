@@ -84,6 +84,8 @@ export const PHONE_PARTS = [
   { name: "cards-top-bar", test: "testCardTopBar", photos: false },
   // INF-6865: a long card revised in place into folded sections while read at its end still scrolls to its choices.
   { name: "cards-revised-scroll", test: "testRevisedCardScrollsToItsChoices", photos: false },
+  // INF-2820 piece 2: the phone's own project focus, picked from Filter, narrows Tasks, its tag row, Activity and messages.
+  { name: "project-filter", test: "testProjectFilter", photos: false, devices: ["ipad"], why: "on its side the iPad keeps the release note's hero pair, Tasks narrowed under the focus row beside the wide layout's sidebar" },
   // INF-6388: a card from an unsafe data reader says a link or request on it may come from a stranger.
   { name: "cards-reader", test: "testReaderCardUnsafeLine", photos: false },
   // INF-3124: a thread read from its start keeps its place as new lines arrive.

@@ -251,7 +251,7 @@ private extension VerticalAlignment {
 /// INF-5265: the ways in Add another computer offers, the first screen's three.
 enum PhoneAddWay { case scan, paste, address }
 
-private extension View {
+extension View {
     /// A key pressed alone; with Command, Option or Control held it is left to the app's own commands, such as
     /// Command-Return, which never presses a row behind it (INF-499).
     func onPlainKey(_ key: KeyEquivalent, _ action: @escaping () -> Void) -> some View {

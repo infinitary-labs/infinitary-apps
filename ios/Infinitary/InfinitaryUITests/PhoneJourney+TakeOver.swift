@@ -63,7 +63,7 @@ extension PhoneJourney {
             _ = try await home(command)
             var attempts = before
             while attempts < before + 2 { attempts = try await attemptsSoFar() }
-            XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value != %@", "Live"), object: app.buttons["computer-details"],
+            XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "NOT (value ENDSWITH %@)", " · Live"), object: settingsButton,
                                                  timeout: 40), .completed, "\(command): the phone took a home it must refuse")
         }
         picture("refused-homes")

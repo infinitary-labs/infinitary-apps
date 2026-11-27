@@ -1605,6 +1605,24 @@
       <string>%2$@: %1$ld</string>
     </dict>
   </dict>
+  <key>phoneFilterWaitingElsewhere</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld esperando em outro projeto</string>
+      <key>many</key>
+      <string>%1$ld esperando em outros projetos</string>
+      <key>other</key>
+      <string>%1$ld esperando em outros projetos</string>
+    </dict>
+  </dict>
   <key>phoneGoogleServiceOffDetail</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

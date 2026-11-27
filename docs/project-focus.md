@@ -17,6 +17,7 @@ How the pill looks and moves is the design skill's `components/core/ProjectFocus
 | The filter a message says | `messageProjectFilter` (`src/renderer/src/app/projectFocus.ts`) fills `focusedProjectId` or `allProjects` on `inf:converse` and `inf:cards:reply`; `projectFilterOf` (`src/core/orchestrator/projectFilter.ts`) reads them, and `CaptainPlaces.fromPhone` says a phone sent it |
 | The first mate's line | `project_filter`, written by `projectFilterLine` in `src/core/orchestrator/firstmateContext.ts` |
 | The keys | `project-focus.open` and `project-focus.clear` (`docs/keyboard.md`) |
+| The phone's own focus | `PhoneProjectFocus` in InfinitaryKit, drawn by `PhoneProjectFilter.swift` (below, "On the phone") |
 
 ## Which projects get a pill
 
@@ -52,11 +53,19 @@ A quiet mono tail after it says how many tasks wait on the captain in other proj
 Every message from a window says the window's filter to the first mate, as the `project_filter` line on each input: the focused project, or All projects while the pill shows.
 A window with one project has nothing to pick, so its message says no filter.
 A reply under a first mate card says it too; a crewmate's card ignores it.
-A message from the phone says it came from the phone, which has no filter and shows every project (the captain's answer to INF-6860's question 2).
+A message from the phone says the phone's own focus (below): the project it is focused on, said as the filter on the captain's phone, or at All projects that it came from the phone, which then shows every project (the captain's answers to INF-6860's question 2 and INF-2820's "messages: focus").
 Ask again, a Crewmate tab line and a button's press say nothing of their own, so the filter from the captain's last message holds, and so does it for every crew report and wake until the next message.
 The line tells the first mate what decides a message's project, strongest first: a project, repository or task the captain's words name, the card they replied under, the shown record or card, then the filter.
 Where nothing stronger names a project, the filter scopes new work, answers and actions on many tasks, and the first mate names what it left out (the captain's answer to INF-6860's question 1).
 The first mate says so in a few words when the filter decided something the captain did not say, and it never changes the filter.
+
+## On the phone
+
+The iPhone and iPad keep a focus of their own, picked from the top bar's Filter button (INF-2820's plan, piece 2; `docs/ios.md`, "The project filter").
+`PhoneProjectFocus` ports `projectPillsOf`, `pillShown`, `heldFocus`, `waitingElsewhere` and `linesInFocus`, and `PhoneProjectFocusTests` replays the desktop's own readings of one board, which `scripts/generate-phone-scene.ts` records.
+The focus is saved on the phone for each kept computer and never written to the computer, so a Mac window's focus and the phone's are apart.
+It narrows the phone's Tasks, its tag row and Activity, lights its project in the crew scene, reaches a panel that reads the board as `view.focusedProjectId`, and rides the phone's messages and card replies as `focusedProjectId`.
+It holds no card back, and every project still notifies.
 
 ## The card stack
 

@@ -475,20 +475,29 @@ export class FirstmateContext {
   /**
    * The project filter's line (INF-6860, the captain's answers: scope new
    * work, answers and actions, naming what it left out; a phone message
-   * covers every project). Which words outrank the filter is the first
+   * at All projects covers every project, and one focused on a project says
+   * its phone's filter, INF-2820 piece 2). Which words outrank the filter is the first
    * mate's judgment, so the order rides the line and the host parses none.
    */
   private projectFilterLine(filter: ProjectFilter | undefined): string | undefined {
     if (filter === "all")
       // i18n-exempt: the project filter line, served only to the first mate's model
       return "All projects - the project filter at the top of the captain's window shows every project, so nothing narrows new work, answers or actions";
-    if (filter === "phone")
+    const project =
+      filter && filter !== "phone" ? this.options.tasks.projects.get(filter.project) : undefined;
+    const phone = filter === "phone" || (typeof filter === "object" && filter.phone === true);
+    // A phone lets go of a project it no longer offers, so a project the board cannot name reads as All projects there.
+    if (phone && (!project || project.archivedAt !== null))
       // i18n-exempt: the project filter line, served only to the first mate's model
-      return "every project - the captain's latest message came from their phone, which has no project filter and shows every project, so nothing narrows new work, answers or actions";
-    const project = filter ? this.options.tasks.projects.get(filter.project) : undefined;
+      return "every project - the captain's latest message came from their phone, whose project filter is at All projects and shows every project, so nothing narrows new work, answers or actions";
     if (!project || project.archivedAt !== null) return undefined;
     // i18n-exempt: the project filter line, served only to the first mate's model
-    return `${project.key} "${project.name}" - the project filter at the top of the captain's window. What decides a message's project, strongest first: a project, repository or task their words name; the card they replied under; the shown record or card; this filter. Where nothing stronger names one, new work goes in ${project.key}, answers cover ${project.key}'s work and say how much waits elsewhere, and actions on many tasks act on ${project.key}'s alone and name what they left out. Say in a few words when the filter decided something they did not say. Never change the filter; only the captain does`;
+    const onPhone = "the project filter on the captain's phone, which they wrote from";
+    // i18n-exempt: the project filter line, served only to the first mate's model
+    const inWindow = "the project filter at the top of the captain's window";
+    const where = phone ? onPhone : inWindow;
+    // i18n-exempt: the project filter line, served only to the first mate's model
+    return `${project.key} "${project.name}" - ${where}. What decides a message's project, strongest first: a project, repository or task their words name; the card they replied under; the shown record or card; this filter. Where nothing stronger names one, new work goes in ${project.key}, answers cover ${project.key}'s work and say how much waits elsewhere, and actions on many tasks act on ${project.key}'s alone and name what they left out. Say in a few words when the filter decided something they did not say. Never change the filter; only the captain does`;
   }
 
   /**

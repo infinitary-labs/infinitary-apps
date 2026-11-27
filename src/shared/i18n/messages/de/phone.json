@@ -164,6 +164,18 @@
   "phoneComputerShowHint": "Zeigt diesen Computer",
   "phoneComputerTitle": "Dein Computer",
   "phoneCrewSummaryOpenTask": "Aufgabe öffnen",
+  "phoneFilterAllProjects": "Alle Projekte",
+  "phoneFilterCounts": "{waiting} warten auf dich · {working} in Arbeit",
+  "phoneFilterFocusCommand": "Auf ein Projekt konzentrieren",
+  "phoneFilterPill": "{name} · {waiting} warten auf dich · {working} in Arbeit",
+  "phoneFilterProject": "Projekt",
+  "phoneFilterShowAll": "Alle Projekte anzeigen",
+  "phoneFilterTitle": "Filter",
+  "phoneFilterWaitingElsewhere": {
+    "plural": "count",
+    "one": "{count} wartet anderswo",
+    "other": "{count} warten anderswo"
+  },
   "phoneFormatDays": "{days} T.",
   "phoneFormatDaysHours": "{days} T. {hours} Std.",
   "phoneFormatHours": "{hours} Std.",

@@ -2022,6 +2022,13 @@
 "phoneComputerShowHint" = "Muestra esta computadora";
 "phoneComputerTitle" = "Tu computadora";
 "phoneCrewSummaryOpenTask" = "Abrir tarea";
+"phoneFilterAllProjects" = "Todos los proyectos";
+"phoneFilterCounts" = "%1$@ esperándote · %2$@ trabajando";
+"phoneFilterFocusCommand" = "Centrarse en un proyecto";
+"phoneFilterPill" = "%1$@ · %2$@ esperándote · %3$@ trabajando";
+"phoneFilterProject" = "Proyecto";
+"phoneFilterShowAll" = "Mostrar todos los proyectos";
+"phoneFilterTitle" = "Filtro";
 "phoneFormatDays" = "%1$@ d";
 "phoneFormatDaysHours" = "%1$@ d %2$@ h";
 "phoneFormatHours" = "%1$@ h";

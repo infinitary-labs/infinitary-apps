@@ -346,6 +346,9 @@ public struct PhoneBoard: Decodable, Sendable {
     }
     public struct Project: Decodable, Sendable {
         public let id: String
+        /// The project's key, which starts each of its tasks' keys (`projectViewSchema`); the project focus narrows
+        /// Activity by it. Absent only from a board written by hand for a test.
+        public let key: String?
         public let name: String
         /// Whether a repository backs the project, and whether it is archived: a row leaves out the project's name where
         /// only one such project could be meant (the Mac's `hasSingleRegisteredRepoProject`).
@@ -355,9 +358,10 @@ public struct PhoneBoard: Decodable, Sendable {
         public let archived: Bool?
         /// The project's own tags, alphabetical (`projectTagViewSchema`); absent while it has none, and from an older Mac.
         public let tags: [PhoneTask.Tag]?
+        /// A repository's name and kind. The project focus offers the app's own workspace only while it lists a task.
         public struct Repo: Decodable, Sendable {
             public let name: String
-            /// `personal` for the app's own workspace; absent from an older Mac.
+            /// `personal` for the app's own workspace; absent from an older Mac, read as an ordinary project's.
             public let kind: String?
         }
 

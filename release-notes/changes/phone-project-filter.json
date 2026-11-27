@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "phone-project-filter",
+      "kind": "feature",
+      "area": "devices",
+      "title": "Focus your iPhone or iPad on one project",
+      "body": "Tap Filter at the right of the top bar on your iPhone or iPad and pick a project. Tasks, Activity, the crew and the panels then show that project, and what you send to your first mate from the phone is about it unless you name another. A row under the top bar names the project and how many tasks wait on you elsewhere; its × shows every project again. The phone keeps its own focus for each computer, apart from the one on your computer, and ⇧⌘P opens Filter from a keyboard.",
+      "picture": {
+        "dark": "phone-project-filter-dark.webp",
+        "light": "phone-project-filter-light.webp",
+        "alt": "An iPad on its side focused on the infinitary project: the row under the top bar names infinitary and how many tasks wait elsewhere, and Tasks lists only that project's tasks"
+      },
+      "docsSite": ["projects", "iphone-and-ipad"],
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

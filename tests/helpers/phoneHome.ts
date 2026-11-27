@@ -78,6 +78,7 @@ import type {
 } from "./phoneKeyboard";
 import { raiseMoveCard, showMoveCardPast } from "./phoneMoveCard";
 import { phonePanelControls } from "./phonePanels";
+import { projectFilterCommand } from "./phoneProjectFilter";
 import { startPhonePushRelay } from "./phonePushRelay";
 import { CARD_RECORDINGS } from "./phoneRecordings";
 import { removeEveryDevice } from "./phoneRemove";
@@ -140,7 +141,6 @@ async function controlBody(request: IncomingMessage): Promise<string> {
 }
 
 /** INF-64 piece 2: a disposable real home, never a replacement for the wire or stores. */
-
 export async function startPhoneHome(
   root: string,
   controls?: {
@@ -674,7 +674,6 @@ export async function startPhoneHome(
           return homeUpdate as Awaited<ReturnType<typeof core.dispatch<typeof channel>>>;
         }
         const result = await core.dispatch(channel, args, actor);
-
         if (loseNextReply === "after" && channel === "inf:converse") {
           loseNextReply = undefined;
           await connection.close();
@@ -3496,6 +3495,7 @@ export async function startPhoneHome(
           break;
         default:
           result = await phoneAppearanceCommand(core, `${request.method} ${command}`, takeOver);
+          result ??= await projectFilterCommand(core, writes, until, command);
           if (result === undefined) {
             response.writeHead(404).end();
             return;

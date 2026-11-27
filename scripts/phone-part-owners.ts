@@ -126,6 +126,8 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
   ] },
   // INF-5608's plan, piece 2: the cards-carried part's card on the test home.
   { parts: ["cards-carried"], files: ["tests/helpers/phoneCarried.ts"] },
+  // INF-2820 piece 2: the project-filter part's three projects on the test home.
+  { parts: ["project-filter"], files: ["tests/helpers/phoneProjectFilter.ts"] },
   // INF-6865: the cards-revised-scroll part's long card on the test home.
   { parts: ["cards-revised-scroll"], files: ["tests/helpers/phoneRevisedCard.ts"] },
   { parts: family("cards"), files: [

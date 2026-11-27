@@ -1,5 +1,5 @@
 ---
-source: b6b6aafda3cee48d
+source: 61843fc4e8da2e59
 title: iPhone et iPad
 description: Demandez une invitation TestFlight privée pour Infinitary sur iPhone et iPad, puis rejoignez votre ordinateur pour lire les cartes et envoyer des messages.
 ---
@@ -37,8 +37,7 @@ Votre téléphone peut garder plus d’un ordinateur, comme un à la maison et u
 Pour en ajouter un autre, ouvrez Réglages sur le téléphone, touchez **Votre ordinateur** et choisissez **Ajouter un autre ordinateur**, puis scannez son code, collez son lien ou rejoignez-le par son adresse.
 L’ordinateur que vous affichiez reste gardé.
 
-Avec plus d’un ordinateur gardé, le bouton de l’ordinateur à droite de la barre du haut du téléphone nomme l’ordinateur affiché.
-**Votre ordinateur**, la première ligne de Réglages sur le téléphone, le nomme aussi, liste vos autres ordinateurs et marque chacun de ceux qui répondent depuis l’endroit où vous êtes, comme quand votre téléphone est sur le réseau ou le réseau privé de cet ordinateur.
+**Votre ordinateur**, la première ligne de Réglages sur le téléphone, nomme l’ordinateur affiché, liste vos autres ordinateurs et marque chacun de ceux qui répondent depuis l’endroit où vous êtes, comme quand votre téléphone est sur le réseau ou le réseau privé de cet ordinateur.
 Touchez-en un, ou appuyez sur Return dessus avec un clavier, pour l’afficher.
 Le téléphone ne change jamais de lui-même : il reste sur votre choix jusqu’à ce que vous en choisissiez un autre.
 

@@ -36,8 +36,7 @@ Your phone can keep more than one computer, such as one at home and one at work,
 To add another, open the phone's Settings, tap **Your computer** and choose **Add another computer**, then scan its code, paste its link or join by its address.
 The computer you were showing stays kept.
 
-With more than one kept, the computer button at the right of the phone's top bar names the computer shown.
-**Your computer**, the first row of the phone's Settings, names it too and lists your other computers and marks each one that answers from where you are now, such as when your phone is on that computer's network or private network.
+**Your computer**, the first row of the phone's Settings, names the computer shown and lists your other computers and marks each one that answers from where you are now, such as when your phone is on that computer's network or private network.
 Tap one, or press Return on it with a keyboard, to show it.
 The phone never switches by itself: it stays on your choice until you pick another.
 

@@ -393,6 +393,32 @@ const SCENARIOS: { file: string; trigger: string; scenario: Scenario }[] = [
     trigger: "Manual request",
     scenario: { github: { event_name: "workflow_dispatch" } },
   },
+  // A batch's jobs GitHub never placed (unplaced-jobs.yml, docs/testing.md "A
+  // job GitHub never placed"): a batch pull request's check that did not
+  // pass, and a dry run started by hand.
+  {
+    file: "unplaced-jobs.yml",
+    trigger: "Merge batch",
+    scenario: {
+      github: {
+        event_name: "workflow_run",
+        repository: "infinitary-labs/infinitary-apps",
+        event: {
+          workflow_run: {
+            conclusion: "failure",
+            event: "pull_request",
+            head_branch: "infinitary-batch/423da1bf",
+            head_repository: { full_name: "infinitary-labs/infinitary-apps" },
+          },
+        },
+      },
+    },
+  },
+  {
+    file: "unplaced-jobs.yml",
+    trigger: "Manual request",
+    scenario: { github: { event_name: "workflow_dispatch" } },
+  },
   // The Careful review check (careful-review-check.yml, docs/public-ci.md
   // "The Careful review check"): an outside pull request, and a run started by hand.
   {

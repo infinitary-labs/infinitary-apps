@@ -1,0 +1,80 @@
+name: unplaced-jobs
+
+# A merge batch's jobs GitHub never placed on a runner (docs/testing.md, "A
+# job GitHub never placed"; scripts/unplaced-jobs.mjs): when a batch pull
+# request's run ends and every job that neither passed nor skipped is one
+# GitHub cancelled with no runner, no step and its own annotation, this asks
+# GitHub to rerun the run's failed jobs on the same machines, until the run's
+# third attempt. A failed test, or a job cancelled any other way, reruns
+# nothing, and the batch's repair reads the run as before. Started by hand
+# with a run's id, it is a dry run that writes what it would do to the
+# job summary and reruns nothing.
+#
+# It starts on workflow_run, which runs from this project's default branch,
+# checks out only its scripts from there, never the batch's code, reads job
+# results from GitHub as data, uses no secret beyond its own token, and runs
+# on GitHub's own machines. Main's check, an alpha cut and an outside pull
+# request never start it: a main check is never retried.
+
+on:
+  workflow_run:
+    workflows: [batch]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      run:
+        description: The id of a batch run to read, the number in its page's address, as a dry run that reruns nothing
+        required: true
+        type: string
+      attempt:
+        description: The attempt to read; unset reads the run's newest
+        required: false
+        type: string
+
+# A read of the project; the job names the writes it needs.
+permissions:
+  contents: read
+
+# Each attempt of a batch run that ends starts this once, and a later
+# attempt's waits for an earlier one's, so two never ask at once.
+concurrency:
+  group: unplaced-jobs-${{ github.event.workflow_run.id || inputs.run }}
+  cancel-in-progress: false
+
+jobs:
+  rerun:
+    # Only a batch pull request's own run that did not pass, or a dry run by
+    # hand; the script reads the run's facts again before it asks.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion != 'success' &&
+       github.event.workflow_run.event == 'pull_request' &&
+       github.event.workflow_run.head_repository.full_name == github.repository &&
+       startsWith(github.event.workflow_run.head_branch, 'infinitary-batch/'))
+    name: ${{ github.event_name == 'workflow_dispatch' && 'Manual request' || 'Merge batch' }} · Rerun jobs GitHub never placed
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    # Actions writes for the rerun, check reads for each job's annotations,
+    # pull request reads for whether the batch is still open at its version.
+    permissions:
+      contents: read
+      actions: write
+      checks: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/unplaced-jobs.mjs
+            scripts/batch-pull.mjs
+          sparse-checkout-cone-mode: false
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        env:
+          RUN: ${{ inputs.run }}
+          ATTEMPT: ${{ inputs.attempt }}
+        with:
+          script: |
+            const {pathToFileURL} = require('node:url');
+            const {rerunUnplaced} = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/unplaced-jobs.mjs`).href);
+            await rerunUnplaced({github, context, core, runId: process.env.RUN, attempt: process.env.ATTEMPT});

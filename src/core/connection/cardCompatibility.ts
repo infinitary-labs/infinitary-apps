@@ -13,6 +13,8 @@ export const AMBIENT_MUSIC = contractChange("ambient-music");
 export const AMBIENT_PAUSE = contractChange("ambient-pause");
 export const AMBIENT_STYLE = contractChange("ambient-style");
 export const AMBIENT_AWAY = contractChange("ambient-away");
+/** A built-in color theme over Dark or Light in the look (`color-theme.md`). */
+export const COLOR_THEME = contractChange("color-theme");
 export const AMBIENT_OWN_STYLES = contractChange("ambient-own-styles");
 /** Own styles past the 12 an older view reads (`ambient-own-styles-uncapped.md`). */
 export const AMBIENT_OWN_STYLES_UNCAPPED = contractChange("ambient-own-styles-uncapped");

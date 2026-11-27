@@ -6,6 +6,7 @@ import {
   AMBIENT_OWN_STYLES_UNCAPPED,
   AMBIENT_PAUSE,
   AMBIENT_STYLE,
+  COLOR_THEME,
   COMPUTER_UPDATING,
   DEVICE_ADDS_BY_ADDRESS,
   SETTINGS_CURRENT,
@@ -83,6 +84,7 @@ export function unreadLook(hello: ViewHello): string[] {
     ...(listsChange(hello.changes, AMBIENT_PAUSE) ? [] : ["ambientPaused"]),
     ...(listsChange(hello.changes, AMBIENT_STYLE) ? [] : ["ambientStyle"]),
     ...(listsChange(hello.changes, AMBIENT_AWAY) ? [] : ["ambientPlaysWhenAway"]),
+    ...(listsChange(hello.changes, COLOR_THEME) ? [] : ["colorTheme"]),
     ...(listsChange(hello.changes, SETTINGS_CURRENT) ? [] : ["settings.current"]),
     ...(listsChange(hello.changes, AMBIENT_OWN_STYLES) &&
     listsChange(hello.changes, AMBIENT_OWN_STYLES_UNCAPPED)

@@ -29,6 +29,7 @@ export const COLOR_TOKENS: readonly ColorToken[] = [
   { name: "--accent-strong", dark: "#38aae6", light: "#0a72a8" },
   { name: "--accent-dim", dark: "rgba(127, 220, 255, 0.14)", light: "rgba(14, 143, 208, 0.1)" },
   { name: "--accent-glow", dark: "rgba(127, 220, 255, 0.35)", light: "rgba(14, 143, 208, 0.25)" },
+  { name: "--on-accent", dark: "#05070d", light: "#05070d" },
   { name: "--ok", dark: "#7fdcff", light: "#0e8fd0" },
   { name: "--ok-dim", dark: "rgba(127, 220, 255, 0.14)", light: "rgba(14, 143, 208, 0.1)" },
   { name: "--hot", dark: "#ffa257", light: "#d97a1f" },

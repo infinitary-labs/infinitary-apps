@@ -2811,7 +2811,7 @@
 "settingsAppearanceSizeDescriptionKeys" = "Agranda el texto y todo lo que lo rodea. %1$@ y %2$@ cambian el mismo tamaño.";
 "settingsAppearanceTheme" = "Tema";
 "settingsAppearanceThemeDark" = "Oscuro";
-"settingsAppearanceThemeDescription" = "Oscuro como el espacio profundo o claro como la luz del día.";
+"settingsAppearanceThemeDescription" = "Oscuro, Claro o un tema con el nombre que le dio su autor. Todos los colores de la ventana lo siguen.";
 "settingsAppearanceThemeLight" = "Claro";
 "settingsAppearanceWash" = "Velo de la ventana";
 "settingsAppearanceWashDescription" = "Cuánto del color del tema cubre el fondo desenfocado. 0 %% es el valor predeterminado.";

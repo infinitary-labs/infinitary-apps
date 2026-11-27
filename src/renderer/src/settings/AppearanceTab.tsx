@@ -17,6 +17,7 @@ import { isView } from "../devices/viewWords";
 import { FontRows } from "./FontRows";
 import { FIRSTMATE_SELECT_STYLE } from "./GeneralTab";
 import { ROW_GAP, SECTION_GAP, SectionLabel, SettingRow } from "./settingRows";
+import { ThemeTiles } from "./ThemeTiles";
 
 /** The language picker's value for no choice, the default language: never a language tag. */
 const NO_CHOICE = "";
@@ -147,8 +148,6 @@ export function AppearanceTab() {
   const setDefaultCardSize = useShellStore((s) => s.setDefaultCardSize);
   const keepCardsMaximized = useShellStore((s) => s.keepCardsMaximized);
   const setKeepCardsMaximized = useShellStore((s) => s.setKeepCardsMaximized);
-  const theme = useShellStore((s) => s.theme);
-  const setTheme = useShellStore((s) => s.setTheme);
   const washStrength = useShellStore((s) => s.washStrength);
   const setWashStrength = useShellStore((s) => s.setWashStrength);
   const showCrewModelNames = useShellStore((s) => s.showCrewModelNames);
@@ -227,24 +226,20 @@ export function AppearanceTab() {
           }
         />
         <SettingRow
-          id="theme"
-          error={errorFor("theme")}
-          title={m.settingsAppearanceTheme()}
-          description={m.settingsAppearanceThemeDescription()}
+          id="crew-model-names"
+          error={errorFor("showCrewModelNames")}
+          title={m.settingsAppearanceCrewModelNames()}
+          description={m.settingsAppearanceCrewModelNamesDescription()}
           control={
-            <GroupedPills
-              name={m.settingsAppearanceTheme()}
-              htmlName="appearance-theme"
-              value={theme}
-              options={[
-                { value: "dark", label: m.settingsAppearanceThemeDark() },
-                { value: "light", label: m.settingsAppearanceThemeLight() },
-              ]}
-              onChange={setTheme}
+            <Switch
+              checked={showCrewModelNames}
+              aria-label={m.settingsAppearanceCrewModelNames()}
+              onChange={setShowCrewModelNames}
             />
           }
         />
-        {/* Only a window over the system's material has a wash (docs/translucent-window.md). */}
+        {/* Only a window over the system's material has a wash (docs/translucent-window.md);
+            it takes the theme's color (docs/themes.md), so it sits just above the tiles. */}
         {desktop.material && (
           <SettingRow
             id="window-wash"
@@ -280,18 +275,14 @@ export function AppearanceTab() {
             }
           />
         )}
+        {/* The tiles are tall: below the rows above, so they stay on screen in the smallest window. */}
         <SettingRow
-          id="crew-model-names"
-          error={errorFor("showCrewModelNames")}
-          title={m.settingsAppearanceCrewModelNames()}
-          description={m.settingsAppearanceCrewModelNamesDescription()}
-          control={
-            <Switch
-              checked={showCrewModelNames}
-              aria-label={m.settingsAppearanceCrewModelNames()}
-              onChange={setShowCrewModelNames}
-            />
-          }
+          id="theme"
+          error={errorFor("theme")}
+          title={m.settingsAppearanceTheme()}
+          description={m.settingsAppearanceThemeDescription()}
+          detail={<ThemeTiles />}
+          control={null}
         />
         {/* Below the rows above, so they stay on screen in the smallest window. */}
         <FontRows />

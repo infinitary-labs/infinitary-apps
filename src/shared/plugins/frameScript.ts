@@ -579,6 +579,16 @@ ${FRAME_EXPAND_SCRIPT}${FRAME_SOUND_SCRIPT}
       theme = data.theme;
       document.documentElement.setAttribute("data-theme", theme);
       if (document.body) document.body.setAttribute("data-theme", theme);
+      // The window's color theme (docs/themes.md): one sheet, last in the head, over the birth rule.
+      if (typeof data.colors === "string") {
+        var sheet = document.getElementById("inf-color-theme");
+        if (!sheet) {
+          sheet = document.createElement("style");
+          sheet.id = "inf-color-theme";
+        }
+        if (sheet.textContent !== data.colors) sheet.textContent = data.colors;
+        if (document.head && sheet.parentNode !== document.head) document.head.appendChild(sheet);
+      }
       themeListeners.slice().forEach(function (listener) { listener(theme); });
     }
   });
@@ -829,4 +839,4 @@ ${FRAME_KEYBOARD_SCRIPT}
  * to the script moves it: re-pin it in the same change, or
  * frameBridgeHash.test.ts fails and every frame's CSP blocks the script.
  */
-export const FRAME_BRIDGE_SHA256 = "sha256-3s+lc8EyIu8oPbb32Wz/fP+y7kyabpwqLGrvK1Xj+so=";
+export const FRAME_BRIDGE_SHA256 = "sha256-W2drWP9C8H3IKy0tj8waardcDqxp9m62C/4vPW7IjyI=";

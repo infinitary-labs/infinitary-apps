@@ -2082,7 +2082,7 @@
   {"said":{"m":"settingsAppearanceSizeDescriptionKeys","a":{"larger":"‹larger›","smaller":"‹smaller›"}},"words":"Make text and everything around it larger. ‹larger› and ‹smaller› change the same size."},
   {"said":{"m":"settingsAppearanceTheme"},"words":"Theme"},
   {"said":{"m":"settingsAppearanceThemeDark"},"words":"Dark"},
-  {"said":{"m":"settingsAppearanceThemeDescription"},"words":"Deep-space dark, or daylight light."},
+  {"said":{"m":"settingsAppearanceThemeDescription"},"words":"Dark, Light, or a theme its maker named. Every color in the window follows."},
   {"said":{"m":"settingsAppearanceThemeLight"},"words":"Light"},
   {"said":{"m":"settingsAppearanceWash"},"words":"Window wash"},
   {"said":{"m":"settingsAppearanceWashDescription"},"words":"How much of the theme color covers the blurred background. 0% is the default."},

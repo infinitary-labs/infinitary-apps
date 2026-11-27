@@ -49,7 +49,7 @@ import { type KnowledgeDirections, knowledgeDirectionChangeSchema } from "./know
 import { reasoningChoiceSchema, slotSchema } from "./modelSlots";
 import { panelLines } from "./panelActions";
 import { AUTOMATIC_COMPUTER } from "./placement";
-import { type Appearance, type Layout, themeSchema } from "./preferences";
+import type { Appearance, Layout } from "./preferences";
 import { normalizePrivateSite, type PrivateSitesView } from "./privateSites";
 import { projectSetupProposalSchema } from "./projectSetup";
 import { catalogEntry } from "./providers";
@@ -67,19 +67,14 @@ import {
 } from "./repos";
 import { savedResetLines } from "./savedResetActions";
 import { settingsActs } from "./settingsActs";
-import {
-  costLimitValue,
-  enabledValue,
-  fontsValue,
-  panelsSwitchValue,
-  themeValue,
-} from "./settingValues";
+import { costLimitValue, enabledValue, fontsValue, panelsSwitchValue } from "./settingValues";
 import type { SharingView } from "./sharing";
 import { showLines } from "./showActions";
 import { type DeviceSignIns, signInPlace } from "./signIns";
 import { summaryPointLines } from "./summaryPointActions";
 import { tagLines } from "./tagActions";
 import type { ProjectView } from "./tasks";
+import { themeLines } from "./themeActions";
 import { signInsUnansweredInEnglish, workSetupWordsInEnglish } from "./workSetupWords";
 
 /**
@@ -926,18 +921,6 @@ const actionLines = {
     "devices",
     `changed where devices find ${HERE.this}`,
   ),
-  theme: {
-    fields: ["theme"],
-    area: "appearance",
-    tier: "asked",
-    change: "inf:settings:appearance:set",
-    current: "inf:settings:appearance:get",
-    value: z.strictObject({ theme: themeSchema }),
-    line: "Switch between dark and light when asked, preserving size, window wash and crew model names.",
-    toRequest: (v, c) => [{ ...(c as Appearance), theme: v.theme }],
-    readValue: themeValue,
-    done: (v) => `switched to the ${v.theme} theme`,
-  },
   font: {
     fields: ["fonts"],
     area: "appearance",
@@ -1569,6 +1552,7 @@ const actionLines = {
     done: (v) => `global instructions and skills ${v.enabled ? "on" : "off"}`,
   },
   ...appearanceLines,
+  ...themeLines,
   "panel-collapse": {
     fields: ["collapsedPanels"],
     area: "panels",

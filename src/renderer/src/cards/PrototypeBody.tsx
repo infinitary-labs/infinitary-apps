@@ -32,6 +32,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { themeFrameStyle } from "../app/colorTheme";
 import { available } from "../app/focusRecovery";
 import { fontFrameStyle, useFontsDrawn } from "../app/fonts";
 import { Button } from "../design";
@@ -915,7 +916,14 @@ function SrcdocCardBody(props: SrcdocProps) {
   const fontsDrawn = useFontsDrawn();
   // biome-ignore lint/correctness/useExhaustiveDependencies: marksKey stands for marks, a new array on every push; fontsDrawn moves with fontFrameStyle
   const srcdoc = useMemo(
-    () => buildPrototypeSrcdoc(body, theme, props.marks, fontFrameStyle()),
+    // The color theme rides the bridge after birth, so it builds nothing again.
+    () =>
+      buildPrototypeSrcdoc(
+        body,
+        theme,
+        props.marks,
+        `${fontFrameStyle()}\n${themeFrameStyle(theme)}`,
+      ),
     [body, theme, marksKey, fontsDrawn],
   );
 
@@ -1064,7 +1072,7 @@ function ScriptedCardBody(props: SrcdocProps) {
         // A longer title is shortened to what the mount takes (INF-3887).
         title: frameTitle(title),
         theme,
-        style: `${cardStylesheet()}\n${fontFrameStyle()}`,
+        style: `${cardStylesheet()}\n${fontFrameStyle()}\n${themeFrameStyle(theme)}`,
         // The markup the agent wrote, unchanged. The host finds its inline
         // scripts and pins each one's hash into that mount's own CSP.
         template,

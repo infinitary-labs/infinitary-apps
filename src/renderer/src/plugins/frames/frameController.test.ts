@@ -188,6 +188,19 @@ describe("FrameController", () => {
     expect(posted.at(-1)).toEqual({ fm: 2, type: "theme", theme: "dark" });
   });
 
+  // The approved plan for color themes (INF-6888, part 1): an open card or panel takes a
+  // newly picked theme without being built again, and still hears the theme it always did.
+  it("carries the window's color rule with the theme, on birth and on every change", () => {
+    const { controller, posted } = harness();
+    const dracula = ':root, [data-theme="light"], [data-theme="dark"] { --accent: #bd93f9; }';
+    controller.setTheme("dark", dracula);
+    controller.receive({ fm: 2, type: "ready" });
+    expect(posted).toEqual([{ fm: 2, type: "theme", theme: "dark", colors: dracula }]);
+    const light = ':root, [data-theme="light"], [data-theme="dark"] { --accent: #0e8fd0; }';
+    controller.setTheme("light", light);
+    expect(posted.at(-1)).toEqual({ fm: 2, type: "theme", theme: "light", colors: light });
+  });
+
   it("pushes view state on a document's birth, and every change after it", () => {
     // The now panel's selected row: host-owned state the frame paints.
     const { controller, posted } = harness({ state: { selectedTaskId: null } });

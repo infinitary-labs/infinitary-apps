@@ -1,4 +1,5 @@
 import type { SavedOwnStyle } from "@shared/ambientOwn";
+import { type BuiltInThemeId, builtInTheme } from "@shared/colorThemes";
 import type { FontChoices, FontSlot } from "@shared/fonts";
 import {
   type Appearance,
@@ -22,7 +23,15 @@ export type AppearanceChoice = keyof Appearance;
  * and they are only mirrored here so the tree can read them synchronously.
  */
 export type AppearanceSlice = {
+  /** Dark or Light; with a color theme chosen, that theme's base. */
   theme: Theme;
+  /**
+   * The color theme over the base, as saved, or null for plain Dark or Light
+   * (docs/themes.md). A name this build lacks stays saved and shows the base.
+   */
+  colorTheme: string | null;
+  /** Picks a built-in color theme with its base; Dark and Light go through `setTheme`. */
+  setColorTheme: (id: BuiltInThemeId) => void;
   defaultCardSize: DefaultCardSize;
   setDefaultCardSize: (size: DefaultCardSize) => void;
   /** Keep cards maximized: a maximize or restore carries to every card (docs/renderer.md). */
@@ -89,6 +98,7 @@ export type AppearanceSlice = {
 function lookOf(s: ShellState, appearance: Appearance): Partial<ShellState> {
   const look = {
     theme: appearance.theme,
+    colorTheme: appearance.colorTheme ?? null,
     defaultCardSize: appearance.defaultCardSize ?? "usual",
     keepCardsMaximized: appearance.keepCardsMaximized ?? false,
     cardsMaximized: appearance.cardsMaximized ?? false,
@@ -160,6 +170,7 @@ export function appearanceSlice(set: ShellSet, get: ShellGet): AppearanceSlice {
       const s = get();
       const saved = appearanceSave.state.value ?? {
         theme: s.theme,
+        ...(s.colorTheme ? { colorTheme: s.colorTheme } : {}),
         defaultCardSize: s.defaultCardSize,
         keepCardsMaximized: s.keepCardsMaximized,
         cardsMaximized: s.cardsMaximized,
@@ -183,6 +194,7 @@ export function appearanceSlice(set: ShellSet, get: ShellGet): AppearanceSlice {
     // Replaced before the first render by the core's own value
     // (./preferences); the default is only what an unread core would say.
     theme: DEFAULT_APPEARANCE.theme,
+    colorTheme: null,
     defaultCardSize: "usual",
     keepCardsMaximized: false,
     cardsMaximized: false,
@@ -221,9 +233,15 @@ export function appearanceSlice(set: ShellSet, get: ShellGet): AppearanceSlice {
       set({ cardsMaximized });
       saveAppearance("cardsMaximized", { cardsMaximized });
     },
+    // Dark or Light is a look with no color theme: the core removes the saved one.
     setTheme: (theme) => {
-      set({ theme });
-      saveAppearance("theme", { theme });
+      set({ theme, colorTheme: null });
+      saveAppearance("theme", { theme, colorTheme: undefined });
+    },
+    setColorTheme: (colorTheme) => {
+      const theme = builtInTheme(colorTheme).base;
+      set({ theme, colorTheme });
+      saveAppearance("theme", { theme, colorTheme });
     },
     setWashStrength: (washStrength) => {
       set({ washStrength });

@@ -19,7 +19,10 @@ const look = (current: unknown) => current as Appearance;
 const DEFAULT_WASH = DEFAULT_APPEARANCE.washStrength as number;
 const DEFAULT_SIZE = DEFAULT_APPEARANCE.size as UiSize;
 
+/** Dark or Light, the base a color theme sits on: what a panel reads, as a frame is told. */
 export const themeValue = (c: unknown) => ({ theme: look(c).theme });
+/** The window's theme as the first mate names it: a color theme's id, else Dark or Light. */
+export const themeChoiceValue = (c: unknown) => ({ theme: look(c).colorTheme ?? look(c).theme });
 export const fontsValue = (c: unknown) => ({ fonts: look(c).fonts ?? {} });
 export const washValue = (c: unknown) => ({ strength: look(c).washStrength ?? DEFAULT_WASH });
 export const sizeValue = (c: unknown) => ({ size: look(c).size ?? DEFAULT_SIZE });

@@ -531,6 +531,15 @@ An older build reads `appearance` strictly, so the choice never goes in it; that
 A look written without fonts removes the row, which means Infinitary's own fonts.
 A saved font this computer lacks stays saved, and the window draws Infinitary's own font in its place (`docs/fonts.md`).
 
+## The color theme
+
+The color theme the captain chose in Settings → Appearance lives in a settings row of its own, `color-theme`, beside the `appearance` row, with the base it was chosen on (`SettingsStore.getAppearance` and `setAppearance`, `docs/themes.md`).
+An older build reads `appearance` strictly, so the theme never goes in it; that build ignores the new row and draws plain Dark or Light, the base `appearance` still names.
+When an older build switches Dark or Light, the saved base no longer matches, and this build shows the base without the theme.
+A look written without a color theme removes the row, which means plain Dark or Light.
+A saved theme this build lacks stays saved, and the window draws its base.
+A window that controls another computer keeps its color theme the same way, in `color-theme.json` beside its `appearance.json` (`JoinedHome.setLook`, `docs/view.md`).
+
 ## A task's pin
 
 Migration 122 adds the `pinned_at` column to `tasks`, empty on every row, and a partial index over the pinned rows, so the board reads the few pinned tasks without walking the record (INF-3127).

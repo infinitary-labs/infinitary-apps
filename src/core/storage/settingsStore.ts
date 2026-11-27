@@ -1,4 +1,5 @@
 import { ownStylesSchema } from "@shared/ambientOwn";
+import { colorThemeSchema } from "@shared/colorThemes";
 import { type CostLimit, costLimitSchema, DEFAULT_COST_LIMIT } from "@shared/costLimit";
 import {
   DEFAULT_DECISIONS,
@@ -45,6 +46,7 @@ import {
   type PersonalPanels,
   panelArrangementSchema,
   personalPanelsSchema,
+  themeSchema,
 } from "@shared/preferences";
 import {
   type PiModelRefView,
@@ -131,6 +133,12 @@ const ambientMusicRowSchema = z.strictObject({ on: z.boolean(), volume: ambientV
 const ambientStyleRowSchema = z.strictObject({ style: ambientStyleSchema });
 /** The `ambient-own-styles` row: the person's own styles (docs/ambient-music.md, "Your own styles"). */
 const ambientOwnRowSchema = z.strictObject({ styles: ownStylesSchema });
+/**
+ * The `color-theme` row: the chosen color theme and the base it was chosen on
+ * (docs/themes.md). The base is kept beside it because an older build writes
+ * only the `appearance` row: a base that no longer matches is its switch.
+ */
+const colorThemeRowSchema = z.strictObject({ theme: colorThemeSchema, base: themeSchema });
 
 export class SettingsStore {
   private projection: Map<string, unknown> | undefined;
@@ -346,6 +354,7 @@ export class SettingsStore {
     const ambient = ambientMusicRowSchema.safeParse(this.get("ambient-music"));
     const style = ambientStyleRowSchema.safeParse(this.get("ambient-style"));
     const own = ambientOwnRowSchema.safeParse(this.get("ambient-own-styles"));
+    const color = colorThemeRowSchema.safeParse(this.get("color-theme"));
     return foldAmbientPause({
       ...DEFAULT_APPEARANCE,
       ...appearance,
@@ -363,6 +372,10 @@ export class SettingsStore {
         : {}),
       ...(style.success ? { ambientStyle: style.data.style } : {}),
       ...(own.success && own.data.styles.length > 0 ? { ambientOwnStyles: own.data.styles } : {}),
+      // An older build that switched Dark or Light left the theme on the other base: the base wins.
+      ...(color.success && color.data.base === appearance.theme
+        ? { colorTheme: color.data.theme }
+        : {}),
     });
   }
 
@@ -382,10 +395,17 @@ export class SettingsStore {
    * build's read of the old `ambient-paused` row or by an older view, is
    * saved off and the row removed (`foldAmbientPause`). The person's own styles go to
    * `ambient-own-styles`; a look without them keeps the saved ones, and an
-   * empty list removes the row.
+   * empty list removes the row. The color theme goes to `color-theme` with
+   * its base, and a look without one removes the row, as the language does:
+   * picking Dark or Light is a look with no color theme.
    */
   setAppearance(appearance: Appearance): void {
-    const { language: _saved, fonts: _savedFonts, ...was } = this.getAppearance();
+    const {
+      language: _saved,
+      fonts: _savedFonts,
+      colorTheme: _savedColorTheme,
+      ...was
+    } = this.getAppearance();
     const {
       keepCardsMaximized,
       cardsMaximized,
@@ -397,6 +417,7 @@ export class SettingsStore {
       ambientVolume,
       ambientStyle,
       ambientOwnStyles,
+      colorTheme,
       ...look
     } = foldAmbientPause({
       ...was,
@@ -415,6 +436,8 @@ export class SettingsStore {
     this.remove("ambient-paused");
     if (ambientPlaysWhenAway) this.set("ambient-away-plays", true);
     else this.remove("ambient-away-plays");
+    if (colorTheme === undefined) this.remove("color-theme");
+    else this.set("color-theme", { theme: colorTheme, base: look.theme });
     if (language === undefined) this.remove("language");
     else this.set("language", { language });
     if (fonts === undefined || Object.keys(fonts).length === 0) this.remove("fonts");

@@ -466,7 +466,7 @@ A part left last behind other stopped parts is not its parent's only open part, 
 
 INF-6664 piece 1: the waiting work that no wake reports to the first mate, read from typed facts the record already holds.
 INF-6853 adds every hold and every wait on work nobody has started, so the first mate can judge whether to check with the captain: a hold's reason is words no code reads, and a wait on work the captain stopped wakes no one ("A wait on work the captain stopped is the captain's turn" above).
-INF-7116 adds idle work nothing runs or watches: a leftover notice in a task's inbox made every watcher read it as moving, so it sat 31 hours after its report with no wake.
+INF-7116 adds idle work nothing runs or watches: a leftover row in a task's inbox can make every watcher read idle work as moving, so no wake reports it.
 The next-move check wakes no one about a part the captain stopped and asks the captain only once it is its parent's last open part ("The last part the captain stopped" above), and the first mate's context counts unstarted work per project without listing it, so a part parked half way through begun work stood with nobody reading it again.
 `standingWork(host, now)` (`src/core/orchestrator/standingWork.ts`) only reads; the heartbeat serves it (`docs/automation.md`, "The heartbeat").
 

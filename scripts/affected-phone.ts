@@ -1019,6 +1019,34 @@ export function requestBase(
 }
 
 /**
+ * A branch rebuilt on an open batch's version, as a held batch's repair is, starts at the newest version of a batch
+ * branch, `infinitary-batch/<id>`, that it holds and that holds its merge point with its base, as
+ * `.github/actions/change-base` finds it for the branch's own check; the batch's other changes then count as none of
+ * the branch's edits. Each of them ran its own phone check, and the batch runs none (docs/testing.md, "The phone check
+ * on request"). A branch no batch version is under, or a clone whose batch branches cannot be read, keeps its base.
+ */
+export function batchBase(
+  base: string, head: string, git: (args: string[]) => string,
+): { base: string; batch?: string } {
+  let refs: string[];
+  let left: string;
+  try {
+    refs = git(["for-each-ref", "--format=%(objectname)", "refs/remotes/origin/infinitary-batch/"]).split("\n").filter(Boolean);
+    left = git(["merge-base", base, head]).trim();
+  } catch {
+    return { base };
+  }
+  const holds = (older: string, newer: string) => {
+    try { git(["merge-base", "--is-ancestor", older, newer]); return true; } catch { return false; }
+  };
+  let from = left;
+  for (const batch of refs) {
+    if (batch !== from && holds(from, batch) && holds(batch, head)) from = batch;
+  }
+  return from === left ? { base } : { base: from, batch: from };
+}
+
+/**
  * Each file's edit in a change, from its zero-context diff read with `--full-index --no-renames`: the lines it removes
  * and adds, without hunk positions, which move when the base under the change moves, and a changed binary file by
  * the file it leaves.
@@ -1080,8 +1108,11 @@ function main(): void {
     process.exitCode = 1;
     return;
   }
-  const base = requestBase(readable.base, values.head, git);
-  if (base.ignored) console.error(`Phone base ${values.base} is behind this branch's merge point with main; comparing with ${base.base} instead.`);
+  const merged = requestBase(readable.base, values.head, git);
+  if (merged.ignored) console.error(`Phone base ${values.base} is behind this branch's merge point with main; comparing with ${merged.base} instead.`);
+  const onBatch = batchBase(merged.base, values.head, git);
+  const base = { base: onBatch.base, ignored: merged.ignored };
+  if (onBatch.batch) console.error(`This branch is built on the batch version ${onBatch.batch}; comparing with it.`);
   const range = `${base.base}...${values.head}`;
   let paths: string[] | undefined;
   try {
@@ -1093,7 +1124,7 @@ function main(): void {
   if (values.since && paths) {
     try {
       const edit = (from: string, to: string) => git(["diff", "-U0", "--full-index", "--no-renames", `${from}...${to}`, "--"]);
-      const files = ownEdits(edit(requestBase(readable.base, values.since, git).base, values.since), edit(base.base, values.head));
+      const files = ownEdits(edit(batchBase(requestBase(readable.base, values.since, git).base, values.since, git).base, values.since), edit(base.base, values.head));
       since = { commit: values.since, files };
       paths = files;
     } catch {
@@ -1180,12 +1211,13 @@ function main(): void {
   console.log(`jobs=${JSON.stringify(jobs)}`);
   // A request that stops at its first failed pass stops its other jobs too.
   console.log(`stop_early=${requestStopsEarly(selection)}`);
-  if (values.placement) writeFileSync(values.placement, `${JSON.stringify({ run, base: base.base, ...(base.ignored ? { ignoredBase: base.ignored } : {}), ...(since ? { since: since.commit, ownEdits: since.files } : {}), inputs: decision.reasons, parts: placement, coverage: kept, iphoneOnly, screens, repeats }, null, 2)}\n`);
+  if (values.placement) writeFileSync(values.placement, `${JSON.stringify({ run, base: base.base, ...(base.ignored ? { ignoredBase: base.ignored } : {}), ...(onBatch.batch ? { batch: onBatch.batch } : {}), ...(since ? { since: since.commit, ownEdits: since.files } : {}), inputs: decision.reasons, parts: placement, coverage: kept, iphoneOnly, screens, repeats }, null, 2)}\n`);
   const row = (each: Placement) =>
     `- ${each.kept ? "Runs" : "Left"}: ${each.part}, distance ${each.distance}, ${each.minutes === undefined ? "no time" : `${each.minutes.toFixed(1)} minutes`}: ${each.reason}; ${each.why}`;
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY,
     ["### Native phone gate", "",
-      ...(base.ignored ? [`The requested base ${base.ignored} is behind this branch's merge point with main, so the change is read from ${base.base}.`, ""] : []),
+      ...(base.ignored ? [`The requested base ${base.ignored} is behind this branch's merge point with main, so the change is read from ${merged.base}.`, ""] : []),
+      ...(onBatch.batch ? [`This branch is built on the batch version ${onBatch.batch}, so the change is read from it; each of the batch's other changes ran its own phone check.`, ""] : []),
       ...(since ? [`Only the change's own edits since its last pass at ${since.commit} count; the earlier pass stays the proof for every other part. Edited since: ${since.files.join(", ") || "nothing"}.`, ""] : []),
       ...(decision.run ? decision.reasons.map((reason) => `- ${reason}`) : ["No phone input the gate uses changed beyond the contract version number."]),
       "", `Ordinary coverage: ${kept.join(" ") || "none"}; complete live selection: ${repeats.full}.`,

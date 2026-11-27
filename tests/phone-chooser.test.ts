@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   appScreenEdits,
+  batchBase,
   before,
   chooseRequest,
   deviceParts,
@@ -1152,6 +1153,38 @@ describe("INF-3379's recorded phone requests", () => {
     expect(readableBase(point, git)).toEqual({ base: point });
     const refused = readableBase("no-such-base", git);
     expect(refused).toEqual({ refused: expect.stringContaining("no-such-base") });
+  });
+
+  // The captain's fix 3 from a daily velocity review: "When a crewmate rebuilds a branch on top of an open batch, its
+  // phone check compares with the batch's version, as its branch check already does." INF-7046's branch, rebuilt on
+  // batch 5fe7754d, dealt 15 jobs compared with main and 2 compared with the batch.
+  it("reads a branch rebuilt on an open batch from the batch's version, as its branch check does", () => {
+    const head = "7f77c98f86deccd47eb51361412087b420175c3a";
+    const point = "5f5055205db882984ef62cb064bf3847b63234f7";
+    const batch = "e5d6f14f42e0c82031ce89e5c5f65a5aa1ead54b";
+    const otherBatch = "f841fa832ff70df09f83060bf5daeb890fc3b86d";
+    // git's own answers for these commits; an --is-ancestor git answered no with is absent, and fails.
+    const answers: Record<string, string> = {
+      "for-each-ref --format=%(objectname) refs/remotes/origin/infinitary-batch/": `${batch}\n${otherBatch}`,
+      [`merge-base origin/main ${head}`]: point,
+      [`merge-base --is-ancestor ${point} ${batch}`]: "",
+      [`merge-base --is-ancestor ${batch} ${head}`]: "",
+    };
+    const git = (args: string[]) => {
+      const answer = answers[args.join(" ")];
+      if (answer === undefined) throw new Error(`git ${args.join(" ")} failed`);
+      return `${answer}\n`;
+    };
+    expect(batchBase("origin/main", head, git)).toEqual({ base: batch, batch });
+    // A branch no batch version is under keeps its base, as does one whose clone cannot list batch branches.
+    answers["for-each-ref --format=%(objectname) refs/remotes/origin/infinitary-batch/"] =
+      otherBatch;
+    expect(batchBase("origin/main", head, git)).toEqual({ base: "origin/main" });
+    expect(
+      batchBase("origin/main", head, () => {
+        throw new Error("no batch branches");
+      }),
+    ).toEqual({ base: "origin/main" });
   });
 
   it("places INF-3137's edit to the overloaded verifyPhoneReadingColumn on its callers", () => {

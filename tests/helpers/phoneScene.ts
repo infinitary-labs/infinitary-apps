@@ -79,9 +79,11 @@ export function phoneSceneFixture(core: Core, userData: string, ready: () => Pro
           tasks.close(id, { status: "done", reason: "answered", actor: "host" });
         return { closed: closing };
       }
+      // The phone names a project group by the board's project id, which is not the repository's id.
+      const board = await core.dispatch("inf:tasks:board", []);
       return {
         ...(await core.dispatch("inf:settings:crew-grouping:get", [])),
-        projects: Object.fromEntries(repos.map((repo) => [repo.name, repo.id])),
+        projects: Object.fromEntries(board.projects.map((project) => [project.name, project.id])),
       };
     },
     async finishParts() {

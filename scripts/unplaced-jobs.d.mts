@@ -22,7 +22,7 @@ export type Verdict = {
 
 /** How GitHub's own annotation on a job no hosted runner took begins. */
 export const NEVER_PLACED: string;
-/** The newest attempt that may still ask for one more: a run reruns itself at most twice. */
+/** The run's last attempt, at which nothing more is asked, so a run reruns itself at most twice. */
 export const LAST_ATTEMPT: number;
 /** Whether GitHub's record of `job` says it never placed it on a runner, given the annotations on its check. */
 export function neverPlaced(job: RunJob, messages: readonly unknown[]): boolean;

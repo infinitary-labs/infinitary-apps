@@ -37,7 +37,7 @@ import { isBatchPullRun } from "./batch-pull.mjs";
 /** How GitHub's own annotation on a job no hosted runner took begins. */
 export const NEVER_PLACED = "The job was not acquired by Runner of type hosted";
 
-/** The newest attempt that may still ask for one more: a run reruns itself at most twice. */
+/** The run's last attempt, at which nothing more is asked, so a run reruns itself at most twice. */
 export const LAST_ATTEMPT = 3;
 
 const PASSED = new Set(["success", "skipped"]);

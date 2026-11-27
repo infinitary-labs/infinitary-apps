@@ -2,6 +2,6 @@
   "entries": [],
   "exclusions": [{
     "id": "unplaced-jobs",
-    "reason": "Internal: when GitHub cancels a merge batch's job because it never found a hosted Mac to run it, a new workflow asks GitHub to rerun that run's failed jobs on the same machines, so the batch's checks finish without a repair task rerunning them by hand. Only this project's own checks change; nothing a person uses changes."
+    "reason": "Internal: when GitHub cancels a merge batch's job because it never found a hosted Mac to run it and no other job of that run failed, a new workflow asks GitHub to rerun that run's failed jobs on the same machines, at most twice, so the batch's checks finish without a repair task rerunning them by hand. Only this project's own checks change; nothing a person uses changes."
   }]
 }

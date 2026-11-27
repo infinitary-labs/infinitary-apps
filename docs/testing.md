@@ -839,7 +839,7 @@ The batch's run holds what the repair reads: its failed jobs, the test files the
 A file the repair's computer cannot run, such as a journey where journeys run only through CI, is judged from its log and the changes' diffs, or run through `journeys.yml` with `files` on a branch the repair pushes at the batch's version.
 The batch's version is its branch's, `infinitary-batch/<id>`, which any clone fetches: one commit per change on the `main` version its last job names.
 A fix built on that version runs its branch's own check, which finds that version, skips every other step and passes in about a minute ("A pushed branch"), and the fix requests no journeys of its own: once it joins, the batch's rebuild runs every check and every journey on it with every change beside it, its release notes included ("The swept batch").
-A batch whose only failed checks are jobs GitHub never placed on a runner reruns them itself once its run ends ("A job GitHub never placed"), so its repair finds those checks running again.
+A batch whose only failed checks are jobs GitHub never placed on a runner reruns them itself once its run ends, before the run's third attempt and while its pull request is open at that version ("A job GitHub never placed"), so its repair finds those checks running again.
 
 ## A job GitHub never placed
 
@@ -856,7 +856,7 @@ Main's check, an alpha cut and an outside pull request never start it, since a m
 GitHub runs a `workflow_run` workflow from the default branch, so it checks out only `scripts/unplaced-jobs.mjs` and `scripts/batch-pull.mjs` from there, never the batch's code, reads jobs and annotations from GitHub as data, holds only Actions writes and check and pull request reads, uses no secret beyond its own token, and runs on GitHub's hosted Ubuntu.
 Its job summary names each job GitHub never placed and why it reran or did not.
 Started by hand with a batch run's id, and an attempt when wanted, it is a dry run: its summary says what it would do, and it reruns nothing.
-`tests/unplaced-jobs.test.ts` runs the workflow's own step on recorded batch runs: one whose only failure was a job GitHub never placed, one with such a job beside a failed test, and one with failed tests alone.
+`tests/unplaced-jobs.test.ts` runs the workflow's own step on recorded batch runs: one whose only failure was a job GitHub never placed, one with such a job beside a failed journey group, and one whose release notes check failed while a newer version of the batch cancelled the jobs still running or waiting.
 
 ## A batch pull request
 
@@ -1799,7 +1799,7 @@ A dry run asks for the ordinary kinds, so a rehearsal never takes a release's pl
 The batch checks' sweep, the alpha's full check, hands `release_split` the same way.
 The `native` kind is the one kind whose queue is GitHub's, `macos-15`, free in a public project: its five jobs take GitHub's five Macs for about half an hour each and leave the project's Macs to the desktop journeys (INF-6330's plan, option D).
 Those lanes read it before `verify.yml`'s `mac_runner` input, so a batch and a release send them there too, while the desktop lanes keep the input's queue; a request's own `native_runner` input comes first, to measure another runner, such as `macos-15-intel`, before a switch.
-A batch's job there that GitHub cancels because no Mac took it runs again on the same queue once the batch's run ends ("A job GitHub never placed").
+A batch's job there that GitHub cancels because no Mac took it runs again on the same queue once the batch's run ends, when no other job of that run failed, before the run's third attempt and while its pull request is open at that version ("A job GitHub never placed").
 Removing `native` from `MAC_QUEUES` sends them back to `split` in one parallel journeys job.
 The full Mac check's lanes ask for `split`, then the `journeys` kind, whose queue already takes journeys-sized jobs, then `check`, then the old label, so until `MAC_QUEUES` names `split` they run where journeys run.
 The placement service starts `release_build` before `release_sign`, so a publishing release's signed installer build starts first; on the Mac mini the build's place and the signing job's cores do not fit together, so signing waits until the build job, with its installed check, ends; until `MAC_QUEUES` names it, the build asks for its `build` kind, as in a dry run.

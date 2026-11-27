@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { describe, expect, it } from "vitest";
-import { judge, LAST_ATTEMPT, NEVER_PLACED, neverPlaced } from "../scripts/unplaced-jobs.mjs";
+import { judge, NEVER_PLACED, neverPlaced } from "../scripts/unplaced-jobs.mjs";
 import { githubScript, loadYamlFile, root, workflowValue } from "./helpers/releaseWorkflows";
 
 // GitHub's own Macs run the batch's native tests and parallel journeys, and
@@ -49,7 +49,7 @@ const fixture = (pull: number): Fixture =>
 const batch91 = fixture(91);
 // Batch #61 (run 45362891764): GitHub never placed its Mac group 1/4, and a Linux journey group failed.
 const batch61 = fixture(61);
-// Batch #105 (run 45727530725): its code checks failed, and a newer version cancelled the rest.
+// Batch #105 (run 45727530725): its release notes check failed, and a newer version cancelled the rest.
 const batch105 = fixture(105);
 
 const project = { owner: "infinitary-labs", repo: "infinitary-apps" };
@@ -231,7 +231,7 @@ describe("a batch run's jobs GitHub never placed on a runner", () => {
     expect(api.reruns).toEqual([]);
   });
 
-  it("leaves batch #105 to its repair: its code checks failed, and a newer version cancelled the jobs that were waiting", async () => {
+  it("leaves batch #105 to its repair: its release notes check failed, and a newer version cancelled the jobs that were waiting", async () => {
     const api = gitHub(batch105);
     const verdict = await judge({ github: api.github, ...project, run: batch105.run, attempt: 1 });
     // Jobs cancelled before they had a runner carry GitHub's words for a newer version, never for no runner.
@@ -244,17 +244,12 @@ describe("a batch run's jobs GitHub never placed on a runner", () => {
     expect(api.reruns).toEqual([]);
   });
 
-  it(`reruns no more once the run is at its attempt ${LAST_ATTEMPT}`, async () => {
-    const third = atAttempt(batch91, LAST_ATTEMPT);
+  it("reruns no more once the run is at its third attempt", async () => {
+    const third = atAttempt(batch91, 3);
     const api = gitHub(third);
-    const verdict = await judge({
-      github: api.github,
-      ...project,
-      run: third.run,
-      attempt: LAST_ATTEMPT,
-    });
+    const verdict = await judge({ github: api.github, ...project, run: third.run, attempt: 3 });
     expect(verdict).toMatchObject({ act: "none", reason: "limit" });
-    expect(verdict.words).toContain(`attempt ${LAST_ATTEMPT}`);
+    expect(verdict.words).toContain("attempt 3");
     await runWorkflow(api, { run: third.run });
     expect(api.reruns).toEqual([]);
     // A second attempt that ended the same way still asks for the third.

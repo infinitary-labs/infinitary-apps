@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "phone-write-ask-row",
+      "kind": "fix",
+      "title": "A request that joins a waiting approval card stays readable on iPhone",
+      "body": "When a new request joined an approval card that was already waiting, its row showed the request one letter per line on iPhone. The \"Joined while this card waited\" label now sits under the request, so the request is as wide as every other row's, on iPhone and iPad and on the computer.",
+      "area": "cards",
+      "picture": {
+        "dark": "phone-write-ask-row-dark.png",
+        "light": "phone-write-ask-row-light.png",
+        "alt": "An approval card's row whose request reads across the row, with its Joined while this card waited label underneath"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

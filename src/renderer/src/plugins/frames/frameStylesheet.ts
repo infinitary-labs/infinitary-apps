@@ -312,12 +312,15 @@ export const FRAME_BASE_STYLE = `
   .inf-asks { list-style: none; margin: var(--space-3) 0; padding: 0; counter-reset: inf-runs inf-out inf-all; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-2); }
   .inf-ask { counter-increment: inf-runs inf-all; margin: 0; padding: var(--space-2) var(--space-3); border: 1px solid var(--line-1); border-left: 3px solid var(--ok); border-radius: var(--radius-m); background: var(--bg-1); transition: opacity var(--dur-med) ease, border-color var(--dur-med) ease; }
   .inf-ask:has(input:not(:checked)) { counter-increment: inf-out inf-all; border-left-color: var(--line-2); background: transparent; }
-  .inf-ask-head { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+  /* A grid, not a one-line flex row: the joined tag and the Allow box cannot shrink, so beside them on one line
+     the request took the whole shortfall and drew one character per line on a phone. The tag sits under the
+     request, so a joined row's request is as wide as any other's. */
+  .inf-ask-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; column-gap: var(--space-2); row-gap: var(--space-1); min-width: 0; }
   .inf-ask-n { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--fg-3); min-width: 1.2em; }
   .inf-ask-name { font-weight: 500; color: var(--fg-1); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .inf-ask-call { white-space: normal; overflow-wrap: anywhere; }
-  .inf-ask-joined { font-size: var(--text-xs); color: var(--accent); background: var(--accent-dim); border-radius: var(--radius-s); padding: 0 var(--space-1); white-space: nowrap; }
-  .inf-ask-out { margin-left: auto; display: inline-flex; align-items: center; gap: var(--space-1); font-size: var(--text-sm); color: var(--fg-2); white-space: nowrap; cursor: pointer; }
+  .inf-ask-joined { font-size: var(--text-xs); color: var(--accent); background: var(--accent-dim); border-radius: var(--radius-s); padding: 0 var(--space-1); white-space: nowrap; grid-row: 2; grid-column: 2; justify-self: start; }
+  .inf-ask-out { grid-row: 1; grid-column: 3; display: inline-flex; align-items: center; gap: var(--space-1); font-size: var(--text-sm); color: var(--fg-2); white-space: nowrap; cursor: pointer; }
   .inf-ask-input { box-sizing: border-box; width: 100%; max-width: none; margin: var(--space-2) 0 0; padding: var(--space-1) var(--space-2); background: var(--bg-0); border-radius: var(--radius-s); font-family: var(--font-mono); font-size: var(--text-sm); color: var(--fg-1); white-space: pre-wrap; overflow-wrap: anywhere; }
   dl.inf-ask-input { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: var(--space-3); }
   .inf-ask-input dt { color: var(--fg-3); }

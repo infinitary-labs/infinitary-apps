@@ -353,6 +353,14 @@ export class HomeLink {
   private refusals = 0;
   private stopped = false;
   private leaving = false;
+  /**
+   * Each connection on which the home said `unpaired` (`removal-notice`,
+   * which this device's hello lists). Its close then reads as the home's
+   * `unpaired` close, however it ends: the home closes a connection it said
+   * that on only after a grace, or cuts it when it stops, so a device that
+   * waited for that close would read its removal late or as a lost home.
+   */
+  private readonly toldUnpaired = new WeakSet<WebSocket>();
   private retryTimer: NodeJS.Timeout | undefined;
   private nextId = 1;
   /** The highest home number heard; a lower one is a home left behind by a move. */
@@ -476,7 +484,7 @@ export class HomeLink {
       const timer = setTimeout(() => resolve(false), timeoutMs);
       socket.once("close", (code: number) => {
         clearTimeout(timer);
-        resolve(code === CONNECTION_CLOSE.unpaired);
+        resolve(code === CONNECTION_CLOSE.unpaired || this.toldUnpaired.has(socket));
       });
       try {
         socket.send(JSON.stringify({ t: "leave" }));
@@ -690,6 +698,9 @@ export class HomeLink {
           else pending.reject(new HomeRefusalError(frame.error));
         } else if (frame.t === "invoke") {
           void this.answer(socket, { ...frame, channel: ownChannel(frame.channel) });
+        } else if (frame.t === "unpaired") {
+          this.toldUnpaired.add(socket);
+          socket.close();
         }
       });
       socket.once("close", (code: number) => {
@@ -704,7 +715,9 @@ export class HomeLink {
           ...(older ? { older } : {}),
           ...(second ? { second } : {}),
           ...(refusedStatus === undefined ? {} : { refusedStatus }),
-          ...(welcomed ? { closeCode: code } : {}),
+          ...(welcomed
+            ? { closeCode: this.toldUnpaired.has(socket) ? CONNECTION_CLOSE.unpaired : code }
+            : {}),
         });
       });
     });

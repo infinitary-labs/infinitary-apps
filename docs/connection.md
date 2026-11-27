@@ -229,6 +229,8 @@ A device whose hello lists `removal-notice` (`REMOVAL_NOTICE`, `src/shared/conne
 The outbox writes it right after the frame it is writing, which still ends whole, drops every frame not yet begun, and writes nothing after it.
 The device closes the connection itself on reading it; the home closes it as `unpaired` once the device answered for the frame and one second more passed (`removalGraceMs`), if it has not.
 A phone's socket loses a close that arrives while one of its own sends is still going, such as a read answering the frame before the removal, and reads that as a lost connection; a frame ahead of the close it always reads.
+A computer's link to its home (`src/core/devices/homeLink.ts`) lists every change its build knows, this one too, so it reads the frame as it reads the `unpaired` close: it closes the connection, and that close, however it ends, reads as `unpaired`, a removal or a Leave the home heard.
+Waiting for the home's close instead would read the removal a second late, or as a lost home when the home cuts the connection as it stops listening.
 
 Stopping a listening run stops accepting connections and forwarding pushes at once, then waits for every device socket to close before resolving.
 The close handshakes run concurrently, with one two-second grace for the whole run; any sockets still open at its end are terminated.

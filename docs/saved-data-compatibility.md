@@ -620,6 +620,7 @@ An older build ignores `readerHolds` and serves no `web_read`.
 A task's standing override (`HoldOverride`, `docs/delivery-rigor.md`, "The override") may carry `direction`, the id and revision of the heard project direction its words are; it rides the existing JSON and adds no migration.
 An older build ignores `direction` and reads such an override as one the captain's words gave, so it never ends it when the direction is revised or retired; downgrading while one stands is unsupported.
 The next start of a build that knows the field ends it if the direction changed meanwhile.
+Its Activity lines name the holds it passes as a list fill (`docs/i18n.md`, "Saved facts"), which an older build or phone cannot word, so it shows those lines in their saved English.
 
 ## Task tags
 

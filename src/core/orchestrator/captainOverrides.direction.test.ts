@@ -13,7 +13,9 @@ import { rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { WorkspaceService } from "@core/workspace/workspaceService";
 import { overridePasses } from "@shared/holds";
-import { describe, expect, it, vi } from "vitest";
+import { setCurrentLanguage } from "@shared/i18n/current";
+import { saidSchema, wordedLine } from "@shared/i18n/said";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { setup as crewSetup, fakeCrewmate, reboot } from "../../../tests/helpers/crewHarness";
 import {
   bindDirections,
@@ -31,6 +33,7 @@ import type { RepoRegistry } from "../workspace/repoRegistry";
 import { DIRECTION_REFUSED, OVERRIDE_REFUSED, SCHEDULED_CITES_DIRECTION } from "./captainOverrides";
 
 fakeClockEachTest();
+afterEach(() => setCurrentLanguage("en"));
 
 type Harness = ReturnType<typeof setup>;
 
@@ -80,13 +83,15 @@ async function harbor(): Promise<{ h: Harness; knowledge: KnowledgeService; repo
 }
 
 describe("an override citing a heard direction", () => {
-  it("records the direction's words with its id and revision, and names it on the row", async () => {
+  // The captain's pick on INF-7021's review: the row names each hold the
+  // direction passes, in all ten languages.
+  it("records the direction's words with its id and revision, and names it and each hold it passes on the row", async () => {
     const { h, knowledge, repo } = await harbor();
     heard(knowledge, "release-checks", repo, RULE);
     await h.agent.converse("Use my Harbor release rule for this release's checks.");
 
     const answer = await override(h, "t-release", {
-      holds: ["checks"],
+      holds: ["checks", "asks-first"],
       until: "task",
       from: "d:release-checks",
     });
@@ -94,18 +99,22 @@ describe("an override citing a heard direction", () => {
     const delivery = h.tasks.get("t-release")?.delivery;
     expect(delivery?.override).toMatchObject({
       words: RULE,
-      holds: ["checks"],
+      holds: ["checks", "asks-first"],
       until: "task",
       direction: { id: "release-checks", revision: 1 },
     });
     expect(overridePasses(delivery, "checks")).toBe(true);
-    expect(
-      line(
-        h.tasks,
-        "t-release",
-        `Your direction d:release-checks passes the holds your first mate named for the rest of this task, until it is revised or retired: “${RULE}”`,
-      ),
-    ).toMatchObject({ kind: "note", actor: "firstmate" });
+    const row = line(
+      h.tasks,
+      "t-release",
+      `Your direction d:release-checks passes the checks and asking first for the rest of this task, until it is revised or retired: “${RULE}”`,
+    );
+    expect(row).toMatchObject({ kind: "note", actor: "firstmate" });
+    // The window words the row's saved fact in the captain's language.
+    setCurrentLanguage("de");
+    expect(wordedLine({ text: row?.text ?? "", said: saidSchema.parse(row?.data?.said) })).toBe(
+      `Wegen deiner Vorgabe d:release-checks halten diese Punkte die Aufgabe für den Rest ihrer Laufzeit nicht mehr zurück: die Überprüfungen und das Fragen vorher. Das gilt, bis die Vorgabe eine neue Revision bekommt oder zurückgezogen wird: „${RULE}“`,
+    );
   });
 
   it("refuses a direction that is no yes on the task, and records nothing", async () => {
@@ -280,14 +289,14 @@ describe("an override citing a heard direction", () => {
       line(
         h.tasks,
         "t-release",
-        "Your direction d:release-checks has a new revision, so the holds it passed on this task hold again.",
+        "Your direction d:release-checks has a new revision, so it stops passing the checks on this task.",
       ),
     ).toMatchObject({ kind: "note", actor: "host" });
     expect(
       line(
         h.tasks,
         "t-deploy",
-        "Your direction d:deploy-checks no longer stands, so the holds it passed on this task hold again.",
+        "Your direction d:deploy-checks no longer stands, so it stops passing the checks on this task.",
       ),
     ).toMatchObject({ kind: "note", actor: "host" });
     // Its crewmate hears that the override ended, on its next turn.
@@ -554,7 +563,7 @@ describe("a direction changed while the app was closed", () => {
       line(
         first.tasks,
         "t-release",
-        "Your direction d:release-checks no longer stands, so the holds it passed on this task hold again.",
+        "Your direction d:release-checks no longer stands, so it stops passing the checks on this task.",
       ),
     ).toMatchObject({ kind: "note", actor: "host" });
     // The rule left as it was still passes its task's holds.

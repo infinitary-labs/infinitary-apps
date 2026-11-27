@@ -6,11 +6,11 @@
       "area": "tasks",
       "docsSite": ["knowledge"],
       "title": "A direction you said can let a task go on without asking",
-      "body": "Your first mate can now use a direction you said for a project to let one of its tasks go on without asking you, as far as the direction's words reach, even on a scheduled check with no message from you. The task's Activity names the direction. Once you change or retire that direction, the task asks you again, and words you give on the task itself always count over a direction.",
+      "body": "Your first mate can now use a direction you said for a project to let one of its tasks go on without asking you, as far as the direction's words reach, even on a scheduled check with no message from you. The task's Activity names the direction and what it lets the task go on past, such as the checks or asking first, in your language. Once you change or retire that direction, the task asks you again, and words you give on the task itself always count over a direction.",
       "picture": {
         "dark": "task-goes-on-by-your-direction-dark.webp",
         "light": "task-goes-on-by-your-direction-light.webp",
-        "alt": "A task's Activity with a line saying your direction d:release-checks passes the holds your first mate named until it is revised or retired, and a later line saying it has a new revision, so those holds hold again"
+        "alt": "A task's Activity with a line saying your direction d:release-checks passes the checks and asking first for the rest of the task until it is revised or retired, and a later line saying it has a new revision, so it stops passing the checks and asking first"
       },
       "provenance": { "origin": "change" }
     }

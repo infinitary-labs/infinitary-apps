@@ -75,6 +75,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | header (an extra request header) | 请求头 | Short form of 请求标头, as Chinese developer docs say it. |
 | held (a batch that stopped) | 暂缓 | The same word as a merge a rule holds (暂缓了它); 暂停 stays for what a person pauses. |
 | hold (on a task) | 暂缓 | 暂缓结束 for a hold ending. |
+| holds an override passes (named on a task's Activity) | asking first: 先询问; the open decisions: 未决的决定; the waits: 对其他工作的等待; the open parts: 未完成的部分; the checks: 检查; the delivery proof: 交付证明; the saved story: 已保存的改动说明; the heavy-run line: 繁重运行的排队; the cost limit: 费用上限; a retired hold: 已停用的项目 | Joined as one list in the reader's language on the line. |
 | How to get it (an ask for a secret) | 获取方法 | The heading over the steps a crewmate lays out for making or finding a secret. |
 | Infinitary | Infinitary | Never translated. |
 | inspector | 检查器 | The Knowledge pane that reads one entry, as Apple's apps say. |

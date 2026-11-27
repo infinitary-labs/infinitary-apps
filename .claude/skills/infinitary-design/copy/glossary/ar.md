@@ -81,6 +81,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | header (a request header) | ترويسة | Plural "ترويسات"; only in the custom API form and the usage reporting form. |
 | held (a batch that stopped) | معلّقة | "إيقاف مؤقت" stays for what a person pauses. |
 | hold (on a task) | تعليق | "بعد رفع تعليقها" for once its hold ends. |
+| holds an override passes (named on a task's Activity) | asking first: السؤال أولًا; the open decisions: القرارات المفتوحة; the waits: انتظار العمل الآخر; the open parts: الأجزاء المفتوحة; the checks: الفحوصات; the delivery proof: إثبات التسليم; the saved story: القصة المحفوظة; the heavy-run line: طابور التشغيلات الثقيلة; the cost limit: حد التكلفة; a retired hold: تعليق لم يعد موجودًا | Joined as one list in the reader's language on the line. |
 | How to get it (an ask for a secret) | كيف تحصل عليه | The heading over the steps a crewmate lays out for making or finding a secret. |
 | Infinitary | Infinitary | Never translated, written in Latin letters inside the Arabic sentence. |
 | inspector | التفاصيل | The side pane that shows one entry. |

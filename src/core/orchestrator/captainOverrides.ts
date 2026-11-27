@@ -12,7 +12,7 @@ import {
   STANDING_WORDS_FROM,
   standingOverride,
 } from "@shared/holds";
-import { said, saidLine } from "@shared/i18n/said";
+import { type SaidPart, said, saidLine, saidList } from "@shared/i18n/said";
 import type { KnowledgeDirectionHeard } from "@shared/knowledge";
 import { CREWMATE_TAB_VIA } from "@shared/provenance";
 import type { TaskRecord } from "../storage/taskRecords";
@@ -60,6 +60,34 @@ export function captainWordsIn(
 
 /** A direction an override cites, at the revision cited (`HoldOverride.direction`). */
 type CitedDirection = NonNullable<HoldOverride["direction"]>;
+
+/**
+ * Each hold an override can pass, as the captain reads it on the task's
+ * record in their own language (INF-7021); `HOLDS`' names stay the words the
+ * crew is served. A kind a later version retired, still on a saved
+ * override, reads as a retired hold.
+ */
+const HOLD_SAID = {
+  "asks-first": "taskHoldAsksFirst",
+  decisions: "taskHoldDecisions",
+  waits: "taskHoldWaits",
+  parts: "taskHoldParts",
+  checks: "taskHoldChecks",
+  proof: "taskHoldProof",
+  story: "taskHoldStory",
+  "load-line": "taskHoldLoadLine",
+  "cost-limit": "taskHoldCostLimit",
+} as const satisfies Record<OverridableHold, string>;
+const RETIRED_HOLD_SAID = "taskHoldRetired";
+
+/** The holds an override passes, as one list the record words where it is shown. */
+function holdsSaid(holds: readonly string[]): SaidPart {
+  const named = holds.map((kind) =>
+    Object.hasOwn(HOLD_SAID, kind) ? HOLD_SAID[kind as OverridableHold] : RETIRED_HOLD_SAID,
+  );
+  const [first = RETIRED_HOLD_SAID, ...rest] = [...new Set(named)];
+  return saidList([first, ...rest]);
+}
 
 /** Why an override citing a direction is refused, after `OVERRIDE_REFUSED`. */
 // i18n-exempt: refusals served to the first mate, never shown to a person
@@ -260,7 +288,7 @@ export class CaptainOverrides {
             override.until === "task"
               ? "taskOverrideDirectionTask"
               : "taskOverrideDirectionVersion",
-            { direction: input.direction.id, words: override.words },
+            { direction: input.direction.id, holds: holdsSaid(holds), words: override.words },
           ),
         )
       : undefined;
@@ -361,6 +389,7 @@ export class CaptainOverrides {
       const line = saidLine(
         said(now && !now.retired ? "taskOverrideDirectionRevised" : "taskOverrideDirectionGone", {
           direction: cited.id,
+          holds: holdsSaid(override.holds),
         }),
       );
       this.options.tasks.delivery.recordPermissionRecords(

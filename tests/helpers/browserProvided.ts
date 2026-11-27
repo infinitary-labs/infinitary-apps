@@ -1,5 +1,6 @@
 import type { PushPayload } from "@shared/ipc";
 import type { TaskBoard } from "@shared/tasks";
+import type { WriteAsk } from "@shared/writeAsk";
 
 /**
  * What the browser project's Node side gives its pages (docs/testing.md,
@@ -84,5 +85,6 @@ declare module "vitest/browser" {
     loadReading(): Promise<LoadReading>;
     holdCommandProcess(milliseconds: number): Promise<void>;
     holdBootLine(milliseconds: number): Promise<void>;
+    readerApprovalCardBody(asks: WriteAsk[], joined: string[]): Promise<string>;
   }
 }

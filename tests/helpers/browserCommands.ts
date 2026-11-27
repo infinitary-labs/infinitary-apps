@@ -1,7 +1,9 @@
 import { availableParallelism, loadavg } from "node:os";
 import { basename, join } from "node:path";
 import type { Frame, Page } from "@playwright/test";
+import type { WriteAsk } from "@shared/writeAsk";
 import type { BrowserCommand, TestProject } from "vitest/node";
+import type { readerApprovalCard as ReaderApprovalCard } from "../../src/core/orchestrator/forgeApprovalCard";
 import type { HomeRead, HomeSeed, holdLine, readHome } from "./browserFreshHome";
 import type { LoadReading, ReducedMotion } from "./browserProvided";
 import { GRADES_BUDGETS } from "./budgets";
@@ -306,6 +308,26 @@ const holdCommandProcess: BrowserCommand<[milliseconds: number]> = (_context, mi
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, milliseconds);
 };
 
+/**
+ * The body of the approval card the host raises for an unsafe data reader's
+ * held writes, built by the core's own builder in this process, since that
+ * builder reaches Node modules the page cannot load.
+ */
+const readerApprovalCardBody: BrowserCommand<[asks: WriteAsk[], joined: string[]]> = async (
+  { project },
+  asks,
+  joined,
+) => {
+  const { readerApprovalCard } = await project.import<{
+    readerApprovalCard: typeof ReaderApprovalCard;
+  }>(join(project.config.root, "src/core/orchestrator/forgeApprovalCard.ts"));
+  return readerApprovalCard(
+    asks,
+    { id: "task", title: "Outside intake round" },
+    { joined: new Set(joined) },
+  ).body;
+};
+
 export const browserCommands = {
   emulateReducedMotion,
   evaluateInFrame,
@@ -320,4 +342,5 @@ export const browserCommands = {
   loadReading,
   holdCommandProcess,
   holdBootLine,
+  readerApprovalCardBody,
 };

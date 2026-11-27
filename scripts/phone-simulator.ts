@@ -59,8 +59,9 @@ export const PHONE_SIMULATOR_LANGUAGE = { languages: ["en"], locale: "en_US" } a
  * Sets `simulator`, which `simctl create` has just made and nothing has booted yet, to speak PHONE_SIMULATOR_LANGUAGE
  * from its first boot, through `run`. `simctl create` copies this Mac's own language and region into the new simulator's
  * global preferences, and SpringBoard reads them as it boots. The app speaks English whatever the simulator speaks
- * (`englishPhone` in PhoneKeys.swift), but the system's own questions do not: on a French Mac the notification question
- * offered Autoriser where the push part waits for Allow, and the question left on screen covered every later part.
+ * (`englishPhone` in PhoneKeys.swift), but the system's own questions speak the simulator's language, such as the
+ * notification question whose Allow the push part waits for, and a question no part answers can stay over the app for
+ * the parts after it on the same simulator.
  */
 export async function phoneSimulatorInEnglish(simulator: string, run: (command: string, args: string[]) => Promise<string>) {
   const listing = JSON.parse(await run("xcrun", ["simctl", "list", "devices", "-j"])) as

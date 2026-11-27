@@ -3,7 +3,7 @@
   "exclusions": [
     {
       "id": "phone-simulators-speak-english",
-      "reason": "Internal: the phone check starts each simulator it creates in English, so its journeys pass on a Mac set to another language, without changing app behavior."
+      "reason": "Internal: the phone check starts each simulator it creates in English, so the system's own questions its journeys answer read in English on a Mac set to another language, without changing app behavior."
     }
   ]
 }

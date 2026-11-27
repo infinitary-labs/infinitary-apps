@@ -332,6 +332,7 @@ Since FI3-566 (cut C) those instructions sit where each step arises: the first m
    A pass carries to a later version whose stored change reading matches the review's reading, for the attestation and the record; no merge is held on it (INF-1876).
    The approved head's reading is stored when the captain approves, and each repair's reading is stored when that repair is recorded, in the read that already brought the branch home.
    Opening the pull request still carries a version that has no stored reading yet, by reading it once and storing that reading, and a quiet timeline line records that carry.
+   A Careful builder's report carries the same way to the version it reads, before the Careful review wake judges that version (`ReportIntake.committedVersion`).
    The kept merge reads no review; its story refresh compares the stored readings for the attestation and does not read the branch again.
    A carry recorded before the reading was stored with the version still covers its head.
    The reading keeps one neighboring line and drops where the lines sit.

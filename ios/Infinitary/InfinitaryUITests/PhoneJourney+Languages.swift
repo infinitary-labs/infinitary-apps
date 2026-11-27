@@ -84,8 +84,11 @@ extension PhoneJourney {
                 let back = app.buttons["phone-settings-back"], window = app.windows.firstMatch.frame
                 XCTAssertGreaterThan(back.frame.midX, window.midX, "Right to left, Back sits at the right")
             }
-            // Arabic's Appearance light and dark: the release note's hero picture pair is cut from these two.
-            if tag == "ar" { try await appearances("language-ar-appearance", showing: language) } else { picture("language-\(tag)-appearance") }
+            // Arabic's Appearance light and dark: the release note's hero picture pair is cut from these two. The
+            // redraw is read on Theme's line, which stays on screen; the theme tiles push Language below it on iPhone.
+            if tag == "ar" {
+                try await appearances("language-ar-appearance", showing: app.staticTexts["phone-theme-scope"])
+            } else { picture("language-\(tag)-appearance") }
         }
 
         // Apple's pseudo-languages: every word the phone's own Swift writes comes from its string files, so each is

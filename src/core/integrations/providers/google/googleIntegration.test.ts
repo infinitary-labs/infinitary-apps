@@ -1048,12 +1048,9 @@ describe("Google as an integration", () => {
 });
 
 /**
- * INF-7012's approved plan, piece 1: Gmail and Calendar go through Google's
- * gmailmcp and calendarmcp servers; "Google's elicitation prompt is relayed
- * to the captain on a card and never answered by the host"; a row line with
- * a link "when Google refuses an unmarked client or a service is off", and
- * the row keeps its sign-in; and Gmail send "uses MCP send; draft when not
- * listed".
+ * INF-785, the captain's words: "secrets used to access the external data
+ * should be handled by the planned secret management capability", and their
+ * choice on its plan: "One approval covers the Google sign-in".
  */
 describe("Google's sign-in kept in Secrets", () => {
   const search = (integrations: IntegrationsService) =>

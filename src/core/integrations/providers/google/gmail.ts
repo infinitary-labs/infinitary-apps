@@ -652,7 +652,13 @@ function mailCursor(text: string, account: string): MailCursor | undefined {
   }
 }
 
-/** Gmail's search words for mail received from a day before `at` on: `after:` counts whole days. */
+/**
+ * Gmail's search words for mail received from two days before `at` on:
+ * `after:` counts whole days in the account's own time zone, which can run a
+ * day behind the UTC date, so the second day keeps mail received just after
+ * `at` inside the search whichever zone the account keeps. The look drops
+ * what came before `at`.
+ */
 function receivedSince(at: number): string {
   const day = new Date(at - 2 * DAY_MS);
   const two = (value: number) => String(value).padStart(2, "0");

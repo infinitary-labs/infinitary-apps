@@ -261,9 +261,3 @@ describe("Google's MCP servers", () => {
     expect(google.calls("gmail").map((call) => call.tool)).not.toContain("send_message");
   });
 });
-
-/**
- * INF-785, the captain's words: "secrets used to access the external data
- * should be handled by the planned secret management capability", and their
- * choice on its plan: "One approval covers the Google sign-in".
- */

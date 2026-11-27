@@ -3,6 +3,7 @@ import {
   Client,
   isInputRequiredResult,
   ProtocolError,
+  type ResponseCacheStore,
   SdkHttpError,
   StreamableHTTPClientTransport,
 } from "@modelcontextprotocol/client";
@@ -25,6 +26,21 @@ import { IntegrationOutcomeUnknown } from "../../binding";
  */
 
 export type GoogleService = "gmail" | "calendar";
+
+/**
+ * A response cache that keeps nothing. Once the SDK's client holds a tool
+ * list it checks each answer against the tool's output schema, and every
+ * Google tool lists one, so Google's question, an `input_required` answer
+ * with no structured content, would come back as a broken answer instead
+ * of reaching the captain. Holding no list keeps that check off.
+ */
+const KEEPS_NOTHING: ResponseCacheStore = {
+  get: () => undefined,
+  set: () => 0,
+  delete: () => undefined,
+  evict: () => undefined,
+  clear: () => undefined,
+};
 
 /** What Google said of one request, beyond its answer: the row's facts follow it. */
 export type GoogleHeard =
@@ -343,6 +359,7 @@ export function googleMcp(options: GoogleMcpOptions): {
           // A form can reach a person, but no handler answers one: the captain does, on a card.
           capabilities: { elicitation: { form: {} } },
           inputRequired: { autoFulfill: false },
+          responseCacheStore: KEEPS_NOTHING,
         },
       );
       try {

@@ -3,7 +3,7 @@
  * them (`googleStandIn.ts`): each tool the Google row calls, by Google's own
  * name, input fields and answer shapes, as `tools/list` on
  * gmailmcp.googleapis.com and calendarmcp.googleapis.com gave them (their
- * `inputSchema` and `outputSchema`), over the SDK's 2026-07-28 server.
+ * `inputSchema`), over the SDK's 2026-07-28 server.
  * Every answer carries `structuredContent`, as Google's do.
  *
  * Only what Google's lists and descriptions state is modelled: search lists
@@ -103,6 +103,13 @@ const APPROVAL_SCHEMA = {
 const DAY_MS = 24 * 60 * 60 * 1000;
 const THREADS_A_PAGE = 50;
 const EVENTS_A_PAGE = 250;
+
+/**
+ * Every tool's output schema. Each of Google's tools lists one, and its
+ * presence alone changes what the SDK's client does with an answer, so the
+ * stand-in lists one too; it admits any object, as no test reads its fields.
+ */
+const ANSWER = z.looseObject({});
 
 const text = (value: unknown): CallToolResult => ({
   content: [{ type: "text", text: JSON.stringify(value) }],
@@ -348,7 +355,7 @@ export function gmailMcpServer(world: GoogleMcpWorld): McpServer {
     .optional();
   server.registerTool(
     "list_labels",
-    { inputSchema: z.strictObject({}), annotations: { readOnlyHint: true } },
+    { outputSchema: ANSWER, inputSchema: z.strictObject({}), annotations: { readOnlyHint: true } },
     async () =>
       text({
         labels: LABELS.map((label) => ({
@@ -361,6 +368,7 @@ export function gmailMcpServer(world: GoogleMcpWorld): McpServer {
   server.registerTool(
     "search_threads",
     {
+      outputSchema: ANSWER,
       inputSchema: z.strictObject({
         query: z.string().optional(),
         pageSize: z.number().int().min(1).max(THREADS_A_PAGE).optional(),
@@ -401,6 +409,7 @@ export function gmailMcpServer(world: GoogleMcpWorld): McpServer {
   server.registerTool(
     "get_message",
     {
+      outputSchema: ANSWER,
       inputSchema: z.strictObject({
         messageId: z.string(),
         messageFormat: z
@@ -425,6 +434,7 @@ export function gmailMcpServer(world: GoogleMcpWorld): McpServer {
   server.registerTool(
     "get_thread",
     {
+      outputSchema: ANSWER,
       inputSchema: z.strictObject({ threadId: z.string(), messageFormat: format }),
       annotations: { readOnlyHint: true },
     },
@@ -445,6 +455,7 @@ export function gmailMcpServer(world: GoogleMcpWorld): McpServer {
   server.registerTool(
     "update_message_labels",
     {
+      outputSchema: ANSWER,
       inputSchema: z.strictObject({
         messageId: z.string(),
         addLabelIds: z.array(z.string()).optional(),
@@ -486,7 +497,7 @@ export function gmailMcpServer(world: GoogleMcpWorld): McpServer {
     [...(input.to ?? []), ...(input.cc ?? [])].join(", ");
   server.registerTool(
     "create_draft",
-    { inputSchema: z.strictObject(outgoingInput) },
+    { outputSchema: ANSWER, inputSchema: z.strictObject(outgoingInput) },
     async (input, context) => {
       if (input.replyToMessageId && !find(input.replyToMessageId))
         return refused("Requested entity was not found.");
@@ -516,6 +527,7 @@ export function gmailMcpServer(world: GoogleMcpWorld): McpServer {
     server.registerTool(
       "send_message",
       {
+        outputSchema: ANSWER,
         inputSchema: z.strictObject({
           ...outgoingInput,
           draftId: z.string().optional(),
@@ -597,6 +609,7 @@ export function calendarMcpServer(world: GoogleMcpWorld): McpServer {
   server.registerTool(
     "list_calendars",
     {
+      outputSchema: ANSWER,
       inputSchema: z.strictObject({
         pageSize: z.number().int().optional(),
         pageToken: z.string().optional(),
@@ -618,6 +631,7 @@ export function calendarMcpServer(world: GoogleMcpWorld): McpServer {
   server.registerTool(
     "list_events",
     {
+      outputSchema: ANSWER,
       inputSchema: z.strictObject({
         calendarId: z.string().optional(),
         startTime: z.string().optional(),
@@ -664,6 +678,7 @@ export function calendarMcpServer(world: GoogleMcpWorld): McpServer {
   server.registerTool(
     "get_event",
     {
+      outputSchema: ANSWER,
       inputSchema: z.strictObject({ calendarId: z.string().optional(), eventId: z.string() }),
       annotations: { readOnlyHint: true },
     },
@@ -675,6 +690,7 @@ export function calendarMcpServer(world: GoogleMcpWorld): McpServer {
   server.registerTool(
     "suggest_time",
     {
+      outputSchema: ANSWER,
       inputSchema: z.strictObject({
         attendeeEmails: z.array(z.string()),
         startTime: z.string(),
@@ -735,6 +751,7 @@ export function calendarMcpServer(world: GoogleMcpWorld): McpServer {
   server.registerTool(
     "create_event",
     {
+      outputSchema: ANSWER,
       inputSchema: z.strictObject({
         ...writable,
         summary: z.string(),
@@ -765,6 +782,7 @@ export function calendarMcpServer(world: GoogleMcpWorld): McpServer {
   server.registerTool(
     "update_event",
     {
+      outputSchema: ANSWER,
       inputSchema: z.strictObject({
         ...writable,
         eventId: z.string(),

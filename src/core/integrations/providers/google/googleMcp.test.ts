@@ -131,6 +131,33 @@ describe("Google's MCP servers", () => {
     expect(google.answers.map((answer) => answer.choice)).toEqual(["ALLOW_ONCE", "DENY_ONCE"]);
   });
 
+  it("still puts Google's question to the captain after a send read Gmail's list of tools", async () => {
+    const world = await signedIn();
+    const { google, integrations } = world;
+    const id = google.deliver(ARRIVING);
+    await integrations
+      .forTask("task-1")
+      .call(
+        "Google",
+        "send_message",
+        { to: ["lena@ortiz-studio.com"], subject: "Got it", body: "Thanks, Lena." },
+        undefined,
+        "To tell Lena it arrived.",
+      );
+    const send = asksOf(world).find((ask) => ask.action === "send_message");
+    expect((await integrations.sendAsk("task-1", send?.id ?? "")).outcome).toEqual({ kind: "ran" });
+    expect(google.sent).toHaveLength(1);
+
+    google.knobs.confirm.add("update_message_labels");
+    const asked = await integrations.sendAsk("task-1", await labelAsk(world, id, ["receipts"]));
+    const why = asked.outcome.kind === "refused" ? asked.outcome.why : "";
+    expect(why).toContain("Google asked the captain to confirm it first, on a new card");
+    expect(asksOf(world).find((ask) => ask.id === askNamed(why))).toMatchObject({
+      action: "label_message",
+      confirm: { message: "Change this message's labels?" },
+    });
+  });
+
   it("keeps Google's question for a call the captain always allows, and tells the crewmate it waits", async () => {
     const world = await signedIn();
     const { google, integrations } = world;

@@ -256,6 +256,7 @@ The only trigger anywhere is the absence of a witness.
 `TaskService` (the one writer) keeps `idle_since` on the record: set at every idle boundary (a turn ending clean or failed, a resume that went idle), cleared when a turn starts.
 Beside it `recovery_rung` (0 none, 1 nudged, 2 woken, 3 card raised), `recovery_count` (wakes sent) and `recovery_at` (when the ladder last acted).
 A new turn starts a new episode and resets all of it - except the turn the ladder's own nudge started, which is the ladder acting (the steer is recorded as the supervisor's, and `onlyLadderSteers` reads that off the timeline).
+That turn stays the ladder's when it also carries a policy, override, allowance or kept-copy notice, which could not have started a turn alone (`isStandingNotice`), so the steps go on climbing behind it.
 A report, a chat message, a restart or a wall-clock jump does not reset it.
 
 **One reconciler, one order.**

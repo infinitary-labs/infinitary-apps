@@ -11,14 +11,17 @@
 
 import { describe, expect, it, vi } from "vitest";
 import {
+  endTurn,
   fakeCrewmate,
   fakeCrewTimersEachTest,
   intentOf,
   setup,
   tick,
 } from "../../../tests/helpers/crewHarness";
+import { idleLadderHarness, idleWakes, minutes } from "../../../tests/helpers/idleLadderHarness";
 import { INBOX_BACKOFF_MS } from "../storage/inboxStore";
 import { SERVABLE_BOUND_MS } from "./crewFacts";
+import { IDLE_NUDGE_TEXT } from "./idleWakes";
 
 fakeCrewTimersEachTest();
 
@@ -79,5 +82,43 @@ describe("CrewFacts.servesTurn", () => {
     const due = tried + (INBOX_BACKOFF_MS[0] ?? 0);
     expect(supervisor.facts.servesTurn(taskId, due + SERVABLE_BOUND_MS - 1)).toBe(true);
     expect(supervisor.facts.servesTurn(taskId, due + SERVABLE_BOUND_MS)).toBe(false);
+  });
+});
+
+// The approved INF-7116 plan: with only a notice on the lane "the stall
+// steps climb (nudge at 10 minutes, wake at 20, stall card at step 3)".
+describe("the idle ladder behind a notice alone", () => {
+  const { stopped } = idleLadderHarness();
+
+  it("reminds the crewmate at 10 idle minutes and wakes the first mate at 20", async () => {
+    const { tasks, inbox, crewmate, ops, sorts, taskId, at } = await stopped();
+    const record = tasks.get(taskId);
+    const policies = tasks.policiesOf(record);
+    if (!record || !policies) throw new Error("The commissioned task has no policies");
+    inbox.enqueue(taskId, {
+      facts: {
+        kind: "task-policies-changed",
+        task: { id: taskId, key: record.key, title: record.title },
+        policies,
+      },
+    });
+    const promptsBefore = crewmate.promptCalls.length;
+
+    await at(minutes(10) - 1);
+    expect(crewmate.promptCalls).toHaveLength(promptsBefore);
+    await at(minutes(10));
+    // The nudge's turn serves the notice with it; that turn is still the
+    // ladder acting, so the episode goes on.
+    expect(crewmate.promptCalls.at(-1)).toContain(IDLE_NUDGE_TEXT);
+    expect(sorts.at(-1)).toEqual({ taskId, verdict: "routine", rule: "idle-nudge" });
+    await endTurn(crewmate, taskId);
+    expect(inbox.allFor(taskId)).toEqual([]);
+    expect(idleWakes(ops)).toHaveLength(0);
+
+    await at(minutes(20) - 1);
+    expect(idleWakes(ops)).toHaveLength(0);
+    await at(minutes(20));
+    expect(idleWakes(ops)).toHaveLength(1);
+    expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "idle-wake" });
   });
 });

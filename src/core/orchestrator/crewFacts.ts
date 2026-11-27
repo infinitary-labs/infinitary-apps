@@ -36,6 +36,19 @@ import { rowAttachments } from "./wakes";
 import { deliverableOf } from "./workShape";
 
 /**
+ * A policy, override, allowance or kept-copy notice: guidance a turn
+ * carries, never a reason to start or resume one, nor the task moving.
+ */
+export function isStandingNotice(row: InboxRow): boolean {
+  return (
+    row.facts?.kind === "task-policies-changed" ||
+    row.facts?.kind === "away-copy-kept" ||
+    row.facts?.kind === "task-override-changed" ||
+    row.facts?.kind === "task-allowed-changed"
+  );
+}
+
+/**
  * How long a lane row still witnesses a crewmate moving after it was
  * created, last tried or fell due: the sweep serves a due row within a
  * tick, so one left unserved this long is a leftover nothing is serving.
@@ -101,17 +114,7 @@ export class CrewFacts {
         !(running && row.facts?.kind === "turn-resumed"),
     );
     // A policy, override or kept-copy notice alone is guidance, not permission to resume or start.
-    if (
-      !this.core.tasks.get(taskId)?.turn.running &&
-      rest.every(
-        (row) =>
-          row.facts?.kind === "task-policies-changed" ||
-          row.facts?.kind === "away-copy-kept" ||
-          row.facts?.kind === "task-override-changed" ||
-          row.facts?.kind === "task-allowed-changed",
-      )
-    )
-      return [];
+    if (!this.core.tasks.get(taskId)?.turn.running && rest.every(isStandingNotice)) return [];
     return rest;
   }
 

@@ -1,6 +1,7 @@
 import type {
   PanelKnowledgeCollection,
   PanelKnowledgeConnection,
+  PanelKnowledgeDirectionHeard,
   PanelKnowledgeEntryConnection,
   PanelKnowledgeOrigin,
   PanelKnowledgeSource,
@@ -85,6 +86,21 @@ export function directionOrigin(origin: string): string {
   if (origin.startsWith("crewmate-report:"))
     return m.knowledgePanelOriginCrewmateReport({ key: origin.slice("crewmate-report:".length) });
   return m.knowledgePanelOriginAgent();
+}
+
+/**
+ * Where the captain's own words for a direction's revision were heard, or
+ * that they were not, so the revision approves nothing on its own
+ * (docs/knowledge.md, "Heard from the captain").
+ */
+export function directionHeard(heard: PanelKnowledgeDirectionHeard | undefined): string {
+  if (!heard) return m.knowledgePanelNotHeard();
+  if (heard.from === "turn") return m.knowledgePanelHeardTurn();
+  if (heard.from === "card")
+    return m.knowledgePanelHeardCard({ title: heard.title ?? heard.card ?? "" });
+  if (heard.from === "crewmate-tab") return m.knowledgePanelHeardTab({ task: heard.task ?? "" });
+  if (heard.from === "standing") return m.knowledgePanelHeardStanding({ task: heard.task ?? "" });
+  return m.knowledgePanelHeardWindow();
 }
 
 export const STANDING_WORDS: Readonly<Record<PanelKnowledgeStanding, string>> = {

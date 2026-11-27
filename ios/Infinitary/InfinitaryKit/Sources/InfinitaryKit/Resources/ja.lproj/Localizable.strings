@@ -1399,6 +1399,12 @@
 "knowledgePanelFocusNearby" = "近くに絞る";
 "knowledgePanelGraphLabel" = "概念の 3D 表示";
 "knowledgePanelGraphLegend" = "実線の矢印：記録された主張 · 破線：併せて読む · 奥行きは配置のみ";
+"knowledgePanelHeardCard" = "カード「%1$@」で聞きました";
+"knowledgePanelHeardStanding" = "%1$@ での有効な返信で聞きました";
+"knowledgePanelHeardTab" = "%1$@ の「乗組員」タブで聞きました";
+"knowledgePanelHeardTitle" = "伝えた場所";
+"knowledgePanelHeardTurn" = "一等航海士へのあなたの言葉で聞きました";
+"knowledgePanelHeardWindow" = "ナレッジであなたが変更しました";
 "knowledgePanelInspector" = "インスペクター";
 "knowledgePanelInspectorSections" = "インスペクターのセクション";
 "knowledgePanelInstruction" = "指示";
@@ -1425,6 +1431,7 @@
 "knowledgePanelNoSources" = "出典は保存されていません。";
 "knowledgePanelNoUses" = "これを使ったと申告した作業はまだありません。";
 "knowledgePanelNone" = "なし";
+"knowledgePanelNotHeard" = "あなたから聞いていないため、これだけでは何も承認しません";
 "knowledgePanelNothingRecorded" = "まだ何も記録されていません";
 "knowledgePanelObservedBy" = "観察による · %1$@";
 "knowledgePanelOpLink" = "リンク";

@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { type KnowledgeDirectionHeard, knowledgeDirectionHeardSchema } from "@shared/knowledge";
 import Database from "better-sqlite3";
 import { type AppDatabase, readDatabaseSnapshot, schemaHistoryKnown } from "./db";
 
@@ -183,6 +184,18 @@ const MIGRATIONS: readonly string[] = [
     PRIMARY KEY (id, revision)
   );
   `,
+  // One mark per direction revision this build saved: the JSON of where the
+  // captain's words for it were heard, or null when they were not. A
+  // revision with no mark was saved before marks were kept.
+  // i18n-exempt: SQL, never shown to a person
+  `
+  CREATE TABLE direction_heard (
+    id TEXT NOT NULL,
+    revision INTEGER NOT NULL,
+    heard TEXT,
+    PRIMARY KEY (id, revision)
+  );
+  `,
 ];
 
 export const KNOWLEDGE_DB_FILE = "knowledge.db";
@@ -197,6 +210,12 @@ export type DirectionRow = {
   createdAt: number;
   updatedAt: number;
 };
+/**
+ * A revision's heard mark: where the captain's words for it were heard,
+ * `null` when this build saved it without them, and `undefined` when it was
+ * saved before marks were kept.
+ */
+export type DirectionMark = KnowledgeDirectionHeard | null | undefined;
 export type DirectionRevision = {
   revision: number;
   text: string;
@@ -205,6 +224,7 @@ export type DirectionRevision = {
   op: "publish" | "revise" | "retire";
   evidence: string;
   at: number;
+  heard: DirectionMark;
 };
 
 export type KnowledgeKind = "concept" | "finding";
@@ -477,25 +497,48 @@ export class KnowledgeStore {
     return this.db.transaction(run)();
   }
 
-  directions(): DirectionRow[] {
+  /** The current directions, each with its current revision's heard mark. */
+  directions(): (DirectionRow & { heard: DirectionMark })[] {
     return this.db
-      .prepare(`SELECT id, scope, text, origin, revision, retired,
-      created_at AS createdAt, updated_at AS updatedAt FROM directions ORDER BY created_at, id`)
+      .prepare(`SELECT d.id, d.scope, d.text, d.origin, d.revision, d.retired,
+      d.created_at AS createdAt, d.updated_at AS updatedAt,
+      h.revision AS marked, h.heard AS heard
+      FROM directions d LEFT JOIN direction_heard h ON h.id = d.id AND h.revision = d.revision
+      ORDER BY d.created_at, d.id`)
       .all()
       .map((row) => {
-        const entry = row as Omit<DirectionRow, "retired"> & { retired: number };
-        return { ...entry, retired: Boolean(entry.retired) };
+        const { marked, heard, retired, ...entry } = row as Omit<DirectionRow, "retired"> &
+          MarkColumns & { retired: number };
+        return { ...entry, retired: Boolean(retired), heard: markOf({ marked, heard }) };
       });
   }
 
   directionHistory(id: string): DirectionRevision[] {
     return this.db
-      .prepare(`SELECT revision, text, origin, scope, op, evidence, at
-      FROM direction_history WHERE id = ? ORDER BY revision DESC`)
-      .all(id) as DirectionRevision[];
+      .prepare(`SELECT r.revision, r.text, r.origin, r.scope, r.op, r.evidence, r.at,
+      h.revision AS marked, h.heard AS heard
+      FROM direction_history r LEFT JOIN direction_heard h ON h.id = r.id AND h.revision = r.revision
+      WHERE r.id = ? ORDER BY r.revision DESC`)
+      .all(id)
+      .map((row) => {
+        const { marked, heard, ...revision } = row as Omit<DirectionRevision, "heard"> &
+          MarkColumns;
+        return { ...revision, heard: markOf({ marked, heard }) };
+      });
   }
 
-  saveDirection(row: DirectionRow, op: DirectionRevision["op"], evidence: string): void {
+  /**
+   * Save a direction's new revision with its heard mark, `null` when
+   * unheard. Only a direction carried from before marks were kept is saved
+   * `unmarked`, so it reads as saved before them.
+   */
+  saveDirection(
+    row: DirectionRow,
+    op: DirectionRevision["op"],
+    evidence: string,
+    heard: KnowledgeDirectionHeard | null = null,
+    { unmarked = false }: { unmarked?: boolean } = {},
+  ): void {
     this.db
       .prepare(`INSERT INTO directions VALUES (@id, @scope, @text, @origin, @revision,
       @retired, @createdAt, @updatedAt) ON CONFLICT(id) DO UPDATE SET
@@ -506,6 +549,11 @@ export class KnowledgeStore {
       .prepare(`INSERT INTO direction_history VALUES
       (@id, @revision, @text, @origin, @scope, @op, @evidence, @updatedAt)`)
       .run({ ...row, retired: Number(row.retired), op, evidence });
+    if (!unmarked)
+      this.db
+        // i18n-exempt: SQL, never shown to a person
+        .prepare("INSERT INTO direction_heard VALUES (?, ?, ?)")
+        .run(row.id, row.revision, heard ? JSON.stringify(heard) : null);
   }
 
   entry(id: string): EntryRow | undefined {
@@ -1001,6 +1049,16 @@ export class KnowledgeStore {
 }
 
 export type SearchWords = { title: string; aliases: string; body: string };
+
+type MarkColumns = { marked: number | null; heard: string | null };
+
+/** A revision's mark as the join reads it: no row is no mark, a null column is unheard. */
+function markOf({ marked, heard }: MarkColumns): DirectionMark {
+  if (marked === null) return undefined;
+  if (heard === null) return null;
+  const parsed = knowledgeDirectionHeardSchema.safeParse(JSON.parse(heard));
+  return parsed.success ? parsed.data : null;
+}
 
 function migrate(db: AppDatabase): void {
   db.exec("CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY)");

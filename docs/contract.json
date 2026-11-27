@@ -47528,6 +47528,38 @@
                     },
                     "updatedAt": {
                       "type": "number"
+                    },
+                    "heard": {
+                      "type": "object",
+                      "properties": {
+                        "from": {
+                          "type": "string",
+                          "enum": [
+                            "turn",
+                            "card",
+                            "crewmate-tab",
+                            "standing",
+                            "window"
+                          ]
+                        },
+                        "card": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 200
+                        },
+                        "title": {
+                          "type": "string",
+                          "maxLength": 400
+                        },
+                        "task": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 64
+                        }
+                      },
+                      "required": [
+                        "from"
+                      ]
                     }
                   },
                   "required": [
@@ -47659,6 +47691,38 @@
                   "updatedAt": {
                     "type": "number"
                   },
+                  "heard": {
+                    "type": "object",
+                    "properties": {
+                      "from": {
+                        "type": "string",
+                        "enum": [
+                          "turn",
+                          "card",
+                          "crewmate-tab",
+                          "standing",
+                          "window"
+                        ]
+                      },
+                      "card": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "title": {
+                        "type": "string",
+                        "maxLength": 400
+                      },
+                      "task": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                      }
+                    },
+                    "required": [
+                      "from"
+                    ]
+                  },
                   "retired": {
                     "type": "boolean"
                   },
@@ -47699,6 +47763,38 @@
                         },
                         "at": {
                           "type": "number"
+                        },
+                        "heard": {
+                          "type": "object",
+                          "properties": {
+                            "from": {
+                              "type": "string",
+                              "enum": [
+                                "turn",
+                                "card",
+                                "crewmate-tab",
+                                "standing",
+                                "window"
+                              ]
+                            },
+                            "card": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 200
+                            },
+                            "title": {
+                              "type": "string",
+                              "maxLength": 400
+                            },
+                            "task": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 64
+                            }
+                          },
+                          "required": [
+                            "from"
+                          ]
                         }
                       },
                       "required": [
@@ -47810,6 +47906,39 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 400
+                  },
+                  "heard": {
+                    "type": "object",
+                    "properties": {
+                      "from": {
+                        "type": "string",
+                        "enum": [
+                          "turn",
+                          "card",
+                          "crewmate-tab",
+                          "standing",
+                          "window"
+                        ]
+                      },
+                      "card": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "title": {
+                        "type": "string",
+                        "maxLength": 400
+                      },
+                      "task": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                      }
+                    },
+                    "required": [
+                      "from"
+                    ],
+                    "additionalProperties": false
                   }
                 },
                 "required": [
@@ -47844,6 +47973,39 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 400
+                  },
+                  "heard": {
+                    "type": "object",
+                    "properties": {
+                      "from": {
+                        "type": "string",
+                        "enum": [
+                          "turn",
+                          "card",
+                          "crewmate-tab",
+                          "standing",
+                          "window"
+                        ]
+                      },
+                      "card": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "title": {
+                        "type": "string",
+                        "maxLength": 400
+                      },
+                      "task": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                      }
+                    },
+                    "required": [
+                      "from"
+                    ],
+                    "additionalProperties": false
                   }
                 },
                 "required": [
@@ -47874,6 +48036,39 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 400
+                  },
+                  "heard": {
+                    "type": "object",
+                    "properties": {
+                      "from": {
+                        "type": "string",
+                        "enum": [
+                          "turn",
+                          "card",
+                          "crewmate-tab",
+                          "standing",
+                          "window"
+                        ]
+                      },
+                      "card": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "title": {
+                        "type": "string",
+                        "maxLength": 400
+                      },
+                      "task": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                      }
+                    },
+                    "required": [
+                      "from"
+                    ],
+                    "additionalProperties": false
                   }
                 },
                 "required": [
@@ -47939,6 +48134,38 @@
               },
               "updatedAt": {
                 "type": "number"
+              },
+              "heard": {
+                "type": "object",
+                "properties": {
+                  "from": {
+                    "type": "string",
+                    "enum": [
+                      "turn",
+                      "card",
+                      "crewmate-tab",
+                      "standing",
+                      "window"
+                    ]
+                  },
+                  "card": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "title": {
+                    "type": "string",
+                    "maxLength": 400
+                  },
+                  "task": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  }
+                },
+                "required": [
+                  "from"
+                ]
               }
             },
             "required": [

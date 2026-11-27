@@ -90,7 +90,8 @@ export type FirstmateWakeKind =
   | "answer-missing"
   | "model-unasked"
   | "seat-moved"
-  | "taken-back";
+  | "taken-back"
+  | "directions-to-confirm";
 
 /**
  * The first mate's kinds each wake family words, read from the family's own

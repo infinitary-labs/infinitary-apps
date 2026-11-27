@@ -1399,6 +1399,12 @@
 "knowledgePanelFocusNearby" = "聚焦附近";
 "knowledgePanelGraphLabel" = "立體概念圖";
 "knowledgePanelGraphLegend" = "實線箭頭：已記錄的論斷 · 虛線：一起閱讀 · 深度僅為版面配置";
+"knowledgePanelHeardCard" = "聽你說過，在卡片「%1$@」上";
+"knowledgePanelHeardStanding" = "聽你說過，在你對 %1$@ 的有效回覆裡";
+"knowledgePanelHeardTab" = "聽你說過，在 %1$@ 的「船員」分頁裡";
+"knowledgePanelHeardTitle" = "在哪裡聽你說的";
+"knowledgePanelHeardTurn" = "聽你說過，在你對大副說的話裡";
+"knowledgePanelHeardWindow" = "由你在知識中修改";
 "knowledgePanelInspector" = "檢閱器";
 "knowledgePanelInspectorSections" = "檢閱器區段";
 "knowledgePanelInstruction" = "指示";
@@ -1425,6 +1431,7 @@
 "knowledgePanelNoSources" = "沒有隨它保存任何來源。";
 "knowledgePanelNoUses" = "還沒有工作申報用到它。";
 "knowledgePanelNone" = "無";
+"knowledgePanelNotHeard" = "沒有聽你說過，因此它本身不核准任何事";
 "knowledgePanelNothingRecorded" = "還沒有記錄任何內容";
 "knowledgePanelObservedBy" = "觀察得出 · 由 %1$@";
 "knowledgePanelOpLink" = "已關聯";

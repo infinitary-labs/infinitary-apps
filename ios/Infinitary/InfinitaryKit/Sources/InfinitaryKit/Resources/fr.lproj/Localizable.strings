@@ -1399,6 +1399,12 @@
 "knowledgePanelFocusNearby" = "Voisinage";
 "knowledgePanelGraphLabel" = "Concepts en trois dimensions";
 "knowledgePanelGraphLegend" = "Flèche pleine : affirmation enregistrée · Ligne pointillée : à lire ensemble · La profondeur n’est que de la mise en page";
+"knowledgePanelHeardCard" = "Entendue de vous, sur la carte « %1$@ »";
+"knowledgePanelHeardStanding" = "Entendue de vous, dans votre réponse permanente sur %1$@";
+"knowledgePanelHeardTab" = "Entendue de vous, dans l’onglet Équipier de %1$@";
+"knowledgePanelHeardTitle" = "Où vous l’avez dit";
+"knowledgePanelHeardTurn" = "Entendue de vous, dans vos mots à votre second";
+"knowledgePanelHeardWindow" = "Modifiée par vous dans Connaissances";
 "knowledgePanelInspector" = "Inspecteur";
 "knowledgePanelInspectorSections" = "Sections de l’inspecteur";
 "knowledgePanelInstruction" = "Instruction";
@@ -1425,6 +1431,7 @@
 "knowledgePanelNoSources" = "Aucune source n’a été conservée avec lui.";
 "knowledgePanelNoUses" = "Aucun travail n’a encore déclaré l’avoir utilisé.";
 "knowledgePanelNone" = "Aucun";
+"knowledgePanelNotHeard" = "Pas entendue de vous : elle n’approuve donc rien à elle seule";
 "knowledgePanelNothingRecorded" = "Rien n’est encore enregistré";
 "knowledgePanelObservedBy" = "Observé · par %1$@";
 "knowledgePanelOpLink" = "Relié";

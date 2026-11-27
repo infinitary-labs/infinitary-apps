@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import {
@@ -12,8 +13,11 @@ import { INFINITARY_ENV_DTS } from "./seed/infinitaryEnv.generated";
 // The generator reads the contracts through CONTRACTS_PATH, which the pull
 // request check's selector (scripts/unit-reach.ts) cannot see from here: a
 // contracts edit without a regenerated file reached the merge batch unread.
-// This literal project-relative path declares that indirect read to it.
-const inventoryFiles = ["src/shared/personal/contracts.ts"] as const;
+// These literal project-relative paths declare that indirect read to it.
+const inventoryFiles = [
+  "src/shared/personal/contracts.ts",
+  "src/shared/personal/knowledgeContracts.ts",
+] as const;
 // The selector reads this declaration statically, never by importing a test.
 void inventoryFiles;
 
@@ -33,8 +37,11 @@ describe("infinitary-env.d.ts", () => {
   it("declares every exported contract type inside the @infinitary/contracts module, with its doc", () => {
     expect(INFINITARY_ENV_DTS).toContain('declare module "@infinitary/contracts" {');
     const exported = [
-      ...readFileSync(CONTRACTS_PATH, "utf8").matchAll(/^export (type|interface) (\w+)/gm),
-    ];
+      CONTRACTS_PATH,
+      join(dirname(CONTRACTS_PATH), "knowledgeContracts.ts"),
+    ].flatMap((path) => [
+      ...readFileSync(path, "utf8").matchAll(/^export (type|interface) (\w+)/gm),
+    ]);
     expect(exported.length).toBeGreaterThan(0);
     for (const [, keyword, name] of exported) {
       expect(INFINITARY_ENV_DTS).toContain(`export ${keyword} ${name}`);

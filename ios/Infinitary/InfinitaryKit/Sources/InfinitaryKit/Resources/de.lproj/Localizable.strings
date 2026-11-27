@@ -1399,6 +1399,12 @@
 "knowledgePanelFocusNearby" = "Umgebung zeigen";
 "knowledgePanelGraphLabel" = "Begriffe in drei Dimensionen";
 "knowledgePanelGraphLegend" = "Durchgezogener Pfeil: festgehaltene Aussage · Gestrichelte Linie: zusammen lesen · Die Tiefe dient nur der Anordnung";
+"knowledgePanelHeardCard" = "Von dir gehört: auf der Karte „%1$@“";
+"knowledgePanelHeardStanding" = "Von dir gehört: in deiner stehenden Antwort zu %1$@";
+"knowledgePanelHeardTab" = "Von dir gehört: im Tab „Crewmitglied“ von %1$@";
+"knowledgePanelHeardTitle" = "Wo du es gesagt hast";
+"knowledgePanelHeardTurn" = "Von dir gehört: in deinen Worten an deinen ersten Offizier";
+"knowledgePanelHeardWindow" = "Von dir in Wissen geändert";
 "knowledgePanelInspector" = "Inspektor";
 "knowledgePanelInspectorSections" = "Bereiche des Inspektors";
 "knowledgePanelInstruction" = "Anweisung";
@@ -1425,6 +1431,7 @@
 "knowledgePanelNoSources" = "Es wurde keine Quelle dazu aufbewahrt.";
 "knowledgePanelNoUses" = "Noch keine Arbeit hat angegeben, dies verwendet zu haben.";
 "knowledgePanelNone" = "Keine";
+"knowledgePanelNotHeard" = "Nicht von dir gehört, daher gibt sie allein nichts frei";
 "knowledgePanelNothingRecorded" = "Noch nichts festgehalten";
 "knowledgePanelObservedBy" = "Beobachtet · von %1$@";
 "knowledgePanelOpLink" = "Verknüpft";

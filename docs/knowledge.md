@@ -141,7 +141,7 @@ A computer on a contract older than `KNOWLEDGE_THERE_SINCE` (`src/shared/contrac
 
 ### Directions are the first mate's to keep
 
-The first mate adds, revises and retires the captain's standing directions on its own judgment of what the captain wants, whatever began the turn: the captain's words, the captain's choice on a card, a confirmation click and a message the captain sends while it works all count, and nothing checks which one it was (INF-638, the captain: "why not just give first mate a tool to freely read and write standing directions, and then rely on the agent's judgment on when/how to do it?").
+The first mate adds, revises and retires the captain's standing directions on its own judgment of what the captain wants, whatever began the turn: the captain's words, the captain's choice on a card, a confirmation click and a message the captain sends while it works all count, and the host checks only where it says it heard them ("Heard from the captain" below) (INF-638, the captain: "why not just give first mate a tool to freely read and write standing directions, and then rely on the agent's judgment on when/how to do it?").
 It does so through the app action catalog, as it changes any setting: `app_change` with the `direction` line, whose `judgment` tier lets it act at any wake and keeps its evidence as the change's reason (`docs/orchestrator-contract.md`, "App action catalog").
 The line's channel, `inf:knowledge:direction:set`, runs `StandingDirections.change` through the dispatcher, the same path a captain's own control takes, so each change leaves one feed line and one operation; Knowledge has no such control yet.
 Every direction it writes is stamped `captain-turn`, the captain's instruction, and its history keeps the reason the first mate gave.
@@ -152,6 +152,24 @@ The offer names the direction and evidence and offers Retire and Keep; unresolve
 Unmet or unknown conditions remain in direction text and are reconsidered when relevant facts arrive, never dispatched as tasks to wait for or check the trigger.
 Unknown is not expired, and a fulfilled condition applies to authorized work rather than authorizing new work.
 No host parser, trigger store or polling schedule decides these judgments.
+
+### Heard from the captain
+
+Each revision of a direction records whether the captain's own words for it were heard, and from where (`direction_heard` in the knowledge store, kept by `StandingDirections.change`).
+The first mate says where with the `direction` line's `from`: `turn` for this turn's words, a card's id for the captain's reply or click there, or `crewmate-tab` or `standing` with `task` naming the task (INF-6987, the captain's plan).
+The host checks the citation by the rule an override's citation keeps (`heardDirection`, `src/core/orchestrator/captainOverrides.ts`, beside `captainWordsIn`): this turn carries the captain's words, the card holds their reply or click, the task's Crewmate tab holds a line they typed, or the task's standing reply stands.
+A scheduled wake that carries none of the captain's words cites none, and a citation the record does not hold is refused, so nothing is saved.
+A click whose answers name directions by `d:` id heard only the ones it names, and a click on a merge is consent to that merge, never words about a direction.
+A change the captain makes in the window is heard from the window; the dispatcher drops any `heard` a request carries, so only the core sets it.
+A change with no `from` still saves, on the first mate's own judgment: it guides work as an instruction, but it is no yes and passes no hold.
+A revision is heard only from what its own change carried, so a later revision with no cited words is not heard, even when an earlier one was.
+Only a heard current revision is consent: `keptYeses` (`src/core/tasks/alreadyAllowed.ts`) lists a project direction for a check approval or a visible validation effect only then, so an approval that rests on one waits for a click once its current revision is not heard.
+`renderDirections` serves each direction's `heard`, where it was heard or `false`, and Knowledge's inspector says it for the current revision and for each one in the history.
+
+A direction whose current revision was saved before Infinitary kept these marks has none, and reads as not heard (`docs/saved-data-compatibility.md`, "The knowledge collection").
+At the first start that finds any, the first mate is asked once to raise one card listing them, each a checkbox whose value is its `d:` id with none ticked (`askToConfirmDirections`, `src/core/orchestrator/directionsToConfirm.ts`; the captain's pick: "Confirm today's directions once, on one card").
+It revises each ticked one with its unchanged wording, citing that card, so the new revision is heard from it; the rest stay instructions that are not heard.
+The inbox keeps the ask with no task, so it is never asked again, and a start that finds none records the ask as made.
 
 ## Knowledge as needed
 
@@ -165,7 +183,7 @@ Knowledge is the only source for personal context, saved references and standing
   The brief holds none of its own, so a brief served again to a new conversation carries no stale copy.
 - Rendering never truncates directions to a character budget or a search page.
 - Captain-origin directions are instructions, other origins are labeled advice, and neither grants permission beyond the task.
-  A captain-origin direction that a step needs no consent is that consent, so a crewmate does not ask again for it.
+  A captain-origin direction that a step needs no consent is that consent, so a crewmate does not ask again for it, while its current revision was heard from the captain ("Heard from the captain").
 - Nothing saved enters an agent's instructions on its own: no entry, title or id is matched to a message or a task and put in front of the agent (INF-4008, the captain: "saved knowledge should be discoverable by the agent but not automatically injected").
   The agent searches with the `knowledge` tool when its work may depend on the captain's situation or a source they saved, and its description says so.
 - The first mate's context carries `saved_knowledge`: how many personal entries, saved sources and their findings the captain's collection holds (`KnowledgeService.savedCounts`), sent once per conversation and again when a count changes.
@@ -272,9 +290,9 @@ Directions leads the Directions, Graph, Concepts and Findings tabs, not a factua
 There is one captain-owned graph, with no Collection picker or Older notes.
 Directions lists all registered projects and the captain scope, named "Everywhere, first mate only" because no crewmate reads it, with a Project filter; removed projects are excluded by identifier, so a same-name replacement cannot inherit their directions.
 Find and keyboard navigation remain; the Project filter never changes the graph.
-The inspector shows wording, applicability, origin and lifecycle, plus paged edit history.
+The inspector shows wording, applicability, origin, where the captain's words for it were heard and lifecycle, plus paged edit history, each revision with where it was heard or that it was not.
 Ask about this drafts a question naming `d:<id>` for the Knowledge tool.
-The first mate's `app_change` `direction` adds one with `text` and `scope`, or revises or retires one by `d:` identifier, with an optional `expectedRevision`; its evidence is the reason the history keeps.
+The first mate's `app_change` `direction` adds one with `text` and `scope`, or revises or retires one by `d:` identifier, with an optional `expectedRevision` and the `from` it heard the captain's words at; its evidence is the reason the history keeps.
 Retiring removes active influence while retaining edits made in Knowledge; it is not secure erasure.
 
 ### Carrying the active directions
@@ -325,6 +343,7 @@ Proactive correction notices, cross-project reads, binary evidence, automatic ex
 - `src/core/knowledge/knowledgeReads.test.ts`: a claim's concepts named as its subject and object, the finding that contradicts it, its relations in the captain's window, a revision or source the reader cannot read refused as absent, and a file an older build kept checked against the reader's working copy.
 - `src/core/knowledge/knowledgeRetireMany.test.ts`: `retire_many` retires only what the captain's resolved card names, keeps the exceptions, lists what it left alone, keeps each entry's history and says the list in one feed line.
 - `src/core/knowledge/directions.test.ts`: the older record's active directions carried once, a retry after a quit and a conflicting destination, and the browser's pages and one direction read only where its project remains and the reader may see it.
+- `src/core/orchestrator/directionsHeard.test.ts`: through the first mate's own `app_change`, a revision heard from this turn, a card and the Crewmate tab, a citation the record does not hold refused with nothing saved, none on a scheduled wake or a later revision with no cited words, only heard revisions as kept yeses, and the confirm-once ask with only its ticked directions heard; `directions.test.ts` the `heard` each served direction carries, `src/core/core.settings.test.ts` a change in the window heard from the window whatever a request claims, and `src/core/core.boot.test.ts` the real boot asking once on a home with older directions and not again after a restart.
 - `tests/e2e/knowledge.spec.ts`: a crewmate's knowledge outlives its discarded task and a restart, and the next crewmate finds it in other words through its brief; a stated fact goes to knowledge, not notes.
 - `tests/e2e/knowledge-gate.spec.ts`: stable and alpha share tools, browsing and linked references; unreadable directions pause new work without replacing the collection.
 - `src/core/knowledge/knowledgeBrowse.test.ts`, `browse.test.ts` and `src/core/core.boot.test.ts`: counts, bounded graph, pages, standings, filters, entry reads and unavailability in every build.
@@ -336,5 +355,6 @@ Proactive correction notices, cross-project reads, binary evidence, automatic ex
 - `tests/e2e/knowledge-browser.spec.ts` (application lane): Open Knowledge by name and from the panel, the graph, its camera and a claim's evidence by keys, the pointer's orbit with either button, the wheel, the lists, Find and the filters, the inspector's sections, the kept place, the narrow card's Back, and Esc in its order, with no knowledge written and no task filed; its seed records through the real owner with pinned ids, so the graph lays out the same on every run (`tests/e2e/knowledgeSeed.ts`).
 - `tests/e2e/knowledge-directions.spec.ts`: directions stay distinct from personal facts in browsing and the first mate's served context; forty rendered directions arrive on an unrelated ask.
   A direction the captain chose on a crewmate's card is saved by the first mate on that crewmate's report, as the captain's instruction, through `app_change` with one Activity line, and the captain never types it.
+  The inspector says of the current revision and each one in its history whether it was heard from the captain and where.
   Eight active directions, five for one project, survive carryover and a stable restart; forget and purge remove influence without a notes fallback.
   This is scripted transport/use evidence, not a claim about live-model obedience.

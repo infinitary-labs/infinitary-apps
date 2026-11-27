@@ -36,6 +36,7 @@ import type { ProjectChanges } from "../workspace/projectChanges";
 import type { ProjectSetups } from "../workspace/projectSetups";
 import type { RepoRegistry } from "../workspace/repoRegistry";
 import type { CrewSupervisor } from "./crewSupervisor";
+import { askToConfirmDirections } from "./directionsToConfirm";
 import {
   FirstmateAgent,
   type FirstmateAgentOptions,
@@ -299,5 +300,6 @@ export function startHomeFirstmate({
     proposeProject: (value) => projectSetups.propose(value),
     changeProject: (action, value, actor) => projectChanges.request(action, value, actor),
   });
+  askToConfirmDirections({ knowledge, inbox, notify: (wake) => firstmate.notifyOp(wake, "agent") });
   return firstmate;
 }

@@ -1472,6 +1472,12 @@ public enum PhoneMessages {
     public static func `knowledgePanelGraphLabel`() -> String { PhoneWords.format("knowledgePanelGraphLabel", []) }
     public static func `knowledgePanelGraphLegend`() -> String { PhoneWords.format("knowledgePanelGraphLegend", []) }
     public static func `knowledgePanelGraphLink`(`count`: Int) -> String { PhoneWords.format("knowledgePanelGraphLink", [`count`]) }
+    public static func `knowledgePanelHeardCard`(`title`: String) -> String { PhoneWords.format("knowledgePanelHeardCard", [`title`]) }
+    public static func `knowledgePanelHeardStanding`(`task`: String) -> String { PhoneWords.format("knowledgePanelHeardStanding", [`task`]) }
+    public static func `knowledgePanelHeardTab`(`task`: String) -> String { PhoneWords.format("knowledgePanelHeardTab", [`task`]) }
+    public static func `knowledgePanelHeardTitle`() -> String { PhoneWords.format("knowledgePanelHeardTitle", []) }
+    public static func `knowledgePanelHeardTurn`() -> String { PhoneWords.format("knowledgePanelHeardTurn", []) }
+    public static func `knowledgePanelHeardWindow`() -> String { PhoneWords.format("knowledgePanelHeardWindow", []) }
     public static func `knowledgePanelHops`(`count`: Int) -> String { PhoneWords.format("knowledgePanelHops", [`count`]) }
     public static func `knowledgePanelInspector`() -> String { PhoneWords.format("knowledgePanelInspector", []) }
     public static func `knowledgePanelInspectorSections`() -> String { PhoneWords.format("knowledgePanelInspectorSections", []) }
@@ -1500,6 +1506,7 @@ public enum PhoneMessages {
     public static func `knowledgePanelNoSources`() -> String { PhoneWords.format("knowledgePanelNoSources", []) }
     public static func `knowledgePanelNoUses`() -> String { PhoneWords.format("knowledgePanelNoUses", []) }
     public static func `knowledgePanelNone`() -> String { PhoneWords.format("knowledgePanelNone", []) }
+    public static func `knowledgePanelNotHeard`() -> String { PhoneWords.format("knowledgePanelNotHeard", []) }
     public static func `knowledgePanelNothingRecorded`() -> String { PhoneWords.format("knowledgePanelNothingRecorded", []) }
     public static func `knowledgePanelObservedBy`(`author`: String) -> String { PhoneWords.format("knowledgePanelObservedBy", [`author`]) }
     public static func `knowledgePanelOpLink`() -> String { PhoneWords.format("knowledgePanelOpLink", []) }
@@ -6278,6 +6285,12 @@ extension PhoneWords {
         "knowledgePanelGraphLabel": [],
         "knowledgePanelGraphLegend": [],
         "knowledgePanelGraphLink": ["count"],
+        "knowledgePanelHeardCard": ["title"],
+        "knowledgePanelHeardStanding": ["task"],
+        "knowledgePanelHeardTab": ["task"],
+        "knowledgePanelHeardTitle": [],
+        "knowledgePanelHeardTurn": [],
+        "knowledgePanelHeardWindow": [],
         "knowledgePanelHops": ["count"],
         "knowledgePanelInspector": [],
         "knowledgePanelInspectorSections": [],
@@ -6306,6 +6319,7 @@ extension PhoneWords {
         "knowledgePanelNoSources": [],
         "knowledgePanelNoUses": [],
         "knowledgePanelNone": [],
+        "knowledgePanelNotHeard": [],
         "knowledgePanelNothingRecorded": [],
         "knowledgePanelObservedBy": ["author"],
         "knowledgePanelOpLink": [],

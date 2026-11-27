@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "direction-heard-from-you",
+      "kind": "improvement",
+      "area": "firstmate",
+      "docsSite": ["knowledge"],
+      "title": "A direction allows something only when you said it",
+      "body": "Each wording of a standing direction now notes whether your first mate heard it from you and where: in your message, on a card, or in a task's Crewmate tab. Only a direction you said lets a step skip asking you. One your first mate kept or reworded on its own still guides your crew, but allows nothing until you confirm it. Knowledge shows this under Where you said it and in each direction's History. After this update your first mate asks you once, on one card, which of your existing directions are yours.",
+      "picture": {
+        "dark": "direction-heard-from-you-dark.webp",
+        "light": "direction-heard-from-you-light.webp",
+        "alt": "A Harbor release direction open in Knowledge, with Where you said it reading Heard from you on the card Ask before each release?"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

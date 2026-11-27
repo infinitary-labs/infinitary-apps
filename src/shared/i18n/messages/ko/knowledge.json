@@ -133,6 +133,12 @@
     "plural": "count",
     "other": "그래프 · 개념 {count}개"
   },
+  "knowledgePanelHeardCard": "카드 “{title}”에서 들었어요",
+  "knowledgePanelHeardStanding": "{task}의 유효한 답장에서 들었어요",
+  "knowledgePanelHeardTab": "{task}의 선원 탭에서 들었어요",
+  "knowledgePanelHeardTitle": "말씀하신 곳",
+  "knowledgePanelHeardTurn": "일등항해사에게 하신 말씀에서 들었어요",
+  "knowledgePanelHeardWindow": "선장님이 지식에서 바꿨어요",
   "knowledgePanelHops": {
     "plural": "count",
     "other": "{count}단계"
@@ -167,6 +173,7 @@
   "knowledgePanelNoSources": "함께 보관한 출처가 없어요.",
   "knowledgePanelNoUses": "아직 이것을 사용했다고 밝힌 작업이 없어요.",
   "knowledgePanelNone": "없음",
+  "knowledgePanelNotHeard": "선장님께 듣지 않았으니 이것만으로는 아무것도 승인하지 않아요",
   "knowledgePanelNothingRecorded": "아직 기록된 것이 없어요",
   "knowledgePanelObservedBy": "관찰함 · {author}",
   "knowledgePanelOpLink": "연결함",

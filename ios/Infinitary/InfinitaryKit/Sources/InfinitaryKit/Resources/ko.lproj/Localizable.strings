@@ -1399,6 +1399,12 @@
 "knowledgePanelFocusNearby" = "주변에 집중";
 "knowledgePanelGraphLabel" = "3차원으로 본 개념";
 "knowledgePanelGraphLegend" = "실선 화살표: 기록된 주장 · 점선: 함께 읽기 · 깊이는 배치일 뿐이에요";
+"knowledgePanelHeardCard" = "카드 “%1$@”에서 들었어요";
+"knowledgePanelHeardStanding" = "%1$@의 유효한 답장에서 들었어요";
+"knowledgePanelHeardTab" = "%1$@의 선원 탭에서 들었어요";
+"knowledgePanelHeardTitle" = "말씀하신 곳";
+"knowledgePanelHeardTurn" = "일등항해사에게 하신 말씀에서 들었어요";
+"knowledgePanelHeardWindow" = "선장님이 지식에서 바꿨어요";
 "knowledgePanelInspector" = "상세 보기";
 "knowledgePanelInspectorSections" = "상세 보기 구역";
 "knowledgePanelInstruction" = "지시";
@@ -1425,6 +1431,7 @@
 "knowledgePanelNoSources" = "함께 보관한 출처가 없어요.";
 "knowledgePanelNoUses" = "아직 이것을 사용했다고 밝힌 작업이 없어요.";
 "knowledgePanelNone" = "없음";
+"knowledgePanelNotHeard" = "선장님께 듣지 않았으니 이것만으로는 아무것도 승인하지 않아요";
 "knowledgePanelNothingRecorded" = "아직 기록된 것이 없어요";
 "knowledgePanelObservedBy" = "관찰함 · %1$@";
 "knowledgePanelOpLink" = "연결함";

@@ -229,6 +229,24 @@ export const knowledgeFindingsSchema = z.discriminatedUnion("state", [
 ]);
 export type KnowledgeFindings = z.infer<typeof knowledgeFindingsSchema>;
 
+/**
+ * Where the captain's own words for one revision of a direction were heard
+ * (docs/knowledge.md, "Heard from the captain"): this turn's words to the
+ * first mate, their reply or click on a card, a line they typed in a task's
+ * Crewmate tab, their standing reply on a task, or their own change in the
+ * window. A revision without one was saved on the first mate's judgment, or
+ * before Infinitary kept these marks, and is no yes.
+ */
+export const knowledgeDirectionHeardSchema = z.strictObject({
+  from: z.enum(["turn", "card", "crewmate-tab", "standing", "window"]),
+  /** The card's id and its title when it was heard, for `card`. */
+  card: z.string().min(1).max(200).optional(),
+  title: z.string().max(400).optional(),
+  /** The task's key, for `crewmate-tab` and `standing`. */
+  task: z.string().min(1).max(64).optional(),
+});
+export type KnowledgeDirectionHeard = z.infer<typeof knowledgeDirectionHeardSchema>;
+
 /** Directions are instructions or advice, never ordinary findings or permissions. */
 export const knowledgeDirectionRowSchema = z.object({
   id: z.string(),
@@ -240,6 +258,8 @@ export const knowledgeDirectionRowSchema = z.object({
   authority: z.enum(["instruction", "advice"]),
   revision: z.number().int().positive(),
   updatedAt: z.number(),
+  /** Where the captain's words for the current revision were heard; absent when they were not. */
+  heard: knowledgeDirectionHeardSchema.optional(),
 });
 export type KnowledgeDirectionRow = z.infer<typeof knowledgeDirectionRowSchema>;
 
@@ -274,6 +294,7 @@ export const knowledgeDirectionSchema = knowledgeDirectionRowSchema.extend({
       scope: scopeSchema,
       evidence: z.string(),
       at: z.number(),
+      heard: knowledgeDirectionHeardSchema.optional(),
     }),
   ),
   page: z.number().int().nonnegative(),
@@ -292,7 +313,9 @@ export type KnowledgeDirectionRead = z.infer<typeof knowledgeDirectionReadSchema
  * app action catalog's `direction` line (src/shared/actions.ts): the
  * captain's window and the first mate's app_change ask this one channel
  * (INF-638). revise and retire check `expectedRevision` when it is given;
- * the reason is kept in the direction's history.
+ * the reason is kept in the direction's history. `heard` is the dispatcher's
+ * to set from who asked, never the asker's: the captain's window, or the
+ * captain's words the first mate cited and the host checked.
  */
 const directionChangeIdSchema = z.string().regex(/^(d:)?[a-z0-9][a-z0-9-]{0,63}$/);
 const directionChangeTextSchema = z.string().min(1).max(4000);
@@ -307,6 +330,7 @@ export const knowledgeDirectionChangeSchema = z.discriminatedUnion("op", [
     /** `captain` for everywhere, read by the first mate alone; or one project's id, read by its crewmates too. */
     scope: scopeSchema.optional(),
     reason: directionChangeReasonSchema,
+    heard: knowledgeDirectionHeardSchema.optional(),
   }),
   z.strictObject({
     op: z.literal("revise"),
@@ -314,12 +338,14 @@ export const knowledgeDirectionChangeSchema = z.discriminatedUnion("op", [
     text: directionChangeTextSchema,
     expectedRevision: directionChangeRevisionSchema,
     reason: directionChangeReasonSchema,
+    heard: knowledgeDirectionHeardSchema.optional(),
   }),
   z.strictObject({
     op: z.literal("retire"),
     id: directionChangeIdSchema,
     expectedRevision: directionChangeRevisionSchema,
     reason: directionChangeReasonSchema,
+    heard: knowledgeDirectionHeardSchema.optional(),
   }),
 ]);
 export type KnowledgeDirectionChange = z.infer<typeof knowledgeDirectionChangeSchema>;

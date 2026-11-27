@@ -157,6 +157,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | session, transcript | (not used) | 대화 instead |
 | Settings | 설정 | |
 | sign-in / sign in | 로그인 / 로그인하다 | Korean software uses 로그인 for both the noun and the verb |
+| standing reply (your words kept on a task, which pass its holds) | 유효한 답장 | |
 | start | 시작 | |
 | starter | 시작 문구 | |
 | Steer (button) | 지시 보내기 |  |

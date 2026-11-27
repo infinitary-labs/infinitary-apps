@@ -364,7 +364,7 @@ const CASES: WordsCases<CrewmateOtherWakeKind> = {
         },
       },
       words:
-        "The captain's standing override on this task, recorded by the first mate: their words pass the checks for the rest of this task: \"Release checks may run and merge without asking me.\". Where their words reach a consent ask of your own, such as their plan's allowance, they are that consent and you do not ask again; for a check that declares what it uses or a validation effect these words cover, name standing as the request's allowance. An effect still needs exact independent clearance. Keychain or signing access, writes outside the project and browser handoffs still ask. Only their words take it back. These words are the captain's direction d:release-checks, revision 2: the override ends when that direction is revised or retired.",
+        "The captain's standing override on this task, recorded by the first mate: their words pass the checks for the rest of this task: \"Release checks may run and merge without asking me.\". Where their words reach a consent ask of your own, such as their plan's allowance, they are that consent and you do not ask again; for a check that declares what it uses, a validation effect or a write github_write would keep that these words cover, name standing as its allowance. An effect still needs exact independent clearance. Keychain or signing access, writes outside the project and browser handoffs still ask. Only their words take it back. These words are the captain's direction d:release-checks, revision 2: the override ends when that direction is revised or retired.",
     },
     {
       name: "ended by its direction",

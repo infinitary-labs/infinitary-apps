@@ -300,8 +300,9 @@ export class IdleLadder {
   /**
    * The witness set for a task (docs/report-sort.md): gathered here once, so
    * the report's sort and the reconciler read the same facts the same way.
-   * Cards are read by task, never by id; guidance is anything its lane will
-   * still deliver, backoff included; a job counts inside its bound.
+   * Cards are read by task, never by id; guidance is what its lane holds that
+   * a turn would serve, inside its bound (`CrewFacts.servesTurn`); a job
+   * counts inside its bound.
    */
   witnesses(taskId: string, now: number): Witnesses {
     const record = this.host.tasks.get(taskId);

@@ -36,9 +36,9 @@ import { rowAttachments } from "./wakes";
 import { deliverableOf } from "./workShape";
 
 /**
- * How long a lane row still witnesses a crewmate moving after it fell due
- * or was last tried: the honest retry's longest backoff, so a row waiting
- * it out always counts, while one the sweep left that long does not.
+ * How long a lane row still witnesses a crewmate moving after it was
+ * created, last tried or fell due: the sweep serves a due row within a
+ * tick, so one left unserved this long is a leftover nothing is serving.
  */
 export const SERVABLE_BOUND_MS = 15 * 60_000;
 

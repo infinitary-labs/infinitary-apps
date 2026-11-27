@@ -454,6 +454,9 @@ test("the Google row moves a sign-in to the person's own client by keys", async 
 });
 
 test("one Google sign-in from Settings by keys, and a message arriving fires a rule", async () => {
+  // The Gmail look tells mail only once it is a minute old (gmail.ts, SETTLE_SECONDS), so the
+  // rule's turn comes over a minute after its first look, past the default test limit.
+  test.setTimeout(3 * 60_000);
   const userDataDir = scratchDir("infinitary-google-");
   google = await startGoogleStandIn();
   const seen: AutomationEventsSeen = { turns: [] };

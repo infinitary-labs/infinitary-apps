@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "fork-contribution-journey-on-this-computer",
+      "reason": "The fork contribution journey's project now runs its tasks on this computer, so a busy test runner no longer holds the scripted crewmate's start past the journey's card wait; nothing in the app changes."
+    }
+  ]
+}

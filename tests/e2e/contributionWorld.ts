@@ -47,9 +47,18 @@ export async function startContributionWorld(imported = false, scenarios: Scenar
     homeDir,
     env: { ...forge.env, GIT_CONFIG_GLOBAL: join(homeDir, ".gitconfig"), GIT_CONFIG_NOSYSTEM: "1" },
   });
-  const { repo } = await app.page.evaluate(
-    async ({ origin }) =>
-      window.infinitary.repos.setup({ kind: "clone", origin, name: "sample-project" }),
+  const repo = await app.page.evaluate(
+    async ({ origin }) => {
+      const { repo } = await window.infinitary.repos.setup({
+        kind: "clone",
+        origin,
+        name: "sample-project",
+      });
+      // Its tasks start here. A cloned project starts on Automatic, which waits
+      // for room the runner's live processor and memory readings show and looks
+      // again only at the next one-minute sweep, past the journey's card wait.
+      return window.infinitary.devices.runsOn(repo.id, null);
+    },
     { origin: imported ? forge.fork.clone_url : forge.upstream.clone_url },
   );
   // Read the pushed fork branch's actual commit, not a synthetic successful head.

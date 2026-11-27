@@ -9,6 +9,7 @@ import { expect, test } from "@playwright/test";
 import { decode } from "@toon-format/toon";
 import { WebSignIns } from "../../src/core/browser/webSignIns";
 import { hostEnv } from "../../src/core/hostEnv";
+import { SECRETS_USE_ENDED_LEAD } from "../../src/core/orchestrator/wakes";
 import { runWords } from "../../src/core/secrets/approvalCard";
 import { approvalCode } from "../../src/core/secrets/approvals";
 import { SECRETS_CHECK_WORDS } from "../../src/core/secrets/commandWords";
@@ -1070,6 +1071,76 @@ printf '%s' "$SERVICE_TOKEN"
       await app.evaluate(() => (globalThis as SecretsJourneyGlobal).secretsJourney.confirmations),
     ).toBe(1);
   } finally {
+    await launched.close();
+  }
+});
+
+// INF-7106 (INF-7080's session audit, finding 1): a crewmate told its run
+// waits on the captain heard nothing more until the program ended. Here the
+// approved program waits for a file only the crewmate's next step creates,
+// so the check completes only when the crewmate hears the run started while
+// it runs. Data: a disposable credential and shell recipient; model, native
+// custody and confirmation stand in, and no shared account is used.
+test("a dispatched crewmate hears its approved run start and acts while it runs", async () => {
+  const cwd = realpathSync(scratchDir("secrets-started-recipient-"));
+  const release = join(cwd, "go");
+  writeFileSync(
+    join(cwd, "check.sh"),
+    `#!/bin/sh
+[ "$SERVICE_TOKEN" = '${TOKEN}' ] || exit 1
+waited=0
+while [ ! -e "$PWD/go" ]; do
+  waited=$((waited + 1))
+  [ "$waited" -gt 300 ] && exit 2
+  sleep 0.1
+done
+printf 'ran\n' >> "$PWD/executions"
+`,
+  );
+  const launched = await launchSecrets({
+    scenarios: [protectedSecretUse(cwd, REFERENCE, release)],
+  });
+  const { app, page } = launched;
+  try {
+    await app.evaluate(
+      async (_electron, input) => {
+        await (globalThis as SecretsJourneyGlobal).secretsJourney.core.services.secrets.put(input);
+      },
+      {
+        ref: REFERENCE,
+        label: LABEL,
+        value: TOKEN,
+        expectedVersion: 0,
+        expectedRevision: null,
+        environment: "Disposable",
+      },
+    );
+    await askFirstmate(page, PROTECTED_USE_PROMPT);
+    const title = approvalTitle(
+      [{ ref: REFERENCE, label: LABEL, environment: "Disposable" }],
+      PROTECTED_USE_TITLE,
+    );
+    const approval = shownCard(page, title);
+    await expect(approval).toBeVisible();
+    await pressKey(
+      approval.getByRole("button", { name: SECRETS_WORDS.once, exact: true }),
+      "Enter",
+    );
+    await expect(shownCard(page, PROTECTED_USE_DONE)).toBeVisible();
+    expect(readFileSync(join(cwd, "executions"), "utf8")).toBe("ran\n");
+    const traffic = launched.mockProvider?.requestBodies() ?? [];
+    const heard = (state: string) =>
+      traffic.findIndex((body) =>
+        new RegExp(`${SECRETS_USE_ENDED_LEAD} [\\w-]+: ${state}\\.`).test(body),
+      );
+    const heardStart = heard("started");
+    const heardEnd = heard("completed");
+    expect(heardStart).toBeGreaterThanOrEqual(0);
+    expect(heardEnd).toBeGreaterThan(heardStart);
+    expect(traffic.join("\n")).not.toContain(TOKEN);
+  } finally {
+    // The program ends by itself; this ends it at once whatever happened.
+    writeFileSync(release, "");
     await launched.close();
   }
 });

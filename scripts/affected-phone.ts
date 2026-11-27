@@ -36,11 +36,12 @@ const INPUTS = [
   "scripts/phone-test-plan.ts",
   // INF-1242: the rest of what the launcher loads on every part - the Photos wait, the failure timers and load clock,
   // the scratch folders, the module runner, the CI-mode and heavy-run guards and the Duo's hinge helper - and what it
-  // reads: each part's recorded work, the hinge helper's source and the library photo a part chooses (test-phone.ts's
-  // LIBRARY_PHOTO). tests/phone-ci.test.ts holds every module the launcher loads to this list.
+  // reads: each part's recorded work, the hinge helper's source, the Face ID helper's source (INF-7013) and the library
+  // photo a part chooses (test-phone.ts's LIBRARY_PHOTO). tests/phone-ci.test.ts holds every module the launcher loads
+  // to this list.
   "tests/helpers/phonePhotos.ts", "tests/helpers/budgets.ts", "tests/helpers/loadClock.ts", "tests/helpers/scratchDirs.ts",
   "tests/helpers/runScratchFolders.ts", "scripts/moduleRunner.ts", "scripts/checks-mode.ts", "scripts/heavy-run-place.ts",
-  "scripts/phone-hinge.ts", "scripts/phone-hinge.m", "scripts/phone-work.json",
+  "scripts/phone-hinge.ts", "scripts/phone-hinge.m", "scripts/phone-face-id.m", "scripts/phone-work.json",
   "release-notes/pictures/activity-settles-setting-runs-light.png",
   // INF-4241 piece 3: the recorded part times the gate shares a device's parts out by.
   "scripts/phone-part-times.json",

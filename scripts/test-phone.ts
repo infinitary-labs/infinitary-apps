@@ -27,7 +27,7 @@ import { phoneRecording } from "./phone-recording.ts";
 import { phoneBuildArguments, readPhoneBuildIdentity, useSharedPhoneBuild } from "./phone-build.ts";
 import { endPhoneHang, PHONE_COMMAND_BUDGET_MS, PhoneDeadlinePassed, phoneCommandBudget, phoneCommandName, phonePartBudget, withinPhoneDeadline } from "./phone-deadlines.ts";
 import { startPhoneGuestObserver } from "./phone-guest-observer.ts";
-import { PHONE_BOOT_BUDGET_MS, PHONE_PREWARM_BUDGET_MS, phonePrewarmFinished, phoneSharedCacheFolder, phoneSimulator, phoneSimulatorBooted, phoneXcode, removeEmptyPhoneSharedCache } from "./phone-simulator.ts";
+import { buildPhoneFaceId, PHONE_BOOT_BUDGET_MS, PHONE_FACE_ID_BUDGET_MS, PHONE_PREWARM_BUDGET_MS, phoneFaceIdStarted, phonePrewarmFinished, phoneSharedCacheFolder, phoneSimulator, phoneSimulatorBooted, phoneXcode, removeEmptyPhoneSharedCache } from "./phone-simulator.ts";
 import { devicePartNames, PHONE_APP, devicePhotos, endPhoneGate, firstPhoneLanes, macTestFilter, partHinge, PHONE_DEVICES, PHONE_PARTS, partOnMac, partPlanPath, type PhoneWork, phoneWork, phoneWorkPast, runSideBySide, type PhoneDevice, type PhoneJob, type PhonePassEnd, phonePassName, phoneSelectionRunsJourney, phoneTestSelection, phoneTestsStarted, phoneAnimationWaits, phoneExecutionArguments, phoneLanePlan, phoneLanes, phonePasses, phoneStopsEarly, PHONE_PART_TIMES, partTimes, runDeviceLanes, testHomeKeys } from "./phone-test-plan.ts";
 
 // INF-800: with CI mode on, the phone check runs only through CI (docs/testing.md).
@@ -452,6 +452,13 @@ const bootSimulator = (device: PhoneDevice, owned: string) => phoneSimulatorBoot
 const prewarmFinished = (device: PhoneDevice, owned: string, booting: Date) => phonePrewarmFinished({ device, simulator: owned,
   booting, run: (args, heard, stop) => run("xcrun", args, false, heard, stop, {},
     heard ? PHONE_PREWARM_BUDGET_MS + PHONE_COMMAND_BUDGET_MS : PHONE_COMMAND_BUDGET_MS) });
+// INF-7013: no part starts on a simulator until its Face ID interface runs, so a Face ID prompt in the part never waits
+// for that process to start; the helper whose request starts it builds once, for the first part that needs it.
+let faceIdHelper: Promise<string> | undefined;
+const faceIdStarted = async (device: PhoneDevice, owned: string) => phoneFaceIdStarted({ device, simulator: owned,
+  helper: await (faceIdHelper ??= buildPhoneFaceId(run, root)),
+  run: (args, heard, stop) => run("xcrun", args, false, heard, stop, {},
+    heard ? PHONE_FACE_ID_BUDGET_MS + PHONE_COMMAND_BUDGET_MS : PHONE_COMMAND_BUDGET_MS) });
 const startSimulator = async (device: PhoneDevice): Promise<Lane> => {
   const catalog = JSON.parse(await run("xcrun", ["simctl", "list", "--json"]));
   const { kind, runtime } = phoneSimulator(catalog, device);
@@ -499,7 +506,8 @@ const installedApps = async (owned: string): Promise<Record<string, unknown>> =>
   return JSON.parse(await run("plutil", ["-convert", "json", "-o", "-", listed]));
 };
 // Every part starts from a clean app on the device: the previous part's app and test runner, Keychain,
-// permission answers, appearance, type size and hardware keyboard are gone, as on a new simulator.
+// permission answers, appearance, type size and hardware keyboard are gone, as on a new simulator, and its Face ID
+// interface runs.
 const readyForPart = async (lane: Lane, name: string) => {
   const { owned, device } = lane;
   const state = await simulatorState(owned);
@@ -522,6 +530,7 @@ const readyForPart = async (lane: Lane, name: string) => {
   await run("xcrun", ["simctl", "ui", owned, "content_size", "large"]);
   await run("xcrun", hardwareKeyboardArguments(owned, false));
   if ((await installedApps(owned))[phoneBundle]) throw new Error(`${device}: the previous part's app survived its uninstall`);
+  await faceIdStarted(device, owned);
 };
 // The library photo a part that chooses a photo picks.
 const LIBRARY_PHOTO = "release-notes/pictures/activity-settles-setting-runs-light.png";

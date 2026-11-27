@@ -1,5 +1,5 @@
 diff --git a/dist/api/bedrock-converse-stream.js b/dist/api/bedrock-converse-stream.js
-index 1bb93966f2a85ef4d95d1a73e2b7f65941e4860c..6af04528465c9aa6c20cd922b33b1de1ab7553a3 100644
+index 1bb93966f2a85ef4d95d1a73e2b7f65941e4860c..f18f2dc6987294716b617a2be8317c6fd91edc1e 100644
 --- a/dist/api/bedrock-converse-stream.js
 +++ b/dist/api/bedrock-converse-stream.js	
 @@ -49,9 +49,11 @@ export const stream = (model, context, options = {}) => {
@@ -33,7 +33,7 @@ index 1bb93966f2a85ef4d95d1a73e2b7f65941e4860c..6af04528465c9aa6c20cd922b33b1de1
              undefined;
          const useBearerToken = bearerToken !== undefined && !skipAuth;
          // in Node.js/Bun environment only
-@@ -96,7 +98,8 @@ export const stream = (model, context, options = {}) => {
+@@ -96,12 +98,25 @@ export const stream = (model, context, options = {}) => {
                      secretAccessKey: "dummy-secret-key",
                  };
              }
@@ -43,7 +43,26 @@ index 1bb93966f2a85ef4d95d1a73e2b7f65941e4860c..6af04528465c9aa6c20cd922b33b1de1
              if (!skipAuth && credentials && !optionsProfile) {
                  config.credentials = credentials;
              }
-@@ -110,7 +113,7 @@ export const stream = (model, context, options = {}) => {
+-            const proxyUrl = resolveHttpProxyUrlForTarget(model.baseUrl, options.env);
+-            if (proxyUrl) {
++            // A scoped caller's own connection wins over the process's proxy variables.
++            const proxyUrl = scoped && (options.httpAgents || options.http2ConnectOptions)
++                ? undefined
++                : resolveHttpProxyUrlForTarget(model.baseUrl, options.env);
++            if (scoped && options.httpAgents) {
++                config.requestHandler = new NodeHttpHandler(options.httpAgents);
++            }
++            else if (scoped && options.http2ConnectOptions) {
++                config.requestHandler = {
++                    disableConcurrentStreams: true,
++                    nodeHttp2ConnectOptions: options.http2ConnectOptions,
++                };
++            }
++            else if (proxyUrl) {
+                 // Bedrock runtime uses NodeHttp2Handler by default since v3.798.0, which is based
+                 // on `http2` module and has no support for http agent.
+                 // Use NodeHttpHandler to support HTTP(S) proxy agents.
+@@ -110,7 +125,7 @@ export const stream = (model, context, options = {}) => {
                      httpsAgent: new HttpsProxyAgent(proxyUrl),
                  });
              }
@@ -52,7 +71,7 @@ index 1bb93966f2a85ef4d95d1a73e2b7f65941e4860c..6af04528465c9aa6c20cd922b33b1de1
                  // Some custom endpoints require HTTP/1.1 instead of HTTP/2
                  config.requestHandler = new NodeHttpHandler();
              }
-@@ -128,6 +131,14 @@ export const stream = (model, context, options = {}) => {
+@@ -128,9 +143,26 @@ export const stream = (model, context, options = {}) => {
          // Kept outside the try so the catch can still correlate a mid-stream failure:
          // exceptions delivered as stream events carry no HTTP metadata of their own.
          let responseRequestId;
@@ -61,13 +80,25 @@ index 1bb93966f2a85ef4d95d1a73e2b7f65941e4860c..6af04528465c9aa6c20cd922b33b1de1
              const supportsStrictMode = model.compat?.supportsStrictMode ?? false;
              const client = new BedrockRuntimeClient(config);
 +            // The SDK has its own ambient bearer provider; a preference alone permits fallback.
-+            if (scoped) {
++            if (scoped && options.noAuth) {
++                // No identity is resolved at all, so no credential chain is ever asked.
++                client.config.httpAuthSchemeProvider = () => [{ schemeId: "smithy.api#noAuth" }];
++                client.config.httpAuthSchemes = [{
++                    schemeId: "smithy.api#noAuth",
++                    identityProvider: () => async () => ({}),
++                    signer: { sign: async (request) => request },
++                }];
++            }
++            else if (scoped) {
 +                const scheme = useBearerToken ? "smithy.api#httpBearerAuth" : "aws.auth#sigv4";
 +                client.config.httpAuthSchemes = client.config.httpAuthSchemes.filter(
 +                    ({ schemeId }) => schemeId === scheme,
 +                );
 +            }
-@@ -225,18 +236,23 @@ export const stream = (model, context, options = {}) => {
+             let observedRawResponse = false;
+             if (options.onResponse) {
+                 addResponseHeadersMiddleware(client, options.onResponse, model, () => {
+@@ -225,18 +257,23 @@ export const stream = (model, context, options = {}) => {
                      handleMetadata(item.metadata, model, output);
                  }
                  else if (item.internalServerException) {
@@ -91,7 +122,7 @@ index 1bb93966f2a85ef4d95d1a73e2b7f65941e4860c..6af04528465c9aa6c20cd922b33b1de1
                      throw item.serviceUnavailableException;
                  }
              }
-@@ -259,7 +275,7 @@ export const stream = (model, context, options = {}) => {
+@@ -259,7 +296,7 @@ export const stream = (model, context, options = {}) => {
              output.stopReason = options.signal?.aborted ? "aborted" : "error";
              output.errorMessage = formatBedrockError(error);
              if (output.stopReason === "error") {
@@ -100,7 +131,7 @@ index 1bb93966f2a85ef4d95d1a73e2b7f65941e4860c..6af04528465c9aa6c20cd922b33b1de1
              }
              stream.push({ type: "error", reason: output.stopReason, error: output });
              stream.end();
-@@ -332,15 +348,15 @@ function extractBedrockErrorCode(error) {
+@@ -332,15 +369,21 @@ function extractBedrockErrorCode(error) {
  }
  /**
   * Structured metadata alongside `errorMessage`, which stays byte-identical because `isRetryableAssistantError`
@@ -116,15 +147,24 @@ index 1bb93966f2a85ef4d95d1a73e2b7f65941e4860c..6af04528465c9aa6c20cd922b33b1de1
      if (typeof metadata?.httpStatusCode === "number")
          details.status = metadata.httpStatusCode;
 -    const errorCode = extractBedrockErrorCode(error);
++    // A request that never got an answer keeps Node's connection code, such as a refused certificate.
++    else {
++        const connectionCode = normalizeDiagnosticValue(error?.code);
++        if (connectionCode !== undefined)
++            details.connectionCode = connectionCode;
++    }
 +    const errorCode = streamErrorCode ?? extractBedrockErrorCode(error);
      if (errorCode !== undefined)
          details.errorCode = errorCode;
      const requestId = normalizeDiagnosticValue(metadata?.requestId) ?? fallbackRequestId;
-@@ -426,6 +442,7 @@ export const streamSimple = (model, context, options) => {
+@@ -426,6 +469,10 @@ export const streamSimple = (model, context, options) => {
      const base = {
          ...buildBaseOptions(model, context, options, undefined),
          toolChoice: options?.toolChoice,
 +        credentials: options?.credentials,
++        httpAgents: options?.httpAgents,
++        http2ConnectOptions: options?.http2ConnectOptions,
++        noAuth: options?.noAuth,
      };
      if (!options?.reasoning) {
          return stream(model, context, { ...base, reasoning: undefined });

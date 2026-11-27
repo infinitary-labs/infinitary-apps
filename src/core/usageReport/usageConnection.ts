@@ -15,7 +15,6 @@ import {
 } from "@shared/usageConnection";
 import { z } from "zod";
 import { claudeLoginEmail, defaultClaudeConfigDir } from "../claude/claudeQuota";
-import { collectorFailureOf, computerRoots } from "../claude/claudeReporting";
 import type { CoreServices } from "../coreServices";
 import { hostEnv } from "../hostEnv";
 import {
@@ -34,6 +33,7 @@ import {
 import type { SecretBroker } from "../secrets/brokers";
 import { canonical, sha256 } from "../secrets/custody";
 import type { HomeUsageFacts } from "../storage/homeUsage";
+import { collectorFailureOf, computerRoots } from "../trustedRoots";
 import { type CompanyHosts, companyUsageDestinations, hostnameOf } from "./companyDestination";
 import { appSessionWords } from "./sessionWords";
 import type { UsageReportDestination } from "./usageReporter";

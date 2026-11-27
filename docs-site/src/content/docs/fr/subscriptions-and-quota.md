@@ -1,5 +1,5 @@
 ---
-source: f1e95aa2b9433f4a
+source: 4cdc56f97509d3e4
 title: Abonnements et allocation
 description: Comment ajouter vos abonnements d’IA, voir ce qui reste de l’allocation de votre forfait, et ce que fait votre équipage quand elle est épuisée.
 ---
@@ -47,6 +47,16 @@ Laissez le pointeur sur une jauge pour voir quand elle se réinitialise.
 **Actualiser**, en haut de la liste, relit chaque allocation.
 Infinitary ne lit pas d’allocation pour OpenRouter ni pour une API personnalisée, et la ligne le dit.
 Amazon Bedrock est facturé à l’usage sur votre compte AWS ; sa ligne affiche l’estimation de ce mois-ci d’après le travail qu’Infinitary a enregistré.
+
+## Amazon Bedrock via votre organisation {#amazon-bedrock-through-your-organization}
+
+Quand vous ajoutez Amazon Bedrock, Infinitary demande où ses requêtes doivent aller : **Directement à AWS** ou **L’adresse de mon organisation**.
+Saisissez l’adresse de votre organisation, et Infinitary affiche son hôte et le réseau où elle se trouve : cet ordinateur, le réseau de votre organisation ou l’internet public.
+Appuyez sur **Envoyer les requêtes là-bas** pour l’approuver.
+Les requêtes vont alors uniquement à cette adresse, seulement tant que son nom pointe vers ce réseau, et seulement si votre ordinateur fait confiance à son certificat.
+Si l’adresse de votre organisation signe elle-même les requêtes, choisissez **Sans clé : l’adresse de mon organisation signe les requêtes** au lieu d’un profil ou d’une clé.
+Quand Claude Code utilise déjà Amazon Bedrock sur votre ordinateur, la connexion commence avec son adresse, sa région et son profil déjà remplis, et indique d’où ils viennent.
+La ligne du compte indique alors par quelle adresse ses requêtes sont **envoyées**.
 
 ## Choisir quel compte fait quoi {#choose-which-account-does-what}
 

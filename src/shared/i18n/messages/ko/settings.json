@@ -1348,6 +1348,7 @@
     "plural": "count",
     "other": "저장된 재설정 {count}개 · {site}에서 사용"
   },
+  "settingsSubscriptionsSentThrough": "{host}을(를) 거쳐 전송",
   "settingsSubscriptionsSignIn": "로그인",
   "settingsSubscriptionsSignInAgainState": "다시 로그인하세요.",
   "settingsSubscriptionsSignedIn": "로그인됨",

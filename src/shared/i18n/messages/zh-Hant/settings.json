@@ -1354,6 +1354,7 @@
     "plural": "count",
     "other": "{count} 次已儲存的重設 · 在 {site} 使用"
   },
+  "settingsSubscriptionsSentThrough": "經由 {host} 傳送",
   "settingsSubscriptionsSignIn": "登入",
   "settingsSubscriptionsSignInAgainState": "請重新登入。",
   "settingsSubscriptionsSignedIn": "已登入",

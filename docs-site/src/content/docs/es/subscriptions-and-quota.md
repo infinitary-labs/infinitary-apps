@@ -1,5 +1,5 @@
 ---
-source: f1e95aa2b9433f4a
+source: 4cdc56f97509d3e4
 title: Suscripciones y asignación
 description: Cómo agregar tus suscripciones de IA, leer cuánto queda de la asignación de tu plan y qué hace tu tripulación cuando se agota.
 ---
@@ -47,6 +47,16 @@ Deja el puntero sobre un medidor para ver cuándo se renueva.
 **Actualizar**, en la parte superior de la lista, vuelve a leer todas las asignaciones.
 Infinitary no lee una asignación para OpenRouter ni para una API personalizada, y la fila lo dice.
 Amazon Bedrock se factura por uso en tu cuenta de AWS; su fila muestra la estimación de este mes a partir del trabajo que registró Infinitary.
+
+## Amazon Bedrock a través de tu organización {#amazon-bedrock-through-your-organization}
+
+Cuando agregas Amazon Bedrock, Infinitary pregunta adónde deben ir sus solicitudes: **Directo a AWS** o **La dirección de mi organización**.
+Escribe la dirección de tu organización, e Infinitary muestra su host y la red en la que está: esta computadora, la red de tu organización o el internet público.
+Pulsa **Enviar solicitudes allí** para aprobarla.
+Las solicitudes van entonces solo a esa dirección, solo mientras su nombre siga apuntando a esa red, y solo cuando tu computadora confía en su certificado.
+Si la dirección de tu organización firma las solicitudes por sí misma, elige **Sin clave: la dirección de mi organización firma las solicitudes** en lugar de un perfil o una clave.
+Cuando Claude Code en tu computadora ya usa Amazon Bedrock, el inicio de sesión empieza con su dirección, región y perfil ya escritos, y dice de dónde salieron.
+La fila de la cuenta dice entonces a través de qué dirección se **envían** sus solicitudes.
 
 ## Elegir qué cuenta hace qué {#choose-which-account-does-what}
 

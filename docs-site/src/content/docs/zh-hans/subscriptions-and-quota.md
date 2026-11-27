@@ -1,5 +1,5 @@
 ---
-source: f1e95aa2b9433f4a
+source: 4cdc56f97509d3e4
 title: 订阅和额度
 description: 如何添加你的 AI 订阅、查看你的套餐额度还剩多少，以及额度用完时你的船员们会怎么做。
 ---
@@ -47,6 +47,16 @@ Claude 账户有所不同。
 列表顶部的 **刷新** 会重新读取每项额度。
 Infinitary 不会读取 OpenRouter 或自定义 API 的额度，这一行会说明这一点。
 Amazon Bedrock 在你的 AWS 账户上按用量计费；它的行显示根据 Infinitary 记录的工作得出的本月估算。
+
+## 通过你所在组织使用 Amazon Bedrock {#amazon-bedrock-through-your-organization}
+
+添加 Amazon Bedrock 时，Infinitary 会问它的请求应发往哪里：**直接发送到 AWS** 或 **我所在组织的地址**。
+输入你所在组织的地址后，Infinitary 会显示它的主机以及它所在的网络：这台电脑、你所在组织的网络或公共互联网。
+按 **将请求发送到那里** 即可批准。
+之后请求只发往这个地址，只在它的名称仍指向这个网络时发送，并且只在你的电脑信任它的证书时发送。
+如果你所在组织的地址自己为请求签名，请选择 **不用密钥：由我所在组织的地址为请求签名**，而不是配置文件或密钥。
+如果这台电脑上的 Claude Code 已在使用 Amazon Bedrock，登录开始时会填好它的地址、区域和配置文件，并说明它们来自哪里。
+之后账户这一行会显示它的请求 **经由** 哪个地址 **发送**。
 
 ## 选择哪个账户做什么 {#choose-which-account-does-what}
 

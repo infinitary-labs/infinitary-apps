@@ -47,6 +47,16 @@ Rest the pointer on a meter to see when it resets.
 Infinitary does not read an allowance for OpenRouter or a custom API, and the row says so.
 Amazon Bedrock is billed by use on your AWS account; its row shows this month’s estimate from work Infinitary recorded.
 
+## Amazon Bedrock through your organization
+
+When you add Amazon Bedrock, Infinitary asks where its requests should go: **Straight to AWS** or **My organization's address**.
+Type your organization's address, and Infinitary shows its host and the network it is on: this computer, your organization's network or the public internet.
+Press **Send requests there** to approve it.
+Requests then go only to that address, only while its name still points to that network, and only when its certificate is one your computer trusts.
+If your organization's address signs requests itself, choose **No key: my organization's address signs requests** instead of a profile or key.
+When Claude Code on your computer already uses Amazon Bedrock, the sign-in starts with its address, region and profile filled in, and says where they came from.
+The account's row then says which address its requests are **sent through**.
+
 ## Choose which account does what
 
 Open an account's menu, the three dots on its row, for these choices.

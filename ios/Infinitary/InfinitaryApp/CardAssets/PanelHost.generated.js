@@ -14916,6 +14916,554 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `your batches of approved changes`;
   }
+  function bedrockAddressInvalid() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يمكن استخدام هذا العنوان: اكتبه كاملًا مبتدئًا بـ https://، دون بيانات دخول أو استعلام أو #.`;
+      case "de":
+        return `Diese Adresse lässt sich nicht verwenden: Schreib sie vollständig, beginnend mit https://, ohne Anmeldung, Abfrage oder #.`;
+      case "es":
+        return `Esa dirección no se puede usar: escríbela completa, empezando por https://, sin inicio de sesión, consulta ni #.`;
+      case "fr":
+        return `Cette adresse ne peut pas être utilisée : écrivez-la en entier, en commençant par https://, sans identifiant, requête ni #.`;
+      case "ja":
+        return `このアドレスは使えません。https:// から始めて全体を書き、サインイン情報、クエリ、# を含めないでください。`;
+      case "ko":
+        return `이 주소는 사용할 수 없습니다. https://로 시작하는 전체 주소를 쓰고 로그인 정보, 쿼리, #은 넣지 마세요.`;
+      case "pt-BR":
+        return `Esse endereço não pode ser usado: escreva-o inteiro, começando com https://, sem login, consulta ou #.`;
+      case "zh-Hans":
+        return `这个地址无法使用：请写出完整地址，以 https:// 开头，不要包含登录信息、查询或 #。`;
+      case "zh-Hant":
+        return `這個位址無法使用：請寫出完整位址，以 https:// 開頭，不要包含登入資訊、查詢或 #。`;
+      case "en-XA":
+        return `[Ţĥáţ áððŕéšš çáññöţ ƀé ûšéð: ŵŕîţé îţ ŵĥöļé, šţáŕţîñĝ ŵîţĥ ĥţţþš://, ŵîţĥ ñö šîĝñ-îñ, ǫûéŕý öŕ # îñ îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮That address cannot be used: write it whole, starting with https://, with no sign-in, query or # in it.‬`;
+    }
+    return `That address cannot be used: write it whole, starting with https://, with no sign-in, query or # in it.`;
+  }
+  function bedrockAddressMoved(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يشير ${host} الآن إلى مكان غير الذي وافقت عليه. سجّل الدخول إلى Amazon Bedrock مجددًا للموافقة عليه.`;
+      case "de":
+        return `${host} zeigt jetzt an einen anderen Ort als bei deiner Freigabe. Melde dich erneut bei Amazon Bedrock an, um sie freizugeben.`;
+      case "es":
+        return `${host} ahora apunta a un lugar distinto del que aprobaste. Vuelve a iniciar sesión en Amazon Bedrock para aprobarlo.`;
+      case "fr":
+        return `${host} mène maintenant ailleurs qu’au moment où vous l’avez approuvée. Reconnectez-vous à Amazon Bedrock pour l’approuver.`;
+      case "ja":
+        return `${host} は承認したときとは別の場所を指しています。承認し直すには Amazon Bedrock にもう一度サインインしてください。`;
+      case "ko":
+        return `${host}이(가) 승인할 때와 다른 곳을 가리킵니다. 다시 승인하려면 Amazon Bedrock에 다시 로그인하세요.`;
+      case "pt-BR":
+        return `${host} agora aponta para um lugar diferente de quando você o aprovou. Faça login no Amazon Bedrock de novo para aprová-lo.`;
+      case "zh-Hans":
+        return `${host} 现在指向的地方与你批准时不同。请重新登录 Amazon Bedrock 来批准它。`;
+      case "zh-Hant":
+        return `${host} 現在指向的地方與你核准時不同。請重新登入 Amazon Bedrock 來核准它。`;
+      case "en-XA":
+        return `[${host} ñöŵ þöîñţš šöɱéŵĥéŕé öţĥéŕ ţĥáñ ŵĥéñ ýöû áþþŕöṽéð îţ. Šîĝñ îñ ţö Åɱážöñ Ɓéðŕöçķ áĝáîñ ţö áþþŕöṽé îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${host}‮ now points somewhere other than when you approved it. Sign in to Amazon Bedrock again to approve it.‬`;
+    }
+    return `${host} now points somewhere other than when you approved it. Sign in to Amazon Bedrock again to approve it.`;
+  }
+  function bedrockAddressNotFound(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر العثور على ${host}.`;
+      case "de":
+        return `${host} wurde nicht gefunden.`;
+      case "es":
+        return `No se encontró ${host}.`;
+      case "fr":
+        return `${host} est introuvable.`;
+      case "ja":
+        return `${host} が見つかりませんでした。`;
+      case "ko":
+        return `${host}을(를) 찾을 수 없습니다.`;
+      case "pt-BR":
+        return `${host} não foi encontrado.`;
+      case "zh-Hans":
+        return `找不到 ${host}。`;
+      case "zh-Hant":
+        return `找不到 ${host}。`;
+      case "en-XA":
+        return `[${host} çöûļð ñöţ ƀé ƒöûñð. ~~~~~~~]`;
+      case "ar-XB":
+        return `${host}‮ could not be found.‬`;
+    }
+    return `${host} could not be found.`;
+  }
+  function bedrockAddressPlainHttp() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `http العادي مخصّص لعنوان على هذا الحاسوب فقط: استخدم عنوان https الخاص بمؤسستك.`;
+      case "de":
+        return `Einfaches http gibt es nur für eine Adresse auf diesem Computer: Verwende die https-Adresse deiner Organisation.`;
+      case "es":
+        return `El http simple es solo para una dirección en esta computadora: usa la dirección https de tu organización.`;
+      case "fr":
+        return `Le http simple est réservé à une adresse sur cet ordinateur : utilisez l’adresse https de votre organisation.`;
+      case "ja":
+        return `通常の http はこのコンピューター上のアドレスにだけ使えます。組織の https アドレスを使ってください。`;
+      case "ko":
+        return `일반 http는 이 컴퓨터의 주소에만 쓸 수 있습니다. 조직의 https 주소를 쓰세요.`;
+      case "pt-BR":
+        return `O http simples é só para um endereço neste computador: use o endereço https da sua organização.`;
+      case "zh-Hans":
+        return `普通 http 只能用于这台电脑上的地址：请使用你所在组织的 https 地址。`;
+      case "zh-Hant":
+        return `一般 http 只能用於這台電腦上的位址：請使用你所屬組織的 https 位址。`;
+      case "en-XA":
+        return `[Þļáîñ ĥţţþ îš öñļý ƒöŕ áñ áððŕéšš öñ ţĥîš çöɱþûţéŕ: ûšé ýöûŕ öŕĝáñîžáţîöñ'š ĥţţþš áððŕéšš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Plain http is only for an address on this computer: use your organization's https address.‬`;
+    }
+    return `Plain http is only for an address on this computer: use your organization's https address.`;
+  }
+  function bedrockAddressRefused(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يشير ${host} إلى مكان لا يتصل به Infinitary.`;
+      case "de":
+        return `${host} zeigt an einen Ort, mit dem sich Infinitary nicht verbindet.`;
+      case "es":
+        return `${host} apunta a un lugar al que Infinitary no se conecta.`;
+      case "fr":
+        return `${host} mène à un endroit auquel Infinitary ne se connecte pas.`;
+      case "ja":
+        return `${host} は Infinitary が接続しない場所を指しています。`;
+      case "ko":
+        return `${host}은(는) Infinitary가 연결하지 않는 곳을 가리킵니다.`;
+      case "pt-BR":
+        return `${host} aponta para um lugar ao qual o Infinitary não se conecta.`;
+      case "zh-Hans":
+        return `${host} 指向 Infinitary 不会连接的地方。`;
+      case "zh-Hant":
+        return `${host} 指向 Infinitary 不會連線的地方。`;
+      case "en-XA":
+        return `[${host} þöîñţš šöɱéŵĥéŕé Îñƒîñîţáŕý ðöéš ñöţ çöññéçţ ţö. ~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${host}‮ points somewhere Infinitary does not connect to.‬`;
+    }
+    return `${host} points somewhere Infinitary does not connect to.`;
+  }
+  function bedrockSecureConnectionFailed(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر تأمين الاتصال بـ ${host}. تأكد من أن هذا الحاسوب يثق بشهادته.`;
+      case "de":
+        return `Die Verbindung zu ${host} ließ sich nicht sichern. Prüfe, ob dieser Computer seinem Zertifikat vertraut.`;
+      case "es":
+        return `La conexión con ${host} no se pudo hacer segura. Comprueba que esta computadora confíe en su certificado.`;
+      case "fr":
+        return `La connexion à ${host} n’a pas pu être sécurisée. Vérifiez que cet ordinateur fait confiance à son certificat.`;
+      case "ja":
+        return `${host} との接続を安全にできませんでした。このコンピューターがその証明書を信頼しているか確認してください。`;
+      case "ko":
+        return `${host}과(와) 안전하게 연결할 수 없습니다. 이 컴퓨터가 해당 인증서를 신뢰하는지 확인하세요.`;
+      case "pt-BR":
+        return `Não foi possível proteger a conexão com ${host}. Confira se este computador confia no certificado dele.`;
+      case "zh-Hans":
+        return `无法与 ${host} 建立安全连接。请确认这台电脑信任它的证书。`;
+      case "zh-Hant":
+        return `無法與 ${host} 建立安全連線。請確認這台電腦信任它的憑證。`;
+      case "en-XA":
+        return `[Ţĥé çöññéçţîöñ ţö ${host} çöûļð ñöţ ƀé ɱáðé šéçûŕé. Çĥéçķ ţĥáţ ţĥîš çöɱþûţéŕ ţŕûšţš îţš çéŕţîƒîçáţé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The connection to ‬${host}‮ could not be made secure. Check that this computer trusts its certificate.‬`;
+    }
+    return `The connection to ${host} could not be made secure. Check that this computer trusts its certificate.`;
+  }
+  function bedrockSignInAddress() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أدخل عنوان Amazon Bedrock الخاص بمؤسستك.`;
+      case "de":
+        return `Gib die Amazon-Bedrock-Adresse deiner Organisation ein.`;
+      case "es":
+        return `Escribe la dirección de Amazon Bedrock de tu organización.`;
+      case "fr":
+        return `Saisissez l’adresse Amazon Bedrock de votre organisation.`;
+      case "ja":
+        return `組織の Amazon Bedrock アドレスを入力してください。`;
+      case "ko":
+        return `조직의 Amazon Bedrock 주소를 입력하세요.`;
+      case "pt-BR":
+        return `Digite o endereço do Amazon Bedrock da sua organização.`;
+      case "zh-Hans":
+        return `输入你所在组织的 Amazon Bedrock 地址。`;
+      case "zh-Hant":
+        return `輸入你所屬組織的 Amazon Bedrock 位址。`;
+      case "en-XA":
+        return `[Éñţéŕ ýöûŕ öŕĝáñîžáţîöñ'š Åɱážöñ Ɓéðŕöçķ áððŕéšš. ~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Enter your organization's Amazon Bedrock address.‬`;
+    }
+    return `Enter your organization's Amazon Bedrock address.`;
+  }
+  function bedrockSignInApproveLocal(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `ستذهب الطلبات إلى ${host}، على هذا الحاسوب.`;
+      case "de":
+        return `Anfragen gehen an ${host}, auf diesem Computer.`;
+      case "es":
+        return `Las solicitudes irán a ${host}, en esta computadora.`;
+      case "fr":
+        return `Les requêtes iront à ${host}, sur cet ordinateur.`;
+      case "ja":
+        return `リクエストはこのコンピューター上の ${host} に送られます。`;
+      case "ko":
+        return `요청은 이 컴퓨터의 ${host}(으)로 갑니다.`;
+      case "pt-BR":
+        return `As solicitações irão para ${host}, neste computador.`;
+      case "zh-Hans":
+        return `请求将发送到 ${host}，位于这台电脑上。`;
+      case "zh-Hant":
+        return `要求將傳送到 ${host}，位於這台電腦上。`;
+      case "en-XA":
+        return `[Ŕéǫûéšţš ŵîļļ ĝö ţö ${host}, öñ ţĥîš çöɱþûţéŕ. ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Requests will go to ‬${host}‮, on this computer.‬`;
+    }
+    return `Requests will go to ${host}, on this computer.`;
+  }
+  function bedrockSignInApprovePrivate(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `ستذهب الطلبات إلى ${host}، على شبكة مؤسستك.`;
+      case "de":
+        return `Anfragen gehen an ${host}, im Netzwerk deiner Organisation.`;
+      case "es":
+        return `Las solicitudes irán a ${host}, en la red de tu organización.`;
+      case "fr":
+        return `Les requêtes iront à ${host}, sur le réseau de votre organisation.`;
+      case "ja":
+        return `リクエストは組織のネットワーク上の ${host} に送られます。`;
+      case "ko":
+        return `요청은 조직 네트워크의 ${host}(으)로 갑니다.`;
+      case "pt-BR":
+        return `As solicitações irão para ${host}, na rede da sua organização.`;
+      case "zh-Hans":
+        return `请求将发送到 ${host}，位于你所在组织的网络中。`;
+      case "zh-Hant":
+        return `要求將傳送到 ${host}，位於你所屬組織的網路中。`;
+      case "en-XA":
+        return `[Ŕéǫûéšţš ŵîļļ ĝö ţö ${host}, öñ ýöûŕ öŕĝáñîžáţîöñ'š ñéţŵöŕķ. ~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Requests will go to ‬${host}‮, on your organization's network.‬`;
+    }
+    return `Requests will go to ${host}, on your organization's network.`;
+  }
+  function bedrockSignInApprovePublic(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `ستذهب الطلبات إلى ${host}، على الإنترنت العام.`;
+      case "de":
+        return `Anfragen gehen an ${host}, im öffentlichen Internet.`;
+      case "es":
+        return `Las solicitudes irán a ${host}, en internet público.`;
+      case "fr":
+        return `Les requêtes iront à ${host}, sur l’internet public.`;
+      case "ja":
+        return `リクエストは公開インターネット上の ${host} に送られます。`;
+      case "ko":
+        return `요청은 공용 인터넷의 ${host}(으)로 갑니다.`;
+      case "pt-BR":
+        return `As solicitações irão para ${host}, na internet pública.`;
+      case "zh-Hans":
+        return `请求将发送到 ${host}，位于公共互联网上。`;
+      case "zh-Hant":
+        return `要求將傳送到 ${host}，位於公用網際網路上。`;
+      case "en-XA":
+        return `[Ŕéǫûéšţš ŵîļļ ĝö ţö ${host}, öñ ţĥé þûƀļîç îñţéŕñéţ. ~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Requests will go to ‬${host}‮, on the public internet.‬`;
+    }
+    return `Requests will go to ${host}, on the public internet.`;
+  }
+  function bedrockSignInChooseWhere() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `اختر وجهة طلبات Amazon Bedrock.`;
+      case "de":
+        return `Wähle, wohin Amazon-Bedrock-Anfragen gehen.`;
+      case "es":
+        return `Elige adónde van las solicitudes de Amazon Bedrock.`;
+      case "fr":
+        return `Choisissez où vont les requêtes Amazon Bedrock.`;
+      case "ja":
+        return `Amazon Bedrock のリクエストの送り先を選んでください。`;
+      case "ko":
+        return `Amazon Bedrock 요청을 보낼 곳을 고르세요.`;
+      case "pt-BR":
+        return `Escolha para onde vão as solicitações do Amazon Bedrock.`;
+      case "zh-Hans":
+        return `请选择 Amazon Bedrock 请求的发送位置。`;
+      case "zh-Hant":
+        return `請選擇 Amazon Bedrock 要求的傳送位置。`;
+      case "en-XA":
+        return `[Çĥööšé ŵĥéŕé Åɱážöñ Ɓéðŕöçķ ŕéǫûéšţš ĝö. ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Choose where Amazon Bedrock requests go.‬`;
+    }
+    return `Choose where Amazon Bedrock requests go.`;
+  }
+  function bedrockSignInFromClaudeSettings() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `مُلئ من إعدادات Claude Code الخاصة بك.`;
+      case "de":
+        return `Aus deinen Claude-Code-Einstellungen ausgefüllt.`;
+      case "es":
+        return `Completado con tu configuración de Claude Code.`;
+      case "fr":
+        return `Rempli à partir de vos réglages Claude Code.`;
+      case "ja":
+        return `Claude Code の設定から入力しました。`;
+      case "ko":
+        return `Claude Code 설정에서 채웠습니다.`;
+      case "pt-BR":
+        return `Preenchido com as suas configurações do Claude Code.`;
+      case "zh-Hans":
+        return `已根据你的 Claude Code 设置填写。`;
+      case "zh-Hant":
+        return `已依你的 Claude Code 設定填入。`;
+      case "en-XA":
+        return `[Ƒîļļéð îñ ƒŕöɱ ýöûŕ Çļáûðé Çöðé šéţţîñĝš. ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Filled in from your Claude Code settings.‬`;
+    }
+    return `Filled in from your Claude Code settings.`;
+  }
+  function bedrockSignInFromOrganization() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `مُلئ من إعدادات Claude Code الخاصة بمؤسستك.`;
+      case "de":
+        return `Aus den Claude-Code-Einstellungen deiner Organisation ausgefüllt.`;
+      case "es":
+        return `Completado con la configuración de Claude Code de tu organización.`;
+      case "fr":
+        return `Rempli à partir des réglages Claude Code de votre organisation.`;
+      case "ja":
+        return `組織の Claude Code の設定から入力しました。`;
+      case "ko":
+        return `조직의 Claude Code 설정에서 채웠습니다.`;
+      case "pt-BR":
+        return `Preenchido com as configurações do Claude Code da sua organização.`;
+      case "zh-Hans":
+        return `已根据你所在组织的 Claude Code 设置填写。`;
+      case "zh-Hant":
+        return `已依你所屬組織的 Claude Code 設定填入。`;
+      case "en-XA":
+        return `[Ƒîļļéð îñ ƒŕöɱ ýöûŕ öŕĝáñîžáţîöñ'š Çļáûðé Çöðé šéţţîñĝš. ~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Filled in from your organization's Claude Code settings.‬`;
+    }
+    return `Filled in from your organization's Claude Code settings.`;
+  }
+  function bedrockSignInNoKey() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `دون مفتاح: عنوان مؤسستي يوقّع الطلبات`;
+      case "de":
+        return `Ohne Schlüssel: Die Adresse meiner Organisation signiert Anfragen`;
+      case "es":
+        return `Sin clave: la dirección de mi organización firma las solicitudes`;
+      case "fr":
+        return `Sans clé : l’adresse de mon organisation signe les requêtes`;
+      case "ja":
+        return `キーなし：組織のアドレスがリクエストに署名する`;
+      case "ko":
+        return `키 없음: 조직의 주소가 요청에 서명합니다`;
+      case "pt-BR":
+        return `Sem chave: o endereço da minha organização assina as solicitações`;
+      case "zh-Hans":
+        return `不用密钥：由我所在组织的地址为请求签名`;
+      case "zh-Hant":
+        return `不用金鑰：由我所屬組織的位址為要求簽署`;
+      case "en-XA":
+        return `[Ñö ķéý: ɱý öŕĝáñîžáţîöñ'š áððŕéšš šîĝñš ŕéǫûéšţš ~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮No key: my organization's address signs requests‬`;
+    }
+    return `No key: my organization's address signs requests`;
+  }
+  function bedrockSignInOrganization() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `عنوان مؤسستي`;
+      case "de":
+        return `Die Adresse meiner Organisation`;
+      case "es":
+        return `La dirección de mi organización`;
+      case "fr":
+        return `L’adresse de mon organisation`;
+      case "ja":
+        return `組織のアドレス`;
+      case "ko":
+        return `조직의 주소`;
+      case "pt-BR":
+        return `O endereço da minha organização`;
+      case "zh-Hans":
+        return `我所在组织的地址`;
+      case "zh-Hant":
+        return `我所屬組織的位址`;
+      case "en-XA":
+        return `[Ṁý öŕĝáñîžáţîöñ'š áððŕéšš ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮My organization's address‬`;
+    }
+    return `My organization's address`;
+  }
+  function bedrockSignInSend() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أرسل الطلبات إلى هناك`;
+      case "de":
+        return `Anfragen dorthin senden`;
+      case "es":
+        return `Enviar solicitudes allí`;
+      case "fr":
+        return `Envoyer les requêtes là-bas`;
+      case "ja":
+        return `そこにリクエストを送る`;
+      case "ko":
+        return `그곳으로 요청 보내기`;
+      case "pt-BR":
+        return `Enviar solicitações para lá`;
+      case "zh-Hans":
+        return `将请求发送到那里`;
+      case "zh-Hant":
+        return `將要求傳送到那裡`;
+      case "en-XA":
+        return `[Šéñð ŕéǫûéšţš ţĥéŕé ~~~~~~~]`;
+      case "ar-XB":
+        return `‮Send requests there‬`;
+    }
+    return `Send requests there`;
+  }
+  function bedrockSignInSettingsNoKey() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ترسل إعدادات Claude Code هذه طلبات Amazon Bedrock دون مفتاح.`;
+      case "de":
+        return `Diese Claude-Code-Einstellungen senden Amazon-Bedrock-Anfragen ohne Schlüssel.`;
+      case "es":
+        return `Esta configuración de Claude Code envía solicitudes a Amazon Bedrock sin clave.`;
+      case "fr":
+        return `Ces réglages Claude Code envoient les requêtes Amazon Bedrock sans clé.`;
+      case "ja":
+        return `この Claude Code の設定は、キーなしで Amazon Bedrock にリクエストを送ります。`;
+      case "ko":
+        return `이 Claude Code 설정은 키 없이 Amazon Bedrock 요청을 보냅니다.`;
+      case "pt-BR":
+        return `Essas configurações do Claude Code enviam solicitações ao Amazon Bedrock sem chave.`;
+      case "zh-Hans":
+        return `这些 Claude Code 设置会在不带密钥的情况下发送 Amazon Bedrock 请求。`;
+      case "zh-Hant":
+        return `這些 Claude Code 設定會在不帶金鑰的情況下傳送 Amazon Bedrock 要求。`;
+      case "en-XA":
+        return `[Ţĥéšé Çļáûðé Çöðé šéţţîñĝš šéñð Åɱážöñ Ɓéðŕöçķ ŕéǫûéšţš ŵîţĥöûţ á ķéý. ~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮These Claude Code settings send Amazon Bedrock requests without a key.‬`;
+    }
+    return `These Claude Code settings send Amazon Bedrock requests without a key.`;
+  }
+  function bedrockSignInStraightToAws() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `مباشرة إلى AWS`;
+      case "de":
+        return `Direkt an AWS`;
+      case "es":
+        return `Directo a AWS`;
+      case "fr":
+        return `Directement à AWS`;
+      case "ja":
+        return `AWS に直接`;
+      case "ko":
+        return `AWS로 바로`;
+      case "pt-BR":
+        return `Direto para a AWS`;
+      case "zh-Hans":
+        return `直接发送到 AWS`;
+      case "zh-Hant":
+        return `直接傳送到 AWS`;
+      case "en-XA":
+        return `[Šţŕáîĝĥţ ţö ÅŴŠ ~~~~~]`;
+      case "ar-XB":
+        return `‮Straight to AWS‬`;
+    }
+    return `Straight to AWS`;
+  }
+  function bedrockSignInWhere() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إلى أين يجب أن تذهب طلبات Amazon Bedrock؟`;
+      case "de":
+        return `Wohin sollen Amazon-Bedrock-Anfragen gehen?`;
+      case "es":
+        return `¿Adónde deben ir las solicitudes de Amazon Bedrock?`;
+      case "fr":
+        return `Où envoyer les requêtes Amazon Bedrock ?`;
+      case "ja":
+        return `Amazon Bedrock のリクエストをどこに送りますか？`;
+      case "ko":
+        return `Amazon Bedrock 요청을 어디로 보낼까요?`;
+      case "pt-BR":
+        return `Para onde as solicitações do Amazon Bedrock devem ir?`;
+      case "zh-Hans":
+        return `Amazon Bedrock 请求应发送到哪里？`;
+      case "zh-Hant":
+        return `Amazon Bedrock 要求應傳送到哪裡？`;
+      case "en-XA":
+        return `[Ŵĥéŕé šĥöûļð Åɱážöñ Ɓéðŕöçķ ŕéǫûéšţš ĝö? ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Where should Amazon Bedrock requests go?‬`;
+    }
+    return `Where should Amazon Bedrock requests go?`;
+  }
+  function bedrockUnreachable(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر الوصول إلى ${host}. تحقّق من شبكتك ومن العنوان.`;
+      case "de":
+        return `${host} ist nicht erreichbar. Prüfe dein Netzwerk und die Adresse.`;
+      case "es":
+        return `No se pudo llegar a ${host}. Comprueba tu red y la dirección.`;
+      case "fr":
+        return `${host} est injoignable. Vérifiez votre réseau et l’adresse.`;
+      case "ja":
+        return `${host} に接続できませんでした。ネットワークとアドレスを確認してください。`;
+      case "ko":
+        return `${host}에 연결할 수 없습니다. 네트워크와 주소를 확인하세요.`;
+      case "pt-BR":
+        return `Não foi possível alcançar ${host}. Confira sua rede e o endereço.`;
+      case "zh-Hans":
+        return `无法连接到 ${host}。请检查你的网络和地址。`;
+      case "zh-Hant":
+        return `無法連線到 ${host}。請檢查你的網路和位址。`;
+      case "en-XA":
+        return `[${host} çöûļð ñöţ ƀé ŕéáçĥéð. Çĥéçķ ýöûŕ ñéţŵöŕķ áñð ţĥé áððŕéšš. ~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${host}‮ could not be reached. Check your network and the address.‬`;
+    }
+    return `${host} could not be reached. Check your network and the address.`;
+  }
   function cardAfterMergeDoerCrewmate() {
     switch (currentLanguage()) {
       case "ar":
@@ -97309,6 +97857,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `${count} saved resets · use one on ${site}`;
     }
   }
+  function settingsSubscriptionsSentThrough(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `مُرسَل عبر ${host}`;
+      case "de":
+        return `gesendet über ${host}`;
+      case "es":
+        return `enviado a través de ${host}`;
+      case "fr":
+        return `envoyé via ${host}`;
+      case "ja":
+        return `${host} 経由で送信`;
+      case "ko":
+        return `${host}을(를) 거쳐 전송`;
+      case "pt-BR":
+        return `enviado por ${host}`;
+      case "zh-Hans":
+        return `经由 ${host} 发送`;
+      case "zh-Hant":
+        return `經由 ${host} 傳送`;
+      case "en-XA":
+        return `[šéñţ ţĥŕöûĝĥ ${host} ~~~~~]`;
+      case "ar-XB":
+        return `‮sent through ‬${host}`;
+    }
+    return `sent through ${host}`;
+  }
   function settingsSubscriptionsSignIn() {
     switch (currentLanguage()) {
       case "ar":
@@ -116593,6 +117169,26 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     automationWaitsForNote,
     automationWaitsForPlaceholder,
     batchesReadWords,
+    bedrockAddressInvalid,
+    bedrockAddressMoved,
+    bedrockAddressNotFound,
+    bedrockAddressPlainHttp,
+    bedrockAddressRefused,
+    bedrockSecureConnectionFailed,
+    bedrockSignInAddress,
+    bedrockSignInApproveLocal,
+    bedrockSignInApprovePrivate,
+    bedrockSignInApprovePublic,
+    bedrockSignInChooseWhere,
+    bedrockSignInFromClaudeSettings,
+    bedrockSignInFromOrganization,
+    bedrockSignInNoKey,
+    bedrockSignInOrganization,
+    bedrockSignInSend,
+    bedrockSignInSettingsNoKey,
+    bedrockSignInStraightToAws,
+    bedrockSignInWhere,
+    bedrockUnreachable,
     cardAfterMergeDoerCrewmate,
     cardAfterMergeDoerFirstmate,
     cardAfterMergeLead,
@@ -119360,6 +119956,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsSubscriptionsRetrying,
     settingsSubscriptionsRowActions,
     settingsSubscriptionsSavedResets,
+    settingsSubscriptionsSentThrough,
     settingsSubscriptionsSignIn,
     settingsSubscriptionsSignInAgainState,
     settingsSubscriptionsSignedIn,
@@ -120308,6 +120905,26 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "automationWaitsForNote": [],
     "automationWaitsForPlaceholder": [],
     "batchesReadWords": [],
+    "bedrockAddressInvalid": [],
+    "bedrockAddressMoved": ["host"],
+    "bedrockAddressNotFound": ["host"],
+    "bedrockAddressPlainHttp": [],
+    "bedrockAddressRefused": ["host"],
+    "bedrockSecureConnectionFailed": ["host"],
+    "bedrockSignInAddress": [],
+    "bedrockSignInApproveLocal": ["host"],
+    "bedrockSignInApprovePrivate": ["host"],
+    "bedrockSignInApprovePublic": ["host"],
+    "bedrockSignInChooseWhere": [],
+    "bedrockSignInFromClaudeSettings": [],
+    "bedrockSignInFromOrganization": [],
+    "bedrockSignInNoKey": [],
+    "bedrockSignInOrganization": [],
+    "bedrockSignInSend": [],
+    "bedrockSignInSettingsNoKey": [],
+    "bedrockSignInStraightToAws": [],
+    "bedrockSignInWhere": [],
+    "bedrockUnreachable": ["host"],
     "cardAfterMergeDoerCrewmate": [],
     "cardAfterMergeDoerFirstmate": [],
     "cardAfterMergeLead": [],
@@ -123075,6 +123692,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsSubscriptionsRetrying": [],
     "settingsSubscriptionsRowActions": ["account"],
     "settingsSubscriptionsSavedResets": ["count", "site"],
+    "settingsSubscriptionsSentThrough": ["host"],
     "settingsSubscriptionsSignIn": [],
     "settingsSubscriptionsSignInAgainState": [],
     "settingsSubscriptionsSignedIn": [],
@@ -131250,6 +131868,11 @@ ${FRAME_KEYBOARD_SCRIPT}
     kind: _enum(["text", "secret", "select", "manual_code"]),
     message: string(),
     placeholder: string().optional(),
+    /**
+     * What a text prompt's field starts with, such as a value read from the
+     * person's own settings. Absent, the field starts empty.
+     */
+    value: string().optional(),
     options: array(object({ id: string(), label: string(), description: string().optional() })).optional()
   });
   const authNoticeSchema = object({
@@ -131342,6 +131965,11 @@ ${FRAME_KEYBOARD_SCRIPT}
      * Code's settings name an address and no token command. Absent otherwise.
      */
     gateway: _enum(CLAUDE_ACCESS_SOURCES).optional(),
+    /**
+     * The host an Amazon Bedrock account's requests are sent through, when its
+     * sign-in saved an organization address. Absent when they go to AWS.
+     */
+    sentThrough: string().optional(),
     /**
      * Why this account cannot serve right now although its credential is
      * fine, in the backend's own sentence: a Claude account whose machine has

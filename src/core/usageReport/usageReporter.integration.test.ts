@@ -8,9 +8,10 @@ import { DEFAULT_COST_LIMIT } from "@shared/costLimit";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { type CollectorTls, collectorTlsFixture } from "../../../tests/helpers/collectorTlsFixture";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
-import { companyReportingFrom, useSystemRootsForTests } from "../claude/claudeReporting";
+import { companyReportingFrom } from "../claude/claudeReporting";
 import { openInMemoryDatabase } from "../storage/db";
 import { homeUsage } from "../storage/homeUsage";
+import { useSystemRootsForTests } from "../trustedRoots";
 import { companyDestination } from "./companyDestination";
 
 /**

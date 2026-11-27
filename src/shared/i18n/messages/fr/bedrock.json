@@ -1,0 +1,22 @@
+{
+  "bedrockAddressInvalid": "Cette adresse ne peut pas être utilisée : écrivez-la en entier, en commençant par https://, sans identifiant, requête ni #.",
+  "bedrockAddressMoved": "{host} mène maintenant ailleurs qu’au moment où vous l’avez approuvée. Reconnectez-vous à Amazon Bedrock pour l’approuver.",
+  "bedrockAddressNotFound": "{host} est introuvable.",
+  "bedrockAddressPlainHttp": "Le http simple est réservé à une adresse sur cet ordinateur : utilisez l’adresse https de votre organisation.",
+  "bedrockAddressRefused": "{host} mène à un endroit auquel Infinitary ne se connecte pas.",
+  "bedrockSecureConnectionFailed": "La connexion à {host} n’a pas pu être sécurisée. Vérifiez que cet ordinateur fait confiance à son certificat.",
+  "bedrockSignInAddress": "Saisissez l’adresse Amazon Bedrock de votre organisation.",
+  "bedrockSignInApproveLocal": "Les requêtes iront à {host}, sur cet ordinateur.",
+  "bedrockSignInApprovePrivate": "Les requêtes iront à {host}, sur le réseau de votre organisation.",
+  "bedrockSignInApprovePublic": "Les requêtes iront à {host}, sur l’internet public.",
+  "bedrockSignInChooseWhere": "Choisissez où vont les requêtes Amazon Bedrock.",
+  "bedrockSignInFromClaudeSettings": "Rempli à partir de vos réglages Claude Code.",
+  "bedrockSignInFromOrganization": "Rempli à partir des réglages Claude Code de votre organisation.",
+  "bedrockSignInNoKey": "Sans clé : l’adresse de mon organisation signe les requêtes",
+  "bedrockSignInOrganization": "L’adresse de mon organisation",
+  "bedrockSignInSend": "Envoyer les requêtes là-bas",
+  "bedrockSignInSettingsNoKey": "Ces réglages Claude Code envoient les requêtes Amazon Bedrock sans clé.",
+  "bedrockSignInStraightToAws": "Directement à AWS",
+  "bedrockSignInWhere": "Où envoyer les requêtes Amazon Bedrock ?",
+  "bedrockUnreachable": "{host} est injoignable. Vérifiez votre réseau et l’adresse."
+}

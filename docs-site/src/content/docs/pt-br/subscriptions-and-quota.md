@@ -1,5 +1,5 @@
 ---
-source: f1e95aa2b9433f4a
+source: 4cdc56f97509d3e4
 title: Assinaturas e franquia
 description: Como adicionar suas assinaturas de IA, ver quanto ainda resta da franquia do seu plano e o que sua tripulação faz quando ela acaba.
 ---
@@ -47,6 +47,16 @@ Deixe o ponteiro sobre um medidor para ver quando ele renova.
 **Atualizar**, no topo da lista, lê todas as franquias de novo.
 O Infinitary não lê a franquia do OpenRouter nem de uma API personalizada, e a linha avisa isso.
 O Amazon Bedrock é cobrado pelo uso na sua conta da AWS; a linha dele mostra a estimativa deste mês a partir do trabalho que o Infinitary registrou.
+
+## Amazon Bedrock pela sua organização {#amazon-bedrock-through-your-organization}
+
+Quando você adiciona o Amazon Bedrock, o Infinitary pergunta para onde as solicitações devem ir: **Direto para a AWS** ou **O endereço da minha organização**.
+Digite o endereço da sua organização, e o Infinitary mostra o host e a rede em que ele está: este computador, a rede da sua organização ou a internet pública.
+Pressione **Enviar solicitações para lá** para aprová-lo.
+As solicitações então vão só para esse endereço, só enquanto o nome dele ainda apontar para essa rede, e só quando o seu computador confia no certificado dele.
+Se o endereço da sua organização assina as solicitações sozinho, escolha **Sem chave: o endereço da minha organização assina as solicitações** em vez de um perfil ou uma chave.
+Quando o Claude Code no seu computador já usa o Amazon Bedrock, o login começa com o endereço, a região e o perfil dele preenchidos, e diz de onde vieram.
+A linha da conta então diz por qual endereço as solicitações são **enviadas**.
 
 ## Escolher qual conta faz o quê {#choose-which-account-does-what}
 

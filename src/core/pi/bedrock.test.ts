@@ -2,9 +2,15 @@ import { writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { join } from "node:path";
 import { normalizeContext } from "@earendil-works/pi-ai";
+import { BEDROCK_PROVIDER_ID } from "@shared/providers";
 import { afterEach, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
-import { bedrockCode, bedrockModelInRegion } from "./bedrock";
+import {
+  BEDROCK_ADDRESS_ENV,
+  BEDROCK_NETWORK_ENV,
+  bedrockCode,
+  bedrockModelInRegion,
+} from "./bedrock";
 import {
   awsLoginUrl,
   bedrockProfileFailure,
@@ -322,4 +328,38 @@ it("preserves only the AWS profile and console cache selectors for re-sign-in (I
     AWS_LOGIN_CACHE_DIRECTORY: "/fixture/console-cache",
     PATH: "/fixture/bin",
   });
+});
+
+it("counts a Bedrock sign-in with no key or profile only where it saved an organization address", async () => {
+  vi.stubEnv("PI_OFFLINE", "1");
+  const signedIn = async (env: Record<string, string>) => {
+    const dir = scratchDir("bedrock-no-key-");
+    writeFileSync(
+      join(dir, "auth.json"),
+      JSON.stringify({ [BEDROCK_PROVIDER_ID]: { type: "api_key", env } }),
+      { mode: 0o600 },
+    );
+    const runtime = await createModelRuntime({
+      authPath: join(dir, "auth.json"),
+      modelsPath: join(dir, "models.json"),
+      bedrockAccount: true,
+    });
+    return (await runtime.getAuth(BEDROCK_PROVIDER_ID)) !== undefined;
+  };
+  const checked = {
+    AWS_REGION: "us-west-2",
+    INFINITARY_BEDROCK_MODELS: "us.anthropic.claude-fixture",
+  };
+  expect(await signedIn(checked)).toBe(false);
+  expect(
+    await signedIn({
+      ...checked,
+      [BEDROCK_ADDRESS_ENV]: "https://bedrock.example.com",
+      [BEDROCK_NETWORK_ENV]: "public",
+    }),
+  ).toBe(true);
+  // An address saved without the network the person approved is no address at all.
+  expect(await signedIn({ ...checked, [BEDROCK_ADDRESS_ENV]: "https://bedrock.example.com" })).toBe(
+    false,
+  );
 });

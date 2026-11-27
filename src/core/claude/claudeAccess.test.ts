@@ -8,6 +8,7 @@ import {
   assertClaudeWorkSettings,
   type ResolveClaudeSettings,
   readClaudeAccess,
+  readClaudeBedrockSetup,
 } from "./claudeAccess";
 
 /**
@@ -160,4 +161,64 @@ it("blocks managed Bedrock and unreadable policy at the shared Claude work bound
     }),
   ).rejects.toThrow("could not confirm");
   await expect(assertClaudeWorkSettings(planted())).resolves.toBeUndefined();
+});
+
+/**
+ * The approved Bedrock plan's extra: a Bedrock sign-in starts from the
+ * address, region and profile Claude Code's Bedrock settings name, and
+ * whether they skip AWS auth, read from the organization's tier and the
+ * person's own, and never a key.
+ */
+describe("Claude Code's Amazon Bedrock settings", () => {
+  const OWN_BEDROCK = {
+    env: {
+      CLAUDE_CODE_USE_BEDROCK: "1",
+      ANTHROPIC_BEDROCK_BASE_URL: "https://bedrock.example.com",
+      AWS_REGION: "us-east-1",
+      AWS_PROFILE: "work",
+      AWS_BEARER_TOKEN_BEDROCK: "disposable-settings-key",
+      AWS_ACCESS_KEY_ID: "AKIDSETTINGS",
+      AWS_SECRET_ACCESS_KEY: "disposable-settings-secret",
+    },
+  };
+
+  it("takes the address, region and profile from the person's own settings, and never a key", async () => {
+    personalSettings(OWN_BEDROCK);
+    expect(await readClaudeBedrockSetup(planted())).toEqual({
+      source: "claude-settings",
+      address: "https://bedrock.example.com",
+      region: "us-east-1",
+      profile: "work",
+    });
+  });
+
+  it("names the organization, whose values win over the person's own", async () => {
+    personalSettings(OWN_BEDROCK);
+    const setup = await readClaudeBedrockSetup(
+      withOrganization({
+        env: {
+          CLAUDE_CODE_USE_BEDROCK: "true",
+          ANTHROPIC_BEDROCK_BASE_URL: "https://llm.corp.example",
+          CLAUDE_CODE_SKIP_BEDROCK_AUTH: "1",
+        },
+      }),
+    );
+    expect(setup).toEqual({
+      source: "organization",
+      address: "https://llm.corp.example",
+      region: "us-east-1",
+      profile: "work",
+      skipAuth: true,
+    });
+  });
+
+  it("reads nothing when no tier turns Bedrock on, or the settings cannot be read", async () => {
+    personalSettings({ env: { ...OWN_BEDROCK.env, CLAUDE_CODE_USE_BEDROCK: "0" } });
+    expect(await readClaudeBedrockSetup(planted())).toBeUndefined();
+    expect(
+      await readClaudeBedrockSetup(async () => {
+        throw new Error("plutil failed");
+      }),
+    ).toBeUndefined();
+  });
 });

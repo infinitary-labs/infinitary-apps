@@ -1,0 +1,22 @@
+{
+  "bedrockAddressInvalid": "Esse endereço não pode ser usado: escreva-o inteiro, começando com https://, sem login, consulta ou #.",
+  "bedrockAddressMoved": "{host} agora aponta para um lugar diferente de quando você o aprovou. Faça login no Amazon Bedrock de novo para aprová-lo.",
+  "bedrockAddressNotFound": "{host} não foi encontrado.",
+  "bedrockAddressPlainHttp": "O http simples é só para um endereço neste computador: use o endereço https da sua organização.",
+  "bedrockAddressRefused": "{host} aponta para um lugar ao qual o Infinitary não se conecta.",
+  "bedrockSecureConnectionFailed": "Não foi possível proteger a conexão com {host}. Confira se este computador confia no certificado dele.",
+  "bedrockSignInAddress": "Digite o endereço do Amazon Bedrock da sua organização.",
+  "bedrockSignInApproveLocal": "As solicitações irão para {host}, neste computador.",
+  "bedrockSignInApprovePrivate": "As solicitações irão para {host}, na rede da sua organização.",
+  "bedrockSignInApprovePublic": "As solicitações irão para {host}, na internet pública.",
+  "bedrockSignInChooseWhere": "Escolha para onde vão as solicitações do Amazon Bedrock.",
+  "bedrockSignInFromClaudeSettings": "Preenchido com as suas configurações do Claude Code.",
+  "bedrockSignInFromOrganization": "Preenchido com as configurações do Claude Code da sua organização.",
+  "bedrockSignInNoKey": "Sem chave: o endereço da minha organização assina as solicitações",
+  "bedrockSignInOrganization": "O endereço da minha organização",
+  "bedrockSignInSend": "Enviar solicitações para lá",
+  "bedrockSignInSettingsNoKey": "Essas configurações do Claude Code enviam solicitações ao Amazon Bedrock sem chave.",
+  "bedrockSignInStraightToAws": "Direto para a AWS",
+  "bedrockSignInWhere": "Para onde as solicitações do Amazon Bedrock devem ir?",
+  "bedrockUnreachable": "Não foi possível alcançar {host}. Confira sua rede e o endereço."
+}

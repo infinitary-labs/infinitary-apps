@@ -1416,6 +1416,7 @@
     "many": "{count} réinitialisations enregistrées · à utiliser sur {site}",
     "other": "{count} réinitialisations enregistrées · à utiliser sur {site}"
   },
+  "settingsSubscriptionsSentThrough": "envoyé via {host}",
   "settingsSubscriptionsSignIn": "Se connecter",
   "settingsSubscriptionsSignInAgainState": "Reconnectez-vous.",
   "settingsSubscriptionsSignedIn": "connecté",

@@ -1354,6 +1354,7 @@
     "plural": "count",
     "other": "{count} 次已保存的重置 · 在 {site} 使用"
   },
+  "settingsSubscriptionsSentThrough": "经由 {host} 发送",
   "settingsSubscriptionsSignIn": "登录",
   "settingsSubscriptionsSignInAgainState": "请重新登录。",
   "settingsSubscriptionsSignedIn": "已登录",

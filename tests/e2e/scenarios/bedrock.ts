@@ -6,10 +6,10 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
-import { crc32 } from "node:zlib";
 import { FIRSTMATE_PERSONA, KIND_CLASSIFIER_OPENING } from "../../../src/core/pi/piResources";
 import { STARTER_SLOTS } from "../../../src/shared/modelSlots";
 import { BEDROCK_PROVIDER_ID } from "../../../src/shared/providers";
+import { bedrockEvent as event } from "../../helpers/bedrockEventStream";
 import { scratchDir } from "../../helpers/scratchDirs";
 import {
   seedAccountAuth,
@@ -179,33 +179,6 @@ export function installBedrockProfile(home: string, keyId = PROFILE_KEY_ID): voi
 
 export function removeBedrockProfile(home: string): void {
   rmSync(join(home, ".aws", "credentials"));
-}
-
-/** The AWS event-stream wire format exercises the shipped SDK, not a replacement driver. */
-function event(name: string, fields: object): Buffer {
-  const headers = Buffer.concat(
-    Object.entries({
-      ":event-type": name,
-      ":message-type": "event",
-      ":content-type": "application/json",
-    }).map(([key, value]) =>
-      Buffer.concat([
-        Buffer.from([key.length]),
-        Buffer.from(key),
-        Buffer.from([7, 0, value.length]),
-        Buffer.from(value),
-      ]),
-    ),
-  );
-  const body = Buffer.from(JSON.stringify(fields));
-  const frame = Buffer.alloc(16 + headers.length + body.length);
-  frame.writeUInt32BE(frame.length, 0);
-  frame.writeUInt32BE(headers.length, 4);
-  frame.writeUInt32BE(crc32(frame.subarray(0, 8)), 8);
-  headers.copy(frame, 12);
-  body.copy(frame, 12 + headers.length);
-  frame.writeUInt32BE(crc32(frame.subarray(0, -4)), frame.length - 4);
-  return frame;
 }
 
 export const BEDROCK_FIXTURE_USAGE = { inputTokens: 5000, outputTokens: 500, totalTokens: 5500 };

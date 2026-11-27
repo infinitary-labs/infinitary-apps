@@ -12,7 +12,10 @@ import {
   statusFromHealth,
 } from "../accounts/accountBackend";
 import type { CredentialHealth, RenewalOutcome, RenewReason } from "../accounts/credentialHealth";
+import type { BedrockClaudeSetup } from "../claude/claudeAccess";
 import { createQuotaHttp, type QuotaHttp } from "../quota/http";
+import { BEDROCK_ADDRESS_ENV, BEDROCK_NETWORK_ENV, bedrockSentThrough } from "./bedrock";
+import type { BedrockResolver } from "./bedrockConnection";
 import {
   bedrockProfileIdentity,
   bedrockProfiles,
@@ -56,6 +59,10 @@ export type PiAccountBackendOptions = {
   http?: QuotaHttp;
   bedrockUrl?: string;
   awsCli?: string;
+  /** How an organization address's name is looked up; tests stand in for DNS. */
+  bedrockResolve?: BedrockResolver;
+  /** Claude Code's Bedrock settings, which a Bedrock sign-in starts from. */
+  bedrockClaudeSetup?: () => Promise<BedrockClaudeSetup | undefined>;
 };
 
 /**
@@ -86,6 +93,8 @@ export class PiAccountBackend implements AccountBackend {
   private readonly http: QuotaHttp;
   private readonly bedrockUrl?: string;
   private readonly awsCli?: string;
+  private readonly bedrockResolve?: BedrockResolver;
+  private readonly bedrockClaudeSetup?: () => Promise<BedrockClaudeSetup | undefined>;
   private activeBedrockLogin = false;
   private readonly unavailableProfiles = new Set<string>();
 
@@ -105,6 +114,8 @@ export class PiAccountBackend implements AccountBackend {
     this.modelsPath = options.modelsPath;
     this.bedrockUrl = options.bedrockUrl;
     this.awsCli = options.awsCli;
+    this.bedrockResolve = options.bedrockResolve;
+    this.bedrockClaudeSetup = options.bedrockClaudeSetup;
     // Profiles, names and prices read every Pi account's refreshed catalog,
     // and the live catalog a custom connection's protocol needs, kept beside
     // the app's models.json. With no app home (tests) nothing is fetched.
@@ -200,14 +211,28 @@ export class PiAccountBackend implements AccountBackend {
           ? await runtime.getAuth(BEDROCK_PROVIDER_ID)
           : undefined;
       const profile = existing?.env?.AWS_PROFILE;
-      const region = existing?.env?.AWS_REGION;
+      // Signing in again answers every step but the key from what was saved; an
+      // address whose name now reads as another network kind is not approved.
       const recheck = async (
         target: AccountRef,
         current: ModelRuntime,
-        region?: string,
-        targetProfile = profile,
+        saved?: { env?: Record<string, string>; auth?: { apiKey?: string } },
       ) => {
-        let answeredRegion = false;
+        const env = saved?.env;
+        const region = env?.AWS_REGION;
+        const targetProfile = env?.AWS_PROFILE;
+        const address = env?.[BEDROCK_ADDRESS_ENV];
+        const method = targetProfile ? "profile" : !saved?.auth?.apiKey && address ? "none" : "key";
+        const selects = [
+          method,
+          ...(method === "none" ? [] : [address ? "organization" : "aws"]),
+          ...(address ? [`send:${env?.[BEDROCK_NETWORK_ENV] ?? ""}`] : []),
+        ];
+        const texts = [
+          region ?? "",
+          ...(address ? [address] : []),
+          ...(targetProfile ? [targetProfile] : []),
+        ];
         await current.login(
           target.providerId,
           request.type,
@@ -215,14 +240,13 @@ export class PiAccountBackend implements AccountBackend {
             ? {
                 ...auth,
                 prompt: (prompt) => {
-                  if (prompt.type === "select")
-                    return Promise.resolve(targetProfile ? "profile" : "key");
-                  if (prompt.type === "text") {
-                    if (answeredRegion && targetProfile) return Promise.resolve(targetProfile);
-                    answeredRegion = true;
-                    return Promise.resolve(region);
-                  }
-                  return auth.prompt(prompt);
+                  const answer =
+                    prompt.type === "select"
+                      ? selects.shift()
+                      : prompt.type === "text"
+                        ? texts.shift()
+                        : undefined;
+                  return answer === undefined ? auth.prompt(prompt) : Promise.resolve(answer);
                 },
               }
             : auth,
@@ -237,8 +261,7 @@ export class PiAccountBackend implements AccountBackend {
       const related: {
         account: AccountRef;
         runtime: ModelRuntime;
-        region: string;
-        profile: string;
+        saved: { env?: Record<string, string>; auth?: { apiKey?: string } };
       }[] = [];
       if (profile) {
         const profiles = await bedrockProfiles();
@@ -253,12 +276,7 @@ export class PiAccountBackend implements AccountBackend {
             siblingRegion &&
             bedrockProfileIdentity(profiles, siblingProfile) === identity
           )
-            related.push({
-              account,
-              runtime: sibling,
-              region: siblingRegion,
-              profile: siblingProfile,
-            });
+            related.push({ account, runtime: sibling, saved });
         }
         abort.signal.throwIfAborted();
         // The named AWS identity can change for several rows at once. Mark every old list first.
@@ -267,10 +285,10 @@ export class PiAccountBackend implements AccountBackend {
         auth.notify({ type: "progress", message: "Opening your AWS sign-in." });
         await signInBedrockProfile(bedrockSourceProfile(profiles, profile), auth, this.awsCli);
       }
-      await recheck(request, runtime, region);
+      await recheck(request, runtime, existing);
       for (const sibling of related) {
         try {
-          await recheck(sibling.account, sibling.runtime, sibling.region, sibling.profile);
+          await recheck(sibling.account, sibling.runtime, sibling.saved);
           await request.onRelatedRechecked?.(sibling.account.accountId);
         } catch {
           // A sibling's old models stay withheld. Check the remaining regions within this sign-in.
@@ -354,10 +372,15 @@ export class PiAccountBackend implements AccountBackend {
       const runtime = await this.runtimeFor(account);
       if (!runtime.hasConfiguredAuth(account.providerId)) return { state: "unsigned" };
       const login = this.signedInAs.get(account.accountId);
+      const sentThrough =
+        account.providerId === BEDROCK_PROVIDER_ID
+          ? bedrockSentThrough((await runtime.getAuth(BEDROCK_PROVIDER_ID))?.env)
+          : undefined;
       return {
         state: "healthy",
         authType: runtime.isUsingOAuth(account.providerId) ? "oauth" : "api_key",
         ...(login ? { identity: { label: login } } : {}),
+        ...(sentThrough ? { sentThrough } : {}),
       };
     } catch {
       return { state: "degraded", reason: "unknown" };
@@ -394,6 +417,7 @@ export class PiAccountBackend implements AccountBackend {
         this.onCatalogRefreshed,
         account.providerId === BEDROCK_PROVIDER_ID,
         this.bedrockUrl,
+        { resolve: this.bedrockResolve, claudeSetup: this.bedrockClaudeSetup },
         (unavailable) => {
           if (this.runtimes.get(account.accountId) !== pending) return;
           if (unavailable) this.unavailableProfiles.add(account.accountId);
@@ -424,6 +448,10 @@ async function createRuntime(
   onCatalogRefreshed?: () => void,
   bedrockAccount?: boolean,
   bedrockUrl?: string,
+  bedrock: {
+    resolve?: BedrockResolver;
+    claudeSetup?: () => Promise<BedrockClaudeSetup | undefined>;
+  } = {},
   bedrockProfileUnavailable?: (unavailable: boolean) => void,
 ): Promise<ModelRuntime> {
   mkdirSync(dir, { recursive: true, mode: 0o700 });
@@ -433,6 +461,8 @@ async function createRuntime(
     bedrockUrl,
     bedrockProfileUnavailable,
     ...(bedrockAccount ? { bedrockRecheckPending: () => bedrockRecheckPending(dir) } : {}),
+    ...(bedrockAccount && bedrock.resolve ? { bedrockResolve: bedrock.resolve } : {}),
+    ...(bedrockAccount && bedrock.claudeSetup ? { bedrockClaudeSetup: bedrock.claudeSetup } : {}),
     modelsPath: appModelsPath ?? modelsPathIn(dir),
     // The overlay cache stays per account whichever models.json is read.
     ...(appModelsPath ? { modelsStorePath: join(dir, "models-store.json") } : {}),

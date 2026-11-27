@@ -7,6 +7,7 @@ import {
 } from "../../src/core/orchestrator/seat";
 import { captainTurn, renderWake } from "../../src/core/orchestrator/wakes";
 import { classifyBedrockCode } from "../../src/shared/authFailure";
+import * as m from "../../src/shared/i18n/messages.generated";
 import { placementNamedModelWait } from "../../src/shared/placement";
 import {
   BEDROCK_PROFILE_UNAVAILABLE,
@@ -72,6 +73,10 @@ test("a connected Bedrock account serves checked Claude models and shows a refus
     await pressKey(page.getByRole("button", { name: BEDROCK_SIGN_IN.key, exact: true }), "Enter");
     await page.getByPlaceholder(BEDROCK_SIGN_IN.regionExample).fill(BEDROCK_SIGN_IN.regionExample);
     await pressKey(page.getByPlaceholder(BEDROCK_SIGN_IN.regionExample), "Enter");
+    await pressKey(
+      page.getByRole("button", { name: m.bedrockSignInStraightToAws(), exact: true }),
+      "Enter",
+    );
     const key = page.getByPlaceholder(BEDROCK_SIGN_IN.key);
     await key.fill(BEDROCK_KEY);
     await pressKey(key, "Enter");
@@ -330,6 +335,53 @@ test("a connected Bedrock account serves checked Claude models and shows a refus
   }
 });
 
+test("a Bedrock account sent through the organization's own address names it on its row", async () => {
+  const gateway = await startBedrockStandIn();
+  // AWS's own address stands in as one nothing answers, so a request that went there fails.
+  const env = {
+    INFINITARY_BEDROCK_TEST_URL: "http://127.0.0.1:9",
+    AWS_BEARER_TOKEN_BEDROCK: "ambient-not-connected",
+  };
+  const launched = await launchApp({ env }).catch(async (error: unknown) => {
+    await gateway.close();
+    throw error;
+  });
+  try {
+    const { page } = launched;
+    await chooseWhereFirstMateLives(page, "here");
+    await pressKey(page.getByRole("button", { name: new RegExp(name), exact: false }), "Enter");
+    await pressKey(page.getByRole("button", { name: BEDROCK_SIGN_IN.key, exact: true }), "Enter");
+    const region = page.getByPlaceholder(BEDROCK_SIGN_IN.regionExample);
+    await region.fill(BEDROCK_SIGN_IN.regionExample);
+    await pressKey(region, "Enter");
+    await pressKey(
+      page.getByRole("button", { name: m.bedrockSignInOrganization(), exact: true }),
+      "Enter",
+    );
+    const address = page.getByPlaceholder("https://bedrock.example.com");
+    await address.fill(gateway.url);
+    await pressKey(address, "Enter");
+    const host = new URL(gateway.url).host;
+    await expect(page.getByText(m.bedrockSignInApproveLocal({ host }))).toBeVisible();
+    await pressKey(page.getByRole("button", { name: m.bedrockSignInSend(), exact: true }), "Enter");
+    const key = page.getByPlaceholder(BEDROCK_SIGN_IN.key);
+    await key.fill(BEDROCK_KEY);
+    await pressKey(key, "Enter");
+    await expect(promptInput(page)).toBeEnabled();
+    expect(
+      gateway.calls.some((call) => call.model === BEDROCK_MODEL && call.check && call.signed),
+    ).toBe(true);
+    await pressKey(page.getByRole("button", { name: "Settings", exact: true }), "Enter");
+    await pressKey(page.getByRole("tab", { name: "Intelligence", exact: true }), "Enter");
+    await expect(
+      page.getByText(m.settingsSubscriptionsSentThrough({ host }), { exact: false }),
+    ).toBeVisible();
+  } finally {
+    await launched.close();
+    await gateway.close();
+  }
+});
+
 test("a named Bedrock profile that cannot resolve offers recovery without claiming expiry (INF-3451)", async () => {
   const aws = await startBedrockStandIn();
   const env = {
@@ -354,6 +406,10 @@ test("a named Bedrock profile that cannot resolve offers recovery without claimi
     const region = page.getByPlaceholder(BEDROCK_SIGN_IN.regionExample);
     await region.fill(BEDROCK_SIGN_IN.regionExample);
     await pressKey(region, "Enter");
+    await pressKey(
+      page.getByRole("button", { name: m.bedrockSignInStraightToAws(), exact: true }),
+      "Enter",
+    );
     const profile = page.getByPlaceholder("default", { exact: true });
     await profile.fill(BEDROCK_PROFILE);
     await pressKey(profile, "Enter");

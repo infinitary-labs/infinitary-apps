@@ -13729,6 +13729,9 @@
                               "claude-settings"
                             ]
                           },
+                          "sentThrough": {
+                            "type": "string"
+                          },
                           "detail": {
                             "type": "string"
                           },
@@ -14731,6 +14734,9 @@
                             "type": "string"
                           },
                           "placeholder": {
+                            "type": "string"
+                          },
+                          "value": {
                             "type": "string"
                           },
                           "options": {
@@ -31416,6 +31422,9 @@
                 "claude-settings"
               ]
             },
+            "sentThrough": {
+              "type": "string"
+            },
             "detail": {
               "type": "string"
             },
@@ -31554,6 +31563,9 @@
               "claude-settings"
             ]
           },
+          "sentThrough": {
+            "type": "string"
+          },
           "detail": {
             "type": "string"
           },
@@ -31669,6 +31681,9 @@
               "organization",
               "claude-settings"
             ]
+          },
+          "sentThrough": {
+            "type": "string"
           },
           "detail": {
             "type": "string"
@@ -99956,6 +99971,9 @@
                           "placeholder": {
                             "type": "string"
                           },
+                          "value": {
+                            "type": "string"
+                          },
                           "options": {
                             "type": "array",
                             "items": {
@@ -100257,6 +100275,9 @@
                         "organization",
                         "claude-settings"
                       ]
+                    },
+                    "sentThrough": {
+                      "type": "string"
                     },
                     "detail": {
                       "type": "string"
@@ -105240,6 +105261,9 @@
             "type": "string"
           },
           "placeholder": {
+            "type": "string"
+          },
+          "value": {
             "type": "string"
           },
           "options": {
@@ -115657,6 +115681,9 @@
                               "claude-settings"
                             ]
                           },
+                          "sentThrough": {
+                            "type": "string"
+                          },
                           "detail": {
                             "type": "string"
                           },
@@ -116661,6 +116688,9 @@
                           "placeholder": {
                             "type": "string"
                           },
+                          "value": {
+                            "type": "string"
+                          },
                           "options": {
                             "type": "array",
                             "items": {
@@ -116896,6 +116926,9 @@
                         "type": "string"
                       },
                       "placeholder": {
+                        "type": "string"
+                      },
+                      "value": {
                         "type": "string"
                       },
                       "options": {
@@ -117461,6 +117494,9 @@
                               "organization",
                               "claude-settings"
                             ]
+                          },
+                          "sentThrough": {
+                            "type": "string"
                           },
                           "detail": {
                             "type": "string"
@@ -121769,6 +121805,9 @@
                       "organization",
                       "claude-settings"
                     ]
+                  },
+                  "sentThrough": {
+                    "type": "string"
                   },
                   "detail": {
                     "type": "string"

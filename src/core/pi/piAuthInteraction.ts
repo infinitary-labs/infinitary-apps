@@ -43,6 +43,10 @@ export function buildAuthInteraction(
         ...("placeholder" in prompt && prompt.placeholder
           ? { placeholder: prompt.placeholder }
           : {}),
+        // Bedrock's sign-in adds a starting value Pi's own prompt type does not name.
+        ...("value" in prompt && typeof prompt.value === "string" && prompt.value
+          ? { value: prompt.value }
+          : {}),
         ...(prompt.type === "select" ? { options: [...prompt.options] } : {}),
       });
       if (!prompt.signal) return reply;

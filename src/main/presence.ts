@@ -1,3 +1,4 @@
+import { settingFrom } from "@shared/envSettings";
 import { type BrowserWindow, powerMonitor, systemPreferences } from "electron";
 import { hostPlatform } from "../core/platform";
 import { PresenceWatch } from "./presenceWatch";
@@ -7,14 +8,29 @@ import { watchWindowsDisplay } from "./windowsDisplay";
  * Whether someone is at this computer (docs/ambient-music.md, "When nobody
  * is at the computer"), from what the system tells the app (./presenceWatch.ts).
  * A Mac and a Windows PC say it; a Linux desktop says none of it through
- * Electron, so there nobody is ever away and `watched` is false.
+ * Electron, so there nobody is ever away and `watched` is false. Linux's
+ * idle reading can answer zero forever on some Wayland desktops, so a card's
+ * seen report reads idle time only where `watched` is true.
  */
 let watch: PresenceWatch | null = null;
+let readsSystem = true;
+
+/**
+ * Called once before any window opens. An isolated run reads no presence, so
+ * every journey sees cards marked seen as on a computer that cannot tell;
+ * `INFINITARY_PRESENCE=system` reads this computer's own there anyway.
+ */
+export function choosePresenceReading(isolated: boolean): void {
+  readsSystem = !isolated || settingFrom(process.env, "PRESENCE") === "system";
+}
 
 export function presenceWatch(): PresenceWatch {
   if (watch) return watch;
   const platform = hostPlatform();
-  const started = new PresenceWatch(platform === "darwin" || platform === "win32");
+  const started = new PresenceWatch(
+    readsSystem && (platform === "darwin" || platform === "win32"),
+    () => powerMonitor.getSystemIdleTime(),
+  );
   watch = started;
   if (!started.watched) return started;
   powerMonitor.on("lock-screen", () => started.set("locked", true));

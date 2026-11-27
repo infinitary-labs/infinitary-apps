@@ -1258,7 +1258,10 @@ A revised card says what is new to the captain, and the author marks nothing: th
 The visual rules are the design skill's (`components/cards/ResponseCard.prompt.md`, the revised line).
 
 - **Seen.**
-  An updated window reports the exact released update only after its body draws while the window is visible and focused (`inf:cards:seen-update`, `useSeenReport`; focus inside a card's own frame counts).
+  An updated window reports the exact released update only after its body draws while the window is visible and focused (`inf:cards:seen-update`, `useSeenReport`; focus inside a card's own frame counts) and someone is at the computer (INF-7038's plan, Part 1; `reportWhileHere`).
+  Someone is there while no away reason holds (`docs/ambient-music.md`, "When nobody is at the computer") and the keyboard or mouse was touched in the 10 seconds before the update drew or at any time since: a key or the pointer in the window counts at once, and every other touch through the system's idle time (`inf:window:idle`, `powerMonitor.getSystemIdleTime`), asked every 2 seconds while a report waits.
+  A change to presence or to the window's front starts the reading again from that moment, so a card drawn while locked is reported after the unlock, and one drawn on an untouched computer at the next touch, if it is still drawn in front.
+  A computer that cannot tell (`watched` false: Linux, or an isolated run unless `INFINITARY_PRESENCE=system`) reports as soon as the body draws in front.
   The window coming back to the front with the focus inside a card's frame gives the page no focus of its own, so the report also reads the window again when a frame's bridge says its window gained or lost the focus (`focused`, `docs/ui-plugins.md` "Focus and the frames").
   `CardService.seenUpdate` deduplicates the exact identifier, rejects stale reports and broadcasts the shared current-update mark without moving or hiding a card.
   The same sighting retains its offer for revision comparisons; an older home uses the unchanged two-argument `inf:cards:seen` path and local unread fallback (`docs/card-evidence.md`).

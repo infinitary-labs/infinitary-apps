@@ -4,7 +4,10 @@
  * Google's own name, input fields and answer shapes, as `tools/list` on
  * drivemcp.googleapis.com gave them (their `inputSchema` and
  * `outputSchema`), over the SDK's 2026-07-28 server. Every answer carries
- * `structuredContent`, as Google's do.
+ * `structuredContent`, as Google's do. Google lists no `outputSchema` for
+ * download_file_content, so its `{ id, title, mimeType, content }` answer,
+ * with the content base64-encoded as its description says, is assumed here;
+ * only a call to Google's own server proves it.
  *
  * Only what Google's list and descriptions state is modelled: search takes
  * Drive's query words joined by `and` (`title contains`, `fullText

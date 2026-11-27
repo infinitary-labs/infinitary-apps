@@ -163,8 +163,19 @@ describe("Drive on the Google row", () => {
       (await call(world, "search_files", { name: "o", max: 2, page: String(first.next_page) }))
         .text,
     );
-    expect(world.google.calls("drive").at(-1)?.args.pageToken).toBe("2");
+    expect(world.google.calls("drive").at(-1)?.args).toMatchObject({
+      pageToken: "2",
+      query: "title contains 'o' and trashed = false",
+    });
     expect((next.files as unknown[]).length).toBeGreaterThan(0);
+
+    // Google's page token continues the search that made it, so a page
+    // given without that search's words would list other files.
+    const before = world.google.calls("drive").length;
+    expect(
+      await call(world, "search_files", { max: 2, page: String(first.next_page) }),
+    ).toMatchObject({ refused: "invalid" });
+    expect(world.google.calls("drive")).toHaveLength(before);
   });
 
   it("refuses a search that names nothing to search by", async () => {
@@ -225,6 +236,18 @@ describe("Drive on the Google row", () => {
       (await call(world, "save_file", { id: "1DoCsHoTlIsT", as: "docx" })).text,
     );
     expect(asWord).toMatchObject({ name: "October shoot shot list.docx", type: DOCX });
+
+    // A slash in a Drive title is part of the name, never a folder.
+    world.google.files.set("1BuDgEt1022", {
+      id: "1BuDgEt1022",
+      title: "Budget 10/22",
+      mimeType: "application/vnd.google-apps.document",
+      owner: "ada.park@gmail.com",
+      modifiedTime: "2026-10-22T09:00:00.000Z",
+      text: "Lenses, roof permit, lunch.",
+    });
+    const dated = parsed((await call(world, "save_file", { id: "1BuDgEt1022" })).text);
+    expect(dated).toMatchObject({ name: "Budget 10-22.pdf", type: PDF });
   });
 
   it("refuses a folder, an export the type does not take and a format for an ordinary file, downloading nothing", async () => {

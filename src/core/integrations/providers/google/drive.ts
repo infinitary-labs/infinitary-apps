@@ -101,7 +101,7 @@ export const DRIVE_ACTIONS: readonly IntegrationActionSpec[] = [
     effect: "reads",
     // i18n-exempt: served to the crew, which stays English
     description:
-      "Search the captain's Google Drive. name finds files whose name contains the words; words finds them in a file's name or text; folder, a folder's id, keeps files anywhere inside it; type is document, spreadsheet, presentation, folder, pdf or image. Give at least one. max is how many files to list (at most 100 at a time); page continues from an answer's next_page. Each file comes with its id, name, type, owner, last change, size and link. read_file reads one; save_file saves one.",
+      "Search the captain's Google Drive. name finds files whose name contains the words; words finds them in a file's name or text; folder, a folder's id, keeps files anywhere inside it; type is document, spreadsheet, presentation, folder, pdf or image. Give at least one. max is how many files to list (at most 100 at a time); page continues from an answer's next_page, given with the same name, words, folder and type as the search that answered it. Each file comes with its id, name, type, owner, last change, size and link. read_file reads one; save_file saves one.",
     input: z
       .strictObject({
         name: searchWordsSchema.optional(),
@@ -115,7 +115,6 @@ export const DRIVE_ACTIONS: readonly IntegrationActionSpec[] = [
       })
       .refine(
         (value) =>
-          value.page !== undefined ||
           [value.name, value.words, value.folder, value.type].some((given) => given !== undefined),
         // i18n-exempt: served to the crew, which stays English
         { message: "name at least one of name, words, folder or type" },
@@ -182,8 +181,8 @@ function listed(file: DriveFile) {
 
 /** The saved file's name: the file's own, with the export's ending when it lacks one. */
 function savedName(title: string | undefined, id: string, ending?: string): string {
-  // A name a folder could read as a path is not one: only its last part is kept.
-  const base = (title ?? "").split(/[/\\]/).pop()?.trim() || `drive-${id}`;
+  // A Drive title may hold a slash ("Budget 10/22"), which a folder would read as a path.
+  const base = (title ?? "").replace(/[/\\]/g, "-").trim() || `drive-${id}`;
   return ending && !base.toLowerCase().endsWith(ending) ? `${base}${ending}` : base;
 }
 

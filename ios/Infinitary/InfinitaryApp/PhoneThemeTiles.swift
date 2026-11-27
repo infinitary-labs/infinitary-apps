@@ -6,7 +6,8 @@ import SwiftUI
 /// colors, drawn whatever the phone wears. A tap applies the pick at once; the arrow keys move it from the group (`PhoneSettingsSheet`).
 struct PhoneThemeTiles: View {
     @Binding var look: PhoneLook
-    /// The person's own themes as the computer last sent them, under Yours as on the computer; none shows no Yours.
+    /// The person's own themes as every kept computer last sent them together, under Yours as on the computer; none
+    /// shows no Yours.
     var ownThemes: [PhoneOwnTheme] = []
 
     var body: some View {

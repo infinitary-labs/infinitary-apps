@@ -10,9 +10,10 @@ extension PhoneJourney {
     /// once it opened a card (`push-opened`); each home's own sealed send is read at its relay, and `PhonePushTests`
     /// owns opening each computer's sealed card under its own key. Completion: the bar names the computer shown, each
     /// computer shows only its own cards, the sheet marks the other as answering or not as its home goes away and comes
-    /// back with no switch, a keyboard's Return shows it, both stay kept through a relaunch and hand each home its own
-    /// key again (each home let go of its registration first) under which it seals a new card, the push's tap shows its
-    /// computer with its card, and leaving each in turn ends on the first screen. A test cannot change the simulator's own
+    /// back with no switch, a keyboard's Return shows it, the first computer's own theme, worn, stays worn and listed
+    /// while the second shows and goes back to Dark once the first removes it, both stay kept through a relaunch and
+    /// hand each home its own key again (each home let go of its registration first) under which it seals a new card,
+    /// the push's tap shows its computer with its card, and leaving each in turn ends on the first screen. A test cannot change the simulator's own
     /// network, so the phone's path going and coming back while the sheet stays open comes from the app's stand-in
     /// path monitor (`phone-path`); the real monitor's own readings are not driven.
     func testSeveralComputers() async throws {

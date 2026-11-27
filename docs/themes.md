@@ -110,7 +110,7 @@ The phone reads it when the computer comes in reach and on each `inf:shell:prefe
 A home that lists no `own-themes-worked` is never asked, and the phone keeps the list it last had from it; a forgotten computer's list goes with it.
 An own theme's palette is built once from its tokens (`PhoneOwnPalettes`), and the window's color theme trait carries the theme's id with a fingerprint of its tokens, so a theme saved again under its name is a new trait value and every view resolves its colors again.
 Cards and panels get the tokens themselves in place of an id, and `phoneThemeRule` (`CardRuntime/themeRule.ts`) writes them with `themeRule`.
-A pick the computer no longer lists goes back to its base, Dark or Light, as the computer's own window keeps its base.
+A pick no kept computer lists any longer, as when the computer that sent it removes it or is forgotten, goes back to its base, Dark or Light, as the computer's own window keeps its base; showing another computer keeps it.
 
 ## What stays
 

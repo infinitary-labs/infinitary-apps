@@ -1,5 +1,6 @@
 import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
+import { colorThemeSchema } from "@shared/colorThemes";
 import { COMPUTER } from "@shared/deviceNames";
 import {
   type DeviceGrant,
@@ -10,7 +11,13 @@ import {
   type SteppedDown,
   steppedDownSchema,
 } from "@shared/devices";
-import { type Appearance, appearanceSchema, type Layout, layoutSchema } from "@shared/preferences";
+import {
+  type Appearance,
+  appearanceSchema,
+  type Layout,
+  layoutSchema,
+  themeSchema,
+} from "@shared/preferences";
 import { z } from "zod";
 import {
   type HeardTakeOver,
@@ -46,6 +53,19 @@ const LEFT_FILE = "left.json";
 /** What this computer saved as the home after the copy that took over from it (docs/devices.md, "An old home that returns"). */
 const STEPPED_DOWN_FILE = "stepped-down.json";
 const LOOK_FILE = "appearance.json";
+/**
+ * The look's color theme and the base it was chosen on, beside the look
+ * rather than in it: an older version reads `appearance.json` strictly and
+ * would refuse the whole look for a field it does not know. A base that no
+ * longer matches is an older version's switch to Dark or Light, and the
+ * base wins (docs/themes.md, "Where the choice lives").
+ */
+const COLOR_THEME_FILE = "color-theme.json";
+const colorThemeFileSchema = z.strictObject({
+  version: z.literal(1),
+  theme: colorThemeSchema,
+  base: themeSchema,
+});
 /**
  * The grant this app kept its own first mate beside: it came while the
  * profile here had something done, so the window stays itself, after a
@@ -310,6 +330,7 @@ export class JoinedHome {
     rmSync(join(this.dir, HOME_FILE), { force: true });
     rmSync(join(this.dir, HOME_ADDRESSES_FILE), { force: true });
     rmSync(join(this.dir, LOOK_FILE), { force: true });
+    rmSync(join(this.dir, COLOR_THEME_FILE), { force: true });
     rmSync(join(this.dir, HOME_NUMBER_FILE), { force: true });
     rmSync(join(this.dir, STEPPED_DOWN_FILE), { force: true });
     this.write(LEFT_FILE, {
@@ -364,9 +385,13 @@ export class JoinedHome {
     const path = join(this.dir, LOOK_FILE);
     if (!existsSync(path)) return null;
     try {
-      const { appearance, layout, keyboard } = lookSchema.parse(
-        JSON.parse(readFileSync(path, "utf8")),
-      );
+      const {
+        appearance: saved,
+        layout,
+        keyboard,
+      } = lookSchema.parse(JSON.parse(readFileSync(path, "utf8")));
+      const colorTheme = this.colorTheme(saved.theme);
+      const appearance = colorTheme === null ? saved : { ...saved, colorTheme };
       return keyboard === undefined ? { appearance, layout } : { appearance, layout, keyboard };
     } catch {
       return null;
@@ -374,7 +399,22 @@ export class JoinedHome {
   }
 
   setLook(look: OwnLook): void {
-    this.write(LOOK_FILE, { version: 1, ...look });
+    const { colorTheme, ...appearance } = look.appearance;
+    this.write(LOOK_FILE, { version: 1, ...look, appearance });
+    if (colorTheme === undefined) rmSync(join(this.dir, COLOR_THEME_FILE), { force: true });
+    else this.write(COLOR_THEME_FILE, { version: 1, theme: colorTheme, base: appearance.theme });
+  }
+
+  /** The saved color theme when it was chosen on `base`, else null; one that cannot be read is none. */
+  private colorTheme(base: Appearance["theme"]): string | null {
+    const path = join(this.dir, COLOR_THEME_FILE);
+    if (!existsSync(path)) return null;
+    try {
+      const read = colorThemeFileSchema.parse(JSON.parse(readFileSync(path, "utf8")));
+      return read.base === base ? read.theme : null;
+    } catch {
+      return null;
+    }
   }
 
   /** The Mac this app last stopped controlling, or null. */

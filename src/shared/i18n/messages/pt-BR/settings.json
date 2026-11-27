@@ -67,7 +67,7 @@
   "settingsAppearanceSizeDescriptionKeys": "Aumente o texto e tudo ao redor dele. {larger} e {smaller} mudam o mesmo tamanho.",
   "settingsAppearanceTheme": "Tema",
   "settingsAppearanceThemeDark": "Escuro",
-  "settingsAppearanceThemeDescription": "Escuro como o espaço profundo ou claro como a luz do dia.",
+  "settingsAppearanceThemeDescription": "Escuro, Claro ou um tema com o nome dado por quem o criou. Todas as cores da janela acompanham.",
   "settingsAppearanceThemeLight": "Claro",
   "settingsAppearanceWash": "Véu da janela",
   "settingsAppearanceWashDescription": "Quanto da cor do tema cobre o fundo desfocado. 0% é o padrão.",

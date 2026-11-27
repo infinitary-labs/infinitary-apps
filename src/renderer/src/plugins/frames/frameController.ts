@@ -403,6 +403,8 @@ export type FrameRevealed = {
 export class FrameController {
   private spec: FrameMountSpec;
   private theme: FrameTheme;
+  /** The color theme's rule last given, sent with every theme; none until a host gives one. */
+  private colors: string | undefined;
   private ready = false;
   private reuseReads = false;
   private documentId: string | undefined;
@@ -488,9 +490,20 @@ export class FrameController {
     this.subscriptions.redeclared(before, this.spec);
   }
 
-  setTheme(theme: FrameTheme): void {
+  /** Dark or Light, and the rule that lays the window's color theme over it (docs/themes.md). */
+  setTheme(theme: FrameTheme, colors?: string): void {
     this.theme = theme;
-    if (this.ready) this.port.post({ fm: V, type: "theme", theme });
+    this.colors = colors;
+    if (this.ready) this.port.post(this.themeMessage());
+  }
+
+  private themeMessage(): HostMessage {
+    return {
+      fm: V,
+      type: "theme",
+      theme: this.theme,
+      ...(this.colors === undefined ? {} : { colors: this.colors }),
+    };
   }
 
   /** Hands a part back its state from the full-screen copy (`inf-expanded`). */
@@ -616,7 +629,7 @@ export class FrameController {
         this.ready = true;
         this.reuseReads = message.reuseReads === true;
         this.documentId = message.document;
-        this.port.post({ fm: V, type: "theme", theme: this.theme });
+        this.port.post(this.themeMessage());
         if (this.spec.state !== undefined) {
           this.port.post({ fm: V, type: "state", state: this.spec.state });
         }

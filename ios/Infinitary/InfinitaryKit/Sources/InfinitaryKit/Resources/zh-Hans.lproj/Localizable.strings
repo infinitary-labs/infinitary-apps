@@ -2811,7 +2811,7 @@
 "settingsAppearanceSizeDescriptionKeys" = "放大文字及其周围的一切。%1$@ 和 %2$@ 调整的是同一个大小。";
 "settingsAppearanceTheme" = "主题";
 "settingsAppearanceThemeDark" = "深色";
-"settingsAppearanceThemeDescription" = "深空般的深色，或日光般的浅色。";
+"settingsAppearanceThemeDescription" = "深色、浅色，或由作者命名的主题。窗口中的所有颜色都会随之改变。";
 "settingsAppearanceThemeLight" = "浅色";
 "settingsAppearanceWash" = "窗口底色";
 "settingsAppearanceWashDescription" = "主题颜色覆盖模糊背景的程度。默认为 0%%。";

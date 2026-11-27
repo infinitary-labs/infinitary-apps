@@ -65,7 +65,7 @@
   "settingsAppearanceSizeDescriptionKeys": "Make text and everything around it larger. {larger} and {smaller} change the same size.",
   "settingsAppearanceTheme": "Theme",
   "settingsAppearanceThemeDark": "Dark",
-  "settingsAppearanceThemeDescription": "Deep-space dark, or daylight light.",
+  "settingsAppearanceThemeDescription": "Dark, Light, or a theme its maker named. Every color in the window follows.",
   "settingsAppearanceThemeLight": "Light",
   "settingsAppearanceWash": "Window wash",
   "settingsAppearanceWashDescription": "How much of the theme color covers the blurred background. 0% is the default.",

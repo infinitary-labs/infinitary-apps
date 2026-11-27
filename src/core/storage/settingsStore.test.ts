@@ -334,6 +334,42 @@ describe("SettingsStore preferences", () => {
     expect(new SettingsStore(db).getAppearance().theme).toBe("dark");
   });
 
+  // The approved plan for color themes (INF-6888, part 1): the theme is its own row beside
+  // its base, an older build reads the appearance row unchanged, and when that older build
+  // switches Dark or Light the base wins and the theme is dropped.
+  it("keeps the color theme in its own row, and drops it when an older build switches the base", () => {
+    const db = openInMemoryDatabase();
+    const settings = new SettingsStore(db);
+    settings.setAppearance({ theme: "dark", washStrength: 30, colorTheme: "dracula" });
+    expect(new SettingsStore(db).getAppearance()).toMatchObject({
+      theme: "dark",
+      washStrength: 30,
+      colorTheme: "dracula",
+    });
+    const readRow = (key: string) =>
+      JSON.parse(
+        (db.prepare("SELECT value FROM settings WHERE key = ?").get(key) as { value: string })
+          .value,
+      );
+    expect(readRow("color-theme")).toEqual({ theme: "dracula", base: "dark" });
+    const row = readRow("appearance");
+    expect(row.colorTheme).toBeUndefined();
+    expect(appearanceSchema.omit({ colorTheme: true }).safeParse(row).success).toBe(true);
+
+    // An older build knows only the appearance row: it switches to Light there.
+    db.prepare("UPDATE settings SET value = ? WHERE key = ?").run(
+      JSON.stringify({ ...row, theme: "light" }),
+      "appearance",
+    );
+    expect(new SettingsStore(db).getAppearance().theme).toBe("light");
+    expect(new SettingsStore(db).getAppearance().colorTheme).toBeUndefined();
+
+    // Picking Dark or Light is a look with no color theme: the row goes.
+    settings.setAppearance({ theme: "dark", colorTheme: "tokyo-night" });
+    settings.setAppearance({ theme: "light" });
+    expect(db.prepare("SELECT 1 FROM settings WHERE key = ?").get("color-theme")).toBeUndefined();
+  });
+
   // The approved plan (INF-3982, direction B): any installed font for the
   // app, reading and code, kept across a restart, while an older build,
   // which reads the appearance row strictly, still reads the rest of the look.

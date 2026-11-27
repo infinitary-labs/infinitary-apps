@@ -197,6 +197,9 @@ The product feeling: **calm, peaceful, confident, futuristic, a bit of space-tra
   Exactly two chromatic families: ice cyan for everything calm (accent, ok, medium bucket) and ember/lava (`--hot #ffa257`, `--danger #ff6b52`) for the occasional hot thing — energy, sun, fire: warnings, high-intelligence bucket, the working first mate.
   Everything else is neutral gray.
   Light theme via `[data-theme="light"]`.
+  **Themes:** a color theme lays its own values over every color token (the app's `docs/themes.md`), so the two families hold in it too: its accent is the calm family and its hot and danger the hot one, kept apart by the theme's distance checks.
+  A view reads only the tokens and never names a color a theme would have to override; words on an accent fill use `--on-accent`, never a fixed dark.
+  A theme sits on Dark or Light, its base, so a view that asks `data-theme` still gets one of the two.
   One accent at a time within each thing being read - a screen's chrome, and inside a card each figure on its own, so a card with several figures may light one element per figure; large areas are the tint over the desktop - `--material-tint`, the void at 0% by default - and read against the blurred desktop rather than as a fixed opaque color.
 - **Type:** Space Grotesk (UI/display, weights 300–600); JetBrains Mono (data).
   **The font choice:** Settings → Appearance lets a person put any installed font, or the computer's own, in three places - the app (`--font-ui`), reading, what the crew writes on cards (`--font-text`, the app's face unless chosen), and code (`--font-mono`).

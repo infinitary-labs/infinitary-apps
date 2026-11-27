@@ -1,7 +1,7 @@
 import Foundation
 
 /// INF-7045's plan, part 2: a card thread's reply split at the addresses it writes as words, as the computer splits it
-/// (`splitCardAddresses` in src/shared/linkify.ts). The pattern, punctuation and hosts are the computer's own, generated
+/// (`splitCardBodyUrls` in src/shared/linkify.ts). The pattern, punctuation and hosts are the computer's own, generated
 /// into `PhoneAddressRule`; the trimming and opener logic here are twins of `trimTrailingUrlPunctuation` and
 /// `isSafeCardHref`, held to the computer's split of the same replies by `PhoneLinkedWordsTests`.
 public enum PhoneLinkedWords {

@@ -4,7 +4,7 @@ import Testing
 
 /// INF-7045's plan, part 2 (the captain's pick "Card bodies and the card's thread replies"): the phone links a thread
 /// reply's addresses exactly where the computer does. Each reading is a reply and the computer's own split of it
-/// (`splitCardAddresses`, written by scripts/generate-phone-scene.ts).
+/// (`splitCardBodyUrls`, written by scripts/generate-phone-scene.ts).
 struct PhoneLinkedWordsTests {
     private struct Reading: Decodable {
         let text: String

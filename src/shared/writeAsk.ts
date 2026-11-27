@@ -265,7 +265,16 @@ export type WriteAskOutcome =
   /** An integration's action ran and answered. */
   | { kind: "ran" }
   | { kind: "unknown"; why: string }
-  | { kind: "refused"; why: string }
+  | {
+      kind: "refused";
+      why: string;
+      /**
+       * The place asked the captain first (`IntegrationAsk.confirm`): the
+       * new ask holding its question, whose outcome the asker hears once.
+       * Nothing ran yet, so the asker waits for it and never calls again.
+       */
+      confirming?: string;
+    }
   /** A Build row's task was filed, and started on Start now. */
   | {
       kind: "filed";

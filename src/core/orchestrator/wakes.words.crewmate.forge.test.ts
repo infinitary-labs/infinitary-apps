@@ -525,6 +525,40 @@ const CASES: WordsCases<CrewmateForgeWakeKind> = {
       words:
         "[fm-op] the captain's click on ask w-16 sent nothing. To ask again, make a new write with github_write or call the integration again.",
     },
+    {
+      // A crewmate told to ask again would raise a second question for one call (docs/integrations.md, "Google").
+      name: "a place that asked the captain first, to a crewmate",
+      wake: {
+        facts: {
+          kind: "write-answered",
+          ask: "w-18",
+          call: "send_message",
+          place: "Google",
+          outcome: "refused",
+          why: "Google asked the captain to confirm it first, on a new card (ask w-19). Nothing ran yet; you hear that ask's outcome once through write-answered.",
+          confirming: "w-19",
+        },
+      },
+      words:
+        "[fm-op] the captain's click on ask w-18 (send_message) sent nothing yet: Google asked the captain to confirm it first, on a new card (ask w-19). Nothing ran yet; you hear that ask's outcome once through write-answered. Do not call it again.",
+    },
+    {
+      name: "a place that asked the captain first, to the first mate",
+      wake: {
+        facts: {
+          kind: "write-answered",
+          to: "firstmate",
+          ask: "w-20",
+          call: "create_event",
+          place: "Google",
+          outcome: "refused",
+          why: "Google asked the captain to confirm it first, on a new card (ask w-21). Nothing ran yet; you hear that ask's outcome once through write-answered.",
+          confirming: "w-21",
+        },
+      },
+      words:
+        "[fm-op] the captain's click on ask w-20 (create_event) sent nothing yet: Google asked the captain to confirm it first, on a new card (ask w-21). Nothing ran yet; you hear that ask's outcome once through write-answered. Do not call it again.",
+    },
   ],
 };
 

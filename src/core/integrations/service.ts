@@ -645,8 +645,10 @@ export class IntegrationsService {
     );
     if (answer.confirm) {
       const now = (this.options.now ?? Date.now)();
-      const why = confirmAgain(this.options.asks, taskId, ask, answer.confirm, now);
-      const sent = done({ kind: "refused", why });
+      const sent = done({
+        kind: "refused",
+        ...confirmAgain(this.options.asks, taskId, ask, answer.confirm, now),
+      });
       return allowance ? { ...sent, allowance } : sent;
     }
     const sent = unknown

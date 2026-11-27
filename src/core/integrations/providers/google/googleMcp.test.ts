@@ -80,6 +80,8 @@ describe("Google's MCP servers", () => {
     expect(first.outcome).toMatchObject({ kind: "refused" });
     const why = first.outcome.kind === "refused" ? first.outcome.why : "";
     expect(why).toContain("Google asked the captain to confirm it first, on a new card");
+    // The new ask is a typed fact too, so the crewmate's notice can tell it to wait, not ask again.
+    expect(first.outcome).toMatchObject({ confirming: askNamed(why) });
     expect(google.mail.get(id)?.labelIds).not.toContain("Label_3");
     expect(google.answers).toEqual([]);
     const question = asksOf(world).find((ask) => ask.id === askNamed(why));

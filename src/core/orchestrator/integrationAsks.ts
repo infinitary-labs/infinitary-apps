@@ -238,6 +238,9 @@ export class IntegrationAsks {
             ...(sent.outcome.kind === "unknown" || sent.outcome.kind === "refused"
               ? { why: sent.outcome.why }
               : {}),
+            ...(sent.outcome.kind === "refused" && sent.outcome.confirming
+              ? { confirming: sent.outcome.confirming }
+              : {}),
             ...(sent.answer !== undefined ? { answer: sent.answer } : {}),
           },
           once: `write-answered:${askId}`,
@@ -342,6 +345,9 @@ export function writeAnsweredFacts(askId: string, sent: WriteAskSent): WriteAnsw
     ...(sent.outcome.kind === "answered" ? { status: sent.outcome.status } : {}),
     ...(sent.outcome.kind === "unknown" || sent.outcome.kind === "refused"
       ? { why: sent.outcome.why }
+      : {}),
+    ...(sent.outcome.kind === "refused" && sent.outcome.confirming
+      ? { confirming: sent.outcome.confirming }
       : {}),
     ...(sent.outcome.kind === "filed"
       ? {

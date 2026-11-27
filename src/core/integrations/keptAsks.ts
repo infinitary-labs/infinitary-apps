@@ -165,7 +165,8 @@ export function keepConfirm(
 /**
  * The place asked again about a call the captain answered: the same call
  * is kept as a new ask with the new question, on a new card. It answers why
- * the answered ask ran nothing, for that ask's outcome.
+ * the answered ask ran nothing, for that ask's outcome, and the new ask
+ * once it is kept.
  */
 export function confirmAgain(
   asks: IntegrationAskStore | undefined,
@@ -173,14 +174,17 @@ export function confirmAgain(
   answered: IntegrationAsk,
   confirm: IntegrationConfirm,
   now: number,
-): string {
+): { why: string; confirming?: string } {
   const { scope: _scope, card: _card, sentAt: _sent, outcome: _outcome, ...asked } = answered;
   const again: IntegrationAsk = { ...asked, id: newAskId(), confirm, at: now };
   const kept = presentConfirm(asks, taskId, again);
   return "refused" in kept
-    ? kept.refused
-    : // i18n-exempt: words served to the crew, which stay English
-      `${answered.place} asked the captain to confirm it first, on a new card (ask ${again.id}). Nothing ran yet; you hear that ask's outcome once through write-answered.`;
+    ? { why: kept.refused }
+    : {
+        // i18n-exempt: words served to the crew, which stay English
+        why: `${answered.place} asked the captain to confirm it first, on a new card (ask ${again.id}). Nothing ran yet; you hear that ask's outcome once through write-answered.`,
+        confirming: again.id,
+      };
 }
 
 /**

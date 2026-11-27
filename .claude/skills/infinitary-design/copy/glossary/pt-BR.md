@@ -147,6 +147,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | session (avoided in sentences) | conversa | "sessão" survives only as the crewmate's log name and a search word. |
 | Settings | Ajustes | Follows Apple's Brazilian Portuguese; macOS's own is "Ajustes do Sistema". |
 | sign-in / sign in | login, fazer login | "seu login do GitHub", "faça login de novo". |
+| standing reply (your words kept on a task, which pass its holds) | resposta permanente | Feminine. |
 | start | iniciar, começar | |
 | starter | ponto de partida | |
 | Steer (button) | Orientar |  |

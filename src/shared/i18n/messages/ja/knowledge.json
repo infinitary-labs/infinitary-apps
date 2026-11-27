@@ -133,6 +133,12 @@
     "plural": "count",
     "other": "グラフ · 概念{count}件"
   },
+  "knowledgePanelHeardCard": "カード「{title}」で聞きました",
+  "knowledgePanelHeardStanding": "{task} での有効な返信で聞きました",
+  "knowledgePanelHeardTab": "{task} の「乗組員」タブで聞きました",
+  "knowledgePanelHeardTitle": "伝えた場所",
+  "knowledgePanelHeardTurn": "一等航海士へのあなたの言葉で聞きました",
+  "knowledgePanelHeardWindow": "ナレッジであなたが変更しました",
   "knowledgePanelHops": {
     "plural": "count",
     "other": "{count}ステップ"
@@ -167,6 +173,7 @@
   "knowledgePanelNoSources": "出典は保存されていません。",
   "knowledgePanelNoUses": "これを使ったと申告した作業はまだありません。",
   "knowledgePanelNone": "なし",
+  "knowledgePanelNotHeard": "あなたから聞いていないため、これだけでは何も承認しません",
   "knowledgePanelNothingRecorded": "まだ何も記録されていません",
   "knowledgePanelObservedBy": "観察による · {author}",
   "knowledgePanelOpLink": "リンク",

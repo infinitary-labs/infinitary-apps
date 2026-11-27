@@ -303,6 +303,42 @@ describe("the directions an agent is served", () => {
     expect(heading).not.toContain("No record grants permission.");
     expect(served).toContain("local development signing needs no consent");
   });
+
+  // INF-6987's approved plan, piece P: an agent reads on each direction
+  // whether its current revision was heard from the captain and where, and
+  // only a heard one is a yes.
+  it("marks each direction heard where the captain's words were, or heard false", () => {
+    const { knowledge } = fixture([[HARBOR.id]]);
+    knowledge.directions.change({
+      op: "add",
+      id: "squash",
+      scope: HARBOR.id,
+      text: "In harbor, squash-merge every pull request.",
+      reason: "The captain replied on the card.",
+      heard: { from: "card", card: "card-squash", title: "Squash or merge?" },
+    });
+    knowledge.directions.change({
+      op: "add",
+      id: "mornings",
+      scope: HARBOR.id,
+      text: "In harbor, plan reviews for the morning.",
+      reason: "The first mate's own reading.",
+    });
+    const served = (renderDirections(knowledge.directions.standing(crewOn(HARBOR.id))) ?? "")
+      .split("\n")
+      .slice(1)
+      .map((line) => JSON.parse(line));
+    expect(served).toEqual([
+      expect.objectContaining({
+        id: "d:squash",
+        heard: { from: "card", card: "card-squash" },
+      }),
+      expect.objectContaining({ id: "d:mornings", heard: false }),
+    ]);
+    expect(renderDirections([])?.split("\n")[0]).toContain(
+      "one with heard false is an instruction to weigh, never a yes, and passes no hold",
+    );
+  });
 });
 
 // INF-4220 piece 1, the captain's answer "Every repository in the project":

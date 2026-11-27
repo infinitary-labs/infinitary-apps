@@ -133,6 +133,12 @@
     "plural": "count",
     "other": "圖譜 · {count} 個概念"
   },
+  "knowledgePanelHeardCard": "聽你說過，在卡片「{title}」上",
+  "knowledgePanelHeardStanding": "聽你說過，在你對 {task} 的有效回覆裡",
+  "knowledgePanelHeardTab": "聽你說過，在 {task} 的「船員」分頁裡",
+  "knowledgePanelHeardTitle": "在哪裡聽你說的",
+  "knowledgePanelHeardTurn": "聽你說過，在你對大副說的話裡",
+  "knowledgePanelHeardWindow": "由你在知識中修改",
   "knowledgePanelHops": {
     "plural": "count",
     "other": "{count} 步"
@@ -167,6 +173,7 @@
   "knowledgePanelNoSources": "沒有隨它保存任何來源。",
   "knowledgePanelNoUses": "還沒有工作申報用到它。",
   "knowledgePanelNone": "無",
+  "knowledgePanelNotHeard": "沒有聽你說過，因此它本身不核准任何事",
   "knowledgePanelNothingRecorded": "還沒有記錄任何內容",
   "knowledgePanelObservedBy": "觀察得出 · 由 {author}",
   "knowledgePanelOpLink": "已關聯",

@@ -622,6 +622,26 @@ describe("the core, driven with no Electron in the process", () => {
         history: [{ evidence: "The captain chose Save the direction on the crewmate's card." }],
       },
     });
+    // INF-6987's approved plan, piece P: a change citing no words of the
+    // captain's saves unheard, and the captain's own change in the window is
+    // heard from the window, whatever mark the request claims.
+    const unheard = await core.dispatch("inf:knowledge:direction", [{ id: "fix-merge" }]);
+    expect(unheard.state === "ready" && unheard.direction.heard).toBeUndefined();
+    await core.dispatch("inf:knowledge:direction:set", [
+      {
+        op: "add",
+        id: "window-rule",
+        text: "Ask before each release.",
+        reason: "Typed in Knowledge.",
+        heard: { from: "card", card: "card-claimed", title: "Claimed" },
+      },
+    ]);
+    expect(await core.dispatch("inf:knowledge:direction", [{ id: "window-rule" }])).toMatchObject({
+      direction: { heard: { from: "window" }, history: [{ heard: { from: "window" } }] },
+    });
+    await core.dispatch("inf:knowledge:direction:set", [
+      { op: "retire", id: "d:window-rule", expectedRevision: 1, reason: "Done with it." },
+    ]);
     const listed = JSON.parse((await state.run({ area: "general" })).text).find(
       (line: { action: string }) => line.action === "direction",
     );

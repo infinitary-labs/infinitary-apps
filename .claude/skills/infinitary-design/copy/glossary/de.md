@@ -151,6 +151,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | send back (a change out of a batch) | zurückschicken | "Mit Begründung zurückschicken"; the change "geht zurück" to its crewmate. |
 | Settings | Einstellungen | Plural, so "Die Einstellungen sind offen". |
 | sign-in / sign in | Anmeldung / anmelden | "sich erneut anmelden". |
+| standing reply (your words kept on a task, which pass its holds) | stehende Antwort | |
 | start | starten | |
 | starter | Einstieg | A button that begins a sentence in the message box. |
 | Steer (button) | Lenken |  |

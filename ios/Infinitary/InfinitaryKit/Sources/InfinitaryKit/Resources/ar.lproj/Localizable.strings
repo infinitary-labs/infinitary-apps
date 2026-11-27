@@ -1395,6 +1395,12 @@
 "knowledgePanelFocusNearby" = "التركيز على المحيط";
 "knowledgePanelGraphLabel" = "المفاهيم في ثلاثة أبعاد";
 "knowledgePanelGraphLegend" = "سهم متصل: ادعاء مسجّل · خط متقطع: يُقرآن معًا · العمق للترتيب فقط";
+"knowledgePanelHeardCard" = "سُمع منك على البطاقة «%1$@»";
+"knowledgePanelHeardStanding" = "سُمع منك في ردك القائم على %1$@";
+"knowledgePanelHeardTab" = "سُمع منك في تبويب «فرد الطاقم» في %1$@";
+"knowledgePanelHeardTitle" = "أين قلته";
+"knowledgePanelHeardTurn" = "سُمع منك في كلماتك إلى نائب القبطان";
+"knowledgePanelHeardWindow" = "غيّرته بنفسك في المعرفة";
 "knowledgePanelInspector" = "التفاصيل";
 "knowledgePanelInspectorSections" = "أقسام التفاصيل";
 "knowledgePanelInstruction" = "تعليمة";
@@ -1421,6 +1427,7 @@
 "knowledgePanelNoSources" = "لم يُحفظ معها أي مصدر.";
 "knowledgePanelNoUses" = "لم يُعلن أي عمل بعد أنه استخدم هذا.";
 "knowledgePanelNone" = "لا شيء";
+"knowledgePanelNotHeard" = "لم يُسمع منك، لذا لا يوافق على شيء بمفرده";
 "knowledgePanelNothingRecorded" = "لم يُسجّل شيء بعد";
 "knowledgePanelObservedBy" = "ملاحَظة · بواسطة %1$@";
 "knowledgePanelOpLink" = "رُبط";

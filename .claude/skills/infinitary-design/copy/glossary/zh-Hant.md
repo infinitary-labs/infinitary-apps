@@ -160,6 +160,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | sign in again | 重新登入 | Standard. |
 | sign-in / sign in | 登入 | Taiwan's word; 登錄 is mainland. |
 | standing direction | 長期指引 | A direction meant to last; 指引 alone where the context is clear. |
+| standing reply (your words kept on a task, which pass its holds) | 有效回覆 | |
 | start | 開始 | Standard. |
 | starter | 開場句 | A sentence the person finishes. |
 | Steer (button) | 引導 | 指引 is a standing direction. |

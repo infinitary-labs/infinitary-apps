@@ -49,7 +49,7 @@ function reviewVerdictProblem(
 }
 
 function missingAllowance(source: string): string {
-  return `${source === STANDING_WORDS_FROM ? "No standing override of the captain's stands on this task now." : `No current consent from ${source} stands on this task.`} Name a current project direction by its d: id, standing for the task override, or a kept yes's card from Already allowed whose words cover the request; otherwise ask through emit_card.validation_request.`;
+  return `${source === STANDING_WORDS_FROM ? "No standing override of the captain's stands on this task now." : `No current consent from ${source} stands on this task.`} Name a current project direction heard from the captain by its d: id, standing for the task override, or a kept yes's card from Already allowed whose words cover the request; a direction whose served heard is false is no yes. Otherwise ask through emit_card.validation_request.`;
 }
 
 /** Pure transitions; TaskService is the only writer. Reports only consume consent the captain still keeps. */
@@ -152,7 +152,7 @@ export function recordValidation(
         const approval = checkApproval(state, scenario, context.allowances);
         if (!approval)
           fail(
-            `The check ${scenario.id} declares what it uses, and its run needs your approval of those resources and their cost per run first, resting on a yes the captain still keeps. Name a covering direction by its d: id, a kept yes's card, or ${STANDING_WORDS_FROM} for the captain's standing override as a new check request's allowance; otherwise ask through emit_card.validation_request. A run of this check that already passed at this version counts once it is approved: record that same run then, never run the check again only because it started first.`,
+            `The check ${scenario.id} declares what it uses, and its run needs your approval of those resources and their cost per run first, resting on a yes the captain still keeps. Name a covering direction heard from the captain by its d: id, a kept yes's card, or ${STANDING_WORDS_FROM} for the captain's standing override as a new check request's allowance; otherwise ask through emit_card.validation_request. A run of this check that already passed at this version counts once it is approved: record that same run then, never run the check again only because it started first.`,
           );
         checkApprovals.push(approval.request.id);
       }

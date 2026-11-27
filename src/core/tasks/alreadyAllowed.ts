@@ -91,9 +91,12 @@ export function inheritedOverride(
 
 /**
  * Every consent source a validation request may rest
- * on (INF-4446): each kept yes by its card, and the captain's standing
+ * on (INF-4446): each kept yes by its card, the captain's standing
  * override by `standing` while it stands at `head`, the version under
- * validation, given when it was recorded.
+ * validation, given when it was recorded, and each project direction whose
+ * current revision was heard from the captain (docs/knowledge.md, "Heard
+ * from the captain"). One the first mate saved on its own judgment, or
+ * from before heard marks were kept, is no yes until the captain is heard.
  */
 export function keptYeses(
   tasks: AllowedReaderTasks,
@@ -107,7 +110,7 @@ export function keptYeses(
     : [];
   return [
     ...projectDirections
-      .filter((row) => row.origin === "captain-turn")
+      .filter((row) => row.origin === "captain-turn" && row.heard)
       .map((row) => ({
         card: `d:${row.id}`,
         words: row.text,

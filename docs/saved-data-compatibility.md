@@ -190,6 +190,9 @@ It prevents application-owned protected work, sign-ins, launch counters and data
 Knowledge (`docs/knowledge.md`) runs in every build and owns `knowledge/knowledge.db` with its own schema history.
 Its first read inspects a private snapshot; a newer or unreadable collection stays unchanged, and no new agent work runs without its standing directions.
 Knowledge schema 4 adds current directions and their future edit history, not a notes archive.
+Knowledge schema 5 adds `direction_heard`, one mark for each direction revision saved since: where the captain's words for it were heard, or null when they were not.
+A revision with no mark was saved before marks were kept, and reads as not heard until the captain confirms it once (`docs/knowledge.md`, "Heard from the captain").
+An earlier build refuses a schema 5 collection as it refuses any newer one, so its new agent work pauses until a build that knows the schema opens it.
 Main database schema 81 refuses earlier notes-writing builds.
 Before agents start, the service carries active preferences with their identifiers, wording, scope, origin and dates, then removes the old tables.
 A quit after the destination commit but before source removal retries only identical rows; a conflict stops startup.

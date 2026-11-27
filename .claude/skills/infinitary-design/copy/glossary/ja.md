@@ -157,6 +157,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | server (a custom API's) | サーバー | Long-vowel mark, as for コンピューター. |
 | Settings | 設定 | macOS Japanese. |
 | sign-in / sign in | サインイン / サインインする | Apple and GitHub Japanese use サインイン; never トークン or 認証情報. |
+| standing reply (your words kept on a task, which pass its holds) | 有効な返信 | |
 | start | 開始 | Standard. |
 | starter | 書き出し | The welcome's sentence starters. |
 | Steer (button) | 伝える | 指示 is the Instruction kind. |

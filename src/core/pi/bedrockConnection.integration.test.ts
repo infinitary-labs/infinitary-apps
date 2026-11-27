@@ -403,10 +403,10 @@ describe("every Amazon Bedrock connection", () => {
     expect(trusted.stopReason).toBe("stop");
     expect(streams).toBe(1);
 
-    // HTTP/2 reports a refused certificate as a cancelled stream, so the
-    // proof is that no request reached the stand-in.
     useSystemRootsForTests(() => []);
-    expect((await send()).stopReason).toBe("error");
+    const refused = await send();
+    expect(refused.stopReason).toBe("error");
+    expect(bedrockConnectionFailure(refused)).toBe("secure-connection");
     expect(streams).toBe(1);
   }, 30_000);
 

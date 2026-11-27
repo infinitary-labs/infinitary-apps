@@ -147,9 +147,9 @@ index 1bb93966f2a85ef4d95d1a73e2b7f65941e4860c..f18f2dc6987294716b617a2be8317c6f
      if (typeof metadata?.httpStatusCode === "number")
          details.status = metadata.httpStatusCode;
 -    const errorCode = extractBedrockErrorCode(error);
-+    // A request that never got an answer keeps Node's connection code, such as a refused certificate.
++    // A request that never got an answer keeps Node's connection code, such as a refused certificate; HTTP/2 cancels the stream and keeps that code on the cancel's cause.
 +    else {
-+        const connectionCode = normalizeDiagnosticValue(error?.code);
++        const connectionCode = normalizeDiagnosticValue(error?.code === "ERR_HTTP2_STREAM_CANCEL" ? (error.cause?.code ?? error.code) : error?.code);
 +        if (connectionCode !== undefined)
 +            details.connectionCode = connectionCode;
 +    }

@@ -1272,7 +1272,7 @@
 "integrationsGoogleSetupOpenPage" = "開啟 Google 的頁面";
 "integrationsGoogleSetupStays" = "Infinitary 把用戶端的密鑰保存在這台電腦的機密中。你的大副和船員永遠看不到它。";
 "integrationsGoogleSetupStepFile" = "用 Download JSON 下載 Google 顯示的用戶端檔案，然後拖到這裡、選擇它，或貼上它的內容。";
-"integrationsGoogleSetupStepPage" = "開啟 Google 的頁面，用你要連接的 Google 帳戶登入。為專案命名，接受 Google 的政策，然後按 Continue。";
+"integrationsGoogleSetupStepPage" = "開啟 Google 的頁面，用你要連接的 Google 帳戶登入。為專案命名，並讓「Use this client for an AI-powered agent」保持未勾選，因為這個核取方塊只用於使用 Google MCP 工具的用戶端。然後接受 Google 的政策，按 Continue。";
 "integrationsGoogleSetupTitle" = "設定你自己的 Google 連線";
 "integrationsGoogleSignIn" = "登入";
 "integrationsGoogleSignInHint" = "請用建立用戶端的 Google 帳戶登入：它只為該帳戶服務。";

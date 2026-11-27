@@ -1272,7 +1272,7 @@
 "integrationsGoogleSetupOpenPage" = "Googles Seite öffnen";
 "integrationsGoogleSetupStays" = "Infinitary bewahrt das Geheimnis des Clients in Geheimnisse auf diesem Computer auf. Dein erster Offizier und deine Crew sehen es nie.";
 "integrationsGoogleSetupStepFile" = "Lade die Client-Datei, die Google zeigt, mit Download JSON herunter. Lege sie dann hier ab, wähle sie aus oder füge ihren Inhalt ein.";
-"integrationsGoogleSetupStepPage" = "Öffne Googles Seite und melde dich mit dem Google-Konto an, das du verbinden willst. Gib dem Projekt einen Namen, akzeptiere Googles Richtlinie und drücke Continue.";
+"integrationsGoogleSetupStepPage" = "Öffne Googles Seite und melde dich mit dem Google-Konto an, das du verbinden willst. Gib dem Projekt einen Namen und lass das Kästchen „Use this client for an AI-powered agent“ ohne Haken, denn es ist nur für Clients gedacht, die Googles MCP-Tools nutzen. Akzeptiere dann Googles Richtlinie und drücke Continue.";
 "integrationsGoogleSetupTitle" = "Deine eigene Google-Verbindung einrichten";
 "integrationsGoogleSignIn" = "Anmelden";
 "integrationsGoogleSignInHint" = "Melde dich mit dem Google-Konto an, das deinen Client erstellt hat: Er dient nur diesem Konto.";

@@ -1272,7 +1272,7 @@
 "integrationsGoogleSetupOpenPage" = "Google のページを開く";
 "integrationsGoogleSetupStays" = "Infinitary はクライアントのシークレットをこのコンピュータのシークレットに保管します。一等航海士と乗組員がそれを見ることはありません。";
 "integrationsGoogleSetupStepFile" = "Google に表示されるクライアント ファイルを Download JSON でダウンロードし、ここにドロップするか、選択するか、中身を貼り付けてください。";
-"integrationsGoogleSetupStepPage" = "Google のページを開き、接続する Google アカウントでサインインします。プロジェクトに名前を付け、Google のポリシーに同意して Continue を押します。";
+"integrationsGoogleSetupStepPage" = "Google のページを開き、接続する Google アカウントでサインインします。プロジェクトに名前を付け、「Use this client for an AI-powered agent」はチェックを入れないままにします。このチェックボックスは Google の MCP ツールを使うクライアント専用です。そのあと Google のポリシーに同意して Continue を押します。";
 "integrationsGoogleSetupTitle" = "自分の Google 接続を設定";
 "integrationsGoogleSignIn" = "サインイン";
 "integrationsGoogleSignInHint" = "クライアントを作成した Google アカウントでサインインしてください。そのアカウントでしか使えません。";

@@ -27,7 +27,7 @@
   "integrationsGoogleSetupOpenPage": "Ouvrir la page de Google",
   "integrationsGoogleSetupStays": "Infinitary garde le secret du client dans Secrets sur cet ordinateur. Votre second et votre équipage ne le voient jamais.",
   "integrationsGoogleSetupStepFile": "Téléchargez avec Download JSON le fichier de client que Google affiche, puis déposez-le ici, choisissez-le ou collez son contenu.",
-  "integrationsGoogleSetupStepPage": "Ouvrez la page de Google et connectez-vous avec le compte Google que vous allez relier. Nommez le projet, acceptez la règle de Google et appuyez sur Continue.",
+  "integrationsGoogleSetupStepPage": "Ouvrez la page de Google et connectez-vous avec le compte Google que vous allez relier. Nommez le projet et laissez la case « Use this client for an AI-powered agent » décochée, car elle ne sert qu’aux clients qui utilisent les outils MCP de Google. Acceptez ensuite la règle de Google et appuyez sur Continue.",
   "integrationsGoogleSetupTitle": "Configurer votre propre connexion Google",
   "integrationsGoogleSignIn": "Se connecter",
   "integrationsGoogleSignInHint": "Connectez-vous avec le compte Google qui a créé votre client : il ne sert que ce compte.",

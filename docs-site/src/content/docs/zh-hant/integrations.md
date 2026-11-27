@@ -1,5 +1,5 @@
 ---
-source: 73e387523c5a3dd9
+source: e71da6c9134d6753
 title: 整合
 description: 連結 GitHub、GitLab、Bitbucket、Google 和 MCP 伺服器，讓你的大副和船員能使用它們，並選擇每一個可以不經詢問就做哪些事。
 ---
@@ -60,7 +60,8 @@ Google 不會審核它，不會顯示警告，也不會在 7 天後結束它的�
 
 1. 按 **Google**，會開啟 **設定你自己的 Google 連線**。
 2. 按 **開啟 Google 的頁面**，在那裡用你要連結的 Google 帳號登入。
-   為專案命名，接受 Google 的政策，然後按 Continue。
+   為專案命名，並讓「Use this client for an AI-powered agent」保持未勾選，因為這個核取方塊只用於使用 Google MCP 工具的用戶端。
+   然後接受 Google 的政策，再按 Continue。
 3. 用 Download JSON 下載 Google 顯示的用戶端檔案。
 4. 把這個檔案拖到寫著 **把用戶端檔案拖到這裡** 的地方，用 **選擇檔案** 挑選它，或把它的內容貼到 **用戶端檔案**。
 5. 按 **保存並登入**。

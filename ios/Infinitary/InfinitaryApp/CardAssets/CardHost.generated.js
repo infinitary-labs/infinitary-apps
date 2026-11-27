@@ -43695,29 +43695,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function integrationsGoogleSetupStepPage() {
     switch (currentLanguage()) {
       case "ar":
-        return `افتح صفحة Google وسجّل الدخول بحساب Google الذي ستربطه. سمِّ المشروع، واقبل سياسة Google، واضغط Continue.`;
+        return `افتح صفحة Google وسجّل الدخول بحساب Google الذي ستربطه. سمِّ المشروع واترك مربع «Use this client for an AI-powered agent» دون تحديد، فهو مخصص فقط للعملاء الذين يستخدمون أدوات MCP من Google. ثم اقبل سياسة Google واضغط Continue.`;
       case "de":
-        return `Öffne Googles Seite und melde dich mit dem Google-Konto an, das du verbinden willst. Gib dem Projekt einen Namen, akzeptiere Googles Richtlinie und drücke Continue.`;
+        return `Öffne Googles Seite und melde dich mit dem Google-Konto an, das du verbinden willst. Gib dem Projekt einen Namen und lass das Kästchen „Use this client for an AI-powered agent“ ohne Haken, denn es ist nur für Clients gedacht, die Googles MCP-Tools nutzen. Akzeptiere dann Googles Richtlinie und drücke Continue.`;
       case "es":
-        return `Abre la página de Google e inicia sesión con la cuenta de Google que vas a conectar. Ponle nombre al proyecto, acepta la política de Google y pulsa Continue.`;
+        return `Abre la página de Google e inicia sesión con la cuenta de Google que vas a conectar. Ponle nombre al proyecto y deja sin marcar la casilla «Use this client for an AI-powered agent», porque solo es para clientes que usan las herramientas MCP de Google. Luego acepta la política de Google y pulsa Continue.`;
       case "fr":
-        return `Ouvrez la page de Google et connectez-vous avec le compte Google que vous allez relier. Nommez le projet, acceptez la règle de Google et appuyez sur Continue.`;
+        return `Ouvrez la page de Google et connectez-vous avec le compte Google que vous allez relier. Nommez le projet et laissez la case « Use this client for an AI-powered agent » décochée, car elle ne sert qu’aux clients qui utilisent les outils MCP de Google. Acceptez ensuite la règle de Google et appuyez sur Continue.`;
       case "ja":
-        return `Google のページを開き、接続する Google アカウントでサインインします。プロジェクトに名前を付け、Google のポリシーに同意して Continue を押します。`;
+        return `Google のページを開き、接続する Google アカウントでサインインします。プロジェクトに名前を付け、「Use this client for an AI-powered agent」はチェックを入れないままにします。このチェックボックスは Google の MCP ツールを使うクライアント専用です。そのあと Google のポリシーに同意して Continue を押します。`;
       case "ko":
-        return `Google 페이지를 열고 연결할 Google 계정으로 로그인하세요. 프로젝트 이름을 정하고 Google의 정책에 동의한 뒤 Continue를 누르세요.`;
+        return `Google 페이지를 열고 연결할 Google 계정으로 로그인하세요. 프로젝트 이름을 정하고 “Use this client for an AI-powered agent”는 체크하지 않은 채로 두세요. 이 체크박스는 Google의 MCP 도구를 쓰는 클라이언트 전용이에요. 그런 다음 Google의 정책에 동의하고 Continue를 누르세요.`;
       case "pt-BR":
-        return `Abra a página do Google e faça login com a conta do Google que você vai conectar. Dê um nome ao projeto, aceite a política do Google e pressione Continue.`;
+        return `Abra a página do Google e faça login com a conta do Google que você vai conectar. Dê um nome ao projeto e deixe desmarcada a caixa “Use this client for an AI-powered agent”, porque ela só serve para clientes que usam as ferramentas MCP do Google. Depois aceite a política do Google e pressione Continue.`;
       case "zh-Hans":
-        return `打开 Google 的页面，用你要连接的 Google 账号登录。为项目命名，接受 Google 的政策，然后按 Continue。`;
+        return `打开 Google 的页面，用你要连接的 Google 账号登录。为项目命名，并让“Use this client for an AI-powered agent”保持未勾选，因为这个复选框只用于使用 Google MCP 工具的客户端。然后接受 Google 的政策，按 Continue。`;
       case "zh-Hant":
-        return `開啟 Google 的頁面，用你要連接的 Google 帳戶登入。為專案命名，接受 Google 的政策，然後按 Continue。`;
+        return `開啟 Google 的頁面，用你要連接的 Google 帳戶登入。為專案命名，並讓「Use this client for an AI-powered agent」保持未勾選，因為這個核取方塊只用於使用 Google MCP 工具的用戶端。然後接受 Google 的政策，按 Continue。`;
       case "en-XA":
-        return `[Öþéñ Ĝööĝļé'š þáĝé áñð šîĝñ îñ ŵîţĥ ţĥé Ĝööĝļé áççöûñţ ýöû'ļļ çöññéçţ. Ñáɱé ţĥé þŕöĵéçţ, áççéþţ Ĝööĝļé'š þöļîçý áñð þŕéšš Çöñţîñûé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Öþéñ Ĝööĝļé'š þáĝé áñð šîĝñ îñ ŵîţĥ ţĥé Ĝööĝļé áççöûñţ ýöû'ļļ çöññéçţ. Ñáɱé ţĥé þŕöĵéçţ áñð ļéáṽé “Ûšé ţĥîš çļîéñţ ƒöŕ áñ ÅÎ-þöŵéŕéð áĝéñţ” ûñţîçķéð, šîñçé ţĥáţ ƀöẋ îš öñļý ƒöŕ çļîéñţš ţĥáţ ûšé Ĝööĝļé'š ṀÇÞ ţööļš. Ţĥéñ áççéþţ Ĝööĝļé'š þöļîçý áñð þŕéšš Çöñţîñûé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Open Google's page and sign in with the Google account you'll connect. Name the project, accept Google's policy and press Continue.‬`;
+        return `‮Open Google's page and sign in with the Google account you'll connect. Name the project and leave “Use this client for an AI-powered agent” unticked, since that box is only for clients that use Google's MCP tools. Then accept Google's policy and press Continue.‬`;
     }
-    return `Open Google's page and sign in with the Google account you'll connect. Name the project, accept Google's policy and press Continue.`;
+    return `Open Google's page and sign in with the Google account you'll connect. Name the project and leave “Use this client for an AI-powered agent” unticked, since that box is only for clients that use Google's MCP tools. Then accept Google's policy and press Continue.`;
   }
   function integrationsGoogleSetupTitle() {
     switch (currentLanguage()) {

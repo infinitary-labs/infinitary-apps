@@ -513,7 +513,7 @@ A partial reading is allowed for feedback; the same 64 KiB answer bound applies.
 Submitted values reach the durable thread, card observations and crew steer record and supersede earlier submissions in a basis handoff.
 The thread shows the captain's words alone, with the settings as one quiet collapsed line under them (FI3-617; the design skill's `CardThread.prompt.md`).
 A reply is saved as its author reads it - the captain's words, then "Current settings (context, not permission):" and the `cardAnswerLines` lines (`replyWithSettings`) - and its `message_ref` observation records the answers.
-`CardStore.messages` reads the two apart: where the saved text holds exactly the app's own rendering of the recorded answers, `CardMessage.text` is the captain's words and `CardMessage.answers` the settings, and anything else is shown whole with no `answers`.
+`CardStore.messages` reads the two apart through `cardThreadRows.ts`: where the saved text holds exactly the app's own rendering of the recorded answers, `CardMessage.text` is the captain's words and `CardMessage.answers` the settings, and anything else is shown whole with no `answers`.
 The author's wake, the first mate's own turn about its card and a basis brief's thread still read words and settings together; the first mate's thread-activity line quotes the captain's words.
 Changing how `cardAnswerLines` words an answer leaves replies saved before the change shown whole.
 Words written under a question's Something else row ride a reply like any pick: `written in: "…"` in the author's settings lines, and in curly quotes after the picks in the thread's settings rows (FI3-1002); a written answer is never sent as a reply on its own.

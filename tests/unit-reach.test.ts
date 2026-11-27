@@ -299,6 +299,7 @@ describe("local direct unit reach", () => {
     ["src/core/pi/forgeTools.ts", ["tests/crewmate-fixed-context.test.ts"]],
     ["src/core/tasks/workPresentation.ts", ["src/core/core.projects.test.ts"]],
     ["src/core/storage/cardStore.ts", ["src/core/storage/cardThreadMigrations.test.ts"]],
+    ["src/core/storage/cardThreadRows.ts", ["src/core/storage/cardThreadMigrations.test.ts"]],
     ["src/core/placed/placedLedger.ts", ["src/core/placed/placedClaude.contract.test.ts"]],
     ["src/core/program/programRunner.ts", ["src/core/orchestrator/crewPrograms.test.ts"]],
     ["src/core/placed/placedCopies.ts", ["src/core/placed/placedCallbacks.test.ts"]],

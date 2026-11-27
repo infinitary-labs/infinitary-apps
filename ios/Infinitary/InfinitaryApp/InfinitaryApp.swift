@@ -41,8 +41,11 @@ import SwiftUI
                     else if phase == .background { model.active(false) }
                 }
                 .onOpenURL { model.propose($0.absoluteString) }
-                // Yours: the own themes the computer last sent, kept by the session and drawn by this device's Theme.
-                .onChange(of: model.connection?.ownThemes) { _, themes in if let themes { appearance.heard(themes) } }
+                // Yours: the own themes each computer last sent, kept by this device's Theme under the computer's pin.
+                .onChange(of: model.connection?.ownThemes) { _, themes in
+                    if let themes, let pin = model.connection?.mac.pin { appearance.heard(themes, from: pin) }
+                }
+                .onChange(of: model.keptPins) { _, pins in if let pins { appearance.kept(pins) } }
         }
         .commands {
             CommandGroup(after: .textEditing) {

@@ -110,11 +110,35 @@ import XCTest
     /// A pick the computer no longer lists goes back to its base, as the computer's own window keeps its base.
     func testARemovedOwnPickGoesBackToItsBase() {
         let appearance = PhoneAppearance(), was = appearance.look
-        defer { appearance.look = was; appearance.heard([]) }
-        appearance.heard([Self.oldTerminal])
+        defer { appearance.look = was; appearance.kept([]) }
+        appearance.heard([Self.oldTerminal], from: "home-a")
         appearance.look = .own("own-old-terminal")
         XCTAssertEqual(appearance.looks.last, .own("own-old-terminal"), "Yours follows the built-in themes")
-        appearance.heard([])
+        appearance.heard([], from: "home-a")
         XCTAssertEqual(appearance.look, .dark)
+    }
+
+    /// The captain's choice on the review of own themes on the phone: each kept computer's themes are kept, so a pick
+    /// survives showing another computer, and goes back to its base only once the computer that sent it drops it or is
+    /// forgotten.
+    func testAnOwnPickSurvivesShowingAnotherComputer() {
+        let appearance = PhoneAppearance(), was = appearance.look
+        defer { appearance.look = was; appearance.kept([]) }
+        let solar = PhoneOwnTheme(id: "own-solar", name: "Solar", base: "dark", tokens: Self.oldTerminal.tokens)
+        appearance.heard([Self.oldTerminal], from: "home-a")
+        appearance.look = .own("own-old-terminal")
+        appearance.heard([solar], from: "home-b")
+        XCTAssertEqual(appearance.look, .own("own-old-terminal"), "The pick from the first computer")
+        XCTAssertEqual(appearance.ownThemes.map(\.name), ["Solar", "Old terminal"], "Yours lists the computer shown first")
+        XCTAssertEqual(PhoneAppearance().ownThemes.map(\.name).sorted(), ["Old terminal", "Solar"], "Both lists after a relaunch")
+        appearance.heard([Self.oldTerminal], from: "home-a")
+        appearance.heard([], from: "home-a")
+        XCTAssertEqual(appearance.look, .dark, "The first computer dropped it")
+
+        appearance.heard([Self.oldTerminal], from: "home-a")
+        appearance.look = .own("own-old-terminal")
+        appearance.kept(["home-b"])
+        XCTAssertEqual(appearance.look, .dark, "The first computer was forgotten")
+        XCTAssertEqual(appearance.ownThemes.map(\.name), ["Solar"])
     }
 }

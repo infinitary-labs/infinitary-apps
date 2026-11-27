@@ -60,6 +60,7 @@ Choose **Device**, **Dark**, **Light** or one of your computer's thirteen themes
 A pick recolors the whole app at once, cards included, and stays after Infinitary closes.
 Your computer and your other devices keep their own theme.
 Themes you made with your first mate on your computer show under **Yours**, and change there when you change them on your computer.
+With several computers, **Yours** lists the themes from each of them, and the one you picked stays picked when you switch computers.
 
 ## Read a card on an open foldable iPhone
 

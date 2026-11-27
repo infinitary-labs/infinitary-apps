@@ -201,8 +201,8 @@ public struct PhoneNotice: Equatable, Sendable {
     public private(set) var homeUpdate: PhoneHomeUpdate?
     /// INF-6888's part 3: the person's own color themes as the computer last worked them out, read from a computer whose
     /// welcome lists `own-themes-worked` and again whenever its look changes; a computer without it leaves the list
-    /// this phone last read (`PhoneOwnThemes`).
-    public private(set) var ownThemes = PhoneOwnThemes.saved()
+    /// this phone last read from it (`PhoneOwnThemes`), which the app's appearance keeps.
+    public private(set) var ownThemes: [PhoneOwnTheme]
     @ObservationIgnored private var homeWorksOutOwnThemes = false
     /// The connection ended just as the computer was about to restart for its update: the line says Restarting, never
     /// Out of reach, and after `PhoneHomeRestart.patience` says it has not come back. It never claims the update worked.
@@ -393,13 +393,12 @@ public struct PhoneNotice: Equatable, Sendable {
         args.isEmpty && (channel == PhoneRequest.homeUpdateInstall.rawValue || channel == PhoneRequest.homeUpdateLater.rawValue)
     }
 
-    /// Reads the own themes and keeps the list, so a relaunch away from the computer still draws them.
+    /// Reads the own themes, for the app's appearance to keep under this computer's pin.
     public func readOwnThemes() async throws {
         guard homeWorksOutOwnThemes else { return }
         let answer = try await request(.ownThemes, as: PhoneOwnThemes.Answer.self)
         guard answer.themes != ownThemes else { return }
         ownThemes = answer.themes
-        PhoneOwnThemes.save(answer.themes)
     }
 
     public func readHomeUpdate() async throws {
@@ -853,6 +852,7 @@ public struct PhoneNotice: Equatable, Sendable {
 
     public init(mac: JoinedMac, phone: PhoneIdentity) {
         self.mac = mac; self.phone = phone
+        ownThemes = PhoneOwnThemes.saved()[mac.pin] ?? []
         cardDrafts = PhoneCardDrafts(
             send: { [weak self] cardID, change in
                 guard let self else { throw PhoneError.unavailable }

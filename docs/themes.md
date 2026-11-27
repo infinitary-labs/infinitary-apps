@@ -106,8 +106,8 @@ The crew's palette cache, the media viewer's page background and the scene's col
 Device, Dark, Light and the launch screen keep their colors.
 
 The person's own themes reach the phone worked out: `inf:settings:own-themes:get` answers each saved theme's id, name, base and every token `workOutTheme` gives, `--on-accent` included (`workedOwnThemes`, contract change `own-themes-worked`), so the phone holds none of the math.
-The phone reads it when the computer comes in reach and on each `inf:shell:preferences` push, keeps the last list in its own defaults (`PhoneOwnThemes`) and lists it under Yours, after the built-in themes, in the same group of tiles.
-A home that lists no `own-themes-worked` is never asked, and the phone keeps the list it last had.
+The phone reads it when the computer comes in reach and on each `inf:shell:preferences` push, keeps the last list in its own defaults by the computer's pin (`PhoneOwnThemes`, written only by `PhoneAppearance`), and lists every kept computer's lists together under Yours, after the built-in themes, in the same group of tiles.
+A home that lists no `own-themes-worked` is never asked, and the phone keeps the list it last had from it; a forgotten computer's list goes with it.
 An own theme's palette is built once from its tokens (`PhoneOwnPalettes`), and the window's color theme trait carries the theme's id with a fingerprint of its tokens, so a theme saved again under its name is a new trait value and every view resolves its colors again.
 Cards and panels get the tokens themselves in place of an id, and `phoneThemeRule` (`CardRuntime/themeRule.ts`) writes them with `themeRule`.
 A pick the computer no longer lists goes back to its base, Dark or Light, as the computer's own window keeps its base.

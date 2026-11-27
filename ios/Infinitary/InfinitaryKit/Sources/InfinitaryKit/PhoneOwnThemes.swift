@@ -18,19 +18,28 @@ public struct PhoneOwnTheme: Codable, Hashable, Sendable, Identifiable {
     public var isDark: Bool { base == "dark" }
 }
 
-/// The last list of own themes the phone read from its computer, kept in this app's own defaults beside its Theme, so
-/// Yours and a pick among them survive a relaunch and a computer that cannot answer the read.
+/// The last list of own themes the phone read from each kept computer, by that computer's pin, kept in this app's own
+/// defaults beside its Theme, so Yours and a pick among them survive a relaunch, a computer that cannot answer the read
+/// and showing another computer.
 public enum PhoneOwnThemes {
     static let key = "phone-own-themes"
 
     /// The read's answer.
     public struct Answer: Decodable, Sendable { public let themes: [PhoneOwnTheme] }
 
-    public static func saved(in defaults: UserDefaults = .standard) -> [PhoneOwnTheme] {
-        defaults.data(forKey: key).flatMap { try? JSONDecoder().decode([PhoneOwnTheme].self, from: $0) } ?? []
+    public static func saved(in defaults: UserDefaults = .standard) -> [String: [PhoneOwnTheme]] {
+        defaults.data(forKey: key).flatMap { try? JSONDecoder().decode([String: [PhoneOwnTheme]].self, from: $0) } ?? [:]
     }
 
-    public static func save(_ themes: [PhoneOwnTheme], in defaults: UserDefaults = .standard) {
-        defaults.set(try? JSONEncoder().encode(themes), forKey: key)
+    public static func save(_ lists: [String: [PhoneOwnTheme]], in defaults: UserDefaults = .standard) {
+        defaults.set(try? JSONEncoder().encode(lists), forKey: key)
+    }
+
+    /// Every kept computer's themes as one list under Yours: `first`'s own, then the others' by pin, a theme whose id an
+    /// earlier list already gave left out, since a pick names only the id.
+    public static func together(_ lists: [String: [PhoneOwnTheme]], first: String? = nil) -> [PhoneOwnTheme] {
+        var seen = Set<String>()
+        let pins = lists.keys.sorted { a, b in a == first || (b != first && a < b) }
+        return pins.flatMap { lists[$0] ?? [] }.filter { seen.insert($0.id).inserted }
     }
 }

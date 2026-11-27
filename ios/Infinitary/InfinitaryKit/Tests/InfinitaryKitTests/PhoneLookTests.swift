@@ -70,9 +70,19 @@ struct PhoneLookTests {
         #expect(PhoneOwnThemes.saved(in: defaults).isEmpty)
         let answer = Data(##"{"themes":[{"id":"own-old-terminal","name":"Old terminal","base":"dark","tokens":{"--bg-0":"#020a03","--accent":"#8dff9c","--line-1":"rgba(131, 202, 141, 0.2)"}}]}"##.utf8)
         let themes = (try? JSONDecoder().decode(PhoneOwnThemes.Answer.self, from: answer).themes) ?? []
-        PhoneOwnThemes.save(themes, in: defaults)
-        #expect(PhoneOwnThemes.saved(in: UserDefaults(suiteName: name)!) == [PhoneOwnTheme(
+        PhoneOwnThemes.save(["home-a": themes], in: defaults)
+        #expect(PhoneOwnThemes.saved(in: UserDefaults(suiteName: name)!) == ["home-a": [PhoneOwnTheme(
             id: "own-old-terminal", name: "Old terminal", base: "dark",
-            tokens: ["--bg-0": "#020a03", "--accent": "#8dff9c", "--line-1": "rgba(131, 202, 141, 0.2)"])])
+            tokens: ["--bg-0": "#020a03", "--accent": "#8dff9c", "--line-1": "rgba(131, 202, 141, 0.2)"])]])
+    }
+
+    /// The captain's choice on the review of own themes on the phone: Yours lists every kept computer's themes, the
+    /// computer heard last first, and a theme whose id an earlier list gave once.
+    @Test func listsEveryKeptComputersOwnThemesOnce() {
+        func theme(_ id: String, _ name: String) -> PhoneOwnTheme { PhoneOwnTheme(id: id, name: name, base: "dark", tokens: [:]) }
+        let lists = ["home-a": [theme("own-old-terminal", "Old terminal")],
+                     "home-b": [theme("own-solar", "Solar"), theme("own-old-terminal", "Old terminal again")]]
+        #expect(PhoneOwnThemes.together(lists, first: "home-b").map(\.name) == ["Solar", "Old terminal again"])
+        #expect(PhoneOwnThemes.together(lists, first: "home-a").map(\.name) == ["Old terminal", "Solar"])
     }
 }

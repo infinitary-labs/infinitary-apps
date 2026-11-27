@@ -6,7 +6,12 @@ import UIKit
 /// A change is saved at once, so it survives a relaunch and an update, and it is never sent to the computer.
 @MainActor @Observable final class PhoneAppearance {
     var look: PhoneLook { didSet { look.save() } }
-    /// The person's own themes as the computer last sent them (`PhoneOwnThemes`), listed under Yours.
+    /// The person's own themes as each kept computer last sent them, by its pin (`PhoneOwnThemes`); this is their one
+    /// writer.
+    private var ownLists: [String: [PhoneOwnTheme]]
+    /// The pin of the computer heard last, whose own themes Yours lists first.
+    private var heardFrom: String?
+    /// Every kept computer's own themes together, as Yours lists them.
     private(set) var ownThemes: [PhoneOwnTheme]
     /// The captain's Split at the fold (`PhoneFoldSplit`): off, an open iPhone Duo lays out as an iPad does.
     var splitAtFold: Bool { didSet { PhoneFoldSplit.save(splitAtFold) } }
@@ -24,9 +29,10 @@ import UIKit
 
     init() {
         look = PhoneLook.saved()
-        let kept = PhoneOwnThemes.saved()
-        PhoneOwnPalettes.keep(kept)
-        ownThemes = kept
+        let lists = PhoneOwnThemes.saved(), together = PhoneOwnThemes.together(lists)
+        PhoneOwnPalettes.keep(together)
+        ownLists = lists
+        ownThemes = together
         splitAtFold = PhoneFoldSplit.saved()
         cardMaximized = PhoneCardMaximized.saved()
         foldSeen = PhoneFoldSplit.foldSeen()
@@ -49,14 +55,29 @@ import UIKit
         PhonePencilTop.savePencilSeen()
     }
 
-    /// The computer sent its own themes again. A pick it no longer lists goes back to its base, as the computer's own
-    /// window does when the theme it wears is removed.
-    func heard(_ themes: [PhoneOwnTheme]) {
-        guard themes != ownThemes else { return }
+    /// The computer with `pin` sent its own themes again. Another kept computer's list stays, so a pick from it survives
+    /// showing this one; a pick no kept computer lists any longer goes back to its base, as the computer's own window
+    /// does when the theme it wears is removed.
+    func heard(_ themes: [PhoneOwnTheme], from pin: String) {
+        heardFrom = pin
+        var lists = ownLists
+        lists[pin] = themes
+        keep(lists)
+    }
+
+    /// The kept computers changed: a forgotten one's own themes leave Yours with it.
+    func kept(_ pins: Set<String>) {
+        keep(ownLists.filter { pins.contains($0.key) })
+    }
+
+    private func keep(_ lists: [String: [PhoneOwnTheme]]) {
+        let together = PhoneOwnThemes.together(lists, first: heardFrom)
+        if lists != ownLists { ownLists = lists; PhoneOwnThemes.save(lists) }
+        guard together != ownThemes else { return }
         let base = look.style
-        PhoneOwnPalettes.keep(themes)
-        ownThemes = themes
-        if case .own(let id) = look, !themes.contains(where: { $0.id == id }) { look = base == .light ? .light : base == .dark ? .dark : .device }
+        PhoneOwnPalettes.keep(together)
+        ownThemes = together
+        if case .own(let id) = look, !together.contains(where: { $0.id == id }) { look = base == .light ? .light : base == .dark ? .dark : .device }
     }
 
     /// Every choice in the order Settings lists them: Device, Dark, Light, the built-in themes, then Yours.

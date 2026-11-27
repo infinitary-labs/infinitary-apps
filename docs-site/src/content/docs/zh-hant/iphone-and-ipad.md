@@ -1,5 +1,5 @@
 ---
-source: 7a4132bd57802c1f
+source: a56a7d992b185889
 title: iPhone 和 iPad
 description: 申請 iPhone 和 iPad 版 Infinitary 的私人 TestFlight 邀請，然後加入你的電腦來讀卡片、傳訊息。
 ---
@@ -61,6 +61,7 @@ iPhone 或 iPad 上的設定 → 外觀 → **主題** 只屬於這台裝置。
 選好後，整個 App 會立刻換成新的顏色，卡片也一樣，關閉 Infinitary 後仍會保留。
 你的電腦和其他裝置各自保留自己的主題。
 你在電腦上和大副一起做的主題會顯示在 **你的** 下，在電腦上改動後這裡也會跟著變。
+如果你有多台電腦，**你的** 會列出每台電腦上的主題，切換電腦後你選的主題仍然選著。
 
 ## 在打開的摺疊 iPhone 上讀卡片 {#read-a-card-on-an-open-foldable-iphone}
 

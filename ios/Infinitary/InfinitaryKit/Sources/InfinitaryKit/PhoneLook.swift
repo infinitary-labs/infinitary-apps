@@ -5,7 +5,7 @@ import Foundation
 /// part 3, the captain's "each client can choose its own theme"). The choice is saved in this app's own defaults, never
 /// in the connection file, so Leave, Forget, Removed and joining another computer keep it, and it never reaches the
 /// computer. Nothing saved, or a value this version does not know, reads as matching the device. One of the person's own
-/// themes, from the list the computer last sent (`PhoneOwnThemes`), is saved by its `own-` id too.
+/// themes, from the lists the kept computers last sent (`PhoneOwnThemes`), is saved by its `own-` id too.
 public enum PhoneLook: Hashable, Sendable, CaseIterable, RawRepresentable {
     case device, dark, light
     case theme(PhoneColorTheme)
@@ -45,7 +45,7 @@ public enum PhoneLook: Hashable, Sendable, CaseIterable, RawRepresentable {
         case .dark: PhoneMessages.phoneLookDark()
         case .light: PhoneMessages.phoneLookLight()
         case .theme(let theme): theme.name
-        case .own(let id): PhoneOwnThemes.saved().first { $0.id == id }?.name ?? id
+        case .own(let id): PhoneOwnThemes.together(PhoneOwnThemes.saved()).first { $0.id == id }?.name ?? id
         }
     }
 

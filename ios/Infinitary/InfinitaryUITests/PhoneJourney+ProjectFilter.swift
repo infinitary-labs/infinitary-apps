@@ -42,8 +42,12 @@ extension PhoneJourney {
 
         narrowed()
         tab("Activity")
-        XCTAssertTrue(app.staticTexts[try field(0, "line")].waitForPresence(timeout: 10), app.debugDescription)
-        for index in 1..<3 { XCTAssertFalse(app.staticTexts[try field(index, "line")].exists, "Another project's line leaves") }
+        // Activity words a report's line as "Reported: <its words>", so each line is found inside its label.
+        func activityLine(_ words: String) -> XCUIElement {
+            app.staticTexts.matching(NSPredicate(format: "identifier == 'activity-text' AND label CONTAINS %@", words)).firstMatch
+        }
+        XCTAssertTrue(activityLine(try field(0, "line")).waitForPresence(timeout: 10), app.debugDescription)
+        for index in 1..<3 { XCTAssertFalse(activityLine(try field(index, "line")).exists, "Another project's line leaves") }
         XCTAssertTrue(app.otherElements["project-focus-row"].exists, "The focus row shows on every tab")
         picture("5-activity-focused")
         tab("Panels")

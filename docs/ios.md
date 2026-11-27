@@ -63,18 +63,21 @@ An invalid pin or invalid address discards only that computer and keeps the othe
 One phone keeps every computer it joined and shows one at a time (INF-5265, the captain's approved plan on INF-5264), for a person whose computers cannot see each other, such as one at home and one at work, each behind its own VPN.
 A computer is named by its pin, which a home keeps through a move, so joining one again replaces its record rather than adding a second.
 Joining while a computer is shown keeps that one among the others and shows the new one; the join itself is the same confirmed link.
-The computer sheet is one list (INF-6131, the captain's approved plan): the computer shown first, the other kept computers next, and **Add another computer** last, which offers the first screen's three ways in.
-Leave, or Forget, sits on the computer shown's own row, so it is the sheet's first control and in view as the sheet opens at every Text Size, which the join-read part checks at the largest standard size.
+Your computer is the first row of Settings (INF-2820's plan, piece 1), and its page is one list (INF-6131, the captain's approved plan): the computer shown first, the other kept computers next, and **Add another computer** last, which offers the first screen's three ways in.
+Leave, or Forget, sits on the computer shown's own row, so it is the page's first control and in view as the page opens at every Text Size, which the join-read part checks at the largest standard size.
 A tap on a computer shows it: the phone stops the shown computer's connection, saves the new order and connects to the one tapped.
-The phone never switches by itself (the captain's pick, "Stay on my choice"): on each open, each settled network change and each time the sheet opens, it sends each other kept computer the pinned, non-mutating `GET /connection` a join sends first, which opens no session, and marks the ones that answer 426 as Answers now and the rest as Not answering from here.
-The sheet opens with its first row focused, so on a keyboard the up and down arrows move among the rows, Return or Space presses one, and Command-I opens it.
+The phone never switches by itself (the captain's pick, "Stay on my choice"): on each open, each settled network change and each time the page opens, it sends each other kept computer the pinned, non-mutating `GET /connection` a join sends first, which opens no session, and marks the ones that answer 426 as Answers now and the rest as Not answering from here.
+The page opens with its first row focused, so on a keyboard the up and down arrows move among the rows and Return or Space presses one; Command-I, the top bar's computer button and, while the computer is not in reach, a press on the reach line open Settings at Your computer.
+The list's row names the computer shown and its reach, such as Test Mac mini · Live.
+A choice there closes Settings before it acts, and Add another computer opens its way in once Settings has closed.
+The computer button stays in the bar until the phone's Filter button takes its place (INF-2820's piece 2).
 With more than one computer kept, the top bar's computer button names the computer shown beside its glyph, and VoiceOver reads that name in place of Your computer.
 Leave and Forget act on the computer their confirmation named, even when a notification's tap showed another before the answer came; forgetting the shown one shows the kept computer shown most recently next, or the first screen when none is left.
 A change of network that leaves no usable path marks every other computer Not answering from here and stops the look under way, so a list open while a private network goes away does not keep an old mark.
 Each look tries every saved address of a computer at once, each through the pinned check with the pairing timeout, so an address that times out or answers with another key does not hide one that answers.
 A computer that removes the phone is forgotten alone: while another is kept, it shows with a line saying the removed one removed this device; otherwise the Removed screen shows as before.
 The homes part (`PhoneJourney+Homes.swift`) joins the test home and a second real home in a process of its own (`tests/helpers/phoneSecondHome.ts`) by its pasted link, checks each computer shows only its own cards and seals under its own key at its own stand-in relay, follows the other computer's mark as its home goes offline and back with no switch, switches by keys, keeps both through a relaunch after each home let go of its registration, so each hands its key again and seals a new card under it (`push-cleared`, `homes-card`, `push-sent`), taps a notification from the one not shown and leaves each in turn to the first screen.
-A test cannot change the simulator's own network, so with `INFINITARY_TEST_NETWORK` the part's simulator posts a system notification for the phone's path going and coming back (`phone-path`), which the app reads as its path monitor's (simulator builds only): with the sheet open, the mark goes and comes back with no switch; `PhoneKeptMacsTests` holds the saved list, its order, the whole-record save and the move from one record.
+A test cannot change the simulator's own network, so with `INFINITARY_TEST_NETWORK` the part's simulator posts a system notification for the phone's path going and coming back (`phone-path`), which the app reads as its path monitor's (simulator builds only): with Your computer open, the mark goes and comes back with no switch; `PhoneKeptMacsTests` holds the saved list, its order, the whole-record save and the move from one record.
 
 ### Joining by its address
 
@@ -168,14 +171,14 @@ Nearby addresses may be tried with the original pin.
 Each reconnect gives the saved and nearby private IPv4 candidates their head start, without letting a successful local fallback permanently reverse that preference.
 The authenticated welcome may carry `addresses`, which refreshes the saved alternatives without changing the phone identity or home pin, erasing local fallbacks or interrupting the working socket.
 An older home that omits the field leaves the saved alternatives unchanged.
-The computer sheet displays the last authenticated address actually reached, separately from the saved preference; before any successful connection it shows no reached address.
+Your computer displays the last authenticated address actually reached, separately from the saved preference; before any successful connection it shows no reached address.
 The session records that address in the same step that turns the connection In reach, so nothing reads In reach beside the previous connection's address while the catch-up's reads are still being sent (`PhoneWeakLinkTests`).
 
 Leave is available in reach and asks for confirmation, sends the connection's Leave frame, waits for removal and forgets the computer shown.
 Out of reach, **Forget this computer** asks for confirmation and clears that computer and its pin locally without claiming it removed the phone; either way another kept computer shows next ("Several computers").
-Both choices live in the computer's sheet, opened by the top bar's right-hand computer button or Command-I; neither is an always-visible destructive toolbar action.
-That button is the computer glyph, with a dot in the warning color at its corner only while the computer is out of reach, and VoiceOver reads the reach as its value; with one computer kept its name is in the sheet, not the bar, and with more than one the button names the computer shown.
-Out of reach, the sheet also offers Take over with each computer that keeps a copy of the record, as the welcome lists them, which asks one to take over after Face ID or the passcode (`PhoneTakeOverSection.swift`, `PhoneTakeOver.swift`; `docs/devices.md`, "Taking over from a phone").
+Both choices live on Settings' Your computer page, opened from Settings, the top bar's right-hand computer button, Command-I or the reach line; neither is an always-visible destructive toolbar action.
+That button is the computer glyph, with a dot in the warning color at its corner only while the computer is out of reach, and VoiceOver reads the reach as its value; with one computer kept its name is on Your computer, not the bar, and with more than one the button names the computer shown.
+Out of reach, Your computer also offers Take over with each computer that keeps a copy of the record, as the welcome lists them, which asks one to take over after Face ID or the passcode (`PhoneTakeOverSection.swift`, `PhoneTakeOver.swift`; `docs/devices.md`, "Taking over from a phone").
 The phone then follows the home to the computer that took over by its higher number, and refuses the old home's lower number and a second home with the same number.
 A removal close or repeated authenticated refusal clears cards and feed and forgets that computer; with no other computer kept it offers joining with a new link on a screen shaped like the first one, with one prominent Join again.
 A failed address with no HTTP response does not erase an earlier authenticated refusal; a welcome or a different HTTP response does.
@@ -436,7 +439,7 @@ It carries no unread dot; the notice under the bar and the next chevron's dot ma
 The strip keeps the bar's own size at every type setting, as the system's bars do, so the bar's buttons never move around it.
 Where the bar has room, the strip is as wide as makes the lit tab a 40-point circle, 144 points for three tabs and 189 for four (INF-1517, the captain's Round); where it has not, a `ViewThatFits` gives it the control's own fitted width.
 Settings and the computer are the system's 44-point circles for a one-icon button, with no wider frame of the app's.
-Command-1 to Command-4 switch tabs in the strip's order, Command-Comma opens Settings and Command-I the computer.
+Command-1 to Command-4 switch tabs in the strip's order, Command-Comma opens Settings and Command-I opens it at Your computer.
 `PhoneWorkspace` holds the tabs in the system tab controller with its own bar hidden, so each tab keeps its draft, scroll position and search while another is shown, and a tab that is away leaves the view hierarchy: nothing in it is drawn, pressable or read, and a keyboard typing into the message box closes with the tab it leaves.
 Home is one column: the stage, then the last turn and the message box under it, in the layout rather than floating over it; Tasks, Activity and Panels run to the foot with nothing over them, so the last row is whole and pressable after scrolling to the end.
 No bar height is measured or guessed, and nothing recedes on scroll.
@@ -450,18 +453,18 @@ Focus that a finger, the trackpad or a hardware key gives the message box or a c
 Nothing moves while a field holds focus or while the Pencil writes on one: a waiting move applies once it lets go (`PhonePencilPlacement`).
 An iPad on its side moves the box to the top of the stage column beside the sidebar the same way; a window with a fold and a maximized card keep the box where it was, and an iPhone, which never sees a Pencil, never changes.
 The placement is held only while the app runs, never saved or sent to the computer.
-Settings is this phone's own sheet, `PhoneSettingsSheet`, opening on General, Appearance, Projects, Intelligence, Runbooks, Usage, Automation, Integrations and Devices, the desktop's names in the desktop's order.
+Settings is this phone's own sheet, `PhoneSettingsSheet`, opening on Your computer (`PhoneComputerPage`, "Several computers"), then General, Appearance, Projects, Intelligence, Runbooks, Usage, Automation, Integrations and Devices, the desktop's names in the desktop's order.
 The names, the sheet's own Settings title and Back are the catalog's messages, never words typed into the sheet (`docs/i18n.md`, "On the phone").
-The phone's four own sections, Settings, Done and Back to Settings are the phone's own messages (`PhoneMessages.phoneSettings…`, `phoneCommonSettings`, `phoneCommonDone`); the five pages read from the computer take the computer's own tab names (`PhoneMessages.panelSettings…`).
+The phone's own sections, Your computer among them (`phoneComputerTitle`), Settings, Done and Back to Settings are the phone's own messages (`PhoneMessages.phoneSettings…`, `phoneCommonSettings`, `phoneCommonDone`); the five pages read from the computer take the computer's own tab names (`PhoneMessages.panelSettings…`).
 Back's spoken name on a page under a section is `phoneSettingsBackTo`, and from a page under a page it is the shared `shellTopBarBack`.
 On iOS 26 the sheet's top bar draws two matching circles, as Apple's own sheets do: Back is the chevron alone, still speaking where it goes, and the sheet closes with the system's X (`Button(role: .close)`), since each choice saves as it is made; iOS 18 keeps the chevron with the place's name and the word Done.
 Each row has its name, one current-state line and a chevron, with no icon, and opens its page inside the same sheet on iPhone and iPad alike.
 General holds Infinitary and its version, Appearance holds Theme, Text size, Language and, on a device that folds, Split at the fold, Integrations holds Google on the computer it controls (below), and Devices holds This phone (This iPad on a tablet), what it can do and the existing Approves secret uses switch while the computer offers it.
 Projects, Intelligence, Runbooks, Usage and Automation are the computer's own pages ("Settings pages in the computer's words", below).
 Back goes one page back, from a page under a section to that section and from a section to the list, Command-[ presses Back, Done closes from any page, and Command-Comma opens the list.
-The list starts focused on General; arrow keys move among the rows and Return or Space opens the focused section, with native keyboard focus on its controls.
+The list starts focused on its first row, Your computer; arrow keys move among the rows and Return or Space opens the focused section, with native keyboard focus on its controls.
 The row a key moves to scrolls into view where the list is longer than the sheet.
-Sections with nothing to show stay off the list, so Integrations shows once the computer answers its connections and the five computer pages show together once the computer has answered them; the computer's sheet keeps the computer's name, reach, address and Leave or Forget.
+Sections with nothing to show stay off the list, so Integrations shows once the computer answers its connections and the five computer pages show together once the computer has answered them; Your computer, always the first row, keeps the computer's name, reach, address and Leave or Forget.
 Theme is this device's own (`PhoneLook`, `PhoneAppearance`): Apple's segmented control worded Device, Dark and Light, like the computer's Dark and Light tiles, under a line saying it is set on this iPhone only (this iPad on an iPad) and the computer keeps its own.
 It starts on Device, which follows iOS's own setting and its Automatic switching; Dark or Light sets the window's interface style, so every screen, sheet, the keyboard, the crew, card bodies and the picture viewer follow it at once.
 The choice is saved in the app's own defaults, never in the connection file, so it survives a relaunch, an update, Leave, Forget, Removed and joining another computer; a reinstall resets it.
@@ -483,8 +486,8 @@ The talk-compose part's iPad steps launch a simulator with `INFINITARY_PENCIL_SE
 The launch screen, which iOS draws before the app runs, keeps the device's own appearance.
 While Appearance is open the control holds focus and the left and right arrow keys move the choice, with no command of its own; an unseen shortcut under the sheet never hears an unmodified arrow.
 `PhoneLookTests` holds the saved choice, and the join-read part chooses Dark on a light simulator, sees it drawn dark before and after a relaunch, and chooses Device again by keyboard.
-Both sit on the system's glass: the computer's sheet opens just tall enough for its rows, never past half height, and can be pulled up (INF-6131), and Settings opens at full height, since its nine sections do not fit half a screen.
-Leave, or Forget while out of reach, is a small button in the hairline outline at the trailing edge of the computer's own row in the computer sheet; its alert says what leaving costs.
+It sits on the system's glass and opens at full height, since its ten sections do not fit half a screen.
+Leave, or Forget while out of reach, is a small button in the hairline outline at the trailing edge of the computer's own row on Your computer; its alert says what leaving costs.
 While the computer's Secrets are set up and open, Settings → Devices also shows Secrets approvals: the Approves secret uses switch, the code to compare with the computer's card, or that this device can allow uses, and Set up approvals again in place of the switch for a damaged record.
 The phone reads its approvals again at each Secrets change the computer announces and each time it reaches the computer, from the connection itself rather than a view's restart, which SwiftUI skips when several changes arrive in one frame: each change starts a read of its own, and only the newest read's answer is shown.
 While the keyboard is open, Done takes Settings' place in the leading slot and the Hide keyboard command (Shift-Command-K) dismisses it without sending or clearing the draft.
@@ -961,7 +964,7 @@ Once a build is in internal testing, Apple emails each tester in the app's inter
 On the phone, the tester opens Apple's TestFlight app with the Apple Account in that group, accepts the invitation and installs Infinitary; automatic distribution offers each later build there too.
 The phone and Mac need a network route to one another and a Mac build that accepts `system: "ios"`.
 Open **A phone** in the Mac app's Devices settings, scan or paste its link in the phone app, and confirm that Mac.
-The phone should show Home, Tasks and Activity in its top bar, its cards on Home, and the Mac's name with In reach in the computer's sheet behind the bar's right-hand button.
+The phone should show Home, Tasks and Activity in its top bar, its cards on Home, and the Mac's name with In reach on Settings' Your computer page.
 Type a message or use keyboard dictation, attach a library photo, and confirm the last turn on the Mac.
 Open a task’s record to start or continue it, and its Crewmate tab to steer or stop its running turn.
 A tester outside the team joins an external group instead, by the captain's email invitation or the group's public link; each build reaches that group once Beta App Review approves it ("External testing" below).

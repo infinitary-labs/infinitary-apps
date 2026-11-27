@@ -41,7 +41,7 @@ extension PhoneJourney {
         let second = try await home("second-home", budget: 150)
         let secondControl = try XCTUnwrap(second["control"] as? String)
         let secondName = try XCTUnwrap(second["name"] as? String)
-        tapOnPhone(app.buttons["computer-details"], repeatDiscarded: false)
+        computerDetails(repeatDiscarded: false)
         let add = app.buttons["add-computer"]
         XCTAssertTrue(add.waitForPresence(timeout: 10), app.debugDescription)
         picture("homes-sheet-one")
@@ -87,19 +87,19 @@ extension PhoneJourney {
         XCTAssertEqual(row.label, "Test Mac mini")
         try reachMark(row, "Answers now")
         try await appearances("homes-sheet", showing: row)
-        tapOnPhone(app.buttons["close-computer-details"], repeatDiscarded: false)
+        closeComputerDetails(repeatDiscarded: false)
         XCTAssertTrue(row.waitForAbsence(timeout: 10))
         _ = try await home("offline")
-        tapOnPhone(app.buttons["computer-details"], repeatDiscarded: false)
+        computerDetails(repeatDiscarded: false)
         try reachMark(row, "Not answering from here")
         XCTAssertEqual(computer.label, secondName, "A computer that stops answering switches nothing")
-        tapOnPhone(app.buttons["close-computer-details"], repeatDiscarded: false)
+        closeComputerDetails(repeatDiscarded: false)
         XCTAssertTrue(row.waitForAbsence(timeout: 10))
         _ = try await home("online")
         try await pressPhoneKey("i", modifiers: .command, in: app)
         try reachMark(row, "Answers now")
         XCTAssertEqual(computer.label, secondName, "A computer that answers again switches nothing")
-        // The phone's own network goes, as a private network turned off, and comes back, while the sheet stays open:
+        // The phone's own network goes, as a private network turned off, and comes back, while the page stays open:
         // the mark goes with it and comes back with the next look, and nothing switches.
         _ = try await home("phone-path", body: "{\"usable\":false}")
         try reachMark(row, "Not answering from here")
@@ -107,7 +107,7 @@ extension PhoneJourney {
         try reachMark(row, "Answers now")
         XCTAssertEqual(computer.label, secondName, "A network change switches nothing")
         app.typeKey("\n", modifierFlags: [])
-        XCTAssertTrue(row.waitForAbsence(timeout: 10), "Return on the row shows its computer and closes the sheet")
+        XCTAssertTrue(row.waitForAbsence(timeout: 10), "Return on the row shows its computer and closes Settings")
         reach("Live", timeout: 30)
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "label == %@", "Test Mac mini"), object: computer, timeout: 10),
                        .completed, app.debugDescription)
@@ -131,10 +131,10 @@ extension PhoneJourney {
         // The key it handed again still seals: a new card on the first computer goes to its relay sealed.
         _ = try await home("homes-card")
         try await sentSealed(control, after: firstSent)
-        tapOnPhone(app.buttons["computer-details"], repeatDiscarded: false)
+        computerDetails(repeatDiscarded: false)
         XCTAssertTrue(row.waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertEqual(row.label, secondName, "The second computer is still kept after the relaunch")
-        tapOnPhone(app.buttons["close-computer-details"], repeatDiscarded: false)
+        closeComputerDetails(repeatDiscarded: false)
         XCTAssertTrue(row.waitForAbsence(timeout: 10))
 
         XCUIDevice.shared.press(.home)
@@ -190,7 +190,7 @@ extension PhoneJourney {
 
     private func leaveShown() throws {
         reach("Live", timeout: 30)
-        tapOnPhone(app.buttons["computer-details"], repeatDiscarded: false)
+        computerDetails(repeatDiscarded: false)
         let leave = app.buttons["leave"]
         XCTAssertTrue(leave.waitForPresence(timeout: 10), app.debugDescription)
         tapOnPhone(leave, repeatDiscarded: false)

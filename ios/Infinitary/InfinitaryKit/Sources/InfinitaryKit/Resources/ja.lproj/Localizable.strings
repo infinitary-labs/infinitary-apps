@@ -2284,6 +2284,7 @@
 "phoneSettingsBackTo" = "%1$@ に戻る";
 "phoneSettingsCapabilityFull" = "コンピューター上のカードに答え、メッセージを送信し、タスクを操作します。";
 "phoneSettingsCapabilityRead" = "カード、アクティビティ、タスクを読み込みます。%1$@";
+"phoneSettingsComputerSummary" = "%1$@ · %2$@";
 "phoneSettingsConversationStays" = "会話はコンピューターに残ります。";
 "phoneSettingsDevices" = "デバイス";
 "phoneSettingsFoldSplit" = "折り目で分ける";

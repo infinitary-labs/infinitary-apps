@@ -634,6 +634,7 @@
   "phoneSettingsBackTo": "العودة إلى {place}",
   "phoneSettingsCapabilityFull": "يجيب عن البطاقات ويرسل الرسائل ويتحكم في المهام على حاسوبك.",
   "phoneSettingsCapabilityRead": "يقرأ البطاقات والنشاط والمهام. {update}",
+  "phoneSettingsComputerSummary": "{computer} · {reach}",
   "phoneSettingsConversationStays": "تبقى المحادثة على حاسوبك.",
   "phoneSettingsDevices": "الأجهزة",
   "phoneSettingsFoldSplit": "التقسيم عند الطيّة",

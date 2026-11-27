@@ -111,12 +111,24 @@ import XCTest
         picture(name, screenshot: try appearancePicture(name, dark: dark))
     }
 
-    func computerDetails() {
-        let details = app.buttons["computer-details"]
-        XCTAssertTrue(details.waitForPresence(timeout: 10))
-        XCTAssertEqual(details.label, "Your computer")
-        tapOnPhone(details)
-        XCTAssertTrue(app.buttons["close-computer-details"].waitForPresence(timeout: 10))
+    /// INF-2820 piece 1: the computer's page is Settings' first row, Your computer, which names the computer shown and
+    /// its reach; piece 2 takes the top bar's computer button away, so a step reaches the page through Settings.
+    func computerDetails(repeatDiscarded: Bool = true) {
+        let settings = app.buttons["phone-settings"]
+        XCTAssertTrue(settings.waitForPresence(timeout: 10), app.debugDescription)
+        tapOnPhone(settings, repeatDiscarded: repeatDiscarded)
+        let row = app.buttons["phone-settings-computer"]
+        XCTAssertTrue(row.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(row.label.hasPrefix("Your computer"), row.label)
+        tapOnPhone(row, repeatDiscarded: repeatDiscarded)
+        XCTAssertTrue(app.buttons["add-computer"].waitForPresence(timeout: 10), app.debugDescription)
+    }
+
+    /// Closes Settings from Your computer, or from any of its pages.
+    func closeComputerDetails(repeatDiscarded: Bool = true) {
+        let close = app.buttons["close-phone-settings"]
+        tapOnPhone(close, repeatDiscarded: repeatDiscarded)
+        XCTAssertTrue(close.waitForAbsence(timeout: 10), app.debugDescription)
     }
 
     func tab(_ name: String, repeatDiscarded: Bool = true) {

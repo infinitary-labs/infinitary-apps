@@ -1050,7 +1050,7 @@ A phone can ask a computer that keeps a copy to take over, the same takeover its
 Each welcome a phone hears lists every computer that keeps a copy and has said where it listens (`standbys`): its id, its name, the pin of its own key and where it listens for the other copies, and `inf:home:routes` sends the list again when it changes.
 A computer that never said where it listens is nowhere a phone could reach, so it is left out.
 The phone keeps the list beside the home's addresses and number in its paired record; it keeps no record of the home and is never a copy itself.
-While the home is out of reach, the computer's sheet on the phone shows Take over with each computer that keeps a copy (`PhoneTakeOverSection`; design skill `components/devices/PhoneView`, "Taking over").
+While the home is out of reach, Your computer in the phone's Settings shows Take over with each computer that keeps a copy (`PhoneTakeOverSection`; design skill `components/devices/PhoneView`, "Taking over").
 The phone reaches each one on its own link for phones, `/phone` beside the copies' `/copies`, pinned to that computer's own key (`StandbyPeers`, `src/core/standby/peers.ts`).
 That computer admits only a phone its copy of the record lists, by the phone's key and the system the phone said it runs (`devices/devices.json`, `devices/systems.json`).
 On that link the phone asks `inf:standby:offer` and shows what it answers in the words its own window uses: when its copy is from, whether it reaches the home, whether the home said it went to sleep or quit, each other copy and whether it may be newer, and whether the home told it what taking over needs (`phoneOffer`, `src/core/standby/takeOver.ts`).

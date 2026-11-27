@@ -574,6 +574,7 @@
   "phoneSettingsBackTo": "Volver a {place}",
   "phoneSettingsCapabilityFull": "Responde tarjetas, envía mensajes y controla tareas en tu computadora.",
   "phoneSettingsCapabilityRead": "Lee tarjetas, Actividad y tareas. {update}",
+  "phoneSettingsComputerSummary": "{computer} · {reach}",
   "phoneSettingsConversationStays": "La conversación se queda en tu computadora.",
   "phoneSettingsDevices": "Dispositivos",
   "phoneSettingsFoldSplit": "Dividir en el pliegue",

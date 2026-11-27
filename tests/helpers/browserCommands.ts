@@ -23,11 +23,8 @@ const emulateReducedMotion: BrowserCommand<[ReducedMotion]> = async (context, re
 };
 
 /**
- * Runs a function, given as its source, in a frame of the test's page - the
- * one named `frame`, or the one whose element carries `frame.title`, as a
- * card body's frame carries its card's - and answers what it returns. A card
- * body draws in a sandboxed frame of its own origin, which the page that
- * holds it cannot script; the browser can, as the journeys' frame locators did.
+ * Finds a frame of the test's page: the one named `frame`, or the one whose
+ * element carries `frame.title`, as a card body's frame carries its card's.
  *
  * The test asks once its page shows the frame drawn, and that word reaches
  * this process over the runner's own connection, while the browser's word
@@ -57,6 +54,12 @@ async function frameOf(page: Page, frame: string | { title: string }): Promise<F
   return found;
 }
 
+/**
+ * Runs a function, given as its source, in the frame `frameOf` finds and
+ * answers what it returns. A card body draws in a sandboxed frame of its own
+ * origin, which the page that holds it cannot script; the browser can, as the
+ * journeys' frame locators did.
+ */
 const evaluateInFrame: BrowserCommand<
   [frame: string | { title: string }, source: string, argument?: unknown]
 > = async ({ page }, frame, source, argument) => {

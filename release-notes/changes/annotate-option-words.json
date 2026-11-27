@@ -5,7 +5,7 @@
       "kind": "fix",
       "area": "cards",
       "title": "Annotate words in a card's choices",
-      "body": "Selecting words in one of a question's choices on a card now offers Annotate, as it does for the rest of the card. Selecting them leaves the choice as it was, and a click on a choice still picks it.",
+      "body": "Selecting words in one of a question's choices on a card now offers Annotate, as it does for the rest of the card. Dragging across the words leaves the choice as it was, while a click on them, a double-click included, still picks it.",
       "picture": {
         "dark": "annotate-option-words-dark.webp",
         "light": "annotate-option-words-light.webp",

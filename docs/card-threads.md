@@ -609,7 +609,7 @@ The choices row keeps the queued-note count visible while notes wait.
 Its default key is ⇧⌘A (Ctrl+Shift+A on Linux).
 Arrow keys move through the body parts, Enter opens an annotation popover, and Escape leaves Point at.
 With Point at off, selecting text shows one small Annotate button under the words, drawn by the host outside the frame, and opens no popover, so the native selection and usual Copy are untouched.
-Words in a choice's label can be selected and annotated like any other words: the note is a text note on the choice's question, selecting them never ticks the choice, and a click on the choice still ticks it.
+Words in a choice's label can be selected and annotated like any other words, and the note is a text note on the choice's question: dragging across them leaves the choice as it was, while a click on them, a double-click's first click included, still picks it.
 Annotate shows ⏎ as its key: a click on it, or Enter or Tab in the frame while the words are selected, opens the popover with the caret in its comment.
 The button leaves when a press in the card or the window clears the selection, and on Escape.
 With Point at on, selecting text or clicking a part opens the popover at once, with the caret in its comment.

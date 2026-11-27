@@ -62,10 +62,10 @@ import { type GoogleClientRecord, GoogleClientStore, GoogleSignInStore } from ".
  * refused the lasting key or the person's own client, or the sign-in was
  * made with a client the person no longer keeps - and `unavailable` when
  * Google could not be reached or failed. A key refused again just after a
- * real renewal is not the sign-in's fault: Google's MCP servers take only a
- * client marked for an AI-powered agent, so the sign-in stays and the row
- * says what to tick (`client().mcp`), as it does for a service whose MCP
- * server is off.
+ * real renewal is not the sign-in's fault: Google asks an AI-powered agent
+ * to use a client marked for one, so that refusal is read as the missing
+ * mark, the sign-in stays and the row says what to tick (`client().mcp`), as
+ * it does for a service whose MCP server is off.
  * When Google asks the app to slow down and says for how long (Retry-After),
  * every request waits that long, and a rule's look tries again on its next
  * minute.

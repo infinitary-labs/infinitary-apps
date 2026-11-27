@@ -343,6 +343,8 @@ export const RAW_WORDS_LEDGER: Readonly<Record<string, number>> = {
   "src/core/batches/batches.ts": 16,
   "src/core/batches/combine.ts": 11,
   "src/core/batches/description.ts": 5,
+  // Split out of batches.ts with the words it held.
+  "src/core/batches/words.ts": 11,
   "src/core/bootRecovery.ts": 4,
   "src/core/browser/browserRecord.ts": 9,
   "src/core/browser/changes.ts": 7,

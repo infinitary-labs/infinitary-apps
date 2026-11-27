@@ -289,6 +289,7 @@
 "automationWaitsForPlaceholder" = "Cada evento";
 "batchesPanelAfter" = "tras el #%1$@";
 "batchesPanelChecking" = "comprobando %1$@";
+"batchesPanelCheckingFix" = "las comprobaciones se ejecutan con la corrección %1$@ antes de su aprobación";
 "batchesPanelChecksFull" = "Comprobaciones: %2$@ superadas, %1$@ fallidas, %3$@ en curso, leídas a las %4$@";
 "batchesPanelChecksPassed" = "%1$@ de %2$@ comprobaciones superadas";
 "batchesPanelChecksUnread" = "comprobaciones aún sin leer";
@@ -1110,6 +1111,9 @@
 "feedBatchQueuedHost" = "%2$@: el sitio que aloja el proyecto puso %1$@ en la cola de fusión de la rama principal. Se fusiona allí cuando se superen las comprobaciones de la cola.";
 "feedBatchRetried" = "%2$@: %1$@ se combinó de nuevo y sus comprobaciones se ejecutan otra vez.";
 "feedBatchSentBack" = "%1$@: «%3$@» se devolvió de su lote: %2$@";
+"feedBatchTrial" = "%2$@: %1$@ ejecuta sus comprobaciones con su corrección declarada antes de que se apruebe la corrección. Cuando la corrección se apruebe en esta versión y estas comprobaciones pasen, el lote se fusiona tal como está.";
+"feedBatchTrialFailed" = "%3$@: %2$@ sigue retenido porque fallaron estas comprobaciones con su corrección declarada: %1$@. El tripulante de la corrección la repara en una nueva versión.";
+"feedBatchTrialFailedUnnamed" = "%2$@: %1$@ sigue retenido porque fallaron sus comprobaciones con su corrección declarada. El tripulante de la corrección la repara en una nueva versión.";
 "feedBranchPushed" = "Insertó la rama";
 "feedBuildRowKept" = "«%2$@» anotada como %1$@ para después.";
 "feedBuildRowNotFiled" = "«%1$@» no se anotó.";
@@ -3572,6 +3576,7 @@
 "settingsProjectsBatchAnswerRuleNote" = "Ninguna respuesta cumple la regla. Cada una cambia lo que contiene el lote.";
 "settingsProjectsBatchAnswerYourself" = "Responder tú mismo";
 "settingsProjectsBatchChanges" = "Cambios para devolver";
+"settingsProjectsBatchCheckingFix" = "Sus comprobaciones se están ejecutando ahora con la corrección de %1$@, antes de que la apruebes. Si se superan, al aprobarla el lote se fusiona tal como está.";
 "settingsProjectsBatchGap" = "Cuándo empieza un lote";
 "settingsProjectsBatchGapDescription" = "Un intervalo más largo pone más cambios aprobados en cada lote, así que sus comprobaciones se ejecutan menos a menudo. La reparación de un lote retenido nunca espera.";
 "settingsProjectsBatchGapNow" = "En cuanto se aprueba un cambio";

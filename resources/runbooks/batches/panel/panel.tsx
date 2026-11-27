@@ -450,6 +450,9 @@ function OpenDetail({ open, hold }: { open: NonNullable<PanelBatchRepo["open"]>;
           {after && <span className="fm-batches-panel-nowrap">{after.trimStart()}</span>}
         </span>
       )}
+      {open.checkingFix && (
+        <span data-batches-trial="">{m.batchesPanelCheckingFix({ key: taskName(open.checkingFix) })}</span>
+      )}
       {fixKeys.length > 0 && (
         <span data-batches-fix="">{m.batchesPanelFix({ keys: fixKeys.join(", ") })}</span>
       )}

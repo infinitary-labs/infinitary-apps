@@ -289,6 +289,7 @@
 "automationWaitsForPlaceholder" = "每個事件";
 "batchesPanelAfter" = "排在 #%1$@ 之後";
 "batchesPanelChecking" = "檢查中 %1$@";
+"batchesPanelCheckingFix" = "正在帶上修正 %1$@ 執行檢查，尚未核准";
 "batchesPanelChecksFull" = "檢查：%2$@ 項已通過，%1$@ 項未通過，%3$@ 項執行中，讀取於 %4$@";
 "batchesPanelChecksPassed" = "%2$@ 項檢查中已通過 %1$@ 項";
 "batchesPanelChecksUnread" = "尚未讀取檢查";
@@ -1110,6 +1111,9 @@
 "feedBatchQueuedHost" = "%2$@：專案的主機已把 %1$@ 排入主分支的合併佇列。佇列的檢查通過後，它就會在那裡合併。";
 "feedBatchRetried" = "%2$@：%1$@ 已重新合成，檢查會再次執行。";
 "feedBatchSentBack" = "%1$@：「%3$@」已從批次退回：%2$@";
+"feedBatchTrial" = "%2$@：%1$@ 在宣告的修正核准前，就帶著這個修正執行檢查。修正在這個版本核准且這些檢查通過後，這批變更會原樣合併。";
+"feedBatchTrialFailed" = "%3$@：帶著宣告的修正，以下檢查失敗，所以 %2$@ 仍暫緩：%1$@。修正的船員會用新版本修好它。";
+"feedBatchTrialFailedUnnamed" = "%2$@：帶著宣告的修正，檢查失敗，所以 %1$@ 仍暫緩。修正的船員會用新版本修好它。";
 "feedBranchPushed" = "已推送分支";
 "feedBuildRowKept" = "已將「%2$@」建立為 %1$@，留待以後。";
 "feedBuildRowNotFiled" = "未排入「%1$@」。";
@@ -3572,6 +3576,7 @@
 "settingsProjectsBatchAnswerRuleNote" = "兩個回答都不符合這條規則。每個都會改變批次包含的內容。";
 "settingsProjectsBatchAnswerYourself" = "自己回答";
 "settingsProjectsBatchChanges" = "要退回的變更";
+"settingsProjectsBatchCheckingFix" = "在你核准 %1$@ 的修正之前，檢查正帶上這個修正執行。若檢查通過，核准該修正就會照原樣合併這個批次。";
 "settingsProjectsBatchGap" = "何時開始一個批次";
 "settingsProjectsBatchGapDescription" = "間隔越長，每個批次包含的已核准變更越多，檢查執行得越少。暫緩批次的修復從不等待。";
 "settingsProjectsBatchGapNow" = "變更一經核准就開始";

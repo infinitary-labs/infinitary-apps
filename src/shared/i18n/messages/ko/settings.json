@@ -892,6 +892,7 @@
   "settingsProjectsBatchAnswerRuleNote": "어느 답도 규칙을 충족하지 않아요. 둘 다 일괄 끌어오기 요청의 내용을 바꿔요.",
   "settingsProjectsBatchAnswerYourself": "직접 답하기",
   "settingsProjectsBatchChanges": "돌려보낼 변경",
+  "settingsProjectsBatchCheckingFix": "{key}의 수정을 승인하기 전에, 그 수정을 포함해 검사를 실행하고 있어요. 통과하면 수정을 승인할 때 이 일괄 끌어오기 요청이 그대로 병합돼요.",
   "settingsProjectsBatchGap": "일괄 끌어오기 요청을 시작하는 때",
   "settingsProjectsBatchGapDescription": "간격이 길수록 일괄 끌어오기 요청마다 승인된 변경이 더 많이 들어가서 검사가 덜 자주 실행돼요. 보류된 일괄 끌어오기 요청의 수정은 기다리지 않아요.",
   "settingsProjectsBatchGapHours": "최소 {count}시간 간격",

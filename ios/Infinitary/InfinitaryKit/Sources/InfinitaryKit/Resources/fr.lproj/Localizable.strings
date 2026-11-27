@@ -289,6 +289,7 @@
 "automationWaitsForPlaceholder" = "Chaque événement";
 "batchesPanelAfter" = "après #%1$@";
 "batchesPanelChecking" = "vérification depuis %1$@";
+"batchesPanelCheckingFix" = "les vérifications tournent avec le correctif %1$@ avant son approbation";
 "batchesPanelChecksFull" = "Vérifications : %2$@ réussies, %1$@ échouées, %3$@ en cours, lues à %4$@";
 "batchesPanelChecksPassed" = "%1$@ vérifications réussies sur %2$@";
 "batchesPanelChecksUnread" = "vérifications pas encore lues";
@@ -1110,6 +1111,9 @@
 "feedBatchQueuedHost" = "%2$@ : l’hébergeur du projet a placé %1$@ dans la file de fusion de la branche principale. Il y sera fusionné une fois les vérifications de la file réussies.";
 "feedBatchRetried" = "%2$@ : %1$@ a été regroupé de nouveau et ses vérifications s’exécutent de nouveau.";
 "feedBatchSentBack" = "%1$@ : « %3$@ » a été renvoyée de son lot : %2$@";
+"feedBatchTrial" = "%2$@ : %1$@ exécute ses vérifications avec son correctif déclaré, avant l’approbation du correctif. Une fois le correctif approuvé à cette version et ces vérifications réussies, le lot est fusionné tel quel.";
+"feedBatchTrialFailed" = "%3$@ : %2$@ reste retenu, car ces vérifications ont échoué avec son correctif déclaré : %1$@. L’équipier du correctif le répare dans une nouvelle version.";
+"feedBatchTrialFailedUnnamed" = "%2$@ : %1$@ reste retenu, car ses vérifications ont échoué avec son correctif déclaré. L’équipier du correctif le répare dans une nouvelle version.";
 "feedBranchPushed" = "Branche poussée";
 "feedBuildRowKept" = "« %2$@ » classée comme %1$@ pour plus tard.";
 "feedBuildRowNotFiled" = "« %1$@ » n’a pas été classée.";
@@ -3572,6 +3576,7 @@
 "settingsProjectsBatchAnswerRuleNote" = "Aucune des deux réponses ne satisfait la règle. Chacune change ce que contient le lot.";
 "settingsProjectsBatchAnswerYourself" = "Répondre vous-même";
 "settingsProjectsBatchChanges" = "Modifications à renvoyer";
+"settingsProjectsBatchCheckingFix" = "Ses vérifications tournent maintenant avec le correctif de %1$@, avant que vous l’approuviez. Si elles réussissent, l’approuver fusionne le lot tel quel.";
 "settingsProjectsBatchGap" = "Quand un lot démarre";
 "settingsProjectsBatchGapDescription" = "Un intervalle plus long met plus de modifications approuvées dans chaque lot, donc ses vérifications s’exécutent moins souvent. La réparation d’un lot retenu n’attend jamais.";
 "settingsProjectsBatchGapNow" = "Dès qu’une modification est approuvée";

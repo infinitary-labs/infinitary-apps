@@ -892,6 +892,7 @@
   "settingsProjectsBatchAnswerRuleNote": "兩個回答都不符合這條規則。每個都會改變批次包含的內容。",
   "settingsProjectsBatchAnswerYourself": "自己回答",
   "settingsProjectsBatchChanges": "要退回的變更",
+  "settingsProjectsBatchCheckingFix": "在你核准 {key} 的修正之前，檢查正帶上這個修正執行。若檢查通過，核准該修正就會照原樣合併這個批次。",
   "settingsProjectsBatchGap": "何時開始一個批次",
   "settingsProjectsBatchGapDescription": "間隔越長，每個批次包含的已核准變更越多，檢查執行得越少。暫緩批次的修復從不等待。",
   "settingsProjectsBatchGapHours": {

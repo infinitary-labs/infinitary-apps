@@ -892,6 +892,7 @@
   "settingsProjectsBatchAnswerRuleNote": "两个回答都不满足这条规则。每个都会改变这批改动包含的内容。",
   "settingsProjectsBatchAnswerYourself": "自己回答",
   "settingsProjectsBatchChanges": "要退回的改动",
+  "settingsProjectsBatchCheckingFix": "在你批准 {key} 的修正之前，检查正在带上这个修正运行。若检查通过，批准该修正即会按原样合并这批改动。",
   "settingsProjectsBatchGap": "何时开始一批改动",
   "settingsProjectsBatchGapDescription": "间隔越长，每批包含的已批准改动越多，检查运行得越少。暂缓的这批改动，其修复从不等待。",
   "settingsProjectsBatchGapHours": {

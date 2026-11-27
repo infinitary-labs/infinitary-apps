@@ -274,6 +274,47 @@ describe("the stage grouped by project", () => {
     expect(cues).toContainEqual({ kind: "receive" });
   });
 
+  // A start's spawn can reach the stage before its placement and its board
+  // row: a crewmate the board never named follows its placement to its
+  // computer's group.
+  it("moves a crewmate the board has not named yet to its computer's group when its placement arrives", () => {
+    const model = stage(["web-home", "shop-home"]);
+    model.setGrouping({
+      ...input(),
+      projectOf: (id) => (id === "web-studio" ? undefined : PROJECT_OF[id]),
+    });
+    model.spawn("web-studio", "working", 0, false, "high");
+    expect(model.isHome("web-studio")).toBe(true);
+    model.setPlacement("web-studio", "studio");
+    expect(clusterOf(model, "web-studio")).toBe("studio");
+  });
+
+  // The same plan sentence for the first mate's ring: a built-in project's
+  // crewmate and the focused middle project's, both on another computer.
+  it.each(["scratch-studio", "web-studio"])(
+    "keeps %s on the first mate's ring when the board stops naming it, so it falls home from there",
+    (closing) => {
+      const model = stage(["scratch-studio", "web-studio", "web-home", "shop-home"], "website");
+      model.update(0);
+      model.takeCues();
+      expect(clusterOf(model, closing)).toBe(HOME_COMPUTER);
+      model.setGrouping({
+        ...input("website"),
+        projectOf: (id) => (id === closing ? undefined : PROJECT_OF[id]),
+      });
+      expect(clusterOf(model, closing)).toBe(HOME_COMPUTER);
+      model.leave(closing, "home", 16);
+      expect(model.clusters().some((c) => c.id === "studio")).toBe(false);
+      const cues = [];
+      for (let now = 32; now < 2000; now += 16) {
+        model.update(now);
+        cues.push(...model.takeCues());
+      }
+      expect(model.has(closing)).toBe(false);
+      expect(cues).toContainEqual({ kind: "receive" });
+    },
+  );
+
   it("goes back to each computer's group when the switch turns off", () => {
     const model = stage(["web-home", "web-studio", "shop-home"]);
     model.setGrouping(null);

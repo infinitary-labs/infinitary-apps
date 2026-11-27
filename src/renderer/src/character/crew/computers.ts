@@ -107,6 +107,8 @@ export class ComputerOrbits extends CrewOrbit {
   private homeName: string = HERE.This;
   private clusterCues: Cue[] = [];
   private owners = new Map<string, string>();
+  /** The crew the board has named a project for while grouping by project (`groupOf`). */
+  private named = new Set<string>();
   private tiers = new Map<string, Slot | undefined>();
   private reviewEdges = new Map<string, string>();
   private waits: readonly CrewedWait[] = [];
@@ -228,11 +230,13 @@ export class ComputerOrbits extends CrewOrbit {
     if (!this.plan || !this.grouping) return this.computerOf(id);
     const crew = this.groupCrew(id);
     // A closing task's board row goes before its fall home starts, so a
-    // crewmate the board stops naming keeps the project group it sits in and
-    // falls home from there, instead of jumping to its computer's group.
+    // crewmate the board named once and stops naming keeps the group it sits
+    // in, the first mate's ring included, and falls home from there instead of
+    // jumping to its computer's group. One never named yet takes its
+    // computer's group until its row arrives.
     const owner = this.owners.get(id);
-    if (!crew.away && owner?.startsWith(PROJECT_GROUP) && this.grouping.projectOf(id) === undefined)
-      return owner;
+    if (this.grouping.projectOf(id) !== undefined) this.named.add(id);
+    else if (!crew.away && owner !== undefined && this.named.has(id)) return owner;
     return groupOf(this.plan, this.grouping, crew);
   }
   /** Whether a computer is away: out of reach, updating, connecting or removed. */

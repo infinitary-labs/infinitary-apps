@@ -49,8 +49,10 @@ contextBridge.exposeInMainWorld("firstmate", frozen);
 // render (docs/translucent-window.md): a translucent window's body paints
 // the material tint; every other window paints the opaque void.
 // The preload runs before the document element is born, so the mark set
-// here is lost with it; the one set at DOMContentLoaded is the one that
-// paints, and it lands before the app's first render.
+// here is lost with it. The marks land again when the document turns
+// interactive, which is before the page's module script runs (the card
+// overlay's page reads its mark there, src/renderer/src/main.tsx), and once
+// more at DOMContentLoaded.
 // Which desktop the window is on, the same way: its keys, window controls
 // and Settings rows follow it (src/shared/platform.ts). No mark is a Mac's.
 // The window's language and the way its text runs, the same way: the page
@@ -79,4 +81,5 @@ const markWindowMaterial = () => {
     );
 };
 markWindowMaterial();
+document.addEventListener("readystatechange", markWindowMaterial, { once: true });
 document.addEventListener("DOMContentLoaded", markWindowMaterial, { once: true });

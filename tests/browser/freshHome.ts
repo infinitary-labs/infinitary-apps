@@ -1,4 +1,5 @@
 import { type CardDraft, type CardDraftChange, emptyDraft } from "@shared/cardDrafts";
+import { DEFAULT_CARD_OVERLAY } from "@shared/cardOverlay";
 import { DEFAULT_SAVED_KEYMAP } from "@shared/keymap";
 import { DEFAULT_KEY_REMINDERS } from "@shared/keyReminders";
 import { frameMountUrl } from "@shared/plugins/frameDocument";
@@ -85,6 +86,9 @@ function homeAnswers({ plain, asked }: FreshHomeAnswers): Answers {
     "inf:keyboard:panels": (panels) => keymap.setPanels(panels),
     // A new profile's key reminders (src/main/keyReminders.ts reads its missing file as this).
     "inf:keyboard:reminders": DEFAULT_KEY_REMINDERS,
+    // A Mac that never turned the card overlay on (src/main/cardOverlay.ts): the switch off,
+    // the default key, and nothing wrong with it.
+    "inf:overlay:settings": { ...DEFAULT_CARD_OVERLAY, problem: null },
     "inf:devices:this-mac": { role: "home", left: null },
     // A Mac's first launch reads itself for Set up from your first mate's computer
     // (src/core/devices/setUpHere.ts): a Mac on a private network with Remote Login on.

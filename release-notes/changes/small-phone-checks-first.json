@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "small-phone-checks-first",
+      "reason": "The phone check's request job sends a check it dealt into one or two jobs to a small phone queue, which the build machines start before a bigger check's jobs; only how the project's own phone checks wait for a build machine changes, and nothing in the app changes."
+    }
+  ]
+}

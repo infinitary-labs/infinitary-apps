@@ -12,6 +12,7 @@ import {
   requestJobs,
   requestPasses,
   requestStopsEarly,
+  smallPhoneCheck,
 } from "../scripts/affected-phone";
 import { legacyJobName } from "../scripts/ci-job-names.mjs";
 import { PHONE_DEVICES, PHONE_PART_TIMES, PHONE_PARTS } from "../scripts/phone-test-plan";
@@ -534,37 +535,43 @@ describe("the native gate on an affected request", () => {
     }
     // The shell execution and both-device arguments belong to release-workflows-journey-suites.test.ts.
   });
+  // These mappings name no small phone queue, so a small request (INF-7079's fix 1) lands where any other does.
+  const REQUESTS = ["true", "false"].map((small) => ({ request: { outputs: { small } } }));
   it("ignores former runner overrides for every device job (INF-2202)", () => {
     for (const id of [NATIVE_JOB])
       for (const mode of [OFF, IN_TURN, TOGETHER])
-        expect(
-          workflowValue(workflow.jobs[id]["runs-on"], {
-            vars: {
-              MAC_QUEUES: JSON.stringify({ phone: "mini-mac-phone" }),
-              PHONE_VIRTUAL_MAC: mode,
-              VIRTUAL_MAC_RUNNER: "mini-mac-virtual",
-              MAC_RUNNER: "mini-mac-any",
-              REAL_MAC_RUNNER: "mini-mac-real",
-            },
-            inputs: { mac_runner: "mini-mac-real" },
-          }),
-        ).toBe("mini-mac-phone");
+        for (const needs of REQUESTS)
+          expect(
+            workflowValue(workflow.jobs[id]["runs-on"], {
+              needs,
+              vars: {
+                MAC_QUEUES: JSON.stringify({ phone: "mini-mac-phone" }),
+                PHONE_VIRTUAL_MAC: mode,
+                VIRTUAL_MAC_RUNNER: "mini-mac-virtual",
+                MAC_RUNNER: "mini-mac-any",
+                REAL_MAC_RUNNER: "mini-mac-real",
+              },
+              inputs: { mac_runner: "mini-mac-real" },
+            }),
+          ).toBe("mini-mac-phone");
   });
   it("supplies no runnable destination when the phone queue is absent (INF-2202)", () => {
-    for (const id of [NATIVE_JOB]) {
-      const resolve = (mapping: string) =>
-        workflowValue(workflow.jobs[id]["runs-on"], {
-          vars: {
-            MAC_QUEUES: mapping,
-            PHONE_VIRTUAL_MAC: TOGETHER,
-            MAC_RUNNER: "mini-mac-any",
-            VIRTUAL_MAC_RUNNER: "mini-mac-virtual",
-          },
-          inputs: { mac_runner: "mini-mac-real" },
-        });
-      for (const mapping of ["{}", '{"phone":""}']) expect(resolve(mapping)).toBeFalsy();
-      for (const mapping of ["", "not json"]) expect(() => resolve(mapping)).toThrow();
-    }
+    for (const id of [NATIVE_JOB])
+      for (const needs of REQUESTS) {
+        const resolve = (mapping: string) =>
+          workflowValue(workflow.jobs[id]["runs-on"], {
+            needs,
+            vars: {
+              MAC_QUEUES: mapping,
+              PHONE_VIRTUAL_MAC: TOGETHER,
+              MAC_RUNNER: "mini-mac-any",
+              VIRTUAL_MAC_RUNNER: "mini-mac-virtual",
+            },
+            inputs: { mac_runner: "mini-mac-real" },
+          });
+        for (const mapping of ["{}", '{"phone":""}']) expect(resolve(mapping)).toBeFalsy();
+        for (const mapping of ["", "not json"]) expect(() => resolve(mapping)).toThrow();
+      }
   });
   it("never starts or deletes a fixed clone, failed checks included (INF-2202)", () => {
     for (const mode of [OFF, IN_TURN, TOGETHER])
@@ -1083,6 +1090,45 @@ it("uses the dealt jobs and skips native work when Linux selects none", () => {
   expect(workflowValue(native.strategy.matrix.include, { inputs: {}, needs: {} })).toEqual([
     { device: "every", key: "every" },
   ]);
+});
+
+// INF-7079's fix 1 (the captain's "When the phone places are full, start phone checks of one or two jobs before bigger
+// ones"): the request job marks a check dealt into one or two jobs, whose jobs ask for the small phone queue.
+it("sends a check dealt into one or two jobs to the small phone queue and every other phone check to the phone queue", () => {
+  const native = workflow.jobs[NATIVE_JOB];
+  const queues = { phone: "mini-mac-phone", phone_small: "mini-mac-phone-small" };
+  const placed = (needs: Plain, named: Record<string, string> = queues) =>
+    workflowValue(native["runs-on"], { needs, vars: { MAC_QUEUES: JSON.stringify(named) } });
+  // What the request job hands on when its chooser printed `small` for these dealt jobs.
+  const request = (jobs: ReturnType<typeof requestJobs>) => ({
+    request: {
+      outputs: {
+        small: workflowString(workflow.jobs.request.outputs.small, {
+          steps: { "request-select": { outputs: { small: String(smallPhoneCheck(jobs)) } } },
+        }),
+      },
+    },
+  });
+  const one = requestJobs(selection(), TIMES);
+  expect(one).toHaveLength(1);
+  expect(FULL_JOBS.length).toBeGreaterThan(3);
+  for (const [jobs, label] of [
+    [one, "mini-mac-phone-small"],
+    [FULL_JOBS.slice(0, 2), "mini-mac-phone-small"],
+    [FULL_JOBS.slice(0, 3), "mini-mac-phone"],
+    [FULL_JOBS, "mini-mac-phone"],
+  ] as const) {
+    expect(placed(request(jobs))).toBe(label);
+    // Until MAC_QUEUES names the small queue, every check waits in the phone queue.
+    expect(placed(request(jobs), { phone: "mini-mac-phone" })).toBe("mini-mac-phone");
+  }
+  // The phone release's call hands on only the jobs its own step dealt, and a wait-clock or tool request chooses no
+  // parts, so neither marks a check small.
+  const release = workflowString(workflow.jobs.request.outputs.small, {
+    steps: { "release-select": { outputs: { jobs: JSON.stringify(one) } } },
+  });
+  expect(placed({ request: { outputs: { small: release } } })).toBe("mini-mac-phone");
+  expect(placed({})).toBe("mini-mac-phone");
 });
 
 // Release calls inherit their caller's dispatch event, but must never run manual preselection. INF-7079's fix 5 (the

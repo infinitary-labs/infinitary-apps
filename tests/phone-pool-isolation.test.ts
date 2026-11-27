@@ -6,7 +6,8 @@ import { loadYamlFile, workflowString, workflowValue } from "./helpers/releaseWo
 // INF-2055, captain: only native phone-check jobs may resolve to the rented
 // phone pool, and none may read secrets. Exercise the real workflow routes;
 // caller-supplied proof-run label overrides are not repository routing policy.
-const pool = "mini-mac-phone";
+// INF-7079's fix 1: the small phone queue is served by the same phone places.
+const pools = ["mini-mac-phone", "mini-mac-phone-small"];
 const nativeJobs = ["native-phone"];
 const allowed = nativeJobs.map((id) => `phone.yml:${id}`);
 const kinds = [
@@ -14,6 +15,7 @@ const kinds = [
   "check",
   "journeys",
   "phone",
+  "phone_small",
   "testflight",
   "build",
   "sign",
@@ -69,21 +71,26 @@ function secretRead(value: unknown): boolean {
 
 function inspect(all: Record<string, Workflow>) {
   const selected = new Set<string>();
+  const reached = new Set<string>();
   const violations = new Set<string>();
   for (const [file, workflow] of Object.entries(all)) {
     for (const [id, job] of Object.entries(workflow.jobs)) {
       if (!job["runs-on"]) continue; // Reusable calls have no runner of their own.
-      for (const dryRun of ["true", "false"]) {
+      for (const [dryRun, small] of ["true", "false"].flatMap((dry) =>
+        ["true", "false"].map((each) => [dry, each]),
+      )) {
         // Both publishing paths matter: release-only queues must not join phone.
         // The alpha wait's matrix is the alpha cuts its find job listed, here
         // the one from main run 204 that a main check waited for (alpha-wait.yml).
         // A branch push: no pull request, so a fork-aware runner reads its variables.
+        // A phone request dealt into one or two jobs is small (INF-7079's fix 1).
         const contexts = {
           vars,
           github: { event_name: "push" },
           inputs: {},
           needs: {
             resolve: { outputs: { dry_run: dryRun } },
+            request: { outputs: { small } },
             find: { outputs: { alphas: "[204]" } },
             build: { outputs: { rounds: "[1]" } },
           },
@@ -117,7 +124,9 @@ function inspect(all: Record<string, Workflow>) {
           const labels = (Array.isArray(job["runs-on"]) ? job["runs-on"] : [job["runs-on"]]).map(
             (label) => workflowString(label, { ...contexts, matrix: entry }),
           );
-          if (!labels.includes(pool)) continue;
+          const pool = labels.find((label) => pools.includes(label));
+          if (!pool) continue;
+          reached.add(pool);
           const name = `${file}:${id}`;
           selected.add(name);
           if (!allowed.includes(name)) violations.add(`${name}: not a native phone check`);
@@ -127,24 +136,32 @@ function inspect(all: Record<string, Workflow>) {
       }
     }
   }
-  return { selected: [...selected].sort(), violations: [...violations].sort() };
+  return {
+    selected: [...selected].sort(),
+    reached: [...reached].sort(),
+    violations: [...violations].sort(),
+  };
 }
 
 describe("rented phone pool isolation (INF-2055)", () => {
-  it("resolves only native phone checks to the live pool, without secrets", () => {
+  it("resolves only native phone checks to either phone pool, without secrets", () => {
     const result = inspect(workflows());
     expect(result.selected).toEqual([...allowed].sort());
+    expect(result.reached).toEqual(pools);
     expect(result.violations).toEqual([]);
   });
 
-  it("rejects a journey that accidentally asks for the phone queue", () => {
-    const all = workflows();
-    jobIn(all, "journeys.yml", "affected-journeys")["runs-on"] =
-      "${{ fromJSON(vars.MAC_QUEUES).phone }}";
-    expect(inspect(all).violations).toContain(
-      "journeys.yml:affected-journeys: not a native phone check",
-    );
-  });
+  it.each(["phone", "phone_small"])(
+    "rejects a journey that accidentally asks for the %s queue",
+    (kind) => {
+      const all = workflows();
+      jobIn(all, "journeys.yml", "affected-journeys")["runs-on"] =
+        `\${{ fromJSON(vars.MAC_QUEUES).${kind} }}`;
+      expect(inspect(all).violations).toContain(
+        "journeys.yml:affected-journeys: not a native phone check",
+      );
+    },
+  );
 
   it.each(["${{ secrets.APP_STORE_CONNECT_KEY }}", "${{ secrets['APP_STORE_CONNECT_KEY'] }}"])(
     "rejects a phone check reading %s",

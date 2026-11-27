@@ -1,5 +1,5 @@
 ---
-source: b50d1979307a8fc4
+source: 343fc510d10a179f
 title: iPhone 和 iPad
 description: 申请 iPhone 和 iPad 版 Infinitary 的私有 TestFlight 邀请，然后连接你的电脑，阅读卡片并发送消息。
 ---
@@ -53,6 +53,13 @@ iPhone 和 iPad 版 Infinitary 目前处于私有 TestFlight 阶段。
 - **动态** 显示发生过的事，最新的在底部。
 
 当你的面板已开启时，第四个标签 **面板** 会把它们一个接一个地显示出来。
+
+## 手机自己的主题 {#your-phones-own-theme}
+
+iPhone 或 iPad 上的设置 → 外观 → “**主题**”只属于这台设备。
+可以选择“**跟随设备**”“**深色**”“**浅色**”，或电脑上沿用作者命名的十三个主题之一，例如 **Dracula** 或 **Catppuccin Latte**。
+选好后，整个应用会立即换成新的颜色，卡片也一样，关闭 Infinitary 后依然保留。
+你的电脑和其他设备各自保留自己的主题。
 
 ## 在展开的可折叠 iPhone 上阅读卡片 {#read-a-card-on-an-open-foldable-iphone}
 

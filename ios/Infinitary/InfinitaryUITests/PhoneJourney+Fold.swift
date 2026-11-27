@@ -409,7 +409,7 @@ extension PhoneJourney {
         let appearance = app.buttons["phone-settings-appearance"]
         XCTAssertTrue(appearance.waitForPresence(timeout: 10), app.debugDescription)
         tapOnPhone(appearance)
-        XCTAssertTrue(app.segmentedControls["phone-theme"].waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(phoneThemeTiles.waitForPresence(timeout: 10), app.debugDescription)
     }
 
     private func closeFoldSettings() {

@@ -14,7 +14,7 @@ A card's reply row is shaped like the message capsule: one shape with the messag
 That shape is the Mac's input, a pill at one line and a rounded rectangle with the same 22-point radius when it grows.
 Every lit mark inside it, such as Point at while it is on, is a 32-point circle, so nothing sticks out of its rounded ends.
 A note being written is a raised panel inside the card at the reply row's width, at the card radius on the raised fill with the strong hairline, its comment a plain field beside buttons of the same control radius; queued and sent notes share one row, a 2-point bar, what the note points at on one line, then its comment, the bar in the accent only while the note waits to be sent.
-The app follows the device's appearance unless this device's own Theme in Settings says Dark or Light; its read-only Conversation sheet uses the conversation treatment in `../cards/ResponseCard.prompt.md` and `../cards/Conversation.prompt.md`, without extending that treatment to ordinary cards or their threads.
+The app follows the device's appearance unless this device's own Theme in Settings says Dark, Light or a built-in color theme; its read-only Conversation sheet uses the conversation treatment in `../cards/ResponseCard.prompt.md` and `../cards/Conversation.prompt.md`, without extending that treatment to ordinary cards or their threads.
 One soft tap of haptic feedback confirms that the computer accepted something: a message, a card's answer or reply, a task's start, continue, interrupt or steer, and the computer coming back after it was out of reach.
 Nothing else taps, not a page turn, an arrival or the ordinary reconnection when the app opens.
 
@@ -105,7 +105,7 @@ A project's page leads with its name and its folder in mono under it, then its f
 A choice the project's setup fixes shows as its words in the muted color in place of the control, with the computer's reason.
 
 Runbooks lists the built-in runbooks and the person's own under their labels, each as its name over one caption line with Apple's switch tinted with the accent; a runbook the computer could not read says why in the warning color.
-Theme is Apple's segmented control worded Device, Dark and Light, like the computer's Dark and Light pills, under one secondary line saying it is set on this iPhone only and the computer keeps its own; it starts on Device and never changes the computer's Theme.
+Theme is one group of tiles like the computer's, Device, Dark, Light and the built-in color themes under their makers' names, each a small window in its own colors, under one secondary line saying it is set on this iPhone only and the computer keeps its own; it starts on Device and never changes the computer's Theme.
 Command-1 to Command-4 switch tabs in the strip's order, Command-Comma opens Settings and Command-I opens it at Your computer.
 The sheet shows a joining time only if the saved connection supplies one; it never invents one for an older record.
 Leave on the computer's row asks in an alert that keeps Keep it beside a red Leave and explains that a new link is needed to return; VoiceOver hears the button as Leave <computer>.

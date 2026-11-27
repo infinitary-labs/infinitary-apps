@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "phone-color-themes",
+      "kind": "feature",
+      "title": "Color themes on iPhone and iPad",
+      "body": "Settings, Appearance, Theme on your iPhone or iPad now offers your computer's thirteen color themes beside Device, Dark and Light, under their makers' names, such as Dracula and Catppuccin Latte. A pick recolors the whole app at once, cards and the crew included, on that device only.",
+      "area": "devices",
+      "picture": {
+        "dark": "phone-color-themes-dark.webp",
+        "light": "phone-color-themes-light.webp",
+        "alt": "The phone's Theme setting as a group of tiles, each a small window in its theme's colors, with Dracula picked on a dark screen and Catppuccin Latte on a light one"
+      },
+      "docsSite": ["iphone-and-ipad"],
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

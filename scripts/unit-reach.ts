@@ -37,6 +37,15 @@ const CONTRACT_DEPENDENCIES: ReadonlyArray<{
   readers: readonly string[];
 }> = [
   {
+    owns: (path) =>
+      path === "src/core/orchestrator/taskMoves.ts" ||
+      path === "src/core/orchestrator/computerMoveEligibility.ts",
+    readers: [
+      "src/core/orchestrator/taskMoves.test.ts",
+      "src/core/orchestrator/taskMoves.computer.test.ts",
+    ],
+  },
+  {
     owns: (path) => path.startsWith("src/shared/channels/"),
     readers: ["src/shared/actions.test.ts", "src/shared/ipc.test.ts"],
   },

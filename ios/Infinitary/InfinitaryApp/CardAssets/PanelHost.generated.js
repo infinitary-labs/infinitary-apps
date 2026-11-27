@@ -127741,9 +127741,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   var annotation = { enabled: false, mode: false, index: -1, current: null, queued: [], offered: false };
   var annotationControl = 'a,button,input,select,textarea,summary,label,[role=button],[contenteditable],[data-inf-action],[data-inf-draft]';
   function annotationParts() { return Array.from(document.querySelectorAll('[data-inf-target]')).filter(function(el) { return el.getClientRects().length && !el.matches(annotationControl); }); }
-  function annotationPart(node) {
+  // Words selected in an option's label belong to its question; a press there still ticks the option.
+  var annotationWordsControl = annotationControl.replace(',label,', ',');
+  function annotationPart(node, words) {
     var el = node && (node.nodeType === 1 ? node : node.parentElement);
-    if (!el || el.closest(annotationControl)) return null;
+    if (!el || el.closest(words ? annotationWordsControl : annotationControl)) return null;
     return el.closest('[data-inf-target]');
   }
   function annotationBoundary(el, offset) {
@@ -127823,8 +127825,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     if (!annotation.enabled) return false;
     var selection = window.getSelection();
     if (!selection || selection.isCollapsed || !selection.rangeCount) return false;
-    var range = selection.getRangeAt(0), el = annotationPart(range.startContainer);
-    var last = annotationPart(range.endContainer);
+    var range = selection.getRangeAt(0), el = annotationPart(range.startContainer, true);
+    var last = annotationPart(range.endContainer, true);
     if (!el || !last) return false;
     var prefix = document.createRange(); prefix.selectNodeContents(el); prefix.setEnd(range.startContainer,range.startOffset);
     var start = prefix.toString().length;
@@ -130373,7 +130375,7 @@ ${FRAME_KEYBOARD_SCRIPT}
   }, true);
   post({ type: "ready", reuseReads: true });
 })();`;
-  const FRAME_BRIDGE_SHA256 = "sha256-W2drWP9C8H3IKy0tj8waardcDqxp9m62C/4vPW7IjyI=";
+  const FRAME_BRIDGE_SHA256 = "sha256-KUm1m7a4lexZfIfVb82KSJJFO2C3IA0WnuBK1IJOavo=";
   const APP_FRAME_SCHEME = "app-frame";
   const FRAME_SANDBOX_TOKENS = ["allow-scripts"];
   const FRAME_SANDBOX = FRAME_SANDBOX_TOKENS.join(" ");

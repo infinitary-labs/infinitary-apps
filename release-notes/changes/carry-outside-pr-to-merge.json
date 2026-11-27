@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "carry-outside-pr-to-merge",
+      "reason": "How this project takes outside pull requests: the crew may bring an accepted one up to date on the author's branch, and the Careful review check reads the crew's comment for it. In the app, a contributor's merge the captain already clicked can go ahead after the crew's declared update, and a fork review's answer tells the crewmate when the author allows maintainer edits; no screen changes."
+    }
+  ]
+}

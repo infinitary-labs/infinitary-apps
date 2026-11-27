@@ -59,9 +59,10 @@ Its merge starts no main check and no alpha of its own: main's check leaves it t
 5. **The crew reviews it once every check passes.**
    The next round files its review, and the first mate starts it under the intake rules' standing yes as a fresh review task naming the pull request's number, never the filed follow-up itself, unless a review of that pull request has already started and not closed ("The review" in `docs/outside-intake.md`).
    A crewmate reads its code and GitHub's runs, never runs the change, and shows the merge card with `asks_first`.
+   When GitHub cannot merge it as it stands and its author allows edits by maintainers, the crew first brings it up to date on the author's own branch with an update that leaves the reviewed behavior as it was, reviews only that update, and lets the checks run again on GitHub's machines ("Carrying it to the merge" in `docs/outside-intake.md`).
 6. **The captain merges it.**
    Only the captain's click merges the contributor's pull request; no standing rule that lets a change merge on its own covers an outside one.
-   A later push needs a new review and a new click.
+   An author's later push needs a new review and a new click; the crew's own update after the click keeps it, once the crew declares that the update changed nothing reviewed.
    The merge cuts no alpha of its own: the captain's next batch checks the change on top of `main`, and that batch's alpha ships it.
 
 The crew's safety rule: a crewmate reviewing an outside pull request runs nothing from it on the project's own machines or the captain's computers before the click; it reads the change and GitHub's runs, and starts nothing on the project's own runners for it.
@@ -193,6 +194,7 @@ Infinitary then writes a record at the end of the pull request's story: no-mista
 
 - a pull request from one of the project's own branches, a task's or a batch's, passes at once;
 - an outside one passes when its description carries the signature line and its first record parses, has `producer` `infinitary` with a `live_validation` verdict and counts, names the pull request's newest version, and marks review, test and document completed;
+- it also passes a record naming an earlier version when the maintainer's crew brought that version up to date to the newest one: comments from accounts that can write, judged by GitHub's collaborator permission, carry crew-update marks leading from the record's version to the newest (`<!-- infinitary-crew-update v1 from=<version> to=<version> -->`, "Carrying it to the merge" in `docs/outside-intake.md`); commit authorship is never read, since a contributor can write any name on a commit;
 - otherwise it fails and keeps one comment, edited in place, saying why and how to raise the pull request with Infinitary; once a later version passes, the comment says so.
 
 The status names the live validation's verdict and counts on a pass and the reason on a failure.

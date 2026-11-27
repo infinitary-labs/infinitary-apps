@@ -889,11 +889,13 @@ Preparing the review grants no approval and merges nothing.
 A contributor's fork is accepted on GitHub and GitLab, with its source repository and immutable host id retained in the review when supplied.
 Checks of a selected fork are read by pull request number and head, never by a same-named branch in the project.
 GitLab pipeline jobs are read from the pipeline's own project, including a fork's source project.
-The card and click reread its source, branch, destination and version; another source or later push needs a new review and a new click, never a carried conflict repair.
+The card and click reread its source, branch, destination and version; another source or a contributor's later push needs a new review and a new click.
+The one later version a fork's approval reaches is the crew's own update on the contributor's branch: once `check_change` `conflictRepair` with impact `none` passed the host's lineage checks and carried the kept approval to it, the click's merge goes ahead at that version (`MergeReviews.carriedTo`).
 The crewmate reads contributor code before running it, and declares `asks_first` on the merge effect so the captain decides whether that version merges.
 To publish its story, the crewmate checks out the reviewed commit without changing it, calls `prepare_change`, then `open_change` with the presentation revision while that fork is selected.
 The saved-story publisher writes and reads back a comment (GitHub issue comment or GitLab merge-request note), with its existing attachment barrier and uncertain-write recovery.
-It never changes the contributor's description or title, pushes to their fork, or opens a replacement request.
+It never changes the contributor's description or title, or opens a replacement request.
+When GitHub says the contributor allows edits by maintainers (`ForgePull.maintainerCanModify`, from `maintainer_can_modify`), the review's answer names their branch and its repository, and says the crew may bring it up to date there with an update that leaves the reviewed behavior unchanged, review that update again with `check_change pull` before its merge card, and follow the project's own method for outside pull requests; without that permission the review never pushes to their fork.
 The story comment's own section opens with the project's line saying a crewmate wrote it ("Disclosing AI assistance" below), then the crew's title, separate from the contributor's request title.
 Both sit inside the story's markers, so the squash summary never carries them.
 The active naming runbook owns its wording; fork merging adds no conventional-title requirement.

@@ -1053,6 +1053,21 @@ describe("GitHubForge", () => {
     expect(past.items.every((item) => item.state === "success")).toBe(true);
   });
 
+  // INF-7061: the crew pushes its update to a contributor's branch only when
+  // GitHub says the author allows maintainer edits.
+  it("reads whether a contributor allows the project's maintainers to push to its branch", async () => {
+    let pull: Record<string, unknown> = {};
+    const { forge } = await stub({
+      "GET /repos/octo/meter/pulls/23": () => ({
+        json: { ...PULL, state: "open", base: { ref: "main" }, ...pull },
+      }),
+    });
+    pull = { maintainer_can_modify: true };
+    expect((await forge.pull(23)).maintainerCanModify).toBe(true);
+    pull = { maintainer_can_modify: false };
+    expect(await forge.pull(23)).not.toHaveProperty("maintainerCanModify");
+  });
+
   it("reads a pull request by its number with whether it may merge now, in the seam's terms", async () => {
     let pull: Record<string, unknown> = {};
     const { forge } = await stub({

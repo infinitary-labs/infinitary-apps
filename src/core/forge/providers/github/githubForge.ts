@@ -146,6 +146,7 @@ type PullStateJson = PullJson & {
   base: { ref: string };
   mergeable?: boolean | null;
   mergeable_state?: string;
+  maintainer_can_modify?: boolean;
 };
 
 type AsyncMergeJson = {
@@ -971,6 +972,7 @@ export class GitHubForge implements Forge {
       readiness: readinessOf(pull),
       mergeable: pull.mergeable ?? null,
       ...(pull.mergeable_state ? { mergeableState: pull.mergeable_state } : {}),
+      ...(pull.maintainer_can_modify === true ? { maintainerCanModify: true } : {}),
     };
   }
 
